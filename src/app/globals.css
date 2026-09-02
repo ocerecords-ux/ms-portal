@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-purple: #7b55ff;
+  --brand-purple-deep: #6b2af0;
+  --brand-green: #1fdf67;
+}
+
+body {
+  background: #fbfaff;
+  color: #201a33;
+}
+
+::selection {
+  background: var(--brand-green);
+  color: #201a33;
+}
