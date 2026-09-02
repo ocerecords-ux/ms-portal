@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -12,6 +13,7 @@ export function OrderForm({ ratePerPage }: { ratePerPage: number }) {
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [lastOrder, setLastOrder] = useState<{ title: string; price: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const price = useMemo(() => {
@@ -36,6 +38,7 @@ export function OrderForm({ ratePerPage }: { ratePerPage: number }) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Objednávku se nepodařilo odeslat.');
       }
+      setLastOrder({ title, price });
       setDone(true);
       setTitle('');
       setPageCount('');
@@ -48,6 +51,38 @@ export function OrderForm({ ratePerPage }: { ratePerPage: number }) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (done && lastOrder) {
+    return (
+      <div className="bg-brand-purple rounded-card p-6 sm:p-10 text-white max-w-2xl flex flex-col items-start gap-5">
+        <div className="w-14 h-14 rounded-full bg-brand-green flex items-center justify-center shrink-0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#201a33" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+            <path d="M4 12l6 6L20 6" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka byla odeslána</h2>
+          <p className="text-white/85 text-sm font-body mt-2">
+            „{lastOrder.title}" — předběžná cena{' '}
+            <strong className="text-brand-green">{new Intl.NumberFormat('cs-CZ').format(lastOrder.price)} Kč</strong>.
+            Objednávku jsme uložili k vašemu účtu a MEDIA SPACE se vám brzy ozve.
+          </p>
+        </div>
+        <div className="flex items-center gap-4 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setDone(false)}
+            className="border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-brand-purpleDark transition-colors"
+          >
+            + Vytvořit další objednávku
+          </button>
+          <Link href="/projekty" className="text-white/85 text-sm font-heading underline">
+            Zobrazit Projekty
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -118,7 +153,6 @@ export function OrderForm({ ratePerPage }: { ratePerPage: number }) {
         >
           {submitting ? 'Odesílám…' : 'Objednat'}
         </button>
-        {done && <span className="text-brand-green text-sm font-heading">✓ Objednávka byla odeslána</span>}
       </div>
 
       <style jsx>{`
