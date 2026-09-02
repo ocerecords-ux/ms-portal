@@ -69,10 +69,11 @@ export async function listCaflouProjectsForCompany(caflouCompanyId: string): Pro
   return caflouFetch(`/projects?${params.toString()}`);
 }
 
-/** Syrovy seznam VSECH firem/kontaktu v Caflou - pomocny nastroj, aby admin nemusel ID hledat rucne primo v Caflou. */
-export async function listCaflouCompanies(): Promise<CaflouResult> {
+/** Syrovy seznam firem/kontaktu v Caflou (volitelne vyfiltrovany podle nazvu) - pomocny nastroj, aby admin nemusel ID hledat rucne primo v Caflou. */
+export async function listCaflouCompanies(search?: string): Promise<CaflouResult> {
   const params = new URLSearchParams();
-  params.set('per', '200');
+  params.set('per', '100');
+  if (search) params.set('filter[search]', search);
   return caflouFetch(`/companies?${params.toString()}`);
 }
 

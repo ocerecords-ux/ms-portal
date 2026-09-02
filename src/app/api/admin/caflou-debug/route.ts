@@ -17,8 +17,9 @@ export async function GET(req: NextRequest) {
   }
 
   if (req.nextUrl.searchParams.get('list') === 'companies') {
+    const search = req.nextUrl.searchParams.get('q') || undefined;
     try {
-      const result = await listCaflouCompanies();
+      const result = await listCaflouCompanies(search);
       return NextResponse.json({ status: result.status, ok: result.ok, body: result.body ?? result.raw });
     } catch (err) {
       return NextResponse.json({ error: err instanceof Error ? err.message : 'Dotaz na Caflou selhal.' }, { status: 502 });
