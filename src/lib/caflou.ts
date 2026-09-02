@@ -77,6 +77,54 @@ export async function listCaflouCompanies(search?: string): Promise<CaflouResult
   return caflouFetch(`/companies?${params.toString()}`);
 }
 
+/** Projekt v podobe pripravene pro klientske zobrazeni (sekce "Projekty" v portalu). */
+export type DisplayProject = {
+  id: number;
+  name: string;
+  finished: boolean;
+  statusName: string;
+  narrator: string | null;
+  finishedAt: Date | null;
+  releaseDate: Date | null;
+  startDate: Date | null;
+  endDate: Date | null;
+};
+
+function toDate(v?: string | null): Date | null {
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Prevede syrovou odpoved GET /projects (viz /api/admin/caflou-debug) na
+ * pole projektu pro klientske zobrazeni. Zaznamy bez project_type_id
+ * (interni testovaci/nepotvrzene zapisy v Caflou, napr. "Test") jsou
+ * zamerne vyrazeny - klient je nema videt.
+ *
+ * Overeno na zivo z Caflou (viz custom_column_herec = jmeno herce/vypravece,
+ * custom_column_termin_vydani = datum vydani - u obou dostupne jen u casti
+ * projektu, proto se pocita s null).
+ */
+export function mapCaflouProjects(raw: unknown): DisplayProject[] {
+  if (!raw || typeof raw !== 'object') return [];
+  const results = (raw as { results?: unknown }).results;
+  if (!Array.isArray(results)) return [];
+  return results
+    .filter((p: any) => Boolean(p?.project_type_id))
+    .map((p: any) => ({
+      id: p.id,
+      name: p.name || 'Bez názvu',
+      finished: Boolean(p.finished),
+      statusName: p.project_status_name || (p.finished ? 'Hotovo' : 'V realizaci'),
+      narrator: p.custom_column_herec || null,
+      finishedAt: toDate(p.finished_at),
+      releaseDate: toDate(p.custom_column_termin_vydani),
+      startDate: toDate(p.start_date),
+      endDate: toDate(p.end_date),
+    }));
+}
+
 /**
  * Zalozeni projektu v Caflou pri odeslani objednavky - best-effort, pouziva
  * se v /api/orders. Objednavka v portalu vznikne vzdy, i kdyz se toto
