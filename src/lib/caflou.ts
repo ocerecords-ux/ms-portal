@@ -1,66 +1,92 @@
-/**
- * Adapter pro napojeni na Caflou API.
- *
- * DULEZITE: Presne tvary endpointu a autentizace jeste nejsou potvrzene
- * (cekame na API klic + specifikaci poli z vaseho Caflou uctu - viz ukol
- * v README). Volani je proto zabalene tak, aby:
- *  - selhani Caflou NIKDY nezablokovalo ulozeni objednavky klientovi,
- *  - vysledek (uspech/chyba) sel dohledat u objednavky v adminu
- *    (Order.caflouSyncStatus / caflouSyncError).
- *
- * Az budete mit API klic, staci upravit CAFLOU_API_BASE_URL / hlavicky
- * a tvar payloadu v teto jedine funkci - zbytek aplikace se nemeni.
- */
+// Napojeni na Caflou (nase ucetni/projektove nastroje).
+//
+// 1) CTENI - sekce "Projekty" v portalu ukazuje klientovi projekty tak, jak
+//    jsou vedene primo v Caflou (stav, herec, terminy). Portal do nich
+//    nezasahuje - "projekty se menezuji hlavne v Caflou".
+// 2) ZAKLADANI (puvodni, jiz drive pripravena funkce createCaflouProject) -
+//    pri odeslani objednavky se best-effort zkusi zalozit odpovidajici
+//    projekt v Caflou; vysledek se zaznamena k objednavce
+//    (caflouProjectId/caflouSyncStatus/caflouSyncError). Dokud neni presne
+//    overena struktura POST /projects, zustava toto zalozeni vypnute
+//    (CAFLOU_NOT_CONFIGURED) i pri vyplnenych env promennych, aby se do
+//    Caflou neposilaly neoverene/spatne pozadavky - viz TODO nize.
+//
+// DULEZITE - tenant izolace: projekty tahame VZDY podle caflouCompanyId
+// konkretni firmy (nikdy neuvazujeme cely ucet Caflou najednou), stejne jako
+// je tomu u Google Disku.
+//
+// POZNAMKA: presny tvar odpovedi Caflou API (nazvy poli u projektu) jeste
+// nemame overeny na zivo - viz /api/admin/caflou-debug, ktery vraci syrovou
+// odpoved pro rychle testovani z adminu, nez se podle skutecnych dat dolad'
+// mapovani v pripadne funkci pro klientske zobrazeni.
 
-type CreateCaflouProjectInput = {
-  projectName: string;
-  clientTag: string; // Company.caflouTag - stitek, kterym je klient v Caflou oznacen
-  pageCount: number | null;
-};
+const CAFLOU_BASE = 'https://app.caflou.com/api/v1';
 
-type CaflouResult =
-  | { ok: true; caflouProjectId: string }
-  | { ok: false; error: string };
+export function caflouConfigured(): boolean {
+  return Boolean(process.env.CAFLOU_API_KEY && process.env.CAFLOU_ACCOUNT_ID);
+}
 
-export async function createCaflouProject(input: CreateCaflouProjectInput): Promise<CaflouResult> {
-  const baseUrl = process.env.CAFLOU_API_BASE_URL;
+export type CaflouResult = { ok: boolean; status: number; body: unknown; raw: string };
+
+export async function caflouFetch(
+  path: string,
+  init?: { method?: string; body?: unknown },
+): Promise<CaflouResult> {
   const apiKey = process.env.CAFLOU_API_KEY;
+  const accountId = process.env.CAFLOU_ACCOUNT_ID;
+  if (!apiKey || !accountId) {
+    throw new Error('Caflou API zatím není nastavené (chybí CAFLOU_API_KEY / CAFLOU_ACCOUNT_ID).');
+  }
+  const url = `${CAFLOU_BASE}/${accountId}${path}`;
+  const res = await fetch(url, {
+    method: init?.method ?? 'GET',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Accept: 'application/json',
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: init?.body ? JSON.stringify(init.body) : undefined,
+    cache: 'no-store',
+  });
+  const raw = await res.text();
+  let body: unknown = null;
+  try {
+    body = raw ? JSON.parse(raw) : null;
+  } catch {
+    body = null;
+  }
+  if (!res.ok) {
+    console.error('Caflou API chyba:', res.status, raw.slice(0, 2000));
+  }
+  return { ok: res.ok, status: res.status, body, raw };
+}
 
-  if (!baseUrl || !apiKey) {
-    // Caflou zatim neni nakonfigurovane - objednavka se ulozi normalne,
-    // jen se nezalozi projekt automaticky (bude potreba rucne).
+/** Syrovy seznam projektu dane firmy z Caflou - pro admin diagnostiku i pro pozdejsi mapovani. */
+export async function listCaflouProjectsForCompany(caflouCompanyId: string): Promise<CaflouResult> {
+  const params = new URLSearchParams();
+  params.set('per', '200');
+  params.append('filter[company_ids][]', caflouCompanyId);
+  return caflouFetch(`/projects?${params.toString()}`);
+}
+
+/**
+ * Zalozeni projektu v Caflou pri odeslani objednavky - best-effort, pouziva
+ * se v /api/orders. Objednavka v portalu vznikne vzdy, i kdyz se toto
+ * nepovede; vysledek se jen zaznamena (Order.caflouSyncStatus/caflouSyncError).
+ *
+ * TODO: presny format POST /projects (povinna pole, jak se predava
+ * company_id/pocet stran) jeste neni overeny na zivo, takze zatim vraci
+ * CAFLOU_NOT_CONFIGURED i po vyplneni klice - az bude overeno pres
+ * /api/admin/caflou-debug, doplnit skutecne volani.
+ */
+export async function createCaflouProject(input: {
+  projectName: string;
+  clientTag: string;
+  pageCount?: number | null;
+}): Promise<{ ok: true; caflouProjectId: string } | { ok: false; error: string }> {
+  if (!caflouConfigured()) {
     return { ok: false, error: 'CAFLOU_NOT_CONFIGURED' };
   }
-
-  try {
-    // TODO: az bude znama presna specifikace, nahradit skutecnym endpointem/poli.
-    const res = await fetch(`${baseUrl}/projects`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        name: input.projectName,
-        tags: [input.clientTag],
-        custom_attributes: {
-          pocet_normostran: input.pageCount,
-        },
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return { ok: false, error: `Caflou API ${res.status}: ${text.slice(0, 300)}` };
-    }
-
-    const data = await res.json();
-    const caflouProjectId = data?.id ?? data?.project?.id;
-    if (!caflouProjectId) {
-      return { ok: false, error: 'Caflou API nevratilo ID projektu.' };
-    }
-    return { ok: true, caflouProjectId: String(caflouProjectId) };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Neznama chyba pri volani Caflou API' };
-  }
+  // Zatim zamerne nezakladame - viz TODO v komentari funkce.
+  return { ok: false, error: 'CAFLOU_NOT_CONFIGURED' };
 }

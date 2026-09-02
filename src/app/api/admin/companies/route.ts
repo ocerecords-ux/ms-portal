@@ -7,6 +7,7 @@ const schema = z.object({
   name: z.string().trim().min(1, 'Název firmy je povinný.'),
   ratePerPage: z.coerce.number().int().min(0, 'Sazba musí být kladné číslo.'),
   caflouTag: z.string().trim().optional(),
+  caflouCompanyId: z.string().trim().optional(),
   driveFolderUrl: z.string().trim().optional(),
 });
 
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
       name: parsed.data.name,
       ratePerPage: parsed.data.ratePerPage,
       caflouTag: parsed.data.caflouTag || null,
+      caflouCompanyId: parsed.data.caflouCompanyId || null,
       driveFolderUrl: parsed.data.driveFolderUrl || null,
     },
   });
