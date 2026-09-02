@@ -9,6 +9,7 @@ export function OrderForm({ ratePerPage }: { ratePerPage: number }) {
   const [title, setTitle] = useState('');
   const [pageCount, setPageCount] = useState('');
   const [deadline, setDeadline] = useState('');
+  const [preferredNarrator, setPreferredNarrator] = useState('');
   const [note, setNote] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -30,6 +31,7 @@ export function OrderForm({ ratePerPage }: { ratePerPage: number }) {
       formData.set('title', title);
       formData.set('pageCount', pageCount);
       formData.set('deadline', deadline);
+      formData.set('preferredNarrator', preferredNarrator);
       formData.set('note', note);
       if (file) formData.set('attachment', file);
 
@@ -43,6 +45,7 @@ export function OrderForm({ ratePerPage }: { ratePerPage: number }) {
       setTitle('');
       setPageCount('');
       setDeadline('');
+      setPreferredNarrator('');
       setNote('');
       setFile(null);
       router.refresh();
@@ -122,6 +125,15 @@ export function OrderForm({ ratePerPage }: { ratePerPage: number }) {
 
       <Field label="Datum odevzdání">
         <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
+      </Field>
+
+      <Field label="Preferovaný herec">
+        <input
+          value={preferredNarrator}
+          onChange={(e) => setPreferredNarrator(e.target.value)}
+          placeholder="např. Jan Novák (nepovinné)"
+          className="input"
+        />
       </Field>
 
       <Field label="Poznámka">

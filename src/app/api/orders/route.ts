@@ -13,6 +13,7 @@ const orderSchema = z.object({
   pageCount: z.string().optional(),
   deadline: z.string().optional(),
   note: z.string().optional(),
+  preferredNarrator: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -30,11 +31,13 @@ export async function POST(req: NextRequest) {
     pageCount: formData.get('pageCount'),
     deadline: formData.get('deadline'),
     note: formData.get('note'),
+    preferredNarrator: formData.get('preferredNarrator'),
   });
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
   const { title, note } = parsed.data;
+  const preferredNarrator = parsed.data.preferredNarrator?.trim() || null;
   const pageCount = parsed.data.pageCount ? parseInt(parsed.data.pageCount, 10) : null;
   const deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
 
@@ -63,6 +66,7 @@ export async function POST(req: NextRequest) {
       priceEstimate,
       deadline,
       note: note || null,
+      preferredNarrator,
       attachmentUrl: attachment?.url ?? null,
       attachmentName: attachment?.name ?? null,
       project: {
@@ -70,6 +74,7 @@ export async function POST(req: NextRequest) {
           companyId,
           name: title,
           status: 'Nové',
+          narrator: preferredNarrator,
         },
       },
     },

@@ -73,6 +73,7 @@ model Order {
   priceEstimate        Int?             // predbezna cena = pageCount * ratePerPageSnapshot
   deadline             DateTime?
   note                 String?
+  preferredNarrator    String?          // "Preferovany herec" - preni klienta, MEDIA SPACE ho pak potvrdi nebo zmeni
   attachmentUrl        String?
   attachmentName       String?
 
