@@ -69,6 +69,13 @@ export async function listCaflouProjectsForCompany(caflouCompanyId: string): Pro
   return caflouFetch(`/projects?${params.toString()}`);
 }
 
+/** Syrovy seznam VSECH firem/kontaktu v Caflou - pomocny nastroj, aby admin nemusel ID hledat rucne primo v Caflou. */
+export async function listCaflouCompanies(): Promise<CaflouResult> {
+  const params = new URLSearchParams();
+  params.set('per', '200');
+  return caflouFetch(`/companies?${params.toString()}`);
+}
+
 /**
  * Zalozeni projektu v Caflou pri odeslani objednavky - best-effort, pouziva
  * se v /api/orders. Objednavka v portalu vznikne vzdy, i kdyz se toto
