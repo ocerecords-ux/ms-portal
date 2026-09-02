@@ -36,16 +36,36 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Soubor nenalezen.' }, { status: 404 });
   }
 
-  const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`, {
+  // Soubory vytvorene primo na Disku (Google Dokumenty/Tabulky/Prezentace)
+  // nejdou stahnout pres alt=media - Google pro ne vyzaduje /export s
+  // cilovym mime typem. Normalni nahrane soubory (mp3, wav, zip...) pouzivaji
+  // bezny alt=media.
+  const exportMimeByGoogleType: Record<string, string> = {
+    'application/vnd.google-apps.document': 'application/pdf',
+    'application/vnd.google-apps.spreadsheet': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.google-apps.presentation': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  };
+  const exportMime = exportMimeByGoogleType[meta.mimeType];
+
+  const driveUrl = exportMime
+    ? `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${encodeURIComponent(exportMime)}`
+    : `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`;
+
+  const driveRes = await fetch(driveUrl, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!driveRes.ok || !driveRes.body) {
+    console.error(
+      'Stažení souboru selhalo:',
+      driveRes.status,
+      await driveRes.text().catch(() => ''),
+    );
     return NextResponse.json({ error: 'Stažení souboru selhalo.' }, { status: 502 });
   }
 
   return new NextResponse(driveRes.body, {
     headers: {
-      'Content-Type': meta.mimeType || 'application/octet-stream',
+      'Content-Type': exportMime || meta.mimeType || 'application/octet-stream',
       'Content-Disposition': `attachment; filename="${encodeURIComponent(meta.name)}"`,
     },
   });
