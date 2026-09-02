@@ -72,7 +72,7 @@ export async function listCaflouProjectsForCompany(caflouCompanyId: string): Pro
 /** Syrovy seznam firem/kontaktu v Caflou (volitelne vyfiltrovany podle nazvu) - pomocny nastroj, aby admin nemusel ID hledat rucne primo v Caflou. */
 export async function listCaflouCompanies(search?: string): Promise<CaflouResult> {
   const params = new URLSearchParams();
-  params.set('per', '100');
+  params.set('per', '1000'); // maximum povolene Caflou API - staci na vsechny firmy najednou
   if (search) params.set('filter[search]', search);
   return caflouFetch(`/companies?${params.toString()}`);
 }
