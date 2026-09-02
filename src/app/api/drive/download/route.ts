@@ -51,8 +51,16 @@ export async function GET(req: NextRequest) {
     ? `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${encodeURIComponent(exportMime)}`
     : `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`;
 
+  // Prehravac (<audio>) potrebuje umet "skakat" v nahravce - k tomu je nutne
+  // predat dal pozadavek na Range a vratit spravny 206/Content-Range. Export
+  // (Google Dokumenty apod.) Range nepodporuje, tam se neposila.
+  const rangeHeader = req.headers.get('range');
+
   const driveRes = await fetch(driveUrl, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(rangeHeader && !exportMime ? { Range: rangeHeader } : {}),
+    },
   });
   if (!driveRes.ok || !driveRes.body) {
     console.error(
@@ -63,10 +71,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Stažení souboru selhalo.' }, { status: 502 });
   }
 
+  // Tlacitko "Stahnout" chce vynutit ulozeni (attachment), prehravac chce
+  // soubor prehrat primo v prohlizeci (inline) - rozlisuje se parametrem.
+  const forceInline = req.nextUrl.searchParams.get('disposition') === 'inline';
+
+  const headers: Record<string, string> = {
+    'Content-Type': exportMime || meta.mimeType || 'application/octet-stream',
+    'Content-Disposition': `${forceInline ? 'inline' : 'attachment'}; filename="${encodeURIComponent(meta.name)}"`,
+  };
+  const contentRange = driveRes.headers.get('content-range');
+  const contentLength = driveRes.headers.get('content-length');
+  const acceptRanges = driveRes.headers.get('accept-ranges');
+  if (contentRange) headers['Content-Range'] = contentRange;
+  if (contentLength) headers['Content-Length'] = contentLength;
+  if (acceptRanges) headers['Accept-Ranges'] = acceptRanges;
+
   return new NextResponse(driveRes.body, {
-    headers: {
-      'Content-Type': exportMime || meta.mimeType || 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(meta.name)}"`,
-    },
+    status: driveRes.status,
+    headers,
   });
 }
