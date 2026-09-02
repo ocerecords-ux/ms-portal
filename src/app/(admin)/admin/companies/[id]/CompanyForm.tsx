@@ -10,6 +10,7 @@ export function CompanyForm({ company }: { company: Company }) {
   const [name, setName] = useState(company.name);
   const [rate, setRate] = useState(String(company.ratePerPage));
   const [caflouTag, setCaflouTag] = useState(company.caflouTag ?? '');
+  const [caflouCompanyId, setCaflouCompanyId] = useState(company.caflouCompanyId ?? '');
   const [driveUrl, setDriveUrl] = useState(company.driveFolderUrl ?? '');
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -24,7 +25,7 @@ export function CompanyForm({ company }: { company: Company }) {
       const res = await fetch(`/api/admin/companies/${company.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, ratePerPage: rate, caflouTag, driveFolderUrl: driveUrl }),
+        body: JSON.stringify({ name, ratePerPage: rate, caflouTag, caflouCompanyId, driveFolderUrl: driveUrl }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -49,7 +50,11 @@ export function CompanyForm({ company }: { company: Company }) {
         <input required type="number" min={0} value={rate} onChange={(e) => setRate(e.target.value)} className="admin-input" />
       </AdminField>
 
-      <AdminField label="Štítek klienta v Caflou" hint="přesný název štítku, kterým jsou v Caflou označeny projekty této firmy">
+      <AdminField label="ID firmy v Caflou" hint="podle tohoto ID se z Caflou tahají projekty této firmy do sekce Projekty">
+        <input value={caflouCompanyId} onChange={(e) => setCaflouCompanyId(e.target.value)} placeholder="např. 12345" className="admin-input" />
+      </AdminField>
+
+      <AdminField label="Štítek klienta v Caflou (informativní)" hint="nepovinné, jen pro orientaci - filtrování projektů řídí ID firmy výše">
         <input value={caflouTag} onChange={(e) => setCaflouTag(e.target.value)} className="admin-input" />
       </AdminField>
 

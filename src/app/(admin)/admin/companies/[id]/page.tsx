@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { CompanyForm } from './CompanyForm';
 import { UserForm } from './UserForm';
+import { CaflouTestPanel } from './CaflouTestPanel';
 
 export default async function CompanyDetailPage({ params }: { params: { id: string } }) {
   const company = await prisma.company.findUnique({
@@ -23,6 +24,9 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
       <div>
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">Údaje firmy</h2>
         <CompanyForm company={company} />
+        <div className="mt-4">
+          <CaflouTestPanel companyId={company.id} />
+        </div>
       </div>
 
       <div>
