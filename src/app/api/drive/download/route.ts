@@ -75,9 +75,18 @@ export async function GET(req: NextRequest) {
   // soubor prehrat primo v prohlizeci (inline) - rozlisuje se parametrem.
   const forceInline = req.nextUrl.searchParams.get('disposition') === 'inline';
 
+  // Disk casto vraci nazvy v NFD tvaru (napr. "Š" jako "S" + samostatny hacek),
+  // coz po zakodovani do hlavicky vypadalo jako necitelne %CC%8C apod. -
+  // normalizace na NFC to spoji zpet na jeden bezny znak. Zaroven pouzivame
+  // jak "filename" (bezpecne ASCII, pro stare prohlizece), tak "filename*"
+  // (spravne UTF-8 s diakritikou dle RFC 5987/6266) - tak se jmeno stazeneho
+  // souboru zobrazi presne tak, jak je na Disku.
+  const safeName = meta.name.normalize('NFC');
+  const asciiFallback = safeName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, "'");
+
   const headers: Record<string, string> = {
     'Content-Type': exportMime || meta.mimeType || 'application/octet-stream',
-    'Content-Disposition': `${forceInline ? 'inline' : 'attachment'}; filename="${encodeURIComponent(meta.name)}"`,
+    'Content-Disposition': `${forceInline ? 'inline' : 'attachment'}; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,
   };
   const contentRange = driveRes.headers.get('content-range');
   const contentLength = driveRes.headers.get('content-length');
