@@ -44,7 +44,13 @@ export async function getAccessToken(): Promise<string | null> {
     return cachedToken.token;
   }
 
-  const privateKey = rawKey.replace(/\\n/g, '\n');
+  // GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY muze byt bud primo PEM text (s \n
+  // escapy misto skutecnych zalomeni radku), nebo - spolehlivejsi varianta,
+  // kterou se pri rucnim vkladani do Vercelu nic nemuze poskodit - cely PEM
+  // zakodovany jako jeden radek v base64.
+  const privateKey = rawKey.includes('BEGIN PRIVATE KEY')
+    ? rawKey.replace(/\\n/g, '\n')
+    : Buffer.from(rawKey, 'base64').toString('utf-8');
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: 'RS256', typ: 'JWT' };
   const claim = {
