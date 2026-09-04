@@ -13,7 +13,7 @@ export default async function AdminHomePage() {
       <div>
         <h1 className="font-display text-3xl text-ink m-0">Klienti</h1>
         <p className="text-muted text-sm mt-1 font-body">
-          Tady zadáváte, jaká firma má jakou sazbu za normostranu, štítek v Caflou a složku na Disku — a zakládáte jí přihlašovací účty.
+          Tady zadáváte, jaká firma má jakou sazbu za normostranu a složku na Disku — a zakládáte jí přihlašovací účty.
         </p>
       </div>
 
@@ -24,7 +24,6 @@ export default async function AdminHomePage() {
               <tr className="bg-ink text-white font-heading text-xs">
                 <th className="text-left px-4 py-3.5">Firma</th>
                 <th className="text-left px-4 py-3.5">Sazba / normostrana</th>
-                <th className="text-left px-4 py-3.5">Caflou štítek</th>
                 <th className="text-left px-4 py-3.5">Uživatelé</th>
                 <th className="text-left px-4 py-3.5">Objednávky</th>
                 <th></th>
@@ -33,7 +32,7 @@ export default async function AdminHomePage() {
             <tbody>
               {companies.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm font-body">
                     Zatím žádná firma. Založte první tlačítkem níže.
                   </td>
                 </tr>
@@ -42,7 +41,6 @@ export default async function AdminHomePage() {
                 <tr key={c.id} className="border-t border-line hover:bg-[#FAF8FF]">
                   <td className="px-4 py-3.5 font-heading font-semibold text-sm text-ink">{c.name}</td>
                   <td className="px-4 py-3.5 text-sm font-heading tabular-nums">{c.ratePerPage} Kč</td>
-                  <td className="px-4 py-3.5 text-sm font-heading text-muted">{c.caflouTag || '—'}</td>
                   <td className="px-4 py-3.5 text-sm font-heading tabular-nums">{c._count.users}</td>
                   <td className="px-4 py-3.5 text-sm font-heading tabular-nums">{c._count.orders}</td>
                   <td className="px-4 py-3.5 text-right">

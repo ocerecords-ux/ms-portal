@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { CompanyForm } from './CompanyForm';
 import { UserForm } from './UserForm';
+import { UserCaflouTagCell } from './UserCaflouTagCell';
 import { CaflouTestPanel } from './CaflouTestPanel';
 
 export default async function CompanyDetailPage({ params }: { params: { id: string } }) {
@@ -37,13 +38,14 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
               <tr className="bg-field text-ink font-heading text-xs">
                 <th className="text-left px-4 py-3">E-mail</th>
                 <th className="text-left px-4 py-3">Jméno</th>
+                <th className="text-left px-4 py-3">Štítek v Caflou</th>
                 <th className="text-left px-4 py-3">Založen</th>
               </tr>
             </thead>
             <tbody>
               {company.users.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-6 text-center text-muted text-sm font-body">
+                  <td colSpan={4} className="px-4 py-6 text-center text-muted text-sm font-body">
                     Tato firma zatím nemá žádný přihlašovací účet.
                   </td>
                 </tr>
@@ -52,6 +54,9 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
                 <tr key={u.id} className="border-t border-line">
                   <td className="px-4 py-3 text-sm font-heading">{u.email}</td>
                   <td className="px-4 py-3 text-sm font-heading text-muted">{u.name || '—'}</td>
+                  <td className="px-4 py-3 text-sm">
+                    <UserCaflouTagCell userId={u.id} initialTag={u.caflouTag} />
+                  </td>
                   <td className="px-4 py-3 text-sm font-heading text-muted tabular-nums">
                     {new Intl.DateTimeFormat('cs-CZ').format(u.createdAt)}
                   </td>

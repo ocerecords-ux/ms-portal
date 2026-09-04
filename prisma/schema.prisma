@@ -35,7 +35,6 @@ model Company {
   id             String    @id @default(cuid())
   name           String
   ratePerPage    Int       // predbezna sazba za 1 normostranu, v Kc
-  caflouTag       String?   // presny nazev stitku v Caflou (informativni, projekty se filtruji podle caflouCompanyId)
   caflouCompanyId String?   // ID firmy/kontaktu v Caflou - podle nej se z Caflou API tahaji projekty teto firmy
   driveFolderUrl String?   // odkaz na slozku klienta na Google Disku (prirazuje admin rucne)
   active         Boolean   @default(true)
@@ -55,6 +54,7 @@ model User {
   role         Role      @default(CLIENT)
   companyId    String?   // null pro interni ADMIN ucty
   company      Company?  @relation(fields: [companyId], references: [id])
+  caflouTag    String?   // presny nazev stitku teto konkretni osoby v Caflou (informativni) - rozlisuje, kdo v ramci jedne firmy je ktery projekt objednal
   active       Boolean   @default(true)
   createdAt    DateTime  @default(now())
 
@@ -93,7 +93,7 @@ model Order {
 
 // Lokalni cache projektu - dokud neni napojena plna synchronizace s Caflou,
 // zaznam vznika pri kazde objednavce. Pozdeji pribyde import existujicich
-// projektu z Caflou podle caflouTag firmy.
+// projektu z Caflou podle caflouCompanyId firmy.
 model Project {
   id              String    @id @default(cuid())
   companyId       String

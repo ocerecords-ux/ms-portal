@@ -10,6 +10,7 @@ const schema = z.object({
   password: z.string().min(8, 'Heslo musí mít alespoň 8 znaků.'),
   companyId: z.string().min(1),
   role: z.enum(['CLIENT', 'ADMIN']).default('CLIENT'),
+  caflouTag: z.string().trim().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -35,8 +36,9 @@ export async function POST(req: NextRequest) {
       passwordHash,
       role: parsed.data.role,
       companyId: parsed.data.companyId,
+      caflouTag: parsed.data.caflouTag || null,
     },
-    select: { id: true, email: true, name: true, role: true, createdAt: true },
+    select: { id: true, email: true, name: true, role: true, caflouTag: true, createdAt: true },
   });
 
   return NextResponse.json(user, { status: 201 });

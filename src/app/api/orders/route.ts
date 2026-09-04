@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
   const pageCount = parsed.data.pageCount ? parseInt(parsed.data.pageCount, 10) : null;
   const deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
 
-  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  const [company, orderingUser] = await Promise.all([
+    prisma.company.findUnique({ where: { id: companyId } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { caflouTag: true } }),
+  ]);
   if (!company) {
     return NextResponse.json({ error: 'Firma nenalezena.' }, { status: 404 });
   }
@@ -99,12 +102,15 @@ export async function POST(req: NextRequest) {
     console.error('Odeslání e-mailu o objednávce selhalo:', err);
   }
 
-  // 3) Zalozeni projektu v Caflou (nazev, firma/stitek, pocet normostran) -
-  //    take best effort. Stav se uklada k objednavce pro dohledani v adminu.
-  if (company.caflouTag) {
+  // 3) Zalozeni projektu v Caflou (nazev, stitek OSOBY co objednala, pocet
+  //    normostran) - take best effort. Stitek je zamerne u uzivatele, ne u
+  //    firmy: rozlisuje v Caflou, ktery projekt patri ktere konkretni osobe,
+  //    i kdyz vice lidi objednava pod stejnou firmou. Stav se uklada
+  //    k objednavce pro dohledani v adminu.
+  if (orderingUser?.caflouTag) {
     const caflouResult = await createCaflouProject({
       projectName: title,
-      clientTag: company.caflouTag,
+      clientTag: orderingUser.caflouTag,
       pageCount,
     });
     await prisma.order.update({

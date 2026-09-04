@@ -143,6 +143,40 @@ export function mapCaflouProjects(raw: unknown): DisplayProject[] {
     }));
 }
 
+export type AdminDisplayProject = DisplayProject & { companyName: string };
+
+/**
+ * Nacte aktivni + dokoncene projekty napric VICE firmami najednou (pro admin
+ * prehled vsech projektu, na rozdil od listCaflouProjectsForCompany, ktera
+ * je scoped na jednu firmu pro klientske zobrazeni). Kazda firma se dotazuje
+ * samostatne a nezavisle - pokud se u jedne firmy nacteni nepovede, ostatni
+ * to neovlivni, jen se jeji nazev vrati v failedCompanies.
+ */
+export async function listActiveCaflouProjectsForCompanies(
+  companies: { name: string; caflouCompanyId: string }[],
+): Promise<{ projects: AdminDisplayProject[]; failedCompanies: string[] }> {
+  const results = await Promise.all(
+    companies.map(async (c) => {
+      try {
+        const result = await listCaflouProjectsForCompany(c.caflouCompanyId);
+        if (!result.ok) return { companyName: c.name, ok: false as const };
+        const projects = mapCaflouProjects(result.body).map((p) => ({ ...p, companyName: c.name }));
+        return { companyName: c.name, ok: true as const, projects };
+      } catch {
+        return { companyName: c.name, ok: false as const };
+      }
+    }),
+  );
+
+  const projects: AdminDisplayProject[] = [];
+  const failedCompanies: string[] = [];
+  for (const r of results) {
+    if (r.ok) projects.push(...r.projects);
+    else failedCompanies.push(r.companyName);
+  }
+  return { projects, failedCompanies };
+}
+
 /**
  * Zalozeni projektu v Caflou pri odeslani objednavky - best-effort, pouziva
  * se v /api/orders. Objednavka v portalu vznikne vzdy, i kdyz se toto

@@ -8,7 +8,7 @@ export function NewCompanyForm() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [rate, setRate] = useState('');
-  const [caflouTag, setCaflouTag] = useState('');
+  const [caflouCompanyId, setCaflouCompanyId] = useState('');
   const [driveUrl, setDriveUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -21,7 +21,7 @@ export function NewCompanyForm() {
       const res = await fetch('/api/admin/companies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, ratePerPage: rate, caflouTag, driveFolderUrl: driveUrl }),
+        body: JSON.stringify({ name, ratePerPage: rate, caflouCompanyId, driveFolderUrl: driveUrl }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -29,7 +29,7 @@ export function NewCompanyForm() {
       }
       setName('');
       setRate('');
-      setCaflouTag('');
+      setCaflouCompanyId('');
       setDriveUrl('');
       setOpen(false);
       router.refresh();
@@ -63,8 +63,8 @@ export function NewCompanyForm() {
         <input required type="number" min={0} value={rate} onChange={(e) => setRate(e.target.value)} className="admin-input" />
       </AdminField>
 
-      <AdminField label="Štítek klienta v Caflou" hint="přesný název štítku, kterým jsou v Caflou označeny projekty této firmy">
-        <input value={caflouTag} onChange={(e) => setCaflouTag(e.target.value)} className="admin-input" />
+      <AdminField label="ID firmy v Caflou" hint="podle tohoto ID se z Caflou tahají projekty této firmy - lze doplnit i později">
+        <input value={caflouCompanyId} onChange={(e) => setCaflouCompanyId(e.target.value)} placeholder="např. 12345" className="admin-input" />
       </AdminField>
 
       <AdminField label="Odkaz na složku Google Disk">

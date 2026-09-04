@@ -1,4 +1,4 @@
-import type { DisplayProject } from '@/lib/caflou';
+import type { AdminDisplayProject, DisplayProject } from '@/lib/caflou';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -62,6 +62,58 @@ export function ProjectsTable({ projects, emptyText }: { projects: DisplayProjec
                 </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// Admin varianta prehledu projektu - napric VSEMI firmami najednou (na
+// rozdil od ProjectsTable vyse, ktera je scoped na jednu firmu pro klienta).
+// Sloupce odpovidaji tomu, co Caflou skutecne poskytuje pres vsechny firmy -
+// pocet normostran a datum odevzdani jsou jen u mistni objednavky a s
+// projekty v Caflou zatim nejsou spolehlive provazane (viz TODO u
+// createCaflouProject), takze tady zamerne nejsou.
+export function AdminProjectsTable({
+  projects,
+  emptyText,
+}: {
+  projects: AdminDisplayProject[];
+  emptyText: string;
+}) {
+  return (
+    <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] border-collapse">
+          <thead>
+            <tr className="bg-brand-purple text-white font-heading text-xs">
+              <th className="text-left px-4 py-3.5">Projekt</th>
+              <th className="text-left px-4 py-3.5">Firma</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum dokončení</th>
+            </tr>
+          </thead>
+          <tbody>
+            {projects.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-muted text-sm font-body">
+                  {emptyText}
+                </td>
+              </tr>
+            )}
+            {projects.map((p) => (
+              <tr key={`${p.companyName}-${p.id}`} className="border-t border-line hover:bg-[#FAF8FF]">
+                <td className="px-4 py-4 font-heading font-semibold text-sm text-ink">{p.name}</td>
+                <td className="px-4 py-4 text-sm font-heading text-muted">{p.companyName}</td>
+                <td className="px-4 py-4">
+                  <StatusPill finished={p.finished} statusName={p.statusName} />
+                </td>
+                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                  {p.finished ? formatDate(p.finishedAt) : '—'}
                 </td>
               </tr>
             ))}

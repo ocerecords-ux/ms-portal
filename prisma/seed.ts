@@ -33,7 +33,6 @@ async function main() {
       id: 'demo-ocerecords',
       name: 'Ocecords s.r.o.',
       ratePerPage: 180,
-      caflouTag: '', // doplnit az bude znamy presny nazev stitku v Caflou
       driveFolderUrl: '', // doplnit odkaz na slozku klienta na Google Disku
     },
   });

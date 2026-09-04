@@ -9,6 +9,7 @@ export function UserForm({ companyId }: { companyId: string }) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
+  const [caflouTag, setCaflouTag] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -22,7 +23,7 @@ export function UserForm({ companyId }: { companyId: string }) {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, password, companyId, role: 'CLIENT' }),
+        body: JSON.stringify({ email, name, password, companyId, role: 'CLIENT', caflouTag }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -32,6 +33,7 @@ export function UserForm({ companyId }: { companyId: string }) {
       setEmail('');
       setName('');
       setPassword('');
+      setCaflouTag('');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Účet se nepodařilo založit.');
@@ -56,6 +58,11 @@ export function UserForm({ companyId }: { companyId: string }) {
         <div className="flex-1 min-w-[160px]">
           <AdminField label="Počáteční heslo" required hint="klient si ho může později změnit">
             <input required type="text" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="admin-input" />
+          </AdminField>
+        </div>
+        <div className="flex-1 min-w-[160px]">
+          <AdminField label="Štítek v Caflou" hint="nepovinné - identifikuje tuto konkrétní osobu v Caflou">
+            <input value={caflouTag} onChange={(e) => setCaflouTag(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
       </div>

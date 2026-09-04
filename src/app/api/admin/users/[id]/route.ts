@@ -3,12 +3,10 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 
+// Zatim jen upravuje stitek dane osoby v Caflou (viz schema.prisma > User.caflouTag).
+// Rozsirit pripadne o dalsi editovatelna pole (jmeno, aktivni...) az bude potreba.
 const schema = z.object({
-  name: z.string().trim().min(1, 'Název firmy je povinný.'),
-  ratePerPage: z.coerce.number().int().min(0, 'Sazba musí být kladné číslo.'),
-  caflouCompanyId: z.string().trim().optional(),
-  driveFolderUrl: z.string().trim().optional(),
-  active: z.boolean().optional(),
+  caflouTag: z.string().trim().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -21,16 +19,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
 
-  const company = await prisma.company.update({
+  const user = await prisma.user.update({
     where: { id: params.id },
     data: {
-      name: parsed.data.name,
-      ratePerPage: parsed.data.ratePerPage,
-      caflouCompanyId: parsed.data.caflouCompanyId || null,
-      driveFolderUrl: parsed.data.driveFolderUrl || null,
-      ...(parsed.data.active !== undefined ? { active: parsed.data.active } : {}),
+      caflouTag: parsed.data.caflouTag || null,
     },
+    select: { id: true, email: true, name: true, role: true, caflouTag: true, createdAt: true },
   });
 
-  return NextResponse.json(company);
+  return NextResponse.json(user);
 }
