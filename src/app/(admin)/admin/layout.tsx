@@ -15,15 +15,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen bg-paper">
       <header className="bg-ink px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">
         <Link href="/admin" className="flex items-center gap-2.5 no-underline">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 w-auto shrink-0" />
           <div className="flex flex-col leading-none">
-            <span className="font-display text-brand-green font-semibold tracking-tight">
-              <span className="text-xl">MS</span>
-              <span className="text-sm ml-1">Portal</span>
+            <span className="font-display text-brand-green font-semibold tracking-tight uppercase text-xl">
+              MS Portal
             </span>
-            <span className="text-white/45 font-body text-[9px] uppercase tracking-wider mt-1">
-              by Mediaspace
+            <span className="flex items-center gap-1 text-white/45 font-body text-[9px] uppercase tracking-wider mt-1">
+              by
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-3.5 w-auto" />
             </span>
           </div>
           <span className="text-white/60 font-medium text-sm ml-4">Administrace</span>
