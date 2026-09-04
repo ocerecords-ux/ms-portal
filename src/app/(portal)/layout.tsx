@@ -14,7 +14,7 @@ export default async function PortalLayout({ children }: { children: React.React
   return (
     <div className="min-h-screen bg-paper">
       <Topbar userLabel={session.user.name || session.user.email} isAdmin={session.user.role === 'ADMIN'} />
-      <div className="max-w-5xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
     </div>
   );
 }
