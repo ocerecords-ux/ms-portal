@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   const [company, orderingUser] = await Promise.all([
     prisma.company.findUnique({ where: { id: companyId } }),
-    prisma.user.findUnique({ where: { id: userId }, select: { caflouTag: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { caflouTag: true, name: true } }),
   ]);
   if (!company) {
     return NextResponse.json({ error: 'Firma nenalezena.' }, { status: 404 });
@@ -86,13 +86,17 @@ export async function POST(req: NextRequest) {
   // 2) E-mail na objednavky@mediaspace.cz - best effort, nezablokuje objednavku.
   try {
     const result = await sendOrderNotificationEmail({
+      companyId,
       companyName: company.name,
       title,
       pageCount,
       priceEstimate,
       deadline: deadline ? deadline.toLocaleDateString('cs-CZ') : null,
+      preferredNarrator,
       note: note || null,
       attachmentUrl: attachment?.url ?? null,
+      attachmentName: attachment?.name ?? null,
+      requestedByName: orderingUser?.name ?? null,
       requestedByEmail: session.user.email,
     });
     if (result.sent) {
