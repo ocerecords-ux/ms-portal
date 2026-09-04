@@ -72,28 +72,48 @@ function buildInternalNotificationHtml(input: OrderEmailInput): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
 <style>
-  body { margin: 0; padding: 0; background: #FBFAFF; }
+  /* Sablona ma jeden pevny (brand) vzhled - schvalne NENI adaptivni na tmavy
+     rezim. Bez tohohle si nektere klienty (napr. Apple Mail) barvy "opravi"
+     samy a text/logo se stane necitelnym. */
+  :root { color-scheme: light only; supported-color-schemes: light; }
+  body { margin: 0 !important; padding: 0 !important; background: #FBFAFF !important; }
   table { border-collapse: collapse; width: 100%; }
-  .email-hero { background: linear-gradient(135deg, #7B55FF, #6B2AF0); padding: 28px 32px 24px; }
+  .email-hero { background: #6B2AF0 !important; background: linear-gradient(135deg, #7B55FF, #6B2AF0) !important; padding: 28px 32px 24px; }
   .email-hero .word { display: block; height: 30px; width: auto; }
-  .email-hero .tag { font-family: Helvetica, Arial, sans-serif; color: #C9FFDF; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 10px; }
-  .email-hero .bar { height: 3px; width: 46px; background: #1FDF67; border-radius: 2px; margin-top: 14px; }
-  .email-content { padding: 30px 32px 8px; font-family: Helvetica, Arial, sans-serif; color: #201A33; }
-  .email-content h2 { font-size: 19px; margin: 0 0 14px; font-weight: 600; color: #201A33; }
-  .badge { display: inline-block; background: #E9FFF2; color: #149E4B; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; margin-bottom: 12px; }
+  .email-hero .tag { font-family: Helvetica, Arial, sans-serif; color: #C9FFDF !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 10px; }
+  .email-hero .bar { height: 3px; width: 46px; background: #1FDF67 !important; border-radius: 2px; margin-top: 14px; }
+  .email-content { padding: 30px 32px 8px; font-family: Helvetica, Arial, sans-serif; background: #FFFFFF !important; color: #201A33 !important; }
+  .email-content h2 { font-size: 19px; margin: 0 0 14px; font-weight: 600; color: #201A33 !important; }
+  .badge { display: inline-block; background: #E9FFF2 !important; color: #149E4B !important; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; margin-bottom: 12px; }
   .field-table { border: 1px solid #E4DFFB; border-radius: 10px; overflow: hidden; margin: 4px 0 18px; }
   .field-table tr:not(:last-child) td { border-bottom: 1px solid #E4DFFB; }
-  .field-table td { padding: 11px 14px; font-size: 13.5px; vertical-align: top; }
-  .field-table td.label { color: #6E6580; width: 42%; background: #F6F6F6; font-weight: 500; }
-  .field-table td.value { color: #201A33; font-weight: 600; }
+  .field-table td { padding: 11px 14px; font-size: 13.5px; vertical-align: top; background: #FFFFFF !important; }
+  .field-table td.label { color: #6E6580 !important; width: 42%; background: #F6F6F6 !important; font-weight: 500; }
+  .field-table td.value { color: #201A33 !important; font-weight: 600; }
   .field-table td.value.regular { font-weight: 400; }
-  .field-table td.value a { color: #6B2AF0; text-decoration: none; font-weight: 600; }
-  .cta-row { padding: 4px 0 26px; }
-  .cta { display: inline-block; background: #201A33; color: #ffffff !important; text-decoration: none; font-size: 13.5px; font-weight: 600; padding: 11px 20px; border-radius: 8px; }
-  .email-footer { padding: 18px 32px 26px; border-top: 1px solid #E4DFFB; }
-  .email-footer p { margin: 0; font-size: 11.5px; color: #6E6580; }
-  .email-footer .brand { color: #6B2AF0; font-weight: 600; }
+  .field-table td.value a { color: #6B2AF0 !important; text-decoration: none; font-weight: 600; }
+  .cta-row { padding: 4px 0 26px; background: #FFFFFF !important; }
+  .cta { display: inline-block; background: #201A33 !important; color: #ffffff !important; text-decoration: none; font-size: 13.5px; font-weight: 600; padding: 11px 20px; border-radius: 8px; }
+  .email-footer { padding: 18px 32px 26px; border-top: 1px solid #E4DFFB; background: #FFFFFF !important; }
+  .email-footer p { margin: 0; font-size: 11.5px; color: #6E6580 !important; }
+  .email-footer .brand { color: #6B2AF0 !important; font-weight: 600; }
+  /* Nektere klienty (napr. Apple Mail) i pres color-scheme meta vyse pridaji
+     vlastni "prefers-color-scheme: dark" pravidla - tady jim schvalne
+     podstrcime STEJNE barvy jako u svetleho vzhledu, aby uz nemely co menit. */
+  @media (prefers-color-scheme: dark) {
+    body { background: #FBFAFF !important; }
+    .email-hero { background: #6B2AF0 !important; }
+    .email-hero .tag { color: #C9FFDF !important; }
+    .email-content, .field-table td, .cta-row, .email-footer { background: #FFFFFF !important; color: #201A33 !important; }
+    .field-table td.label { background: #F6F6F6 !important; color: #6E6580 !important; }
+    .field-table td.value { color: #201A33 !important; }
+    .field-table td.value a, .email-footer .brand { color: #6B2AF0 !important; }
+    .email-footer p { color: #6E6580 !important; }
+    .cta { background: #201A33 !important; color: #ffffff !important; }
+  }
 </style>
 </head>
 <body>
