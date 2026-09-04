@@ -29,9 +29,8 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center bg-paper px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <span className="font-heading font-extrabold text-3xl text-brand-purple tracking-wide">
-            MS <span className="text-brand-green">PORTAL</span>
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mediaspace-logo.gif" alt="MS Portal" className="h-20 w-20 mx-auto" />
         </div>
 
         <form

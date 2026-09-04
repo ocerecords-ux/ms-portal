@@ -17,8 +17,9 @@ export function Topbar({ userLabel, isAdmin }: { userLabel: string; isAdmin?: bo
 
   return (
     <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">
-      <Link href="/projekty" className="font-heading font-extrabold text-2xl sm:text-3xl text-brand-green tracking-wide no-underline">
-        MS PORTAL
+      <Link href="/projekty" className="flex items-center no-underline">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mediaspace-logo.gif" alt="MS Portal" className="h-9 sm:h-11 w-auto" />
       </Link>
 
       <nav className="flex items-center gap-6 sm:gap-10 flex-wrap font-heading text-sm font-medium">

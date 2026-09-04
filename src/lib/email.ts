@@ -19,7 +19,7 @@ function getTransport() {
 // kazdy odeslany e-mail o ~750 KB a Gmail takove e-maily oriznuje ("message
 // clipped"). Misto toho se hostuje jako staticky soubor na portalu a
 // natahuje se pres URL - standardni postup pro animovana loga v e-mailech.
-const LOGO_GIF_PATH = '/email/mediaspace-logo.gif';
+const LOGO_GIF_PATH = '/mediaspace-logo.gif';
 
 /** Escapuje hodnoty vkladane do HTML e-mailu (jde o data od klienta/uzivatele). */
 function escapeHtml(value: string): string {

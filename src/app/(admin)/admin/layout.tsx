@@ -14,8 +14,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen bg-paper">
       <header className="bg-ink px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">
-        <Link href="/admin" className="font-heading font-extrabold text-xl text-brand-green no-underline">
-          MS PORTAL <span className="text-white/60 font-medium text-sm ml-2">Administrace</span>
+        <Link href="/admin" className="flex items-center no-underline">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mediaspace-logo.gif" alt="MS Portal" className="h-8 w-auto" />
+          <span className="text-white/60 font-medium text-sm ml-3">Administrace</span>
         </Link>
         <div className="flex items-center gap-5">
           <Link href="/projekty" className="text-white/70 text-sm font-heading hover:text-white">
