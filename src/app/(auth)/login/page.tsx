@@ -28,9 +28,18 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-paper px-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
+        {/* Na bilem podkladu (bg-paper) musi byt nazev "MS Portal" jako
+            primarni, dobre citelny prvek (tmava barva ink) - samotne
+            animovane logo tu slouzi jako mensi znacka nad nazvem, ne jako
+            jediny identifikator (zpetna vazba 4. 9. 2026). */}
+        <div className="text-center mb-8 flex flex-col items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mediaspace-logo.gif" alt="MS Portal" className="h-20 w-20 mx-auto" />
+          <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-14 w-auto mb-3" />
+          <span className="font-display text-ink font-semibold tracking-tight">
+            <span className="text-3xl">MS</span>
+            <span className="text-lg ml-1">Portal</span>
+          </span>
+          <span className="text-muted font-body text-xs uppercase tracking-wider mt-1.5">by Mediaspace</span>
         </div>
 
         <form

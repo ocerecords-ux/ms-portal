@@ -17,19 +17,20 @@ export function Topbar({ userLabel, isAdmin }: { userLabel: string; isAdmin?: bo
 
   return (
     <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">
-      {/* Nazev "MS Portal" je hlavni, dobre citelny prvek brandingu - samotne
-          animovane logo (jen "MEDIASPACE" v zelenych pruzcich) je v malem
-          formatu spatne citelne, proto tu slouzi jen jako doplnujici "by
-          Mediaspace" tagline pod nazvem (zpetna vazba 4. 9. 2026). */}
-      <Link href="/projekty" className="flex items-center no-underline">
+      {/* Nazev "MS Portal" je hlavni, dobre citelny prvek brandingu; animovane
+          logo je vedle nej v citelne velikosti jako znacka, ne miniaturni
+          doplnek - "by Mediaspace" je psany text (zpetna vazba 4. 9. 2026:
+          predchozi verze s drobnym logem pusobila malo a neupraveně). */}
+      <Link href="/projekty" className="flex items-center gap-3 no-underline">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-10 sm:h-12 w-auto shrink-0" />
         <div className="flex flex-col leading-none">
-          <span className="font-display text-brand-green text-xl sm:text-2xl font-semibold tracking-tight">
-            MS Portal
+          <span className="font-display text-brand-green font-semibold tracking-tight">
+            <span className="text-2xl sm:text-3xl">MS</span>
+            <span className="text-base sm:text-lg ml-1">Portal</span>
           </span>
-          <span className="flex items-center gap-1.5 text-white/60 font-body text-[10px] sm:text-xs mt-1">
-            by
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-3 sm:h-3.5 w-auto" />
+          <span className="text-white/50 font-body text-[11px] sm:text-xs uppercase tracking-wider mt-1.5">
+            by Mediaspace
           </span>
         </div>
       </Link>
