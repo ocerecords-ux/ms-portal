@@ -2,12 +2,20 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { extractDriveFolderId } from '@/lib/googleDrive';
+import { getCaflouCompanyName } from '@/lib/caflou';
 import { DriveBrowser } from './DriveBrowser';
 
 export default async function NahravkyPage() {
   const session = await getServerSession(authOptions);
   const companyId = session!.user.companyId;
   const company = companyId ? await prisma.company.findUnique({ where: { id: companyId } }) : null;
+
+  // Presny obchodni nazev (vc. s.r.o./LTD apod.) tahame primo z Caflou - je to
+  // zdroj pravdy pro firemni udaje. Company.name je jen zalozni hodnota pro
+  // pripad, ze firma jeste nema ID v Caflou vyplnene, nebo kdyz Caflou zrovna
+  // neodpovi.
+  const displayName =
+    (company?.caflouCompanyId ? await getCaflouCompanyName(company.caflouCompanyId) : null) ?? company?.name ?? '';
 
   const folderId = company?.driveFolderUrl ? extractDriveFolderId(company.driveFolderUrl) : null;
   const driveConfigured = Boolean(
@@ -22,11 +30,11 @@ export default async function NahravkyPage() {
       </div>
 
       {company?.driveFolderUrl && folderId && driveConfigured ? (
-        <DriveBrowser initialFolderId={folderId} rootName={company.name} />
+        <DriveBrowser initialFolderId={folderId} rootName={displayName} />
       ) : company?.driveFolderUrl ? (
         <div className="bg-white rounded-card border border-line p-8 flex flex-col items-start gap-4 max-w-xl shadow-sm">
           <p className="text-sm font-body text-muted m-0">
-            Složka firmy {company.name} na Google Disku obsahuje všechny vaše nahrávky. Otevře se v nové záložce.
+            Složka firmy {displayName} na Google Disku obsahuje všechny vaše nahrávky. Otevře se v nové záložce.
           </p>
           <a
             href={company.driveFolderUrl}

@@ -61,6 +61,24 @@ export async function caflouFetch(
   return { ok: res.ok, status: res.status, body, raw };
 }
 
+/**
+ * Nazev firmy primo z Caflou (GET /companies/{id}) - Caflou je zdroj pravdy
+ * pro presny/plny obchodni nazev vc. pripony (s.r.o., a.s., LTD...), zatimco
+ * Company.name v portalu byval jen orientacni nazev zadany rucne v adminu.
+ * Pouziva se pro klientske zobrazeni (napr. sekce Nahravky); pri chybe se
+ * volajici strana vraci k Company.name jako zalozni hodnote.
+ */
+export async function getCaflouCompanyName(caflouCompanyId: string): Promise<string | null> {
+  try {
+    const result = await caflouFetch(`/companies/${encodeURIComponent(caflouCompanyId)}`);
+    if (!result.ok || !result.body || typeof result.body !== 'object') return null;
+    const name = (result.body as { name?: unknown }).name;
+    return typeof name === 'string' && name.trim() ? name.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Syrovy seznam projektu dane firmy z Caflou - pro admin diagnostiku i pro pozdejsi mapovani. */
 export async function listCaflouProjectsForCompany(caflouCompanyId: string): Promise<CaflouResult> {
   const params = new URLSearchParams();
