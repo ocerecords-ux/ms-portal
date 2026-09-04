@@ -184,7 +184,7 @@ export async function sendOrderNotificationEmail(input: OrderEmailInput) {
   await transport.sendMail({
     from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
     to,
-    subject: `Nová objednávka – ${input.companyName} – ${input.title}`,
+    subject: `Objednávka audioknihy – ${input.title}`,
     text: buildInternalNotificationText(input),
     html: buildInternalNotificationHtml(input),
   });
