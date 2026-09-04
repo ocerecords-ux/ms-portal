@@ -28,18 +28,14 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-paper px-4">
       <div className="w-full max-w-sm">
-        {/* Na bilem podkladu (bg-paper): "MS PORTAL" jednotna velikost,
-            verzalky, tmava barva (ink); misto textu "Mediaspace" v tagline
-            je animovane logo (zpetna vazba 4. 9. 2026). */}
-        <div className="text-center mb-8 flex flex-col items-center">
-          <span className="font-display text-ink font-semibold tracking-tight uppercase text-3xl">
-            MS Portal
-          </span>
-          <span className="flex items-center gap-1.5 text-muted font-body text-xs uppercase tracking-wider mt-1.5">
-            by
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-5 w-auto" />
-          </span>
+        {/* Na bilem podkladu (bg-paper) je "by" bile nečitelne, proto tu misto
+            bile pouzivame muted/ink - jinak stejny jednoradkovy branding jako
+            v topbaru a administraci (4. 9. 2026). */}
+        <div className="flex items-center justify-center gap-2.5 mb-8">
+          <span className="font-body text-ink font-semibold text-2xl sm:text-3xl">MS portal</span>
+          <span className="font-body text-muted font-medium text-2xl sm:text-3xl">by</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-7 sm:h-8 w-auto" />
         </div>
 
         <form

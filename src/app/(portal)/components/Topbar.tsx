@@ -17,19 +17,14 @@ export function Topbar({ userLabel, isAdmin }: { userLabel: string; isAdmin?: bo
 
   return (
     <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">
-      {/* Nazev "MS PORTAL" je jednotna velikost, verzalky; misto textu
-          "Mediaspace" v tagline je animovane logo (zpetna vazba 4. 9. 2026). */}
-      <Link href="/projekty" className="flex items-center gap-3 no-underline">
-        <div className="flex flex-col leading-none">
-          <span className="font-display text-brand-green font-semibold tracking-tight uppercase text-2xl sm:text-3xl">
-            MS Portal
-          </span>
-          <span className="flex items-center gap-1.5 text-white/50 font-body text-[11px] sm:text-xs uppercase tracking-wider mt-1.5">
-            by
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-4 sm:h-5 w-auto" />
-          </span>
-        </div>
+      {/* Jednoradkovy branding "MS portal by [logo]" podle referencniho
+          mockupu uzivatele (4. 9. 2026) - MS portal zelene, by bile,
+          animovane logo Mediaspace na konci radku, vse ve stejne vysce. */}
+      <Link href="/projekty" className="flex items-center gap-2.5 no-underline">
+        <span className="font-body text-brand-green font-semibold text-2xl sm:text-3xl">MS portal</span>
+        <span className="font-body text-white/85 font-medium text-2xl sm:text-3xl">by</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-7 sm:h-8 w-auto" />
       </Link>
 
       <nav className="flex items-center gap-6 sm:gap-10 flex-wrap font-heading text-sm font-medium">
