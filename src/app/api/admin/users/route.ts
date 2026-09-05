@@ -43,27 +43,35 @@ const schema = z
     path: ['companyId'],
   });
 
+// Oprava 12. 9. 2026: formData.get(klic) vraci pro nepritomny klic null, ne
+// undefined - ale zod .optional() (bez .nullable()) povoluje jen undefined.
+// NewUserForm posila caflouTag/Herec-pole (birthNumber, ic, dic, bankAccount,
+// adresa...) jen podminene (podle role - viz isClient/isHerec tamtez), takze
+// pro ostatni role tyhle klice ve FormData vubec nejsou. Bez has() kontroly
+// tak zod padal na "Expected string, received null" a zalozeni uctu selhalo
+// uplne (napr. u Mediaspace uctu, ktery caflouTag ani Herec-pole neposila
+// vubec). Stejny vzor uz spravne pouziva PATCH /api/admin/users/[id].
 function readFormData(formData: FormData) {
-  const studioLocations = formData.getAll('studioLocations').map(String);
+  const has = (key: string) => formData.has(key);
   return {
     email: formData.get('email'),
-    name: formData.get('name'),
-    phone: formData.get('phone'),
+    name: has('name') ? formData.get('name') : undefined,
+    phone: has('phone') ? formData.get('phone') : undefined,
     password: formData.get('password'),
     companyId: formData.get('companyId') || null,
     role: formData.get('role'),
-    caflouTag: formData.get('caflouTag'),
-    birthDate: formData.get('birthDate'),
-    studioLocations,
-    birthNumber: formData.get('birthNumber'),
-    ic: formData.get('ic'),
-    dic: formData.get('dic'),
-    vatPayer: formData.get('vatPayer') === 'true',
-    bankAccount: formData.get('bankAccount'),
-    addressStreet: formData.get('addressStreet'),
-    addressCity: formData.get('addressCity'),
-    addressZip: formData.get('addressZip'),
-    addressCountry: formData.get('addressCountry'),
+    caflouTag: has('caflouTag') ? formData.get('caflouTag') : undefined,
+    birthDate: has('birthDate') ? formData.get('birthDate') : undefined,
+    studioLocations: has('studioLocations') ? formData.getAll('studioLocations').map(String) : undefined,
+    birthNumber: has('birthNumber') ? formData.get('birthNumber') : undefined,
+    ic: has('ic') ? formData.get('ic') : undefined,
+    dic: has('dic') ? formData.get('dic') : undefined,
+    vatPayer: has('vatPayer') ? formData.get('vatPayer') === 'true' : undefined,
+    bankAccount: has('bankAccount') ? formData.get('bankAccount') : undefined,
+    addressStreet: has('addressStreet') ? formData.get('addressStreet') : undefined,
+    addressCity: has('addressCity') ? formData.get('addressCity') : undefined,
+    addressZip: has('addressZip') ? formData.get('addressZip') : undefined,
+    addressCountry: has('addressCountry') ? formData.get('addressCountry') : undefined,
   };
 }
 
