@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Role } from '@prisma/client';
 import { AdminField } from '../NewCompanyForm';
+import { PhotoDropzone } from './PhotoDropzone';
 import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany, HEREC_STUDIOS } from '@/lib/roles';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
@@ -142,22 +143,21 @@ export function NewUserForm({
     <form onSubmit={handleSubmit} className="bg-white border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
       <h2 className="font-display text-xl text-ink m-0">Nový uživatel</h2>
 
+      {/* Poradi poli (zadani 12. 9. 2026): Jmeno + Fotka (drag & drop) prvni,
+          pak Role (s Heslem a Firmou), az pak E-mail + Telefon. */}
       <div className="flex gap-4 flex-wrap">
-        <div className="flex-1 min-w-[200px]">
-          <AdminField label="E-mail" required>
-            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="admin-input" />
-          </AdminField>
-        </div>
         <div className="flex-1 min-w-[160px]">
           <AdminField label="Jméno">
             <input value={name} onChange={(e) => setName(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
-        <div className="flex-1 min-w-[160px]">
-          <AdminField label="Telefon">
-            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="admin-input" />
-          </AdminField>
-        </div>
+        {isMediaspace && (
+          <div className="flex-[2] min-w-[240px]">
+            <AdminField label="Fotka">
+              <PhotoDropzone file={photo} onChange={setPhoto} />
+            </AdminField>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-4 flex-wrap">
@@ -204,16 +204,24 @@ export function NewUserForm({
         )}
       </div>
 
+      <div className="flex gap-4 flex-wrap">
+        <div className="flex-1 min-w-[200px]">
+          <AdminField label="E-mail" required>
+            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="admin-input" />
+          </AdminField>
+        </div>
+        <div className="flex-1 min-w-[160px]">
+          <AdminField label="Telefon">
+            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="admin-input" />
+          </AdminField>
+        </div>
+      </div>
+
       {isMediaspace && (
-        <div className="flex gap-4 flex-wrap items-end">
+        <div className="flex gap-4 flex-wrap">
           <div className="flex-1 min-w-[160px]">
             <AdminField label="Datum narození">
               <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="admin-input" />
-            </AdminField>
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <AdminField label="Fotka">
-              <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] || null)} className="admin-input" />
             </AdminField>
           </div>
         </div>
