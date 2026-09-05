@@ -61,7 +61,10 @@ function readFormData(formData: FormData) {
   };
 }
 
+// Oprava 12. 9. 2026: viz stejna zmena a duvod u /api/admin/users (POST) -
+// bez try/catch skoncila nezachycena vyjimka jako holy 500 bez JSON tela.
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+ try {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
@@ -154,4 +157,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   });
 
   return NextResponse.json(user);
+ } catch (err) {
+  console.error('PATCH /api/admin/users/[id] selhalo:', err);
+  const message = err instanceof Error ? err.message : 'Neznámá chyba.';
+  return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+ }
 }

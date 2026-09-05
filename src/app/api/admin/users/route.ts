@@ -67,67 +67,80 @@ function readFormData(formData: FormData) {
   };
 }
 
+// Oprava 12. 9. 2026: cela routa byla drive bez try/catch - jakakoli
+// nezachycena vyjimka (napr. drivejsi pad pri nahravani fotky, viz
+// lib/storage.ts) skoncila jako holy 500 bez JSON tela, takze frontend
+// (NewUserForm) mohl ukazat jen obecnou hlasku "Účet se nepodařilo založit."
+// bez jakekoli stopy, co se skutecne pokazilo. Ted se kazda neocekavana
+// chyba zaloguje na server (dohledatelne v logu deploymentu) a klientovi se
+// vrati aspon strucny popis mista chyby.
 export async function POST(req: NextRequest) {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  try {
+    const session = await requireAdmin();
+    if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
-  const formData = await req.formData();
-  const parsed = schema.safeParse(readFormData(formData));
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+    const formData = await req.formData();
+    const parsed = schema.safeParse(readFormData(formData));
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+    }
+    const data = parsed.data;
+
+    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    if (existing) {
+      return NextResponse.json({ error: 'Uživatel s tímto e-mailem už existuje.' }, { status: 409 });
+    }
+
+    const passwordHash = await bcrypt.hash(data.password, 10);
+
+    let photoUrl: string | null = null;
+    const photo = formData.get('photo');
+    if (INTERNAL_ROLES.includes(data.role) && photo instanceof File && photo.size > 0) {
+      photoUrl = await uploadUserPhoto(photo);
+    }
+
+    const code = await nextCode(codePrefixForRole(data.role));
+
+    const user = await prisma.user.create({
+      data: {
+        code,
+        email: data.email,
+        name: data.name || null,
+        phone: data.phone || null,
+        passwordHash,
+        role: data.role,
+        companyId: COMPANY_REQUIRED_ROLES.includes(data.role) ? data.companyId || null : null,
+        // Stitek v Caflou je od 8. 9. 2026 jen a pouze u Klientu (zadani) - u
+        // ostatnich roli se neuklada, i kdyby ho formular nejak poslal.
+        caflouTag: data.role === 'CLIENT' ? data.caflouTag || null : null,
+        ...(INTERNAL_ROLES.includes(data.role)
+          ? {
+              birthDate: data.birthDate ? new Date(data.birthDate) : null,
+              photoUrl,
+            }
+          : {}),
+        ...(data.role === 'HEREC'
+          ? {
+              studioLocations: data.studioLocations || [],
+              birthNumber: data.birthNumber || null,
+              ic: data.ic || null,
+              dic: data.dic || null,
+              vatPayer: data.vatPayer ?? false,
+              bankAccount: data.bankAccount || null,
+              addressStreet: data.addressStreet || null,
+              addressCity: data.addressCity || null,
+              addressZip: data.addressZip || null,
+              addressCountry: data.addressCountry || null,
+            }
+          : {}),
+      },
+      select: { id: true, code: true, email: true, name: true, phone: true, role: true, companyId: true, caflouTag: true, createdAt: true },
+    });
+
+    return NextResponse.json(user, { status: 201 });
+  } catch (err) {
+    console.error('POST /api/admin/users selhalo:', err);
+    const message = err instanceof Error ? err.message : 'Neznámá chyba.';
+    return NextResponse.json({ error: `Účet se nepodařilo založit (${message}).` }, { status: 500 });
   }
-  const data = parsed.data;
-
-  const existing = await prisma.user.findUnique({ where: { email: data.email } });
-  if (existing) {
-    return NextResponse.json({ error: 'Uživatel s tímto e-mailem už existuje.' }, { status: 409 });
-  }
-
-  const passwordHash = await bcrypt.hash(data.password, 10);
-
-  let photoUrl: string | null = null;
-  const photo = formData.get('photo');
-  if (INTERNAL_ROLES.includes(data.role) && photo instanceof File && photo.size > 0) {
-    photoUrl = await uploadUserPhoto(photo);
-  }
-
-  const code = await nextCode(codePrefixForRole(data.role));
-
-  const user = await prisma.user.create({
-    data: {
-      code,
-      email: data.email,
-      name: data.name || null,
-      phone: data.phone || null,
-      passwordHash,
-      role: data.role,
-      companyId: COMPANY_REQUIRED_ROLES.includes(data.role) ? data.companyId || null : null,
-      // Stitek v Caflou je od 8. 9. 2026 jen a pouze u Klientu (zadani) - u
-      // ostatnich roli se neuklada, i kdyby ho formular nejak poslal.
-      caflouTag: data.role === 'CLIENT' ? data.caflouTag || null : null,
-      ...(INTERNAL_ROLES.includes(data.role)
-        ? {
-            birthDate: data.birthDate ? new Date(data.birthDate) : null,
-            photoUrl,
-          }
-        : {}),
-      ...(data.role === 'HEREC'
-        ? {
-            studioLocations: data.studioLocations || [],
-            birthNumber: data.birthNumber || null,
-            ic: data.ic || null,
-            dic: data.dic || null,
-            vatPayer: data.vatPayer ?? false,
-            bankAccount: data.bankAccount || null,
-            addressStreet: data.addressStreet || null,
-            addressCity: data.addressCity || null,
-            addressZip: data.addressZip || null,
-            addressCountry: data.addressCountry || null,
-          }
-        : {}),
-    },
-    select: { id: true, code: true, email: true, name: true, phone: true, role: true, companyId: true, caflouTag: true, createdAt: true },
-  });
-
-  return NextResponse.json(user, { status: 201 });
 }

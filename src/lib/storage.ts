@@ -48,24 +48,37 @@ export async function uploadOrderAttachment(file: File, companyId: string): Prom
  * Ulozi fotku uzivatele (sekce Mediaspace v adminu, zadani 5. 9. 2026) -
  * stejny princip jako uploadOrderAttachment: pokud uloziste jeste neni
  * nakonfigurovane, nahravani se jen tise preskoci a ucet se ulozi bez fotky.
+ *
+ * Oprava 12. 9. 2026: samotne odeslani do S3/R2 (PutObjectCommand) drive
+ * mohlo pri jakemkoli problemu (spatne credentials, sit, prava k bucketu)
+ * shodit celou API routu nezachycenou vyjimkou - zalozeni uctu pak selhalo
+ * s obecnou hlaskou "Účet se nepodařilo založit.", i kdyz s fotkou samotnou
+ * nemelo zadani nic spolecneho. Nahravani fotky uz proto nikdy nesmi shodit
+ * zalozeni/upravu uctu - pri chybe se jen preskoci (fotku pak jde doplnit
+ * pozdeji editaci) a chyba se zaloguje na server, aby sla dohledat.
  */
 export async function uploadUserPhoto(file: File): Promise<string | null> {
   const client = getClient();
   const bucket = process.env.S3_BUCKET;
   if (!client || !bucket) return null;
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const key = `uzivatele/${randomUUID()}-${file.name}`;
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const key = `uzivatele/${randomUUID()}-${file.name}`;
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: buffer,
-      ContentType: file.type || 'application/octet-stream',
-    }),
-  );
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: file.type || 'application/octet-stream',
+      }),
+    );
 
-  const endpoint = process.env.S3_ENDPOINT;
-  return endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
+    const endpoint = process.env.S3_ENDPOINT;
+    return endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
+  } catch (err) {
+    console.error('uploadUserPhoto selhalo, pokracuji bez fotky:', err);
+    return null;
+  }
 }
