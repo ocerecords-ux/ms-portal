@@ -33,7 +33,10 @@ const schema = z
     dic: z.string().trim().optional(),
     vatPayer: z.boolean().optional(),
     bankAccount: z.string().trim().optional(),
-    address: z.string().trim().optional(),
+    addressStreet: z.string().trim().optional(),
+    addressCity: z.string().trim().optional(),
+    addressZip: z.string().trim().optional(),
+    addressCountry: z.string().trim().optional(),
   })
   .refine((data) => !COMPANY_REQUIRED_ROLES.includes(data.role) || !!data.companyId, {
     message: 'Pro tuto roli musíte vybrat firmu.',
@@ -57,7 +60,10 @@ function readFormData(formData: FormData) {
     dic: formData.get('dic'),
     vatPayer: formData.get('vatPayer') === 'true',
     bankAccount: formData.get('bankAccount'),
-    address: formData.get('address'),
+    addressStreet: formData.get('addressStreet'),
+    addressCity: formData.get('addressCity'),
+    addressZip: formData.get('addressZip'),
+    addressCountry: formData.get('addressCountry'),
   };
 }
 
@@ -96,7 +102,9 @@ export async function POST(req: NextRequest) {
       passwordHash,
       role: data.role,
       companyId: COMPANY_REQUIRED_ROLES.includes(data.role) ? data.companyId || null : null,
-      caflouTag: data.caflouTag || null,
+      // Stitek v Caflou je od 8. 9. 2026 jen a pouze u Klientu (zadani) - u
+      // ostatnich roli se neuklada, i kdyby ho formular nejak poslal.
+      caflouTag: data.role === 'CLIENT' ? data.caflouTag || null : null,
       ...(INTERNAL_ROLES.includes(data.role)
         ? {
             birthDate: data.birthDate ? new Date(data.birthDate) : null,
@@ -111,7 +119,10 @@ export async function POST(req: NextRequest) {
             dic: data.dic || null,
             vatPayer: data.vatPayer ?? false,
             bankAccount: data.bankAccount || null,
-            address: data.address || null,
+            addressStreet: data.addressStreet || null,
+            addressCity: data.addressCity || null,
+            addressZip: data.addressZip || null,
+            addressCountry: data.addressCountry || null,
           }
         : {}),
     },

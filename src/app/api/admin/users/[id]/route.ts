@@ -29,7 +29,10 @@ const schema = z.object({
   dic: z.string().trim().optional(),
   vatPayer: z.boolean().optional(),
   bankAccount: z.string().trim().optional(),
-  address: z.string().trim().optional(),
+  addressStreet: z.string().trim().optional(),
+  addressCity: z.string().trim().optional(),
+  addressZip: z.string().trim().optional(),
+  addressCountry: z.string().trim().optional(),
 });
 
 function readFormData(formData: FormData) {
@@ -51,7 +54,10 @@ function readFormData(formData: FormData) {
     dic: has('dic') ? formData.get('dic') : undefined,
     vatPayer: has('vatPayer') ? formData.get('vatPayer') === 'true' : undefined,
     bankAccount: has('bankAccount') ? formData.get('bankAccount') : undefined,
-    address: has('address') ? formData.get('address') : undefined,
+    addressStreet: has('addressStreet') ? formData.get('addressStreet') : undefined,
+    addressCity: has('addressCity') ? formData.get('addressCity') : undefined,
+    addressZip: has('addressZip') ? formData.get('addressZip') : undefined,
+    addressCountry: has('addressCountry') ? formData.get('addressCountry') : undefined,
   };
 }
 
@@ -104,7 +110,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.companyId !== undefined
         ? { companyId: COMPANY_REQUIRED_ROLES.includes(nextRole) ? data.companyId || null : null }
         : {}),
-      ...(data.caflouTag !== undefined ? { caflouTag: data.caflouTag || null } : {}),
+      // Stitek v Caflou je od 8. 9. 2026 jen a pouze u Klientu (zadani) - u
+      // jine (nebo nove zvolene) role se natvrdo vynuluje, i kdyby formular
+      // nejakou starou hodnotu poslal.
+      ...(nextRole === 'CLIENT'
+        ? data.caflouTag !== undefined
+          ? { caflouTag: data.caflouTag || null }
+          : {}
+        : { caflouTag: null }),
       ...(data.active !== undefined ? { active: data.active } : {}),
       ...(passwordHash ? { passwordHash } : {}),
       ...(INTERNAL_ROLES.includes(nextRole) && data.birthDate !== undefined
@@ -119,7 +132,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             ...(data.dic !== undefined ? { dic: data.dic || null } : {}),
             ...(data.vatPayer !== undefined ? { vatPayer: data.vatPayer } : {}),
             ...(data.bankAccount !== undefined ? { bankAccount: data.bankAccount || null } : {}),
-            ...(data.address !== undefined ? { address: data.address || null } : {}),
+            ...(data.addressStreet !== undefined ? { addressStreet: data.addressStreet || null } : {}),
+            ...(data.addressCity !== undefined ? { addressCity: data.addressCity || null } : {}),
+            ...(data.addressZip !== undefined ? { addressZip: data.addressZip || null } : {}),
+            ...(data.addressCountry !== undefined ? { addressCountry: data.addressCountry || null } : {}),
           }
         : {}),
     },

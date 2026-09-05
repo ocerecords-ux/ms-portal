@@ -44,7 +44,10 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           dic: user.dic,
           vatPayer: user.vatPayer,
           bankAccount: user.bankAccount,
-          address: user.address,
+          addressStreet: user.addressStreet,
+          addressCity: user.addressCity,
+          addressZip: user.addressZip,
+          addressCountry: user.addressCountry,
         }}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
       />

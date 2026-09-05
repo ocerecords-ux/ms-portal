@@ -25,7 +25,10 @@ type EditableUser = {
   dic: string | null;
   vatPayer: boolean;
   bankAccount: string | null;
-  address: string | null;
+  addressStreet: string | null;
+  addressCity: string | null;
+  addressZip: string | null;
+  addressCountry: string | null;
 };
 
 // Editace VSECH udaju existujiciho uzivatele (email, jmeno, telefon, role,
@@ -61,7 +64,10 @@ export function UserEditForm({
   const [dic, setDic] = useState(user.dic ?? '');
   const [vatPayer, setVatPayer] = useState(user.vatPayer);
   const [bankAccount, setBankAccount] = useState(user.bankAccount ?? '');
-  const [address, setAddress] = useState(user.address ?? '');
+  const [addressStreet, setAddressStreet] = useState(user.addressStreet ?? '');
+  const [addressCity, setAddressCity] = useState(user.addressCity ?? '');
+  const [addressZip, setAddressZip] = useState(user.addressZip ?? '');
+  const [addressCountry, setAddressCountry] = useState(user.addressCountry ?? '');
 
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -70,6 +76,8 @@ export function UserEditForm({
   const needsCompany = roleRequiresCompany(role);
   const isMediaspace = INTERNAL_ROLES.includes(role);
   const isHerec = role === 'HEREC';
+  // Stitek v Caflou je od 8. 9. 2026 jen a pouze u Klientu (zadani).
+  const isClient = role === 'CLIENT';
 
   function toggleStudio(studio: string) {
     setStudioLocations((prev) => (prev.includes(studio) ? prev.filter((s) => s !== studio) : [...prev, studio]));
@@ -87,7 +95,7 @@ export function UserEditForm({
       fd.set('phone', phone);
       fd.set('role', role);
       fd.set('companyId', needsCompany ? companyId || '' : '');
-      fd.set('caflouTag', caflouTag);
+      if (isClient) fd.set('caflouTag', caflouTag);
       fd.set('active', String(active));
       if (newPassword) fd.set('password', newPassword);
       if (isMediaspace) {
@@ -102,7 +110,10 @@ export function UserEditForm({
         fd.set('dic', dic);
         fd.set('vatPayer', String(vatPayer));
         fd.set('bankAccount', bankAccount);
-        fd.set('address', address);
+        fd.set('addressStreet', addressStreet);
+        fd.set('addressCity', addressCity);
+        fd.set('addressZip', addressZip);
+        fd.set('addressCountry', addressCountry);
       }
 
       const res = await fetch(`/api/admin/users/${user.id}`, { method: 'PATCH', body: fd });
@@ -240,9 +251,27 @@ export function UserEditForm({
                 <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <AdminField label="Adresa">
-                <input value={address} onChange={(e) => setAddress(e.target.value)} className="admin-input" />
+          </div>
+
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-[2] min-w-[220px]">
+              <AdminField label="Ulice č.p.">
+                <input value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[160px]">
+              <AdminField label="Město">
+                <input value={addressCity} onChange={(e) => setAddressCity(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[120px]">
+              <AdminField label="PSČ">
+                <input value={addressZip} onChange={(e) => setAddressZip(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <AdminField label="Země">
+                <input value={addressCountry} onChange={(e) => setAddressCountry(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
           </div>
@@ -250,11 +279,13 @@ export function UserEditForm({
       )}
 
       <div className="flex gap-4 flex-wrap">
-        <div className="flex-1 min-w-[160px]">
-          <AdminField label="Štítek v Caflou" hint="nepovinné">
-            <input value={caflouTag} onChange={(e) => setCaflouTag(e.target.value)} className="admin-input" />
-          </AdminField>
-        </div>
+        {isClient && (
+          <div className="flex-1 min-w-[160px]">
+            <AdminField label="Štítek v Caflou" hint="nepovinné">
+              <input value={caflouTag} onChange={(e) => setCaflouTag(e.target.value)} className="admin-input" />
+            </AdminField>
+          </div>
+        )}
         <div className="flex-1 min-w-[160px]">
           <AdminField label="Nové heslo" hint="nechte prázdné, pokud nechcete měnit">
             <input

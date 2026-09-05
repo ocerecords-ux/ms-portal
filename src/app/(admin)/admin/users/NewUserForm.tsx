@@ -44,7 +44,10 @@ export function NewUserForm({
   const [dic, setDic] = useState('');
   const [vatPayer, setVatPayer] = useState(false);
   const [bankAccount, setBankAccount] = useState('');
-  const [address, setAddress] = useState('');
+  const [addressStreet, setAddressStreet] = useState('');
+  const [addressCity, setAddressCity] = useState('');
+  const [addressZip, setAddressZip] = useState('');
+  const [addressCountry, setAddressCountry] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<string | null>(null);
@@ -53,6 +56,8 @@ export function NewUserForm({
   const needsCompany = roleRequiresCompany(role);
   const isMediaspace = INTERNAL_ROLES.includes(role);
   const isHerec = role === 'HEREC';
+  // Stitek v Caflou je od 8. 9. 2026 jen a pouze u Klientu (zadani).
+  const isClient = role === 'CLIENT';
 
   function toggleStudio(studio: string) {
     setStudioLocations((prev) => (prev.includes(studio) ? prev.filter((s) => s !== studio) : [...prev, studio]));
@@ -71,7 +76,7 @@ export function NewUserForm({
       fd.set('password', password);
       fd.set('role', role);
       fd.set('companyId', needsCompany ? companyId : '');
-      fd.set('caflouTag', caflouTag);
+      if (isClient) fd.set('caflouTag', caflouTag);
       if (isMediaspace) {
         fd.set('birthDate', birthDate);
         if (photo) fd.set('photo', photo);
@@ -83,7 +88,10 @@ export function NewUserForm({
         fd.set('dic', dic);
         fd.set('vatPayer', String(vatPayer));
         fd.set('bankAccount', bankAccount);
-        fd.set('address', address);
+        fd.set('addressStreet', addressStreet);
+        fd.set('addressCity', addressCity);
+        fd.set('addressZip', addressZip);
+        fd.set('addressCountry', addressCountry);
       }
 
       const res = await fetch('/api/admin/users', { method: 'POST', body: fd });
@@ -105,7 +113,10 @@ export function NewUserForm({
       setDic('');
       setVatPayer(false);
       setBankAccount('');
-      setAddress('');
+      setAddressStreet('');
+      setAddressCity('');
+      setAddressZip('');
+      setAddressCountry('');
       setRole(defaultRole || 'CLIENT');
       setCompanyId(defaultCompanyId || '');
       router.refresh();
@@ -250,18 +261,38 @@ export function NewUserForm({
                 <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <AdminField label="Adresa">
-                <input value={address} onChange={(e) => setAddress(e.target.value)} className="admin-input" />
+          </div>
+
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-[2] min-w-[220px]">
+              <AdminField label="Ulice č.p.">
+                <input value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[160px]">
+              <AdminField label="Město">
+                <input value={addressCity} onChange={(e) => setAddressCity(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[120px]">
+              <AdminField label="PSČ">
+                <input value={addressZip} onChange={(e) => setAddressZip(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <AdminField label="Země">
+                <input value={addressCountry} onChange={(e) => setAddressCountry(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
           </div>
         </>
       )}
 
-      <AdminField label="Štítek v Caflou" hint="nepovinné - identifikuje tuto konkrétní osobu v Caflou">
-        <input value={caflouTag} onChange={(e) => setCaflouTag(e.target.value)} className="admin-input" />
-      </AdminField>
+      {isClient && (
+        <AdminField label="Štítek v Caflou" hint="nepovinné - identifikuje tuto konkrétní osobu v Caflou">
+          <input value={caflouTag} onChange={(e) => setCaflouTag(e.target.value)} className="admin-input" />
+        </AdminField>
+      )}
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
       {created && <p className="text-status-done text-sm">{created}</p>}

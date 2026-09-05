@@ -106,7 +106,13 @@ model User {
   dic             String?
   vatPayer        Boolean   @default(false) // platce DPH
   bankAccount     String?
-  address         String?
+  // Adresa rozdelena na samostatna pole (zadani 8. 9. 2026: "vice poli na
+  // adresu") - misto jednoho pole address, ktere ma pro srovnani Dodavatel
+  // (Company) u Firmy.
+  addressStreet   String?   // ulice a cislo popisne
+  addressCity     String?   // mesto
+  addressZip      String?   // PSC
+  addressCountry  String?   // zeme
 
   orders Order[] @relation("OrderCreatedBy")
 }
