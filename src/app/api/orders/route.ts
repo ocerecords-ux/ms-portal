@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { calculatePrice } from '@/lib/price';
 import { uploadOrderAttachment } from '@/lib/storage';
-import { sendOrderNotificationEmail } from '@/lib/email';
+import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/email';
 import { createCaflouProject } from '@/lib/caflou';
 
 // Druh objednavky (zadani 12. 9. 2026 - viz OrderKind ve schema.prisma).
@@ -120,6 +120,26 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error('Odeslání e-mailu o objednávce selhalo:', err);
+  }
+
+  // 2b) Potvrzeni klientovi (zadani 5. 9. 2026) - opet best effort, aby
+  //     neodeslany e-mail nikdy neshodil samotnou objednavku.
+  try {
+    await sendOrderConfirmationEmail({
+      to: session.user.email,
+      name: orderingUser?.name ?? null,
+      isAudiobook,
+      title,
+      companyName: company.name,
+      pageCount,
+      priceEstimate,
+      deadline: deadline ? deadline.toLocaleDateString('cs-CZ') : null,
+      preferredNarrator,
+      note: note || null,
+      attachmentName: attachment?.name ?? null,
+    });
+  } catch (err) {
+    console.error('Odeslání potvrzení objednávky klientovi selhalo:', err);
   }
 
   // 3) Zalozeni projektu v Caflou (nazev, stitek OSOBY co objednala, pocet

@@ -22,12 +22,14 @@ export function ProjectMetaForm({
   canEdit,
   managers,
   companyDriveFolderUrl,
+  caflouPriority,
   initial,
 }: {
   caflouProjectId: string;
   canEdit: boolean;
   managers: { id: string; label: string }[];
   companyDriveFolderUrl: string | null;
+  caflouPriority: string | null;
   initial: Initial;
 }) {
   const router = useRouter();
@@ -168,6 +170,11 @@ export function ProjectMetaForm({
               </option>
             ))}
           </select>
+          <span className="text-xs text-muted font-body">
+            {caflouPriority
+              ? 'Prioritu určuje Caflou, tohle se použije, jen když ji Caflou přestane vracet.'
+              : 'Caflou u tohoto projektu prioritu nevrací - použije se tahle hodnota.'}
+          </span>
         </label>
 
         <label className="flex flex-col gap-1.5 sm:col-span-2">

@@ -254,7 +254,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
           <button
             type="button"
             onClick={() => toggleSort('name')}
-            className="flex-1 min-w-0 flex items-center gap-1 text-left hover:text-ink transition-colors"
+            className="flex-1 min-w-0 flex items-center gap-1 text-left uppercase tracking-wide hover:text-ink transition-colors"
           >
             Název
             {sortBy === 'name' && <SortIcon dir={sortDir} />}
@@ -262,12 +262,12 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
           <button
             type="button"
             onClick={() => toggleSort('date')}
-            className="w-20 shrink-0 hidden sm:flex items-center justify-end gap-1 hover:text-ink transition-colors"
+            className="w-24 shrink-0 hidden sm:flex items-center justify-end gap-1 uppercase tracking-wide hover:text-ink transition-colors"
           >
             {sortBy === 'date' && <SortIcon dir={sortDir} />}
             Upraveno
           </button>
-          <span className="w-16 shrink-0 text-right hidden sm:block">Velikost</span>
+          <span className="w-20 shrink-0 text-right hidden sm:block">Velikost</span>
           <span className="w-[108px] shrink-0" />
         </div>
       )}
@@ -303,11 +303,11 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                       </span>
                     )}
                   </button>
-                  <span className="text-xs text-muted font-body w-20 text-right shrink-0 hidden sm:block">
+                  <span className="text-xs text-muted font-body tabular-nums w-24 text-right shrink-0 hidden sm:block">
                     {formatDate(item.modifiedTime)}
                   </span>
-                  <span className="text-xs text-muted font-body w-16 text-right shrink-0 hidden sm:block">
-                    {item.isFolder ? '' : formatBytes(item.size)}
+                  <span className="text-xs text-muted font-body tabular-nums w-20 text-right shrink-0 hidden sm:block">
+                    {item.isFolder ? '—' : formatBytes(item.size)}
                   </span>
                   <div className="flex items-center justify-end gap-1.5 shrink-0 w-[108px]">
                     {audio && (
@@ -329,6 +329,19 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                         href={`/api/drive/download?fileId=${encodeURIComponent(item.id)}`}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
                         title="Stáhnout"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                          <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" />
+                        </svg>
+                      </a>
+                    )}
+                    {item.isFolder && item.webViewLink && (
+                      <a
+                        href={item.webViewLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Otevřít složku na Google Disku (odtud jde stáhnout celá)"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                           <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" />

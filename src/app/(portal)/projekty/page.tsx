@@ -8,14 +8,9 @@ import {
   type DisplayProject,
 } from '@/lib/caflou';
 import { isInternalRole } from '@/lib/roles';
-import {
-  ProjectsTable,
-  InternalProjectsTable,
-  type InternalProject,
-  type InternalProjectMeta,
-} from './shared';
+import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
-import { InternalFinishedProjects } from './InternalFinishedProjects';
+import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 
 // DULEZITE: tato stranka tahá projekty ZIVE z Caflou při každém zobrazení -
 // nesmí ji Next.js pri buildu "zamrazit" jako statickou stránku (to by
@@ -146,9 +141,9 @@ async function InternalProjektySection() {
     );
 
   return (
-    <section className="flex flex-col gap-8">
+    <section className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Projekty — všechny firmy</h1>
+        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
         {error && (
           <span className="text-xs font-heading text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2">
             Projekty se nepodařilo načíst z Caflou. {error}
@@ -156,14 +151,7 @@ async function InternalProjektySection() {
         )}
       </div>
 
-      <div>
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
-          Aktivní projekty <span className="tabular-nums">({active.length})</span>
-        </h2>
-        <InternalProjectsTable projects={active} emptyText="Aktuálně nejsou žádné rozpracované projekty." />
-      </div>
-
-      <InternalFinishedProjects projects={finished} />
+      <InternalProjectsBrowser active={active} finished={finished} />
     </section>
   );
 }

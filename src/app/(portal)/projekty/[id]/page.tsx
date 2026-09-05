@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
 import { canEditProjectMeta, isInternalRole, INTERNAL_ROLES } from '@/lib/roles';
+import { PRIORITY_LABELS } from '@/lib/projectTypes';
 import { formatDate, StatusPill } from '../shared';
 import { ProjectMetaForm } from './ProjectMetaForm';
 
@@ -77,6 +78,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             Z Caflou
           </h2>
           <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 m-0">
+            <Field label="Priorita" value={project.priority ? PRIORITY_LABELS[project.priority] : '—'} />
             <Field label="Herec" value={project.narrator ?? '—'} />
             <Field label="Normostrany" value={project.pageCount != null ? String(project.pageCount) : '—'} />
             <Field label="Zahájení" value={formatDate(project.startDate)} />
@@ -92,6 +94,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         canEdit={canEdit}
         managers={managers.map((m) => ({ id: m.id, label: m.name || m.email }))}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
+        caflouPriority={project?.priority ?? null}
         initial={{
           driveUrl: meta?.driveUrl ?? '',
           managerUserId: meta?.managerUserId ?? '',

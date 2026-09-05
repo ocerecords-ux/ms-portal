@@ -20,6 +20,8 @@
 // odpoved pro rychle testovani z adminu, nez se podle skutecnych dat dolad'
 // mapovani v pripadne funkci pro klientske zobrazeni.
 
+import type { ProjectPriority } from '@prisma/client';
+
 const CAFLOU_BASE = 'https://app.caflou.com/api/v1';
 
 export function caflouConfigured(): boolean {
@@ -119,6 +121,8 @@ export type DisplayProject = {
   name: string;
   finished: boolean;
   statusName: string;
+  /** Priorita z Caflou (zadani 5. 9. 2026: prioritu cerpat z Caflou, ne z portalu). */
+  priority: ProjectPriority | null;
   narrator: string | null;
   pageCount: number | null;
   finishedAt: Date | null;
@@ -131,6 +135,22 @@ function toIntOrNull(v: unknown): number | null {
   if (v === null || v === undefined || v === '') return null;
   const n = typeof v === 'number' ? v : parseInt(String(v), 10);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Priorita z Caflou. Caflou ji muze vracet jako vlastni sloupec i jako
+ * vlastni pole a s ruznymi nazvy hodnot (cesky/anglicky/cislem), takze
+ * mapujeme tolerantne; co nepoznáme, bereme jako "neuvedeno" a v portalu se
+ * pak pouzije rucne nastavena priorita (ProjectMeta) jako zaloha.
+ */
+function toPriority(v: unknown): ProjectPriority | null {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim().toLowerCase();
+  if (!s) return null;
+  if (['1', 'low', 'nízká', 'nizka', 'nízká priorita', 'malá', 'mala'].includes(s)) return 'LOW';
+  if (['2', 'medium', 'normal', 'normální', 'normalni', 'střední', 'stredni'].includes(s)) return 'MEDIUM';
+  if (['3', 'high', 'urgent', 'vysoká', 'vysoka', 'kritická', 'kriticka'].includes(s)) return 'HIGH';
+  return null;
 }
 
 function toDate(v?: string | null): Date | null {
@@ -174,6 +194,7 @@ export function mapOneCaflouProject(p: any): DisplayProject {
     name: p.name || 'Bez názvu',
     finished: Boolean(p.finished),
     statusName: p.project_status_name || (p.finished ? 'Hotovo' : 'V realizaci'),
+    priority: toPriority(p.custom_column_priorita ?? p.priority_name ?? p.priority),
     narrator: p.custom_column_herec || null,
     pageCount: toIntOrNull(p.custom_column_pocet_normostran),
     finishedAt: toDate(p.finished_at),

@@ -207,7 +207,10 @@ export function InternalProjectsTable({
                   <StatusPill finished={p.finished} statusName={p.statusName} />
                 </td>
                 <td className="px-4 py-4 text-sm font-heading">
-                  <PriorityPill priority={p.meta?.priority ?? null} />
+                  {/* Priorita se cerpa z Caflou (zadani 5. 9. 2026); rucne
+                      nastavena hodnota v portalu slouzi uz jen jako zaloha,
+                      kdyz ji Caflou nevraci. */}
+                  <PriorityPill priority={p.priority ?? p.meta?.priority ?? null} />
                 </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted">
                   {projectTypeLabel(p.meta?.projectType) ?? '—'}

@@ -210,13 +210,20 @@ type InviteEmailInput = {
   expiresAt: Date;
 };
 
-function buildInviteHtml(input: InviteEmailInput): string {
+/**
+ * Spolecny "obal" e-mailu MS Portal (grafika schvalena 5. 9. 2026):
+ * fialovy gradientovy hero s animovanym logem a zelenym prouzkem, bila karta
+ * s obsahem, decentni paticka. Vsechny nase e-maily pouzivaji tenhle ramec,
+ * aby portal posilal jednu vizualni radu.
+ *
+ * Pozn.: pevny svetly vzhled (color-scheme light only + zdvojena pravidla v
+ * prefers-color-scheme: dark) je zamerny - bez toho si nektere klienty
+ * (Apple Mail) barvy "opravi" samy a logo/text zesednou.
+ */
+function emailShell(options: { tag: string; preheader: string; body: string }): string {
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
-  const greeting = input.name ? `Dobrý den, ${escapeHtml(input.name)},` : 'Dobrý den,';
-  const expiresText = input.expiresAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' });
-
   return `<!doctype html>
-<html>
+<html lang="cs">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -225,51 +232,112 @@ function buildInviteHtml(input: InviteEmailInput): string {
 <style>
   :root { color-scheme: light only; supported-color-schemes: light; }
   body { margin: 0 !important; padding: 0 !important; background: #FBFAFF !important; }
-  table { border-collapse: collapse; width: 100%; }
-  .email-hero { background: #6B2AF0 !important; background: linear-gradient(135deg, #7B55FF, #6B2AF0) !important; padding: 28px 32px 24px; }
-  .email-hero .word { display: block; height: 150px; width: 150px; }
-  .email-hero .tag { font-family: Helvetica, Arial, sans-serif; color: #C9FFDF !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 16px; }
-  .email-hero .bar { height: 3px; width: 46px; background: #1FDF67 !important; border-radius: 2px; margin-top: 14px; }
-  .email-content { padding: 30px 32px 8px; font-family: Helvetica, Arial, sans-serif; background: #FFFFFF !important; color: #201A33 !important; }
-  .email-content h2 { font-size: 19px; margin: 0 0 14px; font-weight: 600; color: #201A33 !important; }
-  .email-content p { font-size: 14px; line-height: 1.6; margin: 0 0 14px; color: #201A33 !important; }
-  .email-content .small { font-size: 12px; color: #6E6580 !important; }
-  .cta-row { padding: 8px 0 26px; background: #FFFFFF !important; }
-  .cta { display: inline-block; background: #201A33 !important; color: #ffffff !important; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 22px; border-radius: 8px; }
-  .email-footer { padding: 18px 32px 26px; border-top: 1px solid #E4DFFB; background: #FFFFFF !important; }
-  .email-footer p { margin: 0; font-size: 11.5px; color: #6E6580 !important; }
-  .email-footer .brand { color: #6B2AF0 !important; font-weight: 600; }
+  .preheader { display: none !important; visibility: hidden; opacity: 0; height: 0; width: 0; overflow: hidden; mso-hide: all; }
+  table { border-collapse: collapse; }
+  .wrap { width: 100%; background: #FBFAFF !important; padding: 28px 12px 40px; }
+  .card { width: 100%; max-width: 560px; margin: 0 auto; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px rgba(32,26,51,0.08); }
+  .hero { background: #6B2AF0 !important; background: linear-gradient(135deg, #7B55FF, #6B2AF0) !important; padding: 30px 34px 26px; text-align: left; }
+  .hero .logo { display: block; height: 96px; width: 96px; border: 0; }
+  .hero .word { font-family: Helvetica, Arial, sans-serif; font-size: 21px; font-weight: 700; color: #1FDF67 !important; letter-spacing: 0.01em; padding-right: 14px; }
+  .hero .rule { display: inline-block; width: 1px; height: 26px; background: rgba(255,255,255,0.4) !important; }
+  .hero .tag { font-family: Helvetica, Arial, sans-serif; color: #C9FFDF !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; padding-top: 18px; }
+  .hero .bar { height: 3px; width: 46px; background: #1FDF67 !important; border-radius: 2px; margin-top: 12px; }
+  .content { padding: 30px 34px 10px; font-family: Helvetica, Arial, sans-serif; background: #FFFFFF !important; color: #201A33 !important; }
+  .content h2 { font-size: 21px; line-height: 1.3; margin: 0 0 14px; font-weight: 600; color: #201A33 !important; }
+  .content p { font-size: 14.5px; line-height: 1.65; margin: 0 0 14px; color: #201A33 !important; }
+  .content .small { font-size: 12px; line-height: 1.6; color: #6E6580 !important; }
+  .badge { display: inline-block; background: #E9FFF2 !important; color: #149E4B !important; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; margin-bottom: 14px; }
+  .field-table { width: 100%; border: 1px solid #E4DFFB; border-radius: 12px; overflow: hidden; margin: 4px 0 20px; }
+  .field-table tr:not(:last-child) td { border-bottom: 1px solid #E4DFFB; }
+  .field-table td { padding: 11px 14px; font-size: 13.5px; vertical-align: top; background: #FFFFFF !important; }
+  .field-table td.label { color: #6E6580 !important; width: 44%; background: #F7F5FF !important; font-weight: 500; }
+  .field-table td.value { color: #201A33 !important; font-weight: 600; }
+  .field-table td.value.regular { font-weight: 400; }
+  .field-table td.value a { color: #6B2AF0 !important; text-decoration: none; font-weight: 600; }
+  .cta-row { padding: 2px 0 24px; background: #FFFFFF !important; }
+  .cta { display: inline-block; background: #1FDF67 !important; color: #10331F !important; text-decoration: none; font-size: 15px; font-weight: 700; padding: 14px 28px; border-radius: 10px; }
+  .cta-dark { display: inline-block; background: #201A33 !important; color: #ffffff !important; text-decoration: none; font-size: 13.5px; font-weight: 600; padding: 11px 20px; border-radius: 8px; }
+  .steps td { font-family: Helvetica, Arial, sans-serif; font-size: 13.5px; color: #201A33 !important; padding: 0 0 10px; background: #FFFFFF !important; }
+  .steps .num { width: 26px; color: #6B2AF0 !important; font-weight: 700; }
+  .footer { padding: 18px 34px 26px; border-top: 1px solid #E4DFFB; background: #FFFFFF !important; }
+  .footer p { margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 11.5px; line-height: 1.6; color: #6E6580 !important; }
+  .footer .brand { color: #6B2AF0 !important; font-weight: 600; }
   @media (prefers-color-scheme: dark) {
-    body { background: #FBFAFF !important; }
-    .email-hero { background: #6B2AF0 !important; }
-    .email-content, .cta-row, .email-footer { background: #FFFFFF !important; color: #201A33 !important; }
-    .cta { background: #201A33 !important; color: #ffffff !important; }
+    body, .wrap { background: #FBFAFF !important; }
+    .hero { background: #6B2AF0 !important; }
+    .hero .word { color: #1FDF67 !important; }
+    .hero .tag { color: #C9FFDF !important; }
+    .content, .cta-row, .footer, .steps td, .field-table td { background: #FFFFFF !important; color: #201A33 !important; }
+    .content h2, .content p, .field-table td.value { color: #201A33 !important; }
+    .content .small, .footer p, .field-table td.label { color: #6E6580 !important; }
+    .field-table td.label { background: #F7F5FF !important; }
+    .cta { background: #1FDF67 !important; color: #10331F !important; }
+    .cta-dark { background: #201A33 !important; color: #ffffff !important; }
+  }
+  @media (max-width: 520px) {
+    .hero, .content, .footer { padding-left: 22px !important; padding-right: 22px !important; }
+    .hero .logo { height: 76px !important; width: 76px !important; }
   }
 </style>
 </head>
 <body>
-<table role="presentation">
-  <tr><td class="email-hero">
-    <img class="word" src="${baseUrl}${LOGO_GIF_PATH}" width="150" height="150" alt="Mediaspace" />
-    <div class="tag">MS Portal - pozvánka</div>
-    <div class="bar"></div>
-  </td></tr>
-  <tr><td class="email-content">
-    <h2>Vítejte v MS Portalu</h2>
-    <p>${greeting}</p>
-    <p>založili jsme vám přístup do klientského portálu MEDIA SPACE. Přihlašovacím jménem je tento e-mail
-       (<strong>${escapeHtml(input.to)}</strong>), heslo si nastavíte sami přes tlačítko níže.</p>
-    <div class="cta-row">
-      <a href="${escapeHtml(input.inviteUrl)}" class="cta">Nastavit heslo →</a>
-    </div>
-    <p class="small">Odkaz platí do ${expiresText}. Pokud vyprší, napište nám a pošleme vám nový.</p>
-  </td></tr>
-  <tr><td class="email-footer">
-    <p><span class="brand">Mediaspace</span> · MS Portal</p>
-  </td></tr>
-</table>
+<span class="preheader">${escapeHtml(options.preheader)}</span>
+<table role="presentation" class="wrap" width="100%"><tr><td>
+  <table role="presentation" class="card" width="560">
+    <tr><td class="hero">
+      <table role="presentation"><tr>
+        <td class="word">MS portal</td>
+        <td><span class="rule"></span></td>
+        <td style="padding-left:14px;">
+          <img class="logo" src="${baseUrl}${LOGO_GIF_PATH}" width="96" height="96" alt="Mediaspace" />
+        </td>
+      </tr></table>
+      <div class="tag">${escapeHtml(options.tag)}</div>
+      <div class="bar"></div>
+    </td></tr>
+    <tr><td class="content">${options.body}</td></tr>
+    <tr><td class="footer">
+      <p><span class="brand">MEDIA SPACE</span> · MS Portal · <a href="${baseUrl}" style="color:#6B2AF0;text-decoration:none;">www.msportal.cz</a></p>
+    </td></tr>
+  </table>
+</td></tr></table>
 </body>
 </html>`;
+}
+
+export function buildInviteHtml(input: InviteEmailInput): string {
+  const greeting = input.name ? `Dobrý den, ${escapeHtml(input.name)},` : 'Dobrý den,';
+  const expiresText = input.expiresAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' });
+
+  return emailShell({
+    tag: 'Pozvánka do portálu',
+    preheader: 'Váš přístup do MS Portalu je připravený - stačí si nastavit heslo.',
+    body: `
+    <span class="badge">Nový přístup</span>
+    <h2>Vítejte v MS Portalu</h2>
+    <p>${greeting}</p>
+    <p>připravili jsme vám přístup do klientského portálu MEDIA SPACE. Heslo si nastavíte sami - stačí jedno kliknutí.</p>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Přihlašovací jméno</td><td class="value">${escapeHtml(input.to)}</td></tr>
+      <tr><td class="label">Odkaz platí do</td><td class="value regular">${expiresText}</td></tr>
+    </table>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.inviteUrl)}" class="cta">Nastavit heslo</a>
+    </div>
+
+    <p style="font-weight:600;margin-bottom:10px;">Co v portálu najdete</p>
+    <table role="presentation" class="steps" width="100%">
+      <tr><td class="num">1</td><td>Přehled vašich projektů a jejich stavu</td></tr>
+      <tr><td class="num">2</td><td>Objednávkový formulář s předběžnou cenou</td></tr>
+      <tr><td class="num">3</td><td>Hotové i rozpracované nahrávky ke stažení</td></tr>
+    </table>
+
+    <p class="small">Pokud odkaz vyprší, napište nám a pošleme vám nový. Tuto pozvánku jste dostali, protože pro vás
+       MEDIA SPACE založila účet - pokud si ji neumíte vysvětlit, dejte nám prosím vědět.</p>
+  `,
+  });
 }
 
 export async function sendInviteEmail(input: InviteEmailInput) {
@@ -285,7 +353,7 @@ export async function sendInviteEmail(input: InviteEmailInput) {
     text: [
       input.name ? `Dobry den, ${input.name},` : 'Dobry den,',
       '',
-      'zalozili jsme vam pristup do portalu MEDIA SPACE (MS Portal).',
+      'pripravili jsme vam pristup do portalu MEDIA SPACE (MS Portal).',
       `Prihlasovaci jmeno: ${input.to}`,
       '',
       'Heslo si nastavite zde:',
@@ -294,6 +362,129 @@ export async function sendInviteEmail(input: InviteEmailInput) {
       `Odkaz plati do ${input.expiresAt.toLocaleDateString('cs-CZ')}.`,
     ].join('\n'),
     html: buildInviteHtml(input),
+  });
+
+  return { sent: true as const };
+}
+
+// ---------------------------------------------------------------------------
+// Potvrzeni objednavky klientovi (zadani 5. 9. 2026: "Nastav už i mail na
+// potvrzení objednávky pro klienta ve chvíli, kdy ji odešle.")
+// ---------------------------------------------------------------------------
+// Chodi na e-mail uzivatele, ktery objednavku odeslal, hned po jejim ulozeni.
+// Interni notifikace na objednavky@mediaspace.cz zustava beze zmeny.
+
+type OrderConfirmationInput = {
+  to: string;
+  name: string | null;
+  isAudiobook: boolean;
+  title: string;
+  companyName: string;
+  pageCount: number | null;
+  priceEstimate: number | null;
+  deadline: string | null;
+  preferredNarrator: string | null;
+  note: string | null;
+  attachmentName: string | null;
+};
+
+export function buildOrderConfirmationHtml(input: OrderConfirmationInput): string {
+  const greeting = input.name ? `Dobrý den, ${escapeHtml(input.name)},` : 'Dobrý den,';
+  const rows: string[] = [
+    `<tr><td class="label">Název</td><td class="value">${escapeHtml(input.title)}</td></tr>`,
+  ];
+  if (input.isAudiobook) {
+    rows.push(
+      `<tr><td class="label">Počet normostran</td><td class="value regular">${input.pageCount ?? '—'}</td></tr>`,
+    );
+    rows.push(
+      `<tr><td class="label">Předběžná cena</td><td class="value">${
+        input.priceEstimate != null ? `${input.priceEstimate.toLocaleString('cs-CZ')} Kč` : '—'
+      }</td></tr>`,
+    );
+  }
+  rows.push(
+    `<tr><td class="label">Termín odevzdání</td><td class="value regular">${input.deadline ?? '—'}</td></tr>`,
+  );
+  if (input.preferredNarrator) {
+    rows.push(
+      `<tr><td class="label">Preferovaný herec</td><td class="value regular">${escapeHtml(
+        input.preferredNarrator,
+      )}</td></tr>`,
+    );
+  }
+  if (input.note) {
+    rows.push(`<tr><td class="label">Poznámka</td><td class="value regular">${escapeHtml(input.note)}</td></tr>`);
+  }
+  if (input.attachmentName) {
+    rows.push(
+      `<tr><td class="label">Příloha</td><td class="value regular">${escapeHtml(input.attachmentName)}</td></tr>`,
+    );
+  }
+
+  const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
+
+  return emailShell({
+    tag: input.isAudiobook ? 'Objednávka audioknihy' : 'Objednávka',
+    preheader: `Objednávku ${input.title} jsme přijali.`,
+    body: `
+    <span class="badge">Objednávka přijata</span>
+    <h2>Máme vaši objednávku</h2>
+    <p>${greeting}</p>
+    <p>děkujeme za objednávku. Přijali jsme ji a ozveme se vám s potvrzením termínu${
+      input.isAudiobook ? ' a konečné ceny' : ''
+    }.</p>
+
+    <table role="presentation" class="field-table">
+      ${rows.join('\n      ')}
+    </table>
+
+    <div class="cta-row">
+      <a href="${baseUrl}/projekty" class="cta-dark">Zobrazit v portálu →</a>
+    </div>
+
+    ${
+      input.isAudiobook
+        ? '<p class="small">Uvedená cena je předběžná - vychází z počtu normostran a vaší sjednané sazby. Konečnou cenu potvrdíme po kontrole podkladů.</p>'
+        : ''
+    }
+    <p class="small">Tento e-mail je automatické potvrzení z MS Portalu. Když něco nesedí, odpovězte nám nebo napište na
+       <a href="mailto:objednavky@mediaspace.cz" style="color:#6B2AF0;text-decoration:none;">objednavky@mediaspace.cz</a>.</p>
+  `,
+  });
+}
+
+export async function sendOrderConfirmationEmail(input: OrderConfirmationInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.to,
+    replyTo: process.env.ORDER_NOTIFICATION_EMAIL || 'objednavky@mediaspace.cz',
+    subject: `Potvrzení objednávky – ${input.title}`,
+    text: [
+      input.name ? `Dobry den, ${input.name},` : 'Dobry den,',
+      '',
+      'dekujeme za objednavku, prijali jsme ji.',
+      '',
+      `Nazev: ${input.title}`,
+      ...(input.isAudiobook
+        ? [
+            `Pocet normostran: ${input.pageCount ?? '-'}`,
+            `Predbezna cena: ${input.priceEstimate != null ? input.priceEstimate + ' Kc' : '-'}`,
+          ]
+        : []),
+      `Termin odevzdani: ${input.deadline ?? '-'}`,
+      `Preferovany herec: ${input.preferredNarrator ?? '-'}`,
+      `Poznamka: ${input.note ?? '-'}`,
+      '',
+      'Ozveme se vam s potvrzenim terminu.',
+      'MEDIA SPACE / MS Portal',
+    ].join('\n'),
+    html: buildOrderConfirmationHtml(input),
   });
 
   return { sent: true as const };

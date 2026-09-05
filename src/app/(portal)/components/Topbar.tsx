@@ -16,18 +16,15 @@ function navItemsFor(isAdmin?: boolean, isInternal?: boolean) {
       { href: '/projekty', label: 'Projekty' },
       { href: '/admin', label: 'Firmy' },
       { href: '/admin/users', label: 'Uživatelé' },
-      { href: '/nahravky', label: 'Nahrávky' },
     ];
   }
   // Interni ucty bez admin prav (Produkce / Zvukar) - objednavka je
   // klientska agenda, do administrace firem a uzivatelu je zatim pousti jen
-  // role Zuzo-labuzo (viz middleware.ts), takze jim zbyva prehled projektu a
-  // nahravky.
+  // role Zuzo-labuzo (viz middleware.ts), takze jim zbyva prehled projektu.
+  // Nahravky jsou od 5. 9. 2026 (zadani) uz jen klientska sekce - interni tym
+  // se k souborum dostava pres Google Disk primo, ne pres portal.
   if (isInternal) {
-    return [
-      { href: '/projekty', label: 'Projekty' },
-      { href: '/nahravky', label: 'Nahrávky' },
-    ];
+    return [{ href: '/projekty', label: 'Projekty' }];
   }
   return [
     { href: '/projekty', label: 'Projekty' },
