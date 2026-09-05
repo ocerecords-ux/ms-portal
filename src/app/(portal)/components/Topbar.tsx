@@ -108,6 +108,9 @@ export function Topbar({
         </button>
         {open && (
           <div className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-line py-1 min-w-[160px] z-10">
+            <Link href="/muj-ucet" className="block w-full text-left px-4 py-2 text-sm font-body text-ink hover:bg-field no-underline">
+              Můj účet
+            </Link>
             {isAdmin && (
               <Link href="/admin" className="block w-full text-left px-4 py-2 text-sm font-body text-ink hover:bg-field no-underline">
                 Administrace
