@@ -22,6 +22,11 @@ export default async function UserEditPage({ params }: { params: { id: string } 
       </div>
 
       <UserEditForm
+        // key = user.id: bez toho by pri prechodu z editace jednoho uzivatele
+        // na druheho (Link, ne plny reload) klientsky formular mohl zustat s
+        // puvodnimi hodnotami - stejna trida bugu jako na /admin/users (viz
+        // key na NewUserForm tamtez, nahlaseno 5. 9. 2026).
+        key={user.id}
         user={{
           id: user.id,
           email: user.email,

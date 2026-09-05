@@ -249,6 +249,11 @@ export default async function UsersAdminPage({
       </div>
 
       <NewUserForm
+        // key vynuti remount pri prepnuti zalozky/filtru - jinak si klientsky
+        // komponent drzi svuj puvodni useState(role) z prvniho mountu (bug
+        // nahlaseny 5. 9. 2026: na zalozce Herci se po prepnuti z jine
+        // zalozky ukazovala stara role/pole).
+        key={filteredCompany ? `company:${filteredCompany.id}` : `tab:${activeTab.key}`}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
         defaultCompanyId={companyId}
         defaultRole={filteredCompany ? 'CLIENT' : activeTab.roles[0]}
