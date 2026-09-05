@@ -35,6 +35,9 @@ export async function GET(req: NextRequest) {
       '/contacts?per=3',
       '/people?per=3',
       '/users?per=3',
+      '/custom_columns?per=100',
+      '/project_custom_columns?per=100',
+      '/custom_fields?per=100',
       '/project_types?per=50',
       '/project_statuses?per=50',
       '/tags?per=50',
@@ -64,15 +67,34 @@ export async function GET(req: NextRequest) {
   // tahame stav, prioritu, normostrany a terminy.
   if (req.nextUrl.searchParams.get('all') === '1') {
     try {
-      const result = await caflouFetch('/projects?per=200&page=1');
+      // ?page=N - vlastni sloupce (herec, pocet normostran, termin vydani)
+      // se objevi jen u projektu, ktere je maji vyplnene, a Caflou vraci
+      // nejdriv NEJSTARSI projekty - u tech z roku 2023 tam nejsou. Proto jde
+      // vybrat stranka a diagnostika vypisuje vsechny nalezene custom_column_*.
+      const page = Number(req.nextUrl.searchParams.get('page') || '1') || 1;
+      const result = await caflouFetch(`/projects?per=100&page=${page}`);
       const results = (result.body as { results?: unknown } | null)?.results;
       if (!result.ok || !Array.isArray(results)) {
         return NextResponse.json({ status: result.status, ok: result.ok, body: result.body ?? result.raw.slice(0, 2000) });
       }
       const rows = results as any[];
       const statusNames = Array.from(new Set(rows.map((p) => p?.project_status_name).filter(Boolean)));
+      // Vsechny vlastni sloupce nalezene na teto strance + ukazkova hodnota,
+      // at je videt, jak se presne jmenuji (herec, normostrany, termin vydani).
+      const customColumns: Record<string, unknown> = {};
+      for (const row of rows) {
+        for (const key of Object.keys(row ?? {})) {
+          if (!key.startsWith('custom_column_')) continue;
+          const value = (row as any)[key];
+          if (customColumns[key] === undefined || customColumns[key] === null || customColumns[key] === '') {
+            customColumns[key] = value ?? null;
+          }
+        }
+      }
       return NextResponse.json({
         status: result.status,
+        stranka: page,
+        vlastniSloupce: customColumns,
         pocetProjektu: rows.length,
         dokoncenych: rows.filter((p) => Boolean(p?.finished)).length,
         nedokoncenych: rows.filter((p) => !p?.finished).length,
