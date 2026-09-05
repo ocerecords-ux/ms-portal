@@ -48,7 +48,7 @@ export async function caflouFetch(
   // 5. 9. 2026: "Projekty se nepodařilo načíst z Caflou"). Kratky retry (max
   // 3 pokusy, rostouci odstup) tohle ve vetsine pripadu vyresi driv, nez se
   // to vubec ukaze klientovi jako chyba.
-  const MAX_ATTEMPTS = 3;
+  const MAX_ATTEMPTS = 4;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const res = await fetch(url, {
       method: init?.method ?? 'GET',
@@ -74,7 +74,9 @@ export async function caflouFetch(
     if (!isRetryableRateLimit) {
       return { ok: res.ok, status: res.status, body, raw };
     }
-    await new Promise((resolve) => setTimeout(resolve, 350 * attempt));
+    // Exponencialni odstup (0,4 s / 0,9 s / 1,8 s) - Caflou hlaskou 429 rika
+    // taky "same request is processing already", takze kratke cekani casto staci.
+    await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** (attempt - 1)));
   }
   // Nedosazitelne (smycka vzdy vrati na poslednim pokusu), jen aby TS vedel,
   // ze funkce vzdy neco vraci.
@@ -291,9 +293,55 @@ function caflouCompanyNameOf(p: any): string | null {
  * Na rozdil od klientskeho zobrazeni se tu projekty NEFILTRUJI podle
  * project_type_id - interni tym ma videt uplne vsechno, co v Caflou je.
  */
+// Cely seznam projektu uctu je pro Caflou drahy dotaz - pri kazdem zobrazeni
+// stranky by se poslal znovu a Caflou zacne vracet 429 ("Rate limit exceeded -
+// same request is processing already"), coz uzivatel vidi jako "Projekty se
+// nepodarilo nacist z Caflou" (hlaseno 5. 9. 2026). Proto:
+//  - vysledek si na minutu drzime v pameti instance,
+//  - soubezne pozadavky sdili jeden probihajici dotaz (dedupe),
+//  - kdyz Caflou odmitne, radeji ukazeme i starsi data z cache nez prazdnou
+//    stranku s chybou.
+type InternalProjectsResult = { projects: AdminDisplayProject[]; error: string | null };
+
+const PROJECTS_CACHE_MS = 60 * 1000;
+const PROJECTS_STALE_MS = 10 * 60 * 1000;
+let projectsCache: { at: number; projects: AdminDisplayProject[] } | null = null;
+let projectsInFlight: Promise<InternalProjectsResult> | null = null;
+
 export async function listAllCaflouProjectsForInternal(
   knownCompanies: { name: string; caflouCompanyId: string }[],
-): Promise<{ projects: AdminDisplayProject[]; error: string | null }> {
+): Promise<InternalProjectsResult> {
+  const now = Date.now();
+  if (projectsCache && now - projectsCache.at < PROJECTS_CACHE_MS) {
+    return { projects: projectsCache.projects, error: null };
+  }
+  if (projectsInFlight) return projectsInFlight;
+
+  projectsInFlight = fetchAllCaflouProjects(knownCompanies)
+    .then((result) => {
+      if (!result.error) {
+        projectsCache = { at: Date.now(), projects: result.projects };
+        return result;
+      }
+      // Dotaz selhal - kdyz mame necim starsi, ale jeste pouzitelna data, ukazeme je.
+      if (projectsCache && Date.now() - projectsCache.at < PROJECTS_STALE_MS) {
+        return {
+          projects: projectsCache.projects,
+          error: null,
+        };
+      }
+      return result;
+    })
+    .finally(() => {
+      projectsInFlight = null;
+    });
+
+  return projectsInFlight;
+}
+
+async function fetchAllCaflouProjects(
+  knownCompanies: { name: string; caflouCompanyId: string }[],
+): Promise<InternalProjectsResult> {
   const nameById = new Map(knownCompanies.map((c): [string, string] => [String(c.caflouCompanyId), c.name]));
 
   const PER = 200;
@@ -310,7 +358,13 @@ export async function listAllCaflouProjectsForInternal(
       if (!result.ok) {
         // Prvni stranka selhala = nemame nic; dalsi stranka = vratime aspon to, co uz mame.
         if (page === 1) {
-          return { projects: [], error: `Caflou API odpovědělo chybou ${result.status}.` };
+          return {
+            projects: [],
+            error:
+              result.status === 429
+                ? 'Caflou nás teď odmítá kvůli limitu dotazů (429). Za chvíli to zkuste znovu.'
+                : `Caflou API odpovědělo chybou ${result.status}.`,
+          };
         }
         break;
       }
