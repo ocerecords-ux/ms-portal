@@ -151,14 +151,7 @@ async function InternalProjektySection() {
         )}
       </div>
 
-      <InternalProjectsBrowser
-        active={active}
-        finished={finished}
-        // Z Caflou zatim tahame jen rozpracovane projekty (zadani 5. 9. 2026)
-        // - dokoncenych jsou tam stovky a nacitani po strankach po stovce by
-        //   stranku jen zdrzovalo.
-        finishedNote="Dokončené projekty se zatím z Caflou nenačítají — je jich příliš mnoho. Doplníme, až je budete chtít vidět i tady."
-      />
+      <InternalProjectsBrowser active={active} finished={finished} />
     </section>
   );
 }

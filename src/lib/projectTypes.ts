@@ -37,3 +37,20 @@ export function projectTypeLabel(key: string | null | undefined): string | null 
   if (!key) return null;
   return PROJECT_TYPES.find((t) => t.key === key)?.label ?? key;
 }
+
+/**
+ * Stavy projektu v Caflou, ktere povazujeme za ROZPRACOVANY projekt
+ * (overeno na zivo 5. 9. 2026 - v uctu se vyskytuji tyto stavy: "V přípravě",
+ * "Natáčíme", "Dokončeno - ke schválení", "Schváleno - k fakturaci").
+ *
+ * Priznak `finished` z Caflou na tohle bohuzel pouzit nejde - v uctu ho maji
+ * nastaveny uplne vsechny projekty, i ty se stavem "Natáčíme". Rozpracovanost
+ * se proto ridi stavem; dalsi stav pridej jednim radkem sem.
+ */
+export const ACTIVE_PROJECT_STATUSES: string[] = ['V přípravě', 'Natáčíme'];
+
+export function isActiveProjectStatus(statusName: string | null | undefined): boolean {
+  if (!statusName) return false;
+  const normalized = statusName.trim().toLowerCase();
+  return ACTIVE_PROJECT_STATUSES.some((s) => s.toLowerCase() === normalized);
+}

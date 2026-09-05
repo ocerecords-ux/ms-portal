@@ -22,6 +22,8 @@
 
 import type { ProjectPriority } from '@prisma/client';
 
+import { isActiveProjectStatus } from '@/lib/projectTypes';
+
 const CAFLOU_BASE = 'https://app.caflou.com/api/v1';
 
 export function caflouConfigured(): boolean {
@@ -121,6 +123,13 @@ export async function listCaflouCompanies(search?: string): Promise<CaflouResult
 export type DisplayProject = {
   id: number;
   name: string;
+  /**
+   * Dokonceny projekt. POZOR: neni to primo priznak `finished` z Caflou - ten
+   * maji v uctu nastaveny uplne vsechny projekty, i ty se stavem "Natáčíme"
+   * (overeno 5. 9. 2026). Rozhoduje proto stav projektu, viz
+   * lib/projectTypes.ts (ACTIVE_PROJECT_STATUSES); `finished` z Caflou slouzi
+   * uz jen jako zaloha u projektu bez stavu.
+   */
   finished: boolean;
   statusName: string;
   /** Priorita z Caflou (zadani 5. 9. 2026: prioritu cerpat z Caflou, ne z portalu). */
@@ -192,14 +201,22 @@ export function mapCaflouProjects(raw: unknown): DisplayProject[] {
  * projektu a pro interni prehled napric vsemi firmami.
  */
 export function mapOneCaflouProject(p: any): DisplayProject {
+  const statusName: string = p.project_status_name || (p.finished ? 'Hotovo' : 'V realizaci');
   return {
     id: p.id,
     name: p.name || 'Bez názvu',
-    finished: Boolean(p.finished),
-    statusName: p.project_status_name || (p.finished ? 'Hotovo' : 'V realizaci'),
+    finished: p.project_status_name ? !isActiveProjectStatus(statusName) : Boolean(p.finished),
+    statusName,
     priority: toPriority(p.project_priority_name ?? p.priority ?? p.custom_column_priorita),
     narrator: p.custom_column_herec || null,
-    pageCount: toIntOrNull(p.custom_column_pocet_normostran),
+    // Overeno na zivo 5. 9. 2026: vlastni sloupec s normostranami se v uctu
+    // jmenuje "custom_column_pocet_ns1" (drive jsme hadali
+    // "custom_column_pocet_normostran", proto byl sloupec vzdy prazdny).
+    // Sloupce se navic objevi jen u projektu, ktere je maji vyplnene.
+    pageCount:
+      toIntOrNull(p.custom_column_pocet_ns1) ??
+      toIntOrNull(p.custom_column_pocet_normostran) ??
+      toIntOrNull(String(p.custom_column_pocet_ns1_decorated ?? '').trim()),
     finishedAt: toDate(p.finished_at),
     releaseDate: toDate(p.custom_column_termin_vydani),
     startDate: toDate(p.start_date),
@@ -298,14 +315,14 @@ function caflouCompanyNameOf(p: any): string | null {
 // stranky by se poslal znovu a Caflou zacne vracet 429 ("Rate limit exceeded -
 // same request is processing already"), coz uzivatel vidi jako "Projekty se
 // nepodarilo nacist z Caflou" (hlaseno 5. 9. 2026). Proto:
-//  - vysledek si na minutu drzime v pameti instance,
+//  - vysledek si na pet minut drzime v pameti instance,
 //  - soubezne pozadavky sdili jeden probihajici dotaz (dedupe),
 //  - kdyz Caflou odmitne, radeji ukazeme i starsi data z cache nez prazdnou
 //    stranku s chybou.
 type InternalProjectsResult = { projects: AdminDisplayProject[]; error: string | null };
 
-const PROJECTS_CACHE_MS = 60 * 1000;
-const PROJECTS_STALE_MS = 10 * 60 * 1000;
+const PROJECTS_CACHE_MS = 5 * 60 * 1000;
+const PROJECTS_STALE_MS = 30 * 60 * 1000;
 let projectsCache: { at: number; projects: AdminDisplayProject[] } | null = null;
 let projectsInFlight: Promise<InternalProjectsResult> | null = null;
 
@@ -340,25 +357,9 @@ export async function listAllCaflouProjectsForInternal(
   return projectsInFlight;
 }
 
-/**
- * Kandidati na filtr "jen rozpracovane projekty". Caflou v dokumentaci tenhle
- * filtr nema popsany jednoznacne, takze ho zkusime rozpoznat za behu: posleme
- * kazdou variantu a prijmeme tu, u ktere prijdou samé nedokoncene projekty.
- * Vysledek si zapamatujeme, aby se to nezkousaelo pri kazdem zobrazeni.
- */
-const ACTIVE_FILTER_CANDIDATES = [
-  'filter[finished]=false',
-  'filter[finished]=0',
-  'filter[unfinished]=true',
-  'filter[state]=active',
-];
-// undefined = jeste jsme nezkouseli, null = zadny filtr nefunguje (jedeme
-// prehledem vsech stranek a filtrujeme si sami)
-let activeFilterQuery: string | null | undefined = undefined;
-
 /** Jedna stranka projektu z Caflou; pri chybe vraci HTTP status jako cislo. */
-async function fetchProjectsPage(query: string, page: number, per: number): Promise<any[] | number> {
-  const result = await caflouFetch(`/projects?${query}${query ? '&' : ''}per=${per}&page=${page}`);
+async function fetchProjectsPage(page: number, per: number): Promise<any[] | number> {
+  const result = await caflouFetch(`/projects?per=${per}&page=${page}`);
   if (!result.ok) return result.status;
   const results = (result.body as { results?: unknown } | null)?.results;
   return Array.isArray(results) ? (results as any[]) : [];
@@ -370,69 +371,29 @@ async function fetchAllCaflouProjects(
   const nameById = new Map(knownCompanies.map((c): [string, string] => [String(c.caflouCompanyId), c.name]));
 
   // Caflou strop je 100 zaznamu na stranku (overeno 5. 9. 2026: na per=200
-  // vratilo presne 100). Zaroven vraci nejdriv nejstarsi projekty, takze bez
-  // filtru bychom se k rozpracovanym prokousavali pres stovky dokoncenych -
-  // proto tahame rovnou jen aktivni (zadani 5. 9. 2026: "Tak načti zatím jen
-  // ty aktivní").
+  // vratilo presne 100) a radi od nejstarsich. Ucet ma radove sedm stovek
+  // projektu, takze cely seznam je 7-8 dotazu - proto se drzi v cache (viz
+  // listAllCaflouProjectsForInternal) a nestahuje se pri kazdem zobrazeni.
+  //
+  // Filtr "jen nerozpracovane" tu zamerne nezkousime: priznak `finished` maji
+  // v uctu nastaveny vsechny projekty, takze by nevratil nic. Rozpracovanost
+  // se pozna az u nas podle stavu projektu (viz mapOneCaflouProject).
   const PER = 100;
-  const MAX_PAGES = 25;
-  const TIME_BUDGET_MS = 8000; // aby dotaz nikdy nepreteel limit serverove funkce
+  const MAX_PAGES = 15;
+  const TIME_BUDGET_MS = 20000;
   const startedAt = Date.now();
 
   const rawProjects: any[] = [];
   const seenIds = new Set<string>();
-  let httpError: number | null = null;
-
-  function collect(rows: any[], onlyUnfinished: boolean): number {
-    const before = seenIds.size;
-    for (const p of rows) {
-      if (onlyUnfinished && p?.finished) continue;
-      const key = String(p?.id ?? '');
-      if (!key || seenIds.has(key)) continue;
-      seenIds.add(key);
-      rawProjects.push(p);
-    }
-    return seenIds.size - before;
-  }
 
   try {
-    // 1) Zjisteni funkcniho filtru na nedokoncene projekty (jen jednou za bezu instance)
-    if (activeFilterQuery === undefined) {
-      activeFilterQuery = null;
-      for (const candidate of ACTIVE_FILTER_CANDIDATES) {
-        const rows = await fetchProjectsPage(candidate, 1, PER);
-        if (typeof rows === 'number') {
-          httpError = rows;
-          break;
-        }
-        // Filtr uznavame jen tehdy, kdyz opravdu zabral - tzn. neprisel ani
-        // jeden dokonceny projekt. Prazdna odpoved nic nedokazuje.
-        if (rows.length > 0 && rows.every((p) => !p?.finished)) {
-          activeFilterQuery = candidate;
-          collect(rows, true);
-          break;
-        }
-      }
-    }
-
-    if (httpError !== null && rawProjects.length === 0) {
-      return {
-        projects: [],
-        error:
-          httpError === 429
-            ? 'Caflou nás teď odmítá kvůli limitu dotazů (429). Za chvíli to zkuste znovu.'
-            : `Caflou API odpovědělo chybou ${httpError}.`,
-      };
-    }
-
-    // 2) Dotazeni dalsich stranek
-    const query = activeFilterQuery ?? '';
-    const startPage = activeFilterQuery && rawProjects.length > 0 ? 2 : 1;
-    for (let page = startPage; page <= MAX_PAGES; page++) {
+    for (let page = 1; page <= MAX_PAGES; page++) {
       if (Date.now() - startedAt > TIME_BUDGET_MS) break;
-      const rows = await fetchProjectsPage(query, page, PER);
+      const rows = await fetchProjectsPage(page, PER);
+
       if (typeof rows === 'number') {
-        if (page === 1 && rawProjects.length === 0) {
+        // Prvni stranka selhala = nemame nic. U dalsich vratime aspon to, co uz mame.
+        if (page === 1) {
           return {
             projects: [],
             error:
@@ -443,15 +404,19 @@ async function fetchAllCaflouProjects(
         }
         break;
       }
+
       if (rows.length === 0) break;
+
       // Pojistka pro pripad, ze by Caflou parametr "page" ignorovalo a vracelo
-      // porad tu samou stranku.
-      const added = collect(rows, true);
-      if (added === 0 && rows.every((p) => p?.finished)) {
-        // Bez funkcniho filtru se prokousavame dokoncenymi projekty - pokracujeme dal.
-        if (rows.length < PER) break;
-        continue;
+      // porad tu samou stranku - bez toho by se projekty zopakovaly.
+      const before = seenIds.size;
+      for (const row of rows) {
+        const key = String(row?.id ?? '');
+        if (!key || seenIds.has(key)) continue;
+        seenIds.add(key);
+        rawProjects.push(row);
       }
+      if (seenIds.size === before) break;
       if (rows.length < PER) break;
     }
   } catch (err) {
