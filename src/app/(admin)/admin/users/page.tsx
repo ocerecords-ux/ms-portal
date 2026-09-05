@@ -1,25 +1,34 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { NewUserForm } from './NewUserForm';
-import { ROLE_LABELS } from '@/lib/roles';
+import { ROLE_LABELS, USER_TABS } from '@/lib/roles';
 
+// Bez companyId (default pohled) se uzivatele tridi do 4 zalozek podle
+// zadani 5. 9. 2026 - Mediaspace / Klienti / Herci / Dodavatele. Filtr podle
+// konkretni firmy (prichozi z detailu firmy) tyto zalozky obchazi, protoze
+// jedna firma muze mit uzivatele s ruznymi rolemi - proto v tom pripade
+// zustava puvodni plocha tabulka se vsemi jejimi ucty.
 export default async function UsersAdminPage({
   searchParams,
 }: {
-  searchParams: { companyId?: string };
+  searchParams: { companyId?: string; tab?: string };
 }) {
   const companyId = searchParams?.companyId;
+  const activeTab = USER_TABS.find((t) => t.key === searchParams?.tab) ?? USER_TABS[0];
 
-  const [users, companies] = await Promise.all([
+  const [users, companies, roleCounts] = await Promise.all([
     prisma.user.findMany({
-      where: companyId ? { companyId } : {},
+      where: companyId ? { companyId } : { role: { in: activeTab.roles } },
       include: { company: true },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.company.findMany({ orderBy: { name: 'asc' } }),
+    prisma.user.groupBy({ by: ['role'], _count: { role: true } }),
   ]);
 
   const filteredCompany = companyId ? companies.find((c) => c.id === companyId) : null;
+  const countFor = (roles: string[]) =>
+    roleCounts.filter((r) => roles.includes(r.role)).reduce((sum, r) => sum + r._count.role, 0);
 
   return (
     <section className="flex flex-col gap-8">
@@ -37,6 +46,27 @@ export default async function UsersAdminPage({
           </p>
         )}
       </div>
+
+      {!filteredCompany && (
+        <div className="flex items-center gap-1 border-b border-line">
+          {USER_TABS.map((tab) => {
+            const active = tab.key === activeTab.key;
+            return (
+              <Link
+                key={tab.key}
+                href={`/admin/users?tab=${tab.key}`}
+                className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
+                  active
+                    ? 'bg-white border-line text-brand-purple'
+                    : 'border-transparent text-muted hover:text-ink'
+                }`}
+              >
+                {tab.label} <span className="tabular-nums">({countFor(tab.roles)})</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto">

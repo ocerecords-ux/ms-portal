@@ -12,14 +12,14 @@ datasource db {
 }
 
 // Popisky pro lidi viz src/lib/roles.ts (ROLE_LABELS) - napr. ADMIN se v
-// adminu zobrazuje jako "Zuzo-labuzi". Klicove hodnoty enumu zustavaji
+// adminu zobrazuje jako "Zuzo-labuzo". Klicove hodnoty enumu zustavaji
 // zpetne kompatibilni (existujici ucty, middleware, adminGuard kontroluji
 // primo 'ADMIN'), pribyvaji jen nove role pro klienty a interni tym.
 enum Role {
   CLIENT    // Klient - uzivatel klientske firmy
   HEREC     // Herec
   DODAVATEL // Dodavatel
-  ADMIN     // Zuzo-labuzi - rozsirena prava jako admin
+  ADMIN     // Zuzo-labuzo - rozsirena prava jako admin
   ZVUKAR    // Zvukar (interni, do budoucna omezeny vyber projektu)
   PRODUKCE  // Produkce (interni)
 }

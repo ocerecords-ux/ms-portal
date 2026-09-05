@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useState } from 'react';
 
-// Pro adminy (Zuzo-labuzi) nahrazuje polozka "Uzivatele" polozku "Objednavka
+// Pro adminy (Zuzo-labuzo) nahrazuje polozka "Uzivatele" polozku "Objednavka
 // audioknihy" v hlavni navigaci - objednavani je klientska agenda, admini
 // naopak potrebuji rychly pristup ke sprave uzivatelu (zadani 5. 9. 2026).
 function navItemsFor(isAdmin?: boolean) {
