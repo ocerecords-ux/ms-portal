@@ -1,0 +1,5 @@
+
+# Nahledy a soubory, ktere sem uklada Claude/desktop app - do repa nepatri
+.DS_Store
+Claude outputs/
+.claude/
