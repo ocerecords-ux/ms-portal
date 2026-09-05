@@ -26,6 +26,38 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ?probe=1 - co vsechno nam Caflou API nabizi. Potrebujeme z nej dostat
+  // firmy, herce a projekty do vlastni databaze (zadani 5. 9. 2026), a nez
+  // napiseme import, musime vedet, ktere zdroje existuji a jak vypadaji.
+  if (req.nextUrl.searchParams.get('probe') === '1') {
+    const endpoints = [
+      '/companies?per=3',
+      '/contacts?per=3',
+      '/people?per=3',
+      '/users?per=3',
+      '/project_types?per=50',
+      '/project_statuses?per=50',
+      '/tags?per=50',
+    ];
+    const out: Record<string, unknown> = {};
+    for (const endpoint of endpoints) {
+      try {
+        const result = await caflouFetch(endpoint);
+        const body = result.body as any;
+        const rows = Array.isArray(body?.results) ? body.results : Array.isArray(body) ? body : null;
+        out[endpoint] = {
+          status: result.status,
+          pocet: rows ? rows.length : null,
+          klice: rows && rows[0] ? Object.keys(rows[0]) : null,
+          prvni: rows ? rows[0] ?? null : String(result.raw).slice(0, 300),
+        };
+      } catch (err) {
+        out[endpoint] = { chyba: err instanceof Error ? err.message : 'selhalo' };
+      }
+    }
+    return NextResponse.json(out);
+  }
+
   // ?all=1 - prehled toho, co Caflou vraci za CELY ucet (bez filtru na firmu).
   // Slouzi k ladeni internich Projektu: kolik projektu vubec chodi, kolik z
   // nich je oznaceno jako dokoncene a jak se presne jmenuji pole, ze kterych
