@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Vaší firmě zatím není nastavená sazba za normostranu.' }, { status: 400 });
   }
 
-  const priceEstimate = isAudiobook ? calculatePrice(pageCount, company.ratePerPage) : null;
+  const priceEstimate = isAudiobook ? calculatePrice(pageCount, company.ratePerPage ?? 0) : null;
 
   let attachment: { url: string; name: string } | null = null;
   const file = formData.get('attachment');
