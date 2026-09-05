@@ -160,20 +160,27 @@ export function mapCaflouProjects(raw: unknown): DisplayProject[] {
   if (!raw || typeof raw !== 'object') return [];
   const results = (raw as { results?: unknown }).results;
   if (!Array.isArray(results)) return [];
-  return results
-    .filter((p: any) => Boolean(p?.project_type_id))
-    .map((p: any) => ({
-      id: p.id,
-      name: p.name || 'Bez názvu',
-      finished: Boolean(p.finished),
-      statusName: p.project_status_name || (p.finished ? 'Hotovo' : 'V realizaci'),
-      narrator: p.custom_column_herec || null,
-      pageCount: toIntOrNull(p.custom_column_pocet_normostran),
-      finishedAt: toDate(p.finished_at),
-      releaseDate: toDate(p.custom_column_termin_vydani),
-      startDate: toDate(p.start_date),
-      endDate: toDate(p.end_date),
-    }));
+  return results.filter((p: any) => Boolean(p?.project_type_id)).map(mapOneCaflouProject);
+}
+
+/**
+ * Prevede jeden syrovy zaznam projektu z Caflou na DisplayProject. Vytazeno
+ * z mapCaflouProjects, aby se stejne mapovani dalo pouzit i pro detail
+ * projektu a pro interni prehled napric vsemi firmami.
+ */
+export function mapOneCaflouProject(p: any): DisplayProject {
+  return {
+    id: p.id,
+    name: p.name || 'Bez názvu',
+    finished: Boolean(p.finished),
+    statusName: p.project_status_name || (p.finished ? 'Hotovo' : 'V realizaci'),
+    narrator: p.custom_column_herec || null,
+    pageCount: toIntOrNull(p.custom_column_pocet_normostran),
+    finishedAt: toDate(p.finished_at),
+    releaseDate: toDate(p.custom_column_termin_vydani),
+    startDate: toDate(p.start_date),
+    endDate: toDate(p.end_date),
+  };
 }
 
 export type AdminDisplayProject = DisplayProject & { companyName: string };
@@ -230,4 +237,129 @@ export async function createCaflouProject(input: {
   }
   // Zatim zamerne nezakladame - viz TODO v komentari funkce.
   return { ok: false, error: 'CAFLOU_NOT_CONFIGURED' };
+}
+
+// ---------------------------------------------------------------------------
+// Interni prehled VSECH projektu (zadani 5. 9. 2026)
+// ---------------------------------------------------------------------------
+// listActiveCaflouProjectsForCompanies vyse se pta Caflou zvlast za kazdou
+// firmu (N pozadavku naraz) - to se pri vice firmach zacalo srazet o rate
+// limit Caflou a v adminu koncilo hlaskou "Nepodařilo se načíst projekty z
+// Caflou u: ...". Pro interni prehled proto stahujeme rovnou CELY seznam
+// projektu uctu jednim (strankovanym) dotazem a nazev firmy k projektu
+// doplnujeme az u nas.
+
+/** Vytahne ID firmy z projektu v Caflou - nazev pole neni v API dokumentaci jednoznacny, zkousime znama mista. */
+function caflouCompanyIdOf(p: any): string | null {
+  const candidate =
+    p?.company_id ?? p?.companyId ?? p?.company?.id ?? p?.client_id ?? p?.customer_id ?? null;
+  if (candidate === null || candidate === undefined || candidate === '') return null;
+  return String(candidate);
+}
+
+/** Nazev firmy, pokud ho Caflou u projektu rovnou posila (jinak si ho doplnime z nasi databaze). */
+function caflouCompanyNameOf(p: any): string | null {
+  const candidate = p?.company_name ?? p?.company?.name ?? p?.client_name ?? null;
+  return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : null;
+}
+
+/**
+ * Nacte vsechny projekty uctu z Caflou (strankovane po 200) a doplni k nim
+ * nazev firmy - primo z Caflou, jinak podle caflouCompanyId firem v portalu.
+ *
+ * Na rozdil od klientskeho zobrazeni se tu projekty NEFILTRUJI podle
+ * project_type_id - interni tym ma videt uplne vsechno, co v Caflou je.
+ */
+export async function listAllCaflouProjectsForInternal(
+  knownCompanies: { name: string; caflouCompanyId: string }[],
+): Promise<{ projects: AdminDisplayProject[]; error: string | null }> {
+  const nameById = new Map(knownCompanies.map((c): [string, string] => [String(c.caflouCompanyId), c.name]));
+
+  const PER = 200;
+  const MAX_PAGES = 15; // pojistka proti nekonecne smycce, staci na 3000 projektu
+  const rawProjects: any[] = [];
+  const seenIds = new Set<string>();
+
+  try {
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const params = new URLSearchParams();
+      params.set('per', String(PER));
+      params.set('page', String(page));
+      const result = await caflouFetch(`/projects?${params.toString()}`);
+      if (!result.ok) {
+        // Prvni stranka selhala = nemame nic; dalsi stranka = vratime aspon to, co uz mame.
+        if (page === 1) {
+          return { projects: [], error: `Caflou API odpovědělo chybou ${result.status}.` };
+        }
+        break;
+      }
+      const results = (result.body as { results?: unknown } | null)?.results;
+      if (!Array.isArray(results) || results.length === 0) break;
+      // Pojistka pro pripad, ze by Caflou parametr "page" ignorovalo a vracelo
+      // porad prvni stranku - bez deduplikace by se projekty nekolikrat
+      // zopakovaly. Kdyz stranka neprinese nic noveho, koncime.
+      const before = seenIds.size;
+      for (const p of results as any[]) {
+        const key = String(p?.id ?? '');
+        if (!key || seenIds.has(key)) continue;
+        seenIds.add(key);
+        rawProjects.push(p);
+      }
+      if (seenIds.size === before) break;
+      if (results.length < PER) break;
+    }
+  } catch (err) {
+    return { projects: [], error: err instanceof Error ? err.message : 'Dotaz na Caflou selhal.' };
+  }
+
+  const projects: AdminDisplayProject[] = rawProjects.map((p: any) => {
+    const caflouCompanyId = caflouCompanyIdOf(p);
+    const companyName =
+      caflouCompanyNameOf(p) ?? (caflouCompanyId ? nameById.get(caflouCompanyId) ?? null : null) ?? '—';
+    return { ...mapOneCaflouProject(p), companyName };
+  });
+
+  return { projects, error: null };
+}
+
+/**
+ * Jeden projekt z Caflou podle ID - pro detail projektu v interni sekci.
+ * Vraci null, kdyz projekt neexistuje nebo se ho nepodarilo nacist.
+ */
+export async function getCaflouProject(
+  caflouProjectId: string,
+): Promise<{ project: DisplayProject; caflouCompanyId: string | null } | null> {
+  try {
+    const result = await caflouFetch(`/projects/${encodeURIComponent(caflouProjectId)}`);
+    if (!result.ok || !result.body || typeof result.body !== 'object') return null;
+    // Caflou u detailu vraci bud rovnou objekt projektu, nebo ho zabaleny v "result"/"results".
+    const body = result.body as any;
+    const p = body?.result ?? (Array.isArray(body?.results) ? body.results[0] : null) ?? body;
+    if (!p || typeof p !== 'object' || (!p.id && !p.name)) return null;
+    return { project: mapOneCaflouProject(p), caflouCompanyId: caflouCompanyIdOf(p) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Zaloha pro detail projektu: kdyz Caflou nepodporuje/nevrati GET
+ * /projects/{id}, dohledame projekt v celem seznamu projektu uctu.
+ */
+export async function findCaflouProjectInList(
+  caflouProjectId: string,
+): Promise<{ project: DisplayProject; caflouCompanyId: string | null } | null> {
+  try {
+    const params = new URLSearchParams();
+    params.set('per', '200');
+    const result = await caflouFetch(`/projects?${params.toString()}`);
+    if (!result.ok) return null;
+    const results = (result.body as { results?: unknown } | null)?.results;
+    if (!Array.isArray(results)) return null;
+    const found = (results as any[]).find((p) => String(p?.id ?? '') === String(caflouProjectId));
+    if (!found) return null;
+    return { project: mapOneCaflouProject(found), caflouCompanyId: caflouCompanyIdOf(found) };
+  } catch {
+    return null;
+  }
 }

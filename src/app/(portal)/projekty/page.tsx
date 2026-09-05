@@ -3,12 +3,19 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import {
   listCaflouProjectsForCompany,
-  listActiveCaflouProjectsForCompanies,
+  listAllCaflouProjectsForInternal,
   mapCaflouProjects,
   type DisplayProject,
 } from '@/lib/caflou';
-import { ProjectsTable, AdminProjectsTable } from './shared';
+import { isInternalRole } from '@/lib/roles';
+import {
+  ProjectsTable,
+  InternalProjectsTable,
+  type InternalProject,
+  type InternalProjectMeta,
+} from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
+import { InternalFinishedProjects } from './InternalFinishedProjects';
 
 // DULEZITE: tato stranka tahá projekty ZIVE z Caflou při každém zobrazení -
 // nesmí ji Next.js pri buildu "zamrazit" jako statickou stránku (to by
@@ -19,11 +26,12 @@ export const dynamic = 'force-dynamic';
 export default async function ProjektyPage() {
   const session = await getServerSession(authOptions);
 
-  // ADMIN ucty nemaji companyId (nepatri pod zadnou firmu) - misto prazdne
-  // "nemate zadne projekty" hlasky jim tu ukazeme prehled aktivnich projektu
-  // NAPRIC vsemi firmami najednou, at maji rychly prehled z jednoho mista.
-  if (session!.user.role === 'ADMIN') {
-    return <AdminProjektySection />;
+  // Interni ucty MEDIA SPACE (Zuzo-labuzo / Produkce / Zvukar) nemaji
+  // companyId (nepatri pod zadnou firmu) - misto prazdne "nemate zadne
+  // projekty" hlasky jim tu ukazeme prehled VSECH projektu z Caflou napric
+  // firmami, rozdeleny na aktivni a dokoncene (zadani 5. 9. 2026).
+  if (isInternalRole(session!.user.role)) {
+    return <InternalProjektySection />;
   }
 
   // Klic tenant izolace: companyId bereme VYHRADNE ze session, nikdy z query/parametru.
@@ -88,43 +96,74 @@ export default async function ProjektyPage() {
   );
 }
 
-async function AdminProjektySection() {
+async function InternalProjektySection() {
+  // Nazvy firem si drzime u sebe (Caflou u projektu vraci hlavne ID firmy) -
+  // slouzi jen k doplneni sloupce "Firma", samotne projekty uz tahame z
+  // Caflou jednim dotazem za cely ucet (viz listAllCaflouProjectsForInternal).
   const companies = await prisma.company.findMany({
-    where: { active: true, caflouCompanyId: { not: null } },
+    where: { caflouCompanyId: { not: null } },
     select: { name: true, caflouCompanyId: true },
     orderBy: { name: 'asc' },
   });
 
-  const { projects, failedCompanies } = await listActiveCaflouProjectsForCompanies(
+  const { projects, error } = await listAllCaflouProjectsForInternal(
     companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
   );
 
-  const active = projects
+  // Nase vlastni atributy k projektum (priorita, typ, manazer) - jednim
+  // dotazem pro vsechny nactene projekty najednou.
+  const metas = projects.length
+    ? await prisma.projectMeta.findMany({
+        where: { caflouProjectId: { in: projects.map((p) => String(p.id)) } },
+        include: { manager: { select: { name: true, email: true } } },
+      })
+    : [];
+  const metaById = new Map(
+    metas.map((m): [string, InternalProjectMeta] => [
+      m.caflouProjectId,
+      {
+        priority: m.priority,
+        projectType: m.projectType,
+        managerName: m.manager ? m.manager.name || m.manager.email : null,
+      },
+    ]),
+  );
+
+  const withMeta: InternalProject[] = projects.map((p) => ({
+    ...p,
+    meta: metaById.get(String(p.id)) ?? null,
+  }));
+
+  const active = withMeta
     .filter((p) => !p.finished)
     .sort((a, b) => (a.endDate?.getTime() ?? Infinity) - (b.endDate?.getTime() ?? Infinity));
+  const finished = withMeta
+    .filter((p) => p.finished)
+    .sort(
+      (a, b) =>
+        (b.finishedAt?.getTime() ?? b.endDate?.getTime() ?? 0) -
+        (a.finishedAt?.getTime() ?? a.endDate?.getTime() ?? 0),
+    );
 
   return (
     <section className="flex flex-col gap-8">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Projekty — všechny firmy</h1>
-        {companies.length === 0 && (
-          <span className="text-xs font-heading text-brand-purpleDark bg-[#F1ECFF] border border-line rounded-lg px-3 py-2">
-            Žádná firma zatím nemá napojení na Caflou
-          </span>
-        )}
-        {failedCompanies.length > 0 && (
+        {error && (
           <span className="text-xs font-heading text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2">
-            Nepodařilo se načíst projekty z Caflou u: {failedCompanies.join(', ')}
+            Projekty se nepodařilo načíst z Caflou. {error}
           </span>
         )}
       </div>
 
       <div>
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
-          Aktivní projekty
+          Aktivní projekty <span className="tabular-nums">({active.length})</span>
         </h2>
-        <AdminProjectsTable projects={active} emptyText="Aktuálně nejsou žádné rozpracované projekty." />
+        <InternalProjectsTable projects={active} emptyText="Aktuálně nejsou žádné rozpracované projekty." />
       </div>
+
+      <InternalFinishedProjects projects={finished} />
     </section>
   );
 }

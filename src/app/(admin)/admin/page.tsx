@@ -134,7 +134,9 @@ export default async function AdminHomePage({
       {/* key vynuti remount pri prepnuti zalozky Klienti/Dodavatele - stejny
           bug jako u /admin/users NewUserForm (5. 9. 2026): bez key si
           klientsky komponent drzi puvodni useState(type) z prvniho mountu. */}
-      <NewCompanyForm key={activeTab.key} defaultType={activeTab.type} />
+      <div className="max-w-3xl w-full">
+        <NewCompanyForm key={activeTab.key} defaultType={activeTab.type} />
+      </div>
     </section>
   );
 }

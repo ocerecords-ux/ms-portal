@@ -10,12 +10,22 @@ import { useState } from 'react';
 // naopak potrebuji rychly pristup ke sprave uzivatelu (zadani 5. 9. 2026).
 // Firmy jsou od 5. 9. 2026 (upresneni) taky primo tady v hlavnim panelu -
 // admin se k nim nema dostavat jen oklikou pres "Administrace" v menu.
-function navItemsFor(isAdmin?: boolean) {
+function navItemsFor(isAdmin?: boolean, isInternal?: boolean) {
   if (isAdmin) {
     return [
       { href: '/projekty', label: 'Projekty' },
       { href: '/admin', label: 'Firmy' },
       { href: '/admin/users', label: 'Uživatelé' },
+      { href: '/nahravky', label: 'Nahrávky' },
+    ];
+  }
+  // Interni ucty bez admin prav (Produkce / Zvukar) - objednavka je
+  // klientska agenda, do administrace firem a uzivatelu je zatim pousti jen
+  // role Zuzo-labuzo (viz middleware.ts), takze jim zbyva prehled projektu a
+  // nahravky.
+  if (isInternal) {
+    return [
+      { href: '/projekty', label: 'Projekty' },
       { href: '/nahravky', label: 'Nahrávky' },
     ];
   }
@@ -31,10 +41,18 @@ function navItemsFor(isAdmin?: boolean) {
   ];
 }
 
-export function Topbar({ userLabel, isAdmin }: { userLabel: string; isAdmin?: boolean }) {
+export function Topbar({
+  userLabel,
+  isAdmin,
+  isInternal,
+}: {
+  userLabel: string;
+  isAdmin?: boolean;
+  isInternal?: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const NAV = navItemsFor(isAdmin);
+  const NAV = navItemsFor(isAdmin, isInternal);
 
   return (
     <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">

@@ -20,7 +20,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen bg-paper">
       <Topbar userLabel={session.user.name || session.user.email} isAdmin />
-      <div className="max-w-4xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
+      {/* Od 5. 9. 2026 stejne siroky obsah jako v klientske casti portalu
+          (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.
+          telefonni cislo se lamalo na dva radky. Formulare si sirku hlidaji
+          samy (max-w-3xl primo u nich). */}
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
     </div>
   );
 }

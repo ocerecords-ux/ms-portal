@@ -1,4 +1,7 @@
+import Link from 'next/link';
+import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/caflou';
+import { PRIORITY_CLASSES, PRIORITY_LABELS, projectTypeLabel } from '@/lib/projectTypes';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -117,6 +120,100 @@ export function AdminProjectsTable({
                 <td className="px-4 py-4 text-sm font-heading text-muted">{p.companyName}</td>
                 <td className="px-4 py-4">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
+                </td>
+                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
+                  {p.pageCount ?? '—'}
+                </td>
+                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                  {p.finished ? formatDate(p.finishedAt) : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Interni prehled projektu (zadani 5. 9. 2026)
+// ---------------------------------------------------------------------------
+// Na rozdil od AdminProjectsTable vyse ukazuje i nase vlastni atributy k
+// projektu (priorita, typ, manazer - viz model ProjectMeta) a nazev projektu
+// je proklik na detail, kde se daji tyto udaje editovat. Vidi ho jen interni
+// ucty MEDIA SPACE.
+
+export type InternalProjectMeta = {
+  priority: ProjectPriority | null;
+  projectType: string | null;
+  managerName: string | null;
+};
+
+export type InternalProject = AdminDisplayProject & { meta: InternalProjectMeta | null };
+
+export function PriorityPill({ priority }: { priority: ProjectPriority | null }) {
+  if (!priority) return <span className="text-muted">—</span>;
+  return (
+    <span
+      className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill whitespace-nowrap ${PRIORITY_CLASSES[priority]}`}
+    >
+      {PRIORITY_LABELS[priority]}
+    </span>
+  );
+}
+
+export function InternalProjectsTable({
+  projects,
+  emptyText,
+}: {
+  projects: InternalProject[];
+  emptyText: string;
+}) {
+  return (
+    <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[980px] border-collapse">
+          <thead>
+            <tr className="bg-brand-purple text-white font-heading text-xs">
+              <th className="text-left px-4 py-3.5">Projekt</th>
+              <th className="text-left px-4 py-3.5">Firma</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">Priorita</th>
+              <th className="text-left px-4 py-3.5">Typ projektu</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">Manažer</th>
+              <th className="text-right px-4 py-3.5 whitespace-nowrap">Normostrany</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">Dokončeno</th>
+            </tr>
+          </thead>
+          <tbody>
+            {projects.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center text-muted text-sm font-body">
+                  {emptyText}
+                </td>
+              </tr>
+            )}
+            {projects.map((p) => (
+              <tr key={p.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                <td className="px-4 py-4 font-heading font-semibold text-sm">
+                  <Link href={`/projekty/${p.id}`} className="text-ink hover:text-brand-purple no-underline">
+                    {p.name}
+                  </Link>
+                </td>
+                <td className="px-4 py-4 text-sm font-heading text-muted">{p.companyName}</td>
+                <td className="px-4 py-4">
+                  <StatusPill finished={p.finished} statusName={p.statusName} />
+                </td>
+                <td className="px-4 py-4 text-sm font-heading">
+                  <PriorityPill priority={p.meta?.priority ?? null} />
+                </td>
+                <td className="px-4 py-4 text-sm font-heading text-muted">
+                  {projectTypeLabel(p.meta?.projectType) ?? '—'}
+                </td>
+                <td className="px-4 py-4 text-sm font-heading text-muted whitespace-nowrap">
+                  {p.meta?.managerName ?? '—'}
                 </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
                   {p.pageCount ?? '—'}

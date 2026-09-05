@@ -194,3 +194,107 @@ export async function sendOrderNotificationEmail(input: OrderEmailInput) {
 
   return { sent: true as const };
 }
+
+// ---------------------------------------------------------------------------
+// Pozvanka do portalu (zadani 5. 9. 2026)
+// ---------------------------------------------------------------------------
+// Admin uzivateli posle pozvanku; odkaz v ni obsahuje jednorazovy token,
+// kterym si uzivatel sam nastavi heslo (viz /api/admin/users/[id]/invite a
+// stranka /nastaveni-hesla). Sablona zamerne drzi stejnou fialovo-zelenou
+// identitu jako notifikace objednavky vyse - vytvarne se jeste doladi.
+
+type InviteEmailInput = {
+  to: string;
+  name: string | null;
+  inviteUrl: string;
+  expiresAt: Date;
+};
+
+function buildInviteHtml(input: InviteEmailInput): string {
+  const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
+  const greeting = input.name ? `Dobrý den, ${escapeHtml(input.name)},` : 'Dobrý den,';
+  const expiresText = input.expiresAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' });
+
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<style>
+  :root { color-scheme: light only; supported-color-schemes: light; }
+  body { margin: 0 !important; padding: 0 !important; background: #FBFAFF !important; }
+  table { border-collapse: collapse; width: 100%; }
+  .email-hero { background: #6B2AF0 !important; background: linear-gradient(135deg, #7B55FF, #6B2AF0) !important; padding: 28px 32px 24px; }
+  .email-hero .word { display: block; height: 150px; width: 150px; }
+  .email-hero .tag { font-family: Helvetica, Arial, sans-serif; color: #C9FFDF !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 16px; }
+  .email-hero .bar { height: 3px; width: 46px; background: #1FDF67 !important; border-radius: 2px; margin-top: 14px; }
+  .email-content { padding: 30px 32px 8px; font-family: Helvetica, Arial, sans-serif; background: #FFFFFF !important; color: #201A33 !important; }
+  .email-content h2 { font-size: 19px; margin: 0 0 14px; font-weight: 600; color: #201A33 !important; }
+  .email-content p { font-size: 14px; line-height: 1.6; margin: 0 0 14px; color: #201A33 !important; }
+  .email-content .small { font-size: 12px; color: #6E6580 !important; }
+  .cta-row { padding: 8px 0 26px; background: #FFFFFF !important; }
+  .cta { display: inline-block; background: #201A33 !important; color: #ffffff !important; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 22px; border-radius: 8px; }
+  .email-footer { padding: 18px 32px 26px; border-top: 1px solid #E4DFFB; background: #FFFFFF !important; }
+  .email-footer p { margin: 0; font-size: 11.5px; color: #6E6580 !important; }
+  .email-footer .brand { color: #6B2AF0 !important; font-weight: 600; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #FBFAFF !important; }
+    .email-hero { background: #6B2AF0 !important; }
+    .email-content, .cta-row, .email-footer { background: #FFFFFF !important; color: #201A33 !important; }
+    .cta { background: #201A33 !important; color: #ffffff !important; }
+  }
+</style>
+</head>
+<body>
+<table role="presentation">
+  <tr><td class="email-hero">
+    <img class="word" src="${baseUrl}${LOGO_GIF_PATH}" width="150" height="150" alt="Mediaspace" />
+    <div class="tag">MS Portal - pozvánka</div>
+    <div class="bar"></div>
+  </td></tr>
+  <tr><td class="email-content">
+    <h2>Vítejte v MS Portalu</h2>
+    <p>${greeting}</p>
+    <p>založili jsme vám přístup do klientského portálu MEDIA SPACE. Přihlašovacím jménem je tento e-mail
+       (<strong>${escapeHtml(input.to)}</strong>), heslo si nastavíte sami přes tlačítko níže.</p>
+    <div class="cta-row">
+      <a href="${escapeHtml(input.inviteUrl)}" class="cta">Nastavit heslo →</a>
+    </div>
+    <p class="small">Odkaz platí do ${expiresText}. Pokud vyprší, napište nám a pošleme vám nový.</p>
+  </td></tr>
+  <tr><td class="email-footer">
+    <p><span class="brand">Mediaspace</span> · MS Portal</p>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+export async function sendInviteEmail(input: InviteEmailInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.to,
+    subject: 'Pozvánka do MS Portalu',
+    text: [
+      input.name ? `Dobry den, ${input.name},` : 'Dobry den,',
+      '',
+      'zalozili jsme vam pristup do portalu MEDIA SPACE (MS Portal).',
+      `Prihlasovaci jmeno: ${input.to}`,
+      '',
+      'Heslo si nastavite zde:',
+      input.inviteUrl,
+      '',
+      `Odkaz plati do ${input.expiresAt.toLocaleDateString('cs-CZ')}.`,
+    ].join('\n'),
+    html: buildInviteHtml(input),
+  });
+
+  return { sent: true as const };
+}

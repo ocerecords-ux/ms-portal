@@ -75,3 +75,27 @@ export const COMPANY_TYPE_TABS: { key: string; label: string; type: CompanyType 
   { key: 'klienti', label: 'Klienti', type: 'KLIENT' },
   { key: 'dodavatele', label: 'Dodavatelé', type: 'DODAVATEL' },
 ];
+
+/**
+ * Interni ucet MEDIA SPACE (Zuzo-labuzo / Produkce / Zvukar). Takovy ucet
+ * nema firmu - v portalu proto misto "svych" projektu vidi prehled projektu
+ * napric vsemi firmami (viz (portal)/projekty/page.tsx).
+ */
+export function isInternalRole(role: Role): boolean {
+  return INTERNAL_ROLES.includes(role);
+}
+
+/**
+ * Kdo smi menit interni atributy projektu (odkaz na KZ, manazer, priorita,
+ * typ projektu - viz model ProjectMeta) - zadani 5. 9. 2026: "můžou je měnit
+ * jen uživatelé typu s rolí Produkce a Žůžo-labůžo. Zvukaři je budou mít jen
+ * jako náhled ke čtení."
+ */
+export function canEditProjectMeta(role: Role): boolean {
+  return role === 'ADMIN' || role === 'PRODUKCE';
+}
+
+/** Kdo smi interni atributy projektu videt (vcetne zvukaru - jen ke cteni). */
+export function canViewProjectMeta(role: Role): boolean {
+  return isInternalRole(role);
+}

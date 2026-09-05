@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { UserEditForm } from './UserEditForm';
+import { InviteButton } from '../InviteButton';
 
 export default async function UserEditPage({ params }: { params: { id: string } }) {
   const [user, companies] = await Promise.all([
@@ -19,6 +20,25 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         <h1 className="font-display text-3xl text-ink m-0 mt-2">
           {user.name || user.email} {user.code && <span className="text-muted text-lg font-heading">({user.code})</span>}
         </h1>
+      </div>
+
+      {/* Pozvanka do portalu (zadani 5. 9. 2026) - uzivateli prijde e-mail s
+          odkazem, kde si sam nastavi heslo. */}
+      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-heading font-semibold text-sm text-ink m-0">Pozvánka do portálu</p>
+          <p className="text-muted text-xs font-body m-0 mt-1">
+            {user.invitedAt
+              ? `Naposledy odeslána ${new Intl.DateTimeFormat('cs-CZ').format(user.invitedAt)}.`
+              : 'Zatím neodeslána.'}
+            {user.passwordSetAt && ' Uživatel si už heslo nastavil.'}
+          </p>
+        </div>
+        <InviteButton
+          userId={user.id}
+          invitedAtLabel={user.invitedAt ? new Intl.DateTimeFormat('cs-CZ').format(user.invitedAt) : null}
+          variant="button"
+        />
       </div>
 
       <UserEditForm

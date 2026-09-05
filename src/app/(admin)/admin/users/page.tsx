@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { NewUserForm } from './NewUserForm';
+import { InviteButton } from './InviteButton';
 import { ROLE_LABELS, USER_TABS } from '@/lib/roles';
 
 // Bez companyId (default pohled) se uzivatele tridi do 3 zalozek podle
@@ -77,11 +78,11 @@ export default async function UsersAdminPage({
               <thead>
                 <tr className="bg-ink text-white font-heading text-xs">
                   <th className="text-left px-4 py-3.5">Kód</th>
-                  <th className="text-left px-4 py-3.5">Jméno</th>
-                  <th className="text-left px-4 py-3.5">E-mail</th>
-                  <th className="text-left px-4 py-3.5">Telefon</th>
-                  <th className="text-left px-4 py-3.5">Role</th>
-                  <th className="text-left px-4 py-3.5">Aktivní</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Jméno</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">E-mail</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Role</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
                   <th></th>
                 </tr>
               </thead>
@@ -96,15 +97,21 @@ export default async function UsersAdminPage({
                 {users.map((u) => (
                   <tr key={u.id} className="border-t border-line hover:bg-[#FAF8FF]">
                     <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">{u.code || '—'}</td>
-                    <td className="px-4 py-3.5 font-heading font-semibold text-sm text-ink">{u.name || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading">{u.email}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums">{u.phone || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading">{ROLE_LABELS[u.role]}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-                    <td className="px-4 py-3.5 text-right">
-                      <Link href={`/admin/users/${u.id}`} className="text-brand-purple text-sm font-heading font-semibold">
-                        Upravit →
-                      </Link>
+                    <td className="px-4 py-3.5 font-heading font-semibold text-sm text-ink whitespace-nowrap">{u.name || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.email}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap">{u.phone || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{ROLE_LABELS[u.role]}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                      <span className="inline-flex items-center gap-4">
+                        <InviteButton
+                          userId={u.id}
+                          invitedAtLabel={u.invitedAt ? dateFmt.format(u.invitedAt) : null}
+                        />
+                        <Link href={`/admin/users/${u.id}`} className="text-brand-purple text-sm font-heading font-semibold">
+                          Upravit →
+                        </Link>
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -115,12 +122,12 @@ export default async function UsersAdminPage({
               <thead>
                 <tr className="bg-ink text-white font-heading text-xs">
                   <th className="text-left px-4 py-3.5">Kód</th>
-                  <th className="text-left px-4 py-3.5">Jméno</th>
-                  <th className="text-left px-4 py-3.5">E-mail</th>
-                  <th className="text-left px-4 py-3.5">Telefon</th>
-                  <th className="text-left px-4 py-3.5">Role</th>
-                  <th className="text-left px-4 py-3.5">Datum narození</th>
-                  <th className="text-left px-4 py-3.5">Aktivní</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Jméno</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">E-mail</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Role</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum narození</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
                   <th></th>
                 </tr>
               </thead>
@@ -142,17 +149,23 @@ export default async function UsersAdminPage({
                       )}
                       {u.name || '—'}
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-heading">{u.email}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums">{u.phone || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading">{ROLE_LABELS[u.role]}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.email}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap">{u.phone || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{ROLE_LABELS[u.role]}</td>
                     <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">
                       {u.birthDate ? dateFmt.format(u.birthDate) : '—'}
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-heading">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-                    <td className="px-4 py-3.5 text-right">
-                      <Link href={`/admin/users/${u.id}`} className="text-brand-purple text-sm font-heading font-semibold">
-                        Upravit →
-                      </Link>
+                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                      <span className="inline-flex items-center gap-4">
+                        <InviteButton
+                          userId={u.id}
+                          invitedAtLabel={u.invitedAt ? dateFmt.format(u.invitedAt) : null}
+                        />
+                        <Link href={`/admin/users/${u.id}`} className="text-brand-purple text-sm font-heading font-semibold">
+                          Upravit →
+                        </Link>
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -163,11 +176,11 @@ export default async function UsersAdminPage({
               <thead>
                 <tr className="bg-ink text-white font-heading text-xs">
                   <th className="text-left px-4 py-3.5">Kód</th>
-                  <th className="text-left px-4 py-3.5">Jméno</th>
-                  <th className="text-left px-4 py-3.5">E-mail</th>
-                  <th className="text-left px-4 py-3.5">Telefon</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Jméno</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">E-mail</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
                   <th className="text-left px-4 py-3.5">Lokace</th>
-                  <th className="text-left px-4 py-3.5">Aktivní</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
                   <th></th>
                 </tr>
               </thead>
@@ -182,17 +195,23 @@ export default async function UsersAdminPage({
                 {users.map((u) => (
                   <tr key={u.id} className="border-t border-line hover:bg-[#FAF8FF]">
                     <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">{u.code || '—'}</td>
-                    <td className="px-4 py-3.5 font-heading font-semibold text-sm text-ink">{u.name || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading">{u.email}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums">{u.phone || '—'}</td>
+                    <td className="px-4 py-3.5 font-heading font-semibold text-sm text-ink whitespace-nowrap">{u.name || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.email}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap">{u.phone || '—'}</td>
                     <td className="px-4 py-3.5 text-sm font-heading text-muted">
                       {u.studioLocations.length > 0 ? u.studioLocations.join(', ') : '—'}
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-heading">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-                    <td className="px-4 py-3.5 text-right">
-                      <Link href={`/admin/users/${u.id}`} className="text-brand-purple text-sm font-heading font-semibold">
-                        Upravit →
-                      </Link>
+                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                      <span className="inline-flex items-center gap-4">
+                        <InviteButton
+                          userId={u.id}
+                          invitedAtLabel={u.invitedAt ? dateFmt.format(u.invitedAt) : null}
+                        />
+                        <Link href={`/admin/users/${u.id}`} className="text-brand-purple text-sm font-heading font-semibold">
+                          Upravit →
+                        </Link>
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -203,11 +222,11 @@ export default async function UsersAdminPage({
               <thead>
                 <tr className="bg-ink text-white font-heading text-xs">
                   <th className="text-left px-4 py-3.5">Kód</th>
-                  <th className="text-left px-4 py-3.5">Jméno</th>
-                  <th className="text-left px-4 py-3.5">E-mail</th>
-                  <th className="text-left px-4 py-3.5">Telefon</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Jméno</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">E-mail</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
                   <th className="text-left px-4 py-3.5">Firma</th>
-                  <th className="text-left px-4 py-3.5">Aktivní</th>
+                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
                   <th></th>
                 </tr>
               </thead>
@@ -222,9 +241,9 @@ export default async function UsersAdminPage({
                 {users.map((u) => (
                   <tr key={u.id} className="border-t border-line hover:bg-[#FAF8FF]">
                     <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">{u.code || '—'}</td>
-                    <td className="px-4 py-3.5 font-heading font-semibold text-sm text-ink">{u.name || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading">{u.email}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums">{u.phone || '—'}</td>
+                    <td className="px-4 py-3.5 font-heading font-semibold text-sm text-ink whitespace-nowrap">{u.name || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.email}</td>
+                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap">{u.phone || '—'}</td>
                     <td className="px-4 py-3.5 text-sm font-heading text-muted">
                       {u.company ? (
                         <Link href={`/admin/companies/${u.company.id}`} className="hover:text-brand-purple">
@@ -234,11 +253,17 @@ export default async function UsersAdminPage({
                         '—'
                       )}
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-heading">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-                    <td className="px-4 py-3.5 text-right">
-                      <Link href={`/admin/users/${u.id}`} className="text-brand-purple text-sm font-heading font-semibold">
-                        Upravit →
-                      </Link>
+                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                      <span className="inline-flex items-center gap-4">
+                        <InviteButton
+                          userId={u.id}
+                          invitedAtLabel={u.invitedAt ? dateFmt.format(u.invitedAt) : null}
+                        />
+                        <Link href={`/admin/users/${u.id}`} className="text-brand-purple text-sm font-heading font-semibold">
+                          Upravit →
+                        </Link>
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -248,7 +273,8 @@ export default async function UsersAdminPage({
         </div>
       </div>
 
-      <NewUserForm
+      <div className="max-w-3xl w-full">
+        <NewUserForm
         // key vynuti remount pri prepnuti zalozky/filtru - jinak si klientsky
         // komponent drzi svuj puvodni useState(role) z prvniho mountu (bug
         // nahlaseny 5. 9. 2026: na zalozce Herci se po prepnuti z jine
@@ -257,7 +283,8 @@ export default async function UsersAdminPage({
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
         defaultCompanyId={companyId}
         defaultRole={filteredCompany ? 'CLIENT' : activeTab.roles[0]}
-      />
+        />
+      </div>
     </section>
   );
 }
