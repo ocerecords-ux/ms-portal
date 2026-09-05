@@ -48,6 +48,12 @@ export async function POST(req: NextRequest) {
   if (!company) {
     return NextResponse.json({ error: 'Firma nenalezena.' }, { status: 404 });
   }
+  // ratePerPage je od 5. 9. 2026 nepovinne pole (Dodavatele ho nemaji) -
+  // klientske firmy, ktere jedine tudy objednavaji, by ho ale mely mit vzdy
+  // vyplnene (viz take (portal)/objednavka/page.tsx).
+  if (company.ratePerPage == null) {
+    return NextResponse.json({ error: 'Vaší firmě zatím není nastavená sazba za normostranu.' }, { status: 400 });
+  }
 
   const priceEstimate = calculatePrice(pageCount, company.ratePerPage);
 

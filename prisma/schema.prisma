@@ -15,13 +15,25 @@ datasource db {
 // adminu zobrazuje jako "Zuzo-labuzo". Klicove hodnoty enumu zustavaji
 // zpetne kompatibilni (existujici ucty, middleware, adminGuard kontroluji
 // primo 'ADMIN'), pribyvaji jen nove role pro klienty a interni tym.
+//
+// DODAVATEL byla puvodne role Uzivatele, od 5. 9. 2026 (upresneni zadani) se
+// ale dodavatele vedou jako Firmy (viz CompanyType.DODAVATEL nize) - v dobe
+// zmeny neexistovaly zadne ucty s touto roli, enum hodnota je proto smazana
+// rovnou bez migrace dat.
 enum Role {
-  CLIENT    // Klient - uzivatel klientske firmy
-  HEREC     // Herec
-  DODAVATEL // Dodavatel
-  ADMIN     // Zuzo-labuzo - rozsirena prava jako admin
-  ZVUKAR    // Zvukar (interni, do budoucna omezeny vyber projektu)
-  PRODUKCE  // Produkce (interni)
+  CLIENT   // Klient - uzivatel klientske firmy
+  HEREC    // Herec
+  ADMIN    // Zuzo-labuzo - rozsirena prava jako admin
+  ZVUKAR   // Zvukar (interni, do budoucna omezeny vyber projektu)
+  PRODUKCE // Produkce (interni)
+}
+
+// Typ firmy na strance /admin (zadani 5. 9. 2026): Firmy uz nejsou jen
+// klienti, ale i dodavatele MEDIA SPACE (produkcni firmy, studia apod.) -
+// stejny model Company, jen jine udaje (viz pole nize) a jina zalozka.
+enum CompanyType {
+  KLIENT
+  DODAVATEL
 }
 
 enum OrderStatus {
@@ -40,11 +52,26 @@ enum CaflouSyncStatus {
 }
 
 model Company {
-  id             String    @id @default(cuid())
-  name           String
-  ratePerPage    Int       // predbezna sazba za 1 normostranu, v Kc
+  id              String      @id @default(cuid())
+  code            String?     @unique // verejne ID zobrazovane v adminu, napr. "MSF0001" - viz lib/codes.ts
+  type            CompanyType @default(KLIENT)
+  name            String
+
+  // --- Klient (type = KLIENT) ---
+  ratePerPage    Int?      // predbezna sazba za 1 normostranu, v Kc - jen u klientu
   caflouCompanyId String?   // ID firmy/kontaktu v Caflou - podle nej se z Caflou API tahaji projekty teto firmy
   driveFolderUrl String?   // odkaz na slozku klienta na Google Disku (prirazuje admin rucne)
+
+  // --- Dodavatel (type = DODAVATEL) - fakturacni/kontaktni udaje, zadani 5. 9. 2026 ---
+  contactName    String?   // kontaktni osoba
+  contactEmail   String?
+  contactPhone   String?
+  ic             String?
+  dic            String?
+  vatPayer       Boolean   @default(false) // platce DPH
+  bankAccount    String?
+  address        String?
+
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -56,16 +83,30 @@ model Company {
 
 model User {
   id           String    @id @default(cuid())
+  code         String?   @unique // verejne ID zobrazovane v adminu, napr. "MSK0001" - viz lib/codes.ts
   email        String    @unique
   passwordHash String
   name         String?
   phone        String?
   role         Role      @default(CLIENT)
-  companyId    String?   // null pro interni ucty (ADMIN/ZVUKAR/PRODUKCE)
+  companyId    String?   // null pro interni ucty (ADMIN/ZVUKAR/PRODUKCE) a pro herce (samostatna jednotka bez firmy)
   company      Company?  @relation(fields: [companyId], references: [id])
   caflouTag    String?   // presny nazev stitku teto konkretni osoby v Caflou (informativni) - rozlisuje, kdo v ramci jedne firmy je ktery projekt objednal
   active       Boolean   @default(true)
   createdAt    DateTime  @default(now())
+
+  // --- Mediaspace (interni role ADMIN/ZVUKAR/PRODUKCE) - zadani 5. 9. 2026 ---
+  birthDate    DateTime? // datum narozeni
+  photoUrl     String?   // fotka
+
+  // --- Herec - zadani 5. 9. 2026: samostatna fyzicka osoba, bez firmy ---
+  studioLocations String[] @default([]) // lokace, ve kterych je herec schopen fyzicky natacet - viz lib/roles.ts HEREC_STUDIOS
+  birthNumber     String?   // RC, nebo datum narozeni jako text, pokud herec RC nema (cizinec apod.)
+  ic              String?
+  dic             String?
+  vatPayer        Boolean   @default(false) // platce DPH
+  bankAccount     String?
+  address         String?
 
   orders Order[] @relation("OrderCreatedBy")
 }
@@ -121,4 +162,12 @@ model Project {
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+// Atomicke pocitadlo pro verejna ID uzivatelu/firem (MSF/MSI/MSH/MSK...) -
+// viz lib/codes.ts. "name" je prefix (napr. "F", "I", "H", "K"), "value" je
+// posledni pouzite cislo v teto rade.
+model Counter {
+  name  String @id
+  value Int    @default(0)
 }

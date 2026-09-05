@@ -16,12 +16,20 @@ export default async function ObjednavkaPage() {
     );
   }
 
+  // ratePerPage je od 5. 9. 2026 nepovinne pole (Dodavatele ho nemaji vubec)
+  // - klientske firmy by ho ale vzdy mely mit vyplnene. Bez sazby nejde
+  // spocitat predbeznou cenu, radeji tedy zobrazime hlasku nez pustit
+  // objednavku s neznamou cenou.
+  if (company.ratePerPage == null) {
+    return (
+      <p className="text-muted font-body">
+        Vaší firmě zatím není nastavená sazba za normostranu. Kontaktujte prosím MEDIA SPACE.
+      </p>
+    );
+  }
+
   return (
     <section>
-      <div className="mb-6">
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Nová objednávka</h1>
-        <p className="text-muted text-sm mt-1 font-body">Vyplňte údaje o audioknize, cenu spočítáme za vás</p>
-      </div>
       <OrderForm ratePerPage={company.ratePerPage} />
     </section>
   );

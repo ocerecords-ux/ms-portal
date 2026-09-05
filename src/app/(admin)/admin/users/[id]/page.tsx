@@ -6,7 +6,7 @@ import { UserEditForm } from './UserEditForm';
 export default async function UserEditPage({ params }: { params: { id: string } }) {
   const [user, companies] = await Promise.all([
     prisma.user.findUnique({ where: { id: params.id } }),
-    prisma.company.findMany({ orderBy: { name: 'asc' } }),
+    prisma.company.findMany({ where: { type: 'KLIENT' }, orderBy: { name: 'asc' } }),
   ]);
   if (!user) notFound();
 
@@ -16,7 +16,9 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         <Link href="/admin/users" className="text-muted text-sm font-heading">
           ← Zpět na seznam uživatelů
         </Link>
-        <h1 className="font-display text-3xl text-ink m-0 mt-2">{user.name || user.email}</h1>
+        <h1 className="font-display text-3xl text-ink m-0 mt-2">
+          {user.name || user.email} {user.code && <span className="text-muted text-lg font-heading">({user.code})</span>}
+        </h1>
       </div>
 
       <UserEditForm
@@ -29,6 +31,15 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           companyId: user.companyId,
           caflouTag: user.caflouTag,
           active: user.active,
+          birthDate: user.birthDate ? user.birthDate.toISOString().slice(0, 10) : null,
+          photoUrl: user.photoUrl,
+          studioLocations: user.studioLocations,
+          birthNumber: user.birthNumber,
+          ic: user.ic,
+          dic: user.dic,
+          vatPayer: user.vatPayer,
+          bankAccount: user.bankAccount,
+          address: user.address,
         }}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
       />

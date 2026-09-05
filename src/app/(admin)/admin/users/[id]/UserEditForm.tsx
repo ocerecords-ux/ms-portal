@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Role } from '@prisma/client';
 import { AdminField } from '../../NewCompanyForm';
-import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany } from '@/lib/roles';
+import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany, HEREC_STUDIOS } from '@/lib/roles';
+
+const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
 type EditableUser = {
   id: string;
@@ -15,11 +17,21 @@ type EditableUser = {
   companyId: string | null;
   caflouTag: string | null;
   active: boolean;
+  birthDate: string | null;
+  photoUrl: string | null;
+  studioLocations: string[];
+  birthNumber: string | null;
+  ic: string | null;
+  dic: string | null;
+  vatPayer: boolean;
+  bankAccount: string | null;
+  address: string | null;
 };
 
 // Editace VSECH udaju existujiciho uzivatele (email, jmeno, telefon, role,
-// firma, aktivni stav, heslo, stitek v Caflou) - viz zadani 5. 9. 2026:
-// "aby sly editovat uzivatele... abych jim mohl zmenit vsechny udaje".
+// firma, aktivni stav, heslo, stitek v Caflou + pole specificka pro danou
+// kategorii - viz zadani 5. 9. 2026). multipart/form-data kvuli volitelne
+// fotce u Mediaspace uctu.
 export function UserEditForm({
   user,
   companies,
@@ -36,11 +48,32 @@ export function UserEditForm({
   const [caflouTag, setCaflouTag] = useState(user.caflouTag ?? '');
   const [active, setActive] = useState(user.active);
   const [newPassword, setNewPassword] = useState('');
+
+  // Mediaspace
+  const [birthDate, setBirthDate] = useState(user.birthDate ?? '');
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
+
+  // Herec
+  const [studioLocations, setStudioLocations] = useState<string[]>(user.studioLocations);
+  const [birthNumber, setBirthNumber] = useState(user.birthNumber ?? '');
+  const [ic, setIc] = useState(user.ic ?? '');
+  const [dic, setDic] = useState(user.dic ?? '');
+  const [vatPayer, setVatPayer] = useState(user.vatPayer);
+  const [bankAccount, setBankAccount] = useState(user.bankAccount ?? '');
+  const [address, setAddress] = useState(user.address ?? '');
+
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const needsCompany = roleRequiresCompany(role);
+  const isMediaspace = INTERNAL_ROLES.includes(role);
+  const isHerec = role === 'HEREC';
+
+  function toggleStudio(studio: string) {
+    setStudioLocations((prev) => (prev.includes(studio) ? prev.filter((s) => s !== studio) : [...prev, studio]));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,26 +81,39 @@ export function UserEditForm({
     setSaved(false);
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/users/${user.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          name,
-          phone,
-          role,
-          companyId: needsCompany ? companyId || null : null,
-          caflouTag,
-          active,
-          ...(newPassword ? { password: newPassword } : {}),
-        }),
-      });
+      const fd = new FormData();
+      fd.set('email', email);
+      fd.set('name', name);
+      fd.set('phone', phone);
+      fd.set('role', role);
+      fd.set('companyId', needsCompany ? companyId || '' : '');
+      fd.set('caflouTag', caflouTag);
+      fd.set('active', String(active));
+      if (newPassword) fd.set('password', newPassword);
+      if (isMediaspace) {
+        fd.set('birthDate', birthDate);
+        if (photo) fd.set('photo', photo);
+        else if (removePhoto) fd.set('removePhoto', 'true');
+      }
+      if (isHerec) {
+        studioLocations.forEach((s) => fd.append('studioLocations', s));
+        fd.set('birthNumber', birthNumber);
+        fd.set('ic', ic);
+        fd.set('dic', dic);
+        fd.set('vatPayer', String(vatPayer));
+        fd.set('bankAccount', bankAccount);
+        fd.set('address', address);
+      }
+
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: 'PATCH', body: fd });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Uložení se nezdařilo.');
       }
       setSaved(true);
       setNewPassword('');
+      setPhoto(null);
+      setRemovePhoto(false);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Uložení se nezdařilo.');
@@ -112,29 +158,96 @@ export function UserEditForm({
             </select>
           </AdminField>
         </div>
-        <div className="flex-1 min-w-[200px]">
-          <AdminField
-            label="Firma"
-            required={needsCompany}
-            hint={needsCompany ? undefined : 'interní role - firma se nepáruje'}
-          >
-            <select
-              required={needsCompany}
-              disabled={!needsCompany}
-              value={needsCompany ? companyId : ''}
-              onChange={(e) => setCompanyId(e.target.value)}
-              className="admin-input"
-            >
-              <option value="">— vyberte firmu —</option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </AdminField>
-        </div>
+        {needsCompany && (
+          <div className="flex-1 min-w-[200px]">
+            <AdminField label="Firma" required>
+              <select required value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="admin-input">
+                <option value="">— vyberte firmu —</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </AdminField>
+          </div>
+        )}
       </div>
+
+      {isMediaspace && (
+        <div className="flex gap-4 flex-wrap items-end">
+          <div className="flex-1 min-w-[160px]">
+            <AdminField label="Datum narození">
+              <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="admin-input" />
+            </AdminField>
+          </div>
+          <div className="flex-1 min-w-[220px]">
+            <AdminField label="Fotka">
+              {user.photoUrl && !photo && !removePhoto && (
+                <div className="flex items-center gap-2 mb-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={user.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                  <button type="button" onClick={() => setRemovePhoto(true)} className="text-xs text-red-600 font-heading">
+                    Odebrat fotku
+                  </button>
+                </div>
+              )}
+              <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] || null)} className="admin-input" />
+            </AdminField>
+          </div>
+        </div>
+      )}
+
+      {isHerec && (
+        <>
+          <AdminField label="Lokace" hint="studia, ve kterých je herec schopen fyzicky natáčet">
+            <div className="flex flex-col gap-1.5">
+              {HEREC_STUDIOS.map((studio) => (
+                <label key={studio} className="flex items-center gap-2 text-sm font-heading text-ink">
+                  <input type="checkbox" checked={studioLocations.includes(studio)} onChange={() => toggleStudio(studio)} />
+                  {studio}
+                </label>
+              ))}
+            </div>
+          </AdminField>
+
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 min-w-[180px]">
+              <AdminField label="RČ / datum narození">
+                <input value={birthNumber} onChange={(e) => setBirthNumber(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <AdminField label="IČ">
+                <input value={ic} onChange={(e) => setIc(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <AdminField label="DIČ">
+                <input value={dic} onChange={(e) => setDic(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm font-heading text-ink">
+            <input type="checkbox" checked={vatPayer} onChange={(e) => setVatPayer(e.target.checked)} />
+            Plátce DPH
+          </label>
+
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 min-w-[180px]">
+              <AdminField label="Číslo účtu">
+                <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <AdminField label="Adresa">
+                <input value={address} onChange={(e) => setAddress(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[160px]">

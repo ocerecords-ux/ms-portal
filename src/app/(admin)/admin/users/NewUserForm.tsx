@@ -4,17 +4,24 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Role } from '@prisma/client';
 import { AdminField } from '../NewCompanyForm';
-import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany } from '@/lib/roles';
+import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany, HEREC_STUDIOS } from '@/lib/roles';
+
+const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
 // Uzivatele se zakladaji tady, na urovni celeho admin panelu, a paruji se s
 // firmou vyberem ze seznamu (misto zakladani primo z detailu jedne firmy) -
 // diky tomu je videt vsechny ucty na jednom miste vcetne internich.
+//
+// Formular jde od 5. 9. 2026 (upresneni) jako multipart/form-data, protoze
+// Mediaspace ucty maji volitelnou fotku (soubor) - viz /api/admin/users.
 export function NewUserForm({
   companies,
   defaultCompanyId,
+  defaultRole,
 }: {
   companies: { id: string; name: string }[];
   defaultCompanyId?: string;
+  defaultRole?: Role;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -22,14 +29,34 @@ export function NewUserForm({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<Role>('CLIENT');
+  const [role, setRole] = useState<Role>(defaultRole || 'CLIENT');
   const [companyId, setCompanyId] = useState(defaultCompanyId || '');
   const [caflouTag, setCaflouTag] = useState('');
+
+  // Mediaspace
+  const [birthDate, setBirthDate] = useState('');
+  const [photo, setPhoto] = useState<File | null>(null);
+
+  // Herec
+  const [studioLocations, setStudioLocations] = useState<string[]>([]);
+  const [birthNumber, setBirthNumber] = useState('');
+  const [ic, setIc] = useState('');
+  const [dic, setDic] = useState('');
+  const [vatPayer, setVatPayer] = useState(false);
+  const [bankAccount, setBankAccount] = useState('');
+  const [address, setAddress] = useState('');
+
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const needsCompany = roleRequiresCompany(role);
+  const isMediaspace = INTERNAL_ROLES.includes(role);
+  const isHerec = role === 'HEREC';
+
+  function toggleStudio(studio: string) {
+    setStudioLocations((prev) => (prev.includes(studio) ? prev.filter((s) => s !== studio) : [...prev, studio]));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,19 +64,29 @@ export function NewUserForm({
     setCreated(null);
     setSaving(true);
     try {
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          name,
-          phone,
-          password,
-          role,
-          companyId: needsCompany ? companyId : null,
-          caflouTag,
-        }),
-      });
+      const fd = new FormData();
+      fd.set('email', email);
+      fd.set('name', name);
+      fd.set('phone', phone);
+      fd.set('password', password);
+      fd.set('role', role);
+      fd.set('companyId', needsCompany ? companyId : '');
+      fd.set('caflouTag', caflouTag);
+      if (isMediaspace) {
+        fd.set('birthDate', birthDate);
+        if (photo) fd.set('photo', photo);
+      }
+      if (isHerec) {
+        studioLocations.forEach((s) => fd.append('studioLocations', s));
+        fd.set('birthNumber', birthNumber);
+        fd.set('ic', ic);
+        fd.set('dic', dic);
+        fd.set('vatPayer', String(vatPayer));
+        fd.set('bankAccount', bankAccount);
+        fd.set('address', address);
+      }
+
+      const res = await fetch('/api/admin/users', { method: 'POST', body: fd });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Účet se nepodařilo založit.');
@@ -60,7 +97,16 @@ export function NewUserForm({
       setPhone('');
       setPassword('');
       setCaflouTag('');
-      setRole('CLIENT');
+      setBirthDate('');
+      setPhoto(null);
+      setStudioLocations([]);
+      setBirthNumber('');
+      setIc('');
+      setDic('');
+      setVatPayer(false);
+      setBankAccount('');
+      setAddress('');
+      setRole(defaultRole || 'CLIENT');
       setCompanyId(defaultCompanyId || '');
       router.refresh();
     } catch (err) {
@@ -131,25 +177,87 @@ export function NewUserForm({
             </select>
           </AdminField>
         </div>
-        <div className="flex-1 min-w-[200px]">
-          <AdminField label="Firma" required={needsCompany} hint={needsCompany ? undefined : 'interní role - firma se nepáruje'}>
-            <select
-              required={needsCompany}
-              disabled={!needsCompany}
-              value={needsCompany ? companyId : ''}
-              onChange={(e) => setCompanyId(e.target.value)}
-              className="admin-input"
-            >
-              <option value="">— vyberte firmu —</option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </AdminField>
-        </div>
+        {needsCompany && (
+          <div className="flex-1 min-w-[200px]">
+            <AdminField label="Firma" required>
+              <select required value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="admin-input">
+                <option value="">— vyberte firmu —</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </AdminField>
+          </div>
+        )}
       </div>
+
+      {isMediaspace && (
+        <div className="flex gap-4 flex-wrap items-end">
+          <div className="flex-1 min-w-[160px]">
+            <AdminField label="Datum narození">
+              <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="admin-input" />
+            </AdminField>
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <AdminField label="Fotka">
+              <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] || null)} className="admin-input" />
+            </AdminField>
+          </div>
+        </div>
+      )}
+
+      {isHerec && (
+        <>
+          <AdminField label="Lokace" hint="studia, ve kterých je herec schopen fyzicky natáčet">
+            <div className="flex flex-col gap-1.5">
+              {HEREC_STUDIOS.map((studio) => (
+                <label key={studio} className="flex items-center gap-2 text-sm font-heading text-ink">
+                  <input type="checkbox" checked={studioLocations.includes(studio)} onChange={() => toggleStudio(studio)} />
+                  {studio}
+                </label>
+              ))}
+            </div>
+          </AdminField>
+
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 min-w-[180px]">
+              <AdminField label="RČ / datum narození">
+                <input value={birthNumber} onChange={(e) => setBirthNumber(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <AdminField label="IČ">
+                <input value={ic} onChange={(e) => setIc(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <AdminField label="DIČ">
+                <input value={dic} onChange={(e) => setDic(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm font-heading text-ink">
+            <input type="checkbox" checked={vatPayer} onChange={(e) => setVatPayer(e.target.checked)} />
+            Plátce DPH
+          </label>
+
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 min-w-[180px]">
+              <AdminField label="Číslo účtu">
+                <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <AdminField label="Adresa">
+                <input value={address} onChange={(e) => setAddress(e.target.value)} className="admin-input" />
+              </AdminField>
+            </div>
+          </div>
+        </>
+      )}
 
       <AdminField label="Štítek v Caflou" hint="nepovinné - identifikuje tuto konkrétní osobu v Caflou">
         <input value={caflouTag} onChange={(e) => setCaflouTag(e.target.value)} className="admin-input" />

@@ -43,3 +43,29 @@ export async function uploadOrderAttachment(file: File, companyId: string): Prom
 
   return { url, name: file.name };
 }
+
+/**
+ * Ulozi fotku uzivatele (sekce Mediaspace v adminu, zadani 5. 9. 2026) -
+ * stejny princip jako uploadOrderAttachment: pokud uloziste jeste neni
+ * nakonfigurovane, nahravani se jen tise preskoci a ucet se ulozi bez fotky.
+ */
+export async function uploadUserPhoto(file: File): Promise<string | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const key = `uzivatele/${randomUUID()}-${file.name}`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type || 'application/octet-stream',
+    }),
+  );
+
+  const endpoint = process.env.S3_ENDPOINT;
+  return endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
+}
