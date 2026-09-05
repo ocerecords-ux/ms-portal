@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -81,11 +82,15 @@ export default function LoginPage() {
             >
               {loading ? 'Přihlašuji…' : 'Přihlásit se'}
             </button>
+
+            <Link href="/zapomenute-heslo" className="text-white/80 text-xs font-body text-center hover:text-white">
+              Zapomenuté heslo
+            </Link>
           </form>
         </div>
 
         <p className="text-center text-muted text-xs mt-6 font-body">
-          Účet vám založí Mediaspace. Zapomenuté heslo řešte prosím přímo s námi.
+          Účet vám založí Mediaspace.
         </p>
       </div>
     </main>

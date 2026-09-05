@@ -549,3 +549,71 @@ export async function sendOrderConfirmationEmail(input: OrderConfirmationInput) 
 
   return { sent: true as const };
 }
+
+// ---------------------------------------------------------------------------
+// Zapomenute heslo (zadani 5. 9. 2026)
+// ---------------------------------------------------------------------------
+
+type PasswordResetInput = {
+  to: string;
+  name: string | null;
+  resetUrl: string;
+  expiresAt: Date;
+};
+
+export function buildPasswordResetHtml(input: PasswordResetInput): string {
+  const greeting = input.name ? `Dobrý den, ${escapeHtml(input.name)},` : 'Dobrý den,';
+  const expiresText = input.expiresAt.toLocaleString('cs-CZ', {
+    timeZone: 'Europe/Prague',
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return emailShell({
+    tag: 'Obnovení hesla',
+    preheader: 'Odkaz pro nastavení nového hesla do MS Portalu.',
+    body: `
+    <span class="badge">Nové heslo</span>
+    <h2>Nastavení nového hesla</h2>
+    <p>${greeting}</p>
+    <p>někdo (snad vy) požádal o nové heslo k účtu <strong>${escapeHtml(input.to)}</strong> v MS Portalu.
+       Nastavíte si ho tímto odkazem:</p>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.resetUrl)}" class="cta">Nastavit nové heslo</a>
+    </div>
+
+    <p class="small">Odkaz platí do ${expiresText}. Pokud jste o nové heslo nežádali, nemusíte nic dělat -
+       stávající heslo zůstává v platnosti a odkaz po uplynutí té doby přestane fungovat.</p>
+  `,
+  });
+}
+
+export async function sendPasswordResetEmail(input: PasswordResetInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.to,
+    subject: 'Nové heslo do MS Portalu',
+    text: [
+      input.name ? `Dobry den, ${input.name},` : 'Dobry den,',
+      '',
+      `nekdo pozadal o nove heslo k uctu ${input.to} v MS Portalu.`,
+      'Nastavite si ho zde:',
+      input.resetUrl,
+      '',
+      `Odkaz plati do ${input.expiresAt.toLocaleString('cs-CZ')}.`,
+      'Pokud jste o nove heslo nezadali, nemusite nic delat.',
+    ].join('\n'),
+    html: buildPasswordResetHtml(input),
+  });
+
+  return { sent: true as const };
+}

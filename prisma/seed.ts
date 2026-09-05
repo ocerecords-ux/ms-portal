@@ -14,13 +14,21 @@ const prisma = new PrismaClient();
  * primo v Prisma Studiu (npx prisma studio), dokud neni hotova admin obrazovka.
  */
 async function main() {
-  const adminPasswordHash = await bcrypt.hash('zmente-toto-heslo', 10);
+  // Zachranna brzda pro pripad, ze se do adminu nejde prihlasit (5. 9. 2026):
+  // kdyz je na Vercelu vyplnena promenna ADMIN_INITIAL_PASSWORD, seed pri
+  // nasazeni prepise heslo interniho admin uctu na tuto hodnotu. Po
+  // prihlaseni promennou zase smazte, at heslo nezustava v nastaveni projektu.
+  const adminResetPassword = process.env.ADMIN_INITIAL_PASSWORD?.trim();
+  const adminPasswordHash = await bcrypt.hash(adminResetPassword || 'zmente-toto-heslo', 10);
   await prisma.user.upsert({
     where: { email: 'admin@mediaspace.cz' },
     // Jmeno se pri kazdem seedu srovna na aktualni podobu brandu (5. 9. 2026:
     // "Mediaspace", ne "MEDIA SPACE") - jinak by uz zalozenemu uctu zustal
     // stary nazev v topbaru.
-    update: { name: 'Mediaspace admin' },
+    update: {
+      name: 'Mediaspace admin',
+      ...(adminResetPassword ? { passwordHash: adminPasswordHash, active: true } : {}),
+    },
     create: {
       email: 'admin@mediaspace.cz',
       passwordHash: adminPasswordHash,
