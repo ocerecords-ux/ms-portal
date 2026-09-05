@@ -85,24 +85,6 @@ export function NewCompanyForm() {
           Zrušit
         </button>
       </div>
-
-      <style jsx global>{`
-        .admin-input {
-          font-family: var(--font-inter);
-          font-size: 14px;
-          border-radius: 8px;
-          border: 1.5px solid #e4dffb;
-          padding: 9px 12px;
-          background: #fff;
-          color: #201a33;
-          width: 100%;
-        }
-        .admin-input:focus {
-          outline: none;
-          border-color: #7b55ff;
-          box-shadow: 0 0 0 3px rgba(123, 85, 255, 0.15);
-        }
-      `}</style>
     </form>
   );
 }

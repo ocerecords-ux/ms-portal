@@ -11,9 +11,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Popisky pro lidi viz src/lib/roles.ts (ROLE_LABELS) - napr. ADMIN se v
+// adminu zobrazuje jako "Zuzo-labuzi". Klicove hodnoty enumu zustavaji
+// zpetne kompatibilni (existujici ucty, middleware, adminGuard kontroluji
+// primo 'ADMIN'), pribyvaji jen nove role pro klienty a interni tym.
 enum Role {
-  CLIENT // uzivatel klientske firmy
-  ADMIN  // interni pracovnik MEDIA SPACE
+  CLIENT    // Klient - uzivatel klientske firmy
+  HEREC     // Herec
+  DODAVATEL // Dodavatel
+  ADMIN     // Zuzo-labuzi - rozsirena prava jako admin
+  ZVUKAR    // Zvukar (interni, do budoucna omezeny vyber projektu)
+  PRODUKCE  // Produkce (interni)
 }
 
 enum OrderStatus {
@@ -51,8 +59,9 @@ model User {
   email        String    @unique
   passwordHash String
   name         String?
+  phone        String?
   role         Role      @default(CLIENT)
-  companyId    String?   // null pro interni ADMIN ucty
+  companyId    String?   // null pro interni ucty (ADMIN/ZVUKAR/PRODUKCE)
   company      Company?  @relation(fields: [companyId], references: [id])
   caflouTag    String?   // presny nazev stitku teto konkretni osoby v Caflou (informativni) - rozlisuje, kdo v ramci jedne firmy je ktery projekt objednal
   active       Boolean   @default(true)
@@ -93,7 +102,7 @@ model Order {
 
 // Lokalni cache projektu - dokud neni napojena plna synchronizace s Caflou,
 // zaznam vznika pri kazde objednavce. Pozdeji pribyde import existujicich
-// projektu z Caflou podle caflouCompanyId firmy.
+// projektu z Caflou podle caflouTag firmy.
 model Project {
   id              String    @id @default(cuid())
   companyId       String

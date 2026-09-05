@@ -17,3 +17,28 @@ body {
   background: var(--brand-green);
   color: #201a33;
 }
+
+/* Spolecny styl pro vsechny formularove prvky v administraci (input,
+   select, textarea) - drive definovano jen lokalne v NewCompanyForm.tsx,
+   presunuto sem, aby fungoval i na strankach, ktere tento komponent
+   nevykresluji (napr. /admin/users). */
+.admin-input {
+  font-family: var(--font-inter);
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1.5px solid #e4dffb;
+  padding: 9px 12px;
+  background: #fff;
+  color: #201a33;
+  width: 100%;
+}
+.admin-input:focus {
+  outline: none;
+  border-color: #7b55ff;
+  box-shadow: 0 0 0 3px rgba(123, 85, 255, 0.15);
+}
+.admin-input:disabled {
+  background: #f6f6f6;
+  color: #6e6580;
+  cursor: not-allowed;
+}

@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { authOptions } from '@/lib/auth';
 import { SignOutButton } from './SignOutButton';
 
+const ADMIN_NAV = [
+  { href: '/admin', label: 'Firmy' },
+  { href: '/admin/users', label: 'Uživatelé' },
+];
+
 // Administrace MEDIA SPACE - pristupna jen uctum s roli ADMIN. Middleware
 // (src/middleware.ts) uz neprihlasene/neadminy blokuje na urovni routovani,
 // tady je stejna kontrola znovu primo v serverove komponente (obrana do hloubky).
@@ -21,6 +26,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-5 w-auto" />
           <span className="text-white/60 font-medium text-sm ml-4">Administrace</span>
         </Link>
+        <nav className="flex items-center gap-6 font-heading text-sm font-medium text-white/70">
+          {ADMIN_NAV.map((item) => (
+            <Link key={item.href} href={item.href} className="hover:text-white">
+              {item.label}
+            </Link>
+          ))}
+        </nav>
         <div className="flex items-center gap-5">
           <Link href="/projekty" className="text-white/70 text-sm font-heading hover:text-white">
             Zpět do portálu

@@ -5,15 +5,21 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useState } from 'react';
 
-const NAV = [
-  { href: '/projekty', label: 'Projekty' },
-  { href: '/objednavka', label: 'Objednávka audioknihy' },
-  { href: '/nahravky', label: 'Nahrávky' },
-];
+// Pro adminy (Zuzo-labuzi) nahrazuje polozka "Uzivatele" polozku "Objednavka
+// audioknihy" v hlavni navigaci - objednavani je klientska agenda, admini
+// naopak potrebuji rychly pristup ke sprave uzivatelu (zadani 5. 9. 2026).
+function navItemsFor(isAdmin?: boolean) {
+  return [
+    { href: '/projekty', label: 'Projekty' },
+    isAdmin ? { href: '/admin/users', label: 'Uživatelé' } : { href: '/objednavka', label: 'Objednávka audioknihy' },
+    { href: '/nahravky', label: 'Nahrávky' },
+  ];
+}
 
 export function Topbar({ userLabel, isAdmin }: { userLabel: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const NAV = navItemsFor(isAdmin);
 
   return (
     <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">
