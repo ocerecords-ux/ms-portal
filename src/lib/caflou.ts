@@ -38,27 +38,45 @@ export async function caflouFetch(
     throw new Error('Caflou API zatím není nastavené (chybí CAFLOU_API_KEY / CAFLOU_ACCOUNT_ID).');
   }
   const url = `${CAFLOU_BASE}/${accountId}${path}`;
-  const res = await fetch(url, {
-    method: init?.method ?? 'GET',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: init?.body ? JSON.stringify(init.body) : undefined,
-    cache: 'no-store',
-  });
-  const raw = await res.text();
-  let body: unknown = null;
-  try {
-    body = raw ? JSON.parse(raw) : null;
-  } catch {
-    body = null;
+
+  // Caflou API obcas kratkodobe odmitne soubezny pozadavek na stejnou cestu
+  // hláškou 429 "Rate limit exceeded - same request is processing already" -
+  // typicky kdyz Next.js prefetchne z hlavniho menu vic odkazu naraz a
+  // /projekty se "srazi" s jinym souvisejicim pozadavkem (zprava uzivatele
+  // 5. 9. 2026: "Projekty se nepodařilo načíst z Caflou"). Kratky retry (max
+  // 3 pokusy, rostouci odstup) tohle ve vetsine pripadu vyresi driv, nez se
+  // to vubec ukaze klientovi jako chyba.
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(url, {
+      method: init?.method ?? 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: 'application/json',
+        ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: init?.body ? JSON.stringify(init.body) : undefined,
+      cache: 'no-store',
+    });
+    const raw = await res.text();
+    let body: unknown = null;
+    try {
+      body = raw ? JSON.parse(raw) : null;
+    } catch {
+      body = null;
+    }
+    if (!res.ok) {
+      console.error('Caflou API chyba:', res.status, raw.slice(0, 2000));
+    }
+    const isRetryableRateLimit = res.status === 429 && attempt < MAX_ATTEMPTS;
+    if (!isRetryableRateLimit) {
+      return { ok: res.ok, status: res.status, body, raw };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 350 * attempt));
   }
-  if (!res.ok) {
-    console.error('Caflou API chyba:', res.status, raw.slice(0, 2000));
-  }
-  return { ok: res.ok, status: res.status, body, raw };
+  // Nedosazitelne (smycka vzdy vrati na poslednim pokusu), jen aby TS vedel,
+  // ze funkce vzdy neco vraci.
+  throw new Error('Caflou API: nedosazeno vysledku po opakovanych pokusech.');
 }
 
 /**

@@ -30,12 +30,14 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Na bilem podkladu (bg-paper) je "by" bile nečitelne, proto tu misto
             bile pouzivame muted/ink - jinak stejny jednoradkovy branding jako
-            v topbaru a administraci (4. 9. 2026). */}
+            v topbaru a administraci (4. 9. 2026). Logo tu drive zustalo malé
+            (h-7/h-8), i kdyz uz bylo zvetsene v topbaru - sjednoceno na
+            stejnou velikost jako topbar/administrace (5. 9. 2026). */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
           <span className="font-body text-ink font-semibold text-2xl sm:text-3xl">MS portal</span>
           <span className="font-body text-muted font-medium text-2xl sm:text-3xl">by</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-7 sm:h-8 w-auto" />
+          <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-12 sm:h-16 w-auto" />
         </div>
 
         <form

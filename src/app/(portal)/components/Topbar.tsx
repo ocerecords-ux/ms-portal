@@ -42,12 +42,14 @@ export function Topbar({ userLabel, isAdmin }: { userLabel: string; isAdmin?: bo
           uzivatele (12. 9. 2026: "to animované logo je strašně malé...mělo
           by to vypadat cca takto: MS portal | (animované logo Mediaspace)")
           - "by" nahrazeno svislou oddelovaci carou a logo znatelne zvetseno
-          (drive vetsi nez napis MS portal, drive bylo h-7/h-8). */}
+          (drive vetsi nez napis MS portal, drive bylo h-7/h-8). Jeste dal
+          zvetseno 5. 9. 2026 (drive h-11/h-14) - uzivatel chtel logo jeste
+          o neco vetsi. */}
       <Link href="/projekty" className="flex items-center gap-3 sm:gap-4 no-underline">
         <span className="font-body text-brand-green font-semibold text-2xl sm:text-3xl">MS portal</span>
-        <span className="w-px h-7 sm:h-9 bg-white/40" aria-hidden="true" />
+        <span className="w-px h-8 sm:h-10 bg-white/40" aria-hidden="true" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-11 sm:h-14 w-auto" />
+        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-12 sm:h-16 w-auto" />
       </Link>
 
       <nav className="flex items-center gap-6 sm:gap-10 flex-wrap font-heading text-sm font-medium">
@@ -62,6 +64,13 @@ export function Topbar({ userLabel, isAdmin }: { userLabel: string; isAdmin?: bo
             <Link
               key={item.href}
               href={item.href}
+              // "/projekty" tahá při každém zobrazení živá data z Caflou
+              // (viz projekty/page.tsx) - výchozí automatický prefetch by ho
+              // natahoval při každém vykreslení Topbaru (item je porad ve
+              // viewportu), coz spolu s dalsimi odkazy zbytecne zvysovalo
+              // riziko kolize/rate-limitu na Caflou API (zprava uzivatele
+              // 5. 9. 2026: "Projekty se nepodařilo načíst z Caflou").
+              prefetch={item.href === '/projekty' ? false : undefined}
               className={`pb-2 border-b-2 transition-colors ${
                 active ? 'text-brand-green border-brand-green' : 'text-white/90 border-transparent hover:text-white'
               }`}
