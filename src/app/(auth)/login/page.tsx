@@ -19,7 +19,16 @@ export default function LoginPage() {
     const res = await signIn('credentials', { email, password, redirect: false });
     setLoading(false);
     if (res?.error) {
-      setError('Nesprávný e-mail nebo heslo.');
+      // Do 5. 9. 2026 tu byla u KAZDE chyby hlaska "Nesprávný e-mail nebo
+      // heslo" - i kdyz prihlaseni spadlo na necem uplne jinem (nedostupna
+      // databaze, chybejici NEXTAUTH_SECRET...). Spatne heslo hlasi NextAuth
+      // jako "CredentialsSignin"; cokoliv jineho je chyba serveru a ma to i
+      // tak vypadat, at se to da dohledat.
+      setError(
+        res.error === 'CredentialsSignin'
+          ? 'Nesprávný e-mail nebo heslo.'
+          : `Přihlášení selhalo kvůli chybě serveru (${res.error}). Zkuste to prosím znovu.`,
+      );
       return;
     }
     router.push('/projekty');
