@@ -14,23 +14,47 @@ const prisma = new PrismaClient();
  * primo v Prisma Studiu (npx prisma studio), dokud neni hotova admin obrazovka.
  */
 async function main() {
-  // Zachranna brzda pro pripad, ze se do adminu nejde prihlasit (5. 9. 2026):
-  // kdyz je na Vercelu vyplnena promenna ADMIN_INITIAL_PASSWORD, seed pri
-  // nasazeni prepise heslo interniho admin uctu na tuto hodnotu. Po
-  // prihlaseni promennou zase smazte, at heslo nezustava v nastaveni projektu.
+  // --- Univerzalni admin ucet Mediaspace (zadani 5. 9. 2026) ---
+  //
+  // Adresa admin@mediaspace.cz neni skutecna schranka, takze na ni nechodi ani
+  // obnova hesla. Ucet se proto ridi dvema promennymi prostredi na Vercelu:
+  //
+  //   ADMIN_EMAIL             - adresa, kterou se tym prihlasuje (nastavte
+  //                             skutecnou schranku, at funguje "zapomenute
+  //                             heslo"). Kdyz neni vyplnena, zustava puvodni
+  //                             admin@mediaspace.cz.
+  //   ADMIN_INITIAL_PASSWORD  - kdyz je vyplnena, seed pri nasazeni nastavi
+  //                             tomuto uctu toto heslo. PO PRIHLASENI JI ZASE
+  //                             SMAZTE, at heslo nezustava v nastaveni projektu.
+  //
+  // Ucet se nikdy nezaklada podruhe: kdyz uz existuje puvodni
+  // admin@mediaspace.cz a ADMIN_EMAIL je jiny, jen se mu adresa prepise -
+  // zustanou tak vsechny jeho vazby.
+  const LEGACY_ADMIN_EMAIL = 'admin@mediaspace.cz';
+  const adminEmail = (process.env.ADMIN_EMAIL?.trim() || LEGACY_ADMIN_EMAIL).toLowerCase();
   const adminResetPassword = process.env.ADMIN_INITIAL_PASSWORD?.trim();
   const adminPasswordHash = await bcrypt.hash(adminResetPassword || 'zmente-toto-heslo', 10);
+
+  if (adminEmail !== LEGACY_ADMIN_EMAIL) {
+    const legacyAdmin = await prisma.user.findUnique({ where: { email: LEGACY_ADMIN_EMAIL } });
+    const alreadyMoved = await prisma.user.findUnique({ where: { email: adminEmail } });
+    if (legacyAdmin && !alreadyMoved) {
+      await prisma.user.update({ where: { id: legacyAdmin.id }, data: { email: adminEmail } });
+    }
+  }
+
   await prisma.user.upsert({
-    where: { email: 'admin@mediaspace.cz' },
+    where: { email: adminEmail },
     // Jmeno se pri kazdem seedu srovna na aktualni podobu brandu (5. 9. 2026:
     // "Mediaspace", ne "MEDIA SPACE") - jinak by uz zalozenemu uctu zustal
     // stary nazev v topbaru.
     update: {
       name: 'Mediaspace admin',
+      role: 'ADMIN',
       ...(adminResetPassword ? { passwordHash: adminPasswordHash, active: true } : {}),
     },
     create: {
-      email: 'admin@mediaspace.cz',
+      email: adminEmail,
       passwordHash: adminPasswordHash,
       name: 'Mediaspace admin',
       role: 'ADMIN',
@@ -63,8 +87,8 @@ async function main() {
 
   await backfillCodes();
 
-  console.log('Seed hotov. Prihlasovaci udaje (zmente po prvnim prihlaseni):');
-  console.log('  admin@mediaspace.cz / zmente-toto-heslo');
+  console.log('Seed hotov.');
+  console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
   console.log('  ocerecords@gmail.com / zmente-toto-heslo');
 }
 
