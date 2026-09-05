@@ -28,14 +28,17 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-paper px-4">
       <div className="w-full max-w-sm">
-        {/* Na bilem podkladu (bg-paper) je "by" bile nečitelne, proto tu misto
-            bile pouzivame muted/ink - jinak stejny jednoradkovy branding jako
-            v topbaru a administraci (4. 9. 2026). Logo tu drive zustalo malé
-            (h-7/h-8), i kdyz uz bylo zvetsene v topbaru - sjednoceno na
-            stejnou velikost jako topbar/administrace (5. 9. 2026). */}
-        <div className="flex items-center justify-center gap-2.5 mb-8">
+        {/* Stejny branding "MS portal | [logo]" jako v topbaru/administraci -
+            drive tu bylo "MS portal by [logo]" (textove "by" navic zustalo
+            male, i kdyz uz bylo v topbaru davno nahrazeno svislou carou) -
+            sjednoceno na stejnou svislou oddelovaci caru a stejnou velikost
+            loga jako topbar (zprava uzivatele: "porad tam je by misto |
+            a logo je porad male", oprava). Na bilem podkladu (bg-paper) je
+            cara/napis v puvodni bile barve necitelna, proto tu misto bile
+            pouzivame ink/muted odstiny. */}
+        <div className="flex items-center justify-center gap-3 sm:gap-4 mb-8">
           <span className="font-body text-ink font-semibold text-2xl sm:text-3xl">MS portal</span>
-          <span className="font-body text-muted font-medium text-2xl sm:text-3xl">by</span>
+          <span className="w-px h-8 sm:h-10 bg-ink/20" aria-hidden="true" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-12 sm:h-16 w-auto" />
         </div>
