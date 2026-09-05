@@ -140,17 +140,18 @@ function toIntOrNull(v: unknown): number | null {
 }
 
 /**
- * Priorita z Caflou. Caflou ji muze vracet jako vlastni sloupec i jako
- * vlastni pole a s ruznymi nazvy hodnot (cesky/anglicky/cislem), takze
- * mapujeme tolerantne; co nepoznáme, bereme jako "neuvedeno" a v portalu se
- * pak pouzije rucne nastavena priorita (ProjectMeta) jako zaloha.
+ * Priorita z Caflou. Overeno na zivo 5. 9. 2026: Caflou u projektu vraci
+ * project_priority_name ("Vysoká"/"Střední"/"Nízká") a zaroven strojove
+ * priority ("high"/"middle"/"low"). Mapujeme tolerantne obojI; co nepoznáme,
+ * bereme jako "neuvedeno" a v portalu se pak pouzije rucne nastavena priorita
+ * (ProjectMeta) jako zaloha.
  */
 function toPriority(v: unknown): ProjectPriority | null {
   if (v === null || v === undefined) return null;
   const s = String(v).trim().toLowerCase();
   if (!s) return null;
   if (['1', 'low', 'nízká', 'nizka', 'nízká priorita', 'malá', 'mala'].includes(s)) return 'LOW';
-  if (['2', 'medium', 'normal', 'normální', 'normalni', 'střední', 'stredni'].includes(s)) return 'MEDIUM';
+  if (['2', 'medium', 'middle', 'normal', 'normální', 'normalni', 'střední', 'stredni'].includes(s)) return 'MEDIUM';
   if (['3', 'high', 'urgent', 'vysoká', 'vysoka', 'kritická', 'kriticka'].includes(s)) return 'HIGH';
   return null;
 }
@@ -196,7 +197,7 @@ export function mapOneCaflouProject(p: any): DisplayProject {
     name: p.name || 'Bez názvu',
     finished: Boolean(p.finished),
     statusName: p.project_status_name || (p.finished ? 'Hotovo' : 'V realizaci'),
-    priority: toPriority(p.custom_column_priorita ?? p.priority_name ?? p.priority),
+    priority: toPriority(p.project_priority_name ?? p.priority ?? p.custom_column_priorita),
     narrator: p.custom_column_herec || null,
     pageCount: toIntOrNull(p.custom_column_pocet_normostran),
     finishedAt: toDate(p.finished_at),
@@ -339,49 +340,119 @@ export async function listAllCaflouProjectsForInternal(
   return projectsInFlight;
 }
 
+/**
+ * Kandidati na filtr "jen rozpracovane projekty". Caflou v dokumentaci tenhle
+ * filtr nema popsany jednoznacne, takze ho zkusime rozpoznat za behu: posleme
+ * kazdou variantu a prijmeme tu, u ktere prijdou samé nedokoncene projekty.
+ * Vysledek si zapamatujeme, aby se to nezkousaelo pri kazdem zobrazeni.
+ */
+const ACTIVE_FILTER_CANDIDATES = [
+  'filter[finished]=false',
+  'filter[finished]=0',
+  'filter[unfinished]=true',
+  'filter[state]=active',
+];
+// undefined = jeste jsme nezkouseli, null = zadny filtr nefunguje (jedeme
+// prehledem vsech stranek a filtrujeme si sami)
+let activeFilterQuery: string | null | undefined = undefined;
+
+/** Jedna stranka projektu z Caflou; pri chybe vraci HTTP status jako cislo. */
+async function fetchProjectsPage(query: string, page: number, per: number): Promise<any[] | number> {
+  const result = await caflouFetch(`/projects?${query}${query ? '&' : ''}per=${per}&page=${page}`);
+  if (!result.ok) return result.status;
+  const results = (result.body as { results?: unknown } | null)?.results;
+  return Array.isArray(results) ? (results as any[]) : [];
+}
+
 async function fetchAllCaflouProjects(
   knownCompanies: { name: string; caflouCompanyId: string }[],
 ): Promise<InternalProjectsResult> {
   const nameById = new Map(knownCompanies.map((c): [string, string] => [String(c.caflouCompanyId), c.name]));
 
-  const PER = 200;
-  const MAX_PAGES = 15; // pojistka proti nekonecne smycce, staci na 3000 projektu
+  // Caflou strop je 100 zaznamu na stranku (overeno 5. 9. 2026: na per=200
+  // vratilo presne 100). Zaroven vraci nejdriv nejstarsi projekty, takze bez
+  // filtru bychom se k rozpracovanym prokousavali pres stovky dokoncenych -
+  // proto tahame rovnou jen aktivni (zadani 5. 9. 2026: "Tak načti zatím jen
+  // ty aktivní").
+  const PER = 100;
+  const MAX_PAGES = 25;
+  const TIME_BUDGET_MS = 8000; // aby dotaz nikdy nepreteel limit serverove funkce
+  const startedAt = Date.now();
+
   const rawProjects: any[] = [];
   const seenIds = new Set<string>();
+  let httpError: number | null = null;
+
+  function collect(rows: any[], onlyUnfinished: boolean): number {
+    const before = seenIds.size;
+    for (const p of rows) {
+      if (onlyUnfinished && p?.finished) continue;
+      const key = String(p?.id ?? '');
+      if (!key || seenIds.has(key)) continue;
+      seenIds.add(key);
+      rawProjects.push(p);
+    }
+    return seenIds.size - before;
+  }
 
   try {
-    for (let page = 1; page <= MAX_PAGES; page++) {
-      const params = new URLSearchParams();
-      params.set('per', String(PER));
-      params.set('page', String(page));
-      const result = await caflouFetch(`/projects?${params.toString()}`);
-      if (!result.ok) {
-        // Prvni stranka selhala = nemame nic; dalsi stranka = vratime aspon to, co uz mame.
-        if (page === 1) {
+    // 1) Zjisteni funkcniho filtru na nedokoncene projekty (jen jednou za bezu instance)
+    if (activeFilterQuery === undefined) {
+      activeFilterQuery = null;
+      for (const candidate of ACTIVE_FILTER_CANDIDATES) {
+        const rows = await fetchProjectsPage(candidate, 1, PER);
+        if (typeof rows === 'number') {
+          httpError = rows;
+          break;
+        }
+        // Filtr uznavame jen tehdy, kdyz opravdu zabral - tzn. neprisel ani
+        // jeden dokonceny projekt. Prazdna odpoved nic nedokazuje.
+        if (rows.length > 0 && rows.every((p) => !p?.finished)) {
+          activeFilterQuery = candidate;
+          collect(rows, true);
+          break;
+        }
+      }
+    }
+
+    if (httpError !== null && rawProjects.length === 0) {
+      return {
+        projects: [],
+        error:
+          httpError === 429
+            ? 'Caflou nás teď odmítá kvůli limitu dotazů (429). Za chvíli to zkuste znovu.'
+            : `Caflou API odpovědělo chybou ${httpError}.`,
+      };
+    }
+
+    // 2) Dotazeni dalsich stranek
+    const query = activeFilterQuery ?? '';
+    const startPage = activeFilterQuery && rawProjects.length > 0 ? 2 : 1;
+    for (let page = startPage; page <= MAX_PAGES; page++) {
+      if (Date.now() - startedAt > TIME_BUDGET_MS) break;
+      const rows = await fetchProjectsPage(query, page, PER);
+      if (typeof rows === 'number') {
+        if (page === 1 && rawProjects.length === 0) {
           return {
             projects: [],
             error:
-              result.status === 429
+              rows === 429
                 ? 'Caflou nás teď odmítá kvůli limitu dotazů (429). Za chvíli to zkuste znovu.'
-                : `Caflou API odpovědělo chybou ${result.status}.`,
+                : `Caflou API odpovědělo chybou ${rows}.`,
           };
         }
         break;
       }
-      const results = (result.body as { results?: unknown } | null)?.results;
-      if (!Array.isArray(results) || results.length === 0) break;
+      if (rows.length === 0) break;
       // Pojistka pro pripad, ze by Caflou parametr "page" ignorovalo a vracelo
-      // porad prvni stranku - bez deduplikace by se projekty nekolikrat
-      // zopakovaly. Kdyz stranka neprinese nic noveho, koncime.
-      const before = seenIds.size;
-      for (const p of results as any[]) {
-        const key = String(p?.id ?? '');
-        if (!key || seenIds.has(key)) continue;
-        seenIds.add(key);
-        rawProjects.push(p);
+      // porad tu samou stranku.
+      const added = collect(rows, true);
+      if (added === 0 && rows.every((p) => p?.finished)) {
+        // Bez funkcniho filtru se prokousavame dokoncenymi projekty - pokracujeme dal.
+        if (rows.length < PER) break;
+        continue;
       }
-      if (seenIds.size === before) break;
-      if (results.length < PER) break;
+      if (rows.length < PER) break;
     }
   } catch (err) {
     return { projects: [], error: err instanceof Error ? err.message : 'Dotaz na Caflou selhal.' };

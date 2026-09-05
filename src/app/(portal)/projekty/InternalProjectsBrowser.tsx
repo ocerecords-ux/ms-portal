@@ -33,9 +33,12 @@ function matches(p: InternalProject, needle: string): boolean {
 export function InternalProjectsBrowser({
   active,
   finished,
+  finishedNote,
 }: {
   active: InternalProject[];
   finished: InternalProject[];
+  /** Vysvetleni pro zalozku Dokoncene, kdyz se dokoncene projekty netahaji. */
+  finishedNote?: string;
 }) {
   const [tab, setTab] = useState<Tab>('active');
   const [query, setQuery] = useState('');
@@ -111,7 +114,7 @@ export function InternalProjectsBrowser({
             ? 'Hledání nic nenašlo.'
             : tab === 'active'
               ? 'Aktuálně nejsou žádné rozpracované projekty.'
-              : 'Zatím tu nejsou žádné dokončené projekty.'
+              : (finishedNote ?? 'Zatím tu nejsou žádné dokončené projekty.')
         }
       />
 
