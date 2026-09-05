@@ -29,7 +29,7 @@ enum Role {
 }
 
 // Typ firmy na strance /admin (zadani 5. 9. 2026): Firmy uz nejsou jen
-// klienti, ale i dodavatele MEDIA SPACE (produkcni firmy, studia apod.) -
+// klienti, ale i dodavatele Mediaspace (produkcni firmy, studia apod.) -
 // stejny model Company, jen jine udaje (viz pole nize) a jina zalozka.
 enum CompanyType {
   KLIENT
@@ -160,7 +160,7 @@ model Order {
   priceEstimate        Int?             // predbezna cena = pageCount * ratePerPageSnapshot
   deadline             DateTime?
   note                 String?
-  preferredNarrator    String?          // "Preferovany herec" - preni klienta, MEDIA SPACE ho pak potvrdi nebo zmeni
+  preferredNarrator    String?          // "Preferovany herec" - preni klienta, Mediaspace ho pak potvrdi nebo zmeni
   attachmentUrl        String?
   attachmentName       String?
 
@@ -223,14 +223,14 @@ enum ProjectPriority {
 // Zaznam vznika az ve chvili, kdy nekdo z tymu neco vyplni (upsert), takze
 // pro vetsinu projektu zadny radek neexistuje a to je v poradku.
 //
-// Videt to smi jen interni ucty MEDIA SPACE (ADMIN/PRODUKCE/ZVUKAR), menit
+// Videt to smi jen interni ucty Mediaspace (ADMIN/PRODUKCE/ZVUKAR), menit
 // jen Produkce a Zuzo-labuzo - viz lib/roles.ts (canEditProjectMeta).
 model ProjectMeta {
   id              String           @id @default(cuid())
   caflouProjectId String           @unique // ID projektu v Caflou (cislo jako text)
 
   driveUrl        String?          // "Odkaz na KZ" - slozka projektu na Google Disku
-  managerUserId   String?          // manazer projektu - interni ucet MEDIA SPACE
+  managerUserId   String?          // manazer projektu - interni ucet Mediaspace
   manager         User?            @relation("ProjectManager", fields: [managerUserId], references: [id])
   priority        ProjectPriority?
   projectType     String?          // klic ciselniku - viz lib/projectTypes.ts (PROJECT_TYPES)

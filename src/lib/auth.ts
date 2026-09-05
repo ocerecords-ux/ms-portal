@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 
 /**
- * Ucty klientu zaklada vyhradne administrator MEDIA SPACE (zadna verejna
+ * Ucty klientu zaklada vyhradne administrator Mediaspace (zadna verejna
  * registrace). Prihlaseni e-mailem + heslem. Kazdy prihlaseny uzivatel ma
  * v session sve companyId (u ADMIN je null) - tímto se v celé aplikaci
  * odvozuje, ktera data smi videt. Nikdy nespoléhat na companyId poslane

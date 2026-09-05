@@ -36,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Neznámý typ projektu.' }, { status: 400 });
     }
 
-    // Manazer musi byt existujici interni ucet MEDIA SPACE.
+    // Manazer musi byt existujici interni ucet Mediaspace.
     if (data.managerUserId) {
       const manager = await prisma.user.findFirst({
         where: { id: data.managerUserId, role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] } },

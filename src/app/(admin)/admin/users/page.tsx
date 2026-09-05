@@ -38,7 +38,7 @@ export default async function UsersAdminPage({
       <div>
         <h1 className="font-display text-3xl text-ink m-0">Uživatelé</h1>
         <p className="text-muted text-sm mt-1 font-body">
-          Všechny přihlašovací účty napříč firmami i interní účty MEDIA SPACE. Uživatele zakládáte tady a párujete s firmou.
+          Všechny přihlašovací účty napříč firmami i interní účty Mediaspace. Uživatele zakládáte tady a párujete s firmou.
         </p>
         {filteredCompany && (
           <p className="text-sm font-heading mt-2">

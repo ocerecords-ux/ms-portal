@@ -2,7 +2,7 @@ import { createSign } from 'crypto';
 
 // Cteni obsahu Google Disku pro sekci "Nahravky". Autentizace bezi pres
 // servisni ucet (email + soukromy klic v env promennych) - zadny klient
-// portalu se nemusi k Disku prihlasovat sam. Admin MEDIA SPACE musi kazdou
+// portalu se nemusi k Disku prihlasovat sam. Admin Mediaspace musi kazdou
 // klientskou slozku (nebo nadrazenou slozku se vsemi klienty) nasdilet
 // e-mailu servisniho uctu jako "Prohlizejici".
 //

@@ -79,7 +79,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
           <p className="text-white/85 text-sm font-body mt-2">
             „{lastOrder.title}" — předběžná cena{' '}
             <strong className="text-brand-green">{new Intl.NumberFormat('cs-CZ').format(lastOrder.price)} Kč</strong>.
-            Objednávku jsme uložili k vašemu účtu a MEDIA SPACE se vám brzy ozve.
+            Objednávku jsme uložili k vašemu účtu a Mediaspace se vám brzy ozve.
           </p>
         </div>
         <div className="flex items-center gap-4 flex-wrap">

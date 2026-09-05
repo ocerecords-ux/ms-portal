@@ -85,7 +85,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-muted text-xs mt-6 font-body">
-          Účet vám založí MEDIA SPACE. Zapomenuté heslo řešte prosím přímo s námi.
+          Účet vám založí Mediaspace. Zapomenuté heslo řešte prosím přímo s námi.
         </p>
       </div>
     </main>

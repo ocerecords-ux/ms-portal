@@ -28,7 +28,7 @@ export const ROLE_LABELS: Record<Role, string> = {
  */
 export const COMPANY_ROLES: Role[] = ['CLIENT'];
 
-/** Interni role MEDIA SPACE - bez firmy. */
+/** Interni role Mediaspace - bez firmy. */
 export const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
 export const ROLE_GROUPS: { label: string; roles: Role[] }[] = [
@@ -77,7 +77,7 @@ export const COMPANY_TYPE_TABS: { key: string; label: string; type: CompanyType 
 ];
 
 /**
- * Interni ucet MEDIA SPACE (Zuzo-labuzo / Produkce / Zvukar). Takovy ucet
+ * Interni ucet Mediaspace (Zuzo-labuzo / Produkce / Zvukar). Takovy ucet
  * nema firmu - v portalu proto misto "svych" projektu vidi prehled projektu
  * napric vsemi firmami (viz (portal)/projekty/page.tsx).
  */

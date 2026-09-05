@@ -143,7 +143,7 @@ export function AdminProjectsTable({
 // Na rozdil od AdminProjectsTable vyse ukazuje i nase vlastni atributy k
 // projektu (priorita, typ, manazer - viz model ProjectMeta) a nazev projektu
 // je proklik na detail, kde se daji tyto udaje editovat. Vidi ho jen interni
-// ucty MEDIA SPACE.
+// ucty Mediaspace.
 
 export type InternalProjectMeta = {
   priority: ProjectPriority | null;

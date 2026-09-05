@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
-import { sendInviteEmail } from '@/lib/email';
+import { sendInviteEmail, type InviteAudience } from '@/lib/email';
 
 // Odeslani pozvanky uzivateli (zadani 5. 9. 2026): vygeneruje jednorazovy
 // token, ulozi ho k uzivateli a posle mu e-mail s odkazem, kde si sam
@@ -32,11 +32,17 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
     const inviteUrl = `${baseUrl}/nastaveni-hesla?token=${token}`;
 
+    // Text pozvanky se lisi podle toho, komu jde (zadani 5. 9. 2026) -
+    // klientovi, internimu cloveku z Mediaspace, nebo herci.
+    const audience: InviteAudience =
+      user.role === 'HEREC' ? 'HEREC' : user.role === 'CLIENT' ? 'CLIENT' : 'INTERNAL';
+
     const result = await sendInviteEmail({
       to: user.email,
       name: user.name,
       inviteUrl,
       expiresAt,
+      audience,
     });
 
     if (!result.sent) {

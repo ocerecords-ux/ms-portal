@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from '@/app/(portal)/components/Topbar';
 
-// Administrace MEDIA SPACE - pristupna jen uctum s roli ADMIN. Middleware
+// Administrace Mediaspace - pristupna jen uctum s roli ADMIN. Middleware
 // (src/middleware.ts) uz neprihlasene/neadminy blokuje na urovni routovani,
 // tady je stejna kontrola znovu primo v serverove komponente (obrana do hloubky).
 //

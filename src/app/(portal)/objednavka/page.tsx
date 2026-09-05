@@ -13,7 +13,7 @@ export default async function ObjednavkaPage() {
   if (!company) {
     return (
       <p className="text-muted font-body">
-        Váš účet zatím není přiřazen k žádné firmě. Kontaktujte prosím MEDIA SPACE.
+        Váš účet zatím není přiřazen k žádné firmě. Kontaktujte prosím Mediaspace.
       </p>
     );
   }
@@ -24,7 +24,7 @@ export default async function ObjednavkaPage() {
   if (!company.dealsAudiobooks && !company.dealsAds) {
     return (
       <p className="text-muted font-body">
-        Vaší firmě zatím není nastavený žádný druh zakázek. Kontaktujte prosím MEDIA SPACE.
+        Vaší firmě zatím není nastavený žádný druh zakázek. Kontaktujte prosím Mediaspace.
       </p>
     );
   }
@@ -36,7 +36,7 @@ export default async function ObjednavkaPage() {
   if (company.dealsAudiobooks && company.ratePerPage == null) {
     return (
       <p className="text-muted font-body">
-        Vaší firmě zatím není nastavená sazba za normostranu. Kontaktujte prosím MEDIA SPACE.
+        Vaší firmě zatím není nastavená sazba za normostranu. Kontaktujte prosím Mediaspace.
       </p>
     );
   }

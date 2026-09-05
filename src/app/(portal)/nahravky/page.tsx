@@ -53,7 +53,7 @@ export default async function NahravkyPage() {
       ) : (
         <div className="bg-white rounded-card border border-line p-8 max-w-xl mx-auto shadow-sm">
           <p className="text-sm font-body text-muted m-0">
-            Zatím vám nebyla přiřazena složka na Google Disku. Ozvěte se prosím MEDIA SPACE.
+            Zatím vám nebyla přiřazena složka na Google Disku. Ozvěte se prosím Mediaspace.
           </p>
         </div>
       )}

@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 /**
  * Zakladni data pro prvni spusteni:
- *  - jeden interni ADMIN ucet (MEDIA SPACE),
+ *  - jeden interni ADMIN ucet (Mediaspace),
  *  - jedna ukazkova firma s prihlasenim (ocerecords), stejna jako ve
  *    verejnem prototypu vzhledu.
  *
@@ -17,11 +17,14 @@ async function main() {
   const adminPasswordHash = await bcrypt.hash('zmente-toto-heslo', 10);
   await prisma.user.upsert({
     where: { email: 'admin@mediaspace.cz' },
-    update: {},
+    // Jmeno se pri kazdem seedu srovna na aktualni podobu brandu (5. 9. 2026:
+    // "Mediaspace", ne "MEDIA SPACE") - jinak by uz zalozenemu uctu zustal
+    // stary nazev v topbaru.
+    update: { name: 'Mediaspace admin' },
     create: {
       email: 'admin@mediaspace.cz',
       passwordHash: adminPasswordHash,
-      name: 'MEDIA SPACE admin',
+      name: 'Mediaspace admin',
       role: 'ADMIN',
     },
   });

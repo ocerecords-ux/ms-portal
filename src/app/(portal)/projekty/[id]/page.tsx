@@ -13,7 +13,7 @@ import { ProjectMetaForm } from './ProjectMetaForm';
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
 // atributy (odkaz na KZ, manazer, priorita, typ projektu - model ProjectMeta).
 //
-// Vidi to jen interni ucty MEDIA SPACE; menit smi jen Produkce a Zuzo-labuzo,
+// Vidi to jen interni ucty Mediaspace; menit smi jen Produkce a Zuzo-labuzo,
 // zvukar ma nahled ke cteni (viz lib/roles.ts).
 export const dynamic = 'force-dynamic';
 

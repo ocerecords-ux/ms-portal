@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
 export default async function ProjektyPage() {
   const session = await getServerSession(authOptions);
 
-  // Interni ucty MEDIA SPACE (Zuzo-labuzo / Produkce / Zvukar) nemaji
+  // Interni ucty Mediaspace (Zuzo-labuzo / Produkce / Zvukar) nemaji
   // companyId (nepatri pod zadnou firmu) - misto prazdne "nemate zadne
   // projekty" hlasky jim tu ukazeme prehled VSECH projektu z Caflou napric
   // firmami, rozdeleny na aktivni a dokoncene (zadani 5. 9. 2026).

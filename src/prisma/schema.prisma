@@ -13,7 +13,7 @@ datasource db {
 
 enum Role {
   CLIENT // uzivatel klientske firmy
-  ADMIN  // interni pracovnik MEDIA SPACE
+  ADMIN  // interni pracovnik Mediaspace
 }
 
 enum OrderStatus {
@@ -74,7 +74,7 @@ model Order {
   priceEstimate        Int?             // predbezna cena = pageCount * ratePerPageSnapshot
   deadline             DateTime?
   note                 String?
-  preferredNarrator    String?          // "Preferovany herec" - preni klienta, MEDIA SPACE ho pak potvrdi nebo zmeni
+  preferredNarrator    String?          // "Preferovany herec" - preni klienta, Mediaspace ho pak potvrdi nebo zmeni
   attachmentUrl        String?
   attachmentName       String?
 

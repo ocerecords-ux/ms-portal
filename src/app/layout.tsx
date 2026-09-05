@@ -10,7 +10,7 @@ const poppins = Poppins({ subsets: ['latin', 'latin-ext'], variable: '--font-pop
 
 export const metadata: Metadata = {
   title: 'MS Portal',
-  description: 'Klientský portál MEDIA SPACE',
+  description: 'Klientský portál Mediaspace',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -46,7 +46,7 @@ type OrderEmailInput = {
   requestedByEmail: string;
 };
 
-// HTML sablona interniho e-mailu (tym MEDIA SPACE) - schvaleny design, viz
+// HTML sablona interniho e-mailu (tym Mediaspace) - schvaleny design, viz
 // e-mailovy mockup z 4. 9. 2026 (fialovo-zelena identita msportal.cz,
 // rychle skenovatelny prehled objednavky s odkazem do adminu).
 function buildInternalNotificationHtml(input: OrderEmailInput): string {
@@ -171,7 +171,7 @@ function buildInternalNotificationText(input: OrderEmailInput): string {
   ].join('\n');
 }
 
-// POZOR: v teto fazi jde tento e-mail VYHRADNE interne timu MEDIA SPACE
+// POZOR: v teto fazi jde tento e-mail VYHRADNE interne timu Mediaspace
 // (viz ORDER_NOTIFICATION_EMAIL) - klientska potvrzovaci sablona je
 // navrzena (schvaleno 4. 9. 2026), ale zamerne jeste NENI zapojena.
 export async function sendOrderNotificationEmail(input: OrderEmailInput) {
@@ -203,11 +203,63 @@ export async function sendOrderNotificationEmail(input: OrderEmailInput) {
 // stranka /nastaveni-hesla). Sablona zamerne drzi stejnou fialovo-zelenou
 // identitu jako notifikace objednavky vyse - vytvarne se jeste doladi.
 
+/**
+ * Komu pozvanka jde (zadani 5. 9. 2026: "Když budeme posílat pozvánky
+ * uživatelům Mediaspace nebo hercům, musí to vypadat jinak. Hlavně mi jde o
+ * ten seznam, co v portálu najdete."). Odvozuje se z role uzivatele - viz
+ * /api/admin/users/[id]/invite.
+ */
+export type InviteAudience = 'CLIENT' | 'INTERNAL' | 'HEREC';
+
 type InviteEmailInput = {
   to: string;
   name: string | null;
   inviteUrl: string;
   expiresAt: Date;
+  audience: InviteAudience;
+};
+
+/** Uvodni odstavec a "co v portalu najdete" podle toho, komu pozvanka jde. */
+const INVITE_COPY: Record<
+  InviteAudience,
+  { tag: string; badge: string; heading: string; intro: string; listTitle: string | null; list: string[] }
+> = {
+  CLIENT: {
+    tag: 'Pozvánka do portálu',
+    badge: 'Nový přístup',
+    heading: 'Vítejte v MS Portalu',
+    intro:
+      'připravili jsme vám přístup do klientského portálu Mediaspace. Heslo si nastavíte sami - stačí jedno kliknutí.',
+    listTitle: 'Co v portálu najdete',
+    list: [
+      'Přehled vašich projektů a jejich stavu',
+      'Objednávkový formulář s předběžnou cenou',
+      'Hotové i rozpracované nahrávky ke stažení',
+    ],
+  },
+  INTERNAL: {
+    tag: 'Interní přístup',
+    badge: 'Interní účet',
+    heading: 'Váš přístup do MS Portalu',
+    intro: 'založili jsme ti interní účet do MS Portalu. Heslo si nastavíš sám - stačí jedno kliknutí.',
+    listTitle: 'Co v portálu najdeš',
+    list: [
+      'Přehled všech projektů z Caflou - aktivní i dokončené',
+      'Detail projektu: manažer, priorita, typ zakázky a odkaz na KZ',
+      'Správu firem a uživatelů (podle role)',
+    ],
+  },
+  HEREC: {
+    tag: 'Pozvánka do portálu',
+    badge: 'Nový přístup',
+    heading: 'Vítejte v MS Portalu',
+    intro:
+      'založili jsme vám účet do MS Portalu, kde vedeme spolupráci s herci. Heslo si nastavíte sami - stačí jedno kliknutí.',
+    // Hercovska cast portalu se teprve stavi - schvalne tu neslibujeme nic,
+    // co uzivatel po prihlaseni nenajde.
+    listTitle: null,
+    list: [],
+  },
 };
 
 /**
@@ -297,7 +349,7 @@ function emailShell(options: { tag: string; preheader: string; body: string }): 
     </td></tr>
     <tr><td class="content">${options.body}</td></tr>
     <tr><td class="footer">
-      <p><span class="brand">MEDIA SPACE</span> · MS Portal · <a href="${baseUrl}" style="color:#6B2AF0;text-decoration:none;">www.msportal.cz</a></p>
+      <p><span class="brand">Mediaspace</span> · MS Portal · <a href="${baseUrl}" style="color:#6B2AF0;text-decoration:none;">www.msportal.cz</a></p>
     </td></tr>
   </table>
 </td></tr></table>
@@ -309,14 +361,30 @@ export function buildInviteHtml(input: InviteEmailInput): string {
   const greeting = input.name ? `Dobrý den, ${escapeHtml(input.name)},` : 'Dobrý den,';
   const expiresText = input.expiresAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' });
 
+  const copy = INVITE_COPY[input.audience];
+  const listHtml = copy.listTitle
+    ? `
+    <p style="font-weight:600;margin-bottom:10px;">${copy.listTitle}</p>
+    <table role="presentation" class="steps" width="100%">
+      ${copy.list
+        .map((item, i) => `<tr><td class="num">${i + 1}</td><td>${item}</td></tr>`)
+        .join('\n      ')}
+    </table>
+`
+    : '';
+  const closing =
+    input.audience === 'INTERNAL'
+      ? 'Pokud odkaz vyprší, řekni si o nový. Kdyby něco nefungovalo, dej vědět.'
+      : 'Pokud odkaz vyprší, napište nám a pošleme vám nový. Tuto pozvánku jste dostali, protože pro vás Mediaspace založila účet - pokud si ji neumíte vysvětlit, dejte nám prosím vědět.';
+
   return emailShell({
-    tag: 'Pozvánka do portálu',
+    tag: copy.tag,
     preheader: 'Váš přístup do MS Portalu je připravený - stačí si nastavit heslo.',
     body: `
-    <span class="badge">Nový přístup</span>
-    <h2>Vítejte v MS Portalu</h2>
+    <span class="badge">${copy.badge}</span>
+    <h2>${copy.heading}</h2>
     <p>${greeting}</p>
-    <p>připravili jsme vám přístup do klientského portálu MEDIA SPACE. Heslo si nastavíte sami - stačí jedno kliknutí.</p>
+    <p>${copy.intro}</p>
 
     <table role="presentation" class="field-table">
       <tr><td class="label">Přihlašovací jméno</td><td class="value">${escapeHtml(input.to)}</td></tr>
@@ -326,16 +394,8 @@ export function buildInviteHtml(input: InviteEmailInput): string {
     <div class="cta-row">
       <a href="${escapeHtml(input.inviteUrl)}" class="cta">Nastavit heslo</a>
     </div>
-
-    <p style="font-weight:600;margin-bottom:10px;">Co v portálu najdete</p>
-    <table role="presentation" class="steps" width="100%">
-      <tr><td class="num">1</td><td>Přehled vašich projektů a jejich stavu</td></tr>
-      <tr><td class="num">2</td><td>Objednávkový formulář s předběžnou cenou</td></tr>
-      <tr><td class="num">3</td><td>Hotové i rozpracované nahrávky ke stažení</td></tr>
-    </table>
-
-    <p class="small">Pokud odkaz vyprší, napište nám a pošleme vám nový. Tuto pozvánku jste dostali, protože pro vás
-       MEDIA SPACE založila účet - pokud si ji neumíte vysvětlit, dejte nám prosím vědět.</p>
+${listHtml}
+    <p class="small">${closing}</p>
   `,
   });
 }
@@ -349,11 +409,11 @@ export async function sendInviteEmail(input: InviteEmailInput) {
   await transport.sendMail({
     from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
     to: input.to,
-    subject: 'Pozvánka do MS Portalu',
+    subject: input.audience === 'INTERNAL' ? 'Přístup do MS Portalu' : 'Pozvánka do MS Portalu',
     text: [
       input.name ? `Dobry den, ${input.name},` : 'Dobry den,',
       '',
-      'pripravili jsme vam pristup do portalu MEDIA SPACE (MS Portal).',
+      'pripravili jsme vam pristup do portalu Mediaspace (MS Portal).',
       `Prihlasovaci jmeno: ${input.to}`,
       '',
       'Heslo si nastavite zde:',
@@ -482,7 +542,7 @@ export async function sendOrderConfirmationEmail(input: OrderConfirmationInput) 
       `Poznamka: ${input.note ?? '-'}`,
       '',
       'Ozveme se vam s potvrzenim terminu.',
-      'MEDIA SPACE / MS Portal',
+      'Mediaspace / MS Portal',
     ].join('\n'),
     html: buildOrderConfirmationHtml(input),
   });

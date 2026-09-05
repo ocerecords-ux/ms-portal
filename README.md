@@ -1,7 +1,7 @@
 # MS Portal
 
-Klientský portál MEDIA SPACE (Next.js 14, App Router, TypeScript, Tailwind, Prisma/PostgreSQL).
-Veřejný web MEDIA SPACE zůstává na Wixu — tohle je samostatná aplikace pro `www.msportal.cz`.
+Klientský portál Mediaspace (Next.js 14, App Router, TypeScript, Tailwind, Prisma/PostgreSQL).
+Veřejný web Mediaspace zůstává na Wixu — tohle je samostatná aplikace pro `www.msportal.cz`.
 
 ## Co je hotové (fáze 1, část 1)
 

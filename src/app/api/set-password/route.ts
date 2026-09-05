@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Odkaz už není platný. Požádejte prosím o novou pozvánku.' }, { status: 400 });
     }
     if (!user.active) {
-      return NextResponse.json({ error: 'Účet je neaktivní. Kontaktujte prosím MEDIA SPACE.' }, { status: 400 });
+      return NextResponse.json({ error: 'Účet je neaktivní. Kontaktujte prosím Mediaspace.' }, { status: 400 });
     }
 
     await prisma.user.update({

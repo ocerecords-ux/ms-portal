@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 /**
  * Objednavka reklamy (zadani 12. 9. 2026) - klienti, kteri poptavaji jen
  * reklamy, nepotrebuji normostrany/cenu/herce jako u audioknihy. Zatim jen
- * zakladni pole (nazev, termin, poznamka, priloha) - zbytek si MEDIA SPACE
+ * zakladni pole (nazev, termin, poznamka, priloha) - zbytek si Mediaspace
  * s temito klienty vyspecifikuje pozdeji, viz OrderKind ve schema.prisma.
  */
 export function AdOrderForm() {
@@ -71,7 +71,7 @@ export function AdOrderForm() {
         <div>
           <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka byla odeslána</h2>
           <p className="text-white/85 text-sm font-body mt-2">
-            „{lastTitle}" — objednávku jsme uložili k vašemu účtu a MEDIA SPACE se vám brzy ozve.
+            „{lastTitle}" — objednávku jsme uložili k vašemu účtu a Mediaspace se vám brzy ozve.
           </p>
         </div>
         <div className="flex items-center gap-4 flex-wrap">

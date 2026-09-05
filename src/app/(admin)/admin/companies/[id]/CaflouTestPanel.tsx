@@ -8,7 +8,7 @@ type CompanyHit = { id: string | number; name: string };
 // Caflou API (nazvy poli u projektu), tady si admin muze kdykoliv overit
 // zivé napojeni a videt syrovou odpoved primo v adminu - misto hledani ve
 // Vercel Logs. Hledani firem je zvlast (zobrazuje jen nazev + ID, ne cely
-// syrovy JSON), protoze uctu ma MEDIA SPACE pres Caflou stovky.
+// syrovy JSON), protoze uctu ma Mediaspace pres Caflou stovky.
 export function CaflouTestPanel({ companyId }: { companyId: string }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);

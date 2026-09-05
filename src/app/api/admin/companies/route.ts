@@ -7,7 +7,7 @@ import { nextCode } from '@/lib/codes';
 // Firmy se od 5. 9. 2026 deli na Klienty a Dodavatele (viz CompanyType v
 // schema.prisma) - kazdy typ ma jina pole, proto discriminated union podle
 // "type". Dodavatel nema sazbu/normostranu ani napojeni na Caflou/Disk (to
-// dava smysl jen u klientu, kterym MEDIA SPACE fakturuje za stranky), misto
+// dava smysl jen u klientu, kterym Mediaspace fakturuje za stranky), misto
 // toho ma fakturacni/kontaktni udaje.
 const schema = z.discriminatedUnion('type', [
   z.object({
