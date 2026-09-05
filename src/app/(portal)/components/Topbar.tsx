@@ -8,10 +8,20 @@ import { useState } from 'react';
 // Pro adminy (Zuzo-labuzo) nahrazuje polozka "Uzivatele" polozku "Objednavka
 // audioknihy" v hlavni navigaci - objednavani je klientska agenda, admini
 // naopak potrebuji rychly pristup ke sprave uzivatelu (zadani 5. 9. 2026).
+// Firmy jsou od 5. 9. 2026 (upresneni) taky primo tady v hlavnim panelu -
+// admin se k nim nema dostavat jen oklikou pres "Administrace" v menu.
 function navItemsFor(isAdmin?: boolean) {
+  if (isAdmin) {
+    return [
+      { href: '/projekty', label: 'Projekty' },
+      { href: '/admin', label: 'Firmy' },
+      { href: '/admin/users', label: 'Uživatelé' },
+      { href: '/nahravky', label: 'Nahrávky' },
+    ];
+  }
   return [
     { href: '/projekty', label: 'Projekty' },
-    isAdmin ? { href: '/admin/users', label: 'Uživatelé' } : { href: '/objednavka', label: 'Objednávka audioknihy' },
+    { href: '/objednavka', label: 'Objednávka audioknihy' },
     { href: '/nahravky', label: 'Nahrávky' },
   ];
 }
@@ -35,7 +45,12 @@ export function Topbar({ userLabel, isAdmin }: { userLabel: string; isAdmin?: bo
 
       <nav className="flex items-center gap-6 sm:gap-10 flex-wrap font-heading text-sm font-medium">
         {NAV.map((item) => {
-          const active = pathname?.startsWith(item.href);
+          // "/admin" (Firmy) by jinak jako prefix odpovidal i "/admin/users" -
+          // proto je Firmy aktivni jen presne na /admin nebo na detailu firmy.
+          const active =
+            item.href === '/admin'
+              ? pathname === '/admin' || pathname?.startsWith('/admin/companies')
+              : pathname?.startsWith(item.href);
           return (
             <Link
               key={item.href}
