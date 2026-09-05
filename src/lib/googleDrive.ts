@@ -150,15 +150,40 @@ export async function getFileMeta(
  * Tenant izolace: overi, ze pozadovane ID je skutecne potomkem korenove
  * slozky firmy (rootId) - klient si tak nemuze vyzadat cizi soubor jen tim,
  * ze do dotazu vlozi jine ID.
+ *
+ * Puvodne se overovalo "zdola nahoru" - files.get na cilove ID a cteni jeho
+ * pole parents, opakovane az ke korenu. V praxi to ale u podslozek/souboru
+ * hlasilo "K teto slozce nemate pristup", i kdyz byla polozka viditelne
+ * vracena jako potomek korenove slozky pri normalnim vypisu (listFolder) -
+ * pole parents ziskane pres samostatny files.get na cilove ID neni pro
+ * nektere sdilene polozky stejne spolehlive jako vypis pres query
+ * "'X' in parents", ktery uz mame overene jako funkcni (jinak by se
+ * nezobrazil ani korenovy vypis). Overeni proto delame "shora dolu" - BFS
+ * z jiz funkcni korenove slozky pomoci stejne funkce (listFolder), misto
+ * spolehu na getFileMeta/parents ciloveho ID.
  */
-export async function isWithinRoot(id: string, rootId: string, token: string, maxHops = 25): Promise<boolean> {
-  let currentId = id;
-  for (let i = 0; i < maxHops; i++) {
-    if (currentId === rootId) return true;
-    const meta = await getFileMeta(currentId, token);
-    if (!meta || meta.parents.length === 0) return false;
-    if (meta.parents.includes(rootId)) return true;
-    currentId = meta.parents[0];
+export async function isWithinRoot(id: string, rootId: string, token: string, maxNodes = 500): Promise<boolean> {
+  if (id === rootId) return true;
+  const queue: string[] = [rootId];
+  const visited = new Set<string>([rootId]);
+  let visitedNodes = 0;
+  while (queue.length > 0 && visitedNodes < maxNodes) {
+    const current = queue.shift()!;
+    let children: DriveItem[];
+    try {
+      children = await listFolder(current, token);
+    } catch (err) {
+      console.error('isWithinRoot: vypis slozky pri overovani prislusnosti selhal', current, err);
+      continue;
+    }
+    visitedNodes++;
+    for (const child of children) {
+      if (child.id === id) return true;
+      if (child.isFolder && !visited.has(child.id)) {
+        visited.add(child.id);
+        queue.push(child.id);
+      }
+    }
   }
   return false;
 }

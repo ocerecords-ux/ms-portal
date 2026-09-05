@@ -13,6 +13,8 @@ const schema = z.discriminatedUnion('type', [
     ratePerPage: z.coerce.number().int().min(0, 'Sazba musí být kladné číslo.'),
     caflouCompanyId: z.string().trim().optional(),
     driveFolderUrl: z.string().trim().optional(),
+    dealsAudiobooks: z.boolean().optional(),
+    dealsAds: z.boolean().optional(),
     active: z.boolean().optional(),
   }),
   z.object({
@@ -51,6 +53,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             ratePerPage: data.ratePerPage,
             caflouCompanyId: data.caflouCompanyId || null,
             driveFolderUrl: data.driveFolderUrl || null,
+            ...(data.dealsAudiobooks !== undefined ? { dealsAudiobooks: data.dealsAudiobooks } : {}),
+            ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
             ...(data.active !== undefined ? { active: data.active } : {}),
           }
         : {

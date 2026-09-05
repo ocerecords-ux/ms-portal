@@ -17,6 +17,10 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
   const [rate, setRate] = useState('');
   const [caflouCompanyId, setCaflouCompanyId] = useState('');
   const [driveUrl, setDriveUrl] = useState('');
+  // Druh zakazek (zadani 12. 9. 2026) - podle tohoto se klientovi na
+  // /objednavka zobrazi jen prislusny typ objednavky.
+  const [dealsAudiobooks, setDealsAudiobooks] = useState(true);
+  const [dealsAds, setDealsAds] = useState(false);
 
   // Dodavatel
   const [contactName, setContactName] = useState('');
@@ -36,6 +40,8 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
     setRate('');
     setCaflouCompanyId('');
     setDriveUrl('');
+    setDealsAudiobooks(true);
+    setDealsAds(false);
     setContactName('');
     setContactEmail('');
     setContactPhone('');
@@ -53,7 +59,7 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
     try {
       const body =
         type === 'KLIENT'
-          ? { type, name, ratePerPage: rate, caflouCompanyId, driveFolderUrl: driveUrl }
+          ? { type, name, ratePerPage: rate, caflouCompanyId, driveFolderUrl: driveUrl, dealsAudiobooks, dealsAds }
           : { type, name, contactName, contactEmail, contactPhone, ic, dic, vatPayer, bankAccount, address };
 
       const res = await fetch('/api/admin/companies', {
@@ -113,6 +119,19 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
 
           <AdminField label="Odkaz na složku Google Disk">
             <input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="https://drive.google.com/…" className="admin-input" />
+          </AdminField>
+
+          <AdminField label="Druh zakázek" hint="podle toho klient uvidí jen příslušný typ objednávky">
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 text-sm font-heading text-ink">
+                <input type="checkbox" checked={dealsAudiobooks} onChange={(e) => setDealsAudiobooks(e.target.checked)} />
+                Audioknihy
+              </label>
+              <label className="flex items-center gap-2 text-sm font-heading text-ink">
+                <input type="checkbox" checked={dealsAds} onChange={(e) => setDealsAds(e.target.checked)} />
+                Reklamy
+              </label>
+            </div>
           </AdminField>
         </>
       ) : (

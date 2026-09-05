@@ -16,6 +16,8 @@ const schema = z.discriminatedUnion('type', [
     ratePerPage: z.coerce.number().int().min(0, 'Sazba musí být kladné číslo.'),
     caflouCompanyId: z.string().trim().optional(),
     driveFolderUrl: z.string().trim().optional(),
+    dealsAudiobooks: z.boolean().optional(),
+    dealsAds: z.boolean().optional(),
   }),
   z.object({
     type: z.literal('DODAVATEL'),
@@ -54,6 +56,10 @@ export async function POST(req: NextRequest) {
             ratePerPage: data.ratePerPage,
             caflouCompanyId: data.caflouCompanyId || null,
             driveFolderUrl: data.driveFolderUrl || null,
+            // Chybi-li v pozadavku (starsi klient formulare apod.), zustava
+            // vychozi hodnota ze schema.prisma (dealsAudiobooks true, dealsAds false).
+            ...(data.dealsAudiobooks !== undefined ? { dealsAudiobooks: data.dealsAudiobooks } : {}),
+            ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
           }
         : {
             code,

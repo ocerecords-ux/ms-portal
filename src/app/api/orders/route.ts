@@ -8,7 +8,14 @@ import { uploadOrderAttachment } from '@/lib/storage';
 import { sendOrderNotificationEmail } from '@/lib/email';
 import { createCaflouProject } from '@/lib/caflou';
 
+// Druh objednavky (zadani 12. 9. 2026 - viz OrderKind ve schema.prisma).
+// AUDIOBOOK je vychozi a zachovava puvodni chovani (normostrany, cena,
+// Caflou projekt); AD je zatim jen zakladni ulozeni objednavky - zbytek
+// (jaka pole presne, Caflou napojeni apod.) se upresni pozdeji.
+const ORDER_KINDS = ['AUDIOBOOK', 'AD'] as const;
+
 const orderSchema = z.object({
+  kind: z.enum(ORDER_KINDS).default('AUDIOBOOK'),
   title: z.string().trim().min(1, 'Název je povinný.'),
   pageCount: z.string().optional(),
   deadline: z.string().optional(),
@@ -27,6 +34,7 @@ export async function POST(req: NextRequest) {
 
   const formData = await req.formData();
   const parsed = orderSchema.safeParse({
+    kind: formData.get('kind') || undefined,
     title: formData.get('title'),
     pageCount: formData.get('pageCount'),
     deadline: formData.get('deadline'),
@@ -36,9 +44,10 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
-  const { title, note } = parsed.data;
+  const { kind, title, note } = parsed.data;
+  const isAudiobook = kind === 'AUDIOBOOK';
   const preferredNarrator = parsed.data.preferredNarrator?.trim() || null;
-  const pageCount = parsed.data.pageCount ? parseInt(parsed.data.pageCount, 10) : null;
+  const pageCount = isAudiobook && parsed.data.pageCount ? parseInt(parsed.data.pageCount, 10) : null;
   const deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
 
   const [company, orderingUser] = await Promise.all([
@@ -48,14 +57,14 @@ export async function POST(req: NextRequest) {
   if (!company) {
     return NextResponse.json({ error: 'Firma nenalezena.' }, { status: 404 });
   }
-  // ratePerPage je od 5. 9. 2026 nepovinne pole (Dodavatele ho nemaji) -
-  // klientske firmy, ktere jedine tudy objednavaji, by ho ale mely mit vzdy
-  // vyplnene (viz take (portal)/objednavka/page.tsx).
-  if (company.ratePerPage == null) {
+  // ratePerPage/normostrany davaji smysl jen u objednavky audioknihy - u
+  // reklamy (kind AD) se cena zatim nepocita (zadani 12. 9. 2026: "zbytek si
+  // vyspecifikujeme později").
+  if (isAudiobook && company.ratePerPage == null) {
     return NextResponse.json({ error: 'Vaší firmě zatím není nastavená sazba za normostranu.' }, { status: 400 });
   }
 
-  const priceEstimate = calculatePrice(pageCount, company.ratePerPage);
+  const priceEstimate = isAudiobook ? calculatePrice(pageCount, company.ratePerPage) : null;
 
   let attachment: { url: string; name: string } | null = null;
   const file = formData.get('attachment');
@@ -69,9 +78,10 @@ export async function POST(req: NextRequest) {
     data: {
       companyId,
       createdByUserId: userId,
+      kind,
       title,
       pageCount,
-      ratePerPageSnapshot: company.ratePerPage,
+      ratePerPageSnapshot: isAudiobook ? company.ratePerPage : null,
       priceEstimate,
       deadline,
       note: note || null,
@@ -113,11 +123,12 @@ export async function POST(req: NextRequest) {
   }
 
   // 3) Zalozeni projektu v Caflou (nazev, stitek OSOBY co objednala, pocet
-  //    normostran) - take best effort. Stitek je zamerne u uzivatele, ne u
-  //    firmy: rozlisuje v Caflou, ktery projekt patri ktere konkretni osobe,
-  //    i kdyz vice lidi objednava pod stejnou firmou. Stav se uklada
-  //    k objednavce pro dohledani v adminu.
-  if (orderingUser?.caflouTag) {
+  //    normostran) - take best effort, a zatim jen pro objednavky audioknihy
+  //    (u reklamy normostrany/cena zatim nedavaji smysl - viz vyse). Stitek
+  //    je zamerne u uzivatele, ne u firmy: rozlisuje v Caflou, ktery projekt
+  //    patri ktere konkretni osobe, i kdyz vice lidi objednava pod stejnou
+  //    firmou. Stav se uklada k objednavce pro dohledani v adminu.
+  if (isAudiobook && orderingUser?.caflouTag) {
     const caflouResult = await createCaflouProject({
       projectName: title,
       clientTag: orderingUser.caflouTag,

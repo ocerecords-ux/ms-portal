@@ -38,6 +38,7 @@ export function ProjectsTable({ projects, emptyText }: { projects: DisplayProjec
               <th className="text-left px-4 py-3.5">Projekt</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
               <th className="text-left px-4 py-3.5">Herec</th>
+              <th className="text-right px-4 py-3.5 whitespace-nowrap">Normostrany</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum dokončení</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum vydání</th>
             </tr>
@@ -45,7 +46,7 @@ export function ProjectsTable({ projects, emptyText }: { projects: DisplayProjec
           <tbody>
             {projects.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm font-body">
+                <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
                   {emptyText}
                 </td>
               </tr>
@@ -57,6 +58,9 @@ export function ProjectsTable({ projects, emptyText }: { projects: DisplayProjec
                   <StatusPill finished={p.finished} statusName={p.statusName} />
                 </td>
                 <td className="px-4 py-4 text-sm font-heading">{p.narrator ?? '—'}</td>
+                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
+                  {p.pageCount ?? '—'}
+                </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {p.finished ? formatDate(p.finishedAt) : '—'}
                 </td>
@@ -74,10 +78,11 @@ export function ProjectsTable({ projects, emptyText }: { projects: DisplayProjec
 
 // Admin varianta prehledu projektu - napric VSEMI firmami najednou (na
 // rozdil od ProjectsTable vyse, ktera je scoped na jednu firmu pro klienta).
-// Sloupce odpovidaji tomu, co Caflou skutecne poskytuje pres vsechny firmy -
-// pocet normostran a datum odevzdani jsou jen u mistni objednavky a s
-// projekty v Caflou zatim nejsou spolehlive provazane (viz TODO u
-// createCaflouProject), takze tady zamerne nejsou.
+// Datum odevzdani je jen u mistni objednavky a s projekty v Caflou zatim
+// neni spolehlive provazane (viz TODO u createCaflouProject), takze tu
+// zamerne neni. Normostrany uz ale tahame primo z Caflou (viz
+// custom_column_pocet_normostran v mapCaflouProjects), takze tenhle sloupec
+// funguje stejne jako u klientske tabulky vyse.
 export function AdminProjectsTable({
   projects,
   emptyText,
@@ -94,13 +99,14 @@ export function AdminProjectsTable({
               <th className="text-left px-4 py-3.5">Projekt</th>
               <th className="text-left px-4 py-3.5">Firma</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
+              <th className="text-right px-4 py-3.5 whitespace-nowrap">Normostrany</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum dokončení</th>
             </tr>
           </thead>
           <tbody>
             {projects.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-muted text-sm font-body">
+                <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm font-body">
                   {emptyText}
                 </td>
               </tr>
@@ -111,6 +117,9 @@ export function AdminProjectsTable({
                 <td className="px-4 py-4 text-sm font-heading text-muted">{p.companyName}</td>
                 <td className="px-4 py-4">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
+                </td>
+                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
+                  {p.pageCount ?? '—'}
                 </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {p.finished ? formatDate(p.finishedAt) : '—'}

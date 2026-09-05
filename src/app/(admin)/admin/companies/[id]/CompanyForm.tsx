@@ -14,6 +14,10 @@ export function CompanyForm({ company }: { company: Company }) {
   const [rate, setRate] = useState(String(company.ratePerPage ?? ''));
   const [caflouCompanyId, setCaflouCompanyId] = useState(company.caflouCompanyId ?? '');
   const [driveUrl, setDriveUrl] = useState(company.driveFolderUrl ?? '');
+  // Druh zakazek (zadani 12. 9. 2026) - podle tohoto se klientovi na
+  // /objednavka zobrazi jen prislusny typ objednavky.
+  const [dealsAudiobooks, setDealsAudiobooks] = useState(company.dealsAudiobooks);
+  const [dealsAds, setDealsAds] = useState(company.dealsAds);
 
   // Dodavatel
   const [contactName, setContactName] = useState(company.contactName ?? '');
@@ -37,7 +41,7 @@ export function CompanyForm({ company }: { company: Company }) {
     try {
       const body =
         company.type === 'KLIENT'
-          ? { type: 'KLIENT', name, ratePerPage: rate, caflouCompanyId, driveFolderUrl: driveUrl }
+          ? { type: 'KLIENT', name, ratePerPage: rate, caflouCompanyId, driveFolderUrl: driveUrl, dealsAudiobooks, dealsAds }
           : { type: 'DODAVATEL', name, contactName, contactEmail, contactPhone, ic, dic, vatPayer, bankAccount, address };
 
       const res = await fetch(`/api/admin/companies/${company.id}`, {
@@ -80,6 +84,19 @@ export function CompanyForm({ company }: { company: Company }) {
 
           <AdminField label="Odkaz na složku Google Disk">
             <input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="https://drive.google.com/…" className="admin-input" />
+          </AdminField>
+
+          <AdminField label="Druh zakázek" hint="podle toho klient uvidí jen příslušný typ objednávky">
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 text-sm font-heading text-ink">
+                <input type="checkbox" checked={dealsAudiobooks} onChange={(e) => setDealsAudiobooks(e.target.checked)} />
+                Audioknihy
+              </label>
+              <label className="flex items-center gap-2 text-sm font-heading text-ink">
+                <input type="checkbox" checked={dealsAds} onChange={(e) => setDealsAds(e.target.checked)} />
+                Reklamy
+              </label>
+            </div>
           </AdminField>
         </>
       ) : (

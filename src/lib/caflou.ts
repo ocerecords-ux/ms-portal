@@ -102,11 +102,18 @@ export type DisplayProject = {
   finished: boolean;
   statusName: string;
   narrator: string | null;
+  pageCount: number | null;
   finishedAt: Date | null;
   releaseDate: Date | null;
   startDate: Date | null;
   endDate: Date | null;
 };
+
+function toIntOrNull(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = typeof v === 'number' ? v : parseInt(String(v), 10);
+  return Number.isFinite(n) ? n : null;
+}
 
 function toDate(v?: string | null): Date | null {
   if (!v) return null;
@@ -123,6 +130,13 @@ function toDate(v?: string | null): Date | null {
  * Overeno na zivo z Caflou (viz custom_column_herec = jmeno herce/vypravece,
  * custom_column_termin_vydani = datum vydani - u obou dostupne jen u casti
  * projektu, proto se pocita s null).
+ *
+ * custom_column_pocet_normostran (zadani 12. 9. 2026 - "U projektů by měl
+ * být vidět počet normostran") NENI jeste overeno naživo stejnym zpusobem
+ * jako predchozi dva sloupce - odhadnuto dle stejne konvence pojmenovani
+ * vlastnich sloupcu v Caflou. Pokud se v UI vsude ukazuje jen "—", je
+ * potreba nazev sloupce overit pres /api/admin/caflou-debug?companyId=...
+ * (syrova odpoved) a upravit klic nize.
  */
 export function mapCaflouProjects(raw: unknown): DisplayProject[] {
   if (!raw || typeof raw !== 'object') return [];
@@ -136,6 +150,7 @@ export function mapCaflouProjects(raw: unknown): DisplayProject[] {
       finished: Boolean(p.finished),
       statusName: p.project_status_name || (p.finished ? 'Hotovo' : 'V realizaci'),
       narrator: p.custom_column_herec || null,
+      pageCount: toIntOrNull(p.custom_column_pocet_normostran),
       finishedAt: toDate(p.finished_at),
       releaseDate: toDate(p.custom_column_termin_vydani),
       startDate: toDate(p.start_date),

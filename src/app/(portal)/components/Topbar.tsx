@@ -21,7 +21,12 @@ function navItemsFor(isAdmin?: boolean) {
   }
   return [
     { href: '/projekty', label: 'Projekty' },
-    { href: '/objednavka', label: 'Objednávka audioknihy' },
+    // Label zjednoduseny na "Objednávka" (zadani 12. 9. 2026) - stranka uz
+    // muze byt objednavka audioknihy NEBO reklamy podle Company.dealsAds /
+    // dealsAudiobooks (viz objednavka/page.tsx), takze pevny nazev
+    // "Objednávka audioknihy" by byl u klientu poptavajicich jen reklamu
+    // zavadejici.
+    { href: '/objednavka', label: 'Objednávka' },
     { href: '/nahravky', label: 'Nahrávky' },
   ];
 }
@@ -33,14 +38,16 @@ export function Topbar({ userLabel, isAdmin }: { userLabel: string; isAdmin?: bo
 
   return (
     <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">
-      {/* Jednoradkovy branding "MS portal by [logo]" podle referencniho
-          mockupu uzivatele (4. 9. 2026) - MS portal zelene, by bile,
-          animovane logo Mediaspace na konci radku, vse ve stejne vysce. */}
-      <Link href="/projekty" className="flex items-center gap-2.5 no-underline">
+      {/* Branding "MS portal | [logo]" podle noveho referencniho mockupu
+          uzivatele (12. 9. 2026: "to animované logo je strašně malé...mělo
+          by to vypadat cca takto: MS portal | (animované logo Mediaspace)")
+          - "by" nahrazeno svislou oddelovaci carou a logo znatelne zvetseno
+          (drive vetsi nez napis MS portal, drive bylo h-7/h-8). */}
+      <Link href="/projekty" className="flex items-center gap-3 sm:gap-4 no-underline">
         <span className="font-body text-brand-green font-semibold text-2xl sm:text-3xl">MS portal</span>
-        <span className="font-body text-white/85 font-medium text-2xl sm:text-3xl">by</span>
+        <span className="w-px h-7 sm:h-9 bg-white/40" aria-hidden="true" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-7 sm:h-8 w-auto" />
+        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-11 sm:h-14 w-auto" />
       </Link>
 
       <nav className="flex items-center gap-6 sm:gap-10 flex-wrap font-heading text-sm font-medium">

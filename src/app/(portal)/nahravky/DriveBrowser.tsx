@@ -112,6 +112,24 @@ function StopIcon() {
   );
 }
 
+type SortBy = 'name' | 'date';
+
+function SortIcon({ dir }: { dir: 'asc' | 'desc' }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-3 h-3 transition-transform ${dir === 'desc' ? 'rotate-180' : ''}`}
+    >
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>
+  );
+}
+
 export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: string; rootName: string }) {
   const [stack, setStack] = useState<{ id: string; name: string }[]>([{ id: initialFolderId, name: rootName }]);
   const [items, setItems] = useState<DriveItem[]>([]);
@@ -119,6 +137,20 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  // Rezeni klikem na nadpis sloupce (zadani 12. 9. 2026) - slozky jsou vzdy
+  // nahore (bezny zvyk z Disku/Finderu), v ramci toho se radi podle nazvu
+  // nebo data zmeny, vzestupne/sestupne.
+  const [sortBy, setSortBy] = useState<SortBy>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  function toggleSort(field: SortBy) {
+    if (sortBy === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortDir('asc');
+    }
+  }
 
   const currentFolder = stack[stack.length - 1];
 
@@ -172,11 +204,15 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
 
   const sorted = [...items].sort((a, b) => {
     if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
-    return a.name.localeCompare(b.name, 'cs');
+    const dirMul = sortDir === 'asc' ? 1 : -1;
+    if (sortBy === 'date') {
+      return dirMul * (new Date(a.modifiedTime).getTime() - new Date(b.modifiedTime).getTime());
+    }
+    return dirMul * a.name.localeCompare(b.name, 'cs');
   });
 
   return (
-    <div className="rounded-card overflow-hidden border border-line shadow-sm max-w-4xl bg-white">
+    <div className="rounded-card overflow-hidden border border-line shadow-sm max-w-4xl mx-auto bg-white">
       <div className="bg-brand-purple px-4 sm:px-6 py-4 flex items-center gap-3 flex-wrap">
         <button
           type="button"
@@ -215,10 +251,24 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
       {!loading && !error && sorted.length > 0 && (
         <div className="flex items-center gap-3 px-6 py-2 border-b border-line bg-field text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
           <span className="w-5 shrink-0" />
-          <span className="flex-1 min-w-0">Název</span>
-          <span className="w-20 shrink-0 text-right hidden sm:block">Upraveno</span>
+          <button
+            type="button"
+            onClick={() => toggleSort('name')}
+            className="flex-1 min-w-0 flex items-center gap-1 text-left hover:text-ink transition-colors"
+          >
+            Název
+            {sortBy === 'name' && <SortIcon dir={sortDir} />}
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleSort('date')}
+            className="w-20 shrink-0 hidden sm:flex items-center justify-end gap-1 hover:text-ink transition-colors"
+          >
+            {sortBy === 'date' && <SortIcon dir={sortDir} />}
+            Upraveno
+          </button>
           <span className="w-16 shrink-0 text-right hidden sm:block">Velikost</span>
-          <span className="shrink-0" style={{ width: '76px' }} />
+          <span className="w-[108px] shrink-0" />
         </div>
       )}
 
@@ -259,7 +309,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                   <span className="text-xs text-muted font-body w-16 text-right shrink-0 hidden sm:block">
                     {item.isFolder ? '' : formatBytes(item.size)}
                   </span>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center justify-end gap-1.5 shrink-0 w-[108px]">
                     {audio && (
                       <button
                         type="button"

@@ -5,6 +5,11 @@ import { extractDriveFolderId } from '@/lib/googleDrive';
 import { getCaflouCompanyName } from '@/lib/caflou';
 import { DriveBrowser } from './DriveBrowser';
 
+// Stejne jako u Projektu - tahá se tu živě jméno firmy z Caflou, takže
+// stránka nesmí být Next.js zamrazená jako statická (viz komentář v
+// src/app/(portal)/projekty/page.tsx).
+export const dynamic = 'force-dynamic';
+
 export default async function NahravkyPage() {
   const session = await getServerSession(authOptions);
   const companyId = session!.user.companyId;
@@ -32,7 +37,7 @@ export default async function NahravkyPage() {
       {company?.driveFolderUrl && folderId && driveConfigured ? (
         <DriveBrowser initialFolderId={folderId} rootName={displayName} />
       ) : company?.driveFolderUrl ? (
-        <div className="bg-white rounded-card border border-line p-8 flex flex-col items-start gap-4 max-w-xl shadow-sm">
+        <div className="bg-white rounded-card border border-line p-8 flex flex-col items-start gap-4 max-w-xl mx-auto shadow-sm">
           <p className="text-sm font-body text-muted m-0">
             Složka firmy {displayName} na Google Disku obsahuje všechny vaše nahrávky. Otevře se v nové záložce.
           </p>
@@ -46,7 +51,7 @@ export default async function NahravkyPage() {
           </a>
         </div>
       ) : (
-        <div className="bg-white rounded-card border border-line p-8 max-w-xl shadow-sm">
+        <div className="bg-white rounded-card border border-line p-8 max-w-xl mx-auto shadow-sm">
           <p className="text-sm font-body text-muted m-0">
             Zatím vám nebyla přiřazena složka na Google Disku. Ozvěte se prosím MEDIA SPACE.
           </p>

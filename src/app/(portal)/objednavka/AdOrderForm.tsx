@@ -1,28 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { NarratorMultiSelect, type NarratorOption } from './NarratorMultiSelect';
 
-export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: NarratorOption[] }) {
+/**
+ * Objednavka reklamy (zadani 12. 9. 2026) - klienti, kteri poptavaji jen
+ * reklamy, nepotrebuji normostrany/cenu/herce jako u audioknihy. Zatim jen
+ * zakladni pole (nazev, termin, poznamka, priloha) - zbytek si MEDIA SPACE
+ * s temito klienty vyspecifikuje pozdeji, viz OrderKind ve schema.prisma.
+ */
+export function AdOrderForm() {
   const router = useRouter();
   const [title, setTitle] = useState('');
-  const [pageCount, setPageCount] = useState('');
   const [deadline, setDeadline] = useState('');
-  const [narrators, setNarrators] = useState<string[]>([]);
   const [note, setNote] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  const [lastOrder, setLastOrder] = useState<{ title: string; price: number } | null>(null);
+  const [lastTitle, setLastTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  const price = useMemo(() => {
-    const n = parseFloat(pageCount) || 0;
-    return Math.round(n * ratePerPage);
-  }, [pageCount, ratePerPage]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,11 +28,9 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
     setSubmitting(true);
     try {
       const formData = new FormData();
-      formData.set('kind', 'AUDIOBOOK');
+      formData.set('kind', 'AD');
       formData.set('title', title);
-      formData.set('pageCount', pageCount);
       formData.set('deadline', deadline);
-      formData.set('preferredNarrator', narrators.join(', '));
       formData.set('note', note);
       if (file) formData.set('attachment', file);
 
@@ -43,12 +39,10 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Objednávku se nepodařilo odeslat.');
       }
-      setLastOrder({ title, price });
+      setLastTitle(title);
       setDone(true);
       setTitle('');
-      setPageCount('');
       setDeadline('');
-      setNarrators([]);
       setNote('');
       setFile(null);
       router.refresh();
@@ -66,7 +60,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
     if (dropped) setFile(dropped);
   }
 
-  if (done && lastOrder) {
+  if (done) {
     return (
       <div className="bg-brand-purple rounded-card p-6 sm:p-10 text-white max-w-2xl mx-auto flex flex-col items-start gap-5">
         <div className="w-14 h-14 rounded-full bg-brand-green flex items-center justify-center shrink-0">
@@ -77,9 +71,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
         <div>
           <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka byla odeslána</h2>
           <p className="text-white/85 text-sm font-body mt-2">
-            „{lastOrder.title}" — předběžná cena{' '}
-            <strong className="text-brand-green">{new Intl.NumberFormat('cs-CZ').format(lastOrder.price)} Kč</strong>.
-            Objednávku jsme uložili k vašemu účtu a MEDIA SPACE se vám brzy ozve.
+            „{lastTitle}" — objednávku jsme uložili k vašemu účtu a MEDIA SPACE se vám brzy ozve.
           </p>
         </div>
         <div className="flex items-center gap-4 flex-wrap">
@@ -101,53 +93,21 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
   return (
     <form onSubmit={handleSubmit} className="bg-brand-purple rounded-card p-6 sm:p-10 text-white max-w-2xl mx-auto flex flex-col gap-5">
       <div>
-        <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka audioknihy</h2>
-        <p className="text-white/75 text-xs font-heading mt-1.5">
-          Vaše sazba: <strong className="text-brand-green font-semibold">{ratePerPage} Kč</strong> / normostrana
-        </p>
+        <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka</h2>
       </div>
 
-      <div className="flex gap-4 flex-wrap">
-        <Field label="Název" required className="flex-[2_1_200px]">
-          <input
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="např. Stín nad Vltavou"
-            className="input"
-          />
-        </Field>
-        <Field label="Počet normostran" className="flex-1 min-w-[140px]">
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={pageCount}
-            onChange={(e) => setPageCount(e.target.value)}
-            placeholder="0"
-            className="input"
-          />
-        </Field>
-        <Field
-          label="Cena"
-          className="flex-1 min-w-[140px]"
-          tooltip="Cena se vypočítává dle dohodnuté ceny za normostranu."
-        >
-          <input
-            readOnly
-            value={`${new Intl.NumberFormat('cs-CZ').format(price)} Kč`}
-            title="Cena se vypočítává dle dohodnuté ceny za normostranu."
-            className="input input-readonly"
-          />
-        </Field>
-      </div>
+      <Field label="Název" required>
+        <input
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="např. Vánoční kampaň 2026"
+          className="input"
+        />
+      </Field>
 
       <Field label="Datum odevzdání">
         <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
-      </Field>
-
-      <Field label="Preferovaný herec" tooltip="Vyberte jednoho nebo víc herců z databáze, nebo napište vlastní jméno.">
-        <NarratorMultiSelect options={herci} value={narrators} onChange={setNarrators} />
       </Field>
 
       <Field label="Poznámka">
@@ -212,12 +172,6 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
           border-color: #fff;
           box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
         }
-        .input-readonly {
-          background: #f6f6f6;
-          font-weight: 600;
-          font-variant-numeric: tabular-nums;
-          border-style: dashed;
-        }
       `}</style>
     </form>
   );
@@ -226,30 +180,17 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
 function Field({
   label,
   required,
-  tooltip,
   children,
-  className = '',
 }: {
   label: string;
   required?: boolean;
-  tooltip?: string;
   children: React.ReactNode;
-  className?: string;
 }) {
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
+    <div className="flex flex-col gap-1.5">
       <label className="text-[13.5px] font-body text-white inline-flex items-center gap-1.5">
         {label}
         {required && <span className="text-brand-green ml-0.5">*</span>}
-        {tooltip && (
-          <span
-            title={tooltip}
-            className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-white/50 text-white/70 text-[10px] leading-none cursor-help shrink-0"
-            aria-label={tooltip}
-          >
-            i
-          </span>
-        )}
       </label>
       {children}
     </div>

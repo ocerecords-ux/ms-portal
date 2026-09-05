@@ -44,6 +44,15 @@ enum OrderStatus {
   CANCELLED   // zrusena
 }
 
+// Druh objednavky (zadani 12. 9. 2026) - klient poptavajici audioknihy vidi
+// jinou objednavku (normostrany, cena, herec) nez klient poptavajici reklamy
+// (zatim jen zakladni pole, zbytek se upresni pozdeji - viz AdOrderForm.tsx).
+// Vychozi AUDIOBOOK, aby stavajici objednavky zustaly beze zmeny.
+enum OrderKind {
+  AUDIOBOOK
+  AD
+}
+
 enum CaflouSyncStatus {
   SKIPPED // Caflou zatim neni napojene (chybi API klic)
   PENDING // ceka na zalozeni projektu v Caflou
@@ -61,6 +70,15 @@ model Company {
   ratePerPage    Int?      // predbezna sazba za 1 normostranu, v Kc - jen u klientu
   caflouCompanyId String?   // ID firmy/kontaktu v Caflou - podle nej se z Caflou API tahaji projekty teto firmy
   driveFolderUrl String?   // odkaz na slozku klienta na Google Disku (prirazuje admin rucne)
+
+  // Druh zakazek klienta (zadani 12. 9. 2026) - podle techto dvou priznaku
+  // se klientovi na strance /objednavka zobrazi jen prislusny typ objednavky
+  // (klient poptavajici jen reklamu nevidi objednavku audioknihy a naopak;
+  // ma-li klient oboje, muze si typ prepnout). dealsAudiobooks vychozi true,
+  // aby vsem stavajicim klientum (pred timto zadanim) zustalo puvodni
+  // chovani beze zmeny.
+  dealsAudiobooks Boolean  @default(true)
+  dealsAds        Boolean  @default(false)
 
   // --- Dodavatel (type = DODAVATEL) - fakturacni/kontaktni udaje, zadani 5. 9. 2026 ---
   contactName    String?   // kontaktni osoba
@@ -123,6 +141,9 @@ model Order {
   company             Company           @relation(fields: [companyId], references: [id])
   createdByUserId     String
   createdBy           User              @relation("OrderCreatedBy", fields: [createdByUserId], references: [id])
+
+  // Druh objednavky (zadani 12. 9. 2026) - viz OrderKind vyse.
+  kind                OrderKind         @default(AUDIOBOOK)
 
   title               String
   pageCount           Int?
