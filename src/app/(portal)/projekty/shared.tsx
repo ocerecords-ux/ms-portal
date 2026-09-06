@@ -299,7 +299,7 @@ export function InternalProjectsTable({
         <table className="w-full min-w-[980px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
-              <SortableHeader label="Projekt" sortKey="name" sort={sort} onSort={onSort} />
+              <SortableHeader label="Název projektu" sortKey="name" sort={sort} onSort={onSort} />
               <SortableHeader label="Firma" sortKey="companyName" sort={sort} onSort={onSort} />
               <SortableHeader label="Stav" sortKey="statusName" sort={sort} onSort={onSort} />
               <SortableHeader label="Priorita" sortKey="priority" sort={sort} onSort={onSort} />

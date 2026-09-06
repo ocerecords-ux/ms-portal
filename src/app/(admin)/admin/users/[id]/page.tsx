@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
+import { isInternalRole } from '@/lib/roles';
 import { UserEditForm } from './UserEditForm';
 import { InviteButton } from '../InviteButton';
 
@@ -17,9 +18,26 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         <Link href="/admin/users" className="text-muted text-sm font-heading">
           ← Zpět na seznam uživatelů
         </Link>
-        <h1 className="font-display text-3xl text-ink m-0 mt-2">
-          {user.name || user.email} {user.code && <span className="text-muted text-lg font-heading">({user.code})</span>}
-        </h1>
+        <div className="flex items-center gap-4 mt-2">
+          {/* Fotku vedou jen interni ucty Mediaspace - u ostatnich se misto ni
+              nic nezobrazuje (zadani 6. 9. 2026). */}
+          {isInternalRole(user.role) &&
+            (user.photoUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={user.photoUrl}
+                alt=""
+                className="w-16 h-16 rounded-full object-cover border border-line shrink-0"
+              />
+            ) : (
+              <span className="w-16 h-16 rounded-full bg-field border border-line flex items-center justify-center text-muted text-xl shrink-0">
+                {(user.name || user.email).trim().charAt(0).toUpperCase()}
+              </span>
+            ))}
+          <h1 className="font-display text-3xl text-ink m-0">
+            {user.name || user.email} {user.code && <span className="text-muted text-lg font-heading">({user.code})</span>}
+          </h1>
+        </div>
       </div>
 
       {/* Pozvanka do portalu (zadani 5. 9. 2026) - uzivateli prijde e-mail s

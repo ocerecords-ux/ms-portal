@@ -103,7 +103,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       <div>
         <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka audioknihy</h2>
         <p className="text-white/75 text-xs font-heading mt-1.5">
-          Vaše sazba: <strong className="text-brand-green font-semibold">{ratePerPage} Kč</strong> / normostrana
+          Vaše sazba: <strong className="text-brand-green font-semibold">{ratePerPage} Kč</strong> / normostrana, bez DPH
         </p>
       </div>
 
@@ -129,14 +129,14 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
           />
         </Field>
         <Field
-          label="Cena"
+          label="Cena bez DPH"
           className="flex-1 min-w-[140px]"
-          tooltip="Cena se vypočítává dle dohodnuté ceny za normostranu."
+          tooltip="Cena se vypočítává dle dohodnuté ceny za normostranu. Uvedená částka je bez DPH."
         >
           <input
             readOnly
             value={`${new Intl.NumberFormat('cs-CZ').format(price)} Kč`}
-            title="Cena se vypočítává dle dohodnuté ceny za normostranu."
+            title="Cena se vypočítává dle dohodnuté ceny za normostranu. Uvedená částka je bez DPH."
             className="input input-readonly"
           />
         </Field>
@@ -167,7 +167,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleFileDrop}
-          className={`flex items-center gap-2.5 border-[1.5px] border-dashed rounded-lg px-3.5 py-2.5 text-sm text-white/85 transition-colors ${
+          className={`flex flex-col items-center justify-center gap-2 border-[1.5px] border-dashed rounded-lg px-4 py-8 text-sm text-white/85 text-center transition-colors ${
             dragOver ? 'border-white bg-white/15' : 'border-brand-green bg-white/5'
           }`}
         >

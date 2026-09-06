@@ -54,15 +54,15 @@ export function PhotoDropzone({
         handleFiles(e.dataTransfer.files);
       }}
       onClick={() => inputRef.current?.click()}
-      className={`flex items-center gap-2.5 border border-dashed rounded-lg px-3 py-2 cursor-pointer transition-colors ${
+      className={`flex items-center gap-3 border border-dashed rounded-lg px-3 py-3 cursor-pointer transition-colors ${
         dragOver ? 'border-brand-purple bg-brand-purple/5' : 'border-line hover:border-brand-purple/50'
       }`}
     >
       {previewUrl || showingExisting ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={previewUrl || existingUrl || ''} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+        <img src={previewUrl || existingUrl || ''} alt="" className="w-14 h-14 rounded-full object-cover shrink-0 border border-line" />
       ) : (
-        <span className="text-muted text-base shrink-0">📷</span>
+        <span className="w-14 h-14 rounded-full bg-field border border-line flex items-center justify-center text-muted text-xl shrink-0">📷</span>
       )}
       <span className="text-xs text-muted flex-1 truncate">
         {file ? file.name : showingExisting ? 'Aktuální fotka' : 'Přetáhněte sem soubor nebo klikněte pro výběr'}

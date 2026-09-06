@@ -90,6 +90,18 @@ model Company {
   bankAccount    String?
   address        String?
 
+  // --- Fakturacni udaje (zadani 6. 9. 2026) - nove je vedeme u VSECH firem,
+  // nejen u dodavatelu: karta klienta ma obsahovat IC, DIC, platce DPH a
+  // kompletni adresu. Puvodni jednoradkove pole `address` zustava kvuli
+  // starym zaznamum dodavatelu.
+  addressStreet  String?   // ulice a cislo popisne
+  addressCity    String?
+  addressZip     String?
+  addressCountry String?   @default("CZ") // ISO kod zeme, vychozi Ceska republika
+
+  // Doba splatnosti ve dnech - predvyplni se pri vystavovani faktury.
+  paymentTermDays Int?     @default(14)
+
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

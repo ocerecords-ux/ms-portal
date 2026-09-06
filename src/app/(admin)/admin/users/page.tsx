@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { NewUserForm } from './NewUserForm';
-import { InviteButton } from './InviteButton';
 import { ROLE_LABELS, USER_TABS } from '@/lib/roles';
+import { AdminSearch } from '../AdminSearch';
 
 // Bez companyId (default pohled) se uzivatele tridi do 3 zalozek podle
 // zadani 5. 9. 2026 (upresneni) - Mediaspace / Klienti / Herci. Dodavatele uz
@@ -12,14 +12,26 @@ import { ROLE_LABELS, USER_TABS } from '@/lib/roles';
 export default async function UsersAdminPage({
   searchParams,
 }: {
-  searchParams: { companyId?: string; tab?: string };
+  searchParams: { companyId?: string; tab?: string; q?: string };
 }) {
   const companyId = searchParams?.companyId;
+  // Hledani napric jmenem, e-mailem, telefonem a kodem uctu (zadani 6. 9. 2026).
+  const q = searchParams?.q?.trim() || '';
+  const searchWhere = q
+    ? {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' as const } },
+          { email: { contains: q, mode: 'insensitive' as const } },
+          { phone: { contains: q, mode: 'insensitive' as const } },
+          { code: { contains: q, mode: 'insensitive' as const } },
+        ],
+      }
+    : {};
   const activeTab = USER_TABS.find((t) => t.key === searchParams?.tab) ?? USER_TABS[0];
 
   const [users, companies, roleCounts] = await Promise.all([
     prisma.user.findMany({
-      where: companyId ? { companyId } : { role: { in: activeTab.roles } },
+      where: companyId ? { companyId, ...searchWhere } : { role: { in: activeTab.roles }, ...searchWhere },
       include: { company: true },
       orderBy: { createdAt: 'desc' },
     }),
@@ -38,7 +50,7 @@ export default async function UsersAdminPage({
       <div>
         <h1 className="font-display text-3xl text-ink m-0">Uživatelé</h1>
         <p className="text-muted text-sm mt-1 font-body">
-          Všechny přihlašovací účty napříč firmami i interní účty Mediaspace. Kliknutím na jméno účet otevřete a upravíte.
+          Všechny přihlašovací účty napříč firmami i interní účty Mediaspace. Kliknutím na jméno účet otevřete — pozvánku do portálu odešlete odtamtud.
         </p>
         {filteredCompany && (
           <p className="text-sm font-heading mt-2">
@@ -51,7 +63,8 @@ export default async function UsersAdminPage({
       </div>
 
       {!filteredCompany && (
-        <div className="flex items-center gap-1 border-b border-line">
+        <div className="flex items-end justify-between gap-4 flex-wrap border-b border-line">
+          <div className="flex items-center gap-1">
           {USER_TABS.map((tab) => {
             const active = tab.key === activeTab.key;
             return (
@@ -68,6 +81,10 @@ export default async function UsersAdminPage({
               </Link>
             );
           })}
+          </div>
+          <div className="mb-2">
+            <AdminSearch placeholder="Hledat jméno, e-mail, telefon…" />
+          </div>
         </div>
       )}
 
@@ -83,14 +100,13 @@ export default async function UsersAdminPage({
                   <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
                   <th className="text-left px-4 py-3.5 whitespace-nowrap">Typ přístupu</th>
                   <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
-                      Žádný uživatel neodpovídá filtru.
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
+                      {q ? 'Hledání nic nenašlo.' : 'Žádný uživatel neodpovídá filtru.'}
                     </td>
                   </tr>
                 )}
@@ -106,12 +122,7 @@ export default async function UsersAdminPage({
                     <td className="px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap">{u.phone || '—'}</td>
                     <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{ROLE_LABELS[u.role]}</td>
                     <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                      <InviteButton
-                        userId={u.id}
-                        invitedAtLabel={u.invitedAt ? dateFmt.format(u.invitedAt) : null}
-                      />
-                    </td>
+
                   </tr>
                 ))}
               </tbody>
@@ -127,14 +138,13 @@ export default async function UsersAdminPage({
                   <th className="text-left px-4 py-3.5 whitespace-nowrap">Typ přístupu</th>
                   <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum narození</th>
                   <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-muted text-sm font-body">
-                      Žádný uživatel neodpovídá filtru.
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
+                      {q ? 'Hledání nic nenašlo.' : 'Žádný uživatel neodpovídá filtru.'}
                     </td>
                   </tr>
                 )}
@@ -157,12 +167,7 @@ export default async function UsersAdminPage({
                       {u.birthDate ? dateFmt.format(u.birthDate) : '—'}
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                      <InviteButton
-                        userId={u.id}
-                        invitedAtLabel={u.invitedAt ? dateFmt.format(u.invitedAt) : null}
-                      />
-                    </td>
+
                   </tr>
                 ))}
               </tbody>
@@ -177,14 +182,13 @@ export default async function UsersAdminPage({
                   <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
                   <th className="text-left px-4 py-3.5">Lokace</th>
                   <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
-                      Žádný uživatel neodpovídá filtru.
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
+                      {q ? 'Hledání nic nenašlo.' : 'Žádný uživatel neodpovídá filtru.'}
                     </td>
                   </tr>
                 )}
@@ -202,12 +206,7 @@ export default async function UsersAdminPage({
                       {u.studioLocations.length > 0 ? u.studioLocations.join(', ') : '—'}
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                      <InviteButton
-                        userId={u.id}
-                        invitedAtLabel={u.invitedAt ? dateFmt.format(u.invitedAt) : null}
-                      />
-                    </td>
+
                   </tr>
                 ))}
               </tbody>
@@ -222,14 +221,13 @@ export default async function UsersAdminPage({
                   <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
                   <th className="text-left px-4 py-3.5">Firma</th>
                   <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
-                      Žádný uživatel neodpovídá filtru.
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
+                      {q ? 'Hledání nic nenašlo.' : 'Žádný uživatel neodpovídá filtru.'}
                     </td>
                   </tr>
                 )}
@@ -253,12 +251,7 @@ export default async function UsersAdminPage({
                       )}
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                      <InviteButton
-                        userId={u.id}
-                        invitedAtLabel={u.invitedAt ? dateFmt.format(u.invitedAt) : null}
-                      />
-                    </td>
+
                   </tr>
                 ))}
               </tbody>

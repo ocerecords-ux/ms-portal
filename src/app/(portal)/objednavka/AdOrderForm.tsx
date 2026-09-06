@@ -127,7 +127,7 @@ export function AdOrderForm() {
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleFileDrop}
-          className={`flex items-center gap-2.5 border-[1.5px] border-dashed rounded-lg px-3.5 py-2.5 text-sm text-white/85 transition-colors ${
+          className={`flex flex-col items-center justify-center gap-2 border-[1.5px] border-dashed rounded-lg px-4 py-8 text-sm text-white/85 text-center transition-colors ${
             dragOver ? 'border-white bg-white/15' : 'border-brand-green bg-white/5'
           }`}
         >
