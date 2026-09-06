@@ -31,7 +31,9 @@ export default async function NahravkyPage() {
     <section>
       <div className="mb-6">
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Nahrávky</h1>
-        <p className="text-muted text-sm mt-1 font-body">Vaše hotové i rozpracované nahrávky na Google Disku</p>
+        <p className="text-muted text-sm mt-1 font-body">
+          Vaše hotové i rozpracované nahrávky na Google Disku. Dvojklikem na název souboru ho přejmenujete.
+        </p>
       </div>
 
       {company?.driveFolderUrl && folderId && driveConfigured ? (

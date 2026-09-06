@@ -27,8 +27,8 @@ export default async function MyAccountPage() {
       <div>
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Můj účet</h1>
         <p className="text-muted text-sm mt-1 font-body">
-          Tady si spravujete svoje kontaktní údaje. Roli, kód účtu ani firmu měnit nelze — s tím se obraťte na
-          Mediaspace.
+          Tady si spravujete svoje kontaktní údaje. Typ přístupu, kód účtu ani firmu měnit nelze — s tím se obraťte
+          na Mediaspace.
         </p>
       </div>
 
@@ -39,13 +39,18 @@ export default async function MyAccountPage() {
             <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">{user.code || '—'}</dd>
           </div>
           <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Role</dt>
+            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Typ přístupu</dt>
             <dd className="text-sm font-heading text-ink m-0 mt-1">{ROLE_LABELS[user.role]}</dd>
           </div>
-          <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Firma</dt>
-            <dd className="text-sm font-heading text-ink m-0 mt-1">{user.company?.name ?? '—'}</dd>
-          </div>
+          {/* Firma se ukazuje jen u klientu - interni ucty Mediaspace ani herci
+              pod zadnou firmu nepatri (zadani 5. 9. 2026), takze by tu bylo
+              natvrdo jen prazdne pole. */}
+          {user.company && (
+            <div>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Firma</dt>
+              <dd className="text-sm font-heading text-ink m-0 mt-1">{user.company.name}</dd>
+            </div>
+          )}
         </dl>
       </div>
 

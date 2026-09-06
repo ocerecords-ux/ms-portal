@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PRIORITY_LABELS, PRIORITY_OPTIONS, PROJECT_TYPES, projectTypeLabel } from '@/lib/projectTypes';
+import { PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 
 type Initial = {
   driveUrl: string;
@@ -23,6 +23,7 @@ export function ProjectMetaForm({
   managers,
   companyDriveFolderUrl,
   caflouPriority,
+  projectTypeOptions,
   initial,
 }: {
   caflouProjectId: string;
@@ -30,6 +31,8 @@ export function ProjectMetaForm({
   managers: { id: string; label: string }[];
   companyDriveFolderUrl: string | null;
   caflouPriority: string | null;
+  /** Nazvy polozek ceniku - jen z nich jde typ projektu vybrat (zadani 5. 9. 2026). */
+  projectTypeOptions: string[];
   initial: Initial;
 }) {
   const router = useRouter();
@@ -185,12 +188,22 @@ export function ProjectMetaForm({
             className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
           >
             <option value="">— nevybráno —</option>
-            {PROJECT_TYPES.map((t) => (
-              <option key={t.key} value={t.key}>
-                {t.label}
+            {/* Ulozeny typ, ktery uz v ceniku neni (vyrazena polozka), at se
+                pri ulozeni nezmeni na "nevybráno". */}
+            {values.projectType && !projectTypeOptions.includes(values.projectType) && (
+              <option value={values.projectType}>{values.projectType} (mimo ceník)</option>
+            )}
+            {projectTypeOptions.map((t) => (
+              <option key={t} value={t}>
+                {t}
               </option>
             ))}
           </select>
+          <span className="text-xs text-muted font-body">
+            {projectTypeOptions.length > 0
+              ? 'Nabídka se bere z Ceníků v administraci.'
+              : 'Ceník je zatím prázdný — typy projektu se přidávají v administraci v sekci Ceníky.'}
+          </span>
         </label>
       </div>
 

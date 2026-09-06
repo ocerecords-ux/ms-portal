@@ -224,7 +224,7 @@ export function mapOneCaflouProject(p: any): DisplayProject {
   };
 }
 
-export type AdminDisplayProject = DisplayProject & { companyName: string };
+export type AdminDisplayProject = DisplayProject & { companyName: string; caflouCompanyId: string | null };
 
 /**
  * Nacte aktivni + dokoncene projekty napric VICE firmami najednou (pro admin
@@ -241,7 +241,11 @@ export async function listActiveCaflouProjectsForCompanies(
       try {
         const result = await listCaflouProjectsForCompany(c.caflouCompanyId);
         if (!result.ok) return { companyName: c.name, ok: false as const };
-        const projects = mapCaflouProjects(result.body).map((p) => ({ ...p, companyName: c.name }));
+        const projects = mapCaflouProjects(result.body).map((p) => ({
+          ...p,
+          companyName: c.name,
+          caflouCompanyId: c.caflouCompanyId,
+        }));
         return { companyName: c.name, ok: true as const, projects };
       } catch {
         return { companyName: c.name, ok: false as const };
@@ -427,7 +431,7 @@ async function fetchAllCaflouProjects(
     const caflouCompanyId = caflouCompanyIdOf(p);
     const companyName =
       caflouCompanyNameOf(p) ?? (caflouCompanyId ? nameById.get(caflouCompanyId) ?? null : null) ?? '—';
-    return { ...mapOneCaflouProject(p), companyName };
+    return { ...mapOneCaflouProject(p), companyName, caflouCompanyId };
   });
 
   return { projects, error: null };

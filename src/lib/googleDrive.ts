@@ -187,3 +187,40 @@ export async function isWithinRoot(id: string, rootId: string, token: string, ma
   }
   return false;
 }
+
+/** Zakladni udaje o slozce - pouziva se pro odkaz na celou slozku v sekci Nahravky. */
+export async function getFolderInfo(
+  folderId: string,
+  token: string,
+): Promise<{ id: string; name: string; webViewLink: string | null } | null> {
+  const res = await fetch(
+    `${DRIVE_API}/files/${folderId}?fields=id,name,webViewLink&supportsAllDrives=true`,
+    { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  return { id: data.id, name: data.name, webViewLink: data.webViewLink ?? null };
+}
+
+/**
+ * Prejmenovani souboru nebo slozky na Disku (zadani 5. 9. 2026 - prejmenovani
+ * dvojklikem na nazev). Volajici MUSI predem overit, ze polozka lezi uvnitr
+ * korenove slozky firmy (isWithinRoot) - jinak by sel prejmenovat cizi soubor.
+ */
+export async function renameDriveItem(
+  fileId: string,
+  name: string,
+  token: string,
+): Promise<{ id: string; name: string } | null> {
+  const res = await fetch(`${DRIVE_API}/files/${fileId}?supportsAllDrives=true&fields=id,name`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    console.error('Drive rename selhal:', res.status, await res.text().catch(() => ''));
+    return null;
+  }
+  const data = await res.json();
+  return { id: data.id, name: data.name };
+}

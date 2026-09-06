@@ -97,9 +97,15 @@ async function InternalProjektySection() {
   // Caflou jednim dotazem za cely ucet (viz listAllCaflouProjectsForInternal).
   const companies = await prisma.company.findMany({
     where: { caflouCompanyId: { not: null } },
-    select: { name: true, caflouCompanyId: true },
+    select: { name: true, caflouCompanyId: true, dealsAudiobooks: true },
     orderBy: { name: 'asc' },
   });
+  // Normostrany maji smysl jen u firem, pro ktere delame audioknihy (zadani
+  // 5. 9. 2026) - u reklamnich klientu se cena bude pocitat kalkulackou nad
+  // Cenikem, takze se tam sloupec nechava prazdny.
+  const audiobookCompanies = new Set(
+    companies.filter((c) => c.dealsAudiobooks).map((c) => String(c.caflouCompanyId)),
+  );
 
   const { projects, error } = await listAllCaflouProjectsForInternal(
     companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
@@ -127,6 +133,7 @@ async function InternalProjektySection() {
   const withMeta: InternalProject[] = projects.map((p) => ({
     ...p,
     meta: metaById.get(String(p.id)) ?? null,
+    showPageCount: p.caflouCompanyId ? audiobookCompanies.has(p.caflouCompanyId) : false,
   }));
 
   const active = withMeta

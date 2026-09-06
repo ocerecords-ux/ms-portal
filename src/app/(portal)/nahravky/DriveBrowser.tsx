@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { WaveformPlayer } from './WaveformPlayer';
 
 type DriveItem = {
   id: string;
@@ -142,6 +143,13 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
   // nebo data zmeny, vzestupne/sestupne.
   const [sortBy, setSortBy] = useState<SortBy>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  // Odkaz na celou aktualni slozku (zadani 5. 9. 2026) - vraci ho /api/drive/list.
+  const [folderLink, setFolderLink] = useState<string | null>(null);
+  const [folderLinkCopied, setFolderLinkCopied] = useState(false);
+  // Prejmenovani dvojklikem na nazev.
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [renameBusy, setRenameBusy] = useState(false);
 
   function toggleSort(field: SortBy) {
     if (sortBy === field) {
@@ -162,6 +170,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Obsah složky se nepodařilo načíst.');
       setItems(body.items ?? []);
+      setFolderLink(body.folder?.webViewLink ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Obsah složky se nepodařilo načíst.');
     } finally {
@@ -202,6 +211,70 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
     }
   }
 
+  async function copyFolderLink() {
+    if (!folderLink) return;
+    try {
+      await navigator.clipboard.writeText(folderLink);
+      setFolderLinkCopied(true);
+      setTimeout(() => setFolderLinkCopied(false), 2000);
+    } catch {
+      // schránka nemusí být dostupná - tiše ignorujeme
+    }
+  }
+
+  /**
+   * "Stáhnout vše" - projde soubory v aktuální složce a spustí u každého
+   * stažení. Zámerne se nedela ZIP na serveru: nahravky audioknihy jsou
+   * bezne stovky MB a serverova funkce by na tom vytimeoutovala.
+   * Prohlizec se u vic souboru jednou zepta, jestli to povolit.
+   */
+  function downloadAll() {
+    const files = sorted.filter((item) => !item.isFolder);
+    if (files.length === 0) return;
+    files.forEach((file, index) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = `/api/drive/download?fileId=${encodeURIComponent(file.id)}`;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }, index * 800);
+    });
+  }
+
+  function startRename(item: DriveItem) {
+    setRenamingId(item.id);
+    setRenameValue(item.name);
+  }
+
+  async function saveRename(item: DriveItem) {
+    const name = renameValue.trim();
+    if (!name || name === item.name) {
+      setRenamingId(null);
+      return;
+    }
+    setRenameBusy(true);
+    try {
+      const res = await fetch('/api/drive/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId: item.id, name }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Přejmenování se nezdařilo.');
+        return;
+      }
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: data.name ?? name } : i)));
+      setRenamingId(null);
+    } catch {
+      setError('Přejmenování se nezdařilo.');
+    } finally {
+      setRenameBusy(false);
+    }
+  }
+
   const sorted = [...items].sort((a, b) => {
     if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
     const dirMul = sortDir === 'asc' ? 1 : -1;
@@ -227,7 +300,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
         >
           <BackIcon />
         </button>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
           {stack.map((crumb, index) => (
             <span key={crumb.id} className="flex items-center gap-2">
               {index > 0 && <span className="text-white/50 text-sm">/</span>}
@@ -245,6 +318,40 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
               </button>
             </span>
           ))}
+        </div>
+
+        {/* Akce nad celou slozkou (zadani 5. 9. 2026). */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={downloadAll}
+            disabled={loading || sorted.every((i) => i.isFolder)}
+            title="Stáhnout všechny soubory v této složce"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/40 text-white text-xs font-heading font-semibold px-3 py-2 hover:bg-white hover:text-brand-purple transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-white"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" />
+            </svg>
+            Stáhnout vše
+          </button>
+          <button
+            type="button"
+            onClick={copyFolderLink}
+            disabled={!folderLink}
+            title="Kopírovat odkaz na celou složku"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/40 text-white text-xs font-heading font-semibold px-3 py-2 hover:bg-white hover:text-brand-purple transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-white"
+          >
+            {folderLinkCopied ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M4 12l6 6L20 6" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M9 3h9a1 1 0 0 1 1 1v9m-4-4H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9" />
+              </svg>
+            )}
+            {folderLinkCopied ? 'Zkopírováno' : 'Odkaz na složku'}
+          </button>
         </div>
       </div>
 
@@ -288,21 +395,37 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
               <div key={item.id}>
                 <div className="flex items-center gap-3 px-6 py-3 hover:bg-field transition-colors">
                   <FileIcon mimeType={item.mimeType} isFolder={item.isFolder} />
-                  <button
-                    type="button"
-                    onClick={() => (item.isFolder ? openFolder(item) : undefined)}
-                    disabled={!item.isFolder}
-                    className={`flex-1 min-w-0 flex items-center gap-2 text-left text-sm font-body text-ink ${
-                      item.isFolder ? 'font-semibold hover:underline cursor-pointer' : ''
-                    }`}
-                  >
-                    <span className="truncate">{item.name}</span>
-                    {badge && (
-                      <span className="shrink-0 text-[10px] font-heading font-bold text-brand-purpleDeep bg-line rounded px-1.5 py-0.5">
-                        {badge}
-                      </span>
-                    )}
-                  </button>
+                  {renamingId === item.id ? (
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      disabled={renameBusy}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={() => saveRename(item)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveRename(item);
+                        if (e.key === 'Escape') setRenamingId(null);
+                      }}
+                      className="flex-1 min-w-0 rounded border border-brand-purple bg-white px-2 py-1 text-sm font-body text-ink outline-none"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => (item.isFolder ? openFolder(item) : undefined)}
+                      onDoubleClick={() => startRename(item)}
+                      title="Dvojklikem přejmenujete"
+                      className={`flex-1 min-w-0 flex items-center gap-2 text-left text-sm font-body text-ink ${
+                        item.isFolder ? 'font-semibold hover:underline cursor-pointer' : 'cursor-text'
+                      }`}
+                    >
+                      <span className="truncate">{item.name}</span>
+                      {badge && (
+                        <span className="shrink-0 text-[10px] font-heading font-bold text-brand-purpleDeep bg-line rounded px-1.5 py-0.5">
+                          {badge}
+                        </span>
+                      )}
+                    </button>
+                  )}
                   <span className="text-xs text-muted font-body tabular-nums w-24 text-right shrink-0 hidden sm:block">
                     {formatDate(item.modifiedTime)}
                   </span>
@@ -370,12 +493,9 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                 </div>
                 {audio && isPlaying && (
                   <div className="px-6 pb-3 -mt-1 bg-field">
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                    <audio
+                    <WaveformPlayer
                       key={item.id}
-                      controls
                       autoPlay
-                      className="w-full h-9"
                       src={`/api/drive/download?fileId=${encodeURIComponent(item.id)}&disposition=inline`}
                     />
                   </div>

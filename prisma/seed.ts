@@ -85,6 +85,24 @@ async function main() {
     },
   });
 
+  // Cenik (zadani 5. 9. 2026) - pri prvnim spusteni zalozime vychozi polozky,
+  // ktere zaroven slouzi jako typy projektu. Pokud uz v ceniku neco je,
+  // nesahame na nej.
+  // Zamerne bez importu z src/lib/priceList: seed bezi pres tsx mimo Next.js,
+  // kde by se alias "@/..." uvnitr toho souboru nerozresil.
+  const DEFAULT_PRICE_LIST_ITEMS = [
+    'Natáčení a postprodukce audioknihy',
+    'Výroba rádiového spotu',
+    'Natáčení voiceoveru',
+  ];
+  const priceListCount = await prisma.priceListItem.count();
+  if (priceListCount === 0) {
+    await prisma.priceListItem.createMany({
+      data: DEFAULT_PRICE_LIST_ITEMS.map((name, index) => ({ name, sortOrder: (index + 1) * 10 })),
+      skipDuplicates: true,
+    });
+  }
+
   await backfillCodes();
 
   console.log('Seed hotov.');

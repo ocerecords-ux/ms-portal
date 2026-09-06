@@ -151,7 +151,76 @@ export type InternalProjectMeta = {
   managerName: string | null;
 };
 
-export type InternalProject = AdminDisplayProject & { meta: InternalProjectMeta | null };
+export type InternalProject = AdminDisplayProject & {
+  meta: InternalProjectMeta | null;
+  /**
+   * Normostrany maji smysl jen u firem, pro ktere delame audioknihy (zadani
+   * 5. 9. 2026) - u reklamnich klientu se cena pocita jinak (pripravovana
+   * kalkulacka nad Cenikem), takze se tam sloupec necha prazdny.
+   */
+  showPageCount: boolean;
+};
+
+/** Sloupce, podle kterych jde v prehledu radit (zadani 5. 9. 2026). */
+export type ProjectSortKey =
+  | 'name'
+  | 'companyName'
+  | 'statusName'
+  | 'priority'
+  | 'projectType'
+  | 'managerName'
+  | 'pageCount'
+  | 'finishedAt';
+
+export type ProjectSort = { key: ProjectSortKey; dir: 'asc' | 'desc' };
+
+const PRIORITY_RANK: Record<ProjectPriority, number> = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+
+/** Porovnani dvou projektu podle zvoleneho sloupce. Prazdne hodnoty konci vzdy dole. */
+export function compareProjects(a: InternalProject, b: InternalProject, sort: ProjectSort): number {
+  const dir = sort.dir === 'asc' ? 1 : -1;
+
+  const numeric = (p: InternalProject): number | null => {
+    if (sort.key === 'pageCount') return p.showPageCount ? p.pageCount : null;
+    if (sort.key === 'finishedAt') return p.finishedAt?.getTime() ?? p.endDate?.getTime() ?? null;
+    if (sort.key === 'priority') {
+      const value = p.priority ?? p.meta?.priority ?? null;
+      return value ? PRIORITY_RANK[value] : null;
+    }
+    return null;
+  };
+
+  if (sort.key === 'pageCount' || sort.key === 'finishedAt' || sort.key === 'priority') {
+    const av = numeric(a);
+    const bv = numeric(b);
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    return dir * (av - bv);
+  }
+
+  const text = (p: InternalProject): string => {
+    switch (sort.key) {
+      case 'companyName':
+        return p.companyName ?? '';
+      case 'statusName':
+        return p.statusName ?? '';
+      case 'projectType':
+        return p.meta?.projectType ?? '';
+      case 'managerName':
+        return p.meta?.managerName ?? '';
+      default:
+        return p.name ?? '';
+    }
+  };
+
+  const av = text(a);
+  const bv = text(b);
+  if (!av && !bv) return 0;
+  if (!av) return 1;
+  if (!bv) return -1;
+  return dir * av.localeCompare(bv, 'cs');
+}
 
 export function PriorityPill({ priority }: { priority: ProjectPriority | null }) {
   if (!priority) return <span className="text-muted">—</span>;
@@ -164,12 +233,65 @@ export function PriorityPill({ priority }: { priority: ProjectPriority | null })
   );
 }
 
+function SortArrow({ dir }: { dir: 'asc' | 'desc' }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-3 h-3 shrink-0 transition-transform ${dir === 'desc' ? 'rotate-180' : ''}`}
+      aria-hidden="true"
+    >
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>
+  );
+}
+
+/** Hlavicka sloupce, na kterou jde kliknout a seradit podle ni. */
+function SortableHeader({
+  label,
+  sortKey,
+  sort,
+  onSort,
+  align = 'left',
+}: {
+  label: string;
+  sortKey: ProjectSortKey;
+  sort: ProjectSort;
+  onSort: (key: ProjectSortKey) => void;
+  align?: 'left' | 'right';
+}) {
+  const active = sort.key === sortKey;
+  return (
+    <th className={`px-4 py-3.5 whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        title={`Seřadit podle: ${label}`}
+        className={`inline-flex items-center gap-1.5 font-heading text-xs transition-opacity hover:opacity-100 ${
+          active ? 'opacity-100' : 'opacity-80'
+        } ${align === 'right' ? 'flex-row-reverse' : ''}`}
+      >
+        {label}
+        {active && <SortArrow dir={sort.dir} />}
+      </button>
+    </th>
+  );
+}
+
 export function InternalProjectsTable({
   projects,
   emptyText,
+  sort,
+  onSort,
 }: {
   projects: InternalProject[];
   emptyText: string;
+  sort: ProjectSort;
+  onSort: (key: ProjectSortKey) => void;
 }) {
   return (
     <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
@@ -177,14 +299,14 @@ export function InternalProjectsTable({
         <table className="w-full min-w-[980px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
-              <th className="text-left px-4 py-3.5">Projekt</th>
-              <th className="text-left px-4 py-3.5">Firma</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Priorita</th>
-              <th className="text-left px-4 py-3.5">Typ projektu</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Manažer</th>
-              <th className="text-right px-4 py-3.5 whitespace-nowrap">Normostrany</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Dokončeno</th>
+              <SortableHeader label="Projekt" sortKey="name" sort={sort} onSort={onSort} />
+              <SortableHeader label="Firma" sortKey="companyName" sort={sort} onSort={onSort} />
+              <SortableHeader label="Stav" sortKey="statusName" sort={sort} onSort={onSort} />
+              <SortableHeader label="Priorita" sortKey="priority" sort={sort} onSort={onSort} />
+              <SortableHeader label="Typ projektu" sortKey="projectType" sort={sort} onSort={onSort} />
+              <SortableHeader label="Manažer" sortKey="managerName" sort={sort} onSort={onSort} />
+              <SortableHeader label="Normostrany" sortKey="pageCount" sort={sort} onSort={onSort} align="right" />
+              <SortableHeader label="Dokončeno" sortKey="finishedAt" sort={sort} onSort={onSort} />
             </tr>
           </thead>
           <tbody>
@@ -219,7 +341,7 @@ export function InternalProjectsTable({
                   {p.meta?.managerName ?? '—'}
                 </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
-                  {p.pageCount ?? '—'}
+                  {p.showPageCount ? (p.pageCount ?? '—') : '—'}
                 </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {p.finished ? formatDate(p.finishedAt) : '—'}

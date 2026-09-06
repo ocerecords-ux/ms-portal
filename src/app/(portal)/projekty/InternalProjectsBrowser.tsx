@@ -1,7 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { InternalProjectsTable, type InternalProject } from './shared';
+import {
+  InternalProjectsTable,
+  compareProjects,
+  type InternalProject,
+  type ProjectSort,
+  type ProjectSortKey,
+} from './shared';
 import { projectTypeLabel } from '@/lib/projectTypes';
 
 // Zadani 5. 9. 2026: "Na stránce bude max. padesát aktivních projektů. Nahoře
@@ -43,9 +49,24 @@ export function InternalProjectsBrowser({
   const [tab, setTab] = useState<Tab>('active');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
+  // Razeni klikem na nadpis sloupce (zadani 5. 9. 2026). Vychozi je stejne
+  // jako driv - podle terminu, resp. data dokonceni.
+  const [sort, setSort] = useState<ProjectSort>({ key: 'finishedAt', dir: 'desc' });
+
+  function handleSort(key: ProjectSortKey) {
+    setSort((current) =>
+      current.key === key
+        ? { key, dir: current.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'finishedAt' || key === 'pageCount' || key === 'priority' ? 'desc' : 'asc' },
+    );
+    setPage(0);
+  }
 
   const source = tab === 'active' ? active : finished;
-  const filtered = useMemo(() => source.filter((p) => matches(p, query.trim())), [source, query]);
+  const filtered = useMemo(() => {
+    const rows = source.filter((p) => matches(p, query.trim()));
+    return rows.sort((a, b) => compareProjects(a, b, sort));
+  }, [source, query, sort]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
@@ -108,6 +129,8 @@ export function InternalProjectsBrowser({
       </div>
 
       <InternalProjectsTable
+        sort={sort}
+        onSort={handleSort}
         projects={visible}
         emptyText={
           query

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { extractDriveFolderId, getAccessToken, isWithinRoot, listFolder } from '@/lib/googleDrive';
+import { extractDriveFolderId, getAccessToken, getFolderInfo, isWithinRoot, listFolder } from '@/lib/googleDrive';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -31,8 +31,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const items = await listFolder(requestedId, token);
-    return NextResponse.json({ items });
+    // Vedle obsahu vracime i udaje o samotne slozce - sekce Nahravky z toho
+    // dela tlacitko "odkaz na celou složku" (zadani 5. 9. 2026).
+    const [items, folder] = await Promise.all([listFolder(requestedId, token), getFolderInfo(requestedId, token)]);
+    return NextResponse.json({ items, folder });
   } catch (err) {
     console.error('Načtení obsahu Google Disku selhalo:', err);
     return NextResponse.json({ error: 'Obsah složky se nepodařilo načíst.' }, { status: 502 });

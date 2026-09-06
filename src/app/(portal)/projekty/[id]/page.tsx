@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
 import { canEditProjectMeta, isInternalRole, INTERNAL_ROLES } from '@/lib/roles';
 import { PRIORITY_LABELS } from '@/lib/projectTypes';
+import { listProjectTypeOptions } from '@/lib/priceList';
 import { formatDate, StatusPill } from '../shared';
 import { ProjectMetaForm } from './ProjectMetaForm';
 
@@ -24,7 +25,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const caflouProjectId = params.id;
   const canEdit = canEditProjectMeta(session.user.role);
 
-  const [caflouDirect, meta, managers] = await Promise.all([
+  const [caflouDirect, meta, managers, projectTypeOptions] = await Promise.all([
     getCaflouProject(caflouProjectId),
     prisma.projectMeta.findUnique({
       where: { caflouProjectId },
@@ -35,6 +36,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     }),
+    listProjectTypeOptions(),
   ]);
 
   // Nektere ucty Caflou nevraci detail jednoho projektu - pak projekt
@@ -95,6 +97,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         managers={managers.map((m) => ({ id: m.id, label: m.name || m.email }))}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
         caflouPriority={project?.priority ?? null}
+        projectTypeOptions={projectTypeOptions}
         initial={{
           driveUrl: meta?.driveUrl ?? '',
           managerUserId: meta?.managerUserId ?? '',

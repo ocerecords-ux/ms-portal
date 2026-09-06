@@ -16,6 +16,7 @@ function navItemsFor(isAdmin?: boolean, isInternal?: boolean) {
       { href: '/projekty', label: 'Projekty' },
       { href: '/admin', label: 'Firmy' },
       { href: '/admin/users', label: 'Uživatelé' },
+      { href: '/admin/ceniky', label: 'Ceníky' },
     ];
   }
   // Interni ucty bez admin prav (Produkce / Zvukar) - objednavka je

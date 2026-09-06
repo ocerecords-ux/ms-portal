@@ -238,3 +238,18 @@ model ProjectMeta {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
+
+
+// Cenik (zadani 5. 9. 2026). Polozka cenika slouzi zaroven jako ciselnik
+// TYPU PROJEKTU - u projektu jde vybrat jen to, co je tady. Proto je nazev
+// unikatni a v ProjectMeta.projectType se uklada primo nazev polozky.
+model PriceListItem {
+  id          String   @id @default(cuid())
+  name        String   @unique // "Natáčení voiceoveru", "Výroba rádiového spotu"...
+  priceExVat  Int?     // cena bez DPH v Kc
+  priceIncVat Int?     // cena s DPH v Kc
+  active      Boolean  @default(true) // vyrazena polozka se uz nenabizi u novych projektu
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

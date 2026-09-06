@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
-import { PROJECT_TYPE_KEYS } from '@/lib/projectTypes';
+
 
 // Ulozeni internich atributu projektu (model ProjectMeta) - zadani
 // 5. 9. 2026. Menit je smi POUZE Produkce a Zuzo-labuzo; zvukar ma jen
@@ -32,8 +32,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (data.driveUrl && !/^https?:\/\//i.test(data.driveUrl)) {
       return NextResponse.json({ error: 'Odkaz na KZ musí začínat http:// nebo https://.' }, { status: 400 });
     }
-    if (data.projectType && !PROJECT_TYPE_KEYS.includes(data.projectType)) {
-      return NextResponse.json({ error: 'Neznámý typ projektu.' }, { status: 400 });
+    // Typ projektu musi byt polozka ceniku (zadani 5. 9. 2026).
+    if (data.projectType) {
+      const item = await prisma.priceListItem.findUnique({ where: { name: data.projectType } });
+      if (!item) {
+        return NextResponse.json({ error: 'Typ projektu musí být položka z ceníku.' }, { status: 400 });
+      }
     }
 
     // Manazer musi byt existujici interni ucet Mediaspace.

@@ -174,7 +174,7 @@ export function NewUserForm({
           </AdminField>
         </div>
         <div className="flex-1 min-w-[200px]">
-          <AdminField label="Role" required>
+          <AdminField label="Typ přístupu" required>
             <select required value={role} onChange={(e) => setRole(e.target.value as Role)} className="admin-input">
               {ROLE_GROUPS.map((group) => (
                 <optgroup key={group.label} label={group.label}>
