@@ -7,6 +7,9 @@ import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
 import { canEditProjectMeta, isInternalRole, INTERNAL_ROLES } from '@/lib/roles';
 import { PRIORITY_LABELS } from '@/lib/projectTypes';
 import { listProjectTypeOptions } from '@/lib/priceList';
+import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
+import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
+import { ProjectBudget } from './ProjectBudget';
 import { formatDate, StatusPill } from '../shared';
 import { ProjectMetaForm } from './ProjectMetaForm';
 
@@ -25,7 +28,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const caflouProjectId = params.id;
   const canEdit = canEditProjectMeta(session.user.role);
 
-  const [caflouDirect, meta, managers, projectTypeOptions] = await Promise.all([
+  const [caflouDirect, meta, managers, projectTypeOptions, budgetSettings, timesheets] = await Promise.all([
     getCaflouProject(caflouProjectId),
     prisma.projectMeta.findUnique({
       where: { caflouProjectId },
@@ -37,6 +40,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       orderBy: { name: 'asc' },
     }),
     listProjectTypeOptions(),
+    prisma.budgetSettings.findUnique({ where: { id: 'default' } }),
+    // Vykazy k tomuhle projektu - z nich se pocita cerpani rozpoctu.
+    prisma.timesheetEntry.findMany({
+      where: { caflouProjectId },
+      select: { startMinutes: true, endMinutes: true, hourlyRateSnapshot: true },
+    }),
   ]);
 
   // Nektere ucty Caflou nevraci detail jednoho projektu - pak projekt
@@ -47,11 +56,25 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const company = caflou?.caflouCompanyId
     ? await prisma.company.findFirst({
         where: { caflouCompanyId: caflou.caflouCompanyId },
-        select: { id: true, name: true, driveFolderUrl: true },
+        select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true },
       })
     : null;
 
   const project = caflou?.project ?? null;
+
+  // Rozpocet (zadani 6. 9. 2026) - jen u audioknih, kde zname pocet normostran,
+  // a vidi ho jen Zuzo-labuzo.
+  const settings = budgetSettings ?? DEFAULT_BUDGET_SETTINGS;
+  const showBudget =
+    session.user.role === 'ADMIN' && company?.dealsAudiobooks === true && (project?.pageCount ?? 0) > 0;
+  const budget = showBudget ? computeBudget(project!.pageCount!, settings) : null;
+  const spent = timesheets.reduce(
+    (sum, e) => sum + entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot),
+    0,
+  );
+  const hoursLogged = timesheets.reduce((sum, e) => sum + toHours(durationMinutes(e.startMinutes, e.endMinutes)), 0);
+  const revenue =
+    budget && company?.ratePerPage != null ? budget.pageCount * company.ratePerPage : null;
 
   return (
     <section className="flex flex-col gap-8">
@@ -89,6 +112,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <Field label="Datum vydání" value={formatDate(project.releaseDate)} />
           </dl>
         </div>
+      )}
+
+      {budget && (
+        <ProjectBudget
+          budget={budget}
+          spent={spent}
+          revenue={revenue}
+          ratePerPage={company?.ratePerPage ?? null}
+          hoursLogged={hoursLogged}
+        />
       )}
 
       <ProjectMetaForm

@@ -22,7 +22,7 @@ export default async function TimesheetsPage() {
     prisma.timesheetEntry.findMany({
       where: isAdmin ? {} : { userId: session.user.id },
       orderBy: [{ date: 'desc' }, { startMinutes: 'desc' }],
-      take: 300,
+      take: 2000,
       include: { user: { select: { id: true, name: true, email: true } } },
     }),
     prisma.company.findMany({
@@ -37,6 +37,7 @@ export default async function TimesheetsPage() {
   const { projects } = await listAllCaflouProjectsForInternal(
     companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
   );
+  // Vykaz jde pridat jen k rozpracovanemu projektu (zadani 6. 9. 2026).
   const projectOptions = projects
     .filter((p) => !p.finished)
     .map((p) => ({ id: String(p.id), label: p.companyName ? `${p.name} — ${p.companyName}` : p.name }))

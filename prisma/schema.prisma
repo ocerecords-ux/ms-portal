@@ -305,3 +305,17 @@ model TimesheetEntry {
 
   @@index([userId, date])
 }
+
+
+// Parametry vypoctu rozpoctu audioknihy (zadani 6. 9. 2026). Drzi se v
+// databazi jako jediny radek, aby se daly menit v administraci bez zasahu do
+// kodu - kazde studio si je casem doladi.
+model BudgetSettings {
+  id                 String   @id @default("default")
+  pagesPerSession    Int      @default(40)  // kolik NS herec nacte za jednu frekvenci
+  sessionHours       Int      @default(4)   // delka jedne frekvence v hodinach
+  editingCoefficient Int      @default(120) // strih jako % z poctu frekvenci (120 = +20 %)
+  bonusPerPage       Int      @default(4)   // bonus zvukari v Kc za normostranu
+  hourlyRate         Int      @default(250) // sazba, ze ktere se pocita cena frekvence
+  updatedAt          DateTime @updatedAt
+}

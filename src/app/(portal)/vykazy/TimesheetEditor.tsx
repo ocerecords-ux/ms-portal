@@ -35,6 +35,17 @@ function todayIso(): string {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
+/** "2026-01" -> "Leden 2026" */
+function monthLabel(key: string): string {
+  const [year, month] = key.split('-');
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  const name = new Intl.DateTimeFormat('cs-CZ', { month: 'long' }).format(date);
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${year}`;
+}
+
+type SortKey = 'date' | 'user' | 'duration' | 'workType' | 'project' | 'amount';
+type Sort = { key: SortKey; dir: 'asc' | 'desc' };
+
 function formatDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   return Number.isNaN(d.getTime()) ? iso : new Intl.DateTimeFormat('cs-CZ').format(d);
@@ -64,6 +75,71 @@ export function TimesheetEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Filtry nad seznamem (zadani 6. 9. 2026): mesic, hledani, ciho vykazu a razeni.
+  const [month, setMonth] = useState<string>('all');
+  const [query, setQuery] = useState('');
+  const [userFilter, setUserFilter] = useState<string>('all');
+  const [sort, setSort] = useState<Sort>({ key: 'date', dir: 'desc' });
+
+  // Zalozky s mesici se skladaji z toho, co ve vykazech opravdu je.
+  const months = useMemo(() => {
+    const set = new Set(entries.map((e) => e.date.slice(0, 7)));
+    return Array.from(set).sort().reverse();
+  }, [entries]);
+
+  const people = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const e of entries) map.set(e.userId, e.userLabel);
+    return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
+  }, [entries]);
+
+  function toggleSort(key: SortKey) {
+    setSort((current) =>
+      current.key === key
+        ? { key, dir: current.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'project' || key === 'user' || key === 'workType' ? 'asc' : 'desc' },
+    );
+  }
+
+  const visibleEntries = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const rows = entries.filter((e) => {
+      if (month !== 'all' && !e.date.startsWith(month)) return false;
+      if (userFilter === 'mine' && !e.mine) return false;
+      if (userFilter !== 'all' && userFilter !== 'mine' && e.userId !== userFilter) return false;
+      if (!needle) return true;
+      const haystack = [e.projectName, e.note ?? '', e.userLabel, WORK_TYPE_LABELS[e.workType], formatDate(e.date)]
+        .join(' ')
+        .toLowerCase();
+      return needle.split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
+    });
+
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    return rows.sort((a, b) => {
+      switch (sort.key) {
+        case 'duration':
+          return (
+            dir * (durationMinutes(a.startMinutes, a.endMinutes) - durationMinutes(b.startMinutes, b.endMinutes))
+          );
+        case 'amount':
+          return (
+            dir *
+            (entryAmount(a.startMinutes, a.endMinutes, a.hourlyRateSnapshot) -
+              entryAmount(b.startMinutes, b.endMinutes, b.hourlyRateSnapshot))
+          );
+        case 'user':
+          return dir * a.userLabel.localeCompare(b.userLabel, 'cs');
+        case 'workType':
+          return dir * WORK_TYPE_LABELS[a.workType].localeCompare(WORK_TYPE_LABELS[b.workType], 'cs');
+        case 'project':
+          return dir * a.projectName.localeCompare(b.projectName, 'cs');
+        default: {
+          const byDate = a.date.localeCompare(b.date);
+          return dir * (byDate !== 0 ? byDate : a.startMinutes - b.startMinutes);
+        }
+      }
+    });
+  }, [entries, month, userFilter, query, sort]);
 
   // Živý náhled: kolik hodin to je a kolik to dělá peněz.
   const preview = useMemo(() => {
@@ -77,12 +153,12 @@ export function TimesheetEditor({
   const totals = useMemo(() => {
     let minutes = 0;
     let amount = 0;
-    for (const e of entries) {
+    for (const e of visibleEntries) {
       minutes += durationMinutes(e.startMinutes, e.endMinutes);
       amount += entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot);
     }
     return { minutes, amount };
-  }, [entries]);
+  }, [visibleEntries]);
 
   async function addEntry(e: React.FormEvent) {
     e.preventDefault();
@@ -175,6 +251,7 @@ export function TimesheetEditor({
             <input
               type="time"
               required
+              step={1800}
               value={form.from}
               onChange={(e) => setForm({ ...form, from: e.target.value })}
               className={inputClass}
@@ -185,6 +262,7 @@ export function TimesheetEditor({
             <input
               type="time"
               required
+              step={1800}
               value={form.to}
               onChange={(e) => setForm({ ...form, to: e.target.value })}
               className={inputClass}
@@ -220,11 +298,11 @@ export function TimesheetEditor({
                 </option>
               ))}
             </select>
-            {projectOptions.length === 0 && (
-              <span className="text-xs text-muted font-body">
-                Zatím se nenačetly žádné rozpracované projekty z Caflou.
-              </span>
-            )}
+            <span className="text-xs text-muted font-body">
+              {projectOptions.length === 0
+                ? 'Zatím se nenačetly žádné rozpracované projekty z Caflou.'
+                : 'V nabídce jsou jen rozpracované projekty.'}
+            </span>
           </label>
 
           <label className="flex flex-col gap-1.5 sm:col-span-2">
@@ -259,30 +337,77 @@ export function TimesheetEditor({
         </div>
       </form>
 
+      <div className="flex flex-col gap-4">
+        <div className="flex items-end justify-between gap-4 flex-wrap border-b border-line">
+          <div className="flex items-center gap-1 flex-wrap">
+            <MonthTab active={month === 'all'} onClick={() => setMonth('all')} label="Vše" />
+            {months.map((m) => (
+              <MonthTab key={m} active={month === m} onClick={() => setMonth(m)} label={monthLabel(m)} />
+            ))}
+          </div>
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
+            {isAdmin && people.length > 1 && (
+              <select
+                value={userFilter}
+                onChange={(e) => setUserFilter(e.target.value)}
+                className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+              >
+                <option value="all">Všichni zvukaři</option>
+                <option value="mine">Jen moje</option>
+                {people.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            )}
+            <div className="relative">
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Hledat projekt, poznámku…"
+                className="w-64 max-w-full rounded-lg border border-line bg-white pl-9 pr-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+              />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="M20 20l-3.5-3.5" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
       <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[840px] border-collapse">
             <thead>
               <tr className="bg-brand-purple text-white font-heading text-xs">
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum</th>
-                {isAdmin && <th className="text-left px-4 py-3.5 whitespace-nowrap">Zvukař</th>}
+                <SortHeader label="Datum" sortKey="date" sort={sort} onSort={toggleSort} />
+                {isAdmin && <SortHeader label="Zvukař" sortKey="user" sort={sort} onSort={toggleSort} />}
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Od–do</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Hodiny</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Druh práce</th>
-                <th className="text-left px-4 py-3.5">Projekt</th>
-                <th className="text-right px-4 py-3.5 whitespace-nowrap">Částka</th>
+                <SortHeader label="Hodiny" sortKey="duration" sort={sort} onSort={toggleSort} />
+                <SortHeader label="Druh práce" sortKey="workType" sort={sort} onSort={toggleSort} />
+                <SortHeader label="Projekt" sortKey="project" sort={sort} onSort={toggleSort} />
+                <SortHeader label="Částka" sortKey="amount" sort={sort} onSort={toggleSort} align="right" />
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {entries.length === 0 && (
+              {visibleEntries.length === 0 && (
                 <tr>
                   <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-muted text-sm font-body">
-                    Zatím tu není žádný výkaz.
+                    {entries.length === 0 ? 'Zatím tu není žádný výkaz.' : 'Nic neodpovídá filtru.'}
                   </td>
                 </tr>
               )}
-              {entries.map((e) => {
+              {visibleEntries.map((e) => {
                 const minutes = durationMinutes(e.startMinutes, e.endMinutes);
                 return (
                   <tr key={e.id} className="border-t border-line hover:bg-[#FAF8FF]">
@@ -335,6 +460,65 @@ export function TimesheetEditor({
           </table>
         </div>
       </div>
+      </div>
     </section>
+  );
+}
+
+function MonthTab({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
+        active ? 'bg-white border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function SortHeader({
+  label,
+  sortKey,
+  sort,
+  onSort,
+  align = 'left',
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: Sort;
+  onSort: (key: SortKey) => void;
+  align?: 'left' | 'right';
+}) {
+  const active = sort.key === sortKey;
+  return (
+    <th className={`px-4 py-3.5 whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        title={`Seřadit podle: ${label}`}
+        className={`inline-flex items-center gap-1.5 font-heading text-xs transition-opacity hover:opacity-100 ${
+          active ? 'opacity-100' : 'opacity-80'
+        } ${align === 'right' ? 'flex-row-reverse' : ''}`}
+      >
+        {label}
+        {active && (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`w-3 h-3 shrink-0 transition-transform ${sort.dir === 'desc' ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          >
+            <path d="M12 19V5M5 12l7-7 7 7" />
+          </svg>
+        )}
+      </button>
+    </th>
   );
 }
