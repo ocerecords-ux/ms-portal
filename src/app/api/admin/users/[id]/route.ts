@@ -23,6 +23,8 @@ const schema = z.object({
   active: z.boolean().optional(),
   removePhoto: z.boolean().optional(),
   birthDate: z.string().trim().optional(),
+  // Hodinova sazba zvukare (zadani 6. 9. 2026) - pocita se z ni vykaz prace.
+  hourlyRate: z.string().trim().optional(),
   studioLocations: z.array(z.string()).optional(),
   birthNumber: z.string().trim().optional(),
   ic: z.string().trim().optional(),
@@ -48,6 +50,7 @@ function readFormData(formData: FormData) {
     active: has('active') ? formData.get('active') === 'true' : undefined,
     removePhoto: formData.get('removePhoto') === 'true',
     birthDate: has('birthDate') ? formData.get('birthDate') : undefined,
+    hourlyRate: has('hourlyRate') ? formData.get('hourlyRate') : undefined,
     studioLocations: has('studioLocations') ? formData.getAll('studioLocations').map(String) : undefined,
     birthNumber: has('birthNumber') ? formData.get('birthNumber') : undefined,
     ic: has('ic') ? formData.get('ic') : undefined,
@@ -127,6 +130,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ? { birthDate: data.birthDate ? new Date(data.birthDate) : null }
         : {}),
       ...(photoUrl !== undefined ? { photoUrl } : {}),
+      // Hodinova sazba dava smysl jen u zvukare (zadani 6. 9. 2026).
+      ...(nextRole === 'ZVUKAR' && data.hourlyRate !== undefined
+        ? { hourlyRate: data.hourlyRate ? parseInt(data.hourlyRate, 10) || null : null }
+        : {}),
       ...(nextRole === 'HEREC'
         ? {
             ...(data.studioLocations !== undefined ? { studioLocations: data.studioLocations } : {}),

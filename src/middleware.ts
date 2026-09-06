@@ -19,6 +19,7 @@ export const config = {
     '/objednavka/:path*',
     '/nahravky/:path*',
     '/muj-ucet/:path*',
+    '/vykazy/:path*',
     '/admin/:path*',
   ],
 };

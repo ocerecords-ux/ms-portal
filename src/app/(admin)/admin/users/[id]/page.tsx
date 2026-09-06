@@ -76,6 +76,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           active: user.active,
           birthDate: user.birthDate ? user.birthDate.toISOString().slice(0, 10) : null,
           photoUrl: user.photoUrl,
+          hourlyRate: user.hourlyRate,
           studioLocations: user.studioLocations,
           birthNumber: user.birthNumber,
           ic: user.ic,

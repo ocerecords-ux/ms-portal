@@ -129,6 +129,10 @@ model User {
   birthDate    DateTime? // datum narozeni
   photoUrl     String?   // fotka
 
+  // Hodinova sazba zvukare v Kc (zadani 6. 9. 2026) - z ni se pocitaji vykazy
+  // prace. Vychozi 250 Kc; u ostatnich roli se nepouziva.
+  hourlyRate   Int?      @default(250)
+
   // --- Herec - zadani 5. 9. 2026: samostatna fyzicka osoba, bez firmy ---
   studioLocations String[] @default([]) // lokace, ve kterych je herec schopen fyzicky natacet - viz lib/roles.ts HEREC_STUDIOS
   birthNumber     String?   // RC, nebo datum narozeni jako text, pokud herec RC nema (cizinec apod.)
@@ -152,8 +156,9 @@ model User {
   invitedAt          DateTime? // kdy byla naposledy odeslana pozvanka
   passwordSetAt      DateTime? // kdy si uzivatel naposledy nastavil heslo pres pozvanku
 
-  orders          Order[]       @relation("OrderCreatedBy")
-  managedProjects ProjectMeta[] @relation("ProjectManager")
+  orders          Order[]         @relation("OrderCreatedBy")
+  managedProjects ProjectMeta[]   @relation("ProjectManager")
+  timesheets      TimesheetEntry[]
 }
 
 model Order {
@@ -264,4 +269,39 @@ model PriceListItem {
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+
+// Druh prace ve vykazu zvukare (zadani 6. 9. 2026).
+enum WorkType {
+  RECORDING // natáčení
+  EDITING   // střih
+}
+
+// Vykaz prace zvukare (zadani 6. 9. 2026): den, cas od-do, druh prace,
+// projekt. Pocet hodin i castka se dopocitavaji - v databazi drzime cas v
+// minutach od pulnoci (spolehlive se s tim pocita) a sazbu v okamziku zapisu,
+// aby pozdejsi zmena sazby neprepsala uz vykazane dny.
+model TimesheetEntry {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date               DateTime // den prace (bez casu)
+  startMinutes       Int      // od - minuty od pulnoci
+  endMinutes         Int      // do - minuty od pulnoci
+  workType           WorkType
+
+  // Projekt z Caflou. Nazev si ukladame i textove, aby vykaz zustal citelny,
+  // kdyz projekt v Caflou zmizi nebo se prejmenuje.
+  caflouProjectId    String?
+  projectName        String
+
+  hourlyRateSnapshot Int      // sazba pouzita pro tenhle vykaz
+  note               String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId, date])
 }

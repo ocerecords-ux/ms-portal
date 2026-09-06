@@ -10,13 +10,15 @@ import { useState } from 'react';
 // naopak potrebuji rychly pristup ke sprave uzivatelu (zadani 5. 9. 2026).
 // Firmy jsou od 5. 9. 2026 (upresneni) taky primo tady v hlavnim panelu -
 // admin se k nim nema dostavat jen oklikou pres "Administrace" v menu.
-function navItemsFor(isAdmin?: boolean, isInternal?: boolean) {
+function navItemsFor(isAdmin?: boolean, isInternal?: boolean, showTimesheets?: boolean) {
   if (isAdmin) {
     return [
       { href: '/projekty', label: 'Projekty' },
       { href: '/admin', label: 'Firmy' },
       { href: '/admin/users', label: 'Uživatelé' },
       { href: '/admin/ceniky', label: 'Ceníky' },
+      // Vykazy vidi Zuzo-labuzo (vsechny) a Zvukar (svoje) - zadani 6. 9. 2026.
+      ...(showTimesheets ? [{ href: '/vykazy', label: 'Výkazy' }] : []),
     ];
   }
   // Interni ucty bez admin prav (Produkce / Zvukar) - objednavka je
@@ -25,7 +27,10 @@ function navItemsFor(isAdmin?: boolean, isInternal?: boolean) {
   // Nahravky jsou od 5. 9. 2026 (zadani) uz jen klientska sekce - interni tym
   // se k souborum dostava pres Google Disk primo, ne pres portal.
   if (isInternal) {
-    return [{ href: '/projekty', label: 'Projekty' }];
+    return [
+      { href: '/projekty', label: 'Projekty' },
+      ...(showTimesheets ? [{ href: '/vykazy', label: 'Výkazy' }] : []),
+    ];
   }
   return [
     { href: '/projekty', label: 'Projekty' },
@@ -43,14 +48,17 @@ export function Topbar({
   userLabel,
   isAdmin,
   isInternal,
+  showTimesheets,
 }: {
   userLabel: string;
   isAdmin?: boolean;
   isInternal?: boolean;
+  /** Vykazy prace - jen zvukar a Zuzo-labuzo (zadani 6. 9. 2026). */
+  showTimesheets?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const NAV = navItemsFor(isAdmin, isInternal);
+  const NAV = navItemsFor(isAdmin, isInternal, showTimesheets);
 
   return (
     <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">

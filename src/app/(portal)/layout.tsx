@@ -18,6 +18,7 @@ export default async function PortalLayout({ children }: { children: React.React
         userLabel={session.user.name || session.user.email}
         isAdmin={session.user.role === 'ADMIN'}
         isInternal={isInternalRole(session.user.role)}
+        showTimesheets={session.user.role === 'ZVUKAR' || session.user.role === 'ADMIN'}
       />
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
     </div>

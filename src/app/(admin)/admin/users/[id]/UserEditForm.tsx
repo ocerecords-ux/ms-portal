@@ -20,6 +20,7 @@ type EditableUser = {
   active: boolean;
   birthDate: string | null;
   photoUrl: string | null;
+  hourlyRate: number | null;
   studioLocations: string[];
   birthNumber: string | null;
   ic: string | null;
@@ -48,6 +49,7 @@ export function UserEditForm({
   const [name, setName] = useState(user.name ?? '');
   const [phone, setPhone] = useState(user.phone ?? '');
   const [role, setRole] = useState<Role>(user.role);
+  const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
   const [caflouTag, setCaflouTag] = useState(user.caflouTag ?? '');
   const [active, setActive] = useState(user.active);
@@ -101,6 +103,7 @@ export function UserEditForm({
       if (newPassword) fd.set('password', newPassword);
       if (isMediaspace) {
         fd.set('birthDate', birthDate);
+        if (role === 'ZVUKAR') fd.set('hourlyRate', hourlyRate);
         if (photo) fd.set('photo', photo);
         else if (removePhoto) fd.set('removePhoto', 'true');
       }
@@ -177,6 +180,22 @@ export function UserEditForm({
             </select>
           </AdminField>
         </div>
+        {/* Hodinova sazba - jen zvukar, pocitaji se z ni vykazy prace
+            (zadani 6. 9. 2026). */}
+        {role === 'ZVUKAR' && (
+          <div className="flex-1 min-w-[180px]">
+            <AdminField label="Hodinová sazba (Kč)" hint="z ní se počítají výkazy práce">
+              <input
+                type="number"
+                min={0}
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                placeholder="250"
+                className="admin-input"
+              />
+            </AdminField>
+          </div>
+        )}
         {needsCompany && (
           <div className="flex-1 min-w-[200px]">
             <AdminField label="Firma" required>

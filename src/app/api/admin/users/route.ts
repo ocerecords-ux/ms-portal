@@ -26,6 +26,8 @@ const schema = z
     caflouTag: z.string().trim().optional(),
     // Mediaspace
     birthDate: z.string().trim().optional(),
+  // Hodinova sazba zvukare (zadani 6. 9. 2026) - pocita se z ni vykaz prace.
+  hourlyRate: z.string().trim().optional(),
     // Herec
     studioLocations: z.array(z.string()).optional(),
     birthNumber: z.string().trim().optional(),
@@ -62,6 +64,7 @@ function readFormData(formData: FormData) {
     role: formData.get('role'),
     caflouTag: has('caflouTag') ? formData.get('caflouTag') : undefined,
     birthDate: has('birthDate') ? formData.get('birthDate') : undefined,
+    hourlyRate: has('hourlyRate') ? formData.get('hourlyRate') : undefined,
     studioLocations: has('studioLocations') ? formData.getAll('studioLocations').map(String) : undefined,
     birthNumber: has('birthNumber') ? formData.get('birthNumber') : undefined,
     ic: has('ic') ? formData.get('ic') : undefined,
@@ -126,6 +129,11 @@ export async function POST(req: NextRequest) {
               birthDate: data.birthDate ? new Date(data.birthDate) : null,
               photoUrl,
             }
+          : {}),
+        // Hodinova sazba dava smysl jen u zvukare (zadani 6. 9. 2026);
+        // kdyz se nevyplni, zustava vychozich 250 Kc ze schematu.
+        ...(data.role === 'ZVUKAR' && data.hourlyRate
+          ? { hourlyRate: parseInt(data.hourlyRate, 10) || null }
           : {}),
         ...(data.role === 'HEREC'
           ? {
