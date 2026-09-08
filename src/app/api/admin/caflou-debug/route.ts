@@ -61,6 +61,42 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(out);
   }
 
+  // ?najdi=NAZEV - najde projekty podle nazvu napric vsemi strankami a vypise
+  // JEJICH SUROVA DATA. Slouzi k dohledani, proc konkretni projekt spadl do
+  // spatne zalozky (zadani 8. 9. 2026: "OODA 7, TRIOLA, ATMOS - EN MUTACE jsou
+  // v Caflou ukoncene, na portalu maji byt v Dokoncenych").
+  const najdi = req.nextUrl.searchParams.get('najdi');
+  if (najdi) {
+    try {
+      const needle = najdi.trim().toLowerCase();
+      const found: any[] = [];
+      const statusToFinished: Record<string, { finished: number; unfinished: number }> = {};
+      for (let page = 1; page <= 15; page++) {
+        const result = await caflouFetch(`/projects?per=100&page=${page}`);
+        const results = (result.body as { results?: unknown } | null)?.results;
+        if (!result.ok || !Array.isArray(results) || results.length === 0) break;
+        for (const row of results as any[]) {
+          const status = String(row?.project_status_name ?? '(prázdné)');
+          statusToFinished[status] ??= { finished: 0, unfinished: 0 };
+          if (row?.finished) statusToFinished[status].finished += 1;
+          else statusToFinished[status].unfinished += 1;
+          if (String(row?.name ?? '').toLowerCase().includes(needle)) found.push(row);
+        }
+        if ((results as any[]).length < 100) break;
+      }
+      return NextResponse.json({
+        hledano: najdi,
+        nalezeno: found.length,
+        // Prehled vsech stavu v uctu a jak u nich vypada priznak finished -
+        // z toho je videt, podle ceho se ma rozpracovanost poznat.
+        stavyAPriznakFinished: statusToFinished,
+        zaznamy: found,
+      });
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : 'Dotaz na Caflou selhal.' }, { status: 502 });
+    }
+  }
+
   // ?all=1 - prehled toho, co Caflou vraci za CELY ucet (bez filtru na firmu).
   // Slouzi k ladeni internich Projektu: kolik projektu vubec chodi, kolik z
   // nich je oznaceno jako dokoncene a jak se presne jmenuji pole, ze kterych
