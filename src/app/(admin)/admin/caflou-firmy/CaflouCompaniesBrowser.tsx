@@ -40,6 +40,8 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [transferring, setTransferring] = useState(false);
+  const [report, setReport] = useState<{ nazev: string; akce: string; detail: string }[] | null>(null);
 
   const counts = useMemo(() => {
     const map: Record<string, number> = { vse: items.length, duplicity: 0 };
@@ -95,6 +97,43 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
     }
   }
 
+  /**
+   * Prenese roztridene radky do portalu - klienty do Firem, herce mezi
+   * uzivatele. Uz zalozene zaznamy se nezakladaji znovu, jen se u nich
+   * doplni prazdna pole (server to hlida znovu, viz /zalozit).
+   */
+  async function transferToPortal() {
+    const ids = items.filter((i) => i.kind === 'KLIENT' || i.kind === 'HEREC').map((i) => i.id);
+    if (ids.length === 0) {
+      setError('Nejdřív u firem vyberte, jestli jde o klienta, nebo o herce.');
+      return;
+    }
+    setTransferring(true);
+    setError(null);
+    setReport(null);
+    try {
+      const res = await fetch('/api/admin/caflou-firmy/zalozit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Přenos se nezdařil.');
+        return;
+      }
+      setReport(Array.isArray(data?.vysledky) ? data.vysledky : []);
+      setProgress(
+        `Založeno ${data?.zalozeno ?? 0}, doplněno ${data?.doplneno ?? 0}, přeskočeno ${data?.preskoceno ?? 0}.`,
+      );
+      router.refresh();
+    } catch {
+      setError('Přenos se nezdařil.');
+    } finally {
+      setTransferring(false);
+    }
+  }
+
   async function setKind(id: string, kind: CaflouContactKind) {
     setBusyId(id);
     setError(null);
@@ -131,26 +170,63 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
         <div>
           <h1 className="font-display text-3xl text-ink m-0">Firmy z Caflou</h1>
           <p className="text-muted text-sm mt-1 font-body max-w-2xl">
-            Surový seznam z Caflou — klienti i herci dohromady. Označte u každého, o koho jde; do Firem
-            ani k Uživatelům se zatím nic nezakládá, takže tu nemůže vzniknout duplicita. Co už v
-            portálu je, je označené.
+            Klienti i herci dohromady, tak jak jsou v Caflou. Označte u každého, o koho jde, a pak to
+            přeneste do portálu — klienti se založí mezi Firmy, herci mezi uživatele. Co už v portálu
+            je, se nezakládá znovu; jen se doplní prázdná pole, ručně zadané údaje zůstanou.
           </p>
         </div>
         <div className="text-right">
-          <button
-            type="button"
-            onClick={runImport}
-            disabled={importing}
-            className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-          >
-            {importing ? 'Načítám…' : items.length === 0 ? 'Načíst z Caflou' : 'Načíst znovu'}
-          </button>
+          <div className="flex items-center gap-3 justify-end flex-wrap">
+            <button
+              type="button"
+              onClick={runImport}
+              disabled={importing || transferring}
+              className="font-heading font-semibold text-sm rounded-lg border border-line bg-white px-4 py-2.5 text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-60"
+            >
+              {importing ? 'Načítám…' : items.length === 0 ? 'Načíst z Caflou' : 'Načíst znovu'}
+            </button>
+            <button
+              type="button"
+              onClick={transferToPortal}
+              disabled={transferring || importing || counts.KLIENT + counts.HEREC === 0}
+              title="Klienty založí mezi Firmy, herce mezi uživatele"
+              className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+            >
+              {transferring ? 'Přenáším…' : `Přenést do portálu (${counts.KLIENT + counts.HEREC})`}
+            </button>
+          </div>
           {progress && <p className="text-xs font-body text-muted m-0 mt-1.5">{progress}</p>}
         </div>
       </div>
 
       {error && (
         <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>
+      )}
+
+      {report && report.length > 0 && (
+        <div className="bg-white rounded-card border border-line shadow-sm p-4 max-h-64 overflow-y-auto">
+          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0 mb-2">
+            Co se stalo
+          </h2>
+          <ul className="m-0 pl-0 list-none flex flex-col gap-1.5">
+            {report.map((r, index) => (
+              <li key={`${r.nazev}-${index}`} className="text-sm font-body text-ink">
+                <span
+                  className={`inline-block min-w-[86px] text-xs font-heading font-semibold ${
+                    r.akce === 'zalozeno'
+                      ? 'text-status-done'
+                      : r.akce === 'doplneno'
+                        ? 'text-brand-purpleDark'
+                        : 'text-status-progress'
+                  }`}
+                >
+                  {r.akce === 'zalozeno' ? 'Založeno' : r.akce === 'doplneno' ? 'Doplněno' : 'Přeskočeno'}
+                </span>
+                {r.detail}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div className="flex items-end justify-between gap-4 flex-wrap border-b border-line">
