@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { expandNumberFormat } from '@/lib/doklady';
 import { CURRENCIES } from '@/lib/doklady';
 import { getRateForCurrency } from '@/lib/cnb';
 
@@ -126,7 +127,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     const session = await requireAdmin();
     if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
-    const invoice = await prisma.invoice.findUnique({ where: { id: params.id }, select: { status: true } });
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: params.id },
+      select: { status: true, number: true, issuerCompanyId: true },
+    });
     if (!invoice) return NextResponse.json({ error: 'Faktura nenalezena.' }, { status: 404 });
 
     // Odeslanou nebo uhrazenou fakturu nemazeme - ucetne musi zustat, jen se
@@ -136,8 +140,28 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ ok: true, cancelledInsteadOfDeleted: true });
     }
 
-    await prisma.invoice.delete({ where: { id: params.id } });
-    return NextResponse.json({ ok: true });
+    // Zahozeny rozpracovany doklad vrati sve cislo do rady - jinak by kazda
+    // faktura, kterou si nekdo jen vyzkousi z nabidky a zase ji smaze,
+    // udelala v ciselne rade diru (zadani 8. 9. 2026: fakturu z nabidky chci
+    // nejdriv videt v editaci a teprve pak ulozit).
+    const issuer = await prisma.issuerCompany.findUnique({
+      where: { id: invoice.issuerCompanyId },
+      select: { invoiceNextNumber: true, invoiceNumberFormat: true },
+    });
+    const bylaPosledni =
+      issuer !== null &&
+      expandNumberFormat(issuer.invoiceNumberFormat, issuer.invoiceNextNumber - 1) === invoice.number;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.invoice.delete({ where: { id: params.id } });
+      if (bylaPosledni && issuer) {
+        await tx.issuerCompany.update({
+          where: { id: invoice.issuerCompanyId },
+          data: { invoiceNextNumber: issuer.invoiceNextNumber - 1 },
+        });
+      }
+    });
+    return NextResponse.json({ ok: true, cisloVraceno: bylaPosledni });
   } catch (err) {
     console.error('DELETE /api/admin/invoices/[id] selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';

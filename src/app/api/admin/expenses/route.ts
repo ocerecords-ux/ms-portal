@@ -66,9 +66,8 @@ export async function POST(req: NextRequest) {
     }
     const d = parsed.data;
 
-    if (!d.supplierCompanyId && !d.supplierName) {
-      return NextResponse.json({ error: 'Vyplňte dodavatele.' }, { status: 400 });
-    }
+    // Dodavatel uz u vydaje povinny neni (zadani 8. 9. 2026: "je to zbytecny
+    // udaj") - u starsich dokladu zustava vyplneny a porad se zobrazuje.
 
     const issueDate = toDate(d.issueDate);
     if (!issueDate) return NextResponse.json({ error: 'Neplatné datum dokladu.' }, { status: 400 });

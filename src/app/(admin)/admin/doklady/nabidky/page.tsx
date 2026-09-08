@@ -84,9 +84,10 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
               <table className="w-full min-w-[860px] border-collapse">
                 <thead>
                   <tr className="bg-ink text-white font-heading text-xs">
-                    <th className="text-left px-4 py-3.5 whitespace-nowrap">Číslo</th>
+                    {/* Nazev je prvni a proklikavaci - u vsech dokladu stejne
+                        (zadani 8. 9. 2026). Cislo dokladu je pod nim. */}
+                    <th className="text-left px-4 py-3.5">Název</th>
                     <th className="text-left px-4 py-3.5">Odběratel</th>
-                    <th className="text-left px-4 py-3.5">Předmět</th>
                     <th className="text-left px-4 py-3.5 whitespace-nowrap">Vystaveno</th>
                     <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
                     <th className="text-right px-4 py-3.5 whitespace-nowrap">Bez DPH</th>
@@ -96,7 +97,7 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
                 <tbody>
                   {offers.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
+                      <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
                         Tady zatím nic není.
                       </td>
                     </tr>
@@ -105,16 +106,16 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
                     const totals = computeTotals(offer.items);
                     return (
                       <tr key={offer.id} className="border-t border-line hover:bg-[#FAF8FF]">
-                        <td className="px-4 py-3.5 font-heading font-semibold text-sm whitespace-nowrap">
+                        <td className="px-4 py-3.5 font-heading font-semibold text-sm">
                           <Link
                             href={`/admin/doklady/nabidky/${offer.id}`}
-                            className="text-ink hover:text-brand-purple no-underline tabular-nums"
+                            className="text-ink hover:text-brand-purple no-underline"
                           >
-                            {offer.number}
+                            {offer.subject || 'Bez názvu'}
                           </Link>
+                          <span className="block text-xs text-muted font-body tabular-nums">{offer.number}</span>
                         </td>
                         <td className="px-4 py-3.5 text-sm font-heading text-muted">{offer.company.name}</td>
-                        <td className="px-4 py-3.5 text-sm font-body text-muted">{offer.subject || '—'}</td>
                         <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                           {formatDate(offer.issueDate)}
                         </td>

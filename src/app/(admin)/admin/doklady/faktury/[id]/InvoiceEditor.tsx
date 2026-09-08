@@ -96,14 +96,25 @@ export function InvoiceEditor({
   company,
   companies,
   bankAccounts,
+  /**
+   * ID nabidky, ze ktere se faktura chysta. Kdyz je vyplnene, faktura JESTE
+   * NEEXISTUJE - editor jen ukazuje predvyplneny doklad a teprve tlacitko
+   * Ulozit ho zalozi (zadani 8. 9. 2026: "chci se dostat jeste do editace
+   * faktury a az pak ji ulozit"). Driv se faktura zalozila uz kliknutim na
+   * "Vystavit fakturu", takze kazde rozmysleni si to nechavalo v seznamu
+   * rozpracovany doklad a snedlo cislo z rady.
+   */
+  draftFromOfferId,
 }: {
   invoice: Invoice;
   issuer: Party;
   company: Party;
   companies: { id: string; name: string }[];
   bankAccounts: { id: string; label: string; accountNumber: string | null; iban: string | null; currency: Currency }[];
+  draftFromOfferId?: string;
 }) {
   const router = useRouter();
+  const jesteNeulozena = Boolean(draftFromOfferId);
   const locked = invoice.status === 'PAID' || invoice.status === 'CANCELLED';
 
   const [form, setForm] = useState({
@@ -141,30 +152,43 @@ export function InvoiceEditor({
     setError(null);
     setInfo(null);
     try {
-      const res = await fetch(`/api/admin/invoices/${invoice.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          bankAccountId: form.bankAccountId || null,
-          taxDate: form.taxDate || null,
-          dueDate: form.dueDate || null,
-          refreshRate: extra?.refreshRate,
-          items: items
-            .filter((i) => i.description.trim())
-            .map((i) => ({
-              description: i.description.trim(),
-              quantity: Number(i.quantity) || 0,
-              unit: i.unit || undefined,
-              unitPriceMinor: i.unitPriceMinor,
-              vatRate: i.vatRate,
-            })),
-        }),
-      });
+      const telo = {
+        ...form,
+        bankAccountId: form.bankAccountId || null,
+        taxDate: form.taxDate || null,
+        dueDate: form.dueDate || null,
+        refreshRate: extra?.refreshRate,
+        items: items
+          .filter((i) => i.description.trim())
+          .map((i) => ({
+            description: i.description.trim(),
+            quantity: Number(i.quantity) || 0,
+            unit: i.unit || undefined,
+            unitPriceMinor: i.unitPriceMinor,
+            vatRate: i.vatRate,
+          })),
+      };
+      const res = jesteNeulozena
+        ? await fetch('/api/admin/invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...telo, offerId: draftFromOfferId }),
+          })
+        : await fetch(`/api/admin/invoices/${invoice.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(telo),
+          });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || 'Uložení se nezdařilo.');
         return false;
+      }
+      if (jesteNeulozena && data?.id) {
+        // Cislo z rady se pridelilo az ted - dal uz se pracuje s hotovou fakturou.
+        router.replace(`/admin/doklady/faktury/${data.id}`);
+        router.refresh();
+        return true;
       }
       setInfo('Uloženo.');
       router.refresh();
@@ -253,11 +277,13 @@ export function InvoiceEditor({
     <div className="flex flex-col gap-5">
       <div className="bg-white rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="font-display text-2xl text-ink">{invoice.number}</span>
+          <span className="font-display text-2xl text-ink">
+            {jesteNeulozena ? 'Nová faktura' : invoice.number}
+          </span>
           <span
             className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${STATUS_CLASSES[invoice.status]}`}
           >
-            {STATUS_LABELS[invoice.status]}
+            {jesteNeulozena ? 'Neuložená' : STATUS_LABELS[invoice.status]}
           </span>
           {invoice.offerNumber && (
             <span className="text-xs font-body text-muted">z nabídky {invoice.offerNumber}</span>
@@ -271,7 +297,31 @@ export function InvoiceEditor({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {invoice.status === 'PAID' ? (
+          {jesteNeulozena && (
+            <>
+              <span className="text-xs font-body text-muted max-w-[280px]">
+                Faktura se založí až tlačítkem Uložit — číslo z řady dostane teprve tehdy.
+              </span>
+              <button
+                type="button"
+                onClick={() => router.back()}
+                disabled={saving}
+                className="border border-line text-muted font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
+              >
+                Zrušit
+              </button>
+              <button
+                type="button"
+                onClick={() => save()}
+                disabled={saving}
+                className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+              >
+                {saving ? 'Zakládám…' : 'Uložit fakturu'}
+              </button>
+            </>
+          )}
+          {!jesteNeulozena &&
+            (invoice.status === 'PAID' ? (
             <button
               type="button"
               onClick={() => setPaid(false)}
@@ -281,18 +331,18 @@ export function InvoiceEditor({
               Zrušit úhradu
             </button>
           ) : (
-            invoice.status !== 'CANCELLED' && (
-              <button
-                type="button"
-                onClick={() => setPaid(true)}
-                disabled={saving}
-                className="bg-brand-green text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60"
-              >
-                Označit jako uhrazenou
-              </button>
-            )
-          )}
-          {!locked && (
+              invoice.status !== 'CANCELLED' && (
+                <button
+                  type="button"
+                  onClick={() => setPaid(true)}
+                  disabled={saving}
+                  className="bg-brand-green text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60"
+                >
+                  Označit jako uhrazenou
+                </button>
+              )
+            ))}
+          {!locked && !jesteNeulozena && (
             <>
               <button
                 type="button"
@@ -366,7 +416,7 @@ export function InvoiceEditor({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 border-b border-line">
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Předmět</span>
+            <span className="text-sm font-body text-ink">Název</span>
             <input
               value={form.subject}
               disabled={locked}
@@ -625,7 +675,7 @@ export function InvoiceEditor({
         />
       </div>
 
-      {invoice.status !== 'CANCELLED' && (
+      {invoice.status !== 'CANCELLED' && !jesteNeulozena && (
         <div>
           <button
             type="button"

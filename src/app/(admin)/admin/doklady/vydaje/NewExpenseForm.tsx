@@ -14,11 +14,9 @@ import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
  */
 export function NewExpenseForm({
   categories,
-  companies,
   issuers,
 }: {
   categories: { id: string; name: string }[];
-  companies: { id: string; name: string }[];
   issuers: { id: string; name: string; isDefault: boolean; currency: Currency }[];
 }) {
   const router = useRouter();
@@ -29,10 +27,6 @@ export function NewExpenseForm({
   const [form, setForm] = useState({
     issueDate: new Date().toISOString().slice(0, 10),
     dueDate: '',
-    // Jedno pole misto prepinace "Dodavatel z Firem / Drobny doklad" (zadani
-    // 8. 9. 2026). Da se vybrat firma ze seznamu, nebo proste napsat jmeno -
-    // co se trefi do nazvu firmy, ulozi se jako firma, zbytek jako text.
-    supplier: '',
     number: '',
     categoryId: categories[0]?.id ?? '',
     issuerCompanyId: defaultIssuer?.id ?? '',
@@ -59,11 +53,6 @@ export function NewExpenseForm({
       const body = new FormData();
       body.set('issueDate', form.issueDate);
       if (form.dueDate) body.set('dueDate', form.dueDate);
-      const zvolenaFirma = companies.find(
-        (c) => c.name.trim().toLowerCase() === form.supplier.trim().toLowerCase(),
-      );
-      if (zvolenaFirma) body.set('supplierCompanyId', zvolenaFirma.id);
-      else body.set('supplierName', form.supplier);
       if (form.number) body.set('number', form.number);
       if (form.categoryId) body.set('categoryId', form.categoryId);
       if (form.issuerCompanyId) body.set('issuerCompanyId', form.issuerCompanyId);
@@ -84,7 +73,7 @@ export function NewExpenseForm({
       }
       // Po uložení zpátky na přehled (zadani 8. 9. 2026) - doklad je vidět
       // v seznamu a je jasné, že se opravdu uložil.
-      setForm((f) => ({ ...f, number: '', description: '', amount: '', note: '', dueDate: '', supplier: '' }));
+      setForm((f) => ({ ...f, number: '', description: '', amount: '', note: '', dueDate: '' }));
       setFileName(null);
       if (fileRef.current) fileRef.current.value = '';
       setOpen(false);
@@ -121,6 +110,20 @@ export function NewExpenseForm({
     >
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nový výdaj</h2>
 
+      {/* Nazev je prvni - zadava se jako prvni (zadani 8. 9. 2026). Dodavatel
+          se u vydaje uz nevyplnuje vubec, je to zbytecny udaj. */}
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-body text-ink">Název</span>
+        <input
+          required
+          autoFocus
+          value={form.description}
+          onChange={(e) => set('description', e.target.value)}
+          placeholder="za co to bylo"
+          className={inputClass}
+        />
+      </label>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Datum dokladu</span>
@@ -153,32 +156,6 @@ export function NewExpenseForm({
         </label>
       </div>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Dodavatel</span>
-        <input
-          required
-          list="dodavatele"
-          value={form.supplier}
-          onChange={(e) => set('supplier', e.target.value)}
-          placeholder="vyberte firmu, nebo napište, kdo doklad vystavil"
-          className={inputClass}
-        />
-        <datalist id="dodavatele">
-          {companies.map((c) => (
-            <option key={c.id} value={c.name} />
-          ))}
-        </datalist>
-      </label>
-
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Název</span>
-        <input
-          value={form.description}
-          onChange={(e) => set('description', e.target.value)}
-          placeholder="za co to bylo"
-          className={inputClass}
-        />
-      </label>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <label className="flex flex-col gap-1.5">
@@ -235,20 +212,30 @@ export function NewExpenseForm({
           />
           {fileName && <span className="text-xs text-muted font-body truncate">{fileName}</span>}
         </label>
-        {/* Zaskrtavatko "Uz uhrazeno" se prehlizelo - je z nej tlacitko,
-            ktere zezelena, kdyz je doklad uhrazeny (zadani 8. 9. 2026). */}
-        <button
-          type="button"
-          onClick={() => set('paid', !form.paid)}
-          aria-pressed={form.paid}
-          className={`mb-0.5 font-heading font-semibold text-sm rounded-lg px-5 py-2.5 border transition-colors ${
-            form.paid
-              ? 'bg-brand-green border-brand-green text-ink'
-              : 'bg-white border-line text-muted hover:border-brand-purple hover:text-brand-purple'
-          }`}
-        >
-          {form.paid ? '✓ Uhrazeno' : 'Uhrazeno'}
-        </button>
+        {/* Prepinac se dvema stavy misto jednoho tlacitka (zadani 8. 9. 2026)
+            - je z nej videt, ktera moznost plati, i bez najeti mysi. */}
+        <span className="mb-0.5 inline-flex rounded-lg border border-line overflow-hidden">
+          <button
+            type="button"
+            onClick={() => set('paid', false)}
+            aria-pressed={!form.paid}
+            className={`font-heading font-semibold text-sm px-4 py-2.5 transition-colors ${
+              !form.paid ? 'bg-status-progress text-white' : 'bg-white text-muted hover:text-ink'
+            }`}
+          >
+            Neuhrazeno
+          </button>
+          <button
+            type="button"
+            onClick={() => set('paid', true)}
+            aria-pressed={form.paid}
+            className={`font-heading font-semibold text-sm px-4 py-2.5 transition-colors border-l border-line ${
+              form.paid ? 'bg-status-done text-white' : 'bg-white text-muted hover:text-ink'
+            }`}
+          >
+            Uhrazeno
+          </button>
+        </span>
       </div>
 
       {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}

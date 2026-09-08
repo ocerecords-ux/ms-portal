@@ -194,32 +194,14 @@ export function OfferEditor({
     }
   }
 
-  /** Z odsouhlasené nabídky rovnou faktura - převezme se všechno včetně položek. */
-  async function createInvoice() {
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/admin/invoices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offerId: offer.id }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (data?.invoiceId) {
-          router.push(`/admin/doklady/faktury/${data.invoiceId}`);
-          return;
-        }
-        setError(data?.error || 'Fakturu se nepodařilo vystavit.');
-        return;
-      }
-      router.push(`/admin/doklady/faktury/${data.id}`);
-      router.refresh();
-    } catch {
-      setError('Fakturu se nepodařilo vystavit.');
-    } finally {
-      setSaving(false);
-    }
+  /**
+   * Faktura z nabídky. Nic se tu nezakládá - otevře se předvyplněný doklad
+   * k úpravě a teprve tam se uloží (zadani 8. 9. 2026: "chci se dostat ještě
+   * do editace faktury a až pak ji uložit"). Dřív klik rovnou založil
+   * rozpracovanou fakturu a snědl číslo z řady.
+   */
+  function createInvoice() {
+    router.push(`/admin/doklady/faktury/nova?nabidka=${offer.id}`);
   }
 
   async function remove() {
@@ -384,7 +366,7 @@ export function OfferEditor({
         {/* Předmět a data */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 border-b border-line">
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Předmět nabídky</span>
+            <span className="text-sm font-body text-ink">Název</span>
             <input
               value={form.subject}
               disabled={locked}

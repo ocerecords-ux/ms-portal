@@ -30,7 +30,7 @@ export default async function ExpensesPage({
   const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[0];
   const categoryFilter = searchParams?.kategorie || '';
 
-  const [expenses, categories, companies, issuers, counts] = await Promise.all([
+  const [expenses, categories, issuers, counts] = await Promise.all([
     prisma.expense.findMany({
       where: {
         paid: activeTab.paid,
@@ -44,7 +44,6 @@ export default async function ExpensesPage({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: { _count: { select: { expenses: true } } },
     }),
-    prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     prisma.issuerCompany.findMany({
       where: { active: true },
       orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
@@ -89,7 +88,6 @@ export default async function ExpensesPage({
         </div>
         <NewExpenseForm
           categories={categories.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name }))}
-          companies={companies}
           issuers={issuers.map((i) => ({ id: i.id, name: i.name, isDefault: i.isDefault, currency: i.defaultCurrency }))}
         />
       </div>
@@ -146,7 +144,6 @@ export default async function ExpensesPage({
                 {/* Nazev je prvni a je z nej proklik na detail (zadani 8. 9. 2026). */}
                 <th className="text-left px-4 py-3.5">Název</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum</th>
-                <th className="text-left px-4 py-3.5">Dodavatel</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Kategorie</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Splatnost</th>
                 <th className="text-right px-4 py-3.5 whitespace-nowrap">Bez DPH</th>
@@ -157,7 +154,7 @@ export default async function ExpensesPage({
             <tbody>
               {expenses.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-muted text-sm font-body">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
                     Tady zatím nic není.
                   </td>
                 </tr>
@@ -173,6 +170,13 @@ export default async function ExpensesPage({
                       >
                         {e.description || 'Bez názvu'}
                       </Link>
+                      {(e.supplier?.name || e.supplierName || e.number) && (
+                        <span className="block text-xs text-muted font-body">
+                          {[e.supplier?.name || e.supplierName, e.number ? `č. ${e.number}` : null]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      )}
                       {e.attachmentUrl && (
                         <span className="ml-2 text-[10px] font-heading font-bold text-brand-purpleDeep bg-line rounded px-1.5 py-0.5">
                           PŘÍLOHA
@@ -181,10 +185,6 @@ export default async function ExpensesPage({
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                       {formatDate(e.issueDate)}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-ink">
-                      {e.supplier?.name || e.supplierName || '—'}
-                      {e.number && <span className="block text-xs text-muted font-body">č. {e.number}</span>}
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading text-muted whitespace-nowrap">
                       {e.category?.name || '—'}

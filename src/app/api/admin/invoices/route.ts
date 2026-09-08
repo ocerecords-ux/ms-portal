@@ -10,12 +10,37 @@ import { getRateForCurrency } from '@/lib/cnb';
 //
 // Faktura muze vzniknout i z odsouhlasene nabidky - pak se prevezme odberatel,
 // mena, predmet i vsechny polozky, aby se nic neprepisovalo rucne.
+// Kdyz faktura vznika z nabidky, chodi sem uz UPRAVENY doklad - stranka
+// /admin/doklady/faktury/nova ho necha projit a teprve Ulozit posle tohle
+// (zadani 8. 9. 2026). Co neprijde, se dopocita z nabidky jako driv.
+const itemSchema = z.object({
+  description: z.string().trim().min(1),
+  quantity: z.number(),
+  unit: z.string().trim().max(20).optional(),
+  unitPriceMinor: z.number().int(),
+  vatRate: z.number().int(),
+});
+
 const schema = z.object({
   issuerCompanyId: z.string().trim().min(1, 'Vyberte, za kterou firmu fakturujete.').optional(),
   companyId: z.string().trim().min(1, 'Vyberte odběratele.').optional(),
   subject: z.string().trim().max(200).optional(),
   offerId: z.string().trim().min(1).optional(),
+  note: z.string().trim().max(2000).optional(),
+  variableSymbol: z.string().trim().max(20).optional(),
+  bankAccountId: z.string().trim().min(1).nullable().optional(),
+  issueDate: z.string().trim().optional(),
+  taxDate: z.string().trim().nullable().optional(),
+  dueDate: z.string().trim().nullable().optional(),
+  items: z.array(itemSchema).max(100).optional(),
 });
+
+/** "2026-09-08" -> Date; co neni datum, bereme jako nevyplnene. */
+function toDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -70,17 +95,43 @@ export async function POST(req: NextRequest) {
     // kurz jde doplnit rucne - kvuli tomu faktura padat nebude.
     const rate = await getRateForCurrency(currency);
 
-    // Splatnost podle karty odberatele.
-    const issueDate = new Date();
-    const dueDate = new Date(issueDate);
-    dueDate.setDate(dueDate.getDate() + (company.paymentTermDays ?? 14));
+    // Datumy z formulare maji prednost; kdyz neprijdou, plati dnesek a
+    // splatnost podle karty odberatele.
+    const issueDate = toDate(input.issueDate) ?? new Date();
+    const dueDate =
+      toDate(input.dueDate) ??
+      (() => {
+        const d = new Date(issueDate);
+        d.setDate(d.getDate() + (company.paymentTermDays ?? 14));
+        return d;
+      })();
+    const taxDate = toDate(input.taxDate) ?? issueDate;
 
-    // Vychozi ucet ve mene dokladu.
-    const account = await prisma.bankAccount.findFirst({
-      where: { issuerCompanyId, currency },
-      orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],
-      select: { id: true },
-    });
+    // Ucet z formulare, jinak vychozi ve mene dokladu.
+    const account =
+      input.bankAccountId === undefined
+        ? await prisma.bankAccount.findFirst({
+            where: { issuerCompanyId, currency },
+            orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],
+            select: { id: true },
+          })
+        : input.bankAccountId
+          ? await prisma.bankAccount.findFirst({
+              where: { id: input.bankAccountId, issuerCompanyId },
+              select: { id: true },
+            })
+          : null;
+
+    // Polozky: upravene z formulare, jinak presne ty z nabidky.
+    const polozky =
+      input.items ??
+      (offer?.items ?? []).map((item) => ({
+        description: item.description,
+        quantity: item.quantity,
+        unit: item.unit,
+        unitPriceMinor: item.unitPriceMinor,
+        vatRate: item.vatRate,
+      }));
 
     let created = null;
     let sequence = issuer.invoiceNextNumber;
@@ -98,7 +149,7 @@ export async function POST(req: NextRequest) {
             number,
             // Variabilni symbol = cislo faktury bez necislic. Podle nej se pak
             // budou parovat platby z banky.
-            variableSymbol: number.replace(/\D/g, '') || String(seq),
+            variableSymbol: input.variableSymbol?.trim() || number.replace(/\D/g, '') || String(seq),
             issuerCompanyId,
             companyId,
             bankAccountId: account?.id ?? null,
@@ -106,18 +157,18 @@ export async function POST(req: NextRequest) {
             exchangeRate: rate?.rate ?? 1,
             exchangeRateDate: rate ? new Date() : null,
             issueDate,
-            taxDate: issueDate,
+            taxDate,
             dueDate,
-            subject: offer?.subject ?? input.subject ?? null,
-            note: offer?.note ?? null,
+            subject: input.subject ?? offer?.subject ?? null,
+            note: input.note ?? offer?.note ?? null,
             offerId: offer?.id ?? null,
-            ...(offer && offer.items.length > 0
+            ...(polozky.length > 0
               ? {
                   items: {
-                    create: offer.items.map((item, index) => ({
+                    create: polozky.map((item, index) => ({
                       description: item.description,
                       quantity: item.quantity,
-                      unit: item.unit,
+                      unit: item.unit || 'ks',
                       unitPriceMinor: item.unitPriceMinor,
                       vatRate: item.vatRate,
                       sortOrder: (index + 1) * 10,
