@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { caflouFetch, caflouConfigured, listCaflouCompanies, listCaflouProjectsForCompany } from '@/lib/caflou';
+import { isProjectFinished } from '@/lib/projectTypes';
 
 // Diagnosticky endpoint - admin si tu muze overit napojeni na Caflou pro
 // konkretni firmu a hned videt syrovou odpoved (kvuli doladeni mapovani
@@ -64,32 +65,61 @@ export async function GET(req: NextRequest) {
   // ?najdi=NAZEV - najde projekty podle nazvu napric vsemi strankami a vypise
   // JEJICH SUROVA DATA. Slouzi k dohledani, proc konkretni projekt spadl do
   // spatne zalozky (zadani 8. 9. 2026: "OODA 7, TRIOLA, ATMOS - EN MUTACE jsou
-  // v Caflou ukoncene, na portalu maji byt v Dokoncenych").
+  // v Caflou ukoncene, na portalu maji byt v Dokoncenych"). Da se zadat vic
+  // nazvu oddelenych carkou a hleda se bez ohledu na diakritiku a mezery.
+  //
+  // ?aktivni=1 - vypise VSECHNY projekty, ktere portal po nove uprave ukaze v
+  // zalozce Aktivni (nazev, stav, priznak finished). Kdyz v tom seznamu neco
+  // byt nema, je hned videt, na jakem stavu to v Caflou visi.
   const najdi = req.nextUrl.searchParams.get('najdi');
-  if (najdi) {
+  const vypisAktivni = req.nextUrl.searchParams.get('aktivni') === '1';
+  if (najdi || vypisAktivni) {
     try {
-      const needle = najdi.trim().toLowerCase();
+      const zjednodus = (v: string) =>
+        v
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '');
+      const needles = (najdi ?? '')
+        .split(',')
+        .map((n) => zjednodus(n))
+        .filter(Boolean);
+
       const found: any[] = [];
+      const aktivni: any[] = [];
       const statusToFinished: Record<string, { finished: number; unfinished: number }> = {};
+      let celkem = 0;
+      let stranek = 0;
       for (let page = 1; page <= 15; page++) {
         const result = await caflouFetch(`/projects?per=100&page=${page}`);
         const results = (result.body as { results?: unknown } | null)?.results;
         if (!result.ok || !Array.isArray(results) || results.length === 0) break;
+        stranek = page;
         for (const row of results as any[]) {
+          celkem += 1;
           const status = String(row?.project_status_name ?? '(prázdné)');
           statusToFinished[status] ??= { finished: 0, unfinished: 0 };
           if (row?.finished) statusToFinished[status].finished += 1;
           else statusToFinished[status].unfinished += 1;
-          if (String(row?.name ?? '').toLowerCase().includes(needle)) found.push(row);
+
+          const nazev = String(row?.name ?? '');
+          if (needles.length > 0 && needles.some((n) => zjednodus(nazev).includes(n))) found.push(row);
+          if (vypisAktivni && !isProjectFinished(status, row?.finished)) {
+            aktivni.push({ id: row?.id, nazev, stav: status, finished: Boolean(row?.finished) });
+          }
         }
         if ((results as any[]).length < 100) break;
       }
       return NextResponse.json({
-        hledano: najdi,
+        hledano: najdi ?? null,
+        prohledanoProjektu: celkem,
+        prohledanoStranek: stranek,
         nalezeno: found.length,
         // Prehled vsech stavu v uctu a jak u nich vypada priznak finished -
         // z toho je videt, podle ceho se ma rozpracovanost poznat.
         stavyAPriznakFinished: statusToFinished,
+        ...(vypisAktivni ? { pocetAktivnich: aktivni.length, aktivni } : {}),
         zaznamy: found,
       });
     } catch (err) {

@@ -22,7 +22,7 @@
 
 import type { ProjectPriority } from '@prisma/client';
 
-import { isActiveProjectStatus } from '@/lib/projectTypes';
+import { isProjectFinished } from '@/lib/projectTypes';
 
 const CAFLOU_BASE = 'https://app.caflou.com/api/v1';
 
@@ -205,7 +205,9 @@ export function mapOneCaflouProject(p: any): DisplayProject {
   return {
     id: p.id,
     name: p.name || 'Bez názvu',
-    finished: p.project_status_name ? !isActiveProjectStatus(statusName) : Boolean(p.finished),
+    // Dokonceny = uzavreny v Caflou (priznak finished) NEBO koncovy stitek.
+    // Viz isProjectFinished v lib/projectTypes.ts.
+    finished: isProjectFinished(statusName, p.finished),
     statusName,
     priority: toPriority(p.project_priority_name ?? p.priority ?? p.custom_column_priorita),
     narrator: p.custom_column_herec || null,
@@ -379,9 +381,9 @@ async function fetchAllCaflouProjects(
   // projektu, takze cely seznam je 7-8 dotazu - proto se drzi v cache (viz
   // listAllCaflouProjectsForInternal) a nestahuje se pri kazdem zobrazeni.
   //
-  // Filtr "jen nerozpracovane" tu zamerne nezkousime: priznak `finished` maji
-  // v uctu nastaveny vsechny projekty, takze by nevratil nic. Rozpracovanost
-  // se pozna az u nas podle stavu projektu (viz mapOneCaflouProject).
+  // Filtr "jen nerozpracovane" tu zamerne nezkousime - potrebujeme obe
+  // zalozky (Aktivni i Dokoncene) najednou. Rozpracovanost se vyhodnoti az u
+  // nas z priznaku finished a stavu projektu (viz isProjectFinished).
   const PER = 100;
   const MAX_PAGES = 15;
   const TIME_BUDGET_MS = 20000;
