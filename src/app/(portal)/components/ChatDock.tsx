@@ -81,13 +81,10 @@ function Avatar({ label, photoUrl, size = 28 }: { label: string; photoUrl: strin
  */
 function Zobrazeno({ seenBy }: { seenBy: string[] }) {
   if (seenBy.length === 0) {
-    return <span className="block mt-0.5 text-[11px] font-body text-muted/70">Odesláno</span>;
+    return <span className="text-[11px] font-body text-muted/70">Odesláno</span>;
   }
   return (
-    <span
-      className="block mt-0.5 text-[11px] font-body text-muted/80"
-      title={`Zobrazeno: ${seenBy.join(', ')}`}
-    >
+    <span className="text-[11px] font-body text-muted/80" title={`Zobrazeno: ${seenBy.join(', ')}`}>
       Zobrazeno {seenBy.length <= 2 ? `· ${seenBy.join(', ')}` : `· ${seenBy.length} lidem`}
     </span>
   );
@@ -762,18 +759,28 @@ export function ChatDock() {
                           >
                             <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
                           </p>
-                          {m.mine && <Zobrazeno seenBy={m.seenBy} />}
-                          <button
-                            type="button"
-                            onClick={() => setVlaknoId(m.id)}
-                            className={`mt-1 text-[11px] font-heading font-semibold hover:underline ${
-                              vlaknoId === m.id ? 'text-brand-purpleDark underline' : 'text-brand-purple'
-                            }`}
-                          >
-                            {m.replyCount > 0
-                              ? `${m.replyCount} ${m.replyCount === 1 ? 'odpověď' : m.replyCount < 5 ? 'odpovědi' : 'odpovědí'} ›`
-                              : 'Odpovědět ve vlákně'}
-                          </button>
+                          {/* Zobrazeno i odkaz do vlakna na jednom radku -
+                              samostatny radek na odpoved zabiral moc mista
+                              (zprava uzivatele 8. 9. 2026). */}
+                          <span className="mt-0.5 flex items-center gap-2 flex-wrap">
+                            {m.mine && (
+                              <>
+                                <Zobrazeno seenBy={m.seenBy} />
+                                <span className="text-[11px] text-muted/40">·</span>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setVlaknoId(m.id)}
+                              className={`text-[11px] font-heading font-semibold hover:underline ${
+                                vlaknoId === m.id ? 'text-brand-purpleDark underline' : 'text-brand-purple'
+                              }`}
+                            >
+                              {m.replyCount > 0
+                                ? `${m.replyCount} ${m.replyCount === 1 ? 'odpověď' : m.replyCount < 5 ? 'odpovědi' : 'odpovědí'} ›`
+                                : 'Odpovědět'}
+                            </button>
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -825,7 +832,11 @@ export function ChatDock() {
                             >
                               <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
                             </p>
-                            {m.mine && <Zobrazeno seenBy={m.seenBy} />}
+                            {m.mine && (
+                              <span className="block mt-0.5">
+                                <Zobrazeno seenBy={m.seenBy} />
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}
