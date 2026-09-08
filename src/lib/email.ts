@@ -617,3 +617,101 @@ export async function sendPasswordResetEmail(input: PasswordResetInput) {
 
   return { sent: true as const };
 }
+
+
+// ===========================================================================
+// NABÍDKA (zadani 6. 9. 2026)
+//
+// Klient dostane mail s odkazem, kde nabídku uvidí a jedním tlačítkem ji
+// schválí nebo odmítne - nikam se kvůli tomu nepřihlašuje.
+// ===========================================================================
+
+type OfferEmailInput = {
+  to: string;
+  contactName: string | null;
+  companyName: string;
+  issuerName: string;
+  number: string;
+  subject: string | null;
+  currency: 'CZK' | 'EUR' | 'GBP';
+  totalExVat: number; // v halerich/centech
+  totalIncVat: number;
+  validUntil: Date | null;
+  offerUrl: string;
+};
+
+const OFFER_CURRENCY_SYMBOL: Record<string, string> = { CZK: 'Kč', EUR: '€', GBP: '£' };
+
+function formatOfferMoney(minor: number, currency: string): string {
+  const value = minor / 100;
+  const formatted = new Intl.NumberFormat('cs-CZ', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+  return `${formatted} ${OFFER_CURRENCY_SYMBOL[currency] ?? currency}`;
+}
+
+export function buildOfferHtml(input: OfferEmailInput): string {
+  const greeting = input.contactName ? `Dobrý den, ${escapeHtml(input.contactName)},` : 'Dobrý den,';
+  const validText = input.validUntil
+    ? input.validUntil.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })
+    : null;
+
+  return emailShell({
+    tag: 'Nabídka',
+    preheader: `Nabídka ${input.number} od ${input.issuerName}.`,
+    body: `
+    <span class="badge">Nabídka ${escapeHtml(input.number)}</span>
+    <h2>${input.subject ? escapeHtml(input.subject) : 'Nabídka k odsouhlasení'}</h2>
+    <p>${greeting}</p>
+    <p>posíláme nabídku pro <strong>${escapeHtml(input.companyName)}</strong>. Celý rozpis si otevřete
+       odkazem níže a rovnou tam nabídku schválíte — přihlašovat se kvůli tomu nemusíte.</p>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Číslo nabídky</td><td class="value">${escapeHtml(input.number)}</td></tr>
+      <tr><td class="label">Cena bez DPH</td><td class="value">${escapeHtml(formatOfferMoney(input.totalExVat, input.currency))}</td></tr>
+      <tr><td class="label">Cena s DPH</td><td class="value">${escapeHtml(formatOfferMoney(input.totalIncVat, input.currency))}</td></tr>
+      ${validText ? `<tr><td class="label">Platnost do</td><td class="value regular">${escapeHtml(validText)}</td></tr>` : ''}
+      <tr><td class="label">Vystavil</td><td class="value regular">${escapeHtml(input.issuerName)}</td></tr>
+    </table>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.offerUrl)}" class="cta">Zobrazit a schválit nabídku</a>
+    </div>
+
+    <p class="small">Odkaz je určený jen vám — nesdílejte ho prosím dál. Kdyby cokoliv nesedělo, stačí
+       na tento e-mail odpovědět.</p>
+  `,
+  });
+}
+
+export async function sendOfferEmail(input: OfferEmailInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.to,
+    subject: `Nabídka ${input.number}${input.subject ? ` — ${input.subject}` : ''}`,
+    text: [
+      input.contactName ? `Dobry den, ${input.contactName},` : 'Dobry den,',
+      '',
+      `posilame nabidku ${input.number} pro ${input.companyName}.`,
+      `Cena bez DPH: ${formatOfferMoney(input.totalExVat, input.currency)}`,
+      `Cena s DPH: ${formatOfferMoney(input.totalIncVat, input.currency)}`,
+      input.validUntil ? `Platnost do: ${input.validUntil.toLocaleDateString('cs-CZ')}` : '',
+      '',
+      'Cely rozpis a schvaleni najdete zde:',
+      input.offerUrl,
+      '',
+      input.issuerName,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildOfferHtml(input),
+  });
+
+  return { sent: true as const };
+}
