@@ -78,23 +78,28 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
     setReport(null);
     setProgress('Načítám z Caflou…');
     try {
+      // Typy jsou tu vypsane schvalne. Bez nich TypeScript hlasil "'res'
+      // implicitly has type 'any' ... referenced directly or indirectly in its
+      // own initializer" a build na Vercelu spadl: odpoved fetche se rozbaluje
+      // pres `any` a zaroven z ni vychazi promenna `page`, kterou se ridi tahle
+      // smycka - odvozeni typu se tim zacyklilo.
       let page: number | null = 1;
       let total = 0;
       // Pojistka proti nekonecne smycce, kdyby Caflou parametr page ignorovalo.
       for (let guard = 0; page !== null && guard < 60; guard += 1) {
-        const res = await fetch('/api/admin/caflou-firmy', {
+        const res: Response = await fetch('/api/admin/caflou-firmy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ page, autoKind: true }),
         });
-        const data = await res.json().catch(() => ({}));
+        const data: any = await res.json().catch(() => ({}));
         if (!res.ok) {
           setError(data?.error || 'Import se nezdařil.');
           return;
         }
         total += Number(data?.ulozeno ?? 0);
         setProgress(`Načteno ${total} firem…`);
-        page = data?.dalsiStranka ?? null;
+        page = typeof data?.dalsiStranka === 'number' ? data.dalsiStranka : null;
       }
       if (!prenest) {
         setProgress(`Hotovo — načteno ${total} firem.`);
@@ -102,13 +107,13 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
         return;
       }
       setProgress(`Načteno ${total} firem, přenáším do portálu…`);
-      const res = await fetch('/api/admin/caflou-firmy/zalozit', {
+      const resPrenos: Response = await fetch('/api/admin/caflou-firmy/zalozit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vse: true }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      const data: any = await resPrenos.json().catch(() => ({}));
+      if (!resPrenos.ok) {
         setError(data?.error || 'Přenos se nezdařil.');
         return;
       }
