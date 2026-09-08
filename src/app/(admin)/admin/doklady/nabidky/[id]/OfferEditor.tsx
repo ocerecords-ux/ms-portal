@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Currency, OfferStatus } from '@prisma/client';
+import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 import {
   CURRENCIES,
   CURRENCY_LABELS,
@@ -51,6 +52,8 @@ type Offer = {
   approvedAt: string | null;
   approvedByName: string | null;
   rejectedAt: string | null;
+  caflouProjectId: string;
+  projectName: string | null;
   items: Item[];
 };
 
@@ -77,6 +80,7 @@ export function OfferEditor({
   issuers,
   companies,
   bankAccounts,
+  projects,
 }: {
   offer: Offer;
   issuer: Party;
@@ -84,6 +88,7 @@ export function OfferEditor({
   issuers: { id: string; name: string }[];
   companies: { id: string; name: string }[];
   bankAccounts: { label: string; accountNumber: string | null; iban: string | null }[];
+  projects: ProjectChoice[];
 }) {
   const router = useRouter();
   const locked = offer.status === 'APPROVED';
@@ -96,6 +101,7 @@ export function OfferEditor({
     validUntil: offer.validUntil,
     subject: offer.subject,
     note: offer.note,
+    caflouProjectId: offer.caflouProjectId,
   });
   const [items, setItems] = useState<Item[]>(offer.items.length > 0 ? offer.items : [emptyItem()]);
   const [saving, setSaving] = useState(false);
@@ -372,6 +378,19 @@ export function OfferEditor({
               disabled={locked}
               onChange={(e) => set('subject', e.target.value)}
               placeholder="např. Výroba audioknihy Tři mušketýři"
+              className={inputClass}
+            />
+          </label>
+          {/* Projekt (zadani 8. 9. 2026) - nabidka se pak ukaze v detailu projektu
+              a vazba se prenese i na fakturu z ni vystavenou. */}
+          <label className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-sm font-body text-ink">Projekt</span>
+            <ProjectSelect
+              value={form.caflouProjectId}
+              onChange={(id) => set('caflouProjectId', id)}
+              projects={projects}
+              currentName={offer.projectName}
+              disabled={locked}
               className={inputClass}
             />
           </label>

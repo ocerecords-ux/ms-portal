@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Currency } from '@prisma/client';
 import { CURRENCIES, CURRENCY_NAMES, formatMoney, parseMoneyToMinor } from '@/lib/doklady';
 import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
+import { ProjectSelect, type ProjectChoice } from '../ProjectSelect';
 
 /**
  * Zadání přijatého dokladu. Schválně jedna obrazovka bez překlikávání —
@@ -15,9 +16,11 @@ import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
 export function NewExpenseForm({
   categories,
   issuers,
+  projects,
 }: {
   categories: { id: string; name: string }[];
   issuers: { id: string; name: string; isDefault: boolean; currency: Currency }[];
+  projects: ProjectChoice[];
 }) {
   const router = useRouter();
   const defaultIssuer = issuers.find((i) => i.isDefault) ?? issuers[0];
@@ -29,6 +32,7 @@ export function NewExpenseForm({
     dueDate: '',
     number: '',
     categoryId: categories[0]?.id ?? '',
+    caflouProjectId: '',
     issuerCompanyId: defaultIssuer?.id ?? '',
     currency: (defaultIssuer?.currency ?? 'CZK') as Currency,
     description: '',
@@ -88,6 +92,7 @@ export function NewExpenseForm({
       if (form.dueDate) body.set('dueDate', form.dueDate);
       if (form.number) body.set('number', form.number);
       if (form.categoryId) body.set('categoryId', form.categoryId);
+      if (form.caflouProjectId) body.set('caflouProjectId', form.caflouProjectId);
       if (form.issuerCompanyId) body.set('issuerCompanyId', form.issuerCompanyId);
       body.set('currency', form.currency);
       if (form.description) body.set('description', form.description);
@@ -106,6 +111,7 @@ export function NewExpenseForm({
       }
       // Po uložení zpátky na přehled (zadani 8. 9. 2026) - doklad je vidět
       // v seznamu a je jasné, že se opravdu uložil.
+      // Projekt zustava vybrany - doklady k jednomu projektu chodi po davkach.
       setForm((f) => ({ ...f, number: '', description: '', amount: '', note: '', dueDate: '' }));
       setFileName(null);
       if (fileRef.current) fileRef.current.value = '';
@@ -226,6 +232,20 @@ export function NewExpenseForm({
         </div>
       </div>
 
+      {/* Vazba na projekt (zadani 8. 9. 2026) - podle ni se doklad ukaze v
+          detailu projektu. Nepovinna, rezie se k zadnemu projektu nevaze. */}
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-body text-ink">Projekt</span>
+        <ProjectSelect
+          value={form.caflouProjectId}
+          onChange={(id) => set('caflouProjectId', id)}
+          projects={projects}
+          className={inputClass}
+        />
+        {projects.length === 0 && (
+          <span className="text-xs text-muted font-body">Projekty se z Caflou nenačetly.</span>
+        )}
+      </label>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <label className="flex flex-col gap-1.5">

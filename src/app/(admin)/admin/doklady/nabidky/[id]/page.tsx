@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { OfferEditor } from './OfferEditor';
+import { listProjectOptions } from '@/lib/projectOptions';
 
 // Detail nabidky - editor, ktery vypada jako samotny doklad (zadani 8. 9. 2026:
 // "hlavně, ať je vše přehledné a intuitivní").
@@ -21,6 +22,8 @@ export default async function OfferDetailPage({ params }: { params: { id: string
     prisma.company.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
   ]);
   if (!offer) notFound();
+
+  const projects = await listProjectOptions();
 
   const bankAccounts = await prisma.bankAccount.findMany({
     where: { issuerCompanyId: offer.issuerCompanyId, currency: offer.currency },
@@ -50,6 +53,8 @@ export default async function OfferDetailPage({ params }: { params: { id: string
           approvedAt: offer.approvedAt ? offer.approvedAt.toISOString() : null,
           approvedByName: offer.approvedByName,
           rejectedAt: offer.rejectedAt ? offer.rejectedAt.toISOString() : null,
+          caflouProjectId: offer.caflouProjectId ?? '',
+          projectName: offer.projectName,
           items: offer.items.map((i) => ({
             description: i.description,
             quantity: i.quantity,
@@ -83,6 +88,7 @@ export default async function OfferDetailPage({ params }: { params: { id: string
           accountNumber: a.accountNumber,
           iban: a.iban,
         }))}
+        projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
       />
     </div>
   );

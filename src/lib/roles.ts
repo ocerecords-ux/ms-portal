@@ -95,6 +95,16 @@ export function canEditProjectMeta(role: Role): boolean {
   return role === 'ADMIN' || role === 'PRODUKCE';
 }
 
+/**
+ * Kdo smi videt doklady navazane na projekt (zadani 8. 9. 2026). Zatim jen
+ * Zuzo-labuzo - samotna sekce Doklady je v /admin, kam ostatni role nemaji
+ * pristup (middleware.ts), takze by z detailu projektu koukali na odkazy,
+ * ktere jim stejne neotevrou.
+ */
+export function canViewProjectDocuments(role: Role): boolean {
+  return role === 'ADMIN';
+}
+
 /** Kdo smi interni atributy projektu videt (vcetne zvukaru - jen ke cteni). */
 export function canViewProjectMeta(role: Role): boolean {
   return isInternalRole(role);

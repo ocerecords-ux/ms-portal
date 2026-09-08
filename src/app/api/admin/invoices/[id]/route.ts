@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { expandNumberFormat } from '@/lib/doklady';
 import { CURRENCIES } from '@/lib/doklady';
 import { getRateForCurrency } from '@/lib/cnb';
+import { resolveProject } from '@/lib/projectOptions';
 
 // Uprava faktury (zadani 6. 9. 2026). Polozky se posilaji vzdy cele.
 const itemSchema = z.object({
@@ -25,6 +26,7 @@ const schema = z.object({
   subject: z.string().trim().max(200).optional(),
   note: z.string().trim().max(3000).optional(),
   variableSymbol: z.string().trim().max(20).optional(),
+  caflouProjectId: z.string().trim().nullable().optional(),
   items: z.array(itemSchema).max(100).optional(),
   /** Znovu si říct ČNB o kurz k datu vystavení. */
   refreshRate: z.boolean().optional(),
@@ -59,6 +61,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.subject !== undefined) data.subject = d.subject || null;
     if (d.note !== undefined) data.note = d.note || null;
     if (d.variableSymbol !== undefined) data.variableSymbol = d.variableSymbol || invoice.variableSymbol;
+    if (d.caflouProjectId !== undefined) {
+      const projekt = await resolveProject(d.caflouProjectId);
+      data.caflouProjectId = projekt.caflouProjectId;
+      data.projectName = projekt.projectName;
+    }
 
     let issueDate = invoice.issueDate;
     if (d.issueDate !== undefined) {

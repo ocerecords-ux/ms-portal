@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { ExpenseEditor } from './ExpenseEditor';
+import { listProjectOptions } from '@/lib/projectOptions';
 
 // Detail prijateho dokladu.
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,8 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
     prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
   ]);
   if (!expense) notFound();
+
+  const projects = await listProjectOptions();
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
@@ -45,9 +48,12 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
           attachmentUrl: expense.attachmentUrl,
           attachmentName: expense.attachmentName,
           note: expense.note ?? '',
+          caflouProjectId: expense.caflouProjectId ?? '',
+          projectName: expense.projectName,
         }}
         categories={categories.map((c) => ({ id: c.id, name: c.name }))}
         companies={companies}
+        projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
       />
     </div>
   );

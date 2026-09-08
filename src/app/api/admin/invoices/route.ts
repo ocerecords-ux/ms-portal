@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { expandNumberFormat } from '@/lib/doklady';
 import { getRateForCurrency } from '@/lib/cnb';
+import { resolveProject } from '@/lib/projectOptions';
 
 // Zalozeni faktury (zadani 6. 9. 2026). Cislo se bere z ciselne rady vlastni
 // firmy a rada se rovnou posune.
@@ -26,6 +27,7 @@ const schema = z.object({
   companyId: z.string().trim().min(1, 'Vyberte odběratele.').optional(),
   subject: z.string().trim().max(200).optional(),
   offerId: z.string().trim().min(1).optional(),
+  caflouProjectId: z.string().trim().nullable().optional(),
   note: z.string().trim().max(2000).optional(),
   variableSymbol: z.string().trim().max(20).optional(),
   bankAccountId: z.string().trim().min(1).nullable().optional(),
@@ -133,6 +135,11 @@ export async function POST(req: NextRequest) {
         vatRate: item.vatRate,
       }));
 
+    // Vazba na projekt: co prislo z formulare, jinak to, co bylo u nabidky.
+    const projekt = await resolveProject(
+      input.caflouProjectId === undefined ? offer?.caflouProjectId : input.caflouProjectId,
+    );
+
     let created = null;
     let sequence = issuer.invoiceNextNumber;
     for (let attempt = 0; attempt < 20 && !created; attempt++) {
@@ -162,6 +169,8 @@ export async function POST(req: NextRequest) {
             subject: input.subject ?? offer?.subject ?? null,
             note: input.note ?? offer?.note ?? null,
             offerId: offer?.id ?? null,
+            caflouProjectId: projekt.caflouProjectId,
+            projectName: projekt.projectName,
             ...(polozky.length > 0
               ? {
                   items: {

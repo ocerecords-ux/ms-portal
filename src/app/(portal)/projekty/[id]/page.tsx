@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
-import { canEditProjectMeta, isInternalRole, INTERNAL_ROLES } from '@/lib/roles';
+import { canEditProjectMeta, canViewProjectDocuments, isInternalRole, INTERNAL_ROLES } from '@/lib/roles';
 import { PRIORITY_LABELS } from '@/lib/projectTypes';
 import { listProjectTypeOptions } from '@/lib/priceList';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
@@ -12,6 +12,9 @@ import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
 import { ProjectBudget } from './ProjectBudget';
 import { formatDate, StatusPill } from '../shared';
 import { ProjectMetaForm } from './ProjectMetaForm';
+import { ProjectDocuments, invoiceStatus, offerStatus, type ProjectDocRow } from './ProjectDocuments';
+import { computeTotals } from '@/lib/doklady';
+import { expenseTotalMinor } from '@/lib/expenses';
 
 // Detail projektu (zadani 5. 9. 2026). Projekt sam o sobe zije v Caflou -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -48,6 +51,26 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     }),
   ]);
 
+  // Doklady navazane na projekt (zadani 8. 9. 2026). Vazba je pres ID projektu
+  // v Caflou, stejne jako u vykazu.
+  const showDocuments = canViewProjectDocuments(session.user.role);
+  const [offers, invoices, expenses] = await Promise.all([
+    prisma.offer.findMany({
+      where: { caflouProjectId },
+      orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
+      include: { items: true },
+    }),
+    prisma.invoice.findMany({
+      where: { caflouProjectId },
+      orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
+      include: { items: true },
+    }),
+    prisma.expense.findMany({
+      where: { caflouProjectId },
+      orderBy: [{ issueDate: 'desc' }, { createdAt: 'desc' }],
+    }),
+  ]);
+
   // Nektere ucty Caflou nevraci detail jednoho projektu - pak projekt
   // dohledame v seznamu vsech projektu.
   const caflou = caflouDirect ?? (await findCaflouProjectInList(caflouProjectId));
@@ -75,6 +98,63 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const hoursLogged = timesheets.reduce((sum, e) => sum + toHours(durationMinutes(e.startMinutes, e.endMinutes)), 0);
   const revenue =
     budget && company?.ratePerPage != null ? budget.pageCount * company.ratePerPage : null;
+
+  const dokladDatum = (date: Date | null) => (date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '');
+
+  const offerRows: ProjectDocRow[] = offers.map((o) => {
+    const stav = offerStatus(o.status);
+    return {
+      id: o.id,
+      href: `/admin/doklady/nabidky/${o.id}`,
+      title: o.subject || 'Bez názvu',
+      number: o.number,
+      date: dokladDatum(o.issueDate),
+      amountMinor: computeTotals(o.items).incVat,
+      currency: o.currency,
+      statusLabel: stav.label,
+      statusClass: stav.className,
+    };
+  });
+
+  const invoiceRows: ProjectDocRow[] = invoices.map((i) => {
+    const stav = invoiceStatus(i.status);
+    return {
+      id: i.id,
+      href: `/admin/doklady/faktury/${i.id}`,
+      title: i.subject || 'Bez názvu',
+      number: i.number,
+      date: dokladDatum(i.issueDate),
+      amountMinor: computeTotals(i.items).incVat,
+      currency: i.currency,
+      statusLabel: stav.label,
+      statusClass: stav.className,
+    };
+  });
+
+  const expenseRows: ProjectDocRow[] = expenses.map((e) => ({
+    id: e.id,
+    href: `/admin/doklady/vydaje/${e.id}`,
+    title: e.description || 'Bez názvu',
+    number: e.number || '',
+    date: dokladDatum(e.issueDate),
+    amountMinor: expenseTotalMinor(e.amountExVatMinor, e.vatRate),
+    currency: e.currency,
+    statusLabel: e.paid ? 'Uhrazeno' : 'Neuhrazeno',
+    statusClass: e.paid ? 'bg-[#E3F9EC] text-status-done' : 'bg-[#F1ECFF] text-brand-purpleDark',
+  }));
+
+  // Souctuje se po menach - jablka s hruskami se nescitaji. Stornovane
+  // faktury se do fakturovaneho nepocitaji.
+  const soucet = (rows: ProjectDocRow[], skip: (row: ProjectDocRow) => boolean = () => false) => {
+    const map = new Map<string, number>();
+    for (const row of rows) {
+      if (skip(row)) continue;
+      map.set(row.currency, (map.get(row.currency) ?? 0) + row.amountMinor);
+    }
+    return Array.from(map.entries()).map(([currency, minor]) => ({ currency: currency as never, minor }));
+  };
+  const invoicedByCurrency = soucet(invoiceRows, (r) => r.statusLabel === 'Stornovaná');
+  const costsByCurrency = soucet(expenseRows);
 
   return (
     <section className="flex flex-col gap-8">
@@ -122,6 +202,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           revenue={revenue}
           ratePerPage={company?.ratePerPage ?? null}
           hoursLogged={hoursLogged}
+        />
+      )}
+
+      {showDocuments && (
+        <ProjectDocuments
+          offers={offerRows}
+          invoices={invoiceRows}
+          expenses={expenseRows}
+          invoicedByCurrency={invoicedByCurrency}
+          costsByCurrency={costsByCurrency}
         />
       )}
 

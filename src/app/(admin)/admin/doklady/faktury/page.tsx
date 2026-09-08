@@ -160,7 +160,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
                           >
                             {invoice.subject || 'Bez názvu'}
                           </Link>
-                          <span className="block text-xs text-muted font-body tabular-nums">{invoice.number}</span>
+                          <span className="block text-xs text-muted font-body">
+                            <span className="tabular-nums">{invoice.number}</span>
+                            {invoice.projectName ? ` · ${invoice.projectName}` : ''}
+                          </span>
                         </td>
                         <td className="px-4 py-3.5 text-sm font-heading text-muted">{invoice.company.name}</td>
                         <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">

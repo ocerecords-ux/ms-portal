@@ -6,8 +6,12 @@ import {
   CHAT_TABS,
   EMOJI,
   MAX_MESSAGE_LENGTH,
+  formatClock,
+  formatDayLabel,
+  formatFullTime,
   formatMessageTime,
   initials,
+  stejnyDen,
   splitMentions,
   type ChatConversation,
   type ChatMessage,
@@ -81,11 +85,44 @@ function Avatar({ label, photoUrl, size = 28 }: { label: string; photoUrl: strin
  */
 function Zobrazeno({ seenBy }: { seenBy: string[] }) {
   if (seenBy.length === 0) {
-    return <span className="text-[11px] font-body text-muted/70">Odesláno</span>;
+    return <span className="text-[11px] font-body text-muted">Odesláno</span>;
   }
   return (
-    <span className="text-[11px] font-body text-muted/80" title={`Zobrazeno: ${seenBy.join(', ')}`}>
+    <span className="text-[11px] font-body text-muted" title={`Zobrazeno: ${seenBy.join(', ')}`}>
       Zobrazeno {seenBy.length <= 2 ? `· ${seenBy.join(', ')}` : `· ${seenBy.length} lidem`}
+    </span>
+  );
+}
+
+/**
+ * Oddelovac dnu ve vypisu (zprava uzivatele 8. 9. 2026: "chybi cas zobrazeni
+ * zpravy"). Datum na jednom radku pres celou sirku, u kazde zpravy uz pak
+ * staci hodiny a minuty.
+ */
+function DenOddelovac({ iso }: { iso: string }) {
+  return (
+    <div className="flex items-center gap-3 my-1">
+      <span className="h-px flex-1 bg-line" />
+      <span className="text-[11px] font-heading font-semibold text-muted uppercase tracking-wide bg-white border border-line rounded-pill px-2.5 py-0.5">
+        {formatDayLabel(iso)}
+      </span>
+      <span className="h-px flex-1 bg-line" />
+    </div>
+  );
+}
+
+/** Autor a cas nad zpravou. Cas je videt vzdy, cely datum je v napovede. */
+function Hlavicka({ jmeno, iso }: { jmeno: string; iso: string }) {
+  return (
+    <span className="flex items-baseline gap-1.5">
+      <span className="text-[12px] font-heading font-semibold text-ink">{jmeno}</span>
+      <time
+        dateTime={iso}
+        title={formatFullTime(iso)}
+        className="text-[11px] font-body text-muted tabular-nums"
+      >
+        {formatClock(iso)}
+      </time>
     </span>
   );
 }
@@ -547,7 +584,7 @@ export function ChatDock() {
         <div className="flex-1 min-h-0 flex">
           {/* --- Levy sloupec: zalozky a seznam ---------------------------- */}
           <div
-            className={`w-[220px] shrink-0 border-r border-line flex-col min-h-0 ${
+            className={`w-[220px] shrink-0 border-r border-line bg-[#FBFAFF] flex-col min-h-0 ${
               vlaknoId ? 'hidden lg:flex' : otevrena ? 'hidden sm:flex' : 'flex'
             }`}
           >
@@ -719,7 +756,7 @@ export function ChatDock() {
                     v dalsim okne napravo od te zpravy") - jen na uzkem okne
                     ustoupi, aby na vlakno vubec zbylo misto. */}
                 <div className={`flex-1 min-w-0 flex flex-col ${vlaknoId ? 'hidden md:flex' : 'flex'}`}>
-                  <div className="px-4 py-2.5 border-b border-line flex items-center gap-2">
+                  <div className="px-4 py-2.5 border-b border-line bg-white flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setOpenId(null)}
@@ -741,20 +778,27 @@ export function ChatDock() {
                     )}
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
+                  {/* Vypis zprav ma vlastni jemne fialovy podklad - na bilem
+                      pozadi splyvaly bile bubliny s okolim (zprava uzivatele
+                      8. 9. 2026: "cele je to takove bile, sterilni"). */}
+                  <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-[#FAF8FF]">
                     {messages.length === 0 && (
                       <p className="text-sm font-body text-muted m-0">Zatím tu nikdo nic nenapsal.</p>
                     )}
-                    {messages.map((m) => (
-                      <div key={m.id} className="flex items-start gap-2">
+                    {messages.map((m, index) => (
+                      <div key={m.id} className="flex flex-col gap-3">
+                        {(index === 0 || !stejnyDen(m.createdAt, messages[index - 1].createdAt)) && (
+                          <DenOddelovac iso={m.createdAt} />
+                        )}
+                      <div className="flex items-start gap-2">
                         <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={28} />
                         <div className="min-w-0">
-                          <span className="text-[11px] font-heading text-muted">
-                            {m.mine ? 'Já' : m.authorLabel} · {formatMessageTime(m.createdAt)}
-                          </span>
+                          <Hlavicka jmeno={m.mine ? 'Já' : m.authorLabel} iso={m.createdAt} />
                           <p
-                            className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
-                              m.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
+                            className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
+                              m.mine
+                                ? 'bg-brand-purple text-white'
+                                : 'bg-white border border-line text-ink'
                             }`}
                           >
                             <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
@@ -782,6 +826,7 @@ export function ChatDock() {
                             </button>
                           </span>
                         </div>
+                      </div>
                       </div>
                     ))}
                     <div ref={konecRef} />
@@ -817,16 +862,25 @@ export function ChatDock() {
                       </button>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3">
+                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3 bg-[#FAF8FF]">
                       {vlakno.map((m, index) => (
                         <div key={m.id} className={`flex items-start gap-2 ${index === 0 ? '' : 'pl-3'}`}>
                           <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={index === 0 ? 26 : 22} />
                           <div className="min-w-0">
-                            <span className="text-[11px] font-heading text-muted">
-                              {m.mine ? 'Já' : m.authorLabel} · {formatMessageTime(m.createdAt)}
+                            <span className="flex items-baseline gap-1.5">
+                              <span className="text-[12px] font-heading font-semibold text-ink">
+                                {m.mine ? 'Já' : m.authorLabel}
+                              </span>
+                              <time
+                                dateTime={m.createdAt}
+                                title={formatFullTime(m.createdAt)}
+                                className="text-[11px] font-body text-muted tabular-nums"
+                              >
+                                {formatMessageTime(m.createdAt)}
+                              </time>
                             </span>
                             <p
-                              className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
+                              className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
                                 m.mine ? 'bg-brand-purple text-white' : 'bg-white border border-line text-ink'
                               }`}
                             >

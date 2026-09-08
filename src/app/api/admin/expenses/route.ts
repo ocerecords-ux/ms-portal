@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { uploadExpenseAttachment } from '@/lib/storage';
 import { getRateForCurrency } from '@/lib/cnb';
 import { CURRENCIES, parseMoneyToMinor } from '@/lib/doklady';
+import { resolveProject } from '@/lib/projectOptions';
 
 // Zalozeni prijateho dokladu (zadani 6. 9. 2026). Posila se jako FormData,
 // protoze u dokladu byva priloha - PDF nebo foto uctenky.
@@ -15,6 +16,7 @@ const schema = z.object({
   supplierCompanyId: z.string().trim().optional(),
   supplierName: z.string().trim().max(200).optional(),
   categoryId: z.string().trim().optional(),
+  caflouProjectId: z.string().trim().optional(),
   issuerCompanyId: z.string().trim().optional(),
   currency: z.enum(CURRENCIES),
   description: z.string().trim().max(300).optional(),
@@ -36,6 +38,7 @@ function readForm(formData: FormData) {
     supplierCompanyId: get('supplierCompanyId'),
     supplierName: get('supplierName'),
     categoryId: get('categoryId'),
+    caflouProjectId: get('caflouProjectId'),
     issuerCompanyId: get('issuerCompanyId'),
     currency: get('currency'),
     description: get('description'),
@@ -96,12 +99,18 @@ export async function POST(req: NextRequest) {
     // Kurz CNB ke dni dokladu.
     const rate = await getRateForCurrency(d.currency, issueDate);
 
+    // Vazba na projekt (zadani 8. 9. 2026) - nazev se dohleda v Caflou a ulozi
+    // se i textove, aby doklad zustal citelny.
+    const projekt = await resolveProject(d.caflouProjectId);
+
     const expense = await prisma.expense.create({
       data: {
         number: d.number || null,
         supplierCompanyId: d.supplierCompanyId || null,
         supplierName: d.supplierName || null,
         categoryId: d.categoryId || null,
+        caflouProjectId: projekt.caflouProjectId,
+        projectName: projekt.projectName,
         issuerCompanyId: d.issuerCompanyId || null,
         currency: d.currency,
         exchangeRate: rate?.rate ?? 1,

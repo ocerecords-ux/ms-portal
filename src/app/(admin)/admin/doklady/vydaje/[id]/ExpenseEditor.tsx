@@ -6,6 +6,7 @@ import type { Currency } from '@prisma/client';
 import { formatMoney, minorToInput, parseMoneyToMinor } from '@/lib/doklady';
 import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
 import { formatRate, toCzkMinor } from '@/lib/cnb';
+import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 
 type Expense = {
   id: string;
@@ -28,6 +29,8 @@ type Expense = {
   attachmentUrl: string | null;
   attachmentName: string | null;
   note: string;
+  caflouProjectId: string;
+  projectName: string | null;
 };
 
 function formatDateTime(iso: string | null): string {
@@ -46,10 +49,12 @@ export function ExpenseEditor({
   expense,
   categories,
   companies,
+  projects,
 }: {
   expense: Expense;
   categories: { id: string; name: string }[];
   companies: { id: string; name: string }[];
+  projects: ProjectChoice[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -57,6 +62,7 @@ export function ExpenseEditor({
     supplierCompanyId: expense.supplierCompanyId,
     supplierName: expense.supplierName,
     categoryId: expense.categoryId,
+    caflouProjectId: expense.caflouProjectId,
     description: expense.description,
     amount: minorToInput(expense.amountExVatMinor),
     vatRate: expense.vatRate,
@@ -88,6 +94,7 @@ export function ExpenseEditor({
           supplierCompanyId: form.supplierCompanyId || null,
           supplierName: form.supplierName,
           categoryId: form.categoryId || null,
+          caflouProjectId: form.caflouProjectId || null,
           description: form.description,
           amountExVatMinor: amountMinor,
           vatRate: form.vatRate,
@@ -241,6 +248,18 @@ export function ExpenseEditor({
             </select>
           </label>
         </div>
+
+        {/* Projekt (zadani 8. 9. 2026) - doklad je pak videt v detailu projektu. */}
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Projekt</span>
+          <ProjectSelect
+            value={form.caflouProjectId}
+            onChange={(id) => set('caflouProjectId', id)}
+            projects={projects}
+            currentName={expense.projectName}
+            className={inputClass}
+          />
+        </label>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Název</span>

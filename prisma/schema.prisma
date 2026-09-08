@@ -598,11 +598,18 @@ model Offer {
   items   OfferItem[]
   invoice Invoice?
 
+  // Vazba na projekt v Caflou (zadani 8. 9. 2026: "chtel bych mit Doklady
+  // navazane na projekty"). Nazev drzime i textove, aby doklad zustal
+  // citelny, kdyz projekt v Caflou zmizi nebo se prejmenuje.
+  caflouProjectId String?
+  projectName     String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([companyId])
   @@index([status])
+  @@index([caflouProjectId])
 }
 
 // Polozka nabidky. Cena se drzi v nejmensi jednotce meny (halere, centy,
@@ -669,11 +676,18 @@ model Invoice {
 
   items InvoiceItem[]
 
+  // Vazba na projekt v Caflou (zadani 8. 9. 2026: "chtel bych mit Doklady
+  // navazane na projekty"). Nazev drzime i textove, aby doklad zustal
+  // citelny, kdyz projekt v Caflou zmizi nebo se prejmenuje.
+  caflouProjectId String?
+  projectName     String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([companyId])
   @@index([status])
+  @@index([caflouProjectId])
 }
 
 model InvoiceItem {
@@ -749,11 +763,18 @@ model Expense {
 
   note String?
 
+  // Vazba na projekt v Caflou (zadani 8. 9. 2026: "chtel bych mit Doklady
+  // navazane na projekty"). Nazev drzime i textove, aby doklad zustal
+  // citelny, kdyz projekt v Caflou zmizi nebo se prejmenuje.
+  caflouProjectId String?
+  projectName     String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([paid])
   @@index([categoryId])
+  @@index([caflouProjectId])
 }
 
 

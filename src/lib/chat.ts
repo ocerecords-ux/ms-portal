@@ -101,6 +101,51 @@ export function initials(label: string): string {
   return (slova[0].charAt(0) + slova[1].charAt(0)).toUpperCase();
 }
 
+/** Jsou obe zpravy ze stejneho dne? Podle toho se do vypisu vklada oddelovac. */
+export function stejnyDen(a: string, b: string): boolean {
+  const x = new Date(a);
+  const y = new Date(b);
+  if (Number.isNaN(x.getTime()) || Number.isNaN(y.getTime())) return false;
+  return (
+    x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate()
+  );
+}
+
+/** "Dnes" / "Včera" / "pondělí 3. 9." - popisek oddelovace dnu ve vypisu. */
+export function formatDayLabel(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const den = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const rozdil = (den(new Date()) - den(date)) / (24 * 60 * 60 * 1000);
+  if (rozdil === 0) return 'Dnes';
+  if (rozdil === 1) return 'Včera';
+  if (rozdil < 7) {
+    const dvt = new Intl.DateTimeFormat('cs-CZ', { weekday: 'long' }).format(date);
+    return `${dvt} ${new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(date)}`;
+  }
+  return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' }).format(date);
+}
+
+/** Jen hodina a minuta - cas u konkretni zpravy. */
+export function formatClock(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('cs-CZ', { hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
+/** Cely datum a cas - do bublinove napovedy nad casem zpravy. */
+export function formatFullTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('cs-CZ', {
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 /** "dnes 14:32" / "včera 9:05" / "3. 9. 14:32" - kratky cas u zpravy. */
 export function formatMessageTime(iso: string): string {
   const date = new Date(iso);

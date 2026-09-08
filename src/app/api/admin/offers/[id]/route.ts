@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { CURRENCIES } from '@/lib/doklady';
+import { resolveProject } from '@/lib/projectOptions';
 
 // Uprava nabidky (zadani 6. 9. 2026). Polozky se posilaji vzdy cele - editor
 // s nimi pracuje jako s jednim celkem, takze je jednodussi je prepsat nez
@@ -23,6 +24,7 @@ const schema = z.object({
   validUntil: z.string().trim().nullable().optional(),
   subject: z.string().trim().max(200).optional(),
   note: z.string().trim().max(3000).optional(),
+  caflouProjectId: z.string().trim().nullable().optional(),
   items: z.array(itemSchema).max(100).optional(),
 });
 
@@ -57,6 +59,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.currency !== undefined) data.currency = d.currency;
     if (d.subject !== undefined) data.subject = d.subject || null;
     if (d.note !== undefined) data.note = d.note || null;
+    if (d.caflouProjectId !== undefined) {
+      const projekt = await resolveProject(d.caflouProjectId);
+      data.caflouProjectId = projekt.caflouProjectId;
+      data.projectName = projekt.projectName;
+    }
 
     if (d.issueDate !== undefined) {
       const date = toDate(d.issueDate);

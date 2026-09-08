@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { getRateForCurrency } from '@/lib/cnb';
 import { InvoiceEditor } from '../[id]/InvoiceEditor';
+import { listProjectOptions } from '@/lib/projectOptions';
 
 /**
  * Faktura z nabídky PŘED uložením (zadani 8. 9. 2026: "chci se dostat ještě
@@ -50,6 +51,8 @@ export default async function NewInvoiceFromOfferPage({
     getRateForCurrency(offer.currency),
   ]);
 
+  const projects = await listProjectOptions();
+
   const dnes = new Date();
   const splatnost = new Date(dnes);
   splatnost.setDate(splatnost.getDate() + (offer.company.paymentTermDays ?? 14));
@@ -76,6 +79,10 @@ export default async function NewInvoiceFromOfferPage({
         sentAt: null,
         paidAt: null,
         offerNumber: offer.number,
+        // Projekt se prebira z nabidky (zadani 8. 9. 2026: z nabidky se musi
+        // propsat vsechny udaje).
+        caflouProjectId: offer.caflouProjectId ?? '',
+        projectName: offer.projectName,
         items: offer.items.map((i) => ({
           description: i.description,
           quantity: i.quantity,
@@ -105,6 +112,7 @@ export default async function NewInvoiceFromOfferPage({
       }}
       companies={companies}
       bankAccounts={bankAccounts}
+      projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
     />
   );
 }

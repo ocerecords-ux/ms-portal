@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { resolveProject } from '@/lib/projectOptions';
 
 // Uprava a smazani prijateho dokladu. Prepinac uhrazeno/neuhrazeno jde taky
 // tudy - je to jen jedno pole navic.
@@ -10,6 +11,7 @@ const schema = z.object({
   supplierCompanyId: z.string().trim().nullable().optional(),
   supplierName: z.string().trim().max(200).nullable().optional(),
   categoryId: z.string().trim().nullable().optional(),
+  caflouProjectId: z.string().trim().nullable().optional(),
   description: z.string().trim().max(300).nullable().optional(),
   amountExVatMinor: z.number().int().min(0).optional(),
   vatRate: z.number().int().min(0).max(100).optional(),
@@ -39,6 +41,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.supplierCompanyId !== undefined) data.supplierCompanyId = d.supplierCompanyId || null;
     if (d.supplierName !== undefined) data.supplierName = d.supplierName || null;
     if (d.categoryId !== undefined) data.categoryId = d.categoryId || null;
+    if (d.caflouProjectId !== undefined) {
+      const projekt = await resolveProject(d.caflouProjectId);
+      data.caflouProjectId = projekt.caflouProjectId;
+      data.projectName = projekt.projectName;
+    }
     if (d.description !== undefined) data.description = d.description || null;
     if (d.amountExVatMinor !== undefined) data.amountExVatMinor = d.amountExVatMinor;
     if (d.vatRate !== undefined) data.vatRate = d.vatRate;

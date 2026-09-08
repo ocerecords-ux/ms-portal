@@ -113,7 +113,10 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
                           >
                             {offer.subject || 'Bez názvu'}
                           </Link>
-                          <span className="block text-xs text-muted font-body tabular-nums">{offer.number}</span>
+                          <span className="block text-xs text-muted font-body">
+                            <span className="tabular-nums">{offer.number}</span>
+                            {offer.projectName ? ` · ${offer.projectName}` : ''}
+                          </span>
                         </td>
                         <td className="px-4 py-3.5 text-sm font-heading text-muted">{offer.company.name}</td>
                         <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">

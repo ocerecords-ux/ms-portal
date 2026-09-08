@@ -13,6 +13,7 @@ import {
   parseMoneyToMinor,
 } from '@/lib/doklady';
 import { formatRate, toCzkMinor } from '@/lib/cnb';
+import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 
 type Item = {
   description: string;
@@ -51,6 +52,8 @@ type Invoice = {
   sentAt: string | null;
   paidAt: string | null;
   offerNumber: string | null;
+  caflouProjectId: string;
+  projectName: string | null;
   items: Item[];
 };
 
@@ -96,6 +99,7 @@ export function InvoiceEditor({
   company,
   companies,
   bankAccounts,
+  projects,
   /**
    * ID nabidky, ze ktere se faktura chysta. Kdyz je vyplnene, faktura JESTE
    * NEEXISTUJE - editor jen ukazuje predvyplneny doklad a teprve tlacitko
@@ -111,6 +115,7 @@ export function InvoiceEditor({
   company: Party;
   companies: { id: string; name: string }[];
   bankAccounts: { id: string; label: string; accountNumber: string | null; iban: string | null; currency: Currency }[];
+  projects: ProjectChoice[];
   draftFromOfferId?: string;
 }) {
   const router = useRouter();
@@ -127,6 +132,7 @@ export function InvoiceEditor({
     subject: invoice.subject,
     note: invoice.note,
     variableSymbol: invoice.variableSymbol,
+    caflouProjectId: invoice.caflouProjectId,
   });
   const [items, setItems] = useState<Item[]>(invoice.items.length > 0 ? invoice.items : [emptyItem()]);
   const [saving, setSaving] = useState(false);
@@ -421,6 +427,19 @@ export function InvoiceEditor({
               value={form.subject}
               disabled={locked}
               onChange={(e) => set('subject', e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          {/* Projekt (zadani 8. 9. 2026) - faktura je pak videt v detailu projektu.
+              Z nabidky se predvyplni sama. */}
+          <label className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-sm font-body text-ink">Projekt</span>
+            <ProjectSelect
+              value={form.caflouProjectId}
+              onChange={(id) => set('caflouProjectId', id)}
+              projects={projects}
+              currentName={invoice.projectName}
+              disabled={locked}
               className={inputClass}
             />
           </label>

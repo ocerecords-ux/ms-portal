@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { InvoiceEditor } from './InvoiceEditor';
+import { listProjectOptions } from '@/lib/projectOptions';
 
 // Detail faktury - stejny "vypada jako doklad" editor jako u nabidek.
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,8 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
     },
   });
   if (!invoice) notFound();
+
+  const projects = await listProjectOptions();
 
   const companies = await prisma.company.findMany({
     where: { active: true },
@@ -49,6 +52,8 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           sentAt: invoice.sentAt ? invoice.sentAt.toISOString() : null,
           paidAt: invoice.paidAt ? invoice.paidAt.toISOString() : null,
           offerNumber: invoice.offer?.number ?? null,
+          caflouProjectId: invoice.caflouProjectId ?? '',
+          projectName: invoice.projectName,
           items: invoice.items.map((i) => ({
             description: i.description,
             quantity: i.quantity,
@@ -83,6 +88,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           iban: a.iban,
           currency: a.currency,
         }))}
+        projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
       />
     </div>
   );

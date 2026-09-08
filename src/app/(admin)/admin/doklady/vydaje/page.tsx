@@ -4,6 +4,7 @@ import { formatMoney } from '@/lib/doklady';
 import { ensureExpenseCategories, expenseTotalMinor } from '@/lib/expenses';
 import { NewExpenseForm } from './NewExpenseForm';
 import { CategoryManager } from './CategoryManager';
+import { listProjectOptions } from '@/lib/projectOptions';
 
 // Prijate doklady (zadani 6. 9. 2026). Zalozky Uhrazeno / Neuhrazeno stejne
 // jako Aktivni / Dokoncene u projektu, nahore soucty.
@@ -52,6 +53,8 @@ export default async function ExpensesPage({
     prisma.expense.groupBy({ by: ['paid'], _count: true }),
   ]);
 
+  const projects = await listProjectOptions();
+
   const countFor = (paid: boolean) => counts.find((c) => c.paid === paid)?._count ?? 0;
 
   // Soucty za to, co je zrovna videt - po menach, at se nescitaji jablka s hruskami.
@@ -89,6 +92,7 @@ export default async function ExpensesPage({
         <NewExpenseForm
           categories={categories.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name }))}
           issuers={issuers.map((i) => ({ id: i.id, name: i.name, isDefault: i.isDefault, currency: i.defaultCurrency }))}
+          projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
         />
       </div>
 
@@ -182,9 +186,13 @@ export default async function ExpensesPage({
                       >
                         {e.description || 'Bez názvu'}
                       </Link>
-                      {(e.supplier?.name || e.supplierName || e.number) && (
+                      {(e.supplier?.name || e.supplierName || e.number || e.projectName) && (
                         <span className="block text-xs text-muted font-body">
-                          {[e.supplier?.name || e.supplierName, e.number ? `č. ${e.number}` : null]
+                          {[
+                            e.supplier?.name || e.supplierName,
+                            e.number ? `č. ${e.number}` : null,
+                            e.projectName,
+                          ]
                             .filter(Boolean)
                             .join(' · ')}
                         </span>
