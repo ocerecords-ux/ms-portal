@@ -20,6 +20,8 @@ export const config = {
     '/nahravky/:path*',
     '/muj-ucet/:path*',
     '/vykazy/:path*',
+    '/kalendar/:path*',
+    '/moje-terminy/:path*',
     '/admin/:path*',
   ],
 };

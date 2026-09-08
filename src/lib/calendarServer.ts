@@ -269,7 +269,8 @@ export type EventInput = {
   fromStatus?: string | null;
   toStatus?: string | null;
   note?: string | null;
-  payload?: unknown;
+  /** Doplnkova data (puvodni a novy cas u presunu apod.). */
+  payload?: Record<string, unknown>;
 };
 
 /**
@@ -287,7 +288,9 @@ export function eventData(input: EventInput) {
     fromStatus: input.fromStatus ?? null,
     toStatus: input.toStatus ?? null,
     note: input.note ?? null,
-    payload: input.payload === undefined ? null : (input.payload as never),
+    // Pole typu Json se v Prisme nesmi nastavit na null jako ostatni sloupce -
+    // bud se posle hodnota, nebo se klic vynecha uplne. Proto tenhle spread.
+    ...(input.payload ? { payload: input.payload } : {}),
   };
 }
 

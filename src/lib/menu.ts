@@ -33,6 +33,10 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/nahravky': ['CLIENT'],
   // Vykazy: zvukar svoje, Zuzo-labuzo prehled celeho tymu.
   '/vykazy': ['ADMIN', 'ZVUKAR'],
+  // Kalendare studii (zadani 8. 9. 2026): Produkce a Zuzo-labuzo zapisuji,
+  // zvukar jen cte. Herec ma vlastni, uzsi pohled.
+  '/kalendar': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
+  '/moje-terminy': ['HEREC'],
   // Administrace - jen Zuzo-labuzo.
   '/admin': ['ADMIN'],
   '/admin/caflou-firmy': ['ADMIN'],
@@ -53,6 +57,7 @@ export const DEFAULT_MENU_ITEMS: { label: string; href: string; sortOrder: numbe
   { label: 'Objednávka', href: '/objednavka', sortOrder: 20 },
   { label: 'Nahrávky', href: '/nahravky', sortOrder: 30 },
   { label: 'Výkazy', href: '/vykazy', sortOrder: 40 },
+  { label: 'Kalendář', href: '/kalendar', sortOrder: 45 },
   { label: 'Firmy', href: '/admin', sortOrder: 50 },
   { label: 'Uživatelé', href: '/admin/users', sortOrder: 60 },
   { label: 'Ceníky', href: '/admin/ceniky', sortOrder: 70 },
@@ -65,6 +70,7 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/objednavka', label: 'Objednávka' },
   { href: '/nahravky', label: 'Nahrávky' },
   { href: '/vykazy', label: 'Výkazy' },
+  { href: '/kalendar', label: 'Kalendář' },
   { href: '/admin', label: 'Firmy' },
   { href: '/admin/caflou-firmy', label: 'Firmy z Caflou' },
   { href: '/admin/users', label: 'Uživatelé' },
