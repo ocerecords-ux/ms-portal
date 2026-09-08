@@ -187,17 +187,21 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         <Chevron direction="right" />
       </button>
 
-      <div className="w-[320px] max-w-[86vw] max-h-[36vh] overflow-y-auto bg-white border border-r-0 border-line shadow-xl p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Úkoly</h2>
+      <div className="w-[320px] max-w-[86vw] max-h-[30vh] overflow-y-auto bg-white border border-r-0 border-line shadow-xl flex flex-col">
+      {/* Fialova hlavicka se zelenym napisem - stejne jako horni lista a jako
+          MS chat (zadani 8. 9. 2026). Drzi se nahore i pri rolovani seznamu. */}
+      <div className="sticky top-0 z-10 bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
+        <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">Úkoly</h2>
         <button
           type="button"
           onClick={toggle}
-          className="text-xs font-heading font-semibold text-muted hover:text-brand-purple border border-line rounded-lg px-3 py-1.5 whitespace-nowrap"
+          className="text-xs font-heading font-semibold text-brand-green/90 hover:text-white whitespace-nowrap"
         >
           {open.length === 0 ? 'hotovo' : `${open.length} k vyřízení`} ›
         </button>
       </div>
+
+      <div className="p-4 flex flex-col gap-3">
 
       <form onSubmit={addTask} className="flex flex-col gap-2">
         <input
@@ -295,6 +299,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
           )}
         </div>
       )}
+      </div>
       </div>
     </aside>
   );

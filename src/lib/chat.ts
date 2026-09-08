@@ -20,8 +20,12 @@ export type ChatMessage = {
   createdAt: string;
   authorId: string;
   authorLabel: string;
+  /** Fotka autora - u uctu bez fotky null a vykresli se iniciály. */
+  authorPhotoUrl: string | null;
   mine: boolean;
 };
+
+export type ChatTeamMember = { id: string; label: string; photoUrl: string | null };
 
 export type ChatConversation = {
   id: string;
@@ -34,7 +38,17 @@ export type ChatConversation = {
   caflouProjectId: string | null;
   /** Jmena ucastniku - u skupiny se ukazuji pod nazvem. */
   memberLabels: string[];
+  /** Fotka do seznamu - u soukrome zpravy fotka druheho cloveka. */
+  avatarUrl: string | null;
 };
+
+/** Iniciály pro kolečko, když u účtu není fotka. */
+export function initials(label: string): string {
+  const slova = label.trim().split(/\s+/).filter(Boolean);
+  if (slova.length === 0) return '?';
+  if (slova.length === 1) return slova[0].slice(0, 2).toUpperCase();
+  return (slova[0].charAt(0) + slova[1].charAt(0)).toUpperCase();
+}
 
 /** "dnes 14:32" / "včera 9:05" / "3. 9. 14:32" - kratky cas u zpravy. */
 export function formatMessageTime(iso: string): string {

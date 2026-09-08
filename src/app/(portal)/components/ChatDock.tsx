@@ -6,8 +6,10 @@ import {
   CHAT_TABS,
   MAX_MESSAGE_LENGTH,
   formatMessageTime,
+  initials,
   type ChatConversation,
   type ChatMessage,
+  type ChatTeamMember,
 } from '@/lib/chat';
 
 /**
@@ -26,7 +28,6 @@ import {
 const STORAGE_KEY = 'ms-portal-chat-otevreno';
 const REFRESH_MS = 12000;
 
-type TeamMember = { id: string; label: string };
 type ProjectOption = { id: string; label: string; name: string };
 
 function ChatIcon() {
@@ -34,6 +35,30 @@ function ChatIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
       <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.3-.6L3 21l1.7-5a8.4 8.4 0 0 1-.7-3.4 8.5 8.5 0 0 1 8.5-8.5 8.4 8.4 0 0 1 8.5 8.4z" />
     </svg>
+  );
+}
+
+/** Kolecko s fotkou, a kdyz fotka neni, s iniciálami. */
+function Avatar({ label, photoUrl, size = 28 }: { label: string; photoUrl: string | null; size?: number }) {
+  if (photoUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src={photoUrl}
+        alt=""
+        style={{ width: size, height: size }}
+        className="rounded-full object-cover shrink-0 border border-line"
+      />
+    );
+  }
+  return (
+    <span
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
+      className="rounded-full shrink-0 bg-brand-purple/15 text-brand-purpleDark font-heading font-bold flex items-center justify-center"
+      aria-hidden="true"
+    >
+      {initials(label)}
+    </span>
   );
 }
 
@@ -49,7 +74,7 @@ export function ChatDock() {
   const [expanded, setExpanded] = useState(false);
   const [tab, setTab] = useState<ConversationKind>('PROJEKT');
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
-  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [team, setTeam] = useState<ChatTeamMember[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -279,86 +304,31 @@ export function ChatDock() {
         <Chevron direction="right" />
       </button>
 
-      <div className="w-[340px] max-w-[86vw] h-[42vh] bg-white border border-r-0 border-line shadow-xl flex flex-col">
-        {/* Hlavicka: bud seznam, nebo otevrena konverzace */}
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-line">
-          {otevrena ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setOpenId(null)}
-                className="text-xs font-heading font-semibold text-muted hover:text-brand-purple flex items-center gap-1"
-              >
-                <Chevron direction="left" /> Zpět
-              </button>
-              <span className="font-heading font-semibold text-sm text-ink truncate">{otevrena.label}</span>
-            </>
-          ) : (
-            <>
-              <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">MS chat</h2>
-              <button
-                type="button"
-                onClick={toggle}
-                className="text-xs font-heading font-semibold text-muted hover:text-brand-purple border border-line rounded-lg px-3 py-1.5 whitespace-nowrap"
-              >
-                {neprectene > 0 ? `${neprectene} nových` : 'skrýt'} ›
-              </button>
-            </>
-          )}
+      {/* Rozvrzeni jako Slack (zadani 8. 9. 2026): vlevo seznam, vpravo
+          samotny chat. Na uzkem okne se leva cast schova a zustane jen to,
+          co je zrovna otevrene. */}
+      <div className="w-[620px] max-w-[92vw] h-[50vh] bg-white border border-r-0 border-line shadow-xl flex flex-col overflow-hidden">
+        <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
+          <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">MS chat</h2>
+          <button
+            type="button"
+            onClick={toggle}
+            className="text-xs font-heading font-semibold text-brand-green/90 hover:text-white whitespace-nowrap"
+          >
+            {neprectene > 0 ? `${neprectene} nových` : 'skrýt'} ›
+          </button>
         </div>
 
         {error && <p className="text-xs text-red-600 bg-red-50 px-4 py-2 m-0">{error}</p>}
 
-        {otevrena ? (
-          <>
-            <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3">
-              {messages.length === 0 && (
-                <p className="text-sm font-body text-muted m-0">Zatím tu nikdo nic nenapsal.</p>
-              )}
-              {messages.map((m) => (
-                <div key={m.id} className={`flex flex-col ${m.mine ? 'items-end' : 'items-start'}`}>
-                  <span className="text-[11px] font-heading text-muted">
-                    {m.mine ? 'Já' : m.authorLabel} · {formatMessageTime(m.createdAt)}
-                  </span>
-                  <span
-                    className={`mt-0.5 max-w-[85%] rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
-                      m.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
-                    }`}
-                  >
-                    {m.body}
-                  </span>
-                </div>
-              ))}
-              <div ref={konecRef} />
-            </div>
-
-            <form onSubmit={odesli} className="border-t border-line p-3 flex items-end gap-2">
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
-                onKeyDown={(e) => {
-                  // Enter odesle, Shift+Enter je novy radek - jak je zvykem.
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    void odesli(e as unknown as React.FormEvent);
-                  }
-                }}
-                rows={2}
-                placeholder="Napište zprávu…"
-                className="flex-1 resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
-              />
-              <button
-                type="submit"
-                disabled={sending || !draft.trim()}
-                className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-50"
-              >
-                Poslat
-              </button>
-            </form>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center gap-1 px-3 pt-3">
+        <div className="flex-1 min-h-0 flex">
+          {/* --- Levy sloupec: zalozky a seznam ---------------------------- */}
+          <div
+            className={`w-[220px] shrink-0 border-r border-line flex flex-col min-h-0 ${
+              otevrena ? 'hidden sm:flex' : 'flex'
+            }`}
+          >
+            <div className="flex items-center gap-1 px-2 pt-2">
               {CHAT_TABS.map((t) => (
                 <button
                   key={t.kind}
@@ -367,7 +337,7 @@ export function ChatDock() {
                     setTab(t.kind);
                     setNovy(false);
                   }}
-                  className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill transition-colors ${
+                  className={`px-2.5 py-1.5 text-xs font-heading font-semibold rounded-pill transition-colors ${
                     tab === t.kind ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
                   }`}
                 >
@@ -376,7 +346,7 @@ export function ChatDock() {
               ))}
             </div>
 
-            <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-1.5">
+            <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 flex flex-col gap-0.5">
               {tab === 'PROJEKT' && projekty === null && (
                 <p className="text-sm font-body text-muted m-0 px-1">Načítám projekty…</p>
               )}
@@ -384,29 +354,34 @@ export function ChatDock() {
                 <p className="text-xs text-red-600 m-0 px-1">{projektyChyba}</p>
               )}
               {tab === 'PROJEKT' &&
-                kanaly.map((k) => (
-                  <button
-                    key={k.key}
-                    type="button"
-                    onClick={() =>
-                      k.conversation
-                        ? setOpenId(k.conversation.id)
-                        : void otevriNovou({ kind: 'PROJEKT', caflouProjectId: k.caflouProjectId, name: k.name })
-                    }
-                    className="text-left rounded-lg px-3 py-2 hover:bg-field transition-colors flex items-center justify-between gap-2"
-                  >
-                    <span className="font-heading font-semibold text-sm text-ink truncate">{k.label}</span>
-                    {(k.conversation?.unread ?? 0) > 0 && (
-                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-[18px] text-center">
-                        {k.conversation?.unread}
+                kanaly.map((k) => {
+                  const aktivni = k.conversation?.id === openId;
+                  return (
+                    <button
+                      key={k.key}
+                      type="button"
+                      onClick={() =>
+                        k.conversation
+                          ? setOpenId(k.conversation.id)
+                          : void otevriNovou({ kind: 'PROJEKT', caflouProjectId: k.caflouProjectId, name: k.name })
+                      }
+                      className={`text-left rounded-lg px-2.5 py-1.5 transition-colors flex items-center justify-between gap-2 ${
+                        aktivni ? 'bg-[#F1ECFF] text-brand-purpleDark' : 'hover:bg-field text-ink'
+                      }`}
+                    >
+                      <span className="font-heading text-sm truncate">
+                        <span className="text-muted">#</span> {k.label}
                       </span>
-                    )}
-                  </button>
-                ))}
+                      {(k.conversation?.unread ?? 0) > 0 && (
+                        <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-[18px] text-center">
+                          {k.conversation?.unread}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               {tab === 'PROJEKT' && projekty !== null && kanaly.length === 0 && (
-                <p className="text-sm font-body text-muted m-0 px-1">
-                  Žádné rozpracované projekty — kanály se berou z aktivních projektů v Caflou.
-                </p>
+                <p className="text-sm font-body text-muted m-0 px-1">Žádné rozpracované projekty.</p>
               )}
 
               {tab !== 'PROJEKT' && vZalozce.length === 0 && !novy && (
@@ -414,75 +389,77 @@ export function ChatDock() {
                   {tab === 'SOUKROMA' ? 'Zatím si s nikým nepíšete.' : 'Zatím tu není žádná skupina.'}
                 </p>
               )}
-              {tab !== 'PROJEKT' && vZalozce.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setOpenId(c.id)}
-                  className="text-left rounded-lg px-3 py-2 hover:bg-field transition-colors flex items-center justify-between gap-2"
-                >
-                  <span className="min-w-0">
-                    <span className="block font-heading font-semibold text-sm text-ink truncate">{c.label}</span>
-                    {c.kind === 'SKUPINA' && c.memberLabels.length > 0 && (
-                      <span className="block text-[11px] font-body text-muted truncate">
-                        {c.memberLabels.join(', ')}
+              {tab !== 'PROJEKT' &&
+                vZalozce.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setOpenId(c.id)}
+                    className={`text-left rounded-lg px-2.5 py-1.5 transition-colors flex items-center gap-2 ${
+                      c.id === openId ? 'bg-[#F1ECFF]' : 'hover:bg-field'
+                    }`}
+                  >
+                    <Avatar label={c.label} photoUrl={c.avatarUrl} size={26} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-heading text-sm text-ink truncate">{c.label}</span>
+                      {c.kind === 'SKUPINA' && c.memberLabels.length > 0 && (
+                        <span className="block text-[11px] font-body text-muted truncate">
+                          {c.memberLabels.join(', ')}
+                        </span>
+                      )}
+                    </span>
+                    {c.unread > 0 && (
+                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-[18px] text-center">
+                        {c.unread}
                       </span>
                     )}
-                  </span>
-                  {c.unread > 0 && (
-                    <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-[18px] text-center">
-                      {c.unread}
-                    </span>
-                  )}
-                </button>
-              ))}
+                  </button>
+                ))}
 
               {novy && tab === 'SOUKROMA' && (
-                <div className="mt-2 flex flex-col gap-1">
+                <div className="mt-2 flex flex-col gap-0.5 border-t border-line pt-2">
                   {team.length === 0 && <p className="text-xs text-muted m-0 px-1">Nikdo další tu zatím není.</p>}
                   {team.map((u) => (
                     <button
                       key={u.id}
                       type="button"
                       onClick={() => otevriNovou({ kind: 'SOUKROMA', userId: u.id })}
-                      className="text-left rounded-lg px-3 py-2 text-sm font-body text-ink hover:bg-field truncate"
+                      className="text-left rounded-lg px-2.5 py-1.5 text-sm font-body text-ink hover:bg-field flex items-center gap-2"
                     >
-                      {u.label}
+                      <Avatar label={u.label} photoUrl={u.photoUrl} size={24} />
+                      <span className="truncate">{u.label}</span>
                     </button>
                   ))}
                 </div>
               )}
 
               {novy && tab === 'SKUPINA' && (
-                <div className="mt-2 flex flex-col gap-2">
+                <div className="mt-2 flex flex-col gap-2 border-t border-line pt-2">
                   <input
                     value={nazevSkupiny}
                     onChange={(e) => setNazevSkupiny(e.target.value)}
                     placeholder="Název skupiny"
                     className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
                   />
-                  <div className="flex flex-col gap-1">
-                    {team.map((u) => (
-                      <label key={u.id} className="flex items-center gap-2 text-sm font-body text-ink px-1">
-                        <input
-                          type="checkbox"
-                          checked={vybraniLide.includes(u.id)}
-                          onChange={(e) =>
-                            setVybraniLide((current) =>
-                              e.target.checked ? [...current, u.id] : current.filter((id) => id !== u.id),
-                            )
-                          }
-                        />
-                        {u.label}
-                      </label>
-                    ))}
-                  </div>
+                  {team.map((u) => (
+                    <label key={u.id} className="flex items-center gap-2 text-sm font-body text-ink px-1">
+                      <input
+                        type="checkbox"
+                        checked={vybraniLide.includes(u.id)}
+                        onChange={(e) =>
+                          setVybraniLide((current) =>
+                            e.target.checked ? [...current, u.id] : current.filter((id) => id !== u.id),
+                          )
+                        }
+                      />
+                      <Avatar label={u.label} photoUrl={u.photoUrl} size={22} />
+                      <span className="truncate">{u.label}</span>
+                    </label>
+                  ))}
                   <button
                     type="button"
                     disabled={!nazevSkupiny.trim() || vybraniLide.length === 0}
-                    onClick={() =>
-                      otevriNovou({ kind: 'SKUPINA', name: nazevSkupiny.trim(), userIds: vybraniLide })
-                    }
+                    onClick={() => otevriNovou({ kind: 'SKUPINA', name: nazevSkupiny.trim(), userIds: vybraniLide })}
                     className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 disabled:opacity-50"
                   >
                     Založit skupinu
@@ -494,18 +471,99 @@ export function ChatDock() {
             {/* Kanaly k projektum se nezakladaji rucne - berou se z aktivnich
                 projektu, takze tlacitko dava smysl jen u zbylych dvou zalozek. */}
             {tab !== 'PROJEKT' && (
-              <div className="border-t border-line p-3">
+              <div className="border-t border-line p-2">
                 <button
                   type="button"
                   onClick={() => setNovy((v) => !v)}
-                  className="w-full font-heading font-semibold text-sm rounded-lg border border-line px-4 py-2 text-brand-purple hover:border-brand-purple transition-colors"
+                  className="w-full font-heading font-semibold text-xs rounded-lg border border-line px-3 py-2 text-brand-purple hover:border-brand-purple transition-colors"
                 >
                   {novy ? 'Zrušit' : tab === 'SOUKROMA' ? '+ Napsat někomu' : '+ Nová skupina'}
                 </button>
               </div>
             )}
-          </>
-        )}
+          </div>
+
+          {/* --- Pravy sloupec: samotny chat ------------------------------- */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            {!otevrena ? (
+              <p className="m-auto text-sm font-body text-muted px-6 text-center">
+                Vyberte vlevo projekt nebo člověka.
+              </p>
+            ) : (
+              <>
+                <div className="px-4 py-2.5 border-b border-line flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(null)}
+                    title="Zpět na seznam"
+                    className="sm:hidden text-muted hover:text-brand-purple"
+                  >
+                    <Chevron direction="left" />
+                  </button>
+                  {otevrena.kind !== 'PROJEKT' && (
+                    <Avatar label={otevrena.label} photoUrl={otevrena.avatarUrl} size={26} />
+                  )}
+                  <span className="font-heading font-semibold text-sm text-ink truncate">
+                    {otevrena.kind === 'PROJEKT' ? `# ${otevrena.label}` : otevrena.label}
+                  </span>
+                  {otevrena.kind === 'SKUPINA' && otevrena.memberLabels.length > 0 && (
+                    <span className="text-[11px] font-body text-muted truncate hidden sm:block">
+                      {otevrena.memberLabels.join(', ')}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
+                  {messages.length === 0 && (
+                    <p className="text-sm font-body text-muted m-0">Zatím tu nikdo nic nenapsal.</p>
+                  )}
+                  {messages.map((m) => (
+                    <div key={m.id} className="flex items-start gap-2">
+                      <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={28} />
+                      <div className="min-w-0">
+                        <span className="text-[11px] font-heading text-muted">
+                          {m.mine ? 'Já' : m.authorLabel} · {formatMessageTime(m.createdAt)}
+                        </span>
+                        <p
+                          className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
+                            m.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
+                          }`}
+                        >
+                          {m.body}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={konecRef} />
+                </div>
+
+                <form onSubmit={odesli} className="border-t border-line p-3 flex items-end gap-2">
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
+                    onKeyDown={(e) => {
+                      // Enter odesle, Shift+Enter je novy radek - jak je zvykem.
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        void odesli(e as unknown as React.FormEvent);
+                      }
+                    }}
+                    rows={2}
+                    placeholder="Napište zprávu…"
+                    className="flex-1 resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
+                  />
+                  <button
+                    type="submit"
+                    disabled={sending || !draft.trim()}
+                    className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-50"
+                  >
+                    Poslat
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </aside>
   );

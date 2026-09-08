@@ -50,7 +50,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       where: { conversationId: conversation.id },
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true, name: true, email: true, photoUrl: true } } },
     });
 
     // Otevrel jsem si ji, takze je precteno. U kanalu k projektu tim zaroven
@@ -68,6 +68,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         createdAt: m.createdAt.toISOString(),
         authorId: m.userId,
         authorLabel: userLabel(m.user),
+        authorPhotoUrl: m.user.photoUrl,
         mine: m.userId === me,
       })),
     });
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const message = await prisma.message.create({
       data: { conversationId: conversation.id, userId: me, body: parsed.data.body },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true, name: true, email: true, photoUrl: true } } },
     });
 
     await prisma.$transaction([
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         createdAt: message.createdAt.toISOString(),
         authorId: message.userId,
         authorLabel: userLabel(message.user),
+        authorPhotoUrl: message.user.photoUrl,
         mine: true,
       },
       { status: 201 },

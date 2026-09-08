@@ -33,7 +33,7 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
     orderBy: { lastMessageAt: 'desc' },
     take: 300,
     include: {
-      members: { include: { user: { select: { id: true, name: true, email: true } } } },
+      members: { include: { user: { select: { id: true, name: true, email: true, photoUrl: true } } } },
     },
   });
   if (conversations.length === 0) return [];
@@ -79,7 +79,8 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
       ? novejsi.filter((m) => m.conversationId === c.id && m.createdAt > lastRead).length
       : (totalById.get(c.id) ?? 0);
 
-    const ostatni = c.members.filter((m) => m.userId !== userId).map((m) => userLabel(m.user));
+    const ostatniClenove = c.members.filter((m) => m.userId !== userId);
+    const ostatni = ostatniClenove.map((m) => userLabel(m.user));
     const label =
       c.kind === 'SOUKROMA' ? (ostatni[0] ?? 'Soukromá zpráva') : (c.name ?? 'Bez názvu');
 
@@ -90,6 +91,7 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
       unread,
       lastMessageAt: c.lastMessageAt.toISOString(),
       caflouProjectId: c.caflouProjectId,
+      avatarUrl: c.kind === 'SOUKROMA' ? (ostatniClenove[0]?.user.photoUrl ?? null) : null,
       memberLabels: ostatni,
     };
   });
@@ -99,8 +101,8 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
 export async function loadTeam(userId: string) {
   const users = await prisma.user.findMany({
     where: { role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] }, active: true, id: { not: userId } },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, email: true, photoUrl: true },
     orderBy: [{ name: 'asc' }, { email: 'asc' }],
   });
-  return users.map((u) => ({ id: u.id, label: userLabel(u) }));
+  return users.map((u) => ({ id: u.id, label: userLabel(u), photoUrl: u.photoUrl }));
 }

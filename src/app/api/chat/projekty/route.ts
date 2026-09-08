@@ -28,11 +28,9 @@ export async function GET() {
 
     const projekty = projects
       .filter((p) => !p.finished)
-      .map((p) => ({
-        id: String(p.id),
-        label: p.companyName && p.companyName !== '—' ? `${p.name} — ${p.companyName}` : p.name,
-        name: p.name,
-      }))
+      // Jen nazev projektu, bez firmy (zadani 8. 9. 2026: "musi tam byt
+      // nazvy projektu jen, ne firem, jinak to bude dlouhe").
+      .map((p) => ({ id: String(p.id), label: p.name, name: p.name }))
       .sort((a, b) => a.label.localeCompare(b.label, 'cs'));
 
     return NextResponse.json({ projekty, chyba: null });
