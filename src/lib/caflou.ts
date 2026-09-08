@@ -200,6 +200,25 @@ export function mapCaflouProjects(raw: unknown): DisplayProject[] {
  * z mapCaflouProjects, aby se stejne mapovani dalo pouzit i pro detail
  * projektu a pro interni prehled napric vsemi firmami.
  */
+/**
+ * Hodnota vlastniho sloupce z Caflou podle CASTI nazvu. Vlastni sloupce se
+ * jmenuji "custom_column_<slug>" a slug si Caflou obcas doplni cislem
+ * (v uctu je napr. "custom_column_pocet_ns1" nebo "custom_column_platce_dph1"),
+ * takze hadat presny nazev se uz jednou nevyplatilo - sloupec byl vzdy
+ * prazdny. Hledame proto podle podretezce a bereme prvni neprazdnou hodnotu.
+ */
+function customColumnValue(p: any, ...needles: string[]): string | null {
+  for (const key of Object.keys(p ?? {})) {
+    if (!key.startsWith('custom_column_') || key.endsWith('_decorated')) continue;
+    const slug = key.slice('custom_column_'.length).replace(/[^a-z0-9]/gi, '').toLowerCase();
+    if (!needles.some((n) => slug.includes(n))) continue;
+    const value = p[key];
+    if (value === null || value === undefined || value === '') continue;
+    return String(value);
+  }
+  return null;
+}
+
 export function mapOneCaflouProject(p: any): DisplayProject {
   const statusName: string = p.project_status_name || (p.finished ? 'Hotovo' : 'V realizaci');
   return {
@@ -219,8 +238,14 @@ export function mapOneCaflouProject(p: any): DisplayProject {
       toIntOrNull(p.custom_column_pocet_ns1) ??
       toIntOrNull(p.custom_column_pocet_normostran) ??
       toIntOrNull(String(p.custom_column_pocet_ns1_decorated ?? '').trim()),
+    // finished_at je okamzik, kdy nekdo projekt v Caflou uzavrel, a casto
+    // chybi. Jako "Datum dokonceni" se v portalu ukazuje endDate ("Konec"
+    // z Caflou) - zadani 8. 9. 2026.
     finishedAt: toDate(p.finished_at),
-    releaseDate: toDate(p.custom_column_termin_vydani),
+    // "Datum vydani" je nas vlastni sloupec v Caflou (zadani 8. 9. 2026).
+    releaseDate: toDate(
+      p.custom_column_termin_vydani ?? customColumnValue(p, 'terminvydani', 'datumvydani', 'vydani'),
+    ),
     startDate: toDate(p.start_date),
     endDate: toDate(p.end_date),
   };

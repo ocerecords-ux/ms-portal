@@ -112,13 +112,13 @@ export function InternalProjectsBrowser({
   }
   // Razeni klikem na nadpis sloupce (zadani 5. 9. 2026). Vychozi je stejne
   // jako driv - podle terminu, resp. data dokonceni.
-  const [sort, setSort] = useState<ProjectSort>({ key: 'finishedAt', dir: 'desc' });
+  const [sort, setSort] = useState<ProjectSort>({ key: 'endDate', dir: 'desc' });
 
   function handleSort(key: ProjectSortKey) {
     setSort((current) =>
       current.key === key
         ? { key, dir: current.dir === 'asc' ? 'desc' : 'asc' }
-        : { key, dir: key === 'finishedAt' || key === 'pageCount' || key === 'priority' ? 'desc' : 'asc' },
+        : { key, dir: key === 'endDate' || key === 'releaseDate' || key === 'pageCount' || key === 'priority' ? 'desc' : 'asc' },
     );
     setPage(0);
   }

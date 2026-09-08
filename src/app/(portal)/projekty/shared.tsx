@@ -65,7 +65,7 @@ export function ProjectsTable({ projects, emptyText }: { projects: DisplayProjec
                   {p.pageCount ?? '—'}
                 </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {p.finished ? formatDate(p.finishedAt) : '—'}
+                  {formatDate(p.endDate)}
                 </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
@@ -104,12 +104,13 @@ export function AdminProjectsTable({
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
               <th className="text-right px-4 py-3.5 whitespace-nowrap">Normostrany</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum dokončení</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum vydání</th>
             </tr>
           </thead>
           <tbody>
             {projects.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm font-body">
+                <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
                   {emptyText}
                 </td>
               </tr>
@@ -125,7 +126,10 @@ export function AdminProjectsTable({
                   {p.pageCount ?? '—'}
                 </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {p.finished ? formatDate(p.finishedAt) : '—'}
+                  {formatDate(p.endDate)}
+                </td>
+                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                  {formatDate(p.releaseDate)}
                 </td>
               </tr>
             ))}
@@ -170,7 +174,8 @@ export type ProjectSortKey =
   | 'projectType'
   | 'managerName'
   | 'pageCount'
-  | 'finishedAt';
+  | 'endDate'
+  | 'releaseDate';
 
 export type ProjectSort = { key: ProjectSortKey; dir: 'asc' | 'desc' };
 
@@ -182,7 +187,9 @@ export function compareProjects(a: InternalProject, b: InternalProject, sort: Pr
 
   const numeric = (p: InternalProject): number | null => {
     if (sort.key === 'pageCount') return p.showPageCount ? p.pageCount : null;
-    if (sort.key === 'finishedAt') return p.finishedAt?.getTime() ?? p.endDate?.getTime() ?? null;
+    // "Datum dokonceni" je Konec z Caflou; finished_at je jen zaloha.
+    if (sort.key === 'endDate') return p.endDate?.getTime() ?? p.finishedAt?.getTime() ?? null;
+    if (sort.key === 'releaseDate') return p.releaseDate?.getTime() ?? null;
     if (sort.key === 'priority') {
       const value = p.priority ?? p.meta?.priority ?? null;
       return value ? PRIORITY_RANK[value] : null;
@@ -190,7 +197,12 @@ export function compareProjects(a: InternalProject, b: InternalProject, sort: Pr
     return null;
   };
 
-  if (sort.key === 'pageCount' || sort.key === 'finishedAt' || sort.key === 'priority') {
+  if (
+    sort.key === 'pageCount' ||
+    sort.key === 'endDate' ||
+    sort.key === 'releaseDate' ||
+    sort.key === 'priority'
+  ) {
     const av = numeric(a);
     const bv = numeric(b);
     if (av === null && bv === null) return 0;
@@ -339,7 +351,7 @@ export function InternalProjectsTable({
   return (
     <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] border-collapse">
+        <table className="w-full min-w-[1080px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
               {head('name')}
@@ -349,13 +361,14 @@ export function InternalProjectsTable({
               {head('projectType')}
               {head('managerName')}
               {head('pageCount', 'right')}
-              {head('finishedAt')}
+              {head('endDate')}
+              {head('releaseDate')}
             </tr>
           </thead>
           <tbody>
             {projects.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-muted text-sm font-body">
+                <td colSpan={9} className="px-4 py-8 text-center text-muted text-sm font-body">
                   {emptyText}
                 </td>
               </tr>
@@ -387,7 +400,10 @@ export function InternalProjectsTable({
                   {p.showPageCount ? (p.pageCount ?? '—') : '—'}
                 </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {p.finished ? formatDate(p.finishedAt) : '—'}
+                  {formatDate(p.endDate)}
+                </td>
+                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                  {formatDate(p.releaseDate)}
                 </td>
               </tr>
             ))}

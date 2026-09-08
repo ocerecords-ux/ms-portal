@@ -22,7 +22,10 @@ export const DEFAULT_COLUMN_LABELS: Record<string, { key: string; label: string 
     { key: 'projectType', label: 'Typ projektu' },
     { key: 'managerName', label: 'Manažer projektu' },
     { key: 'pageCount', label: 'Normostrany' },
-    { key: 'finishedAt', label: 'Dokončeno' },
+    // "Konec" z Caflou; "Datum vydání" je náš vlastní sloupec v Caflou
+    // (zadani 8. 9. 2026).
+    { key: 'endDate', label: 'Datum dokončení' },
+    { key: 'releaseDate', label: 'Datum vydání' },
   ],
 };
 

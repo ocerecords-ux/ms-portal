@@ -62,6 +62,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(out);
   }
 
+  // ?sloupce=1 - projde vsechny projekty v uctu a vypise KAZDY vlastni sloupec
+  // (custom_column_*), ktery se kde objevil, s poctem vyplnenych hodnot a
+  // ukazkou. Presny nazev sloupce se totiz neda uhodnout - Caflou si ke slugu
+  // obcas prida cislo ("custom_column_pocet_ns1") a sloupec se v odpovedi
+  // objevi jen u projektu, ktere ho maji vyplneny (zadani 8. 9. 2026: overit,
+  // jak se jmenuje nas vlastni sloupec "Datum vydani").
+  if (req.nextUrl.searchParams.get('sloupce') === '1') {
+    try {
+      const columns: Record<string, { vyplneno: number; ukazka: unknown }> = {};
+      let celkem = 0;
+      for (let page = 1; page <= 15; page++) {
+        const result = await caflouFetch(`/projects?per=100&page=${page}`);
+        const results = (result.body as { results?: unknown } | null)?.results;
+        if (!result.ok || !Array.isArray(results) || results.length === 0) break;
+        for (const row of results as any[]) {
+          celkem += 1;
+          for (const key of Object.keys(row ?? {})) {
+            if (!key.startsWith('custom_column_')) continue;
+            columns[key] ??= { vyplneno: 0, ukazka: null };
+            const value = (row as any)[key];
+            if (value === null || value === undefined || value === '') continue;
+            columns[key].vyplneno += 1;
+            if (columns[key].ukazka === null) columns[key].ukazka = value;
+          }
+        }
+        if ((results as any[]).length < 100) break;
+      }
+      return NextResponse.json({ prohledanoProjektu: celkem, vlastniSloupce: columns });
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : 'Dotaz na Caflou selhal.' }, { status: 502 });
+    }
+  }
+
   // ?najdi=NAZEV - najde projekty podle nazvu napric vsemi strankami a vypise
   // JEJICH SUROVA DATA. Slouzi k dohledani, proc konkretni projekt spadl do
   // spatne zalozky (zadani 8. 9. 2026: "OODA 7, TRIOLA, ATMOS - EN MUTACE jsou

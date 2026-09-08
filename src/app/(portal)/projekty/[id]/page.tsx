@@ -107,8 +107,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <Field label="Herec" value={project.narrator ?? '—'} />
             <Field label="Normostrany" value={project.pageCount != null ? String(project.pageCount) : '—'} />
             <Field label="Zahájení" value={formatDate(project.startDate)} />
-            <Field label="Termín" value={formatDate(project.endDate)} />
-            <Field label="Dokončeno" value={project.finished ? formatDate(project.finishedAt) : '—'} />
+            {/* "Konec" z Caflou je pro nas datum dokonceni; datum vydani je
+                nas vlastni sloupec v Caflou (zadani 8. 9. 2026). */}
+            <Field label="Datum dokončení" value={formatDate(project.endDate)} />
             <Field label="Datum vydání" value={formatDate(project.releaseDate)} />
           </dl>
         </div>

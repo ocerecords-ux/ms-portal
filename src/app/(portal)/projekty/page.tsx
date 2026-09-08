@@ -54,8 +54,8 @@ export default async function ProjektyPage() {
           .filter((p) => p.finished)
           .sort(
             (a, b) =>
-              (b.finishedAt?.getTime() ?? b.endDate?.getTime() ?? 0) -
-              (a.finishedAt?.getTime() ?? a.endDate?.getTime() ?? 0),
+              (b.endDate?.getTime() ?? b.finishedAt?.getTime() ?? 0) -
+              (a.endDate?.getTime() ?? a.finishedAt?.getTime() ?? 0),
           );
       } else {
         loadError = true;
@@ -148,8 +148,8 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
     .filter((p) => p.finished)
     .sort(
       (a, b) =>
-        (b.finishedAt?.getTime() ?? b.endDate?.getTime() ?? 0) -
-        (a.finishedAt?.getTime() ?? a.endDate?.getTime() ?? 0),
+        (b.endDate?.getTime() ?? b.finishedAt?.getTime() ?? 0) -
+        (a.endDate?.getTime() ?? a.finishedAt?.getTime() ?? 0),
     );
 
   return (
