@@ -35,6 +35,7 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/vykazy': ['ADMIN', 'ZVUKAR'],
   // Administrace - jen Zuzo-labuzo.
   '/admin': ['ADMIN'],
+  '/admin/caflou-firmy': ['ADMIN'],
   '/admin/users': ['ADMIN'],
   '/admin/ceniky': ['ADMIN'],
   '/admin/doklady': ['ADMIN'],
@@ -65,6 +66,7 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/nahravky', label: 'Nahrávky' },
   { href: '/vykazy', label: 'Výkazy' },
   { href: '/admin', label: 'Firmy' },
+  { href: '/admin/caflou-firmy', label: 'Firmy z Caflou' },
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/ceniky', label: 'Ceníky' },
   { href: '/admin/doklady', label: 'Doklady' },

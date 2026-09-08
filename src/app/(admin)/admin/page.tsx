@@ -42,11 +42,20 @@ export default async function AdminHomePage({
 
   return (
     <section className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-display text-3xl text-ink m-0">Firmy</h1>
-        <p className="text-muted text-sm mt-1 font-body">
-          Kliknutím na název firmu otevřete. Klienti mají navíc napojení na Caflou a složku na Disku.
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-display text-3xl text-ink m-0">Firmy</h1>
+          <p className="text-muted text-sm mt-1 font-body">
+            Kliknutím na název firmu otevřete. Klienti mají navíc napojení na Caflou a složku na Disku.
+          </p>
+        </div>
+        {/* Surovy seznam firem z Caflou k roztrideni (zadani 8. 9. 2026). */}
+        <Link
+          href="/admin/caflou-firmy"
+          className="font-heading font-semibold text-sm rounded-lg border border-line bg-white px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
+        >
+          Firmy z Caflou
+        </Link>
       </div>
 
       <div className="flex items-end justify-between gap-4 flex-wrap border-b border-line">

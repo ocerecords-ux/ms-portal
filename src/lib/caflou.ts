@@ -124,11 +124,11 @@ export type DisplayProject = {
   id: number;
   name: string;
   /**
-   * Dokonceny projekt. POZOR: neni to primo priznak `finished` z Caflou - ten
-   * maji v uctu nastaveny uplne vsechny projekty, i ty se stavem "Natáčíme"
-   * (overeno 5. 9. 2026). Rozhoduje proto stav projektu, viz
-   * lib/projectTypes.ts (ACTIVE_PROJECT_STATUSES); `finished` z Caflou slouzi
-   * uz jen jako zaloha u projektu bez stavu.
+   * Dokonceny projekt = priznak `finished` z Caflou (= projekt je tam
+   * uzavreny). Presne podle nej deli projekty i Caflou samo - 35 aktivnich a
+   * 668 ukoncenych, overeno 8. 9. 2026. Stitek (project_status_name) je jen
+   * popisek workflow a muze zustat viset kdekoliv, takze slouzi uz jen jako
+   * zaloha, kdyz priznak nedorazi. Viz lib/projectTypes.ts.
    */
   finished: boolean;
   statusName: string;

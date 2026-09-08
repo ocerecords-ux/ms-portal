@@ -351,6 +351,50 @@ model UserMenuItem {
 }
 
 
+// Firmy nactene z Caflou (zadani 8. 9. 2026: "nahraj databazi firem, ktere
+// mame v Caflou - jsou tam najednou klienti i herci, to bychom si roztridili").
+//
+// Zamerne to NENI zapis do modelu Company: tam kazdy radek znamena tenanta s
+// uzivateli, slozkou na Disku a napojenim na Caflou, kdezto tady je surovy
+// seznam z Caflou k roztrideni. Diky tomu nemuzou vzniknout duplicity mezi
+// tim, co uz v portalu je, a tim, co se prave stahlo (zprava uzivatele
+// 8. 9. 2026: "bacha na duplicity, nektere firmy uz mam v MS portalu").
+// Klicem je ID z Caflou, takze opakovany import stejnou firmu jen aktualizuje.
+enum CaflouContactKind {
+  NEZARAZENO
+  KLIENT
+  HEREC
+  IGNOROVAT
+}
+
+model CaflouCompany {
+  id             String   @id // ID firmy v Caflou
+  name           String
+  ic             String?
+  dic            String?
+  email          String?
+  phone          String?
+  addressStreet  String?
+  addressCity    String?
+  addressZip     String?
+  addressCountry String?
+  note           String?
+
+  // Roztrideni - kdo je klient a kdo herec. Zatim jen znacka, zakladani
+  // skutecnych firem a uctu prijde az potom.
+  kind           CaflouContactKind @default(NEZARAZENO)
+
+  // Cela puvodni odpoved z Caflou, at se da kdykoliv domapovat dalsi pole
+  // bez opakovaneho importu.
+  raw            Json
+
+  importedAt     DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([kind])
+  @@index([name])
+}
+
 // Ukoly (to-do) na profilu clena tymu Mediaspace - zadani 5. 9. 2026
 // ("nejaky widget s ukoly u profilu Mediaspace"). Ukol patri vzdy konkretnimu
 // uzivateli; nikdo jiny nez on (a admin) ho nevidi.
