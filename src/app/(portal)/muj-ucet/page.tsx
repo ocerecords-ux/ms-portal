@@ -66,6 +66,7 @@ export default async function MyAccountPage() {
           phone: user.phone ?? '',
           birthDate: user.birthDate ? user.birthDate.toISOString().slice(0, 10) : '',
         }}
+        photoUrl={user.photoUrl ?? null}
       />
     </section>
   );

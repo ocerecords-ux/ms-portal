@@ -102,6 +102,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const photo = formData.get('photo');
   if (photo instanceof File && photo.size > 0) {
     photoUrl = await uploadUserPhoto(photo);
+    // Driv se v tomhle pripade ulozil zbytek a fotka tise zmizela - ucet pak
+    // vypadal, ze se fotka nahrala, a pritom v profilu nebylo nic.
+    if (photoUrl === null) {
+      return NextResponse.json(
+        { error: 'Fotku se nepodařilo uložit - zkuste menší obrázek.' },
+        { status: 400 },
+      );
+    }
   } else if (data.removePhoto) {
     photoUrl = null;
   }

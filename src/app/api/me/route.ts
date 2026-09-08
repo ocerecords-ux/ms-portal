@@ -4,13 +4,18 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
+import { uploadUserPhoto } from '@/lib/storage';
 
 // Uprava vlastnich udaju prihlaseneho uzivatele (zadani 5. 9. 2026).
 //
-// KLICOVE: menit jde VYHRADNE jmeno, e-mail a telefon (a u internich uctu
-// Mediaspace navic datum narozeni). Role, ID uctu ani prirazeni k firme se
-// tudy zmenit NEDA - to zustava jen v administraci. Uzivatele bereme vzdy ze
-// session, nikdy z tela pozadavku.
+// KLICOVE: menit jde VYHRADNE jmeno, e-mail, telefon a fotka (a u internich
+// uctu Mediaspace navic datum narozeni). Role, ID uctu ani prirazeni k firme
+// se tudy zmenit NEDA - to zustava jen v administraci. Uzivatele bereme vzdy
+// ze session, nikdy z tela pozadavku.
+//
+// Telo chodi jako multipart/form-data, protoze fotka je soubor. Do 8. 9. 2026
+// se fotka dala nastavit jen v administraci u detailu uctu - proto ji nikdo z
+// tymu nemel a v chatu svitily jen iniciály.
 const schema = z.object({
   name: z.string().trim().max(200).optional(),
   email: z.string().trim().toLowerCase().email('Zadejte platný e-mail.').optional(),
@@ -26,7 +31,14 @@ export async function PATCH(req: NextRequest) {
     }
     const userId = session.user.id;
 
-    const parsed = schema.safeParse(await req.json());
+    const formData = await req.formData();
+    const text = (key: string) => (formData.has(key) ? String(formData.get(key) ?? '') : undefined);
+    const parsed = schema.safeParse({
+      name: text('name'),
+      email: text('email'),
+      phone: text('phone'),
+      birthDate: text('birthDate'),
+    });
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
@@ -42,6 +54,22 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    // Fotka: novy soubor ji nahradi, "odstranit" ji smaze, jinak zustava.
+    let photoUrl: string | null | undefined = undefined;
+    const photo = formData.get('photo');
+    if (photo instanceof File && photo.size > 0) {
+      photoUrl = await uploadUserPhoto(photo);
+      if (photoUrl === null) {
+        // Driv se v tomhle pripade ulozil zbytek a fotka tise zmizela.
+        return NextResponse.json(
+          { error: 'Fotku se nepodařilo uložit - zkuste menší obrázek.' },
+          { status: 400 },
+        );
+      }
+    } else if (formData.get('removePhoto') === '1') {
+      photoUrl = null;
+    }
+
     const updated = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -52,8 +80,9 @@ export async function PATCH(req: NextRequest) {
         ...(isInternalRole(user.role) && data.birthDate !== undefined
           ? { birthDate: data.birthDate ? new Date(data.birthDate) : null }
           : {}),
+        ...(photoUrl !== undefined ? { photoUrl } : {}),
       },
-      select: { id: true, name: true, email: true, phone: true, birthDate: true },
+      select: { id: true, name: true, email: true, phone: true, birthDate: true, photoUrl: true },
     });
 
     return NextResponse.json({

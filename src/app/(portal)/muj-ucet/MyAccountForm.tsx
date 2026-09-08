@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import { PhotoDropzone } from '@/app/(admin)/admin/users/PhotoDropzone';
 
 type Values = {
   name: string;
@@ -12,13 +13,27 @@ type Values = {
 };
 
 /**
- * Uprava vlastnich udaju. Datum narozeni se ukazuje jen internimu tymu
- * Mediaspace (zadani 5. 9. 2026). Role, kod uctu a firma tu zamerne nejsou -
- * ty nesmi menit nikdo z uzivatelu.
+ * Uprava vlastnich udaju. Datum narozeni a fotka se ukazuji jen internimu
+ * tymu Mediaspace (zadani 5. 9. 2026). Role, kod uctu a firma tu zamerne
+ * nejsou - ty nesmi menit nikdo z uzivatelu.
+ *
+ * Fotka pribyla 8. 9. 2026: do te doby ji sel nastavit jen admin u detailu
+ * uctu, takze ji v tymu nemel nikdo a v MS chatu svitily jen iniciály.
+ * Stejny vyber jako v administraci - vc. zmenseni na 400 px v prohlizeci.
  */
-export function MyAccountForm({ internal, initial }: { internal: boolean; initial: Values }) {
+export function MyAccountForm({
+  internal,
+  initial,
+  photoUrl,
+}: {
+  internal: boolean;
+  initial: Values;
+  photoUrl: string | null;
+}) {
   const router = useRouter();
   const [values, setValues] = useState<Values>(initial);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -35,11 +50,16 @@ export function MyAccountForm({ internal, initial }: { internal: boolean; initia
     setError(null);
     setSaved(false);
     try {
-      const res = await fetch('/api/me', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
+      // multipart, protoze fotka je soubor
+      const formData = new FormData();
+      formData.set('name', values.name);
+      formData.set('email', values.email);
+      formData.set('phone', values.phone);
+      formData.set('birthDate', values.birthDate);
+      if (photo) formData.set('photo', photo);
+      if (removePhoto) formData.set('removePhoto', '1');
+
+      const res = await fetch('/api/me', { method: 'PATCH', body: formData });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || 'Uložení se nezdařilo.');
@@ -47,6 +67,8 @@ export function MyAccountForm({ internal, initial }: { internal: boolean; initia
       }
       setSaved(true);
       setEmailChanged(Boolean(data?.emailChanged));
+      setPhoto(null);
+      setRemovePhoto(false);
       router.refresh();
     } catch {
       setError('Uložení se nezdařilo.');
@@ -61,6 +83,27 @@ export function MyAccountForm({ internal, initial }: { internal: boolean; initia
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Kontaktní údaje</h2>
+
+      {internal && (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Fotka</span>
+          <PhotoDropzone
+            file={photo}
+            onChange={(f) => {
+              setPhoto(f);
+              setSaved(false);
+            }}
+            existingUrl={removePhoto ? null : photoUrl}
+            onRemoveExisting={() => {
+              setRemovePhoto(true);
+              setSaved(false);
+            }}
+          />
+          <span className="text-xs text-muted font-body">
+            Ukazuje se u vašich zpráv v MS chatu.
+          </span>
+        </label>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <label className="flex flex-col gap-1.5">
