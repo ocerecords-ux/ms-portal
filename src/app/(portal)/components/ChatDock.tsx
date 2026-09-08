@@ -517,7 +517,11 @@ export function ChatDock() {
       {/* Rozvrzeni jako Slack (zadani 8. 9. 2026): vlevo seznam, vpravo
           samotny chat. Na uzkem okne se leva cast schova a zustane jen to,
           co je zrovna otevrene. */}
-      <div className="w-[620px] max-w-[92vw] h-[50vh] bg-white border border-r-0 border-line shadow-xl flex flex-col overflow-hidden">
+      <div
+        className={`max-w-[92vw] h-[50vh] bg-white border border-r-0 border-line shadow-xl flex flex-col overflow-hidden transition-[width] ${
+          vlaknoId ? 'w-[900px]' : 'w-[620px]'
+        }`}
+      >
         <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
           <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">MS chat</h2>
           <button
@@ -534,8 +538,8 @@ export function ChatDock() {
         <div className="flex-1 min-h-0 flex">
           {/* --- Levy sloupec: zalozky a seznam ---------------------------- */}
           <div
-            className={`w-[220px] shrink-0 border-r border-line flex flex-col min-h-0 ${
-              otevrena ? 'hidden sm:flex' : 'flex'
+            className={`w-[220px] shrink-0 border-r border-line flex-col min-h-0 ${
+              vlaknoId ? 'hidden lg:flex' : otevrena ? 'hidden sm:flex' : 'flex'
             }`}
           >
             <div className="flex items-center gap-1 px-2 pt-2">
@@ -694,60 +698,117 @@ export function ChatDock() {
           </div>
 
           {/* --- Pravy sloupec: samotny chat ------------------------------- */}
-          <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex-1 min-w-0 flex">
             {!otevrena ? (
               <p className="m-auto text-sm font-body text-muted px-6 text-center">
                 Vyberte vlevo projekt nebo člověka.
               </p>
             ) : (
               <>
-                <div className="px-4 py-2.5 border-b border-line flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setOpenId(null)}
-                    title="Zpět na seznam"
-                    className="sm:hidden text-muted hover:text-brand-purple"
-                  >
-                    <Chevron direction="left" />
-                  </button>
-                  {otevrena.kind !== 'PROJEKT' && (
-                    <Avatar label={otevrena.label} photoUrl={otevrena.avatarUrl} size={26} />
-                  )}
-                  <span className="font-heading font-semibold text-sm text-ink truncate">
-                    {otevrena.kind === 'PROJEKT' ? `# ${otevrena.label}` : otevrena.label}
-                  </span>
-                  {otevrena.kind === 'SKUPINA' && otevrena.memberLabels.length > 0 && (
-                    <span className="text-[11px] font-body text-muted truncate hidden sm:block">
-                      {otevrena.memberLabels.join(', ')}
+                {/* Prostredni sloupec: samotna konverzace. Pri otevrenem
+                    vlakne zustava videt (zadani 8. 9. 2026: "at se otevre
+                    v dalsim okne napravo od te zpravy") - jen na uzkem okne
+                    ustoupi, aby na vlakno vubec zbylo misto. */}
+                <div className={`flex-1 min-w-0 flex flex-col ${vlaknoId ? 'hidden md:flex' : 'flex'}`}>
+                  <div className="px-4 py-2.5 border-b border-line flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOpenId(null)}
+                      title="Zpět na seznam"
+                      className="sm:hidden text-muted hover:text-brand-purple"
+                    >
+                      <Chevron direction="left" />
+                    </button>
+                    {otevrena.kind !== 'PROJEKT' && (
+                      <Avatar label={otevrena.label} photoUrl={otevrena.avatarUrl} size={26} />
+                    )}
+                    <span className="font-heading font-semibold text-sm text-ink truncate">
+                      {otevrena.kind === 'PROJEKT' ? `# ${otevrena.label}` : otevrena.label}
                     </span>
-                  )}
+                    {otevrena.kind === 'SKUPINA' && otevrena.memberLabels.length > 0 && (
+                      <span className="text-[11px] font-body text-muted truncate hidden sm:block">
+                        {otevrena.memberLabels.join(', ')}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
+                    {messages.length === 0 && (
+                      <p className="text-sm font-body text-muted m-0">Zatím tu nikdo nic nenapsal.</p>
+                    )}
+                    {messages.map((m) => (
+                      <div key={m.id} className="flex items-start gap-2">
+                        <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={28} />
+                        <div className="min-w-0">
+                          <span className="text-[11px] font-heading text-muted">
+                            {m.mine ? 'Já' : m.authorLabel} · {formatMessageTime(m.createdAt)}
+                          </span>
+                          <p
+                            className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
+                              m.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
+                            }`}
+                          >
+                            <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
+                          </p>
+                          {m.mine && <Zobrazeno seenBy={m.seenBy} />}
+                          <button
+                            type="button"
+                            onClick={() => setVlaknoId(m.id)}
+                            className={`mt-1 text-[11px] font-heading font-semibold hover:underline ${
+                              vlaknoId === m.id ? 'text-brand-purpleDark underline' : 'text-brand-purple'
+                            }`}
+                          >
+                            {m.replyCount > 0
+                              ? `${m.replyCount} ${m.replyCount === 1 ? 'odpověď' : m.replyCount < 5 ? 'odpovědi' : 'odpovědí'} ›`
+                              : 'Odpovědět ve vlákně'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={konecRef} />
+                  </div>
+
+                  <Psatko
+                    hodnota={draft}
+                    zmena={(v) => {
+                      setDraft(v);
+                      sledujZminku(v, 'hlavni');
+                    }}
+                    odeslat={(e) => odesli(e, false)}
+                    sending={sending}
+                    placeholder="Napište zprávu… (@ zmíní kolegu)"
+                    nabidka={zminkyPro === 'hlavni' ? nabidkaZminek : []}
+                    vyber={doplnZminku}
+                  />
                 </div>
 
-                {vlaknoId ? (
-                  /* --- Vlakno: pod puvodni zpravou visi odpovedi ---------- */
-                  <>
-                    <div className="px-4 py-2 border-b border-line flex items-center gap-2 bg-field">
+                {/* Treti sloupec: vlakno vedle zpravy, jako u Slacku. */}
+                {vlaknoId && (
+                  <div className="w-full md:w-[300px] shrink-0 border-l border-line flex flex-col min-h-0">
+                    <div className="px-3 py-2.5 border-b border-line flex items-center justify-between gap-2 bg-field">
+                      <span className="font-heading font-semibold text-sm text-ink">Vlákno</span>
                       <button
                         type="button"
                         onClick={() => setVlaknoId(null)}
-                        className="text-xs font-heading font-semibold text-brand-purple hover:underline flex items-center gap-1"
+                        title="Zavřít vlákno"
+                        aria-label="Zavřít vlákno"
+                        className="text-muted hover:text-brand-purple text-lg leading-none px-1"
                       >
-                        <Chevron direction="left" /> Zpět do konverzace
+                        ×
                       </button>
-                      <span className="text-xs font-heading text-muted">Vlákno</span>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
+                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3">
                       {vlakno.map((m, index) => (
-                        <div key={m.id} className={`flex items-start gap-2 ${index === 0 ? '' : 'pl-4'}`}>
-                          <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={index === 0 ? 28 : 24} />
+                        <div key={m.id} className={`flex items-start gap-2 ${index === 0 ? '' : 'pl-3'}`}>
+                          <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={index === 0 ? 26 : 22} />
                           <div className="min-w-0">
                             <span className="text-[11px] font-heading text-muted">
                               {m.mine ? 'Já' : m.authorLabel} · {formatMessageTime(m.createdAt)}
                             </span>
                             <p
                               className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
-                                m.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
+                                m.mine ? 'bg-brand-purple text-white' : 'bg-white border border-line text-ink'
                               }`}
                             >
                               <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
@@ -757,7 +818,7 @@ export function ChatDock() {
                         </div>
                       ))}
                       {vlakno.length <= 1 && (
-                        <p className="text-sm font-body text-muted m-0 pl-4">Zatím bez odpovědí.</p>
+                        <p className="text-sm font-body text-muted m-0 pl-3">Zatím bez odpovědí.</p>
                       )}
                     </div>
 
@@ -769,60 +830,11 @@ export function ChatDock() {
                       }}
                       odeslat={(e) => odesli(e, true)}
                       sending={sending}
-                      placeholder="Odpovědět ve vlákně…"
+                      placeholder="Odpovědět…"
                       nabidka={zminkyPro === 'vlakno' ? nabidkaZminek : []}
                       vyber={doplnZminku}
                     />
-                  </>
-                ) : (
-                  <>
-                    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
-                      {messages.length === 0 && (
-                        <p className="text-sm font-body text-muted m-0">Zatím tu nikdo nic nenapsal.</p>
-                      )}
-                      {messages.map((m) => (
-                        <div key={m.id} className="flex items-start gap-2">
-                          <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={28} />
-                          <div className="min-w-0">
-                            <span className="text-[11px] font-heading text-muted">
-                              {m.mine ? 'Já' : m.authorLabel} · {formatMessageTime(m.createdAt)}
-                            </span>
-                            <p
-                              className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
-                                m.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
-                              }`}
-                            >
-                              <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
-                            </p>
-                            {m.mine && <Zobrazeno seenBy={m.seenBy} />}
-                            <button
-                              type="button"
-                              onClick={() => setVlaknoId(m.id)}
-                              className="mt-1 text-[11px] font-heading font-semibold text-brand-purple hover:underline"
-                            >
-                              {m.replyCount > 0
-                                ? `${m.replyCount} ${m.replyCount === 1 ? 'odpověď' : m.replyCount < 5 ? 'odpovědi' : 'odpovědí'} ›`
-                                : 'Odpovědět ve vlákně'}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      <div ref={konecRef} />
-                    </div>
-
-                    <Psatko
-                      hodnota={draft}
-                      zmena={(v) => {
-                        setDraft(v);
-                        sledujZminku(v, 'hlavni');
-                      }}
-                      odeslat={(e) => odesli(e, false)}
-                      sending={sending}
-                      placeholder="Napište zprávu… (@ zmíní kolegu)"
-                      nabidka={zminkyPro === 'hlavni' ? nabidkaZminek : []}
-                      vyber={doplnZminku}
-                    />
-                  </>
+                  </div>
                 )}
               </>
             )}
