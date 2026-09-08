@@ -113,6 +113,7 @@ model Company {
   invoices  Invoice[]
   expenses  Expense[]
   contracts Contract[]
+  recordingRequests RecordingRequest[]
 }
 
 model User {
@@ -168,6 +169,16 @@ model User {
   conversationsCreated Conversation[]       @relation("ConversationCreatedBy")
   conversationMembers  ConversationMember[]
   messages             Message[]
+
+  // Kalendare a natacecí frekvence (zadani 8. 9. 2026).
+  actorOnProjects    ProjectMeta[]      @relation("ProjectActor")
+  recordingRequests  RecordingRequest[] @relation("RecordingActor")
+  recordingsCreated  RecordingRequest[] @relation("RecordingCreatedBy")
+  recordingsDecided  RecordingRequest[] @relation("RecordingDecidedBy")
+  recordingEvents    RecordingEvent[]   @relation("RecordingEventUser")
+  studioBlocks       StudioBlock[]      @relation("StudioBlockCreatedBy")
+  notifications      Notification[]
+  calendarFeeds      CalendarFeed[]
 }
 
 model Order {
@@ -261,6 +272,12 @@ model ProjectMeta {
   priority        ProjectPriority?
   projectType     String?          // klic ciselniku - viz lib/projectTypes.ts (PROJECT_TYPES)
 
+  // Herec projektu (zadani 8. 9. 2026). V Caflou je herec jen text ve vlastnim
+  // sloupci - tady se jednou navaze na konkretni ucet a od te chvile se z toho
+  // da stavet (nabidky terminu, notifikace, jeho vlastni prehled).
+  actorUserId     String?
+  actor           User?            @relation("ProjectActor", fields: [actorUserId], references: [id])
+
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -328,6 +345,9 @@ model BudgetSettings {
   editingCoefficient Int      @default(120) // strih jako % z poctu frekvenci (120 = +20 %)
   bonusPerPage       Int      @default(4)   // bonus zvukari v Kc za normostranu
   hourlyRate         Int      @default(250) // sazba, ze ktere se pocita cena frekvence
+  // Jak dlouho se drzi terminy vybrane hercem, nez je produkce potvrdi
+  // (zadani 8. 9. 2026). Po vyprseni se uvolni zpatky do nabidky.
+  holdHours          Int      @default(72)
   updatedAt          DateTime @updatedAt
 }
 
@@ -901,4 +921,286 @@ model ContractSignature {
   documentHash String
 
   @@index([contractId])
+}
+
+
+// ===========================================================================
+// KALENDARE STUDII A NATACECI FREKVENCE (zadani 8. 9. 2026)
+//
+// Produkcni vytvori hercovi NABIDKU terminu, herec si z ni vybere presne
+// tolik, kolik je potreba frekvenci, a produkcni vyber potvrdi. Teprve tim
+// vznika pevna rezervace studia.
+//
+// Obsazenost studia drzi JEDNA tabulka - RecordingSlot ve stavu SELECTED
+// (drzeno do schvaleni) nebo CONFIRMED, plus StudioBlock. Zadna paralelni
+// evidence rezervaci, aby se dve kopie nemohly rozejit.
+//
+// Projekt zije v Caflou, takze se sem - stejne jako u ProjectMeta, vykazu,
+// dokladu a smluv - klicuje pres textove caflouProjectId.
+// ===========================================================================
+
+/// Kalendarovy zdroj. Dnes jedno studio = jeden kalendar; az budou mistnosti,
+/// bude mistnost studio s vyplnenym parentStudioId (relace nize).
+model Studio {
+  id             String  @id @default(cuid())
+  name           String  @unique
+  shortName      String
+  location       String?
+  /// Barva udalosti v kalendari.
+  color          String  @default("#7B55FF")
+  /// London ma jine pasmo nez Brno - proto u kazdeho studia zvlast.
+  timezone       String  @default("Europe/Prague")
+  sortOrder      Int     @default(0)
+  active         Boolean @default(true)
+
+  parentStudioId String?
+  parentStudio   Studio?  @relation("StudioRooms", fields: [parentStudioId], references: [id])
+  rooms          Studio[] @relation("StudioRooms")
+
+  hours    StudioHours[]
+  presets  StudioSlotPreset[]
+  blocks   StudioBlock[]
+  requests RecordingRequest[]
+  slots    RecordingSlot[]
+  feeds    CalendarFeed[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Pracovni doba studia po dnech v tydnu. Minuty od pulnoci, at se s tim da
+/// pocitat bez tahani casovych pasem do databaze.
+model StudioHours {
+  id            String  @id @default(cuid())
+  studioId      String
+  studio        Studio  @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  /// 0 = nedele, 1 = pondeli … 6 = sobota (stejne jako Date.getDay()).
+  weekday       Int
+  startMinutes  Int
+  endMinutes    Int
+  /// Vikend: natacet jde, ale jen po domluve se zvukarem - kalendar to jen
+  /// oznaci, neblokuje (zadani 8. 9. 2026).
+  byArrangement Boolean @default(false)
+
+  @@unique([studioId, weekday])
+}
+
+/// Nejcastejsi frekvence (9-13, 13-17) jako zkratka na jedno kliknuti.
+/// Neomezuje - produkcni si muze vytahnout libovolne okno, treba 8-12.
+model StudioSlotPreset {
+  id           String @id @default(cuid())
+  studioId     String
+  studio       Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  label        String
+  startMinutes Int
+  endMinutes   Int
+  sortOrder    Int    @default(0)
+}
+
+enum StudioBlockKind {
+  HOLIDAY     // statni svatek
+  VACATION    // dovolena
+  MAINTENANCE // udrzba, servis techniky
+  INTERNAL    // interni blokace
+  OTHER
+}
+
+/// Cas, kdy se ve studiu netoci. Do obsazenosti se pocita stejne jako
+/// potvrzena rezervace.
+model StudioBlock {
+  id       String          @id @default(cuid())
+  studioId String
+  studio   Studio          @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  start    DateTime
+  end      DateTime
+  kind     StudioBlockKind @default(INTERNAL)
+  title    String
+  note     String?
+
+  createdById String?
+  createdBy   User?   @relation("StudioBlockCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studioId, start, end])
+}
+
+enum RecordingStatus {
+  DRAFT     // koncept - zalozeno z projektove karty, jeste bez terminu
+  PREPARING // produkcni vybira okna v kalendari
+  SENT      // nabidka odeslana herci
+  PICKING   // herec odkaz otevrel a vybira
+  SUBMITTED // vyber odeslan ke schvaleni, terminy drzeny do holdUntil
+  RETURNED  // vraceno herci k prepracovani
+  REJECTED  // zamitnuto
+  CONFIRMED // potvrzeno - schvaleni a potvrzeni je jeden krok (zadani 8. 9. 2026)
+  CANCELLED // zruseno
+  COMPLETED // odtoceno
+}
+
+enum SlotState {
+  OFFERED   // nabidnuto herci
+  SELECTED  // herec vybral, drzi se do rozhodnuti produkce
+  CONFIRMED // pevna rezervace
+  RELEASED  // nevybrano, vraceno nebo vyprselo drzeni
+  CANCELLED // zruseno po potvrzeni
+}
+
+/// Nabidka terminu pro jednoho herce na jednom projektu. Kniha delena mezi
+/// vic hercu ma vic nabidek, kazdou se svym poctem normostran (zadani
+/// 8. 9. 2026).
+model RecordingRequest {
+  id              String @id @default(cuid())
+  caflouProjectId String
+  /// Otisk nazvu projektu, aby zaznam zustal citelny i bez Caflou.
+  projectName     String
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  actorUserId String?
+  actor       User?   @relation("RecordingActor", fields: [actorUserId], references: [id])
+  /// Otisk jmena a e-mailu - herec muze zmenit ucet, nabidka ma zustat citelna.
+  actorName   String
+  actorEmail  String
+
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id])
+
+  /// Normostrany pro TOHOTO herce. Predvyplni se z projektu, da se prepsat.
+  pageCount        Int?
+  /// Kolik terminu musi herec vybrat. Uklada se natvrdo - pozdejsi zmena
+  /// normostran v Caflou nesmi zpetne prepsat, na co se herec dival.
+  requiredSessions Int
+  sessionMinutes   Int @default(240)
+
+  periodFrom DateTime
+  periodTo   DateTime
+
+  note         String? // poznamka produkce pro herce
+  actorNote    String? // poznamka herce k vyberu
+  decisionNote String? // duvod vraceni nebo zamitnuti
+
+  status RecordingStatus @default(DRAFT)
+  /// Jednorazovy odkaz k vyberu - stejny princip jako u nabidek a smluv.
+  accessToken String @unique
+  /// Do kdy se drzi vybrane terminy (BudgetSettings.holdHours).
+  holdUntil   DateTime?
+
+  createdById String
+  createdBy   User   @relation("RecordingCreatedBy", fields: [createdById], references: [id])
+
+  sentAt      DateTime?
+  openedAt    DateTime?
+  submittedAt DateTime?
+  decidedAt   DateTime?
+  decidedById String?
+  decidedBy   User?     @relation("RecordingDecidedBy", fields: [decidedById], references: [id])
+  completedAt DateTime?
+
+  slots  RecordingSlot[]
+  events RecordingEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caflouProjectId])
+  @@index([status])
+  @@index([actorUserId])
+}
+
+/// Jedno casove okno. studioId je tu i pres request zamerne - dotaz na
+/// obsazenost studia se pak obejde bez joinu.
+model RecordingSlot {
+  id        String           @id @default(cuid())
+  requestId String
+  request   RecordingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id])
+
+  start DateTime
+  end   DateTime
+
+  state      SlotState @default(OFFERED)
+  selectedAt DateTime?
+  note       String?
+
+  events RecordingEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studioId, start, end])
+  @@index([requestId, state])
+}
+
+/// Historie: kdo co kdy udelal. Herec bez uctu ma userId null a jmeno
+/// v actorLabel.
+model RecordingEvent {
+  id        String           @id @default(cuid())
+  requestId String
+  request   RecordingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  slotId String?
+  slot   RecordingSlot? @relation(fields: [slotId], references: [id], onDelete: SetNull)
+
+  userId     String?
+  user       User?   @relation("RecordingEventUser", fields: [userId], references: [id])
+  actorLabel String
+
+  type       String
+  fromStatus String?
+  toStatus   String?
+  note       String?
+  /// Puvodni a novy cas u presunu, seznam terminu u vyberu apod.
+  payload    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([requestId, createdAt])
+}
+
+/// Notifikace v portalu. Zamerne obecna - pouzitelna i pro doklady a smlouvy,
+/// a pozdeji pro push do mobilu (pribude jen odesilaci kanal, ne novy model).
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind  String
+  title String
+  body  String?
+  url   String?
+
+  readAt    DateTime?
+  emailedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+enum FeedScope {
+  MINE   // jen moje terminy
+  STUDIO // cely kalendar jednoho studia
+  ALL    // vsechna studia
+}
+
+/// Osobni ICS odkaz. Nahodny, odvolatelny, filtruje se podle prav vlastnika -
+/// nikdy nesmi pustit k cizim projektum.
+model CalendarFeed {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token String @unique
+  scope FeedScope @default(MINE)
+
+  studioId String?
+  studio   Studio? @relation(fields: [studioId], references: [id])
+
+  revokedAt  DateTime?
+  lastReadAt DateTime?
+  createdAt  DateTime  @default(now())
 }

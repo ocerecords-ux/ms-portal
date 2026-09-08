@@ -103,11 +103,71 @@ async function main() {
     });
   }
 
+  await seedStudios();
+
   await backfillCodes();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
   console.log('  ocerecords@gmail.com / zmente-toto-heslo');
+}
+
+/**
+ * Studia jako kalendarove zdroje (zadani 8. 9. 2026). Drive to byly ctyri
+ * texty v src/lib/roles.ts (HEREC_STUDIOS) - ted je to tabulka, ze ktere se
+ * ten seznam odvozuje.
+ *
+ * Pracovni doba: po-pa 8:00-20:00 napevno, vikendy taky 8:00-20:00, ale
+ * s priznakem byArrangement - natacet o vikendu jde jen po domluve se
+ * zvukarem, takze to kalendar oznaci a neblokuje.
+ *
+ * Presety: nejcastejsi frekvence jsou 9-13 a 13-17. Je to jen zkratka na
+ * jedno kliknuti, libovolne okno (treba 8-12) jde vytahnout dal.
+ *
+ * Idempotentni - bezi po kazdem nasazeni, existujici studia nechava byt.
+ */
+const STUDIA: { name: string; shortName: string; location: string; color: string; timezone: string }[] = [
+  { name: 'MS Studio - Brno I', shortName: 'Brno I', location: 'Brno', color: '#7B55FF', timezone: 'Europe/Prague' },
+  { name: 'MS Studio - Brno II', shortName: 'Brno II', location: 'Brno', color: '#1FDF67', timezone: 'Europe/Prague' },
+  { name: 'MS Studio - Praha', shortName: 'Praha', location: 'Praha', color: '#F2A03D', timezone: 'Europe/Prague' },
+  { name: 'MS Studio - London', shortName: 'London', location: 'London', color: '#4FC3F7', timezone: 'Europe/London' },
+];
+
+const PRESETY = [
+  { label: 'Dopolední', startMinutes: 9 * 60, endMinutes: 13 * 60, sortOrder: 10 },
+  { label: 'Odpolední', startMinutes: 13 * 60, endMinutes: 17 * 60, sortOrder: 20 },
+];
+
+async function seedStudios() {
+  for (const [index, studio] of STUDIA.entries()) {
+    const zaznam = await prisma.studio.upsert({
+      where: { name: studio.name },
+      update: {},
+      create: { ...studio, sortOrder: (index + 1) * 10 },
+    });
+
+    const maHodiny = await prisma.studioHours.count({ where: { studioId: zaznam.id } });
+    if (maHodiny === 0) {
+      await prisma.studioHours.createMany({
+        data: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
+          studioId: zaznam.id,
+          weekday,
+          startMinutes: 8 * 60,
+          endMinutes: 20 * 60,
+          // 0 = nedele, 6 = sobota
+          byArrangement: weekday === 0 || weekday === 6,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    const maPresety = await prisma.studioSlotPreset.count({ where: { studioId: zaznam.id } });
+    if (maPresety === 0) {
+      await prisma.studioSlotPreset.createMany({
+        data: PRESETY.map((p) => ({ ...p, studioId: zaznam.id })),
+      });
+    }
+  }
 }
 
 /**
