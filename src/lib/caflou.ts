@@ -144,8 +144,13 @@ export type DisplayProject = {
 
 function toIntOrNull(v: unknown): number | null {
   if (v === null || v === undefined || v === '') return null;
-  const n = typeof v === 'number' ? v : parseInt(String(v), 10);
-  return Number.isFinite(n) ? n : null;
+  if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v) : null;
+  // Vlastni sloupce v Caflou jsou textove - hodnota tam byva zapsana i jako
+  // "281 NS", "cca 195" nebo "195,5", proto z ni bereme prvni cislo.
+  const match = /-?\d+(?:[.,]\d+)?/.exec(String(v));
+  if (!match) return null;
+  const n = Number(match[0].replace(',', '.'));
+  return Number.isFinite(n) ? Math.round(n) : null;
 }
 
 /**
@@ -230,13 +235,15 @@ export function mapOneCaflouProject(p: any): DisplayProject {
     statusName,
     priority: toPriority(p.project_priority_name ?? p.priority ?? p.custom_column_priorita),
     narrator: p.custom_column_herec || null,
-    // Overeno na zivo 5. 9. 2026: vlastni sloupec s normostranami se v uctu
-    // jmenuje "custom_column_pocet_ns1" (drive jsme hadali
-    // "custom_column_pocet_normostran", proto byl sloupec vzdy prazdny).
-    // Sloupce se navic objevi jen u projektu, ktere je maji vyplnene.
+    // Normostrany: nazev vlastniho sloupce se v uctu lisi projekt od projektu
+    // ("custom_column_pocet_ns1"), takze se hleda podle casti nazvu napric
+    // vsemi vlastnimi sloupci - jinak nekde chybely, i kdyz v Caflou byly
+    // (zprava uzivatele 8. 9. 2026). Hodnota muze prijit i jako text
+    // ("281 NS"), proto se z ni bere prvni cislo.
     pageCount:
       toIntOrNull(p.custom_column_pocet_ns1) ??
       toIntOrNull(p.custom_column_pocet_normostran) ??
+      toIntOrNull(customColumnValue(p, 'pocetnormostran', 'normostran', 'pocetns', 'pocetstran')) ??
       toIntOrNull(String(p.custom_column_pocet_ns1_decorated ?? '').trim()),
     // finished_at je okamzik, kdy nekdo projekt v Caflou uzavrel, a casto
     // chybi. Jako "Datum dokonceni" se v portalu ukazuje endDate ("Konec"

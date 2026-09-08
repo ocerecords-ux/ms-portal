@@ -157,13 +157,14 @@ export type InternalProjectMeta = {
 
 export type InternalProject = AdminDisplayProject & {
   meta: InternalProjectMeta | null;
-  /**
-   * Normostrany maji smysl jen u firem, pro ktere delame audioknihy (zadani
-   * 5. 9. 2026) - u reklamnich klientu se cena pocita jinak (pripravovana
-   * kalkulacka nad Cenikem), takze se tam sloupec necha prazdny.
-   */
-  showPageCount: boolean;
 };
+
+// Normostrany se drive ukazovaly jen u firem oznacenych jako "delame pro ne
+// audioknihy" (zadani 5. 9. 2026). Kvuli tomu chybely u projektu firem, ktere
+// tenhle priznak nemely nebo v portalu jeste nejsou zalozene, i kdyz v Caflou
+// normostrany byly (zprava uzivatele 8. 9. 2026). Ted plati jednoduse: co je
+// v Caflou, to portal ukaze - u reklamnich klientu tam zadne cislo neni, takze
+// sloupec zustane prazdny sam od sebe.
 
 /** Sloupce, podle kterych jde v prehledu radit (zadani 5. 9. 2026). */
 export type ProjectSortKey =
@@ -186,7 +187,7 @@ export function compareProjects(a: InternalProject, b: InternalProject, sort: Pr
   const dir = sort.dir === 'asc' ? 1 : -1;
 
   const numeric = (p: InternalProject): number | null => {
-    if (sort.key === 'pageCount') return p.showPageCount ? p.pageCount : null;
+    if (sort.key === 'pageCount') return p.pageCount;
     // "Datum dokonceni" je Konec z Caflou; finished_at je jen zaloha.
     if (sort.key === 'endDate') return p.endDate?.getTime() ?? p.finishedAt?.getTime() ?? null;
     if (sort.key === 'releaseDate') return p.releaseDate?.getTime() ?? null;
@@ -401,7 +402,7 @@ export function InternalProjectsTable({
                   {p.meta?.managerName ?? '—'}
                 </td>
                 <td className="px-3 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
-                  {p.showPageCount ? (p.pageCount ?? '—') : '—'}
+                  {p.pageCount ?? '—'}
                 </td>
                 <td className="px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.endDate)}
