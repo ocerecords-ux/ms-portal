@@ -111,6 +111,7 @@ model Company {
   projects Project[]
   offers   Offer[]
   invoices Invoice[]
+  expenses Expense[]
 }
 
 model User {
@@ -407,6 +408,7 @@ model IssuerCompany {
   bankAccounts BankAccount[]
   offers       Offer[]
   invoices     Invoice[]
+  expenses     Expense[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -560,4 +562,69 @@ model InvoiceItem {
   sortOrder      Int     @default(0)
 
   @@index([invoiceId])
+}
+
+
+// ===========================================================================
+// VYDAJE (zadani 6. 9. 2026) - prijate doklady od dodavatelu, vcetne smluv s
+// herci a drobnych dokladu.
+// ===========================================================================
+
+// Kategorie vydaju. Zamerne ciselnik v databazi, ne pevny vycet - uzivatel si
+// potrebuje pridavat dalsi podle skutecnych dokladu (zadani 8. 9. 2026:
+// "u vydaju bych chtel mit moznost pridavat dodatecne kategorie").
+model ExpenseCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  sortOrder Int       @default(0)
+  active    Boolean   @default(true) // vyrazena se uz nenabizi u novych dokladu
+  expenses  Expense[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Expense {
+  id     String  @id @default(cuid())
+  number String? // cislo dokladu od dodavatele
+
+  // Dodavatel: bud firma ze sekce Firmy, nebo jen jmeno u drobneho dokladu
+  // (benzin, parkovne) - proto obojí a nic z toho povinne.
+  supplierCompanyId String?
+  supplier          Company? @relation(fields: [supplierCompanyId], references: [id])
+  supplierName      String?
+
+  categoryId String?
+  category   ExpenseCategory? @relation(fields: [categoryId], references: [id])
+
+  // Za kterou nasi firmu vydaj jde.
+  issuerCompanyId String?
+  issuer          IssuerCompany? @relation(fields: [issuerCompanyId], references: [id])
+
+  currency         Currency  @default(CZK)
+  exchangeRate     Float     @default(1) // kurz CNB ke dni dokladu
+  exchangeRateDate DateTime?
+
+  description String?
+  // Castka se zadava BEZ DPH; sazba 0 znamena bez DPH (herci nejsou vzdy
+  // platci a sazby nejsou vzdy 21 %).
+  amountExVatMinor Int @default(0)
+  vatRate          Int @default(21)
+
+  issueDate DateTime  @default(now())
+  dueDate   DateTime?
+  paid      Boolean   @default(false)
+  paidAt    DateTime?
+
+  // Priloha - PDF nebo foto uctenky.
+  attachmentUrl  String?
+  attachmentName String?
+
+  note String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([paid])
+  @@index([categoryId])
 }

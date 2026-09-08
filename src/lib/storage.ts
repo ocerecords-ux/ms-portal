@@ -101,3 +101,52 @@ export async function uploadUserPhoto(file: File): Promise<string | null> {
   const mime = file.type && file.type.startsWith('image/') ? file.type : 'image/jpeg';
   return `data:${mime};base64,${buffer.toString('base64')}`;
 }
+
+
+/** Priloha vydaje - PDF nebo foto uctenky. */
+const MAX_INLINE_ATTACHMENT_BYTES = 1_500 * 1024;
+
+/**
+ * Ulozi prilohu prijateho dokladu (zadani 6. 9. 2026 - "prilohy: PDF, foto").
+ *
+ * Stejny princip jako u fotky uzivatele: kdyz je nastavene S3, jde tam;
+ * jinak se priloha ulozi rovnou do databaze jako data URL. Obrazky prohlizec
+ * pred odeslanim zmensi, PDF prochazi tak, jak je - nad 1,5 MB uz ale
+ * odmitneme a rekneme proc, at se do databaze necpe nekolikamegovy sken.
+ */
+export async function uploadExpenseAttachment(
+  file: File,
+): Promise<{ url: string; name: string } | { error: string } | null> {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+
+  if (client && bucket) {
+    try {
+      const key = `vydaje/${randomUUID()}-${file.name}`;
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: file.type || 'application/octet-stream',
+        }),
+      );
+      const endpoint = process.env.S3_ENDPOINT;
+      const url = endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
+      return { url, name: file.name };
+    } catch (err) {
+      console.error('uploadExpenseAttachment: S3 selhalo, ukladam do databaze:', err);
+    }
+  }
+
+  if (buffer.byteLength > MAX_INLINE_ATTACHMENT_BYTES) {
+    return {
+      error:
+        'Příloha je moc velká (přes 1,5 MB). Zmenšete ji prosím, nebo naskenujte v nižší kvalitě — zatím nemáme nastavené úložiště souborů.',
+    };
+  }
+
+  const mime = file.type || 'application/octet-stream';
+  return { url: `data:${mime};base64,${buffer.toString('base64')}`, name: file.name };
+}

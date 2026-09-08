@@ -1,11 +1,237 @@
-// Vydaje (prijate doklady) - viz claude/ms-portal-doklady-a-rozpocty.md.
-export default function ExpensesPage() {
+import Link from 'next/link';
+import { prisma } from '@/lib/db';
+import { formatMoney } from '@/lib/doklady';
+import { ensureExpenseCategories, expenseTotalMinor } from '@/lib/expenses';
+import { NewExpenseForm } from './NewExpenseForm';
+import { CategoryManager } from './CategoryManager';
+
+// Prijate doklady (zadani 6. 9. 2026). Zalozky Uhrazeno / Neuhrazeno stejne
+// jako Aktivni / Dokoncene u projektu, nahore soucty.
+export const dynamic = 'force-dynamic';
+
+const TABS = [
+  { key: 'neuhrazene', label: 'Neuhrazené', paid: false },
+  { key: 'uhrazene', label: 'Uhrazené', paid: true },
+  { key: 'vse', label: 'Vše', paid: null },
+] as const;
+
+function formatDate(date: Date | null): string {
+  return date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '—';
+}
+
+export default async function ExpensesPage({
+  searchParams,
+}: {
+  searchParams: { tab?: string; kategorie?: string };
+}) {
+  await ensureExpenseCategories();
+
+  const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[0];
+  const categoryFilter = searchParams?.kategorie || '';
+
+  const [expenses, categories, companies, issuers, counts] = await Promise.all([
+    prisma.expense.findMany({
+      where: {
+        ...(activeTab.paid === null ? {} : { paid: activeTab.paid }),
+        ...(categoryFilter ? { categoryId: categoryFilter } : {}),
+      },
+      orderBy: [{ issueDate: 'desc' }, { createdAt: 'desc' }],
+      take: 300,
+      include: { category: true, supplier: { select: { name: true } } },
+    }),
+    prisma.expenseCategory.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: { _count: { select: { expenses: true } } },
+    }),
+    prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    prisma.issuerCompany.findMany({
+      where: { active: true },
+      orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+      select: { id: true, name: true, isDefault: true, defaultCurrency: true },
+    }),
+    prisma.expense.groupBy({ by: ['paid'], _count: true }),
+  ]);
+
+  const countFor = (paid: boolean | null) =>
+    paid === null
+      ? counts.reduce((sum, c) => sum + c._count, 0)
+      : (counts.find((c) => c.paid === paid)?._count ?? 0);
+
+  // Soucty za to, co je zrovna videt - po menach, at se nescitaji jablka s hruskami.
+  const totals = new Map<string, { exVat: number; incVat: number }>();
+  for (const e of expenses) {
+    const current = totals.get(e.currency) ?? { exVat: 0, incVat: 0 };
+    current.exVat += e.amountExVatMinor;
+    current.incVat += expenseTotalMinor(e.amountExVatMinor, e.vatRate);
+    totals.set(e.currency, current);
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   return (
-    <div className="bg-white rounded-card border border-line shadow-sm px-6 py-10 text-center">
-      <p className="font-heading font-semibold text-ink m-0">Výdaje se dodělávají</p>
-      <p className="text-sm text-muted font-body m-0 mt-1 max-w-lg mx-auto">
-        Přijaté doklady s přílohami, záložkami Uhrazeno / Neuhrazeno a DPH nastavitelným u každého dokladu zvlášť.
-      </p>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-1 flex-wrap">
+          {TABS.map((tab) => {
+            const active = tab.key === activeTab.key;
+            const href = `/admin/doklady/vydaje?tab=${tab.key}${categoryFilter ? `&kategorie=${categoryFilter}` : ''}`;
+            return (
+              <Link
+                key={tab.key}
+                href={href}
+                className={`px-4 py-2 text-sm font-heading font-semibold rounded-pill no-underline transition-colors ${
+                  active ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
+                }`}
+              >
+                {tab.label} <span className="tabular-nums opacity-80">({countFor(tab.paid)})</span>
+              </Link>
+            );
+          })}
+        </div>
+        <NewExpenseForm
+          categories={categories.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name }))}
+          companies={companies}
+          issuers={issuers.map((i) => ({ id: i.id, name: i.name, isDefault: i.isDefault, currency: i.defaultCurrency }))}
+        />
+      </div>
+
+      {/* Soucty za aktualni vyber */}
+      {totals.size > 0 && (
+        <div className="bg-white rounded-card border border-line shadow-sm px-5 py-4 flex items-center gap-8 flex-wrap">
+          <span className="text-xs font-heading text-muted uppercase tracking-wide">
+            {activeTab.label} celkem ({expenses.length})
+          </span>
+          {Array.from(totals.entries()).map(([currency, sum]) => (
+            <span key={currency} className="flex items-baseline gap-3">
+              <span className="font-display text-xl text-ink tabular-nums">
+                {formatMoney(sum.incVat, currency as never)}
+              </span>
+              <span className="text-xs font-body text-muted tabular-nums">
+                bez DPH {formatMoney(sum.exVat, currency as never)}
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Filtr podle kategorie */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Link
+          href={`/admin/doklady/vydaje?tab=${activeTab.key}`}
+          className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill no-underline transition-colors ${
+            !categoryFilter ? 'bg-ink text-white' : 'bg-white border border-line text-muted hover:text-ink'
+          }`}
+        >
+          Všechny kategorie
+        </Link>
+        {categories
+          .filter((c) => c.active || c._count.expenses > 0)
+          .map((c) => (
+            <Link
+              key={c.id}
+              href={`/admin/doklady/vydaje?tab=${activeTab.key}&kategorie=${c.id}`}
+              className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill no-underline transition-colors ${
+                categoryFilter === c.id ? 'bg-ink text-white' : 'bg-white border border-line text-muted hover:text-ink'
+              }`}
+            >
+              {c.name} <span className="tabular-nums opacity-70">({c._count.expenses})</span>
+            </Link>
+          ))}
+      </div>
+
+      <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] border-collapse">
+            <thead>
+              <tr className="bg-ink text-white font-heading text-xs">
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum</th>
+                <th className="text-left px-4 py-3.5">Dodavatel</th>
+                <th className="text-left px-4 py-3.5">Popis</th>
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">Kategorie</th>
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">Splatnost</th>
+                <th className="text-right px-4 py-3.5 whitespace-nowrap">Bez DPH</th>
+                <th className="text-right px-4 py-3.5 whitespace-nowrap">Celkem</th>
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted text-sm font-body">
+                    Tady zatím nic není.
+                  </td>
+                </tr>
+              )}
+              {expenses.map((e) => {
+                const overdue = !e.paid && e.dueDate && new Date(e.dueDate) < today;
+                return (
+                  <tr key={e.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                      <Link
+                        href={`/admin/doklady/vydaje/${e.id}`}
+                        className="text-ink hover:text-brand-purple no-underline"
+                      >
+                        {formatDate(e.issueDate)}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-heading text-ink">
+                      {e.supplier?.name || e.supplierName || '—'}
+                      {e.number && <span className="block text-xs text-muted font-body">č. {e.number}</span>}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-body text-muted">
+                      {e.description || '—'}
+                      {e.attachmentUrl && (
+                        <span className="ml-2 text-[10px] font-heading font-bold text-brand-purpleDeep bg-line rounded px-1.5 py-0.5">
+                          PŘÍLOHA
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-heading text-muted whitespace-nowrap">
+                      {e.category?.name || '—'}
+                    </td>
+                    <td
+                      className={`px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap ${
+                        overdue ? 'text-red-600 font-semibold' : 'text-muted'
+                      }`}
+                    >
+                      {formatDate(e.dueDate)}
+                      {overdue && <span className="block text-[11px] font-body">po splatnosti</span>}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
+                      {formatMoney(e.amountExVatMinor, e.currency)}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-heading text-ink tabular-nums text-right whitespace-nowrap">
+                      {formatMoney(expenseTotalMinor(e.amountExVatMinor, e.vatRate), e.currency)}
+                      <span className="block text-[11px] font-body text-muted">
+                        {e.vatRate === 0 ? 'bez DPH' : `DPH ${e.vatRate} %`}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
+                          e.paid ? 'bg-[#E3F9EC] text-status-done' : 'bg-[#F1ECFF] text-brand-purpleDark'
+                        }`}
+                      >
+                        {e.paid ? 'Uhrazeno' : 'Neuhrazeno'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <CategoryManager
+        categories={categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          active: c.active,
+          usedBy: c._count.expenses,
+        }))}
+      />
     </div>
   );
 }
