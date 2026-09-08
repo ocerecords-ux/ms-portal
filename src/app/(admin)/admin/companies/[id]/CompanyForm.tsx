@@ -107,10 +107,14 @@ export function CompanyForm({ company }: { company: Company }) {
       }
       setSaved(true);
       setAresNote(null);
+      // Po ulozeni zpet na seznam firem (zadani 8. 9. 2026: "když uložím
+      // firmu, tak se uloží a vrátí na seznam firem") - rovnou na záložku,
+      // ze ktere firma je. Tlacitko zamerne zustava neaktivni, dokud
+      // prechod neprobehne, aby nesly odeslat dva pozadavky za sebou.
+      router.push(`/admin?tab=${company.type === 'KLIENT' ? 'klienti' : 'dodavatele'}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Uložení se nezdařilo.');
-    } finally {
       setSaving(false);
     }
   }

@@ -15,6 +15,11 @@ function getClient() {
   });
 }
 
+/** Je uloziste souboru vubec nastavene? Pouziva i /api/health pro diagnostiku. */
+export function isStorageConfigured(): boolean {
+  return Boolean(process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY && process.env.S3_BUCKET);
+}
+
 /**
  * Ulozi prilohu objednavky do S3/R2 pod nahodnym klicem (aby se nedaly
  * uhodnout/prochazet cizi soubory) a vrati verejnou URL. Pokud uloziste
@@ -44,41 +49,55 @@ export async function uploadOrderAttachment(file: File, companyId: string): Prom
   return { url, name: file.name };
 }
 
+/** Fotka ulozena primo v databazi nesmi nafouknout radek uzivatele. */
+const MAX_INLINE_PHOTO_BYTES = 700 * 1024;
+
 /**
- * Ulozi fotku uzivatele (sekce Mediaspace v adminu, zadani 5. 9. 2026) -
- * stejny princip jako uploadOrderAttachment: pokud uloziste jeste neni
- * nakonfigurovane, nahravani se jen tise preskoci a ucet se ulozi bez fotky.
+ * Ulozi fotku uzivatele (sekce Mediaspace v adminu, zadani 5. 9. 2026).
  *
  * Oprava 12. 9. 2026: samotne odeslani do S3/R2 (PutObjectCommand) drive
  * mohlo pri jakemkoli problemu (spatne credentials, sit, prava k bucketu)
  * shodit celou API routu nezachycenou vyjimkou - zalozeni uctu pak selhalo
- * s obecnou hlaskou "Účet se nepodařilo založit.", i kdyz s fotkou samotnou
- * nemelo zadani nic spolecneho. Nahravani fotky uz proto nikdy nesmi shodit
- * zalozeni/upravu uctu - pri chybe se jen preskoci (fotku pak jde doplnit
- * pozdeji editaci) a chyba se zaloguje na server, aby sla dohledat.
+ * s obecnou hlaskou "Účet se nepodařilo založit.".
+ *
+ * Oprava 8. 9. 2026 ("v detailu uživatele se nezobrazuje fotka, i když ji tam
+ * mám"): kdyz uloziste S3 neni nastavene (coz je zatim na produkci pripad)
+ * nebo nahravani selze, fotka se drive TISE zahodila - uzivatel ji nahral,
+ * ulozeni proslo a fotka nikde. Nove se v takovem pripade ulozi rovnou do
+ * databaze jako data URL. Prohlizec ji pred odeslanim zmensi na 400 px
+ * (viz PhotoDropzone), takze jde o desitky kB - pro portretovou fotku
+ * naprosto dostacujici a bez zavislosti na externim ulozisti.
  */
 export async function uploadUserPhoto(file: File): Promise<string | null> {
+  const buffer = Buffer.from(await file.arrayBuffer());
   const client = getClient();
   const bucket = process.env.S3_BUCKET;
-  if (!client || !bucket) return null;
 
-  try {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const key = `uzivatele/${randomUUID()}-${file.name}`;
+  if (client && bucket) {
+    try {
+      const key = `uzivatele/${randomUUID()}-${file.name}`;
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: file.type || 'application/octet-stream',
+        }),
+      );
+      const endpoint = process.env.S3_ENDPOINT;
+      return endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
+    } catch (err) {
+      console.error('uploadUserPhoto: S3 selhalo, ukladam fotku do databaze:', err);
+    }
+  }
 
-    await client.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        Body: buffer,
-        ContentType: file.type || 'application/octet-stream',
-      }),
+  // Zaloha bez S3 - fotka rovnou v databazi.
+  if (buffer.byteLength > MAX_INLINE_PHOTO_BYTES) {
+    console.error(
+      `uploadUserPhoto: fotka je bez nastaveneho uloziste moc velka (${buffer.byteLength} B), preskakuji.`,
     );
-
-    const endpoint = process.env.S3_ENDPOINT;
-    return endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
-  } catch (err) {
-    console.error('uploadUserPhoto selhalo, pokracuji bez fotky:', err);
     return null;
   }
+  const mime = file.type && file.type.startsWith('image/') ? file.type : 'image/jpeg';
+  return `data:${mime};base64,${buffer.toString('base64')}`;
 }

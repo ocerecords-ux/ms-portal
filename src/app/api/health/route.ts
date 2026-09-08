@@ -16,6 +16,11 @@ export async function GET() {
     GOOGLE_DISK_nastaveno: Boolean(
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
     ),
+    // Uloziste fotek/priloh. Kdyz neni nastavene, fotka uzivatele se od
+    // 8. 9. 2026 uklada rovnou do databaze (viz lib/storage.ts).
+    ULOZISTE_S3_nastaveno: Boolean(
+      process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY && process.env.S3_BUCKET,
+    ),
     ADMIN_EMAIL: process.env.ADMIN_EMAIL || null,
     ADMIN_INITIAL_PASSWORD_nastaveno: Boolean(process.env.ADMIN_INITIAL_PASSWORD),
   };
