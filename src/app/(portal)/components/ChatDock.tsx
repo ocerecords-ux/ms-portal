@@ -137,6 +137,17 @@ function Psatko({
   vyber: (clovek: ChatTeamMember) => void;
 }) {
   const [smajlici, setSmajlici] = useState(false);
+  const poleRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Pole roste s textem misto rolovani ve dvou radcich (zprava uzivatele
+  // 8. 9. 2026: "okno, do ktereho pisu zpravy, je docela male"). Strop je
+  // 160 px, aby delsi zprava nesnedla cely chat.
+  useEffect(() => {
+    const pole = poleRef.current;
+    if (!pole) return;
+    pole.style.height = 'auto';
+    pole.style.height = `${Math.min(pole.scrollHeight, 160)}px`;
+  }, [hodnota]);
 
   return (
     <form onSubmit={odeslat} className="relative border-t border-line p-3 flex items-end gap-2">
@@ -185,6 +196,7 @@ function Psatko({
         </svg>
       </button>
       <textarea
+        ref={poleRef}
         value={hodnota}
         onChange={(e) => zmena(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
         onKeyDown={(e) => {
@@ -193,9 +205,9 @@ function Psatko({
             odeslat(e as unknown as React.FormEvent);
           }
         }}
-        rows={2}
+        rows={3}
         placeholder={placeholder}
-        className="flex-1 resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
+        className="flex-1 min-h-[72px] max-h-[160px] resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
       />
       <button
         type="submit"
@@ -518,7 +530,7 @@ export function ChatDock() {
           samotny chat. Na uzkem okne se leva cast schova a zustane jen to,
           co je zrovna otevrene. */}
       <div
-        className={`max-w-[92vw] h-[50vh] bg-white border border-r-0 border-line shadow-xl flex flex-col overflow-hidden transition-[width] ${
+        className={`max-w-[92vw] h-[56vh] bg-white border border-r-0 border-line shadow-xl flex flex-col overflow-hidden transition-[width] ${
           vlaknoId ? 'w-[900px]' : 'w-[620px]'
         }`}
       >

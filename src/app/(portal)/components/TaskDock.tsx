@@ -188,7 +188,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         <Chevron direction="right" />
       </button>
 
-      <div className="w-[320px] max-w-[86vw] max-h-[30vh] overflow-y-auto bg-white border border-r-0 border-line shadow-xl flex flex-col">
+      <div className="w-[320px] max-w-[86vw] max-h-[24vh] overflow-y-auto bg-white border border-r-0 border-line shadow-xl flex flex-col">
       {/* Fialova hlavicka se zelenym napisem - stejne jako horni lista a jako
           MS chat (zadani 8. 9. 2026). Drzi se nahore i pri rolovani seznamu. */}
       <div className="sticky top-0 z-10 bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
