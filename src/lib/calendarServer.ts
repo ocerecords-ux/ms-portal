@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { DEFAULT_BUDGET_SETTINGS } from '@/lib/budget';
 import {
@@ -269,8 +270,12 @@ export type EventInput = {
   fromStatus?: string | null;
   toStatus?: string | null;
   note?: string | null;
-  /** Doplnkova data (puvodni a novy cas u presunu apod.). */
-  payload?: Record<string, unknown>;
+  /**
+   * Doplnkova data (puvodni a novy cas u presunu apod.). Typ musi byt
+   * Prisma.InputJsonValue - obycejny Record<string, unknown> Prisma do Json
+   * sloupce nepusti, protoze `unknown` neni platna JSON hodnota.
+   */
+  payload?: Prisma.InputJsonValue;
 };
 
 /**
@@ -290,7 +295,7 @@ export function eventData(input: EventInput) {
     note: input.note ?? null,
     // Pole typu Json se v Prisme nesmi nastavit na null jako ostatni sloupce -
     // bud se posle hodnota, nebo se klic vynecha uplne. Proto tenhle spread.
-    ...(input.payload ? { payload: input.payload } : {}),
+    ...(input.payload !== undefined ? { payload: input.payload } : {}),
   };
 }
 
