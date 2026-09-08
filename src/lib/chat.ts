@@ -23,6 +23,8 @@ export type ChatMessage = {
   /** Fotka autora - u uctu bez fotky null a vykresli se iniciály. */
   authorPhotoUrl: string | null;
   mine: boolean;
+  /** Kolik odpovedi visi ve vlakne pod touhle zpravou. */
+  replyCount: number;
 };
 
 export type ChatTeamMember = { id: string; label: string; photoUrl: string | null };
@@ -41,6 +43,40 @@ export type ChatConversation = {
   /** Fotka do seznamu - u soukrome zpravy fotka druheho cloveka. */
   avatarUrl: string | null;
 };
+
+/**
+ * Rozdeli text zpravy na kousky a oznaci zminky (@Jméno). Zminka se pozna
+ * podle toho, ze za @ nasleduje jmeno nekoho z tymu - jmena mivaji mezeru,
+ * takze samotny regulární výraz by nestačil (@Jan by ve "@Jan Novák"
+ * skoncil u mezery). Delsi jmena se zkousi drive, at "@Jan Novák" nevyhraje
+ * kratsi "@Jan".
+ */
+export function splitMentions(body: string, names: string[]): { text: string; mention: boolean }[] {
+  const serazena = [...names].filter(Boolean).sort((a, b) => b.length - a.length);
+  const out: { text: string; mention: boolean }[] = [];
+  let buffer = '';
+  let i = 0;
+
+  while (i < body.length) {
+    if (body[i] === '@') {
+      const zbytek = body.slice(i + 1);
+      const jmeno = serazena.find((n) => zbytek.toLowerCase().startsWith(n.toLowerCase()));
+      if (jmeno) {
+        if (buffer) {
+          out.push({ text: buffer, mention: false });
+          buffer = '';
+        }
+        out.push({ text: `@${body.substr(i + 1, jmeno.length)}`, mention: true });
+        i += 1 + jmeno.length;
+        continue;
+      }
+    }
+    buffer += body[i];
+    i += 1;
+  }
+  if (buffer) out.push({ text: buffer, mention: false });
+  return out;
+}
 
 /** Iniciály pro kolečko, když u účtu není fotka. */
 export function initials(label: string): string {

@@ -16,6 +16,8 @@ const schema = z.object({
     .trim()
     .min(1, 'Zpráva je prázdná.')
     .max(MAX_MESSAGE_LENGTH, 'Zpráva je moc dlouhá.'),
+  /** Odpoved ve vlakne - ID zpravy, pod kterou ma viset. */
+  parentId: z.string().trim().min(1).optional(),
 });
 
 /**
@@ -46,11 +48,19 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const conversation = await nactiPristupnou(params.id, me);
     if (!conversation) return NextResponse.json({ error: 'Konverzace nenalezena.' }, { status: 404 });
 
+    // ?vlakno=<id> vrati zpravu a odpovedi pod ni; jinak hlavni proud, tedy
+    // jen zpravy bez rodice (zadani 8. 9. 2026: odpovedi ve vlakne).
+    const vlakno = req.nextUrl.searchParams.get('vlakno');
     const zpravy = await prisma.message.findMany({
-      where: { conversationId: conversation.id },
+      where: vlakno
+        ? { conversationId: conversation.id, OR: [{ id: vlakno }, { parentId: vlakno }] }
+        : { conversationId: conversation.id, parentId: null },
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { user: { select: { id: true, name: true, email: true, photoUrl: true } } },
+      include: {
+        user: { select: { id: true, name: true, email: true, photoUrl: true } },
+        _count: { select: { replies: true } },
+      },
     });
 
     // Otevrel jsem si ji, takze je precteno. U kanalu k projektu tim zaroven
@@ -70,6 +80,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         authorLabel: userLabel(m.user),
         authorPhotoUrl: m.user.photoUrl,
         mine: m.userId === me,
+        replyCount: m._count.replies,
       })),
     });
   } catch (err) {
@@ -94,8 +105,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
 
+    // Odpovidat jde jen na zpravu z teze konverzace, a nikdy na odpoved -
+    // vlakna zustavaji jednourovnova, stejne jako u Slacku.
+    let parentId: string | null = null;
+    if (parsed.data.parentId) {
+      const parent = await prisma.message.findFirst({
+        where: { id: parsed.data.parentId, conversationId: conversation.id, parentId: null },
+        select: { id: true },
+      });
+      if (!parent) return NextResponse.json({ error: 'Vlákno se nenašlo.' }, { status: 400 });
+      parentId = parent.id;
+    }
+
     const message = await prisma.message.create({
-      data: { conversationId: conversation.id, userId: me, body: parsed.data.body },
+      data: { conversationId: conversation.id, userId: me, body: parsed.data.body, parentId },
       include: { user: { select: { id: true, name: true, email: true, photoUrl: true } } },
     });
 
@@ -120,6 +143,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         authorLabel: userLabel(message.user),
         authorPhotoUrl: message.user.photoUrl,
         mine: true,
+        replyCount: 0,
       },
       { status: 201 },
     );

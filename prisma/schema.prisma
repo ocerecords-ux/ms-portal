@@ -457,7 +457,15 @@ model Message {
   body           String
   createdAt      DateTime     @default(now())
 
+  // Odpovedi ve vlakne (zadani 8. 9. 2026: "odpovedi ve vlakne, jak je u
+  // Slacku"). Odpoved ukazuje na zpravu, pod kterou visi; v hlavnim proudu
+  // kanalu se zobrazuji jen zpravy bez rodice.
+  parentId       String?
+  parent         Message?     @relation("MessageThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        Message[]    @relation("MessageThread")
+
   @@index([conversationId, createdAt])
+  @@index([parentId])
 }
 
 // Ukoly (to-do) na profilu clena tymu Mediaspace - zadani 5. 9. 2026

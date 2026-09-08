@@ -140,27 +140,28 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         onClick={toggle}
         title="Zobrazit úkoly"
         aria-label="Zobrazit úkoly"
-        className="fixed right-0 top-28 z-40 flex flex-col items-center gap-3 bg-white border border-r-0 border-line rounded-l-card shadow-lg px-2.5 py-3 text-muted hover:text-brand-purple transition-colors"
+        className="fixed right-0 top-28 z-40 flex flex-col items-center gap-2 bg-brand-purple hover:bg-brand-purpleDeep rounded-l-card shadow-lg px-2.5 py-3 text-brand-green transition-colors"
       >
-        <span className="text-brand-purple">
-          <Chevron direction="left" />
-        </span>
-        <span className="relative text-brand-purpleDark">
+        <Chevron direction="left" />
+        <span className="relative">
           <ChecklistIcon />
           {open.length > 0 && (
-            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-purple text-white text-[10px] font-heading font-bold leading-4 text-center">
+            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-4 text-center">
               {open.length}
             </span>
           )}
         </span>
         {overdue.length > 0 && (
-          <span className="relative text-red-600" title={`${overdue.length} po termínu`}>
+          <span className="relative text-white" title={`${overdue.length} po termínu`}>
             <ClockIcon />
             <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-heading font-bold leading-4 text-center">
               {overdue.length}
             </span>
           </span>
         )}
+        <span className="text-[10px] font-heading font-bold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
+          Úkoly
+        </span>
       </button>
     );
   }

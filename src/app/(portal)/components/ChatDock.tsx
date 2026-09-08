@@ -7,6 +7,7 @@ import {
   MAX_MESSAGE_LENGTH,
   formatMessageTime,
   initials,
+  splitMentions,
   type ChatConversation,
   type ChatMessage,
   type ChatTeamMember,
@@ -38,16 +39,26 @@ function ChatIcon() {
   );
 }
 
-/** Kolecko s fotkou, a kdyz fotka neni, s iniciálami. */
+/**
+ * Kolecko s fotkou, a kdyz fotka neni (nebo se nenacte), s inicialami.
+ *
+ * onError je tu naschval: v uctu muze zustat stara adresa do S3, ktere uz
+ * nikdo neodpovi (uloziste na Vercelu nastavene neni a fotky se od te doby
+ * ukladaji primo do databaze jako data: URL). Bez teto pojistky by na miste
+ * fotky zustalo prazdne kolecko - takhle se aspon ukazou iniciály.
+ */
 function Avatar({ label, photoUrl, size = 28 }: { label: string; photoUrl: string | null; size?: number }) {
-  if (photoUrl) {
+  const [selhalo, setSelhalo] = useState(false);
+
+  if (photoUrl && !selhalo) {
     // eslint-disable-next-line @next/next/no-img-element
     return (
       <img
         src={photoUrl}
         alt=""
+        onError={() => setSelhalo(true)}
         style={{ width: size, height: size }}
-        className="rounded-full object-cover shrink-0 border border-line"
+        className="rounded-full object-cover shrink-0 border border-line bg-field"
       />
     );
   }
@@ -59,6 +70,90 @@ function Avatar({ label, photoUrl, size = 28 }: { label: string; photoUrl: strin
     >
       {initials(label)}
     </span>
+  );
+}
+
+/** Text zpravy se zvyraznenymi zminkami (@Jméno). */
+function Telo({ body, jmena, mine }: { body: string; jmena: string[]; mine: boolean }) {
+  return (
+    <>
+      {splitMentions(body, jmena).map((cast, index) =>
+        cast.mention ? (
+          <strong
+            key={index}
+            className={`font-heading font-semibold rounded px-0.5 ${
+              mine ? 'bg-white/25 text-white' : 'bg-brand-purple/15 text-brand-purpleDark'
+            }`}
+          >
+            {cast.text}
+          </strong>
+        ) : (
+          <span key={index}>{cast.text}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+/**
+ * Psaci pole s nabidkou zminek. Enter odesila, Shift+Enter dela novy radek.
+ * Nabidka se ukaze jen kdyz je rozepsana zminka - vybere se kliknutim.
+ */
+function Psatko({
+  hodnota,
+  zmena,
+  odeslat,
+  sending,
+  placeholder,
+  nabidka,
+  vyber,
+}: {
+  hodnota: string;
+  zmena: (v: string) => void;
+  odeslat: (e: React.FormEvent) => void;
+  sending: boolean;
+  placeholder: string;
+  nabidka: ChatTeamMember[];
+  vyber: (clovek: ChatTeamMember) => void;
+}) {
+  return (
+    <form onSubmit={odeslat} className="relative border-t border-line p-3 flex items-end gap-2">
+      {nabidka.length > 0 && (
+        <div className="absolute left-3 right-3 bottom-full mb-1 max-h-40 overflow-y-auto bg-white border border-line rounded-lg shadow-lg py-1 z-10">
+          {nabidka.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              onClick={() => vyber(u)}
+              className="w-full text-left px-3 py-1.5 text-sm font-body text-ink hover:bg-field flex items-center gap-2"
+            >
+              <Avatar label={u.label} photoUrl={u.photoUrl} size={22} />
+              <span className="truncate">{u.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <textarea
+        value={hodnota}
+        onChange={(e) => zmena(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            odeslat(e as unknown as React.FormEvent);
+          }
+        }}
+        rows={2}
+        placeholder={placeholder}
+        className="flex-1 resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
+      />
+      <button
+        type="submit"
+        disabled={sending || !hodnota.trim()}
+        className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-50"
+      >
+        Poslat
+      </button>
+    </form>
   );
 }
 
@@ -78,6 +173,13 @@ export function ChatDock() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
+  // Otevrene vlakno (zadani 8. 9. 2026) - ID zpravy, pod kterou se odpovida.
+  const [vlaknoId, setVlaknoId] = useState<string | null>(null);
+  const [vlakno, setVlakno] = useState<ChatMessage[]>([]);
+  const [vlaknoDraft, setVlaknoDraft] = useState('');
+  // Naseptavac zminek: kdyz se v rozepsanem textu objevi "@", nabidne lidi.
+  const [zminkyPro, setZminkyPro] = useState<'hlavni' | 'vlakno' | null>(null);
+  const [zminkaHledani, setZminkaHledani] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,6 +224,19 @@ export function ChatDock() {
     }
   }, []);
 
+  const nactiVlakno = useCallback(async (conversationId: string, messageId: string) => {
+    try {
+      const res: Response = await fetch(
+        `/api/chat/konverzace/${conversationId}/zpravy?vlakno=${encodeURIComponent(messageId)}`,
+      );
+      if (!res.ok) return;
+      const data: any = await res.json().catch(() => ({}));
+      setVlakno(Array.isArray(data?.zpravy) ? data.zpravy : []);
+    } catch {
+      // nevadi, zkusi se znovu
+    }
+  }, []);
+
   const nactiZpravy = useCallback(async (conversationId: string) => {
     try {
       const res: Response = await fetch(`/api/chat/konverzace/${conversationId}/zpravy`);
@@ -140,14 +255,21 @@ export function ChatDock() {
     const timer = setInterval(() => {
       void nactiKonverzace();
       if (openId) void nactiZpravy(openId);
+      if (openId && vlaknoId) void nactiVlakno(openId, vlaknoId);
     }, REFRESH_MS);
     return () => clearInterval(timer);
-  }, [nactiKonverzace, nactiZpravy, openId]);
+  }, [nactiKonverzace, nactiZpravy, nactiVlakno, openId, vlaknoId]);
 
   useEffect(() => {
     if (openId) void nactiZpravy(openId);
     else setMessages([]);
+    setVlaknoId(null);
   }, [openId, nactiZpravy]);
+
+  useEffect(() => {
+    if (openId && vlaknoId) void nactiVlakno(openId, vlaknoId);
+    else setVlakno([]);
+  }, [openId, vlaknoId, nactiVlakno]);
 
   // Kanaly se nabizeji rovnou podle aktivnich projektu (zprava uzivatele
   // 8. 9. 2026: "kanaly by se mely vytvorit z existujicich aktivnich
@@ -230,25 +352,33 @@ export function ChatDock() {
     }
   }
 
-  async function odesli(e: React.FormEvent) {
+  async function odesli(e: React.FormEvent, doVlakna = false) {
     e.preventDefault();
-    const text = draft.trim();
+    const text = (doVlakna ? vlaknoDraft : draft).trim();
     if (!openId || !text || sending) return;
+    if (doVlakna && !vlaknoId) return;
     setSending(true);
     setError(null);
     try {
       const res: Response = await fetch(`/api/chat/konverzace/${openId}/zpravy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: text }),
+        body: JSON.stringify(doVlakna ? { body: text, parentId: vlaknoId } : { body: text }),
       });
       const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || 'Zprávu se nepodařilo odeslat.');
         return;
       }
-      setDraft('');
-      setMessages((current) => [...current, data as ChatMessage]);
+      if (doVlakna) {
+        setVlaknoDraft('');
+        setVlakno((current) => [...current, data as ChatMessage]);
+        void nactiZpravy(openId);
+      } else {
+        setDraft('');
+        setMessages((current) => [...current, data as ChatMessage]);
+      }
+      setZminkyPro(null);
       void nactiKonverzace();
     } catch {
       setError('Zprávu se nepodařilo odeslat.');
@@ -256,6 +386,34 @@ export function ChatDock() {
       setSending(false);
     }
   }
+
+  /**
+   * Hlida rozepsany text a kdyz konci rozepsanou zminkou (@ a za nim zatim
+   * zadna mezera), otevre nabidku lidi. Vybrany clovek se do textu doplni
+   * i s mezerou, at se da rovnou psat dal.
+   */
+  function sledujZminku(text: string, kde: 'hlavni' | 'vlakno') {
+    // Zminka se pozna jen na zacatku slova a jen dokud za @ neni mezera -
+    // jinak by nabidka vyskakovala i uprostred bezne vety a v e-mailovych
+    // adresach. Cele jmeno vc. prijmeni doplni az vyber ze seznamu.
+    const match = /(?:^|\s)@([\p{L}]{0,20})$/u.exec(text);
+    if (match) {
+      setZminkyPro(kde);
+      setZminkaHledani(match[1].toLowerCase());
+    } else {
+      setZminkyPro(null);
+    }
+  }
+
+  function doplnZminku(clovek: ChatTeamMember) {
+    const uprav = (text: string) => text.replace(/@[\p{L}]{0,20}$/u, `@${clovek.label} `);
+    if (zminkyPro === 'vlakno') setVlaknoDraft((t) => uprav(t));
+    else setDraft((t) => uprav(t));
+    setZminkyPro(null);
+  }
+
+  const jmenaTymu = team.map((u) => u.label);
+  const nabidkaZminek = team.filter((u) => u.label.toLowerCase().includes(zminkaHledani));
 
   // --- Zabaleno: jen ikonka na hrane obrazovky ---------------------------
   if (!expanded) {
@@ -265,18 +423,19 @@ export function ChatDock() {
         onClick={toggle}
         title="Zobrazit MS chat"
         aria-label="Zobrazit MS chat"
-        className="fixed right-0 bottom-6 z-40 flex flex-col items-center gap-3 bg-white border border-r-0 border-line rounded-l-card shadow-lg px-2.5 py-3 text-muted hover:text-brand-purple transition-colors"
+        className="fixed right-0 bottom-6 z-40 flex flex-col items-center gap-2 bg-brand-purple hover:bg-brand-purpleDeep rounded-l-card shadow-lg px-2.5 py-3 text-brand-green transition-colors"
       >
-        <span className="text-brand-purple">
-          <Chevron direction="left" />
-        </span>
-        <span className="relative text-brand-purpleDark">
+        <Chevron direction="left" />
+        <span className="relative">
           <ChatIcon />
           {neprectene > 0 && (
             <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-4 text-center">
               {neprectene}
             </span>
           )}
+        </span>
+        <span className="text-[10px] font-heading font-bold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
+          MS chat
         </span>
       </button>
     );
@@ -513,53 +672,105 @@ export function ChatDock() {
                   )}
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
-                  {messages.length === 0 && (
-                    <p className="text-sm font-body text-muted m-0">Zatím tu nikdo nic nenapsal.</p>
-                  )}
-                  {messages.map((m) => (
-                    <div key={m.id} className="flex items-start gap-2">
-                      <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={28} />
-                      <div className="min-w-0">
-                        <span className="text-[11px] font-heading text-muted">
-                          {m.mine ? 'Já' : m.authorLabel} · {formatMessageTime(m.createdAt)}
-                        </span>
-                        <p
-                          className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
-                            m.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
-                          }`}
-                        >
-                          {m.body}
-                        </p>
-                      </div>
+                {vlaknoId ? (
+                  /* --- Vlakno: pod puvodni zpravou visi odpovedi ---------- */
+                  <>
+                    <div className="px-4 py-2 border-b border-line flex items-center gap-2 bg-field">
+                      <button
+                        type="button"
+                        onClick={() => setVlaknoId(null)}
+                        className="text-xs font-heading font-semibold text-brand-purple hover:underline flex items-center gap-1"
+                      >
+                        <Chevron direction="left" /> Zpět do konverzace
+                      </button>
+                      <span className="text-xs font-heading text-muted">Vlákno</span>
                     </div>
-                  ))}
-                  <div ref={konecRef} />
-                </div>
 
-                <form onSubmit={odesli} className="border-t border-line p-3 flex items-end gap-2">
-                  <textarea
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
-                    onKeyDown={(e) => {
-                      // Enter odesle, Shift+Enter je novy radek - jak je zvykem.
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        void odesli(e as unknown as React.FormEvent);
-                      }
-                    }}
-                    rows={2}
-                    placeholder="Napište zprávu…"
-                    className="flex-1 resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
-                  />
-                  <button
-                    type="submit"
-                    disabled={sending || !draft.trim()}
-                    className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-50"
-                  >
-                    Poslat
-                  </button>
-                </form>
+                    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
+                      {vlakno.map((m, index) => (
+                        <div key={m.id} className={`flex items-start gap-2 ${index === 0 ? '' : 'pl-4'}`}>
+                          <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={index === 0 ? 28 : 24} />
+                          <div className="min-w-0">
+                            <span className="text-[11px] font-heading text-muted">
+                              {m.mine ? 'Já' : m.authorLabel} · {formatMessageTime(m.createdAt)}
+                            </span>
+                            <p
+                              className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
+                                m.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
+                              }`}
+                            >
+                              <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {vlakno.length <= 1 && (
+                        <p className="text-sm font-body text-muted m-0 pl-4">Zatím bez odpovědí.</p>
+                      )}
+                    </div>
+
+                    <Psatko
+                      hodnota={vlaknoDraft}
+                      zmena={(v) => {
+                        setVlaknoDraft(v);
+                        sledujZminku(v, 'vlakno');
+                      }}
+                      odeslat={(e) => odesli(e, true)}
+                      sending={sending}
+                      placeholder="Odpovědět ve vlákně…"
+                      nabidka={zminkyPro === 'vlakno' ? nabidkaZminek : []}
+                      vyber={doplnZminku}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
+                      {messages.length === 0 && (
+                        <p className="text-sm font-body text-muted m-0">Zatím tu nikdo nic nenapsal.</p>
+                      )}
+                      {messages.map((m) => (
+                        <div key={m.id} className="flex items-start gap-2">
+                          <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={28} />
+                          <div className="min-w-0">
+                            <span className="text-[11px] font-heading text-muted">
+                              {m.mine ? 'Já' : m.authorLabel} · {formatMessageTime(m.createdAt)}
+                            </span>
+                            <p
+                              className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
+                                m.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
+                              }`}
+                            >
+                              <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setVlaknoId(m.id)}
+                              className="mt-1 text-[11px] font-heading font-semibold text-brand-purple hover:underline"
+                            >
+                              {m.replyCount > 0
+                                ? `${m.replyCount} ${m.replyCount === 1 ? 'odpověď' : m.replyCount < 5 ? 'odpovědi' : 'odpovědí'} ›`
+                                : 'Odpovědět ve vlákně'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={konecRef} />
+                    </div>
+
+                    <Psatko
+                      hodnota={draft}
+                      zmena={(v) => {
+                        setDraft(v);
+                        sledujZminku(v, 'hlavni');
+                      }}
+                      odeslat={(e) => odesli(e, false)}
+                      sending={sending}
+                      placeholder="Napište zprávu… (@ zmíní kolegu)"
+                      nabidka={zminkyPro === 'hlavni' ? nabidkaZminek : []}
+                      vyber={doplnZminku}
+                    />
+                  </>
+                )}
               </>
             )}
           </div>
