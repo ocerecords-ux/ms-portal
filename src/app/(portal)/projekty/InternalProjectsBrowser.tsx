@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   InternalProjectsTable,
   compareProjects,
@@ -9,6 +10,7 @@ import {
   type ProjectSortKey,
 } from './shared';
 import { projectTypeLabel } from '@/lib/projectTypes';
+import { PROJECTS_TABLE_KEY, type ColumnLabels } from '@/lib/columnLabels';
 
 // Zadani 5. 9. 2026: "Na stránce bude max. padesát aktivních projektů. Nahoře
 // budou dvě záložky, kde se bude přepínat mezi projekty Aktivní a Dokončené.
@@ -40,15 +42,74 @@ export function InternalProjectsBrowser({
   active,
   finished,
   finishedNote,
+  labels,
+  canEditLabels,
 }: {
   active: InternalProject[];
   finished: InternalProject[];
   /** Vysvetleni pro zalozku Dokoncene, kdyz se dokoncene projekty netahaji. */
   finishedNote?: string;
+  /** Nazvy sloupcu - vychozi prepsane tim, co je ulozene. */
+  labels: ColumnLabels;
+  /** Prejmenovat sloupce smi jen Zuzo-labuzo. */
+  canEditLabels?: boolean;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>('active');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
+  // Uprava nazvu sloupcu primo v tabulce - tri tecky, stejne jako u listy
+  // (zadani 8. 9. 2026).
+  const [editing, setEditing] = useState(false);
+  const [draftLabels, setDraftLabels] = useState<ColumnLabels>(labels);
+  const [saving, setSaving] = useState(false);
+  const [labelError, setLabelError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editing) setDraftLabels(labels);
+  }, [labels, editing]);
+
+  async function saveLabels() {
+    setSaving(true);
+    setLabelError(null);
+    try {
+      const res = await fetch('/api/admin/column-labels', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tableKey: PROJECTS_TABLE_KEY, labels: draftLabels }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setLabelError(data?.error || 'Uložení se nezdařilo.');
+        return;
+      }
+      setEditing(false);
+      router.refresh();
+    } catch {
+      setLabelError('Uložení se nezdařilo.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function resetLabels() {
+    setSaving(true);
+    setLabelError(null);
+    try {
+      const res = await fetch(`/api/admin/column-labels?tableKey=${PROJECTS_TABLE_KEY}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setLabelError(data?.error || 'Obnovení se nezdařilo.');
+        return;
+      }
+      setEditing(false);
+      router.refresh();
+    } catch {
+      setLabelError('Obnovení se nezdařilo.');
+    } finally {
+      setSaving(false);
+    }
+  }
   // Razeni klikem na nadpis sloupce (zadani 5. 9. 2026). Vychozi je stejne
   // jako driv - podle terminu, resp. data dokonceni.
   const [sort, setSort] = useState<ProjectSort>({ key: 'finishedAt', dir: 'desc' });
@@ -103,35 +164,100 @@ export function InternalProjectsBrowser({
           })}
         </div>
 
-        <div className="relative mb-2">
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Hledat projekt, firmu, manažera…"
-            className="w-72 max-w-full rounded-lg border border-line bg-white pl-9 pr-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
-          />
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-3.5-3.5" />
-          </svg>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="relative">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Hledat projekt, firmu, manažera…"
+              className="w-72 max-w-full rounded-lg border border-line bg-white pl-9 pr-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+            />
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
+          </div>
+
+          {/* Tři tečky - přejmenování sloupců. Vidí je jen Žůžo-labůžo. */}
+          {canEditLabels && !editing && (
+            <button
+              type="button"
+              onClick={() => {
+                setDraftLabels(labels);
+                setEditing(true);
+                setLabelError(null);
+              }}
+              title="Přejmenovat sloupce"
+              aria-label="Přejmenovat sloupce"
+              className="w-7 h-7 shrink-0 rounded-full text-muted hover:text-brand-purple hover:bg-field flex flex-col items-center justify-center gap-[3px]"
+            >
+              <span className="w-[3px] h-[3px] rounded-full bg-current" />
+              <span className="w-[3px] h-[3px] rounded-full bg-current" />
+              <span className="w-[3px] h-[3px] rounded-full bg-current" />
+            </button>
+          )}
+
+          {editing && (
+            <span className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={saveLabels}
+                disabled={saving}
+                className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+              >
+                {saving ? 'Ukládám…' : 'Hotovo'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDraftLabels(labels);
+                  setEditing(false);
+                  setLabelError(null);
+                }}
+                className="text-muted hover:text-ink text-xs font-heading"
+              >
+                Zrušit
+              </button>
+              <button
+                type="button"
+                onClick={resetLabels}
+                disabled={saving}
+                className="text-muted hover:text-ink text-xs font-heading disabled:opacity-60"
+              >
+                Obnovit výchozí
+              </button>
+            </span>
+          )}
         </div>
       </div>
+
+      {editing && (
+        <p className="text-xs font-body text-muted m-0">
+          Přepište názvy sloupců přímo v hlavičce tabulky. Změna platí pro všechny.
+        </p>
+      )}
+      {labelError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{labelError}</p>
+      )}
 
       <InternalProjectsTable
         sort={sort}
         onSort={handleSort}
         projects={visible}
+        labels={editing ? draftLabels : labels}
+        editing={editing}
+        onLabelChange={(key, label) => setDraftLabels((current) => ({ ...current, [key]: label }))}
         emptyText={
           query
             ? 'Hledání nic nenašlo.'

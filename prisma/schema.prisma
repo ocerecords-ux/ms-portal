@@ -628,3 +628,21 @@ model Expense {
   @@index([paid])
   @@index([categoryId])
 }
+
+
+// Vlastni nazvy sloupcu v tabulkach (zadani 8. 9. 2026: "dej tam ty tri tecky
+// jako v menu na upravu tech nazvu sloupcu"). Ulozene je jen to, co si
+// uzivatel prejmenoval - zbytek se bere z vychozich nazvu v kodu
+// (src/lib/columnLabels.ts), takze pribyvajici sloupce fungujou samy.
+model ColumnLabel {
+  id        String @id @default(cuid())
+  tableKey  String // ktera tabulka, napr. "projekty-interni"
+  columnKey String // ktery sloupec, napr. "managerName"
+  label     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tableKey, columnKey])
+  @@index([tableKey])
+}

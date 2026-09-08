@@ -11,6 +11,8 @@ import { isInternalRole } from '@/lib/roles';
 import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
+import { loadColumnLabels } from '@/lib/columnLabelsServer';
+import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 
 // DULEZITE: tato stranka tahá projekty ZIVE z Caflou při každém zobrazení -
 // nesmí ji Next.js pri buildu "zamrazit" jako statickou stránku (to by
@@ -26,7 +28,7 @@ export default async function ProjektyPage() {
   // projekty" hlasky jim tu ukazeme prehled VSECH projektu z Caflou napric
   // firmami, rozdeleny na aktivni a dokoncene (zadani 5. 9. 2026).
   if (isInternalRole(session!.user.role)) {
-    return <InternalProjektySection />;
+    return <InternalProjektySection isAdmin={session!.user.role === 'ADMIN'} />;
   }
 
   // Klic tenant izolace: companyId bereme VYHRADNE ze session, nikdy z query/parametru.
@@ -91,7 +93,7 @@ export default async function ProjektyPage() {
   );
 }
 
-async function InternalProjektySection() {
+async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
   // Nazvy firem si drzime u sebe (Caflou u projektu vraci hlavne ID firmy) -
   // slouzi jen k doplneni sloupce "Firma", samotne projekty uz tahame z
   // Caflou jednim dotazem za cely ucet (viz listAllCaflouProjectsForInternal).
@@ -136,6 +138,9 @@ async function InternalProjektySection() {
     showPageCount: p.caflouCompanyId ? audiobookCompanies.has(p.caflouCompanyId) : false,
   }));
 
+  // Nazvy sloupcu - vychozi prepsane tim, co si Zuzo-labuzo prejmenovalo.
+  const columnLabels = await loadColumnLabels(PROJECTS_TABLE_KEY);
+
   const active = withMeta
     .filter((p) => !p.finished)
     .sort((a, b) => (a.endDate?.getTime() ?? Infinity) - (b.endDate?.getTime() ?? Infinity));
@@ -158,7 +163,12 @@ async function InternalProjektySection() {
         )}
       </div>
 
-      <InternalProjectsBrowser active={active} finished={finished} />
+      <InternalProjectsBrowser
+        active={active}
+        finished={finished}
+        labels={columnLabels}
+        canEditLabels={isAdmin}
+      />
     </section>
   );
 }

@@ -250,21 +250,45 @@ function SortArrow({ dir }: { dir: 'asc' | 'desc' }) {
   );
 }
 
-/** Hlavicka sloupce, na kterou jde kliknout a seradit podle ni. */
+/**
+ * Hlavicka sloupce, na kterou jde kliknout a seradit podle ni. V rezimu uprav
+ * (tri tecky nad tabulkou, zadani 8. 9. 2026) se z ni stane pole, ve kterem
+ * jde nazev sloupce prepsat.
+ */
 function SortableHeader({
   label,
   sortKey,
   sort,
   onSort,
   align = 'left',
+  editing,
+  onLabelChange,
 }: {
   label: string;
   sortKey: ProjectSortKey;
   sort: ProjectSort;
   onSort: (key: ProjectSortKey) => void;
   align?: 'left' | 'right';
+  editing?: boolean;
+  onLabelChange?: (key: ProjectSortKey, label: string) => void;
 }) {
   const active = sort.key === sortKey;
+
+  if (editing) {
+    return (
+      <th className="px-2 py-2.5 whitespace-nowrap">
+        <input
+          value={label}
+          onChange={(e) => onLabelChange?.(sortKey, e.target.value)}
+          aria-label={`Název sloupce ${label}`}
+          className={`w-full min-w-[90px] rounded-lg border border-dashed border-white/60 bg-white/10 px-2 py-1 font-heading text-xs text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 ${
+            align === 'right' ? 'text-right' : ''
+          }`}
+        />
+      </th>
+    );
+  }
+
   return (
     <th className={`px-4 py-3.5 whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}>
       <button
@@ -287,26 +311,45 @@ export function InternalProjectsTable({
   emptyText,
   sort,
   onSort,
+  labels,
+  editing,
+  onLabelChange,
 }: {
   projects: InternalProject[];
   emptyText: string;
   sort: ProjectSort;
   onSort: (key: ProjectSortKey) => void;
+  /** Názvy sloupců - výchozí přepsané tím, co si Žůžo-labůžo nastavilo. */
+  labels: Record<string, string>;
+  editing?: boolean;
+  onLabelChange?: (key: ProjectSortKey, label: string) => void;
 }) {
+  const head = (key: ProjectSortKey, align?: 'left' | 'right') => (
+    <SortableHeader
+      label={labels[key] ?? key}
+      sortKey={key}
+      sort={sort}
+      onSort={onSort}
+      align={align}
+      editing={editing}
+      onLabelChange={onLabelChange}
+    />
+  );
+
   return (
     <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[980px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
-              <SortableHeader label="Název projektu" sortKey="name" sort={sort} onSort={onSort} />
-              <SortableHeader label="Firma" sortKey="companyName" sort={sort} onSort={onSort} />
-              <SortableHeader label="Stav" sortKey="statusName" sort={sort} onSort={onSort} />
-              <SortableHeader label="Priorita" sortKey="priority" sort={sort} onSort={onSort} />
-              <SortableHeader label="Typ projektu" sortKey="projectType" sort={sort} onSort={onSort} />
-              <SortableHeader label="Manažer" sortKey="managerName" sort={sort} onSort={onSort} />
-              <SortableHeader label="Normostrany" sortKey="pageCount" sort={sort} onSort={onSort} align="right" />
-              <SortableHeader label="Dokončeno" sortKey="finishedAt" sort={sort} onSort={onSort} />
+              {head('name')}
+              {head('companyName')}
+              {head('statusName')}
+              {head('priority')}
+              {head('projectType')}
+              {head('managerName')}
+              {head('pageCount', 'right')}
+              {head('finishedAt')}
             </tr>
           </thead>
           <tbody>
