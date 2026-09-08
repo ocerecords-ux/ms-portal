@@ -86,7 +86,8 @@ export default async function NewInvoiceFromOfferPage({
         items: offer.items.map((i) => ({
           description: i.description,
           quantity: i.quantity,
-          unit: i.unit,
+          // OfferItem.unit muze byt v databazi null, editor ceka retezec.
+          unit: i.unit ?? '',
           unitPriceMinor: i.unitPriceMinor,
           vatRate: i.vatRate,
         })),
