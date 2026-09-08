@@ -34,7 +34,7 @@ export function StatusPill({ finished, statusName }: { finished: boolean; status
 export function ProjectsTable({ projects, emptyText }: { projects: DisplayProject[]; emptyText: string }) {
   return (
     <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
         <table className="w-full min-w-[720px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
@@ -95,7 +95,7 @@ export function AdminProjectsTable({
 }) {
   return (
     <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
         <table className="w-full min-w-[720px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
@@ -302,7 +302,7 @@ function SortableHeader({
   }
 
   return (
-    <th className={`px-4 py-3.5 whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}>
+    <th className={`px-3 py-3.5 whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}>
       <button
         type="button"
         onClick={() => onSort(sortKey)}
@@ -350,8 +350,12 @@ export function InternalProjectsTable({
 
   return (
     <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1080px] border-collapse">
+      {/* Sloupcu je hodne a na uzsim okne se tabulka nevejde. Posouvani do
+          stran je proto videt: macOS lista se sama schovava, tak si ji tu
+          vykreslujeme natrvalo (zadani 8. 9. 2026: "nesmi se stavat, ze se to
+          vpravo usekne"). */}
+      <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
+        <table className="w-full min-w-[900px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
               {head('name')}
@@ -375,34 +379,34 @@ export function InternalProjectsTable({
             )}
             {projects.map((p) => (
               <tr key={p.id} className="border-t border-line hover:bg-[#FAF8FF]">
-                <td className="px-4 py-4 font-heading font-semibold text-sm">
+                <td className="px-3 py-3.5 font-heading font-semibold text-sm">
                   <Link href={`/projekty/${p.id}`} className="text-ink hover:text-brand-purple no-underline">
                     {p.name}
                   </Link>
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted">{p.companyName}</td>
+                <td className="px-3 py-3.5 text-sm font-heading text-muted">{p.companyName}</td>
                 <td className="px-4 py-4">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
                 </td>
-                <td className="px-4 py-4 text-sm font-heading">
+                <td className="px-3 py-3.5 text-sm font-heading">
                   {/* Priorita se cerpa z Caflou (zadani 5. 9. 2026); rucne
                       nastavena hodnota v portalu slouzi uz jen jako zaloha,
                       kdyz ji Caflou nevraci. */}
                   <PriorityPill priority={p.priority ?? p.meta?.priority ?? null} />
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted">
+                <td className="px-3 py-3.5 text-sm font-heading text-muted">
                   {projectTypeLabel(p.meta?.projectType) ?? '—'}
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted whitespace-nowrap">
+                <td className="px-3 py-3.5 text-sm font-heading text-muted">
                   {p.meta?.managerName ?? '—'}
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
+                <td className="px-3 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
                   {p.showPageCount ? (p.pageCount ?? '—') : '—'}
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                <td className="px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.endDate)}
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                <td className="px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
                 </td>
               </tr>

@@ -32,7 +32,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* Od 5. 9. 2026 stejne siroky obsah jako v klientske casti portalu
           (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.
           telefonni cislo se lamalo na dva radky. */}
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
+      {/* Vpravo je připnutý panel Úkolů - obsahu tam necháme místo. */}
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12 pr-16 sm:pr-20">{children}</div>
       {/* Úkoly po ruce i v administraci - stejný panel jako ve zbytku portálu. */}
       <TaskDock tasks={tasks} />
     </div>

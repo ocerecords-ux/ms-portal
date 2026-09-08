@@ -467,7 +467,7 @@ export function TimesheetEditor({
       )}
 
       <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
           <table className="w-full min-w-[840px] border-collapse">
             <thead>
               <tr className="bg-brand-purple text-white font-heading text-xs">

@@ -35,7 +35,14 @@ export default async function PortalLayout({ children }: { children: React.React
         items={visibleFor(entries, role)}
         pageOptions={pageOptionsFor(role)}
       />
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
+      {/* Panel Úkolů je připnutý na pravé hraně okna, takže obsahu vpravo
+          uvolníme místo - jinak se přes něj tabulky "usekávaly"
+          (zadani 8. 9. 2026). */}
+      <div
+        className={`max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12 ${internal ? 'pr-16 sm:pr-20' : ''}`}
+      >
+        {children}
+      </div>
       {/* Úkoly po ruce na každé stránce - vysouvací panel na pravé hraně
           (zadani 8. 9. 2026). Jen pro tým Mediaspace. */}
       {internal && <TaskDock tasks={tasks} />}
