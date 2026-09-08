@@ -105,6 +105,22 @@ export function canViewProjectDocuments(role: Role): boolean {
   return role === 'ADMIN';
 }
 
+/**
+ * Kalendare studii a natacecí frekvence (zadani 8. 9. 2026). Nabidky terminu
+ * sestavuje a rezervace potvrzuje Produkce a Zuzo-labuzo; zvukar kalendar jen
+ * vidi. Herec ma vlastni, uzsi pohled - viz stranka /moje-terminy.
+ *
+ * Zamerne to NENI v /admin: Helca je role PRODUKCE a tu middleware do
+ * administrace nepousti.
+ */
+export function canManageCalendar(role: Role): boolean {
+  return role === 'ADMIN' || role === 'PRODUKCE';
+}
+
+export function canViewCalendar(role: Role): boolean {
+  return role === 'ADMIN' || role === 'PRODUKCE' || role === 'ZVUKAR';
+}
+
 /** Kdo smi interni atributy projektu videt (vcetne zvukaru - jen ke cteni). */
 export function canViewProjectMeta(role: Role): boolean {
   return isInternalRole(role);
