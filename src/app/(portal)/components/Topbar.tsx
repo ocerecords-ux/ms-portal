@@ -31,8 +31,10 @@ export function Topbar({
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [mode, setMode] = useState<null | 'edit' | 'move'>(null);
+  // Jeden rezim uprav, ne dva (zadani 8. 9. 2026: "je blbost upravovat na
+  // dvakrát. Stačí kliknout na tři tečky a můžeš upravit i přesunout") -
+  // v nem jde zaroven odebirat, pridavat i pretahovat poradi.
+  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<MenuEntry[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -41,20 +43,19 @@ export function Topbar({
 
   // Kdyz server posle novy seznam, prepiseme rozdelanou praci jen mimo rezim uprav.
   useEffect(() => {
-    if (!mode) setDraft(allItems ?? []);
-  }, [allItems, mode]);
+    if (!editing) setDraft(allItems ?? []);
+  }, [allItems, editing]);
 
-  function startMode(next: 'edit' | 'move') {
+  function startEditing() {
     setDraft(allItems ?? []);
-    setMode(next);
-    setMenuOpen(false);
+    setEditing(true);
     setAddOpen(false);
     setError(null);
   }
 
   function cancel() {
     setDraft(allItems ?? []);
-    setMode(null);
+    setEditing(false);
     setAddOpen(false);
     setError(null);
   }
@@ -100,7 +101,7 @@ export function Topbar({
         setError(data?.error || 'Uložení se nezdařilo.');
         return;
       }
-      setMode(null);
+      setEditing(false);
       router.refresh();
     } catch {
       setError('Uložení se nezdařilo.');
@@ -109,7 +110,6 @@ export function Topbar({
     }
   }
 
-  const editing = mode !== null;
   // V rezimu uprav pracujeme s celym seznamem, jinak s tim, co uzivatel vidi.
   const shown: NavItem[] = editing ? draft.map((d) => ({ href: d.href, label: d.label })) : items;
   const missingPages = PORTAL_PAGES.filter((p) => !draft.some((d) => d.href === p.href));
@@ -145,28 +145,25 @@ export function Topbar({
             return (
               <span
                 key={`${item.href}-${index}`}
-                draggable={mode === 'move'}
+                draggable
                 onDragStart={() => {
                   dragIndex.current = index;
                 }}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => onDrop(index)}
-                className={`relative pb-2 border-b-2 border-dashed border-white/40 text-white/90 select-none ${
-                  mode === 'move' ? 'cursor-grab active:cursor-grabbing' : ''
-                }`}
+                title="Přetažením změníte pořadí"
+                className="relative pb-2 border-b-2 border-dashed border-white/40 text-white/90 select-none cursor-grab active:cursor-grabbing"
               >
                 {item.label}
-                {mode === 'edit' && (
-                  <button
-                    type="button"
-                    onClick={() => removeAt(index)}
-                    title={`Odebrat ${item.label}`}
-                    aria-label={`Odebrat ${item.label}`}
-                    className="absolute -top-2.5 -left-3 w-5 h-5 rounded-full bg-white text-brand-purpleDeep text-xs font-bold leading-none flex items-center justify-center shadow"
-                  >
-                    ×
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => removeAt(index)}
+                  title={`Odebrat ${item.label}`}
+                  aria-label={`Odebrat ${item.label}`}
+                  className="absolute -top-2.5 -left-3 w-5 h-5 rounded-full bg-white text-brand-purpleDeep text-xs font-bold leading-none flex items-center justify-center shadow"
+                >
+                  ×
+                </button>
               </span>
             );
           }
@@ -194,8 +191,8 @@ export function Topbar({
           );
         })}
 
-        {/* Přidání zkratky - jen v režimu Upravit. */}
-        {mode === 'edit' && (
+        {/* Přidání zkratky. */}
+        {editing && (
           <span className="relative">
             <button
               type="button"
@@ -223,39 +220,20 @@ export function Topbar({
           </span>
         )}
 
-        {/* Tři tečky - úpravy lišty. Vidí je jen Žůžo-labůžo. */}
+        {/* Tři tečky - jedno kliknutí a lišta se dá rovnou upravovat
+            i přetahovat. Vidí je jen Žůžo-labůžo. */}
         {isAdmin && !editing && (
-          <span className="relative">
-            <button
-              type="button"
-              onClick={() => setMenuOpen((v) => !v)}
-              title="Upravit lištu"
-              aria-label="Upravit lištu"
-              className="w-7 h-7 rounded-full text-white/80 hover:text-white hover:bg-white/10 flex flex-col items-center justify-center gap-[3px]"
-            >
-              <span className="w-[3px] h-[3px] rounded-full bg-current" />
-              <span className="w-[3px] h-[3px] rounded-full bg-current" />
-              <span className="w-[3px] h-[3px] rounded-full bg-current" />
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-line py-1 min-w-[150px] z-20">
-                <button
-                  type="button"
-                  onClick={() => startMode('edit')}
-                  className="block w-full text-left px-4 py-2 text-sm font-body text-ink hover:bg-field"
-                >
-                  Upravit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => startMode('move')}
-                  className="block w-full text-left px-4 py-2 text-sm font-body text-ink hover:bg-field"
-                >
-                  Přesunout
-                </button>
-              </div>
-            )}
-          </span>
+          <button
+            type="button"
+            onClick={startEditing}
+            title="Upravit lištu"
+            aria-label="Upravit lištu"
+            className="w-7 h-7 rounded-full text-white/80 hover:text-white hover:bg-white/10 flex flex-col items-center justify-center gap-[3px]"
+          >
+            <span className="w-[3px] h-[3px] rounded-full bg-current" />
+            <span className="w-[3px] h-[3px] rounded-full bg-current" />
+            <span className="w-[3px] h-[3px] rounded-full bg-current" />
+          </button>
         )}
 
         {editing && (
@@ -277,10 +255,8 @@ export function Topbar({
 
       <div className="relative flex items-center gap-3">
         {editing && (
-          <span className="text-white/70 text-xs font-body hidden lg:block max-w-[220px]">
-            {mode === 'edit'
-              ? 'Křížkem odeberete odkaz, „+" přidá zkratku.'
-              : 'Přetažením změníte pořadí odkazů.'}
+          <span className="text-white/70 text-xs font-body hidden lg:block max-w-[240px]">
+            Přetažením změníte pořadí, křížkem odkaz odeberete, „+" přidá zkratku.
           </span>
         )}
         <button
