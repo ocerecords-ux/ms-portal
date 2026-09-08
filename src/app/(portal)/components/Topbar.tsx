@@ -20,13 +20,10 @@ import { isExternalHref, type NavItem } from '@/lib/menu';
  */
 export function Topbar({
   userLabel,
-  isAdmin,
   items,
   pageOptions,
 }: {
   userLabel: string;
-  /** Jen kvůli odkazu do administrace v uživatelském menu. */
-  isAdmin?: boolean;
   /** Vlastní lišta přihlášeného uživatele. */
   items: NavItem[];
   /** Stránky, které si smí do lišty přidat. */
@@ -34,7 +31,6 @@ export function Topbar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   // Jeden rezim uprav, ne dva (zadani 8. 9. 2026: "je blbost upravovat na
   // dvakrát. Stačí kliknout na tři tečky a můžeš upravit i přesunout") -
   // v nem jde zaroven odebirat, pridavat i pretahovat poradi.
@@ -278,39 +274,45 @@ export function Topbar({
         )}
       </nav>
 
-      <div className="relative flex items-center gap-3">
+      {/* Vpravo uz zadna rozbalovaci nabidka (zadani 8. 9. 2026: "dame pryc
+          rozbalovaci nabidku i tu sipku") - kliknuti na jmeno vede rovnou na
+          Muj ucet, vedle je jen odhlaseni. Do administrace se chodi odkazy
+          v liste (Firmy, Uzivatele, Ceniky, Doklady). */}
+      <div className="flex items-center gap-2">
         {editing && (
           <span className="text-white/70 text-xs font-body hidden lg:block max-w-[260px]">
             Přetažením změníte pořadí, křížkem odkaz odeberete, „+" přidá zkratku. Lišta je jen vaše.
           </span>
         )}
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-2 text-sm font-heading text-brand-green bg-white/10 border border-white/20 rounded-pill px-3.5 py-2"
+        <Link
+          href="/muj-ucet"
+          title="Můj účet"
+          className="flex items-center text-sm font-heading text-brand-green bg-white/10 border border-white/20 rounded-pill px-3.5 py-2 no-underline hover:bg-white/20 transition-colors"
         >
           {userLabel}
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5">
-            <path d="M5 8l5 5 5-5" />
+        </Link>
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          title="Odhlásit se"
+          aria-label="Odhlásit se"
+          className="flex items-center justify-center w-9 h-9 rounded-pill text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-5 h-5"
+            aria-hidden="true"
+          >
+            <path d="M15 17l5-5-5-5" />
+            <path d="M20 12H9" />
+            <path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5" />
           </svg>
         </button>
-        {open && (
-          <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-line py-1 min-w-[160px] z-10">
-            <Link href="/muj-ucet" className="block w-full text-left px-4 py-2 text-sm font-body text-ink hover:bg-field no-underline">
-              Můj účet
-            </Link>
-            {isAdmin && (
-              <Link href="/admin" className="block w-full text-left px-4 py-2 text-sm font-body text-ink hover:bg-field no-underline">
-                Administrace
-              </Link>
-            )}
-            <button
-              onClick={() => signOut({ callbackUrl: '/login' })}
-              className="w-full text-left px-4 py-2 text-sm font-body text-ink hover:bg-field"
-            >
-              Odhlásit se
-            </button>
-          </div>
-        )}
       </div>
 
       {error && (

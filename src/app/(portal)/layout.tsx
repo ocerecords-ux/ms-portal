@@ -16,7 +16,6 @@ export default async function PortalLayout({ children }: { children: React.React
   if (!session) redirect('/login');
 
   const role = session.user.role;
-  const isAdmin = role === 'ADMIN';
   const internal = isInternalRole(role);
 
   // Lišta je editovatelná (viz Topbar) a patří KONKRÉTNÍMU uživateli - úprava
@@ -31,7 +30,6 @@ export default async function PortalLayout({ children }: { children: React.React
     <div className="min-h-screen bg-paper">
       <Topbar
         userLabel={session.user.name || session.user.email}
-        isAdmin={isAdmin}
         items={visibleFor(entries, role)}
         pageOptions={pageOptionsFor(role)}
       />

@@ -25,7 +25,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen bg-paper">
       <Topbar
         userLabel={session.user.name || session.user.email}
-        isAdmin
         items={visibleFor(entries, 'ADMIN')}
         pageOptions={pageOptionsFor('ADMIN')}
       />
