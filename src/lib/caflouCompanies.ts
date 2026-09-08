@@ -84,3 +84,96 @@ export function comparableCompanyName(name: string): string {
     .replace(/\b(s\.?\s?r\.?\s?o|a\.?\s?s|spol|z\.?\s?s|o\.?\s?p\.?\s?s|ltd|llc|inc|gmbh)\b/g, '')
     .replace(/[^a-z0-9]+/g, '');
 }
+
+/**
+ * Odhad, jestli je zaznam z Caflou klient, nebo herec (zadani 8. 9. 2026:
+ * "nemuzes to natahnout najednou?").
+ *
+ * Poradi je zamerne takove, ze se nejdriv zkusi POLE Z CAFLOU a teprve kdyz
+ * zadne neni, hada se z nazvu. Herec je pro Mediaspace dodavatel (fakturuje
+ * nam), klient je odberatel - kdyz Caflou tohle rozliseni vede, je to
+ * spolehlivejsi nez jakykoliv odhad.
+ *
+ * Co si odhad neni jisty, zustane NEZARAZENO - radeji par radku k rucnimu
+ * projiti nez herec omylem zalozeny mezi firmami.
+ */
+// Pravni formy se hledaji az v nazvu BEZ DIAKRITIKY a vzdy oddelene mezerou
+// nebo teckou. Bez toho to strilelo vedle: JavaScriptove \b bere "í" jako
+// nepismeno, takze uvnitr "Písařík" naslo hranici slova kolem "sa" a herec
+// Martin Pisarik vysel jako firma s pravni formou "s.a.".
+const LEGAL_FORM =
+  /(^|[\s,.()\-])(s\.?\s?r\.?\s?o|a\.?\s?s|v\.?\s?o\.?\s?s|z\.?\s?s|o\.?\s?p\.?\s?s|spol|ltd|limited|llc|inc|gmbh|kft|sp\.?\s?z\.?\s?o\.?\s?o)([\s,.()\-]|$)/;
+
+const COMPANY_WORDS =
+  /(media|publishing|books|knih|nakladatel|vydavatel|group|studi|records|music|audio|agentur|agency|company|productio|produkc|holding|invest|trade|servis|service|centrum|institut|skol|universi|univerz|mesto|obec|kraj|urad)/;
+
+/** Akademicke tituly - kdyz je nazev nese, jde skoro jiste o cloveka. */
+const TITLES = /(^|\s)(mgr|ing|mga|bc|bca|phdr|paeddr|judr|mudr|rndr|doc|prof|dis)\.?(\s|$)/;
+
+/** Nazev bez diakritiky a v malych pismenech - jen pro porovnavani. */
+function bezDiakritiky(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/**
+ * Vypada nazev jako jmeno cloveka? Dve az tri slova, kazde zacina velkym
+ * pismenem a neobsahuje cislici. Prvni pismeno testujeme pres toUpperCase,
+ * ne rozsahem znaku - "Č" ani "Ř" v zadnem jednoduchem rozsahu neleze.
+ */
+function vypadaJakoJmeno(name: string): boolean {
+  const slova = name.trim().split(/\s+/).filter(Boolean);
+  if (slova.length < 2 || slova.length > 3) return false;
+  return slova.every((slovo) => {
+    if (slovo.length < 2 || /[\d]/.test(slovo)) return false;
+    const prvni = slovo.charAt(0);
+    return prvni !== prvni.toLowerCase() && prvni === prvni.toUpperCase();
+  });
+}
+
+export function guessContactKind(
+  mapped: MappedCaflouCompany,
+  raw: any,
+): { kind: CaflouContactKind; reason: string } {
+  // 1) Pole primo z Caflou.
+  const boolOf = (keys: string[]): boolean | null => {
+    for (const key of keys) {
+      const value = raw?.[key];
+      if (value === true || value === 1 || value === '1') return true;
+      if (value === false || value === 0 || value === '0') return false;
+    }
+    return null;
+  };
+  const textOf = (keys: string[]): string => (pickString(raw, keys) ?? '').toLowerCase();
+
+  if (boolOf(['is_person', 'person', 'is_individual']) === true) {
+    return { kind: 'HEREC', reason: 'V Caflou je vedený jako osoba.' };
+  }
+  const typ = textOf(['type', 'company_type', 'contact_type', 'category', 'kind']);
+  if (typ.includes('klient') || typ.includes('customer') || typ.includes('odberatel')) {
+    return { kind: 'KLIENT', reason: `Pole „${typ}" v Caflou.` };
+  }
+  if (typ.includes('dodavatel') || typ.includes('supplier') || typ.includes('vendor')) {
+    return { kind: 'HEREC', reason: `Pole „${typ}" v Caflou (dodavatel = fakturuje nám).` };
+  }
+  const jeOdberatel = boolOf(['is_customer', 'customer', 'is_client', 'client']);
+  const jeDodavatel = boolOf(['is_supplier', 'supplier', 'is_vendor', 'vendor']);
+  if (jeOdberatel === true && jeDodavatel !== true) {
+    return { kind: 'KLIENT', reason: 'V Caflou označený jako odběratel.' };
+  }
+  if (jeDodavatel === true && jeOdberatel !== true) {
+    return { kind: 'HEREC', reason: 'V Caflou označený jako dodavatel.' };
+  }
+
+  // 2) Odhad z nazvu.
+  const name = mapped.name.trim();
+  const porovnatelny = bezDiakritiky(name);
+  if (LEGAL_FORM.test(porovnatelny)) return { kind: 'KLIENT', reason: 'Právní forma v názvu.' };
+  if (COMPANY_WORDS.test(porovnatelny)) return { kind: 'KLIENT', reason: 'Název vypadá na firmu.' };
+  if (TITLES.test(porovnatelny)) return { kind: 'HEREC', reason: 'Akademický titul v názvu.' };
+  if (vypadaJakoJmeno(name)) return { kind: 'HEREC', reason: 'Vypadá to na jméno osoby.' };
+
+  return { kind: 'NEZARAZENO', reason: 'Nepodařilo se rozhodnout — vyberte ručně.' };
+}

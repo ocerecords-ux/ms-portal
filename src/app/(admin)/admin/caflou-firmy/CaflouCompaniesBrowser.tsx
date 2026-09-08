@@ -17,6 +17,8 @@ export type CaflouCompanyRow = {
   phone: string | null;
   city: string | null;
   kind: CaflouContactKind;
+  /** Podle ceho se to roztridilo (odhad pri nacteni), null u rucni volby. */
+  kindReason: string | null;
   /** Nalezena shoda s tim, co uz v portalu je - kvuli duplicitam. */
   existing: { label: string; where: string } | null;
 };
@@ -65,9 +67,15 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
     });
   }, [items, filter, query]);
 
-  async function runImport() {
+  /**
+   * Natahne vsechno najednou (zadani 8. 9. 2026): nacte firmy z Caflou,
+   * rovnou odhadne, kdo je klient a kdo herec, a co je rozhodnuto, prenese
+   * do portalu. Co odhad nerozhodne, zustane tady k rucnimu projiti.
+   */
+  async function runImport(prenest = false) {
     setImporting(true);
     setError(null);
+    setReport(null);
     setProgress('Načítám z Caflou…');
     try {
       let page: number | null = 1;
@@ -77,7 +85,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
         const res = await fetch('/api/admin/caflou-firmy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ page }),
+          body: JSON.stringify({ page, autoKind: true }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -88,7 +96,26 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
         setProgress(`Načteno ${total} firem…`);
         page = data?.dalsiStranka ?? null;
       }
-      setProgress(`Hotovo — načteno ${total} firem.`);
+      if (!prenest) {
+        setProgress(`Hotovo — načteno ${total} firem.`);
+        router.refresh();
+        return;
+      }
+      setProgress(`Načteno ${total} firem, přenáším do portálu…`);
+      const res = await fetch('/api/admin/caflou-firmy/zalozit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vse: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Přenos se nezdařil.');
+        return;
+      }
+      setReport(Array.isArray(data?.vysledky) ? data.vysledky : []);
+      setProgress(
+        `Načteno ${total} firem · založeno ${data?.zalozeno ?? 0}, doplněno ${data?.doplneno ?? 0}, přeskočeno ${data?.preskoceno ?? 0}.`,
+      );
       router.refresh();
     } catch {
       setError('Import se nezdařil.');
@@ -170,29 +197,39 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
         <div>
           <h1 className="font-display text-3xl text-ink m-0">Firmy z Caflou</h1>
           <p className="text-muted text-sm mt-1 font-body max-w-2xl">
-            Klienti i herci dohromady, tak jak jsou v Caflou. Označte u každého, o koho jde, a pak to
-            přeneste do portálu — klienti se založí mezi Firmy, herci mezi uživatele. Co už v portálu
-            je, se nezakládá znovu; jen se doplní prázdná pole, ručně zadané údaje zůstanou.
+            „Načíst a přenést" udělá všechno naráz: stáhne firmy z Caflou, odhadne, kdo je klient a
+            kdo herec, a založí je v portálu — klienty mezi Firmy, herce mezi uživatele. Co odhad
+            nerozhodne, zůstane tady k ručnímu projití. Co už v portálu je, se nezakládá znovu; jen
+            se doplní prázdná pole, ručně zadané údaje zůstanou.
           </p>
         </div>
         <div className="text-right">
           <div className="flex items-center gap-3 justify-end flex-wrap">
             <button
               type="button"
-              onClick={runImport}
+              onClick={() => runImport(false)}
               disabled={importing || transferring}
               className="font-heading font-semibold text-sm rounded-lg border border-line bg-white px-4 py-2.5 text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-60"
             >
-              {importing ? 'Načítám…' : items.length === 0 ? 'Načíst z Caflou' : 'Načíst znovu'}
+              {importing ? 'Pracuji…' : 'Jen načíst'}
             </button>
             <button
               type="button"
               onClick={transferToPortal}
               disabled={transferring || importing || counts.KLIENT + counts.HEREC === 0}
-              title="Klienty založí mezi Firmy, herce mezi uživatele"
+              title="Přenese jen to, co je tady roztříděné"
+              className="font-heading font-semibold text-sm rounded-lg border border-line bg-white px-4 py-2.5 text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-60"
+            >
+              {transferring ? 'Přenáším…' : `Přenést roztříděné (${counts.KLIENT + counts.HEREC})`}
+            </button>
+            <button
+              type="button"
+              onClick={() => runImport(true)}
+              disabled={importing || transferring}
+              title="Načte firmy z Caflou, odhadne klienty a herce a rovnou je založí v portálu"
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              {transferring ? 'Přenáším…' : `Přenést do portálu (${counts.KLIENT + counts.HEREC})`}
+              {importing || transferring ? 'Pracuji…' : 'Načíst a přenést do portálu'}
             </button>
           </div>
           {progress && <p className="text-xs font-body text-muted m-0 mt-1.5">{progress}</p>}
@@ -315,6 +352,11 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                         </option>
                       ))}
                     </select>
+                    {item.kindReason && (
+                      <span className="block text-xs font-body text-muted/80 mt-1 max-w-[180px] whitespace-normal">
+                        {item.kindReason}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

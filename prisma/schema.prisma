@@ -383,6 +383,9 @@ model CaflouCompany {
   // Roztrideni - kdo je klient a kdo herec. Zatim jen znacka, zakladani
   // skutecnych firem a uctu prijde az potom.
   kind           CaflouContactKind @default(NEZARAZENO)
+  // Podle ceho se to roztridilo - at je videt, jestli rozhodlo pole z Caflou,
+  // nebo jen odhad z nazvu, a da se to rychle prekontrolovat.
+  kindReason     String?
 
   // Cela puvodni odpoved z Caflou, at se da kdykoliv domapovat dalsi pole
   // bez opakovaneho importu.

@@ -19,7 +19,11 @@ import { comparableCompanyName } from '@/lib/caflouCompanies';
 //     ICa a jmena. Kdyz se najde, jen se DOPLNI a propoji.
 //  2) Nic se neprepisuje. Doplnuji se vyhradne prazdna pole, takze rucne
 //     zadany udaj v portalu ma vzdy prednost pred tim, co prijde z Caflou.
-const schema = z.object({ ids: z.array(z.string().min(1)).min(1).max(300) });
+const schema = z.object({
+  ids: z.array(z.string().min(1)).max(2000).optional(),
+  /** Vsechno, co je oznacene jako klient nebo herec - pouziva "Nacist a prenest". */
+  vse: z.boolean().optional(),
+});
 
 type Vysledek = { id: string; nazev: string; akce: 'zalozeno' | 'doplneno' | 'preskoceno'; detail: string };
 
@@ -56,7 +60,18 @@ export async function POST(req: NextRequest) {
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
 
-    const rows = await prisma.caflouCompany.findMany({ where: { id: { in: parsed.data.ids } } });
+    const rows = await prisma.caflouCompany.findMany({
+      where: parsed.data.vse
+        ? { kind: { in: ['KLIENT', 'HEREC'] } }
+        : { id: { in: parsed.data.ids ?? [] } },
+      orderBy: { name: 'asc' },
+    });
+    if (rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Není co přenášet — u firem není vybráno, jestli jde o klienta, nebo o herce.' },
+        { status: 400 },
+      );
+    }
 
     // Firmy i herce nacteme JEDNOU dopredu a parujeme v pameti - jednak je to
     // rychlejsi nez dotaz na kazdy radek, jednak nove zalozene rovnou pridame

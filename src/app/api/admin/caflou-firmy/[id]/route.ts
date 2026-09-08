@@ -18,7 +18,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const updated = await prisma.caflouCompany.update({
       where: { id: params.id },
-      data: { kind: parsed.data.kind },
+      // Rucni volba prebiji odhad - poznamku "podle ceho se to rozhodlo"
+      // proto mazeme, uz to neni odhad.
+      data: { kind: parsed.data.kind, kindReason: null },
       select: { id: true, kind: true },
     });
     return NextResponse.json(updated);

@@ -59,6 +59,7 @@ export default async function CaflouCompaniesPage() {
       phone: row.phone,
       city: row.addressCity,
       kind: row.kind,
+      kindReason: row.kindReason,
       existing,
     };
   });
