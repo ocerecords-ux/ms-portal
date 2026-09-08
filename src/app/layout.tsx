@@ -8,9 +8,20 @@ const inter = Inter({ subsets: ['latin', 'latin-ext'], variable: '--font-inter',
 const jost = Jost({ subsets: ['latin', 'latin-ext'], variable: '--font-jost', weight: ['400', '500', '600'] });
 const poppins = Poppins({ subsets: ['latin', 'latin-ext'], variable: '--font-poppins', weight: ['300', '400', '500', '600'] });
 
+// Ikona na zalozce prohlizece (zadani 8. 9. 2026). Soubory icon.svg,
+// favicon.ico a apple-icon.png lezi primo v src/app/ - Next.js je podle
+// nazvu sam najde a vlozi do hlavicky, rucne se nic linkovat nemusi.
+// Motiv vychazi z animovaneho loga Mediaspace, ktere je vlastne ekvalizer:
+// tri zelene sloupce na fialovem podkladu. Zamerne jen tri a silne, aby to
+// bylo poznat i v 16 px na zalozce.
 export const metadata: Metadata = {
   title: 'MS Portal',
   description: 'Klientský portál Mediaspace',
+  applicationName: 'MS Portal',
+};
+
+export const viewport = {
+  themeColor: '#6B2AF0',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
