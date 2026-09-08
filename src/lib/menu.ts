@@ -1,63 +1,76 @@
 import type { Role } from '@prisma/client';
 
 /**
- * Editovatelne menu v horni fialove liste (zadani 6. 9. 2026: "měla by být
- * možnost si modifikovat odkazy nahoře v menu v horní fialové liště").
+ * Odkazy v horní fialové liště (zadani 6. 9. 2026, prepracovano 8. 9. 2026).
+ *
+ * Uprava se dela primo v liste - tri tecky vpravo, volba "Upravit" (mazani a
+ * pridani zkratky) nebo "Presunout" (pretahovani poradi), jako na ploche
+ * iPhonu. Zadna samostatna administracni stranka uz neni.
+ *
+ * KDO CO UVIDI SE NENASTAVUJE. Ridi se to pravy k dane strance - viz
+ * PAGE_ACCESS nize, ktere odpovida tomu, kam kterou roli pousti middleware a
+ * serverove komponenty. Admin tedy urcuje jen POradi a to, co v liste je.
  *
  * Tenhle soubor je zamerne bez pristupu do databaze - pouzivaji ho i klientske
- * komponenty (Topbar, MenuEditor). Nacitani z databaze je v lib/menuServer.ts.
- *
- * Zdrojem pravdy je tabulka MenuItem. Dokud je prazdna (cerstva databaze,
- * nebo admin jeste menu neotevrel), pouzije se DEFAULT_MENU_ITEMS - presne
- * ty polozky, ktere driv byly napevno v Topbaru. Lista tak nikdy neskonci
- * prazdna.
+ * komponenty (Topbar). Nacitani z databaze je v lib/menuServer.ts.
  */
 
 export type NavItem = { href: string; label: string };
+export type MenuEntry = { id: string; label: string; href: string };
 
-export const ALL_ROLES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE'] as const;
-
-export type MenuItemInput = {
-  label: string;
-  href: string;
-  roles: Role[];
-  visible: boolean;
-};
-
-export type MenuItemRow = MenuItemInput & { id: string; sortOrder: number };
-
-/** Vychozi obsah listy - odpovida stavu pred zavedenim editoru menu. */
-export const DEFAULT_MENU_ITEMS: (MenuItemInput & { sortOrder: number })[] = [
-  { label: 'Projekty', href: '/projekty', roles: ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE'], visible: true, sortOrder: 10 },
-  { label: 'Objednávka', href: '/objednavka', roles: ['CLIENT'], visible: true, sortOrder: 20 },
-  { label: 'Nahrávky', href: '/nahravky', roles: ['CLIENT'], visible: true, sortOrder: 30 },
-  // Vykazy vidi Zvukar (svoje) a Zuzo-labuzo (vsechny) - zadani 6. 9. 2026.
-  { label: 'Výkazy', href: '/vykazy', roles: ['ADMIN', 'ZVUKAR'], visible: true, sortOrder: 40 },
-  { label: 'Firmy', href: '/admin', roles: ['ADMIN'], visible: true, sortOrder: 50 },
-  { label: 'Uživatelé', href: '/admin/users', roles: ['ADMIN'], visible: true, sortOrder: 60 },
-  { label: 'Ceníky', href: '/admin/ceniky', roles: ['ADMIN'], visible: true, sortOrder: 70 },
-  { label: 'Menu', href: '/admin/menu', roles: ['ADMIN'], visible: true, sortOrder: 80 },
-];
+export const ALL_ROLES: Role[] = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
 /**
- * Stranky portalu, ze kterych jde v editoru menu vybrat cil odkazu - aby
- * admin nemusel psat adresy rucne. Vlastni URL zustava jako moznost navic.
+ * Kdo se dostane na kterou stranku. Musi odpovidat middleware.ts a kontrolam
+ * primo ve strankach - lista jen nezobrazuje odkaz tam, kam by uzivatele
+ * stejne nepustila.
  */
+export const PAGE_ACCESS: Record<string, Role[]> = {
+  '/projekty': ALL_ROLES,
+  '/muj-ucet': ALL_ROLES,
+  // Objednavka a Nahravky jsou klientska agenda.
+  '/objednavka': ['CLIENT'],
+  '/nahravky': ['CLIENT'],
+  // Vykazy: zvukar svoje, Zuzo-labuzo prehled celeho tymu.
+  '/vykazy': ['ADMIN', 'ZVUKAR'],
+  // Administrace - jen Zuzo-labuzo.
+  '/admin': ['ADMIN'],
+  '/admin/users': ['ADMIN'],
+  '/admin/ceniky': ['ADMIN'],
+};
+
+/** Uvidi uzivatel s touhle roli tenhle odkaz? Vlastni odkaz vidi kazdy. */
+export function canSee(href: string, role: Role): boolean {
+  const allowed = PAGE_ACCESS[href];
+  return allowed ? allowed.includes(role) : true;
+}
+
+/** Vychozi obsah listy - odpovida stavu pred zavedenim editace. */
+export const DEFAULT_MENU_ITEMS: { label: string; href: string; sortOrder: number }[] = [
+  { label: 'Projekty', href: '/projekty', sortOrder: 10 },
+  { label: 'Objednávka', href: '/objednavka', sortOrder: 20 },
+  { label: 'Nahrávky', href: '/nahravky', sortOrder: 30 },
+  { label: 'Výkazy', href: '/vykazy', sortOrder: 40 },
+  { label: 'Firmy', href: '/admin', sortOrder: 50 },
+  { label: 'Uživatelé', href: '/admin/users', sortOrder: 60 },
+  { label: 'Ceníky', href: '/admin/ceniky', sortOrder: 70 },
+];
+
+/** Stranky, ktere jde pridat zpet do listy pres "+" v rezimu Upravit. */
 export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/projekty', label: 'Projekty' },
   { href: '/objednavka', label: 'Objednávka' },
   { href: '/nahravky', label: 'Nahrávky' },
   { href: '/vykazy', label: 'Výkazy' },
-  { href: '/muj-ucet', label: 'Můj účet' },
-  { href: '/admin', label: 'Firmy (administrace)' },
+  { href: '/admin', label: 'Firmy' },
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/ceniky', label: 'Ceníky' },
-  { href: '/admin/menu', label: 'Menu' },
+  { href: '/muj-ucet', label: 'Můj účet' },
 ];
 
 /** Vychozi (napevno zadana) navigace pro danou roli. */
 export function defaultNavFor(role: Role): NavItem[] {
-  return DEFAULT_MENU_ITEMS.filter((i) => i.visible && i.roles.includes(role))
+  return DEFAULT_MENU_ITEMS.filter((i) => canSee(i.href, role))
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((i) => ({ href: i.href, label: i.label }));
 }

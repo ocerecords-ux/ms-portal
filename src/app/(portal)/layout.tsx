@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from './components/Topbar';
-import { loadMenuForRole } from '@/lib/menuServer';
+import { loadMenuEntries, visibleFor } from '@/lib/menuServer';
 
 // Jediné místo, které chrání celou klientskou sekci portálu. Session je
 // zdroj pravdy o tom, kdo je přihlášen a pod jakou firmu (companyId) patří
@@ -12,16 +12,18 @@ export default async function PortalLayout({ children }: { children: React.React
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  // Polozky horni listy jsou od 6. 9. 2026 editovatelne v /admin/menu -
-  // filtrovani podle role delame na serveru, klient dostane jen svoje.
-  const menu = await loadMenuForRole(session.user.role);
+  const isAdmin = session.user.role === 'ADMIN';
+  // Odkazy v liště jsou editovatelné (viz Topbar). Co uvidí konkrétní role se
+  // nenastavuje - řídí se právy ke stránce (lib/menu.ts > PAGE_ACCESS).
+  const entries = await loadMenuEntries();
 
   return (
     <div className="min-h-screen bg-paper">
       <Topbar
         userLabel={session.user.name || session.user.email}
-        isAdmin={session.user.role === 'ADMIN'}
-        items={menu}
+        isAdmin={isAdmin}
+        items={visibleFor(entries, session.user.role)}
+        allItems={isAdmin ? entries : undefined}
       />
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
     </div>

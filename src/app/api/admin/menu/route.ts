@@ -4,10 +4,12 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { ALL_ROLES, DEFAULT_MENU_ITEMS } from '@/lib/menu';
 
-// Sprava polozek horni listy (zadani 6. 9. 2026). Meni je jen Zuzo-labuzo.
+// Uprava odkazu v horni liste (zadani 8. 9. 2026). Meni je jen Zuzo-labuzo,
+// primo v liste - poslany je vzdy CELY seznam v poradi, jak ma vypadat.
 //
-// PUT uklada cely seznam najednou - editor v adminu pracuje s celym menu, ne
-// s jednotlivymi radky, takze i poradi a mazani projde jednim pozadavkem.
+// Viditelnost se tu nenastavuje: kdo co uvidi se ridi pravy ke strance
+// (lib/menu.ts > PAGE_ACCESS). Sloupec roles ve schematu zustava z drivejska,
+// plni se vsemi rolemi a nikde se necte.
 const itemSchema = z.object({
   id: z.string().trim().min(1).optional(),
   label: z.string().trim().min(1, 'Název položky nesmí být prázdný.').max(40, 'Název je moc dlouhý.'),
@@ -19,8 +21,6 @@ const itemSchema = z.object({
     .refine((v) => v.startsWith('/') || /^https?:\/\/\S+$/i.test(v), {
       message: 'Odkaz musí začínat lomítkem (stránka portálu) nebo http(s)://.',
     }),
-  roles: z.array(z.enum(ALL_ROLES)).min(1, 'U každé položky vyberte aspoň jednu roli.'),
-  visible: z.boolean(),
 });
 
 const schema = z.object({ items: z.array(itemSchema).max(30, 'Do lišty se vejde nejvýš 30 položek.') });
@@ -44,8 +44,8 @@ export async function PUT(req: NextRequest) {
         const data = {
           label: item.label,
           href: item.href,
-          roles: item.roles,
-          visible: item.visible,
+          roles: ALL_ROLES,
+          visible: true,
           sortOrder: (index + 1) * 10,
         };
         return item.id
@@ -62,7 +62,7 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-/** Obnoveni vychoziho menu - smaze uprav a vrati puvodni sadu odkazu. */
+/** Obnoveni vychozi listy - kdyby si ji nekdo rozbil. */
 export async function POST() {
   try {
     const session = await requireAdmin();
@@ -70,7 +70,14 @@ export async function POST() {
 
     await prisma.$transaction([
       prisma.menuItem.deleteMany({}),
-      prisma.menuItem.createMany({ data: DEFAULT_MENU_ITEMS }),
+      prisma.menuItem.createMany({
+        data: DEFAULT_MENU_ITEMS.map((i) => ({
+          label: i.label,
+          href: i.href,
+          sortOrder: i.sortOrder,
+          roles: ALL_ROLES,
+        })),
+      }),
     ]);
 
     return NextResponse.json({ ok: true, count: DEFAULT_MENU_ITEMS.length });
