@@ -140,7 +140,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         onClick={toggle}
         title="Zobrazit úkoly"
         aria-label="Zobrazit úkoly"
-        className="fixed right-0 top-1/3 z-40 flex flex-col items-center gap-3 bg-white border border-r-0 border-line rounded-l-card shadow-lg px-2.5 py-3 text-muted hover:text-brand-purple transition-colors"
+        className="fixed right-0 top-28 z-40 flex flex-col items-center gap-3 bg-white border border-r-0 border-line rounded-l-card shadow-lg px-2.5 py-3 text-muted hover:text-brand-purple transition-colors"
       >
         <span className="text-brand-purple">
           <Chevron direction="left" />
@@ -166,8 +166,11 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   }
 
   // --- Rozbaleno: cely seznam -------------------------------------------
+  // Panel drzi horni polovinu prave hrany, chat spodni - pri delsim seznamu
+  // ukolu se driv prekryvaly (zprava uzivatele 8. 9. 2026). Seznam se proto
+  // radeji roluje uvnitr, nez aby rostl do chatu.
   return (
-    <aside className="fixed right-0 top-1/3 -translate-y-8 z-40 flex items-stretch">
+    <aside className="fixed right-0 top-28 z-40 flex items-stretch">
       {/* Široký pruh na zavření přes celou výšku panelu - do malé šipky
           se špatně trefovalo (zadani 8. 9. 2026). Kliknout jde kamkoliv sem. */}
       <button
@@ -184,7 +187,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         <Chevron direction="right" />
       </button>
 
-      <div className="w-[320px] max-w-[86vw] max-h-[70vh] overflow-y-auto bg-white border border-r-0 border-line shadow-xl p-4 flex flex-col gap-3">
+      <div className="w-[320px] max-w-[86vw] max-h-[36vh] overflow-y-auto bg-white border border-r-0 border-line shadow-xl p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Úkoly</h2>
         <button

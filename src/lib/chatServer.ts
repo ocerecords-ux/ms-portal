@@ -89,6 +89,7 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
       label,
       unread,
       lastMessageAt: c.lastMessageAt.toISOString(),
+      caflouProjectId: c.caflouProjectId,
       memberLabels: ostatni,
     };
   });

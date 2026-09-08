@@ -124,6 +124,14 @@ export function ChatDock() {
     else setMessages([]);
   }, [openId, nactiZpravy]);
 
+  // Kanaly se nabizeji rovnou podle aktivnich projektu (zprava uzivatele
+  // 8. 9. 2026: "kanaly by se mely vytvorit z existujicich aktivnich
+  // projektu"), takze se seznam nacita hned po otevreni zalozky.
+  useEffect(() => {
+    if (tab === 'PROJEKT') void nactiProjekty();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
   useEffect(() => {
     konecRef.current?.scrollIntoView({ block: 'end' });
   }, [messages, openId]);
@@ -131,6 +139,34 @@ export function ChatDock() {
   const neprectene = conversations.reduce((sum, c) => sum + c.unread, 0);
   const vZalozce = conversations.filter((c) => c.kind === tab);
   const otevrena = conversations.find((c) => c.id === openId) ?? null;
+
+  /**
+   * Kanaly k projektum. Neni to seznam zalozenych konverzaci, ale seznam
+   * AKTIVNICH PROJEKTU - kanal ma kazdy z nich, at uz v nem nekdo psal, nebo
+   * ne. Konverzace v databazi vznikne az s prvni zpravou, takze nezustavaji
+   * stovky prazdnych kanalu a seznam se sam sroubuje, jak projekty pribyvaji
+   * a konci. Kanal k projektu, ktery uz aktivni neni, ale zpravy v nem jsou,
+   * se pripoji na konec - aby se historie neztratila.
+   */
+  const kanaly: { key: string; label: string; conversation: ChatConversation | null; caflouProjectId: string; name: string }[] =
+    (projekty ?? []).map((p) => ({
+      key: p.id,
+      label: p.label,
+      conversation: conversations.find((c) => c.caflouProjectId === p.id) ?? null,
+      caflouProjectId: p.id,
+      name: p.name,
+    }));
+  for (const c of vZalozce) {
+    if (tab !== 'PROJEKT') break;
+    if (c.caflouProjectId && kanaly.some((k) => k.caflouProjectId === c.caflouProjectId)) continue;
+    kanaly.push({
+      key: c.id,
+      label: c.label,
+      conversation: c,
+      caflouProjectId: c.caflouProjectId ?? '',
+      name: c.label,
+    });
+  }
 
   async function otevriNovou(telo: Record<string, unknown>) {
     setError(null);
@@ -202,9 +238,9 @@ export function ChatDock() {
       <button
         type="button"
         onClick={toggle}
-        title="Zobrazit chat"
-        aria-label="Zobrazit chat"
-        className="fixed right-0 bottom-10 z-40 flex flex-col items-center gap-3 bg-white border border-r-0 border-line rounded-l-card shadow-lg px-2.5 py-3 text-muted hover:text-brand-purple transition-colors"
+        title="Zobrazit MS chat"
+        aria-label="Zobrazit MS chat"
+        className="fixed right-0 bottom-6 z-40 flex flex-col items-center gap-3 bg-white border border-r-0 border-line rounded-l-card shadow-lg px-2.5 py-3 text-muted hover:text-brand-purple transition-colors"
       >
         <span className="text-brand-purple">
           <Chevron direction="left" />
@@ -222,15 +258,18 @@ export function ChatDock() {
   }
 
   // --- Rozbaleno ---------------------------------------------------------
+  // Spodni polovina prave hrany - Ukoly maji horni. Vysky obou panelu jsou
+  // zastropovane, at na sebe nelezou ani na nizsim okne (zprava uzivatele
+  // 8. 9. 2026: "prekryva to to do list, kdyz tam mam vice ukolu").
   return (
-    <aside className="fixed right-0 bottom-10 z-40 flex items-stretch">
+    <aside className="fixed right-0 bottom-6 z-40 flex items-stretch">
       {/* Stejny siroky pruh na zavreni jako u Ukolu - do male sipky se spatne
           trefuje (zadani 8. 9. 2026). */}
       <button
         type="button"
         onClick={toggle}
-        title="Skrýt chat"
-        aria-label="Skrýt chat"
+        title="Skrýt MS chat"
+        aria-label="Skrýt MS chat"
         className="w-8 shrink-0 rounded-l-card border border-r-0 border-line bg-field text-muted hover:bg-brand-purple hover:text-white transition-colors flex flex-col items-center justify-center gap-2"
       >
         <Chevron direction="right" />
@@ -240,7 +279,7 @@ export function ChatDock() {
         <Chevron direction="right" />
       </button>
 
-      <div className="w-[340px] max-w-[86vw] h-[60vh] bg-white border border-r-0 border-line shadow-xl flex flex-col">
+      <div className="w-[340px] max-w-[86vw] h-[42vh] bg-white border border-r-0 border-line shadow-xl flex flex-col">
         {/* Hlavicka: bud seznam, nebo otevrena konverzace */}
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-line">
           {otevrena ? (
@@ -256,7 +295,7 @@ export function ChatDock() {
             </>
           ) : (
             <>
-              <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Chat</h2>
+              <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">MS chat</h2>
               <button
                 type="button"
                 onClick={toggle}
@@ -338,16 +377,44 @@ export function ChatDock() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-1.5">
-              {vZalozce.length === 0 && !novy && (
+              {tab === 'PROJEKT' && projekty === null && (
+                <p className="text-sm font-body text-muted m-0 px-1">Načítám projekty…</p>
+              )}
+              {tab === 'PROJEKT' && projektyChyba && (
+                <p className="text-xs text-red-600 m-0 px-1">{projektyChyba}</p>
+              )}
+              {tab === 'PROJEKT' &&
+                kanaly.map((k) => (
+                  <button
+                    key={k.key}
+                    type="button"
+                    onClick={() =>
+                      k.conversation
+                        ? setOpenId(k.conversation.id)
+                        : void otevriNovou({ kind: 'PROJEKT', caflouProjectId: k.caflouProjectId, name: k.name })
+                    }
+                    className="text-left rounded-lg px-3 py-2 hover:bg-field transition-colors flex items-center justify-between gap-2"
+                  >
+                    <span className="font-heading font-semibold text-sm text-ink truncate">{k.label}</span>
+                    {(k.conversation?.unread ?? 0) > 0 && (
+                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-[18px] text-center">
+                        {k.conversation?.unread}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              {tab === 'PROJEKT' && projekty !== null && kanaly.length === 0 && (
                 <p className="text-sm font-body text-muted m-0 px-1">
-                  {tab === 'PROJEKT'
-                    ? 'Zatím tu není žádný projektový kanál.'
-                    : tab === 'SOUKROMA'
-                      ? 'Zatím si s nikým nepíšete.'
-                      : 'Zatím tu není žádná skupina.'}
+                  Žádné rozpracované projekty — kanály se berou z aktivních projektů v Caflou.
                 </p>
               )}
-              {vZalozce.map((c) => (
+
+              {tab !== 'PROJEKT' && vZalozce.length === 0 && !novy && (
+                <p className="text-sm font-body text-muted m-0 px-1">
+                  {tab === 'SOUKROMA' ? 'Zatím si s nikým nepíšete.' : 'Zatím tu není žádná skupina.'}
+                </p>
+              )}
+              {tab !== 'PROJEKT' && vZalozce.map((c) => (
                 <button
                   key={c.id}
                   type="button"
@@ -369,23 +436,6 @@ export function ChatDock() {
                   )}
                 </button>
               ))}
-
-              {novy && tab === 'PROJEKT' && (
-                <div className="mt-2 flex flex-col gap-1">
-                  {projektyChyba && <p className="text-xs text-red-600 m-0 px-1">{projektyChyba}</p>}
-                  {projekty === null && <p className="text-xs text-muted m-0 px-1">Načítám projekty…</p>}
-                  {projekty?.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => otevriNovou({ kind: 'PROJEKT', caflouProjectId: p.id, name: p.name })}
-                      className="text-left rounded-lg px-3 py-2 text-sm font-body text-ink hover:bg-field truncate"
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              )}
 
               {novy && tab === 'SOUKROMA' && (
                 <div className="mt-2 flex flex-col gap-1">
@@ -441,25 +491,19 @@ export function ChatDock() {
               )}
             </div>
 
-            <div className="border-t border-line p-3">
-              <button
-                type="button"
-                onClick={() => {
-                  const dalsi = !novy;
-                  setNovy(dalsi);
-                  if (dalsi && tab === 'PROJEKT') void nactiProjekty();
-                }}
-                className="w-full font-heading font-semibold text-sm rounded-lg border border-line px-4 py-2 text-brand-purple hover:border-brand-purple transition-colors"
-              >
-                {novy
-                  ? 'Zrušit'
-                  : tab === 'PROJEKT'
-                    ? '+ Kanál k projektu'
-                    : tab === 'SOUKROMA'
-                      ? '+ Napsat někomu'
-                      : '+ Nová skupina'}
-              </button>
-            </div>
+            {/* Kanaly k projektum se nezakladaji rucne - berou se z aktivnich
+                projektu, takze tlacitko dava smysl jen u zbylych dvou zalozek. */}
+            {tab !== 'PROJEKT' && (
+              <div className="border-t border-line p-3">
+                <button
+                  type="button"
+                  onClick={() => setNovy((v) => !v)}
+                  className="w-full font-heading font-semibold text-sm rounded-lg border border-line px-4 py-2 text-brand-purple hover:border-brand-purple transition-colors"
+                >
+                  {novy ? 'Zrušit' : tab === 'SOUKROMA' ? '+ Napsat někomu' : '+ Nová skupina'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

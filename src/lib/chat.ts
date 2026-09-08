@@ -30,6 +30,8 @@ export type ChatConversation = {
   /** Kolik zprav uzivatel jeste nevidel. */
   unread: number;
   lastMessageAt: string;
+  /** U kanalu k projektu ID projektu v Caflou - podle nej se paruje na seznam. */
+  caflouProjectId: string | null;
   /** Jmena ucastniku - u skupiny se ukazuji pod nazvem. */
   memberLabels: string[];
 };
