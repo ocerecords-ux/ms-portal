@@ -110,6 +110,7 @@ model Company {
   orders   Order[]
   projects Project[]
   offers   Offer[]
+  invoices Invoice[]
 }
 
 model User {
@@ -405,6 +406,7 @@ model IssuerCompany {
 
   bankAccounts BankAccount[]
   offers       Offer[]
+  invoices     Invoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -425,6 +427,8 @@ model BankAccount {
   currency      Currency @default(CZK)
   isDefault     Boolean  @default(false) // predvybrany ucet pro tuhle menu
   sortOrder     Int      @default(0)
+
+  invoices Invoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -462,7 +466,8 @@ model Offer {
   approvedByName String?     // kdo na strane klienta schvalil
   rejectedAt     DateTime?
 
-  items OfferItem[]
+  items   OfferItem[]
+  invoice Invoice?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -486,4 +491,73 @@ model OfferItem {
   sortOrder      Int     @default(0)
 
   @@index([offerId])
+}
+
+
+// Stav faktury. Parovani plateb z banky prijde az s napojenim na Air Bank,
+// zatim se uhrazeni oznacuje rucne.
+enum InvoiceStatus {
+  DRAFT     // rozpracovana
+  SENT      // odeslana, ceka na uhrazeni
+  PAID      // uhrazena
+  CANCELLED // stornovana
+}
+
+// Vydana faktura (zadani 6. 9. 2026).
+//
+// Meny: castka se drzi v mene dokladu, a k tomu se ULOZI denni kurz CNB
+// platny v den vystaveni (zadani 8. 9. 2026). Doklad si tak nese kurz, ktery
+// pro nej platil, a pozdejsi pohyb na trhu s nim uz nehne.
+model Invoice {
+  id              String        @id @default(cuid())
+  number          String        @unique
+  variableSymbol  String        // z cisla faktury, jen cislice
+  issuerCompanyId String
+  issuer          IssuerCompany @relation(fields: [issuerCompanyId], references: [id])
+  companyId       String
+  company         Company       @relation(fields: [companyId], references: [id])
+  bankAccountId   String?
+  bankAccount     BankAccount?  @relation(fields: [bankAccountId], references: [id])
+
+  currency         Currency  @default(CZK)
+  exchangeRate     Float     @default(1) // kolik CZK za 1 jednotku meny (CNB)
+  exchangeRateDate DateTime? // ke kteremu dni kurz je
+
+  issueDate DateTime  @default(now())
+  taxDate   DateTime? // datum zdanitelneho plneni
+  dueDate   DateTime?
+  subject   String?
+  note      String?
+
+  status          InvoiceStatus @default(DRAFT)
+  sentAt          DateTime?
+  paidAt          DateTime?
+  paidAmountMinor Int?
+
+  // Faktura muze vzniknout z odsouhlasene nabidky - polozky se prenesou.
+  offerId String? @unique
+  offer   Offer?  @relation(fields: [offerId], references: [id])
+
+  items InvoiceItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+}
+
+model InvoiceItem {
+  id        String  @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  description    String
+  quantity       Float   @default(1)
+  unit           String?
+  unitPriceMinor Int     @default(0) // cena za jednotku bez DPH, v halerich/centech
+  vatRate        Int     @default(21)
+  sortOrder      Int     @default(0)
+
+  @@index([invoiceId])
 }

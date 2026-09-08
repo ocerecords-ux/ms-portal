@@ -2,19 +2,17 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Currency, OfferStatus } from '@prisma/client';
+import type { Currency, InvoiceStatus } from '@prisma/client';
 import {
   CURRENCIES,
-  CURRENCY_LABELS,
   CURRENCY_NAMES,
   computeTotals,
+  formatAddress,
   formatMoney,
   minorToInput,
   parseMoneyToMinor,
-  OFFER_STATUS_CLASSES,
-  OFFER_STATUS_LABELS,
-  formatAddress,
 } from '@/lib/doklady';
+import { formatRate, toCzkMinor } from '@/lib/cnb';
 
 type Item = {
   description: string;
@@ -35,26 +33,42 @@ type Party = {
   addressZip: string | null;
 };
 
-type Offer = {
+type Invoice = {
   id: string;
   number: string;
-  status: OfferStatus;
-  issuerCompanyId: string;
+  variableSymbol: string;
+  status: InvoiceStatus;
   companyId: string;
+  bankAccountId: string | null;
   currency: Currency;
+  exchangeRate: number;
+  exchangeRateDate: string | null;
   issueDate: string;
-  validUntil: string;
+  taxDate: string;
+  dueDate: string;
   subject: string;
   note: string;
-  approvalToken: string;
   sentAt: string | null;
-  approvedAt: string | null;
-  approvedByName: string | null;
-  rejectedAt: string | null;
+  paidAt: string | null;
+  offerNumber: string | null;
   items: Item[];
 };
 
 const VAT_RATES = [21, 12, 0];
+
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'Rozpracovaná',
+  SENT: 'Neuhrazená',
+  PAID: 'Uhrazená',
+  CANCELLED: 'Stornovaná',
+};
+
+const STATUS_CLASSES: Record<string, string> = {
+  DRAFT: 'bg-field text-muted',
+  SENT: 'bg-[#F1ECFF] text-brand-purpleDark',
+  PAID: 'bg-[#E3F9EC] text-status-done',
+  CANCELLED: 'bg-red-50 text-red-600',
+};
 
 function emptyItem(): Item {
   return { description: '', quantity: 1, unit: 'ks', unitPriceMinor: 0, vatRate: 21 };
@@ -62,50 +76,55 @@ function emptyItem(): Item {
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleString('cs-CZ', {
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 /**
- * Editor nabídky. Vypadá jako samotný doklad — hlavička s oběma firmami,
- * pod ní položky a součet — a edituje se v něm přímo, aby bylo pořád vidět,
- * co klient dostane (zadani 8. 9. 2026: "ať je vše přehledné a intuitivní").
+ * Editor faktury. Vypadá jako samotný doklad, stejně jako u nabídek.
+ * U cizí měny je vidět kurz ČNB ke dni vystavení i přepočet do korun -
+ * kurz se s dokladem ukládá, takže se pozdějším pohybem na trhu nezmění.
  */
-export function OfferEditor({
-  offer,
+export function InvoiceEditor({
+  invoice,
   issuer,
   company,
-  issuers,
   companies,
   bankAccounts,
 }: {
-  offer: Offer;
+  invoice: Invoice;
   issuer: Party;
   company: Party;
-  issuers: { id: string; name: string }[];
   companies: { id: string; name: string }[];
-  bankAccounts: { label: string; accountNumber: string | null; iban: string | null }[];
+  bankAccounts: { id: string; label: string; accountNumber: string | null; iban: string | null; currency: Currency }[];
 }) {
   const router = useRouter();
-  const locked = offer.status === 'APPROVED';
+  const locked = invoice.status === 'PAID' || invoice.status === 'CANCELLED';
 
   const [form, setForm] = useState({
-    issuerCompanyId: offer.issuerCompanyId,
-    companyId: offer.companyId,
-    currency: offer.currency,
-    issueDate: offer.issueDate,
-    validUntil: offer.validUntil,
-    subject: offer.subject,
-    note: offer.note,
+    companyId: invoice.companyId,
+    bankAccountId: invoice.bankAccountId ?? '',
+    currency: invoice.currency,
+    issueDate: invoice.issueDate,
+    taxDate: invoice.taxDate,
+    dueDate: invoice.dueDate,
+    subject: invoice.subject,
+    note: invoice.note,
+    variableSymbol: invoice.variableSymbol,
   });
-  const [items, setItems] = useState<Item[]>(offer.items.length > 0 ? offer.items : [emptyItem()]);
+  const [items, setItems] = useState<Item[]>(invoice.items.length > 0 ? invoice.items : [emptyItem()]);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const totals = useMemo(() => computeTotals(items), [items]);
-  const approvalUrl = typeof window !== 'undefined' ? `${window.location.origin}/nabidka/${offer.approvalToken}` : '';
+  const accountsForCurrency = bankAccounts.filter((a) => a.currency === form.currency);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -117,25 +136,20 @@ export function OfferEditor({
     setInfo(null);
   }
 
-  function addItem() {
-    setItems((current) => [...current, emptyItem()]);
-  }
-
-  function removeItem(index: number) {
-    setItems((current) => (current.length === 1 ? [emptyItem()] : current.filter((_, i) => i !== index)));
-  }
-
-  async function save() {
+  async function save(extra?: { refreshRate?: boolean }) {
     setSaving(true);
     setError(null);
     setInfo(null);
     try {
-      const res = await fetch(`/api/admin/offers/${offer.id}`, {
+      const res = await fetch(`/api/admin/invoices/${invoice.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
-          validUntil: form.validUntil || null,
+          bankAccountId: form.bankAccountId || null,
+          taxDate: form.taxDate || null,
+          dueDate: form.dueDate || null,
+          refreshRate: extra?.refreshRate,
           items: items
             .filter((i) => i.description.trim())
             .map((i) => ({
@@ -169,13 +183,13 @@ export function OfferEditor({
     setSending(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/offers/${offer.id}/send`, { method: 'POST' });
+      const res = await fetch(`/api/admin/invoices/${invoice.id}/send`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || 'Odeslání se nezdařilo.');
         return;
       }
-      setInfo(`Nabídka odeslána na ${data.to}.`);
+      setInfo(`Faktura odeslána na ${data.to}.`);
       router.refresh();
     } catch {
       setError('Odeslání se nezdařilo.');
@@ -184,39 +198,23 @@ export function OfferEditor({
     }
   }
 
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(approvalUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setError('Odkaz se nepodařilo zkopírovat — schránka není dostupná.');
-    }
-  }
-
-  /** Z odsouhlasené nabídky rovnou faktura - převezme se všechno včetně položek. */
-  async function createInvoice() {
+  async function setPaid(paid: boolean) {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/invoices', {
+      const res = await fetch(`/api/admin/invoices/${invoice.id}/uhrada`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offerId: offer.id }),
+        body: JSON.stringify({ paid, paidAmountMinor: paid ? totals.incVat : undefined }),
       });
-      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (data?.invoiceId) {
-          router.push(`/admin/doklady/faktury/${data.invoiceId}`);
-          return;
-        }
-        setError(data?.error || 'Fakturu se nepodařilo vystavit.');
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || 'Uložení se nezdařilo.');
         return;
       }
-      router.push(`/admin/doklady/faktury/${data.id}`);
       router.refresh();
     } catch {
-      setError('Fakturu se nepodařilo vystavit.');
+      setError('Uložení se nezdařilo.');
     } finally {
       setSaving(false);
     }
@@ -226,13 +224,18 @@ export function OfferEditor({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/offers/${offer.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/invoices/${invoice.id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         setError(data?.error || 'Smazání se nezdařilo.');
         return;
       }
-      router.push('/admin/doklady/nabidky');
+      if (data.cancelledInsteadOfDeleted) {
+        setInfo('Faktura byla stornována — v číselné řadě po ní zůstává stopa, jak to má být.');
+        router.refresh();
+        return;
+      }
+      router.push('/admin/doklady/faktury');
       router.refresh();
     } catch {
       setError('Smazání se nezdařilo.');
@@ -248,37 +251,47 @@ export function OfferEditor({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Lišta se stavem a akcemi - drží se nahoře, aby byla pořád po ruce. */}
       <div className="bg-white rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="font-display text-2xl text-ink">{offer.number}</span>
+          <span className="font-display text-2xl text-ink">{invoice.number}</span>
           <span
-            className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${OFFER_STATUS_CLASSES[offer.status]}`}
+            className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${STATUS_CLASSES[invoice.status]}`}
           >
-            {OFFER_STATUS_LABELS[offer.status]}
+            {STATUS_LABELS[invoice.status]}
           </span>
-          {offer.approvedAt && (
-            <span className="text-xs font-body text-muted">
-              Schváleno {formatDateTime(offer.approvedAt)}
-              {offer.approvedByName ? ` — ${offer.approvedByName}` : ''}
-            </span>
+          {invoice.offerNumber && (
+            <span className="text-xs font-body text-muted">z nabídky {invoice.offerNumber}</span>
           )}
-          {offer.rejectedAt && !offer.approvedAt && (
-            <span className="text-xs font-body text-red-600">Odmítnuto {formatDateTime(offer.rejectedAt)}</span>
+          {invoice.paidAt && (
+            <span className="text-xs font-body text-status-done">Uhrazeno {formatDateTime(invoice.paidAt)}</span>
           )}
-          {offer.sentAt && !offer.approvedAt && !offer.rejectedAt && (
-            <span className="text-xs font-body text-muted">Odesláno {formatDateTime(offer.sentAt)}</span>
+          {invoice.sentAt && !invoice.paidAt && (
+            <span className="text-xs font-body text-muted">Odesláno {formatDateTime(invoice.sentAt)}</span>
           )}
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={copyLink}
-            className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors"
-          >
-            {copied ? 'Zkopírováno' : 'Odkaz pro klienta'}
-          </button>
+          {invoice.status === 'PAID' ? (
+            <button
+              type="button"
+              onClick={() => setPaid(false)}
+              disabled={saving}
+              className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
+            >
+              Zrušit úhradu
+            </button>
+          ) : (
+            invoice.status !== 'CANCELLED' && (
+              <button
+                type="button"
+                onClick={() => setPaid(true)}
+                disabled={saving}
+                className="bg-brand-green text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60"
+              >
+                Označit jako uhrazenou
+              </button>
+            )
+          )}
           {!locked && (
             <>
               <button
@@ -287,11 +300,11 @@ export function OfferEditor({
                 disabled={saving || sending}
                 className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-[#F1ECFF] transition-colors disabled:opacity-60"
               >
-                {sending ? 'Odesílám…' : 'Odeslat klientovi'}
+                {sending ? 'Odesílám…' : 'Odeslat odběrateli'}
               </button>
               <button
                 type="button"
-                onClick={save}
+                onClick={() => save()}
                 disabled={saving || sending}
                 className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
               >
@@ -303,44 +316,20 @@ export function OfferEditor({
       </div>
 
       {locked && (
-        <div className="bg-[#E3F9EC] border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
-          <p className="text-sm text-ink m-0">
-            Nabídku klient schválil, takže už se nedá měnit — zůstává přesně v podobě, kterou odsouhlasil.
-          </p>
-          <button
-            type="button"
-            onClick={createInvoice}
-            disabled={saving}
-            className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60 whitespace-nowrap"
-          >
-            Vystavit fakturu
-          </button>
-        </div>
+        <p className="text-sm text-ink bg-field border border-line rounded-lg px-4 py-3 m-0">
+          {invoice.status === 'PAID'
+            ? 'Faktura je uhrazená, takže se nedá měnit. Kdyby bylo potřeba, nejdřív zrušte úhradu.'
+            : 'Faktura je stornovaná.'}
+        </p>
       )}
       {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
       {info && <p className="text-sm text-ink bg-[#F1ECFF] border border-line rounded-lg px-4 py-3 m-0">{info}</p>}
 
-      {/* Vlastní doklad */}
       <div className="bg-white rounded-card border border-line shadow-sm overflow-hidden">
-        {/* Hlavička: dodavatel vs. odběratel */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-line">
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <span className="text-xs font-heading text-muted uppercase tracking-wide">Dodavatel</span>
-            {locked ? (
-              <p className="font-heading font-semibold text-ink m-0">{issuer.name}</p>
-            ) : (
-              <select
-                value={form.issuerCompanyId}
-                onChange={(e) => set('issuerCompanyId', e.target.value)}
-                className={inputClass}
-              >
-                {issuers.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            <p className="font-heading font-semibold text-ink m-0">{issuer.name}</p>
             <p className="text-sm font-body text-muted m-0">
               {formatAddress(issuer) || '—'}
               <br />
@@ -369,42 +358,30 @@ export function OfferEditor({
             </p>
             {!company.contactEmail && (
               <p className="text-xs text-red-600 font-body m-0">
-                Firma nemá kontaktní e-mail — bez něj nabídku nepošlete.
+                Firma nemá kontaktní e-mail — bez něj fakturu nepošlete.
               </p>
             )}
           </div>
         </div>
 
-        {/* Předmět a data */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 border-b border-line">
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Předmět nabídky</span>
+            <span className="text-sm font-body text-ink">Předmět</span>
             <input
               value={form.subject}
               disabled={locked}
               onChange={(e) => set('subject', e.target.value)}
-              placeholder="např. Výroba audioknihy Tři mušketýři"
               className={inputClass}
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Vystaveno</span>
+            <span className="text-sm font-body text-ink">Variabilní symbol</span>
             <input
-              type="date"
-              value={form.issueDate}
+              value={form.variableSymbol}
               disabled={locked}
-              onChange={(e) => set('issueDate', e.target.value)}
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Platnost do</span>
-            <input
-              type="date"
-              value={form.validUntil}
-              disabled={locked}
-              onChange={(e) => set('validUntil', e.target.value)}
-              className={inputClass}
+              onChange={(e) => set('variableSymbol', e.target.value.replace(/\D/g, ''))}
+              inputMode="numeric"
+              className={`${inputClass} tabular-nums`}
             />
           </label>
           <label className="flex flex-col gap-1.5">
@@ -422,9 +399,82 @@ export function OfferEditor({
               ))}
             </select>
           </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Vystaveno</span>
+            <input
+              type="date"
+              value={form.issueDate}
+              disabled={locked}
+              onChange={(e) => set('issueDate', e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Datum zdanitelného plnění</span>
+            <input
+              type="date"
+              value={form.taxDate}
+              disabled={locked}
+              onChange={(e) => set('taxDate', e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Splatnost</span>
+            <input
+              type="date"
+              value={form.dueDate}
+              disabled={locked}
+              onChange={(e) => set('dueDate', e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Účet</span>
+            <select
+              value={form.bankAccountId}
+              disabled={locked}
+              onChange={(e) => set('bankAccountId', e.target.value)}
+              className={inputClass}
+            >
+              <option value="">— vyberte účet —</option>
+              {accountsForCurrency.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label} · {[a.accountNumber, a.iban].filter(Boolean).join(' / ')}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        {/* Položky */}
+        {/* Kurz ČNB - jen u cizí měny */}
+        {form.currency !== 'CZK' && (
+          <div className="px-6 py-4 border-b border-line bg-field flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <span className="text-xs font-heading text-muted uppercase tracking-wide">Kurz ČNB</span>
+              <p className="text-sm font-heading text-ink m-0 mt-0.5 tabular-nums">
+                1 {form.currency} = {formatRate(invoice.exchangeRate)} Kč
+                {invoice.exchangeRateDate && (
+                  <span className="text-muted font-body">
+                    {' '}
+                    ke dni {new Intl.DateTimeFormat('cs-CZ').format(new Date(invoice.exchangeRateDate))}
+                  </span>
+                )}
+              </p>
+            </div>
+            {!locked && (
+              <button
+                type="button"
+                onClick={() => save({ refreshRate: true })}
+                disabled={saving}
+                className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-white transition-colors disabled:opacity-60"
+              >
+                Načíst kurz k datu vystavení
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="p-6 flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Položky</h2>
@@ -472,7 +522,6 @@ export function OfferEditor({
                         value={item.unit}
                         disabled={locked}
                         onChange={(e) => updateItem(index, { unit: e.target.value })}
-                        placeholder="ks"
                         className={cellClass}
                       />
                     </td>
@@ -506,7 +555,11 @@ export function OfferEditor({
                       {!locked && (
                         <button
                           type="button"
-                          onClick={() => removeItem(index)}
+                          onClick={() =>
+                            setItems((current) =>
+                              current.length === 1 ? [emptyItem()] : current.filter((_, i) => i !== index),
+                            )
+                          }
                           title="Odebrat položku"
                           className="text-muted hover:text-red-600 text-sm font-heading"
                         >
@@ -523,7 +576,7 @@ export function OfferEditor({
           {!locked && (
             <button
               type="button"
-              onClick={addItem}
+              onClick={() => setItems((current) => [...current, emptyItem()])}
               className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-[#F1ECFF] transition-colors self-start"
             >
               + Přidat položku
@@ -531,7 +584,6 @@ export function OfferEditor({
           )}
         </div>
 
-        {/* Součet */}
         <div className="border-t border-line p-6 flex justify-end">
           <div className="w-full max-w-xs flex flex-col gap-1.5">
             <div className="flex items-center justify-between text-sm font-heading">
@@ -545,53 +597,35 @@ export function OfferEditor({
               </div>
             ))}
             <div className="flex items-center justify-between border-t border-line pt-2 mt-1">
-              <span className="font-heading font-semibold text-ink">Celkem</span>
+              <span className="font-heading font-semibold text-ink">K úhradě</span>
               <span className="font-display text-xl text-ink tabular-nums">
                 {formatMoney(totals.incVat, form.currency)}
               </span>
             </div>
+            {form.currency !== 'CZK' && (
+              <div className="flex items-center justify-between text-xs font-body text-muted">
+                <span>v korunách kurzem ČNB</span>
+                <span className="tabular-nums">
+                  {formatMoney(toCzkMinor(totals.incVat, invoice.exchangeRate), 'CZK')}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Poznámka a účet */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
-          <span className="text-xs font-heading text-muted uppercase tracking-wide">Poznámka pro klienta</span>
-          <textarea
-            value={form.note}
-            disabled={locked}
-            onChange={(e) => set('note', e.target.value)}
-            rows={4}
-            placeholder="Co je v ceně, termíny, podmínky…"
-            className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full disabled:opacity-70"
-          />
-        </div>
-
-        <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
-          <span className="text-xs font-heading text-muted uppercase tracking-wide">
-            Bankovní účet ({CURRENCY_LABELS[form.currency]})
-          </span>
-          {bankAccounts.length === 0 ? (
-            <p className="text-sm text-muted font-body m-0">
-              Pro tuhle měnu není u vaší firmy žádný účet. Doplňte ho v Moje firmy — na faktuře bude potřeba.
-            </p>
-          ) : (
-            <ul className="list-none p-0 m-0 flex flex-col gap-1">
-              {bankAccounts.map((a, i) => (
-                <li key={i} className="text-sm font-heading text-ink">
-                  {a.label}
-                  <span className="block text-xs text-muted font-body tabular-nums">
-                    {[a.accountNumber, a.iban].filter(Boolean).join(' · ')}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
+        <span className="text-xs font-heading text-muted uppercase tracking-wide">Poznámka na faktuře</span>
+        <textarea
+          value={form.note}
+          disabled={locked}
+          onChange={(e) => set('note', e.target.value)}
+          rows={3}
+          className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full disabled:opacity-70"
+        />
       </div>
 
-      {!locked && (
+      {invoice.status !== 'CANCELLED' && (
         <div>
           <button
             type="button"
@@ -599,7 +633,7 @@ export function OfferEditor({
             disabled={saving}
             className="text-red-600 text-sm font-heading disabled:opacity-60"
           >
-            Smazat nabídku
+            {invoice.status === 'DRAFT' ? 'Smazat fakturu' : 'Stornovat fakturu'}
           </button>
         </div>
       )}

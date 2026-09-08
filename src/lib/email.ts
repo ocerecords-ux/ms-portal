@@ -715,3 +715,86 @@ export async function sendOfferEmail(input: OfferEmailInput) {
 
   return { sent: true as const };
 }
+
+
+// ===========================================================================
+// FAKTURA (zadani 6. 9. 2026)
+//
+// Mail nese vše, co odběratel potřebuje k zaplacení - částku, účet,
+// variabilní symbol a splatnost.
+// ===========================================================================
+
+type InvoiceEmailInput = {
+  to: string;
+  contactName: string | null;
+  companyName: string;
+  issuerName: string;
+  number: string;
+  subject: string | null;
+  currency: 'CZK' | 'EUR' | 'GBP';
+  totalExVat: number;
+  totalIncVat: number;
+  dueDate: Date | null;
+  variableSymbol: string;
+  accountLabel: string;
+  accountNumber: string | null;
+  iban: string | null;
+};
+
+export function buildInvoiceHtml(input: InvoiceEmailInput): string {
+  const greeting = input.contactName ? `Dobrý den, ${escapeHtml(input.contactName)},` : 'Dobrý den,';
+  const dueText = input.dueDate ? input.dueDate.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' }) : null;
+  const account = [input.accountNumber, input.iban].filter(Boolean).join(' · ');
+
+  return emailShell({
+    tag: 'Faktura',
+    preheader: `Faktura ${input.number} od ${input.issuerName}.`,
+    body: `
+    <span class="badge">Faktura ${escapeHtml(input.number)}</span>
+    <h2>${input.subject ? escapeHtml(input.subject) : 'Faktura k úhradě'}</h2>
+    <p>${greeting}</p>
+    <p>posíláme fakturu pro <strong>${escapeHtml(input.companyName)}</strong>.</p>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Číslo faktury</td><td class="value">${escapeHtml(input.number)}</td></tr>
+      <tr><td class="label">Částka bez DPH</td><td class="value regular">${escapeHtml(formatOfferMoney(input.totalExVat, input.currency))}</td></tr>
+      <tr><td class="label">K úhradě</td><td class="value">${escapeHtml(formatOfferMoney(input.totalIncVat, input.currency))}</td></tr>
+      ${dueText ? `<tr><td class="label">Splatnost</td><td class="value">${escapeHtml(dueText)}</td></tr>` : ''}
+      <tr><td class="label">Účet</td><td class="value regular">${escapeHtml(account || input.accountLabel)}</td></tr>
+      <tr><td class="label">Variabilní symbol</td><td class="value">${escapeHtml(input.variableSymbol)}</td></tr>
+    </table>
+
+    <p class="small">Kdyby cokoliv nesedělo, stačí na tento e-mail odpovědět.</p>
+    <p class="small">${escapeHtml(input.issuerName)}</p>
+  `,
+  });
+}
+
+export async function sendInvoiceEmail(input: InvoiceEmailInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.to,
+    subject: `Faktura ${input.number}${input.subject ? ` — ${input.subject}` : ''}`,
+    text: [
+      input.contactName ? `Dobry den, ${input.contactName},` : 'Dobry den,',
+      '',
+      `posilame fakturu ${input.number} pro ${input.companyName}.`,
+      `K uhrade: ${formatOfferMoney(input.totalIncVat, input.currency)}`,
+      input.dueDate ? `Splatnost: ${input.dueDate.toLocaleDateString('cs-CZ')}` : '',
+      `Ucet: ${[input.accountNumber, input.iban].filter(Boolean).join(' / ') || input.accountLabel}`,
+      `Variabilni symbol: ${input.variableSymbol}`,
+      '',
+      input.issuerName,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildInvoiceHtml(input),
+  });
+
+  return { sent: true as const };
+}

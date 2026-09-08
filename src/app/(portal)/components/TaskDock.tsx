@@ -167,23 +167,33 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
 
   // --- Rozbaleno: cely seznam -------------------------------------------
   return (
-    <aside className="fixed right-0 top-1/3 -translate-y-8 z-40 w-[320px] max-w-[92vw] max-h-[70vh] overflow-y-auto bg-white border border-r-0 border-line rounded-l-card shadow-xl p-4 flex flex-col gap-3">
+    <aside className="fixed right-0 top-1/3 -translate-y-8 z-40 flex items-stretch">
+      {/* Široký pruh na zavření přes celou výšku panelu - do malé šipky
+          se špatně trefovalo (zadani 8. 9. 2026). Kliknout jde kamkoliv sem. */}
+      <button
+        type="button"
+        onClick={toggle}
+        title="Skrýt úkoly"
+        aria-label="Skrýt úkoly"
+        className="w-8 shrink-0 rounded-l-card border border-r-0 border-line bg-field text-muted hover:bg-brand-purple hover:text-white transition-colors flex flex-col items-center justify-center gap-2"
+      >
+        <Chevron direction="right" />
+        <span className="text-[10px] font-heading font-semibold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
+          Skrýt
+        </span>
+        <Chevron direction="right" />
+      </button>
+
+      <div className="w-[320px] max-w-[86vw] max-h-[70vh] overflow-y-auto bg-white border border-r-0 border-line shadow-xl p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Úkoly</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-heading text-muted tabular-nums">
-            {open.length === 0 ? 'hotovo' : `${open.length} k vyřízení`}
-          </span>
-          <button
-            type="button"
-            onClick={toggle}
-            title="Skrýt úkoly"
-            aria-label="Skrýt úkoly"
-            className="text-muted hover:text-brand-purple"
-          >
-            <Chevron direction="right" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={toggle}
+          className="text-xs font-heading font-semibold text-muted hover:text-brand-purple border border-line rounded-lg px-3 py-1.5 whitespace-nowrap"
+        >
+          {open.length === 0 ? 'hotovo' : `${open.length} k vyřízení`} ›
+        </button>
       </div>
 
       <form onSubmit={addTask} className="flex flex-col gap-2">
@@ -282,6 +292,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
           )}
         </div>
       )}
+      </div>
     </aside>
   );
 }
