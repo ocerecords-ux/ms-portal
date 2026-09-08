@@ -37,6 +37,7 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin': ['ADMIN'],
   '/admin/users': ['ADMIN'],
   '/admin/ceniky': ['ADMIN'],
+  '/admin/doklady': ['ADMIN'],
 };
 
 /** Uvidi uzivatel s touhle roli tenhle odkaz? Vlastni odkaz vidi kazdy. */
@@ -54,6 +55,7 @@ export const DEFAULT_MENU_ITEMS: { label: string; href: string; sortOrder: numbe
   { label: 'Firmy', href: '/admin', sortOrder: 50 },
   { label: 'Uživatelé', href: '/admin/users', sortOrder: 60 },
   { label: 'Ceníky', href: '/admin/ceniky', sortOrder: 70 },
+  { label: 'Doklady', href: '/admin/doklady', sortOrder: 80 },
 ];
 
 /** Stranky, ktere jde pridat zpet do listy pres "+" v rezimu Upravit. */
@@ -65,6 +67,7 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/admin', label: 'Firmy' },
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/ceniky', label: 'Ceníky' },
+  { href: '/admin/doklady', label: 'Doklady' },
   { href: '/muj-ucet', label: 'Můj účet' },
 ];
 

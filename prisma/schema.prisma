@@ -109,6 +109,7 @@ model Company {
   users    User[]
   orders   Order[]
   projects Project[]
+  offers   Offer[]
 }
 
 model User {
@@ -355,4 +356,134 @@ model Task {
   updatedAt DateTime  @updatedAt
 
   @@index([userId, done])
+}
+
+
+// ===========================================================================
+// DOKLADY (zadani 6. 9. 2026) - vlastni fakturacni firmy, ciselne rady,
+// bankovni ucty a nabidky. Vse pracuje s menami: castka se vzdy uklada spolu
+// s kodem meny, nikdy jako hole cislo.
+// ===========================================================================
+
+// Meny, ve kterych Mediaspace fakturuje (zadani 8. 9. 2026: CZK, EUR a libry).
+enum Currency {
+  CZK
+  EUR
+  GBP
+}
+
+// "Moje firmy" - fakturacni jednotky, za ktere Mediaspace vystavuje doklady.
+// Pocita se s vic firmami pod jednou znackou, proto se u kazdeho dokladu
+// vybira, za kterou se vystavuje.
+model IssuerCompany {
+  id             String   @id @default(cuid())
+  name           String
+  ic             String?
+  dic            String?
+  vatPayer       Boolean  @default(true)
+
+  addressStreet  String?
+  addressCity    String?
+  addressZip     String?
+  addressCountry String?  @default("CZ")
+
+  email          String?  // odesilatel dokladu
+  phone          String?
+  logoUrl        String?
+
+  // Ciselne rady. Format se sklada ze zastupnych znaku - {YYYY} rok, {YY} rok
+  // dvojcislim, {MM} mesic, {NNN}/{NNNN}/{NNNNN} poradove cislo doplnene
+  // nulami. Pocatecni cislo jde nastavit, aby slo navazat na radu z Caflou.
+  invoiceNumberFormat String @default("{YYYY}{NNN}")
+  invoiceNextNumber   Int    @default(1)
+  offerNumberFormat   String @default("N{YYYY}{NNN}")
+  offerNextNumber     Int    @default(1)
+
+  defaultCurrency Currency @default(CZK)
+  isDefault       Boolean  @default(false) // predvybrana firma u novych dokladu
+  active          Boolean  @default(true)
+
+  bankAccounts BankAccount[]
+  offers       Offer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Bankovni ucty vlastni firmy - jeden na kazdou menu, klidne i vic
+// (zadani 8. 9. 2026: "bude dobré mít i možnost nastavit více účtů").
+model BankAccount {
+  id              String        @id @default(cuid())
+  issuerCompanyId String
+  issuer          IssuerCompany @relation(fields: [issuerCompanyId], references: [id], onDelete: Cascade)
+
+  label         String   // "Air Bank CZK", "Fio EUR"...
+  accountNumber String?  // tuzemsky tvar
+  iban          String?
+  swift         String?
+  bankName      String?
+  currency      Currency @default(CZK)
+  isDefault     Boolean  @default(false) // predvybrany ucet pro tuhle menu
+  sortOrder     Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([issuerCompanyId])
+}
+
+// Stav nabidky. Schvaleni dela klient odkazem s jednorazovym tokenem, takze
+// se kvuli tomu nemusi prihlasovat.
+enum OfferStatus {
+  DRAFT    // rozpracovana
+  SENT     // odeslana klientovi
+  APPROVED // klient schvalil
+  REJECTED // klient odmitl
+}
+
+model Offer {
+  id              String        @id @default(cuid())
+  number          String        @unique
+  issuerCompanyId String
+  issuer          IssuerCompany @relation(fields: [issuerCompanyId], references: [id])
+  companyId       String        // odberatel - firma ze sekce Firmy
+  company         Company       @relation(fields: [companyId], references: [id])
+
+  currency   Currency  @default(CZK)
+  issueDate  DateTime  @default(now())
+  validUntil DateTime?
+  subject    String?   // predmet nabidky
+  note       String?
+
+  status         OfferStatus @default(DRAFT)
+  approvalToken  String      @unique // odkaz pro klienta ke schvaleni
+  sentAt         DateTime?
+  approvedAt     DateTime?
+  approvedByName String?     // kdo na strane klienta schvalil
+  rejectedAt     DateTime?
+
+  items OfferItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+}
+
+// Polozka nabidky. Cena se drzi v nejmensi jednotce meny (halere, centy,
+// pence) jako cele cislo - s desetinnymi cisly by castky postupne ujizdely.
+model OfferItem {
+  id      String @id @default(cuid())
+  offerId String
+  offer   Offer  @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  description    String
+  quantity       Float  @default(1) // klidne 2,5 hodiny
+  unit           String? // "NS", "hod", "ks"
+  unitPriceMinor Int     @default(0) // cena za jednotku bez DPH, v halerich/centech
+  vatRate        Int     @default(21) // sazba DPH v procentech, 0 = bez DPH
+  sortOrder      Int     @default(0)
+
+  @@index([offerId])
 }
