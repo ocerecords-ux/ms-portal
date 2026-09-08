@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from '@/app/(portal)/components/Topbar';
 import { TaskDock } from '@/app/(portal)/components/TaskDock';
+import { ChatDock } from '@/app/(portal)/components/ChatDock';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 
@@ -35,6 +36,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12 pr-16 sm:pr-20">{children}</div>
       {/* Úkoly po ruce i v administraci - stejný panel jako ve zbytku portálu. */}
       <TaskDock tasks={tasks} />
+      {/* Chat týmu - stejný panel u spodní hrany (zadani 8. 9. 2026). */}
+      <ChatDock />
     </div>
   );
 }

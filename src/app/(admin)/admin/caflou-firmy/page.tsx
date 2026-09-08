@@ -20,17 +20,17 @@ export default async function CaflouCompaniesPage() {
 
   // Rejstriky pro hledani duplicit. Nazev se porovnava bez diakritiky a bez
   // pravni formy ("s.r.o."), protoze v Caflou a v portalu byva zapsany jinak.
-  const companyByCaflouId = new Map(
+  const companyByCaflouId = new Map<string, string>(
     companies.filter((c) => c.caflouCompanyId).map((c): [string, string] => [String(c.caflouCompanyId), c.name]),
   );
-  const companyByIc = new Map(
+  const companyByIc = new Map<string, string>(
     companies.filter((c) => c.ic).map((c): [string, string] => [String(c.ic).replace(/\D/g, ''), c.name]),
   );
-  const companyByName = new Map(companies.map((c): [string, string] => [comparableCompanyName(c.name), c.name]));
-  const personByIc = new Map(
+  const companyByName = new Map<string, string>(companies.map((c): [string, string] => [comparableCompanyName(c.name), c.name]));
+  const personByIc = new Map<string, string>(
     people.filter((p) => p.ic).map((p): [string, string] => [String(p.ic).replace(/\D/g, ''), p.name || p.email]),
   );
-  const personByName = new Map(
+  const personByName = new Map<string, string>(
     people.map((p): [string, string] => [comparableCompanyName(p.name || p.email), p.name || p.email]),
   );
 

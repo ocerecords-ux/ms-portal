@@ -164,6 +164,9 @@ model User {
   timesheets      TimesheetEntry[]
   tasks           Task[]
   menuItems       UserMenuItem[]
+  conversationsCreated Conversation[]       @relation("ConversationCreatedBy")
+  conversationMembers  ConversationMember[]
+  messages             Message[]
 }
 
 model Order {
@@ -396,6 +399,65 @@ model CaflouCompany {
 
   @@index([kind])
   @@index([name])
+}
+
+// Komunikacni kanal pro tym (zadani 8. 9. 2026: "vytvor komunikacni kanal
+// jako Slack pro tym - misto Kanalu to bude nazvano Projekty, pak soukrome
+// zpravy a skupinovy chat"). Zatim zamerne jednoduche: text, zadne prilohy,
+// reakce ani vlakna - "do budoucna na to udelame samostatnou aplikaci".
+//
+// Chat je jen pro tym Mediaspace (stejne jako Ukoly), klienti a herci se k
+// nemu vubec nedostanou.
+enum ConversationKind {
+  PROJEKT   // kanal k jednomu projektu z Caflou - vidi ho cely tym
+  SOUKROMA  // zprava mezi dvema lidmi
+  SKUPINA   // pojmenovana skupina vic lidi
+}
+
+model Conversation {
+  id              String           @id @default(cuid())
+  kind            ConversationKind
+  // Nazev: u skupiny zadany rucne, u projektu nazev projektu (drzime si ho i
+  // textove, aby byl kanal citelny, kdyz projekt v Caflou zmizi).
+  name            String?
+  caflouProjectId String?          @unique
+
+  createdById     String
+  createdBy       User             @relation("ConversationCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime         @default(now())
+  // Kvuli razeni seznamu - posledni zprava nahore.
+  lastMessageAt   DateTime         @default(now())
+
+  members         ConversationMember[]
+  messages        Message[]
+
+  @@index([kind, lastMessageAt])
+}
+
+// Clenstvi drzi hlavne stav precteni. U kanalu k projektu se radek zaklada az
+// ve chvili, kdy tam nekdo poprve zajde - kanal vidi cely tym bez ohledu na to.
+model ConversationMember {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt     DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body           String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
 }
 
 // Ukoly (to-do) na profilu clena tymu Mediaspace - zadani 5. 9. 2026

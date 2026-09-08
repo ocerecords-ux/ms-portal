@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from './components/Topbar';
 import { TaskDock } from './components/TaskDock';
+import { ChatDock } from './components/ChatDock';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { isInternalRole } from '@/lib/roles';
@@ -44,6 +45,9 @@ export default async function PortalLayout({ children }: { children: React.React
       {/* Úkoly po ruce na každé stránce - vysouvací panel na pravé hraně
           (zadani 8. 9. 2026). Jen pro tým Mediaspace. */}
       {internal && <TaskDock tasks={tasks} />}
+      {/* Chat týmu - stejný vysouvací panel, jen u spodní hrany
+          (zadani 8. 9. 2026). Taky jen pro tým Mediaspace. */}
+      {internal && <ChatDock />}
     </div>
   );
 }
