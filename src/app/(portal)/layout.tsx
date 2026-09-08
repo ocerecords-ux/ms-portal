@@ -2,7 +2,10 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from './components/Topbar';
+import { TaskDock } from './components/TaskDock';
 import { loadMenuEntries, visibleFor } from '@/lib/menuServer';
+import { loadMyTasks } from '@/lib/tasksServer';
+import { isInternalRole } from '@/lib/roles';
 
 // Jediné místo, které chrání celou klientskou sekci portálu. Session je
 // zdroj pravdy o tom, kdo je přihlášen a pod jakou firmu (companyId) patří
@@ -12,20 +15,29 @@ export default async function PortalLayout({ children }: { children: React.React
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const isAdmin = session.user.role === 'ADMIN';
+  const role = session.user.role;
+  const isAdmin = role === 'ADMIN';
+  const internal = isInternalRole(role);
+
   // Odkazy v liště jsou editovatelné (viz Topbar). Co uvidí konkrétní role se
   // nenastavuje - řídí se právy ke stránce (lib/menu.ts > PAGE_ACCESS).
-  const entries = await loadMenuEntries();
+  const [entries, tasks] = await Promise.all([
+    loadMenuEntries(),
+    loadMyTasks(session.user.id, role),
+  ]);
 
   return (
     <div className="min-h-screen bg-paper">
       <Topbar
         userLabel={session.user.name || session.user.email}
         isAdmin={isAdmin}
-        items={visibleFor(entries, session.user.role)}
+        items={visibleFor(entries, role)}
         allItems={isAdmin ? entries : undefined}
       />
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
+      {/* Úkoly po ruce na každé stránce - vysouvací panel na pravé hraně
+          (zadani 8. 9. 2026). Jen pro tým Mediaspace. */}
+      {internal && <TaskDock tasks={tasks} />}
     </div>
   );
 }

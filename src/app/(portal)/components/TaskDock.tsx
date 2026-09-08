@@ -1,7 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+
+/**
+ * Úkoly pořád po ruce (zadani 8. 9. 2026: "aby byl ten to do list pořád po
+ * ruce, tak by se mohl skrývat a odkrývat na pravé straně obrazovky pomocí
+ * šipky >. Když se minimalizuje, zůstanou jen ikonky.").
+ *
+ * Panel visi na prave hrane obrazovky nad obsahem stranky. Zabaleny je z nej
+ * jen uzka lista s ikonkami (odskrtavatko s poctem otevrenych ukolu, hodiny s
+ * poctem ukolu po terminu), rozbaleny je to cely seznam se zadavanim.
+ * Stav (rozbaleno/zabaleno) si pamatuje prohlizec, takze si to kazdy nastavi
+ * jednou a drzi mu to.
+ *
+ * Vidi ho jen tym Mediaspace - klientum se vubec nevykresli (viz layout).
+ */
 
 type Task = {
   id: string;
@@ -9,6 +23,8 @@ type Task = {
   done: boolean;
   dueDate: string | null;
 };
+
+const STORAGE_KEY = 'ms-portal-ukoly-otevreno';
 
 function formatDue(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
@@ -20,22 +36,66 @@ function todayIso(): string {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
-/**
- * Úkoly na profilu člena týmu Mediaspace (zadani 5. 9. 2026). Jednoduchy
- * to-do seznam: napsat, odskrtnout, smazat. Ukoly vidi jen jejich vlastnik -
- * server bere uzivatele vzdy ze session, nikdy z pozadavku.
- */
-export function TaskWidget({ tasks }: { tasks: Task[] }) {
+function ChecklistIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M3 6l2 2 3-3M3 13l2 2 3-3M3 20l2 2 3-3" />
+      <path d="M12 7h9M12 14h9M12 21h9" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+function Chevron({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d={direction === 'right' ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'} />
+    </svg>
+  );
+}
+
+export function TaskDock({ tasks }: { tasks: Task[] }) {
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
 
+  // Stav si pamatujeme v prohlizeci, at se panel neotevira porad znovu.
+  useEffect(() => {
+    try {
+      setExpanded(window.localStorage.getItem(STORAGE_KEY) === '1');
+    } catch {
+      // soukrome okno / zakazane uloziste - nevadi, jen si to nezapamatujeme
+    }
+  }, []);
+
+  function toggle() {
+    setExpanded((v) => {
+      const next = !v;
+      try {
+        window.localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
+      } catch {
+        // viz vyse
+      }
+      return next;
+    });
+  }
+
+  const today = todayIso();
   const open = tasks.filter((t) => !t.done);
   const done = tasks.filter((t) => t.done);
-  const today = todayIso();
+  const overdue = open.filter((t) => t.dueDate && t.dueDate < today);
 
   async function send(url: string, method: string, body?: unknown) {
     setBusy(true);
@@ -72,13 +132,58 @@ export function TaskWidget({ tasks }: { tasks: Task[] }) {
     }
   }
 
-  return (
-    <aside className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-4 h-fit">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Úkoly</h2>
-        <span className="text-xs font-heading text-muted tabular-nums">
-          {open.length === 0 ? 'hotovo' : `${open.length} k vyřízení`}
+  // --- Zabaleno: jen ikonky na hrane obrazovky ---------------------------
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={toggle}
+        title="Zobrazit úkoly"
+        aria-label="Zobrazit úkoly"
+        className="fixed right-0 top-1/3 z-40 flex flex-col items-center gap-3 bg-white border border-r-0 border-line rounded-l-card shadow-lg px-2.5 py-3 text-muted hover:text-brand-purple transition-colors"
+      >
+        <span className="text-brand-purple">
+          <Chevron direction="left" />
         </span>
+        <span className="relative text-brand-purpleDark">
+          <ChecklistIcon />
+          {open.length > 0 && (
+            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-purple text-white text-[10px] font-heading font-bold leading-4 text-center">
+              {open.length}
+            </span>
+          )}
+        </span>
+        {overdue.length > 0 && (
+          <span className="relative text-red-600" title={`${overdue.length} po termínu`}>
+            <ClockIcon />
+            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-heading font-bold leading-4 text-center">
+              {overdue.length}
+            </span>
+          </span>
+        )}
+      </button>
+    );
+  }
+
+  // --- Rozbaleno: cely seznam -------------------------------------------
+  return (
+    <aside className="fixed right-0 top-1/3 -translate-y-8 z-40 w-[320px] max-w-[92vw] max-h-[70vh] overflow-y-auto bg-white border border-r-0 border-line rounded-l-card shadow-xl p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Úkoly</h2>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-heading text-muted tabular-nums">
+            {open.length === 0 ? 'hotovo' : `${open.length} k vyřízení`}
+          </span>
+          <button
+            type="button"
+            onClick={toggle}
+            title="Skrýt úkoly"
+            aria-label="Skrýt úkoly"
+            className="text-muted hover:text-brand-purple"
+          >
+            <Chevron direction="right" />
+          </button>
+        </div>
       </div>
 
       <form onSubmit={addTask} className="flex flex-col gap-2">
@@ -109,9 +214,7 @@ export function TaskWidget({ tasks }: { tasks: Task[] }) {
       {error && <p className="text-xs text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
-        {open.length === 0 && (
-          <li className="text-sm text-muted font-body py-2">Žádné otevřené úkoly. 👌</li>
-        )}
+        {open.length === 0 && <li className="text-sm text-muted font-body py-2">Žádné otevřené úkoly. 👌</li>}
         {open.map((task) => (
           <li key={task.id} className="flex items-start gap-2.5 py-2.5 group">
             <input
@@ -124,11 +227,7 @@ export function TaskWidget({ tasks }: { tasks: Task[] }) {
             <span className="flex-1 min-w-0 text-sm font-body text-ink break-words">
               {task.title}
               {task.dueDate && (
-                <span
-                  className={`block text-xs font-heading mt-0.5 ${
-                    task.dueDate < today ? 'text-red-600' : 'text-muted'
-                  }`}
-                >
+                <span className={`block text-xs font-heading mt-0.5 ${task.dueDate < today ? 'text-red-600' : 'text-muted'}`}>
                   {task.dueDate < today ? 'Po termínu — ' : 'Do '}
                   {formatDue(task.dueDate)}
                 </span>
@@ -167,9 +266,7 @@ export function TaskWidget({ tasks }: { tasks: Task[] }) {
                     onChange={() => send(`/api/tasks/${task.id}`, 'PATCH', { done: false })}
                     className="mt-0.5 w-4 h-4 accent-[#6C4BF4] shrink-0"
                   />
-                  <span className="flex-1 min-w-0 text-sm font-body text-muted line-through break-words">
-                    {task.title}
-                  </span>
+                  <span className="flex-1 min-w-0 text-sm font-body text-muted line-through break-words">{task.title}</span>
                   <button
                     type="button"
                     onClick={() => send(`/api/tasks/${task.id}`, 'DELETE')}

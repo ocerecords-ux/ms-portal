@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from '@/app/(portal)/components/Topbar';
+import { TaskDock } from '@/app/(portal)/components/TaskDock';
 import { loadMenuEntries, visibleFor } from '@/lib/menuServer';
+import { loadMyTasks } from '@/lib/tasksServer';
 
 // Administrace Mediaspace - pristupna jen uctum s roli ADMIN. Middleware
 // (src/middleware.ts) uz neprihlasene/neadminy blokuje na urovni routovani,
@@ -14,7 +16,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== 'ADMIN') redirect('/login');
 
-  const entries = await loadMenuEntries();
+  const [entries, tasks] = await Promise.all([
+    loadMenuEntries(),
+    loadMyTasks(session.user.id, session.user.role),
+  ]);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -28,6 +33,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.
           telefonni cislo se lamalo na dva radky. */}
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
+      {/* Úkoly po ruce i v administraci - stejný panel jako ve zbytku portálu. */}
+      <TaskDock tasks={tasks} />
     </div>
   );
 }
