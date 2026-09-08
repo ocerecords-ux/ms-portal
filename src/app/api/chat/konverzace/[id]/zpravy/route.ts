@@ -28,7 +28,15 @@ const schema = z.object({
 async function nactiPristupnou(conversationId: string, userId: string) {
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
-    include: { members: { select: { userId: true } } },
+    include: {
+      members: {
+        select: {
+          userId: true,
+          lastReadAt: true,
+          user: { select: { name: true, email: true } },
+        },
+      },
+    },
   });
   if (!conversation) return null;
   if (conversation.kind !== 'PROJEKT' && !conversation.members.some((m) => m.userId === userId)) {
@@ -71,6 +79,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       create: { conversationId: conversation.id, userId: me },
     });
 
+    // "Zobrazeno": kdo mel konverzaci otevrenou uz potom, co zprava prisla.
+    // Bere se z lastReadAt clena - stejneho udaje, ze ktereho se pocitaji
+    // neprectene, takze nic dalsiho se nikam neuklada.
+    const ostatniClenove = conversation.members.filter((m) => m.userId !== me);
+
     return NextResponse.json({
       zpravy: zpravy.reverse().map((m) => ({
         id: m.id,
@@ -81,6 +94,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         authorPhotoUrl: m.user.photoUrl,
         mine: m.userId === me,
         replyCount: m._count.replies,
+        seenBy: ostatniClenove
+          .filter((clen) => clen.lastReadAt >= m.createdAt)
+          .map((clen) => userLabel(clen.user)),
       })),
     });
   } catch (err) {
@@ -144,6 +160,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         authorPhotoUrl: message.user.photoUrl,
         mine: true,
         replyCount: 0,
+        // Prave odeslanou zpravu jeste nikdo videt nemohl.
+        seenBy: [],
       },
       { status: 201 },
     );

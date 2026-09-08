@@ -14,6 +14,19 @@ export const CHAT_TABS: { kind: ConversationKind; label: string }[] = [
 
 export const MAX_MESSAGE_LENGTH = 4000;
 
+/**
+ * Smajlici do zprav (zadani 8. 9. 2026). Zamerne kratky rucni vyber toho,
+ * co se v pracovnim chatu opravdu pouziva - zadna knihovna navic; ta by se
+ * do portalu tahala kvuli par ikonam.
+ */
+export const EMOJI: string[] = [
+  '👍', '👎', '👏', '🙌', '🙏', '💪', '🤝', '👋',
+  '😀', '😄', '😅', '😂', '🙂', '😉', '😍', '🤩',
+  '🤔', '😐', '😬', '😢', '😮', '😴', '🤯', '🥳',
+  '🔥', '✅', '❌', '⚠️', '❗', '❓', '💡', '⭐',
+  '🎧', '🎙️', '🎬', '📚', '📅', '⏰', '💰', '🚀',
+];
+
 export type ChatMessage = {
   id: string;
   body: string;
@@ -25,6 +38,8 @@ export type ChatMessage = {
   mine: boolean;
   /** Kolik odpovedi visi ve vlakne pod touhle zpravou. */
   replyCount: number;
+  /** Kdo uz zpravu videl - jmena bez autora (zadani 8. 9. 2026). */
+  seenBy: string[];
 };
 
 export type ChatTeamMember = { id: string; label: string; photoUrl: string | null };

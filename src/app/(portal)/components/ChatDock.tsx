@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConversationKind } from '@prisma/client';
 import {
   CHAT_TABS,
+  EMOJI,
   MAX_MESSAGE_LENGTH,
   formatMessageTime,
   initials,
@@ -73,6 +74,25 @@ function Avatar({ label, photoUrl, size = 28 }: { label: string; photoUrl: strin
   );
 }
 
+/**
+ * "Zobrazeno" u vlastni zpravy (zadani 8. 9. 2026). Bere se z toho, kdy mel
+ * kdo konverzaci naposledy otevrenou - stejny udaj, ze ktereho se pocitaji
+ * neprectene. U kanalu k projektu to znamena "z tech, kdo tam kdy byli".
+ */
+function Zobrazeno({ seenBy }: { seenBy: string[] }) {
+  if (seenBy.length === 0) {
+    return <span className="block mt-0.5 text-[11px] font-body text-muted/70">Odesláno</span>;
+  }
+  return (
+    <span
+      className="block mt-0.5 text-[11px] font-body text-muted/80"
+      title={`Zobrazeno: ${seenBy.join(', ')}`}
+    >
+      Zobrazeno {seenBy.length <= 2 ? `· ${seenBy.join(', ')}` : `· ${seenBy.length} lidem`}
+    </span>
+  );
+}
+
 /** Text zpravy se zvyraznenymi zminkami (@Jméno). */
 function Telo({ body, jmena, mine }: { body: string; jmena: string[]; mine: boolean }) {
   return (
@@ -116,8 +136,27 @@ function Psatko({
   nabidka: ChatTeamMember[];
   vyber: (clovek: ChatTeamMember) => void;
 }) {
+  const [smajlici, setSmajlici] = useState(false);
+
   return (
     <form onSubmit={odeslat} className="relative border-t border-line p-3 flex items-end gap-2">
+      {smajlici && (
+        <div className="absolute left-3 right-3 bottom-full mb-1 bg-white border border-line rounded-lg shadow-lg p-2 grid grid-cols-8 gap-1 z-10">
+          {EMOJI.map((e) => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => {
+                zmena(`${hodnota}${e}`);
+                setSmajlici(false);
+              }}
+              className="text-lg leading-none rounded hover:bg-field py-1"
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+      )}
       {nabidka.length > 0 && (
         <div className="absolute left-3 right-3 bottom-full mb-1 max-h-40 overflow-y-auto bg-white border border-line rounded-lg shadow-lg py-1 z-10">
           {nabidka.map((u) => (
@@ -133,6 +172,18 @@ function Psatko({
           ))}
         </div>
       )}
+      <button
+        type="button"
+        onClick={() => setSmajlici((v) => !v)}
+        title="Smajlíci"
+        aria-label="Smajlíci"
+        className="shrink-0 w-9 h-9 rounded-lg border border-line text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-5 h-5">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0" />
+        </svg>
+      </button>
       <textarea
         value={hodnota}
         onChange={(e) => zmena(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
@@ -701,6 +752,7 @@ export function ChatDock() {
                             >
                               <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
                             </p>
+                            {m.mine && <Zobrazeno seenBy={m.seenBy} />}
                           </div>
                         </div>
                       ))}
@@ -742,6 +794,7 @@ export function ChatDock() {
                             >
                               <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
                             </p>
+                            {m.mine && <Zobrazeno seenBy={m.seenBy} />}
                             <button
                               type="button"
                               onClick={() => setVlaknoId(m.id)}
