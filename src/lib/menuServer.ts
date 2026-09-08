@@ -7,18 +7,53 @@ import { DEFAULT_MENU_ITEMS, canSee, type MenuEntry } from '@/lib/menu';
 // klientsky Topbar a Prisma se do prohlizece dostat nesmi.
 
 /**
+ * Odkazy na stranky, ktere uz v portalu nejsou. Prvni nasazeni editovatelneho
+ * menu jeste zakladalo polozku "Menu" mirici na /admin/menu; tu stranku
+ * nahradila uprava primo v liste, takze by odkaz vedl na nic. Pri nacteni je
+ * proto z databaze rovnou vyhodime - uzivatel to nema co resit rucne.
+ */
+const REMOVED_HREFS = ['/admin/menu'];
+
+/**
  * Vsechny polozky listy v poradi, jak je admin nastavil. Kdyz tabulka jeste
  * neexistuje nebo je prazdna, zalozi se z vychozi sady - lista se tedy nikdy
  * nezobrazi prazdna a admin ma hned co presouvat.
  */
 export async function loadMenuEntries(): Promise<MenuEntry[]> {
   try {
-    const items = await prisma.menuItem.findMany({
+    let items = await prisma.menuItem.findMany({
       orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }],
     });
+
+    // Jednorazovy uklid: vyhodit odkazy na zrusene stranky a doplnit sekce,
+    // ktere vznikly az po zalozeni listy (lista se seedovala driv, nez byly
+    // Doklady, takze by na ne nesel odkaz). Bezi jen jednou - jakmile stara
+    // polozka zmizi, uz se sem nikdy nevejdeme, takze rucne odebranou polozku
+    // to uzivateli nikdy nevrati zpatky.
+    if (items.some((i) => REMOVED_HREFS.includes(i.href))) {
+      await prisma.menuItem.deleteMany({ where: { href: { in: REMOVED_HREFS } } });
+      items = items.filter((i) => !REMOVED_HREFS.includes(i.href));
+
+      const missing = DEFAULT_MENU_ITEMS.filter(
+        (d) => d.href === '/admin/doklady' && !items.some((i) => i.href === d.href),
+      );
+      if (missing.length > 0) {
+        await prisma.menuItem.createMany({
+          data: missing.map((d) => ({
+            label: d.label,
+            href: d.href,
+            sortOrder: d.sortOrder,
+            roles: ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE'],
+          })),
+        });
+        items = await prisma.menuItem.findMany({ orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }] });
+      }
+    }
+
     if (items.length > 0) {
       return items.map((i) => ({ id: i.id, label: i.label, href: i.href }));
     }
+
     await seedDefaults();
     const seeded = await prisma.menuItem.findMany({ orderBy: [{ sortOrder: 'asc' }] });
     return seeded.map((i) => ({ id: i.id, label: i.label, href: i.href }));
