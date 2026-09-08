@@ -4,61 +4,22 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useState } from 'react';
+import { isExternalHref, type NavItem } from '@/lib/menu';
 
-// Pro adminy (Zuzo-labuzo) nahrazuje polozka "Uzivatele" polozku "Objednavka
-// audioknihy" v hlavni navigaci - objednavani je klientska agenda, admini
-// naopak potrebuji rychly pristup ke sprave uzivatelu (zadani 5. 9. 2026).
-// Firmy jsou od 5. 9. 2026 (upresneni) taky primo tady v hlavnim panelu -
-// admin se k nim nema dostavat jen oklikou pres "Administrace" v menu.
-function navItemsFor(isAdmin?: boolean, isInternal?: boolean, showTimesheets?: boolean) {
-  if (isAdmin) {
-    return [
-      { href: '/projekty', label: 'Projekty' },
-      { href: '/admin', label: 'Firmy' },
-      { href: '/admin/users', label: 'Uživatelé' },
-      { href: '/admin/ceniky', label: 'Ceníky' },
-      // Vykazy vidi Zuzo-labuzo (vsechny) a Zvukar (svoje) - zadani 6. 9. 2026.
-      ...(showTimesheets ? [{ href: '/vykazy', label: 'Výkazy' }] : []),
-    ];
-  }
-  // Interni ucty bez admin prav (Produkce / Zvukar) - objednavka je
-  // klientska agenda, do administrace firem a uzivatelu je zatim pousti jen
-  // role Zuzo-labuzo (viz middleware.ts), takze jim zbyva prehled projektu.
-  // Nahravky jsou od 5. 9. 2026 (zadani) uz jen klientska sekce - interni tym
-  // se k souborum dostava pres Google Disk primo, ne pres portal.
-  if (isInternal) {
-    return [
-      { href: '/projekty', label: 'Projekty' },
-      ...(showTimesheets ? [{ href: '/vykazy', label: 'Výkazy' }] : []),
-    ];
-  }
-  return [
-    { href: '/projekty', label: 'Projekty' },
-    // Label zjednoduseny na "Objednávka" (zadani 12. 9. 2026) - stranka uz
-    // muze byt objednavka audioknihy NEBO reklamy podle Company.dealsAds /
-    // dealsAudiobooks (viz objednavka/page.tsx), takze pevny nazev
-    // "Objednávka audioknihy" by byl u klientu poptavajicich jen reklamu
-    // zavadejici.
-    { href: '/objednavka', label: 'Objednávka' },
-    { href: '/nahravky', label: 'Nahrávky' },
-  ];
-}
-
+// Polozky listy uz nejsou napevno tady - skladaji se z tabulky MenuItem a
+// admin je meni v /admin/menu (zadani 6. 9. 2026). Vychozi sada zustava v
+// src/lib/menu.ts (DEFAULT_MENU_ITEMS) a pouzije se, dokud je tabulka prazdna.
 export function Topbar({
   userLabel,
   isAdmin,
-  isInternal,
-  showTimesheets,
+  items,
 }: {
   userLabel: string;
   isAdmin?: boolean;
-  isInternal?: boolean;
-  /** Vykazy prace - jen zvukar a Zuzo-labuzo (zadani 6. 9. 2026). */
-  showTimesheets?: boolean;
+  items: NavItem[];
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const NAV = navItemsFor(isAdmin, isInternal, showTimesheets);
 
   return (
     <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">
@@ -77,16 +38,37 @@ export function Topbar({
       </Link>
 
       <nav className="flex items-center gap-6 sm:gap-10 flex-wrap font-heading text-sm font-medium">
-        {NAV.map((item) => {
+        {items.map((item, index) => {
+          const external = isExternalHref(item.href);
           // "/admin" (Firmy) by jinak jako prefix odpovidal i "/admin/users" -
           // proto je Firmy aktivni jen presne na /admin nebo na detailu firmy.
           const active =
-            item.href === '/admin'
-              ? pathname === '/admin' || pathname?.startsWith('/admin/companies')
-              : pathname?.startsWith(item.href);
+            external || !pathname
+              ? false
+              : item.href === '/admin'
+                ? pathname === '/admin' || pathname.startsWith('/admin/companies')
+                : pathname.startsWith(item.href);
+          const className = `pb-2 border-b-2 transition-colors ${
+            active ? 'text-brand-green border-brand-green' : 'text-white/90 border-transparent hover:text-white'
+          }`;
+
+          if (external) {
+            return (
+              <a
+                key={`${item.href}-${index}`}
+                href={item.href}
+                target="_blank"
+                rel="noreferrer"
+                className={className}
+              >
+                {item.label}
+              </a>
+            );
+          }
+
           return (
             <Link
-              key={item.href}
+              key={`${item.href}-${index}`}
               href={item.href}
               // "/projekty" tahá při každém zobrazení živá data z Caflou
               // (viz projekty/page.tsx) - výchozí automatický prefetch by ho
@@ -95,9 +77,7 @@ export function Topbar({
               // riziko kolize/rate-limitu na Caflou API (zprava uzivatele
               // 5. 9. 2026: "Projekty se nepodařilo načíst z Caflou").
               prefetch={item.href === '/projekty' ? false : undefined}
-              className={`pb-2 border-b-2 transition-colors ${
-                active ? 'text-brand-green border-brand-green' : 'text-white/90 border-transparent hover:text-white'
-              }`}
+              className={className}
             >
               {item.label}
             </Link>

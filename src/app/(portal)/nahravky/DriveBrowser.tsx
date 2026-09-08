@@ -150,6 +150,10 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [renameBusy, setRenameBusy] = useState(false);
+  // Chovani jako ve Finderu (zadani 5. 9. 2026): jeden klik polozku oznaci,
+  // dvojklik otevre slozku / spusti prejmenovani souboru.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [zipBusy, setZipBusy] = useState(false);
 
   function toggleSort(field: SortBy) {
     if (sortBy === field) {
@@ -181,6 +185,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
   useEffect(() => {
     load(currentFolder.id);
     setPlayingId(null);
+    setSelectedId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentFolder.id]);
 
@@ -223,24 +228,44 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
   }
 
   /**
-   * "Stáhnout vše" - projde soubory v aktuální složce a spustí u každého
-   * stažení. Zámerne se nedela ZIP na serveru: nahravky audioknihy jsou
-   * bezne stovky MB a serverova funkce by na tom vytimeoutovala.
-   * Prohlizec se u vic souboru jednou zepta, jestli to povolit.
+   * "Stáhnout vše" - server slozi ze souboru v aktualni slozce jeden ZIP a
+   * rovnou ho streamuje (viz /api/drive/zip). Drive se misto toho spoustelo
+   * N samostatnych stazeni, coz prohlizec hlasil jako vyskakovaci okna.
+   *
+   * Nejdriv se zeptame s probe=1 - kdyz je slozka prazdna nebo moc velka,
+   * ukazeme normalni hlasku misto holeho JSONu v novem okne.
    */
-  function downloadAll() {
-    const files = sorted.filter((item) => !item.isFolder);
-    if (files.length === 0) return;
-    files.forEach((file, index) => {
-      setTimeout(() => {
-        const a = document.createElement('a');
-        a.href = `/api/drive/download?fileId=${encodeURIComponent(file.id)}`;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }, index * 800);
-    });
+  async function downloadAll() {
+    const url = `/api/drive/zip?folderId=${encodeURIComponent(currentFolder.id)}`;
+    setZipBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`${url}&probe=1`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Stažení složky se nezdařilo.');
+        return;
+      }
+      window.location.href = url;
+    } catch {
+      setError('Stažení složky se nezdařilo.');
+    } finally {
+      setZipBusy(false);
+    }
+  }
+
+  /** Jeden klik = označit (Finder). */
+  function selectItem(item: DriveItem) {
+    setSelectedId(item.id);
+  }
+
+  /** Dvojklik = otevřít složku, u souboru přejmenovat. */
+  function activateItem(item: DriveItem) {
+    if (item.isFolder) {
+      openFolder(item);
+      return;
+    }
+    startRename(item);
   }
 
   function startRename(item: DriveItem) {
@@ -325,14 +350,14 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
           <button
             type="button"
             onClick={downloadAll}
-            disabled={loading || sorted.every((i) => i.isFolder)}
-            title="Stáhnout všechny soubory v této složce"
+            disabled={loading || zipBusy || sorted.every((i) => i.isFolder)}
+            title="Stáhnout všechny soubory v této složce jako ZIP"
             className="inline-flex items-center gap-1.5 rounded-lg border border-white/40 text-white text-xs font-heading font-semibold px-3 py-2 hover:bg-white hover:text-brand-purple transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-white"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
               <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" />
             </svg>
-            Stáhnout vše
+            {zipBusy ? 'Připravuji ZIP…' : 'Stáhnout vše'}
           </button>
           <button
             type="button"
@@ -393,29 +418,46 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
             const isPlaying = playingId === item.id;
             return (
               <div key={item.id}>
-                <div className="flex items-center gap-3 px-6 py-3 hover:bg-field transition-colors">
+                {/* Radek se chova jako ve Finderu: jeden klik oznaci, dvojklik
+                    otevre slozku nebo spusti prejmenovani souboru. */}
+                <div
+                  role="row"
+                  tabIndex={0}
+                  onClick={() => selectItem(item)}
+                  onDoubleClick={() => activateItem(item)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      activateItem(item);
+                    }
+                    if (e.key === 'Escape') setSelectedId(null);
+                  }}
+                  className={`flex items-center gap-3 px-6 py-3 transition-colors outline-none cursor-default ${
+                    selectedId === item.id ? 'bg-[#F1ECFF]' : 'hover:bg-field'
+                  }`}
+                >
                   <FileIcon mimeType={item.mimeType} isFolder={item.isFolder} />
                   {renamingId === item.id ? (
                     <input
                       autoFocus
                       value={renameValue}
                       disabled={renameBusy}
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={(e) => e.stopPropagation()}
                       onChange={(e) => setRenameValue(e.target.value)}
                       onBlur={() => saveRename(item)}
                       onKeyDown={(e) => {
+                        e.stopPropagation();
                         if (e.key === 'Enter') saveRename(item);
                         if (e.key === 'Escape') setRenamingId(null);
                       }}
                       className="flex-1 min-w-0 rounded border border-brand-purple bg-white px-2 py-1 text-sm font-body text-ink outline-none"
                     />
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => (item.isFolder ? openFolder(item) : undefined)}
-                      onDoubleClick={() => startRename(item)}
-                      title="Dvojklikem přejmenujete"
-                      className={`flex-1 min-w-0 flex items-center gap-2 text-left text-sm font-body text-ink ${
-                        item.isFolder ? 'font-semibold hover:underline cursor-pointer' : 'cursor-text'
+                    <span
+                      title={item.isFolder ? 'Dvojklikem otevřete složku' : 'Dvojklikem přejmenujete'}
+                      className={`flex-1 min-w-0 flex items-center gap-2 text-left text-sm font-body text-ink select-none ${
+                        item.isFolder ? 'font-semibold' : ''
                       }`}
                     >
                       <span className="truncate">{item.name}</span>
@@ -424,7 +466,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                           {badge}
                         </span>
                       )}
-                    </button>
+                    </span>
                   )}
                   <span className="text-xs text-muted font-body tabular-nums w-24 text-right shrink-0 hidden sm:block">
                     {formatDate(item.modifiedTime)}
@@ -432,7 +474,11 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                   <span className="text-xs text-muted font-body tabular-nums w-20 text-right shrink-0 hidden sm:block">
                     {item.isFolder ? '—' : formatBytes(item.size)}
                   </span>
-                  <div className="flex items-center justify-end gap-1.5 shrink-0 w-[108px]">
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    className="flex items-center justify-end gap-1.5 shrink-0 w-[108px]"
+                  >
                     {audio && (
                       <button
                         type="button"
@@ -504,6 +550,12 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
             );
           })}
         </div>
+      )}
+
+      {!loading && !error && sorted.length > 0 && (
+        <p className="px-6 py-2.5 border-t border-line bg-field text-[11px] font-body text-muted m-0">
+          Jeden klik položku označí, dvojklik otevře složku nebo umožní přejmenovat soubor.
+        </p>
       )}
     </div>
   );

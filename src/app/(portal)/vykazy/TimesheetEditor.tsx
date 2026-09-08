@@ -51,24 +51,45 @@ function formatDate(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : new Intl.DateTimeFormat('cs-CZ').format(d);
 }
 
-/** Výkazy práce zvukaře - zápis i přehled. */
+/**
+ * Výkazy práce zvukaře - zápis i přehled.
+ *
+ * Zápis vidí jen ten, kdo si výkazy opravdu dělá, tedy zvukař (`canWrite`).
+ * Žůžo-labůžo si výkazy nedělá (zadani 6. 9. 2026: "Nikdo ze Žůžo Labůžo si
+ * výkazy nedělá... A zvukaři by zase měli vidět jen ty svoje."), takže pro něj
+ * je tahle stránka jen přehled cizích výkazů - proto tu není ani formulář, ani
+ * volba "Jen moje". Zvukaři data cizích lidí vůbec nedostanou (filtruje se už
+ * na serveru ve vykazy/page.tsx).
+ */
 export function TimesheetEditor({
   isAdmin,
+  canWrite,
   hourlyRate,
   projectOptions,
   entries,
 }: {
   isAdmin: boolean;
+  /** Smi si tenhle uzivatel psat vykazy? (jen zvukar) */
+  canWrite: boolean;
   hourlyRate: number;
   projectOptions: ProjectOption[];
   entries: Entry[];
 }) {
   const router = useRouter();
-  const [form, setForm] = useState({
+  // Cas, druh prace i projekt jsou povinne (zadani 6. 9. 2026) - druh prace
+  // proto zacina prazdny, aby si ho zvukar musel vybrat vedome.
+  const [form, setForm] = useState<{
+    date: string;
+    from: string;
+    to: string;
+    workType: WorkType | '';
+    project: string;
+    note: string;
+  }>({
     date: todayIso(),
-    from: '09:00',
-    to: '13:00',
-    workType: 'RECORDING' as WorkType,
+    from: '',
+    to: '',
+    workType: '',
     project: '',
     note: '',
   });
@@ -105,8 +126,7 @@ export function TimesheetEditor({
     const needle = query.trim().toLowerCase();
     const rows = entries.filter((e) => {
       if (month !== 'all' && !e.date.startsWith(month)) return false;
-      if (userFilter === 'mine' && !e.mine) return false;
-      if (userFilter !== 'all' && userFilter !== 'mine' && e.userId !== userFilter) return false;
+      if (userFilter !== 'all' && e.userId !== userFilter) return false;
       if (!needle) return true;
       const haystack = [e.projectName, e.note ?? '', e.userLabel, WORK_TYPE_LABELS[e.workType], formatDate(e.date)]
         .join(' ')
@@ -150,6 +170,9 @@ export function TimesheetEditor({
     return { minutes, amount: entryAmount(start, end, hourlyRate) };
   }, [form.from, form.to, hourlyRate]);
 
+  // Bez casu, druhu prace a projektu se vykaz ulozit neda (zadani 6. 9. 2026).
+  const missing = !form.date || !form.from || !form.to || !form.workType || !form.project;
+
   const totals = useMemo(() => {
     let minutes = 0;
     let amount = 0;
@@ -162,6 +185,10 @@ export function TimesheetEditor({
 
   async function addEntry(e: React.FormEvent) {
     e.preventDefault();
+    if (missing) {
+      setError('Vyplňte datum, čas od–do, druh práce a projekt.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -220,9 +247,9 @@ export function TimesheetEditor({
         <div>
           <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Výkazy</h1>
           <p className="text-muted text-sm mt-1 font-body">
-            {isAdmin
-              ? 'Odpracované hodiny celého týmu. Částka se počítá z hodinové sazby platné v době zápisu.'
-              : `Zapište si odpracovaný čas. Vaše hodinová sazba je ${formatCzk(hourlyRate)}.`}
+            {canWrite
+              ? `Zapište si odpracovaný čas. Vaše hodinová sazba je ${formatCzk(hourlyRate)}.`
+              : 'Odpracované hodiny zvukařů. Částka se počítá z hodinové sazby platné v době zápisu.'}
           </p>
         </div>
         <div className="text-right">
@@ -232,110 +259,128 @@ export function TimesheetEditor({
         </div>
       </div>
 
-      <form onSubmit={addEntry} className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nový výkaz</h2>
+      {canWrite && (
+        <form onSubmit={addEntry} className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
+          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nový výkaz</h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Datum</span>
-            <input
-              type="date"
-              required
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Od</span>
-            <input
-              type="time"
-              required
-              step={1800}
-              value={form.from}
-              onChange={(e) => setForm({ ...form, from: e.target.value })}
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Do</span>
-            <input
-              type="time"
-              required
-              step={1800}
-              value={form.to}
-              onChange={(e) => setForm({ ...form, to: e.target.value })}
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Druh práce</span>
-            <select
-              value={form.workType}
-              onChange={(e) => setForm({ ...form, workType: e.target.value as WorkType })}
-              className={inputClass}
-            >
-              {WORK_TYPE_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {WORK_TYPE_LABELS[t]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">
+                Datum <span className="text-red-600">*</span>
+              </span>
+              <input
+                type="date"
+                required
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                className={inputClass}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">
+                Od <span className="text-red-600">*</span>
+              </span>
+              <input
+                type="time"
+                required
+                step={1800}
+                value={form.from}
+                onChange={(e) => setForm({ ...form, from: e.target.value })}
+                className={inputClass}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">
+                Do <span className="text-red-600">*</span>
+              </span>
+              <input
+                type="time"
+                required
+                step={1800}
+                value={form.to}
+                onChange={(e) => setForm({ ...form, to: e.target.value })}
+                className={inputClass}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">
+                Druh práce <span className="text-red-600">*</span>
+              </span>
+              <select
+                required
+                value={form.workType}
+                onChange={(e) => setForm({ ...form, workType: e.target.value as WorkType })}
+                className={inputClass}
+              >
+                <option value="">— vyberte druh práce —</option>
+                {WORK_TYPE_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {WORK_TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Projekt</span>
-            <select
-              required
-              value={form.project}
-              onChange={(e) => setForm({ ...form, project: e.target.value })}
-              className={inputClass}
-            >
-              <option value="">— vyberte projekt —</option>
-              {projectOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-            <span className="text-xs text-muted font-body">
-              {projectOptions.length === 0
-                ? 'Zatím se nenačetly žádné rozpracované projekty z Caflou.'
-                : 'V nabídce jsou jen rozpracované projekty.'}
-            </span>
-          </label>
+            <label className="flex flex-col gap-1.5 sm:col-span-2">
+              <span className="text-sm font-body text-ink">
+                Projekt <span className="text-red-600">*</span>
+              </span>
+              <select
+                required
+                value={form.project}
+                onChange={(e) => setForm({ ...form, project: e.target.value })}
+                className={inputClass}
+              >
+                <option value="">— vyberte projekt —</option>
+                {projectOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-muted font-body">
+                {projectOptions.length === 0
+                  ? 'Zatím se nenačetly žádné rozpracované projekty z Caflou.'
+                  : 'V nabídce jsou jen rozpracované projekty.'}
+              </span>
+            </label>
 
-          <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Poznámka</span>
-            <input
-              value={form.note}
-              onChange={(e) => setForm({ ...form, note: e.target.value })}
-              placeholder="nepovinné"
-              className={inputClass}
-            />
-          </label>
-        </div>
+            <label className="flex flex-col gap-1.5 sm:col-span-2">
+              <span className="text-sm font-body text-ink">Poznámka</span>
+              <input
+                value={form.note}
+                onChange={(e) => setForm({ ...form, note: e.target.value })}
+                placeholder="nepovinné"
+                className={inputClass}
+              />
+            </label>
+          </div>
 
-        {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
-
-        <div className="flex items-center gap-4 flex-wrap">
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-          >
-            {saving ? 'Ukládám…' : 'Přidat výkaz'}
-          </button>
-          {preview ? (
-            <span className="text-sm font-heading text-ink">
-              {formatDuration(preview.minutes)} ·{' '}
-              <strong className="text-brand-purpleDark">{formatCzk(preview.amount)}</strong>
-            </span>
-          ) : (
-            <span className="text-sm font-body text-muted">Zadejte platný čas od–do.</span>
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>
           )}
-        </div>
-      </form>
+
+          <div className="flex items-center gap-4 flex-wrap">
+            <button
+              type="submit"
+              disabled={saving || missing}
+              className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+            >
+              {saving ? 'Ukládám…' : 'Přidat výkaz'}
+            </button>
+            {preview ? (
+              <span className="text-sm font-heading text-ink">
+                {formatDuration(preview.minutes)} ·{' '}
+                <strong className="text-brand-purpleDark">{formatCzk(preview.amount)}</strong>
+              </span>
+            ) : (
+              <span className="text-sm font-body text-muted">
+                Vyplňte čas od–do, druh práce a projekt — bez nich výkaz uložit nejde.
+              </span>
+            )}
+          </div>
+        </form>
+      )}
 
       <div className="flex flex-col gap-4">
         <div className="flex items-end justify-between gap-4 flex-wrap border-b border-line">
@@ -346,6 +391,10 @@ export function TimesheetEditor({
             ))}
           </div>
           <div className="flex items-center gap-3 mb-2 flex-wrap">
+            {/* Prepinac "ciho vykazu" ma smysl jen pro Zuzo-labuzo, ktere vidi
+                cely tym. Zvukar vidi jen svoje (filtruje server), takze by mu
+                nabizel jedinou moznost. Volba "Jen moje" tu uz neni - Zuzo
+                -labuzo si vykazy nedela (zadani 6. 9. 2026). */}
             {isAdmin && people.length > 1 && (
               <select
                 value={userFilter}
@@ -353,7 +402,6 @@ export function TimesheetEditor({
                 className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
               >
                 <option value="all">Všichni zvukaři</option>
-                <option value="mine">Jen moje</option>
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.label}
@@ -383,6 +431,10 @@ export function TimesheetEditor({
             </div>
           </div>
         </div>
+
+      {!canWrite && error && (
+        <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>
+      )}
 
       <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto">

@@ -159,6 +159,7 @@ model User {
   orders          Order[]         @relation("OrderCreatedBy")
   managedProjects ProjectMeta[]   @relation("ProjectManager")
   timesheets      TimesheetEntry[]
+  tasks           Task[]
 }
 
 model Order {
@@ -318,4 +319,40 @@ model BudgetSettings {
   bonusPerPage       Int      @default(4)   // bonus zvukari v Kc za normostranu
   hourlyRate         Int      @default(250) // sazba, ze ktere se pocita cena frekvence
   updatedAt          DateTime @updatedAt
+}
+
+
+// Polozky horni fialove listy (zadani 6. 9. 2026: "měla by být možnost si
+// modifikovat odkazy nahoře v menu v horní fialové liště"). Dokud je tabulka
+// prazdna, portal pouziva vychozi sadu z src/lib/menu.ts - lista se tedy
+// nikdy nezobrazi prazdna. Editor je v /admin/menu.
+model MenuItem {
+  id        String   @id @default(cuid())
+  label     String   // co je videt v liste
+  href      String   // "/projekty" nebo vlastni https:// odkaz
+  sortOrder Int      @default(0)
+  roles     Role[]   // kdo polozku vidi
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+// Ukoly (to-do) na profilu clena tymu Mediaspace - zadani 5. 9. 2026
+// ("nejaky widget s ukoly u profilu Mediaspace"). Ukol patri vzdy konkretnimu
+// uzivateli; nikdo jiny nez on (a admin) ho nevidi.
+model Task {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title     String
+  done      Boolean   @default(false)
+  dueDate   DateTime? // termin, nepovinny
+  sortOrder Int       @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, done])
 }

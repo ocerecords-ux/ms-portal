@@ -6,8 +6,9 @@ import { listAllCaflouProjectsForInternal } from '@/lib/caflou';
 import { DEFAULT_HOURLY_RATE } from '@/lib/timesheets';
 import { TimesheetEditor } from './TimesheetEditor';
 
-// Výkazy zvukařů (zadani 6. 9. 2026). Vidi je zvukar (svoje) a Zuzo-labuzo
-// (vsechny) - produkce ani klienti se sem nedostanou.
+// Výkazy zvukařů (zadani 6. 9. 2026). Vidi je zvukar (VYHRADNE svoje) a
+// Zuzo-labuzo (vsechny, jen ke cteni - vykazy si nedela) - produkce ani
+// klienti se sem nedostanou.
 export const dynamic = 'force-dynamic';
 
 export default async function TimesheetsPage() {
@@ -16,10 +17,15 @@ export default async function TimesheetsPage() {
   if (!session?.user?.id || (role !== 'ZVUKAR' && role !== 'ADMIN')) redirect('/projekty');
 
   const isAdmin = role === 'ADMIN';
+  // Vykaz si pise jen zvukar (zadani 6. 9. 2026: "Nikdo ze Žůžo Labůžo si
+  // výkazy nedělá") - Zuzo-labuzo ma tuhle stranku jen jako prehled.
+  const canWrite = role === 'ZVUKAR';
 
   const [me, entries, companies] = await Promise.all([
     prisma.user.findUnique({ where: { id: session.user.id }, select: { hourlyRate: true } }),
     prisma.timesheetEntry.findMany({
+      // Zvukar nikdy nedostane data kolegu - filtruje se uz v dotazu, ne az
+      // v prohlizeci.
       where: isAdmin ? {} : { userId: session.user.id },
       orderBy: [{ date: 'desc' }, { startMinutes: 'desc' }],
       take: 2000,
@@ -33,19 +39,25 @@ export default async function TimesheetsPage() {
   ]);
 
   // Nabidka projektu pro vyber - z Caflou, stejny (cachovany) seznam jako
-  // pouziva prehled Projekty, takze to nic navic nestoji.
-  const { projects } = await listAllCaflouProjectsForInternal(
-    companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
-  );
-  // Vykaz jde pridat jen k rozpracovanemu projektu (zadani 6. 9. 2026).
-  const projectOptions = projects
-    .filter((p) => !p.finished)
-    .map((p) => ({ id: String(p.id), label: p.companyName ? `${p.name} — ${p.companyName}` : p.name }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'cs'));
+  // pouziva prehled Projekty, takze to nic navic nestoji. Zuzo-labuzo si
+  // vykaz nepise, takze pro nej seznam vubec nenacitame.
+  const projectOptions = canWrite
+    ? await (async () => {
+        const { projects } = await listAllCaflouProjectsForInternal(
+          companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
+        );
+        // Vykaz jde pridat jen k rozpracovanemu projektu (zadani 6. 9. 2026).
+        return projects
+          .filter((p) => !p.finished)
+          .map((p) => ({ id: String(p.id), label: p.companyName ? `${p.name} — ${p.companyName}` : p.name }))
+          .sort((a, b) => a.label.localeCompare(b.label, 'cs'));
+      })()
+    : [];
 
   return (
     <TimesheetEditor
       isAdmin={isAdmin}
+      canWrite={canWrite}
       hourlyRate={me?.hourlyRate ?? DEFAULT_HOURLY_RATE}
       projectOptions={projectOptions}
       entries={entries.map((e) => ({

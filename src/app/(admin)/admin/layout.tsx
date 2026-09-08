@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from '@/app/(portal)/components/Topbar';
+import { loadMenuForRole } from '@/lib/menuServer';
 
 // Administrace Mediaspace - pristupna jen uctum s roli ADMIN. Middleware
 // (src/middleware.ts) uz neprihlasene/neadminy blokuje na urovni routovani,
@@ -17,9 +18,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== 'ADMIN') redirect('/login');
 
+  const menu = await loadMenuForRole('ADMIN');
+
   return (
     <div className="min-h-screen bg-paper">
-      <Topbar userLabel={session.user.name || session.user.email} isAdmin showTimesheets />
+      <Topbar userLabel={session.user.name || session.user.email} isAdmin items={menu} />
       {/* Od 5. 9. 2026 stejne siroky obsah jako v klientske casti portalu
           (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.
           telefonni cislo se lamalo na dva radky. Formulare si sirku hlidaji

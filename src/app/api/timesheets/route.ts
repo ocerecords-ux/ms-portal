@@ -10,12 +10,18 @@ import { DEFAULT_HOURLY_RATE, durationMinutes, parseTime } from '@/lib/timesheet
 // Zapisovat smi jen ZVUKAR (svoje vykazy) a ADMIN. Uzivatel se bere VZDY ze
 // session - v tele pozadavku zadne userId neprijimame, aby nesel zapsat vykaz
 // za nekoho jineho.
+//
+// Datum, cas od-do, druh prace a projekt jsou povinne (zadani 6. 9. 2026:
+// "čas, druh práce a projekt by měly být povinné údaje") - formular je hlida
+// uz v prohlizeci, tady je stejna kontrola znovu.
 const schema = z.object({
   date: z.string().trim().min(8, 'Vyberte datum.'),
-  from: z.string().trim(),
-  to: z.string().trim(),
-  workType: z.enum(['RECORDING', 'EDITING']),
-  caflouProjectId: z.string().trim().optional(),
+  from: z.string().trim().min(1, 'Vyplňte čas od.'),
+  to: z.string().trim().min(1, 'Vyplňte čas do.'),
+  workType: z.enum(['RECORDING', 'EDITING'], {
+    errorMap: () => ({ message: 'Vyberte druh práce.' }),
+  }),
+  caflouProjectId: z.string().trim().min(1, 'Vyberte projekt.'),
   projectName: z.string().trim().min(1, 'Vyberte projekt.'),
   note: z.string().trim().max(500).optional(),
 });
@@ -63,7 +69,7 @@ export async function POST(req: NextRequest) {
         startMinutes,
         endMinutes,
         workType: data.workType,
-        caflouProjectId: data.caflouProjectId || null,
+        caflouProjectId: data.caflouProjectId,
         projectName: data.projectName,
         hourlyRateSnapshot: user?.hourlyRate ?? DEFAULT_HOURLY_RATE,
         note: data.note || null,
