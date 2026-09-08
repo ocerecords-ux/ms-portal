@@ -9,9 +9,19 @@ import type { WorkType } from '@prisma/client';
 export const WORK_TYPE_LABELS: Record<WorkType, string> = {
   RECORDING: 'Natáčení',
   EDITING: 'Střih',
+  OTHER: 'Ostatní',
 };
 
-export const WORK_TYPE_OPTIONS: WorkType[] = ['RECORDING', 'EDITING'];
+export const WORK_TYPE_OPTIONS: WorkType[] = ['RECORDING', 'EDITING', 'OTHER'];
+
+/**
+ * Vybira se u tohohle druhu prace projekt? U "Ostatni" ne (zadani 8. 9. 2026:
+ * "kdyz tam bude Ostatni, tak zmizi vyber prirazeni k projektu") - je to
+ * prace, ktera ke konkretni zakazce nepatri.
+ */
+export function requiresProject(workType: WorkType | ''): boolean {
+  return workType !== 'OTHER';
+}
 
 /** Vychozi hodinova sazba zvukare, kdyz ji nema u uctu vyplnenou. */
 export const DEFAULT_HOURLY_RATE = 250;

@@ -51,12 +51,10 @@ export function projectTypeLabel(key: string | null | undefined): string | null 
  * uzavrene projekty se zapomenutym stitkem "Natacime" byly duvodem, proc se
  * hotove veci ukazovaly jako aktivni.
  *
- * Pravidlo je proto: projekt je DOKONCENY, kdyz ho Caflou ma uzavreny
- * (finished), NEBO kdyz je jeho stitek nektery z koncovych. Neznamy stitek u
- * neuzavreneho projektu bereme jako aktivni - kdyz si tym v Caflou zalozi
- * novy stav, ma se objevit mezi rozpracovanymi, ne zmizet do archivu (drive
- * to bylo naopak a napr. "Natacime/strihame" kvuli tomu padalo do
- * Dokoncenych).
+ * Pravidlo je proto: rozhoduje priznak `finished`, protoze presne podle nej
+ * deli projekty i samotne Caflou (35 aktivnich / 668 ukoncenych, overeno
+ * 8. 9. 2026). Seznamy stitku nize slouzi uz jen jako zaloha pro pripad, ze
+ * priznak v odpovedi chybi.
  */
 
 /** Stav bez diakritiky, mezer a interpunkce - at porovnani prezije preklepy a "#2". */
@@ -105,13 +103,24 @@ export function isFinishedProjectStatus(statusName: string | null | undefined): 
 }
 
 /**
- * Vysledne zarazeni projektu. `finishedFlag` je priznak finished z Caflou -
- * uzavreny projekt je dokonceny bez ohledu na to, na jakem stitku zustal.
+ * Vysledne zarazeni projektu.
+ *
+ * Rozhoduje priznak `finished` z Caflou - overeno 8. 9. 2026 porovnanim s
+ * Caflou samotnym: podle nej je aktivnich 35 a ukoncenych 668 projektu, coz
+ * presne odpovida poctu projektu s finished=false a finished=true. Stitek
+ * (project_status_name) je tedy jen popisek workflow, ktery muze zustat na
+ * "Natacime" i u davno uzavrene zakazky - a naopak "Dokonceno - ke schvaleni"
+ * muze mit projekt, ktery Caflou porad vede jako aktivni (presne jeden takovy
+ * v uctu je, a byl to rozdil 34/669 proti 35/668).
+ *
+ * Stitek se pouzije jen jako zaloha, kdyz priznak nedorazi (napr. jinak
+ * tvarovana odpoved z detailu projektu).
  */
 export function isProjectFinished(
   statusName: string | null | undefined,
   finishedFlag: unknown,
 ): boolean {
   if (finishedFlag === true || finishedFlag === 1 || finishedFlag === '1') return true;
+  if (finishedFlag === false || finishedFlag === 0 || finishedFlag === '0') return false;
   return isFinishedProjectStatus(statusName);
 }

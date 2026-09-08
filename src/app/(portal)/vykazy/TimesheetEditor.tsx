@@ -12,6 +12,7 @@ import {
   formatDuration,
   formatTime,
   parseTime,
+  requiresProject,
 } from '@/lib/timesheets';
 
 type Entry = {
@@ -20,7 +21,7 @@ type Entry = {
   startMinutes: number;
   endMinutes: number;
   workType: WorkType;
-  projectName: string;
+  projectName: string | null;
   note: string | null;
   hourlyRateSnapshot: number;
   userId: string;
@@ -33,6 +34,11 @@ type ProjectOption = { id: string; label: string };
 function todayIso(): string {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+/** Aktualni mesic jako "2026-01". */
+function currentMonthKey(): string {
+  return todayIso().slice(0, 7);
 }
 
 /** "2026-01" -> "Leden 2026" */
@@ -97,14 +103,20 @@ export function TimesheetEditor({
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   // Filtry nad seznamem (zadani 6. 9. 2026): mesic, hledani, ciho vykazu a razeni.
-  const [month, setMonth] = useState<string>('all');
+  // Otevira se rovnou na aktualnim mesici (zadani 8. 9. 2026: "kdyz se na tu
+  // stranku prokliknu, chci mit zobrazeny ten dany mesic") - castka nahore se
+  // pak pocita z toho, ktera zalozka je zrovna vybrana.
+  const [month, setMonth] = useState<string>(currentMonthKey);
   const [query, setQuery] = useState('');
   const [userFilter, setUserFilter] = useState<string>('all');
   const [sort, setSort] = useState<Sort>({ key: 'date', dir: 'desc' });
 
-  // Zalozky s mesici se skladaji z toho, co ve vykazech opravdu je.
+  // Zalozky s mesici se skladaji z toho, co ve vykazech opravdu je - plus
+  // vzdy aktualni mesic, at je na cem zacit i prvniho v mesici, kdy jeste
+  // zadny vykaz neni.
   const months = useMemo(() => {
     const set = new Set(entries.map((e) => e.date.slice(0, 7)));
+    set.add(currentMonthKey());
     return Array.from(set).sort().reverse();
   }, [entries]);
 
@@ -128,7 +140,7 @@ export function TimesheetEditor({
       if (month !== 'all' && !e.date.startsWith(month)) return false;
       if (userFilter !== 'all' && e.userId !== userFilter) return false;
       if (!needle) return true;
-      const haystack = [e.projectName, e.note ?? '', e.userLabel, WORK_TYPE_LABELS[e.workType], formatDate(e.date)]
+      const haystack = [e.projectName ?? '', e.note ?? '', e.userLabel, WORK_TYPE_LABELS[e.workType], formatDate(e.date)]
         .join(' ')
         .toLowerCase();
       return needle.split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
@@ -152,7 +164,7 @@ export function TimesheetEditor({
         case 'workType':
           return dir * WORK_TYPE_LABELS[a.workType].localeCompare(WORK_TYPE_LABELS[b.workType], 'cs');
         case 'project':
-          return dir * a.projectName.localeCompare(b.projectName, 'cs');
+          return dir * (a.projectName ?? '').localeCompare(b.projectName ?? '', 'cs');
         default: {
           const byDate = a.date.localeCompare(b.date);
           return dir * (byDate !== 0 ? byDate : a.startMinutes - b.startMinutes);
@@ -170,8 +182,11 @@ export function TimesheetEditor({
     return { minutes, amount: entryAmount(start, end, hourlyRate) };
   }, [form.from, form.to, hourlyRate]);
 
-  // Bez casu, druhu prace a projektu se vykaz ulozit neda (zadani 6. 9. 2026).
-  const missing = !form.date || !form.from || !form.to || !form.workType || !form.project;
+  // U druhu prace "Ostatni" se projekt nevybira (zadani 8. 9. 2026), takze se
+  // ani nevyzaduje. Jinak je povinny stejne jako cas (zadani 6. 9. 2026).
+  const needsProject = requiresProject(form.workType);
+  const missing =
+    !form.date || !form.from || !form.to || !form.workType || (needsProject && !form.project);
 
   const totals = useMemo(() => {
     let minutes = 0;
@@ -186,13 +201,17 @@ export function TimesheetEditor({
   async function addEntry(e: React.FormEvent) {
     e.preventDefault();
     if (missing) {
-      setError('Vyplňte datum, čas od–do, druh práce a projekt.');
+      setError(
+        needsProject
+          ? 'Vyplňte datum, čas od–do, druh práce a projekt.'
+          : 'Vyplňte datum, čas od–do a druh práce.',
+      );
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const selected = projectOptions.find((p) => p.id === form.project);
+      const selected = needsProject ? projectOptions.find((p) => p.id === form.project) : undefined;
       const res = await fetch('/api/timesheets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -202,7 +221,7 @@ export function TimesheetEditor({
           to: form.to,
           workType: form.workType,
           caflouProjectId: selected?.id ?? '',
-          projectName: selected?.label ?? form.project,
+          projectName: needsProject ? (selected?.label ?? form.project) : '',
           note: form.note,
         }),
       });
@@ -253,7 +272,9 @@ export function TimesheetEditor({
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">Celkem</p>
+          <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">
+            Celkem · {month === 'all' ? 'vše' : monthLabel(month)}
+          </p>
           <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatCzk(totals.amount)}</p>
           <p className="text-xs font-body text-muted m-0">{formatDuration(totals.minutes)}</p>
         </div>
@@ -309,7 +330,12 @@ export function TimesheetEditor({
               <select
                 required
                 value={form.workType}
-                onChange={(e) => setForm({ ...form, workType: e.target.value as WorkType })}
+                onChange={(e) => {
+                  const workType = e.target.value as WorkType | '';
+                  // Prepnuti na "Ostatni" rovnou zahodi vybrany projekt, at
+                  // se neodesle neco, co uz na obrazovce neni videt.
+                  setForm({ ...form, workType, project: requiresProject(workType) ? form.project : '' });
+                }}
                 className={inputClass}
               >
                 <option value="">— vyberte druh práce —</option>
@@ -321,6 +347,7 @@ export function TimesheetEditor({
               </select>
             </label>
 
+            {needsProject && (
             <label className="flex flex-col gap-1.5 sm:col-span-2">
               <span className="text-sm font-body text-ink">
                 Projekt <span className="text-red-600">*</span>
@@ -344,6 +371,7 @@ export function TimesheetEditor({
                   : 'V nabídce jsou jen rozpracované projekty.'}
               </span>
             </label>
+            )}
 
             <label className="flex flex-col gap-1.5 sm:col-span-2">
               <span className="text-sm font-body text-ink">Poznámka</span>
@@ -375,7 +403,9 @@ export function TimesheetEditor({
               </span>
             ) : (
               <span className="text-sm font-body text-muted">
-                Vyplňte čas od–do, druh práce a projekt — bez nich výkaz uložit nejde.
+                {needsProject
+                  ? 'Vyplňte čas od–do, druh práce a projekt — bez nich výkaz uložit nejde.'
+                  : 'Vyplňte čas od–do a druh práce — u „Ostatní" se projekt nevybírá.'}
               </span>
             )}
           </div>
@@ -480,14 +510,16 @@ export function TimesheetEditor({
                         className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
                           e.workType === 'RECORDING'
                             ? 'bg-[#F1ECFF] text-brand-purpleDark'
-                            : 'bg-[#E3F9EC] text-status-done'
+                            : e.workType === 'EDITING'
+                              ? 'bg-[#E3F9EC] text-status-done'
+                              : 'bg-[#EEF2F7] text-[#5B6472]'
                         }`}
                       >
                         {WORK_TYPE_LABELS[e.workType]}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading text-muted">
-                      {e.projectName}
+                      {e.projectName || <span className="text-muted/60">—</span>}
                       {e.note && <span className="block text-xs text-muted/80 font-body">{e.note}</span>}
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading text-ink tabular-nums text-right whitespace-nowrap">

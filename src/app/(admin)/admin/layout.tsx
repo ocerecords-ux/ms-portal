@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from '@/app/(portal)/components/Topbar';
 import { TaskDock } from '@/app/(portal)/components/TaskDock';
-import { loadMenuEntries, visibleFor } from '@/lib/menuServer';
+import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 
 // Administrace Mediaspace - pristupna jen uctum s roli ADMIN. Middleware
@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session || session.user.role !== 'ADMIN') redirect('/login');
 
   const [entries, tasks] = await Promise.all([
-    loadMenuEntries(),
+    loadMenuEntries(session.user.id),
     loadMyTasks(session.user.id, session.user.role),
   ]);
 
@@ -27,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         userLabel={session.user.name || session.user.email}
         isAdmin
         items={visibleFor(entries, 'ADMIN')}
-        allItems={entries}
+        pageOptions={pageOptionsFor('ADMIN')}
       />
       {/* Od 5. 9. 2026 stejne siroky obsah jako v klientske casti portalu
           (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.

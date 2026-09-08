@@ -163,6 +163,7 @@ model User {
   managedProjects ProjectMeta[]   @relation("ProjectManager")
   timesheets      TimesheetEntry[]
   tasks           Task[]
+  menuItems       UserMenuItem[]
 }
 
 model Order {
@@ -280,6 +281,7 @@ model PriceListItem {
 enum WorkType {
   RECORDING // natáčení
   EDITING   // střih
+  OTHER     // ostatní - práce, která nepatří ke konkrétnímu projektu (zadání 8. 9. 2026)
 }
 
 // Vykaz prace zvukare (zadani 6. 9. 2026): den, cas od-do, druh prace,
@@ -298,8 +300,9 @@ model TimesheetEntry {
 
   // Projekt z Caflou. Nazev si ukladame i textove, aby vykaz zustal citelny,
   // kdyz projekt v Caflou zmizi nebo se prejmenuje.
+  // U druhu prace "Ostatni" se projekt nevybira, takze oboji zustane prazdne.
   caflouProjectId    String?
-  projectName        String
+  projectName        String?
 
   hourlyRateSnapshot Int      // sazba pouzita pro tenhle vykaz
   note               String?
@@ -329,15 +332,22 @@ model BudgetSettings {
 // modifikovat odkazy nahoře v menu v horní fialové liště"). Dokud je tabulka
 // prazdna, portal pouziva vychozi sadu z src/lib/menu.ts - lista se tedy
 // nikdy nezobrazi prazdna. Editor je v /admin/menu.
-model MenuItem {
+// Horni lista si ji kazdy uzivatel sklada SAM (zadani 8. 9. 2026: "uprava
+// menu by se mela tykat kazdeho uzivatele zvlast - kdyz jsem si dal pryc
+// vykazy, zmizelo to i zvukarum"). Kdo radky nema, vidi vychozi listu z
+// lib/menu.ts > DEFAULT_MENU_ITEMS. Viditelnost se tu neresi - tu urcuji
+// prava ke strance (PAGE_ACCESS).
+model UserMenuItem {
   id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   label     String   // co je videt v liste
   href      String   // "/projekty" nebo vlastni https:// odkaz
   sortOrder Int      @default(0)
-  roles     Role[]   // kdo polozku vidi
-  visible   Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, sortOrder])
 }
 
 

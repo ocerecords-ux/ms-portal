@@ -4,29 +4,33 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
-import { PORTAL_PAGES, isExternalHref, type MenuEntry, type NavItem } from '@/lib/menu';
+import { isExternalHref, type NavItem } from '@/lib/menu';
 
 /**
- * Horní fialová lišta. Odkazy si Žůžo-labůžo upravuje přímo tady - tři tečky
- * vpravo, volba "Upravit" (mazání a přidání zkratky) nebo "Přesunout"
- * (přetahování pořadí), jako na ploše iPhonu (zadani 8. 9. 2026).
+ * Horní fialová lišta. Odkazy si upravuje přímo tady každý sám - tři tečky
+ * vpravo a lišta se dá rovnou přetahovat, mazat i doplňovat, jako na ploše
+ * iPhonu (zadani 8. 9. 2026).
  *
- * Kdo co uvidí se nikde nenastavuje - řídí se to právy ke stránce
- * (lib/menu.ts > PAGE_ACCESS). V režimu úprav proto admin vidí i položky,
- * které se jemu samotnému běžně nezobrazují, aby s nimi mohl hýbat.
+ * Lišta patří KONKRÉTNÍMU UŽIVATELI (zadani 8. 9. 2026: "když jsem si dal
+ * pryč výkazy, zmizelo to i u zvukařů"). Nikomu jinému se nemění.
+ *
+ * Kdo co může mít v liště se nenastavuje - řídí se to právy ke stránce
+ * (lib/menu.ts > PAGE_ACCESS); nabídka pod "+" proto obsahuje jen stránky,
+ * na které uživatel opravdu smí.
  */
 export function Topbar({
   userLabel,
   isAdmin,
   items,
-  allItems,
+  pageOptions,
 }: {
   userLabel: string;
+  /** Jen kvůli odkazu do administrace v uživatelském menu. */
   isAdmin?: boolean;
-  /** Co uvidí přihlášený uživatel podle svých práv. */
+  /** Vlastní lišta přihlášeného uživatele. */
   items: NavItem[];
-  /** Všechny položky listy - jen pro admina, kvůli úpravám. */
-  allItems?: MenuEntry[];
+  /** Stránky, které si smí do lišty přidat. */
+  pageOptions: NavItem[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -35,7 +39,7 @@ export function Topbar({
   // dvakrát. Stačí kliknout na tři tečky a můžeš upravit i přesunout") -
   // v nem jde zaroven odebirat, pridavat i pretahovat poradi.
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<MenuEntry[]>([]);
+  const [draft, setDraft] = useState<NavItem[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,18 +47,18 @@ export function Topbar({
 
   // Kdyz server posle novy seznam, prepiseme rozdelanou praci jen mimo rezim uprav.
   useEffect(() => {
-    if (!editing) setDraft(allItems ?? []);
-  }, [allItems, editing]);
+    if (!editing) setDraft(items);
+  }, [items, editing]);
 
   function startEditing() {
-    setDraft(allItems ?? []);
+    setDraft(items);
     setEditing(true);
     setAddOpen(false);
     setError(null);
   }
 
   function cancel() {
-    setDraft(allItems ?? []);
+    setDraft(items);
     setEditing(false);
     setAddOpen(false);
     setError(null);
@@ -65,7 +69,7 @@ export function Topbar({
   }
 
   function addPage(page: { href: string; label: string }) {
-    setDraft((current) => [...current, { id: `new-${Date.now()}`, label: page.label, href: page.href }]);
+    setDraft((current) => [...current, { label: page.label, href: page.href }]);
     setAddOpen(false);
   }
 
@@ -81,20 +85,33 @@ export function Topbar({
     });
   }
 
+  /** Zpet na vychozi listu - smaze vlastni nastaveni uzivatele. */
+  async function resetToDefault() {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/menu', { method: 'DELETE' });
+      if (!res.ok) {
+        setError('Obnovení se nezdařilo.');
+        return;
+      }
+      setEditing(false);
+      router.refresh();
+    } catch {
+      setError('Obnovení se nezdařilo.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function save() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/menu', {
+      const res = await fetch('/api/menu', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: draft.map((d) => ({
-            id: d.id.startsWith('new-') || d.id.startsWith('default-') ? undefined : d.id,
-            label: d.label,
-            href: d.href,
-          })),
-        }),
+        body: JSON.stringify({ items: draft.map((d) => ({ label: d.label, href: d.href })) }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -110,9 +127,8 @@ export function Topbar({
     }
   }
 
-  // V rezimu uprav pracujeme s celym seznamem, jinak s tim, co uzivatel vidi.
-  const shown: NavItem[] = editing ? draft.map((d) => ({ href: d.href, label: d.label })) : items;
-  const missingPages = PORTAL_PAGES.filter((p) => !draft.some((d) => d.href === p.href));
+  const shown: NavItem[] = editing ? draft : items;
+  const missingPages = pageOptions.filter((p) => !draft.some((d) => d.href === p.href));
 
   return (
     <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">
@@ -221,8 +237,8 @@ export function Topbar({
         )}
 
         {/* Tři tečky - jedno kliknutí a lišta se dá rovnou upravovat
-            i přetahovat. Vidí je jen Žůžo-labůžo. */}
-        {isAdmin && !editing && (
+            i přetahovat. Každý si upravuje svou vlastní. */}
+        {!editing && (
           <button
             type="button"
             onClick={startEditing}
@@ -249,14 +265,23 @@ export function Topbar({
             <button type="button" onClick={cancel} className="text-white/70 hover:text-white text-xs font-heading">
               Zrušit
             </button>
+            <button
+              type="button"
+              onClick={resetToDefault}
+              disabled={saving}
+              title="Vrátit lištu do původní podoby"
+              className="text-white/70 hover:text-white text-xs font-heading underline disabled:opacity-50"
+            >
+              Výchozí
+            </button>
           </span>
         )}
       </nav>
 
       <div className="relative flex items-center gap-3">
         {editing && (
-          <span className="text-white/70 text-xs font-body hidden lg:block max-w-[240px]">
-            Přetažením změníte pořadí, křížkem odkaz odeberete, „+" přidá zkratku.
+          <span className="text-white/70 text-xs font-body hidden lg:block max-w-[260px]">
+            Přetažením změníte pořadí, křížkem odkaz odeberete, „+" přidá zkratku. Lišta je jen vaše.
           </span>
         )}
         <button

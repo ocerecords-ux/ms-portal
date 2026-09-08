@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from './components/Topbar';
 import { TaskDock } from './components/TaskDock';
-import { loadMenuEntries, visibleFor } from '@/lib/menuServer';
+import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { isInternalRole } from '@/lib/roles';
 
@@ -19,10 +19,11 @@ export default async function PortalLayout({ children }: { children: React.React
   const isAdmin = role === 'ADMIN';
   const internal = isInternalRole(role);
 
-  // Odkazy v liště jsou editovatelné (viz Topbar). Co uvidí konkrétní role se
-  // nenastavuje - řídí se právy ke stránce (lib/menu.ts > PAGE_ACCESS).
+  // Lišta je editovatelná (viz Topbar) a patří KONKRÉTNÍMU uživateli - úprava
+  // se nikomu jinému nepromítne (zadani 8. 9. 2026). Co v ní vůbec smí být se
+  // nenastavuje, řídí se právy ke stránce (lib/menu.ts > PAGE_ACCESS).
   const [entries, tasks] = await Promise.all([
-    loadMenuEntries(),
+    loadMenuEntries(session.user.id),
     loadMyTasks(session.user.id, role),
   ]);
 
@@ -32,7 +33,7 @@ export default async function PortalLayout({ children }: { children: React.React
         userLabel={session.user.name || session.user.email}
         isAdmin={isAdmin}
         items={visibleFor(entries, role)}
-        allItems={isAdmin ? entries : undefined}
+        pageOptions={pageOptionsFor(role)}
       />
       <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12">{children}</div>
       {/* Úkoly po ruce na každé stránce - vysouvací panel na pravé hraně
