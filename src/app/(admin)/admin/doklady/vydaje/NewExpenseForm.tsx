@@ -41,6 +41,39 @@ export function NewExpenseForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Kategorie se daji zalozit primo tady (zadani 8. 9. 2026) - kdyz se zadava
+  // doklad a kategorie jeste neexistuje, neni duvod kvuli tomu odchazet pryc.
+  const [kategorie, setKategorie] = useState(categories);
+  const [novaKategorie, setNovaKategorie] = useState<string | null>(null);
+  const [kategorieBusy, setKategorieBusy] = useState(false);
+
+  async function zalozitKategorii() {
+    const name = (novaKategorie ?? '').trim();
+    if (!name) return;
+    setKategorieBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/expense-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Kategorii se nepodařilo přidat.');
+        return;
+      }
+      setKategorie((list) => [...list, { id: data.id, name: data.name }]);
+      set('categoryId', data.id);
+      setNovaKategorie(null);
+      router.refresh();
+    } catch {
+      setError('Kategorii se nepodařilo přidat.');
+    } finally {
+      setKategorieBusy(false);
+    }
+  }
+
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
@@ -143,17 +176,54 @@ export function NewExpenseForm({
           <span className="text-sm font-body text-ink">Číslo dokladu</span>
           <input value={form.number} onChange={(e) => set('number', e.target.value)} className={inputClass} />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Kategorie</span>
-          <select value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={inputClass}>
-            <option value="">— bez kategorie —</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <span className="flex items-baseline justify-between gap-2">
+            <span className="text-sm font-body text-ink">Kategorie</span>
+            <button
+              type="button"
+              onClick={() => setNovaKategorie(novaKategorie === null ? '' : null)}
+              className="text-xs font-heading font-semibold text-brand-purple hover:text-brand-purpleDeep"
+            >
+              {novaKategorie === null ? '+ Nová kategorie' : 'Zrušit'}
+            </button>
+          </span>
+          {novaKategorie === null ? (
+            <select value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={inputClass}>
+              <option value="">— bez kategorie —</option>
+              {kategorie.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="flex gap-2">
+              <input
+                autoFocus
+                value={novaKategorie}
+                onChange={(e) => setNovaKategorie(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enter tady zaklada kategorii, ne odesila cely doklad.
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void zalozitKategorii();
+                  }
+                  if (e.key === 'Escape') setNovaKategorie(null);
+                }}
+                placeholder="např. Marketing"
+                className={inputClass}
+              />
+              <button
+                type="button"
+                onClick={() => void zalozitKategorii()}
+                disabled={kategorieBusy || !novaKategorie.trim()}
+                className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60 shrink-0"
+              >
+                Přidat
+              </button>
+            </span>
+          )}
+        </div>
       </div>
 
 

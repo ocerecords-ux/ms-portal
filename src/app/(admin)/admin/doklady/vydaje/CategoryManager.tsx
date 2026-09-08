@@ -68,9 +68,10 @@ export function CategoryManager({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-muted hover:text-ink text-sm font-heading self-start"
+        className="self-start inline-flex items-center gap-1.5 rounded-pill border border-brand-purple bg-white px-4 py-1.5 text-xs font-heading font-semibold text-brand-purple hover:bg-[#F1ECFF] transition-colors"
       >
-        Spravovat kategorie ({categories.filter((c) => c.active).length})
+        + Přidat / spravovat kategorie
+        <span className="tabular-nums opacity-70">({categories.filter((c) => c.active).length})</span>
       </button>
     );
   }

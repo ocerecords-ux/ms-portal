@@ -111,8 +111,10 @@ export default async function ExpensesPage({
         </div>
       )}
 
-      {/* Filtr podle kategorie */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* Filtr podle kategorie. Sprava kategorii sedi hned vedle (zadani
+          8. 9. 2026) - drive byla schovana az uplne dole pod tabulkou. */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
         <Link
           href={`/admin/doklady/vydaje?tab=${activeTab.key}`}
           className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill no-underline transition-colors ${
@@ -130,10 +132,20 @@ export default async function ExpensesPage({
               className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill no-underline transition-colors ${
                 categoryFilter === c.id ? 'bg-ink text-white' : 'bg-white border border-line text-muted hover:text-ink'
               }`}
-            >
-              {c.name} <span className="tabular-nums opacity-70">({c._count.expenses})</span>
-            </Link>
-          ))}
+              >
+                {c.name} <span className="tabular-nums opacity-70">({c._count.expenses})</span>
+              </Link>
+            ))}
+        </div>
+
+        <CategoryManager
+          categories={categories.map((c) => ({
+            id: c.id,
+            name: c.name,
+            active: c.active,
+            usedBy: c._count.expenses,
+          }))}
+        />
       </div>
 
       <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
@@ -223,14 +235,6 @@ export default async function ExpensesPage({
         </div>
       </div>
 
-      <CategoryManager
-        categories={categories.map((c) => ({
-          id: c.id,
-          name: c.name,
-          active: c.active,
-          usedBy: c._count.expenses,
-        }))}
-      />
     </div>
   );
 }
