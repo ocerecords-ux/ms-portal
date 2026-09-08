@@ -104,6 +104,7 @@ async function main() {
   }
 
   await seedStudios();
+  await doplnKalendarDoListy();
 
   await backfillCodes();
 
@@ -168,6 +169,43 @@ async function seedStudios() {
       });
     }
   }
+}
+
+/**
+ * Jednorazove doplneni odkazu Kalendar do listy (zadani 8. 9. 2026:
+ * "tak ho tam dej nahoru do listy").
+ *
+ * Lista je od 8. 9. 2026 na kazdeho uzivatele zvlast. Kdo si ji nekdy
+ * upravoval, ma v databazi vlastni radky a VYCHOZI sada se mu uz nepromita -
+ * novy odkaz by se mu tedy sam neobjevil. Kdo radky nema, vidi vychozi listu
+ * a Kalendar v ni uz je, takze toho se to netyka.
+ *
+ * Bezi PRAVE JEDNOU za zivot databaze - hlida to zaznam v tabulce Counter.
+ * Bez toho by se odkaz vracel po kazdem nasazeni i tomu, kdo si ho schvalne
+ * odebral.
+ */
+async function doplnKalendarDoListy() {
+  const ZNAMKA = 'menu-backfill-kalendar';
+  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+  if (uz) return;
+
+  // Kalendar vidi jen tym Mediaspace - viz PAGE_ACCESS v src/lib/menu.ts.
+  const uzivatele = await prisma.user.findMany({
+    where: { role: { in: ['ADMIN', 'PRODUKCE', 'ZVUKAR'] } },
+    select: { id: true },
+  });
+
+  for (const u of uzivatele) {
+    const radky = await prisma.userMenuItem.findMany({ where: { userId: u.id } });
+    if (radky.length === 0) continue; // vychozi lista, Kalendar uz v ni je
+    if (radky.some((r) => r.href === '/kalendar')) continue;
+    const posledni = radky.reduce((max, r) => Math.max(max, r.sortOrder), 0);
+    await prisma.userMenuItem.create({
+      data: { userId: u.id, label: 'Kalendář', href: '/kalendar', sortOrder: posledni + 10 },
+    });
+  }
+
+  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
 }
 
 /**
