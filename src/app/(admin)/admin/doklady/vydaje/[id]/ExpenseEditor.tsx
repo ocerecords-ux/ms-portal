@@ -243,7 +243,7 @@ export function ExpenseEditor({
         </div>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Popis</span>
+          <span className="text-sm font-body text-ink">Název</span>
           <input value={form.description} onChange={(e) => set('description', e.target.value)} className={inputClass} />
         </label>
 

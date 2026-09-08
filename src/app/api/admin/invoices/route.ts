@@ -36,8 +36,13 @@ export async function POST(req: NextRequest) {
         include: { items: { orderBy: { sortOrder: 'asc' } }, invoice: { select: { id: true } } },
       });
       if (!offer) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
-      if (offer.status !== 'APPROVED') {
-        return NextResponse.json({ error: 'Fakturu vystavujeme až z odsouhlasené nabídky.' }, { status: 409 });
+      // Puvodne slo fakturovat jen z odsouhlasene nabidky. Schvalovani pres
+      // odkaz je ale dobrovolne a casto se domlouva jinak (telefon, e-mail),
+      // takze cekat na nej znamenalo, ze fakturu z nabidky nesel vystavit
+      // vubec (zadani 8. 9. 2026: "potreboval bych, aby z nabidky sla
+      // vytvorit faktura"). Brani se uz jen odmitnuta nabidka.
+      if (offer.status === 'REJECTED') {
+        return NextResponse.json({ error: 'Tuhle nabídku klient odmítl.' }, { status: 409 });
       }
       if (offer.invoice) {
         return NextResponse.json(

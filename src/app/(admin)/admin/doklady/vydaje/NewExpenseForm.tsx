@@ -3,8 +3,8 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Currency } from '@prisma/client';
-import { CURRENCIES, CURRENCY_NAMES } from '@/lib/doklady';
-import { EXPENSE_VAT_RATES } from '@/lib/expenses';
+import { CURRENCIES, CURRENCY_NAMES, formatMoney, parseMoneyToMinor } from '@/lib/doklady';
+import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
 
 /**
  * Zadání přijatého dokladu. Schválně jedna obrazovka bez překlikávání —
@@ -26,12 +26,13 @@ export function NewExpenseForm({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [open, setOpen] = useState(false);
-  const [supplierMode, setSupplierMode] = useState<'firma' | 'jmeno'>('firma');
   const [form, setForm] = useState({
     issueDate: new Date().toISOString().slice(0, 10),
     dueDate: '',
-    supplierCompanyId: '',
-    supplierName: '',
+    // Jedno pole misto prepinace "Dodavatel z Firem / Drobny doklad" (zadani
+    // 8. 9. 2026). Da se vybrat firma ze seznamu, nebo proste napsat jmeno -
+    // co se trefi do nazvu firmy, ulozi se jako firma, zbytek jako text.
+    supplier: '',
     number: '',
     categoryId: categories[0]?.id ?? '',
     issuerCompanyId: defaultIssuer?.id ?? '',
@@ -58,11 +59,11 @@ export function NewExpenseForm({
       const body = new FormData();
       body.set('issueDate', form.issueDate);
       if (form.dueDate) body.set('dueDate', form.dueDate);
-      if (supplierMode === 'firma') {
-        body.set('supplierCompanyId', form.supplierCompanyId);
-      } else {
-        body.set('supplierName', form.supplierName);
-      }
+      const zvolenaFirma = companies.find(
+        (c) => c.name.trim().toLowerCase() === form.supplier.trim().toLowerCase(),
+      );
+      if (zvolenaFirma) body.set('supplierCompanyId', zvolenaFirma.id);
+      else body.set('supplierName', form.supplier);
       if (form.number) body.set('number', form.number);
       if (form.categoryId) body.set('categoryId', form.categoryId);
       if (form.issuerCompanyId) body.set('issuerCompanyId', form.issuerCompanyId);
@@ -81,10 +82,12 @@ export function NewExpenseForm({
         setError(data?.error || 'Doklad se nepodařilo uložit.');
         return;
       }
-      // Formular necháme otevřený a jen vyprázdníme - doklady se zadávají po dávkách.
-      setForm((f) => ({ ...f, number: '', description: '', amount: '', note: '', dueDate: '' }));
+      // Po uložení zpátky na přehled (zadani 8. 9. 2026) - doklad je vidět
+      // v seznamu a je jasné, že se opravdu uložil.
+      setForm((f) => ({ ...f, number: '', description: '', amount: '', note: '', dueDate: '', supplier: '' }));
       setFileName(null);
       if (fileRef.current) fileRef.current.value = '';
+      setOpen(false);
       router.refresh();
     } catch {
       setError('Doklad se nepodařilo uložit.');
@@ -92,6 +95,10 @@ export function NewExpenseForm({
       setBusy(false);
     }
   }
+
+  // Zivy prepocet na castku s DPH - jen kdyz uz je co pocitat.
+  const bezDph = form.amount.trim() ? parseMoneyToMinor(form.amount) : null;
+  const sDph = bezDph === null ? null : expenseTotalMinor(bezDph, form.vatRate);
 
   const inputClass =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full';
@@ -146,55 +153,25 @@ export function NewExpenseForm({
         </label>
       </div>
 
-      {/* Dodavatel - buď z Firem, nebo jen jménem u drobného dokladu */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setSupplierMode('firma')}
-            className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill transition-colors ${
-              supplierMode === 'firma' ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
-            }`}
-          >
-            Dodavatel z Firem
-          </button>
-          <button
-            type="button"
-            onClick={() => setSupplierMode('jmeno')}
-            className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill transition-colors ${
-              supplierMode === 'jmeno' ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
-            }`}
-          >
-            Drobný doklad
-          </button>
-        </div>
-        {supplierMode === 'firma' ? (
-          <select
-            required
-            value={form.supplierCompanyId}
-            onChange={(e) => set('supplierCompanyId', e.target.value)}
-            className={inputClass}
-          >
-            <option value="">— vyberte dodavatele —</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <input
-            required
-            value={form.supplierName}
-            onChange={(e) => set('supplierName', e.target.value)}
-            placeholder="např. Benzina, Shell — kdo doklad vystavil"
-            className={inputClass}
-          />
-        )}
-      </div>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-body text-ink">Dodavatel</span>
+        <input
+          required
+          list="dodavatele"
+          value={form.supplier}
+          onChange={(e) => set('supplier', e.target.value)}
+          placeholder="vyberte firmu, nebo napište, kdo doklad vystavil"
+          className={inputClass}
+        />
+        <datalist id="dodavatele">
+          {companies.map((c) => (
+            <option key={c.id} value={c.name} />
+          ))}
+        </datalist>
+      </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Popis</span>
+        <span className="text-sm font-body text-ink">Název</span>
         <input
           value={form.description}
           onChange={(e) => set('description', e.target.value)}
@@ -214,6 +191,11 @@ export function NewExpenseForm({
             placeholder="0,00"
             className={`${inputClass} text-right tabular-nums`}
           />
+          {/* Kolik to dela s DPH je videt hned pri psani (zadani 8. 9. 2026) -
+              na dokladu byva uvedena castka VCETNE, tak at se da zkontrolovat. */}
+          <span className="text-xs font-body text-muted text-right tabular-nums">
+            {sDph === null ? 's DPH —' : `s DPH ${formatMoney(sDph, form.currency)}`}
+          </span>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">DPH</span>
@@ -239,21 +221,6 @@ export function NewExpenseForm({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Naše firma</span>
-          <select
-            value={form.issuerCompanyId}
-            onChange={(e) => set('issuerCompanyId', e.target.value)}
-            className={inputClass}
-          >
-            <option value="">— nevybráno —</option>
-            {issuers.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name}
-              </option>
-            ))}
-          </select>
-        </label>
       </div>
 
       <div className="flex items-end gap-4 flex-wrap">
@@ -268,10 +235,20 @@ export function NewExpenseForm({
           />
           {fileName && <span className="text-xs text-muted font-body truncate">{fileName}</span>}
         </label>
-        <label className="flex items-center gap-2 text-sm font-heading text-ink pb-2">
-          <input type="checkbox" checked={form.paid} onChange={(e) => set('paid', e.target.checked)} />
-          Už uhrazeno
-        </label>
+        {/* Zaskrtavatko "Uz uhrazeno" se prehlizelo - je z nej tlacitko,
+            ktere zezelena, kdyz je doklad uhrazeny (zadani 8. 9. 2026). */}
+        <button
+          type="button"
+          onClick={() => set('paid', !form.paid)}
+          aria-pressed={form.paid}
+          className={`mb-0.5 font-heading font-semibold text-sm rounded-lg px-5 py-2.5 border transition-colors ${
+            form.paid
+              ? 'bg-brand-green border-brand-green text-ink'
+              : 'bg-white border-line text-muted hover:border-brand-purple hover:text-brand-purple'
+          }`}
+        >
+          {form.paid ? '✓ Uhrazeno' : 'Uhrazeno'}
+        </button>
       </div>
 
       {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
@@ -287,7 +264,7 @@ export function NewExpenseForm({
         <button type="button" onClick={() => setOpen(false)} className="text-muted text-sm font-heading">
           Zavřít
         </button>
-        <span className="text-xs text-muted font-body">Formulář zůstane otevřený, ať jde zadat víc dokladů za sebou.</span>
+        <span className="text-xs text-muted font-body">Po uložení se vrátíte na přehled.</span>
       </div>
     </form>
   );

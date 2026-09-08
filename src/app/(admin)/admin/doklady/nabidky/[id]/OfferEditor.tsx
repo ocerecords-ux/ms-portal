@@ -279,6 +279,19 @@ export function OfferEditor({
           >
             {copied ? 'Zkopírováno' : 'Odkaz pro klienta'}
           </button>
+          {/* Fakturu jde vystavit z kazde nabidky, kterou klient neodmitl
+              (zadani 8. 9. 2026) - schvaleni pres odkaz je dobrovolne a
+              casto se domlouva telefonem. */}
+          {offer.status !== 'REJECTED' && (
+            <button
+              type="button"
+              onClick={createInvoice}
+              disabled={saving || sending}
+              className="border border-brand-green bg-[#E3F9EC] text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-green transition-colors disabled:opacity-60 whitespace-nowrap"
+            >
+              Vystavit fakturu
+            </button>
+          )}
           {!locked && (
             <>
               <button
@@ -306,15 +319,8 @@ export function OfferEditor({
         <div className="bg-[#E3F9EC] border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <p className="text-sm text-ink m-0">
             Nabídku klient schválil, takže už se nedá měnit — zůstává přesně v podobě, kterou odsouhlasil.
+            Fakturu z ní vystavíte tlačítkem nahoře.
           </p>
-          <button
-            type="button"
-            onClick={createInvoice}
-            disabled={saving}
-            className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60 whitespace-nowrap"
-          >
-            Vystavit fakturu
-          </button>
         </div>
       )}
       {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-4 py-3 m-0">{error}</p>}

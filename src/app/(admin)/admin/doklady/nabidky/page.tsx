@@ -7,8 +7,8 @@ import { NewOfferForm } from './NewOfferForm';
 // co ceka na klienta a co uz je odsouhlasene.
 export const dynamic = 'force-dynamic';
 
+// Zalozka "Vse" tu byla navic (zadani 8. 9. 2026) - stavy pokryvaji vsechno.
 const TABS = [
-  { key: 'vse', label: 'Vše', statuses: null },
   { key: 'rozpracovane', label: 'Rozpracované', statuses: ['DRAFT'] },
   { key: 'odeslane', label: 'Odeslané', statuses: ['SENT'] },
   { key: 'schvalene', label: 'Schválené', statuses: ['APPROVED'] },

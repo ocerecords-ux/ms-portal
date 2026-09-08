@@ -9,10 +9,11 @@ import { CategoryManager } from './CategoryManager';
 // jako Aktivni / Dokoncene u projektu, nahore soucty.
 export const dynamic = 'force-dynamic';
 
+// Zalozka "Vse" tu byla navic (zadani 8. 9. 2026) - uhrazene a neuhrazene
+// pokryvaji vsechno.
 const TABS = [
   { key: 'neuhrazene', label: 'Neuhrazené', paid: false },
   { key: 'uhrazene', label: 'Uhrazené', paid: true },
-  { key: 'vse', label: 'Vše', paid: null },
 ] as const;
 
 function formatDate(date: Date | null): string {
@@ -32,7 +33,7 @@ export default async function ExpensesPage({
   const [expenses, categories, companies, issuers, counts] = await Promise.all([
     prisma.expense.findMany({
       where: {
-        ...(activeTab.paid === null ? {} : { paid: activeTab.paid }),
+        paid: activeTab.paid,
         ...(categoryFilter ? { categoryId: categoryFilter } : {}),
       },
       orderBy: [{ issueDate: 'desc' }, { createdAt: 'desc' }],
@@ -52,10 +53,7 @@ export default async function ExpensesPage({
     prisma.expense.groupBy({ by: ['paid'], _count: true }),
   ]);
 
-  const countFor = (paid: boolean | null) =>
-    paid === null
-      ? counts.reduce((sum, c) => sum + c._count, 0)
-      : (counts.find((c) => c.paid === paid)?._count ?? 0);
+  const countFor = (paid: boolean) => counts.find((c) => c.paid === paid)?._count ?? 0;
 
   // Soucty za to, co je zrovna videt - po menach, at se nescitaji jablka s hruskami.
   const totals = new Map<string, { exVat: number; incVat: number }>();
@@ -145,9 +143,10 @@ export default async function ExpensesPage({
           <table className="w-full min-w-[900px] border-collapse">
             <thead>
               <tr className="bg-ink text-white font-heading text-xs">
+                {/* Nazev je prvni a je z nej proklik na detail (zadani 8. 9. 2026). */}
+                <th className="text-left px-4 py-3.5">Název</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum</th>
                 <th className="text-left px-4 py-3.5">Dodavatel</th>
-                <th className="text-left px-4 py-3.5">Popis</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Kategorie</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Splatnost</th>
                 <th className="text-right px-4 py-3.5 whitespace-nowrap">Bez DPH</th>
@@ -167,25 +166,25 @@ export default async function ExpensesPage({
                 const overdue = !e.paid && e.dueDate && new Date(e.dueDate) < today;
                 return (
                   <tr key={e.id} className="border-t border-line hover:bg-[#FAF8FF]">
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                    <td className="px-4 py-3.5 text-sm font-heading font-semibold">
                       <Link
                         href={`/admin/doklady/vydaje/${e.id}`}
                         className="text-ink hover:text-brand-purple no-underline"
                       >
-                        {formatDate(e.issueDate)}
+                        {e.description || 'Bez názvu'}
                       </Link>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-ink">
-                      {e.supplier?.name || e.supplierName || '—'}
-                      {e.number && <span className="block text-xs text-muted font-body">č. {e.number}</span>}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-body text-muted">
-                      {e.description || '—'}
                       {e.attachmentUrl && (
                         <span className="ml-2 text-[10px] font-heading font-bold text-brand-purpleDeep bg-line rounded px-1.5 py-0.5">
                           PŘÍLOHA
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                      {formatDate(e.issueDate)}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-heading text-ink">
+                      {e.supplier?.name || e.supplierName || '—'}
+                      {e.number && <span className="block text-xs text-muted font-body">č. {e.number}</span>}
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading text-muted whitespace-nowrap">
                       {e.category?.name || '—'}

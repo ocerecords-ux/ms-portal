@@ -7,8 +7,8 @@ import { NewInvoiceForm } from './NewInvoiceForm';
 // je videt, co je jeste neuhrazene a co je uz po splatnosti.
 export const dynamic = 'force-dynamic';
 
+// Zalozka "Vse" tu byla navic (zadani 8. 9. 2026) - stavy pokryvaji vsechno.
 const TABS = [
-  { key: 'vse', label: 'Vše', statuses: null },
   { key: 'rozpracovane', label: 'Rozpracované', statuses: ['DRAFT'] },
   { key: 'neuhrazene', label: 'Neuhrazené', statuses: ['SENT'] },
   { key: 'uhrazene', label: 'Uhrazené', statuses: ['PAID'] },

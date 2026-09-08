@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const d = parsed.data;
 
     if (!d.supplierCompanyId && !d.supplierName) {
-      return NextResponse.json({ error: 'Vyplňte dodavatele — buď z Firem, nebo jménem.' }, { status: 400 });
+      return NextResponse.json({ error: 'Vyplňte dodavatele.' }, { status: 400 });
     }
 
     const issueDate = toDate(d.issueDate);
