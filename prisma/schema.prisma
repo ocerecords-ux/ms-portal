@@ -826,7 +826,7 @@ enum ContractSignerRole {
   PROTISTRANA  // herec / klient - podepisuje přes odkaz
 }
 
-/** Šablona smlouvy s poli {{jmeno}}, {{projekt}}… - viz lib/contracts.ts. */
+/// Šablona smlouvy s poli {{jmeno}}, {{projekt}}… - viz lib/contracts.ts.
 model ContractTemplate {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -842,17 +842,17 @@ model Contract {
   number String @unique
   title  String
 
-  /** Finální text smlouvy - šablona s už doplněnými poli, dál ručně upravitelná. */
+  /// Finální text smlouvy - šablona s už doplněnými poli, dál ručně upravitelná.
   body String @db.Text
 
   issuerCompanyId String
   issuer          IssuerCompany @relation(fields: [issuerCompanyId], references: [id])
 
-  /** Protistrana: firma ze sekce Firmy (nepovinná - herec firmu mít nemusí). */
+  /// Protistrana: firma ze sekce Firmy (nepovinná - herec firmu mít nemusí).
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
 
-  /** Komu odkaz k podpisu jde. Jméno i e-mail se drží textově. */
+  /// Komu odkaz k podpisu jde. Jméno i e-mail se drží textově.
   signerName  String
   signerEmail String
 
@@ -861,7 +861,7 @@ model Contract {
 
   status ContractStatus @default(DRAFT)
 
-  /** Jednorázový odkaz k podpisu - stejný princip jako u nabídek. */
+  /// Jednorázový odkaz k podpisu - stejný princip jako u nabídek.
   accessToken String @unique
 
   sentAt         DateTime?
@@ -869,7 +869,7 @@ model Contract {
   rejectedAt     DateTime?
   rejectedReason String?
 
-  /** Otisk textu v okamžiku odeslání k podpisu. */
+  /// Otisk textu v okamžiku odeslání k podpisu.
   bodyHash String?
 
   signatures ContractSignature[]
@@ -891,13 +891,13 @@ model ContractSignature {
   name  String
   email String?
 
-  /** Nakreslený podpis jako PNG v data URL. */
+  /// Nakreslený podpis jako PNG v data URL.
   imageData String @db.Text
 
   signedAt     DateTime @default(now())
   ip           String?
   userAgent    String?
-  /** Otisk textu, který podepisující v tu chvíli viděl. */
+  /// Otisk textu, který podepisující v tu chvíli viděl.
   documentHash String
 
   @@index([contractId])
