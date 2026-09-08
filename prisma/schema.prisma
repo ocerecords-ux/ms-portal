@@ -107,11 +107,12 @@ model Company {
   updatedAt      DateTime  @updatedAt
 
   users    User[]
-  orders   Order[]
-  projects Project[]
-  offers   Offer[]
-  invoices Invoice[]
-  expenses Expense[]
+  orders    Order[]
+  projects  Project[]
+  offers    Offer[]
+  invoices  Invoice[]
+  expenses  Expense[]
+  contracts Contract[]
 }
 
 model User {
@@ -527,6 +528,9 @@ model IssuerCompany {
   invoiceNextNumber   Int    @default(1)
   offerNumberFormat   String @default("N{YYYY}{NNN}")
   offerNextNumber     Int    @default(1)
+  // Rada pro smlouvy (zadani 8. 9. 2026).
+  contractNumberFormat String @default("S{YYYY}{NNN}")
+  contractNextNumber   Int    @default(1)
 
   defaultCurrency Currency @default(CZK)
   isDefault       Boolean  @default(false) // predvybrana firma u novych dokladu
@@ -536,6 +540,7 @@ model IssuerCompany {
   offers       Offer[]
   invoices     Invoice[]
   expenses     Expense[]
+  contracts    Contract[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -793,4 +798,107 @@ model ColumnLabel {
 
   @@unique([tableKey, columnKey])
   @@index([tableKey])
+}
+
+
+// ===========================================================================
+// SMLOUVY S ELEKTRONICKYM PODPISEM (zadani 8. 9. 2026: "chtel bych udelat
+// vlastni podepisovani smluv, jak to ma treba Signi. Ale bez kodu
+// potvrzovacich.")
+//
+// Identita podepisujiciho se overuje jednorazovym odkazem poslanym na jeho
+// e-mail - zadna SMS ani overovaci kod. Ke kazdemu podpisu se uklada
+// dolozka: kdy, z jake IP, z jakeho prohlizece a OTISK textu, ktery clovek
+// videl. Kdyby se text smlouvy pozdeji zmenil, otisk prestane sedet a je to
+// poznat. Podle eIDAS jde o prosty elektronicky podpis.
+// ===========================================================================
+
+enum ContractStatus {
+  DRAFT     // rozpracovaná - jde měnit text
+  SENT      // odeslaná, čeká na podpis protistrany
+  SIGNED    // podepsaná oběma stranami
+  REJECTED  // protistrana podpis odmítla
+  CANCELLED // zrušená námi
+}
+
+enum ContractSignerRole {
+  MEDIASPACE   // naše strana - podepisuje se v portálu
+  PROTISTRANA  // herec / klient - podepisuje přes odkaz
+}
+
+/** Šablona smlouvy s poli {{jmeno}}, {{projekt}}… - viz lib/contracts.ts. */
+model ContractTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  body      String   @db.Text
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Contract {
+  id     String @id @default(cuid())
+  number String @unique
+  title  String
+
+  /** Finální text smlouvy - šablona s už doplněnými poli, dál ručně upravitelná. */
+  body String @db.Text
+
+  issuerCompanyId String
+  issuer          IssuerCompany @relation(fields: [issuerCompanyId], references: [id])
+
+  /** Protistrana: firma ze sekce Firmy (nepovinná - herec firmu mít nemusí). */
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  /** Komu odkaz k podpisu jde. Jméno i e-mail se drží textově. */
+  signerName  String
+  signerEmail String
+
+  caflouProjectId String?
+  projectName     String?
+
+  status ContractStatus @default(DRAFT)
+
+  /** Jednorázový odkaz k podpisu - stejný princip jako u nabídek. */
+  accessToken String @unique
+
+  sentAt         DateTime?
+  completedAt    DateTime?
+  rejectedAt     DateTime?
+  rejectedReason String?
+
+  /** Otisk textu v okamžiku odeslání k podpisu. */
+  bodyHash String?
+
+  signatures ContractSignature[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([caflouProjectId])
+  @@index([companyId])
+}
+
+model ContractSignature {
+  id         String   @id @default(cuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  role  ContractSignerRole
+  name  String
+  email String?
+
+  /** Nakreslený podpis jako PNG v data URL. */
+  imageData String @db.Text
+
+  signedAt     DateTime @default(now())
+  ip           String?
+  userAgent    String?
+  /** Otisk textu, který podepisující v tu chvíli viděl. */
+  documentHash String
+
+  @@index([contractId])
 }

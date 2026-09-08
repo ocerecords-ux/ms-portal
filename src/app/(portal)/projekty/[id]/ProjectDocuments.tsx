@@ -55,16 +55,18 @@ export function ProjectDocuments({
   offers,
   invoices,
   expenses,
+  contracts,
   invoicedByCurrency,
   costsByCurrency,
 }: {
   offers: ProjectDocRow[];
   invoices: ProjectDocRow[];
   expenses: ProjectDocRow[];
+  contracts: ProjectDocRow[];
   invoicedByCurrency: { currency: Currency; minor: number }[];
   costsByCurrency: { currency: Currency; minor: number }[];
 }) {
-  const celkem = offers.length + invoices.length + expenses.length;
+  const celkem = offers.length + invoices.length + expenses.length + contracts.length;
 
   return (
     <div className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-6">
@@ -84,6 +86,7 @@ export function ProjectDocuments({
         </p>
       ) : (
         <div className="flex flex-col gap-6">
+          <Block title="Smlouvy" rows={contracts} hideAmount />
           <Block title="Nabídky" rows={offers} />
           <Block title="Vydané faktury" rows={invoices} />
           <Block title="Přijaté doklady" rows={expenses} />
@@ -98,7 +101,7 @@ export function ProjectDocuments({
   );
 }
 
-function Block({ title, rows }: { title: string; rows: ProjectDocRow[] }) {
+function Block({ title, rows, hideAmount }: { title: string; rows: ProjectDocRow[]; hideAmount?: boolean }) {
   if (rows.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
@@ -118,9 +121,11 @@ function Block({ title, rows }: { title: string; rows: ProjectDocRow[] }) {
               </span>
             </span>
             <span className="flex items-center gap-4 shrink-0">
-              <span className="text-sm font-heading text-ink tabular-nums">
-                {formatMoney(row.amountMinor, row.currency)}
-              </span>
+              {!hideAmount && (
+                <span className="text-sm font-heading text-ink tabular-nums">
+                  {formatMoney(row.amountMinor, row.currency)}
+                </span>
+              )}
               <span
                 className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${row.statusClass}`}
               >

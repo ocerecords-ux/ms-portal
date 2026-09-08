@@ -9,6 +9,8 @@ const TABS = [
   { href: '/admin/doklady/nabidky', label: 'Nabídky' },
   { href: '/admin/doklady/faktury', label: 'Faktury' },
   { href: '/admin/doklady/vydaje', label: 'Výdaje' },
+  // Smlouvy s elektronickym podpisem (zadani 8. 9. 2026).
+  { href: '/admin/doklady/smlouvy', label: 'Smlouvy' },
   { href: '/admin/doklady/moje-firmy', label: 'Moje firmy' },
 ];
 

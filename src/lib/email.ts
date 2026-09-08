@@ -798,3 +798,83 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
 
   return { sent: true as const };
 }
+
+
+// ===========================================================================
+// SMLOUVA K PODPISU (zadani 8. 9. 2026)
+//
+// Odkaz v mailu JE overeni totoznosti - zadny SMS kod se nikde nezadava.
+// Proto je v mailu vyslovne napsane, ze odkaz patri jen adresatovi.
+// ===========================================================================
+
+type ContractEmailInput = {
+  to: string;
+  signerName: string;
+  issuerName: string;
+  number: string;
+  title: string;
+  projectName: string | null;
+  alreadySignedByUs: boolean;
+  contractUrl: string;
+};
+
+export function buildContractHtml(input: ContractEmailInput): string {
+  return emailShell({
+    tag: 'Smlouva k podpisu',
+    preheader: `Smlouva ${input.number} od ${input.issuerName} čeká na váš podpis.`,
+    body: `
+    <span class="badge">Smlouva ${escapeHtml(input.number)}</span>
+    <h2>${escapeHtml(input.title)}</h2>
+    <p>Dobrý den, ${escapeHtml(input.signerName)},</p>
+    <p>posíláme vám k podpisu smlouvu se společností <strong>${escapeHtml(input.issuerName)}</strong>.
+       Otevřete ji odkazem níže, přečtěte si ji a podepište se rovnou v prohlížeči — myší nebo
+       prstem na mobilu. Nemusíte se nikam přihlašovat ani opisovat žádný kód.</p>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Číslo smlouvy</td><td class="value">${escapeHtml(input.number)}</td></tr>
+      ${input.projectName ? `<tr><td class="label">Projekt</td><td class="value regular">${escapeHtml(input.projectName)}</td></tr>` : ''}
+      <tr><td class="label">Druhá strana</td><td class="value regular">${escapeHtml(input.issuerName)}</td></tr>
+      ${input.alreadySignedByUs ? '<tr><td class="label">Stav</td><td class="value regular">Za nás už je podepsaná</td></tr>' : ''}
+    </table>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.contractUrl)}" class="cta">Otevřít a podepsat smlouvu</a>
+    </div>
+
+    <p class="small">Tenhle odkaz je váš podpisový klíč — nesdílejte ho prosím dál. K podpisu se
+       uloží čas, IP adresa a otisk textu, který jste měli před sebou. Kdyby vám ve smlouvě něco
+       nesedělo, stačí na tento e-mail odpovědět nebo podpis přímo na stránce odmítnout.</p>
+  `,
+  });
+}
+
+export async function sendContractEmail(input: ContractEmailInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.to,
+    subject: `Smlouva ${input.number} k podpisu — ${input.title}`,
+    text: [
+      `Dobry den, ${input.signerName},`,
+      '',
+      `posilame vam k podpisu smlouvu ${input.number} se spolecnosti ${input.issuerName}.`,
+      input.projectName ? `Projekt: ${input.projectName}` : '',
+      '',
+      'Smlouvu si otevrete a podepisete zde:',
+      input.contractUrl,
+      '',
+      'Odkaz je urceny jen vam - nesdilejte ho dal.',
+      '',
+      input.issuerName,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildContractHtml(input),
+  });
+
+  return { sent: true as const };
+}

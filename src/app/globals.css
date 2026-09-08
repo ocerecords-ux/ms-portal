@@ -42,3 +42,57 @@ body {
   color: #6e6580;
   cursor: not-allowed;
 }
+
+/* ---------------------------------------------------------------------------
+   Tmavý režim MS chatu (zadání 8. 9. 2026: "u MS chatu by měl jít zapnout
+   i nějaký tmavý režim").
+
+   Přepínač jen přidá třídu .ms-chat-tmavy na panel chatu; barvy se přebijí
+   tady, aby se nemusely v komponentě psát dvě sady tříd ke každému prvku.
+   Platí to výhradně uvnitř chatu — zbytek portálu zůstává světlý.
+--------------------------------------------------------------------------- */
+.ms-chat-tmavy {
+  color-scheme: dark;
+}
+.ms-chat-tmavy .bg-white {
+  background-color: #262034 !important;
+}
+.ms-chat-tmavy .bg-\[\#FAF8FF\] {
+  background-color: #1B1626 !important;
+}
+.ms-chat-tmavy .bg-\[\#FBFAFF\] {
+  background-color: #211B2E !important;
+}
+.ms-chat-tmavy .bg-field {
+  background-color: #2E2740 !important;
+}
+.ms-chat-tmavy .bg-\[\#F1ECFF\] {
+  background-color: #3A2F55 !important;
+}
+.ms-chat-tmavy .text-ink {
+  color: #EDE9F7 !important;
+}
+.ms-chat-tmavy .text-muted {
+  color: #A79FBC !important;
+}
+.ms-chat-tmavy .text-brand-purple,
+.ms-chat-tmavy .text-brand-purpleDark {
+  color: #B49BFF !important;
+}
+.ms-chat-tmavy .border-line {
+  border-color: #3A3350 !important;
+}
+.ms-chat-tmavy .divide-line > * + * {
+  border-color: #3A3350 !important;
+}
+.ms-chat-tmavy .bg-line {
+  background-color: #3A3350 !important;
+}
+.ms-chat-tmavy input,
+.ms-chat-tmavy textarea {
+  color: #EDE9F7 !important;
+}
+.ms-chat-tmavy input::placeholder,
+.ms-chat-tmavy textarea::placeholder {
+  color: #8A82A3 !important;
+}

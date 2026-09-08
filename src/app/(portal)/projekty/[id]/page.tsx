@@ -13,6 +13,7 @@ import { ProjectBudget } from './ProjectBudget';
 import { formatDate, StatusPill } from '../shared';
 import { ProjectMetaForm } from './ProjectMetaForm';
 import { ProjectDocuments, invoiceStatus, offerStatus, type ProjectDocRow } from './ProjectDocuments';
+import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
 import { computeTotals } from '@/lib/doklady';
 import { expenseTotalMinor } from '@/lib/expenses';
 
@@ -54,7 +55,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Doklady navazane na projekt (zadani 8. 9. 2026). Vazba je pres ID projektu
   // v Caflou, stejne jako u vykazu.
   const showDocuments = canViewProjectDocuments(session.user.role);
-  const [offers, invoices, expenses] = await Promise.all([
+  const [offers, invoices, expenses, contracts] = await Promise.all([
     prisma.offer.findMany({
       where: { caflouProjectId },
       orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
@@ -68,6 +69,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     prisma.expense.findMany({
       where: { caflouProjectId },
       orderBy: [{ issueDate: 'desc' }, { createdAt: 'desc' }],
+    }),
+    prisma.contract.findMany({
+      where: { caflouProjectId },
+      orderBy: [{ createdAt: 'desc' }],
     }),
   ]);
 
@@ -143,6 +148,18 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     statusClass: e.paid ? 'bg-[#E3F9EC] text-status-done' : 'bg-[#F1ECFF] text-brand-purpleDark',
   }));
 
+  const contractRows: ProjectDocRow[] = contracts.map((c) => ({
+    id: c.id,
+    href: `/admin/doklady/smlouvy/${c.id}`,
+    title: c.title,
+    number: c.number,
+    date: dokladDatum(c.createdAt),
+    amountMinor: 0,
+    currency: 'CZK' as never,
+    statusLabel: CONTRACT_STATUS_LABELS[c.status] ?? c.status,
+    statusClass: CONTRACT_STATUS_CLASSES[c.status] ?? 'bg-field text-muted',
+  }));
+
   // Souctuje se po menach - jablka s hruskami se nescitaji. Stornovane
   // faktury se do fakturovaneho nepocitaji.
   const soucet = (rows: ProjectDocRow[], skip: (row: ProjectDocRow) => boolean = () => false) => {
@@ -210,6 +227,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           offers={offerRows}
           invoices={invoiceRows}
           expenses={expenseRows}
+          contracts={contractRows}
           invoicedByCurrency={invoicedByCurrency}
           costsByCurrency={costsByCurrency}
         />
