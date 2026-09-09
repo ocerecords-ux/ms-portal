@@ -135,7 +135,10 @@ export function Topbar({
   const missingPages = pageOptions.filter((p) => !draft.some((d) => d.href === p.href));
 
   return (
-    <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4">
+    // Lista zustava nahore i pri rolovani (zadani 9. 9. 2026: "hlavni fialova
+    // lista at je na celem portalu zakotvena, ze nezmizi"). Vyssi vrstva nez
+    // vysouvaci panely po stranach, at ji nic neprekryje.
+    <header className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4 shadow-md">
       {/* Branding "MS portal | [logo]" podle referencniho mockupu uzivatele
           (12. 9. 2026) - svisla oddelovaci cara misto "by" a znatelne vetsi
           logo (jeste zvetseno 5. 9. 2026). */}

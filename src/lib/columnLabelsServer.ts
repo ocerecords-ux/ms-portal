@@ -19,6 +19,8 @@ import { mergeColumns, defaultColumns, type ColumnSetting } from '@/lib/columnLa
 const OUTDATED_LABELS: Record<string, string[]> = {
   managerName: ['Manažer'],
   endDate: ['Dokončeno'],
+  // "NS" bylo moc krátké (zadání 9. 9. 2026: "NS změň na Počet NS").
+  pageCount: ['NS', 'Normostrany'],
 };
 
 /**

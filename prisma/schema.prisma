@@ -166,6 +166,7 @@ model User {
   timesheets      TimesheetEntry[]
   tasks           Task[]
   menuItems       UserMenuItem[]
+  quickActions    UserQuickAction[]
   conversationsCreated Conversation[]       @relation("ConversationCreatedBy")
   conversationMembers  ConversationMember[]
   messages             Message[]
@@ -391,6 +392,22 @@ model BudgetSettings {
 // vykazy, zmizelo to i zvukarum"). Kdo radky nema, vidi vychozi listu z
 // lib/menu.ts > DEFAULT_MENU_ITEMS. Viditelnost se tu neresi - tu urcuji
 // prava ke strance (PAGE_ACCESS).
+/// Rychla volba v levem panelu (zadani 9. 9. 2026). Panel patri konkretnimu
+/// uzivateli, stejne jako horni lista - uprava se nikomu jinemu nepromitne.
+/// Ulozeny je jen KLIC akce; popisek, ikona i cil patri ke kodu
+/// (viz lib/quickActions.ts), aby se daly kdykoliv zmenit.
+model UserQuickAction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actionKey String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, actionKey])
+  @@index([userId, sortOrder])
+}
+
 model UserMenuItem {
   id        String   @id @default(cuid())
   userId    String

@@ -37,7 +37,7 @@ export const DEFAULT_COLUMN_LABELS: Record<string, { key: string; label: string 
     { key: 'priority', label: 'Priorita' },
     { key: 'projectType', label: 'Typ projektu' },
     { key: 'managerName', label: 'Manažer projektu' },
-    { key: 'pageCount', label: 'Normostrany' },
+    { key: 'pageCount', label: 'Počet NS' },
     // "Konec" z Caflou; "Datum vydání" je náš vlastní sloupec v Caflou
     // (zadani 8. 9. 2026).
     { key: 'endDate', label: 'Datum dokončení' },
@@ -67,6 +67,17 @@ export function mergeColumns(tableKey: string, stored: StoredColumn[]): ColumnSe
   const defaults = DEFAULT_COLUMN_LABELS[tableKey] ?? [];
   const podleKlice = new Map(stored.map((s) => [s.columnKey, s]));
 
+  /**
+   * Uložené pořadí se použije, jen když je uložený KOMPLETNÍ seznam sloupců.
+   *
+   * Starší verze ukládala řádek jen pro přejmenované sloupce a všem dávala
+   * sortOrder 0. Kdyby se takové pořadí bralo vážně, vyskočil by přejmenovaný
+   * sloupec na začátek tabulky (chyba 9. 9. 2026: první byl "NS" místo názvu
+   * projektu). Neúplné nastavení tedy řeší jen názvy a skrytí, pořadí zůstává
+   * z kódu - a první uložení novou verzí to samo srovná.
+   */
+  const maPoradi = defaults.length > 0 && defaults.every((c) => podleKlice.has(c.key));
+
   return defaults
     .map((sloupec, index) => {
       const ulozene = podleKlice.get(sloupec.key);
@@ -74,8 +85,7 @@ export function mergeColumns(tableKey: string, stored: StoredColumn[]): ColumnSe
         key: sloupec.key,
         label: ulozene?.label?.trim() ? ulozene.label.trim() : sloupec.label,
         hidden: ulozene?.hidden ?? false,
-        // Bez uloženého pořadí až za nastavené sloupce, v pořadí z kódu.
-        poradi: ulozene ? ulozene.sortOrder : 1000 + index,
+        poradi: maPoradi && ulozene ? ulozene.sortOrder : index,
       };
     })
     .sort((a, b) => a.poradi - b.poradi)

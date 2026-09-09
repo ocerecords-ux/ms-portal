@@ -4,10 +4,13 @@ import { prisma } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from './components/Topbar';
 import { TaskDock } from './components/TaskDock';
+import { QuickDock } from './components/QuickDock';
 import { ChatDock } from './components/ChatDock';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { countUnread } from '@/lib/notifications';
+import { loadQuickActions } from '@/lib/quickActionsServer';
+import { quickActionsFor } from '@/lib/quickActions';
 import { isInternalRole } from '@/lib/roles';
 
 // Jediné místo, které chrání celou klientskou sekci portálu. Session je
@@ -24,12 +27,14 @@ export default async function PortalLayout({ children }: { children: React.React
   // Lišta je editovatelná (viz Topbar) a patří KONKRÉTNÍMU uživateli - úprava
   // se nikomu jinému nepromítne (zadani 8. 9. 2026). Co v ní vůbec smí být se
   // nenastavuje, řídí se právy ke stránce (lib/menu.ts > PAGE_ACCESS).
-  const [entries, tasks, unread, ucet] = await Promise.all([
+  const [entries, tasks, unread, ucet, quickActions] = await Promise.all([
     loadMenuEntries(session.user.id),
     loadMyTasks(session.user.id, role),
     countUnread(session.user.id),
     // Fotka do lišty (zadani 9. 9. 2026) - v session není, bere se z karty účtu.
     prisma.user.findUnique({ where: { id: session.user.id }, select: { photoUrl: true } }),
+    // Rychle volby v levem panelu (zadani 9. 9. 2026).
+    loadQuickActions(session.user.id, role),
   ]);
 
   return (
@@ -45,12 +50,15 @@ export default async function PortalLayout({ children }: { children: React.React
           uvolníme místo - jinak se přes něj tabulky "usekávaly"
           (zadani 8. 9. 2026). */}
       <div
-        className={`max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12 ${internal ? 'pr-16 sm:pr-20' : ''}`}
+        className={`max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-12 pl-14 sm:pl-16 ${internal ? 'pr-16 sm:pr-20' : ''}`}
       >
         {children}
       </div>
       {/* Úkoly po ruce na každé stránce - vysouvací panel na pravé hraně
           (zadani 8. 9. 2026). Jen pro tým Mediaspace. */}
+      {/* Rychle volby na leve hrane - zatazene jsou to jen zelene ikony
+          na fialovem podkladu (zadani 9. 9. 2026). */}
+      <QuickDock actions={quickActions} available={quickActionsFor(role)} />
       {internal && <TaskDock tasks={tasks} />}
       {/* Chat týmu - stejný vysouvací panel, jen u spodní hrany
           (zadani 8. 9. 2026). Taky jen pro tým Mediaspace. */}

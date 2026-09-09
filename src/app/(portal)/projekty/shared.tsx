@@ -353,6 +353,20 @@ const ZAROVNANI_VPRAVO = new Set(['pageCount']);
  */
 let taheny: number | null = null;
 
+/** Úchyt na přetahování - šest teček, ať je jasné, za co se sloupec bere. */
+function Uchyt() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 shrink-0" aria-hidden="true">
+      <circle cx="9" cy="6" r="1.5" />
+      <circle cx="15" cy="6" r="1.5" />
+      <circle cx="9" cy="12" r="1.5" />
+      <circle cx="15" cy="12" r="1.5" />
+      <circle cx="9" cy="18" r="1.5" />
+      <circle cx="15" cy="18" r="1.5" />
+    </svg>
+  );
+}
+
 /**
  * Hlavicka sloupce. Bezne se na ni da kliknout a seradit podle ni; v rezimu
  * uprav (tri tecky ve fialove liste, zadani 8. 9. 2026, rozsireno 9. 9. 2026)
@@ -385,25 +399,36 @@ function SortableHeader({
     return (
       <th
         className="px-2 py-2.5 whitespace-nowrap"
-        draggable
-        onDragStart={() => {
-          taheny = index;
-        }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={() => {
           const from = taheny;
           taheny = null;
           if (from !== null && from !== index) onMove?.(from, index);
         }}
-        title="Přetažením změníte pořadí"
       >
-        <span className="relative inline-flex items-center cursor-grab active:cursor-grabbing">
+        <span className="inline-flex items-center gap-1.5">
+          {/* Pořadí se mění TAHEM ZA ÚCHYT, ne za křížek - ten jen odebírá
+              (zpráva uživatele 9. 9. 2026: "mění se pořadí chycením za
+              křížek, je to matoucí"). */}
+          <span
+            draggable
+            onDragStart={() => {
+              taheny = index;
+            }}
+            onDragEnd={() => {
+              taheny = null;
+            }}
+            title="Přetažením změníte pořadí"
+            className="cursor-grab active:cursor-grabbing text-white/70 hover:text-white"
+          >
+            <Uchyt />
+          </span>
           <button
             type="button"
             onClick={() => onHide?.(sloupec.key)}
             title={`Odebrat ${sloupec.label}`}
             aria-label={`Odebrat ${sloupec.label}`}
-            className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-white text-brand-purpleDeep text-[10px] font-bold leading-none flex items-center justify-center shadow"
+            className="w-4 h-4 shrink-0 rounded-full bg-white/90 text-brand-purpleDeep text-[10px] font-bold leading-none flex items-center justify-center hover:bg-white"
           >
             ×
           </button>
