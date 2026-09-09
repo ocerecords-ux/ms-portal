@@ -187,7 +187,7 @@ export function ExpenseEditor({
             className={`font-heading font-semibold text-sm rounded-lg px-4 py-2 transition-colors disabled:opacity-60 ${
               expense.paid
                 ? 'border border-line text-ink hover:bg-field'
-                : 'bg-brand-green text-ink hover:brightness-95'
+                : 'bg-brand-green text-onAccent hover:brightness-95'
             }`}
           >
             {expense.paid ? 'Zrušit úhradu' : 'Označit jako uhrazený'}

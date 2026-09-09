@@ -167,7 +167,7 @@ export function MyAccountForm({
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: '/login' })}
-            className="bg-ink text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDark transition-colors"
+            className="bg-bar text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDark transition-colors"
           >
             Odhlásit se
           </button>

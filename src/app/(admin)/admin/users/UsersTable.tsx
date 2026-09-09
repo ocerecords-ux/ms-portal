@@ -131,7 +131,7 @@ export function UsersTable({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] border-collapse">
           <thead>
-            <tr className="bg-ink text-white font-heading text-xs">
+            <tr className="bg-bar text-white font-heading text-xs">
               {columns.map((sloupec) => {
                 const aktivni = sort.key === sloupec;
                 return (

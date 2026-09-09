@@ -96,24 +96,6 @@ function Zobrazeno({ seenBy }: { seenBy: string[] }) {
   );
 }
 
-/** Měsíc = přepnout do tmy, slunce = zpátky do světla. */
-function IkonaMesic() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  );
-}
-
-function IkonaSlunce() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-    </svg>
-  );
-}
-
 /**
  * Oddelovac dnu ve vypisu (zprava uzivatele 8. 9. 2026: "chybi cas zobrazeni
  * zpravy"). Datum na jednom radku pres celou sirku, u kazde zpravy uz pak
@@ -465,27 +447,11 @@ export function ChatDock() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Tmavy rezim chatu (zadani 8. 9. 2026). Drzi se v prohlizeci uzivatele,
-  // takze si ho kazdy nastavi po svem a prezije to i prechod mezi strankami.
-  const [tmavy, setTmavy] = useState(false);
-  useEffect(() => {
-    try {
-      setTmavy(window.localStorage.getItem('ms-chat-tmavy') === '1');
-    } catch {
-      // Prohlizec muze mit uloziste zakazane - pak zustane svetly rezim.
-    }
-  }, []);
-  function prepniTma() {
-    setTmavy((current) => {
-      const dalsi = !current;
-      try {
-        window.localStorage.setItem('ms-chat-tmavy', dalsi ? '1' : '0');
-      } catch {
-        // Nevadi, jen se to nezapamatuje.
-      }
-      return dalsi;
-    });
-  }
+  // Vlastni tmavy rezim chatu (zadani 8. 9. 2026) uz tu neni. Od 9. 9. 2026
+  // se prepina tmavy rezim celeho portalu z horni listy, takze zvlast pro
+  // chat by to byl druhy prepinac na tutez vec (zprava uzivatele 9. 9. 2026:
+  // "u chatu ten dark mode nedava smysl, kdyz se to da menit z hlavni listy").
+  // Chat se ted ridi motivem portalu jako vsechno ostatni.
 
   // Zakladani noveho: projekt / clovek / skupina
   const [novy, setNovy] = useState(false);
@@ -733,7 +699,7 @@ export function ChatDock() {
         <span className="relative">
           <ChatIcon />
           {neprectene > 0 && (
-            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-4 text-center">
+            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-4 text-center">
               {neprectene}
             </span>
           )}
@@ -773,21 +739,11 @@ export function ChatDock() {
       <div
         className={`max-w-[96vw] h-[72vh] bg-surface border border-r-0 border-line shadow-xl flex flex-col overflow-hidden transition-[width] ${
           vlaknoId ? 'w-[1180px]' : 'w-[760px]'
-        } ${tmavy ? 'ms-chat-tmavy' : ''}`}
+        }`}
       >
         <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
           <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">MS chat</h2>
           <span className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={prepniTma}
-              title={tmavy ? 'Přepnout na světlý režim' : 'Přepnout na tmavý režim'}
-              aria-label={tmavy ? 'Přepnout na světlý režim' : 'Přepnout na tmavý režim'}
-              aria-pressed={tmavy}
-              className="text-brand-green/90 hover:text-white leading-none"
-            >
-              {tmavy ? <IkonaSlunce /> : <IkonaMesic />}
-            </button>
             <button
               type="button"
               onClick={toggle}
@@ -852,7 +808,7 @@ export function ChatDock() {
                         <span className="text-muted">#</span> {k.label}
                       </span>
                       {(k.conversation?.unread ?? 0) > 0 && (
-                        <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-[18px] text-center">
+                        <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
                           {k.conversation?.unread}
                         </span>
                       )}
@@ -888,7 +844,7 @@ export function ChatDock() {
                       )}
                     </span>
                     {c.unread > 0 && (
-                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-[18px] text-center">
+                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
                         {c.unread}
                       </span>
                     )}

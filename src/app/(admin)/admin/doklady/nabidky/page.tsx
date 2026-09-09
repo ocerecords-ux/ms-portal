@@ -83,7 +83,7 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
             <div className="overflow-x-auto">
               <table className="w-full min-w-[860px] border-collapse">
                 <thead>
-                  <tr className="bg-ink text-white font-heading text-xs">
+                  <tr className="bg-bar text-white font-heading text-xs">
                     {/* Nazev je prvni a proklikavaci - u vsech dokladu stejne
                         (zadani 8. 9. 2026). Cislo dokladu je pod nim. */}
                     <th className="text-left px-4 py-3.5">Název</th>

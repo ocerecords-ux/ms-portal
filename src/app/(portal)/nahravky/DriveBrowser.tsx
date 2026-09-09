@@ -486,8 +486,8 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                         title={isPlaying ? 'Zastavit přehrávání' : 'Přehrát'}
                         className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${
                           isPlaying
-                            ? 'bg-brand-green border-brand-green text-ink'
-                            : 'border-line text-brand-green hover:bg-brand-green hover:text-ink'
+                            ? 'bg-brand-green border-brand-green text-onAccent'
+                            : 'border-line text-brand-green hover:bg-brand-green hover:text-onAccent'
                         }`}
                       >
                         {isPlaying ? <StopIcon /> : <PlayIcon />}

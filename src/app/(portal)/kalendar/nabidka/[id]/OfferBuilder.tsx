@@ -456,7 +456,7 @@ export function OfferBuilder({
               type="button"
               onClick={() => rozhodni('confirm')}
               disabled={busy}
-              className="bg-status-done text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:opacity-90 transition-opacity disabled:opacity-60"
+              className="bg-solidDone text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:opacity-90 transition-opacity disabled:opacity-60"
             >
               Potvrdit termíny
             </button>

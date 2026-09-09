@@ -307,7 +307,7 @@ export function NewExpenseForm({
             onClick={() => set('paid', false)}
             aria-pressed={!form.paid}
             className={`font-heading font-semibold text-sm px-4 py-2.5 transition-colors ${
-              !form.paid ? 'bg-status-progress text-white' : 'bg-surface text-muted hover:text-ink'
+              !form.paid ? 'bg-solidProgress text-white' : 'bg-surface text-muted hover:text-ink'
             }`}
           >
             Neuhrazeno
@@ -317,7 +317,7 @@ export function NewExpenseForm({
             onClick={() => set('paid', true)}
             aria-pressed={form.paid}
             className={`font-heading font-semibold text-sm px-4 py-2.5 transition-colors border-l border-line ${
-              form.paid ? 'bg-status-done text-white' : 'bg-surface text-muted hover:text-ink'
+              form.paid ? 'bg-solidDone text-white' : 'bg-surface text-muted hover:text-ink'
             }`}
           >
             Uhrazeno

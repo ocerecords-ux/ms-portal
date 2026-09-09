@@ -155,7 +155,7 @@ export function WaveformPlayer({ src, autoPlay }: { src: string; autoPlay?: bool
         onClick={toggle}
         title={playing ? 'Pozastavit' : 'Přehrát'}
         aria-label={playing ? 'Pozastavit' : 'Přehrát'}
-        className="inline-flex items-center justify-center w-9 h-9 shrink-0 rounded-full bg-brand-green text-ink hover:brightness-95 transition-[filter]"
+        className="inline-flex items-center justify-center w-9 h-9 shrink-0 rounded-full bg-brand-green text-onAccent hover:brightness-95 transition-[filter]"
       >
         {playing ? <PauseIcon /> : <PlayIcon />}
       </button>

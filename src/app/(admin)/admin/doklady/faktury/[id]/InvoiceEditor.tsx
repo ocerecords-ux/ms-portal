@@ -343,7 +343,7 @@ export function InvoiceEditor({
                   type="button"
                   onClick={() => setPaid(true)}
                   disabled={saving}
-                  className="bg-brand-green text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60"
+                  className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60"
                 >
                   Označit jako uhrazenou
                 </button>

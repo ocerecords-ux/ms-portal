@@ -95,7 +95,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] border-collapse">
             <thead>
-              <tr className="bg-ink text-white font-heading text-xs">
+              <tr className="bg-bar text-white font-heading text-xs">
                 <th className="text-left px-4 py-3.5">Název</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Podepisující</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Vytvořeno</th>

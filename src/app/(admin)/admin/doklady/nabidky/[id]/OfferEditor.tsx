@@ -276,7 +276,7 @@ export function OfferEditor({
               type="button"
               onClick={createInvoice}
               disabled={saving || sending}
-              className="border border-brand-green bg-okTint text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-green transition-colors disabled:opacity-60 whitespace-nowrap"
+              className="border border-brand-green bg-okTint text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-green transition-colors disabled:opacity-60 whitespace-nowrap"
             >
               Vystavit fakturu
             </button>

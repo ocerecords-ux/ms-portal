@@ -122,7 +122,7 @@ export default async function ExpensesPage({
         <Link
           href={`/admin/doklady/vydaje?tab=${activeTab.key}`}
           className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill no-underline transition-colors ${
-            !categoryFilter ? 'bg-ink text-white' : 'bg-surface border border-line text-muted hover:text-ink'
+            !categoryFilter ? 'bg-bar text-white' : 'bg-surface border border-line text-muted hover:text-ink'
           }`}
         >
           Všechny kategorie
@@ -134,7 +134,7 @@ export default async function ExpensesPage({
               key={c.id}
               href={`/admin/doklady/vydaje?tab=${activeTab.key}&kategorie=${c.id}`}
               className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill no-underline transition-colors ${
-                categoryFilter === c.id ? 'bg-ink text-white' : 'bg-surface border border-line text-muted hover:text-ink'
+                categoryFilter === c.id ? 'bg-bar text-white' : 'bg-surface border border-line text-muted hover:text-ink'
               }`}
               >
                 {c.name} <span className="tabular-nums opacity-70">({c._count.expenses})</span>
@@ -156,7 +156,7 @@ export default async function ExpensesPage({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse">
             <thead>
-              <tr className="bg-ink text-white font-heading text-xs">
+              <tr className="bg-bar text-white font-heading text-xs">
                 {/* Nazev je prvni a je z nej proklik na detail (zadani 8. 9. 2026). */}
                 <th className="text-left px-4 py-3.5">Název</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum</th>

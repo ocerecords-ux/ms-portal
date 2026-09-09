@@ -103,7 +103,7 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
           type="button"
           onClick={handleTest}
           disabled={loading}
-          className="bg-ink text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDark transition-colors disabled:opacity-60"
+          className="bg-bar text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDark transition-colors disabled:opacity-60"
         >
           {loading ? 'Testuji…' : 'Otestovat projekty'}
         </button>

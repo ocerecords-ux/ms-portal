@@ -90,7 +90,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
-              <tr className="bg-ink text-white font-heading text-xs">
+              <tr className="bg-bar text-white font-heading text-xs">
                 <th className="text-left px-4 py-3.5">Položka</th>
                 <th className="text-right px-4 py-3.5 whitespace-nowrap">Cena bez DPH</th>
                 <th className="text-right px-4 py-3.5 whitespace-nowrap">Cena s DPH</th>

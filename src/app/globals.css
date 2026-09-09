@@ -50,6 +50,7 @@
   --brand-green: #1fdf67;
 
   --c-ink: 32 26 51; /* #201A33 */
+  --c-bar: 32 26 51; /* tmavý pruh hlaviček */
   --c-paper: 251 250 255; /* #FBFAFF */
   --c-surface: 255 255 255; /* #FFFFFF */
   --c-surface-soft: 250 248 255; /* #FAF8FF */
@@ -70,6 +71,7 @@
 
 .dark {
   --c-ink: 236 233 247; /* svetly text */
+  --c-bar: 45 39 70; /* pruh zůstává tmavý, jen o odstín světlejší než karta */
   --c-paper: 20 17 28; /* podklad stranky */
   --c-surface: 29 25 48; /* karty a tabulky */
   --c-surface-soft: 38 33 56; /* najeti mysi na radek */
@@ -124,65 +126,7 @@ body {
   cursor: not-allowed;
 }
 
-/* ---------------------------------------------------------------------------
-   Tmavý režim MS chatu (zadání 8. 9. 2026: "u MS chatu by měl jít zapnout
-   i nějaký tmavý režim").
-
-   Od 9. 9. 2026, kdy má tmavý režim celý portál, to není sada přebíjecích
-   pravidel s !important, ale prosté přenastavení barevných proměnných na
-   panelu chatu. Všechno uvnitř (bg-surface, text-ink, border-line…) se tím
-   přebarví samo. Chat si tak může jet v tmavém i ve světlém portálu a naopak.
---------------------------------------------------------------------------- */
-.ms-chat-tmavy {
-  color-scheme: dark;
-
-  --c-ink: 237 233 247;
-  --c-paper: 27 22 38;
-  --c-surface: 38 32 52;
-  --c-surface-soft: 27 22 38;
-  --c-field: 46 39 64;
-  --c-line: 58 51 80;
-  --c-muted: 167 159 188;
-  --c-tint: 58 47 85;
-  --c-ok-tint: 22 51 31;
-  --c-warn-tint: 58 43 18;
-  --c-danger-tint: 58 26 30;
-  --c-danger: 255 138 138;
-  --c-status-new: 167 139 255;
-  --c-status-progress: 240 169 58;
-  --c-status-done: 63 217 127;
-}
-/* Fialová se uvnitř chatu nebere z proměnné (je to barva značky), takže
-   vlastní bubliny se ztlumí zvlášť - syté fialové se v tmavém špatně čte
-   (zpráva uživatele 8. 9. 2026). */
-.ms-chat-tmavy .bg-brand-purple {
-  background-color: #5B3FC4;
-}
-.ms-chat-tmavy .text-brand-purple,
-.ms-chat-tmavy .text-brand-purpleDark {
-  color: #B49BFF;
-}
-/* Nedostupné tlačítko Poslat působilo na tmavém rozbité. */
-.ms-chat-tmavy button:disabled {
-  opacity: 0.35;
-}
-/* Posuvník ve výpisu zpráv, ať nesvítí bíle. */
-.ms-chat-tmavy * {
-  scrollbar-color: #4A4266 #1B1626;
-}
-.ms-chat-tmavy ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-.ms-chat-tmavy ::-webkit-scrollbar-track {
-  background: #1B1626;
-}
-.ms-chat-tmavy ::-webkit-scrollbar-thumb {
-  background: #4A4266;
-  border-radius: 6px;
-}
-
-/* Posuvníky v tmavém portálu - stejná úvaha jako u chatu. */
+/* Posuvníky v tmavém režimu, ať nesvítí bíle. */
 .dark * {
   scrollbar-color: rgb(var(--c-line)) rgb(var(--c-paper));
 }

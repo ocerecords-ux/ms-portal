@@ -85,7 +85,7 @@ export default async function AdminHomePage({
           {activeTab.type === 'KLIENT' ? (
             <table className="w-full min-w-[720px] border-collapse">
               <thead>
-                <tr className="bg-ink text-white font-heading text-xs">
+                <tr className="bg-bar text-white font-heading text-xs">
                   <th className="text-left px-4 py-3.5">Kód</th>
                   <th className="text-left px-4 py-3.5">Firma</th>
                   <th className="text-left px-4 py-3.5">Sazba / normostrana</th>
@@ -120,7 +120,7 @@ export default async function AdminHomePage({
           ) : (
             <table className="w-full min-w-[720px] border-collapse">
               <thead>
-                <tr className="bg-ink text-white font-heading text-xs">
+                <tr className="bg-bar text-white font-heading text-xs">
                   <th className="text-left px-4 py-3.5">Kód</th>
                   <th className="text-left px-4 py-3.5">Firma</th>
                   <th className="text-left px-4 py-3.5">Kontaktní osoba</th>

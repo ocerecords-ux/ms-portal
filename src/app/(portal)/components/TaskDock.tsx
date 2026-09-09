@@ -146,7 +146,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         <span className="relative">
           <ChecklistIcon />
           {open.length > 0 && (
-            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-green text-ink text-[10px] font-heading font-bold leading-4 text-center">
+            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-4 text-center">
               {open.length}
             </span>
           )}

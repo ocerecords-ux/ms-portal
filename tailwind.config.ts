@@ -33,6 +33,22 @@ const config: Config = {
           green: '#1FDF67',
           greenDeep: '#149E4B',
         },
+        // Tmavy pruh (hlavicky tabulek, inverzni tlacitka). Drive se na nej
+        // pouzival token "ink", jenze ten je barva TEXTU - v tmavem rezimu
+        // zesvetla, takze z hlavicek byly bile pruhy s bilym pismem (zprava
+        // uzivatele 9. 9. 2026: "u firem, uzivatelu, dokladu jede vrchni lista
+        // bila a je to necitelne"). Tmavy pruh musi zustat tmavy v obou
+        // rezimech, proto ma vlastni promennou.
+        bar: promenna('--c-bar'),
+        // Tmavy text na svetlych plochach znacky (zelena tlacitka a odznaky).
+        // Pevna barva - "ink" by se v tmavem rezimu prevratil a zelena
+        // zustava svetla, takze by na ni bylo svetle pismo.
+        onAccent: '#201A33',
+        // Plne obarvene stavove odznaky. Take pevne: bg-status-* se v tmavem
+        // rezimu rozsvecuje kvuli citelnosti TEXTU, coz se pro plochu pod
+        // bilym pismem nehodi.
+        solidDone: '#149E4B',
+        solidProgress: '#E08A00',
         // Plochy a text - meni se s rezimem.
         ink: promenna('--c-ink'),
         paper: promenna('--c-paper'),

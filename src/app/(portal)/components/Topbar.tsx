@@ -267,7 +267,7 @@ export function Topbar({
               type="button"
               onClick={save}
               disabled={saving}
-              className="bg-brand-green text-ink font-heading font-semibold text-xs rounded-pill px-4 py-1.5 disabled:opacity-60"
+              className="bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-pill px-4 py-1.5 disabled:opacity-60"
             >
               {saving ? 'Ukládám…' : 'Hotovo'}
             </button>

@@ -24,7 +24,7 @@ export default async function IssuersPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] border-collapse">
             <thead>
-              <tr className="bg-ink text-white font-heading text-xs">
+              <tr className="bg-bar text-white font-heading text-xs">
                 <th className="text-left px-4 py-3.5">Firma</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">IČ</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">Další faktura</th>

@@ -98,7 +98,7 @@ export function OfferApproval({
             type="button"
             onClick={() => send('approve')}
             disabled={busy}
-            className="bg-brand-green text-ink font-heading font-semibold text-sm rounded-lg px-5 py-2.5 disabled:opacity-60"
+            className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-5 py-2.5 disabled:opacity-60"
           >
             Přece jen schválit
           </button>
@@ -134,7 +134,7 @@ export function OfferApproval({
           type="button"
           onClick={() => send('approve')}
           disabled={busy}
-          className="bg-brand-green text-ink font-heading font-semibold text-base rounded-lg px-6 py-3 hover:brightness-95 transition-[filter] disabled:opacity-60"
+          className="bg-brand-green text-onAccent font-heading font-semibold text-base rounded-lg px-6 py-3 hover:brightness-95 transition-[filter] disabled:opacity-60"
         >
           {busy ? 'Ukládám…' : 'Schvaluji nabídku'}
         </button>
