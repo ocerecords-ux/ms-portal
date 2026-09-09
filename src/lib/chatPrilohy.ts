@@ -30,6 +30,15 @@ export function jeObrazek(mime: string): boolean {
   return mime.startsWith('image/');
 }
 
+/**
+ * Zvuk se v chatu přehrává rovnou, s waveformou jako v Nahrávkách (zadání
+ * 9. 9. 2026). Pozor: přehrávání hotového souboru je něco úplně jiného než
+ * nahrávání hlasu v chatu - to tu nebude, viz poznámka nahoře.
+ */
+export function jeZvuk(mime: string): boolean {
+  return mime.startsWith('audio/');
+}
+
 /** "1,4 MB" - velikost do karty přílohy. */
 export function formatVelikost(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '';

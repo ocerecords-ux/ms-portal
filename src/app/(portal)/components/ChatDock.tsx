@@ -26,8 +26,10 @@ import {
   MAX_PRILOHA_BYTES,
   formatVelikost,
   jeObrazek,
+  jeZvuk,
   type ChatPriloha,
 } from '@/lib/chatPrilohy';
+import { WaveformPlayer } from './WaveformPlayer';
 
 /**
  * Chat týmu (zadani 8. 9. 2026: "vytvor komunikacni kanal jako Slack pro tym...
@@ -627,6 +629,45 @@ function Reakce({
  * podepsany odkaz. Trvala verejna adresa by znamenala, ze staci link poslat
  * dal - a v chatu muzou byt klientske materialy.
  */
+/**
+ * Zvukova priloha - waveforma a prehravani primo v bubline (zadani
+ * 9. 9. 2026: "slo by tu prilohu prehrat, kdyz je to zvuk, jako to mame
+ * v Nahravkach"). Je to tentyz prehravac jako tam.
+ *
+ * Prehravac se nasadi az po kliknuti na Prehrat. Kresleni waveformy totiz
+ * potrebuje stahnout cely soubor - a kanal, kde visi deset spotu, by jinak
+ * pri otevreni stahl vsechny naraz. Po kliknuti se rovnou prehrava, takze
+ * to uzivatele nestoji nic navic.
+ */
+function ZvukovaPriloha({ priloha, odkaz }: { priloha: ChatPriloha; odkaz: string }) {
+  const [spustit, setSpustit] = useState(false);
+
+  return (
+    <span className="block rounded-lg border border-line bg-surface px-2.5 py-2 max-w-[320px]">
+      <span className="flex items-center gap-2">
+        {!spustit && (
+          <button
+            type="button"
+            onClick={() => setSpustit(true)}
+            title={`Přehrát ${priloha.name}`}
+            aria-label={`Přehrát ${priloha.name}`}
+            className="inline-flex items-center justify-center w-9 h-9 shrink-0 rounded-full bg-brand-green text-onAccent hover:brightness-95 transition-[filter]"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+              <path d="M7 5v14l11-7z" />
+            </svg>
+          </button>
+        )}
+        <span className="min-w-0">
+          <span className="block text-[12px] font-heading font-semibold text-ink truncate">{priloha.name}</span>
+          <span className="block text-[11px] font-body text-muted">{formatVelikost(priloha.size)}</span>
+        </span>
+      </span>
+      {spustit && <WaveformPlayer src={odkaz} autoPlay />}
+    </span>
+  );
+}
+
 function Prilohy({ prilohy }: { prilohy: ChatPriloha[] }) {
   if (prilohy.length === 0) return null;
 
@@ -634,6 +675,9 @@ function Prilohy({ prilohy }: { prilohy: ChatPriloha[] }) {
     <span className="mt-1 flex flex-col gap-1.5">
       {prilohy.map((p) => {
         const odkaz = `/api/chat/prilohy/${p.id}`;
+        if (jeZvuk(p.mime)) {
+          return <ZvukovaPriloha key={p.id} priloha={p} odkaz={odkaz} />;
+        }
         if (jeObrazek(p.mime)) {
           return (
             <a

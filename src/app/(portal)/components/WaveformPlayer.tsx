@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 
 /**
  * Přehrávač s waveformou (zadani 5. 9. 2026: "chtělo by to spíše graficky
- * zobrazit waveformu"). Staví na wavesurfer.js, který se natahuje až v
+ * zobrazit waveformu").
+ *
+ * Od 9. 9. 2026 ho pouzivaji dve mista - Nahravky a prilohy v MS chatu
+ * ("slo by tu prilohu prehrat, kdyz je to zvuk, jako to mame v Nahravkach") -
+ * proto sedi mezi spolecnymi komponentami, ne u Nahravek. Staví na wavesurfer.js, který se natahuje až v
  * prohlížeči (dynamický import) - na serveru by neprošel.
  *
  * Ovládání je celé vlastní, v barvách portálu - černá systémová lišta

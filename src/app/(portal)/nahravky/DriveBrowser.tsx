@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { WaveformPlayer } from './WaveformPlayer';
+import { WaveformPlayer } from '../components/WaveformPlayer';
 
 type DriveItem = {
   id: string;
