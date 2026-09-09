@@ -589,7 +589,7 @@ export function InternalProjectsTable({
                       onClick={onStartEditing}
                       title="Upravit sloupce"
                       aria-label="Upravit sloupce"
-                      className="w-7 h-7 rounded-full bg-white/15 text-brand-green hover:bg-white/30 inline-flex flex-col items-center justify-center gap-[3px] transition-colors"
+                      className="w-7 h-7 rounded-full text-brand-green hover:bg-white/15 inline-flex flex-col items-center justify-center gap-[3px] transition-colors"
                     >
                       <span className="w-[3px] h-[3px] rounded-full bg-current" />
                       <span className="w-[3px] h-[3px] rounded-full bg-current" />
