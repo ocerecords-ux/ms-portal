@@ -540,9 +540,33 @@ model Message {
   replies        Message[]    @relation("MessageThread")
 
   reactions      MessageReaction[]
+  attachments    MessageAttachment[]
 
   @@index([conversationId, createdAt])
   @@index([parentId])
+}
+
+// Priloha zpravy v chatu - fotka, PDF, zvukovy soubor se spotem (zadani
+// 9. 9. 2026: "a co vkladani fotek nebo jinych priloh").
+//
+// V "key" NENI verejna adresa, ale klic souboru v uloziti. Odkaz ke stazeni
+// se vydava az na vyzadani a jen na par minut - v chatu muzou byt klientske
+// materialy, takze trvala verejna adresa by znamenala, ze staci link poslat
+// dal a vidi to kdokoliv.
+//
+// Puvodni nazev souboru se drzi zvlast, protoze v klici je jen ocisteny tvar
+// bez diakritiky - uzivatel ma pri stazeni dostat presne to, co nahraval.
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  key       String
+  name      String
+  mime      String
+  size      Int
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
 }
 
 // Reakce smajlikem na konkretni zpravu (zadani 9. 9. 2026: "jeste bych tam

@@ -1,5 +1,7 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
+import { bezpecnyNazev } from '@/lib/chatPrilohy';
 
 function getClient() {
   const { S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_ENDPOINT } = process.env;
@@ -201,4 +203,89 @@ export async function uploadGeneratedPdf(
   }
 
   return { url: `data:application/pdf;base64,${bytes.toString('base64')}` };
+}
+
+
+/* ---------------------------------------------------------------------------
+   Přílohy v MS chatu (zadání 9. 9. 2026)
+
+   Tady se to dělá jinak než u objednávek a výdajů: soubor NEJDE přes portál,
+   ale rovnou z prohlížeče do úložiště přes podepsanou adresu.
+
+   Důvod je praktický - funkce na Vercelu mají strop na velikost požadavku
+   kolem 4,5 MB. Mediaspace posílá zvukové soubory a fotky, které jsou běžně
+   větší, takže přes API by to prostě neprošlo. Podepsaná adresa platí pár
+   minut a je jen na zápis jednoho konkrétního klíče.
+
+   Ke stažení se taky nedává trvalá veřejná adresa: v chatu můžou být klientské
+   materiály, takže se pokaždé vydá krátkodobý podepsaný odkaz, a to až potom,
+   co portál ověří, že do té konverzace uživatel vůbec smí.
+--------------------------------------------------------------------------- */
+
+/** Jak dlouho platí podepsaná adresa na nahrání (v sekundách). */
+const PLATNOST_UPLOADU = 10 * 60;
+/** Jak dlouho platí podepsaný odkaz na stažení. */
+const PLATNOST_STAZENI = 5 * 60;
+
+/**
+ * Připraví adresu, na kterou prohlížeč pošle soubor. Klíč si vymýšlí server -
+ * kdyby si ho určoval prohlížeč, dal by se přepsat cizí soubor.
+ */
+export async function podepsanyUploadPrilohy(
+  fileName: string,
+  mime: string,
+): Promise<{ key: string; uploadUrl: string } | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+
+  const key = `chat/${randomUUID()}-${bezpecnyNazev(fileName)}`;
+  const uploadUrl = await getSignedUrl(
+    client,
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: mime || 'application/octet-stream',
+    }),
+    { expiresIn: PLATNOST_UPLOADU },
+  );
+  return { key, uploadUrl };
+}
+
+/**
+ * Opravdu ten soubor v úložišti leží, a jak je velký? Volá se před uložením
+ * zprávy - prohlížeč hlásí velikost sám, takže se na jeho údaj nespoléháme.
+ */
+export async function overPrilohu(key: string): Promise<{ size: number; mime: string } | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+
+  try {
+    const hlavicka = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    return {
+      size: Number(hlavicka.ContentLength ?? 0),
+      mime: hlavicka.ContentType || 'application/octet-stream',
+    };
+  } catch (err) {
+    console.error('overPrilohu: soubor v úložišti není:', err);
+    return null;
+  }
+}
+
+/** Krátkodobý odkaz ke stažení. Původní název dostane uživatel zpátky celý. */
+export async function podepsanyOdkazNaPrilohu(key: string, fileName: string): Promise<string | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+
+  return getSignedUrl(
+    client,
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ResponseContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    }),
+    { expiresIn: PLATNOST_STAZENI },
+  );
 }

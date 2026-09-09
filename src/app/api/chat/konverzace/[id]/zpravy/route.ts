@@ -4,21 +4,36 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { MAX_MESSAGE_LENGTH } from '@/lib/chat';
+import { MAX_PRILOH, MAX_PRILOHA_BYTES } from '@/lib/chatPrilohy';
+import { overPrilohu } from '@/lib/storage';
 import { canUseChat, shrnReakce, userLabel } from '@/lib/chatServer';
 
 // Zpravy jedne konverzace (zadani 8. 9. 2026). Otevreni konverzace zaroven
 // znamena "precteno" - proto se pri GET posouva lastReadAt.
 export const dynamic = 'force-dynamic';
 
-const schema = z.object({
-  body: z
-    .string()
-    .trim()
-    .min(1, 'Zpráva je prázdná.')
-    .max(MAX_MESSAGE_LENGTH, 'Zpráva je moc dlouhá.'),
-  /** Odpoved ve vlakne - ID zpravy, pod kterou ma viset. */
-  parentId: z.string().trim().min(1).optional(),
-});
+const schema = z
+  .object({
+    // Prazdne telo je v poradku, kdyz jsou u zpravy prilohy - poslat samotnou
+    // fotku bez komentare je bezna vec (zadani 9. 9. 2026).
+    body: z.string().trim().max(MAX_MESSAGE_LENGTH, 'Zpráva je moc dlouhá.'),
+    /** Odpoved ve vlakne - ID zpravy, pod kterou ma viset. */
+    parentId: z.string().trim().min(1).optional(),
+    prilohy: z
+      .array(
+        z.object({
+          key: z.string().trim().min(1).max(300),
+          name: z.string().trim().min(1).max(255),
+          mime: z.string().trim().max(160).optional(),
+        }),
+      )
+      .max(MAX_PRILOH, `Nejvýš ${MAX_PRILOH} přílohy k jedné zprávě.`)
+      .optional(),
+  })
+  .refine((v) => v.body.length > 0 || (v.prilohy?.length ?? 0) > 0, {
+    message: 'Zpráva je prázdná.',
+    path: ['body'],
+  });
 
 /**
  * Smi tenhle uzivatel do teto konverzace? Kanal k projektu je pro cely tym,
@@ -70,6 +85,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         _count: { select: { replies: true } },
         // Reakce se nactou rovnou se zpravami (zadani 9. 9. 2026) - je jich
         // par kusu na zpravu, takze zvlastni dotaz by byl zbytecny.
+        attachments: {
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, name: true, mime: true, size: true },
+        },
         reactions: {
           orderBy: { createdAt: 'asc' },
           select: {
@@ -110,6 +129,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           .map((clen) => userLabel(clen.user)),
         reactions: shrnReakce(m.reactions, me),
         editedAt: m.editedAt ? m.editedAt.toISOString() : null,
+        prilohy: m.attachments,
       })),
     });
   } catch (err) {
@@ -146,9 +166,42 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       parentId = parent.id;
     }
 
+    // Prilohy uz lezi v uloziti (prohlizec je tam poslal pres podepsanou
+    // adresu, viz /api/chat/prilohy/podpis). Tady se jen overi, ze tam
+    // opravdu jsou a jak jsou velke - prohlizec hlasi velikost sam, takze na
+    // jeho udaj se nespolehame. Co se neoveri, se proste nepripoji; zprava
+    // odejde tak jako tak, at o napsany text nikdo neprijde.
+    const prilohy: { key: string; name: string; mime: string; size: number }[] = [];
+    for (const p of parsed.data.prilohy ?? []) {
+      const overena = await overPrilohu(p.key);
+      if (!overena || overena.size <= 0 || overena.size > MAX_PRILOHA_BYTES) {
+        console.error('Priloha se neoverila, preskakuji:', p.key);
+        continue;
+      }
+      prilohy.push({
+        key: p.key,
+        name: p.name,
+        mime: p.mime || overena.mime,
+        size: overena.size,
+      });
+    }
+
+    if (!parsed.data.body && prilohy.length === 0) {
+      return NextResponse.json({ error: 'Přílohu se nepodařilo nahrát.' }, { status: 400 });
+    }
+
     const message = await prisma.message.create({
-      data: { conversationId: conversation.id, userId: me, body: parsed.data.body, parentId },
-      include: { user: { select: { id: true, name: true, email: true, photoUrl: true } } },
+      data: {
+        conversationId: conversation.id,
+        userId: me,
+        body: parsed.data.body,
+        parentId,
+        attachments: { create: prilohy },
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true, photoUrl: true } },
+        attachments: { select: { id: true, name: true, mime: true, size: true } },
+      },
     });
 
     await prisma.$transaction([
@@ -177,6 +230,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         seenBy: [],
         reactions: [],
         editedAt: null,
+        prilohy: message.attachments,
       },
       { status: 201 },
     );

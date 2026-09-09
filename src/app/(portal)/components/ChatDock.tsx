@@ -21,6 +21,13 @@ import {
   type ChatReaction,
   type ChatTeamMember,
 } from '@/lib/chat';
+import {
+  MAX_PRILOH,
+  MAX_PRILOHA_BYTES,
+  formatVelikost,
+  jeObrazek,
+  type ChatPriloha,
+} from '@/lib/chatPrilohy';
 
 /**
  * Chat týmu (zadani 8. 9. 2026: "vytvor komunikacni kanal jako Slack pro tym...
@@ -190,6 +197,9 @@ function Psatko({
   popisek = 'Poslat',
   onZrusit,
   autoFocus = false,
+  prilohy,
+  onPridejPrilohy,
+  onOdeberPrilohu,
 }: {
   hodnota: string;
   zmena: (v: string) => void;
@@ -204,6 +214,10 @@ function Psatko({
   onZrusit?: () => void;
   /** Kurzor rovnou v poli - pri uprave chce clovek psat hned. */
   autoFocus?: boolean;
+  /** Vybrane, jeste neodeslane prilohy. Kdyz chybi, sponka se nevykresli. */
+  prilohy?: File[];
+  onPridejPrilohy?: (soubory: File[]) => void;
+  onOdeberPrilohu?: (index: number) => void;
 }) {
   const [smajlici, setSmajlici] = useState(false);
   const poleRef = useRef<HTMLDivElement | null>(null);
@@ -434,7 +448,54 @@ function Psatko({
         />
       </div>
 
+      {prilohy && prilohy.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {prilohy.map((soubor, index) => (
+            <span
+              key={`${soubor.name}-${index}`}
+              className="inline-flex items-center gap-1.5 max-w-[220px] rounded-lg border border-line bg-field pl-2 pr-1 py-1"
+            >
+              <span className="text-[11px] font-heading text-ink truncate">{soubor.name}</span>
+              <span className="text-[11px] font-body text-muted shrink-0">{formatVelikost(soubor.size)}</span>
+              <button
+                type="button"
+                onClick={() => onOdeberPrilohu?.(index)}
+                title={`Odebrat ${soubor.name}`}
+                aria-label={`Odebrat ${soubor.name}`}
+                className="shrink-0 w-4 h-4 leading-none text-muted hover:text-danger"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
+        {onPridejPrilohy && (
+          <label
+            title="Připojit soubor"
+            className="shrink-0 w-9 h-9 rounded-lg border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center cursor-pointer"
+          >
+            {/* Sponka. Zamerne obycejny vyber souboru - nahravani hlasu
+                v chatu nebude nikdy (zadani 9. 9. 2026), takze tu neni a
+                nebude zadne tlacitko s mikrofonem. */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+              <path d="M21.4 11.05 12.25 20.2a5.5 5.5 0 0 1-7.78-7.78l9.2-9.2a3.67 3.67 0 0 1 5.18 5.19l-9.2 9.19a1.83 1.83 0 0 1-2.6-2.59l8.5-8.49" />
+            </svg>
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const vybrane: File[] = e.target.files ? Array.from(e.target.files) : [];
+                if (vybrane.length > 0) onPridejPrilohy(vybrane);
+                // Ať jde tentýž soubor vybrat znovu, když ho člověk odebere.
+                e.target.value = '';
+              }}
+            />
+          </label>
+        )}
         <button
           type="button"
           onClick={() => setSmajlici((v) => !v)}
@@ -461,7 +522,7 @@ function Psatko({
         )}
         <button
           type="submit"
-          disabled={sending || !hodnota.trim()}
+          disabled={sending || (!hodnota.trim() && (prilohy?.length ?? 0) === 0)}
           className={`shrink-0 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 disabled:opacity-50 ${
             onZrusit ? '' : 'ml-auto'
           }`}
@@ -553,6 +614,60 @@ function Reakce({
   );
 }
 
+/**
+ * Prilohy pod zpravou (zadani 9. 9. 2026). Obrazek se ukaze rovnou, ostatni
+ * jako karta s nazvem a velikosti.
+ *
+ * Odkaz vede na /api/chat/prilohy/[id], ne primo do uloziste: portal nejdriv
+ * overi, ze uzivatel do te konverzace smi, a teprve pak vyda kratkodoby
+ * podepsany odkaz. Trvala verejna adresa by znamenala, ze staci link poslat
+ * dal - a v chatu muzou byt klientske materialy.
+ */
+function Prilohy({ prilohy }: { prilohy: ChatPriloha[] }) {
+  if (prilohy.length === 0) return null;
+
+  return (
+    <span className="mt-1 flex flex-col gap-1.5">
+      {prilohy.map((p) => {
+        const odkaz = `/api/chat/prilohy/${p.id}`;
+        if (jeObrazek(p.mime)) {
+          return (
+            <a
+              key={p.id}
+              href={odkaz}
+              target="_blank"
+              rel="noreferrer"
+              title={`${p.name} (${formatVelikost(p.size)})`}
+              className="block rounded-card overflow-hidden border border-line max-w-[280px]"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={odkaz} alt={p.name} className="block w-full max-h-[240px] object-cover" />
+            </a>
+          );
+        }
+        return (
+          <a
+            key={p.id}
+            href={odkaz}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 max-w-[280px] rounded-lg border border-line bg-surface px-2.5 py-2 no-underline hover:border-brand-purple transition-colors"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-brand-purple">
+              <path d="M14 3v5h5" />
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+            </svg>
+            <span className="min-w-0">
+              <span className="block text-[12px] font-heading font-semibold text-ink truncate">{p.name}</span>
+              <span className="block text-[11px] font-body text-muted">{formatVelikost(p.size)}</span>
+            </span>
+          </a>
+        );
+      })}
+    </span>
+  );
+}
+
 function Chevron({ direction }: { direction: 'left' | 'right' }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -573,6 +688,10 @@ export function ChatDock() {
   const [vlaknoId, setVlaknoId] = useState<string | null>(null);
   const [vlakno, setVlakno] = useState<ChatMessage[]>([]);
   const [vlaknoDraft, setVlaknoDraft] = useState('');
+  // Vybrane, jeste neodeslane prilohy (zadani 9. 9. 2026). Nahravaji se az
+  // pri odeslani - kdyz clovek soubor zase odebere, nic zbytecne neputuje.
+  const [prilohyHlavni, setPrilohyHlavni] = useState<File[]>([]);
+  const [prilohyVlakno, setPrilohyVlakno] = useState<File[]>([]);
 
   // Uprava vlastni odeslane zpravy (zadani 9. 9. 2026). Upravuje se vzdy jen
   // jedna zprava naraz - na miste bubliny se objevi tentyz editor jako dole,
@@ -833,18 +952,67 @@ export function ChatDock() {
     }
   }
 
+  /**
+   * Nahrani priloh do uloziste. Soubor jde z prohlizece PRIMO tam, na
+   * podepsanou adresu - pres portal by neprosel, funkce na Vercelu maji strop
+   * na velikost pozadavku kolem 4,5 MB a my posilame zvuk a fotky.
+   *
+   * Vraci popis priloh pro ulozeni u zpravy, nebo null, kdyz to nevyslo -
+   * v tom pripade uz je duvod vypsany v chybe a zprava se neodesle, at
+   * uzivatel nema pocit, ze fotka odesla.
+   */
+  async function nahrajPrilohy(soubory: File[]): Promise<{ key: string; name: string; mime: string }[] | null> {
+    const hotove: { key: string; name: string; mime: string }[] = [];
+    for (const soubor of soubory) {
+      if (soubor.size > MAX_PRILOHA_BYTES) {
+        setError(`Příloha ${soubor.name} je moc velká (nejvýš ${formatVelikost(MAX_PRILOHA_BYTES)}).`);
+        return null;
+      }
+      const mime = soubor.type || 'application/octet-stream';
+      const podpis = await fetch('/api/chat/prilohy/podpis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: soubor.name, mime, size: soubor.size }),
+      });
+      const data = await podpis.json().catch(() => ({}));
+      if (!podpis.ok) {
+        setError(data?.error || 'Přílohu se nepodařilo připravit.');
+        return null;
+      }
+      const nahrani = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mime },
+        body: soubor,
+      });
+      if (!nahrani.ok) {
+        setError(`Přílohu ${soubor.name} se nepodařilo nahrát.`);
+        return null;
+      }
+      hotove.push({ key: data.key, name: soubor.name, mime });
+    }
+    return hotove;
+  }
+
   async function odesli(e: React.FormEvent, doVlakna = false) {
     e.preventDefault();
     const text = (doVlakna ? vlaknoDraft : draft).trim();
-    if (!openId || !text || sending) return;
+    const soubory = doVlakna ? prilohyVlakno : prilohyHlavni;
+    // Samotna fotka bez textu je v poradku - prazdna zprava bez priloh ne.
+    if (!openId || sending) return;
+    if (!text && soubory.length === 0) return;
     if (doVlakna && !vlaknoId) return;
     setSending(true);
     setError(null);
     try {
+      const prilohy = soubory.length > 0 ? await nahrajPrilohy(soubory) : [];
+      if (prilohy === null) return;
+
       const res: Response = await fetch(`/api/chat/konverzace/${openId}/zpravy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(doVlakna ? { body: text, parentId: vlaknoId } : { body: text }),
+        body: JSON.stringify(
+          doVlakna ? { body: text, parentId: vlaknoId, prilohy } : { body: text, prilohy },
+        ),
       });
       const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -853,10 +1021,12 @@ export function ChatDock() {
       }
       if (doVlakna) {
         setVlaknoDraft('');
+        setPrilohyVlakno([]);
         setVlakno((current) => [...current, data as ChatMessage]);
         void nactiZpravy(openId);
       } else {
         setDraft('');
+        setPrilohyHlavni([]);
         setMessages((current) => [...current, data as ChatMessage]);
       }
       setZminkyPro(null);
@@ -1209,6 +1379,7 @@ export function ChatDock() {
                               >
                                 <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
                               </p>
+                              <Prilohy prilohy={m.prilohy ?? []} />
                               <Reakce
                                 reactions={m.reactions ?? []}
                                 onToggle={(code) => prepniReakci(m.id, code)}
@@ -1270,6 +1441,13 @@ export function ChatDock() {
                     placeholder="Napište zprávu… (@ zmíní kolegu)"
                     nabidka={zminkyPro === 'hlavni' ? nabidkaZminek : []}
                     vyber={doplnZminku}
+                    prilohy={prilohyHlavni}
+                    onPridejPrilohy={(soubory) =>
+                      setPrilohyHlavni((c) => [...c, ...soubory].slice(0, MAX_PRILOH))
+                    }
+                    onOdeberPrilohu={(index) =>
+                      setPrilohyHlavni((c) => c.filter((_, i) => i !== index))
+                    }
                   />
                 </div>
 
@@ -1350,6 +1528,7 @@ export function ChatDock() {
                                 >
                                   <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
                                 </p>
+                                <Prilohy prilohy={m.prilohy ?? []} />
                                 <Reakce
                                   reactions={m.reactions ?? []}
                                   onToggle={(code) => prepniReakci(m.id, code)}
@@ -1380,6 +1559,13 @@ export function ChatDock() {
                       placeholder="Odpovědět…"
                       nabidka={zminkyPro === 'vlakno' ? nabidkaZminek : []}
                       vyber={doplnZminku}
+                      prilohy={prilohyVlakno}
+                      onPridejPrilohy={(soubory) =>
+                        setPrilohyVlakno((c) => [...c, ...soubory].slice(0, MAX_PRILOH))
+                      }
+                      onOdeberPrilohu={(index) =>
+                        setPrilohyVlakno((c) => c.filter((_, i) => i !== index))
+                      }
                     />
                   </div>
                 )}

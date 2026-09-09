@@ -1,5 +1,6 @@
 import type { ConversationKind } from '@prisma/client';
 import { MS_SMAJLICI, MS_SMAJLIK_REGEX, najdiSmajlika } from '@/lib/msSmajlici';
+import type { ChatPriloha } from '@/lib/chatPrilohy';
 
 /**
  * Chat pro tym Mediaspace (zadani 8. 9. 2026). Bez pristupu do databaze, aby
@@ -65,6 +66,8 @@ export type ChatMessage = {
   reactions: ChatReaction[];
   /** Kdy byla zprava naposledy upravena; null = puvodni zneni. */
   editedAt: string | null;
+  /** Prilohy zpravy - fotky, PDF, zvuk (zadani 9. 9. 2026). */
+  prilohy: ChatPriloha[];
 };
 
 export type ChatTeamMember = { id: string; label: string; photoUrl: string | null };
