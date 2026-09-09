@@ -86,9 +86,9 @@ function buildInternalNotificationHtml(input: OrderEmailInput): string {
   table { border-collapse: collapse; width: 100%; }
   .email-hero { background: #6B2AF0 !important; background: linear-gradient(135deg, #7B55FF, #6B2AF0) !important; padding: 28px 32px 24px; }
   .email-hero .word { display: block; height: 150px; width: 150px; }
-  .email-hero .tag { font-family: Helvetica, Arial, sans-serif; color: #C9FFDF !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 16px; }
+  .email-hero .tag { font-family: 'Acid Grotesk', Helvetica, Arial, sans-serif; color: #C9FFDF !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 16px; }
   .email-hero .bar { height: 3px; width: 46px; background: #1FDF67 !important; border-radius: 2px; margin-top: 14px; }
-  .email-content { padding: 30px 32px 8px; font-family: Helvetica, Arial, sans-serif; background: #FFFFFF !important; color: #201A33 !important; }
+  .email-content { padding: 30px 32px 8px; font-family: 'Acid Grotesk', Helvetica, Arial, sans-serif; background: #FFFFFF !important; color: #201A33 !important; }
   .email-content h2 { font-size: 19px; margin: 0 0 14px; font-weight: 600; color: #201A33 !important; }
   .badge { display: inline-block; background: #E9FFF2 !important; color: #149E4B !important; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; margin-bottom: 12px; }
   .field-table { border: 1px solid #E4DFFB; border-radius: 10px; overflow: hidden; margin: 4px 0 18px; }
@@ -290,11 +290,11 @@ function emailShell(options: { tag: string; preheader: string; body: string }): 
   .card { width: 100%; max-width: 560px; margin: 0 auto; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px rgba(32,26,51,0.08); }
   .hero { background: #6B2AF0 !important; background: linear-gradient(135deg, #7B55FF, #6B2AF0) !important; padding: 30px 34px 26px; text-align: left; }
   .hero .logo { display: block; height: 96px; width: 96px; border: 0; }
-  .hero .word { font-family: Helvetica, Arial, sans-serif; font-size: 21px; font-weight: 700; color: #1FDF67 !important; letter-spacing: 0.01em; padding-right: 14px; }
+  .hero .word { font-family: 'Acid Grotesk', Helvetica, Arial, sans-serif; font-size: 21px; font-weight: 700; color: #1FDF67 !important; letter-spacing: 0.01em; padding-right: 14px; }
   .hero .rule { display: inline-block; width: 1px; height: 26px; background: rgba(255,255,255,0.4) !important; }
-  .hero .tag { font-family: Helvetica, Arial, sans-serif; color: #C9FFDF !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; padding-top: 18px; }
+  .hero .tag { font-family: 'Acid Grotesk', Helvetica, Arial, sans-serif; color: #C9FFDF !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; padding-top: 18px; }
   .hero .bar { height: 3px; width: 46px; background: #1FDF67 !important; border-radius: 2px; margin-top: 12px; }
-  .content { padding: 30px 34px 10px; font-family: Helvetica, Arial, sans-serif; background: #FFFFFF !important; color: #201A33 !important; }
+  .content { padding: 30px 34px 10px; font-family: 'Acid Grotesk', Helvetica, Arial, sans-serif; background: #FFFFFF !important; color: #201A33 !important; }
   .content h2 { font-size: 21px; line-height: 1.3; margin: 0 0 14px; font-weight: 600; color: #201A33 !important; }
   .content p { font-size: 14.5px; line-height: 1.65; margin: 0 0 14px; color: #201A33 !important; }
   .content .small { font-size: 12px; line-height: 1.6; color: #6E6580 !important; }
@@ -309,10 +309,10 @@ function emailShell(options: { tag: string; preheader: string; body: string }): 
   .cta-row { padding: 2px 0 24px; background: #FFFFFF !important; }
   .cta { display: inline-block; background: #1FDF67 !important; color: #10331F !important; text-decoration: none; font-size: 15px; font-weight: 700; padding: 14px 28px; border-radius: 10px; }
   .cta-dark { display: inline-block; background: #201A33 !important; color: #ffffff !important; text-decoration: none; font-size: 13.5px; font-weight: 600; padding: 11px 20px; border-radius: 8px; }
-  .steps td { font-family: Helvetica, Arial, sans-serif; font-size: 13.5px; color: #201A33 !important; padding: 0 0 10px; background: #FFFFFF !important; }
+  .steps td { font-family: 'Acid Grotesk', Helvetica, Arial, sans-serif; font-size: 13.5px; color: #201A33 !important; padding: 0 0 10px; background: #FFFFFF !important; }
   .steps .num { width: 26px; color: #6B2AF0 !important; font-weight: 700; }
   .footer { padding: 18px 34px 26px; border-top: 1px solid #E4DFFB; background: #FFFFFF !important; }
-  .footer p { margin: 0; font-family: Helvetica, Arial, sans-serif; font-size: 11.5px; line-height: 1.6; color: #6E6580 !important; }
+  .footer p { margin: 0; font-family: 'Acid Grotesk', Helvetica, Arial, sans-serif; font-size: 11.5px; line-height: 1.6; color: #6E6580 !important; }
   .footer .brand { color: #6B2AF0 !important; font-weight: 600; }
   @media (prefers-color-scheme: dark) {
     body, .wrap { background: #FBFAFF !important; }

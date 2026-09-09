@@ -24,10 +24,13 @@ const config: Config = {
           done: '#149E4B',
         },
       },
+      // Firemni font je Acid Grotesk (zadani 9. 9. 2026). Vsechny tri rodiny
+      // jim zacinaji, Inter / Jost / Poppins zustavaji jako zaloha pro pripad,
+      // ze font neni k dispozici - viz @font-face v globals.css.
       fontFamily: {
-        heading: ['var(--font-inter)', 'Inter', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        display: ['var(--font-jost)', 'Jost', 'Futura', 'sans-serif'],
-        body: ['var(--font-poppins)', 'Poppins', 'Avenir', 'sans-serif'],
+        heading: ['Acid Grotesk', 'var(--font-inter)', 'Inter', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        display: ['Acid Grotesk', 'var(--font-jost)', 'Jost', 'Futura', 'sans-serif'],
+        body: ['Acid Grotesk', 'var(--font-poppins)', 'Poppins', 'Avenir', 'sans-serif'],
       },
       borderRadius: {
         card: '16px',

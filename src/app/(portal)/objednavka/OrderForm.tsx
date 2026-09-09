@@ -195,7 +195,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
 
       <style jsx>{`
         .input {
-          font-family: var(--font-inter);
+          font-family: 'Acid Grotesk', var(--font-inter);
           font-size: 14.5px;
           border-radius: 8px;
           border: 1.5px solid #1fdf67;

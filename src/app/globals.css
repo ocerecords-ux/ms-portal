@@ -2,6 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Firemni font Mediaspace - Acid Grotesk (Folch Studio), zadani 9. 9. 2026:
+   "vsude pouzivame font Acid Grotesk regular, i v logu MS portal".
+
+   Je to komerCni font, nejde stahnout z Google Fonts. Poradi zdroju:
+     1. local() - font nainstalovany v systemu (my v Mediaspace ho mame),
+     2. soubor v public/fonts/ - az tam licencovany .woff2 pribude,
+     3. zadny z nich => Tailwind spadne na zalozni Inter / Jost / Poppins
+        a portal vypada jako pred touhle zmenou. Nic se tedy nerozbije.
+
+   Vice v public/fonts/README.md. Medium a Bold jsou zamerne zakomentovane,
+   at prohlizec nesaha po souborech, ktere jeste nemame. */
+@font-face {
+  font-family: 'Acid Grotesk';
+  src: local('Acid Grotesk Regular'), local('AcidGrotesk-Regular'), local('Acid Grotesk'),
+    url('/fonts/AcidGrotesk-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+/*
+@font-face {
+  font-family: 'Acid Grotesk';
+  src: local('Acid Grotesk Medium'), url('/fonts/AcidGrotesk-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Acid Grotesk';
+  src: local('Acid Grotesk Bold'), url('/fonts/AcidGrotesk-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
 :root {
   --brand-purple: #7b55ff;
   --brand-purple-deep: #6b2af0;
@@ -23,7 +59,7 @@ body {
    presunuto sem, aby fungoval i na strankach, ktere tento komponent
    nevykresluji (napr. /admin/users). */
 .admin-input {
-  font-family: var(--font-inter);
+  font-family: 'Acid Grotesk', var(--font-inter);
   font-size: 14px;
   border-radius: 8px;
   border: 1.5px solid #e4dffb;
