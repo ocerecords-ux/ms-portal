@@ -389,15 +389,52 @@ export async function podepsanyOdkazNaPrilohu(key: string, fileName: string): Pr
  * jako spatne nastaveny bucket - obojí konci hláškou "Failed to fetch".
  * Odsud zadne CORS neplati, takze je videt skutecny duvod.
  */
+/**
+ * Popis klice BEZ jeho hodnoty (9. 9. 2026).
+ *
+ * Cloudflare na strance tokenu ukazuje tri hodnoty a je snadne popadnout
+ * spatnou. Rozeznat je pritom jde uz podle tvaru:
+ *   - Access Key ID: 32 znaku, jen 0-9 a a-f,
+ *   - Secret Access Key: 64 znaku, jen 0-9 a a-f,
+ *   - Token value: kolem 40 znaku, velka i mala pismena, pomlcky.
+ * Delka a tvar nic tajneho neprozradi, ale okamzite ukazi, jestli je
+ * v poli to spravne.
+ */
+function popisKlice(hodnota: string | undefined): {
+  vyplneno: boolean;
+  delka: number;
+  jenHex: boolean;
+  mezeryNaKraji: boolean;
+} {
+  const syrove = hodnota ?? '';
+  const orezane = syrove.trim();
+  return {
+    vyplneno: orezane.length > 0,
+    delka: orezane.length,
+    jenHex: /^[0-9a-f]+$/i.test(orezane),
+    mezeryNaKraji: syrove !== orezane,
+  };
+}
+
 export async function zkusUloziste(): Promise<{
   ok: boolean;
   server: string | null;
   bucket: string | null;
   cestaSBucketem: boolean;
+  klice: {
+    accessKeyId: ReturnType<typeof popisKlice>;
+    secretAccessKey: ReturnType<typeof popisKlice>;
+    ocekavano: string;
+  };
   pocetSouboru?: number;
   chyba?: string;
   kod?: string;
 }> {
+  const klice = {
+    accessKeyId: popisKlice(process.env.S3_ACCESS_KEY_ID),
+    secretAccessKey: popisKlice(process.env.S3_SECRET_ACCESS_KEY),
+    ocekavano: 'U Cloudflare R2: Access Key ID = 32 znaků hex, Secret Access Key = 64 znaků hex.',
+  };
   const bucket = process.env.S3_BUCKET || null;
   const endpoint = ocistiEndpoint(process.env.S3_ENDPOINT);
   let server: string | null = null;
@@ -414,6 +451,7 @@ export async function zkusUloziste(): Promise<{
       server,
       bucket,
       cestaSBucketem: Boolean(endpoint),
+      klice,
       chyba: 'Úložiště není nastavené (chybí klíče, bucket nebo je adresa neplatná).',
     };
   }
@@ -427,6 +465,7 @@ export async function zkusUloziste(): Promise<{
       server,
       bucket,
       cestaSBucketem: Boolean(endpoint),
+      klice,
       pocetSouboru: odpoved.KeyCount ?? 0,
     };
   } catch (err) {
@@ -436,6 +475,7 @@ export async function zkusUloziste(): Promise<{
       server,
       bucket,
       cestaSBucketem: Boolean(endpoint),
+      klice,
       chyba: chyba?.message || 'Neznámá chyba.',
       kod: `${chyba?.name || '?'} / HTTP ${chyba?.$metadata?.httpStatusCode ?? '?'}`,
     };
