@@ -8,6 +8,17 @@ import { prisma } from '@/lib/db';
 // nebo jinde. Zamerne NEVRACI zadne tajne hodnoty, jen jestli jsou vyplnene.
 export const dynamic = 'force-dynamic';
 
+/** Ze zadane adresy jen jmeno serveru; z necehokoliv jineho nic. */
+function bezpecnyHost(hodnota: string | undefined): string | null {
+  const text = (hodnota || '').trim();
+  if (!text) return null;
+  try {
+    return new URL(/^https?:\/\//i.test(text) ? text : `https://${text}`).hostname;
+  } catch {
+    return '(neplatná adresa)';
+  }
+}
+
 export async function GET() {
   // Seznam uctu vidi jen Zuzo-labuzo. Do 9. 9. 2026 ho tahle stranka
   // vypisovala uplne komukoliv, kdo znal adresu - tedy e-maily a role celeho
@@ -34,7 +45,10 @@ export async function GET() {
     ADMIN_INITIAL_PASSWORD_nastaveno: Boolean(process.env.ADMIN_INITIAL_PASSWORD),
     // Adresa uloziste ani oblast nejsou tajne (tajne jsou klice) a bez nich
     // se spatne hleda, proc podepsana adresa neprojde. Presto jen pro spravce.
-    ULOZISTE_endpoint: jeSpravce ? process.env.S3_ENDPOINT || null : undefined,
+    // Jen jmeno serveru, nikdy cela hodnota: kdyz se do promenne omylem
+    // dostane tajny udaj (stalo se 9. 9. 2026), nesmi ho stranka vypsat ani
+    // spravci.
+    ULOZISTE_endpoint_server: jeSpravce ? bezpecnyHost(process.env.S3_ENDPOINT) : undefined,
     ULOZISTE_bucket: jeSpravce ? process.env.S3_BUCKET || null : undefined,
     ULOZISTE_region: jeSpravce ? process.env.S3_REGION || '(nenastaveno)' : undefined,
   };

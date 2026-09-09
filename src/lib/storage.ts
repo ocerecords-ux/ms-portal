@@ -8,13 +8,35 @@ import { bezpecnyNazev } from '@/lib/chatPrilohy';
  * preklepy: chybejici https:// a lomitko na konci. Spatne slozena adresa
  * jinak shodi cely klient uz pri sestaveni (9. 9. 2026).
  */
+/**
+ * Do logu nikdy nepatri obsah promenne. Do S3_ENDPOINT se muze omylem dostat
+ * i tajna hodnota (stalo se 9. 9. 2026 - uzivatel tam vlozil secret key),
+ * a log by ji rozesel po Vercelu. Staci vedet, jak je hodnota dlouha a cim
+ * konci.
+ */
+function nahled(hodnota: string | undefined): string {
+  const text = (hodnota || '').trim();
+  if (!text) return '(prazdne)';
+  return `${text.length} znaku, konci na "${text.slice(-6)}"`;
+}
+
 function ocistiEndpoint(hodnota: string | undefined): string | undefined {
   const text = (hodnota || '').trim().replace(/\/+$/, '');
   if (!text) return undefined;
+  // Do adresy obcas omylem sklouzne pristupovy klic (stalo se 9. 9. 2026).
+  // Nesmi se s ni pak nakladat jako s adresou - a hlavne se nesmi nikam
+  // vypsat. Klic nema tecku ani protokol a byva dlouhy.
+  if (!text.includes('.') || (text.length > 45 && !/^https?:\/\//i.test(text))) {
+    console.error(
+      'S3_ENDPOINT nevypada jako adresa. Pozor: patri sem POUZE adresa uloziste, ' +
+        'nikdy pristupovy klic. Pokud tam klic je, zneplatnete ho a vytvorte novy.',
+    );
+    return undefined;
+  }
   const sProtokolem = /^https?:\/\//i.test(text) ? text : `https://${text}`;
   // Nevyplneny zastupny text z navodu - snadny preklep pri kopirovani.
   if (/[<>{}\s]/.test(sProtokolem) || /account_id|ucet_id|yourbucket/i.test(sProtokolem)) {
-    console.error(`S3_ENDPOINT vypada jako nevyplneny vzor: "${hodnota}"`);
+    console.error(`S3_ENDPOINT vypada jako nevyplneny vzor (${nahled(hodnota)}).`);
     return undefined;
   }
   try {
@@ -23,7 +45,7 @@ function ocistiEndpoint(hodnota: string | undefined): string | undefined {
     // ji spolkne. Bez teto kontroly se podpis vyrobi a chyba se projevi az
     // v prohlizeci jako necitelne "Failed to fetch" (9. 9. 2026).
     if (adresa.hostname.split('.').some((kus) => kus.length === 0)) {
-      console.error(`S3_ENDPOINT ma v adrese prazdny kousek: "${hodnota}"`);
+      console.error(`S3_ENDPOINT ma v adrese prazdny kousek (${nahled(hodnota)}).`);
       return undefined;
     }
     // U Cloudflare R2 je prvni kousek vzdy 32 znaku hex (account ID). Kdyz
@@ -31,13 +53,13 @@ function ocistiEndpoint(hodnota: string | undefined): string | undefined {
     if (adresa.hostname.endsWith('.r2.cloudflarestorage.com')) {
       const ucet = adresa.hostname.split('.')[0];
       if (!/^[0-9a-f]{32}$/i.test(ucet)) {
-        console.error(`S3_ENDPOINT nevypada jako skutecna adresa R2 (account ID "${ucet}"): "${hodnota}"`);
+        console.error(`S3_ENDPOINT nevypada jako skutecna adresa R2 - prvni kousek jmena neni account ID (${nahled(hodnota)}).`);
         return undefined;
       }
     }
     return sProtokolem;
   } catch {
-    console.error(`S3_ENDPOINT neni platna adresa: "${hodnota}"`);
+    console.error(`S3_ENDPOINT neni platna adresa (${nahled(hodnota)}).`);
     return undefined;
   }
 }
