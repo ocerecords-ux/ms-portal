@@ -18,7 +18,23 @@ function ocistiEndpoint(hodnota: string | undefined): string | undefined {
     return undefined;
   }
   try {
-    new URL(sProtokolem);
+    const adresa = new URL(sProtokolem);
+    // Prazdny kousek jmena ("a1b2....r2...") je neplatna adresa, ale new URL()
+    // ji spolkne. Bez teto kontroly se podpis vyrobi a chyba se projevi az
+    // v prohlizeci jako necitelne "Failed to fetch" (9. 9. 2026).
+    if (adresa.hostname.split('.').some((kus) => kus.length === 0)) {
+      console.error(`S3_ENDPOINT ma v adrese prazdny kousek: "${hodnota}"`);
+      return undefined;
+    }
+    // U Cloudflare R2 je prvni kousek vzdy 32 znaku hex (account ID). Kdyz
+    // tam je neco jineho, je to skoro jiste zkopirovany priklad z navodu.
+    if (adresa.hostname.endsWith('.r2.cloudflarestorage.com')) {
+      const ucet = adresa.hostname.split('.')[0];
+      if (!/^[0-9a-f]{32}$/i.test(ucet)) {
+        console.error(`S3_ENDPOINT nevypada jako skutecna adresa R2 (account ID "${ucet}"): "${hodnota}"`);
+        return undefined;
+      }
+    }
     return sProtokolem;
   } catch {
     console.error(`S3_ENDPOINT neni platna adresa: "${hodnota}"`);
