@@ -220,10 +220,6 @@ function Psatko({
   onOdeberPrilohu?: (index: number) => void;
 }) {
   const [smajlici, setSmajlici] = useState(false);
-  // Pretazeni souboru rovnou do psatka (zadani 9. 9. 2026). Pocitadlo, ne
-  // true/false: dragleave chodi i pri prejezdu pres vnorene prvky, takze
-  // s prostym prepinacem by ramecek probliskaval.
-  const [tahnou, setTahnou] = useState(0);
   const poleRef = useRef<HTMLDivElement | null>(null);
   /** Text, který jsme naposledy poslali ven - podle něj se pozná cizí změna. */
   const posledni = useRef(hodnota);
@@ -358,31 +354,11 @@ function Psatko({
     // a smajliky a odeslat bych dal az pod nej"). Drive to byl jeden radek
     // [smajlik][pole][Poslat], takze pole prichazelo o par desitek pixelu
     // z obou stran.
-    <form
-      onSubmit={odeslat}
-      onDragEnter={(e: React.DragEvent<HTMLFormElement>) => {
-        if (!onPridejPrilohy || !e.dataTransfer.types.includes('Files')) return;
-        e.preventDefault();
-        setTahnou((n) => n + 1);
-      }}
-      onDragOver={(e: React.DragEvent<HTMLFormElement>) => {
-        if (!onPridejPrilohy || !e.dataTransfer.types.includes('Files')) return;
-        // Bez tohohle prohlizec soubor proste otevre misto vlozeni.
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
-      }}
-      onDragLeave={() => setTahnou((n) => Math.max(0, n - 1))}
-      onDrop={(e: React.DragEvent<HTMLFormElement>) => {
-        if (!onPridejPrilohy) return;
-        e.preventDefault();
-        setTahnou(0);
-        const soubory: File[] = Array.from(e.dataTransfer.files ?? []);
-        if (soubory.length > 0) onPridejPrilohy(soubory);
-      }}
-      className={`relative border-t bg-surface p-3 flex flex-col gap-2 transition-colors ${
-        tahnou > 0 ? 'border-brand-purple bg-tint' : 'border-line'
-      }`}
-    >
+    // Pretazeni souboru se neresi tady, ale na celem panelu chatu - prouzek
+    // s psatkem je na to moc mala plocha a lidi soubor pousteji do vypisu
+    // zprav (zprava uzivatele 9. 9. 2026: "jde to pres sponku, ale nejde
+    // drag and drop"). Viz ChatDock niz.
+    <form onSubmit={odeslat} className="relative border-t border-line bg-surface p-3 flex flex-col gap-2">
       {smajlici && (
         <div className="absolute left-3 right-3 bottom-full mb-1 bg-surface border border-line rounded-lg shadow-lg p-2 z-10 max-h-64 overflow-y-auto">
           {/* Naše vlastní sada je první - viz lib/msSmajlici.ts. */}
@@ -476,11 +452,6 @@ function Psatko({
         />
       </div>
 
-      {tahnou > 0 && (
-        <p className="m-0 rounded-lg border border-dashed border-brand-purple bg-surface px-3 py-2 text-center text-xs font-heading font-semibold text-brand-purple">
-          Pusťte soubor sem
-        </p>
-      )}
       {prilohy && prilohy.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap">
           {prilohy.map((soubor, index) => (
@@ -725,6 +696,19 @@ export function ChatDock() {
   // pri odeslani - kdyz clovek soubor zase odebere, nic zbytecne neputuje.
   const [prilohyHlavni, setPrilohyHlavni] = useState<File[]>([]);
   const [prilohyVlakno, setPrilohyVlakno] = useState<File[]>([]);
+  // Pretazeni souboru plati pro CELY panel chatu, ne jen pro prouzek
+  // s psatkem - do toho se tezko trefit a lidi soubor pousteji doprostred
+  // vypisu zprav (zprava uzivatele 9. 9. 2026). Pocitadlo, ne true/false:
+  // dragleave chodi i pri prejezdu pres vnorene prvky, takze s prostym
+  // prepinacem by ramecek probliskaval.
+  const [tahnouSoubory, setTahnouSoubory] = useState(0);
+
+  /** Kam soubor patri: kdyz je otevrene vlakno, tak do nej. */
+  function pridejPrilohy(soubory: File[]) {
+    if (soubory.length === 0) return;
+    if (vlaknoId) setPrilohyVlakno((c) => [...c, ...soubory].slice(0, MAX_PRILOH));
+    else setPrilohyHlavni((c) => [...c, ...soubory].slice(0, MAX_PRILOH));
+  }
 
   // Uprava vlastni odeslane zpravy (zadani 9. 9. 2026). Upravuje se vzdy jen
   // jedna zprava naraz - na miste bubliny se objevi tentyz editor jako dole,
@@ -1165,10 +1149,38 @@ export function ChatDock() {
           samotny chat. Na uzkem okne se leva cast schova a zustane jen to,
           co je zrovna otevrene. */}
       <div
-        className={`max-w-[96vw] h-[72vh] bg-surface border border-r-0 border-line shadow-xl flex flex-col overflow-hidden transition-[width] ${
+        onDragEnter={(e: React.DragEvent<HTMLDivElement>) => {
+          if (!openId || !e.dataTransfer.types.includes('Files')) return;
+          e.preventDefault();
+          setTahnouSoubory((n) => n + 1);
+        }}
+        onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
+          if (!openId || !e.dataTransfer.types.includes('Files')) return;
+          // Bez tohohle prohlizec soubor proste otevre misto vlozeni.
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }}
+        onDragLeave={() => setTahnouSoubory((n) => Math.max(0, n - 1))}
+        onDrop={(e: React.DragEvent<HTMLDivElement>) => {
+          if (!openId) return;
+          e.preventDefault();
+          setTahnouSoubory(0);
+          pridejPrilohy(Array.from(e.dataTransfer.files ?? []));
+        }}
+        className={`relative max-w-[96vw] h-[72vh] bg-surface border border-r-0 shadow-xl flex flex-col overflow-hidden transition-[width] ${
           vlaknoId ? 'w-[1180px]' : 'w-[760px]'
-        }`}
+        } ${tahnouSoubory > 0 ? 'border-brand-purple' : 'border-line'}`}
       >
+        {/* Pres cely panel, at je videt, ze se soubor pusti kamkoliv. Vrstva
+            nesmi brat udalosti mysi, jinak by drop spadl na ni a nedoputoval
+            k panelu (pointer-events-none). */}
+        {tahnouSoubory > 0 && (
+          <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-brand-purple/15 backdrop-blur-[1px]">
+            <span className="rounded-card border-2 border-dashed border-brand-purple bg-surface px-6 py-4 font-heading font-semibold text-sm text-brand-purple shadow-lg">
+              Pusťte soubor sem
+            </span>
+          </div>
+        )}
         <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
           <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">MS chat</h2>
           <span className="flex items-center gap-3">
