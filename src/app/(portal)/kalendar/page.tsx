@@ -46,9 +46,11 @@ export default async function KalendarPage({
 
   // Termíny, které herec vybral a produkce je včas nepotvrdila, se vrací do
   // nabídky. Vercel nemá nic, co by běželo samo, tak se to dělá tady.
-  await releaseExpiredHolds();
-
-  const studios = await loadStudios();
+  //
+  // Úklid a načtení studií spolu nesouvisí, takže běží najednou (zpráva
+  // 9. 9. 2026 o zpomaleném webu). Dřív se čekalo nejdřív na úklid a teprve
+  // pak na studia - dvě kolečka do databáze za sebou tam, kde stačí jedno.
+  const [, studios] = await Promise.all([releaseExpiredHolds(), loadStudios()]);
   if (studios.length === 0) {
     return (
       <section className="flex flex-col gap-4">

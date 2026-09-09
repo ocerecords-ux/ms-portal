@@ -10,15 +10,26 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  /**
+   * Fáze přihlášení (zpráva 9. 9. 2026: "kliknu na přihlásit a dlouho čekám
+   * a nic se neděje").
+   *
+   * Dřív se čekání vypnulo hned po ověření hesla - jenže tím to nekončí:
+   * pak se teprve načítá stránka Projekty, která si tahá data z Caflou, a to
+   * je ta delší část. Tlačítko se mezitím vrátilo do klidového stavu a
+   * vypadalo, jako by se klik ztratil. Teď čekání běží až do překreslení
+   * portálu a rovnou říká, na co se čeká.
+   */
+  const [phase, setPhase] = useState<'idle' | 'signing' | 'redirecting'>('idle');
+  const loading = phase !== 'idle';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
+    setPhase('signing');
     const res = await signIn('credentials', { email, password, redirect: false });
-    setLoading(false);
     if (res?.error) {
+      setPhase('idle');
       // Do 5. 9. 2026 tu byla u KAZDE chyby hlaska "Nesprávný e-mail nebo
       // heslo" - i kdyz prihlaseni spadlo na necem uplne jinem (nedostupna
       // databaze, chybejici NEXTAUTH_SECRET...). Spatne heslo hlasi NextAuth
@@ -31,6 +42,8 @@ export default function LoginPage() {
       );
       return;
     }
+    // Čekání schválně nevypínáme - pokračuje se přesměrováním do portálu.
+    setPhase('redirecting');
     router.push('/projekty');
     router.refresh();
   }
@@ -89,7 +102,7 @@ export default function LoginPage() {
               disabled={loading}
               className="mt-2 border-2 border-brand-green text-brand-green font-heading font-semibold rounded-lg py-2.5 hover:bg-brand-green hover:text-brand-purpleDark transition-colors disabled:opacity-60"
             >
-              {loading ? 'Přihlašuji…' : 'Přihlásit se'}
+              {phase === 'signing' ? 'Přihlašuji…' : phase === 'redirecting' ? 'Načítám portál…' : 'Přihlásit se'}
             </button>
 
             <Link href="/zapomenute-heslo" className="text-white/80 text-xs font-body text-center hover:text-white">
