@@ -180,7 +180,10 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                       <button
                         type="button"
                         onClick={() => startEdit(item)}
-                        className={`text-left hover:text-brand-purple ${item.active ? 'text-ink' : 'text-muted line-through'}`}
+                        title="Upravit položku"
+                        className={`text-left hover:text-brand-purple hover:underline ${
+                          item.active ? 'text-ink' : 'text-muted line-through'
+                        }`}
                       >
                         {item.name}
                       </button>
@@ -212,24 +215,18 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                         {item.rodnyList ? 'Ano' : 'Ne'}
                       </button>
                     </td>
+                    {/* Tlacitko Upravit tu bylo zbytecne (zadani 9. 9. 2026) -
+                        polozka se upravuje kliknutim na nazev, stejne jako
+                        uzivatel v seznamu uzivatelu. */}
                     <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                      <span className="inline-flex items-center gap-4">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(item)}
-                          className="text-brand-purple text-sm font-heading font-semibold"
-                        >
-                          Upravit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeItem(item)}
-                          disabled={busy}
-                          className="text-danger text-sm font-heading disabled:opacity-60"
-                        >
-                          Smazat
-                        </button>
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item)}
+                        disabled={busy}
+                        className="text-danger text-sm font-heading disabled:opacity-60"
+                      >
+                        Smazat
+                      </button>
                     </td>
                   </tr>
                 ),
