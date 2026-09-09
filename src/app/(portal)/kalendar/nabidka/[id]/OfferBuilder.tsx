@@ -80,6 +80,7 @@ export function OfferBuilder({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [zkopirovano, setZkopirovano] = useState(false);
+  const [vzkaz, setVzkaz] = useState('');
 
   const nabidnute = slots.filter((s) => s.state === 'OFFERED');
   const vybrane = slots.filter((s) => s.state === 'SELECTED' || s.state === 'CONFIRMED');
@@ -193,6 +194,44 @@ export function OfferBuilder({
       router.refresh();
     } catch {
       setError('Odeslání se nezdařilo.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * Rozhodnutí o výběru herce. Potvrzení je zároveň schválení — mezikrok
+   * jsme vypustili (rozhodnuto 8. 9. 2026).
+   */
+  async function rozhodni(action: 'confirm' | 'return' | 'reject' | 'complete') {
+    if (action === 'reject' && !window.confirm('Opravdu zamítnout? Termíny se uvolní.')) return;
+    setBusy(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/kalendar/nabidky/${request.id}/rozhodnuti`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, note: vzkaz || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Rozhodnutí se nepodařilo uložit.');
+        return;
+      }
+      setVzkaz('');
+      setInfo(
+        action === 'confirm'
+          ? 'Termíny potvrzeny, herci odešel e-mail.'
+          : action === 'return'
+            ? 'Vráceno herci k novému výběru.'
+            : action === 'reject'
+              ? 'Výběr zamítnut.'
+              : 'Označeno jako dokončené.',
+      );
+      router.refresh();
+    } catch {
+      setError('Rozhodnutí se nepodařilo uložit.');
     } finally {
       setBusy(false);
     }
@@ -338,6 +377,125 @@ export function OfferBuilder({
           </button>
         </div>
       </div>
+
+      {/* Schvalovani vyberu herce */}
+      {request.status === 'SUBMITTED' && (
+        <div className="bg-white rounded-card border-2 border-status-progress shadow-sm p-5 flex flex-col gap-4">
+          <div>
+            <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+              Herec vybral termíny
+            </h2>
+            <p className="text-sm font-body text-muted m-0 mt-1">
+              Vybráno {vybrane.length} z {request.requiredSessions}
+              {request.holdUntil ? ` · drženo do ${formatDateTime(request.holdUntil, request.timezone)}` : ''}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <span className="text-xs font-heading text-status-done uppercase tracking-wide">Vybral</span>
+              <ul className="list-none p-0 m-0 mt-2 flex flex-col gap-1.5">
+                {vybrane.map((s) => (
+                  <li key={s.id} className="text-sm font-heading text-ink">
+                    <span className="capitalize">
+                      {new Intl.DateTimeFormat('cs-CZ', {
+                        timeZone: request.timezone,
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'numeric',
+                      }).format(new Date(s.start))}
+                    </span>
+                    <span className="text-muted font-body tabular-nums">
+                      {' · '}
+                      {minutesToTime(minutesInZone(new Date(s.start), request.timezone))}–
+                      {minutesToTime(minutesInZone(new Date(s.end), request.timezone))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <span className="text-xs font-heading text-muted uppercase tracking-wide">Nevybral</span>
+              <ul className="list-none p-0 m-0 mt-2 flex flex-col gap-1.5">
+                {nabidnute.length === 0 && (
+                  <li className="text-sm font-body text-muted">— všechny nabídnuté termíny si vzal —</li>
+                )}
+                {nabidnute.map((s) => (
+                  <li key={s.id} className="text-sm font-body text-muted">
+                    <span className="capitalize">
+                      {new Intl.DateTimeFormat('cs-CZ', {
+                        timeZone: request.timezone,
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'numeric',
+                      }).format(new Date(s.start))}
+                    </span>
+                    <span className="tabular-nums">
+                      {' · '}
+                      {minutesToTime(minutesInZone(new Date(s.start), request.timezone))}–
+                      {minutesToTime(minutesInZone(new Date(s.end), request.timezone))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Vzkaz herci (u vrácení a zamítnutí se hodí důvod)</span>
+            <input
+              value={vzkaz}
+              onChange={(e) => setVzkaz(e.target.value)}
+              className={inputClass}
+              placeholder="např. Středu bohužel nestihneme, vyberte prosím jiný den."
+            />
+          </label>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() => rozhodni('confirm')}
+              disabled={busy}
+              className="bg-status-done text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:opacity-90 transition-opacity disabled:opacity-60"
+            >
+              Potvrdit termíny
+            </button>
+            <button
+              type="button"
+              onClick={() => rozhodni('return')}
+              disabled={busy}
+              className="rounded-lg border border-status-progress px-5 py-2.5 text-sm font-heading font-semibold text-status-progress hover:bg-[#FFF3E0] transition-colors disabled:opacity-60"
+            >
+              Vrátit k přepracování
+            </button>
+            <button
+              type="button"
+              onClick={() => rozhodni('reject')}
+              disabled={busy}
+              className="text-red-600 text-sm font-heading px-2 disabled:opacity-60"
+            >
+              Zamítnout
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Potvrzeno - zbyva uz jen odtocit */}
+      {request.status === 'CONFIRMED' && (
+        <div className="bg-[#E3F9EC] border border-line rounded-card p-5 flex items-center justify-between gap-4 flex-wrap">
+          <span className="text-sm font-body text-ink m-0">
+            Termíny jsou potvrzené a v kalendáři studia. Až se odtočí, můžete nabídku uzavřít.
+          </span>
+          <button
+            type="button"
+            onClick={() => rozhodni('complete')}
+            disabled={busy}
+            className="rounded-lg border border-line bg-white px-5 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors disabled:opacity-60"
+          >
+            Označit jako dokončené
+          </button>
+        </div>
+      )}
 
       {/* Parametry */}
       {!locked && (

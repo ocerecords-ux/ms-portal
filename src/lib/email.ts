@@ -969,3 +969,98 @@ export async function sendRecordingOfferEmail(input: RecordingOfferEmailInput) {
 
   return { sent: true as const };
 }
+
+
+// ===========================================================================
+// ROZHODNUTI O VYBERU TERMINU (zadani 8. 9. 2026)
+//
+// Herec se musi dozvedet, jak jeho vyber dopadl - potvrzeno, vraceno
+// k prepracovani, nebo zamitnuto.
+// ===========================================================================
+
+type RecordingDecisionEmailInput = {
+  to: string;
+  actorName: string;
+  projectName: string;
+  studioName: string;
+  decision: 'CONFIRMED' | 'RETURNED' | 'REJECTED';
+  note: string | null;
+  /** Potvrzene terminy, uz naformatovane ("pondělí 14. 9. · 9:00–13:00"). */
+  slots: string[];
+  offerUrl: string;
+};
+
+const DECISION_TEXTS: Record<string, { tag: string; nadpis: string; uvod: string }> = {
+  CONFIRMED: {
+    tag: 'Termíny potvrzeny',
+    nadpis: 'Termíny jsou potvrzené',
+    uvod: 'vaše termíny jsou potvrzené — těšíme se na vás ve studiu.',
+  },
+  RETURNED: {
+    tag: 'Prosíme o nový výběr',
+    nadpis: 'Prosíme o nový výběr termínů',
+    uvod: 'potřebovali bychom váš výběr ještě jednou upravit.',
+  },
+  REJECTED: {
+    tag: 'Výběr zamítnut',
+    nadpis: 'Výběr termínů zamítnut',
+    uvod: 'váš výběr termínů se bohužel nepodařilo potvrdit.',
+  },
+};
+
+export function buildRecordingDecisionHtml(input: RecordingDecisionEmailInput): string {
+  const t = DECISION_TEXTS[input.decision];
+  const seznam = input.slots.length
+    ? `<table role="presentation" class="field-table">${input.slots
+        .map((s) => `<tr><td class="label">Termín</td><td class="value">${escapeHtml(s)}</td></tr>`)
+        .join('')}</table>`
+    : '';
+
+  return emailShell({
+    tag: t.tag,
+    preheader: `${t.nadpis} — ${input.projectName}.`,
+    body: `
+    <span class="badge">${escapeHtml(input.projectName)}</span>
+    <h2>${escapeHtml(t.nadpis)}</h2>
+    <p>Dobrý den, ${escapeHtml(input.actorName)},</p>
+    <p>${escapeHtml(t.uvod)}</p>
+    ${seznam}
+    ${input.note ? `<p class="small"><strong>Vzkaz produkce:</strong> ${escapeHtml(input.note)}</p>` : ''}
+    <p class="small">Studio: ${escapeHtml(input.studioName)}</p>
+    ${
+      input.decision === 'RETURNED'
+        ? `<div class="cta-row"><a href="${escapeHtml(input.offerUrl)}" class="cta">Vybrat termíny znovu</a></div>`
+        : `<div class="cta-row"><a href="${escapeHtml(input.offerUrl)}" class="cta">Zobrazit termíny</a></div>`
+    }
+  `,
+  });
+}
+
+export async function sendRecordingDecisionEmail(input: RecordingDecisionEmailInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  const t = DECISION_TEXTS[input.decision];
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.to,
+    subject: `${t.nadpis} — ${input.projectName}`,
+    text: [
+      `Dobry den, ${input.actorName},`,
+      '',
+      t.uvod,
+      ...input.slots.map((s) => `- ${s}`),
+      input.note ? `Vzkaz produkce: ${input.note}` : '',
+      `Studio: ${input.studioName}`,
+      '',
+      input.offerUrl,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildRecordingDecisionHtml(input),
+  });
+
+  return { sent: true as const };
+}
