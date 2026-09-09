@@ -19,6 +19,7 @@ export function AdOrderForm() {
   const [dragOver, setDragOver] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [varovani, setVarovani] = useState<string | null>(null);
   const [lastTitle, setLastTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -35,11 +36,14 @@ export function AdOrderForm() {
       if (file) formData.set('attachment', file);
 
       const res = await fetch('/api/orders', { method: 'POST', body: formData });
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Objednávku se nepodařilo odeslat.');
       }
       setLastTitle(title);
+      // Objednavka projde i tehdy, kdyz se prilohu nepodari ulozit - ale
+      // odesilatel se to musi dozvedet (oprava 9. 9. 2026).
+      setVarovani(body?.varovani ?? null);
       setDone(true);
       setTitle('');
       setDeadline('');
@@ -73,6 +77,11 @@ export function AdOrderForm() {
           <p className="text-white/85 text-sm font-body mt-2">
             „{lastTitle}" — objednávku jsme uložili k vašemu účtu a Mediaspace se vám brzy ozve.
           </p>
+          {varovani && (
+            <p className="mt-3 mb-0 rounded-lg bg-white/15 border border-brand-green px-3 py-2 text-sm font-body text-white">
+              {varovani}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-4 flex-wrap">
           <button

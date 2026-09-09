@@ -66,10 +66,24 @@ export async function POST(req: NextRequest) {
 
   const priceEstimate = isAudiobook ? calculatePrice(pageCount, company.ratePerPage ?? 0) : null;
 
+  // Priloha objednavky. Kdyz uloziste souboru neni nastavene (coz je k
+  // 9. 9. 2026 na produkci porad pripad), uploadOrderAttachment vrati null -
+  // a driv se s tim dal nic nedelalo: objednavka se ulozila bez souboru a
+  // klient videl jen "odeslano". Podklady tak tise mizely. Objednavka se
+  // ulozi porad (je to zdroj pravdy a o vypsana data nikdo prijit nesmi),
+  // ale ted se to aspon zapise do logu a REKNE ODESILATELI.
   let attachment: { url: string; name: string } | null = null;
+  let prilohaSelhala: string | null = null;
   const file = formData.get('attachment');
   if (file instanceof File && file.size > 0) {
     attachment = await uploadOrderAttachment(file, companyId);
+    if (!attachment) {
+      console.error(
+        `Prilohu objednavky se nepodarilo ulozit (firma ${companyId}, soubor "${file.name}", ` +
+          `${file.size} B). Uloziste souboru neni nastavene nebo selhalo.`,
+      );
+      prilohaSelhala = file.name;
+    }
   }
 
   // 1) Objednavka a navazany projekt se ulozi VZDY - tohle je zdroj pravdy,
@@ -163,5 +177,15 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ id: order.id }, { status: 201 });
+  return NextResponse.json(
+    {
+      id: order.id,
+      // Formulare tuhle hlasku vypisou, at je jasne, ze soubor nedorazil a
+      // ma se poslat jinak.
+      varovani: prilohaSelhala
+        ? `Objednávka je uložená, ale přílohu ${prilohaSelhala} se nepodařilo uložit. Pošlete ji prosím e-mailem.`
+        : undefined,
+    },
+    { status: 201 },
+  );
 }

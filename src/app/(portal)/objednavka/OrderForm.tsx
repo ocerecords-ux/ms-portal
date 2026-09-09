@@ -16,7 +16,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
   const [dragOver, setDragOver] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  const [lastOrder, setLastOrder] = useState<{ title: string; price: number } | null>(null);
+  const [lastOrder, setLastOrder] = useState<{ title: string; price: number; varovani: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const price = useMemo(() => {
@@ -39,11 +39,14 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       if (file) formData.set('attachment', file);
 
       const res = await fetch('/api/orders', { method: 'POST', body: formData });
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Objednávku se nepodařilo odeslat.');
       }
-      setLastOrder({ title, price });
+      // Objednavka projde i tehdy, kdyz se prilohu nepodari ulozit - ale
+      // odesilatel se to musi dozvedet, jinak si mysli, ze podklady dorazily
+      // (oprava 9. 9. 2026).
+      setLastOrder({ title, price, varovani: body?.varovani ?? null });
       setDone(true);
       setTitle('');
       setPageCount('');
@@ -81,6 +84,11 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
             <strong className="text-brand-green">{new Intl.NumberFormat('cs-CZ').format(lastOrder.price)} Kč</strong>.
             Objednávku jsme uložili k vašemu účtu a Mediaspace se vám brzy ozve.
           </p>
+          {lastOrder.varovani && (
+            <p className="mt-3 mb-0 rounded-lg bg-white/15 border border-brand-green px-3 py-2 text-sm font-body text-white">
+              {lastOrder.varovani}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-4 flex-wrap">
           <button
