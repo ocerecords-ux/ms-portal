@@ -3,7 +3,6 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import {
   listCaflouProjectsForCompanyCached,
-  listAllCaflouProjectsForInternal,
   mapCaflouProjects,
   type DisplayProject,
 } from '@/lib/caflou';
@@ -12,6 +11,7 @@ import { ProjectsTable, type InternalProject, type InternalProjectMeta } from '.
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { loadColumnLabels } from '@/lib/columnLabelsServer';
+import { loadInternalProjects } from '@/lib/caflouProjectsServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 
@@ -107,17 +107,11 @@ export default async function ProjektyPage() {
 }
 
 async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
-  // Nazvy firem si drzime u sebe (Caflou u projektu vraci hlavne ID firmy) -
-  // slouzi jen k doplneni sloupce "Firma", samotne projekty uz tahame z
-  // Caflou jednim dotazem za cely ucet (viz listAllCaflouProjectsForInternal).
-  const companies = await prisma.company.findMany({
-    where: { caflouCompanyId: { not: null } },
-    select: { name: true, caflouCompanyId: true },
-    orderBy: { name: 'asc' },
-  });
-  const { projects, error } = await listAllCaflouProjectsForInternal(
-    companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
-  );
+  // Seznam projektu se bere pres sdilenou cache (lib/caflouProjectsServer.ts):
+  // pamet instance -> tabulka v databazi -> teprve pak Caflou. Stahovani
+  // celeho uctu z Caflou je osm dotazu za sebou (mereno 12,5 s) a drive se
+  // platilo pokazde, kdyz pozadavek obslouzila jina instance funkce.
+  const { projects, error } = await loadInternalProjects();
 
   // Rodne listy reklamnich spotu (zadani 9. 9. 2026). Caflou nam zmenu stavu
   // nehlasi, takze se porovna s poslednim videnym stavem prave tady - interni

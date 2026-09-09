@@ -1270,3 +1270,27 @@ model RodnyList {
   @@index([caflouProjectId])
   @@index([companyId])
 }
+
+/// Sdílená cache seznamu projektů z Caflou - oprava 9. 9. 2026.
+///
+/// Interní přehled projektů si celý účet Caflou stahuje po stovkách, tedy
+/// osmi dotazy za sebou; naměřeno 12,5 s. Cache byla dosud jen v paměti jedné
+/// instance funkce na Vercelu, takže jakmile požadavek obsloužila jiná (což je
+/// běžné), platilo se to znovu. Tahle tabulka je společná pro všechny - první
+/// požadavek po vypršení platnosti seznam stáhne a uloží sem, ostatní ho čtou
+/// jedním dotazem.
+///
+/// Je to opravdu jen cache: když řádek chybí nebo je starý, nic se nerozbije,
+/// jen se sáhne do Caflou.
+model CaflouProjectsCache {
+  /// Zatím jediný klíč "internal-projects"; sloupec je tu pro další seznamy.
+  key String @id
+
+  /// Namapované projekty jako JSON (viz AdminDisplayProject v lib/caflou.ts).
+  payload String @db.Text
+  /// Kolik projektů payload obsahuje - kvůli přehledu v diagnostice.
+  count Int
+
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

@@ -62,9 +62,24 @@ function fieldsFromMeta(meta: Record<string, unknown> | null, fallbackSpotName: 
 }
 
 /**
+ * Kolik změn stavu se vyřídí v rámci jednoho zobrazení stránky. Zbytek se
+ * dorovná při dalším načtení - je lepší, když se stránka vždycky rychle
+ * ukáže, než aby se čekalo na dávku o stovkách zápisů.
+ */
+const MAX_ZMEN_NA_POZADAVEK = 20;
+
+/**
  * Projede seznam projektů z Caflou a u těch, kde se stav od minule změnil,
  * zařídí, co má. Volá se ze stránek, které projekty stejně načítají
  * (přehled projektů, detail projektu) - žádný cron portál nemá.
+ *
+ * POZOR NA POČET ZÁPISŮ (oprava 9. 9. 2026): interní přehled sem posílá celý
+ * účet Caflou, tedy stovky projektů. První verze na každý dosud neviděný
+ * projekt pouštěla vlastní `upsert`, takže hned po nasazení musela stránka
+ * počkat na ~700 zápisů do databáze za sebou (a každá instance funkce má jen
+ * jedno spojení, viz lib/db.ts) - měřeno 12,5 s místo 1 s. Teď se projekty
+ * viděné poprvé založí JEDNÍM dotazem a jednotlivě se řeší už jen skutečné
+ * změny stavu, kterých bývá pár.
  *
  * Nikdy nevyhazuje: kdyby se RL nepodařil, projeví se to u projektu jako
  * chyba k prošetření, ne pádem stránky.
@@ -78,20 +93,36 @@ export async function syncRodneListy(projects: ProjectStatusSnapshot[]): Promise
       where: { caflouProjectId: { in: zajimave.map((p) => p.caflouProjectId) } },
       select: { caflouProjectId: true, lastCaflouStatus: true },
     });
-    const posledni = new Map(metas.map((m) => [m.caflouProjectId, m.lastCaflouStatus]));
+    const zname = new Map(metas.map((m) => [m.caflouProjectId, m.lastCaflouStatus]));
 
-    for (const projekt of zajimave) {
-      const predchozi = posledni.get(projekt.caflouProjectId) ?? null;
-      if (predchozi === projekt.statusName) continue;
+    // 1) Projekty, ke kterým ještě nemáme vůbec žádný záznam. Jedním dotazem
+    //    si zapamatujeme jejich stav; nic se negeneruje, protože první setkání
+    //    s projektem není přechod (jinak by po nasazení vznikly Rodné listy ke
+    //    všem starým hotovým zakázkám naráz).
+    const nove = zajimave.filter((p) => !zname.has(p.caflouProjectId));
+    if (nove.length > 0) {
+      await prisma.projectMeta.createMany({
+        data: nove.map((p) => ({ caflouProjectId: p.caflouProjectId, lastCaflouStatus: p.statusName })),
+        skipDuplicates: true,
+      });
+    }
 
-      // Stav si zapamatujeme vždycky, ať už se RL dělá nebo ne.
-      await prisma.projectMeta.upsert({
+    // 2) Projekty, které už v databázi máme a stav se u nich liší. Tady se
+    //    zapisuje po jednom (každý má jinou hodnotu), proto ten strop.
+    const zmenene = zajimave.filter(
+      (p) => zname.has(p.caflouProjectId) && zname.get(p.caflouProjectId) !== p.statusName,
+    );
+
+    for (const projekt of zmenene.slice(0, MAX_ZMEN_NA_POZADAVEK)) {
+      const predchozi = zname.get(projekt.caflouProjectId) ?? null;
+
+      await prisma.projectMeta.update({
         where: { caflouProjectId: projekt.caflouProjectId },
-        create: { caflouProjectId: projekt.caflouProjectId, lastCaflouStatus: projekt.statusName },
-        update: { lastCaflouStatus: projekt.statusName },
+        data: { lastCaflouStatus: projekt.statusName },
       });
 
-      // Pojistka 1: první setkání s projektem není přechod.
+      // Záznam bez zapamatovaného stavu (vznikl dřív kvůli jiným údajům
+      // projektu) je pro nás taky první setkání - jen si stav poznamenáme.
       if (predchozi === null) continue;
       if (!isRodnyListTriggerStatus(projekt.statusName)) continue;
 

@@ -1,5 +1,4 @@
-import { prisma } from '@/lib/db';
-import { listAllCaflouProjectsForInternal } from '@/lib/caflou';
+import { loadInternalProjects } from '@/lib/caflouProjectsServer';
 
 /**
  * Nabídka projektů pro doklady (zadani 8. 9. 2026: "chtel bych mit Doklady
@@ -21,13 +20,7 @@ export type ProjectOption = {
 
 export async function listProjectOptions(): Promise<ProjectOption[]> {
   try {
-    const companies = await prisma.company.findMany({
-      where: { caflouCompanyId: { not: null } },
-      select: { name: true, caflouCompanyId: true },
-    });
-    const { projects } = await listAllCaflouProjectsForInternal(
-      companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
-    );
+    const { projects } = await loadInternalProjects();
     return projects
       .map((p) => ({
         id: String(p.id),

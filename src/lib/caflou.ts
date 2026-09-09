@@ -389,6 +389,23 @@ const PROJECTS_STALE_MS = 30 * 60 * 1000;
 let projectsCache: { at: number; projects: AdminDisplayProject[] } | null = null;
 let projectsInFlight: Promise<InternalProjectsResult> | null = null;
 
+/**
+ * Nahlédnutí do paměti instance bez sáhnutí do Caflou - vrací seznam jen
+ * tehdy, když je v cache a je čerstvý. Používá to sdílená cache v databázi
+ * (lib/caflouProjectsServer.ts), aby si mohla vybrat nejlevnější zdroj.
+ */
+export function peekInternalProjectsCache(): AdminDisplayProject[] | null {
+  if (projectsCache && Date.now() - projectsCache.at < PROJECTS_CACHE_MS) {
+    return projectsCache.projects;
+  }
+  return null;
+}
+
+/** Naplní paměť instance seznamem, který přišel odjinud (ze sdílené cache). */
+export function primeInternalProjectsCache(projects: AdminDisplayProject[]): void {
+  projectsCache = { at: Date.now(), projects };
+}
+
 export async function listAllCaflouProjectsForInternal(
   knownCompanies: { name: string; caflouCompanyId: string }[],
 ): Promise<InternalProjectsResult> {
