@@ -387,6 +387,42 @@ export function formatDateTime(date: Date | string | null, timeZone = 'Europe/Pr
 export const WEEKDAY_LABELS = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
 export const WEEKDAY_SHORT = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];
 
-/** Rozsah hodin, který mřížka kreslí. */
-export const GRID_START_HOUR = 7;
-export const GRID_END_HOUR = 22;
+/**
+ * Mřížka kreslí celý den, 0–24 (zprava uzivatele 9. 9. 2026: "určitě by tam
+ * mělo být všech 24 h za den zobrazeno"). Aby se do okna vešel, je hodina
+ * nižší než dřív — 34 px místo 60. Na 4hodinovou frekvenci to pořád stačí
+ * s přehledem.
+ */
+export const GRID_START_HOUR = 0;
+export const GRID_END_HOUR = 24;
+/** Výška jedné hodiny v mřížce. */
+export const HOUR_PX = 34;
+
+/** Kam se má mřížka po otevření nascrollovat — ať se nekouká na noc. */
+export const GRID_SCROLL_TO_HOUR = 7;
+
+/** Pozice a výška události v mřížce, v pixelech. */
+export function gridPosition(startMinutes: number, endMinutes: number) {
+  const top = ((startMinutes - GRID_START_HOUR * 60) * HOUR_PX) / 60;
+  const vyska = ((endMinutes - startMinutes) * HOUR_PX) / 60;
+  return { top, height: Math.max(16, vyska) };
+}
+
+/**
+ * Barva události podle STUDIA, odlišená podle stavu (zprava uzivatele
+ * 9. 9. 2026: "každý bude mít jinou barvu"). Potvrzené je plnou barvou,
+ * držené a nabídnuté průhlednější — barva tak drží studio, sytost stav.
+ */
+export function eventColors(studioColor: string, state: string): { background: string; border: string; text: string } {
+  if (state === 'CONFIRMED') {
+    return { background: studioColor, border: studioColor, text: '#FFFFFF' };
+  }
+  if (state === 'SELECTED') {
+    return { background: `${studioColor}66`, border: studioColor, text: '#201A33' };
+  }
+  if (state === 'OFFERED') {
+    return { background: `${studioColor}26`, border: studioColor, text: '#201A33' };
+  }
+  // Blokace a uvolnene terminy - seda, at se nepletou s natacením.
+  return { background: '#E4DFFB', border: '#6E6580', text: '#201A33' };
+}

@@ -5,8 +5,6 @@ import { canManageCalendar, canViewCalendar } from '@/lib/roles';
 import { loadOccupancy, loadStudios, releaseExpiredHolds } from '@/lib/calendarServer';
 import {
   BLOCK_KIND_LABELS,
-  GRID_END_HOUR,
-  GRID_START_HOUR,
   addDays,
   startOfMonth,
   startOfWeek,
@@ -17,8 +15,9 @@ import {
 import { CalendarBrowser, type CalendarEvent, type CalendarDay } from './CalendarBrowser';
 
 /**
- * Kalendář studií (zadani 8. 9. 2026). Den / týden / měsíc, jedno studio
- * najednou — studia jsou samostatné kalendářové zdroje.
+ * Kalendář studií (zadani 8. 9. 2026, upraveno 9. 9. 2026). Den / týden /
+ * měsíc, a nově se dají studia PROLNOUT — každé má svou barvu a jde
+ * zaškrtnout, která jsou vidět.
  *
  * Vidí ho tým Mediaspace: Produkce a Žůžo-labůžo i zapisují, zvukař jen čte.
  * Herec má vlastní, užší pohled (/moje-terminy) — sem nesmí.
@@ -40,7 +39,7 @@ function parseDate(value?: string): Date {
 export default async function KalendarPage({
   searchParams,
 }: {
-  searchParams: { studio?: string; pohled?: string; datum?: string };
+  searchParams: { studia?: string; studio?: string; pohled?: string; datum?: string };
 }) {
   const session = await getServerSession(authOptions);
   if (!session || !canViewCalendar(session.user.role)) redirect('/projekty');
@@ -61,12 +60,21 @@ export default async function KalendarPage({
     );
   }
 
-  const studio = studios.find((s) => s.id === searchParams?.studio) ?? studios[0];
+  // Vybraná studia: seznam v adrese, jinak všechna. `studio` je stará podoba
+  // odkazu s jedním studiem - ať fungují uložené odkazy dál.
+  const zAdresy = (searchParams?.studia ?? searchParams?.studio ?? '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const vybrana = studios.filter((s) => zAdresy.includes(s.id));
+  const aktivni = vybrana.length > 0 ? vybrana : studios;
+
   const view = parseView(searchParams?.pohled);
   const anchor = parseDate(searchParams?.datum);
-  const tz = studio.timezone;
+  // Mřížka se kreslí v pásmu prvního vybraného studia; u víc studií naráz se
+  // musí zvolit jedno, jinak by sloupce nesouhlasily.
+  const tz = aktivni[0].timezone;
 
-  // Rozsah se počítá v pásmu STUDIA - v Londýně začíná den o hodinu jinde.
   const anchorParts = utcParts(anchor, tz);
   const anchorLocal = new Date(anchorParts.year, anchorParts.month - 1, anchorParts.day);
 
@@ -89,7 +97,9 @@ export default async function KalendarPage({
     const start = zonedToUtc(d.getFullYear(), d.getMonth() + 1, d.getDate(), 0, tz);
     const end = zonedToUtc(d.getFullYear(), d.getMonth() + 1, d.getDate() + 1, 0, tz);
     const weekday = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getDay();
-    const pravidlo = studio.hours.find((h) => h.weekday === weekday);
+    // Pracovní doba se bere z prvního studia - u prolnutých kalendářů je to
+    // jen vodítko, ne zákaz.
+    const pravidlo = aktivni[0].hours.find((h) => h.weekday === weekday);
     days.push({
       key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
       startIso: start.toISOString(),
@@ -105,12 +115,23 @@ export default async function KalendarPage({
   const to = new Date(days[days.length - 1].endIso);
 
   // includeOffered: nabídnutá okna nezabírají studio, ale produkce je vidět chce.
-  const occupancy = await loadOccupancy([studio.id], from, to, { includeOffered: true });
+  const occupancy = await loadOccupancy(
+    aktivni.map((s) => s.id),
+    from,
+    to,
+    { includeOffered: true },
+  );
+
+  const barvaStudia = new Map(studios.map((s) => [s.id, s.color]));
+  const nazevStudia = new Map(studios.map((s) => [s.id, s.shortName]));
 
   const events: CalendarEvent[] = [
     ...occupancy.slots.map((s) => ({
       id: s.id,
       kind: 'SLOT' as const,
+      studioId: s.studioId,
+      studioName: nazevStudia.get(s.studioId) ?? '',
+      color: barvaStudia.get(s.studioId) ?? '#7B55FF',
       start: s.start.toISOString(),
       end: s.end.toISOString(),
       state: s.state,
@@ -120,6 +141,9 @@ export default async function KalendarPage({
     ...occupancy.blocks.map((b) => ({
       id: b.id,
       kind: 'BLOCK' as const,
+      studioId: b.studioId,
+      studioName: nazevStudia.get(b.studioId) ?? '',
+      color: barvaStudia.get(b.studioId) ?? '#7B55FF',
       start: b.start.toISOString(),
       end: b.end.toISOString(),
       state: b.kind,
@@ -130,15 +154,19 @@ export default async function KalendarPage({
 
   return (
     <CalendarBrowser
-      studios={studios.map((s) => ({ id: s.id, shortName: s.shortName, name: s.name, timezone: s.timezone }))}
-      studioId={studio.id}
+      studios={studios.map((s) => ({
+        id: s.id,
+        shortName: s.shortName,
+        name: s.name,
+        timezone: s.timezone,
+        color: s.color,
+      }))}
+      selectedStudioIds={aktivni.map((s) => s.id)}
       timezone={tz}
       view={view}
       anchorIso={anchorLocal.toISOString().slice(0, 10)}
       days={days}
       events={events}
-      gridStartHour={GRID_START_HOUR}
-      gridEndHour={GRID_END_HOUR}
       canManage={canManageCalendar(session.user.role)}
     />
   );
