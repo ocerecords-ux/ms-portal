@@ -1,0 +1,17 @@
+{
+  "name": "MS Portal",
+  "short_name": "MS Portal",
+  "description": "Interní portál Mediaspace - projekty, doklady, kalendář.",
+  "start_url": "/projekty?app=portal",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FBFAFF",
+  "theme_color": "#6B2AF0",
+  "lang": "cs",
+  "icons": [
+    { "src": "/ikony/portal-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/ikony/portal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/ikony/portal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

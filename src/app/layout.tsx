@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Jost, Poppins } from 'next/font/google';
 import './globals.css';
 import { SKRIPT_MOTIVU } from '@/lib/motiv';
+import { RegistraceAplikace } from '@/app/(portal)/components/RegistraceAplikace';
 
 // Nahrada za puvodni Wix fonty (Helvetica Neue / Futura / Avenir),
 // viz README > Design system pro zduvodneni vyberu.
@@ -19,6 +20,10 @@ export const metadata: Metadata = {
   title: 'MS Portal',
   description: 'Klientský portál Mediaspace',
   applicationName: 'MS Portal',
+  // Aplikace na plose (zadani 9. 9. 2026). Chat ma vlastni manifest ve svem
+  // layoutu, takze z nej vznikne druha, samostatna ikona.
+  manifest: '/manifest-portal.webmanifest',
+  appleWebApp: { capable: true, title: 'MS Portal', statusBarStyle: 'default' },
 };
 
 export const viewport = {
@@ -34,7 +39,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             v hlavicce, ne React - viz lib/motiv.ts. */}
         <script dangerouslySetInnerHTML={{ __html: SKRIPT_MOTIVU }} />
       </head>
-      <body className="font-body">{children}</body>
+      <body className="font-body">
+        {children}
+        <RegistraceAplikace />
+      </body>
     </html>
   );
 }

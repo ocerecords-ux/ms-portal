@@ -767,8 +767,30 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
   );
 }
 
-export function ChatDock() {
-  const [expanded, setExpanded] = useState(false);
+/**
+ * MS chat. Dva tvary z jednoho kodu (zadani 9. 9. 2026: "chtel bych i
+ * aplikaci, ale MS chat bych chtel mit jako aplikaci zvlast"):
+ *
+ *   - dock: vysouvaci panel na hrane obrazovky uvnitr portalu (vychozi),
+ *   - naStrance: chat vyplni celou stranku /chat, ze ktere se dela
+ *     samostatna aplikace na plose.
+ *
+ * Neni to druhy chat, jen jina schranka kolem tehoz obsahu - jinak by se
+ * obe podoby rozesly hned pri prvni uprave.
+ */
+export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
+  // Na samostatne strance je chat rovnou otevreny, neni co rozbalovat.
+  const [expanded, setExpanded] = useState(naStrance);
+  // Bezi portal jako nainstalovana aplikace? Zjisti se az v prohlizeci -
+  // na serveru to vedet nejde.
+  const [vAplikaci, setVAplikaci] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const samostatne =
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    setVAplikaci(Boolean(samostatne));
+  }, []);
   const [tab, setTab] = useState<ConversationKind>('PROJEKT');
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [team, setTeam] = useState<ChatTeamMember[]>([]);
@@ -1184,8 +1206,17 @@ export function ChatDock() {
   const jmenaTymu = team.map((u) => u.label);
   const nabidkaZminek = team.filter((u) => u.label.toLowerCase().includes(zminkaHledani));
 
+  // V nainstalovane aplikaci PORTALU chat nema co delat - ma vlastni
+  // aplikaci (zadani 9. 9. 2026: "nebude tam MS chat, ten bych chtel mit
+  // jako aplikaci zvlast"). V prohlizeci zustava panel jako dosud.
+  //
+  // Pozna se to podle toho, ze stranka bezi ve vlastnim okne bez adresniho
+  // radku (display-mode: standalone; na iPhonu navigator.standalone). Stranka
+  // /chat sem nespada - ta se vykresluje s naStrance.
+  if (vAplikaci && !naStrance) return null;
+
   // --- Zabaleno: jen ikonka na hrane obrazovky ---------------------------
-  if (!expanded) {
+  if (!expanded && !naStrance) {
     return (
       <button
         type="button"
@@ -1215,9 +1246,10 @@ export function ChatDock() {
   // zastropovane, at na sebe nelezou ani na nizsim okne (zprava uzivatele
   // 8. 9. 2026: "prekryva to to do list, kdyz tam mam vice ukolu").
   return (
-    <aside className="fixed right-0 bottom-6 z-40 flex items-stretch">
+    <aside className={naStrance ? 'flex items-stretch h-full w-full' : 'fixed right-0 bottom-6 z-40 flex items-stretch'}>
       {/* Stejny siroky pruh na zavreni jako u Ukolu - do male sipky se spatne
-          trefuje (zadani 8. 9. 2026). */}
+          trefuje (zadani 8. 9. 2026). Na samostatne strance neni co zavirat. */}
+      {!naStrance && (
       <button
         type="button"
         onClick={toggle}
@@ -1231,6 +1263,7 @@ export function ChatDock() {
         </span>
         <Chevron direction="right" />
       </button>
+      )}
 
       {/* Rozvrzeni jako Slack (zadani 8. 9. 2026): vlevo seznam, vpravo
           samotny chat. Na uzkem okne se leva cast schova a zustane jen to,
@@ -1254,8 +1287,12 @@ export function ChatDock() {
           setTahnouSoubory(0);
           pridejPrilohy(Array.from(e.dataTransfer.files ?? []));
         }}
-        className={`relative max-w-[96vw] h-[72vh] bg-surface border border-r-0 shadow-xl flex flex-col overflow-hidden transition-[width] ${
-          vlaknoId ? 'w-[1180px]' : 'w-[760px]'
+        className={`relative bg-surface border flex flex-col overflow-hidden ${
+          naStrance
+            ? 'w-full h-full border-0'
+            : `max-w-[96vw] h-[72vh] border-r-0 shadow-xl transition-[width] ${
+                vlaknoId ? 'w-[1180px]' : 'w-[760px]'
+              }`
         } ${tahnouSoubory > 0 ? 'border-brand-purple' : 'border-line'}`}
       >
         {/* Pres cely panel, at je videt, ze se soubor pusti kamkoliv. Vrstva
