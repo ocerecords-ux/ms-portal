@@ -42,7 +42,8 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
     if (!vysledek.ok) {
       // Chybějící údaje jsou chyba zadání (409), zbytek je chyba běhu (500).
-      const status = vysledek.reason === 'MISSING_FIELDS' || vysledek.reason === 'NOT_ADS' ? 409 : 500;
+      const status =
+        vysledek.reason === 'MISSING_FIELDS' || vysledek.reason === 'NOT_RADIO_SPOT' ? 409 : 500;
       return NextResponse.json({ error: vysledek.message }, { status });
     }
 

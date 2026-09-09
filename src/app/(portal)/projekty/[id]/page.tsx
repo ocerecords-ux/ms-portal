@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
 import { canEditProjectMeta, canManageCalendar, canViewProjectDocuments, isInternalRole, INTERNAL_ROLES } from '@/lib/roles';
 import { PRIORITY_LABELS } from '@/lib/projectTypes';
-import { listProjectTypeOptions } from '@/lib/priceList';
+import { listProjectTypeOptions, listRodnyListProjectTypes } from '@/lib/priceList';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
 import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
 import { ProjectBudget } from './ProjectBudget';
@@ -53,6 +53,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     meta,
     managers,
     projectTypeOptions,
+    rodnyListTypy,
     budgetSettings,
     timesheets,
     offers,
@@ -78,6 +79,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       orderBy: { name: 'asc' },
     }),
     listProjectTypeOptions(),
+    // Typy projektu, u kterych se dela Rodny list - tedy radiove spoty.
+    listRodnyListProjectTypes(),
     prisma.budgetSettings.findUnique({ where: { id: 'default' } }),
     // Vykazy k tomuhle projektu - z nich se pocita cerpani rozpoctu.
     prisma.timesheetEntry.findMany({
@@ -132,7 +135,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const company = caflou?.caflouCompanyId
     ? await prisma.company.findFirst({
         where: { caflouCompanyId: caflou.caflouCompanyId },
-        select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true, dealsAds: true },
+        select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true },
       })
     : null;
 
@@ -153,13 +156,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     ]);
   }
 
-  // Zalozka Rodny list dava smysl jen u firem se zapnutymi "Reklamami".
-  const showRodnyList = company?.dealsAds === true;
-  const rodneListy = showRodnyList ? await loadRodneListy(caflouProjectId) : [];
+  // Rodny list se dela jen u radiovych spotu (upresneni 9. 9. 2026) - pozna se
+  // to podle typu projektu, ne podle firmy. U ostatnich projektu se v zalozce
+  // ukaze jen sekce Hudba ve spotu, kterou chtel mit uzivatel k dispozici
+  // u projektu obecne.
+  const jeRadiovySpot = rodnyListTypy.includes(meta?.projectType ?? '');
+  const rodneListy = jeRadiovySpot ? await loadRodneListy(caflouProjectId) : [];
   // Meta se cte znovu, protoze synchronizace vyse mohla zapsat chybu.
-  const metaPoSync = showRodnyList
-    ? await prisma.projectMeta.findUnique({ where: { caflouProjectId } })
-    : null;
+  const metaPoSync = await prisma.projectMeta.findUnique({ where: { caflouProjectId } });
 
   // Rozpocet (zadani 6. 9. 2026) - jen u audioknih, kde zname pocet normostran,
   // a vidi ho jen Zuzo-labuzo.
@@ -343,6 +347,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       canEdit={canEdit}
       clientName={company?.name ?? ''}
       projectName={project?.name ?? `Projekt ${caflouProjectId}`}
+      jeRadiovySpot={jeRadiovySpot}
       rlError={metaPoSync?.rlError ?? null}
       rodneListy={rodneListy.map((rl) => ({
         id: rl.id,
@@ -374,14 +379,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       content: frekvence,
     });
   }
-  if (showRodnyList) {
-    tabs.push({
-      key: 'rodny-list',
-      label: 'Rodný list',
-      count: rodneListy.length,
-      content: rodnyList,
-    });
-  }
+  // Zalozka je u vsech projektu - u radioveho spotu jako Rodny list, jinak
+  // jen jako Hudba ve spotu.
+  tabs.push({
+    key: 'rodny-list',
+    label: jeRadiovySpot ? 'Rodný list' : 'Hudba ve spotu',
+    count: jeRadiovySpot ? rodneListy.length : undefined,
+    content: rodnyList,
+  });
   if (showDocuments) {
     tabs.push({
       key: 'doklady',

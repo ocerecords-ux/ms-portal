@@ -9,6 +9,8 @@ type Item = {
   priceExVat: number | null;
   priceIncVat: number | null;
   active: boolean;
+  /** Rádiový spot - jen u něj se vyrábí Rodný list. */
+  rodnyList: boolean;
 };
 
 function formatPrice(value: number | null): string {
@@ -22,7 +24,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   const [busy, setBusy] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: '', priceExVat: '', priceIncVat: '' });
-  const [newItem, setNewItem] = useState({ name: '', priceExVat: '', priceIncVat: '' });
+  const [newItem, setNewItem] = useState({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false });
 
   async function send(url: string, method: string, body?: unknown) {
     setBusy(true);
@@ -52,7 +54,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   async function addItem(e: React.FormEvent) {
     e.preventDefault();
     const created = await send('/api/admin/pricelist', 'POST', newItem);
-    if (created) setNewItem({ name: '', priceExVat: '', priceIncVat: '' });
+    if (created) setNewItem({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false });
   }
 
   function startEdit(item: Item) {
@@ -92,13 +94,16 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                 <th className="text-right px-4 py-3.5 whitespace-nowrap">Cena bez DPH</th>
                 <th className="text-right px-4 py-3.5 whitespace-nowrap">Cena s DPH</th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">V nabídce</th>
+                <th className="text-left px-4 py-3.5 whitespace-nowrap" title="U projektů s tímhle typem se při dokončení vyrobí Rodný list">
+                  Rodný list
+                </th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm font-body">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
                     Ceník je zatím prázdný. Přidejte první položku formulářem níže.
                   </td>
                 </tr>
@@ -130,6 +135,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                       />
                     </td>
                     <td className="px-4 py-3 text-sm font-heading text-muted">{item.active ? 'Ano' : 'Ne'}</td>
+                    <td className="px-4 py-3 text-sm font-heading text-muted">{item.rodnyList ? 'Ano' : 'Ne'}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <span className="inline-flex items-center gap-3">
                         <button
@@ -175,6 +181,17 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                         className={item.active ? 'text-brand-greenDeep' : 'text-muted'}
                       >
                         {item.active ? 'Ano' : 'Ne'}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-heading">
+                      <button
+                        type="button"
+                        onClick={() => send(`/api/admin/pricelist/${item.id}`, 'PATCH', { rodnyList: !item.rodnyList })}
+                        disabled={busy}
+                        title="U projektů s tímhle typem se při přechodu na „Dokončeno - ke schválení“ vyrobí Rodný list"
+                        className={item.rodnyList ? 'text-brand-greenDeep' : 'text-muted'}
+                      >
+                        {item.rodnyList ? 'Ano' : 'Ne'}
                       </button>
                     </td>
                     <td className="px-4 py-3.5 text-right whitespace-nowrap">
@@ -240,6 +257,14 @@ export function PriceListEditor({ items }: { items: Item[] }) {
             />
           </label>
         </div>
+        <label className="flex items-center gap-2 text-sm font-heading text-ink">
+          <input
+            type="checkbox"
+            checked={newItem.rodnyList}
+            onChange={(e) => setNewItem({ ...newItem, rodnyList: e.target.checked })}
+          />
+          Rádiový spot — u projektů s tímhle typem se při dokončení vyrobí Rodný list
+        </label>
         <div>
           <button
             type="submit"

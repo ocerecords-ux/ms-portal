@@ -66,13 +66,13 @@ export default async function ProjektyPage() {
     }
   }
 
-  // Rodne listy reklamnich spotu (zadani 9. 9. 2026) - klient je vidi rovnou
-  // u projektu. U firmy, ktera reklamy nedela, se sloupec vubec nevykresli.
-  const rodneListy = company?.dealsAds
-    ? Object.fromEntries(
-        await loadNejnovejsiRodneListy([...active, ...finished].map((p) => String(p.id))),
-      )
-    : undefined;
+  // Rodne listy radiovych spotu (zadani 9. 9. 2026) - klient je vidi rovnou
+  // u projektu. Sloupec se vykresli, jen kdyz nejaky RL opravdu existuje;
+  // u klienta, ktery spoty nedela, tak zbytecne nepribyva prazdny sloupec.
+  const rodneListyMapa = await loadNejnovejsiRodneListy(
+    [...active, ...finished].map((p) => String(p.id)),
+  );
+  const rodneListy = rodneListyMapa.size > 0 ? Object.fromEntries(rodneListyMapa) : undefined;
 
   return (
     <section className="flex flex-col gap-8">

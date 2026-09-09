@@ -4,6 +4,7 @@ import { sendRodnyListEmail } from '@/lib/email';
 import { uploadGeneratedPdf } from '@/lib/storage';
 import { uploadPdfToDriveFolder } from '@/lib/googleDrive';
 import { renderRodnyListPdf } from '@/lib/rodnyListPdf';
+import { isRodnyListProjectType } from '@/lib/priceList';
 import {
   formatProductionDate,
   formatSpotLength,
@@ -19,6 +20,12 @@ import {
 /**
  * Běh Rodného listu - kdy vzniká, kam se ukládá, kdo se to dozví.
  * Zadání 9. 9. 2026.
+ *
+ * KDY SE DĚLÁ: jen u rádiových spotů (upřesnění 9. 9. 2026 - "platí to jen
+ * u rádiových spotů"). Pozná se to podle TYPU PROJEKTU: položka ceníku má
+ * příznak, který se přepíná v administraci. Přepínač „Reklamy" u firmy o tom
+ * záměrně nerozhoduje - rádiový spot je rádiový spot bez ohledu na to, jestli
+ * si to někdo u klienta pamatoval zaškrtnout.
  *
  * JAK SE POZNÁ „SKUTEČNÁ ZMĚNA STAVU"
  * Stav projektu žije v Caflou; portál do něj nezapisuje (viz lib/caflou.ts) a
@@ -46,7 +53,11 @@ export type ProjectStatusSnapshot = {
 
 export type RodnyListResult =
   | { ok: true; rodnyListId: string; version: number }
-  | { ok: false; reason: 'NO_COMPANY' | 'NOT_ADS' | 'MISSING_FIELDS' | 'FAILED'; message: string };
+  | {
+      ok: false;
+      reason: 'NO_COMPANY' | 'NOT_RADIO_SPOT' | 'MISSING_FIELDS' | 'FAILED';
+      message: string;
+    };
 
 /** Prázdné hodnoty RL - použije se, když projekt ještě žádnou ProjectMeta nemá. */
 function fieldsFromMeta(meta: Record<string, unknown> | null, fallbackSpotName: string): RodnyListFields {
@@ -153,23 +164,29 @@ async function vytvorRodnyList(
   const { caflouProjectId, projectName } = projekt;
 
   try {
+    const meta = await prisma.projectMeta.findUnique({ where: { caflouProjectId } });
+
+    // Podmínka ze zadání (upřesnění 9. 9. 2026): rozhoduje TYP PROJEKTU, ne
+    // firma. Rodný list se dělá jen u rádiových spotů - tedy u typů, které
+    // mají v ceníku zapnutý příznak (viz lib/priceList.ts).
+    if (!(await isRodnyListProjectType(meta?.projectType))) {
+      return {
+        ok: false,
+        reason: 'NOT_RADIO_SPOT',
+        message: 'Rodný list se vyrábí jen u rádiových spotů — projekt má jiný typ.',
+      };
+    }
+
     const company = projekt.caflouCompanyId
       ? await prisma.company.findFirst({
           where: { caflouCompanyId: projekt.caflouCompanyId },
-          select: { id: true, name: true, dealsAds: true, driveFolderUrl: true },
+          select: { id: true, name: true, driveFolderUrl: true },
         })
       : null;
 
     if (!company) {
       return { ok: false, reason: 'NO_COMPANY', message: 'K projektu není v portálu napojená firma.' };
     }
-
-    // Podmínka ze zadání: bez přepínače „Reklamy" se RL nedělá.
-    if (!company.dealsAds) {
-      return { ok: false, reason: 'NOT_ADS', message: 'Firma nemá zapnuté „Reklamy".' };
-    }
-
-    const meta = await prisma.projectMeta.findUnique({ where: { caflouProjectId } });
     const fields = fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
     const chybi = missingRodnyListFields({ ...fields, clientName: company.name });
 

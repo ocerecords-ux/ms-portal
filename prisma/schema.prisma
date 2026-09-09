@@ -315,6 +315,13 @@ model PriceListItem {
   priceExVat  Int?     // cena bez DPH v Kc
   priceIncVat Int?     // cena s DPH v Kc
   active      Boolean  @default(true) // vyrazena polozka se uz nenabizi u novych projektu
+
+  /// Radiovy spot - u projektu s timhle typem se vyrabi Rodny list
+  /// (upresneni 9. 9. 2026: "plati to jen u radiovych spotu"). Zamerne je to
+  /// priznak na polozce ceniku, ne hadani podle nazvu: nazvy se prejmenovavaji
+  /// a pribyvaji, tohle si tym prepne v administraci.
+  rodnyList   Boolean  @default(false)
+
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

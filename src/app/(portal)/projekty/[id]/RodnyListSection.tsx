@@ -12,14 +12,19 @@ import {
 /**
  * Záložka „Rodný list" na detailu projektu - zadání 9. 9. 2026.
  *
- * Ukazuje se jen u firem se zapnutými „Reklamami"; u audioknihy nemá RL smysl
- * a záložka se vůbec nevykreslí (viz page.tsx).
+ * KDY SE CO UKAZUJE (upřesnění 9. 9. 2026: „platí to jen u rádiových spotů"):
+ *  - u rádiového spotu celá záložka: údaje pro RL, kontrola a vygenerované verze,
+ *  - u ostatních projektů jen sekce „Hudba ve spotu" - tu chtěl mít uživatel
+ *    k dispozici u projektů obecně, i když se z ní žádný dokument nedělá.
  *
- * POZNÁMKA KE KONTROLE PŘED DOKONČENÍM: stav projektu se přepíná v Caflou,
- * ne v portálu - portál tedy nemá kam vložit „zákaz dokončení". Kontrola je
- * proto na dvou místech: tady jako výrazné varování, dokud údaje chybí, a
- * hlavně v okamžiku přechodu stavu - když něco chybí, RL nevznikne, klientovi
- * NIC neodejde a projekt se označí jako vyžadující kontrolu.
+ * O tom, co je rádiový spot, rozhoduje TYP PROJEKTU (příznak u položky ceníku),
+ * ne přepínač u firmy.
+ *
+ * POZNÁMKA KE KONTROLE PŘED DOKONČENÍM: stav projektu se přepíná v Caflou, ne
+ * v portálu - portál tedy nemá kam vložit „zákaz dokončení". Kontrola je proto
+ * na dvou místech: tady jako výrazné varování, dokud údaje chybí, a hlavně
+ * v okamžiku přechodu stavu - když něco chybí, RL nevznikne, klientovi NIC
+ * neodejde a projekt se označí jako vyžadující kontrolu.
  */
 
 export type RodnyListValues = {
@@ -41,11 +46,15 @@ export type RodnyListRow = {
   driveUrl: string | null;
 };
 
+const inputClass =
+  'rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple disabled:opacity-60';
+
 export function RodnyListSection({
   caflouProjectId,
   canEdit,
   clientName,
   projectName,
+  jeRadiovySpot,
   rlError,
   rodneListy,
   initial,
@@ -54,6 +63,8 @@ export function RodnyListSection({
   canEdit: boolean;
   clientName: string;
   projectName: string;
+  /** Rádiový spot = typ projektu má v ceníku zapnutý Rodný list. */
+  jeRadiovySpot: boolean;
   /** Poslední zaznamenaná chyba generování (ProjectMeta.rlError). */
   rlError: string | null;
   rodneListy: RodnyListRow[];
@@ -72,20 +83,22 @@ export function RodnyListSection({
   }
 
   // Stejná kontrola, jakou dělá server před generováním - uživatel tak vidí
-  // rovnou při psaní, co ještě chybí.
+  // rovnou při psaní, co ještě chybí. U jiného typu projektu nemá smysl.
   const chybi = useMemo(
     () =>
-      missingRodnyListFields({
-        clientName,
-        spotName: values.spotName || projectName,
-        spotLengthSeconds: values.spotLengthSeconds ? Number(values.spotLengthSeconds) : null,
-        directorName: values.directorName,
-        musicTitle: values.musicTitle,
-        musicAuthor: values.musicAuthor,
-        noMusic: values.noMusic,
-        productionDate: values.productionDate ? new Date(values.productionDate) : null,
-      }),
-    [values, clientName, projectName],
+      jeRadiovySpot
+        ? missingRodnyListFields({
+            clientName,
+            spotName: values.spotName || projectName,
+            spotLengthSeconds: values.spotLengthSeconds ? Number(values.spotLengthSeconds) : null,
+            directorName: values.directorName,
+            musicTitle: values.musicTitle,
+            musicAuthor: values.musicAuthor,
+            noMusic: values.noMusic,
+            productionDate: values.productionDate ? new Date(values.productionDate) : null,
+          })
+        : [],
+    [values, clientName, projectName, jeRadiovySpot],
   );
 
   async function handleSubmit(e: React.FormEvent) {
@@ -94,18 +107,28 @@ export function RodnyListSection({
     setError(null);
     setSaved(false);
     try {
+      // U jiného typu projektu posíláme jen hudbu - ať se omylem nepřepíšou
+      // pole, která tenhle formulář vůbec neukazuje.
+      const telo = jeRadiovySpot
+        ? {
+            spotName: values.spotName,
+            spotLengthSeconds: values.spotLengthSeconds,
+            directorName: values.directorName,
+            musicTitle: values.musicTitle,
+            musicAuthor: values.musicAuthor,
+            noMusic: values.noMusic,
+            productionDate: values.productionDate,
+          }
+        : {
+            musicTitle: values.musicTitle,
+            musicAuthor: values.musicAuthor,
+            noMusic: values.noMusic,
+          };
+
       const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/meta`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          spotName: values.spotName,
-          spotLengthSeconds: values.spotLengthSeconds,
-          directorName: values.directorName,
-          musicTitle: values.musicTitle,
-          musicAuthor: values.musicAuthor,
-          noMusic: values.noMusic,
-          productionDate: values.productionDate,
-        }),
+        body: JSON.stringify(telo),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -143,6 +166,96 @@ export function RodnyListSection({
 
   const nazevSouboru = rodnyListFileName(values.spotName || projectName);
 
+  /** Sekce „Hudba ve spotu" - jediná část, která je i u jiných typů projektu. */
+  const hudba = (
+    <div className={jeRadiovySpot ? 'border-t border-line pt-5 flex flex-col gap-4' : 'flex flex-col gap-4'}>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h3 className="font-heading font-semibold text-sm text-ink m-0">Hudba ve spotu</h3>
+        <label className="flex items-center gap-2 text-sm font-heading text-ink">
+          <input
+            type="checkbox"
+            disabled={!canEdit}
+            checked={values.noMusic}
+            onChange={(e) => set('noMusic', e.target.checked)}
+          />
+          Spot nemá hudbu
+        </label>
+      </div>
+
+      {values.noMusic ? (
+        <p className="text-sm font-body text-muted m-0">
+          {jeRadiovySpot
+            ? 'V Rodném listu bude u hudby uvedeno „Spot bez hudby“ — žádný vymyšlený údaj se tam nedostane.'
+            : 'U projektu je poznamenané, že hudbu nemá.'}
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Název skladby</span>
+            <input
+              type="text"
+              disabled={!canEdit}
+              value={values.musicTitle}
+              onChange={(e) => set('musicTitle', e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Autor hudby</span>
+            <input
+              type="text"
+              disabled={!canEdit}
+              value={values.musicAuthor}
+              onChange={(e) => set('musicAuthor', e.target.value)}
+              className={inputClass}
+            />
+          </label>
+        </div>
+      )}
+    </div>
+  );
+
+  const tlacitka = (
+    <>
+      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {canEdit && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+          >
+            {saving ? 'Ukládám…' : 'Uložit'}
+          </button>
+          {saved && <span className="text-sm font-heading text-brand-greenDeep">Uloženo.</span>}
+        </div>
+      )}
+    </>
+  );
+
+  // --- Projekt, který není rádiový spot: jen hudba ---------------------------
+  if (!jeRadiovySpot) {
+    return (
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-5"
+      >
+        <div>
+          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+            Hudba ve spotu
+          </h2>
+          <p className="text-xs text-muted font-body m-0 mt-1">
+            Rodný list se vyrábí jen u projektů s typem rádiový spot. Údaje o hudbě si tu ale můžete
+            vést u jakéhokoliv projektu.
+          </p>
+        </div>
+        {hudba}
+        {tlacitka}
+      </form>
+    );
+  }
+
+  // --- Rádiový spot: celý Rodný list ----------------------------------------
   return (
     <div className="flex flex-col gap-6">
       {rlError && (
@@ -190,7 +303,7 @@ export function RodnyListSection({
               placeholder={projectName}
               value={values.spotName}
               onChange={(e) => set('spotName', e.target.value)}
-              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple disabled:opacity-60"
+              className={inputClass}
             />
             <span className="text-xs text-muted font-body">
               Když zůstane prázdný, použije se název projektu. Soubor se uloží jako {nazevSouboru}.
@@ -206,7 +319,7 @@ export function RodnyListSection({
               disabled={!canEdit}
               value={values.spotLengthSeconds}
               onChange={(e) => set('spotLengthSeconds', e.target.value)}
-              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple disabled:opacity-60"
+              className={inputClass}
             />
             <span className="text-xs text-muted font-body">V dokumentu se zobrazí například jako „20s".</span>
           </label>
@@ -218,7 +331,7 @@ export function RodnyListSection({
               disabled={!canEdit}
               value={values.productionDate}
               onChange={(e) => set('productionDate', e.target.value)}
-              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple disabled:opacity-60"
+              className={inputClass}
             />
           </label>
 
@@ -229,69 +342,13 @@ export function RodnyListSection({
               disabled={!canEdit}
               value={values.directorName}
               onChange={(e) => set('directorName', e.target.value)}
-              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple disabled:opacity-60"
+              className={inputClass}
             />
           </label>
         </div>
 
-        <div className="border-t border-line pt-5 flex flex-col gap-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <h3 className="font-heading font-semibold text-sm text-ink m-0">Hudba ve spotu</h3>
-            <label className="flex items-center gap-2 text-sm font-heading text-ink">
-              <input
-                type="checkbox"
-                disabled={!canEdit}
-                checked={values.noMusic}
-                onChange={(e) => set('noMusic', e.target.checked)}
-              />
-              Spot nemá hudbu
-            </label>
-          </div>
-
-          {values.noMusic ? (
-            <p className="text-sm font-body text-muted m-0">
-              V Rodném listu bude u hudby uvedeno „Spot bez hudby“ — žádný vymyšlený údaj se tam nedostane.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-body text-ink">Název skladby</span>
-                <input
-                  type="text"
-                  disabled={!canEdit}
-                  value={values.musicTitle}
-                  onChange={(e) => set('musicTitle', e.target.value)}
-                  className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple disabled:opacity-60"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-body text-ink">Autor hudby</span>
-                <input
-                  type="text"
-                  disabled={!canEdit}
-                  value={values.musicAuthor}
-                  onChange={(e) => set('musicAuthor', e.target.value)}
-                  className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple disabled:opacity-60"
-                />
-              </label>
-            </div>
-          )}
-        </div>
-
-        {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
-
-        {canEdit && (
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-            >
-              {saving ? 'Ukládám…' : 'Uložit'}
-            </button>
-            {saved && <span className="text-sm font-heading text-brand-greenDeep">Uloženo.</span>}
-          </div>
-        )}
+        {hudba}
+        {tlacitka}
       </form>
 
       <div className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">

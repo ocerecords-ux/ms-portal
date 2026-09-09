@@ -30,6 +30,7 @@ export default async function PriceListPage() {
           priceExVat: i.priceExVat,
           priceIncVat: i.priceIncVat,
           active: i.active,
+          rodnyList: i.rodnyList,
         }))}
       />
 

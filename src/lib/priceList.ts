@@ -23,6 +23,43 @@ export function withVat(priceExVat: number): number {
   return Math.round(priceExVat * (1 + VAT_RATE));
 }
 
+/**
+ * Nazvy typu projektu, u kterych se vyrabi Rodny list - tedy radiove spoty
+ * (upresneni 9. 9. 2026: "plati to jen u radiovych spotu").
+ *
+ * Priznak je na polozce ceniku (PriceListItem.rodnyList) a prepina se
+ * v administraci. Zamerne se nehada podle nazvu: polozky se prejmenovavaji
+ * a pribyvaji a "spot" muze byt i televizni.
+ */
+export async function listRodnyListProjectTypes(): Promise<string[]> {
+  try {
+    const items = await prisma.priceListItem.findMany({
+      where: { rodnyList: true },
+      select: { name: true },
+    });
+    return items.map((i) => i.name);
+  } catch (err) {
+    console.error('Nacteni typu projektu pro Rodny list selhalo:', err);
+    return [];
+  }
+}
+
+/** Je tenhle typ projektu radiovy spot, ke kteremu se dela Rodny list? */
+export async function isRodnyListProjectType(projectType: string | null | undefined): Promise<boolean> {
+  const typ = projectType?.trim();
+  if (!typ) return false;
+  try {
+    const item = await prisma.priceListItem.findUnique({
+      where: { name: typ },
+      select: { rodnyList: true },
+    });
+    return item?.rodnyList === true;
+  } catch (err) {
+    console.error('Overeni typu projektu pro Rodny list selhalo:', err);
+    return false;
+  }
+}
+
 /** Nazvy polozek pouzitelne jako typ projektu (jen aktivni, v poradi ceniku). */
 export async function listProjectTypeOptions(): Promise<string[]> {
   const items = await prisma.priceListItem.findMany({

@@ -90,21 +90,28 @@ async function main() {
   // nesahame na nej.
   // Zamerne bez importu z src/lib/priceList: seed bezi pres tsx mimo Next.js,
   // kde by se alias "@/..." uvnitr toho souboru nerozresil.
+  const RADIOVY_SPOT = 'Výroba rádiového spotu';
   const DEFAULT_PRICE_LIST_ITEMS = [
     'Natáčení a postprodukce audioknihy',
-    'Výroba rádiového spotu',
+    RADIOVY_SPOT,
     'Natáčení voiceoveru',
   ];
   const priceListCount = await prisma.priceListItem.count();
   if (priceListCount === 0) {
     await prisma.priceListItem.createMany({
-      data: DEFAULT_PRICE_LIST_ITEMS.map((name, index) => ({ name, sortOrder: (index + 1) * 10 })),
+      data: DEFAULT_PRICE_LIST_ITEMS.map((name, index) => ({
+        name,
+        sortOrder: (index + 1) * 10,
+        // U radioveho spotu se vyrabi Rodny list (upresneni 9. 9. 2026).
+        rodnyList: name === RADIOVY_SPOT,
+      })),
       skipDuplicates: true,
     });
   }
 
   await seedStudios();
   await doplnKalendarDoListy();
+  await zapniRodnyListURadiovehoSpotu();
 
   await backfillCodes();
 
@@ -184,6 +191,32 @@ async function seedStudios() {
  * Bez toho by se odkaz vracel po kazdem nasazeni i tomu, kdo si ho schvalne
  * odebral.
  */
+/**
+ * Jednorazove zapnuti priznaku "Rodny list" u polozky ceniku "Vyroba
+ * radioveho spotu" (upresneni 9. 9. 2026: "plati to jen u radiovych spotu").
+ *
+ * Priznak je novy, takze u ceniku, ktery uz existuje, by zustal vsude vypnuty
+ * a Rodny list by se nikdy sam nevyrobil. Tohle ho jednou nastavi u vychozi
+ * polozky; dal si to tym prepina v administraci a seed uz do toho nesaha -
+ * proto ta znamka v Counteru, stejne jako u doplneni kalendare do listy.
+ */
+async function zapniRodnyListURadiovehoSpotu() {
+  const ZNAMKA = 'cenik-backfill-rodny-list';
+  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+  if (uz) return;
+
+  const polozka = await prisma.priceListItem.findUnique({
+    where: { name: 'Výroba rádiového spotu' },
+    select: { id: true, rodnyList: true },
+  });
+  if (polozka && !polozka.rodnyList) {
+    await prisma.priceListItem.update({ where: { id: polozka.id }, data: { rodnyList: true } });
+    console.log('  cenik: u "Výroba rádiového spotu" zapnut Rodný list');
+  }
+
+  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+}
+
 async function doplnKalendarDoListy() {
   const ZNAMKA = 'menu-backfill-kalendar';
   const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });

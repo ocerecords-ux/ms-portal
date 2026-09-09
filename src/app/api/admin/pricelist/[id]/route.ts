@@ -9,6 +9,7 @@ const schema = z.object({
   priceExVat: z.string().trim().optional(),
   priceIncVat: z.string().trim().optional(),
   active: z.boolean().optional(),
+  rodnyList: z.boolean().optional(),
 });
 
 function toIntOrNull(v?: string): number | null {
@@ -47,6 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(priceExVat !== undefined ? { priceExVat } : {}),
         ...(priceIncVat !== undefined ? { priceIncVat } : {}),
         ...(data.active !== undefined ? { active: data.active } : {}),
+        ...(data.rodnyList !== undefined ? { rodnyList: data.rodnyList } : {}),
       },
     });
 

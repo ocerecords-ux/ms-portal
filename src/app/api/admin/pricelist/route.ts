@@ -9,6 +9,8 @@ const schema = z.object({
   name: z.string().trim().min(1, 'Název položky je povinný.').max(200),
   priceExVat: z.string().trim().optional(),
   priceIncVat: z.string().trim().optional(),
+  /** Radiovy spot - jen u nej se vyrabi Rodny list. */
+  rodnyList: z.boolean().optional(),
 });
 
 function toIntOrNull(v?: string): number | null {
@@ -40,7 +42,13 @@ export async function POST(req: NextRequest) {
     const last = await prisma.priceListItem.findFirst({ orderBy: { sortOrder: 'desc' }, select: { sortOrder: true } });
 
     const item = await prisma.priceListItem.create({
-      data: { name, priceExVat, priceIncVat, sortOrder: (last?.sortOrder ?? 0) + 10 },
+      data: {
+        name,
+        priceExVat,
+        priceIncVat,
+        rodnyList: parsed.data.rodnyList ?? false,
+        sortOrder: (last?.sortOrder ?? 0) + 10,
+      },
     });
     return NextResponse.json(item, { status: 201 });
   } catch (err) {
