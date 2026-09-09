@@ -363,8 +363,20 @@ export async function overPrilohu(key: string): Promise<{ size: number; mime: st
   }
 }
 
-/** Krátkodobý odkaz ke stažení. Původní název dostane uživatel zpátky celý. */
-export async function podepsanyOdkazNaPrilohu(key: string, fileName: string): Promise<string | null> {
+/**
+ * Krátkodobý odkaz na přílohu. Původní název dostane uživatel zpátky celý.
+ *
+ * `jakoPrilohu` rozhoduje, co udělá prohlížeč: false soubor otevře (obrázek
+ * se ukáže, PDF se zobrazí), true ho rovnou stáhne. Řídí se tím hlavička
+ * Content-Disposition, kterou úložiště pošle - u odkazu na cizí server
+ * nestačí atribut download, ten prohlížeč přes hranici domény ignoruje
+ * (zadání 9. 9. 2026: "mělo by tam svítit tlačítko stáhnout").
+ */
+export async function podepsanyOdkazNaPrilohu(
+  key: string,
+  fileName: string,
+  jakoPrilohu = false,
+): Promise<string | null> {
   const client = getClient();
   const bucket = process.env.S3_BUCKET;
   if (!client || !bucket) return null;
@@ -374,7 +386,9 @@ export async function podepsanyOdkazNaPrilohu(key: string, fileName: string): Pr
     new GetObjectCommand({
       Bucket: bucket,
       Key: key,
-      ResponseContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+      ResponseContentDisposition: `${jakoPrilohu ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(
+        fileName,
+      )}`,
     }),
     { expiresIn: PLATNOST_STAZENI },
   );

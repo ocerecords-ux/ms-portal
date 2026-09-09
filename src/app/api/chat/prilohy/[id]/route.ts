@@ -18,7 +18,7 @@ import { podepsanyOdkazNaPrilohu } from '@/lib/storage';
  */
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !canUseChat(session.user.role)) {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
@@ -48,7 +48,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Příloha nenalezena.' }, { status: 404 });
     }
 
-    const odkaz = await podepsanyOdkazNaPrilohu(priloha.key, priloha.name);
+    // ?stahnout=1 posle soubor rovnou do stazenych, jinak se otevre.
+    const stahnout = req.nextUrl.searchParams.get('stahnout') === '1';
+    const odkaz = await podepsanyOdkazNaPrilohu(priloha.key, priloha.name, stahnout);
     if (!odkaz) {
       return NextResponse.json({ error: 'Úložiště souborů není dostupné.' }, { status: 503 });
     }

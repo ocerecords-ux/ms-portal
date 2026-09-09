@@ -639,6 +639,37 @@ function Reakce({
  * pri otevreni stahl vsechny naraz. Po kliknuti se rovnou prehrava, takze
  * to uzivatele nestoji nic navic.
  */
+/**
+ * Tlacitko Stahnout u prilohy (zadani 9. 9. 2026: "mela by jit ta priloha
+ * stahnout, rovnou by tam melo svitit tlacitko"). Zamerne je videt porad,
+ * ne az pri najeti mysi.
+ *
+ * Stahovani resi hlavicka od uloziste (?stahnout=1), ne atribut download -
+ * ten prohlizec u odkazu na cizi server ignoruje a soubor by se misto
+ * stazeni jen otevrel.
+ */
+function TlacitkoStahnout({ odkaz, nazev, tmave }: { odkaz: string; nazev: string; tmave?: boolean }) {
+  return (
+    <a
+      href={`${odkaz}?stahnout=1`}
+      title={`Stáhnout ${nazev}`}
+      aria-label={`Stáhnout ${nazev}`}
+      onClick={(e) => e.stopPropagation()}
+      className={`inline-flex items-center justify-center w-7 h-7 shrink-0 rounded-lg border transition-colors no-underline ${
+        tmave
+          ? 'border-white/40 text-white hover:bg-white/20'
+          : 'border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple'
+      }`}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+        <path d="M12 4v11" />
+        <path d="M7.5 11.5 12 16l4.5-4.5" />
+        <path d="M5 19h14" />
+      </svg>
+    </a>
+  );
+}
+
 function ZvukovaPriloha({ priloha, odkaz }: { priloha: ChatPriloha; odkaz: string }) {
   const [spustit, setSpustit] = useState(false);
 
@@ -658,10 +689,11 @@ function ZvukovaPriloha({ priloha, odkaz }: { priloha: ChatPriloha; odkaz: strin
             </svg>
           </button>
         )}
-        <span className="min-w-0">
+        <span className="min-w-0 flex-1">
           <span className="block text-[12px] font-heading font-semibold text-ink truncate">{priloha.name}</span>
           <span className="block text-[11px] font-body text-muted">{formatVelikost(priloha.size)}</span>
         </span>
+        <TlacitkoStahnout odkaz={odkaz} nazev={priloha.name} />
       </span>
       {spustit && <WaveformPlayer src={odkaz} autoPlay />}
     </span>
@@ -680,36 +712,47 @@ function Prilohy({ prilohy }: { prilohy: ChatPriloha[] }) {
         }
         if (jeObrazek(p.mime)) {
           return (
-            <a
-              key={p.id}
-              href={odkaz}
-              target="_blank"
-              rel="noreferrer"
-              title={`${p.name} (${formatVelikost(p.size)})`}
-              className="block rounded-card overflow-hidden border border-line max-w-[280px]"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={odkaz} alt={p.name} className="block w-full max-h-[240px] object-cover" />
-            </a>
+            <span key={p.id} className="relative block max-w-[280px]">
+              <a
+                href={odkaz}
+                target="_blank"
+                rel="noreferrer"
+                title={`${p.name} (${formatVelikost(p.size)})`}
+                className="block rounded-card overflow-hidden border border-line"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={odkaz} alt={p.name} className="block w-full max-h-[240px] object-cover" />
+              </a>
+              {/* Na obrazku samotnem by svetle tlacitko zaniklo, proto tmava
+                  varianta s pruhlednym podkladem. */}
+              <span className="absolute top-1.5 right-1.5 rounded-lg bg-ink/45 backdrop-blur-[2px] p-0.5">
+                <TlacitkoStahnout odkaz={odkaz} nazev={p.name} tmave />
+              </span>
+            </span>
           );
         }
         return (
-          <a
+          <span
             key={p.id}
-            href={odkaz}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 max-w-[280px] rounded-lg border border-line bg-surface px-2.5 py-2 no-underline hover:border-brand-purple transition-colors"
+            className="flex items-center gap-2 max-w-[320px] rounded-lg border border-line bg-surface px-2.5 py-2"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-brand-purple">
-              <path d="M14 3v5h5" />
-              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-            </svg>
-            <span className="min-w-0">
-              <span className="block text-[12px] font-heading font-semibold text-ink truncate">{p.name}</span>
-              <span className="block text-[11px] font-body text-muted">{formatVelikost(p.size)}</span>
-            </span>
-          </a>
+            <a
+              href={odkaz}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 min-w-0 flex-1 no-underline"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-brand-purple">
+                <path d="M14 3v5h5" />
+                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+              </svg>
+              <span className="min-w-0">
+                <span className="block text-[12px] font-heading font-semibold text-ink truncate">{p.name}</span>
+                <span className="block text-[11px] font-body text-muted">{formatVelikost(p.size)}</span>
+              </span>
+            </a>
+            <TlacitkoStahnout odkaz={odkaz} nazev={p.name} />
+          </span>
         );
       })}
     </span>
