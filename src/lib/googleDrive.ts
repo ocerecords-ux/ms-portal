@@ -28,20 +28,28 @@ function base64url(input: Buffer | string) {
   return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-let cachedToken: { token: string; expiresAt: number } | null = null;
+/** Rozsah pro cteni Disku - s nim se portal chova jako doted. */
+export const DRIVE_READONLY_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+/** Sirsi rozsah, ktery umi i zapis - potrebuje ho ukladani Rodneho listu. */
+export const DRIVE_WRITE_SCOPE = 'https://www.googleapis.com/auth/drive';
+
+// Token si drzime zvlast pro kazdy rozsah - jinak by se pro zapis pouzil
+// token vydany jen ke cteni a Google by nahrani odmitl.
+const tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
 /**
  * Ziska pristupovy token servisniho uctu. Vraci null, pokud env promenne
  * GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY jeste
  * nejsou nastavene - volajici pak ma zobrazit puvodni jednoduchy odkaz.
  */
-export async function getAccessToken(): Promise<string | null> {
+export async function getAccessToken(scope: string = DRIVE_READONLY_SCOPE): Promise<string | null> {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const rawKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
   if (!email || !rawKey) return null;
 
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) {
-    return cachedToken.token;
+  const cached = tokenCache.get(scope);
+  if (cached && cached.expiresAt > Date.now() + 30_000) {
+    return cached.token;
   }
 
   // GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY muze byt bud primo PEM text (s \n
@@ -55,7 +63,7 @@ export async function getAccessToken(): Promise<string | null> {
   const header = { alg: 'RS256', typ: 'JWT' };
   const claim = {
     iss: email,
-    scope: 'https://www.googleapis.com/auth/drive.readonly',
+    scope,
     aud: 'https://oauth2.googleapis.com/token',
     exp: now + 3600,
     iat: now,
@@ -91,7 +99,7 @@ export async function getAccessToken(): Promise<string | null> {
   const data = (await res.json()) as { access_token?: string; expires_in?: number };
   if (!data.access_token) return null;
 
-  cachedToken = { token: data.access_token, expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000 };
+  tokenCache.set(scope, { token: data.access_token, expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000 });
   return data.access_token;
 }
 
@@ -223,4 +231,69 @@ export async function renameDriveItem(
   }
   const data = await res.json();
   return { id: data.id, name: data.name };
+}
+
+/**
+ * Nahraje hotove PDF do slozky projektu na Google Disku (zadani 9. 9. 2026 -
+ * "uloz PDF do projektove slozky na nakonfigurovanem disku").
+ *
+ * ZAMERNE JE TO "BEST EFFORT" a vraci null misto vyjimky. Servisni ucet je
+ * u klientskych slozek nasdileny jako Prohlizejici, takze zapis muze skoncit
+ * chybou 403 - a Rodny list se kvuli tomu nesmi nevyrobit. Dokument se vzdy
+ * uklada i k nam (viz lib/storage.ts) a odkaz v portalu i v mailu klientovi
+ * vede tam, aby nikdy nekoukal na rozbity odkaz. Az bude slozka nasdilena
+ * jako Editor, zacne fungovat i kopie na Disku, bez zasahu do kodu.
+ *
+ * Nahravaji se VYHRADNE vygenerovana PDF - zvukove soubory portal na Disk
+ * nikdy nekopiruje ani nepresouva, nahravky uz tam v tuhle chvili jsou.
+ */
+export async function uploadPdfToDriveFolder(
+  folderUrl: string,
+  fileName: string,
+  bytes: Buffer,
+): Promise<{ id: string; webViewLink: string | null } | null> {
+  const folderId = extractDriveFolderId(folderUrl);
+  if (!folderId) return null;
+
+  const token = await getAccessToken(DRIVE_WRITE_SCOPE);
+  if (!token) return null;
+
+  try {
+    const boundary = `mediaspace-${Date.now()}`;
+    const metadata = JSON.stringify({ name: fileName, parents: [folderId], mimeType: 'application/pdf' });
+    const body = Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
+          `--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`,
+        'utf-8',
+      ),
+      bytes,
+      Buffer.from(`\r\n--${boundary}--\r\n`, 'utf-8'),
+    ]);
+
+    const res = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,webViewLink',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`,
+        },
+        body,
+        cache: 'no-store',
+      },
+    );
+
+    if (!res.ok) {
+      console.error('Google Drive: nahrani PDF selhalo', res.status, await res.text().catch(() => ''));
+      return null;
+    }
+
+    const data = (await res.json()) as { id?: string; webViewLink?: string };
+    if (!data.id) return null;
+    return { id: data.id, webViewLink: data.webViewLink ?? null };
+  } catch (err) {
+    console.error('Google Drive: nahrani PDF selhalo:', err);
+    return null;
+  }
 }

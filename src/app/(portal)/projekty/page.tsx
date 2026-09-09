@@ -12,6 +12,7 @@ import { ProjectsTable, type InternalProject, type InternalProjectMeta } from '.
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { loadColumnLabels } from '@/lib/columnLabelsServer';
+import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 
 // DULEZITE: tato stranka tahá projekty ZIVE z Caflou při každém zobrazení -
@@ -65,6 +66,14 @@ export default async function ProjektyPage() {
     }
   }
 
+  // Rodne listy reklamnich spotu (zadani 9. 9. 2026) - klient je vidi rovnou
+  // u projektu. U firmy, ktera reklamy nedela, se sloupec vubec nevykresli.
+  const rodneListy = company?.dealsAds
+    ? Object.fromEntries(
+        await loadNejnovejsiRodneListy([...active, ...finished].map((p) => String(p.id))),
+      )
+    : undefined;
+
   return (
     <section className="flex flex-col gap-8">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
@@ -85,10 +94,14 @@ export default async function ProjektyPage() {
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
           Aktivní projekty
         </h2>
-        <ProjectsTable projects={active} emptyText="Aktuálně nemáte žádné rozpracované projekty." />
+        <ProjectsTable
+          projects={active}
+          emptyText="Aktuálně nemáte žádné rozpracované projekty."
+          rodneListy={rodneListy}
+        />
       </div>
 
-      <FinishedProjectsSection projects={finished} />
+      <FinishedProjectsSection projects={finished} rodneListy={rodneListy} />
     </section>
   );
 }
@@ -104,6 +117,20 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
   });
   const { projects, error } = await listAllCaflouProjectsForInternal(
     companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
+  );
+
+  // Rodne listy reklamnich spotu (zadani 9. 9. 2026). Caflou nam zmenu stavu
+  // nehlasi, takze se porovna s poslednim videnym stavem prave tady - interni
+  // prehled projektu je misto, kam se produkce diva nejcasteji. Kdyz se stav
+  // od minule nezmenil, neudela to nic; opakovane nacteni stranky tedy zadny
+  // duplicitni dokument nevyrobi.
+  await syncRodneListy(
+    projects.map((p) => ({
+      caflouProjectId: String(p.id),
+      projectName: p.name,
+      statusName: p.statusName,
+      caflouCompanyId: p.caflouCompanyId,
+    })),
   );
 
   // Nase vlastni atributy k projektum (priorita, typ, manazer) - jednim

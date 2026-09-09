@@ -114,6 +114,7 @@ model Company {
   expenses  Expense[]
   contracts Contract[]
   recordingRequests RecordingRequest[]
+  rodneListy RodnyList[]
 }
 
 model User {
@@ -277,6 +278,28 @@ model ProjectMeta {
   // da stavet (nabidky terminu, notifikace, jeho vlastni prehled).
   actorUserId     String?
   actor           User?            @relation("ProjectActor", fields: [actorUserId], references: [id])
+
+  /// Rodný list reklamního spotu (zadání 9. 9. 2026) - údaje, ze kterých se
+  /// PDF vyrábí. Vedou se u projektu, do kódu se nic nepíše natvrdo.
+  /// Název spotu je nepovinný; když chybí, použije se název projektu z Caflou.
+  spotName          String?
+  /// Délka spotu v sekundách - v dokumentu se zobrazí jako "20s".
+  spotLengthSeconds Int?
+  directorName      String?
+  /// Sekce "Hudba ve spotu" - záměrně jen tahle dvě pole, žádná licence.
+  musicTitle        String?
+  musicAuthor       String?
+  /// Spot hudbu nemá - hudební pole se pak nevyžadují a RL neuvede nepravdu.
+  noMusic           Boolean          @default(false)
+  productionDate    DateTime?
+
+  /// Poslední stav projektu, který jsme v Caflou viděli. Caflou nám změnu
+  /// nehlásí, takže se SKUTEČNÝ přechod do stavu "Dokončeno - ke schválení"
+  /// pozná právě porovnáním s touhle hodnotou (viz lib/rodnyListServer.ts).
+  lastCaflouStatus  String?
+  /// Poslední chyba při vytváření Rodného listu. Dokud je vyplněná, projekt
+  /// se internímu týmu ukazuje jako vyžadující kontrolu a klientovi nic nešlo.
+  rlError           String?
 
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -1203,4 +1226,47 @@ model CalendarFeed {
   revokedAt  DateTime?
   lastReadAt DateTime?
   createdAt  DateTime  @default(now())
+}
+
+/// Vygenerovaný Rodný list (RL) reklamního spotu - zadání 9. 9. 2026.
+///
+/// Údaje se ukládají i textově: dokument musí zůstat doložitelný i potom, co
+/// se projekt v Caflou přejmenuje nebo firma změní název. Vazba na projekt je
+/// přes textové ID z Caflou, stejně jako u dokladů a natáčecích frekvencí.
+model RodnyList {
+  id String @id @default(cuid())
+
+  caflouProjectId String
+  projectName     String
+  companyId       String?
+  company         Company? @relation(fields: [companyId], references: [id])
+
+  /// Pořadí verze. Automatika další verzi nikdy nedělá - vzniká jen řízeně
+  /// tlačítkem "Vygenerovat RL znovu", aby refresh stránky nedělal duplicity.
+  version  Int
+  fileName String
+
+  /// Odkaz na PDF: adresa v S3/R2, nebo data URL, když úložiště není nastavené
+  /// (stejný princip jako u příloh výdajů - viz lib/storage.ts).
+  url String @db.Text
+
+  /// Kopie na Google Disku, pokud se ji podařilo nahrát (složka bývá jen ke čtení).
+  driveFileId String?
+  driveUrl    String?
+
+  /// Hodnoty tak, jak jsou vytištěné v dokumentu.
+  clientName     String
+  spotName       String
+  spotLength     String
+  director       String
+  musicTitle     String?
+  musicAuthor    String?
+  productionDate DateTime
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@unique([caflouProjectId, version])
+  @@index([caflouProjectId])
+  @@index([companyId])
 }

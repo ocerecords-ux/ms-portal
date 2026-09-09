@@ -31,7 +31,21 @@ export function StatusPill({ finished, statusName }: { finished: boolean; status
   );
 }
 
-export function ProjectsTable({ projects, emptyText }: { projects: DisplayProject[]; emptyText: string }) {
+export function ProjectsTable({
+  projects,
+  emptyText,
+  rodneListy,
+}: {
+  projects: DisplayProject[];
+  emptyText: string;
+  /**
+   * Rodné listy reklamních spotů podle ID projektu v Caflou (zadání 9. 9. 2026).
+   * Když se prop nepředá, sloupec se vůbec nevykreslí - u audioknih nemá RL
+   * smysl a klient, který reklamy nedělá, ho v přehledu vidět nemá.
+   */
+  rodneListy?: Record<string, { id: string; fileName: string }>;
+}) {
+  const showRodnyList = rodneListy !== undefined;
   return (
     <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
       <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
@@ -44,12 +58,13 @@ export function ProjectsTable({ projects, emptyText }: { projects: DisplayProjec
               <th className="text-right px-4 py-3.5 whitespace-nowrap">Normostrany</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum dokončení</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum vydání</th>
+              {showRodnyList && <th className="text-left px-4 py-3.5 whitespace-nowrap">Rodný list</th>}
             </tr>
           </thead>
           <tbody>
             {projects.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
+                <td colSpan={showRodnyList ? 7 : 6} className="px-4 py-8 text-center text-muted text-sm font-body">
                   {emptyText}
                 </td>
               </tr>
@@ -70,6 +85,22 @@ export function ProjectsTable({ projects, emptyText }: { projects: DisplayProjec
                 <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
                 </td>
+                {showRodnyList && (
+                  <td className="px-4 py-4 text-sm font-heading whitespace-nowrap">
+                    {rodneListy?.[String(p.id)] ? (
+                      <a
+                        href={`/api/rodny-list/${rodneListy[String(p.id)].id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-purple no-underline"
+                      >
+                        Rodný list ↗
+                      </a>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

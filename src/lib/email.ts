@@ -1064,3 +1064,82 @@ export async function sendRecordingDecisionEmail(input: RecordingDecisionEmailIn
 
   return { sent: true as const };
 }
+
+
+// ===========================================================================
+// RODNY LIST REKLAMNIHO SPOTU (zadani 9. 9. 2026)
+//
+// Odchazi klientovi ve chvili, kdy projekt prejde do stavu "Dokonceno - ke
+// schvaleni" a Rodny list se UZ USPESNE vyrobil. Kdyz se dokument nepodari
+// vytvorit, tenhle e-mail se zamerne neposila - projekt se misto toho oznaci
+// jako vyzadujici kontrolu (viz lib/rodnyListServer.ts).
+// ===========================================================================
+
+type RodnyListEmailInput = {
+  to: string;
+  recipientName: string;
+  projectName: string;
+  statusName: string;
+  rodnyListUrl: string;
+  recordingsUrl: string;
+};
+
+export function buildRodnyListHtml(input: RodnyListEmailInput): string {
+  return emailShell({
+    tag: 'Projekt ke schválení',
+    preheader: `${input.projectName} je hotový — nahrávky i rodný list jsou připravené.`,
+    body: `
+    <span class="badge">${escapeHtml(input.statusName)}</span>
+    <h2>${escapeHtml(input.projectName)}</h2>
+    <p>Dobrý den, ${escapeHtml(input.recipientName)},</p>
+    <p>spot máme hotový. Projekt je ve stavu <strong>${escapeHtml(input.statusName)}</strong> —
+       nahrávky jsou připravené a spolu s nimi posíláme i <strong>rodný list</strong> spotu
+       s údaji o délce, režii a použité hudbě.</p>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Projekt</td><td class="value">${escapeHtml(input.projectName)}</td></tr>
+      <tr><td class="label">Stav</td><td class="value regular">${escapeHtml(input.statusName)}</td></tr>
+    </table>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.rodnyListUrl)}" class="cta">Otevřít rodný list (PDF)</a>
+    </div>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.recordingsUrl)}" class="cta-dark">Přejít na nahrávky →</a>
+    </div>
+
+    <p class="small">Kdyby vám v rodném listu nebo v nahrávkách cokoliv nesedělo, stačí na tenhle
+       e-mail odpovědět — rádi to opravíme.</p>
+  `,
+  });
+}
+
+export async function sendRodnyListEmail(input: RodnyListEmailInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.to,
+    subject: `${input.projectName} — hotovo, ke schválení`,
+    text: [
+      `Dobry den, ${input.recipientName},`,
+      '',
+      `spot ${input.projectName} mame hotovy - projekt je ve stavu "${input.statusName}".`,
+      '',
+      'Rodny list spotu (PDF):',
+      input.rodnyListUrl,
+      '',
+      'Pripravene nahravky:',
+      input.recordingsUrl,
+      '',
+      'Mediaspace',
+    ].join('\n'),
+    html: buildRodnyListHtml(input),
+  });
+
+  return { sent: true as const };
+}

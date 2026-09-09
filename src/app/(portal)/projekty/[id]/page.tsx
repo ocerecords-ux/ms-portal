@@ -20,6 +20,8 @@ import { sessionsForPages } from '@/lib/calendar';
 import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
 import { RecordingSection } from './RecordingSection';
 import { ProjectTabs, type ProjectTab } from './ProjectTabs';
+import { RodnyListSection } from './RodnyListSection';
+import { loadRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 
 // Detail projektu (zadani 5. 9. 2026). Projekt sam o sobe zije v Caflou -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -88,11 +90,34 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const company = caflou?.caflouCompanyId
     ? await prisma.company.findFirst({
         where: { caflouCompanyId: caflou.caflouCompanyId },
-        select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true },
+        select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true, dealsAds: true },
       })
     : null;
 
   const project = caflou?.project ?? null;
+
+  // Rodny list reklamniho spotu (zadani 9. 9. 2026). Stav projektu se prepina
+  // v Caflou, ne u nas - proto se tu pri otevreni detailu porovna aktualni
+  // stav s poslednim VIDENYM a teprve skutecny prechod do stavu "Dokonceno -
+  // ke schvaleni" dokument vyrobi. Opakovane otevreni stranky uz nic nedela.
+  if (project) {
+    await syncRodneListy([
+      {
+        caflouProjectId,
+        projectName: project.name,
+        statusName: project.statusName,
+        caflouCompanyId: caflou?.caflouCompanyId ?? null,
+      },
+    ]);
+  }
+
+  // Zalozka Rodny list dava smysl jen u firem se zapnutymi "Reklamami".
+  const showRodnyList = company?.dealsAds === true;
+  const rodneListy = showRodnyList ? await loadRodneListy(caflouProjectId) : [];
+  // Meta se cte znovu, protoze synchronizace vyse mohla zapsat chybu.
+  const metaPoSync = showRodnyList
+    ? await prisma.projectMeta.findUnique({ where: { caflouProjectId } })
+    : null;
 
   // Rozpocet (zadani 6. 9. 2026) - jen u audioknih, kde zname pocet normostran,
   // a vidi ho jen Zuzo-labuzo.
@@ -287,6 +312,34 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     />
   );
 
+  const rodnyList = (
+    <RodnyListSection
+      caflouProjectId={caflouProjectId}
+      canEdit={canEdit}
+      clientName={company?.name ?? ''}
+      projectName={project?.name ?? `Projekt ${caflouProjectId}`}
+      rlError={metaPoSync?.rlError ?? null}
+      rodneListy={rodneListy.map((rl) => ({
+        id: rl.id,
+        version: rl.version,
+        fileName: rl.fileName,
+        createdAt: rl.createdAt.toISOString(),
+        driveUrl: rl.driveUrl,
+      }))}
+      initial={{
+        spotName: metaPoSync?.spotName ?? '',
+        spotLengthSeconds: metaPoSync?.spotLengthSeconds != null ? String(metaPoSync.spotLengthSeconds) : '',
+        directorName: metaPoSync?.directorName ?? '',
+        musicTitle: metaPoSync?.musicTitle ?? '',
+        musicAuthor: metaPoSync?.musicAuthor ?? '',
+        noMusic: metaPoSync?.noMusic ?? false,
+        productionDate: metaPoSync?.productionDate
+          ? metaPoSync.productionDate.toISOString().slice(0, 10)
+          : '',
+      }}
+    />
+  );
+
   const tabs: ProjectTab[] = [{ key: 'prehled', label: 'Přehled', content: prehled }];
   if (isInternalRole(session.user.role)) {
     tabs.push({
@@ -294,6 +347,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       label: 'Natáčecí frekvence',
       count: recordingRequests.length,
       content: frekvence,
+    });
+  }
+  if (showRodnyList) {
+    tabs.push({
+      key: 'rodny-list',
+      label: 'Rodný list',
+      count: rodneListy.length,
+      content: rodnyList,
     });
   }
   if (showDocuments) {

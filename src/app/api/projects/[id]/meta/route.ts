@@ -9,11 +9,27 @@ import { canEditProjectMeta } from '@/lib/roles';
 // Ulozeni internich atributu projektu (model ProjectMeta) - zadani
 // 5. 9. 2026. Menit je smi POUZE Produkce a Zuzo-labuzo; zvukar ma jen
 // nahled ke cteni, klient se sem nedostane vubec.
+//
+// Zmena 9. 9. 2026 (Rodny list): route ted uklada jen ta pole, ktera opravdu
+// prisla v pozadavku. Formularu na detailu projektu je vic (Interni udaje,
+// Rodny list) a kazdy posila jen svou cast - kdyby se ukladalo vsechno
+// najednou jako driv, jeden formular by pri ulozeni vymazal pole druheho.
 const schema = z.object({
   driveUrl: z.string().trim().max(2000).optional(),
   managerUserId: z.string().trim().optional(),
   priority: z.enum(['', 'LOW', 'MEDIUM', 'HIGH']).optional(),
   projectType: z.string().trim().optional(),
+
+  // --- Rodny list reklamniho spotu (zadani 9. 9. 2026) ---
+  spotName: z.string().trim().max(300).optional(),
+  /** Prichazi jako text z <input type="number"> - prazdny retezec = smazat. */
+  spotLengthSeconds: z.union([z.string().trim(), z.number()]).optional(),
+  directorName: z.string().trim().max(200).optional(),
+  musicTitle: z.string().trim().max(300).optional(),
+  musicAuthor: z.string().trim().max(300).optional(),
+  noMusic: z.boolean().optional(),
+  /** YYYY-MM-DD z <input type="date">; prazdny retezec = smazat. */
+  productionDate: z.string().trim().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -51,12 +67,55 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
-    const values = {
-      driveUrl: data.driveUrl ? data.driveUrl : null,
-      managerUserId: data.managerUserId ? data.managerUserId : null,
-      priority: data.priority ? data.priority : null,
-      projectType: data.projectType ? data.projectType : null,
+    // Delka spotu: cislo v sekundach, prazdno = nevyplneno.
+    let spotLengthSeconds: number | null | undefined;
+    if (data.spotLengthSeconds !== undefined) {
+      const raw = typeof data.spotLengthSeconds === 'number' ? data.spotLengthSeconds : data.spotLengthSeconds.trim();
+      if (raw === '' || raw === null) {
+        spotLengthSeconds = null;
+      } else {
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n <= 0 || n > 3600) {
+          return NextResponse.json({ error: 'Délka spotu musí být počet sekund mezi 1 a 3600.' }, { status: 400 });
+        }
+        spotLengthSeconds = Math.round(n);
+      }
+    }
+
+    // Datum vyroby drzime jako pulnoc UTC - v dokumentu se tiskne jen datum a
+    // nesmi se posunout podle toho, v jakem pasmu se PDF vyrabi.
+    let productionDate: Date | null | undefined;
+    if (data.productionDate !== undefined) {
+      if (data.productionDate === '') {
+        productionDate = null;
+      } else {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data.productionDate);
+        if (!match) {
+          return NextResponse.json({ error: 'Datum výroby má neplatný tvar.' }, { status: 400 });
+        }
+        productionDate = new Date(`${data.productionDate}T00:00:00.000Z`);
+        if (Number.isNaN(productionDate.getTime())) {
+          return NextResponse.json({ error: 'Datum výroby má neplatný tvar.' }, { status: 400 });
+        }
+      }
+    }
+
+    // Do databaze jde jen to, co prislo. Prazdny retezec znamena "smazat".
+    const values: Record<string, unknown> = {};
+    const text = (key: string, value: string | undefined) => {
+      if (value !== undefined) values[key] = value ? value : null;
     };
+    text('driveUrl', data.driveUrl);
+    text('managerUserId', data.managerUserId);
+    text('priority', data.priority);
+    text('projectType', data.projectType);
+    text('spotName', data.spotName);
+    text('directorName', data.directorName);
+    text('musicTitle', data.musicTitle);
+    text('musicAuthor', data.musicAuthor);
+    if (data.noMusic !== undefined) values.noMusic = data.noMusic;
+    if (spotLengthSeconds !== undefined) values.spotLengthSeconds = spotLengthSeconds;
+    if (productionDate !== undefined) values.productionDate = productionDate;
 
     const meta = await prisma.projectMeta.upsert({
       where: { caflouProjectId: params.id },

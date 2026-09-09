@@ -11,7 +11,14 @@ const PAGE_SIZE = 20;
 // strankach po 20 zaznamech, aby tabulka u klientu s dlouhou historii
 // nebyla nekonecne dlouha - tlacitko "Dalsi projekty" pokazde odkryje
 // dalsich 20.
-export function FinishedProjectsSection({ projects }: { projects: DisplayProject[] }) {
+export function FinishedProjectsSection({
+  projects,
+  rodneListy,
+}: {
+  projects: DisplayProject[];
+  /** Rodné listy k projektům - viz ProjectsTable (zadání 9. 9. 2026). */
+  rodneListy?: Record<string, { id: string; fileName: string }>;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -38,6 +45,7 @@ export function FinishedProjectsSection({ projects }: { projects: DisplayProject
           <ProjectsTable
             projects={projects.slice(0, visibleCount)}
             emptyText="Zatím tu nemáte žádné dokončené projekty."
+            rodneListy={rodneListy}
           />
           {visibleCount < projects.length && (
             <div className="flex justify-center mt-4">

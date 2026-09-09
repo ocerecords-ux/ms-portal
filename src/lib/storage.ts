@@ -150,3 +150,55 @@ export async function uploadExpenseAttachment(
   const mime = file.type || 'application/octet-stream';
   return { url: `data:${mime};base64,${buffer.toString('base64')}`, name: file.name };
 }
+
+
+/** Vygenerovane PDF ulozene rovnou v databazi nesmi nafouknout radek. */
+const MAX_INLINE_PDF_BYTES = 3 * 1024 * 1024;
+
+/**
+ * Ulozi PDF, ktere si portal vyrobil sam (zatim Rodny list - zadani
+ * 9. 9. 2026), a vrati odkaz, pod kterym se da vydat.
+ *
+ * Stejny princip jako u priloh vydaju a fotek: kdyz je nastavene S3/R2, jde
+ * soubor tam pod nahodny klic; kdyz uloziste nastavene neni (coz je zatim na
+ * produkci pripad), ulozi se dokument rovnou do databaze jako data URL.
+ * Rodny list ma kolem 60 kB, takze to databazi nijak nezatezuje - a hlavne
+ * to znamena, ze funkce nikdy nezavisi na tom, jestli uz nekdo doplnil
+ * pristupove udaje k uloziti.
+ */
+export async function uploadGeneratedPdf(
+  bytes: Buffer,
+  keyPrefix: string,
+  fileName: string,
+): Promise<{ url: string } | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+
+  if (client && bucket) {
+    try {
+      const key = `${keyPrefix}/${randomUUID()}-${fileName}`;
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: bytes,
+          ContentType: 'application/pdf',
+        }),
+      );
+      const endpoint = process.env.S3_ENDPOINT;
+      const url = endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
+      return { url };
+    } catch (err) {
+      console.error('uploadGeneratedPdf: S3 selhalo, ukladam PDF do databaze:', err);
+    }
+  }
+
+  if (bytes.byteLength > MAX_INLINE_PDF_BYTES) {
+    console.error(
+      `uploadGeneratedPdf: PDF je bez nastaveneho uloziste moc velke (${bytes.byteLength} B), neukladam.`,
+    );
+    return null;
+  }
+
+  return { url: `data:application/pdf;base64,${bytes.toString('base64')}` };
+}
