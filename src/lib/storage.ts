@@ -84,6 +84,16 @@ function getClient() {
   return new S3Client({
     region: S3_REGION || (jeR2 ? 'auto' : 'eu-central-1'),
     endpoint, // prazdne = AWS S3, jinak napr. Cloudflare R2
+    // SDK od Amazonu sklada adresu jako <bucket>.<server>/<klic>. R2 tohle
+    // nezna - chce <server>/<bucket>/<klic>. Adresa s bucketem v podomene
+    // se sice prelozi (cloudflarestorage.com ma zastupny zaznam), ale R2 na
+    // ni bucket nenajde, takze na pozadavek z prohlizece neodpovi ani
+    // hlavickami CORS - a prohlizec hlasi jen necitelne "Failed to fetch"
+    // (naměřeno na produkci 9. 9. 2026).
+    //
+    // Plati pro kazde cizi uloziste, ne jen R2: kdyz je vyplneny vlastni
+    // endpoint, je cesta s bucketem v ceste ta bezpecnejsi volba.
+    forcePathStyle: Boolean(endpoint),
     credentials: {
       accessKeyId: S3_ACCESS_KEY_ID,
       secretAccessKey: S3_SECRET_ACCESS_KEY,
