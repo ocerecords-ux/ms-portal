@@ -19,6 +19,7 @@ import { expenseTotalMinor } from '@/lib/expenses';
 import { sessionsForPages } from '@/lib/calendar';
 import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
 import { RecordingSection } from './RecordingSection';
+import { ProjectTabs, type ProjectTab } from './ProjectTabs';
 
 // Detail projektu (zadani 5. 9. 2026). Projekt sam o sobe zije v Caflou -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -193,21 +194,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const invoicedByCurrency = soucet(invoiceRows, (r) => r.statusLabel === 'Stornovaná');
   const costsByCurrency = soucet(expenseRows);
 
-  return (
-    <section className="flex flex-col gap-8">
-      <div>
-        <Link href="/projekty" className="text-muted text-sm font-heading no-underline">
-          ← Zpět na projekty
-        </Link>
-        <div className="flex items-center gap-4 flex-wrap mt-2">
-          <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">
-            {project?.name ?? `Projekt ${caflouProjectId}`}
-          </h1>
-          {project && <StatusPill finished={project.finished} statusName={project.statusName} />}
-        </div>
-        {company && <p className="text-muted text-sm font-body mt-1">{company.name}</p>}
-      </div>
-
+  // Zalozky (zprava uzivatele 8. 9. 2026: "u projektu uz to zacina byt trochu
+  // neprehledne... Natacecí frekvence a doklady by mohly byt nahore v
+  // zalozce"). Obsah se vykresli na serveru a do zalozek prijde hotovy.
+  const prehled = (
+    <>
       {!project && (
         <p className="text-sm font-heading text-red-600 bg-red-50 border border-line rounded-lg px-4 py-3 m-0">
           Údaje o projektu se nepodařilo načíst z Caflou. Interní atributy níže se přesto dají vyplnit a uloží se.
@@ -242,8 +233,25 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         />
       )}
 
-      {isInternalRole(session.user.role) && (
-        <RecordingSection
+      <ProjectMetaForm
+        caflouProjectId={caflouProjectId}
+        canEdit={canEdit}
+        managers={managers.map((m) => ({ id: m.id, label: m.name || m.email }))}
+        companyDriveFolderUrl={company?.driveFolderUrl ?? null}
+        caflouPriority={project?.priority ?? null}
+        projectTypeOptions={projectTypeOptions}
+        initial={{
+          driveUrl: meta?.driveUrl ?? '',
+          managerUserId: meta?.managerUserId ?? '',
+          priority: meta?.priority ?? '',
+          projectType: meta?.projectType ?? '',
+        }}
+      />
+    </>
+  );
+
+  const frekvence = (
+    <RecordingSection
           caflouProjectId={caflouProjectId}
           projectName={project?.name ?? `Projekt ${caflouProjectId}`}
           companyId={company?.id ?? null}
@@ -264,35 +272,55 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             status: r.status,
             createdAt: r.createdAt.toISOString(),
           }))}
-          canManage={canManageCalendar(session.user.role)}
-        />
-      )}
+      canManage={canManageCalendar(session.user.role)}
+    />
+  );
 
-      {showDocuments && (
-        <ProjectDocuments
-          offers={offerRows}
-          invoices={invoiceRows}
-          expenses={expenseRows}
-          contracts={contractRows}
-          invoicedByCurrency={invoicedByCurrency}
-          costsByCurrency={costsByCurrency}
-        />
-      )}
+  const doklady = (
+    <ProjectDocuments
+      offers={offerRows}
+      invoices={invoiceRows}
+      expenses={expenseRows}
+      contracts={contractRows}
+      invoicedByCurrency={invoicedByCurrency}
+      costsByCurrency={costsByCurrency}
+    />
+  );
 
-      <ProjectMetaForm
-        caflouProjectId={caflouProjectId}
-        canEdit={canEdit}
-        managers={managers.map((m) => ({ id: m.id, label: m.name || m.email }))}
-        companyDriveFolderUrl={company?.driveFolderUrl ?? null}
-        caflouPriority={project?.priority ?? null}
-        projectTypeOptions={projectTypeOptions}
-        initial={{
-          driveUrl: meta?.driveUrl ?? '',
-          managerUserId: meta?.managerUserId ?? '',
-          priority: meta?.priority ?? '',
-          projectType: meta?.projectType ?? '',
-        }}
-      />
+  const tabs: ProjectTab[] = [{ key: 'prehled', label: 'Přehled', content: prehled }];
+  if (isInternalRole(session.user.role)) {
+    tabs.push({
+      key: 'frekvence',
+      label: 'Natáčecí frekvence',
+      count: recordingRequests.length,
+      content: frekvence,
+    });
+  }
+  if (showDocuments) {
+    tabs.push({
+      key: 'doklady',
+      label: 'Doklady',
+      count: offerRows.length + invoiceRows.length + expenseRows.length + contractRows.length,
+      content: doklady,
+    });
+  }
+
+  return (
+    <section className="flex flex-col gap-6">
+      <div>
+        <Link href="/projekty" className="text-muted text-sm font-heading no-underline">
+          ← Zpět na projekty
+        </Link>
+        <div className="flex items-center gap-4 flex-wrap mt-2">
+          <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">
+            {project?.name ?? `Projekt ${caflouProjectId}`}
+          </h1>
+          {project && <StatusPill finished={project.finished} statusName={project.statusName} />}
+        </div>
+        {company && <p className="text-muted text-sm font-body mt-1">{company.name}</p>}
+      </div>
+
+      <ProjectTabs tabs={tabs} />
     </section>
   );
 }
