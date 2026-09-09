@@ -171,6 +171,7 @@ model User {
   conversationMembers  ConversationMember[]
   messages             Message[]
   reactions            MessageReaction[]
+  pushOdbery           PushOdber[]
 
   // Kalendare a natacecí frekvence (zadani 8. 9. 2026).
   actorOnProjects    ProjectMeta[]      @relation("ProjectActor")
@@ -544,6 +545,28 @@ model Message {
 
   @@index([conversationId, createdAt])
   @@index([parentId])
+}
+
+// Odber upozorneni na nove zpravy (zadani 9. 9. 2026 k aplikaci MS Chat).
+//
+// Jeden radek = jedno zarizeni, ne jeden clovek: kdo ma chat na mobilu
+// i na pocitaci, ma dva odbery a upozorneni dostane na obe. Endpoint je
+// unikatni, takze opakovane povoleni na tomtez zarizeni radek jen prepise.
+//
+// Klice p256dh a auth patri k zarizeni a slouzi k zasifrovani obsahu
+// upozorneni - bez nich by je prohlizec neprijal.
+model PushOdber {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  /** Odkud odber prisel - jen pro orientaci, kdyby se hledala chyba. */
+  zarizeni  String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // Priloha zpravy v chatu - fotka, PDF, zvukovy soubor se spotem (zadani

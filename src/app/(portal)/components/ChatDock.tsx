@@ -30,6 +30,7 @@ import {
   type ChatPriloha,
 } from '@/lib/chatPrilohy';
 import { WaveformPlayer } from './WaveformPlayer';
+import { UpozorneniChatu } from './UpozorneniChatu';
 
 /**
  * Chat týmu (zadani 8. 9. 2026: "vytvor komunikacni kanal jako Slack pro tym...
@@ -1308,6 +1309,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
           <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">MS chat</h2>
           <span className="flex items-center gap-3">
+            {/* Zapnuti upozorneni na nove zpravy (zadani 9. 9. 2026). */}
+            <UpozorneniChatu />
             <button
               type="button"
               onClick={toggle}

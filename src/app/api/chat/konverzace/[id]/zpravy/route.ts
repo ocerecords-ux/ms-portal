@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { MAX_MESSAGE_LENGTH } from '@/lib/chat';
 import { MAX_PRILOH, MAX_PRILOHA_BYTES } from '@/lib/chatPrilohy';
 import { overPrilohu } from '@/lib/storage';
+import { posliPush } from '@/lib/pushServer';
 import { canUseChat, shrnReakce, userLabel } from '@/lib/chatServer';
 
 // Zpravy jedne konverzace (zadani 8. 9. 2026). Otevreni konverzace zaroven
@@ -203,6 +204,28 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         attachments: { select: { id: true, name: true, mime: true, size: true } },
       },
     });
+
+    // Upozorneni na nove zpravy (zadani 9. 9. 2026). Zamerne az PO ulozeni
+    // zpravy a bez cekani na vysledek - kdyz push selze, zprava uz je davno
+    // v databazi a nikdo o ni neprijde.
+    //
+    // Kanal k projektu je pro cely tym, ale upozorneni se posilaji jen tem,
+    // kdo v nem opravdu jsou (radek clenstvi vznika otevrenim konverzace) -
+    // jinak by kazda zprava v kazdem kanalu budila cely Mediaspace.
+    const prijemci = conversation.members.map((m) => m.userId).filter((id) => id !== me);
+    if (prijemci.length > 0) {
+      const kdo = userLabel(message.user);
+      const nahled = parsed.data.body
+        ? parsed.data.body.replace(/:ms-[a-z-]+:/g, '').trim().slice(0, 140)
+        : `Poslal(a) ${prilohy.length === 1 ? 'přílohu' : 'přílohy'}`;
+      void posliPush(prijemci, {
+        titulek: conversation.kind === 'PROJEKT' ? `# ${conversation.name ?? 'Projekt'}` : kdo,
+        text: conversation.kind === 'PROJEKT' ? `${kdo}: ${nahled}` : nahled,
+        odkaz: `/chat?konverzace=${conversation.id}`,
+        // Nova zprava z teze konverzace prepise predchozi upozorneni.
+        znacka: `chat-${conversation.id}`,
+      });
+    }
 
     await prisma.$transaction([
       prisma.conversation.update({
