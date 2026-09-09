@@ -8,6 +8,7 @@ import {
   CONTACT_KIND_LABELS,
   CONTACT_KIND_OPTIONS,
 } from '@/lib/caflouCompanies';
+import { useRazeni, ThRadit } from '@/app/(portal)/components/RaditelnaTabulka';
 
 export type CaflouCompanyRow = {
   id: string;
@@ -66,6 +67,19 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
       return needle.split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
     });
   }, [items, filter, query]);
+
+  // Razeni kliknutim na nazev sloupce (zadani 9. 9. 2026). Pravidla jsou
+  // spolecna s ostatnimi tabulkami - viz components/RaditelnaTabulka.
+  const { razeni, prepni, serad } = useRazeni<(typeof items)[number]>({ key: 'nazev' });
+  const serazene = serad(visible, {
+    nazev: (i) => i.name,
+    ic: (i) => i.ic ?? null,
+    kontakt: (i) => i.email ?? i.phone ?? null,
+    mesto: (i) => i.city ?? null,
+    // Firmy, ktere v portalu jeste nejsou, jdou napred - to je to, co se resi.
+    vPortalu: (i) => (i.existing ? 1 : 0),
+    kdoToJe: (i) => i.kind,
+  });
 
   /**
    * Natahne vsechno najednou (zadani 8. 9. 2026): nacte firmy z Caflou,
@@ -201,12 +215,6 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-3xl text-ink m-0">Firmy z Caflou</h1>
-          <p className="text-muted text-sm mt-1 font-body max-w-2xl">
-            „Načíst a přenést" udělá všechno naráz: stáhne firmy z Caflou, odhadne, kdo je klient a
-            kdo herec, a založí je v portálu — klienty mezi Firmy, herce mezi uživatele. Co odhad
-            nerozhodne, zůstane tady k ručnímu projití. Co už v portálu je, se nezakládá znovu; jen
-            se doplní prázdná pole, ručně zadané údaje zůstanou.
-          </p>
         </div>
         <div className="text-right">
           <div className="flex items-center gap-3 justify-end flex-wrap">
@@ -305,12 +313,12 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
           <table className="w-full min-w-[900px] border-collapse">
             <thead>
               <tr className="bg-brand-purple text-white font-heading text-xs">
-                <th className="text-left px-3 py-3.5">Název</th>
-                <th className="text-left px-3 py-3.5 whitespace-nowrap">IČ</th>
-                <th className="text-left px-3 py-3.5">Kontakt</th>
-                <th className="text-left px-3 py-3.5">Město</th>
-                <th className="text-left px-3 py-3.5 whitespace-nowrap">Už v portálu</th>
-                <th className="text-left px-3 py-3.5 whitespace-nowrap">Kdo to je</th>
+                <ThRadit label="Název" sloupec="nazev" razeni={razeni} prepni={prepni} trida="px-3" />
+                <ThRadit label="IČ" sloupec="ic" razeni={razeni} prepni={prepni} trida="px-3" />
+                <ThRadit label="Kontakt" sloupec="kontakt" razeni={razeni} prepni={prepni} trida="px-3" />
+                <ThRadit label="Město" sloupec="mesto" razeni={razeni} prepni={prepni} trida="px-3" />
+                <ThRadit label="Už v portálu" sloupec="vPortalu" razeni={razeni} prepni={prepni} trida="px-3" />
+                <ThRadit label="Kdo to je" sloupec="kdoToJe" razeni={razeni} prepni={prepni} trida="px-3" />
               </tr>
             </thead>
             <tbody>
@@ -323,7 +331,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                   </td>
                 </tr>
               )}
-              {visible.map((item) => (
+              {serazene.map((item) => (
                 <tr key={item.id} className="border-t border-line hover:bg-surfaceSoft">
                   <td className="px-3 py-3.5 font-heading font-semibold text-sm text-ink">{item.name}</td>
                   <td className="px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">

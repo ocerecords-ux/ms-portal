@@ -93,10 +93,6 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-display text-3xl text-ink m-0">Studia</h1>
-        <p className="text-sm font-body text-muted m-0 mt-1">
-          Kalendářové zdroje pro natáčení. Víkendová doba s přepínačem „po domluvě" se v kalendáři
-          jen označí — neblokuje se.
-        </p>
       </div>
 
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}

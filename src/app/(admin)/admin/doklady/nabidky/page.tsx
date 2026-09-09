@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { computeTotals, formatMoney, OFFER_STATUS_CLASSES, OFFER_STATUS_LABELS } from '@/lib/doklady';
 import { NewOfferForm } from './NewOfferForm';
+import { NabidkyTabulka, type NabidkaRadek } from './NabidkyTabulka';
 
 // Prehled nabidek (zadani 6. 9. 2026). Zalozky podle stavu, at je hned videt,
 // co ceka na klienta a co uz je odsouhlasene.
@@ -38,6 +39,29 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
     statuses
       ? counts.filter((c) => statuses.includes(c.status)).reduce((sum, c) => sum + c._count, 0)
       : counts.reduce((sum, c) => sum + c._count, 0);
+
+  // Poradi pri razeni podle stavu: co ceka na akci, jde napred.
+  const stavPoradi: Record<string, number> = { SENT: 0, DRAFT: 1, APPROVED: 2, REJECTED: 3 };
+
+  const radkyTabulky: NabidkaRadek[] = offers.map((offer) => {
+    const totals = computeTotals(offer.items);
+    return {
+      id: offer.id,
+      nazev: offer.subject || 'Bez názvu',
+      cislo: offer.number,
+      projekt: offer.projectName || null,
+      odberatel: offer.company.name,
+      vystaveno: formatDate(offer.issueDate),
+      vystavenoMs: offer.issueDate ? new Date(offer.issueDate).getTime() : null,
+      stav: OFFER_STATUS_LABELS[offer.status] ?? offer.status,
+      stavTrida: OFFER_STATUS_CLASSES[offer.status] ?? 'bg-field text-muted',
+      stavPoradi: stavPoradi[offer.status] ?? 9,
+      bezDph: formatMoney(totals.exVat, offer.currency),
+      bezDphMinor: totals.exVat,
+      sDph: formatMoney(totals.incVat, offer.currency),
+      sDphMinor: totals.incVat,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,69 +103,7 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
             />
           </div>
 
-          <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] border-collapse">
-                <thead>
-                  <tr className="bg-bar text-white font-heading text-xs">
-                    {/* Nazev je prvni a proklikavaci - u vsech dokladu stejne
-                        (zadani 8. 9. 2026). Cislo dokladu je pod nim. */}
-                    <th className="text-left px-4 py-3.5">Název</th>
-                    <th className="text-left px-4 py-3.5">Odběratel</th>
-                    <th className="text-left px-4 py-3.5 whitespace-nowrap">Vystaveno</th>
-                    <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
-                    <th className="text-right px-4 py-3.5 whitespace-nowrap">Bez DPH</th>
-                    <th className="text-right px-4 py-3.5 whitespace-nowrap">S DPH</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {offers.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
-                        Tady zatím nic není.
-                      </td>
-                    </tr>
-                  )}
-                  {offers.map((offer) => {
-                    const totals = computeTotals(offer.items);
-                    return (
-                      <tr key={offer.id} className="border-t border-line hover:bg-surfaceSoft">
-                        <td className="px-4 py-3.5 font-heading font-semibold text-sm">
-                          <Link
-                            href={`/admin/doklady/nabidky/${offer.id}`}
-                            className="text-ink hover:text-brand-purple no-underline"
-                          >
-                            {offer.subject || 'Bez názvu'}
-                          </Link>
-                          <span className="block text-xs text-muted font-body">
-                            <span className="tabular-nums">{offer.number}</span>
-                            {offer.projectName ? ` · ${offer.projectName}` : ''}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-sm font-heading text-muted">{offer.company.name}</td>
-                        <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                          {formatDate(offer.issueDate)}
-                        </td>
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${OFFER_STATUS_CLASSES[offer.status]}`}
-                          >
-                            {OFFER_STATUS_LABELS[offer.status]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
-                          {formatMoney(totals.exVat, offer.currency)}
-                        </td>
-                        <td className="px-4 py-3.5 text-sm font-heading text-ink tabular-nums text-right whitespace-nowrap">
-                          {formatMoney(totals.incVat, offer.currency)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <NabidkyTabulka radky={radkyTabulky} />
         </>
       )}
     </div>

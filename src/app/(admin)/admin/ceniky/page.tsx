@@ -17,10 +17,6 @@ export default async function PriceListPage() {
     <section className="flex flex-col gap-8">
       <div>
         <h1 className="font-display text-3xl text-ink m-0">Ceníky</h1>
-        <p className="text-muted text-sm mt-1 font-body">
-          Položky ceníku slouží zároveň jako typy projektu — u projektu jde vybrat jen to, co je tady. Cenu s DPH
-          dopočítáme z ceny bez DPH, pokud ji nevyplníte.
-        </p>
       </div>
 
       <PriceListEditor

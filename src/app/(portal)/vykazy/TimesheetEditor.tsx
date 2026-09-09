@@ -265,11 +265,13 @@ export function TimesheetEditor({
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Výkazy</h1>
-          <p className="text-muted text-sm mt-1 font-body">
-            {canWrite
-              ? `Zapište si odpracovaný čas. Vaše hodinová sazba je ${formatCzk(hourlyRate)}.`
-              : 'Odpracované hodiny zvukařů. Částka se počítá z hodinové sazby platné v době zápisu.'}
-          </p>
+          {canWrite && (
+            // Navod pryc (zadani 9. 9. 2026), sazba zustava - to je udaj,
+            // ne vysvetlivka.
+            <p className="text-muted text-sm mt-1 font-body">
+              Vaše hodinová sazba: {formatCzk(hourlyRate)}
+            </p>
+          )}
         </div>
         <div className="text-right">
           <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">

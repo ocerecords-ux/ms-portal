@@ -56,9 +56,6 @@ export default async function MojeTerminyPage() {
     <section className="flex flex-col gap-6">
       <div>
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Moje termíny</h1>
-        <p className="text-sm font-body text-muted m-0 mt-1">
-          Natáčecí termíny k vašim projektům — co si máte vybrat i co je už potvrzené.
-        </p>
       </div>
 
       {requests.length === 0 && (

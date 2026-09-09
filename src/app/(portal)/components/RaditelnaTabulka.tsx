@@ -187,3 +187,79 @@ export function RaditelnaTabulka<T>({
     </div>
   );
 }
+
+
+/* ---------------------------------------------------------------------------
+   Řazení pro tabulky, které mají vlastní podobu
+
+   Ne každá tabulka se vejde do RaditelnaTabulka - třeba ceník má v řádcích
+   rovnou vstupní pole. Aby ani ty nemusely řazení psát znovu, jsou tu jeho
+   dvě části zvlášť: stav (useRazeni) a hlavička sloupce (ThRadit). Pravidla
+   porovnávání jsou pořád tatáž, sdílená s komponentou výše.
+--------------------------------------------------------------------------- */
+
+export function useRazeni<T>(vychozi?: { key: string; smer?: SmerRazeni }) {
+  const [razeni, setRazeni] = useState<{ key: string; smer: SmerRazeni } | null>(
+    vychozi ? { key: vychozi.key, smer: vychozi.smer ?? 'asc' } : null,
+  );
+
+  function prepni(key: string) {
+    setRazeni((soucasne) =>
+      soucasne && soucasne.key === key
+        ? { key, smer: soucasne.smer === 'asc' ? 'desc' : 'asc' }
+        : { key, smer: 'asc' },
+    );
+  }
+
+  /**
+   * Seřadí řádky podle právě zvoleného sloupce. `hodnoty` říká, co se z řádku
+   * pro který sloupec bere - stejně jako `hodnota` u sloupců výše.
+   */
+  function serad(radky: T[], hodnoty: Record<string, (radek: T) => string | number | null>): T[] {
+    if (!razeni) return radky;
+    const ber = hodnoty[razeni.key];
+    if (!ber) return radky;
+    return [...radky].sort((a, b) => porovnej(ber(a), ber(b), razeni.smer));
+  }
+
+  return { razeni, prepni, serad };
+}
+
+export function ThRadit({
+  label,
+  sloupec,
+  razeni,
+  prepni,
+  vpravo,
+  trida = '',
+  title,
+}: {
+  label: string;
+  sloupec: string;
+  razeni: { key: string; smer: SmerRazeni } | null;
+  prepni: (key: string) => void;
+  vpravo?: boolean;
+  trida?: string;
+  title?: string;
+}) {
+  const aktivni = razeni?.key === sloupec;
+  return (
+    <th
+      aria-sort={aktivni ? (razeni!.smer === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={`${vpravo ? 'text-right' : 'text-left'} px-4 py-3.5 whitespace-nowrap ${trida}`}
+      title={title}
+    >
+      <button
+        type="button"
+        onClick={() => prepni(sloupec)}
+        title={`Seřadit podle: ${label}`}
+        className={`font-heading text-xs hover:text-brand-green transition-colors ${
+          aktivni ? 'text-brand-green' : 'text-white'
+        }`}
+      >
+        {label}
+        <Sipka smer={aktivni ? razeni!.smer : null} />
+      </button>
+    </th>
+  );
+}

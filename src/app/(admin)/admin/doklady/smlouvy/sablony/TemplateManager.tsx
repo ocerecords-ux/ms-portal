@@ -57,9 +57,6 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-3xl text-ink m-0">Šablony smluv</h1>
-          <p className="text-sm font-body text-muted m-0 mt-1">
-            Do textu se dají psát pole ve složených závorkách — při založení smlouvy se doplní z databáze.
-          </p>
         </div>
         <div className="flex items-end gap-2">
           <label className="flex flex-col gap-1.5">

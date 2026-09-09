@@ -4,6 +4,7 @@ import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts
 import { ensureContractTemplates } from '@/lib/contractsServer';
 import { listProjectOptions } from '@/lib/projectOptions';
 import { NewContractForm } from './NewContractForm';
+import { SmlouvyTabulka, type SmlouvaRadek } from './SmlouvyTabulka';
 
 // Smlouvy s elektronickym podpisem (zadani 8. 9. 2026: "chtel bych udelat
 // vlastni podepisovani smluv, jak to ma treba Signi. Ale bez kodu
@@ -56,6 +57,21 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
   const countFor = (statuses: readonly string[]) =>
     counts.filter((c) => statuses.includes(c.status)).reduce((sum, c) => sum + c._count, 0);
 
+  const radkyTabulky: SmlouvaRadek[] = contracts.map((c) => ({
+    id: c.id,
+    nazev: c.title,
+    cislo: c.number,
+    projekt: c.projectName || null,
+    podepisujici: c.signerName,
+    podepisujiciDoplnek: c.company?.name ?? c.signerEmail,
+    vytvoreno: formatDate(c.createdAt),
+    vytvorenoMs: c.createdAt ? new Date(c.createdAt).getTime() : null,
+    podepsalaMediaspace: c.signatures.some((s) => s.role === 'MEDIASPACE'),
+    podepsalaProtistrana: c.signatures.some((s) => s.role === 'PROTISTRANA'),
+    stav: CONTRACT_STATUS_LABELS[c.status] ?? c.status,
+    stavTrida: CONTRACT_STATUS_CLASSES[c.status] ?? 'bg-field text-muted',
+  }));
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
@@ -91,74 +107,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
         </div>
       </div>
 
-      <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse">
-            <thead>
-              <tr className="bg-bar text-white font-heading text-xs">
-                <th className="text-left px-4 py-3.5">Název</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Podepisující</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Vytvořeno</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Podpisy</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contracts.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm font-body">
-                    Tady zatím nic není.
-                  </td>
-                </tr>
-              )}
-              {contracts.map((c) => {
-                const nase = c.signatures.some((s) => s.role === 'MEDIASPACE');
-                const druha = c.signatures.some((s) => s.role === 'PROTISTRANA');
-                return (
-                  <tr key={c.id} className="border-t border-line hover:bg-surfaceSoft">
-                    <td className="px-4 py-3.5 text-sm font-heading font-semibold">
-                      <Link
-                        href={`/admin/doklady/smlouvy/${c.id}`}
-                        className="text-ink hover:text-brand-purple no-underline"
-                      >
-                        {c.title}
-                      </Link>
-                      <span className="block text-xs text-muted font-body">
-                        <span className="tabular-nums">{c.number}</span>
-                        {c.projectName ? ` · ${c.projectName}` : ''}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted whitespace-nowrap">
-                      {c.signerName}
-                      <span className="block text-xs font-body">{c.company?.name ?? c.signerEmail}</span>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                      {formatDate(c.createdAt)}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs font-heading whitespace-nowrap">
-                      <span className={nase ? 'text-status-done' : 'text-muted'}>
-                        {nase ? '✓' : '○'} Mediaspace
-                      </span>
-                      <span className={`block ${druha ? 'text-status-done' : 'text-muted'}`}>
-                        {druha ? '✓' : '○'} protistrana
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
-                          CONTRACT_STATUS_CLASSES[c.status] ?? 'bg-field text-muted'
-                        }`}
-                      >
-                        {CONTRACT_STATUS_LABELS[c.status] ?? c.status}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <SmlouvyTabulka radky={radkyTabulky} />
     </div>
   );
 }

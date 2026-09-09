@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { computeTotals, formatMoney } from '@/lib/doklady';
 import { NewInvoiceForm } from './NewInvoiceForm';
+import { FakturyTabulka, type FakturaRadek } from './FakturyTabulka';
 
 // Prehled vydanych faktur (zadani 6. 9. 2026). Zalozky podle stavu - nejdulezitejsi
 // je videt, co je jeste neuhrazene a co je uz po splatnosti.
@@ -20,6 +21,14 @@ const STATUS_LABELS: Record<string, string> = {
   SENT: 'Neuhrazená',
   PAID: 'Uhrazená',
   CANCELLED: 'Stornovaná',
+};
+
+// Poradi pri razeni podle stavu: co ceka na akci, jde napred.
+const STATUS_PORADI: Record<string, number> = {
+  SENT: 0,
+  DRAFT: 1,
+  PAID: 2,
+  CANCELLED: 3,
 };
 
 const STATUS_CLASSES: Record<string, string> = {
@@ -68,6 +77,32 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
     const totals = computeTotals(invoice.items);
     unpaidByCurrency.set(invoice.currency, (unpaidByCurrency.get(invoice.currency) ?? 0) + totals.incVat);
   }
+
+  // Radky pro tabulku. Formatuje se tady na serveru, do prohlizece jde hotovy
+  // text a k nemu cislo pro razeni - podle vypsaneho textu by razeni datumu
+  // ani castek nefungovalo.
+  const radkyTabulky: FakturaRadek[] = invoices.map((invoice) => {
+    const totals = computeTotals(invoice.items);
+    return {
+      id: invoice.id,
+      nazev: invoice.subject || 'Bez názvu',
+      cislo: invoice.number,
+      projekt: invoice.projectName || null,
+      odberatel: invoice.company.name,
+      vystaveno: formatDate(invoice.issueDate),
+      vystavenoMs: invoice.issueDate ? new Date(invoice.issueDate).getTime() : null,
+      splatnost: formatDate(invoice.dueDate),
+      splatnostMs: invoice.dueDate ? new Date(invoice.dueDate).getTime() : null,
+      poSplatnosti: Boolean(
+        invoice.status === 'SENT' && invoice.dueDate && new Date(invoice.dueDate) < today,
+      ),
+      stav: STATUS_LABELS[invoice.status] ?? invoice.status,
+      stavTrida: STATUS_CLASSES[invoice.status] ?? 'bg-field text-muted',
+      stavPoradi: STATUS_PORADI[invoice.status] ?? 9,
+      castka: formatMoney(totals.incVat, invoice.currency),
+      castkaMinor: totals.incVat,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -124,76 +159,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
             </div>
           )}
 
-          <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] border-collapse">
-                <thead>
-                  <tr className="bg-bar text-white font-heading text-xs">
-                    {/* Nazev je prvni a proklikavaci - u vsech dokladu stejne
-                        (zadani 8. 9. 2026). Cislo dokladu je pod nim. */}
-                    <th className="text-left px-4 py-3.5">Název</th>
-                    <th className="text-left px-4 py-3.5">Odběratel</th>
-                    <th className="text-left px-4 py-3.5 whitespace-nowrap">Vystaveno</th>
-                    <th className="text-left px-4 py-3.5 whitespace-nowrap">Splatnost</th>
-                    <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
-                    <th className="text-right px-4 py-3.5 whitespace-nowrap">K úhradě</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoices.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
-                        Tady zatím nic není.
-                      </td>
-                    </tr>
-                  )}
-                  {invoices.map((invoice) => {
-                    const totals = computeTotals(invoice.items);
-                    const overdue =
-                      invoice.status === 'SENT' && invoice.dueDate && new Date(invoice.dueDate) < today;
-                    return (
-                      <tr key={invoice.id} className="border-t border-line hover:bg-surfaceSoft">
-                        <td className="px-4 py-3.5 font-heading font-semibold text-sm">
-                          <Link
-                            href={`/admin/doklady/faktury/${invoice.id}`}
-                            className="text-ink hover:text-brand-purple no-underline"
-                          >
-                            {invoice.subject || 'Bez názvu'}
-                          </Link>
-                          <span className="block text-xs text-muted font-body">
-                            <span className="tabular-nums">{invoice.number}</span>
-                            {invoice.projectName ? ` · ${invoice.projectName}` : ''}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-sm font-heading text-muted">{invoice.company.name}</td>
-                        <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                          {formatDate(invoice.issueDate)}
-                        </td>
-                        <td
-                          className={`px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap ${
-                            overdue ? 'text-danger font-semibold' : 'text-muted'
-                          }`}
-                        >
-                          {formatDate(invoice.dueDate)}
-                          {overdue && <span className="block text-[11px] font-body">po splatnosti</span>}
-                        </td>
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${STATUS_CLASSES[invoice.status]}`}
-                          >
-                            {STATUS_LABELS[invoice.status]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-sm font-heading text-ink tabular-nums text-right whitespace-nowrap">
-                          {formatMoney(totals.incVat, invoice.currency)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <FakturyTabulka radky={radkyTabulky} />
         </>
       )}
     </div>

@@ -30,10 +30,6 @@ export default async function MyAccountPage() {
     <section className="flex flex-col gap-6 max-w-2xl">
       <div>
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Můj účet</h1>
-        <p className="text-muted text-sm mt-1 font-body">
-          Tady si spravujete svoje kontaktní údaje. Typ přístupu, kód účtu ani firmu měnit nelze — s tím se obraťte
-          na Mediaspace.
-        </p>
       </div>
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-5">

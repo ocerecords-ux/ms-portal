@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRazeni, ThRadit } from '@/app/(portal)/components/RaditelnaTabulka';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 
@@ -26,6 +27,18 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: '', priceExVat: '', priceIncVat: '' });
   const [newItem, setNewItem] = useState({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false });
+
+  // Razeni kliknutim na nazev sloupce (zadani 9. 9. 2026). Vychozi je podle
+  // nazvu - cenik se cte jako seznam, ne jako poradi.
+  const { razeni, prepni, serad } = useRazeni<Item>({ key: 'polozka' });
+  const serazene = serad(items, {
+    polozka: (i) => i.name,
+    bezDph: (i) => i.priceExVat,
+    sDph: (i) => i.priceIncVat,
+    // V nabidce napred pri vzestupnem razeni.
+    vNabidce: (i) => (i.active ? 0 : 1),
+    rodnyList: (i) => (i.rodnyList ? 0 : 1),
+  });
 
   async function send(url: string, method: string, body?: unknown) {
     setBusy(true);
@@ -91,13 +104,17 @@ export function PriceListEditor({ items }: { items: Item[] }) {
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
               <tr className="bg-bar text-white font-heading text-xs">
-                <th className="text-left px-4 py-3.5">Položka</th>
-                <th className="text-right px-4 py-3.5 whitespace-nowrap">Cena bez DPH</th>
-                <th className="text-right px-4 py-3.5 whitespace-nowrap">Cena s DPH</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">V nabídce</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap" title="U projektů s tímhle typem se při dokončení vyrobí Rodný list">
-                  Rodný list
-                </th>
+                <ThRadit label="Položka" sloupec="polozka" razeni={razeni} prepni={prepni} />
+                <ThRadit label="Cena bez DPH" sloupec="bezDph" razeni={razeni} prepni={prepni} vpravo />
+                <ThRadit label="Cena s DPH" sloupec="sDph" razeni={razeni} prepni={prepni} vpravo />
+                <ThRadit label="V nabídce" sloupec="vNabidce" razeni={razeni} prepni={prepni} />
+                <ThRadit
+                  label="Rodný list"
+                  sloupec="rodnyList"
+                  razeni={razeni}
+                  prepni={prepni}
+                  title="U projektů s tímhle typem se při dokončení vyrobí Rodný list"
+                />
                 <th></th>
               </tr>
             </thead>
@@ -109,7 +126,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                   </td>
                 </tr>
               )}
-              {items.map((item) =>
+              {serazene.map((item) =>
                 editingId === item.id ? (
                   <tr key={item.id} className="border-t border-line bg-surfaceSoft">
                     <td className="px-4 py-3">

@@ -8,9 +8,6 @@ export default function DokladyLayout({ children }: { children: React.ReactNode 
     <section className="flex flex-col gap-6">
       <div>
         <h1 className="font-display text-3xl text-ink m-0">Doklady</h1>
-        <p className="text-muted text-sm mt-1 font-body">
-          Nabídky, faktury a výdaje. Každý doklad se vystavuje za konkrétní firmu z „Moje firmy" a nese svoji měnu.
-        </p>
       </div>
 
       <DokladyTabs />

@@ -92,10 +92,6 @@ export default async function UsersAdminPage({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-3xl text-ink m-0">Uživatelé</h1>
-          <p className="text-muted text-sm mt-1 font-body">
-            Všechny přihlašovací účty napříč firmami i interní účty Mediaspace. Kliknutím na jméno účet
-            otevřete — pozvánku do portálu odešlete odtamtud.
-          </p>
           {filteredCompany && (
             <p className="text-sm font-heading mt-2">
               Filtr: <strong>{filteredCompany.name}</strong>{' '}
