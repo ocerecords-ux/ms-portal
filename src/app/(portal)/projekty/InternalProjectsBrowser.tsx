@@ -70,6 +70,40 @@ export function InternalProjectsBrowser({
     if (!editing) setDraft(columns);
   }, [columns, editing]);
 
+  // Tlacitka rezimu uprav. Vykresluji se v liste NAD tabulkou (viz vyse) -
+  // v hlavicce tabulky utikala mimo obraz, jakmile se sloupce roztahly.
+  const editAkce = (
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <button
+        type="button"
+        onClick={saveLabels}
+        disabled={saving}
+        className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-4 py-1.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+      >
+        {saving ? 'Ukládám…' : 'Hotovo'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setDraft(columns);
+          setEditing(false);
+          setLabelError(null);
+        }}
+        className="text-xs font-heading text-brand-purpleDark hover:underline"
+      >
+        Zrušit
+      </button>
+      <button
+        type="button"
+        onClick={resetLabels}
+        disabled={saving}
+        className="text-xs font-heading text-brand-purpleDark hover:underline disabled:opacity-60"
+      >
+        Obnovit výchozí
+      </button>
+    </span>
+  );
+
   const zobrazene = visibleColumns(editing ? draft : columns);
   const skryte = (editing ? draft : columns).filter((c) => c.hidden);
 
@@ -236,10 +270,19 @@ export function InternalProjectsBrowser({
 
       {editing && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-body text-muted m-0">
-            Název přepište přímo v hlavičce, pořadí změníte přetažením, křížkem sloupec odeberete.
-            Změna platí pro všechny.
-          </p>
+          {/* Hotovo / Zrušit patří SEM, ne do hlavičky tabulky. V režimu úprav
+              se sloupce roztáhnou, tabulka přeteče do stran a tlačítka
+              v posledním sloupci skončila mimo obraz - z úprav pak nebylo jak
+              vyjet ani je uložit (zpráva uživatele 9. 9. 2026: "když to dám
+              editovat, tak se to pak nedá uložit ani z toho vyjet"). Lišta nad
+              tabulkou je vidět vždycky, ať je tabulka jakkoliv široká. */}
+          <div className="flex items-center gap-3 flex-wrap rounded-card border border-brand-purple bg-tint px-3 py-2">
+            <p className="text-xs font-body text-brand-purpleDark m-0 flex-1 min-w-[220px]">
+              Název přepište přímo v hlavičce, pořadí změníte přetažením, křížkem sloupec odeberete.
+              Změna platí pro všechny.
+            </p>
+            {editAkce}
+          </div>
           {skryte.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-body text-muted">Odebrané sloupce:</span>
@@ -274,37 +317,6 @@ export function InternalProjectsBrowser({
           setEditing(true);
           setLabelError(null);
         }}
-        editActions={
-          <span className="inline-flex items-center gap-2 whitespace-nowrap">
-            <button
-              type="button"
-              onClick={saveLabels}
-              disabled={saving}
-              className="bg-white text-brand-purpleDeep font-heading font-semibold text-xs rounded-lg px-3 py-1.5 hover:bg-white/90 transition-colors disabled:opacity-60"
-            >
-              {saving ? 'Ukládám…' : 'Hotovo'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDraft(columns);
-                setEditing(false);
-                setLabelError(null);
-              }}
-              className="text-white/80 hover:text-white text-xs font-heading"
-            >
-              Zrušit
-            </button>
-            <button
-              type="button"
-              onClick={resetLabels}
-              disabled={saving}
-              className="text-white/80 hover:text-white text-xs font-heading disabled:opacity-60"
-            >
-              Obnovit výchozí
-            </button>
-          </span>
-        }
         onLabelChange={prejmenuj}
         onMoveColumn={presun}
         onHideColumn={skryj}

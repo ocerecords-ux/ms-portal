@@ -418,25 +418,46 @@ function SortableHeader({
           if (from !== null && from !== index) onMove?.(from, index);
         }}
       >
-        <span className="inline-flex items-center gap-1.5">
-          {/* Pořadí se mění TAHEM ZA ÚCHYT, ne za křížek - ten jen odebírá
-              (zpráva uživatele 9. 9. 2026: "mění se pořadí chycením za
-              křížek, je to matoucí"). */}
+        {/* Cely obdelnicek se chyti a presune (zprava uzivatele 9. 9. 2026:
+            "normalne bych ten obdelnicek chytil a presunul"). Uchyt uz neni
+            porad na ocich - zelena ikonka se ukaze az po najeti mysi, takze
+            v klidu je hlavicka cista.
+
+            Krizek se z tazeni vyjima (draggable={false} a zastaveni
+            mousedown), jinak by se pri chyceni za nej zase presouvalo -
+            presne to uzivateli vadilo drive. */}
+        <span
+          draggable
+          onDragStart={() => {
+            taheny = index;
+          }}
+          onDragEnd={() => {
+            taheny = null;
+          }}
+          title="Přetažením změníte pořadí"
+          className="group inline-flex items-center gap-1.5 rounded-lg border border-dashed border-white/60 bg-white/10 px-1.5 py-1 cursor-grab active:cursor-grabbing hover:bg-white/20 hover:border-white transition-colors"
+        >
           <span
-            draggable
-            onDragStart={() => {
-              taheny = index;
-            }}
-            onDragEnd={() => {
-              taheny = null;
-            }}
-            title="Přetažením změníte pořadí"
-            className="cursor-grab active:cursor-grabbing text-white/70 hover:text-white"
+            aria-hidden="true"
+            className="text-brand-green opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
           >
             <Uchyt />
           </span>
+          <input
+            value={sloupec.label}
+            onChange={(e) => onLabelChange?.(sloupec.key, e.target.value)}
+            onMouseDown={(e) => e.stopPropagation()}
+            draggable={false}
+            aria-label={`Název sloupce ${sloupec.label}`}
+            className={`w-full min-w-[100px] bg-transparent px-1 py-0.5 font-heading text-xs text-white placeholder-white/50 outline-none ${
+              vpravo ? 'text-right' : ''
+            }`}
+          />
           <button
             type="button"
+            draggable={false}
+            onMouseDown={(e) => e.stopPropagation()}
+            onDragStart={(e) => e.preventDefault()}
             onClick={() => onHide?.(sloupec.key)}
             title={`Odebrat ${sloupec.label}`}
             aria-label={`Odebrat ${sloupec.label}`}
@@ -444,14 +465,6 @@ function SortableHeader({
           >
             ×
           </button>
-          <input
-            value={sloupec.label}
-            onChange={(e) => onLabelChange?.(sloupec.key, e.target.value)}
-            aria-label={`Název sloupce ${sloupec.label}`}
-            className={`w-full min-w-[100px] rounded-lg border border-dashed border-white/60 bg-white/10 px-2 py-1 font-heading text-xs text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 ${
-              vpravo ? 'text-right' : ''
-            }`}
-          />
         </span>
       </th>
     );
@@ -513,7 +526,6 @@ export function InternalProjectsTable({
   editing,
   canEditColumns,
   onStartEditing,
-  editActions,
   onLabelChange,
   onMoveColumn,
   onHideColumn,
@@ -528,8 +540,6 @@ export function InternalProjectsTable({
   /** Upravovat sloupce smí jen Žůžo-labůžo. */
   canEditColumns?: boolean;
   onStartEditing?: () => void;
-  /** Tlačítka Hotovo / Zrušit / Obnovit výchozí - vykreslí se ve fialové liště. */
-  editActions?: React.ReactNode;
   onLabelChange?: (key: string, label: string) => void;
   onMoveColumn?: (from: number, to: number) => void;
   onHideColumn?: (key: string) => void;
@@ -570,9 +580,7 @@ export function InternalProjectsTable({
                   toho zvetsila v layoutu tak, aby se tabulka vesla cela. */}
               {canEditColumns && (
                 <th className="px-2 py-2.5 text-right whitespace-nowrap w-px">
-                  {editing ? (
-                    editActions
-                  ) : (
+                  {editing ? null : (
                     <button
                       type="button"
                       onClick={onStartEditing}
