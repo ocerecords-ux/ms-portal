@@ -405,6 +405,9 @@ function SortableHeader({
   onHide?: (key: string) => void;
 }) {
   const vpravo = ZAROVNANI_VPRAVO.has(sloupec.key);
+  // Sloupec, podle ktereho je tabulka serazena, je zeleny - stejne jako
+  // ve zbytku portalu (zadani 9. 9. 2026). Fialova lista tehle tabulky
+  // zustava, ta se libi.
   const active = sort.key === (sloupec.key as ProjectSortKey);
 
   if (editing) {
@@ -476,8 +479,8 @@ function SortableHeader({
         type="button"
         onClick={() => onSort(sloupec.key as ProjectSortKey)}
         title={`Seřadit podle: ${sloupec.label}`}
-        className={`inline-flex items-center gap-1.5 font-heading text-xs transition-opacity hover:opacity-100 ${
-          active ? 'opacity-100' : 'opacity-80'
+        className={`inline-flex items-center gap-1.5 font-heading text-xs transition-colors hover:text-brand-green ${
+          active ? 'text-brand-green' : 'text-white/85'
         } ${vpravo ? 'flex-row-reverse' : ''}`}
       >
         {sloupec.label}
