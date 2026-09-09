@@ -196,10 +196,11 @@ export function Topbar({
             <Link
               key={`${item.href}-${index}`}
               href={item.href}
-              // "/projekty" tahá při každém zobrazení živá data z Caflou, takže
-              // výchozí prefetch by ho natahoval při každém vykreslení lišty -
-              // zbytečné riziko rate-limitu na Caflou API.
-              prefetch={item.href === '/projekty' ? false : undefined}
+              // Prefetch je od 9. 9. 2026 zapnutý (dřív byl u "/projekty"
+              // vypnutý, protože by při každém vykreslení lišty tahal živá data
+              // z Caflou). Od chvíle, kdy sekce mají loading.tsx, přednačte
+              // Next.js jen tu kostru a k datům se nesáhne - proklik je díky
+              // tomu okamžitý a Caflou to nezatěžuje.
               className={className}
             >
               {item.label}

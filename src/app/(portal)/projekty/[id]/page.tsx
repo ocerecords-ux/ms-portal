@@ -38,7 +38,31 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const caflouProjectId = params.id;
   const canEdit = canEditProjectMeta(session.user.role);
 
-  const [caflouDirect, meta, managers, projectTypeOptions, budgetSettings, timesheets] = await Promise.all([
+  // Kdo smi videt doklady - musi se vedet driv, nez se pro ne pojede do databaze.
+  const showDocuments = canViewProjectDocuments(session.user.role);
+
+  // POZOR NA PORADI (zprava 9. 9. 2026: "web se mi zdá zpomalený"): drive se
+  // tady cekalo postupne na tri skupiny dotazu za sebou, a teprve pak na dalsi.
+  // Kazda takova bariera znamena dalsi kolecko tam a zpet do Supabase - a
+  // protoze si kazda instance funkce drzi jen JEDNO spojeni (viz lib/db.ts),
+  // scitalo se to. Ted jde do databaze vsechno naraz a soubezne s tim bezi
+  // dotaz do Caflou, takze se ceka jen na to nejpomalejsi z toho.
+  const [
+    caflouDirect,
+    meta,
+    managers,
+    projectTypeOptions,
+    budgetSettings,
+    timesheets,
+    offers,
+    invoices,
+    expenses,
+    contracts,
+    recordingRequests,
+    herci,
+    studia,
+    calendarSettings,
+  ] = await Promise.all([
     getCaflouProject(caflouProjectId),
     prisma.projectMeta.findUnique({
       where: { caflouProjectId },
@@ -56,12 +80,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       where: { caflouProjectId },
       select: { startMinutes: true, endMinutes: true, hourlyRateSnapshot: true },
     }),
-  ]);
-
-  // Doklady navazane na projekt (zadani 8. 9. 2026). Vazba je pres ID projektu
-  // v Caflou, stejne jako u vykazu.
-  const showDocuments = canViewProjectDocuments(session.user.role);
-  const [offers, invoices, expenses, contracts] = await Promise.all([
+    // Doklady navazane na projekt (zadani 8. 9. 2026). Vazba je pres ID
+    // projektu v Caflou, stejne jako u vykazu.
     prisma.offer.findMany({
       where: { caflouProjectId },
       orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
@@ -80,6 +100,20 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       where: { caflouProjectId },
       orderBy: [{ createdAt: 'desc' }],
     }),
+    // Natacecí frekvence (zadani 8. 9. 2026) - nabidky terminu k tomuhle
+    // projektu, seznam hercu a studii pro zalozeni nove.
+    prisma.recordingRequest.findMany({
+      where: { caflouProjectId },
+      orderBy: { createdAt: 'desc' },
+      include: { studio: { select: { name: true } }, slots: { select: { state: true } } },
+    }),
+    prisma.user.findMany({
+      where: { role: 'HEREC', active: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, email: true },
+    }),
+    loadStudios(),
+    loadCalendarSettings(),
   ]);
 
   // Nektere ucty Caflou nevraci detail jednoho projektu - pak projekt
@@ -132,23 +166,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const hoursLogged = timesheets.reduce((sum, e) => sum + toHours(durationMinutes(e.startMinutes, e.endMinutes)), 0);
   const revenue =
     budget && company?.ratePerPage != null ? budget.pageCount * company.ratePerPage : null;
-
-  // Natacecí frekvence (zadani 8. 9. 2026) - nabidky terminu k tomuhle
-  // projektu, seznam hercu a studii pro zalozeni nove.
-  const [recordingRequests, herci, studia, calendarSettings] = await Promise.all([
-    prisma.recordingRequest.findMany({
-      where: { caflouProjectId },
-      orderBy: { createdAt: 'desc' },
-      include: { studio: { select: { name: true } }, slots: { select: { state: true } } },
-    }),
-    prisma.user.findMany({
-      where: { role: 'HEREC', active: true },
-      orderBy: { name: 'asc' },
-      select: { id: true, name: true, email: true },
-    }),
-    loadStudios(),
-    loadCalendarSettings(),
-  ]);
 
   const dokladDatum = (date: Date | null) => (date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '');
 

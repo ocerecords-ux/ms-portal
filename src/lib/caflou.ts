@@ -23,6 +23,7 @@
 import type { ProjectPriority } from '@prisma/client';
 
 import { isProjectFinished } from '@/lib/projectTypes';
+import { cached } from '@/lib/cache';
 
 const CAFLOU_BASE = 'https://app.caflou.com/api/v1';
 
@@ -93,6 +94,15 @@ export async function caflouFetch(
  * volajici strana vraci k Company.name jako zalozni hodnote.
  */
 export async function getCaflouCompanyName(caflouCompanyId: string): Promise<string | null> {
+  // Nazev firmy se meni jednou za rok, ale drive se pro nej chodilo do Caflou
+  // pri KAZDEM otevreni sekce Nahravky - jen aby se vykreslil nadpis slozky.
+  // Odezva Caflou tak byla primo na kriticke ceste kliknuti v liste.
+  return cached(`caflou:company-name:${caflouCompanyId}`, 15 * 60 * 1000, async () => {
+    return fetchCaflouCompanyName(caflouCompanyId);
+  });
+}
+
+async function fetchCaflouCompanyName(caflouCompanyId: string): Promise<string | null> {
   try {
     const result = await caflouFetch(`/companies/${encodeURIComponent(caflouCompanyId)}`);
     if (!result.ok || !result.body || typeof result.body !== 'object') return null;
@@ -109,6 +119,21 @@ export async function listCaflouProjectsForCompany(caflouCompanyId: string): Pro
   params.set('per', '200');
   params.append('filter[company_ids][]', caflouCompanyId);
   return caflouFetch(`/projects?${params.toString()}`);
+}
+
+/**
+ * Totez s kratkou pameti - pro klientsky prehled projektu.
+ *
+ * Puvodne se tenhle dotaz posilal do Caflou pri kazdem zobrazeni stranky
+ * /projekty, takze klient cekal na Caflou pokazde, kdyz na sekci klikl.
+ * Interni prehled uz svou cache mel (listAllCaflouProjectsForInternal nize),
+ * klientsky ne. Diagnostika v adminu schvalne pouziva necachovanou variantu
+ * vyse - tam chceme videt, co Caflou vraci prave ted.
+ */
+export async function listCaflouProjectsForCompanyCached(caflouCompanyId: string): Promise<CaflouResult> {
+  return cached(`caflou:company-projects:${caflouCompanyId}`, 2 * 60 * 1000, () =>
+    listCaflouProjectsForCompany(caflouCompanyId),
+  );
 }
 
 /** Syrovy seznam firem/kontaktu v Caflou (volitelne vyfiltrovany podle nazvu) - pomocny nastroj, aby admin nemusel ID hledat rucne primo v Caflou. */

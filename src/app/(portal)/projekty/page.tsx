@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import {
-  listCaflouProjectsForCompany,
+  listCaflouProjectsForCompanyCached,
   listAllCaflouProjectsForInternal,
   mapCaflouProjects,
   type DisplayProject,
@@ -45,7 +45,7 @@ export default async function ProjektyPage() {
 
   if (company?.caflouCompanyId) {
     try {
-      const result = await listCaflouProjectsForCompany(company.caflouCompanyId);
+      const result = await listCaflouProjectsForCompanyCached(company.caflouCompanyId);
       if (result.ok) {
         const all = mapCaflouProjects(result.body);
         active = all
