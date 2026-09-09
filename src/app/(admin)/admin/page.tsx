@@ -52,7 +52,7 @@ export default async function AdminHomePage({
         {/* Surovy seznam firem z Caflou k roztrideni (zadani 8. 9. 2026). */}
         <Link
           href="/admin/caflou-firmy"
-          className="font-heading font-semibold text-sm rounded-lg border border-line bg-white px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
+          className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
         >
           Firmy z Caflou
         </Link>
@@ -67,7 +67,7 @@ export default async function AdminHomePage({
               key={tab.key}
               href={`/admin?tab=${tab.key}`}
               className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
-                active ? 'bg-white border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
+                active ? 'bg-surface border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
               }`}
             >
               {tab.label} <span className="tabular-nums">({countFor(tab.type)})</span>
@@ -80,7 +80,7 @@ export default async function AdminHomePage({
         </div>
       </div>
 
-      <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+      <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           {activeTab.type === 'KLIENT' ? (
             <table className="w-full min-w-[720px] border-collapse">
@@ -102,7 +102,7 @@ export default async function AdminHomePage({
                   </tr>
                 )}
                 {companies.map((c) => (
-                  <tr key={c.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                  <tr key={c.id} className="border-t border-line hover:bg-surfaceSoft">
                     <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">{c.code || '—'}</td>
                     <td className="px-4 py-3.5 font-heading font-semibold text-sm whitespace-nowrap">
                       <Link href={`/admin/companies/${c.id}`} className="text-ink hover:text-brand-purple no-underline">
@@ -137,7 +137,7 @@ export default async function AdminHomePage({
                   </tr>
                 )}
                 {companies.map((c) => (
-                  <tr key={c.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                  <tr key={c.id} className="border-t border-line hover:bg-surfaceSoft">
                     <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">{c.code || '—'}</td>
                     <td className="px-4 py-3.5 font-heading font-semibold text-sm whitespace-nowrap">
                       <Link href={`/admin/companies/${c.id}`} className="text-ink hover:text-brand-purple no-underline">

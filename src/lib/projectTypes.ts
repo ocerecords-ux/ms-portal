@@ -15,8 +15,8 @@ export const PRIORITY_LABELS: Record<ProjectPriority, string> = {
 
 /** Barvy stitku priority v prehledu i na detailu projektu. */
 export const PRIORITY_CLASSES: Record<ProjectPriority, string> = {
-  LOW: 'bg-[#EEF2F7] text-[#5B6472]',
-  MEDIUM: 'bg-[#FDF1DE] text-status-progress',
+  LOW: 'bg-field text-muted',
+  MEDIUM: 'bg-warnTint text-status-progress',
   HIGH: 'bg-[#FDE4E4] text-[#C22B2B]',
 };
 

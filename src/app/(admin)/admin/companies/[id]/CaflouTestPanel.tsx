@@ -74,7 +74,7 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
   }
 
   return (
-    <div className="bg-white border border-line rounded-card p-6 flex flex-col gap-3">
+    <div className="bg-surface border border-line rounded-card p-6 flex flex-col gap-3">
       <div>
         <h3 className="font-heading font-semibold text-sm text-ink m-0">Test napojení na Caflou</h3>
         <p className="text-muted text-xs font-body mt-1">
@@ -95,7 +95,7 @@ export function CaflouTestPanel({ companyId }: { companyId: string }) {
           type="button"
           onClick={handleListCompanies}
           disabled={loading}
-          className="bg-white border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
+          className="bg-surface border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
         >
           {loading ? 'Hledám…' : 'Najít'}
         </button>

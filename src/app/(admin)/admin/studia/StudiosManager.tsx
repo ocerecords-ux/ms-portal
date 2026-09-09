@@ -99,18 +99,18 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
         </p>
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
-      {info && <p className="text-sm text-ink bg-[#E3F9EC] border border-line rounded-lg px-3 py-2 m-0">{info}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {info && <p className="text-sm text-ink bg-okTint border border-line rounded-lg px-3 py-2 m-0">{info}</p>}
 
       <div className="flex flex-col sm:flex-row gap-5 items-start">
-        <div className="w-full sm:w-[240px] shrink-0 bg-white rounded-card border border-line shadow-sm p-2 flex flex-col gap-0.5">
+        <div className="w-full sm:w-[240px] shrink-0 bg-surface rounded-card border border-line shadow-sm p-2 flex flex-col gap-0.5">
           {studios.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => setOpenId(s.id)}
               className={`text-left rounded-lg px-3 py-2 text-sm font-heading flex items-center gap-2 transition-colors ${
-                s.id === openId ? 'bg-[#F1ECFF] text-ink' : 'text-muted hover:text-ink hover:bg-field'
+                s.id === openId ? 'bg-tint text-ink' : 'text-muted hover:text-ink hover:bg-field'
               } ${s.active ? '' : 'line-through'}`}
             >
               <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
@@ -120,7 +120,7 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
         </div>
 
         {otevrene && (
-          <div className="flex-1 min-w-0 bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-5">
+          <div className="flex-1 min-w-0 bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <label className="flex flex-col gap-1.5 sm:col-span-2">
                 <span className="text-sm font-body text-ink">Název</span>
@@ -222,7 +222,7 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
       </div>
 
       {/* Nove studio */}
-      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex items-end gap-3 flex-wrap">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex items-end gap-3 flex-wrap">
         <label className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
           <span className="text-sm font-body text-ink">Nové studio</span>
           <input
@@ -262,7 +262,7 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
       </div>
 
       {/* Blokace */}
-      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
           Blokace — svátky, dovolené, údržba
         </h2>
@@ -354,7 +354,7 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
                 type="button"
                 disabled={busy}
                 onClick={() => posli(`/api/admin/studia/blokace?id=${b.id}`, 'DELETE')}
-                className="text-red-600 text-xs font-heading font-semibold disabled:opacity-60"
+                className="text-danger text-xs font-heading font-semibold disabled:opacity-60"
               >
                 Smazat
               </button>

@@ -34,7 +34,7 @@ export function FinishedProjectsSection({
             setExpanded((v) => !v);
             setVisibleCount(PAGE_SIZE);
           }}
-          className="bg-white border border-line text-ink font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-field transition-colors"
+          className="bg-surface border border-line text-ink font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-field transition-colors"
         >
           {expanded ? 'Skrýt dokončené projekty' : `Zobrazit dokončené projekty (${projects.length})`}
         </button>

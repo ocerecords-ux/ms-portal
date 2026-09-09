@@ -197,7 +197,7 @@ export function InternalProjectsBrowser({
                 type="button"
                 onClick={() => switchTab(t.key)}
                 className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
-                  isActive ? 'bg-white border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
+                  isActive ? 'bg-surface border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
                 }`}
               >
                 {t.label} <span className="tabular-nums">({t.count})</span>
@@ -216,7 +216,7 @@ export function InternalProjectsBrowser({
                 setPage(0);
               }}
               placeholder="Hledat projekt, firmu, manažera…"
-              className="w-72 max-w-full rounded-lg border border-line bg-white pl-9 pr-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+              className="w-72 max-w-full rounded-lg border border-line bg-surface pl-9 pr-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
             />
             <svg
               viewBox="0 0 24 24"
@@ -249,7 +249,7 @@ export function InternalProjectsBrowser({
                   type="button"
                   onClick={() => vrat(c.key)}
                   title={`Vrátit ${c.label}`}
-                  className="inline-flex items-center gap-1 rounded-pill border border-brand-purple bg-white px-3 py-1 text-xs font-heading font-semibold text-brand-purple hover:bg-[#F1ECFF] transition-colors"
+                  className="inline-flex items-center gap-1 rounded-pill border border-brand-purple bg-surface px-3 py-1 text-xs font-heading font-semibold text-brand-purple hover:bg-tint transition-colors"
                 >
                   + {c.label}
                 </button>
@@ -259,7 +259,7 @@ export function InternalProjectsBrowser({
         </div>
       )}
       {labelError && (
-        <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{labelError}</p>
+        <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{labelError}</p>
       )}
 
       <InternalProjectsTable
@@ -329,7 +329,7 @@ export function InternalProjectsBrowser({
                 type="button"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={currentPage === 0}
-                className="bg-white border border-line text-ink font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-40"
+                className="bg-surface border border-line text-ink font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-40"
               >
                 ← Předchozí
               </button>
@@ -340,7 +340,7 @@ export function InternalProjectsBrowser({
                 type="button"
                 onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
                 disabled={currentPage >= pageCount - 1}
-                className="bg-white border border-line text-ink font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-40"
+                className="bg-surface border border-line text-ink font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-40"
               >
                 Další →
               </button>

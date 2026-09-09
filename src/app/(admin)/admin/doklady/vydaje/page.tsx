@@ -98,7 +98,7 @@ export default async function ExpensesPage({
 
       {/* Soucty za aktualni vyber */}
       {totals.size > 0 && (
-        <div className="bg-white rounded-card border border-line shadow-sm px-5 py-4 flex items-center gap-8 flex-wrap">
+        <div className="bg-surface rounded-card border border-line shadow-sm px-5 py-4 flex items-center gap-8 flex-wrap">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">
             {activeTab.label} celkem ({expenses.length})
           </span>
@@ -122,7 +122,7 @@ export default async function ExpensesPage({
         <Link
           href={`/admin/doklady/vydaje?tab=${activeTab.key}`}
           className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill no-underline transition-colors ${
-            !categoryFilter ? 'bg-ink text-white' : 'bg-white border border-line text-muted hover:text-ink'
+            !categoryFilter ? 'bg-ink text-white' : 'bg-surface border border-line text-muted hover:text-ink'
           }`}
         >
           Všechny kategorie
@@ -134,7 +134,7 @@ export default async function ExpensesPage({
               key={c.id}
               href={`/admin/doklady/vydaje?tab=${activeTab.key}&kategorie=${c.id}`}
               className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill no-underline transition-colors ${
-                categoryFilter === c.id ? 'bg-ink text-white' : 'bg-white border border-line text-muted hover:text-ink'
+                categoryFilter === c.id ? 'bg-ink text-white' : 'bg-surface border border-line text-muted hover:text-ink'
               }`}
               >
                 {c.name} <span className="tabular-nums opacity-70">({c._count.expenses})</span>
@@ -152,7 +152,7 @@ export default async function ExpensesPage({
         />
       </div>
 
-      <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+      <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse">
             <thead>
@@ -178,7 +178,7 @@ export default async function ExpensesPage({
               {expenses.map((e) => {
                 const overdue = !e.paid && e.dueDate && new Date(e.dueDate) < today;
                 return (
-                  <tr key={e.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                  <tr key={e.id} className="border-t border-line hover:bg-surfaceSoft">
                     <td className="px-4 py-3.5 text-sm font-heading font-semibold">
                       <Link
                         href={`/admin/doklady/vydaje/${e.id}`}
@@ -211,7 +211,7 @@ export default async function ExpensesPage({
                     </td>
                     <td
                       className={`px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap ${
-                        overdue ? 'text-red-600 font-semibold' : 'text-muted'
+                        overdue ? 'text-danger font-semibold' : 'text-muted'
                       }`}
                     >
                       {formatDate(e.dueDate)}
@@ -229,7 +229,7 @@ export default async function ExpensesPage({
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
-                          e.paid ? 'bg-[#E3F9EC] text-status-done' : 'bg-[#F1ECFF] text-brand-purpleDark'
+                          e.paid ? 'bg-okTint text-status-done' : 'bg-tint text-brand-purpleDark'
                         }`}
                       >
                         {e.paid ? 'Uhrazeno' : 'Neuhrazeno'}

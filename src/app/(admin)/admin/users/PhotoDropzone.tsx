@@ -125,7 +125,7 @@ export function PhotoDropzone({
             if (file) onChange(null);
             else onRemoveExisting?.();
           }}
-          className="text-xs text-red-600 font-heading shrink-0"
+          className="text-xs text-danger font-heading shrink-0"
         >
           Odebrat
         </button>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Jost, Poppins } from 'next/font/google';
 import './globals.css';
+import { SKRIPT_MOTIVU } from '@/lib/motiv';
 
 // Nahrada za puvodni Wix fonty (Helvetica Neue / Futura / Avenir),
 // viz README > Design system pro zduvodneni vyberu.
@@ -27,6 +28,12 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="cs" className={`${inter.variable} ${jost.variable} ${poppins.variable}`}>
+      <head>
+        {/* Svetly / tmavy rezim se musi nastavit JESTE PRED vykreslenim, jinak
+            by pri kazdem nacteni blikla bila stranka. Proto obycejny skript
+            v hlavicce, ne React - viz lib/motiv.ts. */}
+        <script dangerouslySetInnerHTML={{ __html: SKRIPT_MOTIVU }} />
+      </head>
       <body className="font-body">{children}</body>
     </html>
   );

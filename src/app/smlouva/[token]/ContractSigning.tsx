@@ -59,7 +59,7 @@ export function ContractSigning({
 
   if (status === 'CANCELLED') {
     return (
-      <div className="bg-red-50 border border-line rounded-card p-6 text-center">
+      <div className="bg-dangerTint border border-line rounded-card p-6 text-center">
         <p className="font-display text-2xl text-ink m-0">Smlouva byla zrušena</p>
         <p className="text-sm font-body text-muted m-0 mt-2">
           {issuerName} tuhle smlouvu stáhl. Ozvěte se prosím produkci.
@@ -70,7 +70,7 @@ export function ContractSigning({
 
   if (status === 'REJECTED') {
     return (
-      <div className="bg-red-50 border border-line rounded-card p-6 text-center">
+      <div className="bg-dangerTint border border-line rounded-card p-6 text-center">
         <p className="font-display text-2xl text-ink m-0">Podpis odmítnut</p>
         <p className="text-sm font-body text-muted m-0 mt-2">
           Odmítnuto {formatSignedAt(rejectedAt)}. {issuerName} o tom ví a ozve se vám.
@@ -81,7 +81,7 @@ export function ContractSigning({
 
   if (alreadySigned) {
     return (
-      <div className="bg-[#E3F9EC] border border-line rounded-card p-6 text-center">
+      <div className="bg-okTint border border-line rounded-card p-6 text-center">
         <p className="font-display text-2xl text-ink m-0">
           {status === 'SIGNED' ? 'Smlouva je podepsaná' : 'Váš podpis je uložený'}
         </p>
@@ -96,7 +96,7 @@ export function ContractSigning({
 
   if (odmitam) {
     return (
-      <div className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
           Odmítnutí podpisu
         </h2>
@@ -109,7 +109,7 @@ export function ContractSigning({
             className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full"
           />
         </label>
-        {error && <p className="text-sm text-red-600 m-0">{error}</p>}
+        {error && <p className="text-sm text-danger m-0">{error}</p>}
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -128,7 +128,7 @@ export function ContractSigning({
   }
 
   return (
-    <div className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
+    <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Váš podpis</h2>
 
       <label className="flex flex-col gap-1.5 max-w-sm">
@@ -155,7 +155,7 @@ export function ContractSigning({
         </span>
       </label>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       <div className="flex items-center gap-4 flex-wrap">
         <button

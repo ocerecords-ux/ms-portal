@@ -92,7 +92,7 @@ export function NewContractForm({
   return (
     <form
       onSubmit={submit}
-      className="bg-white border border-line rounded-card shadow-sm p-5 flex flex-col gap-4 w-full"
+      className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4 w-full"
     >
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nová smlouva</h2>
 
@@ -181,7 +181,7 @@ export function NewContractForm({
         />
       </label>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       <div className="flex items-center gap-3">
         <AddButton type="submit" disabled={busy}>

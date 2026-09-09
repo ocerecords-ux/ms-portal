@@ -74,7 +74,7 @@ export function CategoryManager({
   }
 
   return (
-    <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
+    <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Kategorie výdajů</h2>
         <button type="button" onClick={() => setOpen(false)} className="text-muted hover:text-ink text-sm font-heading">
@@ -102,7 +102,7 @@ export function CategoryManager({
                 type="button"
                 onClick={() => remove(c)}
                 disabled={busy}
-                className="text-red-600 text-sm font-heading disabled:opacity-60"
+                className="text-danger text-sm font-heading disabled:opacity-60"
               >
                 Smazat
               </button>
@@ -111,8 +111,8 @@ export function CategoryManager({
         ))}
       </ul>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
-      {note && <p className="text-sm text-ink bg-[#F1ECFF] border border-line rounded-lg px-3 py-2 m-0">{note}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {note && <p className="text-sm text-ink bg-tint border border-line rounded-lg px-3 py-2 m-0">{note}</p>}
 
       <form onSubmit={add} className="flex items-end gap-3 flex-wrap">
         <label className="flex flex-col gap-1.5 flex-1 min-w-[220px]">

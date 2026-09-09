@@ -33,7 +33,7 @@ export function ContractPaper({
   const protistrana = signatures.find((s) => s.role === 'PROTISTRANA') ?? null;
 
   return (
-    <article className="bg-white rounded-card border border-line shadow-sm overflow-hidden">
+    <article className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
       <header className="px-6 sm:px-10 pt-8 pb-4 border-b border-line">
         <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">Smlouva {number}</p>
         <h1 className="font-display text-2xl sm:text-3xl text-ink m-0 mt-1">{title}</h1>
@@ -83,7 +83,7 @@ function SignatureBox({
           {signature.ip && <span className="block">IP {signature.ip}</span>}
           <span className="block break-all">Otisk dokumentu {signature.documentHash.slice(0, 16).toUpperCase()}</span>
           {!sedi && (
-            <span className="block mt-1 text-red-600 font-heading font-semibold">
+            <span className="block mt-1 text-danger font-heading font-semibold">
               Pozor: text smlouvy se od tohoto podpisu změnil.
             </span>
           )}

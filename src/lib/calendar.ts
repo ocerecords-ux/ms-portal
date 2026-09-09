@@ -40,14 +40,14 @@ export const RECORDING_STATUS_LABELS: Record<string, string> = {
 export const RECORDING_STATUS_CLASSES: Record<string, string> = {
   DRAFT: 'bg-field text-muted',
   PREPARING: 'bg-field text-muted',
-  SENT: 'bg-[#F1ECFF] text-brand-purpleDark',
-  PICKING: 'bg-[#F1ECFF] text-brand-purpleDark',
-  SUBMITTED: 'bg-[#FFF3E0] text-status-progress',
-  RETURNED: 'bg-[#FFF3E0] text-status-progress',
-  REJECTED: 'bg-red-50 text-red-600',
-  CONFIRMED: 'bg-[#E3F9EC] text-status-done',
-  CANCELLED: 'bg-red-50 text-red-600',
-  COMPLETED: 'bg-[#E3F9EC] text-status-done',
+  SENT: 'bg-tint text-brand-purpleDark',
+  PICKING: 'bg-tint text-brand-purpleDark',
+  SUBMITTED: 'bg-warnTint text-status-progress',
+  RETURNED: 'bg-warnTint text-status-progress',
+  REJECTED: 'bg-dangerTint text-danger',
+  CONFIRMED: 'bg-okTint text-status-done',
+  CANCELLED: 'bg-dangerTint text-danger',
+  COMPLETED: 'bg-okTint text-status-done',
 };
 
 /**
@@ -88,8 +88,8 @@ export const SLOT_STATE_LABELS: Record<string, string> = {
 
 /** Barvy v kalendáři. Volno je prostě prázdná mřížka, proto tu není. */
 export const SLOT_STATE_CLASSES: Record<string, string> = {
-  OFFERED: 'bg-[#F1ECFF] border-brand-purple text-brand-purpleDark',
-  SELECTED: 'bg-[#FFF3E0] border-status-progress text-status-progress',
+  OFFERED: 'bg-tint border-brand-purple text-brand-purpleDark',
+  SELECTED: 'bg-warnTint border-status-progress text-status-progress',
   CONFIRMED: 'bg-brand-purple border-brand-purpleDeep text-white',
   RELEASED: 'bg-field border-line text-muted',
   CANCELLED: 'bg-field border-line text-muted line-through',

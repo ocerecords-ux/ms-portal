@@ -133,7 +133,7 @@ export function UserEditForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-line rounded-card p-6 flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4">
       {/* Poradi poli (zadani 12. 9. 2026): Jmeno + Fotka (drag & drop) prvni,
           pak Role (+ Firma), az pak E-mail + Telefon. */}
       <div className="flex gap-4 flex-wrap">
@@ -318,7 +318,7 @@ export function UserEditForm({
         Aktivní účet (může se přihlásit)
       </label>
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && <p className="text-danger text-sm">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button

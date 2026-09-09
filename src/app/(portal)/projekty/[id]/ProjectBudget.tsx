@@ -27,7 +27,7 @@ export function ProjectBudget({
   const remaining = budget.total - spent;
 
   return (
-    <div className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
+    <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
       <div className="flex items-baseline justify-between flex-wrap gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Rozpočet</h2>
         <span className="text-xs font-body text-muted">
@@ -69,7 +69,7 @@ export function ProjectBudget({
       <div>
         <div className="flex items-baseline justify-between gap-3 mb-1.5">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">Čerpání</span>
-          <span className={`text-sm font-heading font-semibold tabular-nums ${over ? 'text-red-600' : 'text-ink'}`}>
+          <span className={`text-sm font-heading font-semibold tabular-nums ${over ? 'text-danger' : 'text-ink'}`}>
             {czk(spent)} z {czk(budget.total)} · {percent} %
           </span>
         </div>
@@ -99,7 +99,7 @@ export function ProjectBudget({
           ) : (
             <span className="text-sm font-heading text-ink tabular-nums">
               {czk(revenue)} − {czk(budget.total)} ={' '}
-              <strong className={revenue - budget.total >= 0 ? 'text-brand-greenDeep' : 'text-red-600'}>
+              <strong className={revenue - budget.total >= 0 ? 'text-brand-greenDeep' : 'text-danger'}>
                 {czk(revenue - budget.total)}
               </strong>
             </span>

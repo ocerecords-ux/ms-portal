@@ -93,7 +93,7 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
   const offerPreview = previewNumbers(form.offerNumberFormat, Number(form.offerNextNumber) || 1);
 
   return (
-    <form onSubmit={submit} className="bg-white border border-line rounded-card p-6 flex flex-col gap-4 shadow-sm">
+    <form onSubmit={submit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 shadow-sm">
       <h2 className="font-display text-xl text-ink m-0">{issuer.name}</h2>
 
       <AdminField label="Název firmy" required hint="ve fakturačních údajích píšeme MEDIA SPACE s.r.o.">
@@ -242,7 +242,7 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
         </label>
       </div>
 
-      {error && <p className="text-red-600 text-sm m-0">{error}</p>}
+      {error && <p className="text-danger text-sm m-0">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button

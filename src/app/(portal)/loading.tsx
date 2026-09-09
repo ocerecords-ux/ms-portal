@@ -21,7 +21,7 @@ export default function PortalLoading() {
     <section className="flex flex-col gap-6 animate-pulse" aria-busy="true" aria-label="Načítám">
       <div className="h-9 w-64 bg-line/70 rounded-lg" />
 
-      <div className="bg-white rounded-card border border-line shadow-sm overflow-hidden">
+      <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
         <div className="h-11 bg-line/60" />
         <div className="flex flex-col">
           {[0, 1, 2, 3, 4, 5].map((i) => (

@@ -39,7 +39,7 @@ export default async function NahravkyPage() {
       {company?.driveFolderUrl && folderId && driveConfigured ? (
         <DriveBrowser initialFolderId={folderId} rootName={displayName} />
       ) : company?.driveFolderUrl ? (
-        <div className="bg-white rounded-card border border-line p-8 flex flex-col items-start gap-4 max-w-xl mx-auto shadow-sm">
+        <div className="bg-surface rounded-card border border-line p-8 flex flex-col items-start gap-4 max-w-xl mx-auto shadow-sm">
           <p className="text-sm font-body text-muted m-0">
             Složka firmy {displayName} na Google Disku obsahuje všechny vaše nahrávky. Otevře se v nové záložce.
           </p>
@@ -53,7 +53,7 @@ export default async function NahravkyPage() {
           </a>
         </div>
       ) : (
-        <div className="bg-white rounded-card border border-line p-8 max-w-xl mx-auto shadow-sm">
+        <div className="bg-surface rounded-card border border-line p-8 max-w-xl mx-auto shadow-sm">
           <p className="text-sm font-body text-muted m-0">
             Zatím vám nebyla přiřazena složka na Google Disku. Ozvěte se prosím Mediaspace.
           </p>

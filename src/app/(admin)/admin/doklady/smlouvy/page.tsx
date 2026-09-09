@@ -78,7 +78,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
         <div className="flex items-center gap-3">
           <Link
             href="/admin/doklady/smlouvy/sablony"
-            className="text-xs font-heading font-semibold text-brand-purple no-underline border border-brand-purple rounded-pill px-4 py-1.5 hover:bg-[#F1ECFF] transition-colors"
+            className="text-xs font-heading font-semibold text-brand-purple no-underline border border-brand-purple rounded-pill px-4 py-1.5 hover:bg-tint transition-colors"
           >
             Šablony smluv
           </Link>
@@ -91,7 +91,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
         </div>
       </div>
 
-      <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+      <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] border-collapse">
             <thead>
@@ -115,7 +115,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
                 const nase = c.signatures.some((s) => s.role === 'MEDIASPACE');
                 const druha = c.signatures.some((s) => s.role === 'PROTISTRANA');
                 return (
-                  <tr key={c.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                  <tr key={c.id} className="border-t border-line hover:bg-surfaceSoft">
                     <td className="px-4 py-3.5 text-sm font-heading font-semibold">
                       <Link
                         href={`/admin/doklady/smlouvy/${c.id}`}

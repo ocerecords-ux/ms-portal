@@ -188,7 +188,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         <Chevron direction="right" />
       </button>
 
-      <div className="w-[320px] max-w-[86vw] max-h-[24vh] overflow-y-auto bg-white border border-r-0 border-line shadow-xl flex flex-col">
+      <div className="w-[320px] max-w-[86vw] max-h-[24vh] overflow-y-auto bg-surface border border-r-0 border-line shadow-xl flex flex-col">
       {/* Fialova hlavicka se zelenym napisem - stejne jako horni lista a jako
           MS chat (zadani 8. 9. 2026). Drzi se nahore i pri rolovani seznamu. */}
       <div className="sticky top-0 z-10 bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
@@ -229,7 +229,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         </div>
       </form>
 
-      {error && <p className="text-xs text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {error && <p className="text-xs text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
         {open.length === 0 && <li className="text-sm text-muted font-body py-2">Žádné otevřené úkoly. 👌</li>}
@@ -245,7 +245,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
             <span className="flex-1 min-w-0 text-sm font-body text-ink break-words">
               {task.title}
               {task.dueDate && (
-                <span className={`block text-xs font-heading mt-0.5 ${task.dueDate < today ? 'text-red-600' : 'text-muted'}`}>
+                <span className={`block text-xs font-heading mt-0.5 ${task.dueDate < today ? 'text-danger' : 'text-muted'}`}>
                   {task.dueDate < today ? 'Po termínu — ' : 'Do '}
                   {formatDue(task.dueDate)}
                 </span>
@@ -256,7 +256,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
               onClick={() => send(`/api/tasks/${task.id}`, 'DELETE')}
               disabled={busy}
               title="Smazat úkol"
-              className="text-muted hover:text-red-600 text-xs font-heading opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+              className="text-muted hover:text-danger text-xs font-heading opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
             >
               ✕
             </button>
@@ -290,7 +290,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
                     onClick={() => send(`/api/tasks/${task.id}`, 'DELETE')}
                     disabled={busy}
                     title="Smazat úkol"
-                    className="text-muted hover:text-red-600 text-xs font-heading opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    className="text-muted hover:text-danger text-xs font-heading opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                   >
                     ✕
                   </button>

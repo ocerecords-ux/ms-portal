@@ -285,7 +285,7 @@ export function OfferBuilder({
   return (
     <div className="flex flex-col gap-6">
       {/* Hlavicka */}
-      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">Nabídka termínů</p>
@@ -355,8 +355,8 @@ export function OfferBuilder({
             <strong>Poznámka herce:</strong> {request.actorNote}
           </p>
         )}
-        {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
-        {info && <p className="text-sm text-ink bg-[#E3F9EC] border border-line rounded-lg px-3 py-2 m-0">{info}</p>}
+        {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+        {info && <p className="text-sm text-ink bg-okTint border border-line rounded-lg px-3 py-2 m-0">{info}</p>}
 
         {/* Odkaz pro herce */}
         <div className="flex items-center gap-3 flex-wrap border-t border-line pt-4">
@@ -380,7 +380,7 @@ export function OfferBuilder({
 
       {/* Schvalovani vyberu herce */}
       {request.status === 'SUBMITTED' && (
-        <div className="bg-white rounded-card border-2 border-status-progress shadow-sm p-5 flex flex-col gap-4">
+        <div className="bg-surface rounded-card border-2 border-status-progress shadow-sm p-5 flex flex-col gap-4">
           <div>
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
               Herec vybral termíny
@@ -464,7 +464,7 @@ export function OfferBuilder({
               type="button"
               onClick={() => rozhodni('return')}
               disabled={busy}
-              className="rounded-lg border border-status-progress px-5 py-2.5 text-sm font-heading font-semibold text-status-progress hover:bg-[#FFF3E0] transition-colors disabled:opacity-60"
+              className="rounded-lg border border-status-progress px-5 py-2.5 text-sm font-heading font-semibold text-status-progress hover:bg-warnTint transition-colors disabled:opacity-60"
             >
               Vrátit k přepracování
             </button>
@@ -472,7 +472,7 @@ export function OfferBuilder({
               type="button"
               onClick={() => rozhodni('reject')}
               disabled={busy}
-              className="text-red-600 text-sm font-heading px-2 disabled:opacity-60"
+              className="text-danger text-sm font-heading px-2 disabled:opacity-60"
             >
               Zamítnout
             </button>
@@ -482,7 +482,7 @@ export function OfferBuilder({
 
       {/* Potvrzeno - zbyva uz jen odtocit */}
       {request.status === 'CONFIRMED' && (
-        <div className="bg-[#E3F9EC] border border-line rounded-card p-5 flex items-center justify-between gap-4 flex-wrap">
+        <div className="bg-okTint border border-line rounded-card p-5 flex items-center justify-between gap-4 flex-wrap">
           <span className="text-sm font-body text-ink m-0">
             Termíny jsou potvrzené a v kalendáři studia. Až se odtočí, můžete nabídku uzavřít.
           </span>
@@ -490,7 +490,7 @@ export function OfferBuilder({
             type="button"
             onClick={() => rozhodni('complete')}
             disabled={busy}
-            className="rounded-lg border border-line bg-white px-5 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors disabled:opacity-60"
+            className="rounded-lg border border-line bg-surface px-5 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors disabled:opacity-60"
           >
             Označit jako dokončené
           </button>
@@ -499,7 +499,7 @@ export function OfferBuilder({
 
       {/* Parametry */}
       {!locked && (
-        <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
+        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Parametry</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <label className="flex flex-col gap-1.5">
@@ -564,7 +564,7 @@ export function OfferBuilder({
 
       {/* Pridavani terminu */}
       {!locked && (
-        <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
+        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
             Nabídnout termíny
           </h2>
@@ -596,7 +596,7 @@ export function OfferBuilder({
                   disabled={busy || !jeVolno}
                   onClick={() => pridej(startIso, endIso)}
                   title={jeVolno ? 'Přidat do nabídky' : 'V tomhle čase je studio obsazené'}
-                  className="rounded-lg border border-brand-purple px-4 py-2 text-sm font-heading font-semibold text-brand-purple hover:bg-[#F1ECFF] transition-colors disabled:opacity-40 disabled:border-line disabled:text-muted"
+                  className="rounded-lg border border-brand-purple px-4 py-2 text-sm font-heading font-semibold text-brand-purple hover:bg-tint transition-colors disabled:opacity-40 disabled:border-line disabled:text-muted"
                 >
                   + {minutesToTime(p.startMinutes)}–{minutesToTime(p.endMinutes)}
                 </button>
@@ -635,7 +635,7 @@ export function OfferBuilder({
       )}
 
       {/* Seznam terminu */}
-      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
           Termíny v nabídce <span className="tabular-nums">({slots.length})</span>
         </h2>
@@ -671,7 +671,7 @@ export function OfferBuilder({
                       type="button"
                       onClick={() => odeber(s.id)}
                       disabled={busy}
-                      className="text-xs font-heading font-semibold text-red-600 disabled:opacity-60"
+                      className="text-xs font-heading font-semibold text-danger disabled:opacity-60"
                     >
                       Odebrat
                     </button>
@@ -684,7 +684,7 @@ export function OfferBuilder({
       </div>
 
       {/* Historie */}
-      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Historie</h2>
         <ul className="list-none p-0 m-0 flex flex-col gap-2">
           {historie.map((e) => (

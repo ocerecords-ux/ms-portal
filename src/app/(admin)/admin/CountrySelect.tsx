@@ -43,7 +43,7 @@ export function CountrySelect({ value, onChange }: { value: string; onChange: (c
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full bg-white border border-line rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg overflow-hidden">
           <input
             autoFocus
             value={query}

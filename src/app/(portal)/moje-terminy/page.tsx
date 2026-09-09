@@ -74,7 +74,7 @@ export default async function MojeTerminyPage() {
             <Link
               key={r.id}
               href={`/terminy/${r.accessToken}`}
-              className="bg-white rounded-card border-2 border-brand-purple shadow-sm p-5 no-underline flex items-center justify-between gap-4 flex-wrap hover:bg-[#FAF8FF] transition-colors"
+              className="bg-surface rounded-card border-2 border-brand-purple shadow-sm p-5 no-underline flex items-center justify-between gap-4 flex-wrap hover:bg-surfaceSoft transition-colors"
             >
               <span>
                 <span className="block font-heading font-semibold text-ink">{r.projectName}</span>
@@ -95,7 +95,7 @@ export default async function MojeTerminyPage() {
           {ostatni.map((r) => {
             const dulezite = r.slots.filter((s) => s.state === 'CONFIRMED' || s.state === 'SELECTED');
             return (
-              <div key={r.id} className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
+              <div key={r.id} className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <span>
                     <span className="block font-heading font-semibold text-ink">{r.projectName}</span>

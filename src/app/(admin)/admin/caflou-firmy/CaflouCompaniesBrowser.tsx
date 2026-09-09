@@ -214,7 +214,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
               type="button"
               onClick={() => runImport(false)}
               disabled={importing || transferring}
-              className="font-heading font-semibold text-sm rounded-lg border border-line bg-white px-4 py-2.5 text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-60"
+              className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-60"
             >
               {importing ? 'Pracuji…' : 'Jen načíst'}
             </button>
@@ -223,7 +223,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
               onClick={transferToPortal}
               disabled={transferring || importing || counts.KLIENT + counts.HEREC === 0}
               title="Přenese jen to, co je tady roztříděné"
-              className="font-heading font-semibold text-sm rounded-lg border border-line bg-white px-4 py-2.5 text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-60"
+              className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-60"
             >
               {transferring ? 'Přenáším…' : `Přenést roztříděné (${counts.KLIENT + counts.HEREC})`}
             </button>
@@ -242,11 +242,11 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>
+        <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>
       )}
 
       {report && report.length > 0 && (
-        <div className="bg-white rounded-card border border-line shadow-sm p-4 max-h-64 overflow-y-auto">
+        <div className="bg-surface rounded-card border border-line shadow-sm p-4 max-h-64 overflow-y-auto">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0 mb-2">
             Co se stalo
           </h2>
@@ -281,7 +281,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                 type="button"
                 onClick={() => setFilter(tab.key)}
                 className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
-                  active ? 'bg-white border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
+                  active ? 'bg-surface border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
                 }`}
               >
                 {tab.label} ({counts[tab.key] ?? 0})
@@ -295,12 +295,12 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Hledat název, IČ, e-mail…"
-            className="w-64 max-w-full rounded-lg border border-line bg-white px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+            className="w-64 max-w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+      <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
           <table className="w-full min-w-[900px] border-collapse">
             <thead>
@@ -324,7 +324,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                 </tr>
               )}
               {visible.map((item) => (
-                <tr key={item.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                <tr key={item.id} className="border-t border-line hover:bg-surfaceSoft">
                   <td className="px-3 py-3.5 font-heading font-semibold text-sm text-ink">{item.name}</td>
                   <td className="px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                     {item.ic ?? '—'}

@@ -67,7 +67,7 @@ export function NewInvoiceForm({
   return (
     <form
       onSubmit={submit}
-      className="bg-white border border-line rounded-card shadow-sm p-5 flex flex-col gap-3 w-full max-w-xl"
+      className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3 w-full max-w-xl"
     >
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nová faktura</h2>
 
@@ -154,7 +154,7 @@ export function NewInvoiceForm({
         </>
       )}
 
-      {error && <p className="text-sm text-red-600 m-0">{error}</p>}
+      {error && <p className="text-sm text-danger m-0">{error}</p>}
 
       <div className="flex items-center gap-3">
         <AddButton type="submit" disabled={busy || (mode === 'offer' ? !offerId : !companyId)}>

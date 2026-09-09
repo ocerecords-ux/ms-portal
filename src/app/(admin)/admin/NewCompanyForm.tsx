@@ -159,7 +159,7 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
+    <form onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
       <h2 className="font-display text-xl text-ink m-0">{type === 'KLIENT' ? 'Nový klient' : 'Nový dodavatel'}</h2>
 
       <AdminField label="Typ firmy" required>
@@ -186,7 +186,7 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
           onClick={loadFromAres}
           disabled={aresBusy || ic.replace(/\D/g, '').length !== 8}
           title="Doplnit název, DIČ a adresu z veřejného registru podle IČ"
-          className="bg-white border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-field transition-colors disabled:opacity-40 mb-[26px]"
+          className="bg-surface border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-field transition-colors disabled:opacity-40 mb-[26px]"
         >
           {aresBusy ? 'Načítám…' : 'Načíst z registru'}
         </button>
@@ -284,7 +284,7 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
         </>
       )}
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && <p className="text-danger text-sm">{error}</p>}
 
       <div className="flex items-center gap-3">
         <AddButton type="submit" disabled={saving}>

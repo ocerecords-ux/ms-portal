@@ -162,12 +162,12 @@ export function ExpenseEditor({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="bg-white rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="font-display text-2xl text-ink">{expense.supplierLabel}</span>
           <span
             className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
-              expense.paid ? 'bg-[#E3F9EC] text-status-done' : 'bg-[#F1ECFF] text-brand-purpleDark'
+              expense.paid ? 'bg-okTint text-status-done' : 'bg-tint text-brand-purpleDark'
             }`}
           >
             {expense.paid ? 'Uhrazeno' : 'Neuhrazeno'}
@@ -203,10 +203,10 @@ export function ExpenseEditor({
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
-      {saved && <p className="text-sm text-ink bg-[#F1ECFF] border border-line rounded-lg px-4 py-3 m-0">Uloženo.</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
+      {saved && <p className="text-sm text-ink bg-tint border border-line rounded-lg px-4 py-3 m-0">Uloženo.</p>}
 
-      <div className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Dodavatel z Firem</span>
@@ -315,7 +315,7 @@ export function ExpenseEditor({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
+        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">Poznámka</span>
           <textarea
             value={form.note}
@@ -325,7 +325,7 @@ export function ExpenseEditor({
           />
         </div>
 
-        <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
+        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">Příloha</span>
           {expense.attachmentUrl ? (
             <a
@@ -348,7 +348,7 @@ export function ExpenseEditor({
           type="button"
           onClick={remove}
           disabled={saving}
-          className="text-red-600 text-sm font-heading disabled:opacity-60"
+          className="text-danger text-sm font-heading disabled:opacity-60"
         >
           Smazat doklad
         </button>

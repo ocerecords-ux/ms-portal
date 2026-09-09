@@ -109,7 +109,7 @@ export function ActorPicker({
 
   if (status === 'CONFIRMED' || status === 'COMPLETED') {
     return (
-      <div className="bg-[#E3F9EC] border border-line rounded-card p-6 flex flex-col gap-3">
+      <div className="bg-okTint border border-line rounded-card p-6 flex flex-col gap-3">
         <p className="font-display text-2xl text-ink m-0">Termíny jsou potvrzené</p>
         <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
           {chosen.map((s) => (
@@ -126,7 +126,7 @@ export function ActorPicker({
 
   if (status === 'SUBMITTED') {
     return (
-      <div className="bg-white border border-line rounded-card p-6 flex flex-col gap-3 shadow-sm">
+      <div className="bg-surface border border-line rounded-card p-6 flex flex-col gap-3 shadow-sm">
         <p className="font-display text-2xl text-ink m-0">Výběr odeslán ke schválení</p>
         <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
           {chosen.map((s) => (
@@ -206,10 +206,10 @@ export function ActorPicker({
                     aria-pressed={zvoleno}
                     className={`flex items-center justify-between gap-4 rounded-card border px-4 py-3 text-left transition-colors ${
                       zvoleno
-                        ? 'bg-[#F1ECFF] border-brand-purple'
+                        ? 'bg-tint border-brand-purple'
                         : plno
-                          ? 'bg-white border-line opacity-50'
-                          : 'bg-white border-line hover:border-brand-purple'
+                          ? 'bg-surface border-line opacity-50'
+                          : 'bg-surface border-line hover:border-brand-purple'
                     }`}
                   >
                     <span className="flex items-center gap-3">
@@ -242,12 +242,12 @@ export function ActorPicker({
               value={poznamka}
               onChange={(e) => setPoznamka(e.target.value)}
               rows={3}
-              className="rounded-lg border border-line bg-white px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full"
+              className="rounded-lg border border-line bg-surface px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full"
             />
           </label>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>
+            <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>
           )}
 
           <button
@@ -268,7 +268,7 @@ function Hlaska({ barva, children }: { barva: 'red' | 'oranzova'; children: Reac
   return (
     <p
       className={`text-sm font-body m-0 rounded-card px-4 py-3 border border-line ${
-        barva === 'red' ? 'bg-red-50 text-ink' : 'bg-[#FFF3E0] text-ink'
+        barva === 'red' ? 'bg-dangerTint text-ink' : 'bg-warnTint text-ink'
       }`}
     >
       {children}

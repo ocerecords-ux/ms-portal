@@ -20,7 +20,7 @@ export default async function IssuersPage() {
         Caflou) a bankovní účty — klidně několik, každý ve své měně.
       </p>
 
-      <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+      <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] border-collapse">
             <thead>
@@ -42,13 +42,13 @@ export default async function IssuersPage() {
                 </tr>
               )}
               {issuers.map((issuer) => (
-                <tr key={issuer.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                <tr key={issuer.id} className="border-t border-line hover:bg-surfaceSoft">
                   <td className="px-4 py-3.5 font-heading font-semibold text-sm">
                     <Link href={`/admin/doklady/moje-firmy/${issuer.id}`} className="text-ink hover:text-brand-purple no-underline">
                       {issuer.name}
                     </Link>
                     {issuer.isDefault && (
-                      <span className="ml-2 text-[10px] font-heading font-bold text-brand-purpleDeep bg-[#F1ECFF] rounded px-1.5 py-0.5">
+                      <span className="ml-2 text-[10px] font-heading font-bold text-brand-purpleDeep bg-tint rounded px-1.5 py-0.5">
                         VÝCHOZÍ
                       </span>
                     )}

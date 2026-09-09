@@ -61,7 +61,7 @@ export function NewOfferForm({
   return (
     <form
       onSubmit={submit}
-      className="bg-white border border-line rounded-card shadow-sm p-5 flex flex-col gap-3 w-full max-w-xl"
+      className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3 w-full max-w-xl"
     >
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nová nabídka</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -97,7 +97,7 @@ export function NewOfferForm({
         />
       </label>
 
-      {error && <p className="text-sm text-red-600 m-0">{error}</p>}
+      {error && <p className="text-sm text-danger m-0">{error}</p>}
 
       <div className="flex items-center gap-3">
         <AddButton type="submit" disabled={busy || !companyId}>

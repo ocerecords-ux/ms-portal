@@ -69,9 +69,9 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_CLASSES: Record<string, string> = {
   DRAFT: 'bg-field text-muted',
-  SENT: 'bg-[#F1ECFF] text-brand-purpleDark',
-  PAID: 'bg-[#E3F9EC] text-status-done',
-  CANCELLED: 'bg-red-50 text-red-600',
+  SENT: 'bg-tint text-brand-purpleDark',
+  PAID: 'bg-okTint text-status-done',
+  CANCELLED: 'bg-dangerTint text-danger',
 };
 
 function emptyItem(): Item {
@@ -278,11 +278,11 @@ export function InvoiceEditor({
   const inputClass =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:opacity-70';
   const cellClass =
-    'rounded-lg border border-line bg-white px-2.5 py-1.5 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:bg-field disabled:opacity-70';
+    'rounded-lg border border-line bg-surface px-2.5 py-1.5 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:bg-field disabled:opacity-70';
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="bg-white rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="font-display text-2xl text-ink">
             {jesteNeulozena ? 'Nová faktura' : invoice.number}
@@ -355,7 +355,7 @@ export function InvoiceEditor({
                 type="button"
                 onClick={sendToClient}
                 disabled={saving || sending}
-                className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-[#F1ECFF] transition-colors disabled:opacity-60"
+                className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-tint transition-colors disabled:opacity-60"
               >
                 {sending ? 'Odesílám…' : 'Odeslat odběrateli'}
               </button>
@@ -379,10 +379,10 @@ export function InvoiceEditor({
             : 'Faktura je stornovaná.'}
         </p>
       )}
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
-      {info && <p className="text-sm text-ink bg-[#F1ECFF] border border-line rounded-lg px-4 py-3 m-0">{info}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
+      {info && <p className="text-sm text-ink bg-tint border border-line rounded-lg px-4 py-3 m-0">{info}</p>}
 
-      <div className="bg-white rounded-card border border-line shadow-sm overflow-hidden">
+      <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-line">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-heading text-muted uppercase tracking-wide">Dodavatel</span>
@@ -414,7 +414,7 @@ export function InvoiceEditor({
               {company.ic ? `IČ ${company.ic}` : ''} {company.dic ? `· DIČ ${company.dic}` : ''}
             </p>
             {!company.contactEmail && (
-              <p className="text-xs text-red-600 font-body m-0">
+              <p className="text-xs text-danger font-body m-0">
                 Firma nemá kontaktní e-mail — bez něj fakturu nepošlete.
               </p>
             )}
@@ -537,7 +537,7 @@ export function InvoiceEditor({
                 type="button"
                 onClick={() => save({ refreshRate: true })}
                 disabled={saving}
-                className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-white transition-colors disabled:opacity-60"
+                className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-surface transition-colors disabled:opacity-60"
               >
                 Načíst kurz k datu vystavení
               </button>
@@ -631,7 +631,7 @@ export function InvoiceEditor({
                             )
                           }
                           title="Odebrat položku"
-                          className="text-muted hover:text-red-600 text-sm font-heading"
+                          className="text-muted hover:text-danger text-sm font-heading"
                         >
                           ✕
                         </button>
@@ -684,7 +684,7 @@ export function InvoiceEditor({
         </div>
       </div>
 
-      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
         <span className="text-xs font-heading text-muted uppercase tracking-wide">Poznámka na faktuře</span>
         <textarea
           value={form.note}
@@ -701,7 +701,7 @@ export function InvoiceEditor({
             type="button"
             onClick={remove}
             disabled={saving}
-            className="text-red-600 text-sm font-heading disabled:opacity-60"
+            className="text-danger text-sm font-heading disabled:opacity-60"
           >
             {invoice.status === 'DRAFT' ? 'Smazat fakturu' : 'Stornovat fakturu'}
           </button>

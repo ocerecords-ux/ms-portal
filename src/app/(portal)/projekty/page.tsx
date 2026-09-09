@@ -79,12 +79,12 @@ export default async function ProjektyPage() {
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
         {!company?.caflouCompanyId && (
-          <span className="text-xs font-heading text-brand-purpleDark bg-[#F1ECFF] border border-line rounded-lg px-3 py-2">
+          <span className="text-xs font-heading text-brand-purpleDark bg-tint border border-line rounded-lg px-3 py-2">
             Napojení na Caflou zatím čeká na dokončení nastavení
           </span>
         )}
         {company?.caflouCompanyId && loadError && (
-          <span className="text-xs font-heading text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2">
+          <span className="text-xs font-heading text-danger bg-dangerTint border border-line rounded-lg px-3 py-2">
             Projekty se nepodařilo načíst z Caflou. Zkuste to prosím později.
           </span>
         )}
@@ -171,7 +171,7 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
         {error && (
-          <span className="text-xs font-heading text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2">
+          <span className="text-xs font-heading text-danger bg-dangerTint border border-line rounded-lg px-3 py-2">
             Projekty se nepodařilo načíst z Caflou. {error}
           </span>
         )}

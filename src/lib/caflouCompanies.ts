@@ -17,10 +17,10 @@ export const CONTACT_KIND_LABELS: Record<CaflouContactKind, string> = {
 };
 
 export const CONTACT_KIND_CLASSES: Record<CaflouContactKind, string> = {
-  NEZARAZENO: 'bg-[#FDF1DE] text-status-progress',
-  KLIENT: 'bg-[#F1ECFF] text-brand-purpleDark',
-  HEREC: 'bg-[#E3F9EC] text-status-done',
-  IGNOROVAT: 'bg-[#EEF2F7] text-[#5B6472]',
+  NEZARAZENO: 'bg-warnTint text-status-progress',
+  KLIENT: 'bg-tint text-brand-purpleDark',
+  HEREC: 'bg-okTint text-status-done',
+  IGNOROVAT: 'bg-field text-muted',
 };
 
 /**

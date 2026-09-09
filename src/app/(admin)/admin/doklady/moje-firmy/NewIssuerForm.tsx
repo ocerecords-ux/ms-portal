@@ -84,7 +84,7 @@ export function NewIssuerForm() {
   }
 
   return (
-    <form onSubmit={submit} className="bg-white border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
+    <form onSubmit={submit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
       <h2 className="font-display text-xl text-ink m-0">Nová fakturační firma</h2>
 
       <div className="flex gap-4 flex-wrap items-end">
@@ -102,7 +102,7 @@ export function NewIssuerForm() {
           type="button"
           onClick={loadFromAres}
           disabled={aresBusy || ic.replace(/\D/g, '').length !== 8}
-          className="bg-white border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-field transition-colors disabled:opacity-40 mb-[26px]"
+          className="bg-surface border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-field transition-colors disabled:opacity-40 mb-[26px]"
         >
           {aresBusy ? 'Načítám…' : 'Načíst z registru'}
         </button>
@@ -145,7 +145,7 @@ export function NewIssuerForm() {
         </div>
       </div>
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && <p className="text-danger text-sm">{error}</p>}
 
       <div className="flex items-center gap-3">
         <AddButton type="submit" disabled={saving}>

@@ -24,7 +24,7 @@ export function StatusPill({ finished, statusName }: { finished: boolean; status
   return (
     <span
       className={`inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-3 py-1 rounded-pill whitespace-nowrap ${
-        finished ? 'bg-[#E3F9EC] text-status-done' : 'bg-[#FDF1DE] text-status-progress'
+        finished ? 'bg-okTint text-status-done' : 'bg-warnTint text-status-progress'
       }`}
     >
       {displayStatusName(statusName)}
@@ -48,7 +48,7 @@ export function ProjectsTable({
 }) {
   const showRodnyList = rodneListy !== undefined;
   return (
-    <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+    <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
         <table className="w-full min-w-[720px] border-collapse">
           <thead>
@@ -71,7 +71,7 @@ export function ProjectsTable({
               </tr>
             )}
             {projects.map((p) => (
-              <tr key={p.id} className="border-t border-line hover:bg-[#FAF8FF]">
+              <tr key={p.id} className="border-t border-line hover:bg-surfaceSoft">
                 <td className="px-4 py-4 font-heading font-semibold text-sm text-ink">{p.name}</td>
                 <td className="px-4 py-4">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
@@ -126,7 +126,7 @@ export function AdminProjectsTable({
   emptyText: string;
 }) {
   return (
-    <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+    <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
         <table className="w-full min-w-[720px] border-collapse">
           <thead>
@@ -148,7 +148,7 @@ export function AdminProjectsTable({
               </tr>
             )}
             {projects.map((p) => (
-              <tr key={`${p.companyName}-${p.id}`} className="border-t border-line hover:bg-[#FAF8FF]">
+              <tr key={`${p.companyName}-${p.id}`} className="border-t border-line hover:bg-surfaceSoft">
                 <td className="px-4 py-4 font-heading font-semibold text-sm text-ink">{p.name}</td>
                 <td className="px-4 py-4 text-sm font-heading text-muted">{p.companyName}</td>
                 <td className="px-4 py-4">
@@ -495,7 +495,7 @@ export function InternalProjectsTable({
   const sloupcuCelkem = columns.length + (canEditColumns ? 1 : 0);
 
   return (
-    <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+    <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       {/* Sloupcu je hodne a na uzsim okne se tabulka nevejde. Posouvani do
           stran je proto videt: macOS lista se sama schovava, tak si ji tu
           vykreslujeme natrvalo (zadani 8. 9. 2026: "nesmi se stavat, ze se to
@@ -520,15 +520,14 @@ export function InternalProjectsTable({
               {/* Tri tecky primo ve fialove liste (zadani 9. 9. 2026) - stejne
                   misto jako u horni listy portalu.
 
-                  Sloupec je PRILEPENY k pravemu okraji (sticky right-0). Bez
-                  toho se tlacitko schovalo za pravy okraj tabulky: sloupcu je
-                  vic, nez se vejde do sirky karty, takze se tabulka posouva do
-                  stran a tecky skoncily mimo obraz (zprava uzivatele
-                  9. 9. 2026: "zmizela uprava sloupcu u projektu"). Radek tela
-                  ma proto vlastni bile pozadi - prilepena bunka si ho dedi,
-                  aby pod ni text neprosvital. */}
+                  Tlacitko se drive schovavalo za pravy okraj tabulky. Chvili
+                  bylo reseni prilepit celou bunku k okraji (sticky), ale to
+                  delalo pruh pres cele telo tabulky a lezlo to pres zaobleny
+                  roh karty (zprava uzivatele 9. 9. 2026: "zasahuje do spodni
+                  casti a tabulky jdou za roh"). Sirka obsahu se proto misto
+                  toho zvetsila v layoutu tak, aby se tabulka vesla cela. */}
               {canEditColumns && (
-                <th className="sticky right-0 z-20 bg-brand-purple px-2 py-2.5 text-right whitespace-nowrap w-px shadow-[-10px_0_10px_-8px_rgba(32,26,51,0.45)]">
+                <th className="px-2 py-2.5 text-right whitespace-nowrap w-px">
                   {editing ? (
                     editActions
                   ) : (
@@ -557,15 +556,13 @@ export function InternalProjectsTable({
               </tr>
             )}
             {projects.map((p) => (
-              <tr key={p.id} className="border-t border-line bg-white hover:bg-[#FAF8FF]">
+              <tr key={p.id} className="border-t border-line hover:bg-surfaceSoft">
                 {columns.map((sloupec) => (
                   <td key={sloupec.key} className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-3.5 text-sm font-heading'}>
                     {bunkaSloupce(p, sloupec.key)}
                   </td>
                 ))}
-                {canEditColumns && (
-                  <td className="sticky right-0 z-10 bg-inherit shadow-[-10px_0_10px_-8px_rgba(32,26,51,0.12)]" />
-                )}
+                {canEditColumns && <td />}
               </tr>
             ))}
           </tbody>

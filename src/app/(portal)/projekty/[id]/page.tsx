@@ -220,7 +220,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     amountMinor: expenseTotalMinor(e.amountExVatMinor, e.vatRate),
     currency: e.currency,
     statusLabel: e.paid ? 'Uhrazeno' : 'Neuhrazeno',
-    statusClass: e.paid ? 'bg-[#E3F9EC] text-status-done' : 'bg-[#F1ECFF] text-brand-purpleDark',
+    statusClass: e.paid ? 'bg-okTint text-status-done' : 'bg-tint text-brand-purpleDark',
   }));
 
   const contractRows: ProjectDocRow[] = contracts.map((c) => ({
@@ -254,13 +254,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const prehled = (
     <>
       {!project && (
-        <p className="text-sm font-heading text-red-600 bg-red-50 border border-line rounded-lg px-4 py-3 m-0">
+        <p className="text-sm font-heading text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">
           Údaje o projektu se nepodařilo načíst z Caflou. Interní atributy níže se přesto dají vyplnit a uloží se.
         </p>
       )}
 
       {project && (
-        <div className="bg-white rounded-card border border-line shadow-sm p-6">
+        <div className="bg-surface rounded-card border border-line shadow-sm p-6">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0 mb-4">
             Z Caflou
           </h2>

@@ -42,7 +42,7 @@ export default async function PublicOfferPage({ params }: { params: { token: str
           </p>
         </div>
 
-        <div className="bg-white rounded-card border border-line shadow-sm overflow-hidden">
+        <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6 border-b border-line">
             <div>
               <span className="text-xs font-heading text-muted uppercase tracking-wide">Dodavatel</span>
@@ -122,7 +122,7 @@ export default async function PublicOfferPage({ params }: { params: { token: str
         </div>
 
         {offer.note && (
-          <div className="bg-white rounded-card border border-line shadow-sm p-6">
+          <div className="bg-surface rounded-card border border-line shadow-sm p-6">
             <span className="text-xs font-heading text-muted uppercase tracking-wide">Poznámka</span>
             <p className="text-sm font-body text-ink m-0 mt-2 whitespace-pre-line">{offer.note}</p>
           </div>

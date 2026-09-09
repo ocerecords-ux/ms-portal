@@ -119,7 +119,7 @@ export default async function UsersAdminPage({
                 href={`/admin/users?tab=${tab.key}`}
                 className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
                   active
-                    ? 'bg-white border-line text-brand-purple'
+                    ? 'bg-surface border-line text-brand-purple'
                     : 'border-transparent text-muted hover:text-ink'
                 }`}
               >

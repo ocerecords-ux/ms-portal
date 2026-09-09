@@ -82,7 +82,7 @@ export function NotificationBell({ unread }: { unread: number }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[320px] max-h-[60vh] overflow-y-auto bg-white border border-line rounded-card shadow-xl z-50 p-2">
+        <div className="absolute right-0 top-full mt-2 w-[320px] max-h-[60vh] overflow-y-auto bg-surface border border-line rounded-card shadow-xl z-50 p-2">
           {items === null && <p className="text-sm font-body text-muted m-0 px-3 py-3">Načítám…</p>}
           {items !== null && items.length === 0 && (
             <p className="text-sm font-body text-muted m-0 px-3 py-3">Zatím tu nic není.</p>
@@ -98,7 +98,7 @@ export function NotificationBell({ unread }: { unread: number }) {
               </>
             );
             return (
-              <div key={n.id} className={`rounded-lg px-3 py-2.5 ${n.readAt ? '' : 'bg-[#F1ECFF]'}`}>
+              <div key={n.id} className={`rounded-lg px-3 py-2.5 ${n.readAt ? '' : 'bg-tint'}`}>
                 {n.url ? (
                   <Link href={n.url} onClick={() => setOpen(false)} className="no-underline block">
                     {obsah}

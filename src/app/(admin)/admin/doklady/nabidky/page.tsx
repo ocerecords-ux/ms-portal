@@ -42,7 +42,7 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
   return (
     <div className="flex flex-col gap-6">
       {issuers.length === 0 ? (
-        <div className="bg-white rounded-card border border-line shadow-sm px-6 py-10 text-center">
+        <div className="bg-surface rounded-card border border-line shadow-sm px-6 py-10 text-center">
           <p className="font-heading font-semibold text-ink m-0">Nejdřív si založte fakturační firmu</p>
           <p className="text-sm text-muted font-body m-0 mt-1 max-w-lg mx-auto">
             Nabídka se vystavuje za konkrétní firmu a bere si z ní číselnou řadu.
@@ -79,7 +79,7 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
             />
           </div>
 
-          <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+          <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[860px] border-collapse">
                 <thead>
@@ -105,7 +105,7 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
                   {offers.map((offer) => {
                     const totals = computeTotals(offer.items);
                     return (
-                      <tr key={offer.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                      <tr key={offer.id} className="border-t border-line hover:bg-surfaceSoft">
                         <td className="px-4 py-3.5 font-heading font-semibold text-sm">
                           <Link
                             href={`/admin/doklady/nabidky/${offer.id}`}

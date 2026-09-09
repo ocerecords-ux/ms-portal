@@ -217,7 +217,7 @@ export function RodnyListSection({
 
   const tlacitka = (
     <>
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
       {canEdit && (
         <div className="flex items-center gap-3 flex-wrap">
           <button
@@ -238,7 +238,7 @@ export function RodnyListSection({
     return (
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-5"
+        className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5"
       >
         <div>
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
@@ -259,17 +259,17 @@ export function RodnyListSection({
   return (
     <div className="flex flex-col gap-6">
       {rlError && (
-        <div className="bg-red-50 border border-red-200 rounded-card px-4 py-3">
-          <p className="text-sm font-heading font-semibold text-red-700 m-0">Projekt vyžaduje kontrolu</p>
-          <p className="text-sm font-body text-red-700 m-0 mt-1">{rlError}</p>
-          <p className="text-xs font-body text-red-700 m-0 mt-1">
+        <div className="bg-dangerTint border border-danger/30 rounded-card px-4 py-3">
+          <p className="text-sm font-heading font-semibold text-danger m-0">Projekt vyžaduje kontrolu</p>
+          <p className="text-sm font-body text-danger m-0 mt-1">{rlError}</p>
+          <p className="text-xs font-body text-danger m-0 mt-1">
             Klientovi se v tomhle případě nic neodeslalo. Doplňte údaje a vygenerujte Rodný list znovu.
           </p>
         </div>
       )}
 
       {chybi.length > 0 && !rlError && (
-        <div className="bg-[#FDF1DE] border border-line rounded-card px-4 py-3">
+        <div className="bg-warnTint border border-line rounded-card px-4 py-3">
           <p className="text-sm font-heading font-semibold text-status-progress m-0">
             Chybí údaje pro Rodný list
           </p>
@@ -282,7 +282,7 @@ export function RodnyListSection({
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-5"
+        className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5"
       >
         <div>
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
@@ -351,7 +351,7 @@ export function RodnyListSection({
         {tlacitka}
       </form>
 
-      <div className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
             Vygenerované Rodné listy

@@ -127,7 +127,7 @@ export function UsersTable({
   const bunka = 'px-4 py-3.5 text-sm font-heading whitespace-nowrap';
 
   return (
-    <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+    <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] border-collapse">
           <thead>
@@ -162,7 +162,7 @@ export function UsersTable({
               </tr>
             )}
             {serazene.map((u) => (
-              <tr key={u.id} className="border-t border-line hover:bg-[#FAF8FF]">
+              <tr key={u.id} className="border-t border-line hover:bg-surfaceSoft">
                 {columns.map((sloupec) => {
                   switch (sloupec) {
                     case 'jmeno':
@@ -232,7 +232,7 @@ export function UsersTable({
                     case 'aktivni':
                       return (
                         <td key={sloupec} className={bunka}>
-                          {u.active ? 'Ano' : <span className="text-red-600">Ne</span>}
+                          {u.active ? 'Ano' : <span className="text-danger">Ne</span>}
                         </td>
                       );
                   }

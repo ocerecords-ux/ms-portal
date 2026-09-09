@@ -45,7 +45,7 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
               + Spravovat uživatele →
             </Link>
           </div>
-          <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+          <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] border-collapse">
                 <thead>

@@ -63,7 +63,7 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
         </div>
 
         {request.note && (
-          <p className="text-sm font-body text-ink bg-white border border-line rounded-card px-4 py-3 m-0">
+          <p className="text-sm font-body text-ink bg-surface border border-line rounded-card px-4 py-3 m-0">
             <strong>Poznámka produkce:</strong> {request.note}
           </p>
         )}

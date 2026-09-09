@@ -281,13 +281,13 @@ export function TimesheetEditor({
       </div>
 
       {canWrite && (
-        <form onSubmit={addEntry} className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
+        <form onSubmit={addEntry} className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nový výkaz</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Datum <span className="text-red-600">*</span>
+                Datum <span className="text-danger">*</span>
               </span>
               <input
                 type="date"
@@ -299,7 +299,7 @@ export function TimesheetEditor({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Od <span className="text-red-600">*</span>
+                Od <span className="text-danger">*</span>
               </span>
               <input
                 type="time"
@@ -312,7 +312,7 @@ export function TimesheetEditor({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Do <span className="text-red-600">*</span>
+                Do <span className="text-danger">*</span>
               </span>
               <input
                 type="time"
@@ -325,7 +325,7 @@ export function TimesheetEditor({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Druh práce <span className="text-red-600">*</span>
+                Druh práce <span className="text-danger">*</span>
               </span>
               <select
                 required
@@ -350,7 +350,7 @@ export function TimesheetEditor({
             {needsProject && (
             <label className="flex flex-col gap-1.5 sm:col-span-2">
               <span className="text-sm font-body text-ink">
-                Projekt <span className="text-red-600">*</span>
+                Projekt <span className="text-danger">*</span>
               </span>
               <select
                 required
@@ -385,7 +385,7 @@ export function TimesheetEditor({
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>
+            <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>
           )}
 
           <div className="flex items-center gap-4 flex-wrap">
@@ -429,7 +429,7 @@ export function TimesheetEditor({
               <select
                 value={userFilter}
                 onChange={(e) => setUserFilter(e.target.value)}
-                className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+                className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
               >
                 <option value="all">Všichni zvukaři</option>
                 {people.map((p) => (
@@ -445,7 +445,7 @@ export function TimesheetEditor({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Hledat projekt, poznámku…"
-                className="w-64 max-w-full rounded-lg border border-line bg-white pl-9 pr-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+                className="w-64 max-w-full rounded-lg border border-line bg-surface pl-9 pr-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
               />
               <svg
                 viewBox="0 0 24 24"
@@ -463,10 +463,10 @@ export function TimesheetEditor({
         </div>
 
       {!canWrite && error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>
+        <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>
       )}
 
-      <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+      <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
           <table className="w-full min-w-[840px] border-collapse">
             <thead>
@@ -492,7 +492,7 @@ export function TimesheetEditor({
               {visibleEntries.map((e) => {
                 const minutes = durationMinutes(e.startMinutes, e.endMinutes);
                 return (
-                  <tr key={e.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                  <tr key={e.id} className="border-t border-line hover:bg-surfaceSoft">
                     <td className="px-4 py-3.5 text-sm font-heading text-ink tabular-nums whitespace-nowrap">
                       {formatDate(e.date)}
                     </td>
@@ -509,10 +509,10 @@ export function TimesheetEditor({
                       <span
                         className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
                           e.workType === 'RECORDING'
-                            ? 'bg-[#F1ECFF] text-brand-purpleDark'
+                            ? 'bg-tint text-brand-purpleDark'
                             : e.workType === 'EDITING'
-                              ? 'bg-[#E3F9EC] text-status-done'
-                              : 'bg-[#EEF2F7] text-[#5B6472]'
+                              ? 'bg-okTint text-status-done'
+                              : 'bg-field text-muted'
                         }`}
                       >
                         {WORK_TYPE_LABELS[e.workType]}
@@ -531,7 +531,7 @@ export function TimesheetEditor({
                           type="button"
                           onClick={() => removeEntry(e.id)}
                           disabled={busyId === e.id}
-                          className="text-red-600 text-sm font-heading disabled:opacity-50"
+                          className="text-danger text-sm font-heading disabled:opacity-50"
                         >
                           Smazat
                         </button>
@@ -555,7 +555,7 @@ function MonthTab({ label, active, onClick }: { label: string; active: boolean; 
       type="button"
       onClick={onClick}
       className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
-        active ? 'bg-white border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
+        active ? 'bg-surface border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
       }`}
     >
       {label}

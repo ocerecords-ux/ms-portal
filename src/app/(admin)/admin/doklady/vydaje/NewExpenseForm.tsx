@@ -141,7 +141,7 @@ export function NewExpenseForm({
   return (
     <form
       onSubmit={submit}
-      className="bg-white border border-line rounded-card shadow-sm p-5 flex flex-col gap-4 w-full"
+      className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4 w-full"
     >
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nový výdaj</h2>
 
@@ -307,7 +307,7 @@ export function NewExpenseForm({
             onClick={() => set('paid', false)}
             aria-pressed={!form.paid}
             className={`font-heading font-semibold text-sm px-4 py-2.5 transition-colors ${
-              !form.paid ? 'bg-status-progress text-white' : 'bg-white text-muted hover:text-ink'
+              !form.paid ? 'bg-status-progress text-white' : 'bg-surface text-muted hover:text-ink'
             }`}
           >
             Neuhrazeno
@@ -317,7 +317,7 @@ export function NewExpenseForm({
             onClick={() => set('paid', true)}
             aria-pressed={form.paid}
             className={`font-heading font-semibold text-sm px-4 py-2.5 transition-colors border-l border-line ${
-              form.paid ? 'bg-status-done text-white' : 'bg-white text-muted hover:text-ink'
+              form.paid ? 'bg-status-done text-white' : 'bg-surface text-muted hover:text-ink'
             }`}
           >
             Uhrazeno
@@ -325,7 +325,7 @@ export function NewExpenseForm({
         </span>
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button

@@ -42,7 +42,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
 
       {/* Pozvanka do portalu (zadani 5. 9. 2026) - uzivateli prijde e-mail s
           odkazem, kde si sam nastavi heslo. */}
-      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex items-start justify-between gap-4 flex-wrap">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="font-heading font-semibold text-sm text-ink m-0">Pozvánka do portálu</p>
           <p className="text-muted text-xs font-body m-0 mt-1">

@@ -81,7 +81,7 @@ export function MyAccountForm({
     'rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple';
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
+    <form onSubmit={handleSubmit} className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Kontaktní údaje</h2>
 
       {internal && (
@@ -146,7 +146,7 @@ export function MyAccountForm({
         )}
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       <div className="flex items-center gap-3 flex-wrap">
         <button
@@ -160,7 +160,7 @@ export function MyAccountForm({
       </div>
 
       {saved && emailChanged && (
-        <div className="bg-[#F1ECFF] border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+        <div className="bg-tint border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <p className="text-sm font-body text-ink m-0">
             E-mail je změněný. Příště se přihlaste novou adresou — kvůli tomu je potřeba se teď odhlásit.
           </p>

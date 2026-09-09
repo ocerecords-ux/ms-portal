@@ -10,14 +10,14 @@ export default function AdminLoading() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
+          <div key={i} className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
             <div className="h-2.5 w-24 bg-field rounded" />
             <div className="h-6 w-20 bg-line/60 rounded" />
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-card border border-line shadow-sm overflow-hidden">
+      <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
         <div className="h-11 bg-line/60" />
         {[0, 1, 2, 3, 4].map((i) => (
           <div key={i} className="flex items-center gap-4 px-4 py-4 border-t border-line">

@@ -66,7 +66,7 @@ export function NarratorMultiSelect({
     <div className="relative">
       <div
         onClick={() => inputRef.current?.focus()}
-        className="flex items-center gap-1.5 flex-wrap border-[1.5px] border-brand-green rounded-lg bg-white px-2 py-1.5 min-h-[42px] cursor-text"
+        className="flex items-center gap-1.5 flex-wrap border-[1.5px] border-brand-green rounded-lg bg-surface px-2 py-1.5 min-h-[42px] cursor-text"
       >
         {value.map((label) => (
           <span
@@ -103,7 +103,7 @@ export function NarratorMultiSelect({
       </div>
 
       {open && (suggestions.length > 0 || canAddFreeText) && (
-        <div className="absolute left-0 right-0 mt-1 bg-white border border-line rounded-lg shadow-lg py-1 z-20 max-h-56 overflow-auto">
+        <div className="absolute left-0 right-0 mt-1 bg-surface border border-line rounded-lg shadow-lg py-1 z-20 max-h-56 overflow-auto">
           {suggestions.map((o) => (
             <button
               key={o.id}

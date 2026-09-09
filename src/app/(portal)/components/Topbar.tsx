@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { isExternalHref, type NavItem } from '@/lib/menu';
 import { initials } from '@/lib/chat';
 import { NotificationBell } from './NotificationBell';
+import { ThemeToggle } from './ThemeToggle';
 
 /**
  * Horní fialová lišta. Odkazy si upravuje přímo tady každý sám - tři tečky
@@ -228,7 +229,7 @@ export function Topbar({
               +
             </button>
             {addOpen && missingPages.length > 0 && (
-              <div className="absolute left-0 mt-2 bg-white rounded-lg shadow-lg border border-line py-1 min-w-[180px] z-20">
+              <div className="absolute left-0 mt-2 bg-surface rounded-lg shadow-lg border border-line py-1 min-w-[180px] z-20">
                 {missingPages.map((p) => (
                   <button
                     key={p.href}
@@ -296,6 +297,7 @@ export function Topbar({
             Přetažením změníte pořadí, křížkem odkaz odeberete, „+" přidá zkratku. Lišta je jen vaše.
           </span>
         )}
+        <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
         <Link
           href="/muj-ucet"

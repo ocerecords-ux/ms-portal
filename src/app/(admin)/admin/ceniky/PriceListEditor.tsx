@@ -86,7 +86,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+      <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
@@ -111,7 +111,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
               )}
               {items.map((item) =>
                 editingId === item.id ? (
-                  <tr key={item.id} className="border-t border-line bg-[#FAF8FF]">
+                  <tr key={item.id} className="border-t border-line bg-surfaceSoft">
                     <td className="px-4 py-3">
                       <input
                         value={draft.name}
@@ -158,7 +158,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={item.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                  <tr key={item.id} className="border-t border-line hover:bg-surfaceSoft">
                     <td className="px-4 py-3.5 font-heading font-semibold text-sm">
                       <button
                         type="button"
@@ -208,7 +208,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                           type="button"
                           onClick={() => removeItem(item)}
                           disabled={busy}
-                          className="text-red-600 text-sm font-heading disabled:opacity-60"
+                          className="text-danger text-sm font-heading disabled:opacity-60"
                         >
                           Smazat
                         </button>
@@ -222,10 +222,10 @@ export function PriceListEditor({ items }: { items: Item[] }) {
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
-      {note && <p className="text-sm text-ink bg-[#F1ECFF] border border-line rounded-lg px-3 py-2 m-0">{note}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {note && <p className="text-sm text-ink bg-tint border border-line rounded-lg px-3 py-2 m-0">{note}</p>}
 
-      <form onSubmit={addItem} className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-4 max-w-3xl">
+      <form onSubmit={addItem} className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4 max-w-3xl">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Přidat položku</h2>
         <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr] gap-4">
           <label className="flex flex-col gap-1.5">

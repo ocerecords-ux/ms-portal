@@ -74,7 +74,7 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full';
 
   return (
-    <div className="bg-white border border-line rounded-card p-6 flex flex-col gap-4 shadow-sm">
+    <div className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 shadow-sm">
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Bankovní účty</h2>
         <span className="text-xs text-muted font-body">Na dokladu se nabídne účet ve stejné měně.</span>
@@ -89,7 +89,7 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
               <div className="min-w-0">
                 <p className="font-heading font-semibold text-sm text-ink m-0">
                   {a.label}
-                  <span className="ml-2 text-[10px] font-heading font-bold text-brand-purpleDeep bg-[#F1ECFF] rounded px-1.5 py-0.5">
+                  <span className="ml-2 text-[10px] font-heading font-bold text-brand-purpleDeep bg-tint rounded px-1.5 py-0.5">
                     {CURRENCY_LABELS[a.currency]}
                   </span>
                   {a.isDefault && <span className="ml-2 text-xs text-status-done font-heading">výchozí</span>}
@@ -113,7 +113,7 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
                   type="button"
                   onClick={() => send(`/api/admin/ucty/${a.id}`, 'DELETE')}
                   disabled={busy}
-                  className="text-red-600 text-sm font-heading disabled:opacity-60"
+                  className="text-danger text-sm font-heading disabled:opacity-60"
                 >
                   Smazat
                 </button>
@@ -123,7 +123,7 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
         </ul>
       )}
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       {adding ? (
         <form onSubmit={addAccount} className="flex flex-col gap-3 border-t border-line pt-4">

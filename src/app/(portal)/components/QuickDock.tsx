@@ -150,6 +150,15 @@ export function QuickDock({
     }
   }, []);
 
+  // Rozbaleny panel odsune obsah stranky doprava, at ho nezakryva (zprava
+  // uzivatele 9. 9. 2026: "projekty at se posunou doprava az kam te pusti
+  // leve rychle volby v rozbalenem stavu"). Sirku resi trida .dock-otevreny
+  // v globals.css - layout je serverovy a o stavu panelu nevi.
+  useEffect(() => {
+    document.body.classList.toggle('dock-otevreny', expanded);
+    return () => document.body.classList.remove('dock-otevreny');
+  }, [expanded]);
+
   useEffect(() => {
     if (!editing) setDraft(actions);
   }, [actions, editing]);
@@ -243,7 +252,7 @@ export function QuickDock({
   // --- Rozbaleno: ikony i nazvy ------------------------------------------
   return (
     <aside className="fixed left-0 top-28 z-40 flex items-stretch">
-      <div className="w-60 max-w-[70vw] bg-white border border-l-0 border-line rounded-r-card shadow-lg flex flex-col">
+      <div className="w-60 max-w-[70vw] bg-surface border border-l-0 border-line rounded-r-card shadow-lg flex flex-col">
         <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-brand-purple text-white rounded-tr-card">
           <span className="font-heading font-semibold text-xs uppercase tracking-wide">Rychlé volby</span>
           {editing ? (
@@ -331,7 +340,7 @@ export function QuickDock({
                   onClick={() => odeber(akce.key)}
                   title={`Odebrat ${akce.label}`}
                   aria-label={`Odebrat ${akce.label}`}
-                  className="w-5 h-5 rounded-full bg-field text-muted hover:bg-red-50 hover:text-red-600 text-xs font-bold leading-none flex items-center justify-center"
+                  className="w-5 h-5 rounded-full bg-field text-muted hover:bg-dangerTint hover:text-danger text-xs font-bold leading-none flex items-center justify-center"
                 >
                   ×
                 </button>
@@ -362,7 +371,7 @@ export function QuickDock({
                       key={akce.key}
                       type="button"
                       onClick={() => pridej(akce)}
-                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-heading text-brand-purple hover:bg-[#F1ECFF] transition-colors text-left"
+                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-heading text-brand-purple hover:bg-tint transition-colors text-left"
                     >
                       + {akce.label}
                     </button>
@@ -372,7 +381,7 @@ export function QuickDock({
             </div>
           )}
 
-          {error && <p className="text-xs text-red-600 m-0 px-2 pt-1">{error}</p>}
+          {error && <p className="text-xs text-danger m-0 px-2 pt-1">{error}</p>}
         </div>
       </div>
     </aside>

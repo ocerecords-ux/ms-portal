@@ -49,7 +49,7 @@ export function InviteButton({
 
   const className =
     variant === 'button'
-      ? 'bg-white border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-field transition-colors disabled:opacity-60'
+      ? 'bg-surface border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-field transition-colors disabled:opacity-60'
       : 'text-brand-purple text-sm font-heading font-semibold hover:underline disabled:opacity-60';
 
   return (
@@ -58,7 +58,7 @@ export function InviteButton({
         {label}
       </button>
       {message && (
-        <span className={`text-xs font-body ${state === 'error' ? 'text-red-600' : 'text-brand-greenDeep'}`}>
+        <span className={`text-xs font-body ${state === 'error' ? 'text-danger' : 'text-brand-greenDeep'}`}>
           {message}
         </span>
       )}

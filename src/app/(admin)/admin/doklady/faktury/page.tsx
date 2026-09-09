@@ -24,9 +24,9 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_CLASSES: Record<string, string> = {
   DRAFT: 'bg-field text-muted',
-  SENT: 'bg-[#F1ECFF] text-brand-purpleDark',
-  PAID: 'bg-[#E3F9EC] text-status-done',
-  CANCELLED: 'bg-red-50 text-red-600',
+  SENT: 'bg-tint text-brand-purpleDark',
+  PAID: 'bg-okTint text-status-done',
+  CANCELLED: 'bg-dangerTint text-danger',
 };
 
 function formatDate(date: Date | null): string {
@@ -72,7 +72,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
   return (
     <div className="flex flex-col gap-6">
       {issuers.length === 0 ? (
-        <div className="bg-white rounded-card border border-line shadow-sm px-6 py-10 text-center">
+        <div className="bg-surface rounded-card border border-line shadow-sm px-6 py-10 text-center">
           <p className="font-heading font-semibold text-ink m-0">Nejdřív si založte fakturační firmu</p>
           <p className="text-sm text-muted font-body m-0 mt-1 max-w-lg mx-auto">
             Faktura se vystavuje za konkrétní firmu a bere si z ní číselnou řadu i bankovní účet.
@@ -114,7 +114,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
           </div>
 
           {unpaidByCurrency.size > 0 && (
-            <div className="bg-white rounded-card border border-line shadow-sm px-5 py-4 flex items-center gap-6 flex-wrap">
+            <div className="bg-surface rounded-card border border-line shadow-sm px-5 py-4 flex items-center gap-6 flex-wrap">
               <span className="text-xs font-heading text-muted uppercase tracking-wide">Neuhrazeno celkem</span>
               {Array.from(unpaidByCurrency.entries()).map(([currency, amount]) => (
                 <span key={currency} className="font-display text-xl text-ink tabular-nums">
@@ -124,7 +124,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
             </div>
           )}
 
-          <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
+          <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] border-collapse">
                 <thead>
@@ -152,7 +152,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
                     const overdue =
                       invoice.status === 'SENT' && invoice.dueDate && new Date(invoice.dueDate) < today;
                     return (
-                      <tr key={invoice.id} className="border-t border-line hover:bg-[#FAF8FF]">
+                      <tr key={invoice.id} className="border-t border-line hover:bg-surfaceSoft">
                         <td className="px-4 py-3.5 font-heading font-semibold text-sm">
                           <Link
                             href={`/admin/doklady/faktury/${invoice.id}`}
@@ -171,7 +171,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
                         </td>
                         <td
                           className={`px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap ${
-                            overdue ? 'text-red-600 font-semibold' : 'text-muted'
+                            overdue ? 'text-danger font-semibold' : 'text-muted'
                           }`}
                         >
                           {formatDate(invoice.dueDate)}

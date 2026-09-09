@@ -38,15 +38,60 @@
 }
 */
 
+/* Barvy portalu. Znacka (fialova, zelena) je v obou rezimech stejna, meni se
+   jen plochy a text - viz tailwind.config.ts, kde se na tyhle promenne
+   navazuji tokeny bg-surface, text-ink, border-line a spol.
+
+   Zapis je "R G B" bez rgb(), aby fungovaly i zapisy s pruhlednosti
+   (text-muted/60). Tmavy rezim se zapina tridou .dark na <html>. */
 :root {
   --brand-purple: #7b55ff;
   --brand-purple-deep: #6b2af0;
   --brand-green: #1fdf67;
+
+  --c-ink: 32 26 51; /* #201A33 */
+  --c-paper: 251 250 255; /* #FBFAFF */
+  --c-surface: 255 255 255; /* #FFFFFF */
+  --c-surface-soft: 250 248 255; /* #FAF8FF */
+  --c-field: 246 246 246; /* #F6F6F6 */
+  --c-line: 228 223 251; /* #E4DFFB */
+  --c-muted: 110 101 128; /* #6E6580 */
+  --c-tint: 241 236 255; /* #F1ECFF */
+  --c-ok-tint: 227 249 236; /* #E3F9EC */
+  --c-warn-tint: 253 241 222; /* #FDF1DE */
+  --c-danger-tint: 254 242 242; /* #FEF2F2 */
+  --c-danger: 220 38 38; /* #DC2626 */
+  --c-status-new: 123 85 255;
+  --c-status-progress: 224 138 0;
+  --c-status-done: 20 158 75;
+
+  color-scheme: light;
+}
+
+.dark {
+  --c-ink: 236 233 247; /* svetly text */
+  --c-paper: 20 17 28; /* podklad stranky */
+  --c-surface: 29 25 48; /* karty a tabulky */
+  --c-surface-soft: 38 33 56; /* najeti mysi na radek */
+  --c-field: 38 34 51; /* vstupni pole */
+  --c-line: 52 46 74;
+  --c-muted: 167 159 188;
+  --c-tint: 46 37 80; /* svetle fialove plochy */
+  --c-ok-tint: 22 51 31;
+  --c-warn-tint: 58 43 18;
+  --c-danger-tint: 58 26 30;
+  --c-danger: 255 138 138;
+  /* Stavove barvy musi na tmavem podkladu vic svitit, jinak nejsou videt. */
+  --c-status-new: 167 139 255;
+  --c-status-progress: 240 169 58;
+  --c-status-done: 63 217 127;
+
+  color-scheme: dark;
 }
 
 body {
-  background: #fbfaff;
-  color: #201a33;
+  background: rgb(var(--c-paper));
+  color: rgb(var(--c-ink));
 }
 
 ::selection {
@@ -62,10 +107,10 @@ body {
   font-family: 'Acid Grotesk', var(--font-inter);
   font-size: 14px;
   border-radius: 8px;
-  border: 1.5px solid #e4dffb;
+  border: 1.5px solid rgb(var(--c-line));
   padding: 9px 12px;
-  background: #fff;
-  color: #201a33;
+  background: rgb(var(--c-surface));
+  color: rgb(var(--c-ink));
   width: 100%;
 }
 .admin-input:focus {
@@ -74,8 +119,8 @@ body {
   box-shadow: 0 0 0 3px rgba(123, 85, 255, 0.15);
 }
 .admin-input:disabled {
-  background: #f6f6f6;
-  color: #6e6580;
+  background: rgb(var(--c-field));
+  color: rgb(var(--c-muted));
   cursor: not-allowed;
 }
 
@@ -83,65 +128,45 @@ body {
    Tmavý režim MS chatu (zadání 8. 9. 2026: "u MS chatu by měl jít zapnout
    i nějaký tmavý režim").
 
-   Přepínač jen přidá třídu .ms-chat-tmavy na panel chatu; barvy se přebijí
-   tady, aby se nemusely v komponentě psát dvě sady tříd ke každému prvku.
-   Platí to výhradně uvnitř chatu — zbytek portálu zůstává světlý.
+   Od 9. 9. 2026, kdy má tmavý režim celý portál, to není sada přebíjecích
+   pravidel s !important, ale prosté přenastavení barevných proměnných na
+   panelu chatu. Všechno uvnitř (bg-surface, text-ink, border-line…) se tím
+   přebarví samo. Chat si tak může jet v tmavém i ve světlém portálu a naopak.
 --------------------------------------------------------------------------- */
 .ms-chat-tmavy {
   color-scheme: dark;
+
+  --c-ink: 237 233 247;
+  --c-paper: 27 22 38;
+  --c-surface: 38 32 52;
+  --c-surface-soft: 27 22 38;
+  --c-field: 46 39 64;
+  --c-line: 58 51 80;
+  --c-muted: 167 159 188;
+  --c-tint: 58 47 85;
+  --c-ok-tint: 22 51 31;
+  --c-warn-tint: 58 43 18;
+  --c-danger-tint: 58 26 30;
+  --c-danger: 255 138 138;
+  --c-status-new: 167 139 255;
+  --c-status-progress: 240 169 58;
+  --c-status-done: 63 217 127;
 }
-.ms-chat-tmavy .bg-white {
-  background-color: #262034 !important;
-}
-.ms-chat-tmavy .bg-\[\#FAF8FF\] {
-  background-color: #1B1626 !important;
-}
-.ms-chat-tmavy .bg-\[\#FBFAFF\] {
-  background-color: #211B2E !important;
-}
-.ms-chat-tmavy .bg-field {
-  background-color: #2E2740 !important;
-}
-.ms-chat-tmavy .bg-\[\#F1ECFF\] {
-  background-color: #3A2F55 !important;
-}
-.ms-chat-tmavy .text-ink {
-  color: #EDE9F7 !important;
-}
-.ms-chat-tmavy .text-muted {
-  color: #A79FBC !important;
+/* Fialová se uvnitř chatu nebere z proměnné (je to barva značky), takže
+   vlastní bubliny se ztlumí zvlášť - syté fialové se v tmavém špatně čte
+   (zpráva uživatele 8. 9. 2026). */
+.ms-chat-tmavy .bg-brand-purple {
+  background-color: #5B3FC4;
 }
 .ms-chat-tmavy .text-brand-purple,
 .ms-chat-tmavy .text-brand-purpleDark {
-  color: #B49BFF !important;
+  color: #B49BFF;
 }
-.ms-chat-tmavy .border-line {
-  border-color: #3A3350 !important;
-}
-.ms-chat-tmavy .divide-line > * + * {
-  border-color: #3A3350 !important;
-}
-.ms-chat-tmavy .bg-line {
-  background-color: #3A3350 !important;
-}
-.ms-chat-tmavy input,
-.ms-chat-tmavy textarea {
-  color: #EDE9F7 !important;
-}
-.ms-chat-tmavy input::placeholder,
-.ms-chat-tmavy textarea::placeholder {
-  color: #8A82A3 !important;
-}
-/* Vlastni bubliny byly v tmavem rezimu prilis syte - o odstin tlumeji,
-   at se to da cist i dele (zprava uzivatele 8. 9. 2026). */
-.ms-chat-tmavy .bg-brand-purple {
-  background-color: #5B3FC4 !important;
-}
-/* Nedostupne tlacitko Poslat pusobilo na tmavem rozbite. */
+/* Nedostupné tlačítko Poslat působilo na tmavém rozbité. */
 .ms-chat-tmavy button:disabled {
-  opacity: 0.35 !important;
+  opacity: 0.35;
 }
-/* Posuvnik ve vypisu zprav, at nesviti bile. */
+/* Posuvník ve výpisu zpráv, ať nesvítí bíle. */
 .ms-chat-tmavy * {
   scrollbar-color: #4A4266 #1B1626;
 }
@@ -155,4 +180,46 @@ body {
 .ms-chat-tmavy ::-webkit-scrollbar-thumb {
   background: #4A4266;
   border-radius: 6px;
+}
+
+/* Posuvníky v tmavém portálu - stejná úvaha jako u chatu. */
+.dark * {
+  scrollbar-color: rgb(var(--c-line)) rgb(var(--c-paper));
+}
+.dark ::-webkit-scrollbar-track {
+  background: rgb(var(--c-paper));
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-line));
+  border-radius: 6px;
+}
+
+/* ---------------------------------------------------------------------------
+   Levý panel rychlých voleb odsune obsah, když je rozbalený (zpráva uživatele
+   9. 9. 2026). Panel je "fixed", takže si místo sám neudělá - třídu
+   .dock-otevreny nasazuje na <body> komponenta QuickDock.
+
+   Platí až od šířky okna, kde se to vejde. Na užším okně panel obsah překryje
+   jako dosud - odsazovat tam nemá cenu, obsah by se zmáčkl na nic.
+--------------------------------------------------------------------------- */
+.obsah-portalu {
+  transition: padding-left 200ms ease;
+}
+@media (min-width: 1024px) {
+  body.dock-otevreny .obsah-portalu {
+    padding-left: 256px;
+  }
+}
+
+/* Fialová značky je na tmavém podkladu špatně čitelná (je to sytá barva
+   navrženrá na bílou). Barvu značky neměníme - fialové plochy zůstávají jak
+   jsou - ale fialový TEXT se v tmavém režimu o kus rozsvítí. Stejná úvaha
+   jako v MS chatu, který to má takhle od 8. 9. 2026. */
+.dark .text-brand-purple,
+.dark .text-brand-purpleDeep,
+.dark .text-brand-purpleDark {
+  color: #B49BFF;
+}
+.dark .hover\:text-brand-purple:hover {
+  color: #B49BFF;
 }

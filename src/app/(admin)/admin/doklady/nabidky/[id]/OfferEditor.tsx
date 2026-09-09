@@ -233,12 +233,12 @@ export function OfferEditor({
   const inputClass =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:opacity-70';
   const cellClass =
-    'rounded-lg border border-line bg-white px-2.5 py-1.5 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:bg-field disabled:opacity-70';
+    'rounded-lg border border-line bg-surface px-2.5 py-1.5 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:bg-field disabled:opacity-70';
 
   return (
     <div className="flex flex-col gap-5">
       {/* Lišta se stavem a akcemi - drží se nahoře, aby byla pořád po ruce. */}
-      <div className="bg-white rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="font-display text-2xl text-ink">{offer.number}</span>
           <span
@@ -253,7 +253,7 @@ export function OfferEditor({
             </span>
           )}
           {offer.rejectedAt && !offer.approvedAt && (
-            <span className="text-xs font-body text-red-600">Odmítnuto {formatDateTime(offer.rejectedAt)}</span>
+            <span className="text-xs font-body text-danger">Odmítnuto {formatDateTime(offer.rejectedAt)}</span>
           )}
           {offer.sentAt && !offer.approvedAt && !offer.rejectedAt && (
             <span className="text-xs font-body text-muted">Odesláno {formatDateTime(offer.sentAt)}</span>
@@ -276,7 +276,7 @@ export function OfferEditor({
               type="button"
               onClick={createInvoice}
               disabled={saving || sending}
-              className="border border-brand-green bg-[#E3F9EC] text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-green transition-colors disabled:opacity-60 whitespace-nowrap"
+              className="border border-brand-green bg-okTint text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-green transition-colors disabled:opacity-60 whitespace-nowrap"
             >
               Vystavit fakturu
             </button>
@@ -287,7 +287,7 @@ export function OfferEditor({
                 type="button"
                 onClick={sendToClient}
                 disabled={saving || sending}
-                className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-[#F1ECFF] transition-colors disabled:opacity-60"
+                className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-tint transition-colors disabled:opacity-60"
               >
                 {sending ? 'Odesílám…' : 'Odeslat klientovi'}
               </button>
@@ -305,18 +305,18 @@ export function OfferEditor({
       </div>
 
       {locked && (
-        <div className="bg-[#E3F9EC] border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+        <div className="bg-okTint border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <p className="text-sm text-ink m-0">
             Nabídku klient schválil, takže už se nedá měnit — zůstává přesně v podobě, kterou odsouhlasil.
             Fakturu z ní vystavíte tlačítkem nahoře.
           </p>
         </div>
       )}
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
-      {info && <p className="text-sm text-ink bg-[#F1ECFF] border border-line rounded-lg px-4 py-3 m-0">{info}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
+      {info && <p className="text-sm text-ink bg-tint border border-line rounded-lg px-4 py-3 m-0">{info}</p>}
 
       {/* Vlastní doklad */}
-      <div className="bg-white rounded-card border border-line shadow-sm overflow-hidden">
+      <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
         {/* Hlavička: dodavatel vs. odběratel */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-line">
           <div className="flex flex-col gap-2">
@@ -363,7 +363,7 @@ export function OfferEditor({
               {company.ic ? `IČ ${company.ic}` : ''} {company.dic ? `· DIČ ${company.dic}` : ''}
             </p>
             {!company.contactEmail && (
-              <p className="text-xs text-red-600 font-body m-0">
+              <p className="text-xs text-danger font-body m-0">
                 Firma nemá kontaktní e-mail — bez něj nabídku nepošlete.
               </p>
             )}
@@ -516,7 +516,7 @@ export function OfferEditor({
                           type="button"
                           onClick={() => removeItem(index)}
                           title="Odebrat položku"
-                          className="text-muted hover:text-red-600 text-sm font-heading"
+                          className="text-muted hover:text-danger text-sm font-heading"
                         >
                           ✕
                         </button>
@@ -560,7 +560,7 @@ export function OfferEditor({
 
       {/* Poznámka a účet */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
+        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">Poznámka pro klienta</span>
           <textarea
             value={form.note}
@@ -572,7 +572,7 @@ export function OfferEditor({
           />
         </div>
 
-        <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
+        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">
             Bankovní účet ({CURRENCY_LABELS[form.currency]})
           </span>
@@ -601,7 +601,7 @@ export function OfferEditor({
             type="button"
             onClick={remove}
             disabled={saving}
-            className="text-red-600 text-sm font-heading disabled:opacity-60"
+            className="text-danger text-sm font-heading disabled:opacity-60"
           >
             Smazat nabídku
           </button>

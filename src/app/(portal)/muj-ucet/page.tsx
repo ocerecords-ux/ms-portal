@@ -36,7 +36,7 @@ export default async function MyAccountPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-card border border-line shadow-sm p-5">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5">
         <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-4 m-0">
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Kód účtu</dt>

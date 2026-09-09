@@ -25,7 +25,7 @@ export default function ProjectDetailLoading() {
         ))}
       </div>
 
-      <div className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
         <div className="h-3 w-24 bg-field rounded" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-5">
           {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -37,7 +37,7 @@ export default function ProjectDetailLoading() {
         </div>
       </div>
 
-      <div className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
         <div className="h-3 w-28 bg-field rounded" />
         <div className="h-24 bg-field rounded-lg" />
       </div>

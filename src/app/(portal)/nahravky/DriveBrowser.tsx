@@ -310,7 +310,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
   });
 
   return (
-    <div className="rounded-card overflow-hidden border border-line shadow-sm max-w-4xl mx-auto bg-white">
+    <div className="rounded-card overflow-hidden border border-line shadow-sm max-w-4xl mx-auto bg-surface">
       <div className="bg-brand-purple px-4 sm:px-6 py-4 flex items-center gap-3 flex-wrap">
         <button
           type="button"
@@ -407,7 +407,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
       {loading ? (
         <div className="px-6 py-10 text-center text-sm text-muted font-body">Načítám…</div>
       ) : error ? (
-        <div className="px-6 py-10 text-center text-sm text-red-600 font-body">{error}</div>
+        <div className="px-6 py-10 text-center text-sm text-danger font-body">{error}</div>
       ) : sorted.length === 0 ? (
         <div className="px-6 py-10 text-center text-sm text-muted font-body">Tato složka je prázdná.</div>
       ) : (
@@ -433,7 +433,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                     if (e.key === 'Escape') setSelectedId(null);
                   }}
                   className={`flex items-center gap-3 px-6 py-3 transition-colors outline-none cursor-default ${
-                    selectedId === item.id ? 'bg-[#F1ECFF]' : 'hover:bg-field'
+                    selectedId === item.id ? 'bg-tint' : 'hover:bg-field'
                   }`}
                 >
                   <FileIcon mimeType={item.mimeType} isFolder={item.isFolder} />
@@ -451,7 +451,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                         if (e.key === 'Enter') saveRename(item);
                         if (e.key === 'Escape') setRenamingId(null);
                       }}
-                      className="flex-1 min-w-0 rounded border border-brand-purple bg-white px-2 py-1 text-sm font-body text-ink outline-none"
+                      className="flex-1 min-w-0 rounded border border-brand-purple bg-surface px-2 py-1 text-sm font-body text-ink outline-none"
                     />
                   ) : (
                     <span

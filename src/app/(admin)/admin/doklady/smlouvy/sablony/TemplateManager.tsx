@@ -87,7 +87,7 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-card border border-line shadow-sm p-4 flex flex-wrap gap-2">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-wrap gap-2">
         <span className="text-xs font-heading text-muted uppercase tracking-wide w-full">Dostupná pole</span>
         {CONTRACT_PLACEHOLDERS.map((p) => (
           <span
@@ -100,11 +100,11 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
         ))}
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
-      {info && <p className="text-sm text-ink bg-[#E3F9EC] border border-line rounded-lg px-3 py-2 m-0">{info}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {info && <p className="text-sm text-ink bg-okTint border border-line rounded-lg px-3 py-2 m-0">{info}</p>}
 
       <div className="flex flex-col sm:flex-row gap-5 items-start">
-        <div className="w-full sm:w-[260px] shrink-0 bg-white rounded-card border border-line shadow-sm p-2 flex flex-col gap-0.5">
+        <div className="w-full sm:w-[260px] shrink-0 bg-surface rounded-card border border-line shadow-sm p-2 flex flex-col gap-0.5">
           {templates.length === 0 && <p className="text-sm font-body text-muted m-0 px-2 py-3">Zatím žádné šablony.</p>}
           {templates.map((t) => (
             <button
@@ -112,7 +112,7 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
               type="button"
               onClick={() => setOpenId(t.id)}
               className={`text-left rounded-lg px-3 py-2 text-sm font-heading transition-colors ${
-                t.id === openId ? 'bg-[#F1ECFF] text-ink' : 'text-muted hover:text-ink hover:bg-field'
+                t.id === openId ? 'bg-tint text-ink' : 'text-muted hover:text-ink hover:bg-field'
               } ${t.active ? '' : 'line-through'}`}
             >
               {hodnota(t).name}
@@ -121,7 +121,7 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
         </div>
 
         {otevrena && (
-          <div className="flex-1 min-w-0 bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
+          <div className="flex-1 min-w-0 bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Název šablony</span>
               <input
@@ -170,7 +170,7 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
                   const ok = await posli(`/api/admin/contract-templates/${otevrena.id}`, 'DELETE');
                   if (ok) setOpenId(null);
                 }}
-                className="text-red-600 text-sm font-heading ml-auto"
+                className="text-danger text-sm font-heading ml-auto"
               >
                 Smazat
               </button>

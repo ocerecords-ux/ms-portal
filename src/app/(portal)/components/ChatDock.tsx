@@ -123,7 +123,7 @@ function DenOddelovac({ iso }: { iso: string }) {
   return (
     <div className="flex items-center gap-3 my-1">
       <span className="h-px flex-1 bg-line" />
-      <span className="text-[11px] font-heading font-semibold text-muted uppercase tracking-wide bg-white border border-line rounded-pill px-2.5 py-0.5">
+      <span className="text-[11px] font-heading font-semibold text-muted uppercase tracking-wide bg-surface border border-line rounded-pill px-2.5 py-0.5">
         {formatDayLabel(iso)}
       </span>
       <span className="h-px flex-1 bg-line" />
@@ -321,9 +321,9 @@ function Psatko({
   }
 
   return (
-    <form onSubmit={odeslat} className="relative border-t border-line bg-white p-3 flex items-end gap-2">
+    <form onSubmit={odeslat} className="relative border-t border-line bg-surface p-3 flex items-end gap-2">
       {smajlici && (
-        <div className="absolute left-3 right-3 bottom-full mb-1 bg-white border border-line rounded-lg shadow-lg p-2 z-10 max-h-64 overflow-y-auto">
+        <div className="absolute left-3 right-3 bottom-full mb-1 bg-surface border border-line rounded-lg shadow-lg p-2 z-10 max-h-64 overflow-y-auto">
           {/* Naše vlastní sada je první - viz lib/msSmajlici.ts. */}
           <p className="text-[10px] font-heading font-semibold text-muted uppercase tracking-wide m-0 mb-1.5 px-0.5">
             Mediaspace
@@ -369,7 +369,7 @@ function Psatko({
         </div>
       )}
       {nabidka.length > 0 && (
-        <div className="absolute left-3 right-3 bottom-full mb-1 max-h-40 overflow-y-auto bg-white border border-line rounded-lg shadow-lg py-1 z-10">
+        <div className="absolute left-3 right-3 bottom-full mb-1 max-h-40 overflow-y-auto bg-surface border border-line rounded-lg shadow-lg py-1 z-10">
           {nabidka.map((u) => (
             <button
               key={u.id}
@@ -388,7 +388,7 @@ function Psatko({
         onClick={() => setSmajlici((v) => !v)}
         title="Smajlíci"
         aria-label="Smajlíci"
-        className="shrink-0 w-9 h-9 rounded-lg border border-line bg-white text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center"
+        className="shrink-0 w-9 h-9 rounded-lg border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-5 h-5">
           <circle cx="12" cy="12" r="9" />
@@ -424,7 +424,7 @@ function Psatko({
             document.execCommand('insertText', false, text);
             posliVen();
           }}
-          className="min-h-[96px] max-h-[260px] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
+          className="min-h-[150px] max-h-[45vh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
         />
       </div>
 
@@ -771,8 +771,8 @@ export function ChatDock() {
           samotny chat. Na uzkem okne se leva cast schova a zustane jen to,
           co je zrovna otevrene. */}
       <div
-        className={`max-w-[92vw] h-[56vh] bg-white border border-r-0 border-line shadow-xl flex flex-col overflow-hidden transition-[width] ${
-          vlaknoId ? 'w-[900px]' : 'w-[620px]'
+        className={`max-w-[96vw] h-[72vh] bg-surface border border-r-0 border-line shadow-xl flex flex-col overflow-hidden transition-[width] ${
+          vlaknoId ? 'w-[1180px]' : 'w-[760px]'
         } ${tmavy ? 'ms-chat-tmavy' : ''}`}
       >
         <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
@@ -798,12 +798,12 @@ export function ChatDock() {
           </span>
         </div>
 
-        {error && <p className="text-xs text-red-600 bg-red-50 px-4 py-2 m-0">{error}</p>}
+        {error && <p className="text-xs text-danger bg-dangerTint px-4 py-2 m-0">{error}</p>}
 
         <div className="flex-1 min-h-0 flex">
           {/* --- Levy sloupec: zalozky a seznam ---------------------------- */}
           <div
-            className={`w-[220px] shrink-0 border-r border-line bg-[#FBFAFF] flex-col min-h-0 ${
+            className={`w-[220px] shrink-0 border-r border-line bg-paper flex-col min-h-0 ${
               vlaknoId ? 'hidden lg:flex' : otevrena ? 'hidden sm:flex' : 'flex'
             }`}
           >
@@ -830,7 +830,7 @@ export function ChatDock() {
                 <p className="text-sm font-body text-muted m-0 px-1">Načítám projekty…</p>
               )}
               {tab === 'PROJEKT' && projektyChyba && (
-                <p className="text-xs text-red-600 m-0 px-1">{projektyChyba}</p>
+                <p className="text-xs text-danger m-0 px-1">{projektyChyba}</p>
               )}
               {tab === 'PROJEKT' &&
                 kanaly.map((k) => {
@@ -845,7 +845,7 @@ export function ChatDock() {
                           : void otevriNovou({ kind: 'PROJEKT', caflouProjectId: k.caflouProjectId, name: k.name })
                       }
                       className={`text-left rounded-lg px-2.5 py-1.5 transition-colors flex items-center justify-between gap-2 ${
-                        aktivni ? 'bg-[#F1ECFF] text-brand-purpleDark' : 'hover:bg-field text-ink'
+                        aktivni ? 'bg-tint text-brand-purpleDark' : 'hover:bg-field text-ink'
                       }`}
                     >
                       <span className="font-heading text-sm truncate">
@@ -875,7 +875,7 @@ export function ChatDock() {
                     type="button"
                     onClick={() => setOpenId(c.id)}
                     className={`text-left rounded-lg px-2.5 py-1.5 transition-colors flex items-center gap-2 ${
-                      c.id === openId ? 'bg-[#F1ECFF]' : 'hover:bg-field'
+                      c.id === openId ? 'bg-tint' : 'hover:bg-field'
                     }`}
                   >
                     <Avatar label={c.label} photoUrl={c.avatarUrl} size={26} />
@@ -975,7 +975,7 @@ export function ChatDock() {
                     v dalsim okne napravo od te zpravy") - jen na uzkem okne
                     ustoupi, aby na vlakno vubec zbylo misto. */}
                 <div className={`flex-1 min-w-0 flex flex-col ${vlaknoId ? 'hidden md:flex' : 'flex'}`}>
-                  <div className="px-4 py-2.5 border-b border-line bg-white flex items-center gap-2">
+                  <div className="px-4 py-2.5 border-b border-line bg-surface flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setOpenId(null)}
@@ -1000,7 +1000,7 @@ export function ChatDock() {
                   {/* Vypis zprav ma vlastni jemne fialovy podklad - na bilem
                       pozadi splyvaly bile bubliny s okolim (zprava uzivatele
                       8. 9. 2026: "cele je to takove bile, sterilni"). */}
-                  <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-[#FAF8FF]">
+                  <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-surfaceSoft">
                     {messages.length === 0 && (
                       <p className="text-sm font-body text-muted m-0">Zatím tu nikdo nic nenapsal.</p>
                     )}
@@ -1017,7 +1017,7 @@ export function ChatDock() {
                             className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
                               m.mine
                                 ? 'bg-brand-purple text-white'
-                                : 'bg-white border border-line text-ink'
+                                : 'bg-surface border border-line text-ink'
                             }`}
                           >
                             <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
@@ -1067,7 +1067,7 @@ export function ChatDock() {
 
                 {/* Treti sloupec: vlakno vedle zpravy, jako u Slacku. */}
                 {vlaknoId && (
-                  <div className="w-full md:w-[300px] shrink-0 border-l border-line flex flex-col min-h-0">
+                  <div className="w-full md:w-[340px] shrink-0 border-l border-line flex flex-col min-h-0">
                     <div className="px-3 py-2.5 border-b border-line flex items-center justify-between gap-2 bg-field">
                       <span className="font-heading font-semibold text-sm text-ink">Vlákno</span>
                       <button
@@ -1081,7 +1081,7 @@ export function ChatDock() {
                       </button>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3 bg-[#FAF8FF]">
+                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3 bg-surfaceSoft">
                       {vlakno.map((m, index) => (
                         <div key={m.id} className={`flex items-start gap-2 ${index === 0 ? '' : 'pl-3'}`}>
                           <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={index === 0 ? 26 : 22} />
@@ -1100,7 +1100,7 @@ export function ChatDock() {
                             </span>
                             <p
                               className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
-                                m.mine ? 'bg-brand-purple text-white' : 'bg-white border border-line text-ink'
+                                m.mine ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-ink'
                               }`}
                             >
                               <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />

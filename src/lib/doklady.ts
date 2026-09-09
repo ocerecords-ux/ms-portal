@@ -101,9 +101,9 @@ export const OFFER_STATUS_LABELS: Record<string, string> = {
 
 export const OFFER_STATUS_CLASSES: Record<string, string> = {
   DRAFT: 'bg-field text-muted',
-  SENT: 'bg-[#F1ECFF] text-brand-purpleDark',
-  APPROVED: 'bg-[#E3F9EC] text-status-done',
-  REJECTED: 'bg-red-50 text-red-600',
+  SENT: 'bg-tint text-brand-purpleDark',
+  APPROVED: 'bg-okTint text-status-done',
+  REJECTED: 'bg-dangerTint text-danger',
 };
 
 /** Adresa firmy na jeden řádek - pro hlavičku dokladu. */

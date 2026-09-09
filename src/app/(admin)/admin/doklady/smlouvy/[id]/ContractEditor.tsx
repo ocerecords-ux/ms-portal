@@ -197,7 +197,7 @@ export function ContractEditor({
   return (
     <div className="flex flex-col gap-6">
       {/* Hlavicka se stavem a akcemi */}
-      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="font-display text-2xl text-ink">{contract.number}</span>
@@ -234,7 +234,7 @@ export function ContractEditor({
                 type="button"
                 onClick={() => setPodpisOtevreny((v) => !v)}
                 disabled={busy}
-                className="font-heading font-semibold text-sm rounded-lg border border-brand-purple px-4 py-2 text-brand-purple hover:bg-[#F1ECFF] disabled:opacity-60"
+                className="font-heading font-semibold text-sm rounded-lg border border-brand-purple px-4 py-2 text-brand-purple hover:bg-tint disabled:opacity-60"
               >
                 {podpisOtevreny ? 'Zavřít podpis' : 'Podepsat za Mediaspace'}
               </button>
@@ -255,7 +255,7 @@ export function ContractEditor({
               </button>
             )}
             {contract.status === 'DRAFT' && (
-              <button type="button" onClick={smazat} disabled={busy} className="text-red-600 text-sm font-heading px-2">
+              <button type="button" onClick={smazat} disabled={busy} className="text-danger text-sm font-heading px-2">
                 Smazat
               </button>
             )}
@@ -263,13 +263,13 @@ export function ContractEditor({
         </div>
 
         {contract.rejectedAt && (
-          <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">
+          <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">
             Protistrana podpis odmítla {formatSignedAt(contract.rejectedAt)}
             {contract.rejectedReason ? ` — „${contract.rejectedReason}"` : '.'}
           </p>
         )}
-        {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
-        {info && <p className="text-sm text-ink bg-[#E3F9EC] border border-line rounded-lg px-3 py-2 m-0">{info}</p>}
+        {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+        {info && <p className="text-sm text-ink bg-okTint border border-line rounded-lg px-3 py-2 m-0">{info}</p>}
 
         {/* Odkaz k podpisu - da se poslat i jinou cestou nez mailem */}
         <div className="flex items-center gap-3 flex-wrap border-t border-line pt-4">
@@ -292,7 +292,7 @@ export function ContractEditor({
       </div>
 
       {podpisOtevreny && !podepsanoNami && (
-        <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
+        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
             Podpis za Mediaspace
           </h2>
@@ -311,7 +311,7 @@ export function ContractEditor({
       )}
 
       {/* Udaje smlouvy */}
-      <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Údaje</h2>
 
         <label className="flex flex-col gap-1.5">
@@ -371,11 +371,11 @@ export function ContractEditor({
 
       {/* Text smlouvy */}
       {!locked && (
-        <div className="bg-white rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
+        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Text smlouvy</h2>
             {(podepsanoNami || podepsanoJimi) && textZmenen && (
-              <span className="text-xs font-heading font-semibold text-red-600">
+              <span className="text-xs font-heading font-semibold text-danger">
                 Uložení změněného textu zruší už pořízené podpisy — podepisovalo se jiné znění.
               </span>
             )}

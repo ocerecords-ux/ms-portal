@@ -96,7 +96,7 @@ export function SignaturePad({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative rounded-card border-2 border-dashed border-line bg-white overflow-hidden">
+      <div className="relative rounded-card border-2 border-dashed border-line bg-surface overflow-hidden">
         <canvas
           ref={canvasRef}
           onPointerDown={start}

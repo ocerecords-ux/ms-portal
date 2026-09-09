@@ -15,7 +15,7 @@ export function OrderTypeSwitcher({ ratePerPage, herci }: { ratePerPage: number;
 
   return (
     <div className="flex flex-col gap-5 items-center">
-      <div className="flex items-center gap-2 bg-white border border-line rounded-pill p-1">
+      <div className="flex items-center gap-2 bg-surface border border-line rounded-pill p-1">
         <button
           type="button"
           onClick={() => setTab('audiokniha')}

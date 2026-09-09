@@ -65,7 +65,7 @@ export function OfferApproval({
 
   if (status === 'APPROVED') {
     return (
-      <div className="bg-[#E3F9EC] border border-line rounded-card p-6 text-center">
+      <div className="bg-okTint border border-line rounded-card p-6 text-center">
         <p className="font-display text-2xl text-ink m-0">Nabídka schválena</p>
         <p className="text-sm font-body text-muted m-0 mt-2">
           {approvedByName ? `Schválil(a) ${approvedByName}` : 'Schváleno'} {formatDateTime(approvedAt)}.
@@ -77,7 +77,7 @@ export function OfferApproval({
 
   if (status === 'REJECTED') {
     return (
-      <div className="bg-white border border-line rounded-card p-6 text-center flex flex-col gap-3">
+      <div className="bg-surface border border-line rounded-card p-6 text-center flex flex-col gap-3">
         <div>
           <p className="font-display text-2xl text-ink m-0">Nabídka odmítnuta</p>
           <p className="text-sm font-body text-muted m-0 mt-2">
@@ -103,13 +103,13 @@ export function OfferApproval({
             Přece jen schválit
           </button>
         </div>
-        {error && <p className="text-sm text-red-600 m-0">{error}</p>}
+        {error && <p className="text-sm text-danger m-0">{error}</p>}
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-line rounded-card shadow-sm p-6 flex flex-col gap-4">
+    <div className="bg-surface border border-line rounded-card shadow-sm p-6 flex flex-col gap-4">
       <div>
         <p className="font-heading font-semibold text-ink m-0">Souhlasíte s nabídkou?</p>
         <p className="text-sm font-body text-muted m-0 mt-1">
@@ -127,7 +127,7 @@ export function OfferApproval({
         />
       </label>
 
-      {error && <p className="text-sm text-red-600 m-0">{error}</p>}
+      {error && <p className="text-sm text-danger m-0">{error}</p>}
 
       <div className="flex items-center gap-3 flex-wrap">
         <button

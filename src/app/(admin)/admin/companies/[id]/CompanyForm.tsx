@@ -120,7 +120,7 @@ export function CompanyForm({ company }: { company: Company }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-line rounded-card p-6 flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4">
       <p className="text-xs font-heading text-muted uppercase tracking-wide -mb-1">
         Typ firmy: <span className="text-ink">{COMPANY_TYPE_LABELS[company.type]}</span>
       </p>
@@ -145,7 +145,7 @@ export function CompanyForm({ company }: { company: Company }) {
           onClick={loadFromAres}
           disabled={aresBusy || ic.replace(/\D/g, '').length !== 8}
           title="Doplnit název, DIČ a adresu z veřejného registru podle IČ"
-          className="bg-white border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-field transition-colors disabled:opacity-40 mb-[2px]"
+          className="bg-surface border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-field transition-colors disabled:opacity-40 mb-[2px]"
         >
           {aresBusy ? 'Načítám…' : 'Načíst z registru'}
         </button>
@@ -254,7 +254,7 @@ export function CompanyForm({ company }: { company: Company }) {
         </>
       )}
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && <p className="text-danger text-sm">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button

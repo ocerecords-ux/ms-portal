@@ -32,9 +32,9 @@ const INVOICE_STATUS_LABELS: Record<string, string> = {
 
 const INVOICE_STATUS_CLASSES: Record<string, string> = {
   DRAFT: 'bg-field text-muted',
-  SENT: 'bg-[#F1ECFF] text-brand-purpleDark',
-  PAID: 'bg-[#E3F9EC] text-status-done',
-  CANCELLED: 'bg-red-50 text-red-600',
+  SENT: 'bg-tint text-brand-purpleDark',
+  PAID: 'bg-okTint text-status-done',
+  CANCELLED: 'bg-dangerTint text-danger',
 };
 
 export function invoiceStatus(status: string): { label: string; className: string } {
@@ -69,7 +69,7 @@ export function ProjectDocuments({
   const celkem = offers.length + invoices.length + expenses.length + contracts.length;
 
   return (
-    <div className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-6">
+    <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-6">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
           Doklady k projektu

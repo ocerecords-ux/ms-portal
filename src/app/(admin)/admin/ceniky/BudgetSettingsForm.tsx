@@ -53,7 +53,7 @@ export function BudgetSettingsForm({ initial }: { initial: BudgetSettingsValues 
   const czk = (v: number) => `${v.toLocaleString('cs-CZ')} Kč`;
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
+    <form onSubmit={handleSubmit} className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
       <div>
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
           Parametry rozpočtu audioknihy
@@ -115,7 +115,7 @@ export function BudgetSettingsForm({ initial }: { initial: BudgetSettingsValues 
         </table>
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button

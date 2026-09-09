@@ -133,7 +133,7 @@ export function NewUserForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
+    <form onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
       <h2 className="font-display text-xl text-ink m-0">Nový uživatel</h2>
 
       {/* Poradi poli (zadani 12. 9. 2026): Jmeno + Fotka (drag & drop) prvni,
@@ -289,7 +289,7 @@ export function NewUserForm({
         </>
       )}
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && <p className="text-danger text-sm">{error}</p>}
       {created && <p className="text-status-done text-sm">{created}</p>}
 
       <div className="flex items-center gap-3">
