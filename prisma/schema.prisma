@@ -127,7 +127,6 @@ model User {
   role         Role      @default(CLIENT)
   companyId    String?   // null pro interni ucty (ADMIN/ZVUKAR/PRODUKCE) a pro herce (samostatna jednotka bez firmy)
   company      Company?  @relation(fields: [companyId], references: [id])
-  caflouTag    String?   // presny nazev stitku teto konkretni osoby v Caflou (informativni) - rozlisuje, kdo v ramci jedne firmy je ktery projekt objednal
   active       Boolean   @default(true)
   createdAt    DateTime  @default(now())
 
@@ -216,8 +215,9 @@ model Order {
 }
 
 // Lokalni cache projektu - dokud neni napojena plna synchronizace s Caflou,
-// zaznam vznika pri kazde objednavce. Pozdeji pribyde import existujicich
-// projektu z Caflou podle caflouTag firmy.
+// zaznam vznika pri kazde objednavce. Vyhledove se projekty budou zakladat
+// primo v MS portalu (zadani 9. 9. 2026 - "Caflou casem nebudeme potrebovat
+// a projekty budeme zakladat na MS portalu").
 model Project {
   id              String    @id @default(cuid())
   companyId       String

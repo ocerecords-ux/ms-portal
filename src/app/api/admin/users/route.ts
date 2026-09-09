@@ -23,7 +23,6 @@ const schema = z
     password: z.string().min(8, 'Heslo musí mít alespoň 8 znaků.'),
     companyId: z.string().trim().min(1).nullable().optional(),
     role: z.enum(ROLE_VALUES).default('CLIENT'),
-    caflouTag: z.string().trim().optional(),
     // Mediaspace
     birthDate: z.string().trim().optional(),
   // Hodinova sazba zvukare (zadani 6. 9. 2026) - pocita se z ni vykaz prace.
@@ -47,12 +46,12 @@ const schema = z
 
 // Oprava 12. 9. 2026: formData.get(klic) vraci pro nepritomny klic null, ne
 // undefined - ale zod .optional() (bez .nullable()) povoluje jen undefined.
-// NewUserForm posila caflouTag/Herec-pole (birthNumber, ic, dic, bankAccount,
-// adresa...) jen podminene (podle role - viz isClient/isHerec tamtez), takze
-// pro ostatni role tyhle klice ve FormData vubec nejsou. Bez has() kontroly
-// tak zod padal na "Expected string, received null" a zalozeni uctu selhalo
-// uplne (napr. u Mediaspace uctu, ktery caflouTag ani Herec-pole neposila
-// vubec). Stejny vzor uz spravne pouziva PATCH /api/admin/users/[id].
+// NewUserForm posila pole specificka pro roli (u Herce birthNumber, ic, dic,
+// bankAccount, adresa...) jen podminene, takze pro ostatni role tyhle klice ve
+// FormData vubec nejsou. Bez has() kontroly tak zod padal na "Expected string,
+// received null" a zalozeni uctu selhalo uplne (napr. u Mediaspace uctu, ktery
+// Herec-pole neposila vubec). Stejny vzor uz spravne pouziva
+// PATCH /api/admin/users/[id].
 function readFormData(formData: FormData) {
   const has = (key: string) => formData.has(key);
   return {
@@ -62,7 +61,6 @@ function readFormData(formData: FormData) {
     password: formData.get('password'),
     companyId: formData.get('companyId') || null,
     role: formData.get('role'),
-    caflouTag: has('caflouTag') ? formData.get('caflouTag') : undefined,
     birthDate: has('birthDate') ? formData.get('birthDate') : undefined,
     hourlyRate: has('hourlyRate') ? formData.get('hourlyRate') : undefined,
     studioLocations: has('studioLocations') ? formData.getAll('studioLocations').map(String) : undefined,
@@ -121,9 +119,6 @@ export async function POST(req: NextRequest) {
         passwordHash,
         role: data.role,
         companyId: COMPANY_REQUIRED_ROLES.includes(data.role) ? data.companyId || null : null,
-        // Stitek v Caflou je od 8. 9. 2026 jen a pouze u Klientu (zadani) - u
-        // ostatnich roli se neuklada, i kdyby ho formular nejak poslal.
-        caflouTag: data.role === 'CLIENT' ? data.caflouTag || null : null,
         ...(INTERNAL_ROLES.includes(data.role)
           ? {
               birthDate: data.birthDate ? new Date(data.birthDate) : null,
@@ -150,7 +145,7 @@ export async function POST(req: NextRequest) {
             }
           : {}),
       },
-      select: { id: true, code: true, email: true, name: true, phone: true, role: true, companyId: true, caflouTag: true, createdAt: true },
+      select: { id: true, code: true, email: true, name: true, phone: true, role: true, companyId: true, createdAt: true },
     });
 
     return NextResponse.json(user, { status: 201 });

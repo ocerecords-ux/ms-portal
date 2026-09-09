@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
   const [company, orderingUser] = await Promise.all([
     prisma.company.findUnique({ where: { id: companyId } }),
-    prisma.user.findUnique({ where: { id: userId }, select: { caflouTag: true, name: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
   ]);
   if (!company) {
     return NextResponse.json({ error: 'Firma nenalezena.' }, { status: 404 });
@@ -142,16 +142,17 @@ export async function POST(req: NextRequest) {
     console.error('Odeslání potvrzení objednávky klientovi selhalo:', err);
   }
 
-  // 3) Zalozeni projektu v Caflou (nazev, stitek OSOBY co objednala, pocet
-  //    normostran) - take best effort, a zatim jen pro objednavky audioknihy
-  //    (u reklamy normostrany/cena zatim nedavaji smysl - viz vyse). Stitek
-  //    je zamerne u uzivatele, ne u firmy: rozlisuje v Caflou, ktery projekt
-  //    patri ktere konkretni osobe, i kdyz vice lidi objednava pod stejnou
-  //    firmou. Stav se uklada k objednavce pro dohledani v adminu.
-  if (isAudiobook && orderingUser?.caflouTag) {
+  // 3) Zalozeni projektu v Caflou (nazev, pocet normostran) - take best
+  //    effort, a zatim jen pro objednavky audioknihy (u reklamy normostrany
+  //    ani cena zatim nedavaji smysl - viz vyse). Stav se uklada k objednavce
+  //    pro dohledani v adminu.
+  //
+  //    Zadani 9. 9. 2026: "Caflou casem nebudeme potrebovat a projekty budeme
+  //    zakladat na MS portalu" - tahle vetev je tedy docasna a stitek klienta,
+  //    podle ktereho se drive projekt v Caflou oznacoval, uz neexistuje.
+  if (isAudiobook) {
     const caflouResult = await createCaflouProject({
       projectName: title,
-      clientTag: orderingUser.caflouTag,
       pageCount,
     });
     await prisma.order.update({

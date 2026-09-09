@@ -16,7 +16,6 @@ type EditableUser = {
   phone: string | null;
   role: Role;
   companyId: string | null;
-  caflouTag: string | null;
   active: boolean;
   birthDate: string | null;
   photoUrl: string | null;
@@ -51,7 +50,6 @@ export function UserEditForm({
   const [role, setRole] = useState<Role>(user.role);
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
-  const [caflouTag, setCaflouTag] = useState(user.caflouTag ?? '');
   const [active, setActive] = useState(user.active);
   const [newPassword, setNewPassword] = useState('');
 
@@ -79,8 +77,6 @@ export function UserEditForm({
   const needsCompany = roleRequiresCompany(role);
   const isMediaspace = INTERNAL_ROLES.includes(role);
   const isHerec = role === 'HEREC';
-  // Stitek v Caflou je od 8. 9. 2026 jen a pouze u Klientu (zadani).
-  const isClient = role === 'CLIENT';
 
   function toggleStudio(studio: string) {
     setStudioLocations((prev) => (prev.includes(studio) ? prev.filter((s) => s !== studio) : [...prev, studio]));
@@ -98,7 +94,6 @@ export function UserEditForm({
       fd.set('phone', phone);
       fd.set('role', role);
       fd.set('companyId', needsCompany ? companyId || '' : '');
-      if (isClient) fd.set('caflouTag', caflouTag);
       fd.set('active', String(active));
       if (newPassword) fd.set('password', newPassword);
       if (isMediaspace) {
@@ -305,13 +300,6 @@ export function UserEditForm({
       )}
 
       <div className="flex gap-4 flex-wrap">
-        {isClient && (
-          <div className="flex-1 min-w-[160px]">
-            <AdminField label="Štítek v Caflou" hint="nepovinné">
-              <input value={caflouTag} onChange={(e) => setCaflouTag(e.target.value)} className="admin-input" />
-            </AdminField>
-          </div>
-        )}
         <div className="flex-1 min-w-[160px]">
           <AdminField label="Nové heslo" hint="nechte prázdné, pokud nechcete měnit">
             <input

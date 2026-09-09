@@ -32,7 +32,6 @@ export function NewUserForm({
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>(defaultRole || 'CLIENT');
   const [companyId, setCompanyId] = useState(defaultCompanyId || '');
-  const [caflouTag, setCaflouTag] = useState('');
 
   // Mediaspace
   const [birthDate, setBirthDate] = useState('');
@@ -57,8 +56,6 @@ export function NewUserForm({
   const needsCompany = roleRequiresCompany(role);
   const isMediaspace = INTERNAL_ROLES.includes(role);
   const isHerec = role === 'HEREC';
-  // Stitek v Caflou je od 8. 9. 2026 jen a pouze u Klientu (zadani).
-  const isClient = role === 'CLIENT';
 
   function toggleStudio(studio: string) {
     setStudioLocations((prev) => (prev.includes(studio) ? prev.filter((s) => s !== studio) : [...prev, studio]));
@@ -77,7 +74,6 @@ export function NewUserForm({
       fd.set('password', password);
       fd.set('role', role);
       fd.set('companyId', needsCompany ? companyId : '');
-      if (isClient) fd.set('caflouTag', caflouTag);
       if (isMediaspace) {
         fd.set('birthDate', birthDate);
         if (photo) fd.set('photo', photo);
@@ -105,8 +101,7 @@ export function NewUserForm({
       setName('');
       setPhone('');
       setPassword('');
-      setCaflouTag('');
-      setBirthDate('');
+        setBirthDate('');
       setPhoto(null);
       setStudioLocations([]);
       setBirthNumber('');
@@ -294,12 +289,6 @@ export function NewUserForm({
             </div>
           </div>
         </>
-      )}
-
-      {isClient && (
-        <AdminField label="Štítek v Caflou" hint="nepovinné - identifikuje tuto konkrétní osobu v Caflou">
-          <input value={caflouTag} onChange={(e) => setCaflouTag(e.target.value)} className="admin-input" />
-        </AdminField>
       )}
 
       {error && <p className="text-red-600 text-sm">{error}</p>}

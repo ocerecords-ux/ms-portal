@@ -333,7 +333,6 @@ export async function listActiveCaflouProjectsForCompanies(
  */
 export async function createCaflouProject(input: {
   projectName: string;
-  clientTag: string;
   pageCount?: number | null;
 }): Promise<{ ok: true; caflouProjectId: string } | { ok: false; error: string }> {
   if (!caflouConfigured()) {

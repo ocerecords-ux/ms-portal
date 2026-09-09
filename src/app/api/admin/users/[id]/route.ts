@@ -19,7 +19,6 @@ const schema = z.object({
   password: z.string().min(8, 'Heslo musí mít alespoň 8 znaků.').optional(),
   companyId: z.string().trim().min(1).nullable().optional(),
   role: z.enum(ROLE_VALUES).optional(),
-  caflouTag: z.string().trim().optional(),
   active: z.boolean().optional(),
   removePhoto: z.boolean().optional(),
   birthDate: z.string().trim().optional(),
@@ -46,7 +45,6 @@ function readFormData(formData: FormData) {
     password: formData.get('password') || undefined,
     companyId: has('companyId') ? formData.get('companyId') || null : undefined,
     role: has('role') ? formData.get('role') : undefined,
-    caflouTag: has('caflouTag') ? formData.get('caflouTag') : undefined,
     active: has('active') ? formData.get('active') === 'true' : undefined,
     removePhoto: formData.get('removePhoto') === 'true',
     birthDate: has('birthDate') ? formData.get('birthDate') : undefined,
@@ -124,14 +122,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.companyId !== undefined
         ? { companyId: COMPANY_REQUIRED_ROLES.includes(nextRole) ? data.companyId || null : null }
         : {}),
-      // Stitek v Caflou je od 8. 9. 2026 jen a pouze u Klientu (zadani) - u
-      // jine (nebo nove zvolene) role se natvrdo vynuluje, i kdyby formular
-      // nejakou starou hodnotu poslal.
-      ...(nextRole === 'CLIENT'
-        ? data.caflouTag !== undefined
-          ? { caflouTag: data.caflouTag || null }
-          : {}
-        : { caflouTag: null }),
       ...(data.active !== undefined ? { active: data.active } : {}),
       ...(passwordHash ? { passwordHash } : {}),
       ...(INTERNAL_ROLES.includes(nextRole) && data.birthDate !== undefined
@@ -165,7 +155,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       phone: true,
       role: true,
       companyId: true,
-      caflouTag: true,
       active: true,
       createdAt: true,
     },
