@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
+import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 
 /**
  * Založení faktury. Buď z odsouhlasené nabídky (převezme se odběratel, měna,
@@ -20,6 +21,11 @@ export function NewInvoiceForm({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  // Prisel sem clovek pres rychlou volbu z leveho panelu? Pak rovnou
+  // rozbalit - zkratka ma vest do editacniho okna, ne jen na stranku
+  // (zadani 9. 9. 2026).
+  useOtevriZeZkratky(() => setOpen(true));
   const [mode, setMode] = useState<'offer' | 'blank'>(offers.length > 0 ? 'offer' : 'blank');
   const [offerId, setOfferId] = useState(offers[0]?.id ?? '');
   const [issuerCompanyId, setIssuerCompanyId] = useState(
@@ -60,12 +66,14 @@ export function NewInvoiceForm({
 
   if (!open) {
     return (
-      <AddButton onClick={() => setOpen(true)}>Nová faktura</AddButton>
+      <span id={KOTVA_NOVE}>
+        <AddButton onClick={() => setOpen(true)}>Nová faktura</AddButton>
+      </span>
     );
   }
 
   return (
-    <form
+    <form id={KOTVA_NOVE}
       onSubmit={submit}
       className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3 w-full max-w-xl"
     >

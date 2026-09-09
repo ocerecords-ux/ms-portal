@@ -36,16 +36,24 @@ export type QuickAction = {
 
 const ADMIN: Role[] = ['ADMIN'];
 
-export const QUICK_ACTIONS: QuickAction[] = [
+export // Zkratka vede rovnou do editacniho okna, ne jen na stranku (zadani
+// 9. 9. 2026: "jinak to jako rychla akce postrada smysl"). Zakladaci
+// formulare nejsou samostatne stranky - sedi slozene pod tabulkou, takze
+// adresa nese kotvu #nove a formular se pri otevreni stranky sam rozbali;
+// viz lib/zkratky.ts.
+//
+// Bez kotvy zustavaji jen ty volby, kde uz cilova stranka JE formular
+// (objednavka) nebo kde se zaklada jinak (termin v kalendari, vykaz).
+const QUICK_ACTIONS: QuickAction[] = [
   { key: 'objednavka', label: 'Nová objednávka', href: '/objednavka', roles: ['CLIENT'] },
-  { key: 'nabidka', label: 'Nová nabídka', href: '/admin/doklady/nabidky', roles: ADMIN },
-  { key: 'faktura', label: 'Nová faktura', href: '/admin/doklady/faktury', roles: ADMIN },
-  { key: 'smlouva', label: 'Nová smlouva', href: '/admin/doklady/smlouvy', roles: ADMIN },
-  { key: 'vydaj', label: 'Nový výdaj', href: '/admin/doklady/vydaje', roles: ADMIN },
+  { key: 'nabidka', label: 'Nová nabídka', href: '/admin/doklady/nabidky#nove', roles: ADMIN },
+  { key: 'faktura', label: 'Nová faktura', href: '/admin/doklady/faktury#nove', roles: ADMIN },
+  { key: 'smlouva', label: 'Nová smlouva', href: '/admin/doklady/smlouvy#nove', roles: ADMIN },
+  { key: 'vydaj', label: 'Nový výdaj', href: '/admin/doklady/vydaje#nove', roles: ADMIN },
   { key: 'termin', label: 'Nový termín', href: '/kalendar', roles: ['ADMIN', 'PRODUKCE', 'ZVUKAR'] },
   { key: 'vykaz', label: 'Nový výkaz', href: '/vykazy', roles: ['ADMIN', 'ZVUKAR'] },
-  { key: 'uzivatel', label: 'Nový uživatel', href: '/admin/users', roles: ADMIN },
-  { key: 'firma', label: 'Nová firma', href: '/admin', roles: ADMIN },
+  { key: 'uzivatel', label: 'Nový uživatel', href: '/admin/users#nove', roles: ADMIN },
+  { key: 'firma', label: 'Nová firma', href: '/admin#nove', roles: ADMIN },
 ];
 
 /** Co si smí do panelu dát uživatel s touhle rolí. */

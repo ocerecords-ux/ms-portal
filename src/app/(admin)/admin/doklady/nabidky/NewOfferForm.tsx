@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
+import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 
 /**
  * Založení nabídky. Schválně jen tři pole - za koho, komu a čeho se týká.
@@ -17,6 +18,11 @@ export function NewOfferForm({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  // Prisel sem clovek pres rychlou volbu z leveho panelu? Pak rovnou
+  // rozbalit - zkratka ma vest do editacniho okna, ne jen na stranku
+  // (zadani 9. 9. 2026).
+  useOtevriZeZkratky(() => setOpen(true));
   const [issuerCompanyId, setIssuerCompanyId] = useState(
     issuers.find((i) => i.isDefault)?.id ?? issuers[0]?.id ?? '',
   );
@@ -54,12 +60,14 @@ export function NewOfferForm({
 
   if (!open) {
     return (
-      <AddButton onClick={() => setOpen(true)}>Nová nabídka</AddButton>
+      <span id={KOTVA_NOVE}>
+        <AddButton onClick={() => setOpen(true)}>Nová nabídka</AddButton>
+      </span>
     );
   }
 
   return (
-    <form
+    <form id={KOTVA_NOVE}
       onSubmit={submit}
       className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3 w-full max-w-xl"
     >

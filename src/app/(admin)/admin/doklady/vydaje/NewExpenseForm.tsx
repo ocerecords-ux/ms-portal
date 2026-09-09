@@ -7,6 +7,7 @@ import type { Currency } from '@prisma/client';
 import { CURRENCIES, CURRENCY_NAMES, formatMoney, parseMoneyToMinor } from '@/lib/doklady';
 import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
 import { ProjectSelect, type ProjectChoice } from '../ProjectSelect';
+import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 
 /**
  * Zadání přijatého dokladu. Schválně jedna obrazovka bez překlikávání —
@@ -28,6 +29,11 @@ export function NewExpenseForm({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [open, setOpen] = useState(false);
+
+  // Prisel sem clovek pres rychlou volbu z leveho panelu? Pak rovnou
+  // rozbalit - zkratka ma vest do editacniho okna, ne jen na stranku
+  // (zadani 9. 9. 2026).
+  useOtevriZeZkratky(() => setOpen(true));
   const [form, setForm] = useState({
     issueDate: new Date().toISOString().slice(0, 10),
     dueDate: '',
@@ -134,12 +140,14 @@ export function NewExpenseForm({
 
   if (!open) {
     return (
-      <AddButton onClick={() => setOpen(true)}>Nový výdaj</AddButton>
+      <span id={KOTVA_NOVE}>
+        <AddButton onClick={() => setOpen(true)}>Nový výdaj</AddButton>
+      </span>
     );
   }
 
   return (
-    <form
+    <form id={KOTVA_NOVE}
       onSubmit={submit}
       className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4 w-full"
     >

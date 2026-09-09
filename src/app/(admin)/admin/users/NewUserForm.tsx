@@ -7,6 +7,7 @@ import type { Role } from '@prisma/client';
 import { AdminField } from '../NewCompanyForm';
 import { PhotoDropzone } from './PhotoDropzone';
 import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany, HEREC_STUDIOS } from '@/lib/roles';
+import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
@@ -27,6 +28,11 @@ export function NewUserForm({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  // Prisel sem clovek pres rychlou volbu z leveho panelu? Pak rovnou
+  // rozbalit - zkratka ma vest do editacniho okna, ne jen na stranku
+  // (zadani 9. 9. 2026).
+  useOtevriZeZkratky(() => setOpen(true));
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -126,14 +132,16 @@ export function NewUserForm({
 
   if (!open) {
     return (
-      <AddButton onClick={() => setOpen(true)} className="self-start">
+      <span id={KOTVA_NOVE}>
+        <AddButton onClick={() => setOpen(true)} className="self-start">
         Přidat uživatele
-      </AddButton>
+        </AddButton>
+      </span>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
+    <form id={KOTVA_NOVE} onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
       <h2 className="font-display text-xl text-ink m-0">Nový uživatel</h2>
 
       {/* Poradi poli (zadani 12. 9. 2026): Jmeno + Fotka (drag & drop) prvni,

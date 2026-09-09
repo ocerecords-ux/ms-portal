@@ -6,6 +6,7 @@ import { AddButton } from '@/components/AddButton';
 import type { CompanyType } from '@prisma/client';
 import { CountrySelect } from './CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
+import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 
 // Firmy se od 5. 9. 2026 deli na Klienty a Dodavatele (CompanyType) - typ se
 // prednastavi podle zalozky, na ktere admin prave je (viz page.tsx), pole
@@ -17,6 +18,11 @@ import { DEFAULT_COUNTRY } from '@/lib/countries';
 export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  // Prisel sem clovek pres rychlou volbu z leveho panelu? Pak rovnou
+  // rozbalit - zkratka ma vest do editacniho okna, ne jen na stranku
+  // (zadani 9. 9. 2026).
+  useOtevriZeZkratky(() => setOpen(true));
   const [type, setType] = useState<CompanyType>(defaultType);
   const [name, setName] = useState('');
 
@@ -152,14 +158,16 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
 
   if (!open) {
     return (
-      <AddButton onClick={() => setOpen(true)} className="self-start">
+      <span id={KOTVA_NOVE}>
+        <AddButton onClick={() => setOpen(true)} className="self-start">
         {defaultType === 'KLIENT' ? 'Nový klient' : 'Nový dodavatel'}
-      </AddButton>
+        </AddButton>
+      </span>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
+    <form id={KOTVA_NOVE} onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
       <h2 className="font-display text-xl text-ink m-0">{type === 'KLIENT' ? 'Nový klient' : 'Nový dodavatel'}</h2>
 
       <AdminField label="Typ firmy" required>

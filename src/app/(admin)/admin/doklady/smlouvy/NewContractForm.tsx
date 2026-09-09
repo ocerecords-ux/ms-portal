@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import { ProjectSelect, type ProjectChoice } from '../ProjectSelect';
+import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 
 /**
  * Založení smlouvy. Šablona se vybere, pole se předvyplní z databáze a text
@@ -25,6 +26,11 @@ export function NewContractForm({
   const defaultIssuer = issuers.find((i) => i.isDefault) ?? issuers[0];
 
   const [open, setOpen] = useState(false);
+
+  // Prisel sem clovek pres rychlou volbu z leveho panelu? Pak rovnou
+  // rozbalit - zkratka ma vest do editacniho okna, ne jen na stranku
+  // (zadani 9. 9. 2026).
+  useOtevriZeZkratky(() => setOpen(true));
   const [form, setForm] = useState({
     issuerCompanyId: defaultIssuer?.id ?? '',
     templateId: templates[0]?.id ?? '',
@@ -85,12 +91,14 @@ export function NewContractForm({
 
   if (!open) {
     return (
-      <AddButton onClick={() => setOpen(true)}>Nová smlouva</AddButton>
+      <span id={KOTVA_NOVE}>
+        <AddButton onClick={() => setOpen(true)}>Nová smlouva</AddButton>
+      </span>
     );
   }
 
   return (
-    <form
+    <form id={KOTVA_NOVE}
       onSubmit={submit}
       className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4 w-full"
     >
