@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConversationKind } from '@prisma/client';
+import { MS_SMAJLICI } from '@/lib/msSmajlici';
+import { MsSmajlik } from './MsSmajlik';
 import {
   CHAT_TABS,
   EMOJI,
@@ -12,7 +14,7 @@ import {
   formatMessageTime,
   initials,
   stejnyDen,
-  splitMentions,
+  splitChatBody,
   type ChatConversation,
   type ChatMessage,
   type ChatTeamMember,
@@ -145,24 +147,26 @@ function Hlavicka({ jmeno, iso }: { jmeno: string; iso: string }) {
   );
 }
 
-/** Text zpravy se zvyraznenymi zminkami (@Jméno). */
+/** Text zpravy se zvyraznenymi zminkami (@Jméno) a Mediaspace smajliky. */
 function Telo({ body, jmena, mine }: { body: string; jmena: string[]; mine: boolean }) {
   return (
     <>
-      {splitMentions(body, jmena).map((cast, index) =>
-        cast.mention ? (
-          <strong
-            key={index}
-            className={`font-heading font-semibold rounded px-0.5 ${
-              mine ? 'bg-white/25 text-white' : 'bg-brand-purple/15 text-brand-purpleDark'
-            }`}
-          >
-            {cast.text}
-          </strong>
-        ) : (
-          <span key={index}>{cast.text}</span>
-        ),
-      )}
+      {splitChatBody(body, jmena).map((cast, index) => {
+        if (cast.kind === 'mention') {
+          return (
+            <strong
+              key={index}
+              className={`font-heading font-semibold rounded px-0.5 ${
+                mine ? 'bg-white/25 text-white' : 'bg-brand-purple/15 text-brand-purpleDark'
+              }`}
+            >
+              {cast.value}
+            </strong>
+          );
+        }
+        if (cast.kind === 'smajlik') return <MsSmajlik key={index} code={cast.value} />;
+        return <span key={index}>{cast.value}</span>;
+      })}
     </>
   );
 }
@@ -204,20 +208,49 @@ function Psatko({
   return (
     <form onSubmit={odeslat} className="relative border-t border-line bg-white p-3 flex items-end gap-2">
       {smajlici && (
-        <div className="absolute left-3 right-3 bottom-full mb-1 bg-white border border-line rounded-lg shadow-lg p-2 grid grid-cols-8 gap-1 z-10">
-          {EMOJI.map((e) => (
-            <button
-              key={e}
-              type="button"
-              onClick={() => {
-                zmena(`${hodnota}${e}`);
-                setSmajlici(false);
-              }}
-              className="text-lg leading-none rounded hover:bg-field py-1"
-            >
-              {e}
-            </button>
-          ))}
+        <div className="absolute left-3 right-3 bottom-full mb-1 bg-white border border-line rounded-lg shadow-lg p-2 z-10 max-h-64 overflow-y-auto">
+          {/* Nase vlastni sada je prvni - viz lib/msSmajlici.ts. Do zpravy se
+              vklada zkratka, obrazek se slozi az pri zobrazeni. */}
+          <p className="text-[10px] font-heading font-semibold text-muted uppercase tracking-wide m-0 mb-1.5 px-0.5">
+            Mediaspace
+          </p>
+          <div className="grid grid-cols-8 gap-1">
+            {MS_SMAJLICI.map((s) => (
+              <button
+                key={s.code}
+                type="button"
+                title={s.label}
+                aria-label={s.label}
+                onClick={() => {
+                  const mezera = hodnota && !hodnota.endsWith(' ') ? ' ' : '';
+                  zmena(`${hodnota}${mezera}${s.code} `);
+                  setSmajlici(false);
+                }}
+                className="rounded hover:bg-field py-1.5 flex items-center justify-center"
+              >
+                <MsSmajlik code={s.code} size={22} />
+              </button>
+            ))}
+          </div>
+
+          <p className="text-[10px] font-heading font-semibold text-muted uppercase tracking-wide m-0 mt-3 mb-1.5 px-0.5">
+            Běžné
+          </p>
+          <div className="grid grid-cols-8 gap-1">
+            {EMOJI.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => {
+                  zmena(`${hodnota}${e}`);
+                  setSmajlici(false);
+                }}
+                className="text-lg leading-none rounded hover:bg-field py-1"
+              >
+                {e}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {nabidka.length > 0 && (

@@ -1,4 +1,5 @@
 import type { ConversationKind } from '@prisma/client';
+import { MS_SMAJLIK_REGEX, najdiSmajlika } from '@/lib/msSmajlici';
 
 /**
  * Chat pro tym Mediaspace (zadani 8. 9. 2026). Bez pristupu do databaze, aby
@@ -18,6 +19,11 @@ export const MAX_MESSAGE_LENGTH = 4000;
  * Smajlici do zprav (zadani 8. 9. 2026). Zamerne kratky rucni vyber toho,
  * co se v pracovnim chatu opravdu pouziva - zadna knihovna navic; ta by se
  * do portalu tahala kvuli par ikonam.
+ *
+ * Od 9. 9. 2026 jsou v nabidce jako druha sada - prvni jsou vlastni
+ * Mediaspace smajlici (viz lib/msSmajlici.ts). Bezne emoji tu zustavaji
+ * schvalne: vlastni sada ma sestnact kousku a nema smysl v ni zastupovat
+ * kazdou vlajecku nebo jidlo.
  */
 export const EMOJI: string[] = [
   '👍', '👎', '👏', '🙌', '🙏', '💪', '🤝', '👋',
@@ -90,6 +96,43 @@ export function splitMentions(body: string, names: string[]): { text: string; me
     i += 1;
   }
   if (buffer) out.push({ text: buffer, mention: false });
+  return out;
+}
+
+/**
+ * Kousek textu zpravy pripraveny k vykresleni. Bud obycejny text, zvyraznena
+ * zminka, nebo Mediaspace smajlik (viz lib/msSmajlici.ts).
+ */
+export type ChatToken =
+  | { kind: 'text'; value: string }
+  | { kind: 'mention'; value: string }
+  | { kind: 'smajlik'; value: string };
+
+/**
+ * Rozdeli telo zpravy na zminky a smajliky naraz (zadani 9. 9. 2026).
+ *
+ * Nejdriv se vytahnou zminky (uz kvuli jmenum s mezerou, viz splitMentions
+ * vyse) a teprve v obycejnem textu se hledaji zkratky smajliku. Diky tomu
+ * nemuze zkratka rozbit jmeno a naopak.
+ *
+ * Zkratka, kterou v sade nenajdeme, zustava textem - stare zpravy se tak
+ * nikdy nezmeni v prazdne misto, kdyz se sada prekresli.
+ */
+export function splitChatBody(body: string, names: string[]): ChatToken[] {
+  const out: ChatToken[] = [];
+
+  for (const cast of splitMentions(body, names)) {
+    if (cast.mention) {
+      out.push({ kind: 'mention', value: cast.text });
+      continue;
+    }
+    for (const kousek of cast.text.split(MS_SMAJLIK_REGEX)) {
+      if (!kousek) continue;
+      if (najdiSmajlika(kousek)) out.push({ kind: 'smajlik', value: kousek });
+      else out.push({ kind: 'text', value: kousek });
+    }
+  }
+
   return out;
 }
 
