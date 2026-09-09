@@ -3,6 +3,7 @@ import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/caflou';
 import type { ColumnSetting } from '@/lib/columnLabels';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, projectTypeLabel } from '@/lib/projectTypes';
+import { initials } from '@/lib/chat';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -185,6 +186,8 @@ export type InternalProjectMeta = {
   priority: ProjectPriority | null;
   projectType: string | null;
   managerName: string | null;
+  /** Fotka manazera do bunky vedle jmena (zadani 9. 9. 2026). */
+  managerPhotoUrl: string | null;
 };
 
 export type InternalProject = AdminDisplayProject & {
@@ -318,8 +321,17 @@ function bunkaSloupce(p: InternalProject, key: string) {
       return <PriorityPill priority={p.priority ?? p.meta?.priority ?? null} />;
     case 'projectType':
       return projectTypeLabel(p.meta?.projectType) ?? '—';
-    case 'managerName':
-      return p.meta?.managerName ?? '—';
+    case 'managerName': {
+      // Fotka vedle jmena, stejne jako v horni liste (zadani 9. 9. 2026).
+      const jmeno = p.meta?.managerName;
+      if (!jmeno) return '—';
+      return (
+        <span className="inline-flex items-center gap-2 min-w-0">
+          <AvatarManazera jmeno={jmeno} photoUrl={p.meta?.managerPhotoUrl ?? null} />
+          <span className="truncate">{jmeno}</span>
+        </span>
+      );
+    }
     case 'pageCount':
       return p.pageCount ?? '—';
     case 'endDate':
@@ -459,6 +471,36 @@ function SortableHeader({
         {active && <SortArrow dir={sort.dir} />}
       </button>
     </th>
+  );
+}
+
+/**
+ * Fotka manazera v tabulce projektu (zadani 9. 9. 2026: "ta fotka by se mela
+ * objevit i u jmena manazera v projektech").
+ *
+ * Kdyz fotka chybi, ukazi se iniciály - stejne jako v horni liste a v chatu.
+ * Chybu nacteni obrazku tady neresime jako v chatu: tenhle soubor je
+ * i serverovy, takze v nem nesmi byt stav (useState). Rozbity obrazek by
+ * prohlizec ukazal jako prazdne kolecko, coz je prijatelne.
+ */
+function AvatarManazera({ jmeno, photoUrl }: { jmeno: string; photoUrl: string | null }) {
+  if (photoUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src={photoUrl}
+        alt=""
+        className="w-6 h-6 rounded-full object-cover shrink-0 border border-line bg-field"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="w-6 h-6 rounded-full shrink-0 bg-brand-purple/15 text-brand-purpleDark text-[10px] font-heading font-bold flex items-center justify-center"
+    >
+      {initials(jmeno)}
+    </span>
   );
 }
 

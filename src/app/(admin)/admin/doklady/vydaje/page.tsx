@@ -4,6 +4,7 @@ import { formatMoney } from '@/lib/doklady';
 import { ensureExpenseCategories, expenseTotalMinor } from '@/lib/expenses';
 import { NewExpenseForm } from './NewExpenseForm';
 import { CategoryManager } from './CategoryManager';
+import { VydajeTabulka, type VydajRadek } from './VydajeTabulka';
 import { listProjectOptions } from '@/lib/projectOptions';
 
 // Prijate doklady (zadani 6. 9. 2026). Zalozky Uhrazeno / Neuhrazeno stejne
@@ -68,6 +69,39 @@ export default async function ExpensesPage({
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Radky pro tabulku. Texty se formatuji uz tady na serveru, do prohlizece
+  // jde jen hotovy retezec a k nemu cislo, podle ktereho se ma radit -
+  // podle naformatovaneho textu by razeni nefungovalo ("9. 10." je jako text
+  // vetsi nez "10. 9." a stovka s mezerami se nesecte).
+  const radkyTabulky: VydajRadek[] = expenses.map((e) => {
+    const poSplatnosti = Boolean(!e.paid && e.dueDate && new Date(e.dueDate) < today);
+    const podnadpis = [
+      e.supplier?.name || e.supplierName,
+      e.number ? `č. ${e.number}` : null,
+      e.projectName,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    return {
+      id: e.id,
+      nazev: e.description || 'Bez názvu',
+      podnadpis: podnadpis || null,
+      maPrilohu: Boolean(e.attachmentUrl),
+      datum: formatDate(e.issueDate),
+      datumMs: e.issueDate ? new Date(e.issueDate).getTime() : null,
+      kategorie: e.category?.name || '—',
+      splatnost: formatDate(e.dueDate),
+      splatnostMs: e.dueDate ? new Date(e.dueDate).getTime() : null,
+      poSplatnosti,
+      bezDph: formatMoney(e.amountExVatMinor, e.currency),
+      bezDphMinor: e.amountExVatMinor,
+      celkem: formatMoney(expenseTotalMinor(e.amountExVatMinor, e.vatRate), e.currency),
+      celkemMinor: expenseTotalMinor(e.amountExVatMinor, e.vatRate),
+      dph: e.vatRate === 0 ? 'bez DPH' : `DPH ${e.vatRate} %`,
+      uhrazeno: e.paid,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -152,96 +186,7 @@ export default async function ExpensesPage({
         />
       </div>
 
-      <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse">
-            <thead>
-              <tr className="bg-bar text-white font-heading text-xs">
-                {/* Nazev je prvni a je z nej proklik na detail (zadani 8. 9. 2026). */}
-                <th className="text-left px-4 py-3.5">Název</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Kategorie</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Splatnost</th>
-                <th className="text-right px-4 py-3.5 whitespace-nowrap">Bez DPH</th>
-                <th className="text-right px-4 py-3.5 whitespace-nowrap">Celkem</th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
-                    Tady zatím nic není.
-                  </td>
-                </tr>
-              )}
-              {expenses.map((e) => {
-                const overdue = !e.paid && e.dueDate && new Date(e.dueDate) < today;
-                return (
-                  <tr key={e.id} className="border-t border-line hover:bg-surfaceSoft">
-                    <td className="px-4 py-3.5 text-sm font-heading font-semibold">
-                      <Link
-                        href={`/admin/doklady/vydaje/${e.id}`}
-                        className="text-ink hover:text-brand-purple no-underline"
-                      >
-                        {e.description || 'Bez názvu'}
-                      </Link>
-                      {(e.supplier?.name || e.supplierName || e.number || e.projectName) && (
-                        <span className="block text-xs text-muted font-body">
-                          {[
-                            e.supplier?.name || e.supplierName,
-                            e.number ? `č. ${e.number}` : null,
-                            e.projectName,
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </span>
-                      )}
-                      {e.attachmentUrl && (
-                        <span className="ml-2 text-[10px] font-heading font-bold text-brand-purpleDeep bg-line rounded px-1.5 py-0.5">
-                          PŘÍLOHA
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                      {formatDate(e.issueDate)}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted whitespace-nowrap">
-                      {e.category?.name || '—'}
-                    </td>
-                    <td
-                      className={`px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap ${
-                        overdue ? 'text-danger font-semibold' : 'text-muted'
-                      }`}
-                    >
-                      {formatDate(e.dueDate)}
-                      {overdue && <span className="block text-[11px] font-body">po splatnosti</span>}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
-                      {formatMoney(e.amountExVatMinor, e.currency)}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-ink tabular-nums text-right whitespace-nowrap">
-                      {formatMoney(expenseTotalMinor(e.amountExVatMinor, e.vatRate), e.currency)}
-                      <span className="block text-[11px] font-body text-muted">
-                        {e.vatRate === 0 ? 'bez DPH' : `DPH ${e.vatRate} %`}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
-                          e.paid ? 'bg-okTint text-status-done' : 'bg-tint text-brand-purpleDark'
-                        }`}
-                      >
-                        {e.paid ? 'Uhrazeno' : 'Neuhrazeno'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <VydajeTabulka radky={radkyTabulky} />
 
     </div>
   );

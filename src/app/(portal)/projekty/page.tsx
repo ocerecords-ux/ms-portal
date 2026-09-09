@@ -132,7 +132,7 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
   const metas = projects.length
     ? await prisma.projectMeta.findMany({
         where: { caflouProjectId: { in: projects.map((p) => String(p.id)) } },
-        include: { manager: { select: { name: true, email: true } } },
+        include: { manager: { select: { name: true, email: true, photoUrl: true } } },
       })
     : [];
   const metaById = new Map(
@@ -142,6 +142,7 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
         priority: m.priority,
         projectType: m.projectType,
         managerName: m.manager ? m.manager.name || m.manager.email : null,
+        managerPhotoUrl: m.manager?.photoUrl ?? null,
       },
     ]),
   );
