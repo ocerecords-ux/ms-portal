@@ -61,6 +61,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(podpis);
   } catch (err) {
     console.error('POST /api/chat/prilohy/podpis selhalo:', err);
-    return NextResponse.json({ error: 'Přílohu se nepodařilo připravit.' }, { status: 500 });
+    // Spravci ukazeme i duvod - nastaveni uloziste se ladi naslepo mizerne
+    // a v teto hlasce zadne tajne hodnoty nejsou. Ostatnim jen obecne.
+    const detail = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      {
+        error: 'Přílohu se nepodařilo připravit.',
+        detail: session.user.role === 'ADMIN' ? detail : undefined,
+      },
+      { status: 500 },
+    );
   }
 }

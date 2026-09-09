@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 // Verejna diagnostika nasazeni (5. 9. 2026) - kdyz se nikdo nedokaze
@@ -7,6 +9,13 @@ import { prisma } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  // Seznam uctu vidi jen Zuzo-labuzo. Do 9. 9. 2026 ho tahle stranka
+  // vypisovala uplne komukoliv, kdo znal adresu - tedy e-maily a role celeho
+  // tymu Mediaspace i klientu bez jakehokoli prihlaseni. Diagnostika nastaveni
+  // (jestli jsou promenne vyplnene) verejna zustava, tam zadne udaje nejsou.
+  const session = await getServerSession(authOptions);
+  const jeSpravce = session?.user?.role === 'ADMIN';
+
   const env = {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL || null, // verejna adresa, neni tajna
     NEXTAUTH_SECRET_nastaveno: Boolean(process.env.NEXTAUTH_SECRET),
@@ -23,6 +32,11 @@ export async function GET() {
     ),
     ADMIN_EMAIL: process.env.ADMIN_EMAIL || null,
     ADMIN_INITIAL_PASSWORD_nastaveno: Boolean(process.env.ADMIN_INITIAL_PASSWORD),
+    // Adresa uloziste ani oblast nejsou tajne (tajne jsou klice) a bez nich
+    // se spatne hleda, proc podepsana adresa neprojde. Presto jen pro spravce.
+    ULOZISTE_endpoint: jeSpravce ? process.env.S3_ENDPOINT || null : undefined,
+    ULOZISTE_bucket: jeSpravce ? process.env.S3_BUCKET || null : undefined,
+    ULOZISTE_region: jeSpravce ? process.env.S3_REGION || '(nenastaveno)' : undefined,
   };
 
   let databaze: unknown;
@@ -30,17 +44,19 @@ export async function GET() {
     const [pocetUzivatelu, pocetAktivnich, ucty] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { active: true } }),
-      prisma.user.findMany({
-        select: { email: true, role: true, active: true },
-        orderBy: { createdAt: 'asc' },
-        take: 25,
-      }),
+      jeSpravce
+        ? prisma.user.findMany({
+            select: { email: true, role: true, active: true },
+            orderBy: { createdAt: 'asc' },
+            take: 25,
+          })
+        : Promise.resolve(undefined),
     ]);
     databaze = {
       spojeni: 'ok',
       pocetUzivatelu,
       pocetAktivnich,
-      // Jen e-maily a role - zadna hesla ani jine udaje.
+      // Jen e-maily a role, a jen pro prihlaseneho spravce.
       ucty,
     };
   } catch (err) {

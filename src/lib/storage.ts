@@ -3,13 +3,36 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import { bezpecnyNazev } from '@/lib/chatPrilohy';
 
+/**
+ * Adresa uloziste se z Cloudflare kopiruje rucne, takze snesme drobne
+ * preklepy: chybejici https:// a lomitko na konci. Spatne slozena adresa
+ * jinak shodi cely klient uz pri sestaveni (9. 9. 2026).
+ */
+function ocistiEndpoint(hodnota: string | undefined): string | undefined {
+  const text = (hodnota || '').trim().replace(/\/+$/, '');
+  if (!text) return undefined;
+  const sProtokolem = /^https?:\/\//i.test(text) ? text : `https://${text}`;
+  try {
+    new URL(sProtokolem);
+    return sProtokolem;
+  } catch {
+    console.error(`S3_ENDPOINT neni platna adresa: "${hodnota}"`);
+    return undefined;
+  }
+}
+
 function getClient() {
   const { S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_ENDPOINT } = process.env;
   if (!S3_ACCESS_KEY_ID || !S3_SECRET_ACCESS_KEY) return null;
 
+  const endpoint = ocistiEndpoint(S3_ENDPOINT);
+  // Cloudflare R2 zna jedinou oblast, a to "auto". Kdyz se posle cokoliv
+  // jineho, podpis nesedi a uloziste zapis odmitne.
+  const jeR2 = Boolean(endpoint && endpoint.includes('r2.cloudflarestorage.com'));
+
   return new S3Client({
-    region: S3_REGION || 'eu-central-1',
-    endpoint: S3_ENDPOINT || undefined, // prazdne = AWS S3, jinak napr. Cloudflare R2
+    region: S3_REGION || (jeR2 ? 'auto' : 'eu-central-1'),
+    endpoint, // prazdne = AWS S3, jinak napr. Cloudflare R2
     credentials: {
       accessKeyId: S3_ACCESS_KEY_ID,
       secretAccessKey: S3_SECRET_ACCESS_KEY,

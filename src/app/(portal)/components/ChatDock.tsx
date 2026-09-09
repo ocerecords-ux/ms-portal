@@ -220,6 +220,10 @@ function Psatko({
   onOdeberPrilohu?: (index: number) => void;
 }) {
   const [smajlici, setSmajlici] = useState(false);
+  // Pretazeni souboru rovnou do psatka (zadani 9. 9. 2026). Pocitadlo, ne
+  // true/false: dragleave chodi i pri prejezdu pres vnorene prvky, takze
+  // s prostym prepinacem by ramecek probliskaval.
+  const [tahnou, setTahnou] = useState(0);
   const poleRef = useRef<HTMLDivElement | null>(null);
   /** Text, který jsme naposledy poslali ven - podle něj se pozná cizí změna. */
   const posledni = useRef(hodnota);
@@ -354,7 +358,31 @@ function Psatko({
     // a smajliky a odeslat bych dal az pod nej"). Drive to byl jeden radek
     // [smajlik][pole][Poslat], takze pole prichazelo o par desitek pixelu
     // z obou stran.
-    <form onSubmit={odeslat} className="relative border-t border-line bg-surface p-3 flex flex-col gap-2">
+    <form
+      onSubmit={odeslat}
+      onDragEnter={(e: React.DragEvent<HTMLFormElement>) => {
+        if (!onPridejPrilohy || !e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        setTahnou((n) => n + 1);
+      }}
+      onDragOver={(e: React.DragEvent<HTMLFormElement>) => {
+        if (!onPridejPrilohy || !e.dataTransfer.types.includes('Files')) return;
+        // Bez tohohle prohlizec soubor proste otevre misto vlozeni.
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }}
+      onDragLeave={() => setTahnou((n) => Math.max(0, n - 1))}
+      onDrop={(e: React.DragEvent<HTMLFormElement>) => {
+        if (!onPridejPrilohy) return;
+        e.preventDefault();
+        setTahnou(0);
+        const soubory: File[] = Array.from(e.dataTransfer.files ?? []);
+        if (soubory.length > 0) onPridejPrilohy(soubory);
+      }}
+      className={`relative border-t bg-surface p-3 flex flex-col gap-2 transition-colors ${
+        tahnou > 0 ? 'border-brand-purple bg-tint' : 'border-line'
+      }`}
+    >
       {smajlici && (
         <div className="absolute left-3 right-3 bottom-full mb-1 bg-surface border border-line rounded-lg shadow-lg p-2 z-10 max-h-64 overflow-y-auto">
           {/* Naše vlastní sada je první - viz lib/msSmajlici.ts. */}
@@ -448,6 +476,11 @@ function Psatko({
         />
       </div>
 
+      {tahnou > 0 && (
+        <p className="m-0 rounded-lg border border-dashed border-brand-purple bg-surface px-3 py-2 text-center text-xs font-heading font-semibold text-brand-purple">
+          Pusťte soubor sem
+        </p>
+      )}
       {prilohy && prilohy.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap">
           {prilohy.map((soubor, index) => (
