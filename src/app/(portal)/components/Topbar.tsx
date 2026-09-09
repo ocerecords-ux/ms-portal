@@ -246,14 +246,17 @@ export function Topbar({
         )}
 
         {/* Tři tečky - jedno kliknutí a lišta se dá rovnou upravovat
-            i přetahovat. Každý si upravuje svou vlastní. */}
+            i přetahovat. Každý si upravuje svou vlastní.
+
+            Zelené, ne bílé (zadání 9. 9. 2026) - na fialové lište splývaly
+            s odkazy a nikdo si jich nevšiml. */}
         {!editing && (
           <button
             type="button"
             onClick={startEditing}
             title="Upravit lištu"
             aria-label="Upravit lištu"
-            className="w-7 h-7 rounded-full text-white/80 hover:text-white hover:bg-white/10 flex flex-col items-center justify-center gap-[3px]"
+            className="w-7 h-7 rounded-full text-brand-green hover:bg-white/15 flex flex-col items-center justify-center gap-[3px] transition-colors"
           >
             <span className="w-[3px] h-[3px] rounded-full bg-current" />
             <span className="w-[3px] h-[3px] rounded-full bg-current" />
