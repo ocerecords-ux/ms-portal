@@ -303,7 +303,12 @@ function Psatko({
   }
 
   return (
-    <form onSubmit={odeslat} className="relative border-t border-line bg-surface p-3 flex items-end gap-2">
+    // Psatko je pres celou sirku a ovladani je az POD nim (zprava uzivatele
+    // 9. 9. 2026: "to okno chatu bych roztahl do stran, vznikne tam vic mista
+    // a smajliky a odeslat bych dal az pod nej"). Drive to byl jeden radek
+    // [smajlik][pole][Poslat], takze pole prichazelo o par desitek pixelu
+    // z obou stran.
+    <form onSubmit={odeslat} className="relative border-t border-line bg-surface p-3 flex flex-col gap-2">
       {smajlici && (
         <div className="absolute left-3 right-3 bottom-full mb-1 bg-surface border border-line rounded-lg shadow-lg p-2 z-10 max-h-64 overflow-y-auto">
           {/* Naše vlastní sada je první - viz lib/msSmajlici.ts. */}
@@ -365,20 +370,7 @@ function Psatko({
           ))}
         </div>
       )}
-      <button
-        type="button"
-        onClick={() => setSmajlici((v) => !v)}
-        title="Smajlíci"
-        aria-label="Smajlíci"
-        className="shrink-0 w-9 h-9 rounded-lg border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-5 h-5">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0" />
-        </svg>
-      </button>
-
-      <div className="relative flex-1">
+      <div className="relative w-full">
         {!hodnota && (
           <span className="pointer-events-none absolute left-3 top-2.5 text-sm font-body text-muted select-none">
             {placeholder}
@@ -406,17 +398,34 @@ function Psatko({
             document.execCommand('insertText', false, text);
             posliVen();
           }}
-          className="min-h-[150px] max-h-[45vh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
+          className="min-h-[150px] max-h-[45vh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-line bg-field px-3 py-2.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={sending || !hodnota.trim()}
-        className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-50"
-      >
-        Poslat
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setSmajlici((v) => !v)}
+          title="Smajlíci"
+          aria-label="Smajlíci"
+          className="shrink-0 w-9 h-9 rounded-lg border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-5 h-5">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0" />
+          </svg>
+        </button>
+        <span className="text-[11px] font-body text-muted select-none hidden sm:inline">
+          Enter odešle, Shift+Enter zalomí řádek
+        </span>
+        <button
+          type="submit"
+          disabled={sending || !hodnota.trim()}
+          className="ml-auto shrink-0 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 disabled:opacity-50"
+        >
+          Poslat
+        </button>
+      </div>
     </form>
   );
 }
