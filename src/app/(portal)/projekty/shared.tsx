@@ -518,9 +518,17 @@ export function InternalProjectsTable({
                 />
               ))}
               {/* Tri tecky primo ve fialove liste (zadani 9. 9. 2026) - stejne
-                  misto jako u horni listy portalu. */}
+                  misto jako u horni listy portalu.
+
+                  Sloupec je PRILEPENY k pravemu okraji (sticky right-0). Bez
+                  toho se tlacitko schovalo za pravy okraj tabulky: sloupcu je
+                  vic, nez se vejde do sirky karty, takze se tabulka posouva do
+                  stran a tecky skoncily mimo obraz (zprava uzivatele
+                  9. 9. 2026: "zmizela uprava sloupcu u projektu"). Radek tela
+                  ma proto vlastni bile pozadi - prilepena bunka si ho dedi,
+                  aby pod ni text neprosvital. */}
               {canEditColumns && (
-                <th className="px-2 py-2.5 text-right whitespace-nowrap w-px">
+                <th className="sticky right-0 z-20 bg-brand-purple px-2 py-2.5 text-right whitespace-nowrap w-px shadow-[-10px_0_10px_-8px_rgba(32,26,51,0.45)]">
                   {editing ? (
                     editActions
                   ) : (
@@ -529,7 +537,7 @@ export function InternalProjectsTable({
                       onClick={onStartEditing}
                       title="Upravit sloupce"
                       aria-label="Upravit sloupce"
-                      className="w-7 h-7 rounded-full text-white/80 hover:text-white hover:bg-white/15 inline-flex flex-col items-center justify-center gap-[3px]"
+                      className="w-7 h-7 rounded-full bg-white/15 text-white hover:bg-white/30 inline-flex flex-col items-center justify-center gap-[3px] transition-colors"
                     >
                       <span className="w-[3px] h-[3px] rounded-full bg-current" />
                       <span className="w-[3px] h-[3px] rounded-full bg-current" />
@@ -549,13 +557,15 @@ export function InternalProjectsTable({
               </tr>
             )}
             {projects.map((p) => (
-              <tr key={p.id} className="border-t border-line hover:bg-[#FAF8FF]">
+              <tr key={p.id} className="border-t border-line bg-white hover:bg-[#FAF8FF]">
                 {columns.map((sloupec) => (
                   <td key={sloupec.key} className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-3.5 text-sm font-heading'}>
                     {bunkaSloupce(p, sloupec.key)}
                   </td>
                 ))}
-                {canEditColumns && <td />}
+                {canEditColumns && (
+                  <td className="sticky right-0 z-10 bg-inherit shadow-[-10px_0_10px_-8px_rgba(32,26,51,0.12)]" />
+                )}
               </tr>
             ))}
           </tbody>
