@@ -1,5 +1,5 @@
 import type { ConversationKind } from '@prisma/client';
-import { MS_SMAJLIK_REGEX, najdiSmajlika } from '@/lib/msSmajlici';
+import { MS_SMAJLICI, MS_SMAJLIK_REGEX, najdiSmajlika } from '@/lib/msSmajlici';
 
 /**
  * Chat pro tym Mediaspace (zadani 8. 9. 2026). Bez pristupu do databaze, aby
@@ -33,6 +33,21 @@ export const EMOJI: string[] = [
   '🎧', '🎙️', '🎬', '📚', '📅', '⏰', '💰', '🚀',
 ];
 
+/**
+ * Reakce smajlikem na jednu zpravu (zadani 9. 9. 2026). Do prohlizece se
+ * neposilaji jednotlive radky z databaze, ale uz secteny prehled - kolik
+ * lidi dalo ktery smajlik, jestli jsem mezi nimi ja a kdo to byl.
+ */
+export type ChatReaction = {
+  /** Zkratka naseho smajlika (":ms-palec:") nebo primo emoji ("👍"). */
+  code: string;
+  count: number;
+  /** Dal jsem tuhle reakci taky? Pak jde kliknutim odebrat. */
+  mine: boolean;
+  /** Jmena do bubliny pri najeti mysi. */
+  kdo: string[];
+};
+
 export type ChatMessage = {
   id: string;
   body: string;
@@ -46,6 +61,8 @@ export type ChatMessage = {
   replyCount: number;
   /** Kdo uz zpravu videl - jmena bez autora (zadani 8. 9. 2026). */
   seenBy: string[];
+  /** Reakce na tuhle zpravu, serazene od nejcastejsi (zadani 9. 9. 2026). */
+  reactions: ChatReaction[];
 };
 
 export type ChatTeamMember = { id: string; label: string; photoUrl: string | null };
@@ -201,4 +218,33 @@ export function formatMessageTime(iso: string): string {
   if (rozdil === 0) return `dnes ${cas}`;
   if (rozdil === 1) return `včera ${cas}`;
   return `${new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(date)} ${cas}`;
+}
+
+
+/* ---------------------------------------------------------------------------
+   Reakce na zpravu (zadani 9. 9. 2026)
+--------------------------------------------------------------------------- */
+
+/**
+ * Co se nabizi po kliknuti na "+" u zpravy. Zamerne kratky vyber - v panelu
+ * chatu neni misto na celou tabulku emoji a v praxi se stejne pouziva par
+ * kousku. Prvni jsou nase vlastni, pak bezna.
+ */
+export const RYCHLE_REAKCE: string[] = [
+  ':ms-palec:',
+  ':ms-hotovo:',
+  ':ms-smich:',
+  ':ms-srdce:',
+  ':ms-ohen:',
+  ':ms-premyslim:',
+  ':ms-pozor:',
+  ':ms-palec-dolu:',
+];
+
+/**
+ * Smi se tenhle kod ulozit jako reakce? Kontroluje se na serveru, aby se do
+ * databaze nedostalo nic, co neni v nabidce - "code" chodi z prohlizece.
+ */
+export function jePlatnaReakce(code: string): boolean {
+  return MS_SMAJLICI.some((s) => s.code === code) || EMOJI.includes(code);
 }

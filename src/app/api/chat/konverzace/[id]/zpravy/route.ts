@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { MAX_MESSAGE_LENGTH } from '@/lib/chat';
-import { canUseChat, userLabel } from '@/lib/chatServer';
+import { canUseChat, shrnReakce, userLabel } from '@/lib/chatServer';
 
 // Zpravy jedne konverzace (zadani 8. 9. 2026). Otevreni konverzace zaroven
 // znamena "precteno" - proto se pri GET posouva lastReadAt.
@@ -68,6 +68,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       include: {
         user: { select: { id: true, name: true, email: true, photoUrl: true } },
         _count: { select: { replies: true } },
+        // Reakce se nactou rovnou se zpravami (zadani 9. 9. 2026) - je jich
+        // par kusu na zpravu, takze zvlastni dotaz by byl zbytecny.
+        reactions: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            code: true,
+            userId: true,
+            createdAt: true,
+            user: { select: { name: true, email: true } },
+          },
+        },
       },
     });
 
@@ -97,6 +108,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         seenBy: ostatniClenove
           .filter((clen) => clen.lastReadAt >= m.createdAt)
           .map((clen) => userLabel(clen.user)),
+        reactions: shrnReakce(m.reactions, me),
       })),
     });
   } catch (err) {
@@ -162,6 +174,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         replyCount: 0,
         // Prave odeslanou zpravu jeste nikdo videt nemohl.
         seenBy: [],
+        reactions: [],
       },
       { status: 201 },
     );

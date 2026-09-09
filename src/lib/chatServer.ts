@@ -1,7 +1,7 @@
 import type { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
-import type { ChatConversation } from '@/lib/chat';
+import type { ChatConversation, ChatReaction } from '@/lib/chat';
 
 // Serverova cast chatu - oddelena od lib/chat.ts, protoze konstanty odtamtud
 // pouziva i klientsky panel a Prisma se do prohlizece dostat nesmi.
@@ -105,4 +105,30 @@ export async function loadTeam(userId: string) {
     orderBy: [{ name: 'asc' }, { email: 'asc' }],
   });
   return users.map((u) => ({ id: u.id, label: userLabel(u), photoUrl: u.photoUrl }));
+}
+
+
+/**
+ * Radky reakci z databaze -> secteny prehled pro prohlizec (zadani
+ * 9. 9. 2026). Razeni: nejdriv nejcastejsi, pri shode ta, ktera prisla driv -
+ * at odznaky pod zpravou neposkakuji pri kazdem obnoveni.
+ */
+export function shrnReakce(
+  rows: { code: string; userId: string; createdAt: Date; user: { name: string | null; email: string } }[],
+  me: string,
+): ChatReaction[] {
+  const podleKodu = new Map<string, { code: string; kdo: string[]; mine: boolean; prvni: number }>();
+  for (const r of rows) {
+    let zaznam = podleKodu.get(r.code);
+    if (!zaznam) {
+      zaznam = { code: r.code, kdo: [], mine: false, prvni: r.createdAt.getTime() };
+      podleKodu.set(r.code, zaznam);
+    }
+    zaznam.kdo.push(r.userId === me ? 'Já' : userLabel(r.user));
+    if (r.userId === me) zaznam.mine = true;
+    zaznam.prvni = Math.min(zaznam.prvni, r.createdAt.getTime());
+  }
+  return [...podleKodu.values()]
+    .sort((a, b) => b.kdo.length - a.kdo.length || a.prvni - b.prvni)
+    .map((z) => ({ code: z.code, count: z.kdo.length, mine: z.mine, kdo: z.kdo }));
 }

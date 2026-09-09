@@ -8,6 +8,7 @@ import {
   CHAT_TABS,
   EMOJI,
   MAX_MESSAGE_LENGTH,
+  RYCHLE_REAKCE,
   formatClock,
   formatDayLabel,
   formatFullTime,
@@ -17,6 +18,7 @@ import {
   splitChatBody,
   type ChatConversation,
   type ChatMessage,
+  type ChatReaction,
   type ChatTeamMember,
 } from '@/lib/chat';
 
@@ -430,6 +432,86 @@ function Psatko({
   );
 }
 
+/** Jeden znak reakce - bud nas smajlik podle zkratky, nebo bezne emoji. */
+function ZnakReakce({ code, size = 15 }: { code: string; size?: number }) {
+  if (code.startsWith(':ms-')) return <MsSmajlik code={code} size={size} />;
+  return <span style={{ fontSize: size }} className="leading-none">{code}</span>;
+}
+
+/**
+ * Reakce pod zpravou (zadani 9. 9. 2026: "jeste bych tam pridal reakce
+ * smajlikama na text - myslim na konkretni zpravu").
+ *
+ * Odznak = jeden smajlik a pocet lidi, kteri ho dali. Kliknuti prepina: kdyz
+ * uz jsem reakci dal, znovu ji odeberu. Moje reakce je videt na prvni pohled
+ * (fialovy ramecek), kdo dal kterou, ukaze bublina pri najeti mysi.
+ *
+ * "+" otevre kratkou nabidku toho, co se v pracovnim chatu opravdu pouziva -
+ * cely vyber emoji je v psatku, sem by se nevesel a ani by k nicemu nebyl.
+ */
+function Reakce({
+  reactions,
+  onToggle,
+}: {
+  reactions: ChatReaction[];
+  onToggle: (code: string) => void;
+}) {
+  const [otevreno, setOtevreno] = useState(false);
+
+  return (
+    <span className="relative mt-1 flex items-center gap-1 flex-wrap">
+      {reactions.map((r) => (
+        <button
+          key={r.code}
+          type="button"
+          onClick={() => onToggle(r.code)}
+          title={r.kdo.join(', ')}
+          aria-pressed={r.mine}
+          className={`inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 leading-none transition-colors ${
+            r.mine
+              ? 'border-brand-purple bg-tint text-brand-purple'
+              : 'border-line bg-surface text-muted hover:border-brand-purple'
+          }`}
+        >
+          <ZnakReakce code={r.code} />
+          <span className="text-[11px] font-heading font-semibold tabular-nums">{r.count}</span>
+        </button>
+      ))}
+
+      <button
+        type="button"
+        onClick={() => setOtevreno((v) => !v)}
+        title="Přidat reakci"
+        aria-label="Přidat reakci"
+        className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0" />
+        </svg>
+      </button>
+
+      {otevreno && (
+        <span className="absolute left-0 bottom-full mb-1 z-20 bg-surface border border-line rounded-lg shadow-lg p-1 flex items-center gap-0.5">
+          {RYCHLE_REAKCE.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => {
+                onToggle(code);
+                setOtevreno(false);
+              }}
+              className="rounded p-1 hover:bg-field flex items-center justify-center"
+            >
+              <ZnakReakce code={code} size={20} />
+            </button>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function Chevron({ direction }: { direction: 'left' | 'right' }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -450,6 +532,34 @@ export function ChatDock() {
   const [vlaknoId, setVlaknoId] = useState<string | null>(null);
   const [vlakno, setVlakno] = useState<ChatMessage[]>([]);
   const [vlaknoDraft, setVlaknoDraft] = useState('');
+
+  /**
+   * Prepnuti reakce na zprave (zadani 9. 9. 2026). Server vrati cely secteny
+   * prehled reakci te zpravy, takze si ho jen prepiseme - a to v obou
+   * seznamech, protoze tataz zprava muze byt zaroven v hlavnim proudu
+   * i v otevrenem vlaknu.
+   *
+   * Kdyz to selze, nechame stav byt: nejblizsi obnoveni zprav ho stejne
+   * srovna podle databaze, takze nema smysl uzivatele budit hlaskou.
+   */
+  async function prepniReakci(messageId: string, code: string) {
+    try {
+      const res = await fetch(`/api/chat/zpravy/${messageId}/reakce`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const reactions: ChatReaction[] = Array.isArray(data?.reactions) ? data.reactions : [];
+      const uprav = (seznam: ChatMessage[]) =>
+        seznam.map((m) => (m.id === messageId ? { ...m, reactions } : m));
+      setMessages(uprav);
+      setVlakno(uprav);
+    } catch (err) {
+      console.error('Reakci se nepodařilo uložit:', err);
+    }
+  }
   // Naseptavac zminek: kdyz se v rozepsanem textu objevi "@", nabidne lidi.
   const [zminkyPro, setZminkyPro] = useState<'hlavni' | 'vlakno' | null>(null);
   const [zminkaHledani, setZminkaHledani] = useState('');
@@ -987,6 +1097,10 @@ export function ChatDock() {
                           >
                             <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
                           </p>
+                          <Reakce
+                            reactions={m.reactions ?? []}
+                            onToggle={(code) => prepniReakci(m.id, code)}
+                          />
                           {/* Zobrazeno i odkaz do vlakna na jednom radku -
                               samostatny radek na odpoved zabiral moc mista
                               (zprava uzivatele 8. 9. 2026). */}
@@ -1070,6 +1184,10 @@ export function ChatDock() {
                             >
                               <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
                             </p>
+                            <Reakce
+                              reactions={m.reactions ?? []}
+                              onToggle={(code) => prepniReakci(m.id, code)}
+                            />
                             {m.mine && (
                               <span className="block mt-0.5">
                                 <Zobrazeno seenBy={m.seenBy} />
