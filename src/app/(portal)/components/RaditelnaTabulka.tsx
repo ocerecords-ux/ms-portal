@@ -141,8 +141,8 @@ export function RaditelnaTabulka<T>({
                       type="button"
                       onClick={() => prepni(sloupec.key)}
                       title={`Seřadit podle: ${sloupec.label}`}
-                      className={`font-heading text-xs hover:text-brand-green transition-colors ${
-                        aktivni ? 'text-brand-green' : 'text-white'
+                      className={`font-heading text-xs hover:text-brand-purpleLight transition-colors ${
+                        aktivni ? 'text-brand-purpleLight' : 'text-white'
                       }`}
                     >
                       {sloupec.label}
@@ -253,8 +253,8 @@ export function ThRadit({
         type="button"
         onClick={() => prepni(sloupec)}
         title={`Seřadit podle: ${label}`}
-        className={`font-heading text-xs hover:text-brand-green transition-colors ${
-          aktivni ? 'text-brand-green' : 'text-white'
+        className={`font-heading text-xs hover:text-brand-purpleLight transition-colors ${
+          aktivni ? 'text-brand-purpleLight' : 'text-white'
         }`}
       >
         {label}

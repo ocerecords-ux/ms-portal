@@ -158,7 +158,11 @@ export function Topbar({
         <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-12 sm:h-16 w-auto" />
       </Link>
 
-      <nav className="flex items-center gap-5 sm:gap-8 font-heading text-sm font-medium min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* py-3 -my-3: posuvny pruh oreze vsechno, co z nej cni - a krizky
+          u odkazu cni nahoru, takze se usekavaly (zprava uzivatele
+          9. 9. 2026: "jsou useknute krizky"). Svisle odsazeni jim udela
+          misto uvnitr pruhu, zaporny okraj vrati liste puvodni vysku. */}
+      <nav className="flex items-center gap-5 sm:gap-8 font-heading text-sm font-medium min-w-0 py-3 -my-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {shown.map((item, index) => {
           const external = isExternalHref(item.href);
           // "/admin" (Firmy) by jinak jako prefix odpovidal i "/admin/users" -

@@ -30,6 +30,11 @@ const config: Config = {
           purple: '#7B55FF',
           purpleDeep: '#6B2AF0',
           purpleDark: '#4B2FB0',
+          // Svetla fialova pro zvyrazneni na tmavem i fialovem podkladu -
+          // pouziva ji serazeny sloupec v tabulkach (zadani 9. 9. 2026:
+          // "udelal bych to vsude fialove, at to tolik nerve") a fialovy text
+          // v tmavem rezimu. Sytou #7B55FF by na obou podkladech nebylo videt.
+          purpleLight: '#B49BFF',
           green: '#1FDF67',
           greenDeep: '#149E4B',
         },
