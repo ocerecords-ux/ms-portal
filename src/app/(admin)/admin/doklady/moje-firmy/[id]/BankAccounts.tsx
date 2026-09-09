@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AddButton } from '@/components/AddButton';
 import type { Currency } from '@prisma/client';
 import { CURRENCIES, CURRENCY_LABELS, CURRENCY_NAMES } from '@/lib/doklady';
 
@@ -181,26 +182,18 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
             Výchozí účet pro tuhle měnu
           </label>
           <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={busy}
-              className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-            >
+            <AddButton type="submit" disabled={busy}>
               Přidat účet
-            </button>
+            </AddButton>
             <button type="button" onClick={() => setAdding(false)} className="text-muted text-sm font-heading">
               Zrušit
             </button>
           </div>
         </form>
       ) : (
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-[#F1ECFF] transition-colors self-start"
-        >
-          + Přidat účet
-        </button>
+        <AddButton type="button" onClick={() => setAdding(true)} className="self-start">
+          Přidat účet
+        </AddButton>
       )}
     </div>
   );

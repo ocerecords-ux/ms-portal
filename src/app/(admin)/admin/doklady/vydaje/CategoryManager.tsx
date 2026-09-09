@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AddButton } from '@/components/AddButton';
 
 /**
  * Kategorie výdajů. Sedí až pod seznamem, protože se do nich sahá jednou za
@@ -65,14 +66,10 @@ export function CategoryManager({
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="self-start inline-flex items-center gap-1.5 rounded-pill border border-brand-purple bg-white px-4 py-1.5 text-xs font-heading font-semibold text-brand-purple hover:bg-[#F1ECFF] transition-colors"
-      >
-        + Přidat / spravovat kategorie
-        <span className="tabular-nums opacity-70">({categories.filter((c) => c.active).length})</span>
-      </button>
+      <AddButton type="button" size="sm" onClick={() => setOpen(true)} className="self-start">
+        Přidat / spravovat kategorie
+        <span className="tabular-nums opacity-70 ml-1">({categories.filter((c) => c.active).length})</span>
+      </AddButton>
     );
   }
 
@@ -127,13 +124,9 @@ export function CategoryManager({
             className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full"
           />
         </label>
-        <button
-          type="submit"
-          disabled={busy || !name.trim()}
-          className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-        >
+        <AddButton type="submit" disabled={busy || !name.trim()}>
           Přidat
-        </button>
+        </AddButton>
       </form>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AddButton } from '@/components/AddButton';
 import type { Currency, OfferStatus } from '@prisma/client';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 import {
@@ -528,13 +529,9 @@ export function OfferEditor({
           </div>
 
           {!locked && (
-            <button
-              type="button"
-              onClick={addItem}
-              className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-[#F1ECFF] transition-colors self-start"
-            >
-              + Přidat položku
-            </button>
+            <AddButton type="button" onClick={addItem} className="self-start">
+              Přidat položku
+            </AddButton>
           )}
         </div>
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AddButton } from '@/components/AddButton';
 
 type Item = {
   id: string;
@@ -266,13 +267,9 @@ export function PriceListEditor({ items }: { items: Item[] }) {
           Rádiový spot — u projektů s tímhle typem se při dokončení vyrobí Rodný list
         </label>
         <div>
-          <button
-            type="submit"
-            disabled={busy}
-            className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-          >
+          <AddButton type="submit" disabled={busy}>
             Přidat do ceníku
-          </button>
+          </AddButton>
         </div>
       </form>
     </div>

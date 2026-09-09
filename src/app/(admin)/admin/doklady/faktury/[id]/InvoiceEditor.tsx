@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AddButton } from '@/components/AddButton';
 import type { Currency, InvoiceStatus } from '@prisma/client';
 import {
   CURRENCIES,
@@ -643,13 +644,13 @@ export function InvoiceEditor({
           </div>
 
           {!locked && (
-            <button
+            <AddButton
               type="button"
               onClick={() => setItems((current) => [...current, emptyItem()])}
-              className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-[#F1ECFF] transition-colors self-start"
+              className="self-start"
             >
-              + Přidat položku
-            </button>
+              Přidat položku
+            </AddButton>
           )}
         </div>
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AddButton } from '@/components/AddButton';
 import type { Role } from '@prisma/client';
 import { AdminField } from '../NewCompanyForm';
 import { PhotoDropzone } from './PhotoDropzone';
@@ -125,12 +126,9 @@ export function NewUserForm({
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors self-start"
-      >
-        + Přidat uživatele
-      </button>
+      <AddButton onClick={() => setOpen(true)} className="self-start">
+        Přidat uživatele
+      </AddButton>
     );
   }
 

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
+import { prisma } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from './components/Topbar';
 import { TaskDock } from './components/TaskDock';
@@ -23,16 +24,19 @@ export default async function PortalLayout({ children }: { children: React.React
   // Lišta je editovatelná (viz Topbar) a patří KONKRÉTNÍMU uživateli - úprava
   // se nikomu jinému nepromítne (zadani 8. 9. 2026). Co v ní vůbec smí být se
   // nenastavuje, řídí se právy ke stránce (lib/menu.ts > PAGE_ACCESS).
-  const [entries, tasks, unread] = await Promise.all([
+  const [entries, tasks, unread, ucet] = await Promise.all([
     loadMenuEntries(session.user.id),
     loadMyTasks(session.user.id, role),
     countUnread(session.user.id),
+    // Fotka do lišty (zadani 9. 9. 2026) - v session není, bere se z karty účtu.
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { photoUrl: true } }),
   ]);
 
   return (
     <div className="min-h-screen bg-paper">
       <Topbar
         userLabel={session.user.name || session.user.email}
+        userPhotoUrl={ucet?.photoUrl ?? null}
         items={visibleFor(entries, role)}
         pageOptions={pageOptionsFor(role)}
         unreadNotifications={unread}

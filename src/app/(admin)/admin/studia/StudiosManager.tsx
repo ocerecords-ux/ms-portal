@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AddButton } from '@/components/AddButton';
 import { BLOCK_KIND_LABELS, WEEKDAY_LABELS, formatDateTime, minutesToTime } from '@/lib/calendar';
 
 type Hodiny = { weekday: number; startMinutes: number; endMinutes: number; byArrangement: boolean };
@@ -248,17 +249,16 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
             className={inputClass}
           />
         </label>
-        <button
+        <AddButton
           type="button"
           disabled={busy || !nove.name.trim() || !nove.shortName.trim()}
           onClick={async () => {
             const ok = await posli('/api/admin/studia', 'POST', nove);
             if (ok) setNove({ name: '', shortName: '', location: '' });
           }}
-          className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
           Založit
-        </button>
+        </AddButton>
       </div>
 
       {/* Blokace */}
@@ -323,7 +323,7 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
               className={inputClass}
             />
           </label>
-          <button
+          <AddButton
             type="button"
             disabled={busy || !blokace.title.trim() || !blokace.start || !blokace.end}
             onClick={async () => {
@@ -334,10 +334,9 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
               });
               if (ok) setBlokace((b) => ({ ...b, start: '', end: '', title: '' }));
             }}
-            className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
           >
             Přidat blokaci
-          </button>
+          </AddButton>
         </div>
 
         <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">

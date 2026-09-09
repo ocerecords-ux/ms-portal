@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { NewUserForm } from './NewUserForm';
+import { UsersTable, type UsersColumn, type UserRow } from './UsersTable';
 import { ROLE_LABELS, USER_TABS } from '@/lib/roles';
 import { AdminSearch } from '../AdminSearch';
 
@@ -45,21 +46,66 @@ export default async function UsersAdminPage({
 
   const dateFmt = new Intl.DateTimeFormat('cs-CZ');
 
+  // Jedna tabulka pro vsechny zalozky (zadani 9. 9. 2026) - lisi se uz jen
+  // tim, ktere sloupce si zalozka vyzada. Jmeno je vzdycky prvni.
+  const rows: UserRow[] = users.map((u) => ({
+    id: u.id,
+    code: u.code,
+    name: u.name ?? '',
+    email: u.email,
+    phone: u.phone,
+    roleLabel: ROLE_LABELS[u.role],
+    active: u.active,
+    photoUrl: u.photoUrl ?? null,
+    birthDate: u.birthDate ? dateFmt.format(u.birthDate) : null,
+    birthDateMs: u.birthDate ? u.birthDate.getTime() : null,
+    studioLocations: u.studioLocations.length > 0 ? u.studioLocations.join(', ') : null,
+    companyName: u.company?.name ?? null,
+    companyId: u.company?.id ?? null,
+  }));
+
+  const sloupce: UsersColumn[] = filteredCompany
+    ? ['jmeno', 'kod', 'email', 'telefon', 'role', 'aktivni']
+    : activeTab.key === 'mediaspace'
+      ? ['jmeno', 'kod', 'email', 'telefon', 'role', 'narozeni', 'aktivni']
+      : activeTab.key === 'herci'
+        ? ['jmeno', 'kod', 'email', 'telefon', 'lokace', 'aktivni']
+        : ['jmeno', 'kod', 'email', 'telefon', 'firma', 'aktivni'];
+
+  const zalozitUzivatele = (
+    <NewUserForm
+      // key vynuti remount pri prepnuti zalozky/filtru - jinak si klientsky
+      // komponent drzi svuj puvodni useState(role) z prvniho mountu (bug
+      // nahlaseny 5. 9. 2026: na zalozce Herci se po prepnuti z jine
+      // zalozky ukazovala stara role/pole).
+      key={filteredCompany ? `company:${filteredCompany.id}` : `tab:${activeTab.key}`}
+      companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+      defaultCompanyId={companyId}
+      defaultRole={filteredCompany ? 'CLIENT' : activeTab.roles[0]}
+    />
+  );
+
   return (
     <section className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-display text-3xl text-ink m-0">Uživatelé</h1>
-        <p className="text-muted text-sm mt-1 font-body">
-          Všechny přihlašovací účty napříč firmami i interní účty Mediaspace. Kliknutím na jméno účet otevřete — pozvánku do portálu odešlete odtamtud.
-        </p>
-        {filteredCompany && (
-          <p className="text-sm font-heading mt-2">
-            Filtr: <strong>{filteredCompany.name}</strong>{' '}
-            <Link href="/admin/users" className="text-brand-purple">
-              (zrušit filtr)
-            </Link>
+      {/* Zalozeni uctu patri nahoru (zadani 9. 9. 2026) - drive bylo az pod
+          tabulkou, kde ho pri delsim seznamu nebylo videt. */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-display text-3xl text-ink m-0">Uživatelé</h1>
+          <p className="text-muted text-sm mt-1 font-body">
+            Všechny přihlašovací účty napříč firmami i interní účty Mediaspace. Kliknutím na jméno účet
+            otevřete — pozvánku do portálu odešlete odtamtud.
           </p>
-        )}
+          {filteredCompany && (
+            <p className="text-sm font-heading mt-2">
+              Filtr: <strong>{filteredCompany.name}</strong>{' '}
+              <Link href="/admin/users" className="text-brand-purple">
+                (zrušit filtr)
+              </Link>
+            </p>
+          )}
+        </div>
+        <div className="max-w-3xl w-full sm:w-auto">{zalozitUzivatele}</div>
       </div>
 
       {!filteredCompany && (
@@ -88,190 +134,11 @@ export default async function UsersAdminPage({
         </div>
       )}
 
-      <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          {filteredCompany ? (
-            <table className="w-full min-w-[760px] border-collapse">
-              <thead>
-                <tr className="bg-ink text-white font-heading text-xs">
-                  <th className="text-left px-4 py-3.5">Kód</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Jméno</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">E-mail</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Typ přístupu</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
-                      {q ? 'Hledání nic nenašlo.' : 'Žádný uživatel neodpovídá filtru.'}
-                    </td>
-                  </tr>
-                )}
-                {users.map((u) => (
-                  <tr key={u.id} className="border-t border-line hover:bg-[#FAF8FF]">
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">{u.code || '—'}</td>
-                    <td className="px-4 py-3.5 font-heading font-semibold text-sm whitespace-nowrap">
-                      <Link href={`/admin/users/${u.id}`} className="text-ink hover:text-brand-purple no-underline">
-                        {u.name || u.email}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.email}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap">{u.phone || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{ROLE_LABELS[u.role]}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : activeTab.key === 'mediaspace' ? (
-            <table className="w-full min-w-[760px] border-collapse">
-              <thead>
-                <tr className="bg-ink text-white font-heading text-xs">
-                  <th className="text-left px-4 py-3.5">Kód</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Jméno</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">E-mail</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Typ přístupu</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum narození</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
-                      {q ? 'Hledání nic nenašlo.' : 'Žádný uživatel neodpovídá filtru.'}
-                    </td>
-                  </tr>
-                )}
-                {users.map((u) => (
-                  <tr key={u.id} className="border-t border-line hover:bg-[#FAF8FF]">
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">{u.code || '—'}</td>
-                    <td className="px-4 py-3.5 font-heading font-semibold text-sm whitespace-nowrap">
-                      <Link href={`/admin/users/${u.id}`} className="text-ink hover:text-brand-purple no-underline">
-                        {u.photoUrl && (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={u.photoUrl} alt="" className="w-6 h-6 rounded-full object-cover inline-block mr-2 align-middle" />
-                        )}
-                        {u.name || u.email}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.email}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap">{u.phone || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{ROLE_LABELS[u.role]}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">
-                      {u.birthDate ? dateFmt.format(u.birthDate) : '—'}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : activeTab.key === 'herci' ? (
-            <table className="w-full min-w-[860px] border-collapse">
-              <thead>
-                <tr className="bg-ink text-white font-heading text-xs">
-                  <th className="text-left px-4 py-3.5">Kód</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Jméno</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">E-mail</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
-                  <th className="text-left px-4 py-3.5">Lokace</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
-                      {q ? 'Hledání nic nenašlo.' : 'Žádný uživatel neodpovídá filtru.'}
-                    </td>
-                  </tr>
-                )}
-                {users.map((u) => (
-                  <tr key={u.id} className="border-t border-line hover:bg-[#FAF8FF]">
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">{u.code || '—'}</td>
-                    <td className="px-4 py-3.5 font-heading font-semibold text-sm whitespace-nowrap">
-                      <Link href={`/admin/users/${u.id}`} className="text-ink hover:text-brand-purple no-underline">
-                        {u.name || u.email}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.email}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap">{u.phone || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted">
-                      {u.studioLocations.length > 0 ? u.studioLocations.join(', ') : '—'}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <table className="w-full min-w-[760px] border-collapse">
-              <thead>
-                <tr className="bg-ink text-white font-heading text-xs">
-                  <th className="text-left px-4 py-3.5">Kód</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Jméno</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">E-mail</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Telefon</th>
-                  <th className="text-left px-4 py-3.5">Firma</th>
-                  <th className="text-left px-4 py-3.5 whitespace-nowrap">Aktivní</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
-                      {q ? 'Hledání nic nenašlo.' : 'Žádný uživatel neodpovídá filtru.'}
-                    </td>
-                  </tr>
-                )}
-                {users.map((u) => (
-                  <tr key={u.id} className="border-t border-line hover:bg-[#FAF8FF]">
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted tabular-nums">{u.code || '—'}</td>
-                    <td className="px-4 py-3.5 font-heading font-semibold text-sm whitespace-nowrap">
-                      <Link href={`/admin/users/${u.id}`} className="text-ink hover:text-brand-purple no-underline">
-                        {u.name || u.email}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.email}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading tabular-nums whitespace-nowrap">{u.phone || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm font-heading text-muted">
-                      {u.company ? (
-                        <Link href={`/admin/companies/${u.company.id}`} className="hover:text-brand-purple">
-                          {u.company.name}
-                        </Link>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm font-heading whitespace-nowrap">{u.active ? 'Ano' : <span className="text-red-600">Ne</span>}</td>
-
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      <div className="max-w-3xl w-full">
-        <NewUserForm
-        // key vynuti remount pri prepnuti zalozky/filtru - jinak si klientsky
-        // komponent drzi svuj puvodni useState(role) z prvniho mountu (bug
-        // nahlaseny 5. 9. 2026: na zalozce Herci se po prepnuti z jine
-        // zalozky ukazovala stara role/pole).
-        key={filteredCompany ? `company:${filteredCompany.id}` : `tab:${activeTab.key}`}
-        companies={companies.map((c) => ({ id: c.id, name: c.name }))}
-        defaultCompanyId={companyId}
-        defaultRole={filteredCompany ? 'CLIENT' : activeTab.roles[0]}
-        />
-      </div>
+      <UsersTable
+        rows={rows}
+        columns={sloupce}
+        emptyText={q ? 'Hledání nic nenašlo.' : 'Žádný uživatel neodpovídá filtru.'}
+      />
     </section>
   );
 }

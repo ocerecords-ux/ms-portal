@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AddButton } from '@/components/AddButton';
 import { CONTRACT_PLACEHOLDERS } from '@/lib/contracts';
 
 type Template = { id: string; name: string; body: string; active: boolean };
@@ -70,7 +71,7 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
               className={inputClass}
             />
           </label>
-          <button
+          <AddButton
             type="button"
             disabled={busy || !novaNazev.trim()}
             onClick={async () => {
@@ -80,10 +81,9 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
                 setOpenId(created.id);
               }
             }}
-            className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
           >
             Přidat
-          </button>
+          </AddButton>
         </div>
       </div>
 

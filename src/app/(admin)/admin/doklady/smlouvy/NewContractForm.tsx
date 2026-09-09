@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AddButton } from '@/components/AddButton';
 import { ProjectSelect, type ProjectChoice } from '../ProjectSelect';
 
 /**
@@ -84,12 +85,7 @@ export function NewContractForm({
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors"
-      >
-        + Nová smlouva
-      </button>
+      <AddButton onClick={() => setOpen(true)}>Nová smlouva</AddButton>
     );
   }
 
@@ -188,13 +184,9 @@ export function NewContractForm({
       {error && <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={busy}
-          className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-        >
+        <AddButton type="submit" disabled={busy}>
           {busy ? 'Zakládám…' : 'Založit a upravit text'}
-        </button>
+        </AddButton>
         <button type="button" onClick={() => setOpen(false)} className="text-muted text-sm font-heading">
           Zavřít
         </button>

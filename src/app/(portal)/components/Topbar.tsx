@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
 import { isExternalHref, type NavItem } from '@/lib/menu';
+import { initials } from '@/lib/chat';
 import { NotificationBell } from './NotificationBell';
 
 /**
@@ -21,11 +22,14 @@ import { NotificationBell } from './NotificationBell';
  */
 export function Topbar({
   userLabel,
+  userPhotoUrl,
   items,
   pageOptions,
   unreadNotifications = 0,
 }: {
   userLabel: string;
+  /** Fotka z karty uživatele; bez ní se ukážou iniciály. */
+  userPhotoUrl?: string | null;
   /** Kolik nepřečtených oznámení má uživatel pod zvonkem. */
   unreadNotifications?: number;
   /** Vlastní lišta přihlášeného uživatele. */
@@ -293,8 +297,22 @@ export function Topbar({
         <Link
           href="/muj-ucet"
           title="Můj účet"
-          className="flex items-center text-sm font-heading text-brand-green bg-white/10 border border-white/20 rounded-pill px-3.5 py-2 no-underline hover:bg-white/20 transition-colors"
+          className="flex items-center gap-2 text-sm font-heading text-brand-green bg-white/10 border border-white/20 rounded-pill pl-1.5 pr-3.5 py-1.5 no-underline hover:bg-white/20 transition-colors"
         >
+          {/* Fotka u jmena (zadani 9. 9. 2026). Bez fotky iniciály, at lista
+              nepreskakuje podle toho, kdo je prihlaseny. */}
+          {userPhotoUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={userPhotoUrl}
+              alt=""
+              className="w-7 h-7 rounded-full object-cover shrink-0 bg-white/20"
+            />
+          ) : (
+            <span className="w-7 h-7 rounded-full bg-white/20 text-white text-[11px] font-semibold grid place-items-center shrink-0">
+              {initials(userLabel)}
+            </span>
+          )}
           {userLabel}
         </Link>
         <button

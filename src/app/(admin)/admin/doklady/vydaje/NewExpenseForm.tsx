@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AddButton } from '@/components/AddButton';
 import type { Currency } from '@prisma/client';
 import { CURRENCIES, CURRENCY_NAMES, formatMoney, parseMoneyToMinor } from '@/lib/doklady';
 import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
@@ -133,12 +134,7 @@ export function NewExpenseForm({
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors"
-      >
-        + Nový výdaj
-      </button>
+      <AddButton onClick={() => setOpen(true)}>Nový výdaj</AddButton>
     );
   }
 
@@ -219,14 +215,15 @@ export function NewExpenseForm({
                 placeholder="např. Marketing"
                 className={inputClass}
               />
-              <button
+              <AddButton
                 type="button"
+                size="sm"
                 onClick={() => void zalozitKategorii()}
                 disabled={kategorieBusy || !novaKategorie.trim()}
-                className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60 shrink-0"
+                className="shrink-0"
               >
                 Přidat
-              </button>
+              </AddButton>
             </span>
           )}
         </div>
