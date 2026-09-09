@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
-import { canEditProjectMeta, canViewProjectDocuments, isInternalRole, INTERNAL_ROLES } from '@/lib/roles';
+import { canEditProjectMeta, canManageCalendar, canViewProjectDocuments, isInternalRole, INTERNAL_ROLES } from '@/lib/roles';
 import { PRIORITY_LABELS } from '@/lib/projectTypes';
 import { listProjectTypeOptions } from '@/lib/priceList';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
@@ -16,6 +16,9 @@ import { ProjectDocuments, invoiceStatus, offerStatus, type ProjectDocRow } from
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
 import { computeTotals } from '@/lib/doklady';
 import { expenseTotalMinor } from '@/lib/expenses';
+import { sessionsForPages } from '@/lib/calendar';
+import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
+import { RecordingSection } from './RecordingSection';
 
 // Detail projektu (zadani 5. 9. 2026). Projekt sam o sobe zije v Caflou -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -103,6 +106,23 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const hoursLogged = timesheets.reduce((sum, e) => sum + toHours(durationMinutes(e.startMinutes, e.endMinutes)), 0);
   const revenue =
     budget && company?.ratePerPage != null ? budget.pageCount * company.ratePerPage : null;
+
+  // Natacecí frekvence (zadani 8. 9. 2026) - nabidky terminu k tomuhle
+  // projektu, seznam hercu a studii pro zalozeni nove.
+  const [recordingRequests, herci, studia, calendarSettings] = await Promise.all([
+    prisma.recordingRequest.findMany({
+      where: { caflouProjectId },
+      orderBy: { createdAt: 'desc' },
+      include: { studio: { select: { name: true } }, slots: { select: { state: true } } },
+    }),
+    prisma.user.findMany({
+      where: { role: 'HEREC', active: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, email: true },
+    }),
+    loadStudios(),
+    loadCalendarSettings(),
+  ]);
 
   const dokladDatum = (date: Date | null) => (date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '');
 
@@ -219,6 +239,32 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           revenue={revenue}
           ratePerPage={company?.ratePerPage ?? null}
           hoursLogged={hoursLogged}
+        />
+      )}
+
+      {isInternalRole(session.user.role) && (
+        <RecordingSection
+          caflouProjectId={caflouProjectId}
+          projectName={project?.name ?? `Projekt ${caflouProjectId}`}
+          companyId={company?.id ?? null}
+          pageCount={project?.pageCount ?? null}
+          sessionsFromPages={sessionsForPages(project?.pageCount ?? 0, calendarSettings.pagesPerSession)}
+          narratorFromCaflou={project?.narrator ?? null}
+          herci={herci.map((h) => ({ id: h.id, label: h.name || h.email }))}
+          studios={studia.map((s) => ({ id: s.id, name: s.name }))}
+          defaultActorUserId={meta?.actorUserId ?? null}
+          requests={recordingRequests.map((r) => ({
+            id: r.id,
+            actorName: r.actorName,
+            studioName: r.studio.name,
+            requiredSessions: r.requiredSessions,
+            offeredCount: r.slots.filter((s) => s.state === 'OFFERED').length,
+            selectedCount: r.slots.filter((s) => s.state === 'SELECTED').length,
+            confirmedCount: r.slots.filter((s) => s.state === 'CONFIRMED').length,
+            status: r.status,
+            createdAt: r.createdAt.toISOString(),
+          }))}
+          canManage={canManageCalendar(session.user.role)}
         />
       )}
 

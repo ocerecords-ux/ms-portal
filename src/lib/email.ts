@@ -878,3 +878,94 @@ export async function sendContractEmail(input: ContractEmailInput) {
 
   return { sent: true as const };
 }
+
+
+// ===========================================================================
+// NABIDKA NATACECICH TERMINU (zadani 8. 9. 2026)
+//
+// Herec dostane odkaz s jednorazovym tokenem - vybere si terminy bez
+// prihlasovani. Odkaz je zaroven overeni, ze je to on, proto je v mailu
+// napsane, ze ho nema posilat dal.
+// ===========================================================================
+
+type RecordingOfferEmailInput = {
+  to: string;
+  actorName: string;
+  projectName: string;
+  studioName: string;
+  requiredSessions: number;
+  offeredCount: number;
+  periodFrom: Date;
+  periodTo: Date;
+  note: string | null;
+  offerUrl: string;
+};
+
+function pocetTerminu(n: number): string {
+  if (n === 1) return '1 termín';
+  if (n < 5) return `${n} termíny`;
+  return `${n} termínů`;
+}
+
+export function buildRecordingOfferHtml(input: RecordingOfferEmailInput): string {
+  const obdobi = `${input.periodFrom.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })} – ${input.periodTo.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}`;
+  return emailShell({
+    tag: 'Natáčecí termíny',
+    preheader: `Vyberte si ${pocetTerminu(input.requiredSessions)} pro projekt ${input.projectName}.`,
+    body: `
+    <span class="badge">Výběr termínů</span>
+    <h2>${escapeHtml(input.projectName)}</h2>
+    <p>Dobrý den, ${escapeHtml(input.actorName)},</p>
+    <p>máme pro vás připravené termíny natáčení. Otevřete odkaz níže a vyberte si
+       <strong>${escapeHtml(pocetTerminu(input.requiredSessions))}</strong>, které vám sedí —
+       přihlašovat se nemusíte.</p>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Projekt</td><td class="value">${escapeHtml(input.projectName)}</td></tr>
+      <tr><td class="label">Studio</td><td class="value regular">${escapeHtml(input.studioName)}</td></tr>
+      <tr><td class="label">Období</td><td class="value regular">${escapeHtml(obdobi)}</td></tr>
+      <tr><td class="label">Vyberte</td><td class="value">${escapeHtml(pocetTerminu(input.requiredSessions))} z ${input.offeredCount} nabídnutých</td></tr>
+    </table>
+
+    ${input.note ? `<p class="small"><strong>Poznámka produkce:</strong> ${escapeHtml(input.note)}</p>` : ''}
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.offerUrl)}" class="cta">Vybrat termíny</a>
+    </div>
+
+    <p class="small">Odkaz je určený jen vám — nesdílejte ho prosím dál. Kdyby vám žádný
+       z termínů nevyhovoval, stačí na tento e-mail odpovědět.</p>
+  `,
+  });
+}
+
+export async function sendRecordingOfferEmail(input: RecordingOfferEmailInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.to,
+    subject: `Výběr natáčecích termínů — ${input.projectName}`,
+    text: [
+      `Dobry den, ${input.actorName},`,
+      '',
+      `mame pro vas pripravene terminy nataceni projektu ${input.projectName}.`,
+      `Studio: ${input.studioName}`,
+      `Vyberte si ${input.requiredSessions} terminu z ${input.offeredCount} nabidnutych.`,
+      input.note ? `Poznamka produkce: ${input.note}` : '',
+      '',
+      'Vyber terminu:',
+      input.offerUrl,
+      '',
+      'Odkaz je urceny jen vam - nesdilejte ho dal.',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildRecordingOfferHtml(input),
+  });
+
+  return { sent: true as const };
+}
