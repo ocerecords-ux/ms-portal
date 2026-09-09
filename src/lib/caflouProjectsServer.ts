@@ -25,7 +25,10 @@ import {
  * než prázdná stránka s chybou - stejná úvaha jako u cache v paměti.
  */
 
-const KLIC = 'internal-projects';
+// Klic zamerne "v2": radek ulozeny starsi verzi mohl obsahovat NEUPLNY
+// seznam (chyba 9. 9. 2026 - v prehledu zbylo 100 projektu misto 709),
+// a ten se uz nesmi pouzit.
+const KLIC = 'internal-projects-v2';
 const DB_TTL_MS = 10 * 60 * 1000;
 /** Jak stará data se ještě smí ukázat, když Caflou zrovna nefunguje. */
 const DB_STALE_MS = 24 * 60 * 60 * 1000;
@@ -112,18 +115,33 @@ export async function loadInternalProjects(): Promise<InternalProjectsResult> {
     companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
   );
 
-  if (!result.error && result.projects.length > 0) {
+  // Ukládá se JEN úplný seznam. Když Caflou uprostřed stránkování odmítne
+  // další stránku (typicky 429), dostaneme jen jeho začátek - a protože Caflou
+  // řadí od nejstarších, vypadalo by to, že žádné projekty nejsou rozpracované
+  // (chyba 9. 9. 2026: v přehledu zbylo 100 projektů z 709 a všechny
+  // dokončené). Takový výsledek by se navíc rozlezl do všech instancí.
+  if (!result.error && result.complete && result.projects.length > 0) {
     await zapisDoDatabaze(result.projects);
     return result;
   }
 
-  // Caflou nedojelo - radši starší seznam než prázdná stránka.
+  // Nedotaženo nebo chyba - radši starší, ale úplný seznam než useknutá
+  // nebo prázdná stránka.
   if (ulozene && Date.now() - ulozene.fetchedAt.getTime() < DB_STALE_MS) {
     primeInternalProjectsCache(ulozene.projects);
     return { projects: ulozene.projects, error: null };
   }
 
-  return result;
+  // Ani cache nemáme. Neúplný seznam je pořád lepší než prázdná stránka, ale
+  // musí být vidět, že je useknutý.
+  if (!result.error && result.projects.length > 0) {
+    return {
+      projects: result.projects,
+      error: 'Caflou nestihlo vrátit celý seznam, tohle je jen jeho část. Zkuste stránku načíst znovu.',
+    };
+  }
+
+  return { projects: result.projects, error: result.error };
 }
 
 /**

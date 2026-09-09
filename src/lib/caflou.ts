@@ -381,11 +381,24 @@ function caflouCompanyNameOf(p: any): string | null {
 //  - soubezne pozadavky sdili jeden probihajici dotaz (dedupe),
 //  - kdyz Caflou odmitne, radeji ukazeme i starsi data z cache nez prazdnou
 //    stranku s chybou.
-type InternalProjectsResult = { projects: AdminDisplayProject[]; error: string | null };
+type InternalProjectsResult = {
+  projects: AdminDisplayProject[];
+  error: string | null;
+  /**
+   * Podarilo se stahnout CELY seznam? Kdyz Caflou uprostred strankovani
+   * odmitne dalsi stranku (typicky 429) nebo dojde casovy rozpocet, vratime
+   * jen to, co uz mame - a tohle je false. Takovy seznam se NESMI ulozit do
+   * sdilene cache (viz lib/caflouProjectsServer.ts), jinak by se necelý
+   * vysledek tvaril jako platny pro vsechny (chyba 9. 9. 2026: v prehledu
+   * zbylo 100 projektu misto 709 a vsechny vypadaly jako dokoncene, protoze
+   * Caflou radi od nejstarsich).
+   */
+  complete: boolean;
+};
 
 const PROJECTS_CACHE_MS = 5 * 60 * 1000;
 const PROJECTS_STALE_MS = 30 * 60 * 1000;
-let projectsCache: { at: number; projects: AdminDisplayProject[] } | null = null;
+let projectsCache: { at: number; projects: AdminDisplayProject[]; complete: boolean } | null = null;
 let projectsInFlight: Promise<InternalProjectsResult> | null = null;
 
 /**
@@ -394,7 +407,9 @@ let projectsInFlight: Promise<InternalProjectsResult> | null = null;
  * (lib/caflouProjectsServer.ts), aby si mohla vybrat nejlevnější zdroj.
  */
 export function peekInternalProjectsCache(): AdminDisplayProject[] | null {
-  if (projectsCache && Date.now() - projectsCache.at < PROJECTS_CACHE_MS) {
+  // Neuplny seznam se z pameti nenabizi - radsi se zeptame znovu, nez aby
+  // uzivatel koukal na useknuty prehled.
+  if (projectsCache?.complete && Date.now() - projectsCache.at < PROJECTS_CACHE_MS) {
     return projectsCache.projects;
   }
   return null;
@@ -402,30 +417,27 @@ export function peekInternalProjectsCache(): AdminDisplayProject[] | null {
 
 /** Naplní paměť instance seznamem, který přišel odjinud (ze sdílené cache). */
 export function primeInternalProjectsCache(projects: AdminDisplayProject[]): void {
-  projectsCache = { at: Date.now(), projects };
+  projectsCache = { at: Date.now(), projects, complete: true };
 }
 
 export async function listAllCaflouProjectsForInternal(
   knownCompanies: { name: string; caflouCompanyId: string }[],
 ): Promise<InternalProjectsResult> {
   const now = Date.now();
-  if (projectsCache && now - projectsCache.at < PROJECTS_CACHE_MS) {
-    return { projects: projectsCache.projects, error: null };
+  if (projectsCache?.complete && now - projectsCache.at < PROJECTS_CACHE_MS) {
+    return { projects: projectsCache.projects, error: null, complete: true };
   }
   if (projectsInFlight) return projectsInFlight;
 
   projectsInFlight = fetchAllCaflouProjects(knownCompanies)
     .then((result) => {
-      if (!result.error) {
-        projectsCache = { at: Date.now(), projects: result.projects };
+      if (!result.error && result.complete) {
+        projectsCache = { at: Date.now(), projects: result.projects, complete: true };
         return result;
       }
-      // Dotaz selhal - kdyz mame necim starsi, ale jeste pouzitelna data, ukazeme je.
-      if (projectsCache && Date.now() - projectsCache.at < PROJECTS_STALE_MS) {
-        return {
-          projects: projectsCache.projects,
-          error: null,
-        };
+      // Nedotazeno nebo chyba - kdyz mame starsi, ale UPLNY seznam, ukazeme radsi ten.
+      if (projectsCache?.complete && Date.now() - projectsCache.at < PROJECTS_STALE_MS) {
+        return { projects: projectsCache.projects, error: null, complete: true };
       }
       return result;
     })
@@ -436,12 +448,24 @@ export async function listAllCaflouProjectsForInternal(
   return projectsInFlight;
 }
 
-/** Jedna stranka projektu z Caflou; pri chybe vraci HTTP status jako cislo. */
+/**
+ * Jedna stranka projektu z Caflou; pri chybe vraci HTTP status jako cislo.
+ *
+ * Pri 429 (limit dotazu) se po kratke pauze zkusi jeste jednou - stranek je
+ * osm za sebou a Caflou obcas odmitne prave tu prostredni, cimz se drive
+ * usekl cely seznam.
+ */
 async function fetchProjectsPage(page: number, per: number): Promise<any[] | number> {
-  const result = await caflouFetch(`/projects?per=${per}&page=${page}`);
-  if (!result.ok) return result.status;
-  const results = (result.body as { results?: unknown } | null)?.results;
-  return Array.isArray(results) ? (results as any[]) : [];
+  for (let pokus = 0; pokus < 2; pokus++) {
+    const result = await caflouFetch(`/projects?per=${per}&page=${page}`);
+    if (result.ok) {
+      const results = (result.body as { results?: unknown } | null)?.results;
+      return Array.isArray(results) ? (results as any[]) : [];
+    }
+    if (result.status !== 429 || pokus === 1) return result.status;
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  return 429;
 }
 
 async function fetchAllCaflouProjects(
@@ -459,15 +483,25 @@ async function fetchAllCaflouProjects(
   // nas z priznaku finished a stavu projektu (viz isProjectFinished).
   const PER = 100;
   const MAX_PAGES = 15;
-  const TIME_BUDGET_MS = 20000;
+  // Zmereno na produkci 9. 9. 2026: jedna stranka trva 1,6-2,5 s, stranek je
+  // osm - dohromady tedy 13-20 s. S puvodnim rozpoctem 20 s se to obcas
+  // nestihlo a seznam se usekl v pulce (a od te doby uz jen 100 nejstarsich,
+  // same dokoncene projekty). Cely seznam se ted diky sdilene cache stahuje
+  // jednou za deset minut za celou aplikaci, takze si muze dovolit doběhnout.
+  const TIME_BUDGET_MS = 45000;
   const startedAt = Date.now();
 
   const rawProjects: any[] = [];
   const seenIds = new Set<string>();
+  let neuplny = false;
 
   try {
     for (let page = 1; page <= MAX_PAGES; page++) {
-      if (Date.now() - startedAt > TIME_BUDGET_MS) break;
+      if (Date.now() - startedAt > TIME_BUDGET_MS) {
+        neuplny = true;
+        break;
+      }
+      if (page === MAX_PAGES) neuplny = true;
       const rows = await fetchProjectsPage(page, PER);
 
       if (typeof rows === 'number') {
@@ -475,12 +509,15 @@ async function fetchAllCaflouProjects(
         if (page === 1) {
           return {
             projects: [],
+            complete: false,
             error:
               rows === 429
                 ? 'Caflou nás teď odmítá kvůli limitu dotazů (429). Za chvíli to zkuste znovu.'
                 : `Caflou API odpovědělo chybou ${rows}.`,
           };
         }
+        // Nedotazeno - mame jen cast seznamu.
+        neuplny = true;
         break;
       }
 
@@ -496,10 +533,18 @@ async function fetchAllCaflouProjects(
         rawProjects.push(row);
       }
       if (seenIds.size === before) break;
-      if (rows.length < PER) break;
+      // Neplna stranka = konec seznamu, tohle je jediny "cisty" konec.
+      if (rows.length < PER) {
+        neuplny = false;
+        break;
+      }
     }
   } catch (err) {
-    return { projects: [], error: err instanceof Error ? err.message : 'Dotaz na Caflou selhal.' };
+    return {
+      projects: [],
+      complete: false,
+      error: err instanceof Error ? err.message : 'Dotaz na Caflou selhal.',
+    };
   }
 
   const projects: AdminDisplayProject[] = rawProjects.map((p: any) => {
@@ -509,7 +554,7 @@ async function fetchAllCaflouProjects(
     return { ...mapOneCaflouProject(p), companyName, caflouCompanyId };
   });
 
-  return { projects, error: null };
+  return { projects, error: null, complete: !neuplny };
 }
 
 /**
