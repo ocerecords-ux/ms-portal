@@ -63,6 +63,8 @@ export type ChatMessage = {
   seenBy: string[];
   /** Reakce na tuhle zpravu, serazene od nejcastejsi (zadani 9. 9. 2026). */
   reactions: ChatReaction[];
+  /** Kdy byla zprava naposledy upravena; null = puvodni zneni. */
+  editedAt: string | null;
 };
 
 export type ChatTeamMember = { id: string; label: string; photoUrl: string | null };

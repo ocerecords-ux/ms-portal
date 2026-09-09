@@ -109,6 +109,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           .filter((clen) => clen.lastReadAt >= m.createdAt)
           .map((clen) => userLabel(clen.user)),
         reactions: shrnReakce(m.reactions, me),
+        editedAt: m.editedAt ? m.editedAt.toISOString() : null,
       })),
     });
   } catch (err) {
@@ -175,6 +176,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         // Prave odeslanou zpravu jeste nikdo videt nemohl.
         seenBy: [],
         reactions: [],
+        editedAt: null,
       },
       { status: 201 },
     );

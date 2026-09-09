@@ -116,7 +116,7 @@ function DenOddelovac({ iso }: { iso: string }) {
 }
 
 /** Autor a cas nad zpravou. Cas je videt vzdy, cely datum je v napovede. */
-function Hlavicka({ jmeno, iso }: { jmeno: string; iso: string }) {
+function Hlavicka({ jmeno, iso, editedAt }: { jmeno: string; iso: string; editedAt?: string | null }) {
   return (
     <span className="flex items-baseline gap-1.5">
       <span className="text-[12px] font-heading font-semibold text-ink">{jmeno}</span>
@@ -127,6 +127,13 @@ function Hlavicka({ jmeno, iso }: { jmeno: string; iso: string }) {
       >
         {formatClock(iso)}
       </time>
+      {editedAt && (
+        // Upravena zprava to musi priznat, jinak by slo nenapadne prepsat, co
+        // uz nekdo cetl (zadani 9. 9. 2026).
+        <span className="text-[11px] font-body text-muted italic" title={`Upraveno ${formatFullTime(editedAt)}`}>
+          upraveno
+        </span>
+      )}
     </span>
   );
 }
@@ -180,6 +187,9 @@ function Psatko({
   placeholder,
   nabidka,
   vyber,
+  popisek = 'Poslat',
+  onZrusit,
+  autoFocus = false,
 }: {
   hodnota: string;
   zmena: (v: string) => void;
@@ -188,6 +198,12 @@ function Psatko({
   placeholder: string;
   nabidka: ChatTeamMember[];
   vyber: (clovek: ChatTeamMember) => void;
+  /** Popisek odesilaciho tlacitka - pri uprave zpravy je to "Uložit". */
+  popisek?: string;
+  /** Kdyz je zadane, vedle tlacitka pribude Zrušit (uprava zpravy). */
+  onZrusit?: () => void;
+  /** Kurzor rovnou v poli - pri uprave chce clovek psat hned. */
+  autoFocus?: boolean;
 }) {
   const [smajlici, setSmajlici] = useState(false);
   const poleRef = useRef<HTMLDivElement | null>(null);
@@ -264,6 +280,20 @@ function Psatko({
       vyber?.addRange(rozsah);
     }
   }, [hodnota, smajlikUzel]);
+
+  // Pri uprave zpravy chce clovek psat hned - kurzor rovnou na konec textu.
+  useEffect(() => {
+    if (!autoFocus) return;
+    const pole = poleRef.current;
+    if (!pole) return;
+    pole.focus();
+    const rozsah = document.createRange();
+    rozsah.selectNodeContents(pole);
+    rozsah.collapse(false);
+    const vyberTextu = window.getSelection();
+    vyberTextu?.removeAllRanges();
+    vyberTextu?.addRange(rozsah);
+  }, [autoFocus]);
 
   function posliVen() {
     const pole = poleRef.current;
@@ -420,12 +450,23 @@ function Psatko({
         <span className="text-[11px] font-body text-muted select-none hidden sm:inline">
           Enter odešle, Shift+Enter zalomí řádek
         </span>
+        {onZrusit && (
+          <button
+            type="button"
+            onClick={onZrusit}
+            className="ml-auto shrink-0 text-sm font-heading font-semibold text-muted hover:text-ink"
+          >
+            Zrušit
+          </button>
+        )}
         <button
           type="submit"
           disabled={sending || !hodnota.trim()}
-          className="ml-auto shrink-0 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 disabled:opacity-50"
+          className={`shrink-0 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 disabled:opacity-50 ${
+            onZrusit ? '' : 'ml-auto'
+          }`}
         >
-          Poslat
+          {popisek}
         </button>
       </div>
     </form>
@@ -532,6 +573,57 @@ export function ChatDock() {
   const [vlaknoId, setVlaknoId] = useState<string | null>(null);
   const [vlakno, setVlakno] = useState<ChatMessage[]>([]);
   const [vlaknoDraft, setVlaknoDraft] = useState('');
+
+  // Uprava vlastni odeslane zpravy (zadani 9. 9. 2026). Upravuje se vzdy jen
+  // jedna zprava naraz - na miste bubliny se objevi tentyz editor jako dole,
+  // takze smajlici i zminky funguji stejne.
+  const [upravovanaId, setUpravovanaId] = useState<string | null>(null);
+  const [upravaText, setUpravaText] = useState('');
+  const [upravaChyba, setUpravaChyba] = useState<string | null>(null);
+
+  function zacniUpravu(m: ChatMessage) {
+    setUpravovanaId(m.id);
+    setUpravaText(m.body);
+    setUpravaChyba(null);
+  }
+
+  function zrusUpravu() {
+    setUpravovanaId(null);
+    setUpravaText('');
+    setUpravaChyba(null);
+  }
+
+  async function ulozUpravu(e: React.FormEvent) {
+    e.preventDefault();
+    const id = upravovanaId;
+    const text = upravaText.trim();
+    if (!id || !text || sending) return;
+
+    setSending(true);
+    setUpravaChyba(null);
+    try {
+      const res = await fetch(`/api/chat/zpravy/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: text }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setUpravaChyba(data?.error || 'Zprávu se nepodařilo upravit.');
+        return;
+      }
+      const uprav = (seznam: ChatMessage[]) =>
+        seznam.map((m) => (m.id === id ? { ...m, body: data.body, editedAt: data.editedAt } : m));
+      setMessages(uprav);
+      setVlakno(uprav);
+      zrusUpravu();
+    } catch (err) {
+      console.error('Úprava zprávy selhala:', err);
+      setUpravaChyba('Zprávu se nepodařilo upravit.');
+    } finally {
+      setSending(false);
+    }
+  }
 
   /**
    * Prepnuti reakce na zprave (zadani 9. 9. 2026). Server vrati cely secteny
@@ -1087,20 +1179,42 @@ export function ChatDock() {
                       <div className="flex items-start gap-2">
                         <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={28} />
                         <div className="min-w-0">
-                          <Hlavicka jmeno={m.mine ? 'Já' : m.authorLabel} iso={m.createdAt} />
-                          <p
-                            className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
-                              m.mine
-                                ? 'bg-brand-purple text-white'
-                                : 'bg-surface border border-line text-ink'
-                            }`}
-                          >
-                            <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
-                          </p>
-                          <Reakce
-                            reactions={m.reactions ?? []}
-                            onToggle={(code) => prepniReakci(m.id, code)}
-                          />
+                          <Hlavicka jmeno={m.mine ? 'Já' : m.authorLabel} iso={m.createdAt} editedAt={m.editedAt} />
+                          {upravovanaId === m.id ? (
+                            <div className="mt-1 rounded-card border border-brand-purple overflow-hidden bg-surface">
+                              <Psatko
+                                hodnota={upravaText}
+                                zmena={setUpravaText}
+                                odeslat={ulozUpravu}
+                                sending={sending}
+                                placeholder="Upravit zprávu…"
+                                nabidka={[]}
+                                vyber={() => {}}
+                                popisek="Uložit"
+                                onZrusit={zrusUpravu}
+                                autoFocus
+                              />
+                              {upravaChyba && (
+                                <p className="text-[11px] font-body text-danger px-3 pb-2 m-0">{upravaChyba}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <>
+                              <p
+                                className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
+                                  m.mine
+                                    ? 'bg-brand-purple text-white'
+                                    : 'bg-surface border border-line text-ink'
+                                }`}
+                              >
+                                <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
+                              </p>
+                              <Reakce
+                                reactions={m.reactions ?? []}
+                                onToggle={(code) => prepniReakci(m.id, code)}
+                              />
+                            </>
+                          )}
                           {/* Zobrazeno i odkaz do vlakna na jednom radku -
                               samostatny radek na odpoved zabiral moc mista
                               (zprava uzivatele 8. 9. 2026). */}
@@ -1122,6 +1236,21 @@ export function ChatDock() {
                                 ? `${m.replyCount} ${m.replyCount === 1 ? 'odpověď' : m.replyCount < 5 ? 'odpovědi' : 'odpovědí'} ›`
                                 : 'Odpovědět'}
                             </button>
+                            {/* Upravit smi jen autor - i na serveru (zadani
+                                9. 9. 2026: "bylo by super upravovat me
+                                odeslane zpravy, kdyz se treba spletu"). */}
+                            {m.mine && upravovanaId !== m.id && (
+                              <>
+                                <span className="text-[11px] text-muted/40">·</span>
+                                <button
+                                  type="button"
+                                  onClick={() => zacniUpravu(m)}
+                                  className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
+                                >
+                                  Upravit
+                                </button>
+                              </>
+                            )}
                           </span>
                         </div>
                       </div>
@@ -1176,18 +1305,57 @@ export function ChatDock() {
                               >
                                 {formatMessageTime(m.createdAt)}
                               </time>
+                              {m.editedAt && (
+                                <span
+                                  className="text-[11px] font-body text-muted italic"
+                                  title={`Upraveno ${formatFullTime(m.editedAt)}`}
+                                >
+                                  upraveno
+                                </span>
+                              )}
+                              {m.mine && upravovanaId !== m.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => zacniUpravu(m)}
+                                  className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
+                                >
+                                  Upravit
+                                </button>
+                              )}
                             </span>
-                            <p
-                              className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
-                                m.mine ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-ink'
-                              }`}
-                            >
-                              <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
-                            </p>
-                            <Reakce
-                              reactions={m.reactions ?? []}
-                              onToggle={(code) => prepniReakci(m.id, code)}
-                            />
+                            {upravovanaId === m.id ? (
+                              <div className="mt-1 rounded-card border border-brand-purple overflow-hidden bg-surface">
+                                <Psatko
+                                  hodnota={upravaText}
+                                  zmena={setUpravaText}
+                                  odeslat={ulozUpravu}
+                                  sending={sending}
+                                  placeholder="Upravit zprávu…"
+                                  nabidka={[]}
+                                  vyber={() => {}}
+                                  popisek="Uložit"
+                                  onZrusit={zrusUpravu}
+                                  autoFocus
+                                />
+                                {upravaChyba && (
+                                  <p className="text-[11px] font-body text-danger px-3 pb-2 m-0">{upravaChyba}</p>
+                                )}
+                              </div>
+                            ) : (
+                              <>
+                                <p
+                                  className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
+                                    m.mine ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-ink'
+                                  }`}
+                                >
+                                  <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
+                                </p>
+                                <Reakce
+                                  reactions={m.reactions ?? []}
+                                  onToggle={(code) => prepniReakci(m.id, code)}
+                                />
+                              </>
+                            )}
                             {m.mine && (
                               <span className="block mt-0.5">
                                 <Zobrazeno seenBy={m.seenBy} />

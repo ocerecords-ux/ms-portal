@@ -526,6 +526,12 @@ model Message {
   body           String
   createdAt      DateTime     @default(now())
 
+  // Uprava vlastni zpravy (zadani 9. 9. 2026: "bylo by super upravovat me
+  // odeslane zpravy, kdyz se treba spletu"). Drzi se jen cas posledni upravy,
+  // ne historie verzi - v pracovnim chatu by k nicemu nebyla a je to citlivy
+  // udaj navic. Prazdno znamena, ze zprava je v puvodnim zneni.
+  editedAt       DateTime?
+
   // Odpovedi ve vlakne (zadani 8. 9. 2026: "odpovedi ve vlakne, jak je u
   // Slacku"). Odpoved ukazuje na zpravu, pod kterou visi; v hlavnim proudu
   // kanalu se zobrazuji jen zpravy bez rodice.
