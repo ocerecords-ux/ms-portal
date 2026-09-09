@@ -18,5 +18,9 @@ declare module 'next-auth/jwt' {
   interface JWT {
     role: Role;
     companyId: string | null;
+    /** Kdy se role naposledy overila proti databazi (viz jwt callback). */
+    overenoAt?: number;
+    /** Ucet je vypnuty nebo smazany - middleware takovy token nepusti dal. */
+    neaktivni?: boolean;
   }
 }

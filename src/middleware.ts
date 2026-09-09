@@ -7,6 +7,8 @@ export default withAuth({
   callbacks: {
     authorized: ({ token, req }) => {
       if (!token) return false;
+      // Ucet mezitim vypnuty nebo smazany (viz jwt callback v lib/auth.ts).
+      if (token.neaktivni) return false;
       if (req.nextUrl.pathname.startsWith('/admin') && token.role !== 'ADMIN') return false;
       return true;
     },
