@@ -21,6 +21,7 @@ import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
 import { RecordingSection } from './RecordingSection';
 import { ProjectTabs, type ProjectTab } from './ProjectTabs';
 import { RodnyListSection } from './RodnyListSection';
+import { findInternalProject } from '@/lib/caflouProjectsServer';
 import { loadRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 
 // Detail projektu (zadani 5. 9. 2026). Projekt sam o sobe zije v Caflou -
@@ -63,7 +64,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     studia,
     calendarSettings,
   ] = await Promise.all([
-    getCaflouProject(caflouProjectId),
+    // Nejdriv sdileny seznam projektu (lib/caflouProjectsServer.ts) - ma uz
+    // vsechno, co se tu z Caflou ukazuje, a byva nacteny. Doptat se Caflou
+    // primo se necha az jako zaloha nize.
+    findInternalProject(caflouProjectId),
     prisma.projectMeta.findUnique({
       where: { caflouProjectId },
       include: { manager: { select: { id: true, name: true, email: true } } },
@@ -116,9 +120,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     loadCalendarSettings(),
   ]);
 
-  // Nektere ucty Caflou nevraci detail jednoho projektu - pak projekt
-  // dohledame v seznamu vsech projektu.
-  const caflou = caflouDirect ?? (await findCaflouProjectInList(caflouProjectId));
+  // Zalohy pro pripad, ze projekt jeste neni ve sdilenem seznamu (zalozeny
+  // pred chvili): detail jednoho projektu z Caflou, a kdyz ho ucet nevraci,
+  // dohledani v seznamu vsech projektu.
+  const caflou =
+    caflouDirect ??
+    (await getCaflouProject(caflouProjectId)) ??
+    (await findCaflouProjectInList(caflouProjectId));
 
   // Nazev firmy k projektu doplnujeme z nasi databaze podle ID firmy v Caflou.
   const company = caflou?.caflouCompanyId

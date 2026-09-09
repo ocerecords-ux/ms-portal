@@ -125,3 +125,23 @@ export async function loadInternalProjects(): Promise<InternalProjectsResult> {
 
   return result;
 }
+
+/**
+ * Jeden projekt ze sdíleného seznamu - pro detail projektu.
+ *
+ * Detail se dřív ptal Caflou zvlášť na ten jeden projekt (naměřeno 1,7 s jen
+ * za tenhle dotaz), přestože stejná data už leží v seznamu, který si portál
+ * drží. Tady se proto sáhne nejdřív do něj; když tam projekt není (nový, ještě
+ * nepromítnutý do cache), volající se doptá Caflou přímo.
+ *
+ * Cena za to je, že údaje na detailu můžou být až deset minut staré - stejně
+ * jako v přehledu projektů, odkud se na detail kliká.
+ */
+export async function findInternalProject(
+  caflouProjectId: string,
+): Promise<{ project: AdminDisplayProject; caflouCompanyId: string | null } | null> {
+  const { projects } = await loadInternalProjects();
+  const found = projects.find((p) => String(p.id) === String(caflouProjectId));
+  if (!found) return null;
+  return { project: found, caflouCompanyId: found.caflouCompanyId };
+}
