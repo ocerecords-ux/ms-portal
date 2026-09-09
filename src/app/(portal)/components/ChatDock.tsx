@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConversationKind } from '@prisma/client';
-import { MS_SMAJLICI } from '@/lib/msSmajlici';
+import { MS_SMAJLICI, najdiSmajlika } from '@/lib/msSmajlici';
 import { MsSmajlik } from './MsSmajlik';
 import {
   CHAT_TABS,
@@ -172,8 +172,21 @@ function Telo({ body, jmena, mine }: { body: string; jmena: string[]; mine: bool
 }
 
 /**
- * Psaci pole s nabidkou zminek. Enter odesila, Shift+Enter dela novy radek.
- * Nabidka se ukaze jen kdyz je rozepsana zminka - vybere se kliknutim.
+ * Psací pole chatu.
+ *
+ * Od 9. 9. 2026 to NENÍ obyčejné <textarea>, ale editovatelný blok (zpráva
+ * uživatele: „mně se to právě nelíbí, když je tam ta zkratka"). Do textarey
+ * se obrázek vložit nedá, takže tam po výběru smajlíka zůstala viset zkratka
+ * `:ms-palec:` a člověk psal do něčeho jiného, než co pak odešlo. Tady se
+ * smajlík vykreslí rovnou při psaní.
+ *
+ * Ven i dovnitř se ale pořád předává OBYČEJNÝ TEXT se zkratkami - okolní
+ * komponenta o žádném HTML neví a zprávy se ukládají stejně jako dřív (viz
+ * lib/msSmajlici.ts). Tenhle blok je jen jiný způsob zobrazení.
+ *
+ * Pole se plní z `hodnota` jen tehdy, když se liší od toho, co jsme naposledy
+ * sami poslali ven - jinak by se při každém stisku klávesy přepsal obsah
+ * a kurzor by skákal na konec.
  */
 function Psatko({
   hodnota,
@@ -193,24 +206,125 @@ function Psatko({
   vyber: (clovek: ChatTeamMember) => void;
 }) {
   const [smajlici, setSmajlici] = useState(false);
-  const poleRef = useRef<HTMLTextAreaElement | null>(null);
+  const poleRef = useRef<HTMLDivElement | null>(null);
+  /** Text, který jsme naposledy poslali ven - podle něj se pozná cizí změna. */
+  const posledni = useRef(hodnota);
 
-  // Pole roste s textem misto rolovani ve dvou radcich (zprava uzivatele
-  // 8. 9. 2026: "okno, do ktereho pisu zpravy, je docela male"). Strop je
-  // 160 px, aby delsi zprava nesnedla cely chat.
+  /** Obsah pole zpátky na text se zkratkami. */
+  const naText = useCallback((el: HTMLElement): string => {
+    let out = '';
+    const projdi = (uzel: Node) => {
+      uzel.childNodes.forEach((n) => {
+        if (n.nodeType === Node.TEXT_NODE) {
+          out += n.textContent ?? '';
+          return;
+        }
+        if (!(n instanceof HTMLElement)) return;
+        if (n.dataset.code) {
+          out += n.dataset.code;
+          return;
+        }
+        if (n.tagName === 'BR') {
+          out += '\n';
+          return;
+        }
+        // Prohlížeč při Shift+Enter zabaluje řádky do <div>; každý další
+        // takový blok je nový řádek.
+        if ((n.tagName === 'DIV' || n.tagName === 'P') && out && !out.endsWith('\n')) out += '\n';
+        projdi(n);
+      });
+    };
+    projdi(el);
+    // Nezlomitelné mezery používáme jen kvůli kurzoru, ven patří obyčejné.
+    return out.replace(/ /g, ' ');
+  }, []);
+
+  /** Jeden smajlík jako needitovatelný kousek obsahu. */
+  const smajlikUzel = useCallback((code: string): HTMLElement | null => {
+    const s = najdiSmajlika(code);
+    if (!s) return null;
+    const span = document.createElement('span');
+    span.contentEditable = 'false';
+    span.dataset.code = code;
+    span.title = s.label;
+    span.className = 'inline-block align-[-0.22em]';
+    span.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-label="${s.label}">${s.svg}</svg>`;
+    return span;
+  }, []);
+
+  /** Naplní pole podle textu (jen při změně zvenčí - odeslání, výběr zmínky). */
   useEffect(() => {
     const pole = poleRef.current;
+    if (!pole || hodnota === posledni.current) return;
+
+    pole.textContent = '';
+    for (const cast of splitChatBody(hodnota, [])) {
+      if (cast.kind === 'smajlik') {
+        const uzel = smajlikUzel(cast.value);
+        if (uzel) {
+          pole.appendChild(uzel);
+          continue;
+        }
+      }
+      pole.appendChild(document.createTextNode(cast.value));
+    }
+    posledni.current = hodnota;
+
+    // Kurzor na konec, ať se dá rovnou psát dál.
+    if (document.activeElement === pole) {
+      const rozsah = document.createRange();
+      rozsah.selectNodeContents(pole);
+      rozsah.collapse(false);
+      const vyber = window.getSelection();
+      vyber?.removeAllRanges();
+      vyber?.addRange(rozsah);
+    }
+  }, [hodnota, smajlikUzel]);
+
+  function posliVen() {
+    const pole = poleRef.current;
     if (!pole) return;
-    pole.style.height = 'auto';
-    pole.style.height = `${Math.min(pole.scrollHeight, 160)}px`;
-  }, [hodnota]);
+    const text = naText(pole).slice(0, MAX_MESSAGE_LENGTH);
+    posledni.current = text;
+    zmena(text);
+  }
+
+  /** Vloží smajlíka tam, kde je kurzor (ne na konec - to by lidi štvalo). */
+  function vlozSmajlika(code: string) {
+    const pole = poleRef.current;
+    const uzel = smajlikUzel(code);
+    if (!pole || !uzel) return;
+
+    pole.focus();
+    const vyberTextu = window.getSelection();
+    let rozsah: Range;
+    if (vyberTextu && vyberTextu.rangeCount > 0 && pole.contains(vyberTextu.anchorNode)) {
+      rozsah = vyberTextu.getRangeAt(0);
+      rozsah.deleteContents();
+    } else {
+      rozsah = document.createRange();
+      rozsah.selectNodeContents(pole);
+      rozsah.collapse(false);
+    }
+
+    rozsah.insertNode(uzel);
+    // Mezera za smajlíkem, aby za ním šlo psát a kurzor nezůstal "uvnitř".
+    const mezera = document.createTextNode(' ');
+    uzel.parentNode?.insertBefore(mezera, uzel.nextSibling);
+    rozsah.setStartAfter(mezera);
+    rozsah.collapse(true);
+    vyberTextu?.removeAllRanges();
+    vyberTextu?.addRange(rozsah);
+
+    posliVen();
+    setSmajlici(false);
+  }
 
   return (
     <form onSubmit={odeslat} className="relative border-t border-line bg-white p-3 flex items-end gap-2">
       {smajlici && (
         <div className="absolute left-3 right-3 bottom-full mb-1 bg-white border border-line rounded-lg shadow-lg p-2 z-10 max-h-64 overflow-y-auto">
-          {/* Nase vlastni sada je prvni - viz lib/msSmajlici.ts. Do zpravy se
-              vklada zkratka, obrazek se slozi az pri zobrazeni. */}
+          {/* Naše vlastní sada je první - viz lib/msSmajlici.ts. */}
           <p className="text-[10px] font-heading font-semibold text-muted uppercase tracking-wide m-0 mb-1.5 px-0.5">
             Mediaspace
           </p>
@@ -221,11 +335,7 @@ function Psatko({
                 type="button"
                 title={s.label}
                 aria-label={s.label}
-                onClick={() => {
-                  const mezera = hodnota && !hodnota.endsWith(' ') ? ' ' : '';
-                  zmena(`${hodnota}${mezera}${s.code} `);
-                  setSmajlici(false);
-                }}
+                onClick={() => vlozSmajlika(s.code)}
                 className="rounded hover:bg-field py-1.5 flex items-center justify-center"
               >
                 <MsSmajlik code={s.code} size={22} />
@@ -242,7 +352,12 @@ function Psatko({
                 key={e}
                 type="button"
                 onClick={() => {
-                  zmena(`${hodnota}${e}`);
+                  const pole = poleRef.current;
+                  if (pole) {
+                    pole.focus();
+                    document.execCommand('insertText', false, e);
+                    posliVen();
+                  }
                   setSmajlici(false);
                 }}
                 className="text-lg leading-none rounded hover:bg-field py-1"
@@ -280,20 +395,39 @@ function Psatko({
           <path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0" />
         </svg>
       </button>
-      <textarea
-        ref={poleRef}
-        value={hodnota}
-        onChange={(e) => zmena(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
+
+      <div className="relative flex-1">
+        {!hodnota && (
+          <span className="pointer-events-none absolute left-3 top-2.5 text-sm font-body text-muted select-none">
+            {placeholder}
+          </span>
+        )}
+        <div
+          ref={poleRef}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          aria-multiline="true"
+          aria-label={placeholder}
+          onInput={posliVen}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              odeslat(e as unknown as React.FormEvent);
+            }
+          }}
+          onPaste={(e) => {
+            // Vkládáme jen čistý text - jinak by se do pole dostalo cizí
+            // formátování z Wordu nebo z webu.
             e.preventDefault();
-            odeslat(e as unknown as React.FormEvent);
-          }
-        }}
-        rows={3}
-        placeholder={placeholder}
-        className="flex-1 min-h-[72px] max-h-[160px] resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
-      />
+            const text = e.clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
+            posliVen();
+          }}
+          className="min-h-[96px] max-h-[260px] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
+        />
+      </div>
+
       <button
         type="submit"
         disabled={sending || !hodnota.trim()}
