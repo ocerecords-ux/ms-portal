@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { checkSlot, loadCalendarSettings, recordEvent } from '@/lib/calendarServer';
+import { notify } from '@/lib/notifications';
 
 /**
  * Výběr termínů hercem (zadani 8. 9. 2026). VEŘEJNÝ endpoint — nabídka se
@@ -110,6 +111,15 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
         terminy: vybrane.map((s) => `${s.start.toISOString()} – ${s.end.toISOString()}`),
         drzenoDo: drzetDo.toISOString(),
       },
+    });
+
+    // Produkci dame vedet, ze je co schvalovat.
+    await notify({
+      userId: request.createdById,
+      kind: 'RECORDING_SUBMITTED',
+      title: `${request.actorName} vybral termíny`,
+      body: `${request.projectName} · ${vybrane.length} termínů čeká na potvrzení`,
+      url: `/kalendar/nabidka/${request.id}`,
     });
 
     return NextResponse.json({ ok: true, holdUntil: drzetDo.toISOString() });

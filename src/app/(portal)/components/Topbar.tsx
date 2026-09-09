@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
 import { isExternalHref, type NavItem } from '@/lib/menu';
+import { NotificationBell } from './NotificationBell';
 
 /**
  * Horní fialová lišta. Odkazy si upravuje přímo tady každý sám - tři tečky
@@ -22,8 +23,11 @@ export function Topbar({
   userLabel,
   items,
   pageOptions,
+  unreadNotifications = 0,
 }: {
   userLabel: string;
+  /** Kolik nepřečtených oznámení má uživatel pod zvonkem. */
+  unreadNotifications?: number;
   /** Vlastní lišta přihlášeného uživatele. */
   items: NavItem[];
   /** Stránky, které si smí do lišty přidat. */
@@ -284,6 +288,7 @@ export function Topbar({
             Přetažením změníte pořadí, křížkem odkaz odeberete, „+" přidá zkratku. Lišta je jen vaše.
           </span>
         )}
+        <NotificationBell unread={unreadNotifications} />
         <Link
           href="/muj-ucet"
           title="Můj účet"

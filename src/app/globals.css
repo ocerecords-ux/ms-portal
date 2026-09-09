@@ -96,3 +96,27 @@ body {
 .ms-chat-tmavy textarea::placeholder {
   color: #8A82A3 !important;
 }
+/* Vlastni bubliny byly v tmavem rezimu prilis syte - o odstin tlumeji,
+   at se to da cist i dele (zprava uzivatele 8. 9. 2026). */
+.ms-chat-tmavy .bg-brand-purple {
+  background-color: #5B3FC4 !important;
+}
+/* Nedostupne tlacitko Poslat pusobilo na tmavem rozbite. */
+.ms-chat-tmavy button:disabled {
+  opacity: 0.35 !important;
+}
+/* Posuvnik ve vypisu zprav, at nesviti bile. */
+.ms-chat-tmavy * {
+  scrollbar-color: #4A4266 #1B1626;
+}
+.ms-chat-tmavy ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.ms-chat-tmavy ::-webkit-scrollbar-track {
+  background: #1B1626;
+}
+.ms-chat-tmavy ::-webkit-scrollbar-thumb {
+  background: #4A4266;
+  border-radius: 6px;
+}

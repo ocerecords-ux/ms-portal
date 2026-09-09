@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
 import { recordEvent } from '@/lib/calendarServer';
 import { sendRecordingOfferEmail } from '@/lib/email';
+import { notify } from '@/lib/notifications';
 
 // Odeslani nabidky herci. Nabidka musi obsahovat aspon tolik terminu, kolik
 // jich ma herec vybrat - jinak nema z ceho vybirat.
@@ -66,6 +67,16 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       toStatus: 'SENT',
       note: `Odesláno na ${request.actorEmail}, nabídnuto ${nabidnuto} termínů.`,
     });
+
+    if (request.actorUserId) {
+      await notify({
+        userId: request.actorUserId,
+        kind: 'RECORDING_OFFER',
+        title: 'Vyberte si natáčecí termíny',
+        body: `${request.projectName} · vyberte ${request.requiredSessions} z ${nabidnuto}`,
+        url: '/moje-terminy',
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

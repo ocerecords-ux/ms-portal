@@ -7,6 +7,7 @@ import { canManageCalendar } from '@/lib/roles';
 import { checkSlot, recordEvent } from '@/lib/calendarServer';
 import { minutesInZone, minutesToTime } from '@/lib/calendar';
 import { sendRecordingDecisionEmail } from '@/lib/email';
+import { notify } from '@/lib/notifications';
 
 /**
  * Rozhodnutí produkce o výběru herce (zadani 8. 9. 2026).
@@ -113,6 +114,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         offerUrl,
       });
 
+      if (request.actorUserId) {
+        await notify({
+          userId: request.actorUserId,
+          kind: 'RECORDING_RETURNED',
+          title: 'Vyberte prosím termíny znovu',
+          body: `${request.projectName}${note ? ` — ${note}` : ''}`,
+          url: '/moje-terminy',
+        });
+      }
+
       return NextResponse.json({ ok: true });
     }
 
@@ -155,6 +166,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         slots: [],
         offerUrl,
       });
+
+      if (request.actorUserId) {
+        await notify({
+          userId: request.actorUserId,
+          kind: 'RECORDING_REJECTED',
+          title: 'Výběr termínů byl zamítnut',
+          body: `${request.projectName}${note ? ` — ${note}` : ''}`,
+          url: '/moje-terminy',
+        });
+      }
 
       return NextResponse.json({ ok: true });
     }
@@ -245,6 +266,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       slots: popisTerminu,
       offerUrl,
     });
+
+    if (request.actorUserId) {
+      await notify({
+        userId: request.actorUserId,
+        kind: 'RECORDING_CONFIRMED',
+        title: 'Termíny jsou potvrzené',
+        body: `${request.projectName} · ${popisTerminu.join(', ')}`,
+        url: '/moje-terminy',
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

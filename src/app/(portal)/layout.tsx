@@ -6,6 +6,7 @@ import { TaskDock } from './components/TaskDock';
 import { ChatDock } from './components/ChatDock';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
+import { countUnread } from '@/lib/notifications';
 import { isInternalRole } from '@/lib/roles';
 
 // Jediné místo, které chrání celou klientskou sekci portálu. Session je
@@ -22,9 +23,10 @@ export default async function PortalLayout({ children }: { children: React.React
   // Lišta je editovatelná (viz Topbar) a patří KONKRÉTNÍMU uživateli - úprava
   // se nikomu jinému nepromítne (zadani 8. 9. 2026). Co v ní vůbec smí být se
   // nenastavuje, řídí se právy ke stránce (lib/menu.ts > PAGE_ACCESS).
-  const [entries, tasks] = await Promise.all([
+  const [entries, tasks, unread] = await Promise.all([
     loadMenuEntries(session.user.id),
     loadMyTasks(session.user.id, role),
+    countUnread(session.user.id),
   ]);
 
   return (
@@ -33,6 +35,7 @@ export default async function PortalLayout({ children }: { children: React.React
         userLabel={session.user.name || session.user.email}
         items={visibleFor(entries, role)}
         pageOptions={pageOptionsFor(role)}
+        unreadNotifications={unread}
       />
       {/* Panel Úkolů je připnutý na pravé hraně okna, takže obsahu vpravo
           uvolníme místo - jinak se přes něj tabulky "usekávaly"

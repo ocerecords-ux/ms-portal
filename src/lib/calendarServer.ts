@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { notifyMany } from '@/lib/notifications';
 import { DEFAULT_BUDGET_SETTINGS } from '@/lib/budget';
 import {
   BLOCKING_SLOT_STATES,
@@ -71,7 +72,7 @@ export async function releaseExpiredHolds(): Promise<string[]> {
   const ted = new Date();
   const prosle = await prisma.recordingRequest.findMany({
     where: { status: 'SUBMITTED', holdUntil: { lt: ted } },
-    select: { id: true, actorName: true },
+    select: { id: true, actorName: true, actorUserId: true, createdById: true, projectName: true },
   });
   if (prosle.length === 0) return [];
 
@@ -95,6 +96,17 @@ export async function releaseExpiredHolds(): Promise<string[]> {
           note: 'Vypršelo držení termínů, vrátily se do nabídky.',
         },
       });
+    });
+  }
+
+  // Notifikace az po transakcich - kdyby zapis notifikace selhal, uvolneni
+  // uz je hotove a to je to podstatne.
+  for (const request of prosle) {
+    await notifyMany([request.createdById, request.actorUserId], {
+      kind: 'RECORDING_HOLD_EXPIRED',
+      title: 'Vypršelo držení termínů',
+      body: `${request.projectName} · ${request.actorName} — termíny se vrátily do nabídky`,
+      url: `/kalendar/nabidka/${request.id}`,
     });
   }
 

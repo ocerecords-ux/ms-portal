@@ -202,7 +202,7 @@ function Psatko({
   }, [hodnota]);
 
   return (
-    <form onSubmit={odeslat} className="relative border-t border-line p-3 flex items-end gap-2">
+    <form onSubmit={odeslat} className="relative border-t border-line bg-white p-3 flex items-end gap-2">
       {smajlici && (
         <div className="absolute left-3 right-3 bottom-full mb-1 bg-white border border-line rounded-lg shadow-lg p-2 grid grid-cols-8 gap-1 z-10">
           {EMOJI.map((e) => (
@@ -240,7 +240,7 @@ function Psatko({
         onClick={() => setSmajlici((v) => !v)}
         title="Smajlíci"
         aria-label="Smajlíci"
-        className="shrink-0 w-9 h-9 rounded-lg border border-line text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center"
+        className="shrink-0 w-9 h-9 rounded-lg border border-line bg-white text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-5 h-5">
           <circle cx="12" cy="12" r="9" />

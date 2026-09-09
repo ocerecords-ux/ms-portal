@@ -42,6 +42,7 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/caflou-firmy': ['ADMIN'],
   '/admin/users': ['ADMIN'],
   '/admin/ceniky': ['ADMIN'],
+  '/admin/studia': ['ADMIN'],
   '/admin/doklady': ['ADMIN'],
 };
 
@@ -58,6 +59,7 @@ export const DEFAULT_MENU_ITEMS: { label: string; href: string; sortOrder: numbe
   { label: 'Nahrávky', href: '/nahravky', sortOrder: 30 },
   { label: 'Výkazy', href: '/vykazy', sortOrder: 40 },
   { label: 'Kalendář', href: '/kalendar', sortOrder: 45 },
+  { label: 'Moje termíny', href: '/moje-terminy', sortOrder: 46 },
   { label: 'Firmy', href: '/admin', sortOrder: 50 },
   { label: 'Uživatelé', href: '/admin/users', sortOrder: 60 },
   { label: 'Ceníky', href: '/admin/ceniky', sortOrder: 70 },
@@ -71,10 +73,12 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/nahravky', label: 'Nahrávky' },
   { href: '/vykazy', label: 'Výkazy' },
   { href: '/kalendar', label: 'Kalendář' },
+  { href: '/moje-terminy', label: 'Moje termíny' },
   { href: '/admin', label: 'Firmy' },
   { href: '/admin/caflou-firmy', label: 'Firmy z Caflou' },
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/ceniky', label: 'Ceníky' },
+  { href: '/admin/studia', label: 'Studia' },
   { href: '/admin/doklady', label: 'Doklady' },
   { href: '/muj-ucet', label: 'Můj účet' },
 ];
