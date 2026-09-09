@@ -139,7 +139,15 @@ export function Topbar({
     // Lista zustava nahore i pri rolovani (zadani 9. 9. 2026: "hlavni fialova
     // lista at je na celem portalu zakotvena, ze nezmizi"). Vyssi vrstva nez
     // vysouvaci panely po stranach, at ji nic neprekryje.
-    <header className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between flex-wrap gap-4 shadow-md">
+    //
+    // Lista se pri uprave NESMI prelamovat (zprava uzivatele 9. 9. 2026:
+    // "cele to menu pri uprave ujede nekam doprava a jmeno s fotkou
+    // a zvonecek se da na dalsi radek, chci at se to upravuje na tom samem
+    // miste"). Drive tu bylo flex-wrap a v rezimu uprav pribyly krizky,
+    // tlacitko "+" a Hotovo/Zrusit/Vychozi - rada se proto zalomila a cela
+    // lista poskocila. Ted se misto toho v uzkem miste posouvaji odkazy do
+    // stran; jmeno, zvonecek ani prepinac se nikam nestehuji.
+    <header className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between gap-4 shadow-md">
       {/* Branding "MS portal | [logo]" podle referencniho mockupu uzivatele
           (12. 9. 2026) - svisla oddelovaci cara misto "by" a znatelne vetsi
           logo (jeste zvetseno 5. 9. 2026). */}
@@ -150,7 +158,7 @@ export function Topbar({
         <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-12 sm:h-16 w-auto" />
       </Link>
 
-      <nav className="flex items-center gap-5 sm:gap-8 flex-wrap font-heading text-sm font-medium">
+      <nav className="flex items-center gap-5 sm:gap-8 font-heading text-sm font-medium min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {shown.map((item, index) => {
           const external = isExternalHref(item.href);
           // "/admin" (Firmy) by jinak jako prefix odpovidal i "/admin/users" -
@@ -294,12 +302,7 @@ export function Topbar({
           rozbalovaci nabidku i tu sipku") - kliknuti na jmeno vede rovnou na
           Muj ucet, vedle je jen odhlaseni. Do administrace se chodi odkazy
           v liste (Firmy, Uzivatele, Ceniky, Doklady). */}
-      <div className="flex items-center gap-2">
-        {editing && (
-          <span className="text-white/70 text-xs font-body hidden lg:block max-w-[260px]">
-            Přetažením změníte pořadí, křížkem odkaz odeberete, „+" přidá zkratku. Lišta je jen vaše.
-          </span>
-        )}
+      <div className="flex items-center gap-2 shrink-0">
         <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
         <Link
