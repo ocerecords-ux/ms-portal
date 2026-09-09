@@ -1,4 +1,10 @@
-import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  HeadObjectCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import { bezpecnyNazev } from '@/lib/chatPrilohy';
@@ -372,4 +378,66 @@ export async function podepsanyOdkazNaPrilohu(key: string, fileName: string): Pr
     }),
     { expiresIn: PLATNOST_STAZENI },
   );
+}
+
+
+/**
+ * Zkouska spojeni s uloziste ZE SERVERU (9. 9. 2026).
+ *
+ * Z prohlizece se chyba uloziste pozna mizerne: odpoved bez hlavicek CORS
+ * se ke skriptu vubec nedostane, takze odmitnuty podpis vypada uplne stejne
+ * jako spatne nastaveny bucket - obojí konci hláškou "Failed to fetch".
+ * Odsud zadne CORS neplati, takze je videt skutecny duvod.
+ */
+export async function zkusUloziste(): Promise<{
+  ok: boolean;
+  server: string | null;
+  bucket: string | null;
+  cestaSBucketem: boolean;
+  pocetSouboru?: number;
+  chyba?: string;
+  kod?: string;
+}> {
+  const bucket = process.env.S3_BUCKET || null;
+  const endpoint = ocistiEndpoint(process.env.S3_ENDPOINT);
+  let server: string | null = null;
+  try {
+    server = endpoint ? new URL(endpoint).hostname : '(AWS S3)';
+  } catch {
+    server = '(neplatná adresa)';
+  }
+
+  const client = getClient();
+  if (!client || !bucket) {
+    return {
+      ok: false,
+      server,
+      bucket,
+      cestaSBucketem: Boolean(endpoint),
+      chyba: 'Úložiště není nastavené (chybí klíče, bucket nebo je adresa neplatná).',
+    };
+  }
+
+  try {
+    // Vypis jednoho souboru staci - overi klice, adresu i pristup k bucketu,
+    // a pritom nic nezapisuje.
+    const odpoved = await client.send(new ListObjectsV2Command({ Bucket: bucket, MaxKeys: 1 }));
+    return {
+      ok: true,
+      server,
+      bucket,
+      cestaSBucketem: Boolean(endpoint),
+      pocetSouboru: odpoved.KeyCount ?? 0,
+    };
+  } catch (err) {
+    const chyba = err as { name?: string; message?: string; $metadata?: { httpStatusCode?: number } };
+    return {
+      ok: false,
+      server,
+      bucket,
+      cestaSBucketem: Boolean(endpoint),
+      chyba: chyba?.message || 'Neznámá chyba.',
+      kod: `${chyba?.name || '?'} / HTTP ${chyba?.$metadata?.httpStatusCode ?? '?'}`,
+    };
+  }
 }
