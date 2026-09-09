@@ -841,7 +841,14 @@ model ColumnLabel {
   id        String @id @default(cuid())
   tableKey  String // ktera tabulka, napr. "projekty-interni"
   columnKey String // ktery sloupec, napr. "managerName"
+  /// Vlastni nazev sloupce. Prazdny retezec = ponechat vychozi nazev z kodu -
+  /// diky tomu se pozdejsi zmena vychoziho nazvu porad projevi.
   label     String
+
+  /// Poradi a skryti (rozsireni 9. 9. 2026 - "udelejme to stejne jako
+  /// v hlavnim menu": pretahovani a odebrani krizkem).
+  sortOrder Int     @default(0)
+  hidden    Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

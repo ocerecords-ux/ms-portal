@@ -1,14 +1,30 @@
 /**
- * Vlastní názvy sloupců v tabulkách (zadani 8. 9. 2026).
+ * Nastavení sloupců v tabulkách (zadání 8. 9. 2026, rozšířeno 9. 9. 2026:
+ * „když chceme upravit názvy sloupců u projektu, udělejme to stejně jako
+ * v hlavním menu").
  *
- * Výchozí názvy zůstávají v kódu, v databázi je jen to, co si někdo
- * přejmenoval. Když do tabulky přibude sloupec, funguje sám od sebe — a
- * "Obnovit výchozí" znamená prostě smazat uložené přepisy.
+ * Stejně jako lišta nahoře se sloupce dají přejmenovat, přetáhnout do jiného
+ * pořadí a křížkem odebrat. Výchozí podoba zůstává v kódu, v databázi je jen
+ * to, co si někdo nastavil — takže když do tabulky přibude sloupec, objeví se
+ * sám (na konci) a „Obnovit výchozí" znamená prostě uložené nastavení smazat.
  *
  * Bez přístupu do databáze, aby to šlo použít i v klientských komponentách.
  */
 
-export type ColumnLabels = Record<string, string>;
+/** Jeden sloupec tak, jak se má vykreslit. */
+export type ColumnSetting = {
+  key: string;
+  label: string;
+  hidden: boolean;
+};
+
+/** Co je o sloupci uložené. Prázdný `label` = ponechat výchozí název. */
+export type StoredColumn = {
+  columnKey: string;
+  label: string;
+  hidden: boolean;
+  sortOrder: number;
+};
 
 /** Interní přehled projektů - jediná tabulka, která to zatím používá. */
 export const PROJECTS_TABLE_KEY = 'projekty-interni';
@@ -30,17 +46,48 @@ export const DEFAULT_COLUMN_LABELS: Record<string, { key: string; label: string 
 };
 
 /** Výchozí názvy jako mapa klíč → název. */
-export function defaultLabelsFor(tableKey: string): ColumnLabels {
+export function defaultLabelsFor(tableKey: string): Record<string, string> {
   const columns = DEFAULT_COLUMN_LABELS[tableKey] ?? [];
   return Object.fromEntries(columns.map((c) => [c.key, c.label]));
 }
 
-/** Výchozí názvy překryté tím, co si uživatel uložil. */
-export function mergeLabels(tableKey: string, overrides: ColumnLabels): ColumnLabels {
-  const defaults = defaultLabelsFor(tableKey);
-  const merged: ColumnLabels = { ...defaults };
-  for (const [key, label] of Object.entries(overrides)) {
-    if (key in defaults && label.trim()) merged[key] = label.trim();
-  }
-  return merged;
+/** Výchozí podoba tabulky - všechny sloupce, v pořadí z kódu, nic skryté. */
+export function defaultColumns(tableKey: string): ColumnSetting[] {
+  return (DEFAULT_COLUMN_LABELS[tableKey] ?? []).map((c) => ({ ...c, hidden: false }));
+}
+
+/**
+ * Výchozí sloupce překryté tím, co je uložené.
+ *
+ * Sloupec, ke kterému nic uloženého není (nový v kódu), si nechá výchozí název
+ * a zařadí se za všechny nastavené - ať se po přidání do kódu objeví sám a
+ * nikdo si nemusí vzpomenout, že ho má někde zapnout.
+ */
+export function mergeColumns(tableKey: string, stored: StoredColumn[]): ColumnSetting[] {
+  const defaults = DEFAULT_COLUMN_LABELS[tableKey] ?? [];
+  const podleKlice = new Map(stored.map((s) => [s.columnKey, s]));
+
+  return defaults
+    .map((sloupec, index) => {
+      const ulozene = podleKlice.get(sloupec.key);
+      return {
+        key: sloupec.key,
+        label: ulozene?.label?.trim() ? ulozene.label.trim() : sloupec.label,
+        hidden: ulozene?.hidden ?? false,
+        // Bez uloženého pořadí až za nastavené sloupce, v pořadí z kódu.
+        poradi: ulozene ? ulozene.sortOrder : 1000 + index,
+      };
+    })
+    .sort((a, b) => a.poradi - b.poradi)
+    .map(({ key, label, hidden }) => ({ key, label, hidden }));
+}
+
+/** Jen viditelné sloupce, v pořadí. */
+export function visibleColumns(columns: ColumnSetting[]): ColumnSetting[] {
+  return columns.filter((c) => !c.hidden);
+}
+
+/** Zpětná kompatibilita: mapa klíč → název pro místa, kde stačí jen názvy. */
+export function labelsOf(columns: ColumnSetting[]): Record<string, string> {
+  return Object.fromEntries(columns.map((c) => [c.key, c.label]));
 }

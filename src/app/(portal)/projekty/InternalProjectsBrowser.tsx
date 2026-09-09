@@ -10,7 +10,7 @@ import {
   type ProjectSortKey,
 } from './shared';
 import { projectTypeLabel } from '@/lib/projectTypes';
-import { PROJECTS_TABLE_KEY, type ColumnLabels } from '@/lib/columnLabels';
+import { PROJECTS_TABLE_KEY, visibleColumns, type ColumnSetting } from '@/lib/columnLabels';
 
 // Zadani 5. 9. 2026: "Na stránce bude max. padesát aktivních projektů. Nahoře
 // budou dvě záložky, kde se bude přepínat mezi projekty Aktivní a Dokončené.
@@ -42,32 +42,74 @@ export function InternalProjectsBrowser({
   active,
   finished,
   finishedNote,
-  labels,
+  columns,
   canEditLabels,
 }: {
   active: InternalProject[];
   finished: InternalProject[];
   /** Vysvetleni pro zalozku Dokoncene, kdyz se dokoncene projekty netahaji. */
   finishedNote?: string;
-  /** Nazvy sloupcu - vychozi prepsane tim, co je ulozene. */
-  labels: ColumnLabels;
-  /** Prejmenovat sloupce smi jen Zuzo-labuzo. */
+  /** Sloupce tabulky - vychozi podoba prepsana tim, co je ulozene. */
+  columns: ColumnSetting[];
+  /** Upravovat sloupce smi jen Zuzo-labuzo. */
   canEditLabels?: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('active');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
-  // Uprava nazvu sloupcu primo v tabulce - tri tecky, stejne jako u listy
-  // (zadani 8. 9. 2026).
+  // Uprava sloupcu primo v tabulce - tri tecky ve fialove liste, prejmenovani,
+  // pretahovani a krizek, uplne stejne jako u horni listy portalu
+  // (zadani 8. 9. 2026, rozsireno 9. 9. 2026).
   const [editing, setEditing] = useState(false);
-  const [draftLabels, setDraftLabels] = useState<ColumnLabels>(labels);
+  const [draft, setDraft] = useState<ColumnSetting[]>(columns);
   const [saving, setSaving] = useState(false);
   const [labelError, setLabelError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!editing) setDraftLabels(labels);
-  }, [labels, editing]);
+    if (!editing) setDraft(columns);
+  }, [columns, editing]);
+
+  const zobrazene = visibleColumns(editing ? draft : columns);
+  const skryte = (editing ? draft : columns).filter((c) => c.hidden);
+
+  function prejmenuj(key: string, label: string) {
+    setDraft((cols) => cols.map((c) => (c.key === key ? { ...c, label } : c)));
+  }
+
+  /** Pretazeni: indexy prichazi z VIDITELNYCH sloupcu, prerovnava se cely seznam. */
+  function presun(from: number, to: number) {
+    setDraft((cols) => {
+      const vid = cols.filter((c) => !c.hidden);
+      const klicZ = vid[from]?.key;
+      const klicNa = vid[to]?.key;
+      if (!klicZ || !klicNa || klicZ === klicNa) return cols;
+      const taheny = cols.find((c) => c.key === klicZ)!;
+      const bez = cols.filter((c) => c.key !== klicZ);
+      const cil = bez.findIndex((c) => c.key === klicNa);
+      const kam = from < to ? cil + 1 : cil;
+      const kopie = [...bez];
+      kopie.splice(kam, 0, taheny);
+      return kopie;
+    });
+  }
+
+  function skryj(key: string) {
+    setLabelError(null);
+    setDraft((cols) => {
+      // Prazdna tabulka nedava smysl - posledni sloupec nejde odebrat.
+      if (cols.filter((c) => !c.hidden).length <= 1) {
+        setLabelError('Aspoň jeden sloupec musí zůstat zobrazený.');
+        return cols;
+      }
+      return cols.map((c) => (c.key === key ? { ...c, hidden: true } : c));
+    });
+  }
+
+  function vrat(key: string) {
+    setLabelError(null);
+    setDraft((cols) => cols.map((c) => (c.key === key ? { ...c, hidden: false } : c)));
+  }
 
   async function saveLabels() {
     setSaving(true);
@@ -76,7 +118,7 @@ export function InternalProjectsBrowser({
       const res = await fetch('/api/admin/column-labels', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tableKey: PROJECTS_TABLE_KEY, labels: draftLabels }),
+        body: JSON.stringify({ tableKey: PROJECTS_TABLE_KEY, columns: draft }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -189,63 +231,32 @@ export function InternalProjectsBrowser({
             </svg>
           </div>
 
-          {/* Tři tečky - přejmenování sloupců. Vidí je jen Žůžo-labůžo. */}
-          {canEditLabels && !editing && (
-            <button
-              type="button"
-              onClick={() => {
-                setDraftLabels(labels);
-                setEditing(true);
-                setLabelError(null);
-              }}
-              title="Přejmenovat sloupce"
-              aria-label="Přejmenovat sloupce"
-              className="w-7 h-7 shrink-0 rounded-full text-muted hover:text-brand-purple hover:bg-field flex flex-col items-center justify-center gap-[3px]"
-            >
-              <span className="w-[3px] h-[3px] rounded-full bg-current" />
-              <span className="w-[3px] h-[3px] rounded-full bg-current" />
-              <span className="w-[3px] h-[3px] rounded-full bg-current" />
-            </button>
-          )}
-
-          {editing && (
-            <span className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={saveLabels}
-                disabled={saving}
-                className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-              >
-                {saving ? 'Ukládám…' : 'Hotovo'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setDraftLabels(labels);
-                  setEditing(false);
-                  setLabelError(null);
-                }}
-                className="text-muted hover:text-ink text-xs font-heading"
-              >
-                Zrušit
-              </button>
-              <button
-                type="button"
-                onClick={resetLabels}
-                disabled={saving}
-                className="text-muted hover:text-ink text-xs font-heading disabled:opacity-60"
-              >
-                Obnovit výchozí
-              </button>
-            </span>
-          )}
         </div>
       </div>
 
       {editing && (
-        <p className="text-xs font-body text-muted m-0">
-          Přepište názvy sloupců přímo v hlavičce tabulky. Změna platí pro všechny.
-        </p>
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-body text-muted m-0">
+            Název přepište přímo v hlavičce, pořadí změníte přetažením, křížkem sloupec odeberete.
+            Změna platí pro všechny.
+          </p>
+          {skryte.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-body text-muted">Odebrané sloupce:</span>
+              {skryte.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => vrat(c.key)}
+                  title={`Vrátit ${c.label}`}
+                  className="inline-flex items-center gap-1 rounded-pill border border-brand-purple bg-white px-3 py-1 text-xs font-heading font-semibold text-brand-purple hover:bg-[#F1ECFF] transition-colors"
+                >
+                  + {c.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
       {labelError && (
         <p className="text-sm text-red-600 bg-red-50 border border-line rounded-lg px-3 py-2 m-0">{labelError}</p>
@@ -255,9 +266,48 @@ export function InternalProjectsBrowser({
         sort={sort}
         onSort={handleSort}
         projects={visible}
-        labels={editing ? draftLabels : labels}
+        columns={zobrazene}
         editing={editing}
-        onLabelChange={(key, label) => setDraftLabels((current) => ({ ...current, [key]: label }))}
+        canEditColumns={canEditLabels}
+        onStartEditing={() => {
+          setDraft(columns);
+          setEditing(true);
+          setLabelError(null);
+        }}
+        editActions={
+          <span className="inline-flex items-center gap-2 whitespace-nowrap">
+            <button
+              type="button"
+              onClick={saveLabels}
+              disabled={saving}
+              className="bg-white text-brand-purpleDeep font-heading font-semibold text-xs rounded-lg px-3 py-1.5 hover:bg-white/90 transition-colors disabled:opacity-60"
+            >
+              {saving ? 'Ukládám…' : 'Hotovo'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(columns);
+                setEditing(false);
+                setLabelError(null);
+              }}
+              className="text-white/80 hover:text-white text-xs font-heading"
+            >
+              Zrušit
+            </button>
+            <button
+              type="button"
+              onClick={resetLabels}
+              disabled={saving}
+              className="text-white/80 hover:text-white text-xs font-heading disabled:opacity-60"
+            >
+              Obnovit výchozí
+            </button>
+          </span>
+        }
+        onLabelChange={prejmenuj}
+        onMoveColumn={presun}
+        onHideColumn={skryj}
         emptyText={
           query
             ? 'Hledání nic nenašlo.'

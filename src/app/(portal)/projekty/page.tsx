@@ -10,7 +10,7 @@ import { isInternalRole } from '@/lib/roles';
 import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
-import { loadColumnLabels } from '@/lib/columnLabelsServer';
+import { loadColumnSettings } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/caflouProjectsServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
@@ -151,8 +151,9 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
     meta: metaById.get(String(p.id)) ?? null,
   }));
 
-  // Nazvy sloupcu - vychozi prepsane tim, co si Zuzo-labuzo prejmenovalo.
-  const columnLabels = await loadColumnLabels(PROJECTS_TABLE_KEY);
+  // Sloupce tabulky - vychozi podoba prepsana tim, co si Zuzo-labuzo
+  // nastavilo (nazev, poradi, skryti).
+  const columnSettings = await loadColumnSettings(PROJECTS_TABLE_KEY);
 
   const active = withMeta
     .filter((p) => !p.finished)
@@ -179,7 +180,7 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
       <InternalProjectsBrowser
         active={active}
         finished={finished}
-        labels={columnLabels}
+        columns={columnSettings}
         canEditLabels={isAdmin}
       />
     </section>

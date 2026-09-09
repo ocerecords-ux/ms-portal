@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/caflou';
+import type { ColumnSetting } from '@/lib/columnLabels';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, projectTypeLabel } from '@/lib/projectTypes';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
@@ -295,55 +296,141 @@ function SortArrow({ dir }: { dir: 'asc' | 'desc' }) {
 }
 
 /**
- * Hlavicka sloupce, na kterou jde kliknout a seradit podle ni. V rezimu uprav
- * (tri tecky nad tabulkou, zadani 8. 9. 2026) se z ni stane pole, ve kterem
- * jde nazev sloupce prepsat.
+ * Obsah jedné buňky podle sloupce - jediné místo, kde je napsané, co který
+ * sloupec ukazuje. Díky tomu se dá tabulka poskládat z nastavení (pořadí,
+ * skrytí) místo pevně napsané řady <td>.
+ */
+function bunkaSloupce(p: InternalProject, key: string) {
+  switch (key) {
+    case 'name':
+      return (
+        <Link href={`/projekty/${p.id}`} className="text-ink hover:text-brand-purple no-underline">
+          {p.name}
+        </Link>
+      );
+    case 'companyName':
+      return p.companyName;
+    case 'statusName':
+      return <StatusPill finished={p.finished} statusName={p.statusName} />;
+    case 'priority':
+      // Priorita se cerpa z Caflou (zadani 5. 9. 2026); rucne nastavena
+      // hodnota v portalu slouzi uz jen jako zaloha, kdyz ji Caflou nevraci.
+      return <PriorityPill priority={p.priority ?? p.meta?.priority ?? null} />;
+    case 'projectType':
+      return projectTypeLabel(p.meta?.projectType) ?? '—';
+    case 'managerName':
+      return p.meta?.managerName ?? '—';
+    case 'pageCount':
+      return p.pageCount ?? '—';
+    case 'endDate':
+      return formatDate(p.endDate);
+    case 'releaseDate':
+      return formatDate(p.releaseDate);
+    default:
+      return null;
+  }
+}
+
+/** Třída buňky podle sloupce - čísla doprava, data bez zalomení. */
+const TRIDA_BUNKY: Record<string, string> = {
+  name: 'px-3 py-3.5 font-heading font-semibold text-sm',
+  companyName: 'px-3 py-3.5 text-sm font-heading text-muted',
+  statusName: 'px-4 py-4',
+  priority: 'px-3 py-3.5 text-sm font-heading',
+  projectType: 'px-3 py-3.5 text-sm font-heading text-muted',
+  managerName: 'px-3 py-3.5 text-sm font-heading text-muted',
+  pageCount: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
+  endDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
+  releaseDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
+};
+
+const ZAROVNANI_VPRAVO = new Set(['pageCount']);
+
+/**
+ * Který sloupec se zrovna přetahuje. Obyčejná proměnná schválně: přetahování
+ * probíhá vždycky jen jedno a useRef by z tohohle souboru udělal klientský
+ * modul - a ten se importuje i ze serverových stránek.
+ */
+let taheny: number | null = null;
+
+/**
+ * Hlavicka sloupce. Bezne se na ni da kliknout a seradit podle ni; v rezimu
+ * uprav (tri tecky ve fialove liste, zadani 8. 9. 2026, rozsireno 9. 9. 2026)
+ * se z ni stane pole s nazvem, da se pretahnout jinam a krizkem odebrat -
+ * uplne stejne jako odkazy v horni liste portalu.
  */
 function SortableHeader({
-  label,
-  sortKey,
+  sloupec,
+  index,
   sort,
   onSort,
-  align = 'left',
   editing,
   onLabelChange,
+  onMove,
+  onHide,
 }: {
-  label: string;
-  sortKey: ProjectSortKey;
+  sloupec: ColumnSetting;
+  index: number;
   sort: ProjectSort;
   onSort: (key: ProjectSortKey) => void;
-  align?: 'left' | 'right';
   editing?: boolean;
-  onLabelChange?: (key: ProjectSortKey, label: string) => void;
+  onLabelChange?: (key: string, label: string) => void;
+  onMove?: (from: number, to: number) => void;
+  onHide?: (key: string) => void;
 }) {
-  const active = sort.key === sortKey;
+  const vpravo = ZAROVNANI_VPRAVO.has(sloupec.key);
+  const active = sort.key === (sloupec.key as ProjectSortKey);
 
   if (editing) {
     return (
-      <th className="px-2 py-2.5 whitespace-nowrap">
-        <input
-          value={label}
-          onChange={(e) => onLabelChange?.(sortKey, e.target.value)}
-          aria-label={`Název sloupce ${label}`}
-          className={`w-full min-w-[90px] rounded-lg border border-dashed border-white/60 bg-white/10 px-2 py-1 font-heading text-xs text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 ${
-            align === 'right' ? 'text-right' : ''
-          }`}
-        />
+      <th
+        className="px-2 py-2.5 whitespace-nowrap"
+        draggable
+        onDragStart={() => {
+          taheny = index;
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={() => {
+          const from = taheny;
+          taheny = null;
+          if (from !== null && from !== index) onMove?.(from, index);
+        }}
+        title="Přetažením změníte pořadí"
+      >
+        <span className="relative inline-flex items-center cursor-grab active:cursor-grabbing">
+          <button
+            type="button"
+            onClick={() => onHide?.(sloupec.key)}
+            title={`Odebrat ${sloupec.label}`}
+            aria-label={`Odebrat ${sloupec.label}`}
+            className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-white text-brand-purpleDeep text-[10px] font-bold leading-none flex items-center justify-center shadow"
+          >
+            ×
+          </button>
+          <input
+            value={sloupec.label}
+            onChange={(e) => onLabelChange?.(sloupec.key, e.target.value)}
+            aria-label={`Název sloupce ${sloupec.label}`}
+            className={`w-full min-w-[100px] rounded-lg border border-dashed border-white/60 bg-white/10 px-2 py-1 font-heading text-xs text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 ${
+              vpravo ? 'text-right' : ''
+            }`}
+          />
+        </span>
       </th>
     );
   }
 
   return (
-    <th className={`px-3 py-3.5 whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}>
+    <th className={`px-3 py-3.5 whitespace-nowrap ${vpravo ? 'text-right' : 'text-left'}`}>
       <button
         type="button"
-        onClick={() => onSort(sortKey)}
-        title={`Seřadit podle: ${label}`}
+        onClick={() => onSort(sloupec.key as ProjectSortKey)}
+        title={`Seřadit podle: ${sloupec.label}`}
         className={`inline-flex items-center gap-1.5 font-heading text-xs transition-opacity hover:opacity-100 ${
           active ? 'opacity-100' : 'opacity-80'
-        } ${align === 'right' ? 'flex-row-reverse' : ''}`}
+        } ${vpravo ? 'flex-row-reverse' : ''}`}
       >
-        {label}
+        {sloupec.label}
         {active && <SortArrow dir={sort.dir} />}
       </button>
     </th>
@@ -355,30 +442,32 @@ export function InternalProjectsTable({
   emptyText,
   sort,
   onSort,
-  labels,
+  columns,
   editing,
+  canEditColumns,
+  onStartEditing,
+  editActions,
   onLabelChange,
+  onMoveColumn,
+  onHideColumn,
 }: {
   projects: InternalProject[];
   emptyText: string;
   sort: ProjectSort;
   onSort: (key: ProjectSortKey) => void;
-  /** Názvy sloupců - výchozí přepsané tím, co si Žůžo-labůžo nastavilo. */
-  labels: Record<string, string>;
+  /** Viditelné sloupce v pořadí - výchozí přepsané tím, co si Žůžo-labůžo nastavilo. */
+  columns: ColumnSetting[];
   editing?: boolean;
-  onLabelChange?: (key: ProjectSortKey, label: string) => void;
+  /** Upravovat sloupce smí jen Žůžo-labůžo. */
+  canEditColumns?: boolean;
+  onStartEditing?: () => void;
+  /** Tlačítka Hotovo / Zrušit / Obnovit výchozí - vykreslí se ve fialové liště. */
+  editActions?: React.ReactNode;
+  onLabelChange?: (key: string, label: string) => void;
+  onMoveColumn?: (from: number, to: number) => void;
+  onHideColumn?: (key: string) => void;
 }) {
-  const head = (key: ProjectSortKey, align?: 'left' | 'right') => (
-    <SortableHeader
-      label={labels[key] ?? key}
-      sortKey={key}
-      sort={sort}
-      onSort={onSort}
-      align={align}
-      editing={editing}
-      onLabelChange={onLabelChange}
-    />
-  );
+  const sloupcuCelkem = columns.length + (canEditColumns ? 1 : 0);
 
   return (
     <div className="bg-white rounded-card border border-line overflow-hidden shadow-sm">
@@ -390,57 +479,58 @@ export function InternalProjectsTable({
         <table className="w-full min-w-[900px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
-              {head('name')}
-              {head('companyName')}
-              {head('statusName')}
-              {head('priority')}
-              {head('projectType')}
-              {head('managerName')}
-              {head('pageCount', 'right')}
-              {head('endDate')}
-              {head('releaseDate')}
+              {columns.map((sloupec, index) => (
+                <SortableHeader
+                  key={sloupec.key}
+                  sloupec={sloupec}
+                  index={index}
+                  sort={sort}
+                  onSort={onSort}
+                  editing={editing}
+                  onLabelChange={onLabelChange}
+                  onMove={onMoveColumn}
+                  onHide={onHideColumn}
+                />
+              ))}
+              {/* Tri tecky primo ve fialove liste (zadani 9. 9. 2026) - stejne
+                  misto jako u horni listy portalu. */}
+              {canEditColumns && (
+                <th className="px-2 py-2.5 text-right whitespace-nowrap w-px">
+                  {editing ? (
+                    editActions
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onStartEditing}
+                      title="Upravit sloupce"
+                      aria-label="Upravit sloupce"
+                      className="w-7 h-7 rounded-full text-white/80 hover:text-white hover:bg-white/15 inline-flex flex-col items-center justify-center gap-[3px]"
+                    >
+                      <span className="w-[3px] h-[3px] rounded-full bg-current" />
+                      <span className="w-[3px] h-[3px] rounded-full bg-current" />
+                      <span className="w-[3px] h-[3px] rounded-full bg-current" />
+                    </button>
+                  )}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {projects.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-muted text-sm font-body">
+                <td colSpan={sloupcuCelkem} className="px-4 py-8 text-center text-muted text-sm font-body">
                   {emptyText}
                 </td>
               </tr>
             )}
             {projects.map((p) => (
               <tr key={p.id} className="border-t border-line hover:bg-[#FAF8FF]">
-                <td className="px-3 py-3.5 font-heading font-semibold text-sm">
-                  <Link href={`/projekty/${p.id}`} className="text-ink hover:text-brand-purple no-underline">
-                    {p.name}
-                  </Link>
-                </td>
-                <td className="px-3 py-3.5 text-sm font-heading text-muted">{p.companyName}</td>
-                <td className="px-4 py-4">
-                  <StatusPill finished={p.finished} statusName={p.statusName} />
-                </td>
-                <td className="px-3 py-3.5 text-sm font-heading">
-                  {/* Priorita se cerpa z Caflou (zadani 5. 9. 2026); rucne
-                      nastavena hodnota v portalu slouzi uz jen jako zaloha,
-                      kdyz ji Caflou nevraci. */}
-                  <PriorityPill priority={p.priority ?? p.meta?.priority ?? null} />
-                </td>
-                <td className="px-3 py-3.5 text-sm font-heading text-muted">
-                  {projectTypeLabel(p.meta?.projectType) ?? '—'}
-                </td>
-                <td className="px-3 py-3.5 text-sm font-heading text-muted">
-                  {p.meta?.managerName ?? '—'}
-                </td>
-                <td className="px-3 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
-                  {p.pageCount ?? '—'}
-                </td>
-                <td className="px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {formatDate(p.endDate)}
-                </td>
-                <td className="px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {formatDate(p.releaseDate)}
-                </td>
+                {columns.map((sloupec) => (
+                  <td key={sloupec.key} className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-3.5 text-sm font-heading'}>
+                    {bunkaSloupce(p, sloupec.key)}
+                  </td>
+                ))}
+                {canEditColumns && <td />}
               </tr>
             ))}
           </tbody>
