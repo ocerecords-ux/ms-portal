@@ -12,6 +12,11 @@ function ocistiEndpoint(hodnota: string | undefined): string | undefined {
   const text = (hodnota || '').trim().replace(/\/+$/, '');
   if (!text) return undefined;
   const sProtokolem = /^https?:\/\//i.test(text) ? text : `https://${text}`;
+  // Nevyplneny zastupny text z navodu - snadny preklep pri kopirovani.
+  if (/[<>{}\s]/.test(sProtokolem) || /account_id|ucet_id|yourbucket/i.test(sProtokolem)) {
+    console.error(`S3_ENDPOINT vypada jako nevyplneny vzor: "${hodnota}"`);
+    return undefined;
+  }
   try {
     new URL(sProtokolem);
     return sProtokolem;
@@ -26,6 +31,14 @@ function getClient() {
   if (!S3_ACCESS_KEY_ID || !S3_SECRET_ACCESS_KEY) return null;
 
   const endpoint = ocistiEndpoint(S3_ENDPOINT);
+  // Kdyz je adresa vyplnena, ale nedava smysl (typicky nekdo nechal
+  // v hodnote zastupny text jako <account_id>), NESMI se tise sahnout po
+  // Amazonu - podpis by pak mířil úplně jinam a chyba by se hledala hodiny
+  // (stalo se 9. 9. 2026). Radsi rict, ze uloziste neni dostupne.
+  if (S3_ENDPOINT && S3_ENDPOINT.trim() && !endpoint) {
+    console.error('S3_ENDPOINT je vyplneny, ale neni to platna adresa - uloziste se nepouzije.');
+    return null;
+  }
   // Cloudflare R2 zna jedinou oblast, a to "auto". Kdyz se posle cokoliv
   // jineho, podpis nesedi a uloziste zapis odmitne.
   const jeR2 = Boolean(endpoint && endpoint.includes('r2.cloudflarestorage.com'));

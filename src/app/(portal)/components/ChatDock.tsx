@@ -1012,13 +1012,27 @@ export function ChatDock() {
         setError(data?.error || 'Přílohu se nepodařilo připravit.');
         return null;
       }
-      const nahrani = await fetch(data.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': mime },
-        body: soubor,
-      });
+      // Prohlizec posila soubor primo do uloziste, tedy na cizi adresu.
+      // Kdyz uloziste nema povolene pozadavky z msportal.cz (nastaveni CORS
+      // u bucketu), fetch spadne uz na tomhle - a "Failed to fetch" nikomu
+      // nic nerekne. Proto vlastni hlaska (9. 9. 2026).
+      let nahrani: Response;
+      try {
+        nahrani = await fetch(data.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': mime },
+          body: soubor,
+        });
+      } catch (err) {
+        console.error('Nahrání přílohy do úložiště selhalo:', err);
+        setError(
+          `Přílohu ${soubor.name} se nepodařilo nahrát - úložiště odmítlo požadavek z portálu. ` +
+            'Nejspíš mu chybí povolení pro www.msportal.cz (nastavení CORS u bucketu).',
+        );
+        return null;
+      }
       if (!nahrani.ok) {
-        setError(`Přílohu ${soubor.name} se nepodařilo nahrát.`);
+        setError(`Přílohu ${soubor.name} se nepodařilo nahrát (${nahrani.status}).`);
         return null;
       }
       hotove.push({ key: data.key, name: soubor.name, mime });
