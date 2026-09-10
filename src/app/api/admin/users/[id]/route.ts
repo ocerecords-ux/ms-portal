@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { uploadUserPhoto } from '@/lib/storage';
+import { popisPrekazek, prekazkyUzivatele } from '@/lib/mazani';
 
 const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE'] as const;
 const COMPANY_REQUIRED_ROLES: string[] = ['CLIENT'];
@@ -166,4 +167,41 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const message = err instanceof Error ? err.message : 'Neznámá chyba.';
   return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
  }
+}
+
+/**
+ * Tvrde smazani uzivatele (zadani 10. 9. 2026). Stejne pravidlo jako u firmy:
+ * smaze se jen ucet, na kterem nic nevisi. Kdyz neco visi, portal to odmitne
+ * a vypise co; pro vsechno ostatni je vyrazeni (PATCH s active: false).
+ *
+ * Sam sebe smazat nejde - kdyby si admin omylem smazal ucet, nema se jak
+ * vratit.
+ */
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (session.user.id === params.id) {
+    return NextResponse.json({ error: 'Vlastní účet smazat nejde.' }, { status: 400 });
+  }
+
+  const uzivatel = await prisma.user.findUnique({
+    where: { id: params.id },
+    select: { name: true, email: true },
+  });
+  if (!uzivatel) return NextResponse.json({ error: 'Uživatel nenalezen.' }, { status: 404 });
+  const jmeno = uzivatel.name || uzivatel.email;
+
+  const prekazky = await prekazkyUzivatele(params.id);
+  if (prekazky.length > 0) {
+    return NextResponse.json(
+      {
+        error: `${jmeno} nejde smazat, visí na něm: ${popisPrekazek(prekazky)}. Můžete ho vyřadit — nepřihlásí se a všechno zůstane čitelné.`,
+        prekazky,
+      },
+      { status: 409 },
+    );
+  }
+
+  await prisma.user.delete({ where: { id: params.id } });
+  return NextResponse.json({ smazano: true, jmeno });
 }

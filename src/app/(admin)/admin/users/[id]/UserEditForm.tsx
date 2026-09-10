@@ -51,6 +51,9 @@ export function UserEditForm({
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
   const [active, setActive] = useState(user.active);
+  // Tvrde smazani (zadani 10. 9. 2026) - jen kdyz na uctu nic nevisi.
+  const [maze, setMaze] = useState(false);
+  const [potvrzeni, setPotvrzeni] = useState(false);
   const [newPassword, setNewPassword] = useState('');
 
   // Mediaspace
@@ -129,6 +132,33 @@ export function UserEditForm({
       setError(err instanceof Error ? err.message : 'Uložení se nezdařilo.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  /** Smaze ucet uplne. Prvni kliknuti si rekne o potvrzeni. */
+  async function smaz() {
+    if (!potvrzeni) {
+      setPotvrzeni(true);
+      setError(null);
+      return;
+    }
+    setMaze(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Smazání se nezdařilo.');
+        setPotvrzeni(false);
+        return;
+      }
+      router.push('/admin/users');
+      router.refresh();
+    } catch {
+      setError('Smazání se nezdařilo.');
+      setPotvrzeni(false);
+    } finally {
+      setMaze(false);
     }
   }
 
@@ -338,6 +368,25 @@ export function UserEditForm({
           }`}
         >
           {active ? 'Vyřadit uživatele' : 'Vrátit mezi aktivní'}
+        </button>
+      </div>
+
+      {/* Tvrde smazani - jen kdyz na uctu nic nevisi (zadani 10. 9. 2026). */}
+      <div className="flex items-start gap-4 flex-wrap">
+        <div className="flex-1 min-w-[260px]">
+          <p className="font-heading font-semibold text-sm text-ink m-0">Smazat účet úplně</p>
+          <p className="text-xs font-body text-muted m-0 mt-1">
+            Jen když na něm nic nevisí — typicky testovací účet. Když na účtu něco je, portál to
+            odmítne a napíše co. Nevratné.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void smaz()}
+          disabled={maze}
+          className="font-heading font-semibold text-sm rounded-lg px-4 py-2.5 bg-danger text-white hover:brightness-95 transition-colors disabled:opacity-60"
+        >
+          {maze ? 'Mažu…' : potvrzeni ? 'Opravdu smazat?' : 'Smazat'}
         </button>
       </div>
 

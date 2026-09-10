@@ -42,6 +42,8 @@ export function CompanyForm({ company }: { company: Company }) {
   // a projekty, ktere musi zustat citelne.
   const [aktivni, setAktivni] = useState(company.active);
   const [vyrazuje, setVyrazuje] = useState(false);
+  const [maze, setMaze] = useState(false);
+  const [potvrzeni, setPotvrzeni] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -131,6 +133,36 @@ export function CompanyForm({ company }: { company: Company }) {
    * a seznamů, ale všechno, co na ni odkazuje, zůstane čitelné - a dá se to
    * kdykoliv vrátit.
    */
+  /**
+   * Smaze firmu uplne. Prvni kliknuti si rekne o potvrzeni - smazani je
+   * nevratne a tlacitko sedi hned pod tim vyrazovacim.
+   */
+  async function smaz() {
+    if (!potvrzeni) {
+      setPotvrzeni(true);
+      setError(null);
+      return;
+    }
+    setMaze(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/companies/${company.id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Smazání se nezdařilo.');
+        setPotvrzeni(false);
+        return;
+      }
+      router.push('/admin');
+      router.refresh();
+    } catch {
+      setError('Smazání se nezdařilo.');
+      setPotvrzeni(false);
+    } finally {
+      setMaze(false);
+    }
+  }
+
   async function prepniVyrazeni() {
     const nove = !aktivni;
     setVyrazuje(true);
@@ -328,6 +360,26 @@ export function CompanyForm({ company }: { company: Company }) {
           {vyrazuje ? 'Měním…' : aktivni ? 'Vyřadit firmu' : 'Vrátit mezi aktivní'}
         </button>
       </div>
+
+      {/* Tvrde smazani (zadani 10. 9. 2026) - jen kdyz na firme nic nevisi. */}
+      <div className="flex items-start gap-4 flex-wrap">
+        <div className="flex-1 min-w-[260px]">
+          <p className="font-heading font-semibold text-sm text-ink m-0">Smazat firmu úplně</p>
+          <p className="text-xs font-body text-muted m-0 mt-1">
+            Jen když na ní nic nevisí — typicky testovací záznam. Když na firmě něco je, portál to
+            odmítne a napíše co. Nevratné.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void smaz()}
+          disabled={maze}
+          className="font-heading font-semibold text-sm rounded-lg px-4 py-2.5 bg-danger text-white hover:brightness-95 transition-colors disabled:opacity-60"
+        >
+          {maze ? 'Mažu…' : potvrzeni ? 'Opravdu smazat?' : 'Smazat'}
+        </button>
+      </div>
+
     </form>
   );
 }

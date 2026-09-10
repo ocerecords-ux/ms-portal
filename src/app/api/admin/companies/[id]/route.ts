@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { popisPrekazek, prekazkyFirmy } from '@/lib/mazani';
 
 // Editace firmy. Typ (Klient/Dodavatel) se po zalozeni uz nemeni.
 //
@@ -89,4 +90,34 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
     return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
   }
+}
+
+/**
+ * Tvrde smazani firmy (zadani 10. 9. 2026: testovaci firmy je potreba smazat
+ * uplne, ne jen vyradit).
+ *
+ * Smaze se jen firma, na ktere opravdu nic nevisi. Kdyz neco visi, portal to
+ * odmitne a vypise CO - at je hned videt, jestli je to odpadek, nebo omyl.
+ * Pro vsechno ostatni je vyrazeni (PATCH s active: false).
+ */
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+
+  const firma = await prisma.company.findUnique({ where: { id: params.id }, select: { name: true } });
+  if (!firma) return NextResponse.json({ error: 'Firma nenalezena.' }, { status: 404 });
+
+  const prekazky = await prekazkyFirmy(params.id);
+  if (prekazky.length > 0) {
+    return NextResponse.json(
+      {
+        error: `Firmu ${firma.name} nejde smazat, visí na ní: ${popisPrekazek(prekazky)}. Můžete ji vyřadit — zmizí ze seznamů a všechno zůstane čitelné.`,
+        prekazky,
+      },
+      { status: 409 },
+    );
+  }
+
+  await prisma.company.delete({ where: { id: params.id } });
+  return NextResponse.json({ smazano: true, nazev: firma.name });
 }

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -84,6 +85,61 @@ async function main() {
       companyId: demoCompany.id,
     },
   });
+
+  // --- Testovaci ucty (zadani 10. 9. 2026) ------------------------------
+  // "Udelali bychom podle vzoru Test - herec, Test - zvukar, Test - klient
+  // nejake profily, ktere bychom pouzivali na testy. Tyhle testy by tam mohly
+  // zustat do budoucna, at je nemusim zakladat."
+  //
+  // ADRESY: vsechny jsou aliasy jedne schranky (ocerecords+neco@gmail.com).
+  // Gmail cast za plusem ignoruje pri doruceni, ale portal je bere jako ruzne
+  // ucty - dorucuje se tedy vsechno na ocerecords@gmail.com a pritom jde
+  // o tri samostatne uzivatele s ruznymi pravy.
+  //
+  // HESLO se tady schvalne nenastavuje na nic pouzitelneho. Prihlaseni se
+  // resi tlacitkem "Odeslat pozvanku" u uzivatele - odkaz prijde do te same
+  // schranky a heslo si nastavite sam. Heslo napsane v kodu by skoncilo
+  // na GitHubu.
+  const testovaciFirma = await prisma.company.upsert({
+    where: { id: 'test-klient' },
+    update: {},
+    create: {
+      id: 'test-klient',
+      name: 'Test - klient s.r.o.',
+      ratePerPage: 180,
+    },
+  });
+
+  // Nepouzitelny hash - ucet se odemkne az pozvankou.
+  const bezHesla = await bcrypt.hash(randomBytes(24).toString('hex'), 10);
+
+  const TESTOVACI_UCTY = [
+    { email: 'ocerecords+herec@gmail.com', name: 'Test - herec', role: 'HEREC' as const, companyId: null },
+    { email: 'ocerecords+zvukar@gmail.com', name: 'Test - zvukař', role: 'ZVUKAR' as const, companyId: null },
+    {
+      email: 'ocerecords+klient@gmail.com',
+      name: 'Test - klient',
+      role: 'CLIENT' as const,
+      companyId: testovaciFirma.id,
+    },
+    { email: 'ocerecords+produkce@gmail.com', name: 'Test - produkce', role: 'PRODUKCE' as const, companyId: null },
+  ];
+
+  for (const ucet of TESTOVACI_UCTY) {
+    await prisma.user.upsert({
+      where: { email: ucet.email },
+      // Existujici testovaci ucet se nepretahuje - kdyz si u nej nekdo zmeni
+      // heslo nebo jmeno, seed pri dalsim nasazeni tu zmenu nesmi vratit.
+      update: {},
+      create: {
+        email: ucet.email,
+        passwordHash: bezHesla,
+        name: ucet.name,
+        role: ucet.role,
+        companyId: ucet.companyId,
+      },
+    });
+  }
 
   // Cenik (zadani 5. 9. 2026) - pri prvnim spusteni zalozime vychozi polozky,
   // ktere zaroven slouzi jako typy projektu. Pokud uz v ceniku neco je,
