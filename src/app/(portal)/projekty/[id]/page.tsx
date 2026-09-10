@@ -5,12 +5,11 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
 import { canEditProjectMeta, canManageCalendar, canViewProjectDocuments, isInternalRole, INTERNAL_ROLES } from '@/lib/roles';
-import { PRIORITY_LABELS } from '@/lib/projectTypes';
 import { listProjectTypeOptions, listRodnyListProjectTypes } from '@/lib/priceList';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
 import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
 import { ProjectBudget } from './ProjectBudget';
-import { formatDate, StatusPill } from '../shared';
+import { StatusPill } from '../shared';
 import { ProjectMetaForm } from './ProjectMetaForm';
 import { ProjectDocuments, invoiceStatus, offerStatus, type ProjectDocRow } from './ProjectDocuments';
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
@@ -287,29 +286,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // zalozce"). Obsah se vykresli na serveru a do zalozek prijde hotovy.
   const prehled = (
     <>
-      {!project && (
-        <p className="text-sm font-heading text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">
-          Údaje o projektu se nepodařilo načíst z Caflou. Interní atributy níže se přesto dají vyplnit a uloží se.
-        </p>
-      )}
-
-      {project && (
-        <div className="bg-surface rounded-card border border-line shadow-sm p-6">
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0 mb-4">
-            Z Caflou
-          </h2>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 m-0">
-            <Field label="Priorita" value={project.priority ? PRIORITY_LABELS[project.priority] : '—'} />
-            <Field label="Herec" value={meta?.narrator ?? project.narrator ?? '—'} />
-            <Field label="Normostrany" value={project.pageCount != null ? String(project.pageCount) : '—'} />
-            <Field label="Zahájení" value={formatDate(project.startDate)} />
-            {/* "Konec" z Caflou je pro nas datum dokonceni; datum vydani je
-                nas vlastni sloupec v Caflou (zadani 8. 9. 2026). */}
-            <Field label="Datum dokončení" value={formatDate(project.endDate)} />
-            <Field label="Datum vydání" value={formatDate(project.releaseDate)} />
-          </dl>
-        </div>
-      )}
+      {/* Karta "Z Caflou" je od 10. 9. 2026 pryc (zadani). Ukazovala tytez
+          udaje, ktere jsou hned pod ni ve formulari - jen ve verzi, kterou uz
+          portal needituje. Dokud projekt zil v Caflou, mela smysl jako
+          kontrola; ted, kdyz o projektu rozhoduje portal, by z ni byl jen
+          druhy udaj vedle toho spravneho. Data z Caflou se porad ctou jako
+          zaloha pro projekty, ktere jeste neprosly prenosem - jen se
+          nevypisuji zvlast. */}
 
       {budget && (
         <ProjectBudget
@@ -477,14 +460,5 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
       <ProjectTabs tabs={tabs} />
     </section>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs font-heading text-muted uppercase tracking-wide">{label}</dt>
-      <dd className="text-sm font-heading text-ink m-0 mt-1">{value}</dd>
-    </div>
   );
 }

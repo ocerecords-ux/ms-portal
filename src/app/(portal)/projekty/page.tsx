@@ -11,7 +11,7 @@ import { ProjectsTable, type InternalProject, type InternalProjectMeta } from '.
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { NovyProjektForm } from './NovyProjektForm';
-import { listProjectTypeOptions } from '@/lib/priceList';
+import { listProjectTypeOptions, mapaIkonTypu } from '@/lib/priceList';
 import { loadColumnSettings } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/caflouProjectsServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
@@ -188,7 +188,8 @@ async function InternalProjektySection({
   );
 
   // Ciselniky pro zalozeni projektu (zadani 10. 9. 2026).
-  const [firmyProFormular, klientiProFormular, manazeriProFormular, herciProFormular, typyProjektu] = await Promise.all([
+  const [firmyProFormular, klientiProFormular, manazeriProFormular, herciProFormular, typyProjektu, ikonyTypu] =
+    await Promise.all([
     prisma.company.findMany({
       where: { type: 'KLIENT' },
       select: { id: true, name: true, driveFolderUrl: true },
@@ -211,6 +212,9 @@ async function InternalProjektySection({
       orderBy: [{ name: 'asc' }, { email: 'asc' }],
     }),
     listProjectTypeOptions(),
+    // Ikony typu projektu (zadani 10. 9. 2026) - jednim dotazem pro cely
+    // seznam, ne pro kazdy radek zvlast.
+    mapaIkonTypu(),
   ]);
 
   // Nase vlastni atributy k projektum (priorita, typ, manazer) - jednim
@@ -234,6 +238,7 @@ async function InternalProjektySection({
         managerPhotoUrl: m.managerUserId ? odkazNaFotku(m.managerUserId, m.manager?.photoUrl) : null,
         driveUrl: m.driveUrl,
         managerUserId: m.managerUserId,
+        ikonaTypu: m.projectType ? ikonyTypu[m.projectType] ?? null : null,
       },
     ]),
   );

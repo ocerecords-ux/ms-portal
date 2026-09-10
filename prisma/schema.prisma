@@ -511,6 +511,12 @@ model PriceListItem {
   /// a pribyvaji, tohle si tym prepne v administraci.
   rodnyList   Boolean  @default(false)
 
+  /// Ikona typu projektu (zadani 10. 9. 2026) - klic z lib/ikonyTypu.tsx.
+  /// Sviti pred nazvem projektu v prehledu. Je to na polozce ceniku, ne
+  /// v kodu: typy projektu si tym pridava sam a napevno zadana ikona by nove
+  /// polozce nikdy nepatrila. Prazdne = polozka ikonu nema.
+  ikona       String?
+
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

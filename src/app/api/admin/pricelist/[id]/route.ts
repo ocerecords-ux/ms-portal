@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { withVat } from '@/lib/priceList';
+import { jeKlicIkony } from '@/lib/ikonyTypu';
 
 const schema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
@@ -10,6 +11,8 @@ const schema = z.object({
   priceIncVat: z.string().trim().optional(),
   active: z.boolean().optional(),
   rodnyList: z.boolean().optional(),
+  /** Klic ikony z lib/ikonyTypu.tsx; prazdny retezec = zadna ikona. */
+  ikona: z.string().trim().max(40).optional(),
 });
 
 function toIntOrNull(v?: string): number | null {
@@ -32,6 +35,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const item = await prisma.priceListItem.findUnique({ where: { id: params.id } });
     if (!item) return NextResponse.json({ error: 'Položka nenalezena.' }, { status: 404 });
 
+    // Ulozit jde jen ikona z nasi nabidky - jinak by v databazi zustal klic,
+    // ke kteremu uz zadna kresba neni, a v prehledu by bylo prazdne misto.
+    if (data.ikona && !jeKlicIkony(data.ikona)) {
+      return NextResponse.json({ error: 'Tuhle ikonu neznáme.' }, { status: 400 });
+    }
+
     if (data.name && data.name !== item.name) {
       const taken = await prisma.priceListItem.findUnique({ where: { name: data.name } });
       if (taken) return NextResponse.json({ error: 'Položka s tímto názvem už v ceníku je.' }, { status: 409 });
@@ -49,6 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(priceIncVat !== undefined ? { priceIncVat } : {}),
         ...(data.active !== undefined ? { active: data.active } : {}),
         ...(data.rodnyList !== undefined ? { rodnyList: data.rodnyList } : {}),
+        ...(data.ikona !== undefined ? { ikona: data.ikona || null } : {}),
       },
     });
 
@@ -76,6 +86,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
     const item = await prisma.priceListItem.findUnique({ where: { id: params.id } });
     if (!item) return NextResponse.json({ error: 'Položka nenalezena.' }, { status: 404 });
+
 
     // Polozku, kterou uz nekdo pouzil jako typ projektu, radeji nemazeme -
     // jen ji vyradime, at se u historickych projektu typ neztrati.

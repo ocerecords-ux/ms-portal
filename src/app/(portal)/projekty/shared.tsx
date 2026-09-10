@@ -5,6 +5,7 @@ import type { ColumnSetting } from '@/lib/columnLabels';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
+import { IkonaTypu } from '@/lib/ikonyTypu';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
@@ -203,6 +204,8 @@ export type InternalProjectMeta = {
   driveUrl: string | null;
   /** Kvuli uprave manazera primo v prehledu. */
   managerUserId: string | null;
+  /** Ikona typu projektu - sviti pred nazvem (zadani 10. 9. 2026). */
+  ikonaTypu: string | null;
 };
 
 export type InternalProject = AdminDisplayProject & {
@@ -345,12 +348,15 @@ function bunkaSloupce(
       // Dlouhy nazev se zalomi na dalsi radek (sirka sloupce je v TRIDA_BUNKY);
       // orezavani tremi teckami se neosvedcilo, nebylo poznat, co je za knihu.
       return (
-        <Link
-          href={`/projekty/${p.id}`}
-          className="text-ink hover:text-brand-purple no-underline break-words"
-        >
-          {p.name}
-        </Link>
+        <span className="flex items-start gap-2.5">
+          <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} />
+          <Link
+            href={`/projekty/${p.id}`}
+            className="text-ink hover:text-brand-purple no-underline break-words pt-1"
+          >
+            {p.name}
+          </Link>
+        </span>
       );
     case 'companyName':
       return p.companyName;

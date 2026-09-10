@@ -27,6 +27,7 @@ export default async function PriceListPage() {
           priceIncVat: i.priceIncVat,
           active: i.active,
           rodnyList: i.rodnyList,
+          ikona: i.ikona,
         }))}
       />
 

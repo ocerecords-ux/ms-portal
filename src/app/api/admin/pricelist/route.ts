@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { withVat } from '@/lib/priceList';
+import { jeKlicIkony } from '@/lib/ikonyTypu';
 
 // Zalozeni polozky ceniku (zadani 5. 9. 2026).
 const schema = z.object({
@@ -11,6 +12,8 @@ const schema = z.object({
   priceIncVat: z.string().trim().optional(),
   /** Radiovy spot - jen u nej se vyrabi Rodny list. */
   rodnyList: z.boolean().optional(),
+  /** Ikona typu projektu - klic z lib/ikonyTypu.tsx (zadani 10. 9. 2026). */
+  ikona: z.string().trim().max(40).optional(),
 });
 
 function toIntOrNull(v?: string): number | null {
@@ -47,6 +50,7 @@ export async function POST(req: NextRequest) {
         priceExVat,
         priceIncVat,
         rodnyList: parsed.data.rodnyList ?? false,
+        ikona: parsed.data.ikona && jeKlicIkony(parsed.data.ikona) ? parsed.data.ikona : null,
         sortOrder: (last?.sortOrder ?? 0) + 10,
       },
     });

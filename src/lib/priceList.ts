@@ -60,6 +60,26 @@ export async function isRodnyListProjectType(projectType: string | null | undefi
   }
 }
 
+/**
+ * Ikona ke kazdemu typu projektu (zadani 10. 9. 2026).
+ *
+ * Vraci se cely ciselnik naráz, ne ikona po ikone: prehled projektu je jedna
+ * stranka s desitkami radku a dotaz na kazdy z nich by byl desitky dotazu
+ * navic. I vyrazene polozky, aby projekt se starym typem ikonu neztratil.
+ */
+export async function mapaIkonTypu(): Promise<Record<string, string>> {
+  try {
+    const items = await prisma.priceListItem.findMany({
+      where: { ikona: { not: null } },
+      select: { name: true, ikona: true },
+    });
+    return Object.fromEntries(items.map((i) => [i.name, i.ikona as string]));
+  } catch (err) {
+    console.error('Nacteni ikon typu projektu selhalo:', err);
+    return {};
+  }
+}
+
 /** Nazvy polozek pouzitelne jako typ projektu (jen aktivni, v poradi ceniku). */
 export async function listProjectTypeOptions(): Promise<string[]> {
   const items = await prisma.priceListItem.findMany({

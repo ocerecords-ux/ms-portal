@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRazeni, ThRadit } from '@/app/(portal)/components/RaditelnaTabulka';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
+import { VyberIkony } from './VyberIkony';
 
 type Item = {
   id: string;
@@ -13,6 +14,8 @@ type Item = {
   active: boolean;
   /** Rádiový spot - jen u něj se vyrábí Rodný list. */
   rodnyList: boolean;
+  /** Ikona, která svítí před názvem projektu (zadání 10. 9. 2026). */
+  ikona: string | null;
 };
 
 function formatPrice(value: number | null): string {
@@ -26,7 +29,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   const [busy, setBusy] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: '', priceExVat: '', priceIncVat: '' });
-  const [newItem, setNewItem] = useState({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false });
+  const [newItem, setNewItem] = useState({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false, ikona: '' });
 
   // Razeni kliknutim na nazev sloupce (zadani 9. 9. 2026). Vychozi je podle
   // nazvu - cenik se cte jako seznam, ne jako poradi.
@@ -68,7 +71,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   async function addItem(e: React.FormEvent) {
     e.preventDefault();
     const created = await send('/api/admin/pricelist', 'POST', newItem);
-    if (created) setNewItem({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false });
+    if (created) setNewItem({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false, ikona: '' });
   }
 
   function startEdit(item: Item) {
@@ -104,6 +107,11 @@ export function PriceListEditor({ items }: { items: Item[] }) {
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
               <tr className="bg-bar text-white font-heading text-xs">
+                {/* Ikona typu projektu (zadani 10. 9. 2026) - bez razeni,
+                    radit seznam podle obrazku nedava smysl. */}
+                <th className="text-left px-4 py-3 font-heading" title="Svítí před názvem projektu v přehledu">
+                  Ikona
+                </th>
                 <ThRadit label="Položka" sloupec="polozka" razeni={razeni} prepni={prepni} />
                 <ThRadit label="Cena bez DPH" sloupec="bezDph" razeni={razeni} prepni={prepni} vpravo />
                 <ThRadit label="Cena s DPH" sloupec="sDph" razeni={razeni} prepni={prepni} vpravo />
@@ -121,7 +129,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
             <tbody>
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
                     Ceník je zatím prázdný. Přidejte první položku formulářem níže.
                   </td>
                 </tr>
@@ -129,6 +137,13 @@ export function PriceListEditor({ items }: { items: Item[] }) {
               {serazene.map((item) =>
                 editingId === item.id ? (
                   <tr key={item.id} className="border-t border-line bg-surfaceSoft">
+                    <td className="px-4 py-3">
+                      <VyberIkony
+                        hodnota={item.ikona}
+                        disabled={busy}
+                        onZmena={(ikona) => send(`/api/admin/pricelist/${item.id}`, 'PATCH', { ikona })}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <input
                         value={draft.name}
@@ -176,6 +191,13 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                   </tr>
                 ) : (
                   <tr key={item.id} className="border-t border-line hover:bg-surfaceSoft">
+                    <td className="px-4 py-3">
+                      <VyberIkony
+                        hodnota={item.ikona}
+                        disabled={busy}
+                        onZmena={(ikona) => send(`/api/admin/pricelist/${item.id}`, 'PATCH', { ikona })}
+                      />
+                    </td>
                     <td className="px-4 py-3.5 font-heading font-semibold text-sm">
                       <button
                         type="button"
@@ -244,13 +266,19 @@ export function PriceListEditor({ items }: { items: Item[] }) {
         <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr] gap-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Položka</span>
-            <input
-              required
-              value={newItem.name}
-              onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-              placeholder="např. Natáčení voiceoveru"
-              className={inputClass}
-            />
+            <span className="flex items-center gap-2">
+              <VyberIkony
+                hodnota={newItem.ikona || null}
+                onZmena={(ikona) => setNewItem({ ...newItem, ikona })}
+              />
+              <input
+                required
+                value={newItem.name}
+                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                placeholder="např. Natáčení voiceoveru"
+                className={inputClass}
+              />
+            </span>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Cena bez DPH</span>
