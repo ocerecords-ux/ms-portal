@@ -45,6 +45,7 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
           dueDate: expense.dueDate ? expense.dueDate.toISOString().slice(0, 10) : '',
           paid: expense.paid,
           paidAt: expense.paidAt ? expense.paidAt.toISOString() : null,
+          paymentMethod: expense.paymentMethod,
           attachmentUrl: expense.attachmentUrl,
           attachmentName: expense.attachmentName,
           note: expense.note ?? '',

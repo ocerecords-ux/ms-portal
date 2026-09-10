@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { jePushNastaveno } from '@/lib/pushServer';
+import { jeCteniUctenekNastaveno } from '@/lib/uctenkaServer';
 
 // Verejna diagnostika nasazeni (5. 9. 2026) - kdyz se nikdo nedokaze
 // prihlasit, tohle rekne, jestli je problem v databazi, v nastaveni NextAuth,
@@ -53,6 +54,7 @@ export async function GET() {
     ULOZISTE_bucket: jeSpravce ? process.env.S3_BUCKET || null : undefined,
     ULOZISTE_region: jeSpravce ? process.env.S3_REGION || '(nenastaveno)' : undefined,
     UPOZORNENI_nastaveno: jePushNastaveno(),
+    CTENI_DOKLADU_nastaveno: jeCteniUctenekNastaveno(),
   };
 
   let databaze: unknown;

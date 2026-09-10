@@ -25,6 +25,9 @@ const schema = z.object({
   issueDate: z.string().trim().min(8),
   dueDate: z.string().trim().optional(),
   paid: z.enum(['true', 'false']).optional(),
+  // Zpusob uhrady (zadani 10. 9. 2026). Starsi doklady ho nemaji, proto
+  // nepovinny - v databazi je vychozi hodnota "prevodem".
+  paymentMethod: z.enum(['CARD', 'CASH', 'TRANSFER']).optional(),
   note: z.string().trim().max(2000).optional(),
 });
 
@@ -47,6 +50,7 @@ function readForm(formData: FormData) {
     issueDate: get('issueDate'),
     dueDate: get('dueDate'),
     paid: get('paid'),
+    paymentMethod: get('paymentMethod'),
     note: get('note'),
   };
 }
@@ -122,6 +126,7 @@ export async function POST(req: NextRequest) {
         dueDate: toDate(d.dueDate),
         paid: d.paid === 'true',
         paidAt: d.paid === 'true' ? new Date() : null,
+        paymentMethod: d.paymentMethod ?? 'TRANSFER',
         attachmentUrl,
         attachmentName,
         note: d.note || null,

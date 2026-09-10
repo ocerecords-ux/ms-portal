@@ -251,6 +251,15 @@ model Counter {
 
 
 // Priorita projektu - zadani 5. 9. 2026 (interni atribut, klient ji nevidi).
+// Cim byl vydaj zaplaceny (zadani 10. 9. 2026 ke scanovani uctenek).
+// Kartou a hotove je zaplaceno uz v okamziku vzniku dokladu, prevodem az
+// pozdeji - podle toho se sam predvyplni priznak "uhrazeno".
+enum PaymentMethod {
+  CARD     // platebni kartou
+  CASH     // hotove
+  TRANSFER // prevodem na ucet
+}
+
 enum ProjectPriority {
   LOW    // Nizka
   MEDIUM // Stredni
@@ -907,6 +916,9 @@ model Expense {
   dueDate   DateTime?
   paid      Boolean   @default(false)
   paidAt    DateTime?
+
+  // Prevodem je vychozi stav: drtiva vetsina starsich dokladu jsou faktury.
+  paymentMethod PaymentMethod @default(TRANSFER)
 
   // Priloha - PDF nebo foto uctenky.
   attachmentUrl  String?

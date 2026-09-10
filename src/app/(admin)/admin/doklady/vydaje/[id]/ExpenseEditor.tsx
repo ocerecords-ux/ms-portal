@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Currency } from '@prisma/client';
+import type { Currency, PaymentMethod } from '@prisma/client';
 import { formatMoney, minorToInput, parseMoneyToMinor } from '@/lib/doklady';
+import { nazevZpusobuUhrady } from '@/lib/uctenka';
 import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
 import { formatRate, toCzkMinor } from '@/lib/cnb';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
@@ -26,6 +27,7 @@ type Expense = {
   dueDate: string;
   paid: boolean;
   paidAt: string | null;
+  paymentMethod: PaymentMethod;
   attachmentUrl: string | null;
   attachmentName: string | null;
   note: string;
@@ -172,6 +174,9 @@ export function ExpenseEditor({
           >
             {expense.paid ? 'Uhrazeno' : 'Neuhrazeno'}
           </span>
+          {/* Cim se platilo (zadani 10. 9. 2026) - u uctenky z benzinky je to
+              to hlavni, proc uz je oznacena jako uhrazena. */}
+          <span className="text-xs font-body text-muted">{nazevZpusobuUhrady(expense.paymentMethod)}</span>
           {expense.paidAt && (
             <span className="text-xs font-body text-muted">{formatDateTime(expense.paidAt)}</span>
           )}
