@@ -269,24 +269,25 @@ async function InternalProjektySection({
         )}
       </div>
 
-      {muzeMenitStav && (
-        <NovyProjektForm
-          firmy={firmyProFormular.map((f) => ({
-            id: f.id,
-            label: f.name,
-            maSlozku: Boolean(f.driveFolderUrl),
-          }))}
-          klienti={klientiProFormular.map((k) => ({
-            id: k.id,
-            label: k.company?.name ? `${k.name || k.email} — ${k.company.name}` : k.name || k.email,
-            companyId: k.companyId,
-          }))}
-          manazeri={manazeriProFormular.map((m) => ({ id: m.id, label: m.name || m.email }))}
-          typyProjektu={typyProjektu}
-        />
-      )}
-
       <InternalProjectsBrowser
+        novyProjekt={
+          muzeMenitStav ? (
+            <NovyProjektForm
+              firmy={firmyProFormular.map((f) => ({
+                id: f.id,
+                label: f.name,
+                maSlozku: Boolean(f.driveFolderUrl),
+              }))}
+              klienti={klientiProFormular.map((k) => ({
+                id: k.id,
+                label: k.company?.name ? `${k.name || k.email} — ${k.company.name}` : k.name || k.email,
+                companyId: k.companyId,
+              }))}
+              manazeri={manazeriProFormular.map((m) => ({ id: m.id, label: m.name || m.email }))}
+              typyProjektu={typyProjektu}
+            />
+          ) : null
+        }
         active={active}
         finished={finished}
         columns={columnSettings}

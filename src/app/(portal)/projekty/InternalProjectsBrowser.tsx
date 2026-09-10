@@ -45,6 +45,7 @@ export function InternalProjectsBrowser({
   columns,
   canEditLabels,
   canEditStatus,
+  novyProjekt,
 }: {
   active: InternalProject[];
   finished: InternalProject[];
@@ -56,6 +57,11 @@ export function InternalProjectsBrowser({
   canEditLabels?: boolean;
   /** Prehazovat stav projektu smi Produkce a Zuzo-labuzo (zadani 10. 9. 2026). */
   canEditStatus?: boolean;
+  /**
+   * Zakladani projektu. Sedi vedle hledani, ne nad tabulkou - samostatny
+   * radek jen kvuli jednomu tlacitku je plytvani mistem (zadani 10. 9. 2026).
+   */
+  novyProjekt?: React.ReactNode;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('active');
@@ -243,7 +249,7 @@ export function InternalProjectsBrowser({
           })}
         </div>
 
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-start gap-3 mb-2 flex-wrap">
           <div className="relative">
             <input
               type="search"
@@ -267,7 +273,7 @@ export function InternalProjectsBrowser({
               <path d="M20 20l-3.5-3.5" />
             </svg>
           </div>
-
+          {novyProjekt}
         </div>
       </div>
 
