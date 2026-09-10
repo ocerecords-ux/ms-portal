@@ -347,14 +347,15 @@ export function RodnyListSection({
       )}
 
       {/* DVA SLOUPCE (zadani 10. 9. 2026): vlevo dokument, vpravo uzka karta
-          s udaji. Dokument je to hlavni, na co se clovek diva, tak dostal
-          vic mista; na uzkem okne jde formular nahoru, protoze na telefonu
-          se hlavne vyplnuje. Nahled se pri rolovani drzi na miste, at se
-          nemusi jezdit nahoru a dolu. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
+          s udaji vlevo a nahledem vpravo (zadani 10. 9. 2026). Nahled ma
+          pevnou sirku, aby se do ni vesla cela A4 na vysku - o dokumentu se
+          rozhoduje podle celku, ne podle vyrezu. Na uzkem okne jde formular
+          nahoru, protoze na telefonu se hlavne vyplnuje; nahled se pri
+          rolovani drzi na miste, at se nemusi jezdit nahoru a dolu. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
       <form
         onSubmit={handleSubmit}
-        className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-5 order-1 lg:order-2"
+        className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-5"
       >
         <div>
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
@@ -447,7 +448,7 @@ export function RodnyListSection({
           vznikne po kliknutí na Vygenerovat - jen se nikam neuloží. Rám kolem
           něj je záměrně "papírový": člověk má vidět dokument, ne políčko
           prohlížeče. */}
-      <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden order-2 lg:order-1 lg:sticky lg:top-24 self-start">
+      <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden lg:sticky lg:top-24 self-start">
         <div className="flex items-center justify-between flex-wrap gap-3 px-5 py-3.5 border-b border-line">
           <div>
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
@@ -497,9 +498,11 @@ export function RodnyListSection({
               <iframe
                 // Zdroj je PDF vyrobene z rozepsanych hodnot a drzene
                 // v pameti prohlizece - proto blob:, ne adresa routy.
-                src={nahledUrl ?? undefined}
+                // #view=Fit rekne prohlizeci, at ukaze celou stranku, ne
+                // jen jeji sirku; pomer stran je A4, takze ram sedi na PDF.
+                src={nahledUrl ? `${nahledUrl}#view=Fit&toolbar=0&navpanes=0` : undefined}
                 title="Náhled Rodného listu"
-                className={`w-full h-[760px] max-h-[78vh] rounded-lg border border-line bg-white shadow-md transition-opacity ${
+                className={`w-full aspect-[210/297] rounded-lg border border-line bg-white shadow-md transition-opacity ${
                   nahledSeDela ? 'opacity-60' : 'opacity-100'
                 }`}
               />

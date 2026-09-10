@@ -52,10 +52,8 @@ function hex(value: string): RGB {
  */
 const PURPLE = hex('#6B2AF0');
 const PURPLE_LIGHT = hex('#7B55FF');
-const PURPLE_RULE = hex('#A472F6'); // bila pres fialovou, cca 40 %
 const GREEN = hex('#1FDF67');
 const GREEN_DARK = hex('#149E4B');
-const MINT = hex('#C9FFDF');
 const MINT_BG = hex('#E9FFF2');
 const INK = hex('#201A33');
 const MUTED = hex('#6E6580');
@@ -71,24 +69,19 @@ const LEFT = CARD.x + PAD;
 const RIGHT = CARD.x + CARD.w - PAD;
 const INNER_W = RIGHT - LEFT;
 
-// Hlavicka s fialovym gradientem.
-const HERO_H = 190;
+// Hlavicka s fialovym gradientem. Je to dokument Mediaspace, ne portalu -
+// proto tu je jen logo MEDIASPACE a nazev dokumentu (zadani 10. 9. 2026).
+const HERO_H = 158;
 const HERO_BOTTOM = CARD.top + HERO_H;
-const WORDMARK = 'MS portal';
-const WORDMARK_SIZE = 19;
-const WORDMARK_BASELINE = 84;
-const LOGO_H = 29;
-const TAG = 'RODNÝ LIST';
-const TAG_SIZE = 9.5;
-const TAG_SPACING = 1.8;
-const TAG_BASELINE = 124;
-const GREEN_BAR = { top: 134, w: 46, h: 3 };
-const SPOT_SIZES = [28, 25, 22, 19];
-const SPOT_BASELINE_ONE = 178;
-const SPOT_BASELINES_TWO = [160, 190];
+const LOGO_H = 32;
+const LOGO_TOP = 68;
+const TITLE = 'RODNÝ LIST';
+const TITLE_SIZE = 30;
+const TITLE_BASELINE = 168;
+const GREEN_BAR = { top: 124, w: 46, h: 3 };
 
 // Tabulka udaju - stejna sazba jako .field-table v e-mailu.
-const TABLE_TOP = 264;
+const TABLE_TOP = 232;
 const ROW_H = 46;
 const LABEL_W = 160;
 const SPLIT = LEFT + LABEL_W;
@@ -100,17 +93,17 @@ const VALUE_SIZE = 11.5;
 const VALUE_MAX_W = RIGHT - CELL_PAD - (SPLIT + CELL_PAD);
 
 // Mentolovy blok s hudbou.
-const MUSIC = { top: 472, h: 92, r: 12 };
-const MUSIC_HEAD_BASELINE = 500;
-const MUSIC_LABEL_BASELINE = 522;
-const MUSIC_VALUE_BASELINE = 542;
+const MUSIC = { top: 486, h: 92, r: 12 };
+const MUSIC_HEAD_BASELINE = 514;
+const MUSIC_LABEL_BASELINE = 536;
+const MUSIC_VALUE_BASELINE = 556;
 const MUSIC_COL2 = LEFT + 234;
 
 // Podpisova cast.
 const PRODUCED_BY = 'Vyrobila společnost MEDIA SPACE s.r.o.';
 const PRODUCED_SIZE = 11;
-const PRODUCED_BASELINE = 642;
-const SIGN_BOX = { x: 330, top: 620, w: RIGHT - 330, h: 92, r: 12 };
+const PRODUCED_BASELINE = 650;
+const SIGN_BOX = { x: 330, top: 628, w: RIGHT - 330, h: 92, r: 12 };
 const SIGN_LABEL = 'PODPIS';
 const SIGN_LABEL_SIZE = 8;
 const SIGN_IMAGE_W = 112;
@@ -454,36 +447,6 @@ function f(value: number): string {
   return Number(value.toFixed(3)).toString();
 }
 
-/**
- * Nazev spotu v hlavicce. Zkusi se vejit na jeden radek, jinak na dva - a az
- * kdyz ani to nejde, zmensi se pismo. Nikdy nespadne.
- */
-function fitHeadline(value: string, maxWidth: number): { lines: string[]; size: number } {
-  const text = value.trim() || '—';
-  for (const size of SPOT_SIZES) {
-    if (textWidth(FONT_BOLD, text, size) <= maxWidth) return { lines: [text], size };
-  }
-  const words = text.split(/\s+/).filter(Boolean);
-  for (const size of SPOT_SIZES) {
-    const lines: string[] = [];
-    let line = '';
-    for (const word of words) {
-      const candidate = line ? `${line} ${word}` : word;
-      if (textWidth(FONT_BOLD, candidate, size) <= maxWidth || !line) {
-        line = candidate;
-      } else {
-        lines.push(line);
-        line = word;
-      }
-    }
-    if (line) lines.push(line);
-    if (lines.length <= 2 && lines.every((l) => textWidth(FONT_BOLD, l, size) <= maxWidth)) {
-      return { lines, size };
-    }
-  }
-  return fitValue(FONT_BOLD, text, maxWidth, SPOT_SIZES[SPOT_SIZES.length - 1]);
-}
-
 /** Paticka: nazev firmy tucne, kontakty ve fialove - stejne jako v e-mailu. */
 const FOOTER_PARTS: { text: string; color: RGB; bold?: boolean }[] = [
   { text: 'MEDIA SPACE s.r.o.', color: INK, bold: true },
@@ -528,26 +491,15 @@ export function renderRodnyListPdf(data: RodnyListData): Buffer {
   c.shade('Sh0');
   c.pop();
 
-  // 3) Znacka: "MS portal" zelene, svisla linka, logo MEDIASPACE.
-  c.text(FONT_BOLD, 'FB', WORDMARK, WORDMARK_SIZE, LEFT, WORDMARK_BASELINE, GREEN);
-  const znackaKonec = LEFT + textWidth(FONT_BOLD, WORDMARK, WORDMARK_SIZE);
-  c.line(znackaKonec + 15, WORDMARK_BASELINE - 17, znackaKonec + 15, WORDMARK_BASELINE + 5, PURPLE_RULE, 1);
-  c.image('ImLogo', znackaKonec + 30, WORDMARK_BASELINE - 21, (LOGO_H * LOGO.width) / LOGO.height, LOGO_H);
-
-  // 4) Typ dokumentu, zeleny prouzek a nazev spotu jako nadpis.
-  c.text(FONT_BOLD, 'FB', TAG, TAG_SIZE, LEFT, TAG_BASELINE, MINT, TAG_SPACING);
+  // 3) Logo MEDIASPACE, zeleny prouzek a nazev dokumentu.
+  c.image('ImLogo', LEFT, LOGO_TOP, (LOGO_H * LOGO.width) / LOGO.height, LOGO_H);
   c.fillRound(LEFT, GREEN_BAR.top, GREEN_BAR.w, GREEN_BAR.h, 1.5, 1.5, GREEN);
+  c.text(FONT_BOLD, 'FB', TITLE, TITLE_SIZE, LEFT, TITLE_BASELINE, WHITE);
 
-  const nadpis = fitHeadline(data.spotName, INNER_W);
-  const zakladny = nadpis.lines.length > 1 ? SPOT_BASELINES_TWO : [SPOT_BASELINE_ONE];
-  nadpis.lines.forEach((line, i) => {
-    c.text(FONT_BOLD, 'FB', line, nadpis.size, LEFT, zakladny[Math.min(i, zakladny.length - 1)], WHITE);
-  });
-
-  // 5) Tabulka udaju. Nazev spotu uz je nadpisem, tady se neopakuje; hudba ma
-  //    vlastni blok nize.
+  // 4) Tabulka udaju. Hudba ma vlastni blok nize.
   const radky = [
     { label: 'KLIENT', value: data.clientName },
+    { label: 'NÁZEV SPOTU', value: data.spotName },
     { label: 'DÉLKA SPOTU', value: data.spotLength },
     { label: 'REŽIE', value: data.director },
     { label: 'DATUM VÝROBY', value: data.productionDate },
@@ -592,7 +544,7 @@ export function renderRodnyListPdf(data: RodnyListData): Buffer {
     });
   });
 
-  // 6) Hudba ve spotu. Ma vlastni mentolovou plochu, protoze jako jedina cast
+  // 5) Hudba ve spotu. Ma vlastni mentolovou plochu, protoze jako jedina cast
   //    dokumentu mluvi o pravech k cizimu dilu - at je videt na prvni pohled.
   c.fillRound(LEFT, MUSIC.top, INNER_W, MUSIC.h, MUSIC.r, MUSIC.r, MINT_BG);
   c.text(FONT_BOLD, 'FB', 'HUDBA VE SPOTU', 8.5, LEFT + CELL_PAD, MUSIC_HEAD_BASELINE, GREEN_DARK, 1.4);
@@ -609,7 +561,7 @@ export function renderRodnyListPdf(data: RodnyListData): Buffer {
     });
   }
 
-  // 7) Podpisova cast.
+  // 6) Podpisova cast.
   c.text(FONT_BOLD, 'FB', PRODUCED_BY, PRODUCED_SIZE, LEFT, PRODUCED_BASELINE, INK);
   c.fillRound(SIGN_BOX.x, SIGN_BOX.top, SIGN_BOX.w, SIGN_BOX.h, SIGN_BOX.r, SIGN_BOX.r, LABEL_BG);
   c.strokeRound(SIGN_BOX.x, SIGN_BOX.top, SIGN_BOX.w, SIGN_BOX.h, SIGN_BOX.r, SIGN_BOX.r, BORDER, 1);
@@ -623,7 +575,7 @@ export function renderRodnyListPdf(data: RodnyListData): Buffer {
     vyskaPodpisu,
   );
 
-  // 8) Paticka.
+  // 7) Paticka.
   c.line(LEFT, FOOTER_RULE_TOP, RIGHT, FOOTER_RULE_TOP, BORDER, 1);
   const sirkaPaticky = FOOTER_PARTS.reduce(
     (sum, part) => sum + textWidth(part.bold ? FONT_BOLD : FONT_REGULAR, part.text, FOOTER_SIZE),
@@ -636,7 +588,7 @@ export function renderRodnyListPdf(data: RodnyListData): Buffer {
     kurzor += textWidth(font, part.text, FOOTER_SIZE);
   }
 
-  // 9) Slozeni dokumentu.
+  // 8) Slozeni dokumentu.
   const contentId = pdf.addStream('/Filter /FlateDecode', deflateSync(c.toBuffer(), { level: 9 }));
   const pagesId = pdf.reserve();
   const pageId = pdf.add(
@@ -649,7 +601,7 @@ export function renderRodnyListPdf(data: RodnyListData): Buffer {
   pdf.fill(pagesId, `<< /Type /Pages /Kids [${pageId} 0 R] /Count 1 >>`);
   const infoId = pdf.add(
     `<< /Title ${pdfText(`Rodný list – ${data.spotName}`.replace(/[\r\n]+/g, ' '))} ` +
-      `/Producer ${pdfText('MS Portal')} >>`,
+      `/Producer ${pdfText('MEDIA SPACE s.r.o.')} >>`,
   );
   const rootId = pdf.add(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
 
