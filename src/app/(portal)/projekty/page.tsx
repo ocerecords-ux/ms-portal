@@ -320,7 +320,6 @@ async function InternalProjektySection({
         canEditLabels={isAdmin}
         canEditStatus={muzeMenitStav}
         manazeri={manazeriProFormular}
-        herci={herciProFormular.map((h) => ({ id: h.id, label: h.name || h.email }))}
       />
     </section>
   );

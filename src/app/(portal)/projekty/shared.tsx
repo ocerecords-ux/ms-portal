@@ -6,8 +6,6 @@ import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel }
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
 import { IkonaTypu } from '@/lib/ikonyTypu';
-import { HerecVSeznamu } from './HerecVSeznamu';
-import type { Herec } from './VyberHerce';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
@@ -338,7 +336,6 @@ function bunkaSloupce(
   key: string,
   muzeMenit: boolean,
   manazeri: { id: string; label: string }[],
-  herci: Herec[],
 ) {
   const id = String(p.id);
   switch (key) {
@@ -414,18 +411,25 @@ function bunkaSloupce(
         obsah
       );
     }
-    case 'narrator':
-      // Herec je bublina, ne text (zadani 10. 9. 2026) - a opravdu se pres ni
-      // vybira, at to neni jen ozdoba, ktera vyber slibuje.
-      return (
-        <HerecVSeznamu
-          caflouProjectId={id}
-          herci={herci}
-          actorUserId={p.meta?.actorUserId ?? null}
-          jmeno={p.narrator ?? null}
-          muzeMenit={muzeMenit}
-        />
+    case 'narrator': {
+      // Herec je bublina, ale v prehledu se NEEDITUJE (zadani 10. 9. 2026:
+      // "ten krizek v prehledu je nebezpecny, herce bych editoval jen
+      // v detailu"). Odebrat herce jednim kliknutim pri projizdeni seznamu
+      // je moc snadne a nic se u toho neptá.
+      //
+      // Bublina ma jen ten, kdo ma prirazeny ucet. Jmeno z Caflou je porad
+      // jen text, na kterem nic nestoji - proto zustava sede a bez bubliny.
+      if (!p.narrator) return '—';
+      return p.meta?.actorUserId ? (
+        <span className="inline-flex items-center rounded-pill bg-brand-purple/12 text-brand-purpleDeep dark:text-brand-purpleLight px-3 py-1 text-sm font-heading font-semibold">
+          {p.narrator}
+        </span>
+      ) : (
+        <span className="text-muted" title="Herec zatím nemá přiřazený účet — doplní se v detailu projektu">
+          {p.narrator}
+        </span>
       );
+    }
     case 'pageCount':
       return p.pageCount ?? '—';
     case 'endDate':
@@ -662,7 +666,6 @@ export function InternalProjectsTable({
   onHideColumn,
   canEditStatus = false,
   manazeri = [],
-  herci = [],
 }: {
   projects: InternalProject[];
   emptyText: string;
@@ -675,8 +678,6 @@ export function InternalProjectsTable({
   canEditStatus?: boolean;
   /** Manazeri do rozbalovaciho seznamu primo v prehledu (zadani 10. 9. 2026). */
   manazeri?: { id: string; label: string }[];
-  /** Herci do vyberu primo v prehledu (zadani 10. 9. 2026). */
-  herci?: Herec[];
   /** Upravovat sloupce smí jen Žůžo-labůžo. */
   canEditColumns?: boolean;
   onStartEditing?: () => void;
@@ -749,7 +750,7 @@ export function InternalProjectsTable({
               <tr key={p.id} className="border-t border-line hover:bg-surfaceSoft">
                 {columns.map((sloupec) => (
                   <td key={sloupec.key} className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-3.5 text-sm font-heading'}>
-                    {bunkaSloupce(p, sloupec.key, canEditStatus, manazeri, herci)}
+                    {bunkaSloupce(p, sloupec.key, canEditStatus, manazeri)}
                   </td>
                 ))}
                 {canEditColumns && <td />}
