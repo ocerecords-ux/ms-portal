@@ -69,14 +69,26 @@ export type RodnyListFields = {
 export const VYCHOZI_REZIE = 'Ondřej Černý';
 
 /**
- * Předvyplněný název spotu: RL_ a název projektu (zadání 10. 9. 2026 -
- * „RL_(název projektu), název spotu se mění").
+ * Předvyplněný název spotu: čistý název projektu (oprava 10. 9. 2026 -
+ * „v názvu spotu v tabulce to nemá co dělat, tam musí být čistě název
+ * projektu"). Předpona RL_ patří jen do NÁZVU SOUBORU, kde ji přidává
+ * rodnyListFileName — dřív se doplňovala i sem, takže soubor vycházel jako
+ * RL_RL_neco.pdf a v dokumentu stál název s předponou.
  *
  * Stejně jako u režie: doplní se jen tam, kde nic není, přepsat jde vždycky.
  */
 export function vychoziNazevSpotu(nazevProjektu: string): string {
+  return nazevProjektu.trim();
+}
+
+/**
+ * Uklidí staré předvyplnění u projektů, které se stihly uložit s předponou.
+ * Sundá ji JEN tehdy, když je uložená hodnota přesně „RL_" + název projektu —
+ * tedy když to zjevně není nic, co by někdo napsal ručně.
+ */
+export function bezStarePredpony(spotName: string, nazevProjektu: string): string {
   const nazev = nazevProjektu.trim();
-  return nazev ? `RL_${nazev}` : 'RL_';
+  return nazev && spotName.trim() === `RL_${nazev}` ? nazev : spotName;
 }
 
 /**
@@ -174,7 +186,10 @@ export function rodnyListFileName(spotName: string): string {
     .replace(/[^A-Za-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 80);
-  return `RL_${zaklad || 'spot'}.pdf`;
+  // Kdyz uz nazev spotu s predponou zacina (starsi zaznamy), nepridava se
+  // podruhe - jinak vznikne RL_RL_neco.pdf.
+  const cisty = zaklad.replace(/^RL_/, '');
+  return `RL_${cisty || 'spot'}.pdf`;
 }
 
 /** Popisek verze pro seznam v portálu. */

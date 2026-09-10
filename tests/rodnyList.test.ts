@@ -101,6 +101,9 @@ describe('formatovani hodnot', () => {
     expect(rodnyListFileName('  Léto/2026: „akce" ')).toBe('RL_Leto_2026_akce.pdf');
     expect(rodnyListFileName('')).toBe('RL_spot.pdf');
     expect(rodnyListFileName('///')).toBe('RL_spot.pdf');
+    // Predpona se nikdy nezdvoji, i kdyz ji nazev spotu uz nese (starsi
+    // zaznamy z doby, kdy se predvyplnovalo "RL_" + nazev projektu).
+    expect(rodnyListFileName('RL_MMB')).toBe('RL_MMB.pdf');
   });
 });
 

@@ -25,7 +25,7 @@ import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
 import { findInternalProject } from '@/lib/caflouProjectsServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
-import { dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
+import { bezStarePredpony, dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
 
 // Detail projektu (zadani 5. 9. 2026). Projekt sam o sobe zije v Caflou -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -407,9 +407,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       }))}
       initial={{
         clientName: metaPoSync?.rlClientName || firmaProjektu?.name || company?.name || '',
-        spotName:
-          metaPoSync?.spotName ||
-          vychoziNazevSpotu(metaPoSync?.name || project?.name || ''),
+        spotName: bezStarePredpony(
+          metaPoSync?.spotName || vychoziNazevSpotu(metaPoSync?.name || project?.name || ''),
+          metaPoSync?.name || project?.name || '',
+        ),
         spotLengthSeconds: metaPoSync?.spotLengthSeconds != null ? String(metaPoSync.spotLengthSeconds) : '',
         // Rezie se predvyplnuje (zadani 10. 9. 2026) - jen kdyz u projektu
         // jeste zadna neni, at se rucne zadana nikdy neprepise.

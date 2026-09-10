@@ -6,6 +6,7 @@ import { uploadPdfToDriveFolder } from '@/lib/googleDrive';
 import { renderRodnyListPdf } from '@/lib/rodnyListPdf';
 import { isRodnyListProjectType } from '@/lib/priceList';
 import {
+  bezStarePredpony,
   formatProductionDate,
   formatSpotLength,
   isRodnyListTriggerStatus,
@@ -65,7 +66,8 @@ export type RodnyListResult =
 /** Prázdné hodnoty RL - použije se, když projekt ještě žádnou ProjectMeta nemá. */
 function fieldsFromMeta(meta: Record<string, unknown> | null, fallbackSpotName: string): RodnyListFields {
   return {
-    spotName: (meta?.spotName as string | null) || fallbackSpotName,
+    // Ocisteni stare predpony RL_ (oprava 10. 9. 2026) - viz bezStarePredpony.
+    spotName: bezStarePredpony((meta?.spotName as string | null) || fallbackSpotName, fallbackSpotName),
     spotLengthSeconds: (meta?.spotLengthSeconds as number | null) ?? null,
     directorName: (meta?.directorName as string | null) || '',
     musicTitle: (meta?.musicTitle as string | null) || '',
