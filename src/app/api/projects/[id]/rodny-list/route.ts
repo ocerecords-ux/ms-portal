@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { canEditProjectMeta } from '@/lib/roles';
+import { prisma } from '@/lib/db';
 import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
 import { znovuVytvorRodnyList } from '@/lib/rodnyListServer';
 
@@ -22,10 +23,24 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     }
 
     const caflouProjectId = params.id;
-    const caflou = (await getCaflouProject(caflouProjectId)) ?? (await findCaflouProjectInList(caflouProjectId));
-    if (!caflou?.project) {
+
+    // Udaje o projektu bereme Z PORTALU (zadani 10. 9. 2026). Drive se sahalo
+    // do Caflou a bez nej to skoncilo chybou 502 - jenze projekt zalozeny
+    // v portalu v Caflou vubec neni, takze u nej vyroba RL nikdy neprosla.
+    // Caflou zustava jako zaloha pro projekty, ktere jeste neprosly prenosem.
+    const meta = await prisma.projectMeta.findUnique({
+      where: { caflouProjectId },
+      select: { name: true, statusName: true, company: { select: { caflouCompanyId: true } } },
+    });
+
+    const caflou = meta?.name
+      ? null
+      : ((await getCaflouProject(caflouProjectId)) ?? (await findCaflouProjectInList(caflouProjectId)));
+
+    const projectName = meta?.name || caflou?.project?.name;
+    if (!projectName) {
       return NextResponse.json(
-        { error: 'Údaje o projektu se nepodařilo načíst z Caflou, zkuste to prosím za chvíli.' },
+        { error: 'Údaje o projektu se nepodařilo načíst, zkuste to prosím za chvíli.' },
         { status: 502 },
       );
     }
@@ -33,9 +48,9 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     const vysledek = await znovuVytvorRodnyList(
       {
         caflouProjectId,
-        projectName: caflou.project.name,
-        statusName: caflou.project.statusName,
-        caflouCompanyId: caflou.caflouCompanyId ?? null,
+        projectName,
+        statusName: meta?.statusName || caflou?.project?.statusName || '',
+        caflouCompanyId: meta?.company?.caflouCompanyId ?? caflou?.caflouCompanyId ?? null,
       },
       session.user.id,
     );

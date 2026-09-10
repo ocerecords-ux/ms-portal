@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   missingRodnyListFields,
-  RL_TRIGGER_STATUS,
   rodnyListFileName,
   rodnyListVersionLabel,
 } from '@/lib/rodnyList';
@@ -257,8 +256,7 @@ export function RodnyListSection({
             Chybí údaje pro Rodný list
           </p>
           <p className="text-sm font-body text-ink m-0 mt-1">
-            {chybi.join(', ')}. Než projekt v Caflou přepnete na „{RL_TRIGGER_STATUS}", doplňte je —
-            jinak Rodný list nevznikne a klientovi nic neodejde.
+            {chybi.join(', ')}. Dokud tyhle údaje chybí, nejde vyrobit ani náhled.
           </p>
         </div>
       )}
@@ -272,8 +270,9 @@ export function RodnyListSection({
             Údaje pro Rodný list
           </h2>
           <p className="text-xs text-muted font-body m-0 mt-1">
-            Z nich se vyrobí PDF ve chvíli, kdy projekt v Caflou přejde do stavu „{RL_TRIGGER_STATUS}".
-            Název klienta se bere z karty firmy ({clientName || '—'}).
+            Z nich se vyrobí PDF, až kliknete na „Vygenerovat RL" — sám nevzniká. Náhledem se na
+            něj můžete podívat dřív, než se kamkoliv uloží. Název klienta se bere z karty firmy
+            ({clientName || '—'}).
           </p>
         </div>
 
@@ -340,21 +339,44 @@ export function RodnyListSection({
             Vygenerované Rodné listy
           </h2>
           {canEdit && (
-            <button
-              type="button"
-              onClick={vygenerovatZnovu}
-              disabled={generating || chybi.length > 0}
-              title={chybi.length > 0 ? 'Nejdřív doplňte chybějící údaje.' : undefined}
-              className="border border-line bg-field text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:border-brand-purple transition-colors disabled:opacity-50"
-            >
-              {generating ? 'Generuji…' : rodneListy.length === 0 ? 'Vygenerovat RL' : 'Vygenerovat RL znovu'}
-            </button>
+            <span className="flex items-center gap-2 flex-wrap">
+              {/* Nahled se otevre v nove zalozce a NIC neuklada (zadani
+                  10. 9. 2026). Je to obycejny odkaz, at si ho jde otevrit
+                  kolikrat clovek chce. */}
+              <a
+                href={`/api/projects/${encodeURIComponent(caflouProjectId)}/rodny-list/nahled`}
+                target="_blank"
+                rel="noreferrer"
+                title={
+                  chybi.length > 0
+                    ? 'Náhled půjde otevřít, až budou doplněné chybějící údaje.'
+                    : 'Otevře PDF k prohlédnutí. Nikam se neuloží.'
+                }
+                className={`inline-flex items-center gap-1.5 border border-line font-heading font-semibold text-sm rounded-lg px-4 py-2 no-underline transition-colors ${
+                  chybi.length > 0
+                    ? 'text-muted pointer-events-none opacity-50'
+                    : 'text-brand-purple hover:bg-tint'
+                }`}
+              >
+                Náhled
+              </a>
+              <button
+                type="button"
+                onClick={vygenerovatZnovu}
+                disabled={generating || chybi.length > 0}
+                title={chybi.length > 0 ? 'Nejdřív doplňte chybějící údaje.' : undefined}
+                className="border border-line bg-field text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:border-brand-purple transition-colors disabled:opacity-50"
+              >
+                {generating ? 'Generuji…' : rodneListy.length === 0 ? 'Vygenerovat RL' : 'Vygenerovat RL znovu'}
+              </button>
+            </span>
           )}
         </div>
 
         {rodneListy.length === 0 ? (
           <p className="text-sm font-body text-muted m-0">
-            Zatím žádný. Vznikne sám, jakmile projekt v Caflou přejde do stavu „{RL_TRIGGER_STATUS}".
+            Zatím žádný. Vyrobíte ho tlačítkem — sám nevzniká (zadání 10. 9. 2026). Náhledem se
+            nejdřív podívejte, jestli sedí; teprve „Vygenerovat RL" ho uloží a nahraje na Disk.
           </p>
         ) : (
           <ul className="list-none p-0 m-0 flex flex-col gap-2">

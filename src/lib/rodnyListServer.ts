@@ -51,11 +51,14 @@ export type ProjectStatusSnapshot = {
   caflouCompanyId: string | null;
 };
 
+/** Proc se Rodny list nepovedlo vyrobit - stejne duvody u nahledu i naostro. */
+export type RodnyListFailure = 'NO_COMPANY' | 'NOT_RADIO_SPOT' | 'MISSING_FIELDS' | 'FAILED';
+
 export type RodnyListResult =
   | { ok: true; rodnyListId: string; version: number }
   | {
       ok: false;
-      reason: 'NO_COMPANY' | 'NOT_RADIO_SPOT' | 'MISSING_FIELDS' | 'FAILED';
+      reason: RodnyListFailure;
       message: string;
     };
 
@@ -78,6 +81,16 @@ function fieldsFromMeta(meta: Record<string, unknown> | null, fallbackSpotName: 
  * ukáže, než aby se čekalo na dávku o stovkách zápisů.
  */
 const MAX_ZMEN_NA_POZADAVEK = 20;
+
+/**
+ * Vyrábí se Rodný list sám při přechodu stavu? (zadání 10. 9. 2026)
+ *
+ * Zatím ne: dokud se ladí, co v něm má být, je lepší si ho vyrobit
+ * tlačítkem a podívat se na výsledek, než aby vznikal sám a klientovi
+ * chodily maily o něčem nedodělaném. Stav projektu se pamatuje dál, takže
+ * po zapnutí nevzniknou Rodné listy ke všem starým zakázkám naráz.
+ */
+const AUTOMATIKA_RL = false;
 
 /**
  * Projede seznam projektů z Caflou a u těch, kde se stav od minule změnil,
@@ -137,6 +150,12 @@ export async function syncRodneListy(projects: ProjectStatusSnapshot[]): Promise
       if (predchozi === null) continue;
       if (!isRodnyListTriggerStatus(projekt.statusName)) continue;
 
+      // AUTOMATIKA JE VYPNUTA (zadani 10. 9. 2026: "pojdme to zatim prepnout
+      // do rucniho modu, abych si ho mohl zkusit vygenerovat kdykoli").
+      // Stav se dal pamatuje - az se automatika zapne, nezacne generovat
+      // Rodne listy ke vsem projektum zpetne.
+      if (!AUTOMATIKA_RL) continue;
+
       await vytvorRodnyList(projekt, { trigger: 'AUTO' });
     }
   } catch (err) {
@@ -177,12 +196,22 @@ async function vytvorRodnyList(
       };
     }
 
-    const company = projekt.caflouCompanyId
-      ? await prisma.company.findFirst({
-          where: { caflouCompanyId: projekt.caflouCompanyId },
-          select: { id: true, name: true, driveFolderUrl: true },
-        })
-      : null;
+    // Firma projektu: nejdriv podle toho, co je vyplnene v portalu, teprve
+    // pak podle ID z Caflou. Projekt zalozeny v portalu zadne caflouCompanyId
+    // nema - drive na tom vyroba RL vzdycky spadla na "neni napojena firma".
+    const company =
+      (meta?.companyId
+        ? await prisma.company.findUnique({
+            where: { id: meta.companyId },
+            select: { id: true, name: true, driveFolderUrl: true },
+          })
+        : null) ??
+      (projekt.caflouCompanyId
+        ? await prisma.company.findFirst({
+            where: { caflouCompanyId: projekt.caflouCompanyId },
+            select: { id: true, name: true, driveFolderUrl: true },
+          })
+        : null);
 
     if (!company) {
       return { ok: false, reason: 'NO_COMPANY', message: 'K projektu není v portálu napojená firma.' };
@@ -395,4 +424,79 @@ export async function loadNejnovejsiRodneListy(
     console.error('Načtení Rodných listů pro přehled selhalo:', err);
   }
   return vysledek;
+}
+
+/**
+ * Náhled Rodného listu (zadání 10. 9. 2026: „chtěl bych, než se to někam
+ * uloží, vidět nejdřív náhled").
+ *
+ * Vyrobí TOTÉŽ PDF jako ostrá cesta, ale nic neuloží: nevzniká verze, nic
+ * se nenahrává do úložiště ani na Disk, klientovi se neozýváme a chyba se
+ * projektu nepřipisuje. Je to jen podívání.
+ *
+ * Záměrně to jde přes stejnou funkci jako ostré vyrobení - kdyby měl náhled
+ * vlastní cestu, dřív nebo později by ukazoval něco jiného, než co pak
+ * doopravdy vznikne.
+ */
+export async function nahledRodnehoListu(
+  caflouProjectId: string,
+  projectName: string,
+  caflouCompanyId: string | null,
+): Promise<
+  | { ok: true; pdf: Buffer; fileName: string }
+  | { ok: false; reason: RodnyListFailure; message: string }
+> {
+  try {
+    const meta = await prisma.projectMeta.findUnique({ where: { caflouProjectId } });
+
+    if (!(await isRodnyListProjectType(meta?.projectType))) {
+      return {
+        ok: false,
+        reason: 'NOT_RADIO_SPOT',
+        message: 'Rodný list se vyrábí jen u rádiových spotů — projekt má jiný typ.',
+      };
+    }
+
+    const company =
+      (meta?.companyId
+        ? await prisma.company.findUnique({
+            where: { id: meta.companyId },
+            select: { name: true },
+          })
+        : null) ??
+      (caflouCompanyId
+        ? await prisma.company.findFirst({
+            where: { caflouCompanyId },
+            select: { name: true },
+          })
+        : null);
+
+    if (!company) {
+      return { ok: false, reason: 'NO_COMPANY', message: 'K projektu není v portálu napojená firma.' };
+    }
+
+    const fields = fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
+    const chybi = missingRodnyListFields({ ...fields, clientName: company.name });
+    if (chybi.length > 0) {
+      return { ok: false, reason: 'MISSING_FIELDS', message: missingFieldsMessage(chybi) };
+    }
+
+    const hudba = musicLines(fields);
+    const spotName = fields.spotName.trim();
+    const pdf = renderRodnyListPdf({
+      clientName: company.name,
+      spotName,
+      spotLength: formatSpotLength(fields.spotLengthSeconds),
+      director: fields.directorName.trim(),
+      musicTitle: hudba.title,
+      musicAuthor: hudba.author,
+      productionDate: formatProductionDate(fields.productionDate),
+    });
+
+    return { ok: true, pdf, fileName: rodnyListFileName(spotName) };
+  } catch (err) {
+    console.error(`Náhled Rodného listu k projektu ${caflouProjectId} selhal:`, err);
+    const detail = err instanceof Error ? err.message : 'neznámá chyba';
+    return { ok: false, reason: 'FAILED', message: `Náhled se nepodařilo vyrobit (${detail}).` };
+  }
 }
