@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BublinaHerce, type Herec } from './VyberHerce';
 import { TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 
@@ -44,6 +44,23 @@ export function VyberHercu({
 }) {
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
+  const obal = useRef<HTMLDivElement>(null);
+
+  // Nabídku zavírá klik MIMO ni, ne opuštění políčka.
+  //
+  // Původně se zavírala na onBlur se zpožděním 120 ms — jenže blur přijde
+  // hned při zmáčknutí tlačítka myši, zatímco klik až při puštění. Kdo
+  // klikl pomaleji než za 120 ms (což při vybírání ze seznamu dělá skoro
+  // každý), stihla se nabídka zavřít dřív, tlačítko zmizelo a herec se
+  // nepřidal. Stejně to řeší i výběr jednoho herce ve VyberHerce.
+  useEffect(() => {
+    if (!otevreno) return;
+    function mimo(e: MouseEvent) {
+      if (obal.current && !obal.current.contains(e.target as Node)) setOtevreno(false);
+    }
+    document.addEventListener('mousedown', mimo);
+    return () => document.removeEventListener('mousedown', mimo);
+  }, [otevreno]);
 
   const vybrani = useMemo(
     () => hodnoty.map((id) => herci.find((h) => h.id === id)).filter((h): h is Herec => Boolean(h)),
@@ -77,7 +94,7 @@ export function VyberHercu({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={obal} className="flex flex-col gap-2">
       {vybrani.length > 0 && (
         <div className={TRIDA_SLOUPCE_HERCU}>
           {vybrani.map((h, i) => (
@@ -118,9 +135,6 @@ export function VyberHercu({
             setOtevreno(true);
           }}
           onFocus={() => setOtevreno(true)}
-          // Nabidka se zaviraz az po kliknuti - kdyby se zavrela hned pri
-          // opusteni policka, klik na jmeno v nabidce by se nestihl.
-          onBlur={() => setTimeout(() => setOtevreno(false), 120)}
           placeholder={
             vybrani.length > 0
               ? 'přidat dalšího herce'
