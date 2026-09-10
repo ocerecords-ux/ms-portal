@@ -404,6 +404,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         fileName: rl.fileName,
         createdAt: rl.createdAt.toISOString(),
         driveUrl: rl.driveUrl,
+        driveError: rl.driveError,
       }))}
       initial={{
         clientName: metaPoSync?.rlClientName || firmaProjektu?.name || company?.name || '',

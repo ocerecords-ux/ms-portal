@@ -322,16 +322,29 @@ export async function prejmenujSlozkuProjektu(slozkaUrl: string, novyNazev: stri
  * Nahravaji se VYHRADNE vygenerovana PDF - zvukove soubory portal na Disk
  * nikdy nekopiruje ani nepresouva, nahravky uz tam v tuhle chvili jsou.
  */
+/**
+ * Výsledek nahrání na Disk. Když se nepovede, nese s sebou i důvod - dřív se
+ * jen vrátilo null a zapsalo do logu, takže se člověk v portálu nedozvěděl,
+ * proč dokument na Disku není (oprava 10. 9. 2026).
+ */
+export type NahraniNaDisk =
+  | { ok: true; id: string; webViewLink: string | null }
+  | { ok: false; duvod: string };
+
 export async function uploadPdfToDriveFolder(
   folderUrl: string,
   fileName: string,
   bytes: Buffer,
-): Promise<{ id: string; webViewLink: string | null } | null> {
+): Promise<NahraniNaDisk> {
   const folderId = extractDriveFolderId(folderUrl);
-  if (!folderId) return null;
+  if (!folderId) {
+    return { ok: false, duvod: 'Odkaz na složku není odkaz na Google Disk.' };
+  }
 
   const token = await getAccessToken(DRIVE_WRITE_SCOPE);
-  if (!token) return null;
+  if (!token) {
+    return { ok: false, duvod: 'Portál se nepřihlásil ke Google Disku (chybí nebo neplatí servisní účet).' };
+  }
 
   try {
     const boundary = `mediaspace-${Date.now()}`;
@@ -360,15 +373,53 @@ export async function uploadPdfToDriveFolder(
     );
 
     if (!res.ok) {
-      console.error('Google Drive: nahrani PDF selhalo', res.status, await res.text().catch(() => ''));
-      return null;
+      const telo = await res.text().catch(() => '');
+      console.error('Google Drive: nahrani PDF selhalo', res.status, telo);
+      return { ok: false, duvod: popisChybyDisku(res.status, telo) };
     }
 
     const data = (await res.json()) as { id?: string; webViewLink?: string };
-    if (!data.id) return null;
-    return { id: data.id, webViewLink: data.webViewLink ?? null };
+    if (!data.id) return { ok: false, duvod: 'Disk soubor přijal, ale nevrátil jeho ID.' };
+    return { ok: true, id: data.id, webViewLink: data.webViewLink ?? null };
   } catch (err) {
     console.error('Google Drive: nahrani PDF selhalo:', err);
-    return null;
+    return { ok: false, duvod: 'Disk neodpověděl.' };
+  }
+}
+
+/** Srozumitelný důvod místo holého čísla stavu. */
+function popisChybyDisku(status: number, telo: string): string {
+  if (status === 403) {
+    return telo.includes('storageQuota')
+      ? 'Složka je na Disku plná.'
+      : 'Servisní účet portálu nemá do té složky právo zápisu.';
+  }
+  if (status === 404) return 'Složka na Disku neexistuje nebo k ní portál nevidí.';
+  if (status === 401) return 'Přihlášení portálu ke Google Disku vypršelo.';
+  return `Disk odmítl soubor (chyba ${status}).`;
+}
+
+/**
+ * Přesune soubor na Disku do koše. Používá se při mazání verze Rodného listu -
+ * záměrně koš, a ne trvalé smazání, aby šlo omylem smazaný dokument vrátit.
+ */
+export async function presunDoKoseNaDisku(fileId: string): Promise<boolean> {
+  const token = await getAccessToken(DRIVE_WRITE_SCOPE);
+  if (!token) return false;
+  try {
+    const res = await fetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trashed: true }),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.error('Google Drive: presun do kose selhal', res.status, await res.text().catch(() => ''));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Google Drive: presun do kose selhal:', err);
+    return false;
   }
 }

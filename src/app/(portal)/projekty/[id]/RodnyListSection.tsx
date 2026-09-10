@@ -45,6 +45,8 @@ export type RodnyListRow = {
   fileName: string;
   createdAt: string;
   driveUrl: string | null;
+  /** Proč kopie na Disku není - prázdno znamená, že je všechno v pořádku. */
+  driveError: string | null;
 };
 
 const inputClass =
@@ -76,6 +78,7 @@ export function RodnyListSection({
   const [values, setValues] = useState<RodnyListValues>(initial);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [mazany, setMazany] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   /**
@@ -243,6 +246,38 @@ export function RodnyListSection({
   useEffect(() => () => {
     if (posledniUrl.current) URL.revokeObjectURL(posledniUrl.current);
   }, []);
+
+  /**
+   * Smazání jedné verze (zadání 10. 9. 2026). Ptáme se, protože je to jediná
+   * nevratná akce v celé záložce - kopie na Disku jde sice vytáhnout z koše,
+   * ale záznam v portálu už ne.
+   */
+  async function smazVerzi(rl: RodnyListRow) {
+    const potvrzeno = window.confirm(
+      `Opravdu smazat ${rl.fileName} (${rodnyListVersionLabel(rl.version)})?` +
+        (rl.driveUrl ? '\n\nKopie na Disku se přesune do koše.' : ''),
+    );
+    if (!potvrzeno) return;
+
+    setMazany(rl.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/rodny-list/${rl.id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Rodný list se nepodařilo smazat.');
+        return;
+      }
+      if (data?.disk === 'zustal') {
+        setError('Záznam je smazaný, ale soubor na Disku se nepodařilo přesunout do koše — smažte ho tam ručně.');
+      }
+      router.refresh();
+    } catch {
+      setError('Rodný list se nepodařilo smazat.');
+    } finally {
+      setMazany(null);
+    }
+  }
 
   const nazevSouboru = rodnyListFileName(values.spotName || projectName);
 
@@ -562,17 +597,35 @@ export function RodnyListSection({
                       new Date(rl.createdAt),
                     )}
                   </p>
+                  {/* Proc dokument neni ve slozce projektu (oprava 10. 9.
+                      2026). Driv o tom clovek nevedel - selhani skoncilo
+                      v logu serveru a v portalu proste nebyl odkaz. */}
+                  {rl.driveError && (
+                    <p className="text-xs font-body text-status-progress m-0 mt-1">Disk: {rl.driveError}</p>
+                  )}
                 </div>
-                {rl.driveUrl && (
-                  <a
-                    href={rl.driveUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs font-heading text-muted no-underline"
-                  >
-                    Na Google Disku ↗
-                  </a>
-                )}
+                <span className="flex items-center gap-3">
+                  {rl.driveUrl && (
+                    <a
+                      href={rl.driveUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-heading text-muted no-underline"
+                    >
+                      Na Google Disku ↗
+                    </a>
+                  )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => smazVerzi(rl)}
+                      disabled={mazany === rl.id}
+                      className="text-xs font-heading font-semibold text-muted hover:text-danger transition-colors disabled:opacity-50"
+                    >
+                      {mazany === rl.id ? 'Mažu…' : 'Smazat'}
+                    </button>
+                  )}
+                </span>
               </li>
             ))}
           </ul>

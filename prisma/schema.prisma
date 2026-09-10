@@ -1578,9 +1578,15 @@ model RodnyList {
   /// (stejný princip jako u příloh výdajů - viz lib/storage.ts).
   url String @db.Text
 
-  /// Kopie na Google Disku, pokud se ji podařilo nahrát (složka bývá jen ke čtení).
+  /// Kopie na Google Disku, pokud se ji podařilo nahrát.
   driveFileId String?
   driveUrl    String?
+
+  /// Proč kopie na Disku není (oprava 10. 9. 2026: "vygeneroval jsem nový RL,
+  /// ale neuložil se do složky projektu"). Dřív se selhání jen zapsalo do
+  /// logu serveru, takže v portálu nebylo poznat, jestli se nahrání vůbec
+  /// zkoušelo. Prázdno u řádku s driveUrl znamená, že je všechno v pořádku.
+  driveError String?
 
   /// Hodnoty tak, jak jsou vytištěné v dokumentu.
   clientName     String

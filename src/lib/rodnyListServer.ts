@@ -266,11 +266,20 @@ async function vytvorRodnyList(
       throw new Error('PDF se nepodařilo uložit do úložiště.');
     }
 
-    // Google Disk je „hezký k mít": složka projektu bývá jen ke čtení, takže
-    // se nahrání zkusí a případné selhání se jen poznamená. Odkaz v portálu
-    // funguje tak jako tak, aby klient nikdy nekoukal na rozbitý odkaz.
+    // Google Disk je „hezký k mít": nahrání se zkusí a případné selhání se jen
+    // poznamená - odkaz v portálu funguje tak jako tak, aby klient nikdy
+    // nekoukal na rozbitý odkaz. Důvod se ale od 10. 9. 2026 ukládá k RL a
+    // ukazuje v seznamu verzí; dřív mizel do logu serveru.
     const driveFolderUrl = meta?.driveUrl || company.driveFolderUrl || null;
+    const doSlozkyProjektu = Boolean(meta?.driveUrl);
     const drive = driveFolderUrl ? await uploadPdfToDriveFolder(driveFolderUrl, fileName, pdf) : null;
+    const driveError = !driveFolderUrl
+      ? 'Projekt ani firma nemají vyplněnou složku na Disku.'
+      : drive && !drive.ok
+        ? drive.duvod
+        : !doSlozkyProjektu
+          ? 'Uloženo do složky firmy — projekt zatím nemá vlastní složku na Disku.'
+          : null;
 
     const rl = await prisma.rodnyList.create({
       data: {
@@ -280,8 +289,9 @@ async function vytvorRodnyList(
         version,
         fileName,
         url: ulozeno.url,
-        driveFileId: drive?.id ?? null,
-        driveUrl: drive?.webViewLink ?? null,
+        driveFileId: drive?.ok ? drive.id : null,
+        driveUrl: drive?.ok ? drive.webViewLink : null,
+        driveError,
         clientName: klientNaRL,
         spotName,
         spotLength: formatSpotLength(fields.spotLengthSeconds),
