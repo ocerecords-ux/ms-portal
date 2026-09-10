@@ -124,6 +124,12 @@ export async function prenesProjektyZCaflou(): Promise<VysledekPrenosu> {
           startDate: p.startDate,
           endDate: p.endDate,
           popis: text(radek.description, 5000),
+          // V Caflou byl klient projektu jen stitek se jmenem objednavajici
+          // osoby. Ulozi se textem; ucet klienta se k projektu doplni rucne
+          // (zadani 10. 9. 2026), tenhle text k tomu poslouzi jako voditko.
+          klientName: Array.isArray(radek.tags)
+            ? text((radek.tags as unknown[]).map((t) => (typeof t === 'string' ? t : (t as { name?: string })?.name)).filter(Boolean).join(', '), 200)
+            : text(radek.tags, 200),
           zdroj: 'CAFLOU' as const,
           prenesenoAt: new Date(),
         };

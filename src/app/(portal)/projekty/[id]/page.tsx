@@ -52,6 +52,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     caflouDirect,
     meta,
     managers,
+    klientiUctu,
     projectTypeOptions,
     rodnyListTypy,
     budgetSettings,
@@ -77,6 +78,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       where: { role: { in: INTERNAL_ROLES }, active: true },
       select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
+    }),
+    // Ucty klientu - z nich se u projektu vybira, ci ten projekt je
+    // (zadani 10. 9. 2026). Firma se zamerne neomezuje: u koprodukci sedi
+    // u projektu clovek z jine firmy.
+    prisma.user.findMany({
+      where: { role: 'CLIENT', active: true },
+      select: { id: true, name: true, email: true, company: { select: { name: true } } },
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
     }),
     listProjectTypeOptions(),
     // Typy projektu, u kterych se dela Rodny list - tedy radiove spoty.
@@ -295,6 +304,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         caflouProjectId={caflouProjectId}
         canEdit={canEdit}
         managers={managers.map((m) => ({ id: m.id, label: m.name || m.email }))}
+        klienti={klientiUctu.map((k) => ({
+          id: k.id,
+          label: k.company?.name ? `${k.name || k.email} — ${k.company.name}` : k.name || k.email,
+        }))}
+        klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
         projectTypeOptions={projectTypeOptions}
         initial={{
@@ -306,6 +320,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           // prenos, je tam prazdno a pouzije se posledni hodnota z Caflou.
           statusName: meta?.statusName ?? project?.statusName ?? '',
           narrator: meta?.narrator ?? project?.narrator ?? '',
+          klientUserId: meta?.klientUserId ?? '',
         }}
       />
     </>

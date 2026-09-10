@@ -27,6 +27,8 @@ const schema = z.object({
   // opousti, takze o stavu i o herci rozhoduje ted portal.
   statusName: z.string().trim().max(120).optional(),
   narrator: z.string().trim().max(200).optional(),
+  /** Klient projektu - konkretni clovek, na ktereho chodi notifikace. */
+  klientUserId: z.string().trim().optional(),
 
   // --- Rodny list reklamniho spotu (zadani 9. 9. 2026) ---
   spotName: z.string().trim().max(300).optional(),
@@ -72,6 +74,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       });
       if (!manager) {
         return NextResponse.json({ error: 'Vybraný manažer neexistuje.' }, { status: 400 });
+      }
+    }
+
+    // Klient projektu musi byt ucet klienta. Zamerne se nekontroluje, jestli
+    // patri prave k firme projektu - u koprodukci a agentur sedi u projektu
+    // clovek z jine firmy a portal to nema zakazovat.
+    if (data.klientUserId) {
+      const klient = await prisma.user.findFirst({
+        where: { id: data.klientUserId, role: 'CLIENT' },
+        select: { id: true },
+      });
+      if (!klient) {
+        return NextResponse.json({ error: 'Vybraný klient neexistuje.' }, { status: 400 });
       }
     }
 
@@ -125,6 +140,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('priority', data.priority);
     text('projectType', data.projectType);
     text('narrator', data.narrator);
+    text('klientUserId', data.klientUserId);
     if (data.statusName !== undefined) {
       values.statusName = data.statusName || null;
       // Rozpracovanost drzi krok se stavem, at zalozky Aktivni/Dokoncene

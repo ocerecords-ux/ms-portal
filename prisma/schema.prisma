@@ -176,6 +176,7 @@ model User {
 
   // Kalendare a natacecí frekvence (zadani 8. 9. 2026).
   actorOnProjects    ProjectMeta[]      @relation("ProjectActor")
+  klientNaProjektech ProjectMeta[]      @relation("ProjektKlient")
   recordingRequests  RecordingRequest[] @relation("RecordingActor")
   recordingsCreated  RecordingRequest[] @relation("RecordingCreatedBy")
   recordingsDecided  RecordingRequest[] @relation("RecordingDecidedBy")
@@ -298,6 +299,15 @@ model ProjectMeta {
   // da stavet (nabidky terminu, notifikace, jeho vlastni prehled).
   actorUserId     String?
   actor           User?            @relation("ProjectActor", fields: [actorUserId], references: [id])
+
+  // Klient projektu (zadani 10. 9. 2026: "musime u kazdeho projektu jeste
+  // nastavit, ci je ten projekt"). Konkretni clovek u klientske firmy, ne cela
+  // firma - na nej chodi notifikace o projektu. V Caflou tuhle roli zastupoval
+  // stitek se jmenem objednavajici osoby, proto se pri prenosu ulozi aspon
+  // textem a ucet se k nemu doplni rucne.
+  klientUserId    String?
+  klient          User?            @relation("ProjektKlient", fields: [klientUserId], references: [id])
+  klientName      String?
 
   /// Rodný list reklamního spotu (zadání 9. 9. 2026) - údaje, ze kterých se
   /// PDF vyrábí. Vedou se u projektu, do kódu se nic nepíše natvrdo.

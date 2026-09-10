@@ -14,6 +14,8 @@ type Initial = {
   statusName: string;
   /** Herec jako text. Navazany ucet herce se resi jinde. */
   narrator: string;
+  /** Klient projektu - na nej chodi notifikace o projektu. */
+  klientUserId: string;
 };
 
 /**
@@ -26,6 +28,8 @@ export function ProjectMetaForm({
   caflouProjectId,
   canEdit,
   managers,
+  klienti,
+  klientNameZCaflou,
   companyDriveFolderUrl,
   projectTypeOptions,
   initial,
@@ -33,6 +37,10 @@ export function ProjectMetaForm({
   caflouProjectId: string;
   canEdit: boolean;
   managers: { id: string; label: string }[];
+  /** Ucty klientu, ze kterych jde vybrat, ci ten projekt je. */
+  klienti: { id: string; label: string }[];
+  /** Stitek z Caflou se jmenem objednavajici osoby - voditko pri prirazovani. */
+  klientNameZCaflou: string | null;
   companyDriveFolderUrl: string | null;
   /** Nazvy polozek ceniku - jen z nich jde typ projektu vybrat (zadani 5. 9. 2026). */
   projectTypeOptions: string[];
@@ -107,6 +115,12 @@ export function ProjectMetaForm({
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Herec</dt>
             <dd className="text-sm font-heading text-ink m-0 mt-1">{values.narrator || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Klient</dt>
+            <dd className="text-sm font-heading text-ink m-0 mt-1">
+              {klienti.find((k) => k.id === values.klientUserId)?.label ?? klientNameZCaflou ?? '—'}
+            </dd>
           </div>
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Manažer projektu</dt>
@@ -188,6 +202,27 @@ export function ProjectMetaForm({
             placeholder="jméno herce"
             className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
           />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Klient</span>
+          <select
+            value={values.klientUserId}
+            onChange={(e) => set('klientUserId', e.target.value)}
+            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+          >
+            <option value="">— nevybráno —</option>
+            {klienti.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted font-body">
+            {klientNameZCaflou
+              ? `Na tuhle osobu chodí zprávy o projektu. V Caflou tu byl štítek „${klientNameZCaflou}".`
+              : 'Na tuhle osobu chodí zprávy o projektu.'}
+          </span>
         </label>
 
         <label className="flex flex-col gap-1.5">
