@@ -41,13 +41,25 @@ const tokenCache = new Map<string, { token: string; expiresAt: number }>();
  * Ziska pristupovy token servisniho uctu. Vraci null, pokud env promenne
  * GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY jeste
  * nejsou nastavene - volajici pak ma zobrazit puvodni jednoduchy odkaz.
+ *
+ * DELEGACE (nepovinne, zadani 10. 9. 2026): kdyz je vyplnena promenna
+ * GOOGLE_IMPERSONATE_EMAIL, token se vyda JMENEM toho cloveka, ne jmenem
+ * servisniho uctu. Duvod: servisni ucet nema na Disku zadne vlastni misto,
+ * takze do bezne slozky (Muj disk) nic nenahraje - Google to odmitne jako
+ * "storageQuotaExceeded". Nahrany soubor pak patri tomu cloveku a pocita se
+ * do mista Mediaspace, coz je presne to, co chceme. Podminka je zapnuta
+ * celodomenova delegace v Google Workspace pro dany rozsah - bez ni Google
+ * token nevyda a zapise se to do logu.
  */
 export async function getAccessToken(scope: string = DRIVE_READONLY_SCOPE): Promise<string | null> {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const rawKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
   if (!email || !rawKey) return null;
 
-  const cached = tokenCache.get(scope);
+  const zaKoho = process.env.GOOGLE_IMPERSONATE_EMAIL?.trim() || null;
+  const klic = zaKoho ? `${scope}|${zaKoho}` : scope;
+
+  const cached = tokenCache.get(klic);
   if (cached && cached.expiresAt > Date.now() + 30_000) {
     return cached.token;
   }
@@ -63,6 +75,7 @@ export async function getAccessToken(scope: string = DRIVE_READONLY_SCOPE): Prom
   const header = { alg: 'RS256', typ: 'JWT' };
   const claim = {
     iss: email,
+    ...(zaKoho ? { sub: zaKoho } : {}),
     scope,
     aud: 'https://oauth2.googleapis.com/token',
     exp: now + 3600,
@@ -93,13 +106,22 @@ export async function getAccessToken(scope: string = DRIVE_READONLY_SCOPE): Prom
     cache: 'no-store',
   });
   if (!res.ok) {
-    console.error('Google Drive: ziskani access tokenu selhalo', await res.text().catch(() => ''));
+    const telo = await res.text().catch(() => '');
+    if (zaKoho) {
+      console.error(
+        `Google Drive: token jmenem ${zaKoho} se nepodarilo ziskat - je pro servisni ucet ` +
+          'zapnuta celodomenova delegace na rozsah ' + scope + '?',
+        telo,
+      );
+    } else {
+      console.error('Google Drive: ziskani access tokenu selhalo', telo);
+    }
     return null;
   }
   const data = (await res.json()) as { access_token?: string; expires_in?: number };
   if (!data.access_token) return null;
 
-  tokenCache.set(scope, { token: data.access_token, expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000 });
+  tokenCache.set(klic, { token: data.access_token, expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000 });
   return data.access_token;
 }
 
@@ -390,9 +412,19 @@ export async function uploadPdfToDriveFolder(
 /** Srozumitelný důvod místo holého čísla stavu. */
 function popisChybyDisku(status: number, telo: string): string {
   if (status === 403) {
-    return telo.includes('storageQuota')
-      ? 'Složka je na Disku plná.'
-      : 'Servisní účet portálu nemá do té složky právo zápisu.';
+    // storageQuotaExceeded od servisniho uctu NEZNAMENA plnou slozku.
+    // Servisni ucet nema zadne vlastni misto na Disku, a soubor vlozeny do
+    // bezne slozky (v Muj disk nekoho z lidi) by patril jemu - takze ho
+    // Google odmitne. Na sdilenem disku soubory patri disku, ne tomu, kdo je
+    // nahral, a projde to. Druha cesta je delegace (GOOGLE_IMPERSONATE_EMAIL).
+    if (telo.includes('storageQuota')) {
+      return (
+        'Složka není na sdíleném disku. Servisní účet portálu nemá vlastní místo na Disku, ' +
+        'takže do osobní složky soubor uložit nemůže — přesuňte složku na sdílený disk, ' +
+        'nebo nastavte GOOGLE_IMPERSONATE_EMAIL.'
+      );
+    }
+    return 'Servisní účet portálu nemá do té složky právo zápisu.';
   }
   if (status === 404) return 'Složka na Disku neexistuje nebo k ní portál nevidí.';
   if (status === 401) return 'Přihlášení portálu ke Google Disku vypršelo.';
