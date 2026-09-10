@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
 import { canEditProjectMeta, canManageCalendar, canViewProjectDocuments, isInternalRole } from '@/lib/roles';
-import { listProjectTypeOptions, listRodnyListProjectTypes } from '@/lib/priceList';
+import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu } from '@/lib/priceList';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
 import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
 import { ProjectBudget } from './ProjectBudget';
@@ -70,6 +70,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     studia,
     calendarSettings,
     historie,
+    ikonyTypu,
   ] = await Promise.all([
     // Nejdriv sdileny seznam projektu (lib/caflouProjectsServer.ts) - ma uz
     // vsechno, co se tu z Caflou ukazuje, a byva nacteny. Doptat se Caflou
@@ -153,6 +154,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     // Historie projektu (zadani 10. 9. 2026) - jede spolu se vsim ostatnim,
     // aby detail nemel dalsi kolecko do databaze navic.
     nactiHistoriiProjektu(caflouProjectId),
+    // Ikony typu projektu z Ceniku - do odznaku u typu (zadani 10. 9. 2026).
+    mapaIkonTypu(),
   ]);
 
   // Zalohy pro pripad, ze projekt jeste neni ve sdilenem seznamu (zalozeny
@@ -322,6 +325,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
         projectTypeOptions={projectTypeOptions}
+        ikonyTypu={ikonyTypu}
         initial={{
           driveUrl: meta?.driveUrl ?? '',
           managerUserId: meta?.managerUserId ?? '',

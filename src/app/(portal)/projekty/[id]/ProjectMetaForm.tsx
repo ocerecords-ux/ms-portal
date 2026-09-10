@@ -3,11 +3,56 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
-import { PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
-import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
+import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
+import { STAVY_PROJEKTU, barvaStavu, popisStavu } from '@/lib/stavyProjektu';
+import { KresbaIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
+
+/**
+ * Stav, priorita a typ projektu jako barevný odznak (zadání 10. 9. 2026:
+ * „stav projektu by se mohl zobrazovat dle naší barevné palety, to samé
+ * priorita a typ projektu").
+ *
+ * Odznaky jsou stejné jako v přehledu projektů - kdo si barvu spojí se
+ * stavem v seznamu, přečte ji na detailu bez čtení textu. Proto se berou
+ * z týchž zdrojů (lib/stavyProjektu.ts, lib/projectTypes.ts), ne z vlastní
+ * palety kousek vedle.
+ */
+const TRIDA_ODZNAKU = 'inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-xs font-heading font-semibold';
+
+function OdznakStavu({ stav }: { stav: string }) {
+  if (!stav) return <span className="text-sm font-heading text-muted">—</span>;
+  return <span className={`${TRIDA_ODZNAKU} ${barvaStavu(stav)}`}>{stav}</span>;
+}
+
+function OdznakPriority({ priorita }: { priorita: string }) {
+  const klic = priorita as keyof typeof PRIORITY_LABELS;
+  if (!priorita || !PRIORITY_LABELS[klic]) {
+    return <span className="text-sm font-heading text-muted">—</span>;
+  }
+  return <span className={`${TRIDA_ODZNAKU} ${PRIORITY_CLASSES[klic]}`}>{PRIORITY_LABELS[klic]}</span>;
+}
+
+/**
+ * Typ projektu nese barvu značky a ikonu z Ceníku - vlastní paleta pro typy
+ * neexistuje a vymýšlet ji jen sem by přidala další sadu barev, kterou by
+ * nikdo jinde v portálu nepotkal.
+ */
+function OdznakTypu({ typ, ikona }: { typ: string | null; ikona: string | null }) {
+  if (!typ) return <span className="text-sm font-heading text-muted">—</span>;
+  return (
+    <span
+      className={`${TRIDA_ODZNAKU} bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight border border-brand-purple/40`}
+    >
+      {/* Jen kresba, ne cely odznak s koleckem - kolecko v odznaku by byl
+          odznak v odznaku. */}
+      {ikona && <KresbaIkony klic={ikona} velikost={14} />}
+      {typ}
+    </span>
+  );
+}
 
 type Initial = {
   driveUrl: string;
@@ -44,6 +89,7 @@ export function ProjectMetaForm({
   klientNameZCaflou,
   companyDriveFolderUrl,
   projectTypeOptions,
+  ikonyTypu,
   initial,
 }: {
   caflouProjectId: string;
@@ -62,6 +108,8 @@ export function ProjectMetaForm({
   companyDriveFolderUrl: string | null;
   /** Nazvy polozek ceniku - jen z nich jde typ projektu vybrat (zadani 5. 9. 2026). */
   projectTypeOptions: string[];
+  /** Ikony k typum projektu z Ceniku (zadani 10. 9. 2026). */
+  ikonyTypu: Record<string, string>;
   initial: Initial;
 }) {
   const router = useRouter();
@@ -129,7 +177,9 @@ export function ProjectMetaForm({
           </div>
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Stav projektu</dt>
-            <dd className="text-sm font-heading text-ink m-0 mt-1">{values.statusName || '—'}</dd>
+            <dd className="m-0 mt-1">
+              <OdznakStavu stav={values.statusName} />
+            </dd>
           </div>
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">
@@ -162,13 +212,18 @@ export function ProjectMetaForm({
           </div>
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Priorita</dt>
-            <dd className="text-sm font-heading text-ink m-0 mt-1">
-              {values.priority ? PRIORITY_LABELS[values.priority as keyof typeof PRIORITY_LABELS] : '—'}
+            <dd className="m-0 mt-1">
+              <OdznakPriority priorita={values.priority} />
             </dd>
           </div>
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Typ projektu</dt>
-            <dd className="text-sm font-heading text-ink m-0 mt-1">{projectTypeLabel(values.projectType) ?? '—'}</dd>
+            <dd className="m-0 mt-1">
+              <OdznakTypu
+                typ={projectTypeLabel(values.projectType)}
+                ikona={ikonyTypu[values.projectType] ?? null}
+              />
+            </dd>
           </div>
         </dl>
       </div>
@@ -186,15 +241,19 @@ export function ProjectMetaForm({
             kdyz se slozka nezalozila sama. */}
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <span className="text-sm font-body text-ink">Odkaz na KZ</span>
-          <span className="flex items-center gap-3 flex-wrap">
-            <OdkazTlacitko url={values.driveUrl} popisek="Otevřít složku projektu" varianta="vedlejsi" />
+          {/* Odkazy pod sebou, kopirovani jen jako ikona na konci radku
+              (zadani 10. 9. 2026). Vedle sebe stalo v rade ctvero popsanych
+              tlacitek - otevrit, kopirovat, otevrit, kopirovat - a nebylo
+              poznat, co k cemu patri. */}
+          <span className="flex flex-col items-start gap-2">
+            <OdkazTlacitko url={values.driveUrl} popisek="Složka projektu" varianta="radek" />
             {companyDriveFolderUrl && (
-              <OdkazTlacitko url={companyDriveFolderUrl} popisek="Složka firmy" varianta="vedlejsi" />
+              <OdkazTlacitko url={companyDriveFolderUrl} popisek="Složka firmy" varianta="radek" />
             )}
             <button
               type="button"
               onClick={() => setUpravitOdkaz((v) => !v)}
-              className="text-xs font-heading font-semibold text-brand-purple hover:underline"
+              className="text-xs font-heading font-semibold text-brand-purple hover:underline mt-0.5"
             >
               {upravitOdkaz ? 'Skrýt' : values.driveUrl ? 'Změnit odkaz' : 'Zadat odkaz'}
             </button>
@@ -233,8 +292,13 @@ export function ProjectMetaForm({
               </option>
             ))}
           </select>
-          <span className="text-xs text-muted font-body">
-            {popisStavu(values.statusName) ?? 'Stav přehazujete ručně podle toho, kde projekt je.'}
+          {/* Odznak v barve stavu (zadani 10. 9. 2026) - stejny jako
+              v prehledu projektu, at se barva da spojit s vyznamem. */}
+          <span className="flex items-center gap-2 flex-wrap">
+            <OdznakStavu stav={values.statusName} />
+            <span className="text-xs text-muted font-body">
+              {popisStavu(values.statusName) ?? 'Stav přehazujete ručně podle toho, kde projekt je.'}
+            </span>
           </span>
         </label>
 
@@ -337,6 +401,7 @@ export function ProjectMetaForm({
               </option>
             ))}
           </select>
+          <OdznakPriority priorita={values.priority} />
         </label>
 
         <label className="flex flex-col gap-1.5 sm:col-span-2">
@@ -358,6 +423,7 @@ export function ProjectMetaForm({
               </option>
             ))}
           </select>
+          <OdznakTypu typ={projectTypeLabel(values.projectType)} ikona={ikonyTypu[values.projectType] ?? null} />
           <span className="text-xs text-muted font-body">
             {projectTypeOptions.length > 0
               ? 'Nabídka se bere z Ceníků v administraci.'

@@ -8,8 +8,13 @@ import { useEffect, useState } from 'react';
  * zkopírovat odkaz").
  *
  * Adresa složky na Disku je nechutně dlouhá a jako podtržený text se špatně
- * trefuje. Tlačítko je terč, do kterého se dá kliknout, a druhé tlačítko
+ * trefuje. Tlačítko je terč, do kterého se dá kliknout, a vedle něj ikona
  * zkopíruje adresu - typicky když se posílá někomu do zprávy.
+ *
+ * KOPÍROVÁNÍ JE JEN IKONA (zadání 10. 9. 2026). Dokud u něj bylo i slovo
+ * „Kopírovat", stály v řadě čtyři popsané prvky - otevřít, kopírovat,
+ * otevřít, kopírovat - a nebylo poznat, co k čemu patří. Text nese ten,
+ * který někam vede; kopírování je doprovod.
  */
 export function OdkazTlacitko({
   url,
@@ -21,9 +26,12 @@ export function OdkazTlacitko({
   /**
    * "hlavni" = plné tlačítko, "vedlejsi" = jen orámované,
    * "ikona" = jen ikonka bez kopírování - do tabulky, kde by text i druhé
-   * tlačítko rozhodily šířku sloupce (zadání 10. 9. 2026).
+   * tlačítko rozhodily šířku sloupce (zadání 10. 9. 2026),
+   * "radek" = tlačítko přes celou šířku a ikona kopírování na konci. Když
+   * je odkazů pod sebou víc, ikony se srovnají do sloupce a je vidět,
+   * která patří ke kterému (zadání 10. 9. 2026).
    */
-  varianta?: 'hlavni' | 'vedlejsi' | 'ikona';
+  varianta?: 'hlavni' | 'vedlejsi' | 'ikona' | 'radek';
 }) {
   const [zkopirovano, setZkopirovano] = useState(false);
 
@@ -70,16 +78,20 @@ export function OdkazTlacitko({
       ? 'bg-brand-purple text-white hover:bg-brand-purpleDeep'
       : 'border border-line text-brand-purple hover:bg-tint';
 
+  const jeRadek = varianta === 'radek';
+
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className={`inline-flex items-center gap-2 ${jeRadek ? 'w-full max-w-[360px]' : ''}`}>
       <a
         href={url}
         target="_blank"
         rel="noreferrer"
-        className={`inline-flex items-center gap-1.5 font-heading font-semibold text-sm rounded-lg px-3.5 py-2 no-underline transition-colors ${tridaOdkazu}`}
+        className={`inline-flex items-center gap-1.5 font-heading font-semibold text-sm rounded-lg px-3.5 py-2 no-underline transition-colors ${tridaOdkazu} ${
+          jeRadek ? 'flex-1 justify-between' : ''
+        }`}
       >
         {popisek}
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 shrink-0">
           <path d="M14 4h6v6M20 4l-8 8" />
           <path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
         </svg>
@@ -87,25 +99,19 @@ export function OdkazTlacitko({
       <button
         type="button"
         onClick={() => void zkopiruj()}
-        title="Zkopírovat odkaz"
-        aria-label="Zkopírovat odkaz"
-        className="inline-flex items-center gap-1.5 font-heading font-semibold text-xs rounded-lg border border-line px-2.5 py-2 text-muted hover:text-ink transition-colors"
+        title={zkopirovano ? 'Zkopírováno' : 'Zkopírovat odkaz'}
+        aria-label={zkopirovano ? 'Zkopírováno' : 'Zkopírovat odkaz'}
+        className="inline-flex items-center justify-center shrink-0 w-9 h-9 rounded-lg border border-line text-muted hover:text-ink transition-colors"
       >
         {zkopirovano ? (
-          <>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-status-done">
-              <path d="M4 12.5l5 5L20 6.5" />
-            </svg>
-            Zkopírováno
-          </>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-status-done">
+            <path d="M4 12.5l5 5L20 6.5" />
+          </svg>
         ) : (
-          <>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
-              <rect x="9" y="9" width="11" height="11" rx="2" />
-              <path d="M5 15V5a2 2 0 0 1 2-2h8" />
-            </svg>
-            Kopírovat
-          </>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+            <rect x="9" y="9" width="11" height="11" rx="2" />
+            <path d="M5 15V5a2 2 0 0 1 2-2h8" />
+          </svg>
         )}
       </button>
     </span>
