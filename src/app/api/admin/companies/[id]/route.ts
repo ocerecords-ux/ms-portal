@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { popisPrekazek, prekazkyFirmy } from '@/lib/mazani';
+import { jeZpusobSmazani } from '@/lib/archiv';
+import { odstranFirmu } from '@/lib/archivServer';
 
 // Editace firmy. Typ (Klient/Dodavatel) se po zalozeni uz nemeni.
 //
@@ -100,24 +102,58 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
  * odmitne a vypise CO - at je hned videt, jestli je to odpadek, nebo omyl.
  * Pro vsechno ostatni je vyrazeni (PATCH s active: false).
  */
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+/**
+ * Smazani firmy.
+ *
+ * Bez parametru se firma smaze jen tehdy, kdyz na ni nic nevisi - jinak
+ * portal odmitne a vypise co. Clovek se pak muze rozhodnout (zadani
+ * 10. 9. 2026) a poslat pozadavek znovu s ?zpusob=archivovat (navazane veci
+ * se ulozi do archivu a smazou) nebo ?zpusob=smazat-vse (smazou se bez
+ * archivu). Zamerne to neni jedno kliknuti: takhle je vzdycky videt, co to
+ * bude stat, jeste nez se to stane.
+ */
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
   const firma = await prisma.company.findUnique({ where: { id: params.id }, select: { name: true } });
   if (!firma) return NextResponse.json({ error: 'Firma nenalezena.' }, { status: 404 });
 
+  const zpusob = req.nextUrl.searchParams.get('zpusob') ?? '';
   const prekazky = await prekazkyFirmy(params.id);
-  if (prekazky.length > 0) {
+
+  if (prekazky.length > 0 && !jeZpusobSmazani(zpusob)) {
     return NextResponse.json(
       {
-        error: `Firmu ${firma.name} nejde smazat, visí na ní: ${popisPrekazek(prekazky)}. Můžete ji vyřadit — zmizí ze seznamů a všechno zůstane čitelné.`,
+        error: `Firmu ${firma.name} nejde rovnou smazat, visí na ní: ${popisPrekazek(prekazky)}.`,
         prekazky,
       },
       { status: 409 },
     );
   }
 
-  await prisma.company.delete({ where: { id: params.id } });
-  return NextResponse.json({ smazano: true, nazev: firma.name });
+  if (prekazky.length === 0) {
+    await prisma.company.delete({ where: { id: params.id } });
+    return NextResponse.json({ smazano: true, nazev: firma.name });
+  }
+
+  try {
+    const vysledek = await odstranFirmu({
+      companyId: params.id,
+      nazev: firma.name,
+      prekazky,
+      archivovat: zpusob === 'archivovat',
+      puvodce: { id: session.user.id, jmeno: session.user.name || session.user.email },
+    });
+    return NextResponse.json({ smazano: true, ...vysledek });
+  } catch (err) {
+    console.error('Smazání firmy selhalo:', err);
+    return NextResponse.json(
+      {
+        error:
+          'Smazání se nepodařilo dokončit, takže se nic nesmazalo. Nejspíš některý z účtů firmy vystupuje ještě jinde v portálu — zkuste ho smazat zvlášť.',
+      },
+      { status: 409 },
+    );
+  }
 }

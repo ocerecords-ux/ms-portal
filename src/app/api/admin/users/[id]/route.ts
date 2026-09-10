@@ -5,6 +5,8 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { uploadUserPhoto } from '@/lib/storage';
 import { popisPrekazek, prekazkyUzivatele } from '@/lib/mazani';
+import { jeZpusobSmazani } from '@/lib/archiv';
+import { odstranUzivatele } from '@/lib/archivServer';
 
 const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE'] as const;
 const COMPANY_REQUIRED_ROLES: string[] = ['CLIENT'];
@@ -177,7 +179,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
  * Sam sebe smazat nejde - kdyby si admin omylem smazal ucet, nema se jak
  * vratit.
  */
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+/**
+ * Smazani uctu. Viz poznamka u DELETE firmy - bez parametru se smaze jen
+ * ucet, na kterem nic nevisi; s ?zpusob=archivovat / ?zpusob=smazat-vse se
+ * vyresi i to navazane (zadani 10. 9. 2026).
+ *
+ * Projekt se smazanim cloveka nezanika - jen u nej prestane byt vyplneny
+ * jako manazer, herec nebo klient.
+ */
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   if (session.user.id === params.id) {
@@ -191,17 +201,38 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!uzivatel) return NextResponse.json({ error: 'Uživatel nenalezen.' }, { status: 404 });
   const jmeno = uzivatel.name || uzivatel.email;
 
+  const zpusob = req.nextUrl.searchParams.get('zpusob') ?? '';
   const prekazky = await prekazkyUzivatele(params.id);
-  if (prekazky.length > 0) {
+
+  if (prekazky.length > 0 && !jeZpusobSmazani(zpusob)) {
     return NextResponse.json(
       {
-        error: `${jmeno} nejde smazat, visí na něm: ${popisPrekazek(prekazky)}. Můžete ho vyřadit — nepřihlásí se a všechno zůstane čitelné.`,
+        error: `${jmeno} nejde rovnou smazat, visí na něm: ${popisPrekazek(prekazky)}.`,
         prekazky,
       },
       { status: 409 },
     );
   }
 
-  await prisma.user.delete({ where: { id: params.id } });
-  return NextResponse.json({ smazano: true, jmeno });
+  if (prekazky.length === 0) {
+    await prisma.user.delete({ where: { id: params.id } });
+    return NextResponse.json({ smazano: true, jmeno });
+  }
+
+  try {
+    const vysledek = await odstranUzivatele({
+      userId: params.id,
+      jmeno,
+      prekazky,
+      archivovat: zpusob === 'archivovat',
+      puvodce: { id: session.user.id, jmeno: session.user.name || session.user.email },
+    });
+    return NextResponse.json({ smazano: true, jmeno, ...vysledek });
+  } catch (err) {
+    console.error('Smazání uživatele selhalo:', err);
+    return NextResponse.json(
+      { error: 'Smazání se nepodařilo dokončit, takže se nic nesmazalo.' },
+      { status: 409 },
+    );
+  }
 }

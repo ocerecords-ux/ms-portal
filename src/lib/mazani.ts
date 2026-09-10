@@ -12,6 +12,11 @@ import { prisma } from '@/lib/db';
  * Portál proto nejdřív spočítá, co na záznamu visí, a když něco najde,
  * smazání odmítne a vypíše co - ať je hned vidět, jestli je to opravdu
  * odpadek, nebo omyl. Pro všechno ostatní je vyřazení.
+ *
+ * ODMÍTNUTÍ NENÍ KONEC (zadání 10. 9. 2026). Člověk se pak může rozhodnout,
+ * že navázané věci uloží do archivu a smaže i tak, nebo že o ně prostě
+ * přijde - viz lib/archivServer.ts. Tenhle soubor jen počítá, co to bude
+ * stát.
  */
 
 export type Prekazka = { co: string; pocet: number };
@@ -57,16 +62,29 @@ export async function prekazkyFirmy(companyId: string): Promise<Prekazka[]> {
  * ale ano - historie chatu by se rozpadla.
  */
 export async function prekazkyUzivatele(userId: string): Promise<Prekazka[]> {
-  const [zpravy, vykazy, objednavky, projektyManazer, projektyHerec, projektyKlient, frekvence] =
-    await Promise.all([
-      prisma.message.count({ where: { userId } }),
-      prisma.timesheetEntry.count({ where: { userId } }),
-      prisma.order.count({ where: { createdByUserId: userId } }),
-      prisma.projectMeta.count({ where: { managerUserId: userId } }),
-      prisma.projectMeta.count({ where: { actorUserId: userId } }),
-      prisma.projectMeta.count({ where: { klientUserId: userId } }),
-      prisma.recordingRequest.count({ where: { actorUserId: userId } }),
-    ]);
+  const [
+    zpravy,
+    vykazy,
+    objednavky,
+    projektyManazer,
+    projektyHerec,
+    projektyKlient,
+    frekvence,
+    frekvenceZalozil,
+    kanaly,
+  ] = await Promise.all([
+    prisma.message.count({ where: { userId } }),
+    prisma.timesheetEntry.count({ where: { userId } }),
+    prisma.order.count({ where: { createdByUserId: userId } }),
+    prisma.projectMeta.count({ where: { managerUserId: userId } }),
+    prisma.projectMeta.count({ where: { actorUserId: userId } }),
+    prisma.projectMeta.count({ where: { klientUserId: userId } }),
+    prisma.recordingRequest.count({ where: { actorUserId: userId } }),
+    // Zakladatel frekvence i kanalu je povinny udaj, takze i tohle brani
+    // smazani - bez nich by v seznamu chybelo to podstatne.
+    prisma.recordingRequest.count({ where: { createdById: userId } }),
+    prisma.conversation.count({ where: { createdById: userId } }),
+  ]);
 
   return [
     { co: 'zpráva v chatu', pocet: zpravy },
@@ -75,7 +93,9 @@ export async function prekazkyUzivatele(userId: string): Promise<Prekazka[]> {
     { co: 'projekt (jako manažer)', pocet: projektyManazer },
     { co: 'projekt (jako herec)', pocet: projektyHerec },
     { co: 'projekt (jako klient)', pocet: projektyKlient },
-    { co: 'natáčecí frekvence', pocet: frekvence },
+    { co: 'natáčecí frekvence (jako herec)', pocet: frekvence },
+    { co: 'natáčecí frekvence (založil)', pocet: frekvenceZalozil },
+    { co: 'kanál v chatu (založil)', pocet: kanaly },
   ].filter((p) => p.pocet > 0);
 }
 

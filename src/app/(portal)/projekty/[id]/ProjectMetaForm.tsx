@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import { PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
 import { VyberHerce, type Herec } from '../VyberHerce';
@@ -64,41 +65,11 @@ export function ProjectMetaForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  // Smazani projektu (zadani 10. 9. 2026) - jen kdyz na nem nic nevisi.
-  const [maze, setMaze] = useState(false);
-  const [potvrzeni, setPotvrzeni] = useState(false);
   const [upravitOdkaz, setUpravitOdkaz] = useState(false);
 
   function set<K extends keyof Initial>(key: K, value: Initial[K]) {
     setValues((v) => ({ ...v, [key]: value }));
     setSaved(false);
-  }
-
-  /** Smaze projekt. Prvni kliknuti si rekne o potvrzeni. */
-  async function smaz() {
-    if (!potvrzeni) {
-      setPotvrzeni(true);
-      setError(null);
-      return;
-    }
-    setMaze(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/admin/projekty/${caflouProjectId}`, { method: 'DELETE' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.error || 'Projekt se nepodařilo smazat.');
-        setPotvrzeni(false);
-        return;
-      }
-      router.push('/projekty');
-      router.refresh();
-    } catch {
-      setError('Projekt se nepodařilo smazat.');
-      setPotvrzeni(false);
-    } finally {
-      setMaze(false);
-    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -387,23 +358,26 @@ export function ProjectMetaForm({
         {saved && <span className="text-sm font-heading text-brand-greenDeep">Uloženo.</span>}
       </div>
 
-      {/* Smazani projektu (zadani 10. 9. 2026) - jen kdyz na nem nic nevisi. */}
-      <div className="border-t border-line pt-4 flex items-start gap-4 flex-wrap">
-        <div className="flex-1 min-w-[260px]">
+      {/* Smazani projektu (zadani 10. 9. 2026). Kdyz na nem neco visi, portal
+          nabidne archivaci - viz SmazatSPrekazkami. */}
+      <div className="border-t border-line pt-4 flex flex-col gap-3">
+        <div>
           <p className="font-heading font-semibold text-sm text-ink m-0">Smazat projekt</p>
           <p className="text-xs font-body text-muted m-0 mt-1">
-            Jen když na něm nevisí žádný doklad, výkaz ani frekvence — jinak portál napíše co.
-            Složka na Disku zůstane, tu si smažte sami, pokud ji nechcete. Nevratné.
+            Když na projektu nic nevisí, smaže se rovnou. Když visí doklady, portál ukáže co
+            a nabídne archivaci — doklady se přitom neruší, jen se od projektu odpojí. Složka na
+            Disku zůstane, tu si smažte sami, pokud ji nechcete.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void smaz()}
-          disabled={maze}
-          className="font-heading font-semibold text-sm rounded-lg px-4 py-2.5 bg-danger text-white hover:brightness-95 transition-colors disabled:opacity-60"
-        >
-          {maze ? 'Mažu…' : potvrzeni ? 'Opravdu smazat?' : 'Smazat projekt'}
-        </button>
+        <SmazatSPrekazkami
+          url={`/api/admin/projekty/${encodeURIComponent(caflouProjectId)}`}
+          co="Projekt"
+          popisek="Smazat projekt"
+          onSmazano={() => {
+            router.push('/projekty');
+            router.refresh();
+          }}
+        />
       </div>
     </form>
   );

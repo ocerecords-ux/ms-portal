@@ -44,6 +44,7 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/ceniky': ['ADMIN'],
   '/admin/studia': ['ADMIN'],
   '/admin/doklady': ['ADMIN'],
+  '/admin/archiv': ['ADMIN'],
 };
 
 /** Uvidi uzivatel s touhle roli tenhle odkaz? Vlastni odkaz vidi kazdy. */
@@ -80,6 +81,9 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/admin/ceniky', label: 'Ceníky' },
   { href: '/admin/studia', label: 'Studia' },
   { href: '/admin/doklady', label: 'Doklady' },
+  // Archiv smazanych zaznamu (zadani 10. 9. 2026). Neni ve vychozi liste -
+  // clovek tam chodi jednou za rok, kdyz neco smazal a chce to zpatky.
+  { href: '/admin/archiv', label: 'Archiv' },
   { href: '/muj-ucet', label: 'Můj účet' },
 ];
 

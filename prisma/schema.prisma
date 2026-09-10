@@ -391,6 +391,40 @@ model ProjectMeta {
 //
 // Co ulozene neni, se NEPOSILA. Radeji zpravu neposlat, nez ji poslat
 // klientovi, ktery o ni nestoji.
+// Archiv smazanych zaznamu (zadani 10. 9. 2026: "pak se jeste muzu
+// rozhodnout, zda o ne prijdu, nebo ty veci konkretni archivuju a smazu
+// uzivatele, firmu atd.").
+//
+// Kdyz na firme/uzivateli/projektu neco visi, portal smazani odmitne a
+// vypise co. Odtud vedou dve cesty a archiv je ta bezpecna: vsechno
+// navazane se ulozi sem jako JSON, teprve pak se to z portalu odstrani.
+// Archiv se da stahnout - je to posledni zachrana, kdyz se nekdo ukliknul.
+enum DruhArchivu {
+  FIRMA
+  UZIVATEL
+  PROJEKT
+}
+
+model Archiv {
+  id            String      @id @default(cuid())
+  druh          DruhArchivu
+  /// Jmeno firmy / uzivatele / projektu, jak se jmenoval pri smazani.
+  nazev         String
+  /// ID smazaneho zaznamu - u projektu caflouProjectId.
+  puvodniId     String
+  /// "3x faktura, 1x projekt" - at je ze seznamu hned videt, co v archivu je.
+  souhrn        String
+  pocetZaznamu  Int         @default(0)
+  /// Kompletni data vsech navazanych zaznamu.
+  obsah         Json
+
+  uzivatelId    String?
+  uzivatelJmeno String?
+  createdAt     DateTime    @default(now())
+
+  @@index([druh, createdAt])
+}
+
 // Historie projektu (zadani 10. 9. 2026: "neco jako LOG u kazdeho projektu -
 // takovou historii, co se v projektu upravilo a kdy sla nejaka notifikace").
 //

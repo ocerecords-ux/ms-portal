@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import type { Role } from '@prisma/client';
 import { AdminField } from '../../NewCompanyForm';
 import { PhotoDropzone } from '../PhotoDropzone';
@@ -52,8 +53,6 @@ export function UserEditForm({
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
   const [active, setActive] = useState(user.active);
   // Tvrde smazani (zadani 10. 9. 2026) - jen kdyz na uctu nic nevisi.
-  const [maze, setMaze] = useState(false);
-  const [potvrzeni, setPotvrzeni] = useState(false);
   const [newPassword, setNewPassword] = useState('');
 
   // Mediaspace
@@ -132,33 +131,6 @@ export function UserEditForm({
       setError(err instanceof Error ? err.message : 'Uložení se nezdařilo.');
     } finally {
       setSaving(false);
-    }
-  }
-
-  /** Smaze ucet uplne. Prvni kliknuti si rekne o potvrzeni. */
-  async function smaz() {
-    if (!potvrzeni) {
-      setPotvrzeni(true);
-      setError(null);
-      return;
-    }
-    setMaze(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.error || 'Smazání se nezdařilo.');
-        setPotvrzeni(false);
-        return;
-      }
-      router.push('/admin/users');
-      router.refresh();
-    } catch {
-      setError('Smazání se nezdařilo.');
-      setPotvrzeni(false);
-    } finally {
-      setMaze(false);
     }
   }
 
@@ -371,23 +343,25 @@ export function UserEditForm({
         </button>
       </div>
 
-      {/* Tvrde smazani - jen kdyz na uctu nic nevisi (zadani 10. 9. 2026). */}
-      <div className="flex items-start gap-4 flex-wrap">
-        <div className="flex-1 min-w-[260px]">
+      {/* Tvrde smazani (zadani 10. 9. 2026). Kdyz na uctu neco visi, portal
+          nabidne archivaci - viz SmazatSPrekazkami. */}
+      <div className="flex flex-col gap-3">
+        <div>
           <p className="font-heading font-semibold text-sm text-ink m-0">Smazat účet úplně</p>
           <p className="text-xs font-body text-muted m-0 mt-1">
-            Jen když na něm nic nevisí — typicky testovací účet. Když na účtu něco je, portál to
-            odmítne a napíše co. Nevratné.
+            Když na účtu nic nevisí, smaže se rovnou. Když něco visí, portál nejdřív ukáže co
+            a nabídne archivaci. Projekty tím nezanikají — účet u nich jen přestane být vyplněný.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void smaz()}
-          disabled={maze}
-          className="font-heading font-semibold text-sm rounded-lg px-4 py-2.5 bg-danger text-white hover:brightness-95 transition-colors disabled:opacity-60"
-        >
-          {maze ? 'Mažu…' : potvrzeni ? 'Opravdu smazat?' : 'Smazat'}
-        </button>
+        <SmazatSPrekazkami
+          url={`/api/admin/users/${user.id}`}
+          co={`Účet ${user.name || user.email}`}
+          popisek="Smazat účet"
+          onSmazano={() => {
+            router.push('/admin/users');
+            router.refresh();
+          }}
+        />
       </div>
 
       {error && <p className="text-danger text-sm">{error}</p>}
