@@ -1,5 +1,6 @@
 import type { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { odkazNaFotku } from '@/lib/fotky';
 import { isInternalRole } from '@/lib/roles';
 import type { ChatConversation, ChatReaction } from '@/lib/chat';
 
@@ -91,7 +92,11 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
       unread,
       lastMessageAt: c.lastMessageAt.toISOString(),
       caflouProjectId: c.caflouProjectId,
-      avatarUrl: c.kind === 'SOUKROMA' ? (ostatniClenove[0]?.user.photoUrl ?? null) : null,
+      // Odkaz misto samotne fotky - viz lib/fotky.ts.
+      avatarUrl:
+        c.kind === 'SOUKROMA' && ostatniClenove[0]
+          ? odkazNaFotku(ostatniClenove[0].userId, ostatniClenove[0].user.photoUrl)
+          : null,
       memberLabels: ostatni,
     };
   });
@@ -104,7 +109,7 @@ export async function loadTeam(userId: string) {
     select: { id: true, name: true, email: true, photoUrl: true },
     orderBy: [{ name: 'asc' }, { email: 'asc' }],
   });
-  return users.map((u) => ({ id: u.id, label: userLabel(u), photoUrl: u.photoUrl }));
+  return users.map((u) => ({ id: u.id, label: userLabel(u), photoUrl: odkazNaFotku(u.id, u.photoUrl) }));
 }
 
 

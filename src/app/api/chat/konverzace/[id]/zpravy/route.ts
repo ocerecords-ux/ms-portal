@@ -8,6 +8,7 @@ import { MAX_PRILOH, MAX_PRILOHA_BYTES } from '@/lib/chatPrilohy';
 import { overPrilohu } from '@/lib/storage';
 import { posliPush } from '@/lib/pushServer';
 import { canUseChat, shrnReakce, userLabel } from '@/lib/chatServer';
+import { odkazNaFotku } from '@/lib/fotky';
 
 // Zpravy jedne konverzace (zadani 8. 9. 2026). Otevreni konverzace zaroven
 // znamena "precteno" - proto se pri GET posouva lastReadAt.
@@ -122,7 +123,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         createdAt: m.createdAt.toISOString(),
         authorId: m.userId,
         authorLabel: userLabel(m.user),
-        authorPhotoUrl: m.user.photoUrl,
+        authorPhotoUrl: odkazNaFotku(m.userId, m.user.photoUrl),
         mine: m.userId === me,
         replyCount: m._count.replies,
         seenBy: ostatniClenove
@@ -246,7 +247,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         createdAt: message.createdAt.toISOString(),
         authorId: message.userId,
         authorLabel: userLabel(message.user),
-        authorPhotoUrl: message.user.photoUrl,
+        authorPhotoUrl: odkazNaFotku(message.userId, message.user.photoUrl),
         mine: true,
         replyCount: 0,
         // Prave odeslanou zpravu jeste nikdo videt nemohl.

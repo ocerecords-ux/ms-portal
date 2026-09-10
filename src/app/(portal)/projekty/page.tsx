@@ -14,6 +14,7 @@ import { loadColumnSettings } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/caflouProjectsServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
+import { odkazNaFotku } from '@/lib/fotky';
 
 // DULEZITE: tato stranka tahá projekty ZIVE z Caflou při každém zobrazení -
 // nesmí ji Next.js pri buildu "zamrazit" jako statickou stránku (to by
@@ -142,7 +143,7 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
         priority: m.priority,
         projectType: m.projectType,
         managerName: m.manager ? m.manager.name || m.manager.email : null,
-        managerPhotoUrl: m.manager?.photoUrl ?? null,
+        managerPhotoUrl: m.managerId ? odkazNaFotku(m.managerId, m.manager?.photoUrl) : null,
       },
     ]),
   );

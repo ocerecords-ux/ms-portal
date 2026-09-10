@@ -12,6 +12,7 @@ import { countUnread } from '@/lib/notifications';
 import { loadQuickActions } from '@/lib/quickActionsServer';
 import { quickActionsFor } from '@/lib/quickActions';
 import { isInternalRole } from '@/lib/roles';
+import { odkazNaFotku } from '@/lib/fotky';
 
 // Jediné místo, které chrání celou klientskou sekci portálu. Session je
 // zdroj pravdy o tom, kdo je přihlášen a pod jakou firmu (companyId) patří
@@ -41,7 +42,7 @@ export default async function PortalLayout({ children }: { children: React.React
     <div className="min-h-screen bg-paper">
       <Topbar
         userLabel={session.user.name || session.user.email}
-        userPhotoUrl={ucet?.photoUrl ?? null}
+        userPhotoUrl={odkazNaFotku(session.user.id, ucet?.photoUrl)}
         items={visibleFor(entries, role)}
         pageOptions={pageOptionsFor(role)}
         unreadNotifications={unread}
