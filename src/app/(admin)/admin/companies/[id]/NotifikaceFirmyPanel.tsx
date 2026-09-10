@@ -8,6 +8,7 @@ import {
   KOMU_MOZNOSTI,
   KOMU_POPISKY,
   STAVY_S_NOTIFIKACI,
+  jeToEmail,
   predvolbaJakoAudioteka,
   predvolbaJakoJota,
   prazdneNastaveni,
@@ -25,9 +26,18 @@ import {
  *
  * Dvě předvolby (jako Audioteka / jako Jota) jsou jen zkratka k vyplnění;
  * uloží se až tlačítkem, aby se dalo ještě něco doladit.
+ *
+ * Druhá část je seznam interních příjemců (zadání 10. 9. 2026: "chtěl bych
+ * u přidávání notifikací mít ještě i možnosti, na koho to půjde interně od
+ * nás") — každého klienta má u nás na starosti někdo jiný.
  */
+type Ucet = { email: string; jmeno: string };
+
 export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
   const [nastaveni, setNastaveni] = useState<NastaveniNotifikaci>(prazdneNastaveni());
+  const [prijemci, setPrijemci] = useState<string[]>([]);
+  const [nabidka, setNabidka] = useState<Ucet[]>([]);
+  const [novaAdresa, setNovaAdresa] = useState('');
   const [nacita, setNacita] = useState(true);
   const [uklada, setUklada] = useState(false);
   const [ulozeno, setUlozeno] = useState(false);
@@ -38,6 +48,8 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.nastaveni) setNastaveni(d.nastaveni);
+        if (Array.isArray(d?.interniPrijemci)) setPrijemci(d.interniPrijemci);
+        if (Array.isArray(d?.nabidkaUctu)) setNabidka(d.nabidkaUctu);
       })
       .catch(() => undefined)
       .finally(() => setNacita(false));
@@ -48,6 +60,27 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
     setUlozeno(false);
   }
 
+  function prepniPrijemce(email: string) {
+    const adresa = email.trim().toLowerCase();
+    setPrijemci((p) => (p.includes(adresa) ? p.filter((e) => e !== adresa) : [...p, adresa]));
+    setUlozeno(false);
+    setChyba(null);
+  }
+
+  /** Adresa mimo portál - třeba společná schránka, která účet nemá. */
+  function pridejAdresu() {
+    const adresa = novaAdresa.trim().toLowerCase();
+    if (!adresa) return;
+    if (!jeToEmail(adresa)) {
+      setChyba(`"${adresa}" nevypadá jako e-mail.`);
+      return;
+    }
+    if (!prijemci.includes(adresa)) setPrijemci((p) => [...p, adresa]);
+    setNovaAdresa('');
+    setUlozeno(false);
+    setChyba(null);
+  }
+
   async function uloz() {
     setUklada(true);
     setChyba(null);
@@ -55,7 +88,7 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
       const res = await fetch(`/api/admin/companies/${companyId}/notifikace`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nastaveni }),
+        body: JSON.stringify({ nastaveni, interniPrijemci: prijemci }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -117,9 +150,94 @@ export function NotifikaceFirmyPanel({ companyId }: { companyId: string }) {
         ))}
       </div>
 
-      <p className="text-xs font-body text-muted m-0">
-        „Jen nám interně" pošle zprávu na {INTERNI_PRIJEMCI.join(' a ')} — klient se nic nedozví.
-      </p>
+      {/* Komu z nas to chodi (zadani 10. 9. 2026). Plati pro obe varianty:
+          u "Jen nam interne" jsou to jedini prijemci, u "Klientovi" chodi
+          zprava temto lidem v kopii - at je videt, co klientovi odeslo. */}
+      <div className="border-t border-line pt-5 flex flex-col gap-3">
+        <div>
+          <h3 className="font-heading font-semibold text-sm text-ink m-0">Komu z nás to chodí</h3>
+          <p className="text-xs font-body text-muted m-0 mt-1">
+            U volby „Jen nám interně" jsou to jediní příjemci. U volby „Klientovi" jim zpráva chodí
+            v kopii, ať je vidět, co klientovi odešlo.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {nabidka.map((u) => {
+            const zvoleny = prijemci.includes(u.email.toLowerCase());
+            return (
+              <button
+                key={u.email}
+                type="button"
+                onClick={() => prepniPrijemce(u.email)}
+                aria-pressed={zvoleny}
+                title={u.email}
+                className={`font-heading font-semibold text-xs rounded-pill px-3 py-1.5 border transition-colors ${
+                  zvoleny
+                    ? 'bg-brand-purple text-white border-brand-purple'
+                    : 'bg-surface text-muted border-line hover:text-ink'
+                }`}
+              >
+                {zvoleny ? '✓ ' : '+ '}
+                {u.jmeno}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Adresy, ktere v portalu ucet nemaji - napr. spolecna schranka. */}
+        {prijemci.filter((e) => !nabidka.some((u) => u.email.toLowerCase() === e)).length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {prijemci
+              .filter((e) => !nabidka.some((u) => u.email.toLowerCase() === e))
+              .map((e) => (
+                <span
+                  key={e}
+                  className="inline-flex items-center gap-2 font-heading font-semibold text-xs rounded-pill px-3 py-1.5 bg-field text-ink border border-line"
+                >
+                  {e}
+                  <button
+                    type="button"
+                    onClick={() => prepniPrijemce(e)}
+                    aria-label={`Odebrat ${e}`}
+                    className="text-muted hover:text-danger"
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="email"
+            value={novaAdresa}
+            onChange={(e) => setNovaAdresa(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                pridejAdresu();
+              }
+            }}
+            placeholder="Další adresa, třeba fakturace@mediaspace.cz"
+            className="flex-1 min-w-[240px] rounded-lg border border-line bg-field px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+          />
+          <button
+            type="button"
+            onClick={pridejAdresu}
+            className="font-heading font-semibold text-sm text-brand-purple hover:underline px-2 py-2"
+          >
+            Přidat
+          </button>
+        </div>
+
+        {prijemci.length === 0 && (
+          <p className="text-xs font-body text-muted m-0">
+            Nikdo vybraný — zprávy proto půjdou na {INTERNI_PRIJEMCI.join(' a ')}.
+          </p>
+        )}
+      </div>
 
       {chyba && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{chyba}</p>}
 

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { CO_SE_POSILA, INTERNI_PRIJEMCI, STAVY_S_NOTIFIKACI } from '@/lib/notifikaceFirmy';
+import { CO_SE_POSILA, STAVY_S_NOTIFIKACI, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
 import { sendStavProjektuEmail } from '@/lib/email';
 
 /**
@@ -57,7 +57,7 @@ export async function posliNotifikaciKeStavu(
         driveUrl: true,
         companyId: true,
         companyName: true,
-        company: { select: { name: true, driveFolderUrl: true } },
+        company: { select: { name: true, driveFolderUrl: true, interniPrijemci: true } },
         klient: { select: { name: true, email: true } },
       },
     });
@@ -77,11 +77,13 @@ export async function posliNotifikaciKeStavu(
     });
     if (uz) return { stav: 'jiz-odeslano' };
 
-    // Komu. U zpravy klientovi jdeme v kopii i my - at je videt, co odeslo.
+    // Komu z nas to jde - nastavuje se na karte firmy (zadani 10. 9. 2026).
+    // U zpravy klientovi jdeme v kopii i my, at je videt, co odeslo.
+    const nasi = interniPrijemciFirmy(projekt.company?.interniPrijemci);
     const prijemci =
       nastaveni.komu === 'INTERNE'
-        ? [...INTERNI_PRIJEMCI]
-        : [projekt.klient?.email, ...INTERNI_PRIJEMCI].filter((e): e is string => Boolean(e));
+        ? nasi
+        : [projekt.klient?.email, ...nasi].filter((e): e is string => Boolean(e));
 
     if (nastaveni.komu === 'KLIENT' && !projekt.klient?.email) {
       // Projekt nema vyplneneho klienta - poslat "klientovi" nejde. Zapisujeme

@@ -75,10 +75,28 @@ export function predvolbaJakoJota(): NastaveniNotifikaci {
 }
 
 /**
- * Interní příjemci (zadání 10. 9. 2026).
+ * Výchozí interní příjemci (zadání 10. 9. 2026).
  *
- * Zatím napevno — jsou to konkrétní dvě adresy, které Ondřej určil. Až jich
- * bude víc nebo se budou měnit, přesuneme je do nastavení; teď by z toho byla
- * obrazovka navíc kvůli dvěma řádkům.
+ * Použijí se u firmy, která vlastní seznam vyplněný nemá — ať nová firma
+ * nezůstane bez toho, aby o odeslané zprávě někdo z nás věděl.
  */
 export const INTERNI_PRIJEMCI = ['helena.rychlik@mediaspace.cz', 'karolina.zborilova@mediaspace.cz'];
+
+/**
+ * Komu z nás zprávy téhle firmy chodí (zadání 10. 9. 2026: "chtěl bych
+ * u přidávání notifikací mít ještě i možnosti, na koho to půjde interně
+ * od nás").
+ *
+ * Nastavuje se na kartě firmy — každý klient má u nás na starosti někdo
+ * jiný. Prázdný seznam znamená „nikdo to zvlášť neřeší", takže se použije
+ * výchozí dvojice.
+ */
+export function interniPrijemciFirmy(ulozene: string[] | null | undefined): string[] {
+  const ocistene = (ulozene ?? []).map((e) => e.trim()).filter(Boolean);
+  return ocistene.length > 0 ? ocistene : [...INTERNI_PRIJEMCI];
+}
+
+/** Hrubá kontrola e-mailu - jen aby se do seznamu nedostal překlep typu "helena@". */
+export function jeToEmail(text: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(text.trim());
+}

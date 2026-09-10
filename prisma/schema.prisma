@@ -102,6 +102,13 @@ model Company {
   // Doba splatnosti ve dnech - predvyplni se pri vystavovani faktury.
   paymentTermDays Int?     @default(14)
 
+  /// Komu z nas chodi zpravy o stavu projektu teto firmy (zadani 10. 9. 2026:
+  /// "chtel bych u pridavani notifikaci mit jeste i moznosti, na koho to pujde
+  /// interne od nas"). Ukladaji se e-maily, ne ID uctu - nekdo z prijemcu
+  /// nemusi mit v portalu ucet (napr. spolecna adresa fakturace).
+  /// Prazdne = vychozi dvojice z lib/notifikaceFirmy.ts.
+  interniPrijemci String[] @default([])
+
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
