@@ -142,7 +142,10 @@ export async function POST(req: NextRequest) {
         klientUserId: d.klientUserId || null,
         projectType: d.projectType || null,
         managerUserId: d.managerUserId || null,
-        priority: d.priority || null,
+        // Vychozi stredni priorita (zadani 10. 9. 2026) - stejne jako ve
+        // formulari, aby ji projekt zalozeny odjinud (napr. z objednavky)
+        // nemel prazdnou.
+        priority: d.priority || 'MEDIUM',
         actorUserId: d.actorUserId || null,
         pageCount,
         releaseDate: naDatum(d.releaseDate),

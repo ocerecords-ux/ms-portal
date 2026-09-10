@@ -40,7 +40,10 @@ export function NovyProjektForm({
     klientUserId: '',
     projectType: '',
     managerUserId: '',
-    priority: '',
+    // Stredni priorita je vychozi (zadani 10. 9. 2026). Vetsina projektu je
+    // "normalni" a vybirat ji pokazde znovu je prace navic; kdo ma jinou,
+    // prehodi ji.
+    priority: 'MEDIUM',
     actorUserId: '',
     pageCount: '',
     releaseDate: '',
@@ -122,7 +125,7 @@ export function NovyProjektForm({
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Firma</span>
           <select value={form.companyId} onChange={(e) => set('companyId', e.target.value)} className={tridaPole}>
-            <option value="">— nevybráno —</option>
+            <option value="">— bez priority —</option>
             {firmy.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
@@ -138,7 +141,7 @@ export function NovyProjektForm({
             onChange={(e) => set('klientUserId', e.target.value)}
             className={tridaPole}
           >
-            <option value="">— nevybráno —</option>
+            <option value="">— bez priority —</option>
             {klienti
               .slice()
               .sort((a, b) => {
@@ -163,7 +166,7 @@ export function NovyProjektForm({
             onChange={(e) => set('projectType', e.target.value)}
             className={tridaPole}
           >
-            <option value="">— nevybráno —</option>
+            <option value="">— bez priority —</option>
             {typyProjektu.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -179,7 +182,7 @@ export function NovyProjektForm({
             onChange={(e) => set('managerUserId', e.target.value)}
             className={tridaPole}
           >
-            <option value="">— nevybráno —</option>
+            <option value="">— bez priority —</option>
             {manazeri.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}
@@ -223,7 +226,7 @@ export function NovyProjektForm({
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Priorita</span>
           <select value={form.priority} onChange={(e) => set('priority', e.target.value)} className={tridaPole}>
-            <option value="">— nevybráno —</option>
+            <option value="">— bez priority —</option>
             {PRIORITY_OPTIONS.map((p) => (
               <option key={p} value={p}>
                 {PRIORITY_LABELS[p]}
