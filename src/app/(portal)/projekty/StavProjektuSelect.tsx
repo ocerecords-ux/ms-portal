@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { STAVY_PROJEKTU, barvaStavu } from '@/lib/stavyProjektu';
+import { OdznakSelect } from './OdznakSelect';
 
 /**
  * Přehození stavu přímo v seznamu projektů (zadání 10. 9. 2026: "potřebuju,
@@ -12,12 +13,9 @@ import { STAVY_PROJEKTU, barvaStavu } from '@/lib/stavyProjektu';
  * nemusí kvůli jedné změně otevírat detail projektu. Ukládá se hned po výběru;
  * potvrzovací tlačítko by tady jen překáželo.
  *
- * ŠÍŘKA PODLE TEXTU (zadání 10. 9. 2026: "ty bubliny, kde je stav projektu,
- * by mohly mít různou velikost - podle textu"): samotný <select> se v
- * prohlížeči roztáhne na nejdelší položku nabídky, takže i „V přípravě" měla
- * bublina šířku „Dokončeno - ke schválení". Odznak je proto obyčejný <span>
- * s vybraným textem a <select> na něm leží průhledně přes celou plochu —
- * klikání i klávesnice fungují dál, ale o šířce rozhoduje text.
+ * Vzhled i chování odznaku řeší OdznakSelect - tenhle soubor má na starosti
+ * jen ukládání. Stejný odznak je i v detailu projektu, takže stav vypadá na
+ * obou místech stejně (zadání 10. 9. 2026).
  *
  * Když uložení selže, stav se vrátí na původní hodnotu a vypíše se chyba pod
  * odznakem. Tabulka nesmí ukazovat něco jiného, než co je v databázi.
@@ -68,50 +66,23 @@ export function StavProjektuSelect({
 
   return (
     <span className="inline-flex flex-col gap-1 min-w-0 items-start">
-      <span
-        className={`relative inline-flex items-center gap-1.5 rounded-pill pl-3 pr-2.5 py-1 text-xs font-heading font-semibold cursor-pointer focus-within:ring-2 focus-within:ring-brand-purple/40 ${
-          uklada ? 'opacity-60' : ''
-        } ${barvaStavu(hodnota, dokonceny)}`}
-      >
-        <span className="whitespace-nowrap">{hodnota || 'Bez stavu'}</span>
-        <Sipka />
-        <select
-          value={hodnota}
-          disabled={uklada}
-          onChange={(e) => void zmen(e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          title="Přehodit stav projektu"
-          aria-label="Stav projektu"
-          className="absolute inset-0 w-full h-full appearance-none opacity-0 cursor-pointer outline-none disabled:cursor-default"
-        >
-          {/* Stav prenesený z Caflou, který v naší cestě projektu není - ať se
-              při rozbalení nabídky nezmění na něco jiného. */}
-          {neznamyStav && <option value={hodnota}>{hodnota}</option>}
-          {STAVY_PROJEKTU.map((s) => (
-            <option key={s.nazev} value={s.nazev}>
-              {s.nazev}
-            </option>
-          ))}
-        </select>
-      </span>
+      {/* Vzhled odznaku je spolecny s detailem projektu (OdznakSelect), aby
+          stav vypadal na obou mistech stejne - zadani 10. 9. 2026. */}
+      <OdznakSelect
+        hodnota={hodnota}
+        onZmena={(v) => void zmen(v)}
+        disabled={uklada}
+        trida={barvaStavu(hodnota, dokonceny)}
+        titulek="Přehodit stav projektu"
+        prazdnyPopisek="Bez stavu"
+        moznosti={[
+          // Stav prenesený z Caflou, ktery v nasi ceste projektu neni - at se
+          // pri rozbaleni nabidky nezmeni na neco jineho.
+          ...(neznamyStav ? [{ hodnota, popisek: hodnota }] : []),
+          ...STAVY_PROJEKTU.map((s) => ({ hodnota: s.nazev, popisek: s.nazev })),
+        ]}
+      />
       {chyba && <span className="text-[11px] font-body text-danger">{chyba}</span>}
     </span>
-  );
-}
-
-function Sipka() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="w-2.5 h-2.5 shrink-0 pointer-events-none opacity-70"
-      aria-hidden="true"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
   );
 }

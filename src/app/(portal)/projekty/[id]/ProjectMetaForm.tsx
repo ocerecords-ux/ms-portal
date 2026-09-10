@@ -9,6 +9,7 @@ import { KresbaIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
+import { OdznakSelect } from '../OdznakSelect';
 
 /**
  * Stav, priorita a typ projektu jako barevný odznak (zadání 10. 9. 2026:
@@ -21,6 +22,17 @@ import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
  * palety kousek vedle.
  */
 const TRIDA_ODZNAKU = 'inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-xs font-heading font-semibold';
+
+/** Odznak bez hodnoty - ať je i "nevybráno" vidět jako odznak, ne jako díra. */
+const TRIDA_PRAZDNEHO = 'bg-field text-muted border border-line';
+
+/**
+ * Typ projektu nese barvu značky a ikonu z Ceníku - vlastní paleta pro typy
+ * neexistuje a vymýšlet ji jen sem by přidala další sadu barev, kterou by
+ * nikdo jinde v portálu nepotkal.
+ */
+const TRIDA_TYPU =
+  'bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight border border-brand-purple/40';
 
 function OdznakStavu({ stav }: { stav: string }) {
   if (!stav) return <span className="text-sm font-heading text-muted">—</span>;
@@ -35,17 +47,10 @@ function OdznakPriority({ priorita }: { priorita: string }) {
   return <span className={`${TRIDA_ODZNAKU} ${PRIORITY_CLASSES[klic]}`}>{PRIORITY_LABELS[klic]}</span>;
 }
 
-/**
- * Typ projektu nese barvu značky a ikonu z Ceníku - vlastní paleta pro typy
- * neexistuje a vymýšlet ji jen sem by přidala další sadu barev, kterou by
- * nikdo jinde v portálu nepotkal.
- */
 function OdznakTypu({ typ, ikona }: { typ: string | null; ikona: string | null }) {
   if (!typ) return <span className="text-sm font-heading text-muted">—</span>;
   return (
-    <span
-      className={`${TRIDA_ODZNAKU} bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight border border-brand-purple/40`}
-    >
+    <span className={`${TRIDA_ODZNAKU} ${TRIDA_TYPU}`}>
       {/* Jen kresba, ne cely odznak s koleckem - kolecko v odznaku by byl
           odznak v odznaku. */}
       {ikona && <KresbaIkony klic={ikona} velikost={14} />}
@@ -273,34 +278,29 @@ export function ProjectMetaForm({
 
         {/* Stav a herec se od 10. 9. 2026 prehazuji rucne (odchod z Caflou).
             Stav je prvni, protoze se s nim pracuje nejcasteji. */}
-        <label className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Stav projektu</span>
-          <select
-            value={values.statusName}
-            onChange={(e) => set('statusName', e.target.value)}
-            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-          >
-            <option value="">— nevybráno —</option>
-            {/* Stav prenesen z Caflou, ktery v nasi ceste projektu neni - at se
-                pri ulozeni nezmeni na "nevybráno". */}
-            {values.statusName && !STAVY_PROJEKTU.some((st) => st.nazev === values.statusName) && (
-              <option value={values.statusName}>{values.statusName} (starý stav z Caflou)</option>
-            )}
-            {STAVY_PROJEKTU.map((st) => (
-              <option key={st.nazev} value={st.nazev}>
-                {st.nazev}
-              </option>
-            ))}
-          </select>
-          {/* Odznak v barve stavu (zadani 10. 9. 2026) - stejny jako
-              v prehledu projektu, at se barva da spojit s vyznamem. */}
-          <span className="flex items-center gap-2 flex-wrap">
-            <OdznakStavu stav={values.statusName} />
-            <span className="text-xs text-muted font-body">
-              {popisStavu(values.statusName) ?? 'Stav přehazujete ručně podle toho, kde projekt je.'}
-            </span>
+          {/* Odznak v barve stavu je ZAROVEN ovladac - stejne jako v prehledu
+              projektu (zadani 10. 9. 2026). Puvodne tu byl <select> a pod nim
+              jeste odznak s touz hodnotou, coz byla tataz vec dvakrat. */}
+          <OdznakSelect
+            hodnota={values.statusName}
+            onZmena={(v) => set('statusName', v)}
+            trida={barvaStavu(values.statusName)}
+            titulek="Přehodit stav projektu"
+            moznosti={[
+              // Stav prenesen z Caflou, ktery v nasi ceste projektu neni - at
+              // se pri ulozeni nezmeni na "nevybráno".
+              ...(values.statusName && !STAVY_PROJEKTU.some((st) => st.nazev === values.statusName)
+                ? [{ hodnota: values.statusName, popisek: `${values.statusName} (starý stav z Caflou)` }]
+                : []),
+              ...STAVY_PROJEKTU.map((st) => ({ hodnota: st.nazev, popisek: st.nazev })),
+            ]}
+          />
+          <span className="text-xs text-muted font-body">
+            {popisStavu(values.statusName) ?? 'Stav přehazujete ručně podle toho, kde projekt je.'}
           </span>
-        </label>
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Herci</span>
@@ -389,41 +389,41 @@ export function ProjectMetaForm({
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Priorita</span>
-          <select
-            value={values.priority}
-            onChange={(e) => set('priority', e.target.value)}
-            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-          >
-            <option value="">— nevybráno —</option>
-            {PRIORITY_OPTIONS.map((p) => (
-              <option key={p} value={p}>
-                {PRIORITY_LABELS[p]}
-              </option>
-            ))}
-          </select>
-          <OdznakPriority priorita={values.priority} />
+          <OdznakSelect
+            hodnota={values.priority}
+            onZmena={(v) => set('priority', v)}
+            trida={PRIORITY_CLASSES[values.priority as keyof typeof PRIORITY_CLASSES] ?? TRIDA_PRAZDNEHO}
+            prazdnyPopisek="— bez priority —"
+            moznosti={PRIORITY_OPTIONS.map((p) => ({ hodnota: p, popisek: PRIORITY_LABELS[p] }))}
+          />
         </label>
 
         <label className="flex flex-col gap-1.5 sm:col-span-2">
           <span className="text-sm font-body text-ink">Typ projektu</span>
-          <select
-            value={values.projectType}
-            onChange={(e) => set('projectType', e.target.value)}
-            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-          >
-            <option value="">— nevybráno —</option>
-            {/* Ulozeny typ, ktery uz v ceniku neni (vyrazena polozka), at se
-                pri ulozeni nezmeni na "nevybráno". */}
-            {values.projectType && !projectTypeOptions.includes(values.projectType) && (
-              <option value={values.projectType}>{values.projectType} (mimo ceník)</option>
-            )}
-            {projectTypeOptions.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <OdznakTypu typ={projectTypeLabel(values.projectType)} ikona={ikonyTypu[values.projectType] ?? null} />
+          {/* Typ nese svou ikonu z Ceniku - stejne jako pred nazvem projektu
+              v prehledu (zadani 10. 9. 2026). */}
+          <OdznakSelect
+            hodnota={values.projectType}
+            onZmena={(v) => set('projectType', v)}
+            trida={values.projectType ? TRIDA_TYPU : TRIDA_PRAZDNEHO}
+            moznosti={[
+              // Ulozeny typ, ktery uz v ceniku neni (vyrazena polozka), at se
+              // pri ulozeni nezmeni na "nevybráno".
+              ...(values.projectType && !projectTypeOptions.includes(values.projectType)
+                ? [{ hodnota: values.projectType, popisek: `${values.projectType} (mimo ceník)` }]
+                : []),
+              ...projectTypeOptions.map((t) => ({
+                hodnota: t,
+                popisek: t,
+                obsah: (
+                  <>
+                    {ikonyTypu[t] && <KresbaIkony klic={ikonyTypu[t]} velikost={14} />}
+                    {t}
+                  </>
+                ),
+              })),
+            ]}
+          />
           <span className="text-xs text-muted font-body">
             {projectTypeOptions.length > 0
               ? 'Nabídka se bere z Ceníků v administraci.'
