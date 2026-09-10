@@ -37,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.
           telefonni cislo se lamalo na dva radky. */}
       {/* Vpravo je připnutý panel Úkolů - obsahu tam necháme místo. */}
-      <div className="obsah-portalu max-w-[1800px] mx-auto px-4 sm:px-6 py-8 sm:py-12 pl-14 sm:pl-16 pr-16 sm:pr-20">{children}</div>
+      <div className="obsah-portalu w-full px-4 sm:px-6 py-8 sm:py-12 pl-14 sm:pl-16 pr-16 sm:pr-20">{children}</div>
       {/* Rychle volby na leve hrane - stejny panel jako ve zbytku portalu. */}
       <QuickDock actions={quickActions} available={quickActionsFor('ADMIN')} />
       {/* Úkoly po ruce i v administraci - stejný panel jako ve zbytku portálu. */}

@@ -139,21 +139,18 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
-   Levý panel rychlých voleb odsune obsah, když je rozbalený (zpráva uživatele
-   9. 9. 2026). Panel je "fixed", takže si místo sám neudělá - třídu
-   .dock-otevreny nasazuje na <body> komponenta QuickDock.
+   Rozbalený levý panel PŘEKRÝVÁ obsah, neodsouvá ho (zadání 10. 9. 2026:
+   "spíše bych to celé roztáhl na maximum a chat a rychlé volby se prostě
+   vyrolujou přes to").
 
-   Platí až od šířky okna, kde se to vejde. Na užším okně panel obsah překryje
-   jako dosud - odsazovat tam nemá cenu, obsah by se zmáčkl na nic.
+   Do 10. 9. 2026 si panel bral 256 px a obsah se o ně zúžil. U přehledu
+   projektů to bylo znát nejvíc: tabulka se zmáčkla a poslední sloupce
+   zmizely za okrajem. Panel je otevřený jen chvíli, zatímco tabulka je
+   tam pořád - tak ať se nezmenšuje kvůli něčemu, co za vteřinu zavřu.
+
+   Třídu .dock-otevreny na <body> QuickDock nasazuje dál, ať se dá stav
+   panelu použít jinde; jen už podle ní nikdo nic neodsouvá.
 --------------------------------------------------------------------------- */
-.obsah-portalu {
-  transition: padding-left 200ms ease;
-}
-@media (min-width: 1024px) {
-  body.dock-otevreny .obsah-portalu {
-    padding-left: 256px;
-  }
-}
 
 /* Fialová značky je na tmavém podkladu špatně čitelná (je to sytá barva
    navrženrá na bílou). Barvu značky neměníme - fialové plochy zůstávají jak

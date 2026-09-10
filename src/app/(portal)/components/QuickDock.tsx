@@ -158,10 +158,13 @@ export function QuickDock({
     }
   }, []);
 
-  // Rozbaleny panel odsune obsah stranky doprava, at ho nezakryva (zprava
-  // uzivatele 9. 9. 2026: "projekty at se posunou doprava az kam te pusti
-  // leve rychle volby v rozbalenem stavu"). Sirku resi trida .dock-otevreny
-  // v globals.css - layout je serverovy a o stavu panelu nevi.
+  // Trida na <body> rika zbytku portalu, ze je panel rozbaleny - layout je
+  // serverovy a o stavu panelu sam nevi.
+  //
+  // Do 10. 9. 2026 se podle ni obsah odsouval o 256 px doprava. Od zadani
+  // 10. 9. 2026 panel obsah PREKRYVA: prehled projektu se kvuli nemu macknul
+  // a posledni sloupce mizely za okrajem. Panel je otevreny jen chvili,
+  // tabulka je tam porad.
   useEffect(() => {
     document.body.classList.toggle('dock-otevreny', expanded);
     return () => document.body.classList.remove('dock-otevreny');

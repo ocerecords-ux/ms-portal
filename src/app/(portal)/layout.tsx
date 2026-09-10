@@ -51,7 +51,7 @@ export default async function PortalLayout({ children }: { children: React.React
           uvolníme místo - jinak se přes něj tabulky "usekávaly"
           (zadani 8. 9. 2026). */}
       <div
-        className={`obsah-portalu max-w-[1800px] mx-auto px-4 sm:px-6 py-8 sm:py-12 pl-14 sm:pl-16 ${internal ? 'pr-16 sm:pr-20' : ''}`}
+        className={`obsah-portalu w-full px-4 sm:px-6 py-8 sm:py-12 pl-14 sm:pl-16 ${internal ? 'pr-16 sm:pr-20' : ''}`}
       >
         {children}
       </div>
