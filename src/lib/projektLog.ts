@@ -21,7 +21,7 @@ export const POPISKY_POLI: Record<string, string> = {
   projectType: 'Typ projektu',
   driveUrl: 'Odkaz na KZ',
   managerUserId: 'Manažer projektu',
-  actorUserId: 'Herec',
+  actorUserId: 'Herci',
   klientUserId: 'Klient',
   companyId: 'Firma',
   narrator: 'Herec (text)',

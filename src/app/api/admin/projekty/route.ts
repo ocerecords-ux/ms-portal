@@ -32,8 +32,8 @@ const schema = z.object({
   projectType: z.string().trim().optional(),
   managerUserId: z.string().trim().optional(),
   priority: z.enum(['', 'LOW', 'MEDIUM', 'HIGH']).optional(),
-  /** Ucet herce - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
-  actorUserId: z.string().trim().optional(),
+  /** Ucty hercu v poradi - prvni je hlavni (zadani 10. 9. 2026). */
+  actorUserIds: z.array(z.string().trim().min(1)).max(20).optional(),
   /** Prichazi jako text z <input type="number">. */
   pageCount: z.union([z.string().trim(), z.number()]).optional(),
   /** YYYY-MM-DD. */
@@ -81,12 +81,13 @@ export async function POST(req: NextRequest) {
       slozkaFirmy = firma.driveFolderUrl;
     }
 
-    if (d.actorUserId) {
-      const herec = await prisma.user.findFirst({
-        where: { id: d.actorUserId, role: 'HEREC' },
-        select: { id: true },
-      });
-      if (!herec) return NextResponse.json({ error: 'Vybraný herec neexistuje.' }, { status: 400 });
+    // Duplicity pryc - tentyz herec dvakrat u jednoho projektu nedava smysl.
+    const herciIds: string[] = Array.from(new Set<string>(d.actorUserIds ?? []));
+    if (herciIds.length > 0) {
+      const nalezeni = await prisma.user.count({ where: { id: { in: herciIds }, role: 'HEREC' } });
+      if (nalezeni !== herciIds.length) {
+        return NextResponse.json({ error: 'Některý z vybraných herců neexistuje.' }, { status: 400 });
+      }
     }
 
     if (d.klientUserId) {
@@ -146,7 +147,9 @@ export async function POST(req: NextRequest) {
         // formulari, aby ji projekt zalozeny odjinud (napr. z objednavky)
         // nemel prazdnou.
         priority: d.priority || 'MEDIUM',
-        actorUserId: d.actorUserId || null,
+        // Hlavni herec = prvni v seznamu; dopocitava se, nenastavuje zvlast.
+        actorUserId: herciIds[0] ?? null,
+        ...(herciIds.length > 0 ? { herci: { connect: herciIds.map((id) => ({ id })) } } : {}),
         pageCount,
         releaseDate: naDatum(d.releaseDate),
         statusName: stav,

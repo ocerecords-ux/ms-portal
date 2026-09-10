@@ -6,7 +6,8 @@ import { AddButton } from '@/components/AddButton';
 import { PRIORITY_LABELS, PRIORITY_OPTIONS } from '@/lib/projectTypes';
 import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
-import { VyberHerce, type Herec } from './VyberHerce';
+import { type Herec } from './VyberHerce';
+import { VyberHercu } from './VyberHercu';
 
 /**
  * Založení projektu (zadání 10. 9. 2026). Do teď projekty vznikaly v Caflou;
@@ -44,7 +45,8 @@ export function NovyProjektForm({
     // "normalni" a vybirat ji pokazde znovu je prace navic; kdo ma jinou,
     // prehodi ji.
     priority: 'MEDIUM',
-    actorUserId: '',
+    // Hercu muze byt vic (zadani 10. 9. 2026), prvni je hlavni.
+    actorUserIds: [] as string[],
     pageCount: '',
     releaseDate: '',
     statusName: STAVY_PROJEKTU[0].nazev,
@@ -194,11 +196,11 @@ export function NovyProjektForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Herec</span>
-          <VyberHerce
+          <span className="text-sm font-body text-ink">Herci</span>
+          <VyberHercu
             herci={herci}
-            hodnota={form.actorUserId}
-            onZmena={(id) => set('actorUserId', id)}
+            hodnoty={form.actorUserIds}
+            onZmena={(ids) => set('actorUserIds', ids)}
           />
         </div>
 

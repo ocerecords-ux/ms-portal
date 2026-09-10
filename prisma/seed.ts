@@ -170,6 +170,7 @@ async function main() {
   await zapniRodnyListURadiovehoSpotu();
 
   await backfillCodes();
+  await prenesHerceDoSeznamu();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -347,3 +348,31 @@ main()
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
+
+/**
+ * Jednorázový přenos herce ze starého sloupce do seznamu (zadání 10. 9. 2026:
+ * „chci jich tam dát více").
+ *
+ * Do té doby měl projekt jednoho herce v `actorUserId`. Nový seznam `herci`
+ * je prázdný, takže by po nasazení vypadalo, že projekty herce nemají —
+ * proto se sem jednou zkopíruje.
+ *
+ * Bere jen projekty, kde je seznam PRÁZDNÝ. Kdyby někdo herce mezitím
+ * upravil, seed mu to nesmí přepsat zpátky.
+ */
+async function prenesHerceDoSeznamu() {
+  const projekty = await prisma.projectMeta.findMany({
+    where: { actorUserId: { not: null }, herci: { none: {} } },
+    select: { id: true, actorUserId: true },
+  });
+  for (const p of projekty) {
+    if (!p.actorUserId) continue;
+    await prisma.projectMeta.update({
+      where: { id: p.id },
+      data: { herci: { connect: { id: p.actorUserId } } },
+    });
+  }
+  if (projekty.length > 0) {
+    console.log(`  herci přeneseni do seznamu: ${projekty.length} projektů`);
+  }
+}

@@ -207,8 +207,8 @@ export type InternalProjectMeta = {
   managerUserId: string | null;
   /** Ikona typu projektu - sviti pred nazvem (zadani 10. 9. 2026). */
   ikonaTypu: string | null;
-  /** Prirazeny ucet herce - kvuli vyberu primo v seznamu (10. 9. 2026). */
-  actorUserId: string | null;
+  /** Jmena hercu projektu, hlavni prvni (zadani 10. 9. 2026 - muze jich byt vic). */
+  herciJmena: string[];
 };
 
 export type InternalProject = AdminDisplayProject & {
@@ -420,21 +420,30 @@ function bunkaSloupce(
       //
       // Bublina ma jen ten, kdo ma prirazeny ucet. Jmeno z Caflou je porad
       // jen text, na kterem nic nestoji - proto zustava sede a bez bubliny.
+      // Hercu muze byt vic (zadani 10. 9. 2026) - jdou pod sebe, kazdy ve sve
+      // bubline. Kdyz zadny prirazeny ucet neni, zbyva jmeno z Caflou: jen
+      // sedy text, na kterem nic nestoji.
+      if (p.meta?.herciJmena?.length) {
+        return (
+          <span className={TRIDA_SLOUPCE_HERCU}>
+            {p.meta.herciJmena.map((jmeno) => (
+              <span
+                key={jmeno}
+                className={`inline-flex items-center px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}
+              >
+                {jmeno}
+              </span>
+            ))}
+          </span>
+        );
+      }
       if (!p.narrator) return '—';
       return (
-        <span className={TRIDA_SLOUPCE_HERCU}>
-          {p.meta?.actorUserId ? (
-            <span className={`inline-flex items-center px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}>
-              {p.narrator}
-            </span>
-          ) : (
-            <span
-              className="text-muted whitespace-nowrap"
-              title="Herec zatím nemá přiřazený účet — doplní se v detailu projektu"
-            >
-              {p.narrator}
-            </span>
-          )}
+        <span
+          className="text-muted whitespace-nowrap"
+          title="Herec zatím nemá přiřazený účet — doplní se v detailu projektu"
+        >
+          {p.narrator}
         </span>
       );
     }

@@ -166,7 +166,10 @@ export async function odstranUzivatele(vstup: {
       prisma.conversation.findMany({ where: { createdById: userId } }),
       prisma.recordingRequest.findMany({ where: { createdById: userId }, include: { slots: true } }),
       prisma.projectMeta.findMany({ where: { managerUserId: userId }, select: { caflouProjectId: true, name: true } }),
-      prisma.projectMeta.findMany({ where: { actorUserId: userId }, select: { caflouProjectId: true, name: true } }),
+      prisma.projectMeta.findMany({
+        where: { herci: { some: { id: userId } } },
+        select: { caflouProjectId: true, name: true },
+      }),
       prisma.projectMeta.findMany({ where: { klientUserId: userId }, select: { caflouProjectId: true, name: true } }),
       prisma.recordingRequest.findMany({ where: { actorUserId: userId }, select: { id: true, projectName: true } }),
     ]);
@@ -205,6 +208,17 @@ export async function odstranUzivatele(vstup: {
     // Smazat projekt proto, ze odchazi jeho manazer, by bylo spatne.
     await tx.projectMeta.updateMany({ where: { managerUserId: userId }, data: { managerUserId: null } });
     await tx.projectMeta.updateMany({ where: { actorUserId: userId }, data: { actorUserId: null } });
+    // Odpojit i ze seznamu hercu - projekt zustava, jen uz u nej ten clovek
+    // nefiguruje (zadani 10. 9. 2026, vic hercu na projekt).
+    for (const projekt of await tx.projectMeta.findMany({
+      where: { herci: { some: { id: userId } } },
+      select: { id: true },
+    })) {
+      await tx.projectMeta.update({
+        where: { id: projekt.id },
+        data: { herci: { disconnect: { id: userId } } },
+      });
+    }
     await tx.projectMeta.updateMany({ where: { klientUserId: userId }, data: { klientUserId: null } });
     await tx.recordingRequest.updateMany({ where: { actorUserId: userId }, data: { actorUserId: null } });
 

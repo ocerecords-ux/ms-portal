@@ -77,7 +77,9 @@ export async function prekazkyUzivatele(userId: string): Promise<Prekazka[]> {
     prisma.timesheetEntry.count({ where: { userId } }),
     prisma.order.count({ where: { createdByUserId: userId } }),
     prisma.projectMeta.count({ where: { managerUserId: userId } }),
-    prisma.projectMeta.count({ where: { actorUserId: userId } }),
+    // Herec u projektu - od 10. 9. 2026 jich muze byt vic, tak se pocita
+    // clenstvi v seznamu, ne jen hlavni herec.
+    prisma.projectMeta.count({ where: { herci: { some: { id: userId } } } }),
     prisma.projectMeta.count({ where: { klientUserId: userId } }),
     prisma.recordingRequest.count({ where: { actorUserId: userId } }),
     // Zakladatel frekvence i kanalu je povinny udaj, takze i tohle brani

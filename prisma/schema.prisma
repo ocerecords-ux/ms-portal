@@ -155,6 +155,9 @@ model User {
   manazerProjektu Boolean @default(false)
 
   // --- Herec - zadani 5. 9. 2026: samostatna fyzicka osoba, bez firmy ---
+  /// Projekty, ve kterych herec hraje (zadani 10. 9. 2026, vic hercu na projekt).
+  projektyJakoHerec ProjectMeta[] @relation("ProjektHerci")
+
   studioLocations String[] @default([]) // lokace, ve kterych je herec schopen fyzicky natacet - viz lib/roles.ts HEREC_STUDIOS
   birthNumber     String?   // RC, nebo datum narozeni jako text, pokud herec RC nema (cizinec apod.)
   ic              String?
@@ -319,8 +322,17 @@ model ProjectMeta {
   // Herec projektu (zadani 8. 9. 2026). V Caflou je herec jen text ve vlastnim
   // sloupci - tady se jednou navaze na konkretni ucet a od te chvile se z toho
   // da stavet (nabidky terminu, notifikace, jeho vlastni prehled).
+  /// PŮVODNÍ jeden herec. Od 10. 9. 2026 se herci vedou v `herci` níž - na
+  /// projektu jich může být víc (zadání: "chci jich tam dát více"). Sloupec
+  /// zůstává jako HLAVNÍ herec: drží se na prvním ze seznamu a spoléhají na
+  /// něj starší části portálu (předvyplnění natáčecí frekvence). Nesmí se
+  /// upravovat zvlášť - vždycky se dopočítá ze seznamu.
   actorUserId     String?
   actor           User?            @relation("ProjectActor", fields: [actorUserId], references: [id])
+
+  /// Herci projektu (zadání 10. 9. 2026). Víc lidí na jednu knihu je běžné -
+  /// dabing, dvojhlas, vypravěč plus postavy.
+  herci           User[]           @relation("ProjektHerci")
 
   // Klient projektu (zadani 10. 9. 2026: "musime u kazdeho projektu jeste
   // nastavit, ci je ten projekt"). Konkretni clovek u klientske firmy, ne cela

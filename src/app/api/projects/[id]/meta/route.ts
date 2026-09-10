@@ -35,8 +35,11 @@ const schema = z.object({
   /** YYYY-MM-DD, prazdny retezec = smazat. Upravuje se i primo v prehledu. */
   endDate: z.string().trim().optional(),
   releaseDate: z.string().trim().optional(),
-  /** Ucet herce - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
-  actorUserId: z.string().trim().optional(),
+  /**
+   * Ucty hercu v poradi - prvni je hlavni (zadani 10. 9. 2026: "chci jich tam
+   * dat vice"). Prazdne pole = projekt herce nema.
+   */
+  actorUserIds: z.array(z.string().trim().min(1)).max(20).optional(),
   /** Firma, pro kterou se projekt dela. */
   companyId: z.string().trim().optional(),
   /** Klient projektu - konkretni clovek, na ktereho chodi notifikace. */
@@ -98,17 +101,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       jmenaPo.managerUserId = manager.name || manager.email;
     }
 
-    // Herec musi byt ucet s roli Herec - na nej se vazou nabidky terminu
+    // Herci musi byt ucty s roli Herec - na ne se vazou nabidky terminu
     // a smlouvy, takze volny text uz tady nestaci.
-    if (data.actorUserId) {
-      const herec = await prisma.user.findFirst({
-        where: { id: data.actorUserId, role: 'HEREC' },
+    let herciVPoradi: { id: string; jmeno: string }[] | undefined;
+    if (data.actorUserIds) {
+      // Duplicity pryc: tentyz herec dvakrat u jednoho projektu nedava smysl
+      // a vazba by ho stejne ulozila jednou.
+      const ids: string[] = Array.from(new Set<string>(data.actorUserIds));
+      const nalezeni = await prisma.user.findMany({
+        where: { id: { in: ids }, role: 'HEREC' },
         select: { id: true, name: true, email: true },
       });
-      if (!herec) {
-        return NextResponse.json({ error: 'Vybraný herec neexistuje.' }, { status: 400 });
+      if (nalezeni.length !== ids.length) {
+        return NextResponse.json({ error: 'Některý z vybraných herců neexistuje.' }, { status: 400 });
       }
-      jmenaPo.actorUserId = herec.name || herec.email;
+      // Poradi urcuje clovek ve formulari, ne databaze - prvni je hlavni.
+      const seznam: { id: string; jmeno: string }[] = ids.map((id) => {
+        const u = nalezeni.find((n) => n.id === id)!;
+        return { id, jmeno: u.name || u.email };
+      });
+      herciVPoradi = seznam;
+      jmenaPo.actorUserId = seznam.map((h) => h.jmeno).join(', ') || null;
     }
 
     // Firma projektu musi existovat. Nazev se ulozi i textem, aby projekt
@@ -214,7 +227,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       values[klic] = d2;
     }
     text('klientUserId', data.klientUserId);
-    text('actorUserId', data.actorUserId);
+    // Hlavni herec se dopocitava ze seznamu, nenastavuje se zvlast - dva
+    // zdroje pravdy by se driv nebo pozdeji rozesly.
+    if (herciVPoradi) {
+      values.actorUserId = herciVPoradi[0]?.id ?? null;
+    }
+    // `set` prepise cely seznam, `connect` ho zaklada - upsert potrebuje
+    // obojí a kazde do sve vetve.
+    const vazbaHercu = herciVPoradi ? herciVPoradi.map((h) => ({ id: h.id })) : null;
     text('companyId', data.companyId);
     if (companyName !== undefined) values.companyName = companyName;
     if (data.statusName !== undefined) {
@@ -242,25 +262,46 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         actor: { select: { name: true, email: true } },
         klient: { select: { name: true, email: true } },
         company: { select: { name: true } },
+        herci: { select: { id: true, name: true, email: true } },
       },
     });
 
     const meta = await prisma.projectMeta.upsert({
       where: { caflouProjectId: params.id },
-      create: { caflouProjectId: params.id, ...values },
-      update: values,
+      create: {
+        caflouProjectId: params.id,
+        ...values,
+        ...(vazbaHercu ? { herci: { connect: vazbaHercu } } : {}),
+      },
+      update: {
+        ...values,
+        ...(vazbaHercu ? { herci: { set: vazbaHercu } } : {}),
+      },
       include: { company: { select: { caflouCompanyId: true } } },
     });
 
     // Historie projektu. Zamerne bez cekani - zaznam o praci nesmi zdrzet
     // ani shodit samotne ulozeni.
+    const predProHistorii = pred
+      ? { ...pred, actorUserId: pred.herci.map((h) => h.id).join(',') || pred.actorUserId }
+      : null;
+
     void zapisZmenyProjektu({
       caflouProjectId: params.id,
-      pred,
-      ulozeno: values,
+      pred: predProHistorii,
+      // Seznam hercu se do porovnani posila jako obycejny udaj - `values.herci`
+      // je vazba a porovnat by se neda.
+      // Do porovnani jde CELY seznam hercu slepeny do jedne hodnoty. Kdyby se
+      // porovnaval jen hlavni herec, pridani druheho by se do historie
+      // nezapsalo - hlavni zustal stejny.
+      ulozeno: herciVPoradi ? { ...values, actorUserId: herciVPoradi.map((h) => h.id).join(',') } : values,
       jmenaPred: {
         managerUserId: pred?.manager ? pred.manager.name || pred.manager.email : null,
-        actorUserId: pred?.actor ? pred.actor.name || pred.actor.email : null,
+        actorUserId: pred?.herci?.length
+          ? pred.herci.map((h) => h.name || h.email).join(', ')
+          : pred?.actor
+            ? pred.actor.name || pred.actor.email
+            : null,
         klientUserId: pred?.klient ? pred.klient.name || pred.klient.email : null,
         companyId: pred?.company?.name ?? pred?.companyName ?? null,
       },

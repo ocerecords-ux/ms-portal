@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import { PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
-import { VyberHerce, type Herec } from '../VyberHerce';
+import { type Herec } from '../VyberHerce';
+import { VyberHercu } from '../VyberHercu';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 
 type Initial = {
@@ -15,8 +16,11 @@ type Initial = {
   projectType: string;
   /** Stav projektu - od 10. 9. 2026 vlastni udaj portalu, ne z Caflou. */
   statusName: string;
-  /** Ucet herce - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
-  actorUserId: string;
+  /**
+   * Ucty hercu v poradi - prvni je hlavni (zadani 10. 9. 2026: "chci jich tam
+   * dat vice"). Herec je konkretni osoba, ne text.
+   */
+  actorUserIds: string[];
   /** Klient projektu - na nej chodi notifikace o projektu. */
   klientUserId: string;
   /** Firma, pro kterou se projekt dela. */
@@ -128,9 +132,16 @@ export function ProjectMetaForm({
             <dd className="text-sm font-heading text-ink m-0 mt-1">{values.statusName || '—'}</dd>
           </div>
           <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Herec</dt>
+            <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+              {values.actorUserIds.length > 1 ? 'Herci' : 'Herec'}
+            </dt>
             <dd className="text-sm font-heading text-ink m-0 mt-1">
-              {herci.find((h) => h.id === values.actorUserId)?.label ?? herecZCaflou ?? '—'}
+              {values.actorUserIds.length > 0
+                ? values.actorUserIds
+                    .map((id) => herci.find((h) => h.id === id)?.label)
+                    .filter(Boolean)
+                    .join(', ')
+                : (herecZCaflou ?? '—')}
             </dd>
           </div>
           <div>
@@ -228,13 +239,17 @@ export function ProjectMetaForm({
         </label>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Herec</span>
-          <VyberHerce
+          <span className="text-sm font-body text-ink">Herci</span>
+          <VyberHercu
             herci={herci}
-            hodnota={values.actorUserId}
-            onZmena={(id) => set('actorUserId', id)}
+            hodnoty={values.actorUserIds}
+            onZmena={(ids) => set('actorUserIds', ids)}
             puvodniText={herecZCaflou}
           />
+          <span className="text-xs text-muted font-body">
+            Herců může být víc. První v pořadí je hlavní — podle něj se předvyplňuje natáčecí
+            frekvence.
+          </span>
         </div>
 
         <label className="flex flex-col gap-1.5">

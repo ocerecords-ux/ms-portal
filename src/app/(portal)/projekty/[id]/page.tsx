@@ -77,7 +77,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     findInternalProject(caflouProjectId),
     prisma.projectMeta.findUnique({
       where: { caflouProjectId },
-      include: { manager: { select: { id: true, name: true, email: true } } },
+      include: {
+        manager: { select: { id: true, name: true, email: true } },
+        // Herci projektu (zadani 10. 9. 2026) - muze jich byt vic.
+        herci: { select: { id: true } },
+      },
     }),
     // Manazer projektu - jen ucty, ktere to maji na karte zaskrtnute
     // (zadani 10. 9. 2026). Viz lib/manazeriServer.ts.
@@ -326,7 +330,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           // Stav a herec: prednost ma to, co je v portalu. Dokud neprobehne
           // prenos, je tam prazdno a pouzije se posledni hodnota z Caflou.
           statusName: meta?.statusName ?? project?.statusName ?? '',
-          actorUserId: meta?.actorUserId ?? '',
+          // Poradi: hlavni herec (actorUserId) prvni, zbytek za nim. Vazba
+          // sama poradi nedrzi, drzi ho prave tenhle sloupec.
+          actorUserIds: seradHerce(meta?.herci ?? [], meta?.actorUserId ?? null),
           klientUserId: meta?.klientUserId ?? '',
           companyId: meta?.companyId ?? company?.id ?? '',
         }}
@@ -460,4 +466,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       <ProjectTabs tabs={tabs} />
     </section>
   );
+}
+
+/**
+ * Herci projektu v pořadí: hlavní první.
+ *
+ * Vazba mezi projektem a herci pořadí sama nedrží — drží ho sloupec
+ * `actorUserId` (hlavní herec). Ostatní jdou za ním tak, jak přijdou.
+ */
+function seradHerce(herci: { id: string }[], hlavni: string | null): string[] {
+  const ids = herci.map((h) => h.id);
+  if (!hlavni || !ids.includes(hlavni)) return ids;
+  return [hlavni, ...ids.filter((id) => id !== hlavni)];
 }

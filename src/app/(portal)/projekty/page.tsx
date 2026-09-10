@@ -224,6 +224,8 @@ async function InternalProjektySection({
         include: {
           manager: { select: { name: true, email: true, photoUrl: true } },
           actor: { select: { name: true, email: true } },
+          // Herci projektu (zadani 10. 9. 2026) - v prehledu se ukazuji vsichni.
+          herci: { select: { id: true, name: true, email: true } },
         },
       })
     : [];
@@ -238,7 +240,11 @@ async function InternalProjektySection({
         driveUrl: m.driveUrl,
         managerUserId: m.managerUserId,
         ikonaTypu: m.projectType ? ikonyTypu[m.projectType] ?? null : null,
-        actorUserId: m.actorUserId,
+        // Hlavni herec prvni, at prehled i detail ukazuji stejne poradi.
+        herciJmena: [
+          ...m.herci.filter((h) => h.id === m.actorUserId),
+          ...m.herci.filter((h) => h.id !== m.actorUserId),
+        ].map((h) => h.name || h.email),
       },
     ]),
   );
