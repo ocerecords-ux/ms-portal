@@ -49,7 +49,52 @@ export default async function ProjektyPage() {
   let finished: DisplayProject[] = [];
   let loadError = false;
 
-  if (company?.caflouCompanyId) {
+  // Vlastni data maji prednost (prechod z Caflou, 10. 9. 2026). Jakmile je
+  // projekt v portalu, klient ho vidi odtud a do Caflou se uz nechodi.
+  const zPortalu = company
+    ? await prisma.projectMeta.findMany({
+        where: { companyId: company.id, name: { not: null } },
+        select: {
+          caflouProjectId: true,
+          name: true,
+          statusName: true,
+          finished: true,
+          priority: true,
+          pageCount: true,
+          narrator: true,
+          releaseDate: true,
+          startDate: true,
+          endDate: true,
+        },
+        orderBy: { name: 'asc' },
+      })
+    : [];
+
+  if (zPortalu.length > 0) {
+    const vsechny: DisplayProject[] = zPortalu.map((p) => ({
+      id: Number(p.caflouProjectId),
+      name: p.name ?? '',
+      finished: p.finished,
+      statusName: p.statusName ?? '',
+      priority: p.priority,
+      narrator: p.narrator,
+      pageCount: p.pageCount,
+      finishedAt: p.endDate,
+      releaseDate: p.releaseDate,
+      startDate: p.startDate,
+      endDate: p.endDate,
+    }));
+    active = vsechny
+      .filter((p) => !p.finished)
+      .sort((a, b) => (a.endDate?.getTime() ?? Infinity) - (b.endDate?.getTime() ?? Infinity));
+    finished = vsechny
+      .filter((p) => p.finished)
+      .sort(
+        (a, b) =>
+          (b.endDate?.getTime() ?? b.finishedAt?.getTime() ?? 0) -
+          (a.endDate?.getTime() ?? a.finishedAt?.getTime() ?? 0),
+      );
+  } else if (company?.caflouCompanyId) {
     try {
       const result = await listCaflouProjectsForCompanyCached(company.caflouCompanyId);
       if (result.ok) {

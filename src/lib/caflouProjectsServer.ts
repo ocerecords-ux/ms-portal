@@ -91,7 +91,61 @@ async function zapisDoDatabaze(projects: AdminDisplayProject[]): Promise<void> {
  * projektu u dokladů). Nikdy nevyhazuje - při chybě vrátí prázdný seznam
  * a text chyby, který si volající zobrazí.
  */
+/**
+ * Projekty z vlastní databáze (přechod z Caflou, 10. 9. 2026).
+ *
+ * Jakmile v portálu existuje aspoň jeden projekt s názvem - tedy jakmile
+ * proběhl přenos z Caflou nebo někdo projekt založil rovnou tady - přestává
+ * se Caflou volat úplně. Přepínač se schválně neřeší proměnnou prostředí:
+ * data v portálu jsou tím jediným rozhodujícím znakem, takže se nemůže stát,
+ * že by byl přepínač zapnutý a v portálu prázdno.
+ */
+async function nactiZPortalu(): Promise<AdminDisplayProject[] | null> {
+  const projekty = await prisma.projectMeta.findMany({
+    where: { name: { not: null } },
+    select: {
+      caflouProjectId: true,
+      name: true,
+      companyName: true,
+      statusName: true,
+      finished: true,
+      priority: true,
+      pageCount: true,
+      narrator: true,
+      releaseDate: true,
+      startDate: true,
+      endDate: true,
+      company: { select: { caflouCompanyId: true } },
+    },
+    orderBy: { name: 'asc' },
+  });
+  if (projekty.length === 0) return null;
+
+  return projekty.map((p) => ({
+    id: Number(p.caflouProjectId),
+    name: p.name ?? '',
+    finished: p.finished,
+    statusName: p.statusName ?? '',
+    priority: p.priority,
+    narrator: p.narrator,
+    pageCount: p.pageCount,
+    // Caflou rozlisovalo "finished_at" a "end_date"; v portalu staci datum
+    // dokonceni - odznak i razeni si vystaci s nim.
+    finishedAt: p.endDate,
+    releaseDate: p.releaseDate,
+    startDate: p.startDate,
+    endDate: p.endDate,
+    companyName: p.companyName ?? '',
+    caflouCompanyId: p.company?.caflouCompanyId ?? null,
+  }));
+}
+
 export async function loadInternalProjects(): Promise<InternalProjectsResult> {
+  // 0) Vlastni data maji prednost pred vsim ostatnim - vcetne cache, ktera
+  //    drzi starou odpoved z Caflou.
+  const zPortalu = await nactiZPortalu();
+  if (zPortalu) return { projects: zPortalu, error: null };
+
   // 1) Paměť instance - když ji máme, nesaháme ani do databáze.
   const zPameti = peekInternalProjectsCache();
   if (zPameti) return { projects: zPameti, error: null };
