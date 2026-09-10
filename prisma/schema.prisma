@@ -107,6 +107,7 @@ model Company {
   updatedAt      DateTime  @updatedAt
 
   users    User[]
+  projekty ProjectMeta[] @relation("ProjektFirma")
   orders    Order[]
   projects  Project[]
   offers    Offer[]
@@ -254,6 +255,13 @@ model Counter {
 // Cim byl vydaj zaplaceny (zadani 10. 9. 2026 ke scanovani uctenek).
 // Kartou a hotove je zaplaceno uz v okamziku vzniku dokladu, prevodem az
 // pozdeji - podle toho se sam predvyplni priznak "uhrazeno".
+// Odkud projekt pochazi (prechod z Caflou, 10. 9. 2026). Prenesene projekty
+// se poznaji od tech, ktere uz vznikly primo v portalu.
+enum ProjectSource {
+  CAFLOU // preneseno jednorazovym prenosem z Caflou
+  PORTAL // zalozeno v portalu
+}
+
 enum PaymentMethod {
   CARD     // platebni kartou
   CASH     // hotove
@@ -313,8 +321,38 @@ model ProjectMeta {
   /// se internímu týmu ukazuje jako vyžadující kontrolu a klientovi nic nešlo.
   rlError           String?
 
+  // --- VLASTNI DATA PROJEKTU (prechod z Caflou, 10. 9. 2026) ---------------
+  // Do 10. 9. 2026 se nazev, firma, stav a dalsi udaje cetly pri kazdem
+  // zobrazeni z Caflou a tahle tabulka drzela jen nase vlastni atributy.
+  // Mediaspace ale Caflou opousti, takze projekt ted zije tady. Klic
+  // caflouProjectId zustava tim, cim byl - jednoznacnym ID projektu, na ktere
+  // se odkazuji doklady, vykazy, rozpocty i rodne listy. Nove projekty
+  // dostanou vlastni ID; jen uz nepochazi z Caflou.
+  name            String?
+  companyId       String?
+  company         Company?         @relation("ProjektFirma", fields: [companyId], references: [id])
+  /// Nazev firmy textem - projekt zustane citelny, i kdyz firma v portalu neni.
+  companyName     String?
+  statusName      String?
+  finished        Boolean          @default(false)
+  pageCount       Int?
+  /// Herec jako text, jak byl v Caflou. Navazany ucet je v actorUserId vyse.
+  narrator        String?
+  releaseDate     DateTime?
+  startDate       DateTime?
+  endDate         DateTime?
+  /// Popis projektu. V Caflou se do nej psal odkaz na slozku projektu.
+  popis           String?          @db.Text
+  zdroj           ProjectSource    @default(CAFLOU)
+  /// Kdy projekt prisel jednorazovym prenosem z Caflou.
+  prenesenoAt     DateTime?
+
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+
+  @@index([finished])
+  @@index([companyId])
+  @@index([name])
 }
 
 
