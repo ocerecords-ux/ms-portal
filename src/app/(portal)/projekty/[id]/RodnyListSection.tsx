@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   missingRodnyListFields,
@@ -89,6 +89,10 @@ export function RodnyListSection({
    */
   const [nahledOtevreny, setNahledOtevreny] = useState(true);
   const [verzeNahledu, setVerzeNahledu] = useState(0);
+  /** Adresa právě vykresleného PDF v paměti prohlížeče. */
+  const [nahledUrl, setNahledUrl] = useState<string | null>(null);
+  const [nahledSeDela, setNahledSeDela] = useState(false);
+  const posledniUrl = useRef<string | null>(null);
 
   function set<K extends keyof RodnyListValues>(key: K, value: RodnyListValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -179,6 +183,67 @@ export function RodnyListSection({
     }
   }
 
+  /**
+   * Živý náhled (zadání 10. 9. 2026: „když budu měnit údaje, tak se to bude
+   * měnit i v tom náhledu").
+   *
+   * Rozepsané hodnoty se pošlou na server, ten z nich vyrobí PDF a vrátí ho
+   * - NIC SE NEUKLÁDÁ. Kreslit dokument v prohlížeči by znamenalo mít
+   * podobu Rodného listu na dvou místech a ta by se dřív nebo později
+   * rozešla; takhle je náhled doslova to, co pak vznikne.
+   *
+   * Čeká se půl vteřiny po posledním doťuknutí - jinak by se PDF vyrábělo
+   * po každém písmenu. Rozdělaný požadavek se ruší, aby se nestalo, že
+   * pomalejší starší odpověď přijde po novější a přebije ji.
+   */
+  useEffect(() => {
+    if (!jeRadiovySpot || !nahledOtevreny || chybi.length > 0) return;
+
+    const rizeni = new AbortController();
+    const casovac = window.setTimeout(async () => {
+      setNahledSeDela(true);
+      try {
+        const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/rodny-list/nahled`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: rizeni.signal,
+          body: JSON.stringify({
+            clientName: values.clientName,
+            spotName: values.spotName,
+            spotLengthSeconds: values.spotLengthSeconds,
+            directorName: values.directorName,
+            musicTitle: values.musicTitle,
+            musicAuthor: values.musicAuthor,
+            noMusic: values.noMusic,
+            productionDate: values.productionDate,
+          }),
+        });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        // Předchozí PDF pustíme z paměti - bez toho by se při psaní
+        // hromadila jedna kopie dokumentu za druhou.
+        if (posledniUrl.current) URL.revokeObjectURL(posledniUrl.current);
+        posledniUrl.current = url;
+        setNahledUrl(url);
+      } catch {
+        // Přerušený požadavek při dalším ťuknutí není chyba.
+      } finally {
+        setNahledSeDela(false);
+      }
+    }, 500);
+
+    return () => {
+      window.clearTimeout(casovac);
+      rizeni.abort();
+    };
+  }, [values, chybi.length, jeRadiovySpot, nahledOtevreny, caflouProjectId, verzeNahledu]);
+
+  // Poslední PDF pustíme z paměti, když se od projektu odchází.
+  useEffect(() => () => {
+    if (posledniUrl.current) URL.revokeObjectURL(posledniUrl.current);
+  }, []);
+
   const nazevSouboru = rodnyListFileName(values.spotName || projectName);
 
   /** Sekce „Hudba ve spotu" - jediná část, která je i u jiných typů projektu. */
@@ -204,7 +269,7 @@ export function RodnyListSection({
             : 'U projektu je poznamenané, že hudbu nemá.'}
         </p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 gap-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Název skladby</span>
             <input
@@ -281,9 +346,15 @@ export function RodnyListSection({
         </div>
       )}
 
+      {/* DVA SLOUPCE (zadani 10. 9. 2026): vlevo dokument, vpravo uzka karta
+          s udaji. Dokument je to hlavni, na co se clovek diva, tak dostal
+          vic mista; na uzkem okne jde formular nahoru, protoze na telefonu
+          se hlavne vyplnuje. Nahled se pri rolovani drzi na miste, at se
+          nemusi jezdit nahoru a dolu. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
       <form
         onSubmit={handleSubmit}
-        className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5"
+        className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-5 order-1 lg:order-2"
       >
         <div>
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
@@ -295,11 +366,11 @@ export function RodnyListSection({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 gap-4">
           {/* Klient na dokumentu (zadani 10. 9. 2026). Predvyplneny celym
               nazvem firmy projektu, ale prepsat ho jde - na RL obcas patri
               neco jineho nez firma, ktere se fakturuje. */}
-          <label className="flex flex-col gap-1.5 sm:col-span-2">
+          <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Klient</span>
             <input
               type="text"
@@ -316,7 +387,7 @@ export function RodnyListSection({
             </span>
           </label>
 
-          <label className="flex flex-col gap-1.5 sm:col-span-2">
+          <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Název spotu</span>
             <input
               type="text"
@@ -356,7 +427,7 @@ export function RodnyListSection({
             />
           </label>
 
-          <label className="flex flex-col gap-1.5 sm:col-span-2">
+          <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Režie</span>
             <input
               type="text"
@@ -376,14 +447,14 @@ export function RodnyListSection({
           vznikne po kliknutí na Vygenerovat - jen se nikam neuloží. Rám kolem
           něj je záměrně "papírový": člověk má vidět dokument, ne políčko
           prohlížeče. */}
-      <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between flex-wrap gap-3 px-6 py-4 border-b border-line">
+      <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden order-2 lg:order-1 lg:sticky lg:top-24 self-start">
+        <div className="flex items-center justify-between flex-wrap gap-3 px-5 py-3.5 border-b border-line">
           <div>
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
               Náhled
             </h2>
             <p className="text-xs font-body text-muted m-0 mt-1">
-              Takhle bude dokument vypadat. Nikam se neukládá.
+              {nahledSeDela ? 'Překresluji…' : 'Mění se s tím, co píšete. Nikam se neukládá.'}
             </p>
           </div>
           <span className="flex items-center gap-3 flex-wrap">
@@ -424,16 +495,18 @@ export function RodnyListSection({
               </p>
             ) : (
               <iframe
-                // Pocitadlo v adrese: bez nej by prohlizec po ulozeni ukazal
-                // starý dokument z pameti - adresa je porad stejna.
-                key={verzeNahledu}
-                src={`/api/projects/${encodeURIComponent(caflouProjectId)}/rodny-list/nahled?v=${verzeNahledu}`}
+                // Zdroj je PDF vyrobene z rozepsanych hodnot a drzene
+                // v pameti prohlizece - proto blob:, ne adresa routy.
+                src={nahledUrl ?? undefined}
                 title="Náhled Rodného listu"
-                className="w-full h-[700px] max-h-[75vh] rounded-lg border border-line bg-white shadow-md"
+                className={`w-full h-[760px] max-h-[78vh] rounded-lg border border-line bg-white shadow-md transition-opacity ${
+                  nahledSeDela ? 'opacity-60' : 'opacity-100'
+                }`}
               />
             )}
           </div>
         )}
+      </div>
       </div>
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">

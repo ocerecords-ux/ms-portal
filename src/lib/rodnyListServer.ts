@@ -450,10 +450,28 @@ export async function loadNejnovejsiRodneListy(
  * vlastní cestu, dřív nebo později by ukazoval něco jiného, než co pak
  * doopravdy vznikne.
  */
+/**
+ * Rozepsané hodnoty z formuláře. Když přijdou, mají přednost před tím, co je
+ * uložené - jinak by náhled ukazoval stav před poslední úpravou a nedalo by
+ * se podle něj nic doladit.
+ */
+export type RozepsanyRodnyList = {
+  clientName?: string;
+  spotName?: string;
+  spotLengthSeconds?: number | null;
+  directorName?: string;
+  musicTitle?: string;
+  musicAuthor?: string;
+  noMusic?: boolean;
+  /** YYYY-MM-DD, jak ho dává <input type="date">. */
+  productionDate?: string;
+};
+
 export async function nahledRodnehoListu(
   caflouProjectId: string,
   projectName: string,
   caflouCompanyId: string | null,
+  rozepsane?: RozepsanyRodnyList,
 ): Promise<
   | { ok: true; pdf: Buffer; fileName: string }
   | { ok: false; reason: RodnyListFailure; message: string }
@@ -487,8 +505,25 @@ export async function nahledRodnehoListu(
       return { ok: false, reason: 'NO_COMPANY', message: 'K projektu není v portálu napojená firma.' };
     }
 
-    const fields = fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
-    const klientNaRL = ((meta?.rlClientName as string | null) || '').trim() || company.name;
+    const ulozene = fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
+    // Rozepsane hodnoty prebijou ulozene. Jinak receno: co ve formulari
+    // neni, zustava tak, jak je ulozene.
+    const fields: RodnyListFields = {
+      spotName: rozepsane?.spotName ?? ulozene.spotName,
+      spotLengthSeconds:
+        rozepsane?.spotLengthSeconds !== undefined ? rozepsane.spotLengthSeconds : ulozene.spotLengthSeconds,
+      directorName: rozepsane?.directorName ?? ulozene.directorName,
+      musicTitle: rozepsane?.musicTitle ?? ulozene.musicTitle,
+      musicAuthor: rozepsane?.musicAuthor ?? ulozene.musicAuthor,
+      noMusic: rozepsane?.noMusic ?? ulozene.noMusic,
+      productionDate: rozepsane?.productionDate
+        ? new Date(`${rozepsane.productionDate}T00:00:00.000Z`)
+        : rozepsane?.productionDate === ''
+          ? null
+          : ulozene.productionDate,
+    };
+    const klientNaRL =
+      (rozepsane?.clientName ?? ((meta?.rlClientName as string | null) || '')).trim() || company.name;
     const chybi = missingRodnyListFields({ ...fields, clientName: klientNaRL });
     if (chybi.length > 0) {
       return { ok: false, reason: 'MISSING_FIELDS', message: missingFieldsMessage(chybi) };
