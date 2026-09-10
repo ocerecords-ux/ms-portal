@@ -181,7 +181,8 @@ export async function POST(req: NextRequest) {
             id: row.id,
             nazev: row.name,
             akce: 'preskoceno',
-            detail: 'Chybí e-mail — bez něj nejde účet herce založit. Doplňte ho v Caflou a načtěte znovu.',
+            detail:
+              'Chybí e-mail — bez něj nejde účet herce založit. Dopište ho v tabulce ve sloupci Kontakt a přeneste znovu.',
           });
           continue;
         }

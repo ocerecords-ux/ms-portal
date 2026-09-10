@@ -216,6 +216,37 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
     }
   }
 
+  /**
+   * Dopsani e-mailu primo v tabulce (zadani 10. 9. 2026: "zařvalo mi to, že
+   * nemůže, protože chybí email... nemůžu ho pak třeba v tom bodě doplnit
+   * ručně a projde to?").
+   *
+   * Uklada se na radek nactený z Caflou, ne rovnou na ucet - ucet totiz jeste
+   * neexistuje, prave proto prenos nesel. Pri dalsim pokusu uz e-mail je
+   * a herec se zalozi. Zustane i pro hromadny prenos.
+   */
+  async function setEmail(id: string, email: string) {
+    setBusyId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/caflou-firmy/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || 'E-mail se nepodařilo uložit.');
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError('E-mail se nepodařilo uložit.');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function setKind(id: string, kind: CaflouContactKind) {
     setBusyId(id);
     setError(null);
@@ -375,7 +406,27 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                     {item.ic ?? '—'}
                   </td>
                   <td className="px-3 py-3.5 text-sm font-heading text-muted">
-                    {item.email ?? '—'}
+                    {/* Herec bez e-mailu nejde zalozit - e-mail je prihlasovaci
+                        udaj. Misto aby clovek musel do Caflou a nacitat znovu,
+                        dopise ho rovnou tady (zadani 10. 9. 2026). */}
+                    {item.kind === 'HEREC' && !item.email ? (
+                      <input
+                        type="email"
+                        defaultValue=""
+                        disabled={busyId === item.id}
+                        placeholder="dopište e-mail"
+                        onBlur={(e) => {
+                          const hodnota = e.target.value.trim();
+                          if (hodnota) void setEmail(item.id, hodnota);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                        }}
+                        className="w-[180px] rounded-lg border border-dashed border-brand-purple/60 bg-field px-2 py-1 text-sm font-heading text-ink outline-none focus:border-brand-purple disabled:opacity-50"
+                      />
+                    ) : (
+                      item.email ?? '—'
+                    )}
                     {item.phone && <span className="block text-xs font-body text-muted/80">{item.phone}</span>}
                   </td>
                   <td className="px-3 py-3.5 text-sm font-heading text-muted">{item.city ?? '—'}</td>

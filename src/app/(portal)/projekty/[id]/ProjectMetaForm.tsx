@@ -89,7 +89,13 @@ export function ProjectMetaForm({
         return;
       }
       setSaved(true);
+      // Po ulozeni zpatky do prehledu (zadani 10. 9. 2026: "kdyz neco ulozim
+      // v projektu, at se vratim na prehled"). Ulozeni je konec prace na
+      // projektu - zustat na detailu znamenalo klikat na "Zpet" pokazde.
+      // refresh() musi zustat: prehled uz muze byt nacteny a bez nej by
+      // ukazoval stare hodnoty.
       router.refresh();
+      router.push('/projekty');
     } catch {
       setError('Uložení se nezdařilo.');
     } finally {
