@@ -1147,7 +1147,8 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
 // ZPRÁVA O ZMĚNĚ STAVU PROJEKTU (zadání 10. 9. 2026)
 //
 // Chodí klientovi, když projekt přejde do stavu, který má firma zapnutý
-// (karta firmy → Notifikace). Nese jedno tlačítko - odkaz na složku na Disku.
+// (karta firmy → Notifikace). Nese jedno tlačítko - odkaz do NAŠICH Nahrávek
+// v portálu (zadání 10. 9. 2026), ne na Google Disk.
 // Druhé tlačítko (Audiotagger) přibude, až bude kam odkazovat.
 // ===========================================================================
 
@@ -1171,7 +1172,7 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
       : `Dobrý den, ${escapeHtml(input.jmenoKlienta)},`;
 
   const tlacitko = input.odkazNaDisk
-    ? `<a class="btn" href="${escapeHtml(input.odkazNaDisk)}">Otevřít složku na Disku</a>`
+    ? `<a class="btn" href="${escapeHtml(input.odkazNaDisk)}">Poslechnout nahrávky</a>`
     : '<p style="color:#6C6580;">Odkaz na složku zatím u projektu není vyplněný.</p>';
 
   const interniPoznamka = input.jenInterne
@@ -1213,7 +1214,7 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
       `${input.nazevProjektu}${input.nazevFirmy ? ` (${input.nazevFirmy})` : ''}`,
       input.text,
       '',
-      input.odkazNaDisk ? `Slozka na Disku: ${input.odkazNaDisk}` : 'Odkaz na slozku zatim neni vyplneny.',
+      input.odkazNaDisk ? `Nahravky: ${input.odkazNaDisk}` : 'Odkaz na nahravky zatim neni vyplneny.',
     ]
       .filter(Boolean)
       .join('\n'),

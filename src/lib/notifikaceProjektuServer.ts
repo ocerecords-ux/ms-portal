@@ -98,7 +98,22 @@ export async function posliNotifikaciKeStavu(
       return { stav: 'chybi-prijemce' };
     }
 
-    const odkazNaDisk = projekt.driveUrl || projekt.company?.driveFolderUrl || null;
+    /**
+     * Odkaz v mailu vede do NAŠICH Nahrávek, ne na Google Disk (zadání
+     * 10. 9. 2026: „chci, ať se mu to otevře v tom našem disku Nahrávky
+     * obrandovaném, v barvách").
+     *
+     * Klient tak zůstane v portálu, kde nahrávky vypadají jako od nás a dají
+     * se rovnou poslechnout. Na Google Disk ho pošleme jen tehdy, když
+     * projekt ještě nemáme v portálu spárovaný s firmou - to by se mu
+     * stránka Nahrávek neotevřela a odkaz do prázdna je horší než odkaz
+     * jinam.
+     */
+    const zaklad = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
+    const slozka = projekt.driveUrl || projekt.company?.driveFolderUrl || null;
+    const odkazNaDisk = projekt.companyId && slozka
+      ? `${zaklad}/nahravky?projekt=${encodeURIComponent(caflouProjectId)}`
+      : slozka;
 
     const vysledek = await sendStavProjektuEmail({
       prijemci,
