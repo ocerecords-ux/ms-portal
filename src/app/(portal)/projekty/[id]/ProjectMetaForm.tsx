@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
 import { VyberHerce, type Herec } from '../VyberHerce';
+import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 
 type Initial = {
   driveUrl: string;
@@ -63,10 +64,40 @@ export function ProjectMetaForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Smazani projektu (zadani 10. 9. 2026) - jen kdyz na nem nic nevisi.
+  const [maze, setMaze] = useState(false);
+  const [potvrzeni, setPotvrzeni] = useState(false);
 
   function set<K extends keyof Initial>(key: K, value: Initial[K]) {
     setValues((v) => ({ ...v, [key]: value }));
     setSaved(false);
+  }
+
+  /** Smaze projekt. Prvni kliknuti si rekne o potvrzeni. */
+  async function smaz() {
+    if (!potvrzeni) {
+      setPotvrzeni(true);
+      setError(null);
+      return;
+    }
+    setMaze(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/projekty/${caflouProjectId}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Projekt se nepodařilo smazat.');
+        setPotvrzeni(false);
+        return;
+      }
+      router.push('/projekty');
+      router.refresh();
+    } catch {
+      setError('Projekt se nepodařilo smazat.');
+      setPotvrzeni(false);
+    } finally {
+      setMaze(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -111,13 +142,7 @@ export function ProjectMetaForm({
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Odkaz na KZ</dt>
             <dd className="text-sm font-heading m-0 mt-1">
-              {values.driveUrl ? (
-                <a href={values.driveUrl} target="_blank" rel="noreferrer" className="text-brand-purple break-all">
-                  Otevřít složku ↗
-                </a>
-              ) : (
-                <span className="text-ink">—</span>
-              )}
+              <OdkazTlacitko url={values.driveUrl} popisek="Otevřít složku" varianta="vedlejsi" />
             </dd>
           </div>
           <div>
@@ -175,15 +200,13 @@ export function ProjectMetaForm({
             onChange={(e) => set('driveUrl', e.target.value)}
             className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
           />
-          <span className="text-xs text-muted font-body">
-            Složka projektu na Google Disku.
+          <span className="text-xs text-muted font-body">Složka projektu na Google Disku.</span>
+          {/* Odkazy jako tlacitka i s kopirovanim (zadani 10. 9. 2026) - adresa
+              slozky je dlouha a jako podtrzeny text se spatne trefuje. */}
+          <span className="flex items-center gap-3 flex-wrap mt-1">
+            <OdkazTlacitko url={values.driveUrl} popisek="Otevřít složku projektu" varianta="vedlejsi" />
             {companyDriveFolderUrl && (
-              <>
-                {' '}
-                <a href={companyDriveFolderUrl} target="_blank" rel="noreferrer" className="text-brand-purple">
-                  Otevřít složku firmy ↗
-                </a>
-              </>
+              <OdkazTlacitko url={companyDriveFolderUrl} popisek="Složka firmy" varianta="vedlejsi" />
             )}
           </span>
         </label>
@@ -349,6 +372,25 @@ export function ProjectMetaForm({
           {saving ? 'Ukládám…' : 'Uložit'}
         </button>
         {saved && <span className="text-sm font-heading text-brand-greenDeep">Uloženo.</span>}
+      </div>
+
+      {/* Smazani projektu (zadani 10. 9. 2026) - jen kdyz na nem nic nevisi. */}
+      <div className="border-t border-line pt-4 flex items-start gap-4 flex-wrap">
+        <div className="flex-1 min-w-[260px]">
+          <p className="font-heading font-semibold text-sm text-ink m-0">Smazat projekt</p>
+          <p className="text-xs font-body text-muted m-0 mt-1">
+            Jen když na něm nevisí žádný doklad, výkaz ani frekvence — jinak portál napíše co.
+            Složka na Disku zůstane, tu si smažte sami, pokud ji nechcete. Nevratné.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void smaz()}
+          disabled={maze}
+          className="font-heading font-semibold text-sm rounded-lg px-4 py-2.5 bg-danger text-white hover:brightness-95 transition-colors disabled:opacity-60"
+        >
+          {maze ? 'Mažu…' : potvrzeni ? 'Opravdu smazat?' : 'Smazat projekt'}
+        </button>
       </div>
     </form>
   );

@@ -78,3 +78,35 @@ export async function prekazkyUzivatele(userId: string): Promise<Prekazka[]> {
     { co: 'natáčecí frekvence', pocet: frekvence },
   ].filter((p) => p.pocet > 0);
 }
+
+/**
+ * Co všechno na projektu visí (zadání 10. 9. 2026: "potřeboval bych, aby šly
+ * smazat projekty").
+ *
+ * Vazba je přes ID projektu v textu, ne přes databázový vztah - proto se
+ * počítá podle `caflouProjectId`, stejně jako se všude jinde dohledávají
+ * doklady k projektu.
+ */
+export async function prekazkyProjektu(caflouProjectId: string): Promise<Prekazka[]> {
+  const [faktury, nabidky, vydaje, smlouvy, vykazy, frekvence, rodneListy, konverzace] = await Promise.all([
+    prisma.invoice.count({ where: { caflouProjectId } }),
+    prisma.offer.count({ where: { caflouProjectId } }),
+    prisma.expense.count({ where: { caflouProjectId } }),
+    prisma.contract.count({ where: { caflouProjectId } }),
+    prisma.timesheetEntry.count({ where: { caflouProjectId } }),
+    prisma.recordingRequest.count({ where: { caflouProjectId } }),
+    prisma.rodnyList.count({ where: { caflouProjectId } }),
+    prisma.conversation.count({ where: { caflouProjectId } }),
+  ]);
+
+  return [
+    { co: 'faktura', pocet: faktury },
+    { co: 'nabídka', pocet: nabidky },
+    { co: 'výdaj', pocet: vydaje },
+    { co: 'smlouva', pocet: smlouvy },
+    { co: 'výkaz', pocet: vykazy },
+    { co: 'natáčecí frekvence', pocet: frekvence },
+    { co: 'rodný list', pocet: rodneListy },
+    { co: 'kanál v chatu', pocet: konverzace },
+  ].filter((p) => p.pocet > 0);
+}
