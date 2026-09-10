@@ -1,0 +1,26 @@
+{
+  "name": "ms-portal-mobil",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nativni obal MS Portalu a MS Chatu pro App Store a Google Play. Instaluje se jen v teto slozce - do buildu portalu na Vercelu nic z toho nechodi.",
+  "scripts": {
+    "portal:init": "cp capacitor.config.portal.ts capacitor.config.ts && npx cap sync",
+    "chat:init": "cp capacitor.config.chat.ts capacitor.config.ts && npx cap sync",
+    "ios": "npx cap open ios",
+    "android": "npx cap open android",
+    "ikony": "npx @capacitor/assets generate --assetPath ikony"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/ios": "^6.1.2",
+    "@capacitor/push-notifications": "^6.0.2",
+    "@capacitor/splash-screen": "^6.0.2",
+    "@capacitor/status-bar": "^6.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.1.2"
+  }
+}

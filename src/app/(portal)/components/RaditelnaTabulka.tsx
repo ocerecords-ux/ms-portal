@@ -233,6 +233,7 @@ export function ThRadit({
   vpravo,
   trida = '',
   title,
+  naFialovem = false,
 }: {
   label: string;
   sloupec: string;
@@ -241,8 +242,19 @@ export function ThRadit({
   vpravo?: boolean;
   trida?: string;
   title?: string;
+  /**
+   * Sedí hlavička na fialovém pruhu? Pak se seřazený sloupec zvýrazní zeleně -
+   * světle fialová by na fialovém podkladu nebyla vidět. Na tmavém pruhu
+   * (výchozí stav) se zvýrazňuje světle fialovou.
+   */
+  naFialovem?: boolean;
 }) {
   const aktivni = razeni?.key === sloupec;
+  // Třídy se schválně skládají z celých názvů, ne z kousků - Tailwind hledá
+  // ve zdrojácích přesné řetězce a poskládaný název by mu utekl.
+  const barvy = naFialovem
+    ? `hover:text-brand-green ${aktivni ? 'text-brand-green' : 'text-white'}`
+    : `hover:text-brand-purpleLight ${aktivni ? 'text-brand-purpleLight' : 'text-white'}`;
   return (
     <th
       aria-sort={aktivni ? (razeni!.smer === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -253,9 +265,7 @@ export function ThRadit({
         type="button"
         onClick={() => prepni(sloupec)}
         title={`Seřadit podle: ${label}`}
-        className={`font-heading text-xs hover:text-brand-purpleLight transition-colors ${
-          aktivni ? 'text-brand-purpleLight' : 'text-white'
-        }`}
+        className={`font-heading text-xs transition-colors ${barvy}`}
       >
         {label}
         <Sipka smer={aktivni ? razeni!.smer : null} />

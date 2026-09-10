@@ -313,12 +313,12 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
           <table className="w-full min-w-[900px] border-collapse">
             <thead>
               <tr className="bg-brand-purple text-white font-heading text-xs">
-                <ThRadit label="Název" sloupec="nazev" razeni={razeni} prepni={prepni} trida="px-3" />
-                <ThRadit label="IČ" sloupec="ic" razeni={razeni} prepni={prepni} trida="px-3" />
-                <ThRadit label="Kontakt" sloupec="kontakt" razeni={razeni} prepni={prepni} trida="px-3" />
-                <ThRadit label="Město" sloupec="mesto" razeni={razeni} prepni={prepni} trida="px-3" />
-                <ThRadit label="Už v portálu" sloupec="vPortalu" razeni={razeni} prepni={prepni} trida="px-3" />
-                <ThRadit label="Kdo to je" sloupec="kdoToJe" razeni={razeni} prepni={prepni} trida="px-3" />
+                <ThRadit label="Název" sloupec="nazev" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <ThRadit label="IČ" sloupec="ic" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <ThRadit label="Kontakt" sloupec="kontakt" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <ThRadit label="Město" sloupec="mesto" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <ThRadit label="Už v portálu" sloupec="vPortalu" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <ThRadit label="Kdo to je" sloupec="kdoToJe" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
               </tr>
             </thead>
             <tbody>

@@ -585,8 +585,8 @@ function SortHeader({
         type="button"
         onClick={() => onSort(sortKey)}
         title={`Seřadit podle: ${label}`}
-        className={`inline-flex items-center gap-1.5 font-heading text-xs transition-opacity hover:opacity-100 ${
-          active ? 'opacity-100' : 'opacity-80'
+        className={`inline-flex items-center gap-1.5 font-heading text-xs transition-colors hover:text-brand-green ${
+          active ? 'text-brand-green' : 'text-white/85'
         } ${align === 'right' ? 'flex-row-reverse' : ''}`}
       >
         {label}

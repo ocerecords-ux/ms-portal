@@ -141,8 +141,8 @@ export function UsersTable({
                       onClick={() => prepni(sloupec)}
                       aria-sort={aktivni ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
                       title={`Seřadit podle: ${NADPISY[sloupec]}`}
-                      className={`font-heading text-xs hover:text-brand-green transition-colors ${
-                        aktivni ? 'text-brand-green' : 'text-white'
+                      className={`font-heading text-xs hover:text-brand-purpleLight transition-colors ${
+                        aktivni ? 'text-brand-purpleLight' : 'text-white'
                       }`}
                     >
                       {NADPISY[sloupec]}

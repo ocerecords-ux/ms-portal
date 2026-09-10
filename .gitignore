@@ -3,3 +3,11 @@
 .DS_Store
 Claude outputs/
 .claude/
+
+# Nativni obal aplikaci (slozka mobil/) - do repa patri jen nastaveni a ikony.
+# Vygenerovane projekty a stazene balicky ne, jsou to stovky megabajtu.
+mobil/node_modules/
+mobil/ios/
+mobil/android/
+mobil/capacitor.config.ts
+mobil/prazdno/
