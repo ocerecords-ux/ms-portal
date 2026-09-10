@@ -8,11 +8,14 @@ import { useRouter } from 'next/navigation';
  * bych chtěl, ať jdou editovat přímo z přehledu: název, priorita, manažer
  * projektu, datum dokončení, datum vydání").
  *
- * Všechny tři podoby (text, výběr, datum) ukládají stejnou cestou -
+ * NÁZEV SEM UŽ NEPATŘÍ (zadání 10. 9. 2026): klik na název knihy má otevřít
+ * projekt, ne rozepsat pole. Upravit se dá v detailu projektu.
+ *
+ * Obě podoby (výběr, datum) ukládají stejnou cestou -
  * PATCH /api/projects/<id>/meta s jedním polem. Route uloží jen to, co
  * dorazilo, takže se nedá omylem přepsat něco jiného.
  *
- * SPOLEČNÉ CHOVÁNÍ: ukládá se hned (u textu při opuštění pole nebo Enterem),
+ * SPOLEČNÉ CHOVÁNÍ: ukládá se hned po výběru,
  * a když uložení selže, hodnota se vrátí na původní a vypíše se chyba.
  * Tabulka nikdy nesmí ukazovat něco jiného, než co je v databázi.
  */
@@ -36,106 +39,6 @@ async function uloz(caflouProjectId: string, pole: string, hodnota: string): Pro
 function Chyba({ text }: { text: string | null }) {
   if (!text) return null;
   return <span className="block text-[11px] font-body text-danger mt-0.5">{text}</span>;
-}
-
-/**
- * Text, který se upraví kliknutím. Dokud se needituje, vypadá jako obyčejný
- * text - tabulka se tím nerozpadne do řady políček.
- */
-export function UpravitelnyText({
-  caflouProjectId,
-  pole,
-  hodnota,
-  trida = '',
-  odkaz,
-}: {
-  caflouProjectId: string;
-  pole: string;
-  hodnota: string;
-  trida?: string;
-  /**
-   * Kam se dá odskočit z rozepsané buňky. U názvu projektu je to jeho detail:
-   * kliknutí na název text upravuje (zadání 10. 9. 2026), takže odkaz musí
-   * být někde jinde - a šipka vedle názvu se neosvědčila, roztahovala sloupec.
-   */
-  odkaz?: { href: string; popisek: string };
-}) {
-  const router = useRouter();
-  const [upravuje, setUpravuje] = useState(false);
-  const [text, setText] = useState(hodnota);
-  const [chyba, setChyba] = useState<string | null>(null);
-  const [uklada, setUklada] = useState(false);
-
-  async function potvrd() {
-    setUpravuje(false);
-    const novy = text.trim();
-    if (!novy || novy === hodnota) {
-      setText(hodnota);
-      return;
-    }
-    setUklada(true);
-    const problem = await uloz(caflouProjectId, pole, novy);
-    setUklada(false);
-    if (problem) {
-      setText(hodnota);
-      setChyba(problem);
-      return;
-    }
-    setChyba(null);
-    router.refresh();
-  }
-
-  if (!upravuje) {
-    return (
-      // flex, ne inline-flex: bunka ma pevnou sirku a dlouhy nazev se ma
-      // zalomit na dalsi radek (zadani 10. 9. 2026). inline-flex se smrskl
-      // na sirku textu, takze nebylo kde zalamovat.
-      <span className="flex flex-col min-w-0 w-full">
-        <button
-          type="button"
-          onClick={() => {
-            setText(hodnota);
-            setUpravuje(true);
-          }}
-          title="Upravit klepnutím"
-          className={`w-full text-left hover:text-brand-purple transition-colors ${uklada ? 'opacity-60' : ''} ${trida}`}
-        >
-          {hodnota || '—'}
-        </button>
-        <Chyba text={chyba} />
-      </span>
-    );
-  }
-
-  return (
-    <span className="flex flex-col min-w-0 w-full gap-0.5">
-      <input
-        autoFocus
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => void potvrd()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') void potvrd();
-          if (e.key === 'Escape') {
-            setText(hodnota);
-            setUpravuje(false);
-          }
-        }}
-        className="w-full rounded-lg border border-brand-purple bg-field px-2 py-1 text-sm font-heading text-ink outline-none"
-      />
-      {odkaz && (
-        <a
-          href={odkaz.href}
-          // Prohlizec by pri kliknuti nejdriv opustil policko (onBlur) a odkaz
-          // by zmizel drive, nez se stihne otevrit - proto onMouseDown.
-          onMouseDown={(e) => e.preventDefault()}
-          className="text-[11px] font-heading font-semibold text-brand-purple no-underline hover:underline"
-        >
-          {odkaz.popisek}
-        </a>
-      )}
-    </span>
-  );
 }
 
 /** Výběr z hodnot - priorita, manažer. */

@@ -7,7 +7,7 @@ import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
-import { UpravitelneDatum, UpravitelnyText, UpravitelnyVyber } from './UpravitelnaBunka';
+import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -335,23 +335,20 @@ function bunkaSloupce(
   const id = String(p.id);
   switch (key) {
     case 'name':
-      // Nazev jde upravit primo v prehledu (zadani 10. 9. 2026). Proklik na
-      // detail zustava vedle - jinak by se do projektu nedalo dostat.
-      // Klepnutim se nazev upravuje, stejne jako datum (zadani 10. 9. 2026).
-      // Odkaz na detail se ukaze az v rozepsane bunce - sipka vedle nazvu
-      // roztahovala sloupec a tabulka pak lezla za okraj.
+      // Nazev je proklik na detail projektu - nic vic.
+      //
+      // Kratce (10. 9. 2026) sel upravovat i tady v prehledu, ale byla to
+      // past: clovek klikne na nazev knihy, protoze chce do projektu, a misto
+      // toho si otevre pole a prepisuje nazev. Uprava nazvu zustava v detailu
+      // projektu, kde je k tomu formular a je jasne, co se deje.
+      //
       // Dlouhy nazev se zalomi na dalsi radek (sirka sloupce je v TRIDA_BUNKY);
       // orezavani tremi teckami se neosvedcilo, nebylo poznat, co je za knihu.
-      return muzeMenit ? (
-        <UpravitelnyText
-          caflouProjectId={id}
-          pole="name"
-          hodnota={p.name}
-          trida="whitespace-normal break-words"
-          odkaz={{ href: `/projekty/${p.id}`, popisek: 'Otevřít projekt ›' }}
-        />
-      ) : (
-        <Link href={`/projekty/${p.id}`} className="text-ink hover:text-brand-purple no-underline">
+      return (
+        <Link
+          href={`/projekty/${p.id}`}
+          className="text-ink hover:text-brand-purple no-underline break-words"
+        >
           {p.name}
         </Link>
       );
