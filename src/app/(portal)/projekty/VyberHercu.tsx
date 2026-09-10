@@ -11,7 +11,9 @@ import { TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
  * Víc lidí na jednu knihu je běžné: dabing, dvojhlas, vypravěč plus postavy.
  * Do té doby šel u projektu vyplnit jen jeden.
  *
- * PRVNÍ V SEZNAMU JE HLAVNÍ. Podle něj se předvyplňuje natáčecí frekvence,
+ * HERCI JSOU ČÍSLOVANÍ - Herec 1, Herec 2, ... (zadání 10. 9. 2026:
+ * „nelíbí se mi u herců označení hlavní, dal bych Herec 1, Herec 2").
+ * Na pořadí záleží: podle prvního se předvyplňuje natáčecí frekvence,
  * a proto jde s bublinami hýbat - šipkou se herec posune dopředu.
  *
  * Vybraný herec se v nabídce už neukazuje: dvakrát tentýž herec u jednoho
@@ -35,7 +37,7 @@ export function VyberHercu({
   disabled,
 }: {
   herci: Herec[];
-  /** ID vybraných účtů v pořadí - první je hlavní. */
+  /** ID vybraných účtů v pořadí - první je Herec 1. */
   hodnoty: string[];
   onZmena: (ids: string[]) => void;
   /** Jméno herce, jak přišlo z Caflou - vodítko, dokud účet přiřazený není. */
@@ -84,7 +86,7 @@ export function VyberHercu({
     onZmena(hodnoty.filter((h) => h !== id));
   }
 
-  /** Posun o jedno místo dopředu - první v seznamu je hlavní herec. */
+  /** Posun o jedno místo dopředu - z Herce 3 se stane Herec 2. */
   function nahoru(id: string) {
     const i = hodnoty.indexOf(id);
     if (i <= 0) return;
@@ -98,23 +100,22 @@ export function VyberHercu({
       {vybrani.length > 0 && (
         <div className={TRIDA_SLOUPCE_HERCU}>
           {vybrani.map((h, i) => (
-            <span key={h.id} className="inline-flex items-center gap-1">
+            <span key={h.id} className="inline-flex items-center gap-2">
+              <span className="text-[11px] font-heading text-muted w-[52px] shrink-0">Herec {i + 1}</span>
               <BublinaHerce
                 jmeno={h.label}
                 disabled={disabled}
                 // Klik na jmeno tady nic nemeni - herec se pridava a odebira,
-                // ne prepisuje. Sipka ho posune na prvni misto.
+                // ne prepisuje. Sipka ho posune o misto vys.
                 onZmenit={() => nahoru(h.id)}
                 onOdebrat={() => odeber(h.id)}
               />
-              {i === 0 ? (
-                <span className="text-[11px] font-body text-muted">hlavní</span>
-              ) : (
+              {i > 0 && (
                 <button
                   type="button"
                   disabled={disabled}
                   onClick={() => nahoru(h.id)}
-                  title="Posunout výš (první je hlavní herec)"
+                  title="Posunout výš"
                   className="text-xs text-muted hover:text-brand-purple disabled:opacity-50"
                 >
                   ↑

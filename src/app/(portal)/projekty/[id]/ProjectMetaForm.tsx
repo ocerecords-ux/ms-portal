@@ -247,8 +247,8 @@ export function ProjectMetaForm({
             puvodniText={herecZCaflou}
           />
           <span className="text-xs text-muted font-body">
-            Herců může být víc. První v pořadí je hlavní — podle něj se předvyplňuje natáčecí
-            frekvence.
+            Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění
+            šipkou.
           </span>
         </div>
 
