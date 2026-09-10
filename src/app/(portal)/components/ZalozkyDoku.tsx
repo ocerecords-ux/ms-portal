@@ -26,16 +26,16 @@ export function ZalozkyDoku({
     <div className="shrink-0 bg-brand-purple text-brand-green flex items-stretch justify-between gap-2 pl-2 pr-1.5 pt-1.5">
       <div className="flex items-end gap-1">
         <Zalozka
-          aktivni={aktivni === 'ukoly'}
-          onClick={() => otevri('ukoly')}
-          label="Úkoly"
-          pocet={pocetUkolu}
-        />
-        <Zalozka
           aktivni={aktivni === 'chat'}
           onClick={() => otevri('chat')}
           label="MS chat"
           pocet={neprectene}
+        />
+        <Zalozka
+          aktivni={aktivni === 'ukoly'}
+          onClick={() => otevri('ukoly')}
+          label="Úkoly"
+          pocet={pocetUkolu}
         />
       </div>
       <span className="flex items-center gap-2 pr-0.5">
