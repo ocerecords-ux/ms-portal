@@ -4,6 +4,8 @@ import type { AdminDisplayProject, DisplayProject } from '@/lib/caflou';
 import type { ColumnSetting } from '@/lib/columnLabels';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, projectTypeLabel } from '@/lib/projectTypes';
 import { initials } from '@/lib/chat';
+import { barvaStavu } from '@/lib/stavyProjektu';
+import { StavProjektuSelect } from './StavProjektuSelect';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -22,11 +24,14 @@ export function formatDate(d: Date | null) {
 }
 
 export function StatusPill({ finished, statusName }: { finished: boolean; statusName: string }) {
+  // Barva podle konkretniho stavu (lib/stavyProjektu.ts), ne jen podle toho,
+  // jestli je projekt hotovy - stavu je osm a dva odstiny by je slily.
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-3 py-1 rounded-pill whitespace-nowrap ${
-        finished ? 'bg-okTint text-status-done' : 'bg-warnTint text-status-progress'
-      }`}
+      className={`inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-3 py-1 rounded-pill whitespace-nowrap ${barvaStavu(
+        statusName,
+        finished,
+      )}`}
     >
       {displayStatusName(statusName)}
     </span>
@@ -303,7 +308,7 @@ function SortArrow({ dir }: { dir: 'asc' | 'desc' }) {
  * sloupec ukazuje. Díky tomu se dá tabulka poskládat z nastavení (pořadí,
  * skrytí) místo pevně napsané řady <td>.
  */
-function bunkaSloupce(p: InternalProject, key: string) {
+function bunkaSloupce(p: InternalProject, key: string, muzeMenitStav: boolean) {
   switch (key) {
     case 'name':
       return (
@@ -314,7 +319,13 @@ function bunkaSloupce(p: InternalProject, key: string) {
     case 'companyName':
       return p.companyName;
     case 'statusName':
-      return <StatusPill finished={p.finished} statusName={p.statusName} />;
+      // Stav jde prehodit rovnou v seznamu (zadani 10. 9. 2026) - kdo na to
+      // nema pravo, vidi jen odznak.
+      return muzeMenitStav ? (
+        <StavProjektuSelect caflouProjectId={String(p.id)} stav={p.statusName} dokonceny={p.finished} />
+      ) : (
+        <StatusPill finished={p.finished} statusName={p.statusName} />
+      );
     case 'priority':
       // Priorita se cerpa z Caflou (zadani 5. 9. 2026); rucne nastavena
       // hodnota v portalu slouzi uz jen jako zaloha, kdyz ji Caflou nevraci.
@@ -535,6 +546,7 @@ export function InternalProjectsTable({
   onLabelChange,
   onMoveColumn,
   onHideColumn,
+  canEditStatus = false,
 }: {
   projects: InternalProject[];
   emptyText: string;
@@ -543,6 +555,8 @@ export function InternalProjectsTable({
   /** Viditelné sloupce v pořadí - výchozí přepsané tím, co si Žůžo-labůžo nastavilo. */
   columns: ColumnSetting[];
   editing?: boolean;
+  /** Přehazovat stav smí Produkce a Žůžo-labůžo (zadání 10. 9. 2026). */
+  canEditStatus?: boolean;
   /** Upravovat sloupce smí jen Žůžo-labůžo. */
   canEditColumns?: boolean;
   onStartEditing?: () => void;
@@ -615,7 +629,7 @@ export function InternalProjectsTable({
               <tr key={p.id} className="border-t border-line hover:bg-surfaceSoft">
                 {columns.map((sloupec) => (
                   <td key={sloupec.key} className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-3.5 text-sm font-heading'}>
-                    {bunkaSloupce(p, sloupec.key)}
+                    {bunkaSloupce(p, sloupec.key, canEditStatus)}
                   </td>
                 ))}
                 {canEditColumns && <td />}

@@ -6,7 +6,7 @@ import {
   mapCaflouProjects,
   type DisplayProject,
 } from '@/lib/caflou';
-import { isInternalRole } from '@/lib/roles';
+import { canEditProjectMeta, isInternalRole } from '@/lib/roles';
 import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
@@ -30,7 +30,12 @@ export default async function ProjektyPage() {
   // projekty" hlasky jim tu ukazeme prehled VSECH projektu z Caflou napric
   // firmami, rozdeleny na aktivni a dokoncene (zadani 5. 9. 2026).
   if (isInternalRole(session!.user.role)) {
-    return <InternalProjektySection isAdmin={session!.user.role === 'ADMIN'} />;
+    return (
+      <InternalProjektySection
+        isAdmin={session!.user.role === 'ADMIN'}
+        muzeMenitStav={canEditProjectMeta(session!.user.role)}
+      />
+    );
   }
 
   // Klic tenant izolace: companyId bereme VYHRADNE ze session, nikdy z query/parametru.
@@ -107,7 +112,14 @@ export default async function ProjektyPage() {
   );
 }
 
-async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
+async function InternalProjektySection({
+  isAdmin,
+  muzeMenitStav,
+}: {
+  isAdmin: boolean;
+  /** Prehazovat stav projektu smi Produkce a Zuzo-labuzo. */
+  muzeMenitStav: boolean;
+}) {
   // Seznam projektu se bere pres sdilenou cache (lib/caflouProjectsServer.ts):
   // pamet instance -> tabulka v databazi -> teprve pak Caflou. Stahovani
   // celeho uctu z Caflou je osm dotazu za sebou (mereno 12,5 s) a drive se
@@ -195,6 +207,7 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
         finished={finished}
         columns={columnSettings}
         canEditLabels={isAdmin}
+        canEditStatus={muzeMenitStav}
       />
     </section>
   );

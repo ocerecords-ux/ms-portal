@@ -44,6 +44,7 @@ export function InternalProjectsBrowser({
   finishedNote,
   columns,
   canEditLabels,
+  canEditStatus,
 }: {
   active: InternalProject[];
   finished: InternalProject[];
@@ -53,6 +54,8 @@ export function InternalProjectsBrowser({
   columns: ColumnSetting[];
   /** Upravovat sloupce smi jen Zuzo-labuzo. */
   canEditLabels?: boolean;
+  /** Prehazovat stav projektu smi Produkce a Zuzo-labuzo (zadani 10. 9. 2026). */
+  canEditStatus?: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('active');
@@ -312,6 +315,7 @@ export function InternalProjectsBrowser({
         columns={zobrazene}
         editing={editing}
         canEditColumns={canEditLabels}
+        canEditStatus={canEditStatus}
         onStartEditing={() => {
           setDraft(columns);
           setEditing(true);
