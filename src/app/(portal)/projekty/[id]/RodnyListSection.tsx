@@ -254,13 +254,17 @@ export function RodnyListSection({
         </div>
       )}
 
-      {chybi.length > 0 && !rlError && (
+      {/* Ukazuje se VZDY, kdyz neco chybi (oprava 10. 9. 2026). Driv to bylo
+          schovane, kdyz mel projekt zapsanou chybu generovani - takze clovek
+          videl zasedla tlacitka a zadne vysvetleni proc. */}
+      {chybi.length > 0 && (
         <div className="bg-warnTint border border-line rounded-card px-4 py-3">
           <p className="text-sm font-heading font-semibold text-status-progress m-0">
             Chybí údaje pro Rodný list
           </p>
           <p className="text-sm font-body text-ink m-0 mt-1">
-            {chybi.join(', ')}. Dokud tyhle údaje chybí, nejde vyrobit ani náhled.
+            {chybi.join(', ')}. Dokud tyhle údaje chybí, jsou tlačítka Náhled i Vygenerovat RL
+            zašedlá — doplňte je ve formuláři níž a uložte.
           </p>
         </div>
       )}

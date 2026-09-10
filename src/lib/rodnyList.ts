@@ -69,10 +69,26 @@ export type RodnyListFields = {
 export const VYCHOZI_REZIE = 'Ondřej Černý';
 
 /**
- * Předvyplněný název spotu (zadání 10. 9. 2026). Stejně jako u režie:
- * doplní se jen tam, kde nic není, a přepsat to jde vždycky.
+ * Předvyplněný název spotu: RL_ a název projektu (zadání 10. 9. 2026 -
+ * „RL_(název projektu), název spotu se mění").
+ *
+ * Stejně jako u režie: doplní se jen tam, kde nic není, přepsat jde vždycky.
  */
-export const VYCHOZI_NAZEV_SPOTU = 'RL_MMB';
+export function vychoziNazevSpotu(nazevProjektu: string): string {
+  const nazev = nazevProjektu.trim();
+  return nazev ? `RL_${nazev}` : 'RL_';
+}
+
+/**
+ * Dnešní datum ve tvaru YYYY-MM-DD podle českého času.
+ *
+ * Předvyplní se jako datum výroby - prázdné datum bylo nejčastější důvod,
+ * proč Rodný list nešel vyrobit, a přitom se skoro vždycky vyrábí dneska.
+ * Zóna se počítá schválně: v noci by UTC ukázalo včerejšek.
+ */
+export function dnesniDatum(): string {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Prague' }).format(new Date());
+}
 
 export const RODNY_LIST_LABELS = {
   clientName: 'Název klienta',

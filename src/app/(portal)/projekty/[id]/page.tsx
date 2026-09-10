@@ -25,7 +25,7 @@ import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
 import { findInternalProject } from '@/lib/caflouProjectsServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
-import { VYCHOZI_NAZEV_SPOTU, VYCHOZI_REZIE } from '@/lib/rodnyList';
+import { dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
 
 // Detail projektu (zadani 5. 9. 2026). Projekt sam o sobe zije v Caflou -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -407,7 +407,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       }))}
       initial={{
         clientName: metaPoSync?.rlClientName || firmaProjektu?.name || company?.name || '',
-        spotName: metaPoSync?.spotName || VYCHOZI_NAZEV_SPOTU,
+        spotName:
+          metaPoSync?.spotName ||
+          vychoziNazevSpotu(metaPoSync?.name || project?.name || ''),
         spotLengthSeconds: metaPoSync?.spotLengthSeconds != null ? String(metaPoSync.spotLengthSeconds) : '',
         // Rezie se predvyplnuje (zadani 10. 9. 2026) - jen kdyz u projektu
         // jeste zadna neni, at se rucne zadana nikdy neprepise.
@@ -415,9 +417,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         musicTitle: metaPoSync?.musicTitle ?? '',
         musicAuthor: metaPoSync?.musicAuthor ?? '',
         noMusic: metaPoSync?.noMusic ?? false,
+        // Datum vyroby se predvyplnuje na dnesek (zadani 10. 9. 2026) -
+        // prazdne bylo nejcastejsi duvod, proc RL neslo vyrobit.
         productionDate: metaPoSync?.productionDate
           ? metaPoSync.productionDate.toISOString().slice(0, 10)
-          : '',
+          : dnesniDatum(),
       }}
     />
   );

@@ -225,7 +225,13 @@ async function vytvorRodnyList(
 
     if (chybi.length > 0) {
       const message = missingFieldsMessage(chybi);
-      await oznacKProsetreni(caflouProjectId, message, projectName, meta?.managerUserId ?? null);
+      // Rucni pokus projekt neoznacuje jako "vyzaduje kontrolu" (oprava
+      // 10. 9. 2026): clovek stoji u formulare a chybu vidi hned. Cervena
+      // cedule u projektu je pro automatiku, kde se to jinak nikdo nedozvi -
+      // a kdyz visela i po rucnim pokusu, schovavala vypis chybejicich poli.
+      if (opts.trigger === 'AUTO') {
+        await oznacKProsetreni(caflouProjectId, message, projectName, meta?.managerUserId ?? null);
+      }
       return { ok: false, reason: 'MISSING_FIELDS', message };
     }
 
@@ -301,7 +307,9 @@ async function vytvorRodnyList(
     console.error(`Rodný list k projektu ${caflouProjectId} se nepodařilo vytvořit:`, err);
     const detail = err instanceof Error ? err.message : 'neznámá chyba';
     const message = `Rodný list se nepodařilo vytvořit (${detail}).`;
-    await oznacKProsetreni(caflouProjectId, message, projectName, null);
+    if (opts.trigger === 'AUTO') {
+      await oznacKProsetreni(caflouProjectId, message, projectName, null);
+    }
     return { ok: false, reason: 'FAILED', message };
   }
 }
