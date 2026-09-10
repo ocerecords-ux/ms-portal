@@ -401,7 +401,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         directorName: metaPoSync?.directorName ?? '',
         musicTitle: metaPoSync?.musicTitle ?? '',
         musicAuthor: metaPoSync?.musicAuthor ?? '',
-        musicUrl: metaPoSync?.musicUrl ?? '',
         noMusic: metaPoSync?.noMusic ?? false,
         productionDate: metaPoSync?.productionDate
           ? metaPoSync.productionDate.toISOString().slice(0, 10)

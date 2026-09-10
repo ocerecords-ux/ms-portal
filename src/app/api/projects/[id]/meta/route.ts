@@ -52,8 +52,6 @@ const schema = z.object({
   directorName: z.string().trim().max(200).optional(),
   musicTitle: z.string().trim().max(300).optional(),
   musicAuthor: z.string().trim().max(300).optional(),
-  /** Odkaz na skladbu v hudebni knihovne (zadani 10. 9. 2026). */
-  musicUrl: z.string().trim().max(2000).optional(),
   noMusic: z.boolean().optional(),
   /** YYYY-MM-DD z <input type="date">; prazdny retezec = smazat. */
   productionDate: z.string().trim().optional(),
@@ -250,7 +248,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('directorName', data.directorName);
     text('musicTitle', data.musicTitle);
     text('musicAuthor', data.musicAuthor);
-    text('musicUrl', data.musicUrl);
     if (data.noMusic !== undefined) values.noMusic = data.noMusic;
     if (spotLengthSeconds !== undefined) values.spotLengthSeconds = spotLengthSeconds;
     if (productionDate !== undefined) values.productionDate = productionDate;

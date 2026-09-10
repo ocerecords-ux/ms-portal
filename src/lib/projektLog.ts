@@ -34,7 +34,6 @@ export const POPISKY_POLI: Record<string, string> = {
   directorName: 'Režie',
   musicTitle: 'Hudba - název',
   musicAuthor: 'Hudba - autor',
-  musicUrl: 'Hudba - odkaz',
   noMusic: 'Spot bez hudby',
   productionDate: 'Datum výroby',
 };

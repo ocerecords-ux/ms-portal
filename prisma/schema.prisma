@@ -353,10 +353,6 @@ model ProjectMeta {
   /// Sekce "Hudba ve spotu" - záměrně jen tahle dvě pole, žádná licence.
   musicTitle        String?
   musicAuthor       String?
-  /// Odkaz na skladbu v hudební knihovně (zadání 10. 9. 2026). Portál z něj
-  /// umí vytáhnout název a autora; drží se i potom, aby bylo dohledatelné,
-  /// odkud hudba je - u Rodného listu je to údaj o právech, ne ozdoba.
-  musicUrl          String?
   /// Spot hudbu nemá - hudební pole se pak nevyžadují a RL neuvede nepravdu.
   noMusic           Boolean          @default(false)
   productionDate    DateTime?
