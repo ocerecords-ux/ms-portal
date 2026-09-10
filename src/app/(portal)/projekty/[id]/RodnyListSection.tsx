@@ -33,6 +33,8 @@ export type RodnyListValues = {
   directorName: string;
   musicTitle: string;
   musicAuthor: string;
+  /** Odkaz na skladbu v hudebni knihovne (zadani 10. 9. 2026). */
+  musicUrl: string;
   noMusic: boolean;
   /** Datum ve tvaru YYYY-MM-DD, jak ho dává <input type="date">. */
   productionDate: string;
@@ -76,6 +78,9 @@ export function RodnyListSection({
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Nacitani skladby z odkazu (zadani 10. 9. 2026).
+  const [nacita, setNacita] = useState(false);
+  const [chybaOdkazu, setChybaOdkazu] = useState<string | null>(null);
 
   function set<K extends keyof RodnyListValues>(key: K, value: RodnyListValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -116,12 +121,14 @@ export function RodnyListSection({
             directorName: values.directorName,
             musicTitle: values.musicTitle,
             musicAuthor: values.musicAuthor,
+            musicUrl: values.musicUrl,
             noMusic: values.noMusic,
             productionDate: values.productionDate,
           }
         : {
             musicTitle: values.musicTitle,
             musicAuthor: values.musicAuthor,
+            musicUrl: values.musicUrl,
             noMusic: values.noMusic,
           };
 
@@ -167,6 +174,37 @@ export function RodnyListSection({
   const nazevSouboru = rodnyListFileName(values.spotName || projectName);
 
   /** Sekce „Hudba ve spotu" - jediná část, která je i u jiných typů projektu. */
+  /**
+   * Vytáhne název a autora z odkazu. Vyplní jen prázdná pole — co už člověk
+   * napsal, se nepřepisuje; odkaz je pomocník, ne autorita.
+   */
+  async function nactiZOdkazu() {
+    setNacita(true);
+    setChybaOdkazu(null);
+    try {
+      const res = await fetch('/api/hudba/nacti', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: values.musicUrl.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setChybaOdkazu(data?.error || 'Údaje se nepodařilo načíst.');
+        return;
+      }
+      setValues((v) => ({
+        ...v,
+        musicTitle: v.musicTitle.trim() ? v.musicTitle : (data?.nazev ?? ''),
+        musicAuthor: v.musicAuthor.trim() ? v.musicAuthor : (data?.autor ?? ''),
+      }));
+      setSaved(false);
+    } catch {
+      setChybaOdkazu('Údaje se nepodařilo načíst.');
+    } finally {
+      setNacita(false);
+    }
+  }
+
   const hudba = (
     <div className={jeRadiovySpot ? 'border-t border-line pt-5 flex flex-col gap-4' : 'flex flex-col gap-4'}>
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -181,6 +219,40 @@ export function RodnyListSection({
           Spot nemá hudbu
         </label>
       </div>
+
+      {/* Nacteni z odkazu (zadani 10. 9. 2026). Je to ZKRATKA, ne jedina
+          cesta - obe pole pod tim jdou porad vyplnit rukou, protoze hudba
+          muze byt z archivu, od skladatele nebo odkudkoliv, kde zadna
+          stranka neni. */}
+      {!values.noMusic && canEdit && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Odkaz na skladbu</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="url"
+              value={values.musicUrl}
+              onChange={(e) => set('musicUrl', e.target.value)}
+              placeholder="https://artlist.io/royalty-free-music/song/..."
+              className={`${inputClass} flex-1 min-w-[240px]`}
+            />
+            <button
+              type="button"
+              onClick={() => void nactiZOdkazu()}
+              disabled={nacita || !values.musicUrl.trim()}
+              className="font-heading font-semibold text-sm rounded-lg border border-line px-4 py-2.5 text-brand-purple hover:bg-tint transition-colors disabled:opacity-50"
+            >
+              {nacita ? 'Načítám…' : 'Načíst údaje'}
+            </button>
+          </div>
+          {chybaOdkazu && <span className="text-xs font-body text-danger">{chybaOdkazu}</span>}
+          {!chybaOdkazu && (
+            <span className="text-xs text-muted font-body">
+              Z Artlistu a dalších knihoven doplní název i autora. Odkaz se uloží k projektu, ať je
+              dohledatelné, odkud hudba je.
+            </span>
+          )}
+        </div>
+      )}
 
       {values.noMusic ? (
         <p className="text-sm font-body text-muted m-0">
