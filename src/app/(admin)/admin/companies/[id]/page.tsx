@@ -8,12 +8,43 @@ import { ROLE_LABELS } from '@/lib/roles';
 // Uzivatele se od 5. 9. 2026 zakladaji a edituji centralne na /admin/users
 // (parujou se s firmou vyberem, viz NewUserForm/UserEditForm) - tady je jen
 // prehled uctu teto firmy s odkazem na editaci.
-export default async function CompanyDetailPage({ params }: { params: { id: string } }) {
+/**
+ * Zalozky na karte firmy (zadani 10. 9. 2026: "ty notifikace u firmy udelej
+ * jako samostatnou zalozku nahore").
+ *
+ * Zalozka se drzi v adrese (?zalozka=notifikace), ne ve stavu komponenty:
+ * stranka tak zustava serverova, da se na konkretni zalozku poslat odkaz
+ * a po ulozeni se clovek vrati tam, kde byl.
+ */
+type Zalozka = 'udaje' | 'notifikace' | 'ucty';
+
+export default async function CompanyDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { zalozka?: string };
+}) {
   const company = await prisma.company.findUnique({
     where: { id: params.id },
     include: { users: { orderBy: { createdAt: 'asc' } } },
   });
   if (!company) notFound();
+
+  // Dodavatel nema projekty ani prihlasovaci ucty - zbyde mu jen jedna
+  // zalozka a lista se u nej vubec neukazuje.
+  const jeKlient = company.type === 'KLIENT';
+  const zalozky: { klic: Zalozka; label: string }[] = jeKlient
+    ? [
+        { klic: 'udaje', label: 'Údaje firmy' },
+        { klic: 'notifikace', label: 'Notifikace' },
+        { klic: 'ucty', label: 'Přihlašovací účty' },
+      ]
+    : [{ klic: 'udaje', label: 'Údaje firmy' }];
+
+  const zvolena: Zalozka = zalozky.some((z) => z.klic === searchParams?.zalozka)
+    ? (searchParams?.zalozka as Zalozka)
+    : 'udaje';
 
   return (
     <section className="flex flex-col gap-8">
@@ -26,8 +57,27 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
         </h1>
       </div>
 
+      {zalozky.length > 1 && (
+        <div className="flex items-center gap-1 border-b border-line -mb-4">
+          {zalozky.map((z) => (
+            <Link
+              key={z.klic}
+              href={`/admin/companies/${company.id}?zalozka=${z.klic}`}
+              scroll={false}
+              className={`px-4 py-2.5 text-sm font-heading font-semibold no-underline border-b-2 -mb-px transition-colors ${
+                zvolena === z.klic
+                  ? 'border-brand-purple text-brand-purple'
+                  : 'border-transparent text-muted hover:text-ink'
+              }`}
+            >
+              {z.label}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {zvolena === 'udaje' && (
       <div>
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">Údaje firmy</h2>
         {/* key = company.id - stejny duvod jako key na UserEditForm
             (/admin/users/[id]/page.tsx): bez nej by pri prechodu mezi firmami
             klientsky formular mohl zustat s puvodnimi hodnotami. */}
@@ -35,21 +85,15 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
             komponenta CaflouTestPanel v repu zustava, jen se nezobrazuje. */}
         <CompanyForm key={company.id} company={company} />
       </div>
+      )}
 
       {/* Notifikace klientovi podle stavu projektu (zadani 10. 9. 2026).
           U dodavatele nedava smysl - zadne projekty pod sebou nema. */}
-      {company.type === 'KLIENT' && (
-        <div>
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
-            Notifikace
-          </h2>
-          <NotifikaceFirmyPanel companyId={company.id} />
-        </div>
-      )}
+      {jeKlient && zvolena === 'notifikace' && <NotifikaceFirmyPanel companyId={company.id} />}
 
       {/* Dodavatel nema pod sebou zadne uzivatelske ucty - to maji jen
           klientske firmy (viz COMPANY_ROLES v lib/roles.ts). */}
-      {company.type === 'KLIENT' && (
+      {jeKlient && zvolena === 'ucty' && (
         <div>
           <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Přihlašovací účty</h2>
