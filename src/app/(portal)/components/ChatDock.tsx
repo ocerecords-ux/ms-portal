@@ -31,6 +31,8 @@ import {
 } from '@/lib/chatPrilohy';
 import { WaveformPlayer } from './WaveformPlayer';
 import { UpozorneniChatu } from './UpozorneniChatu';
+import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
+import { ZalozkyDoku } from './ZalozkyDoku';
 
 /**
  * Chat týmu (zadani 8. 9. 2026: "vytvor komunikacni kanal jako Slack pro tym...
@@ -45,7 +47,7 @@ import { UpozorneniChatu } from './UpozorneniChatu';
  * tym o par lidech to bohate staci a nic to nekomplikuje.
  */
 
-const STORAGE_KEY = 'ms-portal-chat-otevreno';
+// Otevreni panelu drzi spolecny stav pravé hrany - viz pravyDok.ts.
 const REFRESH_MS = 12000;
 
 type ProjectOption = { id: string; label: string; name: string };
@@ -781,7 +783,9 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
  */
 export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   // Na samostatne strance je chat rovnou otevreny, neni co rozbalovat.
-  const [expanded, setExpanded] = useState(naStrance);
+  const [dok, otevriDok] = usePravyDok();
+  const pocty = usePoctyDoku();
+  const expanded = naStrance || dok === 'chat';
   // Bezi portal jako nainstalovana aplikace? Zjisti se az v prohlizeci -
   // na serveru to vedet nejde.
   const [vAplikaci, setVAplikaci] = useState(false);
@@ -919,24 +923,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
   const konecRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    try {
-      setExpanded(window.localStorage.getItem(STORAGE_KEY) === '1');
-    } catch {
-      // soukrome okno / zakazane uloziste - nevadi
-    }
-  }, []);
-
   function toggle() {
-    setExpanded((current) => {
-      const next = !current;
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
-      } catch {
-        // nevadi
-      }
-      return next;
-    });
+    otevriDok(dok === 'chat' ? null : 'chat');
   }
 
   const nactiKonverzace = useCallback(async () => {
@@ -1011,6 +999,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   }, [messages, openId]);
 
   const neprectene = conversations.reduce((sum, c) => sum + c.unread, 0);
+
+  // Cislo u zalozky MS chat vidi i panel Ukolu - viz pravyDok.ts.
+  useEffect(() => {
+    oznamPocetDoku('chat', neprectene);
+  }, [neprectene]);
+
   const vZalozce = conversations.filter((c) => c.kind === tab);
   const otevrena = conversations.find((c) => c.id === openId) ?? null;
 
@@ -1218,6 +1212,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
   // --- Zabaleno: jen ikonka na hrane obrazovky ---------------------------
   if (!expanded && !naStrance) {
+    // Kdyz jsou otevrene Ukoly, prepina se zalozkou v jejich hlavicce - dve
+    // poutka pres sebe na jedne hrane nedavaji smysl.
+    if (dok !== null) return null;
     return (
       <button
         type="button"
@@ -1247,7 +1244,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   // zastropovane, at na sebe nelezou ani na nizsim okne (zprava uzivatele
   // 8. 9. 2026: "prekryva to to do list, kdyz tam mam vice ukolu").
   return (
-    <aside className={naStrance ? 'flex items-stretch h-full w-full' : 'fixed right-0 bottom-6 z-40 flex items-stretch'}>
+    <aside
+      className={
+        naStrance ? 'flex items-stretch h-full w-full' : 'fixed right-0 top-28 bottom-6 z-40 flex items-stretch'
+      }
+    >
       {/* Stejny siroky pruh na zavreni jako u Ukolu - do male sipky se spatne
           trefuje (zadani 8. 9. 2026). Na samostatne strance neni co zavirat. */}
       {!naStrance && (
@@ -1291,7 +1292,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         className={`relative bg-surface border flex flex-col overflow-hidden ${
           naStrance
             ? 'w-full h-full border-0'
-            : `max-w-[96vw] h-[72vh] border-r-0 shadow-xl transition-[width] ${
+            : `max-w-[96vw] h-full border-r-0 shadow-xl transition-[width] ${
                 vlaknoId ? 'w-[1180px]' : 'w-[760px]'
               }`
         } ${tahnouSoubory > 0 ? 'border-brand-purple' : 'border-line'}`}
@@ -1306,20 +1307,22 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             </span>
           </div>
         )}
-        <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
-          <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">MS chat</h2>
-          <span className="flex items-center gap-3">
-            {/* Zapnuti upozorneni na nove zpravy (zadani 9. 9. 2026). */}
+        {/* V doku jsou v hlavicce zalozky Ukoly / MS chat (zadani 10. 9.
+            2026), na samostatne strance /chat neni mezi cim prepinat. */}
+        {naStrance ? (
+          <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
+            <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">MS chat</h2>
             <UpozorneniChatu />
-            <button
-              type="button"
-              onClick={toggle}
-              className="text-xs font-heading font-semibold text-brand-green/90 hover:text-white whitespace-nowrap"
-            >
-              {neprectene > 0 ? `${neprectene} nových` : 'skrýt'} ›
-            </button>
-          </span>
-        </div>
+          </div>
+        ) : (
+          <ZalozkyDoku
+            aktivni="chat"
+            otevri={otevriDok}
+            pocetUkolu={pocty.ukoly}
+            neprectene={neprectene}
+            vpravo={<UpozorneniChatu />}
+          />
+        )}
 
         {error && <p className="text-xs text-danger bg-dangerTint px-4 py-2 m-0">{error}</p>}
 

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
+import { ZalozkyDoku } from './ZalozkyDoku';
 
 /**
  * Úkoly pořád po ruce (zadani 8. 9. 2026: "aby byl ten to do list pořád po
@@ -23,8 +25,6 @@ type Task = {
   done: boolean;
   dueDate: string | null;
 };
-
-const STORAGE_KEY = 'ms-portal-ukoly-otevreno';
 
 function formatDue(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
@@ -64,7 +64,9 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
 
 export function TaskDock({ tasks }: { tasks: Task[] }) {
   const router = useRouter();
-  const [expanded, setExpanded] = useState(false);
+  const [dok, otevriDok] = usePravyDok();
+  const pocty = usePoctyDoku();
+  const expanded = dok === 'ukoly';
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [busy, setBusy] = useState(false);
@@ -72,30 +74,15 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   const [showDone, setShowDone] = useState(false);
 
   // Stav si pamatujeme v prohlizeci, at se panel neotevira porad znovu.
-  useEffect(() => {
-    try {
-      setExpanded(window.localStorage.getItem(STORAGE_KEY) === '1');
-    } catch {
-      // soukrome okno / zakazane uloziste - nevadi, jen si to nezapamatujeme
-    }
-  }, []);
-
-  function toggle() {
-    setExpanded((v) => {
-      const next = !v;
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
-      } catch {
-        // viz vyse
-      }
-      return next;
-    });
-  }
-
   const today = todayIso();
   const open = tasks.filter((t) => !t.done);
   const done = tasks.filter((t) => t.done);
   const overdue = open.filter((t) => t.dueDate && t.dueDate < today);
+
+  // Zalozka Ukoly ukazuje sve cislo i v hlavicce chatu - viz pravyDok.ts.
+  useEffect(() => {
+    oznamPocetDoku('ukoly', open.length);
+  }, [open.length]);
 
   async function send(url: string, method: string, body?: unknown) {
     setBusy(true);
@@ -133,11 +120,14 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   }
 
   // --- Zabaleno: jen ikonky na hrane obrazovky ---------------------------
+  // Kdyz je otevreny chat, tenhle pruh se nevykresli - prepina se zalozkou
+  // v hlavicce panelu, ne druhym poutkem pres nej.
   if (!expanded) {
+    if (dok !== null) return null;
     return (
       <button
         type="button"
-        onClick={toggle}
+        onClick={() => otevriDok('ukoly')}
         title="Zobrazit úkoly"
         aria-label="Zobrazit úkoly"
         className="fixed right-0 top-28 z-40 flex flex-col items-center gap-2 bg-brand-purple hover:bg-brand-purpleDeep rounded-l-card shadow-lg px-2.5 py-3 text-brand-green transition-colors"
@@ -167,16 +157,17 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   }
 
   // --- Rozbaleno: cely seznam -------------------------------------------
-  // Panel drzi horni polovinu prave hrany, chat spodni - pri delsim seznamu
-  // ukolu se driv prekryvaly (zprava uzivatele 8. 9. 2026). Seznam se proto
-  // radeji roluje uvnitr, nez aby rostl do chatu.
+  // Panel drzi celou pravou hranu od horni listy po spodek okna (zadani
+  // 10. 9. 2026). Driv mel strop 24 % vysky, aby se nepral s chatem pod sebou
+  // - ted jsou z nich zalozky jednoho panelu, takze otevreny je vzdycky jen
+  // jeden a misto si nekradou.
   return (
-    <aside className="fixed right-0 top-28 z-40 flex items-stretch">
+    <aside className="fixed right-0 top-28 bottom-6 z-40 flex items-stretch">
       {/* Široký pruh na zavření přes celou výšku panelu - do malé šipky
           se špatně trefovalo (zadani 8. 9. 2026). Kliknout jde kamkoliv sem. */}
       <button
         type="button"
-        onClick={toggle}
+        onClick={() => otevriDok(null)}
         title="Skrýt úkoly"
         aria-label="Skrýt úkoly"
         className="w-8 shrink-0 rounded-l-card border border-r-0 border-line bg-field text-muted hover:bg-brand-purple hover:text-white transition-colors flex flex-col items-center justify-center gap-2"
@@ -188,21 +179,13 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         <Chevron direction="right" />
       </button>
 
-      <div className="w-[320px] max-w-[86vw] max-h-[24vh] overflow-y-auto bg-surface border border-r-0 border-line shadow-xl flex flex-col">
+      <div className="w-[360px] max-w-[86vw] bg-surface border border-r-0 border-line shadow-xl flex flex-col min-h-0">
       {/* Fialova hlavicka se zelenym napisem - stejne jako horni lista a jako
-          MS chat (zadani 8. 9. 2026). Drzi se nahore i pri rolovani seznamu. */}
-      <div className="sticky top-0 z-10 bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
-        <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">Úkoly</h2>
-        <button
-          type="button"
-          onClick={toggle}
-          className="text-xs font-heading font-semibold text-brand-green/90 hover:text-white whitespace-nowrap"
-        >
-          {open.length === 0 ? 'hotovo' : `${open.length} k vyřízení`} ›
-        </button>
-      </div>
+          MS chat. Ted v ni jsou zalozky Ukoly / MS chat. */}
+      <ZalozkyDoku aktivni="ukoly" otevri={otevriDok} pocetUkolu={open.length} neprectene={pocty.chat} />
 
-      <div className="p-4 flex flex-col gap-3">
+      {/* Roluje se jen obsah, hlavicka se zalozkami zustava na miste. */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">
 
       <form onSubmit={addTask} className="flex flex-col gap-2">
         <input
