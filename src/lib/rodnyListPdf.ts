@@ -498,8 +498,8 @@ export function renderRodnyListPdf(data: RodnyListData): Buffer {
 
   // 4) Tabulka udaju. Hudba ma vlastni blok nize.
   const radky = [
-    { label: 'KLIENT', value: data.clientName },
     { label: 'NÁZEV SPOTU', value: data.spotName },
+    { label: 'KLIENT', value: data.clientName },
     { label: 'DÉLKA SPOTU', value: data.spotLength },
     { label: 'REŽIE', value: data.director },
     { label: 'DATUM VÝROBY', value: data.productionDate },

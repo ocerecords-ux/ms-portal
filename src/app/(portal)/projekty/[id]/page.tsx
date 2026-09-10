@@ -471,8 +471,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     });
   }
 
+  // Detail je citaci a formularova stranka, ne tabulka - proto je omezeny
+  // sirkou a vycentrovany (zadani 10. 9. 2026: "zbytecne dlouhe radky, kdyz
+  // tam nic neni"). Seznam projektu zustava na celou obrazovku.
   return (
-    <section className="flex flex-col gap-6">
+    <section className="flex flex-col gap-6 w-full max-w-[1180px] mx-auto">
       <div>
         <Link href="/projekty" className="text-muted text-sm font-heading no-underline">
           ← Zpět na projekty

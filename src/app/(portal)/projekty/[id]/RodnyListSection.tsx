@@ -346,13 +346,13 @@ export function RodnyListSection({
         </div>
       )}
 
-      {/* DVA SLOUPCE (zadani 10. 9. 2026): vlevo dokument, vpravo uzka karta
-          s udaji vlevo a nahledem vpravo (zadani 10. 9. 2026). Nahled ma
-          pevnou sirku, aby se do ni vesla cela A4 na vysku - o dokumentu se
-          rozhoduje podle celku, ne podle vyrezu. Na uzkem okne jde formular
+      {/* DVA STEJNE SIROKE SLOUPCE (zadani 10. 9. 2026): vlevo udaje, vpravo
+          nahled. Stejna sirka drzi dokument v pomeru A4 zhruba tak vysoky
+          jako karta s udaji vedle nej a zaroven nenechava radky formulare
+          natahnout se pres celou obrazovku. Na uzkem okne jde formular
           nahoru, protoze na telefonu se hlavne vyplnuje; nahled se pri
           rolovani drzi na miste, at se nemusi jezdit nahoru a dolu. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <form
         onSubmit={handleSubmit}
         className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-5"
@@ -368,6 +368,21 @@ export function RodnyListSection({
         </div>
 
         <div className="grid grid-cols-1 gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Název spotu</span>
+            <input
+              type="text"
+              disabled={!canEdit}
+              placeholder={projectName}
+              value={values.spotName}
+              onChange={(e) => set('spotName', e.target.value)}
+              className={inputClass}
+            />
+            <span className="text-xs text-muted font-body">
+              Když zůstane prázdný, použije se název projektu. Soubor se uloží jako {nazevSouboru}.
+            </span>
+          </label>
+
           {/* Klient na dokumentu (zadani 10. 9. 2026). Predvyplneny celym
               nazvem firmy projektu, ale prepsat ho jde - na RL obcas patri
               neco jineho nez firma, ktere se fakturuje. */}
@@ -389,43 +404,22 @@ export function RodnyListSection({
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Název spotu</span>
-            <input
-              type="text"
-              disabled={!canEdit}
-              placeholder={projectName}
-              value={values.spotName}
-              onChange={(e) => set('spotName', e.target.value)}
-              className={inputClass}
-            />
-            <span className="text-xs text-muted font-body">
-              Když zůstane prázdný, použije se název projektu. Soubor se uloží jako {nazevSouboru}.
+            <span className="text-sm font-body text-ink">Délka spotu</span>
+            {/* Jednotka je primo v poli (zadani 10. 9. 2026), at je jasne, ze
+                se zadavaji sekundy - a at to sedi s tim, co bude v dokumentu. */}
+            <span className="relative flex items-center">
+              <input
+                type="number"
+                min={1}
+                max={3600}
+                disabled={!canEdit}
+                value={values.spotLengthSeconds}
+                onChange={(e) => set('spotLengthSeconds', e.target.value)}
+                className={`${inputClass} w-full pr-8`}
+              />
+              <span className="absolute right-3 text-sm font-body text-muted pointer-events-none">s</span>
             </span>
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Délka spotu (sekundy)</span>
-            <input
-              type="number"
-              min={1}
-              max={3600}
-              disabled={!canEdit}
-              value={values.spotLengthSeconds}
-              onChange={(e) => set('spotLengthSeconds', e.target.value)}
-              className={inputClass}
-            />
             <span className="text-xs text-muted font-body">V dokumentu se zobrazí například jako „20s".</span>
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Datum výroby</span>
-            <input
-              type="date"
-              disabled={!canEdit}
-              value={values.productionDate}
-              onChange={(e) => set('productionDate', e.target.value)}
-              className={inputClass}
-            />
           </label>
 
           <label className="flex flex-col gap-1.5">
@@ -435,6 +429,17 @@ export function RodnyListSection({
               disabled={!canEdit}
               value={values.directorName}
               onChange={(e) => set('directorName', e.target.value)}
+              className={inputClass}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Datum výroby</span>
+            <input
+              type="date"
+              disabled={!canEdit}
+              value={values.productionDate}
+              onChange={(e) => set('productionDate', e.target.value)}
               className={inputClass}
             />
           </label>
