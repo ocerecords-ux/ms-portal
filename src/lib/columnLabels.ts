@@ -37,6 +37,9 @@ export const DEFAULT_COLUMN_LABELS: Record<string, { key: string; label: string 
     { key: 'priority', label: 'Priorita' },
     { key: 'projectType', label: 'Typ projektu' },
     { key: 'managerName', label: 'Manažer projektu' },
+    // Herec patri do zakladniho prehledu (zadani 10. 9. 2026) - u audioknihy
+    // je to prvni vec, ktera se u projektu hleda.
+    { key: 'narrator', label: 'Herec' },
     { key: 'pageCount', label: 'Počet NS' },
     // "Konec" z Caflou; "Datum vydání" je náš vlastní sloupec v Caflou
     // (zadani 8. 9. 2026).

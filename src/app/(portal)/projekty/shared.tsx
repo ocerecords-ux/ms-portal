@@ -214,6 +214,7 @@ export type ProjectSortKey =
   | 'priority'
   | 'projectType'
   | 'managerName'
+  | 'narrator'
   | 'pageCount'
   | 'endDate'
   | 'releaseDate';
@@ -262,6 +263,8 @@ export function compareProjects(a: InternalProject, b: InternalProject, sort: Pr
         return p.meta?.projectType ?? '';
       case 'managerName':
         return p.meta?.managerName ?? '';
+      case 'narrator':
+        return p.narrator ?? '';
       default:
         return p.name ?? '';
     }
@@ -343,6 +346,8 @@ function bunkaSloupce(p: InternalProject, key: string, muzeMenitStav: boolean) {
         </span>
       );
     }
+    case 'narrator':
+      return p.narrator ?? '—';
     case 'pageCount':
       return p.pageCount ?? '—';
     case 'endDate':
@@ -362,6 +367,7 @@ const TRIDA_BUNKY: Record<string, string> = {
   priority: 'px-3 py-3.5 text-sm font-heading',
   projectType: 'px-3 py-3.5 text-sm font-heading text-muted',
   managerName: 'px-3 py-3.5 text-sm font-heading text-muted',
+  narrator: 'px-3 py-3.5 text-sm font-heading text-muted',
   pageCount: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
   endDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
   releaseDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
