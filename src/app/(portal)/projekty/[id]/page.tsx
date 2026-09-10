@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
-import { canEditProjectMeta, canManageCalendar, canViewProjectDocuments, isInternalRole, INTERNAL_ROLES } from '@/lib/roles';
+import { canEditProjectMeta, canManageCalendar, canViewProjectDocuments, isInternalRole } from '@/lib/roles';
 import { listProjectTypeOptions, listRodnyListProjectTypes } from '@/lib/priceList';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
 import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
@@ -23,6 +23,7 @@ import { RodnyListSection } from './RodnyListSection';
 import { HistorieProjektu } from './HistorieProjektu';
 import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
 import { findInternalProject } from '@/lib/caflouProjectsServer';
+import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 
 // Detail projektu (zadani 5. 9. 2026). Projekt sam o sobe zije v Caflou -
@@ -78,11 +79,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       where: { caflouProjectId },
       include: { manager: { select: { id: true, name: true, email: true } } },
     }),
-    prisma.user.findMany({
-      where: { role: { in: INTERNAL_ROLES }, active: true },
-      select: { id: true, name: true, email: true },
-      orderBy: { name: 'asc' },
-    }),
+    // Manazer projektu - jen ucty, ktere to maji na karte zaskrtnute
+    // (zadani 10. 9. 2026). Viz lib/manazeriServer.ts.
+    nabidkaManazeru(),
     // Ucty klientu - z nich se u projektu vybira, ci ten projekt je
     // (zadani 10. 9. 2026). Firma se zamerne neomezuje: u koprodukci sedi
     // u projektu clovek z jine firmy.
@@ -307,7 +306,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       <ProjectMetaForm
         caflouProjectId={caflouProjectId}
         canEdit={canEdit}
-        managers={managers.map((m) => ({ id: m.id, label: m.name || m.email }))}
+        managers={managers}
         klienti={klientiUctu.map((k) => ({
           id: k.id,
           label: k.company?.name ? `${k.name || k.email} — ${k.company.name}` : k.name || k.email,

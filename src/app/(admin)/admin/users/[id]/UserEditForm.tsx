@@ -21,6 +21,8 @@ type EditableUser = {
   birthDate: string | null;
   photoUrl: string | null;
   hourlyRate: number | null;
+  /** Smí být manažerem projektu (zadání 10. 9. 2026). */
+  manazerProjektu: boolean;
   studioLocations: string[];
   birthNumber: string | null;
   ic: string | null;
@@ -50,6 +52,7 @@ export function UserEditForm({
   const [phone, setPhone] = useState(user.phone ?? '');
   const [role, setRole] = useState<Role>(user.role);
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
+  const [manazerProjektu, setManazerProjektu] = useState(user.manazerProjektu);
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
   const [active, setActive] = useState(user.active);
   // Tvrde smazani (zadani 10. 9. 2026) - jen kdyz na uctu nic nevisi.
@@ -101,6 +104,7 @@ export function UserEditForm({
       if (isMediaspace) {
         fd.set('birthDate', birthDate);
         if (role === 'ZVUKAR') fd.set('hourlyRate', hourlyRate);
+        if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
         if (photo) fd.set('photo', photo);
         else if (removePhoto) fd.set('removePhoto', 'true');
       }
@@ -191,6 +195,23 @@ export function UserEditForm({
                 className="admin-input"
               />
             </AdminField>
+          </div>
+        )}
+        {/* Kdo se nabizi jako manazer projektu (zadani 10. 9. 2026). */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={manazerProjektu}
+                onChange={(e) => setManazerProjektu(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Může být manažer projektu
+                <span className="block text-xs text-muted">nabízí se u projektů ve výběru manažera</span>
+              </span>
+            </label>
           </div>
         )}
         {needsCompany && (

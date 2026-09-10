@@ -147,6 +147,13 @@ model User {
   // prace. Vychozi 250 Kc; u ostatnich roli se nepouziva.
   hourlyRate   Int?      @default(250)
 
+  /// Smi byt manazerem projektu (zadani 10. 9. 2026: "manazera projektu bych
+  /// dal na vyber jen me nebo Karolinu"). Zamerne priznak na uctu, ne seznam
+  /// jmen v kodu - lidi se meni a kod by o tom nevedel.
+  /// Dokud neni oznaceny NIKDO, nabizeji se vsechny interni ucty - jinak by
+  /// po nasazeni zustala nabidka prazdna a projekt by nesel zalozit.
+  manazerProjektu Boolean @default(false)
+
   // --- Herec - zadani 5. 9. 2026: samostatna fyzicka osoba, bez firmy ---
   studioLocations String[] @default([]) // lokace, ve kterych je herec schopen fyzicky natacet - viz lib/roles.ts HEREC_STUDIOS
   birthNumber     String?   // RC, nebo datum narozeni jako text, pokud herec RC nema (cizinec apod.)

@@ -12,6 +12,7 @@ import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { NovyProjektForm } from './NovyProjektForm';
 import { listProjectTypeOptions, mapaIkonTypu } from '@/lib/priceList';
+import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadColumnSettings } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/caflouProjectsServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
@@ -200,11 +201,9 @@ async function InternalProjektySection({
       select: { id: true, name: true, email: true, companyId: true, company: { select: { name: true } } },
       orderBy: [{ name: 'asc' }, { email: 'asc' }],
     }),
-    prisma.user.findMany({
-      where: { role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] }, active: true },
-      select: { id: true, name: true, email: true },
-      orderBy: { name: 'asc' },
-    }),
+    // Manazer projektu - jen ucty, ktere to maji na karte zaskrtnute
+    // (zadani 10. 9. 2026). Viz lib/manazeriServer.ts.
+    nabidkaManazeru(),
     // Ucty hercu - herec u projektu je konkretni osoba (zadani 10. 9. 2026).
     prisma.user.findMany({
       where: { role: 'HEREC', active: true },
@@ -309,7 +308,7 @@ async function InternalProjektySection({
                 label: k.company?.name ? `${k.name || k.email} — ${k.company.name}` : k.name || k.email,
                 companyId: k.companyId,
               }))}
-              manazeri={manazeriProFormular.map((m) => ({ id: m.id, label: m.name || m.email }))}
+              manazeri={manazeriProFormular}
               herci={herciProFormular.map((h) => ({ id: h.id, label: h.name || h.email }))}
               typyProjektu={typyProjektu}
             />
@@ -320,7 +319,7 @@ async function InternalProjektySection({
         columns={columnSettings}
         canEditLabels={isAdmin}
         canEditStatus={muzeMenitStav}
-        manazeri={manazeriProFormular.map((m) => ({ id: m.id, label: m.name || m.email }))}
+        manazeri={manazeriProFormular}
         herci={herciProFormular.map((h) => ({ id: h.id, label: h.name || h.email }))}
       />
     </section>

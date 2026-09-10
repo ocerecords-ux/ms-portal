@@ -83,6 +83,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const jmenaPo: CitelnaJmena = {};
 
     // Manazer musi byt existujici interni ucet Mediaspace.
+    //
+    // Zamerne se NEKONTROLUJE priznak manazerProjektu (zadani 10. 9. 2026):
+    // ten ridi, kdo se NABIZI. Projekt, ktery manazera dostal driv, o nej
+    // nema prijit jen proto, ze se nabidka pozdeji zuzila.
     if (data.managerUserId) {
       const manager = await prisma.user.findFirst({
         where: { id: data.managerUserId, role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] } },
