@@ -47,6 +47,7 @@ export function InternalProjectsBrowser({
   canEditStatus,
   novyProjekt,
   manazeri,
+  herci,
 }: {
   active: InternalProject[];
   finished: InternalProject[];
@@ -65,6 +66,8 @@ export function InternalProjectsBrowser({
   novyProjekt?: React.ReactNode;
   /** Manazeri do rozbalovaciho seznamu primo v prehledu (zadani 10. 9. 2026). */
   manazeri?: { id: string; label: string }[];
+  /** Herci do vyberu primo v prehledu (zadani 10. 9. 2026). */
+  herci?: { id: string; label: string }[];
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('active');
@@ -326,6 +329,7 @@ export function InternalProjectsBrowser({
         canEditColumns={canEditLabels}
         canEditStatus={canEditStatus}
         manazeri={manazeri}
+        herci={herci}
         onStartEditing={() => {
           setDraft(columns);
           setEditing(true);

@@ -239,6 +239,7 @@ async function InternalProjektySection({
         driveUrl: m.driveUrl,
         managerUserId: m.managerUserId,
         ikonaTypu: m.projectType ? ikonyTypu[m.projectType] ?? null : null,
+        actorUserId: m.actorUserId,
       },
     ]),
   );
@@ -320,6 +321,7 @@ async function InternalProjektySection({
         canEditLabels={isAdmin}
         canEditStatus={muzeMenitStav}
         manazeri={manazeriProFormular.map((m) => ({ id: m.id, label: m.name || m.email }))}
+        herci={herciProFormular.map((h) => ({ id: h.id, label: h.name || h.email }))}
       />
     </section>
   );

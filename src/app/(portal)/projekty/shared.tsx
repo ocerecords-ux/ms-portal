@@ -6,6 +6,8 @@ import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel }
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
 import { IkonaTypu } from '@/lib/ikonyTypu';
+import { HerecVSeznamu } from './HerecVSeznamu';
+import type { Herec } from './VyberHerce';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
@@ -206,6 +208,8 @@ export type InternalProjectMeta = {
   managerUserId: string | null;
   /** Ikona typu projektu - sviti pred nazvem (zadani 10. 9. 2026). */
   ikonaTypu: string | null;
+  /** Prirazeny ucet herce - kvuli vyberu primo v seznamu (10. 9. 2026). */
+  actorUserId: string | null;
 };
 
 export type InternalProject = AdminDisplayProject & {
@@ -334,6 +338,7 @@ function bunkaSloupce(
   key: string,
   muzeMenit: boolean,
   manazeri: { id: string; label: string }[],
+  herci: Herec[],
 ) {
   const id = String(p.id);
   switch (key) {
@@ -410,7 +415,17 @@ function bunkaSloupce(
       );
     }
     case 'narrator':
-      return p.narrator ?? '—';
+      // Herec je bublina, ne text (zadani 10. 9. 2026) - a opravdu se pres ni
+      // vybira, at to neni jen ozdoba, ktera vyber slibuje.
+      return (
+        <HerecVSeznamu
+          caflouProjectId={id}
+          herci={herci}
+          actorUserId={p.meta?.actorUserId ?? null}
+          jmeno={p.narrator ?? null}
+          muzeMenit={muzeMenit}
+        />
+      );
     case 'pageCount':
       return p.pageCount ?? '—';
     case 'endDate':
@@ -459,7 +474,7 @@ const TRIDA_BUNKY: Record<string, string> = {
   priority: 'px-3 py-3.5 text-sm font-heading',
   projectType: 'px-3 py-3.5 text-sm font-heading text-muted',
   managerName: 'px-3 py-3.5 text-sm font-heading text-muted',
-  narrator: 'px-3 py-3.5 text-sm font-heading text-muted',
+  narrator: 'px-3 py-3.5 text-sm font-heading text-muted align-top',
   pageCount: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
   endDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
   releaseDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
@@ -647,6 +662,7 @@ export function InternalProjectsTable({
   onHideColumn,
   canEditStatus = false,
   manazeri = [],
+  herci = [],
 }: {
   projects: InternalProject[];
   emptyText: string;
@@ -659,6 +675,8 @@ export function InternalProjectsTable({
   canEditStatus?: boolean;
   /** Manazeri do rozbalovaciho seznamu primo v prehledu (zadani 10. 9. 2026). */
   manazeri?: { id: string; label: string }[];
+  /** Herci do vyberu primo v prehledu (zadani 10. 9. 2026). */
+  herci?: Herec[];
   /** Upravovat sloupce smí jen Žůžo-labůžo. */
   canEditColumns?: boolean;
   onStartEditing?: () => void;
@@ -731,7 +749,7 @@ export function InternalProjectsTable({
               <tr key={p.id} className="border-t border-line hover:bg-surfaceSoft">
                 {columns.map((sloupec) => (
                   <td key={sloupec.key} className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-3.5 text-sm font-heading'}>
-                    {bunkaSloupce(p, sloupec.key, canEditStatus, manazeri)}
+                    {bunkaSloupce(p, sloupec.key, canEditStatus, manazeri, herci)}
                   </td>
                 ))}
                 {canEditColumns && <td />}

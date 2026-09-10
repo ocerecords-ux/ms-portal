@@ -12,6 +12,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
  *
  * Uložený je vždycky ÚČET, ne jméno. Text z Caflou (`puvodniText`) se ukazuje
  * jen jako vodítko, dokud účet přiřazený není.
+ *
+ * VYBRANÝ HEREC JE BUBLINA (zadání 10. 9. 2026: „s těmi jmény herců bych
+ * pracoval v bublině, jako s celky, ne s textem, aby bylo jasné, že je to
+ * výběr"). Dokud vypadal jako text v poli, svádělo to psát do něj jméno -
+ * jenže tady se vybírá konkrétní účet, na který se pak váží nabídky termínů
+ * a smlouvy. Bublina je jeden celek: buď tam je, nebo není.
  */
 
 export type Herec = { id: string; label: string };
@@ -68,31 +74,15 @@ export function VyberHerce({
   return (
     <div ref={obal} className="relative">
       {vybrany && !otevreno ? (
-        <div className={`${tridaPole} flex items-center justify-between gap-2`}>
-          <span className="truncate">{vybrany.label}</span>
-          <span className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => {
-                setHledani('');
-                setOtevreno(true);
-              }}
-              className="text-xs font-heading text-brand-purple hover:underline disabled:opacity-50"
-            >
-              Změnit
-            </button>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => onZmena('')}
-              title="Odebrat herce"
-              className="text-muted hover:text-danger disabled:opacity-50"
-            >
-              ×
-            </button>
-          </span>
-        </div>
+        <BublinaHerce
+          jmeno={vybrany.label}
+          disabled={disabled}
+          onZmenit={() => {
+            setHledani('');
+            setOtevreno(true);
+          }}
+          onOdebrat={() => onZmena('')}
+        />
       ) : (
         <input
           type="text"
@@ -137,5 +127,48 @@ export function VyberHerce({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Vybraný herec jako bublina. Klik na jméno otevře hledání, křížek herce
+ * odebere - obojí je uvnitř té samé bubliny, takže je vidět, že je to jeden
+ * celek a ne rozepsaný text.
+ */
+export function BublinaHerce({
+  jmeno,
+  onZmenit,
+  onOdebrat,
+  disabled,
+}: {
+  jmeno: string;
+  onZmenit: () => void;
+  onOdebrat?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 max-w-full rounded-pill bg-brand-purple/12 text-brand-purpleDeep dark:text-brand-purpleLight pl-3 pr-1.5 py-1">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onZmenit}
+        title="Vybrat jiného herce"
+        className="text-sm font-heading font-semibold truncate disabled:opacity-60"
+      >
+        {jmeno}
+      </button>
+      {onOdebrat && (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onOdebrat}
+          title="Odebrat herce"
+          aria-label="Odebrat herce"
+          className="shrink-0 grid place-items-center w-5 h-5 rounded-pill text-current/70 hover:text-danger hover:bg-surface disabled:opacity-50"
+        >
+          ×
+        </button>
+      )}
+    </span>
   );
 }
