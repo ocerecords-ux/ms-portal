@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
+import { jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
+import { syncRodneListy } from '@/lib/rodnyListServer';
 
 
 // Ulozeni internich atributu projektu (model ProjectMeta) - zadani
@@ -19,6 +21,12 @@ const schema = z.object({
   managerUserId: z.string().trim().optional(),
   priority: z.enum(['', 'LOW', 'MEDIUM', 'HIGH']).optional(),
   projectType: z.string().trim().optional(),
+
+  // --- Stav a herec se od 10. 9. 2026 zadavaji rucne ---------------------
+  // Do te doby chodily z Caflou a portal je jen ukazoval. Mediaspace Caflou
+  // opousti, takze o stavu i o herci rozhoduje ted portal.
+  statusName: z.string().trim().max(120).optional(),
+  narrator: z.string().trim().max(200).optional(),
 
   // --- Rodny list reklamniho spotu (zadani 9. 9. 2026) ---
   spotName: z.string().trim().max(300).optional(),
@@ -100,6 +108,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
+    // Stav musi byt z nasi cesty projektu (lib/stavyProjektu.ts). Stary stav
+    // prenesen z Caflou se da nechat byt, ale novy uz jde nastavit jen z naseho
+    // ciselniku - jinak by se cesta projektu rozpadla na desitky variant.
+    if (data.statusName && !jeNasStav(data.statusName)) {
+      return NextResponse.json({ error: 'Tenhle stav projektu neznáme.' }, { status: 400 });
+    }
+
     // Do databaze jde jen to, co prislo. Prazdny retezec znamena "smazat".
     const values: Record<string, unknown> = {};
     const text = (key: string, value: string | undefined) => {
@@ -109,6 +124,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('managerUserId', data.managerUserId);
     text('priority', data.priority);
     text('projectType', data.projectType);
+    text('narrator', data.narrator);
+    if (data.statusName !== undefined) {
+      values.statusName = data.statusName || null;
+      // Rozpracovanost drzi krok se stavem, at zalozky Aktivni/Dokoncene
+      // sedi bez toho, aby to nekdo prepinal zvlast.
+      const dokonceny = stavJeDokonceny(data.statusName);
+      if (dokonceny !== null) values.finished = dokonceny;
+    }
     text('spotName', data.spotName);
     text('directorName', data.directorName);
     text('musicTitle', data.musicTitle);
@@ -121,7 +144,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       where: { caflouProjectId: params.id },
       create: { caflouProjectId: params.id, ...values },
       update: values,
+      include: { company: { select: { caflouCompanyId: true } } },
     });
+
+    // Rodny list se vyrabi pri prechodu do stavu "Dokonceno - ke schvaleni".
+    // Driv se ten prechod poznaval porovnanim s poslednim stavem videnym
+    // v Caflou; ted stav prehazuje clovek, takze se kontrola pousti tady.
+    // Zamerne bez cekani - kdyby vyroba PDF vazla, ulozeni stavu to nesmi
+    // zdrzet ani shodit.
+    if (data.statusName !== undefined && meta.name) {
+      void syncRodneListy([
+        {
+          caflouProjectId: meta.caflouProjectId,
+          projectName: meta.name,
+          statusName: meta.statusName ?? '',
+          caflouCompanyId: meta.company?.caflouCompanyId ?? null,
+        },
+      ]).catch(() => undefined);
+    }
 
     return NextResponse.json(meta);
   } catch (err) {

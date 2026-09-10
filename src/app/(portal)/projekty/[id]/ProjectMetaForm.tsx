@@ -3,12 +3,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
+import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
 
 type Initial = {
   driveUrl: string;
   managerUserId: string;
   priority: string;
   projectType: string;
+  /** Stav projektu - od 10. 9. 2026 vlastni udaj portalu, ne z Caflou. */
+  statusName: string;
+  /** Herec jako text. Navazany ucet herce se resi jinde. */
+  narrator: string;
 };
 
 /**
@@ -22,7 +27,6 @@ export function ProjectMetaForm({
   canEdit,
   managers,
   companyDriveFolderUrl,
-  caflouPriority,
   projectTypeOptions,
   initial,
 }: {
@@ -30,7 +34,6 @@ export function ProjectMetaForm({
   canEdit: boolean;
   managers: { id: string; label: string }[];
   companyDriveFolderUrl: string | null;
-  caflouPriority: string | null;
   /** Nazvy polozek ceniku - jen z nich jde typ projektu vybrat (zadani 5. 9. 2026). */
   projectTypeOptions: string[];
   initial: Initial;
@@ -98,6 +101,14 @@ export function ProjectMetaForm({
             </dd>
           </div>
           <div>
+            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Stav projektu</dt>
+            <dd className="text-sm font-heading text-ink m-0 mt-1">{values.statusName || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Herec</dt>
+            <dd className="text-sm font-heading text-ink m-0 mt-1">{values.narrator || '—'}</dd>
+          </div>
+          <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Manažer projektu</dt>
             <dd className="text-sm font-heading text-ink m-0 mt-1">{managerLabel}</dd>
           </div>
@@ -143,6 +154,42 @@ export function ProjectMetaForm({
           </span>
         </label>
 
+        {/* Stav a herec se od 10. 9. 2026 prehazuji rucne (odchod z Caflou).
+            Stav je prvni, protoze se s nim pracuje nejcasteji. */}
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Stav projektu</span>
+          <select
+            value={values.statusName}
+            onChange={(e) => set('statusName', e.target.value)}
+            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+          >
+            <option value="">— nevybráno —</option>
+            {/* Stav prenesen z Caflou, ktery v nasi ceste projektu neni - at se
+                pri ulozeni nezmeni na "nevybráno". */}
+            {values.statusName && !STAVY_PROJEKTU.some((st) => st.nazev === values.statusName) && (
+              <option value={values.statusName}>{values.statusName} (starý stav z Caflou)</option>
+            )}
+            {STAVY_PROJEKTU.map((st) => (
+              <option key={st.nazev} value={st.nazev}>
+                {st.nazev}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted font-body">
+            {popisStavu(values.statusName) ?? 'Stav přehazujete ručně podle toho, kde projekt je.'}
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Herec</span>
+          <input
+            value={values.narrator}
+            onChange={(e) => set('narrator', e.target.value)}
+            placeholder="jméno herce"
+            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+          />
+        </label>
+
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Manažer projektu</span>
           <select
@@ -173,11 +220,6 @@ export function ProjectMetaForm({
               </option>
             ))}
           </select>
-          <span className="text-xs text-muted font-body">
-            {caflouPriority
-              ? 'Prioritu určuje Caflou, tohle se použije, jen když ji Caflou přestane vracet.'
-              : 'Caflou u tohoto projektu prioritu nevrací - použije se tahle hodnota.'}
-          </span>
         </label>
 
         <label className="flex flex-col gap-1.5 sm:col-span-2">

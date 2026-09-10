@@ -147,11 +147,22 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
       },
     ]),
   );
+  // Stav a herec drzi od 10. 9. 2026 portal, ne Caflou - prehazuji se rucne.
+  // Dokud u projektu stav z portalu neni (neprobehl prenos), plati ten z Caflou.
+  const portalStav = new Map(
+    metas.map((m) => [m.caflouProjectId, { statusName: m.statusName, finished: m.finished, narrator: m.narrator }]),
+  );
 
-  const withMeta: InternalProject[] = projects.map((p) => ({
-    ...p,
-    meta: metaById.get(String(p.id)) ?? null,
-  }));
+  const withMeta: InternalProject[] = projects.map((p) => {
+    const nas = portalStav.get(String(p.id));
+    return {
+      ...p,
+      statusName: nas?.statusName || p.statusName,
+      finished: nas?.statusName ? nas.finished : p.finished,
+      narrator: nas?.narrator || p.narrator,
+      meta: metaById.get(String(p.id)) ?? null,
+    };
+  });
 
   // Sloupce tabulky - vychozi podoba prepsana tim, co si Zuzo-labuzo
   // nastavilo (nazev, poradi, skryti).

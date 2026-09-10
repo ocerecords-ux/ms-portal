@@ -141,11 +141,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   const project = caflou?.project ?? null;
 
-  // Rodny list reklamniho spotu (zadani 9. 9. 2026). Stav projektu se prepina
-  // v Caflou, ne u nas - proto se tu pri otevreni detailu porovna aktualni
-  // stav s poslednim VIDENYM a teprve skutecny prechod do stavu "Dokonceno -
-  // ke schvaleni" dokument vyrobi. Opakovane otevreni stranky uz nic nedela.
-  if (project) {
+  // Rodny list reklamniho spotu (zadani 9. 9. 2026). Do 10. 9. 2026 se prechod
+  // do stavu "Dokonceno - ke schvaleni" poznaval az tady pri otevreni detailu,
+  // protoze stav prepinalo Caflou a nikdo nam to nehlasil. Ted stav prehazuje
+  // clovek primo v portalu, takze se RL vyrabi rovnou pri te zmene
+  // (/api/projects/[id]/meta) - a tohle uz tu byt nemusi.
+  //
+  // Kontrola pri otevreni zustava jen pro projekty, ktere jeste nemaji stav
+  // z portalu; dokud neprobehne prenos, chodi porad z Caflou.
+  if (project && !meta?.statusName) {
     await syncRodneListy([
       {
         caflouProjectId,
@@ -266,7 +270,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           </h2>
           <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 m-0">
             <Field label="Priorita" value={project.priority ? PRIORITY_LABELS[project.priority] : '—'} />
-            <Field label="Herec" value={project.narrator ?? '—'} />
+            <Field label="Herec" value={meta?.narrator ?? project.narrator ?? '—'} />
             <Field label="Normostrany" value={project.pageCount != null ? String(project.pageCount) : '—'} />
             <Field label="Zahájení" value={formatDate(project.startDate)} />
             {/* "Konec" z Caflou je pro nas datum dokonceni; datum vydani je
@@ -292,13 +296,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         canEdit={canEdit}
         managers={managers.map((m) => ({ id: m.id, label: m.name || m.email }))}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
-        caflouPriority={project?.priority ?? null}
         projectTypeOptions={projectTypeOptions}
         initial={{
           driveUrl: meta?.driveUrl ?? '',
           managerUserId: meta?.managerUserId ?? '',
           priority: meta?.priority ?? '',
           projectType: meta?.projectType ?? '',
+          // Stav a herec: prednost ma to, co je v portalu. Dokud neprobehne
+          // prenos, je tam prazdno a pouzije se posledni hodnota z Caflou.
+          statusName: meta?.statusName ?? project?.statusName ?? '',
+          narrator: meta?.narrator ?? project?.narrator ?? '',
         }}
       />
     </>
@@ -406,7 +413,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">
             {project?.name ?? `Projekt ${caflouProjectId}`}
           </h1>
-          {project && <StatusPill finished={project.finished} statusName={project.statusName} />}
+          {/* Stav z portalu ma prednost - od 10. 9. 2026 ho prehazuje clovek. */}
+          {project && (
+            <StatusPill
+              finished={meta?.statusName ? meta.finished : project.finished}
+              statusName={meta?.statusName ?? project.statusName}
+            />
+          )}
         </div>
         {company && <p className="text-muted text-sm font-body mt-1">{company.name}</p>}
       </div>
