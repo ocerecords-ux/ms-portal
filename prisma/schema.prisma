@@ -562,7 +562,7 @@ model PushOdber {
   endpoint  String   @unique
   p256dh    String
   auth      String
-  /** Odkud odber prisel - jen pro orientaci, kdyby se hledala chyba. */
+  // Odkud odber prisel - jen pro orientaci, kdyby se hledala chyba.
   zarizeni  String?
   createdAt DateTime @default(now())
 
