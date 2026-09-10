@@ -232,6 +232,7 @@ async function InternalProjektySection({
         projectType: m.projectType,
         managerName: m.manager ? m.manager.name || m.manager.email : null,
         managerPhotoUrl: m.managerUserId ? odkazNaFotku(m.managerUserId, m.manager?.photoUrl) : null,
+        driveUrl: m.driveUrl,
       },
     ]),
   );

@@ -6,6 +6,7 @@ import { PRIORITY_CLASSES, PRIORITY_LABELS, projectTypeLabel } from '@/lib/proje
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
 import { StavProjektuSelect } from './StavProjektuSelect';
+import { OdkazTlacitko } from '../components/OdkazTlacitko';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -193,6 +194,8 @@ export type InternalProjectMeta = {
   managerName: string | null;
   /** Fotka manazera do bunky vedle jmena (zadani 9. 9. 2026). */
   managerPhotoUrl: string | null;
+  /** Slozka projektu na Google Disku - v prehledu jako tlacitko (10. 9. 2026). */
+  driveUrl: string | null;
 };
 
 export type InternalProject = AdminDisplayProject & {
@@ -354,6 +357,14 @@ function bunkaSloupce(p: InternalProject, key: string, muzeMenitStav: boolean) {
       return formatDate(p.endDate);
     case 'releaseDate':
       return formatDate(p.releaseDate);
+    case 'driveUrl':
+      // Jen tlacitko, adresa se neukazuje - v tabulce by rozhodila sirku
+      // sloupcu (zadani 10. 9. 2026).
+      return p.meta?.driveUrl ? (
+        <OdkazTlacitko url={p.meta.driveUrl} popisek="Složka" varianta="vedlejsi" />
+      ) : (
+        <span className="text-muted">—</span>
+      );
     default:
       return null;
   }
@@ -371,6 +382,7 @@ const TRIDA_BUNKY: Record<string, string> = {
   pageCount: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
   endDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
   releaseDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
+  driveUrl: 'px-3 py-3.5 whitespace-nowrap',
 };
 
 const ZAROVNANI_VPRAVO = new Set(['pageCount']);

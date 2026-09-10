@@ -45,6 +45,8 @@ export const DEFAULT_COLUMN_LABELS: Record<string, { key: string; label: string 
     // (zadani 8. 9. 2026).
     { key: 'endDate', label: 'Datum dokončení' },
     { key: 'releaseDate', label: 'Datum vydání' },
+    // Slozka projektu na Disku - v prehledu jako tlacitko (zadani 10. 9. 2026).
+    { key: 'driveUrl', label: 'Odkaz na KZ' },
   ],
 };
 

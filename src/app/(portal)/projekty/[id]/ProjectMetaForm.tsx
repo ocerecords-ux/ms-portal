@@ -67,6 +67,7 @@ export function ProjectMetaForm({
   // Smazani projektu (zadani 10. 9. 2026) - jen kdyz na nem nic nevisi.
   const [maze, setMaze] = useState(false);
   const [potvrzeni, setPotvrzeni] = useState(false);
+  const [upravitOdkaz, setUpravitOdkaz] = useState(false);
 
   function set<K extends keyof Initial>(key: K, value: Initial[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -191,25 +192,37 @@ export function ProjectMetaForm({
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Interní údaje</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <label className="flex flex-col gap-1.5 sm:col-span-2">
+        {/* Odkaz na KZ: jen tlacitka, samotna adresa se neukazuje (zadani
+            10. 9. 2026 - "nechci, at je videt ten dlouhy odkaz"). Policko na
+            rucni zadani se rozbali az na vyzadani; potreba je hlavne tehdy,
+            kdyz se slozka nezalozila sama. */}
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
           <span className="text-sm font-body text-ink">Odkaz na KZ</span>
-          <input
-            type="url"
-            placeholder="https://drive.google.com/..."
-            value={values.driveUrl}
-            onChange={(e) => set('driveUrl', e.target.value)}
-            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-          />
-          <span className="text-xs text-muted font-body">Složka projektu na Google Disku.</span>
-          {/* Odkazy jako tlacitka i s kopirovanim (zadani 10. 9. 2026) - adresa
-              slozky je dlouha a jako podtrzeny text se spatne trefuje. */}
-          <span className="flex items-center gap-3 flex-wrap mt-1">
+          <span className="flex items-center gap-3 flex-wrap">
             <OdkazTlacitko url={values.driveUrl} popisek="Otevřít složku projektu" varianta="vedlejsi" />
             {companyDriveFolderUrl && (
               <OdkazTlacitko url={companyDriveFolderUrl} popisek="Složka firmy" varianta="vedlejsi" />
             )}
+            <button
+              type="button"
+              onClick={() => setUpravitOdkaz((v) => !v)}
+              className="text-xs font-heading font-semibold text-brand-purple hover:underline"
+            >
+              {upravitOdkaz ? 'Skrýt' : values.driveUrl ? 'Změnit odkaz' : 'Zadat odkaz'}
+            </button>
           </span>
-        </label>
+          {upravitOdkaz && (
+            <input
+              type="url"
+              autoFocus
+              placeholder="https://drive.google.com/..."
+              value={values.driveUrl}
+              onChange={(e) => set('driveUrl', e.target.value)}
+              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+            />
+          )}
+          <span className="text-xs text-muted font-body">Složka projektu na Google Disku.</span>
+        </div>
 
         {/* Stav a herec se od 10. 9. 2026 prehazuji rucne (odchod z Caflou).
             Stav je prvni, protoze se s nim pracuje nejcasteji. */}
