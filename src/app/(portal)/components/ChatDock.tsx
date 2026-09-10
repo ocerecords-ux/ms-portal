@@ -1330,7 +1330,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               vlaknoId ? 'hidden lg:flex' : otevrena ? 'hidden sm:flex' : 'flex'
             }`}
           >
-            <div className="flex items-center gap-1 px-2 pt-2">
+            {/* Na uzke obrazovce se prepina spodni listou (viz konec panelu),
+                tady by zalozky jen ubiraly misto na seznam konverzaci. */}
+            <div className={`items-center gap-1 px-2 pt-2 ${naStrance ? 'hidden sm:flex' : 'flex'}`}>
               {CHAT_TABS.map((t) => (
                 <button
                   key={t.kind}
@@ -1759,7 +1761,87 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             )}
           </div>
         </div>
+
+        {/* --- Spodni lista, jako ve Slacku (zadani 10. 9. 2026) -----------
+            Jen v samostatne aplikaci a jen na uzke obrazovce: na telefonu se
+            palcem dosahne dolu, ne nahoru k zalozkam. Kliknuti na zalozku
+            zaroven zavre otevrenou konverzaci - jinak by clovek prepnul
+            zalozku a porad koukal na tutez konverzaci, coz vypada, ze se nic
+            nestalo. */}
+        {naStrance && (
+          <nav className="sm:hidden shrink-0 border-t border-line bg-paper flex items-stretch">
+            {CHAT_TABS.map((t) => (
+              <button
+                key={t.kind}
+                type="button"
+                onClick={() => {
+                  setTab(t.kind);
+                  setNovy(false);
+                  setOpenId(null);
+                  setVlaknoId(null);
+                }}
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-heading font-semibold transition-colors ${
+                  tab === t.kind && !novy ? 'text-brand-purple' : 'text-muted'
+                }`}
+              >
+                <IkonaZalozky kind={t.kind} />
+                {t.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setNovy(true);
+                setOpenId(null);
+                setVlaknoId(null);
+              }}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-heading font-semibold transition-colors ${
+                novy ? 'text-brand-purple' : 'text-muted'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-5 h-5">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Nová
+            </button>
+          </nav>
+        )}
       </div>
     </aside>
+  );
+}
+
+/** Ikonky pro spodni listu chatu (zadani 10. 9. 2026). */
+function IkonaZalozky({ kind }: { kind: ConversationKind }) {
+  const spolecne = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.9,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    className: 'w-5 h-5',
+  };
+  if (kind === 'PROJEKT') {
+    // Mrizka jako u kanalu - stejny znak, jaky maji projekty v seznamu.
+    return (
+      <svg {...spolecne}>
+        <path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16" />
+      </svg>
+    );
+  }
+  if (kind === 'SOUKROMA') {
+    return (
+      <svg {...spolecne}>
+        <path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...spolecne}>
+      <circle cx="9" cy="9" r="3" />
+      <path d="M3 20c0-3 2.7-5 6-5s6 2 6 5" />
+      <path d="M16 8.5a3 3 0 0 1 0 5M18.5 6a6 6 0 0 1 0 10" />
+    </svg>
   );
 }
