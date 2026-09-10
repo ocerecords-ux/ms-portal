@@ -399,6 +399,26 @@ model NotifikaceFirmy {
   @@index([companyId])
 }
 
+// Co uz bylo o projektu odeslano (zadani 10. 9. 2026).
+//
+// Bez tehle tabulky by se zprava poslala pokazde, kdyz nekdo stav prehodi
+// tam a zpatky - a hlavne by se poslala dvakrat u dvojice
+// "Nataceni/strihame" -> "Dotoceno/strihame", kde obe zpravy rikaji totez:
+// na disku jsou prvni tracky. Proto se u nich pamatuje spolecna znacka
+// (viz ZNACKA_PRVNI_TRACKY v lib/notifikaceProjektuServer.ts).
+model NotifikaceOdeslana {
+  id              String   @id @default(cuid())
+  caflouProjectId String
+  /// Znacka zpravy - obvykle nazev stavu, u prvnich tracku spolecna pro dva stavy.
+  znacka          String
+  /// Komu to slo - kvuli dohledani, kdyz se nekdo pta "prislo to klientovi?".
+  prijemci        String
+  odeslanoAt      DateTime @default(now())
+
+  @@unique([caflouProjectId, znacka])
+  @@index([caflouProjectId])
+}
+
 // Cenik (zadani 5. 9. 2026). Polozka cenika slouzi zaroven jako ciselnik
 // TYPU PROJEKTU - u projektu jde vybrat jen to, co je tady. Proto je nazev
 // unikatni a v ProjectMeta.projectType se uklada primo nazev polozky.

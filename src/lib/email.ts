@@ -1143,3 +1143,82 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
 
   return { sent: true as const };
 }
+// ===========================================================================
+// ZPRÁVA O ZMĚNĚ STAVU PROJEKTU (zadání 10. 9. 2026)
+//
+// Chodí klientovi, když projekt přejde do stavu, který má firma zapnutý
+// (karta firmy → Notifikace). Nese jedno tlačítko - odkaz na složku na Disku.
+// Druhé tlačítko (Audiotagger) přibude, až bude kam odkazovat.
+// ===========================================================================
+
+type StavProjektuInput = {
+  prijemci: string[];
+  /** Zpráva jen pro nás - klient ji nedostane, tak ať to je v mailu vidět. */
+  jenInterne: boolean;
+  jmenoKlienta: string | null;
+  nazevProjektu: string;
+  nazevFirmy: string;
+  stav: string;
+  /** Věta, co se v tomhle stavu klientovi říká. */
+  text: string;
+  odkazNaDisk: string | null;
+};
+
+export function buildStavProjektuHtml(input: StavProjektuInput): string {
+  const osloveni =
+    input.jenInterne || !input.jmenoKlienta
+      ? 'Dobrý den,'
+      : `Dobrý den, ${escapeHtml(input.jmenoKlienta)},`;
+
+  const tlacitko = input.odkazNaDisk
+    ? `<a class="btn" href="${escapeHtml(input.odkazNaDisk)}">Otevřít složku na Disku</a>`
+    : '<p style="color:#6C6580;">Odkaz na složku zatím u projektu není vyplněný.</p>';
+
+  const interniPoznamka = input.jenInterne
+    ? '<p style="background:#F3EEFF;border-radius:10px;padding:10px 14px;font-size:13px;">Tohle je interní zpráva — klientovi nic nešlo.</p>'
+    : '';
+
+  return emailShell({
+    tag: `MS Portal - ${escapeHtml(input.stav)}`,
+    preheader: `${input.nazevProjektu}: ${input.text}`,
+    body: `
+    <p>${osloveni}</p>
+    ${interniPoznamka}
+    <p><strong>${escapeHtml(input.nazevProjektu)}</strong>${
+      input.nazevFirmy ? ` · ${escapeHtml(input.nazevFirmy)}` : ''
+    }</p>
+    <p>${escapeHtml(input.text)}</p>
+    <p style="margin-top:22px;">${tlacitko}</p>
+`,
+  });
+}
+
+export async function sendStavProjektuEmail(input: StavProjektuInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  }
+  if (input.prijemci.length === 0) {
+    return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+  }
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.prijemci.join(', '),
+    subject: `${input.nazevProjektu} - ${input.stav}`,
+    text: [
+      input.jenInterne || !input.jmenoKlienta ? 'Dobry den,' : `Dobry den, ${input.jmenoKlienta},`,
+      '',
+      input.jenInterne ? 'INTERNI ZPRAVA - klientovi nic neslo.' : '',
+      `${input.nazevProjektu}${input.nazevFirmy ? ` (${input.nazevFirmy})` : ''}`,
+      input.text,
+      '',
+      input.odkazNaDisk ? `Slozka na Disku: ${input.odkazNaDisk}` : 'Odkaz na slozku zatim neni vyplneny.',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildStavProjektuHtml(input),
+  });
+
+  return { sent: true as const, reason: undefined };
+}

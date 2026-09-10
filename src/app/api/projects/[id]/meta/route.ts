@@ -7,6 +7,7 @@ import { canEditProjectMeta } from '@/lib/roles';
 import { jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
+import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
 
 
 // Ulozeni internich atributu projektu (model ProjectMeta) - zadani
@@ -237,6 +238,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // v Caflou; ted stav prehazuje clovek, takze se kontrola pousti tady.
     // Zamerne bez cekani - kdyby vyroba PDF vazla, ulozeni stavu to nesmi
     // zdrzet ani shodit.
+    // Zprava klientovi podle nastaveni u firmy (zadani 10. 9. 2026).
+    // Zamerne bez cekani: prehozeni stavu je hlavni vec, kterou clovek dela,
+    // a nesmi ho zdrzet ani shodit to, ze zrovna nejede SMTP.
+    if (data.statusName) {
+      void posliNotifikaciKeStavu(params.id, data.statusName).catch(() => undefined);
+    }
+
     if (data.statusName !== undefined && meta.name) {
       void syncRodneListy([
         {
