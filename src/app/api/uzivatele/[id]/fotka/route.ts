@@ -18,7 +18,8 @@ export const dynamic = 'force-dynamic';
 
 /** Rozebere data: URL na typ a bajty. Cokoliv divného vrátí jako null. */
 function rozeber(dataUrl: string): { typ: string; data: Buffer } | null {
-  const shoda = /^data:([^;,]+);base64,(.+)$/s.exec(dataUrl);
+  // [\s\S] misto priznaku /s - ten chce novejsi cil prekladu, nez portal ma.
+  const shoda = /^data:([^;,]+);base64,([\s\S]+)$/.exec(dataUrl);
   if (!shoda) return null;
   const typ = shoda[1].toLowerCase();
   if (!typ.startsWith('image/')) return null;
