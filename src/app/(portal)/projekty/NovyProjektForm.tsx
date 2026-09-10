@@ -6,6 +6,7 @@ import { AddButton } from '@/components/AddButton';
 import { PRIORITY_LABELS, PRIORITY_OPTIONS } from '@/lib/projectTypes';
 import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
+import { VyberHerce, type Herec } from './VyberHerce';
 
 /**
  * Založení projektu (zadání 10. 9. 2026). Do teď projekty vznikaly v Caflou;
@@ -19,11 +20,14 @@ export function NovyProjektForm({
   firmy,
   klienti,
   manazeri,
+  herci,
   typyProjektu,
 }: {
   firmy: { id: string; label: string; maSlozku: boolean }[];
   klienti: { id: string; label: string; companyId: string | null }[];
   manazeri: { id: string; label: string }[];
+  /** Ucty hercu - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
+  herci: Herec[];
   typyProjektu: string[];
 }) {
   const router = useRouter();
@@ -37,7 +41,7 @@ export function NovyProjektForm({
     projectType: '',
     managerUserId: '',
     priority: '',
-    narrator: '',
+    actorUserId: '',
     pageCount: '',
     releaseDate: '',
     statusName: STAVY_PROJEKTU[0].nazev,
@@ -186,15 +190,14 @@ export function NovyProjektForm({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <label className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Herec</span>
-          <input
-            value={form.narrator}
-            onChange={(e) => set('narrator', e.target.value)}
-            placeholder="jméno herce"
-            className={tridaPole}
+          <VyberHerce
+            herci={herci}
+            hodnota={form.actorUserId}
+            onZmena={(id) => set('actorUserId', id)}
           />
-        </label>
+        </div>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Počet normostran</span>

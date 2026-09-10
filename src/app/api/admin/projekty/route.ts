@@ -31,7 +31,8 @@ const schema = z.object({
   projectType: z.string().trim().optional(),
   managerUserId: z.string().trim().optional(),
   priority: z.enum(['', 'LOW', 'MEDIUM', 'HIGH']).optional(),
-  narrator: z.string().trim().max(200).optional(),
+  /** Ucet herce - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
+  actorUserId: z.string().trim().optional(),
   /** Prichazi jako text z <input type="number">. */
   pageCount: z.union([z.string().trim(), z.number()]).optional(),
   /** YYYY-MM-DD. */
@@ -77,6 +78,14 @@ export async function POST(req: NextRequest) {
       if (!firma) return NextResponse.json({ error: 'Vybraná firma neexistuje.' }, { status: 400 });
       companyName = firma.name;
       slozkaFirmy = firma.driveFolderUrl;
+    }
+
+    if (d.actorUserId) {
+      const herec = await prisma.user.findFirst({
+        where: { id: d.actorUserId, role: 'HEREC' },
+        select: { id: true },
+      });
+      if (!herec) return NextResponse.json({ error: 'Vybraný herec neexistuje.' }, { status: 400 });
     }
 
     if (d.klientUserId) {
@@ -133,7 +142,7 @@ export async function POST(req: NextRequest) {
         projectType: d.projectType || null,
         managerUserId: d.managerUserId || null,
         priority: d.priority || null,
-        narrator: d.narrator || null,
+        actorUserId: d.actorUserId || null,
         pageCount,
         releaseDate: naDatum(d.releaseDate),
         statusName: stav,

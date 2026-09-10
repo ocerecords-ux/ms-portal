@@ -188,7 +188,7 @@ async function InternalProjektySection({
   );
 
   // Ciselniky pro zalozeni projektu (zadani 10. 9. 2026).
-  const [firmyProFormular, klientiProFormular, manazeriProFormular, typyProjektu] = await Promise.all([
+  const [firmyProFormular, klientiProFormular, manazeriProFormular, herciProFormular, typyProjektu] = await Promise.all([
     prisma.company.findMany({
       where: { type: 'KLIENT' },
       select: { id: true, name: true, driveFolderUrl: true },
@@ -204,6 +204,12 @@ async function InternalProjektySection({
       select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     }),
+    // Ucty hercu - herec u projektu je konkretni osoba (zadani 10. 9. 2026).
+    prisma.user.findMany({
+      where: { role: 'HEREC', active: true },
+      select: { id: true, name: true, email: true },
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
+    }),
     listProjectTypeOptions(),
   ]);
 
@@ -212,7 +218,10 @@ async function InternalProjektySection({
   const metas = projects.length
     ? await prisma.projectMeta.findMany({
         where: { caflouProjectId: { in: projects.map((p) => String(p.id)) } },
-        include: { manager: { select: { name: true, email: true, photoUrl: true } } },
+        include: {
+          manager: { select: { name: true, email: true, photoUrl: true } },
+          actor: { select: { name: true, email: true } },
+        },
       })
     : [];
   const metaById = new Map(
@@ -229,7 +238,16 @@ async function InternalProjektySection({
   // Stav a herec drzi od 10. 9. 2026 portal, ne Caflou - prehazuji se rucne.
   // Dokud u projektu stav z portalu neni (neprobehl prenos), plati ten z Caflou.
   const portalStav = new Map(
-    metas.map((m) => [m.caflouProjectId, { statusName: m.statusName, finished: m.finished, narrator: m.narrator }]),
+    metas.map((m) => [
+      m.caflouProjectId,
+      {
+        statusName: m.statusName,
+        finished: m.finished,
+        // Prednost ma pridelený ucet herce; text z Caflou je jen zaloha,
+        // dokud ucet prirazeny neni (zadani 10. 9. 2026).
+        narrator: m.actor ? m.actor.name || m.actor.email : m.narrator,
+      },
+    ]),
   );
 
   const withMeta: InternalProject[] = projects.map((p) => {
@@ -284,6 +302,7 @@ async function InternalProjektySection({
                 companyId: k.companyId,
               }))}
               manazeri={manazeriProFormular.map((m) => ({ id: m.id, label: m.name || m.email }))}
+              herci={herciProFormular.map((h) => ({ id: h.id, label: h.name || h.email }))}
               typyProjektu={typyProjektu}
             />
           ) : null

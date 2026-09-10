@@ -30,6 +30,8 @@ const schema = z.object({
   narrator: z.string().trim().max(200).optional(),
   /** Nazev projektu - u projektu zalozenych v portalu jde zmenit. */
   name: z.string().trim().max(300).optional(),
+  /** Ucet herce - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
+  actorUserId: z.string().trim().optional(),
   /** Firma, pro kterou se projekt dela. */
   companyId: z.string().trim().optional(),
   /** Klient projektu - konkretni clovek, na ktereho chodi notifikace. */
@@ -79,6 +81,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       });
       if (!manager) {
         return NextResponse.json({ error: 'Vybraný manažer neexistuje.' }, { status: 400 });
+      }
+    }
+
+    // Herec musi byt ucet s roli Herec - na nej se vazou nabidky terminu
+    // a smlouvy, takze volny text uz tady nestaci.
+    if (data.actorUserId) {
+      const herec = await prisma.user.findFirst({
+        where: { id: data.actorUserId, role: 'HEREC' },
+        select: { id: true },
+      });
+      if (!herec) {
+        return NextResponse.json({ error: 'Vybraný herec neexistuje.' }, { status: 400 });
       }
     }
 
@@ -165,6 +179,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('narrator', data.narrator);
     if (data.name) values.name = data.name;
     text('klientUserId', data.klientUserId);
+    text('actorUserId', data.actorUserId);
     text('companyId', data.companyId);
     if (companyName !== undefined) values.companyName = companyName;
     if (data.statusName !== undefined) {

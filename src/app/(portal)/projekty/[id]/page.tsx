@@ -54,6 +54,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     managers,
     klientiUctu,
     klientskeFirmy,
+    herciUctu,
     projectTypeOptions,
     rodnyListTypy,
     budgetSettings,
@@ -94,6 +95,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       where: { type: 'KLIENT' },
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
+    }),
+    // Ucty hercu - herec u projektu je konkretni osoba (zadani 10. 9. 2026).
+    prisma.user.findMany({
+      where: { role: 'HEREC', active: true },
+      select: { id: true, name: true, email: true },
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
     }),
     listProjectTypeOptions(),
     // Typy projektu, u kterych se dela Rodny list - tedy radiove spoty.
@@ -318,6 +325,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           companyId: k.companyId,
         }))}
         firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
+        herci={herciUctu.map((h) => ({ id: h.id, label: h.name || h.email }))}
+        herecZCaflou={meta?.narrator ?? project?.narrator ?? null}
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
         projectTypeOptions={projectTypeOptions}
@@ -329,7 +338,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           // Stav a herec: prednost ma to, co je v portalu. Dokud neprobehne
           // prenos, je tam prazdno a pouzije se posledni hodnota z Caflou.
           statusName: meta?.statusName ?? project?.statusName ?? '',
-          narrator: meta?.narrator ?? project?.narrator ?? '',
+          actorUserId: meta?.actorUserId ?? '',
           klientUserId: meta?.klientUserId ?? '',
           companyId: meta?.companyId ?? company?.id ?? '',
         }}

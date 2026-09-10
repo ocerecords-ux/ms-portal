@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
+import { VyberHerce, type Herec } from '../VyberHerce';
 
 type Initial = {
   driveUrl: string;
@@ -12,8 +13,8 @@ type Initial = {
   projectType: string;
   /** Stav projektu - od 10. 9. 2026 vlastni udaj portalu, ne z Caflou. */
   statusName: string;
-  /** Herec jako text. Navazany ucet herce se resi jinde. */
-  narrator: string;
+  /** Ucet herce - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
+  actorUserId: string;
   /** Klient projektu - na nej chodi notifikace o projektu. */
   klientUserId: string;
   /** Firma, pro kterou se projekt dela. */
@@ -32,6 +33,8 @@ export function ProjectMetaForm({
   managers,
   klienti,
   firmy,
+  herci,
+  herecZCaflou,
   klientNameZCaflou,
   companyDriveFolderUrl,
   projectTypeOptions,
@@ -44,6 +47,10 @@ export function ProjectMetaForm({
   klienti: { id: string; label: string; companyId: string | null }[];
   /** Klientske firmy - pro kterou firmu se projekt dela. */
   firmy: { id: string; label: string }[];
+  /** Ucty hercu. */
+  herci: Herec[];
+  /** Jmeno herce z Caflou - voditko, dokud neni pridelen ucet. */
+  herecZCaflou: string | null;
   /** Stitek z Caflou se jmenem objednavajici osoby - voditko pri prirazovani. */
   klientNameZCaflou: string | null;
   companyDriveFolderUrl: string | null;
@@ -119,7 +126,9 @@ export function ProjectMetaForm({
           </div>
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Herec</dt>
-            <dd className="text-sm font-heading text-ink m-0 mt-1">{values.narrator || '—'}</dd>
+            <dd className="text-sm font-heading text-ink m-0 mt-1">
+              {herci.find((h) => h.id === values.actorUserId)?.label ?? herecZCaflou ?? '—'}
+            </dd>
           </div>
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Firma</dt>
@@ -205,15 +214,15 @@ export function ProjectMetaForm({
           </span>
         </label>
 
-        <label className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Herec</span>
-          <input
-            value={values.narrator}
-            onChange={(e) => set('narrator', e.target.value)}
-            placeholder="jméno herce"
-            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+          <VyberHerce
+            herci={herci}
+            hodnota={values.actorUserId}
+            onZmena={(id) => set('actorUserId', id)}
+            puvodniText={herecZCaflou}
           />
-        </label>
+        </div>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Firma</span>
