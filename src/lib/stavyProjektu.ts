@@ -30,12 +30,21 @@ export type StavProjektu = {
 };
 
 /*
- * BARVY STAVŮ
+ * BARVY STAVŮ (zadání 10. 9. 2026)
  *
- * Paleta jde po cestě projektu jako teplota: čím dál je projekt, tím je barva
- * "hotovější". Šedá na začátku, modrá při natáčení, fialová jakmile se do toho
- * zapojí střih, jantarová když se čeká na klienta, červená když se čeká moc
- * dlouho, zelená na konci.
+ * Šest barev je zadaných napevno:
+ *   V přípravě               šedá
+ *   Natáčíme                 světle modrá
+ *   Natáčíme/stříháme        žlutá
+ *   Dokončeno - ke schválení zelená
+ *   Čekáme na opravy         fialová
+ *   Schváleno - k fakturaci  červená
+ *
+ * Zbylé dva stavy v zadání nebyly. Jsou to dvojčata dvou jmenovaných
+ * („Dotočeno" k „Natáčíme", „Dotočeno/stříháme" k „Natáčíme/stříháme"), takže
+ * dostaly sousední odstín téže rodiny - modrozelenou a oranžovou. Stejnou
+ * barvu jako jejich dvojče schválně nemají: dva stavy, které vypadají
+ * totožně, nejdou v seznamu rozeznat.
  *
  * Odstíny jsou schválně napsané číselně (slate-100 a spol.), ne přes tokeny
  * portálu: token okTint/warnTint jsou jen tři a stavů je osm, takže by se
@@ -66,42 +75,42 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
     popis: 'Ještě se natáčí a na disku už jsou první zpracované tracky k poslechu.',
     rozpracovany: true,
     barva:
-      'bg-indigo-100 text-indigo-800 border border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-400/40',
+      'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-500/20 dark:text-yellow-100 dark:border-yellow-400/40',
   },
   {
     nazev: 'Dotočeno',
     popis: 'S hercem dotočeno, na disku zatím není ani jeden track.',
     rozpracovany: true,
     barva:
-      'bg-violet-100 text-violet-800 border border-violet-300 dark:bg-violet-500/20 dark:text-violet-200 dark:border-violet-400/40',
+      'bg-cyan-100 text-cyan-800 border border-cyan-300 dark:bg-cyan-500/20 dark:text-cyan-200 dark:border-cyan-400/40',
   },
   {
     nazev: 'Dotočeno/stříháme',
     popis: 'S hercem dotočeno a na disku už jsou první tracky.',
     rozpracovany: true,
     barva:
-      'bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-300 dark:bg-fuchsia-500/20 dark:text-fuchsia-200 dark:border-fuchsia-400/40',
+      'bg-orange-100 text-orange-800 border border-orange-300 dark:bg-orange-500/20 dark:text-orange-100 dark:border-orange-400/40',
   },
   {
     nazev: 'Dokončeno - ke schválení',
     popis: 'Na disku jsou všechny tracky, čekáme na finální opravy od klienta.',
     rozpracovany: true,
     barva:
-      'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-100 dark:border-amber-400/40',
+      'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-400/40',
   },
   {
     nazev: 'Čekáme na opravy',
     popis: 'Sedm dní po odevzdání klient opravy nedodal.',
     rozpracovany: true,
     barva:
-      'bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-500/20 dark:text-rose-200 dark:border-rose-400/40',
+      'bg-violet-100 text-violet-800 border border-violet-300 dark:bg-violet-500/20 dark:text-violet-200 dark:border-violet-400/40',
   },
   {
     nazev: 'Schváleno - k fakturaci',
     popis: 'Opravené nahrávky jsou na disku, projekt je hotový.',
     rozpracovany: false,
     barva:
-      'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-400/40',
+      'bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/20 dark:text-red-200 dark:border-red-400/40',
   },
 ];
 
