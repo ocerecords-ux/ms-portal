@@ -6,6 +6,7 @@ import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel }
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
 import { IkonaTypu } from '@/lib/ikonyTypu';
+import { TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
@@ -421,7 +422,7 @@ function bunkaSloupce(
       // jen text, na kterem nic nestoji - proto zustava sede a bez bubliny.
       if (!p.narrator) return '—';
       return p.meta?.actorUserId ? (
-        <span className="inline-flex items-center rounded-pill bg-brand-purple/12 text-brand-purpleDeep dark:text-brand-purpleLight px-3 py-1 text-sm font-heading font-semibold">
+        <span className={`inline-flex items-center px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}>
           {p.narrator}
         </span>
       ) : (

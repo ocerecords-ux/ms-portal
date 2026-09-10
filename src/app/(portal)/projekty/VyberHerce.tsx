@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
 
 /**
  * Výběr herce z účtů v portálu (zadání 10. 9. 2026: "pole Herec musí být na
@@ -147,7 +148,7 @@ export function BublinaHerce({
   disabled?: boolean;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 max-w-full rounded-pill bg-brand-purple/12 text-brand-purpleDeep dark:text-brand-purpleLight pl-3 pr-1.5 py-1">
+    <span className={`inline-flex items-center gap-1.5 max-w-full pl-3 pr-1.5 py-1 ${TRIDA_BUBLINY_HERCE}`}>
       <button
         type="button"
         disabled={disabled}
