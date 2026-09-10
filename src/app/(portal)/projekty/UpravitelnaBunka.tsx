@@ -47,11 +47,18 @@ export function UpravitelnyText({
   pole,
   hodnota,
   trida = '',
+  odkaz,
 }: {
   caflouProjectId: string;
   pole: string;
   hodnota: string;
   trida?: string;
+  /**
+   * Kam se dá odskočit z rozepsané buňky. U názvu projektu je to jeho detail:
+   * kliknutí na název text upravuje (zadání 10. 9. 2026), takže odkaz musí
+   * být někde jinde - a šipka vedle názvu se neosvědčila, roztahovala sloupec.
+   */
+  odkaz?: { href: string; popisek: string };
 }) {
   const router = useRouter();
   const [upravuje, setUpravuje] = useState(false);
@@ -98,7 +105,7 @@ export function UpravitelnyText({
   }
 
   return (
-    <span className="inline-flex flex-col min-w-0">
+    <span className="inline-flex flex-col min-w-0 gap-0.5">
       <input
         autoFocus
         value={text}
@@ -111,8 +118,19 @@ export function UpravitelnyText({
             setUpravuje(false);
           }
         }}
-        className="w-full min-w-[160px] rounded-lg border border-brand-purple bg-field px-2 py-1 text-sm font-heading text-ink outline-none"
+        className="w-full max-w-[280px] rounded-lg border border-brand-purple bg-field px-2 py-1 text-sm font-heading text-ink outline-none"
       />
+      {odkaz && (
+        <a
+          href={odkaz.href}
+          // Prohlizec by pri kliknuti nejdriv opustil policko (onBlur) a odkaz
+          // by zmizel drive, nez se stihne otevrit - proto onMouseDown.
+          onMouseDown={(e) => e.preventDefault()}
+          className="text-[11px] font-heading font-semibold text-brand-purple no-underline hover:underline"
+        >
+          {odkaz.popisek}
+        </a>
+      )}
     </span>
   );
 }

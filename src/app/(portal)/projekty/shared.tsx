@@ -333,17 +333,17 @@ function bunkaSloupce(
     case 'name':
       // Nazev jde upravit primo v prehledu (zadani 10. 9. 2026). Proklik na
       // detail zustava vedle - jinak by se do projektu nedalo dostat.
+      // Klepnutim se nazev upravuje, stejne jako datum (zadani 10. 9. 2026).
+      // Odkaz na detail se ukaze az v rozepsane bunce - sipka vedle nazvu
+      // roztahovala sloupec a tabulka pak lezla za okraj.
       return muzeMenit ? (
-        <span className="inline-flex items-center gap-2 min-w-0">
-          <UpravitelnyText caflouProjectId={id} pole="name" hodnota={p.name} trida="truncate" />
-          <Link
-            href={`/projekty/${p.id}`}
-            title="Otevřít projekt"
-            className="text-muted hover:text-brand-purple no-underline shrink-0"
-          >
-            ›
-          </Link>
-        </span>
+        <UpravitelnyText
+          caflouProjectId={id}
+          pole="name"
+          hodnota={p.name}
+          trida="truncate"
+          odkaz={{ href: `/projekty/${p.id}`, popisek: 'Otevřít projekt ›' }}
+        />
       ) : (
         <Link href={`/projekty/${p.id}`} className="text-ink hover:text-brand-purple no-underline">
           {p.name}
@@ -441,7 +441,7 @@ function bunkaSloupce(
 
 /** Třída buňky podle sloupce - čísla doprava, data bez zalomení. */
 const TRIDA_BUNKY: Record<string, string> = {
-  name: 'px-3 py-3.5 font-heading font-semibold text-sm',
+  name: 'px-3 py-3.5 font-heading font-semibold text-sm max-w-[320px]',
   companyName: 'px-3 py-3.5 text-sm font-heading text-muted',
   statusName: 'px-4 py-4',
   priority: 'px-3 py-3.5 text-sm font-heading',
