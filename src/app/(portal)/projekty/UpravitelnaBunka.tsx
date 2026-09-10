@@ -87,7 +87,10 @@ export function UpravitelnyText({
 
   if (!upravuje) {
     return (
-      <span className="inline-flex flex-col min-w-0">
+      // flex, ne inline-flex: bunka ma pevnou sirku a dlouhy nazev se ma
+      // zalomit na dalsi radek (zadani 10. 9. 2026). inline-flex se smrskl
+      // na sirku textu, takze nebylo kde zalamovat.
+      <span className="flex flex-col min-w-0 w-full">
         <button
           type="button"
           onClick={() => {
@@ -95,7 +98,7 @@ export function UpravitelnyText({
             setUpravuje(true);
           }}
           title="Upravit klepnutím"
-          className={`text-left hover:text-brand-purple transition-colors ${uklada ? 'opacity-60' : ''} ${trida}`}
+          className={`w-full text-left hover:text-brand-purple transition-colors ${uklada ? 'opacity-60' : ''} ${trida}`}
         >
           {hodnota || '—'}
         </button>
@@ -105,7 +108,7 @@ export function UpravitelnyText({
   }
 
   return (
-    <span className="inline-flex flex-col min-w-0 gap-0.5">
+    <span className="flex flex-col min-w-0 w-full gap-0.5">
       <input
         autoFocus
         value={text}
@@ -118,7 +121,7 @@ export function UpravitelnyText({
             setUpravuje(false);
           }
         }}
-        className="w-full max-w-[280px] rounded-lg border border-brand-purple bg-field px-2 py-1 text-sm font-heading text-ink outline-none"
+        className="w-full rounded-lg border border-brand-purple bg-field px-2 py-1 text-sm font-heading text-ink outline-none"
       />
       {odkaz && (
         <a

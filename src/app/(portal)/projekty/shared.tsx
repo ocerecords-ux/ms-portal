@@ -80,7 +80,9 @@ export function ProjectsTable({
             )}
             {projects.map((p) => (
               <tr key={p.id} className="border-t border-line hover:bg-surfaceSoft">
-                <td className="px-4 py-4 font-heading font-semibold text-sm text-ink">{p.name}</td>
+                <td className="px-4 py-4 font-heading font-semibold text-sm text-ink max-w-[300px] break-words align-top">
+                  {p.name}
+                </td>
                 <td className="px-4 py-4">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
                 </td>
@@ -157,7 +159,9 @@ export function AdminProjectsTable({
             )}
             {projects.map((p) => (
               <tr key={`${p.companyName}-${p.id}`} className="border-t border-line hover:bg-surfaceSoft">
-                <td className="px-4 py-4 font-heading font-semibold text-sm text-ink">{p.name}</td>
+                <td className="px-4 py-4 font-heading font-semibold text-sm text-ink max-w-[300px] break-words align-top">
+                  {p.name}
+                </td>
                 <td className="px-4 py-4 text-sm font-heading text-muted">{p.companyName}</td>
                 <td className="px-4 py-4">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
@@ -336,12 +340,14 @@ function bunkaSloupce(
       // Klepnutim se nazev upravuje, stejne jako datum (zadani 10. 9. 2026).
       // Odkaz na detail se ukaze az v rozepsane bunce - sipka vedle nazvu
       // roztahovala sloupec a tabulka pak lezla za okraj.
+      // Dlouhy nazev se zalomi na dalsi radek (sirka sloupce je v TRIDA_BUNKY);
+      // orezavani tremi teckami se neosvedcilo, nebylo poznat, co je za knihu.
       return muzeMenit ? (
         <UpravitelnyText
           caflouProjectId={id}
           pole="name"
           hodnota={p.name}
-          trida="truncate"
+          trida="whitespace-normal break-words"
           odkaz={{ href: `/projekty/${p.id}`, popisek: 'Otevřít projekt ›' }}
         />
       ) : (
@@ -441,7 +447,10 @@ function bunkaSloupce(
 
 /** Třída buňky podle sloupce - čísla doprava, data bez zalomení. */
 const TRIDA_BUNKY: Record<string, string> = {
-  name: 'px-3 py-3.5 font-heading font-semibold text-sm max-w-[320px]',
+  // Nazev ma pevnou sirku a dlouhy se zalomi na dalsi radek (zadani 10. 9.
+  // 2026: "je to nekde dlouhe a prekryva se to"). Bez pevne sirky si dlouhy
+  // nazev bral misto ostatnim sloupcum a tabulka lezla za okraj.
+  name: 'px-3 py-3.5 font-heading font-semibold text-sm w-[300px] min-w-[300px] max-w-[300px] align-top',
   companyName: 'px-3 py-3.5 text-sm font-heading text-muted',
   statusName: 'px-4 py-4',
   priority: 'px-3 py-3.5 text-sm font-heading',

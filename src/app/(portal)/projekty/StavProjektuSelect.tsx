@@ -12,6 +12,13 @@ import { STAVY_PROJEKTU, barvaStavu } from '@/lib/stavyProjektu';
  * nemusí kvůli jedné změně otevírat detail projektu. Ukládá se hned po výběru;
  * potvrzovací tlačítko by tady jen překáželo.
  *
+ * ŠÍŘKA PODLE TEXTU (zadání 10. 9. 2026: "ty bubliny, kde je stav projektu,
+ * by mohly mít různou velikost - podle textu"): samotný <select> se v
+ * prohlížeči roztáhne na nejdelší položku nabídky, takže i „V přípravě" měla
+ * bublina šířku „Dokončeno - ke schválení". Odznak je proto obyčejný <span>
+ * s vybraným textem a <select> na něm leží průhledně přes celou plochu —
+ * klikání i klávesnice fungují dál, ale o šířce rozhoduje text.
+ *
  * Když uložení selže, stav se vrátí na původní hodnotu a vypíše se chyba pod
  * odznakem. Tabulka nesmí ukazovat něco jiného, než co je v databázi.
  */
@@ -60,18 +67,22 @@ export function StavProjektuSelect({
   const neznamyStav = hodnota && !STAVY_PROJEKTU.some((s) => s.nazev === hodnota);
 
   return (
-    <span className="inline-flex flex-col gap-1 min-w-0">
-      <span className="relative inline-flex items-center">
+    <span className="inline-flex flex-col gap-1 min-w-0 items-start">
+      <span
+        className={`relative inline-flex items-center gap-1.5 rounded-pill pl-3 pr-2.5 py-1 text-xs font-heading font-semibold cursor-pointer focus-within:ring-2 focus-within:ring-brand-purple/40 ${
+          uklada ? 'opacity-60' : ''
+        } ${barvaStavu(hodnota, dokonceny)}`}
+      >
+        <span className="whitespace-nowrap">{hodnota || 'Bez stavu'}</span>
+        <Sipka />
         <select
           value={hodnota}
           disabled={uklada}
           onChange={(e) => void zmen(e.target.value)}
           onClick={(e) => e.stopPropagation()}
           title="Přehodit stav projektu"
-          className={`appearance-none cursor-pointer rounded-pill pl-3 pr-7 py-1 text-xs font-heading font-semibold outline-none focus:ring-2 focus:ring-brand-purple/40 disabled:opacity-60 ${barvaStavu(
-            hodnota,
-            dokonceny,
-          )}`}
+          aria-label="Stav projektu"
+          className="absolute inset-0 w-full h-full appearance-none opacity-0 cursor-pointer outline-none disabled:cursor-default"
         >
           {/* Stav prenesený z Caflou, který v naší cestě projektu není - ať se
               při rozbalení nabídky nezmění na něco jiného. */}
@@ -82,7 +93,6 @@ export function StavProjektuSelect({
             </option>
           ))}
         </select>
-        <Sipka />
       </span>
       {chyba && <span className="text-[11px] font-body text-danger">{chyba}</span>}
     </span>
@@ -98,7 +108,7 @@ function Sipka() {
       strokeWidth="3"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="w-2.5 h-2.5 absolute right-2.5 pointer-events-none opacity-70"
+      className="w-2.5 h-2.5 shrink-0 pointer-events-none opacity-70"
       aria-hidden="true"
     >
       <path d="M6 9l6 6 6-6" />
