@@ -78,6 +78,17 @@ export function RodnyListSection({
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  /**
+   * Náhled je vidět rovnou v záložce (zadání 10. 9. 2026: „chci to vidět
+   * někde v té záložce Rodný list") - na novou stránku přes celou obrazovku
+   * se člověk musel dívat a zase se vracet.
+   *
+   * `verzeNahledu` je jen počítadlo do adresy. PDF je pro prohlížeč pořád
+   * stejná adresa, takže bez něj by po uložení ukazoval starý dokument
+   * z paměti.
+   */
+  const [nahledOtevreny, setNahledOtevreny] = useState(true);
+  const [verzeNahledu, setVerzeNahledu] = useState(0);
 
   function set<K extends keyof RodnyListValues>(key: K, value: RodnyListValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -139,6 +150,7 @@ export function RodnyListSection({
         return;
       }
       setSaved(true);
+      setVerzeNahledu((v) => v + 1);
       router.refresh();
     } catch {
       setError('Uložení se nezdařilo.');
@@ -360,43 +372,85 @@ export function RodnyListSection({
         {tlacitka}
       </form>
 
+      {/* NÁHLED PŘÍMO V ZÁLOŽCE (zadání 10. 9. 2026). Je to totéž PDF, které
+          vznikne po kliknutí na Vygenerovat - jen se nikam neuloží. Rám kolem
+          něj je záměrně "papírový": člověk má vidět dokument, ne políčko
+          prohlížeče. */}
+      <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between flex-wrap gap-3 px-6 py-4 border-b border-line">
+          <div>
+            <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+              Náhled
+            </h2>
+            <p className="text-xs font-body text-muted m-0 mt-1">
+              Takhle bude dokument vypadat. Nikam se neukládá.
+            </p>
+          </div>
+          <span className="flex items-center gap-3 flex-wrap">
+            {chybi.length === 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setVerzeNahledu((v) => v + 1)}
+                  className="text-xs font-heading font-semibold text-brand-purple hover:underline"
+                >
+                  Obnovit
+                </button>
+                <a
+                  href={`/api/projects/${encodeURIComponent(caflouProjectId)}/rodny-list/nahled`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-heading font-semibold text-brand-purple no-underline hover:underline"
+                >
+                  Otevřít samostatně ↗
+                </a>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => setNahledOtevreny((o) => !o)}
+              className="border border-line font-heading font-semibold text-xs rounded-lg px-3 py-1.5 text-ink hover:border-brand-purple transition-colors"
+            >
+              {nahledOtevreny ? 'Skrýt' : 'Zobrazit'}
+            </button>
+          </span>
+        </div>
+
+        {nahledOtevreny && (
+          <div className="bg-field px-4 py-5 sm:px-6 sm:py-6">
+            {chybi.length > 0 ? (
+              <p className="text-sm font-body text-muted m-0 text-center py-10">
+                Náhled se ukáže, až budou doplněné chybějící údaje.
+              </p>
+            ) : (
+              <iframe
+                // Pocitadlo v adrese: bez nej by prohlizec po ulozeni ukazal
+                // starý dokument z pameti - adresa je porad stejna.
+                key={verzeNahledu}
+                src={`/api/projects/${encodeURIComponent(caflouProjectId)}/rodny-list/nahled?v=${verzeNahledu}`}
+                title="Náhled Rodného listu"
+                className="w-full h-[700px] max-h-[75vh] rounded-lg border border-line bg-white shadow-md"
+              />
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
             Vygenerované Rodné listy
           </h2>
           {canEdit && (
-            <span className="flex items-center gap-2 flex-wrap">
-              {/* Nahled se otevre v nove zalozce a NIC neuklada (zadani
-                  10. 9. 2026). Je to obycejny odkaz, at si ho jde otevrit
-                  kolikrat clovek chce. */}
-              <a
-                href={`/api/projects/${encodeURIComponent(caflouProjectId)}/rodny-list/nahled`}
-                target="_blank"
-                rel="noreferrer"
-                title={
-                  chybi.length > 0
-                    ? 'Náhled půjde otevřít, až budou doplněné chybějící údaje.'
-                    : 'Otevře PDF k prohlédnutí. Nikam se neuloží.'
-                }
-                className={`inline-flex items-center gap-1.5 border border-line font-heading font-semibold text-sm rounded-lg px-4 py-2 no-underline transition-colors ${
-                  chybi.length > 0
-                    ? 'text-muted pointer-events-none opacity-50'
-                    : 'text-brand-purple hover:bg-tint'
-                }`}
-              >
-                Náhled
-              </a>
-              <button
-                type="button"
-                onClick={vygenerovatZnovu}
-                disabled={generating || chybi.length > 0}
-                title={chybi.length > 0 ? 'Nejdřív doplňte chybějící údaje.' : undefined}
-                className="border border-line bg-field text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:border-brand-purple transition-colors disabled:opacity-50"
-              >
-                {generating ? 'Generuji…' : rodneListy.length === 0 ? 'Vygenerovat RL' : 'Vygenerovat RL znovu'}
-              </button>
-            </span>
+            <button
+              type="button"
+              onClick={vygenerovatZnovu}
+              disabled={generating || chybi.length > 0}
+              title={chybi.length > 0 ? 'Nejdřív doplňte chybějící údaje.' : undefined}
+              className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
+            >
+              {generating ? 'Generuji…' : rodneListy.length === 0 ? 'Vygenerovat RL' : 'Vygenerovat RL znovu'}
+            </button>
           )}
         </div>
 
