@@ -180,6 +180,42 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
     }
   }
 
+  /**
+   * Prenese do portalu JEDEN radek (zadani 10. 9. 2026: "hromadne mi to pada,
+   * tak to zkusim po jednom").
+   *
+   * Jde o stejnou routu jako u hromadneho prenosu, jen s jednim ID - pravidla
+   * (nic dvakrat, nic neprepisovat) tedy plati uplne stejne. Vyhoda je, ze
+   * kdyz jeden zaznam spadne, nestrhne s sebou zbytek davky a je hned videt,
+   * ktery to byl.
+   */
+  async function transferOne(id: string, nazev: string) {
+    setBusyId(id);
+    setError(null);
+    setReport(null);
+    try {
+      const res = await fetch('/api/admin/caflou-firmy/zalozit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [id] }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(`${nazev}: ${data?.error || 'přenos se nezdařil.'}`);
+        return;
+      }
+      setReport(Array.isArray(data?.vysledky) ? data.vysledky : []);
+      setProgress(
+        `${nazev}: založeno ${data?.zalozeno ?? 0}, doplněno ${data?.doplneno ?? 0}, přeskočeno ${data?.preskoceno ?? 0}.`,
+      );
+      router.refresh();
+    } catch {
+      setError(`${nazev}: přenos se nezdařil.`);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function setKind(id: string, kind: CaflouContactKind) {
     setBusyId(id);
     setError(null);
@@ -310,7 +346,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
 
       <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
-          <table className="w-full min-w-[900px] border-collapse">
+          <table className="w-full min-w-[1020px] border-collapse">
             <thead>
               <tr className="bg-brand-purple text-white font-heading text-xs">
                 <ThRadit label="Název" sloupec="nazev" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
@@ -319,12 +355,13 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                 <ThRadit label="Město" sloupec="mesto" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
                 <ThRadit label="Už v portálu" sloupec="vPortalu" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
                 <ThRadit label="Kdo to je" sloupec="kdoToJe" razeni={razeni} prepni={prepni} trida="px-3" naFialovem />
+                <th className="text-left px-3 py-3.5 whitespace-nowrap">Přenést</th>
               </tr>
             </thead>
             <tbody>
               {visible.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted text-sm font-body">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
                     {items.length === 0
                       ? 'Zatím tu nic není — načtěte firmy z Caflou tlačítkem nahoře.'
                       : 'Nic neodpovídá filtru.'}
@@ -369,6 +406,22 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                       <span className="block text-xs font-body text-muted/80 mt-1 max-w-[180px] whitespace-normal">
                         {item.kindReason}
                       </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3.5 whitespace-nowrap">
+                    {/* Prenos po jednom (zadani 10. 9. 2026) - hromadny prenos
+                        na velkem poctu zaznamu padal. */}
+                    {item.kind === 'KLIENT' || item.kind === 'HEREC' ? (
+                      <button
+                        type="button"
+                        onClick={() => void transferOne(item.id, item.name)}
+                        disabled={busyId === item.id || transferring || importing}
+                        className="font-heading font-semibold text-xs rounded-lg px-3 py-1.5 border border-line text-brand-purple hover:bg-tint transition-colors disabled:opacity-50"
+                      >
+                        {busyId === item.id ? 'Přenáším…' : 'Přenést'}
+                      </button>
+                    ) : (
+                      <span className="text-xs font-body text-muted/60">nejdřív vyberte vlevo</span>
                     )}
                   </td>
                 </tr>
