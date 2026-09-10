@@ -56,6 +56,18 @@ export type RodnyListFields = {
   productionDate: Date | null;
 };
 
+/**
+ * Předvyplněná režie (zadání 10. 9. 2026: „pole režie by mělo být
+ * předvyplněno jako Ondřej Černý").
+ *
+ * Spoty režíruje skoro vždycky týž člověk, takže vypisovat to pokaždé znovu
+ * je práce navíc. Předvyplní se jen u projektu, který režii ještě nemá -
+ * co je u projektu uložené, se nepřepisuje, a přepsat to jde vždycky.
+ *
+ * Až režíruje někdo jiný natrvalo, mění se tenhle jeden řádek.
+ */
+export const VYCHOZI_REZIE = 'Ondřej Černý';
+
 export const RODNY_LIST_LABELS = {
   clientName: 'Název klienta',
   spotName: 'Název spotu',
