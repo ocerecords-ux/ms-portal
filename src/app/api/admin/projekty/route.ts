@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
 import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
 import { STAVY_PROJEKTU, jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
+import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
 
 /**
  * Založení projektu v portálu (zadání 10. 9. 2026: "teď potřebuju, aby šlo
@@ -151,6 +152,13 @@ export async function POST(req: NextRequest) {
         zdroj: 'PORTAL',
       },
     });
+
+    // Prvni radek historie projektu (zadani 10. 9. 2026). Bez cekani - zaznam
+    // o praci nesmi zdrzet zalozeni projektu.
+    void zapisZalozeniProjektu(caflouProjectId, d.name, {
+      id: session.user.id,
+      jmeno: session.user.name || session.user.email,
+    }).catch(() => undefined);
 
     return NextResponse.json({ id: projekt.caflouProjectId, varovaniDisk }, { status: 201 });
   } catch (err) {

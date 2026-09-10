@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { CO_SE_POSILA, STAVY_S_NOTIFIKACI, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
 import { sendStavProjektuEmail } from '@/lib/email';
+import { zapisNotifikaci } from '@/lib/projektLogServer';
 
 /**
  * Odeslání zprávy o změně stavu projektu (zadání 10. 9. 2026).
@@ -89,6 +90,11 @@ export async function posliNotifikaciKeStavu(
       // Projekt nema vyplneneho klienta - poslat "klientovi" nejde. Zapisujeme
       // to jako duvod, ne jako chybu; casto to znamena jen nedodelany projekt.
       console.warn(`Notifikace ke stavu "${stav}": projekt ${caflouProjectId} nemá klienta.`);
+      await zapisNotifikaci({
+        caflouProjectId,
+        stav,
+        popis: `Zpráva ke stavu „${stav}" neodešla — projekt nemá vyplněného klienta.`,
+      });
       return { stav: 'chybi-prijemce' };
     }
 
@@ -106,11 +112,29 @@ export async function posliNotifikaciKeStavu(
     });
 
     if (!vysledek.sent) {
+      await zapisNotifikaci({
+        caflouProjectId,
+        stav,
+        popis: `Zprávu ke stavu „${stav}" se nepodařilo odeslat (${vysledek.reason ?? 'neznámý důvod'}).`,
+        prijemci,
+      });
       return { stav: 'chyba', zprava: vysledek.reason ?? 'Nepodařilo se odeslat.' };
     }
 
     await prisma.notifikaceOdeslana.create({
       data: { caflouProjectId, znacka, prijemci: prijemci.join(', ') },
+    });
+
+    // Do historie projektu (zadani 10. 9. 2026) - at je videt, kdy co komu
+    // odeslo. Prave kvuli tomu, ze zprava odchazi sama, je to potreba.
+    await zapisNotifikaci({
+      caflouProjectId,
+      stav,
+      popis:
+        nastaveni.komu === 'INTERNE'
+          ? `Zpráva ke stavu „${stav}" odešla jen nám interně.`
+          : `Zpráva ke stavu „${stav}" odešla klientovi.`,
+      prijemci,
     });
 
     return { stav: 'odeslano', prijemci };

@@ -391,6 +391,41 @@ model ProjectMeta {
 //
 // Co ulozene neni, se NEPOSILA. Radeji zpravu neposlat, nez ji poslat
 // klientovi, ktery o ni nestoji.
+// Historie projektu (zadani 10. 9. 2026: "neco jako LOG u kazdeho projektu -
+// takovou historii, co se v projektu upravilo a kdy sla nejaka notifikace").
+//
+// Zamerne bez vazby na ProjectMeta pres cizi klic: na projekt se vsude v
+// portalu odkazuje textovym caflouProjectId (doklady, vykazy, rozpocty,
+// rodne listy) a historie to ma delat stejne - prezije to i smazani projektu.
+enum DruhUdalosti {
+  ZALOZENO    // projekt vznikl
+  ZMENA       // nekdo zmenil udaj
+  NOTIFIKACE  // odesla (nebo neodesla) zprava o stavu
+}
+
+model ProjektUdalost {
+  id              String       @id @default(cuid())
+  caflouProjectId String
+  druh            DruhUdalosti @default(ZMENA)
+
+  /// Klic zmeneneho pole (name, statusName, ...). U notifikace a zalozeni prazdne.
+  pole            String?
+  /// Veta, jak se to ukaze cloveku - at se historie da cist bez prekladace klicu.
+  popis           String       @db.Text
+  /// Hodnoty uz prelozene do citelne podoby (jmeno manazera, ne jeho ID).
+  predchozi       String?      @db.Text
+  nova            String?      @db.Text
+
+  /// Kdo to udelal. Prazdne = portal sam (napr. odeslana notifikace).
+  uzivatelId      String?
+  /// Jmeno textem - zaznam zustane citelny, i kdyz ucet pozdeji zmizi.
+  uzivatelJmeno   String?
+
+  createdAt       DateTime     @default(now())
+
+  @@index([caflouProjectId, createdAt])
+}
+
 model NotifikaceFirmy {
   id        String   @id @default(cuid())
   companyId String

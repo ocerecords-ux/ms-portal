@@ -21,6 +21,8 @@ import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
 import { RecordingSection } from './RecordingSection';
 import { ProjectTabs, type ProjectTab } from './ProjectTabs';
 import { RodnyListSection } from './RodnyListSection';
+import { HistorieProjektu } from './HistorieProjektu';
+import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
 import { findInternalProject } from '@/lib/caflouProjectsServer';
 import { loadRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 
@@ -67,6 +69,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     herci,
     studia,
     calendarSettings,
+    historie,
   ] = await Promise.all([
     // Nejdriv sdileny seznam projektu (lib/caflouProjectsServer.ts) - ma uz
     // vsechno, co se tu z Caflou ukazuje, a byva nacteny. Doptat se Caflou
@@ -145,6 +148,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     }),
     loadStudios(),
     loadCalendarSettings(),
+    // Historie projektu (zadani 10. 9. 2026) - jede spolu se vsim ostatnim,
+    // aby detail nemel dalsi kolecko do databaze navic.
+    nactiHistoriiProjektu(caflouProjectId),
   ]);
 
   // Zalohy pro pripad, ze projekt jeste neni ve sdilenem seznamu (zalozeny
@@ -429,6 +435,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     count: jeRadiovySpot ? rodneListy.length : undefined,
     content: rodnyList,
   });
+  // Historie je jen pro nas - klient se na detail projektu stejne nedostane,
+  // ale zvukar ano a jemu se ukazuje ke cteni jako zbytek detailu.
+  if (isInternalRole(session.user.role)) {
+    tabs.push({
+      key: 'historie',
+      label: 'Historie',
+      count: historie.length,
+      content: <HistorieProjektu udalosti={historie} />,
+    });
+  }
   if (showDocuments) {
     tabs.push({
       key: 'doklady',

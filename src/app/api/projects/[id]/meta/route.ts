@@ -8,6 +8,7 @@ import { jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
 import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
+import { zapisZmenyProjektu, type CitelnaJmena } from '@/lib/projektLogServer';
 
 
 // Ulozeni internich atributu projektu (model ProjectMeta) - zadani
@@ -77,15 +78,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
+    // Jmena k zaznamu do historie projektu (zadani 10. 9. 2026). Sbiraji se
+    // rovnou pri overovani uctu - jinak by to znamenalo tytez dotazy podruhe.
+    const jmenaPo: CitelnaJmena = {};
+
     // Manazer musi byt existujici interni ucet Mediaspace.
     if (data.managerUserId) {
       const manager = await prisma.user.findFirst({
         where: { id: data.managerUserId, role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] } },
-        select: { id: true },
+        select: { id: true, name: true, email: true },
       });
       if (!manager) {
         return NextResponse.json({ error: 'Vybraný manažer neexistuje.' }, { status: 400 });
       }
+      jmenaPo.managerUserId = manager.name || manager.email;
     }
 
     // Herec musi byt ucet s roli Herec - na nej se vazou nabidky terminu
@@ -93,11 +99,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (data.actorUserId) {
       const herec = await prisma.user.findFirst({
         where: { id: data.actorUserId, role: 'HEREC' },
-        select: { id: true },
+        select: { id: true, name: true, email: true },
       });
       if (!herec) {
         return NextResponse.json({ error: 'Vybraný herec neexistuje.' }, { status: 400 });
       }
+      jmenaPo.actorUserId = herec.name || herec.email;
     }
 
     // Firma projektu musi existovat. Nazev se ulozi i textem, aby projekt
@@ -115,6 +122,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           return NextResponse.json({ error: 'Vybraná firma neexistuje.' }, { status: 400 });
         }
         companyName = firma.name;
+        jmenaPo.companyId = firma.name;
       }
     }
 
@@ -124,11 +132,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (data.klientUserId) {
       const klient = await prisma.user.findFirst({
         where: { id: data.klientUserId, role: 'CLIENT' },
-        select: { id: true },
+        select: { id: true, name: true, email: true },
       });
       if (!klient) {
         return NextResponse.json({ error: 'Vybraný klient neexistuje.' }, { status: 400 });
       }
+      jmenaPo.klientUserId = klient.name || klient.email;
     }
 
     // Delka spotu: cislo v sekundach, prazdno = nevyplneno.
@@ -219,12 +228,41 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (spotLengthSeconds !== undefined) values.spotLengthSeconds = spotLengthSeconds;
     if (productionDate !== undefined) values.productionDate = productionDate;
 
+    // Stav pred ulozenim - z nej se pozna, co se opravdu zmenilo, a zapise se
+    // to do historie projektu (zadani 10. 9. 2026). Cte se az tady, kdyz uz je
+    // jiste, ze se bude ukladat.
+    const pred = await prisma.projectMeta.findUnique({
+      where: { caflouProjectId: params.id },
+      include: {
+        manager: { select: { name: true, email: true } },
+        actor: { select: { name: true, email: true } },
+        klient: { select: { name: true, email: true } },
+        company: { select: { name: true } },
+      },
+    });
+
     const meta = await prisma.projectMeta.upsert({
       where: { caflouProjectId: params.id },
       create: { caflouProjectId: params.id, ...values },
       update: values,
       include: { company: { select: { caflouCompanyId: true } } },
     });
+
+    // Historie projektu. Zamerne bez cekani - zaznam o praci nesmi zdrzet
+    // ani shodit samotne ulozeni.
+    void zapisZmenyProjektu({
+      caflouProjectId: params.id,
+      pred,
+      ulozeno: values,
+      jmenaPred: {
+        managerUserId: pred?.manager ? pred.manager.name || pred.manager.email : null,
+        actorUserId: pred?.actor ? pred.actor.name || pred.actor.email : null,
+        klientUserId: pred?.klient ? pred.klient.name || pred.klient.email : null,
+        companyId: pred?.company?.name ?? pred?.companyName ?? null,
+      },
+      jmenaPo,
+      puvodce: { id: session.user.id, jmeno: session.user.name || session.user.email },
+    }).catch(() => undefined);
 
     // Prejmenovani projektu prejmenuje i jeho slozku na Disku (zadani
     // 10. 9. 2026). Zamerne bez cekani a bez hlaseni chyby - kdyz Disk
