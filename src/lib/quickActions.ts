@@ -17,6 +17,7 @@ import type { Role } from '@prisma/client';
 
 export type QuickActionKey =
   | 'objednavka'
+  | 'projekt'
   | 'nabidka'
   | 'faktura'
   | 'smlouva'
@@ -46,6 +47,8 @@ export // Zkratka vede rovnou do editacniho okna, ne jen na stranku (zadani
 // (objednavka) nebo kde se zaklada jinak (termin v kalendari, vykaz).
 const QUICK_ACTIONS: QuickAction[] = [
   { key: 'objednavka', label: 'Nová objednávka', href: '/objednavka', roles: ['CLIENT'] },
+  // Zakladani projektu prislo s odchodem z Caflou (zadani 10. 9. 2026).
+  { key: 'projekt', label: 'Nový projekt', href: '/projekty#nove', roles: ['ADMIN', 'PRODUKCE'] },
   { key: 'nabidka', label: 'Nová nabídka', href: '/admin/doklady/nabidky#nove', roles: ADMIN },
   { key: 'faktura', label: 'Nová faktura', href: '/admin/doklady/faktury#nove', roles: ADMIN },
   { key: 'smlouva', label: 'Nová smlouva', href: '/admin/doklady/smlouvy#nove', roles: ADMIN },
@@ -79,8 +82,8 @@ export function defaultQuickActionKeys(role: Role): QuickActionKey[] {
     case 'ZVUKAR':
       return ['vykaz', 'termin'];
     case 'PRODUKCE':
-      return ['termin'];
+      return ['projekt', 'termin'];
     default:
-      return ['nabidka', 'faktura', 'smlouva', 'vydaj', 'termin'];
+      return ['projekt', 'nabidka', 'faktura', 'smlouva', 'vydaj', 'termin'];
   }
 }

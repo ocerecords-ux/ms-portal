@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
 import { jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { syncRodneListy } from '@/lib/rodnyListServer';
+import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
 
 
 // Ulozeni internich atributu projektu (model ProjectMeta) - zadani
@@ -27,6 +28,8 @@ const schema = z.object({
   // opousti, takze o stavu i o herci rozhoduje ted portal.
   statusName: z.string().trim().max(120).optional(),
   narrator: z.string().trim().max(200).optional(),
+  /** Nazev projektu - u projektu zalozenych v portalu jde zmenit. */
+  name: z.string().trim().max(300).optional(),
   /** Firma, pro kterou se projekt dela. */
   companyId: z.string().trim().optional(),
   /** Klient projektu - konkretni clovek, na ktereho chodi notifikace. */
@@ -160,6 +163,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('priority', data.priority);
     text('projectType', data.projectType);
     text('narrator', data.narrator);
+    if (data.name) values.name = data.name;
     text('klientUserId', data.klientUserId);
     text('companyId', data.companyId);
     if (companyName !== undefined) values.companyName = companyName;
@@ -184,6 +188,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       update: values,
       include: { company: { select: { caflouCompanyId: true } } },
     });
+
+    // Prejmenovani projektu prejmenuje i jeho slozku na Disku (zadani
+    // 10. 9. 2026). Zamerne bez cekani a bez hlaseni chyby - kdyz Disk
+    // nespolupracuje, nazev projektu se stejne ulozit ma.
+    if (data.name && meta.driveUrl) {
+      void prejmenujSlozkuProjektu(meta.driveUrl, data.name).catch(() => undefined);
+    }
 
     // Rodny list se vyrabi pri prechodu do stavu "Dokonceno - ke schvaleni".
     // Driv se ten prechod poznaval porovnanim s poslednim stavem videnym

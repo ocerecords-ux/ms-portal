@@ -10,6 +10,8 @@ import { canEditProjectMeta, isInternalRole } from '@/lib/roles';
 import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
+import { NovyProjektForm } from './NovyProjektForm';
+import { listProjectTypeOptions } from '@/lib/priceList';
 import { loadColumnSettings } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/caflouProjectsServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
@@ -185,6 +187,26 @@ async function InternalProjektySection({
     })),
   );
 
+  // Ciselniky pro zalozeni projektu (zadani 10. 9. 2026).
+  const [firmyProFormular, klientiProFormular, manazeriProFormular, typyProjektu] = await Promise.all([
+    prisma.company.findMany({
+      where: { type: 'KLIENT' },
+      select: { id: true, name: true, driveFolderUrl: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.user.findMany({
+      where: { role: 'CLIENT', active: true },
+      select: { id: true, name: true, email: true, companyId: true, company: { select: { name: true } } },
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
+    }),
+    prisma.user.findMany({
+      where: { role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] }, active: true },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: 'asc' },
+    }),
+    listProjectTypeOptions(),
+  ]);
+
   // Nase vlastni atributy k projektum (priorita, typ, manazer) - jednim
   // dotazem pro vsechny nactene projekty najednou.
   const metas = projects.length
@@ -246,6 +268,23 @@ async function InternalProjektySection({
           </span>
         )}
       </div>
+
+      {muzeMenitStav && (
+        <NovyProjektForm
+          firmy={firmyProFormular.map((f) => ({
+            id: f.id,
+            label: f.name,
+            maSlozku: Boolean(f.driveFolderUrl),
+          }))}
+          klienti={klientiProFormular.map((k) => ({
+            id: k.id,
+            label: k.company?.name ? `${k.name || k.email} — ${k.company.name}` : k.name || k.email,
+            companyId: k.companyId,
+          }))}
+          manazeri={manazeriProFormular.map((m) => ({ id: m.id, label: m.name || m.email }))}
+          typyProjektu={typyProjektu}
+        />
+      )}
 
       <InternalProjectsBrowser
         active={active}

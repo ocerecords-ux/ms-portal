@@ -42,6 +42,14 @@ function Ikona({ akce }: { akce: QuickActionKey }) {
           <circle cx="18" cy="20" r="1.2" />
         </svg>
       );
+    case 'projekt':
+      // Slozka se zalozkou - projekt je to, do ceho se sklada vsechno ostatni.
+      return (
+        <svg {...spolecne}>
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <path d="M12 11v5M9.5 13.5h5" />
+        </svg>
+      );
     case 'nabidka':
       return (
         <svg {...spolecne}>

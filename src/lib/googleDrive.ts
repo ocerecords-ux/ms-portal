@@ -234,6 +234,81 @@ export async function renameDriveItem(
 }
 
 /**
+ * Zalozi slozku projektu uvnitr slozky firmy (zadani 10. 9. 2026: "ta slozka
+ * na disku by se mohla vytvorit automaticky, kdyz se bude zakladat novy
+ * projekt a rovnou se sama zapsat").
+ *
+ * Vraci odkaz na novou slozku, nebo duvod, proc to neslo. NEVYHAZUJE -
+ * zalozeni projektu nesmi spadnout kvuli tomu, ze Disk zrovna nespolupracuje;
+ * odkaz se pak doplni rucne.
+ *
+ * POZOR NA PRAVA: servisni ucet portalu musi mit ve slozce firmy pravo
+ * Editor. U klientskych slozek byva jen Prohlizejici a Google pak zalozeni
+ * odmitne s chybou 403.
+ */
+export async function vytvorSlozkuProjektu(
+  slozkaFirmyUrl: string,
+  nazev: string,
+): Promise<{ url: string; id: string } | { chyba: string }> {
+  const rodicId = extractDriveFolderId(slozkaFirmyUrl);
+  if (!rodicId) return { chyba: 'Odkaz na složku firmy nevypadá jako složka na Google Disku.' };
+
+  const cistyNazev = nazev.trim().replace(/[\\/]/g, '-').slice(0, 200);
+  if (!cistyNazev) return { chyba: 'Projekt nemá název, podle kterého by se složka pojmenovala.' };
+
+  try {
+    const token = await getAccessToken(DRIVE_WRITE_SCOPE);
+    if (!token) return { chyba: 'Portál se nedokázal přihlásit ke Google Disku.' };
+
+    const res = await fetch(`${DRIVE_API}/files?supportsAllDrives=true&fields=id,webViewLink`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: cistyNazev,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [rodicId],
+      }),
+    });
+
+    if (!res.ok) {
+      const stav = res.status;
+      console.error('Zalozeni slozky na Disku selhalo:', stav);
+      return {
+        chyba:
+          stav === 403
+            ? 'Google Disk založení složky odmítl - servisní účet portálu nemá ve složce firmy právo Editor.'
+            : `Google Disk odpověděl chybou ${stav}.`,
+      };
+    }
+
+    const data = (await res.json()) as { id?: string; webViewLink?: string };
+    if (!data.id) return { chyba: 'Google Disk nevrátil ID nové složky.' };
+    return { id: data.id, url: data.webViewLink || `https://drive.google.com/drive/folders/${data.id}` };
+  } catch (err) {
+    console.error('Zalozeni slozky na Disku spadlo:', err);
+    return { chyba: 'Složku na Disku se nepodařilo založit.' };
+  }
+}
+
+/**
+ * Prejmenuje slozku projektu podle noveho nazvu projektu (zadani 10. 9. 2026).
+ * Stejne jako zalozeni: nikdy nevyhazuje, jen rekne, jestli to vyslo.
+ */
+export async function prejmenujSlozkuProjektu(slozkaUrl: string, novyNazev: string): Promise<boolean> {
+  const id = extractDriveFolderId(slozkaUrl);
+  const cistyNazev = novyNazev.trim().replace(/[\\/]/g, '-').slice(0, 200);
+  if (!id || !cistyNazev) return false;
+  try {
+    const token = await getAccessToken(DRIVE_WRITE_SCOPE);
+    if (!token) return false;
+    return Boolean(await renameDriveItem(id, cistyNazev, token));
+  } catch (err) {
+    console.error('Prejmenovani slozky na Disku spadlo:', err);
+    return false;
+  }
+}
+
+/**
  * Nahraje hotove PDF do slozky projektu na Google Disku (zadani 9. 9. 2026 -
  * "uloz PDF do projektove slozky na nakonfigurovanem disku").
  *
