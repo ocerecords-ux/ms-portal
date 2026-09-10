@@ -195,10 +195,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     ]);
   }
 
-  // Rodny list se dela jen u radiovych spotu (upresneni 9. 9. 2026) - pozna se
-  // to podle typu projektu, ne podle firmy. U ostatnich projektu se v zalozce
-  // ukaze jen sekce Hudba ve spotu, kterou chtel mit uzivatel k dispozici
-  // u projektu obecne.
+  // Rodny list i Hudba ve spotu se delaji jen u radiovych spotu (upresneni
+  // 9. 9. 2026, rozsireno 10. 9. 2026) - pozna se to podle typu projektu,
+  // ne podle firmy. U ostatnich projektu se zalozka vubec neukazuje.
   const jeRadiovySpot = rodnyListTypy.includes(meta?.projectType ?? '');
   const rodneListy = jeRadiovySpot ? await loadRodneListy(caflouProjectId) : [];
   // Meta se cte znovu, protoze synchronizace vyse mohla zapsat chybu.
@@ -419,14 +418,23 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       content: frekvence,
     });
   }
-  // Zalozka je u vsech projektu - u radioveho spotu jako Rodny list, jinak
-  // jen jako Hudba ve spotu.
-  tabs.push({
-    key: 'rodny-list',
-    label: jeRadiovySpot ? 'Rodný list' : 'Hudba ve spotu',
-    count: jeRadiovySpot ? rodneListy.length : undefined,
-    content: rodnyList,
-  });
+  // Zalozka JEN u radioveho spotu (zadani 10. 9. 2026: "hudba ve spotu bude
+  // jen u typu projektu Radiovy spot").
+  //
+  // Do ted byla u vsech projektu - u spotu jako Rodny list, jinde aspon jako
+  // Hudba ve spotu. U audioknihy ale zadny spot neni, takze to byla zalozka,
+  // do ktere nikdo nemel co vyplnit.
+  //
+  // Radiovy spot se pozna podle typu projektu, a ten je polozka Ceniku
+  // s priznakem "Rodny list" - neni to nikde v kodu napevno.
+  if (jeRadiovySpot) {
+    tabs.push({
+      key: 'rodny-list',
+      label: 'Rodný list',
+      count: rodneListy.length,
+      content: rodnyList,
+    });
+  }
   // Historie je jen pro nas - klient se na detail projektu stejne nedostane,
   // ale zvukar ano a jemu se ukazuje ke cteni jako zbytek detailu.
   if (isInternalRole(session.user.role)) {

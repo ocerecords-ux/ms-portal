@@ -233,27 +233,10 @@ export function RodnyListSection({
     </>
   );
 
-  // --- Projekt, který není rádiový spot: jen hudba ---------------------------
-  if (!jeRadiovySpot) {
-    return (
-      <form
-        onSubmit={handleSubmit}
-        className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5"
-      >
-        <div>
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Hudba ve spotu
-          </h2>
-          <p className="text-xs text-muted font-body m-0 mt-1">
-            Rodný list se vyrábí jen u projektů s typem rádiový spot. Údaje o hudbě si tu ale můžete
-            vést u jakéhokoliv projektu.
-          </p>
-        </div>
-        {hudba}
-        {tlacitka}
-      </form>
-    );
-  }
+  // Zalozka se od 10. 9. 2026 ukazuje JEN u radioveho spotu (zadani: "hudba
+  // ve spotu bude jen u typu projektu Radiovy spot"), takze sem se komponenta
+  // s jinym typem projektu uz nedostane. Puvodni varianta "jen hudba bez
+  // Rodneho listu" tim odpadla.
 
   // --- Rádiový spot: celý Rodný list ----------------------------------------
   return (
