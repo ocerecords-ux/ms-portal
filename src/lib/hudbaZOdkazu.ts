@@ -140,3 +140,28 @@ export function vytahniHudbu(html: string): HudbaZOdkazu {
 
   return { nazev: titulek ? bezOcasu(dekoduj(titulek)) : null, autor: null, album: null };
 }
+
+/**
+ * Název skladby odhadnutý z adresy - záchrana, když stránku nejde stáhnout.
+ *
+ * Artlist má slug v adrese:
+ *   /royalty-free-music/song/hopeful/60936  ->  "Hopeful"
+ *
+ * Autor v adrese není, ten se musí dopsat. Pořád je to lepší než prázdno:
+ * půlka práce odpadne a je vidět, že portál odkazu rozuměl.
+ */
+export function nazevZAdresy(adresa: string): string | null {
+  try {
+    const casti = new URL(adresa).pathname.split('/').filter(Boolean);
+    // Posledni cast byva cislo (ID skladby) - nazev je ten kousek pred nim.
+    const slug = /^\d+$/.test(casti[casti.length - 1] ?? '')
+      ? casti[casti.length - 2]
+      : casti[casti.length - 1];
+    if (!slug || slug.length < 2 || /^\d+$/.test(slug)) return null;
+    const slova = decodeURIComponent(slug).replace(/[-_]+/g, ' ').trim();
+    if (!slova) return null;
+    return slova.charAt(0).toUpperCase() + slova.slice(1);
+  } catch {
+    return null;
+  }
+}

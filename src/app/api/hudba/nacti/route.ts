@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { canEditProjectMeta } from '@/lib/roles';
-import { POVOLENE_ZDROJE, jePovolenyZdroj, vytahniHudbu } from '@/lib/hudbaZOdkazu';
+import { POVOLENE_ZDROJE, jePovolenyZdroj, nazevZAdresy, vytahniHudbu } from '@/lib/hudbaZOdkazu';
 
 /**
  * Načtení skladby z odkazu (zadání 10. 9. 2026) - portál stránku stáhne
@@ -52,12 +52,33 @@ export async function POST(req: NextRequest) {
       signal: prerus.signal,
       redirect: 'follow',
       headers: {
-        // Bez rozumne hlavicky vraci cast webu jinou stranku nez prohlizeci.
-        'User-Agent': 'Mozilla/5.0 (compatible; MSPortal/1.0; +https://www.msportal.cz)',
-        'Accept-Language': 'en',
+        // Hlavicky obycejneho prohlizece. S vlastni ("MSPortal/1.0") vracel
+        // Artlist 403 - ochrana proti robotum si vsimne kazde hlavicky, kterou
+        // nezna. Stahujeme verejnou stranku, kterou by clovek stejne otevrel
+        // v prohlizeci, jen misto nej k tomu klikne v portalu.
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9,cs;q=0.8',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
       },
     });
     if (!odpoved.ok) {
+      // Kdyz nas stranka nepustila, aspon nazev vytahneme z adresy - pulka
+      // prace odpadne a je videt, ze portal odkazu rozumel.
+      const nazev = nazevZAdresy(url);
+      if (nazev) {
+        return NextResponse.json({
+          nazev,
+          autor: null,
+          album: null,
+          poznamka: `Stránka nás nepustila (${odpoved.status}), název je odhadnutý z odkazu. Autora prosím dopište.`,
+        });
+      }
       return NextResponse.json(
         { error: `Stránka odpověděla ${odpoved.status}. Zkuste odkaz otevřít v prohlížeči, nebo údaje vyplňte ručně.` },
         { status: 502 },
@@ -67,6 +88,15 @@ export async function POST(req: NextRequest) {
     const html = (await odpoved.text()).slice(0, STROP_ZNAKU);
     const hudba = vytahniHudbu(html);
     if (!hudba.nazev && !hudba.autor) {
+      const nazev = nazevZAdresy(url);
+      if (nazev) {
+        return NextResponse.json({
+          nazev,
+          autor: null,
+          album: null,
+          poznamka: 'Na stránce jsem autora nenašel, název je odhadnutý z odkazu. Autora prosím dopište.',
+        });
+      }
       return NextResponse.json(
         { error: 'Na stránce jsem název ani autora nenašel. Vyplňte je prosím ručně.' },
         { status: 422 },

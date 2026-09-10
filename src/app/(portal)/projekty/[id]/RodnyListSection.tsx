@@ -197,6 +197,10 @@ export function RodnyListSection({
         musicTitle: v.musicTitle.trim() ? v.musicTitle : (data?.nazev ?? ''),
         musicAuthor: v.musicAuthor.trim() ? v.musicAuthor : (data?.autor ?? ''),
       }));
+      // Kdyz se povedla jen pulka (napr. nas stranka nepustila a nazev se
+      // odhadl z adresy), rekneme to nahlas - jinak by clovek odesel
+      // s prazdnym autorem a nevedel proc.
+      if (data?.poznamka) setChybaOdkazu(data.poznamka);
       setSaved(false);
     } catch {
       setChybaOdkazu('Údaje se nepodařilo načíst.');
