@@ -1,0 +1,84 @@
+import type { KomuNotifikace } from '@prisma/client';
+import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
+
+/**
+ * Nastavení zpráv klientovi podle stavu projektu (zadání 10. 9. 2026).
+ *
+ * Každá firma to má jinak — Audioteka chce vědět už o prvních trackách,
+ * Jota až o hotovém projektu a první dva stavy chce jen internímu týmu.
+ * Proto se nastavuje u firmy, ne globálně.
+ *
+ * Tenhle soubor je bez Prismy (jen typ), aby si ho mohl vzít i formulář
+ * v prohlížeči.
+ */
+
+export const KOMU_POPISKY: Record<KomuNotifikace, string> = {
+  NIKAM: 'Neposílat',
+  KLIENT: 'Klientovi',
+  INTERNE: 'Jen nám interně',
+};
+
+export const KOMU_MOZNOSTI: KomuNotifikace[] = ['NIKAM', 'KLIENT', 'INTERNE'];
+
+/**
+ * Stavy, u kterých má smysl zprávu posílat.
+ *
+ * Ne všechny stavy z cesty projektu: „V přípravě" a „Natáčíme" znamenají, že
+ * se ještě nic nestalo, a zpráva o tom by byla jen šum. Kdyby to někdy
+ * potřeba bylo, stačí sem stav přidat.
+ */
+export const STAVY_S_NOTIFIKACI: string[] = [
+  'Natáčíme/stříháme',
+  'Dotočeno/stříháme',
+  'Dokončeno - ke schválení',
+  'Čekáme na opravy',
+  'Schváleno - k fakturaci',
+];
+
+/** Co se u kterého stavu v mailu píše - ať je vidět, co klientovi dorazí. */
+export const CO_SE_POSILA: Record<string, string> = {
+  'Natáčíme/stříháme': 'Na disk jsme přidali první tracky, můžete poslouchat.',
+  'Dotočeno/stříháme': 'Na disk jsme přidali první tracky k poslechu.',
+  'Dokončeno - ke schválení': 'Na disku jsou všechny tracky, čekáme na finální opravy.',
+  'Čekáme na opravy': 'Sedm dní po odevzdání jsme nedostali opravy — připomínka.',
+  'Schváleno - k fakturaci': 'Na disku jsou opravené tracky k vydání.',
+};
+
+export function popisStavuProNotifikaci(stav: string): string {
+  return STAVY_PROJEKTU.find((s) => s.nazev === stav)?.popis ?? '';
+}
+
+export type NastaveniNotifikaci = Record<string, KomuNotifikace>;
+
+/** Prázdné nastavení - co není uložené, se neposílá. */
+export function prazdneNastaveni(): NastaveniNotifikaci {
+  return Object.fromEntries(STAVY_S_NOTIFIKACI.map((s) => [s, 'NIKAM' as KomuNotifikace]));
+}
+
+/**
+ * Předvolba podle toho, jak to má většina klientů (Audioteka, Albatros,
+ * Jan Melvil, Čti mi!) - všech pět stavů klientovi. Nabízí se tlačítkem,
+ * automaticky se nikde nepoužije: zprávu klientovi nemá zapnout portál sám.
+ */
+export function predvolbaJakoAudioteka(): NastaveniNotifikaci {
+  return Object.fromEntries(STAVY_S_NOTIFIKACI.map((s) => [s, 'KLIENT' as KomuNotifikace]));
+}
+
+/** Předvolba podle Joty - první dvě zprávy jen internímu týmu. */
+export function predvolbaJakoJota(): NastaveniNotifikaci {
+  return Object.fromEntries(
+    STAVY_S_NOTIFIKACI.map((s) => [
+      s,
+      (s === 'Natáčíme/stříháme' || s === 'Dotočeno/stříháme' ? 'INTERNE' : 'KLIENT') as KomuNotifikace,
+    ]),
+  );
+}
+
+/**
+ * Interní příjemci (zadání 10. 9. 2026).
+ *
+ * Zatím napevno — jsou to konkrétní dvě adresy, které Ondřej určil. Až jich
+ * bude víc nebo se budou měnit, přesuneme je do nastavení; teď by z toho byla
+ * obrazovka navíc kvůli dvěma řádkům.
+ */
+export const INTERNI_PRIJEMCI = ['helena.rychlik@mediaspace.cz', 'karolina.zborilova@mediaspace.cz'];

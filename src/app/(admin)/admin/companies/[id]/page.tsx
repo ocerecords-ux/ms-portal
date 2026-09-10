@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { CompanyForm } from './CompanyForm';
+import { NotifikaceFirmyPanel } from './NotifikaceFirmyPanel';
 import { ROLE_LABELS } from '@/lib/roles';
 
 // Uzivatele se od 5. 9. 2026 zakladaji a edituji centralne na /admin/users
@@ -34,6 +35,17 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
             komponenta CaflouTestPanel v repu zustava, jen se nezobrazuje. */}
         <CompanyForm key={company.id} company={company} />
       </div>
+
+      {/* Notifikace klientovi podle stavu projektu (zadani 10. 9. 2026).
+          U dodavatele nedava smysl - zadne projekty pod sebou nema. */}
+      {company.type === 'KLIENT' && (
+        <div>
+          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
+            Notifikace
+          </h2>
+          <NotifikaceFirmyPanel companyId={company.id} />
+        </div>
+      )}
 
       {/* Dodavatel nema pod sebou zadne uzivatelske ucty - to maji jen
           klientske firmy (viz COMPANY_ROLES v lib/roles.ts). */}

@@ -108,6 +108,7 @@ model Company {
 
   users    User[]
   projekty ProjectMeta[] @relation("ProjektFirma")
+  notifikace NotifikaceFirmy[]
   orders    Order[]
   projects  Project[]
   offers    Offer[]
@@ -258,6 +259,13 @@ model Counter {
 // pozdeji - podle toho se sam predvyplni priznak "uhrazeno".
 // Odkud projekt pochazi (prechod z Caflou, 10. 9. 2026). Prenesene projekty
 // se poznaji od tech, ktere uz vznikly primo v portalu.
+// Komu jde zprava, kdyz projekt vstoupi do daneho stavu (zadani 10. 9. 2026).
+enum KomuNotifikace {
+  NIKAM   // v tomhle stavu se nic neposila
+  KLIENT  // klientovi projektu (a v kopii nam)
+  INTERNE // jen nam - klient se to dozvedet nema
+}
+
 enum ProjectSource {
   CAFLOU // preneseno jednorazovym prenosem z Caflou
   PORTAL // zalozeno v portalu
@@ -365,6 +373,31 @@ model ProjectMeta {
   @@index([name])
 }
 
+
+// Notifikace klientovi podle stavu projektu (zadani 10. 9. 2026: "u firem
+// zalozka Notifikace, kde pujde nastavit individualne, v jake fazi projektu
+// pujde zprava na klienta").
+//
+// Kazda firma to ma jinak: Audioteka chce vedet uz o prvnich trackach,
+// Jota az o hotovem projektu a prvni dva stavy chce jen internimu tymu.
+// Proto radek na dvojici firma + stav.
+//
+// Co ulozene neni, se NEPOSILA. Radeji zpravu neposlat, nez ji poslat
+// klientovi, ktery o ni nestoji.
+model NotifikaceFirmy {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// Nazev stavu z lib/stavyProjektu.ts - stejny text, jaky ma projekt.
+  stav      String
+  komu      KomuNotifikace @default(NIKAM)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, stav])
+  @@index([companyId])
+}
 
 // Cenik (zadani 5. 9. 2026). Polozka cenika slouzi zaroven jako ciselnik
 // TYPU PROJEKTU - u projektu jde vybrat jen to, co je tady. Proto je nazev
