@@ -8,6 +8,14 @@
  *
  * Rámeček dělá z bubliny ohraničený celek - právě to je na ní podstatné.
  * Světlá výplň sama o sobě na bílé kartě skoro mizí.
+ *
+ * JEDNO JMÉNO = JEDEN ŘÁDEK (zadání 10. 9. 2026: „je nesmysl, aby bylo jméno
+ * v bublině na dva řádky"). Zalomené jméno bublinu roztrhne a přestane
+ * vypadat jako jeden celek. Bublina si radši vezme šířku, kterou potřebuje -
+ * a když jich bude víc, jdou pod sebe (viz TRIDA_SLOUPCE_HERCU).
  */
 export const TRIDA_BUBLINY_HERCE =
-  'rounded-pill border border-brand-purple/40 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight';
+  'whitespace-nowrap rounded-pill border border-brand-purple/40 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight';
+
+/** Víc herců u jednoho projektu jde pod sebe, ne za sebe na jeden řádek. */
+export const TRIDA_SLOUPCE_HERCU = 'flex flex-col items-start gap-1';

@@ -6,7 +6,7 @@ import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel }
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
 import { IkonaTypu } from '@/lib/ikonyTypu';
-import { TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
+import { TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
@@ -421,13 +421,20 @@ function bunkaSloupce(
       // Bublina ma jen ten, kdo ma prirazeny ucet. Jmeno z Caflou je porad
       // jen text, na kterem nic nestoji - proto zustava sede a bez bubliny.
       if (!p.narrator) return '—';
-      return p.meta?.actorUserId ? (
-        <span className={`inline-flex items-center px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}>
-          {p.narrator}
-        </span>
-      ) : (
-        <span className="text-muted" title="Herec zatím nemá přiřazený účet — doplní se v detailu projektu">
-          {p.narrator}
+      return (
+        <span className={TRIDA_SLOUPCE_HERCU}>
+          {p.meta?.actorUserId ? (
+            <span className={`inline-flex items-center px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}>
+              {p.narrator}
+            </span>
+          ) : (
+            <span
+              className="text-muted whitespace-nowrap"
+              title="Herec zatím nemá přiřazený účet — doplní se v detailu projektu"
+            >
+              {p.narrator}
+            </span>
+          )}
         </span>
       );
     }
@@ -479,7 +486,9 @@ const TRIDA_BUNKY: Record<string, string> = {
   priority: 'px-3 py-3.5 text-sm font-heading',
   projectType: 'px-3 py-3.5 text-sm font-heading text-muted',
   managerName: 'px-3 py-3.5 text-sm font-heading text-muted',
-  narrator: 'px-3 py-3.5 text-sm font-heading text-muted align-top',
+  // Jmeno herce se nezalamuje - bunka si vezme sirku, kterou potrebuje
+  // (zadani 10. 9. 2026).
+  narrator: 'px-3 py-3.5 text-sm font-heading text-muted align-top whitespace-nowrap',
   pageCount: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
   endDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
   releaseDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
