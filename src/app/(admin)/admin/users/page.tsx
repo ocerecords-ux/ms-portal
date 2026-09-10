@@ -60,6 +60,7 @@ export default async function UsersAdminPage({
     birthDate: u.birthDate ? dateFmt.format(u.birthDate) : null,
     birthDateMs: u.birthDate ? u.birthDate.getTime() : null,
     studioLocations: u.studioLocations.length > 0 ? u.studioLocations.join(', ') : null,
+    lokace: u.studioLocations,
     companyName: u.company?.name ?? null,
     companyId: u.company?.id ?? null,
   }));

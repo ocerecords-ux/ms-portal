@@ -6,7 +6,8 @@ import { AddButton } from '@/components/AddButton';
 import type { Role } from '@prisma/client';
 import { AdminField } from '../NewCompanyForm';
 import { PhotoDropzone } from './PhotoDropzone';
-import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany, HEREC_STUDIOS } from '@/lib/roles';
+import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany } from '@/lib/roles';
+import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
@@ -231,11 +232,27 @@ export function NewUserForm({
       {isHerec && (
         <>
           <AdminField label="Lokace" hint="studia, ve kterých je herec schopen fyzicky natáčet">
+            {/* Barva u kazde lokace je stejna jako v seznamu hercu (zadani
+                10. 9. 2026) - kdo si ji zapamatuje tady, precte pak seznam
+                bez cteni textu. Brno I a Brno II sdileji barvu: jsou to dve
+                mistnosti v jednom meste. */}
             <div className="flex flex-col gap-1.5">
-              {HEREC_STUDIOS.map((studio) => (
-                <label key={studio} className="flex items-center gap-2 text-sm font-heading text-ink">
-                  <input type="checkbox" checked={studioLocations.includes(studio)} onChange={() => toggleStudio(studio)} />
-                  {studio}
+              {LOKACE_S_BARVOU.map((studio) => (
+                <label
+                  key={studio.nazev}
+                  className="flex items-center gap-2 text-sm font-heading text-ink cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={studioLocations.includes(studio.nazev)}
+                    onChange={() => toggleStudio(studio.nazev)}
+                  />
+                  <span
+                    className={`inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-heading font-semibold ${studio.barva}`}
+                  >
+                    {studio.popisek}
+                  </span>
+                  <span className="text-muted text-xs font-body">{studio.nazev}</span>
                 </label>
               ))}
             </div>

@@ -6,7 +6,8 @@ import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import type { Role } from '@prisma/client';
 import { AdminField } from '../../NewCompanyForm';
 import { PhotoDropzone } from '../PhotoDropzone';
-import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany, HEREC_STUDIOS } from '@/lib/roles';
+import { ROLE_GROUPS, ROLE_LABELS, USER_TABS, roleRequiresCompany } from '@/lib/roles';
+import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
@@ -130,7 +131,12 @@ export function UserEditForm({
       setNewPassword('');
       setPhoto(null);
       setRemovePhoto(false);
+      // Po ulozeni zpatky do seznamu, na zalozku podle role uctu (zadani
+      // 10. 9. 2026: "kdyz zedituju herce a dam ulozit, at se vratim na kartu
+      // Herci"). Bere se role PO uprave - kdyz se prave zmenila, patri ucet
+      // uz jinam a vracet se na puvodni zalozku by matlo.
       router.refresh();
+      router.push(`/admin/users?tab=${zalozkaProRoli(role)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Uložení se nezdařilo.');
     } finally {
@@ -256,11 +262,27 @@ export function UserEditForm({
       {isHerec && (
         <>
           <AdminField label="Lokace" hint="studia, ve kterých je herec schopen fyzicky natáčet">
+            {/* Barva u kazde lokace je stejna jako v seznamu hercu (zadani
+                10. 9. 2026) - kdo si ji zapamatuje tady, precte pak seznam
+                bez cteni textu. Brno I a Brno II sdileji barvu: jsou to dve
+                mistnosti v jednom meste. */}
             <div className="flex flex-col gap-1.5">
-              {HEREC_STUDIOS.map((studio) => (
-                <label key={studio} className="flex items-center gap-2 text-sm font-heading text-ink">
-                  <input type="checkbox" checked={studioLocations.includes(studio)} onChange={() => toggleStudio(studio)} />
-                  {studio}
+              {LOKACE_S_BARVOU.map((studio) => (
+                <label
+                  key={studio.nazev}
+                  className="flex items-center gap-2 text-sm font-heading text-ink cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={studioLocations.includes(studio.nazev)}
+                    onChange={() => toggleStudio(studio.nazev)}
+                  />
+                  <span
+                    className={`inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-heading font-semibold ${studio.barva}`}
+                  >
+                    {studio.popisek}
+                  </span>
+                  <span className="text-muted text-xs font-body">{studio.nazev}</span>
                 </label>
               ))}
             </div>
@@ -399,4 +421,9 @@ export function UserEditForm({
       </div>
     </form>
   );
+}
+
+/** Na kterou záložku seznamu účet patří - podle role. */
+function zalozkaProRoli(role: Role): string {
+  return USER_TABS.find((t) => t.roles.includes(role))?.key ?? USER_TABS[0].key;
 }

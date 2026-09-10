@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { barvaLokace, popisekLokace } from '@/lib/lokaceHercu';
 
 /**
  * Tabulka uživatelů v administraci (zadání 9. 9. 2026: „aby byl nejdřív
@@ -30,7 +31,10 @@ export type UserRow = {
   /** Už naformatované datum + hodnota na řazení. */
   birthDate: string | null;
   birthDateMs: number | null;
+  /** Lokace textem - kvuli razeni. */
   studioLocations: string | null;
+  /** Lokace jednotlive - kvuli barevnym odznakum (zadani 10. 9. 2026). */
+  lokace: string[];
   companyName: string | null;
   companyId: string | null;
 };
@@ -212,9 +216,26 @@ export function UsersTable({
                         </td>
                       );
                     case 'lokace':
+                      // Barevny odznak misto textu (zadani 10. 9. 2026) -
+                      // "MS Studio - " ma kazda lokace stejne, takze v seznamu
+                      // jen zabira misto a nic nerozlisuje.
                       return (
                         <td key={sloupec} className="px-4 py-3.5 text-sm font-heading text-muted">
-                          {u.studioLocations || '—'}
+                          {u.lokace.length > 0 ? (
+                            <span className="inline-flex flex-wrap gap-1">
+                              {u.lokace.map((l) => (
+                                <span
+                                  key={l}
+                                  title={l}
+                                  className={`inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-heading font-semibold whitespace-nowrap ${barvaLokace(l)}`}
+                                >
+                                  {popisekLokace(l)}
+                                </span>
+                              ))}
+                            </span>
+                          ) : (
+                            '—'
+                          )}
                         </td>
                       );
                     case 'firma':
