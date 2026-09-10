@@ -18,8 +18,17 @@
  *
  * OPAKUJE SE JEN NA ZAHLCENÍ SPOJENÍ. Chyba ve schématu nebo v seedu se
  * opakováním nespraví — ta build shodí hned, aby ji bylo vidět.
+ *
+ * A HLAVNĚ: když se schéma od minulého nasazení nezměnilo, `db push` se
+ * vůbec nespouští. Většina nasazení mění jen kód a sahat kvůli tomu na
+ * databázi je zbytečné — právě tím padaly buildy, ve kterých nebylo co
+ * měnit. Otisk schématu se ukládá do build cache Vercelu; když cache není
+ * (první build, vyčištěná cache), push proběhne normálně.
  */
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 const POKUSY = 5;
 const CEKANI_MS = 12_000;
@@ -63,13 +72,47 @@ function spust(popis, prikaz, argumenty) {
   }
 }
 
-spust('Úprava schématu (prisma db push)', 'npx', [
-  'prisma',
-  'db',
-  'push',
-  '--accept-data-loss',
-  // Klient uz je vygenerovany krokem pred timhle - podruhe to nema smysl.
-  '--skip-generate',
-]);
+// Otisk schematu. Lezi v build cache, kterou Vercel mezi nasazenimi
+// obnovuje - kdyz chybi, jen se pushne navic, nic se nerozbije.
+const SCHEMA = 'prisma/schema.prisma';
+const OTISK_SOUBOR = 'node_modules/.cache/ms-portal/schema-hash';
+
+function otiskSchematu() {
+  return createHash('sha256').update(readFileSync(SCHEMA)).digest('hex');
+}
+
+function ulozenyOtisk() {
+  try {
+    return existsSync(OTISK_SOUBOR) ? readFileSync(OTISK_SOUBOR, 'utf8').trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function zapisOtisk(otisk) {
+  try {
+    mkdirSync(dirname(OTISK_SOUBOR), { recursive: true });
+    writeFileSync(OTISK_SOUBOR, otisk);
+  } catch {
+    // Kdyz se otisk neulozi, pristi build jen pushne navic. Nic vazneho.
+  }
+}
+
+const otisk = otiskSchematu();
+const stejneSchema = ulozenyOtisk() === otisk;
+
+if (stejneSchema) {
+  console.log('Schéma se od minulého nasazení nezměnilo — prisma db push se přeskakuje.');
+} else {
+  spust('Úprava schématu (prisma db push)', 'npx', [
+    'prisma',
+    'db',
+    'push',
+    '--accept-data-loss',
+    // Klient uz je vygenerovany krokem pred timhle - podruhe to nema smysl.
+    '--skip-generate',
+  ]);
+  zapisOtisk(otisk);
+}
 
 spust('Naplnění výchozích dat (seed)', 'npx', ['tsx', 'prisma/seed.ts']);
