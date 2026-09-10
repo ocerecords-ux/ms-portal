@@ -313,10 +313,33 @@ export function UserEditForm({
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm font-heading text-ink">
-        <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
-        Aktivní účet (může se přihlásit)
-      </label>
+      {/* Vyrazeni misto mazani (zadani 10. 9. 2026): na uzivateli visi smlouvy,
+          vykazy a projekty, ktere musi zustat citelne. Drive to byla jen
+          nenapadna zaskrtavaci polozka, takze nikdo netusil, ze tudy vede
+          cesta, kdyz je potreba nekoho "smazat". */}
+      <div className="border-t border-line pt-4 flex items-start gap-4 flex-wrap">
+        <div className="flex-1 min-w-[260px]">
+          <p className="font-heading font-semibold text-sm text-ink m-0">
+            {active ? 'Vyřadit uživatele' : 'Uživatel je vyřazený'}
+          </p>
+          <p className="text-xs font-body text-muted m-0 mt-1">
+            {active
+              ? 'Nepřihlásí se a zmizí z nabídek. Smlouvy, výkazy a projekty, které na něj odkazují, zůstanou beze změny — proto se nemaže. Změna se uloží tlačítkem níž.'
+              : 'Nemůže se přihlásit a nenabízí se u projektů. Vrátit ho jde kdykoliv. Změna se uloží tlačítkem níž.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setActive(!active)}
+          className={`font-heading font-semibold text-sm rounded-lg px-4 py-2.5 transition-colors ${
+            active
+              ? 'border border-line text-danger hover:bg-dangerTint'
+              : 'bg-brand-green text-onAccent hover:brightness-95'
+          }`}
+        >
+          {active ? 'Vyřadit uživatele' : 'Vrátit mezi aktivní'}
+        </button>
+      </div>
 
       {error && <p className="text-danger text-sm">{error}</p>}
 

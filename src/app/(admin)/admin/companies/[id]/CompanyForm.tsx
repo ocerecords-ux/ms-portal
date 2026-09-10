@@ -38,6 +38,10 @@ export function CompanyForm({ company }: { company: Company }) {
   const [driveUrl, setDriveUrl] = useState(company.driveFolderUrl ?? '');
   const [dealsAudiobooks, setDealsAudiobooks] = useState(company.dealsAudiobooks);
   const [dealsAds, setDealsAds] = useState(company.dealsAds);
+  // Vyrazeni misto mazani (zadani 10. 9. 2026): na firme visi doklady
+  // a projekty, ktere musi zustat citelne.
+  const [aktivni, setAktivni] = useState(company.active);
+  const [vyrazuje, setVyrazuje] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -116,6 +120,38 @@ export function CompanyForm({ company }: { company: Company }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Uložení se nezdařilo.');
       setSaving(false);
+    }
+  }
+
+  /**
+   * Vyřadí firmu, nebo ji vrátí mezi aktivní.
+   *
+   * Schválně se nemaže: na firmě visí faktury, nabídky, smlouvy a projekty
+   * a smazáním by o svou firmu přišly. Vyřazená firma zmizí z nabídek
+   * a seznamů, ale všechno, co na ni odkazuje, zůstane čitelné - a dá se to
+   * kdykoliv vrátit.
+   */
+  async function prepniVyrazeni() {
+    const nove = !aktivni;
+    setVyrazuje(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/companies/${company.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: company.type, name, active: nove }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || 'Změna se nezdařila.');
+        return;
+      }
+      setAktivni(nove);
+      router.refresh();
+    } catch {
+      setError('Změna se nezdařila.');
+    } finally {
+      setVyrazuje(false);
     }
   }
 
@@ -265,6 +301,32 @@ export function CompanyForm({ company }: { company: Company }) {
           {saving ? 'Ukládám…' : 'Uložit změny'}
         </button>
         {saved && <span className="text-status-done text-sm font-heading">✓ Uloženo</span>}
+      </div>
+
+      {/* Vyrazeni misto mazani (zadani 10. 9. 2026). */}
+      <div className="border-t border-line pt-4 flex items-start gap-4 flex-wrap">
+        <div className="flex-1 min-w-[260px]">
+          <p className="font-heading font-semibold text-sm text-ink m-0">
+            {aktivni ? 'Vyřadit firmu' : 'Firma je vyřazená'}
+          </p>
+          <p className="text-xs font-body text-muted m-0 mt-1">
+            {aktivni
+              ? 'Zmizí ze seznamů a z nabídek u dokladů. Faktury, smlouvy a projekty, které na ni odkazují, zůstanou beze změny — proto se nemaže.'
+              : 'Neukazuje se v seznamech ani v nabídkách. Vrátit ji jde kdykoliv.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void prepniVyrazeni()}
+          disabled={vyrazuje}
+          className={`font-heading font-semibold text-sm rounded-lg px-4 py-2.5 transition-colors disabled:opacity-60 ${
+            aktivni
+              ? 'border border-line text-danger hover:bg-dangerTint'
+              : 'bg-brand-green text-onAccent hover:brightness-95'
+          }`}
+        >
+          {vyrazuje ? 'Měním…' : aktivni ? 'Vyřadit firmu' : 'Vrátit mezi aktivní'}
+        </button>
       </div>
     </form>
   );
