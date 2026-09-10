@@ -36,7 +36,7 @@ function todayIso(): string {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
-function ChecklistIcon() {
+export function ChecklistIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
       <path d="M3 6l2 2 3-3M3 13l2 2 3-3M3 20l2 2 3-3" />
@@ -45,7 +45,7 @@ function ChecklistIcon() {
   );
 }
 
-function ClockIcon() {
+export function ClockIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
       <circle cx="12" cy="12" r="9" />
@@ -84,6 +84,10 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
     oznamPocetDoku('ukoly', open.length);
   }, [open.length]);
 
+  useEffect(() => {
+    oznamPocetDoku('poTerminu', overdue.length);
+  }, [overdue.length]);
+
   async function send(url: string, method: string, body?: unknown) {
     setBusy(true);
     setError(null);
@@ -119,42 +123,11 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
     }
   }
 
-  // --- Zabaleno: jen ikonky na hrane obrazovky ---------------------------
-  // Kdyz je otevreny chat, tenhle pruh se nevykresli - prepina se zalozkou
-  // v hlavicce panelu, ne druhym poutkem pres nej.
-  if (!expanded) {
-    if (dok !== null) return null;
-    return (
-      <button
-        type="button"
-        onClick={() => otevriDok('ukoly')}
-        title="Zobrazit úkoly"
-        aria-label="Zobrazit úkoly"
-        className="fixed right-0 top-28 z-40 flex flex-col items-center gap-2 bg-brand-purple hover:bg-brand-purpleDeep rounded-l-card shadow-lg px-2.5 py-3 text-brand-green transition-colors"
-      >
-        <Chevron direction="left" />
-        <span className="relative">
-          <ChecklistIcon />
-          {open.length > 0 && (
-            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-4 text-center">
-              {open.length}
-            </span>
-          )}
-        </span>
-        {overdue.length > 0 && (
-          <span className="relative text-white" title={`${overdue.length} po termínu`}>
-            <ClockIcon />
-            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-heading font-bold leading-4 text-center">
-              {overdue.length}
-            </span>
-          </span>
-        )}
-        <span className="text-[10px] font-heading font-bold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
-          Úkoly
-        </span>
-      </button>
-    );
-  }
+  // --- Zabaleno ----------------------------------------------------------
+  // Poutko na hrane je jen jedno pro oba panely a vykresluje ho MS chat
+  // (zadani 10. 9. 2026: "zustaly tam dve zalozky, staci jedna"). Ukoly se
+  // tedy zabalene nekresli vubec - otevrou se zalozkou v hlavicce panelu.
+  if (!expanded) return null;
 
   // --- Rozbaleno: cely seznam -------------------------------------------
   // Panel drzi celou pravou hranu od horni listy po spodek okna (zadani

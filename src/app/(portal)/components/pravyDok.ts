@@ -74,7 +74,7 @@ export function usePravyDok(): [OtevrenyDok, (dok: OtevrenyDok) => void] {
 // z nich potřebuje ukázat i to číslo toho druhého. Posílají si je přes stejnou
 // událost, takže nikdo nemusí načítat data, která už má vedle něj někdo jiný.
 
-type PoctyDoku = { ukoly?: number; chat?: number };
+type PoctyDoku = { ukoly?: number; chat?: number; poTerminu?: number };
 
 const UDALOST_POCTY = 'ms-portal-pravy-dok-pocty';
 

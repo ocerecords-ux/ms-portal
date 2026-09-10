@@ -33,6 +33,7 @@ import { WaveformPlayer } from './WaveformPlayer';
 import { UpozorneniChatu } from './UpozorneniChatu';
 import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
+import { ChecklistIcon, ClockIcon } from './TaskDock';
 
 /**
  * Chat týmu (zadani 8. 9. 2026: "vytvor komunikacni kanal jako Slack pro tym...
@@ -1215,13 +1216,16 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     // Kdyz jsou otevrene Ukoly, prepina se zalozkou v jejich hlavicce - dve
     // poutka pres sebe na jedne hrane nedavaji smysl.
     if (dok !== null) return null;
+    // JEDNO poutko pro cely panel (zadani 10. 9. 2026: "staci jedna"). Nese
+    // signaly z obou zalozek - nove zpravy, otevrene ukoly, ukoly po terminu -
+    // aby se pro cislo nemuselo nic otevirat. Sedi tam, kde se panel rozbali.
     return (
       <button
         type="button"
         onClick={toggle}
-        title="Zobrazit MS chat"
-        aria-label="Zobrazit MS chat"
-        className="fixed right-0 bottom-6 z-40 flex flex-col items-center gap-2 bg-brand-purple hover:bg-brand-purpleDeep rounded-l-card shadow-lg px-2.5 py-3 text-brand-green transition-colors"
+        title="Zobrazit MS chat a úkoly"
+        aria-label="Zobrazit MS chat a úkoly"
+        className="fixed right-0 top-28 z-40 flex flex-col items-center gap-2.5 bg-brand-purple hover:bg-brand-purpleDeep rounded-l-card shadow-lg px-2.5 py-3 text-brand-green transition-colors"
       >
         <Chevron direction="left" />
         <span className="relative">
@@ -1232,6 +1236,22 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             </span>
           )}
         </span>
+        <span className="relative">
+          <ChecklistIcon />
+          {(pocty.ukoly ?? 0) > 0 && (
+            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-4 text-center">
+              {pocty.ukoly}
+            </span>
+          )}
+        </span>
+        {(pocty.poTerminu ?? 0) > 0 && (
+          <span className="relative text-white" title={`${pocty.poTerminu} po termínu`}>
+            <ClockIcon />
+            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-heading font-bold leading-4 text-center">
+              {pocty.poTerminu}
+            </span>
+          </span>
+        )}
         <span className="text-[10px] font-heading font-bold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
           MS chat
         </span>
@@ -1240,9 +1260,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   }
 
   // --- Rozbaleno ---------------------------------------------------------
-  // Spodni polovina prave hrany - Ukoly maji horni. Vysky obou panelu jsou
-  // zastropovane, at na sebe nelezou ani na nizsim okne (zprava uzivatele
-  // 8. 9. 2026: "prekryva to to do list, kdyz tam mam vice ukolu").
+  // Panel drzi celou pravou hranu od horni listy po spodek okna; Ukoly jsou
+  // jeho druha zalozka, ne samostatne okno vedle (zadani 10. 9. 2026).
   return (
     <aside
       className={
