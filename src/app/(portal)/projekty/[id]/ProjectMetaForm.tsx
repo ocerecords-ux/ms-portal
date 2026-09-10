@@ -16,6 +16,8 @@ type Initial = {
   narrator: string;
   /** Klient projektu - na nej chodi notifikace o projektu. */
   klientUserId: string;
+  /** Firma, pro kterou se projekt dela. */
+  companyId: string;
 };
 
 /**
@@ -29,6 +31,7 @@ export function ProjectMetaForm({
   canEdit,
   managers,
   klienti,
+  firmy,
   klientNameZCaflou,
   companyDriveFolderUrl,
   projectTypeOptions,
@@ -38,7 +41,9 @@ export function ProjectMetaForm({
   canEdit: boolean;
   managers: { id: string; label: string }[];
   /** Ucty klientu, ze kterych jde vybrat, ci ten projekt je. */
-  klienti: { id: string; label: string }[];
+  klienti: { id: string; label: string; companyId: string | null }[];
+  /** Klientske firmy - pro kterou firmu se projekt dela. */
+  firmy: { id: string; label: string }[];
   /** Stitek z Caflou se jmenem objednavajici osoby - voditko pri prirazovani. */
   klientNameZCaflou: string | null;
   companyDriveFolderUrl: string | null;
@@ -115,6 +120,12 @@ export function ProjectMetaForm({
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Herec</dt>
             <dd className="text-sm font-heading text-ink m-0 mt-1">{values.narrator || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Firma</dt>
+            <dd className="text-sm font-heading text-ink m-0 mt-1">
+              {firmy.find((f) => f.id === values.companyId)?.label ?? '—'}
+            </dd>
           </div>
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Klient</dt>
@@ -205,6 +216,23 @@ export function ProjectMetaForm({
         </label>
 
         <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Firma</span>
+          <select
+            value={values.companyId}
+            onChange={(e) => set('companyId', e.target.value)}
+            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+          >
+            <option value="">— nevybráno —</option>
+            {firmy.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted font-body">Pro koho se projekt dělá.</span>
+        </label>
+
+        <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Klient</span>
           <select
             value={values.klientUserId}
@@ -212,11 +240,28 @@ export function ProjectMetaForm({
             className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
           >
             <option value="">— nevybráno —</option>
-            {klienti.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.label}
-              </option>
-            ))}
+            {/* Nahore lide z vybrane firmy, pod nimi zbytek - u koprodukci
+                sedi u projektu clovek odjinud, takze se nabidka neomezuje. */}
+            {values.companyId && klienti.some((k) => k.companyId === values.companyId) && (
+              <optgroup label="Z vybrané firmy">
+                {klienti
+                  .filter((k) => k.companyId === values.companyId)
+                  .map((k) => (
+                    <option key={k.id} value={k.id}>
+                      {k.label}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+            <optgroup label="Ostatní">
+              {klienti
+                .filter((k) => !values.companyId || k.companyId !== values.companyId)
+                .map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.label}
+                  </option>
+                ))}
+            </optgroup>
           </select>
           <span className="text-xs text-muted font-body">
             {klientNameZCaflou

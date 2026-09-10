@@ -53,6 +53,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     meta,
     managers,
     klientiUctu,
+    klientskeFirmy,
     projectTypeOptions,
     rodnyListTypy,
     budgetSettings,
@@ -84,8 +85,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     // u projektu clovek z jine firmy.
     prisma.user.findMany({
       where: { role: 'CLIENT', active: true },
-      select: { id: true, name: true, email: true, company: { select: { name: true } } },
+      select: { id: true, name: true, email: true, companyId: true, company: { select: { name: true } } },
       orderBy: [{ name: 'asc' }, { email: 'asc' }],
+    }),
+    // Klientske firmy - pro kterou se projekt dela (zadani 10. 9. 2026:
+    // "chci mit u projektu klienta i firmu").
+    prisma.company.findMany({
+      where: { type: 'KLIENT' },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
     }),
     listProjectTypeOptions(),
     // Typy projektu, u kterych se dela Rodny list - tedy radiove spoty.
@@ -307,7 +315,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         klienti={klientiUctu.map((k) => ({
           id: k.id,
           label: k.company?.name ? `${k.name || k.email} — ${k.company.name}` : k.name || k.email,
+          companyId: k.companyId,
         }))}
+        firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
         projectTypeOptions={projectTypeOptions}
@@ -321,6 +331,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           statusName: meta?.statusName ?? project?.statusName ?? '',
           narrator: meta?.narrator ?? project?.narrator ?? '',
           klientUserId: meta?.klientUserId ?? '',
+          companyId: meta?.companyId ?? company?.id ?? '',
         }}
       />
     </>

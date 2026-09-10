@@ -27,6 +27,8 @@ const schema = z.object({
   // opousti, takze o stavu i o herci rozhoduje ted portal.
   statusName: z.string().trim().max(120).optional(),
   narrator: z.string().trim().max(200).optional(),
+  /** Firma, pro kterou se projekt dela. */
+  companyId: z.string().trim().optional(),
   /** Klient projektu - konkretni clovek, na ktereho chodi notifikace. */
   klientUserId: z.string().trim().optional(),
 
@@ -74,6 +76,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       });
       if (!manager) {
         return NextResponse.json({ error: 'Vybraný manažer neexistuje.' }, { status: 400 });
+      }
+    }
+
+    // Firma projektu musi existovat. Nazev se ulozi i textem, aby projekt
+    // zustal citelny, kdyby firmu nekdo pozdeji smazal.
+    let companyName: string | null | undefined;
+    if (data.companyId !== undefined) {
+      if (!data.companyId) {
+        companyName = null;
+      } else {
+        const firma = await prisma.company.findUnique({
+          where: { id: data.companyId },
+          select: { name: true },
+        });
+        if (!firma) {
+          return NextResponse.json({ error: 'Vybraná firma neexistuje.' }, { status: 400 });
+        }
+        companyName = firma.name;
       }
     }
 
@@ -141,6 +161,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('projectType', data.projectType);
     text('narrator', data.narrator);
     text('klientUserId', data.klientUserId);
+    text('companyId', data.companyId);
+    if (companyName !== undefined) values.companyName = companyName;
     if (data.statusName !== undefined) {
       values.statusName = data.statusName || null;
       // Rozpracovanost drzi krok se stavem, at zalozky Aktivni/Dokoncene
