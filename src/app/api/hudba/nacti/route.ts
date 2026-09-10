@@ -17,6 +17,13 @@ import { POVOLENE_ZDROJE, jePovolenyZdroj, nazevZAdresy, vytahniHudbu } from '@/
  *     minutu, by držela funkci a nakonec stejně nic nepřinesla.
  *
  * Nic se neukládá; vrácené hodnoty si člověk ve formuláři může přepsat.
+ *
+ * ARTLIST SE STAHOVAT NEDÁ (ověřeno 10. 9. 2026). Na požadavek ze serveru
+ * odpovídá 403 i s hlavičkami obyčejného prohlížeče - blokuje adresy
+ * datových center, kde běží portál. Z prohlížeče to nejde taky, tomu to
+ * zakáže CORS. Zbývá název z adresy, který Artlist naštěstí ve své adrese
+ * má; autora je u něj potřeba dopsat. U knihoven, které se nebrání, se
+ * načte obojí.
  */
 export const dynamic = 'force-dynamic';
 
@@ -76,7 +83,7 @@ export async function POST(req: NextRequest) {
           nazev,
           autor: null,
           album: null,
-          poznamka: `Stránka nás nepustila (${odpoved.status}), název je odhadnutý z odkazu. Autora prosím dopište.`,
+          poznamka: `Knihovna server portálu nepustila (${odpoved.status}) — chrání se proti stahování. Název jsem vzal z odkazu, autora dopište.`,
         });
       }
       return NextResponse.json(

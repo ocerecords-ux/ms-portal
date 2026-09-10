@@ -81,6 +81,9 @@ export function RodnyListSection({
   // Nacitani skladby z odkazu (zadani 10. 9. 2026).
   const [nacita, setNacita] = useState(false);
   const [chybaOdkazu, setChybaOdkazu] = useState<string | null>(null);
+  // Poznamka NENI chyba: neco se povedlo (napr. nazev z adresy) a jen zbyva
+  // dopsat zbytek. Cervene by to vypadalo, ze nacteni selhalo cele.
+  const [poznamkaOdkazu, setPoznamkaOdkazu] = useState<string | null>(null);
 
   function set<K extends keyof RodnyListValues>(key: K, value: RodnyListValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -181,6 +184,7 @@ export function RodnyListSection({
   async function nactiZOdkazu() {
     setNacita(true);
     setChybaOdkazu(null);
+    setPoznamkaOdkazu(null);
     try {
       const res = await fetch('/api/hudba/nacti', {
         method: 'POST',
@@ -200,7 +204,7 @@ export function RodnyListSection({
       // Kdyz se povedla jen pulka (napr. nas stranka nepustila a nazev se
       // odhadl z adresy), rekneme to nahlas - jinak by clovek odesel
       // s prazdnym autorem a nevedel proc.
-      if (data?.poznamka) setChybaOdkazu(data.poznamka);
+      if (data?.poznamka) setPoznamkaOdkazu(data.poznamka);
       setSaved(false);
     } catch {
       setChybaOdkazu('Údaje se nepodařilo načíst.');
@@ -249,10 +253,14 @@ export function RodnyListSection({
             </button>
           </div>
           {chybaOdkazu && <span className="text-xs font-body text-danger">{chybaOdkazu}</span>}
-          {!chybaOdkazu && (
+          {poznamkaOdkazu && (
+            <span className="text-xs font-body text-status-progress">{poznamkaOdkazu}</span>
+          )}
+          {!chybaOdkazu && !poznamkaOdkazu && (
             <span className="text-xs text-muted font-body">
-              Z Artlistu a dalších knihoven doplní název i autora. Odkaz se uloží k projektu, ať je
-              dohledatelné, odkud hudba je.
+              Doplní název a u knihoven, které to dovolí, i autora. Artlist stahování brání, takže
+              u něj přijde jen název z odkazu. Odkaz se uloží k projektu, ať je dohledatelné, odkud
+              hudba je.
             </span>
           )}
         </div>
