@@ -30,6 +30,9 @@ const schema = z.object({
   narrator: z.string().trim().max(200).optional(),
   /** Nazev projektu - u projektu zalozenych v portalu jde zmenit. */
   name: z.string().trim().max(300).optional(),
+  /** YYYY-MM-DD, prazdny retezec = smazat. Upravuje se i primo v prehledu. */
+  endDate: z.string().trim().optional(),
+  releaseDate: z.string().trim().optional(),
   /** Ucet herce - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
   actorUserId: z.string().trim().optional(),
   /** Firma, pro kterou se projekt dela. */
@@ -178,6 +181,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('projectType', data.projectType);
     text('narrator', data.narrator);
     if (data.name) values.name = data.name;
+    // Data se drzi jako pulnoc UTC - v prehledu se tiskne jen datum a nesmi
+    // se posunout podle pasma, ve kterem se zrovna uklada.
+    for (const klic of ['endDate', 'releaseDate'] as const) {
+      const hodnota = data[klic];
+      if (hodnota === undefined) continue;
+      if (hodnota === '') {
+        values[klic] = null;
+        continue;
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(hodnota)) {
+        return NextResponse.json({ error: 'Datum má neplatný tvar.' }, { status: 400 });
+      }
+      const d2 = new Date(`${hodnota}T00:00:00.000Z`);
+      if (Number.isNaN(d2.getTime())) {
+        return NextResponse.json({ error: 'Datum má neplatný tvar.' }, { status: 400 });
+      }
+      values[klic] = d2;
+    }
     text('klientUserId', data.klientUserId);
     text('actorUserId', data.actorUserId);
     text('companyId', data.companyId);

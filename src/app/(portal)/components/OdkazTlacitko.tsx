@@ -18,8 +18,12 @@ export function OdkazTlacitko({
 }: {
   url: string | null | undefined;
   popisek: string;
-  /** "hlavni" = plné tlačítko, "vedlejsi" = jen orámované, do řádku k jiným. */
-  varianta?: 'hlavni' | 'vedlejsi';
+  /**
+   * "hlavni" = plné tlačítko, "vedlejsi" = jen orámované,
+   * "ikona" = jen ikonka bez kopírování - do tabulky, kde by text i druhé
+   * tlačítko rozhodily šířku sloupce (zadání 10. 9. 2026).
+   */
+  varianta?: 'hlavni' | 'vedlejsi' | 'ikona';
 }) {
   const [zkopirovano, setZkopirovano] = useState(false);
 
@@ -32,6 +36,23 @@ export function OdkazTlacitko({
   }, [zkopirovano]);
 
   if (!url) return <span className="text-sm font-heading text-muted">—</span>;
+
+  if (varianta === 'ikona') {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        title={popisek}
+        aria-label={popisek}
+        className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-brand-purple hover:bg-tint transition-colors"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        </svg>
+      </a>
+    );
+  }
 
   async function zkopiruj() {
     try {

@@ -2,11 +2,12 @@ import Link from 'next/link';
 import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/caflou';
 import type { ColumnSetting } from '@/lib/columnLabels';
-import { PRIORITY_CLASSES, PRIORITY_LABELS, projectTypeLabel } from '@/lib/projectTypes';
+import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
+import { UpravitelneDatum, UpravitelnyText, UpravitelnyVyber } from './UpravitelnaBunka';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -196,6 +197,8 @@ export type InternalProjectMeta = {
   managerPhotoUrl: string | null;
   /** Slozka projektu na Google Disku - v prehledu jako tlacitko (10. 9. 2026). */
   driveUrl: string | null;
+  /** Kvuli uprave manazera primo v prehledu. */
+  managerUserId: string | null;
 };
 
 export type InternalProject = AdminDisplayProject & {
@@ -314,10 +317,34 @@ function SortArrow({ dir }: { dir: 'asc' | 'desc' }) {
  * sloupec ukazuje. Díky tomu se dá tabulka poskládat z nastavení (pořadí,
  * skrytí) místo pevně napsané řady <td>.
  */
-function bunkaSloupce(p: InternalProject, key: string, muzeMenitStav: boolean) {
+/** Datum pro <input type="date"> - YYYY-MM-DD, nebo prazdno. */
+function proInput(d: Date | null): string {
+  return d ? d.toISOString().slice(0, 10) : '';
+}
+
+function bunkaSloupce(
+  p: InternalProject,
+  key: string,
+  muzeMenit: boolean,
+  manazeri: { id: string; label: string }[],
+) {
+  const id = String(p.id);
   switch (key) {
     case 'name':
-      return (
+      // Nazev jde upravit primo v prehledu (zadani 10. 9. 2026). Proklik na
+      // detail zustava vedle - jinak by se do projektu nedalo dostat.
+      return muzeMenit ? (
+        <span className="inline-flex items-center gap-2 min-w-0">
+          <UpravitelnyText caflouProjectId={id} pole="name" hodnota={p.name} trida="truncate" />
+          <Link
+            href={`/projekty/${p.id}`}
+            title="Otevřít projekt"
+            className="text-muted hover:text-brand-purple no-underline shrink-0"
+          >
+            ›
+          </Link>
+        </span>
+      ) : (
         <Link href={`/projekty/${p.id}`} className="text-ink hover:text-brand-purple no-underline">
           {p.name}
         </Link>
@@ -327,26 +354,50 @@ function bunkaSloupce(p: InternalProject, key: string, muzeMenitStav: boolean) {
     case 'statusName':
       // Stav jde prehodit rovnou v seznamu (zadani 10. 9. 2026) - kdo na to
       // nema pravo, vidi jen odznak.
-      return muzeMenitStav ? (
+      return muzeMenit ? (
         <StavProjektuSelect caflouProjectId={String(p.id)} stav={p.statusName} dokonceny={p.finished} />
       ) : (
         <StatusPill finished={p.finished} statusName={p.statusName} />
       );
-    case 'priority':
-      // Priorita se cerpa z Caflou (zadani 5. 9. 2026); rucne nastavena
-      // hodnota v portalu slouzi uz jen jako zaloha, kdyz ji Caflou nevraci.
-      return <PriorityPill priority={p.priority ?? p.meta?.priority ?? null} />;
+    case 'priority': {
+      const hodnota = p.priority ?? p.meta?.priority ?? null;
+      const odznak = <PriorityPill priority={hodnota} />;
+      return muzeMenit ? (
+        <UpravitelnyVyber
+          caflouProjectId={id}
+          pole="priority"
+          hodnota={hodnota ?? ''}
+          moznosti={PRIORITY_OPTIONS.map((o) => ({ hodnota: o, popisek: PRIORITY_LABELS[o] }))}
+          deti={odznak}
+        />
+      ) : (
+        odznak
+      );
+    }
     case 'projectType':
       return projectTypeLabel(p.meta?.projectType) ?? '—';
     case 'managerName': {
       // Fotka vedle jmena, stejne jako v horni liste (zadani 9. 9. 2026).
       const jmeno = p.meta?.managerName;
-      if (!jmeno) return '—';
-      return (
+      const obsah = jmeno ? (
         <span className="inline-flex items-center gap-2 min-w-0">
           <AvatarManazera jmeno={jmeno} photoUrl={p.meta?.managerPhotoUrl ?? null} />
           <span className="truncate">{jmeno}</span>
         </span>
+      ) : (
+        <span className="text-muted">—</span>
+      );
+      return muzeMenit ? (
+        <UpravitelnyVyber
+          caflouProjectId={id}
+          pole="managerUserId"
+          hodnota={p.meta?.managerUserId ?? ''}
+          moznosti={manazeri.map((m) => ({ hodnota: m.id, popisek: m.label }))}
+          prazdnyPopisek="— nevybráno —"
+          deti={obsah}
+        />
+      ) : (
+        obsah
       );
     }
     case 'narrator':
@@ -354,14 +405,32 @@ function bunkaSloupce(p: InternalProject, key: string, muzeMenitStav: boolean) {
     case 'pageCount':
       return p.pageCount ?? '—';
     case 'endDate':
-      return formatDate(p.endDate);
+      return muzeMenit ? (
+        <UpravitelneDatum
+          caflouProjectId={id}
+          pole="endDate"
+          hodnota={proInput(p.endDate)}
+          popisek={formatDate(p.endDate)}
+        />
+      ) : (
+        formatDate(p.endDate)
+      );
     case 'releaseDate':
-      return formatDate(p.releaseDate);
+      return muzeMenit ? (
+        <UpravitelneDatum
+          caflouProjectId={id}
+          pole="releaseDate"
+          hodnota={proInput(p.releaseDate)}
+          popisek={formatDate(p.releaseDate)}
+        />
+      ) : (
+        formatDate(p.releaseDate)
+      );
     case 'driveUrl':
       // Jen tlacitko, adresa se neukazuje - v tabulce by rozhodila sirku
       // sloupcu (zadani 10. 9. 2026).
       return p.meta?.driveUrl ? (
-        <OdkazTlacitko url={p.meta.driveUrl} popisek="Složka" varianta="vedlejsi" />
+        <OdkazTlacitko url={p.meta.driveUrl} popisek="Složka" varianta="ikona" />
       ) : (
         <span className="text-muted">—</span>
       );
@@ -565,6 +634,7 @@ export function InternalProjectsTable({
   onMoveColumn,
   onHideColumn,
   canEditStatus = false,
+  manazeri = [],
 }: {
   projects: InternalProject[];
   emptyText: string;
@@ -575,6 +645,8 @@ export function InternalProjectsTable({
   editing?: boolean;
   /** Přehazovat stav smí Produkce a Žůžo-labůžo (zadání 10. 9. 2026). */
   canEditStatus?: boolean;
+  /** Manazeri do rozbalovaciho seznamu primo v prehledu (zadani 10. 9. 2026). */
+  manazeri?: { id: string; label: string }[];
   /** Upravovat sloupce smí jen Žůžo-labůžo. */
   canEditColumns?: boolean;
   onStartEditing?: () => void;
@@ -647,7 +719,7 @@ export function InternalProjectsTable({
               <tr key={p.id} className="border-t border-line hover:bg-surfaceSoft">
                 {columns.map((sloupec) => (
                   <td key={sloupec.key} className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-3.5 text-sm font-heading'}>
-                    {bunkaSloupce(p, sloupec.key, canEditStatus)}
+                    {bunkaSloupce(p, sloupec.key, canEditStatus, manazeri)}
                   </td>
                 ))}
                 {canEditColumns && <td />}

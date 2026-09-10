@@ -233,6 +233,7 @@ async function InternalProjektySection({
         managerName: m.manager ? m.manager.name || m.manager.email : null,
         managerPhotoUrl: m.managerUserId ? odkazNaFotku(m.managerUserId, m.manager?.photoUrl) : null,
         driveUrl: m.driveUrl,
+        managerUserId: m.managerUserId,
       },
     ]),
   );
@@ -313,6 +314,7 @@ async function InternalProjektySection({
         columns={columnSettings}
         canEditLabels={isAdmin}
         canEditStatus={muzeMenitStav}
+        manazeri={manazeriProFormular.map((m) => ({ id: m.id, label: m.name || m.email }))}
       />
     </section>
   );

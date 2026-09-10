@@ -46,6 +46,7 @@ export function InternalProjectsBrowser({
   canEditLabels,
   canEditStatus,
   novyProjekt,
+  manazeri,
 }: {
   active: InternalProject[];
   finished: InternalProject[];
@@ -62,6 +63,8 @@ export function InternalProjectsBrowser({
    * radek jen kvuli jednomu tlacitku je plytvani mistem (zadani 10. 9. 2026).
    */
   novyProjekt?: React.ReactNode;
+  /** Manazeri do rozbalovaciho seznamu primo v prehledu (zadani 10. 9. 2026). */
+  manazeri?: { id: string; label: string }[];
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('active');
@@ -322,6 +325,7 @@ export function InternalProjectsBrowser({
         editing={editing}
         canEditColumns={canEditLabels}
         canEditStatus={canEditStatus}
+        manazeri={manazeri}
         onStartEditing={() => {
           setDraft(columns);
           setEditing(true);
