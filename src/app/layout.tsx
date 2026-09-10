@@ -3,6 +3,7 @@ import { Inter, Jost, Poppins } from 'next/font/google';
 import './globals.css';
 import { SKRIPT_MOTIVU } from '@/lib/motiv';
 import { RegistraceAplikace } from '@/app/(portal)/components/RegistraceAplikace';
+import { BezOprav } from './BezOprav';
 
 // Nahrada za puvodni Wix fonty (Helvetica Neue / Futura / Avenir),
 // viz README > Design system pro zduvodneni vyberu.
@@ -39,8 +40,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             v hlavicce, ne React - viz lib/motiv.ts. */}
         <script dangerouslySetInnerHTML={{ __html: SKRIPT_MOTIVU }} />
       </head>
-      <body className="font-body">
+      {/* Automaticke opravy textu jsou vypnute v celem portalu (zadani
+          10. 9. 2026). Na <body> proto, ze spellcheck a autocapitalize se
+          dedi; autocorrect se nededi, ten dorovnava komponenta BezOprav. */}
+      <body className="font-body" spellCheck={false} autoCapitalize="off">
         {children}
+        <BezOprav />
         <RegistraceAplikace />
       </body>
     </html>
