@@ -15,70 +15,110 @@ import {
  * portal nema zadnou zavislost na generovani PDF a pridavat kvuli jednomu
  * jednostrankovemu dokumentu pdf-lib + fontkit (a s nimi vlastni pisma na
  * disku, ktera na Vercelu nemusi byt dostupna) je vic rizika nez uzitku.
- * Dokument ma pevne rozlozeni podle vzoru "RL_Dobre podlahy.pdf", takze staci
- * napsat presne ty objekty, ktere potrebuje: dve orezana pisma, dva obrazky
- * a jeden obsahovy proud. Vsechno je otestovatelne bez site.
+ * Dokument ma pevne rozlozeni, takze staci napsat presne ty objekty, ktere
+ * potrebuje: dve orezana pisma, dva obrazky, jeden prechod a jeden obsahovy
+ * proud. Vsechno je otestovatelne bez site.
  *
- * ROZLOZENI je odmerene primo ze vzoroveho PDF (souradnice, velikosti pisma,
- * barvy i tloustky car) - viz konstanty nize. Souradnice se tu vsude pocitaji
- * OD HORNIHO OKRAJE stranky (jako v grafickem programu); do PDF, ktere meri
- * zdola, je prepocitava funkce y().
+ * GRAFIKA (zadani 10. 9. 2026: "vic vyraznych barev, jako ty notifikace nebo
+ * pozvanka do portalu"): dokument uz nekopiruje puvodni cernou mrizku ze
+ * vzoru "RL_Dobre podlahy.pdf", ale drzi stejnou vizualni rec jako nase
+ * e-maily - bila karta se zaoblenymi rohy, fialovy gradient v hlavicce se
+ * zelenym prouzkem, nazev spotu jako nadpis, tabulka udaju se svetle
+ * fialovym sloupcem popisku a mentolovy blok s hudbou. Barvy jsou doslova ty
+ * z emailShell() v src/lib/email.ts - kdyz se zmeni tam, patri zmenit i tady.
+ *
+ * SOURADNICE se tu vsude pocitaji OD HORNIHO OKRAJE stranky (jako v grafickem
+ * programu); do PDF, ktere meri zdola, je prepocitava funkce y().
  */
 
-// --- Stranka a rozlozeni (vse v bodech, mereno od horniho okraje) ----------
+// --- Barvy a rozlozeni (vse v bodech, mereno od horniho okraje) ------------
 
 const PAGE_W = 595.28; // A4
 const PAGE_H = 841.89;
 
-/** Fialovy pruh pres celou sirku - #9900FF, vytazeno ze vzoru. */
-const BAR_COLOR: RGB = [153 / 255, 0, 1];
-const BAR_HEIGHT = 86;
+type RGB = [number, number, number];
 
-const LOGO_BOX = { x: 388.6, y: 19.0, w: 151.5, h: 50.6 };
+/** '#6B2AF0' -> [0.42, 0.16, 0.94] */
+function hex(value: string): RGB {
+  const n = parseInt(value.slice(1), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
 
-const TITLE = 'RODNÝ LIST';
-const TITLE_SIZE = 16;
-const TITLE_CENTER_X = 296.0;
-const TITLE_BASELINE = 48.2;
-
-/** Tabulka: leva hrana, delici cara sloupcu, prava hrana. */
-const TABLE_LEFT = 56.5;
-const TABLE_SPLIT = 223.5;
-const TABLE_RIGHT = 538.5;
-/** Vodorovne cary tabulky - prvni radek je ve vzoru vyssi nez ostatni. */
-const TABLE_LINES = [131.5, 208.5, 265.5, 322.5, 379.5, 436.5, 493.5, 550.5];
-const TABLE_LINE_WIDTH = 1;
-
-const CELL_SIZE = 10;
-const LABEL_CENTER_X = (TABLE_LEFT + TABLE_SPLIT) / 2;
-const VALUE_CENTER_X = (TABLE_SPLIT + TABLE_RIGHT) / 2;
-/** Kolik mista v pravem sloupci smi hodnota zabrat, nez se zalomi/zmensi. */
-const VALUE_MAX_WIDTH = TABLE_RIGHT - TABLE_SPLIT - 24;
-
-const PRODUCED_BY = 'Vyrobila společnost MEDIA SPACE s.r.o.';
-const PRODUCED_SIZE = 11;
-const PRODUCED_X = 60.4;
-const PRODUCED_BASELINE = 645.9;
-
-/** Ramecek podpisu je ve vzoru vyrazne silnejsi nez mrizka tabulky. */
-const SIGN_BOX_LINE_WIDTH = 1.5;
-const SIGN_BOX = { x: 337.2, y: 631.56, w: 195.75, h: 81.75 };
-const SIGN_LABEL = 'PODPIS:';
-const SIGN_LABEL_SIZE = 10.5;
-const SIGN_LABEL_X = 341.7;
-const SIGN_IMAGE = { x: 403.1, y: 646.2, w: 93.7, h: 41.5 };
-
-const FOOTER_PARTS = ['MEDIA SPACE s.r.o. | ', 'www.mediaspace.cz', ' | ', 'info@mediaspace.cz'];
-/** Ktere casti paticky jsou podtrzene (odkazy) - podle vzoru. */
-const FOOTER_UNDERLINED = [false, true, false, true];
-const FOOTER_SIZE = 11;
-const FOOTER_CENTER_X = 305.0;
-const FOOTER_BASELINE = 735.5;
-
-const BLACK: RGB = [0, 0, 0];
+/*
+ * PALETA je presne ta, kterou mluvi nase e-maily (viz emailShell v
+ * src/lib/email.ts): fialovy gradient v hlavicce, zeleny akcent, mentolova
+ * plocha, svetle fialove popisky. Rodny list ma pusobit jako dalsi kus te
+ * same identity - ne jako formular z jineho sveta.
+ */
+const PURPLE = hex('#6B2AF0');
+const PURPLE_LIGHT = hex('#7B55FF');
+const PURPLE_RULE = hex('#A472F6'); // bila pres fialovou, cca 40 %
+const GREEN = hex('#1FDF67');
+const GREEN_DARK = hex('#149E4B');
+const MINT = hex('#C9FFDF');
+const MINT_BG = hex('#E9FFF2');
+const INK = hex('#201A33');
+const MUTED = hex('#6E6580');
+const BORDER = hex('#E4DFFB');
+const LABEL_BG = hex('#F7F5FF');
+const PAGE_BG = hex('#FBFAFF');
 const WHITE: RGB = [1, 1, 1];
 
-type RGB = [number, number, number];
+// Bila karta uprostred stranky - stejny tvar jako karta v e-mailu.
+const CARD = { x: 42, top: 42, w: 511.28, h: 758, r: 16 };
+const PAD = 34; // vnitrni okraj karty
+const LEFT = CARD.x + PAD;
+const RIGHT = CARD.x + CARD.w - PAD;
+const INNER_W = RIGHT - LEFT;
+
+// Hlavicka s fialovym gradientem.
+const HERO_H = 190;
+const HERO_BOTTOM = CARD.top + HERO_H;
+const WORDMARK = 'MS portal';
+const WORDMARK_SIZE = 19;
+const WORDMARK_BASELINE = 84;
+const LOGO_H = 29;
+const TAG = 'RODNÝ LIST';
+const TAG_SIZE = 9.5;
+const TAG_SPACING = 1.8;
+const TAG_BASELINE = 124;
+const GREEN_BAR = { top: 134, w: 46, h: 3 };
+const SPOT_SIZES = [28, 25, 22, 19];
+const SPOT_BASELINE_ONE = 178;
+const SPOT_BASELINES_TWO = [160, 190];
+
+// Tabulka udaju - stejna sazba jako .field-table v e-mailu.
+const TABLE_TOP = 264;
+const ROW_H = 46;
+const LABEL_W = 160;
+const SPLIT = LEFT + LABEL_W;
+const CELL_PAD = 16;
+const TABLE_R = 12;
+const LABEL_SIZE = 8.5;
+const LABEL_SPACING = 0.7;
+const VALUE_SIZE = 11.5;
+const VALUE_MAX_W = RIGHT - CELL_PAD - (SPLIT + CELL_PAD);
+
+// Mentolovy blok s hudbou.
+const MUSIC = { top: 472, h: 92, r: 12 };
+const MUSIC_HEAD_BASELINE = 500;
+const MUSIC_LABEL_BASELINE = 522;
+const MUSIC_VALUE_BASELINE = 542;
+const MUSIC_COL2 = LEFT + 234;
+
+// Podpisova cast.
+const PRODUCED_BY = 'Vyrobila společnost MEDIA SPACE s.r.o.';
+const PRODUCED_SIZE = 11;
+const PRODUCED_BASELINE = 642;
+const SIGN_BOX = { x: 330, top: 620, w: RIGHT - 330, h: 92, r: 12 };
+const SIGN_LABEL = 'PODPIS';
+const SIGN_LABEL_SIZE = 8;
+const SIGN_IMAGE_W = 112;
+
+// Paticka.
+const FOOTER_RULE_TOP = 756;
+const FOOTER_BASELINE = 780;
+const FOOTER_SIZE = 9.5;
 
 /** Prevod z "od horniho okraje" na souradnici PDF (od spodniho okraje). */
 function y(fromTop: number): number {
@@ -319,36 +359,85 @@ class Content {
     this.ops.push(`${color.join(' ')} rg ${f(x)} ${f(y(top + h))} ${f(w)} ${f(h)} re f`);
   }
 
-  strokeRect(x: number, top: number, w: number, h: number, color: RGB, width: number) {
-    this.ops.push(
-      `${color.join(' ')} RG ${f(width)} w ${f(x)} ${f(y(top + h))} ${f(w)} ${f(h)} re S`,
-    );
-  }
-
   line(x1: number, top1: number, x2: number, top2: number, color: RGB, width: number) {
     this.ops.push(
       `${color.join(' ')} RG ${f(width)} w ${f(x1)} ${f(y(top1))} m ${f(x2)} ${f(y(top2))} l S`,
     );
   }
 
-  text(font: EmbeddedFont, name: string, value: string, size: number, x: number, baselineTop: number, color: RGB) {
-    if (!value) return;
+  /**
+   * Cesta zaobleneho obdelniku. Horni a dolni rohy maji vlastni polomer -
+   * hlavicka je zaoblena jen nahore a dole navazuje na bilou kartu.
+   */
+  private roundPath(x: number, top: number, w: number, h: number, rTop: number, rBottom: number): string {
+    const yb = y(top + h);
+    const yt = y(top);
+    const x0 = x;
+    const x1 = x + w;
+    const kt = rTop * 0.5523;
+    const kb = rBottom * 0.5523;
+    return [
+      `${f(x0 + rBottom)} ${f(yb)} m`,
+      `${f(x1 - rBottom)} ${f(yb)} l`,
+      `${f(x1 - rBottom + kb)} ${f(yb)} ${f(x1)} ${f(yb + rBottom - kb)} ${f(x1)} ${f(yb + rBottom)} c`,
+      `${f(x1)} ${f(yt - rTop)} l`,
+      `${f(x1)} ${f(yt - rTop + kt)} ${f(x1 - rTop + kt)} ${f(yt)} ${f(x1 - rTop)} ${f(yt)} c`,
+      `${f(x0 + rTop)} ${f(yt)} l`,
+      `${f(x0 + rTop - kt)} ${f(yt)} ${f(x0)} ${f(yt - rTop + kt)} ${f(x0)} ${f(yt - rTop)} c`,
+      `${f(x0)} ${f(yb + rBottom)} l`,
+      `${f(x0)} ${f(yb + rBottom - kb)} ${f(x0 + rBottom - kb)} ${f(yb)} ${f(x0 + rBottom)} ${f(yb)} c`,
+      'h',
+    ].join(' ');
+  }
+
+  fillRound(x: number, top: number, w: number, h: number, rTop: number, rBottom: number, color: RGB) {
+    this.ops.push(`${color.join(' ')} rg ${this.roundPath(x, top, w, h, rTop, rBottom)} f`);
+  }
+
+  strokeRound(
+    x: number,
+    top: number,
+    w: number,
+    h: number,
+    rTop: number,
+    rBottom: number,
+    color: RGB,
+    width: number,
+  ) {
     this.ops.push(
-      `BT /${name} ${f(size)} Tf ${color.join(' ')} rg 1 0 0 1 ${f(x)} ${f(y(baselineTop))} Tm ` +
-        `<${encodeText(font, value)}> Tj ET`,
+      `${color.join(' ')} RG ${f(width)} w ${this.roundPath(x, top, w, h, rTop, rBottom)} S`,
     );
   }
 
-  textCentered(
+  /** Orizne kresleni na zablony tvar (pouziva se u tabulky a hlavicky). */
+  clipRound(x: number, top: number, w: number, h: number, rTop: number, rBottom: number) {
+    this.ops.push(`q ${this.roundPath(x, top, w, h, rTop, rBottom)} W n`);
+  }
+
+  /** Vyplni aktualni orez plynulym prechodem (viz /Shading v prostredcich stranky). */
+  shade(name: string) {
+    this.ops.push(`/${name} sh`);
+  }
+
+  pop() {
+    this.ops.push('Q');
+  }
+
+  text(
     font: EmbeddedFont,
     name: string,
     value: string,
     size: number,
-    centerX: number,
+    x: number,
     baselineTop: number,
     color: RGB,
+    spacing = 0,
   ) {
-    this.text(font, name, value, size, centerX - textWidth(font, value, size) / 2, baselineTop, color);
+    if (!value) return;
+    this.ops.push(
+      `BT /${name} ${f(size)} Tf ${f(spacing)} Tc ${color.join(' ')} rg ` +
+        `1 0 0 1 ${f(x)} ${f(y(baselineTop))} Tm <${encodeText(font, value)}> Tj ET`,
+    );
   }
 
   image(name: string, x: number, top: number, w: number, h: number) {
@@ -366,11 +455,50 @@ function f(value: number): string {
 }
 
 /**
+ * Nazev spotu v hlavicce. Zkusi se vejit na jeden radek, jinak na dva - a az
+ * kdyz ani to nejde, zmensi se pismo. Nikdy nespadne.
+ */
+function fitHeadline(value: string, maxWidth: number): { lines: string[]; size: number } {
+  const text = value.trim() || '—';
+  for (const size of SPOT_SIZES) {
+    if (textWidth(FONT_BOLD, text, size) <= maxWidth) return { lines: [text], size };
+  }
+  const words = text.split(/\s+/).filter(Boolean);
+  for (const size of SPOT_SIZES) {
+    const lines: string[] = [];
+    let line = '';
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (textWidth(FONT_BOLD, candidate, size) <= maxWidth || !line) {
+        line = candidate;
+      } else {
+        lines.push(line);
+        line = word;
+      }
+    }
+    if (line) lines.push(line);
+    if (lines.length <= 2 && lines.every((l) => textWidth(FONT_BOLD, l, size) <= maxWidth)) {
+      return { lines, size };
+    }
+  }
+  return fitValue(FONT_BOLD, text, maxWidth, SPOT_SIZES[SPOT_SIZES.length - 1]);
+}
+
+/** Paticka: nazev firmy tucne, kontakty ve fialove - stejne jako v e-mailu. */
+const FOOTER_PARTS: { text: string; color: RGB; bold?: boolean }[] = [
+  { text: 'MEDIA SPACE s.r.o.', color: INK, bold: true },
+  { text: '   •   ', color: MUTED },
+  { text: 'www.mediaspace.cz', color: PURPLE },
+  { text: '   •   ', color: MUTED },
+  { text: 'info@mediaspace.cz', color: PURPLE },
+];
+
+/**
  * Vyrobi hotove jednostrankove PDF Rodneho listu.
  *
  * Nikdy nevyhazuje kvuli obsahu dat - prilis dlouhe hodnoty se zalomi nebo
- * zmensi (viz fitValue), protoze dokument vznika automaticky pri zmene stavu
- * projektu a nesmi to shodit celou akci.
+ * zmensi (viz fitValue), protoze dokument muze vznikat automaticky pri zmene
+ * stavu projektu a nesmi to shodit celou akci.
  */
 export function renderRodnyListPdf(data: RodnyListData): Buffer {
   const pdf = new PdfWriter();
@@ -380,81 +508,142 @@ export function renderRodnyListPdf(data: RodnyListData): Buffer {
   const logoId = embedImage(pdf, LOGO);
   const signatureId = embedImage(pdf, SIGNATURE);
 
+  // Prechod v hlavicce vede z leveho horniho do praveho dolniho rohu - tedy
+  // tech 135 stupnu, ktere ma linear-gradient v e-mailove sablone.
+  const shadingId = pdf.add(
+    `<< /ShadingType 2 /ColorSpace /DeviceRGB ` +
+      `/Coords [${f(CARD.x)} ${f(y(CARD.top))} ${f(CARD.x + CARD.w)} ${f(y(HERO_BOTTOM))}] ` +
+      `/Extend [true true] /Function << /FunctionType 2 /Domain [0 1] ` +
+      `/C0 [${PURPLE_LIGHT.join(' ')}] /C1 [${PURPLE.join(' ')}] /N 1 >> >>`,
+  );
+
   const c = new Content();
 
-  // 1) Fialovy pruh, logo a nadpis.
-  c.fillRect(0, 0, PAGE_W, BAR_HEIGHT, BAR_COLOR);
-  c.image('ImLogo', LOGO_BOX.x, LOGO_BOX.y, LOGO_BOX.w, LOGO_BOX.h);
-  c.textCentered(FONT_BOLD, 'FB', TITLE, TITLE_SIZE, TITLE_CENTER_X, TITLE_BASELINE, WHITE);
+  // 1) Pozadi stranky a bila karta.
+  c.fillRect(0, 0, PAGE_W, PAGE_H, PAGE_BG);
+  c.fillRound(CARD.x, CARD.top, CARD.w, CARD.h, CARD.r, CARD.r, WHITE);
 
-  // 2) Mrizka tabulky - vodorovne cary pres celou sirku, tri svisle.
-  for (const lineTop of TABLE_LINES) {
-    c.line(TABLE_LEFT, lineTop, TABLE_RIGHT, lineTop, BLACK, TABLE_LINE_WIDTH);
+  // 2) Fialova hlavicka - zaoblena jen nahore, dole navazuje na bilou kartu.
+  c.clipRound(CARD.x, CARD.top, CARD.w, HERO_H, CARD.r, 0);
+  c.shade('Sh0');
+  c.pop();
+
+  // 3) Znacka: "MS portal" zelene, svisla linka, logo MEDIASPACE.
+  c.text(FONT_BOLD, 'FB', WORDMARK, WORDMARK_SIZE, LEFT, WORDMARK_BASELINE, GREEN);
+  const znackaKonec = LEFT + textWidth(FONT_BOLD, WORDMARK, WORDMARK_SIZE);
+  c.line(znackaKonec + 15, WORDMARK_BASELINE - 17, znackaKonec + 15, WORDMARK_BASELINE + 5, PURPLE_RULE, 1);
+  c.image('ImLogo', znackaKonec + 30, WORDMARK_BASELINE - 21, (LOGO_H * LOGO.width) / LOGO.height, LOGO_H);
+
+  // 4) Typ dokumentu, zeleny prouzek a nazev spotu jako nadpis.
+  c.text(FONT_BOLD, 'FB', TAG, TAG_SIZE, LEFT, TAG_BASELINE, MINT, TAG_SPACING);
+  c.fillRound(LEFT, GREEN_BAR.top, GREEN_BAR.w, GREEN_BAR.h, 1.5, 1.5, GREEN);
+
+  const nadpis = fitHeadline(data.spotName, INNER_W);
+  const zakladny = nadpis.lines.length > 1 ? SPOT_BASELINES_TWO : [SPOT_BASELINE_ONE];
+  nadpis.lines.forEach((line, i) => {
+    c.text(FONT_BOLD, 'FB', line, nadpis.size, LEFT, zakladny[Math.min(i, zakladny.length - 1)], WHITE);
+  });
+
+  // 5) Tabulka udaju. Nazev spotu uz je nadpisem, tady se neopakuje; hudba ma
+  //    vlastni blok nize.
+  const radky = [
+    { label: 'KLIENT', value: data.clientName },
+    { label: 'DÉLKA SPOTU', value: data.spotLength },
+    { label: 'REŽIE', value: data.director },
+    { label: 'DATUM VÝROBY', value: data.productionDate },
+  ];
+  const vyskaTabulky = radky.length * ROW_H;
+
+  c.clipRound(LEFT, TABLE_TOP, INNER_W, vyskaTabulky, TABLE_R, TABLE_R);
+  c.fillRect(LEFT, TABLE_TOP, LABEL_W, vyskaTabulky, LABEL_BG);
+  for (let i = 1; i < radky.length; i += 1) {
+    c.line(LEFT, TABLE_TOP + i * ROW_H, RIGHT, TABLE_TOP + i * ROW_H, BORDER, 1);
   }
-  const gridTop = TABLE_LINES[0];
-  const gridBottom = TABLE_LINES[TABLE_LINES.length - 1];
-  for (const x of [TABLE_LEFT, TABLE_SPLIT, TABLE_RIGHT]) {
-    c.line(x, gridTop, x, gridBottom, BLACK, TABLE_LINE_WIDTH);
-  }
+  c.pop();
+  c.line(SPLIT, TABLE_TOP, SPLIT, TABLE_TOP + vyskaTabulky, BORDER, 1);
+  c.strokeRound(LEFT, TABLE_TOP, INNER_W, vyskaTabulky, TABLE_R, TABLE_R, BORDER, 1);
 
-  // 3) Obsah bunek. Popisek i hodnota se svisle centruji podle vysky verzalek,
-  //    stejne jako ve vzoru.
-  rodnyListRows(data).forEach((row, index) => {
-    const rowTop = TABLE_LINES[index];
-    const rowBottom = TABLE_LINES[index + 1];
-    const center = (rowTop + rowBottom) / 2;
-
-    c.textCentered(
+  radky.forEach((radek, index) => {
+    const stred = TABLE_TOP + index * ROW_H + ROW_H / 2;
+    c.text(
       FONT_BOLD,
       'FB',
-      row.label,
-      CELL_SIZE,
-      LABEL_CENTER_X,
-      center + capHeight(FONT_BOLD, CELL_SIZE) / 2,
-      BLACK,
+      radek.label,
+      LABEL_SIZE,
+      LEFT + CELL_PAD,
+      stred + capHeight(FONT_BOLD, LABEL_SIZE) / 2,
+      MUTED,
+      LABEL_SPACING,
     );
 
-    const fitted = fitValue(FONT_REGULAR, row.value, VALUE_MAX_WIDTH, CELL_SIZE);
-    const lineHeight = fitted.size * 1.25;
-    const blockTop = center - ((fitted.lines.length - 1) * lineHeight) / 2;
-    fitted.lines.forEach((line, i) => {
-      c.textCentered(
-        FONT_REGULAR,
-        'FR',
+    const hodnota = fitValue(FONT_BOLD, radek.value, VALUE_MAX_W, VALUE_SIZE);
+    const vyskaRadku = hodnota.size * 1.28;
+    const zacatek = stred - ((hodnota.lines.length - 1) * vyskaRadku) / 2;
+    hodnota.lines.forEach((line, i) => {
+      c.text(
+        FONT_BOLD,
+        'FB',
         line,
-        fitted.size,
-        VALUE_CENTER_X,
-        blockTop + i * lineHeight + capHeight(FONT_REGULAR, fitted.size) / 2,
-        BLACK,
+        hodnota.size,
+        SPLIT + CELL_PAD,
+        zacatek + i * vyskaRadku + capHeight(FONT_BOLD, hodnota.size) / 2,
+        INK,
       );
     });
   });
 
-  // 4) Podpisova cast.
-  c.text(FONT_BOLD, 'FB', PRODUCED_BY, PRODUCED_SIZE, PRODUCED_X, PRODUCED_BASELINE, BLACK);
-  c.strokeRect(SIGN_BOX.x, SIGN_BOX.y, SIGN_BOX.w, SIGN_BOX.h, BLACK, SIGN_BOX_LINE_WIDTH);
-  c.text(FONT_BOLD, 'FB', SIGN_LABEL, SIGN_LABEL_SIZE, SIGN_LABEL_X, PRODUCED_BASELINE, BLACK);
-  c.image('ImSign', SIGN_IMAGE.x, SIGN_IMAGE.y, SIGN_IMAGE.w, SIGN_IMAGE.h);
+  // 6) Hudba ve spotu. Ma vlastni mentolovou plochu, protoze jako jedina cast
+  //    dokumentu mluvi o pravech k cizimu dilu - at je videt na prvni pohled.
+  c.fillRound(LEFT, MUSIC.top, INNER_W, MUSIC.h, MUSIC.r, MUSIC.r, MINT_BG);
+  c.text(FONT_BOLD, 'FB', 'HUDBA VE SPOTU', 8.5, LEFT + CELL_PAD, MUSIC_HEAD_BASELINE, GREEN_DARK, 1.4);
 
-  // 5) Paticka - dva odkazy jsou podtrzene, stejne jako ve vzoru.
-  const footerWidth = FOOTER_PARTS.reduce((sum, part) => sum + textWidth(FONT_REGULAR, part, FOOTER_SIZE), 0);
-  let cursor = FOOTER_CENTER_X - footerWidth / 2;
-  FOOTER_PARTS.forEach((part, i) => {
-    const width = textWidth(FONT_REGULAR, part, FOOTER_SIZE);
-    c.text(FONT_REGULAR, 'FR', part, FOOTER_SIZE, cursor, FOOTER_BASELINE, BLACK);
-    if (FOOTER_UNDERLINED[i]) {
-      c.line(cursor, FOOTER_BASELINE + 1.4, cursor + width, FOOTER_BASELINE + 1.4, BLACK, 0.6);
-    }
-    cursor += width;
-  });
+  const sloupceHudby = [
+    { x: LEFT + CELL_PAD, label: 'NÁZEV', value: data.musicTitle, max: MUSIC_COL2 - LEFT - CELL_PAD - 14 },
+    { x: MUSIC_COL2, label: 'AUTOR', value: data.musicAuthor, max: RIGHT - CELL_PAD - MUSIC_COL2 },
+  ];
+  for (const sloupec of sloupceHudby) {
+    c.text(FONT_BOLD, 'FB', sloupec.label, 7.5, sloupec.x, MUSIC_LABEL_BASELINE, MUTED, 0.7);
+    const hodnota = fitValue(FONT_BOLD, sloupec.value, sloupec.max, 12.5);
+    hodnota.lines.forEach((line, i) => {
+      c.text(FONT_BOLD, 'FB', line, hodnota.size, sloupec.x, MUSIC_VALUE_BASELINE + i * hodnota.size * 1.25, INK);
+    });
+  }
 
-  // 6) Slozeni dokumentu.
+  // 7) Podpisova cast.
+  c.text(FONT_BOLD, 'FB', PRODUCED_BY, PRODUCED_SIZE, LEFT, PRODUCED_BASELINE, INK);
+  c.fillRound(SIGN_BOX.x, SIGN_BOX.top, SIGN_BOX.w, SIGN_BOX.h, SIGN_BOX.r, SIGN_BOX.r, LABEL_BG);
+  c.strokeRound(SIGN_BOX.x, SIGN_BOX.top, SIGN_BOX.w, SIGN_BOX.h, SIGN_BOX.r, SIGN_BOX.r, BORDER, 1);
+  c.text(FONT_BOLD, 'FB', SIGN_LABEL, SIGN_LABEL_SIZE, SIGN_BOX.x + CELL_PAD, SIGN_BOX.top + 20, MUTED, 1.4);
+  const vyskaPodpisu = (SIGN_IMAGE_W * SIGNATURE.height) / SIGNATURE.width;
+  c.image(
+    'ImSign',
+    SIGN_BOX.x + (SIGN_BOX.w - SIGN_IMAGE_W) / 2,
+    SIGN_BOX.top + SIGN_BOX.h - vyskaPodpisu - 14,
+    SIGN_IMAGE_W,
+    vyskaPodpisu,
+  );
+
+  // 8) Paticka.
+  c.line(LEFT, FOOTER_RULE_TOP, RIGHT, FOOTER_RULE_TOP, BORDER, 1);
+  const sirkaPaticky = FOOTER_PARTS.reduce(
+    (sum, part) => sum + textWidth(part.bold ? FONT_BOLD : FONT_REGULAR, part.text, FOOTER_SIZE),
+    0,
+  );
+  let kurzor = CARD.x + CARD.w / 2 - sirkaPaticky / 2;
+  for (const part of FOOTER_PARTS) {
+    const font = part.bold ? FONT_BOLD : FONT_REGULAR;
+    c.text(font, part.bold ? 'FB' : 'FR', part.text, FOOTER_SIZE, kurzor, FOOTER_BASELINE, part.color);
+    kurzor += textWidth(font, part.text, FOOTER_SIZE);
+  }
+
+  // 9) Slozeni dokumentu.
   const contentId = pdf.addStream('/Filter /FlateDecode', deflateSync(c.toBuffer(), { level: 9 }));
   const pagesId = pdf.reserve();
   const pageId = pdf.add(
     `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${f(PAGE_W)} ${f(PAGE_H)}] ` +
       `/Resources << /Font << /FR ${regularId} 0 R /FB ${boldId} 0 R >> ` +
-      `/XObject << /ImLogo ${logoId} 0 R /ImSign ${signatureId} 0 R >> >> ` +
+      `/XObject << /ImLogo ${logoId} 0 R /ImSign ${signatureId} 0 R >> ` +
+      `/Shading << /Sh0 ${shadingId} 0 R >> >> ` +
       `/Contents ${contentId} 0 R >>`,
   );
   pdf.fill(pagesId, `<< /Type /Pages /Kids [${pageId} 0 R] /Count 1 >>`);
