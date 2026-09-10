@@ -350,6 +350,10 @@ model ProjectMeta {
   /// Délka spotu v sekundách - v dokumentu se zobrazí jako "20s".
   spotLengthSeconds Int?
   directorName      String?
+  /// Klient na Rodném listu (zadání 10. 9. 2026). Předvyplní se celým názvem
+  /// firmy projektu, ale jde přepsat - na dokumentu občas patří něco jiného
+  /// (agentura, koncový zadavatel) než firma, které se fakturuje.
+  rlClientName      String?
   /// Sekce "Hudba ve spotu" - záměrně jen tahle dvě pole, žádná licence.
   musicTitle        String?
   musicAuthor       String?

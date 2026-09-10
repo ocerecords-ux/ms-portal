@@ -25,7 +25,7 @@ import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
 import { findInternalProject } from '@/lib/caflouProjectsServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
-import { VYCHOZI_REZIE } from '@/lib/rodnyList';
+import { VYCHOZI_NAZEV_SPOTU, VYCHOZI_REZIE } from '@/lib/rodnyList';
 
 // Detail projektu (zadani 5. 9. 2026). Projekt sam o sobe zije v Caflou -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -202,7 +202,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const jeRadiovySpot = rodnyListTypy.includes(meta?.projectType ?? '');
   const rodneListy = jeRadiovySpot ? await loadRodneListy(caflouProjectId) : [];
   // Meta se cte znovu, protoze synchronizace vyse mohla zapsat chybu.
-  const metaPoSync = await prisma.projectMeta.findUnique({ where: { caflouProjectId } });
+  const metaPoSync = await prisma.projectMeta.findUnique({
+    where: { caflouProjectId },
+    include: { company: { select: { name: true } } },
+  });
+  // Firma projektu tak, jak je vyplnena v portalu.
+  const firmaProjektu = metaPoSync?.company ?? null;
 
   // Rozpocet (zadani 6. 9. 2026) - jen u audioknih, kde zname pocet normostran,
   // a vidi ho jen Zuzo-labuzo.
@@ -381,12 +386,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     />
   );
 
+  // Nazev firmy i projektu bereme Z PORTALU, ne pres Caflou. Projekt zalozeny
+  // v portalu zadne caflouCompanyId nema, takze klient zustaval prazdny - a
+  // protoze je klient povinny udaj, neslo u nej RL vyrobit vubec (zadani
+  // 10. 9. 2026). Caflou zustava jako zaloha pro projekty pred prenosem.
   const rodnyList = (
     <RodnyListSection
       caflouProjectId={caflouProjectId}
       canEdit={canEdit}
-      clientName={company?.name ?? ''}
-      projectName={project?.name ?? `Projekt ${caflouProjectId}`}
+      nazevFirmy={firmaProjektu?.name ?? company?.name ?? ''}
+      projectName={metaPoSync?.name || project?.name || `Projekt ${caflouProjectId}`}
       jeRadiovySpot={jeRadiovySpot}
       rlError={metaPoSync?.rlError ?? null}
       rodneListy={rodneListy.map((rl) => ({
@@ -397,7 +406,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         driveUrl: rl.driveUrl,
       }))}
       initial={{
-        spotName: metaPoSync?.spotName ?? '',
+        clientName: metaPoSync?.rlClientName || firmaProjektu?.name || company?.name || '',
+        spotName: metaPoSync?.spotName || VYCHOZI_NAZEV_SPOTU,
         spotLengthSeconds: metaPoSync?.spotLengthSeconds != null ? String(metaPoSync.spotLengthSeconds) : '',
         // Rezie se predvyplnuje (zadani 10. 9. 2026) - jen kdyz u projektu
         // jeste zadna neni, at se rucne zadana nikdy neprepise.

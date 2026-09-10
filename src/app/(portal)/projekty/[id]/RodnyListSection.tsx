@@ -27,6 +27,8 @@ import {
  */
 
 export type RodnyListValues = {
+  /** Klient na dokumentu - predvyplneny nazvem firmy, jde prepsat. */
+  clientName: string;
   spotName: string;
   spotLengthSeconds: string;
   directorName: string;
@@ -51,7 +53,7 @@ const inputClass =
 export function RodnyListSection({
   caflouProjectId,
   canEdit,
-  clientName,
+  nazevFirmy,
   projectName,
   jeRadiovySpot,
   rlError,
@@ -60,7 +62,8 @@ export function RodnyListSection({
 }: {
   caflouProjectId: string;
   canEdit: boolean;
-  clientName: string;
+  /** Nazev firmy projektu - z nej se predvyplni Klient na RL. */
+  nazevFirmy: string;
   projectName: string;
   /** Rádiový spot = typ projektu má v ceníku zapnutý Rodný list. */
   jeRadiovySpot: boolean;
@@ -87,7 +90,7 @@ export function RodnyListSection({
     () =>
       jeRadiovySpot
         ? missingRodnyListFields({
-            clientName,
+            clientName: values.clientName || nazevFirmy,
             spotName: values.spotName || projectName,
             spotLengthSeconds: values.spotLengthSeconds ? Number(values.spotLengthSeconds) : null,
             directorName: values.directorName,
@@ -97,7 +100,7 @@ export function RodnyListSection({
             productionDate: values.productionDate ? new Date(values.productionDate) : null,
           })
         : [],
-    [values, clientName, projectName, jeRadiovySpot],
+    [values, nazevFirmy, projectName, jeRadiovySpot],
   );
 
   async function handleSubmit(e: React.FormEvent) {
@@ -110,6 +113,7 @@ export function RodnyListSection({
       // pole, která tenhle formulář vůbec neukazuje.
       const telo = jeRadiovySpot
         ? {
+            rlClientName: values.clientName,
             spotName: values.spotName,
             spotLengthSeconds: values.spotLengthSeconds,
             directorName: values.directorName,
@@ -271,12 +275,31 @@ export function RodnyListSection({
           </h2>
           <p className="text-xs text-muted font-body m-0 mt-1">
             Z nich se vyrobí PDF, až kliknete na „Vygenerovat RL" — sám nevzniká. Náhledem se na
-            něj můžete podívat dřív, než se kamkoliv uloží. Název klienta se bere z karty firmy
-            ({clientName || '—'}).
+            něj můžete podívat dřív, než se kamkoliv uloží.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* Klient na dokumentu (zadani 10. 9. 2026). Predvyplneny celym
+              nazvem firmy projektu, ale prepsat ho jde - na RL obcas patri
+              neco jineho nez firma, ktere se fakturuje. */}
+          <label className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-sm font-body text-ink">Klient</span>
+            <input
+              type="text"
+              disabled={!canEdit}
+              placeholder={nazevFirmy || 'název klienta na dokumentu'}
+              value={values.clientName}
+              onChange={(e) => set('clientName', e.target.value)}
+              className={inputClass}
+            />
+            <span className="text-xs text-muted font-body">
+              {nazevFirmy
+                ? `Předvyplněno podle firmy projektu (${nazevFirmy}). Přepsat jde kdykoliv.`
+                : 'Projekt zatím nemá vyplněnou firmu, tak klienta zadejte ručně.'}
+            </span>
+          </label>
+
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-sm font-body text-ink">Název spotu</span>
             <input

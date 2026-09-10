@@ -68,6 +68,12 @@ export type RodnyListFields = {
  */
 export const VYCHOZI_REZIE = 'Ondřej Černý';
 
+/**
+ * Předvyplněný název spotu (zadání 10. 9. 2026). Stejně jako u režie:
+ * doplní se jen tam, kde nic není, a přepsat to jde vždycky.
+ */
+export const VYCHOZI_NAZEV_SPOTU = 'RL_MMB';
+
 export const RODNY_LIST_LABELS = {
   clientName: 'Název klienta',
   spotName: 'Název spotu',

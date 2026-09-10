@@ -217,7 +217,11 @@ async function vytvorRodnyList(
       return { ok: false, reason: 'NO_COMPANY', message: 'K projektu není v portálu napojená firma.' };
     }
     const fields = fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
-    const chybi = missingRodnyListFields({ ...fields, clientName: company.name });
+    // Klient na dokumentu: co je vyplnene u projektu, jinak nazev firmy
+    // (zadani 10. 9. 2026). Na RL obcas patri neco jineho nez firma, ktere
+    // se fakturuje - agentura, koncovy zadavatel.
+    const klientNaRL = ((meta?.rlClientName as string | null) || '').trim() || company.name;
+    const chybi = missingRodnyListFields({ ...fields, clientName: klientNaRL });
 
     if (chybi.length > 0) {
       const message = missingFieldsMessage(chybi);
@@ -238,7 +242,7 @@ async function vytvorRodnyList(
     const hudba = musicLines(fields);
     const spotName = fields.spotName.trim();
     const pdf = renderRodnyListPdf({
-      clientName: company.name,
+      clientName: klientNaRL,
       spotName,
       spotLength: formatSpotLength(fields.spotLengthSeconds),
       director: fields.directorName.trim(),
@@ -270,7 +274,7 @@ async function vytvorRodnyList(
         url: ulozeno.url,
         driveFileId: drive?.id ?? null,
         driveUrl: drive?.webViewLink ?? null,
-        clientName: company.name,
+        clientName: klientNaRL,
         spotName,
         spotLength: formatSpotLength(fields.spotLengthSeconds),
         director: fields.directorName.trim(),
@@ -476,7 +480,8 @@ export async function nahledRodnehoListu(
     }
 
     const fields = fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
-    const chybi = missingRodnyListFields({ ...fields, clientName: company.name });
+    const klientNaRL = ((meta?.rlClientName as string | null) || '').trim() || company.name;
+    const chybi = missingRodnyListFields({ ...fields, clientName: klientNaRL });
     if (chybi.length > 0) {
       return { ok: false, reason: 'MISSING_FIELDS', message: missingFieldsMessage(chybi) };
     }
@@ -484,7 +489,7 @@ export async function nahledRodnehoListu(
     const hudba = musicLines(fields);
     const spotName = fields.spotName.trim();
     const pdf = renderRodnyListPdf({
-      clientName: company.name,
+      clientName: klientNaRL,
       spotName,
       spotLength: formatSpotLength(fields.spotLengthSeconds),
       director: fields.directorName.trim(),

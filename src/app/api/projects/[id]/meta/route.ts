@@ -47,6 +47,8 @@ const schema = z.object({
 
   // --- Rodny list reklamniho spotu (zadani 9. 9. 2026) ---
   spotName: z.string().trim().max(300).optional(),
+  /** Klient na Rodnem listu - predvyplneny nazvem firmy, jde prepsat. */
+  rlClientName: z.string().trim().max(300).optional(),
   /** Prichazi jako text z <input type="number"> - prazdny retezec = smazat. */
   spotLengthSeconds: z.union([z.string().trim(), z.number()]).optional(),
   directorName: z.string().trim().max(200).optional(),
@@ -245,6 +247,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       if (dokonceny !== null) values.finished = dokonceny;
     }
     text('spotName', data.spotName);
+    text('rlClientName', data.rlClientName);
     text('directorName', data.directorName);
     text('musicTitle', data.musicTitle);
     text('musicAuthor', data.musicAuthor);

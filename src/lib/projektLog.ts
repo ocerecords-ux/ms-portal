@@ -30,6 +30,7 @@ export const POPISKY_POLI: Record<string, string> = {
   pageCount: 'Normostrany',
   finished: 'Dokončeno',
   spotName: 'Název spotu',
+  rlClientName: 'Klient na RL',
   spotLengthSeconds: 'Délka spotu',
   directorName: 'Režie',
   musicTitle: 'Hudba - název',
