@@ -8,7 +8,9 @@ import {
   rodnyListFileName,
   RL_TRIGGER_STATUS,
 } from '../src/lib/rodnyList';
-import { fitValue, renderRodnyListPdf, rodnyListRows, textWidth } from '../src/lib/rodnyListPdf';
+import { renderRodnyListPdf, rodnyListRows } from '../src/lib/rodnyListPdf';
+// Zalamani a mereni textu se presunulo do spolecneho kreslitka (10. 9. 2026).
+import { fitValue, textWidth } from '../src/lib/pdf/kreslitko';
 import { FONT_BOLD, FONT_REGULAR } from '../src/lib/rodnyListAssets';
 
 // Testy Rodneho listu (zadani 9. 9. 2026). Bezi bez databaze i bez site -
