@@ -143,7 +143,7 @@ async function InternalProjektySection({ isAdmin }: { isAdmin: boolean }) {
         priority: m.priority,
         projectType: m.projectType,
         managerName: m.manager ? m.manager.name || m.manager.email : null,
-        managerPhotoUrl: m.managerId ? odkazNaFotku(m.managerId, m.manager?.photoUrl) : null,
+        managerPhotoUrl: m.managerUserId ? odkazNaFotku(m.managerUserId, m.manager?.photoUrl) : null,
       },
     ]),
   );
