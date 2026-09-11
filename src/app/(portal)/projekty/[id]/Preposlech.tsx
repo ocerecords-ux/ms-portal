@@ -231,6 +231,8 @@ export function Preposlech({
    */
   const casVyberuRef = useRef<number | null>(null);
   const [uklada, setUklada] = useState(false);
+  /** Odškrtnutí PŘEPOSLECHNUTO se ptá - je to krok zpátky ve velké věci. */
+  const [rusiPreposlech, setRusiPreposlech] = useState(false);
   const [chybaHlaska, setChybaHlaska] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -956,17 +958,67 @@ export function Preposlech({
           <span className="text-[11px] font-heading text-white/60 hidden lg:inline">
             Mezerník = přehrát · ←/→ = ±5 s · E = přidat chybu · označ text myší = chyba v tom místě
           </span>
-          {!jenPoslech && (
-            <button
-              type="button"
-              onClick={prepniPreposlechnuto}
-              className={`font-heading font-semibold text-xs rounded-lg px-3 py-1.5 transition-colors ${
-                stav.reviewed ? 'bg-brand-green text-onAccent' : 'border border-white/40 text-white hover:border-white'
-              }`}
-            >
-              {stav.reviewed ? '☑ Přeposlechnuto' : '☐ Přeposlechnuto'}
-            </button>
-          )}
+          {/* PŘEPOSLECHNUTO je velká akce - tímhle se za nahrávku někdo
+              postaví (zadání 11. 9. 2026: „to tlačítko přeposlechnuto by
+              mělo asi být výraznější, je to velká akce"). Proto plné
+              tlačítko, ne obtažený proužek, a odškrtnutí se ptá. */}
+          {!jenPoslech &&
+            (stav.reviewed ? (
+              <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2 bg-brand-green text-onAccent font-heading font-bold text-sm rounded-lg px-4 py-2.5">
+                  <span className="grid place-items-center w-5 h-5 rounded-full bg-onAccent/15">✓</span>
+                  Přeposlechnuto
+                </span>
+                <span className="text-[11px] font-body text-white/70 leading-tight">
+                  {stav.reviewedByName ?? 'Mediaspace'}
+                  {stav.reviewedAt && (
+                    <>
+                      <br />
+                      {new Date(stav.reviewedAt).toLocaleDateString('cs-CZ')}
+                    </>
+                  )}
+                </span>
+                {rusiPreposlech ? (
+                  <span className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRusiPreposlech(false);
+                        void prepniPreposlechnuto();
+                      }}
+                      className="font-heading font-semibold text-xs rounded-lg bg-white text-brand-purpleDeep px-3 py-1.5"
+                    >
+                      Opravdu zrušit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRusiPreposlech(false)}
+                      className="font-heading text-xs text-white/70 hover:text-white"
+                    >
+                      Ne
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setRusiPreposlech(true)}
+                    title="Zrušit označení"
+                    className="font-heading text-xs text-white/60 hover:text-white underline"
+                  >
+                    zrušit
+                  </button>
+                )}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void prepniPreposlechnuto()}
+                className="flex items-center gap-2 bg-white text-brand-purpleDeep font-heading font-bold text-sm rounded-lg px-5 py-2.5 shadow-sm hover:bg-brand-green hover:text-onAccent transition-colors"
+              >
+                <span className="grid place-items-center w-5 h-5 rounded border-2 border-current" aria-hidden="true" />
+                Označit jako přeposlechnuté
+              </button>
+            ))}
         </div>
       </div>
 
