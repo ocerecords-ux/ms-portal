@@ -22,7 +22,9 @@ import { ProjectTabs, type ProjectTab } from './ProjectTabs';
 import { RodnyListSection } from './RodnyListSection';
 import { HistorieProjektu } from './HistorieProjektu';
 import { Preposlech } from './Preposlech';
+import { OdkazProKlienta } from './OdkazProKlienta';
 import { nactiPreposlech } from '@/lib/preposlechServer';
+import { stavOdkazu } from '@/lib/preposlechOdkaz';
 import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
 import { findInternalProject } from '@/lib/caflouProjectsServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
@@ -459,17 +461,24 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // AudioTagger - preposlech nahravky proti textu (zadani 11. 9. 2026).
   // Jen pro tym Mediaspace; zaznamy chyb patri tomuhle projektu.
   if (isInternalRole(session.user.role)) {
-    const preposlech = await nactiPreposlech(caflouProjectId);
+    const [preposlech, odkaz] = await Promise.all([
+      nactiPreposlech(caflouProjectId),
+      stavOdkazu(caflouProjectId),
+    ]);
     tabs.push({
       key: 'preposlech',
       label: 'Přeposlech',
       count: preposlech.chyby.length,
       content: (
-        <Preposlech
-          caflouProjectId={caflouProjectId}
-          projectName={metaPoSync?.name || project?.name || `Projekt ${caflouProjectId}`}
-          pocatecniStav={preposlech}
-        />
+        <div className="flex flex-col gap-4">
+          {/* Odkaz, kterym klient posloucha - viz OdkazProKlienta.tsx. */}
+          <OdkazProKlienta caflouProjectId={caflouProjectId} pocatecni={odkaz} />
+          <Preposlech
+            caflouProjectId={caflouProjectId}
+            projectName={metaPoSync?.name || project?.name || `Projekt ${caflouProjectId}`}
+            pocatecniStav={preposlech}
+          />
+        </div>
       ),
     });
   }

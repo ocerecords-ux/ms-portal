@@ -6,20 +6,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
  * AudioTagger — přeposlech nahrávky proti textu (zadání 11. 9. 2026).
  *
  * Přeneseno z prototypu (viz projektový dokument audiotagger-v1-prototype.md)
- * do portálu. Proti prototypu se změnilo to podstatné: ZÁZNAMY CHYB PATŘÍ
- * PROJEKTU a leží v databázi, takže přežijí obnovení stránky i výměnu
- * počítače a vidí je celý tým. Dřív žily jen v localStorage jednoho
- * prohlížeče.
+ * do portálu. Proti prototypu se změnily dvě podstatné věci:
  *
- * Stopy a PDF se pořád vybírají ze souborů — prohlížeč je uložit neumí
- * a načítání z Disku je samostatný krok. Záznam proto ukazuje na stopu jejím
- * POŘADÍM a nese i její název; když se příště načtou soubory ve stejném
- * pořadí, značky sednou na místo, a když ne, je to v seznamu vidět.
+ * 1. ZÁZNAMY CHYB PATŘÍ PROJEKTU a leží v databázi — přežijí obnovení stránky
+ *    i výměnu počítače a vidí je celý tým. Dřív žily v localStorage.
+ * 2. STOPY A TEXT SI PORTÁL BERE SÁM ze složky projektu na Disku. Pořadí se
+ *    řídí názvem („01_", „02_"…), text je PDF končící „_RE". Ruční výběr
+ *    souborů zůstal jako záloha, kdyby složka nebyla po ruce.
  *
- * ZVUK je psaný rovnou na Web Audio API, ne přes knihovnu — AudioBufferSource
- * neumí pauzu, takže se pozice počítá ručně. Zvukový soubor se čte přes
- * File.arrayBuffer(), ne fetchem; v prototypu to byla nutnost (sandbox), tady
- * je to prostě nejkratší cesta bez další závislosti.
+ * ZVUK SE PŘEHRÁVÁ PROUDEM přes obyčejný <audio>, ne přes dekódování celé
+ * stopy do paměti jako v prototypu. Hodinová nahrávka má po rozbalení přes
+ * gigabajt a prohlížeč by to položil; takhle se stahuje jen to, co zrovna
+ * hraje, a jde v ní skákat.
+ *
+ * KŘIVKA se počítá zvlášť a jen pro vybranou stopu: soubor se stáhne a
+ * dekóduje do 8 kHz mono (OfflineAudioContext), což je pro obrázek dost a
+ * paměť to unese. U příliš velkých souborů se nekreslí vůbec a zůstane
+ * časová osa se značkami.
  */
 
 type ChybaZeServeru = {
@@ -41,14 +44,25 @@ type Stav = {
 };
 
 type Stopa = {
-  id: number;
   name: string;
-  file: File;
-  audioBuffer: AudioBuffer | null;
+  /** Odkaz, ze kterého se stopa přehrává (Disk přes portál, nebo blob z disku). */
+  url: string;
+  /** Velikost v bajtech — podle ní se rozhoduje, jestli kreslit křivku. */
+  velikost: number | null;
   peaks: [number, number][] | null;
+  /** Křivku už zkoušíme spočítat / spočítat nešla. */
+  krivkaStav: 'ceka' | 'pocita' | 'hotovo' | 'nejde';
 };
 
 const DELKA_STOPY_V_CUBASE = 3600; // stopa 01 -> 0 h, 02 -> 1 h, 03 -> 2 h…
+
+/** Nad tuhle velikost se křivka nekreslí - dekódování by sežralo paměť. */
+const STROP_PRO_KRIVKU = 150 * 1024 * 1024;
+
+/** Vzorkování pro křivku. Na obrázek široký pár set bodů to bohatě stačí. */
+const KRIVKA_HZ = 8000;
+
+const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289';
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
@@ -67,37 +81,10 @@ function hms(sec: number): string {
 }
 
 /**
- * Zmenší dekódovaný zvuk na pevný počet sloupečků, aby kreslení waveformy
- * nezáviselo na délce stopy. Počítá se jednou po dekódování.
- */
-function spocitejPeaks(buffer: AudioBuffer, pocet = 640): [number, number][] {
-  const data = buffer.getChannelData(0);
-  const velikost = data.length / pocet;
-  const strop = 48; // kolik vzorku se nejvys prohlida v jednom sloupecku
-  const peaks: [number, number][] = new Array(pocet);
-  for (let i = 0; i < pocet; i += 1) {
-    const od = Math.floor(i * velikost);
-    const do_ = Math.max(od + 1, Math.floor((i + 1) * velikost));
-    const krok = Math.max(1, Math.floor((do_ - od) / strop));
-    let min = 0;
-    let max = 0;
-    for (let j = od; j < do_; j += krok) {
-      const v = data[j];
-      if (v < min) min = v;
-      if (v > max) max = v;
-    }
-    peaks[i] = [min, max];
-  }
-  return peaks;
-}
-
-const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289';
-
-/**
  * Natáhne pdf.js z CDN až ve chvíli, kdy je potřeba.
  *
  * Schválně to NENÍ `import('https://…')`: takový import se snaží přeložit
- * balíčkovač i TypeScript, a ani jeden vzdálenou adresu neumí. Modul se proto
+ * balíčkovač i TypeScript a ani jeden vzdálenou adresu neumí. Modul se proto
  * vkládá jako obyčejný `<script type="module">`, který si hotovou knihovnu
  * odloží na `window`. Načte se jen jednou za život stránky.
  */
@@ -107,12 +94,15 @@ function nactiPdfJs(): Promise<any> {
 
   return new Promise((hotovo, chyba) => {
     const hlaska = 'preposlech-pdfjs';
-    const posluchac = (e: Event) => {
-      const detail = (e as CustomEvent<{ ok: boolean }>).detail;
-      if (detail?.ok && okno.__pdfjs) hotovo(okno.__pdfjs);
-      else chyba(new Error('pdf.js se nepodařilo načíst'));
-    };
-    window.addEventListener(hlaska, posluchac, { once: true });
+    window.addEventListener(
+      hlaska,
+      (e: Event) => {
+        const detail = (e as CustomEvent<{ ok: boolean }>).detail;
+        if (detail?.ok && okno.__pdfjs) hotovo(okno.__pdfjs);
+        else chyba(new Error('pdf.js se nepodařilo načíst'));
+      },
+      { once: true },
+    );
 
     const script = document.createElement('script');
     script.type = 'module';
@@ -125,113 +115,119 @@ function nactiPdfJs(): Promise<any> {
   });
 }
 
+/**
+ * Stáhne stopu a spočítá z ní křivku. Dekóduje se do 8 kHz mono, takže
+ * z hodinové nahrávky vznikne pár desítek MB místo gigabajtu.
+ */
+async function spocitejKrivku(url: string, pocet = 640): Promise<[number, number][]> {
+  const odpoved = await fetch(url);
+  if (!odpoved.ok) throw new Error('nelze stáhnout');
+  const data = await odpoved.arrayBuffer();
+
+  const Offline =
+    (window as unknown as { OfflineAudioContext?: typeof OfflineAudioContext; webkitOfflineAudioContext?: typeof OfflineAudioContext })
+      .OfflineAudioContext ??
+    (window as unknown as { webkitOfflineAudioContext: typeof OfflineAudioContext }).webkitOfflineAudioContext;
+  const ctx = new Offline(1, KRIVKA_HZ, KRIVKA_HZ);
+  const buffer = await ctx.decodeAudioData(data);
+
+  const vzorky = buffer.getChannelData(0);
+  const velikost = vzorky.length / pocet;
+  const strop = 64;
+  const peaks: [number, number][] = new Array(pocet);
+  for (let i = 0; i < pocet; i += 1) {
+    const od = Math.floor(i * velikost);
+    const do_ = Math.max(od + 1, Math.floor((i + 1) * velikost));
+    const krok = Math.max(1, Math.floor((do_ - od) / strop));
+    let min = 0;
+    let max = 0;
+    for (let j = od; j < do_; j += krok) {
+      const v = vzorky[j];
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    peaks[i] = [min, max];
+  }
+  return peaks;
+}
+
 export function Preposlech({
   caflouProjectId,
   projectName,
   pocatecniStav,
+  /** Klientský režim: poslouchá a zapisuje, ale se stopami nehýbe. */
+  jenPoslech = false,
+  /** Vstupenka z mailu. Když je, jde s každým požadavkem místo přihlášení. */
+  token = null,
 }: {
   caflouProjectId: string;
   projectName: string;
   pocatecniStav: Stav;
+  jenPoslech?: boolean;
+  token?: string | null;
 }) {
   const [stav, setStav] = useState<Stav>(pocatecniStav);
   const [stopy, setStopy] = useState<Stopa[]>([]);
-  const [aktivniStopa, setAktivniStopa] = useState<number | null>(null);
+  const [aktivni, setAktivni] = useState<number | null>(null);
   const [hraje, setHraje] = useState(false);
   const [pozice, setPozice] = useState(0);
   const [delka, setDelka] = useState(0);
+
+  const [zDisku, setZDisku] = useState<'ceka' | 'nacitam' | 'hotovo' | 'nejde'>('ceka');
+  const [poznamka, setPoznamka] = useState<string | null>(null);
+  const [slozkaUrl, setSlozkaUrl] = useState<string | null>(null);
+
+  const [pdfNazev, setPdfNazev] = useState('');
+  const [pdfStran, setPdfStran] = useState(0);
+  const [pdfStrana, setPdfStrana] = useState(1);
+
   const [formOtevreny, setFormOtevreny] = useState(false);
   const [popis, setPopis] = useState('');
   const [zachyt, setZachyt] = useState<{ trackIndex: number; trackName: string; localTime: number; pdfPage: number | null } | null>(null);
   const [uklada, setUklada] = useState(false);
   const [chybaHlaska, setChybaHlaska] = useState<string | null>(null);
 
-  // PDF
-  const [pdfNazev, setPdfNazev] = useState('');
-  const [pdfStran, setPdfStran] = useState(0);
-  const [pdfStrana, setPdfStrana] = useState(1);
-
-  const ctxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const zdrojRef = useRef<AudioBufferSourceNode | null>(null);
-  const bufferRef = useRef<AudioBuffer | null>(null);
-  const zacatekCtxRef = useRef(0);
-  const offsetRef = useRef(0);
-  const hrajeRef = useRef(false);
-  const rafRef = useRef<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const stopyRef = useRef<Stopa[]>([]);
   const aktivniRef = useRef<number | null>(null);
   const pdfDocRef = useRef<any>(null);
   const pdfObalRef = useRef<HTMLDivElement | null>(null);
-  const ekvalizerRef = useRef<HTMLCanvasElement | null>(null);
   const popisRef = useRef<HTMLTextAreaElement | null>(null);
+  const vytvoreneUrl = useRef<string[]>([]);
 
   useEffect(() => {
     stopyRef.current = stopy;
   }, [stopy]);
   useEffect(() => {
-    aktivniRef.current = aktivniStopa;
-  }, [aktivniStopa]);
+    aktivniRef.current = aktivni;
+  }, [aktivni]);
 
-  function ctx(): AudioContext {
-    if (!ctxRef.current) {
-      const W = window as unknown as { AudioContext: typeof AudioContext; webkitAudioContext?: typeof AudioContext };
-      ctxRef.current = new (W.AudioContext || W.webkitAudioContext!)();
-    }
-    return ctxRef.current;
-  }
+  // Blob URL z rucne vybranych souboru je potreba po sobe uklidit.
+  useEffect(
+    () => () => {
+      vytvoreneUrl.current.forEach((u) => URL.revokeObjectURL(u));
+    },
+    [],
+  );
 
-  function analyser(): AnalyserNode {
-    const c = ctx();
-    if (!analyserRef.current) {
-      const a = c.createAnalyser();
-      a.fftSize = 64;
-      a.smoothingTimeConstant = 0.75;
-      a.connect(c.destination);
-      analyserRef.current = a;
-    }
-    return analyserRef.current;
-  }
+  const zaklad = `/api/projekty/${encodeURIComponent(caflouProjectId)}/preposlech`;
 
-  const aktualniCas = useCallback(() => {
-    if (!bufferRef.current) return 0;
-    if (hrajeRef.current && ctxRef.current) {
-      return Math.min(
-        bufferRef.current.duration,
-        offsetRef.current + (ctxRef.current.currentTime - zacatekCtxRef.current),
-      );
-    }
-    return offsetRef.current;
-  }, []);
+  /**
+   * Klient z mailu není přihlášený, takže se ke každé adrese přilepí token.
+   * Týmu se nepřilepuje nic a pozná se podle sezení jako dosud.
+   */
+  const sKlicem = useCallback(
+    (url: string): string => (token ? `${url}${url.includes('?') ? '&' : '?'}k=${encodeURIComponent(token)}` : url),
+    [token],
+  );
 
-  function zastavZdroj() {
-    const z = zdrojRef.current;
-    if (!z) return;
-    z.onended = null;
-    try {
-      z.stop();
-    } catch {
-      // uz skoncil sam
-    }
-    z.disconnect();
-    zdrojRef.current = null;
-  }
+  /* ---------- křivka ---------- */
 
-  const pauza = useCallback(() => {
-    if (!hrajeRef.current) return;
-    offsetRef.current = aktualniCas();
-    zastavZdroj();
-    hrajeRef.current = false;
-    setHraje(false);
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-  }, [aktualniCas]);
-
-  /** Vykreslí waveformu jedné stopy i se značkami chyb a pozicí přehrávání. */
   const kresliStopu = useCallback(
     (index: number) => {
       const canvas = document.querySelector<HTMLCanvasElement>(`canvas[data-stopa="${index}"]`);
       const stopa = stopyRef.current[index];
-      if (!canvas || !stopa?.peaks) return;
+      if (!canvas || !stopa) return;
 
       const dpr = window.devicePixelRatio || 1;
       const w = canvas.clientWidth || 600;
@@ -248,15 +244,25 @@ export function Preposlech({
 
       const stred = h / 2;
       const jeAktivni = index === aktivniRef.current;
-      const trvani = stopa.audioBuffer?.duration || 1;
-      const kurzor = jeAktivni ? (aktualniCas() / trvani) * w : -1;
+      const trvani = jeAktivni && delka > 0 ? delka : 0;
+      const kurzor = jeAktivni && trvani ? (pozice / trvani) * w : -1;
 
-      const sirkaSloupce = w / stopa.peaks.length;
-      for (let i = 0; i < stopa.peaks.length; i += 1) {
-        const [mn, mx] = stopa.peaks[i];
-        const x = i * sirkaSloupce;
-        c.fillStyle = jeAktivni && x < kurzor ? '#7B55FF' : '#a29c8f';
-        c.fillRect(x, stred - mx * stred, Math.max(1, sirkaSloupce - 0.4), Math.max(1, (mx - mn) * stred));
+      if (stopa.peaks) {
+        const sirkaSloupce = w / stopa.peaks.length;
+        for (let i = 0; i < stopa.peaks.length; i += 1) {
+          const [mn, mx] = stopa.peaks[i];
+          const x = i * sirkaSloupce;
+          c.fillStyle = jeAktivni && x < kurzor ? '#7B55FF' : '#a29c8f';
+          c.fillRect(x, stred - mx * stred, Math.max(1, sirkaSloupce - 0.4), Math.max(1, (mx - mn) * stred));
+        }
+      } else {
+        // Bez krivky aspon casova osa, at je kam klikat a kam kreslit znacky.
+        c.fillStyle = '#d8d4cc';
+        c.fillRect(0, stred - 1, w, 2);
+        if (jeAktivni && kurzor > 0) {
+          c.fillStyle = '#7B55FF';
+          c.fillRect(0, stred - 1, kurzor, 2);
+        }
       }
 
       // Znacky chyb - podle poradi stopy, ne podle nejakeho ID.
@@ -264,234 +270,151 @@ export function Preposlech({
       stav.chyby
         .filter((ch) => ch.trackIndex === index + 1)
         .forEach((ch) => {
+          if (!trvani) return;
           c.fillRect(Math.max(0, (ch.localTime / trvani) * w - 1.5), 0, 3, h);
         });
 
       if (jeAktivni && kurzor >= 0) c.fillRect(Math.max(0, kurzor - 0.5), 0, 1, h);
       c.restore();
     },
-    [aktualniCas, stav.chyby],
+    [delka, pozice, stav.chyby],
   );
 
   const kresliVse = useCallback(() => {
     stopyRef.current.forEach((_, i) => kresliStopu(i));
   }, [kresliStopu]);
 
-  /** Ekvalizér je ozdoba — bere data z právě hrající stopy, v klidu leží. */
-  const kresliEkvalizer = useCallback(() => {
-    const canvas = ekvalizerRef.current;
-    if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const w = canvas.clientWidth || 150;
-    const h = canvas.clientHeight || 38;
-    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
-    }
-    const c = canvas.getContext('2d');
-    if (!c) return;
-    c.save();
-    c.scale(dpr, dpr);
-    c.clearRect(0, 0, w, h);
-
-    const pocet = 20;
-    const mezera = 2;
-    const sirka = Math.max(1, (w - mezera * (pocet - 1)) / pocet);
-
-    if (analyserRef.current && hrajeRef.current) {
-      const data = new Uint8Array(analyserRef.current.frequencyBinCount);
-      analyserRef.current.getByteFrequencyData(data);
-      const krok = Math.max(1, Math.floor(data.length / pocet));
-      for (let i = 0; i < pocet; i += 1) {
-        const v = data[Math.min(data.length - 1, i * krok)] / 255;
-        const vyska = Math.max(2, v * h);
-        c.fillStyle = v > 0.72 ? '#1FDF67' : '#7B55FF';
-        c.fillRect(i * (sirka + mezera), h - vyska, sirka, vyska);
-      }
-    } else {
-      c.fillStyle = '#c7c2b7';
-      for (let i = 0; i < pocet; i += 1) c.fillRect(i * (sirka + mezera), h - 3, sirka, 3);
-    }
-    c.restore();
-  }, []);
-
-  const tik = useCallback(() => {
-    setPozice(aktualniCas());
-    if (aktivniRef.current !== null) kresliStopu(aktivniRef.current);
-    kresliEkvalizer();
-    if (hrajeRef.current) rafRef.current = requestAnimationFrame(tik);
-  }, [aktualniCas, kresliEkvalizer, kresliStopu]);
-
-  const prehrajOd = useCallback(
-    (odkud: number) => {
-      const buffer = bufferRef.current;
-      if (!buffer) return;
-      const c = ctx();
-      zastavZdroj();
-      const zdroj = c.createBufferSource();
-      zdroj.buffer = buffer;
-      zdroj.connect(analyser());
-      const bezpecny = Math.max(0, Math.min(odkud, Math.max(0, buffer.duration - 0.02)));
-      zdroj.start(0, bezpecny);
-      zdroj.onended = () => {
-        if (zdrojRef.current !== zdroj) return; // mezitim se preplo jinam
-        hrajeRef.current = false;
-        offsetRef.current = buffer.duration;
-        setHraje(false);
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        kresliEkvalizer();
-      };
-      zdrojRef.current = zdroj;
-      zacatekCtxRef.current = c.currentTime;
-      offsetRef.current = bezpecny;
-      hrajeRef.current = true;
-      setHraje(true);
-      tik();
-    },
-    [kresliEkvalizer, tik],
-  );
-
-  const skoc = useCallback(
-    (kam: number) => {
-      const buffer = bufferRef.current;
-      if (!buffer) return;
-      const cil = Math.max(0, Math.min(kam, buffer.duration));
-      if (hrajeRef.current) prehrajOd(cil);
-      else {
-        offsetRef.current = cil;
-        setPozice(cil);
-        if (aktivniRef.current !== null) kresliStopu(aktivniRef.current);
-      }
-    },
-    [kresliStopu, prehrajOd],
-  );
-
-  function prehrajNeboPauzni() {
-    if (!bufferRef.current) return;
-    if (hrajeRef.current) {
-      pauza();
-      kresliEkvalizer();
-    } else {
-      void ctx().resume();
-      prehrajOd(offsetRef.current >= bufferRef.current.duration - 0.02 ? 0 : offsetRef.current);
-    }
-  }
-
-  /** Vybere stopu (a případně na ní rovnou skočí na čas). */
-  const vyberStopu = useCallback(
-    async (index: number, skocNa?: number) => {
-      const stopa = stopyRef.current[index];
-      if (!stopa) return;
-      pauza();
-      setAktivniStopa(index);
-      aktivniRef.current = index;
-
-      try {
-        if (!stopa.audioBuffer) {
-          const data = await stopa.file.arrayBuffer();
-          const buffer = await ctx().decodeAudioData(data);
-          stopa.audioBuffer = buffer;
-          stopa.peaks = spocitejPeaks(buffer);
-          setStopy((s) => [...s]);
-        }
-        if (aktivniRef.current !== index) return; // clovek mezitim preplo jinam
-        bufferRef.current = stopa.audioBuffer;
-        offsetRef.current = typeof skocNa === 'number' ? Math.max(0, Math.min(skocNa, stopa.audioBuffer!.duration)) : 0;
-        setDelka(stopa.audioBuffer!.duration);
-        setPozice(offsetRef.current);
-        kresliStopu(index);
-      } catch {
-        setChybaHlaska(`Stopu „${stopa.name}" se nepodařilo přečíst — je to opravdu zvukový soubor?`);
-      }
-    },
-    [kresliStopu, pauza],
-  );
-
-  function pridejStopy(seznam: FileList) {
-    const soubory = Array.from(seznam).sort((a, b) =>
-      a.name.localeCompare(b.name, 'cs', { numeric: true }),
-    );
-    setStopy((soucasne) => {
-      const dalsi = [...soucasne];
-      soubory.forEach((file, i) => {
-        dalsi.push({ id: soucasne.length + i + 1, name: file.name, file, audioBuffer: null, peaks: null });
-      });
-      stopyRef.current = dalsi;
-      return dalsi;
-    });
-    // Prvni nactena stopa se rovnou vybere, at neni potreba klikat navic.
-    if (aktivniRef.current === null && soubory.length > 0) {
-      setTimeout(() => void vyberStopu(0), 0);
-    } else {
-      setTimeout(() => kresliVse(), 0);
-    }
-  }
-
-  /** Dekóduje stopy na pozadí, aby se waveformy objevily samy. */
   useEffect(() => {
+    kresliVse();
+  }, [kresliVse, stopy, pozice, delka, stav.chyby]);
+
+  useEffect(() => {
+    window.addEventListener('resize', kresliVse);
+    return () => window.removeEventListener('resize', kresliVse);
+  }, [kresliVse]);
+
+  /** Křivku počítáme až pro vybranou stopu — ne pro všechny najednou. */
+  useEffect(() => {
+    if (aktivni === null) return;
+    const stopa = stopyRef.current[aktivni];
+    if (!stopa || stopa.krivkaStav !== 'ceka') return;
+
+    if (stopa.velikost !== null && stopa.velikost > STROP_PRO_KRIVKU) {
+      setStopy((s) => s.map((x, i) => (i === aktivni ? { ...x, krivkaStav: 'nejde' } : x)));
+      return;
+    }
+
     let zruseno = false;
-    (async () => {
-      for (let i = 0; i < stopyRef.current.length; i += 1) {
-        const stopa = stopyRef.current[i];
-        if (stopa.audioBuffer || zruseno) continue;
-        try {
-          const data = await stopa.file.arrayBuffer();
-          const buffer = await ctx().decodeAudioData(data);
-          if (zruseno) return;
-          stopa.audioBuffer = buffer;
-          stopa.peaks = spocitejPeaks(buffer);
-          setStopy((s) => [...s]);
-          kresliStopu(i);
-        } catch {
-          // Nectitelnou stopu proste necham bez waveformy - nema smysl kvuli
-          // jednomu souboru zastavit celou praci.
-        }
-      }
-    })();
+    setStopy((s) => s.map((x, i) => (i === aktivni ? { ...x, krivkaStav: 'pocita' } : x)));
+    spocitejKrivku(stopa.url)
+      .then((peaks) => {
+        if (zruseno) return;
+        setStopy((s) => s.map((x, i) => (i === aktivni ? { ...x, peaks, krivkaStav: 'hotovo' } : x)));
+      })
+      .catch(() => {
+        if (zruseno) return;
+        setStopy((s) => s.map((x, i) => (i === aktivni ? { ...x, krivkaStav: 'nejde' } : x)));
+      });
+
     return () => {
       zruseno = true;
     };
-  }, [stopy.length, kresliStopu]);
+  }, [aktivni]);
+
+  /* ---------- přehrávání ---------- */
+
+  const vyberStopu = useCallback((index: number, skocNa?: number) => {
+    const stopa = stopyRef.current[index];
+    const audio = audioRef.current;
+    if (!stopa || !audio) return;
+    setAktivni(index);
+    aktivniRef.current = index;
+    if (audio.src !== stopa.url) {
+      audio.src = stopa.url;
+      audio.load();
+    }
+    setDelka(Number.isFinite(audio.duration) ? audio.duration : 0);
+    if (typeof skocNa === 'number') {
+      const nastav = () => {
+        audio.currentTime = skocNa;
+        setPozice(skocNa);
+      };
+      if (audio.readyState >= 1) nastav();
+      else audio.addEventListener('loadedmetadata', nastav, { once: true });
+    } else {
+      audio.currentTime = 0;
+      setPozice(0);
+    }
+  }, []);
+
+  function prehrajNeboPauzni() {
+    const audio = audioRef.current;
+    if (!audio || aktivni === null) return;
+    if (audio.paused) void audio.play().catch(() => setChybaHlaska('Nahrávku se nepodařilo přehrát.'));
+    else audio.pause();
+  }
+
+  const skoc = useCallback((kam: number) => {
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(audio.duration)) return;
+    const cil = Math.max(0, Math.min(kam, audio.duration));
+    audio.currentTime = cil;
+    setPozice(cil);
+  }, []);
+
+  /* ---------- načtení ze složky projektu ---------- */
+
+  const nactiZDisku = useCallback(async () => {
+    setZDisku('nacitam');
+    setChybaHlaska(null);
+    try {
+      const res = await fetch(sKlicem(`${zaklad}/stopy`));
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setZDisku('nejde');
+        setPoznamka(data?.error || 'Složku projektu se nepodařilo načíst.');
+        return;
+      }
+
+      const nove: Stopa[] = (data.stopy ?? []).map((s: { id: string; name: string; velikost: number | null }) => ({
+        name: s.name,
+        url: sKlicem(`${zaklad}/soubor?soubor=${encodeURIComponent(s.id)}`),
+        velikost: s.velikost,
+        peaks: null,
+        krivkaStav: 'ceka' as const,
+      }));
+
+      setStopy(nove);
+      stopyRef.current = nove;
+      setSlozkaUrl(data.slozkaUrl ?? null);
+      setPoznamka(data.poznamkaKTextu ?? null);
+      setZDisku('hotovo');
+
+      if (nove.length > 0) setTimeout(() => vyberStopu(0), 0);
+      if (data.text?.id) {
+        void nactiPdfZUrl(sKlicem(`${zaklad}/soubor?soubor=${encodeURIComponent(data.text.id)}`), data.text.name);
+      }
+    } catch {
+      setZDisku('nejde');
+      setPoznamka('Složku projektu se nepodařilo načíst.');
+    }
+  }, [zaklad, sKlicem, vyberStopu]);
 
   useEffect(() => {
-    kresliVse();
-    kresliEkvalizer();
-  }, [kresliVse, kresliEkvalizer, stav.chyby]);
-
-  useEffect(() => {
-    const prekresli = () => {
-      kresliVse();
-      kresliEkvalizer();
-    };
-    window.addEventListener('resize', prekresli);
-    return () => window.removeEventListener('resize', prekresli);
-  }, [kresliVse, kresliEkvalizer]);
+    void nactiZDisku();
+    // Schvalne jen pri otevreni - dalsi nacteni si clovek vyzada tlacitkem.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ---------- PDF ---------- */
-
-  async function nactiPdf(file: File) {
-    try {
-      const pdfjs = await nactiPdfJs();
-      pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
-      const data = await file.arrayBuffer();
-      const doc = await pdfjs.getDocument({ data }).promise;
-      pdfDocRef.current = doc;
-      setPdfNazev(file.name);
-      setPdfStran(doc.numPages);
-      setPdfStrana(1);
-      await vykresliPdf(doc);
-    } catch {
-      setChybaHlaska(`PDF „${file.name}" se nepodařilo načíst.`);
-    }
-  }
 
   async function vykresliPdf(doc: any) {
     const obal = pdfObalRef.current;
     if (!obal) return;
     obal.innerHTML = '';
     const prvni = await doc.getPage(1);
-    const sirkaPanelu = obal.clientWidth - 32;
-    const zvetseni = Math.max(0.3, Math.min(4, sirkaPanelu / prvni.getViewport({ scale: 1 }).width));
+    const sirka = obal.clientWidth - 32;
+    const zvetseni = Math.max(0.3, Math.min(4, sirka / prvni.getViewport({ scale: 1 }).width));
 
     for (let n = 1; n <= doc.numPages; n += 1) {
       const stranka = await doc.getPage(n);
@@ -506,12 +429,32 @@ export function Preposlech({
       ramecek.appendChild(canvas);
       const cislo = document.createElement('span');
       cislo.textContent = String(n);
-      cislo.className =
-        'absolute top-1.5 left-1.5 bg-ink/60 text-white text-[10px] font-heading rounded px-1.5 py-0.5';
+      cislo.className = 'absolute top-1.5 left-1.5 bg-ink/60 text-white text-[10px] font-heading rounded px-1.5 py-0.5';
       ramecek.appendChild(cislo);
       obal.appendChild(ramecek);
       await stranka.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
     }
+  }
+
+  async function nactiPdfZUrl(url: string, nazev: string) {
+    try {
+      const pdfjs = await nactiPdfJs();
+      pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
+      const doc = await pdfjs.getDocument({ url }).promise;
+      pdfDocRef.current = doc;
+      setPdfNazev(nazev);
+      setPdfStran(doc.numPages);
+      setPdfStrana(1);
+      await vykresliPdf(doc);
+    } catch {
+      setPoznamka(`Text „${nazev}" se nepodařilo otevřít.`);
+    }
+  }
+
+  async function nactiPdfZeSouboru(file: File) {
+    const url = URL.createObjectURL(file);
+    vytvoreneUrl.current.push(url);
+    await nactiPdfZUrl(url, file.name);
   }
 
   function naStranu(n: number) {
@@ -519,6 +462,22 @@ export function Preposlech({
     const cil = Math.min(Math.max(1, n), pdfStran);
     setPdfStrana(cil);
     pdfObalRef.current?.querySelector(`[data-strana="${cil}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /** Ruční záloha, když složka projektu není po ruce. */
+  function pridejStopyZeSouboru(seznam: FileList) {
+    const soubory = Array.from(seznam).sort((a, b) => a.name.localeCompare(b.name, 'cs', { numeric: true }));
+    const nove: Stopa[] = soubory.map((file) => {
+      const url = URL.createObjectURL(file);
+      vytvoreneUrl.current.push(url);
+      return { name: file.name, url, velikost: file.size, peaks: null, krivkaStav: 'ceka' as const };
+    });
+    setStopy((s) => {
+      const dalsi = [...s, ...nove];
+      stopyRef.current = dalsi;
+      return dalsi;
+    });
+    if (aktivniRef.current === null && nove.length > 0) setTimeout(() => vyberStopu(0), 0);
   }
 
   /* ---------- záznamy chyb ---------- */
@@ -540,16 +499,14 @@ export function Preposlech({
     }
   }
 
-  const zaklad = `/api/projekty/${encodeURIComponent(caflouProjectId)}/preposlech`;
-
   function otevriForm() {
-    if (aktivniStopa === null || !bufferRef.current) return;
-    if (hrajeRef.current) pauza();
-    const stopa = stopyRef.current[aktivniStopa];
+    if (aktivni === null) return;
+    audioRef.current?.pause();
+    const stopa = stopyRef.current[aktivni];
     setZachyt({
-      trackIndex: aktivniStopa + 1,
+      trackIndex: aktivni + 1,
       trackName: stopa.name,
-      localTime: aktualniCas(),
+      localTime: audioRef.current?.currentTime ?? 0,
       pdfPage: pdfDocRef.current ? pdfStrana : null,
     });
     setPopis('');
@@ -560,7 +517,7 @@ export function Preposlech({
   async function ulozChybu() {
     if (!zachyt || !popis.trim() || uklada) return;
     setUklada(true);
-    const ok = await posli(zaklad, {
+    const ok = await posli(sKlicem(zaklad), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...zachyt, description: popis.trim() }),
@@ -574,22 +531,21 @@ export function Preposlech({
   }
 
   async function smazChybu(id: string) {
-    await posli(`${zaklad}?chyba=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await posli(sKlicem(`${zaklad}?chyba=${encodeURIComponent(id)}`), { method: 'DELETE' });
   }
 
   async function prepniPreposlechnuto() {
-    await posli(zaklad, {
+    await posli(sKlicem(zaklad), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reviewed: !stav.reviewed }),
     });
   }
 
-  /** Skok na chybu: přepne stopu, najede na čas a otočí PDF na stránku. */
   function skocNaChybu(ch: ChybaZeServeru) {
     const index = ch.trackIndex - 1;
     if (stopyRef.current[index]) {
-      if (index !== aktivniRef.current) void vyberStopu(index, ch.localTime);
+      if (index !== aktivniRef.current) vyberStopu(index, ch.localTime);
       else skoc(ch.localTime);
     }
     if (ch.pdfPage) naStranu(ch.pdfPage);
@@ -607,10 +563,10 @@ export function Preposlech({
         prehrajNeboPauzni();
       } else if (e.code === 'ArrowRight') {
         e.preventDefault();
-        skoc(aktualniCas() + 5);
+        skoc((audioRef.current?.currentTime ?? 0) + 5);
       } else if (e.code === 'ArrowLeft') {
         e.preventDefault();
-        skoc(aktualniCas() - 5);
+        skoc((audioRef.current?.currentTime ?? 0) - 5);
       } else if (e.key === 'e' || e.key === 'E') {
         e.preventDefault();
         otevriForm();
@@ -620,7 +576,6 @@ export function Preposlech({
     return () => window.removeEventListener('keydown', stisk);
   });
 
-  /** Stopa, na kterou záznam ukazuje, ale zrovna není načtená. */
   const chybejiciStopy = useMemo(() => {
     const nactene = new Set(stopy.map((_, i) => i + 1));
     return stav.chyby.some((ch) => !nactene.has(ch.trackIndex));
@@ -631,7 +586,19 @@ export function Preposlech({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Lišta: stav přeposlechu a počty. Fialová jako všude v portálu. */}
+      {/* Prehravac sam o sobe nic nekresli - zvuk tece proudem z Disku. */}
+      <audio
+        ref={audioRef}
+        preload="metadata"
+        onLoadedMetadata={(e) => setDelka(e.currentTarget.duration || 0)}
+        onTimeUpdate={(e) => setPozice(e.currentTarget.currentTime)}
+        onPlay={() => setHraje(true)}
+        onPause={() => setHraje(false)}
+        onEnded={() => setHraje(false)}
+        onError={() => setChybaHlaska('Stopu se nepodařilo načíst z Disku.')}
+        className="hidden"
+      />
+
       <div className="bg-brand-purple text-white rounded-card px-5 py-3 flex items-center justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">AudioTagger</h2>
@@ -640,54 +607,54 @@ export function Preposlech({
         <div className="flex items-center gap-4 flex-wrap">
           <span className="text-xs font-heading text-white/80">
             Stop: <b className="text-white">{stopy.length}</b> · Chyb:{' '}
-            <b className="text-white">{stav.chyby.length}</b> · PDF:{' '}
+            <b className="text-white">{stav.chyby.length}</b> · Text:{' '}
             <b className="text-white">{pdfNazev || '—'}</b>
           </span>
           <span className="text-[11px] font-heading text-white/60 hidden lg:inline">
             Mezerník = přehrát · ←/→ = ±5 s · E = přidat chybu
           </span>
-          <button
-            type="button"
-            onClick={prepniPreposlechnuto}
-            className={`font-heading font-semibold text-xs rounded-lg px-3 py-1.5 transition-colors ${
-              stav.reviewed
-                ? 'bg-brand-green text-onAccent'
-                : 'border border-white/40 text-white hover:border-white'
-            }`}
-          >
-            {stav.reviewed ? '☑ Přeposlechnuto' : '☐ Přeposlechnuto'}
-          </button>
+          {!jenPoslech && (
+            <button
+              type="button"
+              onClick={prepniPreposlechnuto}
+              className={`font-heading font-semibold text-xs rounded-lg px-3 py-1.5 transition-colors ${
+                stav.reviewed ? 'bg-brand-green text-onAccent' : 'border border-white/40 text-white hover:border-white'
+              }`}
+            >
+              {stav.reviewed ? '☑ Přeposlechnuto' : '☐ Přeposlechnuto'}
+            </button>
+          )}
         </div>
       </div>
-
-      {stav.reviewed && stav.reviewedByName && (
-        <p className="text-xs font-body text-muted m-0">
-          Přeposlech potvrdil {stav.reviewedByName}
-          {stav.reviewedAt ? ` · ${new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(stav.reviewedAt))}` : ''}
-        </p>
-      )}
 
       {chybaHlaska && (
         <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">{chybaHlaska}</p>
       )}
+      {poznamka && (
+        <p className="text-xs font-body text-status-progress bg-warnTint border border-line rounded-lg px-4 py-2.5 m-0">
+          {poznamka}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,520px)] gap-4 items-start">
-        {/* VLEVO: text nahrávky */}
         <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden flex flex-col">
           <div className="flex items-center gap-3 flex-wrap px-4 py-2.5 border-b border-line">
-            <label className="flex items-center gap-2 text-sm font-heading text-muted border border-dashed border-line rounded-lg px-3 py-1.5 cursor-pointer hover:border-brand-purple hover:text-brand-purple transition-colors">
-              Načíst PDF s textem
-              <input
-                type="file"
-                accept="application/pdf"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void nactiPdf(f);
-                  e.target.value = '';
-                }}
-              />
-            </label>
+            <span className="text-sm font-heading text-ink truncate">{pdfNazev || 'Text nahrávky'}</span>
+            {!jenPoslech && (
+              <label className="text-xs font-heading text-muted border border-dashed border-line rounded-lg px-3 py-1 cursor-pointer hover:border-brand-purple hover:text-brand-purple transition-colors">
+                Načíst jiné PDF
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void nactiPdfZeSouboru(f);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            )}
             {pdfStran > 0 && (
               <span className="flex items-center gap-1.5 ml-auto">
                 <button type="button" onClick={() => naStranu(pdfStrana - 1)} className="text-muted hover:text-brand-purple px-1.5">
@@ -708,20 +675,17 @@ export function Preposlech({
               </span>
             )}
           </div>
-          <div
-            ref={pdfObalRef}
-            className="bg-field overflow-y-auto p-4 flex flex-col items-center gap-4"
-            style={{ height: '72vh' }}
-          >
+          <div ref={pdfObalRef} className="bg-field overflow-y-auto p-4 flex flex-col items-center gap-4" style={{ height: '72vh' }}>
             {pdfStran === 0 && (
-              <p className="text-sm font-body text-muted m-auto text-center max-w-[280px]">
-                Načtěte PDF s textem nahrávky. Stránka se bude přepínat spolu s chybami, které označíte vpravo.
+              <p className="text-sm font-body text-muted m-auto text-center max-w-[300px]">
+                {zDisku === 'nacitam'
+                  ? 'Načítám text ze složky projektu…'
+                  : 'Ve složce projektu zatím není text. Hledá se PDF, jehož název končí _RE.'}
               </p>
             )}
           </div>
         </div>
 
-        {/* VPRAVO: chyby nahoře, ovládání uprostřed, stopy dole */}
         <div className="flex flex-col gap-4">
           <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
             <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3">
@@ -730,7 +694,7 @@ export function Preposlech({
               </h3>
               {chybejiciStopy && (
                 <span className="text-[11px] font-body text-status-progress">
-                  Některé záznamy patří stopám, které teď nejsou načtené.
+                  Některé záznamy patří stopám, které tu teď nejsou.
                 </span>
               )}
             </div>
@@ -743,35 +707,23 @@ export function Preposlech({
                 <ul className="list-none m-0 p-0 divide-y divide-line">
                   {stav.chyby.map((ch) => (
                     <li key={ch.id} className="flex items-start gap-3 px-4 py-2.5 hover:bg-surfaceSoft">
-                      <button
-                        type="button"
-                        onClick={() => skocNaChybu(ch)}
-                        className="flex-1 min-w-0 text-left"
-                        title="Skočit na místo v nahrávce"
-                      >
+                      <button type="button" onClick={() => skocNaChybu(ch)} className="flex-1 min-w-0 text-left" title="Skočit na místo v nahrávce">
                         <span className="flex items-center gap-2 flex-wrap">
                           <span className="text-[11px] font-heading font-semibold tabular-nums bg-field border border-line rounded px-1.5">
                             {pad2(ch.trackIndex)}
                           </span>
                           <span className="text-xs font-heading text-muted tabular-nums">{cas(ch.localTime)}</span>
-                          {ch.pdfPage && (
-                            <span className="text-xs font-heading text-muted tabular-nums">s. {ch.pdfPage}</span>
+                          {ch.pdfPage && <span className="text-xs font-heading text-muted tabular-nums">s. {ch.pdfPage}</span>}
+                          {!jenPoslech && (
+                            <span className="text-[11px] font-heading text-muted/70 tabular-nums">
+                              Cubase {hms((ch.trackIndex - 1) * DELKA_STOPY_V_CUBASE + ch.localTime)}
+                            </span>
                           )}
-                          <span className="text-[11px] font-heading text-muted/70 tabular-nums">
-                            Cubase {hms((ch.trackIndex - 1) * DELKA_STOPY_V_CUBASE + ch.localTime)}
-                          </span>
                         </span>
                         <span className="block text-sm font-body text-ink mt-0.5 break-words">{ch.description}</span>
-                        {ch.createdByName && (
-                          <span className="block text-[11px] font-body text-muted mt-0.5">{ch.createdByName}</span>
-                        )}
+                        {ch.createdByName && <span className="block text-[11px] font-body text-muted mt-0.5">{ch.createdByName}</span>}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => void smazChybu(ch.id)}
-                        title="Smazat záznam"
-                        className="text-muted hover:text-danger text-sm shrink-0"
-                      >
+                      <button type="button" onClick={() => void smazChybu(ch.id)} title="Smazat záznam" className="text-muted hover:text-danger text-sm shrink-0">
                         ✕
                       </button>
                     </li>
@@ -781,37 +733,35 @@ export function Preposlech({
             </div>
           </div>
 
-          {/* Ovládání */}
           <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
             <div className="flex items-center gap-3 flex-wrap">
               <button
                 type="button"
                 onClick={prehrajNeboPauzni}
-                disabled={aktivniStopa === null}
+                disabled={aktivni === null}
                 title="Přehrát / pozastavit (mezerník)"
                 className="w-10 h-10 rounded-full bg-brand-green text-onAccent font-heading font-bold disabled:opacity-40"
               >
                 {hraje ? '❚❚' : '▶'}
               </button>
               <span className="text-xs font-heading font-semibold bg-tint text-brand-purpleDark rounded px-2 py-1 tabular-nums">
-                {aktivniStopa === null ? '—' : `Stopa ${pad2(aktivniStopa + 1)}`}
+                {aktivni === null ? '—' : `Stopa ${pad2(aktivni + 1)}`}
               </span>
               <span className="text-sm font-heading text-muted tabular-nums">
                 <b className="text-ink">{cas(pozice)}</b> / {cas(delka)}
               </span>
-              <canvas ref={ekvalizerRef} className="w-[120px] h-[34px] block" />
               <button
                 type="button"
                 onClick={otevriForm}
-                disabled={aktivniStopa === null || formOtevreny}
+                disabled={aktivni === null || formOtevreny}
                 className="ml-auto bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
               >
                 + Přidat chybu
               </button>
             </div>
-            {aktivniStopa !== null && (
+            {aktivni !== null && !jenPoslech && (
               <p className="text-[11px] font-heading text-muted m-0 tabular-nums">
-                Offset této stopy v Cubase: +{hms(aktivniStopa * DELKA_STOPY_V_CUBASE)}
+                Offset této stopy v Cubase: +{hms(aktivni * DELKA_STOPY_V_CUBASE)}
               </p>
             )}
 
@@ -820,15 +770,13 @@ export function Preposlech({
                 <p className="text-xs font-heading text-muted m-0">
                   Stopa <b className="text-ink">{pad2(zachyt.trackIndex)}</b> · čas{' '}
                   <b className="text-ink tabular-nums">{cas(zachyt.localTime)}</b> · strana{' '}
-                  <b className="text-ink">{zachyt.pdfPage ?? '— (PDF nenačteno)'}</b>
+                  <b className="text-ink">{zachyt.pdfPage ?? '— (text nenačtený)'}</b>
                 </p>
                 <textarea
                   ref={popisRef}
                   value={popis}
                   onChange={(e) => setPopis(e.target.value)}
                   onKeyDown={(e) => {
-                    // Enter uklada, Shift+Enter dela novy radek - stejne jako
-                    // v prototypu, at se zaznamy pisou rychle.
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       void ulozChybu();
@@ -842,11 +790,7 @@ export function Preposlech({
                   className={`${inputClass} w-full resize-none`}
                 />
                 <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormOtevreny(false)}
-                    className="text-sm font-heading text-muted hover:text-ink"
-                  >
+                  <button type="button" onClick={() => setFormOtevreny(false)} className="text-sm font-heading text-muted hover:text-ink">
                     Zrušit
                   </button>
                   <button
@@ -862,78 +806,83 @@ export function Preposlech({
             )}
           </div>
 
-          {/* Stopy */}
           <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3">
-              <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-                Zvukové stopy
-              </h3>
-              <label className="flex items-center gap-2 text-xs font-heading text-muted border border-dashed border-line rounded-lg px-3 py-1.5 cursor-pointer hover:border-brand-purple hover:text-brand-purple transition-colors">
-                + Přidat stopy
-                <input
-                  type="file"
-                  accept="audio/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files?.length) pridejStopy(e.target.files);
-                    e.target.value = '';
-                  }}
-                />
-              </label>
+            <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3 flex-wrap">
+              <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Zvukové stopy</h3>
+              {!jenPoslech && (
+                <span className="flex items-center gap-3">
+                  {slozkaUrl && (
+                    <a href={slozkaUrl} target="_blank" rel="noreferrer" className="text-xs font-heading text-brand-purple no-underline hover:underline">
+                      Složka na Disku ↗
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void nactiZDisku()}
+                    disabled={zDisku === 'nacitam'}
+                    className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-50"
+                  >
+                    {zDisku === 'nacitam' ? 'Načítám…' : 'Načíst z Disku znovu'}
+                  </button>
+                  <label className="text-xs font-heading text-muted border border-dashed border-line rounded-lg px-3 py-1 cursor-pointer hover:border-brand-purple hover:text-brand-purple transition-colors">
+                    + Ze souborů
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files?.length) pridejStopyZeSouboru(e.target.files);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </span>
+              )}
             </div>
             <div className="p-3 flex flex-col gap-2 overflow-y-auto" style={{ maxHeight: '34vh' }}>
               {stopy.length === 0 ? (
                 <p className="text-sm font-body text-muted m-0 px-1 py-5 text-center">
-                  Načtěte zvukové stopy. Každou uvidíte i s vykreslenou křivkou — kliknutím do ní se
-                  přesunete, kliknutím na značku skočíte na chybu.
+                  {zDisku === 'nacitam'
+                    ? 'Načítám stopy ze složky projektu…'
+                    : 'Ve složce projektu zatím nejsou žádné nahrávky. Stopy se řadí podle čísla na začátku názvu — 01_, 02_, 03_.'}
                 </p>
               ) : (
                 stopy.map((stopa, index) => (
                   <div
-                    key={stopa.id}
+                    key={`${index}-${stopa.name}`}
                     className={`rounded-lg border overflow-hidden ${
-                      index === aktivniStopa ? 'border-brand-purple bg-tint' : 'border-line bg-surface'
+                      index === aktivni ? 'border-brand-purple bg-tint' : 'border-line bg-surface'
                     }`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => void vyberStopu(index)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left"
-                    >
-                      <span className="text-[11px] font-heading font-bold tabular-nums bg-field rounded px-1.5 py-0.5">
-                        {pad2(index + 1)}
-                      </span>
+                    <button type="button" onClick={() => vyberStopu(index)} className="w-full flex items-center gap-2 px-3 py-1.5 text-left">
+                      <span className="text-[11px] font-heading font-bold tabular-nums bg-field rounded px-1.5 py-0.5">{pad2(index + 1)}</span>
                       <span className="flex-1 min-w-0 text-xs font-body text-ink truncate">{stopa.name}</span>
-                      <span className="text-[10px] font-heading text-muted tabular-nums">
-                        +{hms(index * DELKA_STOPY_V_CUBASE)}
-                      </span>
+                      {stopa.krivkaStav === 'pocita' && <span className="text-[10px] font-heading text-muted">kreslím křivku…</span>}
+                      {!jenPoslech && (
+                        <span className="text-[10px] font-heading text-muted tabular-nums">+{hms(index * DELKA_STOPY_V_CUBASE)}</span>
+                      )}
                     </button>
                     <canvas
                       data-stopa={index}
                       className="w-full h-[56px] block bg-field cursor-pointer"
                       onClick={(e) => {
-                        const stopaData = stopyRef.current[index];
-                        if (!stopaData?.audioBuffer) {
-                          void vyberStopu(index);
-                          return;
-                        }
                         const ramecek = e.currentTarget.getBoundingClientRect();
                         const x = e.clientX - ramecek.left;
-                        const trvani = stopaData.audioBuffer.duration;
-                        // Kliknuti na znacku skoci na chybu, jinak se jen presune.
+                        if (index !== aktivni) {
+                          vyberStopu(index);
+                          return;
+                        }
+                        const trvani = audioRef.current?.duration;
+                        if (!trvani || !Number.isFinite(trvani)) return;
                         const trefa = stav.chyby.find(
-                          (ch) =>
-                            ch.trackIndex === index + 1 &&
-                            Math.abs((ch.localTime / trvani) * ramecek.width - x) < 6,
+                          (ch) => ch.trackIndex === index + 1 && Math.abs((ch.localTime / trvani) * ramecek.width - x) < 6,
                         );
                         if (trefa) {
                           skocNaChybu(trefa);
                           return;
                         }
-                        const kam = (x / ramecek.width) * trvani;
-                        if (index === aktivniStopa) skoc(kam);
-                        else void vyberStopu(index, kam);
+                        skoc((x / ramecek.width) * trvani);
                       }}
                     />
                   </div>

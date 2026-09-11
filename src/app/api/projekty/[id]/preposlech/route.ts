@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { z } from 'zod';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { isInternalRole } from '@/lib/roles';
+import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 
 /**
  * Záznamy chyb z přeposlechu nahrávky (AudioTagger) — zadání 11. 9. 2026.
  *
- * Vidí a zapisuje jen tým Mediaspace. Klient ani herec se sem nedostanou.
+ * ČÍST A ZAPSAT smí i klient — buď přihlášený u projektu své firmy, nebo
+ * odkazem z mailu. Právě proto se přeposlech posílá: aby napsal, co mu vadí.
+ * Poznámka od nepřihlášeného klienta se podepíše „Klient", protože z odkazu
+ * se jméno poznat nedá.
+ *
+ * MAZAT ZÁZNAMY a odškrtnout PŘEPOSLECHNUTO smí jen tým Mediaspace
+ * („my můžeme editovat vše").
  *
  * `[id]` je ID projektu; stopy se neukládají, záznam ukazuje na stopu jejím
  * pořadím a nese i její název — viz komentář u modelu v schema.prisma.
  */
 export const dynamic = 'force-dynamic';
 
-async function overInterniPristup() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return { chyba: NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 }) };
+async function over(req: NextRequest, caflouProjectId: string, jenInterni: boolean) {
+  const pristup = await pristupKPreposlechu(caflouProjectId, req.nextUrl.searchParams.get('k'));
+  if (!pristup.ok) {
+    return { chyba: NextResponse.json({ error: pristup.message }, { status: pristup.status }) };
   }
-  if (!isInternalRole(session.user.role)) {
+  if (jenInterni && !pristup.interni) {
     return { chyba: NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 }) };
   }
-  return { userId: session.user.id, jmeno: session.user.name || session.user.email || null };
+  return {
+    userId: pristup.userId,
+    jmeno: pristup.jmeno ?? (pristup.pres_odkaz ? 'Klient' : null),
+  };
 }
 
 async function stav(caflouProjectId: string) {
@@ -53,8 +60,8 @@ async function stav(caflouProjectId: string) {
   };
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const pristup = await overInterniPristup();
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const pristup = await over(req, params.id, false);
   if ('chyba' in pristup) return pristup.chyba;
   return NextResponse.json(await stav(params.id));
 }
@@ -68,7 +75,7 @@ const novaChyba = z.object({
 });
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const pristup = await overInterniPristup();
+  const pristup = await over(req, params.id, false);
   if ('chyba' in pristup) return pristup.chyba;
 
   const parsed = novaChyba.safeParse(await req.json().catch(() => null));
@@ -90,7 +97,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const pristup = await overInterniPristup();
+  const pristup = await over(req, params.id, true);
   if ('chyba' in pristup) return pristup.chyba;
 
   const telo = await req.json().catch(() => ({}));
@@ -115,7 +122,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const pristup = await overInterniPristup();
+  const pristup = await over(req, params.id, true);
   if ('chyba' in pristup) return pristup.chyba;
 
   const chybaId = req.nextUrl.searchParams.get('chyba');

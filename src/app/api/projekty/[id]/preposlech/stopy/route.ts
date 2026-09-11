@@ -9,8 +9,8 @@ import { pristupKPreposlechu } from '@/lib/preposlechPristup';
  */
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const pristup = await pristupKPreposlechu(params.id);
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const pristup = await pristupKPreposlechu(params.id, req.nextUrl.searchParams.get('k'));
   if (!pristup.ok) return NextResponse.json({ error: pristup.message }, { status: pristup.status });
 
   const vysledek = await nactiZDisku(params.id);

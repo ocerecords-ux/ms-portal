@@ -1163,6 +1163,11 @@ type StavProjektuInput = {
   /** Věta, co se v tomhle stavu klientovi říká. */
   text: string;
   odkazNaDisk: string | null;
+  /**
+   * Druhé tlačítko — celoobrazovkový AudioTagger (zadání 11. 9. 2026).
+   * Posílá se jen u zprávy o prvních tracích; jindy zůstává prázdné.
+   */
+  odkazNaPreposlech?: string | null;
 };
 
 export function buildStavProjektuHtml(input: StavProjektuInput): string {
@@ -1171,8 +1176,33 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
       ? 'Dobrý den,'
       : `Dobrý den, ${escapeHtml(input.jmenoKlienta)},`;
 
-  const tlacitko = input.odkazNaDisk
-    ? `<a class="btn" href="${escapeHtml(input.odkazNaDisk)}">Poslechnout nahrávky</a>`
+  /**
+   * Dvě výrazná tlačítka (zadání 11. 9. 2026). Zelené je to hlavní —
+   * přeposlech v AudioTaggeru; tmavé vede do složky projektu. Když
+   * AudioTagger po ruce není, zůstane jen složka a ta je pak ta hlavní.
+   *
+   * Třídy `cta` a `cta-dark` jsou definované v emailShell. (Dřív tu bylo
+   * `class="btn"`, které ve stylopisu nikdy nebylo, takže se tlačítko
+   * posílalo jako obyčejný odkaz.)
+   */
+  const tlacitka: string[] = [];
+  if (input.odkazNaPreposlech) {
+    tlacitka.push(
+      `<a href="${escapeHtml(input.odkazNaPreposlech)}" class="cta">Přeposlechnout v AudioTaggeru</a>`,
+    );
+  }
+  if (input.odkazNaDisk) {
+    tlacitka.push(
+      `<a href="${escapeHtml(input.odkazNaDisk)}" class="${
+        input.odkazNaPreposlech ? 'cta-dark' : 'cta'
+      }">Otevřít složku projektu</a>`,
+    );
+  }
+  // Kazde tlacitko na svem radku - na telefonu by se vedle sebe nevesla.
+  const tlacitko = tlacitka.length
+    ? `<table role="presentation">${tlacitka
+        .map((odkaz) => `<tr><td style="padding-bottom:10px;">${odkaz}</td></tr>`)
+        .join('')}</table>`
     : '<p style="color:#6C6580;">Odkaz na složku zatím u projektu není vyplněný.</p>';
 
   const interniPoznamka = input.jenInterne
@@ -1189,7 +1219,7 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
       input.nazevFirmy ? ` · ${escapeHtml(input.nazevFirmy)}` : ''
     }</p>
     <p>${escapeHtml(input.text)}</p>
-    <p style="margin-top:22px;">${tlacitko}</p>
+    <div class="cta-row" style="padding-top:8px;">${tlacitko}</div>
 `,
   });
 }
@@ -1214,7 +1244,8 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
       `${input.nazevProjektu}${input.nazevFirmy ? ` (${input.nazevFirmy})` : ''}`,
       input.text,
       '',
-      input.odkazNaDisk ? `Nahravky: ${input.odkazNaDisk}` : 'Odkaz na nahravky zatim neni vyplneny.',
+      input.odkazNaPreposlech ? `Preposlech v AudioTaggeru: ${input.odkazNaPreposlech}` : '',
+      input.odkazNaDisk ? `Slozka projektu: ${input.odkazNaDisk}` : 'Odkaz na nahravky zatim neni vyplneny.',
     ]
       .filter(Boolean)
       .join('\n'),

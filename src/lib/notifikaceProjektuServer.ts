@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { CO_SE_POSILA, STAVY_S_NOTIFIKACI, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
 import { sendStavProjektuEmail } from '@/lib/email';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
+import { zajistiOdkaz, urlPreposlechu } from '@/lib/preposlechOdkaz';
 
 /**
  * Odeslání zprávy o změně stavu projektu (zadání 10. 9. 2026).
@@ -115,6 +116,21 @@ export async function posliNotifikaciKeStavu(
       ? `${zaklad}/nahravky?projekt=${encodeURIComponent(caflouProjectId)}`
       : slozka;
 
+    /**
+     * Druhé tlačítko: „Přeposlechnout v AudioTaggeru" (zadání 11. 9. 2026).
+     *
+     * Jen u zprávy o prvních tracích — u ostatních stavů není co poslouchat.
+     * Odkaz je tokenový a otevře se na celou obrazovku bez přihlašování; na
+     * projekt je živý vždycky jeden, takže opakované zprávy ten předchozí
+     * nezneplatní. Když se token nepodaří vyrobit, odejde zpráva jen se
+     * složkou — kvůli odkazu navíc se rozhodně nesmí ztratit celá zpráva.
+     */
+    let odkazNaPreposlech: string | null = null;
+    if (znackaStavu(stav) === ZNACKA_PRVNI_TRACKY && nastaveni.komu !== 'INTERNE') {
+      const token = await zajistiOdkaz(caflouProjectId, null);
+      if (token) odkazNaPreposlech = urlPreposlechu(token);
+    }
+
     const vysledek = await sendStavProjektuEmail({
       prijemci,
       jenInterne: nastaveni.komu === 'INTERNE',
@@ -124,6 +140,7 @@ export async function posliNotifikaciKeStavu(
       stav,
       text: CO_SE_POSILA[stav] ?? '',
       odkazNaDisk,
+      odkazNaPreposlech,
     });
 
     if (!vysledek.sent) {

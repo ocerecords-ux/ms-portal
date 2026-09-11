@@ -1712,3 +1712,25 @@ model PreposlechStav {
   reviewedByName  String?
   updatedAt       DateTime  @updatedAt
 }
+
+/// Odkaz na celoobrazovkovy preposlech pro klienta (zadani 11. 9. 2026:
+/// „proste mu posleme odkaz, pobezi to na portalu ale ve fullscreen,
+/// klient vlastne ani nebude vedet, kde je").
+///
+/// Klient nema ucet a mit ho nemusi - do AudioTaggeru se dostane tokenem
+/// z mailu. Na projekt je zivy vzdycky jeden odkaz; „Vygenerovat novy"
+/// ten predchozi zneplatni, coz je zaroven jediny zpusob, jak uz rozeslany
+/// odkaz zavrit.
+model PreposlechOdkaz {
+  token           String @id
+  caflouProjectId String @unique
+
+  createdAt     DateTime  @default(now())
+  createdByName String?
+  /// Vyplneno = odkaz uz neplati (vygenerovali jsme novy nebo jsme ho zavreli).
+  zneplatnenoAt DateTime?
+
+  /// Kdy si ho klient naposledy otevrel a kolikrat - at je videt, jestli poslouchal.
+  otevrenoAt    DateTime?
+  pocetOtevreni Int       @default(0)
+}
