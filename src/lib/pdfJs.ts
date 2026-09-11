@@ -19,6 +19,49 @@ export function nactiPdfJs(): Promise<any> {
   if (okno.__pdfjsSlib) return okno.__pdfjsSlib;
 
   /**
+   * SAFARI NEUMÍ PROJÍT STREAM CYKLEM `for await` (stav k 12. 9. 2026,
+   * Safari 26). A přesně to dělá pdf.js v `getTextContent()`, ze kterého
+   * čteme text stránky — jak v počítadle normostran, tak v AudioTaggeru pod
+   * nahrávkou. Safari na tom spadne hláškou „undefined is not a function
+   * (near '...t of e...')", ze které nikoho nenapadne, že jde o tohle.
+   *
+   * Doplňujeme tedy streamu chybějící schopnost. Je to přesně to, co dělá
+   * norma: čtečka se otevře, čte se po kusech a na konci se zavře.
+   */
+  const RS = typeof ReadableStream !== 'undefined' ? (ReadableStream.prototype as any) : null;
+  if (RS && !RS[Symbol.asyncIterator]) {
+    RS[Symbol.asyncIterator] = function ({ preventCancel = false } = {}) {
+      const ctecka = this.getReader();
+      return {
+        async next() {
+          try {
+            const kus = await ctecka.read();
+            if (kus.done) ctecka.releaseLock();
+            return kus;
+          } catch (err) {
+            ctecka.releaseLock();
+            throw err;
+          }
+        },
+        async return(hodnota: unknown) {
+          if (preventCancel) {
+            ctecka.releaseLock();
+          } else {
+            const hotovo = ctecka.cancel(hodnota);
+            ctecka.releaseLock();
+            await hotovo;
+          }
+          return { done: true, value: hodnota };
+        },
+        [Symbol.asyncIterator]() {
+          return this;
+        },
+      };
+    };
+    RS.values = RS[Symbol.asyncIterator];
+  }
+
+  /**
    * Starší Safari (do 17.4) neumí `Promise.withResolvers`, které pdf.js 6
    * používá. Bez tohohle doplnění spadne rovnou při načtení hláškou
    * „undefined is not a function" a nikdo se nedopátrá proč (12. 9. 2026).
