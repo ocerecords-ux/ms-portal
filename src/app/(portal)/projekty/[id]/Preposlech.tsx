@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { nactiPdfJs, PDFJS_CDN } from '@/lib/pdfJs';
 
 /**
  * AudioTagger — přeposlech nahrávky proti textu (zadání 11. 9. 2026).
@@ -82,8 +83,6 @@ const STROP_PRO_KRIVKU = 150 * 1024 * 1024;
 /** Vzorkování pro křivku. Na obrázek široký pár set bodů to bohatě stačí. */
 const KRIVKA_HZ = 8000;
 
-const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289';
-
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
@@ -98,41 +97,6 @@ function cas(sec: number): string {
 function hms(sec: number): string {
   const cele = Math.max(0, Math.round(sec));
   return `${pad2(Math.floor(cele / 3600))}:${pad2(Math.floor((cele % 3600) / 60))}:${pad2(cele % 60)}`;
-}
-
-/**
- * Natáhne pdf.js z CDN až ve chvíli, kdy je potřeba.
- *
- * Schválně to NENÍ `import('https://…')`: takový import se snaží přeložit
- * balíčkovač i TypeScript a ani jeden vzdálenou adresu neumí. Modul se proto
- * vkládá jako obyčejný `<script type="module">`, který si hotovou knihovnu
- * odloží na `window`. Načte se jen jednou za život stránky.
- */
-function nactiPdfJs(): Promise<any> {
-  const okno = window as unknown as { __pdfjs?: any };
-  if (okno.__pdfjs) return Promise.resolve(okno.__pdfjs);
-
-  return new Promise((hotovo, chyba) => {
-    const hlaska = 'preposlech-pdfjs';
-    window.addEventListener(
-      hlaska,
-      (e: Event) => {
-        const detail = (e as CustomEvent<{ ok: boolean }>).detail;
-        if (detail?.ok && okno.__pdfjs) hotovo(okno.__pdfjs);
-        else chyba(new Error('pdf.js se nepodařilo načíst'));
-      },
-      { once: true },
-    );
-
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.textContent =
-      `import * as pdfjs from "${PDFJS_CDN}/pdf.min.mjs";\n` +
-      `window.__pdfjs = pdfjs;\n` +
-      `window.dispatchEvent(new CustomEvent("${hlaska}", { detail: { ok: true } }));`;
-    script.onerror = () => window.dispatchEvent(new CustomEvent(hlaska, { detail: { ok: false } }));
-    document.head.appendChild(script);
-  });
 }
 
 /**

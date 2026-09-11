@@ -1,9 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { NarratorMultiSelect, type NarratorOption } from './NarratorMultiSelect';
+import {
+  formatujCislo,
+  formatujNormostrany,
+  sklonujNormostrany,
+  spoctiNormostrany,
+  umimeSpocitat,
+  ZNAKU_NA_NORMOSTRANU,
+  type RozborTextu,
+} from '@/lib/normostrany';
 
 export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: NarratorOption[] }) {
   const router = useRouter();
@@ -14,6 +23,13 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
   const [note, setNote] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  /**
+   * Normostrany z přiloženého textu (zadání 12. 9. 2026: „když tam načteš
+   * přílohu s textem, tak ti to rovnou přepočítá normostrany").
+   */
+  const [rozbor, setRozbor] = useState<RozborTextu | null>(null);
+  const [pocitam, setPocitam] = useState(false);
+  const [chybaRozboru, setChybaRozboru] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [lastOrder, setLastOrder] = useState<{ title: string; price: number; varovani: string | null } | null>(null);
@@ -54,6 +70,8 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       setNarrators([]);
       setNote('');
       setFile(null);
+      setRozbor(null);
+      setChybaRozboru(null);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Objednávku se nepodařilo odeslat.');
@@ -68,6 +86,40 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
     const dropped = e.dataTransfer.files?.[0];
     if (dropped) setFile(dropped);
   }
+
+  /**
+   * Počítání běží CELÉ V PROHLÍŽEČI (viz lib/normostrany.ts) - rukopis se
+   * nikam neposílá a výsledek je hned. Pustí se samo, jakmile klient soubor
+   * vybere; do políčka se počet doplní jen tehdy, když si tam nic nenapsal
+   * sám. Přepsat mu ručně zadané číslo by bylo horší než nespočítat nic.
+   */
+  const pocetRef = useRef(pageCount);
+  pocetRef.current = pageCount;
+
+  const prepocitej = useCallback(async (soubor: File, doplnitVzdy: boolean) => {
+    setPocitam(true);
+    setChybaRozboru(null);
+    try {
+      const vysledek = await spoctiNormostrany(soubor);
+      setRozbor(vysledek);
+      if (doplnitVzdy || !pocetRef.current.trim()) {
+        setPageCount(String(Math.round(vysledek.normostran)));
+      }
+    } catch (err) {
+      setRozbor(null);
+      setChybaRozboru(err instanceof Error ? err.message : 'Text se nepodařilo přečíst.');
+    } finally {
+      setPocitam(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setRozbor(null);
+    setChybaRozboru(null);
+    if (!file) return;
+    if (!umimeSpocitat(file.name)) return;
+    void prepocitej(file, false);
+  }, [file, prepocitej]);
 
   if (done && lastOrder) {
     return (
@@ -187,6 +239,70 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
             <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
         </div>
+
+        {/* Kalkulačka normostran nad přílohou (zadání 12. 9. 2026). */}
+        {file && (
+          <div className="mt-2">
+            {pocitam && (
+              <p className="m-0 text-xs font-body text-white/80">Počítám normostrany z textu…</p>
+            )}
+
+            {!pocitam && rozbor && (
+              <div className="rounded-lg border border-brand-green bg-white/10 px-3.5 py-3">
+                <p className="m-0 font-heading font-semibold text-sm text-brand-green">
+                  Text má {formatujNormostrany(rozbor.normostran)} {sklonujNormostrany(rozbor.normostran)}
+                </p>
+                <p className="m-0 mt-1 text-[11px] font-body text-white/75">
+                  {formatujCislo(rozbor.znaku)} znaků včetně mezer · {formatujCislo(rozbor.slov)} slov ·{' '}
+                  {rozbor.zdroj}
+                  {rozbor.stran ? ` · ${rozbor.stran} stran v souboru` : ''}
+                </p>
+                <p className="m-0 mt-1 text-[11px] font-body text-white/55">
+                  Normostrana = {formatujCislo(ZNAKU_NA_NORMOSTRANU)} znaků včetně mezer. Počet v objednávce
+                  můžete kdykoliv přepsat.
+                </p>
+                {pageCount !== String(Math.round(rozbor.normostran)) && (
+                  <button
+                    type="button"
+                    onClick={() => setPageCount(String(Math.round(rozbor.normostran)))}
+                    className="mt-2 bg-brand-green text-brand-purpleDark rounded-md px-3 py-1.5 text-xs font-heading font-semibold"
+                  >
+                    Doplnit {Math.round(rozbor.normostran)} do objednávky
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!pocitam && chybaRozboru && (
+              <div className="rounded-lg border border-white/30 bg-white/10 px-3.5 py-2.5 flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-body text-white/85">{chybaRozboru}</span>
+                <button
+                  type="button"
+                  onClick={() => void prepocitej(file, true)}
+                  className="text-xs font-heading font-semibold text-brand-green underline"
+                >
+                  Zkusit znovu
+                </button>
+              </div>
+            )}
+
+            {!pocitam && !rozbor && !chybaRozboru && !umimeSpocitat(file.name) && (
+              <p className="m-0 text-xs font-body text-white/60">
+                Z tohohle souboru normostrany spočítat neumím. Umím Word (.docx), PDF, RTF, ODT, EPUB a TXT.
+              </p>
+            )}
+
+            {!pocitam && umimeSpocitat(file.name) && (rozbor || chybaRozboru) && (
+              <button
+                type="button"
+                onClick={() => void prepocitej(file, true)}
+                className="mt-2 text-[11px] font-heading font-semibold text-white/70 underline"
+              >
+                Spočítat z textu znovu
+              </button>
+            )}
+          </div>
+        )}
       </Field>
 
       {error && <p className="bg-red-500/30 rounded-lg px-3.5 py-2.5 text-sm">{error}</p>}
