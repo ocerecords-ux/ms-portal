@@ -14,6 +14,7 @@ import {
   parseTime,
   requiresProject,
 } from '@/lib/timesheets';
+import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 
 type Entry = {
   id: string;
@@ -29,7 +30,7 @@ type Entry = {
   mine: boolean;
 };
 
-type ProjectOption = { id: string; label: string };
+type ProjectOption = { id: string; label: string; dokonceny?: boolean };
 
 function todayIso(): string {
   const now = new Date();
@@ -354,23 +355,17 @@ export function TimesheetEditor({
               <span className="text-sm font-body text-ink">
                 Projekt <span className="text-danger">*</span>
               </span>
-              <select
-                required
-                value={form.project}
-                onChange={(e) => setForm({ ...form, project: e.target.value })}
-                className={inputClass}
-              >
-                <option value="">— vyberte projekt —</option>
-                {projectOptions.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+              {/* Misto rolovaciho seznamu se sedmi sty polozkami se projekt
+                  HLEDA PSANIM (zadani 11. 9. 2026) - viz VyberProjektu.tsx. */}
+              <VyberProjektu
+                projekty={projectOptions}
+                hodnota={form.project}
+                onZmena={(id) => setForm({ ...form, project: id })}
+              />
               <span className="text-xs text-muted font-body">
                 {projectOptions.length === 0
-                  ? 'Zatím se nenačetly žádné rozpracované projekty z Caflou.'
-                  : 'V nabídce jsou jen rozpracované projekty.'}
+                  ? 'Zatím se nenačetly žádné projekty.'
+                  : 'Pište název projektu, firmu nebo číslo. V nabídce jsou i dokončené projekty.'}
               </span>
             </label>
             )}

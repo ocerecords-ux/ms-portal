@@ -33,15 +33,25 @@ export default async function TimesheetsPage() {
     }),
   ]);
 
-  // Nabidka projektu pro vyber - stejny seznam, jaky pouziva prehled Projekty.
-  // Zuzo-labuzo si vykaz nepise, takze pro nej seznam vubec nenacitame.
+  /**
+   * Nabidka projektu pro vyber - stejny seznam, jaky pouziva prehled Projekty.
+   * Zuzo-labuzo si vykaz nepise, takze pro nej seznam vubec nenacitame.
+   *
+   * DOKONCENE PROJEKTY V NABIDCE ZUSTAVAJI (zadani 11. 9. 2026: "porad
+   * zvukari nevidi ukoncene"). Do 6. 9. 2026 se do nabidky davaly jen
+   * rozpracovane - jenze prace na projektu castokrat dobehne az potom, co
+   * ho produkce uzavre, a zvukar pak nemel kam vykaz napsat. Jsou proto
+   * oznacene a v seznamu az za rozdelanymi, at se na ne neklikne omylem.
+   */
   const projectOptions = canWrite
     ? await (async () => {
         const { projects } = await loadInternalProjects();
-        // Vykaz jde pridat jen k rozpracovanemu projektu (zadani 6. 9. 2026).
         return projects
-          .filter((p) => !p.finished)
-          .map((p) => ({ id: String(p.id), label: p.companyName ? `${p.name} — ${p.companyName}` : p.name }))
+          .map((p) => ({
+            id: String(p.id),
+            label: p.companyName ? `${p.name} — ${p.companyName}` : p.name,
+            dokonceny: p.finished,
+          }))
           .sort((a, b) => a.label.localeCompare(b.label, 'cs'));
       })()
     : [];
