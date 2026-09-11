@@ -164,3 +164,18 @@ body {
 .dark .hover\:text-brand-purple:hover {
   color: #B49BFF;
 }
+
+/* Prouzek pod logem, kdyz se odesila objednavka (zadani 12. 9. 2026).
+   Musi byt tady, ne v <style jsx> u formulare: styled-jsx si nazvy
+   keyframes prejmenovava a trida z Tailwindu by pak ukazovala do prazdna. */
+@keyframes objednavka-pruh {
+  0% {
+    transform: translateX(-10%);
+  }
+  50% {
+    transform: translateX(220%);
+  }
+  100% {
+    transform: translateX(-10%);
+  }
+}

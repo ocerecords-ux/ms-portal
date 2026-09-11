@@ -30,6 +30,8 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
   const [rozbor, setRozbor] = useState<RozborTextu | null>(null);
   const [pocitam, setPocitam] = useState(false);
   const [chybaRozboru, setChybaRozboru] = useState<string | null>(null);
+  /** Puvodni technicka hlaska - schovana pod „Podrobnosti". */
+  const [detailChyby, setDetailChyby] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [lastOrder, setLastOrder] = useState<{ title: string; price: number; varovani: string | null } | null>(null);
@@ -72,6 +74,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       setFile(null);
       setRozbor(null);
       setChybaRozboru(null);
+      setDetailChyby(null);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Objednávku se nepodařilo odeslat.');
@@ -99,6 +102,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
   const prepocitej = useCallback(async (soubor: File, doplnitVzdy: boolean) => {
     setPocitam(true);
     setChybaRozboru(null);
+    setDetailChyby(null);
     try {
       const vysledek = await spoctiNormostrany(soubor);
       setRozbor(vysledek);
@@ -110,7 +114,12 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       // nedopatrame, proc to u konkretniho souboru nesedlo.
       console.error('Normostrany se nepodarilo spocitat:', err);
       setRozbor(null);
-      const hlaska = err instanceof Error ? err.message : '';
+      const hlaska = err instanceof Error ? err.message : String(err ?? '');
+      setDetailChyby(
+        `${soubor.name} · ${hlaska || 'bez hlášky'}${
+          typeof navigator !== 'undefined' ? ` · ${navigator.userAgent}` : ''
+        }`,
+      );
       setChybaRozboru(
         hlaska && hlaska.length < 120 && /[ěščřžýáíéúůťďň ]/i.test(hlaska)
           ? hlaska
@@ -124,6 +133,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
   useEffect(() => {
     setRozbor(null);
     setChybaRozboru(null);
+    setDetailChyby(null);
     if (!file) return;
     if (!umimeSpocitat(file.name)) return;
     void prepocitej(file, false);
@@ -167,7 +177,26 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-brand-purple rounded-card p-6 sm:p-10 text-white max-w-2xl mx-auto flex flex-col gap-5">
+    <form
+      onSubmit={handleSubmit}
+      className="relative bg-brand-purple rounded-card p-6 sm:p-10 text-white max-w-2xl mx-auto flex flex-col gap-5"
+    >
+      {/* Odesilani neni okamzite - priloha muze mit desitky megabajtu.
+          Misto tiche pauzy prebehne pres formular clona s rozehranym logem
+          (zadani 12. 9. 2026: „bylo by tam super vymaslet nejakou pohyblivou
+          vec, kdyz se to bude odesilat"). Clona zaroven zabrani druhemu
+          kliknuti na Odeslat. */}
+      {submitting && (
+        <div className="absolute inset-0 z-10 rounded-card bg-brand-purpleDeep/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mediaspace-logo.gif" alt="" aria-hidden="true" className="h-16 w-auto" />
+          <p className="m-0 font-heading font-semibold text-sm text-brand-green">Odesíláme objednávku…</p>
+          <span className="block w-40 h-[3px] rounded-full bg-white/20 overflow-hidden">
+            <span className="block h-full w-1/3 rounded-full bg-brand-green animate-[objednavka-pruh_1.1s_ease-in-out_infinite]" />
+          </span>
+        </div>
+      )}
+
       <div>
         <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka audioknihy</h2>
         <p className="text-white/75 text-xs font-heading mt-1.5">
@@ -291,6 +320,16 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
                 >
                   Zkusit znovu
                 </button>
+                {/* Puvodni hlaska na jedno kliknuti - at ji jde poslat dal,
+                    aniz by clovek otviral konzoli prohlizece. */}
+                {detailChyby && (
+                  <details className="w-full">
+                    <summary className="cursor-pointer text-[11px] font-heading text-white/60">
+                      Podrobnosti
+                    </summary>
+                    <p className="m-0 mt-1 text-[11px] font-mono text-white/70 break-words">{detailChyby}</p>
+                  </details>
+                )}
               </div>
             )}
 
@@ -319,9 +358,18 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
         <button
           type="submit"
           disabled={submitting}
-          className="border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-brand-purpleDark transition-colors disabled:opacity-60"
+          className="inline-flex items-center gap-2.5 border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-brand-purpleDark transition-colors disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-brand-green"
         >
-          {submitting ? 'Odesílám…' : 'Objednat'}
+          {/* Za odesilani se rozbehne logo Mediaspace - stejna vlnka jako
+              v AudioTaggeru, kdyz hraje nahravka (zadani 12. 9. 2026:
+              „bylo by tam super vymaslet nejakou pohyblivou vec, kdyz se to
+              bude odesilat"). Neni to tocici se kolecko, ktere vypada jako
+              v kazde aplikaci. */}
+          {submitting && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/mediaspace-logo.gif" alt="" aria-hidden="true" className="h-5 w-auto" />
+          )}
+          {submitting ? 'Odesílám…' : 'Odeslat'}
         </button>
       </div>
 
@@ -350,6 +398,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
           font-variant-numeric: tabular-nums;
           border-style: dashed;
         }
+
       `}</style>
     </form>
   );
