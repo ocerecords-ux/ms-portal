@@ -154,6 +154,10 @@ model User {
   /// po nasazeni zustala nabidka prazdna a projekt by nesel zalozit.
   manazerProjektu Boolean @default(false)
 
+  /// Dostava dotazy klientu (zadani 11. 9. 2026). Kdo to ma zaskrtnute, sedi
+  /// v kazdem kanalu, ktery klient otevre tlacitkem "Zeptat se" u projektu.
+  prijimaDotazyKlientu Boolean @default(false)
+
   // --- Herec - zadani 5. 9. 2026: samostatna fyzicka osoba, bez firmy ---
   /// Projekty, ve kterych herec hraje (zadani 10. 9. 2026, vic hercu na projekt).
   projektyJakoHerec ProjectMeta[] @relation("ProjektHerci")
@@ -697,6 +701,7 @@ enum ConversationKind {
   PROJEKT   // kanal k jednomu projektu z Caflou - vidi ho cely tym
   SOUKROMA  // zprava mezi dvema lidmi
   SKUPINA   // pojmenovana skupina vic lidi
+  DOTAZ     // dotaz klienta k jeho projektu (zadani 11. 9. 2026)
 }
 
 model Conversation {
@@ -707,6 +712,16 @@ model Conversation {
   name            String?
   caflouProjectId String?          @unique
 
+  /// Kanal dotazu klienta k projektu (zadani 11. 9. 2026: "tlacitko Zeptat se
+  /// v klientske sekci"). Klic je dvojice projekt + firma, takze kazda firma
+  /// ma u sveho projektu jeden kanal - a nekolizuje s kanalem PROJEKT, ktery
+  /// drzi caflouProjectId vyse.
+  dotazProjektId String?
+  dotazCompanyId String?
+  /// Kdy se kanal uzavrel (projekt skoncil). Historie zustava dohledatelna,
+  /// jen uz kanal neni v seznamu.
+  uzavrenoAt     DateTime?
+
   createdById     String
   createdBy       User             @relation("ConversationCreatedBy", fields: [createdById], references: [id])
   createdAt       DateTime         @default(now())
@@ -716,6 +731,7 @@ model Conversation {
   members         ConversationMember[]
   messages        Message[]
 
+  @@unique([dotazProjektId, dotazCompanyId])
   @@index([kind, lastMessageAt])
 }
 

@@ -148,10 +148,14 @@ export default async function ProjektyPage() {
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
           Aktivní projekty
         </h2>
+        {/* Tlacitko "Zeptat se" jen u KLIENTU AUDIOKNIH a jen u rozpracovanych
+            projektu (zadani 11. 9. 2026). U dokoncenych se kanal uzavira, tak
+            se tam ani nenabizi. */}
         <ProjectsTable
           projects={active}
           emptyText="Aktuálně nemáte žádné rozpracované projekty."
           rodneListy={rodneListy}
+          dotazy={company?.dealsAudiobooks === true}
         />
       </div>
 

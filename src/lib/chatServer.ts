@@ -30,6 +30,9 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
   const conversations = await prisma.conversation.findMany({
     where: {
       OR: [{ kind: 'PROJEKT' }, { members: { some: { userId } } }],
+      // Uzavrene kanaly dotazu (projekt skoncil) uz v seznamu nestraši -
+      // historie zustava v databazi (zadani 11. 9. 2026).
+      uzavrenoAt: null,
     },
     orderBy: { lastMessageAt: 'desc' },
     take: 300,

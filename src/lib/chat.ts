@@ -12,6 +12,9 @@ export const CHAT_TABS: { kind: ConversationKind; label: string }[] = [
   { kind: 'PROJEKT', label: 'Projekty' },
   { kind: 'SOUKROMA', label: 'Soukromé' },
   { kind: 'SKUPINA', label: 'Skupiny' },
+  // Dotazy klientu k projektum (zadani 11. 9. 2026) - klient je zaklada
+  // tlacitkem "Zeptat se" u sveho projektu.
+  { kind: 'DOTAZ', label: 'Dotazy' },
 ];
 
 export const MAX_MESSAGE_LENGTH = 4000;

@@ -24,6 +24,7 @@ type EditableUser = {
   hourlyRate: number | null;
   /** Smí být manažerem projektu (zadání 10. 9. 2026). */
   manazerProjektu: boolean;
+  prijimaDotazyKlientu: boolean;
   studioLocations: string[];
   birthNumber: string | null;
   ic: string | null;
@@ -54,6 +55,7 @@ export function UserEditForm({
   const [role, setRole] = useState<Role>(user.role);
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
   const [manazerProjektu, setManazerProjektu] = useState(user.manazerProjektu);
+  const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
   const [active, setActive] = useState(user.active);
   // Tvrde smazani (zadani 10. 9. 2026) - jen kdyz na uctu nic nevisi.
@@ -106,6 +108,7 @@ export function UserEditForm({
         fd.set('birthDate', birthDate);
         if (role === 'ZVUKAR') fd.set('hourlyRate', hourlyRate);
         if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
+        if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
         if (photo) fd.set('photo', photo);
         else if (removePhoto) fd.set('removePhoto', 'true');
       }
@@ -216,6 +219,26 @@ export function UserEditForm({
               <span className="text-sm font-body text-ink">
                 Může být manažer projektu
                 <span className="block text-xs text-muted">nabízí se u projektů ve výběru manažera</span>
+              </span>
+            </label>
+          </div>
+        )}
+        {/* Kdo sedi v kanalech, ktere klient otevre tlacitkem "Zeptat se"
+            u sveho projektu (zadani 11. 9. 2026). */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={prijimaDotazy}
+                onChange={(e) => setPrijimaDotazy(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Dostává dotazy klientů
+                <span className="block text-xs text-muted">
+                  je v každém kanálu, který klient otevře tlačítkem Zeptat se
+                </span>
               </span>
             </label>
           </div>

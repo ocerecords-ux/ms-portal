@@ -8,6 +8,8 @@ import { jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
 import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
+import { uzavriDotazyProjektu } from '@/lib/dotazyServer';
+import { isActiveProjectStatus } from '@/lib/projectTypes';
 import { zapisZmenyProjektu, type CitelnaJmena } from '@/lib/projektLogServer';
 
 
@@ -329,6 +331,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // a nesmi ho zdrzet ani shodit to, ze zrovna nejede SMTP.
     if (data.statusName) {
       void posliNotifikaciKeStavu(params.id, data.statusName).catch(() => undefined);
+
+      // Dokoncenym projektem se uzavira i kanal dotazu klienta (zadani
+      // 11. 9. 2026) - historie zustava, jen uz do nej neni kam psat.
+      if (!isActiveProjectStatus(data.statusName)) {
+        void uzavriDotazyProjektu(params.id).catch(() => undefined);
+      }
     }
 
     if (data.statusName !== undefined && meta.name) {

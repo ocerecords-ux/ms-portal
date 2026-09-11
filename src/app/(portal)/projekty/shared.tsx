@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ZeptatSe } from './ZeptatSe';
 import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/caflou';
 import type { ColumnSetting } from '@/lib/columnLabels';
@@ -46,9 +47,16 @@ export function ProjectsTable({
   projects,
   emptyText,
   rodneListy,
+  dotazy,
 }: {
   projects: DisplayProject[];
   emptyText: string;
+  /**
+   * Tlačítko „Zeptat se" u každého projektu (zadání 11. 9. 2026). Zapíná se
+   * jen v klientské sekci a jen u klientů audioknih; u dokončených projektů
+   * se sloupec nepředává, takže tam tlačítko není.
+   */
+  dotazy?: boolean;
   /**
    * Rodné listy reklamních spotů podle ID projektu v Caflou (zadání 9. 9. 2026).
    * Když se prop nepředá, sloupec se vůbec nevykreslí - u audioknih nemá RL
@@ -57,6 +65,7 @@ export function ProjectsTable({
   rodneListy?: Record<string, { id: string; fileName: string }>;
 }) {
   const showRodnyList = rodneListy !== undefined;
+  const showDotazy = dotazy === true;
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
@@ -70,12 +79,13 @@ export function ProjectsTable({
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum dokončení</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum vydání</th>
               {showRodnyList && <th className="text-left px-4 py-3.5 whitespace-nowrap">Rodný list</th>}
+              {showDotazy && <th className="text-right px-4 py-3.5 whitespace-nowrap">Dotaz</th>}
             </tr>
           </thead>
           <tbody>
             {projects.length === 0 && (
               <tr>
-                <td colSpan={showRodnyList ? 7 : 6} className="px-4 py-8 text-center text-muted text-sm font-body">
+                <td colSpan={6 + (showRodnyList ? 1 : 0) + (showDotazy ? 1 : 0)} className="px-4 py-8 text-center text-muted text-sm font-body">
                   {emptyText}
                 </td>
               </tr>
@@ -112,6 +122,11 @@ export function ProjectsTable({
                     ) : (
                       <span className="text-muted">—</span>
                     )}
+                  </td>
+                )}
+                {showDotazy && (
+                  <td className="px-4 py-4 text-right whitespace-nowrap">
+                    <ZeptatSe projectId={String(p.id)} projectName={p.name} />
                   </td>
                 )}
               </tr>
