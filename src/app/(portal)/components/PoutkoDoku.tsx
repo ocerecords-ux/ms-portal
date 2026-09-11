@@ -1,7 +1,7 @@
 'use client';
 
 import { ChecklistIcon, ClockIcon } from './TaskDock';
-import { usePoctyDoku, usePravyDok, useVAplikaci } from './pravyDok';
+import { usePoctyDoku, usePravyDok } from './pravyDok';
 
 /**
  * Jedno poutko na pravé hraně, kterým se otevírá panel Úkolů a MS chatu
@@ -15,31 +15,27 @@ import { usePoctyDoku, usePravyDok, useVAplikaci } from './pravyDok';
 export function PoutkoDoku() {
   const [dok, otevri] = usePravyDok();
   const pocty = usePoctyDoku();
-  const vAplikaci = useVAplikaci();
 
   // Otevreny panel ma vlastni hlavicku se zalozkami - poutko by pres nej leželo.
   if (dok !== null) return null;
 
-  const neprectene = vAplikaci ? 0 : pocty.chat ?? 0;
+  const neprectene = pocty.chat ?? 0;
   const ukoly = pocty.ukoly ?? 0;
   const poTerminu = pocty.poTerminu ?? 0;
-  const popis = vAplikaci ? 'Úkoly' : 'MS chat';
 
   return (
     <button
       type="button"
-      onClick={() => otevri(vAplikaci ? 'ukoly' : 'chat')}
-      title={vAplikaci ? 'Zobrazit úkoly' : 'Zobrazit MS chat a úkoly'}
-      aria-label={vAplikaci ? 'Zobrazit úkoly' : 'Zobrazit MS chat a úkoly'}
+      onClick={() => otevri('chat')}
+      title="Zobrazit MS chat a úkoly"
+      aria-label="Zobrazit MS chat a úkoly"
       className="fixed right-0 top-28 z-40 flex flex-col items-center gap-2.5 bg-brand-purple hover:bg-brand-purpleDeep rounded-l-card shadow-lg px-2.5 py-3 text-brand-green transition-colors"
     >
       <Sipka />
-      {!vAplikaci && (
-        <span className="relative">
-          <IkonaChatu />
-          {neprectene > 0 && <Bublina>{neprectene}</Bublina>}
-        </span>
-      )}
+      <span className="relative">
+        <IkonaChatu />
+        {neprectene > 0 && <Bublina>{neprectene}</Bublina>}
+      </span>
       <span className="relative">
         <ChecklistIcon />
         {ukoly > 0 && <Bublina>{ukoly}</Bublina>}
@@ -53,7 +49,7 @@ export function PoutkoDoku() {
         </span>
       )}
       <span className="text-[10px] font-heading font-bold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
-        {popis}
+        MS chat
       </span>
     </button>
   );

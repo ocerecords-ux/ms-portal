@@ -1,6 +1,6 @@
 'use client';
 
-import { useVAplikaci, type OtevrenyDok } from './pravyDok';
+import type { OtevrenyDok } from './pravyDok';
 
 /**
  * Záložky v hlavičce pravého panelu — Úkoly / MS chat. Otevřený je vždycky
@@ -22,21 +22,15 @@ export function ZalozkyDoku({
   /** Ovládání, které patří jen jednomu z panelů (u chatu upozornění). */
   vpravo?: React.ReactNode;
 }) {
-  // V nainstalovane aplikaci ma chat vlastni aplikaci a v panelu se
-  // nevykresluje - zalozka by vedla do prazdna (oprava 11. 9. 2026).
-  const vAplikaci = useVAplikaci();
-
   return (
     <div className="shrink-0 bg-brand-purple text-brand-green flex items-stretch justify-between gap-2 pl-2 pr-1.5 pt-1.5">
       <div className="flex items-end gap-1">
-        {!vAplikaci && (
-          <Zalozka
-            aktivni={aktivni === 'chat'}
-            onClick={() => otevri('chat')}
-            label="MS chat"
-            pocet={neprectene}
-          />
-        )}
+        <Zalozka
+          aktivni={aktivni === 'chat'}
+          onClick={() => otevri('chat')}
+          label="MS chat"
+          pocet={neprectene}
+        />
         <Zalozka
           aktivni={aktivni === 'ukoly'}
           onClick={() => otevri('ukoly')}

@@ -31,7 +31,7 @@ import {
 } from '@/lib/chatPrilohy';
 import { WaveformPlayer } from './WaveformPlayer';
 import { UpozorneniChatu } from './UpozorneniChatu';
-import { oznamPocetDoku, usePoctyDoku, usePravyDok, useVAplikaci } from './pravyDok';
+import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
 
 /**
@@ -779,7 +779,6 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const [dok, otevriDok] = usePravyDok();
   const pocty = usePoctyDoku();
   const expanded = naStrance || dok === 'chat';
-  const vAplikaci = useVAplikaci();
   const [tab, setTab] = useState<ConversationKind>('PROJEKT');
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [team, setTeam] = useState<ChatTeamMember[]>([]);
@@ -1220,14 +1219,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const jmenaTymu = team.map((u) => u.label);
   const nabidkaZminek = team.filter((u) => u.label.toLowerCase().includes(zminkaHledani));
 
-  // V nainstalovane aplikaci PORTALU chat nema co delat - ma vlastni
-  // aplikaci (zadani 9. 9. 2026: "nebude tam MS chat, ten bych chtel mit
-  // jako aplikaci zvlast"). V prohlizeci zustava panel jako dosud.
-  //
-  // Pozna se to podle toho, ze stranka bezi ve vlastnim okne bez adresniho
-  // radku (display-mode: standalone; na iPhonu navigator.standalone). Stranka
-  // /chat sem nespada - ta se vykresluje s naStrance.
-  if (vAplikaci && !naStrance) return null;
+  // POZN. 11. 9. 2026: chat se drive v nainstalovane aplikaci portalu
+  // schovaval (mel byt jen jako samostatna aplikace). Uzivatel si vyzadal
+  // zpet jednotny panel se zalozkami vsude - "prece byla posledni verze
+  // takova, ze to bylo v jednom a byly tam zalozky". Samostatna aplikace
+  // MS chatu tim nezanika, jen uz se kvuli ni panel nikde neschovava.
 
   // Poutko na hrane vykresluje layout (PoutkoDoku) - oprava 11. 9. 2026.
   // Kdyz ho mel na starosti chat, zmizelo s nim v nainstalovane aplikaci
