@@ -10,7 +10,7 @@ import { KresbaIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
 import { FajfkaDotoceno } from '../FajfkaDotoceno';
-import { TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
+import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 import { OdznakSelect } from '../OdznakSelect';
 
@@ -309,7 +309,9 @@ export function ProjectMetaForm({
                     return (
                       <span
                         key={id}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
+                          dotoceni[id] ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
+                        }`}
                       >
                         {jmeno}
                         {dotoceni[id] && <FajfkaDotoceno kdy={dotoceni[id]} />}

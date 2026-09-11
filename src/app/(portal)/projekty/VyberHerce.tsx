@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
+import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
 import { FajfkaDotoceno } from './FajfkaDotoceno';
 
 /**
@@ -152,7 +152,11 @@ export function BublinaHerce({
   dotoceno?: string | null;
 }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 max-w-full pl-3 pr-1.5 py-1 ${TRIDA_BUBLINY_HERCE}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 max-w-full pl-3 pr-1.5 py-1 ${
+        dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
+      }`}
+    >
       <button
         type="button"
         disabled={disabled}

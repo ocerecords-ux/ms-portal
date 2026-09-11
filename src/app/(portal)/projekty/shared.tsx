@@ -7,7 +7,7 @@ import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel }
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
 import { IkonaTypu } from '@/lib/ikonyTypu';
-import { TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
+import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
@@ -451,7 +451,10 @@ function bunkaSloupce(
             {p.meta.herci.map((h) => (
               <span
                 key={h.jmeno}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}
+                title={h.dotoceno ? `${h.jmeno} — dotočeno` : undefined}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
+                  h.dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
+                }`}
               >
                 {h.jmeno}
                 {h.dotoceno && <FajfkaDotoceno />}
