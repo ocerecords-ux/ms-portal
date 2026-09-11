@@ -281,16 +281,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           zaloha pro projekty, ktere jeste neprosly prenosem - jen se
           nevypisuji zvlast. */}
 
-      {budget && (
-        <ProjectBudget
-          budget={budget}
-          spent={spent}
-          revenue={revenue}
-          ratePerPage={company?.ratePerPage ?? null}
-          hoursLogged={hoursLogged}
-        />
-      )}
-
       <ProjectMetaForm
         caflouProjectId={caflouProjectId}
         canEdit={canEdit}
@@ -325,6 +315,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       />
     </>
   );
+
+  // Rozpocet ma vlastni zalozku (zadani 11. 9. 2026: „rozpocet v detailu
+  // projektu dej do zalozky"). V Prehledu byl uplne nahore, takze prvni, co
+  // clovek u projektu videl, byla cisla - a ta potrebuje jen obcas.
+  const rozpocet = budget ? (
+    <ProjectBudget
+      budget={budget}
+      spent={spent}
+      revenue={revenue}
+      ratePerPage={company?.ratePerPage ?? null}
+      hoursLogged={hoursLogged}
+    />
+  ) : null;
 
   const frekvence = (
     <RecordingSection
@@ -406,6 +409,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   );
 
   const tabs: ProjectTab[] = [{ key: 'prehled', label: 'Přehled', content: prehled }];
+  // Rozpocet se pocita jen u audioknih s poctem normostran a vidi ho jen
+  // Zuzo-labuzo - kdyz neni co ukazat, zalozka se vubec neobjevi.
+  if (rozpocet) {
+    tabs.push({ key: 'rozpocet', label: 'Rozpočet', content: rozpocet });
+  }
   if (isInternalRole(session.user.role)) {
     tabs.push({
       key: 'frekvence',
