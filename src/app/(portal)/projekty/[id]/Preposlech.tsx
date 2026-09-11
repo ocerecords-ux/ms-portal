@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { nactiPdfJs, PDFJS_CDN } from '@/lib/pdfJs';
+import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 
 /**
  * AudioTagger — přeposlech nahrávky proti textu (zadání 11. 9. 2026).
@@ -728,7 +728,7 @@ export function Preposlech({
   async function nactiPdfZUrl(url: string, nazev: string) {
     try {
       const pdfjs = await nactiPdfJs();
-      pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
+      await nastavPdfWorker(pdfjs);
       const doc = await pdfjs.getDocument({ url }).promise;
       pdfDocRef.current = doc;
       setPdfNazev(nazev);

@@ -95,7 +95,10 @@ export function ProjectsTable({
               <th className="text-left px-4 py-3.5">Dokončení</th>
               <th className="text-left px-4 py-3.5">Vydání</th>
               {showRodnyList && <th className="text-left px-4 py-3.5">Rodný list</th>}
-              {showDotazy && <th className="text-right px-4 py-3.5">Dotaz</th>}
+              {/* Doleva jako vsechny ostatni sloupce - vpravo u samotneho
+                  okraje pusobilo tlacitko odtrzene od zbytku tabulky
+                  (zadani 12. 9. 2026: „ve sloupci rozhozeno doptat se"). */}
+              {showDotazy && <th className="text-left px-4 py-3.5">Dotaz</th>}
             </tr>
           </thead>
           <tbody>
@@ -146,7 +149,7 @@ export function ProjectsTable({
                   </td>
                 )}
                 {showDotazy && (
-                  <td className="px-4 py-0 text-right whitespace-nowrap">
+                  <td className="px-4 py-0 whitespace-nowrap">
                     <ZeptatSe projectId={String(p.id)} projectName={p.name} />
                   </td>
                 )}

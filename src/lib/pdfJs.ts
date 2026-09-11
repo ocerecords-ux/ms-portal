@@ -61,3 +61,38 @@ export function nactiPdfJs(): Promise<any> {
   okno.__pdfjsSlib = slib;
   return slib;
 }
+
+/**
+ * Nastavi pdf.js pomocny vlaknový skript (worker) tak, aby fungoval i v Safari.
+ *
+ * PROC TO NENI JEN JEDEN RADEK: pdf.js si worker pousti z adresy, kterou mu
+ * dame - a ta vede na CDN, tedy na CIZI DOMENU. Chrome si s tim poradi,
+ * Safari vlakno z ciziho serveru odmitne spustit a pdf.js pak spadne
+ * v nitru knihovny na neprehledne „undefined is not a function"
+ * (12. 9. 2026, Safari 26: „u objednavky nefunguje porad to pocitadlo").
+ *
+ * Skript se proto nejdriv stahne k nam a teprve z nej vznikne adresa
+ * `blob:`, ktera uz se tvari jako z vlastni domeny. Stahuje se jednou za
+ * zivot stranky.
+ *
+ * Kdyz se nepovede ani to, worker se nenastavi a pdf.js si poradi sam na
+ * hlavnim vlakne - pomaleji, ale poradi.
+ */
+let workerAdresa: Promise<string | null> | null = null;
+
+export async function nastavPdfWorker(pdfjs: any): Promise<void> {
+  if (pdfjs?.GlobalWorkerOptions?.workerSrc) return;
+
+  if (!workerAdresa) {
+    workerAdresa = fetch(`${PDFJS_CDN}/pdf.worker.min.mjs`)
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
+      .then((kod) => URL.createObjectURL(new Blob([kod], { type: 'text/javascript' })))
+      .catch((err) => {
+        console.warn('pdf.js: worker se nepodarilo pripravit, pojede to na hlavnim vlakne', err);
+        return null;
+      });
+  }
+
+  const adresa = await workerAdresa;
+  if (adresa) pdfjs.GlobalWorkerOptions.workerSrc = adresa;
+}

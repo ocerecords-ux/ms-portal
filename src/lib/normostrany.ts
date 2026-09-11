@@ -15,7 +15,7 @@
  * zalomený na šířku stránky.
  */
 
-import { nactiPdfJs, PDFJS_CDN } from '@/lib/pdfJs';
+import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 
 export const ZNAKU_NA_NORMOSTRANU = 1800;
 
@@ -184,7 +184,7 @@ async function zPdf(file: File): Promise<RozborTextu> {
   const adresa = URL.createObjectURL(file);
   try {
     const pdfjs = await nactiPdfJs();
-    pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
+    await nastavPdfWorker(pdfjs);
     const doc = await pdfjs.getDocument({ url: adresa }).promise;
 
     const casti: string[] = [];
