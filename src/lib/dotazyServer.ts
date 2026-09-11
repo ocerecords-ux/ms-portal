@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { userLabel } from '@/lib/chatServer';
 import { odkazNaFotku } from '@/lib/fotky';
+import { listCaflouProjectsForCompanyCached, mapCaflouProjects } from '@/lib/caflou';
 
 /**
  * Dotazy klienta k projektu (zadání 11. 9. 2026: „chtěl bych přidat
@@ -32,18 +33,18 @@ export async function projektPatriFirme(caflouProjectId: string, companyId: stri
   });
   if (meta?.companyId) return meta.companyId === companyId;
 
-  // Projekty prevzate z Caflou nemusi mit companyId vyplnene - pak se overi
-  // pres caflouCompanyId firmy.
+  // Projekty prevzate z Caflou nemusi mit companyId vyplnene. Pak se pta
+  // stejneho zdroje, ze ktereho se klientovi vykresluje jeho seznam projektu:
+  // je to ID mezi projekty jeho firmy v Caflou?
   const firma = await prisma.company.findUnique({
     where: { id: companyId },
     select: { caflouCompanyId: true },
   });
   if (!firma?.caflouCompanyId) return false;
-  const metaCaflou = await prisma.projectMeta.findUnique({
-    where: { caflouProjectId },
-    select: { caflouCompanyId: true },
-  });
-  return Boolean(metaCaflou?.caflouCompanyId) && metaCaflou!.caflouCompanyId === firma.caflouCompanyId;
+
+  const vysledek = await listCaflouProjectsForCompanyCached(firma.caflouCompanyId);
+  if (!vysledek.ok) return false;
+  return mapCaflouProjects(vysledek.body).some((p) => String(p.id) === caflouProjectId);
 }
 
 /** Kdo z Mediaspace dostává dotazy klientů. */
