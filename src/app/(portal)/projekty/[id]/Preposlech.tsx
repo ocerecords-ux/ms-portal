@@ -242,6 +242,9 @@ export function Preposlech({
   const pdfObalRef = useRef<HTMLDivElement | null>(null);
   const pdfRolovaniRef = useRef<HTMLDivElement | null>(null);
   const pdfVerzeRef = useRef(0);
+  /** Které strany už jsou vykreslené - kreslí se až na dohled, viz vykresliPdf. */
+  const nakresleneRef = useRef<Set<number>>(new Set());
+  const pozorovatelRef = useRef<IntersectionObserver | null>(null);
   const popisRef = useRef<HTMLTextAreaElement | null>(null);
   const vytvoreneUrl = useRef<string[]>([]);
 
@@ -506,37 +509,45 @@ export function Preposlech({
     // Dve nacteni za sebou (z Disku a rucne) by si jinak kreslila pres sebe.
     const moje = pdfVerzeRef.current + 1;
     pdfVerzeRef.current = moje;
+    pozorovatelRef.current?.disconnect();
+    nakresleneRef.current = new Set();
     obal.replaceChildren();
 
     const prvni = await doc.getPage(1);
     const sirka = Math.max(200, obal.clientWidth || 600);
     const zvetseni = Math.max(0.3, Math.min(4, sirka / prvni.getViewport({ scale: 1 }).width));
+    const rozmer = prvni.getViewport({ scale: zvetseni });
 
-    for (let n = 1; n <= doc.numPages; n += 1) {
-      if (pdfVerzeRef.current !== moje) return;
+    /**
+     * Stránka se vykreslí, AŽ KDYŽ SE K NÍ ČLOVĚK PŘIBLÍŽÍ (zadání
+     * 11. 9. 2026: „kolegovi nenačetl text").
+     *
+     * Do té doby se kreslilo všech 330 stran naráz, každá do vlastního
+     * plátna a s vlastní textovou vrstvou. Na silném stroji to jen chvíli
+     * trvalo, na slabším prohlížeč vzdal a text nenaskočil vůbec. Teď se
+     * rovnou vyrobí jen prázdné rámečky správné velikosti (aby rolování
+     * i čísla stran seděly) a plátno s textem do nich přibude, až jsou
+     * na dohled.
+     */
+    async function vykresliStranku(n: number) {
+      if (nakresleneRef.current.has(n) || pdfVerzeRef.current !== moje) return;
+      nakresleneRef.current.add(n);
+      const ramecek = obal!.querySelector<HTMLElement>(`[data-strana="${n}"]`);
+      if (!ramecek) return;
+
       const stranka = await doc.getPage(n);
+      if (pdfVerzeRef.current !== moje) return;
       const viewport = stranka.getViewport({ scale: zvetseni });
-      const ramecek = document.createElement('div');
-      ramecek.className = 'relative shadow-md bg-white';
-      ramecek.dataset.strana = String(n);
+
       const canvas = document.createElement('canvas');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       canvas.className = 'block';
-      ramecek.appendChild(canvas);
-      const cislo = document.createElement('span');
-      cislo.textContent = String(n);
-      cislo.className = 'absolute top-1.5 left-1.5 bg-ink/60 text-white text-[10px] font-heading rounded px-1.5 py-0.5';
-      ramecek.appendChild(cislo);
+      ramecek.prepend(canvas);
+      ramecek.style.height = '';
 
-      /**
-       * Vrstva se zvýrazněními (žluté obdélníky) leží NAD plátnem, ale pod
-       * textem — kliká se skrz ni.
-       */
-      const znacky = document.createElement('div');
-      znacky.dataset.znacky = '1';
-      znacky.className = 'absolute inset-0 pointer-events-none';
-      ramecek.appendChild(znacky);
+      await stranka.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      if (pdfVerzeRef.current !== moje) return;
 
       /**
        * Textová vrstva: průhledná slova přesně nad vykresleným textem, aby
@@ -544,17 +555,11 @@ export function Preposlech({
        * getTextContent(), protože hotová TextLayer z pdf.js chce vlastní
        * stylopis a proměnnou --scale-factor — a ta se mezi verzemi mění.
        */
-      const textovaVrstva = document.createElement('div');
-      textovaVrstva.dataset.text = '1';
-      textovaVrstva.className = 'absolute inset-0 select-text cursor-text';
-      ramecek.appendChild(textovaVrstva);
-
-      obal.appendChild(ramecek);
-      await stranka.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-      if (pdfVerzeRef.current !== moje) return;
-
+      const textovaVrstva = ramecek.querySelector<HTMLElement>('[data-text]');
+      if (!textovaVrstva) return;
       try {
         const obsah = await stranka.getTextContent();
+        if (pdfVerzeRef.current !== moje) return;
         for (const polozka of obsah.items as any[]) {
           if (!polozka.str) continue;
           const t = pdfjs.Util.transform(viewport.transform, polozka.transform);
@@ -578,6 +583,54 @@ export function Preposlech({
         // Sken bez textu - zvyraznovac tam proste nebude.
       }
     }
+
+    for (let n = 1; n <= doc.numPages; n += 1) {
+      const ramecek = document.createElement('div');
+      ramecek.className = 'relative shadow-md bg-white shrink-0';
+      ramecek.dataset.strana = String(n);
+      // Prazdny ramecek drzi misto, nez se stranka vykresli - bez toho by
+      // rolovani skakalo a cislo strany ukazovalo nesmysly.
+      ramecek.style.width = `${rozmer.width}px`;
+      ramecek.style.height = `${rozmer.height}px`;
+
+      const cislo = document.createElement('span');
+      cislo.textContent = String(n);
+      cislo.className = 'absolute top-1.5 left-1.5 bg-ink/60 text-white text-[10px] font-heading rounded px-1.5 py-0.5';
+      ramecek.appendChild(cislo);
+
+      /**
+       * Vrstva se zvýrazněními (žluté obdélníky) leží NAD plátnem, ale pod
+       * textem — kliká se skrz ni.
+       */
+      const znacky = document.createElement('div');
+      znacky.dataset.znacky = '1';
+      znacky.className = 'absolute inset-0 pointer-events-none';
+      ramecek.appendChild(znacky);
+
+      const textovaVrstva = document.createElement('div');
+      textovaVrstva.dataset.text = '1';
+      textovaVrstva.className = 'absolute inset-0 select-text cursor-text';
+      ramecek.appendChild(textovaVrstva);
+
+      obal.appendChild(ramecek);
+    }
+
+    // Predstih 1500 px: nez clovek doroluje, je stranka hotova.
+    const pozorovatel = new IntersectionObserver(
+      (zaznamy) => {
+        for (const z of zaznamy) {
+          if (!z.isIntersecting) continue;
+          const n = Number((z.target as HTMLElement).dataset.strana);
+          if (n) void vykresliStranku(n);
+        }
+      },
+      { root: pdfRolovaniRef.current, rootMargin: '1500px 0px' },
+    );
+    obal.querySelectorAll<HTMLElement>('[data-strana]').forEach((el) => pozorovatel.observe(el));
+    pozorovatelRef.current = pozorovatel;
+
+    // Prvni strany hned, at je po nacteni co cist i bez rolovani.
+    for (let n = 1; n <= Math.min(3, doc.numPages); n += 1) await vykresliStranku(n);
 
     vykresliZnacky();
   }
