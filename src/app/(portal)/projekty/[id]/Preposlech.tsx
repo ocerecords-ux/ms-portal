@@ -192,6 +192,7 @@ export function Preposlech({
   const aktivniRef = useRef<number | null>(null);
   const pdfDocRef = useRef<any>(null);
   const pdfObalRef = useRef<HTMLDivElement | null>(null);
+  const pdfVerzeRef = useRef(0);
   const popisRef = useRef<HTMLTextAreaElement | null>(null);
   const vytvoreneUrl = useRef<string[]>([]);
 
@@ -408,15 +409,31 @@ export function Preposlech({
 
   /* ---------- PDF ---------- */
 
+  /**
+   * Stránky PDF kreslí pdf.js do DOM sám, takže `pdfObalRef` je div, do
+   * kterého React NIKDY nic nevykresluje.
+   *
+   * Kdyby si ho s Reactem dělili, skončí to pádem celé stránky:
+   * `NotFoundError: Failed to execute 'removeChild'`. React si pamatuje, co
+   * v tom místě vykreslil (hlášku „ve složce zatím není text"), my mu to pod
+   * rukama smažeme `innerHTML = ''` a při dalším překreslení chce odebrat
+   * uzel, který už není. Přesně tohle položilo Přeposlech 11. 9. 2026.
+   */
   async function vykresliPdf(doc: any) {
     const obal = pdfObalRef.current;
     if (!obal) return;
-    obal.innerHTML = '';
+
+    // Dve nacteni za sebou (z Disku a rucne) by si jinak kreslila pres sebe.
+    const moje = pdfVerzeRef.current + 1;
+    pdfVerzeRef.current = moje;
+    obal.replaceChildren();
+
     const prvni = await doc.getPage(1);
-    const sirka = obal.clientWidth - 32;
+    const sirka = Math.max(200, obal.clientWidth || 600);
     const zvetseni = Math.max(0.3, Math.min(4, sirka / prvni.getViewport({ scale: 1 }).width));
 
     for (let n = 1; n <= doc.numPages; n += 1) {
+      if (pdfVerzeRef.current !== moje) return;
       const stranka = await doc.getPage(n);
       const viewport = stranka.getViewport({ scale: zvetseni });
       const ramecek = document.createElement('div');
@@ -675,7 +692,7 @@ export function Preposlech({
               </span>
             )}
           </div>
-          <div ref={pdfObalRef} className="bg-field overflow-y-auto p-4 flex flex-col items-center gap-4" style={{ height: '72vh' }}>
+          <div className="bg-field overflow-y-auto p-4 flex flex-col items-center gap-4" style={{ height: '72vh' }}>
             {pdfStran === 0 && (
               <p className="text-sm font-body text-muted m-auto text-center max-w-[300px]">
                 {zDisku === 'nacitam'
@@ -683,6 +700,10 @@ export function Preposlech({
                   : 'Ve složce projektu zatím není text. Hledá se PDF, jehož název končí _RE.'}
               </p>
             )}
+            {/* Stranky PDF kresli pdf.js primo do DOM, ne React. Musi proto mit
+                vlastni div, do ktereho React nikdy zadne dite nevlozi - viz
+                komentar u vykresliPdf(). */}
+            <div ref={pdfObalRef} className="w-full flex flex-col items-center gap-4" />
           </div>
         </div>
 
