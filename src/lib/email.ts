@@ -1257,6 +1257,15 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
 
 export type StavProjektuInput = {
   prijemci: string[];
+  /**
+   * Naše adresy do SKRYTÉ kopie (zadání 11. 9. 2026: „je tam i u klienta
+   * v mailu, že to jde na nás v kopii, nemůžeme tam být vidět, kdyžtak to
+   * musí být ve skryté kopii").
+   *
+   * Klient nemá vidět, kdo všechno u nás o jeho projektu ví — a hlavně: když
+   * na zprávu odpoví „všem", nemá odpověď chodit celé produkci.
+   */
+  skrytaKopie?: string[];
   /** Zpráva jen pro nás - klient ji nedostane, tak ať to je v mailu vidět. */
   jenInterne: boolean;
   jmenoKlienta: string | null;
@@ -1362,9 +1371,13 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
     return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
   }
 
+  const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
+
   await transport.sendMail({
     from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
     to: input.prijemci.join(', '),
+    // Nase adresy jen ve skryte kopii - viz skrytaKopie v typu vys.
+    bcc: skryta.length > 0 ? skryta.join(', ') : undefined,
     subject: input.predmet?.trim() || `${input.nazevProjektu} - ${input.stav}`,
     text: [
       input.jenInterne ? 'Dobry den,' : pozdrav(input.jmenoKlienta),

@@ -1,25 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { extractDriveFolderId, getAccessToken, getFileMeta, isWithinRoot } from '@/lib/googleDrive';
+import { getAccessToken, getFileMeta, isWithinRoot } from '@/lib/googleDrive';
+import { korenProZadost } from '@/lib/drivePristup';
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user.companyId) {
-    return NextResponse.json({ error: 'Nejste přihlášen k žádné firmě.' }, { status: 401 });
-  }
-
   const fileId = req.nextUrl.searchParams.get('fileId');
   if (!fileId) {
     return NextResponse.json({ error: 'Chybí ID souboru.' }, { status: 400 });
   }
 
-  const company = await prisma.company.findUnique({ where: { id: session.user.companyId } });
-  const rootId = company?.driveFolderUrl ? extractDriveFolderId(company.driveFolderUrl) : null;
-  if (!rootId) {
-    return NextResponse.json({ error: 'Firmě není přiřazena složka na Google Disku.' }, { status: 404 });
+  // Prihlaseny klient, nebo token z mailu - viz lib/drivePristup.ts.
+  const koren = await korenProZadost(req);
+  if ('chyba' in koren) {
+    return NextResponse.json({ error: koren.chyba }, { status: koren.status });
   }
+  const rootId = koren.rootId;
 
   const token = await getAccessToken();
   if (!token) {

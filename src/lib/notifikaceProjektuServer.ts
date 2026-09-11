@@ -4,7 +4,7 @@ import { dosadPromenne } from '@/lib/vzoryZprav';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { sendStavProjektuEmail } from '@/lib/email';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
-import { zajistiOdkaz, urlPreposlechu } from '@/lib/preposlechOdkaz';
+import { zajistiOdkaz, urlNahravek, urlPreposlechu } from '@/lib/preposlechOdkaz';
 
 /**
  * Odeslání zprávy o změně stavu projektu (zadání 10. 9. 2026).
@@ -84,10 +84,16 @@ export async function posliNotifikaciKeStavu(
     // Komu z nas to jde - nastavuje se na karte firmy (zadani 10. 9. 2026).
     // U zpravy klientovi jdeme v kopii i my, at je videt, co odeslo.
     const nasi = interniPrijemciFirmy(projekt.company?.interniPrijemci);
-    const prijemci =
-      nastaveni.komu === 'INTERNE'
-        ? nasi
-        : [projekt.klient?.email, ...nasi].filter((e): e is string => Boolean(e));
+    /**
+     * Klient je v „Komu", MY VE SKRYTÉ KOPII (zadání 11. 9. 2026: „nemůžeme
+     * tam být vidět, kdyžtak to musí být ve skryté kopii").
+     *
+     * Do té doby jsme byli v „Komu" vedle klienta — bylo vidět, kdo všechno
+     * u nás o jeho projektu ví, a odpověď „všem" by šla celé produkci.
+     */
+    const klientovi = nastaveni.komu !== 'INTERNE' && projekt.klient?.email ? [projekt.klient.email] : [];
+    const prijemci = klientovi.length > 0 ? klientovi : nasi;
+    const skrytaKopie = klientovi.length > 0 ? nasi : [];
 
     if (nastaveni.komu === 'KLIENT' && !projekt.klient?.email) {
       // Projekt nema vyplneneho klienta - poslat "klientovi" nejde. Zapisujeme
@@ -102,35 +108,41 @@ export async function posliNotifikaciKeStavu(
     }
 
     /**
-     * Odkaz v mailu vede do NAŠICH Nahrávek, ne na Google Disk (zadání
-     * 10. 9. 2026: „chci, ať se mu to otevře v tom našem disku Nahrávky
-     * obrandovaném, v barvách").
+     * ODKAZY V MAILU KLIENTOVI JSOU OTEVŘENÉ (zadání 11. 9. 2026: „potřebuju,
+     * ať se klient nemusí přihlašovat a jsou ty odkazy otevřené, mnohdy to
+     * někomu posílá").
      *
-     * Klient tak zůstane v portálu, kde nahrávky vypadají jako od nás a dají
-     * se rovnou poslechnout. Na Google Disk ho pošleme jen tehdy, když
-     * projekt ještě nemáme v portálu spárovaný s firmou - to by se mu
-     * stránka Nahrávek neotevřela a odkaz do prázdna je horší než odkaz
-     * jinam.
+     * Do 11. 9. 2026 vedlo tlačítko na `/nahravky?projekt=…`, což je stránka
+     * portálu za přihlášením. Klient, který účet nikdy neaktivoval, skončil
+     * na přihlašovací obrazovce; přeposlaný odkaz nefungoval vůbec.
+     *
+     * Teď vede na `/nahravky/<token>` — stejný token jako AudioTagger, jeden
+     * na projekt, neuhodnutelný a kdykoliv zrušitelný tlačítkem „Vygenerovat
+     * nový" u projektu. Když se token nepodaří vyrobit, pošle se aspoň odkaz
+     * na složku na Disku; kvůli odkazu se nesmí ztratit celá zpráva.
+     *
+     * INTERNÍ zpráva chodí dál do portálu — nás přihlášení nebrzdí a v
+     * portálu máme u nahrávek všechno ostatní.
      */
     const zaklad = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
     const slozka = projekt.driveUrl || projekt.company?.driveFolderUrl || null;
-    const odkazNaDisk = projekt.companyId && slozka
-      ? `${zaklad}/nahravky?projekt=${encodeURIComponent(caflouProjectId)}`
-      : slozka;
+
+    // Jeden token na projekt - pouziji ho obe tlacitka.
+    const token = nastaveni.komu === 'INTERNE' ? null : await zajistiOdkaz(caflouProjectId, null);
+
+    const odkazNaDisk = token
+      ? urlNahravek(token)
+      : projekt.companyId && slozka
+        ? `${zaklad}/nahravky?projekt=${encodeURIComponent(caflouProjectId)}`
+        : slozka;
 
     /**
      * Druhé tlačítko: „Přeposlechnout v AudioTaggeru" (zadání 11. 9. 2026).
-     *
      * Jen u zprávy o prvních tracích — u ostatních stavů není co poslouchat.
-     * Odkaz je tokenový a otevře se na celou obrazovku bez přihlašování; na
-     * projekt je živý vždycky jeden, takže opakované zprávy ten předchozí
-     * nezneplatní. Když se token nepodaří vyrobit, odejde zpráva jen se
-     * složkou — kvůli odkazu navíc se rozhodně nesmí ztratit celá zpráva.
      */
     let odkazNaPreposlech: string | null = null;
-    if (znackaStavu(stav) === ZNACKA_PRVNI_TRACKY && nastaveni.komu !== 'INTERNE') {
-      const token = await zajistiOdkaz(caflouProjectId, null);
-      if (token) odkazNaPreposlech = urlPreposlechu(token);
+    if (znackaStavu(stav) === ZNACKA_PRVNI_TRACKY && token) {
+      odkazNaPreposlech = urlPreposlechu(token);
     }
 
     /**
@@ -150,6 +162,7 @@ export async function posliNotifikaciKeStavu(
 
     const vysledek = await sendStavProjektuEmail({
       prijemci,
+      skrytaKopie,
       jenInterne: nastaveni.komu === 'INTERNE',
       jmenoKlienta: projekt.klient?.name ?? null,
       nazevProjektu,
@@ -167,13 +180,13 @@ export async function posliNotifikaciKeStavu(
         caflouProjectId,
         stav,
         popis: `Zprávu ke stavu „${stav}" se nepodařilo odeslat (${vysledek.reason ?? 'neznámý důvod'}).`,
-        prijemci,
+        prijemci: [...prijemci, ...skrytaKopie],
       });
       return { stav: 'chyba', zprava: vysledek.reason ?? 'Nepodařilo se odeslat.' };
     }
 
     await prisma.notifikaceOdeslana.create({
-      data: { caflouProjectId, znacka, prijemci: prijemci.join(', ') },
+      data: { caflouProjectId, znacka, prijemci: [...prijemci, ...skrytaKopie].join(', ') },
     });
 
     // Do historie projektu (zadani 10. 9. 2026) - at je videt, kdy co komu
@@ -184,11 +197,12 @@ export async function posliNotifikaciKeStavu(
       popis:
         nastaveni.komu === 'INTERNE'
           ? `Zpráva ke stavu „${stav}" odešla jen nám interně.`
-          : `Zpráva ke stavu „${stav}" odešla klientovi.`,
-      prijemci,
+          : `Zpráva ke stavu „${stav}" odešla klientovi, nám ve skryté kopii.`,
+      // Do historie patri i skryta kopie - at je dohledatelne, kdo to dostal.
+      prijemci: [...prijemci, ...skrytaKopie],
     });
 
-    return { stav: 'odeslano', prijemci };
+    return { stav: 'odeslano', prijemci: [...prijemci, ...skrytaKopie] };
   } catch (err) {
     console.error('posliNotifikaciKeStavu selhalo:', err);
     return { stav: 'chyba', zprava: err instanceof Error ? err.message : 'Neznámá chyba.' };

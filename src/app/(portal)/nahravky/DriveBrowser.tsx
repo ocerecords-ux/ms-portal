@@ -131,7 +131,26 @@ function SortIcon({ dir }: { dir: 'asc' | 'desc' }) {
   );
 }
 
-export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: string; rootName: string }) {
+export function DriveBrowser({
+  initialFolderId,
+  rootName,
+  token,
+  jenCteni,
+}: {
+  initialFolderId: string;
+  rootName: string;
+  /**
+   * Token z mailu (zadání 11. 9. 2026: „potřebuju, ať se klient nemusí
+   * přihlašovat a jsou ty odkazy otevřené"). Když je vyplněný, přilepí se
+   * ke každému dotazu na Disk — server podle něj pozná, do které složky
+   * ten odkaz pouští. Bez něj se jede podle přihlášení, jako dosud.
+   */
+  token?: string;
+  /** Klient z odkazu soubory nepřejmenovává. */
+  jenCteni?: boolean;
+}) {
+  // Klic se lepi na KAZDOU adresu k Disku - vypis, stahovani i ZIP.
+  const klic = token ? `&k=${encodeURIComponent(token)}` : '';
   const [stack, setStack] = useState<{ id: string; name: string }[]>([{ id: initialFolderId, name: rootName }]);
   const [items, setItems] = useState<DriveItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,7 +189,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/drive/list?folderId=${encodeURIComponent(folderId)}`);
+      const res = await fetch(`/api/drive/list?folderId=${encodeURIComponent(folderId)}${klic}`);
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Obsah složky se nepodařilo načíst.');
       setItems(body.items ?? []);
@@ -180,7 +199,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [klic]);
 
   useEffect(() => {
     load(currentFolder.id);
@@ -236,7 +255,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
    * ukazeme normalni hlasku misto holeho JSONu v novem okne.
    */
   async function downloadAll() {
-    const url = `/api/drive/zip?folderId=${encodeURIComponent(currentFolder.id)}`;
+    const url = `/api/drive/zip?folderId=${encodeURIComponent(currentFolder.id)}${klic}`;
     setZipBusy(true);
     setError(null);
     try {
@@ -269,6 +288,9 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
   }
 
   function startRename(item: DriveItem) {
+    // Klient z odkazu soubory neprejmenovava - /api/drive/rename ho stejne
+    // neprusti, tak at se o to ani nepokousi.
+    if (jenCteni) return;
     setRenamingId(item.id);
     setRenameValue(item.name);
   }
@@ -495,7 +517,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                     )}
                     {!item.isFolder && (
                       <a
-                        href={`/api/drive/download?fileId=${encodeURIComponent(item.id)}`}
+                        href={`/api/drive/download?fileId=${encodeURIComponent(item.id)}${klic}`}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
                         title="Stáhnout"
                       >
@@ -542,7 +564,7 @@ export function DriveBrowser({ initialFolderId, rootName }: { initialFolderId: s
                     <WaveformPlayer
                       key={item.id}
                       autoPlay
-                      src={`/api/drive/download?fileId=${encodeURIComponent(item.id)}&disposition=inline`}
+                      src={`/api/drive/download?fileId=${encodeURIComponent(item.id)}&disposition=inline${klic}`}
                     />
                   </div>
                 )}

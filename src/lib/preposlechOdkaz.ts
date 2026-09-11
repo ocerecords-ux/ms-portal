@@ -31,6 +31,16 @@ export function urlPreposlechu(token: string): string {
 }
 
 /**
+ * Nahrávky projektu bez přihlašování (zadání 11. 9. 2026: „potřebuju, ať se
+ * klient nemusí přihlašovat a jsou ty odkazy otevřené, mnohdy to někomu
+ * posílá"). Je to TENTÝŽ token jako u přeposlechu — „Vygenerovat nový"
+ * u projektu tedy zavře obojí naráz.
+ */
+export function urlNahravek(token: string): string {
+  return `${zakladPortalu()}/nahravky/${encodeURIComponent(token)}`;
+}
+
+/**
  * Vrátí platný token projektu; když žádný nemá, založí ho.
  * Nikdy nevyhazuje — odkaz navíc nesmí shodit odesílání zprávy.
  */
