@@ -7,11 +7,10 @@ import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel }
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
 import { IkonaTypu } from '@/lib/ikonyTypu';
-import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
+import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
-import { FajfkaDotoceno } from './FajfkaDotoceno';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -69,18 +68,34 @@ export function ProjectsTable({
   const showDotazy = dotazy === true;
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
-      <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
-        <table className="w-full min-w-[720px] border-collapse">
+      {/* Stejne jako u interniho prehledu: procentni sirky, jeden radek na
+          bunku, zadne posouvani do stran (zadani 12. 9. 2026). */}
+      <div className="overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
+        <table className="w-full min-w-[620px] table-fixed border-collapse">
+          <colgroup>
+            {sirkySloupcu([
+              'name',
+              'statusName',
+              'narrator',
+              'pageCount',
+              'endDate',
+              'releaseDate',
+              ...(showRodnyList ? ['driveUrl'] : []),
+              ...(showDotazy ? ['driveUrl'] : []),
+            ]).map((sirka, i) => (
+              <col key={i} style={{ width: sirka }} />
+            ))}
+          </colgroup>
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
               <th className="text-left px-4 py-3.5">Projekt</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
+              <th className="text-left px-4 py-3.5">Stav</th>
               <th className="text-left px-4 py-3.5">Herec</th>
-              <th className="text-right px-4 py-3.5 whitespace-nowrap">Normostrany</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum dokončení</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum vydání</th>
-              {showRodnyList && <th className="text-left px-4 py-3.5 whitespace-nowrap">Rodný list</th>}
-              {showDotazy && <th className="text-right px-4 py-3.5 whitespace-nowrap">Dotaz</th>}
+              <th className="text-right px-4 py-3.5">Normostrany</th>
+              <th className="text-left px-4 py-3.5">Dokončení</th>
+              <th className="text-left px-4 py-3.5">Vydání</th>
+              {showRodnyList && <th className="text-left px-4 py-3.5">Rodný list</th>}
+              {showDotazy && <th className="text-right px-4 py-3.5">Dotaz</th>}
             </tr>
           </thead>
           <tbody>
@@ -92,25 +107,30 @@ export function ProjectsTable({
               </tr>
             )}
             {projects.map((p) => (
-              <tr key={p.id} className="border-t border-line hover:bg-surfaceSoft">
-                <td className="px-4 py-4 font-heading font-semibold text-sm text-ink max-w-[300px] break-words align-top">
+              <tr key={p.id} className={TRIDA_RADKU}>
+                <td
+                  className="px-4 py-0 font-heading font-semibold text-sm text-ink truncate"
+                  title={p.name}
+                >
                   {p.name}
                 </td>
-                <td className="px-4 py-4">
+                <td className="px-4 py-0 truncate">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
                 </td>
-                <td className="px-4 py-4 text-sm font-heading">{p.narrator ?? '—'}</td>
-                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
+                <td className="px-4 py-0 text-sm font-heading truncate" title={p.narrator ?? undefined}>
+                  {p.narrator ?? '—'}
+                </td>
+                <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
                   {p.pageCount ?? '—'}
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.endDate)}
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
                 </td>
                 {showRodnyList && (
-                  <td className="px-4 py-4 text-sm font-heading whitespace-nowrap">
+                  <td className="px-4 py-0 text-sm font-heading whitespace-nowrap">
                     {rodneListy?.[String(p.id)] ? (
                       <a
                         href={`/api/rodny-list/${rodneListy[String(p.id)].id}`}
@@ -126,7 +146,7 @@ export function ProjectsTable({
                   </td>
                 )}
                 {showDotazy && (
-                  <td className="px-4 py-4 text-right whitespace-nowrap">
+                  <td className="px-4 py-0 text-right whitespace-nowrap">
                     <ZeptatSe projectId={String(p.id)} projectName={p.name} />
                   </td>
                 )}
@@ -155,16 +175,23 @@ export function AdminProjectsTable({
 }) {
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
-      <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
-        <table className="w-full min-w-[720px] border-collapse">
+      <div className="overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
+        <table className="w-full min-w-[620px] table-fixed border-collapse">
+          <colgroup>
+            {sirkySloupcu(['name', 'companyName', 'statusName', 'pageCount', 'endDate', 'releaseDate']).map(
+              (sirka, i) => (
+                <col key={i} style={{ width: sirka }} />
+              ),
+            )}
+          </colgroup>
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
               <th className="text-left px-4 py-3.5">Projekt</th>
               <th className="text-left px-4 py-3.5">Firma</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Stav</th>
-              <th className="text-right px-4 py-3.5 whitespace-nowrap">Normostrany</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum dokončení</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Datum vydání</th>
+              <th className="text-left px-4 py-3.5">Stav</th>
+              <th className="text-right px-4 py-3.5">Normostrany</th>
+              <th className="text-left px-4 py-3.5">Dokončení</th>
+              <th className="text-left px-4 py-3.5">Vydání</th>
             </tr>
           </thead>
           <tbody>
@@ -176,21 +203,26 @@ export function AdminProjectsTable({
               </tr>
             )}
             {projects.map((p) => (
-              <tr key={`${p.companyName}-${p.id}`} className="border-t border-line hover:bg-surfaceSoft">
-                <td className="px-4 py-4 font-heading font-semibold text-sm text-ink max-w-[300px] break-words align-top">
+              <tr key={`${p.companyName}-${p.id}`} className={TRIDA_RADKU}>
+                <td
+                  className="px-4 py-0 font-heading font-semibold text-sm text-ink truncate"
+                  title={p.name}
+                >
                   {p.name}
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted">{p.companyName}</td>
-                <td className="px-4 py-4">
+                <td className="px-4 py-0 text-sm font-heading text-muted truncate" title={p.companyName}>
+                  {p.companyName}
+                </td>
+                <td className="px-4 py-0 truncate">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
+                <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
                   {p.pageCount ?? '—'}
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.endDate)}
                 </td>
-                <td className="px-4 py-4 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
                 </td>
               </tr>
@@ -370,14 +402,17 @@ function bunkaSloupce(
       // toho si otevre pole a prepisuje nazev. Uprava nazvu zustava v detailu
       // projektu, kde je k tomu formular a je jasne, co se deje.
       //
-      // Dlouhy nazev se zalomi na dalsi radek (sirka sloupce je v TRIDA_BUNKY);
-      // orezavani tremi teckami se neosvedcilo, nebylo poznat, co je za knihu.
+      // JEDEN RADEK (zadani 12. 9. 2026: „hrozne nam tam litaji radky, prosim
+      // srovnat"). Nazev je nejsirsi sloupec a bere si vsechno, co ostatni
+      // nepotrebuji, takze se skoro vzdycky vejde cely; delsi se orezne a
+      // uplny je v bublinkove napovede. Zalomeny nazev delal ze dvou sousednich
+      // radku dvojnasobne vysoke a seznam se pak nedal projizdet ocima.
       return (
-        <span className="flex items-start gap-2.5">
+        <span className="flex items-center gap-2.5 min-w-0" title={p.name}>
           <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} />
           <Link
             href={`/projekty/${p.id}`}
-            className="text-ink hover:text-brand-purple no-underline break-words pt-1"
+            className="text-ink hover:text-brand-purple no-underline truncate"
           >
             {p.name}
           </Link>
@@ -446,20 +481,31 @@ function bunkaSloupce(
       // bubline. Kdyz zadny prirazeny ucet neni, zbyva jmeno z Caflou: jen
       // sedy text, na kterem nic nestoji.
       if (p.meta?.herci?.length) {
+        // JEDNA BUBLINA NA RADEK (zadani 12. 9. 2026: „hrozne nam tam litaji
+        // radky"). Herci pod sebou delali z nekterych radku dvoj- az
+        // trojnasobne vysoke. Kdyz jich je vic, za bublinou stoji „+2"
+        // a cely seznam je v bublinkove napovede; kompletni je pak v detailu.
+        const herci = p.meta.herci;
+        const prvni = herci[0];
         return (
-          <span className={TRIDA_SLOUPCE_HERCU}>
-            {p.meta.herci.map((h) => (
-              <span
-                key={h.jmeno}
-                title={h.dotoceno ? `${h.jmeno} — dotočeno` : undefined}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
-                  h.dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
-                }`}
-              >
-                {h.jmeno}
-                {h.dotoceno && <FajfkaDotoceno />}
-              </span>
-            ))}
+          <span
+            className="flex items-center gap-1.5 min-w-0"
+            title={herci.map((h) => (h.dotoceno ? `${h.jmeno} — dotočeno` : h.jmeno)).join(', ')}
+          >
+            <span
+              className={`inline-flex items-center px-3 py-1 text-sm font-heading font-semibold truncate ${
+                prvni.dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
+              }`}
+            >
+              {prvni.jmeno}
+              {/* Zelena linka kolem bubliny znamena dotoceno - fajfka uvnitr
+                  uz je navic (zadani 12. 9. 2026: „dej pryc tu fajfku").
+                  Pro ctecky obrazovky, ktere barvu nevidi, zustava popisek. */}
+              {prvni.dotoceno && <span className="sr-only"> — dotočeno</span>}
+            </span>
+            {herci.length > 1 && (
+              <span className="shrink-0 text-xs font-heading text-muted">+{herci.length - 1}</span>
+            )}
           </span>
         );
       }
@@ -511,24 +557,62 @@ function bunkaSloupce(
 }
 
 /** Třída buňky podle sloupce - čísla doprava, data bez zalomení. */
-const TRIDA_BUNKY: Record<string, string> = {
-  // Nazev ma pevnou sirku a dlouhy se zalomi na dalsi radek (zadani 10. 9.
-  // 2026: "je to nekde dlouhe a prekryva se to"). Bez pevne sirky si dlouhy
-  // nazev bral misto ostatnim sloupcum a tabulka lezla za okraj.
-  name: 'px-3 py-3.5 font-heading font-semibold text-sm w-[300px] min-w-[300px] max-w-[300px] align-top',
-  companyName: 'px-3 py-3.5 text-sm font-heading text-muted',
-  statusName: 'px-4 py-4',
-  priority: 'px-3 py-3.5 text-sm font-heading',
-  projectType: 'px-3 py-3.5 text-sm font-heading text-muted',
-  managerName: 'px-3 py-3.5 text-sm font-heading text-muted',
-  // Jmeno herce se nezalamuje - bunka si vezme sirku, kterou potrebuje
-  // (zadani 10. 9. 2026).
-  narrator: 'px-3 py-3.5 text-sm font-heading text-muted align-top whitespace-nowrap',
-  pageCount: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
-  endDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
-  releaseDate: 'px-3 py-3.5 text-sm font-heading text-muted tabular-nums whitespace-nowrap',
-  driveUrl: 'px-3 py-3.5 whitespace-nowrap',
+/**
+ * ŠÍŘKY SLOUPCŮ JSOU POMĚRY, NE PIXELY (zadání 12. 9. 2026: „ať se jednou pro
+ * vždy neobjeví na tom přehledu projektů posuvníky, to je špatně, vymysli,
+ * jak to tam vejde").
+ *
+ * Tabulka běží v režimu `table-fixed` a každý sloupec dostane procento
+ * z toho, co je zrovna k dispozici. Součet je vždycky 100 %, takže tabulka
+ * nemůže přetéct — ať je okno jakkoliv široké a ať si kdo chce zapne jakékoliv
+ * sloupce. Dřív měly sloupce pevné pixely a stačilo pár zapnutých navíc, aby
+ * se seznam začal posouvat do stran.
+ *
+ * Čísla jsou VÁHY, ne procenta: přepočítají se podle toho, které sloupce jsou
+ * zrovna vidět. Název dostal nejvíc — ten se má vejít celý.
+ */
+const VAHA_SLOUPCE: Record<string, number> = {
+  name: 30,
+  companyName: 16,
+  statusName: 16,
+  priority: 9,
+  projectType: 11,
+  managerName: 16,
+  narrator: 18,
+  pageCount: 8,
+  endDate: 10,
+  releaseDate: 10,
+  driveUrl: 6,
 };
+
+export function sirkySloupcu(klice: string[]): string[] {
+  const vahy = klice.map((k) => VAHA_SLOUPCE[k] ?? 12);
+  const soucet = vahy.reduce((a, b) => a + b, 0) || 1;
+  return vahy.map((v) => `${((v / soucet) * 100).toFixed(3)}%`);
+}
+
+/**
+ * KAŽDÁ BUŇKA JE NA JEDEN ŘÁDEK (zadání 12. 9. 2026: „hrozně nám tam lítají
+ * řádky, prosím srovnat"). Co se nevejde, se ořízne třemi tečkami a celé je
+ * v bublinkové nápovědě. Řádky tak mají všechny stejnou výšku a seznam se dá
+ * projíždět očima.
+ */
+const TRIDA_BUNKY: Record<string, string> = {
+  name: 'px-3 py-0 font-heading font-semibold text-sm truncate',
+  companyName: 'px-3 py-0 text-sm font-heading text-muted truncate',
+  statusName: 'px-3 py-0 truncate',
+  priority: 'px-3 py-0 text-sm font-heading truncate',
+  projectType: 'px-3 py-0 text-sm font-heading text-muted truncate',
+  managerName: 'px-3 py-0 text-sm font-heading text-muted truncate',
+  narrator: 'px-3 py-0 text-sm font-heading text-muted truncate',
+  pageCount: 'px-3 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
+  endDate: 'px-3 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap truncate',
+  releaseDate: 'px-3 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap truncate',
+  driveUrl: 'px-3 py-0 whitespace-nowrap',
+};
+
+/** Jedna výška pro všechny řádky - kvůli tomu to celé je. */
+const TRIDA_RADKU = 'h-[52px] border-t border-line hover:bg-surfaceSoft';
 
 const ZAROVNANI_VPRAVO = new Set(['pageCount']);
 
@@ -651,16 +735,16 @@ function SortableHeader({
   }
 
   return (
-    <th className={`px-3 py-3.5 whitespace-nowrap ${vpravo ? 'text-right' : 'text-left'}`}>
+    <th className={`px-3 py-3.5 overflow-hidden ${vpravo ? 'text-right' : 'text-left'}`}>
       <button
         type="button"
         onClick={() => onSort(sloupec.key as ProjectSortKey)}
         title={`Seřadit podle: ${sloupec.label}`}
-        className={`inline-flex items-center gap-1.5 font-heading text-xs transition-colors hover:text-brand-green ${
+        className={`inline-flex items-center gap-1.5 max-w-full font-heading text-xs transition-colors hover:text-brand-green ${
           active ? 'text-brand-green' : 'text-white/85'
         } ${vpravo ? 'flex-row-reverse' : ''}`}
       >
-        {sloupec.label}
+        <span className="truncate">{sloupec.label}</span>
         {active && <SortArrow dir={sort.dir} />}
       </button>
     </th>
@@ -734,12 +818,20 @@ export function InternalProjectsTable({
 
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
-      {/* Sloupcu je hodne a na uzsim okne se tabulka nevejde. Posouvani do
-          stran je proto videt: macOS lista se sama schovava, tak si ji tu
-          vykreslujeme natrvalo (zadani 8. 9. 2026: "nesmi se stavat, ze se to
-          vpravo usekne"). */}
-      <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
-        <table className="w-full min-w-[900px] border-collapse">
+      {/* ŽÁDNÉ POSUVNÍKY DO STRAN (zadání 12. 9. 2026). Tabulka je
+          `table-fixed` a sloupce mají procenta, takže se vejde vždycky - ať je
+          okno jakkoliv široké a ať je zapnutých sloupců kolik chce. Co se do
+          sloupce nevejde, se ořízne třemi tečkami a celé je v nápovědě.
+          Posouvání zbývá jen pro opravdu úzká okna, kde by se dál zmenšovat
+          nedalo. */}
+      <div className="overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
+        <table className="w-full min-w-[620px] table-fixed border-collapse">
+          <colgroup>
+            {sirkySloupcu(columns.map((c) => c.key)).map((sirka, i) => (
+              <col key={columns[i].key} style={{ width: sirka }} />
+            ))}
+            {canEditColumns && <col style={{ width: '44px' }} />}
+          </colgroup>
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
               {columns.map((sloupec, index) => (
@@ -792,9 +884,12 @@ export function InternalProjectsTable({
               </tr>
             )}
             {projects.map((p) => (
-              <tr key={p.id} className="border-t border-line hover:bg-surfaceSoft">
+              <tr key={p.id} className={TRIDA_RADKU}>
                 {columns.map((sloupec) => (
-                  <td key={sloupec.key} className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-3.5 text-sm font-heading'}>
+                  <td
+                    key={sloupec.key}
+                    className={TRIDA_BUNKY[sloupec.key] ?? 'px-3 py-0 text-sm font-heading truncate'}
+                  >
                     {bunkaSloupce(p, sloupec.key, canEditStatus, manazeri)}
                   </td>
                 ))}
