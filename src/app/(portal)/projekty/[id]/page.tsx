@@ -8,6 +8,7 @@ import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu } from 
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
 import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
 import { ProjectBudget } from './ProjectBudget';
+import { ProjectBudgetZakazka } from './ProjectBudgetZakazka';
 import { StatusPill } from '../shared';
 import { ProjectMetaForm } from './ProjectMetaForm';
 import { ProjectDocuments, invoiceStatus, offerStatus, type ProjectDocRow } from './ProjectDocuments';
@@ -316,10 +317,33 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     </>
   );
 
-  // Rozpocet ma vlastni zalozku (zadani 11. 9. 2026: „rozpocet v detailu
-  // projektu dej do zalozky"). V Prehledu byl uplne nahore, takze prvni, co
-  // clovek u projektu videl, byla cisla - a ta potrebuje jen obcas.
-  const rozpocet = budget ? (
+  /**
+   * Rozpocet ma vlastni zalozku (zadani 11. 9. 2026: „rozpocet v detailu
+   * projektu dej do zalozky") a je U KAZDEHO PROJEKTU (zadani tyz den:
+   * „rozpocet dej do kazde karty projektu, bude se to akorat lisit tim,
+   * jestli je to audiokniha nebo reklama").
+   *
+   * Audiokniha: portal rozpocet SPOCITA z normostran (frekvence, strih,
+   * bonus). Reklama: normostrany nejsou a cena se s klientem dohodne, takze
+   * se bere z toho, co je na papire - z faktury, a dokud zadna neni,
+   * z nabidky. Proti ni stoji vykazy a vydaje.
+   */
+  const vCzk = (mena: string) => mena === 'CZK';
+  const korunyBezDph = (minor: number) => minor / 100;
+  const cenaZFaktur = invoices
+    .filter((i) => vCzk(i.currency) && invoiceStatus(i.status).label !== 'Stornovaná')
+    .reduce((soucet, i) => soucet + korunyBezDph(computeTotals(i.items).exVat), 0);
+  const cenaZNabidek = offers
+    .filter((o) => vCzk(o.currency))
+    .reduce((soucet, o) => soucet + korunyBezDph(computeTotals(o.items).exVat), 0);
+  const vydajeCelkem = expenses
+    .filter((e) => vCzk(e.currency))
+    .reduce((soucet, e) => soucet + korunyBezDph(e.amountExVatMinor), 0);
+
+  const cenaZakazky = cenaZFaktur > 0 ? cenaZFaktur : cenaZNabidek > 0 ? cenaZNabidek : null;
+  const zdrojCeny = cenaZFaktur > 0 ? ('faktura' as const) : cenaZNabidek > 0 ? ('nabidka' as const) : null;
+
+  const rozpocet = !showDocuments ? null : budget ? (
     <ProjectBudget
       budget={budget}
       spent={spent}
@@ -327,7 +351,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       ratePerPage={company?.ratePerPage ?? null}
       hoursLogged={hoursLogged}
     />
-  ) : null;
+  ) : (
+    <ProjectBudgetZakazka
+      cena={cenaZakazky}
+      zdrojCeny={zdrojCeny}
+      spent={spent}
+      hoursLogged={hoursLogged}
+      vydaje={vydajeCelkem}
+    />
+  );
 
   const frekvence = (
     <RecordingSection
@@ -409,8 +441,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   );
 
   const tabs: ProjectTab[] = [{ key: 'prehled', label: 'Přehled', content: prehled }];
-  // Rozpocet se pocita jen u audioknih s poctem normostran a vidi ho jen
-  // Zuzo-labuzo - kdyz neni co ukazat, zalozka se vubec neobjevi.
+  // Zalozka je u kazdeho projektu, ale jen pro toho, kdo na cisla ma pravo
+  // (canViewProjectDocuments) - zvukar ani produkce ji nevidi.
   if (rozpocet) {
     tabs.push({ key: 'rozpocet', label: 'Rozpočet', content: rozpocet });
   }
