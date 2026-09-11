@@ -25,7 +25,15 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return ok;
 
     const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-    if (!user || !user.active) return ok;
+    if (!user || !user.active) {
+      // Do logu ANO, do odpovedi ne - viz poznamka nahore. Bez tohohle radku
+      // nejde poznat rozdil mezi "adresa v portalu neni" a "posta nejede"
+      // (zadani 11. 9. 2026: zvukarovi po resetu nic neprislo).
+      console.warn(
+        `Reset hesla: ucet "${parsed.data.email}" ${user ? 'je neaktivni' : 'v portalu neni'} - nic se neodeslalo.`,
+      );
+      return ok;
+    }
 
     const token = randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + RESET_VALID_HOURS * 60 * 60 * 1000);
@@ -35,12 +43,17 @@ export async function POST(req: NextRequest) {
     });
 
     const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
-    await sendPasswordResetEmail({
+    const vysledek = await sendPasswordResetEmail({
       to: user.email,
       name: user.name,
       resetUrl: `${baseUrl}/nastaveni-hesla?token=${token}`,
       expiresAt,
     });
+    if (!vysledek.sent) {
+      console.error(`Reset hesla pro ${user.email} se neodeslal: ${vysledek.reason}`);
+    } else {
+      console.log(`Reset hesla odeslan na ${user.email}.`);
+    }
   } catch (err) {
     console.error('POST /api/forgot-password selhalo:', err);
   }

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { jePushNastaveno } from '@/lib/pushServer';
 import { jeCteniUctenekNastaveno } from '@/lib/uctenkaServer';
+import { stavPosty } from '@/lib/email';
 
 // Verejna diagnostika nasazeni (5. 9. 2026) - kdyz se nikdo nedokaze
 // prihlasit, tohle rekne, jestli je problem v databazi, v nastaveni NextAuth,
@@ -21,7 +22,7 @@ function bezpecnyHost(hodnota: string | undefined): string | null {
   }
 }
 
-export async function GET() {
+export async function GET(_req: Request) {
   // Seznam uctu vidi jen Zuzo-labuzo. Do 9. 9. 2026 ho tahle stranka
   // vypisovala uplne komukoliv, kdo znal adresu - tedy e-maily a role celeho
   // tymu Mediaspace i klientu bez jakehokoli prihlaseni. Diagnostika nastaveni
@@ -84,5 +85,11 @@ export async function GET() {
     };
   }
 
-  return NextResponse.json({ cas: new Date().toISOString(), env, databaze });
+  // Posta (zadani 11. 9. 2026). Jen pro Zuzo-labuzo a jen na vyzadani
+  // (?posta=1) - spojeni se serverem trva a diagnostika se cte casto.
+  // Nic neodesila, jen se prihlasi a zase odejde.
+  const chceCheckPosty = jeSpravce && new URL(_req.url).searchParams.get('posta') === '1';
+  const posta = chceCheckPosty ? await stavPosty() : undefined;
+
+  return NextResponse.json({ cas: new Date().toISOString(), env, databaze, posta });
 }

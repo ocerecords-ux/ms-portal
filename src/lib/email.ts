@@ -12,6 +12,48 @@ function getTransport() {
   });
 }
 
+/**
+ * Stav odesílání pošty pro diagnostiku (zadání 11. 9. 2026: „zvukař si
+ * vyresetoval heslo a nepřišel mu žádný e-mail").
+ *
+ * Odesílání se dělo potichu: endpoint na zapomenuté heslo schválně odpovídá
+ * vždycky stejně, aby neprozradil, které e-maily v portálu existují — jenže
+ * tím zmizela i informace, že se vůbec nic neodeslalo. Tohle se zeptá serveru
+ * napřímo: spojí se, přihlásí a zase odejde. Nic neposílá.
+ *
+ * Vrací i jméno serveru a adresu odesílatele — ani jedno není tajné a obojí
+ * je první, na co se při nedoručené poště kouká.
+ */
+export async function stavPosty(): Promise<{
+  nastaveno: boolean;
+  host: string | null;
+  port: number | null;
+  odesilatel: string | null;
+  spojeni: 'ok' | 'chyba' | 'nenastaveno';
+  chyba: string | null;
+}> {
+  const host = process.env.SMTP_HOST || null;
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const odesilatel = process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>';
+  const transport = getTransport();
+  if (!transport) {
+    return { nastaveno: false, host, port, odesilatel, spojeni: 'nenastaveno', chyba: null };
+  }
+  try {
+    await transport.verify();
+    return { nastaveno: true, host, port, odesilatel, spojeni: 'ok', chyba: null };
+  } catch (err) {
+    return {
+      nastaveno: true,
+      host,
+      port,
+      odesilatel,
+      spojeni: 'chyba',
+      chyba: err instanceof Error ? err.message.slice(0, 300) : 'Neznámá chyba.',
+    };
+  }
+}
+
 // Animovane logo Mediaspace v hlavicce e-mailu (schvaleno 4. 9. 2026 -
 // varianta B, s pruhlednym pozadim aby splyvalo s fialovym gradientem
 // hlavicky). Zamerne NENI vlozene jako base64 (na rozdil od puvodni staticke
