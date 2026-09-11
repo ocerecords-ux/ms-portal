@@ -254,6 +254,10 @@ export function Preposlech({
    */
   const [zalozka, setZalozka] = useState<{ trackIndex: number; localTime: number } | null>(null);
   const [zalozkaSkryta, setZalozkaSkryta] = useState(false);
+
+  /** Na celou obrazovku (zadání 11. 9. 2026). */
+  const celaObrazovkaRef = useRef<HTMLDivElement | null>(null);
+  const [celaObrazovka, setCelaObrazovka] = useState(false);
   const [chybaHlaska, setChybaHlaska] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -1019,6 +1023,22 @@ export function Preposlech({
     };
   }, [sKlicem, zaklad]);
 
+  function prepniCelouObrazovku() {
+    const obal = celaObrazovkaRef.current;
+    if (!obal) return;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void obal.requestFullscreen?.().catch(() => {});
+  }
+
+  // Z cele obrazovky se da odejit i Escapem, o tom nam prohlizec rekne sam.
+  useEffect(() => {
+    function zmena() {
+      setCelaObrazovka(Boolean(document.fullscreenElement));
+    }
+    document.addEventListener('fullscreenchange', zmena);
+    return () => document.removeEventListener('fullscreenchange', zmena);
+  }, []);
+
   /* ---------- klávesy ---------- */
 
   useEffect(() => {
@@ -1053,7 +1073,7 @@ export function Preposlech({
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple';
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={celaObrazovkaRef} className="flex flex-col gap-4 bg-paper">
       {/* Prehravac sam o sobe nic nekresli - zvuk tece proudem z Disku. */}
       <audio
         ref={audioRef}
@@ -1067,28 +1087,50 @@ export function Preposlech({
         className="hidden"
       />
 
-      <div className="bg-brand-purple text-white rounded-card px-5 py-3 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4 min-w-0">
-          {/* Logo Mediaspace (zadani 11. 9. 2026). Klient se sem dostane
-              z mailu na celou obrazovku, takze tahle lista je jedine misto,
-              kde pozna, ci nastroj to vlastne je. */}
+      <div className="bg-brand-purple text-white rounded-card px-4 py-1.5 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          {/**
+           * Logo Mediaspace (zadání 11. 9. 2026). Klient se sem dostane
+           * z mailu na celou obrazovku, takže tahle lišta je jediné místo,
+           * kde pozná, čí nástroj to vlastně je.
+           *
+           * A HÝBE SE, JEN KDYŽ SE HRAJE (zadání 11. 9. 2026: „když nebude
+           * nic hrát, tak bude to logo statické a s play se pak začne
+           * hýbat"). Animovaný GIF se zastavit nedá, tak se prohodí za
+           * obrázek jednoho snímku — a při návratu k GIFu animace naskočí
+           * od začátku, což se k rozjezdu hodí.
+           */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-9 sm:h-11 w-auto shrink-0" />
-          <span className="w-px h-9 bg-white/30 shrink-0" aria-hidden="true" />
-          <div className="min-w-0">
-            <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">AudioTagger</h2>
-            <p className="text-xs font-body text-white/80 m-0 mt-0.5 truncate">{projectName}</p>
+          <img
+            src={hraje ? '/mediaspace-logo.gif' : '/mediaspace-logo-still.png'}
+            alt="Mediaspace"
+            className="h-7 w-auto shrink-0"
+          />
+          <span className="w-px h-6 bg-white/30 shrink-0" aria-hidden="true" />
+          <div className="min-w-0 flex items-baseline gap-2">
+            <h2 className="font-heading font-semibold text-xs uppercase tracking-wide m-0">AudioTagger</h2>
+            <p className="text-[11px] font-body text-white/70 m-0 truncate">{projectName}</p>
           </div>
         </div>
         <div className="flex items-center gap-4 flex-wrap">
-          <span className="text-xs font-heading text-white/80">
+          <span className="text-[11px] font-heading text-white/80">
             Stop: <b className="text-white">{stopy.length}</b> · Chyb:{' '}
             <b className="text-white">{stav.chyby.length}</b> · Text:{' '}
             <b className="text-white">{pdfNazev || '—'}</b>
           </span>
-          <span className="text-[11px] font-heading text-white/60 hidden lg:inline">
-            Mezerník = přehrát · ←/→ = ±5 s · E = přidat chybu · označ text myší = chyba v tom místě
+          <span className="text-[11px] font-heading text-white/60 hidden xl:inline">
+            Mezerník · ←/→ ±5 s · E = chyba · označ text myší
           </span>
+          {/* Na celou obrazovku (zadani 11. 9. 2026). U 330stranneho textu
+              a dvanacti stop je kazdy pixel k uzitku. */}
+          <button
+            type="button"
+            onClick={prepniCelouObrazovku}
+            title={celaObrazovka ? 'Zpět do okna (Esc)' : 'Na celou obrazovku'}
+            className="font-heading font-semibold text-[11px] rounded-lg border border-white/40 px-2.5 py-1 hover:border-white transition-colors"
+          >
+            {celaObrazovka ? '⤡ Zpět do okna' : '⤢ Na celou obrazovku'}
+          </button>
           {/* PŘEPOSLECHNUTO je velká akce - tímhle se za nahrávku někdo
               postaví (zadání 11. 9. 2026: „to tlačítko přeposlechnuto by
               mělo asi být výraznější, je to velká akce"). Proto plné
@@ -1333,60 +1375,58 @@ export function Preposlech({
               </div>
             )}
 
-            {/* Displej (zadani 11. 9. 2026: „nejaky vetsi display, kde bude
-                videt kolikaty track z kolika se prehrava"). Cislo stopy
-                a cas jsou zamerne velke - pri poslechu se na ne diva clovek
-                od stolu a musi to precist na prvni pohled. */}
-            <div className="rounded-card bg-brand-purpleDark text-white px-4 py-3 flex items-center gap-4 flex-wrap">
+            {/* Displej je zámerně na JEDEN ŘÁDEK (zadání 11. 9. 2026: „ten
+                display už zabírá dost místa, celé bych to hodně zmenšil").
+                Číslo stopy a čas zůstávají to největší na něm — na ně se
+                člověk dívá od stolu; název stopy je drobným písmem vedle. */}
+            <div className="rounded-card bg-brand-purpleDark text-white px-3 py-2 flex items-center gap-3 flex-wrap">
               <button
                 type="button"
                 onClick={prehrajNeboPauzni}
                 disabled={aktivni === null}
                 title="Přehrát / pozastavit (mezerník)"
-                className="shrink-0 w-12 h-12 rounded-full bg-brand-green text-onAccent font-heading font-bold text-lg disabled:opacity-40"
+                className="shrink-0 w-9 h-9 rounded-full bg-brand-green text-onAccent font-heading font-bold disabled:opacity-40"
               >
                 {hraje ? '❚❚' : '▶'}
               </button>
-              <div className="min-w-0">
-                <span className="block text-[10px] font-heading uppercase tracking-[0.18em] text-white/60">Stopa</span>
-                <span className="block font-heading font-bold leading-none tabular-nums">
-                  <b className="text-3xl">{aktivni === null ? '—' : pad2(aktivni + 1)}</b>
-                  <span className="text-lg text-white/60"> / {pad2(stopy.length)}</span>
+
+              <span className="font-heading font-bold text-xl leading-none tabular-nums">
+                {aktivni === null ? '—' : pad2(aktivni + 1)}
+                <span className="text-xs font-semibold text-white/60">/{pad2(stopy.length)}</span>
+              </span>
+
+              <span className="font-heading font-bold text-xl leading-none tabular-nums">
+                {cas(pozice)}
+                <span className="text-xs font-semibold text-white/60"> z {cas(delka)}</span>
+              </span>
+
+              {aktivni !== null && stopy[aktivni] && (
+                <span className="text-[11px] font-body text-white/60 truncate max-w-[160px] hidden sm:inline">
+                  {stopy[aktivni].name}
                 </span>
-                {aktivni !== null && stopy[aktivni] && (
-                  <span className="block text-[11px] font-body text-white/70 mt-1 truncate max-w-[220px]">
-                    {stopy[aktivni].name}
-                  </span>
-                )}
-              </div>
-              <div className="min-w-0">
-                <span className="block text-[10px] font-heading uppercase tracking-[0.18em] text-white/60">Čas</span>
-                <span className="block font-heading font-bold text-3xl leading-none tabular-nums">{cas(pozice)}</span>
-                <span className="block text-[11px] font-body text-white/70 mt-1 tabular-nums">z {cas(delka)}</span>
-              </div>
-              <div className="min-w-0">
-                <span className="block text-[10px] font-heading uppercase tracking-[0.18em] text-white/60">Rychlost</span>
-                <span className="flex items-center gap-1 mt-1">
-                  {RYCHLOSTI.map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setRychlost(r)}
-                      title={`Přehrávat ${r}× rychle`}
-                      className={`font-heading font-semibold text-xs tabular-nums rounded px-2 py-1 transition-colors ${
-                        r === rychlost ? 'bg-brand-green text-onAccent' : 'bg-white/10 text-white/80 hover:bg-white/20'
-                      }`}
-                    >
-                      {r}×
-                    </button>
-                  ))}
-                </span>
-              </div>
+              )}
+
+              <span className="flex items-center gap-1">
+                {RYCHLOSTI.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRychlost(r)}
+                    title={`Přehrávat ${r}× rychle`}
+                    className={`font-heading font-semibold text-[11px] tabular-nums rounded px-1.5 py-0.5 transition-colors ${
+                      r === rychlost ? 'bg-brand-green text-onAccent' : 'bg-white/10 text-white/70 hover:bg-white/20'
+                    }`}
+                  >
+                    {r}×
+                  </button>
+                ))}
+              </span>
+
               <button
                 type="button"
                 onClick={() => otevriForm()}
                 disabled={aktivni === null || formOtevreny}
-                className="ml-auto bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-40"
+                className="ml-auto bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-40"
               >
                 + Přidat chybu
               </button>
