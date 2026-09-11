@@ -324,8 +324,12 @@ export function InvoiceEditor({
   const cellClass =
     'rounded-lg border border-line bg-surface px-2.5 py-1.5 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:bg-field disabled:opacity-70';
 
+  // Editor je omezeny sirkou a vycentrovany (zadani 10. 9. 2026: "ta
+  // vyberova pole jsou strasne roztahana na sirku"). Formularove radky
+  // natazene pres celou obrazovku se spatne ctou a doklad vedle nich by
+  // zbyl uzky a nizky.
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 w-full max-w-[1180px] mx-auto">
       <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="font-display text-2xl text-ink">
@@ -419,7 +423,7 @@ export function InvoiceEditor({
       {/* DVA SLOUPCE (zadani 10. 9. 2026): vlevo udaje, vpravo hotovy doklad.
           Stejny model jako u Rodneho listu - clovek vidi, co vyrabi, uz pri
           zakladani, ne az po ulozeni. */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,520px)] gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
       <div className="flex flex-col gap-5 min-w-0">
 
       {locked && (
@@ -471,7 +475,9 @@ export function InvoiceEditor({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 border-b border-line">
+        {/* Dva sloupce, ne ctyri: formular ted sedi v polovine sirky, ve
+            ctyrech by byla policka na datum uzka na precteni. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6 border-b border-line">
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-sm font-body text-ink">Název</span>
             <input
