@@ -347,15 +347,19 @@ export function DriveBrowser({
         >
           <BackIcon />
         </button>
-        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+        {/* Nazvy audioknih byvaji dlouhe („... (serie Rychtar Jakub Protiva
+            a mnich Blasius 6.)"). Bez tohohle se drobecky zlomi do uzkeho
+            sloupce a fialova lista naructe o polovinu vyroste. */}
+        <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
           {stack.map((crumb, index) => (
-            <span key={crumb.id} className="flex items-center gap-2">
-              {index > 0 && <span className="text-white/50 text-sm">/</span>}
+            <span key={crumb.id} className="flex items-center gap-2 min-w-0">
+              {index > 0 && <span className="text-white/50 text-sm shrink-0">/</span>}
               <button
                 type="button"
                 onClick={() => jumpTo(index)}
                 disabled={index === stack.length - 1}
-                className={`font-heading text-sm ${
+                title={crumb.name}
+                className={`font-heading text-sm truncate max-w-[22rem] ${
                   index === stack.length - 1
                     ? 'text-brand-green font-semibold cursor-default'
                     : 'text-white/85 hover:text-white underline'
@@ -381,6 +385,10 @@ export function DriveBrowser({
             </svg>
             {zipBusy ? 'Připravuji ZIP…' : 'Stáhnout vše'}
           </button>
+          {/* Odkaz vede na Google Disk, kam klient pristup nema - jemu by to
+              bylo jen dalsi zavrene dvere (11. 9. 2026: „sel mail na klienta
+              s timto odkazem a on se tam nedostane"). */}
+          {!jenCteni && (
           <button
             type="button"
             onClick={copyFolderLink}
@@ -399,6 +407,7 @@ export function DriveBrowser({
             )}
             {folderLinkCopied ? 'Zkopírováno' : 'Odkaz na složku'}
           </button>
+          )}
         </div>
       </div>
 
