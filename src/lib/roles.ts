@@ -102,6 +102,10 @@ export function canEditProjectMeta(role: Role): boolean {
  * ktere jim stejne neotevrou.
  */
 export function canViewProjectDocuments(role: Role): boolean {
+  // Zvukar ani produkce sem nepatri (potvrzeno 11. 9. 2026: "zvukari by
+  // nemeli videt u projektu zadne doklady ani rozpocty"). Podle tehoz
+  // prepinace se ridi i rozpocet projektu a to, jestli se ta data vubec
+  // nactou - viz projekty/[id]/page.tsx.
   return role === 'ADMIN';
 }
 

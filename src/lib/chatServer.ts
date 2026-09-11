@@ -101,6 +101,7 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
           ? odkazNaFotku(ostatniClenove[0].userId, ostatniClenove[0].user.photoUrl)
           : null,
       memberLabels: ostatni,
+      memberIds: c.members.map((m) => m.userId),
     };
   });
 }

@@ -29,6 +29,7 @@ import { findInternalProject } from '@/lib/projektySeznamServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadRodneListy } from '@/lib/rodnyListServer';
 import { bezStarePredpony, dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
+import { nactiPenizeProjektu } from '@/lib/projektPenizeServer';
 
 // Detail projektu (zadani 5. 9. 2026). Od 11. 9. 2026 projekt zije v portalu -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -63,12 +64,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     herciUctu,
     projectTypeOptions,
     rodnyListTypy,
-    budgetSettings,
-    timesheets,
-    offers,
-    invoices,
-    expenses,
-    contracts,
+    penize,
     recordingRequests,
     herci,
     studia,
@@ -113,32 +109,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     listProjectTypeOptions(),
     // Typy projektu, u kterych se dela Rodny list - tedy radiove spoty.
     listRodnyListProjectTypes(),
-    prisma.budgetSettings.findUnique({ where: { id: 'default' } }),
-    // Vykazy k tomuhle projektu - z nich se pocita cerpani rozpoctu.
-    prisma.timesheetEntry.findMany({
-      where: { caflouProjectId },
-      select: { startMinutes: true, endMinutes: true, hourlyRateSnapshot: true },
-    }),
-    // Doklady navazane na projekt (zadani 8. 9. 2026). Vazba je pres ID
-    // projektu v Caflou, stejne jako u vykazu.
-    prisma.offer.findMany({
-      where: { caflouProjectId },
-      orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
-      include: { items: true },
-    }),
-    prisma.invoice.findMany({
-      where: { caflouProjectId },
-      orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
-      include: { items: true },
-    }),
-    prisma.expense.findMany({
-      where: { caflouProjectId },
-      orderBy: [{ issueDate: 'desc' }, { createdAt: 'desc' }],
-    }),
-    prisma.contract.findMany({
-      where: { caflouProjectId },
-      orderBy: [{ createdAt: 'desc' }],
-    }),
+    // Rozpocet a doklady - jen pro toho, kdo na ne ma pravo. Viz
+    // lib/projektPenizeServer.ts; zvukari se ta cisla ani nenactou.
+    showDocuments ? nactiPenizeProjektu(caflouProjectId) : null,
     // Natacecí frekvence (zadani 8. 9. 2026) - nabidky terminu k tomuhle
     // projektu, seznam hercu a studii pro zalozeni nove.
     prisma.recordingRequest.findMany({
@@ -192,10 +165,20 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const firmaProjektu = metaPoSync?.company ?? null;
 
   // Rozpocet (zadani 6. 9. 2026) - jen u audioknih, kde zname pocet normostran,
-  // a vidi ho jen Zuzo-labuzo.
+  // a vidi ho jen Zuzo-labuzo. Zvukar ani produkce se k cislum nedostanou
+  // (zadani 11. 9. 2026) - viz canViewProjectDocuments v lib/roles.ts.
+  const { budgetSettings, timesheets, offers, invoices, expenses, contracts } = penize ?? {
+    budgetSettings: null,
+    timesheets: [],
+    offers: [],
+    invoices: [],
+    expenses: [],
+    contracts: [],
+  };
+
   const settings = budgetSettings ?? DEFAULT_BUDGET_SETTINGS;
   const showBudget =
-    session.user.role === 'ADMIN' && company?.dealsAudiobooks === true && (project?.pageCount ?? 0) > 0;
+    showDocuments && company?.dealsAudiobooks === true && (project?.pageCount ?? 0) > 0;
   const budget = showBudget ? computeBudget(project!.pageCount!, settings) : null;
   const spent = timesheets.reduce(
     (sum, e) => sum + entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot),

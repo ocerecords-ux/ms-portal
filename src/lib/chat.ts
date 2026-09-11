@@ -86,6 +86,8 @@ export type ChatConversation = {
   caflouProjectId: string | null;
   /** Jmena ucastniku - u skupiny se ukazuji pod nazvem. */
   memberLabels: string[];
+  /** ID clenu vcetne me - podle nich se predvyplni sprava skupiny. */
+  memberIds: string[];
   /** Fotka do seznamu - u soukrome zpravy fotka druheho cloveka. */
   avatarUrl: string | null;
 };

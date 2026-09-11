@@ -938,6 +938,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const [nazevSkupiny, setNazevSkupiny] = useState('');
   const [vybraniLide, setVybraniLide] = useState<string[]>([]);
 
+  // Sprava otevrene skupiny (zadani 11. 9. 2026) - prejmenovat, pridat nebo
+  // odebrat cloveka, odejit. Bez toho by se skupina vedeni musela pri kazde
+  // zmene v tymu zakladat znovu a historie by zustala v te stare.
+  const [spravaOtevrena, setSpravaOtevrena] = useState(false);
+  const [spravaNazev, setSpravaNazev] = useState('');
+  const [spravaClenove, setSpravaClenove] = useState<string[]>([]);
+  const [spravaUklada, setSpravaUklada] = useState(false);
+
   const konecRef = useRef<HTMLDivElement | null>(null);
 
   function toggle() {
@@ -1081,6 +1089,61 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       caflouProjectId: c.caflouProjectId ?? '',
       name: c.label,
     });
+  }
+
+  /** Otevre panel spravy s aktualnimi udaji skupiny. */
+  function otevriSpravu() {
+    if (!otevrena || otevrena.kind !== 'SKUPINA') return;
+    setSpravaNazev(otevrena.label);
+    setSpravaClenove(otevrena.memberIds ?? []);
+    setSpravaOtevrena(true);
+  }
+
+  async function ulozSpravu() {
+    if (!otevrena || !spravaNazev.trim()) return;
+    setSpravaUklada(true);
+    setError(null);
+    try {
+      const res: Response = await fetch(`/api/chat/konverzace/${encodeURIComponent(otevrena.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: spravaNazev.trim(), userIds: spravaClenove }),
+      });
+      const data: any = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Uložení se nezdařilo.');
+        return;
+      }
+      setSpravaOtevrena(false);
+      await nactiKonverzace();
+    } catch {
+      setError('Uložení se nezdařilo.');
+    } finally {
+      setSpravaUklada(false);
+    }
+  }
+
+  async function opustSkupinu() {
+    if (!otevrena) return;
+    setSpravaUklada(true);
+    setError(null);
+    try {
+      const res: Response = await fetch(`/api/chat/konverzace/${encodeURIComponent(otevrena.id)}`, {
+        method: 'DELETE',
+      });
+      const data: any = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Odchod se nezdařil.');
+        return;
+      }
+      setSpravaOtevrena(false);
+      setOpenId(null);
+      await nactiKonverzace();
+    } catch {
+      setError('Odchod se nezdařil.');
+    } finally {
+      setSpravaUklada(false);
+    }
   }
 
   async function otevriNovou(telo: Record<string, unknown>) {
@@ -1558,12 +1621,80 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     <span className="font-heading font-semibold text-sm text-ink truncate">
                       {otevrena.kind === 'PROJEKT' ? `# ${otevrena.label}` : otevrena.label}
                     </span>
-                    {otevrena.kind === 'SKUPINA' && otevrena.memberLabels.length > 0 && (
-                      <span className="text-[11px] font-body text-muted truncate hidden sm:block">
-                        {otevrena.memberLabels.join(', ')}
-                      </span>
+                    {otevrena.kind === 'SKUPINA' && (
+                      <button
+                        type="button"
+                        onClick={() => (spravaOtevrena ? setSpravaOtevrena(false) : otevriSpravu())}
+                        title="Kdo do skupiny vidí — a úprava"
+                        className="text-[11px] font-body text-muted truncate hover:text-brand-purple ml-auto text-left"
+                      >
+                        {/* Kdo skupinu vidi, je videt rovnou v hlavicce - u
+                            skupiny vedeni je to ta nejdulezitejsi informace
+                            (zadani 11. 9. 2026). */}
+                        Vidí jen: já
+                        {otevrena.memberLabels.length > 0 ? `, ${otevrena.memberLabels.join(', ')}` : ''}
+                      </button>
                     )}
                   </div>
+
+                  {otevrena.kind === 'SKUPINA' && spravaOtevrena && (
+                    <div className="border-b border-line bg-tint px-4 py-3 flex flex-col gap-2">
+                      <input
+                        value={spravaNazev}
+                        onChange={(e) => setSpravaNazev(e.target.value)}
+                        placeholder="Název skupiny"
+                        className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
+                      />
+                      <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">
+                        Kdo do skupiny vidí
+                      </p>
+                      <div className="flex flex-col gap-1 max-h-[180px] overflow-y-auto">
+                        {team.map((u) => (
+                          <label key={u.id} className="flex items-center gap-2 text-sm font-body text-ink px-1">
+                            <input
+                              type="checkbox"
+                              checked={spravaClenove.includes(u.id)}
+                              onChange={(e) =>
+                                setSpravaClenove((current) =>
+                                  e.target.checked ? [...current, u.id] : current.filter((id) => id !== u.id),
+                                )
+                              }
+                            />
+                            <Avatar label={u.label} photoUrl={u.photoUrl} size={22} />
+                            <span className="truncate">{u.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <p className="text-[11px] font-body text-muted m-0">
+                        Kdo se do skupiny dostane, uvidí i to, co se v ní psalo dřív.
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => void ulozSpravu()}
+                          disabled={spravaUklada || !spravaNazev.trim()}
+                          className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-50"
+                        >
+                          {spravaUklada ? 'Ukládám…' : 'Uložit'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSpravaOtevrena(false)}
+                          className="font-heading text-xs text-muted hover:text-ink"
+                        >
+                          Zrušit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void opustSkupinu()}
+                          disabled={spravaUklada}
+                          className="ml-auto font-heading text-xs text-muted hover:text-danger disabled:opacity-50"
+                        >
+                          Odejít ze skupiny
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Vypis zprav ma vlastni jemne fialovy podklad - na bilem
                       pozadi splyvaly bile bubliny s okolim (zprava uzivatele
