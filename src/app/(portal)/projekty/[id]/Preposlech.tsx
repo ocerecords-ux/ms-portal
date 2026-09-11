@@ -180,6 +180,19 @@ export function Preposlech({
   const [pdfNazev, setPdfNazev] = useState('');
   const [pdfStran, setPdfStran] = useState(0);
   const [pdfStrana, setPdfStrana] = useState(1);
+  /**
+   * Co je zrovna napsané v políčku s číslem strany.
+   *
+   * Políčko NENÍ přímo napojené na `pdfStrana` (zadání 11. 9. 2026: „když do
+   * stránky PDF chceš napsat číslo stránky ručně, tak to nějak blbne").
+   * Kdyby bylo, tak se každý stisk klávesy hned bere jako hotové číslo:
+   * smazání políčka znamená nulu a skok na stranu 1, „12" u desetistránkového
+   * textu se po první číslici usadí na jedničce, a rolování, které tím samo
+   * spustí, přepíše to, co člověk zrovna píše. Proto se psané číslo drží
+   * stranou a uplatní se až Enterem nebo odkliknutím.
+   */
+  const [psanaStrana, setPsanaStrana] = useState<string | null>(null);
+  const psanaStranaRef = useRef<string | null>(null);
 
   const [formOtevreny, setFormOtevreny] = useState(false);
   const [popis, setPopis] = useState('');
@@ -203,6 +216,9 @@ export function Preposlech({
   useEffect(() => {
     aktivniRef.current = aktivni;
   }, [aktivni]);
+  useEffect(() => {
+    psanaStranaRef.current = psanaStrana;
+  }, [psanaStrana]);
 
   // Blob URL z rucne vybranych souboru je potreba po sobe uklidit.
   useEffect(
@@ -522,6 +538,8 @@ export function Preposlech({
         if (el.getBoundingClientRect().top - horni > prah) break;
         nalezena = Number(el.dataset.strana) || nalezena;
       }
+      // Kdyz clovek zrovna pise, rolovani mu do policka nesaha.
+      if (psanaStranaRef.current !== null) return;
       setPdfStrana((stara) => (stara === nalezena ? stara : nalezena));
     };
 
@@ -722,11 +740,30 @@ export function Preposlech({
                   ◂
                 </button>
                 <input
-                  type="number"
-                  min={1}
-                  max={pdfStran}
-                  value={pdfStrana}
-                  onChange={(e) => naStranu(Number(e.target.value) || 1)}
+                  type="text"
+                  inputMode="numeric"
+                  aria-label="Číslo strany"
+                  value={psanaStrana ?? String(pdfStrana)}
+                  onFocus={(e) => {
+                    setPsanaStrana(String(pdfStrana));
+                    e.currentTarget.select();
+                  }}
+                  onChange={(e) => setPsanaStrana(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.currentTarget.blur();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setPsanaStrana(null);
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  onBlur={() => {
+                    const cislo = Number(psanaStrana);
+                    setPsanaStrana(null);
+                    if (psanaStrana && Number.isFinite(cislo) && cislo > 0) naStranu(cislo);
+                  }}
                   className={`${inputClass} w-16 text-center tabular-nums py-1`}
                 />
                 <span className="text-xs font-heading text-muted tabular-nums">/ {pdfStran}</span>
