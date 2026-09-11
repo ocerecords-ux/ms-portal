@@ -354,6 +354,10 @@ function emailShell(options: { tag: string; preheader: string; body: string }): 
   .cta-dark { display: inline-block; background: #201A33 !important; color: #ffffff !important; text-decoration: none; font-size: 13.5px; font-weight: 600; padding: 11px 20px; border-radius: 8px; }
   .steps td { font-family: 'Acid Grotesk', Helvetica, Arial, sans-serif; font-size: 13.5px; color: #201A33 !important; padding: 0 0 10px; background: #FFFFFF !important; }
   .steps .num { width: 26px; color: #6B2AF0 !important; font-weight: 700; }
+  .tagger { width: 100%; background: #F7F5FF !important; border-radius: 12px; margin: 0 0 8px; }
+  .tagger td { padding: 16px 18px; background: #F7F5FF !important; }
+  .tagger .t-title { margin: 0 0 10px; font-family: 'Acid Grotesk', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #6B2AF0 !important; }
+  .tagger .t-steps td { padding: 0 0 8px; font-size: 13px; line-height: 1.5; background: #F7F5FF !important; color: #201A33 !important; }
   .footer { padding: 18px 34px 26px; border-top: 1px solid #E4DFFB; background: #FFFFFF !important; }
   .footer p { margin: 0; font-family: 'Acid Grotesk', Helvetica, Arial, sans-serif; font-size: 11.5px; line-height: 1.6; color: #6E6580 !important; }
   .footer .brand { color: #6B2AF0 !important; font-weight: 600; }
@@ -363,6 +367,8 @@ function emailShell(options: { tag: string; preheader: string; body: string }): 
     .hero .word { color: #1FDF67 !important; }
     .hero .tag { color: #C9FFDF !important; }
     .content, .cta-row, .footer, .steps td, .field-table td { background: #FFFFFF !important; color: #201A33 !important; }
+    .tagger, .tagger td, .tagger .t-steps td { background: #F7F5FF !important; color: #201A33 !important; }
+    .tagger .t-title { color: #6B2AF0 !important; }
     .content h2, .content p, .field-table td.value { color: #201A33 !important; }
     .content .small, .footer p, .field-table td.label { color: #6E6580 !important; }
     .field-table td.label { background: #F7F5FF !important; }
@@ -1310,19 +1316,25 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
    * přeposlech v AudioTaggeru; tmavé vede do složky projektu. Když
    * AudioTagger po ruce není, zůstane jen složka a ta je pak ta hlavní.
    *
+   * POŘADÍ JE ZÁMĚR (zadání 12. 9. 2026: „audiotagger je pro nás lepší
+   * a budeme se ho snažit prodat"). Chvíli to bylo obráceně, protože
+   * padlo, že je AudioTagger zatím jen alternativa — není.
+   *
    * Třídy `cta` a `cta-dark` jsou definované v emailShell. (Dřív tu bylo
    * `class="btn"`, které ve stylopisu nikdy nebylo, takže se tlačítko
    * posílalo jako obyčejný odkaz.)
    */
   const tlacitka: string[] = [];
-  if (input.odkazNaDisk) {
-    tlacitka.push(`<a href="${escapeHtml(input.odkazNaDisk)}" class="cta">Otevřít nahrávky</a>`);
-  }
   if (input.odkazNaPreposlech) {
     tlacitka.push(
-      `<a href="${escapeHtml(input.odkazNaPreposlech)}" class="${
-        input.odkazNaDisk ? 'cta-dark' : 'cta'
-      }">Nebo si je poslechněte v AudioTaggeru</a>`,
+      `<a href="${escapeHtml(input.odkazNaPreposlech)}" class="cta">Přeposlechnout v AudioTaggeru</a>`,
+    );
+  }
+  if (input.odkazNaDisk) {
+    tlacitka.push(
+      `<a href="${escapeHtml(input.odkazNaDisk)}" class="${
+        input.odkazNaPreposlech ? 'cta-dark' : 'cta'
+      }">Stáhnout nahrávky ze složky</a>`,
     );
   }
   // Kazde tlacitko na svem radku - na telefonu by se vedle sebe nevesla.
@@ -1352,6 +1364,28 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     ? `<h2>${escapeHtml(input.nadpis.trim())}</h2>`
     : '';
 
+  /**
+   * Krátké shrnutí, o co v AudioTaggeru jde (zadání 12. 9. 2026: „chtělo by
+   * to krátké grafické shrnutí, o co jde").
+   *
+   * Ukazuje se JEN u zprávy s odkazem na přeposlech - jinde by to byla
+   * reklama bez tlačítka. Tři řádky, žádné obrázky: obrázky v mailu klienti
+   * často nemají zapnuté a vypadalo by to rozbitě.
+   */
+  const oTaggeru = input.odkazNaPreposlech
+    ? `
+    <table role="presentation" class="tagger" width="100%" style="background:#F7F5FF;border-radius:12px;">
+      <tr><td style="padding:16px 18px;background:#F7F5FF;">
+        <p class="t-title" style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;">AudioTagger — přeposlech v prohlížeči</p>
+        <table role="presentation" class="steps t-steps" width="100%">
+          <tr><td class="num" style="background:#F7F5FF;color:#6B2AF0;font-weight:700;width:24px;">1</td><td style="background:#F7F5FF;">Nahrávka se pustí hned, nic se nestahuje.</td></tr>
+          <tr><td class="num" style="background:#F7F5FF;color:#6B2AF0;font-weight:700;width:24px;">2</td><td style="background:#F7F5FF;">Text běží vedle — chybu v něm rovnou označíte a nám sedí na vteřinu.</td></tr>
+          <tr><td class="num" style="background:#F7F5FF;color:#6B2AF0;font-weight:700;width:24px;">3</td><td style="background:#F7F5FF;">Na konci kliknete na Přeposlechnuto a my se do oprav pustíme.</td></tr>
+        </table>
+      </td></tr>
+    </table>`
+    : '';
+
   // Veta navic - odlisena, at je hned videt, ze tohle neni sablona.
   const uvod = input.uvod?.trim()
     ? `<p style="background:#F3EEFF;border-radius:10px;padding:12px 14px;">${escapeHtml(
@@ -1370,6 +1404,7 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     <p><strong>${escapeHtml(input.nazevProjektu)}</strong></p>
     ${odstavce}
     <div class="cta-row" style="padding-top:8px;">${tlacitko}</div>
+    ${oTaggeru}
 `,
   });
 }
@@ -1399,8 +1434,11 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
       input.nazevProjektu,
       input.text,
       '',
-      input.odkazNaDisk ? `Nahravky: ${input.odkazNaDisk}` : 'Odkaz na nahravky zatim neni vyplneny.',
-      input.odkazNaPreposlech ? `Nebo v AudioTaggeru: ${input.odkazNaPreposlech}` : '',
+      input.odkazNaPreposlech ? `Preposlech v AudioTaggeru: ${input.odkazNaPreposlech}` : '',
+      input.odkazNaPreposlech
+        ? 'Nahravka se pusti hned v prohlizeci, text bezi vedle, chybu v nem rovnou oznacite. Na konci kliknete na Preposlechnuto.'
+        : '',
+      input.odkazNaDisk ? `Slozka s nahravkami: ${input.odkazNaDisk}` : 'Odkaz na nahravky zatim neni vyplneny.',
     ]
       .filter(Boolean)
       .join('\n'),
