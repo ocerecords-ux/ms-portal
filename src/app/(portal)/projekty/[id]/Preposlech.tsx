@@ -578,6 +578,55 @@ export function Preposlech({
     }
   }
 
+  /**
+   * Tabulka chyb ke stažení (zadání 11. 9. 2026: „udělej tlačítko, že to
+   * vygeneruje ještě i tabulku s chybama pro backup").
+   *
+   * CSV, ne XLSX: otevře se v Excelu i v Numbers, poradí si s ním kdokoliv
+   * a nepotřebuje to žádnou knihovnu navíc. Oddělovač je STŘEDNÍK a na
+   * začátku je BOM — bez toho si český Excel nacpe celý řádek do jednoho
+   * sloupce a zmrší diakritiku.
+   *
+   * Záznamy v portálu zůstávají; tohle je kopie stranou, ne přesun.
+   */
+  function stahniTabulku() {
+    const hlavicka = ['Stopa', 'Název stopy', 'Čas ve stopě', 'Strana textu', 'Popis chyby', 'Zapsal', 'Kdy'];
+    if (!jenPoslech) hlavicka.splice(3, 0, 'Čas v Cubase');
+
+    const radky = stav.chyby.map((ch) => {
+      const bunky = [
+        pad2(ch.trackIndex),
+        ch.trackName,
+        cas(ch.localTime),
+        ch.pdfPage != null ? String(ch.pdfPage) : '',
+        ch.description,
+        ch.createdByName ?? '',
+        new Date(ch.createdAt).toLocaleString('cs-CZ'),
+      ];
+      if (!jenPoslech) {
+        bunky.splice(3, 0, hms((ch.trackIndex - 1) * DELKA_STOPY_V_CUBASE + ch.localTime));
+      }
+      return bunky;
+    });
+
+    // Bunku vzdycky do uvozovek - popis chyby muze obsahovat strednik
+    // i konec radku a rozsypal by tabulku.
+    const csv = [hlavicka, ...radky]
+      .map((r) => r.map((b) => `"${String(b).replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+
+    const nazev = `${projectName} - chyby ${new Date().toISOString().slice(0, 10)}.csv`
+      .replace(/[\\/:*?"<>|]/g, '-');
+    const odkaz = document.createElement('a');
+    const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+    odkaz.href = url;
+    odkaz.download = nazev;
+    document.body.appendChild(odkaz);
+    odkaz.click();
+    odkaz.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function otevriForm() {
     if (aktivni === null) return;
     audioRef.current?.pause();
@@ -794,11 +843,22 @@ export function Preposlech({
               <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
                 Záznamy chyb ({stav.chyby.length})
               </h3>
-              {chybejiciStopy && (
-                <span className="text-[11px] font-body text-status-progress">
-                  Některé záznamy patří stopám, které tu teď nejsou.
-                </span>
-              )}
+              <span className="flex items-center gap-3 ml-auto">
+                {chybejiciStopy && (
+                  <span className="text-[11px] font-body text-status-progress">
+                    Některé záznamy patří stopám, které tu teď nejsou.
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={stahniTabulku}
+                  disabled={stav.chyby.length === 0}
+                  title="Stáhnout všechny záznamy jako tabulku (CSV pro Excel)"
+                  className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-40 disabled:no-underline"
+                >
+                  Stáhnout tabulku
+                </button>
+              </span>
             </div>
             <div className="overflow-y-auto" style={{ maxHeight: '30vh' }}>
               {stav.chyby.length === 0 ? (
