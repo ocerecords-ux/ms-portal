@@ -77,11 +77,11 @@ export function ProjectsTable({
               'name',
               'statusName',
               'narrator',
-              'pageCount',
+              'pageCountSirsi',
               'endDate',
               'releaseDate',
-              ...(showRodnyList ? ['driveUrl'] : []),
-              ...(showDotazy ? ['driveUrl'] : []),
+              ...(showRodnyList ? ['rodnyList'] : []),
+              ...(showDotazy ? ['dotaz'] : []),
             ]).map((sirka, i) => (
               <col key={i} style={{ width: sirka }} />
             ))}
@@ -178,7 +178,14 @@ export function AdminProjectsTable({
       <div className="overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
         <table className="w-full min-w-[620px] table-fixed border-collapse">
           <colgroup>
-            {sirkySloupcu(['name', 'companyName', 'statusName', 'pageCount', 'endDate', 'releaseDate']).map(
+            {sirkySloupcu([
+              'name',
+              'companyName',
+              'statusName',
+              'pageCountSirsi',
+              'endDate',
+              'releaseDate',
+            ]).map(
               (sirka, i) => (
                 <col key={i} style={{ width: sirka }} />
               ),
@@ -584,6 +591,20 @@ const VAHA_SLOUPCE: Record<string, number> = {
   projectType: 8,
   pageCount: 6,
   driveUrl: 4,
+  /**
+   * Klientsky prehled ma dva sloupce navic a oba nesou TLACITKO, ne text.
+   * Kdyz dostaly sirku jako ikonka Disku, tlacitko „Zeptat se" z bunky
+   * vylezlo, rozsirilo stranku a cely seznam se posunul doleva (zadani
+   * 12. 9. 2026: „v klientske sekci taky nic moc ten seznam projektu").
+   */
+  rodnyList: 10,
+  dotaz: 11,
+  /**
+   * V klientskem a adminskem prehledu se sloupec jmenuje „Normostrany" -
+   * jedno dlouhe slovo, ktere se neda zalomit. V internim prehledu ma
+   * popisek „Pocet NS" a vystaci si s mensi sirkou.
+   */
+  pageCountSirsi: 11,
 };
 
 export function sirkySloupcu(klice: string[]): string[] {
