@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { pozdrav } from '@/lib/osloveni';
 
 function getTransport() {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env;
@@ -400,7 +401,7 @@ function emailShell(options: { tag: string; preheader: string; body: string }): 
 }
 
 export function buildInviteHtml(input: InviteEmailInput): string {
-  const greeting = input.name ? `Dobrý den, ${escapeHtml(input.name)},` : 'Dobrý den,';
+  const greeting = escapeHtml(pozdrav(input.name));
   const expiresText = input.expiresAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' });
 
   const copy = INVITE_COPY[input.audience];
@@ -453,7 +454,7 @@ export async function sendInviteEmail(input: InviteEmailInput) {
     to: input.to,
     subject: input.audience === 'INTERNAL' ? 'Přístup do MS Portalu' : 'Pozvánka do MS Portalu',
     text: [
-      input.name ? `Dobry den, ${input.name},` : 'Dobry den,',
+      pozdrav(input.name),
       '',
       'pripravili jsme vam pristup do portalu Mediaspace (MS Portal).',
       `Prihlasovaci jmeno: ${input.to}`,
@@ -491,7 +492,7 @@ type OrderConfirmationInput = {
 };
 
 export function buildOrderConfirmationHtml(input: OrderConfirmationInput): string {
-  const greeting = input.name ? `Dobrý den, ${escapeHtml(input.name)},` : 'Dobrý den,';
+  const greeting = escapeHtml(pozdrav(input.name));
   const rows: string[] = [
     `<tr><td class="label">Název</td><td class="value">${escapeHtml(input.title)}</td></tr>`,
   ];
@@ -568,7 +569,7 @@ export async function sendOrderConfirmationEmail(input: OrderConfirmationInput) 
     replyTo: process.env.ORDER_NOTIFICATION_EMAIL || 'objednavky@mediaspace.cz',
     subject: `Potvrzení objednávky – ${input.title}`,
     text: [
-      input.name ? `Dobry den, ${input.name},` : 'Dobry den,',
+      pozdrav(input.name),
       '',
       'dekujeme za objednavku, prijali jsme ji.',
       '',
@@ -604,7 +605,7 @@ type PasswordResetInput = {
 };
 
 export function buildPasswordResetHtml(input: PasswordResetInput): string {
-  const greeting = input.name ? `Dobrý den, ${escapeHtml(input.name)},` : 'Dobrý den,';
+  const greeting = escapeHtml(pozdrav(input.name));
   const expiresText = input.expiresAt.toLocaleString('cs-CZ', {
     timeZone: 'Europe/Prague',
     day: 'numeric',
@@ -705,7 +706,7 @@ export async function sendPasswordResetEmail(input: PasswordResetInput) {
     to: input.to,
     subject: 'Nové heslo do MS Portalu',
     text: [
-      input.name ? `Dobry den, ${input.name},` : 'Dobry den,',
+      pozdrav(input.name),
       '',
       `nekdo pozadal o nove heslo k uctu ${input.to} v MS Portalu.`,
       'Nastavite si ho zde:',
@@ -754,7 +755,7 @@ function formatOfferMoney(minor: number, currency: string): string {
 }
 
 export function buildOfferHtml(input: OfferEmailInput): string {
-  const greeting = input.contactName ? `Dobrý den, ${escapeHtml(input.contactName)},` : 'Dobrý den,';
+  const greeting = escapeHtml(pozdrav(input.contactName));
   const validText = input.validUntil
     ? input.validUntil.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })
     : null;
@@ -798,7 +799,7 @@ export async function sendOfferEmail(input: OfferEmailInput) {
     to: input.to,
     subject: `Nabídka ${input.number}${input.subject ? ` — ${input.subject}` : ''}`,
     text: [
-      input.contactName ? `Dobry den, ${input.contactName},` : 'Dobry den,',
+      pozdrav(input.contactName),
       '',
       `posilame nabidku ${input.number} pro ${input.companyName}.`,
       `Cena bez DPH: ${formatOfferMoney(input.totalExVat, input.currency)}`,
@@ -844,7 +845,7 @@ type InvoiceEmailInput = {
 };
 
 export function buildInvoiceHtml(input: InvoiceEmailInput): string {
-  const greeting = input.contactName ? `Dobrý den, ${escapeHtml(input.contactName)},` : 'Dobrý den,';
+  const greeting = escapeHtml(pozdrav(input.contactName));
   const dueText = input.dueDate ? input.dueDate.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' }) : null;
   const account = [input.accountNumber, input.iban].filter(Boolean).join(' · ');
 
@@ -883,7 +884,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
     to: input.to,
     subject: `Faktura ${input.number}${input.subject ? ` — ${input.subject}` : ''}`,
     text: [
-      input.contactName ? `Dobry den, ${input.contactName},` : 'Dobry den,',
+      pozdrav(input.contactName),
       '',
       `posilame fakturu ${input.number} pro ${input.companyName}.`,
       `K uhrade: ${formatOfferMoney(input.totalIncVat, input.currency)}`,
@@ -927,7 +928,7 @@ export function buildContractHtml(input: ContractEmailInput): string {
     body: `
     <span class="badge">Smlouva ${escapeHtml(input.number)}</span>
     <h2>${escapeHtml(input.title)}</h2>
-    <p>Dobrý den, ${escapeHtml(input.signerName)},</p>
+    <p>${escapeHtml(pozdrav(input.signerName))}</p>
     <p>posíláme vám k podpisu smlouvu se společností <strong>${escapeHtml(input.issuerName)}</strong>.
        Otevřete ji odkazem níže, přečtěte si ji a podepište se rovnou v prohlížeči — myší nebo
        prstem na mobilu. Nemusíte se nikam přihlašovat ani opisovat žádný kód.</p>
@@ -961,7 +962,7 @@ export async function sendContractEmail(input: ContractEmailInput) {
     to: input.to,
     subject: `Smlouva ${input.number} k podpisu — ${input.title}`,
     text: [
-      `Dobry den, ${input.signerName},`,
+      pozdrav(input.signerName),
       '',
       `posilame vam k podpisu smlouvu ${input.number} se spolecnosti ${input.issuerName}.`,
       input.projectName ? `Projekt: ${input.projectName}` : '',
@@ -1017,7 +1018,7 @@ export function buildRecordingOfferHtml(input: RecordingOfferEmailInput): string
     body: `
     <span class="badge">Výběr termínů</span>
     <h2>${escapeHtml(input.projectName)}</h2>
-    <p>Dobrý den, ${escapeHtml(input.actorName)},</p>
+    <p>${escapeHtml(pozdrav(input.actorName))}</p>
     <p>máme pro vás připravené termíny natáčení. Otevřete odkaz níže a vyberte si
        <strong>${escapeHtml(pocetTerminu(input.requiredSessions))}</strong>, které vám sedí —
        přihlašovat se nemusíte.</p>
@@ -1052,7 +1053,7 @@ export async function sendRecordingOfferEmail(input: RecordingOfferEmailInput) {
     to: input.to,
     subject: `Výběr natáčecích termínů — ${input.projectName}`,
     text: [
-      `Dobry den, ${input.actorName},`,
+      pozdrav(input.actorName),
       '',
       `mame pro vas pripravene terminy nataceni projektu ${input.projectName}.`,
       `Studio: ${input.studioName}`,
@@ -1124,7 +1125,7 @@ export function buildRecordingDecisionHtml(input: RecordingDecisionEmailInput): 
     body: `
     <span class="badge">${escapeHtml(input.projectName)}</span>
     <h2>${escapeHtml(t.nadpis)}</h2>
-    <p>Dobrý den, ${escapeHtml(input.actorName)},</p>
+    <p>${escapeHtml(pozdrav(input.actorName))}</p>
     <p>${escapeHtml(t.uvod)}</p>
     ${seznam}
     ${input.note ? `<p class="small"><strong>Vzkaz produkce:</strong> ${escapeHtml(input.note)}</p>` : ''}
@@ -1150,7 +1151,7 @@ export async function sendRecordingDecisionEmail(input: RecordingDecisionEmailIn
     to: input.to,
     subject: `${t.nadpis} — ${input.projectName}`,
     text: [
-      `Dobry den, ${input.actorName},`,
+      pozdrav(input.actorName),
       '',
       t.uvod,
       ...input.slots.map((s) => `- ${s}`),
@@ -1193,7 +1194,7 @@ export function buildRodnyListHtml(input: RodnyListEmailInput): string {
     body: `
     <span class="badge">${escapeHtml(input.statusName)}</span>
     <h2>${escapeHtml(input.projectName)}</h2>
-    <p>Dobrý den, ${escapeHtml(input.recipientName)},</p>
+    <p>${escapeHtml(pozdrav(input.recipientName))}</p>
     <p>spot máme hotový. Projekt je ve stavu <strong>${escapeHtml(input.statusName)}</strong> —
        nahrávky jsou připravené a spolu s nimi posíláme i <strong>rodný list</strong> spotu
        s údaji o délce, režii a použité hudbě.</p>
@@ -1228,7 +1229,7 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
     to: input.to,
     subject: `${input.projectName} — hotovo, ke schválení`,
     text: [
-      `Dobry den, ${input.recipientName},`,
+      pozdrav(input.recipientName),
       '',
       `spot ${input.projectName} mame hotovy - projekt je ve stavu "${input.statusName}".`,
       '',
@@ -1260,6 +1261,11 @@ export type StavProjektuInput = {
   jenInterne: boolean;
   jmenoKlienta: string | null;
   nazevProjektu: string;
+  /**
+   * Ve zpravé samotné uz nefiguruje (zadání 11. 9. 2026: „dejme tam jen název
+   * titulu, ne firmu") — klient svoji firmu zná. Zůstává kvůli proměnné
+   * {firma} ve vzoru, kterou si tam produkce může dát sama.
+   */
   nazevFirmy: string;
   stav: string;
   /** Věta, co se v tomhle stavu klientovi říká. */
@@ -1281,10 +1287,8 @@ export type StavProjektuInput = {
 };
 
 export function buildStavProjektuHtml(input: StavProjektuInput): string {
-  const osloveni =
-    input.jenInterne || !input.jmenoKlienta
-      ? 'Dobrý den,'
-      : `Dobrý den, ${escapeHtml(input.jmenoKlienta)},`;
+  // Jmeno se sklonuje do 5. padu - viz lib/osloveni.ts (zadani 11. 9. 2026).
+  const osloveni = escapeHtml(input.jenInterne ? 'Dobrý den,' : pozdrav(input.jmenoKlienta));
 
   /**
    * Dvě výrazná tlačítka (zadání 11. 9. 2026). Zelené je to hlavní —
@@ -1342,9 +1346,7 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     ${nadpis}
     <p>${osloveni}</p>
     ${interniPoznamka}
-    <p><strong>${escapeHtml(input.nazevProjektu)}</strong>${
-      input.nazevFirmy ? ` · ${escapeHtml(input.nazevFirmy)}` : ''
-    }</p>
+    <p><strong>${escapeHtml(input.nazevProjektu)}</strong></p>
     ${odstavce}
     <div class="cta-row" style="padding-top:8px;">${tlacitko}</div>
 `,
@@ -1365,10 +1367,10 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
     to: input.prijemci.join(', '),
     subject: input.predmet?.trim() || `${input.nazevProjektu} - ${input.stav}`,
     text: [
-      input.jenInterne || !input.jmenoKlienta ? 'Dobry den,' : `Dobry den, ${input.jmenoKlienta},`,
+      input.jenInterne ? 'Dobry den,' : pozdrav(input.jmenoKlienta),
       '',
       input.jenInterne ? 'INTERNI ZPRAVA - klientovi nic neslo.' : '',
-      `${input.nazevProjektu}${input.nazevFirmy ? ` (${input.nazevFirmy})` : ''}`,
+      input.nazevProjektu,
       input.text,
       '',
       input.odkazNaPreposlech ? `Preposlech v AudioTaggeru: ${input.odkazNaPreposlech}` : '',

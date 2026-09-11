@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDateTime, minutesInZone, minutesToTime, pickingLabel, remainingToPick } from '@/lib/calendar';
+import { oslovit } from '@/lib/osloveni';
 
 type Slot = { id: string; start: string; end: string };
 
@@ -164,7 +165,7 @@ export function ActorPicker({
       )}
 
       <p className="text-sm font-body text-ink m-0">
-        Dobrý den, {actorName}. Vyberte si prosím{' '}
+        Dobrý den, {oslovit(actorName) || actorName}. Vyberte si prosím{' '}
         <strong>
           {requiredSessions} {requiredSessions === 1 ? 'termín' : requiredSessions < 5 ? 'termíny' : 'termínů'}
         </strong>{' '}
