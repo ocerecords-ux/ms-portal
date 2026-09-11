@@ -18,6 +18,24 @@ export function nactiPdfJs(): Promise<any> {
   // dvakrát - druhý by čekal na událost, která už proběhla.
   if (okno.__pdfjsSlib) return okno.__pdfjsSlib;
 
+  /**
+   * Starší Safari (do 17.4) neumí `Promise.withResolvers`, které pdf.js 6
+   * používá. Bez tohohle doplnění spadne rovnou při načtení hláškou
+   * „undefined is not a function" a nikdo se nedopátrá proč (12. 9. 2026).
+   */
+  const P = Promise as unknown as { withResolvers?: unknown };
+  if (typeof P.withResolvers !== 'function') {
+    P.withResolvers = function withResolvers<T>() {
+      let resolve!: (v: T | PromiseLike<T>) => void;
+      let reject!: (d?: unknown) => void;
+      const promise = new Promise<T>((a, b) => {
+        resolve = a;
+        reject = b;
+      });
+      return { promise, resolve, reject };
+    };
+  }
+
   const slib = new Promise<any>((hotovo, chyba) => {
     const hlaska = 'portal-pdfjs';
     window.addEventListener(

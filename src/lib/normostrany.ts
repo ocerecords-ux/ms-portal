@@ -178,26 +178,33 @@ async function zEpub(file: File): Promise<RozborTextu> {
 }
 
 async function zPdf(file: File): Promise<RozborTextu> {
-  const pdfjs = await nactiPdfJs();
-  pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  // Soubor se predava JAKO ADRESA (blob:), ne jako pole bajtu - presne tak,
+  // jak to dela prehravac v AudioTaggeru, ktery uz je dlouho v provozu.
+  // Varianta s `data` se v nekterych prohlizecich chovala jinak.
+  const adresa = URL.createObjectURL(file);
+  try {
+    const pdfjs = await nactiPdfJs();
+    pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
+    const doc = await pdfjs.getDocument({ url: adresa }).promise;
 
-  const casti: string[] = [];
-  for (let strana = 1; strana <= doc.numPages; strana++) {
-    const obsah = await (await doc.getPage(strana)).getTextContent();
-    casti.push(
-      obsah.items
-        .map((polozka: { str?: string; hasEOL?: boolean }) =>
-          polozka.str === undefined ? '' : polozka.str + (polozka.hasEOL ? '\n' : ''),
-        )
-        .join(''),
-    );
+    const casti: string[] = [];
+    for (let strana = 1; strana <= doc.numPages; strana++) {
+      const obsah = await (await doc.getPage(strana)).getTextContent();
+      const polozky: { str?: string; hasEOL?: boolean }[] = obsah?.items ?? [];
+      casti.push(
+        polozky
+          .map((polozka) => (polozka.str === undefined ? '' : polozka.str + (polozka.hasEOL ? '\n' : '')))
+          .join(''),
+      );
+    }
+    const text = casti.join('\n');
+    if (!text.replace(/\s/g, '')) {
+      throw new Error('PDF neobsahuje text, nejspíš je to sken. Pošlete prosím Word nebo TXT.');
+    }
+    return rozeberText(text, 'PDF', doc.numPages);
+  } finally {
+    URL.revokeObjectURL(adresa);
   }
-  const text = casti.join('\n');
-  if (!text.replace(/\s/g, '')) {
-    throw new Error('PDF neobsahuje text, nejspíš je to sken. Pošlete prosím Word nebo TXT.');
-  }
-  return rozeberText(text, 'PDF', doc.numPages);
 }
 
 async function zRtf(file: File): Promise<RozborTextu> {
@@ -219,6 +226,12 @@ async function zRtf(file: File): Promise<RozborTextu> {
  */
 export async function spoctiNormostrany(file: File): Promise<RozborTextu> {
   const pripona = priponaSouboru(file.name);
+
+  // Skutecnou chybu chceme videt v konzoli - v okne objednavky se ukazuje
+  // jen srozumitelna veta a z te se nic nevypatra.
+  if (!PODPOROVANE.includes(pripona) && pripona !== 'doc') {
+    console.warn('Normostrany: neznama pripona', pripona);
+  }
 
   if (pripona === 'doc') {
     throw new Error('Starý formát .doc přečíst neumím. Uložte prosím jako .docx nebo PDF.');

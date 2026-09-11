@@ -106,8 +106,16 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
         setPageCount(String(Math.round(vysledek.normostran)));
       }
     } catch (err) {
+      // Do okna jde srozumitelna veta, do konzole cela chyba - jinak se
+      // nedopatrame, proc to u konkretniho souboru nesedlo.
+      console.error('Normostrany se nepodarilo spocitat:', err);
       setRozbor(null);
-      setChybaRozboru(err instanceof Error ? err.message : 'Text se nepodařilo přečíst.');
+      const hlaska = err instanceof Error ? err.message : '';
+      setChybaRozboru(
+        hlaska && hlaska.length < 120 && /[ěščřžýáíéúůťďň ]/i.test(hlaska)
+          ? hlaska
+          : 'Text z tohohle souboru se nepodařilo přečíst. Zkuste ho prosím poslat jako Word (.docx) nebo TXT.',
+      );
     } finally {
       setPocitam(false);
     }

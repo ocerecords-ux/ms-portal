@@ -64,9 +64,14 @@ export function NarratorMultiSelect({
 
   return (
     <div className="relative">
+      {/* Objednávkový formulář stojí na FIALOVÉ kartě a všechna ostatní pole
+          v něm jsou bílá - ať je režim portálu jaký chce. Dřív tu bylo
+          `bg-surface`, které se v tmavém režimu přepnulo na skoro černou
+          a pole vypadalo rozbitě (zadání 12. 9. 2026: „to pole Preferovaný
+          herec nemůže být černé, vypadá to hrozně"). */}
       <div
         onClick={() => inputRef.current?.focus()}
-        className="flex items-center gap-1.5 flex-wrap border-[1.5px] border-brand-green rounded-lg bg-surface px-2 py-1.5 min-h-[42px] cursor-text"
+        className="flex items-center gap-1.5 flex-wrap border-[1.5px] border-brand-green rounded-lg bg-white px-2 py-1.5 min-h-[42px] cursor-text"
       >
         {value.map((label) => (
           <span
@@ -98,19 +103,19 @@ export function NarratorMultiSelect({
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           onKeyDown={handleKeyDown}
           placeholder={value.length ? '' : 'Hledat herce, nebo napsat vlastní jméno…'}
-          className="flex-1 min-w-[140px] border-0 outline-none text-[14.5px] font-body text-ink py-1"
+          className="flex-1 min-w-[140px] border-0 outline-none bg-transparent text-[14.5px] font-body text-[#201a33] placeholder:text-[#a9a2c2] py-1"
         />
       </div>
 
       {open && (suggestions.length > 0 || canAddFreeText) && (
-        <div className="absolute left-0 right-0 mt-1 bg-surface border border-line rounded-lg shadow-lg py-1 z-20 max-h-56 overflow-auto">
+        <div className="absolute left-0 right-0 mt-1 bg-white border border-[#e4dffb] rounded-lg shadow-lg py-1 z-20 max-h-56 overflow-auto">
           {suggestions.map((o) => (
             <button
               key={o.id}
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => addValue(o.label)}
-              className="w-full text-left px-3 py-2 text-sm font-body text-ink hover:bg-field"
+              className="w-full text-left px-3 py-2 text-sm font-body text-[#201a33] hover:bg-[#f7f5ff]"
             >
               {o.label}
             </button>
@@ -120,7 +125,7 @@ export function NarratorMultiSelect({
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => addValue(query)}
-              className="w-full text-left px-3 py-2 text-sm font-body text-brand-purpleDeep hover:bg-field"
+              className="w-full text-left px-3 py-2 text-sm font-body text-brand-purpleDeep hover:bg-[#f7f5ff]"
             >
               + Přidat „{query.trim()}“
             </button>
