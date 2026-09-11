@@ -352,7 +352,8 @@ export function PriorityPill({ priority }: { priority: ProjectPriority | null })
   if (!priority) return <span className="text-muted">—</span>;
   return (
     <span
-      className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill whitespace-nowrap ${PRIORITY_CLASSES[priority]}`}
+      title={PRIORITY_LABELS[priority]}
+      className={`inline-flex items-center max-w-full truncate text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${PRIORITY_CLASSES[priority]}`}
     >
       {PRIORITY_LABELS[priority]}
     </span>
@@ -408,7 +409,7 @@ function bunkaSloupce(
       // uplny je v bublinkove napovede. Zalomeny nazev delal ze dvou sousednich
       // radku dvojnasobne vysoke a seznam se pak nedal projizdet ocima.
       return (
-        <span className="flex items-center gap-2.5 min-w-0" title={p.name}>
+        <span className="flex items-center gap-2.5 min-w-0 max-w-full" title={p.name}>
           <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} />
           <Link
             href={`/projekty/${p.id}`}
@@ -449,7 +450,7 @@ function bunkaSloupce(
       // Fotka vedle jmena, stejne jako v horni liste (zadani 9. 9. 2026).
       const jmeno = p.meta?.managerName;
       const obsah = jmeno ? (
-        <span className="inline-flex items-center gap-2 min-w-0">
+        <span className="inline-flex items-center gap-2 min-w-0 max-w-full">
           <AvatarManazera jmeno={jmeno} photoUrl={p.meta?.managerPhotoUrl ?? null} />
           <span className="truncate">{jmeno}</span>
         </span>
@@ -489,11 +490,11 @@ function bunkaSloupce(
         const prvni = herci[0];
         return (
           <span
-            className="flex items-center gap-1.5 min-w-0"
+            className="flex items-center gap-1.5 min-w-0 max-w-full"
             title={herci.map((h) => (h.dotoceno ? `${h.jmeno} — dotočeno` : h.jmeno)).join(', ')}
           >
             <span
-              className={`inline-flex items-center px-3 py-1 text-sm font-heading font-semibold truncate ${
+              className={`inline-flex items-center min-w-0 max-w-full truncate px-3 py-1 text-sm font-heading font-semibold ${
                 prvni.dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
               }`}
             >
@@ -572,17 +573,17 @@ function bunkaSloupce(
  * zrovna vidět. Název dostal nejvíc — ten se má vejít celý.
  */
 const VAHA_SLOUPCE: Record<string, number> = {
-  name: 40,
-  companyName: 11,
-  statusName: 17,
-  priority: 7,
-  projectType: 9,
-  managerName: 14,
-  narrator: 16,
+  name: 27,
+  statusName: 18,
+  narrator: 14,
+  managerName: 11,
+  companyName: 10,
+  endDate: 10,
+  releaseDate: 10,
+  priority: 8,
+  projectType: 8,
   pageCount: 6,
-  endDate: 11,
-  releaseDate: 11,
-  driveUrl: 5,
+  driveUrl: 4,
 };
 
 export function sirkySloupcu(klice: string[]): string[] {
@@ -734,17 +735,20 @@ function SortableHeader({
     );
   }
 
+  // Nazev sloupce se radeji ZALOMI na dva radky, nez aby z „Manazer projektu"
+  // zbylo „Manazer proje..." (zadani 12. 9. 2026). Hlavicka je jedna, takze
+  // o radek vyssi lista nikomu nevadi - vyska radku v tele zustava stejna.
   return (
-    <th className={`px-3 py-3.5 overflow-hidden ${vpravo ? 'text-right' : 'text-left'}`}>
+    <th className={`px-3 py-3 align-bottom ${vpravo ? 'text-right' : 'text-left'}`}>
       <button
         type="button"
         onClick={() => onSort(sloupec.key as ProjectSortKey)}
         title={`Seřadit podle: ${sloupec.label}`}
-        className={`inline-flex items-center gap-1.5 max-w-full font-heading text-xs transition-colors hover:text-brand-green ${
+        className={`inline-flex items-end gap-1.5 max-w-full text-left font-heading text-xs leading-tight transition-colors hover:text-brand-green ${
           active ? 'text-brand-green' : 'text-white/85'
-        } ${vpravo ? 'flex-row-reverse' : ''}`}
+        } ${vpravo ? 'flex-row-reverse text-right' : ''}`}
       >
-        <span className="truncate">{sloupec.label}</span>
+        <span className="min-w-0">{sloupec.label}</span>
         {active && <SortArrow dir={sort.dir} />}
       </button>
     </th>
