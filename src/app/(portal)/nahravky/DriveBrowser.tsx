@@ -171,6 +171,13 @@ export function DriveBrowser({
   const [renameBusy, setRenameBusy] = useState(false);
   // Chovani jako ve Finderu (zadani 5. 9. 2026): jeden klik polozku oznaci,
   // dvojklik otevre slozku / spusti prejmenovani souboru.
+  /**
+   * Hledání ve složce (zadání 12. 9. 2026: „v Nahrávkách by mělo jít
+   * hledat"). Filtruje se to, co je právě vidět — ne celý Disk: člověk
+   * hledá kapitolu mezi stovkou souborů jednoho titulu a odpověď má mít
+   * hned, bez čekání na server.
+   */
+  const [hledani, setHledani] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [zipBusy, setZipBusy] = useState(false);
 
@@ -322,7 +329,14 @@ export function DriveBrowser({
     }
   }
 
-  const sorted = [...items].sort((a, b) => {
+  // Bez diakritiky a bez ohledu na velikost pismen - „kapitola 5" najde
+  // i „KAPITOLA 5." a „Doslov" najde i „doslov".
+  const bezDiakritiky = (t: string) =>
+    t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const dotaz = bezDiakritiky(hledani.trim());
+  const nalezene = dotaz ? items.filter((i) => bezDiakritiky(i.name).includes(dotaz)) : items;
+
+  const sorted = [...nalezene].sort((a, b) => {
     if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
     const dirMul = sortDir === 'asc' ? 1 : -1;
     if (sortBy === 'date') {
@@ -411,6 +425,49 @@ export function DriveBrowser({
         </div>
       </div>
 
+      {/* Hledani ve slozce (zadani 12. 9. 2026). Ukazuje se, az kdyz je v cem
+          hledat - u tri souboru by policko jen zabiralo misto. */}
+      {!loading && !error && (items.length > 5 || dotaz) && (
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-2.5 border-b border-line bg-surface">
+          <span aria-hidden="true" className="text-muted shrink-0">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="w-4 h-4"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
+          </span>
+          <input
+            value={hledani}
+            onChange={(e) => setHledani(e.target.value)}
+            placeholder="Hledat v této složce…"
+            aria-label="Hledat v této složce"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm font-body text-ink placeholder:text-muted"
+          />
+          {dotaz && (
+            <>
+              <span className="text-xs font-heading text-muted shrink-0 tabular-nums">
+                {sorted.length} z {items.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setHledani('')}
+                title="Zrušit hledání"
+                aria-label="Zrušit hledání"
+                className="shrink-0 w-6 h-6 grid place-items-center rounded-full text-muted hover:text-ink hover:bg-field transition-colors"
+              >
+                ×
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {!loading && !error && sorted.length > 0 && (
         <div className="flex items-center gap-3 px-6 py-2 border-b border-line bg-field text-[11px] font-heading font-semibold uppercase tracking-wide text-muted">
           <span className="w-5 shrink-0" />
@@ -440,7 +497,9 @@ export function DriveBrowser({
       ) : error ? (
         <div className="px-6 py-10 text-center text-sm text-danger font-body">{error}</div>
       ) : sorted.length === 0 ? (
-        <div className="px-6 py-10 text-center text-sm text-muted font-body">Tato složka je prázdná.</div>
+        <div className="px-6 py-10 text-center text-sm text-muted font-body">
+          {dotaz ? `Nic, co by odpovídalo „${hledani.trim()}".` : 'Tato složka je prázdná.'}
+        </div>
       ) : (
         <div className="divide-y divide-line">
           {sorted.map((item) => {
