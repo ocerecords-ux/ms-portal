@@ -298,6 +298,14 @@ export function Preposlech({
     [delka, pozice, stav.chyby],
   );
 
+  /** Běží zrovna výpočet křivky? Víc než jeden naráz nechceme. */
+  const kresliciRef = useRef(false);
+  /** Je komponenta ještě na stránce? Po odchodu už nic nepřepisujeme. */
+  const zivyRef = useRef(true);
+  useEffect(() => () => {
+    zivyRef.current = false;
+  }, []);
+
   const kresliVse = useCallback(() => {
     stopyRef.current.forEach((_, i) => kresliStopu(i));
   }, [kresliStopu]);
@@ -311,33 +319,51 @@ export function Preposlech({
     return () => window.removeEventListener('resize', kresliVse);
   }, [kresliVse]);
 
-  /** Křivku počítáme až pro vybranou stopu — ne pro všechny najednou. */
+  /**
+   * Křivky se dopočítávají POSTUPNĚ, jedna po druhé (zadání 11. 9. 2026:
+   * „ty stopy se moc nenačítají").
+   *
+   * Do té doby se křivka počítala jen pro vybranou stopu, takže ostatní
+   * zůstávaly prázdné - vypadalo to jako rozbité, i když to tak bylo
+   * schválně. Teď se po vybrané stopě dopočítají i zbylé, ale vždycky
+   * jenom JEDNA NARÁZ: každá křivka znamená stáhnout celou stopu a všechny
+   * najednou by ucpaly linku i paměť.
+   *
+   * Hlídá to `kreslici` ref, ne cleanup efektu. Efekt se totiž spustí znovu
+   * hned, jak se stopě nastaví „pocita" - a cleanup by tím zrušil výpočet,
+   * který právě odstartoval.
+   */
   useEffect(() => {
-    if (aktivni === null) return;
-    const stopa = stopyRef.current[aktivni];
-    if (!stopa || stopa.krivkaStav !== 'ceka') return;
+    if (kresliciRef.current) return;
 
+    // Vybraná stopa má přednost - na tu se člověk dívá teď.
+    const naRade =
+      aktivni !== null && stopy[aktivni]?.krivkaStav === 'ceka'
+        ? aktivni
+        : stopy.findIndex((x) => x.krivkaStav === 'ceka');
+    if (naRade < 0) return;
+
+    const stopa = stopy[naRade];
     if (stopa.velikost !== null && stopa.velikost > STROP_PRO_KRIVKU) {
-      setStopy((s) => s.map((x, i) => (i === aktivni ? { ...x, krivkaStav: 'nejde' } : x)));
+      setStopy((s) => s.map((x, i) => (i === naRade ? { ...x, krivkaStav: 'nejde' } : x)));
       return;
     }
 
-    let zruseno = false;
-    setStopy((s) => s.map((x, i) => (i === aktivni ? { ...x, krivkaStav: 'pocita' } : x)));
+    kresliciRef.current = true;
+    setStopy((s) => s.map((x, i) => (i === naRade ? { ...x, krivkaStav: 'pocita' } : x)));
     spocitejKrivku(stopa.url)
       .then((peaks) => {
-        if (zruseno) return;
-        setStopy((s) => s.map((x, i) => (i === aktivni ? { ...x, peaks, krivkaStav: 'hotovo' } : x)));
+        if (!zivyRef.current) return;
+        setStopy((s) => s.map((x, i) => (i === naRade ? { ...x, peaks, krivkaStav: 'hotovo' } : x)));
       })
       .catch(() => {
-        if (zruseno) return;
-        setStopy((s) => s.map((x, i) => (i === aktivni ? { ...x, krivkaStav: 'nejde' } : x)));
+        if (!zivyRef.current) return;
+        setStopy((s) => s.map((x, i) => (i === naRade ? { ...x, krivkaStav: 'nejde' } : x)));
+      })
+      .finally(() => {
+        kresliciRef.current = false;
       });
-
-    return () => {
-      zruseno = true;
-    };
-  }, [aktivni]);
+  }, [aktivni, stopy]);
 
   /* ---------- přehrávání ---------- */
 
