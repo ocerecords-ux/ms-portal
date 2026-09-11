@@ -21,6 +21,8 @@ import { RecordingSection } from './RecordingSection';
 import { ProjectTabs, type ProjectTab } from './ProjectTabs';
 import { RodnyListSection } from './RodnyListSection';
 import { HistorieProjektu } from './HistorieProjektu';
+import { Preposlech } from './Preposlech';
+import { nactiPreposlech } from '@/lib/preposlechServer';
 import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
 import { findInternalProject } from '@/lib/caflouProjectsServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
@@ -452,6 +454,23 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       label: 'Rodný list',
       count: rodneListy.length,
       content: rodnyList,
+    });
+  }
+  // AudioTagger - preposlech nahravky proti textu (zadani 11. 9. 2026).
+  // Jen pro tym Mediaspace; zaznamy chyb patri tomuhle projektu.
+  if (isInternalRole(session.user.role)) {
+    const preposlech = await nactiPreposlech(caflouProjectId);
+    tabs.push({
+      key: 'preposlech',
+      label: 'Přeposlech',
+      count: preposlech.chyby.length,
+      content: (
+        <Preposlech
+          caflouProjectId={caflouProjectId}
+          projectName={metaPoSync?.name || project?.name || `Projekt ${caflouProjectId}`}
+          pocatecniStav={preposlech}
+        />
+      ),
     });
   }
   // Historie je jen pro nas - klient se na detail projektu stejne nedostane,

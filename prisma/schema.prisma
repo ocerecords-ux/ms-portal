@@ -1666,3 +1666,49 @@ model CaflouProjectsCache {
   fetchedAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+
+// ===========================================================================
+// PREPOSLECH NAHRAVKY (AudioTagger) - zadani 11. 9. 2026.
+//
+// Prevzato z prototypu (viz projektovy dokument audiotagger-v1-prototype.md),
+// ktery si zaznamy chyb drzel jen v prohlizeci. Tady uz patri projektu:
+// prezijou obnoveni stranky i vymenu pocitace a vidi je cely tym.
+//
+// Stopy samotne se v databazi NEDRZI - jsou to soubory, ktere si clovek
+// vybere z disku. Zaznam proto ukazuje na stopu jejim PORADIM (od 1) a nese
+// i jeji nazev, aby byl citelny i ve chvili, kdy zadne soubory nactene
+// nejsou. Z poradi se dopocitava i pozice na casove ose Cubase
+// (offset = (poradi - 1) x 3600 s).
+// ===========================================================================
+
+model PreposlechChyba {
+  id              String @id @default(cuid())
+  caflouProjectId String
+
+  /// Poradi stopy od 1 - z nej se pocita offset na casove ose Cubase.
+  trackIndex Int
+  /// Nazev souboru stopy, aby byl zaznam citelny i bez nactenych souboru.
+  trackName  String
+  /// Cas v ramci stopy, v sekundach od jejiho zacatku.
+  localTime  Float
+  /// Strana PDF, na ktere chyba je (kdyz bylo PDF nactene).
+  pdfPage    Int?
+
+  description String @db.Text
+
+  createdByUserId String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+
+  @@index([caflouProjectId, trackIndex, localTime])
+}
+
+/// Stav preposlechu celeho projektu - tlacitko PREPOSLECHNUTO z prototypu.
+model PreposlechStav {
+  caflouProjectId String    @id
+  reviewed        Boolean   @default(false)
+  reviewedAt      DateTime?
+  reviewedByName  String?
+  updatedAt       DateTime  @updatedAt
+}
