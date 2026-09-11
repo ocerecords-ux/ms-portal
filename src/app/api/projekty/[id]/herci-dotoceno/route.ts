@@ -7,6 +7,7 @@ import { canEditProjectMeta } from '@/lib/roles';
 import { sendHerecDotocenEmail } from '@/lib/email';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
+import { prehodStavPodleDotoceni, vratStavPoOdskrtnuti } from '@/lib/dotoceniStavServer';
 
 /**
  * Dotočený herec na projektu (zadání 11. 9. 2026: „u herců v projektech
@@ -15,9 +16,12 @@ import { zapisNotifikaci } from '@/lib/projektLogServer';
  * na Helenu Rychlík").
  *
  * Je to vlastnost DVOJICE projekt + herec: na audioknize bývá herců víc a
- * každý končí jindy. Stav projektu se tím sám nepřehazuje — podle dotočení
- * herců se produkce teprve rozhoduje, kdy projekt překlopit do
- * „Dotočeno/stříháme".
+ * každý končí jindy.
+ *
+ * STAV PROJEKTU SE PŘEHODÍ SÁM (zadání 11. 9. 2026) — „Natáčíme" na
+ * „Dotočeno", „Natáčíme/stříháme" na „Dotočeno/stříháme", a to až když mají
+ * fajfku všichni herci. V jiných stavech se na stav nesahá. Podrobně
+ * v lib/dotoceniStavServer.ts.
  *
  * ZPRÁVA ODCHÁZÍ JEN PŘI ZAŠKRTNUTÍ, ne při odškrtnutí: odškrtnutí je v praxi
  * oprava překlepu a mail o tom by byl jen šum. Neodeslaná zpráva nesmí shodit
@@ -57,7 +61,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (!dotoceno) {
     await prisma.herecDotocen.deleteMany({ where: { caflouProjectId: params.id, userId } });
-    return NextResponse.json({ dotoceno: false });
+    const stav = await vratStavPoOdskrtnuti(params.id, { id: session.user.id, jmeno: kdo });
+    return NextResponse.json({ dotoceno: false, stav });
   }
 
   const zaznam = await prisma.herecDotocen.upsert({
@@ -73,6 +78,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const jmenoHerce = herec.name || herec.email;
   const nazevProjektu = projekt.name || `Projekt ${params.id}`;
+
+  // Stav se prehodi PRED odeslanim zpravy o hercovi - kdyby to bylo naopak,
+  // Helca by dostala mail driv, nez by se stav v portalu zmenil.
+  const stav = await prehodStavPodleDotoceni(params.id, { id: session.user.id, jmeno: kdo });
 
   // Zprava je best effort - odskrtnuti uz je v databazi a nesmi na ni cekat.
   void (async () => {
@@ -113,5 +122,5 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   })();
 
-  return NextResponse.json({ dotoceno: true, dotocenoAt: zaznam.dotocenoAt.toISOString() });
+  return NextResponse.json({ dotoceno: true, dotocenoAt: zaznam.dotocenoAt.toISOString(), stav });
 }

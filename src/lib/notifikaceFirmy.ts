@@ -29,6 +29,10 @@ export const KOMU_MOZNOSTI: KomuNotifikace[] = ['NIKAM', 'KLIENT', 'INTERNE'];
  */
 export const STAVY_S_NOTIFIKACI: string[] = [
   'Natáčíme/stříháme',
+  // Herec dotocil a strihat se jeste nezacalo (zadani 11. 9. 2026). Nova
+  // firma to ma vypnute jako vsechno ostatni - kdo o to nestoji, nic
+  // nedostane.
+  'Dotočeno',
   'Dotočeno/stříháme',
   'Dokončeno - ke schválení',
   'Čekáme na opravy',
@@ -38,6 +42,7 @@ export const STAVY_S_NOTIFIKACI: string[] = [
 /** Co se u kterého stavu v mailu píše - ať je vidět, co klientovi dorazí. */
 export const CO_SE_POSILA: Record<string, string> = {
   'Natáčíme/stříháme': 'Na disk jsme přidali první tracky, můžete poslouchat.',
+  'Dotočeno': 'S hercem je dotočeno, pustili jsme se do střihu.',
   'Dotočeno/stříháme': 'Na disk jsme přidali první tracky k poslechu.',
   'Dokončeno - ke schválení': 'Na disku jsou všechny tracky, čekáme na finální opravy.',
   'Čekáme na opravy': 'Sedm dní po odevzdání jsme nedostali opravy — připomínka.',
