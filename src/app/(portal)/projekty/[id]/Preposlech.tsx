@@ -1147,15 +1147,18 @@ export function Preposlech({
        * ZÁLOŽKA PŘES OBRAZOVKU (zadání 11. 9. 2026).
        *
        * Sjede shora jako pruh papíru zastrčený do knihy, pod sebou zamkne
-       * celý přeposlech (přes `inset-0` se na nic pod ní nedá kliknout)
-       * a napíše, kde se skončilo. Vytáhne se tlačítkem, Enterem nebo
+       * celý přeposlech (přes ni se na nic nedá kliknout) a napíše, kde se
+       * skončilo. Je `fixed`, ne `absolute`: musí viset od horní hrany
+       * OBRAZOVKY, ne od horní hrany odrolované karty — jinak jí špička
+       * i hlavička zůstanou nad viditelnou částí stránky. Ve fullscreenu
+       * se `fixed` vztahuje k té zvětšené ploše, takže to sedí i tam. Vytáhne se tlačítkem, Enterem nebo
        * Escapem — a nahrávka se rovnou nastaví na to místo.
        *
        * Špička dole je `clip-path`, ne obrázek: drží se při každé velikosti
        * okna a nemá co se rozostřit.
        */}
       {zalozkaZasunuta && (
-        <div className="absolute inset-0 z-40 flex justify-center bg-ink/70 backdrop-blur-[2px]">
+        <div className="fixed inset-0 z-[60] flex justify-center bg-ink/70 backdrop-blur-[2px]">
           <div
             className={`w-[min(340px,80vw)] h-[70%] bg-gradient-to-b from-brand-purple to-brand-purpleDeep text-white shadow-2xl transition-transform duration-500 ease-out flex flex-col items-center px-6 pt-7 ${
               zalozkaVysunuta ? 'translate-y-0' : '-translate-y-full'
