@@ -572,17 +572,17 @@ function bunkaSloupce(
  * zrovna vidět. Název dostal nejvíc — ten se má vejít celý.
  */
 const VAHA_SLOUPCE: Record<string, number> = {
-  name: 30,
-  companyName: 16,
-  statusName: 16,
-  priority: 9,
-  projectType: 11,
-  managerName: 16,
-  narrator: 18,
-  pageCount: 8,
-  endDate: 10,
-  releaseDate: 10,
-  driveUrl: 6,
+  name: 40,
+  companyName: 11,
+  statusName: 17,
+  priority: 7,
+  projectType: 9,
+  managerName: 14,
+  narrator: 16,
+  pageCount: 6,
+  endDate: 11,
+  releaseDate: 11,
+  driveUrl: 5,
 };
 
 export function sirkySloupcu(klice: string[]): string[] {
@@ -601,14 +601,14 @@ const TRIDA_BUNKY: Record<string, string> = {
   name: 'px-3 py-0 font-heading font-semibold text-sm truncate',
   companyName: 'px-3 py-0 text-sm font-heading text-muted truncate',
   statusName: 'px-3 py-0 truncate',
-  priority: 'px-3 py-0 text-sm font-heading truncate',
+  priority: 'px-2 py-0 text-sm font-heading truncate',
   projectType: 'px-3 py-0 text-sm font-heading text-muted truncate',
   managerName: 'px-3 py-0 text-sm font-heading text-muted truncate',
   narrator: 'px-3 py-0 text-sm font-heading text-muted truncate',
-  pageCount: 'px-3 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
-  endDate: 'px-3 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap truncate',
-  releaseDate: 'px-3 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap truncate',
-  driveUrl: 'px-3 py-0 whitespace-nowrap',
+  pageCount: 'px-2 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
+  endDate: 'px-2 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap truncate',
+  releaseDate: 'px-2 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap truncate',
+  driveUrl: 'px-2 py-0 whitespace-nowrap',
 };
 
 /** Jedna výška pro všechny řádky - kvůli tomu to celé je. */

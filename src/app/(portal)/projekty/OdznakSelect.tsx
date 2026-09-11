@@ -45,11 +45,14 @@ export function OdznakSelect({
   return (
     <span
       title={titulek}
-      className={`relative inline-flex items-center gap-1.5 self-start rounded-pill pl-3 pr-2.5 py-1.5 text-xs font-heading font-semibold cursor-pointer focus-within:ring-2 focus-within:ring-brand-purple/40 ${
+      className={`relative inline-flex items-center gap-1.5 self-start max-w-full rounded-pill pl-3 pr-2.5 py-1.5 text-xs font-heading font-semibold cursor-pointer focus-within:ring-2 focus-within:ring-brand-purple/40 ${
         disabled ? 'opacity-60' : ''
       } ${trida}`}
     >
-      <span className="whitespace-nowrap inline-flex items-center gap-1.5">
+      {/* V uzkem sloupci se dlouhy stav orizne TREMI TECKAMI primo uvnitr
+          odznaku (zadani 12. 9. 2026). Kdyby se oriznul az bunkou, useklo by
+          to odznak v pulce i s pozadim a vypadalo by to jako chyba. */}
+      <span className="min-w-0 truncate inline-flex items-center gap-1.5">
         {vybrana?.obsah ?? vybrana?.popisek ?? prazdnyPopisek}
       </span>
       <Sipka />
