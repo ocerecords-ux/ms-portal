@@ -509,6 +509,15 @@ function PoslatZnovu({ caflouProjectId, stav }: { caflouProjectId: string; stav:
 
   return (
     <span className="flex items-center gap-2 flex-wrap">
+      <a
+        href={`/api/projects/${encodeURIComponent(caflouProjectId)}/notifikace-nahled`}
+        target="_blank"
+        rel="noreferrer"
+        className="text-xs font-heading font-semibold text-brand-purple no-underline hover:underline"
+      >
+        Ukázat, co klientovi dorazí
+      </a>
+      <span className="text-muted text-xs">·</span>
       <button
         type="button"
         onClick={() => void posli()}

@@ -1152,7 +1152,7 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
 // Druhé tlačítko (Audiotagger) přibude, až bude kam odkazovat.
 // ===========================================================================
 
-type StavProjektuInput = {
+export type StavProjektuInput = {
   prijemci: string[];
   /** Zpráva jen pro nás - klient ji nedostane, tak ať to je v mailu vidět. */
   jenInterne: boolean;
