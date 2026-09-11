@@ -10,6 +10,7 @@ import {
   sklonujNormostrany,
   spoctiNormostrany,
   umimeSpocitat,
+  zaokrouhliNormostrany,
   ZNAKU_NA_NORMOSTRANU,
   type RozborTextu,
 } from '@/lib/normostrany';
@@ -107,7 +108,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       const vysledek = await spoctiNormostrany(soubor);
       setRozbor(vysledek);
       if (doplnitVzdy || !pocetRef.current.trim()) {
-        setPageCount(String(Math.round(vysledek.normostran)));
+        setPageCount(String(zaokrouhliNormostrany(vysledek.normostran)));
       }
     } catch (err) {
       // Do okna jde srozumitelna veta, do konzole cela chyba - jinak se
@@ -295,16 +296,16 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
                   {rozbor.stran ? ` · ${rozbor.stran} stran v souboru` : ''}
                 </p>
                 <p className="m-0 mt-1 text-[11px] font-body text-white/55">
-                  Normostrana = {formatujCislo(ZNAKU_NA_NORMOSTRANU)} znaků včetně mezer. Počet v objednávce
-                  můžete kdykoliv přepsat.
+                  Normostrana = {formatujCislo(ZNAKU_NA_NORMOSTRANU)} znaků včetně mezer, započatá strana se
+                  počítá celá. Počet v objednávce můžete kdykoliv přepsat.
                 </p>
-                {pageCount !== String(Math.round(rozbor.normostran)) && (
+                {pageCount !== String(zaokrouhliNormostrany(rozbor.normostran)) && (
                   <button
                     type="button"
-                    onClick={() => setPageCount(String(Math.round(rozbor.normostran)))}
+                    onClick={() => setPageCount(String(zaokrouhliNormostrany(rozbor.normostran)))}
                     className="mt-2 bg-brand-green text-brand-purpleDark rounded-md px-3 py-1.5 text-xs font-heading font-semibold"
                   >
-                    Doplnit {Math.round(rozbor.normostran)} do objednávky
+                    Doplnit {zaokrouhliNormostrany(rozbor.normostran)} do objednávky
                   </button>
                 )}
               </div>

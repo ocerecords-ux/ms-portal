@@ -265,6 +265,18 @@ export async function spoctiNormostrany(file: File): Promise<RozborTextu> {
   }
 }
 
+/**
+ * Počet normostran do objednávky (zadání 12. 9. 2026: „když to bude započatá
+ * strana, zaokrouhleme to nahoru").
+ *
+ * Účtuje se po celých normostranách, takže 71,1 je sedmdesát dva. Malá
+ * tolerance je tam kvůli počítání s desetinnými čísly: přesně 71 nemá kvůli
+ * poslední cifře za čárkou vyskočit na 72.
+ */
+export function zaokrouhliNormostrany(n: number): number {
+  return Math.max(0, Math.ceil(n - 1e-9));
+}
+
 /** „71,3" — na hlášku pod přílohou. */
 export function formatujNormostrany(n: number): string {
   return new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 1 }).format(n);
