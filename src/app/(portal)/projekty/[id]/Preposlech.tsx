@@ -91,6 +91,40 @@ function spocitejPeaks(buffer: AudioBuffer, pocet = 640): [number, number][] {
   return peaks;
 }
 
+const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289';
+
+/**
+ * Natáhne pdf.js z CDN až ve chvíli, kdy je potřeba.
+ *
+ * Schválně to NENÍ `import('https://…')`: takový import se snaží přeložit
+ * balíčkovač i TypeScript, a ani jeden vzdálenou adresu neumí. Modul se proto
+ * vkládá jako obyčejný `<script type="module">`, který si hotovou knihovnu
+ * odloží na `window`. Načte se jen jednou za život stránky.
+ */
+function nactiPdfJs(): Promise<any> {
+  const okno = window as unknown as { __pdfjs?: any };
+  if (okno.__pdfjs) return Promise.resolve(okno.__pdfjs);
+
+  return new Promise((hotovo, chyba) => {
+    const hlaska = 'preposlech-pdfjs';
+    const posluchac = (e: Event) => {
+      const detail = (e as CustomEvent<{ ok: boolean }>).detail;
+      if (detail?.ok && okno.__pdfjs) hotovo(okno.__pdfjs);
+      else chyba(new Error('pdf.js se nepodařilo načíst'));
+    };
+    window.addEventListener(hlaska, posluchac, { once: true });
+
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.textContent =
+      `import * as pdfjs from "${PDFJS_CDN}/pdf.min.mjs";\n` +
+      `window.__pdfjs = pdfjs;\n` +
+      `window.dispatchEvent(new CustomEvent("${hlaska}", { detail: { ok: true } }));`;
+    script.onerror = () => window.dispatchEvent(new CustomEvent(hlaska, { detail: { ok: false } }));
+    document.head.appendChild(script);
+  });
+}
+
 export function Preposlech({
   caflouProjectId,
   projectName,
@@ -437,11 +471,8 @@ export function Preposlech({
 
   async function nactiPdf(file: File) {
     try {
-      // pdf.js se tahne z CDN az ve chvili, kdy je potreba - do balicku
-      // portalu se nepribaluje (webpackIgnore drzi import mimo bundler).
-      const pdfjs: any = await import(/* webpackIgnore: true */ 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs');
-      pdfjs.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs';
+      const pdfjs = await nactiPdfJs();
+      pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
       const data = await file.arrayBuffer();
       const doc = await pdfjs.getDocument({ data }).promise;
       pdfDocRef.current = doc;
