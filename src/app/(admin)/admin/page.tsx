@@ -59,6 +59,13 @@ export default async function AdminHomePage({
         <div>
           <h1 className="font-display text-3xl text-ink m-0">Firmy</h1>
         </div>
+        {/* Zneni zprav klientovi (zadani 11. 9. 2026). */}
+        <Link
+          href="/admin/vzory-zprav"
+          className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
+        >
+          Vzory zpráv klientovi
+        </Link>
         {/* Surovy seznam firem z Caflou (zadani 8. 9. 2026). Od odpojeni
             11. 9. 2026 uz to neni bezna cesta, jen posledni moznost, jak
             neco z Caflou dohledat - proto v barve poznamky, ne akce. */}

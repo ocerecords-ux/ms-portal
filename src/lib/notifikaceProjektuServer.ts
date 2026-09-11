@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db';
-import { CO_SE_POSILA, STAVY_S_NOTIFIKACI, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
+import { STAVY_S_NOTIFIKACI, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
+import { dosadPromenne } from '@/lib/vzoryZprav';
+import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { sendStavProjektuEmail } from '@/lib/email';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
 import { zajistiOdkaz, urlPreposlechu } from '@/lib/preposlechOdkaz';
@@ -131,14 +133,31 @@ export async function posliNotifikaciKeStavu(
       if (token) odkazNaPreposlech = urlPreposlechu(token);
     }
 
+    /**
+     * Znění zprávy se bere ze VZORU (zadání 11. 9. 2026), ne z kódu. Proměnné
+     * se dosazují až tady - vzor si pamatuje „{projekt}", ne konkrétní název,
+     * takže se dá napsat jednou a platí pro všechny projekty.
+     */
+    const nazevProjektu = projekt.name || `Projekt ${caflouProjectId}`;
+    const nazevFirmy = projekt.company?.name ?? projekt.companyName ?? '';
+    const vzor = await vzorProStav(stav);
+    const hodnoty = {
+      projekt: nazevProjektu,
+      firma: nazevFirmy,
+      klient: projekt.klient?.name ?? '',
+      stav,
+    };
+
     const vysledek = await sendStavProjektuEmail({
       prijemci,
       jenInterne: nastaveni.komu === 'INTERNE',
       jmenoKlienta: projekt.klient?.name ?? null,
-      nazevProjektu: projekt.name || `Projekt ${caflouProjectId}`,
-      nazevFirmy: projekt.company?.name ?? projekt.companyName ?? '',
+      nazevProjektu,
+      nazevFirmy,
       stav,
-      text: CO_SE_POSILA[stav] ?? '',
+      predmet: dosadPromenne(vzor.predmet, hodnoty),
+      nadpis: dosadPromenne(vzor.nadpis, hodnoty),
+      text: dosadPromenne(vzor.text, hodnoty),
       odkazNaDisk,
       odkazNaPreposlech,
     });

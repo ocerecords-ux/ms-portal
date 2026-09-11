@@ -42,6 +42,7 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // Firmy z Caflou uz nejsou v menu (odpojeni 11. 9. 2026), stranka ale
   // zustava - je to posledni cesta, jak neco z Caflou dohledat.
   '/admin/caflou-firmy': ['ADMIN'],
+  '/admin/vzory-zprav': ['ADMIN'],
   '/admin/users': ['ADMIN'],
   '/admin/ceniky': ['ADMIN'],
   '/admin/studia': ['ADMIN'],

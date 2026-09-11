@@ -1270,6 +1270,14 @@ export type StavProjektuInput = {
    * Posílá se jen u zprávy o prvních tracích; jindy zůstává prázdné.
    */
   odkazNaPreposlech?: string | null;
+  /** Předmět mailu ze vzoru; prázdné = „{projekt} - {stav}". */
+  predmet?: string | null;
+  /**
+   * Velký nadpis nad textem (zadání 11. 9. 2026). Prázdný = zpráva nadpis
+   * nemá, jak to bylo do té doby — vzor s prázdným nadpisem tedy vypadá
+   * přesně jako dřív.
+   */
+  nadpis?: string | null;
 };
 
 export function buildStavProjektuHtml(input: StavProjektuInput): string {
@@ -1311,16 +1319,33 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     ? '<p style="background:#F3EEFF;border-radius:10px;padding:10px 14px;font-size:13px;">Tohle je interní zpráva — klientovi nic nešlo.</p>'
     : '';
 
+  /**
+   * Text může mít víc odstavců - prázdný řádek je oddělí. Vzor se píše jako
+   * obyčejný text, ne jako HTML; všechno se escapuje, takže do zprávy nejde
+   * propašovat značky ani z uloženého vzoru.
+   */
+  const odstavce = input.text
+    .split(/\n\s*\n/)
+    .map((o) => o.trim())
+    .filter(Boolean)
+    .map((o) => `<p>${escapeHtml(o).replace(/\n/g, '<br />')}</p>`)
+    .join('\n    ');
+
+  const nadpis = input.nadpis?.trim()
+    ? `<h2>${escapeHtml(input.nadpis.trim())}</h2>`
+    : '';
+
   return emailShell({
     tag: `MS Portal - ${escapeHtml(input.stav)}`,
-    preheader: `${input.nazevProjektu}: ${input.text}`,
+    preheader: `${input.nazevProjektu}: ${input.text.replace(/\s+/g, ' ').slice(0, 120)}`,
     body: `
+    ${nadpis}
     <p>${osloveni}</p>
     ${interniPoznamka}
     <p><strong>${escapeHtml(input.nazevProjektu)}</strong>${
       input.nazevFirmy ? ` · ${escapeHtml(input.nazevFirmy)}` : ''
     }</p>
-    <p>${escapeHtml(input.text)}</p>
+    ${odstavce}
     <div class="cta-row" style="padding-top:8px;">${tlacitko}</div>
 `,
   });
@@ -1338,7 +1363,7 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
   await transport.sendMail({
     from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
     to: input.prijemci.join(', '),
-    subject: `${input.nazevProjektu} - ${input.stav}`,
+    subject: input.predmet?.trim() || `${input.nazevProjektu} - ${input.stav}`,
     text: [
       input.jenInterne || !input.jmenoKlienta ? 'Dobry den,' : `Dobry den, ${input.jmenoKlienta},`,
       '',

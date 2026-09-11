@@ -3,7 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
-import { CO_SE_POSILA, STAVY_S_NOTIFIKACI } from '@/lib/notifikaceFirmy';
+import { STAVY_S_NOTIFIKACI } from '@/lib/notifikaceFirmy';
+import { dosadPromenne } from '@/lib/vzoryZprav';
+import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { buildStavProjektuHtml } from '@/lib/email';
 import { urlPreposlechu, zakladPortalu } from '@/lib/preposlechOdkaz';
 import { ZNACKA_PRVNI_TRACKY, znackaStavu } from '@/lib/notifikaceProjektuServer';
@@ -70,14 +72,26 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         : `${zaklad}/preposlech/ukazkovy-odkaz`;
   }
 
+  const nazevProjektu = projekt.name || `Projekt ${params.id}`;
+  const nazevFirmy = projekt.company?.name ?? projekt.companyName ?? '';
+  const vzor = await vzorProStav(stav);
+  const hodnoty = {
+    projekt: nazevProjektu,
+    firma: nazevFirmy,
+    klient: projekt.klient?.name ?? '',
+    stav,
+  };
+
   const html = buildStavProjektuHtml({
     prijemci: [],
     jenInterne: false,
     jmenoKlienta: projekt.klient?.name ?? null,
-    nazevProjektu: projekt.name || `Projekt ${params.id}`,
-    nazevFirmy: projekt.company?.name ?? projekt.companyName ?? '',
+    nazevProjektu,
+    nazevFirmy,
     stav,
-    text: CO_SE_POSILA[stav] ?? '',
+    predmet: dosadPromenne(vzor.predmet, hodnoty),
+    nadpis: dosadPromenne(vzor.nadpis, hodnoty),
+    text: dosadPromenne(vzor.text, hodnoty),
     odkazNaDisk,
     odkazNaPreposlech,
   });

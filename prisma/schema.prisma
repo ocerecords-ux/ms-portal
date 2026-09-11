@@ -1770,3 +1770,29 @@ model HerecDotocen {
   @@unique([caflouProjectId, userId])
   @@index([caflouProjectId])
 }
+
+/// Vzor zpravy klientovi pro jeden stav projektu (zadani 11. 9. 2026:
+/// "udelame vzory a ja si je pak muzu textove jeste treba upravit,
+/// pracoval bych i s promennymi").
+///
+/// Do te doby byly texty napsane v kodu (CO_SE_POSILA v lib/notifikaceFirmy).
+/// Menit zneni zpravy klientovi kvuli preklepu znamenalo nasazovat portal
+/// znovu - a psat to ma stejne produkce, ne programator.
+///
+/// Radek existuje jen pro stav, ktery nekdo upravil. Co ulozene neni, se bere
+/// z vychozich textu v lib/vzoryZprav.ts, takze "Obnovit vychozi" znamena
+/// proste radek smazat.
+model VzorZpravy {
+  /// Nazev stavu projektu - viz STAVY_S_NOTIFIKACI.
+  stav String @id
+
+  /// Predmet mailu. Prazdne = vychozi.
+  predmet String?
+  /// Velky nadpis nad textem. Prazdne = zadny nadpis, jako do 11. 9. 2026.
+  nadpis  String?
+  /// Hlavni text. Prazdny radek oddeluje odstavce.
+  text    String  @db.Text
+
+  upravilJmeno String?
+  updatedAt    DateTime @updatedAt
+}
