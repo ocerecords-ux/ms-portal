@@ -98,3 +98,25 @@ export function usePoctyDoku(): PoctyDoku {
 
   return pocty;
 }
+
+/**
+ * Běží portál jako nainstalovaná aplikace? V ní MS chat není - má vlastní
+ * aplikaci (zadání 9. 9. 2026) - takže se v panelu nenabízí a poutko na hraně
+ * otevírá rovnou Úkoly.
+ *
+ * Pozná se to podle toho, že stránka běží ve vlastním okně bez adresního
+ * řádku. Zjistit to jde až v prohlížeči, na serveru ne.
+ */
+export function useVAplikaci(): boolean {
+  const [vAplikaci, setVAplikaci] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const samostatne =
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    setVAplikaci(Boolean(samostatne));
+  }, []);
+
+  return vAplikaci;
+}

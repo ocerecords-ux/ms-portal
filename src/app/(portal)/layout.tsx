@@ -6,6 +6,7 @@ import { Topbar } from './components/Topbar';
 import { TaskDock } from './components/TaskDock';
 import { QuickDock } from './components/QuickDock';
 import { ChatDock } from './components/ChatDock';
+import { PoutkoDoku } from './components/PoutkoDoku';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { countUnread } from '@/lib/notifications';
@@ -64,6 +65,9 @@ export default async function PortalLayout({ children }: { children: React.React
       {/* Chat týmu - stejný vysouvací panel, jen u spodní hrany
           (zadani 8. 9. 2026). Taky jen pro tým Mediaspace. */}
       {internal && <ChatDock />}
+      {/* Poutko na prave hrane, kterym se panel otevira. Vykresluje ho layout,
+          ne nektery z panelu - oprava 11. 9. 2026, viz PoutkoDoku.tsx. */}
+      {internal && <PoutkoDoku />}
     </div>
   );
 }

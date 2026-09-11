@@ -31,9 +31,8 @@ import {
 } from '@/lib/chatPrilohy';
 import { WaveformPlayer } from './WaveformPlayer';
 import { UpozorneniChatu } from './UpozorneniChatu';
-import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
+import { oznamPocetDoku, usePoctyDoku, usePravyDok, useVAplikaci } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
-import { ChecklistIcon, ClockIcon } from './TaskDock';
 
 /**
  * Chat týmu (zadani 8. 9. 2026: "vytvor komunikacni kanal jako Slack pro tym...
@@ -53,13 +52,6 @@ const REFRESH_MS = 12000;
 
 type ProjectOption = { id: string; label: string; name: string };
 
-function ChatIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.3-.6L3 21l1.7-5a8.4 8.4 0 0 1-.7-3.4 8.5 8.5 0 0 1 8.5-8.5 8.4 8.4 0 0 1 8.5 8.4z" />
-    </svg>
-  );
-}
 
 /**
  * Kolecko s fotkou, a kdyz fotka neni (nebo se nenacte), s inicialami.
@@ -787,16 +779,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const [dok, otevriDok] = usePravyDok();
   const pocty = usePoctyDoku();
   const expanded = naStrance || dok === 'chat';
-  // Bezi portal jako nainstalovana aplikace? Zjisti se az v prohlizeci -
-  // na serveru to vedet nejde.
-  const [vAplikaci, setVAplikaci] = useState(false);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const samostatne =
-      window.matchMedia?.('(display-mode: standalone)').matches ||
-      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
-    setVAplikaci(Boolean(samostatne));
-  }, []);
+  const vAplikaci = useVAplikaci();
   const [tab, setTab] = useState<ConversationKind>('PROJEKT');
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [team, setTeam] = useState<ChatTeamMember[]>([]);
@@ -1246,53 +1229,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   // /chat sem nespada - ta se vykresluje s naStrance.
   if (vAplikaci && !naStrance) return null;
 
-  // --- Zabaleno: jen ikonka na hrane obrazovky ---------------------------
-  if (!expanded && !naStrance) {
-    // Kdyz jsou otevrene Ukoly, prepina se zalozkou v jejich hlavicce - dve
-    // poutka pres sebe na jedne hrane nedavaji smysl.
-    if (dok !== null) return null;
-    // JEDNO poutko pro cely panel (zadani 10. 9. 2026: "staci jedna"). Nese
-    // signaly z obou zalozek - nove zpravy, otevrene ukoly, ukoly po terminu -
-    // aby se pro cislo nemuselo nic otevirat. Sedi tam, kde se panel rozbali.
-    return (
-      <button
-        type="button"
-        onClick={toggle}
-        title="Zobrazit MS chat a úkoly"
-        aria-label="Zobrazit MS chat a úkoly"
-        className="fixed right-0 top-28 z-40 flex flex-col items-center gap-2.5 bg-brand-purple hover:bg-brand-purpleDeep rounded-l-card shadow-lg px-2.5 py-3 text-brand-green transition-colors"
-      >
-        <Chevron direction="left" />
-        <span className="relative">
-          <ChatIcon />
-          {neprectene > 0 && (
-            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-4 text-center">
-              {neprectene}
-            </span>
-          )}
-        </span>
-        <span className="relative">
-          <ChecklistIcon />
-          {(pocty.ukoly ?? 0) > 0 && (
-            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-4 text-center">
-              {pocty.ukoly}
-            </span>
-          )}
-        </span>
-        {(pocty.poTerminu ?? 0) > 0 && (
-          <span className="relative text-white" title={`${pocty.poTerminu} po termínu`}>
-            <ClockIcon />
-            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-heading font-bold leading-4 text-center">
-              {pocty.poTerminu}
-            </span>
-          </span>
-        )}
-        <span className="text-[10px] font-heading font-bold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
-          MS chat
-        </span>
-      </button>
-    );
-  }
+  // Poutko na hrane vykresluje layout (PoutkoDoku) - oprava 11. 9. 2026.
+  // Kdyz ho mel na starosti chat, zmizelo s nim v nainstalovane aplikaci
+  // i poutko k ukolum.
+  if (!expanded && !naStrance) return null;
 
   // --- Rozbaleno ---------------------------------------------------------
   // Panel drzi celou pravou hranu od horni listy po spodek okna; Ukoly jsou

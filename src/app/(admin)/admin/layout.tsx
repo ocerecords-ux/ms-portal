@@ -5,6 +5,7 @@ import { Topbar } from '@/app/(portal)/components/Topbar';
 import { TaskDock } from '@/app/(portal)/components/TaskDock';
 import { QuickDock } from '@/app/(portal)/components/QuickDock';
 import { ChatDock } from '@/app/(portal)/components/ChatDock';
+import { PoutkoDoku } from '@/app/(portal)/components/PoutkoDoku';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { loadQuickActions } from '@/lib/quickActionsServer';
@@ -44,6 +45,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <TaskDock tasks={tasks} />
       {/* Chat týmu - stejný panel u spodní hrany (zadani 8. 9. 2026). */}
       <ChatDock />
+      {/* Poutko na prave hrane - vykresluje ho layout, viz PoutkoDoku.tsx. */}
+      <PoutkoDoku />
     </div>
   );
 }
