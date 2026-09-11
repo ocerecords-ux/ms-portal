@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BublinaHerce, type Herec } from './VyberHerce';
 import { TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
-import { FajfkaDotoceno } from './FajfkaDotoceno';
 
 /**
  * Výběr VÍCE herců k projektu (zadání 10. 9. 2026: „ještě nemám v detailu
@@ -118,6 +117,7 @@ export function VyberHercu({
               <BublinaHerce
                 jmeno={h.label}
                 disabled={disabled}
+                dotoceno={dotoceni?.[h.id]}
                 // Klik na jmeno tady nic nemeni - herec se pridava a odebira,
                 // ne prepisuje. Sipka ho posune o misto vys.
                 onZmenit={() => nahoru(h.id)}
@@ -132,10 +132,9 @@ export function VyberHercu({
                     disabled={disabled || dotoceniBezi === h.id}
                     onClick={() => onPrepnoutDotoceno(h.id, false)}
                     title={`Dotočeno ${new Date(dotoceni[h.id]).toLocaleDateString('cs-CZ')} — klepnutím zrušíte`}
-                    className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold text-brand-greenDeep disabled:opacity-50"
+                    className="text-xs font-heading font-semibold rounded-pill border border-brand-green px-2.5 py-1 text-brand-greenDeep disabled:opacity-50"
                   >
-                    <FajfkaDotoceno kdy={dotoceni[h.id]} />
-                    Dotočeno
+                    Zrušit dotočeno
                   </button>
                 ) : (
                   <button

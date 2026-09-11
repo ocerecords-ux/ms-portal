@@ -10,6 +10,7 @@ import { KresbaIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
 import { FajfkaDotoceno } from '../FajfkaDotoceno';
+import { TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 import { OdznakSelect } from '../OdznakSelect';
 
@@ -298,14 +299,20 @@ export function ProjectMetaForm({
             </dt>
             <dd className="text-sm font-heading text-ink m-0 mt-1">
               {values.actorUserIds.length > 0 ? (
-                <span className="flex flex-col items-start gap-1">
+                <span className={TRIDA_SLOUPCE_HERCU}>
                   {values.actorUserIds.map((id) => {
                     const jmeno = herci.find((h) => h.id === id)?.label;
                     if (!jmeno) return null;
+                    // Stejna bublina i fajfka uvnitr jako v prehledu projektu
+                    // (zadani 11. 9. 2026) - na obou mistech ma herec vypadat
+                    // stejne.
                     return (
-                      <span key={id} className="inline-flex items-center gap-1.5">
+                      <span
+                        key={id}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}
+                      >
                         {jmeno}
-                        {dotoceniHercu[id] && <FajfkaDotoceno kdy={dotoceniHercu[id]} />}
+                        {dotoceni[id] && <FajfkaDotoceno kdy={dotoceni[id]} />}
                       </span>
                     );
                   })}

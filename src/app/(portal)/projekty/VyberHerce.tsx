@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
+import { FajfkaDotoceno } from './FajfkaDotoceno';
 
 /**
  * Výběr herce z účtů v portálu (zadání 10. 9. 2026: "pole Herec musí být na
@@ -141,11 +142,14 @@ export function BublinaHerce({
   onZmenit,
   onOdebrat,
   disabled,
+  dotoceno,
 }: {
   jmeno: string;
   onZmenit: () => void;
   onOdebrat?: () => void;
   disabled?: boolean;
+  /** Datum dotočení - fajfka patří DOVNITŘ bubliny (zadání 11. 9. 2026). */
+  dotoceno?: string | null;
 }) {
   return (
     <span className={`inline-flex items-center gap-1.5 max-w-full pl-3 pr-1.5 py-1 ${TRIDA_BUBLINY_HERCE}`}>
@@ -158,6 +162,10 @@ export function BublinaHerce({
       >
         {jmeno}
       </button>
+      {/* Fajfka je uvnitr bubliny, stejne jako v prehledu projektu (zadani
+          11. 9. 2026: „tu fajfku u herce dotoceno jsem chtel [do] toho
+          ovalneho ramecku s napisem herec"). */}
+      {dotoceno && <FajfkaDotoceno kdy={dotoceno} />}
       {onOdebrat && (
         <button
           type="button"
