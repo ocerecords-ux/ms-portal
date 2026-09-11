@@ -99,6 +99,7 @@ export function ProjectMetaForm({
   ikonyTypu,
   initial,
   dotoceniHercu,
+  natoceniHercu,
 }: {
   caflouProjectId: string;
   canEdit: boolean;
@@ -121,6 +122,12 @@ export function ProjectMetaForm({
   initial: Initial;
   /** Kdo z herců má dotočeno - ID účtu -> datum (zadání 11. 9. 2026). */
   dotoceniHercu: Record<string, string>;
+  /**
+   * Kam se s kterým hercem doteklo natáčení (zadání 12. 9. 2026) — vede to
+   * Bruno z chatu projektu. Klíč je účet herce; prázdný klíč je zápis bez
+   * herce, tedy projekt s jediným hercem.
+   */
+  natoceniHercu?: Record<string, { strana: number; kdy: string }>;
 }) {
   const router = useRouter();
   const [values, setValues] = useState<Initial>(initial);
@@ -307,19 +314,45 @@ export function ProjectMetaForm({
                     // linka kolem bubliny; datum odskrtnuti se doctete
                     // v bublinkove napovede, at nezabira misto.
                     const kdy = dotoceni[id];
+                    // Kam se s nim doteklo natacení (Bruno, zadani 12. 9. 2026).
+                    // U projektu s jedinym hercem muze byt zapis bez herce -
+                    // pak patri jemu.
+                    const strana =
+                      natoceniHercu?.[id] ??
+                      (values.actorUserIds.length === 1 ? natoceniHercu?.[''] : undefined);
                     return (
-                      <span
-                        key={id}
-                        title={kdy ? `Dotočeno ${new Date(kdy).toLocaleDateString('cs-CZ')}` : undefined}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
-                          kdy ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
-                        }`}
-                      >
-                        {jmeno}
-                        {kdy && <span className="sr-only"> — dotočeno</span>}
+                      <span key={id} className="inline-flex items-center gap-2 flex-wrap">
+                        <span
+                          title={kdy ? `Dotočeno ${new Date(kdy).toLocaleDateString('cs-CZ')}` : undefined}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
+                            kdy ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
+                          }`}
+                        >
+                          {jmeno}
+                          {kdy && <span className="sr-only"> — dotočeno</span>}
+                        </span>
+                        {strana && (
+                          <span
+                            title={`Zapsal Bruno z chatu ${new Date(strana.kdy).toLocaleDateString('cs-CZ')}`}
+                            className="text-xs font-body text-muted"
+                          >
+                            natočeno do str. <span className="text-ink font-heading font-semibold tabular-nums">{strana.strana}</span>
+                          </span>
+                        )}
                       </span>
                     );
                   })}
+                  {/* Zapis bez herce u projektu s vice herci - Bruno se na
+                      jmeno ptal a jeste se nedozvedel. */}
+                  {values.actorUserIds.length > 1 && natoceniHercu?.[''] && (
+                    <span className="text-xs font-body text-muted">
+                      natočeno do str.{' '}
+                      <span className="text-ink font-heading font-semibold tabular-nums">
+                        {natoceniHercu[''].strana}
+                      </span>{' '}
+                      — zatím bez herce
+                    </span>
+                  )}
                 </span>
               ) : (
                 (herecZCaflou ?? '—')

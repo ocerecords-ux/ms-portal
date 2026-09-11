@@ -167,6 +167,9 @@ model User {
   /// U kterych projektu je tenhle herec dotoceny.
   dotoceniHerce HerecDotocen[] @relation("DotocenyHerec")
 
+  /// Kam se s timhle hercem doteklo natacení (vede Bruno - viz BrunoNatoceno).
+  brunoNatoceno BrunoNatoceno[] @relation("BrunoNatocenoHerec")
+
   // --- Herec - zadani 5. 9. 2026: samostatna fyzicka osoba, bez firmy ---
   /// Projekty, ve kterych herec hraje (zadani 10. 9. 2026, vic hercu na projekt).
   projektyJakoHerec ProjectMeta[] @relation("ProjektHerci")
@@ -478,6 +481,7 @@ enum DruhUdalosti {
   ZALOZENO    // projekt vznikl
   ZMENA       // nekdo zmenil udaj
   NOTIFIKACE  // odesla (nebo neodesla) zprava o stavu
+  BRUNO       // neco vycetl z chatu asistent Bruno (zadani 12. 9. 2026)
 }
 
 model ProjektUdalost {
@@ -1855,4 +1859,54 @@ model PreposlechPozice {
   updatedAt DateTime @updatedAt
 
   @@unique([caflouProjectId, posluchac])
+}
+
+// ---------------------------------------------------------------------------
+// BRUNO - asistent studia (zadani 12. 9. 2026: „pojdme pridat naseho firemniho
+// otroka, ktery se jmenuje Bruno. Chci, aby delal ruzne veci, ale prvni ukol
+// bude sbirat data z komunikaci internich a pamatovat si souvislosti.")
+//
+// Bruno cte kanaly projektu v chatu a vytahuje z nich udaje, ktere by jinak
+// nikdo nikam nepsal. Neni to hledani vzorcu v textu - zpravu posuzuje model,
+// takze pochopi „str33", „str.33" i holou „33" a pozna, kdy se ho nekdo ptá
+// na neco jineho. Kdyz si neni jisty, ZEPTA SE V KANALU misto hadani.
+// ---------------------------------------------------------------------------
+
+/// Kam se u projektu doteklo natacení - strana ve scenari/PDF, kde se skoncilo.
+///
+/// Klic je PROJEKT + HEREC: kdyz se toci s vice herci, kazdy je jinde. Prazdny
+/// herec znamena, ze projekt ma jedineho herce (nebo jeste neni jasne kdo -
+/// pak to Bruno doresi dotazem v kanalu).
+model BrunoNatoceno {
+  id              String   @id @default(cuid())
+  caflouProjectId String
+  userId          String?
+  user            User?    @relation("BrunoNatocenoHerec", fields: [userId], references: [id], onDelete: Cascade)
+
+  strana          Int
+  /// Zprava, ze ktere to Bruno vycetl - at je dohledatelne, odkud to vzal.
+  zdrojMessageId  String?
+  /// Kdo tu zpravu napsal (typicky zvukar).
+  zapsalUserId    String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([caflouProjectId, userId])
+  @@index([caflouProjectId])
+}
+
+/// Co si Bruno zapamatoval, aby se priste rozhodoval lip.
+///
+/// Tohle je ta „pamet souvislosti": ne surova data, ale vety typu „Martin pise
+/// strany bez slova strana" nebo „na tomhle projektu toci Petr utery, Klara
+/// ctvrtky". Pred kazdym rozhodnutim je Bruno dostane zpatky.
+model BrunoPamet {
+  id              String   @id @default(cuid())
+  /// Prazdne = poznamka plati vsude; jinak jen u toho projektu.
+  caflouProjectId String?
+  poznamka        String
+  createdAt       DateTime @default(now())
+
+  @@index([caflouProjectId, createdAt])
 }

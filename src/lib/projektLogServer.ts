@@ -57,6 +57,27 @@ export async function zapisZalozeniProjektu(
 }
 
 /**
+ * Co do historie zapsal Bruno (zadání 12. 9. 2026).
+ *
+ * Vlastní druh záznamu schválně: v historii projektu má být na první pohled
+ * poznat, co vyčetl asistent z chatu a co tam napsal člověk. Kdyby se to
+ * slilo dohromady, nedalo by se Brunovi věřit ani kontrolovat.
+ */
+export async function zapisBrunoUdalost(vstup: {
+  caflouProjectId: string;
+  popis: string;
+  nova?: string | null;
+}) {
+  await zapis({
+    caflouProjectId: vstup.caflouProjectId,
+    druh: 'BRUNO',
+    popis: vstup.popis,
+    nova: vstup.nova ?? null,
+    puvodce: { id: null, jmeno: 'Bruno' },
+  });
+}
+
+/**
  * Jména navázaných účtů, aby se do historie nedostalo holé ID. Klíč je název
  * pole (managerUserId, ...), hodnota to, co se má ukázat.
  */

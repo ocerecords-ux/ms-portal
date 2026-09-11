@@ -31,6 +31,7 @@ import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadRodneListy } from '@/lib/rodnyListServer';
 import { bezStarePredpony, dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
 import { nactiPenizeProjektu } from '@/lib/projektPenizeServer';
+import { natoceniProjektu } from '@/lib/brunoServer';
 
 // Detail projektu (zadani 5. 9. 2026). Od 11. 9. 2026 projekt zije v portalu -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -73,6 +74,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     historie,
     dotoceniHercu,
     ikonyTypu,
+    natoceno,
   ] = await Promise.all([
     // Projekt tak, jak se ukazuje v prehledu (lib/projektySeznamServer.ts).
     findInternalProject(caflouProjectId),
@@ -138,11 +140,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     }),
     // Ikony typu projektu z Ceniku - do odznaku u typu (zadani 10. 9. 2026).
     mapaIkonTypu(),
+    // Kam se doteklo natacení - vede Bruno z chatu (zadani 12. 9. 2026).
+    natoceniProjektu(caflouProjectId),
   ]);
 
   // Dotoceni hercu do tvaru, ve kterem s tim pracuji komponenty: ucet -> datum.
   const dotoceniPodleHerce: Record<string, string> = Object.fromEntries(
     dotoceniHercu.map((d) => [d.userId, d.dotocenoAt.toISOString()]),
+  );
+
+  // Natoceno do strany: ucet -> strana. Klic "" je zapis bez herce (projekt
+  // s jedinym hercem, nebo jeste nevyjasneny - to druhe Bruno resi dotazem).
+  const natocenoPodleHerce: Record<string, { strana: number; kdy: string }> = Object.fromEntries(
+    natoceno.map((n) => [n.userId ?? '', { strana: n.strana, kdy: n.updatedAt.toISOString() }]),
   );
 
   // Firma projektu. Od 11. 9. 2026 ji projekt drzi primo (ProjectMeta.companyId);
@@ -296,6 +306,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
         herci={herciUctu.map((h) => ({ id: h.id, label: h.name || h.email }))}
         dotoceniHercu={dotoceniPodleHerce}
+        natoceniHercu={natocenoPodleHerce}
         herecZCaflou={meta?.narrator ?? project?.narrator ?? null}
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}

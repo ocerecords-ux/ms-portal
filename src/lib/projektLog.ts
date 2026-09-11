@@ -46,6 +46,7 @@ export const POPISKY_DRUHU: Record<DruhUdalosti, string> = {
   ZALOZENO: 'Založení',
   ZMENA: 'Změna',
   NOTIFIKACE: 'Zpráva',
+  BRUNO: 'Bruno',
 };
 
 /** Barva odznaku podle druhu události — ať jde historie číst na první pohled. */
@@ -53,6 +54,9 @@ export const BARVY_DRUHU: Record<DruhUdalosti, string> = {
   ZALOZENO: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200',
   ZMENA: 'bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-200',
   NOTIFIKACE: 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200',
+  // Bruno ma vlastni barvu, at je v historii hned videt, co vycetl asistent
+  // z chatu a co tam zapsal clovek (zadani 12. 9. 2026).
+  BRUNO: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200',
 };
 
 /** Prázdná hodnota se ukazuje pomlčkou, ne prázdným místem. */

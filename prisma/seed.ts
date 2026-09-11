@@ -332,6 +332,25 @@ async function backfillCodes() {
     await prisma.company.update({ where: { id: c.id }, data: { code } });
   }
 
+  // --- Bruno, asistent studia (zadani 12. 9. 2026) ---
+  //
+  // Ucet je tu proto, aby Bruno mohl psat do chatu jako kdokoliv jiny a bylo
+  // poznat, ze to pise on. PRIHLASIT SE POD NIM NEJDE: heslo je nahodne a
+  // nikde se neuklada, takze ani nahodou nesedne na nic, co by nekdo zkusil.
+  // Ucet je zaroven neaktivni, takze ho odmitne i prihlasovaci formular.
+  const brunoHash = await bcrypt.hash(randomBytes(24).toString('hex'), 10);
+  await prisma.user.upsert({
+    where: { email: 'bruno@mediaspace.cz' },
+    update: { name: 'Bruno', role: 'PRODUKCE', active: false },
+    create: {
+      email: 'bruno@mediaspace.cz',
+      passwordHash: brunoHash,
+      name: 'Bruno',
+      role: 'PRODUKCE',
+      active: false,
+    },
+  });
+
   const usersWithoutCode = await prisma.user.findMany({
     where: { code: null },
     orderBy: { createdAt: 'asc' },

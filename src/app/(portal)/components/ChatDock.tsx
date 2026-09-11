@@ -1366,12 +1366,36 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         setPrilohyHlavni([]);
         setMessages((current) => [...current, data as ChatMessage]);
       }
+      // Bruno (zadani 12. 9. 2026) - rozmysli si, jestli ze zpravy neco vytezi.
+      // Az TED, kdyz uz je zprava odeslana: ptat se modelu trva vteriny
+      // a odesilani zpravy na to cekat nesmi.
+      if (typeof data?.id === 'string') void probudBruna(data.id, openId);
       setZminkyPro(null);
       void nactiKonverzace();
     } catch {
       setError('Zprávu se nepodařilo odeslat.');
     } finally {
       setSending(false);
+    }
+  }
+
+  /**
+   * Pošle Brunovi ID čerstvé zprávy a nic po něm nechce (zadání 12. 9. 2026).
+   *
+   * Když z ní něco vyčte nebo se na něco zeptá, objeví se to v kanálu jako
+   * jeho zpráva — proto se po dokončení kanál jednou přečte znovu. Selhání se
+   * nikde neukazuje: Brunova nepřítomnost není chyba odesílání.
+   */
+  async function probudBruna(messageId: string, conversationId: string) {
+    try {
+      await fetch('/api/bruno/zprava', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId }),
+      });
+      if (otevrenaRef.current === conversationId) void nactiZpravy(conversationId, true);
+    } catch {
+      // Bruno je k dobru, ne podminka.
     }
   }
 
