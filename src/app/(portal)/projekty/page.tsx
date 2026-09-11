@@ -64,6 +64,10 @@ export default async function ProjektyPage() {
           releaseDate: true,
           startDate: true,
           endDate: true,
+          // Herci do bubliny (zadani 12. 9. 2026) - hlavni herec prvni, at
+          // to vypada stejne jako v internim prehledu.
+          actorUserId: true,
+          herci: { select: { id: true, name: true, email: true } },
         },
         orderBy: { name: 'asc' },
       })
@@ -84,6 +88,10 @@ export default async function ProjektyPage() {
       endDate: p.endDate,
       // Projekt uz je v portalu, takze stary stitek nema co resit.
       clientTag: null,
+      herci: [
+        ...p.herci.filter((h) => h.id === p.actorUserId),
+        ...p.herci.filter((h) => h.id !== p.actorUserId),
+      ].map((h) => ({ jmeno: h.name || h.email })),
     }));
     active = vsechny
       .filter((p) => !p.finished)

@@ -120,8 +120,34 @@ export function ProjectsTable({
                 <td className="px-4 py-0 truncate">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
                 </td>
-                <td className="px-4 py-0 text-sm font-heading truncate" title={p.narrator ?? undefined}>
-                  {p.narrator ?? '—'}
+                {/* Herec je bublina jako v internim prehledu (zadani
+                    12. 9. 2026: „pojdme stejny princip s bublinama udelat
+                    i v tom klientskem prehledu"). Bublinu ma jen herec
+                    s uctem v portalu; jmeno z Caflou zustava sedym textem,
+                    protoze na nem nic nestoji. Zelena linka „dotoceno" sem
+                    nepatri - to je nase vyroba, klientovi staci stav. */}
+                <td className="px-4 py-0 text-sm font-heading truncate">
+                  {p.herci && p.herci.length > 0 ? (
+                    <span
+                      className="flex items-center gap-1.5 min-w-0 max-w-full"
+                      title={p.herci.map((h) => h.jmeno).join(', ')}
+                    >
+                      <span
+                        className={`inline-flex items-center min-w-0 max-w-full truncate px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}
+                      >
+                        {p.herci[0].jmeno}
+                      </span>
+                      {p.herci.length > 1 && (
+                        <span className="shrink-0 text-xs font-heading text-muted">
+                          +{p.herci.length - 1}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-muted" title={p.narrator ?? undefined}>
+                      {p.narrator ?? '—'}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
                   {p.pageCount ?? '—'}

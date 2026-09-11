@@ -34,6 +34,14 @@ export type DisplayProject = {
    * vodítko, dokud projekt nemá vyplněného klienta (ProjectMeta.klientUserId).
    */
   clientTag: string | null;
+  /**
+   * Herci projektu pro bublinu v přehledu (zadání 12. 9. 2026: „pojďme
+   * stejný princip s bublinama udělat i v tom klientském přehledu").
+   *
+   * Nepovinné: starší volající to neposílají a pak se ukáže jméno z pole
+   * `narrator` jako obyčejný text, jako dosud. Hlavní herec je první.
+   */
+  herci?: { jmeno: string }[];
 };
 
 export type AdminDisplayProject = DisplayProject & {
