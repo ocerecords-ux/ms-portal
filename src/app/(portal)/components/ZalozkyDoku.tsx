@@ -24,7 +24,7 @@ export function ZalozkyDoku({
 }) {
   return (
     <div className="shrink-0 bg-brand-purple text-brand-green flex items-stretch justify-between gap-2 pl-2 pr-1.5 pt-1.5">
-      <div className="flex items-end gap-1">
+      <div className="flex items-end gap-1 shrink-0">
         <Zalozka
           aktivni={aktivni === 'chat'}
           onClick={() => otevri('chat')}
@@ -38,7 +38,7 @@ export function ZalozkyDoku({
           pocet={pocetUkolu}
         />
       </div>
-      <span className="flex items-center gap-2 pr-0.5">
+      <span className="flex items-center gap-1.5 sm:gap-2 pr-0.5 min-w-0">
         {vpravo}
         <button
         type="button"

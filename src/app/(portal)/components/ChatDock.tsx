@@ -1055,6 +1055,62 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
   const neprectene = conversations.reduce((sum, c) => sum + c.unread, 0);
 
+  /**
+   * Nepřečtené po druzích. Ikony v liště pak samy řeknou, kde něco přibylo —
+   * dřív se to poznalo, až když člověk na záložku přepnul.
+   */
+  const neprectenePodleDruhu = conversations.reduce<Record<string, number>>((soucet, c) => {
+    soucet[c.kind] = (soucet[c.kind] ?? 0) + c.unread;
+    return soucet;
+  }, {});
+
+  /**
+   * Druh zpráv se přepíná IKONAMI V HLAVIČCE (zadání 11. 9. 2026: „ta nabídka
+   * typu zpráv je tam špatně, chtělo by to dát nahoru do lišty s ikonkama,
+   * ať je to přehledné, podobně jako v aplikaci").
+   *
+   * Do té doby to byly čtyři textové pilulky nad seznamem konverzací: braly
+   * celý řádek v úzkém sloupci, jejich názvy se do 220 px sotva vešly a
+   * vypadaly jako filtr nad seznamem, ne jako hlavní navigace — což ale jsou.
+   * V hlavičce nestojí ani řádek navíc a ikony jsou tytéž, jaké má aplikace
+   * na telefonu ve spodní liště, takže se to nemusí učit dvakrát.
+   *
+   * Tečka na ikoně říká, že v tom druhu je něco nepřečteného. Dřív to šlo
+   * poznat, teprve až tam člověk přepnul.
+   */
+  const listaDruhu = (
+    <span className={`${naStrance ? 'hidden sm:flex' : 'flex'} items-center gap-0.5`}>
+      {CHAT_TABS.map((t) => {
+        const jeTu = tab === t.kind;
+        const nove = neprectenePodleDruhu[t.kind] ?? 0;
+        return (
+          <button
+            key={t.kind}
+            type="button"
+            onClick={() => {
+              setTab(t.kind);
+              setNovy(false);
+            }}
+            title={nove > 0 ? `${t.label} — ${nove} nepřečtených` : t.label}
+            aria-label={t.label}
+            aria-current={jeTu ? 'page' : undefined}
+            className={`relative grid place-items-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg transition-colors ${
+              jeTu ? 'bg-white/20 text-white' : 'text-brand-green/75 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <IkonaZalozky kind={t.kind} />
+            {nove > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-green ring-2 ring-brand-purple"
+              />
+            )}
+          </button>
+        );
+      })}
+    </span>
+  );
+
   // Cislo u zalozky MS chat vidi i panel Ukolu - viz pravyDok.ts.
   useEffect(() => {
     oznamPocetDoku('chat', neprectene);
@@ -1415,7 +1471,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         {naStrance ? (
           <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
             <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">MS chat</h2>
-            <UpozorneniChatu />
+            <span className="flex items-center gap-3">
+              {listaDruhu}
+              <UpozorneniChatu />
+            </span>
           </div>
         ) : (
           <ZalozkyDoku
@@ -1423,7 +1482,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             otevri={otevriDok}
             pocetUkolu={pocty.ukoly}
             neprectene={neprectene}
-            vpravo={<UpozorneniChatu />}
+            vpravo={
+              <>
+                {listaDruhu}
+                <UpozorneniChatu />
+              </>
+            }
           />
         )}
 
@@ -1436,24 +1500,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               vlaknoId ? 'hidden lg:flex' : otevrena ? 'hidden sm:flex' : 'flex'
             }`}
           >
-            {/* Na uzke obrazovce se prepina spodni listou (viz konec panelu),
-                tady by zalozky jen ubiraly misto na seznam konverzaci. */}
-            <div className={`items-center gap-1 px-2 pt-2 ${naStrance ? 'hidden sm:flex' : 'flex'}`}>
-              {CHAT_TABS.map((t) => (
-                <button
-                  key={t.kind}
-                  type="button"
-                  onClick={() => {
-                    setTab(t.kind);
-                    setNovy(false);
-                  }}
-                  className={`px-2.5 py-1.5 text-xs font-heading font-semibold rounded-pill transition-colors ${
-                    tab === t.kind ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
+            {/* Druh zprav se prepina ikonami v hlavicce (zadani 11. 9. 2026);
+                tady uz zustava jen nazev toho, co je v seznamu videt - at je
+                po prepnuti jasne, kde clovek je. Na uzke obrazovce se prepina
+                spodni listou. */}
+            <div className="px-3 pt-2.5 pb-1">
+              <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.14em] text-muted">
+                {CHAT_TABS.find((t) => t.kind === tab)?.label}
+              </span>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 flex flex-col gap-0.5">
@@ -2027,11 +2081,22 @@ function IkonaZalozky({ kind }: { kind: ConversationKind }) {
       </svg>
     );
   }
+  if (kind === 'SKUPINA') {
+    return (
+      <svg {...spolecne}>
+        <circle cx="9" cy="9" r="3" />
+        <path d="M3 20c0-3 2.7-5 6-5s6 2 6 5" />
+        <path d="M16 8.5a3 3 0 0 1 0 5M18.5 6a6 6 0 0 1 0 10" />
+      </svg>
+    );
+  }
+  // Dotazy klientu. Do 11. 9. 2026 mely tutez ikonu jako Skupiny, takze se
+  // na spodni liste nedaly rozeznat.
   return (
     <svg {...spolecne}>
-      <circle cx="9" cy="9" r="3" />
-      <path d="M3 20c0-3 2.7-5 6-5s6 2 6 5" />
-      <path d="M16 8.5a3 3 0 0 1 0 5M18.5 6a6 6 0 0 1 0 10" />
+      <path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
+      <path d="M9.6 8.6a2.4 2.4 0 0 1 4.4 1.3c0 1.6-2 1.9-2 3.1" />
+      <path d="M12 15.4h.01" />
     </svg>
   );
 }
