@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
@@ -125,40 +125,103 @@ export function ProjectMetaForm({
   const [saved, setSaved] = useState(false);
   const [upravitOdkaz, setUpravitOdkaz] = useState(false);
 
-  function set<K extends keyof Initial>(key: K, value: Initial[K]) {
-    setValues((v) => ({ ...v, [key]: value }));
-    setSaved(false);
-  }
+  /**
+   * UKLÁDÁ SE SAMO (zadání 11. 9. 2026: „u projektu zruš to tlačítko uložit,
+   * šel bych cestou, co přepneš, to tam je").
+   *
+   * Co člověk přepne, to platí. Tlačítko „Uložit" bylo u obrazovky, kde se
+   * skoro vždycky mění jediná věc — přehodit stav a pak ještě potvrdit je
+   * krok navíc, na který se dá zapomenout, a rozdělaná změna pak tiše zmizí
+   * i s odchodem ze stránky.
+   *
+   * Nečeká se na každé klepnutí do klávesnice: změna se odloží o chvilku, aby
+   * se rychlé úpravy za sebou poslaly jednou. U políčka s odkazem je ta chvíle
+   * delší (píše se do něj) a odkliknutím se uloží hned.
+   *
+   * Kdyby mezitím přišla novější změna, odpověď té starší se zahodí — jinak by
+   * pomalejší požadavek mohl přepsat to, co už je na obrazovce.
+   */
+  const PRODLEVA_MS = 400;
+  const PRODLEVA_PSANI_MS = 900;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    setSaved(false);
-    try {
-      const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/meta`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
-        return;
+  const valuesRef = useRef(values);
+  const casovacRef = useRef<number | null>(null);
+  const poradiRef = useRef(0);
+
+  useEffect(() => {
+    valuesRef.current = values;
+  }, [values]);
+
+  const uloz = useCallback(
+    async (data: Initial) => {
+      const moje = ++poradiRef.current;
+      setSaving(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/meta`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const odpoved = await res.json().catch(() => ({}));
+        // Mezitim prisla novejsi zmena - tahle odpoved uz nic neridi.
+        if (moje !== poradiRef.current) return;
+        if (!res.ok) {
+          setError((odpoved as { error?: string })?.error || 'Uložení se nezdařilo.');
+          setSaved(false);
+          return;
+        }
+        setSaved(true);
+        // Zbytek stranky (odznak stavu v hlavicce, zalozky, rodny list) se
+        // sklada na serveru - bez tohohle by ukazoval starou hodnotu.
+        router.refresh();
+      } catch {
+        if (moje === poradiRef.current) {
+          setError('Uložení se nezdařilo.');
+          setSaved(false);
+        }
+      } finally {
+        if (moje === poradiRef.current) setSaving(false);
       }
-      setSaved(true);
-      // Po ulozeni zpatky do prehledu (zadani 10. 9. 2026: "kdyz neco ulozim
-      // v projektu, at se vratim na prehled"). Ulozeni je konec prace na
-      // projektu - zustat na detailu znamenalo klikat na "Zpet" pokazde.
-      // refresh() musi zustat: prehled uz muze byt nacteny a bez nej by
-      // ukazoval stare hodnoty.
-      router.refresh();
-      router.push('/projekty');
-    } catch {
-      setError('Uložení se nezdařilo.');
-    } finally {
-      setSaving(false);
+    },
+    [caflouProjectId, router],
+  );
+
+  const naplanujUlozeni = useCallback(
+    (prodleva: number = PRODLEVA_MS) => {
+      if (casovacRef.current) window.clearTimeout(casovacRef.current);
+      casovacRef.current = window.setTimeout(() => {
+        casovacRef.current = null;
+        void uloz(valuesRef.current);
+      }, prodleva);
+    },
+    [uloz],
+  );
+
+  /** Uloz hned - po odkliknuti policka, at se necekaci nic neztrati. */
+  const ulozHned = useCallback(() => {
+    if (casovacRef.current) {
+      window.clearTimeout(casovacRef.current);
+      casovacRef.current = null;
     }
+    void uloz(valuesRef.current);
+  }, [uloz]);
+
+  useEffect(
+    () => () => {
+      if (casovacRef.current) window.clearTimeout(casovacRef.current);
+    },
+    [],
+  );
+
+  function set<K extends keyof Initial>(key: K, value: Initial[K], psani = false) {
+    setValues((v) => {
+      const dalsi = { ...v, [key]: value };
+      valuesRef.current = dalsi;
+      return dalsi;
+    });
+    setSaved(false);
+    naplanujUlozeni(psani ? PRODLEVA_PSANI_MS : PRODLEVA_MS);
   }
 
   const managerLabel = managers.find((m) => m.id === values.managerUserId)?.label ?? '—';
@@ -237,7 +300,7 @@ export function ProjectMetaForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
+    <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Interní údaje</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -270,7 +333,8 @@ export function ProjectMetaForm({
               autoFocus
               placeholder="https://drive.google.com/..."
               value={values.driveUrl}
-              onChange={(e) => set('driveUrl', e.target.value)}
+              onChange={(e) => set('driveUrl', e.target.value, true)}
+              onBlur={ulozHned}
               className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
             />
           )}
@@ -439,15 +503,16 @@ export function ProjectMetaForm({
 
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-        >
-          {saving ? 'Ukládám…' : 'Uložit'}
-        </button>
-        {saved && <span className="text-sm font-heading text-brand-greenDeep">Uloženo.</span>}
+      {/* Misto tlacitka jen tichy stav - at je videt, ze se to opravdu ulozilo
+          (zadani 11. 9. 2026). */}
+      <div className="flex items-center gap-2 text-xs font-heading min-h-[20px]">
+        {saving ? (
+          <span className="text-muted">Ukládám…</span>
+        ) : saved ? (
+          <span className="text-brand-greenDeep">Uloženo</span>
+        ) : (
+          <span className="text-muted">Změny se ukládají samy.</span>
+        )}
       </div>
 
       {/* Smazani projektu (zadani 10. 9. 2026). Kdyz na nem neco visi, portal
@@ -471,7 +536,7 @@ export function ProjectMetaForm({
           }}
         />
       </div>
-    </form>
+    </div>
   );
 }
 
