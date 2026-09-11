@@ -1285,6 +1285,12 @@ export type StavProjektuInput = {
    * Posílá se jen u zprávy o prvních tracích; jindy zůstává prázdné.
    */
   odkazNaPreposlech?: string | null;
+  /**
+   * Věta navíc nad textem ze vzoru - píše se ručně u konkrétního odeslání
+   * (zadání 11. 9. 2026: „popošli to rovnou jen na Radku a omluv se").
+   * Vzor zůstává nedotčený, tohle platí jen pro tuhle jednu zprávu.
+   */
+  uvod?: string | null;
   /** Předmět mailu ze vzoru; prázdné = „{projekt} - {stav}". */
   predmet?: string | null;
   /**
@@ -1309,16 +1315,14 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
    * posílalo jako obyčejný odkaz.)
    */
   const tlacitka: string[] = [];
+  if (input.odkazNaDisk) {
+    tlacitka.push(`<a href="${escapeHtml(input.odkazNaDisk)}" class="cta">Otevřít nahrávky</a>`);
+  }
   if (input.odkazNaPreposlech) {
     tlacitka.push(
-      `<a href="${escapeHtml(input.odkazNaPreposlech)}" class="cta">Přeposlechnout v AudioTaggeru</a>`,
-    );
-  }
-  if (input.odkazNaDisk) {
-    tlacitka.push(
-      `<a href="${escapeHtml(input.odkazNaDisk)}" class="${
-        input.odkazNaPreposlech ? 'cta-dark' : 'cta'
-      }">Otevřít složku projektu</a>`,
+      `<a href="${escapeHtml(input.odkazNaPreposlech)}" class="${
+        input.odkazNaDisk ? 'cta-dark' : 'cta'
+      }">Nebo si je poslechněte v AudioTaggeru</a>`,
     );
   }
   // Kazde tlacitko na svem radku - na telefonu by se vedle sebe nevesla.
@@ -1348,6 +1352,13 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     ? `<h2>${escapeHtml(input.nadpis.trim())}</h2>`
     : '';
 
+  // Veta navic - odlisena, at je hned videt, ze tohle neni sablona.
+  const uvod = input.uvod?.trim()
+    ? `<p style="background:#F3EEFF;border-radius:10px;padding:12px 14px;">${escapeHtml(
+        input.uvod.trim(),
+      ).replace(/\n/g, '<br />')}</p>`
+    : '';
+
   return emailShell({
     tag: `MS Portal - ${escapeHtml(input.stav)}`,
     preheader: `${input.nazevProjektu}: ${input.text.replace(/\s+/g, ' ').slice(0, 120)}`,
@@ -1355,6 +1366,7 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     ${nadpis}
     <p>${osloveni}</p>
     ${interniPoznamka}
+    ${uvod}
     <p><strong>${escapeHtml(input.nazevProjektu)}</strong></p>
     ${odstavce}
     <div class="cta-row" style="padding-top:8px;">${tlacitko}</div>
@@ -1383,11 +1395,12 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
       input.jenInterne ? 'Dobry den,' : pozdrav(input.jmenoKlienta),
       '',
       input.jenInterne ? 'INTERNI ZPRAVA - klientovi nic neslo.' : '',
+      input.uvod?.trim() || '',
       input.nazevProjektu,
       input.text,
       '',
-      input.odkazNaPreposlech ? `Preposlech v AudioTaggeru: ${input.odkazNaPreposlech}` : '',
-      input.odkazNaDisk ? `Slozka projektu: ${input.odkazNaDisk}` : 'Odkaz na nahravky zatim neni vyplneny.',
+      input.odkazNaDisk ? `Nahravky: ${input.odkazNaDisk}` : 'Odkaz na nahravky zatim neni vyplneny.',
+      input.odkazNaPreposlech ? `Nebo v AudioTaggeru: ${input.odkazNaPreposlech}` : '',
     ]
       .filter(Boolean)
       .join('\n'),

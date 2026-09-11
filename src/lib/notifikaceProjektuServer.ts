@@ -50,6 +50,13 @@ export type VysledekNotifikace =
 export async function posliNotifikaciKeStavu(
   caflouProjectId: string,
   stav: string,
+  /**
+   * `uvod` - věta navíc nad textem ze vzoru, napsaná ručně u konkrétního
+   * odeslání (zadání 11. 9. 2026: „popošli to rovnou jen na Radku a omluv
+   * se"). Vzor zůstává nedotčený. Používá se jen při ručním poslání znovu;
+   * automatická zpráva při přehození stavu ji nikdy nemá.
+   */
+  moznosti?: { uvod?: string | null },
 ): Promise<VysledekNotifikace> {
   try {
     if (!STAVY_S_NOTIFIKACI.includes(stav)) return { stav: 'vypnuto' };
@@ -164,6 +171,7 @@ export async function posliNotifikaciKeStavu(
       prijemci,
       skrytaKopie,
       jenInterne: nastaveni.komu === 'INTERNE',
+      uvod: moznosti?.uvod ?? null,
       jmenoKlienta: projekt.klient?.name ?? null,
       nazevProjektu,
       nazevFirmy,

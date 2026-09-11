@@ -20,12 +20,20 @@ import { posliNotifikaciKeStavu, znackaStavu } from '@/lib/notifikaceProjektuSer
  */
 export const dynamic = 'force-dynamic';
 
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
   if (!canEditProjectMeta(session.user.role)) {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   }
+
+  /**
+   * Věta navíc nad textem ze vzoru - typicky omluva, když předchozí zpráva
+   * dorazila s rozbitým odkazem (zadání 11. 9. 2026). Nepovinná; vzor se tím
+   * nemění, platí jen pro tohle jedno odeslání.
+   */
+  const telo = (await req.json().catch(() => null)) as { uvod?: unknown } | null;
+  const uvod = typeof telo?.uvod === 'string' ? telo.uvod.trim().slice(0, 600) : null;
 
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId: params.id },
@@ -44,7 +52,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     .deleteMany({ where: { caflouProjectId: params.id, znacka: znackaStavu(stav) } })
     .catch(() => undefined);
 
-  const vysledek = await posliNotifikaciKeStavu(params.id, stav);
+  const vysledek = await posliNotifikaciKeStavu(params.id, stav, { uvod });
 
   const zprava =
     vysledek.stav === 'odeslano'

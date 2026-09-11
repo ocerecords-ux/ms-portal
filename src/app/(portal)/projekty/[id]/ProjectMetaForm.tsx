@@ -617,6 +617,10 @@ export function ProjectMetaForm({
 function PoslatZnovu({ caflouProjectId, stav }: { caflouProjectId: string; stav: string }) {
   const [posila, setPosila] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
+  // Veta navic nad textem ze vzoru - typicky omluva, kdyz predchozi zprava
+  // dorazila rozbita (zadani 11. 9. 2026). Vzor se tim nemeni.
+  const [uvod, setUvod] = useState('');
+  const [pisu, setPisu] = useState(false);
 
   if (!STAVY_S_NOTIFIKACI.includes(stav)) return null;
 
@@ -626,6 +630,8 @@ function PoslatZnovu({ caflouProjectId, stav }: { caflouProjectId: string; stav:
     try {
       const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/notifikace-znovu`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uvod: uvod.trim() || null }),
       });
       const data = await res.json().catch(() => null);
       setHlaska((data as { zprava?: string; error?: string })?.zprava || (data as { error?: string })?.error || 'Nepodařilo se to.');
@@ -655,7 +661,25 @@ function PoslatZnovu({ caflouProjectId, stav }: { caflouProjectId: string; stav:
       >
         {posila ? 'Posílám…' : 'Poslat zprávu ke stavu znovu'}
       </button>
+      <span className="text-muted text-xs">·</span>
+      <button
+        type="button"
+        onClick={() => setPisu((p) => !p)}
+        className="text-xs font-heading font-semibold text-brand-purple hover:underline"
+      >
+        {pisu ? 'Zrušit větu navíc' : 'Přidat větu navíc'}
+      </button>
       {hlaska && <span className="text-xs font-body text-muted">{hlaska}</span>}
+      {pisu && (
+        <textarea
+          value={uvod}
+          onChange={(e) => setUvod(e.target.value)}
+          rows={3}
+          maxLength={600}
+          placeholder="Například omluva za to, že minulý odkaz nefungoval. Vzor zprávy se tím nemění — platí to jen pro tohle jedno odeslání."
+          className="w-full mt-1 rounded-lg border border-line bg-field text-ink text-xs font-body p-2.5 resize-y"
+        />
+      )}
     </span>
   );
 }
