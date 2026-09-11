@@ -953,7 +953,11 @@ export function Preposlech({
                 stopy.map((stopa, index) => (
                   <div
                     key={`${index}-${stopa.name}`}
-                    className={`rounded-lg border overflow-hidden ${
+                    // shrink-0 je tu povinne: seznam je flex sloupec s pevnou
+                    // maximalni vyskou, takze bez nej flexbox radky SMRSKNE misto
+                    // toho, aby je nechal prescnout a rolovat. Pri dvanacti
+                    // stopach z nich byly 12px prouzky (11. 9. 2026).
+                    className={`shrink-0 rounded-lg border overflow-hidden ${
                       index === aktivni ? 'border-brand-purple bg-tint' : 'border-line bg-surface'
                     }`}
                   >
