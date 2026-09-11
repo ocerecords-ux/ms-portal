@@ -243,6 +243,17 @@ export function Preposlech({
    * proto se po každém výběru stopy nastaví znovu.
    */
   const [rychlost, setRychlost] = useState(1);
+  /**
+   * Záložka - kde člověk skončil (zadání 11. 9. 2026: „aby si nějak
+   * jednoduše pamatoval, kde se skončilo v přeposlechu, když si chce dát
+   * člověk pauzu").
+   *
+   * Neskáče se tam samo. Nabídne se to proužkem nad přehrávačem: kdo si
+   * pauzu dal, klikne a je tam; kdo přišel poslouchat od začátku, proužek
+   * zavře. Samovolný skok doprostřed nahrávky by mátl víc, než pomohl.
+   */
+  const [zalozka, setZalozka] = useState<{ trackIndex: number; localTime: number } | null>(null);
+  const [zalozkaSkryta, setZalozkaSkryta] = useState(false);
   const [chybaHlaska, setChybaHlaska] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -961,6 +972,53 @@ export function Preposlech({
     if (audioRef.current) audioRef.current.playbackRate = rychlost;
   }, [rychlost]);
 
+  // Nacteni zalozky. Jen jednou pri otevreni - pozdeji uz ji prepisujeme my.
+  useEffect(() => {
+    let zruseno = false;
+    fetch(sKlicem(`${zaklad}/pozice`))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (zruseno || !d?.pozice) return;
+        // Prvnich par vterin neni pauza, je to zacatek - tam netreba nic
+        // nabizet.
+        if (d.pozice.localTime > 10 || d.pozice.trackIndex > 1) setZalozka(d.pozice);
+      })
+      .catch(() => {});
+    return () => {
+      zruseno = true;
+    };
+  }, [sKlicem, zaklad]);
+
+  /**
+   * Zápis záložky: jednou za deset vteřin při přehrávání a při každé pauze.
+   * Častěji to nemá smysl (deset vteřin nikdo nehledá) a při zavření okna
+   * se stejně nic poslat nestihne — proto se píše průběžně, ne až na konci.
+   */
+  useEffect(() => {
+    function uloz() {
+      const audio = audioRef.current;
+      const index = aktivniRef.current;
+      if (!audio || index === null || !Number.isFinite(audio.currentTime)) return;
+      void fetch(sKlicem(`${zaklad}/pozice`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackIndex: index + 1, localTime: audio.currentTime }),
+        keepalive: true,
+      }).catch(() => {});
+    }
+
+    const audio = audioRef.current;
+    audio?.addEventListener('pause', uloz);
+    const tik = window.setInterval(() => {
+      if (audioRef.current && !audioRef.current.paused) uloz();
+    }, 10_000);
+
+    return () => {
+      audio?.removeEventListener('pause', uloz);
+      window.clearInterval(tik);
+    };
+  }, [sKlicem, zaklad]);
+
   /* ---------- klávesy ---------- */
 
   useEffect(() => {
@@ -1248,6 +1306,33 @@ export function Preposlech({
           </div>
 
           <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
+            {/* Zalozka z minule - nabidne se, neskace se tam samo. */}
+            {zalozka && !zalozkaSkryta && stopy.length > 0 && (
+              <div className="flex items-center gap-3 flex-wrap rounded-card border border-brand-purple bg-tint px-4 py-2.5">
+                <span className="text-sm font-body text-brand-purpleDark m-0 flex-1 min-w-[200px]">
+                  Posledně jste skončili u stopy <b>{pad2(zalozka.trackIndex)}</b> v čase{' '}
+                  <b className="tabular-nums">{cas(zalozka.localTime)}</b>.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    vyberStopu(zalozka.trackIndex - 1, zalozka.localTime);
+                    setZalozkaSkryta(true);
+                  }}
+                  className="font-heading font-semibold text-sm rounded-lg bg-brand-purple text-white px-4 py-2 hover:bg-brand-purpleDeep transition-colors"
+                >
+                  Pokračovat odtud
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZalozkaSkryta(true)}
+                  className="font-heading text-xs text-muted hover:text-ink"
+                >
+                  Začít od začátku
+                </button>
+              </div>
+            )}
+
             {/* Displej (zadani 11. 9. 2026: „nejaky vetsi display, kde bude
                 videt kolikaty track z kolika se prehrava"). Cislo stopy
                 a cas jsou zamerne velke - pri poslechu se na ne diva clovek
