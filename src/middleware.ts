@@ -19,7 +19,12 @@ export const config = {
   matcher: [
     '/projekty/:path*',
     '/objednavka/:path*',
-    '/nahravky/:path*',
+    // Jen prehled nahravek pro prihlasene. Podstranka /nahravky/<token> je
+    // otevreny odkaz pro klienta z mailu (zadani 11. 9. 2026: „potrebuju, at
+    // se klient nemusi prihlasovat a jsou ty odkazy otevrene") - kdyby sem
+    // spadla, poslala by ho middleware na prihlaseni driv, nez token vubec
+    // nekdo precte.
+    '/nahravky',
     '/muj-ucet/:path*',
     '/vykazy/:path*',
     '/kalendar/:path*',
