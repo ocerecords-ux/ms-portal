@@ -329,7 +329,7 @@ export function InvoiceEditor({
   // natazene pres celou obrazovku se spatne ctou a doklad vedle nich by
   // zbyl uzky a nizky.
   return (
-    <div className="flex flex-col gap-5 w-full max-w-[1180px] mx-auto">
+    <div className="flex flex-col gap-5 w-full max-w-[1460px] mx-auto">
       <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="font-display text-2xl text-ink">
@@ -423,7 +423,11 @@ export function InvoiceEditor({
       {/* DVA SLOUPCE (zadani 10. 9. 2026): vlevo udaje, vpravo hotovy doklad.
           Stejny model jako u Rodneho listu - clovek vidi, co vyrabi, uz pri
           zakladani, ne az po ulozeni. */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+      {/* Dokument ma vic mista nez formular (zadani 10. 9. 2026: "nahled
+          jeste trosku zvetsi") - do pulky sirky uz se vic vejit nemuze,
+          takze si bere 600 bodu a formular zbytek. Dva sloupce az od xl,
+          na uzsim okne by na formular zbylo pod 400 bodu. */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,620px)] gap-5 items-start">
       <div className="flex flex-col gap-5 min-w-0">
 
       {locked && (
@@ -477,7 +481,7 @@ export function InvoiceEditor({
 
         {/* Dva sloupce, ne ctyri: formular ted sedi v polovine sirky, ve
             ctyrech by byla policka na datum uzka na precteni. */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6 border-b border-line">
+        <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 p-6 border-b border-line">
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-sm font-body text-ink">Název</span>
             <input
@@ -637,12 +641,12 @@ export function InvoiceEditor({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] border-collapse">
+            <table className="w-full min-w-[660px] border-collapse">
               <thead>
                 <tr className="text-xs font-heading text-muted uppercase tracking-wide">
                   <th className="text-left pb-2 font-semibold">Popis</th>
-                  <th className="text-right pb-2 font-semibold w-24">Množství</th>
-                  <th className="text-left pb-2 font-semibold w-20">Jednotka</th>
+                  <th className="text-right pb-2 font-semibold w-20">Množství</th>
+                  <th className="text-left pb-2 font-semibold w-16">Jednotka</th>
                   <th className="text-right pb-2 font-semibold w-32">Cena / j.</th>
                   <th className="text-right pb-2 font-semibold w-24">DPH</th>
                   <th className="text-right pb-2 font-semibold w-32">Celkem</th>

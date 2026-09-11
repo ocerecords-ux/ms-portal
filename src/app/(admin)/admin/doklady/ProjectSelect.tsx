@@ -6,10 +6,14 @@ export type ProjectChoice = { id: string; label: string; finished: boolean };
  * Výběr projektu u dokladu (zadani 8. 9. 2026). Jedno místo pro nabídku,
  * fakturu i výdaj, aby se to všude chovalo stejně.
  *
- * Rozpracované projekty jsou v první skupině, dokončené pod nimi — fakturuje
- * se běžně až po dokončení, ale nabízet je promíchané by znamenalo hledat.
- * Když projekt uložený u dokladu není v aktuální nabídce (Caflou nedojelo,
- * projekt zmizel), přidá se do seznamu zvlášť, aby vazba nezmizela.
+ * Nabízejí se JEN ROZPRACOVANÉ projekty (zadání 10. 9. 2026: „když vybírám
+ * u faktury projekt, je tam brutální seznam"). Dokončených jsou stovky a
+ * v rozbalovacím seznamu se v nich nedá nic najít.
+ *
+ * Dvě výjimky, aby se nic neztratilo: projekt, který už je u dokladu uložený,
+ * se nabídne vždycky — i když je mezitím dokončený nebo z Caflou zmizel.
+ * Doklad k dokončenému projektu tak jde dál otevřít a uložit, jen se k němu
+ * nový nepřiřadí omylem.
  */
 export function ProjectSelect({
   value,
@@ -27,8 +31,11 @@ export function ProjectSelect({
   className?: string;
 }) {
   const rozpracovane = projects.filter((p) => !p.finished);
-  const dokoncene = projects.filter((p) => p.finished);
-  const chybi = Boolean(value) && !projects.some((p) => p.id === value);
+  // Projekt uz ulozeny u dokladu: bud je mezi dokoncenymi, nebo v seznamu
+  // vubec neni. V obou pripadech se musi nabidnout, jinak by ho ulozeni
+  // shodilo.
+  const ulozeny = value ? projects.find((p) => p.id === value) : undefined;
+  const mimoNabidku = Boolean(value) && !rozpracovane.some((p) => p.id === value);
 
   return (
     <select
@@ -38,25 +45,14 @@ export function ProjectSelect({
       className={className}
     >
       <option value="">— bez projektu —</option>
-      {chybi && <option value={value}>{currentName || `Projekt ${value}`}</option>}
-      {rozpracovane.length > 0 && (
-        <optgroup label="Rozpracované">
-          {rozpracovane.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-            </option>
-          ))}
-        </optgroup>
+      {mimoNabidku && (
+        <option value={value}>{ulozeny?.label || currentName || `Projekt ${value}`}</option>
       )}
-      {dokoncene.length > 0 && (
-        <optgroup label="Dokončené">
-          {dokoncene.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-            </option>
-          ))}
-        </optgroup>
-      )}
+      {rozpracovane.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.label}
+        </option>
+      ))}
     </select>
   );
 }
