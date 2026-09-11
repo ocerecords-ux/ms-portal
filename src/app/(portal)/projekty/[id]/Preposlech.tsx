@@ -728,9 +728,17 @@ export function Preposlech({
       />
 
       <div className="bg-brand-purple text-white rounded-card px-5 py-3 flex items-center justify-between gap-4 flex-wrap">
-        <div className="min-w-0">
-          <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">AudioTagger</h2>
-          <p className="text-xs font-body text-white/80 m-0 mt-0.5 truncate">{projectName}</p>
+        <div className="flex items-center gap-4 min-w-0">
+          {/* Logo Mediaspace (zadani 11. 9. 2026). Klient se sem dostane
+              z mailu na celou obrazovku, takze tahle lista je jedine misto,
+              kde pozna, ci nastroj to vlastne je. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-9 sm:h-11 w-auto shrink-0" />
+          <span className="w-px h-9 bg-white/30 shrink-0" aria-hidden="true" />
+          <div className="min-w-0">
+            <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">AudioTagger</h2>
+            <p className="text-xs font-body text-white/80 m-0 mt-0.5 truncate">{projectName}</p>
+          </div>
         </div>
         <div className="flex items-center gap-4 flex-wrap">
           <span className="text-xs font-heading text-white/80">
@@ -896,27 +904,42 @@ export function Preposlech({
           </div>
 
           <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
-            <div className="flex items-center gap-3 flex-wrap">
+            {/* Displej (zadani 11. 9. 2026: „nejaky vetsi display, kde bude
+                videt kolikaty track z kolika se prehrava"). Cislo stopy
+                a cas jsou zamerne velke - pri poslechu se na ne diva clovek
+                od stolu a musi to precist na prvni pohled. */}
+            <div className="rounded-card bg-brand-purpleDark text-white px-4 py-3 flex items-center gap-4 flex-wrap">
               <button
                 type="button"
                 onClick={prehrajNeboPauzni}
                 disabled={aktivni === null}
                 title="Přehrát / pozastavit (mezerník)"
-                className="w-10 h-10 rounded-full bg-brand-green text-onAccent font-heading font-bold disabled:opacity-40"
+                className="shrink-0 w-12 h-12 rounded-full bg-brand-green text-onAccent font-heading font-bold text-lg disabled:opacity-40"
               >
                 {hraje ? '❚❚' : '▶'}
               </button>
-              <span className="text-xs font-heading font-semibold bg-tint text-brand-purpleDark rounded px-2 py-1 tabular-nums">
-                {aktivni === null ? '—' : `Stopa ${pad2(aktivni + 1)}`}
-              </span>
-              <span className="text-sm font-heading text-muted tabular-nums">
-                <b className="text-ink">{cas(pozice)}</b> / {cas(delka)}
-              </span>
+              <div className="min-w-0">
+                <span className="block text-[10px] font-heading uppercase tracking-[0.18em] text-white/60">Stopa</span>
+                <span className="block font-heading font-bold leading-none tabular-nums">
+                  <b className="text-3xl">{aktivni === null ? '—' : pad2(aktivni + 1)}</b>
+                  <span className="text-lg text-white/60"> / {pad2(stopy.length)}</span>
+                </span>
+                {aktivni !== null && stopy[aktivni] && (
+                  <span className="block text-[11px] font-body text-white/70 mt-1 truncate max-w-[220px]">
+                    {stopy[aktivni].name}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <span className="block text-[10px] font-heading uppercase tracking-[0.18em] text-white/60">Čas</span>
+                <span className="block font-heading font-bold text-3xl leading-none tabular-nums">{cas(pozice)}</span>
+                <span className="block text-[11px] font-body text-white/70 mt-1 tabular-nums">z {cas(delka)}</span>
+              </div>
               <button
                 type="button"
                 onClick={otevriForm}
                 disabled={aktivni === null || formOtevreny}
-                className="ml-auto bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
+                className="ml-auto bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-40"
               >
                 + Přidat chybu
               </button>
