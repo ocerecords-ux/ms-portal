@@ -243,6 +243,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (companyName !== undefined) values.companyName = companyName;
     if (data.statusName !== undefined) {
       values.statusName = data.statusName || null;
+      /**
+       * Rucni zmena stavu zahazuje pamet tlacitka "Dotoceno" (zadani
+       * 11. 9. 2026). Kdyz clovek stav prehodi sam, odskrtnuti herce uz nema
+       * co vracet - vratilo by projekt do stavu, ktery mezitim prestal
+       * platit. Viz lib/dotoceniStavServer.ts.
+       */
+      values.dotocenoStavPred = null;
+      values.dotocenoStavPo = null;
       // Rozpracovanost drzi krok se stavem, at zalozky Aktivni/Dokoncene
       // sedi bez toho, aby to nekdo prepinal zvlast.
       const dokonceny = stavJeDokonceny(data.statusName);

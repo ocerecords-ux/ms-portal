@@ -24,14 +24,15 @@ const PREKLOPENI: Record<string, string> = {
 };
 
 /**
- * Odškrtnutí vrací stav zpátky — ale jen tehdy, když je projekt PŘESNĚ v tom
- * stavu, do kterého ho tlačítko přehodilo. Kdo mezitím posunul projekt dál,
- * tomu se odškrtnutím herce stav nevrátí o dva kroky zpět.
+ * CO PŘESNĚ TLAČÍTKO PŘEHODILO si projekt pamatuje (ProjectMeta.dotocenoStavPred
+ * a dotocenoStavPo), ne že by se to odvozovalo ze současného stavu.
+ *
+ * Proč: z „Dotočeno" se ručně pokračuje na „Dotočeno/stříháme" (potvrzeno
+ * 11. 9. 2026). Kdyby se návrat počítal z toho, v čem projekt zrovna je,
+ * odškrtnutí herce v „Dotočeno/stříháme" by ho poslalo do „Natáčíme/stříháme"
+ * — tedy do stavu, ve kterém nikdy nebyl. Takhle se vrací jen to, co tlačítko
+ * opravdu udělalo, a jen dokud tam projekt pořád stojí.
  */
-const ZPET: Record<string, string> = {
-  'Dotočeno': 'Natáčíme',
-  'Dotočeno/stříháme': 'Natáčíme/stříháme',
-};
 
 export type VysledekPreklopeni =
   | { zmeneno: true; zStavu: string; naStav: string }
@@ -67,25 +68,41 @@ export async function prehodStavPodleDotoceni(
   });
   if (dotoceni < herci.length) return { zmeneno: false, duvod: 'chybi-herci' };
 
-  await zapisStav(caflouProjectId, stav, cil, puvodce);
+  await zapisStav(caflouProjectId, stav, cil, puvodce, { dotocenoStavPred: stav, dotocenoStavPo: cil });
   return { zmeneno: true, zStavu: stav, naStav: cil };
 }
 
-/** Odškrtnutí — vrátí stav zpátky, viz poznámka u ZPET. */
+/** Odškrtnutí — vrátí stav zpátky, viz poznámka výš. */
 export async function vratStavPoOdskrtnuti(
   caflouProjectId: string,
   puvodce: Puvodce,
 ): Promise<VysledekPreklopeni> {
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId },
-    select: { statusName: true },
+    select: { statusName: true, dotocenoStavPred: true, dotocenoStavPo: true },
   });
   const stav = meta?.statusName ?? '';
-  const cil = stav ? ZPET[stav] : undefined;
-  if (!cil) return { zmeneno: false, duvod: stav ? 'jiny-stav' : 'bez-stavu' };
+  if (!stav) return { zmeneno: false, duvod: 'bez-stavu' };
 
-  await zapisStav(caflouProjectId, stav, cil, puvodce);
-  return { zmeneno: true, zStavu: stav, naStav: cil };
+  // Projekt uz je jinde, nez ho tlacitko nechalo - na stav se nesaha, jen se
+  // zapomene, co tlacitko udelalo (uz to stejne neplati).
+  if (!meta?.dotocenoStavPo || meta.dotocenoStavPo !== stav || !meta.dotocenoStavPred) {
+    if (meta?.dotocenoStavPo || meta?.dotocenoStavPred) {
+      await prisma.projectMeta
+        .update({
+          where: { caflouProjectId },
+          data: { dotocenoStavPred: null, dotocenoStavPo: null },
+        })
+        .catch(() => undefined);
+    }
+    return { zmeneno: false, duvod: 'jiny-stav' };
+  }
+
+  await zapisStav(caflouProjectId, stav, meta.dotocenoStavPred, puvodce, {
+    dotocenoStavPred: null,
+    dotocenoStavPo: null,
+  });
+  return { zmeneno: true, zStavu: stav, naStav: meta.dotocenoStavPred };
 }
 
 /**
@@ -98,11 +115,16 @@ async function zapisStav(
   zeStavu: string,
   naStav: string,
   puvodce: Puvodce,
+  pamet: { dotocenoStavPred: string | null; dotocenoStavPo: string | null },
 ): Promise<void> {
   const dokonceny = stavJeDokonceny(naStav);
   await prisma.projectMeta.update({
     where: { caflouProjectId },
-    data: { statusName: naStav, ...(dokonceny !== null ? { finished: dokonceny } : {}) },
+    data: {
+      statusName: naStav,
+      ...(dokonceny !== null ? { finished: dokonceny } : {}),
+      ...pamet,
+    },
   });
 
   // Historie i zprava bez cekani - odskrtnuti herce nesmi zdrzet ani shodit

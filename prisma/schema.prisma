@@ -404,6 +404,13 @@ model ProjectMeta {
   endDate         DateTime?
   /// Popis projektu. V Caflou se do nej psal odkaz na slozku projektu.
   popis           String?          @db.Text
+  /// Co se stavem udelalo tlacitko "Dotoceno" u herce (zadani 11. 9. 2026).
+  /// Podle toho se pozna, jestli se odskrtnutim herce smi stav vratit: kdyz
+  /// uz nekdo posunul projekt dal (Dotoceno -> Dotoceno/strihame), vracet
+  /// neni co a portal na stav nesahne.
+  dotocenoStavPred String?
+  dotocenoStavPo   String?
+
   zdroj           ProjectSource    @default(CAFLOU)
   /// Kdy projekt prisel jednorazovym prenosem z Caflou.
   prenesenoAt     DateTime?
