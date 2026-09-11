@@ -7,7 +7,7 @@ import { STAVY_S_NOTIFIKACI } from '@/lib/notifikaceFirmy';
 import { dosadPromenne } from '@/lib/vzoryZprav';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { buildStavProjektuHtml } from '@/lib/email';
-import { urlPreposlechu, zakladPortalu } from '@/lib/preposlechOdkaz';
+import { urlNahravek, urlPreposlechu, zakladPortalu } from '@/lib/preposlechOdkaz';
 import { ZNACKA_PRVNI_TRACKY, znackaStavu } from '@/lib/notifikaceProjektuServer';
 
 /**
@@ -53,23 +53,34 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const zaklad = zakladPortalu();
   const slozka = projekt.driveUrl || projekt.company?.driveFolderUrl || null;
-  const odkazNaDisk =
-    projekt.companyId && slozka
-      ? `${zaklad}/nahravky?projekt=${encodeURIComponent(params.id)}`
+
+  /**
+   * Nahled musi ukazovat TY SAME odkazy, co odejdou. Do 11. 9. 2026 tu stal
+   * natvrdo `/nahravky?projekt=…`, tedy stranka za prihlasenim - zprava uz
+   * mezitim posilala otevreny `/nahravky/<token>` a nahled o tom lhal.
+   *
+   * Token se tu ale NEVYRABI (nahled nema zakladat nic, co pak nekde
+   * zustane) - pouzije se ten, ktery projekt uz ma.
+   */
+  const odkaz = await prisma.preposlechOdkaz
+    .findUnique({
+      where: { caflouProjectId: params.id },
+      select: { token: true, zneplatnenoAt: true },
+    })
+    .catch(() => null);
+  const platnyToken = odkaz && !odkaz.zneplatnenoAt ? odkaz.token : null;
+
+  const odkazNaDisk = platnyToken
+    ? urlNahravek(platnyToken)
+    : projekt.companyId && slozka
+      ? `${zaklad}/nahravky/ukazkovy-odkaz`
       : slozka;
 
   let odkazNaPreposlech: string | null = null;
   if (znackaStavu(stav) === ZNACKA_PRVNI_TRACKY) {
-    const odkaz = await prisma.preposlechOdkaz
-      .findUnique({
-        where: { caflouProjectId: params.id },
-        select: { token: true, zneplatnenoAt: true },
-      })
-      .catch(() => null);
-    odkazNaPreposlech =
-      odkaz && !odkaz.zneplatnenoAt
-        ? urlPreposlechu(odkaz.token)
-        : `${zaklad}/preposlech/ukazkovy-odkaz`;
+    odkazNaPreposlech = platnyToken
+      ? urlPreposlechu(platnyToken)
+      : `${zaklad}/preposlech/ukazkovy-odkaz`;
   }
 
   const nazevProjektu = projekt.name || `Projekt ${params.id}`;
