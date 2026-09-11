@@ -165,6 +165,12 @@ export type DisplayProject = {
   releaseDate: Date | null;
   startDate: Date | null;
   endDate: Date | null;
+  /**
+   * Kdo je u projektu v Caflou napsany jako objednavajici - Caflou to drzi
+   * ve stitcich (`tags`). Pouziva se jen prechodne, dokud projekty nemaji
+   * v portalu vyplneneho klienta (viz ProjectMeta.klientUserId).
+   */
+  clientTag: string | null;
 };
 
 function toIntOrNull(v: unknown): number | null {
@@ -249,6 +255,19 @@ function customColumnValue(p: any, ...needles: string[]): string | null {
   return null;
 }
 
+/** Jmeno objednavajiciho ze stitku projektu v Caflou. */
+function caflouTag(p: any): string | null {
+  const tags = p?.tags;
+  if (typeof tags === 'string') return tags.trim() || null;
+  if (Array.isArray(tags)) {
+    const jmena = tags
+      .map((t: any) => (typeof t === 'string' ? t : t?.name))
+      .filter((t: unknown): t is string => typeof t === 'string' && t.trim() !== '');
+    return jmena.length > 0 ? jmena.join(', ') : null;
+  }
+  return null;
+}
+
 export function mapOneCaflouProject(p: any): DisplayProject {
   const statusName: string = p.project_status_name || (p.finished ? 'Hotovo' : 'V realizaci');
   return {
@@ -280,6 +299,8 @@ export function mapOneCaflouProject(p: any): DisplayProject {
     ),
     startDate: toDate(p.start_date),
     endDate: toDate(p.end_date),
+    // Stitky v Caflou nesou jmeno objednavajici osoby (overeno 5. 9. 2026).
+    clientTag: caflouTag(p),
   };
 }
 

@@ -135,6 +135,8 @@ async function nactiZPortalu(): Promise<AdminDisplayProject[] | null> {
     releaseDate: p.releaseDate,
     startDate: p.startDate,
     endDate: p.endDate,
+    // Projekt uz je v portalu, takze stitek z Caflou nema co resit.
+    clientTag: null,
     companyName: p.companyName ?? '',
     caflouCompanyId: p.company?.caflouCompanyId ?? null,
   }));

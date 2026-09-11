@@ -54,9 +54,14 @@ export default async function ProjektyPage() {
 
   // Vlastni data maji prednost (prechod z Caflou, 10. 9. 2026). Jakmile je
   // projekt v portalu, klient ho vidi odtud a do Caflou se uz nechodi.
+  // KDO CO VIDI (oprava 11. 9. 2026): klient nevidi vsechny projekty sve
+  // firmy, ale jen ty, u kterych je napsany jako klient. U vetsich firem
+  // (Audioteka) na sebe lide z ruznych oddeleni videli navzajem.
+  const jaId = session!.user.id;
+
   const zPortalu = company
     ? await prisma.projectMeta.findMany({
-        where: { companyId: company.id, name: { not: null } },
+        where: { companyId: company.id, klientUserId: jaId, name: { not: null } },
         select: {
           caflouProjectId: true,
           name: true,
@@ -86,6 +91,8 @@ export default async function ProjektyPage() {
       releaseDate: p.releaseDate,
       startDate: p.startDate,
       endDate: p.endDate,
+      // Projekt uz je v portalu, takze stitek z Caflou nema co resit.
+      clientTag: null,
     }));
     active = vsechny
       .filter((p) => !p.finished)
@@ -101,7 +108,7 @@ export default async function ProjektyPage() {
     try {
       const result = await listCaflouProjectsForCompanyCached(company.caflouCompanyId);
       if (result.ok) {
-        const all = mapCaflouProjects(result.body);
+        const all = await jenMojeProjekty(mapCaflouProjects(result.body), jaId);
         active = all
           .filter((p) => !p.finished)
           .sort((a, b) => (a.endDate?.getTime() ?? Infinity) - (b.endDate?.getTime() ?? Infinity));
@@ -153,7 +160,7 @@ export default async function ProjektyPage() {
             se tam ani nenabizi. */}
         <ProjectsTable
           projects={active}
-          emptyText="Aktuálně nemáte žádné rozpracované projekty."
+          emptyText="Aktuálně tu nemáte žádný rozpracovaný projekt. Vidíte jen zakázky, u kterých jste vedení jako kontaktní osoba — kdyby vám nějaká chyběla, dejte nám vědět."
           rodneListy={rodneListy}
           dotazy={company?.dealsAudiobooks === true}
         />
@@ -333,4 +340,49 @@ async function InternalProjektySection({
       />
     </section>
   );
+}
+
+/**
+ * Z projektů firmy nechá jen ty, které patří přihlášenému člověku
+ * (oprava 11. 9. 2026: „vidí tam všechny projekty od Audioteky a to je
+ * špatně, mělo by se to roztřídit tím, kdo je u projektu napsaný jako
+ * klient").
+ *
+ * Rozhoduje přiřazení v portálu (ProjectMeta.klientUserId). Dokud ho projekt
+ * nemá — u zakázek převzatých z Caflou ho nemá skoro žádný — bere se náhradní
+ * vodítko: štítek v Caflou, kde je napsané jméno objednávajícího. Jméno se
+ * porovnává bez ohledu na velikost písmen a diakritiku, protože v Caflou ho
+ * psali lidé ručně. Jakmile někdo u projektu vyplní klienta v portálu, štítek
+ * se už neřeší.
+ */
+async function jenMojeProjekty(projekty: DisplayProject[], userId: string): Promise<DisplayProject[]> {
+  if (projekty.length === 0) return [];
+
+  const [ja, prirazeni] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } }),
+    prisma.projectMeta.findMany({
+      where: { caflouProjectId: { in: projekty.map((p) => String(p.id)) }, klientUserId: { not: null } },
+      select: { caflouProjectId: true, klientUserId: true },
+    }),
+  ]);
+
+  const klientProjektu = new Map(prirazeni.map((p) => [p.caflouProjectId, p.klientUserId]));
+  const mojeJmeno = bezDiakritiky(ja?.name ?? '');
+
+  return projekty.filter((p) => {
+    const prirazeny = klientProjektu.get(String(p.id));
+    if (prirazeny) return prirazeny === userId;
+    if (!mojeJmeno) return false;
+    return bezDiakritiky(p.clientTag ?? '') === mojeJmeno;
+  });
+}
+
+/** Porovnani jmen z ruznych zdroju - bez diakritiky, velikosti pismen a mezer navic. */
+function bezDiakritiky(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 }
