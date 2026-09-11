@@ -18,15 +18,17 @@ export const TRIDA_BUBLINY_HERCE =
   'whitespace-nowrap rounded-pill border border-brand-purple/40 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight';
 
 /**
- * Bublina DOTOČENÉHO herce (zadání 11. 9. 2026: „kolem té bubliny bych udělal
- * třeba tenkou zelenou linku").
+ * Bublina DOTOČENÉHO herce (zadání 12. 9. 2026: „pojďme u těch dotočených
+ * herců cestou minimalismu — nechme tu bublinu fialovou a jen to obtáhneme
+ * tenkou zelenou linkou, i v detailu i v přehledu").
  *
- * Zelená je celý rámeček, ne jen fajfka uvnitř. V přehledu projektů se jede
- * očima po sloupci a tenká zelená linka je vidět dřív než osmnáctipixelové
- * kolečko — dotočený herec se tak pozná bez čtení.
+ * Od běžné bubliny se liší JEDINĚ tou linkou. Výplň i písmo zůstávají
+ * fialové, takže sloupec herců drží jeden vzhled a zelená v něm znamená
+ * právě jednu věc: hotovo. Předtím byla dotočená bublina celá zelená
+ * a přebíjela všechno ostatní na kartě.
  */
 export const TRIDA_BUBLINY_DOTOCENO =
-  'whitespace-nowrap rounded-pill border border-brand-green bg-brand-green/10 text-brand-greenDeep dark:text-brand-green';
+  'whitespace-nowrap rounded-pill border border-brand-green bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight';
 
 /** Víc herců u jednoho projektu jde pod sebe, ne za sebe na jeden řádek. */
 export const TRIDA_SLOUPCE_HERCU = 'flex flex-col items-start gap-1';
