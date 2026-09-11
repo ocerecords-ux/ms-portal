@@ -192,6 +192,7 @@ export function Preposlech({
   const aktivniRef = useRef<number | null>(null);
   const pdfDocRef = useRef<any>(null);
   const pdfObalRef = useRef<HTMLDivElement | null>(null);
+  const pdfRolovaniRef = useRef<HTMLDivElement | null>(null);
   const pdfVerzeRef = useRef(0);
   const popisRef = useRef<HTMLTextAreaElement | null>(null);
   const vytvoreneUrl = useRef<string[]>([]);
@@ -497,6 +498,49 @@ export function Preposlech({
     if (aktivniRef.current === null && nove.length > 0) setTimeout(() => vyberStopu(0), 0);
   }
 
+  /**
+   * Číslo strany se musí měnit i při obyčejném rolování (zadání 11. 9. 2026:
+   * „u PDF se nepřepínají strany, je pořád na straně 1, i když roluju").
+   *
+   * Bere se ta strana, jejíž začátek je nejníž nad horní trvetinou okna —
+   * tedy ta, kterou má člověk zrovna před sebou. Počítá se v rytmu
+   * překreslování, aby rolování zůstalo plynulé.
+   */
+  useEffect(() => {
+    const box = pdfRolovaniRef.current;
+    if (!box || pdfStran === 0) return;
+
+    let tik = 0;
+    const prepocti = () => {
+      const stranky = pdfObalRef.current?.querySelectorAll<HTMLElement>('[data-strana]');
+      if (!stranky || stranky.length === 0) return;
+      const horni = box.getBoundingClientRect().top;
+      const prah = box.clientHeight * 0.35;
+      let nalezena = 1;
+      for (let i = 0; i < stranky.length; i += 1) {
+        const el = stranky[i];
+        if (el.getBoundingClientRect().top - horni > prah) break;
+        nalezena = Number(el.dataset.strana) || nalezena;
+      }
+      setPdfStrana((stara) => (stara === nalezena ? stara : nalezena));
+    };
+
+    const priRolovani = () => {
+      if (tik) return;
+      tik = window.requestAnimationFrame(() => {
+        tik = 0;
+        prepocti();
+      });
+    };
+
+    box.addEventListener('scroll', priRolovani, { passive: true });
+    prepocti();
+    return () => {
+      box.removeEventListener('scroll', priRolovani);
+      if (tik) window.cancelAnimationFrame(tik);
+    };
+  }, [pdfStran]);
+
   /* ---------- záznamy chyb ---------- */
 
   async function posli(cesta: string, init: RequestInit): Promise<boolean> {
@@ -692,7 +736,7 @@ export function Preposlech({
               </span>
             )}
           </div>
-          <div className="bg-field overflow-y-auto p-4 flex flex-col items-center gap-4" style={{ height: '72vh' }}>
+          <div ref={pdfRolovaniRef} className="bg-field overflow-y-auto p-4 flex flex-col items-center gap-4" style={{ height: '72vh' }}>
             {pdfStran === 0 && (
               <p className="text-sm font-body text-muted m-auto text-center max-w-[300px]">
                 {zDisku === 'nacitam'

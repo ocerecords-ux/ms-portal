@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { STAVY_PROJEKTU, barvaStavu, popisStavu } from '@/lib/stavyProjektu';
+import { STAVY_S_NOTIFIKACI } from '@/lib/notifikaceFirmy';
 import { KresbaIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
@@ -300,6 +301,10 @@ export function ProjectMetaForm({
           <span className="text-xs text-muted font-body">
             {popisStavu(values.statusName) ?? 'Stav přehazujete ručně podle toho, kde projekt je.'}
           </span>
+          {/* Zprava ke kazdemu stavu odejde z projektu jen jednou - jinak by ji
+              klient dostal pokazde, co nekdo stav prehodi tam a zpatky. Tohle
+              je cesta, jak ji poslat znovu (zadani 11. 9. 2026). */}
+          <PoslatZnovu caflouProjectId={caflouProjectId} stav={values.statusName} />
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -467,5 +472,52 @@ export function ProjectMetaForm({
         />
       </div>
     </form>
+  );
+}
+
+
+/**
+ * „Poslat zprávu znovu" pod stavem projektu (zadání 11. 9. 2026).
+ *
+ * Zpráva o stavu odchází sama při přehození a pak už NIKDY - o to se stará
+ * jednorázová známka v databázi, aby klienta neotravovalo přehazování stavu
+ * tam a zpátky. Jenže pak nejde zprávu vyzkoušet ani ji poslat znovu, když
+ * spadla do spamu. Tohle tu známku smaže a pošle to znovu; komu a jestli
+ * vůbec, o tom pořád rozhoduje nastavení u firmy.
+ */
+function PoslatZnovu({ caflouProjectId, stav }: { caflouProjectId: string; stav: string }) {
+  const [posila, setPosila] = useState(false);
+  const [hlaska, setHlaska] = useState<string | null>(null);
+
+  if (!STAVY_S_NOTIFIKACI.includes(stav)) return null;
+
+  async function posli() {
+    setPosila(true);
+    setHlaska(null);
+    try {
+      const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/notifikace-znovu`, {
+        method: 'POST',
+      });
+      const data = await res.json().catch(() => null);
+      setHlaska((data as { zprava?: string; error?: string })?.zprava || (data as { error?: string })?.error || 'Nepodařilo se to.');
+    } catch {
+      setHlaska('Nepodařilo se spojit se serverem.');
+    } finally {
+      setPosila(false);
+    }
+  }
+
+  return (
+    <span className="flex items-center gap-2 flex-wrap">
+      <button
+        type="button"
+        onClick={() => void posli()}
+        disabled={posila}
+        className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-50"
+      >
+        {posila ? 'Posílám…' : 'Poslat zprávu ke stavu znovu'}
+      </button>
+      {hlaska && <span className="text-xs font-body text-muted">{hlaska}</span>}
+    </span>
   );
 }

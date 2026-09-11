@@ -25,9 +25,9 @@ import { zajistiOdkaz, urlPreposlechu } from '@/lib/preposlechOdkaz';
  * první, takže druhá zpráva by byla jen opakování. Sdílejí proto jednu
  * značku a odejde jen ta dřívější (zadání 10. 9. 2026).
  */
-const ZNACKA_PRVNI_TRACKY = 'prvni-tracky';
+export const ZNACKA_PRVNI_TRACKY = 'prvni-tracky';
 
-function znackaStavu(stav: string): string {
+export function znackaStavu(stav: string): string {
   if (stav === 'Natáčíme/stříháme' || stav === 'Dotočeno/stříháme') return ZNACKA_PRVNI_TRACKY;
   return stav;
 }
