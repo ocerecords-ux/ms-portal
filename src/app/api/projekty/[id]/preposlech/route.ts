@@ -53,6 +53,7 @@ async function stav(caflouProjectId: string) {
       trackName: ch.trackName,
       localTime: ch.localTime,
       pdfPage: ch.pdfPage,
+      zvyrazneni: (ch.zvyrazneni as unknown as Zvyrazneni | null) ?? null,
       description: ch.description,
       createdByName: ch.createdByName,
       createdAt: ch.createdAt.toISOString(),
@@ -66,11 +67,27 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(await stav(params.id));
 }
 
+/**
+ * Zvyrazneny usek textu (zadani 11. 9. 2026). Ramecky jsou zlomky sirky
+ * a vysky strany, proto strop 1 - v pixelech by zvyrazneni sedelo jen pri
+ * te sirce okna, ve ktere vzniklo.
+ */
+const zvyrazneniSchema = z.object({
+  strana: z.number().int().min(1).max(10000),
+  text: z.string().max(2000),
+  ramecky: z
+    .array(z.tuple([z.number().min(0).max(1), z.number().min(0).max(1), z.number().min(0).max(1), z.number().min(0).max(1)]))
+    .max(200),
+});
+
+type Zvyrazneni = { strana: number; ramecky: [number, number, number, number][]; text: string };
+
 const novaChyba = z.object({
   trackIndex: z.number().int().min(1).max(999),
   trackName: z.string().trim().min(1).max(300),
   localTime: z.number().min(0).max(24 * 3600),
   pdfPage: z.number().int().min(1).max(10000).nullable().optional(),
+  zvyrazneni: zvyrazneniSchema.nullable().optional(),
   description: z.string().trim().min(1).max(4000),
 });
 
@@ -88,6 +105,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       caflouProjectId: params.id,
       ...parsed.data,
       pdfPage: parsed.data.pdfPage ?? null,
+      zvyrazneni: parsed.data.zvyrazneni ?? undefined,
       createdByUserId: pristup.userId,
       createdByName: pristup.jmeno,
     },

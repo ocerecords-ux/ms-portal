@@ -25,12 +25,28 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
  * časová osa se značkami.
  */
 
+/**
+ * Zvýrazněný úsek textu (zadání 11. 9. 2026: „šlo by ještě nějakým
+ * zvýrazňovačem, abych zaznačil tu chybu v textu?").
+ *
+ * Rámečky jsou ZLOMKY šířky a výšky strany, ne pixely. PDF se kreslí na
+ * šířku okna, takže v pixelech by zvýraznění sedělo jen na tom monitoru,
+ * kde vzniklo.
+ */
+type Zvyrazneni = {
+  strana: number;
+  /** [x, y, šířka, výška], všechno 0-1 vůči straně. */
+  ramecky: [number, number, number, number][];
+  text: string;
+};
+
 type ChybaZeServeru = {
   id: string;
   trackIndex: number;
   trackName: string;
   localTime: number;
   pdfPage: number | null;
+  zvyrazneni: Zvyrazneni | null;
   description: string;
   createdByName: string | null;
   createdAt: string;
@@ -167,6 +183,10 @@ export function Preposlech({
   token?: string | null;
 }) {
   const [stav, setStav] = useState<Stav>(pocatecniStav);
+  // Znacky do PDF kresli funkce mimo React render, potrebuje proto posledni
+  // stav i mimo zavislosti efektu.
+  const stavRef = useRef(stav);
+  stavRef.current = stav;
   const [stopy, setStopy] = useState<Stopa[]>([]);
   const [aktivni, setAktivni] = useState<number | null>(null);
   const [hraje, setHraje] = useState(false);
@@ -196,7 +216,20 @@ export function Preposlech({
 
   const [formOtevreny, setFormOtevreny] = useState(false);
   const [popis, setPopis] = useState('');
-  const [zachyt, setZachyt] = useState<{ trackIndex: number; trackName: string; localTime: number; pdfPage: number | null } | null>(null);
+  const [zachyt, setZachyt] = useState<{
+    trackIndex: number;
+    trackName: string;
+    localTime: number;
+    pdfPage: number | null;
+    zvyrazneni: Zvyrazneni | null;
+  } | null>(null);
+  /**
+   * Čas, na kterém stopa stála, KDYŽ ČLOVĚK ZAČAL TÁHNOUT MYŠÍ po textu
+   * (zadání 11. 9. 2026: „mohlo by se to časově párovat s tím místem, kde
+   * se zastaví track a hodí marker"). Než výběr dotáhne, uteče nahrávce
+   * pár vteřin — a marker patří tam, kde tu chybu slyšel.
+   */
+  const casVyberuRef = useRef<number | null>(null);
   const [uklada, setUklada] = useState(false);
   const [chybaHlaska, setChybaHlaska] = useState<string | null>(null);
 
@@ -465,6 +498,8 @@ export function Preposlech({
   async function vykresliPdf(doc: any) {
     const obal = pdfObalRef.current;
     if (!obal) return;
+    // Util.transform prepocita souradnice textu na pixely stranky.
+    const pdfjs = await nactiPdfJs();
 
     // Dve nacteni za sebou (z Disku a rucne) by si jinak kreslila pres sebe.
     const moje = pdfVerzeRef.current + 1;
@@ -491,9 +526,123 @@ export function Preposlech({
       cislo.textContent = String(n);
       cislo.className = 'absolute top-1.5 left-1.5 bg-ink/60 text-white text-[10px] font-heading rounded px-1.5 py-0.5';
       ramecek.appendChild(cislo);
+
+      /**
+       * Vrstva se zvýrazněními (žluté obdélníky) leží NAD plátnem, ale pod
+       * textem — kliká se skrz ni.
+       */
+      const znacky = document.createElement('div');
+      znacky.dataset.znacky = '1';
+      znacky.className = 'absolute inset-0 pointer-events-none';
+      ramecek.appendChild(znacky);
+
+      /**
+       * Textová vrstva: průhledná slova přesně nad vykresleným textem, aby
+       * šla myší označit jako v každé PDF čtečce. Kreslí ji ručně z
+       * getTextContent(), protože hotová TextLayer z pdf.js chce vlastní
+       * stylopis a proměnnou --scale-factor — a ta se mezi verzemi mění.
+       */
+      const textovaVrstva = document.createElement('div');
+      textovaVrstva.dataset.text = '1';
+      textovaVrstva.className = 'absolute inset-0 select-text cursor-text';
+      ramecek.appendChild(textovaVrstva);
+
       obal.appendChild(ramecek);
       await stranka.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      if (pdfVerzeRef.current !== moje) return;
+
+      try {
+        const obsah = await stranka.getTextContent();
+        for (const polozka of obsah.items as any[]) {
+          if (!polozka.str) continue;
+          const t = pdfjs.Util.transform(viewport.transform, polozka.transform);
+          const vyskaPisma = Math.hypot(t[2], t[3]);
+          if (!vyskaPisma) continue;
+          const slovo = document.createElement('span');
+          slovo.textContent = polozka.str;
+          slovo.style.cssText =
+            `position:absolute;white-space:pre;transform-origin:0 0;color:transparent;` +
+            `left:${t[4]}px;top:${t[5] - vyskaPisma}px;font-size:${vyskaPisma}px;font-family:sans-serif;`;
+          textovaVrstva.appendChild(slovo);
+          // Roztazeni na spravnou sirku - nase pismo neni to z PDF, takze
+          // by jinak vyber koncil jinde, nez text opravdu je.
+          const sirkaNaseho = slovo.getBoundingClientRect().width;
+          const sirkaVPdf = polozka.width * zvetseni;
+          if (sirkaNaseho > 0 && sirkaVPdf > 0) {
+            slovo.style.transform = `scaleX(${sirkaVPdf / sirkaNaseho})`;
+          }
+        }
+      } catch {
+        // Sken bez textu - zvyraznovac tam proste nebude.
+      }
     }
+
+    vykresliZnacky();
+  }
+
+  /**
+   * Žluté obdélníky uložených zvýraznění. Kreslí se do vrstvy, kterou
+   * React nikdy nesahá — stejně jako samotné stránky PDF.
+   */
+  const vykresliZnacky = useCallback(() => {
+    const obal = pdfObalRef.current;
+    if (!obal) return;
+    obal.querySelectorAll<HTMLElement>('[data-znacky]').forEach((v) => v.replaceChildren());
+
+    for (const ch of stavRef.current.chyby) {
+      const z = ch.zvyrazneni;
+      if (!z?.ramecky?.length) continue;
+      const vrstva = obal.querySelector<HTMLElement>(`[data-strana="${z.strana}"] [data-znacky]`);
+      if (!vrstva) continue;
+      for (const [x, y, w, h] of z.ramecky) {
+        const znacka = document.createElement('div');
+        znacka.style.cssText =
+          `position:absolute;left:${x * 100}%;top:${y * 100}%;width:${w * 100}%;height:${h * 100}%;` +
+          `background:rgba(255,214,0,0.45);border-bottom:2px solid rgba(224,138,0,0.9);border-radius:2px;`;
+        znacka.title = ch.description;
+        vrstva.appendChild(znacka);
+      }
+    }
+  }, []);
+
+  /**
+   * Zvýraznění z toho, co má člověk zrovna označené myší. Souřadnice se
+   * přepočítají na zlomky strany, viz typ Zvyrazneni.
+   */
+  function zvyrazneniZVyberu(): Zvyrazneni | null {
+    const vyber = window.getSelection();
+    if (!vyber || vyber.isCollapsed || vyber.rangeCount === 0) return null;
+    const text = vyber.toString().trim();
+    if (!text) return null;
+
+    const rozsah = vyber.getRangeAt(0);
+    const uzel = rozsah.startContainer;
+    const prvek = (uzel.nodeType === 1 ? (uzel as HTMLElement) : uzel.parentElement) ?? null;
+    const strankaEl = prvek?.closest<HTMLElement>('[data-strana]');
+    if (!strankaEl) return null;
+
+    const okraj = strankaEl.getBoundingClientRect();
+    if (!okraj.width || !okraj.height) return null;
+
+    const ramecky: [number, number, number, number][] = [];
+    for (const r of Array.from(rozsah.getClientRects())) {
+      if (r.width < 1 || r.height < 1) continue;
+      const x = (r.left - okraj.left) / okraj.width;
+      const y = (r.top - okraj.top) / okraj.height;
+      const w = r.width / okraj.width;
+      const h = r.height / okraj.height;
+      if (x < -0.05 || y < -0.05 || x > 1 || y > 1) continue;
+      ramecky.push([
+        Math.max(0, Math.min(1, x)),
+        Math.max(0, Math.min(1, y)),
+        Math.max(0, Math.min(1, w)),
+        Math.max(0, Math.min(1, h)),
+      ]);
+      if (ramecky.length >= 200) break;
+    }
+    if (!ramecky.length) return null;
+
+    return { strana: Number(strankaEl.dataset.strana), ramecky, text: text.slice(0, 2000) };
   }
 
   async function nactiPdfZUrl(url: string, nazev: string) {
@@ -653,19 +802,46 @@ export function Preposlech({
     URL.revokeObjectURL(url);
   }
 
-  function otevriForm() {
+  function otevriForm(zvyrazneni: Zvyrazneni | null = null, cas?: number) {
     if (aktivni === null) return;
     audioRef.current?.pause();
     const stopa = stopyRef.current[aktivni];
     setZachyt({
       trackIndex: aktivni + 1,
       trackName: stopa.name,
-      localTime: audioRef.current?.currentTime ?? 0,
-      pdfPage: pdfDocRef.current ? pdfStrana : null,
+      localTime: cas ?? audioRef.current?.currentTime ?? 0,
+      // Strana ze zvyrazneni ma prednost pred tou, na kterou je zrovna
+      // odrolovane - clovek mohl oznacit text o stranu vys.
+      pdfPage: zvyrazneni ? zvyrazneni.strana : pdfDocRef.current ? pdfStrana : null,
+      zvyrazneni,
     });
-    setPopis('');
+    // Oznaceny text rovnou do popisu - nejcasteji se stejne opisuje to,
+    // co herec precetl spatne.
+    setPopis(zvyrazneni ? `„${zvyrazneni.text}" — ` : '');
     setFormOtevreny(true);
-    setTimeout(() => popisRef.current?.focus(), 0);
+    setTimeout(() => {
+      popisRef.current?.focus();
+      const delka = popisRef.current?.value.length ?? 0;
+      popisRef.current?.setSelectionRange(delka, delka);
+    }, 0);
+  }
+
+  /**
+   * Tažení myší po textu = označení místa chyby (zadání 11. 9. 2026).
+   *
+   * Čas se bere z okamžiku, kdy člověk ZAČAL táhnout — viz casVyberuRef.
+   * Nahrávka se přitom zastaví, aby při psaní popisu neutíkala dál.
+   */
+  function vyberZacal() {
+    casVyberuRef.current = audioRef.current?.currentTime ?? null;
+  }
+
+  function vyberSkoncil() {
+    if (formOtevreny || aktivni === null) return;
+    const zvyrazneni = zvyrazneniZVyberu();
+    if (!zvyrazneni) return;
+    otevriForm(zvyrazneni, casVyberuRef.current ?? undefined);
+    casVyberuRef.current = null;
   }
 
   async function ulozChybu() {
@@ -704,6 +880,11 @@ export function Preposlech({
     }
     if (ch.pdfPage) naStranu(ch.pdfPage);
   }
+
+  // Nova nebo smazana chyba => prekreslit zlute znacky v textu.
+  useEffect(() => {
+    vykresliZnacky();
+  }, [stav.chyby, vykresliZnacky]);
 
   /* ---------- klávesy ---------- */
 
@@ -773,7 +954,7 @@ export function Preposlech({
             <b className="text-white">{pdfNazev || '—'}</b>
           </span>
           <span className="text-[11px] font-heading text-white/60 hidden lg:inline">
-            Mezerník = přehrát · ←/→ = ±5 s · E = přidat chybu
+            Mezerník = přehrát · ←/→ = ±5 s · E = přidat chybu · označ text myší = chyba v tom místě
           </span>
           {!jenPoslech && (
             <button
@@ -867,7 +1048,14 @@ export function Preposlech({
             {/* Stranky PDF kresli pdf.js primo do DOM, ne React. Musi proto mit
                 vlastni div, do ktereho React nikdy zadne dite nevlozi - viz
                 komentar u vykresliPdf(). */}
-            <div ref={pdfObalRef} className="w-full flex flex-col items-center gap-4" />
+            <div
+              ref={pdfObalRef}
+              onMouseDown={vyberZacal}
+              onMouseUp={vyberSkoncil}
+              onTouchStart={vyberZacal}
+              onTouchEnd={vyberSkoncil}
+              className="w-full flex flex-col items-center gap-4"
+            />
           </div>
         </div>
 
@@ -910,6 +1098,11 @@ export function Preposlech({
                           </span>
                           <span className="text-xs font-heading text-muted tabular-nums">{cas(ch.localTime)}</span>
                           {ch.pdfPage && <span className="text-xs font-heading text-muted tabular-nums">s. {ch.pdfPage}</span>}
+                          {ch.zvyrazneni && (
+                            <span className="text-[11px] font-heading bg-warnTint text-ink rounded px-1.5" title={ch.zvyrazneni.text}>
+                              ✎ v textu
+                            </span>
+                          )}
                           {!jenPoslech && (
                             <span className="text-[11px] font-heading text-muted/70 tabular-nums">
                               Cubase {hms((ch.trackIndex - 1) * DELKA_STOPY_V_CUBASE + ch.localTime)}
@@ -963,7 +1156,7 @@ export function Preposlech({
               </div>
               <button
                 type="button"
-                onClick={otevriForm}
+                onClick={() => otevriForm()}
                 disabled={aktivni === null || formOtevreny}
                 className="ml-auto bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-40"
               >
@@ -982,6 +1175,12 @@ export function Preposlech({
                   Stopa <b className="text-ink">{pad2(zachyt.trackIndex)}</b> · čas{' '}
                   <b className="text-ink tabular-nums">{cas(zachyt.localTime)}</b> · strana{' '}
                   <b className="text-ink">{zachyt.pdfPage ?? '— (text nenačtený)'}</b>
+                  {zachyt.zvyrazneni && (
+                    <>
+                      {' '}
+                      · <span className="bg-warnTint text-ink rounded px-1">zvýrazněno v textu</span>
+                    </>
+                  )}
                 </p>
                 <textarea
                   ref={popisRef}

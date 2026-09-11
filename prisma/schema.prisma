@@ -1710,6 +1710,11 @@ model PreposlechChyba {
   localTime  Float
   /// Strana PDF, na ktere chyba je (kdyz bylo PDF nactene).
   pdfPage    Int?
+  /// Zvyrazneny usek textu (zadani 11. 9. 2026) - { strana, ramecky, text }.
+  /// Ramecky jsou ZLOMKY sirky a vysky strany (0-1), ne pixely: PDF se
+  /// vykresluje na sirku okna, takze v pixelech by zvyrazneni sedelo jen
+  /// pri stejne sirke, v jake vzniklo.
+  zvyrazneni Json?
 
   description String @db.Text
 

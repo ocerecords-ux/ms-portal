@@ -16,6 +16,8 @@ export type PreposlechStavData = {
     trackName: string;
     localTime: number;
     pdfPage: number | null;
+    /** Zvýrazněný úsek textu - { strana, ramecky, text }, viz schema.prisma. */
+    zvyrazneni: { strana: number; ramecky: [number, number, number, number][]; text: string } | null;
     description: string;
     createdByName: string | null;
     createdAt: string;
@@ -43,6 +45,7 @@ export async function nactiPreposlech(caflouProjectId: string): Promise<Preposle
         trackName: ch.trackName,
         localTime: ch.localTime,
         pdfPage: ch.pdfPage,
+        zvyrazneni: (ch.zvyrazneni as PreposlechStavData['chyby'][number]['zvyrazneni']) ?? null,
         description: ch.description,
         createdByName: ch.createdByName,
         createdAt: ch.createdAt.toISOString(),
