@@ -27,6 +27,9 @@ const schema = z.object({
   note: z.string().trim().max(3000).optional(),
   variableSymbol: z.string().trim().max(20).optional(),
   caflouProjectId: z.string().trim().nullable().optional(),
+  // Rezim DPH a jazyk vytisteneho dokladu (zadani 10. 9. 2026).
+  rezimDph: z.enum(['STANDARD', 'PRENESENA', 'MIMO_PREDMET']).optional(),
+  jazyk: z.enum(['CS', 'EN']).optional(),
   items: z.array(itemSchema).max(100).optional(),
   /** Znovu si říct ČNB o kurz k datu vystavení. */
   refreshRate: z.boolean().optional(),
@@ -61,6 +64,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.subject !== undefined) data.subject = d.subject || null;
     if (d.note !== undefined) data.note = d.note || null;
     if (d.variableSymbol !== undefined) data.variableSymbol = d.variableSymbol || invoice.variableSymbol;
+    if (d.rezimDph !== undefined) data.rezimDph = d.rezimDph;
+    if (d.jazyk !== undefined) data.jazyk = d.jazyk;
     if (d.caflouProjectId !== undefined) {
       const projekt = await resolveProject(d.caflouProjectId);
       data.caflouProjectId = projekt.caflouProjectId;

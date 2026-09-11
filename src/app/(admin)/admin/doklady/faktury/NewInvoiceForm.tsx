@@ -41,7 +41,19 @@ export function NewInvoiceForm({
     setBusy(true);
     setError(null);
     try {
-      const body = mode === 'offer' ? { offerId } : { issuerCompanyId, companyId, subject };
+      // Prazdna faktura se uz nezaklada kliknutim - clovek jde do editoru,
+      // uvidi vedle formulare hotovy doklad a ulozi ho, az bude sedet
+      // (zadani 10. 9. 2026). Diky tomu nezustavaji po rozmysleni
+      // rozpracovane doklady ani diry v ciselne rade.
+      if (mode === 'blank') {
+        const parametry = new URLSearchParams({ vydavatel: issuerCompanyId });
+        if (companyId) parametry.set('firma', companyId);
+        if (subject.trim()) parametry.set('predmet', subject.trim());
+        router.push(`/admin/doklady/faktury/nova?${parametry.toString()}`);
+        return;
+      }
+
+      const body = { offerId };
       const res = await fetch('/api/admin/invoices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

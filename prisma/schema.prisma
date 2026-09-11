@@ -954,6 +954,9 @@ model Offer {
   subject    String?   // predmet nabidky
   note       String?
 
+  /// Jazyk vytistene nabidky (zadani 10. 9. 2026).
+  jazyk JazykDokladu @default(CS)
+
   status         OfferStatus @default(DRAFT)
   approvalToken  String      @unique // odkaz pro klienta ke schvaleni
   sentAt         DateTime?
@@ -1010,6 +1013,21 @@ enum InvoiceStatus {
 // Meny: castka se drzi v mene dokladu, a k tomu se ULOZI denni kurz CNB
 // platny v den vystaveni (zadani 8. 9. 2026). Doklad si tak nese kurz, ktery
 // pro nej platil, a pozdejsi pohyb na trhu s nim uz nehne.
+/// Rezim DPH na dokladu (zadani 10. 9. 2026 - fakturujeme i do zahranici).
+/// VYBIRA HO CLOVEK u konkretniho dokladu; portal ho nehada z adresy
+/// odberatele, protoze to je vec ucetni, ne adresy.
+enum RezimDph {
+  STANDARD     // bezny rezim, sazby podle polozek
+  PRENESENA    // dan odvede zakaznik
+  MIMO_PREDMET // misto plneni je ve state prijemce
+}
+
+/// Jazyk vytisteneho dokladu.
+enum JazykDokladu {
+  CS
+  EN
+}
+
 model Invoice {
   id              String        @id @default(cuid())
   number          String        @unique
@@ -1030,6 +1048,10 @@ model Invoice {
   dueDate   DateTime?
   subject   String?
   note      String?
+
+  /// Rezim DPH a jazyk vytisteneho dokladu (zadani 10. 9. 2026).
+  rezimDph RezimDph     @default(STANDARD)
+  jazyk    JazykDokladu @default(CS)
 
   status          InvoiceStatus @default(DRAFT)
   sentAt          DateTime?

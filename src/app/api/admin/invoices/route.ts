@@ -34,6 +34,9 @@ const schema = z.object({
   issueDate: z.string().trim().optional(),
   taxDate: z.string().trim().nullable().optional(),
   dueDate: z.string().trim().nullable().optional(),
+  // Rezim DPH a jazyk vytisteneho dokladu (zadani 10. 9. 2026).
+  rezimDph: z.enum(['STANDARD', 'PRENESENA', 'MIMO_PREDMET']).optional(),
+  jazyk: z.enum(['CS', 'EN']).optional(),
   items: z.array(itemSchema).max(100).optional(),
 });
 
@@ -171,6 +174,8 @@ export async function POST(req: NextRequest) {
             offerId: offer?.id ?? null,
             caflouProjectId: projekt.caflouProjectId,
             projectName: projekt.projectName,
+            rezimDph: input.rezimDph ?? 'STANDARD',
+            jazyk: input.jazyk ?? offer?.jazyk ?? 'CS',
             ...(polozky.length > 0
               ? {
                   items: {

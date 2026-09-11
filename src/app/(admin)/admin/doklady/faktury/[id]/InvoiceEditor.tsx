@@ -15,6 +15,7 @@ import {
 } from '@/lib/doklady';
 import { formatRate, toCzkMinor } from '@/lib/cnb';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
+import { NahledDokladu } from '../../NahledDokladu';
 
 type Item = {
   description: string;
@@ -55,6 +56,8 @@ type Invoice = {
   offerNumber: string | null;
   caflouProjectId: string;
   projectName: string | null;
+  rezimDph: 'STANDARD' | 'PRENESENA' | 'MIMO_PREDMET';
+  jazyk: 'CS' | 'EN';
   items: Item[];
 };
 
@@ -96,6 +99,7 @@ function formatDateTime(iso: string | null): string {
  */
 export function InvoiceEditor({
   invoice,
+  issuerCompanyId,
   issuer,
   company,
   companies,
@@ -112,6 +116,8 @@ export function InvoiceEditor({
   draftFromOfferId,
 }: {
   invoice: Invoice;
+  /** Vydavatel dokladu - kvuli nahledu, ktery si ho tahne ze serveru. */
+  issuerCompanyId: string;
   issuer: Party;
   company: Party;
   companies: { id: string; name: string }[];
@@ -120,7 +126,10 @@ export function InvoiceEditor({
   draftFromOfferId?: string;
 }) {
   const router = useRouter();
-  const jesteNeulozena = Boolean(draftFromOfferId);
+  // Neulozeny doklad: bud se chysta z nabidky, nebo se zaklada od nuly -
+  // v obou pripadech jeste nema ani cislo, ani radek v databazi (zadani
+  // 10. 9. 2026: cislo z rady se nesmi spotrebovat rozmyslenim).
+  const jesteNeulozena = Boolean(draftFromOfferId) || invoice.id === 'nova';
   const locked = invoice.status === 'PAID' || invoice.status === 'CANCELLED';
 
   const [form, setForm] = useState({
@@ -134,6 +143,8 @@ export function InvoiceEditor({
     note: invoice.note,
     variableSymbol: invoice.variableSymbol,
     caflouProjectId: invoice.caflouProjectId,
+    rezimDph: invoice.rezimDph,
+    jazyk: invoice.jazyk,
   });
   const [items, setItems] = useState<Item[]>(invoice.items.length > 0 ? invoice.items : [emptyItem()]);
   const [saving, setSaving] = useState(false);
@@ -142,6 +153,39 @@ export function InvoiceEditor({
   const [info, setInfo] = useState<string | null>(null);
 
   const totals = useMemo(() => computeTotals(items), [items]);
+
+  /**
+   * Co se posílá do náhledu. Je to schválně jen to, co je na dokumentu vidět -
+   * kdyby se posílal celý stav, překresloval by se i po změnách, které se
+   * dokumentu vůbec netýkají.
+   */
+  const nahledTelo = useMemo(
+    () => ({
+      druh: 'FAKTURA' as const,
+      id: jesteNeulozena ? null : invoice.id,
+      issuerCompanyId,
+      companyId: form.companyId,
+      bankAccountId: form.bankAccountId || null,
+      currency: form.currency,
+      issueDate: form.issueDate,
+      taxDate: form.taxDate || null,
+      dueDate: form.dueDate || null,
+      subject: form.subject,
+      note: form.note,
+      variableSymbol: form.variableSymbol,
+      projectName: projects.find((p) => p.id === form.caflouProjectId)?.label ?? invoice.projectName ?? null,
+      rezimDph: form.rezimDph,
+      jazyk: form.jazyk === 'EN' ? ('en' as const) : ('cs' as const),
+      items: items.map((i) => ({
+        description: i.description,
+        quantity: Number(i.quantity) || 0,
+        unit: i.unit,
+        unitPriceMinor: i.unitPriceMinor,
+        vatRate: i.vatRate,
+      })),
+    }),
+    [form, items, invoice.id, invoice.projectName, issuerCompanyId, jesteNeulozena, projects],
+  );
   const accountsForCurrency = bankAccounts.filter((a) => a.currency === form.currency);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -179,7 +223,7 @@ export function InvoiceEditor({
         ? await fetch('/api/admin/invoices', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...telo, offerId: draftFromOfferId }),
+            body: JSON.stringify({ ...telo, offerId: draftFromOfferId, issuerCompanyId }),
           })
         : await fetch(`/api/admin/invoices/${invoice.id}`, {
             method: 'PATCH',
@@ -372,6 +416,12 @@ export function InvoiceEditor({
         </div>
       </div>
 
+      {/* DVA SLOUPCE (zadani 10. 9. 2026): vlevo udaje, vpravo hotovy doklad.
+          Stejny model jako u Rodneho listu - clovek vidi, co vyrabi, uz pri
+          zakladani, ne az po ulozeni. */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,520px)] gap-5 items-start">
+      <div className="flex flex-col gap-5 min-w-0">
+
       {locked && (
         <p className="text-sm text-ink bg-field border border-line rounded-lg px-4 py-3 m-0">
           {invoice.status === 'PAID'
@@ -469,6 +519,35 @@ export function InvoiceEditor({
               ))}
             </select>
           </label>
+
+          {/* Rezim DPH VYBIRA CLOVEK (zadani 10. 9. 2026) - portal ho nehada
+              z adresy odberatele, protoze to je vec ucetni, ne adresy. */}
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Režim DPH</span>
+            <select
+              value={form.rezimDph}
+              disabled={locked}
+              onChange={(e) => set('rezimDph', e.target.value as typeof form.rezimDph)}
+              className={inputClass}
+            >
+              <option value="STANDARD">Běžný — sazby podle položek</option>
+              <option value="PRENESENA">Přenesená daňová povinnost</option>
+              <option value="MIMO_PREDMET">Mimo předmět DPH v ČR</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Jazyk dokladu</span>
+            <select
+              value={form.jazyk}
+              disabled={locked}
+              onChange={(e) => set('jazyk', e.target.value as typeof form.jazyk)}
+              className={inputClass}
+            >
+              <option value="CS">Čeština</option>
+              <option value="EN">Angličtina</option>
+            </select>
+          </label>
+
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Vystaveno</span>
             <input
@@ -693,6 +772,11 @@ export function InvoiceEditor({
           rows={3}
           className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full disabled:opacity-70"
         />
+      </div>
+
+      </div>
+
+      <NahledDokladu telo={nahledTelo} titulek="Náhled faktury" />
       </div>
 
       {invoice.status !== 'CANCELLED' && !jesteNeulozena && (

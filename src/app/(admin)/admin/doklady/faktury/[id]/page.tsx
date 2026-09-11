@@ -34,6 +34,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
       </Link>
 
       <InvoiceEditor
+        issuerCompanyId={invoice.issuerCompanyId}
         invoice={{
           id: invoice.id,
           number: invoice.number,
@@ -54,6 +55,8 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           offerNumber: invoice.offer?.number ?? null,
           caflouProjectId: invoice.caflouProjectId ?? '',
           projectName: invoice.projectName,
+          rezimDph: invoice.rezimDph,
+          jazyk: invoice.jazyk,
           items: invoice.items.map((i) => ({
             description: i.description,
             quantity: i.quantity,
