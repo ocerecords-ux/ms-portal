@@ -89,17 +89,14 @@ export function InternalProjectsBrowser({
   const [query, setQuery] = useState('');
 
   /**
-   * Hledat i v dokončených (zadání 11. 9. 2026: „dejme možnost na nějaké
-   * přepnutí, kde povolíme hledat i v ukončených projektech… jinak se z toho
-   * lidi zblázní rolovat tolik položek").
+   * Hledá se VŽDYCKY jen v otevřené záložce (zadání 11. 9. 2026: „tady to
+   * hledat v dokončených dej pryč, tady stačí záložky").
    *
-   * Dokončených je skoro sedm set proti čtyřiceti aktivním. Kdyby se v nich
-   * hledalo pořád, utopil by se v nich běžný dotaz na rozdělanou práci —
-   * a přepínat se kvůli jednomu dohledání na druhou záložku a hledat znovu
-   * je otrava. Proto vypínatelné a proto se to projeví jen tehdy, když je
-   * do čeho hledat: prázdné hledání by jinak vysypalo všech 710 projektů.
+   * Přepínač „Hledat i v dokončených" tu chvíli byl, ale patřil jinam - do
+   * výběru projektu ve výkazu, kde se člověk mezi záložkami přepnout nemůže.
+   * Tady jsou záložky na dosah, takže dvě místa, kde se říká totéž, jen
+   * pletla.
    */
-  const [iDokoncene, setIDokoncene] = useState(false);
   const [page, setPage] = useState(0);
   // Uprava sloupcu primo v tabulce - tri tecky ve fialove liste, prejmenovani,
   // pretahovani a krizek, uplne stejne jako u horni listy portalu
@@ -268,8 +265,7 @@ export function InternalProjectsBrowser({
   }
 
   const hledanyText = query.trim();
-  const hledatVsude = iDokoncene && hledanyText.length > 0;
-  const source = hledatVsude ? [...active, ...finished] : tab === 'active' ? active : finished;
+  const source = tab === 'active' ? active : finished;
   const filtered = useMemo(() => {
     const rows = source.filter((p) => matches(p, hledanyText));
     return rows.sort((a, b) => compareProjects(a, b, sort));
@@ -302,16 +298,9 @@ export function InternalProjectsBrowser({
               <button
                 key={t.key}
                 type="button"
-                onClick={() => {
-                  // Klik na zalozku je jasny signal "chci videt tuhle skupinu"
-                  // - hledani napric tim koncí, jinak by clovek kliknul a nic
-                  // by se nestalo.
-                  setIDokoncene(false);
-                  switchTab(t.key);
-                }}
-                title={hledatVsude ? 'Hledá se teď napříč oběma — kliknutím se vrátíte sem' : undefined}
+                onClick={() => switchTab(t.key)}
                 className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
-                  isActive && !hledatVsude
+                  isActive
                     ? 'bg-surface border-line text-brand-purple'
                     : 'border-transparent text-muted hover:text-ink'
                 }`}
@@ -356,31 +345,6 @@ export function InternalProjectsBrowser({
           </svg>
         </div>
 
-        <label
-          className="flex items-center gap-2 cursor-pointer select-none"
-          title="Dokončených je několikanásobně víc než rozdělaných — proto se v nich hledá jen na vyžádání."
-        >
-          <input
-            type="checkbox"
-            checked={iDokoncene}
-            onChange={(e) => {
-              setIDokoncene(e.target.checked);
-              setPage(0);
-            }}
-            className="w-4 h-4 accent-brand-purple"
-          />
-          <span className="text-sm font-heading text-ink">
-            Hledat i v dokončených
-            <span className="text-muted tabular-nums"> ({finished.length})</span>
-          </span>
-        </label>
-
-        {hledatVsude && (
-          <span className="text-xs font-heading font-semibold text-brand-purpleDark bg-tint border border-line rounded-pill px-3 py-1.5">
-            Hledám ve všech projektech · nalezeno{' '}
-            <span className="tabular-nums">{filtered.length}</span>
-          </span>
-        )}
       </div>
 
       {editing && (
@@ -439,9 +403,9 @@ export function InternalProjectsBrowser({
         onHideColumn={skryj}
         emptyText={
           hledanyText
-            ? iDokoncene
-              ? 'Hledání nic nenašlo ani mezi dokončenými.'
-              : 'Hledání nic nenašlo. Zkuste zaškrtnout „Hledat i v dokončených“.'
+            ? tab === 'active'
+              ? 'Hledání nic nenašlo. Dokončené projekty jsou na druhé záložce.'
+              : 'Hledání nic nenašlo.'
             : tab === 'active'
               ? 'Aktuálně nejsou žádné rozpracované projekty.'
               : (finishedNote ?? 'Zatím tu nejsou žádné dokončené projekty.')
