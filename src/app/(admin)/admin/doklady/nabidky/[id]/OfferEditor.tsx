@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import type { Currency, OfferStatus } from '@prisma/client';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
+import { NahledDokladu } from '../../NahledDokladu';
 import {
   CURRENCIES,
   CURRENCY_LABELS,
@@ -55,6 +56,7 @@ type Offer = {
   rejectedAt: string | null;
   caflouProjectId: string;
   projectName: string | null;
+  jazyk: 'CS' | 'EN';
   items: Item[];
 };
 
@@ -103,8 +105,31 @@ export function OfferEditor({
     subject: offer.subject,
     note: offer.note,
     caflouProjectId: offer.caflouProjectId,
+    jazyk: offer.jazyk,
   });
   const [items, setItems] = useState<Item[]>(offer.items.length > 0 ? offer.items : [emptyItem()]);
+
+  /** Co se posílá do náhledu - jen to, co je na dokumentu vidět. */
+  const nahledTelo = {
+    druh: 'NABIDKA' as const,
+    id: offer.id,
+    issuerCompanyId: form.issuerCompanyId,
+    companyId: form.companyId,
+    currency: form.currency,
+    issueDate: form.issueDate,
+    validUntil: form.validUntil || null,
+    subject: form.subject,
+    note: form.note,
+    projectName: projects.find((p) => p.id === form.caflouProjectId)?.label ?? offer.projectName ?? null,
+    jazyk: form.jazyk === 'EN' ? ('en' as const) : ('cs' as const),
+    items: items.map((i) => ({
+      description: i.description,
+      quantity: Number(i.quantity) || 0,
+      unit: i.unit,
+      unitPriceMinor: i.unitPriceMinor,
+      vatRate: i.vatRate,
+    })),
+  };
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -304,6 +329,10 @@ export function OfferEditor({
         </div>
       </div>
 
+      {/* DVA SLOUPCE (zadani 10. 9. 2026): vlevo udaje, vpravo hotovy doklad. */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,520px)] gap-5 items-start">
+      <div className="flex flex-col gap-5 min-w-0">
+
       {locked && (
         <div className="bg-okTint border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <p className="text-sm text-ink m-0">
@@ -428,6 +457,18 @@ export function OfferEditor({
                   {CURRENCY_NAMES[c]}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Jazyk nabídky</span>
+            <select
+              value={form.jazyk}
+              disabled={locked}
+              onChange={(e) => set('jazyk', e.target.value as typeof form.jazyk)}
+              className={inputClass}
+            >
+              <option value="CS">Čeština</option>
+              <option value="EN">Angličtina</option>
             </select>
           </label>
         </div>
@@ -593,6 +634,11 @@ export function OfferEditor({
             </ul>
           )}
         </div>
+      </div>
+
+      </div>
+
+      <NahledDokladu telo={nahledTelo} titulek="Náhled nabídky" />
       </div>
 
       {!locked && (

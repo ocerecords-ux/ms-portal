@@ -55,6 +55,7 @@ export default async function OfferDetailPage({ params }: { params: { id: string
           rejectedAt: offer.rejectedAt ? offer.rejectedAt.toISOString() : null,
           caflouProjectId: offer.caflouProjectId ?? '',
           projectName: offer.projectName,
+          jazyk: offer.jazyk,
           items: offer.items.map((i) => ({
             description: i.description,
             quantity: i.quantity,

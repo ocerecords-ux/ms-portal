@@ -25,6 +25,8 @@ const schema = z.object({
   subject: z.string().trim().max(200).optional(),
   note: z.string().trim().max(3000).optional(),
   caflouProjectId: z.string().trim().nullable().optional(),
+  // Jazyk vytistene nabidky (zadani 10. 9. 2026).
+  jazyk: z.enum(['CS', 'EN']).optional(),
   items: z.array(itemSchema).max(100).optional(),
 });
 
@@ -59,6 +61,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.currency !== undefined) data.currency = d.currency;
     if (d.subject !== undefined) data.subject = d.subject || null;
     if (d.note !== undefined) data.note = d.note || null;
+    if (d.jazyk !== undefined) data.jazyk = d.jazyk;
     if (d.caflouProjectId !== undefined) {
       const projekt = await resolveProject(d.caflouProjectId);
       data.caflouProjectId = projekt.caflouProjectId;
