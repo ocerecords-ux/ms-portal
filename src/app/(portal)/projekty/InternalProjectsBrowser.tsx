@@ -19,20 +19,38 @@ const PAGE_SIZE = 50;
 
 type Tab = 'active' | 'finished';
 
+/**
+ * Porovnávací tvar - bez diakritiky, malými písmeny. „cerny" tak najde
+ * „Černý" a „strihame" najde „stříháme"; kdo hledá, nemá řešit háčky.
+ */
+function zjednodus(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/**
+ * Hledá se ve VŠECH sloupcích, které v tabulce něco znamenají, plus v čísle
+ * projektu - to je na dokladech a lidé podle něj projekt dohledávají.
+ * Slova se hledají nezávisle na pořadí: „audioteka cerny" najde projekt
+ * Audioteky s Černým, ať je to napsané jakkoliv.
+ */
 function matches(p: InternalProject, needle: string): boolean {
   if (!needle) return true;
-  const haystack = [
-    p.name,
-    p.companyName,
-    p.statusName,
-    p.narrator ?? '',
-    p.meta?.managerName ?? '',
-    projectTypeLabel(p.meta?.projectType) ?? '',
-  ]
-    .join(' ')
-    .toLowerCase();
-  return needle
-    .toLowerCase()
+  const haystack = zjednodus(
+    [
+      p.name,
+      p.companyName,
+      p.statusName,
+      p.narrator ?? '',
+      p.meta?.herciJmenaText ?? '',
+      p.meta?.managerName ?? '',
+      projectTypeLabel(p.meta?.projectType) ?? '',
+      String(p.id),
+    ].join(' '),
+  );
+  return zjednodus(needle)
     .split(/\s+/)
     .filter(Boolean)
     .every((word) => haystack.includes(word));
@@ -69,6 +87,19 @@ export function InternalProjectsBrowser({
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('active');
   const [query, setQuery] = useState('');
+
+  /**
+   * Hledat i v dokončených (zadání 11. 9. 2026: „dejme možnost na nějaké
+   * přepnutí, kde povolíme hledat i v ukončených projektech… jinak se z toho
+   * lidi zblázní rolovat tolik položek").
+   *
+   * Dokončených je skoro sedm set proti čtyřiceti aktivním. Kdyby se v nich
+   * hledalo pořád, utopil by se v nich běžný dotaz na rozdělanou práci —
+   * a přepínat se kvůli jednomu dohledání na druhou záložku a hledat znovu
+   * je otrava. Proto vypínatelné a proto se to projeví jen tehdy, když je
+   * do čeho hledat: prázdné hledání by jinak vysypalo všech 710 projektů.
+   */
+  const [iDokoncene, setIDokoncene] = useState(false);
   const [page, setPage] = useState(0);
   // Uprava sloupcu primo v tabulce - tri tecky ve fialove liste, prejmenovani,
   // pretahovani a krizek, uplne stejne jako u horni listy portalu
@@ -236,11 +267,13 @@ export function InternalProjectsBrowser({
     setPage(0);
   }
 
-  const source = tab === 'active' ? active : finished;
+  const hledanyText = query.trim();
+  const hledatVsude = iDokoncene && hledanyText.length > 0;
+  const source = hledatVsude ? [...active, ...finished] : tab === 'active' ? active : finished;
   const filtered = useMemo(() => {
-    const rows = source.filter((p) => matches(p, query.trim()));
+    const rows = source.filter((p) => matches(p, hledanyText));
     return rows.sort((a, b) => compareProjects(a, b, sort));
-  }, [source, query, sort]);
+  }, [source, hledanyText, sort]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
@@ -269,9 +302,18 @@ export function InternalProjectsBrowser({
               <button
                 key={t.key}
                 type="button"
-                onClick={() => switchTab(t.key)}
+                onClick={() => {
+                  // Klik na zalozku je jasny signal "chci videt tuhle skupinu"
+                  // - hledani napric tim koncí, jinak by clovek kliknul a nic
+                  // by se nestalo.
+                  setIDokoncene(false);
+                  switchTab(t.key);
+                }}
+                title={hledatVsude ? 'Hledá se teď napříč oběma — kliknutím se vrátíte sem' : undefined}
                 className={`px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 transition-colors ${
-                  isActive ? 'bg-surface border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
+                  isActive && !hledatVsude
+                    ? 'bg-surface border-line text-brand-purple'
+                    : 'border-transparent text-muted hover:text-ink'
                 }`}
               >
                 {t.label} <span className="tabular-nums">({t.count})</span>
@@ -280,32 +322,65 @@ export function InternalProjectsBrowser({
           })}
         </div>
 
-        <div className="flex items-start gap-3 mb-2 flex-wrap">
-          <div className="relative">
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(0);
-              }}
-              placeholder="Hledat projekt, firmu, manažera…"
-              className="w-72 max-w-full rounded-lg border border-line bg-surface pl-9 pr-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
-            />
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="M20 20l-3.5-3.5" />
-            </svg>
-          </div>
-          {novyProjekt}
+        <div className="flex items-start gap-3 mb-2 flex-wrap">{novyProjekt}</div>
+      </div>
+
+      {/* HLEDÁNÍ MÁ VLASTNÍ ŘÁDEK, a to vlevo (zadání 11. 9. 2026: „chtělo by
+          to tam dát možnost nějakého hledání lupou fulltextem, jinak se z toho
+          lidi zblázní rolovat tolik položek").
+          Políčko tu bylo i dřív, jenže vpravo nahoře - přesně tam, kam sedí
+          otevřený panel chatu, takže ho přes něj nebylo vidět. */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[240px] max-w-[520px]">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(0);
+            }}
+            placeholder="Hledat projekt, firmu, herce, manažera, číslo…"
+            aria-label="Hledat v projektech"
+            className="w-full rounded-lg border border-line bg-surface pl-10 pr-3 py-2.5 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+          />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
         </div>
+
+        <label
+          className="flex items-center gap-2 cursor-pointer select-none"
+          title="Dokončených je několikanásobně víc než rozdělaných — proto se v nich hledá jen na vyžádání."
+        >
+          <input
+            type="checkbox"
+            checked={iDokoncene}
+            onChange={(e) => {
+              setIDokoncene(e.target.checked);
+              setPage(0);
+            }}
+            className="w-4 h-4 accent-brand-purple"
+          />
+          <span className="text-sm font-heading text-ink">
+            Hledat i v dokončených
+            <span className="text-muted tabular-nums"> ({finished.length})</span>
+          </span>
+        </label>
+
+        {hledatVsude && (
+          <span className="text-xs font-heading font-semibold text-brand-purpleDark bg-tint border border-line rounded-pill px-3 py-1.5">
+            Hledám ve všech projektech · nalezeno{' '}
+            <span className="tabular-nums">{filtered.length}</span>
+          </span>
+        )}
       </div>
 
       {editing && (
@@ -363,8 +438,10 @@ export function InternalProjectsBrowser({
         onMoveColumn={presun}
         onHideColumn={skryj}
         emptyText={
-          query
-            ? 'Hledání nic nenašlo.'
+          hledanyText
+            ? iDokoncene
+              ? 'Hledání nic nenašlo ani mezi dokončenými.'
+              : 'Hledání nic nenašlo. Zkuste zaškrtnout „Hledat i v dokončených“.'
             : tab === 'active'
               ? 'Aktuálně nejsou žádné rozpracované projekty.'
               : (finishedNote ?? 'Zatím tu nejsou žádné dokončené projekty.')

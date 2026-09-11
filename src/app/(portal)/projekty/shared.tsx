@@ -229,6 +229,8 @@ export type InternalProjectMeta = {
    * 11. 9. 2026: "fajfku prosim v prehledu i v detailu").
    */
   herci: { jmeno: string; dotoceno: boolean }[];
+  /** Jména herců jedním textem - jen pro hledání, nikde se nevypisuje. */
+  herciJmenaText: string;
 };
 
 export type InternalProject = AdminDisplayProject & {

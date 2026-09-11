@@ -233,6 +233,7 @@ async function InternalProjektySection({
           jmeno: h.name || h.email,
           dotoceno: dotoceni.has(`${m.caflouProjectId}:${h.id}`),
         })),
+        herciJmenaText: m.herci.map((h) => h.name || h.email).join(' '),
       },
     ]),
   );
