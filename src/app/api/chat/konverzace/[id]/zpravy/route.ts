@@ -76,7 +76,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // ?vlakno=<id> vrati zpravu a odpovedi pod ni; jinak hlavni proud, tedy
     // jen zpravy bez rodice (zadani 8. 9. 2026: odpovedi ve vlakne).
     const vlakno = req.nextUrl.searchParams.get('vlakno');
-    const zpravy = await prisma.message.findMany({
+    // Cteni zprav a zapis "precteno" jsou na sobe nezavisle, takze jdou do
+    // databaze najednou. Za sebou to byla jedna zbytecna cesta tam a zpet
+    // navic pri kazdem otevreni konverzace (oprava 10. 9. 2026: "v MS chatu
+    // se strasne dlouho nacitaji zpravy").
+    const [zpravy] = await Promise.all([
+      prisma.message.findMany({
       where: vlakno
         ? { conversationId: conversation.id, OR: [{ id: vlakno }, { parentId: vlakno }] }
         : { conversationId: conversation.id, parentId: null },
@@ -101,15 +106,16 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           },
         },
       },
-    });
+      }),
+      // Otevrel jsem si ji, takze je precteno. U kanalu k projektu tim zaroven
+      // vznikne radek clenstvi, ktery drzi stav precteni.
+      prisma.conversationMember.upsert({
+        where: { conversationId_userId: { conversationId: conversation.id, userId: me } },
+        update: { lastReadAt: new Date() },
+        create: { conversationId: conversation.id, userId: me },
+      }),
+    ]);
 
-    // Otevrel jsem si ji, takze je precteno. U kanalu k projektu tim zaroven
-    // vznikne radek clenstvi, ktery drzi stav precteni.
-    await prisma.conversationMember.upsert({
-      where: { conversationId_userId: { conversationId: conversation.id, userId: me } },
-      update: { lastReadAt: new Date() },
-      create: { conversationId: conversation.id, userId: me },
-    });
 
     // "Zobrazeno": kdo mel konverzaci otevrenou uz potom, co zprava prisla.
     // Bere se z lastReadAt clena - stejneho udaje, ze ktereho se pocitaji

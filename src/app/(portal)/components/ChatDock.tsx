@@ -802,6 +802,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const [team, setTeam] = useState<ChatTeamMember[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [zpravyNacitam, setZpravyNacitam] = useState(false);
+  /** Uz nactene konverzace - pri navratu se ukazou hned, bez cekani na server. */
+  const cacheZprav = useRef(new Map<string, ChatMessage[]>());
+  /** Ktera konverzace je opravdu otevrena - viz nactiZpravy. */
+  const otevrenaRef = useRef<string | null>(null);
   const [draft, setDraft] = useState('');
   // Otevrene vlakno (zadani 8. 9. 2026) - ID zpravy, pod kterou se odpovida.
   const [vlaknoId, setVlaknoId] = useState<string | null>(null);
@@ -953,14 +958,32 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     }
   }, []);
 
-  const nactiZpravy = useCallback(async (conversationId: string) => {
+  /**
+   * Nacteni zprav konverzace.
+   *
+   * `tiche` = obnoveni na pozadi (kazdych par vterin nebo po odeslani) -
+   * neprepina stav "nacitam", aby vypis neproblikaval.
+   *
+   * Uz nactene zpravy si drzime v pameti prohlizece (oprava 10. 9. 2026:
+   * "kdyz kliknu na konverzaci, nejdriv se objevi, ze zatim nikdo nic
+   * nenapsal, a pak se to za nejakou dobu nacte"). Pri navratu do konverzace
+   * se tak ukazou hned a nova data je jen tise prepisou.
+   */
+  const nactiZpravy = useCallback(async (conversationId: string, tiche = false) => {
+    if (!tiche) setZpravyNacitam(true);
     try {
       const res: Response = await fetch(`/api/chat/konverzace/${conversationId}/zpravy`);
       if (!res.ok) return;
       const data: any = await res.json().catch(() => ({}));
-      setMessages(Array.isArray(data?.zpravy) ? data.zpravy : []);
+      const zpravy: ChatMessage[] = Array.isArray(data?.zpravy) ? data.zpravy : [];
+      cacheZprav.current.set(conversationId, zpravy);
+      // Pomala odpoved na konverzaci, ze ktere uz clovek odesel, se zahodi -
+      // jinak by prepsala vypis te otevrene.
+      if (otevrenaRef.current === conversationId) setMessages(zpravy);
     } catch {
       // nevadi, zkusi se znovu
+    } finally {
+      if (!tiche) setZpravyNacitam(false);
     }
   }, []);
 
@@ -970,16 +993,28 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     void nactiKonverzace();
     const timer = setInterval(() => {
       void nactiKonverzace();
-      if (openId) void nactiZpravy(openId);
+      if (openId) void nactiZpravy(openId, true);
       if (openId && vlaknoId) void nactiVlakno(openId, vlaknoId);
     }, REFRESH_MS);
     return () => clearInterval(timer);
   }, [nactiKonverzace, nactiZpravy, nactiVlakno, openId, vlaknoId]);
 
   useEffect(() => {
-    if (openId) void nactiZpravy(openId);
-    else setMessages([]);
+    otevrenaRef.current = openId;
     setVlaknoId(null);
+    if (!openId) {
+      setMessages([]);
+      return;
+    }
+    const ulozene = cacheZprav.current.get(openId);
+    if (ulozene) {
+      // Uz jsme tu byli - ukazeme, co mame, a novinky doplnime na pozadi.
+      setMessages(ulozene);
+      void nactiZpravy(openId, true);
+    } else {
+      setMessages([]);
+      void nactiZpravy(openId);
+    }
   }, [openId, nactiZpravy]);
 
   useEffect(() => {
@@ -1159,7 +1194,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         setVlaknoDraft('');
         setPrilohyVlakno([]);
         setVlakno((current) => [...current, data as ChatMessage]);
-        void nactiZpravy(openId);
+        void nactiZpravy(openId, true);
       } else {
         setDraft('');
         setPrilohyHlavni([]);
@@ -1549,9 +1584,24 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       8. 9. 2026: "cele je to takove bile, sterilni"). */}
                   <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-surfaceSoft">
                     {messages.length === 0 && (
-                      <p className="text-sm font-body text-muted m-0">Zatím tu nikdo nic nenapsal.</p>
+                      <p className="text-sm font-body text-muted m-0">
+                        {zpravyNacitam ? 'Načítám zprávy…' : 'Zatím tu nikdo nic nenapsal.'}
+                      </p>
                     )}
-                    {messages.map((m, index) => (
+                    {messages.map((m, index) => {
+                      /**
+                       * Odkaz "Odpovedet" se ukazuje jen u POSLEDNI zpravy
+                       * ze serie od jednoho autora (zadani 10. 9. 2026:
+                       * "kdyz napise nekdo vice zprav za sebou, at se pod
+                       * kazdou neobjevuje odpovedet, strasne to zabira
+                       * misto"). Zprava, pod kterou uz nejake odpovedi visi,
+                       * si svuj odkaz nechava vzdycky - jinak by k vlaknu
+                       * nebyla cesta.
+                       */
+                      const dalsi = messages[index + 1];
+                      const posledniOdAutora = !dalsi || dalsi.authorId !== m.authorId;
+                      const ukazOdpovedet = m.replyCount > 0 || posledniOdAutora;
+                      return (
                       <div key={m.id} className="flex flex-col gap-3">
                         {(index === 0 || !stejnyDen(m.createdAt, messages[index - 1].createdAt)) && (
                           <DenOddelovac iso={m.createdAt} />
@@ -1599,13 +1649,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                           {/* Zobrazeno i odkaz do vlakna na jednom radku -
                               samostatny radek na odpoved zabiral moc mista
                               (zprava uzivatele 8. 9. 2026). */}
+                          {(m.mine || ukazOdpovedet) && (
                           <span className="mt-0.5 flex items-center gap-2 flex-wrap">
-                            {m.mine && (
-                              <>
-                                <Zobrazeno seenBy={m.seenBy} />
-                                <span className="text-[11px] text-muted/40">·</span>
-                              </>
-                            )}
+                            {m.mine && <Zobrazeno seenBy={m.seenBy} />}
+                            {m.mine && ukazOdpovedet && <span className="text-[11px] text-muted/40">·</span>}
+                            {ukazOdpovedet && (
                             <button
                               type="button"
                               onClick={() => setVlaknoId(m.id)}
@@ -1617,6 +1665,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                 ? `${m.replyCount} ${m.replyCount === 1 ? 'odpověď' : m.replyCount < 5 ? 'odpovědi' : 'odpovědí'} ›`
                                 : 'Odpovědět'}
                             </button>
+                            )}
                             {/* Upravit smi jen autor - i na serveru (zadani
                                 9. 9. 2026: "bylo by super upravovat me
                                 odeslane zpravy, kdyz se treba spletu"). */}
@@ -1633,10 +1682,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               </>
                             )}
                           </span>
+                          )}
                         </div>
                       </div>
                       </div>
-                    ))}
+                      );
+                    })}
                     <div ref={konecRef} />
                   </div>
 
