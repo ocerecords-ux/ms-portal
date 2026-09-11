@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: vysledek.message }, { status: 409 });
   }
 
-  return new NextResponse(vysledek.pdf, {
+  // Uint8Array, ne Buffer - typy Next.js Buffer jako telo odpovedi neberou
+  // (stejne jako u nahledu Rodneho listu).
+  return new NextResponse(new Uint8Array(vysledek.pdf), {
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
