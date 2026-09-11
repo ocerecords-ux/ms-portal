@@ -253,7 +253,9 @@ export function Preposlech({
    * zavře. Samovolný skok doprostřed nahrávky by mátl víc, než pomohl.
    */
   const [zalozka, setZalozka] = useState<{ trackIndex: number; localTime: number } | null>(null);
-  const [zalozkaSkryta, setZalozkaSkryta] = useState(false);
+  // Kresli se do canvasu mimo React render, proto i ref.
+  const zalozkaRef = useRef<{ trackIndex: number; localTime: number } | null>(null);
+  zalozkaRef.current = zalozka;
 
   /** Na celou obrazovku (zadání 11. 9. 2026). */
   const celaObrazovkaRef = useRef<HTMLDivElement | null>(null);
@@ -357,6 +359,13 @@ export function Preposlech({
           c.fillRect(Math.max(0, (ch.localTime / trvani) * w - 1.5), 0, 3, h);
         });
 
+      // Zalozka - tenka oranzova carka tam, kde se skoncilo.
+      const zal = zalozkaRef.current;
+      if (zal && zal.trackIndex === index + 1 && trvani) {
+        c.fillStyle = '#E08A00';
+        c.fillRect(Math.max(0, (zal.localTime / trvani) * w - 1), 0, 2, h);
+      }
+
       if (jeAktivni && kurzor >= 0) c.fillRect(Math.max(0, kurzor - 0.5), 0, 1, h);
       c.restore();
     },
@@ -377,7 +386,7 @@ export function Preposlech({
 
   useEffect(() => {
     kresliVse();
-  }, [kresliVse, stopy, pozice, delka, stav.chyby]);
+  }, [kresliVse, stopy, pozice, delka, stav.chyby, zalozka]);
 
   useEffect(() => {
     window.addEventListener('resize', kresliVse);
@@ -1348,33 +1357,6 @@ export function Preposlech({
           </div>
 
           <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
-            {/* Zalozka z minule - nabidne se, neskace se tam samo. */}
-            {zalozka && !zalozkaSkryta && stopy.length > 0 && (
-              <div className="flex items-center gap-3 flex-wrap rounded-card border border-brand-purple bg-tint px-4 py-2.5">
-                <span className="text-sm font-body text-brand-purpleDark m-0 flex-1 min-w-[200px]">
-                  Posledně jste skončili u stopy <b>{pad2(zalozka.trackIndex)}</b> v čase{' '}
-                  <b className="tabular-nums">{cas(zalozka.localTime)}</b>.
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    vyberStopu(zalozka.trackIndex - 1, zalozka.localTime);
-                    setZalozkaSkryta(true);
-                  }}
-                  className="font-heading font-semibold text-sm rounded-lg bg-brand-purple text-white px-4 py-2 hover:bg-brand-purpleDeep transition-colors"
-                >
-                  Pokračovat odtud
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setZalozkaSkryta(true)}
-                  className="font-heading text-xs text-muted hover:text-ink"
-                >
-                  Začít od začátku
-                </button>
-              </div>
-            )}
-
             {/* Displej je zámerně na JEDEN ŘÁDEK (zadání 11. 9. 2026: „ten
                 display už zabírá dost místa, celé bych to hodně zmenšil").
                 Číslo stopy a čas zůstávají to největší na něm — na ně se
@@ -1537,9 +1519,38 @@ export function Preposlech({
                       index === aktivni ? 'border-brand-purple bg-tint' : 'border-line bg-surface'
                     }`}
                   >
-                    <button type="button" onClick={() => vyberStopu(index)} className="w-full flex items-center gap-2 px-3 py-1.5 text-left">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        // Stopa se zalozkou se otevre rovnou tam, kde se
+                        // skoncilo - presne jako kdyz se kniha otevre na
+                        // zalozce.
+                        vyberStopu(index, zalozka?.trackIndex === index + 1 ? zalozka.localTime : undefined)
+                      }
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left"
+                    >
                       <span className="text-[11px] font-heading font-bold tabular-nums bg-field rounded px-1.5 py-0.5">{pad2(index + 1)}</span>
                       <span className="flex-1 min-w-0 text-xs font-body text-ink truncate">{stopa.name}</span>
+                      {/**
+                       * Záložka jako v knize (zadání 11. 9. 2026: „pracoval
+                       * bych s tím jako s fyzickou záložkou v knize").
+                       *
+                       * Předtím to byl proužek přes celou šířku nad
+                       * přehrávačem — velký a pořád na očích, i když ho
+                       * člověk nepotřeboval. Teď je to stužka u té jedné
+                       * stopy, ve které se skončilo, plus tenká čárka na
+                       * křivce přesně v tom místě. Kdo si pauzu nedal, ani
+                       * si jí nevšimne.
+                       */}
+                      {zalozka?.trackIndex === index + 1 && (
+                        <span
+                          title={`Tady jste skončili (${cas(zalozka.localTime)}) — kliknutím pokračujete`}
+                          className="shrink-0 inline-flex items-center gap-1 text-[10px] font-heading font-semibold text-status-progress"
+                        >
+                          <span aria-hidden="true">🔖</span>
+                          <span className="tabular-nums">{cas(zalozka.localTime)}</span>
+                        </span>
+                      )}
                       {stopa.krivkaStav === 'pocita' && <span className="text-[10px] font-heading text-muted">kreslím křivku…</span>}
                       {!jenPoslech && (
                         <span className="text-[10px] font-heading text-muted tabular-nums">+{hms(index * DELKA_STOPY_V_CUBASE)}</span>
