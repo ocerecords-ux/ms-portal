@@ -1,11 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import {
-  listCaflouProjectsForCompanyCached,
-  mapCaflouProjects,
-  type DisplayProject,
-} from '@/lib/caflou';
+import type { DisplayProject } from '@/lib/projektyTypy';
 import { canEditProjectMeta, isInternalRole } from '@/lib/roles';
 import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
@@ -14,15 +10,14 @@ import { NovyProjektForm } from './NovyProjektForm';
 import { listProjectTypeOptions, mapaIkonTypu } from '@/lib/priceList';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadColumnSettings } from '@/lib/columnLabelsServer';
-import { loadInternalProjects } from '@/lib/caflouProjectsServer';
+import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 import { odkazNaFotku } from '@/lib/fotky';
 
-// DULEZITE: tato stranka tahá projekty ZIVE z Caflou při každém zobrazení -
-// nesmí ji Next.js pri buildu "zamrazit" jako statickou stránku (to by
-// klientovi natvrdo zapeklo výsledek jednoho dotazu z okamžiku buildu,
-// včetně případné chyby, a nikdy by se sám neopravil bez nového nasazení).
+// DULEZITE: stránka čte projekty při každém zobrazení - nesmí ji Next.js
+// pri buildu "zamrazit" jako statickou stránku (to by klientovi natvrdo
+// zapeklo stav z okamžiku buildu a nikdy by se sám neopravil bez nasazení).
 export const dynamic = 'force-dynamic';
 
 export default async function ProjektyPage() {
@@ -30,8 +25,8 @@ export default async function ProjektyPage() {
 
   // Interni ucty Mediaspace (Zuzo-labuzo / Produkce / Zvukar) nemaji
   // companyId (nepatri pod zadnou firmu) - misto prazdne "nemate zadne
-  // projekty" hlasky jim tu ukazeme prehled VSECH projektu z Caflou napric
-  // firmami, rozdeleny na aktivni a dokoncene (zadani 5. 9. 2026).
+  // projekty" hlasky jim tu ukazeme prehled VSECH projektu napric firmami,
+  // rozdeleny na aktivni a dokoncene (zadani 5. 9. 2026).
   if (isInternalRole(session!.user.role)) {
     return (
       <InternalProjektySection
@@ -46,17 +41,13 @@ export default async function ProjektyPage() {
 
   const company = companyId ? await prisma.company.findUnique({ where: { id: companyId } }) : null;
 
-  // Projekty se ctou zive z Caflou (viz src/lib/caflou.ts) - portal je uz nikde
-  // sam nezaklada ani needituje, "projekty se menezuji hlavne v Caflou".
-  let active: DisplayProject[] = [];
-  let finished: DisplayProject[] = [];
-  let loadError = false;
-
-  // Vlastni data maji prednost (prechod z Caflou, 10. 9. 2026). Jakmile je
-  // projekt v portalu, klient ho vidi odtud a do Caflou se uz nechodi.
+  // Projekty se ctou z NASI databaze (od 11. 9. 2026 - odpojeni Caflou).
+  //
   // KDO CO VIDI (oprava 11. 9. 2026): klient nevidi vsechny projekty sve
   // firmy, ale jen ty, u kterych je napsany jako klient. U vetsich firem
   // (Audioteka) na sebe lide z ruznych oddeleni videli navzajem.
+  let active: DisplayProject[] = [];
+  let finished: DisplayProject[] = [];
   const jaId = session!.user.id;
 
   const zPortalu = company
@@ -91,7 +82,7 @@ export default async function ProjektyPage() {
       releaseDate: p.releaseDate,
       startDate: p.startDate,
       endDate: p.endDate,
-      // Projekt uz je v portalu, takze stitek z Caflou nema co resit.
+      // Projekt uz je v portalu, takze stary stitek nema co resit.
       clientTag: null,
     }));
     active = vsechny
@@ -104,27 +95,6 @@ export default async function ProjektyPage() {
           (b.endDate?.getTime() ?? b.finishedAt?.getTime() ?? 0) -
           (a.endDate?.getTime() ?? a.finishedAt?.getTime() ?? 0),
       );
-  } else if (company?.caflouCompanyId) {
-    try {
-      const result = await listCaflouProjectsForCompanyCached(company.caflouCompanyId);
-      if (result.ok) {
-        const all = await jenMojeProjekty(mapCaflouProjects(result.body), jaId);
-        active = all
-          .filter((p) => !p.finished)
-          .sort((a, b) => (a.endDate?.getTime() ?? Infinity) - (b.endDate?.getTime() ?? Infinity));
-        finished = all
-          .filter((p) => p.finished)
-          .sort(
-            (a, b) =>
-              (b.endDate?.getTime() ?? b.finishedAt?.getTime() ?? 0) -
-              (a.endDate?.getTime() ?? a.finishedAt?.getTime() ?? 0),
-          );
-      } else {
-        loadError = true;
-      }
-    } catch {
-      loadError = true;
-    }
   }
 
   // Rodne listy radiovych spotu (zadani 9. 9. 2026) - klient je vidi rovnou
@@ -139,16 +109,6 @@ export default async function ProjektyPage() {
     <section className="flex flex-col gap-8">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
-        {!company?.caflouCompanyId && (
-          <span className="text-xs font-heading text-brand-purpleDark bg-tint border border-line rounded-lg px-3 py-2">
-            Napojení na Caflou zatím čeká na dokončení nastavení
-          </span>
-        )}
-        {company?.caflouCompanyId && loadError && (
-          <span className="text-xs font-heading text-danger bg-dangerTint border border-line rounded-lg px-3 py-2">
-            Projekty se nepodařilo načíst z Caflou. Zkuste to prosím později.
-          </span>
-        )}
       </div>
 
       <div>
@@ -179,17 +139,13 @@ async function InternalProjektySection({
   /** Prehazovat stav projektu smi Produkce a Zuzo-labuzo. */
   muzeMenitStav: boolean;
 }) {
-  // Seznam projektu se bere pres sdilenou cache (lib/caflouProjectsServer.ts):
-  // pamet instance -> tabulka v databazi -> teprve pak Caflou. Stahovani
-  // celeho uctu z Caflou je osm dotazu za sebou (mereno 12,5 s) a drive se
-  // platilo pokazde, kdyz pozadavek obslouzila jina instance funkce.
+  // Projekty jsou nase - jeden dotaz do databaze (viz lib/projektySeznamServer.ts).
   const { projects, error } = await loadInternalProjects();
 
-  // Rodne listy reklamnich spotu (zadani 9. 9. 2026). Caflou nam zmenu stavu
-  // nehlasi, takze se porovna s poslednim videnym stavem prave tady - interni
-  // prehled projektu je misto, kam se produkce diva nejcasteji. Kdyz se stav
-  // od minule nezmenil, neudela to nic; opakovane nacteni stranky tedy zadny
-  // duplicitni dokument nevyrobi.
+  // Rodne listy reklamnich spotu (zadani 9. 9. 2026). Porovnava se s poslednim
+  // videnym stavem prave tady - interni prehled projektu je misto, kam se
+  // produkce diva nejcasteji. Kdyz se stav od minule nezmenil, neudela to nic;
+  // opakovane nacteni stranky tedy zadny duplicitni dokument nevyrobi.
   await syncRodneListy(
     projects.map((p) => ({
       caflouProjectId: String(p.id),
@@ -306,7 +262,7 @@ async function InternalProjektySection({
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
         {error && (
           <span className="text-xs font-heading text-danger bg-dangerTint border border-line rounded-lg px-3 py-2">
-            Projekty se nepodařilo načíst z Caflou. {error}
+            Projekty se nepodařilo načíst. {error}
           </span>
         )}
       </div>

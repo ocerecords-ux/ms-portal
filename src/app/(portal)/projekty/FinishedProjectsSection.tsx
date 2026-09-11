@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { DisplayProject } from '@/lib/caflou';
+import type { DisplayProject } from '@/lib/projektyTypy';
 import { ProjectsTable } from './shared';
 
 const PAGE_SIZE = 20;

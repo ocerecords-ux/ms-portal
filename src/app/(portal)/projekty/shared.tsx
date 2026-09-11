@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ZeptatSe } from './ZeptatSe';
 import type { ProjectPriority } from '@prisma/client';
-import type { AdminDisplayProject, DisplayProject } from '@/lib/caflou';
+import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { initials } from '@/lib/chat';

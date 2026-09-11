@@ -7,6 +7,7 @@ import { canEditProjectMeta } from '@/lib/roles';
 import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
 import { STAVY_PROJEKTU, jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
+import { noveIdProjektu } from '@/lib/projektId';
 
 /**
  * Založení projektu v portálu (zadání 10. 9. 2026: "teď potřebuju, aby šlo
@@ -42,11 +43,6 @@ const schema = z.object({
   /** Zakladat slozku na Disku? Kdyz uz slozka existuje, da se to vypnout. */
   zalozitSlozku: z.boolean().optional(),
 });
-
-/** Číslo projektu odvozené z času - viz poznámka k ID nahoře. */
-function noveIdProjektu(): string {
-  return String(Date.now());
-}
 
 function naDatum(hodnota?: string): Date | null {
   if (!hodnota) return null;

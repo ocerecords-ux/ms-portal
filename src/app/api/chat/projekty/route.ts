@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { listAllCaflouProjectsForInternal } from '@/lib/caflou';
+import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { canUseChat } from '@/lib/chatServer';
 
 // Rozpracovane projekty pro zalozku "Projekty" v chatu (zadani 8. 9. 2026).
-// Nacita se az na vyzadani, kdyz si nekdo zalozku otevre - kdyby to viselo v
-// layoutu, tahal by se Caflou pri kazdem zobrazeni jakekoliv stranky.
+// Nacita se az na vyzadani, kdyz si nekdo zalozku otevre - v layoutu by to
+// znamenalo dotaz navic pri kazdem zobrazeni jakekoliv stranky.
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -17,13 +16,7 @@ export async function GET() {
   }
 
   try {
-    const companies = await prisma.company.findMany({
-      where: { caflouCompanyId: { not: null } },
-      select: { name: true, caflouCompanyId: true },
-    });
-    const { projects, error } = await listAllCaflouProjectsForInternal(
-      companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
-    );
+    const { projects, error } = await loadInternalProjects();
     if (error) return NextResponse.json({ projekty: [], chyba: error });
 
     const projekty = projects
@@ -36,6 +29,6 @@ export async function GET() {
     return NextResponse.json({ projekty, chyba: null });
   } catch (err) {
     console.error('GET /api/chat/projekty selhalo:', err);
-    return NextResponse.json({ projekty: [], chyba: 'Projekty se nepodařilo načíst z Caflou.' });
+    return NextResponse.json({ projekty: [], chyba: 'Projekty se nepodařilo načíst.' });
   }
 }

@@ -24,6 +24,11 @@ import type { ProjectPriority } from '@prisma/client';
 
 import { isProjectFinished } from '@/lib/projectTypes';
 import { cached } from '@/lib/cache';
+import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
+
+// Typy projektu uz nepatri Caflou (viz lib/projektyTypy.ts) - tady se jen
+// pouzivaji pri jednorazovem prenosu. Re-export je kvuli starsim importum.
+export type { AdminDisplayProject, DisplayProject };
 
 const CAFLOU_BASE = 'https://app.caflou.com/api/v1';
 
@@ -145,33 +150,6 @@ export async function listCaflouCompanies(search?: string): Promise<CaflouResult
 }
 
 /** Projekt v podobe pripravene pro klientske zobrazeni (sekce "Projekty" v portalu). */
-export type DisplayProject = {
-  id: number;
-  name: string;
-  /**
-   * Dokonceny projekt = priznak `finished` z Caflou (= projekt je tam
-   * uzavreny). Presne podle nej deli projekty i Caflou samo - 35 aktivnich a
-   * 668 ukoncenych, overeno 8. 9. 2026. Stitek (project_status_name) je jen
-   * popisek workflow a muze zustat viset kdekoliv, takze slouzi uz jen jako
-   * zaloha, kdyz priznak nedorazi. Viz lib/projectTypes.ts.
-   */
-  finished: boolean;
-  statusName: string;
-  /** Priorita z Caflou (zadani 5. 9. 2026: prioritu cerpat z Caflou, ne z portalu). */
-  priority: ProjectPriority | null;
-  narrator: string | null;
-  pageCount: number | null;
-  finishedAt: Date | null;
-  releaseDate: Date | null;
-  startDate: Date | null;
-  endDate: Date | null;
-  /**
-   * Kdo je u projektu v Caflou napsany jako objednavajici - Caflou to drzi
-   * ve stitcich (`tags`). Pouziva se jen prechodne, dokud projekty nemaji
-   * v portalu vyplneneho klienta (viz ProjectMeta.klientUserId).
-   */
-  clientTag: string | null;
-};
 
 function toIntOrNull(v: unknown): number | null {
   if (v === null || v === undefined || v === '') return null;
@@ -304,7 +282,6 @@ export function mapOneCaflouProject(p: any): DisplayProject {
   };
 }
 
-export type AdminDisplayProject = DisplayProject & { companyName: string; caflouCompanyId: string | null };
 
 /**
  * Nacte aktivni + dokoncene projekty napric VICE firmami najednou (pro admin

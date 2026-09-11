@@ -39,6 +39,8 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/moje-terminy': ['HEREC'],
   // Administrace - jen Zuzo-labuzo.
   '/admin': ['ADMIN'],
+  // Firmy z Caflou uz nejsou v menu (odpojeni 11. 9. 2026), stranka ale
+  // zustava - je to posledni cesta, jak neco z Caflou dohledat.
   '/admin/caflou-firmy': ['ADMIN'],
   '/admin/users': ['ADMIN'],
   '/admin/ceniky': ['ADMIN'],
@@ -76,7 +78,6 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/kalendar', label: 'Kalendář' },
   { href: '/moje-terminy', label: 'Moje termíny' },
   { href: '/admin', label: 'Firmy' },
-  { href: '/admin/caflou-firmy', label: 'Firmy z Caflou' },
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/ceniky', label: 'Ceníky' },
   { href: '/admin/studia', label: 'Studia' },

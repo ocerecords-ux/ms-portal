@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { findCaflouProjectInList, getCaflouProject } from '@/lib/caflou';
 import { canEditProjectMeta, canManageCalendar, canViewProjectDocuments, isInternalRole } from '@/lib/roles';
 import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu } from '@/lib/priceList';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
@@ -26,12 +25,12 @@ import { OdkazProKlienta } from './OdkazProKlienta';
 import { nactiPreposlech } from '@/lib/preposlechServer';
 import { stavOdkazu } from '@/lib/preposlechOdkaz';
 import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
-import { findInternalProject } from '@/lib/caflouProjectsServer';
+import { findInternalProject } from '@/lib/projektySeznamServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
-import { loadRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
+import { loadRodneListy } from '@/lib/rodnyListServer';
 import { bezStarePredpony, dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
 
-// Detail projektu (zadani 5. 9. 2026). Projekt sam o sobe zije v Caflou -
+// Detail projektu (zadani 5. 9. 2026). Od 11. 9. 2026 projekt zije v portalu -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
 // atributy (odkaz na KZ, manazer, priorita, typ projektu - model ProjectMeta).
 //
@@ -53,10 +52,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // tady cekalo postupne na tri skupiny dotazu za sebou, a teprve pak na dalsi.
   // Kazda takova bariera znamena dalsi kolecko tam a zpet do Supabase - a
   // protoze si kazda instance funkce drzi jen JEDNO spojeni (viz lib/db.ts),
-  // scitalo se to. Ted jde do databaze vsechno naraz a soubezne s tim bezi
-  // dotaz do Caflou, takze se ceka jen na to nejpomalejsi z toho.
+  // scitalo se to. Ted jde do databaze vsechno naraz, takze se ceka jen na to
+  // nejpomalejsi z toho.
   const [
-    caflouDirect,
+    zSeznamu,
     meta,
     managers,
     klientiUctu,
@@ -77,9 +76,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     historie,
     ikonyTypu,
   ] = await Promise.all([
-    // Nejdriv sdileny seznam projektu (lib/caflouProjectsServer.ts) - ma uz
-    // vsechno, co se tu z Caflou ukazuje, a byva nacteny. Doptat se Caflou
-    // primo se necha az jako zaloha nize.
+    // Projekt tak, jak se ukazuje v prehledu (lib/projektySeznamServer.ts).
     findInternalProject(caflouProjectId),
     prisma.projectMeta.findUnique({
       where: { caflouProjectId },
@@ -163,42 +160,23 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     mapaIkonTypu(),
   ]);
 
-  // Zalohy pro pripad, ze projekt jeste neni ve sdilenem seznamu (zalozeny
-  // pred chvili): detail jednoho projektu z Caflou, a kdyz ho ucet nevraci,
-  // dohledani v seznamu vsech projektu.
-  const caflou =
-    caflouDirect ??
-    (await getCaflouProject(caflouProjectId)) ??
-    (await findCaflouProjectInList(caflouProjectId));
-
-  // Nazev firmy k projektu doplnujeme z nasi databaze podle ID firmy v Caflou.
-  const company = caflou?.caflouCompanyId
-    ? await prisma.company.findFirst({
-        where: { caflouCompanyId: caflou.caflouCompanyId },
+  // Firma projektu. Od 11. 9. 2026 ji projekt drzi primo (ProjectMeta.companyId);
+  // dohledani podle stareho ID z Caflou zustava jen pro projekty, ktere jeste
+  // vlastni firmu vyplnenou nemaji.
+  const company = meta?.companyId
+    ? await prisma.company.findUnique({
+        where: { id: meta.companyId },
         select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true },
       })
-    : null;
+    : zSeznamu?.caflouCompanyId
+      ? await prisma.company.findFirst({
+          where: { caflouCompanyId: zSeznamu.caflouCompanyId },
+          select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true },
+        })
+      : null;
 
-  const project = caflou?.project ?? null;
+  const project = zSeznamu?.project ?? null;
 
-  // Rodny list reklamniho spotu (zadani 9. 9. 2026). Do 10. 9. 2026 se prechod
-  // do stavu "Dokonceno - ke schvaleni" poznaval az tady pri otevreni detailu,
-  // protoze stav prepinalo Caflou a nikdo nam to nehlasil. Ted stav prehazuje
-  // clovek primo v portalu, takze se RL vyrabi rovnou pri te zmene
-  // (/api/projects/[id]/meta) - a tohle uz tu byt nemusi.
-  //
-  // Kontrola pri otevreni zustava jen pro projekty, ktere jeste nemaji stav
-  // z portalu; dokud neprobehne prenos, chodi porad z Caflou.
-  if (project && !meta?.statusName) {
-    await syncRodneListy([
-      {
-        caflouProjectId,
-        projectName: project.name,
-        statusName: project.statusName,
-        caflouCompanyId: caflou?.caflouCompanyId ?? null,
-      },
-    ]);
-  }
 
   // Rodny list i Hudba ve spotu se delaji jen u radiovych spotu (upresneni
   // 9. 9. 2026, rozsireno 10. 9. 2026) - pozna se to podle typu projektu,

@@ -1,4 +1,4 @@
-import { loadInternalProjects } from '@/lib/caflouProjectsServer';
+import { loadInternalProjects } from '@/lib/projektySeznamServer';
 
 /**
  * Nabídka projektů pro doklady (zadani 8. 9. 2026: "chtel bych mit Doklady

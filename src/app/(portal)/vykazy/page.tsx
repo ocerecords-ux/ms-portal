@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { listAllCaflouProjectsForInternal } from '@/lib/caflou';
+import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { DEFAULT_HOURLY_RATE } from '@/lib/timesheets';
 import { TimesheetEditor } from './TimesheetEditor';
 
@@ -21,7 +21,7 @@ export default async function TimesheetsPage() {
   // výkazy nedělá") - Zuzo-labuzo ma tuhle stranku jen jako prehled.
   const canWrite = role === 'ZVUKAR';
 
-  const [me, entries, companies] = await Promise.all([
+  const [me, entries] = await Promise.all([
     prisma.user.findUnique({ where: { id: session.user.id }, select: { hourlyRate: true } }),
     prisma.timesheetEntry.findMany({
       // Zvukar nikdy nedostane data kolegu - filtruje se uz v dotazu, ne az
@@ -31,21 +31,13 @@ export default async function TimesheetsPage() {
       take: 2000,
       include: { user: { select: { id: true, name: true, email: true } } },
     }),
-    prisma.company.findMany({
-      where: { caflouCompanyId: { not: null } },
-      select: { name: true, caflouCompanyId: true },
-      orderBy: { name: 'asc' },
-    }),
   ]);
 
-  // Nabidka projektu pro vyber - z Caflou, stejny (cachovany) seznam jako
-  // pouziva prehled Projekty, takze to nic navic nestoji. Zuzo-labuzo si
-  // vykaz nepise, takze pro nej seznam vubec nenacitame.
+  // Nabidka projektu pro vyber - stejny seznam, jaky pouziva prehled Projekty.
+  // Zuzo-labuzo si vykaz nepise, takze pro nej seznam vubec nenacitame.
   const projectOptions = canWrite
     ? await (async () => {
-        const { projects } = await listAllCaflouProjectsForInternal(
-          companies.map((c) => ({ name: c.name, caflouCompanyId: c.caflouCompanyId! })),
-        );
+        const { projects } = await loadInternalProjects();
         // Vykaz jde pridat jen k rozpracovanemu projektu (zadani 6. 9. 2026).
         return projects
           .filter((p) => !p.finished)

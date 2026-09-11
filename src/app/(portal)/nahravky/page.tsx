@@ -2,10 +2,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { extractDriveFolderId } from '@/lib/googleDrive';
-import { getCaflouCompanyName } from '@/lib/caflou';
 import { DriveBrowser } from './DriveBrowser';
 
-// Stejne jako u Projektu - tahá se tu živě jméno firmy z Caflou, takže
+// Stejne jako u Projektu - stránka se skládá při každém zobrazení, takže
 // stránka nesmí být Next.js zamrazená jako statická (viz komentář v
 // src/app/(portal)/projekty/page.tsx).
 export const dynamic = 'force-dynamic';
@@ -38,12 +37,9 @@ export default async function NahravkyPage({
   const projektJeJeho = Boolean(projekt && companyId && projekt.companyId === companyId);
   const projektovaSlozka = projektJeJeho && projekt?.driveUrl ? projekt.driveUrl : null;
 
-  // Presny obchodni nazev (vc. s.r.o./LTD apod.) tahame primo z Caflou - je to
-  // zdroj pravdy pro firemni udaje. Company.name je jen zalozni hodnota pro
-  // pripad, ze firma jeste nema ID v Caflou vyplnene, nebo kdyz Caflou zrovna
-  // neodpovi.
-  const displayName =
-    (company?.caflouCompanyId ? await getCaflouCompanyName(company.caflouCompanyId) : null) ?? company?.name ?? '';
+  // Obchodni nazev firmy drzi od 11. 9. 2026 portal (karta firmy). Do te doby
+  // se tahal pri kazdem zobrazeni z Caflou, aby souhlasil vcetne "s.r.o.".
+  const displayName = company?.name ?? '';
 
   // Slozka projektu ma prednost pred slozkou firmy - klient prisel z mailu
   // o konkretnim projektu a nema se proklikavat celym archivem.

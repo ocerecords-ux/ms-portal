@@ -6,7 +6,9 @@ import { prisma } from '@/lib/db';
 import { calculatePrice } from '@/lib/price';
 import { uploadOrderAttachment } from '@/lib/storage';
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/email';
-import { createCaflouProject } from '@/lib/caflou';
+import { noveIdProjektu } from '@/lib/projektId';
+import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
+import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
 
 // Druh objednavky (zadani 12. 9. 2026 - viz OrderKind ve schema.prisma).
 // AUDIOBOOK je vychozi a zachovava puvodni chovani (normostrany, cena,
@@ -87,7 +89,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 1) Objednavka a navazany projekt se ulozi VZDY - tohle je zdroj pravdy,
-  //    nezavisly na tom, jestli se pozdeji povede e-mail nebo Caflou.
+  //    nezavisly na tom, jestli se pozdeji povede e-mail.
   const order = await prisma.order.create({
     data: {
       companyId,
@@ -156,25 +158,51 @@ export async function POST(req: NextRequest) {
     console.error('Odeslání potvrzení objednávky klientovi selhalo:', err);
   }
 
-  // 3) Zalozeni projektu v Caflou (nazev, pocet normostran) - take best
-  //    effort, a zatim jen pro objednavky audioknihy (u reklamy normostrany
-  //    ani cena zatim nedavaji smysl - viz vyse). Stav se uklada k objednavce
-  //    pro dohledani v adminu.
+  // 3) Zalozeni projektu V PORTALU (zadani 9. 9. 2026: "Caflou casem nebudeme
+  //    potrebovat a projekty budeme zakladat na MS portalu"; odpojeno
+  //    11. 9. 2026). Zatim jen pro objednavky audioknihy - u reklamy
+  //    normostrany ani cena zatim nedavaji smysl, viz vyse.
   //
-  //    Zadani 9. 9. 2026: "Caflou casem nebudeme potrebovat a projekty budeme
-  //    zakladat na MS portalu" - tahle vetev je tedy docasna a stitek klienta,
-  //    podle ktereho se drive projekt v Caflou oznacoval, uz neexistuje.
+  //    Best effort: projekt navic nesmi shodit prijatou objednavku. Slozka na
+  //    Disku se tady nezaklada - projekt zatim nikdo nepotvrdil a prazdnych
+  //    slozek by pribyvalo; zaklada se az pri zalozeni projektu produkci.
   if (isAudiobook) {
-    const caflouResult = await createCaflouProject({
-      projectName: title,
-      pageCount,
-    });
-    await prisma.order.update({
-      where: { id: order.id },
-      data: caflouResult.ok
-        ? { caflouProjectId: caflouResult.caflouProjectId, caflouSyncStatus: 'OK' }
-        : { caflouSyncStatus: caflouResult.error === 'CAFLOU_NOT_CONFIGURED' ? 'SKIPPED' : 'ERROR', caflouSyncError: caflouResult.error },
-    });
+    try {
+      const caflouProjectId = noveIdProjektu();
+      await prisma.projectMeta.create({
+        data: {
+          caflouProjectId,
+          name: title,
+          companyId,
+          companyName: company.name,
+          klientUserId: userId,
+          pageCount,
+          narrator: preferredNarrator,
+          statusName: STAVY_PROJEKTU[0].nazev,
+          priority: 'MEDIUM',
+          zdroj: 'PORTAL',
+        },
+      });
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { caflouProjectId, caflouSyncStatus: 'OK' },
+      });
+      void zapisZalozeniProjektu(caflouProjectId, title, {
+        id: userId,
+        jmeno: orderingUser?.name ?? session.user.email,
+      }).catch(() => undefined);
+    } catch (err) {
+      console.error('Projekt k objednavce se nepodarilo zalozit:', err);
+      await prisma.order
+        .update({
+          where: { id: order.id },
+          data: {
+            caflouSyncStatus: 'ERROR',
+            caflouSyncError: err instanceof Error ? err.message.slice(0, 300) : 'Neznámá chyba.',
+          },
+        })
+        .catch(() => undefined);
+    }
   }
 
   return NextResponse.json(
