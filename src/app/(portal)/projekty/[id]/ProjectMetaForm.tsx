@@ -9,7 +9,6 @@ import { STAVY_S_NOTIFIKACI } from '@/lib/notifikaceFirmy';
 import { KresbaIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
-import { FajfkaDotoceno } from '../FajfkaDotoceno';
 import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 import { OdznakSelect } from '../OdznakSelect';
@@ -303,18 +302,21 @@ export function ProjectMetaForm({
                   {values.actorUserIds.map((id) => {
                     const jmeno = herci.find((h) => h.id === id)?.label;
                     if (!jmeno) return null;
-                    // Stejna bublina i fajfka uvnitr jako v prehledu projektu
-                    // (zadani 11. 9. 2026) - na obou mistech ma herec vypadat
-                    // stejne.
+                    // Stejna bublina jako v prehledu projektu - na obou
+                    // mistech ma herec vypadat stejne. Dotoceno rika zelena
+                    // linka kolem bubliny; datum odskrtnuti se doctete
+                    // v bublinkove napovede, at nezabira misto.
+                    const kdy = dotoceni[id];
                     return (
                       <span
                         key={id}
+                        title={kdy ? `Dotočeno ${new Date(kdy).toLocaleDateString('cs-CZ')}` : undefined}
                         className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
-                          dotoceni[id] ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
+                          kdy ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
                         }`}
                       >
                         {jmeno}
-                        {dotoceni[id] && <FajfkaDotoceno kdy={dotoceni[id]} />}
+                        {kdy && <span className="sr-only"> — dotočeno</span>}
                       </span>
                     );
                   })}

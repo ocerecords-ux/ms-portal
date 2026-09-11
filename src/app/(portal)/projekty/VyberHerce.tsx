@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
-import { FajfkaDotoceno } from './FajfkaDotoceno';
 
 /**
  * Výběr herce z účtů v portálu (zadání 10. 9. 2026: "pole Herec musí být na
@@ -148,11 +147,12 @@ export function BublinaHerce({
   onZmenit: () => void;
   onOdebrat?: () => void;
   disabled?: boolean;
-  /** Datum dotočení - fajfka patří DOVNITŘ bubliny (zadání 11. 9. 2026). */
+  /** Datum dotočení - pozná se zelenou linkou kolem bubliny. */
   dotoceno?: string | null;
 }) {
   return (
     <span
+      title={dotoceno ? `Dotočeno ${new Date(dotoceno).toLocaleDateString('cs-CZ')}` : undefined}
       className={`inline-flex items-center gap-1.5 max-w-full pl-3 pr-1.5 py-1 ${
         dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
       }`}
@@ -166,10 +166,9 @@ export function BublinaHerce({
       >
         {jmeno}
       </button>
-      {/* Fajfka je uvnitr bubliny, stejne jako v prehledu projektu (zadani
-          11. 9. 2026: „tu fajfku u herce dotoceno jsem chtel [do] toho
-          ovalneho ramecku s napisem herec"). */}
-      {dotoceno && <FajfkaDotoceno kdy={dotoceno} />}
+      {/* Dotoceno rika zelena linka kolem bubliny (zadani 12. 9. 2026:
+          „dej pryc tu fajfku"). Pro ctecky obrazovky zustava popisek. */}
+      {dotoceno && <span className="sr-only"> — dotočeno</span>}
       {onOdebrat && (
         <button
           type="button"
