@@ -1158,7 +1158,7 @@ export function Preposlech({
        * okna a nemá co se rozostřit.
        */}
       {zalozkaZasunuta && (
-        <div className="fixed inset-0 z-[60] flex justify-center bg-ink/70 backdrop-blur-[2px]">
+        <div className="fixed inset-0 z-[60] flex justify-center bg-bar/80 backdrop-blur-[2px]">
           <div
             className={`w-[min(340px,80vw)] h-[70%] bg-gradient-to-b from-brand-purple to-brand-purpleDeep text-white shadow-2xl transition-transform duration-500 ease-out flex flex-col items-center px-6 pt-7 ${
               zalozkaVysunuta ? 'translate-y-0' : '-translate-y-full'
