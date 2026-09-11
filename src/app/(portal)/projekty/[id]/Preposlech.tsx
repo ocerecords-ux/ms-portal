@@ -256,6 +256,19 @@ export function Preposlech({
   // Kresli se do canvasu mimo React render, proto i ref.
   const zalozkaRef = useRef<{ trackIndex: number; localTime: number } | null>(null);
   zalozkaRef.current = zalozka;
+  /**
+   * Vysunutá záložka (zadání 11. 9. 2026: „vysouvací panel, který vysune
+   * přeposlouchávač ve chvíli, kdy si chce dát pauzu, a zasune se jako pruh
+   * — mohlo by to fakt vypadat graficky jako záložka — přes obrazovku
+   * a zamkne přeposlech").
+   *
+   * `zasunuta` je to, co je v DOM; `vysunuta` spouští CSS přesun. Dvě
+   * proměnné proto, že prohlížeč musí prvek nejdřív vykreslit nahoře mimo
+   * obraz a teprve pak ho posunout dolů — jinak se nic neanimuje a záložka
+   * jen cukne.
+   */
+  const [zalozkaZasunuta, setZalozkaZasunuta] = useState(false);
+  const [zalozkaVysunuta, setZalozkaVysunuta] = useState(false);
 
   /** Na celou obrazovku (zadání 11. 9. 2026). */
   const celaObrazovkaRef = useRef<HTMLDivElement | null>(null);
@@ -994,7 +1007,11 @@ export function Preposlech({
         if (zruseno || !d?.pozice) return;
         // Prvnich par vterin neni pauza, je to zacatek - tam netreba nic
         // nabizet.
-        if (d.pozice.localTime > 10 || d.pozice.trackIndex > 1) setZalozka(d.pozice);
+        if (d.pozice.localTime > 10 || d.pozice.trackIndex > 1) {
+          setZalozka(d.pozice);
+          // Kniha se otevira tam, kde je zalozka zastrcena.
+          otevriZalozku();
+        }
       })
       .catch(() => {});
     return () => {
@@ -1032,6 +1049,41 @@ export function Preposlech({
     };
   }, [sKlicem, zaklad]);
 
+  /** Pauza se záložkou: nahrávka stojí, obrazovka je zamčená. */
+  function zaloz() {
+    const audio = audioRef.current;
+    const index = aktivniRef.current;
+    audio?.pause();
+    if (audio && index !== null && Number.isFinite(audio.currentTime)) {
+      const misto = { trackIndex: index + 1, localTime: audio.currentTime };
+      setZalozka(misto);
+      void fetch(sKlicem(`${zaklad}/pozice`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(misto),
+        keepalive: true,
+      }).catch(() => {});
+    }
+    otevriZalozku();
+  }
+
+  function otevriZalozku() {
+    setZalozkaZasunuta(true);
+    // Dva snimky: prvni vykresli zalozku nad obrazovkou, druhy ji pusti
+    // dolu. Bez toho by se objevila rovnou dole a nic by nesjelo.
+    requestAnimationFrame(() => requestAnimationFrame(() => setZalozkaVysunuta(true)));
+  }
+
+  /** Vytáhnout záložku z knihy — a pokračovat přesně tam, kde vězela. */
+  function pokracuj() {
+    setZalozkaVysunuta(false);
+    window.setTimeout(() => setZalozkaZasunuta(false), 450);
+    const misto = zalozkaRef.current;
+    if (misto && stopyRef.current[misto.trackIndex - 1]) {
+      vyberStopu(misto.trackIndex - 1, misto.localTime);
+    }
+  }
+
   function prepniCelouObrazovku() {
     const obal = celaObrazovkaRef.current;
     if (!obal) return;
@@ -1054,6 +1106,14 @@ export function Preposlech({
     function stisk(e: KeyboardEvent) {
       const cil = e.target as HTMLElement | null;
       if (cil && (cil.tagName === 'INPUT' || cil.tagName === 'TEXTAREA')) return;
+      // Vysunuta zalozka prehravac zamyka - klavesy delaji jen jedno.
+      if (zalozkaZasunuta) {
+        if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') {
+          e.preventDefault();
+          pokracuj();
+        }
+        return;
+      }
       if (formOtevreny) return;
       if (e.code === 'Space') {
         e.preventDefault();
@@ -1082,7 +1142,59 @@ export function Preposlech({
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple';
 
   return (
-    <div ref={celaObrazovkaRef} className="flex flex-col gap-4 bg-paper">
+    <div ref={celaObrazovkaRef} className="relative flex flex-col gap-4 bg-paper">
+      {/**
+       * ZÁLOŽKA PŘES OBRAZOVKU (zadání 11. 9. 2026).
+       *
+       * Sjede shora jako pruh papíru zastrčený do knihy, pod sebou zamkne
+       * celý přeposlech (přes `inset-0` se na nic pod ní nedá kliknout)
+       * a napíše, kde se skončilo. Vytáhne se tlačítkem, Enterem nebo
+       * Escapem — a nahrávka se rovnou nastaví na to místo.
+       *
+       * Špička dole je `clip-path`, ne obrázek: drží se při každé velikosti
+       * okna a nemá co se rozostřit.
+       */}
+      {zalozkaZasunuta && (
+        <div className="absolute inset-0 z-40 flex justify-center bg-ink/70 backdrop-blur-[2px]">
+          <div
+            className={`w-[min(340px,80vw)] h-[70%] bg-gradient-to-b from-brand-purple to-brand-purpleDeep text-white shadow-2xl transition-transform duration-500 ease-out flex flex-col items-center px-6 pt-7 ${
+              zalozkaVysunuta ? 'translate-y-0' : '-translate-y-full'
+            }`}
+            style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 88%, 0 100%)' }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/mediaspace-logo-still.png" alt="Mediaspace" className="h-8 w-auto opacity-90" />
+            <span className="mt-5 text-[10px] font-heading uppercase tracking-[0.28em] text-white/60">Záložka</span>
+            <p className="mt-1 text-sm font-body text-white/80 text-center m-0 truncate max-w-full">{projectName}</p>
+
+            <div className="mt-7 text-center">
+              <span className="block text-[10px] font-heading uppercase tracking-[0.22em] text-white/50">Stopa</span>
+              <span className="block font-heading font-bold text-4xl leading-none tabular-nums mt-1">
+                {zalozka ? pad2(zalozka.trackIndex) : '—'}
+                <span className="text-base text-white/50">/{pad2(stopy.length)}</span>
+              </span>
+              <span className="block font-heading font-bold text-3xl leading-none tabular-nums mt-4">
+                {zalozka ? cas(zalozka.localTime) : '—'}
+              </span>
+              {zalozka && stopy[zalozka.trackIndex - 1] && (
+                <span className="block text-[11px] font-body text-white/60 mt-3 truncate max-w-[240px]">
+                  {stopy[zalozka.trackIndex - 1].name}
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={pokracuj}
+              className="mt-8 bg-brand-green text-onAccent font-heading font-bold text-sm rounded-lg px-5 py-2.5"
+            >
+              Pokračovat odtud
+            </button>
+            <span className="mt-2 text-[11px] font-body text-white/50">nebo Enter · Esc</span>
+          </div>
+        </div>
+      )}
+
       {/* Prehravac sam o sobe nic nekresli - zvuk tece proudem z Disku. */}
       <audio
         ref={audioRef}
@@ -1404,14 +1516,25 @@ export function Preposlech({
                 ))}
               </span>
 
-              <button
-                type="button"
-                onClick={() => otevriForm()}
-                disabled={aktivni === null || formOtevreny}
-                className="ml-auto bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-40"
-              >
-                + Přidat chybu
-              </button>
+              <span className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={zaloz}
+                  disabled={aktivni === null}
+                  title="Dát si pauzu — přeposlech se zamkne a založí se místo"
+                  className="font-heading font-semibold text-xs rounded-lg border border-white/40 px-2.5 py-1.5 hover:border-white transition-colors disabled:opacity-40"
+                >
+                  🔖 Pauza
+                </button>
+                <button
+                  type="button"
+                  onClick={() => otevriForm()}
+                  disabled={aktivni === null || formOtevreny}
+                  className="bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-40"
+                >
+                  + Přidat chybu
+                </button>
+              </span>
             </div>
             {aktivni !== null && !jenPoslech && (
               <p className="text-[11px] font-heading text-muted m-0 tabular-nums">
