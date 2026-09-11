@@ -345,8 +345,11 @@ export function DriveBrowser({
     return dirMul * a.name.localeCompare(b.name, 'cs');
   });
 
+  // Sirku urcuje stranka, ne tahle komponenta - v klientskem pohledu se
+  // karta pri pevnych 896 px krcila pod sirokou hlavickou a vypadala
+  // zbytecne mala (zadani 12. 9. 2026).
   return (
-    <div className="rounded-card overflow-hidden border border-line shadow-sm max-w-4xl mx-auto bg-surface">
+    <div className="rounded-card overflow-hidden border border-line shadow-sm w-full bg-surface">
       <div className="bg-brand-purple px-4 sm:px-6 py-4 flex items-center gap-3 flex-wrap">
         <button
           type="button"

@@ -72,7 +72,7 @@ export default async function NahravkyOdkazemPage({ params }: { params: { token:
 
   return (
     <main className="min-h-screen bg-page p-3 sm:p-6">
-      <div className="max-w-[1100px] mx-auto flex flex-col gap-5">
+      <div className="max-w-[1280px] mx-auto flex flex-col gap-4">
         <div className="bg-brand-purple text-white rounded-card px-4 py-2.5 flex items-center gap-3 flex-wrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/mediaspace-logo-still.png" alt="Mediaspace" className="h-7 w-auto shrink-0" />
