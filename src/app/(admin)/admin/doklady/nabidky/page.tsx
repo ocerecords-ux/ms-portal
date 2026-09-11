@@ -23,7 +23,7 @@ function formatDate(date: Date | null): string {
 export default async function OffersPage({ searchParams }: { searchParams: { tab?: string } }) {
   const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[0];
 
-  const [offers, issuers, companies, counts] = await Promise.all([
+  const [offers, issuers, counts] = await Promise.all([
     prisma.offer.findMany({
       where: activeTab.statuses ? { status: { in: activeTab.statuses as never } } : {},
       orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
@@ -31,7 +31,6 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
       include: { company: { select: { name: true } }, items: true },
     }),
     prisma.issuerCompany.findMany({ where: { active: true }, orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] }),
-    prisma.company.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     prisma.offer.groupBy({ by: ['status'], _count: true }),
   ]);
 
@@ -97,10 +96,7 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
                 );
               })}
             </div>
-            <NewOfferForm
-              issuers={issuers.map((i) => ({ id: i.id, name: i.name, isDefault: i.isDefault }))}
-              companies={companies}
-            />
+            <NewOfferForm />
           </div>
 
           <NabidkyTabulka radky={radkyTabulky} />

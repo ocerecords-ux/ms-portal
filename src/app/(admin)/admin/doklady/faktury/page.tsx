@@ -45,7 +45,7 @@ function formatDate(date: Date | null): string {
 export default async function InvoicesPage({ searchParams }: { searchParams: { tab?: string } }) {
   const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[0];
 
-  const [invoices, issuers, companies, approvedOffers, counts] = await Promise.all([
+  const [invoices, issuers, counts] = await Promise.all([
     prisma.invoice.findMany({
       where: activeTab.statuses ? { status: { in: activeTab.statuses as never } } : {},
       orderBy: [{ issueDate: 'desc' }, { number: 'desc' }],
@@ -53,12 +53,6 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
       include: { company: { select: { name: true } }, items: true },
     }),
     prisma.issuerCompany.findMany({ where: { active: true }, orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] }),
-    prisma.company.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    prisma.offer.findMany({
-      where: { status: 'APPROVED', invoice: null },
-      orderBy: { issueDate: 'desc' },
-      select: { id: true, number: true, subject: true, company: { select: { name: true } } },
-    }),
     prisma.invoice.groupBy({ by: ['status'], _count: true }),
   ]);
 
@@ -138,14 +132,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
                 );
               })}
             </div>
-            <NewInvoiceForm
-              issuers={issuers.map((i) => ({ id: i.id, name: i.name, isDefault: i.isDefault }))}
-              companies={companies}
-              offers={approvedOffers.map((o) => ({
-                id: o.id,
-                label: `${o.number} — ${o.company.name}${o.subject ? ` (${o.subject})` : ''}`,
-              }))}
-            />
+            <NewInvoiceForm />
           </div>
 
           {unpaidByCurrency.size > 0 && (

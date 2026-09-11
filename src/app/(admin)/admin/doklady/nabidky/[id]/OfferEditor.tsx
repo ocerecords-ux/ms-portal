@@ -95,6 +95,13 @@ export function OfferEditor({
 }) {
   const router = useRouter();
   const locked = offer.status === 'APPROVED';
+  /**
+   * Neulozena nabidka - clovek klikl na "Nova nabidka" a rovnou vidi doklad
+   * (zadani 10. 9. 2026: "dej pryc ten mezikrok"). Vznikne az tlacitkem
+   * Ulozit, takze rozmysleni nenechava v seznamu prazdny doklad ani diru
+   * v ciselne rade.
+   */
+  const jesteNeulozena = offer.id === 'nova';
 
   const [form, setForm] = useState({
     issuerCompanyId: offer.issuerCompanyId,
@@ -162,27 +169,39 @@ export function OfferEditor({
     setError(null);
     setInfo(null);
     try {
-      const res = await fetch(`/api/admin/offers/${offer.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          validUntil: form.validUntil || null,
-          items: items
-            .filter((i) => i.description.trim())
-            .map((i) => ({
-              description: i.description.trim(),
-              quantity: Number(i.quantity) || 0,
-              unit: i.unit || undefined,
-              unitPriceMinor: i.unitPriceMinor,
-              vatRate: i.vatRate,
-            })),
-        }),
-      });
+      const telo = {
+        ...form,
+        validUntil: form.validUntil || null,
+        items: items
+          .filter((i) => i.description.trim())
+          .map((i) => ({
+            description: i.description.trim(),
+            quantity: Number(i.quantity) || 0,
+            unit: i.unit || undefined,
+            unitPriceMinor: i.unitPriceMinor,
+            vatRate: i.vatRate,
+          })),
+      };
+      const res = jesteNeulozena
+        ? await fetch('/api/admin/offers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(telo),
+          })
+        : await fetch(`/api/admin/offers/${offer.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(telo),
+          });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || 'Uložení se nezdařilo.');
         return false;
+      }
+      if (jesteNeulozena && data?.id) {
+        router.push(`/admin/doklady/nabidky/${data.id}`);
+        router.refresh();
+        return true;
       }
       setInfo('Uloženo.');
       router.refresh();
@@ -286,6 +305,7 @@ export function OfferEditor({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {!jesteNeulozena && (
           <button
             type="button"
             onClick={copyLink}
@@ -293,10 +313,11 @@ export function OfferEditor({
           >
             {copied ? 'Zkopírováno' : 'Odkaz pro klienta'}
           </button>
+          )}
           {/* Fakturu jde vystavit z kazde nabidky, kterou klient neodmitl
               (zadani 8. 9. 2026) - schvaleni pres odkaz je dobrovolne a
               casto se domlouva telefonem. */}
-          {offer.status !== 'REJECTED' && (
+          {offer.status !== 'REJECTED' && !jesteNeulozena && (
             <button
               type="button"
               onClick={createInvoice}
@@ -308,6 +329,7 @@ export function OfferEditor({
           )}
           {!locked && (
             <>
+              {!jesteNeulozena && (
               <button
                 type="button"
                 onClick={sendToClient}
@@ -316,6 +338,7 @@ export function OfferEditor({
               >
                 {sending ? 'Odesílám…' : 'Odeslat klientovi'}
               </button>
+              )}
               <button
                 type="button"
                 onClick={save}
@@ -641,7 +664,7 @@ export function OfferEditor({
       <NahledDokladu telo={nahledTelo} titulek="Náhled nabídky" />
       </div>
 
-      {!locked && (
+      {!locked && !jesteNeulozena && (
         <div>
           <button
             type="button"

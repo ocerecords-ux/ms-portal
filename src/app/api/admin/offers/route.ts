@@ -4,15 +4,41 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { expandNumberFormat } from '@/lib/doklady';
+import { resolveProject } from '@/lib/projectOptions';
 
 // Zalozeni nabidky (zadani 6. 9. 2026). Cislo se bere z ciselne rady vlastni
 // firmy a rada se rovnou posune - v transakci, aby dve soubezne nabidky
 // nedostaly stejne cislo.
+// Nabidka se zaklada az z hotoveho dokladu (zadani 10. 9. 2026: "dej pryc
+// ten mezikrok, rovnou po kliknuti ukaz nahled") - proto sem chodi vsechno,
+// co clovek v editoru vyplnil, ne jen tri pole.
+const itemSchema = z.object({
+  description: z.string().trim().min(1),
+  quantity: z.number(),
+  unit: z.string().trim().max(20).optional(),
+  unitPriceMinor: z.number().int(),
+  vatRate: z.number().int(),
+});
+
 const schema = z.object({
   issuerCompanyId: z.string().trim().min(1, 'Vyberte, za kterou firmu nabídku vystavujete.'),
   companyId: z.string().trim().min(1, 'Vyberte odběratele.'),
   subject: z.string().trim().max(200).optional(),
+  note: z.string().trim().max(3000).optional(),
+  currency: z.enum(['CZK', 'EUR', 'GBP']).optional(),
+  issueDate: z.string().trim().min(8).optional(),
+  validUntil: z.string().trim().nullable().optional(),
+  caflouProjectId: z.string().trim().nullable().optional(),
+  jazyk: z.enum(['CS', 'EN']).optional(),
+  items: z.array(itemSchema).max(100).optional(),
 });
+
+/** "2026-09-08" -> Date; co neni datum, bereme jako nevyplnene. */
+function toDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,13 +49,17 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
-    const { issuerCompanyId, companyId, subject } = parsed.data;
+    const input = parsed.data;
+    const { issuerCompanyId, companyId, subject } = input;
 
     const issuer = await prisma.issuerCompany.findUnique({ where: { id: issuerCompanyId } });
     if (!issuer) return NextResponse.json({ error: 'Vlastní firma nenalezena.' }, { status: 404 });
 
     const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
     if (!company) return NextResponse.json({ error: 'Odběratel nenalezen.' }, { status: 404 });
+
+    const projekt = await resolveProject(input.caflouProjectId ?? null);
+    const polozky = input.items ?? [];
 
     // Kdyby cislo uz existovalo (rucne posunuta rada, souběh), zkusime dalsi.
     let created = null;
@@ -47,9 +77,30 @@ export async function POST(req: NextRequest) {
             number,
             issuerCompanyId,
             companyId,
-            currency: issuer.defaultCurrency,
+            currency: input.currency ?? issuer.defaultCurrency,
             subject: subject || null,
+            note: input.note || null,
+            jazyk: input.jazyk ?? 'CS',
+            ...(toDate(input.issueDate) ? { issueDate: toDate(input.issueDate)! } : {}),
+            validUntil: toDate(input.validUntil),
+            ...(projekt.caflouProjectId
+              ? { caflouProjectId: projekt.caflouProjectId, projectName: projekt.projectName }
+              : {}),
             approvalToken: randomBytes(24).toString('base64url'),
+            ...(polozky.length > 0
+              ? {
+                  items: {
+                    create: polozky.map((item, index) => ({
+                      description: item.description,
+                      quantity: item.quantity,
+                      unit: item.unit || 'ks',
+                      unitPriceMinor: item.unitPriceMinor,
+                      vatRate: item.vatRate,
+                      sortOrder: index,
+                    })),
+                  },
+                }
+              : {}),
           },
         });
         await tx.issuerCompany.update({
