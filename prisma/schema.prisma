@@ -1845,6 +1845,13 @@ model PreposlechPozice {
   trackIndex Int
   localTime  Float
 
+  /// Jmeno, aby se u nas interne poznalo, KDO posloucha. U odkazu z mailu
+  /// jine jmeno nemame, tam je to "Klient".
+  jmeno String?
+  /// Hralo to pri poslednim zapisu? Spolu s updatedAt z toho vyjde
+  /// "prave posloucha" - viz signalizace v AudioTaggeru.
+  hraje Boolean @default(false)
+
   updatedAt DateTime @updatedAt
 
   @@unique([caflouProjectId, posluchac])

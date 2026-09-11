@@ -270,6 +270,16 @@ export function Preposlech({
   const [zalozkaZasunuta, setZalozkaZasunuta] = useState(false);
   const [zalozkaVysunuta, setZalozkaVysunuta] = useState(false);
 
+  /**
+   * Kdo zrovna poslouchá (zadání 11. 9. 2026: „bylo by dobré mít nějakou
+   * signalizaci, že někdo poslouchá — svítilo by to u nás interně").
+   *
+   * Ptáme se každých dvacet vteřin; posluchač se hlásí po deseti, takže
+   * kontrolka zhasne nejpozději minutu po tom, co někdo odejde od stolu.
+   * Klientovi se to neukazuje vůbec.
+   */
+  const [posluchaci, setPosluchaci] = useState<{ jmeno: string; trackIndex: number; localTime: number }[]>([]);
+
   /** Na celou obrazovku (zadání 11. 9. 2026). */
   const celaObrazovkaRef = useRef<HTMLDivElement | null>(null);
   const [celaObrazovka, setCelaObrazovka] = useState(false);
@@ -1032,19 +1042,23 @@ export function Preposlech({
       void fetch(sKlicem(`${zaklad}/pozice`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trackIndex: index + 1, localTime: audio.currentTime }),
+        // `hraje` je to, z ceho se u nas interne pozna, ze u nahravky
+        // nekdo zrovna sedi - viz signalizace v hlavicce.
+        body: JSON.stringify({ trackIndex: index + 1, localTime: audio.currentTime, hraje: !audio.paused }),
         keepalive: true,
       }).catch(() => {});
     }
 
     const audio = audioRef.current;
     audio?.addEventListener('pause', uloz);
+    audio?.addEventListener('play', uloz);
     const tik = window.setInterval(() => {
       if (audioRef.current && !audioRef.current.paused) uloz();
     }, 10_000);
 
     return () => {
       audio?.removeEventListener('pause', uloz);
+      audio?.removeEventListener('play', uloz);
       window.clearInterval(tik);
     };
   }, [sKlicem, zaklad]);
@@ -1099,6 +1113,25 @@ export function Preposlech({
     document.addEventListener('fullscreenchange', zmena);
     return () => document.removeEventListener('fullscreenchange', zmena);
   }, []);
+
+  useEffect(() => {
+    if (jenPoslech) return;
+    let zruseno = false;
+    async function zjisti() {
+      try {
+        const d = await fetch(sKlicem(`${zaklad}/pozice`)).then((r) => (r.ok ? r.json() : null));
+        if (!zruseno) setPosluchaci(d?.posluchaci ?? []);
+      } catch {
+        // Vypadek site neni duvod nic hlasit - kontrolka proste nesviti.
+      }
+    }
+    void zjisti();
+    const tik = window.setInterval(zjisti, 20_000);
+    return () => {
+      zruseno = true;
+      window.clearInterval(tik);
+    };
+  }, [jenPoslech, sKlicem, zaklad]);
 
   /* ---------- klávesy ---------- */
 
@@ -1245,6 +1278,22 @@ export function Preposlech({
           <span className="text-[11px] font-heading text-white/60 hidden xl:inline">
             Mezerník · ←/→ ±5 s · E = chyba · označ text myší
           </span>
+          {/* Kontrolka „nekdo posloucha" - jen pro nas, klient ji nevidi. */}
+          {posluchaci.length > 0 && (
+            <span
+              title={posluchaci.map((p) => `${p.jmeno} — stopa ${pad2(p.trackIndex)}, ${cas(p.localTime)}`).join('\n')}
+              className="flex items-center gap-1.5 text-[11px] font-heading font-semibold bg-brand-green/20 text-white rounded-pill px-2.5 py-1"
+            >
+              <span className="relative flex w-2 h-2">
+                <span className="absolute inline-flex w-full h-full rounded-full bg-brand-green opacity-70 animate-ping" />
+                <span className="relative inline-flex w-2 h-2 rounded-full bg-brand-green" />
+              </span>
+              {posluchaci.length === 1
+                ? `${posluchaci[0].jmeno} poslouchá · ${pad2(posluchaci[0].trackIndex)}`
+                : `Poslouchá ${posluchaci.length} lidí`}
+            </span>
+          )}
+
           {/* Na celou obrazovku (zadani 11. 9. 2026). U 330stranneho textu
               a dvanacti stop je kazdy pixel k uzitku. */}
           <button
