@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import type { ConversationKind } from '@prisma/client';
 import { MS_SMAJLICI, najdiSmajlika } from '@/lib/msSmajlici';
 import { MsSmajlik } from './MsSmajlik';
@@ -16,6 +17,7 @@ import {
   initials,
   stejnyDen,
   splitChatBody,
+  type ProjektZminka,
   type ChatConversation,
   type ChatMessage,
   type ChatReaction,
@@ -144,10 +146,35 @@ function Hlavicka({ jmeno, iso, editedAt }: { jmeno: string; iso: string; edited
 }
 
 /** Text zpravy se zvyraznenymi zminkami (@Jméno) a Mediaspace smajliky. */
-function Telo({ body, jmena, mine }: { body: string; jmena: string[]; mine: boolean }) {
+function Telo({
+  body,
+  jmena,
+  projekty,
+  mine,
+}: {
+  body: string;
+  jmena: string[];
+  /** Projekty, na ktere jde ve zprave odkazat mrizkou (#Nazev). */
+  projekty: ProjektZminka[];
+  mine: boolean;
+}) {
   return (
     <>
-      {splitChatBody(body, jmena).map((cast, index) => {
+      {splitChatBody(body, jmena, projekty).map((cast, index) => {
+        if (cast.kind === 'projekt') {
+          // Odkaz rovnou na detail projektu - zadani 11. 9. 2026.
+          return (
+            <Link
+              key={index}
+              href={`/projekty/${encodeURIComponent(cast.id)}`}
+              className={`font-heading font-semibold rounded px-0.5 underline underline-offset-2 ${
+                mine ? 'bg-white/25 text-white' : 'bg-brand-green/20 text-brand-purpleDark'
+              }`}
+            >
+              {cast.value}
+            </Link>
+          );
+        }
         if (cast.kind === 'mention') {
           return (
             <strong
@@ -892,6 +919,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   }
   // Naseptavac zminek: kdyz se v rozepsanem textu objevi "@", nabidne lidi.
   const [zminkyPro, setZminkyPro] = useState<'hlavni' | 'vlakno' | null>(null);
+  /** Co se zrovna nabizi - clovek po @, nebo projekt po # (zadani 11. 9. 2026). */
+  const [druhZminky, setDruhZminky] = useState<'clovek' | 'projekt'>('clovek');
   const [zminkaHledani, setZminkaHledani] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1197,27 +1226,48 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * i s mezerou, at se da rovnou psat dal.
    */
   function sledujZminku(text: string, kde: 'hlavni' | 'vlakno') {
-    // Zminka se pozna jen na zacatku slova a jen dokud za @ neni mezera -
+    // Zminka se pozna jen na zacatku slova a jen dokud za znakem neni mezera -
     // jinak by nabidka vyskakovala i uprostred bezne vety a v e-mailovych
-    // adresach. Cele jmeno vc. prijmeni doplni az vyber ze seznamu.
-    const match = /(?:^|\s)@([\p{L}]{0,20})$/u.exec(text);
-    if (match) {
+    // adresach. Cely nazev vc. mezer doplni az vyber ze seznamu.
+    //
+    // @ = clovek z tymu, # = projekt (zadani 11. 9. 2026).
+    const clovek = /(?:^|\s)@([\p{L}]{0,20})$/u.exec(text);
+    if (clovek) {
+      setDruhZminky('clovek');
       setZminkyPro(kde);
-      setZminkaHledani(match[1].toLowerCase());
-    } else {
-      setZminkyPro(null);
+      setZminkaHledani(clovek[1].toLowerCase());
+      return;
     }
+    const projekt = /(?:^|\s)#([\p{L}\p{N} _-]{0,40})$/u.exec(text);
+    if (projekt) {
+      setDruhZminky('projekt');
+      setZminkyPro(kde);
+      setZminkaHledani(projekt[1].toLowerCase());
+      return;
+    }
+    setZminkyPro(null);
   }
 
-  function doplnZminku(clovek: ChatTeamMember) {
-    const uprav = (text: string) => text.replace(/@[\p{L}]{0,20}$/u, `@${clovek.label} `);
+  function doplnZminku(polozka: ChatTeamMember) {
+    const uprav = (text: string) =>
+      druhZminky === 'projekt'
+        ? text.replace(/#[\p{L}\p{N} _-]{0,40}$/u, `#${polozka.label} `)
+        : text.replace(/@[\p{L}]{0,20}$/u, `@${polozka.label} `);
     if (zminkyPro === 'vlakno') setVlaknoDraft((t) => uprav(t));
     else setDraft((t) => uprav(t));
     setZminkyPro(null);
   }
 
   const jmenaTymu = team.map((u) => u.label);
-  const nabidkaZminek = team.filter((u) => u.label.toLowerCase().includes(zminkaHledani));
+  /** Projekty, na ktere jde odkazat - stejny seznam, ze ktereho jsou kanaly. */
+  const projektyProZminky: ProjektZminka[] = (projekty ?? []).map((p) => ({ id: p.id, name: p.name }));
+  const nabidkaZminek =
+    druhZminky === 'projekt'
+      ? projektyProZminky
+          .filter((p) => p.name.toLowerCase().includes(zminkaHledani))
+          .slice(0, 8)
+          .map((p) => ({ id: p.id, label: p.name, photoUrl: null }))
+      : team.filter((u) => u.label.toLowerCase().includes(zminkaHledani));
 
   // POZN. 11. 9. 2026: chat se drive v nainstalovane aplikaci portalu
   // schovaval (mel byt jen jako samostatna aplikace). Uzivatel si vyzadal
@@ -1573,7 +1623,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                     : 'bg-surface border border-line text-ink'
                                 }`}
                               >
-                                <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
+                                <Telo body={m.body} jmena={jmenaTymu} projekty={projektyProZminky} mine={m.mine} />
                               </p>
                               <Prilohy prilohy={m.prilohy ?? []} />
                               <Reakce
@@ -1635,7 +1685,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     }}
                     odeslat={(e) => odesli(e, false)}
                     sending={sending}
-                    placeholder="Napište zprávu… (@ zmíní kolegu)"
+                    placeholder="Napište zprávu… (@ zmíní kolegu, # odkáže na projekt)"
                     nabidka={zminkyPro === 'hlavni' ? nabidkaZminek : []}
                     vyber={doplnZminku}
                     prilohy={prilohyHlavni}
@@ -1723,7 +1773,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                     m.mine ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-ink'
                                   }`}
                                 >
-                                  <Telo body={m.body} jmena={jmenaTymu} mine={m.mine} />
+                                  <Telo body={m.body} jmena={jmenaTymu} projekty={projektyProZminky} mine={m.mine} />
                                 </p>
                                 <Prilohy prilohy={m.prilohy ?? []} />
                                 <Reakce

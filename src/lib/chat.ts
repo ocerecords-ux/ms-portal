@@ -131,7 +131,53 @@ export function splitMentions(body: string, names: string[]): { text: string; me
 export type ChatToken =
   | { kind: 'text'; value: string }
   | { kind: 'mention'; value: string }
-  | { kind: 'smajlik'; value: string };
+  | { kind: 'smajlik'; value: string }
+  /** Zmínka projektu (#Název) - vykresluje se jako odkaz na jeho detail. */
+  | { kind: 'projekt'; value: string; id: string };
+
+/** Projekt, na který se dá ve zprávě odkázat mřížkou. */
+export type ProjektZminka = { id: string; name: string };
+
+/**
+ * Rozdeli text na kousky a oznaci zminky projektu (#Nazev projektu) -
+ * zadani 11. 9. 2026: "kdyz dam krizek a nazev projektu, tak se proklikneme
+ * pak z chatu vsichni na dany projekt".
+ *
+ * Funguje stejne jako zminka cloveka: hleda se skutecny nazev ze seznamu
+ * projektu, protoze nazvy mivaji mezery. Delsi nazvy se zkousi driv, at
+ * "#MMB podzim" nevyhraje kratsi "#MMB".
+ */
+export function splitProjektyVTextu(
+  body: string,
+  projekty: ProjektZminka[],
+): { text: string; projekt?: ProjektZminka }[] {
+  const serazene = [...projekty].filter((p) => p.name).sort((a, b) => b.name.length - a.name.length);
+  if (serazene.length === 0) return [{ text: body }];
+
+  const out: { text: string; projekt?: ProjektZminka }[] = [];
+  let buffer = '';
+  let i = 0;
+
+  while (i < body.length) {
+    if (body[i] === '#') {
+      const zbytek = body.slice(i + 1);
+      const projekt = serazene.find((p) => zbytek.toLowerCase().startsWith(p.name.toLowerCase()));
+      if (projekt) {
+        if (buffer) {
+          out.push({ text: buffer });
+          buffer = '';
+        }
+        out.push({ text: `#${body.substr(i + 1, projekt.name.length)}`, projekt });
+        i += 1 + projekt.name.length;
+        continue;
+      }
+    }
+    buffer += body[i];
+    i += 1;
+  }
+  if (buffer) out.push({ text: buffer });
+  return out;
+}
 
 /**
  * Rozdeli telo zpravy na zminky a smajliky naraz (zadani 9. 9. 2026).
@@ -143,7 +189,7 @@ export type ChatToken =
  * Zkratka, kterou v sade nenajdeme, zustava textem - stare zpravy se tak
  * nikdy nezmeni v prazdne misto, kdyz se sada prekresli.
  */
-export function splitChatBody(body: string, names: string[]): ChatToken[] {
+export function splitChatBody(body: string, names: string[], projekty: ProjektZminka[] = []): ChatToken[] {
   const out: ChatToken[] = [];
 
   for (const cast of splitMentions(body, names)) {
@@ -151,10 +197,16 @@ export function splitChatBody(body: string, names: string[]): ChatToken[] {
       out.push({ kind: 'mention', value: cast.text });
       continue;
     }
-    for (const kousek of cast.text.split(MS_SMAJLIK_REGEX)) {
-      if (!kousek) continue;
-      if (najdiSmajlika(kousek)) out.push({ kind: 'smajlik', value: kousek });
-      else out.push({ kind: 'text', value: kousek });
+    for (const castProjektu of splitProjektyVTextu(cast.text, projekty)) {
+      if (castProjektu.projekt) {
+        out.push({ kind: 'projekt', value: castProjektu.text, id: castProjektu.projekt.id });
+        continue;
+      }
+      for (const kousek of castProjektu.text.split(MS_SMAJLIK_REGEX)) {
+        if (!kousek) continue;
+        if (najdiSmajlika(kousek)) out.push({ kind: 'smajlik', value: kousek });
+        else out.push({ kind: 'text', value: kousek });
+      }
     }
   }
 
