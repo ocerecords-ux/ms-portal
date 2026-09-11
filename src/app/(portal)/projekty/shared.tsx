@@ -11,6 +11,7 @@ import { TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
+import { FajfkaDotoceno } from './FajfkaDotoceno';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -223,7 +224,11 @@ export type InternalProjectMeta = {
   /** Ikona typu projektu - sviti pred nazvem (zadani 10. 9. 2026). */
   ikonaTypu: string | null;
   /** Jmena hercu projektu, hlavni prvni (zadani 10. 9. 2026 - muze jich byt vic). */
-  herciJmena: string[];
+  /**
+   * Herci projektu v poradi. `dotoceno` = zelena fajfka u jmena (zadani
+   * 11. 9. 2026: "fajfku prosim v prehledu i v detailu").
+   */
+  herci: { jmeno: string; dotoceno: boolean }[];
 };
 
 export type InternalProject = AdminDisplayProject & {
@@ -438,15 +443,16 @@ function bunkaSloupce(
       // Hercu muze byt vic (zadani 10. 9. 2026) - jdou pod sebe, kazdy ve sve
       // bubline. Kdyz zadny prirazeny ucet neni, zbyva jmeno z Caflou: jen
       // sedy text, na kterem nic nestoji.
-      if (p.meta?.herciJmena?.length) {
+      if (p.meta?.herci?.length) {
         return (
           <span className={TRIDA_SLOUPCE_HERCU}>
-            {p.meta.herciJmena.map((jmeno) => (
+            {p.meta.herci.map((h) => (
               <span
-                key={jmeno}
-                className={`inline-flex items-center px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}
+                key={h.jmeno}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}
               >
-                {jmeno}
+                {h.jmeno}
+                {h.dotoceno && <FajfkaDotoceno />}
               </span>
             ))}
           </span>

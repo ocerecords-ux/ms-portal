@@ -634,6 +634,66 @@ export function buildPasswordResetHtml(input: PasswordResetInput): string {
   });
 }
 
+// ===========================================================================
+// DOTOČENÝ HEREC (zadání 11. 9. 2026)
+// ===========================================================================
+
+type HerecDotocenInput = {
+  prijemci: string[];
+  jmenoHerce: string;
+  nazevProjektu: string;
+  nazevFirmy: string | null;
+  /** Kdo to v portálu odškrtl. */
+  potvrdil: string | null;
+  odkazNaProjekt: string;
+};
+
+export function buildHerecDotocenHtml(input: HerecDotocenInput): string {
+  return emailShell({
+    tag: 'Dotočeno',
+    preheader: `${input.jmenoHerce} dotočil ${input.nazevProjektu}.`,
+    body: `
+    <span class="badge">Dotočeno</span>
+    <h2>${escapeHtml(input.jmenoHerce)} má dotočeno</h2>
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Projekt</td><td class="value">${escapeHtml(input.nazevProjektu)}</td></tr>
+      ${input.nazevFirmy ? `<tr><td class="label">Firma</td><td class="value regular">${escapeHtml(input.nazevFirmy)}</td></tr>` : ''}
+      <tr><td class="label">Herec</td><td class="value">${escapeHtml(input.jmenoHerce)}</td></tr>
+      ${input.potvrdil ? `<tr><td class="label">Odškrtl(a)</td><td class="value regular">${escapeHtml(input.potvrdil)}</td></tr>` : ''}
+    </table>
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkazNaProjekt)}" class="cta">Otevřít projekt</a>
+    </div>
+    <p class="small">Tahle zpráva chodí každému, kdo má na kartě uživatele zaškrtnuté „Dostává zprávy o dotočení".</p>
+`,
+  });
+}
+
+export async function sendHerecDotocenEmail(input: HerecDotocenInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (input.prijemci.length === 0) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    to: input.prijemci.join(', '),
+    subject: `Dotočeno - ${input.jmenoHerce} - ${input.nazevProjektu}`,
+    text: [
+      `${input.jmenoHerce} ma dotoceno.`,
+      '',
+      `Projekt: ${input.nazevProjektu}${input.nazevFirmy ? ` (${input.nazevFirmy})` : ''}`,
+      input.potvrdil ? `Odskrtl(a): ${input.potvrdil}` : '',
+      '',
+      input.odkazNaProjekt,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildHerecDotocenHtml(input),
+  });
+
+  return { sent: true as const, reason: undefined };
+}
+
 export async function sendPasswordResetEmail(input: PasswordResetInput) {
   const transport = getTransport();
   if (!transport) {

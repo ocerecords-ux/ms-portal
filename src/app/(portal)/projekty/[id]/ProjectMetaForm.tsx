@@ -9,6 +9,7 @@ import { STAVY_S_NOTIFIKACI } from '@/lib/notifikaceFirmy';
 import { KresbaIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
+import { FajfkaDotoceno } from '../FajfkaDotoceno';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 import { OdznakSelect } from '../OdznakSelect';
 
@@ -97,6 +98,7 @@ export function ProjectMetaForm({
   projectTypeOptions,
   ikonyTypu,
   initial,
+  dotoceniHercu,
 }: {
   caflouProjectId: string;
   canEdit: boolean;
@@ -117,6 +119,8 @@ export function ProjectMetaForm({
   /** Ikony k typum projektu z Ceniku (zadani 10. 9. 2026). */
   ikonyTypu: Record<string, string>;
   initial: Initial;
+  /** Kdo z herců má dotočeno - ID účtu -> datum (zadání 11. 9. 2026). */
+  dotoceniHercu: Record<string, string>;
 }) {
   const router = useRouter();
   const [values, setValues] = useState<Initial>(initial);
@@ -124,6 +128,44 @@ export function ProjectMetaForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [upravitOdkaz, setUpravitOdkaz] = useState(false);
+
+  /**
+   * Dotočení herce (zadání 11. 9. 2026) se ukládá ZVLÁŠŤ, ne se zbytkem
+   * formuláře: je to událost, ne rozepsaná hodnota — a odchází na ni zpráva,
+   * takže se nesmí odeslat jako vedlejší účinek toho, že člověk vedle
+   * přehodil prioritu.
+   */
+  const [dotoceni, setDotoceni] = useState<Record<string, string>>(dotoceniHercu);
+  const [dotoceniBezi, setDotoceniBezi] = useState<string | null>(null);
+
+  async function prepniDotoceno(userId: string, dotocenoNove: boolean) {
+    setDotoceniBezi(userId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/projekty/${encodeURIComponent(caflouProjectId)}/herci-dotoceno`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, dotoceno: dotocenoNove }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((data as { error?: string })?.error || 'Nepodařilo se to uložit.');
+        return;
+      }
+      setDotoceni((soucasne) => {
+        const dalsi = { ...soucasne };
+        if (dotocenoNove) dalsi[userId] = (data as { dotocenoAt?: string })?.dotocenoAt ?? new Date().toISOString();
+        else delete dalsi[userId];
+        return dalsi;
+      });
+      // Fajfka se ukazuje i v prehledu projektu - at tam sedi hned.
+      router.refresh();
+    } catch {
+      setError('Nepodařilo se to uložit.');
+    } finally {
+      setDotoceniBezi(null);
+    }
+  }
 
   /**
    * UKLÁDÁ SE SAMO (zadání 11. 9. 2026: „u projektu zruš to tlačítko uložit,
@@ -255,12 +297,22 @@ export function ProjectMetaForm({
               {values.actorUserIds.length > 1 ? 'Herci' : 'Herec'}
             </dt>
             <dd className="text-sm font-heading text-ink m-0 mt-1">
-              {values.actorUserIds.length > 0
-                ? values.actorUserIds
-                    .map((id) => herci.find((h) => h.id === id)?.label)
-                    .filter(Boolean)
-                    .join(', ')
-                : (herecZCaflou ?? '—')}
+              {values.actorUserIds.length > 0 ? (
+                <span className="flex flex-col items-start gap-1">
+                  {values.actorUserIds.map((id) => {
+                    const jmeno = herci.find((h) => h.id === id)?.label;
+                    if (!jmeno) return null;
+                    return (
+                      <span key={id} className="inline-flex items-center gap-1.5">
+                        {jmeno}
+                        {dotoceniHercu[id] && <FajfkaDotoceno kdy={dotoceniHercu[id]} />}
+                      </span>
+                    );
+                  })}
+                </span>
+              ) : (
+                (herecZCaflou ?? '—')
+              )}
             </dd>
           </div>
           <div>
@@ -378,6 +430,9 @@ export function ProjectMetaForm({
             hodnoty={values.actorUserIds}
             onZmena={(ids) => set('actorUserIds', ids)}
             puvodniText={herecZCaflou}
+            dotoceni={dotoceni}
+            onPrepnoutDotoceno={(id, stav) => void prepniDotoceno(id, stav)}
+            dotoceniBezi={dotoceniBezi}
           />
           <span className="text-xs text-muted font-body">
             Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění

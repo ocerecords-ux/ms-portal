@@ -70,6 +70,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     studia,
     calendarSettings,
     historie,
+    dotoceniHercu,
     ikonyTypu,
   ] = await Promise.all([
     // Projekt tak, jak se ukazuje v prehledu (lib/projektySeznamServer.ts).
@@ -129,9 +130,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     // Historie projektu (zadani 10. 9. 2026) - jede spolu se vsim ostatnim,
     // aby detail nemel dalsi kolecko do databaze navic.
     nactiHistoriiProjektu(caflouProjectId),
+    // Kdo z hercu ma dotoceno (zadani 11. 9. 2026).
+    prisma.herecDotocen.findMany({
+      where: { caflouProjectId },
+      select: { userId: true, dotocenoAt: true },
+    }),
     // Ikony typu projektu z Ceniku - do odznaku u typu (zadani 10. 9. 2026).
     mapaIkonTypu(),
   ]);
+
+  // Dotoceni hercu do tvaru, ve kterem s tim pracuji komponenty: ucet -> datum.
+  const dotoceniPodleHerce: Record<string, string> = Object.fromEntries(
+    dotoceniHercu.map((d) => [d.userId, d.dotocenoAt.toISOString()]),
+  );
 
   // Firma projektu. Od 11. 9. 2026 ji projekt drzi primo (ProjectMeta.companyId);
   // dohledani podle stareho ID z Caflou zustava jen pro projekty, ktere jeste
@@ -291,6 +302,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         }))}
         firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
         herci={herciUctu.map((h) => ({ id: h.id, label: h.name || h.email }))}
+        dotoceniHercu={dotoceniPodleHerce}
         herecZCaflou={meta?.narrator ?? project?.narrator ?? null}
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}

@@ -30,6 +30,7 @@ const schema = z.object({
   /** "1" / "0" - smi byt manazerem projektu (zadani 10. 9. 2026). */
   manazerProjektu: z.string().trim().optional(),
   prijimaDotazyKlientu: z.string().trim().optional(),
+  dostavaDotoceno: z.string().trim().optional(),
   studioLocations: z.array(z.string()).optional(),
   birthNumber: z.string().trim().optional(),
   ic: z.string().trim().optional(),
@@ -57,6 +58,7 @@ function readFormData(formData: FormData) {
     hourlyRate: has('hourlyRate') ? formData.get('hourlyRate') : undefined,
     manazerProjektu: has('manazerProjektu') ? formData.get('manazerProjektu') : undefined,
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
+    dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
     studioLocations: has('studioLocations') ? formData.getAll('studioLocations').map(String) : undefined,
     birthNumber: has('birthNumber') ? formData.get('birthNumber') : undefined,
     ic: has('ic') ? formData.get('ic') : undefined,
@@ -138,6 +140,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(photoUrl !== undefined ? { photoUrl } : {}),
       // Hodinova sazba dava smysl jen u zvukare (zadani 6. 9. 2026).
       ...(data.manazerProjektu !== undefined ? { manazerProjektu: data.manazerProjektu === '1' } : {}),
+      ...(data.dostavaDotoceno !== undefined
+        ? { dostavaDotoceno: data.dostavaDotoceno === '1' }
+        : {}),
       ...(data.prijimaDotazyKlientu !== undefined
         ? { prijimaDotazyKlientu: data.prijimaDotazyKlientu === '1' }
         : {}),

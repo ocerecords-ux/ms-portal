@@ -158,6 +158,15 @@ model User {
   /// v kazdem kanalu, ktery klient otevre tlacitkem "Zeptat se" u projektu.
   prijimaDotazyKlientu Boolean @default(false)
 
+  /// Dostava zpravu, kdyz je herec na projektu dotoceny (zadani 11. 9. 2026:
+  /// "info o dotoceno s hercem jde notifikaci mailem na Helenu Rychlik").
+  /// Je to priznak u uctu, ne adresa v kodu - az to bude hlidat nekdo jiny,
+  /// preklikne se to na karte uzivatele.
+  dostavaDotoceno Boolean @default(false)
+
+  /// U kterych projektu je tenhle herec dotoceny.
+  dotoceniHerce HerecDotocen[] @relation("DotocenyHerec")
+
   // --- Herec - zadani 5. 9. 2026: samostatna fyzicka osoba, bez firmy ---
   /// Projekty, ve kterych herec hraje (zadani 10. 9. 2026, vic hercu na projekt).
   projektyJakoHerec ProjectMeta[] @relation("ProjektHerci")
@@ -1733,4 +1742,31 @@ model PreposlechOdkaz {
   /// Kdy si ho klient naposledy otevrel a kolikrat - at je videt, jestli poslouchal.
   otevrenoAt    DateTime?
   pocetOtevreni Int       @default(0)
+}
+
+
+/// Dotoceny herec na projektu (zadani 11. 9. 2026: "u hercu v projektech
+/// v detailu vlozit vedle jeho jmena tlacitko Dotoceno, jakmile ho nekdo
+/// stiskne, objevi se vedle jmena zelena fajfka").
+///
+/// Je to vlastnost DVOJICE projekt + herec, ne projektu: na audioknize byva
+/// hercu vic a kazdy konci jindy. Podle toho se pak Peter rozhoduje, jestli
+/// uz projekt prehodit do "Dotoceno/strihame".
+///
+/// Radek existuje = dotoceno. Odskrtnuti radek smaze, takze se nedrzi
+/// historie prepinani sem a tam - v praxi je to preklep, ne udalost.
+model HerecDotocen {
+  id              String @id @default(cuid())
+  caflouProjectId String
+
+  userId String
+  user   User   @relation("DotocenyHerec", fields: [userId], references: [id], onDelete: Cascade)
+
+  dotocenoAt     DateTime @default(now())
+  /// Kdo to odskrtl - at je v projektu videt, po kom se ptat.
+  potvrdilUserId String?
+  potvrdilJmeno  String?
+
+  @@unique([caflouProjectId, userId])
+  @@index([caflouProjectId])
 }

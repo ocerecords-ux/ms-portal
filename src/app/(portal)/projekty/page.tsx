@@ -196,6 +196,24 @@ async function InternalProjektySection({
         },
       })
     : [];
+
+  /**
+   * Dotoceni herci (zadani 11. 9. 2026: "fajfku prosim v prehledu i v
+   * detailu") - jednim dotazem pro cely prehled, ne projekt po projektu.
+   * Klic je dvojice projekt + herec, protoze tentyz herec muze mit na jednom
+   * projektu dotoceno a na druhem ne.
+   */
+  const dotoceni = new Set(
+    projects.length
+      ? (
+          await prisma.herecDotocen.findMany({
+            where: { caflouProjectId: { in: projects.map((p) => String(p.id)) } },
+            select: { caflouProjectId: true, userId: true },
+          })
+        ).map((d) => `${d.caflouProjectId}:${d.userId}`)
+      : [],
+  );
+
   const metaById = new Map(
     metas.map((m): [string, InternalProjectMeta] => [
       m.caflouProjectId,
@@ -208,10 +226,13 @@ async function InternalProjektySection({
         managerUserId: m.managerUserId,
         ikonaTypu: m.projectType ? ikonyTypu[m.projectType] ?? null : null,
         // Hlavni herec prvni, at prehled i detail ukazuji stejne poradi.
-        herciJmena: [
+        herci: [
           ...m.herci.filter((h) => h.id === m.actorUserId),
           ...m.herci.filter((h) => h.id !== m.actorUserId),
-        ].map((h) => h.name || h.email),
+        ].map((h) => ({
+          jmeno: h.name || h.email,
+          dotoceno: dotoceni.has(`${m.caflouProjectId}:${h.id}`),
+        })),
       },
     ]),
   );

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BublinaHerce, type Herec } from './VyberHerce';
 import { TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
+import { FajfkaDotoceno } from './FajfkaDotoceno';
 
 /**
  * Výběr VÍCE herců k projektu (zadání 10. 9. 2026: „ještě nemám v detailu
@@ -35,6 +36,9 @@ export function VyberHercu({
   onZmena,
   puvodniText,
   disabled,
+  dotoceni,
+  onPrepnoutDotoceno,
+  dotoceniBezi,
 }: {
   herci: Herec[];
   /** ID vybraných účtů v pořadí - první je Herec 1. */
@@ -43,6 +47,15 @@ export function VyberHercu({
   /** Jméno herce, jak přišlo z Caflou - vodítko, dokud účet přiřazený není. */
   puvodniText?: string | null;
   disabled?: boolean;
+  /**
+   * Kdo z herců má dotočeno - ID účtu -> datum (zadání 11. 9. 2026).
+   * Ukládá se zvlášť od zbytku formuláře: je to událost, ne vlastnost, kterou
+   * by měl člověk „rozepsanou" a potvrzoval ji až spolu s ostatním.
+   */
+  dotoceni?: Record<string, string>;
+  onPrepnoutDotoceno?: (userId: string, dotoceno: boolean) => void;
+  /** ID herce, u kterého se zrovna ukládá - tlačítko na něj chvíli nereaguje. */
+  dotoceniBezi?: string | null;
 }) {
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
@@ -110,6 +123,31 @@ export function VyberHercu({
                 onZmenit={() => nahoru(h.id)}
                 onOdebrat={() => odeber(h.id)}
               />
+              {/* Dotoceno u konkretniho herce (zadani 11. 9. 2026) - na
+                  audioknize byva hercu vic a kazdy konci jindy. */}
+              {onPrepnoutDotoceno &&
+                (dotoceni?.[h.id] ? (
+                  <button
+                    type="button"
+                    disabled={disabled || dotoceniBezi === h.id}
+                    onClick={() => onPrepnoutDotoceno(h.id, false)}
+                    title={`Dotočeno ${new Date(dotoceni[h.id]).toLocaleDateString('cs-CZ')} — klepnutím zrušíte`}
+                    className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold text-brand-greenDeep disabled:opacity-50"
+                  >
+                    <FajfkaDotoceno kdy={dotoceni[h.id]} />
+                    Dotočeno
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={disabled || dotoceniBezi === h.id}
+                    onClick={() => onPrepnoutDotoceno(h.id, true)}
+                    title="Označit, že tenhle herec má dotočeno"
+                    className="text-xs font-heading font-semibold rounded-pill border border-line px-2.5 py-1 text-muted hover:border-brand-green hover:text-brand-greenDeep transition-colors disabled:opacity-50"
+                  >
+                    {dotoceniBezi === h.id ? 'Ukládám…' : 'Dotočeno'}
+                  </button>
+                ))}
               {i > 0 && (
                 <button
                   type="button"

@@ -78,6 +78,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           hourlyRate: user.hourlyRate,
           manazerProjektu: user.manazerProjektu,
           prijimaDotazyKlientu: user.prijimaDotazyKlientu,
+          dostavaDotoceno: user.dostavaDotoceno,
           studioLocations: user.studioLocations,
           birthNumber: user.birthNumber,
           ic: user.ic,

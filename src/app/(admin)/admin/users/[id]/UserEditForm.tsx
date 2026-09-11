@@ -25,6 +25,7 @@ type EditableUser = {
   /** Smí být manažerem projektu (zadání 10. 9. 2026). */
   manazerProjektu: boolean;
   prijimaDotazyKlientu: boolean;
+  dostavaDotoceno: boolean;
   studioLocations: string[];
   birthNumber: string | null;
   ic: string | null;
@@ -56,6 +57,7 @@ export function UserEditForm({
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
   const [manazerProjektu, setManazerProjektu] = useState(user.manazerProjektu);
   const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
+  const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
   const [active, setActive] = useState(user.active);
   // Tvrde smazani (zadani 10. 9. 2026) - jen kdyz na uctu nic nevisi.
@@ -109,6 +111,7 @@ export function UserEditForm({
         if (role === 'ZVUKAR') fd.set('hourlyRate', hourlyRate);
         if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
+        if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (photo) fd.set('photo', photo);
         else if (removePhoto) fd.set('removePhoto', 'true');
       }
@@ -243,6 +246,30 @@ export function UserEditForm({
             </label>
           </div>
         )}
+
+        {/* Zprava o dotocenem herci (zadani 11. 9. 2026: "info o dotoceno
+            s hercem jde notifikaci mailem na Helenu Rychlik"). Priznak
+            u uctu, ne adresa v kodu - az to bude hlidat nekdo jiny,
+            preklikne se to tady. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dostavaDotoceno}
+                onChange={(e) => setDostavaDotoceno(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Dostává zprávy o dotočení
+                <span className="block text-xs text-muted">
+                  mail pokaždé, když se u projektu odškrtne dotočený herec
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
         {needsCompany && (
           <div className="flex-1 min-w-[200px]">
             <AdminField label="Firma" required>
