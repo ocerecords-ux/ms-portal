@@ -1,3 +1,8 @@
+'use client';
+
+import { useState } from 'react';
+import { NakladyProjektu, type NakladovaPolozka } from './NakladyProjektu';
+
 const czk = (v: number) => `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
 
 /**
@@ -6,30 +11,41 @@ const czk = (v: number) => `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
  * je to audiokniha nebo reklama").
  *
  * U audioknihy portál rozpočet SPOČÍTÁ — normostrany × sazby, viz
- * ProjectBudget. U reklamy žádné normostrany nejsou a cena se s klientem
- * dohodne, takže se bere z toho, co je na papíře: z vystavené faktury, a
- * dokud žádná není, z nabídky. Proti tomu stojí, co nás to zatím stálo —
- * výkazy zvukařů a výdaje navázané na projekt.
+ * ProjectBudget. U reklamy žádný takový vzorec není: cena se bere z nabídky
+ * (a dokud není, z vystavené faktury) a náklady si produkce napíše sama po
+ * položkách — honorář herce, studio, hudba. K nim se přičte, co portál ví
+ * sám: výkazy zvukařů a výdaje navázané na projekt.
+ *
+ * Zatím schválně jednoduché; Ondřej 11. 9. 2026: „u těch reklam to bude
+ * trošku sofistikovanější, zatím to udělej jednoduše."
  *
  * Všechno bez DPH: daň projektu nevydělá ani nesežere.
  */
 export function ProjectBudgetZakazka({
+  caflouProjectId,
   cena,
   zdrojCeny,
   spent,
   hoursLogged,
   vydaje,
+  pocatecniPolozky,
 }: {
+  caflouProjectId: string;
   /** Cena zakázky bez DPH v korunách; null = není z čeho ji vzít. */
   cena: number | null;
-  zdrojCeny: 'faktura' | 'nabidka' | null;
+  zdrojCeny: 'nabidka' | 'faktura' | null;
   /** Vykázané peníze podle výkazů zvukařů. */
   spent: number;
   hoursLogged: number;
-  /** Výdaje navázané na projekt (honoráře, studio…), bez DPH. */
+  /** Výdaje navázané na projekt (doklady), bez DPH. */
   vydaje: number;
+  pocatecniPolozky: NakladovaPolozka[];
 }) {
-  const naklady = spent + vydaje;
+  const [polozky, setPolozky] = useState(
+    pocatecniPolozky.reduce((s, p) => s + p.castka, 0),
+  );
+
+  const naklady = spent + vydaje + polozky;
   const percent = cena && cena > 0 ? Math.round((naklady / cena) * 100) : 0;
   const over = cena != null && naklady > cena;
 
@@ -38,10 +54,10 @@ export function ProjectBudgetZakazka({
       <div className="flex items-baseline justify-between flex-wrap gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Rozpočet</h2>
         <span className="text-xs font-body text-muted">
-          {zdrojCeny === 'faktura'
-            ? 'Cena podle vystavené faktury'
-            : zdrojCeny === 'nabidka'
-              ? 'Cena podle nabídky'
+          {zdrojCeny === 'nabidka'
+            ? 'Cena podle nabídky'
+            : zdrojCeny === 'faktura'
+              ? 'Cena podle vystavené faktury'
               : 'Cena zakázky zatím není'}
         </span>
       </div>
@@ -51,7 +67,7 @@ export function ProjectBudgetZakazka({
           <tr>
             <td className="py-1 text-ink">Cena zakázky</td>
             <td className="py-1 text-muted whitespace-nowrap">
-              {zdrojCeny === 'faktura' ? 'fakturováno' : zdrojCeny === 'nabidka' ? 'nabídnuto' : '—'}
+              {zdrojCeny === 'nabidka' ? 'nabídnuto' : zdrojCeny === 'faktura' ? 'fakturováno' : '—'}
             </td>
             <td className="py-1 text-ink tabular-nums text-right">{cena == null ? '—' : czk(cena)}</td>
           </tr>
@@ -63,9 +79,14 @@ export function ProjectBudgetZakazka({
             <td className="py-1 text-ink tabular-nums text-right">{czk(spent)}</td>
           </tr>
           <tr>
-            <td className="py-1 text-ink">Výdaje</td>
-            <td className="py-1 text-muted whitespace-nowrap">honoráře, studio…</td>
+            <td className="py-1 text-ink">Výdaje z dokladů</td>
+            <td className="py-1 text-muted whitespace-nowrap">záložka Doklady</td>
             <td className="py-1 text-ink tabular-nums text-right">{czk(vydaje)}</td>
+          </tr>
+          <tr>
+            <td className="py-1 text-ink">Náklady po položkách</td>
+            <td className="py-1 text-muted whitespace-nowrap">viz níž</td>
+            <td className="py-1 text-ink tabular-nums text-right">{czk(polozky)}</td>
           </tr>
           <tr className="border-t border-line">
             <td className="pt-2 text-ink font-semibold">Náklady celkem</td>
@@ -108,10 +129,13 @@ export function ProjectBudgetZakazka({
             </span>
           )}
         </div>
-        <p className="text-xs font-body text-muted mt-1 m-0">
-          Všechno bez DPH. Doklady se přidávají v záložce Doklady.
-        </p>
       </div>
+
+      <NakladyProjektu
+        caflouProjectId={caflouProjectId}
+        pocatecni={pocatecniPolozky}
+        onZmena={setPolozky}
+      />
     </div>
   );
 }

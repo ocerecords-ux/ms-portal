@@ -1808,3 +1808,22 @@ model VzorZpravy {
   upravilJmeno String?
   updatedAt    DateTime @updatedAt
 }
+
+/// Polozkove naklady projektu (zadani 11. 9. 2026: „do te karty mi dej treba
+/// polozkove menu naklady, tak napisu naklady na herce a tak dale").
+///
+/// U audioknihy si naklady portal spocita z normostran. U reklamy zadny takovy
+/// vzorec neni, takze si je produkce napise sama - honorar herce, studio,
+/// hudba. Castka je v CELYCH KORUNACH BEZ DPH, stejne jako zbytek rozpoctu.
+model ProjektNaklad {
+  id              String @id @default(cuid())
+  caflouProjectId String
+
+  nazev  String
+  castka Int
+  poradi Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([caflouProjectId])
+}

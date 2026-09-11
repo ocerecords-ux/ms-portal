@@ -11,7 +11,7 @@ import { prisma } from '@/lib/db';
  * otevře rychleji, protože mu odpadne šest dotazů do databáze.
  */
 export async function nactiPenizeProjektu(caflouProjectId: string) {
-  const [budgetSettings, timesheets, offers, invoices, expenses, contracts] = await Promise.all([
+  const [budgetSettings, timesheets, offers, invoices, expenses, contracts, naklady] = await Promise.all([
     prisma.budgetSettings.findUnique({ where: { id: 'default' } }),
     // Vykazy k tomuhle projektu - z nich se pocita cerpani rozpoctu.
     prisma.timesheetEntry.findMany({
@@ -38,9 +38,15 @@ export async function nactiPenizeProjektu(caflouProjectId: string) {
       where: { caflouProjectId },
       orderBy: [{ createdAt: 'desc' }],
     }),
+    // Polozkove naklady, ktere si produkce napsala sama (zadani 11. 9. 2026).
+    prisma.projektNaklad.findMany({
+      where: { caflouProjectId },
+      orderBy: [{ poradi: 'asc' }, { createdAt: 'asc' }],
+      select: { nazev: true, castka: true },
+    }),
   ]);
 
-  return { budgetSettings, timesheets, offers, invoices, expenses, contracts };
+  return { budgetSettings, timesheets, offers, invoices, expenses, contracts, naklady };
 }
 
 export type PenizeProjektu = Awaited<ReturnType<typeof nactiPenizeProjektu>>;

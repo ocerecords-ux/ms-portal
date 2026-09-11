@@ -70,6 +70,10 @@ type Stopa = {
   krivkaStav: 'ceka' | 'pocita' | 'hotovo' | 'nejde';
 };
 
+/** Nabídka rychlostí. Pomalejší než 0,75 už se nedá poslouchat, rychlejší
+ *  než 2 nejde rozumět. */
+const RYCHLOSTI = [0.75, 1, 1.25, 1.5, 2];
+
 const DELKA_STOPY_V_CUBASE = 3600; // stopa 01 -> 0 h, 02 -> 1 h, 03 -> 2 h…
 
 /** Nad tuhle velikost se křivka nekreslí - dekódování by sežralo paměť. */
@@ -233,6 +237,12 @@ export function Preposlech({
   const [uklada, setUklada] = useState(false);
   /** Odškrtnutí PŘEPOSLECHNUTO se ptá - je to krok zpátky ve velké věci. */
   const [rusiPreposlech, setRusiPreposlech] = useState(false);
+  /**
+   * Rychlost přehrávání (zadání 11. 9. 2026: „přidej do audiotaggeru
+   * přepínání rychlé přehrávání"). Prohlížeč ji při výměně souboru zahodí,
+   * proto se po každém výběru stopy nastaví znovu.
+   */
+  const [rychlost, setRychlost] = useState(1);
   const [chybaHlaska, setChybaHlaska] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -242,6 +252,8 @@ export function Preposlech({
   const pdfObalRef = useRef<HTMLDivElement | null>(null);
   const pdfRolovaniRef = useRef<HTMLDivElement | null>(null);
   const pdfVerzeRef = useRef(0);
+  /** Vybraná rychlost i mimo React render - viz vyberStopu. */
+  const rychlostRef = useRef(1);
   /** Které strany už jsou vykreslené - kreslí se až na dohled, viz vykresliPdf. */
   const nakresleneRef = useRef<Set<number>>(new Set());
   const pozorovatelRef = useRef<IntersectionObserver | null>(null);
@@ -415,6 +427,8 @@ export function Preposlech({
       audio.src = stopa.url;
       audio.load();
     }
+    // Novy soubor = rychlost zpatky na 1, tak ji hned vratime na vybranou.
+    audio.playbackRate = rychlostRef.current;
     setDelka(Number.isFinite(audio.duration) ? audio.duration : 0);
     if (typeof skocNa === 'number') {
       const nastav = () => {
@@ -941,6 +955,12 @@ export function Preposlech({
     vykresliZnacky();
   }, [stav.chyby, vykresliZnacky]);
 
+  // Prepnuti rychlosti se projevi hned, i kdyz uz stopa hraje.
+  useEffect(() => {
+    rychlostRef.current = rychlost;
+    if (audioRef.current) audioRef.current.playbackRate = rychlost;
+  }, [rychlost]);
+
   /* ---------- klávesy ---------- */
 
   useEffect(() => {
@@ -1258,6 +1278,24 @@ export function Preposlech({
                 <span className="block text-[10px] font-heading uppercase tracking-[0.18em] text-white/60">Čas</span>
                 <span className="block font-heading font-bold text-3xl leading-none tabular-nums">{cas(pozice)}</span>
                 <span className="block text-[11px] font-body text-white/70 mt-1 tabular-nums">z {cas(delka)}</span>
+              </div>
+              <div className="min-w-0">
+                <span className="block text-[10px] font-heading uppercase tracking-[0.18em] text-white/60">Rychlost</span>
+                <span className="flex items-center gap-1 mt-1">
+                  {RYCHLOSTI.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRychlost(r)}
+                      title={`Přehrávat ${r}× rychle`}
+                      className={`font-heading font-semibold text-xs tabular-nums rounded px-2 py-1 transition-colors ${
+                        r === rychlost ? 'bg-brand-green text-onAccent' : 'bg-white/10 text-white/80 hover:bg-white/20'
+                      }`}
+                    >
+                      {r}×
+                    </button>
+                  ))}
+                </span>
               </div>
               <button
                 type="button"

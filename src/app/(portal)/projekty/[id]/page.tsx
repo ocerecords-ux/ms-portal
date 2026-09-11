@@ -179,14 +179,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Rozpocet (zadani 6. 9. 2026) - jen u audioknih, kde zname pocet normostran,
   // a vidi ho jen Zuzo-labuzo. Zvukar ani produkce se k cislum nedostanou
   // (zadani 11. 9. 2026) - viz canViewProjectDocuments v lib/roles.ts.
-  const { budgetSettings, timesheets, offers, invoices, expenses, contracts } = penize ?? {
+  const { budgetSettings, timesheets, offers, invoices, expenses, contracts, naklady } = penize ?? {
     budgetSettings: null,
     timesheets: [],
     offers: [],
     invoices: [],
     expenses: [],
     contracts: [],
+    naklady: [],
   };
+  const nakladovePolozky = naklady.map((n) => ({ nazev: n.nazev, castka: n.castka }));
 
   const settings = budgetSettings ?? DEFAULT_BUDGET_SETTINGS;
   const showBudget =
@@ -340,8 +342,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     .filter((e) => vCzk(e.currency))
     .reduce((soucet, e) => soucet + korunyBezDph(e.amountExVatMinor), 0);
 
-  const cenaZakazky = cenaZFaktur > 0 ? cenaZFaktur : cenaZNabidek > 0 ? cenaZNabidek : null;
-  const zdrojCeny = cenaZFaktur > 0 ? ('faktura' as const) : cenaZNabidek > 0 ? ('nabidka' as const) : null;
+  // Prednost ma NABIDKA (zadani 11. 9. 2026: „bude si brat cenu z nabidky").
+  // Faktura je zaloha pro projekty, kde se nabidka nedelala.
+  const cenaZakazky = cenaZNabidek > 0 ? cenaZNabidek : cenaZFaktur > 0 ? cenaZFaktur : null;
+  const zdrojCeny = cenaZNabidek > 0 ? ('nabidka' as const) : cenaZFaktur > 0 ? ('faktura' as const) : null;
 
   const rozpocet = !showDocuments ? null : budget ? (
     <ProjectBudget
@@ -353,11 +357,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     />
   ) : (
     <ProjectBudgetZakazka
+      caflouProjectId={caflouProjectId}
       cena={cenaZakazky}
       zdrojCeny={zdrojCeny}
       spent={spent}
       hoursLogged={hoursLogged}
       vydaje={vydajeCelkem}
+      pocatecniPolozky={nakladovePolozky}
     />
   );
 
