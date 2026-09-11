@@ -852,6 +852,42 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     setUpravaChyba(null);
   }
 
+  /**
+   * Mazání vlastní zprávy (zadání 11. 9. 2026: „ať můžu smazat svoje zprávy
+   * z chatu, když se třeba spletu").
+   *
+   * Ptá se na potvrzení PŘÍMO V ŘÁDKU, ne oknem prohlížeče: okno by v panelu
+   * chatu vypadalo cize a smazaná zpráva se vrátit nedá, takže krok navíc má
+   * smysl. Klik na „Smazat" jen přepne odkaz na „Opravdu smazat?" a vedle
+   * nabídne „Zrušit".
+   */
+  const [mazanaId, setMazanaId] = useState<string | null>(null);
+  const [mazani, setMazani] = useState(false);
+
+  async function smazZpravu(id: string) {
+    if (mazani) return;
+    setMazani(true);
+    setUpravaChyba(null);
+    try {
+      const res = await fetch(`/api/chat/zpravy/${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setUpravaChyba((data as { error?: string })?.error || 'Zprávu se nepodařilo smazat.');
+        return;
+      }
+      const bez = (seznam: ChatMessage[]) => seznam.filter((z) => z.id !== id);
+      setMessages(bez);
+      setVlakno(bez);
+      setMazanaId(null);
+      // Seznam konverzaci drzi cas posledni zpravy - po smazani muze byt jiny.
+      void nactiKonverzace();
+    } catch {
+      setUpravaChyba('Zprávu se nepodařilo smazat.');
+    } finally {
+      setMazani(false);
+    }
+  }
+
   function zrusUpravu() {
     setUpravovanaId(null);
     setUpravaText('');
@@ -1850,6 +1886,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                 >
                                   Upravit
                                 </button>
+                                <span className="text-[11px] text-muted/40">·</span>
+                                <SmazatZpravu
+                                  id={m.id}
+                                  ptaSe={mazanaId === m.id}
+                                  bezi={mazani}
+                                  onZeptejSe={() => setMazanaId(m.id)}
+                                  onZrus={() => setMazanaId(null)}
+                                  onSmaz={() => void smazZpravu(m.id)}
+                                />
                               </>
                             )}
                           </span>
@@ -1924,13 +1969,23 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                 </span>
                               )}
                               {m.mine && upravovanaId !== m.id && (
-                                <button
-                                  type="button"
-                                  onClick={() => zacniUpravu(m)}
-                                  className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
-                                >
-                                  Upravit
-                                </button>
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => zacniUpravu(m)}
+                                    className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
+                                  >
+                                    Upravit
+                                  </button>
+                                  <SmazatZpravu
+                                    id={m.id}
+                                    ptaSe={mazanaId === m.id}
+                                    bezi={mazani}
+                                    onZeptejSe={() => setMazanaId(m.id)}
+                                    onZrus={() => setMazanaId(null)}
+                                    onSmaz={() => void smazZpravu(m.id)}
+                                  />
+                                </>
                               )}
                             </span>
                             {upravovanaId === m.id ? (
@@ -2056,6 +2111,58 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 }
 
 /** Ikonky pro spodni listu chatu (zadani 10. 9. 2026). */
+/**
+ * „Smazat" u vlastní zprávy (zadání 11. 9. 2026). Ptá se na potvrzení přímo
+ * v řádku, ne oknem prohlížeče - smazaná zpráva se vrátit nedá, ale okno by
+ * v panelu chatu vypadalo cize.
+ */
+function SmazatZpravu({
+  ptaSe,
+  bezi,
+  onZeptejSe,
+  onZrus,
+  onSmaz,
+}: {
+  id: string;
+  ptaSe: boolean;
+  bezi: boolean;
+  onZeptejSe: () => void;
+  onZrus: () => void;
+  onSmaz: () => void;
+}) {
+  if (!ptaSe) {
+    return (
+      <button
+        type="button"
+        onClick={onZeptejSe}
+        className="text-[11px] font-heading font-semibold text-muted hover:text-danger"
+      >
+        Smazat
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <button
+        type="button"
+        onClick={onSmaz}
+        disabled={bezi}
+        className="text-[11px] font-heading font-semibold text-danger hover:underline disabled:opacity-50"
+      >
+        {bezi ? 'Mažu…' : 'Opravdu smazat?'}
+      </button>
+      <span className="text-[11px] text-muted/40">·</span>
+      <button
+        type="button"
+        onClick={onZrus}
+        className="text-[11px] font-heading font-semibold text-muted hover:text-ink"
+      >
+        Zrušit
+      </button>
+    </span>
+  );
+}
+
 function IkonaZalozky({ kind }: { kind: ConversationKind }) {
   const spolecne = {
     viewBox: '0 0 24 24',

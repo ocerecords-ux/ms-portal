@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   InternalProjectsTable,
@@ -198,15 +198,40 @@ export function InternalProjectsBrowser({
       setSaving(false);
     }
   }
-  // Razeni klikem na nadpis sloupce (zadani 5. 9. 2026). Vychozi je stejne
-  // jako driv - podle terminu, resp. data dokonceni.
-  const [sort, setSort] = useState<ProjectSort>({ key: 'endDate', dir: 'desc' });
+  /**
+   * Řazení klikem na nadpis sloupce (zadání 5. 9. 2026).
+   *
+   * VÝCHOZÍ POŘADÍ SE LIŠÍ PODLE ZÁLOŽKY (zadání 11. 9. 2026: „řazení projektů
+   * podle data dokončení od nejbližšího termínu, to zatím nejde"):
+   *
+   *  - Aktivní: nejbližší termín NAHOŘE. Je to seznam práce, která teprve
+   *    čeká — co hoří, má být vidět první. Do teď se řadilo sestupně, takže
+   *    nahoře stály nejvzdálenější termíny a ten nejbližší byl až na konci.
+   *  - Dokončené: naposledy dokončené nahoře. Tam je to archiv a zajímá nás,
+   *    co se stalo nedávno.
+   *
+   * Projekty bez data končí v obou případech dole (viz compareProjects).
+   *
+   * Když si člověk řazení přehodí sám, přepínání záložek už mu do něj nesahá —
+   * jinak by mu jeho volba mizela pod rukama.
+   */
+  const VYCHOZI_RAZENI: Record<Tab, ProjectSort> = {
+    active: { key: 'endDate', dir: 'asc' },
+    finished: { key: 'endDate', dir: 'desc' },
+  };
+  const [sort, setSort] = useState<ProjectSort>(VYCHOZI_RAZENI.active);
+  const razenoRucne = useRef(false);
 
   function handleSort(key: ProjectSortKey) {
+    razenoRucne.current = true;
     setSort((current) =>
       current.key === key
         ? { key, dir: current.dir === 'asc' ? 'desc' : 'asc' }
-        : { key, dir: key === 'endDate' || key === 'releaseDate' || key === 'pageCount' || key === 'priority' ? 'desc' : 'asc' },
+        : {
+            key,
+            // U dat se zacina od nejblizsiho, u cisel a priority od nejvyssiho.
+            dir: key === 'pageCount' || key === 'priority' ? 'desc' : 'asc',
+          },
     );
     setPage(0);
   }
@@ -223,6 +248,9 @@ export function InternalProjectsBrowser({
 
   function switchTab(next: Tab) {
     setTab(next);
+    // Vlastni volbu cloveka prepinani zalozek neprepisuje - viz poznamka
+    // u VYCHOZI_RAZENI.
+    if (!razenoRucne.current) setSort(VYCHOZI_RAZENI[next]);
     setPage(0);
   }
 

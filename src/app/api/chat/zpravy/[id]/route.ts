@@ -73,3 +73,50 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'Zprávu se nepodařilo upravit.' }, { status: 500 });
   }
 }
+
+
+/**
+ * Smazání vlastní zprávy (zadání 11. 9. 2026: „potřebuju, ať můžu smazat
+ * svoje zprávy z chatu, když se třeba spletu").
+ *
+ * Smazat smí VÝHRADNĚ autor, ani správce ne — stejně jako u úpravy, a
+ * podmínka na `userId` je přímo ve `where`, takže cizí zprávu nejde smazat
+ * ani závodem mezi kontrolou a zápisem. Cizí zpráva se tváří, že neexistuje.
+ *
+ * ZPRÁVA S ODPOVĚĎMI SE NESMAŽE. Odpovědi na ni v databázi visí (cascade),
+ * takže by smazání vzalo s sebou i to, co napsali ostatní — a ti by o tom
+ * nevěděli. Portál to proto odmítne a řekne proč; smazat jde poté, co vlákno
+ * doběhne, nebo se dá zpráva prostě upravit.
+ *
+ * Přílohy zmizí s ní (cascade). Samotné soubory v úložišti zůstávají — úklid
+ * osiřelých souborů je samostatná věc, a je lepší nechat soubor ležet než
+ * mazat něco, na co se ještě může odkazovat jiná zpráva.
+ */
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !canUseChat(session.user.role)) {
+    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  }
+  const me = session.user.id;
+
+  try {
+    const zprava = await prisma.message.findFirst({
+      where: { id: params.id, userId: me },
+      select: { id: true, conversationId: true, _count: { select: { replies: true } } },
+    });
+    if (!zprava) return NextResponse.json({ error: 'Zpráva nenalezena.' }, { status: 404 });
+
+    if (zprava._count.replies > 0) {
+      return NextResponse.json(
+        { error: 'Pod zprávou visí odpovědi — smazat by je vzalo s sebou. Můžete ji upravit.' },
+        { status: 409 },
+      );
+    }
+
+    await prisma.message.delete({ where: { id: zprava.id } });
+    return NextResponse.json({ smazano: true });
+  } catch (err) {
+    console.error('DELETE /api/chat/zpravy/[id] selhalo:', err);
+    return NextResponse.json({ error: 'Zprávu se nepodařilo smazat.' }, { status: 500 });
+  }
+}
