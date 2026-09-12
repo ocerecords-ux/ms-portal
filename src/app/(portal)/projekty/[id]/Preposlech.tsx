@@ -65,6 +65,8 @@ type Udalost = {
   popis: string;
   kdo: string | null;
   kdy: string;
+  /** Da se tenhle krok vratit? Rozhoduje server (zadani 12. 9. 2026). */
+  muzuVratit?: boolean;
 };
 
 type Stav = {
@@ -1007,6 +1009,36 @@ export function Preposlech({
     }
   }
 
+  /**
+   * Vrácení jednoho kroku v historii (zadání 12. 9. 2026: „když to bude nějaký
+   * krok v editaci, tak bude možnost se do toho bodu vrátit").
+   *
+   * Vrací se JEDEN krok, ne stav k danému okamžiku: každý krok si nese, jak
+   * poznámka vypadala před ním, a tenhle ho podle toho odčiní. Kdyby se vracel
+   * „celý stav", zmizely by i poznámky, které mezitím napsal někdo jiný.
+   */
+  async function vratKrok(udalostId: string) {
+    setChybaHlaska(null);
+    try {
+      const res = await fetch(sKlicem(`${zaklad}/vraceni`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ udalost: udalostId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setChybaHlaska(data?.error || 'Krok se nepodařilo vrátit.');
+        return;
+      }
+      // Vraceni meni i seznam poznamek, takze se stav nacte cely znovu.
+      const znovu = await fetch(sKlicem(zaklad));
+      const novy = await znovu.json().catch(() => null);
+      if (znovu.ok && novy) setStav(novy as Stav);
+    } catch {
+      setChybaHlaska('Krok se nepodařilo vrátit.');
+    }
+  }
+
   async function prepniPreposlechnuto() {
     await posli(sKlicem(zaklad), {
       method: 'PATCH',
@@ -1834,7 +1866,7 @@ export function Preposlech({
                 </div>
                 <div className="overflow-y-auto" style={{ maxHeight: '30vh' }}>
                   {panel === 'historie' ? (
-                    <Historie zaznamy={stav.historie ?? []} />
+                    <Historie zaznamy={stav.historie ?? []} onVratit={(id) => void vratKrok(id)} />
                   ) : stav.chyby.length === 0 ? (
                     <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
                       Zatím žádné chyby. Pusťte stopu a v místě problému dejte „Přidat chybu".
@@ -1944,7 +1976,7 @@ export function Preposlech({
  * nebo opravil poznámku, kdo odškrtl přeposlechnuto. Zůstává, i když se
  * poznámka mezitím smaže; právě proto to není spočítané ze záznamů chyb.
  */
-function Historie({ zaznamy }: { zaznamy: Udalost[] }) {
+function Historie({ zaznamy, onVratit }: { zaznamy: Udalost[]; onVratit: (id: string) => void }) {
   if (zaznamy.length === 0) {
     return (
       <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
@@ -1971,6 +2003,18 @@ function Historie({ zaznamy }: { zaznamy: Udalost[] }) {
           />
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-body text-ink break-words">{u.popis}</span>
+            {/* Vratit jde jen krok nad poznamkou, na kterou dotycny smi -
+                a jen jednou (zadani 12. 9. 2026). */}
+            {u.muzuVratit && (
+              <button
+                type="button"
+                onClick={() => onVratit(u.id)}
+                title="Vrátit tenhle krok"
+                className="mt-1 text-[11px] font-heading font-semibold text-brand-purple hover:underline"
+              >
+                ↩ Vrátit do tohoto bodu
+              </button>
+            )}
             <span className="block text-[11px] font-body text-muted mt-0.5">
               {u.kdo ? `${u.kdo} · ` : ''}
               {new Date(u.kdy).toLocaleString('cs-CZ', {

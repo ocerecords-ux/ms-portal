@@ -1984,6 +1984,15 @@ model PreposlechUdalost {
   /// Jmeno textem - zaznam zustane citelny, i kdyz ucet pozdeji zmizi.
   kdo             String?
 
+  /// Ktere poznamky se krok tykal (zadani 12. 9. 2026: „kdyz to bude nejaky
+  /// krok v editaci, tak bude moznost se do toho bodu vratit").
+  chybaId         String?
+  /// Jak poznamka vypadala PRED timhle krokem. U pridani je prazdny -
+  /// predtim nebylo co vracet. Z nej se krok vraci zpatky.
+  snimek          Json?
+  /// Uz byl tenhle krok vracen? Vracet ho podruhe nema smysl.
+  vracenoAt       DateTime?
+
   createdAt       DateTime @default(now())
 
   @@index([caflouProjectId, createdAt])

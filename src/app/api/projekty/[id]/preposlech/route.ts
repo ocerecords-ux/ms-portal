@@ -54,9 +54,20 @@ async function zapisUdalost(
   typ: string,
   popis: string,
   kdo: string | null,
+  /** Které poznámky se to týkalo a jak vypadala PŘED tímhle krokem. */
+  krok?: { chybaId?: string | null; snimek?: unknown },
 ) {
   await prisma.preposlechUdalost
-    .create({ data: { caflouProjectId, typ, popis, kdo } })
+    .create({
+      data: {
+        caflouProjectId,
+        typ,
+        popis,
+        kdo,
+        chybaId: krok?.chybaId ?? null,
+        snimek: (krok?.snimek as never) ?? undefined,
+      },
+    })
     .catch((err) => console.error('Zápis do historie přeposlechu selhal:', err));
 }
 
@@ -106,6 +117,17 @@ async function stav(caflouProjectId: string, kdo?: Pristup) {
       popis: u.popis,
       kdo: u.kdo,
       kdy: u.createdAt.toISOString(),
+      /**
+       * Da se tenhle krok vratit? Jen kroky nad poznamkou, jen jednou
+       * a jen tomu, kdo na tu poznamku smi (zadani 12. 9. 2026).
+       */
+      muzuVratit: Boolean(
+        kdo &&
+          !u.vracenoAt &&
+          ['PRIDANA', 'UPRAVENA', 'SMAZANA'].includes(u.typ) &&
+          u.chybaId &&
+          smiUpravit({ createdByUserId: (u.snimek as { createdByUserId?: string | null } | null)?.createdByUserId ?? null }, kdo),
+      ),
     })),
   };
 }
@@ -149,7 +171,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
 
-  await prisma.preposlechChyba.create({
+  const vytvorena = await prisma.preposlechChyba.create({
     data: {
       caflouProjectId: params.id,
       ...parsed.data,
@@ -165,6 +187,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     'PRIDANA',
     `Přidal(a) poznámku u stopy ${parsed.data.trackIndex}.`,
     pristup.jmeno,
+    // Pred pridanim nebylo co vracet - snimek nese jen to, kdo poznamku
+    // zalozil, aby se dalo overit, kdo ji smi zase odebrat.
+    { chybaId: vytvorena.id, snimek: { createdByUserId: pristup.userId } },
   );
 
   return NextResponse.json(await stav(params.id, pristup));
@@ -219,7 +244,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   const chyba = await prisma.preposlechChyba.findFirst({
     where: { id: parsed.data.chyba, caflouProjectId: params.id },
-    select: { id: true, createdByUserId: true },
+    select: { id: true, createdByUserId: true, description: true },
   });
   if (!chyba) return NextResponse.json({ error: 'Záznam se nenašel.' }, { status: 404 });
   if (!smiUpravit(chyba, pristup)) {
@@ -231,7 +256,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     data: { description: parsed.data.description },
   });
 
-  await zapisUdalost(params.id, 'UPRAVENA', 'Upravil(a) znění poznámky.', pristup.jmeno);
+  await zapisUdalost(params.id, 'UPRAVENA', 'Upravil(a) znění poznámky.', pristup.jmeno, {
+    chybaId: chyba.id,
+    snimek: { createdByUserId: chyba.createdByUserId, description: chyba.description },
+  });
 
   return NextResponse.json(await stav(params.id, pristup));
 }
@@ -245,7 +273,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   const chyba = await prisma.preposlechChyba.findFirst({
     where: { id: chybaId, caflouProjectId: params.id },
-    select: { id: true, createdByUserId: true },
   });
   if (!chyba) return NextResponse.json(await stav(params.id, pristup));
   if (!smiUpravit(chyba, pristup)) {
@@ -254,7 +281,20 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   await prisma.preposlechChyba.delete({ where: { id: chyba.id } });
 
-  await zapisUdalost(params.id, 'SMAZANA', 'Smazal(a) poznámku.', pristup.jmeno);
+  await zapisUdalost(params.id, 'SMAZANA', 'Smazal(a) poznámku.', pristup.jmeno, {
+    chybaId: chyba.id,
+    // Cely zaznam - z nej se poznamka da postavit zpatky.
+    snimek: {
+      createdByUserId: chyba.createdByUserId,
+      createdByName: chyba.createdByName,
+      trackIndex: chyba.trackIndex,
+      trackName: chyba.trackName,
+      localTime: chyba.localTime,
+      pdfPage: chyba.pdfPage,
+      zvyrazneni: chyba.zvyrazneni,
+      description: chyba.description,
+    },
+  });
 
   return NextResponse.json(await stav(params.id, pristup));
 }
