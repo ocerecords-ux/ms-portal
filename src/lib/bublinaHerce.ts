@@ -15,7 +15,7 @@
  * a když jich bude víc, jdou pod sebe (viz TRIDA_SLOUPCE_HERCU).
  */
 export const TRIDA_BUBLINY_HERCE =
-  'whitespace-nowrap rounded-pill border border-brand-purple/40 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight';
+  'rounded-pill border border-brand-purple/40 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight';
 
 /**
  * Bublina DOTOČENÉHO herce (zadání 12. 9. 2026: „pojďme u těch dotočených
@@ -28,7 +28,15 @@ export const TRIDA_BUBLINY_HERCE =
  * a přebíjela všechno ostatní na kartě.
  */
 export const TRIDA_BUBLINY_DOTOCENO =
-  'whitespace-nowrap rounded-pill border border-brand-green bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight';
+  'rounded-pill border border-brand-green bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight';
+
+/**
+ * ZALAMOVÁNÍ SI ŘÍDÍ MÍSTO POUŽITÍ (oprava 12. 9. 2026: „Valůšek herec je
+ * třeba useklý"). Třída měla `whitespace-nowrap`, a protože Tailwind vydává
+ * `nowrap` až za `normal`, přebila i tam, kde se zalomit mělo — jméno pak
+ * vyjelo ze sloupce a sloupec ho uřízl. Kde má jméno držet na jednom řádku
+ * (výběr herce, detail projektu), přidá se `whitespace-nowrap` u sebe.
+ */
 
 /** Víc herců u jednoho projektu jde pod sebe, ne za sebe na jeden řádek. */
 export const TRIDA_SLOUPCE_HERCU = 'flex flex-col items-start gap-1';

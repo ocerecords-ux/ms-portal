@@ -154,7 +154,7 @@ export function BublinaHerce({
     <span
       title={dotoceno ? `Dotočeno ${new Date(dotoceno).toLocaleDateString('cs-CZ')}` : undefined}
       className={`inline-flex items-center gap-1.5 max-w-full pl-3 pr-1.5 py-1 ${
-        dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
+        dotoceno ? `whitespace-nowrap ${TRIDA_BUBLINY_DOTOCENO}` : `whitespace-nowrap ${TRIDA_BUBLINY_HERCE}`
       }`}
     >
       <button

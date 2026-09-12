@@ -106,13 +106,15 @@ export function ProjectsTable({
               <th className="text-left px-4 py-3.5">Projekt</th>
               <th className="text-left px-4 py-3.5">Stav</th>
               <th className="text-left px-4 py-3.5">Herec</th>
-              <th className="text-right px-4 py-3.5">Normostrany</th>
-              <th className="text-left px-4 py-3.5">Dokončení</th>
-              <th className="text-left px-4 py-3.5">Vydání</th>
+              {/* „NS" misto „Normostrany" - usetrena sirka se hodi nazvum
+                  a hercum (zadani 12. 9. 2026). */}
+              <th className="text-right px-4 py-3.5 whitespace-nowrap" title="Normostrany">NS</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">Dokončení</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">Vydání</th>
               {/* Dva sloupce k přeposlechu (zadání 12. 9. 2026): jestli už je
                   co poslouchat, a jak daleko poslech došel. */}
-              {showPreposlech && <th className="text-left px-4 py-3.5">K přeposlechu</th>}
-              {showPreposlech && <th className="text-left px-4 py-3.5">Přeposlechnuto</th>}
+              {showPreposlech && <th className="text-left px-4 py-3.5 whitespace-nowrap">K přeposlechu</th>}
+              {showPreposlech && <th className="text-left px-4 py-3.5 whitespace-nowrap">Přeposlechnuto</th>}
               {showRodnyList && <th className="text-left px-4 py-3.5">Rodný list</th>}
               {/* Doleva jako vsechny ostatni sloupce - vpravo u samotneho
                   okraje pusobilo tlacitko odtrzene od zbytku tabulky
@@ -133,11 +135,11 @@ export function ProjectsTable({
             )}
             {projects.map((p) => (
               <tr key={p.id} className={TRIDA_RADKU}>
-                <td
-                  className="px-4 py-0 font-heading font-semibold text-sm text-ink truncate"
-                  title={p.name}
-                >
-                  {p.name}
+                {/* NAZEV KNIHY MUSI BYT CELY (zadani 12. 9. 2026: „nazvy knih
+                    musi byt cele. Kdyz to nevejde, dej to na dalsi radek").
+                    Radek se o to zvysi - 52 px je u tabulky minimum, ne strop. */}
+                <td className="px-4 py-2 font-heading font-semibold text-sm text-ink align-middle">
+                  <span className="block leading-tight break-words">{p.name}</span>
                 </td>
                 <td className="px-4 py-0 overflow-hidden">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
@@ -602,7 +604,7 @@ function bunkaSloupce(
  * zrovna vidět. Název dostal nejvíc — ten se má vejít celý.
  */
 const VAHA_SLOUPCE: Record<string, number> = {
-  name: 25,
+  name: 27,
   // „Dokonceno - ke schvaleni" je nejdelsi stav a ma se vejit cely
   // (oprava 12. 9. 2026).
   statusName: 21,
@@ -623,16 +625,18 @@ const VAHA_SLOUPCE: Record<string, number> = {
    */
   rodnyList: 10,
   dotaz: 11,
-  /** Fajfka nebo krizek - uzky sloupec staci (zadani 12. 9. 2026). */
-  kPreposlechu: 9,
+  /**
+   * Fajfka nebo krizek. Sirka je podle popisku v hlavicce, ktery ma zustat
+   * na jednom radku (zadani 12. 9. 2026).
+   */
+  kPreposlechu: 11,
   /** „3 z 24" nebo „Dokonceno". */
   preposlechnuto: 11,
   /**
-   * V klientskem a adminskem prehledu se sloupec jmenuje „Normostrany" -
-   * jedno dlouhe slovo, ktere se neda zalomit. V internim prehledu ma
-   * popisek „Pocet NS" a vystaci si s mensi sirkou.
+   * V klientskem prehledu se sloupec od 12. 9. 2026 jmenuje „NS" - dlouhe
+   * „Normostrany" si bralo sirku, kterou potrebuji nazvy knih a herci.
    */
-  pageCountSirsi: 11,
+  pageCountSirsi: 7,
 };
 
 export function sirkySloupcu(klice: string[]): string[] {

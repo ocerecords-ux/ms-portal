@@ -325,7 +325,7 @@ export function ProjectMetaForm({
                         <span
                           title={kdy ? `Dotočeno ${new Date(kdy).toLocaleDateString('cs-CZ')}` : undefined}
                           className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
-                            kdy ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
+                            kdy ? `whitespace-nowrap ${TRIDA_BUBLINY_DOTOCENO}` : `whitespace-nowrap ${TRIDA_BUBLINY_HERCE}`
                           }`}
                         >
                           {jmeno}
