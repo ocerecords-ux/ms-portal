@@ -7,7 +7,7 @@ import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel }
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
 import { IkonaTypu } from '@/lib/ikonyTypu';
-import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
+import { HerciBunka } from './HerciBunka';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
@@ -126,23 +126,12 @@ export function ProjectsTable({
                     s uctem v portalu; jmeno z Caflou zustava sedym textem,
                     protoze na nem nic nestoji. Zelena linka „dotoceno" sem
                     nepatri - to je nase vyroba, klientovi staci stav. */}
-                <td className="px-4 py-0 text-sm font-heading truncate">
+                <td className="px-4 py-0 text-sm font-heading align-middle">
                   {p.herci && p.herci.length > 0 ? (
-                    <span
-                      className="flex items-center gap-1.5 min-w-0 max-w-full"
-                      title={p.herci.map((h) => h.jmeno).join(', ')}
-                    >
-                      <span
-                        className={`inline-flex items-center min-w-0 max-w-full truncate px-3 py-1 text-sm font-heading font-semibold ${TRIDA_BUBLINY_HERCE}`}
-                      >
-                        {p.herci[0].jmeno}
-                      </span>
-                      {p.herci.length > 1 && (
-                        <span className="shrink-0 text-xs font-heading text-muted">
-                          +{p.herci.length - 1}
-                        </span>
-                      )}
-                    </span>
+                    // Herci pod sebou, stejne jako v internim prehledu (zadani
+                    // 12. 9. 2026). Dotoceno se klientovi neukazuje - to je
+                    // nase vyroba, jemu staci stav.
+                    <HerciBunka herci={p.herci.map((h) => ({ jmeno: h.jmeno, dotoceno: false }))} />
                   ) : (
                     <span className="text-muted" title={p.narrator ?? undefined}>
                       {p.narrator ?? '—'}
@@ -446,7 +435,10 @@ function bunkaSloupce(
       // radku dvojnasobne vysoke a seznam se pak nedal projizdet ocima.
       return (
         <span className="flex items-center gap-2.5 min-w-0 max-w-full" title={p.name}>
-          <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} />
+          {/* Projekt bez ikony si misto ni nechava prazdno (zadani 12. 9.
+              2026: „projekty, ktere nemaji ikony, by se mely spise zarovnat
+              nazvem, ne podle te ikony") - nazvy tak stoji v jedne linii. */}
+          <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} mezeraKdyzNeni />
           <Link
             href={`/projekty/${p.id}`}
             className="text-ink hover:text-brand-purple no-underline truncate"
@@ -518,33 +510,10 @@ function bunkaSloupce(
       // bubline. Kdyz zadny prirazeny ucet neni, zbyva jmeno z Caflou: jen
       // sedy text, na kterem nic nestoji.
       if (p.meta?.herci?.length) {
-        // JEDNA BUBLINA NA RADEK (zadani 12. 9. 2026: „hrozne nam tam litaji
-        // radky"). Herci pod sebou delali z nekterych radku dvoj- az
-        // trojnasobne vysoke. Kdyz jich je vic, za bublinou stoji „+2"
-        // a cely seznam je v bublinkove napovede; kompletni je pak v detailu.
-        const herci = p.meta.herci;
-        const prvni = herci[0];
-        return (
-          <span
-            className="flex items-center gap-1.5 min-w-0 max-w-full"
-            title={herci.map((h) => (h.dotoceno ? `${h.jmeno} — dotočeno` : h.jmeno)).join(', ')}
-          >
-            <span
-              className={`inline-flex items-center min-w-0 max-w-full truncate px-3 py-1 text-sm font-heading font-semibold ${
-                prvni.dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
-              }`}
-            >
-              {prvni.jmeno}
-              {/* Zelena linka kolem bubliny znamena dotoceno - fajfka uvnitr
-                  uz je navic (zadani 12. 9. 2026: „dej pryc tu fajfku").
-                  Pro ctecky obrazovky, ktere barvu nevidi, zustava popisek. */}
-              {prvni.dotoceno && <span className="sr-only"> — dotočeno</span>}
-            </span>
-            {herci.length > 1 && (
-              <span className="shrink-0 text-xs font-heading text-muted">+{herci.length - 1}</span>
-            )}
-          </span>
-        );
+        // HERCI POD SEBOU, RADEK SE ZVYSI (zadani 12. 9. 2026). Drive tu byla
+        // jen prvni bublina a za ni „+2" - jmeno se do ni neveslo a urizlo se
+        // uprostred. Viz HerciBunka.tsx.
+        return <HerciBunka herci={p.meta.herci} />;
       }
       if (!p.narrator) return '—';
       return (
@@ -611,7 +580,7 @@ function bunkaSloupce(
 const VAHA_SLOUPCE: Record<string, number> = {
   name: 27,
   statusName: 18,
-  narrator: 14,
+  narrator: 16,
   managerName: 11,
   companyName: 10,
   endDate: 10,
@@ -655,14 +624,21 @@ const TRIDA_BUNKY: Record<string, string> = {
   priority: 'px-2 py-0 text-sm font-heading truncate',
   projectType: 'px-3 py-0 text-sm font-heading text-muted truncate',
   managerName: 'px-3 py-0 text-sm font-heading text-muted truncate',
-  narrator: 'px-3 py-0 text-sm font-heading text-muted truncate',
+  // Herci nejsou na jeden radek - jdou pod sebe a radek se o to zvysi
+  // (zadani 12. 9. 2026: „hlavne nesmi byt nic useknute").
+  narrator: 'px-3 py-0 text-sm font-heading text-muted align-middle',
   pageCount: 'px-2 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
   endDate: 'px-2 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap truncate',
   releaseDate: 'px-2 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap truncate',
   driveUrl: 'px-2 py-0 whitespace-nowrap',
 };
 
-/** Jedna výška pro všechny řádky - kvůli tomu to celé je. */
+/**
+ * Jedna výška pro všechny řádky - kvůli tomu to celé je. U tabulky se `height`
+ * chová jako MINIMUM, takže řádek s několika herci se o ně zvýší (zadání
+ * 12. 9. 2026: „roztáhne se celý řádek projektu vertikálně") a zbytek seznamu
+ * zůstává srovnaný na 52 px.
+ */
 const TRIDA_RADKU = 'h-[52px] border-t border-line hover:bg-surfaceSoft';
 
 const ZAROVNANI_VPRAVO = new Set(['pageCount']);

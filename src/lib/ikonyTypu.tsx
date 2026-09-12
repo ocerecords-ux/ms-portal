@@ -303,12 +303,21 @@ export function IkonaTypu({
   klic,
   /** Název typu do bublinky - barevný tvar bez vysvětlení je hádanka. */
   typProjektu,
+  /**
+   * V tabulce projektů drží prázdné místo i tam, kde ikona není (zadání
+   * 12. 9. 2026) - jinak by se název u projektu bez ikony posunul doleva
+   * a sloupec by se rozjel. Jinde se prostě nevykreslí nic.
+   */
+  mezeraKdyzNeni = false,
 }: {
   klic: string | null | undefined;
   typProjektu?: string | null;
+  mezeraKdyzNeni?: boolean;
 }) {
   const ikona = najdiIkonu(klic);
-  if (!ikona) return null;
+  if (!ikona) {
+    return mezeraKdyzNeni ? <span aria-hidden="true" className="shrink-0 w-[30px] h-[30px]" /> : null;
+  }
   return (
     <span
       title={typProjektu || ikona.popisek}
