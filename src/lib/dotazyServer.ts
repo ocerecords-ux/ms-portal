@@ -74,6 +74,96 @@ async function zalozKanal(caflouProjectId: string, projectName: string, companyI
   });
 }
 
+/**
+ * SEZNAM PROJEKTŮ PRO KLIENTSKÝ DOK (zadání 12. 9. 2026: „udělal bych
+ * stabilní chat na pravé straně, jak to máme interně, kde by zůstávaly
+ * konverzace k projektům, když se klient bude na něco doptávat").
+ *
+ * Vrací všechny rozpracované projekty klienta — i ty, kde se ještě na nic
+ * nezeptal. Dok je tak zároveň místo, kde se dotaz zakládá; prázdné kanály
+ * přitom nevznikají, kanál pořád vzniká až první zprávou.
+ */
+export type DotazVSeznamu = {
+  projektId: string;
+  nazev: string;
+  /** Kolik zpráv od nás klient ještě neviděl. */
+  neprectene: number;
+  /** Poslední zpráva v kanálu; bez kanálu null. */
+  posledniAt: string | null;
+  zalozeno: boolean;
+  uzavreno: boolean;
+};
+
+export async function nactiDotazyKlienta(companyId: string, userId: string): Promise<DotazVSeznamu[]> {
+  const projekty = await prisma.projectMeta.findMany({
+    where: { companyId, klientUserId: userId, finished: false, name: { not: null } },
+    select: { caflouProjectId: true, name: true },
+    orderBy: { name: 'asc' },
+    take: 200,
+  });
+  if (projekty.length === 0) return [];
+
+  const kanaly = await prisma.conversation.findMany({
+    where: {
+      kind: 'DOTAZ',
+      dotazCompanyId: companyId,
+      dotazProjektId: { in: projekty.map((p) => p.caflouProjectId) },
+    },
+    select: {
+      id: true,
+      dotazProjektId: true,
+      uzavrenoAt: true,
+      lastMessageAt: true,
+      members: { where: { userId }, select: { lastReadAt: true } },
+    },
+  });
+  if (kanaly.length === 0) {
+    return projekty.map((p) => ({
+      projektId: p.caflouProjectId,
+      nazev: p.name ?? '',
+      neprectene: 0,
+      posledniAt: null,
+      zalozeno: false,
+      uzavreno: false,
+    }));
+  }
+
+  // Neprectene jednim dotazem pres vsechny kanaly - u klienta jich je par,
+  // ale i tak nema smysl se ptat na kazdy zvlast.
+  const cizi = await prisma.message.findMany({
+    where: { conversationId: { in: kanaly.map((k) => k.id) }, userId: { not: userId } },
+    select: { conversationId: true, createdAt: true },
+    take: 2000,
+  });
+
+  const podleProjektu = new Map(kanaly.map((k) => [k.dotazProjektId ?? '', k]));
+  return projekty.map((p) => {
+    const kanal = podleProjektu.get(p.caflouProjectId);
+    if (!kanal) {
+      return {
+        projektId: p.caflouProjectId,
+        nazev: p.name ?? '',
+        neprectene: 0,
+        posledniAt: null,
+        zalozeno: false,
+        uzavreno: false,
+      };
+    }
+    const videno = kanal.members[0]?.lastReadAt ?? null;
+    const neprectene = cizi.filter(
+      (m) => m.conversationId === kanal.id && (!videno || m.createdAt > videno),
+    ).length;
+    return {
+      projektId: p.caflouProjectId,
+      nazev: p.name ?? '',
+      neprectene,
+      posledniAt: kanal.lastMessageAt.toISOString(),
+      zalozeno: true,
+      uzavreno: Boolean(kanal.uzavrenoAt),
+    };
+  });
+}
+
 /** Zprávy kanálu pro klienta. Když kanál ještě není, vrátí prázdno. */
 export async function nactiDotaz(
   caflouProjectId: string,

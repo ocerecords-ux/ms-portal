@@ -31,9 +31,15 @@ export function formatDate(d: Date | null) {
 export function StatusPill({ finished, statusName }: { finished: boolean; statusName: string }) {
   // Barva podle konkretniho stavu (lib/stavyProjektu.ts), ne jen podle toho,
   // jestli je projekt hotovy - stavu je osm a dva odstiny by je slily.
+  //
+  // OREZAVA SE SAM V SOBE (oprava 12. 9. 2026: „na strance klienta jsou nejake
+  // useknute veci v grafice a tri tecky random"). Kdyz orezavala bunka, visely
+  // tri tecky ZA bublinou jako samostatny znak a vypadaly jako omyl. Takhle se
+  // orizne text uvnitr a cely stav zustane v bublinkove napovede.
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-3 py-1 rounded-pill whitespace-nowrap ${barvaStavu(
+      title={displayStatusName(statusName)}
+      className={`inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-3 py-1 rounded-pill whitespace-nowrap max-w-full truncate ${barvaStavu(
         statusName,
         finished,
       )}`}
@@ -133,7 +139,7 @@ export function ProjectsTable({
                 >
                   {p.name}
                 </td>
-                <td className="px-4 py-0 truncate">
+                <td className="px-4 py-0 overflow-hidden">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
                 </td>
                 {/* Herec je bublina jako v internim prehledu (zadani
@@ -256,7 +262,7 @@ export function AdminProjectsTable({
                 <td className="px-4 py-0 text-sm font-heading text-muted truncate" title={p.companyName}>
                   {p.companyName}
                 </td>
-                <td className="px-4 py-0 truncate">
+                <td className="px-4 py-0 overflow-hidden">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
@@ -596,8 +602,10 @@ function bunkaSloupce(
  * zrovna vidět. Název dostal nejvíc — ten se má vejít celý.
  */
 const VAHA_SLOUPCE: Record<string, number> = {
-  name: 27,
-  statusName: 18,
+  name: 25,
+  // „Dokonceno - ke schvaleni" je nejdelsi stav a ma se vejit cely
+  // (oprava 12. 9. 2026).
+  statusName: 21,
   narrator: 16,
   managerName: 11,
   companyName: 10,

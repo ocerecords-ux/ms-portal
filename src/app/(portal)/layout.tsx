@@ -8,6 +8,7 @@ import { QuickDock } from './components/QuickDock';
 import { ChatDock } from './components/ChatDock';
 import { PoutkoDoku } from './components/PoutkoDoku';
 import { NeprecteneVedleDoku } from './components/NeprecteneVedleDoku';
+import { DotazyDock } from './components/DotazyDock';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { countUnread } from '@/lib/notifications';
@@ -91,7 +92,11 @@ export default async function PortalLayout({ children }: { children: React.React
           (zadani 8. 9. 2026). Jen pro tým Mediaspace. */}
       {/* Rychle volby na leve hrane - zatazene jsou to jen zelene ikony
           na fialovem podkladu (zadani 9. 9. 2026). */}
-      <QuickDock actions={quickActions} available={quickActionsFor(role)} />
+      {/* RYCHLE VOLBY JSOU JEN PRO TYM (zadani 12. 9. 2026: „dal bych pryc cele
+          ty rychle volby na leve strane stranky i s tim vysouvacim menu").
+          Klient ma misto nich dok dotazu u prave hrany - jednu vec na jednom
+          miste, ne dva vysouvaci panely na dvou stranach. */}
+      {internal && <QuickDock actions={quickActions} available={quickActionsFor(role)} />}
       {internal && <TaskDock tasks={tasks} />}
       {/* Chat týmu - stejný vysouvací panel, jen u spodní hrany
           (zadani 8. 9. 2026). Taky jen pro tým Mediaspace. */}
@@ -101,6 +106,10 @@ export default async function PortalLayout({ children }: { children: React.React
       {internal && <PoutkoDoku />}
       {/* Tvare neprectenych rozhovoru nalevo od poutka (zadani 12. 9. 2026). */}
       {internal && <NeprecteneVedleDoku />}
+      {/* Klientsky dok dotazu k projektum (zadani 12. 9. 2026) - vypada jako
+          nas dok, ale mluvi jen s /api/dotazy, kde se u kazdeho pozadavku
+          overuje, ze projekt patri firme prihlaseneho klienta. */}
+      {!internal && role === 'CLIENT' && <DotazyDock />}
     </div>
   );
 }
