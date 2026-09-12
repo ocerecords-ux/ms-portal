@@ -1965,3 +1965,26 @@ model ChatPise {
   @@unique([conversationId, userId])
   @@index([conversationId, updatedAt])
 }
+
+/// Historie preposlechu (zadani 12. 9. 2026: „mozna mohlo byt dobre mit
+/// nejakou historii, log by se odkryl treba na prave strane").
+///
+/// Je to zaznam o tom, co se s nahravkou dělo: kdo odkaz otevrel, kdo pridal
+/// nebo opravil poznamku, kdo odskrtl preposlechnuto. Samotne poznamky zijí
+/// v PreposlechChyba - tohle je stopa, ktera zustane, i kdyz se poznamka
+/// smaze.
+model PreposlechUdalost {
+  id              String   @id @default(cuid())
+  caflouProjectId String
+
+  /// OTEVRENO / PRIDANA / UPRAVENA / SMAZANA / PREPOSLECHNUTO / ZNOVU
+  typ             String
+  /// Veta, jak se to ukaze cloveku.
+  popis           String   @db.Text
+  /// Jmeno textem - zaznam zustane citelny, i kdyz ucet pozdeji zmizi.
+  kdo             String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([caflouProjectId, createdAt])
+}

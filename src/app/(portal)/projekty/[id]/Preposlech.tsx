@@ -58,11 +58,21 @@ type ChybaZeServeru = {
   muzuUpravit?: boolean;
 };
 
+/** Radek historie preposlechu (zadani 12. 9. 2026). */
+type Udalost = {
+  id: string;
+  typ: string;
+  popis: string;
+  kdo: string | null;
+  kdy: string;
+};
+
 type Stav = {
   reviewed: boolean;
   reviewedByName: string | null;
   reviewedAt: string | null;
   chyby: ChybaZeServeru[];
+  historie?: Udalost[];
 };
 
 type Stopa = {
@@ -167,6 +177,13 @@ export function Preposlech({
   const [delka, setDelka] = useState(0);
 
   const [zDisku, setZDisku] = useState<'ceka' | 'nacitam' | 'hotovo' | 'nejde'>('ceka');
+  /**
+   * Ktera zalozka je videt v pravem sloupci (zadani 12. 9. 2026: „podobne
+   * jako to mame s ukoly a chatem, by byly nahore zalozky"). Jmenuje se
+   * `panel`, protoze `zalozka` uz v tomhle souboru znamena zalozku
+   * v nahravce - misto, kde clovek skoncil.
+   */
+  const [panel, setPanel] = useState<'chyby' | 'historie'>('chyby');
   /** Ktery zaznam se prave upravuje a co je v policku (zadani 12. 9. 2026). */
   const [upravovana, setUpravovana] = useState<string | null>(null);
   const [upravaText, setUpravaText] = useState('');
@@ -1301,9 +1318,13 @@ export function Preposlech({
           {/* PŘEPOSLECHNUTO je velká akce - tímhle se za nahrávku někdo
               postaví (zadání 11. 9. 2026: „to tlačítko přeposlechnuto by
               mělo asi být výraznější, je to velká akce"). Proto plné
-              tlačítko, ne obtažený proužek, a odškrtnutí se ptá. */}
-          {!jenPoslech &&
-            (stav.reviewed ? (
+              tlačítko, ne obtažený proužek, a odškrtnutí se ptá.
+
+              VIDÍ HO I KLIENT (zadání 12. 9. 2026: „na straně klienta není
+              možnost označit jako přeposlechnuté, mělo by to být asi vy").
+              Je to jeho slovo, že nahrávku poslechl; u záznamu zůstane jméno,
+              takže je pořád vidět, kdo to odškrtl. */}
+          {(stav.reviewed ? (
               <span className="flex items-center gap-2">
                 <span className="flex items-center gap-2 bg-brand-green text-onAccent font-heading font-bold text-sm rounded-lg px-4 py-2.5">
                   <span className="grid place-items-center w-5 h-5 rounded-full bg-onAccent/15">✓</span>
@@ -1452,30 +1473,57 @@ export function Preposlech({
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3">
-              <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-                Záznamy chyb ({stav.chyby.length})
-              </h3>
-              <span className="flex items-center gap-3 ml-auto">
-                {chybejiciStopy && (
+          {/* PREHRAVAC JE NAHORE (zadani 12. 9. 2026: „tim padem tam na prave
+              strane vznikne vice mista na tracky a prehravac bude vice
+              nahore"). Poradi resi `order`, ne prohozeni bloku - kod tim
+              zustava ctenym shora dolu podle vyznamu, ne podle mista na
+              obrazovce. */}
+          <div className="order-2 bg-surface rounded-card border border-line shadow-sm overflow-hidden">
+            {/* Zalozky jako u Ukolu a chatu (zadani 12. 9. 2026). Chyby
+                a historie sdileji jedno misto, takze na prehravac a stopy
+                zbyde vic. */}
+            <div className="px-2 pt-2 border-b border-line flex items-end gap-1">
+              {([
+                { klic: 'chyby' as const, popisek: `Chyby (${stav.chyby.length})` },
+                { klic: 'historie' as const, popisek: 'Historie' },
+              ]).map((z) => (
+                <button
+                  key={z.klic}
+                  type="button"
+                  onClick={() => setPanel(z.klic)}
+                  aria-pressed={panel === z.klic}
+                  className={`rounded-t-lg px-3 py-1.5 text-xs font-heading font-semibold transition-colors ${
+                    panel === z.klic
+                      ? 'bg-tint text-brand-purpleDark'
+                      : 'text-muted hover:text-ink hover:bg-field'
+                  }`}
+                >
+                  {z.popisek}
+                </button>
+              ))}
+              <span className="ml-auto flex items-center gap-3 pb-1.5 pr-2">
+                {panel === 'chyby' && chybejiciStopy && (
                   <span className="text-[11px] font-body text-status-progress">
                     Některé záznamy patří stopám, které tu teď nejsou.
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={stahniTabulku}
-                  disabled={stav.chyby.length === 0}
-                  title="Stáhnout všechny záznamy jako tabulku (CSV pro Excel)"
-                  className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-40 disabled:no-underline"
-                >
-                  Stáhnout tabulku
-                </button>
+                {panel === 'chyby' && (
+                  <button
+                    type="button"
+                    onClick={stahniTabulku}
+                    disabled={stav.chyby.length === 0}
+                    title="Stáhnout všechny záznamy jako tabulku (CSV pro Excel)"
+                    className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-40 disabled:no-underline"
+                  >
+                    Stáhnout tabulku
+                  </button>
+                )}
               </span>
             </div>
             <div className="overflow-y-auto" style={{ maxHeight: '30vh' }}>
-              {stav.chyby.length === 0 ? (
+              {panel === 'historie' ? (
+                <Historie zaznamy={stav.historie ?? []} />
+              ) : stav.chyby.length === 0 ? (
                 <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
                   Zatím žádné chyby. Pusťte stopu a v místě problému dejte „Přidat chybu".
                 </p>
@@ -1571,7 +1619,7 @@ export function Preposlech({
             </div>
           </div>
 
-          <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
+          <div className="order-1 bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
             {/* Displej je zámerně na JEDEN ŘÁDEK (zadání 11. 9. 2026: „ten
                 display už zabírá dost místa, celé bych to hodně zmenšil").
                 Číslo stopy a čas zůstávají to největší na něm — na ně se
@@ -1812,5 +1860,56 @@ export function Preposlech({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Historie přeposlechu (zadání 12. 9. 2026: „možná mohlo být dobré mít nějakou
+ * historii").
+ *
+ * Je to stopa toho, co se s nahrávkou dělo — kdo odkaz otevřel, kdo přidal
+ * nebo opravil poznámku, kdo odškrtl přeposlechnuto. Zůstává, i když se
+ * poznámka mezitím smaže; právě proto to není spočítané ze záznamů chyb.
+ */
+function Historie({ zaznamy }: { zaznamy: Udalost[] }) {
+  if (zaznamy.length === 0) {
+    return (
+      <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
+        Zatím se nic nestalo. Jakmile někdo otevře odkaz nebo napíše poznámku, objeví se to tady.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="list-none m-0 p-0 divide-y divide-line">
+      {zaznamy.map((u) => (
+        <li key={u.id} className="px-4 py-2 flex items-start gap-3">
+          <span
+            className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${
+              u.typ === 'PREPOSLECHNUTO'
+                ? 'bg-brand-green'
+                : u.typ === 'SMAZANA'
+                  ? 'bg-danger'
+                  : u.typ === 'OTEVRENO'
+                    ? 'bg-brand-purple'
+                    : 'bg-line'
+            }`}
+            aria-hidden="true"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-body text-ink break-words">{u.popis}</span>
+            <span className="block text-[11px] font-body text-muted mt-0.5">
+              {u.kdo ? `${u.kdo} · ` : ''}
+              {new Date(u.kdy).toLocaleString('cs-CZ', {
+                day: 'numeric',
+                month: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

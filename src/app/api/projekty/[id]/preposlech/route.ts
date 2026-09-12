@@ -20,7 +20,13 @@ import { pristupKPreposlechu } from '@/lib/preposlechPristup';
  * bez účtu — tedy ty z toho odkazu. Odkaz patří jednomu projektu a sdílí ho
  * lidé z jedné firmy, takže si mezi sebou opravit poznámku můžou.
  *
- * Odškrtnout PŘEPOSLECHNUTO smí pořád jen tým Mediaspace.
+ * ODŠKRTNOUT PŘEPOSLECHNUTO smí i klient (zadání 12. 9. 2026: „na straně
+ * klienta není možnost označit jako přeposlechnuté, mělo by to být asi vy").
+ * Je to jeho slovo, že nahrávku poslechl — my se to jen dozvíme. U záznamu
+ * zůstává jméno, takže je vidět, kdo to odškrtl.
+ *
+ * HISTORIE. Každý zásah se zapisuje do PreposlechUdalost, ať je zpětně vidět,
+ * kdo kdy co udělal — i u poznámky, která už byla smazaná.
  *
  * `[id]` je ID projektu; stopy se neukládají, záznam ukazuje na stopu jejím
  * pořadím a nese i její název — viz komentář u modelu v schema.prisma.
@@ -42,6 +48,18 @@ async function over(req: NextRequest, caflouProjectId: string, jenInterni: boole
   };
 }
 
+/** Řádek do historie. Nikdy nevyhazuje - historie nesmí shodit samotný zápis. */
+async function zapisUdalost(
+  caflouProjectId: string,
+  typ: string,
+  popis: string,
+  kdo: string | null,
+) {
+  await prisma.preposlechUdalost
+    .create({ data: { caflouProjectId, typ, popis, kdo } })
+    .catch((err) => console.error('Zápis do historie přeposlechu selhal:', err));
+}
+
 /** Kdo smí sáhnout na jeden záznam - viz komentář nahoře. */
 type Pristup = { userId: string | null; interni: boolean };
 function smiUpravit(chyba: { createdByUserId: string | null }, kdo: Pristup): boolean {
@@ -51,13 +69,18 @@ function smiUpravit(chyba: { createdByUserId: string | null }, kdo: Pristup): bo
 }
 
 async function stav(caflouProjectId: string, kdo?: Pristup) {
-  const [chyby, preposlech] = await Promise.all([
+  const [chyby, preposlech, historie] = await Promise.all([
     prisma.preposlechChyba.findMany({
       where: { caflouProjectId },
       orderBy: [{ trackIndex: 'asc' }, { localTime: 'asc' }],
       take: 2000,
     }),
     prisma.preposlechStav.findUnique({ where: { caflouProjectId } }),
+    prisma.preposlechUdalost.findMany({
+      where: { caflouProjectId },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    }),
   ]);
 
   return {
@@ -76,6 +99,13 @@ async function stav(caflouProjectId: string, kdo?: Pristup) {
       createdAt: ch.createdAt.toISOString(),
       // At okno vi, u ktereho zaznamu ma ukazat tuzku a krizek.
       muzuUpravit: kdo ? smiUpravit(ch, kdo) : false,
+    })),
+    historie: historie.map((u) => ({
+      id: u.id,
+      typ: u.typ,
+      popis: u.popis,
+      kdo: u.kdo,
+      kdy: u.createdAt.toISOString(),
     })),
   };
 }
@@ -130,11 +160,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     },
   });
 
+  await zapisUdalost(
+    params.id,
+    'PRIDANA',
+    `Přidal(a) poznámku u stopy ${parsed.data.trackIndex}.`,
+    pristup.jmeno,
+  );
+
   return NextResponse.json(await stav(params.id, pristup));
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const pristup = await over(req, params.id, true);
+  const pristup = await over(req, params.id, false);
   if ('chyba' in pristup) return pristup.chyba;
 
   const telo = await req.json().catch(() => ({}));
@@ -154,6 +191,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       reviewedByName: reviewed ? pristup.jmeno : null,
     },
   });
+
+  await zapisUdalost(
+    params.id,
+    reviewed ? 'PREPOSLECHNUTO' : 'ZNOVU',
+    reviewed ? 'Označil(a) nahrávku jako přeposlechnutou.' : 'Vrátil(a) nahrávku k přeposlechu.',
+    pristup.jmeno,
+  );
 
   return NextResponse.json(await stav(params.id, pristup));
 }
@@ -187,6 +231,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     data: { description: parsed.data.description },
   });
 
+  await zapisUdalost(params.id, 'UPRAVENA', 'Upravil(a) znění poznámky.', pristup.jmeno);
+
   return NextResponse.json(await stav(params.id, pristup));
 }
 
@@ -207,6 +253,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   await prisma.preposlechChyba.delete({ where: { id: chyba.id } });
+
+  await zapisUdalost(params.id, 'SMAZANA', 'Smazal(a) poznámku.', pristup.jmeno);
 
   return NextResponse.json(await stav(params.id, pristup));
 }

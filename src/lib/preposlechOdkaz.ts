@@ -116,12 +116,28 @@ export async function projektPodleTokenu(token: string): Promise<string | null> 
 
 /** Zápis do statistiky otevření. Nikdy nevyhazuje. */
 export async function zapisOtevreni(token: string): Promise<void> {
-  await prisma.preposlechOdkaz
+  const zaznam = await prisma.preposlechOdkaz
     .update({
       where: { token },
       data: { otevrenoAt: new Date(), pocetOtevreni: { increment: 1 } },
+      select: { caflouProjectId: true },
     })
-    .catch(() => undefined);
+    .catch(() => null);
+
+  // Do historie preposlechu (zadani 12. 9. 2026) - at je videt, ze si klient
+  // odkaz doopravdy otevrel, i kdyz nakonec nic nenapsal.
+  if (zaznam) {
+    await prisma.preposlechUdalost
+      .create({
+        data: {
+          caflouProjectId: zaznam.caflouProjectId,
+          typ: 'OTEVRENO',
+          popis: 'Klient otevřel odkaz.',
+          kdo: 'Klient',
+        },
+      })
+      .catch(() => undefined);
+  }
 }
 
 /** Stav odkazu pro kartu projektu. */
