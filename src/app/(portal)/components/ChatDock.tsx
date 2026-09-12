@@ -1003,11 +1003,18 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       const res: Response = await fetch('/api/chat/konverzace');
       if (!res.ok) return;
       const data: any = await res.json().catch(() => ({}));
+      // ZADRHEL NA SERVERU NESMI VYMAZAT SEZNAM (12. 9. 2026: „zmizely nam
+      // z chatu skupiny, ktere jsme tam meli vytvorene"). Kdyz se databaze
+      // na vterinu neozve, prisel prazdny seznam a panel ho poslusne
+      // vykreslil - vypadalo to, ze jsou skupiny pryc. Radsi necháme viset
+      // to, co uz mame, a jen napiseme, ze se to nepovedlo nacist.
+      if (data?.chyba) {
+        setError(String(data.chyba));
+        return;
+      }
+      setError(null);
       setConversations(Array.isArray(data?.konverzace) ? data.konverzace : []);
       setTeam(Array.isArray(data?.tym) ? data.tym : []);
-      // Kdyz seznam spadne na strane serveru, at je to videt. Prazdny panel
-      // vypadal jako „zadne skupiny tu nejsou" (12. 9. 2026).
-      if (data?.chyba) setError(String(data.chyba));
     } catch {
       // vypadek site - zkusi se zas za chvili
     }

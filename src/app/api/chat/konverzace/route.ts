@@ -30,10 +30,18 @@ export async function GET() {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   }
   try {
-    const [konverzace, tym] = await Promise.all([
-      loadConversations(session.user.id),
-      loadTeam(session.user.id),
-    ]);
+    // JEDEN OPAKOVANY POKUS. Supabase pooler ma v session modu patnact mist
+    // a pri nasazeni byvaji chvili plna - seznam konverzaci pak spadne na
+    // vterinovem zadrhelu, se kterym neni nic spatne. Stejny pristup uz
+    // pouziva build (scripts/priprav-databazi.mjs).
+    let konverzace, tym;
+    try {
+      [konverzace, tym] = await Promise.all([loadConversations(session.user.id), loadTeam(session.user.id)]);
+    } catch (prvni) {
+      console.warn('Seznam konverzaci napoprve selhal, zkousim znovu:', prvni);
+      await new Promise((hotovo) => setTimeout(hotovo, 400));
+      [konverzace, tym] = await Promise.all([loadConversations(session.user.id), loadTeam(session.user.id)]);
+    }
     return NextResponse.json({ konverzace, tym });
   } catch (err) {
     // Databaze bez tabulek chatu (jeste nedobehl `prisma db push`) nesmi
