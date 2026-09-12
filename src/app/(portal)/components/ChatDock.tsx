@@ -994,13 +994,55 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
   const konecRef = useRef<HTMLDivElement | null>(null);
 
+  /**
+   * ČERSTVÁ PŘEPNUTÍ, KTERÁ SERVER JEŠTĚ NESTIHL POTVRDIT (12. 9. 2026:
+   * „to připnutí konverzací v chatu blbne. Když zmáčknu špendlík, tak se to
+   * tam objeví, ale pak problikne a zmizí").
+   *
+   * Špendlík se překlopí hned, ať tlačítko nelaguje. Jenže seznam se sám
+   * dotazuje po pár vteřinách a ten dotaz mohl odejít JEŠTĚ PŘED uložením -
+   * jeho odpověď pak nese staré „nepřipnuto" a přepíše to, co člověk právě
+   * udělal. Připnutí přitom v databázi je; jen se na vteřinu ztratí z očí.
+   *
+   * Proto si tady držíme, co jsme právě přepnuli, a každou odpověď ze serveru
+   * tím přebijeme. Jakmile server pošle totéž, evidence se zahodí a platí
+   * zase jen to, co říká databáze.
+   */
+  const cerstvaPrepnuti = useRef<Map<string, { pripnuto?: boolean; ztlumeno?: boolean }>>(new Map());
+
+  const zapisCerstve = useCallback((id: string, zmena: { pripnuto?: boolean; ztlumeno?: boolean }) => {
+    cerstvaPrepnuti.current.set(id, { ...cerstvaPrepnuti.current.get(id), ...zmena });
+  }, []);
+
+  const sCerstvymi = useCallback((seznam: ChatConversation[]): ChatConversation[] => {
+    if (cerstvaPrepnuti.current.size === 0) return seznam;
+    return seznam.map((c) => {
+      const zmena = cerstvaPrepnuti.current.get(c.id);
+      if (!zmena) return c;
+      const uzSedi =
+        (zmena.pripnuto === undefined || zmena.pripnuto === c.pripnuto) &&
+        (zmena.ztlumeno === undefined || zmena.ztlumeno === c.ztlumeno);
+      if (uzSedi) {
+        cerstvaPrepnuti.current.delete(c.id);
+        return c;
+      }
+      return {
+        ...c,
+        ...(zmena.pripnuto === undefined ? {} : { pripnuto: zmena.pripnuto }),
+        ...(zmena.ztlumeno === undefined ? {} : { ztlumeno: zmena.ztlumeno }),
+      };
+    });
+  }, []);
+
   function toggle() {
     otevriDok(dok === 'chat' ? null : 'chat');
   }
 
   const nactiKonverzace = useCallback(async () => {
     try {
-      const res: Response = await fetch('/api/chat/konverzace');
+      // no-store: odpoved je pro kazdeho jina, z cache by chodila cizi nebo
+      // stara (12. 9. 2026).
+      const res: Response = await fetch('/api/chat/konverzace', { cache: 'no-store' });
       if (!res.ok) return;
       const data: any = await res.json().catch(() => ({}));
       // ZADRHEL NA SERVERU NESMI VYMAZAT SEZNAM (12. 9. 2026: „zmizely nam
@@ -1013,12 +1055,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         return;
       }
       setError(null);
-      setConversations(Array.isArray(data?.konverzace) ? data.konverzace : []);
+      setConversations(sCerstvymi(Array.isArray(data?.konverzace) ? data.konverzace : []));
       setTeam(Array.isArray(data?.tym) ? data.tym : []);
     } catch {
       // vypadek site - zkusi se zas za chvili
     }
-  }, []);
+  }, [sCerstvymi]);
 
   const nactiVlakno = useCallback(async (conversationId: string, messageId: string) => {
     try {
@@ -1460,16 +1502,22 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * Připnutí rozhovoru nahoru jako rychlá volba (zadání 12. 9. 2026).
    */
   async function prepniPripnuti(conversationId: string, pripnuto: boolean) {
+    zapisCerstve(conversationId, { pripnuto });
     setConversations((current) =>
       current.map((c) => (c.id === conversationId ? { ...c, pripnuto } : c)),
     );
     try {
-      await fetch(`/api/chat/konverzace/${encodeURIComponent(conversationId)}/pripnuti`, {
+      const res: Response = await fetch(`/api/chat/konverzace/${encodeURIComponent(conversationId)}/pripnuti`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pripnuto }),
       });
-    } catch {
+      if (!res.ok) throw new Error(`Server odmítl připnutí (${res.status}).`);
+    } catch (err) {
+      // Neulozilo se - evidenci zahodime, at plati databaze, a rekneme to.
+      cerstvaPrepnuti.current.delete(conversationId);
+      setError(pripnuto ? 'Připnutí se nepodařilo uložit.' : 'Odepnutí se nepodařilo uložit.');
+      console.error('Připnutí selhalo:', err);
       void nactiKonverzace();
     }
   }
@@ -1481,16 +1529,21 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * srovná se to při příštím načtení seznamu.
    */
   async function prepniZtlumeni(conversationId: string, ztlumeno: boolean) {
+    zapisCerstve(conversationId, { ztlumeno });
     setConversations((current) =>
       current.map((c) => (c.id === conversationId ? { ...c, ztlumeno } : c)),
     );
     try {
-      await fetch(`/api/chat/konverzace/${encodeURIComponent(conversationId)}/ztlumeni`, {
+      const res: Response = await fetch(`/api/chat/konverzace/${encodeURIComponent(conversationId)}/ztlumeni`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ztlumeno }),
       });
-    } catch {
+      if (!res.ok) throw new Error(`Server odmítl ztlumení (${res.status}).`);
+    } catch (err) {
+      cerstvaPrepnuti.current.delete(conversationId);
+      setError('Ztlumení se nepodařilo uložit.');
+      console.error('Ztlumení selhalo:', err);
       void nactiKonverzace();
     }
   }
