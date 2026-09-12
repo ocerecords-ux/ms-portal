@@ -755,15 +755,18 @@ function ZnakReakce({ code, size = 15 }: { code: string; size?: number }) {
 }
 
 /**
- * Reakce pod zpravou (zadani 9. 9. 2026: "jeste bych tam pridal reakce
+ * Reakce pod zpravou (zadani 9. 9. 2026: „jeste bych tam pridal reakce
  * smajlikama na text - myslim na konkretni zpravu").
  *
  * Odznak = jeden smajlik a pocet lidi, kteri ho dali. Kliknuti prepina: kdyz
  * uz jsem reakci dal, znovu ji odeberu. Moje reakce je videt na prvni pohled
  * (fialovy ramecek), kdo dal kterou, ukaze bublina pri najeti mysi.
  *
- * "+" otevre kratkou nabidku toho, co se v pracovnim chatu opravdu pouziva -
- * cely vyber emoji je v psatku, sem by se nevesel a ani by k nicemu nebyl.
+ * PRIDAT REAKCI SE UZ ODSUD NEDA (zadani 12. 9. 2026: „v konverzaci v chatu
+ * nebude pod bublinou s textem ta ikona smajliku"). Nabidka se vyvola
+ * podrzenim prstu primo na zprave - viz BublinaZpravy. Kdyz zadna reakce
+ * neni, nevykresli se tu nic; drive tu i u prazdne zpravy sedel prazdny
+ * radek s ikonkou a kazda zprava tak byla o kus vyssi.
  */
 function Reakce({
   reactions,
@@ -772,10 +775,10 @@ function Reakce({
   reactions: ChatReaction[];
   onToggle: (code: string) => void;
 }) {
-  const [otevreno, setOtevreno] = useState(false);
+  if (reactions.length === 0) return null;
 
   return (
-    <span className="relative mt-1 flex items-center gap-1 flex-wrap">
+    <span className="mt-1 flex items-center gap-1 flex-wrap">
       {reactions.map((r) => (
         <button
           key={r.code}
@@ -793,36 +796,131 @@ function Reakce({
           <span className="text-[11px] font-heading font-semibold tabular-nums">{r.count}</span>
         </button>
       ))}
+    </span>
+  );
+}
 
-      <button
-        type="button"
-        onClick={() => setOtevreno((v) => !v)}
-        title="Přidat reakci"
-        aria-label="Přidat reakci"
-        className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
+/** Nabidka rychlych reakci nad zpravou. Zavre se klepnutim vedle i Escapem. */
+function NabidkaReakci({
+  mine,
+  onVyber,
+  onZavri,
+}: {
+  mine: boolean;
+  onVyber: (code: string) => void;
+  onZavri: () => void;
+}) {
+  useEffect(() => {
+    function naKlavesu(e: KeyboardEvent) {
+      if (e.key === 'Escape') onZavri();
+    }
+    window.addEventListener('keydown', naKlavesu);
+    return () => window.removeEventListener('keydown', naKlavesu);
+  }, [onZavri]);
+
+  return (
+    <>
+      {/* Klepnuti kamkoliv jinam nabidku zavre. */}
+      <span className="fixed inset-0 z-30" onPointerDown={onZavri} />
+      <span
+        className={`absolute bottom-full mb-1 z-40 flex items-center gap-0.5 rounded-lg border border-line bg-surface p-1 shadow-lg ${
+          mine ? 'right-0' : 'left-0'
+        }`}
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0" />
-        </svg>
-      </button>
+        {RYCHLE_REAKCE.map((code) => (
+          <button
+            key={code}
+            type="button"
+            onClick={() => onVyber(code)}
+            // Vetsi plocha nez v puvodni nabidce - tady se miri prstem.
+            className="flex items-center justify-center rounded p-1.5 hover:bg-field"
+          >
+            <ZnakReakce code={code} size={22} />
+          </button>
+        ))}
+      </span>
+    </>
+  );
+}
 
-      {otevreno && (
-        <span className="absolute left-0 bottom-full mb-1 z-20 bg-surface border border-line rounded-lg shadow-lg p-1 flex items-center gap-0.5">
-          {RYCHLE_REAKCE.map((code) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => {
-                onToggle(code);
-                setOtevreno(false);
-              }}
-              className="rounded p-1 hover:bg-field flex items-center justify-center"
-            >
-              <ZnakReakce code={code} size={20} />
-            </button>
-          ))}
-        </span>
+/**
+ * Bublina se zpravou, ze ktere si podrzenim vyvolam reakce (zadani 12. 9.
+ * 2026: „v konverzaci v chatu nebude pod bublinou s textem ta ikona
+ * smajliku. Udelejme to tak, ze kdyz na text v mobilu kliknu a podrzim prst,
+ * ukaze se mi nabidka smajliku").
+ *
+ * PODRZENI, NE KLEPNUTI. Kratke klepnuti musi zustat volne - jinak by nesla
+ * otevrit priloha ani odkaz ve zprave. Tah prstem delsi nez 8 px cekani zrusi,
+ * aby rolovani seznamu neotviralo okenka.
+ *
+ * Systemova nabidka nad textem (Kopirovat / Vyhledat) by se do stejneho gesta
+ * pletla, proto je na bubline vypnuta. Na pocitaci dela totez prave tlacitko.
+ */
+function BublinaZpravy({
+  mine,
+  onReakce,
+  children,
+}: {
+  mine: boolean;
+  onReakce: (code: string) => void;
+  children: React.ReactNode;
+}) {
+  const [nabidka, setNabidka] = useState(false);
+  const casovac = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const zacatek = useRef<{ x: number; y: number } | null>(null);
+
+  const zrusCekani = useCallback(() => {
+    if (casovac.current) clearTimeout(casovac.current);
+    casovac.current = null;
+    zacatek.current = null;
+  }, []);
+
+  useEffect(() => zrusCekani, [zrusCekani]);
+
+  function zacniDrzet(e: React.PointerEvent<HTMLElement>) {
+    if (nabidka) return;
+    zacatek.current = { x: e.clientX, y: e.clientY };
+    casovac.current = setTimeout(() => {
+      casovac.current = null;
+      // Krátké cuknutí, ať je poznat, že se gesto povedlo (kde to jde).
+      navigator.vibrate?.(10);
+      setNabidka(true);
+    }, 450);
+  }
+
+  function hlidejPohyb(e: React.PointerEvent<HTMLElement>) {
+    const z = zacatek.current;
+    if (!z) return;
+    if (Math.abs(e.clientX - z.x) > 8 || Math.abs(e.clientY - z.y) > 8) zrusCekani();
+  }
+
+  return (
+    <span className="relative block">
+      <p
+        onPointerDown={zacniDrzet}
+        onPointerMove={hlidejPohyb}
+        onPointerUp={zrusCekani}
+        onPointerCancel={zrusCekani}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          zrusCekani();
+          setNabidka(true);
+        }}
+        className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm [-webkit-touch-callout:none] ${
+          mine ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-ink'
+        }`}
+      >
+        {children}
+      </p>
+      {nabidka && (
+        <NabidkaReakci
+          mine={mine}
+          onVyber={(code) => {
+            onReakce(code);
+            setNabidka(false);
+          }}
+          onZavri={() => setNabidka(false)}
+        />
       )}
     </span>
   );
@@ -2617,15 +2715,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                             </div>
                           ) : (
                             <>
-                              <p
-                                className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
-                                  m.mine
-                                    ? 'bg-brand-purple text-white'
-                                    : 'bg-surface border border-line text-ink'
-                                }`}
-                              >
+                              <BublinaZpravy mine={m.mine} onReakce={(code) => prepniReakci(m.id, code)}>
                                 <Telo body={m.body} jmena={jmenaTymu} projekty={projektyProZminky} mine={m.mine} />
-                              </p>
+                              </BublinaZpravy>
                               <Prilohy prilohy={m.prilohy ?? []} />
                               <Reakce
                                 reactions={m.reactions ?? []}
@@ -2791,13 +2883,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               </div>
                             ) : (
                               <>
-                                <p
-                                  className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm ${
-                                    m.mine ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-ink'
-                                  }`}
-                                >
+                                <BublinaZpravy mine={m.mine} onReakce={(code) => prepniReakci(m.id, code)}>
                                   <Telo body={m.body} jmena={jmenaTymu} projekty={projektyProZminky} mine={m.mine} />
-                                </p>
+                                </BublinaZpravy>
                                 <Prilohy prilohy={m.prilohy ?? []} />
                                 <Reakce
                                   reactions={m.reactions ?? []}
