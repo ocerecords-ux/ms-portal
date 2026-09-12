@@ -64,3 +64,15 @@ Pro pokročilejší přímý zásah do databáze (výjimečně) lze použít i `
 - `S3_*` — úložiště příloh (AWS S3 nebo Cloudflare R2 — R2 má zdarma tarif).
 - `SMTP_*` — pro odesílání objednávek na `objednavky@mediaspace.cz`.
 - `CAFLOU_API_BASE_URL` / `CAFLOU_API_KEY` — z vašeho Caflou účtu (Nastavení → API).
+
+## Kde to běží
+
+Funkce běží ve **Frankfurtu** (`vercel.json` → `regions: ["fra1"]`), ne ve výchozím
+Washingtonu. Databáze (Supabase) je v Evropě a tým taky: než se to přepnulo,
+šla každá cesta do databáze přes Atlantik a zpátky. Jeden požadavek chatu tak
+trval přes dvě vteřiny, i když samotné dotazy byly rychlé — načítání
+konverzace 2,3 s, prázdná route bez databáze 0,7 s (oprava 12. 9. 2026).
+
+Kdyby se databáze někdy stěhovala, patří sem region k ní, ne k lidem: dotazů
+je na jeden požadavek několik, zatímco uživatel čeká jen na jednu cestu tam a
+zpátky.
