@@ -29,6 +29,17 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email.toLowerCase().trim() },
         });
         if (!user || !user.active) return null;
+        /**
+         * ROBOT SE NEPRIHLASI (zadani 12. 9. 2026). Ucty jako Bruno maji
+         * nahodne heslo, ktere nikde neexistuje, ale spolehat se na to je
+         * malo - kdyby jim nekdo heslo nastavil, byl by uvnitr. Prihlaseni
+         * proto odmita sama role.
+         *
+         * Drive to hlidal priznak „neaktivni", jenze robot pak v seznamu
+         * uzivatelu vypadal jako vyrazeny ucet a tlacitko „Vratit mezi
+         * aktivni" u nej nedavalo smysl.
+         */
+        if (user.role === 'ROBOT') return null;
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!valid) return null;

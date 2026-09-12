@@ -349,13 +349,13 @@ async function backfillCodes() {
   const brunoFotka = `${(process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '')}/bruno-znacka.png`;
   await prisma.user.upsert({
     where: { email: 'bruno@mediaspace.cz' },
-    update: { name: 'Bruno', role: 'ROBOT', active: false, photoUrl: brunoFotka },
+    update: { name: 'Bruno', role: 'ROBOT', active: true, photoUrl: brunoFotka },
     create: {
       email: 'bruno@mediaspace.cz',
       passwordHash: brunoHash,
       name: 'Bruno',
       role: 'ROBOT',
-      active: false,
+      active: true,
       photoUrl: brunoFotka,
     },
   });

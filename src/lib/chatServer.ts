@@ -117,14 +117,15 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
  * naseptavani zminek (@).
  *
  * ROBOTI JSOU V SEZNAMU TAKY (zadani 12. 9. 2026: „umim si predstavit, ze do
- * konverzace zapojim Bruna pomoci @bruno"). Nemaji zaskrtnute `active` -
- * schvalne, aby se pod nimi nedalo prihlasit - takze se musi pustit zvlast.
+ * konverzace zapojim Bruna pomoci @bruno"). Prihlasit se pod nimi nejde -
+ * to odmita sama role v lib/auth.ts, ne priznak „neaktivni".
  */
 export async function loadTeam(userId: string) {
   const users = await prisma.user.findMany({
     where: {
       id: { not: userId },
-      OR: [{ role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] }, active: true }, { role: 'ROBOT' }],
+      active: true,
+      role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE', 'ROBOT'] },
     },
     select: { id: true, name: true, email: true, photoUrl: true },
     orderBy: [{ name: 'asc' }, { email: 'asc' }],
