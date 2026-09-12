@@ -2516,7 +2516,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     v dalsim okne napravo od te zpravy") - jen na uzkem okne
                     ustoupi, aby na vlakno vubec zbylo misto. */}
                 <div className={`flex-1 min-w-0 flex flex-col ${vlaknoId ? 'hidden md:flex' : 'flex'}`}>
-                  <div className="px-4 py-2.5 border-b border-line bg-surface flex items-center gap-2">
+                  {/* HLAVICKA ROZHOVORU (zadani 12. 9. 2026: „a tato lista je
+                      taky uzka. Lehce bych ji protahnul dolu a zvetsil ikony
+                      spendliku a zvonku"). Na telefonu je o neco vyssi nez na
+                      pocitaci - tam se miri mysi, tady palcem. */}
+                  <div className="px-4 py-3.5 sm:py-3 border-b border-line bg-surface flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setOpenId(null)}
@@ -2581,7 +2585,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       }
                       aria-label={otevrena.pripnuto ? 'Odepnout' : 'Připnout nahoru'}
                       aria-pressed={Boolean(otevrena.pripnuto)}
-                      className={`shrink-0 leading-none transition-colors ${
+                      className={`shrink-0 leading-none p-1 -m-1 transition-colors ${
                         otevrena.kind === 'SKUPINA' ? '' : 'ml-auto'
                       } ${otevrena.pripnuto ? 'text-brand-purple' : 'text-muted hover:text-brand-purple'}`}
                     >
@@ -2597,7 +2601,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       }
                       aria-label={otevrena.ztlumeno ? 'Zrušit ztlumení' : 'Ztlumit rozhovor'}
                       aria-pressed={Boolean(otevrena.ztlumeno)}
-                      className={`shrink-0 leading-none transition-colors ${
+                      className={`shrink-0 leading-none p-1 -m-1 transition-colors ${
                         otevrena.ztlumeno ? 'text-brand-purple' : 'text-muted hover:text-brand-purple'
                       }`}
                     >
@@ -3082,7 +3086,7 @@ function IkonaZalozky({ kind }: { kind: ConversationKind }) {
 /** Zvonek v hlavicce rozhovoru - ztlumit. */
 function ZvonekMaly() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-[22px] h-[22px]" aria-hidden="true">
       <path d="M18 15.6v-4a6 6 0 0 0-12 0v4L4.6 17v.7h14.8V17z" />
       <path d="M10.2 20.4a2 2 0 0 0 3.6 0" />
     </svg>
@@ -3092,7 +3096,7 @@ function ZvonekMaly() {
 /** Zvonek se skrtnutim - rozhovor je ztlumeny. */
 function ZvonekSkrtnuty() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-[22px] h-[22px]" aria-hidden="true">
       <path d="M18 15.6v-4a6 6 0 0 0-12 0v4L4.6 17v.7h14.8V17z" />
       <path d="M10.2 20.4a2 2 0 0 0 3.6 0" />
       <path d="M4 3.5 20 20" />
@@ -3165,7 +3169,7 @@ function Pinacek({ plna }: { plna: boolean }) {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="w-4 h-4"
+      className="w-[22px] h-[22px]"
       aria-hidden="true"
     >
       <path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z" />
