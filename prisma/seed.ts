@@ -476,6 +476,26 @@ async function doplnIkonyTypu() {
     { hledej: /voiceover/i, ikona: 'mikrofon' },
   ];
 
+  // JEDNORÁZOVÁ OPRAVA DVOU STARÝCH VOLEB. Audiokniha měla obyčejnou knihu a
+  // rádiový spot sluchátka — obojí proto, že v době, kdy se to vybíralo, lepší
+  // ikona neexistovala. Zadání 12. 9. 2026 říká, jak to má být; přepisují se
+  // proto právě tyhle dvě dvojice a nic jiného.
+  const OPRAVY: { hledej: RegExp; stara: string; nova: string }[] = [
+    { hledej: /audiokni/i, stara: 'kniha', nova: 'kniha-mikrofon' },
+    { hledej: /r[áa]diov/i, stara: 'sluchatka', nova: 'radio' },
+  ];
+  for (const oprava of OPRAVY) {
+    const stare = await prisma.priceListItem.findMany({
+      where: { ikona: oprava.stara },
+      select: { id: true, name: true },
+    });
+    for (const polozka of stare) {
+      if (!oprava.hledej.test(polozka.name)) continue;
+      await prisma.priceListItem.update({ where: { id: polozka.id }, data: { ikona: oprava.nova } });
+      console.log(`  ikona „${polozka.name}": ${oprava.stara} -> ${oprava.nova}`);
+    }
+  }
+
   const polozky = await prisma.priceListItem.findMany({
     where: { OR: [{ ikona: null }, { ikona: '' }] },
     select: { id: true, name: true },
