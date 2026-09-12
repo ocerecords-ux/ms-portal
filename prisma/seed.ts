@@ -339,15 +339,21 @@ async function backfillCodes() {
   // nikde se neuklada, takze ani nahodou nesedne na nic, co by nekdo zkusil.
   // Ucet je zaroven neaktivni, takze ho odmitne i prihlasovaci formular.
   const brunoHash = await bcrypt.hash(randomBytes(24).toString('hex'), 10);
+  // Fotka lezi v public/bruno.png a v uctu je na ni jen odkaz. Fotky lidi se
+  // drzi jako data: URL primo v databazi, ale u Bruna by to byl zbytecne
+  // vlozeny obrazek v seedu - takhle je kreslena podoba verzovana v repu
+  // a da se kdykoliv prekreslit bez zasahu do databaze.
+  const brunoFotka = `${(process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '')}/bruno.png`;
   await prisma.user.upsert({
     where: { email: 'bruno@mediaspace.cz' },
-    update: { name: 'Bruno', role: 'PRODUKCE', active: false },
+    update: { name: 'Bruno', role: 'PRODUKCE', active: false, photoUrl: brunoFotka },
     create: {
       email: 'bruno@mediaspace.cz',
       passwordHash: brunoHash,
       name: 'Bruno',
       role: 'PRODUKCE',
       active: false,
+      photoUrl: brunoFotka,
     },
   });
 
