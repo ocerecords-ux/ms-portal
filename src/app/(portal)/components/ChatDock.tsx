@@ -2518,9 +2518,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 <div className={`flex-1 min-w-0 flex flex-col ${vlaknoId ? 'hidden md:flex' : 'flex'}`}>
                   {/* HLAVICKA ROZHOVORU (zadani 12. 9. 2026: „a tato lista je
                       taky uzka. Lehce bych ji protahnul dolu a zvetsil ikony
-                      spendliku a zvonku"). Na telefonu je o neco vyssi nez na
-                      pocitaci - tam se miri mysi, tady palcem. */}
-                  <div className="px-4 py-3.5 sm:py-3 border-b border-line bg-surface flex items-center gap-2">
+                      spendliku a zvonku", po prvni uprave jeste jednou vyssi).
+                      Na telefonu je vyrazne vyssi nez na pocitaci - tam se
+                      miri mysi, tady palcem. */}
+                  <div className="px-4 py-5 sm:py-3.5 border-b border-line bg-surface flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setOpenId(null)}
