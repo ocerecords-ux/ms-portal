@@ -38,8 +38,18 @@ export async function GET() {
   } catch (err) {
     // Databaze bez tabulek chatu (jeste nedobehl `prisma db push`) nesmi
     // shodit stranku - panel se proste ukaze prazdny.
+    //
+    // ALE PRAZDNY PANEL NESMI VYPADAT JAKO "nic tu neni" (12. 9. 2026:
+    // „zmizely nam z chatu skupiny, ktere jsme tam meli vytvorene").
+    // Tichy catch delal z rozbite databaze prazdny seznam a nebylo poznat,
+    // ze se neco pokazilo. Adminovi proto duvod rovnou posleme.
     console.error('GET /api/chat/konverzace selhalo:', err);
-    return NextResponse.json({ konverzace: [], tym: [] });
+    const duvod = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({
+      konverzace: [],
+      tym: [],
+      chyba: session.user.role === 'ADMIN' ? duvod.slice(0, 900) : 'Chat se teď nepodařilo načíst.',
+    });
   }
 }
 

@@ -1005,6 +1005,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       const data: any = await res.json().catch(() => ({}));
       setConversations(Array.isArray(data?.konverzace) ? data.konverzace : []);
       setTeam(Array.isArray(data?.tym) ? data.tym : []);
+      // Kdyz seznam spadne na strane serveru, at je to videt. Prazdny panel
+      // vypadal jako „zadne skupiny tu nejsou" (12. 9. 2026).
+      if (data?.chyba) setError(String(data.chyba));
     } catch {
       // vypadek site - zkusi se zas za chvili
     }
