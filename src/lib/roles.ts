@@ -19,6 +19,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: 'Žůžo-labůžo',
   ZVUKAR: 'Zvukař',
   PRODUKCE: 'Produkce',
+  ROBOT: 'Robot',
 };
 
 /**
@@ -31,10 +32,21 @@ export const COMPANY_ROLES: Role[] = ['CLIENT'];
 /** Interni role Mediaspace - bez firmy. */
 export const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
+/**
+ * Ucty, za kterymi nestoji clovek (zadani 12. 9. 2026) - dnes Bruno.
+ *
+ * SCHVALNE MIMO INTERNAL_ROLES. Robot se ma objevit v seznamu lidi a psat
+ * do chatu, ale nema mit pristup nikam jinam: kdyby byl "interni", otevrely
+ * by se mu rovnou projekty, doklady i kalendare - a ucet, ke kteremu nikdo
+ * nema heslo, je presne ten, u ktereho takova prava nechceme.
+ */
+export const ROBOT_ROLES: Role[] = ['ROBOT'];
+
 export const ROLE_GROUPS: { label: string; roles: Role[] }[] = [
   { label: 'Klientské role', roles: COMPANY_ROLES },
   { label: 'Herec', roles: ['HEREC'] },
   { label: 'Interní (Mediaspace)', roles: INTERNAL_ROLES },
+  { label: 'Robot (účet bez člověka)', roles: ROBOT_ROLES },
 ];
 
 export function roleRequiresCompany(role: Role): boolean {
@@ -48,7 +60,9 @@ export function roleRequiresCompany(role: Role): boolean {
  * pod sekci Firmy.
  */
 export const USER_TABS: { key: string; label: string; roles: Role[] }[] = [
-  { key: 'mediaspace', label: 'Mediaspace', roles: INTERNAL_ROLES },
+  // Robot sedi v zalozce Mediaspace, at je videt, ze existuje - prava
+  // s internim tymem nesdili, jen misto v seznamu.
+  { key: 'mediaspace', label: 'Mediaspace', roles: [...INTERNAL_ROLES, ...ROBOT_ROLES] },
   { key: 'klienti', label: 'Klienti', roles: ['CLIENT'] },
   { key: 'herci', label: 'Herci', roles: ['HEREC'] },
 ];

@@ -6,7 +6,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { nextCode, codePrefixForRole } from '@/lib/codes';
 import { uploadUserPhoto } from '@/lib/storage';
 
-const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE'] as const;
+const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE', 'ROBOT'] as const;
 // Tyto role jsou vazane na klientskou firmu - viz src/lib/roles.ts (COMPANY_ROLES).
 // Herec od 5. 9. 2026 uz firmu nema (samostatna jednotka).
 const COMPANY_REQUIRED_ROLES: string[] = ['CLIENT'];

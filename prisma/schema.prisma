@@ -26,6 +26,11 @@ enum Role {
   ADMIN    // Zuzo-labuzo - rozsirena prava jako admin
   ZVUKAR   // Zvukar (interni, do budoucna omezeny vyber projektu)
   PRODUKCE // Produkce (interni)
+  // Ucet, za kterym nestoji clovek (zadani 12. 9. 2026) - dnes Bruno.
+  // Zamerne NENI mezi internimi rolemi: robot ma vystupovat v seznamech
+  // a psat do chatu, ale nema videt projekty, doklady ani cokoliv dalsiho,
+  // co portal otevira lidem z tymu.
+  ROBOT
 }
 
 // Typ firmy na strance /admin (zadani 5. 9. 2026): Firmy uz nejsou jen
