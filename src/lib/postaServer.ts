@@ -40,14 +40,16 @@ import {
  * IMAP_PASSWORD  — heslo ke schránce
  * IMAP_FOLDER    — složka, výchozí INBOX (hodí se mít zvlášť, třeba "Doklady")
  * IMAP_DNU_ZPETNE — kolik dnů historie se vezme při úplně prvním kole
- *                   (výchozí 14). Když je ve schránce pár měsíců dokladů, které
- *                   mají do portálu doputovat, dá se to jednorázově zvednout.
+ *                   (výchozí 14). 0 znamená „ber to až od teď" - schránka se
+ *                   jen označí za přečtenou a portál si všímá až nových zpráv.
+ *                   Když naopak mají doputovat i starší doklady, dá se číslo
+ *                   jednorázově zvednout.
  * Bez nich se kontrola pošty tiše vypne a portál se chová jako dřív.
  */
 
 function prvniKoloDnu(): number {
   const zadano = Number(process.env.IMAP_DNU_ZPETNE);
-  return Number.isFinite(zadano) && zadano > 0 ? Math.min(zadano, 3650) : 14;
+  return Number.isFinite(zadano) && zadano >= 0 ? Math.min(zadano, 3650) : 14;
 }
 
 /**
@@ -165,8 +167,21 @@ async function stahniPrilohy(
   try {
     const zamek = await klient.getMailboxLock(process.env.IMAP_FOLDER || 'INBOX');
     try {
-      // Poprvé se nebere celá historie schránky - jen poslední dva týdny.
+      // Poprvé se nebere celá historie schránky - jen posledních pár dnů.
       // Jinak by se při zapnutí funkce do Výdajů vysypaly roky dokladů.
+      //
+      // IMAP_DNU_ZPETNE=0 znamená „až od teď" (zadání 12. 9. 2026: „nenatahoval
+      // bych teď doklady ze schránky, bude jich moc - spíš bych to nastavil od
+      // teď"). Schránka se jen označí za přečtenou po poslední zprávu, která v
+      // ní teď leží, a portál si dál všímá jen toho, co přijde nově. Přes datum
+      // by to nešlo - IMAP umí hledat jen po celých dnech, takže „od teď" by
+      // stejně natáhlo celý dnešek.
+      if (!posledniUid && prvniKoloDnu() === 0) {
+        const vse = await klient.search({ all: true }, { uid: true });
+        const nejvyssi = Array.isArray(vse) && vse.length > 0 ? Math.max(...vse) : 0;
+        return { prilohy: [], nejvyssiUid: nejvyssi, zbyva: false };
+      }
+
       const nalezene = posledniUid
         ? await klient.search({ uid: `${posledniUid + 1}:*` }, { uid: true })
         : await klient.search(
