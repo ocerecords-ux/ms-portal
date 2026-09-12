@@ -39,10 +39,16 @@ import {
  * IMAP_USER      — přihlašovací jméno, obvykle celá adresa
  * IMAP_PASSWORD  — heslo ke schránce
  * IMAP_FOLDER    — složka, výchozí INBOX (hodí se mít zvlášť, třeba "Doklady")
+ * IMAP_DNU_ZPETNE — kolik dnů historie se vezme při úplně prvním kole
+ *                   (výchozí 14). Když je ve schránce pár měsíců dokladů, které
+ *                   mají do portálu doputovat, dá se to jednorázově zvednout.
  * Bez nich se kontrola pošty tiše vypne a portál se chová jako dřív.
  */
 
-const PRVNI_KOLO_DNU = 14;
+function prvniKoloDnu(): number {
+  const zadano = Number(process.env.IMAP_DNU_ZPETNE);
+  return Number.isFinite(zadano) && zadano > 0 ? Math.min(zadano, 3650) : 14;
+}
 
 /**
  * Z knihoven si bereme jen to, co opravdu voláme.
@@ -164,7 +170,7 @@ async function stahniPrilohy(
       const nalezene = posledniUid
         ? await klient.search({ uid: `${posledniUid + 1}:*` }, { uid: true })
         : await klient.search(
-            { since: new Date(Date.now() - PRVNI_KOLO_DNU * 24 * 60 * 60 * 1000) },
+            { since: new Date(Date.now() - prvniKoloDnu() * 24 * 60 * 60 * 1000) },
             { uid: true },
           );
 

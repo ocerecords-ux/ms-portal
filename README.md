@@ -81,6 +81,7 @@ záložek Uhrazené / Neuhrazené se počítají jen zařazené doklady.
 | `IMAP_USER` | přihlašovací jméno, obvykle celá adresa |
 | `IMAP_PASSWORD` | heslo ke schránce |
 | `IMAP_FOLDER` | složka, výchozí `INBOX` |
+| `IMAP_DNU_ZPETNE` | kolik dnů historie vzít při úplně prvním kole (výchozí 14) |
 
 Doporučený postup: **založit zvlášť schránku nebo složku jen pro doklady** (třeba
 `doklady@mediaspace.cz`) a do ní nechat z účtárny přeposílat. Portál pak nemusí
