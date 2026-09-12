@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canUseChat, loadConversations, loadTeam } from '@/lib/chatServer';
+import { zkusDatabazi } from '@/lib/dbZnovu';
 
 // Seznam konverzaci + zalozeni nove (zadani 8. 9. 2026).
 export const dynamic = 'force-dynamic';
@@ -34,14 +35,9 @@ export async function GET() {
     // a pri nasazeni byvaji chvili plna - seznam konverzaci pak spadne na
     // vterinovem zadrhelu, se kterym neni nic spatne. Stejny pristup uz
     // pouziva build (scripts/priprav-databazi.mjs).
-    let konverzace, tym;
-    try {
-      [konverzace, tym] = await Promise.all([loadConversations(session.user.id), loadTeam(session.user.id)]);
-    } catch (prvni) {
-      console.warn('Seznam konverzaci napoprve selhal, zkousim znovu:', prvni);
-      await new Promise((hotovo) => setTimeout(hotovo, 400));
-      [konverzace, tym] = await Promise.all([loadConversations(session.user.id), loadTeam(session.user.id)]);
-    }
+    const [konverzace, tym] = await zkusDatabazi(() =>
+      Promise.all([loadConversations(session.user.id), loadTeam(session.user.id)]),
+    );
     return NextResponse.json({ konverzace, tym });
   } catch (err) {
     // Databaze bez tabulek chatu (jeste nedobehl `prisma db push`) nesmi
