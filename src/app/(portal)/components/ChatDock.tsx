@@ -105,6 +105,27 @@ function Avatar({ label, photoUrl, size = 28 }: { label: string; photoUrl: strin
  * telefonu i v levém sloupci, jen je jinak velká a v liště svítí prstenec
  * zeleně - fialová by na fialové nebyla vidět.
  */
+/** Panáčci k počtu lidí ve skupině (12. 9. 2026). */
+function IkonaLidi() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-3.5 h-3.5"
+      aria-hidden="true"
+    >
+      <path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
+      <circle cx="9" cy="7" r="3.5" />
+      <path d="M22 20v-1.5a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.63a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
 function PripnutaVolba({
   konverzace,
   aktivni,
@@ -2336,21 +2357,43 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     {otevrena.kind !== 'PROJEKT' && (
                       <Avatar label={otevrena.label} photoUrl={otevrena.avatarUrl} size={26} />
                     )}
-                    <span className="font-heading font-semibold text-sm text-ink truncate">
-                      {otevrena.kind === 'PROJEKT' ? `# ${otevrena.label}` : otevrena.label}
+                    {/* NÁZEV SKUPINY MUSÍ BÝT CELÝ (zadání 12. 9. 2026: „tady
+                        ty názvy skupin musí být celé. Popisek o tom, kdo do
+                        skupiny vidí, musíme vyřešit jinak").
+
+                        Dřív se o jeden řádek dělil název a výčet lidí — na
+                        telefonu z toho bylo „Žúžo-…" a „Vidí jen: já, Karolína
+                        Zbořilová, Barb…", tedy dvě useknuté věci místo jedné
+                        celé. Název se teď smí zalomit a výčet ustoupí: na
+                        širokém okně jde pod název, na telefonu zbyde jen
+                        počet lidí, který otevře správu skupiny — tam jsou
+                        jmenovitě a dá se s nimi něco dělat. */}
+                    <span className="min-w-0 flex-1 flex flex-col">
+                      <span className="font-heading font-semibold text-sm text-ink leading-tight break-words">
+                        {otevrena.kind === 'PROJEKT' ? `# ${otevrena.label}` : otevrena.label}
+                      </span>
+                      {otevrena.kind === 'SKUPINA' && (
+                        <button
+                          type="button"
+                          onClick={() => (spravaOtevrena ? setSpravaOtevrena(false) : otevriSpravu())}
+                          title={`Vidí jen: já${otevrena.memberLabels.length > 0 ? `, ${otevrena.memberLabels.join(', ')}` : ''}`}
+                          className="hidden sm:block text-[11px] font-body text-muted truncate hover:text-brand-purple text-left"
+                        >
+                          Vidí jen: já
+                          {otevrena.memberLabels.length > 0 ? `, ${otevrena.memberLabels.join(', ')}` : ''}
+                        </button>
+                      )}
                     </span>
                     {otevrena.kind === 'SKUPINA' && (
                       <button
                         type="button"
                         onClick={() => (spravaOtevrena ? setSpravaOtevrena(false) : otevriSpravu())}
                         title="Kdo do skupiny vidí — a úprava"
-                        className="text-[11px] font-body text-muted truncate hover:text-brand-purple ml-auto text-left"
+                        aria-label={`Kdo do skupiny vidí (${otevrena.memberLabels.length + 1})`}
+                        className="sm:hidden shrink-0 inline-flex items-center gap-1 rounded-pill border border-line px-2 py-0.5 text-[11px] font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
                       >
-                        {/* Kdo skupinu vidi, je videt rovnou v hlavicce - u
-                            skupiny vedeni je to ta nejdulezitejsi informace
-                            (zadani 11. 9. 2026). */}
-                        Vidí jen: já
-                        {otevrena.memberLabels.length > 0 ? `, ${otevrena.memberLabels.join(', ')}` : ''}
+                        <IkonaLidi />
+                        <span className="tabular-nums">{otevrena.memberLabels.length + 1}</span>
                       </button>
                     )}
                     {/* Ztlumeni jednoho rozhovoru (zadani 12. 9. 2026) - patri
