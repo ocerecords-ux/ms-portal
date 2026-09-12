@@ -95,6 +95,8 @@ export type ChatConversation = {
    * jako neprectene - jen z nej necinka upozorneni.
    */
   ztlumeno?: boolean;
+  /** Pripnuty rozhovor - drzi se nahore jako rychla volba (12. 9. 2026). */
+  pripnuto?: boolean;
 };
 
 /**

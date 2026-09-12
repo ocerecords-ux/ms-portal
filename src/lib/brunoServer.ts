@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { zapisBrunoUdalost } from '@/lib/projektLogServer';
+import { jeZminen } from '@/lib/chatUpozorneniServer';
 
 /**
  * BRUNO — asistent studia (zadání 12. 9. 2026: „pojďme přidat našeho firemního
@@ -122,8 +123,11 @@ bez slova strana"), rozdělení práce na projektu, kdo za co odpovídá. Neukl�
 čísla stran — ta se ukládají zvlášť. Většinou je poznámka null.`;
 
 type Kontext = {
-  caflouProjectId: string;
-  nazevProjektu: string;
+  /** Prazdne = neni to kanal projektu, Bruna nekdo oslovil jinde. */
+  caflouProjectId: string | null;
+  /** Oslovil ho nekdo jmenem? Pak ma odpovedet vzdycky. */
+  oslovenPrimo: boolean;
+  nazevProjektu: string | null;
   herci: { id: string; jmeno: string }[];
   natoceno: { jmeno: string | null; strana: number }[];
   poznamky: string[];
@@ -145,6 +149,23 @@ function sestavDotaz(k: Kontext): string {
     .map((z) => `${z.jeBruno ? 'Bruno (ty)' : z.kdo}: ${z.text}`)
     .join('\n');
 
+  if (!k.caflouProjectId) {
+    // Mimo kanal projektu nema Bruno co hlidat - jen odpovida tomu, kdo ho
+    // oslovil. Zbytek kontextu by ho jen mátl.
+    return `Tohle NENÍ kanál projektu, je to ${k.nazevProjektu ? `rozhovor „${k.nazevProjektu}"` : 'soukromá zpráva'}.
+Někdo tě oslovil jménem. Odpověz mu.
+
+CO SI PAMATUJEŠ:
+${poznamky}
+
+POSLEDNÍ ZPRÁVY (nejstarší nahoře, poslední je ta nová):
+${zpravy}
+
+Odpověz JSONem. Zapisovat tu není co (strany se vedou u projektů), takže akce
+bude „dotaz" se zprávou do kanálu — odpověz krátce a k věci, a když se tě ptají
+na něco, co nevíš, řekni to rovnou.`;
+  }
+
   return `PROJEKT: ${k.nazevProjektu}
 
 HERCI NA PROJEKTU:
@@ -159,6 +180,7 @@ ${poznamky}
 POSLEDNÍ ZPRÁVY V KANÁLU (nejstarší nahoře, poslední je ta nová):
 ${zpravy}
 
+${k.oslovenPrimo ? '\nV POSLEDNÍ ZPRÁVĚ TĚ NĚKDO OSLOVIL JMÉNEM — odpověz mu vždycky, i kdyby nebylo co zapsat.\n' : ''}
 Posuď POSLEDNÍ zprávu a odpověz JSONem.`;
 }
 
@@ -216,31 +238,45 @@ export async function brunoZpracujZpravu(messageId: string): Promise<void> {
         conversation: { select: { kind: true, caflouProjectId: true, name: true } },
       },
     });
-    if (!zprava?.conversation?.caflouProjectId) return;
-    if (zprava.conversation.kind !== 'PROJEKT') return;
+    if (!zprava?.conversation) return;
+    if (!zprava.body?.trim()) return;
 
     const bruno = await brunoUcet();
     // Na vlastní zprávu nereaguje - jinak by si odpovídal donekonečna.
     if (bruno && zprava.userId === bruno.id) return;
-    if (!zprava.body?.trim()) return;
 
-    const caflouProjectId = zprava.conversation.caflouProjectId;
+    /**
+     * KDY SE BRUNO VŮBEC ROZMÝŠLÍ (zadání 12. 9. 2026: „umím si představit,
+     * že do konverzace zapojím Bruna pomocí @bruno").
+     *
+     * Buď je to kanál projektu — tam sleduje dění sám od sebe a mlčí, dokud
+     * nemá co říct. Nebo ho někdo oslovil jménem; pak odpovídá kdekoliv,
+     * i v soukromé zprávě, kde žádný projekt není.
+     */
+    const oslovenPrimo = jeZminen(zprava.body, 'Bruno', BRUNO_EMAIL);
+    const caflouProjectId =
+      zprava.conversation.kind === 'PROJEKT' ? zprava.conversation.caflouProjectId : null;
+    if (!caflouProjectId && !oslovenPrimo) return;
 
     const [meta, natoceno, poznamky, historie] = await Promise.all([
-      prisma.projectMeta.findUnique({
-        where: { caflouProjectId },
-        select: {
-          name: true,
-          actorUserId: true,
-          herci: { select: { id: true, name: true, email: true } },
-        },
-      }),
-      prisma.brunoNatoceno.findMany({
-        where: { caflouProjectId },
-        select: { strana: true, user: { select: { name: true, email: true } } },
-      }),
+      caflouProjectId
+        ? prisma.projectMeta.findUnique({
+            where: { caflouProjectId },
+            select: {
+              name: true,
+              actorUserId: true,
+              herci: { select: { id: true, name: true, email: true } },
+            },
+          })
+        : Promise.resolve(null),
+      caflouProjectId
+        ? prisma.brunoNatoceno.findMany({
+            where: { caflouProjectId },
+            select: { strana: true, user: { select: { name: true, email: true } } },
+          })
+        : Promise.resolve([]),
       prisma.brunoPamet.findMany({
-        where: { OR: [{ caflouProjectId }, { caflouProjectId: null }] },
+        where: caflouProjectId ? { OR: [{ caflouProjectId }, { caflouProjectId: null }] } : { caflouProjectId: null },
         orderBy: { createdAt: 'desc' },
         take: KONTEXT_POZNAMEK,
         select: { poznamka: true },
@@ -257,17 +293,20 @@ export async function brunoZpracujZpravu(messageId: string): Promise<void> {
         },
       }),
     ]);
-    if (!meta) return;
+    if (caflouProjectId && !meta) return;
 
     // Hlavni herec prvni, at model cte seznam ve stejnem poradi jako clovek.
-    const herci = [
-      ...meta.herci.filter((h) => h.id === meta.actorUserId),
-      ...meta.herci.filter((h) => h.id !== meta.actorUserId),
-    ].map((h) => ({ id: h.id, jmeno: h.name || h.email }));
+    const herci = meta
+      ? [
+          ...meta.herci.filter((h) => h.id === meta.actorUserId),
+          ...meta.herci.filter((h) => h.id !== meta.actorUserId),
+        ].map((h) => ({ id: h.id, jmeno: h.name || h.email }))
+      : [];
 
     const kontext: Kontext = {
       caflouProjectId,
-      nazevProjektu: meta.name || zprava.conversation.name || 'Projekt',
+      oslovenPrimo,
+      nazevProjektu: meta?.name || zprava.conversation.name || null,
       herci,
       natoceno: natoceno.map((n) => ({
         jmeno: n.user ? n.user.name || n.user.email : null,
@@ -289,11 +328,12 @@ export async function brunoZpracujZpravu(messageId: string): Promise<void> {
 
     if (rozhodnuti.poznamka) {
       await prisma.brunoPamet
-        .create({ data: { caflouProjectId, poznamka: rozhodnuti.poznamka } })
+        .create({ data: { caflouProjectId: caflouProjectId ?? null, poznamka: rozhodnuti.poznamka } })
         .catch(() => undefined);
     }
 
-    if (rozhodnuti.akce === 'zapis' && rozhodnuti.strana) {
+    // Zapisovat stranu jde jen u projektu - jinde neni kam.
+    if (rozhodnuti.akce === 'zapis' && rozhodnuti.strana && caflouProjectId) {
       // Jmeno z odpovedi se musi trefit do seznamu hercu projektu; kdyz ne,
       // zapise se bez herce - vymysleneho cloveka do karty nepustime.
       const herec = rozhodnuti.herec

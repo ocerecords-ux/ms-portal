@@ -179,3 +179,25 @@ body {
     transform: translateX(-10%);
   }
 }
+
+/* Ekvalizer „někdo píše" v chatu (zadání 12. 9. 2026: „mohlo by to vypadat
+   jako grafický ekvalizér, mohlo by to vycházet z toho animovaného loga").
+   Pruhy se hýbou kolem středu jako v logu Mediaspace; každý má jinou
+   rychlost a jiné zpoždění, takže se rytmus neopakuje po dvojicích. */
+@keyframes ms-ekvalizer {
+  0%,
+  100% {
+    transform: scaleY(0.28);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Kdo si v systému vypnul animace, dostane jen tři tiché tečky. */
+@media (prefers-reduced-motion: reduce) {
+  .ms-ekvalizer-pruh {
+    animation: none !important;
+    transform: scaleY(0.55);
+  }
+}

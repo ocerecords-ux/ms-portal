@@ -799,6 +799,10 @@ model ConversationMember {
   /// zustava, jak byl.
   ztlumeno       Boolean      @default(false)
 
+  /// Pripnuty rozhovor - drzi se nahore jako rychla volba (zadani 12. 9.
+  /// 2026). Patri CLOVEKU, ne rozhovoru: kazdy si nahoru da to svoje.
+  pripnuto       Boolean      @default(false)
+
   @@unique([conversationId, userId])
   @@index([userId])
 }
@@ -1943,4 +1947,21 @@ model BrunoPamet {
   createdAt       DateTime @default(now())
 
   @@index([caflouProjectId, createdAt])
+}
+
+/// Kdo prave pise v konverzaci (zadani 12. 9. 2026: „aby bylo videt, kdyz
+/// s nekym chatujes, ze na te druhe strane ten clovek pise").
+///
+/// Jeden radek na dvojici konverzace + clovek, ktery se jen prepisuje - kdo
+/// pise, hlasi se kazdych par vterin. Za „pise" se povazuje radek mladsi nez
+/// nekolik vterin; nic se nemaze a nic se nehlida, stary zaznam proste
+/// prestane platit sam od sebe.
+model ChatPise {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  updatedAt      DateTime @updatedAt
+
+  @@unique([conversationId, userId])
+  @@index([conversationId, updatedAt])
 }

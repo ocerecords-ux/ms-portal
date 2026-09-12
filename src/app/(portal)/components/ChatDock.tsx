@@ -51,6 +51,12 @@ import { ZalozkyDoku } from './ZalozkyDoku';
 
 // Otevreni panelu drzi spolecny stav pravé hrany - viz pravyDok.ts.
 const REFRESH_MS = 12000;
+/**
+ * Jak casto se ptame, kdo pise, a jak casto sami hlasime, ze pisu
+ * (zadani 12. 9. 2026). Tri vteriny: min uz je zbytecny provoz, vic a je po
+ * psani driv, nez se to ukaze.
+ */
+const PISE_MS = 3000;
 
 type ProjectOption = { id: string; label: string; name: string };
 
@@ -808,6 +814,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const expanded = naStrance || dok === 'chat';
   const [tab, setTab] = useState<ConversationKind>('PROJEKT');
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  /** Kdo prave pise v otevrene konverzaci (zadani 12. 9. 2026). */
+  const [pisou, setPisou] = useState<string[]>([]);
+  /** Kdy jsme naposledy ohlasili, ze pisu - at se to nehlasi na kazdy znak. */
+  const ohlasenoRef = useRef(0);
   const [team, setTeam] = useState<ChatTeamMember[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -1156,6 +1166,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const otevrena = conversations.find((c) => c.id === openId) ?? null;
 
   /**
+   * Pripnute rozhovory - rychle volby nahore (zadani 12. 9. 2026). Poradi je
+   * podle posledni zpravy, at je nejzivejsi po ruce jako prvni.
+   */
+  const pripnute = conversations
+    .filter((c) => c.pripnuto)
+    .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
+    .slice(0, 12);
+
+  /**
    * Kanaly k projektum. Neni to seznam zalozenych konverzaci, ale seznam
    * AKTIVNICH PROJEKTU - kanal ma kazdy z nich, at uz v nem nekdo psal, nebo
    * ne. Konverzace v databazi vznikne az s prvni zpravou, takze nezustavaji
@@ -1380,6 +1399,72 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   }
 
   /**
+   * Kdo právě píše (zadání 12. 9. 2026: „aby bylo vidět, když s někým
+   * chatuješ, že na té druhé straně ten člověk píše").
+   *
+   * Ptáme se po třech vteřinách — po dvanácti, jako na zprávy, by bylo po
+   * psaní dřív, než by se to ukázalo. Dotaz je za to malý (jen jména) a chodí
+   * jen když je konverzace otevřená a okno vidět; na skryté záložce nemá kdo
+   * koukat a prohlížeč by nás stejně zpomalil.
+   */
+  useEffect(() => {
+    if (!openId) {
+      setPisou([]);
+      return;
+    }
+    let zivy = true;
+    async function zjisti() {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const res = await fetch(`/api/chat/konverzace/${encodeURIComponent(openId!)}/pise`);
+        const data = await res.json().catch(() => null);
+        if (zivy && otevrenaRef.current === openId) {
+          setPisou(Array.isArray(data?.pisou) ? data.pisou : []);
+        }
+      } catch {
+        // Kdo pise je ozdoba - chyba se nikde neukazuje.
+      }
+    }
+    void zjisti();
+    const timer = setInterval(() => void zjisti(), PISE_MS);
+    return () => {
+      zivy = false;
+      clearInterval(timer);
+    };
+  }, [openId]);
+
+  /**
+   * Ohlásí, že píšu. Volá se při psaní, ale posílá se nejvýš jednou za pár
+   * vteřin — na každý stisk klávesy by to byl zbytečný provoz.
+   */
+  function ohlasZePisu(conversationId: string) {
+    const ted = Date.now();
+    if (ted - ohlasenoRef.current < PISE_MS - 300) return;
+    ohlasenoRef.current = ted;
+    void fetch(`/api/chat/konverzace/${encodeURIComponent(conversationId)}/pise`, {
+      method: 'POST',
+    }).catch(() => undefined);
+  }
+
+  /**
+   * Připnutí rozhovoru nahoru jako rychlá volba (zadání 12. 9. 2026).
+   */
+  async function prepniPripnuti(conversationId: string, pripnuto: boolean) {
+    setConversations((current) =>
+      current.map((c) => (c.id === conversationId ? { ...c, pripnuto } : c)),
+    );
+    try {
+      await fetch(`/api/chat/konverzace/${encodeURIComponent(conversationId)}/pripnuti`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pripnuto }),
+      });
+    } catch {
+      void nactiKonverzace();
+    }
+  }
+
+  /**
    * Ztlumení jednoho rozhovoru (zadání 12. 9. 2026).
    *
    * Přepne se hned v seznamu, ať tlačítko nelaguje; kdyby uložení selhalo,
@@ -1581,6 +1666,37 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               vlaknoId ? 'hidden lg:flex' : otevrena ? 'hidden sm:flex' : 'flex'
             }`}
           >
+            {/* RYCHLE VOLBY (zadani 12. 9. 2026: „bylo by dobre mit moznost si
+                pripnout nekam nahoru v tom chatu skupiny a uzivatele, jako
+                rychle volby"). Sedi nad zalozkami, takze pripnuty clovek je
+                po ruce, i kdyz je clovek zrovna v projektech. */}
+            {pripnute.length > 0 && (
+              <div className="px-2 pt-2 pb-2 border-b border-line flex items-center gap-1.5 flex-wrap">
+                {pripnute.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setOpenId(c.id)}
+                    title={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label}
+                    className={`relative shrink-0 rounded-full transition-transform hover:scale-105 ${
+                      c.id === openId ? 'ring-2 ring-brand-purple' : ''
+                    }`}
+                  >
+                    <Avatar
+                      label={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label}
+                      photoUrl={c.avatarUrl}
+                      size={30}
+                    />
+                    {c.unread > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-brand-green text-onAccent text-[9px] font-heading font-bold leading-[16px] text-center">
+                        {c.unread}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Druh zprav se prepina ikonami v hlavicce (zadani 11. 9. 2026);
                 tady uz zustava jen nazev toho, co je v seznamu videt - at je
                 po prepnuti jasne, kde clovek je. Na uzke obrazovce se prepina
@@ -1776,6 +1892,22 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         upozorneni. */}
                     <button
                       type="button"
+                      onClick={() => void prepniPripnuti(otevrena.id, !otevrena.pripnuto)}
+                      title={
+                        otevrena.pripnuto
+                          ? 'Připnuto nahoře — klepnutím odepnete'
+                          : 'Připnout nahoru jako rychlou volbu'
+                      }
+                      aria-label={otevrena.pripnuto ? 'Odepnout' : 'Připnout nahoru'}
+                      aria-pressed={Boolean(otevrena.pripnuto)}
+                      className={`shrink-0 leading-none transition-colors ${
+                        otevrena.kind === 'SKUPINA' ? '' : 'ml-auto'
+                      } ${otevrena.pripnuto ? 'text-brand-purple' : 'text-muted hover:text-brand-purple'}`}
+                    >
+                      <Pinacek plna={Boolean(otevrena.pripnuto)} />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => void prepniZtlumeni(otevrena.id, !otevrena.ztlumeno)}
                       title={
                         otevrena.ztlumeno
@@ -1785,8 +1917,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       aria-label={otevrena.ztlumeno ? 'Zrušit ztlumení' : 'Ztlumit rozhovor'}
                       aria-pressed={Boolean(otevrena.ztlumeno)}
                       className={`shrink-0 leading-none transition-colors ${
-                        otevrena.kind === 'SKUPINA' ? '' : 'ml-auto'
-                      } ${otevrena.ztlumeno ? 'text-brand-purple' : 'text-muted hover:text-brand-purple'}`}
+                        otevrena.ztlumeno ? 'text-brand-purple' : 'text-muted hover:text-brand-purple'
+                      }`}
                     >
                       {otevrena.ztlumeno ? <ZvonekSkrtnuty /> : <ZvonekMaly />}
                     </button>
@@ -1972,11 +2104,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     <div ref={konecRef} />
                   </div>
 
+                  <PisouIndikator jmena={pisou} />
+
                   <Psatko
                     hodnota={draft}
                     zmena={(v) => {
                       setDraft(v);
                       sledujZminku(v, 'hlavni');
+                      if (v.trim()) ohlasZePisu(otevrena.id);
                     }}
                     odeslat={(e) => odesli(e, false)}
                     sending={sending}
@@ -2290,6 +2425,80 @@ function ZvonekSkrtnuty() {
       <path d="M18 15.6v-4a6 6 0 0 0-12 0v4L4.6 17v.7h14.8V17z" />
       <path d="M10.2 20.4a2 2 0 0 0 3.6 0" />
       <path d="M4 3.5 20 20" />
+    </svg>
+  );
+}
+
+/**
+ * „Někdo píše" jako grafický ekvalizér (zadání 12. 9. 2026: „mohlo by to
+ * vypadat jako grafický ekvalizér, mohlo by to vycházet z toho animovaného
+ * loga").
+ *
+ * Pět zelených proužků, které se hýbou kolem středu — stejná vlnka, jakou má
+ * Mediaspace v logu a Bruno v ikoně. Každý proužek má jinou rychlost a jiné
+ * zpoždění, takže se rytmus neopakuje a nevzniká z toho blikající „vlna".
+ *
+ * Když má člověk v systému vypnuté animace, proužky se zastaví (viz
+ * globals.css) — pořád je vidět, že někdo píše, jen to neposkakuje.
+ */
+function PisouIndikator({ jmena }: { jmena: string[] }) {
+  if (jmena.length === 0) return null;
+
+  const text =
+    jmena.length === 1
+      ? `${jmena[0]} píše…`
+      : jmena.length === 2
+        ? `${jmena[0]} a ${jmena[1]} píšou…`
+        : `${jmena.length} lidí píše…`;
+
+  return (
+    <div className="px-4 pb-1.5 -mt-1 flex items-center gap-2" aria-live="polite">
+      <Ekvalizer />
+      <span className="text-[11px] font-body text-muted truncate">{text}</span>
+    </div>
+  );
+}
+
+/** Pět proužků z loga. Výšky i časy jsou schválně nesoudělné. */
+function Ekvalizer() {
+  const pruhy = [
+    { vyska: 9, doba: 620, zpozdeni: 0 },
+    { vyska: 14, doba: 780, zpozdeni: 120 },
+    { vyska: 18, doba: 560, zpozdeni: 60 },
+    { vyska: 12, doba: 700, zpozdeni: 200 },
+    { vyska: 8, doba: 840, zpozdeni: 140 },
+  ];
+  return (
+    <span className="flex items-center gap-[2px] h-[18px]" aria-hidden="true">
+      {pruhy.map((p, i) => (
+        <span
+          key={i}
+          className="ms-ekvalizer-pruh block w-[3px] rounded-full bg-brand-green"
+          style={{
+            height: `${p.vyska}px`,
+            animation: `ms-ekvalizer ${p.doba}ms ease-in-out ${p.zpozdeni}ms infinite`,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
+/** Připínáček - plný, když je rozhovor připnutý. */
+function Pinacek({ plna }: { plna: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill={plna ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-4 h-4"
+      aria-hidden="true"
+    >
+      <path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z" />
+      <path d="M12 14v6" />
     </svg>
   );
 }

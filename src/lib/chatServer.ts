@@ -105,14 +105,27 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
       // Ztlumeny rozhovor (zadani 12. 9. 2026) - zpravy chodi dal a pocitaji
       // se jako neprectene, jen z nej necinka upozorneni.
       ztlumeno: c.members.find((m) => m.userId === userId)?.ztlumeno ?? false,
+      // Pripnute rozhovory drzi chat nahore jako rychle volby (zadani
+      // 12. 9. 2026).
+      pripnuto: c.members.find((m) => m.userId === userId)?.pripnuto ?? false,
     };
   });
 }
 
-/** Ostatni clenove tymu - pro zalozeni soukrome zpravy nebo skupiny. */
+/**
+ * Ostatni clenove tymu - pro zalozeni soukrome zpravy nebo skupiny a pro
+ * naseptavani zminek (@).
+ *
+ * ROBOTI JSOU V SEZNAMU TAKY (zadani 12. 9. 2026: „umim si predstavit, ze do
+ * konverzace zapojim Bruna pomoci @bruno"). Nemaji zaskrtnute `active` -
+ * schvalne, aby se pod nimi nedalo prihlasit - takze se musi pustit zvlast.
+ */
 export async function loadTeam(userId: string) {
   const users = await prisma.user.findMany({
-    where: { role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] }, active: true, id: { not: userId } },
+    where: {
+      id: { not: userId },
+      OR: [{ role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] }, active: true }, { role: 'ROBOT' }],
+    },
     select: { id: true, name: true, email: true, photoUrl: true },
     orderBy: [{ name: 'asc' }, { email: 'asc' }],
   });
