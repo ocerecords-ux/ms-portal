@@ -195,6 +195,18 @@ export function Preposlech({
    * seznam poznamek si otevre, az kdyz ho potrebuje.
    */
   const [zaznamyOtevrene, setZaznamyOtevrene] = useState(false);
+  /**
+   * VYSKA CELE SEKCE (zadani 12. 9. 2026: „to okno s pdf bych potahl na hranu
+   * dolu, co to jde. Je tam zbytecne moc prazdneho mista. Dulezite je
+   * zachovat co nejvice roztazeny text na obrazovku").
+   *
+   * Pevnych 72vh nechavalo pod textem pruh prazdna, protoze o tom, jak
+   * vysoko sekce zacina, nevedelo nic. Tady se to zmeri: od horni hrany
+   * mrizky po spodni hranu okna. Na uzkem okne (pod xl) zustava null - tam se
+   * sloupce radi pod sebe a stranka roluje, takze plati puvodni vysky.
+   */
+  const mrizkaRef = useRef<HTMLDivElement | null>(null);
+  const [vyskaSekce, setVyskaSekce] = useState<number | null>(null);
   /** Ktery zaznam se prave upravuje a co je v policku (zadani 12. 9. 2026). */
   const [upravovana, setUpravovana] = useState<string | null>(null);
   const [upravaText, setUpravaText] = useState('');
@@ -1173,6 +1185,33 @@ export function Preposlech({
     return () => document.removeEventListener('fullscreenchange', zmena);
   }, []);
 
+  // Zmereni vysky sekce - viz komentar u vyskaSekce.
+  useEffect(() => {
+    function zmer() {
+      const mrizka = mrizkaRef.current;
+      if (!mrizka) return;
+      if (window.innerWidth < 1280) {
+        setVyskaSekce(null);
+        return;
+      }
+      const ramecek = mrizka.getBoundingClientRect();
+      // Mimo fullscreen pocitame pozici v DOKUMENTU, ne v okne. Kdyby se
+      // bralo ramecek.top, sekce by pri rolovani stranky rostla a smrskavala
+      // se pod rukama.
+      const horni = document.fullscreenElement ? ramecek.top : ramecek.top + window.scrollY;
+      const rezerva = document.fullscreenElement ? 12 : 24;
+      setVyskaSekce(Math.max(420, Math.round(window.innerHeight - horni - rezerva)));
+    }
+    zmer();
+    // Hlasky nad mrizkou se objevuji az po odpovedi serveru - premerime i chvili po.
+    const casovac = window.setTimeout(zmer, 300);
+    window.addEventListener('resize', zmer);
+    return () => {
+      window.clearTimeout(casovac);
+      window.removeEventListener('resize', zmer);
+    };
+  }, [celaObrazovka, chybaHlaska, poznamka, jenPoslech]);
+
   useEffect(() => {
     if (jenPoslech) return;
     let zruseno = false;
@@ -1461,7 +1500,11 @@ export function Preposlech({
         </p>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,520px)] gap-4 items-start">
+      <div
+        ref={mrizkaRef}
+        className="relative grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,520px)] gap-4 items-stretch"
+        style={vyskaSekce ? { height: vyskaSekce } : undefined}
+      >
         <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden flex flex-col">
           <div className="flex items-center gap-3 flex-wrap px-4 py-2.5 border-b border-line">
             <span className="text-sm font-heading text-ink truncate">{pdfNazev || 'Text nahrávky'}</span>
@@ -1519,7 +1562,11 @@ export function Preposlech({
               </span>
             )}
           </div>
-          <div ref={pdfRolovaniRef} className="bg-field overflow-y-auto p-4 flex flex-col items-center gap-4" style={{ height: '72vh' }}>
+          <div
+            ref={pdfRolovaniRef}
+            className={`bg-field overflow-y-auto p-4 flex flex-col items-center gap-4 ${vyskaSekce ? 'flex-1 min-h-0' : ''}`}
+            style={vyskaSekce ? undefined : { height: '72vh' }}
+          >
             {pdfStran === 0 && (
               <p className="text-sm font-body text-muted m-auto text-center max-w-[300px]">
                 {zDisku === 'nacitam'
@@ -1541,7 +1588,7 @@ export function Preposlech({
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 min-h-0">
           {/* V pravem sloupci zustava UZ JEN PREHRAVAC A STOPY (zadani
               12. 9. 2026: „vlevo bude pdf s textem a v te cele prave casti
               bude jen prehravac s displejem a pod tim tracky"). Seznam
@@ -1667,8 +1714,8 @@ export function Preposlech({
             )}
           </div>
 
-          <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3 flex-wrap">
+          <div className={`bg-surface rounded-card border border-line shadow-sm overflow-hidden ${vyskaSekce ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
+            <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3 flex-wrap shrink-0">
               <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Zvukové stopy</h3>
               {!jenPoslech && (
                 <span className="flex items-center gap-3">
@@ -1701,7 +1748,10 @@ export function Preposlech({
                 </span>
               )}
             </div>
-            <div className="p-3 flex flex-col gap-2 overflow-y-auto" style={{ maxHeight: '34vh' }}>
+            <div
+              className={`p-3 flex flex-col gap-2 overflow-y-auto ${vyskaSekce ? 'flex-1 min-h-0' : ''}`}
+              style={vyskaSekce ? undefined : { maxHeight: '34vh' }}
+            >
               {stopy.length === 0 ? (
                 <p className="text-sm font-body text-muted m-0 px-1 py-5 text-center">
                   {zDisku === 'nacitam'
@@ -1785,44 +1835,53 @@ export function Preposlech({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ZAZNAMY A HISTORIE SE VYSOUVAJI Z PRAVE HRANY (zadani 12. 9. 2026:
-          „chci, at cela sekce, kde je zaznam chyb, je zarolovana vpravo, jak
-          mame chat a ukoly, at se da skryt a odkryt... primarne skryta").
-          Panel lezi UVNITR tehle sekce, ne v okne - diky tomu jede i na celou
-          obrazovku, kde by okenni panel nebyl videt. */}
-      {!zaznamyOtevrene ? (
-        <button
-          type="button"
-          onClick={() => setZaznamyOtevrene(true)}
-          title="Zobrazit záznamy chyb a historii"
-          className="absolute top-24 right-0 z-30 rounded-l-card bg-brand-purple text-white shadow-lg px-1.5 py-3 flex flex-col items-center gap-2 hover:bg-brand-purpleDeep transition-colors"
-        >
-          <span className="[writing-mode:vertical-rl] rotate-180 font-heading font-semibold text-[11px] uppercase tracking-[0.16em]">
-            Záznamy
-          </span>
-          {stav.chyby.length > 0 && (
-            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
-              {stav.chyby.length}
+        {/* ZAZNAMY A HISTORIE SE VYSOUVAJI Z PRAVE HRANY - PRESNE JAKO CHAT
+            A UKOLY (zadani 12. 9. 2026: „to zatahovani zaznamu chyb delal
+            uplne stejne, jako mame ten chat a ukoly. A jeste bych to vice
+            roztahl doleva cele a klidne at to zabere celou tu pravou cast
+            obrazovky, az na hranu okna pdf").
+
+            Dok proto sedi UVNITR mrizky: pravou hranu ma spolecnou s pravym
+            sloupcem a leva hrana - siroky pruh na zavreni, do male sipky se
+            spatne trefuje - dosedne presne na hranu okna s textem. Prekryje
+            tedy prehravac i stopy, ne text. A protoze je uvnitr sekce, jede
+            i na celou obrazovku, kde by okenni panel nebyl videt. */}
+        {!zaznamyOtevrene ? (
+          <button
+            type="button"
+            onClick={() => setZaznamyOtevrene(true)}
+            title="Zobrazit záznamy chyb a historii"
+            aria-label="Zobrazit záznamy chyb a historii"
+            className="absolute top-6 right-0 z-30 flex flex-col items-center gap-2.5 rounded-l-card bg-brand-purple hover:bg-brand-purpleDeep text-brand-green shadow-lg px-2.5 py-3 transition-colors"
+          >
+            <SipkaDoku smer="left" />
+            {stav.chyby.length > 0 && (
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
+                {stav.chyby.length}
+              </span>
+            )}
+            <span className="text-[10px] font-heading font-bold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
+              Záznamy
             </span>
-          )}
-        </button>
-      ) : (
-        <div className="absolute top-0 right-0 bottom-0 z-30 w-[380px] max-w-[92vw] bg-surface border-l border-line shadow-2xl flex flex-col">
-          <div className="px-3 py-2 border-b border-line flex items-center gap-2">
-            <span className="font-heading font-semibold text-xs uppercase tracking-wide text-muted">Záznamy</span>
+          </button>
+        ) : (
+          <aside className="absolute top-0 right-0 bottom-0 z-30 w-[min(552px,100%)] flex items-stretch">
+            {/* Stejne siroky pruh na zavreni jako u chatu a ukolu. */}
             <button
               type="button"
               onClick={() => setZaznamyOtevrene(false)}
-              title="Skrýt (zase se vysune z pravé hrany)"
+              title="Skrýt záznamy"
               aria-label="Skrýt záznamy"
-              className="ml-auto text-muted hover:text-brand-purple text-sm px-1"
+              className="w-8 shrink-0 rounded-l-card border border-r-0 border-line bg-field text-muted hover:bg-brand-purple hover:text-white transition-colors flex flex-col items-center justify-center gap-2"
             >
-              ▸
+              <SipkaDoku smer="right" />
+              <span className="text-[10px] font-heading font-semibold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
+                Skrýt
+              </span>
+              <SipkaDoku smer="right" />
             </button>
-          </div>
-              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <div className="flex-1 min-w-0 bg-surface border border-line rounded-r-card shadow-xl flex flex-col overflow-hidden">
                 {/* Zalozky jako u Ukolu a chatu (zadani 12. 9. 2026). Chyby
                     a historie sdileji jedno misto, takze na prehravac a stopy
                     zbyde vic. */}
@@ -1864,7 +1923,7 @@ export function Preposlech({
                     )}
                   </span>
                 </div>
-                <div className="overflow-y-auto" style={{ maxHeight: '30vh' }}>
+                <div className="flex-1 min-h-0 overflow-y-auto">
                   {panel === 'historie' ? (
                     <Historie zaznamy={stav.historie ?? []} onVratit={(id) => void vratKrok(id)} />
                   ) : stav.chyby.length === 0 ? (
@@ -1962,9 +2021,28 @@ export function Preposlech({
                   )}
                 </div>
               </div>
-        </div>
-      )}
+          </aside>
+        )}
+      </div>
     </div>
+  );
+}
+
+/** Sipka doku - stejna jako u chatu a ukolu, at se to chova jako jeden dum. */
+function SipkaDoku({ smer }: { smer: 'left' | 'right' }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-4 h-4"
+      aria-hidden="true"
+    >
+      <path d={smer === 'left' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'} />
+    </svg>
   );
 }
 
