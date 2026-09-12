@@ -1196,11 +1196,22 @@ export function Preposlech({
   }, []);
 
   // Zmereni vysky sekce - viz komentar u vyskaSekce.
+  //
+  // MERI SE ZNOVU PRI KAZDE ZMENE ROZVRZENI (oprava 12. 9. 2026: „nejak se to
+  // pokazilo v interni sekci. Nejde to vyrolovat dal dolu a je to useknute").
+  // Prvni mereni probehlo drive, nez se nad mrizku vlozil odkaz pro klienta a
+  // lista AudioTaggeru - sekce pak zacinala niz, nez se pocitalo, a spodek
+  // zustal pod hranou okna. ResizeObserver na body chytne kazdou takovou
+  // zmenu, i tu, o ktere dopredu nevime.
   useEffect(() => {
+    let posledni = -1;
+
     function zmer() {
       const mrizka = mrizkaRef.current;
-      if (!mrizka) return;
+      // Na pozadi ma zalozka nulove okno - z toho by vyslo nesmyslne cislo.
+      if (!mrizka || window.innerHeight < 200) return;
       if (window.innerWidth < 1280) {
+        posledni = -1;
         setVyskaSekce(null);
         return;
       }
@@ -1210,17 +1221,31 @@ export function Preposlech({
       // se pod rukama.
       const horni = document.fullscreenElement ? ramecek.top : ramecek.top + window.scrollY;
       const rezerva = document.fullscreenElement ? 12 : 24;
-      setVyskaSekce(Math.max(420, Math.round(window.innerHeight - horni - rezerva)));
+      const vyska = Math.round(window.innerHeight - horni - rezerva);
+
+      // Kdyz by na sekci zbyl prouzek, je poctivejsi nechat stranku rolovat
+      // po starem, nez ji nacpat do vysky, ve ktere neni nic videt.
+      if (vyska < 360) {
+        posledni = -1;
+        setVyskaSekce(null);
+        return;
+      }
+      // Prah 2 px: vlastni zmena vysky prekresli body a spustila by tohle
+      // znovu. Bez nej by se to honilo dokola.
+      if (Math.abs(vyska - posledni) <= 2) return;
+      posledni = vyska;
+      setVyskaSekce(vyska);
     }
+
     zmer();
-    // Hlasky nad mrizkou se objevuji az po odpovedi serveru - premerime i chvili po.
-    const casovac = window.setTimeout(zmer, 300);
+    const sledovac = new ResizeObserver(zmer);
+    sledovac.observe(document.body);
     window.addEventListener('resize', zmer);
     return () => {
-      window.clearTimeout(casovac);
+      sledovac.disconnect();
       window.removeEventListener('resize', zmer);
     };
-  }, [celaObrazovka, chybaHlaska, poznamka, jenPoslech]);
+  }, [celaObrazovka]);
 
   useEffect(() => {
     if (jenPoslech) return;
