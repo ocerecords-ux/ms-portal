@@ -1698,9 +1698,45 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         {/* V doku jsou v hlavicce zalozky Ukoly / MS chat (zadani 10. 9.
             2026), na samostatne strance /chat neni mezi cim prepinat. */}
         {naStrance ? (
-          <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3">
-            <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">MS chat</h2>
-            <span className="flex items-center gap-3">
+          <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center gap-3">
+            <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0 shrink-0">MS chat</h2>
+            {/* RYCHLE VOLBY V LISTE (zadani 12. 9. 2026: „a tady v mobilu bych
+                ty zkratky na konverzace dal nahoru do te fialove listy. Aby to
+                bylo k dispozici porad").
+
+                Na telefonu se levy sloupec pri otevrene konverzaci schova a s
+                nim mizely i pripnute zkratky - presne tehdy, kdy jsou k
+                necemu. Lista je videt vzdycky, takze patri sem. Na sirokem
+                okne zustavaji v levem sloupci, kde je porad vidno, a v liste
+                by se jen zdvojily. */}
+            {pripnute.length > 0 && (
+              <div className="sm:hidden flex-1 min-w-0 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {pripnute.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setOpenId(c.id)}
+                    title={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label}
+                    aria-label={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label}
+                    className={`relative shrink-0 rounded-full ${
+                      c.id === openId ? 'ring-2 ring-brand-green ring-offset-2 ring-offset-brand-purple' : ''
+                    }`}
+                  >
+                    <Avatar
+                      label={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label}
+                      photoUrl={c.avatarUrl}
+                      size={28}
+                    />
+                    {c.unread > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-brand-green text-onAccent text-[9px] font-heading font-bold leading-[15px] text-center">
+                        {c.unread}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            <span className="ml-auto flex items-center gap-3 shrink-0">
               {listaDruhu}
               <UpozorneniChatu />
             </span>
@@ -1734,7 +1770,13 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 rychle volby"). Sedi nad zalozkami, takze pripnuty clovek je
                 po ruce, i kdyz je clovek zrovna v projektech. */}
             {pripnute.length > 0 && (
-              <div className="px-2 pt-2 pb-2 border-b border-line flex items-center gap-1.5 flex-wrap">
+              <div
+                className={`px-2 pt-2 pb-2 border-b border-line items-center gap-1.5 flex-wrap ${
+                  // Na samostatne strance je na telefonu maji ve fialove liste,
+                  // tady by se zdvojily; v doku zadna takova lista neni.
+                  naStrance ? 'hidden sm:flex' : 'flex'
+                }`}
+              >
                 {pripnute.map((c) => (
                   <button
                     key={c.id}
