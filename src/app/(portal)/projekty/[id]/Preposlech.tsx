@@ -184,6 +184,15 @@ export function Preposlech({
    * v nahravce - misto, kde clovek skoncil.
    */
   const [panel, setPanel] = useState<'chyby' | 'historie'>('chyby');
+  /**
+   * Vysunuty panel se zaznamy (zadani 12. 9. 2026: „chci, at cela sekce, kde
+   * je zaznam chyb, je zarolovana vpravo, jak mame chat a ukoly, at se da
+   * skryt a odkryt... primarne skryta").
+   *
+   * Vychozi je ZAVRENY. Pri praci se clovek diva do textu a na stopy;
+   * seznam poznamek si otevre, az kdyz ho potrebuje.
+   */
+  const [zaznamyOtevrene, setZaznamyOtevrene] = useState(false);
   /** Ktery zaznam se prave upravuje a co je v policku (zadani 12. 9. 2026). */
   const [upravovana, setUpravovana] = useState<string | null>(null);
   const [upravaText, setUpravaText] = useState('');
@@ -1501,153 +1510,11 @@ export function Preposlech({
         </div>
 
         <div className="flex flex-col gap-4">
-          {/* PREHRAVAC JE NAHORE (zadani 12. 9. 2026: „tim padem tam na prave
-              strane vznikne vice mista na tracky a prehravac bude vice
-              nahore"). Poradi resi `order`, ne prohozeni bloku - kod tim
-              zustava ctenym shora dolu podle vyznamu, ne podle mista na
-              obrazovce. */}
-          <div className="order-2 bg-surface rounded-card border border-line shadow-sm overflow-hidden">
-            {/* Zalozky jako u Ukolu a chatu (zadani 12. 9. 2026). Chyby
-                a historie sdileji jedno misto, takze na prehravac a stopy
-                zbyde vic. */}
-            <div className="px-2 pt-2 border-b border-line flex items-end gap-1">
-              {([
-                { klic: 'chyby' as const, popisek: `Chyby (${stav.chyby.length})` },
-                { klic: 'historie' as const, popisek: 'Historie' },
-              ]).map((z) => (
-                <button
-                  key={z.klic}
-                  type="button"
-                  onClick={() => setPanel(z.klic)}
-                  aria-pressed={panel === z.klic}
-                  className={`rounded-t-lg px-3 py-1.5 text-xs font-heading font-semibold transition-colors ${
-                    panel === z.klic
-                      ? 'bg-tint text-brand-purpleDark'
-                      : 'text-muted hover:text-ink hover:bg-field'
-                  }`}
-                >
-                  {z.popisek}
-                </button>
-              ))}
-              <span className="ml-auto flex items-center gap-3 pb-1.5 pr-2">
-                {panel === 'chyby' && chybejiciStopy && (
-                  <span className="text-[11px] font-body text-status-progress">
-                    Některé záznamy patří stopám, které tu teď nejsou.
-                  </span>
-                )}
-                {panel === 'chyby' && (
-                  <button
-                    type="button"
-                    onClick={stahniTabulku}
-                    disabled={stav.chyby.length === 0}
-                    title="Stáhnout všechny záznamy jako tabulku (CSV pro Excel)"
-                    className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-40 disabled:no-underline"
-                  >
-                    Stáhnout tabulku
-                  </button>
-                )}
-              </span>
-            </div>
-            <div className="overflow-y-auto" style={{ maxHeight: '30vh' }}>
-              {panel === 'historie' ? (
-                <Historie zaznamy={stav.historie ?? []} />
-              ) : stav.chyby.length === 0 ? (
-                <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
-                  Zatím žádné chyby. Pusťte stopu a v místě problému dejte „Přidat chybu".
-                </p>
-              ) : (
-                <ul className="list-none m-0 p-0 divide-y divide-line">
-                  {stav.chyby.map((ch) => (
-                    <li key={ch.id} className="px-4 py-2.5 hover:bg-surfaceSoft">
-                      {upravovana === ch.id ? (
-                        <div className="flex flex-col gap-2">
-                          <textarea
-                            value={upravaText}
-                            onChange={(e) => setUpravaText(e.target.value)}
-                            rows={2}
-                            autoFocus
-                            className="w-full rounded-lg border border-brand-purple bg-field px-3 py-2 text-sm font-body text-ink outline-none resize-y"
-                          />
-                          <span className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => void ulozUpravu(ch.id)}
-                              disabled={!upravaText.trim()}
-                              className="rounded-lg bg-brand-purple text-white text-xs font-heading font-semibold px-3 py-1.5 disabled:opacity-40"
-                            >
-                              Uložit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setUpravovana(null)}
-                              className="text-xs font-heading text-muted hover:text-ink"
-                            >
-                              Zrušit
-                            </button>
-                          </span>
-                        </div>
-                      ) : (
-                      <div className="flex items-start gap-3">
-                      <button type="button" onClick={() => skocNaChybu(ch)} className="flex-1 min-w-0 text-left" title="Skočit na místo v nahrávce">
-                        <span className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[11px] font-heading font-semibold tabular-nums bg-field border border-line rounded px-1.5">
-                            {pad2(ch.trackIndex)}
-                          </span>
-                          <span className="text-xs font-heading text-muted tabular-nums">{cas(ch.localTime)}</span>
-                          {ch.pdfPage && <span className="text-xs font-heading text-muted tabular-nums">s. {ch.pdfPage}</span>}
-                          {ch.zvyrazneni && (
-                            <span className="text-[11px] font-heading bg-warnTint text-ink rounded px-1.5" title={ch.zvyrazneni.text}>
-                              ✎ v textu
-                            </span>
-                          )}
-                          {!jenPoslech && (
-                            <span className="text-[11px] font-heading text-muted/70 tabular-nums">
-                              Cubase {hms((ch.trackIndex - 1) * DELKA_STOPY_V_CUBASE + ch.localTime)}
-                            </span>
-                          )}
-                        </span>
-                        <span className="block text-sm font-body text-ink mt-0.5 break-words">{ch.description}</span>
-                        {ch.createdByName && <span className="block text-[11px] font-body text-muted mt-0.5">{ch.createdByName}</span>}
-                      </button>
-                      {/* Upravit a smazat jen tam, kde to server dovoli
-                          (zadani 12. 9. 2026) - klient svoje, tym vsechno.
-                          U cizich zaznamu tlacitka radeji nejsou, nez aby
-                          po kliknuti hlasila, ze to nejde. */}
-                      {ch.muzuUpravit && (
-                        <span className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setUpravovana(ch.id);
-                              setUpravaText(ch.description);
-                            }}
-                            title="Upravit znění"
-                            aria-label="Upravit znění"
-                            className="text-muted hover:text-brand-purple text-sm"
-                          >
-                            ✎
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void smazChybu(ch.id)}
-                            title="Smazat záznam"
-                            aria-label="Smazat záznam"
-                            className="text-muted hover:text-danger text-sm"
-                          >
-                            ✕
-                          </button>
-                        </span>
-                      )}
-                      </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          <div className="order-1 bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
+          {/* V pravem sloupci zustava UZ JEN PREHRAVAC A STOPY (zadani
+              12. 9. 2026: „vlevo bude pdf s textem a v te cele prave casti
+              bude jen prehravac s displejem a pod tim tracky"). Seznam
+              poznamek a historie se vysouvaji z prave hrany. */}
+          <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
             {/* Displej je zámerně na JEDEN ŘÁDEK (zadání 11. 9. 2026: „ten
                 display už zabírá dost místa, celé bych to hodně zmenšil").
                 Číslo stopy a čas zůstávají to největší na něm — na ně se
@@ -1887,6 +1754,184 @@ export function Preposlech({
           </div>
         </div>
       </div>
+
+      {/* ZAZNAMY A HISTORIE SE VYSOUVAJI Z PRAVE HRANY (zadani 12. 9. 2026:
+          „chci, at cela sekce, kde je zaznam chyb, je zarolovana vpravo, jak
+          mame chat a ukoly, at se da skryt a odkryt... primarne skryta").
+          Panel lezi UVNITR tehle sekce, ne v okne - diky tomu jede i na celou
+          obrazovku, kde by okenni panel nebyl videt. */}
+      {!zaznamyOtevrene ? (
+        <button
+          type="button"
+          onClick={() => setZaznamyOtevrene(true)}
+          title="Zobrazit záznamy chyb a historii"
+          className="absolute top-24 right-0 z-30 rounded-l-card bg-brand-purple text-white shadow-lg px-1.5 py-3 flex flex-col items-center gap-2 hover:bg-brand-purpleDeep transition-colors"
+        >
+          <span className="[writing-mode:vertical-rl] rotate-180 font-heading font-semibold text-[11px] uppercase tracking-[0.16em]">
+            Záznamy
+          </span>
+          {stav.chyby.length > 0 && (
+            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
+              {stav.chyby.length}
+            </span>
+          )}
+        </button>
+      ) : (
+        <div className="absolute top-0 right-0 bottom-0 z-30 w-[380px] max-w-[92vw] bg-surface border-l border-line shadow-2xl flex flex-col">
+          <div className="px-3 py-2 border-b border-line flex items-center gap-2">
+            <span className="font-heading font-semibold text-xs uppercase tracking-wide text-muted">Záznamy</span>
+            <button
+              type="button"
+              onClick={() => setZaznamyOtevrene(false)}
+              title="Skrýt (zase se vysune z pravé hrany)"
+              aria-label="Skrýt záznamy"
+              className="ml-auto text-muted hover:text-brand-purple text-sm px-1"
+            >
+              ▸
+            </button>
+          </div>
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                {/* Zalozky jako u Ukolu a chatu (zadani 12. 9. 2026). Chyby
+                    a historie sdileji jedno misto, takze na prehravac a stopy
+                    zbyde vic. */}
+                <div className="px-2 pt-2 border-b border-line flex items-end gap-1">
+                  {([
+                    { klic: 'chyby' as const, popisek: `Chyby (${stav.chyby.length})` },
+                    { klic: 'historie' as const, popisek: 'Historie' },
+                  ]).map((z) => (
+                    <button
+                      key={z.klic}
+                      type="button"
+                      onClick={() => setPanel(z.klic)}
+                      aria-pressed={panel === z.klic}
+                      className={`rounded-t-lg px-3 py-1.5 text-xs font-heading font-semibold transition-colors ${
+                        panel === z.klic
+                          ? 'bg-tint text-brand-purpleDark'
+                          : 'text-muted hover:text-ink hover:bg-field'
+                      }`}
+                    >
+                      {z.popisek}
+                    </button>
+                  ))}
+                  <span className="ml-auto flex items-center gap-3 pb-1.5 pr-2">
+                    {panel === 'chyby' && chybejiciStopy && (
+                      <span className="text-[11px] font-body text-status-progress">
+                        Některé záznamy patří stopám, které tu teď nejsou.
+                      </span>
+                    )}
+                    {panel === 'chyby' && (
+                      <button
+                        type="button"
+                        onClick={stahniTabulku}
+                        disabled={stav.chyby.length === 0}
+                        title="Stáhnout všechny záznamy jako tabulku (CSV pro Excel)"
+                        className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-40 disabled:no-underline"
+                      >
+                        Stáhnout tabulku
+                      </button>
+                    )}
+                  </span>
+                </div>
+                <div className="overflow-y-auto" style={{ maxHeight: '30vh' }}>
+                  {panel === 'historie' ? (
+                    <Historie zaznamy={stav.historie ?? []} />
+                  ) : stav.chyby.length === 0 ? (
+                    <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
+                      Zatím žádné chyby. Pusťte stopu a v místě problému dejte „Přidat chybu".
+                    </p>
+                  ) : (
+                    <ul className="list-none m-0 p-0 divide-y divide-line">
+                      {stav.chyby.map((ch) => (
+                        <li key={ch.id} className="px-4 py-2.5 hover:bg-surfaceSoft">
+                          {upravovana === ch.id ? (
+                            <div className="flex flex-col gap-2">
+                              <textarea
+                                value={upravaText}
+                                onChange={(e) => setUpravaText(e.target.value)}
+                                rows={2}
+                                autoFocus
+                                className="w-full rounded-lg border border-brand-purple bg-field px-3 py-2 text-sm font-body text-ink outline-none resize-y"
+                              />
+                              <span className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => void ulozUpravu(ch.id)}
+                                  disabled={!upravaText.trim()}
+                                  className="rounded-lg bg-brand-purple text-white text-xs font-heading font-semibold px-3 py-1.5 disabled:opacity-40"
+                                >
+                                  Uložit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setUpravovana(null)}
+                                  className="text-xs font-heading text-muted hover:text-ink"
+                                >
+                                  Zrušit
+                                </button>
+                              </span>
+                            </div>
+                          ) : (
+                          <div className="flex items-start gap-3">
+                          <button type="button" onClick={() => skocNaChybu(ch)} className="flex-1 min-w-0 text-left" title="Skočit na místo v nahrávce">
+                            <span className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[11px] font-heading font-semibold tabular-nums bg-field border border-line rounded px-1.5">
+                                {pad2(ch.trackIndex)}
+                              </span>
+                              <span className="text-xs font-heading text-muted tabular-nums">{cas(ch.localTime)}</span>
+                              {ch.pdfPage && <span className="text-xs font-heading text-muted tabular-nums">s. {ch.pdfPage}</span>}
+                              {ch.zvyrazneni && (
+                                <span className="text-[11px] font-heading bg-warnTint text-ink rounded px-1.5" title={ch.zvyrazneni.text}>
+                                  ✎ v textu
+                                </span>
+                              )}
+                              {!jenPoslech && (
+                                <span className="text-[11px] font-heading text-muted/70 tabular-nums">
+                                  Cubase {hms((ch.trackIndex - 1) * DELKA_STOPY_V_CUBASE + ch.localTime)}
+                                </span>
+                              )}
+                            </span>
+                            <span className="block text-sm font-body text-ink mt-0.5 break-words">{ch.description}</span>
+                            {ch.createdByName && <span className="block text-[11px] font-body text-muted mt-0.5">{ch.createdByName}</span>}
+                          </button>
+                          {/* Upravit a smazat jen tam, kde to server dovoli
+                              (zadani 12. 9. 2026) - klient svoje, tym vsechno.
+                              U cizich zaznamu tlacitka radeji nejsou, nez aby
+                              po kliknuti hlasila, ze to nejde. */}
+                          {ch.muzuUpravit && (
+                            <span className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setUpravovana(ch.id);
+                                  setUpravaText(ch.description);
+                                }}
+                                title="Upravit znění"
+                                aria-label="Upravit znění"
+                                className="text-muted hover:text-brand-purple text-sm"
+                              >
+                                ✎
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void smazChybu(ch.id)}
+                                title="Smazat záznam"
+                                aria-label="Smazat záznam"
+                                className="text-muted hover:text-danger text-sm"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          )}
+                          </div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+        </div>
+      )}
     </div>
   );
 }
