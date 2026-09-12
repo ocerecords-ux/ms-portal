@@ -748,6 +748,9 @@ function Psatko({
   );
 }
 
+/** Kolik pripnutych zkratek se vejde vedle sebe do fialove listy na telefonu. */
+const ZKRATEK_V_LISTE = 5;
+
 /** Jeden znak reakce - bud nas smajlik podle zkratky, nebo bezne emoji. */
 function ZnakReakce({ code, size = 15 }: { code: string; size?: number }) {
   if (code.startsWith(':ms-')) return <MsSmajlik code={code} size={size} />;
@@ -2256,20 +2259,35 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 necemu. Lista je videt vzdycky, takze patri sem. Na sirokem
                 okne zustavaji v levem sloupci, kde je porad vidno, a v liste
                 by se jen zdvojily. */}
+            {/* DVE RADY JAKO V PROHLIZECI (zadani 12. 9. 2026: „s tema
+                skupinama a soukromyma zpravama bych to udelal stejne jako na
+                verzi v prohlizeci. Nahore soukrome a pod tim skupiny. A
+                omezil bych to na 5 vedle sebe, vice tam nevejde"). Pres pet
+                kolecek uz by se do sirky telefonu netlacilo - dalsi pripnute
+                zustavaji v seznamu, poradi se meni tazenim. Prazdna rada se
+                nekresli, at po ni nezustane mezera. */}
             {pripnute.length > 0 && (
-              <div className="sm:hidden flex-1 min-w-0 flex items-center gap-2.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5">
-                {radaPriTazeni(pripnute).map((c) => (
-                  <PripnutaVolba
-                    key={c.id}
-                    konverzace={c}
-                    aktivni={c.id === openId}
-                    onOtevri={() => setOpenId(c.id)}
-                    onZacniTahat={(e) => zacniTahat(e, radaPriTazeni(pripnute), c.id)}
-                    taha={tazena === c.id}
-                    velikost={40}
-                    vListe
-                  />
-                ))}
+              <div className="sm:hidden flex-1 min-w-0 flex flex-col gap-1.5 py-0.5">
+                {[pripnuteSoukrome, pripnuteSkupiny].map((rada, poradiRady) =>
+                  rada.length === 0 ? null : (
+                    <div key={poradiRady} className="flex items-center gap-2">
+                      {radaPriTazeni(rada)
+                        .slice(0, ZKRATEK_V_LISTE)
+                        .map((c) => (
+                          <PripnutaVolba
+                            key={c.id}
+                            konverzace={c}
+                            aktivni={c.id === openId}
+                            onOtevri={() => setOpenId(c.id)}
+                            onZacniTahat={(e) => zacniTahat(e, radaPriTazeni(rada), c.id)}
+                            taha={tazena === c.id}
+                            velikost={40}
+                            vListe
+                          />
+                        ))}
+                    </div>
+                  ),
+                )}
               </div>
             )}
             <span className="ml-auto flex items-center gap-3 shrink-0">
