@@ -110,6 +110,28 @@ type NalezenaPriloha = {
   kdy: Date;
 };
 
+/**
+ * Srozumitelná hláška z chyby IMAPu.
+ *
+ * Knihovna hlásí skoro všechno jako „Command failed" a to, co se opravdu
+ * stalo, schovává do responseText (třeba „[AUTHENTICATIONFAILED] …"). Bez toho
+ * se v hlavičce Výdajů objevila věta, se kterou nešlo nic dělat (12. 9. 2026).
+ */
+function popisChyby(err: unknown): string {
+  const e = err as { message?: string; responseText?: string; serverResponseCode?: string; code?: string };
+  const text = [e?.responseText, e?.serverResponseCode, e?.code].filter(Boolean).join(' ');
+
+  if (/AUTHENTICATIONFAILED|Invalid credentials|LOGIN failed/i.test(text)) {
+    return 'Schránka odmítla přihlášení — zkontrolujte IMAP_USER a IMAP_PASSWORD.';
+  }
+  if (/NONEXISTENT|Mailbox doesn't exist|no such mailbox/i.test(text)) {
+    return `Složka ${process.env.IMAP_FOLDER || 'INBOX'} ve schránce není — zkontrolujte IMAP_FOLDER.`;
+  }
+
+  const zaklad = e?.message || 'Do schránky se nepodařilo přihlásit.';
+  return (text ? `${zaklad} — ${text}` : zaklad).slice(0, 300);
+}
+
 /** Jméno odesílatele bez adresy: z „Jan Novák <jan@…>" udělá „Jan Novák". */
 function jmenoOdesilatele(od: string | null): string | null {
   if (!od) return null;
@@ -414,7 +436,7 @@ export async function zkontrolujPostu(): Promise<VysledekKontroly> {
     });
   } catch (err) {
     // Do hlášky nikdy nepatří heslo ani obsah zprávy - jen co se stalo.
-    chyba = err instanceof Error ? err.message.slice(0, 300) : 'Do schránky se nepodařilo přihlásit.';
+    chyba = popisChyby(err);
     console.error('Kontrola pošty selhala:', chyba);
     await prisma.postaStav.update({
       where: { id: 'posta' },
