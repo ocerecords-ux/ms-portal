@@ -11,8 +11,16 @@ import { pristupKPreposlechu } from '@/lib/preposlechPristup';
  * Poznámka od nepřihlášeného klienta se podepíše „Klient", protože z odkazu
  * se jméno poznat nedá.
  *
- * MAZAT ZÁZNAMY a odškrtnout PŘEPOSLECHNUTO smí jen tým Mediaspace
- * („my můžeme editovat vše").
+ * UPRAVIT A SMAZAT SVŮJ ZÁZNAM smí i klient (zadání 12. 9. 2026: „potřebuju,
+ * ať mají ještě klienti možnost upravit nebo smazat chyby, v tomhle bych jim
+ * úpravy povolil"). Cizí záznamy klient nechává být — přepsat poznámku
+ * někoho jiného není oprava, ale zmatek. Tým Mediaspace může všechno.
+ *
+ * Kdo přišel odkazem z mailu, nemá účet, takže „svoje" jsou pro něj záznamy
+ * bez účtu — tedy ty z toho odkazu. Odkaz patří jednomu projektu a sdílí ho
+ * lidé z jedné firmy, takže si mezi sebou opravit poznámku můžou.
+ *
+ * Odškrtnout PŘEPOSLECHNUTO smí pořád jen tým Mediaspace.
  *
  * `[id]` je ID projektu; stopy se neukládají, záznam ukazuje na stopu jejím
  * pořadím a nese i její název — viz komentář u modelu v schema.prisma.
@@ -29,11 +37,20 @@ async function over(req: NextRequest, caflouProjectId: string, jenInterni: boole
   }
   return {
     userId: pristup.userId,
+    interni: pristup.interni,
     jmeno: pristup.jmeno ?? (pristup.pres_odkaz ? 'Klient' : null),
   };
 }
 
-async function stav(caflouProjectId: string) {
+/** Kdo smí sáhnout na jeden záznam - viz komentář nahoře. */
+type Pristup = { userId: string | null; interni: boolean };
+function smiUpravit(chyba: { createdByUserId: string | null }, kdo: Pristup): boolean {
+  if (kdo.interni) return true;
+  // Prihlaseny klient: jen co napsal sam. Odkazem z mailu: zaznamy bez uctu.
+  return kdo.userId ? chyba.createdByUserId === kdo.userId : chyba.createdByUserId === null;
+}
+
+async function stav(caflouProjectId: string, kdo?: Pristup) {
   const [chyby, preposlech] = await Promise.all([
     prisma.preposlechChyba.findMany({
       where: { caflouProjectId },
@@ -57,6 +74,8 @@ async function stav(caflouProjectId: string) {
       description: ch.description,
       createdByName: ch.createdByName,
       createdAt: ch.createdAt.toISOString(),
+      // At okno vi, u ktereho zaznamu ma ukazat tuzku a krizek.
+      muzuUpravit: kdo ? smiUpravit(ch, kdo) : false,
     })),
   };
 }
@@ -64,7 +83,7 @@ async function stav(caflouProjectId: string) {
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const pristup = await over(req, params.id, false);
   if ('chyba' in pristup) return pristup.chyba;
-  return NextResponse.json(await stav(params.id));
+  return NextResponse.json(await stav(params.id, pristup));
 }
 
 /**
@@ -111,7 +130,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     },
   });
 
-  return NextResponse.json(await stav(params.id));
+  return NextResponse.json(await stav(params.id, pristup));
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -136,19 +155,58 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     },
   });
 
-  return NextResponse.json(await stav(params.id));
+  return NextResponse.json(await stav(params.id, pristup));
+}
+
+/** Úprava znění záznamu (zadání 12. 9. 2026). Mění se jen text poznámky. */
+const upravaChyby = z.object({
+  chyba: z.string().min(1).max(100),
+  description: z.string().trim().min(1).max(4000),
+});
+
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  const pristup = await over(req, params.id, false);
+  if ('chyba' in pristup) return pristup.chyba;
+
+  const parsed = upravaChyby.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+  }
+
+  const chyba = await prisma.preposlechChyba.findFirst({
+    where: { id: parsed.data.chyba, caflouProjectId: params.id },
+    select: { id: true, createdByUserId: true },
+  });
+  if (!chyba) return NextResponse.json({ error: 'Záznam se nenašel.' }, { status: 404 });
+  if (!smiUpravit(chyba, pristup)) {
+    return NextResponse.json({ error: 'Upravit jde jen vlastní záznam.' }, { status: 403 });
+  }
+
+  await prisma.preposlechChyba.update({
+    where: { id: chyba.id },
+    data: { description: parsed.data.description },
+  });
+
+  return NextResponse.json(await stav(params.id, pristup));
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const pristup = await over(req, params.id, true);
+  const pristup = await over(req, params.id, false);
   if ('chyba' in pristup) return pristup.chyba;
 
   const chybaId = req.nextUrl.searchParams.get('chyba');
   if (!chybaId) return NextResponse.json({ error: 'Chybí ID záznamu.' }, { status: 400 });
 
-  // Mazat smi kdokoliv z tymu - preposlech delaji ve dvou a opravovat cizi
-  // preklep je bezna vec.
-  await prisma.preposlechChyba.deleteMany({ where: { id: chybaId, caflouProjectId: params.id } });
+  const chyba = await prisma.preposlechChyba.findFirst({
+    where: { id: chybaId, caflouProjectId: params.id },
+    select: { id: true, createdByUserId: true },
+  });
+  if (!chyba) return NextResponse.json(await stav(params.id, pristup));
+  if (!smiUpravit(chyba, pristup)) {
+    return NextResponse.json({ error: 'Smazat jde jen vlastní záznam.' }, { status: 403 });
+  }
 
-  return NextResponse.json(await stav(params.id));
+  await prisma.preposlechChyba.delete({ where: { id: chyba.id } });
+
+  return NextResponse.json(await stav(params.id, pristup));
 }

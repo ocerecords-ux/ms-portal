@@ -51,6 +51,11 @@ type ChybaZeServeru = {
   description: string;
   createdByName: string | null;
   createdAt: string;
+  /**
+   * Smim s timhle zaznamem hnout? Rozhoduje server (zadani 12. 9. 2026):
+   * tym Mediaspace vsechno, klient jen to, co napsal sam.
+   */
+  muzuUpravit?: boolean;
 };
 
 type Stav = {
@@ -162,6 +167,9 @@ export function Preposlech({
   const [delka, setDelka] = useState(0);
 
   const [zDisku, setZDisku] = useState<'ceka' | 'nacitam' | 'hotovo' | 'nejde'>('ceka');
+  /** Ktery zaznam se prave upravuje a co je v policku (zadani 12. 9. 2026). */
+  const [upravovana, setUpravovana] = useState<string | null>(null);
+  const [upravaText, setUpravaText] = useState('');
   const [poznamka, setPoznamka] = useState<string | null>(null);
   const [slozkaUrl, setSlozkaUrl] = useState<string | null>(null);
 
@@ -944,6 +952,28 @@ export function Preposlech({
     await posli(sKlicem(`${zaklad}?chyba=${encodeURIComponent(id)}`), { method: 'DELETE' });
   }
 
+  /**
+   * Uprava zneni zaznamu (zadani 12. 9. 2026: „potrebuju, at maji jeste
+   * klienti moznost upravit nebo smazat chyby").
+   *
+   * Meni se jen text poznamky. Stopa, cas a zvyraznene misto zustavaji -
+   * to je zaznam O TOM MISTE a prepsat ho na jine by z nej udelalo jiny
+   * zaznam; k tomu slouzi novy.
+   */
+  async function ulozUpravu(id: string) {
+    const text = upravaText.trim();
+    if (!text) return;
+    const ok = await posli(sKlicem(zaklad), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chyba: id, description: text }),
+    });
+    if (ok) {
+      setUpravovana(null);
+      setUpravaText('');
+    }
+  }
+
   async function prepniPreposlechnuto() {
     await posli(sKlicem(zaklad), {
       method: 'PATCH',
@@ -1452,7 +1482,36 @@ export function Preposlech({
               ) : (
                 <ul className="list-none m-0 p-0 divide-y divide-line">
                   {stav.chyby.map((ch) => (
-                    <li key={ch.id} className="flex items-start gap-3 px-4 py-2.5 hover:bg-surfaceSoft">
+                    <li key={ch.id} className="px-4 py-2.5 hover:bg-surfaceSoft">
+                      {upravovana === ch.id ? (
+                        <div className="flex flex-col gap-2">
+                          <textarea
+                            value={upravaText}
+                            onChange={(e) => setUpravaText(e.target.value)}
+                            rows={2}
+                            autoFocus
+                            className="w-full rounded-lg border border-brand-purple bg-field px-3 py-2 text-sm font-body text-ink outline-none resize-y"
+                          />
+                          <span className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => void ulozUpravu(ch.id)}
+                              disabled={!upravaText.trim()}
+                              className="rounded-lg bg-brand-purple text-white text-xs font-heading font-semibold px-3 py-1.5 disabled:opacity-40"
+                            >
+                              Uložit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setUpravovana(null)}
+                              className="text-xs font-heading text-muted hover:text-ink"
+                            >
+                              Zrušit
+                            </button>
+                          </span>
+                        </div>
+                      ) : (
+                      <div className="flex items-start gap-3">
                       <button type="button" onClick={() => skocNaChybu(ch)} className="flex-1 min-w-0 text-left" title="Skočit na místo v nahrávce">
                         <span className="flex items-center gap-2 flex-wrap">
                           <span className="text-[11px] font-heading font-semibold tabular-nums bg-field border border-line rounded px-1.5">
@@ -1474,9 +1533,37 @@ export function Preposlech({
                         <span className="block text-sm font-body text-ink mt-0.5 break-words">{ch.description}</span>
                         {ch.createdByName && <span className="block text-[11px] font-body text-muted mt-0.5">{ch.createdByName}</span>}
                       </button>
-                      <button type="button" onClick={() => void smazChybu(ch.id)} title="Smazat záznam" className="text-muted hover:text-danger text-sm shrink-0">
-                        ✕
-                      </button>
+                      {/* Upravit a smazat jen tam, kde to server dovoli
+                          (zadani 12. 9. 2026) - klient svoje, tym vsechno.
+                          U cizich zaznamu tlacitka radeji nejsou, nez aby
+                          po kliknuti hlasila, ze to nejde. */}
+                      {ch.muzuUpravit && (
+                        <span className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUpravovana(ch.id);
+                              setUpravaText(ch.description);
+                            }}
+                            title="Upravit znění"
+                            aria-label="Upravit znění"
+                            className="text-muted hover:text-brand-purple text-sm"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void smazChybu(ch.id)}
+                            title="Smazat záznam"
+                            aria-label="Smazat záznam"
+                            className="text-muted hover:text-danger text-sm"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      )}
+                      </div>
+                      )}
                     </li>
                   ))}
                 </ul>
