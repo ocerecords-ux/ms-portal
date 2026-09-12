@@ -102,6 +102,9 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
           : null,
       memberLabels: ostatni,
       memberIds: c.members.map((m) => m.userId),
+      // Ztlumeny rozhovor (zadani 12. 9. 2026) - zpravy chodi dal a pocitaji
+      // se jako neprectene, jen z nej necinka upozorneni.
+      ztlumeno: c.members.find((m) => m.userId === userId)?.ztlumeno ?? false,
     };
   });
 }

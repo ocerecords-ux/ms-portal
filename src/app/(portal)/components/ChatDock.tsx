@@ -1380,6 +1380,27 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   }
 
   /**
+   * Ztlumení jednoho rozhovoru (zadání 12. 9. 2026).
+   *
+   * Přepne se hned v seznamu, ať tlačítko nelaguje; kdyby uložení selhalo,
+   * srovná se to při příštím načtení seznamu.
+   */
+  async function prepniZtlumeni(conversationId: string, ztlumeno: boolean) {
+    setConversations((current) =>
+      current.map((c) => (c.id === conversationId ? { ...c, ztlumeno } : c)),
+    );
+    try {
+      await fetch(`/api/chat/konverzace/${encodeURIComponent(conversationId)}/ztlumeni`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ztlumeno }),
+      });
+    } catch {
+      void nactiKonverzace();
+    }
+  }
+
+  /**
    * Pošle Brunovi ID čerstvé zprávy a nic po něm nechce (zadání 12. 9. 2026).
    *
    * Když z ní něco vyčte nebo se na něco zeptá, objeví se to v kanálu jako
@@ -1749,6 +1770,26 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         {otevrena.memberLabels.length > 0 ? `, ${otevrena.memberLabels.join(', ')}` : ''}
                       </button>
                     )}
+                    {/* Ztlumeni jednoho rozhovoru (zadani 12. 9. 2026) - patri
+                        k nemu, ne do obecneho nastaveni. Zpravy chodi dal
+                        a pocitaji se jako neprectene, jen z nej necinka
+                        upozorneni. */}
+                    <button
+                      type="button"
+                      onClick={() => void prepniZtlumeni(otevrena.id, !otevrena.ztlumeno)}
+                      title={
+                        otevrena.ztlumeno
+                          ? 'Ztlumeno — upozornění odsud nechodí. Klepnutím zrušíte.'
+                          : 'Ztlumit — zprávy chodí dál, jen nezazvoní'
+                      }
+                      aria-label={otevrena.ztlumeno ? 'Zrušit ztlumení' : 'Ztlumit rozhovor'}
+                      aria-pressed={Boolean(otevrena.ztlumeno)}
+                      className={`shrink-0 leading-none transition-colors ${
+                        otevrena.kind === 'SKUPINA' ? '' : 'ml-auto'
+                      } ${otevrena.ztlumeno ? 'text-brand-purple' : 'text-muted hover:text-brand-purple'}`}
+                    >
+                      {otevrena.ztlumeno ? <ZvonekSkrtnuty /> : <ZvonekMaly />}
+                    </button>
                   </div>
 
                   {otevrena.kind === 'SKUPINA' && spravaOtevrena && (
@@ -2228,6 +2269,27 @@ function IkonaZalozky({ kind }: { kind: ConversationKind }) {
       <path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
       <path d="M9.6 8.6a2.4 2.4 0 0 1 4.4 1.3c0 1.6-2 1.9-2 3.1" />
       <path d="M12 15.4h.01" />
+    </svg>
+  );
+}
+
+/** Zvonek v hlavicce rozhovoru - ztlumit. */
+function ZvonekMaly() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4" aria-hidden="true">
+      <path d="M18 15.6v-4a6 6 0 0 0-12 0v4L4.6 17v.7h14.8V17z" />
+      <path d="M10.2 20.4a2 2 0 0 0 3.6 0" />
+    </svg>
+  );
+}
+
+/** Zvonek se skrtnutim - rozhovor je ztlumeny. */
+function ZvonekSkrtnuty() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4" aria-hidden="true">
+      <path d="M18 15.6v-4a6 6 0 0 0-12 0v4L4.6 17v.7h14.8V17z" />
+      <path d="M10.2 20.4a2 2 0 0 0 3.6 0" />
+      <path d="M4 3.5 20 20" />
     </svg>
   );
 }

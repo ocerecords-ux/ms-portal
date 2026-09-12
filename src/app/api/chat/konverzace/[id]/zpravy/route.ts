@@ -9,6 +9,7 @@ import { overPrilohu } from '@/lib/storage';
 import { posliPush } from '@/lib/pushServer';
 import { canUseChat, shrnReakce, userLabel } from '@/lib/chatServer';
 import { odkazNaFotku } from '@/lib/fotky';
+import { komuPoslatUpozorneni } from '@/lib/chatUpozorneniServer';
 
 // Zpravy jedne konverzace (zadani 8. 9. 2026). Otevreni konverzace zaroven
 // znamena "precteno" - proto se pri GET posouva lastReadAt.
@@ -219,7 +220,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Kanal k projektu je pro cely tym, ale upozorneni se posilaji jen tem,
     // kdo v nem opravdu jsou (radek clenstvi vznika otevrenim konverzace) -
     // jinak by kazda zprava v kazdem kanalu budila cely Mediaspace.
-    const prijemci = conversation.members.map((m) => m.userId).filter((id) => id !== me);
+    const vsichni = conversation.members.map((m) => m.userId).filter((id) => id !== me);
+    // Kdo o tom chce doopravdy vedet - kazdy si to nastavuje sam
+    // (zadani 12. 9. 2026), viz lib/chatUpozorneniServer.ts. Zprava se dorucuje
+    // vsem tak jako tak; tohle rozhoduje jen o tom, komu to cinkne.
+    const prijemci = await komuPoslatUpozorneni(vsichni, {
+      conversationId: conversation.id,
+      jeKanal: conversation.kind === 'PROJEKT',
+      body: parsed.data.body ?? '',
+      parentId,
+    });
     if (prijemci.length > 0) {
       const kdo = userLabel(message.user);
       const nahled = parsed.data.body

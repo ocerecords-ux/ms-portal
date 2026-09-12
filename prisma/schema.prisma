@@ -158,6 +158,22 @@ model User {
   /// v kazdem kanalu, ktery klient otevre tlacitkem "Zeptat se" u projektu.
   prijimaDotazyKlientu Boolean @default(false)
 
+  // --- Upozorneni na zpravy v chatu (zadani 12. 9. 2026: „detailnejsi
+  //     nastaveni notifikaci v chatu, at si nastavi kazdy sam individualne") ---
+  //
+  // Zvlast pro rozhovory a zvlast pro kanaly projektu: kanal projektu je
+  // pracovni proud, kde clovek casto chce vedet jen o tom, kdyz se resi on,
+  // zatimco kdyz mu nekdo pise primo, chce vedet o kazde zprave.
+  /// Prime zpravy a skupiny.
+  chatUpozorneniZpravy ChatUpozorneni @default(VSE)
+  /// Kanaly projektu.
+  chatUpozorneniKanaly ChatUpozorneni @default(ZMINKY)
+  /// Zacatek a konec hodin, kdy upozorneni nechodi (0-23, cas v Praze).
+  /// Kdyz je nekterá prazdna, ticho se neuplatnuje. Rozsah smi prechazet
+  /// pres pulnoc (22 -> 7).
+  chatTichoOd Int?
+  chatTichoDo Int?
+
   /// Dostava zpravu, kdyz je herec na projektu dotoceny (zadani 11. 9. 2026:
   /// "info o dotoceno s hercem jde notifikaci mailem na Helenu Rychlik").
   /// Je to priznak u uctu, ne adresa v kodu - az to bude hlidat nekdo jiny,
@@ -477,6 +493,13 @@ model Archiv {
 // Zamerne bez vazby na ProjectMeta pres cizi klic: na projekt se vsude v
 // portalu odkazuje textovym caflouProjectId (doklady, vykazy, rozpocty,
 // rodne listy) a historie to ma delat stejne - prezije to i smazani projektu.
+/// Kdy chce clovek vedet o nove zprave v chatu (zadani 12. 9. 2026).
+enum ChatUpozorneni {
+  VSE     // kazda zprava
+  ZMINKY  // jen kdyz me nekdo zmini nebo odpovi v mem vlakne
+  NIC     // nic
+}
+
 enum DruhUdalosti {
   ZALOZENO    // projekt vznikl
   ZMENA       // nekdo zmenil udaj
@@ -764,6 +787,12 @@ model ConversationMember {
   userId         String
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   lastReadAt     DateTime     @default(now())
+
+  /// Ztlumeny rozhovor (zadani 12. 9. 2026). Zprava se dorucuje dal a je
+  /// videt jako neprectena - jen z nej nechodi upozorneni. Nejcasteji
+  /// pouzivane nastaveni ze vsech: jeden ukecany kanal se umlci a zbytek
+  /// zustava, jak byl.
+  ztlumeno       Boolean      @default(false)
 
   @@unique([conversationId, userId])
   @@index([userId])

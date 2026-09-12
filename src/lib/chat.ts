@@ -90,6 +90,11 @@ export type ChatConversation = {
   memberIds: string[];
   /** Fotka do seznamu - u soukrome zpravy fotka druheho cloveka. */
   avatarUrl: string | null;
+  /**
+   * Ztlumeny rozhovor (zadani 12. 9. 2026). Zpravy chodi dal a pocitaji se
+   * jako neprectene - jen z nej necinka upozorneni.
+   */
+  ztlumeno?: boolean;
 };
 
 /**
