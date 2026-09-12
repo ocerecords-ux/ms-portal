@@ -136,7 +136,6 @@ export default async function ProjektyPage() {
           projects={active}
           emptyText="Aktuálně tu nemáte žádný rozpracovaný projekt. Vidíte jen zakázky, u kterých jste vedení jako kontaktní osoba — kdyby vám nějaká chyběla, dejte nám vědět."
           rodneListy={rodneListy}
-          dotazy={company?.dealsAudiobooks === true}
           preposlech={preposlech}
         />
       </div>

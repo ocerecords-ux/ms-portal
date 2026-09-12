@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { ZeptatSe } from './ZeptatSe';
 import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
@@ -53,7 +52,6 @@ export function ProjectsTable({
   projects,
   emptyText,
   rodneListy,
-  dotazy,
   preposlech,
 }: {
   projects: DisplayProject[];
@@ -65,12 +63,6 @@ export function ProjectsTable({
    */
   preposlech?: Record<string, { stop: number; poslechnuto: number; hotovo: boolean }>;
   /**
-   * Tlačítko „Zeptat se" u každého projektu (zadání 11. 9. 2026). Zapíná se
-   * jen v klientské sekci a jen u klientů audioknih; u dokončených projektů
-   * se sloupec nepředává, takže tam tlačítko není.
-   */
-  dotazy?: boolean;
-  /**
    * Rodné listy reklamních spotů podle ID projektu v Caflou (zadání 9. 9. 2026).
    * Když se prop nepředá, sloupec se vůbec nevykreslí - u audioknih nemá RL
    * smysl a klient, který reklamy nedělá, ho v přehledu vidět nemá.
@@ -78,7 +70,6 @@ export function ProjectsTable({
   rodneListy?: Record<string, { id: string; fileName: string }>;
 }) {
   const showRodnyList = rodneListy !== undefined;
-  const showDotazy = dotazy === true;
   const showPreposlech = preposlech !== undefined;
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
@@ -96,7 +87,6 @@ export function ProjectsTable({
               'releaseDate',
               ...(showPreposlech ? ['kPreposlechu', 'preposlechnuto'] : []),
               ...(showRodnyList ? ['rodnyList'] : []),
-              ...(showDotazy ? ['dotaz'] : []),
             ]).map((sirka, i) => (
               <col key={i} style={{ width: sirka }} />
             ))}
@@ -116,17 +106,13 @@ export function ProjectsTable({
               {showPreposlech && <th className="text-left px-4 py-3.5 whitespace-nowrap">K přeposlechu</th>}
               {showPreposlech && <th className="text-left px-4 py-3.5 whitespace-nowrap">Přeposlechnuto</th>}
               {showRodnyList && <th className="text-left px-4 py-3.5">Rodný list</th>}
-              {/* Doleva jako vsechny ostatni sloupce - vpravo u samotneho
-                  okraje pusobilo tlacitko odtrzene od zbytku tabulky
-                  (zadani 12. 9. 2026: „ve sloupci rozhozeno doptat se"). */}
-              {showDotazy && <th className="text-left px-4 py-3.5">Dotaz</th>}
             </tr>
           </thead>
           <tbody>
             {projects.length === 0 && (
               <tr>
                 <td
-                  colSpan={6 + (showPreposlech ? 2 : 0) + (showRodnyList ? 1 : 0) + (showDotazy ? 1 : 0)}
+                  colSpan={6 + (showPreposlech ? 2 : 0) + (showRodnyList ? 1 : 0)}
                   className="px-4 py-8 text-center text-muted text-sm font-body"
                 >
                   {emptyText}
@@ -187,11 +173,6 @@ export function ProjectsTable({
                     ) : (
                       <span className="text-muted">—</span>
                     )}
-                  </td>
-                )}
-                {showDotazy && (
-                  <td className="px-4 py-0 whitespace-nowrap">
-                    <ZeptatSe projectId={String(p.id)} projectName={p.name} />
                   </td>
                 )}
               </tr>
@@ -618,13 +599,11 @@ const VAHA_SLOUPCE: Record<string, number> = {
   pageCount: 6,
   driveUrl: 4,
   /**
-   * Klientsky prehled ma dva sloupce navic a oba nesou TLACITKO, ne text.
-   * Kdyz dostaly sirku jako ikonka Disku, tlacitko „Zeptat se" z bunky
-   * vylezlo, rozsirilo stranku a cely seznam se posunul doleva (zadani
-   * 12. 9. 2026: „v klientske sekci taky nic moc ten seznam projektu").
+   * Klientsky prehled ma sloupec navic, ktery nese TLACITKO, ne text - kdyz
+   * dostal sirku jako ikonka Disku, tlacitko z bunky vylezlo a rozsirilo
+   * stranku (zadani 12. 9. 2026).
    */
   rodnyList: 10,
-  dotaz: 11,
   /**
    * Fajfka nebo krizek. Sirka je podle popisku v hlavicce, ktery ma zustat
    * na jednom radku (zadani 12. 9. 2026).
