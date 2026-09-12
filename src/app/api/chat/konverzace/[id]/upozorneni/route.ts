@@ -6,18 +6,19 @@ import { prisma } from '@/lib/db';
 import { canUseChat } from '@/lib/chatServer';
 
 /**
- * Ztlumení jednoho rozhovoru (zadání 12. 9. 2026).
+ * Upozornění pro JEDEN rozhovor (zadání 12. 9. 2026: „potřeboval bych ještě
+ * upravovat notifikace zvlášť na soukromé zprávy a na individuální skupiny").
  *
- * Nejčastěji používané nastavení ze všech: jeden ukecaný kanál se umlčí
- * a zbytek zůstane, jak byl. Zprávy chodí dál a počítají se jako nepřečtené —
- * jen z nich nechodí upozornění.
+ * Ztlumení bylo jen vypínač; tohle je celá trojice Vše / Jen zmínky / Nic —
+ * u ukecané skupiny totiž člověk většinou nechce ticho, chce vědět, když se
+ * řeší on. Prázdná hodnota znamená „řiď se obecným nastavením".
  *
- * Řádek členství u kanálu projektu vzniká, až když tam člověk poprvé zajde;
- * kdyby ještě nebyl, ztlumení ho založí.
+ * DRŽÍ SE SE ZTLUMENÍM V SOULADU: Nic = ztlumeno, cokoliv jiného = neztlumeno.
+ * Dvě nastavení, která si můžou protiřečit, jsou horší než jedno.
  */
 export const dynamic = 'force-dynamic';
 
-const schema = z.object({ ztlumeno: z.boolean() });
+const schema = z.object({ upozorneni: z.enum(['VSE', 'ZMINKY', 'NIC']).nullable() });
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -27,6 +28,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  const { upozorneni } = parsed.data;
 
   const konverzace = await prisma.conversation.findUnique({
     where: { id: params.id },
@@ -34,14 +36,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   });
   if (!konverzace) return NextResponse.json({ error: 'Konverzace nenalezena.' }, { status: 404 });
 
-  // Ztlumeni a podrobne nastaveni rozhovoru jsou dve strany teze veci
-  // (zadani 12. 9. 2026) - drzime je v souladu, at si neprotireci.
-  const upozorneni = parsed.data.ztlumeno ? 'NIC' : null;
+  const ztlumeno = upozorneni === 'NIC';
   await prisma.conversationMember.upsert({
     where: { conversationId_userId: { conversationId: params.id, userId: session.user.id } },
-    update: { ztlumeno: parsed.data.ztlumeno, upozorneni },
-    create: { conversationId: params.id, userId: session.user.id, ztlumeno: parsed.data.ztlumeno, upozorneni },
+    update: { upozorneni, ztlumeno },
+    create: { conversationId: params.id, userId: session.user.id, upozorneni, ztlumeno },
   });
 
-  return NextResponse.json({ ztlumeno: parsed.data.ztlumeno });
+  return NextResponse.json({ upozorneni, ztlumeno });
 }

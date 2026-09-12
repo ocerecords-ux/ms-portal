@@ -128,6 +128,8 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
       pripnuto: c.members.find((m) => m.userId === userId)?.pripnuto ?? false,
       // Vlastni poradi mezi pripnutymi (zadani 12. 9. 2026).
       poradi: c.members.find((m) => m.userId === userId)?.poradiPripnuti ?? null,
+      // Upozorneni jen pro tenhle rozhovor (zadani 12. 9. 2026).
+      upozorneni: c.members.find((m) => m.userId === userId)?.upozorneni ?? null,
     };
   });
 }

@@ -19,6 +19,7 @@ const hodina = z.number().int().min(0).max(23).nullable();
 
 const schema = z.object({
   zpravy: rezim.optional(),
+  skupiny: rezim.optional(),
   kanaly: rezim.optional(),
   tichoOd: hodina.optional(),
   tichoDo: hodina.optional(),
@@ -34,6 +35,7 @@ export async function GET() {
     where: { id: session.user.id },
     select: {
       chatUpozorneniZpravy: true,
+      chatUpozorneniSkupiny: true,
       chatUpozorneniKanaly: true,
       chatTichoOd: true,
       chatTichoDo: true,
@@ -42,6 +44,7 @@ export async function GET() {
 
   return NextResponse.json({
     zpravy: ja?.chatUpozorneniZpravy ?? 'VSE',
+    skupiny: ja?.chatUpozorneniSkupiny ?? 'VSE',
     kanaly: ja?.chatUpozorneniKanaly ?? 'ZMINKY',
     tichoOd: ja?.chatTichoOd ?? null,
     tichoDo: ja?.chatTichoDo ?? null,
@@ -57,17 +60,19 @@ export async function PUT(req: NextRequest) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
 
-  const { zpravy, kanaly, tichoOd, tichoDo } = parsed.data;
+  const { zpravy, skupiny, kanaly, tichoOd, tichoDo } = parsed.data;
   const ulozeno = await prisma.user.update({
     where: { id: session.user.id },
     data: {
       ...(zpravy ? { chatUpozorneniZpravy: zpravy } : {}),
+      ...(skupiny ? { chatUpozorneniSkupiny: skupiny } : {}),
       ...(kanaly ? { chatUpozorneniKanaly: kanaly } : {}),
       ...(tichoOd !== undefined ? { chatTichoOd: tichoOd } : {}),
       ...(tichoDo !== undefined ? { chatTichoDo: tichoDo } : {}),
     },
     select: {
       chatUpozorneniZpravy: true,
+      chatUpozorneniSkupiny: true,
       chatUpozorneniKanaly: true,
       chatTichoOd: true,
       chatTichoDo: true,
@@ -76,6 +81,7 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({
     zpravy: ulozeno.chatUpozorneniZpravy,
+    skupiny: ulozeno.chatUpozorneniSkupiny,
     kanaly: ulozeno.chatUpozorneniKanaly,
     tichoOd: ulozeno.chatTichoOd,
     tichoDo: ulozeno.chatTichoDo,

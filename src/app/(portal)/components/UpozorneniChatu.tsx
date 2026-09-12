@@ -28,10 +28,19 @@ type Rezim = 'VSE' | 'ZMINKY' | 'NIC';
 
 type Nastaveni = {
   zpravy: Rezim;
+  skupiny: Rezim;
   kanaly: Rezim;
   tichoOd: number | null;
   tichoDo: number | null;
 };
+
+/**
+ * Jedna skupina do seznamu „Jednotlivé skupiny" (zadání 12. 9. 2026:
+ * „potřeboval bych ještě upravovat notifikace zvlášť na soukromé zprávy
+ * a na individuální skupiny"). Prázdné `upozorneni` znamená „řídí se
+ * nastavením skupin".
+ */
+export type SkupinaProUpozorneni = { id: string; label: string; upozorneni: Rezim | null };
 
 const REZIMY: { hodnota: Rezim; popisek: string }[] = [
   { hodnota: 'VSE', popisek: 'Vše' },
@@ -67,7 +76,13 @@ function vAplikaci(): boolean {
   );
 }
 
-export function UpozorneniChatu() {
+export function UpozorneniChatu({
+  skupiny = [],
+  onZmenaSkupiny,
+}: {
+  skupiny?: SkupinaProUpozorneni[];
+  onZmenaSkupiny?: (id: string, rezim: Rezim | null) => void;
+} = {}) {
   const [stav, setStav] = useState<Stav>('nezname');
   const [pracuje, setPracuje] = useState(false);
   const [otevreno, setOtevreno] = useState(false);
@@ -257,15 +272,61 @@ export function UpozorneniChatu() {
             ) : (
               <>
                 <Prepinac
-                  popisek="Zprávy a skupiny"
+                  popisek="Soukromé zprávy"
                   hodnota={nastaveni.zpravy}
                   onZmena={(v) => void uloz({ zpravy: v })}
+                />
+                <Prepinac
+                  popisek="Skupiny"
+                  hodnota={nastaveni.skupiny}
+                  onZmena={(v) => void uloz({ skupiny: v })}
                 />
                 <Prepinac
                   popisek="Kanály projektů"
                   hodnota={nastaveni.kanaly}
                   onZmena={(v) => void uloz({ kanaly: v })}
                 />
+
+                {/* JEDNOTLIVÉ SKUPINY (zadání 12. 9. 2026). Jedna ukecaná
+                    skupina nemá nutit člověka ztlumit všechny - proto si
+                    každá může říct svoje. „Podle skupin" je výchozí a vrací
+                    ji zpátky pod obecné nastavení. */}
+                {skupiny.length > 0 && onZmenaSkupiny && (
+                  <div className="border-t border-line pt-3">
+                    <p className="m-0 mb-2 font-heading font-semibold text-[11px] uppercase tracking-wide text-muted">
+                      Jednotlivé skupiny
+                    </p>
+                    <div className="flex flex-col gap-2.5 max-h-[210px] overflow-y-auto pr-1">
+                      {skupiny.map((s) => (
+                        <div key={s.id}>
+                          <span className="block text-xs font-heading text-ink truncate" title={s.label}>
+                            {s.label}
+                          </span>
+                          <div className="mt-1 flex rounded-lg border border-line overflow-hidden">
+                            {([{ hodnota: null, popisek: 'Podle skupin' }, ...REZIMY] as {
+                              hodnota: Rezim | null;
+                              popisek: string;
+                            }[]).map((r) => (
+                              <button
+                                key={r.hodnota ?? 'vychozi'}
+                                type="button"
+                                onClick={() => onZmenaSkupiny(s.id, r.hodnota)}
+                                aria-pressed={s.upozorneni === r.hodnota}
+                                className={`flex-1 px-1.5 py-1 text-[10px] font-heading font-semibold transition-colors ${
+                                  s.upozorneni === r.hodnota
+                                    ? 'bg-brand-purple text-white'
+                                    : 'bg-surface text-muted hover:text-ink hover:bg-field'
+                                }`}
+                              >
+                                {r.popisek}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <div className="flex items-center justify-between gap-2">
@@ -304,7 +365,7 @@ export function UpozorneniChatu() {
 
             <p className="m-0 text-[11px] font-body text-muted leading-snug">
               Platí pro všechna vaše zařízení. Zprávy chodí dál a počítají se jako nepřečtené — jen
-              nezazvoní. Jednotlivý kanál se dá ztlumit u něj samotného.
+              nezazvoní. Jednotlivý kanál projektu se dá ztlumit u něj samotného.
             </p>
           </div>
         </div>

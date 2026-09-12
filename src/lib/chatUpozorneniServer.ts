@@ -80,8 +80,12 @@ export function jeTicho(od: number | null, doo: number | null, ted = new Date())
 
 export type ZpravaProFiltr = {
   conversationId: string;
-  /** Kanál projektu se posuzuje jinak než rozhovor. */
-  jeKanal: boolean;
+  /**
+   * Druh rozhovoru. Soukromá zpráva, skupina a kanál projektu mají každý své
+   * nastavení (zadání 12. 9. 2026: „potřeboval bych ještě upravovat notifikace
+   * zvlášť na soukromé zprávy a na individuální skupiny").
+   */
+  druh: 'SOUKROMA' | 'SKUPINA' | 'PROJEKT' | 'DOTAZ';
   body: string;
   /** Vlákno, do kterého zpráva patří (null = hlavní proud kanálu). */
   parentId: string | null;
@@ -109,14 +113,15 @@ export async function komuPoslatUpozorneni(
           name: true,
           email: true,
           chatUpozorneniZpravy: true,
+          chatUpozorneniSkupiny: true,
           chatUpozorneniKanaly: true,
           chatTichoOd: true,
           chatTichoDo: true,
         },
       }),
       prisma.conversationMember.findMany({
-        where: { conversationId: zprava.conversationId, userId: { in: prijemci }, ztlumeno: true },
-        select: { userId: true },
+        where: { conversationId: zprava.conversationId, userId: { in: prijemci } },
+        select: { userId: true, ztlumeno: true, upozorneni: true },
       }),
       // Kdo uz ve vlakne mluvil - odpoved ve vlakne se ho tyka i bez zminky.
       zprava.parentId
@@ -127,7 +132,11 @@ export async function komuPoslatUpozorneni(
         : Promise.resolve([] as { userId: string }[]),
     ]);
 
-    const ztlumeni = new Set(clenstvi.map((c) => c.userId));
+    const ztlumeni = new Set(clenstvi.filter((c) => c.ztlumeno).map((c) => c.userId));
+    // Nastaveni jen pro tenhle rozhovor - prebiji obecne (zadani 12. 9. 2026).
+    const vlastni = new Map(
+      clenstvi.filter((c) => c.upozorneni).map((c): [string, ChatUpozorneni] => [c.userId, c.upozorneni!]),
+    );
     const veVlakne = new Set(vlakno.map((m) => m.userId));
 
     return lide
@@ -136,9 +145,13 @@ export async function komuPoslatUpozorneni(
         if (ztlumeni.has(clovek.id)) return false;
         if (jeTicho(clovek.chatTichoOd, clovek.chatTichoDo)) return false;
 
-        const rezim: ChatUpozorneni = zprava.jeKanal
-          ? clovek.chatUpozorneniKanaly
-          : clovek.chatUpozorneniZpravy;
+        const podleDruhu: ChatUpozorneni =
+          zprava.druh === 'SOUKROMA'
+            ? clovek.chatUpozorneniZpravy
+            : zprava.druh === 'SKUPINA'
+              ? clovek.chatUpozorneniSkupiny
+              : clovek.chatUpozorneniKanaly;
+        const rezim: ChatUpozorneni = vlastni.get(clovek.id) ?? podleDruhu;
         if (rezim === 'NIC') return false;
         if (rezim === 'VSE') return true;
 

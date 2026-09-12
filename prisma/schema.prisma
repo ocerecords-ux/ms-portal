@@ -169,8 +169,12 @@ model User {
   // Zvlast pro rozhovory a zvlast pro kanaly projektu: kanal projektu je
   // pracovni proud, kde clovek casto chce vedet jen o tom, kdyz se resi on,
   // zatimco kdyz mu nekdo pise primo, chce vedet o kazde zprave.
-  /// Prime zpravy a skupiny.
+  /// Soukrome zpravy (zadani 12. 9. 2026: „potreboval bych jeste upravovat
+  /// notifikace zvlast na soukrome zpravy a na individualni skupiny").
   chatUpozorneniZpravy ChatUpozorneni @default(VSE)
+  /// Skupiny - obecne. Jednotliva skupina si to muze prebit vlastnim
+  /// nastavenim, viz ConversationMember.upozorneni.
+  chatUpozorneniSkupiny ChatUpozorneni @default(VSE)
   /// Kanaly projektu.
   chatUpozorneniKanaly ChatUpozorneni @default(ZMINKY)
   /// Zacatek a konec hodin, kdy upozorneni nechodi (0-23, cas v Praze).
@@ -813,6 +817,11 @@ model ConversationMember {
   /// 12. 9. 2026). Prazdno znamena "jeste nikdy nerovnal" - takove jdou az za
   /// serazene, od nejcerstvejsi zpravy.
   poradiPripnuti Int?
+
+  /// Upozorneni pro TENHLE JEDEN rozhovor (zadani 12. 9. 2026: „na
+  /// individualni skupiny"). Prazdno = plati obecne nastaveni uctu podle
+  /// druhu rozhovoru. Ztlumeni vyse je totez co NIC a drzi se s tim v souladu.
+  upozorneni     ChatUpozorneni?
 
   @@unique([conversationId, userId])
   @@index([userId])

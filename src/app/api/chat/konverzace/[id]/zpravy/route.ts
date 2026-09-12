@@ -226,7 +226,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // vsem tak jako tak; tohle rozhoduje jen o tom, komu to cinkne.
     const prijemci = await komuPoslatUpozorneni(vsichni, {
       conversationId: conversation.id,
-      jeKanal: conversation.kind === 'PROJEKT',
+      druh: conversation.kind,
       body: parsed.data.body ?? '',
       parentId,
     });

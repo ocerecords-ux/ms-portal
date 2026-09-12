@@ -1060,15 +1060,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * tím přebijeme. Jakmile server pošle totéž, evidence se zahodí a platí
    * zase jen to, co říká databáze.
    */
-  const cerstvaPrepnuti = useRef<Map<string, { pripnuto?: boolean; ztlumeno?: boolean; poradi?: number }>>(
-    new Map(),
-  );
+  const cerstvaPrepnuti = useRef<
+    Map<string, { pripnuto?: boolean; ztlumeno?: boolean; poradi?: number; upozorneni?: ChatConversation['upozorneni'] }>
+  >(new Map());
 
   /** Co se zrovna táhne a v jakém pořadí to při tažení vypadá (12. 9. 2026). */
   const [tazena, setTazena] = useState<string | null>(null);
   const [poradiPriTazeni, setPoradiPriTazeni] = useState<string[] | null>(null);
 
-  const zapisCerstve = useCallback((id: string, zmena: { pripnuto?: boolean; ztlumeno?: boolean; poradi?: number }) => {
+  const zapisCerstve = useCallback((id: string, zmena: { pripnuto?: boolean; ztlumeno?: boolean; poradi?: number; upozorneni?: ChatConversation['upozorneni'] }) => {
     cerstvaPrepnuti.current.set(id, { ...cerstvaPrepnuti.current.get(id), ...zmena });
   }, []);
 
@@ -1080,7 +1080,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       const uzSedi =
         (zmena.pripnuto === undefined || zmena.pripnuto === c.pripnuto) &&
         (zmena.ztlumeno === undefined || zmena.ztlumeno === c.ztlumeno) &&
-        (zmena.poradi === undefined || zmena.poradi === c.poradi);
+        (zmena.poradi === undefined || zmena.poradi === c.poradi) &&
+        (zmena.upozorneni === undefined || zmena.upozorneni === c.upozorneni);
       if (uzSedi) {
         cerstvaPrepnuti.current.delete(c.id);
         return c;
@@ -1090,6 +1091,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         ...(zmena.pripnuto === undefined ? {} : { pripnuto: zmena.pripnuto }),
         ...(zmena.ztlumeno === undefined ? {} : { ztlumeno: zmena.ztlumeno }),
         ...(zmena.poradi === undefined ? {} : { poradi: zmena.poradi }),
+        ...(zmena.upozorneni === undefined ? {} : { upozorneni: zmena.upozorneni }),
       };
     });
   }, []);
@@ -1294,6 +1296,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       return b.lastMessageAt.localeCompare(a.lastMessageAt);
     })
     .slice(0, 12);
+
+  /**
+   * Skupiny do panelu upozorneni (zadani 12. 9. 2026). Kanaly projektu tu
+   * nejsou schvalne - ty se ladi u nich samotnych a bylo by jich tu sto.
+   */
+  const skupinyProUpozorneni = conversations
+    .filter((c) => c.kind === 'SKUPINA')
+    .map((c) => ({ id: c.id, label: c.label, upozorneni: c.upozorneni ?? null }));
 
   /** Lide zvlast, skupiny a kanaly zvlast - kazde na svem radku (12. 9. 2026). */
   const pripnuteSoukrome = pripnute.filter((c) => c.kind === 'SOUKROMA');
@@ -1697,6 +1707,32 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * Přepne se hned v seznamu, ať tlačítko nelaguje; kdyby uložení selhalo,
    * srovná se to při příštím načtení seznamu.
    */
+  /**
+   * Upozornění pro JEDEN rozhovor (zadání 12. 9. 2026: „potřeboval bych ještě
+   * upravovat notifikace zvlášť na soukromé zprávy a na individuální
+   * skupiny"). Prázdná hodnota vrací skupinu pod obecné nastavení.
+   */
+  async function nastavUpozorneni(conversationId: string, upozorneni: ChatConversation['upozorneni']) {
+    const ztlumeno = upozorneni === 'NIC';
+    zapisCerstve(conversationId, { upozorneni, ztlumeno });
+    setConversations((current) =>
+      current.map((c) => (c.id === conversationId ? { ...c, upozorneni, ztlumeno } : c)),
+    );
+    try {
+      const res: Response = await fetch(`/api/chat/konverzace/${encodeURIComponent(conversationId)}/upozorneni`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ upozorneni }),
+      });
+      if (!res.ok) throw new Error(`Server odmítl nastavení (${res.status}).`);
+    } catch (err) {
+      cerstvaPrepnuti.current.delete(conversationId);
+      setError('Nastavení upozornění se nepodařilo uložit.');
+      console.error('Upozornění rozhovoru selhalo:', err);
+      void nactiKonverzace();
+    }
+  }
+
   async function prepniZtlumeni(conversationId: string, ztlumeno: boolean) {
     zapisCerstve(conversationId, { ztlumeno });
     setConversations((current) =>
@@ -1896,7 +1932,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             )}
             <span className="ml-auto flex items-center gap-3 shrink-0">
               {listaDruhu}
-              <UpozorneniChatu />
+              <UpozorneniChatu
+                skupiny={skupinyProUpozorneni}
+                onZmenaSkupiny={(id, rezim) => void nastavUpozorneni(id, rezim)}
+              />
             </span>
           </div>
         ) : (
@@ -1908,7 +1947,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             vpravo={
               <>
                 {listaDruhu}
-                <UpozorneniChatu />
+                <UpozorneniChatu
+                  skupiny={skupinyProUpozorneni}
+                  onZmenaSkupiny={(id, rezim) => void nastavUpozorneni(id, rezim)}
+                />
               </>
             }
           />

@@ -102,6 +102,11 @@ export type ChatConversation = {
    * (12. 9. 2026). Prazdno = nerovnal, radi se podle posledni zpravy.
    */
   poradi?: number | null;
+  /**
+   * Upozorneni jen pro tenhle rozhovor (12. 9. 2026). Prazdno = plati obecne
+   * nastaveni podle druhu.
+   */
+  upozorneni?: 'VSE' | 'ZMINKY' | 'NIC' | null;
 };
 
 /**
