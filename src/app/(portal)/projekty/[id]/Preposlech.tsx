@@ -408,7 +408,17 @@ export function Preposlech({
         c.fillRect(Math.max(0, (zal.localTime / trvani) * w - 1), 0, 2, h);
       }
 
-      if (jeAktivni && kurzor >= 0) c.fillRect(Math.max(0, kurzor - 0.5), 0, 1, h);
+      // KURZOR JE ZELENY, ZNACKY CHYB ZUSTAVAJI CERVENE (zadani 12. 9. 2026:
+      // „ten kurzor, kde jsem v nahravce, by mohl mit treba tu nasi zelenou
+      // barvu a ty markery chyb by mohly zustat cervene, at se to odlisi").
+      //
+      // Dosud se kreslil BEZ nastaveni barvy, takze zdedil tu posledni - a to
+      // byla zrovna cervena od znacek chyb. Splyval s nimi presne v miste,
+      // kde na tom zalezi.
+      if (jeAktivni && kurzor >= 0) {
+        c.fillStyle = '#1FDF67';
+        c.fillRect(Math.max(0, kurzor - 1), 0, 2, h);
+      }
       c.restore();
     },
     [delka, pozice, stav.chyby],

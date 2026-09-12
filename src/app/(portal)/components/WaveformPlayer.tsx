@@ -67,8 +67,10 @@ export function WaveformPlayer({ src, autoPlay }: { src: string; autoPlay?: bool
           height: 56,
           waveColor: '#C9BEF5',
           progressColor: '#7B55FF',
-          cursorColor: '#201A33',
-          cursorWidth: 1,
+          // Kurzor je vsude nase zelena (zadani 12. 9. 2026) - at je jasne,
+          // kde clovek je, at se diva do prehravace kdekoliv.
+          cursorColor: '#1FDF67',
+          cursorWidth: 2,
           barWidth: 2,
           barGap: 1,
           barRadius: 2,
