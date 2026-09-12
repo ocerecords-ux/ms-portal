@@ -2301,11 +2301,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         {error && <p className="text-xs text-danger bg-dangerTint px-4 py-2 m-0">{error}</p>}
 
         <div className="flex-1 min-h-0 flex">
-          {/* --- Levy sloupec: zalozky a seznam ---------------------------- */}
+          {/* --- Levy sloupec: zalozky a seznam ----------------------------
+              Dokud neni nic otevreneho, ma na telefonu celou sirku (zadani
+              12. 9. 2026: „ono to cele ty seznamy muze byt vlastne na cele
+              obrazovce"). Nazvy projektu se do 220 px stejne nevesly a
+              vedle nich stala prazdna plocha s vetou, na co kliknout. */}
           <div
-            className={`w-[220px] shrink-0 border-r border-line bg-paper flex-col min-h-0 ${
-              vlaknoId ? 'hidden lg:flex' : otevrena ? 'hidden sm:flex' : 'flex'
-            }`}
+            className={`shrink-0 border-line bg-paper flex-col min-h-0 ${
+              otevrena || vlaknoId ? 'w-[220px] border-r' : 'w-full sm:w-[220px] border-r-0 sm:border-r'
+            } ${vlaknoId ? 'hidden lg:flex' : otevrena ? 'hidden sm:flex' : 'flex'}`}
           >
             {/* RYCHLE VOLBY (zadani 12. 9. 2026: „bylo by dobre mit moznost si
                 pripnout nekam nahoru v tom chatu skupiny a uzivatele, jako
@@ -2504,8 +2508,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             )}
           </div>
 
-          {/* --- Pravy sloupec: samotny chat ------------------------------- */}
-          <div className="flex-1 min-w-0 flex">
+          {/* --- Pravy sloupec: samotny chat -------------------------------
+              Na telefonu se vetou „vyberte vlevo" neplytva mistem - dokud
+              neni nic otevreneho, cely sloupec tam neni (zadani 12. 9.
+              2026). Na sirokem okne zustava, aby plocha vedle seznamu
+              nezela prazdnotou. */}
+          <div className={`flex-1 min-w-0 ${otevrena ? 'flex' : 'hidden sm:flex'}`}>
             {!otevrena ? (
               <p className="m-auto text-sm font-body text-muted px-6 text-center">
                 Vyberte vlevo projekt nebo člověka.
