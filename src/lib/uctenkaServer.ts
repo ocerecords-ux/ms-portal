@@ -1,4 +1,5 @@
 import { PRAZDNA_UCTENKA, type PrectenaUctenka } from '@/lib/uctenka';
+import { anthropicHlavicky } from '@/lib/anthropic';
 
 /**
  * Přečtení vyfoceného dokladu (zadání 10. 9. 2026).
@@ -13,6 +14,8 @@ import { PRAZDNA_UCTENKA, type PrectenaUctenka } from '@/lib/uctenka';
  * NASTAVENÍ
  * ANTHROPIC_API_KEY - klíč k API. Bez něj se čtení tiše vypne a formulář se
  * chová jako dřív: fotka se jen přiloží a údaje se vyplní ručně.
+ * ANTHROPIC_WORKSPACE_ID - u klíče vydaného pro celou organizaci je povinné,
+ * jinak API požadavek odmítne (viz lib/anthropic.ts).
  * UCTENKA_MODEL - volitelně jiný model, když bude potřeba přepnout.
  *
  * CO SE NIKAM NEUKLÁDÁ
@@ -130,11 +133,7 @@ export async function prectiUctenku(data: Buffer, typSouboru: string): Promise<V
   try {
     const odpoved = await fetch(ADRESA, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': klic,
-        'anthropic-version': '2023-06-01',
-      },
+      headers: anthropicHlavicky(klic),
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 700,

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { zapisBrunoUdalost } from '@/lib/projektLogServer';
 import { jeZminen } from '@/lib/chatUpozorneniServer';
+import { anthropicHlavicky } from '@/lib/anthropic';
 
 /**
  * BRUNO — asistent studia (zadání 12. 9. 2026: „pojďme přidat našeho firemního
@@ -207,11 +208,7 @@ async function zeptejSeModelu(dotaz: string): Promise<Rozhodnuti | null> {
 
   const odpoved = await fetch(ADRESA, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': klic,
-      'anthropic-version': '2023-06-01',
-    },
+    headers: anthropicHlavicky(klic),
     body: JSON.stringify({
       model: MODEL,
       max_tokens: 400,
