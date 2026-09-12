@@ -71,6 +71,12 @@ export type ChatMessage = {
   editedAt: string | null;
   /** Prilohy zpravy - fotky, PDF, zvuk (zadani 9. 9. 2026). */
   prilohy: ChatPriloha[];
+  /**
+   * Zprava, ktera je videt v bubline, ale server o ni jeste nevi
+   * (12. 9. 2026). 'posilam' = ceka na odpoved, 'chyba' = neproslo.
+   * U zprav ze serveru chybi.
+   */
+  stav?: 'posilam' | 'chyba';
 };
 
 export type ChatTeamMember = { id: string; label: string; photoUrl: string | null };

@@ -263,7 +263,15 @@ function RadekKonverzace({
   );
 }
 
-function Zobrazeno({ seenBy }: { seenBy: string[] }) {
+function Zobrazeno({ seenBy, stav }: { seenBy: string[]; stav?: 'posilam' | 'chyba' }) {
+  // Dokud server nepotvrdi, rikame to narovinu - „Odeslano" u zpravy, ktera
+  // je jeste na ceste, by byla lez (12. 9. 2026).
+  if (stav === 'posilam') {
+    return <span className="text-[11px] font-body text-muted">Odesílám…</span>;
+  }
+  if (stav === 'chyba') {
+    return <span className="text-[11px] font-body text-danger">Neodešlo — text máte zpátky v psátku</span>;
+  }
   if (seenBy.length === 0) {
     return <span className="text-[11px] font-body text-muted">Odesláno</span>;
   }
@@ -1272,7 +1280,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       cacheZprav.current.set(conversationId, zpravy);
       // Pomala odpoved na konverzaci, ze ktere uz clovek odesel, se zahodi -
       // jinak by prepsala vypis te otevrene.
-      if (otevrenaRef.current === conversationId) setMessages(zpravy);
+      if (otevrenaRef.current === conversationId) {
+        // Zprava, ktera prave leti na server, v odpovedi jeste neni - kdyby
+        // se seznam proste prepsal, zmizela by lidem pod rukama (12. 9. 2026).
+        setMessages((soucasne) => {
+          const cekajici = soucasne.filter((m) => m.stav);
+          return cekajici.length > 0 ? [...zpravy, ...cekajici] : zpravy;
+        });
+      }
     } catch {
       // nevadi, zkusi se znovu
     } finally {
@@ -1634,6 +1649,16 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     return hotove;
   }
 
+  /**
+   * ZPRÁVA JE V OKNĚ HNED (oprava 12. 9. 2026: „i když chci něco odeslat, tak
+   * tam je latence tak 3 s").
+   *
+   * Dřív se čekalo na odpověď serveru a teprve pak se psátko vyprázdnilo a
+   * bublina objevila — člověk mezitím koukal na nehybnou obrazovku a nevěděl,
+   * jestli vůbec zmáčkl. Teď se bublina vykreslí okamžitě, jen bledší, a když
+   * server odpoví, vymění se za tu jeho. Když neodpoví, zůstane u ní červené
+   * „neodešlo" a text se vrátí do psátka, aby se neztratil.
+   */
   async function odesli(e: React.FormEvent, doVlakna = false) {
     e.preventDefault();
     const text = (doVlakna ? vlaknoDraft : draft).trim();
@@ -1644,11 +1669,47 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     if (doVlakna && !vlaknoId) return;
     setSending(true);
     setError(null);
+
+    const konverzace = openId;
+    const docasneId = `docasna-${Date.now()}`;
+    // Psatko se uklidi hned; kdyz odeslani selze, text se do nej vrati.
+    if (doVlakna) {
+      setVlaknoDraft('');
+      setPrilohyVlakno([]);
+    } else {
+      setDraft('');
+      setPrilohyHlavni([]);
+    }
+    setZminkyPro(null);
+
+    // Prilohy jeste nejsou nahrane, takze u nich zatim nic neukazujeme -
+    // text ano, ten je to podstatne.
+    const docasna: ChatMessage = {
+      id: docasneId,
+      body: text,
+      createdAt: new Date().toISOString(),
+      authorId: '',
+      authorLabel: 'Já',
+      authorPhotoUrl: null,
+      mine: true,
+      replyCount: 0,
+      seenBy: [],
+      reactions: [],
+      editedAt: null,
+      prilohy: [],
+      stav: 'posilam',
+    };
+    const vloz = doVlakna ? setVlakno : setMessages;
+    vloz((current) => [...current, docasna]);
+
     try {
       const prilohy = soubory.length > 0 ? await nahrajPrilohy(soubory) : [];
-      if (prilohy === null) return;
+      if (prilohy === null) {
+        vloz((current) => current.filter((m) => m.id !== docasneId));
+        return;
+      }
 
-      const res: Response = await fetch(`/api/chat/konverzace/${openId}/zpravy`, {
+      const res: Response = await fetch(`/api/chat/konverzace/${konverzace}/zpravy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
@@ -1656,28 +1717,24 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         ),
       });
       const data: any = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.error || 'Zprávu se nepodařilo odeslat.');
-        return;
-      }
-      if (doVlakna) {
-        setVlaknoDraft('');
-        setPrilohyVlakno([]);
-        setVlakno((current) => [...current, data as ChatMessage]);
-        void nactiZpravy(openId, true);
-      } else {
-        setDraft('');
-        setPrilohyHlavni([]);
-        setMessages((current) => [...current, data as ChatMessage]);
-      }
+      if (!res.ok) throw new Error(data?.error || 'Zprávu se nepodařilo odeslat.');
+
+      // Docasnou bublinu vymenime za tu ze serveru - na stejnem miste, takze
+      // vypis ani neposkoci.
+      vloz((current) => current.map((m) => (m.id === docasneId ? (data as ChatMessage) : m)));
+      if (doVlakna) void nactiZpravy(konverzace, true);
+
       // Bruno (zadani 12. 9. 2026) - rozmysli si, jestli ze zpravy neco vytezi.
       // Az TED, kdyz uz je zprava odeslana: ptat se modelu trva vteriny
       // a odesilani zpravy na to cekat nesmi.
-      if (typeof data?.id === 'string') void probudBruna(data.id, openId);
-      setZminkyPro(null);
+      if (typeof data?.id === 'string') void probudBruna(data.id, konverzace);
       void nactiKonverzace();
-    } catch {
-      setError('Zprávu se nepodařilo odeslat.');
+    } catch (err) {
+      vloz((current) => current.map((m) => (m.id === docasneId ? { ...m, stav: 'chyba' as const } : m)));
+      // Text zpatky do psatka, at ho clovek nemusi psat znovu.
+      if (doVlakna) setVlaknoDraft((d) => (d ? d : text));
+      else setDraft((d) => (d ? d : text));
+      setError(err instanceof Error ? err.message : 'Zprávu se nepodařilo odeslat.');
     } finally {
       setSending(false);
     }
@@ -2523,7 +2580,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         {(index === 0 || !stejnyDen(m.createdAt, messages[index - 1].createdAt)) && (
                           <DenOddelovac iso={m.createdAt} />
                         )}
-                      <div className="flex items-start gap-2">
+                      <div className={`flex items-start gap-2 ${m.stav === 'posilam' ? 'opacity-60' : ''}`}>
                         <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={28} />
                         <div className="min-w-0">
                           <Hlavicka jmeno={m.mine ? 'Já' : m.authorLabel} iso={m.createdAt} editedAt={m.editedAt} />
@@ -2568,7 +2625,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               (zprava uzivatele 8. 9. 2026). */}
                           {(m.mine || ukazOdpovedet) && (
                           <span className="mt-0.5 flex items-center gap-2 flex-wrap">
-                            {m.mine && <Zobrazeno seenBy={m.seenBy} />}
+                            {m.mine && <Zobrazeno seenBy={m.seenBy} stav={m.stav} />}
                             {m.mine && ukazOdpovedet && <span className="text-[11px] text-muted/40">·</span>}
                             {ukazOdpovedet && (
                             <button
@@ -2737,7 +2794,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                             )}
                             {m.mine && (
                               <span className="block mt-0.5">
-                                <Zobrazeno seenBy={m.seenBy} />
+                                <Zobrazeno seenBy={m.seenBy} stav={m.stav} />
                               </span>
                             )}
                           </div>

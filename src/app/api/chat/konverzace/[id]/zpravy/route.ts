@@ -87,7 +87,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         ? { conversationId: conversation.id, OR: [{ id: vlakno }, { parentId: vlakno }] }
         : { conversationId: conversation.id, parentId: null },
       orderBy: { createdAt: 'desc' },
-      take: 200,
+      // ŠEDESÁT, NE DVĚ STĚ (oprava 12. 9. 2026: „pořád je u chatu obecně
+      // problém, že trvá, než se načte konverzace"). Ke každé zprávě se
+      // dotahuje autor, přílohy, reakce a počet odpovědí - u dvou set zpráv
+      // to byla většina času požadavku, a přitom se do panelu vejde pár
+      // posledních. Starší zůstávají v databázi a jsou vidět ve vyhledávání.
+      take: 60,
       include: {
         user: { select: { id: true, name: true, email: true, photoUrl: true } },
         _count: { select: { replies: true } },
@@ -199,37 +204,62 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Přílohu se nepodařilo nahrát.' }, { status: 400 });
     }
 
-    const message = await prisma.message.create({
-      data: {
-        conversationId: conversation.id,
-        userId: me,
-        body: parsed.data.body,
-        parentId,
-        attachments: { create: prilohy },
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true, photoUrl: true } },
-        attachments: { select: { id: true, name: true, mime: true, size: true } },
-      },
-    });
-
-    // Upozorneni na nove zpravy (zadani 9. 9. 2026). Zamerne az PO ulozeni
-    // zpravy a bez cekani na vysledek - kdyz push selze, zprava uz je davno
-    // v databazi a nikdo o ni neprijde.
+    // VŠECHNO, CO NA SOBĚ NEZÁVISÍ, JDE DO DATABÁZE NAJEDNOU (oprava
+    // 12. 9. 2026: „i když chci něco odeslat, tak tam je latence tak 3 s").
     //
-    // Kanal k projektu je pro cely tym, ale upozorneni se posilaji jen tem,
-    // kdo v nem opravdu jsou (radek clenstvi vznika otevrenim konverzace) -
-    // jinak by kazda zprava v kazdem kanalu budila cely Mediaspace.
+    // Dřív se čekalo popořadě: ulož zprávu → zjisti, komu cinknout (tři
+    // dotazy) → posuň čas poslední zprávy a přečteno (dva zápisy). Šest cest
+    // do databáze za sebou, každá přes pooler — a člověk se mezitím díval na
+    // nehybné tlačítko. Komu poslat upozornění přitom závisí jen na TEXTU,
+    // ne na uložené zprávě, takže to může běžet zároveň.
+    //
+    // Čas si určujeme sami a stejný dáváme všem třem zápisům; jinak by šel
+    // čas poslední zprávy odvodit až z vrácené zprávy a řadilo by se to zas
+    // popořadě.
+    const ted = new Date();
     const vsichni = conversation.members.map((m) => m.userId).filter((id) => id !== me);
-    // Kdo o tom chce doopravdy vedet - kazdy si to nastavuje sam
-    // (zadani 12. 9. 2026), viz lib/chatUpozorneniServer.ts. Zprava se dorucuje
-    // vsem tak jako tak; tohle rozhoduje jen o tom, komu to cinkne.
-    const prijemci = await komuPoslatUpozorneni(vsichni, {
-      conversationId: conversation.id,
-      druh: conversation.kind,
-      body: parsed.data.body ?? '',
-      parentId,
-    });
+
+    const [message, prijemci] = await Promise.all([
+      prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          userId: me,
+          body: parsed.data.body,
+          parentId,
+          createdAt: ted,
+          attachments: { create: prilohy },
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true, photoUrl: true } },
+          attachments: { select: { id: true, name: true, mime: true, size: true } },
+        },
+      }),
+      // Kdo o tom chce doopravdy vedet - kazdy si to nastavuje sam
+      // (zadani 12. 9. 2026), viz lib/chatUpozorneniServer.ts. Zprava se
+      // dorucuje vsem tak jako tak; tohle rozhoduje jen o tom, komu to cinkne.
+      //
+      // Kanal k projektu je pro cely tym, ale upozorneni se posilaji jen tem,
+      // kdo v nem opravdu jsou (radek clenstvi vznika otevrenim konverzace) -
+      // jinak by kazda zprava v kazdem kanalu budila cely Mediaspace.
+      komuPoslatUpozorneni(vsichni, {
+        conversationId: conversation.id,
+        druh: conversation.kind,
+        body: parsed.data.body ?? '',
+        parentId,
+      }),
+      prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { lastMessageAt: ted },
+      }),
+      prisma.conversationMember.upsert({
+        where: { conversationId_userId: { conversationId: conversation.id, userId: me } },
+        update: { lastReadAt: ted },
+        create: { conversationId: conversation.id, userId: me, lastReadAt: ted },
+      }),
+    ]);
+
+    // Push az po ulozeni a bez cekani na vysledek - kdyz selze, zprava uz je
+    // davno v databazi a nikdo o ni neprijde.
     if (prijemci.length > 0) {
       const kdo = userLabel(message.user);
       const nahled = parsed.data.body
@@ -243,18 +273,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         znacka: `chat-${conversation.id}`,
       });
     }
-
-    await prisma.$transaction([
-      prisma.conversation.update({
-        where: { id: conversation.id },
-        data: { lastMessageAt: message.createdAt },
-      }),
-      prisma.conversationMember.upsert({
-        where: { conversationId_userId: { conversationId: conversation.id, userId: me } },
-        update: { lastReadAt: message.createdAt },
-        create: { conversationId: conversation.id, userId: me, lastReadAt: message.createdAt },
-      }),
-    ]);
 
     return NextResponse.json(
       {

@@ -49,7 +49,15 @@ function connectionUrl(): string | undefined {
       if (!url.searchParams.has('pgbouncer')) url.searchParams.set('pgbouncer', 'true');
     }
 
-    if (!url.searchParams.has('connection_limit')) url.searchParams.set('connection_limit', '1');
+    // V transakcnim rezimu si muze funkce dovolit nekolik spojeni naraz -
+    // pujcuji se jen na dobu dotazu. S jedinym spojenim se dotazy, ktere
+    // poustime zaroven, stejne seradily za sebe a odeslani zpravy trvalo
+    // vteriny (oprava 12. 9. 2026). V session rezimu zustava jedno: tam si
+    // kazde spojeni drzi misto, dokud funkce zije.
+    const jeTransakcni = url.port === '6543' || url.searchParams.get('pgbouncer') === 'true';
+    if (!url.searchParams.has('connection_limit')) {
+      url.searchParams.set('connection_limit', jeTransakcni ? '3' : '1');
+    }
     if (!url.searchParams.has('pool_timeout')) url.searchParams.set('pool_timeout', '20');
     return url.toString();
   } catch {
