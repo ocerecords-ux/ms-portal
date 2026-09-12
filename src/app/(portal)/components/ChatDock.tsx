@@ -100,6 +100,58 @@ function Avatar({ label, photoUrl, size = 28 }: { label: string; photoUrl: strin
  * kdo konverzaci naposledy otevrenou - stejny udaj, ze ktereho se pocitaji
  * neprectene. U kanalu k projektu to znamena "z tech, kdo tam kdy byli".
  */
+/**
+ * Jedna připnutá zkratka (zadání 12. 9. 2026). Vypadá stejně v liště na
+ * telefonu i v levém sloupci, jen je jinak velká a v liště svítí prstenec
+ * zeleně - fialová by na fialové nebyla vidět.
+ */
+function PripnutaVolba({
+  konverzace,
+  aktivni,
+  onOtevri,
+  velikost = 30,
+  vListe = false,
+  onZacniTahat,
+  taha = false,
+}: {
+  konverzace: ChatConversation;
+  aktivni: boolean;
+  onOtevri: () => void;
+  velikost?: number;
+  vListe?: boolean;
+  onZacniTahat?: (e: React.PointerEvent<HTMLButtonElement>) => void;
+  taha?: boolean;
+}) {
+  const popisek = konverzace.kind === 'PROJEKT' ? `# ${konverzace.label}` : konverzace.label;
+  return (
+    <button
+      type="button"
+      onClick={onOtevri}
+      onPointerDown={onZacniTahat}
+      data-pripnuta={konverzace.id}
+      title={popisek}
+      aria-label={popisek}
+      // touch-none: bez toho by prst misto tazeni ikony rolovat listou.
+      className={`relative shrink-0 rounded-full transition-transform touch-none ${
+        taha ? 'scale-110 opacity-70 cursor-grabbing' : 'hover:scale-105 cursor-grab'
+      } ${
+        aktivni
+          ? vListe
+            ? 'ring-2 ring-brand-green ring-offset-2 ring-offset-brand-purple'
+            : 'ring-2 ring-brand-purple'
+          : ''
+      }`}
+    >
+      <Avatar label={popisek} photoUrl={konverzace.avatarUrl} size={velikost} />
+      {konverzace.unread > 0 && (
+        <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-brand-green text-onAccent text-[9px] font-heading font-bold leading-[16px] text-center">
+          {konverzace.unread}
+        </span>
+      )}
+    </button>
+  );
+}
+
 function Zobrazeno({ seenBy }: { seenBy: string[] }) {
   if (seenBy.length === 0) {
     return <span className="text-[11px] font-body text-muted">Odesláno</span>;
@@ -1008,9 +1060,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * tím přebijeme. Jakmile server pošle totéž, evidence se zahodí a platí
    * zase jen to, co říká databáze.
    */
-  const cerstvaPrepnuti = useRef<Map<string, { pripnuto?: boolean; ztlumeno?: boolean }>>(new Map());
+  const cerstvaPrepnuti = useRef<Map<string, { pripnuto?: boolean; ztlumeno?: boolean; poradi?: number }>>(
+    new Map(),
+  );
 
-  const zapisCerstve = useCallback((id: string, zmena: { pripnuto?: boolean; ztlumeno?: boolean }) => {
+  /** Co se zrovna táhne a v jakém pořadí to při tažení vypadá (12. 9. 2026). */
+  const [tazena, setTazena] = useState<string | null>(null);
+  const [poradiPriTazeni, setPoradiPriTazeni] = useState<string[] | null>(null);
+
+  const zapisCerstve = useCallback((id: string, zmena: { pripnuto?: boolean; ztlumeno?: boolean; poradi?: number }) => {
     cerstvaPrepnuti.current.set(id, { ...cerstvaPrepnuti.current.get(id), ...zmena });
   }, []);
 
@@ -1021,7 +1079,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       if (!zmena) return c;
       const uzSedi =
         (zmena.pripnuto === undefined || zmena.pripnuto === c.pripnuto) &&
-        (zmena.ztlumeno === undefined || zmena.ztlumeno === c.ztlumeno);
+        (zmena.ztlumeno === undefined || zmena.ztlumeno === c.ztlumeno) &&
+        (zmena.poradi === undefined || zmena.poradi === c.poradi);
       if (uzSedi) {
         cerstvaPrepnuti.current.delete(c.id);
         return c;
@@ -1030,6 +1089,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         ...c,
         ...(zmena.pripnuto === undefined ? {} : { pripnuto: zmena.pripnuto }),
         ...(zmena.ztlumeno === undefined ? {} : { ztlumeno: zmena.ztlumeno }),
+        ...(zmena.poradi === undefined ? {} : { poradi: zmena.poradi }),
       };
     });
   }, []);
@@ -1223,8 +1283,29 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    */
   const pripnute = conversations
     .filter((c) => c.pripnuto)
-    .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
+    .sort((a, b) => {
+      // Kdo si poradi prerovnal pretazenim, ten ho ma; ostatni jdou za nimi
+      // od nejcerstvejsi zpravy (zadani 12. 9. 2026).
+      const pa = a.poradi ?? null;
+      const pb = b.poradi ?? null;
+      if (pa !== null && pb !== null && pa !== pb) return pa - pb;
+      if (pa !== null && pb === null) return -1;
+      if (pa === null && pb !== null) return 1;
+      return b.lastMessageAt.localeCompare(a.lastMessageAt);
+    })
     .slice(0, 12);
+
+  /** Lide zvlast, skupiny a kanaly zvlast - kazde na svem radku (12. 9. 2026). */
+  const pripnuteSoukrome = pripnute.filter((c) => c.kind === 'SOUKROMA');
+  const pripnuteSkupiny = pripnute.filter((c) => c.kind !== 'SOUKROMA');
+
+  /** Behem tazeni se rada kresli v rozehranem poradi, ne v ulozenem. */
+  function radaPriTazeni(rada: ChatConversation[]): ChatConversation[] {
+    if (!poradiPriTazeni) return rada;
+    const podleId = new Map(rada.map((c) => [c.id, c]));
+    const serazena = poradiPriTazeni.map((id) => podleId.get(id)).filter(Boolean) as ChatConversation[];
+    return serazena.length === rada.length ? serazena : rada;
+  }
 
   /**
    * Kanaly k projektum. Neni to seznam zalozenych konverzaci, ale seznam
@@ -1501,6 +1582,94 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   /**
    * Připnutí rozhovoru nahoru jako rychlá volba (zadání 12. 9. 2026).
    */
+  /**
+   * PŘETAHOVÁNÍ ZKRATEK (zadání 12. 9. 2026: „a mělo by jít měnit pořadí těch
+   * konverzací přetažením").
+   *
+   * Schválně na pointer události, ne na HTML5 drag&drop: ten na dotykových
+   * displejích nefunguje a zkratky jsou hlavně mobilní věc. Pořadí se
+   * překlápí už během tažení — jakmile se střed tažené ikony dostane za střed
+   * sousední, prohodí se; pustit se dá kdekoliv.
+   *
+   * Přerovnává se jen v rámci jedné řady (lidé zvlášť, skupiny zvlášť), takže
+   * se tažením nedá udělat guláš z toho, co jsme právě rozdělili.
+   */
+  async function ulozPoradi(seznam: ChatConversation[]) {
+    const ids = seznam.map((c) => c.id);
+    ids.forEach((id, index) => zapisCerstve(id, { poradi: index }));
+    setConversations((current) =>
+      current.map((c) => {
+        const index = ids.indexOf(c.id);
+        return index === -1 ? c : { ...c, poradi: index };
+      }),
+    );
+    try {
+      const res: Response = await fetch('/api/chat/konverzace/poradi', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error(`Server odmítl pořadí (${res.status}).`);
+    } catch (err) {
+      ids.forEach((id) => cerstvaPrepnuti.current.delete(id));
+      setError('Nové pořadí se nepodařilo uložit.');
+      console.error('Pořadí zkratek selhalo:', err);
+      void nactiKonverzace();
+    }
+  }
+
+  function zacniTahat(e: React.PointerEvent<HTMLButtonElement>, rada: ChatConversation[], id: string) {
+    // Jen levym tlacitkem / prstem a jen kdyz je v rade co prohazovat.
+    if (e.button !== 0 || rada.length < 2) return;
+    const radek = e.currentTarget.parentElement;
+    if (!radek) return;
+
+    const start = { x: e.clientX, y: e.clientY };
+    let poradi = rada.map((c) => c.id);
+    let tahnuto = false;
+
+    const pohyb = (ev: PointerEvent) => {
+      if (!tahnuto && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 6) return;
+      if (!tahnuto) {
+        tahnuto = true;
+        setTazena(id);
+      }
+      // Kde je prst? Najdeme ikonu, nad kterou je, a tam taženou přesuneme.
+      const ikony = [...radek.querySelectorAll('[data-pripnuta]')] as HTMLElement[];
+      const nad = ikony.find((el) => {
+        const r = el.getBoundingClientRect();
+        return ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top - 12 && ev.clientY <= r.bottom + 12;
+      });
+      const cil = nad?.dataset.pripnuta;
+      if (!cil || cil === id) return;
+      const odkud = poradi.indexOf(id);
+      const kam = poradi.indexOf(cil);
+      if (odkud === -1 || kam === -1) return;
+      const nove = [...poradi];
+      nove.splice(odkud, 1);
+      nove.splice(kam, 0, id);
+      poradi = nove;
+      setPoradiPriTazeni(nove);
+    };
+
+    const konec = () => {
+      window.removeEventListener('pointermove', pohyb);
+      window.removeEventListener('pointerup', konec);
+      window.removeEventListener('pointercancel', konec);
+      setTazena(null);
+      setPoradiPriTazeni(null);
+      if (!tahnuto) return;
+      // Klik po tažení nechceme - jinak by se konverzace ještě otevřela.
+      window.addEventListener('click', (ev) => ev.stopPropagation(), { capture: true, once: true });
+      const podleId = new Map(rada.map((c) => [c.id, c]));
+      void ulozPoradi(poradi.map((x) => podleId.get(x)).filter(Boolean) as ChatConversation[]);
+    };
+
+    window.addEventListener('pointermove', pohyb);
+    window.addEventListener('pointerup', konec);
+    window.addEventListener('pointercancel', konec);
+  }
+
   async function prepniPripnuti(conversationId: string, pripnuto: boolean) {
     zapisCerstve(conversationId, { pripnuto });
     setConversations((current) =>
@@ -1711,28 +1880,17 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 by se jen zdvojily. */}
             {pripnute.length > 0 && (
               <div className="sm:hidden flex-1 min-w-0 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {pripnute.map((c) => (
-                  <button
+                {radaPriTazeni(pripnute).map((c) => (
+                  <PripnutaVolba
                     key={c.id}
-                    type="button"
-                    onClick={() => setOpenId(c.id)}
-                    title={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label}
-                    aria-label={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label}
-                    className={`relative shrink-0 rounded-full ${
-                      c.id === openId ? 'ring-2 ring-brand-green ring-offset-2 ring-offset-brand-purple' : ''
-                    }`}
-                  >
-                    <Avatar
-                      label={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label}
-                      photoUrl={c.avatarUrl}
-                      size={28}
-                    />
-                    {c.unread > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-brand-green text-onAccent text-[9px] font-heading font-bold leading-[15px] text-center">
-                        {c.unread}
-                      </span>
-                    )}
-                  </button>
+                    konverzace={c}
+                    aktivni={c.id === openId}
+                    onOtevri={() => setOpenId(c.id)}
+                    onZacniTahat={(e) => zacniTahat(e, radaPriTazeni(pripnute), c.id)}
+                    taha={tazena === c.id}
+                    velikost={28}
+                    vListe
+                  />
                 ))}
               </div>
             )}
@@ -1771,34 +1929,44 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 po ruce, i kdyz je clovek zrovna v projektech. */}
             {pripnute.length > 0 && (
               <div
-                className={`px-2 pt-2 pb-2 border-b border-line items-center gap-1.5 flex-wrap ${
+                className={`px-2 pt-2 pb-2 border-b border-line flex-col gap-1.5 ${
                   // Na samostatne strance je na telefonu maji ve fialove liste,
                   // tady by se zdvojily; v doku zadna takova lista neni.
                   naStrance ? 'hidden sm:flex' : 'flex'
                 }`}
               >
-                {pripnute.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setOpenId(c.id)}
-                    title={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label}
-                    className={`relative shrink-0 rounded-full transition-transform hover:scale-105 ${
-                      c.id === openId ? 'ring-2 ring-brand-purple' : ''
-                    }`}
-                  >
-                    <Avatar
-                      label={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label}
-                      photoUrl={c.avatarUrl}
-                      size={30}
-                    />
-                    {c.unread > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-brand-green text-onAccent text-[9px] font-heading font-bold leading-[16px] text-center">
-                        {c.unread}
-                      </span>
-                    )}
-                  </button>
-                ))}
+                {/* DVE RADY (zadani 12. 9. 2026: „na jednom radku budou
+                    soukrome zpravy a pod tim skupiny"). Tvare lidi a znacky
+                    skupin se v jedne rade pletly - takhle oko vi, kam sahnout.
+                    Prazdna rada se nekresli, at po ni nezustane mezera. */}
+                {pripnuteSoukrome.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {radaPriTazeni(pripnuteSoukrome).map((c) => (
+                      <PripnutaVolba
+                        key={c.id}
+                        konverzace={c}
+                        aktivni={c.id === openId}
+                        onOtevri={() => setOpenId(c.id)}
+                        onZacniTahat={(e) => zacniTahat(e, radaPriTazeni(pripnuteSoukrome), c.id)}
+                        taha={tazena === c.id}
+                      />
+                    ))}
+                  </div>
+                )}
+                {pripnuteSkupiny.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {radaPriTazeni(pripnuteSkupiny).map((c) => (
+                      <PripnutaVolba
+                        key={c.id}
+                        konverzace={c}
+                        aktivni={c.id === openId}
+                        onOtevri={() => setOpenId(c.id)}
+                        onZacniTahat={(e) => zacniTahat(e, radaPriTazeni(pripnuteSkupiny), c.id)}
+                        taha={tazena === c.id}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

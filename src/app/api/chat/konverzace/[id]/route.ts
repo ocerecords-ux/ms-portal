@@ -30,7 +30,7 @@ const schema = z.object({
 async function mojeSkupina(conversationId: string, userId: string) {
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
-    select: { id: true, kind: true, members: { select: { userId: true } } },
+    select: { id: true, kind: true, vsichni: true, members: { select: { userId: true } } },
   });
   if (!conversation || conversation.kind !== 'SKUPINA') return null;
   if (!conversation.members.some((m) => m.userId === userId)) return null;
@@ -59,6 +59,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     if (userIds) {
+      // SKUPINA PRO CELY TYM SE NEOSAZUJE RUCNE (zadani 12. 9. 2026: „kde
+      // budou vzdy pridani vsichni"). Kdyby z ni sel nekoho vyhodit, pri
+      // pristim otevreni chatu by se stejne vratil - lepsi to rict rovnou.
+      if (skupina.vsichni) {
+        return NextResponse.json(
+          { error: 'Do téhle skupiny patří celý tým, členy v ní měnit nejde.' },
+          { status: 400 },
+        );
+      }
       // Sam sebe ze skupiny takhle nevyhodim - na odchod je DELETE. Jinak by
       // staci preklik a clovek by se ze skupiny vyradil bez varovani.
       const povoleni = await prisma.user.findMany({
@@ -108,6 +117,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   try {
     const skupina = await mojeSkupina(params.id, me);
     if (!skupina) return NextResponse.json({ error: 'Skupina nenalezena.' }, { status: 404 });
+
+    if (skupina.vsichni) {
+      return NextResponse.json(
+        { error: 'Z téhle skupiny odejít nejde — je v ní celý tým. Můžete si ji ztlumit.' },
+        { status: 400 },
+      );
+    }
 
     if (skupina.members.length <= 1) {
       await prisma.conversation.delete({ where: { id: skupina.id } });

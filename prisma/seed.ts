@@ -171,6 +171,7 @@ async function main() {
 
   await backfillCodes();
   await prenesHerceDoSeznamu();
+  await skupinaProCelyTym();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -403,4 +404,55 @@ async function prenesHerceDoSeznamu() {
   if (projekty.length > 0) {
     console.log(`  herci přeneseni do seznamu: ${projekty.length} projektů`);
   }
+}
+
+
+/**
+ * SKUPINA, VE KTERÉ JE CELÝ TÝM (zadání 12. 9. 2026: „a ještě nějakou skupinu
+ * Mediaspace All, kde budou vždy přidáni všichni, i když se přidá uživatel
+ * později").
+ *
+ * Existující skupinu se stejným smyslem převezmeme, ať se nezaloží druhá a
+ * historie nezůstane v té staré — hledá se podle názvu. Členství se pak
+ * dorovnává tady při každém nasazení a navíc při každém otevření chatu
+ * (viz lib/chatServer.ts), takže nový člověk ji má hned, aniž by ho tam
+ * musel někdo dávat.
+ *
+ * Roboti v ní nejsou: Bruno má do rozhovorů vstupovat na zavolání, ne
+ * poslouchat všechno.
+ */
+async function skupinaProCelyTym() {
+  const NAZEV = 'Mediaspace All';
+  const STARE_NAZVY = [NAZEV, 'All MediaSpace', 'All Mediaspace', 'Mediaspace all'];
+
+  const tym = await prisma.user.findMany({
+    where: { active: true, role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] } },
+    select: { id: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  if (tym.length === 0) return;
+
+  let skupina = await prisma.conversation.findFirst({ where: { vsichni: true }, select: { id: true } });
+  if (!skupina) {
+    const stara = await prisma.conversation.findFirst({
+      where: { kind: 'SKUPINA', name: { in: STARE_NAZVY } },
+      select: { id: true },
+    });
+    skupina = stara
+      ? await prisma.conversation.update({
+          where: { id: stara.id },
+          data: { vsichni: true, name: NAZEV },
+          select: { id: true },
+        })
+      : await prisma.conversation.create({
+          data: { kind: 'SKUPINA', name: NAZEV, vsichni: true, createdById: tym[0].id },
+          select: { id: true },
+        });
+  }
+
+  const { count } = await prisma.conversationMember.createMany({
+    data: tym.map((u) => ({ conversationId: skupina!.id, userId: u.id })),
+    skipDuplicates: true,
+  });
+  if (count > 0) console.log(`  skupina „${NAZEV}": doplneno clenu ${count}`);
 }

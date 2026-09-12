@@ -770,6 +770,12 @@ model Conversation {
   /// jen uz kanal neni v seznamu.
   uzavrenoAt     DateTime?
 
+  /// Skupina, do ktere patri cely tym (zadani 12. 9. 2026: „a jeste nejakou
+  /// skupinu Mediaspace All, kde budou vzdy pridani vsichni, i kdyz se prida
+  /// uzivatel pozdeji"). Clenstvi se u ni nespravuje rucne - kdo je v tymu,
+  /// ten je v ni, a doplni se sam pri prvnim otevreni chatu.
+  vsichni        Boolean          @default(false)
+
   createdById     String
   createdBy       User             @relation("ConversationCreatedBy", fields: [createdById], references: [id])
   createdAt       DateTime         @default(now())
@@ -802,6 +808,11 @@ model ConversationMember {
   /// Pripnuty rozhovor - drzi se nahore jako rychla volba (zadani 12. 9.
   /// 2026). Patri CLOVEKU, ne rozhovoru: kazdy si nahoru da to svoje.
   pripnuto       Boolean      @default(false)
+
+  /// Poradi mezi pripnutymi, kdyz si ho clovek prerovnal pretazenim (zadani
+  /// 12. 9. 2026). Prazdno znamena "jeste nikdy nerovnal" - takove jdou az za
+  /// serazene, od nejcerstvejsi zpravy.
+  poradiPripnuti Int?
 
   @@unique([conversationId, userId])
   @@index([userId])

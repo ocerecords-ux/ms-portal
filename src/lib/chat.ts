@@ -97,6 +97,11 @@ export type ChatConversation = {
   ztlumeno?: boolean;
   /** Pripnuty rozhovor - drzi se nahore jako rychla volba (12. 9. 2026). */
   pripnuto?: boolean;
+  /**
+   * Poradi mezi pripnutymi, kdyz si ho clovek prerovnal pretazenim
+   * (12. 9. 2026). Prazdno = nerovnal, radi se podle posledni zpravy.
+   */
+  poradi?: number | null;
 };
 
 /**

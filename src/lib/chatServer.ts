@@ -29,7 +29,9 @@ export function canUseChat(role: Role): boolean {
 export async function loadConversations(userId: string): Promise<ChatConversation[]> {
   const conversations = await prisma.conversation.findMany({
     where: {
-      OR: [{ kind: 'PROJEKT' }, { members: { some: { userId } } }],
+      // Skupina „Mediaspace All" je videt kazdemu z tymu, i kdyz v ni radek
+      // clenstvi jeste nema - zalozi se nize (zadani 12. 9. 2026).
+      OR: [{ kind: 'PROJEKT' }, { vsichni: true }, { members: { some: { userId } } }],
       // Uzavrene kanaly dotazu (projekt skoncil) uz v seznamu nestraši -
       // historie zustava v databazi (zadani 11. 9. 2026).
       uzavrenoAt: null,
@@ -41,6 +43,22 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
     },
   });
   if (conversations.length === 0) return [];
+
+  // SKUPINA PRO CELY TYM (zadani 12. 9. 2026: „kde budou vzdy pridani vsichni,
+  // i kdyz se prida uzivatel pozdeji"). Kdo v ni jeste neni, ten se pridá
+  // ted - je to jediny zapis a jen jednou za zivot uctu; jindy se nedeje nic.
+  const chybejiciClenstvi = conversations
+    .filter((c) => c.vsichni && !c.members.some((m) => m.userId === userId))
+    .map((c) => c.id);
+  if (chybejiciClenstvi.length > 0) {
+    await prisma.conversationMember.createMany({
+      data: chybejiciClenstvi.map((conversationId) => ({ conversationId, userId })),
+      skipDuplicates: true,
+    });
+    // Radek clenstvi ted uz existuje; do teto odpovedi ho nedoplnujeme, at se
+    // nemichaji data z databaze s domyslenymi. Vychozi hodnoty (neztlumeno,
+    // nepripnuto) plati stejne a pri pristim nacteni prijde radek skutecny.
+  }
 
   // Neprectene spocitame jednim dotazem pres vsechny konverzace najednou.
   const meMembers = new Map<string, Date>(
@@ -108,6 +126,8 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
       // Pripnute rozhovory drzi chat nahore jako rychle volby (zadani
       // 12. 9. 2026).
       pripnuto: c.members.find((m) => m.userId === userId)?.pripnuto ?? false,
+      // Vlastni poradi mezi pripnutymi (zadani 12. 9. 2026).
+      poradi: c.members.find((m) => m.userId === userId)?.poradiPripnuti ?? null,
     };
   });
 }
