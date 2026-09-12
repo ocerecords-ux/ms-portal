@@ -140,7 +140,15 @@ function PripnutaVolba({
     >
       <Avatar label={popisek} photoUrl={konverzace.avatarUrl} size={velikost} />
       {konverzace.unread > 0 && (
-        <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-brand-green text-onAccent text-[9px] font-heading font-bold leading-[16px] text-center">
+        /* Číslo roste s ikonou — na velké zkratce v liště vypadala patnáctka
+           jako smítko a nedala se přečíst. */
+        <span
+          className={`absolute -top-1 -right-1 rounded-full bg-brand-green text-onAccent font-heading font-bold text-center ${
+            velikost >= 36
+              ? 'min-w-[19px] h-[19px] px-1 text-[11px] leading-[19px]'
+              : 'min-w-[16px] h-[16px] px-1 text-[9px] leading-[16px]'
+          }`}
+        >
           {konverzace.unread}
         </span>
       )}
@@ -2133,8 +2141,13 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         )}
         {/* V doku jsou v hlavicce zalozky Ukoly / MS chat (zadani 10. 9.
             2026), na samostatne strance /chat neni mezi cim prepinat. */}
+        {/* LISTA SE PROTAHNE PODLE ZKRATEK (zadani 12. 9. 2026: „ty zkratky na
+            konverzace jsou na mobilu strasne male. Trosku bych je zvetsil. Tim
+            padem se musi protahnout i ta fialova lista nahore"). Vyska neni
+            zadana, ridi se obsahem - vetsi kolecka si ji protahnou sama; na
+            sirokem okne, kde zkratky v liste nejsou, zustava lista nizka. */}
         {naStrance ? (
-          <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center gap-3">
+          <div className="bg-brand-purple text-brand-green px-4 py-3 sm:py-2.5 flex items-center gap-3">
             <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0 shrink-0">MS chat</h2>
             {/* RYCHLE VOLBY V LISTE (zadani 12. 9. 2026: „a tady v mobilu bych
                 ty zkratky na konverzace dal nahoru do te fialove listy. Aby to
@@ -2146,7 +2159,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 okne zustavaji v levem sloupci, kde je porad vidno, a v liste
                 by se jen zdvojily. */}
             {pripnute.length > 0 && (
-              <div className="sm:hidden flex-1 min-w-0 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="sm:hidden flex-1 min-w-0 flex items-center gap-2.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5">
                 {radaPriTazeni(pripnute).map((c) => (
                   <PripnutaVolba
                     key={c.id}
@@ -2155,7 +2168,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     onOtevri={() => setOpenId(c.id)}
                     onZacniTahat={(e) => zacniTahat(e, radaPriTazeni(pripnute), c.id)}
                     taha={tazena === c.id}
-                    velikost={28}
+                    velikost={40}
                     vListe
                   />
                 ))}
