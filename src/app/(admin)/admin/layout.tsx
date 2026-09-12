@@ -6,6 +6,7 @@ import { TaskDock } from '@/app/(portal)/components/TaskDock';
 import { QuickDock } from '@/app/(portal)/components/QuickDock';
 import { ChatDock } from '@/app/(portal)/components/ChatDock';
 import { PoutkoDoku } from '@/app/(portal)/components/PoutkoDoku';
+import { NeprecteneVedleDoku } from '@/app/(portal)/components/NeprecteneVedleDoku';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { loadQuickActions } from '@/lib/quickActionsServer';
@@ -47,6 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <ChatDock />
       {/* Poutko na prave hrane - vykresluje ho layout, viz PoutkoDoku.tsx. */}
       <PoutkoDoku />
+      <NeprecteneVedleDoku />
     </div>
   );
 }

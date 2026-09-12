@@ -99,6 +99,71 @@ export function usePoctyDoku(): PoctyDoku {
   return pocty;
 }
 
+// --- Nepřečtené rozhovory vedle poutka ------------------------------------
+//
+// Zadání 12. 9. 2026: „chtěl bych v chatu ještě nastavit, aby se tady nalevo
+// od toho panelu objevily ty uživatele nebo skupiny jako notifikace a můžu na
+// ně kliknout a prokliknout se rovnou na danou konverzaci. Pak to samozřejmě
+// zmizí, až se prokliknu. Kolečka bych asi řadil pod sebou."
+//
+// Číslo u poutka říkalo jen KOLIK zpráv čeká, ne OD KOHO — a otevřít je
+// znamenalo rozbalit panel a hledat v seznamu. Tváře vedle poutka odpovídají
+// na obojí a jsou zároveň zkratkou dovnitř.
+//
+// Data posílá ChatDock, který je stejně načítá i zabalený. Ležela by tu jinak
+// druhá kopie stejného dotazu.
+
+export type NeprectenaKonverzace = {
+  id: string;
+  label: string;
+  avatarUrl: string | null;
+  unread: number;
+  kind: string;
+};
+
+const UDALOST_NEPRECTENE = 'ms-portal-neprectene-rozhovory';
+const UDALOST_OTEVRI = 'ms-portal-otevri-rozhovor';
+
+let posledniNeprectene: NeprectenaKonverzace[] = [];
+
+export function oznamNeprectene(seznam: NeprectenaKonverzace[]) {
+  const stejne =
+    posledniNeprectene.length === seznam.length &&
+    posledniNeprectene.every((c, i) => c.id === seznam[i].id && c.unread === seznam[i].unread);
+  if (stejne) return;
+  posledniNeprectene = seznam;
+  window.dispatchEvent(new CustomEvent<NeprectenaKonverzace[]>(UDALOST_NEPRECTENE, { detail: seznam }));
+}
+
+export function useNeprectene(): NeprectenaKonverzace[] {
+  const [seznam, setSeznam] = useState<NeprectenaKonverzace[]>([]);
+
+  useEffect(() => {
+    setSeznam(posledniNeprectene);
+    const posluchac = (e: Event) => setSeznam((e as CustomEvent<NeprectenaKonverzace[]>).detail ?? []);
+    window.addEventListener(UDALOST_NEPRECTENE, posluchac);
+    return () => window.removeEventListener(UDALOST_NEPRECTENE, posluchac);
+  }, []);
+
+  return seznam;
+}
+
+/** Otevře panel a v něm rovnou tenhle rozhovor. */
+export function otevriRozhovor(id: string) {
+  window.dispatchEvent(new CustomEvent<string>(UDALOST_OTEVRI, { detail: id }));
+}
+
+export function usePosluchacOtevreni(onOtevri: (id: string) => void) {
+  useEffect(() => {
+    const posluchac = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (id) onOtevri(id);
+    };
+    window.addEventListener(UDALOST_OTEVRI, posluchac);
+    return () => window.removeEventListener(UDALOST_OTEVRI, posluchac);
+  }, [onOtevri]);
+}
+
 /**
  * Běží portál jako nainstalovaná aplikace? V ní MS chat není - má vlastní
  * aplikaci (zadání 9. 9. 2026) - takže se v panelu nenabízí a poutko na hraně

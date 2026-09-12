@@ -33,7 +33,8 @@ import {
 } from '@/lib/chatPrilohy';
 import { WaveformPlayer } from './WaveformPlayer';
 import { UpozorneniChatu } from './UpozorneniChatu';
-import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
+import { Avatar } from './Avatar';
+import { oznamNeprectene, oznamPocetDoku, usePoctyDoku, usePosluchacOtevreni, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
 
 /**
@@ -69,32 +70,6 @@ type ProjectOption = { id: string; label: string; name: string };
  * ukladaji primo do databaze jako data: URL). Bez teto pojistky by na miste
  * fotky zustalo prazdne kolecko - takhle se aspon ukazou iniciály.
  */
-function Avatar({ label, photoUrl, size = 28 }: { label: string; photoUrl: string | null; size?: number }) {
-  const [selhalo, setSelhalo] = useState(false);
-
-  if (photoUrl && !selhalo) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return (
-      <img
-        src={photoUrl}
-        alt=""
-        onError={() => setSelhalo(true)}
-        style={{ width: size, height: size }}
-        className="rounded-full object-cover shrink-0 border border-line bg-field"
-      />
-    );
-  }
-  return (
-    <span
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
-      className="rounded-full shrink-0 bg-brand-purple/15 text-brand-purpleDark font-heading font-bold flex items-center justify-center"
-      aria-hidden="true"
-    >
-      {initials(label)}
-    </span>
-  );
-}
-
 /**
  * "Zobrazeno" u vlastni zpravy (zadani 8. 9. 2026). Bere se z toho, kdy mel
  * kdo konverzaci naposledy otevrenou - stejny udaj, ze ktereho se pocitaji
@@ -1414,6 +1389,34 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   useEffect(() => {
     oznamPocetDoku('chat', neprectene);
   }, [neprectene]);
+
+  /**
+   * Tváře nepřečtených rozhovorů u pravé hrany (zadání 12. 9. 2026). Data má
+   * tahle komponenta stejně načtená i zabalená, takže je jen pošle dál —
+   * druhý dotaz na totéž by byl zbytečný.
+   */
+  const proHranu = conversations
+    .filter((c) => c.unread > 0)
+    .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
+    .map((c) => ({ id: c.id, label: c.label, avatarUrl: c.avatarUrl, unread: c.unread, kind: c.kind }));
+  const otiskProHranu = proHranu.map((c) => `${c.id}:${c.unread}`).join('|');
+  useEffect(() => {
+    oznamNeprectene(proHranu);
+    // Otisk staci - pole se tvori znovu pri kazdem vykresleni.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otiskProHranu]);
+
+  // Klepnuti na tvar u hrany otevre panel rovnou v tom rozhovoru.
+  usePosluchacOtevreni(
+    useCallback(
+      (id: string) => {
+        setOpenId(id);
+        setVlaknoId(null);
+        otevriDok('chat');
+      },
+      [otevriDok],
+    ),
+  );
 
   const vZalozce = conversations.filter((c) => c.kind === tab);
   const otevrena = conversations.find((c) => c.id === openId) ?? null;

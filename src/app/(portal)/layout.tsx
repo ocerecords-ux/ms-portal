@@ -7,6 +7,7 @@ import { TaskDock } from './components/TaskDock';
 import { QuickDock } from './components/QuickDock';
 import { ChatDock } from './components/ChatDock';
 import { PoutkoDoku } from './components/PoutkoDoku';
+import { NeprecteneVedleDoku } from './components/NeprecteneVedleDoku';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { countUnread } from '@/lib/notifications';
@@ -98,6 +99,8 @@ export default async function PortalLayout({ children }: { children: React.React
       {/* Poutko na prave hrane, kterym se panel otevira. Vykresluje ho layout,
           ne nektery z panelu - oprava 11. 9. 2026, viz PoutkoDoku.tsx. */}
       {internal && <PoutkoDoku />}
+      {/* Tvare neprectenych rozhovoru nalevo od poutka (zadani 12. 9. 2026). */}
+      {internal && <NeprecteneVedleDoku />}
     </div>
   );
 }
