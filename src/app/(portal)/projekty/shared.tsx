@@ -48,9 +48,16 @@ export function ProjectsTable({
   emptyText,
   rodneListy,
   dotazy,
+  preposlech,
 }: {
   projects: DisplayProject[];
   emptyText: string;
+  /**
+   * Stav přeposlechu podle ID projektu (zadání 12. 9. 2026). Když se prop
+   * nepředá, sloupce se nevykreslí — u dokončených projektů nemá smysl
+   * ukazovat, kolik zbývá doposlechnout.
+   */
+  preposlech?: Record<string, { stop: number; poslechnuto: number; hotovo: boolean }>;
   /**
    * Tlačítko „Zeptat se" u každého projektu (zadání 11. 9. 2026). Zapíná se
    * jen v klientské sekci a jen u klientů audioknih; u dokončených projektů
@@ -66,6 +73,7 @@ export function ProjectsTable({
 }) {
   const showRodnyList = rodneListy !== undefined;
   const showDotazy = dotazy === true;
+  const showPreposlech = preposlech !== undefined;
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       {/* Stejne jako u interniho prehledu: procentni sirky, jeden radek na
@@ -80,6 +88,7 @@ export function ProjectsTable({
               'pageCountSirsi',
               'endDate',
               'releaseDate',
+              ...(showPreposlech ? ['kPreposlechu', 'preposlechnuto'] : []),
               ...(showRodnyList ? ['rodnyList'] : []),
               ...(showDotazy ? ['dotaz'] : []),
             ]).map((sirka, i) => (
@@ -94,6 +103,10 @@ export function ProjectsTable({
               <th className="text-right px-4 py-3.5">Normostrany</th>
               <th className="text-left px-4 py-3.5">Dokončení</th>
               <th className="text-left px-4 py-3.5">Vydání</th>
+              {/* Dva sloupce k přeposlechu (zadání 12. 9. 2026): jestli už je
+                  co poslouchat, a jak daleko poslech došel. */}
+              {showPreposlech && <th className="text-left px-4 py-3.5">K přeposlechu</th>}
+              {showPreposlech && <th className="text-left px-4 py-3.5">Přeposlechnuto</th>}
               {showRodnyList && <th className="text-left px-4 py-3.5">Rodný list</th>}
               {/* Doleva jako vsechny ostatni sloupce - vpravo u samotneho
                   okraje pusobilo tlacitko odtrzene od zbytku tabulky
@@ -104,7 +117,10 @@ export function ProjectsTable({
           <tbody>
             {projects.length === 0 && (
               <tr>
-                <td colSpan={6 + (showRodnyList ? 1 : 0) + (showDotazy ? 1 : 0)} className="px-4 py-8 text-center text-muted text-sm font-body">
+                <td
+                  colSpan={6 + (showPreposlech ? 2 : 0) + (showRodnyList ? 1 : 0) + (showDotazy ? 1 : 0)}
+                  className="px-4 py-8 text-center text-muted text-sm font-body"
+                >
                   {emptyText}
                 </td>
               </tr>
@@ -147,6 +163,8 @@ export function ProjectsTable({
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
                 </td>
+                {showPreposlech && <BunkaKPreposlechu stav={preposlech?.[String(p.id)]} />}
+                {showPreposlech && <BunkaPreposlechnuto stav={preposlech?.[String(p.id)]} />}
                 {showRodnyList && (
                   <td className="px-4 py-0 text-sm font-heading whitespace-nowrap">
                     {rodneListy?.[String(p.id)] ? (
@@ -597,6 +615,10 @@ const VAHA_SLOUPCE: Record<string, number> = {
    */
   rodnyList: 10,
   dotaz: 11,
+  /** Fajfka nebo krizek - uzky sloupec staci (zadani 12. 9. 2026). */
+  kPreposlechu: 9,
+  /** „3 z 24" nebo „Dokonceno". */
+  preposlechnuto: 11,
   /**
    * V klientskem a adminskem prehledu se sloupec jmenuje „Normostrany" -
    * jedno dlouhe slovo, ktere se neda zalomit. V internim prehledu ma
@@ -790,6 +812,72 @@ function SortableHeader({
  * i serverovy, takze v nem nesmi byt stav (useState). Rozbity obrazek by
  * prohlizec ukazal jako prazdne kolecko, coz je prijatelne.
  */
+/**
+ * „K PŘEPOSLECHU" (zadání 12. 9. 2026: „bude tam buď zelená fajfka nebo
+ * červený křížek, podle toho, jestli se už přidal první záznam
+ * v AudioTaggeru").
+ *
+ * Fajfka znamená, že v AudioTaggeru jsou nahrávky — tedy je co poslouchat.
+ * Počet stop se bere z posledního otevření AudioTaggeru, ne z Disku: padesát
+ * projektů by jinak znamenalo padesát dotazů do Google API při každém
+ * otevření přehledu.
+ */
+function BunkaKPreposlechu({ stav }: { stav?: { stop: number } }) {
+  const pripraveno = (stav?.stop ?? 0) > 0;
+  return (
+    <td className="px-4 py-0 whitespace-nowrap">
+      <span
+        title={pripraveno ? `Nahrávky jsou nachystané (${stav?.stop})` : 'Nahrávky zatím nejsou'}
+        className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${
+          pripraveno ? 'bg-brand-green/15 text-status-done' : 'bg-dangerTint text-danger'
+        }`}
+      >
+        {pripraveno ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden="true">
+            <path d="M5 13l4.5 4.5L19 7" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="w-3.5 h-3.5" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        )}
+        <span className="sr-only">{pripraveno ? 'Připraveno k přeposlechu' : 'Zatím není co poslouchat'}</span>
+      </span>
+    </td>
+  );
+}
+
+/**
+ * „PŘEPOSLECHNUTO" (zadání 12. 9. 2026: „tam bude počet tracků a kolik je
+ * z nich přeposlechnuto, třeba 3 z 24. A když se přeposlech dokončí,
+ * rozsvítí se tam Dokončeno").
+ *
+ * Stopa se počítá, až když ji někdo doposlechl do konce — viz
+ * /api/projekty/[id]/preposlech/stopa.
+ */
+function BunkaPreposlechnuto({ stav }: { stav?: { stop: number; poslechnuto: number; hotovo: boolean } }) {
+  if (stav?.hotovo) {
+    return (
+      <td className="px-4 py-0 whitespace-nowrap">
+        <span className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-3 py-1 rounded-pill bg-brand-green text-onAccent">
+          Dokončeno
+        </span>
+      </td>
+    );
+  }
+  if (!stav || stav.stop === 0) {
+    return <td className="px-4 py-0 text-sm font-heading text-muted whitespace-nowrap">—</td>;
+  }
+  return (
+    <td className="px-4 py-0 text-sm font-heading text-muted whitespace-nowrap">
+      <span className="tabular-nums">
+        <span className={stav.poslechnuto > 0 ? 'text-ink font-semibold' : ''}>{stav.poslechnuto}</span> z{' '}
+        {stav.stop}
+      </span>
+    </td>
+  );
+}
+
 function AvatarManazera({ jmeno, photoUrl }: { jmeno: string; photoUrl: string | null }) {
   if (photoUrl) {
     // eslint-disable-next-line @next/next/no-img-element

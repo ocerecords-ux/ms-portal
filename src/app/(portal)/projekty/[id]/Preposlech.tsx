@@ -348,6 +348,37 @@ export function Preposlech({
     [token],
   );
 
+  /**
+   * DOPOSLECHNUTÁ STOPA SE ZAPÍŠE SAMA (zadání 12. 9. 2026: „Přeposlechnuto —
+   * tam bude počet tracků a kolik je z nich přeposlechnuto, třeba 3 z 24").
+   *
+   * Odškrtávátko u každé stopy by byla práce navíc a lidé na ni zapomínají;
+   * číslo, které nikdo neudržuje, je horší než žádné. Proto se počítá to, co
+   * se dá poznat samo: přehrávání dojelo na konec.
+   *
+   * Jednou za život stopy stačí — ref hlídá, aby se to neposílalo při každém
+   * dalším dohrání.
+   */
+  const poslaneStopy = useRef<Set<number>>(new Set());
+
+  const nahlasDoposlechnuto = useCallback(
+    (index: number) => {
+      const stopa = stopyRef.current[index];
+      if (!stopa || poslaneStopy.current.has(index)) return;
+      poslaneStopy.current.add(index);
+      void fetch(sKlicem(`${zaklad}/stopa`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackIndex: index + 1, trackName: stopa.name }),
+      }).catch((err) => {
+        // Nepovedlo se - zkusi se zase pri pristim dohrani.
+        poslaneStopy.current.delete(index);
+        console.error('Zapis doposlechnute stopy selhal:', err);
+      });
+    },
+    [sKlicem, zaklad],
+  );
+
   /* ---------- křivka ---------- */
 
   const kresliStopu = useCallback(
@@ -1372,7 +1403,11 @@ export function Preposlech({
         onTimeUpdate={(e) => setPozice(e.currentTarget.currentTime)}
         onPlay={() => setHraje(true)}
         onPause={() => setHraje(false)}
-        onEnded={() => setHraje(false)}
+        onEnded={() => {
+          setHraje(false);
+          // Dojelo to na konec - stopa je poslechnuta (zadani 12. 9. 2026).
+          if (aktivniRef.current !== null) nahlasDoposlechnuto(aktivniRef.current);
+        }}
         onError={() => setChybaHlaska('Stopu se nepodařilo načíst z Disku.')}
         className="hidden"
       />

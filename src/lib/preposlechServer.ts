@@ -24,6 +24,58 @@ export type PreposlechStavData = {
   }[];
 };
 
+/**
+ * Přehled přeposlechu pro SEZNAM projektů (zadání 12. 9. 2026: sloupce
+ * „K přeposlechu" a „Přeposlechnuto" v klientské sekci).
+ *
+ * Dva dotazy na celý seznam, ne dva na každý projekt — a nikdy se nesahá na
+ * Disk: počet stop je uložený z posledního otevření AudioTaggeru, jinak by
+ * padesát projektů znamenalo padesát dotazů do Google API při každém otevření
+ * přehledu.
+ */
+export type PreposlechPrehled = {
+  /** Kolik stop je v AudioTaggeru nachystaných; 0 = zatím není co poslouchat. */
+  stop: number;
+  /** Kolik z nich už někdo doposlechl do konce. */
+  poslechnuto: number;
+  /** Klient klepl na PŘEPOSLECHNUTO. */
+  hotovo: boolean;
+};
+
+export async function nactiPreposlechPrehled(
+  caflouProjectIds: string[],
+): Promise<Map<string, PreposlechPrehled>> {
+  const prehled = new Map<string, PreposlechPrehled>();
+  if (caflouProjectIds.length === 0) return prehled;
+
+  try {
+    const [stavy, poslechnute] = await Promise.all([
+      prisma.preposlechStav.findMany({
+        where: { caflouProjectId: { in: caflouProjectIds } },
+        select: { caflouProjectId: true, reviewed: true, pocetStop: true },
+      }),
+      prisma.preposlechStopa.groupBy({
+        by: ['caflouProjectId'],
+        where: { caflouProjectId: { in: caflouProjectIds } },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const pocty = new Map(poslechnute.map((p): [string, number] => [p.caflouProjectId, p._count._all]));
+    for (const stav of stavy) {
+      prehled.set(stav.caflouProjectId, {
+        stop: stav.pocetStop,
+        poslechnuto: pocty.get(stav.caflouProjectId) ?? 0,
+        hotovo: stav.reviewed,
+      });
+    }
+  } catch (err) {
+    // Prehled projektu se kvuli preposlechu nesmi rozbit - sloupce zustanou prazdne.
+    console.error('Nacteni prehledu preposlechu selhalo:', err);
+  }
+  return prehled;
+}
+
 export async function nactiPreposlech(caflouProjectId: string): Promise<PreposlechStavData> {
   try {
     const [chyby, stav] = await Promise.all([

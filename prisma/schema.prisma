@@ -1800,7 +1800,35 @@ model PreposlechStav {
   reviewed        Boolean   @default(false)
   reviewedAt      DateTime?
   reviewedByName  String?
+
+  /// Kolik stop ma AudioTagger u projektu k dispozici (zadani 12. 9. 2026:
+  /// sloupec „K preposlechu" u klienta). Zapisuje se pri kazdem nacteni stop
+  /// - slozka na Disku je zdroj pravdy, tohle je jen jeji posledni znama
+  /// podoba. Do seznamu projektu se nesaha na Disk: u padesati projektu by to
+  /// znamenalo padesat dotazu do Google API pri kazdem otevreni prehledu.
+  pocetStop       Int       @default(0)
+  stopyZjistenyAt DateTime?
+
   updatedAt       DateTime  @updatedAt
+}
+
+/// Jedna preposlechnuta stopa (zadani 12. 9. 2026: „Preposlechnuto - tam bude
+/// pocet tracku a kolik je z nich preposlechnuto, treba 3 z 24").
+///
+/// Zapise se SAMA, kdyz prehravani dojede na konec stopy - klient nic
+/// neodskrtava. Stopa se pozna poradim, stejne jako u zaznamu chyb, a nese
+/// i svuj nazev, aby byl radek citelny i bez nactenych stop.
+model PreposlechStopa {
+  id              String   @id @default(cuid())
+  caflouProjectId String
+  trackIndex      Int
+  trackName       String
+  poslechnutoAt   DateTime @default(now())
+  /// Kdo dojel na konec - u tokenu „Klient", jinak jmeno z uctu.
+  kdo             String?
+
+  @@unique([caflouProjectId, trackIndex])
+  @@index([caflouProjectId])
 }
 
 /// Odkaz na celoobrazovkovy preposlech pro klienta (zadani 11. 9. 2026:

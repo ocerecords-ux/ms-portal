@@ -12,6 +12,7 @@ import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadColumnSettings } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
+import { nactiPreposlechPrehled } from '@/lib/preposlechServer';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 import { odkazNaFotku } from '@/lib/fotky';
 
@@ -113,6 +114,11 @@ export default async function ProjektyPage() {
   );
   const rodneListy = rodneListyMapa.size > 0 ? Object.fromEntries(rodneListyMapa) : undefined;
 
+  // Stav preposlechu do dvou novych sloupcu (zadani 12. 9. 2026). Jen
+  // u rozpracovanych projektu - u dokoncenych uz nema co ukazovat.
+  const preposlechMapa = await nactiPreposlechPrehled(active.map((p) => String(p.id)));
+  const preposlech = Object.fromEntries(preposlechMapa);
+
   return (
     <section className="flex flex-col gap-8">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
@@ -131,6 +137,7 @@ export default async function ProjektyPage() {
           emptyText="Aktuálně tu nemáte žádný rozpracovaný projekt. Vidíte jen zakázky, u kterých jste vedení jako kontaktní osoba — kdyby vám nějaká chyběla, dejte nám vědět."
           rodneListy={rodneListy}
           dotazy={company?.dealsAudiobooks === true}
+          preposlech={preposlech}
         />
       </div>
 
