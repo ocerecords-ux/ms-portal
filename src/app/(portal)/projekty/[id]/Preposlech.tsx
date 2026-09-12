@@ -227,6 +227,13 @@ export function Preposlech({
   /** Odškrtnutí PŘEPOSLECHNUTO se ptá - je to krok zpátky ve velké věci. */
   const [rusiPreposlech, setRusiPreposlech] = useState(false);
   /**
+   * Ptame se pred oznacenim (zadani 12. 9. 2026: „u volby Oznacit jako
+   * preposlechnute dat dotaz Opravdu oznacit? At je tam nejaka pojistka,
+   * kdyz se nekdo splete"). Odskrtnuti uz svuj dotaz melo - ted se pta
+   * i zaskrtnuti, protoze prave to je ta velka akce.
+   */
+  const [potvrzujePreposlech, setPotvrzujePreposlech] = useState(false);
+  /**
    * Rychlost přehrávání (zadání 11. 9. 2026: „přidej do audiotaggeru
    * přepínání rychlé přehrávání"). Prohlížeč ji při výměně souboru zahodí,
    * proto se po každém výběru stopy nastaví znovu.
@@ -1370,10 +1377,31 @@ export function Preposlech({
                   </button>
                 )}
               </span>
+            ) : potvrzujePreposlech ? (
+              <span className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-body text-white/85">Opravdu označit jako přeposlechnuté?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPotvrzujePreposlech(false);
+                    void prepniPreposlechnuto();
+                  }}
+                  className="flex items-center gap-2 bg-brand-green text-onAccent font-heading font-bold text-sm rounded-lg px-4 py-2 shadow-sm"
+                >
+                  Ano, přeposlechnuto
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPotvrzujePreposlech(false)}
+                  className="font-heading text-xs text-white/70 hover:text-white"
+                >
+                  Ne
+                </button>
+              </span>
             ) : (
               <button
                 type="button"
-                onClick={() => void prepniPreposlechnuto()}
+                onClick={() => setPotvrzujePreposlech(true)}
                 className="flex items-center gap-2 bg-white text-brand-purpleDeep font-heading font-bold text-sm rounded-lg px-5 py-2.5 shadow-sm hover:bg-brand-green hover:text-onAccent transition-colors"
               >
                 <span className="grid place-items-center w-5 h-5 rounded border-2 border-current" aria-hidden="true" />
