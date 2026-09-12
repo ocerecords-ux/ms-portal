@@ -45,6 +45,16 @@ export function jeBrunoNastaveny(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
+/**
+ * Co Bruno se zpravou udelal. Vraci se volajicimu, aby slo z prohlizece
+ * poznat, PROC nic nenapsal - jinak je jeho mlceni nerozeznatelne od poruchy
+ * (12. 9. 2026: „Bruno nekomunikuje").
+ */
+export type VysledekBruna = {
+  stav: 'vypnuto' | 'preskoceno' | 'nic' | 'zapsano' | 'odpovedel' | 'chyba';
+  duvod?: string;
+};
+
 type Rozhodnuti = {
   akce: 'zapis' | 'dotaz' | 'nic';
   strana: number | null;
@@ -184,9 +194,16 @@ ${k.oslovenPrimo ? '\nV POSLEDNÍ ZPRÁVĚ TĚ NĚKDO OSLOVIL JMÉNEM — odpov�
 Posuď POSLEDNÍ zprávu a odpověz JSONem.`;
 }
 
+/** Posledni potiz s modelem - do odpovedi volajicimu, ne do zpravy v chatu. */
+let posledniPotiz: string | null = null;
+
 async function zeptejSeModelu(dotaz: string): Promise<Rozhodnuti | null> {
   const klic = process.env.ANTHROPIC_API_KEY;
-  if (!klic) return null;
+  if (!klic) {
+    posledniPotiz = 'chybí ANTHROPIC_API_KEY';
+    return null;
+  }
+  posledniPotiz = null;
 
   const odpoved = await fetch(ADRESA, {
     method: 'POST',
@@ -204,13 +221,19 @@ async function zeptejSeModelu(dotaz: string): Promise<Rozhodnuti | null> {
   });
 
   if (!odpoved.ok) {
-    console.error('Bruno: API odpovědělo', odpoved.status);
+    // Telo chyby je od API, ne od uzivatele - da se bezpecne ukazat a je
+    // v nem napsane, co presne vadi (spatny model, vycerpany kredit...).
+    const proc = await odpoved.text().catch(() => '');
+    posledniPotiz = `API ${odpoved.status}: ${proc.slice(0, 300)}`;
+    console.error('Bruno: API odpovědělo', odpoved.status, proc.slice(0, 300));
     return null;
   }
 
   const telo = (await odpoved.json()) as { content?: { type: string; text?: string }[] };
   const napsal = telo.content?.find((c) => c.type === 'text')?.text ?? '';
-  return naRozhodnuti(vyzobniJson(napsal));
+  const rozhodnuti = naRozhodnuti(vyzobniJson(napsal));
+  if (!rozhodnuti) posledniPotiz = `odpověď nešla přečíst: ${napsal.slice(0, 200)}`;
+  return rozhodnuti;
 }
 
 /** Najde Brunův účet; když ještě není, Bruno nepíše (ale zapisovat umí). */
@@ -223,9 +246,9 @@ async function brunoUcet() {
  *
  * Volá se PO uložení zprávy a nikdy nevyhazuje.
  */
-export async function brunoZpracujZpravu(messageId: string): Promise<void> {
+export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBruna> {
   try {
-    if (!jeBrunoNastaveny()) return;
+    if (!jeBrunoNastaveny()) return { stav: 'vypnuto', duvod: 'chybí ANTHROPIC_API_KEY' };
 
     const zprava = await prisma.message.findUnique({
       where: { id: messageId },
@@ -238,12 +261,13 @@ export async function brunoZpracujZpravu(messageId: string): Promise<void> {
         conversation: { select: { kind: true, caflouProjectId: true, name: true } },
       },
     });
-    if (!zprava?.conversation) return;
-    if (!zprava.body?.trim()) return;
+    if (!zprava?.conversation) return { stav: 'preskoceno', duvod: 'zpráva se nenašla' };
+    if (!zprava.body?.trim()) return { stav: 'preskoceno', duvod: 'prázdná zpráva' };
 
     const bruno = await brunoUcet();
+    if (!bruno) return { stav: 'chyba', duvod: 'Bruno nemá účet (bruno@mediaspace.cz)' };
     // Na vlastní zprávu nereaguje - jinak by si odpovídal donekonečna.
-    if (bruno && zprava.userId === bruno.id) return;
+    if (zprava.userId === bruno.id) return { stav: 'preskoceno', duvod: 'vlastní zpráva' };
 
     /**
      * KDY SE BRUNO VŮBEC ROZMÝŠLÍ (zadání 12. 9. 2026: „umím si představit,
@@ -256,7 +280,9 @@ export async function brunoZpracujZpravu(messageId: string): Promise<void> {
     const oslovenPrimo = jeZminen(zprava.body, 'Bruno', BRUNO_EMAIL);
     const caflouProjectId =
       zprava.conversation.kind === 'PROJEKT' ? zprava.conversation.caflouProjectId : null;
-    if (!caflouProjectId && !oslovenPrimo) return;
+    if (!caflouProjectId && !oslovenPrimo) {
+      return { stav: 'preskoceno', duvod: 'není kanál projektu a nikdo mě neoslovil' };
+    }
 
     const [meta, natoceno, poznamky, historie] = await Promise.all([
       caflouProjectId
@@ -293,7 +319,7 @@ export async function brunoZpracujZpravu(messageId: string): Promise<void> {
         },
       }),
     ]);
-    if (caflouProjectId && !meta) return;
+    if (caflouProjectId && !meta) return { stav: 'preskoceno', duvod: 'projekt není v portálu' };
 
     // Hlavni herec prvni, at model cte seznam ve stejnem poradi jako clovek.
     const herci = meta
@@ -324,7 +350,7 @@ export async function brunoZpracujZpravu(messageId: string): Promise<void> {
     };
 
     const rozhodnuti = await zeptejSeModelu(sestavDotaz(kontext));
-    if (!rozhodnuti) return;
+    if (!rozhodnuti) return { stav: 'chyba', duvod: posledniPotiz ?? 'model neodpověděl' };
 
     if (rozhodnuti.poznamka) {
       await prisma.brunoPamet
@@ -383,8 +409,14 @@ export async function brunoZpracujZpravu(messageId: string): Promise<void> {
         )
         .catch((err) => console.error('Bruno: zprávu se nepodařilo odeslat:', err));
     }
+
+    if (rozhodnuti.zprava) return { stav: 'odpovedel', duvod: rozhodnuti.zprava };
+    if (rozhodnuti.akce === 'zapis') return { stav: 'zapsano' };
+    return { stav: 'nic', duvod: 'model neviděl důvod se ozvat' };
   } catch (err) {
-    console.error('Bruno spadl:', err instanceof Error ? err.message : 'neznámá chyba');
+    const hlaska = err instanceof Error ? err.message : 'neznámá chyba';
+    console.error('Bruno spadl:', hlaska);
+    return { stav: 'chyba', duvod: hlaska };
   }
 }
 

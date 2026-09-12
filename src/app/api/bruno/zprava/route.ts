@@ -27,11 +27,11 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id || !canUseChat(session.user.role)) {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   }
-  if (!jeBrunoNastaveny()) return NextResponse.json({ bruno: 'vypnuto' });
+  if (!jeBrunoNastaveny()) return NextResponse.json({ stav: 'vypnuto' });
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
 
-  await brunoZpracujZpravu(parsed.data.messageId);
-  return NextResponse.json({ bruno: 'hotovo' });
+  // Vysledek se vraci zamerne: kdyz Bruno mlci, ma jit poznat proc.
+  return NextResponse.json(await brunoZpracujZpravu(parsed.data.messageId));
 }
