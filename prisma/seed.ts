@@ -172,6 +172,7 @@ async function main() {
   await backfillCodes();
   await prenesHerceDoSeznamu();
   await skupinaProCelyTym();
+  await doplnIkonyTypu();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -455,4 +456,36 @@ async function skupinaProCelyTym() {
     skipDuplicates: true,
   });
   if (count > 0) console.log(`  skupina „${NAZEV}": doplneno clenu ${count}`);
+}
+
+
+/**
+ * IKONY U TYPŮ PROJEKTU (zadání 12. 9. 2026: „pojďme ještě vytvořit další
+ * ikony pro typy projektu").
+ *
+ * Doplňuje se JEN TAM, KDE ŽÁDNÁ IKONA NENÍ — co si tým vybral v Cenících, se
+ * nepřepisuje. Je to jednorázová laskavost při nasazení, ne hádání: nová
+ * položka ceníku dostane ikonu ručně, tady se řeší jen ty, které tu byly
+ * dřív, než ikony vůbec existovaly.
+ */
+async function doplnIkonyTypu() {
+  const PODLE_NAZVU: { hledej: RegExp; ikona: string }[] = [
+    { hledej: /voiceover.*(mix|mix[áa]ž)/i, ikona: 'mikrofon-mix' },
+    { hledej: /audiokni|audiokní/i, ikona: 'kniha-mikrofon' },
+    { hledej: /r[áa]diov/i, ikona: 'radio' },
+    { hledej: /voiceover/i, ikona: 'mikrofon' },
+  ];
+
+  const polozky = await prisma.priceListItem.findMany({
+    where: { OR: [{ ikona: null }, { ikona: '' }] },
+    select: { id: true, name: true },
+  });
+  let doplneno = 0;
+  for (const polozka of polozky) {
+    const trefa = PODLE_NAZVU.find((v) => v.hledej.test(polozka.name));
+    if (!trefa) continue;
+    await prisma.priceListItem.update({ where: { id: polozka.id }, data: { ikona: trefa.ikona } });
+    doplneno += 1;
+  }
+  if (doplneno > 0) console.log(`  ikony typu projektu doplneny u ${doplneno} polozek ceniku`);
 }

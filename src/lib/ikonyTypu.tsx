@@ -33,6 +33,55 @@ export const IKONY_TYPU: Ikona[] = [
     ),
   },
   {
+    // Zadani 12. 9. 2026: „pro audioknihu bych udelal knihu ve spojeni
+    // s mikrofonem". Kniha drzi levou polovinu, mikrofon stoji vpravo - dva
+    // tvary vedle sebe se v 17 px prectou lip nez jeden slozity.
+    klic: 'kniha-mikrofon',
+    popisek: 'Audiokniha (kniha a mikrofon)',
+    kresba: (
+      <>
+        <path d="M2.5 6A2.5 2.5 0 0 1 5 3.5h5v13H5a2.5 2.5 0 0 0-2.5 2.5z" />
+        <path d="M2.5 19A2.5 2.5 0 0 0 5 21.5h5" />
+        <rect x="14.75" y="2.5" width="5.5" height="9" rx="2.75" />
+        <path d="M12.5 10a5 5 0 0 0 10 0" />
+        <path d="M17.5 15v4" />
+      </>
+    ),
+  },
+  {
+    // Zadani 12. 9. 2026: „pro radiovy spot bych jeste vytvoril ikonku
+    // radia". Prijimac s antenou, ladicim kolečkem a stupnici.
+    klic: 'radio',
+    popisek: 'Rádio (rádiový spot)',
+    kresba: (
+      <>
+        <path d="M17.5 2.5 9 6.5" />
+        <rect x="2.5" y="6.5" width="19" height="14.5" rx="2.5" />
+        <circle cx="16" cy="13.75" r="3.25" />
+        <path d="M6 11h5" />
+        <path d="M6 15h3" />
+      </>
+    ),
+  },
+  {
+    // Zadani 12. 9. 2026: „Natáčení voiceoveru + zvukový mix - tam bych udelal
+    // ikonu mikrofon + mixazni pult". Pult jsou dva fadery s cepickou; tri uz
+    // by se v te velikosti slily.
+    klic: 'mikrofon-mix',
+    popisek: 'Mikrofon a mixážní pult',
+    kresba: (
+      <>
+        <rect x="3.5" y="2.5" width="5" height="8" rx="2.5" />
+        <path d="M1.5 9.5a4.5 4.5 0 0 0 9 0" />
+        <path d="M6 14v3" />
+        <path d="M14.5 4.5v15" />
+        <path d="M19.5 4.5v15" />
+        <path d="M12.75 9.5h3.5" />
+        <path d="M17.75 14.5h3.5" />
+      </>
+    ),
+  },
+  {
     klic: 'sluchatka',
     popisek: 'Sluchátka',
     kresba: (
