@@ -1261,12 +1261,55 @@ model Expense {
   caflouProjectId String?
   projectName     String?
 
+  // ODKUD DOKLAD PRISEL (zadani 12. 9. 2026: faktury chodi na
+  // uctarna@mediaspace.cz, maji se v portalu objevit jako nezarazene).
+  // Doklad ze schranky ceka na ucetni: ta ho prekontroluje, doplni kategorii
+  // a teprve tim se zaradi mezi vydaje. Do souctu a do zalozek Uhrazene /
+  // Neuhrazene se proto pocitaji jen ZARAZENY doklady.
+  stav  StavDokladu @default(ZARAZENY)
+  zdroj String? // "MAIL" u dokladu ze schranky, jinak prazdne (zadano rucne)
+
+  // Klic proti dvojimu zalozeni: id zpravy a poradi prilohy v ni. Schranka se
+  // cte opakovane a zprava se z ni nemaze.
+  mailKlic      String?   @unique
+  mailOd        String?
+  mailPredmet   String?
+  mailPrijatoAt DateTime?
+
+  // Co se z prilohy podarilo vycist (vcetne jistoty), aby sla ucetni ukazat
+  // i ta pole, ktera uz mezitim prepsala.
+  navrhJson String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([paid])
   @@index([categoryId])
   @@index([caflouProjectId])
+  @@index([stav])
+}
+
+/// Doklad ze schranky ceka na prekontrolovani, rucne zadany uz je zarazeny.
+enum StavDokladu {
+  NEZARAZENY
+  ZARAZENY
+}
+
+/// Kam az je precteny postovni ucet s doklady. Jediny radek (id "posta").
+model PostaStav {
+  id String @id @default("posta")
+
+  // Posledni precteny UID zpravy. IMAP UID v ramci slozky jen roste, takze
+  // staci pamatovat si nejvyssi zpracovany - nic se necte dvakrat a nic se
+  // ve schrance nemusi mazat ani oznacovat.
+  posledniUid Int @default(0)
+
+  posledniKontrolaAt DateTime?
+  posledniChyba      String?
+  nactenoCelkem      Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 

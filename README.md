@@ -64,6 +64,36 @@ Pro pokročilejší přímý zásah do databáze (výjimečně) lze použít i `
 - `S3_*` — úložiště příloh (AWS S3 nebo Cloudflare R2 — R2 má zdarma tarif).
 - `SMTP_*` — pro odesílání objednávek na `objednavky@mediaspace.cz`.
 - `CAFLOU_API_BASE_URL` / `CAFLOU_API_KEY` — z vašeho Caflou účtu (Nastavení → API).
+- `IMAP_*` — schránka s doklady, viz níže.
+
+## Schránka s doklady (Výdaje → Nezařazené)
+
+Faktury herců, za nájem i od dodavatelů chodí na `uctarna@mediaspace.cz`. Portál
+se do schránky přihlásí přes IMAP, vytáhne přílohy (PDF a fotky) a z každé udělá
+výdaj ve stavu **Nezařazený**. Účetní ho v záložce Nezařazené překontroluje,
+doplní kategorii a tlačítkem **Zařadit mezi výdaje** pustí dál. Do součtů a do
+záložek Uhrazené / Neuhrazené se počítají jen zařazené doklady.
+
+| Proměnná | K čemu |
+|---|---|
+| `IMAP_HOST` | server schránky, třeba `imap.forpsi.com` |
+| `IMAP_PORT` | obvykle `993` (výchozí); `143` znamená nešifrované spojení |
+| `IMAP_USER` | přihlašovací jméno, obvykle celá adresa |
+| `IMAP_PASSWORD` | heslo ke schránce |
+| `IMAP_FOLDER` | složka, výchozí `INBOX` |
+
+Doporučený postup: **založit zvlášť schránku nebo složku jen pro doklady** (třeba
+`doklady@mediaspace.cz`) a do ní nechat z účtárny přeposílat. Portál pak nemusí
+mít přístup k celé poště účtárny a nemíchá se mu do dokladů běžná komunikace.
+
+Ze schránky se **nic nemaže ani neoznačuje jako přečtené** — portál si jen pamatuje
+nejvyšší přečtené UID zprávy (`PostaStav`). Poprvé se bere jen posledních 14 dnů,
+aby se do Výdajů nevysypala celá historie. Schránka se kontroluje vždy při otevření
+stránky Výdaje a tlačítkem **Zkontrolovat poštu**; plánovaná úloha zatím není.
+
+Údaje z přílohy (dodavatel, částka, DPH, datum, číslo dokladu) vyčítá stejný model
+jako u fotek účtenek (`ANTHROPIC_API_KEY`). Jsou to **návrhy** — u dokladu je vidět,
+s jakou jistotou se četlo, a účetní je před zařazením překontroluje.
 
 ## Kde to běží
 

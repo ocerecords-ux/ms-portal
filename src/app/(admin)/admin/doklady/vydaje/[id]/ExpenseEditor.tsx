@@ -33,7 +33,67 @@ type Expense = {
   note: string;
   caflouProjectId: string;
   projectName: string | null;
+  // Doklad ze schranky (zadani 12. 9. 2026) - nez ho ucetni zaradi, visi
+  // v zalozce Nezarazene a nepocita se do souctu.
+  stav: 'NEZARAZENY' | 'ZARAZENY';
+  mailOd: string | null;
+  mailPredmet: string | null;
+  mailPrijatoAt: string | null;
+  navrhJson: string | null;
 };
+
+/** Co model z prilohy vycetl - zajima nas jistota a pripadna chyba. */
+type Navrh = { jistota?: number | null; chyba?: string | null };
+
+function prectiNavrh(json: string | null): Navrh | null {
+  if (!json) return null;
+  try {
+    const data = JSON.parse(json) as Navrh;
+    return data && typeof data === 'object' ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pás nad dokladem, který přišel e-mailem.
+ *
+ * Účetní musí na první pohled vidět dvě věci: odkud doklad je (aby poznala
+ * fakturu herce od faktury za nájem ještě před otevřením přílohy) a nakolik
+ * se dá věřit vyplněným číslům. Vyčtené údaje jsou návrh, ne pravda —
+ * u naskenované faktury se model může seknout v číslici a v účetnictví by to
+ * nadělalo víc škody než ruční přepsání.
+ */
+function PasZeSchranky({ expense }: { expense: Expense }) {
+  const navrh = prectiNavrh(expense.navrhJson);
+  const jistota = typeof navrh?.jistota === 'number' ? Math.round(navrh.jistota * 100) : null;
+
+  const stavCteni = navrh?.chyba
+    ? `Údaje se nepodařilo vyčíst (${navrh.chyba}) — vyplňte je prosím ručně.`
+    : navrh
+      ? `Údaje vyčetl portál z přílohy${jistota !== null ? ` (jistota ${jistota} %)` : ''} — překontrolujte je.`
+      : 'Údaje se z přílohy ještě nečetly. Zkuste za chvíli obnovit stránku.';
+
+  return (
+    <div className="bg-tint border border-brand-purple/40 rounded-card px-5 py-4 flex flex-col gap-1">
+      <span className="text-xs font-heading font-semibold uppercase tracking-wide text-brand-purpleDark">
+        Doklad z e-mailu · čeká na zařazení
+      </span>
+      {expense.mailOd && (
+        <span className="text-sm font-body text-ink">
+          Od: <span className="font-heading">{expense.mailOd}</span>
+        </span>
+      )}
+      {expense.mailPredmet && (
+        <span className="text-sm font-body text-muted">Předmět: {expense.mailPredmet}</span>
+      )}
+      {expense.mailPrijatoAt && (
+        <span className="text-xs font-body text-muted">Přišlo {formatDateTime(expense.mailPrijatoAt)}</span>
+      )}
+      <span className={`text-xs font-body mt-1 ${navrh?.chyba ? 'text-danger' : 'text-muted'}`}>{stavCteni}</span>
+    </div>
+  );
+}
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '';
@@ -74,6 +134,7 @@ export function ExpenseEditor({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const nezarazeny = expense.stav === 'NEZARAZENY';
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -113,6 +174,53 @@ export function ExpenseEditor({
       router.refresh();
     } catch {
       setError('Uložení se nezdařilo.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /**
+   * Zařazení dokladu ze schránky mezi výdaje (zadání 12. 9. 2026).
+   *
+   * Uloží se to, co je zrovna ve formuláři, a teprve pak se doklad přepne -
+   * jinak by se mezi výdaji objevil s nepřekontrolovanými čísly. Kategorii
+   * chceme mít vyplněnou: zařadit doklad bez ní znamená mít ho pak
+   * v přehledech všude a nikde.
+   */
+  async function zarad() {
+    if (!form.categoryId) {
+      setError('Vyberte kategorii — podle ní se doklad zařadí do přehledů.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/expenses/${expense.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          number: form.number,
+          supplierCompanyId: form.supplierCompanyId || null,
+          supplierName: form.supplierName,
+          categoryId: form.categoryId,
+          caflouProjectId: form.caflouProjectId || null,
+          description: form.description,
+          amountExVatMinor: amountMinor,
+          vatRate: form.vatRate,
+          dueDate: form.dueDate || null,
+          note: form.note,
+          stav: 'ZARAZENY',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Zařazení se nezdařilo.');
+        return;
+      }
+      router.push('/admin/doklady/vydaje?tab=nezarazene');
+      router.refresh();
+    } catch {
+      setError('Zařazení se nezdařilo.');
     } finally {
       setSaving(false);
     }
@@ -164,6 +272,7 @@ export function ExpenseEditor({
 
   return (
     <div className="flex flex-col gap-5">
+      {nezarazeny && <PasZeSchranky expense={expense} />}
       <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="font-display text-2xl text-ink">{expense.supplierLabel}</span>
@@ -172,7 +281,7 @@ export function ExpenseEditor({
               expense.paid ? 'bg-okTint text-status-done' : 'bg-tint text-brand-purpleDark'
             }`}
           >
-            {expense.paid ? 'Uhrazeno' : 'Neuhrazeno'}
+            {nezarazeny ? 'Nezařazeno' : expense.paid ? 'Uhrazeno' : 'Neuhrazeno'}
           </span>
           {/* Cim se platilo (zadani 10. 9. 2026) - u uctenky z benzinky je to
               to hlavni, proc uz je oznacena jako uhrazena. */}
@@ -185,6 +294,16 @@ export function ExpenseEditor({
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {nezarazeny && (
+            <button
+              type="button"
+              onClick={zarad}
+              disabled={saving}
+              className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+            >
+              Zařadit mezi výdaje
+            </button>
+          )}
           <button
             type="button"
             onClick={togglePaid}

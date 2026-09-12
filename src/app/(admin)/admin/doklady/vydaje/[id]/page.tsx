@@ -51,6 +51,11 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
           note: expense.note ?? '',
           caflouProjectId: expense.caflouProjectId ?? '',
           projectName: expense.projectName,
+          stav: expense.stav,
+          mailOd: expense.mailOd,
+          mailPredmet: expense.mailPredmet,
+          mailPrijatoAt: expense.mailPrijatoAt ? expense.mailPrijatoAt.toISOString() : null,
+          navrhJson: expense.navrhJson,
         }}
         categories={categories.map((c) => ({ id: c.id, name: c.name }))}
         companies={companies}

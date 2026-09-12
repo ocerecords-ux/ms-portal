@@ -6,6 +6,8 @@ import { NewExpenseForm } from './NewExpenseForm';
 import { CategoryManager } from './CategoryManager';
 import { VydajeTabulka, type VydajRadek } from './VydajeTabulka';
 import { listProjectOptions } from '@/lib/projectOptions';
+import { nactiStavPosty } from '@/lib/postaServer';
+import { PostaTlacitko } from './PostaTlacitko';
 
 // Prijate doklady (zadani 6. 9. 2026). Zalozky Uhrazeno / Neuhrazeno stejne
 // jako Aktivni / Dokoncene u projektu, nahore soucty.
@@ -13,9 +15,13 @@ export const dynamic = 'force-dynamic';
 
 // Zalozka "Vse" tu byla navic (zadani 8. 9. 2026) - uhrazene a neuhrazene
 // pokryvaji vsechno.
+// Zalozka "Nezarazene" pribyla 12. 9. 2026 s doklady ze schranky: co prijde
+// mailem, ceka tady na prekontrolovani a teprve zarazenim se dostane mezi
+// ostatni vydaje (a do souctu).
 const TABS = [
-  { key: 'neuhrazene', label: 'Neuhrazené', paid: false },
-  { key: 'uhrazene', label: 'Uhrazené', paid: true },
+  { key: 'nezarazene', label: 'Nezařazené', where: { stav: 'NEZARAZENY' as const } },
+  { key: 'neuhrazene', label: 'Neuhrazené', where: { stav: 'ZARAZENY' as const, paid: false } },
+  { key: 'uhrazene', label: 'Uhrazené', where: { stav: 'ZARAZENY' as const, paid: true } },
 ] as const;
 
 function formatDate(date: Date | null): string {
@@ -29,13 +35,14 @@ export default async function ExpensesPage({
 }) {
   await ensureExpenseCategories();
 
-  const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[0];
+  // Vychozi zustavaji Neuhrazene - je to to, co ucetni resi nejcasteji.
+  const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[1];
   const categoryFilter = searchParams?.kategorie || '';
 
-  const [expenses, categories, issuers, counts] = await Promise.all([
+  const [expenses, categories, issuers, pocty, posta] = await Promise.all([
     prisma.expense.findMany({
       where: {
-        paid: activeTab.paid,
+        ...activeTab.where,
         ...(categoryFilter ? { categoryId: categoryFilter } : {}),
       },
       orderBy: [{ issueDate: 'desc' }, { createdAt: 'desc' }],
@@ -51,12 +58,18 @@ export default async function ExpensesPage({
       orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
       select: { id: true, name: true, isDefault: true, defaultCurrency: true },
     }),
-    prisma.expense.groupBy({ by: ['paid'], _count: true }),
+    Promise.all([
+      prisma.expense.count({ where: { stav: 'NEZARAZENY' } }),
+      prisma.expense.count({ where: { stav: 'ZARAZENY', paid: false } }),
+      prisma.expense.count({ where: { stav: 'ZARAZENY', paid: true } }),
+    ]),
+    nactiStavPosty(),
   ]);
 
   const projects = await listProjectOptions();
 
-  const countFor = (paid: boolean) => counts.find((c) => c.paid === paid)?._count ?? 0;
+  const countFor = (key: (typeof TABS)[number]['key']) =>
+    key === 'nezarazene' ? pocty[0] : key === 'neuhrazene' ? pocty[1] : pocty[2];
 
   // Soucty za to, co je zrovna videt - po menach, at se nescitaji jablka s hruskami.
   const totals = new Map<string, { exVat: number; incVat: number }>();
@@ -80,6 +93,9 @@ export default async function ExpensesPage({
       e.supplier?.name || e.supplierName,
       e.number ? `č. ${e.number}` : null,
       e.projectName,
+      // U dokladu ze schranky je odesilatel to hlavni voditko, nez se doklad
+      // precte - ucetni podle nej pozna, o co jde, i z nazvu "faktura.pdf".
+      e.stav === 'NEZARAZENY' && e.mailOd ? `z mailu · ${e.mailOd}` : null,
     ]
       .filter(Boolean)
       .join(' · ');
@@ -118,16 +134,24 @@ export default async function ExpensesPage({
                   active ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
                 }`}
               >
-                {tab.label} <span className="tabular-nums opacity-80">({countFor(tab.paid)})</span>
+                {tab.label} <span className="tabular-nums opacity-80">({countFor(tab.key)})</span>
               </Link>
             );
           })}
         </div>
-        <NewExpenseForm
-          categories={categories.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name }))}
-          issuers={issuers.map((i) => ({ id: i.id, name: i.name, isDefault: i.isDefault, currency: i.defaultCurrency }))}
-          projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <PostaTlacitko stav={posta} />
+          <NewExpenseForm
+            categories={categories.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name }))}
+            issuers={issuers.map((i) => ({
+              id: i.id,
+              name: i.name,
+              isDefault: i.isDefault,
+              currency: i.defaultCurrency,
+            }))}
+            projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
+          />
+        </div>
       </div>
 
       {/* Soucty za aktualni vyber */}

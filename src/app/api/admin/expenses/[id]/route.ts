@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { resolveProject } from '@/lib/projectOptions';
+import { getRateForCurrency } from '@/lib/cnb';
+import { CURRENCIES } from '@/lib/doklady';
 
 // Uprava a smazani prijateho dokladu. Prepinac uhrazeno/neuhrazeno jde taky
 // tudy - je to jen jedno pole navic.
@@ -18,6 +20,14 @@ const schema = z.object({
   dueDate: z.string().trim().nullable().optional(),
   paid: z.boolean().optional(),
   note: z.string().trim().max(2000).nullable().optional(),
+  // Doklad ze schranky (zadani 12. 9. 2026): ucetni ho prekontroluje a timhle
+  // ho zaradi mezi vydaje. Zaroven u nej jde opravit to, co se u rucne
+  // zadaneho dokladu menit nemuselo - datum, menu i zpusob uhrady vycetl
+  // z prilohy model a muze se seknout.
+  stav: z.enum(['NEZARAZENY', 'ZARAZENY']).optional(),
+  issueDate: z.string().trim().optional(),
+  currency: z.enum(CURRENCIES).optional(),
+  paymentMethod: z.enum(['CARD', 'CASH', 'TRANSFER']).optional(),
 });
 
 function toDate(value: string): Date | null {
@@ -64,6 +74,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.paid !== undefined) {
       data.paid = d.paid;
       data.paidAt = d.paid ? new Date() : null;
+    }
+
+    if (d.stav !== undefined) data.stav = d.stav;
+    if (d.paymentMethod !== undefined) data.paymentMethod = d.paymentMethod;
+
+    if (d.issueDate !== undefined) {
+      const date = toDate(d.issueDate);
+      if (!date) return NextResponse.json({ error: 'Neplatné datum dokladu.' }, { status: 400 });
+      data.issueDate = date;
+    }
+
+    // S menou se meni i kurz - jinak by u dokladu zustal kurz predchozi meny
+    // a prepocet do korun by lhal.
+    if (d.currency !== undefined) {
+      data.currency = d.currency;
+      const kDatu = (data.issueDate as Date | undefined) ?? new Date();
+      const kurz = await getRateForCurrency(d.currency, kDatu);
+      if (kurz) {
+        data.exchangeRate = kurz.rate;
+        data.exchangeRateDate = new Date(`${kurz.date}T00:00:00.000Z`);
+      }
     }
 
     await prisma.expense.update({ where: { id: params.id }, data });

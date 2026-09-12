@@ -210,23 +210,35 @@ export async function uploadExpenseAttachment(
   file: File,
 ): Promise<{ url: string; name: string } | { error: string } | null> {
   const buffer = Buffer.from(await file.arrayBuffer());
+  return uploadExpenseBuffer(buffer, file.name, file.type);
+}
+
+/**
+ * Totez, ale z hotovych bajtu - prilohu z e-mailu (zadani 12. 9. 2026) zadny
+ * File neprovazi, prijde rovnou jako Buffer z rozebrane zpravy.
+ */
+export async function uploadExpenseBuffer(
+  buffer: Buffer,
+  nazev: string,
+  typSouboru?: string,
+): Promise<{ url: string; name: string } | { error: string } | null> {
   const client = getClient();
   const bucket = process.env.S3_BUCKET;
 
   if (client && bucket) {
     try {
-      const key = `vydaje/${randomUUID()}-${file.name}`;
+      const key = `vydaje/${randomUUID()}-${bezpecnyNazev(nazev)}`;
       await client.send(
         new PutObjectCommand({
           Bucket: bucket,
           Key: key,
           Body: buffer,
-          ContentType: file.type || 'application/octet-stream',
+          ContentType: typSouboru || 'application/octet-stream',
         }),
       );
       const endpoint = process.env.S3_ENDPOINT;
       const url = endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
-      return { url, name: file.name };
+      return { url, name: nazev };
     } catch (err) {
       console.error('uploadExpenseAttachment: S3 selhalo, ukladam do databaze:', err);
     }
@@ -239,8 +251,8 @@ export async function uploadExpenseAttachment(
     };
   }
 
-  const mime = file.type || 'application/octet-stream';
-  return { url: `data:${mime};base64,${buffer.toString('base64')}`, name: file.name };
+  const mime = typSouboru || 'application/octet-stream';
+  return { url: `data:${mime};base64,${buffer.toString('base64')}`, name: nazev };
 }
 
 

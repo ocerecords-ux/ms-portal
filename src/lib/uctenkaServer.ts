@@ -31,8 +31,9 @@ export function jeCteniUctenekNastaveno(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
-const POKYN = `Jsi součástí účetního portálu. Z přiložené fotografie dokladu (účtenka, paragon, faktura)
-vyčti údaje a vrať JEDINÝ objekt JSON, nic jiného - žádný doprovodný text, žádné značky pro kód.
+const POKYN = `Jsi součástí účetního portálu. Z přiloženého dokladu (účtenka, paragon, faktura -
+fotka nebo PDF) vyčti údaje a vrať JEDINÝ objekt JSON, nic jiného - žádný doprovodný text,
+žádné značky pro kód.
 
 Objekt má přesně tyto klíče:
 {
@@ -53,7 +54,9 @@ Pravidla:
 - Doklady jsou české; desetinná čárka, mezery v tisících ignoruj ("1 234,50" -> "1234,50").
 - "Platba kartou", "PLATEBNÍ KARTA", "VISA", "Maestro" -> CARD. "Hotovost", "HOTOVĚ" -> CASH.
   Bankovní spojení a variabilní symbol na faktuře -> TRANSFER.
-- Když je fotka nečitelná, vrať samá null a jistota 0.`;
+- Když je doklad nečitelný, vrať samá null a jistota 0.
+- U faktury je "castkaSDph" částka k úhradě celkem a "castkaBezDph" základ daně.
+  Když je na faktuře víc sazeb DPH, dej sazbu s největším základem.`;
 
 type Odpoved = { content?: { type: string; text?: string }[] };
 
@@ -121,14 +124,42 @@ export type VysledekCteni =
   | { stav: 'chyba'; zprava: string };
 
 /**
- * Přečte doklad z obrázku.
+ * Doklad jako blok pro API. Fotka jde jako obrázek, faktura z mailu jako
+ * dokument - PDF se nedá poslat jako obrázek a překreslovat ho na stránky by
+ * znamenalo tahat do portálu vykreslovač.
+ */
+function blokDokladu(data: Buffer, typSouboru: string) {
+  const zaklad = data.toString('base64');
+  if (typSouboru === 'application/pdf') {
+    return {
+      type: 'document',
+      source: { type: 'base64', media_type: 'application/pdf', data: zaklad },
+    };
+  }
+  return { type: 'image', source: { type: 'base64', media_type: typSouboru, data: zaklad } };
+}
+
+/**
+ * Přečte doklad z obrázku nebo z PDF.
  *
  * Nikdy nevyhazuje - když čtení selže, formulář prostě zůstane prázdný
  * a člověk údaje opíše, jako to dělal dosud.
+ *
+ * `kontext` je to, co víme odjinud než z dokladu - u doklad ze schránky
+ * odesílatel a předmět zprávy. Občas je v mailu jméno dodavatele čitelnější
+ * než v hlavičce naskenované faktury.
  */
-export async function prectiUctenku(data: Buffer, typSouboru: string): Promise<VysledekCteni> {
+export async function prectiDoklad(
+  data: Buffer,
+  typSouboru: string,
+  kontext?: string | null,
+): Promise<VysledekCteni> {
   const klic = process.env.ANTHROPIC_API_KEY;
   if (!klic) return { stav: 'vypnuto' };
+
+  const pokyn = kontext
+    ? `${POKYN}\n\nDoklad přišel e-mailem. Hlavička zprávy (může, ale nemusí pomoct):\n${kontext}`
+    : POKYN;
 
   try {
     const odpoved = await fetch(ADRESA, {
@@ -140,13 +171,7 @@ export async function prectiUctenku(data: Buffer, typSouboru: string): Promise<V
         messages: [
           {
             role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: { type: 'base64', media_type: typSouboru, data: data.toString('base64') },
-              },
-              { type: 'text', text: POKYN },
-            ],
+            content: [blokDokladu(data, typSouboru), { type: 'text', text: pokyn }],
           },
         ],
       }),
@@ -165,4 +190,9 @@ export async function prectiUctenku(data: Buffer, typSouboru: string): Promise<V
     console.error('Čtení dokladu spadlo:', err instanceof Error ? err.message : 'neznámá chyba');
     return { stav: 'chyba', zprava: 'Doklad se nepodařilo přečíst.' };
   }
+}
+
+/** Starší název pro čtení vyfoceného dokladu - používá ho formulář Nový výdaj. */
+export function prectiUctenku(data: Buffer, typSouboru: string): Promise<VysledekCteni> {
+  return prectiDoklad(data, typSouboru);
 }
