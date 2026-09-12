@@ -2420,13 +2420,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     onOdsun={(odsunuto) => setOdsunutaId(odsunuto ? c.id : null)}
                   >
                     <Avatar label={c.label} photoUrl={c.avatarUrl} size={26} />
+                    {/* JEN NAZEV (zadani 12. 9. 2026: „tady v tech seznamech
+                        skupin bych dal pryc ty popisy. Je to zbytecne. Popisy
+                        se ukazou pak po kliknuti na skupinu az v tom okne
+                        nahore"). Vycet lidi se stejne skoro vzdycky usekl
+                        uprostred druheho jmena, takze z nej nic nebylo - kdo
+                        do skupiny vidi, rekne hlavicka otevreneho rozhovoru. */}
                     <span className="min-w-0 flex-1">
                       <span className="block font-heading text-sm text-ink truncate">{c.label}</span>
-                      {c.kind === 'SKUPINA' && c.memberLabels.length > 0 && (
-                        <span className="block text-[11px] font-body text-muted truncate">
-                          {c.memberLabels.join(', ')}
-                        </span>
-                      )}
                     </span>
                     {c.unread > 0 && (
                       <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
