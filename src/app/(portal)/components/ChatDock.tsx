@@ -152,6 +152,121 @@ function PripnutaVolba({
   );
 }
 
+/**
+ * Řádek konverzace, který jde odsunout doleva (zadání 12. 9. 2026: „ty
+ * konverzace bych mazal třeba přejetím doleva").
+ *
+ * ZA ŘÁDKEM SE ODKRYJE TLAČÍTKO, SAMO PŘEJETÍ NIC NEPROVEDE. Gesto je moc
+ * snadné na to, aby po něm rovnou něco mizelo — palec zavadí o seznam a
+ * skupina je pryč. Takhle je potřeba ještě klepnout, a než se to stane, je
+ * vidět co přesně se stane.
+ *
+ * Svislý tah necháváme seznamu (touch-action: pan-y), jinak by se s odsouvacím
+ * gestem praly a nešlo by rolovat.
+ */
+function RadekKonverzace({
+  konverzace,
+  aktivni,
+  onOtevri,
+  popisekAkce,
+  onAkce,
+  odsunuto,
+  onOdsun,
+  children,
+}: {
+  konverzace: ChatConversation;
+  aktivni: boolean;
+  onOtevri: () => void;
+  /** Co se stane po klepnutí na odkryté tlačítko. Bez popisku se neodsouvá. */
+  popisekAkce: string | null;
+  onAkce: () => void;
+  odsunuto: boolean;
+  onOdsun: (odsunuto: boolean) => void;
+  children: React.ReactNode;
+}) {
+  const SIRKA = 104;
+  const [posun, setPosun] = useState(0);
+  const zacatek = useRef<{ x: number; y: number; posun: number } | null>(null);
+
+  useEffect(() => {
+    if (!odsunuto) setPosun(0);
+  }, [odsunuto]);
+
+  const aktualni = zacatek.current ? posun : odsunuto ? -SIRKA : 0;
+
+  return (
+    <div className="relative overflow-hidden rounded-lg">
+      {popisekAkce && (
+        <button
+          type="button"
+          onClick={onAkce}
+          tabIndex={odsunuto ? 0 : -1}
+          aria-hidden={!odsunuto}
+          className="absolute inset-y-0 right-0 w-[104px] flex items-center justify-center bg-danger text-white text-xs font-heading font-semibold rounded-r-lg"
+        >
+          {popisekAkce}
+        </button>
+      )}
+      <div
+        onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => {
+          if (!popisekAkce || e.button !== 0) return;
+          zacatek.current = { x: e.clientX, y: e.clientY, posun: odsunuto ? -SIRKA : 0 };
+          setPosun(zacatek.current.posun);
+        }}
+        onPointerMove={(e: React.PointerEvent<HTMLDivElement>) => {
+          const z = zacatek.current;
+          if (!z) return;
+          const dx = e.clientX - z.x;
+          const dy = e.clientY - z.y;
+          // Svisly tah patri rolovani seznamu - gesto pustime.
+          if (Math.abs(dy) > Math.abs(dx) + 4) {
+            zacatek.current = null;
+            setPosun(odsunuto ? -SIRKA : 0);
+            return;
+          }
+          setPosun(Math.min(0, Math.max(-SIRKA - 24, z.posun + dx)));
+        }}
+        onPointerUp={() => {
+          const z = zacatek.current;
+          zacatek.current = null;
+          if (!z) return;
+          const otevrit = posun < -SIRKA / 2;
+          setPosun(otevrit ? -SIRKA : 0);
+          onOdsun(otevrit);
+        }}
+        onPointerCancel={() => {
+          zacatek.current = null;
+          setPosun(odsunuto ? -SIRKA : 0);
+        }}
+        onClick={() => {
+          // Odsunuty radek se prvnim klepnutim jen zavre - jinak by clovek
+          // misto zruseni gesta otevrel konverzaci.
+          if (odsunuto) {
+            onOdsun(false);
+            return;
+          }
+          if (Math.abs(posun) > 4) return;
+          onOtevri();
+        }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onOtevri();
+          }
+        }}
+        style={{ transform: `translateX(${aktualni}px)`, touchAction: 'pan-y' }}
+        className={`relative cursor-pointer text-left rounded-lg px-2.5 py-1.5 flex items-center gap-2 transition-colors ${
+          zacatek.current ? '' : 'duration-150 ease-out transition-transform'
+        } ${aktivni ? 'bg-tint' : 'bg-surface hover:bg-field'}`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function Zobrazeno({ seenBy }: { seenBy: string[] }) {
   if (seenBy.length === 0) {
     return <span className="text-[11px] font-body text-muted">Odesláno</span>;
@@ -1064,6 +1179,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     Map<string, { pripnuto?: boolean; ztlumeno?: boolean; poradi?: number; upozorneni?: ChatConversation['upozorneni'] }>
   >(new Map());
 
+  /** Který řádek seznamu je odsunutý doleva (12. 9. 2026). */
+  const [odsunutaId, setOdsunutaId] = useState<string | null>(null);
+
   /** Co se zrovna táhne a v jakém pořadí to při tažení vypadá (12. 9. 2026). */
   const [tazena, setTazena] = useState<string | null>(null);
   const [poradiPriTazeni, setPoradiPriTazeni] = useState<string[] | null>(null);
@@ -1733,6 +1851,38 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     }
   }
 
+  /**
+   * Uklidí rozhovor ze seznamu, nebo opustí skupinu (zadání 12. 9. 2026).
+   * Soukromá zpráva se jen schová a vrátí se s další zprávou; ze skupiny se
+   * odchází doopravdy, takže se tam ptáme.
+   */
+  async function odklidKonverzaci(c: ChatConversation) {
+    setOdsunutaId(null);
+    const jeSkupina = c.kind === 'SKUPINA';
+    if (jeSkupina && !window.confirm(`Opustit skupinu „${c.label}"? Zprávy v ní vám zmizí.`)) return;
+
+    // Zmizi hned, at gesto neceka na server.
+    setConversations((current) => current.filter((x) => x.id !== c.id));
+    if (openId === c.id) setOpenId(null);
+    try {
+      const res: Response = jeSkupina
+        ? await fetch(`/api/chat/konverzace/${encodeURIComponent(c.id)}`, { method: 'DELETE' })
+        : await fetch(`/api/chat/konverzace/${encodeURIComponent(c.id)}/skryt`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ skryto: true }),
+          });
+      if (!res.ok) {
+        const data: any = await res.json().catch(() => ({}));
+        throw new Error(data?.error || `Server odmítl (${res.status}).`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nepodařilo se to odklidit.');
+      console.error('Odklizení konverzace selhalo:', err);
+      void nactiKonverzace();
+    }
+  }
+
   async function prepniZtlumeni(conversationId: string, ztlumeno: boolean) {
     zapisCerstve(conversationId, { ztlumeno });
     setConversations((current) =>
@@ -2067,13 +2217,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               )}
               {tab !== 'PROJEKT' &&
                 vZalozce.map((c) => (
-                  <button
+                  <RadekKonverzace
                     key={c.id}
-                    type="button"
-                    onClick={() => setOpenId(c.id)}
-                    className={`text-left rounded-lg px-2.5 py-1.5 transition-colors flex items-center gap-2 ${
-                      c.id === openId ? 'bg-tint' : 'hover:bg-field'
-                    }`}
+                    konverzace={c}
+                    aktivni={c.id === openId}
+                    onOtevri={() => setOpenId(c.id)}
+                    popisekAkce={c.kind === 'SKUPINA' ? 'Opustit' : 'Uklidit'}
+                    onAkce={() => void odklidKonverzaci(c)}
+                    odsunuto={odsunutaId === c.id}
+                    onOdsun={(odsunuto) => setOdsunutaId(odsunuto ? c.id : null)}
                   >
                     <Avatar label={c.label} photoUrl={c.avatarUrl} size={26} />
                     <span className="min-w-0 flex-1">
@@ -2089,7 +2241,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         {c.unread}
                       </span>
                     )}
-                  </button>
+                  </RadekKonverzace>
                 ))}
 
               {novy && tab === 'SOUKROMA' && (

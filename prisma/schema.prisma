@@ -823,6 +823,13 @@ model ConversationMember {
   /// druhu rozhovoru. Ztlumeni vyse je totez co NIC a drzi se s tim v souladu.
   upozorneni     ChatUpozorneni?
 
+  /// Uklizeny rozhovor (zadani 12. 9. 2026: „ty konverzace bych mazal treba
+  /// prejetim doleva"). ZPRAVY SE NEMAZOU - zmizi jen z MEHO seznamu, druha
+  /// strana ma svoje. Kdyz prijde nova zprava, rozhovor se vrati: proto se
+  /// drzi i cas, kdy se uklidil.
+  skryto         Boolean      @default(false)
+  skrytoAt       DateTime?
+
   @@unique([conversationId, userId])
   @@index([userId])
 }

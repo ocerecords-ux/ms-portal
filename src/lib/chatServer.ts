@@ -95,7 +95,16 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
     });
   }
 
-  return conversations.map((c) => {
+  // UKLIZENE ROZHOVORY (zadani 12. 9. 2026). Zmizi ze seznamu, dokud v nich
+  // nekdo nenapise - pak se vrati samy, protoze prijit o zpravu kvuli jednomu
+  // prejeti prstem by bylo horsi nez mit v seznamu radek navic.
+  const videt = conversations.filter((c) => {
+    const moje = c.members.find((m) => m.userId === userId);
+    if (!moje?.skryto) return true;
+    return moje.skrytoAt ? c.lastMessageAt > moje.skrytoAt : false;
+  });
+
+  return videt.map((c) => {
     const lastRead = meMembers.get(c.id);
     const unread = lastRead
       ? novejsi.filter((m) => m.conversationId === c.id && m.createdAt > lastRead).length
