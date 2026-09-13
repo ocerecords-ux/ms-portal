@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { IssuerForm } from './IssuerForm';
 import { BankAccounts } from './BankAccounts';
+import { ibanZTuzemskehoUctu } from '@/lib/pdf/qrPlatba';
 
 // Detail vlastni fakturacni firmy - udaje, ciselne rady a bankovni ucty.
 export const dynamic = 'force-dynamic';
@@ -54,6 +55,11 @@ export default async function IssuerDetailPage({ params }: { params: { id: strin
           bankName: a.bankName,
           currency: a.currency,
           isDefault: a.isDefault,
+          // QR platba potrebuje IBAN. Kdyz u uctu neni, dopocita se z cisla
+          // uctu a kodu banky - a u uctu je videt, jestli to vyslo (zadani
+          // 13. 9. 2026: „QR kod tam neni"). Bez teto hlasky neni z ceho
+          // poznat, ze na fakture QR chybi kvuli chybejicimu kodu banky.
+          qrIban: a.iban?.trim() || ibanZTuzemskehoUctu(a.accountNumber ?? '', a.bankName),
         }))}
       />
     </div>

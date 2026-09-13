@@ -15,7 +15,14 @@ type Account = {
   bankName: string | null;
   currency: Currency;
   isDefault: boolean;
+  /** IBAN pro QR platbu - vyplněný, nebo dopočítaný z čísla účtu a kódu banky. */
+  qrIban: string | null;
 };
+
+/** IBAN po čtveřicích, ať se dá přečíst. */
+function citelnyIban(iban: string): string {
+  return iban.replace(/(.{4})/g, '$1 ').trim();
+}
 
 /**
  * Bankovní účty vlastní firmy - klidně několik, každý ve své měně
@@ -97,6 +104,18 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
                 <p className="text-xs text-muted font-body m-0 mt-0.5 tabular-nums">
                   {[a.accountNumber, a.iban, a.swift, a.bankName].filter(Boolean).join(' · ') || '—'}
                 </p>
+                {/* Bez IBANu se na fakturu nevykreslí QR platba a není z čeho
+                    to poznat (zadání 13. 9. 2026). Tak ať to je vidět tady. */}
+                {a.qrIban ? (
+                  <p className="text-xs font-body text-status-done m-0 mt-0.5 tabular-nums">
+                    QR platba ✓ {citelnyIban(a.qrIban)}
+                  </p>
+                ) : (
+                  <p className="text-xs font-body text-danger m-0 mt-0.5">
+                    Bez QR platby — doplňte kód banky (například 3030) do pole Banka, nebo číslo účtu
+                    ve tvaru 3169021011/3030.
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 {!a.isDefault && (
@@ -157,8 +176,12 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
               <input
                 value={draft.accountNumber}
                 onChange={(e) => setDraft({ ...draft, accountNumber: e.target.value })}
+                placeholder="3169021011/3030"
                 className={inputClass}
               />
+              <span className="text-xs font-body text-muted">
+                I s kódem banky — z toho se dopočítá IBAN a na faktuře přibude QR platba.
+              </span>
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Banka</span>

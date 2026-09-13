@@ -42,16 +42,26 @@ function mod97(cislice: string): number {
 
 /**
  * Sestaví český IBAN z tuzemského tvaru účtu ("19-2000145399/0800").
+ *
+ * Kód banky může přijít i zvlášť (`kodBanky`) - v Mojich firmách se vyplňuje
+ * do políčka Banka, takže samotné číslo účtu ho často neobsahuje a QR se
+ * kvůli tomu nekreslil (13. 9. 2026: „QR kód tam není").
+ *
  * Vrací null, když tvar nesedí - radši žádný QR než QR se špatným účtem.
  */
-export function ibanZTuzemskehoUctu(ucet: string): string | null {
+export function ibanZTuzemskehoUctu(ucet: string, kodBanky?: string | null): string | null {
   const ocisteny = ucet.replace(/\s/g, '');
-  const shoda = ocisteny.match(/^(?:(\d{1,6})-)?(\d{1,10})\/(\d{4})$/);
+  const shoda = ocisteny.match(/^(?:(\d{1,6})-)?(\d{1,10})(?:\/(\d{4}))?$/);
   if (!shoda) return null;
+
+  // Kód banky buď za lomítkem, nebo z vedlejšího políčka - ale jen když to
+  // jsou opravdu čtyři číslice; „Airbank" jako název banky se použít nedá.
+  const zvlast = (kodBanky ?? '').replace(/\s/g, '');
+  const banka = shoda[3] ?? (/^\d{4}$/.test(zvlast) ? zvlast : null);
+  if (!banka) return null;
 
   const predcisli = (shoda[1] ?? '').padStart(6, '0');
   const cislo = shoda[2].padStart(10, '0');
-  const banka = shoda[3];
 
   const zaklad = `${banka}${predcisli}${cislo}`;
   const kontrola = 98 - mod97(pismenaNaCisla(`${zaklad}CZ00`));

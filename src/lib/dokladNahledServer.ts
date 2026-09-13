@@ -144,7 +144,7 @@ export async function nahledDokladu(
             // vyžaduje, ale číslo účtu ho jednoznačně určuje - není důvod ho
             // po nikom chtít znovu. Když tvar účtu nesedí, zůstane null
             // a QR se prostě nevykreslí.
-            iban: ucet.iban?.trim() || ibanZTuzemskehoUctu(ucet.accountNumber ?? ''),
+            iban: ucet.iban?.trim() || ibanZTuzemskehoUctu(ucet.accountNumber ?? '', ucet.bankName),
             swift: ucet.swift,
             banka: ucet.bankName,
           }
