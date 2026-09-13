@@ -178,7 +178,7 @@ export async function nactiDotaz(
       where: { conversationId: kanal.id, parentId: null },
       orderBy: { createdAt: 'asc' },
       take: 200,
-      include: { user: { select: { id: true, name: true, email: true, photoUrl: true } } },
+      include: { user: { select: { id: true, name: true, email: true, maFotku: true } } },
     }),
     prisma.conversationMember.upsert({
       where: { conversationId_userId: { conversationId: kanal.id, userId } },
@@ -195,7 +195,7 @@ export async function nactiDotaz(
       body: m.body,
       createdAt: m.createdAt.toISOString(),
       authorLabel: userLabel(m.user),
-      authorPhotoUrl: odkazNaFotku(m.userId, m.user.photoUrl),
+      authorPhotoUrl: odkazNaFotku(m.userId, m.user.maFotku),
       mine: m.userId === userId,
     })),
   };

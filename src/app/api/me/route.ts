@@ -80,7 +80,7 @@ export async function PATCH(req: NextRequest) {
         ...(isInternalRole(user.role) && data.birthDate !== undefined
           ? { birthDate: data.birthDate ? new Date(data.birthDate) : null }
           : {}),
-        ...(photoUrl !== undefined ? { photoUrl } : {}),
+        ...(photoUrl !== undefined ? { photoUrl, maFotku: photoUrl !== null } : {}),
       },
       select: { id: true, name: true, email: true, phone: true, birthDate: true, photoUrl: true },
     });

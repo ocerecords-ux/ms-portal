@@ -39,7 +39,7 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
     orderBy: { lastMessageAt: 'desc' },
     take: 300,
     include: {
-      members: { include: { user: { select: { id: true, name: true, email: true, photoUrl: true } } } },
+      members: { include: { user: { select: { id: true, name: true, email: true, maFotku: true } } } },
     },
   });
   if (conversations.length === 0) return [];
@@ -125,7 +125,7 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
       // Odkaz misto samotne fotky - viz lib/fotky.ts.
       avatarUrl:
         c.kind === 'SOUKROMA' && ostatniClenove[0]
-          ? odkazNaFotku(ostatniClenove[0].userId, ostatniClenove[0].user.photoUrl)
+          ? odkazNaFotku(ostatniClenove[0].userId, ostatniClenove[0].user.maFotku)
           : null,
       memberLabels: ostatni,
       memberIds: c.members.map((m) => m.userId),
@@ -158,10 +158,10 @@ export async function loadTeam(userId: string) {
       active: true,
       role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE', 'ROBOT'] },
     },
-    select: { id: true, name: true, email: true, photoUrl: true },
+    select: { id: true, name: true, email: true, maFotku: true },
     orderBy: [{ name: 'asc' }, { email: 'asc' }],
   });
-  return users.map((u) => ({ id: u.id, label: userLabel(u), photoUrl: odkazNaFotku(u.id, u.photoUrl) }));
+  return users.map((u) => ({ id: u.id, label: userLabel(u), photoUrl: odkazNaFotku(u.id, u.maFotku) }));
 }
 
 

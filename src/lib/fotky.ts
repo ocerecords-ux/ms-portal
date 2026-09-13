@@ -10,8 +10,17 @@
  * uloží do mezipaměti a u dalších zpráv už ji jen použije.
  */
 
-/** Adresa fotky uživatele, nebo null, když žádnou nemá. */
-export function odkazNaFotku(userId: string, photoUrl: string | null | undefined): string | null {
-  if (!photoUrl) return null;
+/**
+ * Adresa fotky uživatele, nebo null, když žádnou nemá.
+ *
+ * Druhý parametr je buď samotná fotka, nebo jen příznak `maFotku` — v seznamech
+ * se schválně vybírá jen ten, aby se base64 obrázek vůbec netahal z databáze
+ * (12. 9. 2026, překročený egress na Supabase).
+ */
+export function odkazNaFotku(
+  userId: string,
+  fotkaNeboPriznak: string | boolean | null | undefined,
+): string | null {
+  if (!fotkaNeboPriznak) return null;
   return `/api/uzivatele/${userId}/fotka`;
 }

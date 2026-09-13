@@ -45,7 +45,7 @@ export default async function PortalLayout({ children }: { children: React.React
   let entries: Awaited<ReturnType<typeof loadMenuEntries>> = [];
   let tasks: Awaited<ReturnType<typeof loadMyTasks>> = [];
   let unread = 0;
-  let ucet: { photoUrl: string | null } | null = null;
+  let ucet: { maFotku: boolean } | null = null;
   let quickActions: Awaited<ReturnType<typeof loadQuickActions>> = [];
   let nouzovyRezim = false;
   try {
@@ -55,7 +55,9 @@ export default async function PortalLayout({ children }: { children: React.React
         loadMyTasks(session.user.id, role),
         countUnread(session.user.id),
         // Fotka do lišty (zadani 9. 9. 2026) - v session není, bere se z karty účtu.
-        prisma.user.findUnique({ where: { id: session.user.id }, select: { photoUrl: true } }),
+        // Jen priznak, ne samotna fotka - ta se vydava zvlast a prohlizec si
+        // ji drzi v mezipameti (12. 9. 2026, egress na Supabase).
+        prisma.user.findUnique({ where: { id: session.user.id }, select: { maFotku: true } }),
         // Rychle volby v levem panelu (zadani 9. 9. 2026).
         loadQuickActions(session.user.id, role),
       ]),
@@ -69,7 +71,7 @@ export default async function PortalLayout({ children }: { children: React.React
     <div className="min-h-screen bg-paper">
       <Topbar
         userLabel={session.user.name || session.user.email}
-        userPhotoUrl={odkazNaFotku(session.user.id, ucet?.photoUrl)}
+        userPhotoUrl={odkazNaFotku(session.user.id, ucet?.maFotku)}
         items={visibleFor(entries, role)}
         pageOptions={pageOptionsFor(role)}
         unreadNotifications={unread}

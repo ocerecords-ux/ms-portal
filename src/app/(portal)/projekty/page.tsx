@@ -203,7 +203,7 @@ async function InternalProjektySection({
     ? await prisma.projectMeta.findMany({
         where: { caflouProjectId: { in: projects.map((p) => String(p.id)) } },
         include: {
-          manager: { select: { name: true, email: true, photoUrl: true } },
+          manager: { select: { name: true, email: true, maFotku: true } },
           actor: { select: { name: true, email: true } },
           // Herci projektu (zadani 10. 9. 2026) - v prehledu se ukazuji vsichni.
           herci: { select: { id: true, name: true, email: true } },
@@ -235,7 +235,7 @@ async function InternalProjektySection({
         priority: m.priority,
         projectType: m.projectType,
         managerName: m.manager ? m.manager.name || m.manager.email : null,
-        managerPhotoUrl: m.managerUserId ? odkazNaFotku(m.managerUserId, m.manager?.photoUrl) : null,
+        managerPhotoUrl: m.managerUserId ? odkazNaFotku(m.managerUserId, m.manager?.maFotku) : null,
         driveUrl: m.driveUrl,
         managerUserId: m.managerUserId,
         ikonaTypu: m.projectType ? ikonyTypu[m.projectType] ?? null : null,

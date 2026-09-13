@@ -173,6 +173,7 @@ async function main() {
   await prenesHerceDoSeznamu();
   await skupinaProCelyTym();
   await doplnIkonyTypu();
+  await srovnejPriznakFotky();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -370,6 +371,25 @@ async function backfillCodes() {
     const code = await nextSeedCode(codePrefixForSeedRole(u.role));
     await prisma.user.update({ where: { id: u.id }, data: { code } });
   }
+}
+
+/**
+ * Srovná příznak „má fotku" s tím, co je v databázi (12. 9. 2026).
+ *
+ * Fotky jsou uložené jako data: URL a mají desítky kilobajtů. Seznamy si
+ * o ně dřív říkaly při každém doptání chatu, i když do prohlížeče posílaly
+ * jen adresu — a Supabase to počítal jako odchozí přenos, až organizace
+ * přerostla kvótu. Teď se v seznamech vybírá jen tenhle příznak.
+ *
+ * Běží při každém nasazení, je to jediný příkaz a srovná i fotky nahrané
+ * mimo portál (třeba přímo v databázi).
+ */
+async function srovnejPriznakFotky() {
+  const zmeneno = await prisma.$executeRawUnsafe(
+    `UPDATE "User" SET "maFotku" = ("photoUrl" IS NOT NULL AND "photoUrl" <> '')
+     WHERE "maFotku" <> ("photoUrl" IS NOT NULL AND "photoUrl" <> '')`,
+  );
+  if (zmeneno > 0) console.log(`  priznak fotky srovnan u ${zmeneno} uzivatelu`);
 }
 
 main()

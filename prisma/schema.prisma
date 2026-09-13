@@ -147,6 +147,12 @@ model User {
   // --- Mediaspace (interni role ADMIN/ZVUKAR/PRODUKCE) - zadani 5. 9. 2026 ---
   birthDate    DateTime? // datum narozeni
   photoUrl     String?   // fotka
+  // Fotka je v databazi jako data: URL a ma i 70 kB. Seznamy (chat, prehled
+  // projektu) potrebuji vedet jen to, JESTLI fotka je - adresu obrazku slozi
+  // z id uzivatele. Bez tohoto priznaku tahalo kazde doptani chatu z databaze
+  // fotky vsech clenu vsech konverzaci a Supabase to pocital jako odchozi
+  // prenos (12. 9. 2026: organizace prekrocila kvotu egressu).
+  maFotku      Boolean   @default(false)
 
   // Hodinova sazba zvukare v Kc (zadani 6. 9. 2026) - z ni se pocitaji vykazy
   // prace. Vychozi 250 Kc; u ostatnich roli se nepouziva.
