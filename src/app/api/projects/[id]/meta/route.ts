@@ -338,7 +338,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Zamerne bez cekani: prehozeni stavu je hlavni vec, kterou clovek dela,
     // a nesmi ho zdrzet ani shodit to, ze zrovna nejede SMTP.
     if (data.statusName) {
-      void posliNotifikaciKeStavu(params.id, data.statusName).catch(() => undefined);
+      /**
+       * ZPRÁVA ODEJDE JEN PŘI SKUTEČNÉ ZMĚNĚ STAVU A JEN U ŽIVÉHO PROJEKTU
+       * (zadání 13. 9. 2026: „když teď přiřadím klienta, bere to stav
+       * Schváleno k fakturaci a odešle se notifikace... u ukončených projektů
+       * se žádné notifikace už neposílají").
+       *
+       * Formulář projektu posílá všechna pole najednou, takže stav dorazí
+       * i tehdy, když se měnilo jen jméno klienta. Dřív to stačilo na to, aby
+       * zpráva odešla znovu — a u dávno hotových zakázek, kde se klient jen
+       * doplňoval zpětně, aby odešla vůbec poprvé, roky po odevzdání.
+       *
+       * Rozhoduje stav PŘED uložením: přechod do posledního stavu
+       * („Schváleno - k fakturaci") je pořád živá změna na živém projektu,
+       * takže poslední zpráva klientovi normálně odejde. Až projekt tímhle
+       * přechodem zhasne, další už nic neposílá.
+       */
+      const stavSeZmenil = data.statusName !== (pred?.statusName ?? null);
+      if (stavSeZmenil && !pred?.finished) {
+        void posliNotifikaciKeStavu(params.id, data.statusName).catch(() => undefined);
+      }
 
       // Dokoncenym projektem se uzavira i kanal dotazu klienta (zadani
       // 11. 9. 2026) - historie zustava, jen uz do nej neni kam psat.
