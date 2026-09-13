@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { ROLE_LABELS, isInternalRole } from '@/lib/roles';
 import { MyAccountForm } from './MyAccountForm';
+import { FakturaceKarta } from './FakturaceKarta';
 
 // "Můj účet" - kazdy prihlaseny uzivatel si tu upravi svoje udaje (zadani
 // 5. 9. 2026). Role, kod uctu a firma jsou tu jen k precteni; menit je smi
@@ -20,7 +21,7 @@ export default async function MyAccountPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    include: { company: { select: { name: true } } },
+    include: { company: { select: { name: true, contactEmail: true, fakturyKlientovi: true } } },
   });
   if (!user) redirect('/login');
 
@@ -64,6 +65,18 @@ export default async function MyAccountPage() {
         }}
         photoUrl={user.photoUrl ?? null}
       />
+
+      {/* Fakturaci si spravuje klient sam (zadani 13. 9. 2026) - u internich
+          uctu ani hercu nema co delat, ti pod zadnou firmou nejsou. */}
+      {!internal && user.company && (
+        <FakturaceKarta
+          firma={user.company.name}
+          initial={{
+            contactEmail: user.company.contactEmail ?? '',
+            fakturyKlientovi: user.company.fakturyKlientovi,
+          }}
+        />
+      )}
     </section>
   );
 }
