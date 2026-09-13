@@ -38,6 +38,7 @@ export function VyberHercu({
   dotoceni,
   onPrepnoutDotoceno,
   dotoceniBezi,
+  strany,
 }: {
   herci: Herec[];
   /** ID vybraných účtů v pořadí - první je Herec 1. */
@@ -55,6 +56,11 @@ export function VyberHercu({
   onPrepnoutDotoceno?: (userId: string, dotoceno: boolean) => void;
   /** ID herce, u kterého se zrovna ukládá - tlačítko na něj chvíli nereaguje. */
   dotoceniBezi?: string | null;
+  /**
+   * Poslední strana z natáčecího protokolu - ID účtu -> strana. Jen se
+   * zobrazuje jako odznak na bublině; výběr herců s ní nic nedělá.
+   */
+  strany?: Record<string, number>;
 }) {
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
@@ -118,6 +124,7 @@ export function VyberHercu({
                 jmeno={h.label}
                 disabled={disabled}
                 dotoceno={dotoceni?.[h.id]}
+                strana={strany?.[h.id]}
                 // Klik na jmeno tady nic nemeni - herec se pridava a odebira,
                 // ne prepisuje. Sipka ho posune o misto vys.
                 onZmenit={() => nahoru(h.id)}

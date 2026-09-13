@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
+import { OdznakStrany } from './OdznakStrany';
 
 /**
  * Výběr herce z účtů v portálu (zadání 10. 9. 2026: "pole Herec musí být na
@@ -142,6 +143,7 @@ export function BublinaHerce({
   onOdebrat,
   disabled,
   dotoceno,
+  strana,
 }: {
   jmeno: string;
   onZmenit: () => void;
@@ -149,11 +151,17 @@ export function BublinaHerce({
   disabled?: boolean;
   /** Datum dotočení - pozná se zelenou linkou kolem bubliny. */
   dotoceno?: string | null;
+  /**
+   * Poslední strana z natáčecího protokolu - odznak na rohu bubliny (zadání
+   * 13. 9. 2026). Po dotočení se neukazuje: tam už strana nic neříká.
+   */
+  strana?: number | null;
 }) {
   return (
     <span
       title={dotoceno ? `Dotočeno ${new Date(dotoceno).toLocaleDateString('cs-CZ')}` : undefined}
-      className={`inline-flex items-center gap-1.5 max-w-full pl-3 pr-1.5 py-1 ${
+      // relative: odznak se stranou se kotvi k rohu TETO bubliny.
+      className={`relative inline-flex items-center gap-1.5 max-w-full pl-3 pr-1.5 py-1 ${
         dotoceno ? `whitespace-nowrap ${TRIDA_BUBLINY_DOTOCENO}` : `whitespace-nowrap ${TRIDA_BUBLINY_HERCE}`
       }`}
     >
@@ -169,6 +177,10 @@ export function BublinaHerce({
       {/* Dotoceno rika zelena linka kolem bubliny (zadani 12. 9. 2026:
           „dej pryc tu fajfku"). Pro ctecky obrazovky zustava popisek. */}
       {dotoceno && <span className="sr-only"> — dotočeno</span>}
+      {/* Stejny odznak jako v prehledu projektu (zadani 13. 9. 2026). Lezi na
+          rohu bubliny a ma pointer-events-none, takze krizek pod nim zustava
+          klikaci. */}
+      {!dotoceno && typeof strana === 'number' && <OdznakStrany strana={strana} />}
       {onOdebrat && (
         <button
           type="button"
