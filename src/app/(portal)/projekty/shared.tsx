@@ -640,9 +640,10 @@ const TRIDA_BUNKY: Record<string, string> = {
   companyName: 'px-3 py-0 text-[13px] font-heading text-muted truncate',
   statusName: 'px-3 py-0 truncate',
   priority: 'px-2 py-0 text-[13px] font-heading truncate',
+  // Typ projektu ani manazer se v prehledu uz nevykresluji (zadani
+  // 13. 9. 2026) - tridy tu zustavaji, aby vraceni sloupce bylo na jeden
+  // radek v columnLabels.
   projectType: 'px-3 py-0 text-[13px] font-heading text-muted truncate',
-  // Manazer projektu se v prehledu uz nevykresluje (zadani 13. 9. 2026) -
-  // trida tu zustava, aby vraceni sloupce bylo na jeden radek v columnLabels.
   managerName: 'px-3 py-0 text-[13px] font-heading text-muted truncate',
   // Herci nejsou na jeden radek - jdou pod sebe a radek se o to zvysi
   // (zadani 12. 9. 2026: „hlavne nesmi byt nic useknute"). Sirku hlida

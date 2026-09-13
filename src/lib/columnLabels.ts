@@ -35,14 +35,18 @@ export const DEFAULT_COLUMN_LABELS: Record<string, { key: string; label: string 
     { key: 'companyName', label: 'Firma' },
     { key: 'statusName', label: 'Stav' },
     { key: 'priority', label: 'Priorita' },
-    { key: 'projectType', label: 'Typ projektu' },
-    // MANAZER PROJEKTU TU NENI (zadani 13. 9. 2026: „manazera projektu bych
-    // na hlavni strance nezobrazoval, jen v detailu"). Prehled byl prisirsi
-    // a manazera stejne resi az ten, kdo projekt otevre. Vykreslovani toho
-    // sloupce zustava v shared.tsx - vratit ho znamena dopsat sem jeden radek.
+    // TYP PROJEKTU ANI MANAZER TU NEJSOU (zadani 13. 9. 2026: „manazera
+    // projektu bych na hlavni strance nezobrazoval, jen v detailu" a „dejme
+    // z prehledu i typ projektu, to tam taky nevejde a navic je tam napoveda
+    // v tech ikonach pred nazvem").
     //
-    // Odebranim ODSUD zmizi i z uz ulozeneho nastaveni sloupcu: mergeColumns
-    // prochazi vychozi seznam, takze co tu neni, se nevykresli.
+    // Typ uz nese ikona pred nazvem projektu - ma nazev typu v bublinkove
+    // napovede (viz IkonaTypu), takze sloupec rikal totez podruhe a bral
+    // sirku, ktera chybela nazvum. Manazera resi az ten, kdo projekt otevre.
+    //
+    // Odebranim ODSUD zmizi sloupec i z uz ulozeneho nastaveni: mergeColumns
+    // prochazi vychozi seznam, takze co tu neni, se nevykresli. Vykreslovani
+    // obou sloupcu zustava v shared.tsx - vratit je znamena dopsat sem radek.
     // Herec patri do zakladniho prehledu (zadani 10. 9. 2026) - u audioknihy
     // je to prvni vec, ktera se u projektu hleda.
     { key: 'narrator', label: 'Herec' },
