@@ -138,7 +138,7 @@ function PripnutaVolba({
           : ''
       }`}
     >
-      <Avatar label={popisek} photoUrl={konverzace.avatarUrl} size={velikost} />
+      <Avatar label={popisek} photoUrl={konverzace.avatarUrl} size={velikost} naFialovem={vListe} />
       {konverzace.unread > 0 && (
         /* Číslo roste s ikonou — na velké zkratce v liště vypadala patnáctka
            jako smítko a nedala se přečíst. */
@@ -2267,7 +2267,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 zustavaji v seznamu, poradi se meni tazenim. Prazdna rada se
                 nekresli, at po ni nezustane mezera. */}
             {pripnute.length > 0 && (
-              <div className="sm:hidden flex-1 min-w-0 flex flex-col gap-1.5 py-0.5">
+              /* Zkratky sedi na vlastnim tmavsim podkladu (zadani 13. 9.
+                 2026: „zanikaji na tom podkladu"). Kolecka jsou nove bila,
+                 tacek pod nimi je jeste odsadi od zbytku listy. */
+              <div className="sm:hidden flex-1 min-w-0 flex flex-col gap-1.5 rounded-2xl bg-brand-purpleDeep/45 px-2 py-1.5">
                 {[pripnuteSoukrome, pripnuteSkupiny].map((rada, poradiRady) =>
                   rada.length === 0 ? null : (
                     <div key={poradiRady} className="flex items-center gap-2">
