@@ -38,11 +38,17 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     const meta = offer.caflouProjectId
       ? await prisma.projectMeta.findUnique({
           where: { caflouProjectId: offer.caflouProjectId },
-          select: { manager: { select: { name: true, email: true } } },
+          select: { manager: { select: { name: true, email: true, phone: true, maFotku: true } } },
         })
       : null;
     const senderName = meta?.manager?.name || session.user.name || null;
     const senderEmail = meta?.manager?.email || session.user.email || null;
+    const senderPhone = meta?.manager?.phone || null;
+    // Fotka se v mailu stahuje odkazem proti tokenu nabidky - viz
+    // /api/nabidka/[token]/fotka. Bez fotky se v podpisu ukaze jen jmeno.
+    const senderPhotoUrl = meta?.manager?.maFotku
+      ? `${baseUrl}/api/nabidka/${offer.approvalToken}/fotka`
+      : null;
 
     const result = await sendOfferEmail({
       to,
@@ -59,6 +65,8 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       projectName: offer.projectName,
       senderName,
       senderEmail,
+      senderPhone,
+      senderPhotoUrl,
     });
 
     if (!result.sent) {

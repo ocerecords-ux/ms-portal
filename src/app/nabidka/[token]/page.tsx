@@ -30,7 +30,7 @@ export default async function PublicOfferPage({ params }: { params: { token: str
   const meta = offer.caflouProjectId
     ? await prisma.projectMeta.findUnique({
         where: { caflouProjectId: offer.caflouProjectId },
-        select: { manager: { select: { name: true, email: true } } },
+        select: { manager: { select: { name: true, email: true, phone: true, maFotku: true } } },
       })
     : null;
   const manazer = meta?.manager ?? null;
@@ -68,19 +68,51 @@ export default async function PublicOfferPage({ params }: { params: { token: str
                 {offer.issuer.dic ? ` · DIČ ${offer.issuer.dic}` : ''}
               </p>
               {manazer && (
-                <p className="text-sm font-body text-muted m-0 mt-3">
-                  <span className="text-xs font-heading uppercase tracking-wide">Manažer projektu</span>
-                  <br />
-                  <span className="font-heading font-semibold text-ink">{manazer.name || manazer.email}</span>
-                  {manazer.email && (
-                    <>
-                      <br />
-                      <a href={`mailto:${manazer.email}`} className="text-brand-purple">
-                        {manazer.email}
-                      </a>
-                    </>
-                  )}
-                </p>
+                <div className="mt-4 pt-4 border-t border-line">
+                  <span className="text-xs font-heading text-muted uppercase tracking-wide">
+                    Nabídku pro vás připravil
+                  </span>
+                  <div className="flex items-center gap-3 mt-2">
+                    {manazer.maFotku ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={`/api/nabidka/${offer.approvalToken}/fotka`}
+                        alt={manazer.name ?? ''}
+                        className="w-14 h-14 rounded-full object-cover border border-line"
+                      />
+                    ) : (
+                      <span className="w-14 h-14 rounded-full bg-tint text-brand-purpleDark font-heading font-semibold grid place-items-center">
+                        {(manazer.name || manazer.email || '?')
+                          .split(' ')
+                          .map((c) => c[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase()}
+                      </span>
+                    )}
+                    <span className="min-w-0">
+                      <span className="block font-heading font-semibold text-ink">
+                        {manazer.name || manazer.email}
+                      </span>
+                      {manazer.email && (
+                        <a
+                          href={`mailto:${manazer.email}`}
+                          className="block text-sm font-body text-brand-purple break-words"
+                        >
+                          {manazer.email}
+                        </a>
+                      )}
+                      {manazer.phone && (
+                        <a
+                          href={`tel:${manazer.phone.replace(/\s+/g, '')}`}
+                          className="block text-sm font-body text-muted"
+                        >
+                          {manazer.phone}
+                        </a>
+                      )}
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
             <div>

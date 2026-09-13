@@ -33,6 +33,12 @@ function samotnaAdresa(odesilatel: string): string {
   return (odesilatel.match(/<([^>]+)>/)?.[1] || odesilatel).trim();
 }
 
+/** Odesílatel za firmu - pro doklady, které neposílá konkrétní člověk. */
+export function odesilatelFirmy(): { name: string; address: string } {
+  const vychozi = process.env.SMTP_FROM || 'Mediaspace <portal@msportal.cz>';
+  return { name: 'Mediaspace', address: samotnaAdresa(vychozi) };
+}
+
 export function odesilatelPodleCloveka(
   jmeno?: string | null,
   mail?: string | null,
@@ -804,6 +810,9 @@ type OfferEmailInput = {
   /** Manazer projektu: pod jeho jmenem (a pokud to jde, i adresou) mail odejde. */
   senderName?: string | null;
   senderEmail?: string | null;
+  senderPhone?: string | null;
+  /** Adresa fotky manazera (viz /api/nabidka/[token]/fotka). */
+  senderPhotoUrl?: string | null;
 };
 
 const OFFER_CURRENCY_SYMBOL: Record<string, string> = { CZK: 'Kč', EUR: '€', GBP: '£' };
@@ -815,6 +824,50 @@ function formatOfferMoney(minor: number, currency: string): string {
     maximumFractionDigits: 2,
   }).format(value);
   return `${formatted} ${OFFER_CURRENCY_SYMBOL[currency] ?? currency}`;
+}
+
+/**
+ * PODPIS ČLOVĚKA POD NABÍDKOU (zadání 13. 9. 2026: „a co kdybychom to udělali
+ * více osobní? Fotku manažera, jméno a kontakt. Abych to psal jako já").
+ *
+ * Nabídku domlouvá konkrétní člověk, ne systém - tak ať je pod ní podepsaný
+ * i s tváří a telefonem. Styly jsou psané přímo u prvků: podpis se skládá
+ * i v poštovních klientech, které si se stylopisem v hlavičce neporadí.
+ *
+ * Fotka je odkaz, ne příloha - poštovní klient si ji stáhne sám, a když ji
+ * nestáhne (nebo manažer fotku nemá), zůstane jen jméno a kontakt.
+ */
+function podpisCloveka(input: OfferEmailInput): string {
+  const jmeno = input.senderName?.trim();
+  if (!jmeno) return '';
+
+  const radky = [
+    `<div style="font-weight:600;color:#201A33;">${escapeHtml(jmeno)}</div>`,
+    '<div style="color:#6E6580;font-size:13px;">Mediaspace</div>',
+    input.senderEmail
+      ? `<div style="font-size:13px;"><a href="mailto:${escapeHtml(input.senderEmail)}" style="color:#6B2AF0;text-decoration:none;">${escapeHtml(input.senderEmail)}</a></div>`
+      : '',
+    input.senderPhone
+      ? `<div style="font-size:13px;"><a href="tel:${escapeHtml(input.senderPhone.replace(/\s+/g, ''))}" style="color:#6E6580;text-decoration:none;">${escapeHtml(input.senderPhone)}</a></div>`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('');
+
+  const fotka = input.senderPhotoUrl
+    ? `<td style="padding-right:14px;vertical-align:top;width:64px;">
+         <img src="${escapeHtml(input.senderPhotoUrl)}" width="64" height="64" alt="${escapeHtml(jmeno)}"
+              style="display:block;width:64px;height:64px;border-radius:32px;object-fit:cover;" />
+       </td>`
+    : '';
+
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:28px;">
+      <tr>
+        ${fotka}
+        <td style="vertical-align:top;font-family:Arial,Helvetica,sans-serif;line-height:1.45;">${radky}</td>
+      </tr>
+    </table>`;
 }
 
 export function buildOfferHtml(input: OfferEmailInput): string {
@@ -839,6 +892,8 @@ export function buildOfferHtml(input: OfferEmailInput): string {
     <div class="cta-row">
       <a href="${escapeHtml(input.offerUrl)}" class="cta">Zobrazit nabídku</a>
     </div>
+
+    ${podpisCloveka(input)}
   `,
   });
 }
@@ -867,7 +922,12 @@ export async function sendOfferEmail(input: OfferEmailInput) {
       input.offerUrl,
       '',
       input.senderName || input.issuerName,
-    ].join('\n'),
+      'Mediaspace',
+      input.senderEmail,
+      input.senderPhone,
+    ]
+      .filter((radek) => radek !== null && radek !== undefined)
+      .join('\n'),
     html: buildOfferHtml(input),
   };
 
@@ -951,8 +1011,10 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
+  // Fakturu posila FIRMA, ne clovek (zadani 13. 9. 2026: „fakturu pak uz za
+  // Mediaspace") - je to ucetni doklad, ne domluva mezi dvema lidmi.
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    from: odesilatelFirmy(),
     to: input.to,
     subject: `Faktura ${input.number}${input.subject ? ` — ${input.subject}` : ''}`,
     text: [
