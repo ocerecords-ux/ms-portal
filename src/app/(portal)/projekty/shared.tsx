@@ -523,10 +523,15 @@ function bunkaSloupce(
         return <HerciBunka herci={p.meta.herci} />;
       }
       if (!p.narrator) return '—';
+      // BLOCK A TRUNCATE, ne whitespace-nowrap (oprava 13. 9. 2026: „ten
+      // prehled ale vypada hrozne"). U projektu s vic herci z Caflou je to
+      // jeden dlouhy retezec jmen oddelenych carkou; nowrap ho nechal vytect
+      // z bunky a prejel pres Pocet NS, KZ i manazera. Cele jmeno zustava
+      // v bublinkove napovede.
       return (
         <span
-          className="text-muted whitespace-nowrap"
-          title="Herec zatím nemá přiřazený účet — doplní se v detailu projektu"
+          className="block truncate text-muted"
+          title={`${p.narrator} — herec zatím nemá přiřazený účet, doplní se v detailu projektu`}
         >
           {p.narrator}
         </span>
@@ -631,18 +636,22 @@ export function sirkySloupcu(klice: string[]): string[] {
  * projíždět očima.
  */
 const TRIDA_BUNKY: Record<string, string> = {
-  name: 'px-3 py-0 font-heading font-semibold text-sm truncate',
-  companyName: 'px-3 py-0 text-sm font-heading text-muted truncate',
+  name: 'px-3 py-0 font-heading font-semibold text-[13px] truncate',
+  companyName: 'px-3 py-0 text-[13px] font-heading text-muted truncate',
   statusName: 'px-3 py-0 truncate',
-  priority: 'px-2 py-0 text-sm font-heading truncate',
-  projectType: 'px-3 py-0 text-sm font-heading text-muted truncate',
-  managerName: 'px-3 py-0 text-sm font-heading text-muted truncate',
+  priority: 'px-2 py-0 text-[13px] font-heading truncate',
+  projectType: 'px-3 py-0 text-[13px] font-heading text-muted truncate',
+  // Manazer projektu se v prehledu uz nevykresluje (zadani 13. 9. 2026) -
+  // trida tu zustava, aby vraceni sloupce bylo na jeden radek v columnLabels.
+  managerName: 'px-3 py-0 text-[13px] font-heading text-muted truncate',
   // Herci nejsou na jeden radek - jdou pod sebe a radek se o to zvysi
-  // (zadani 12. 9. 2026: „hlavne nesmi byt nic useknute").
-  narrator: 'px-3 py-0 text-sm font-heading text-muted align-middle',
-  pageCount: 'px-2 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap',
-  endDate: 'px-2 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap truncate',
-  releaseDate: 'px-2 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap truncate',
+  // (zadani 12. 9. 2026: „hlavne nesmi byt nic useknute"). Sirku hlida
+  // table-fixed a procenta ve <col>, takze orezani resi truncate primo na
+  // obsahu bunky - viz vetev 'narrator' v ObsahBunky.
+  narrator: 'px-3 py-0 text-[13px] font-heading text-muted align-middle',
+  pageCount: 'px-2 py-0 text-[13px] font-heading text-muted tabular-nums text-right whitespace-nowrap',
+  endDate: 'px-2 py-0 text-[13px] font-heading text-muted tabular-nums whitespace-nowrap truncate',
+  releaseDate: 'px-2 py-0 text-[13px] font-heading text-muted tabular-nums whitespace-nowrap truncate',
   driveUrl: 'px-2 py-0 whitespace-nowrap',
 };
 
@@ -652,7 +661,10 @@ const TRIDA_BUNKY: Record<string, string> = {
  * 12. 9. 2026: „roztáhne se celý řádek projektu vertikálně") a zbytek seznamu
  * zůstává srovnaný na 52 px.
  */
-const TRIDA_RADKU = 'h-[52px] border-t border-line hover:bg-surfaceSoft';
+// Radky jsou od 13. 9. 2026 nizsi spolu s mensim pismem („pojdme to mozna
+// lehce zmensit cele pismo"). Porad je to MINIMUM - radek s vic herci se
+// o ne zvysi, jak se zavedlo 12. 9. 2026.
+const TRIDA_RADKU = 'h-[44px] border-t border-line hover:bg-surfaceSoft';
 
 const ZAROVNANI_VPRAVO = new Set(['pageCount']);
 
@@ -942,7 +954,7 @@ export function InternalProjectsTable({
             {canEditColumns && <col style={{ width: '44px' }} />}
           </colgroup>
           <thead>
-            <tr className="bg-brand-purple text-white font-heading text-xs">
+            <tr className="bg-brand-purple text-white font-heading text-[11px]">
               {columns.map((sloupec, index) => (
                 <SortableHeader
                   key={sloupec.key}

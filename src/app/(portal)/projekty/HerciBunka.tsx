@@ -42,7 +42,10 @@ export function HerciBunka({
           <span
             // break-words a normalni zalamovani: dlouhe jmeno radsi na dva radky
             // nez uriznute. Vetsina se vejde na jeden.
-            className={`inline-flex max-w-full px-3 py-1 text-sm font-heading font-semibold leading-snug whitespace-normal break-words ${
+            // Mensi nez drive (zadani 13. 9. 2026: „pojdme to mozna lehce
+            // zmensit cele pismo") - u projektu se dvema herci to znatelne
+            // srazi vysku radku, protoze ta se ridi prave bublinami.
+            className={`inline-flex max-w-full px-2.5 py-0.5 text-[13px] font-heading font-semibold leading-snug whitespace-normal break-words ${
               h.dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
             }`}
           >

@@ -36,7 +36,13 @@ export const DEFAULT_COLUMN_LABELS: Record<string, { key: string; label: string 
     { key: 'statusName', label: 'Stav' },
     { key: 'priority', label: 'Priorita' },
     { key: 'projectType', label: 'Typ projektu' },
-    { key: 'managerName', label: 'Manažer projektu' },
+    // MANAZER PROJEKTU TU NENI (zadani 13. 9. 2026: „manazera projektu bych
+    // na hlavni strance nezobrazoval, jen v detailu"). Prehled byl prisirsi
+    // a manazera stejne resi az ten, kdo projekt otevre. Vykreslovani toho
+    // sloupce zustava v shared.tsx - vratit ho znamena dopsat sem jeden radek.
+    //
+    // Odebranim ODSUD zmizi i z uz ulozeneho nastaveni sloupcu: mergeColumns
+    // prochazi vychozi seznam, takze co tu neni, se nevykresli.
     // Herec patri do zakladniho prehledu (zadani 10. 9. 2026) - u audioknihy
     // je to prvni vec, ktera se u projektu hleda.
     { key: 'narrator', label: 'Herec' },
