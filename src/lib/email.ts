@@ -2,14 +2,20 @@ import nodemailer from 'nodemailer';
 import { pozdrav } from '@/lib/osloveni';
 
 function getTransport() {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env;
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD) return null;
+  // Hodnoty se ORIZAVAJI: heslo i jmeno se do nastaveni vkladaji ze schranky
+  // a nalepena mezera nebo konec radku znamena "535 authentication failed",
+  // na kterem se da hledat hodne dlouho.
+  const host = process.env.SMTP_HOST?.trim();
+  const user = process.env.SMTP_USER?.trim();
+  const heslo = process.env.SMTP_PASSWORD?.trim();
+  if (!host || !user || !heslo) return null;
 
+  const port = Number(process.env.SMTP_PORT?.trim()) || 587;
   return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT) || 587,
-    secure: Number(SMTP_PORT) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass: heslo },
   });
 }
 
