@@ -292,7 +292,7 @@ export type InternalProjectMeta = {
    * Herci projektu v poradi. `dotoceno` = zelena fajfka u jmena (zadani
    * 11. 9. 2026: "fajfku prosim v prehledu i v detailu").
    */
-  herci: { jmeno: string; dotoceno: boolean }[];
+  herci: { jmeno: string; dotoceno: boolean; strana?: number | null }[];
   /** Jména herců jedním textem - jen pro hledání, nikde se nevypisuje. */
   herciJmenaText: string;
 };

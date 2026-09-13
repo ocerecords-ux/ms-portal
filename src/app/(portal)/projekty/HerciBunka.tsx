@@ -19,7 +19,11 @@ import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce'
  * seznam natolik, že by se v něm nedalo listovat. Tři tečky pod bublinami
  * zbytek odkryjí — a druhým klepnutím zase schovají.
  */
-export function HerciBunka({ herci }: { herci: { jmeno: string; dotoceno: boolean }[] }) {
+export function HerciBunka({
+  herci,
+}: {
+  herci: { jmeno: string; dotoceno: boolean; strana?: number | null }[];
+}) {
   const [rozbaleno, setRozbaleno] = useState(false);
   const VIDITELNYCH = 2;
   const zobrazeni = rozbaleno ? herci : herci.slice(0, VIDITELNYCH);
@@ -28,18 +32,32 @@ export function HerciBunka({ herci }: { herci: { jmeno: string; dotoceno: boolea
   return (
     <span className="flex flex-col items-start gap-1 py-2 min-w-0 max-w-full">
       {zobrazeni.map((h, i) => (
-        <span
-          key={`${h.jmeno}-${i}`}
-          // break-words a normalni zalamovani: dlouhe jmeno radsi na dva radky
-          // nez uriznute. Vetsina se vejde na jeden.
-          className={`inline-flex max-w-full px-3 py-1 text-sm font-heading font-semibold leading-snug whitespace-normal break-words ${
-            h.dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
-          }`}
-        >
-          {h.jmeno}
-          {/* Zelena linka kolem bubliny znamena dotoceno; pro ctecky obrazovky,
-              ktere barvu nevidi, zustava popisek. */}
-          {h.dotoceno && <span className="sr-only"> — dotočeno</span>}
+        <span key={`${h.jmeno}-${i}`} className="inline-flex items-center gap-1.5 max-w-full">
+          <span
+            // break-words a normalni zalamovani: dlouhe jmeno radsi na dva radky
+            // nez uriznute. Vetsina se vejde na jeden.
+            className={`inline-flex max-w-full px-3 py-1 text-sm font-heading font-semibold leading-snug whitespace-normal break-words ${
+              h.dotoceno ? TRIDA_BUBLINY_DOTOCENO : TRIDA_BUBLINY_HERCE
+            }`}
+          >
+            {h.jmeno}
+            {/* Zelena linka kolem bubliny znamena dotoceno; pro ctecky obrazovky,
+                ktere barvu nevidi, zustava popisek. */}
+            {h.dotoceno && <span className="sr-only"> — dotočeno</span>}
+          </span>
+          {/* Kam se s hercem doteklo natacení - jen cislo, at prehled zustane
+              prehledem (zadani 13. 9. 2026: „mohlo by se to objevit i v tom
+              prehledu jako maly odznak - jen cislo"). Po dotoceni mizi: tam uz
+              strana nic nerika. */}
+          {!h.dotoceno && typeof h.strana === 'number' && (
+            <span
+              title={`Natočeno do strany ${h.strana} — zapsal Bruno z chatu`}
+              className="shrink-0 inline-flex items-center justify-center min-w-[24px] h-[20px] px-1.5 rounded-pill bg-tint border border-brand-purple/40 text-brand-purple text-[11px] font-heading font-bold tabular-nums"
+            >
+              {h.strana}
+              <span className="sr-only"> — natočeno do strany</span>
+            </span>
+          )}
         </span>
       ))}
 

@@ -2048,8 +2048,12 @@ model BrunoNatoceno {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([caflouProjectId, userId])
+  // Kazdy zapis je vlastni radek (zadani 13. 9. 2026: „v detailu bych to
+  // delal jako zaznamy: Datum a strana"). Drive tu byl @@unique na dvojici
+  // projekt+herec a novy zapis ten stary prepsal - bylo videt jen kde jsme
+  // ted, ne jak se tam doslo.
   @@index([caflouProjectId])
+  @@index([caflouProjectId, userId, createdAt])
 }
 
 /// Co si Bruno zapamatoval, aby se priste rozhodoval lip.

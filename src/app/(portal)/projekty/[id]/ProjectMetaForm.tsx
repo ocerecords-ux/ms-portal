@@ -99,7 +99,7 @@ export function ProjectMetaForm({
   ikonyTypu,
   initial,
   dotoceniHercu,
-  natoceniHercu,
+  natoceniZaznamy,
 }: {
   caflouProjectId: string;
   canEdit: boolean;
@@ -123,11 +123,12 @@ export function ProjectMetaForm({
   /** Kdo z herců má dotočeno - ID účtu -> datum (zadání 11. 9. 2026). */
   dotoceniHercu: Record<string, string>;
   /**
-   * Kam se s kterým hercem doteklo natáčení (zadání 12. 9. 2026) — vede to
-   * Bruno z chatu projektu. Klíč je účet herce; prázdný klíč je zápis bez
-   * herce, tedy projekt s jediným hercem.
+   * Kam se doteklo natáčení — jeden záznam na každý zápis Bruna z chatu,
+   * od nejnovějšího (zadání 13. 9. 2026: „v detailu bych to dělal jako
+   * záznamy: Datum a strana"). `userId` chybí, když se ve zprávě nevyjasnilo,
+   * o kterého herce jde.
    */
-  natoceniHercu?: Record<string, { strana: number; kdy: string }>;
+  natoceniZaznamy?: { id: string; strana: number; kdy: string; userId: string | null; jmeno: string | null }[];
 }) {
   const router = useRouter();
   const [values, setValues] = useState<Initial>(initial);
@@ -314,12 +315,6 @@ export function ProjectMetaForm({
                     // linka kolem bubliny; datum odskrtnuti se doctete
                     // v bublinkove napovede, at nezabira misto.
                     const kdy = dotoceni[id];
-                    // Kam se s nim doteklo natacení (Bruno, zadani 12. 9. 2026).
-                    // U projektu s jedinym hercem muze byt zapis bez herce -
-                    // pak patri jemu.
-                    const strana =
-                      natoceniHercu?.[id] ??
-                      (values.actorUserIds.length === 1 ? natoceniHercu?.[''] : undefined);
                     return (
                       <span key={id} className="inline-flex items-center gap-2 flex-wrap">
                         <span
@@ -331,32 +326,14 @@ export function ProjectMetaForm({
                           {jmeno}
                           {kdy && <span className="sr-only"> — dotočeno</span>}
                         </span>
-                        {strana && (
-                          <span
-                            title={`Zapsal Bruno z chatu ${new Date(strana.kdy).toLocaleDateString('cs-CZ')}`}
-                            className="text-xs font-body text-muted"
-                          >
-                            natočeno do str. <span className="text-ink font-heading font-semibold tabular-nums">{strana.strana}</span>
-                          </span>
-                        )}
                       </span>
                     );
                   })}
-                  {/* Zapis bez herce u projektu s vice herci - Bruno se na
-                      jmeno ptal a jeste se nedozvedel. */}
-                  {values.actorUserIds.length > 1 && natoceniHercu?.[''] && (
-                    <span className="text-xs font-body text-muted">
-                      natočeno do str.{' '}
-                      <span className="text-ink font-heading font-semibold tabular-nums">
-                        {natoceniHercu[''].strana}
-                      </span>{' '}
-                      — zatím bez herce
-                    </span>
-                  )}
                 </span>
               ) : (
                 (herecZCaflou ?? '—')
               )}
+              <ZaznamyNatoceni zaznamy={natoceniZaznamy} />
             </dd>
           </div>
           <div>
@@ -477,12 +454,12 @@ export function ProjectMetaForm({
             dotoceni={dotoceni}
             onPrepnoutDotoceno={(id, stav) => void prepniDotoceno(id, stav)}
             dotoceniBezi={dotoceniBezi}
-            natoceni={natoceniHercu}
           />
           <span className="text-xs text-muted font-body">
             Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění
             šipkou.
           </span>
+          <ZaznamyNatoceni zaznamy={natoceniZaznamy} />
         </div>
 
         <label className="flex flex-col gap-1.5">
@@ -717,5 +694,46 @@ function PoslatZnovu({ caflouProjectId, stav }: { caflouProjectId: string; stav:
         />
       )}
     </span>
+  );
+}
+
+/**
+ * Kam se doteklo natáčení — datum a strana, od nejnovějšího (zadání
+ * 13. 9. 2026). Zapisuje to Bruno z chatu projektu, tady se to jen čte;
+ * další strana se do seznamu dostane tím, že ji někdo napíše do kanálu.
+ *
+ * Jméno herce se vypisuje jen tehdy, když je u záznamu — u projektu s jedním
+ * hercem by u každého řádku jen zabíralo místo.
+ */
+function ZaznamyNatoceni({
+  zaznamy,
+}: {
+  zaznamy?: { id: string; strana: number; kdy: string; userId: string | null; jmeno: string | null }[];
+}) {
+  if (!zaznamy || zaznamy.length === 0) return null;
+  const vice = new Set(zaznamy.map((z) => z.userId)).size > 1;
+
+  return (
+    <div className="mt-2 rounded-lg border border-line bg-field/50 px-3 py-2 flex flex-col gap-1">
+      <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
+        Kam se doteklo natáčení
+      </span>
+      {zaznamy.slice(0, 8).map((z) => (
+        <span key={z.id} className="text-xs font-body text-muted flex items-baseline gap-2 flex-wrap">
+          <span className="font-heading text-ink tabular-nums">
+            {new Date(z.kdy).toLocaleDateString('cs-CZ')}
+          </span>
+          <span>
+            str. <span className="font-heading font-semibold text-ink tabular-nums">{z.strana}</span>
+          </span>
+          {vice && <span>· {z.jmeno ?? 'bez herce'}</span>}
+        </span>
+      ))}
+      {zaznamy.length > 8 && (
+        <span className="text-[11px] font-body text-muted">
+          …a starších {zaznamy.length - 8} — celá cesta je v historii projektu.
+        </span>
+      )}
+    </div>
   );
 }

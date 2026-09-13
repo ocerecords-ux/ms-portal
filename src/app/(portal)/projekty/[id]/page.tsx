@@ -149,11 +149,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     dotoceniHercu.map((d) => [d.userId, d.dotocenoAt.toISOString()]),
   );
 
-  // Natoceno do strany: ucet -> strana. Klic "" je zapis bez herce (projekt
-  // s jedinym hercem, nebo jeste nevyjasneny - to druhe Bruno resi dotazem).
-  const natocenoPodleHerce: Record<string, { strana: number; kdy: string }> = Object.fromEntries(
-    natoceno.map((n) => [n.userId ?? '', { strana: n.strana, kdy: n.updatedAt.toISOString() }]),
-  );
+  // Zapisy Bruna jako zaznamy (zadani 13. 9. 2026: „v detailu bych to delal
+  // jako zaznamy: Datum a strana"). Od nejnovejsiho; herec muze chybet, kdyz
+  // se ve zprave nevyjasnil.
+  const zaznamyNatoceni = natoceno.map((n) => ({
+    id: n.id,
+    strana: n.strana,
+    kdy: n.createdAt.toISOString(),
+    userId: n.userId,
+    jmeno: n.user ? n.user.name || n.user.email : null,
+  }));
 
   // Firma projektu. Od 11. 9. 2026 ji projekt drzi primo (ProjectMeta.companyId);
   // dohledani podle stareho ID z Caflou zustava jen pro projekty, ktere jeste
@@ -306,7 +311,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
         herci={herciUctu.map((h) => ({ id: h.id, label: h.name || h.email }))}
         dotoceniHercu={dotoceniPodleHerce}
-        natoceniHercu={natocenoPodleHerce}
+        natoceniZaznamy={zaznamyNatoceni}
         herecZCaflou={meta?.narrator ?? project?.narrator ?? null}
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}

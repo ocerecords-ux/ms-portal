@@ -418,9 +418,15 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
 }
 
 /**
- * Zapíše stranu. Jeden řádek na dvojici projekt + herec, takže nový zápis
- * ten předchozí přepíše — v kartě má stát, kde jsme TEĎ, ne seznam pokusů.
- * Historie zůstává v událostech projektu.
+ * Zapíše stranu jako NOVÝ ZÁZNAM (zadání 13. 9. 2026: „v detailu bych to dělal
+ * jako záznamy: Datum a strana").
+ *
+ * Do 13. 9. 2026 byl na dvojici projekt + herec jediný řádek a nový zápis ten
+ * starý přepsal. V kartě pak stálo, kde jsme teď, ale ne jak se tam došlo —
+ * a přitom právě postup po dnech je to, co produkce sleduje.
+ *
+ * Stejná strana hned po sobě nový řádek nezaloží: zvukař ji občas napíše
+ * dvakrát a ze seznamu by byl výpis omylů.
  */
 async function ulozStranu(vstup: {
   caflouProjectId: string;
@@ -429,19 +435,16 @@ async function ulozStranu(vstup: {
   zdrojMessageId: string | null;
   zapsalUserId: string | null;
 }): Promise<void> {
-  const stavajici = await prisma.brunoNatoceno.findFirst({
+  const posledni = await prisma.brunoNatoceno.findFirst({
     where: { caflouProjectId: vstup.caflouProjectId, userId: vstup.userId },
-    select: { id: true },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, strana: true },
   });
 
-  if (stavajici) {
+  if (posledni?.strana === vstup.strana) {
     await prisma.brunoNatoceno.update({
-      where: { id: stavajici.id },
-      data: {
-        strana: vstup.strana,
-        zdrojMessageId: vstup.zdrojMessageId,
-        zapsalUserId: vstup.zapsalUserId,
-      },
+      where: { id: posledni.id },
+      data: { zdrojMessageId: vstup.zdrojMessageId, zapsalUserId: vstup.zapsalUserId },
     });
     return;
   }
@@ -449,16 +452,43 @@ async function ulozStranu(vstup: {
   await prisma.brunoNatoceno.create({ data: vstup });
 }
 
-/** Co má Bruno u projektu zapsané - pro kartu projektu. */
+/** Všechny zápisy u projektu, od nejnovějšího - pro kartu projektu. */
 export async function natoceniProjektu(caflouProjectId: string) {
   return prisma.brunoNatoceno.findMany({
     where: { caflouProjectId },
-    orderBy: { updatedAt: 'desc' },
+    orderBy: { createdAt: 'desc' },
+    take: 60,
     select: {
+      id: true,
       strana: true,
-      updatedAt: true,
+      createdAt: true,
       userId: true,
       user: { select: { name: true, email: true } },
     },
   });
+}
+
+/**
+ * Poslední strana u každé dvojice projekt + herec. Pro přehled projektů
+ * (zadání 13. 9. 2026: „mohlo by se to objevit i v tom přehledu jako malý
+ * odznak — jen číslo"), jedním dotazem pro celou stránku.
+ *
+ * Klíč je `projekt:herec`; zápis bez herce má klíč `projekt:`.
+ */
+export async function posledniStrany(caflouProjectIds: string[]): Promise<Map<string, number>> {
+  if (caflouProjectIds.length === 0) return new Map();
+
+  const radky = await prisma.brunoNatoceno.findMany({
+    where: { caflouProjectId: { in: caflouProjectIds } },
+    orderBy: { createdAt: 'desc' },
+    select: { caflouProjectId: true, userId: true, strana: true },
+  });
+
+  // Diky razeni od nejnovejsiho je prvni nalezeny zaznam ten platny.
+  const mapa = new Map<string, number>();
+  for (const r of radky) {
+    const klic = `${r.caflouProjectId}:${r.userId ?? ''}`;
+    if (!mapa.has(klic)) mapa.set(klic, r.strana);
+  }
+  return mapa;
 }

@@ -38,7 +38,6 @@ export function VyberHercu({
   dotoceni,
   onPrepnoutDotoceno,
   dotoceniBezi,
-  natoceni,
 }: {
   herci: Herec[];
   /** ID vybraných účtů v pořadí - první je Herec 1. */
@@ -56,16 +55,6 @@ export function VyberHercu({
   onPrepnoutDotoceno?: (userId: string, dotoceno: boolean) => void;
   /** ID herce, u kterého se zrovna ukládá - tlačítko na něj chvíli nereaguje. */
   dotoceniBezi?: string | null;
-  /**
-   * Kam se s kterým hercem doteklo natáčení — ID účtu -> strana (zapisuje
-   * Bruno z chatu, zadání 12. 9. 2026). Klíč „" je zápis, u kterého se herec
-   * nevyjasnil; u projektu s jediným hercem patří jemu.
-   *
-   * Do formuláře to přibylo 13. 9. 2026 („teď se to nikde nezapisuje"):
-   * doteď se strana ukazovala jen v pohledu jen ke čtení, takže ji nikdo
-   * z produkce nikdy neviděl — ti mají projekt rozepsaný.
-   */
-  natoceni?: Record<string, { strana: number; kdy: string }>;
 }) {
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
@@ -158,9 +147,6 @@ export function VyberHercu({
                     {dotoceniBezi === h.id ? 'Ukládám…' : 'Dotočeno'}
                   </button>
                 ))}
-              <StranaHerce
-                zapis={natoceni?.[h.id] ?? (vybrani.length === 1 ? natoceni?.[''] : undefined)}
-              />
               {i > 0 && (
                 <button
                   type="button"
@@ -175,15 +161,6 @@ export function VyberHercu({
             </span>
           ))}
         </div>
-      )}
-
-      {/* Zápis bez herce u projektu, kde herec ještě není vybraný nebo je jich
-          víc — jinak by strana ze zápisu nebyla vidět nikde. */}
-      {natoceni?.[''] && vybrani.length !== 1 && (
-        <span className="text-xs font-body text-muted">
-          Bruno zapsal <strong className="font-heading text-ink tabular-nums">str. {natoceni[''].strana}</strong>, ale
-          nevěděl ke komu — vyberte herce a napište mu to v chatu znovu.
-        </span>
       )}
 
       <div className="relative">
@@ -232,22 +209,5 @@ export function VyberHercu({
         )}
       </div>
     </div>
-  );
-}
-
-/**
- * Kam se s hercem doteklo natáčení. Zapisuje to Bruno z chatu, takže tady se
- * jen ukazuje — přepsat se to dá tím, že se do kanálu projektu napíše jiná
- * strana.
- */
-function StranaHerce({ zapis }: { zapis?: { strana: number; kdy: string } }) {
-  if (!zapis) return null;
-  return (
-    <span
-      title={`Zapsal Bruno z chatu ${new Date(zapis.kdy).toLocaleDateString('cs-CZ')}`}
-      className="text-xs font-heading font-semibold rounded-pill border border-brand-purple/50 bg-tint px-2.5 py-1 text-brand-purple whitespace-nowrap"
-    >
-      natočeno do str. <span className="tabular-nums">{zapis.strana}</span>
-    </span>
   );
 }

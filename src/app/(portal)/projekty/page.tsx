@@ -15,6 +15,7 @@ import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer'
 import { nactiPreposlechPrehled } from '@/lib/preposlechServer';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 import { odkazNaFotku } from '@/lib/fotky';
+import { posledniStrany } from '@/lib/brunoServer';
 
 // DULEZITE: stránka čte projekty při každém zobrazení - nesmí ji Next.js
 // pri buildu "zamrazit" jako statickou stránku (to by klientovi natvrdo
@@ -228,6 +229,10 @@ async function InternalProjektySection({
       : [],
   );
 
+  // Posledni strana u kazde dvojice projekt + herec (Bruno z chatu, zadani
+  // 13. 9. 2026) - odznak s cislem u jmena herce.
+  const strany = await posledniStrany(projects.map((p) => String(p.id)));
+
   const metaById = new Map(
     metas.map((m): [string, InternalProjectMeta] => [
       m.caflouProjectId,
@@ -246,6 +251,12 @@ async function InternalProjektySection({
         ].map((h) => ({
           jmeno: h.name || h.email,
           dotoceno: dotoceni.has(`${m.caflouProjectId}:${h.id}`),
+          // Zapis bez herce patri jedinemu herci projektu - stejne pravidlo
+          // jako v detailu.
+          strana:
+            strany.get(`${m.caflouProjectId}:${h.id}`) ??
+            (m.herci.length === 1 ? strany.get(`${m.caflouProjectId}:`) : undefined) ??
+            null,
         })),
         herciJmenaText: m.herci.map((h) => h.name || h.email).join(' '),
       },
