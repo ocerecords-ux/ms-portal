@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { sendInvoiceEmail } from '@/lib/email';
 import { computeTotals } from '@/lib/doklady';
+import { pdfFaktury } from '@/lib/dokladNahledServer';
 
 // Odeslani faktury odberateli (zadani 6. 9. 2026). Mail jde na e-mail vedeny
 // u firmy a nese vsechno, co klient potrebuje k zaplaceni - castku, ucet,
@@ -42,6 +43,15 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
     const totals = computeTotals(invoice.items);
 
+    // Faktura jde klientovi i jako PDF - je na nem QR platba (zadani 13. 9.
+    // 2026). Kdyz se PDF nepodari vykreslit, mail odejde bez nej: text v nem
+    // ma vsechno potrebne k zaplaceni a je lepsi fakturu poslat nez neposlat.
+    const dokument = await pdfFaktury(invoice.id).catch((err) => {
+      console.error('PDF faktury se nepodarilo vyrobit:', err);
+      return { ok: false as const, message: 'PDF se nepodařilo vyrobit.' };
+    });
+    if (!dokument.ok) console.error('PDF faktury se nepridava:', dokument.message);
+
     const result = await sendInvoiceEmail({
       to,
       contactName: invoice.company.contactName,
@@ -57,6 +67,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       accountLabel: invoice.bankAccount.label,
       accountNumber: invoice.bankAccount.accountNumber,
       iban: invoice.bankAccount.iban,
+      pdf: dokument.ok ? { nazev: dokument.nazev, obsah: dokument.pdf } : null,
     });
 
     if (!result.sent) {
@@ -68,7 +79,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       data: { status: invoice.status === 'DRAFT' ? 'SENT' : invoice.status, sentAt: new Date() },
     });
 
-    return NextResponse.json({ ok: true, to });
+    return NextResponse.json({ ok: true, to, sPrilohou: dokument.ok });
   } catch (err) {
     console.error('POST /api/admin/invoices/[id]/send selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';

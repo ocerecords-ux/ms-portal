@@ -848,6 +848,8 @@ type InvoiceEmailInput = {
   accountLabel: string;
   accountNumber: string | null;
   iban: string | null;
+  /** Faktura v PDF - jde do přílohy a nese QR platbu (zadání 13. 9. 2026). */
+  pdf?: { nazev: string; obsah: Buffer } | null;
 };
 
 export function buildInvoiceHtml(input: InvoiceEmailInput): string {
@@ -873,6 +875,8 @@ export function buildInvoiceHtml(input: InvoiceEmailInput): string {
       <tr><td class="label">Variabilní symbol</td><td class="value">${escapeHtml(input.variableSymbol)}</td></tr>
     </table>
 
+    ${input.pdf ? '<p class="small">Fakturu posíláme i v příloze — je na ní QR kód, kterým se platba v bankovní aplikaci vyplní sama.</p>' : ''}
+
     <p class="small">Kdyby cokoliv nesedělo, stačí na tento e-mail odpovědět.</p>
     <p class="small">${escapeHtml(input.issuerName)}</p>
   `,
@@ -897,12 +901,14 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
       input.dueDate ? `Splatnost: ${input.dueDate.toLocaleDateString('cs-CZ')}` : '',
       `Ucet: ${[input.accountNumber, input.iban].filter(Boolean).join(' / ') || input.accountLabel}`,
       `Variabilni symbol: ${input.variableSymbol}`,
+      input.pdf ? 'Fakturu posilame i v priloze, je na ni QR kod k platbe.' : '',
       '',
       input.issuerName,
     ]
       .filter(Boolean)
       .join('\n'),
     html: buildInvoiceHtml(input),
+    ...(input.pdf ? { attachments: [{ filename: input.pdf.nazev, content: input.pdf.obsah }] } : {}),
   });
 
   return { sent: true as const };

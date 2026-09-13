@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { expandNumberFormat } from '@/lib/doklady';
 import { renderDokladPdf, type DokladData, type PolozkaDokladu, type RezimDph } from '@/lib/dokladPdf';
+import { ibanZTuzemskehoUctu } from '@/lib/pdf/qrPlatba';
 
 /**
  * Náhled faktury nebo nabídky z ROZEPSANÝCH hodnot (zadání 10. 9. 2026:
@@ -135,11 +136,72 @@ export async function nahledDokladu(
     projekt: rozepsane.projectName || null,
     platba:
       rozepsane.druh === 'FAKTURA' && ucet
-        ? { ucet: ucet.accountNumber, iban: ucet.iban, swift: ucet.swift, banka: ucet.bankName }
+        ? {
+            ucet: ucet.accountNumber,
+            // IBAN se dopočítá z tuzemského tvaru účtu, když u účtu vyplněný
+            // není (zadání 13. 9. 2026: „potřebuju na faktury dostat QR kód,
+            // myslím, že ho tam nedostaneme bez IBANU"). QR platba IBAN
+            // vyžaduje, ale číslo účtu ho jednoznačně určuje - není důvod ho
+            // po nikom chtít znovu. Když tvar účtu nesedí, zůstane null
+            // a QR se prostě nevykreslí.
+            iban: ucet.iban?.trim() || ibanZTuzemskehoUctu(ucet.accountNumber ?? ''),
+            swift: ucet.swift,
+            banka: ucet.bankName,
+          }
         : null,
     rezimDph: rozepsane.rezimDph ?? 'STANDARD',
     jazyk: rozepsane.jazyk === 'en' ? 'en' : 'cs',
   };
 
   return { ok: true, pdf: renderDokladPdf(data) };
+}
+
+/** Datum pro náhled - ten si ho převede zpátky na den v Praze. */
+function naDen(hodnota: Date | null): string | null {
+  return hodnota ? hodnota.toISOString().slice(0, 10) : null;
+}
+
+/**
+ * PDF už uložené faktury - k odeslání klientovi (zadání 13. 9. 2026).
+ *
+ * Kreslí ho tentýž kód jako náhled v editoru, takže klient dostane přesně to,
+ * co bylo vidět při vystavování - včetně QR platby.
+ */
+export async function pdfFaktury(
+  invoiceId: string,
+): Promise<{ ok: true; pdf: Buffer; nazev: string } | { ok: false; message: string }> {
+  const faktura = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    include: { items: { orderBy: { sortOrder: 'asc' } } },
+  });
+  if (!faktura) return { ok: false, message: 'Faktura nenalezena.' };
+
+  const vysledek = await nahledDokladu({
+    druh: 'FAKTURA',
+    id: faktura.id,
+    issuerCompanyId: faktura.issuerCompanyId,
+    companyId: faktura.companyId,
+    bankAccountId: faktura.bankAccountId,
+    currency: faktura.currency,
+    issueDate: naDen(faktura.issueDate),
+    taxDate: naDen(faktura.taxDate),
+    dueDate: naDen(faktura.dueDate),
+    subject: faktura.subject,
+    note: faktura.note,
+    variableSymbol: faktura.variableSymbol,
+    projectName: faktura.projectName,
+    rezimDph: faktura.rezimDph,
+    jazyk: faktura.jazyk === 'EN' ? 'en' : 'cs',
+    items: faktura.items.map((i) => ({
+      description: i.description,
+      quantity: i.quantity,
+      unit: i.unit,
+      unitPriceMinor: i.unitPriceMinor,
+      vatRate: i.vatRate,
+    })),
+  });
+
+  if (!vysledek.ok) return vysledek;
+  // Nazev souboru bez lomitek - cislo faktury je muze obsahovat.
+  return { ok: true, pdf: vysledek.pdf, nazev: `Faktura-${faktura.number.replace(/[^\w.-]+/g, '-')}.pdf` };
 }
