@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_ODZNAKU_STRANY } from '@/lib/bublinaHerce';
+import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
+import { OdznakStrany } from './OdznakStrany';
 
 /**
  * Herci v přehledu projektů (zadání 12. 9. 2026: „ti herci vypadají v přehledu
@@ -30,10 +31,10 @@ export function HerciBunka({
   const skryto = herci.length - zobrazeni.length;
 
   return (
-    // pr-3 a gap-2: odznak preteka pres pravy horni roh bubliny, takze si
-    // vpravo i nahore musi sloupec nechat misto - jinak by zajel do vedlejsiho
-    // sloupce nebo na bublinu nad sebou.
-    <span className="flex flex-col items-start gap-2 py-2 pr-3 min-w-0 max-w-full">
+    // pr-3 a gap-3: odznak preteka 8 px pres pravy horni roh bubliny, takze
+    // si sloupec musi nechat misto vpravo i mezi bublinami - jinak by zajel
+    // do vedlejsiho sloupce nebo na bublinu nad sebou.
+    <span className="flex flex-col items-start gap-3 py-2 pr-3 min-w-0 max-w-full">
       {zobrazeni.map((h, i) => (
         // relative: odznak je index posazeny na bublinu, ne sourozenec vedle ni
         // (upresneni 13. 9. 2026). Kotvi se k teto obalce.
@@ -55,18 +56,10 @@ export function HerciBunka({
               prehledu jako maly odznak - jen cislo"). Po dotoceni mizi: tam uz
               strana nic nerika.
 
-              POSAZENY NA ROH BUBLINY jako index (upresneni 13. 9. 2026).
-              Zaporne posuny ho vytahnou pres okraj, aby roh prekryval;
-              pointer-events-none, at neprekazi kliknuti na bublinu pod nim. */}
-          {!h.dotoceno && typeof h.strana === 'number' && (
-            <span
-              title={`Natočeno do strany ${h.strana} — zapsal Bruno z chatu`}
-              className={`pointer-events-none absolute -top-2 -right-2 z-10 inline-flex items-center justify-center min-w-[20px] h-[18px] px-1 text-[10px] font-heading font-bold tabular-nums leading-none ${TRIDA_ODZNAKU_STRANY}`}
-            >
-              {h.strana}
-              <span className="sr-only"> — natočeno do strany</span>
-            </span>
-          )}
+              POSAZENY NA ROH BUBLINY jako index (upresneni 13. 9. 2026) -
+              vzhled i posuny resi OdznakStrany, at je to v prehledu i
+              v detailu tataz vec. */}
+          {!h.dotoceno && typeof h.strana === 'number' && <OdznakStrany strana={h.strana} />}
         </span>
       ))}
 

@@ -19,6 +19,7 @@ import { sessionsForPages } from '@/lib/calendar';
 import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
 import { RecordingSection } from './RecordingSection';
 import { ProjectTabs, type ProjectTab } from './ProjectTabs';
+import { ProtokolNataceni } from './ProtokolNataceni';
 import { RodnyListSection } from './RodnyListSection';
 import { HistorieProjektu } from './HistorieProjektu';
 import { Preposlech } from './Preposlech';
@@ -140,7 +141,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     }),
     // Ikony typu projektu z Ceniku - do odznaku u typu (zadani 10. 9. 2026).
     mapaIkonTypu(),
-    // Kam se doteklo natacení - vede Bruno z chatu (zadani 12. 9. 2026).
+    // Natacecí protokol - vede ho Bruno z chatu (zadani 12. 9. 2026).
     natoceniProjektu(caflouProjectId),
   ]);
 
@@ -515,6 +516,21 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           />
         </div>
       ),
+    });
+  }
+  // NATACECÍ PROTOKOL MA VLASTNI ZALOZKU (zadani 13. 9. 2026: „Natacecí
+  // protokol presunme do zvlastni zalozky a nechme i v detailu u toho herce
+  // jen odznak"). Drive visel pod hercem v prehledu projektu a u delsiho
+  // nataceni odtlacil vsechno ostatni dolu.
+  //
+  // Zalozka je i kdyz je protokol prazdny - tam se clovek docte, ze se strany
+  // beru z chatu. Kdyby se schovavala, vypadalo by to jako chybejici funkce.
+  if (isInternalRole(session.user.role)) {
+    tabs.push({
+      key: 'protokol',
+      label: 'Natáčecí protokol',
+      count: zaznamyNatoceni.length,
+      content: <ProtokolNataceni zaznamy={zaznamyNatoceni} />,
     });
   }
   // Historie je jen pro nas - klient se na detail projektu stejne nedostane,

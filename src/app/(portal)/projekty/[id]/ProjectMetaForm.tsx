@@ -10,6 +10,7 @@ import { KresbaIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
 import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
+import { OdznakStrany, posledniStranyHercu } from '../OdznakStrany';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 import { OdznakSelect } from '../OdznakSelect';
 
@@ -123,10 +124,11 @@ export function ProjectMetaForm({
   /** Kdo z herců má dotočeno - ID účtu -> datum (zadání 11. 9. 2026). */
   dotoceniHercu: Record<string, string>;
   /**
-   * Kam se doteklo natáčení — jeden záznam na každý zápis Bruna z chatu,
-   * od nejnovějšího (zadání 13. 9. 2026: „v detailu bych to dělal jako
-   * záznamy: Datum a strana"). `userId` chybí, když se ve zprávě nevyjasnilo,
-   * o kterého herce jde.
+   * Natáčecí protokol — jeden záznam na každý zápis Bruna z chatu, od
+   * nejnovějšího. Celý se vypisuje ve vlastní záložce (ProtokolNataceni);
+   * tady z něj formulář bere jen poslední stranu pro odznak u herce (zadání
+   * 13. 9. 2026: „nechme i v detailu u toho herce jen odznak"). `userId`
+   * chybí, když se ve zprávě nevyjasnilo, o kterého herce jde.
    */
   natoceniZaznamy?: { id: string; strana: number; kdy: string; userId: string | null; jmeno: string | null }[];
 }) {
@@ -144,6 +146,13 @@ export function ProjectMetaForm({
    * přehodil prioritu.
    */
   const [dotoceni, setDotoceni] = useState<Record<string, string>>(dotoceniHercu);
+
+  /**
+   * Poslední strana pro každého herce — do odznaku na bublině. Nepatří do
+   * stavu: protokol vede Bruno na serveru, formulář ho nijak nemění, takže
+   * se jen přepočítá z toho, co přišlo v props.
+   */
+  const strany = posledniStranyHercu(natoceniZaznamy);
   const [dotoceniBezi, setDotoceniBezi] = useState<string | null>(null);
 
   async function prepniDotoceno(userId: string, dotocenoNove: boolean) {
@@ -315,8 +324,14 @@ export function ProjectMetaForm({
                     // linka kolem bubliny; datum odskrtnuti se doctete
                     // v bublinkove napovede, at nezabira misto.
                     const kdy = dotoceni[id];
+                    const strana = strany[id];
                     return (
-                      <span key={id} className="inline-flex items-center gap-2 flex-wrap">
+                      // relative: odznak se stranou sedi na rohu bubliny
+                      // (zadani 13. 9. 2026). Obalka musi bublinu presne
+                      // obepinat - odznak se kotvi k JEJIMU okraji, takze
+                      // padding by ho odsunul mimo roh. Misto na preteceni
+                      // proto delaji MARGINY, ne padding.
+                      <span key={id} className="relative inline-flex mt-2 mr-2">
                         <span
                           title={kdy ? `Dotočeno ${new Date(kdy).toLocaleDateString('cs-CZ')}` : undefined}
                           className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
@@ -326,6 +341,11 @@ export function ProjectMetaForm({
                           {jmeno}
                           {kdy && <span className="sr-only"> — dotočeno</span>}
                         </span>
+                        {/* Misto celeho protokolu jen posledni strana (zadani
+                            13. 9. 2026: „nechme i v detailu u toho herce jen
+                            odznak"). Po dotoceni mizi - tam uz strana nic
+                            nerika. Cela cesta je v zalozce Natacecí protokol. */}
+                        {!kdy && typeof strana === 'number' && <OdznakStrany strana={strana} />}
                       </span>
                     );
                   })}
@@ -333,7 +353,6 @@ export function ProjectMetaForm({
               ) : (
                 (herecZCaflou ?? '—')
               )}
-              <ZaznamyNatoceni zaznamy={natoceniZaznamy} />
             </dd>
           </div>
           <div>
@@ -459,7 +478,6 @@ export function ProjectMetaForm({
             Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění
             šipkou.
           </span>
-          <ZaznamyNatoceni zaznamy={natoceniZaznamy} />
         </div>
 
         <label className="flex flex-col gap-1.5">
@@ -697,49 +715,3 @@ function PoslatZnovu({ caflouProjectId, stav }: { caflouProjectId: string; stav:
   );
 }
 
-/**
- * Natáčecí protokol — datum a strana, od nejnovějšího (zadání 13. 9. 2026;
- * pojmenování upřesněno tentýž den: „nazvěme to Natáčecí protokol, ne kam se
- * doteklo"). Zapisuje to Bruno z chatu projektu, tady se to jen čte;
- * další strana se do seznamu dostane tím, že ji někdo napíše do kanálu.
- *
- * Jméno herce se vypisuje jen tehdy, když je u záznamu — u projektu s jedním
- * hercem by u každého řádku jen zabíralo místo.
- */
-function ZaznamyNatoceni({
-  zaznamy,
-}: {
-  zaznamy?: { id: string; strana: number; kdy: string; userId: string | null; jmeno: string | null }[];
-}) {
-  if (!zaznamy || zaznamy.length === 0) return null;
-  const vice = new Set(zaznamy.map((z) => z.userId)).size > 1;
-
-  return (
-    <div className="mt-2 rounded-lg border border-line bg-field/50 px-3 py-2 flex flex-col gap-1">
-      <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
-        Natáčecí protokol
-      </span>
-      {zaznamy.slice(0, 8).map((z) => (
-        <span key={z.id} className="text-xs font-body text-muted flex items-baseline gap-2 flex-wrap">
-          <span className="font-heading text-ink tabular-nums">
-            {new Date(z.kdy).toLocaleDateString('cs-CZ')}
-          </span>
-          <span>
-            str.{' '}
-            {/* Cislo zelene stejne jako odznak v prehledu - at je to na obou
-                mistech tataz vec (zadani 13. 9. 2026). */}
-            <span className="font-heading font-semibold tabular-nums text-brand-greenDeep dark:text-brand-green">
-              {z.strana}
-            </span>
-          </span>
-          {vice && <span>· {z.jmeno ?? 'bez herce'}</span>}
-        </span>
-      ))}
-      {zaznamy.length > 8 && (
-        <span className="text-[11px] font-body text-muted">
-          …a starších {zaznamy.length - 8} — celá cesta je v historii projektu.
-        </span>
-      )}
-    </div>
-  );
-}
