@@ -887,7 +887,7 @@ export function buildOfferHtml(input: OfferEmailInput): string {
     preheader: `Nabídka pro projekt ${nazev}.`,
     body: `
     <p>Dobrý den,</p>
-    <p>posíláme nabídku pro projekt <strong>${escapeHtml(nazev)}</strong>.</p>
+    <p>posílám nabídku pro projekt <strong>${escapeHtml(nazev)}</strong>.</p>
 
     <div class="cta-row">
       <a href="${escapeHtml(input.offerUrl)}" class="cta">Zobrazit nabídku</a>
@@ -917,7 +917,7 @@ export async function sendOfferEmail(input: OfferEmailInput) {
     text: [
       'Dobry den,',
       '',
-      `posilame nabidku pro projekt ${nazevVPredmetu}.`,
+      `posilam nabidku pro projekt ${nazevVPredmetu}.`,
       '',
       input.offerUrl,
       '',
