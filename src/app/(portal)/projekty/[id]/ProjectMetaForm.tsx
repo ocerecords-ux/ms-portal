@@ -294,323 +294,357 @@ export function ProjectMetaForm({
 
   if (!canEdit) {
     return (
-      <div className="bg-surface rounded-card border border-line shadow-sm p-6">
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Interní údaje
-          </h2>
-          <span className="text-xs font-heading text-muted bg-field border border-line rounded-pill px-3 py-1">
+      // Stejne rozdeleni do karet jako editacni podoba (zadani 13. 9. 2026),
+      // at Prehled vypada stejne bez ohledu na to, kdo se diva. Zvukar tu
+      // navic nevidi klienta - viz canViewProjectBusinessInfo.
+      <div className="flex flex-col gap-6">
+        <Karta nadpis="Výroba">
+          {/* Odznak „Jen ke cteni" stoji u prvni karty, ne u kazde -
+              ctyrikrat pod sebou by z nej byla tapeta. */}
+          <span className="text-xs font-heading text-muted bg-field border border-line rounded-pill px-3 py-1 self-start -mt-2">
             Jen ke čtení
           </span>
-        </div>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 m-0">
-          <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Odkaz na KZ</dt>
-            <dd className="text-sm font-heading m-0 mt-1">
-              <OdkazTlacitko url={values.driveUrl} popisek="Otevřít složku" varianta="vedlejsi" />
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Stav projektu</dt>
-            <dd className="m-0 mt-1">
-              <OdznakStavu stav={values.statusName} />
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">
-              {values.actorUserIds.length > 1 ? 'Herci' : 'Herec'}
-            </dt>
-            <dd className="text-sm font-heading text-ink m-0 mt-1">
-              {values.actorUserIds.length > 0 ? (
-                <span className={TRIDA_SLOUPCE_HERCU}>
-                  {values.actorUserIds.map((id) => {
-                    const jmeno = herci.find((h) => h.id === id)?.label;
-                    if (!jmeno) return null;
-                    // Stejna bublina jako v prehledu projektu - na obou
-                    // mistech ma herec vypadat stejne. Dotoceno rika zelena
-                    // linka kolem bubliny; datum odskrtnuti se doctete
-                    // v bublinkove napovede, at nezabira misto.
-                    const kdy = dotoceni[id];
-                    const strana = strany[id];
-                    return (
-                      // relative: odznak se stranou sedi na rohu bubliny
-                      // (zadani 13. 9. 2026). Obalka musi bublinu presne
-                      // obepinat - odznak se kotvi k JEJIMU okraji, takze
-                      // padding by ho odsunul mimo roh. Misto na preteceni
-                      // proto delaji MARGINY, ne padding.
-                      <span key={id} className="relative inline-flex mt-2 mr-2">
-                        <span
-                          title={kdy ? `Dotočeno ${new Date(kdy).toLocaleDateString('cs-CZ')}` : undefined}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
-                            kdy ? `whitespace-nowrap ${TRIDA_BUBLINY_DOTOCENO}` : `whitespace-nowrap ${TRIDA_BUBLINY_HERCE}`
-                          }`}
-                        >
-                          {jmeno}
-                          {kdy && <span className="sr-only"> — dotočeno</span>}
-                        </span>
-                        {/* Misto celeho protokolu jen posledni strana (zadani
-                            13. 9. 2026: „nechme i v detailu u toho herce jen
-                            odznak"). Po dotoceni mizi - tam uz strana nic
-                            nerika. Cela cesta je v zalozce Natacecí protokol. */}
-                        {!kdy && typeof strana === 'number' && <OdznakStrany strana={strana} />}
-                      </span>
-                    );
-                  })}
-                </span>
-              ) : (
-                (herecZCaflou ?? '—')
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Firma</dt>
-            <dd className="text-sm font-heading text-ink m-0 mt-1">
-              {firmy.find((f) => f.id === values.companyId)?.label ?? '—'}
-            </dd>
-          </div>
-          {vidiKlienta && (
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 m-0">
             <div>
-              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Klient</dt>
-              <dd className="text-sm font-heading text-ink m-0 mt-1">
-                {klienti.find((k) => k.id === values.klientUserId)?.label ?? klientNameZCaflou ?? '—'}
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Stav projektu</dt>
+              <dd className="m-0 mt-1">
+                <OdznakStavu stav={values.statusName} />
               </dd>
             </div>
-          )}
-          <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Manažer projektu</dt>
-            <dd className="text-sm font-heading text-ink m-0 mt-1">{managerLabel}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Priorita</dt>
-            <dd className="m-0 mt-1">
-              <OdznakPriority priorita={values.priority} />
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Typ projektu</dt>
-            <dd className="m-0 mt-1">
-              <OdznakTypu
-                typ={projectTypeLabel(values.projectType)}
-                ikona={ikonyTypu[values.projectType] ?? null}
-              />
-            </dd>
-          </div>
-        </dl>
+            <div>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                {values.actorUserIds.length > 1 ? 'Herci' : 'Herec'}
+              </dt>
+              <dd className="text-sm font-heading text-ink m-0 mt-1">
+                {values.actorUserIds.length > 0 ? (
+                  <span className={TRIDA_SLOUPCE_HERCU}>
+                    {values.actorUserIds.map((id) => {
+                      const jmeno = herci.find((h) => h.id === id)?.label;
+                      if (!jmeno) return null;
+                      // Stejna bublina jako v prehledu projektu - na obou
+                      // mistech ma herec vypadat stejne. Dotoceno rika zelena
+                      // linka kolem bubliny; datum odskrtnuti se doctete
+                      // v bublinkove napovede, at nezabira misto.
+                      const kdy = dotoceni[id];
+                      const strana = strany[id];
+                      return (
+                        // relative: odznak se stranou sedi na rohu bubliny
+                        // (zadani 13. 9. 2026). Obalka musi bublinu presne
+                        // obepinat - odznak se kotvi k JEJIMU okraji, takze
+                        // padding by ho odsunul mimo roh. Misto na preteceni
+                        // proto delaji MARGINY, ne padding.
+                        <span key={id} className="relative inline-flex mt-2 mr-2">
+                          <span
+                            title={kdy ? `Dotočeno ${new Date(kdy).toLocaleDateString('cs-CZ')}` : undefined}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
+                              kdy ? `whitespace-nowrap ${TRIDA_BUBLINY_DOTOCENO}` : `whitespace-nowrap ${TRIDA_BUBLINY_HERCE}`
+                            }`}
+                          >
+                            {jmeno}
+                            {kdy && <span className="sr-only"> — dotočeno</span>}
+                          </span>
+                          {/* Misto celeho protokolu jen posledni strana (zadani
+                              13. 9. 2026: „nechme i v detailu u toho herce jen
+                              odznak"). Po dotoceni mizi - tam uz strana nic
+                              nerika. Cela cesta je v zalozce Natacecí protokol. */}
+                          {!kdy && typeof strana === 'number' && <OdznakStrany strana={strana} />}
+                        </span>
+                      );
+                    })}
+                  </span>
+                ) : (
+                  (herecZCaflou ?? '—')
+                )}
+              </dd>
+            </div>
+          </dl>
+        </Karta>
+
+        <Karta nadpis="Zakázka">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 m-0">
+            <div>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Firma</dt>
+              <dd className="text-sm font-heading text-ink m-0 mt-1">
+                {firmy.find((f) => f.id === values.companyId)?.label ?? '—'}
+              </dd>
+            </div>
+            {vidiKlienta && (
+              <div>
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide">Klient</dt>
+                <dd className="text-sm font-heading text-ink m-0 mt-1">
+                  {klienti.find((k) => k.id === values.klientUserId)?.label ?? klientNameZCaflou ?? '—'}
+                </dd>
+              </div>
+            )}
+            <div>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Manažer projektu</dt>
+              <dd className="text-sm font-heading text-ink m-0 mt-1">{managerLabel}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Priorita</dt>
+              <dd className="m-0 mt-1">
+                <OdznakPriority priorita={values.priority} />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Typ projektu</dt>
+              <dd className="m-0 mt-1">
+                <OdznakTypu
+                  typ={projectTypeLabel(values.projectType)}
+                  ikona={ikonyTypu[values.projectType] ?? null}
+                />
+              </dd>
+            </div>
+          </dl>
+        </Karta>
+
+        <Karta nadpis="Odkazy">
+          <dl className="m-0">
+            <div>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Odkaz na KZ</dt>
+              <dd className="text-sm font-heading m-0 mt-1">
+                <OdkazTlacitko url={values.driveUrl} popisek="Otevřít složku" varianta="vedlejsi" />
+              </dd>
+            </div>
+          </dl>
+        </Karta>
       </div>
     );
   }
 
   return (
-    <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
-      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Interní údaje</h2>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        {/* Odkaz na KZ: jen tlacitka, samotna adresa se neukazuje (zadani
-            10. 9. 2026 - "nechci, at je videt ten dlouhy odkaz"). Policko na
-            rucni zadani se rozbali az na vyzadani; potreba je hlavne tehdy,
-            kdyz se slozka nezalozila sama. */}
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <span className="text-sm font-body text-ink">Odkaz na KZ</span>
-          {/* Odkazy pod sebou, kopirovani jen jako ikona na konci radku
-              (zadani 10. 9. 2026). Vedle sebe stalo v rade ctvero popsanych
-              tlacitek - otevrit, kopirovat, otevrit, kopirovat - a nebylo
-              poznat, co k cemu patri. */}
-          <span className="flex flex-col items-start gap-2">
-            <OdkazTlacitko url={values.driveUrl} popisek="Složka projektu" varianta="radek" />
-            {companyDriveFolderUrl && (
-              <OdkazTlacitko url={companyDriveFolderUrl} popisek="Složka firmy" varianta="radek" />
-            )}
-            <button
-              type="button"
-              onClick={() => setUpravitOdkaz((v) => !v)}
-              className="text-xs font-heading font-semibold text-brand-purple hover:underline mt-0.5"
-            >
-              {upravitOdkaz ? 'Skrýt' : values.driveUrl ? 'Změnit odkaz' : 'Zadat odkaz'}
-            </button>
-          </span>
-          {upravitOdkaz && (
-            <input
-              type="url"
-              autoFocus
-              placeholder="https://drive.google.com/..."
-              value={values.driveUrl}
-              onChange={(e) => set('driveUrl', e.target.value, true)}
-              onBlur={ulozHned}
-              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+    // KARTY MISTO JEDNE DLOUHE TABULE (zadani 13. 9. 2026: „libi se mi,
+    // jak je to rozdeleno na ty bubliny treba v rozpoctu, at je to proste
+    // prehlednejsi"). Devet poli pod sebou v jedne karte se cetlo jako
+    // seznam bez hierarchie; ted ma kazda skupina vlastni kartu se stejnym
+    // vzhledem jako Rozpocet a Vykazy, takze detail projektu drzi jeden styl.
+    //
+    // PORADI PODLE TOHO, JAK CASTO SE TO OTEVIRA: stav a herci jsou duvod,
+    // proc clovek do projektu leze; firma a klient se vyplni jednou; odkazy
+    // na Disk jsou az potom. Mazani stoji uplne dole a zvlast.
+    <div className="flex flex-col gap-6">
+      <Karta nadpis="Výroba">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* Stav a herec se od 10. 9. 2026 prehazuji rucne (odchod z Caflou).
+              Stav je prvni, protoze se s nim pracuje nejcasteji. */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Stav projektu</span>
+            {/* Odznak v barve stavu je ZAROVEN ovladac - stejne jako v prehledu
+                projektu (zadani 10. 9. 2026). Puvodne tu byl <select> a pod nim
+                jeste odznak s touz hodnotou, coz byla tataz vec dvakrat. */}
+            <OdznakSelect
+              hodnota={values.statusName}
+              onZmena={(v) => set('statusName', v)}
+              trida={barvaStavu(values.statusName)}
+              titulek="Přehodit stav projektu"
+              moznosti={[
+                // Stav prenesen z Caflou, ktery v nasi ceste projektu neni - at
+                // se pri ulozeni nezmeni na "nevybráno".
+                ...(values.statusName && !STAVY_PROJEKTU.some((st) => st.nazev === values.statusName)
+                  ? [{ hodnota: values.statusName, popisek: `${values.statusName} (starý stav z Caflou)` }]
+                  : []),
+                ...STAVY_PROJEKTU.map((st) => ({ hodnota: st.nazev, popisek: st.nazev })),
+              ]}
             />
-          )}
-          <span className="text-xs text-muted font-body">Složka projektu na Google Disku.</span>
+            <span className="text-xs text-muted font-body">
+              {popisStavu(values.statusName) ?? 'Stav přehazujete ručně podle toho, kde projekt je.'}
+            </span>
+            {/* Zprava ke kazdemu stavu odejde z projektu jen jednou - jinak by ji
+                klient dostal pokazde, co nekdo stav prehodi tam a zpatky. Tohle
+                je cesta, jak ji poslat znovu (zadani 11. 9. 2026). */}
+            <PoslatZnovu caflouProjectId={caflouProjectId} stav={values.statusName} />
+          </div>
+
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Herci</span>
+            <VyberHercu
+              herci={herci}
+              hodnoty={values.actorUserIds}
+              onZmena={(ids) => set('actorUserIds', ids)}
+              puvodniText={herecZCaflou}
+              dotoceni={dotoceni}
+              onPrepnoutDotoceno={(id, stav) => void prepniDotoceno(id, stav)}
+              dotoceniBezi={dotoceniBezi}
+              strany={strany}
+            />
+            <span className="text-xs text-muted font-body">
+              Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění
+              šipkou.
+            </span>
+          </div>
+
         </div>
+      </Karta>
 
-        {/* Stav a herec se od 10. 9. 2026 prehazuji rucne (odchod z Caflou).
-            Stav je prvni, protoze se s nim pracuje nejcasteji. */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Stav projektu</span>
-          {/* Odznak v barve stavu je ZAROVEN ovladac - stejne jako v prehledu
-              projektu (zadani 10. 9. 2026). Puvodne tu byl <select> a pod nim
-              jeste odznak s touz hodnotou, coz byla tataz vec dvakrat. */}
-          <OdznakSelect
-            hodnota={values.statusName}
-            onZmena={(v) => set('statusName', v)}
-            trida={barvaStavu(values.statusName)}
-            titulek="Přehodit stav projektu"
-            moznosti={[
-              // Stav prenesen z Caflou, ktery v nasi ceste projektu neni - at
-              // se pri ulozeni nezmeni na "nevybráno".
-              ...(values.statusName && !STAVY_PROJEKTU.some((st) => st.nazev === values.statusName)
-                ? [{ hodnota: values.statusName, popisek: `${values.statusName} (starý stav z Caflou)` }]
-                : []),
-              ...STAVY_PROJEKTU.map((st) => ({ hodnota: st.nazev, popisek: st.nazev })),
-            ]}
-          />
-          <span className="text-xs text-muted font-body">
-            {popisStavu(values.statusName) ?? 'Stav přehazujete ručně podle toho, kde projekt je.'}
-          </span>
-          {/* Zprava ke kazdemu stavu odejde z projektu jen jednou - jinak by ji
-              klient dostal pokazde, co nekdo stav prehodi tam a zpatky. Tohle
-              je cesta, jak ji poslat znovu (zadani 11. 9. 2026). */}
-          <PoslatZnovu caflouProjectId={caflouProjectId} stav={values.statusName} />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Herci</span>
-          <VyberHercu
-            herci={herci}
-            hodnoty={values.actorUserIds}
-            onZmena={(ids) => set('actorUserIds', ids)}
-            puvodniText={herecZCaflou}
-            dotoceni={dotoceni}
-            onPrepnoutDotoceno={(id, stav) => void prepniDotoceno(id, stav)}
-            dotoceniBezi={dotoceniBezi}
-            strany={strany}
-          />
-          <span className="text-xs text-muted font-body">
-            Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění
-            šipkou.
-          </span>
-        </div>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Firma</span>
-          <select
-            value={values.companyId}
-            onChange={(e) => set('companyId', e.target.value)}
-            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-          >
-            <option value="">— nevybráno —</option>
-            {firmy.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-          <span className="text-xs text-muted font-body">Pro koho se projekt dělá.</span>
-        </label>
-
-        {/* Klienta zvukar nevidi ani ve formulari (zadani 13. 9. 2026).
-            Dnes je to pojistka - formular se zvukari stejne neotevre
-            (canEditProjectMeta ho nepousti) - ale az se prava zmeni,
-            nezustane tu dira. */}
-        {vidiKlienta && (
+      <Karta nadpis="Zakázka">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Klient</span>
+            <span className="text-sm font-body text-ink">Firma</span>
             <select
-              value={values.klientUserId}
-              onChange={(e) => set('klientUserId', e.target.value)}
+              value={values.companyId}
+              onChange={(e) => set('companyId', e.target.value)}
               className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
             >
               <option value="">— nevybráno —</option>
-              {/* Nahore lide z vybrane firmy, pod nimi zbytek - u koprodukci
-                  sedi u projektu clovek odjinud, takze se nabidka neomezuje. */}
-              {values.companyId && klienti.some((k) => k.companyId === values.companyId) && (
-                <optgroup label="Z vybrané firmy">
+              {firmy.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-muted font-body">Pro koho se projekt dělá.</span>
+          </label>
+
+
+          {/* Klienta zvukar nevidi ani ve formulari (zadani 13. 9. 2026).
+              Dnes je to pojistka - formular se zvukari stejne neotevre
+              (canEditProjectMeta ho nepousti) - ale az se prava zmeni,
+              nezustane tu dira. */}
+          {vidiKlienta && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">Klient</span>
+              <select
+                value={values.klientUserId}
+                onChange={(e) => set('klientUserId', e.target.value)}
+                className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+              >
+                <option value="">— nevybráno —</option>
+                {/* Nahore lide z vybrane firmy, pod nimi zbytek - u koprodukci
+                    sedi u projektu clovek odjinud, takze se nabidka neomezuje. */}
+                {values.companyId && klienti.some((k) => k.companyId === values.companyId) && (
+                  <optgroup label="Z vybrané firmy">
+                    {klienti
+                      .filter((k) => k.companyId === values.companyId)
+                      .map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+                <optgroup label="Ostatní">
                   {klienti
-                    .filter((k) => k.companyId === values.companyId)
+                    .filter((k) => !values.companyId || k.companyId !== values.companyId)
                     .map((k) => (
                       <option key={k.id} value={k.id}>
                         {k.label}
                       </option>
                     ))}
                 </optgroup>
-              )}
-              <optgroup label="Ostatní">
-                {klienti
-                  .filter((k) => !values.companyId || k.companyId !== values.companyId)
-                  .map((k) => (
-                    <option key={k.id} value={k.id}>
-                      {k.label}
-                    </option>
-                  ))}
-              </optgroup>
+              </select>
+              <span className="text-xs text-muted font-body">
+                {klientNameZCaflou
+                  ? `Na tuhle osobu chodí zprávy o projektu. V Caflou tu byl štítek „${klientNameZCaflou}".`
+                  : 'Na tuhle osobu chodí zprávy o projektu.'}
+              </span>
+            </label>
+          )}
+
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Manažer projektu</span>
+            <select
+              value={values.managerUserId}
+              onChange={(e) => set('managerUserId', e.target.value)}
+              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+            >
+              <option value="">— nevybráno —</option>
+              {managers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
             </select>
+          </label>
+
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Priorita</span>
+            <OdznakSelect
+              hodnota={values.priority}
+              onZmena={(v) => set('priority', v)}
+              trida={PRIORITY_CLASSES[values.priority as keyof typeof PRIORITY_CLASSES] ?? TRIDA_PRAZDNEHO}
+              prazdnyPopisek="— bez priority —"
+              moznosti={PRIORITY_OPTIONS.map((p) => ({ hodnota: p, popisek: PRIORITY_LABELS[p] }))}
+            />
+          </label>
+
+
+          <label className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-sm font-body text-ink">Typ projektu</span>
+            {/* Typ nese svou ikonu z Ceniku - stejne jako pred nazvem projektu
+                v prehledu (zadani 10. 9. 2026). */}
+            <OdznakSelect
+              hodnota={values.projectType}
+              onZmena={(v) => set('projectType', v)}
+              trida={values.projectType ? TRIDA_TYPU : TRIDA_PRAZDNEHO}
+              moznosti={[
+                // Ulozeny typ, ktery uz v ceniku neni (vyrazena polozka), at se
+                // pri ulozeni nezmeni na "nevybráno".
+                ...(values.projectType && !projectTypeOptions.includes(values.projectType)
+                  ? [{ hodnota: values.projectType, popisek: `${values.projectType} (mimo ceník)` }]
+                  : []),
+                ...projectTypeOptions.map((t) => ({
+                  hodnota: t,
+                  popisek: t,
+                  obsah: (
+                    <>
+                      {ikonyTypu[t] && <KresbaIkony klic={ikonyTypu[t]} velikost={14} />}
+                      {t}
+                    </>
+                  ),
+                })),
+              ]}
+            />
             <span className="text-xs text-muted font-body">
-              {klientNameZCaflou
-                ? `Na tuhle osobu chodí zprávy o projektu. V Caflou tu byl štítek „${klientNameZCaflou}".`
-                : 'Na tuhle osobu chodí zprávy o projektu.'}
+              {projectTypeOptions.length > 0
+                ? 'Nabídka se bere z Ceníků v administraci.'
+                : 'Ceník je zatím prázdný — typy projektu se přidávají v administraci v sekci Ceníky.'}
             </span>
           </label>
-        )}
+        </div>
+      </Karta>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Manažer projektu</span>
-          <select
-            value={values.managerUserId}
-            onChange={(e) => set('managerUserId', e.target.value)}
-            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-          >
-            <option value="">— nevybráno —</option>
-            {managers.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      <Karta nadpis="Odkazy">
+          {/* Odkaz na KZ: jen tlacitka, samotna adresa se neukazuje (zadani
+              10. 9. 2026 - "nechci, at je videt ten dlouhy odkaz"). Policko na
+              rucni zadani se rozbali az na vyzadani; potreba je hlavne tehdy,
+              kdyz se slozka nezalozila sama. */}
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-sm font-body text-ink">Odkaz na KZ</span>
+            {/* Odkazy pod sebou, kopirovani jen jako ikona na konci radku
+                (zadani 10. 9. 2026). Vedle sebe stalo v rade ctvero popsanych
+                tlacitek - otevrit, kopirovat, otevrit, kopirovat - a nebylo
+                poznat, co k cemu patri. */}
+            <span className="flex flex-col items-start gap-2">
+              <OdkazTlacitko url={values.driveUrl} popisek="Složka projektu" varianta="radek" />
+              {companyDriveFolderUrl && (
+                <OdkazTlacitko url={companyDriveFolderUrl} popisek="Složka firmy" varianta="radek" />
+              )}
+              <button
+                type="button"
+                onClick={() => setUpravitOdkaz((v) => !v)}
+                className="text-xs font-heading font-semibold text-brand-purple hover:underline mt-0.5"
+              >
+                {upravitOdkaz ? 'Skrýt' : values.driveUrl ? 'Změnit odkaz' : 'Zadat odkaz'}
+              </button>
+            </span>
+            {upravitOdkaz && (
+              <input
+                type="url"
+                autoFocus
+                placeholder="https://drive.google.com/..."
+                value={values.driveUrl}
+                onChange={(e) => set('driveUrl', e.target.value, true)}
+                onBlur={ulozHned}
+                className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+              />
+            )}
+            <span className="text-xs text-muted font-body">Složka projektu na Google Disku.</span>
+          </div>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Priorita</span>
-          <OdznakSelect
-            hodnota={values.priority}
-            onZmena={(v) => set('priority', v)}
-            trida={PRIORITY_CLASSES[values.priority as keyof typeof PRIORITY_CLASSES] ?? TRIDA_PRAZDNEHO}
-            prazdnyPopisek="— bez priority —"
-            moznosti={PRIORITY_OPTIONS.map((p) => ({ hodnota: p, popisek: PRIORITY_LABELS[p] }))}
-          />
-        </label>
-
-        <label className="flex flex-col gap-1.5 sm:col-span-2">
-          <span className="text-sm font-body text-ink">Typ projektu</span>
-          {/* Typ nese svou ikonu z Ceniku - stejne jako pred nazvem projektu
-              v prehledu (zadani 10. 9. 2026). */}
-          <OdznakSelect
-            hodnota={values.projectType}
-            onZmena={(v) => set('projectType', v)}
-            trida={values.projectType ? TRIDA_TYPU : TRIDA_PRAZDNEHO}
-            moznosti={[
-              // Ulozeny typ, ktery uz v ceniku neni (vyrazena polozka), at se
-              // pri ulozeni nezmeni na "nevybráno".
-              ...(values.projectType && !projectTypeOptions.includes(values.projectType)
-                ? [{ hodnota: values.projectType, popisek: `${values.projectType} (mimo ceník)` }]
-                : []),
-              ...projectTypeOptions.map((t) => ({
-                hodnota: t,
-                popisek: t,
-                obsah: (
-                  <>
-                    {ikonyTypu[t] && <KresbaIkony klic={ikonyTypu[t]} velikost={14} />}
-                    {t}
-                  </>
-                ),
-              })),
-            ]}
-          />
-          <span className="text-xs text-muted font-body">
-            {projectTypeOptions.length > 0
-              ? 'Nabídka se bere z Ceníků v administraci.'
-              : 'Ceník je zatím prázdný — typy projektu se přidávají v administraci v sekci Ceníky.'}
-          </span>
-        </label>
-      </div>
+      </Karta>
 
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
@@ -626,9 +660,13 @@ export function ProjectMetaForm({
         )}
       </div>
 
+      {/* Mazani ma vlastni kartu, ne patu formulare: je to jedina
+          nevratna vec na cele strance a nema splyvat s poli, ktera se
+          ukladaji sama. */}
+      <Karta>
       {/* Smazani projektu (zadani 10. 9. 2026). Kdyz na nem neco visi, portal
           nabidne archivaci - viz SmazatSPrekazkami. */}
-      <div className="border-t border-line pt-4 flex flex-col gap-3">
+      <div className="flex flex-col gap-3">
         <div>
           <p className="font-heading font-semibold text-sm text-ink m-0">Smazat projekt</p>
           <p className="text-xs font-body text-muted m-0 mt-1">
@@ -647,10 +685,35 @@ export function ProjectMetaForm({
           }}
         />
       </div>
+      </Karta>
     </div>
   );
 }
 
+
+/**
+ * Jedna karta detailu projektu (zadání 13. 9. 2026: „líbí se mi, jak je to
+ * rozdělené na ty bubliny třeba v rozpočtu").
+ *
+ * Vzhled je schválně TENTÝŽ řetězec tříd, jaký má Rozpočet, Výkazy i Doklady.
+ * Kdyby si každá obrazovka psala svoji kartu, po první úpravě by se rozešly
+ * a detail projektu by přestal vypadat jako jedna věc.
+ *
+ * Nadpis je nepovinný — karta bez něj se hodí tam, kde si obsah nadpis nese
+ * sám (mazání projektu).
+ */
+function Karta({ nadpis, children }: { nadpis?: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
+      {nadpis && (
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+          {nadpis}
+        </h2>
+      )}
+      {children}
+    </div>
+  );
+}
 
 /**
  * „Poslat zprávu znovu" pod stavem projektu (zadání 11. 9. 2026).
