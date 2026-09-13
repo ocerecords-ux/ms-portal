@@ -84,17 +84,38 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
         </div>
       </div>
 
-      <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-wrap gap-2">
-        <span className="text-xs font-heading text-muted uppercase tracking-wide w-full">Dostupná pole</span>
-        {CONTRACT_PLACEHOLDERS.map((p) => (
-          <span
-            key={p.key}
-            title={p.label}
-            className="text-xs font-body bg-field border border-line rounded-pill px-2.5 py-1 text-ink"
-          >
-            {`{{${p.key}}}`}
+      {/*
+        Pole se deli na dve skupiny. Prvni portal zna a doplni je sam, druhou
+        (odmena, termin, rodne cislo) nikde nemame - do smlouvy se misto ni
+        vlozi „…", at je pri cteni hned videt, co jeste dopsat.
+      */}
+      <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
+        <div className="flex flex-wrap gap-2">
+          <span className="text-xs font-heading text-muted uppercase tracking-wide w-full">Doplní se samo</span>
+          {CONTRACT_PLACEHOLDERS.filter((p) => !p.rucne).map((p) => (
+            <span
+              key={p.key}
+              title={p.label}
+              className="text-xs font-body bg-field border border-line rounded-pill px-2.5 py-1 text-ink"
+            >
+              {`{{${p.key}}}`}
+            </span>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="text-xs font-heading text-muted uppercase tracking-wide w-full">
+            Dopíše se ve smlouvě (portál je nezná)
           </span>
-        ))}
+          {CONTRACT_PLACEHOLDERS.filter((p) => p.rucne).map((p) => (
+            <span
+              key={p.key}
+              title={p.label}
+              className="text-xs font-body bg-tint border border-line rounded-pill px-2.5 py-1 text-brand-purpleDark"
+            >
+              {`{{${p.key}}}`}
+            </span>
+          ))}
+        </div>
       </div>
 
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}

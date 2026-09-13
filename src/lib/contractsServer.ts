@@ -66,6 +66,8 @@ export async function contractValues(input: {
   signerName?: string | null;
   signerEmail?: string | null;
   projectName?: string | null;
+  /** Cislo uz pridelene rady - do textu smlouvy patri hned v zahlavi. */
+  contractNumber?: string | null;
 }): Promise<Record<string, string>> {
   const [issuer, company] = await Promise.all([
     prisma.issuerCompany.findUnique({ where: { id: input.issuerCompanyId } }),
@@ -78,7 +80,11 @@ export async function contractValues(input: {
     year: 'numeric',
   }).format(new Date());
 
+  // Kam posilat fakturu. Prvni je e-mail vlastni firmy, jinak uctarna.
+  const nasEmail = issuer?.email?.trim() || process.env.MAIL_UCTARNA?.trim() || 'uctarna@mediaspace.cz';
+
   return {
+    cislo_smlouvy: input.contractNumber ?? '',
     nase_firma: issuer?.name ?? '',
     nase_ic: issuer?.ic ?? '',
     nase_dic: issuer?.dic ?? '',
@@ -89,6 +95,7 @@ export async function contractValues(input: {
           addressZip: issuer.addressZip,
         })
       : '',
+    nas_email: nasEmail,
     protistrana: company?.name ?? input.signerName ?? '',
     protistrana_ic: company?.ic ?? '',
     protistrana_dic: company?.dic ?? '',

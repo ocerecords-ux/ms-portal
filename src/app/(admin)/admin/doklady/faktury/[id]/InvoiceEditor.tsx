@@ -318,6 +318,11 @@ export function InvoiceEditor({
         setError(data?.error || 'Smazání se nezdařilo.');
         return;
       }
+      if (data.smazanoNatrvalo) {
+        router.push('/admin/doklady/faktury');
+        router.refresh();
+        return;
+      }
       if (data.cancelledInsteadOfDeleted) {
         setInfo('Faktura byla stornována — v číselné řadě po ní zůstává stopa, jak to má být.');
         router.refresh();
@@ -828,16 +833,26 @@ export function InvoiceEditor({
       <NahledDokladu telo={nahledTelo} titulek="Náhled faktury" />
       </div>
 
-      {invoice.status !== 'CANCELLED' && !jesteNeulozena && (
-        <div>
+      {!jesteNeulozena && (
+        <div className="flex flex-col gap-1">
           <button
             type="button"
             onClick={remove}
             disabled={saving}
-            className="text-danger text-sm font-heading disabled:opacity-60"
+            className="text-danger text-sm font-heading disabled:opacity-60 self-start"
           >
-            {invoice.status === 'DRAFT' ? 'Smazat fakturu' : 'Stornovat fakturu'}
+            {invoice.status === 'DRAFT'
+              ? 'Smazat fakturu'
+              : invoice.status === 'CANCELLED'
+                ? 'Smazat natrvalo'
+                : 'Stornovat fakturu'}
           </button>
+          {invoice.status === 'CANCELLED' && (
+            <span className="text-xs font-body text-muted">
+              Stornovaná faktura v číselné řadě normálně zůstává. Smazat natrvalo má smysl u dokladů,
+              které v účetnictví nikdy nebyly — třeba zkušebních.
+            </span>
+          )}
         </div>
       )}
     </div>

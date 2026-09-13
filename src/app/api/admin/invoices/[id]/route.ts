@@ -147,6 +147,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
     // Odeslanou nebo uhrazenou fakturu nemazeme - ucetne musi zustat, jen se
     // stornuje, aby v ciselne rade nebyla díra.
+    //
+    // UZ STORNOVANOU JDE SMAZAT NATRVALO (zadani 13. 9. 2026: „pridej moznost
+    // fakturu opravdu smazat"). Je to dvoukrokove schvalne: prvni klik doklad
+    // stornuje, teprve u stornovaneho se nabizi smazani. Omylem se tudy
+    // odeslana faktura ztratit neda a zaroven se daji uklidit zkusebni
+    // doklady, ktere v ucetnictvi nikdy nebyly.
+    if (invoice.status === 'CANCELLED') {
+      await prisma.invoice.delete({ where: { id: params.id } });
+      return NextResponse.json({ ok: true, smazanoNatrvalo: true });
+    }
     if (invoice.status !== 'DRAFT') {
       await prisma.invoice.update({ where: { id: params.id }, data: { status: 'CANCELLED' } });
       return NextResponse.json({ ok: true, cancelledInsteadOfDeleted: true });

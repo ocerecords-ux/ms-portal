@@ -39,16 +39,19 @@ export async function POST(req: NextRequest) {
       ? await prisma.contractTemplate.findUnique({ where: { id: d.templateId } })
       : null;
 
+    // Cislo se pridava pred rozvinutim textu - sablony maji {{cislo_smlouvy}}
+    // rovnou v zahlavi, stejne jako to maji papirove smlouvy.
+    const number = await nextContractNumber(d.issuerCompanyId);
+    if (!number) return NextResponse.json({ error: 'Nepodařilo se přidělit číslo smlouvy.' }, { status: 409 });
+
     const values = await contractValues({
       issuerCompanyId: d.issuerCompanyId,
       companyId: d.companyId || null,
       signerName: d.signerName,
       signerEmail: d.signerEmail,
       projectName: projekt.projectName,
+      contractNumber: number,
     });
-
-    const number = await nextContractNumber(d.issuerCompanyId);
-    if (!number) return NextResponse.json({ error: 'Nepodařilo se přidělit číslo smlouvy.' }, { status: 409 });
 
     const contract = await prisma.contract.create({
       data: {
