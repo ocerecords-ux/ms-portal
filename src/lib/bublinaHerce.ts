@@ -40,3 +40,11 @@ export const TRIDA_BUBLINY_DOTOCENO =
 
 /** Víc herců u jednoho projektu jde pod sebe, ne za sebe na jeden řádek. */
 export const TRIDA_SLOUPCE_HERCU = 'flex flex-col items-start gap-1';
+
+/**
+ * Odznak se stranou, kam se s hercem doteklo natáčení (zadání 13. 9. 2026:
+ * „to číslo v odznaku udělej určitě zelené"). Zelená v sloupci herců znamená
+ * postup — stejně jako zelená linka u dotočeného herce.
+ */
+export const TRIDA_ODZNAKU_STRANY =
+  'rounded-pill border border-brand-green/60 bg-brand-green/10 text-brand-greenDeep dark:text-brand-green';

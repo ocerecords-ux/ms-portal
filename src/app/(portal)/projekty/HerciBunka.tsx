@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
+import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_ODZNAKU_STRANY } from '@/lib/bublinaHerce';
 
 /**
  * Herci v přehledu projektů (zadání 12. 9. 2026: „ti herci vypadají v přehledu
@@ -32,7 +32,9 @@ export function HerciBunka({
   return (
     <span className="flex flex-col items-start gap-1 py-2 min-w-0 max-w-full">
       {zobrazeni.map((h, i) => (
-        <span key={`${h.jmeno}-${i}`} className="inline-flex items-center gap-1.5 max-w-full">
+        // flex-wrap: v uzkem sloupci si odznak sedne pod jmeno misto toho,
+        // aby ho bunka urizla.
+        <span key={`${h.jmeno}-${i}`} className="inline-flex items-center gap-1.5 max-w-full flex-wrap">
           <span
             // break-words a normalni zalamovani: dlouhe jmeno radsi na dva radky
             // nez uriznute. Vetsina se vejde na jeden.
@@ -52,7 +54,7 @@ export function HerciBunka({
           {!h.dotoceno && typeof h.strana === 'number' && (
             <span
               title={`Natočeno do strany ${h.strana} — zapsal Bruno z chatu`}
-              className="shrink-0 inline-flex items-center justify-center min-w-[24px] h-[20px] px-1.5 rounded-pill bg-tint border border-brand-purple/40 text-brand-purple text-[11px] font-heading font-bold tabular-nums"
+              className={`shrink-0 inline-flex items-center justify-center min-w-[24px] h-[20px] px-1.5 text-[11px] font-heading font-bold tabular-nums ${TRIDA_ODZNAKU_STRANY}`}
             >
               {h.strana}
               <span className="sr-only"> — natočeno do strany</span>

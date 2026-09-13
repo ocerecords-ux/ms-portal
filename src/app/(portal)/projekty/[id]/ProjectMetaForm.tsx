@@ -724,7 +724,12 @@ function ZaznamyNatoceni({
             {new Date(z.kdy).toLocaleDateString('cs-CZ')}
           </span>
           <span>
-            str. <span className="font-heading font-semibold text-ink tabular-nums">{z.strana}</span>
+            str.{' '}
+            {/* Cislo zelene stejne jako odznak v prehledu - at je to na obou
+                mistech tataz vec (zadani 13. 9. 2026). */}
+            <span className="font-heading font-semibold tabular-nums text-brand-greenDeep dark:text-brand-green">
+              {z.strana}
+            </span>
           </span>
           {vice && <span>· {z.jmeno ?? 'bez herce'}</span>}
         </span>
