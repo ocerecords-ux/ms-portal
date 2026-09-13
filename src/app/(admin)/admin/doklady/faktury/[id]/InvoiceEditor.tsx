@@ -106,7 +106,6 @@ export function InvoiceEditor({
   companies,
   bankAccounts,
   projects,
-  prijemci = { firma: null, klient: null },
   /**
    * ID nabidky, ze ktere se faktura chysta. Kdyz je vyplnene, faktura JESTE
    * NEEXISTUJE - editor jen ukazuje predvyplneny doklad a teprve tlacitko
@@ -125,8 +124,6 @@ export function InvoiceEditor({
   companies: FirmaVolba[];
   bankAccounts: { id: string; label: string; accountNumber: string | null; iban: string | null; currency: Currency }[];
   projects: ProjectChoice[];
-  /** Komu se dá faktura poslat: kontakt u firmy a klient projektu (13. 9. 2026). */
-  prijemci?: { firma: string | null; klient: { jmeno: string; email: string } | null };
   draftFromOfferId?: string;
 }) {
   const router = useRouter();
@@ -261,29 +258,17 @@ export function InvoiceEditor({
   }
 
   /**
-   * KOMU FAKTURA JDE (zadání 13. 9. 2026: „potřebuju mít možnost, že se faktura
-   * pošle na mail uvedený u firmy — tam je většinou účetní firmy. Ale pak
-   * zároveň někdy posíláme i na klienta, který má na starost projekt").
-   *
-   * Nabídka je jen ze dvou adres, které portál zná: kontakt u firmy a klient
-   * projektu. Ručně psaná adresa tu schválně není — faktura má chodit tam, kde
-   * je to u firmy a u projektu zapsané, ne kam kdo zrovna napíše.
+   * Odeslání faktury. Komu jde, rozhoduje karta firmy (kontaktní e-mail
+   * a zaškrtávátko „Posílat faktury i klientovi") - viz api/admin/invoices/
+   * [id]/send. Po odeslání se vypíše, kdo ji dostal.
    */
-  const [komu, setKomu] = useState({ firma: true, klient: false });
-  const [vybiraKomu, setVybiraKomu] = useState(false);
-
-  async function sendToClient(volba = komu) {
+  async function sendToClient() {
     const saved = await save();
     if (!saved) return;
     setSending(true);
     setError(null);
-    setVybiraKomu(false);
     try {
-      const res = await fetch(`/api/admin/invoices/${invoice.id}/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firme: volba.firma, klientovi: volba.klient }),
-      });
+      const res = await fetch(`/api/admin/invoices/${invoice.id}/send`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || 'Odeslání se nezdařilo.');
@@ -429,70 +414,14 @@ export function InvoiceEditor({
             ))}
           {!locked && !jesteNeulozena && (
             <>
-              <span className="relative">
-                <button
-                  type="button"
-                  onClick={() => (prijemci.klient ? setVybiraKomu((v) => !v) : void sendToClient({ firma: true, klient: false }))}
-                  disabled={saving || sending}
-                  className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-tint transition-colors disabled:opacity-60"
-                >
-                  {sending ? 'Odesílám…' : 'Odeslat odběrateli'}
-                </button>
-
-                {vybiraKomu && prijemci.klient && (
-                  <div className="absolute right-0 top-full mt-2 z-20 w-[320px] bg-surface border border-line rounded-card shadow-lg p-4 flex flex-col gap-3 text-left">
-                    <span className="text-xs font-heading text-muted uppercase tracking-wide">Komu fakturu poslat</span>
-
-                    <label className="flex items-start gap-2 text-sm font-body text-ink">
-                      <input
-                        type="checkbox"
-                        checked={komu.firma}
-                        disabled={!prijemci.firma}
-                        onChange={(e) => setKomu((k) => ({ ...k, firma: e.target.checked }))}
-                        className="mt-0.5"
-                      />
-                      <span>
-                        <span className="font-heading font-semibold">Kontakt u firmy</span>
-                        <br />
-                        <span className="text-muted break-words">{prijemci.firma ?? 'firma nemá vyplněný e-mail'}</span>
-                      </span>
-                    </label>
-
-                    <label className="flex items-start gap-2 text-sm font-body text-ink">
-                      <input
-                        type="checkbox"
-                        checked={komu.klient}
-                        onChange={(e) => setKomu((k) => ({ ...k, klient: e.target.checked }))}
-                        className="mt-0.5"
-                      />
-                      <span>
-                        <span className="font-heading font-semibold">{prijemci.klient.jmeno}</span>
-                        <span className="text-muted"> — klient projektu</span>
-                        <br />
-                        <span className="text-muted break-words">{prijemci.klient.email}</span>
-                      </span>
-                    </label>
-
-                    <div className="flex items-center gap-2 justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setVybiraKomu(false)}
-                        className="text-muted hover:text-ink text-sm font-heading px-2 py-1"
-                      >
-                        Zpět
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void sendToClient()}
-                        disabled={(!komu.firma || !prijemci.firma) && !komu.klient}
-                        className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-                      >
-                        Odeslat
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </span>
+              <button
+                type="button"
+                onClick={sendToClient}
+                disabled={saving || sending}
+                className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-tint transition-colors disabled:opacity-60"
+              >
+                {sending ? 'Odesílám…' : 'Odeslat odběrateli'}
+              </button>
               <button
                 type="button"
                 onClick={() => save()}

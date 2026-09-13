@@ -87,6 +87,11 @@ model Company {
 
   // --- Dodavatel (type = DODAVATEL) - fakturacni/kontaktni udaje, zadani 5. 9. 2026 ---
   contactName    String?   // kontaktni osoba
+  /// Posílat faktury i klientovi projektu (zadání 13. 9. 2026). Na kontaktní
+  /// e-mail firmy chodí faktura vždycky - tam bývá účetní odběratele. Tohle
+  /// k tomu přidá člověka, který má u nich konkrétní projekt na starost;
+  /// portál ho vezme z projektu, ke kterému je faktura navázaná.
+  fakturyKlientovi Boolean @default(false)
   contactEmail   String?
   contactPhone   String?
   ic             String?

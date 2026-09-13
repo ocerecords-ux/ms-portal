@@ -28,6 +28,7 @@ const schema = z.object({
 
   contactName: z.string().trim().optional(),
   contactEmail: z.string().trim().optional(),
+  fakturyKlientovi: z.boolean().optional(),
   contactPhone: z.string().trim().optional(),
 
   ratePerPage: z.string().trim().optional(),
@@ -70,6 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(data.paymentTermDays !== undefined ? { paymentTermDays: toIntOrNull(data.paymentTermDays) } : {}),
         ...(data.contactName !== undefined ? { contactName: data.contactName || null } : {}),
         ...(data.contactEmail !== undefined ? { contactEmail: data.contactEmail || null } : {}),
+        ...(data.fakturyKlientovi !== undefined ? { fakturyKlientovi: data.fakturyKlientovi } : {}),
         ...(data.contactPhone !== undefined ? { contactPhone: data.contactPhone || null } : {}),
         ...(data.type === 'KLIENT'
           ? {

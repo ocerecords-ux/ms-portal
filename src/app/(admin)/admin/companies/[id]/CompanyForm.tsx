@@ -33,6 +33,16 @@ export function CompanyForm({ company }: { company: Company }) {
   const [contactName, setContactName] = useState(company.contactName ?? '');
   const [contactEmail, setContactEmail] = useState(company.contactEmail ?? '');
   const [contactPhone, setContactPhone] = useState(company.contactPhone ?? '');
+  /**
+   * Komu chodí faktury (zadání 13. 9. 2026: „nastavoval bych to u firem
+   * v detailu - primární mail a k tomu zaškrtávátko Klient").
+   *
+   * Na kontaktní e-mail jde faktura vždycky, tam bývá účetní odběratele.
+   * Zaškrtnutí k tomu přidá člověka, který má u nich na starost ten konkrétní
+   * projekt - portál si ho vezme z projektu, ke kterému je faktura navázaná,
+   * takže se nikde nevypisuje ručně a u každé faktury vyjde ten správný.
+   */
+  const [fakturyKlientovi, setFakturyKlientovi] = useState(company.fakturyKlientovi ?? false);
 
   const [rate, setRate] = useState(String(company.ratePerPage ?? ''));
   const [caflouCompanyId, setCaflouCompanyId] = useState(company.caflouCompanyId ?? '');
@@ -101,6 +111,7 @@ export function CompanyForm({ company }: { company: Company }) {
           contactName,
           contactEmail,
           contactPhone,
+          fakturyKlientovi,
           ...(isClient
             ? { ratePerPage: dealsAudiobooks ? rate : '', caflouCompanyId, driveFolderUrl: driveUrl, dealsAudiobooks, dealsAds }
             : {}),
@@ -257,6 +268,23 @@ export function CompanyForm({ company }: { company: Company }) {
           </AdminField>
         </div>
       </div>
+
+      <label className="flex items-start gap-2 text-sm font-heading text-ink">
+        <input
+          type="checkbox"
+          checked={fakturyKlientovi}
+          onChange={(e) => setFakturyKlientovi(e.target.checked)}
+          className="mt-0.5"
+        />
+        <span>
+          Posílat faktury i klientovi
+          <br />
+          <span className="text-xs font-body text-muted">
+            Vedle e-mailu výš dostane fakturu v kopii i člověk, který má u téhle firmy na starost
+            projekt, ke kterému je faktura navázaná.
+          </span>
+        </span>
+      </label>
 
       {isClient && (
         <>

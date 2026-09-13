@@ -21,18 +21,6 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
 
   const projects = await listProjectOptions();
 
-  // Komu se faktura da poslat (zadani 13. 9. 2026): kontakt u firmy - tam byva
-  // ucetni odberatele - a vedle nej clovek, ktery ma u nich projekt na starost.
-  const meta = invoice.caflouProjectId
-    ? await prisma.projectMeta.findUnique({
-        where: { caflouProjectId: invoice.caflouProjectId },
-        select: { klient: { select: { name: true, email: true } } },
-      })
-    : null;
-  const klient = meta?.klient?.email
-    ? { jmeno: meta.klient.name || meta.klient.email, email: meta.klient.email }
-    : null;
-
   const companies = await prisma.company.findMany({
     where: { active: true },
     orderBy: { name: 'asc' },
@@ -104,7 +92,6 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           currency: a.currency,
         }))}
         projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
-        prijemci={{ firma: invoice.company.contactEmail, klient }}
       />
     </div>
   );
