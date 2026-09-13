@@ -435,20 +435,30 @@ function bunkaSloupce(
       // toho si otevre pole a prepisuje nazev. Uprava nazvu zustava v detailu
       // projektu, kde je k tomu formular a je jasne, co se deje.
       //
-      // JEDEN RADEK (zadani 12. 9. 2026: „hrozne nam tam litaji radky, prosim
-      // srovnat"). Nazev je nejsirsi sloupec a bere si vsechno, co ostatni
-      // nepotrebuji, takze se skoro vzdycky vejde cely; delsi se orezne a
-      // uplny je v bublinkove napovede. Zalomeny nazev delal ze dvou sousednich
-      // radku dvojnasobne vysoke a seznam se pak nedal projizdet ocima.
+      // CELY NAZEV, V NOUZI NA DVA RADKY (zadani 13. 9. 2026: „potrebujeme
+      // videt cely nazev projektu. Tak zobraz cely nazev a kdyz tam nevejde,
+      // dej ho na dalsi radek").
+      //
+      // Meni to pravidlo z 12. 9. 2026, kdy se kazda bunka orezavala na jeden
+      // radek, aby „nelitaly radky". Useknuty nazev knihy je ale to posledni,
+      // co se ma orezat - je to jediny udaj, podle ktereho se projekt v
+      // seznamu pozna, a bublinkova napoveda se necte pri projizdeni ocima.
+      // Radek uz stejne roste podle hercu (12. 9. 2026), takze zalomeny nazev
+      // nic noveho nerozhodi.
+      //
+      // items-start misto items-center: u dvouradkoveho nazvu ma ikona sedet
+      // u PRVNIHO radku, ne uprostred vysky bunky.
       return (
-        <span className="flex items-center gap-2.5 min-w-0 max-w-full" title={p.name}>
+        <span className="flex items-start gap-2.5 min-w-0 max-w-full py-2" title={p.name}>
           {/* Projekt bez ikony si misto ni nechava prazdno (zadani 12. 9.
               2026: „projekty, ktere nemaji ikony, by se mely spise zarovnat
               nazvem, ne podle te ikony") - nazvy tak stoji v jedne linii. */}
           <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} mezeraKdyzNeni />
+          {/* break-words: nazev bez mezer (dlouhy jednoslovny titul) se jinak
+              nezalomi vubec a vytekl by z bunky. */}
           <Link
             href={`/projekty/${p.id}`}
-            className="text-ink hover:text-brand-purple no-underline truncate"
+            className="text-ink hover:text-brand-purple no-underline whitespace-normal break-words leading-snug"
           >
             {p.name}
           </Link>
@@ -651,7 +661,10 @@ export function sirkySloupcu(klice: string[]): string[] {
  * projíždět očima.
  */
 const TRIDA_BUNKY: Record<string, string> = {
-  name: 'px-3 py-0 font-heading font-semibold text-[13px] truncate',
+  // Nazev se NEOREZAVA - zalamuje se na dalsi radek (zadani 13. 9. 2026).
+  // Odsazeni shora/zdola si nese obsah bunky, aby dvouradkovy nazev nesedel
+  // natesno na okraji radku.
+  name: 'px-3 py-0 font-heading font-semibold text-[13px] align-middle',
   companyName: 'px-3 py-0 text-[13px] font-heading text-muted truncate',
   statusName: 'px-3 py-0 truncate',
   priority: 'px-2 py-0 text-[13px] font-heading truncate',
