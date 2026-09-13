@@ -85,13 +85,21 @@ export function ProjectDocuments({
           faktuře nebo výdaji.
         </p>
       ) : (
-        <div className="flex flex-col gap-5">
-          <Block title="Smlouvy" rows={contracts} druh="smlouva" hideAmount />
+        {/* PORADI PODLE TOHO, JAK DOKLAD VZNIKA (zadani 13. 9. 2026:
+            „seradme primarne: Nabidky, faktury, smlouvy"). Nejdriv se
+            nabidne, pak fakturuje; smlouva a prijate doklady jsou to, co
+            clovek hleda nejmin casto, a jdou proto dolu.
+
+            Skupiny oddeluje tenka linka - `divide-y` ji nakresli jen MEZI
+            nimi, takze prazdna skupina (vraci null) po sobe nenecha linku
+            na prazdnem miste. */}
+        <div className="flex flex-col divide-y divide-line">
           <Block title="Nabídky" rows={offers} druh="nabidka" />
           <Block title="Vydané faktury" rows={invoices} druh="faktura" />
+          <Block title="Smlouvy" rows={contracts} druh="smlouva" hideAmount />
           <Block title="Přijaté doklady" rows={expenses} druh="vydaj" />
 
-          <div className="flex items-center gap-8 flex-wrap border-t border-line pt-4">
+          <div className="flex items-center gap-8 flex-wrap pt-4">
             <Sum label="Fakturováno" values={invoicedByCurrency} />
             <Sum label="Náklady" values={costsByCurrency} />
           </div>
@@ -197,7 +205,10 @@ function Block({
 }) {
   if (rows.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1.5">
+    // py-4 a ne gap na rodici: mezera musi byt UVNITR skupiny, aby linka
+    // vedla v pulce mezi nimi a ne natesno u nadpisu. first/last si uberou
+    // vnejsi okraj, at panel nema nahore a dole prazdno navic.
+    <div className="flex flex-col gap-1.5 py-4 first:pt-0 last:pb-0">
       <h3 className="font-heading font-semibold text-xs text-muted uppercase tracking-wide m-0">
         {title} <span className="tabular-nums opacity-70">({rows.length})</span>
       </h3>
