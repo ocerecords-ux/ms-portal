@@ -114,13 +114,6 @@ export function OfferApproval({
 
   return (
     <div className="bg-surface border border-line rounded-card shadow-sm p-6 flex flex-col gap-4">
-      <div>
-        <p className="font-heading font-semibold text-ink m-0">Souhlasíte s nabídkou?</p>
-        <p className="text-sm font-body text-muted m-0 mt-1">
-          Schválením dáte {issuerName} vědět, že se může pustit do práce. Přihlašovat se nemusíte.
-        </p>
-      </div>
-
       {error && <p className="text-sm text-danger m-0">{error}</p>}
 
       <div>

@@ -28,23 +28,41 @@ function domenaAdresy(adresa: string | undefined | null): string {
   return (adresa?.match(/@([^\s>]+)/)?.[1] || '').trim().toLowerCase();
 }
 
+/** Holá adresa z hodnoty typu `Něco <nekdo@kde.cz>`. */
+function samotnaAdresa(odesilatel: string): string {
+  return (odesilatel.match(/<([^>]+)>/)?.[1] || odesilatel).trim();
+}
+
 export function odesilatelPodleCloveka(
   jmeno?: string | null,
   mail?: string | null,
 ): { from: string | { name: string; address: string }; replyTo?: string } {
-  const vychozi = process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>';
+  const vychozi = process.env.SMTP_FROM || 'Mediaspace <portal@msportal.cz>';
+  const popisek = jmeno?.trim() ? `${jmeno.trim()} — Mediaspace` : 'Mediaspace';
   const adresa = mail?.trim().toLowerCase() || '';
-  if (!adresa.includes('@')) return { from: vychozi };
+
+  // Jméno odesílatele je VŽDYCKY člověk (nebo aspoň Mediaspace), nikdy
+  // "MS Portal" - to je název vnitřního systému a klientovi nic neříká
+  // (zpráva uživatele 13. 9. 2026: „pořád je tam MS portal").
+  if (!adresa.includes('@')) return { from: { name: popisek, address: samotnaAdresa(vychozi) } };
 
   const nase = new Set(
-    [domenaAdresy(vychozi), domenaAdresy(process.env.SMTP_USER)].filter(Boolean),
+    [
+      domenaAdresy(vychozi),
+      domenaAdresy(process.env.SMTP_USER),
+      // Další domény, pod kterými nám server dovolí odesílat, se dají přidat
+      // proměnnou SMTP_DOMENY_ODESILATELE (oddělené čárkou) - bez zásahu do kódu.
+      ...(process.env.SMTP_DOMENY_ODESILATELE || '')
+        .split(',')
+        .map((d) => d.trim().toLowerCase())
+        .filter(Boolean),
+    ].filter(Boolean),
   );
-  const popisek = jmeno?.trim() ? `${jmeno.trim()} — Mediaspace` : 'Mediaspace';
 
   if (nase.has(domenaAdresy(adresa))) {
     return { from: { name: popisek, address: adresa }, replyTo: adresa };
   }
-  return { from: vychozi, replyTo: adresa };
+  return { from: { name: popisek, address: samotnaAdresa(vychozi) }, replyTo: adresa };
 }
 
 /**
@@ -800,35 +818,27 @@ function formatOfferMoney(minor: number, currency: string): string {
 }
 
 export function buildOfferHtml(input: OfferEmailInput): string {
-  const greeting = escapeHtml(pozdrav(input.contactName));
-  const validText = input.validUntil
-    ? input.validUntil.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })
-    : null;
+  /**
+   * MAIL JE JEN POZVÁNKA (zadání 13. 9. 2026: „nic jiného už tam nebude,
+   * detaily se zobrazí po otevření").
+   *
+   * Dřív nesl i rozpis cen a platnost. Jenže pak si klient udělal obrázek
+   * z mailu a na stránku, kde se nabídka schvaluje, vůbec neklikl - a čísla
+   * v mailu mezitím mohla zestárnout. Teď je v mailu jedna věta a tlačítko;
+   * závazné je to, co je na stránce.
+   */
+  const nazev = input.projectName?.trim() || input.subject?.trim() || input.number;
 
   return emailShell({
     tag: 'Nabídka',
-    preheader: `Nabídka ${input.number} od ${input.issuerName}.`,
+    preheader: `Nabídka pro projekt ${nazev}.`,
     body: `
-    <span class="badge">Nabídka ${escapeHtml(input.number)}</span>
-    <h2>${input.subject ? escapeHtml(input.subject) : 'Nabídka k odsouhlasení'}</h2>
-    <p>${greeting}</p>
-    <p>posíláme nabídku pro <strong>${escapeHtml(input.companyName)}</strong>. Celý rozpis si otevřete
-       odkazem níže a rovnou tam nabídku schválíte — přihlašovat se kvůli tomu nemusíte.</p>
-
-    <table role="presentation" class="field-table">
-      <tr><td class="label">Číslo nabídky</td><td class="value">${escapeHtml(input.number)}</td></tr>
-      <tr><td class="label">Cena bez DPH</td><td class="value">${escapeHtml(formatOfferMoney(input.totalExVat, input.currency))}</td></tr>
-      <tr><td class="label">Cena s DPH</td><td class="value">${escapeHtml(formatOfferMoney(input.totalIncVat, input.currency))}</td></tr>
-      ${validText ? `<tr><td class="label">Platnost do</td><td class="value regular">${escapeHtml(validText)}</td></tr>` : ''}
-      <tr><td class="label">Vystavil</td><td class="value regular">${escapeHtml(input.senderName || input.issuerName)}</td></tr>
-    </table>
+    <p>Dobrý den,</p>
+    <p>posíláme nabídku pro projekt <strong>${escapeHtml(nazev)}</strong>.</p>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.offerUrl)}" class="cta">Zobrazit a schválit nabídku</a>
+      <a href="${escapeHtml(input.offerUrl)}" class="cta">Zobrazit nabídku</a>
     </div>
-
-    <p class="small">Odkaz je určený jen vám — nesdílejte ho prosím dál. Kdyby cokoliv nesedělo, stačí
-       na tento e-mail odpovědět.</p>
   `,
   });
 }
@@ -850,20 +860,14 @@ export async function sendOfferEmail(input: OfferEmailInput) {
     to: input.to,
     subject: `Cenová nabídka - ${nazevVPredmetu}`,
     text: [
-      pozdrav(input.contactName),
+      'Dobry den,',
       '',
-      `posilame nabidku ${input.number} pro ${input.companyName}.`,
-      `Cena bez DPH: ${formatOfferMoney(input.totalExVat, input.currency)}`,
-      `Cena s DPH: ${formatOfferMoney(input.totalIncVat, input.currency)}`,
-      input.validUntil ? `Platnost do: ${input.validUntil.toLocaleDateString('cs-CZ')}` : '',
+      `posilame nabidku pro projekt ${nazevVPredmetu}.`,
       '',
-      'Cely rozpis a schvaleni najdete zde:',
       input.offerUrl,
       '',
       input.senderName || input.issuerName,
-    ]
-      .filter(Boolean)
-      .join('\n'),
+    ].join('\n'),
     html: buildOfferHtml(input),
   };
 
@@ -873,13 +877,11 @@ export async function sendOfferEmail(input: OfferEmailInput) {
     // Nekterym serverum se cizi adresa v From nelibi, i kdyz je ze stejne
     // domeny. Nez aby nabidka neodesla vubec, posleme ji pod nasi adresou
     // a s Reply-To na manazera.
-    if (typeof zprava.from === 'string') throw err;
+    const vychozi = process.env.SMTP_FROM || 'Mediaspace <portal@msportal.cz>';
+    const poslanoZ = typeof zprava.from === 'string' ? zprava.from : zprava.from.address;
+    if (poslanoZ === samotnaAdresa(vychozi)) throw err;
     console.warn('Nabidka: odeslani pod adresou manazera selhalo, zkousim vychozi:', err);
-    await transport.sendMail({
-      ...zprava,
-      from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
-      replyTo: obalka.replyTo,
-    });
+    await transport.sendMail({ ...zprava, from: vychozi, replyTo: obalka.replyTo });
   }
 
   return { sent: true as const };

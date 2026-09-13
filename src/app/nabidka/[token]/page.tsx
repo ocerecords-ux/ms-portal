@@ -21,6 +21,20 @@ export default async function PublicOfferPage({ params }: { params: { token: str
 
   const totals = computeTotals(offer.items);
 
+  /**
+   * Manažer projektu (zadání 13. 9. 2026: „v detailu pak přidej manažera
+   * projektu"). Mail je teď jen pozvánka, takže jméno člověka, se kterým
+   * klient nabídku domlouval, musí být vidět tady - je to první věc, kterou
+   * hledá, když chce něco doladit.
+   */
+  const meta = offer.caflouProjectId
+    ? await prisma.projectMeta.findUnique({
+        where: { caflouProjectId: offer.caflouProjectId },
+        select: { manager: { select: { name: true, email: true } } },
+      })
+    : null;
+  const manazer = meta?.manager ?? null;
+
   return (
     <main className="min-h-screen bg-paper">
       <header className="bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-6 flex items-center gap-3 sm:gap-4">
@@ -53,6 +67,21 @@ export default async function PublicOfferPage({ params }: { params: { token: str
                 {offer.issuer.ic ? `IČ ${offer.issuer.ic}` : ''}
                 {offer.issuer.dic ? ` · DIČ ${offer.issuer.dic}` : ''}
               </p>
+              {manazer && (
+                <p className="text-sm font-body text-muted m-0 mt-3">
+                  <span className="text-xs font-heading uppercase tracking-wide">Manažer projektu</span>
+                  <br />
+                  <span className="font-heading font-semibold text-ink">{manazer.name || manazer.email}</span>
+                  {manazer.email && (
+                    <>
+                      <br />
+                      <a href={`mailto:${manazer.email}`} className="text-brand-purple">
+                        {manazer.email}
+                      </a>
+                    </>
+                  )}
+                </p>
+              )}
             </div>
             <div>
               <span className="text-xs font-heading text-muted uppercase tracking-wide">Odběratel</span>
