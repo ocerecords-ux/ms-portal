@@ -4,9 +4,29 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useEffect } from 'react';
+import { JAZYKY, KLIC_JAZYKA, PLATNOST_JAZYKA_S, jeJazyk, prelozit, type Jazyk } from '@/lib/jazyk';
 
 export default function LoginPage() {
   const router = useRouter();
+  /**
+   * Jazyk uz na prihlaseni (zadani 13. 9. 2026) - zahranicni klient nema jak
+   * se prepnout az uvnitr, kdyz se nejdriv musi dostat dovnitr. Volba se
+   * ulozi do cookie a portal uz ji pak zna.
+   */
+  const [jazyk, setJazyk] = useState<Jazyk>('cs');
+  useEffect(() => {
+    const ulozeny = document.cookie
+      .split('; ')
+      .find((c) => c.startsWith(`${KLIC_JAZYKA}=`))
+      ?.split('=')[1];
+    if (jeJazyk(ulozeny)) setJazyk(ulozeny);
+  }, []);
+  const t = (klic: string) => prelozit(jazyk, klic);
+  function prepni(novy: Jazyk) {
+    document.cookie = `${KLIC_JAZYKA}=${novy}; path=/; max-age=${PLATNOST_JAZYKA_S}; samesite=lax`;
+    setJazyk(novy);
+  }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -37,8 +57,8 @@ export default function LoginPage() {
       // tak vypadat, at se to da dohledat.
       setError(
         res.error === 'CredentialsSignin'
-          ? 'Nesprávný e-mail nebo heslo.'
-          : `Přihlášení selhalo kvůli chybě serveru (${res.error}). Zkuste to prosím znovu.`,
+          ? t('prihlaseni.spatneUdaje')
+          : `${t('prihlaseni.chybaServeru')} (${res.error})`,
       );
       return;
     }
@@ -65,11 +85,28 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="px-8 pb-8 flex flex-col gap-5">
-            <h1 className="font-display text-2xl text-brand-green m-0">Přihlášení</h1>
+            <div className="flex items-center justify-between gap-3">
+              <h1 className="font-display text-2xl text-brand-green m-0">{t('prihlaseni.nadpis')}</h1>
+              <span className="inline-flex items-center rounded-pill border border-white/30 overflow-hidden">
+                {JAZYKY.map((j) => (
+                  <button
+                    key={j}
+                    type="button"
+                    onClick={() => prepni(j)}
+                    aria-pressed={j === jazyk}
+                    className={`px-2.5 py-1 text-[11px] font-heading font-bold tracking-wide transition-colors ${
+                      j === jazyk ? 'bg-brand-green text-brand-purpleDark' : 'text-white/75 hover:text-white'
+                    }`}
+                  >
+                    {j.toUpperCase()}
+                  </button>
+                ))}
+              </span>
+            </div>
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="email" className="text-white text-sm font-body">
-                E-mail
+                {t('prihlaseni.email')}
               </label>
               <input
                 id="email"
@@ -83,7 +120,7 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="password" className="text-white text-sm font-body">
-                Heslo
+                {t('prihlaseni.heslo')}
               </label>
               <input
                 id="password"
@@ -102,18 +139,20 @@ export default function LoginPage() {
               disabled={loading}
               className="mt-2 border-2 border-brand-green text-brand-green font-heading font-semibold rounded-lg py-2.5 hover:bg-brand-green hover:text-brand-purpleDark transition-colors disabled:opacity-60"
             >
-              {phase === 'signing' ? 'Přihlašuji…' : phase === 'redirecting' ? 'Načítám portál…' : 'Přihlásit se'}
+              {phase === 'signing'
+                ? t('prihlaseni.probiha')
+                : phase === 'redirecting'
+                  ? t('prihlaseni.nacitam')
+                  : t('prihlaseni.tlacitko')}
             </button>
 
             <Link href="/zapomenute-heslo" className="text-white/80 text-xs font-body text-center hover:text-white">
-              Zapomenuté heslo
+              {t('prihlaseni.zapomenute')}
             </Link>
           </form>
         </div>
 
-        <p className="text-center text-muted text-xs mt-6 font-body">
-          Účet vám založí Mediaspace.
-        </p>
+        <p className="text-center text-muted text-xs mt-6 font-body">{t('prihlaseni.ucetZalozi')}</p>
       </div>
     </main>
   );

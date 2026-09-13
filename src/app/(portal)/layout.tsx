@@ -17,6 +17,8 @@ import { quickActionsFor } from '@/lib/quickActions';
 import { isInternalRole } from '@/lib/roles';
 import { odkazNaFotku } from '@/lib/fotky';
 import { zkusDatabazi } from '@/lib/dbZnovu';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { JazykProvider } from './components/JazykProvider';
 
 // Jediné místo, které chrání celou klientskou sekci portálu. Session je
 // zdroj pravdy o tom, kdo je přihlášen a pod jakou firmu (companyId) patří
@@ -28,6 +30,9 @@ export default async function PortalLayout({ children }: { children: React.React
 
   const role = session.user.role;
   const internal = isInternalRole(role);
+  // Jazyk portalu (zadani 13. 9. 2026). Cte se z cookie, takze stranka prijde
+  // ze serveru rovnou prelozena.
+  const jazyk = nactiJazyk();
 
   // Lišta je editovatelná (viz Topbar) a patří KONKRÉTNÍMU uživateli - úprava
   // se nikomu jinému nepromítne (zadani 8. 9. 2026). Co v ní vůbec smí být se
@@ -68,6 +73,7 @@ export default async function PortalLayout({ children }: { children: React.React
   }
 
   return (
+    <JazykProvider jazyk={jazyk}>
     <div className="min-h-screen bg-paper">
       <Topbar
         userLabel={session.user.name || session.user.email}
@@ -81,8 +87,9 @@ export default async function PortalLayout({ children }: { children: React.React
           (zadani 8. 9. 2026). */}
       {nouzovyRezim && (
         <p className="m-0 px-4 sm:px-6 py-2.5 bg-warnTint border-b border-line text-sm font-body text-status-progress text-center">
-          Databáze má zrovna plno, takže portál jede v nouzovém režimu — nabídka a úkoly nemusí být úplné. Data jsou
-          v pořádku, za chvíli dejte F5.
+          {jazyk === 'en'
+            ? 'The database is busy right now, so the portal is running in reduced mode — the menu and tasks may be incomplete. Your data is safe; please refresh in a moment.'
+            : 'Databáze má zrovna plno, takže portál jede v nouzovém režimu — nabídka a úkoly nemusí být úplné. Data jsou v pořádku, za chvíli dejte F5.'}
         </p>
       )}
       <div
@@ -113,5 +120,6 @@ export default async function PortalLayout({ children }: { children: React.React
           overuje, ze projekt patri firme prihlaseneho klienta. */}
       {!internal && role === 'CLIENT' && <DotazyDock />}
     </div>
+    </JazykProvider>
   );
 }

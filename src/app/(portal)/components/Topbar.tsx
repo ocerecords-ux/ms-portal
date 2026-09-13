@@ -8,6 +8,9 @@ import { isExternalHref, type NavItem } from '@/lib/menu';
 import { initials } from '@/lib/chat';
 import { NotificationBell } from './NotificationBell';
 import { ThemeToggle } from './ThemeToggle';
+import { PrepinacJazyka } from './PrepinacJazyka';
+import { useJazyk, usePreklad } from './JazykProvider';
+import { nazevOdkazu } from '@/lib/jazyk';
 
 /**
  * Horní fialová lišta. Odkazy si upravuje přímo tady každý sám - tři tečky
@@ -40,6 +43,10 @@ export function Topbar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  // Lista je u kazdeho vlastni a v databazi ulozena cesky, takze se nazvy
+  // prekladaji podle adresy odkazu, ne podle textu (zadani 13. 9. 2026).
+  const jazyk = useJazyk();
+  const t = usePreklad();
   // Jeden rezim uprav, ne dva (zadani 8. 9. 2026: "je blbost upravovat na
   // dvakrát. Stačí kliknout na tři tečky a můžeš upravit i přesunout") -
   // v nem jde zaroven odebirat, pridavat i pretahovat poradi.
@@ -223,7 +230,7 @@ export function Topbar({
               // tomu okamžitý a Caflou to nezatěžuje.
               className={className}
             >
-              {item.label}
+              {nazevOdkazu(jazyk, item.href, item.label)}
             </Link>
           );
         })}
@@ -235,7 +242,7 @@ export function Topbar({
               type="button"
               onClick={() => setAddOpen((v) => !v)}
               disabled={missingPages.length === 0}
-              title="Přidat zkratku"
+              title={t('listou.pridat')}
               className="w-7 h-7 rounded-full border border-dashed border-white/60 text-white text-lg leading-none flex items-center justify-center hover:bg-white/10 disabled:opacity-40"
             >
               +
@@ -249,7 +256,7 @@ export function Topbar({
                     onClick={() => addPage(p)}
                     className="block w-full text-left px-4 py-2 text-sm font-body text-ink hover:bg-field"
                   >
-                    {p.label}
+                    {nazevOdkazu(jazyk, p.href, p.label)}
                   </button>
                 ))}
               </div>
@@ -307,11 +314,12 @@ export function Topbar({
           Muj ucet, vedle je jen odhlaseni. Do administrace se chodi odkazy
           v liste (Firmy, Uzivatele, Ceniky, Doklady). */}
       <div className="flex items-center gap-2 shrink-0">
+        <PrepinacJazyka />
         <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
         <Link
           href="/muj-ucet"
-          title="Můj účet"
+          title={t('listou.mujUcet')}
           className="flex items-center gap-2 text-sm font-heading text-brand-green bg-white/10 border border-white/20 rounded-pill pl-1.5 pr-3.5 py-1.5 no-underline hover:bg-white/20 transition-colors"
         >
           {/* Fotka u jmena (zadani 9. 9. 2026). Bez fotky iniciály, at lista
@@ -333,8 +341,8 @@ export function Topbar({
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: '/login' })}
-          title="Odhlásit se"
-          aria-label="Odhlásit se"
+          title={t('listou.odhlasit')}
+          aria-label={t('listou.odhlasit')}
           className="flex items-center justify-center w-9 h-9 rounded-pill text-white/80 hover:text-white hover:bg-white/10 transition-colors"
         >
           <svg
