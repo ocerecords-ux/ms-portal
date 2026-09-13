@@ -13,10 +13,23 @@ import { prisma } from '@/lib/db';
 export async function nactiPenizeProjektu(caflouProjectId: string) {
   const [budgetSettings, timesheets, offers, invoices, expenses, contracts, naklady] = await Promise.all([
     prisma.budgetSettings.findUnique({ where: { id: 'default' } }),
-    // Vykazy k tomuhle projektu - z nich se pocita cerpani rozpoctu.
+    // Vykazy k tomuhle projektu - z nich se pocita cerpani rozpoctu a od
+    // 13. 9. 2026 se rovnou i vypisuji („u tech rozpoctu by bylo super videt
+    // vsechny vykazy"), proto uz nestaci cisla na vypocet, ale i den, druh
+    // prace a kdo ji vykazal.
     prisma.timesheetEntry.findMany({
       where: { caflouProjectId },
-      select: { startMinutes: true, endMinutes: true, hourlyRateSnapshot: true },
+      orderBy: [{ date: 'desc' }, { startMinutes: 'desc' }],
+      select: {
+        id: true,
+        date: true,
+        startMinutes: true,
+        endMinutes: true,
+        hourlyRateSnapshot: true,
+        workType: true,
+        note: true,
+        user: { select: { name: true, email: true } },
+      },
     }),
     // Doklady navazane na projekt (zadani 8. 9. 2026). Vazba je pres ID
     // projektu, stejne jako u vykazu.

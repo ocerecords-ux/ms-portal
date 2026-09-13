@@ -26,6 +26,7 @@ import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
 import { RecordingSection } from './RecordingSection';
 import { ProjectTabs, type ProjectTab } from './ProjectTabs';
 import { ProtokolNataceni } from './ProtokolNataceni';
+import { VykazyProjektu, type VykazRadek } from './VykazyProjektu';
 import { RodnyListSection } from './RodnyListSection';
 import { HistorieProjektu } from './HistorieProjektu';
 import { Preposlech } from './Preposlech';
@@ -371,6 +372,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const cenaZakazky = cenaZNabidek > 0 ? cenaZNabidek : cenaZFaktur > 0 ? cenaZFaktur : null;
   const zdrojCeny = cenaZNabidek > 0 ? ('nabidka' as const) : cenaZFaktur > 0 ? ('faktura' as const) : null;
 
+  // Vykazy pod rozpoctem (zadani 13. 9. 2026). Date se do klientske
+  // komponenty posilat neda, proto ISO retezec.
+  const vykazyRadky: VykazRadek[] = timesheets.map((t) => ({
+    id: t.id,
+    den: t.date.toISOString(),
+    odMinut: t.startMinutes,
+    doMinut: t.endMinutes,
+    sazba: t.hourlyRateSnapshot,
+    druh: t.workType,
+    poznamka: t.note,
+    kdo: t.user?.name || t.user?.email || '—',
+  }));
+
   const rozpocet = !showDocuments ? null : budget ? (
     <ProjectBudget
       budget={budget}
@@ -389,6 +403,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       vydaje={vydajeCelkem}
       pocatecniPolozky={nakladovePolozky}
     />
+  );
+
+  // Vykazy visi pod rozpoctem, at je to jedna obrazovka: „kolik to melo stat"
+  // hned nad „kdo si co zapsal". Plati pro obe podoby rozpoctu (audiokniha
+  // i zakazka), proto se to sklada az tady, ne uvnitr nich.
+  const rozpocetSVykazy = rozpocet && (
+    <div className="flex flex-col gap-6">
+      {rozpocet}
+      <VykazyProjektu vykazy={vykazyRadky} />
+    </div>
   );
 
   const frekvence = (
@@ -474,7 +498,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Zalozka je u kazdeho projektu, ale jen pro toho, kdo na cisla ma pravo
   // (canViewProjectDocuments) - zvukar ani produkce ji nevidi.
   if (rozpocet) {
-    tabs.push({ key: 'rozpocet', label: 'Rozpočet', content: rozpocet });
+    tabs.push({ key: 'rozpocet', label: 'Rozpočet', content: rozpocetSVykazy });
   }
   if (isInternalRole(session.user.role)) {
     tabs.push({
