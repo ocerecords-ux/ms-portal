@@ -76,11 +76,16 @@ export function FakturaceKarta({
           onChange={(e) => setFakturyKlientovi(e.target.checked)}
           className="mt-0.5"
         />
+        {/* Tady to cte clovek o sobe, ne o kolegovi (zadani 13. 9. 2026:
+            „tady bych to v te klientske sekci zkopiroval spise: Chci kopii
+            i na svuj mail"). V administraci na karte firmy zustava popisek
+            ve treti osobe - tam to nastavuje nekdo jiny. */}
         <span>
-          Posílat fakturu i tomu, kdo má projekt na starost
+          Chci kopii i na svůj mail
           <br />
           <span className="text-xs font-body text-muted">
-            Kopie půjde člověku z vaší firmy, který je u projektu uvedený jako klient.
+            Kopie přijde na váš e-mail u projektů, kde jste uvedený jako klient. Na účtárnu jde
+            faktura vždycky.
           </span>
         </span>
       </label>
