@@ -24,7 +24,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
   const companies = await prisma.company.findMany({
     where: { active: true },
     orderBy: { name: 'asc' },
-    select: { id: true, name: true },
+    select: { id: true, name: true, ic: true },
   });
 
   return (

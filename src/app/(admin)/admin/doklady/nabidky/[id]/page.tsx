@@ -19,7 +19,7 @@ export default async function OfferDetailPage({ params }: { params: { id: string
       },
     }),
     prisma.issuerCompany.findMany({ where: { active: true }, orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] }),
-    prisma.company.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    prisma.company.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, ic: true } }),
   ]);
   if (!offer) notFound();
 

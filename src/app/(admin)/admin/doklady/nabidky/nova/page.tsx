@@ -33,7 +33,7 @@ export default async function NovaNabidkaPage({
 
   const [issuers, companies, bankAccounts, projects] = await Promise.all([
     prisma.issuerCompany.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, ic: true } }),
     prisma.bankAccount.findMany({
       where: { issuerCompanyId: vydavatel.id },
       orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],

@@ -44,7 +44,7 @@ export default async function NewInvoiceFromOfferPage({
   if (offer.invoice) redirect(`/admin/doklady/faktury/${offer.invoice.id}`);
 
   const [companies, bankAccounts, rate] = await Promise.all([
-    prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, ic: true } }),
     prisma.bankAccount.findMany({
       where: { issuerCompanyId: offer.issuerCompanyId },
       orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],
@@ -143,7 +143,7 @@ async function PrazdnaFaktura({
   if (!vydavatel) redirect('/admin/doklady/moje-firmy');
 
   const [companies, bankAccounts, projects] = await Promise.all([
-    prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, ic: true } }),
     prisma.bankAccount.findMany({
       where: { issuerCompanyId: vydavatel.id },
       orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],

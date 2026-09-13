@@ -15,6 +15,7 @@ import {
 } from '@/lib/doklady';
 import { formatRate, toCzkMinor } from '@/lib/cnb';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
+import { VyberFirmy, type FirmaVolba } from '../../VyberFirmy';
 import { NahledDokladu } from '../../NahledDokladu';
 
 type Item = {
@@ -120,7 +121,7 @@ export function InvoiceEditor({
   issuerCompanyId: string;
   issuer: Party;
   company: Party;
-  companies: { id: string; name: string }[];
+  companies: FirmaVolba[];
   bankAccounts: { id: string; label: string; accountNumber: string | null; iban: string | null; currency: Currency }[];
   projects: ProjectChoice[];
   draftFromOfferId?: string;
@@ -464,24 +465,19 @@ export function InvoiceEditor({
             {locked ? (
               <p className="font-heading font-semibold text-ink m-0">{company.name}</p>
             ) : (
-              <select value={form.companyId} onChange={(e) => set('companyId', e.target.value)} className={inputClass}>
-                {/* U nove faktury neni nikdo predvybrany (zadani 13. 9. 2026).
-                    Prvni firma v abecede tam driv sedela jako by byla vybrana
-                    a stacilo ji prehlednout. */}
-                <option value="">— vyberte odběratele —</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              /* Hledani s lupou misto rozbalovaciho seznamu (zadani 13. 9.
+                 2026: „mela by tam byt spise lupa na vyhledavani, at tam muzu
+                 psat a rychle najit firmu"). Firem jsou stovky. */
+              <VyberFirmy firmy={companies} hodnota={form.companyId} onZmena={(id) => set('companyId', id)} />
             )}
             <p className="text-sm font-body text-muted m-0">
               {formatAddress(company) || '—'}
               <br />
               {company.ic ? `IČ ${company.ic}` : ''} {company.dic ? `· DIČ ${company.dic}` : ''}
             </p>
-            {!company.contactEmail && (
+            {/* Az kdyz je nekdo vybrany - u prazdneho vyberu je hlaska
+                matouci (13. 9. 2026). */}
+            {form.companyId && !company.contactEmail && (
               <p className="text-xs text-danger font-body m-0">
                 Firma nemá kontaktní e-mail — bez něj fakturu nepošlete.
               </p>
