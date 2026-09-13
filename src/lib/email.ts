@@ -44,11 +44,23 @@ const SCHRANKY = {
 
 export type Schranka = keyof typeof SCHRANKY;
 
+/**
+ * Zástupná hodnota v hesle. Proměnné jsou ve Vercelu založené dopředu, ať se
+ * do nich dá jen vložit heslo - dokud je v nich tohle, bere se schránka jako
+ * nenastavená a pošta jde po staru hlavním účtem.
+ */
+const HESLO_NEVYPLNENO = 'doplnit-heslo';
+
+function hesloSchranky(schranka: Schranka): string | undefined {
+  const heslo = process.env[SCHRANKY[schranka].heslo]?.trim();
+  return heslo && heslo !== HESLO_NEVYPLNENO ? heslo : undefined;
+}
+
 /** Spojení pro agendu; když schránka není nastavená, vrátí hlavní účet. */
 function transportSchranky(schranka: Schranka) {
   const klice = SCHRANKY[schranka];
   const user = process.env[klice.user];
-  const heslo = process.env[klice.heslo];
+  const heslo = hesloSchranky(schranka);
   const host = process.env[klice.host] || process.env.SMTP_HOST;
   if (!user || !heslo || !host) return getTransport();
 
@@ -69,7 +81,7 @@ function transportSchranky(schranka: Schranka) {
 function adresaSchranky(schranka: Schranka): string | null {
   const klice = SCHRANKY[schranka];
   const user = process.env[klice.user];
-  const heslo = process.env[klice.heslo];
+  const heslo = hesloSchranky(schranka);
   // BEZ HESLA SE ADRESA NEPOUZIJE. Jinak by portal posilal pod adresou
   // schranky, ale prihlasoval se hlavnim uctem - presne ten pripad, kdy mail
   // neprojde kontrolou odesilatele a spadne prijemci do spamu.
@@ -1108,7 +1120,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
 
   // Fakturu posila FIRMA, ne clovek (zadani 13. 9. 2026: „fakturu pak uz za
   // Mediaspace") - je to ucetni doklad, ne domluva mezi dvema lidmi.
-  await transport.sendMail({
+  const zprava = {
     from: odesilatelFirmy(),
     to: input.to,
     subject: `Faktura ${input.number}${input.subject ? ` — ${input.subject}` : ''}`,
@@ -1128,7 +1140,19 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
       .join('\n'),
     html: buildInvoiceHtml(input),
     ...(input.pdf ? { attachments: [{ filename: input.pdf.nazev, content: input.pdf.obsah }] } : {}),
-  });
+  };
+
+  try {
+    await transport.sendMail(zprava);
+  } catch (err) {
+    // Kdyz schranka uctarny odmitne prihlaseni (treba jeste neni nastavena),
+    // nez aby faktura neodesla vubec, posleme ji hlavnim uctem.
+    const vychozi = process.env.SMTP_FROM || 'Mediaspace <portal@msportal.cz>';
+    const hlavni = getTransport();
+    if (!hlavni || zprava.from.address === samotnaAdresa(vychozi)) throw err;
+    console.warn('Faktura: odeslani ze schranky uctarny selhalo, zkousim hlavni ucet:', err);
+    await hlavni.sendMail({ ...zprava, from: vychozi });
+  }
 
   return { sent: true as const };
 }
