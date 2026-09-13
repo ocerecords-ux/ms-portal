@@ -20,6 +20,8 @@ const schema = z.object({
   invoiceNextNumber: z.union([z.string(), z.number()]).optional(),
   offerNumberFormat: z.string().trim().min(1).max(60).optional(),
   offerNextNumber: z.union([z.string(), z.number()]).optional(),
+  contractNumberFormat: z.string().trim().min(1).max(60).optional(),
+  contractNextNumber: z.union([z.string(), z.number()]).optional(),
   defaultCurrency: z.enum(CURRENCIES).optional(),
   isDefault: z.boolean().optional(),
   active: z.boolean().optional(),
@@ -45,7 +47,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     // Format musi obsahovat poradove cislo, jinak by druhy doklad narazil na
     // unikatni cislo a nesel ulozit.
-    for (const format of [d.invoiceNumberFormat, d.offerNumberFormat]) {
+    for (const format of [d.invoiceNumberFormat, d.offerNumberFormat, d.contractNumberFormat]) {
       if (format && !/\{N+\}/.test(format)) {
         return NextResponse.json(
           { error: 'Formát musí obsahovat pořadové číslo, například {NNN}.' },
@@ -70,10 +72,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.defaultCurrency !== undefined) data.defaultCurrency = d.defaultCurrency;
     if (d.active !== undefined) data.active = d.active;
 
+    if (d.contractNumberFormat !== undefined) data.contractNumberFormat = d.contractNumberFormat;
+
     const invoiceNext = toPositiveInt(d.invoiceNextNumber);
     if (invoiceNext !== undefined) data.invoiceNextNumber = invoiceNext;
     const offerNext = toPositiveInt(d.offerNextNumber);
     if (offerNext !== undefined) data.offerNextNumber = offerNext;
+    const contractNext = toPositiveInt(d.contractNextNumber);
+    if (contractNext !== undefined) data.contractNextNumber = contractNext;
 
     // Vychozi firma muze byt jen jedna.
     if (d.isDefault) {

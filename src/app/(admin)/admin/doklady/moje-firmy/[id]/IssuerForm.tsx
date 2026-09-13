@@ -24,6 +24,8 @@ type Issuer = {
   invoiceNextNumber: number;
   offerNumberFormat: string;
   offerNextNumber: number;
+  contractNumberFormat: string;
+  contractNextNumber: number;
   defaultCurrency: Currency;
   isDefault: boolean;
   active: boolean;
@@ -51,6 +53,8 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
     invoiceNextNumber: String(issuer.invoiceNextNumber),
     offerNumberFormat: issuer.offerNumberFormat,
     offerNextNumber: String(issuer.offerNextNumber),
+    contractNumberFormat: issuer.contractNumberFormat,
+    contractNextNumber: String(issuer.contractNextNumber),
     defaultCurrency: issuer.defaultCurrency,
     isDefault: issuer.isDefault,
     active: issuer.active,
@@ -90,6 +94,7 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
   }
 
   const invoicePreview = previewNumbers(form.invoiceNumberFormat, Number(form.invoiceNextNumber) || 1);
+  const contractPreview = previewNumbers(form.contractNumberFormat, Number(form.contractNextNumber) || 1);
   const offerPreview = previewNumbers(form.offerNumberFormat, Number(form.offerNextNumber) || 1);
 
   return (
@@ -209,6 +214,32 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
           <div className="flex-1 min-w-[180px] pt-6">
             <p className="text-xs font-heading text-muted m-0">Vyjde: </p>
             <p className="text-sm font-heading text-ink tabular-nums m-0">{offerPreview.join(', ')}…</p>
+          </div>
+        </div>
+
+        <div className="flex gap-4 flex-wrap items-start">
+          <div className="flex-1 min-w-[200px]">
+            <AdminField label="Formát smlouvy">
+              <input
+                value={form.contractNumberFormat}
+                onChange={(e) => set('contractNumberFormat', e.target.value)}
+                className="admin-input"
+              />
+            </AdminField>
+          </div>
+          <div className="flex-1 min-w-[140px]">
+            <AdminField label="Další číslo">
+              <input
+                value={form.contractNextNumber}
+                onChange={(e) => set('contractNextNumber', e.target.value)}
+                inputMode="numeric"
+                className="admin-input"
+              />
+            </AdminField>
+          </div>
+          <div className="flex-1 min-w-[180px] pt-6">
+            <p className="text-xs font-heading text-muted m-0">Vyjde: </p>
+            <p className="text-sm font-heading text-ink tabular-nums m-0">{contractPreview.join(', ')}…</p>
           </div>
         </div>
 
