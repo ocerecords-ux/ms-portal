@@ -85,14 +85,19 @@ export function ProjectDocuments({
           faktuře nebo výdaji.
         </p>
       ) : (
-        {/* PORADI PODLE TOHO, JAK DOKLAD VZNIKA (zadani 13. 9. 2026:
-            „seradme primarne: Nabidky, faktury, smlouvy"). Nejdriv se
-            nabidne, pak fakturuje; smlouva a prijate doklady jsou to, co
-            clovek hleda nejmin casto, a jdou proto dolu.
-
-            Skupiny oddeluje tenka linka - `divide-y` ji nakresli jen MEZI
-            nimi, takze prazdna skupina (vraci null) po sobe nenecha linku
-            na prazdnem miste. */}
+        // PORADI PODLE TOHO, JAK DOKLAD VZNIKA (zadani 13. 9. 2026:
+        // „seradme primarne: Nabidky, faktury, smlouvy"). Nejdriv se nabidne,
+        // pak fakturuje; smlouva a prijate doklady jsou to, co clovek hleda
+        // nejmin casto, a jdou proto dolu.
+        //
+        // Skupiny oddeluje tenka linka - `divide-y` ji nakresli jen MEZI nimi,
+        // takze prazdna skupina (vraci null) po sobe nenecha linku na
+        // prazdnem miste.
+        //
+        // Komentar je radkovy schvalne: {/* ... */} je JSX komentar a funguje
+        // jen UVNITR elementu. Tady, primo ve vetvi ternarniho operatoru,
+        // by se ta slozena zavorka cetla jako objekt a build spadne
+        // (tak spadl 81c3db5).
         <div className="flex flex-col divide-y divide-line">
           <Block title="Nabídky" rows={offers} druh="nabidka" />
           <Block title="Vydané faktury" rows={invoices} druh="faktura" />
