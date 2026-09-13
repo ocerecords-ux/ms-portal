@@ -196,17 +196,30 @@ export async function stavPosty(): Promise<{
   odesilatel: string | null;
   spojeni: 'ok' | 'chyba' | 'nenastaveno';
   chyba: string | null;
+  /** Schránky podle agendy - adresa a jestli k ní máme heslo. Hesla samotná nikdy. */
+  schranky: Record<string, { adresa: string | null; hesloNastaveno: boolean; pouzijeSe: boolean }>;
 }> {
   const host = process.env.SMTP_HOST || null;
   const port = Number(process.env.SMTP_PORT) || 587;
   const odesilatel = process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>';
+  const schranky = Object.fromEntries(
+    (Object.keys(SCHRANKY) as Schranka[]).map((klic) => [
+      klic,
+      {
+        adresa: process.env[SCHRANKY[klic].user]?.trim() || null,
+        hesloNastaveno: Boolean(hesloSchranky(klic)),
+        pouzijeSe: adresaSchranky(klic) !== null,
+      },
+    ]),
+  );
+
   const transport = getTransport();
   if (!transport) {
-    return { nastaveno: false, host, port, odesilatel, spojeni: 'nenastaveno', chyba: null };
+    return { nastaveno: false, host, port, odesilatel, spojeni: 'nenastaveno', chyba: null, schranky };
   }
   try {
     await transport.verify();
-    return { nastaveno: true, host, port, odesilatel, spojeni: 'ok', chyba: null };
+    return { nastaveno: true, host, port, odesilatel, spojeni: 'ok', chyba: null, schranky };
   } catch (err) {
     return {
       nastaveno: true,
@@ -215,6 +228,7 @@ export async function stavPosty(): Promise<{
       odesilatel,
       spojeni: 'chyba',
       chyba: err instanceof Error ? err.message.slice(0, 300) : 'Neznámá chyba.',
+      schranky,
     };
   }
 }
