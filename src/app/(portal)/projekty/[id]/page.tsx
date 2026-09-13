@@ -3,7 +3,13 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { canEditProjectMeta, canManageCalendar, canViewProjectDocuments, isInternalRole } from '@/lib/roles';
+import {
+  canEditProjectMeta,
+  canManageCalendar,
+  canViewProjectBusinessInfo,
+  canViewProjectDocuments,
+  isInternalRole,
+} from '@/lib/roles';
 import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu } from '@/lib/priceList';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
 import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
@@ -313,6 +319,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         herci={herciUctu.map((h) => ({ id: h.id, label: h.name || h.email }))}
         dotoceniHercu={dotoceniPodleHerce}
         natoceniZaznamy={zaznamyNatoceni}
+        vidiKlienta={canViewProjectBusinessInfo(session.user.role)}
         herecZCaflou={meta?.narrator ?? project?.narrator ?? null}
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}

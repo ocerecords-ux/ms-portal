@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import type { DisplayProject } from '@/lib/projektyTypy';
-import { canEditProjectMeta, isInternalRole } from '@/lib/roles';
+import { canEditProjectMeta, canViewProjectBusinessInfo, isInternalRole } from '@/lib/roles';
 import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
@@ -34,6 +34,7 @@ export default async function ProjektyPage() {
       <InternalProjektySection
         isAdmin={session!.user.role === 'ADMIN'}
         muzeMenitStav={canEditProjectMeta(session!.user.role)}
+        vidiObchodniUdaje={canViewProjectBusinessInfo(session!.user.role)}
       />
     );
   }
@@ -149,10 +150,13 @@ export default async function ProjektyPage() {
 async function InternalProjektySection({
   isAdmin,
   muzeMenitStav,
+  vidiObchodniUdaje,
 }: {
   isAdmin: boolean;
   /** Prehazovat stav projektu smi Produkce a Zuzo-labuzo. */
   muzeMenitStav: boolean;
+  /** Zvukar nevidi datum vydani - viz canViewProjectBusinessInfo. */
+  vidiObchodniUdaje: boolean;
 }) {
   // Projekty jsou nase - jeden dotaz do databaze (viz lib/projektySeznamServer.ts).
   const { projects, error } = await loadInternalProjects();
@@ -290,7 +294,14 @@ async function InternalProjektySection({
 
   // Sloupce tabulky - vychozi podoba prepsana tim, co si Zuzo-labuzo
   // nastavilo (nazev, poradi, skryti).
-  const columnSettings = await loadColumnSettings(PROJECTS_TABLE_KEY);
+  const columnSettingsVse = await loadColumnSettings(PROJECTS_TABLE_KEY);
+
+  // DATUM VYDANI ZVUKARI NE (zadani 13. 9. 2026). Sloupec se zahazuje tady,
+  // ne az v tabulce: takhle o nem nevi ani sirky sloupcu, ani razeni, ani
+  // nastaveni sloupcu - proste pro nej neexistuje.
+  const columnSettings = vidiObchodniUdaje
+    ? columnSettingsVse
+    : columnSettingsVse.filter((c) => c.key !== 'releaseDate');
 
   const active = withMeta
     .filter((p) => !p.finished)

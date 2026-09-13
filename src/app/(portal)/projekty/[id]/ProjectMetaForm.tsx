@@ -101,6 +101,7 @@ export function ProjectMetaForm({
   initial,
   dotoceniHercu,
   natoceniZaznamy,
+  vidiKlienta,
 }: {
   caflouProjectId: string;
   canEdit: boolean;
@@ -123,6 +124,12 @@ export function ProjectMetaForm({
   initial: Initial;
   /** Kdo z herců má dotočeno - ID účtu -> datum (zadání 11. 9. 2026). */
   dotoceniHercu: Record<string, string>;
+  /**
+   * Zvukař klienta u projektu nevidí (zadání 13. 9. 2026) - viz
+   * canViewProjectBusinessInfo. Firma zůstává: podle ní pozná, čí nahrávku
+   * má na stole.
+   */
+  vidiKlienta: boolean;
   /**
    * Natáčecí protokol — jeden záznam na každý zápis Bruna z chatu, od
    * nejnovějšího. Celý se vypisuje ve vlastní záložce (ProtokolNataceni);
@@ -361,12 +368,14 @@ export function ProjectMetaForm({
               {firmy.find((f) => f.id === values.companyId)?.label ?? '—'}
             </dd>
           </div>
-          <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Klient</dt>
-            <dd className="text-sm font-heading text-ink m-0 mt-1">
-              {klienti.find((k) => k.id === values.klientUserId)?.label ?? klientNameZCaflou ?? '—'}
-            </dd>
-          </div>
+          {vidiKlienta && (
+            <div>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Klient</dt>
+              <dd className="text-sm font-heading text-ink m-0 mt-1">
+                {klienti.find((k) => k.id === values.klientUserId)?.label ?? klientNameZCaflou ?? '—'}
+              </dd>
+            </div>
+          )}
           <div>
             <dt className="text-xs font-heading text-muted uppercase tracking-wide">Manažer projektu</dt>
             <dd className="text-sm font-heading text-ink m-0 mt-1">{managerLabel}</dd>
@@ -498,43 +507,49 @@ export function ProjectMetaForm({
           <span className="text-xs text-muted font-body">Pro koho se projekt dělá.</span>
         </label>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Klient</span>
-          <select
-            value={values.klientUserId}
-            onChange={(e) => set('klientUserId', e.target.value)}
-            className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-          >
-            <option value="">— nevybráno —</option>
-            {/* Nahore lide z vybrane firmy, pod nimi zbytek - u koprodukci
-                sedi u projektu clovek odjinud, takze se nabidka neomezuje. */}
-            {values.companyId && klienti.some((k) => k.companyId === values.companyId) && (
-              <optgroup label="Z vybrané firmy">
+        {/* Klienta zvukar nevidi ani ve formulari (zadani 13. 9. 2026).
+            Dnes je to pojistka - formular se zvukari stejne neotevre
+            (canEditProjectMeta ho nepousti) - ale az se prava zmeni,
+            nezustane tu dira. */}
+        {vidiKlienta && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Klient</span>
+            <select
+              value={values.klientUserId}
+              onChange={(e) => set('klientUserId', e.target.value)}
+              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+            >
+              <option value="">— nevybráno —</option>
+              {/* Nahore lide z vybrane firmy, pod nimi zbytek - u koprodukci
+                  sedi u projektu clovek odjinud, takze se nabidka neomezuje. */}
+              {values.companyId && klienti.some((k) => k.companyId === values.companyId) && (
+                <optgroup label="Z vybrané firmy">
+                  {klienti
+                    .filter((k) => k.companyId === values.companyId)
+                    .map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.label}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+              <optgroup label="Ostatní">
                 {klienti
-                  .filter((k) => k.companyId === values.companyId)
+                  .filter((k) => !values.companyId || k.companyId !== values.companyId)
                   .map((k) => (
                     <option key={k.id} value={k.id}>
                       {k.label}
                     </option>
                   ))}
               </optgroup>
-            )}
-            <optgroup label="Ostatní">
-              {klienti
-                .filter((k) => !values.companyId || k.companyId !== values.companyId)
-                .map((k) => (
-                  <option key={k.id} value={k.id}>
-                    {k.label}
-                  </option>
-                ))}
-            </optgroup>
-          </select>
-          <span className="text-xs text-muted font-body">
-            {klientNameZCaflou
-              ? `Na tuhle osobu chodí zprávy o projektu. V Caflou tu byl štítek „${klientNameZCaflou}".`
-              : 'Na tuhle osobu chodí zprávy o projektu.'}
-          </span>
-        </label>
+            </select>
+            <span className="text-xs text-muted font-body">
+              {klientNameZCaflou
+                ? `Na tuhle osobu chodí zprávy o projektu. V Caflou tu byl štítek „${klientNameZCaflou}".`
+                : 'Na tuhle osobu chodí zprávy o projektu.'}
+            </span>
+          </label>
+        )}
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Manažer projektu</span>

@@ -124,6 +124,22 @@ export function canViewProjectDocuments(role: Role): boolean {
 }
 
 /**
+ * Kdo smi u projektu videt obchodni udaje - klienta a datum vydani (zadani
+ * 13. 9. 2026: „zvukari by u projektu nemeli videt: Datum vydani, doklady,
+ * klienta").
+ *
+ * Zvukar dela zvuk. Koho projekt objednal a kdy titul vychazi, k tomu
+ * nepotrebuje - je to obchodni informace, ne vyrobni. Firma u projektu mu
+ * zustava: podle ni pozna, ci nahravku ma na stole.
+ *
+ * DOKLADY sem nepatri, ty uz resi canViewProjectDocuments - a ten je jeste
+ * uzsi (jen Zuzo-labuzo, tedy ani produkce).
+ */
+export function canViewProjectBusinessInfo(role: Role): boolean {
+  return role !== 'ZVUKAR';
+}
+
+/**
  * Kalendare studii a natacecí frekvence (zadani 8. 9. 2026). Nabidky terminu
  * sestavuje a rezervace potvrzuje Produkce a Zuzo-labuzo; zvukar kalendar jen
  * vidi. Herec ma vlastni, uzsi pohled - viz stranka /moje-terminy.
