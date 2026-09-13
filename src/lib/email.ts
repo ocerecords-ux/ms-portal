@@ -68,12 +68,16 @@ function transportSchranky(schranka: Schranka) {
  */
 function adresaSchranky(schranka: Schranka): string | null {
   const klice = SCHRANKY[schranka];
-  const from = process.env[klice.from];
-  if (from?.includes('@')) return samotnaAdresa(from);
   const user = process.env[klice.user];
   const heslo = process.env[klice.heslo];
-  if (user?.includes('@') && heslo) return user.trim();
-  return null;
+  // BEZ HESLA SE ADRESA NEPOUZIJE. Jinak by portal posilal pod adresou
+  // schranky, ale prihlasoval se hlavnim uctem - presne ten pripad, kdy mail
+  // neprojde kontrolou odesilatele a spadne prijemci do spamu.
+  if (!user || !heslo) return null;
+
+  const from = process.env[klice.from];
+  if (from?.includes('@')) return samotnaAdresa(from);
+  return user.includes('@') ? user.trim() : null;
 }
 
 /**
