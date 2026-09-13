@@ -57,7 +57,8 @@ export default async function NovaNabidkaPage({
         number: 'Nová nabídka',
         status: 'DRAFT',
         issuerCompanyId: vydavatel.id,
-        companyId: odberatel?.id ?? companies[0]?.id ?? '',
+        // Nikdo predvybrany, stejne jako u faktury (zadani 13. 9. 2026).
+        companyId: odberatel?.id ?? '',
         currency: vydavatel.defaultCurrency,
         issueDate: iso(dnes),
         validUntil: iso(platnost),

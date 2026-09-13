@@ -545,21 +545,40 @@ export function InvoiceEditor({
               Od 13. 9. 2026 je to jedno zaskrtavatko misto rozbalovaciho
               seznamu: „rezim DPH bych dal jen zaskrtavaci pole, ze je
               v rezimu reverse charge. Primarne bude odskrtnute." */}
-          <label className="flex items-start gap-2 sm:col-span-2 2xl:col-span-1 pt-1">
-            <input
-              type="checkbox"
-              checked={form.rezimDph === 'PRENESENA'}
-              disabled={locked}
-              onChange={(e) => set('rezimDph', e.target.checked ? 'PRENESENA' : 'STANDARD')}
-              className="mt-1"
-            />
-            <span className="flex flex-col">
-              <span className="text-sm font-body text-ink">Přenesená daňová povinnost</span>
-              <span className="text-xs font-body text-muted">
-                reverse charge — daň odvede odběratel, na faktuře nebude DPH
+          <div className="flex flex-col gap-2 sm:col-span-2 2xl:col-span-1 pt-1">
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={form.rezimDph === 'PRENESENA'}
+                disabled={locked}
+                onChange={(e) => set('rezimDph', e.target.checked ? 'PRENESENA' : 'STANDARD')}
+                className="mt-1"
+              />
+              <span className="flex flex-col">
+                <span className="text-sm font-body text-ink">Přenesená daňová povinnost</span>
+                <span className="text-xs font-body text-muted">
+                  reverse charge — daň odvede odběratel, na faktuře nebude DPH
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+            {/* Rezimy se vylucuji, proto zaskrtnuti jednoho odskrtne druhy -
+                doklad muze byt jen v jednom rezimu. */}
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={form.rezimDph === 'MIMO_PREDMET'}
+                disabled={locked}
+                onChange={(e) => set('rezimDph', e.target.checked ? 'MIMO_PREDMET' : 'STANDARD')}
+                className="mt-1"
+              />
+              <span className="flex flex-col">
+                <span className="text-sm font-body text-ink">Mimo předmět DPH v ČR</span>
+                <span className="text-xs font-body text-muted">
+                  místo plnění je ve státě příjemce — třeba prodej do zahraničí
+                </span>
+              </span>
+            </label>
+          </div>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Jazyk dokladu</span>
             <select

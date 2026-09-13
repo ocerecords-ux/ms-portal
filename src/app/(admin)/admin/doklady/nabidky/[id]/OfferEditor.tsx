@@ -169,6 +169,10 @@ export function OfferEditor({
     setError(null);
     setInfo(null);
     try {
+      if (!form.companyId) {
+        setError('Vyberte odběratele — bez něj nevíme, komu nabídku poslat.');
+        return false;
+      }
       const telo = {
         ...form,
         validUntil: form.validUntil || null,
@@ -278,6 +282,8 @@ export function OfferEditor({
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:opacity-70';
   const cellClass =
     'rounded-lg border border-line bg-surface px-2.5 py-1.5 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:bg-field disabled:opacity-70';
+  /** Popisek nad malym polem v radku polozky - nahrazuje hlavicku tabulky. */
+  const popiskaClass = 'text-[10px] font-heading text-muted uppercase tracking-wide';
 
   // Editor je omezeny sirkou a vycentrovany (zadani 10. 9. 2026: "ta
   // vyberova pole jsou strasne roztahana na sirku"). Formularove radky
@@ -410,6 +416,8 @@ export function OfferEditor({
               <p className="font-heading font-semibold text-ink m-0">{company.name}</p>
             ) : (
               <select value={form.companyId} onChange={(e) => set('companyId', e.target.value)} className={inputClass}>
+                {/* Stejne jako u faktury (zadani 13. 9. 2026) - nikdo predvybrany. */}
+                <option value="">— vyberte odběratele —</option>
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -513,93 +521,90 @@ export function OfferEditor({
             <span className="text-xs font-body text-muted">Ceny se zadávají bez DPH.</span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[660px] border-collapse">
-              <thead>
-                <tr className="text-xs font-heading text-muted uppercase tracking-wide">
-                  <th className="text-left pb-2 font-semibold">Popis</th>
-                  <th className="text-right pb-2 font-semibold w-20">Množství</th>
-                  <th className="text-left pb-2 font-semibold w-16">Jednotka</th>
-                  <th className="text-right pb-2 font-semibold w-32">Cena / j.</th>
-                  <th className="text-right pb-2 font-semibold w-24">DPH</th>
-                  <th className="text-right pb-2 font-semibold w-32">Celkem</th>
-                  <th className="w-8" />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, index) => (
-                  <tr key={index} className="align-top">
-                    <td className="py-1.5 pr-2">
-                      <input
-                        value={item.description}
-                        disabled={locked}
-                        onChange={(e) => updateItem(index, { description: e.target.value })}
-                        placeholder="Popis položky"
-                        className={cellClass}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <input
-                        inputMode="decimal"
-                        value={item.quantity}
-                        disabled={locked}
-                        onChange={(e) =>
-                          updateItem(index, { quantity: Number(e.target.value.replace(',', '.')) || 0 })
-                        }
-                        className={`${cellClass} text-right tabular-nums`}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <input
-                        value={item.unit}
-                        disabled={locked}
-                        onChange={(e) => updateItem(index, { unit: e.target.value })}
-                        placeholder="ks"
-                        className={cellClass}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <input
-                        inputMode="decimal"
-                        defaultValue={minorToInput(item.unitPriceMinor)}
-                        disabled={locked}
-                        onChange={(e) => updateItem(index, { unitPriceMinor: parseMoneyToMinor(e.target.value) })}
-                        className={`${cellClass} text-right tabular-nums`}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <select
-                        value={item.vatRate}
-                        disabled={locked}
-                        onChange={(e) => updateItem(index, { vatRate: Number(e.target.value) })}
-                        className={`${cellClass} text-right`}
-                      >
-                        {VAT_RATES.map((r) => (
-                          <option key={r} value={r}>
-                            {r} %
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-1.5 pr-2 text-right text-sm font-heading text-ink tabular-nums pt-3.5">
+          {/* Popis ma cely radek, cisla pod nim - stejne jako u faktury
+              (zadani 13. 9. 2026: „pole, kam zadavam polozku, je moc kratke"). */}
+          <div className="flex flex-col divide-y divide-line">
+            {items.map((item, index) => (
+              <div key={index} className="flex flex-col gap-2 py-3 first:pt-0">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={item.description}
+                    disabled={locked}
+                    onChange={(e) => updateItem(index, { description: e.target.value })}
+                    placeholder="Popis položky"
+                    className={cellClass}
+                  />
+                  {!locked && (
+                    <button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      title="Odebrat položku"
+                      aria-label="Odebrat položku"
+                      className="shrink-0 text-muted hover:text-danger text-sm font-heading px-1"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-end gap-2 flex-wrap">
+                  <label className="flex flex-col gap-1 w-20">
+                    <span className={popiskaClass}>Množství</span>
+                    <input
+                      inputMode="decimal"
+                      value={item.quantity}
+                      disabled={locked}
+                      onChange={(e) =>
+                        updateItem(index, { quantity: Number(e.target.value.replace(',', '.')) || 0 })
+                      }
+                      className={`${cellClass} text-right tabular-nums`}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 w-16">
+                    <span className={popiskaClass}>Jednotka</span>
+                    <input
+                      value={item.unit}
+                      disabled={locked}
+                      onChange={(e) => updateItem(index, { unit: e.target.value })}
+                      placeholder="ks"
+                      className={cellClass}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 w-28">
+                    <span className={popiskaClass}>Cena / j.</span>
+                    <input
+                      inputMode="decimal"
+                      defaultValue={item.unitPriceMinor ? minorToInput(item.unitPriceMinor) : ''}
+                      placeholder="0,00"
+                      disabled={locked}
+                      onChange={(e) => updateItem(index, { unitPriceMinor: parseMoneyToMinor(e.target.value) })}
+                      className={`${cellClass} text-right tabular-nums`}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 w-24">
+                    <span className={popiskaClass}>DPH</span>
+                    <select
+                      value={item.vatRate}
+                      disabled={locked}
+                      onChange={(e) => updateItem(index, { vatRate: Number(e.target.value) })}
+                      className={`${cellClass} text-right`}
+                    >
+                      {VAT_RATES.map((r) => (
+                        <option key={r} value={r}>
+                          {r} %
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span className="ml-auto flex flex-col gap-1 items-end">
+                    <span className={popiskaClass}>Celkem</span>
+                    <span className="text-sm font-heading text-ink tabular-nums py-1.5">
                       {formatMoney(Math.round(item.quantity * item.unitPriceMinor), form.currency)}
-                    </td>
-                    <td className="py-1.5 text-right pt-3">
-                      {!locked && (
-                        <button
-                          type="button"
-                          onClick={() => removeItem(index)}
-                          title="Odebrat položku"
-                          className="text-muted hover:text-danger text-sm font-heading"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </span>
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
 
           {!locked && (
