@@ -698,8 +698,9 @@ function PoslatZnovu({ caflouProjectId, stav }: { caflouProjectId: string; stav:
 }
 
 /**
- * Kam se doteklo natáčení — datum a strana, od nejnovějšího (zadání
- * 13. 9. 2026). Zapisuje to Bruno z chatu projektu, tady se to jen čte;
+ * Natáčecí protokol — datum a strana, od nejnovějšího (zadání 13. 9. 2026;
+ * pojmenování upřesněno tentýž den: „nazvěme to Natáčecí protokol, ne kam se
+ * doteklo"). Zapisuje to Bruno z chatu projektu, tady se to jen čte;
  * další strana se do seznamu dostane tím, že ji někdo napíše do kanálu.
  *
  * Jméno herce se vypisuje jen tehdy, když je u záznamu — u projektu s jedním
@@ -716,7 +717,7 @@ function ZaznamyNatoceni({
   return (
     <div className="mt-2 rounded-lg border border-line bg-field/50 px-3 py-2 flex flex-col gap-1">
       <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
-        Kam se doteklo natáčení
+        Natáčecí protokol
       </span>
       {zaznamy.slice(0, 8).map((z) => (
         <span key={z.id} className="text-xs font-body text-muted flex items-baseline gap-2 flex-wrap">

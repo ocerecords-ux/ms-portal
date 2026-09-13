@@ -42,9 +42,18 @@ export const TRIDA_BUBLINY_DOTOCENO =
 export const TRIDA_SLOUPCE_HERCU = 'flex flex-col items-start gap-1';
 
 /**
- * Odznak se stranou, kam se s hercem doteklo natáčení (zadání 13. 9. 2026:
- * „to číslo v odznaku udělej určitě zelené"). Zelená v sloupci herců znamená
- * postup — stejně jako zelená linka u dotočeného herce.
+ * Odznak se stranou z natáčecího protokolu (zadání 13. 9. 2026: „to číslo
+ * v odznaku udělej určitě zelené"). Zelená v sloupci herců znamená postup —
+ * stejně jako zelená linka u dotočeného herce.
+ *
+ * SEDÍ NA BUBLINĚ JAKO INDEX (upřesnění 13. 9. 2026: „spíš by překrýval pravý
+ * horní roh té fialové bubliny, jako index"). Předtím to byl sourozenec vedle
+ * bubliny — v úzkém sloupci si sedl pod jméno a řádek povyrostl o prázdné
+ * místo. Umístění řeší HerciBunka.tsx, tady zůstává jen vzhled.
+ *
+ * VÝPLŇ JE NEPRŮHLEDNÁ, ne zelená s průhledností: odznak leží na fialové
+ * bublině a přes průsvitnou zelenou by prosvítal její rámeček i výplň —
+ * výsledkem by byla kalná barva, která není ani zelená, ani fialová.
  */
 export const TRIDA_ODZNAKU_STRANY =
-  'rounded-pill border border-brand-green/60 bg-brand-green/10 text-brand-greenDeep dark:text-brand-green';
+  'rounded-pill border border-brand-green/60 bg-surface text-brand-greenDeep dark:text-brand-green';
