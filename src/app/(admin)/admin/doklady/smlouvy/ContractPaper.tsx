@@ -69,8 +69,14 @@ function SignatureBox({
       <span className="text-xs font-heading text-muted uppercase tracking-wide">{label}</span>
       <div className="h-[110px] border-b border-ink/30 flex items-end">
         {signature ? (
+          /* Podpis je tmavy inkoust - v tmavem rezimu by na podkladu stranky
+             zanikl, takze si nese vlastni bily papir (zadani 13. 9. 2026). */
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={signature.imageData} alt={`Podpis: ${signature.name}`} className="max-h-[104px] w-auto" />
+          <img
+            src={signature.imageData}
+            alt={`Podpis: ${signature.name}`}
+            className="max-h-[104px] w-auto bg-white rounded px-1"
+          />
         ) : (
           <span className="text-sm font-body text-muted pb-2">zatím nepodepsáno</span>
         )}

@@ -47,7 +47,9 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
     prisma.contractTemplate.findMany({
       where: { active: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      select: { id: true, name: true },
+      // Text sablony jde i na klienta - formular podle nej pozna, ktera
+      // rucni pole (odmena, termin, ...) v te konkretni smlouve vubec jsou.
+      select: { id: true, name: true, body: true },
     }),
     prisma.contract.groupBy({ by: ['status'], _count: true }),
   ]);

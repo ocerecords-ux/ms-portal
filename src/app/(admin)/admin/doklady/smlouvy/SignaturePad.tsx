@@ -7,6 +7,11 @@ import { useEffect, useRef, useState } from 'react';
  * ověřovacích kódů). Kreslí se myší i prstem — proto pointer events, ne
  * mouse/touch zvlášť.
  *
+ * PLÁTNO JE VŽDYCKY BÍLÉ (zadání 13. 9. 2026: „nejde podepisovat myší").
+ * Ono to šlo — jen se v tmavém režimu kreslilo tmavým inkoustem na tmavý
+ * podklad a nebylo to vidět. Podpis je navíc obrázek, který jde dál do
+ * smlouvy a do PDF, takže musí být tmavý na bílé bez ohledu na režim portálu.
+ *
  * Výstupem je PNG v data URL. Plátno se kreslí ve dvojnásobném rozlišení,
  * aby podpis nebyl na retina displeji rozmazaný.
  */
@@ -43,6 +48,19 @@ export function SignaturePad({
     ctx.strokeStyle = '#201A33';
   }, [height]);
 
+  // Pusteni tlacitka mimo platno taky konci tah - jinak by se kreslilo dal
+  // pri dalsim najeti mysi.
+  useEffect(() => {
+    const konecVenku = () => konec();
+    window.addEventListener('pointerup', konecVenku);
+    window.addEventListener('pointercancel', konecVenku);
+    return () => {
+      window.removeEventListener('pointerup', konecVenku);
+      window.removeEventListener('pointercancel', konecVenku);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function bod(e: any) {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
@@ -51,6 +69,8 @@ export function SignaturePad({
 
   function start(e: any) {
     if (disabled) return;
+    // Kresli jen leve tlacitko mysi - pravym se otevira nabidka prohlizece.
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -64,6 +84,11 @@ export function SignaturePad({
 
   function tah(e: any) {
     if (!kresli.current || disabled) return;
+    // Mys pustena mimo platno: tah uz neni tah, jen pohyb kurzoru.
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+      konec();
+      return;
+    }
     e.preventDefault();
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
@@ -96,7 +121,7 @@ export function SignaturePad({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative rounded-card border-2 border-dashed border-line bg-surface overflow-hidden">
+      <div className="relative rounded-card border-2 border-dashed border-line bg-white overflow-hidden">
         <canvas
           ref={canvasRef}
           onPointerDown={start}
@@ -104,10 +129,10 @@ export function SignaturePad({
           onPointerUp={konec}
           onPointerLeave={konec}
           onPointerCancel={konec}
-          className={`block touch-none ${disabled ? 'opacity-50' : 'cursor-crosshair'}`}
+          className={`block touch-none select-none ${disabled ? 'opacity-50' : 'cursor-crosshair'}`}
         />
         {!maPodpis && (
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm font-body text-muted">
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm font-body text-[#8A82A0]">
             Podepište se sem myší nebo prstem
           </span>
         )}

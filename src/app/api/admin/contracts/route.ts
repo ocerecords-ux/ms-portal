@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
-import { expandPlaceholders } from '@/lib/contracts';
+import { CONTRACT_PLACEHOLDERS, expandPlaceholders } from '@/lib/contracts';
 import { contractValues, newAccessToken, nextContractNumber } from '@/lib/contractsServer';
 import { resolveProject } from '@/lib/projectOptions';
 
@@ -17,7 +17,16 @@ const schema = z.object({
   signerName: z.string().trim().min(1, 'Vyplňte jméno podepisujícího.').max(200),
   signerEmail: z.string().trim().email('Vyplňte platný e-mail podepisujícího.'),
   caflouProjectId: z.string().trim().optional(),
+  /**
+   * Rucne vyplnena pole ze zakladaciho formulare (odmena, termin, ...).
+   * Portal je nikde nema, ale bez nich by ve smlouve chybela treba castka
+   * (zadani 13. 9. 2026: „na smlouve neni nikde castka").
+   */
+  pole: z.record(z.string().trim().max(400)).optional(),
 });
+
+/** Prijmeme jen pole, ktera sablony opravdu znaji - nic jineho se nedosazuje. */
+const RUCNI_KLICE = new Set(CONTRACT_PLACEHOLDERS.filter((p) => p.rucne).map((p) => p.key));
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,6 +61,11 @@ export async function POST(req: NextRequest) {
       projectName: projekt.projectName,
       contractNumber: number,
     });
+
+    const rucni: Record<string, string> = d.pole ?? {};
+    for (const [klic, hodnota] of Object.entries(rucni)) {
+      if (RUCNI_KLICE.has(klic) && hodnota) values[klic] = hodnota;
+    }
 
     const contract = await prisma.contract.create({
       data: {
