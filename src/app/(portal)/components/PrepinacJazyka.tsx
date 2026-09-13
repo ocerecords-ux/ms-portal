@@ -1,10 +1,7 @@
 "use client";
 
 import { useJazyk, usePrepnoutJazyk } from './JazykProvider';
-import { JAZYKY, type Jazyk } from '@/lib/jazyk';
-
-const ZKRATKY: Record<Jazyk, string> = { cs: 'CS', en: 'EN' };
-const NAZVY: Record<Jazyk, string> = { cs: 'Čeština', en: 'English' };
+import { JAZYKY, NAZVY_JAZYKU, ZKRATKY_JAZYKU } from '@/lib/jazyk';
 
 /**
  * Přepínač jazyka v horní liště (zadání 13. 9. 2026: „přidej celkově na
@@ -28,13 +25,13 @@ export function PrepinacJazyka() {
           key={j}
           type="button"
           onClick={() => prepnout(j)}
-          title={NAZVY[j]}
+          title={NAZVY_JAZYKU[j]}
           aria-pressed={j === jazyk}
           className={`px-2 py-0.5 text-[11px] font-heading font-bold tracking-wide transition-colors ${
             j === jazyk ? 'bg-brand-green text-onAccent' : 'text-white/75 hover:text-white'
           }`}
         >
-          {ZKRATKY[j]}
+          {ZKRATKY_JAZYKU[j]}
         </button>
       ))}
     </span>

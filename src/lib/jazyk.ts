@@ -25,6 +25,16 @@ export function jeJazyk(hodnota: unknown): hodnota is Jazyk {
   return hodnota === 'cs' || hodnota === 'en';
 }
 
+/**
+ * Zkratka na přepínači. Kód jazyka je „cs" (tak se čeština značí podle normy
+ * a tak ji zná prohlížeč), na tlačítku ale patří „CZ" — tak to lidi znají
+ * z vlajek a domén (zadání 13. 9. 2026: „CS ale není správně, je to CZ").
+ */
+export const ZKRATKY_JAZYKU: Record<Jazyk, string> = { cs: 'CZ', en: 'EN' };
+
+/** Celý název jazyka, hlavně do bublin u tlačítek. */
+export const NAZVY_JAZYKU: Record<Jazyk, string> = { cs: 'Čeština', en: 'English' };
+
 /** Kód pro Intl a atribut lang - britská angličtina, ne americká. */
 export function kodJazyka(jazyk: Jazyk): 'cs-CZ' | 'en-GB' {
   return jazyk === 'en' ? 'en-GB' : 'cs-CZ';

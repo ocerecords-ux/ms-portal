@@ -5,7 +5,16 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect } from 'react';
-import { JAZYKY, KLIC_JAZYKA, PLATNOST_JAZYKA_S, jeJazyk, prelozit, type Jazyk } from '@/lib/jazyk';
+import {
+  JAZYKY,
+  KLIC_JAZYKA,
+  NAZVY_JAZYKU,
+  PLATNOST_JAZYKA_S,
+  ZKRATKY_JAZYKU,
+  jeJazyk,
+  prelozit,
+  type Jazyk,
+} from '@/lib/jazyk';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -93,12 +102,13 @@ export default function LoginPage() {
                     key={j}
                     type="button"
                     onClick={() => prepni(j)}
+                    title={NAZVY_JAZYKU[j]}
                     aria-pressed={j === jazyk}
                     className={`px-2.5 py-1 text-[11px] font-heading font-bold tracking-wide transition-colors ${
                       j === jazyk ? 'bg-brand-green text-brand-purpleDark' : 'text-white/75 hover:text-white'
                     }`}
                   >
-                    {j.toUpperCase()}
+                    {ZKRATKY_JAZYKU[j]}
                   </button>
                 ))}
               </span>
