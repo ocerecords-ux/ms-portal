@@ -1087,6 +1087,13 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
  * Neni to druhy chat, jen jina schranka kolem tehoz obsahu - jinak by se
  * obe podoby rozesly hned pri prvni uprave.
  */
+/**
+ * Kde si pamatujeme naposledy otevřenou konverzaci (zadání 13. 9. 2026:
+ * „když to otevřu, otevřít poslední konverzaci"). Je to jen zvyk konkrétního
+ * prohlížeče, ne nastavení účtu — proto localStorage a ne databáze.
+ */
+const KLIC_POSLEDNI_KONVERZACE = 'msportal_chat_posledni';
+
 export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   // Na samostatne strance je chat rovnou otevreny, neni co rozbalovat.
   const [dok, otevriDok] = usePravyDok();
@@ -1272,7 +1279,18 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const [spravaClenove, setSpravaClenove] = useState<string[]>([]);
   const [spravaUklada, setSpravaUklada] = useState(false);
 
-  const konecRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * Výpis zpráv (zadání 13. 9. 2026: „konverzace se nevyroluje na poslední
+   * řádek, když ji otevřu").
+   *
+   * Dřív se rolovalo `scrollIntoView` na prázdný div na konci. To ale řeklo
+   * prohlížeči „ukaž tenhle bod" a ten občas posunul celou stránku místo
+   * výpisu — a hlavně to proběhlo dřív, než se dopočítala výška bublin
+   * s obrázky a avatary, takže výpis skončil kousek nad koncem. Tady se
+   * rovnou nastavuje scrollTop kontejneru, a to několikrát po sobě, ať to
+   * sedí i po doskládání obsahu.
+   */
+  const vypisRef = useRef<HTMLDivElement | null>(null);
 
   /**
    * ČERSTVÁ PŘEPNUTÍ, KTERÁ SERVER JEŠTĚ NESTIHL POTVRDIT (12. 9. 2026:
@@ -1447,9 +1465,62 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
+  const naKonec = useCallback(() => {
+    const el = vypisRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
+
   useEffect(() => {
-    konecRef.current?.scrollIntoView({ block: 'end' });
-  }, [messages, openId]);
+    naKonec();
+    const snimek = requestAnimationFrame(naKonec);
+    const brzy = setTimeout(naKonec, 120);
+    const pozdeji = setTimeout(naKonec, 450);
+    return () => {
+      cancelAnimationFrame(snimek);
+      clearTimeout(brzy);
+      clearTimeout(pozdeji);
+    };
+  }, [messages, openId, naKonec]);
+
+  // Poslední otevřená konverzace si pamatuje sama sebe...
+  useEffect(() => {
+    if (!openId) return;
+    try {
+      window.localStorage.setItem(KLIC_POSLEDNI_KONVERZACE, openId);
+    } catch {
+      // Soukromé okno localStorage odmítá - pak se prostě nic nepamatuje.
+    }
+  }, [openId]);
+
+  /**
+   * ...a při otevření chatu se do ní rovnou vrátíme (zadání 13. 9. 2026).
+   * Dřív se otevřel prázdný panel s výzvou, ať si člověk něco vybere.
+   * Když si poslední konverzaci nepamatujeme (nebo mezitím zmizela), naskočí
+   * ta s nejčerstvější zprávou.
+   */
+  const obnovenoRef = useRef(false);
+  useEffect(() => {
+    if (!expanded) {
+      obnovenoRef.current = false;
+      return;
+    }
+    if (obnovenoRef.current || openId || conversations.length === 0) return;
+    obnovenoRef.current = true;
+
+    let posledni: string | null = null;
+    try {
+      posledni = window.localStorage.getItem(KLIC_POSLEDNI_KONVERZACE);
+    } catch {
+      posledni = null;
+    }
+
+    const vrat =
+      (posledni ? conversations.find((c) => c.id === posledni) : undefined) ??
+      [...conversations].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))[0];
+    if (!vrat) return;
+    setTab(vrat.kind);
+    setOpenId(vrat.id);
+  }, [expanded, openId, conversations]);
 
   const neprectene = conversations.reduce((sum, c) => sum + c.unread, 0);
 
@@ -2702,7 +2773,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   {/* Vypis zprav ma vlastni jemne fialovy podklad - na bilem
                       pozadi splyvaly bile bubliny s okolim (zprava uzivatele
                       8. 9. 2026: "cele je to takove bile, sterilni"). */}
-                  <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-surfaceSoft">
+                  <div
+                    ref={vypisRef}
+                    className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-surfaceSoft"
+                  >
                     {messages.length === 0 && (
                       <p className="text-sm font-body text-muted m-0">
                         {zpravyNacitam ? 'Načítám zprávy…' : 'Zatím tu nikdo nic nenapsal.'}
@@ -2811,7 +2885,6 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       </div>
                       );
                     })}
-                    <div ref={konecRef} />
                   </div>
 
                   <PisouIndikator jmena={pisou} />

@@ -32,6 +32,18 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
     const totals = computeTotals(offer.items);
 
+    // Mail posila MANAZER PROJEKTU (zadani 13. 9. 2026). Kdyz nabidka na
+    // projekt navazana neni (nebo projekt manazera nema), podepise se ten,
+    // kdo nabidku odesila - jeho odpoved klient stejne ceka.
+    const meta = offer.caflouProjectId
+      ? await prisma.projectMeta.findUnique({
+          where: { caflouProjectId: offer.caflouProjectId },
+          select: { manager: { select: { name: true, email: true } } },
+        })
+      : null;
+    const senderName = meta?.manager?.name || session.user.name || null;
+    const senderEmail = meta?.manager?.email || session.user.email || null;
+
     const result = await sendOfferEmail({
       to,
       contactName: offer.company.contactName,
@@ -44,6 +56,9 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       totalExVat: totals.exVat,
       validUntil: offer.validUntil,
       offerUrl: `${baseUrl}/nabidka/${offer.approvalToken}`,
+      projectName: offer.projectName,
+      senderName,
+      senderEmail,
     });
 
     if (!result.sent) {

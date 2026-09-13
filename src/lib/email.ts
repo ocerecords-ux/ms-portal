@@ -14,6 +14,40 @@ function getTransport() {
 }
 
 /**
+ * ODESÍLATEL PODLE MANAŽERA PROJEKTU (zadání 13. 9. 2026: „odesílat se to
+ * bude z mailu podle toho, kdo je manažer projektu").
+ *
+ * Cizí adresu do From dát nejde jen tak: poštovní server podepisuje jen svoje
+ * domény a mail odeslaný „jménem" cizí domény skončí ve spamu, nebo ho server
+ * rovnou odmítne. Takže manažerova adresa jde do From jen tehdy, když je
+ * z domény, kterou náš server obhospodařuje (poznáme ji z SMTP_FROM a
+ * SMTP_USER). Jinak posíláme pod svou adresou, ale s jeho jménem a s Reply-To
+ * na něj — odpověď klienta tak dorazí přímo jemu.
+ */
+function domenaAdresy(adresa: string | undefined | null): string {
+  return (adresa?.match(/@([^\s>]+)/)?.[1] || '').trim().toLowerCase();
+}
+
+export function odesilatelPodleCloveka(
+  jmeno?: string | null,
+  mail?: string | null,
+): { from: string | { name: string; address: string }; replyTo?: string } {
+  const vychozi = process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>';
+  const adresa = mail?.trim().toLowerCase() || '';
+  if (!adresa.includes('@')) return { from: vychozi };
+
+  const nase = new Set(
+    [domenaAdresy(vychozi), domenaAdresy(process.env.SMTP_USER)].filter(Boolean),
+  );
+  const popisek = jmeno?.trim() ? `${jmeno.trim()} — Mediaspace` : 'Mediaspace';
+
+  if (nase.has(domenaAdresy(adresa))) {
+    return { from: { name: popisek, address: adresa }, replyTo: adresa };
+  }
+  return { from: vychozi, replyTo: adresa };
+}
+
+/**
  * Stav odesílání pošty pro diagnostiku (zadání 11. 9. 2026: „zvukař si
  * vyresetoval heslo a nepřišel mu žádný e-mail").
  *
@@ -387,7 +421,7 @@ function emailShell(options: { tag: string; preheader: string; body: string }): 
   <table role="presentation" class="card" width="560">
     <tr><td class="hero">
       <table role="presentation"><tr>
-        <td class="word">MS portal</td>
+        <td class="word">Mediaspace</td>
         <td><span class="rule"></span></td>
         <td style="padding-left:14px;">
           <img class="logo" src="${baseUrl}${LOGO_GIF_PATH}" width="96" height="96" alt="Mediaspace" />
@@ -398,7 +432,7 @@ function emailShell(options: { tag: string; preheader: string; body: string }): 
     </td></tr>
     <tr><td class="content">${options.body}</td></tr>
     <tr><td class="footer">
-      <p><span class="brand">Mediaspace</span> · MS Portal · <a href="${baseUrl}" style="color:#6B2AF0;text-decoration:none;">www.msportal.cz</a></p>
+      <p><span class="brand">Mediaspace</span> · <a href="${baseUrl}" style="color:#6B2AF0;text-decoration:none;">www.msportal.cz</a></p>
     </td></tr>
   </table>
 </td></tr></table>
@@ -747,6 +781,11 @@ type OfferEmailInput = {
   totalIncVat: number;
   validUntil: Date | null;
   offerUrl: string;
+  /** Projekt, ke kteremu nabidka patri - jde do predmetu mailu. */
+  projectName?: string | null;
+  /** Manazer projektu: pod jeho jmenem (a pokud to jde, i adresou) mail odejde. */
+  senderName?: string | null;
+  senderEmail?: string | null;
 };
 
 const OFFER_CURRENCY_SYMBOL: Record<string, string> = { CZK: 'Kč', EUR: '€', GBP: '£' };
@@ -781,7 +820,7 @@ export function buildOfferHtml(input: OfferEmailInput): string {
       <tr><td class="label">Cena bez DPH</td><td class="value">${escapeHtml(formatOfferMoney(input.totalExVat, input.currency))}</td></tr>
       <tr><td class="label">Cena s DPH</td><td class="value">${escapeHtml(formatOfferMoney(input.totalIncVat, input.currency))}</td></tr>
       ${validText ? `<tr><td class="label">Platnost do</td><td class="value regular">${escapeHtml(validText)}</td></tr>` : ''}
-      <tr><td class="label">Vystavil</td><td class="value regular">${escapeHtml(input.issuerName)}</td></tr>
+      <tr><td class="label">Vystavil</td><td class="value regular">${escapeHtml(input.senderName || input.issuerName)}</td></tr>
     </table>
 
     <div class="cta-row">
@@ -800,10 +839,16 @@ export async function sendOfferEmail(input: OfferEmailInput) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
-  await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+  // Predmet mailu pojmenovava projekt, ne cislo dokladu (zadani 13. 9. 2026:
+  // „Predmet: Cenova nabidka - (nazev projektu)"). Kdyz nabidka na projekt
+  // navazana neni, zaskoci predmet nabidky a az nakonec jeji cislo.
+  const nazevVPredmetu = input.projectName?.trim() || input.subject?.trim() || input.number;
+  const obalka = odesilatelPodleCloveka(input.senderName, input.senderEmail);
+
+  const zprava = {
+    ...obalka,
     to: input.to,
-    subject: `Nabídka ${input.number}${input.subject ? ` — ${input.subject}` : ''}`,
+    subject: `Cenová nabídka - ${nazevVPredmetu}`,
     text: [
       pozdrav(input.contactName),
       '',
@@ -815,12 +860,27 @@ export async function sendOfferEmail(input: OfferEmailInput) {
       'Cely rozpis a schvaleni najdete zde:',
       input.offerUrl,
       '',
-      input.issuerName,
+      input.senderName || input.issuerName,
     ]
       .filter(Boolean)
       .join('\n'),
     html: buildOfferHtml(input),
-  });
+  };
+
+  try {
+    await transport.sendMail(zprava);
+  } catch (err) {
+    // Nekterym serverum se cizi adresa v From nelibi, i kdyz je ze stejne
+    // domeny. Nez aby nabidka neodesla vubec, posleme ji pod nasi adresou
+    // a s Reply-To na manazera.
+    if (typeof zprava.from === 'string') throw err;
+    console.warn('Nabidka: odeslani pod adresou manazera selhalo, zkousim vychozi:', err);
+    await transport.sendMail({
+      ...zprava,
+      from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+      replyTo: obalka.replyTo,
+    });
+  }
 
   return { sent: true as const };
 }

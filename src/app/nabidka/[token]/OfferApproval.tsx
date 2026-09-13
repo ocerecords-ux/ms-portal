@@ -26,7 +26,6 @@ export function OfferApproval({
   issuerEmail: string | null;
 }) {
   const router = useRouter();
-  const [name, setName] = useState(approvedByName ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +40,11 @@ export function OfferApproval({
     });
   }
 
+  /**
+   * Schválení jedním tlačítkem (zadání 13. 9. 2026: „nech tam jen to tlačítko
+   * Schvaluji nabídku"). Políčko na jméno ani odmítnutí tu už nejsou — kdo
+   * nabídku nechce, ozve se člověku, se kterým ji domlouval, ne tlačítkem.
+   */
   async function send(action: 'approve' | 'reject') {
     setBusy(true);
     setError(null);
@@ -48,7 +52,7 @@ export function OfferApproval({
       const res = await fetch(`/api/nabidka/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, name: name.trim() || undefined }),
+        body: JSON.stringify({ action }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -117,19 +121,9 @@ export function OfferApproval({
         </p>
       </div>
 
-      <label className="flex flex-col gap-1.5 max-w-sm">
-        <span className="text-sm font-body text-ink">Vaše jméno</span>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="nepovinné, ale hodí se vědět kdo"
-          className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full"
-        />
-      </label>
-
       {error && <p className="text-sm text-danger m-0">{error}</p>}
 
-      <div className="flex items-center gap-3 flex-wrap">
+      <div>
         <button
           type="button"
           onClick={() => send('approve')}
@@ -137,14 +131,6 @@ export function OfferApproval({
           className="bg-brand-green text-onAccent font-heading font-semibold text-base rounded-lg px-6 py-3 hover:brightness-95 transition-[filter] disabled:opacity-60"
         >
           {busy ? 'Ukládám…' : 'Schvaluji nabídku'}
-        </button>
-        <button
-          type="button"
-          onClick={() => send('reject')}
-          disabled={busy}
-          className="text-muted hover:text-ink text-sm font-heading disabled:opacity-60"
-        >
-          Nemám zájem
         </button>
       </div>
     </div>

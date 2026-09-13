@@ -327,13 +327,18 @@ export function OfferEditor({
           )}
           {/* Fakturu jde vystavit z kazde nabidky, kterou klient neodmitl
               (zadani 8. 9. 2026) - schvaleni pres odkaz je dobrovolne a
-              casto se domlouva telefonem. */}
+              casto se domlouva telefonem.
+
+              Tlacitko je plna zelena plocha: zeleny text na zelenkavem
+              podkladu se v tmavem rezimu ztratil (zprava uzivatele
+              13. 9. 2026: "to tlacitko Vystavit fakturu nejde v nabidkach
+              precist"). */}
           {offer.status !== 'REJECTED' && !jesteNeulozena && (
             <button
               type="button"
               onClick={createInvoice}
               disabled={saving || sending}
-              className="border border-brand-green bg-okTint text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-green transition-colors disabled:opacity-60 whitespace-nowrap"
+              className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60 whitespace-nowrap"
             >
               Vystavit fakturu
             </button>
