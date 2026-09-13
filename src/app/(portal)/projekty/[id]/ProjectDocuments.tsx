@@ -85,11 +85,11 @@ export function ProjectDocuments({
           faktuře nebo výdaji.
         </p>
       ) : (
-        <div className="flex flex-col gap-6">
-          <Block title="Smlouvy" rows={contracts} hideAmount />
-          <Block title="Nabídky" rows={offers} />
-          <Block title="Vydané faktury" rows={invoices} />
-          <Block title="Přijaté doklady" rows={expenses} />
+        <div className="flex flex-col gap-5">
+          <Block title="Smlouvy" rows={contracts} druh="smlouva" hideAmount />
+          <Block title="Nabídky" rows={offers} druh="nabidka" />
+          <Block title="Vydané faktury" rows={invoices} druh="faktura" />
+          <Block title="Přijaté doklady" rows={expenses} druh="vydaj" />
 
           <div className="flex items-center gap-8 flex-wrap border-t border-line pt-4">
             <Sum label="Fakturováno" values={invoicedByCurrency} />
@@ -101,37 +101,138 @@ export function ProjectDocuments({
   );
 }
 
-function Block({ title, rows, hideAmount }: { title: string; rows: ProjectDocRow[]; hideAmount?: boolean }) {
+/**
+ * IKONY DRUHŮ DOKLADU (zadání 13. 9. 2026: „udělej tam přehlednější seznam
+ * s ikonami"). Stejná rodina jako ikony typů projektu: mřížka 24, tah 1.8,
+ * zakulacené konce, žádná výplň — vedle sebe pak vypadají jako sada.
+ *
+ * SILUETA NESE VÝZNAM, ne barva. Stav dokladu vedle už barvu má a nese ji
+ * záměrně (zrušená červeně, schválená zeleně); kdyby barvu přidala i ikona,
+ * seznam se rozsvítí a stav přestane být informace. Ikona je proto vždycky
+ * firemní fialová, jako u typů projektu.
+ *
+ * Nabídka je cenovka a přijatý doklad účtenka s natrženým spodkem — dvě
+ * jasně odlišné siluety. Smlouva a faktura sdílejí list papíru a liší se
+ * tím, co je na něm: podpis proti řádkům s částkou. V 18 px se to rozezná
+ * a obojí stejně stojí ve vlastní nadepsané skupině.
+ */
+type DruhDokladu = 'smlouva' | 'nabidka' | 'faktura' | 'vydaj';
+
+/** List papíru s ohnutým rohem - společný základ smlouvy a faktury. */
+const LIST = (
+  <>
+    <path d="M14 2.5H7A1.5 1.5 0 0 0 5.5 4v16A1.5 1.5 0 0 0 7 21.5h10a1.5 1.5 0 0 0 1.5-1.5V7z" />
+    <path d="M14 2.5V7h4.5" />
+  </>
+);
+
+const KRESBY: Record<DruhDokladu, React.ReactNode> = {
+  smlouva: (
+    <>
+      {LIST}
+      {/* Podpisová vlnovka - to jediné, co ze smlouvy dělá smlouvu. */}
+      <path d="M8.5 16.8c1.1-1.7 1.9-1.7 2.7 0 .8 1.7 1.6 1.7 2.7 0" />
+    </>
+  ),
+  nabidka: (
+    <>
+      <path d="M20.5 3.5h-7.1a1.5 1.5 0 0 0-1.06.44l-8.4 8.4a1.5 1.5 0 0 0 0 2.12l6.1 6.1a1.5 1.5 0 0 0 2.12 0l8.4-8.4a1.5 1.5 0 0 0 .44-1.06z" />
+      <circle cx="17" cy="7" r="1.25" />
+    </>
+  ),
+  faktura: (
+    <>
+      {LIST}
+      <path d="M9 12.5h6" />
+      <path d="M9 16h4" />
+    </>
+  ),
+  vydaj: (
+    <>
+      {/* Účtenka s natrženým spodkem. */}
+      <path d="M6 3.5h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3z" />
+      <path d="M9 8.5h6" />
+      <path d="M9 12h4" />
+    </>
+  ),
+};
+
+function IkonaDokladu({ druh }: { druh: DruhDokladu }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="shrink-0 grid place-items-center w-9 h-9 rounded-lg bg-brand-purple/10 text-brand-purple"
+    >
+      <svg
+        width={18}
+        height={18}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {KRESBY[druh]}
+      </svg>
+    </span>
+  );
+}
+
+/**
+ * Jedna skupina dokladů. Řádek je celý odkaz a podsvítí se - v seznamu, kde
+ * se kliká skoro na každý řádek, je cíl velký jako řádek sám; předtím to byl
+ * jen text názvu.
+ */
+function Block({
+  title,
+  rows,
+  druh,
+  hideAmount,
+}: {
+  title: string;
+  rows: ProjectDocRow[];
+  druh: DruhDokladu;
+  hideAmount?: boolean;
+}) {
   if (rows.length === 0) return null;
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <h3 className="font-heading font-semibold text-xs text-muted uppercase tracking-wide m-0">
         {title} <span className="tabular-nums opacity-70">({rows.length})</span>
       </h3>
-      <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
+      <ul className="list-none p-0 m-0 flex flex-col gap-0.5">
         {rows.map((row) => (
-          <li key={row.id} className="flex items-center justify-between gap-4 py-2.5">
-            <span className="min-w-0">
-              <Link href={row.href} className="text-sm font-heading font-semibold text-ink hover:text-brand-purple no-underline block truncate">
-                {row.title}
-              </Link>
-              <span className="block text-xs text-muted font-body">
-                <span className="tabular-nums">{row.number}</span>
-                {row.date ? ` · ${row.date}` : ''}
+          <li key={row.id}>
+            <Link
+              href={row.href}
+              className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg no-underline hover:bg-surfaceSoft transition-colors"
+            >
+              <IkonaDokladu druh={druh} />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-heading font-semibold text-ink truncate">
+                  {row.title}
+                </span>
+                <span className="block text-xs text-muted font-body">
+                  <span className="tabular-nums">{row.number}</span>
+                  {row.date ? ` · ${row.date}` : ''}
+                </span>
               </span>
-            </span>
-            <span className="flex items-center gap-4 shrink-0">
               {!hideAmount && (
-                <span className="text-sm font-heading text-ink tabular-nums">
+                <span className="shrink-0 text-sm font-heading text-ink tabular-nums text-right">
                   {formatMoney(row.amountMinor, row.currency)}
                 </span>
               )}
-              <span
-                className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${row.statusClass}`}
-              >
-                {row.statusLabel}
+              {/* Pevna sirka stavu: bubliny pak stoji v jednom sloupci a oko
+                  sjede seznam shora dolu misto toho, aby je hledalo. */}
+              <span className="shrink-0 w-[104px] flex justify-end">
+                <span
+                  className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill whitespace-nowrap ${row.statusClass}`}
+                >
+                  {row.statusLabel}
+                </span>
               </span>
-            </span>
+            </Link>
           </li>
         ))}
       </ul>
