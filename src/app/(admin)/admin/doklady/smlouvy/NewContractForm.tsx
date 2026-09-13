@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import { CONTRACT_PLACEHOLDERS } from '@/lib/contracts';
@@ -17,6 +17,12 @@ import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
  * do textu vložilo „…" a odměna by ve smlouvě chyběla. Formulář se proto
  * podívá do vybrané šablony a zeptá se přesně na ta pole, která v ní opravdu
  * jsou — u smlouvy o dílo na rozsah díla, u reklamy na dobu licence.
+ *
+ * HERCE UŽ PORTÁL ZNÁ (zadání 13. 9. 2026: „tady tyto věci portál ví. Podle
+ * projektu dá na výběr RČ nebo IČ herce a název podle názvu projektu").
+ * Po výběru projektu se nabídnou jeho herci a z karty vybraného se do smlouvy
+ * vezme jméno, e-mail, adresa i RČ nebo IČ — podle toho, co má vyplněné.
+ * Název díla se bere z názvu projektu.
  */
 export function NewContractForm({
   issuers,
@@ -46,13 +52,55 @@ export function NewContractForm({
     signerName: '',
     signerEmail: '',
     caflouProjectId: '',
+    actorUserId: '',
   });
+  const [herci, setHerci] = useState<Herec[]>([]);
   const [pole, setPole] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  // Herci vybraneho projektu. Nacitaji se az po vyberu - poslat na klienta
+  // herce vsech projektu by byl zbytecne velky balik.
+  useEffect(() => {
+    const projekt = form.caflouProjectId;
+    if (!projekt) {
+      setHerci([]);
+      return;
+    }
+    let platne = true;
+    fetch(`/api/admin/contracts/podklady?projekt=${encodeURIComponent(projekt)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!platne) return;
+        const seznam: Herec[] = data?.herci ?? [];
+        setHerci(seznam);
+        // Jeden herec na projektu je nejcastejsi pripad - vybrat ho rovnou,
+        // ale uz napsane jmeno mu neprepisovat.
+        if (seznam.length === 1) vyberHerce(seznam[0], false);
+      })
+      .catch(() => platne && setHerci([]));
+    return () => {
+      platne = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.caflouProjectId]);
+
+  /**
+   * Výběr herce doplní podepisujícího — zbytek (adresu, RČ nebo IČ) si portál
+   * dotáhne z jeho karty sám. `prepsat` je false, když herce vybral portál:
+   * co už je napsané, se nepřepisuje.
+   */
+  function vyberHerce(herec: Herec | null, prepsat = true) {
+    setForm((f) => ({
+      ...f,
+      actorUserId: herec?.id ?? '',
+      signerName: herec && (prepsat || !f.signerName) ? herec.jmeno : f.signerName,
+      signerEmail: herec && (prepsat || !f.signerEmail) ? herec.email : f.signerEmail,
+    }));
   }
 
   /** Ruční pole, která ve vybrané šabloně skutečně jsou. */
@@ -87,6 +135,7 @@ export function NewContractForm({
           ...form,
           companyId: form.companyId || undefined,
           caflouProjectId: form.caflouProjectId || undefined,
+          actorUserId: form.actorUserId || undefined,
           templateId: form.templateId || undefined,
           pole: rucniPole.reduce<Record<string, string>>((acc, p) => {
             const hodnota = pole[p.key]?.trim();
@@ -107,6 +156,8 @@ export function NewContractForm({
       setBusy(false);
     }
   }
+
+  const vybranyHerec = herci.find((h) => h.id === form.actorUserId) ?? null;
 
   const inputClass =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full';
@@ -201,15 +252,43 @@ export function NewContractForm({
         </label>
       </div>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Projekt</span>
-        <ProjectSelect
-          value={form.caflouProjectId}
-          onChange={(id) => set('caflouProjectId', id)}
-          projects={projects}
-          className={inputClass}
-        />
-      </label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Projekt</span>
+          <ProjectSelect
+            value={form.caflouProjectId}
+            onChange={(id) => set('caflouProjectId', id)}
+            projects={projects}
+            className={inputClass}
+          />
+        </label>
+
+        {herci.length > 0 && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Herec z projektu</span>
+            <select
+              value={form.actorUserId}
+              onChange={(e) => vyberHerce(herci.find((h) => h.id === e.target.value) ?? null)}
+              className={inputClass}
+            >
+              <option value="">— nevybírat, vyplním ručně —</option>
+              {herci.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.jmeno}
+                  {h.identifikace ? ` · ${h.identifikace}` : ' · bez RČ a IČ'}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs font-body text-muted">
+              {vybranyHerec
+                ? vybranyHerec.identifikace
+                  ? `Do smlouvy půjde ${vybranyHerec.identifikace}${vybranyHerec.maAdresu ? ' a adresa z jeho karty.' : '. Adresu na kartě nemá — doplní se „…".'}`
+                  : 'Na kartě nemá RČ ani IČ — ve smlouvě bude „…" a dopíšete to v textu.'
+                : 'Adresu i RČ nebo IČ si portál vezme z karty herce.'}
+            </span>
+          </label>
+        )}
+      </div>
 
       {rucniPole.length > 0 && (
         <div className="rounded-card border border-line bg-field/60 p-4 flex flex-col gap-3">
@@ -247,13 +326,20 @@ export function NewContractForm({
   );
 }
 
+type Herec = {
+  id: string;
+  jmeno: string;
+  email: string;
+  /** „IČO: 07459424" nebo „RČ: 666008/1549" — prázdné, když nemá ani jedno. */
+  identifikace: string;
+  maAdresu: boolean;
+};
+
 /** Nápověda k ručním polím — ať je vidět, v jakém tvaru to má být. */
 const NAPOVEDA: Record<string, string> = {
   odmena: 'např. 5 000 Kč',
   termin: 'např. 20. 9. 2026',
   splatnost: 'např. 30',
-  rodne_cislo: 'u fyzické osoby bez IČ',
-  nazev_dila: 'např. KENDAMIL — SPOTIFY CZ+SK',
   rozsah_dila: 'co se dělá — překlad, úprava dialogů, dramaturgie…',
   uziti: 'např. audio reklama na Spotify, CZ+SK',
   doba_licence: 'např. jednoho (1) roku',

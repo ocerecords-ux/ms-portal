@@ -17,6 +17,8 @@ const schema = z.object({
   signerName: z.string().trim().min(1, 'Vyplňte jméno podepisujícího.').max(200),
   signerEmail: z.string().trim().email('Vyplňte platný e-mail podepisujícího.'),
   caflouProjectId: z.string().trim().optional(),
+  /** Herec z projektu - z jeho karty se vezme adresa a RC nebo IC. */
+  actorUserId: z.string().trim().optional(),
   /**
    * Rucne vyplnena pole ze zakladaciho formulare (odmena, termin, ...).
    * Portal je nikde nema, ale bez nich by ve smlouve chybela treba castka
@@ -60,6 +62,7 @@ export async function POST(req: NextRequest) {
       signerEmail: d.signerEmail,
       projectName: projekt.projectName,
       contractNumber: number,
+      actorUserId: d.actorUserId || null,
     });
 
     const rucni: Record<string, string> = d.pole ?? {};

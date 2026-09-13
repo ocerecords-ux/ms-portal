@@ -49,13 +49,13 @@ export const CONTRACT_PLACEHOLDERS: { key: string; label: string; rucne?: boolea
   { key: 'protistrana_ic', label: 'IČ protistrany' },
   { key: 'protistrana_dic', label: 'DIČ protistrany' },
   { key: 'protistrana_adresa', label: 'Adresa protistrany' },
+  { key: 'protistrana_identifikace', label: 'RČ nebo IČ protistrany' },
   { key: 'podepisujici', label: 'Jméno podepisujícího' },
   { key: 'email', label: 'E-mail podepisujícího' },
   { key: 'projekt', label: 'Název projektu' },
+  { key: 'nazev_dila', label: 'Název díla (z projektu)' },
   { key: 'datum', label: 'Dnešní datum' },
-  { key: 'rodne_cislo', label: 'Rodné číslo protistrany', rucne: true },
   { key: 'odmena', label: 'Odměna / cena', rucne: true },
-  { key: 'nazev_dila', label: 'Název díla (spotu, audioknihy)', rucne: true },
   { key: 'termin', label: 'Termín předání / natáčení', rucne: true },
   { key: 'splatnost', label: 'Splatnost ve dnech', rucne: true },
   { key: 'rozsah_dila', label: 'Rozsah díla (co se dělá)', rucne: true },
@@ -112,7 +112,7 @@ export const DEFAULT_CONTRACT_TEMPLATES: { name: string; body: string; sortOrder
 Zhotovitel:
 {{protistrana}}
 Se sídlem: {{protistrana_adresa}}
-RČ: {{rodne_cislo}}
+{{protistrana_identifikace}}
 
 Objednatel:
 {{nase_firma}}
@@ -239,6 +239,7 @@ V Brně dne {{datum}}`,
 Zhotovitel:
 {{protistrana}}
 Se sídlem: {{protistrana_adresa}}
+{{protistrana_identifikace}}
 
 Objednatel:
 {{nase_firma}}
@@ -307,7 +308,7 @@ V Brně dne {{datum}}`,
 Zhotovitel:
 {{protistrana}}
 Se sídlem: {{protistrana_adresa}}
-RČ: {{rodne_cislo}}
+{{protistrana_identifikace}}
 
 Objednatel:
 {{nase_firma}}

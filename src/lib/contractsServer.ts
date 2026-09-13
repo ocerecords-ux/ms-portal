@@ -68,10 +68,32 @@ export async function contractValues(input: {
   projectName?: string | null;
   /** Cislo uz pridelene rady - do textu smlouvy patri hned v zahlavi. */
   contractNumber?: string | null;
+  /**
+   * Herec z projektu (zadani 13. 9. 2026: „tady tyto veci portal vi. Podle
+   * projektu da na vyber RC nebo IC herce"). Kdyz je vyplneny, bere se z jeho
+   * karty adresa i RC/IC - herec vetsinou firmu nema, takze `companyId`
+   * zustane prazdne a bez nej by ve smlouve nebylo nic.
+   */
+  actorUserId?: string | null;
 }): Promise<Record<string, string>> {
-  const [issuer, company] = await Promise.all([
+  const [issuer, company, herec] = await Promise.all([
     prisma.issuerCompany.findUnique({ where: { id: input.issuerCompanyId } }),
     input.companyId ? prisma.company.findUnique({ where: { id: input.companyId } }) : Promise.resolve(null),
+    input.actorUserId
+      ? prisma.user.findUnique({
+          where: { id: input.actorUserId },
+          select: {
+            name: true,
+            email: true,
+            birthNumber: true,
+            ic: true,
+            dic: true,
+            addressStreet: true,
+            addressCity: true,
+            addressZip: true,
+          },
+        })
+      : Promise.resolve(null),
   ]);
 
   const dnes = new Intl.DateTimeFormat('cs-CZ', {
@@ -82,6 +104,14 @@ export async function contractValues(input: {
 
   // Kam posilat fakturu. Prvni je e-mail vlastni firmy, jinak uctarna.
   const nasEmail = issuer?.email?.trim() || process.env.MAIL_UCTARNA?.trim() || 'uctarna@mediaspace.cz';
+
+  const hercovaAdresa = herec
+    ? formatAddress({
+        addressStreet: herec.addressStreet,
+        addressCity: herec.addressCity,
+        addressZip: herec.addressZip,
+      })
+    : '';
 
   return {
     cislo_smlouvy: input.contractNumber ?? '',
@@ -96,21 +126,42 @@ export async function contractValues(input: {
         })
       : '',
     nas_email: nasEmail,
-    protistrana: company?.name ?? input.signerName ?? '',
-    protistrana_ic: company?.ic ?? '',
-    protistrana_dic: company?.dic ?? '',
-    protistrana_adresa: company
-      ? formatAddress({
-          addressStreet: company.addressStreet,
-          addressCity: company.addressCity,
-          addressZip: company.addressZip,
-        })
-      : '',
+    protistrana: company?.name ?? herec?.name ?? input.signerName ?? '',
+    protistrana_ic: company?.ic ?? herec?.ic ?? '',
+    protistrana_dic: company?.dic ?? herec?.dic ?? '',
+    protistrana_adresa:
+      (company
+        ? formatAddress({
+            addressStreet: company.addressStreet,
+            addressCity: company.addressCity,
+            addressZip: company.addressZip,
+          })
+        : hercovaAdresa) || '',
+    protistrana_identifikace: identifikace({
+      ic: company?.ic ?? herec?.ic ?? null,
+      dic: company?.dic ?? herec?.dic ?? null,
+      rodneCislo: company ? null : (herec?.birthNumber ?? null),
+    }),
     podepisujici: input.signerName ?? '',
     email: input.signerEmail ?? '',
     projekt: input.projectName ?? '',
+    // Nazev dila je nazev projektu - portal ho zna, neni proc se na nej ptat.
+    nazev_dila: input.projectName ?? '',
     datum: dnes,
   };
+}
+
+/**
+ * Řádek, kterým se protistrana ve smlouvě identifikuje. Firma i herec na IČ
+ * se uvádějí IČem (a DIČem, když je plátce), herec bez IČ rodným číslem —
+ * přesně jak to stojí v papírových smlouvách Mediaspace.
+ */
+function identifikace(vstup: { ic: string | null; dic: string | null; rodneCislo: string | null }): string {
+  const ic = vstup.ic?.trim();
+  const dic = vstup.dic?.trim();
+  if (ic) return dic ? `IČO: ${ic}    DIČ: ${dic}` : `IČO: ${ic}`;
+  const rc = vstup.rodneCislo?.trim();
+  return rc ? `RČ: ${rc}` : '';
 }
 
 /** IP a prohlížeč do doložky. Za Vercelem je skutečná IP v x-forwarded-for. */
