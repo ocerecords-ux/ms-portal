@@ -990,7 +990,7 @@ export function buildInvoiceHtml(input: InvoiceEmailInput): string {
       <tr><td class="label">Částka bez DPH</td><td class="value regular">${escapeHtml(formatOfferMoney(input.totalExVat, input.currency))}</td></tr>
       <tr><td class="label">K úhradě</td><td class="value">${escapeHtml(formatOfferMoney(input.totalIncVat, input.currency))}</td></tr>
       ${dueText ? `<tr><td class="label">Splatnost</td><td class="value">${escapeHtml(dueText)}</td></tr>` : ''}
-      <tr><td class="label">Účet</td><td class="value regular">${escapeHtml(account || input.accountLabel)}</td></tr>
+      <tr><td class="label">Bankovní účet</td><td class="value regular">${escapeHtml(account || input.accountLabel)}</td></tr>
       <tr><td class="label">Variabilní symbol</td><td class="value">${escapeHtml(input.variableSymbol)}</td></tr>
     </table>
 
@@ -1020,7 +1020,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
       `posilame fakturu ${input.number} pro ${input.companyName}.`,
       `K uhrade: ${formatOfferMoney(input.totalIncVat, input.currency)}`,
       input.dueDate ? `Splatnost: ${input.dueDate.toLocaleDateString('cs-CZ')}` : '',
-      `Ucet: ${[input.accountNumber, input.iban].filter(Boolean).join(' / ') || input.accountLabel}`,
+      `Bankovni ucet: ${[input.accountNumber, input.iban].filter(Boolean).join(' / ') || input.accountLabel}`,
       `Variabilni symbol: ${input.variableSymbol}`,
       input.pdf ? 'Fakturu posilame i v priloze, je na ni QR kod k platbe.' : '',
       '',

@@ -117,3 +117,20 @@ export function formatAddress(parts: {
     .join(', ');
   return line;
 }
+
+/**
+ * Číslo účtu v úplném tvaru, i s kódem banky: „3169021011/3030"
+ * (zadání 13. 9. 2026: „dal bych ho celý i za lomítkem /3030 s kódem banky").
+ *
+ * Kód banky se u účtu vede zvlášť (pole Banka), takže na dokladu by jinak
+ * zůstalo jen číslo - a podle něj se platba zadat nedá. Když už je kód
+ * v čísle napsaný, nebo to není čtyřčíslí (někdo si do Banky napsal jméno),
+ * nechá se číslo tak, jak je.
+ */
+export function cisloUctuSKodem(cislo?: string | null, banka?: string | null): string | null {
+  const ucet = cislo?.trim();
+  if (!ucet) return null;
+  if (ucet.includes('/')) return ucet;
+  const kod = banka?.trim();
+  return kod && /^\d{4}$/.test(kod) ? `${ucet}/${kod}` : ucet;
+}

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { expandNumberFormat } from '@/lib/doklady';
+import { cisloUctuSKodem, expandNumberFormat } from '@/lib/doklady';
 import { renderDokladPdf, type DokladData, type PolozkaDokladu, type RezimDph } from '@/lib/dokladPdf';
 import { ibanZTuzemskehoUctu } from '@/lib/pdf/qrPlatba';
 
@@ -137,7 +137,7 @@ export async function nahledDokladu(
     platba:
       rozepsane.druh === 'FAKTURA' && ucet
         ? {
-            ucet: ucet.accountNumber,
+            ucet: cisloUctuSKodem(ucet.accountNumber, ucet.bankName),
             // IBAN se dopočítá z tuzemského tvaru účtu, když u účtu vyplněný
             // není (zadání 13. 9. 2026: „potřebuju na faktury dostat QR kód,
             // myslím, že ho tam nedostaneme bez IBANU"). QR platba IBAN

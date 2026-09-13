@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { sendInvoiceEmail } from '@/lib/email';
-import { computeTotals } from '@/lib/doklady';
+import { cisloUctuSKodem, computeTotals } from '@/lib/doklady';
 import { pdfFaktury } from '@/lib/dokladNahledServer';
 
 // Odeslani faktury odberateli (zadani 6. 9. 2026). Mail jde na e-mail vedeny
@@ -65,7 +65,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       dueDate: invoice.dueDate,
       variableSymbol: invoice.variableSymbol,
       accountLabel: invoice.bankAccount.label,
-      accountNumber: invoice.bankAccount.accountNumber,
+      accountNumber: cisloUctuSKodem(invoice.bankAccount.accountNumber, invoice.bankAccount.bankName),
       iban: invoice.bankAccount.iban,
       pdf: dokument.ok ? { nazev: dokument.nazev, obsah: dokument.pdf } : null,
     });
