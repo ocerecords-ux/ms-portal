@@ -33,15 +33,20 @@ function rozeber(dataUrl: string): { typ: string; data: Buffer } | null {
 export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
   const offer = await prisma.offer.findUnique({
     where: { approvalToken: params.token },
-    select: { caflouProjectId: true },
+    select: { caflouProjectId: true, odeslal: { select: { photoUrl: true } } },
   });
-  if (!offer?.caflouProjectId) return new NextResponse(null, { status: 404 });
+  if (!offer) return new NextResponse(null, { status: 404 });
 
-  const meta = await prisma.projectMeta.findUnique({
-    where: { caflouProjectId: offer.caflouProjectId },
-    select: { manager: { select: { photoUrl: true } } },
-  });
-  const fotka = meta?.manager?.photoUrl;
+  // Kdo nabidku poslal, ten je pod ni podepsany. U starsich nabidek se to
+  // neevidovalo - tam zaskoci manazer projektu.
+  let fotka = offer.odeslal?.photoUrl ?? null;
+  if (!fotka && offer.caflouProjectId) {
+    const meta = await prisma.projectMeta.findUnique({
+      where: { caflouProjectId: offer.caflouProjectId },
+      select: { manager: { select: { photoUrl: true } } },
+    });
+    fotka = meta?.manager?.photoUrl ?? null;
+  }
   if (!fotka) return new NextResponse(null, { status: 404 });
 
   // Fotka uložená jinde (R2, Disk) - jen ukážeme kam, ať se nepřenáší přes nás.

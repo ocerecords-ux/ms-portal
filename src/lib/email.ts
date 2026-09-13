@@ -14,6 +14,69 @@ function getTransport() {
 }
 
 /**
+ * SCHRÁNKY PODLE AGENDY (zadání 13. 9. 2026: „faktury by měly odcházet z mailu
+ * uctarna@mediaspace.cz a nabídky z nabidky@mediaspace.cz").
+ *
+ * Každá schránka se přihlašuje SAMA SEBOU. Dosadit cizí adresu do „Od" pod
+ * cizím účtem zpravidla nevyjde — server to buď odmítne, nebo mail neprojde
+ * kontrolou odesílatele u příjemce a skončí ve spamu. Vlastní účet tenhle
+ * problém nemá.
+ *
+ * Co není nastavené, se tiše přeskočí a pošta jde po staru hlavním účtem —
+ * portál tím nikdy nepřestane odesílat.
+ */
+const SCHRANKY = {
+  nabidky: {
+    user: 'SMTP_NABIDKY_USER',
+    heslo: 'SMTP_NABIDKY_PASSWORD',
+    from: 'SMTP_NABIDKY_FROM',
+    host: 'SMTP_NABIDKY_HOST',
+    port: 'SMTP_NABIDKY_PORT',
+  },
+  uctarna: {
+    user: 'SMTP_UCTARNA_USER',
+    heslo: 'SMTP_UCTARNA_PASSWORD',
+    from: 'SMTP_UCTARNA_FROM',
+    host: 'SMTP_UCTARNA_HOST',
+    port: 'SMTP_UCTARNA_PORT',
+  },
+} as const;
+
+export type Schranka = keyof typeof SCHRANKY;
+
+/** Spojení pro agendu; když schránka není nastavená, vrátí hlavní účet. */
+function transportSchranky(schranka: Schranka) {
+  const klice = SCHRANKY[schranka];
+  const user = process.env[klice.user];
+  const heslo = process.env[klice.heslo];
+  const host = process.env[klice.host] || process.env.SMTP_HOST;
+  if (!user || !heslo || !host) return getTransport();
+
+  const port = Number(process.env[klice.port] || process.env.SMTP_PORT) || 587;
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass: heslo },
+  });
+}
+
+/**
+ * Adresa schránky. Bere se z `*_FROM`, a když není, z přihlašovacího jména —
+ * u poštovních serverů to bývá rovnou celá adresa. `null` = schránka pro tuhle
+ * agendu nastavená není.
+ */
+function adresaSchranky(schranka: Schranka): string | null {
+  const klice = SCHRANKY[schranka];
+  const from = process.env[klice.from];
+  if (from?.includes('@')) return samotnaAdresa(from);
+  const user = process.env[klice.user];
+  const heslo = process.env[klice.heslo];
+  if (user?.includes('@') && heslo) return user.trim();
+  return null;
+}
+
+/**
  * ODESÍLATEL PODLE MANAŽERA PROJEKTU (zadání 13. 9. 2026: „odesílat se to
  * bude z mailu podle toho, kdo je manažer projektu").
  *
@@ -34,9 +97,36 @@ function samotnaAdresa(odesilatel: string): string {
 }
 
 /** Odesílatel za firmu - pro doklady, které neposílá konkrétní člověk. */
-export function odesilatelFirmy(): { name: string; address: string } {
+export function odesilatelFirmy(schranka: Schranka = 'uctarna'): { name: string; address: string } {
   const vychozi = process.env.SMTP_FROM || 'Mediaspace <portal@msportal.cz>';
-  return { name: 'Mediaspace', address: samotnaAdresa(vychozi) };
+  return { name: 'Mediaspace', address: adresaSchranky(schranka) || samotnaAdresa(vychozi) };
+}
+
+/**
+ * Odesílatel nabídky: JMÉNO ČLOVĚKA, ADRESA SPOLEČNÉ SCHRÁNKY
+ * (rozhodnuto 13. 9. 2026).
+ *
+ * V poště se ukáže „Ondřej Černý — Mediaspace <nabidky@mediaspace.cz>", ale
+ * odpověď (Reply-To) jde na jeho vlastní adresu. Nabídka tak vypadá jako od
+ * člověka, odesílá ji schránka, kterou máme pod kontrolou, a všechny odeslané
+ * nabídky zůstanou pohromadě na jednom místě.
+ *
+ * Kdo to je, se řídí PROJEKTEM: manažer projektu, a když projekt manažera
+ * nemá, ten, kdo nabídku odesílá (viz api/admin/offers/[id]/send).
+ *
+ * Dokud schránka nabidky@ nastavená není, platí starší pravidlo
+ * (odesilatelPodleCloveka) - portál neztichne kvůli chybějící proměnné.
+ */
+export function odesilatelNabidky(
+  jmeno?: string | null,
+  mail?: string | null,
+): { from: string | { name: string; address: string }; replyTo?: string } {
+  const adresa = adresaSchranky('nabidky');
+  if (!adresa) return odesilatelPodleCloveka(jmeno, mail);
+
+  const popisek = jmeno?.trim() ? `${jmeno.trim()} — Mediaspace` : 'Mediaspace';
+  const odpoved = mail?.trim();
+  return { from: { name: popisek, address: adresa }, replyTo: odpoved || undefined };
 }
 
 export function odesilatelPodleCloveka(
@@ -899,7 +989,7 @@ export function buildOfferHtml(input: OfferEmailInput): string {
 }
 
 export async function sendOfferEmail(input: OfferEmailInput) {
-  const transport = getTransport();
+  const transport = transportSchranky('nabidky');
   if (!transport) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
@@ -908,7 +998,7 @@ export async function sendOfferEmail(input: OfferEmailInput) {
   // „Predmet: Cenova nabidka - (nazev projektu)"). Kdyz nabidka na projekt
   // navazana neni, zaskoci predmet nabidky a az nakonec jeji cislo.
   const nazevVPredmetu = input.projectName?.trim() || input.subject?.trim() || input.number;
-  const obalka = odesilatelPodleCloveka(input.senderName, input.senderEmail);
+  const obalka = odesilatelNabidky(input.senderName, input.senderEmail);
 
   const zprava = {
     ...obalka,
@@ -939,9 +1029,10 @@ export async function sendOfferEmail(input: OfferEmailInput) {
     // a s Reply-To na manazera.
     const vychozi = process.env.SMTP_FROM || 'Mediaspace <portal@msportal.cz>';
     const poslanoZ = typeof zprava.from === 'string' ? zprava.from : zprava.from.address;
-    if (poslanoZ === samotnaAdresa(vychozi)) throw err;
-    console.warn('Nabidka: odeslani pod adresou manazera selhalo, zkousim vychozi:', err);
-    await transport.sendMail({ ...zprava, from: vychozi, replyTo: obalka.replyTo });
+    const hlavni = getTransport();
+    if (!hlavni || poslanoZ === samotnaAdresa(vychozi)) throw err;
+    console.warn('Nabidka: odeslani ze schranky nabidek selhalo, zkousim hlavni ucet:', err);
+    await hlavni.sendMail({ ...zprava, from: vychozi, replyTo: obalka.replyTo });
   }
 
   return { sent: true as const };
@@ -1006,7 +1097,7 @@ export function buildInvoiceHtml(input: InvoiceEmailInput): string {
 }
 
 export async function sendInvoiceEmail(input: InvoiceEmailInput) {
-  const transport = getTransport();
+  const transport = transportSchranky('uctarna');
   if (!transport) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }

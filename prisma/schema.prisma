@@ -229,6 +229,8 @@ model User {
 
   orders          Order[]         @relation("OrderCreatedBy")
   managedProjects ProjectMeta[]   @relation("ProjectManager")
+  /// Nabidky, ktere tenhle clovek klientovi odeslal (zadani 13. 9. 2026).
+  odeslaneNabidky Offer[]         @relation("NabidkaOdeslal")
   timesheets      TimesheetEntry[]
   tasks           Task[]
   menuItems       UserMenuItem[]
@@ -1067,6 +1069,13 @@ model Offer {
   status         OfferStatus @default(DRAFT)
   approvalToken  String      @unique // odkaz pro klienta ke schvaleni
   sentAt         DateTime?
+  /// KDO NABIDKU ODESLAL (zadani 13. 9. 2026: „melo by se to menit podle toho,
+  /// kdo je manazer projektu a kdo je prihlaseny"). Zapise se pri odeslani:
+  /// manazer projektu, a kdyz projekt manazera nema, ten, kdo mail poslal.
+  /// Z nej se bere podpis v mailu i na strance pro klienta - at se nerozejde
+  /// jmeno v "Od", podpis a fotka.
+  odeslalUserId  String?
+  odeslal        User?       @relation("NabidkaOdeslal", fields: [odeslalUserId], references: [id])
   approvedAt     DateTime?
   approvedByName String?     // kdo na strane klienta schvalil
   rejectedAt     DateTime?

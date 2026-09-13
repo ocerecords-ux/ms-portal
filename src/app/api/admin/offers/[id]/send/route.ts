@@ -35,18 +35,29 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     // Mail posila MANAZER PROJEKTU (zadani 13. 9. 2026). Kdyz nabidka na
     // projekt navazana neni (nebo projekt manazera nema), podepise se ten,
     // kdo nabidku odesila - jeho odpoved klient stejne ceka.
+    // KDO JE POD NABIDKOU PODEPSANY (zadani 13. 9. 2026: „melo by se to menit
+    // podle toho, kdo je manazer projektu a kdo je prihlaseny"). Prednost ma
+    // manazer projektu; kdyz projekt manazera nema (nebo nabidka na projekt
+    // navazana neni), podepise se ten, kdo ji prave posila. Ulozi se k nabidce,
+    // aby se jmeno v "Od", podpis v mailu a jmeno na strance nerozesly.
     const meta = offer.caflouProjectId
       ? await prisma.projectMeta.findUnique({
           where: { caflouProjectId: offer.caflouProjectId },
-          select: { manager: { select: { name: true, email: true, phone: true, maFotku: true } } },
+          select: { managerUserId: true },
         })
       : null;
-    const senderName = meta?.manager?.name || session.user.name || null;
-    const senderEmail = meta?.manager?.email || session.user.email || null;
-    const senderPhone = meta?.manager?.phone || null;
+    const odeslalUserId = meta?.managerUserId || session.user.id;
+    const odesilatel = await prisma.user.findUnique({
+      where: { id: odeslalUserId },
+      select: { name: true, email: true, phone: true, maFotku: true },
+    });
+
+    const senderName = odesilatel?.name || session.user.name || null;
+    const senderEmail = odesilatel?.email || session.user.email || null;
+    const senderPhone = odesilatel?.phone || null;
     // Fotka se v mailu stahuje odkazem proti tokenu nabidky - viz
     // /api/nabidka/[token]/fotka. Bez fotky se v podpisu ukaze jen jmeno.
-    const senderPhotoUrl = meta?.manager?.maFotku
+    const senderPhotoUrl = odesilatel?.maFotku
       ? `${baseUrl}/api/nabidka/${offer.approvalToken}/fotka`
       : null;
 
@@ -80,7 +91,11 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       where: { id: offer.id },
       // Odeslana nabidka uz ceka na klienta. Odmitnutou muze poslat znovu
       // (treba po uprave), schvalenou uz neprepisujeme.
-      data: { status: offer.status === 'APPROVED' ? 'APPROVED' : 'SENT', sentAt: new Date() },
+      data: {
+        status: offer.status === 'APPROVED' ? 'APPROVED' : 'SENT',
+        sentAt: new Date(),
+        odeslalUserId,
+      },
     });
 
     return NextResponse.json({ ok: true, to });

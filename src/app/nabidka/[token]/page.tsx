@@ -15,25 +15,35 @@ function formatDate(date: Date | null): string {
 export default async function PublicOfferPage({ params }: { params: { token: string } }) {
   const offer = await prisma.offer.findUnique({
     where: { approvalToken: params.token },
-    include: { issuer: true, company: true, items: { orderBy: { sortOrder: 'asc' } } },
+    include: {
+      issuer: true,
+      company: true,
+      items: { orderBy: { sortOrder: 'asc' } },
+      odeslal: { select: { name: true, email: true, phone: true, maFotku: true } },
+    },
   });
   if (!offer) notFound();
 
   const totals = computeTotals(offer.items);
 
   /**
-   * Manažer projektu (zadání 13. 9. 2026: „v detailu pak přidej manažera
-   * projektu"). Mail je teď jen pozvánka, takže jméno člověka, se kterým
+   * Člověk pod nabídkou (zadání 13. 9. 2026: „v detailu pak přidej manažera
+   * projektu" a „mělo by se to měnit podle toho, kdo je manažer projektu a kdo
+   * je přihlášený"). Mail je teď jen pozvánka, takže jméno člověka, se kterým
    * klient nabídku domlouval, musí být vidět tady - je to první věc, kterou
    * hledá, když chce něco doladit.
+   *
+   * Bere se ten, kdo nabídku odeslal; u starších nabídek, kde se to
+   * neevidovalo, zaskočí manažer projektu.
    */
-  const meta = offer.caflouProjectId
-    ? await prisma.projectMeta.findUnique({
-        where: { caflouProjectId: offer.caflouProjectId },
-        select: { manager: { select: { name: true, email: true, phone: true, maFotku: true } } },
-      })
-    : null;
-  const manazer = meta?.manager ?? null;
+  const meta =
+    !offer.odeslal && offer.caflouProjectId
+      ? await prisma.projectMeta.findUnique({
+          where: { caflouProjectId: offer.caflouProjectId },
+          select: { manager: { select: { name: true, email: true, phone: true, maFotku: true } } },
+        })
+      : null;
+  const manazer = offer.odeslal ?? meta?.manager ?? null;
 
   return (
     <main className="min-h-screen bg-paper">
