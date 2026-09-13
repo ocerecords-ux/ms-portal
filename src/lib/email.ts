@@ -14,167 +14,60 @@ function getTransport() {
 }
 
 /**
- * SCHRÁNKY PODLE AGENDY (zadání 13. 9. 2026: „faktury by měly odcházet z mailu
- * uctarna@mediaspace.cz a nabídky z nabidky@mediaspace.cz").
+ * JEDNA SCHRÁNKA NA VŠECHNU ODCHOZÍ POŠTU (rozhodnuto 13. 9. 2026: „založíme
+ * univerzální mail pro odesílání: mediaspace@msportal.cz").
  *
- * Každá schránka se přihlašuje SAMA SEBOU. Dosadit cizí adresu do „Od" pod
- * cizím účtem zpravidla nevyjde — server to buď odmítne, nebo mail neprojde
- * kontrolou odesílatele u příjemce a skončí ve spamu. Vlastní účet tenhle
- * problém nemá.
+ * Napřed měla každá agenda odesílat ze své vlastní adresy (nabidky@, uctarna@
+ * na mediaspace.cz). Neprošlo to: poštovní server pustí do „Od" jen adresu
+ * z domény, kterou má ověřenou, a mail s cizí doménou odmítl rovnou —
+ * „551 Domain name mismatch between authenticated sender ... and source
+ * address". Odesílá proto jediná schránka a rozlišení nese JMÉNO odesílatele
+ * a REPLY-TO:
  *
- * Co není nastavené, se tiše přeskočí a pošta jde po staru hlavním účtem —
- * portál tím nikdy nepřestane odesílat.
- */
-const SCHRANKY = {
-  nabidky: {
-    user: 'SMTP_NABIDKY_USER',
-    heslo: 'SMTP_NABIDKY_PASSWORD',
-    from: 'SMTP_NABIDKY_FROM',
-    host: 'SMTP_NABIDKY_HOST',
-    port: 'SMTP_NABIDKY_PORT',
-  },
-  uctarna: {
-    user: 'SMTP_UCTARNA_USER',
-    heslo: 'SMTP_UCTARNA_PASSWORD',
-    from: 'SMTP_UCTARNA_FROM',
-    host: 'SMTP_UCTARNA_HOST',
-    port: 'SMTP_UCTARNA_PORT',
-  },
-} as const;
-
-export type Schranka = keyof typeof SCHRANKY;
-
-/**
- * Zástupná hodnota v hesle. Proměnné jsou ve Vercelu založené dopředu, ať se
- * do nich dá jen vložit heslo - dokud je v nich tohle, bere se schránka jako
- * nenastavená a pošta jde po staru hlavním účtem.
- */
-const HESLO_NEVYPLNENO = 'doplnit-heslo';
-
-function hesloSchranky(schranka: Schranka): string | undefined {
-  const heslo = process.env[SCHRANKY[schranka].heslo]?.trim();
-  return heslo && heslo !== HESLO_NEVYPLNENO ? heslo : undefined;
-}
-
-/** Spojení pro agendu; když schránka není nastavená, vrátí hlavní účet. */
-function transportSchranky(schranka: Schranka) {
-  const klice = SCHRANKY[schranka];
-  const user = process.env[klice.user];
-  const heslo = hesloSchranky(schranka);
-  const host = process.env[klice.host] || process.env.SMTP_HOST;
-  if (!user || !heslo || !host) return getTransport();
-
-  const port = Number(process.env[klice.port] || process.env.SMTP_PORT) || 587;
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass: heslo },
-  });
-}
-
-/**
- * Adresa schránky. Bere se z `*_FROM`, a když není, z přihlašovacího jména —
- * u poštovních serverů to bývá rovnou celá adresa. `null` = schránka pro tuhle
- * agendu nastavená není.
- */
-function adresaSchranky(schranka: Schranka): string | null {
-  const klice = SCHRANKY[schranka];
-  const user = process.env[klice.user];
-  const heslo = hesloSchranky(schranka);
-  // BEZ HESLA SE ADRESA NEPOUZIJE. Jinak by portal posilal pod adresou
-  // schranky, ale prihlasoval se hlavnim uctem - presne ten pripad, kdy mail
-  // neprojde kontrolou odesilatele a spadne prijemci do spamu.
-  if (!user || !heslo) return null;
-
-  const from = process.env[klice.from];
-  if (from?.includes('@')) return samotnaAdresa(from);
-  return user.includes('@') ? user.trim() : null;
-}
-
-/**
- * ODESÍLATEL PODLE MANAŽERA PROJEKTU (zadání 13. 9. 2026: „odesílat se to
- * bude z mailu podle toho, kdo je manažer projektu").
+ * Jméno v „Od" je vždycky Mediaspace; liší se jen PŘEDMĚT a REPLY-TO:
  *
- * Cizí adresu do From dát nejde jen tak: poštovní server podepisuje jen svoje
- * domény a mail odeslaný „jménem" cizí domény skončí ve spamu, nebo ho server
- * rovnou odmítne. Takže manažerova adresa jde do From jen tehdy, když je
- * z domény, kterou náš server obhospodařuje (poznáme ji z SMTP_FROM a
- * SMTP_USER). Jinak posíláme pod svou adresou, ale s jeho jménem a s Reply-To
- * na něj — odpověď klienta tak dorazí přímo jemu.
+ *   nabídka → odpověď jde manažerovi projektu
+ *   faktura → odpověď jde účtárně
+ *   ostatní → odpověď jde do společné schránky
+ *
+ * Adresa je jen jedna (SMTP_FROM) a mění se na jednom místě.
  */
-function domenaAdresy(adresa: string | undefined | null): string {
-  return (adresa?.match(/@([^\s>]+)/)?.[1] || '').trim().toLowerCase();
-}
 
 /** Holá adresa z hodnoty typu `Něco <nekdo@kde.cz>`. */
 function samotnaAdresa(odesilatel: string): string {
   return (odesilatel.match(/<([^>]+)>/)?.[1] || odesilatel).trim();
 }
 
-/** Odesílatel za firmu - pro doklady, které neposílá konkrétní člověk. */
-export function odesilatelFirmy(schranka: Schranka = 'uctarna'): { name: string; address: string } {
-  const vychozi = process.env.SMTP_FROM || 'Mediaspace <portal@msportal.cz>';
-  return { name: 'Mediaspace', address: adresaSchranky(schranka) || samotnaAdresa(vychozi) };
+function adresaOdesilatele(): string {
+  return samotnaAdresa(process.env.SMTP_FROM || 'Mediaspace <mediaspace@msportal.cz>');
 }
 
 /**
- * Odesílatel nabídky: JMÉNO ČLOVĚKA, ADRESA SPOLEČNÉ SCHRÁNKY
- * (rozhodnuto 13. 9. 2026).
- *
- * V poště se ukáže „Ondřej Černý — Mediaspace <nabidky@mediaspace.cz>", ale
- * odpověď (Reply-To) jde na jeho vlastní adresu. Nabídka tak vypadá jako od
- * člověka, odesílá ji schránka, kterou máme pod kontrolou, a všechny odeslané
- * nabídky zůstanou pohromadě na jednom místě.
- *
- * Kdo to je, se řídí PROJEKTEM: manažer projektu, a když projekt manažera
- * nemá, ten, kdo nabídku odesílá (viz api/admin/offers/[id]/send).
- *
- * Dokud schránka nabidky@ nastavená není, platí starší pravidlo
- * (odesilatelPodleCloveka) - portál neztichne kvůli chybějící proměnné.
+ * Kam chodí odpovědi na faktury. Účtárna je jiná schránka než ta odesílací -
+ * odpovědi na doklady patří k dokladům, ne do obecné pošty.
  */
-export function odesilatelNabidky(
-  jmeno?: string | null,
-  mail?: string | null,
-): { from: string | { name: string; address: string }; replyTo?: string } {
-  const adresa = adresaSchranky('nabidky');
-  if (!adresa) return odesilatelPodleCloveka(jmeno, mail);
+const ODPOVED_UCTARNA = process.env.MAIL_UCTARNA?.trim() || 'uctarna@mediaspace.cz';
 
-  const popisek = jmeno?.trim() ? `${jmeno.trim()} — Mediaspace` : 'Mediaspace';
-  const odpoved = mail?.trim();
-  return { from: { name: popisek, address: adresa }, replyTo: odpoved || undefined };
-}
-
-export function odesilatelPodleCloveka(
-  jmeno?: string | null,
-  mail?: string | null,
-): { from: string | { name: string; address: string }; replyTo?: string } {
-  const vychozi = process.env.SMTP_FROM || 'Mediaspace <portal@msportal.cz>';
-  const popisek = jmeno?.trim() ? `${jmeno.trim()} — Mediaspace` : 'Mediaspace';
-  const adresa = mail?.trim().toLowerCase() || '';
-
-  // Jméno odesílatele je VŽDYCKY člověk (nebo aspoň Mediaspace), nikdy
-  // "MS Portal" - to je název vnitřního systému a klientovi nic neříká
-  // (zpráva uživatele 13. 9. 2026: „pořád je tam MS portal").
-  if (!adresa.includes('@')) return { from: { name: popisek, address: samotnaAdresa(vychozi) } };
-
-  const nase = new Set(
-    [
-      domenaAdresy(vychozi),
-      domenaAdresy(process.env.SMTP_USER),
-      // Další domény, pod kterými nám server dovolí odesílat, se dají přidat
-      // proměnnou SMTP_DOMENY_ODESILATELE (oddělené čárkou) - bez zásahu do kódu.
-      ...(process.env.SMTP_DOMENY_ODESILATELE || '')
-        .split(',')
-        .map((d) => d.trim().toLowerCase())
-        .filter(Boolean),
-    ].filter(Boolean),
-  );
-
-  if (nase.has(domenaAdresy(adresa))) {
-    return { from: { name: popisek, address: adresa }, replyTo: adresa };
-  }
-  return { from: { name: popisek, address: samotnaAdresa(vychozi) }, replyTo: adresa };
+/**
+ * Odesílatel VŠÍ odchozí pošty (rozhodnuto 13. 9. 2026: „jméno schránky bude
+ * vždy Mediaspace a bude se lišit jen předmět").
+ *
+ * V poště se tedy vždycky ukáže „Mediaspace <mediaspace@msportal.cz>" - i
+ * u nabídek, faktur a zpráv o stavu projektu. Že za nabídkou stojí konkrétní
+ * člověk, se pozná z PŘEDMĚTU, z podpisu s fotkou v těle zprávy a hlavně
+ * z REPLY-TO: odpověď jde přímo jemu, ne do společné schránky.
+ *
+ * @param odpovedNa adresa, na kterou má klientovi odejít odpověď
+ */
+export function odesilatelMediaspace(odpovedNa?: string | null): {
+  from: { name: string; address: string };
+  replyTo?: string;
+} {
+  const odpoved = odpovedNa?.trim();
+  return {
+    from: { name: 'Mediaspace', address: adresaOdesilatele() },
+    replyTo: odpoved || undefined,
+  };
 }
 
 /**
@@ -196,30 +89,19 @@ export async function stavPosty(): Promise<{
   odesilatel: string | null;
   spojeni: 'ok' | 'chyba' | 'nenastaveno';
   chyba: string | null;
-  /** Schránky podle agendy - adresa a jestli k ní máme heslo. Hesla samotná nikdy. */
-  schranky: Record<string, { adresa: string | null; hesloNastaveno: boolean; pouzijeSe: boolean }>;
+  /** Kam chodí odpovědi na faktury. */
+  odpovedUctarna: string;
 }> {
   const host = process.env.SMTP_HOST || null;
   const port = Number(process.env.SMTP_PORT) || 587;
-  const odesilatel = process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>';
-  const schranky = Object.fromEntries(
-    (Object.keys(SCHRANKY) as Schranka[]).map((klic) => [
-      klic,
-      {
-        adresa: process.env[SCHRANKY[klic].user]?.trim() || null,
-        hesloNastaveno: Boolean(hesloSchranky(klic)),
-        pouzijeSe: adresaSchranky(klic) !== null,
-      },
-    ]),
-  );
-
+  const odesilatel = process.env.SMTP_FROM || 'Mediaspace <mediaspace@msportal.cz>';
   const transport = getTransport();
   if (!transport) {
-    return { nastaveno: false, host, port, odesilatel, spojeni: 'nenastaveno', chyba: null, schranky };
+    return { nastaveno: false, host, port, odesilatel, spojeni: 'nenastaveno', chyba: null, odpovedUctarna: ODPOVED_UCTARNA };
   }
   try {
     await transport.verify();
-    return { nastaveno: true, host, port, odesilatel, spojeni: 'ok', chyba: null, schranky };
+    return { nastaveno: true, host, port, odesilatel, spojeni: 'ok', chyba: null, odpovedUctarna: ODPOVED_UCTARNA };
   } catch (err) {
     return {
       nastaveno: true,
@@ -228,7 +110,7 @@ export async function stavPosty(): Promise<{
       odesilatel,
       spojeni: 'chyba',
       chyba: err instanceof Error ? err.message.slice(0, 300) : 'Neznámá chyba.',
-      schranky,
+      odpovedUctarna: ODPOVED_UCTARNA,
     };
   }
 }
@@ -406,7 +288,7 @@ export async function sendOrderNotificationEmail(input: OrderEmailInput) {
   }
 
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    ...odesilatelMediaspace(),
     to,
     subject: `Objednávka audioknihy – ${input.title}`,
     text: buildInternalNotificationText(input),
@@ -634,7 +516,7 @@ export async function sendInviteEmail(input: InviteEmailInput) {
   }
 
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    ...odesilatelMediaspace(),
     to: input.to,
     subject: input.audience === 'INTERNAL' ? 'Přístup do MS Portalu' : 'Pozvánka do MS Portalu',
     text: [
@@ -748,7 +630,7 @@ export async function sendOrderConfirmationEmail(input: OrderConfirmationInput) 
   }
 
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    ...odesilatelMediaspace(),
     to: input.to,
     replyTo: process.env.ORDER_NOTIFICATION_EMAIL || 'objednavky@mediaspace.cz',
     subject: `Potvrzení objednávky – ${input.title}`,
@@ -860,7 +742,7 @@ export async function sendHerecDotocenEmail(input: HerecDotocenInput) {
   if (input.prijemci.length === 0) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
 
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    ...odesilatelMediaspace(),
     to: input.prijemci.join(', '),
     subject: `Dotočeno - ${input.jmenoHerce} - ${input.nazevProjektu}`,
     text: [
@@ -886,7 +768,7 @@ export async function sendPasswordResetEmail(input: PasswordResetInput) {
   }
 
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    ...odesilatelMediaspace(),
     to: input.to,
     subject: 'Nové heslo do MS Portalu',
     text: [
@@ -1019,7 +901,7 @@ export function buildOfferHtml(input: OfferEmailInput): string {
 }
 
 export async function sendOfferEmail(input: OfferEmailInput) {
-  const transport = transportSchranky('nabidky');
+  const transport = getTransport();
   if (!transport) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
@@ -1028,7 +910,7 @@ export async function sendOfferEmail(input: OfferEmailInput) {
   // „Predmet: Cenova nabidka - (nazev projektu)"). Kdyz nabidka na projekt
   // navazana neni, zaskoci predmet nabidky a az nakonec jeji cislo.
   const nazevVPredmetu = input.projectName?.trim() || input.subject?.trim() || input.number;
-  const obalka = odesilatelNabidky(input.senderName, input.senderEmail);
+  const obalka = odesilatelMediaspace(input.senderEmail);
 
   const zprava = {
     ...obalka,
@@ -1051,19 +933,7 @@ export async function sendOfferEmail(input: OfferEmailInput) {
     html: buildOfferHtml(input),
   };
 
-  try {
-    await transport.sendMail(zprava);
-  } catch (err) {
-    // Nekterym serverum se cizi adresa v From nelibi, i kdyz je ze stejne
-    // domeny. Nez aby nabidka neodesla vubec, posleme ji pod nasi adresou
-    // a s Reply-To na manazera.
-    const vychozi = process.env.SMTP_FROM || 'Mediaspace <portal@msportal.cz>';
-    const poslanoZ = typeof zprava.from === 'string' ? zprava.from : zprava.from.address;
-    const hlavni = getTransport();
-    if (!hlavni || poslanoZ === samotnaAdresa(vychozi)) throw err;
-    console.warn('Nabidka: odeslani ze schranky nabidek selhalo, zkousim hlavni ucet:', err);
-    await hlavni.sendMail({ ...zprava, from: vychozi, replyTo: obalka.replyTo });
-  }
+  await transport.sendMail(zprava);
 
   return { sent: true as const };
 }
@@ -1127,7 +997,7 @@ export function buildInvoiceHtml(input: InvoiceEmailInput): string {
 }
 
 export async function sendInvoiceEmail(input: InvoiceEmailInput) {
-  const transport = transportSchranky('uctarna');
+  const transport = getTransport();
   if (!transport) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
@@ -1135,7 +1005,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
   // Fakturu posila FIRMA, ne clovek (zadani 13. 9. 2026: „fakturu pak uz za
   // Mediaspace") - je to ucetni doklad, ne domluva mezi dvema lidmi.
   const zprava = {
-    from: odesilatelFirmy(),
+    ...odesilatelMediaspace(ODPOVED_UCTARNA),
     to: input.to,
     subject: `Faktura ${input.number}${input.subject ? ` — ${input.subject}` : ''}`,
     text: [
@@ -1156,17 +1026,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
     ...(input.pdf ? { attachments: [{ filename: input.pdf.nazev, content: input.pdf.obsah }] } : {}),
   };
 
-  try {
-    await transport.sendMail(zprava);
-  } catch (err) {
-    // Kdyz schranka uctarny odmitne prihlaseni (treba jeste neni nastavena),
-    // nez aby faktura neodesla vubec, posleme ji hlavnim uctem.
-    const vychozi = process.env.SMTP_FROM || 'Mediaspace <portal@msportal.cz>';
-    const hlavni = getTransport();
-    if (!hlavni || zprava.from.address === samotnaAdresa(vychozi)) throw err;
-    console.warn('Faktura: odeslani ze schranky uctarny selhalo, zkousim hlavni ucet:', err);
-    await hlavni.sendMail({ ...zprava, from: vychozi });
-  }
+  await transport.sendMail(zprava);
 
   return { sent: true as const };
 }
@@ -1227,7 +1087,7 @@ export async function sendContractEmail(input: ContractEmailInput) {
   }
 
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    ...odesilatelMediaspace(),
     to: input.to,
     subject: `Smlouva ${input.number} k podpisu — ${input.title}`,
     text: [
@@ -1318,7 +1178,7 @@ export async function sendRecordingOfferEmail(input: RecordingOfferEmailInput) {
   }
 
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    ...odesilatelMediaspace(),
     to: input.to,
     subject: `Výběr natáčecích termínů — ${input.projectName}`,
     text: [
@@ -1416,7 +1276,7 @@ export async function sendRecordingDecisionEmail(input: RecordingDecisionEmailIn
 
   const t = DECISION_TEXTS[input.decision];
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    ...odesilatelMediaspace(),
     to: input.to,
     subject: `${t.nadpis} — ${input.projectName}`,
     text: [
@@ -1494,7 +1354,7 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
   }
 
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    ...odesilatelMediaspace(),
     to: input.to,
     subject: `${input.projectName} — hotovo, ke schválení`,
     text: [
@@ -1684,7 +1544,7 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
   const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
 
   await transport.sendMail({
-    from: process.env.SMTP_FROM || 'MS Portal <portal@msportal.cz>',
+    ...odesilatelMediaspace(),
     to: input.prijemci.join(', '),
     // Nase adresy jen ve skryte kopii - viz skrytaKopie v typu vys.
     bcc: skryta.length > 0 ? skryta.join(', ') : undefined,
