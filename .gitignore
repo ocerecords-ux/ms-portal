@@ -11,3 +11,6 @@ mobil/ios/
 mobil/android/
 mobil/capacitor.config.ts
 mobil/prazdno/
+
+# docasny balicek pro typovou kontrolu (Claude)
+.msc-check.tgz

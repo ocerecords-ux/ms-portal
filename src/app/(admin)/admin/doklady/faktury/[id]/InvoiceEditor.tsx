@@ -203,6 +203,10 @@ export function InvoiceEditor({
     setError(null);
     setInfo(null);
     try {
+      if (!form.companyId) {
+        setError('Vyberte odběratele — bez něj nevíme, komu fakturu vystavit.');
+        return false;
+      }
       const telo = {
         ...form,
         bankAccountId: form.bankAccountId || null,
@@ -323,6 +327,8 @@ export function InvoiceEditor({
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:opacity-70';
   const cellClass =
     'rounded-lg border border-line bg-surface px-2.5 py-1.5 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:bg-field disabled:opacity-70';
+  /** Popisek nad malym polem v radku polozky - nahrazuje hlavicku tabulky. */
+  const popiskaClass = 'text-[10px] font-heading text-muted uppercase tracking-wide';
 
   // Editor je omezeny sirkou a vycentrovany (zadani 10. 9. 2026: "ta
   // vyberova pole jsou strasne roztahana na sirku"). Formularove radky
@@ -459,6 +465,10 @@ export function InvoiceEditor({
               <p className="font-heading font-semibold text-ink m-0">{company.name}</p>
             ) : (
               <select value={form.companyId} onChange={(e) => set('companyId', e.target.value)} className={inputClass}>
+                {/* U nove faktury neni nikdo predvybrany (zadani 13. 9. 2026).
+                    Prvni firma v abecede tam driv sedela jako by byla vybrana
+                    a stacilo ji prehlednout. */}
+                <option value="">— vyberte odběratele —</option>
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -531,19 +541,24 @@ export function InvoiceEditor({
           </label>
 
           {/* Rezim DPH VYBIRA CLOVEK (zadani 10. 9. 2026) - portal ho nehada
-              z adresy odberatele, protoze to je vec ucetni, ne adresy. */}
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Režim DPH</span>
-            <select
-              value={form.rezimDph}
+              z adresy odberatele, protoze to je vec ucetni, ne adresy.
+              Od 13. 9. 2026 je to jedno zaskrtavatko misto rozbalovaciho
+              seznamu: „rezim DPH bych dal jen zaskrtavaci pole, ze je
+              v rezimu reverse charge. Primarne bude odskrtnute." */}
+          <label className="flex items-start gap-2 sm:col-span-2 2xl:col-span-1 pt-1">
+            <input
+              type="checkbox"
+              checked={form.rezimDph === 'PRENESENA'}
               disabled={locked}
-              onChange={(e) => set('rezimDph', e.target.value as typeof form.rezimDph)}
-              className={inputClass}
-            >
-              <option value="STANDARD">Běžný — sazby podle položek</option>
-              <option value="PRENESENA">Přenesená daňová povinnost</option>
-              <option value="MIMO_PREDMET">Mimo předmět DPH v ČR</option>
-            </select>
+              onChange={(e) => set('rezimDph', e.target.checked ? 'PRENESENA' : 'STANDARD')}
+              className="mt-1"
+            />
+            <span className="flex flex-col">
+              <span className="text-sm font-body text-ink">Přenesená daňová povinnost</span>
+              <span className="text-xs font-body text-muted">
+                reverse charge — daň odvede odběratel, na faktuře nebude DPH
+              </span>
+            </span>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Jazyk dokladu</span>
@@ -640,96 +655,97 @@ export function InvoiceEditor({
             <span className="text-xs font-body text-muted">Ceny se zadávají bez DPH.</span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[660px] border-collapse">
-              <thead>
-                <tr className="text-xs font-heading text-muted uppercase tracking-wide">
-                  <th className="text-left pb-2 font-semibold">Popis</th>
-                  <th className="text-right pb-2 font-semibold w-20">Množství</th>
-                  <th className="text-left pb-2 font-semibold w-16">Jednotka</th>
-                  <th className="text-right pb-2 font-semibold w-32">Cena / j.</th>
-                  <th className="text-right pb-2 font-semibold w-24">DPH</th>
-                  <th className="text-right pb-2 font-semibold w-32">Celkem</th>
-                  <th className="w-8" />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, index) => (
-                  <tr key={index} className="align-top">
-                    <td className="py-1.5 pr-2">
-                      <input
-                        value={item.description}
-                        disabled={locked}
-                        onChange={(e) => updateItem(index, { description: e.target.value })}
-                        placeholder="Popis položky"
-                        className={cellClass}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <input
-                        inputMode="decimal"
-                        value={item.quantity}
-                        disabled={locked}
-                        onChange={(e) =>
-                          updateItem(index, { quantity: Number(e.target.value.replace(',', '.')) || 0 })
-                        }
-                        className={`${cellClass} text-right tabular-nums`}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <input
-                        value={item.unit}
-                        disabled={locked}
-                        onChange={(e) => updateItem(index, { unit: e.target.value })}
-                        className={cellClass}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <input
-                        inputMode="decimal"
-                        defaultValue={minorToInput(item.unitPriceMinor)}
-                        disabled={locked}
-                        onChange={(e) => updateItem(index, { unitPriceMinor: parseMoneyToMinor(e.target.value) })}
-                        className={`${cellClass} text-right tabular-nums`}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <select
-                        value={item.vatRate}
-                        disabled={locked}
-                        onChange={(e) => updateItem(index, { vatRate: Number(e.target.value) })}
-                        className={`${cellClass} text-right`}
-                      >
-                        {VAT_RATES.map((r) => (
-                          <option key={r} value={r}>
-                            {r} %
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-1.5 pr-2 text-right text-sm font-heading text-ink tabular-nums pt-3.5">
+          {/* POPIS MA CELOU SIRKU (zadani 13. 9. 2026: „pole, kam zadavam
+              polozku, je moc kratke, nic moc tam nevejde"). V tabulce mu vedle
+              peti ciselnych sloupcu zbyvalo kolem sto padesati pixelu, protoze
+              vedle editoru jeste stoji nahled dokladu. Ted ma radek popis
+              nahore pres celou sirku a cisla pod nim - a na telefonu se to
+              zalomi samo. */}
+          <div className="flex flex-col divide-y divide-line">
+            {items.map((item, index) => (
+              <div key={index} className="flex flex-col gap-2 py-3 first:pt-0">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={item.description}
+                    disabled={locked}
+                    onChange={(e) => updateItem(index, { description: e.target.value })}
+                    placeholder="Popis položky"
+                    className={cellClass}
+                  />
+                  {!locked && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setItems((current) =>
+                          current.length === 1 ? [emptyItem()] : current.filter((_, i) => i !== index),
+                        )
+                      }
+                      title="Odebrat položku"
+                      aria-label="Odebrat položku"
+                      className="shrink-0 text-muted hover:text-danger text-sm font-heading px-1"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-end gap-2 flex-wrap">
+                  <label className="flex flex-col gap-1 w-20">
+                    <span className={popiskaClass}>Množství</span>
+                    <input
+                      inputMode="decimal"
+                      value={item.quantity}
+                      disabled={locked}
+                      onChange={(e) =>
+                        updateItem(index, { quantity: Number(e.target.value.replace(',', '.')) || 0 })
+                      }
+                      className={`${cellClass} text-right tabular-nums`}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 w-16">
+                    <span className={popiskaClass}>Jednotka</span>
+                    <input
+                      value={item.unit}
+                      disabled={locked}
+                      onChange={(e) => updateItem(index, { unit: e.target.value })}
+                      className={cellClass}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 w-28">
+                    <span className={popiskaClass}>Cena / j.</span>
+                    <input
+                      inputMode="decimal"
+                      defaultValue={item.unitPriceMinor ? minorToInput(item.unitPriceMinor) : ''}
+                      placeholder="0,00"
+                      disabled={locked}
+                      onChange={(e) => updateItem(index, { unitPriceMinor: parseMoneyToMinor(e.target.value) })}
+                      className={`${cellClass} text-right tabular-nums`}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 w-24">
+                    <span className={popiskaClass}>DPH</span>
+                    <select
+                      value={item.vatRate}
+                      disabled={locked}
+                      onChange={(e) => updateItem(index, { vatRate: Number(e.target.value) })}
+                      className={`${cellClass} text-right`}
+                    >
+                      {VAT_RATES.map((r) => (
+                        <option key={r} value={r}>
+                          {r} %
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span className="ml-auto flex flex-col gap-1 items-end">
+                    <span className={popiskaClass}>Celkem</span>
+                    <span className="text-sm font-heading text-ink tabular-nums py-1.5">
                       {formatMoney(Math.round(item.quantity * item.unitPriceMinor), form.currency)}
-                    </td>
-                    <td className="py-1.5 text-right pt-3">
-                      {!locked && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setItems((current) =>
-                              current.length === 1 ? [emptyItem()] : current.filter((_, i) => i !== index),
-                            )
-                          }
-                          title="Odebrat položku"
-                          className="text-muted hover:text-danger text-sm font-heading"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </span>
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
 
           {!locked && (

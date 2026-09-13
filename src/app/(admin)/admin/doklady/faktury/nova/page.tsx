@@ -169,7 +169,10 @@ async function PrazdnaFaktura({
         number: 'Nová faktura',
         variableSymbol: '',
         status: 'DRAFT',
-        companyId: odberatel?.id ?? companies[0]?.id ?? '',
+        // Nikdo predvybrany (zadani 13. 9. 2026: „u nove faktury na zacatku
+        // at neni vybrana zadna firma"). Prvni firma v abecede se dala snadno
+        // prehlednout a faktura pak odesla na spatneho odberatele.
+        companyId: odberatel?.id ?? '',
         bankAccountId: ucet?.id ?? null,
         currency: vydavatel.defaultCurrency,
         exchangeRate: 1,
