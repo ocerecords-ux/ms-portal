@@ -49,6 +49,15 @@ export type VysledekPreklopeni =
 export async function prehodStavPodleDotoceni(
   caflouProjectId: string,
   puvodce: Puvodce,
+  /**
+   * TICHÉ DOPLNĚNÍ ZPĚTNĚ (zadání 13. 9. 2026). Stav se překlopí úplně
+   * stejně — „Natáčíme/stříháme" na „Dotočeno/stříháme" — ale neodejde
+   * zpráva klientovi. Používá se při srovnávání historie po přenosu
+   * z Caflou, kdy tlačítko „Dotočeno" ještě neexistovalo: projekty se
+   * dotočily tehdy, zpráva o tom dávno neplatí a klientovi by dnes přišla
+   * jako novinka. Do historie projektu se změna zapíše vždycky.
+   */
+  tise = false,
 ): Promise<VysledekPreklopeni> {
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId },
@@ -68,7 +77,7 @@ export async function prehodStavPodleDotoceni(
   });
   if (dotoceni < herci.length) return { zmeneno: false, duvod: 'chybi-herci' };
 
-  await zapisStav(caflouProjectId, stav, cil, puvodce, { dotocenoStavPred: stav, dotocenoStavPo: cil });
+  await zapisStav(caflouProjectId, stav, cil, puvodce, { dotocenoStavPred: stav, dotocenoStavPo: cil }, tise);
   return { zmeneno: true, zStavu: stav, naStav: cil };
 }
 
@@ -116,6 +125,8 @@ async function zapisStav(
   naStav: string,
   puvodce: Puvodce,
   pamet: { dotocenoStavPred: string | null; dotocenoStavPo: string | null },
+  /** Ticho jen pro zprávu ven; historie se zapisuje pořád. */
+  tise = false,
 ): Promise<void> {
   const dokonceny = stavJeDokonceny(naStav);
   await prisma.projectMeta.update({
@@ -136,5 +147,7 @@ async function zapisStav(
     puvodce,
   }).catch(() => undefined);
 
-  void posliNotifikaciKeStavu(caflouProjectId, naStav).catch(() => undefined);
+  // Zprava klientovi NE, kdyz se srovnava historie (zadani 13. 9. 2026:
+  // „ale aby neodesly notifikace"). Zapis do historie vys bezi i tak.
+  if (!tise) void posliNotifikaciKeStavu(caflouProjectId, naStav).catch(() => undefined);
 }

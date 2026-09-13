@@ -78,6 +78,25 @@ export async function zapisBrunoUdalost(vstup: {
 }
 
 /**
+ * Doplnění „Dotočeno" zpětně (zadání 13. 9. 2026). Vlastní řádek v historii,
+ * protože tohle je jediné místo v portálu, kde se stav projektu změní BEZ
+ * zprávy klientovi — a za rok musí být poznat, že to nebyla chyba
+ * v odesílání, ale záměr.
+ */
+export async function zapisDoplneniZpetne(vstup: {
+  caflouProjectId: string;
+  popis: string;
+  puvodce: Puvodce;
+}) {
+  await zapis({
+    caflouProjectId: vstup.caflouProjectId,
+    druh: 'ZMENA',
+    popis: vstup.popis,
+    puvodce: vstup.puvodce,
+  });
+}
+
+/**
  * Jména navázaných účtů, aby se do historie nedostalo holé ID. Klíč je název
  * pole (managerUserId, ...), hodnota to, co se má ukázat.
  */
