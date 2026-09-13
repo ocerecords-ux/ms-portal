@@ -455,7 +455,15 @@ function bunkaSloupce(
         </span>
       );
     case 'companyName':
-      return p.companyName;
+      // Cela firma v bublince - i po rozsireni sloupce se najde nazev, ktery
+      // se nevejde, a „Albatros Me…" sam o sobe nic nerika.
+      return p.companyName ? (
+        <span className="block truncate" title={p.companyName}>
+          {p.companyName}
+        </span>
+      ) : (
+        ''
+      );
     case 'statusName':
       // Stav jde prehodit rovnou v seznamu (zadani 10. 9. 2026) - kdo na to
       // nema pravo, vidi jen odznak.
@@ -590,16 +598,23 @@ function bunkaSloupce(
  * zrovna vidět. Název dostal nejvíc — ten se má vejít celý.
  */
 const VAHA_SLOUPCE: Record<string, number> = {
-  name: 27,
+  name: 24,
   // „Dokonceno - ke schvaleni" je nejdelsi stav a ma se vejit cely
-  // (oprava 12. 9. 2026).
+  // (oprava 12. 9. 2026). Odsud se sirka nebere.
   statusName: 21,
   narrator: 16,
   managerName: 11,
-  companyName: 10,
-  endDate: 10,
-  releaseDate: 10,
-  priority: 8,
+  /**
+   * FIRMA SE MA PRECIST CELA (zadani 13. 9. 2026: „jeste chci, at je videt
+   * firma"). Pri vaze 10 z ni zbyvalo „AUDIOTEKA…" a „Albatros Me…", coz
+   * neni informace. Sirka se vzala tam, kde byla rezerva: datum a priorita
+   * maji obsah pevne delky a zbytecne siroke sloupce, nazev projektu ustoupil
+   * jen o kousek.
+   */
+  companyName: 16,
+  endDate: 8,
+  releaseDate: 8,
+  priority: 6,
   projectType: 8,
   pageCount: 6,
   driveUrl: 4,
