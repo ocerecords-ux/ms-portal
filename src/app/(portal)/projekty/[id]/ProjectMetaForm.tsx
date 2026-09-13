@@ -477,6 +477,7 @@ export function ProjectMetaForm({
             dotoceni={dotoceni}
             onPrepnoutDotoceno={(id, stav) => void prepniDotoceno(id, stav)}
             dotoceniBezi={dotoceniBezi}
+            natoceni={natoceniHercu}
           />
           <span className="text-xs text-muted font-body">
             Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění
