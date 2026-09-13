@@ -5,32 +5,43 @@
  *
  * MÁ VLASTNÍ ZÁLOŽKU (zadání 13. 9. 2026: „Natáčecí protokol přesuňme do
  * zvláštní záložky a nechme i v detailu u toho herce jen odznak"). Předtím
- * visel pod hercem přímo v přehledu projektu a u delšího natáčení odtlačil
- * všechno ostatní dolů. U herce teď zůstává jen odznak s poslední stranou;
+ * visel pod hercem přímo v detailu projektu a u delšího natáčení odtlačil
+ * všechno ostatní dolů. U herce zůstává jen odznak s poslední stranou;
  * kdo chce celou cestu, otevře si tuhle záložku.
  *
  * A PROTO SE UŽ NEKRÁTÍ: pod hercem se vypisovalo jen osm posledních řádků,
  * aby to nezabralo půl stránky. Ve vlastní záložce je místa dost a smysl
  * protokolu je právě v tom, že je celý.
  *
- * KAŽDÝ ŘÁDEK ZAČÍNÁ ÚKONEM (zadání 13. 9. 2026: „do toho Natáčecího
- * protokolu později přidáme i střih, takže v případě, kdy jde o zápis stran
- * v textu, tam přidej ještě atribut na začátek řádku: Natáčení s hercem
- * a jméno"). Dokud Bruno zapisuje jen strany, je úkon vždycky natáčení —
- * ale stojí v řádku jako samostatný údaj, takže až přibude střih, přidá se
- * do `ukonRadku` větev a zbytek tabulky zůstane, jak je.
+ * ŠEST SLOUPCŮ (zadání 13. 9. 2026): Natáčení/střih, Herec, Datum, Čas
+ * zápisu, Zapsal, Strana. Datum i čas jsou z jednoho okamžiku — kdy zápis
+ * vznikl; čas je zvlášť, protože v jeden den bývá zápisů víc a jejich pořadí
+ * je to jediné, co je rozliší.
  */
 
 /**
- * Úkon na začátku řádku. Zápis strany je vždycky natáčení; jméno herce k němu
- * patří, protože u audioknihy se každý herec dostal jinam.
- *
- * Bez jména (projekt s jediným hercem, kde ho do chatu nikdo nepsal) zůstává
- * holé „Natáčení" — „s hercem —" by jen mátlo.
+ * Druh úkonu. Bruno zatím zapisuje jen strany z natáčení, takže je to
+ * konstanta — ale stojí ve vlastním sloupci, protože se chystá i střih
+ * (zadání 13. 9. 2026: „do toho Natáčecího protokolu později přidáme
+ * i střih"). Až přibude, přečte se z dat a zbytek tabulky zůstane, jak je;
+ * model `brunoNatoceno` k tomu zatím pole nemá.
  */
-function ukonRadku(jmeno: string | null): string {
-  return jmeno ? `Natáčení s hercem ${jmeno}` : 'Natáčení';
+const UKON = 'Natáčení';
+
+/**
+ * Kdo zápis pořídil. Taky konstanta: do protokolu píše jedině Bruno, který
+ * čte chat projektu. Sloupec tu je proto, aby bylo z protokolu poznat, že
+ * čísla nezadával člověk ručně.
+ */
+const ZAPSAL = 'Bruno';
+
+/** Čas zápisu ve 24h tvaru — vteřiny by v protokolu nic nepřidaly. */
+function cas(kdy: string): string {
+  return new Date(kdy).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
 }
+
+const TRIDA_ZAHLAVI =
+  'text-left px-4 py-2 text-xs font-heading text-muted uppercase tracking-wide font-semibold whitespace-nowrap';
 
 export function ProtokolNataceni({
   zaznamy,
@@ -51,28 +62,35 @@ export function ProtokolNataceni({
       <p className="text-sm font-body text-muted m-0">
         Kam se doteklo natáčení — zapisuje Bruno z chatu projektu, od nejnovějšího.
       </p>
-      <div className="rounded-card border border-line overflow-hidden">
+      {/* Sest sloupcu se na uzkem okne nevejde - tabulka se posune, stranka ne. */}
+      <div className="rounded-card border border-line overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-field">
-              <th className="text-left px-4 py-2 text-xs font-heading text-muted uppercase tracking-wide font-semibold">
-                Úkon
-              </th>
-              <th className="text-left px-4 py-2 text-xs font-heading text-muted uppercase tracking-wide font-semibold">
-                Datum
-              </th>
-              <th className="text-right px-4 py-2 text-xs font-heading text-muted uppercase tracking-wide font-semibold">
-                Strana
-              </th>
+              <th className={TRIDA_ZAHLAVI}>Natáčení/střih</th>
+              <th className={TRIDA_ZAHLAVI}>Herec</th>
+              <th className={TRIDA_ZAHLAVI}>Datum</th>
+              <th className={TRIDA_ZAHLAVI}>Čas zápisu</th>
+              <th className={TRIDA_ZAHLAVI}>Zapsal</th>
+              <th className={`${TRIDA_ZAHLAVI} text-right`}>Strana</th>
             </tr>
           </thead>
           <tbody>
             {zaznamy.map((z) => (
               <tr key={z.id} className="border-t border-line">
-                <td className="px-4 py-2 text-sm font-heading text-ink">{ukonRadku(z.jmeno)}</td>
+                <td className="px-4 py-2 text-sm font-heading text-ink whitespace-nowrap">{UKON}</td>
+                {/* Herec chybi, kdyz se ve zprave nevyjasnilo, koho se strana
+                    tyka - u projektu s jedinym hercem to nikdo psat nemusel. */}
+                <td className="px-4 py-2 text-sm font-heading text-ink whitespace-nowrap">
+                  {z.jmeno ?? <span className="text-muted">—</span>}
+                </td>
                 <td className="px-4 py-2 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {new Date(z.kdy).toLocaleDateString('cs-CZ')}
                 </td>
+                <td className="px-4 py-2 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
+                  {cas(z.kdy)}
+                </td>
+                <td className="px-4 py-2 text-sm font-heading text-muted whitespace-nowrap">{ZAPSAL}</td>
                 {/* Cislo zelene stejne jako odznak u herce - at je to na obou
                     mistech tataz vec (zadani 13. 9. 2026). */}
                 <td className="px-4 py-2 text-sm font-heading font-semibold tabular-nums text-right text-brand-greenDeep dark:text-brand-green">
