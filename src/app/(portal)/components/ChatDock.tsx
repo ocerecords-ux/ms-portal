@@ -106,7 +106,7 @@ function PripnutaVolba({
   aktivni,
   onOtevri,
   velikost = 30,
-  vListe = false,
+  vPruhu = false,
   onZacniTahat,
   taha = false,
 }: {
@@ -114,7 +114,8 @@ function PripnutaVolba({
   aktivni: boolean;
   onOtevri: () => void;
   velikost?: number;
-  vListe?: boolean;
+  /** Zkratka sedi v pruhu pod fialovou listou, ne v seznamu konverzaci. */
+  vPruhu?: boolean;
   onZacniTahat?: (e: React.PointerEvent<HTMLButtonElement>) => void;
   taha?: boolean;
 }) {
@@ -132,13 +133,13 @@ function PripnutaVolba({
         taha ? 'scale-110 opacity-70 cursor-grabbing' : 'hover:scale-105 cursor-grab'
       } ${
         aktivni
-          ? vListe
-            ? 'ring-2 ring-brand-green ring-offset-2 ring-offset-brand-purple'
+          ? vPruhu
+            ? 'ring-2 ring-brand-green ring-offset-2 ring-offset-surface'
             : 'ring-2 ring-brand-purple'
           : ''
       }`}
     >
-      <Avatar label={popisek} photoUrl={konverzace.avatarUrl} size={velikost} naFialovem={vListe} />
+      <Avatar label={popisek} photoUrl={konverzace.avatarUrl} size={velikost} naPruhu={vPruhu} />
       {konverzace.unread > 0 && (
         /* Číslo roste s ikonou — na velké zkratce v liště vypadala patnáctka
            jako smítko a nedala se přečíst. */
@@ -2313,38 +2314,55 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         )}
         {/* V doku jsou v hlavicce zalozky Ukoly / MS chat (zadani 10. 9.
             2026), na samostatne strance /chat neni mezi cim prepinat. */}
-        {/* LISTA SE PROTAHNE PODLE ZKRATEK (zadani 12. 9. 2026: „ty zkratky na
-            konverzace jsou na mobilu strasne male. Trosku bych je zvetsil. Tim
-            padem se musi protahnout i ta fialova lista nahore"). Vyska neni
-            zadana, ridi se obsahem - vetsi kolecka si ji protahnou sama; na
-            sirokem okne, kde zkratky v liste nejsou, zustava lista nizka. */}
+        {/* ZKRATKY ZUSTAVAJI VELKE (zadani 12. 9. 2026: „ty zkratky na
+            konverzace jsou na mobilu strasne male. Trosku bych je zvetsil").
+            Vysku uz kvuli nim neroztahuje fialova lista, ale vlastni pruh pod
+            ni; na sirokem okne zkratky nahore vubec nejsou. */}
         {naStrance ? (
-          <div className="bg-brand-purple text-brand-green px-4 py-3 sm:py-2.5 flex items-center gap-3">
-            <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0 shrink-0">MS chat</h2>
-            {/* RYCHLE VOLBY V LISTE (zadani 12. 9. 2026: „a tady v mobilu bych
-                ty zkratky na konverzace dal nahoru do te fialove listy. Aby to
-                bylo k dispozici porad").
+          <>
+            {/* TENKA FIALOVA LISTA NAHORE (zadani 13. 9. 2026: „nahore tenky
+                fialovy panel s napisem MS portal a pak pod tim to tmave pole,
+                ktere pouzivame v konverzaci a na nem ta kolecka"). Drive byla
+                lista vysoka, protoze v ni sedely i zkratky - na fialovem
+                obdelniku pres ctvrtinu obrazovky. Ted nese jen jmeno portalu
+                a zvonek, takze zustava tenka na kazdem telefonu. */}
+            <div className="bg-brand-purple text-brand-green px-4 py-2 flex items-center gap-3">
+              <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0 shrink-0">MS portal</h2>
+              <span className="ml-auto flex items-center gap-3 shrink-0">
+                {listaDruhu}
+                <UpozorneniChatu
+                  skupiny={skupinyProUpozorneni}
+                  onZmenaSkupiny={(id, rezim) => void nastavUpozorneni(id, rezim)}
+                />
+              </span>
+            </div>
+
+            {/* PRUH SE ZKRATKAMI POD LISTOU (zadani 12. 9. 2026: „a tady
+                v mobilu bych ty zkratky na konverzace dal nahoru do te
+                fialove listy. Aby to bylo k dispozici porad").
 
                 Na telefonu se levy sloupec pri otevrene konverzaci schova a s
                 nim mizely i pripnute zkratky - presne tehdy, kdy jsou k
-                necemu. Lista je videt vzdycky, takze patri sem. Na sirokem
-                okne zustavaji v levem sloupci, kde je porad vidno, a v liste
-                by se jen zdvojily. */}
-            {/* DVE RADY JAKO V PROHLIZECI (zadani 12. 9. 2026: „s tema
+                necemu. Pruh je videt vzdycky, takze patri sem. Na sirokem okne
+                zustavaji v levem sloupci, kde je porad vidno, a tady by se jen
+                zdvojily.
+
+                PODKLAD JE STEJNY JAKO V KONVERZACI (zadani 13. 9. 2026:
+                „tohle je hnusne ty zkratky na konverzace"). Zkratky mely
+                vlastni fialovy tacek uvnitr fialove listy - dve fialove
+                plochy pres sebe a nad pulkou obrazovky. Ted navazuji na plochu
+                konverzace a od listy je deli jen linka.
+
+                DVE RADY JAKO V PROHLIZECI (zadani 12. 9. 2026: „s tema
                 skupinama a soukromyma zpravama bych to udelal stejne jako na
                 verzi v prohlizeci. Nahore soukrome a pod tim skupiny. A
-                omezil bych to na 5 vedle sebe, vice tam nevejde"). Pres pet
-                kolecek uz by se do sirky telefonu netlacilo - dalsi pripnute
-                zustavaji v seznamu, poradi se meni tazenim. Prazdna rada se
-                nekresli, at po ni nezustane mezera. */}
+                omezil bych to na 5 vedle sebe, vice tam nevejde"). Prazdna
+                rada se nekresli, at po ni nezustane mezera. */}
             {pripnute.length > 0 && (
-              /* Zkratky sedi na vlastnim tmavsim podkladu (zadani 13. 9.
-                 2026: „zanikaji na tom podkladu"). Kolecka jsou nove bila,
-                 tacek pod nimi je jeste odsadi od zbytku listy. */
-              <div className="sm:hidden flex-1 min-w-0 flex flex-col gap-1.5 rounded-2xl bg-brand-purpleDeep/45 px-2 py-1.5">
+              <div className="sm:hidden bg-surface border-b border-line px-4 py-2 flex flex-col gap-2">
                 {[pripnuteSoukrome, pripnuteSkupiny].map((rada, poradiRady) =>
                   rada.length === 0 ? null : (
-                    <div key={poradiRady} className="flex items-center gap-2">
+                    <div key={poradiRady} className="flex items-center gap-2.5">
                       {radaPriTazeni(rada)
                         .slice(0, ZKRATEK_V_LISTE)
                         .map((c) => (
@@ -2356,7 +2374,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                             onZacniTahat={(e) => zacniTahat(e, radaPriTazeni(rada), c.id)}
                             taha={tazena === c.id}
                             velikost={40}
-                            vListe
+                            vPruhu
                           />
                         ))}
                     </div>
@@ -2364,14 +2382,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 )}
               </div>
             )}
-            <span className="ml-auto flex items-center gap-3 shrink-0">
-              {listaDruhu}
-              <UpozorneniChatu
-                skupiny={skupinyProUpozorneni}
-                onZmenaSkupiny={(id, rezim) => void nastavUpozorneni(id, rezim)}
-              />
-            </span>
-          </div>
+          </>
         ) : (
           <ZalozkyDoku
             aktivni="chat"

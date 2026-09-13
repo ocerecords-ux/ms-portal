@@ -14,19 +14,21 @@ export function Avatar({
   label,
   photoUrl,
   size = 28,
-  naFialovem = false,
+  naPruhu = false,
 }: {
   label: string;
   photoUrl: string | null;
   size?: number;
   /**
-   * Kolečko sedí na fialové liště (zadání 13. 9. 2026: „ten fialový podklad
-   * pod kolečkama se zkratkama na chat — zanikají na tom podkladu").
+   * Kolečko sedí v tmavém pruhu se zkratkami pod fialovou lištou (zadání
+   * 13. 9. 2026: „nahoře tenký fialový panel s nápisem MS portal a pak pod tím
+   * to tmavé pole, které používáme v konverzaci a na něm ta kolečka").
    *
-   * Iniciály se jinak kreslí bledě fialovou na fialovou a rozplynou se.
-   * Na liště je proto kolečko bílé a fotka dostane bílý lem.
+   * Podklad pruhu se mění s režimem, takže bílé kolečko by ve světlém režimu
+   * zmizelo. Proto je tu kolečko plnou fialovou s bílými iniciálami — čitelné
+   * v obou režimech a pořád je to značka.
    */
-  naFialovem?: boolean;
+  naPruhu?: boolean;
 }) {
   const [selhalo, setSelhalo] = useState(false);
 
@@ -39,7 +41,7 @@ export function Avatar({
         onError={() => setSelhalo(true)}
         style={{ width: size, height: size }}
         className={`rounded-full object-cover shrink-0 bg-field ${
-          naFialovem ? 'border-2 border-white/85' : 'border border-line'
+          naPruhu ? 'border-2 border-brand-purple/60' : 'border border-line'
         }`}
       />
     );
@@ -48,7 +50,7 @@ export function Avatar({
     <span
       style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
       className={`rounded-full shrink-0 font-heading font-bold flex items-center justify-center ${
-        naFialovem ? 'bg-white text-brand-purpleDeep' : 'bg-brand-purple/15 text-brand-purpleDark'
+        naPruhu ? 'bg-brand-purple text-white' : 'bg-brand-purple/15 text-brand-purpleDark'
       }`}
       aria-hidden="true"
     >
