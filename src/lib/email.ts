@@ -954,6 +954,8 @@ export async function sendOfferEmail(input: OfferEmailInput) {
 
 type InvoiceEmailInput = {
   to: string;
+  /** Kopie - typicky klient projektu vedle účtárny odběratele (13. 9. 2026). */
+  cc?: string[];
   contactName: string | null;
   companyName: string;
   issuerName: string;
@@ -1013,6 +1015,9 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
   const zprava = {
     ...odesilatelMediaspace(ODPOVED_UCTARNA),
     to: input.to,
+    // Kopie schvalne v Cc, ne skryta: ucetni i clovek od projektu maji o sobe
+    // vedet, at si fakturu nepreposilaji dokola.
+    ...(input.cc?.length ? { cc: input.cc } : {}),
     subject: `Faktura ${input.number}${input.subject ? ` — ${input.subject}` : ''}`,
     text: [
       pozdrav(input.contactName),

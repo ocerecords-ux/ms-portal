@@ -5,10 +5,18 @@ import { sendInvoiceEmail } from '@/lib/email';
 import { cisloUctuSKodem, computeTotals } from '@/lib/doklady';
 import { pdfFaktury } from '@/lib/dokladNahledServer';
 
-// Odeslani faktury odberateli (zadani 6. 9. 2026). Mail jde na e-mail vedeny
-// u firmy a nese vsechno, co klient potrebuje k zaplaceni - castku, ucet,
-// variabilni symbol a splatnost.
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+/**
+ * Odeslani faktury odberateli (zadani 6. 9. 2026). Mail nese vsechno, co klient
+ * potrebuje k zaplaceni - castku, ucet, variabilni symbol, splatnost a PDF
+ * s QR platbou.
+ *
+ * KOMU (zadani 13. 9. 2026): faktura jde na e-mail vedeny u FIRMY - tam byva
+ * ucetni odberatele. Vedle toho se da pridat KLIENT PROJEKTU, tedy clovek,
+ * ktery ma u nich projekt na starost. Kdo to bude, rozhoduje ten, kdo fakturu
+ * posila - telo pozadavku { firme, klientovi }. Jina adresa nez tyhle dve se
+ * dosadit neda; posilat faktury kamkoliv neni potreba a je to zbytecna dira.
+ */
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
     if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
@@ -27,10 +35,34 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Faktura nemá žádné položky.' }, { status: 400 });
     }
 
-    const to = invoice.company.contactEmail;
+    const volba = (await req.json().catch(() => null)) as
+      | { firme?: unknown; klientovi?: unknown }
+      | null;
+    // Bez tela pozadavku plati to, co platilo driv: jen firma.
+    const chceFirmu = volba?.firme === undefined ? true : volba.firme === true;
+    const chceKlienta = volba?.klientovi === true;
+
+    const mailFirmy = invoice.company.contactEmail?.trim() || null;
+    const meta = invoice.caflouProjectId
+      ? await prisma.projectMeta.findUnique({
+          where: { caflouProjectId: invoice.caflouProjectId },
+          select: { klient: { select: { email: true } } },
+        })
+      : null;
+    const mailKlienta = meta?.klient?.email?.trim() || null;
+
+    const prijemci = [chceFirmu ? mailFirmy : null, chceKlienta ? mailKlienta : null].filter(
+      (m): m is string => Boolean(m),
+    );
+    // Duplicita nastane, kdyz je klient projektu zaroven kontaktem firmy.
+    const [to, ...kopie] = [...new Set(prijemci)];
     if (!to) {
       return NextResponse.json(
-        { error: `Firma „${invoice.company.name}" nemá vyplněný kontaktní e-mail — doplňte ho v Firmy.` },
+        {
+          error: chceKlienta && !chceFirmu
+            ? 'Projekt nemá přiřazeného klienta — komu fakturu poslat?'
+            : `Firma „${invoice.company.name}" nemá vyplněný kontaktní e-mail — doplňte ho v Firmy.`,
+        },
         { status: 400 },
       );
     }
@@ -54,6 +86,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
     const result = await sendInvoiceEmail({
       to,
+      cc: kopie,
       contactName: invoice.company.contactName,
       companyName: invoice.company.name,
       issuerName: invoice.issuer.name,
@@ -79,7 +112,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       data: { status: invoice.status === 'DRAFT' ? 'SENT' : invoice.status, sentAt: new Date() },
     });
 
-    return NextResponse.json({ ok: true, to, sPrilohou: dokument.ok });
+    return NextResponse.json({ ok: true, to, kopie, sPrilohou: dokument.ok });
   } catch (err) {
     console.error('POST /api/admin/invoices/[id]/send selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
