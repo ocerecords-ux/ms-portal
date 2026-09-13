@@ -129,7 +129,7 @@ export function ContractSigning({
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
-      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Váš podpis</h2>
+      <h2 className="font-heading font-semibold text-sm text-brand-purple uppercase tracking-wide m-0">Váš podpis</h2>
 
       <label className="flex flex-col gap-1.5 max-w-sm">
         <span className="text-sm font-body text-ink">Jméno a příjmení</span>
@@ -162,7 +162,9 @@ export function ContractSigning({
           type="button"
           onClick={() => posli({ action: 'sign', name: jmeno, imageData: podpis })}
           disabled={busy || !podpis || !souhlas || !jmeno.trim()}
-          className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-6 py-3 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
+          /* Zelene jako „Schvaluji nabidku" - hlavni krok klienta ma v portalu
+             vsude stejnou barvu (zadani 13. 9. 2026: „v nasem brandu"). */
+          className="bg-brand-green text-onAccent font-heading font-semibold text-base rounded-lg px-6 py-3 hover:brightness-95 transition-[filter] disabled:opacity-50"
         >
           {busy ? 'Podepisuji…' : 'Podepsat smlouvu'}
         </button>
