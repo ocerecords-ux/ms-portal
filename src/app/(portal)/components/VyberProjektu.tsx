@@ -175,6 +175,9 @@ export function VyberProjektu({
             }
           } else if (e.key === 'Escape') {
             e.preventDefault();
+            // Escape zavira NEJDRIV nabidku, ne okno kolem ni (14. 9. 2026) -
+            // jinak by se pri zavirani seznamu zavrel i cely formular.
+            if (otevreno) e.stopPropagation();
             setOtevreno(false);
             setHledani('');
           }

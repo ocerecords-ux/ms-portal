@@ -114,6 +114,27 @@ export function CalendarBrowser({
     });
   }, [events, filtrStavu, hledani]);
 
+  /**
+   * Otevřené okno zavře Escape a stránka pod ním se nesmí rolovat - jinak
+   * se při kolečku myši posouvá kalendář za oknem místo obsahu okna.
+   */
+  const oknoOtevrene = Boolean(novaBlokace || upravovana);
+  useEffect(() => {
+    if (!oknoOtevrene) return;
+    function naKlavesu(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      setNovaBlokace(null);
+      setUpravovana(null);
+    }
+    const puvodni = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', naKlavesu);
+    return () => {
+      document.body.style.overflow = puvodni;
+      document.removeEventListener('keydown', naKlavesu);
+    };
+  }, [oknoOtevrene]);
+
   /** Události rozdělené po dnech — klíčem je den v pásmu studia. */
   const podleDnu = useMemo(() => {
     const mapa = new Map<string, CalendarEvent[]>();
@@ -314,7 +335,30 @@ export function CalendarBrowser({
         />
       )}
 
+      {/* FORMULÁŘ JE UPROSTŘED OBRAZOVKY (zadání 14. 9. 2026: „to editační
+          okno bych dal někam doprostřed kalendáře. Dole vůbec nevím, že se
+          něco otevřelo, a hlavně tam musím scrollovat").
+
+          Dřív se přidával pod mřížku, takže po dvojkliku do kalendáře se
+          navenek nestalo nic - formulář ležel mimo obrazovku. Teď překryje
+          stránku a je vidět hned.
+
+          Zavírá se křížkem, tlačítkem Zrušit, klávesou Escape a kliknutím
+          mimo kartu. Klik se hlídá na mousedown a jen když padne PŘÍMO na
+          podklad - jinak by se okno zavřelo i při tažení myší z políčka ven,
+          třeba při označování textu. */}
       {(novaBlokace || upravovana) && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/55 flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target !== e.currentTarget) return;
+            setNovaBlokace(null);
+            setUpravovana(null);
+          }}
+        >
+          <div className="w-full max-w-[880px] my-auto">
         <UdalostForm
           // Pri uprave se nastavuje klic - jinak by React nechal ve formulari
           // stav po predchozi udalosti a clovek by upravoval cizi udaje.
@@ -342,6 +386,8 @@ export function CalendarBrowser({
             router.refresh();
           }}
         />
+          </div>
+        </div>
       )}
 
       {detail && (
