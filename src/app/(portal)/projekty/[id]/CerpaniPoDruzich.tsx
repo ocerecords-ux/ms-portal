@@ -125,53 +125,135 @@ export function CerpaniPoDruzich({
 }
 
 /**
- * Sloupce: vykázané peníze uvnitř stropu, obojí na JEDNÉ ose. Osa je společná
- * pro oba druhy, takže delší sloupec doopravdy znamená víc peněz — kdyby si
- * každý řádek škáloval podle sebe, šlo by o dva grafy nad sebou tvářící se
- * jako jeden.
+ * Měřítko svislé osy: nejdřív hezký KROK, teprve z něj strop.
+ *
+ * Obráceně (strop nahoru a krok = strop/4) to vypadá logicky, ale vyrábí to
+ * mřížku po 12 500 Kč — čísla, která nikdo nepřečte zpaměti. Krok se proto
+ * zaokrouhlí na řadu 1/2/5 × mocnina deseti a strop je první jeho násobek
+ * nad nejvyšší hodnotou.
+ */
+function meritkoOsy(nejvic: number): { strop: number; krok: number } {
+  if (nejvic <= 0) return { strop: 1000, krok: 250 };
+  const hruby = nejvic / 4;
+  const rad = Math.pow(10, Math.floor(Math.log10(hruby)));
+  const nasobek = hruby / rad;
+  // Minimalne koruna - pod ni uz by mrizka vypisovala haleře.
+  const krok = Math.max(1, (nasobek <= 1 ? 1 : nasobek <= 2 ? 2 : nasobek <= 5 ? 5 : 10) * rad);
+  return { strop: Math.ceil(nejvic / krok) * krok, krok };
+}
+
+/**
+ * SLOUPCOVÝ GRAF (upřesnění 14. 9. 2026: „chtěl bych tam grafické sloupce —
+ * diagramy"). Předtím to byly tenké pruhy jako u čerpání nad tím; tohle je
+ * graf se svislou osou v korunách a mřížkou.
+ *
+ * KAŽDÝ DRUH PRÁCE JE JEDEN SLOUPEC, ne dva vedle sebe. Světlý obrys je
+ * rozpočet, barevná výplň zdola vykázané peníze — je to „jak plná je ta
+ * kapsa" na první pohled. Dva sousední sloupce (rozpočet, vykázáno) by nutily
+ * oko porovnávat výšky místo aby poměr rovnou viděl.
+ *
+ * OBA DRUHY MAJÍ SPOLEČNOU OSU, takže vyšší sloupec doopravdy znamená víc
+ * peněz. Kdyby si každý škáloval podle sebe, byly by to dva grafy vedle sebe
+ * tvářící se jako jeden — a přesně tak vzniká většina lživých grafů.
  */
 function Sloupce({ druhy }: { druhy: Druh[] }) {
-  const max = Math.max(...druhy.map((d) => Math.max(d.rozpocet, d.vykazano)), 1);
+  const nejvic = Math.max(...druhy.map((d) => Math.max(d.rozpocet, d.vykazano)), 1);
+  const { strop, krok } = meritkoOsy(nejvic);
+  const VYSKA = 190;
+
+  // Vodorovne linky mrizky odspodu nahoru, vcetne nuly a stropu.
+  const linky: number[] = [];
+  for (let v = 0; v <= strop + 0.5; v += krok) linky.push(v);
 
   return (
-    <div className="flex flex-col gap-4">
-      {druhy.map((d) => {
-        const pres = d.vykazano > d.rozpocet;
-        const procent = d.rozpocet > 0 ? Math.round((d.vykazano / d.rozpocet) * 100) : 0;
-        return (
-          <div key={d.klic} className="flex flex-col gap-1.5">
-            <div className="flex items-baseline justify-between gap-3 flex-wrap">
-              <span className="inline-flex items-center gap-2 text-sm font-heading text-ink">
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-3">
+        {/* Popisky osy - vlastni sloupec vlevo, at cisla nelezou do grafu. */}
+        <div className="relative shrink-0 w-14" style={{ height: VYSKA }} aria-hidden="true">
+          {linky.map((v) => (
+            <span
+              key={v}
+              className="absolute right-0 -translate-y-1/2 text-[10px] font-heading text-muted tabular-nums whitespace-nowrap"
+              style={{ bottom: `${(v / strop) * 100}%` }}
+            >
+              {/* „tis." jen kdyz je z ceho - u malych castek by z 500 Kc
+                  bylo „1 tis." a z 250 Kc dokonce „0 tis.". */}
+              {v === 0 ? '0' : strop >= 4000 ? `${Math.round(v / 1000)} tis.` : v.toLocaleString('cs-CZ')}
+            </span>
+          ))}
+        </div>
+
+        <div className="relative flex-1 min-w-0" style={{ height: VYSKA }}>
+          {/* Mrizka je recesivni - ma se dat precist, ne videt. */}
+          {linky.map((v) => (
+            <span
+              key={v}
+              aria-hidden="true"
+              className={`absolute left-0 right-0 border-t ${v === 0 ? 'border-line' : 'border-line/50'}`}
+              style={{ bottom: `${(v / strop) * 100}%` }}
+            />
+          ))}
+
+          <div className="absolute inset-0 flex items-end justify-around gap-6 px-2">
+            {druhy.map((d) => {
+              const pres = d.vykazano > d.rozpocet;
+              const procent = d.rozpocet > 0 ? Math.round((d.vykazano / d.rozpocet) * 100) : 0;
+              return (
+                <div key={d.klic} className="relative flex-1 max-w-[96px] h-full flex items-end justify-center">
+                  {/* Rozpocet: svetly obrys na svou vysku. */}
+                  <span
+                    aria-hidden="true"
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full rounded-t-md border border-b-0 border-line bg-field/60"
+                    style={{ height: `${(d.rozpocet / strop) * 100}%` }}
+                  />
+                  {/* Vykazano: plny sloupec zdola. */}
+                  <span
+                    title={`${d.nazev}: vykázáno ${czk(d.vykazano)} z rozpočtu ${czk(d.rozpocet)} (${procent} %)`}
+                    className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-full rounded-t-md ${pres ? 'bg-danger' : ''}`}
+                    style={{
+                      height: `${Math.min(100, (d.vykazano / strop) * 100)}%`,
+                      backgroundColor: pres ? undefined : `var(--barva-${d.klic})`,
+                    }}
+                  />
+                  {/* Hodnota nad sloupcem - primy popisek, aby se nic necetlo
+                      jen z barvy ani z vysky. */}
+                  <span
+                    className={`absolute left-1/2 -translate-x-1/2 text-[11px] font-heading font-semibold tabular-nums whitespace-nowrap ${
+                      pres ? 'text-danger' : 'text-ink'
+                    }`}
+                    style={{ bottom: `calc(${Math.max((d.rozpocet / strop) * 100, (d.vykazano / strop) * 100)}% + 6px)` }}
+                  >
+                    {procent} %
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Popisky pod osou + cisla. Odsazeni vlevo sedi se sloupcem osy vys. */}
+      <div className="flex gap-3">
+        <span className="shrink-0 w-14" aria-hidden="true" />
+        <div className="flex-1 min-w-0 flex justify-around gap-6 px-2">
+          {druhy.map((d) => (
+            <div key={d.klic} className="flex-1 max-w-[96px] flex flex-col items-center gap-0.5 text-center">
+              <span className="inline-flex items-center gap-1.5 text-xs font-heading text-ink">
                 <Puntik klic={d.klic} />
                 {d.nazev}
-                <span className="text-xs font-body text-muted">{d.popisJednotek}</span>
               </span>
-              <span className={`text-sm font-heading tabular-nums ${pres ? 'text-danger font-semibold' : 'text-ink'}`}>
-                {czk(d.vykazano)} z {czk(d.rozpocet)} · {procent} %
+              <span className="text-[11px] font-heading tabular-nums text-ink">{czk(d.vykazano)}</span>
+              <span className="text-[10px] font-body text-muted tabular-nums">
+                z {czk(d.rozpocet)} · {d.popisJednotek}
               </span>
             </div>
+          ))}
+        </div>
+      </div>
 
-            {/* Strop je svetly pruh na sirku rozpoctu, vykazane penize plny
-                pruh v barve druhu prace. Zaoblene konce a 2px mezera drzi
-                pruhy od sebe i kdyz je vykazano presne na strop. */}
-            <div className="relative h-3 w-full">
-              <div
-                className="absolute inset-y-0 left-0 rounded-pill bg-line"
-                style={{ width: `${(d.rozpocet / max) * 100}%` }}
-                aria-hidden="true"
-              />
-              <div
-                className={`absolute inset-y-0 left-0 rounded-pill ${pres ? 'bg-danger' : ''}`}
-                style={{
-                  width: `${Math.max(d.vykazano > 0 ? 2 : 0, (d.vykazano / max) * 100)}%`,
-                  backgroundColor: pres ? undefined : `var(--barva-${d.klic})`,
-                }}
-                title={`${d.nazev}: vykázáno ${czk(d.vykazano)} z rozpočtu ${czk(d.rozpocet)}`}
-              />
-            </div>
-          </div>
-        );
-      })}
+      <p className="text-[11px] font-body text-muted m-0 text-center">
+        Světlý obrys je rozpočet, barevná výplň vykázané peníze.
+      </p>
     </div>
   );
 }
