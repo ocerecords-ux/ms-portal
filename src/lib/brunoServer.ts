@@ -394,8 +394,22 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
             conversationId: zprava.conversationId,
             userId: bruno.id,
             body: rozhodnuti.zprava,
-            // Odpovida tam, kde se mluvi - ve vlakne, kdyz zprava prisla ve vlakne.
-            parentId: zprava.parentId,
+            /**
+             * ODPOVÍDÁ VŽDYCKY VE VLÁKNĚ (zadání 14. 9. 2026: „když odpovídá
+             * Bruno na zápis normostran, ať odpovídá ve vlákně na odpovědět").
+             *
+             * Do teď se ve vlákně ozval jen tehdy, když ve vlákně přišla
+             * i otázka; na holé „33" napsané do kanálu odpovídal do kanálu.
+             * Jenže Bruno se ptá skoro vždycky na něco, co stojí v jedné
+             * konkrétní zprávě („u koho?"), a ta dvojice patří k sobě —
+             * v proudu kanálu se rozpadla mezi zprávy lidí a nešlo poznat,
+             * čeho se ptá.
+             *
+             * `parentId ?? id`: zpráva ve vlákně má vlákno svoje, zpráva
+             * v kanálu ho tímhle zakládá. Nikdy ne `id` napřímo — vlákno ve
+             * vlákně chat neumí a odpověď by se ztratila.
+             */
+            parentId: zprava.parentId ?? zprava.id,
           },
         })
         .then(() =>
