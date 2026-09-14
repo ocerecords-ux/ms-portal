@@ -27,6 +27,7 @@ import { RecordingSection } from './RecordingSection';
 import { ProjectTabs, type ProjectTab } from './ProjectTabs';
 import { ProtokolNataceni } from './ProtokolNataceni';
 import { VykazyProjektu, type VykazRadek } from './VykazyProjektu';
+import { CerpaniPoDruzich } from './CerpaniPoDruzich';
 import { RodnyListSection } from './RodnyListSection';
 import { HistorieProjektu } from './HistorieProjektu';
 import { Preposlech } from './Preposlech';
@@ -385,6 +386,17 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     kdo: t.user?.name || t.user?.email || '—',
   }));
 
+  // Vykazane penize zvlast za nataceni a zvlast za strih (zadani 14. 9. 2026).
+  // „Ostatni" se nepocita - ten druh prace k projektu nepatri.
+  const castka = (e: (typeof timesheets)[number]) =>
+    entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot);
+  const vykazanoNataceni = timesheets
+    .filter((e) => e.workType === 'RECORDING')
+    .reduce((sum, e) => sum + castka(e), 0);
+  const vykazanoStrih = timesheets
+    .filter((e) => e.workType === 'EDITING')
+    .reduce((sum, e) => sum + castka(e), 0);
+
   const rozpocet = !showDocuments ? null : budget ? (
     <ProjectBudget
       budget={budget}
@@ -408,9 +420,34 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Vykazy visi pod rozpoctem, at je to jedna obrazovka: „kolik to melo stat"
   // hned nad „kdo si co zapsal". Plati pro obe podoby rozpoctu (audiokniha
   // i zakazka), proto se to sklada az tady, ne uvnitr nich.
+  /**
+   * Graf cerpani stoji VEDLE rozpoctu (zadani 14. 9. 2026: „prehled muze byt
+   * treba napravo vedle rozpoctu"). Jen u audioknihy - jinde rozpocet delenim
+   * na nataceni a strih neprochazi, takze by graf nemel co ukazat.
+   */
+  const grafCerpani = budget ? (
+    <CerpaniPoDruzich
+      rozpocetNataceni={budget.recordingCost}
+      rozpocetStrih={budget.editingCost}
+      vykazanoNataceni={vykazanoNataceni}
+      vykazanoStrih={vykazanoStrih}
+      popisNataceni={`${budget.sessions} × ${budget.unitPrice.toLocaleString('cs-CZ')} Kč`}
+      popisStrihu={`${budget.editingUnits} × ${budget.unitPrice.toLocaleString('cs-CZ')} Kč`}
+    />
+  ) : null;
+
   const rozpocetSVykazy = rozpocet && (
     <div className="flex flex-col gap-6">
-      {rozpocet}
+      {/* Na sirokem okne rozpocet vlevo a graf vpravo, na uzkem pod sebou.
+          items-start: karty maji ruznou vysku a nemaji se natahovat. */}
+      {grafCerpani ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {rozpocet}
+          {grafCerpani}
+        </div>
+      ) : (
+        rozpocet
+      )}
       <VykazyProjektu vykazy={vykazyRadky} />
     </div>
   );

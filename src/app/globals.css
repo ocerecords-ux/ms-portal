@@ -53,6 +53,14 @@
   --c-bar: 32 26 51; /* tmavý pruh hlaviček */
   --c-paper: 251 250 255; /* #FBFAFF */
   --c-surface: 255 255 255; /* #FFFFFF */
+
+  /* Grafy: cerpani rozpoctu po druzich prace (zadani 14. 9. 2026).
+     Dvojice prosla kontrolou odstupu pro barvosleposti i kontrastu proti
+     podkladu - proto ma tmavy rezim nize VLASTNI odstiny, ne tytez
+     ztmavene. Znackova fialova a zelena, jen posazene do pasma, ve kterem
+     jsou na bile citelne. */
+  --barva-nataceni: #7B55FF;
+  --barva-strih: #149E4B;
   --c-surface-soft: 250 248 255; /* #FAF8FF */
   --c-field: 246 246 246; /* #F6F6F6 */
   --c-line: 228 223 251; /* #E4DFFB */
@@ -74,6 +82,11 @@
   --c-bar: 45 39 70; /* pruh zůstává tmavý, jen o odstín světlejší než karta */
   --c-paper: 20 17 28; /* podklad stranky */
   --c-surface: 29 25 48; /* karty a tabulky */
+
+  /* Na tmavem podkladu (#1D1930) by byla svetla zelena prezarena a fialova
+     splyvala - obe hodnoty jsou znovu overene proti tomuto podkladu. */
+  --barva-nataceni: #9578FF;
+  --barva-strih: #1AAE58;
   --c-surface-soft: 38 33 56; /* najeti mysi na radek */
   --c-field: 38 34 51; /* vstupni pole */
   --c-line: 52 46 74;
