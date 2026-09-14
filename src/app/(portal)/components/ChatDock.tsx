@@ -1494,22 +1494,82 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  const naKonec = useCallback(() => {
+  /**
+   * Drzime vypis u posledni zpravy? (14. 9. 2026: „kdyz otevru konverzaci,
+   * je schovana posledni zprava a musim se tam posunout ... po chvili to tam
+   * skoci samo").
+   *
+   * Rolovani na konec nestaci udelat parkrat po otevreni a mit hotovo. Vypis
+   * se po otevreni jeste chvili PREVLIKA: dorovna se vyska psaciho pole,
+   * doskladaji se avatary a pisma, na telefonu se usadi viditelna cast
+   * stranky pod adresnim radkem. Kazda takova zmena zkrati misto pro zpravy,
+   * ale scrollTop zustane, kde byl - a konec konverzace se schova pod psaci
+   * pole. Az dalsi obnoveni zprav to pak srovna, coz je presne to „po chvili
+   * to tam skoci samo".
+   *
+   * Proto se konec nehlida casem, ale merenim: dokud si clovek sam
+   * neodroluje nahoru, kazda zmena velikosti vypis zase stahne dolu.
+   */
+  const drzetDole = useRef(true);
+
+  const naKonec = useCallback((vzdy = false) => {
     const el = vypisRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    if (!vzdy && !drzetDole.current) return;
+    el.scrollTop = el.scrollHeight;
   }, []);
 
+  /** Cte si clovek starsi zpravy? Pak mu vypis pod rukama neposouvame. */
+  const hlidejOdrolovani = useCallback(() => {
+    const el = vypisRef.current;
+    if (!el) return;
+    // 80 px tolerance: „skoro dole" je porad dole - jinak by staclio drobne
+    // setrveni prstu a vypis by se u nove zpravy prestal posouvat.
+    drzetDole.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  }, []);
+
+  // Otevreni konverzace zacina vzdy na konci, i kdyz byl clovek v te
+  // predchozi odrolovany nahoru.
   useEffect(() => {
-    naKonec();
-    const snimek = requestAnimationFrame(naKonec);
-    const brzy = setTimeout(naKonec, 120);
-    const pozdeji = setTimeout(naKonec, 450);
+    drzetDole.current = true;
+    naKonec(true);
+    const snimek = requestAnimationFrame(() => naKonec(true));
+    const brzy = setTimeout(() => naKonec(true), 150);
     return () => {
       cancelAnimationFrame(snimek);
       clearTimeout(brzy);
-      clearTimeout(pozdeji);
     };
-  }, [messages, openId, naKonec]);
+  }, [openId, naKonec]);
+
+  // Nova zprava (i doplneni historie) - dolu jen tehdy, kdyz uz tam clovek je.
+  useEffect(() => {
+    naKonec();
+    const snimek = requestAnimationFrame(() => naKonec());
+    return () => cancelAnimationFrame(snimek);
+  }, [messages, naKonec]);
+
+  /**
+   * Zmena velikosti vypisu (psaci pole vyrostlo, klavesnice, otoceni
+   * telefonu) i doskladani obrazku uvnitr. Oboji meni, kde konec lezi -
+   * a oboji prijde az po tom, co se jednou odrolovalo.
+   */
+  useEffect(() => {
+    const el = vypisRef.current;
+    if (!el) return;
+    const znovu = () => naKonec();
+    // Obrazky nemaji predem znamou vysku, takze `load` chytame v zachytne
+    // fazi - na bublinach nebublina.
+    el.addEventListener('load', znovu, true);
+    let pozorovatel: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      pozorovatel = new ResizeObserver(znovu);
+      pozorovatel.observe(el);
+    }
+    return () => {
+      el.removeEventListener('load', znovu, true);
+      pozorovatel?.disconnect();
+    };
+  }, [openId, naKonec]);
 
   /**
    * Klepnutí na upozornění na telefonu otevře TU konverzaci, ze které přišlo
@@ -1935,6 +1995,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       setPrilohyHlavni([]);
     }
     setZminkyPro(null);
+    // Vlastni zprava vypis stahne dolu vzdy, i kdyz si clovek zrovna cetl
+    // neco starsiho - jinak by po odeslani koukal na misto, kam mu zprava
+    // nedosla.
+    drzetDole.current = true;
 
     // Prilohy jeste nejsou nahrane, takze u nich zatim nic neukazujeme -
     // text ano, ten je to podstatne.
@@ -2859,6 +2923,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       8. 9. 2026: "cele je to takove bile, sterilni"). */}
                   <div
                     ref={vypisRef}
+                    onScroll={hlidejOdrolovani}
                     className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-surfaceSoft"
                   >
                     {messages.length === 0 && (
