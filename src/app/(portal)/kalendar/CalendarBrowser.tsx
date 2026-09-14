@@ -509,7 +509,14 @@ function MrizkaPohled({
                           borderLeftWidth: '3px',
                           color: barvy.text,
                         }}
-                        className="absolute rounded border px-1.5 py-0.5 text-left overflow-hidden"
+                        // flex + justify-start: prohlizec sam sazi obsah
+                        // tlacitka na SVISLY STRED, takze u ctyrhodinoveho
+                        // bloku visel nazev uprostred prazdna (14. 9. 2026:
+                        // „ten nazev udalosti by chtelo dat do leveho
+                        // horniho rohu"). Sirku si radky drzi cele (vychozi
+                        // items-stretch), jinak by se dlouhy nazev neorezal
+                        // teckami, ale jen usekl.
+                        className="absolute rounded border px-1.5 py-0.5 text-left overflow-hidden flex flex-col justify-start"
                       >
                         {/* Popisek je dvouřádkový (zadání 14. 9. 2026):
                             projekt - herec, pod tím ZVUKAŘ: jméno. Druhý řádek
