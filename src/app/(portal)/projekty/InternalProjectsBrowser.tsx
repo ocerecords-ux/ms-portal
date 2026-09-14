@@ -423,6 +423,7 @@ export function InternalProjectsBrowser({
         onSort={handleSort}
         projects={visible}
         columns={zobrazene}
+        uzke={uzkaObrazovka && !editing}
         editing={editing}
         canEditColumns={canEditLabels}
         canEditStatus={canEditStatus}

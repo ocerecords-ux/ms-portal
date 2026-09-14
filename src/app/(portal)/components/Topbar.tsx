@@ -154,15 +154,23 @@ export function Topbar({
     // tlacitko "+" a Hotovo/Zrusit/Vychozi - rada se proto zalomila a cela
     // lista poskocila. Ted se misto toho v uzkem miste posouvaji odkazy do
     // stran; jmeno, zvonecek ani prepinac se nikam nestehuji.
-    <header className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-6 sm:px-10 py-5 flex items-center justify-between gap-4 shadow-md">
+    <header className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex items-center justify-between gap-2 sm:gap-4 shadow-md">
       {/* Branding "MS portal | [logo]" podle referencniho mockupu uzivatele
           (12. 9. 2026) - svisla oddelovaci cara misto "by" a znatelne vetsi
           logo (jeste zvetseno 5. 9. 2026). */}
-      <Link href="/projekty" className="flex items-center gap-3 sm:gap-4 no-underline">
-        <span className="font-body text-brand-green font-semibold text-2xl sm:text-3xl">MS portal</span>
-        <span className="w-px h-8 sm:h-10 bg-white/40" aria-hidden="true" />
+      {/* NA TELEFONU SE ZNACKA SMRSTI (zadani 14. 9. 2026: „je rozbita ta
+          horni lista v portalu na mobilu v apce"). „MS portal" ve 2xl se na
+          sirku telefonu nevesel a zalomil se na dva radky, cimz lista
+          povyrostla a zbytek z ni vytlacil ven. Tady je text na jeden radek,
+          mensi, logo nizsi a delici cara az od tabletu - na telefonu je to
+          jen dalsi svisly pruh v uzkem miste. */}
+      <Link href="/projekty" className="flex items-center gap-2 sm:gap-4 no-underline shrink-0">
+        <span className="font-body text-brand-green font-semibold text-lg sm:text-3xl whitespace-nowrap">
+          MS portal
+        </span>
+        <span className="hidden sm:block w-px h-8 sm:h-10 bg-white/40" aria-hidden="true" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-12 sm:h-16 w-auto" />
+        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 sm:h-16 w-auto" />
       </Link>
 
       {/* py-3 -my-3: posuvny pruh oreze vsechno, co z nej cni - a krizky
@@ -313,14 +321,14 @@ export function Topbar({
           rozbalovaci nabidku i tu sipku") - kliknuti na jmeno vede rovnou na
           Muj ucet, vedle je jen odhlaseni. Do administrace se chodi odkazy
           v liste (Firmy, Uzivatele, Ceniky, Doklady). */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         <PrepinacJazyka />
         <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
         <Link
           href="/muj-ucet"
           title={t('listou.mujUcet')}
-          className="flex items-center gap-2 text-sm font-heading text-brand-green bg-white/10 border border-white/20 rounded-pill pl-1.5 pr-3.5 py-1.5 no-underline hover:bg-white/20 transition-colors"
+          className="flex items-center gap-2 text-sm font-heading text-brand-green bg-white/10 border border-white/20 rounded-pill p-1.5 sm:pl-1.5 sm:pr-3.5 no-underline hover:bg-white/20 transition-colors"
         >
           {/* Fotka u jmena (zadani 9. 9. 2026). Bez fotky iniciály, at lista
               nepreskakuje podle toho, kdo je prihlaseny. */}
@@ -336,7 +344,9 @@ export function Topbar({
               {initials(userLabel)}
             </span>
           )}
-          {userLabel}
+          {/* Na telefonu zustava jen fotka - cele jmeno chip roztahlo pres
+              pravy okraj obrazovky. */}
+          <span className="hidden sm:inline">{userLabel}</span>
         </Link>
         <button
           type="button"

@@ -668,8 +668,16 @@ const VAHA_SLOUPCE: Record<string, number> = {
   pageCountSirsi: 7,
 };
 
-export function sirkySloupcu(klice: string[]): string[] {
-  const vahy = klice.map((k) => VAHA_SLOUPCE[k] ?? 12);
+/**
+ * Váhy sloupců na telefonu. Datum má pevnou délku a musí se vejít celé,
+ * název se zalamuje, takže si vystačí s menším podílem než na počítači.
+ */
+const VAHY_NA_TELEFONU: Record<string, number> = { name: 42, endDate: 26, statusName: 32 };
+
+export function sirkySloupcu(klice: string[], prebiti?: Record<string, number>): string[] {
+  // Prebiti je kvuli telefonu: pri trech sloupcich davaji bezne vahy datu
+  // sotva 15 % sirky a „14. 8. 2026" se do toho nevejde (zadani 14. 9. 2026).
+  const vahy = klice.map((k) => prebiti?.[k] ?? VAHA_SLOUPCE[k] ?? 12);
   const soucet = vahy.reduce((a, b) => a + b, 0) || 1;
   return vahy.map((v) => `${((v / soucet) * 100).toFixed(3)}%`);
 }
@@ -998,9 +1006,16 @@ export function InternalProjectsTable({
   onHideColumn,
   canEditStatus = false,
   manazeri = [],
+  uzke = false,
 }: {
   projects: InternalProject[];
   emptyText: string;
+  /**
+   * Telefon: tri sloupce a zadna minimalni sirka, takze se tabulka vejde
+   * bez posouvani do stran (zadani 14. 9. 2026). Sirky se pri tom pocitaji
+   * z vlastnich vah - bezne by datu zbylo 15 %.
+   */
+  uzke?: boolean;
   sort: ProjectSort;
   onSort: (key: ProjectSortKey) => void;
   /** Viditelné sloupce v pořadí - výchozí přepsané tím, co si Žůžo-labůžo nastavilo. */
@@ -1028,9 +1043,9 @@ export function InternalProjectsTable({
           Posouvání zbývá jen pro opravdu úzká okna, kde by se dál zmenšovat
           nedalo. */}
       <div className="overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
-        <table className="w-full min-w-[620px] table-fixed border-collapse">
+        <table className={`w-full table-fixed border-collapse ${uzke ? '' : 'min-w-[620px]'}`}>
           <colgroup>
-            {sirkySloupcu(columns.map((c) => c.key)).map((sirka, i) => (
+            {sirkySloupcu(columns.map((c) => c.key), uzke ? VAHY_NA_TELEFONU : undefined).map((sirka, i) => (
               <col key={columns[i].key} style={{ width: sirka }} />
             ))}
             {canEditColumns && <col style={{ width: '44px' }} />}
