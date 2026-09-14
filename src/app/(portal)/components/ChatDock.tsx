@@ -1511,6 +1511,37 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     };
   }, [messages, openId, naKonec]);
 
+  /**
+   * Klepnutí na upozornění na telefonu otevře TU konverzaci, ze které přišlo
+   * (zadání 14. 9. 2026). Service worker pošle otevřené stránce zprávu — viz
+   * public/sw.js. Konverzace se otevře, až když je seznam načtený; do té doby
+   * čeká v `zadanaKonverzace`.
+   */
+  const [zadanaKonverzace, setZadanaKonverzace] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    function prijmi(e: MessageEvent) {
+      const data = e.data as { typ?: string; konverzace?: string } | null;
+      if (!data || data.typ !== 'otevri-konverzaci' || typeof data.konverzace !== 'string') return;
+      setZadanaKonverzace(data.konverzace);
+      otevriDok('chat');
+    }
+    navigator.serviceWorker.addEventListener('message', prijmi);
+    return () => navigator.serviceWorker.removeEventListener('message', prijmi);
+  }, [otevriDok]);
+
+  useEffect(() => {
+    if (!zadanaKonverzace) return;
+    const c = conversations.find((x) => x.id === zadanaKonverzace);
+    // Seznam se teprve nacita - pockame si na nej, zadani nikam neutece.
+    if (!c) return;
+    setTab(c.kind);
+    setVlaknoId(null);
+    setOpenId(c.id);
+    setZadanaKonverzace(null);
+  }, [zadanaKonverzace, conversations]);
+
   // Poslední otevřená konverzace si pamatuje sama sebe...
   useEffect(() => {
     if (!openId) return;

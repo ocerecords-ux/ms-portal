@@ -48,17 +48,50 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(titulek, nastaveni));
 });
 
+/**
+ * Klepnutí na upozornění vede DO TÉ KONVERZACE, ze které přišlo
+ * (zadání 14. 9. 2026: „když mi přijde na mobilu notifikace a kliknu na ni,
+ * potřeboval bych se dostat rovnou na konverzaci té notifikace").
+ *
+ * Dřív se jen přepnulo do už otevřeného okna chatu - a to ukazovalo tu
+ * konverzaci, ve které člověk zrovna byl. Na telefonu, kde je aplikace
+ * otevřená pořád, tím upozornění skončilo vždycky jinde, než kam volalo.
+ *
+ * Otevřenému chatu se proto pošle zpráva, kterou konverzaci ukázat — otevře
+ * ji sám a stránka se nenačítá znovu, takže rozepsaná zpráva zůstane
+ * rozepsaná. Když je okno jinde v portálu, přejde na adresu z upozornění.
+ */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const odkaz = (event.notification.data && event.notification.data.odkaz) || '/chat';
+  const konverzace = (() => {
+    const kde = odkaz.indexOf('konverzace=');
+    if (kde < 0) return null;
+    return decodeURIComponent(odkaz.slice(kde + 'konverzace='.length).split('&')[0]) || null;
+  })();
 
-  // Když už je chat někde otevřený, přepneme se do něj místo otevírání
-  // dalšího okna - jinak by po pár upozorněních měl člověk plochu plnou
-  // stejných oken.
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((okna) => {
-      for (const okno of okna) {
-        if (okno.url.includes('/chat') && 'focus' in okno) return okno.focus();
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (okna) => {
+      const okno = okna.find((o) => o.url.includes('/chat')) || okna[0];
+      if (!okno) return self.clients.openWindow(odkaz);
+
+      if ('focus' in okno) await okno.focus();
+
+      // Chat uz je otevreny: staci mu rict, kterou konverzaci ukazat. Stranka
+      // se nenacita znovu, takze rozepsana zprava zustane rozepsana.
+      if (konverzace && okno.url.includes('/chat') && 'postMessage' in okno) {
+        okno.postMessage({ typ: 'otevri-konverzaci', konverzace });
+        return undefined;
+      }
+
+      // Okno je jinde v portalu - prejdeme na adresu z upozorneni.
+      if ('navigate' in okno) {
+        try {
+          await okno.navigate(odkaz);
+          return undefined;
+        } catch (err) {
+          // Starsi prohlizec navigate neumi - otevreme rovnou nove okno.
+        }
       }
       return self.clients.openWindow(odkaz);
     }),
