@@ -200,6 +200,12 @@ model User {
   /// preklikne se to na karte uzivatele.
   dostavaDotoceno Boolean @default(false)
 
+  /// Dostava mail o nove objednavce od klienta (zadani 14. 9. 2026: "jednotlive
+  /// adresy uzivatelu tymu, ktere si nastavim na webu v portalu").
+  /// Stejny princip jako dostavaDotoceno - kdo objednavky hlida, se prekliká
+  /// na karte uzivatele, nesedi to v promenne prostredi.
+  dostavaObjednavky Boolean @default(false)
+
   /// U kterych projektu je tenhle herec dotoceny.
   dotoceniHerce HerecDotocen[] @relation("DotocenyHerec")
 

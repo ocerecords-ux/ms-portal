@@ -115,9 +115,22 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // 2) E-mail na objednavky@mediaspace.cz - best effort, nezablokuje objednavku.
+  // 2) E-mail timu Mediaspace - best effort, nezablokuje objednavku.
+  //
+  //    Komu presne, se od 14. 9. 2026 ridi zaskrtnutkem "Dostava objednavky"
+  //    na karte uzivatele (zadani: "jednotlive adresy uzivatelu tymu, ktere
+  //    si nastavim na webu v portalu"), ne promennou prostredi. Nacita se to
+  //    az tady a ne v e-mailove vrstve, aby lib/email.ts nesahal do databaze.
   try {
+    const prijemci = (
+      await prisma.user.findMany({
+        where: { active: true, dostavaObjednavky: true },
+        select: { email: true },
+      })
+    ).map((u) => u.email);
+
     const result = await sendOrderNotificationEmail({
+      prijemci,
       companyId,
       companyName: company.name,
       title,

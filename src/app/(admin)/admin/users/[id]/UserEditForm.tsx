@@ -26,6 +26,7 @@ type EditableUser = {
   manazerProjektu: boolean;
   prijimaDotazyKlientu: boolean;
   dostavaDotoceno: boolean;
+  dostavaObjednavky: boolean;
   studioLocations: string[];
   birthNumber: string | null;
   ic: string | null;
@@ -58,6 +59,7 @@ export function UserEditForm({
   const [manazerProjektu, setManazerProjektu] = useState(user.manazerProjektu);
   const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
+  const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
   const [active, setActive] = useState(user.active);
   // Tvrde smazani (zadani 10. 9. 2026) - jen kdyz na uctu nic nevisi.
@@ -112,6 +114,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
+        if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
         if (photo) fd.set('photo', photo);
         else if (removePhoto) fd.set('removePhoto', 'true');
       }
@@ -264,6 +267,29 @@ export function UserEditForm({
                 Dostává zprávy o dotočení
                 <span className="block text-xs text-muted">
                   mail pokaždé, když se u projektu odškrtne dotočený herec
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Nova objednavka od klienta (zadani 14. 9. 2026: "jednotlive adresy
+            uzivatelu tymu, ktere si nastavim na webu v portalu"). Driv chodila
+            objednavka na jednu spolecnou schranku z promenne prostredi, ktera
+            se nedala z portalu ani precist, natoz zmenit. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dostavaObjednavky}
+                onChange={(e) => setDostavaObjednavky(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Dostává objednávky
+                <span className="block text-xs text-muted">
+                  mail pokaždé, když klient odešle objednávku; klient tuhle adresu nevidí
                 </span>
               </span>
             </label>

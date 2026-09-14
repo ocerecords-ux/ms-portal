@@ -36,16 +36,26 @@ function getTransport() {
  *   faktura → odpověď jde účtárně
  *   ostatní → odpověď jde do společné schránky
  *
- * Adresa je jen jedna (SMTP_FROM) a mění se na jednom místě.
+ * Adresa je jen jedna a mění se na jednom místě - tady.
  */
 
-/** Holá adresa z hodnoty typu `Něco <nekdo@kde.cz>`. */
-function samotnaAdresa(odesilatel: string): string {
-  return (odesilatel.match(/<([^>]+)>/)?.[1] || odesilatel).trim();
-}
+/**
+ * Adresa, ze které portál posílá VŠECHNU poštu (zadání 14. 9. 2026: „chci, aby
+ * to šlo normálně z adresy mediaspace@msportal.cz").
+ *
+ * SCHVÁLNĚ V KÓDU, NE V PROMĚNNÉ PROSTŘEDÍ. Do 14. 9. 2026 o viditelné adrese
+ * rozhodovalo `SMTP_FROM` na Vercelu. Ta proměnná je tam ale citlivá (nejde
+ * přečíst) a zůstala v ní stará adresa `objednavka-audioknihy@msportal.cz`,
+ * takže se rozhodnutí z 13. 9. („odesílatel je vždycky Mediaspace") v poště
+ * vůbec neprojevilo a nikdo to nemohl ověřit. Přihlašovací údaje k poště
+ * zůstávají v prostředí (SMTP_HOST / SMTP_USER / SMTP_PASS); tohle je jen
+ * hlavička „Od", a ta patří do kódu, kde je vidět.
+ */
+const ADRESA_ODESILATELE = 'mediaspace@msportal.cz';
+const ODESILATEL = `Mediaspace <${ADRESA_ODESILATELE}>`;
 
 function adresaOdesilatele(): string {
-  return samotnaAdresa(process.env.SMTP_FROM || 'Mediaspace <mediaspace@msportal.cz>');
+  return ADRESA_ODESILATELE;
 }
 
 /**
@@ -100,7 +110,7 @@ export async function stavPosty(): Promise<{
 }> {
   const host = process.env.SMTP_HOST || null;
   const port = Number(process.env.SMTP_PORT) || 587;
-  const odesilatel = process.env.SMTP_FROM || 'Mediaspace <mediaspace@msportal.cz>';
+  const odesilatel = ODESILATEL;
   const transport = getTransport();
   if (!transport) {
     return { nastaveno: false, host, port, odesilatel, spojeni: 'nenastaveno', chyba: null, odpovedUctarna: ODPOVED_UCTARNA };
@@ -141,6 +151,12 @@ function escapeHtml(value: string): string {
 }
 
 type OrderEmailInput = {
+  /**
+   * Komu zpráva jde - adresy členů týmu, kteří mají na kartě uživatele
+   * zaškrtnuté „Dostává objednávky" (zadání 14. 9. 2026). Prázdné pole
+   * znamená, že to zatím nikdo nemá zaškrtnuté; viz sendOrderNotificationEmail.
+   */
+  prijemci: string[];
   companyId: string;
   companyName: string;
   title: string;
@@ -280,12 +296,27 @@ function buildInternalNotificationText(input: OrderEmailInput): string {
   ].join('\n');
 }
 
-// POZOR: v teto fazi jde tento e-mail VYHRADNE interne timu Mediaspace
-// (viz ORDER_NOTIFICATION_EMAIL) - klientska potvrzovaci sablona je
-// navrzena (schvaleno 4. 9. 2026), ale zamerne jeste NENI zapojena.
+/**
+ * Zpráva o nové objednávce týmu Mediaspace. KLIENT JI NIKDY NEDOSTANE - jde
+ * výhradně na adresy z `input.prijemci`.
+ *
+ * Adresáti se od 14. 9. 2026 nastavují v portálu na kartě uživatele
+ * („Dostává objednávky"), ne proměnnou prostředí. Společná schránka
+ * `ORDER_NOTIFICATION_EMAIL` zůstává jen jako ZÁCHRANNÁ SÍŤ pro případ, že to
+ * nikdo zaškrtnuté nemá - objednávka je obchodní případ a nesmí skončit tak,
+ * že se o ní nikdo nedozví. Že se sáhlo po záloze, se pozná z logu.
+ */
 export async function sendOrderNotificationEmail(input: OrderEmailInput) {
   const transport = getTransport();
-  const to = process.env.ORDER_NOTIFICATION_EMAIL || 'objednavky@mediaspace.cz';
+  const nastaveni = input.prijemci.map((a) => a.trim()).filter(Boolean);
+  const zaloha = process.env.ORDER_NOTIFICATION_EMAIL?.trim() || 'objednavky@mediaspace.cz';
+  if (nastaveni.length === 0) {
+    console.warn(
+      `Objednávka „${input.title}": nikdo nemá zaškrtnuté „Dostává objednávky", ` +
+        'posílám na záložní schránku.',
+    );
+  }
+  const to = nastaveni.length > 0 ? nastaveni : [zaloha];
 
   if (!transport) {
     // SMTP zatim neni nakonfigurovane - objednavka se presto ulozi,
@@ -301,7 +332,7 @@ export async function sendOrderNotificationEmail(input: OrderEmailInput) {
     html: buildInternalNotificationHtml(input),
   });
 
-  return { sent: true as const };
+  return { sent: true as const, komu: to };
 }
 
 // ---------------------------------------------------------------------------
@@ -547,7 +578,7 @@ export async function sendInviteEmail(input: InviteEmailInput) {
 // potvrzení objednávky pro klienta ve chvíli, kdy ji odešle.")
 // ---------------------------------------------------------------------------
 // Chodi na e-mail uzivatele, ktery objednavku odeslal, hned po jejim ulozeni.
-// Interni notifikace na objednavky@mediaspace.cz zustava beze zmeny.
+// Interni notifikace timu zustava beze zmeny (viz sendOrderNotificationEmail).
 
 type OrderConfirmationInput = {
   to: string;
@@ -624,7 +655,7 @@ export function buildOrderConfirmationHtml(input: OrderConfirmationInput): strin
         : ''
     }
     <p class="small">Tento e-mail je automatické potvrzení z MS Portalu. Když něco nesedí, odpovězte nám nebo napište na
-       <a href="mailto:objednavky@mediaspace.cz" style="color:#6B2AF0;text-decoration:none;">objednavky@mediaspace.cz</a>.</p>
+       <a href="mailto:${ADRESA_ODESILATELE}" style="color:#6B2AF0;text-decoration:none;">${ADRESA_ODESILATELE}</a>.</p>
   `,
   });
 }
@@ -636,9 +667,12 @@ export async function sendOrderConfirmationEmail(input: OrderConfirmationInput) 
   }
 
   await transport.sendMail({
+    // ADRESY TYMU SEM NESMI (zadani 14. 9. 2026: „klient nevidi adresy tymu").
+    // Do 14. 9. 2026 tu v Reply-To svitila interni schranka na objednavky;
+    // ted odpoved jde zpatky na mediaspace@msportal.cz, tedy tam, odkud
+    // zprava prisla. Kdo ji uvnitr cte, je nase vec, ne klientova.
     ...odesilatelMediaspace(),
     to: input.to,
-    replyTo: process.env.ORDER_NOTIFICATION_EMAIL || 'objednavky@mediaspace.cz',
     subject: `Potvrzení objednávky – ${input.title}`,
     text: [
       pozdrav(input.name),

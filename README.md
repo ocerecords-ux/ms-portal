@@ -9,7 +9,7 @@ Veřejný web Mediaspace zůstává na Wixu — tohle je samostatná aplikace pr
 - **Bezpečná izolace dat mezi klienty** — `companyId` se vždy bere ze session na serveru, nikdy z URL/parametrů. Viz `src/app/(portal)/layout.tsx` a každou stránku v `src/app/(portal)/`.
 - Design systém odpovídající vzhledu **msportal.cz** (barvy, fonty — viz níže).
 - Obrazovka **Moje projekty**.
-- Formulář **Objednávka audioknihy** s automatickým výpočtem předběžné ceny (počet normostran × sazba klienta), uložením objednávky, e-mailem na `objednavky@mediaspace.cz` a založením projektu v Caflou (název, firma/štítek, počet normostran).
+- Formulář **Objednávka audioknihy** s automatickým výpočtem předběžné ceny (počet normostran × sazba klienta), uložením objednávky, e-mailem členům týmu, kteří mají na kartě uživatele zaškrtnuté „Dostává objednávky", a založením projektu (název, firma/štítek, počet normostran).
 - Obrazovka **Nahrávky** — odkaz na Google Drive složku klienta.
 - **Administrace** (`/admin`, jen pro účty s rolí ADMIN) — zakládání a úprava klientů (název, sazba za normostranu, Caflou štítek, odkaz na Drive složku) a zakládání přihlašovacích účtů klientům. Odkaz na ni najdete po přihlášení jako admin v menu vpravo nahoře.
 
@@ -62,7 +62,8 @@ Pro pokročilejší přímý zásah do databáze (výjimečně) lze použít i `
 - `NEXTAUTH_SECRET` — libovolný náhodný dlouhý řetězec.
 - `NEXTAUTH_URL` — `https://www.msportal.cz`.
 - `S3_*` — úložiště příloh (AWS S3 nebo Cloudflare R2 — R2 má zdarma tarif).
-- `SMTP_*` — pro odesílání objednávek na `objednavky@mediaspace.cz`.
+- `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` — přihlášení k poště. Viditelná adresa odesílatele je napevno `Mediaspace <mediaspace@msportal.cz>` v `src/lib/email.ts` (`SMTP_FROM` se od 14. 9. 2026 nepoužívá).
+- `ORDER_NOTIFICATION_EMAIL` — záložní schránka pro objednávky, když nikdo v týmu nemá zaškrtnuté „Dostává objednávky".
 - `CAFLOU_API_BASE_URL` / `CAFLOU_API_KEY` — z vašeho Caflou účtu (Nastavení → API).
 - `IMAP_*` — schránka s doklady, viz níže.
 
