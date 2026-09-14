@@ -36,6 +36,7 @@ const schema = z.discriminatedUnion('type', [
     caflouCompanyId: z.string().trim().optional(),
     driveFolderUrl: z.string().trim().optional(),
     dealsAudiobooks: z.boolean().optional(),
+    audioknihyNaKlic: z.boolean().optional(),
     dealsAds: z.boolean().optional(),
   }),
   z.object({
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
             // Chybi-li v pozadavku, zustava vychozi hodnota ze schema.prisma
             // (dealsAudiobooks true, dealsAds false).
             ...(data.dealsAudiobooks !== undefined ? { dealsAudiobooks: data.dealsAudiobooks } : {}),
+              ...(data.audioknihyNaKlic !== undefined ? { audioknihyNaKlic: data.audioknihyNaKlic } : {}),
             ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
           }
         : {

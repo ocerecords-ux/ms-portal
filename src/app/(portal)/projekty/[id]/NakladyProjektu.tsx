@@ -18,11 +18,16 @@ export function NakladyProjektu({
   caflouProjectId,
   pocatecni,
   onZmena,
+  nadpis = 'Náklady po položkách',
+  napoveda = 'Bez DPH. Honoráře, studio, hudba — co portál sám neví.',
 }: {
   caflouProjectId: string;
   pocatecni: NakladovaPolozka[];
   /** Součet nahoru do rozpočtu, ať se čerpání přepočítá hned. */
   onZmena?: (soucet: number) => void;
+  /** U audioknihy na klíč se tomu říká jinak - viz ProjectBudget. */
+  nadpis?: string;
+  napoveda?: string;
 }) {
   const [polozky, setPolozky] = useState<NakladovaPolozka[]>(pocatecni);
   const [stav, setStav] = useState<'nic' | 'uklada' | 'ulozeno' | 'chyba'>('nic');
@@ -63,7 +68,7 @@ export function NakladyProjektu({
   return (
     <div className="border-t border-line pt-4">
       <div className="flex items-baseline justify-between gap-3 mb-2">
-        <span className="text-xs font-heading text-muted uppercase tracking-wide">Náklady po položkách</span>
+        <span className="text-xs font-heading text-muted uppercase tracking-wide">{nadpis}</span>
         <span className="text-xs font-heading text-muted">
           {stav === 'uklada' ? 'Ukládám…' : stav === 'ulozeno' ? '✓ Uloženo' : stav === 'chyba' ? 'Neuložilo se' : ''}
         </span>
@@ -113,9 +118,7 @@ export function NakladyProjektu({
           </span>
         )}
       </div>
-      <p className="text-xs font-body text-muted mt-1.5 m-0">
-        Bez DPH. Honoráře, studio, hudba — co portál sám neví.
-      </p>
+      <p className="text-xs font-body text-muted mt-1.5 m-0">{napoveda}</p>
     </div>
   );
 }

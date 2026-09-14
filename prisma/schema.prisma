@@ -85,6 +85,15 @@ model Company {
   dealsAudiobooks Boolean  @default(true)
   dealsAds        Boolean  @default(false)
 
+  /// Audioknihy NA KLIC (zadani 14. 9. 2026). U techto firem neplatime jen
+  /// nataceni a strih - platime i herce a obcas jednorazove veci jako
+  /// preposlech nebo upravu textu.
+  ///
+  /// Rozpocet na vyrobu (nataceni + strih + bonus) tim ZUSTAVA NEDOTCENY;
+  /// tyhle polozky se vedou vedle nej a scitaji se az v celkovem rozpoctu,
+  /// kde je videt zisk z knihy. Viz ProjectBudget.tsx.
+  audioknihyNaKlic Boolean @default(false)
+
   // --- Dodavatel (type = DODAVATEL) - fakturacni/kontaktni udaje, zadani 5. 9. 2026 ---
   contactName    String?   // kontaktni osoba
   /// Posílat faktury i klientovi projektu (zadání 13. 9. 2026). Na kontaktní

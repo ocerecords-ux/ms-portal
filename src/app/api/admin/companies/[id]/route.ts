@@ -35,6 +35,7 @@ const schema = z.object({
   caflouCompanyId: z.string().trim().optional(),
   driveFolderUrl: z.string().trim().optional(),
   dealsAudiobooks: z.boolean().optional(),
+  audioknihyNaKlic: z.boolean().optional(),
   dealsAds: z.boolean().optional(),
   active: z.boolean().optional(),
 });
@@ -81,6 +82,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               caflouCompanyId: data.caflouCompanyId || null,
               driveFolderUrl: data.driveFolderUrl || null,
               ...(data.dealsAudiobooks !== undefined ? { dealsAudiobooks: data.dealsAudiobooks } : {}),
+              ...(data.audioknihyNaKlic !== undefined ? { audioknihyNaKlic: data.audioknihyNaKlic } : {}),
               ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
             }
           : {}),

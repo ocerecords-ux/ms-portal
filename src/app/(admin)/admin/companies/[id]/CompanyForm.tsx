@@ -49,6 +49,15 @@ export function CompanyForm({ company }: { company: Company }) {
   const [driveUrl, setDriveUrl] = useState(company.driveFolderUrl ?? '');
   const [dealsAudiobooks, setDealsAudiobooks] = useState(company.dealsAudiobooks);
   const [dealsAds, setDealsAds] = useState(company.dealsAds);
+  /**
+   * Audioknihy na klíč (zadání 14. 9. 2026: „jsou firmy, pro které děláme
+   * audioknihy na klíč a ještě k tomu platíme herce a někdy tam zahrnujeme
+   * jednorázové položky jako přeposlech a úpravu textu").
+   *
+   * Zaškrtnutím se v rozpočtu projektu otevřou další položky a celkový
+   * rozpočet se ziskem z knihy. Rozpočtu na výrobu se to nedotkne.
+   */
+  const [naKlic, setNaKlic] = useState(company.audioknihyNaKlic ?? false);
   // Vyrazeni misto mazani (zadani 10. 9. 2026): na firme visi doklady
   // a projekty, ktere musi zustat citelne.
   const [aktivni, setAktivni] = useState(company.active);
@@ -113,7 +122,14 @@ export function CompanyForm({ company }: { company: Company }) {
           contactPhone,
           fakturyKlientovi,
           ...(isClient
-            ? { ratePerPage: dealsAudiobooks ? rate : '', caflouCompanyId, driveFolderUrl: driveUrl, dealsAudiobooks, dealsAds }
+            ? {
+                ratePerPage: dealsAudiobooks ? rate : '',
+                caflouCompanyId,
+                driveFolderUrl: driveUrl,
+                dealsAudiobooks,
+                dealsAds,
+                audioknihyNaKlic: dealsAudiobooks ? naKlic : false,
+              }
             : {}),
         }),
       });
@@ -300,6 +316,20 @@ export function CompanyForm({ company }: { company: Company }) {
               </label>
             </div>
           </AdminField>
+
+          {/* Na klic = platime i herce a jednorazove veci. Ukazuje se jen
+              u audioknih, u reklamy ten pojem nedava smysl. */}
+          {dealsAudiobooks && (
+            <AdminField
+              label="Audioknihy na klíč"
+              hint="platíme i herce a jednorázové položky (přeposlech, úprava textu) — v rozpočtu projektu pak přibude celkový rozpočet se ziskem z knihy"
+            >
+              <label className="flex items-center gap-2 text-sm font-heading text-ink">
+                <input type="checkbox" checked={naKlic} onChange={(e) => setNaKlic(e.target.checked)} />
+                Děláme na klíč
+              </label>
+            </AdminField>
+          )}
 
           {/* Sazba za normostranu dava smysl jen u audioknih - u reklamnich
               klientu se cena bude pocitat kalkulackou nad Cenikem. */}

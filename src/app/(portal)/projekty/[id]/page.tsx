@@ -175,12 +175,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const company = meta?.companyId
     ? await prisma.company.findUnique({
         where: { id: meta.companyId },
-        select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true },
+        select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true, audioknihyNaKlic: true },
       })
     : zSeznamu?.caflouCompanyId
       ? await prisma.company.findFirst({
           where: { caflouCompanyId: zSeznamu.caflouCompanyId },
-          select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true },
+          select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true, audioknihyNaKlic: true },
         })
       : null;
 
@@ -406,6 +406,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       hoursLogged={hoursLogged}
       caflouProjectId={caflouProjectId}
       pocatecniPolozky={nakladovePolozky}
+      naKlic={company?.audioknihyNaKlic === true}
+      cenaZDokladu={cenaZakazky}
+      zdrojCeny={zdrojCeny}
     />
   ) : (
     <ProjectBudgetZakazka
