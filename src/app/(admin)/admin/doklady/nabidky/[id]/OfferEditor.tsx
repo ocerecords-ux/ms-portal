@@ -157,6 +157,15 @@ export function OfferEditor({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  /**
+   * RUCNI SCHVALENI (zadani 14. 9. 2026: „potrebuji pridat moznost rucne
+   * schvalit nabidku"). Nabidky se casto odsouhlasi telefonem nebo mailem
+   * a odkaz s tokenem uz nikdo nepouzije - stav pak v portalu visi na
+   * „Odeslana", i kdyz je davno domluveno.
+   */
+  const [schvalovani, setSchvalovani] = useState(false);
+  const [kdoSchvalil, setKdoSchvalil] = useState('');
+  const [schvaluji, setSchvaluji] = useState(false);
 
   const totals = useMemo(
     () => computeTotals(items, { slevaProcent: form.slevaProcent, slevaMinor: form.slevaMinor, slevaPopis: form.slevaPopis }),
@@ -254,6 +263,54 @@ export function OfferEditor({
       setError('Odeslání se nezdařilo.');
     } finally {
       setSending(false);
+    }
+  }
+
+  async function schvalitRucne() {
+    // Nejdriv ulozit: schvalena nabidka je zamcena, takze rozdelane zmeny
+    // by uz do ni nesly dostat.
+    const saved = await save();
+    if (!saved) return;
+    setSchvaluji(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/offers/${offer.id}/schvaleni`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jmeno: kdoSchvalil.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Schválení se nepodařilo uložit.');
+        return;
+      }
+      setSchvalovani(false);
+      setKdoSchvalil('');
+      setInfo('Nabídka je označená jako schválená.');
+      router.refresh();
+    } catch {
+      setError('Schválení se nepodařilo uložit.');
+    } finally {
+      setSchvaluji(false);
+    }
+  }
+
+  async function zrusitSchvaleni() {
+    setSchvaluji(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/offers/${offer.id}/schvaleni`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Schválení se nepodařilo zrušit.');
+        return;
+      }
+      setInfo('Schválení zrušeno, nabídku jde zase upravit.');
+      router.refresh();
+    } catch {
+      setError('Schválení se nepodařilo zrušit.');
+    } finally {
+      setSchvaluji(false);
     }
   }
 
@@ -362,6 +419,22 @@ export function OfferEditor({
           )}
           {!locked && (
             <>
+              {/* Rucni schvaleni (zadani 14. 9. 2026). Nabizi se i u odmitnute
+                  nabidky: klient obcas klikne vedle nebo si to rozmysli
+                  a bez teto cesty by uz nebylo jak stav opravit. */}
+              {!jesteNeulozena && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSchvalovani((v) => !v);
+                    setError(null);
+                  }}
+                  disabled={saving || sending || schvaluji}
+                  className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60 whitespace-nowrap"
+                >
+                  Schválit ručně
+                </button>
+              )}
               {!jesteNeulozena && (
               <button
                 type="button"
@@ -385,6 +458,48 @@ export function OfferEditor({
         </div>
       </div>
 
+      {/* Rucni schvaleni: kdo na strane klienta souhlasil (zadani 14. 9. 2026).
+          Jmeno je nepovinne, ale uklada se do stejneho pole jako u schvaleni
+          odkazem, takze se pak tiskne a zobrazuje uplne stejne. */}
+      {schvalovani && !locked && (
+        <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
+          <p className="text-sm text-ink m-0">
+            Označit nabídku jako schválenou — pro případy, kdy ji klient odsouhlasil telefonem nebo mailem.
+            Schválenou nabídku už nejde měnit.
+          </p>
+          <div className="flex items-end gap-2 flex-wrap">
+            <label className="flex flex-col gap-1 flex-1 min-w-[240px]">
+              <span className="text-[10px] font-heading text-muted uppercase tracking-wide">
+                Kdo na straně klienta schválil (nepovinné)
+              </span>
+              <input
+                type="text"
+                value={kdoSchvalil}
+                onChange={(e) => setKdoSchvalil(e.target.value)}
+                placeholder="např. Jan Novák — potvrzeno telefonicky"
+                className={inputClass}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={schvalitRucne}
+              disabled={saving || sending || schvaluji}
+              className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60 whitespace-nowrap"
+            >
+              {schvaluji ? 'Ukládám…' : 'Schválit nabídku'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSchvalovani(false)}
+              disabled={schvaluji}
+              className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
+            >
+              Zpět
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* DVA SLOUPCE (zadani 10. 9. 2026): vlevo udaje, vpravo hotovy doklad. */}
       {/* Dokument ma vic mista nez formular (zadani 10. 9. 2026: "nahled
           jeste trosku zvetsi") - do pulky sirky uz se vic vejit nemuze,
@@ -396,9 +511,20 @@ export function OfferEditor({
       {locked && (
         <div className="bg-okTint border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <p className="text-sm text-ink m-0">
-            Nabídku klient schválil, takže už se nedá měnit — zůstává přesně v podobě, kterou odsouhlasil.
+            Nabídka je schválená, takže už se nedá měnit — zůstává přesně v podobě, kterou klient odsouhlasil.
             Fakturu z ní vystavíte tlačítkem nahoře.
           </p>
+          {/* Zpetne zruseni schvaleni (zadani 14. 9. 2026) - rucne se da
+              kliknout vedle a bez teto cesty by zamcenou nabidku uz nikdo
+              neopravil. */}
+          <button
+            type="button"
+            onClick={zrusitSchvaleni}
+            disabled={schvaluji}
+            className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-surface transition-colors disabled:opacity-60 whitespace-nowrap"
+          >
+            {schvaluji ? 'Ruším…' : 'Zrušit schválení'}
+          </button>
         </div>
       )}
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
