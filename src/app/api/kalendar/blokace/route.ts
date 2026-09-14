@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
               projectName: d.projectName,
               actorName: kind === 'NATACENI' ? d.actorName : null,
               zvukarName: d.zvukarName,
+              kind,
             })
           : (d.title ?? ''),
         note: d.note || null,

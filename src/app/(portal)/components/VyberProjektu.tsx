@@ -23,6 +23,13 @@ export type ProjektKVyberu = {
   id: string;
   label: string;
   dokonceny?: boolean;
+  /**
+   * Čistý název bez firmy. V nabídce se pořád ukazuje `label` i s firmou -
+   * dva projekty se stejným názvem by jinak nešly rozeznat - ale kdo potřebuje
+   * jen název, sáhne sem. Používá ho zápis do kalendáře (zadání 14. 9. 2026:
+   * „firma je tady zbytečná").
+   */
+  nazev?: string;
 };
 
 /** Porovnávací tvar - bez diakritiky, malými písmeny. */

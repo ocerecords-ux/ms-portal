@@ -139,7 +139,10 @@ export default async function KalendarPage({
             projects
               .map((p) => ({
                 id: String(p.id),
+                // V nabídce firma zůstává (odliší dva stejné názvy), do popisku
+                // události jde jen `nazev` - viz popisUdalosti.
                 label: p.companyName ? `${p.name} — ${p.companyName}` : p.name,
+                nazev: p.name,
                 dokonceny: p.finished,
               }))
               .sort((a, b) => a.label.localeCompare(b.label, 'cs')),

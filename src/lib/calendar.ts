@@ -121,16 +121,33 @@ export function jePraceVeStudiu(kind: string): boolean {
 /**
  * Popisek události do mřížky. Skládá se ze zapsaných polí, ne z ručně psaného
  * názvu - ať v kalendáři vypadají všechny záznamy stejně.
+ *
+ * VZOR (zadání 14. 9. 2026):
+ *
+ *     Vlakař - Jiří Miroslav Valůšek
+ *     ZVUKAŘ: Richard Hanula
+ *
+ * První řádek říká, na čem a s kým se pracuje, druhý kdo to točí. FIRMA SEM
+ * NEPATŘÍ („firma je tady zbytečná") - v kalendáři jde o to, kdo kdy stojí
+ * ve studiu, ne čí je to zakázka; ta se pozná z projektu.
+ *
+ * U střihu není herec, takže na jeho místě stojí druh práce - jinak by první
+ * řádek končil pomlčkou a nebylo by poznat, jestli se točí nebo stříhá.
  */
 export function popisUdalosti(casti: {
   projectName?: string | null;
   actorName?: string | null;
   zvukarName?: string | null;
+  kind?: string | null;
 }): string {
-  return [casti.projectName, casti.actorName, casti.zvukarName]
-    .map((x) => (x ?? '').trim())
-    .filter(Boolean)
-    .join(' · ');
+  const projekt = (casti.projectName ?? '').trim();
+  const herec = (casti.actorName ?? '').trim();
+  const zvukar = (casti.zvukarName ?? '').trim();
+
+  const vpravo = herec || (casti.kind === 'STRIH' ? 'střih' : '');
+  const prvni = [projekt, vpravo].filter(Boolean).join(' - ');
+  const druhy = zvukar ? `ZVUKAŘ: ${zvukar}` : '';
+  return [prvni, druhy].filter(Boolean).join('\n');
 }
 
 // ---------------------------------------------------------------------------

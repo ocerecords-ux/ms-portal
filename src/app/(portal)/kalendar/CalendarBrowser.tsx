@@ -25,7 +25,7 @@ import {
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 
 /** Položka rozbalovacího seznamu lidí a projektů. */
-export type Volba = { id: string; label: string; dokonceny?: boolean };
+export type Volba = { id: string; label: string; dokonceny?: boolean; nazev?: string };
 
 export type CalendarDay = {
   key: string;
@@ -462,11 +462,27 @@ function MrizkaPohled({
                         }}
                         className="absolute left-0.5 right-0.5 rounded border px-1.5 py-0.5 text-left overflow-hidden"
                       >
-                        <span className="block text-[10px] font-heading font-semibold leading-tight truncate">
-                          {e.title}
-                        </span>
-                        {pozice.height > 30 && (
-                          <span className="block text-[9px] font-body opacity-80 tabular-nums truncate">
+                        {/* Popisek je dvouřádkový (zadání 14. 9. 2026):
+                            projekt - herec, pod tím ZVUKAŘ: jméno. Druhý řádek
+                            se ukáže, jen když je na něj v bloku místo. */}
+                        {e.title.split('\n').map((radek, i) =>
+                          i === 0 ? (
+                            <span
+                              key={i}
+                              className="block text-[10px] font-heading font-semibold leading-tight truncate"
+                            >
+                              {radek}
+                            </span>
+                          ) : (
+                            pozice.height > 30 && (
+                              <span key={i} className="block text-[9px] font-heading opacity-90 leading-tight truncate">
+                                {radek}
+                              </span>
+                            )
+                          ),
+                        )}
+                        {pozice.height > 44 && (
+                          <span className="block text-[9px] font-body opacity-70 tabular-nums truncate">
                             {minutesToTime(od)}–{minutesToTime(doo)} · {e.studioName}
                           </span>
                         )}
@@ -536,7 +552,8 @@ function MesicniPohled({
                     }}
                     className="rounded px-1.5 py-0.5 text-[10px] font-heading text-left truncate border"
                   >
-                    {e.title}
+                    {/* V měsíci je na řádek místo jen na to podstatné. */}
+                    {e.title.split('\n')[0]}
                   </button>
                 );
               })}
@@ -676,7 +693,8 @@ function UdalostForm({
           ...(jePrace
             ? {
                 caflouProjectId: projekt?.id ?? '',
-                projectName: projekt?.label ?? '',
+                // Bez firmy (zadání 14. 9. 2026: „firma je tady zbytečná").
+                projectName: projekt?.nazev ?? projekt?.label ?? '',
                 actorUserId: jeNataceni ? (herec?.id ?? '') : '',
                 actorName: jeNataceni ? (herec?.label ?? '') : '',
                 zvukarUserId: zvukar?.id ?? '',
@@ -912,7 +930,15 @@ function DetailUdalosti({
             <span className="text-xs font-heading text-muted uppercase tracking-wide">
               {stav} · {event.studioName}
             </span>
-            <h2 className="font-display text-xl text-ink m-0 mt-0.5">{event.title}</h2>
+            <h2 className="font-display text-xl text-ink m-0 mt-0.5">{event.title.split('\n')[0]}</h2>
+            {event.title
+              .split('\n')
+              .slice(1)
+              .map((radek, i) => (
+                <p key={i} className="text-sm font-heading text-muted m-0 mt-0.5">
+                  {radek}
+                </p>
+              ))}
           </div>
         </div>
         <button type="button" onClick={onClose} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
