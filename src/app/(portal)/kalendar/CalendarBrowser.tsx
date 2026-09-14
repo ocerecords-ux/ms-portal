@@ -18,8 +18,13 @@ import {
   minutesInZone,
   minutesToTime,
   zonedToUtc,
+  jePraceVeStudiu,
   type CalendarView,
 } from '@/lib/calendar';
+import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
+
+/** Položka rozbalovacího seznamu lidí a projektů. */
+export type Volba = { id: string; label: string; dokonceny?: boolean };
 
 export type CalendarDay = {
   key: string;
@@ -61,6 +66,9 @@ export function CalendarBrowser({
   days,
   events,
   canManage,
+  projekty,
+  herci,
+  zvukari,
 }: {
   studios: Studio[];
   selectedStudioIds: string[];
@@ -70,6 +78,10 @@ export function CalendarBrowser({
   days: CalendarDay[];
   events: CalendarEvent[];
   canManage: boolean;
+  /** Nabídka do ručně zapsané události (zadání 14. 9. 2026). */
+  projekty: Volba[];
+  herci: Volba[];
+  zvukari: Volba[];
 }) {
   const router = useRouter();
   const [filtrStavu, setFiltrStavu] = useState<string>('');
@@ -255,7 +267,7 @@ export function CalendarBrowser({
         </select>
         {canManage && view !== 'mesic' && (
           <span className="text-xs font-body text-muted ml-auto">
-            Dvojklikem do volného místa založíte blokaci.
+            Dvojklikem do volného místa zapíšete událost.
           </span>
         )}
       </div>
@@ -286,10 +298,13 @@ export function CalendarBrowser({
       )}
 
       {novaBlokace && (
-        <BlokaceForm
+        <UdalostForm
           studios={studios.filter((s) => selectedStudioIds.includes(s.id))}
           vychozi={novaBlokace}
           timezone={timezone}
+          projekty={projekty}
+          herci={herci}
+          zvukari={zvukari}
           onClose={() => setNovaBlokace(null)}
           onHotovo={() => {
             setNovaBlokace(null);
@@ -522,29 +537,64 @@ function MesicniPohled({
   );
 }
 
-/** Založení blokace z dvojkliku. */
-function BlokaceForm({
+/**
+ * Ručně zapsaná událost v kalendáři (zadání 14. 9. 2026: „když otevřu
+ * kalendář z hlavního panelu, tak chci přidat ručně událost, která bude
+ * obsahovat název projektu, herce (když to bude natáčení) nebo střih
+ * a jméno zvukaře").
+ *
+ * NENÍ TO NABÍDKA TERMÍNŮ. Plánování s hercem - tedy nabídka, ze které si
+ * herec vybírá - se pořád zakládá tlačítkem v detailu projektu a chodí o ní
+ * e-mail. Tohle je jen zápis do kalendáře: co se kdy ve studiu doopravdy
+ * děje. Do obsazenosti se počítá stejně jako blokace, takže se přes to
+ * nedá naplánovat nic jiného.
+ *
+ * Ostatní druhy (svátek, údržba, dovolená) zůstávají obyčejná blokace
+ * s popisem - projekt ani lidi u nich nedávají smysl.
+ */
+function UdalostForm({
   studios,
   vychozi,
   timezone,
+  projekty,
+  herci,
+  zvukari,
   onClose,
   onHotovo,
 }: {
   studios: Studio[];
   vychozi: { studioId: string; start: string; end: string };
   timezone: string;
+  projekty: Volba[];
+  herci: Volba[];
+  zvukari: Volba[];
   onClose: () => void;
   onHotovo: () => void;
 }) {
   const [studioId, setStudioId] = useState(vychozi.studioId);
   const [nazev, setNazev] = useState('');
-  const [druh, setDruh] = useState('INTERNAL');
-  const [hodin, setHodin] = useState(1);
+  // Kalendář se otevírá kvůli natáčení, ne kvůli údržbě - proto je předvybrané.
+  const [druh, setDruh] = useState('NATACENI');
+  const [hodin, setHodin] = useState(4);
+  const [projektId, setProjektId] = useState('');
+  const [herecId, setHerecId] = useState('');
+  const [zvukarId, setZvukarId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const jePrace = jePraceVeStudiu(druh);
+  const jeNataceni = druh === 'NATACENI';
+
   const start = new Date(vychozi.start);
   const konec = new Date(start.getTime() + hodin * 60 * 60 * 1000);
+
+  const projekt = projekty.find((p) => p.id === projektId);
+  const herec = herci.find((h) => h.id === herecId);
+  const zvukar = zvukari.find((z) => z.id === zvukarId);
+
+  const chybi = jePrace
+    ? !projekt || !zvukar || (jeNataceni && !herec)
+    : !nazev.trim();
 
   async function uloz() {
     setBusy(true);
@@ -558,17 +608,26 @@ function BlokaceForm({
           start: start.toISOString(),
           end: konec.toISOString(),
           kind: druh,
-          title: nazev,
+          ...(jePrace
+            ? {
+                caflouProjectId: projekt?.id ?? '',
+                projectName: projekt?.label ?? '',
+                actorUserId: jeNataceni ? (herec?.id ?? '') : '',
+                actorName: jeNataceni ? (herec?.label ?? '') : '',
+                zvukarUserId: zvukar?.id ?? '',
+                zvukarName: zvukar?.label ?? '',
+              }
+            : { title: nazev }),
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Blokaci se nepodařilo uložit.');
+        setError(data?.error || 'Událost se nepodařilo uložit.');
         return;
       }
       onHotovo();
     } catch {
-      setError('Blokaci se nepodařilo uložit.');
+      setError('Událost se nepodařilo uložit.');
     } finally {
       setBusy(false);
     }
@@ -581,7 +640,7 @@ function BlokaceForm({
     <div className="bg-surface rounded-card border-2 border-brand-purple shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nová blokace</h2>
+          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nová událost</h2>
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">
             {new Intl.DateTimeFormat('cs-CZ', {
               timeZone: timezone,
@@ -599,7 +658,17 @@ function BlokaceForm({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Druh</span>
+          <select value={druh} onChange={(e) => setDruh(e.target.value)} className={inputClass}>
+            {Object.entries(BLOCK_KIND_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Studio</span>
           <select value={studioId} onChange={(e) => setStudioId(e.target.value)} className={inputClass}>
@@ -621,16 +690,51 @@ function BlokaceForm({
             className={`${inputClass} tabular-nums`}
           />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Druh</span>
-          <select value={druh} onChange={(e) => setDruh(e.target.value)} className={inputClass}>
-            {Object.entries(BLOCK_KIND_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+      </div>
+
+      {jePrace ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <label className="flex flex-col gap-1.5 sm:col-span-1">
+            <span className="text-sm font-body text-ink">
+              Projekt <span className="text-danger">*</span>
+            </span>
+            {/* Stejné hledání psaním jako u výkazů - projektů jsou stovky. */}
+            <VyberProjektu projekty={projekty} hodnota={projektId} onZmena={setProjektId} />
+          </label>
+
+          {/* Herec jen u natáčení. U střihu žádný není a prázdné pole by tam
+              jen strašilo (zadání 14. 9. 2026). */}
+          {jeNataceni && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">
+                Herec <span className="text-danger">*</span>
+              </span>
+              <select value={herecId} onChange={(e) => setHerecId(e.target.value)} className={inputClass}>
+                <option value="">— vyberte herce —</option>
+                {herci.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">
+              Zvukař <span className="text-danger">*</span>
+            </span>
+            <select value={zvukarId} onChange={(e) => setZvukarId(e.target.value)} className={inputClass}>
+              <option value="">— vyberte zvukaře —</option>
+              {zvukari.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : (
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Popis</span>
           <input
@@ -641,22 +745,27 @@ function BlokaceForm({
             className={inputClass}
           />
         </label>
-      </div>
+      )}
 
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <button
           type="button"
           onClick={uloz}
-          disabled={busy || !nazev.trim()}
+          disabled={busy || chybi}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {busy ? 'Ukládám…' : 'Přidat blokaci'}
+          {busy ? 'Ukládám…' : 'Přidat do kalendáře'}
         </button>
         <button type="button" onClick={onClose} className="text-muted text-sm font-heading">
           Zrušit
         </button>
+        {jePrace && (
+          <span className="text-xs font-body text-muted">
+            Zápis do kalendáře. Nabídku termínů herci zakládáte tlačítkem v detailu projektu.
+          </span>
+        )}
       </div>
     </div>
   );

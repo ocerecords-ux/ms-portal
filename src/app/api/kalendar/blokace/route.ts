@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
 import { loadOccupancy } from '@/lib/calendarServer';
+import { jePraceVeStudiu, popisUdalosti } from '@/lib/calendar';
 
 /**
  * Blokace založená přímo z kalendáře dvojklikem (zprava uzivatele 9. 9. 2026:
@@ -17,9 +18,19 @@ const schema = z.object({
   studioId: z.string().trim().min(1),
   start: z.string().trim().min(8),
   end: z.string().trim().min(8),
-  kind: z.enum(['HOLIDAY', 'VACATION', 'MAINTENANCE', 'INTERNAL', 'OTHER']).optional(),
-  title: z.string().trim().min(1, 'Vyplňte, čeho se blokace týká.').max(160),
+  kind: z
+    .enum(['NATACENI', 'STRIH', 'HOLIDAY', 'VACATION', 'MAINTENANCE', 'INTERNAL', 'OTHER'])
+    .optional(),
+  // U natáčení a střihu se popis skládá ze zapsaných polí, takže sem nechodí.
+  title: z.string().trim().max(160).optional(),
   note: z.string().trim().max(1000).optional(),
+  // Ručně zapsaná událost (zadání 14. 9. 2026).
+  caflouProjectId: z.string().trim().max(100).optional(),
+  projectName: z.string().trim().max(300).optional(),
+  actorUserId: z.string().trim().max(100).optional(),
+  actorName: z.string().trim().max(200).optional(),
+  zvukarUserId: z.string().trim().max(100).optional(),
+  zvukarName: z.string().trim().max(200).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -34,6 +45,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
     const d = parsed.data;
+
+    const kind = d.kind ?? 'INTERNAL';
+    const jePrace = jePraceVeStudiu(kind);
+
+    /**
+     * Co musí být vyplněné (zadání 14. 9. 2026: „událost, která bude
+     * obsahovat název projektu, herce (když to bude natáčení) nebo střih
+     * a jméno zvukaře").
+     *
+     * Herec se vyžaduje jen u natáčení - u střihu žádný není a prázdné pole
+     * by tam jen strašilo.
+     */
+    if (jePrace) {
+      if (!d.projectName?.trim()) {
+        return NextResponse.json({ error: 'Vyberte projekt.' }, { status: 400 });
+      }
+      if (!d.zvukarName?.trim()) {
+        return NextResponse.json({ error: 'Vyberte zvukaře.' }, { status: 400 });
+      }
+      if (kind === 'NATACENI' && !d.actorName?.trim()) {
+        return NextResponse.json({ error: 'Vyberte herce.' }, { status: 400 });
+      }
+    } else if (!d.title?.trim()) {
+      return NextResponse.json({ error: 'Vyplňte, čeho se blokace týká.' }, { status: 400 });
+    }
 
     const start = new Date(d.start);
     const end = new Date(d.end);
@@ -50,7 +86,7 @@ export async function POST(req: NextRequest) {
       );
     }
     if (obsazeno.blocks.length > 0) {
-      return NextResponse.json({ error: 'V tomhle čase už blokace je.' }, { status: 409 });
+      return NextResponse.json({ error: 'V tomhle čase už ve studiu něco je.' }, { status: 409 });
     }
 
     const block = await prisma.studioBlock.create({
@@ -58,9 +94,27 @@ export async function POST(req: NextRequest) {
         studioId: d.studioId,
         start,
         end,
-        kind: d.kind ?? 'INTERNAL',
-        title: d.title,
+        kind,
+        // Popis se u natáčení a střihu skládá ze zapsaných polí - v mřížce
+        // pak všechny události vypadají stejně a nikdo nevymýšlí názvy.
+        title: jePrace
+          ? popisUdalosti({
+              projectName: d.projectName,
+              actorName: kind === 'NATACENI' ? d.actorName : null,
+              zvukarName: d.zvukarName,
+            })
+          : (d.title ?? ''),
         note: d.note || null,
+        ...(jePrace
+          ? {
+              caflouProjectId: d.caflouProjectId || null,
+              projectName: d.projectName || null,
+              actorUserId: kind === 'NATACENI' ? d.actorUserId || null : null,
+              actorName: kind === 'NATACENI' ? d.actorName || null : null,
+              zvukarUserId: d.zvukarUserId || null,
+              zvukarName: d.zvukarName || null,
+            }
+          : {}),
         createdById: session.user.id,
       },
     });

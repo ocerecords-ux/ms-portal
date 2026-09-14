@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { canManageCalendar, canViewCalendar } from '@/lib/roles';
 import { loadOccupancy, loadStudios, releaseExpiredHolds } from '@/lib/calendarServer';
+import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import {
   BLOCK_KIND_LABELS,
   addDays,
@@ -124,6 +126,42 @@ export default async function KalendarPage({
     { includeOffered: true },
   );
 
+  /**
+   * Nabídka do ručně zapsané události (zadání 14. 9. 2026) - projekt, herec
+   * a zvukař. Načítá se jen tomu, kdo do kalendáře smí psát; zvukař ho jen
+   * čte, takže by tahal seznamy, se kterými nic neudělá.
+   */
+  const muzeZapisovat = canManageCalendar(session.user.role);
+  const [projektyProUdalost, lideProUdalost] = muzeZapisovat
+    ? await Promise.all([
+        loadInternalProjects()
+          .then(({ projects }) =>
+            projects
+              .map((p) => ({
+                id: String(p.id),
+                label: p.companyName ? `${p.name} — ${p.companyName}` : p.name,
+                dokonceny: p.finished,
+              }))
+              .sort((a, b) => a.label.localeCompare(b.label, 'cs')),
+          )
+          .catch(() => []),
+        prisma.user
+          .findMany({
+            where: { active: true, role: { in: ['HEREC', 'ZVUKAR'] } },
+            select: { id: true, name: true, email: true, role: true },
+            orderBy: [{ name: 'asc' }],
+          })
+          .catch(() => []),
+      ])
+    : [[], []];
+
+  const herci = lideProUdalost
+    .filter((u) => u.role === 'HEREC')
+    .map((u) => ({ id: u.id, label: u.name || u.email }));
+  const zvukari = lideProUdalost
+    .filter((u) => u.role === 'ZVUKAR')
+    .map((u) => ({ id: u.id, label: u.name || u.email }));
+
   const barvaStudia = new Map(studios.map((s) => [s.id, s.color]));
   const nazevStudia = new Map(studios.map((s) => [s.id, s.shortName]));
 
@@ -169,7 +207,10 @@ export default async function KalendarPage({
       anchorIso={anchorLocal.toISOString().slice(0, 10)}
       days={days}
       events={events}
-      canManage={canManageCalendar(session.user.role)}
+      canManage={muzeZapisovat}
+      projekty={projektyProUdalost}
+      herci={herci}
+      zvukari={zvukari}
     />
   );
 }

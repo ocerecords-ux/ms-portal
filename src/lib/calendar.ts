@@ -99,12 +99,39 @@ export const SLOT_STATE_CLASSES: Record<string, string> = {
 export const BLOCKING_SLOT_STATES = ['SELECTED', 'CONFIRMED'];
 
 export const BLOCK_KIND_LABELS: Record<string, string> = {
+  NATACENI: 'Natáčení',
+  STRIH: 'Střih',
   HOLIDAY: 'Svátek',
   VACATION: 'Dovolená',
   MAINTENANCE: 'Údržba',
   INTERNAL: 'Interní blokace',
   OTHER: 'Jiné',
 };
+
+/**
+ * Druhy, u kterých se v kalendáři vyplňuje projekt, herec a zvukař (zadání
+ * 14. 9. 2026). Ostatní druhy zůstávají obyčejná blokace s popisem.
+ */
+export const PRACOVNI_DRUHY = ['NATACENI', 'STRIH'] as const;
+
+export function jePraceVeStudiu(kind: string): boolean {
+  return (PRACOVNI_DRUHY as readonly string[]).includes(kind);
+}
+
+/**
+ * Popisek události do mřížky. Skládá se ze zapsaných polí, ne z ručně psaného
+ * názvu - ať v kalendáři vypadají všechny záznamy stejně.
+ */
+export function popisUdalosti(casti: {
+  projectName?: string | null;
+  actorName?: string | null;
+  zvukarName?: string | null;
+}): string {
+  return [casti.projectName, casti.actorName, casti.zvukarName]
+    .map((x) => (x ?? '').trim())
+    .filter(Boolean)
+    .join(' · ');
+}
 
 // ---------------------------------------------------------------------------
 // Kolize
@@ -422,6 +449,16 @@ export function eventColors(studioColor: string, state: string): { background: s
   }
   if (state === 'OFFERED') {
     return { background: `${studioColor}26`, border: studioColor, text: '#201A33' };
+  }
+  /**
+   * Rucne zapsana prace ve studiu (zadani 14. 9. 2026) vypada jako potvrzene
+   * nataceni - protoze to potvrzene nataceni JE, jen se nedomlouvalo pres
+   * nabidku. Seda barva je vyhrazena tomu, kdy se netoci (svatek, udrzba,
+   * dovolena) - kdyby v ni svitil zapsany natáčecí den, cetl by se jako
+   * volno.
+   */
+  if (jePraceVeStudiu(state)) {
+    return { background: studioColor, border: studioColor, text: '#FFFFFF' };
   }
   // Blokace a uvolnene terminy - seda, at se nepletou s natacením.
   return { background: '#E4DFFB', border: '#6E6580', text: '#201A33' };

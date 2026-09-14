@@ -1564,6 +1564,11 @@ enum StudioBlockKind {
   MAINTENANCE // udrzba, servis techniky
   INTERNAL    // interni blokace
   OTHER
+  // Rucne zapsana prace ve studiu (zadani 14. 9. 2026: "kdyz otevru kalendar
+  // z hlavniho panelu, tak chci pridat rucne udalost"). Neni to nabidka
+  // terminu herci - ta se porad zaklada tlacitkem v detailu projektu.
+  NATACENI    // natáčení s hercem
+  STRIH       // střih
 }
 
 /// Cas, kdy se ve studiu netoci. Do obsazenosti se pocita stejne jako
@@ -1577,6 +1582,21 @@ model StudioBlock {
   kind     StudioBlockKind @default(INTERNAL)
   title    String
   note     String?
+
+  // --- Rucne zapsana udalost (zadani 14. 9. 2026) ---
+  // Vyplnuje se jen u kind NATACENI / STRIH. Jmena se ukladaji jako OTISK
+  // vedle id: ucet muze zaniknout nebo se prejmenovat a zaznam v kalendari
+  // ma zustat citelny - stejne jako u nabidek terminu a smluv.
+  // Zamerne BEZ vazby na User: kalendar si z uctu nic nedotahuje, jen
+  // zobrazuje, co se zapsalo.
+  /// Projekt, ke kteremu udalost patri (ProjectMeta.caflouProjectId).
+  caflouProjectId String?
+  projectName     String?
+  /// Herec - jen u natáčení, u střihu zustava prazdny.
+  actorUserId     String?
+  actorName       String?
+  zvukarUserId    String?
+  zvukarName      String?
 
   createdById String?
   createdBy   User?   @relation("StudioBlockCreatedBy", fields: [createdById], references: [id])
