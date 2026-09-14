@@ -84,6 +84,10 @@ const config: Config = {
         heading: ['Acid Grotesk', 'var(--font-inter)', 'Inter', 'Helvetica Neue', 'Arial', 'sans-serif'],
         display: ['Acid Grotesk', 'var(--font-jost)', 'Jost', 'Futura', 'sans-serif'],
         body: ['Acid Grotesk', 'var(--font-poppins)', 'Poppins', 'Avenir', 'sans-serif'],
+        // Psany podpis ve smlouvach (zadani 13. 9. 2026). Zalozni rodiny jsou
+        // schvalne rukopisne: kdyby se Caveat nenacetl, ma podpis porad
+        // vypadat jako podpis, ne jako dalsi radek textu.
+        podpis: ['var(--font-podpis)', 'Caveat', 'Segoe Script', 'Bradley Hand', 'cursive'],
       },
     },
   },

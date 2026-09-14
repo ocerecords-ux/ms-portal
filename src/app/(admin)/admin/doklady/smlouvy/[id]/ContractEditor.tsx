@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS, formatSignedAt } from '@/lib/contracts';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
-import { SignaturePad } from '../SignaturePad';
+import { PodpisVyber } from '../PodpisVyber';
 import { ContractPaper, type PaperSignature } from '../ContractPaper';
 
 type Contract = {
@@ -296,7 +296,9 @@ export function ContractEditor({
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
             Podpis za Mediaspace
           </h2>
-          <SignaturePad onChange={setPodpis} />
+          {/* Jmeno pro psany podpis je to, ktere na nasi strane smlouvy
+              stejne stoji vytistene - viz issuerName v ContractPaper. */}
+          <PodpisVyber onChange={setPodpis} jmeno={contract.issuerName} />
           <div>
             <button
               type="button"

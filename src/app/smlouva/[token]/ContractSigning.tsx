@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatSignedAt } from '@/lib/contracts';
-import { SignaturePad } from '@/app/(admin)/admin/doklady/smlouvy/SignaturePad';
+import { PodpisVyber } from '@/app/(admin)/admin/doklady/smlouvy/PodpisVyber';
 
 /**
  * Podpisová část veřejné stránky. Bez ověřovacích kódů — identitu nese
@@ -140,7 +140,7 @@ export function ContractSigning({
         />
       </label>
 
-      <SignaturePad onChange={setPodpis} />
+      <PodpisVyber onChange={setPodpis} jmeno={jmeno} />
 
       <label className="flex items-start gap-2.5 text-sm font-body text-ink">
         <input

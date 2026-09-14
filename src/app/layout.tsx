@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Jost, Poppins } from 'next/font/google';
+import { Caveat, Inter, Jost, Poppins } from 'next/font/google';
 import './globals.css';
 import { SKRIPT_MOTIVU } from '@/lib/motiv';
 import { RegistraceAplikace } from '@/app/(portal)/components/RegistraceAplikace';
@@ -10,6 +10,12 @@ import { BezOprav } from './BezOprav';
 const inter = Inter({ subsets: ['latin', 'latin-ext'], variable: '--font-inter', weight: ['500', '600', '700', '800'] });
 const jost = Jost({ subsets: ['latin', 'latin-ext'], variable: '--font-jost', weight: ['400', '500', '600'] });
 const poppins = Poppins({ subsets: ['latin', 'latin-ext'], variable: '--font-poppins', weight: ['300', '400', '500', '600'] });
+
+// Psany podpis ve smlouvach (zadani 13. 9. 2026: „dal bych na vyber dva druhy
+// podpisu - bud to vytvori nejaky prednastaveny ze jmena, nebo ho nakreslis").
+// latin-ext je tu povinne: bez nej by se z „Cerny" stalo „Cern?" a podpis
+// s hackem nad jmenem je presne to, co ma clovek videt.
+const caveat = Caveat({ subsets: ['latin', 'latin-ext'], variable: '--font-podpis', weight: ['400', '600'] });
 
 // Ikona na zalozce prohlizece (zadani 8. 9. 2026). Soubory icon.svg,
 // favicon.ico a apple-icon.png lezi primo v src/app/ - Next.js je podle
@@ -33,7 +39,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="cs" className={`${inter.variable} ${jost.variable} ${poppins.variable}`}>
+    <html lang="cs" className={`${inter.variable} ${jost.variable} ${poppins.variable} ${caveat.variable}`}>
       <head>
         {/* Svetly / tmavy rezim se musi nastavit JESTE PRED vykreslenim, jinak
             by pri kazdem nacteni blikla bila stranka. Proto obycejny skript
