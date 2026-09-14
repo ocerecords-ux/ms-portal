@@ -1536,6 +1536,19 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     if (obnovenoRef.current || openId || conversations.length === 0) return;
     obnovenoRef.current = true;
 
+    /**
+     * Odkaz z upozornění vede na konkrétní rozhovor (oprava 14. 9. 2026).
+     * Push i zvonek posílají `/chat?konverzace=<id>`, jenže chat ten parametr
+     * nečetl a otevřel prostě ten poslední — člověk po klepnutí na zmínku
+     * skončil jinde, než kam ho zmínka volala.
+     */
+    let zOdkazu: string | null = null;
+    try {
+      zOdkazu = new URLSearchParams(window.location.search).get('konverzace');
+    } catch {
+      zOdkazu = null;
+    }
+
     let posledni: string | null = null;
     try {
       posledni = window.localStorage.getItem(KLIC_POSLEDNI_KONVERZACE);
@@ -1544,6 +1557,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     }
 
     const vrat =
+      (zOdkazu ? conversations.find((c) => c.id === zOdkazu) : undefined) ??
       (posledni ? conversations.find((c) => c.id === posledni) : undefined) ??
       [...conversations].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))[0];
     if (!vrat) return;

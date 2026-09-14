@@ -9,7 +9,8 @@ import { overPrilohu } from '@/lib/storage';
 import { posliPush } from '@/lib/pushServer';
 import { canUseChat, shrnReakce, userLabel } from '@/lib/chatServer';
 import { odkazNaFotku } from '@/lib/fotky';
-import { komuPoslatUpozorneni } from '@/lib/chatUpozorneniServer';
+import { komuPoslatUpozorneni, zminenyTym } from '@/lib/chatUpozorneniServer';
+import { notifyMany } from '@/lib/notifications';
 
 // Zpravy jedne konverzace (zadani 8. 9. 2026). Otevreni konverzace zaroven
 // znamena "precteno" - proto se pri GET posouva lastReadAt.
@@ -219,6 +220,33 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const ted = new Date();
     const vsichni = conversation.members.map((m) => m.userId).filter((id) => id !== me);
 
+    /**
+     * ZMÍNKA DOJDE I TOMU, KDO V KANÁLU JEŠTĚ NEBYL (oprava 14. 9. 2026:
+     * „pořád nám nefunguje to označování uživatelů v chatu").
+     *
+     * Řádek členství vzniká až otevřením kanálu, takže kolega, který si
+     * kanál projektu nikdy neotevřel, nebyl mezi příjemci a zmínka mu
+     * nemohla cinknout — přitom kanály projektů vidí celý tým. Zmínka ho
+     * proto do kanálu rovnou přihlásí.
+     *
+     * Jen u kanálů a dotazů: do soukromé zprávy ani do skupiny nikoho
+     * přizvat nemůžeme, tam je členství pozvánka, ne zvyk.
+     */
+    const zmineni = await zminenyTym(parsed.data.body ?? '', me);
+    const doKanalu =
+      conversation.kind === 'PROJEKT' || conversation.kind === 'DOTAZ'
+        ? zmineni.filter((id) => !vsichni.includes(id))
+        : [];
+    if (doKanalu.length > 0) {
+      await prisma.conversationMember
+        .createMany({
+          data: doKanalu.map((userId) => ({ conversationId: conversation.id, userId })),
+          skipDuplicates: true,
+        })
+        .catch(() => undefined);
+    }
+    const kandidati = Array.from(new Set([...vsichni, ...doKanalu]));
+
     const [message, prijemci] = await Promise.all([
       prisma.message.create({
         data: {
@@ -241,7 +269,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       // Kanal k projektu je pro cely tym, ale upozorneni se posilaji jen tem,
       // kdo v nem opravdu jsou (radek clenstvi vznika otevrenim konverzace) -
       // jinak by kazda zprava v kazdem kanalu budila cely Mediaspace.
-      komuPoslatUpozorneni(vsichni, {
+      komuPoslatUpozorneni(kandidati, {
         conversationId: conversation.id,
         druh: conversation.kind,
         body: parsed.data.body ?? '',
@@ -272,6 +300,28 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         // Nova zprava z teze konverzace prepise predchozi upozorneni.
         znacka: `chat-${conversation.id}`,
       });
+
+      /**
+       * Zmínka jde i pod zvonek v liště (oprava 14. 9. 2026). Push funguje
+       * jen tomu, kdo prohlížeči povolil upozornění — a když ho nepovolil,
+       * nezbylo po zmínce vůbec nic. Zvonek počká, než člověk portál
+       * otevře, takže se zmínka neztratí ani přes noc.
+       *
+       * Běžné zprávy pod zvonek nepatří: od toho je počítadlo nepřečtených
+       * u chatu, jinak by tam byla za den stovka řádků.
+       */
+      const zminenPrijemci = prijemci.filter((id) => zmineni.includes(id));
+      if (zminenPrijemci.length > 0) {
+        void notifyMany(zminenPrijemci, {
+          kind: 'chat-zminka',
+          title:
+            conversation.kind === 'PROJEKT'
+              ? `${kdo} vás zmínil v # ${conversation.name ?? 'projektu'}`
+              : `${kdo} vás zmínil v chatu`,
+          body: nahled,
+          url: `/chat?konverzace=${conversation.id}`,
+        });
+      }
     }
 
     return NextResponse.json(

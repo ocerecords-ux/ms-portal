@@ -1,5 +1,6 @@
 import type { ChatUpozorneni } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { INTERNAL_ROLES } from '@/lib/roles';
 
 /**
  * Komu z příjemců opravdu poslat upozornění na novou zprávu
@@ -118,6 +119,31 @@ export function zmineniVeZprave(
     }
   }
   return zminky;
+}
+
+/**
+ * Koho zpráva zmiňuje z CELÉHO týmu, ne jen z účastníků rozhovoru
+ * (oprava 14. 9. 2026: „pořád nám nefunguje to označování uživatelů v chatu").
+ *
+ * Řádek členství v kanálu projektu vzniká až tím, že si ho člověk otevře —
+ * kdo v kanálu nikdy nebyl, nebyl ani mezi příjemci, takže mu zmínka nemohla
+ * cinknout. Přitom kanály projektů vidí celý tým. Zmínka se proto vyhodnotí
+ * nad všemi interními účty a volající si pak řekne, co s tím.
+ *
+ * Nikdy nevyhazuje: zpráva se musí odeslat, i kdyby tenhle dotaz selhal.
+ */
+export async function zminenyTym(body: string, krome: string): Promise<string[]> {
+  if (!body || !body.includes('@')) return [];
+  try {
+    const lide = await prisma.user.findMany({
+      where: { active: true, role: { in: INTERNAL_ROLES } },
+      select: { id: true, name: true, email: true },
+    });
+    return [...zmineniVeZprave(body, lide)].filter((id) => id !== krome);
+  } catch (err) {
+    console.error('Hledání zmínek selhalo:', err);
+    return [];
+  }
 }
 
 /** Je teď u tohohle člověka noční klid? Hodiny se počítají v Praze. */
