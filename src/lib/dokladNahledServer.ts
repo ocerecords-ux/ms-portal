@@ -201,11 +201,11 @@ export async function pdfFaktury(
     projectName: faktura.projectName,
     rezimDph: faktura.rezimDph,
     jazyk: faktura.jazyk === 'EN' ? 'en' : 'cs',
-    sleva: {
-      slevaProcent: faktura.slevaProcent,
-      slevaMinor: faktura.slevaMinor,
-      slevaPopis: faktura.slevaPopis,
-    },
+    // Sleva jde do RozepsanyDoklad po jednotlivych polich - do DokladData se
+    // slozi az v nahledDokladu.
+    slevaProcent: faktura.slevaProcent,
+    slevaMinor: faktura.slevaMinor,
+    slevaPopis: faktura.slevaPopis,
     items: faktura.items.map((i) => ({
       description: i.description,
       quantity: i.quantity,
