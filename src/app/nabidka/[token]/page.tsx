@@ -24,7 +24,7 @@ export default async function PublicOfferPage({ params }: { params: { token: str
   });
   if (!offer) notFound();
 
-  const totals = computeTotals(offer.items);
+  const totals = computeTotals(offer.items, offer);
 
   /**
    * Člověk pod nabídkou (zadání 13. 9. 2026: „v detailu pak přidej manažera
@@ -172,6 +172,27 @@ export default async function PublicOfferPage({ params }: { params: { token: str
 
           <div className="border-t border-line p-6 flex justify-end">
             <div className="w-full max-w-xs flex flex-col gap-1.5">
+              {/* Sleva musí být vidět i klientovi - jinak by v nabídce
+                  nepoznal, že ji dostal (zadání 14. 9. 2026). */}
+              {totals.sleva > 0 && (
+                <>
+                  <div className="flex items-center justify-between text-sm font-heading">
+                    <span className="text-muted">Mezisoučet bez DPH</span>
+                    <span className="text-ink tabular-nums">
+                      {formatMoney(totals.exVatPredSlevou, offer.currency)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm font-heading">
+                    <span className="text-muted">
+                      Sleva{offer.slevaProcent > 0 ? ` ${offer.slevaProcent} %` : ''}
+                      {totals.slevaPopis ? ` · ${totals.slevaPopis}` : ''}
+                    </span>
+                    <span className="text-danger tabular-nums">
+                      − {formatMoney(totals.sleva, offer.currency)}
+                    </span>
+                  </div>
+                </>
+              )}
               <div className="flex items-center justify-between text-sm font-heading">
                 <span className="text-muted">Základ bez DPH</span>
                 <span className="text-ink tabular-nums">{formatMoney(totals.exVat, offer.currency)}</span>

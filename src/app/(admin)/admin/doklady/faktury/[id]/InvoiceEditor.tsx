@@ -17,6 +17,7 @@ import { formatRate, toCzkMinor } from '@/lib/cnb';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 import { VyberFirmy, type FirmaVolba } from '../../VyberFirmy';
 import { NahledDokladu } from '../../NahledDokladu';
+import { SlevaPole } from '../../SlevaPole';
 
 type Item = {
   description: string;
@@ -59,6 +60,10 @@ type Invoice = {
   projectName: string | null;
   rezimDph: 'STANDARD' | 'PRENESENA' | 'MIMO_PREDMET';
   jazyk: 'CS' | 'EN';
+  /** Sleva na dokladu (zadání 14. 9. 2026). */
+  slevaProcent: number;
+  slevaMinor: number;
+  slevaPopis: string | null;
   items: Item[];
 };
 
@@ -146,6 +151,11 @@ export function InvoiceEditor({
     caflouProjectId: invoice.caflouProjectId,
     rezimDph: invoice.rezimDph,
     jazyk: invoice.jazyk,
+    // Sleva na celem dokladu (zadani 14. 9. 2026). Jde s formularem, takze
+    // se uklada stejnou cestou jako zbytek.
+    slevaProcent: invoice.slevaProcent ?? 0,
+    slevaMinor: invoice.slevaMinor ?? 0,
+    slevaPopis: invoice.slevaPopis ?? '',
   });
   const [items, setItems] = useState<Item[]>(invoice.items.length > 0 ? invoice.items : [emptyItem()]);
   const [saving, setSaving] = useState(false);
@@ -153,7 +163,10 @@ export function InvoiceEditor({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  const totals = useMemo(() => computeTotals(items), [items]);
+  const totals = useMemo(
+    () => computeTotals(items, { slevaProcent: form.slevaProcent, slevaMinor: form.slevaMinor, slevaPopis: form.slevaPopis }),
+    [items, form.slevaProcent, form.slevaMinor, form.slevaPopis],
+  );
 
   /**
    * Co se posílá do náhledu. Je to schválně jen to, co je na dokumentu vidět -
@@ -177,6 +190,10 @@ export function InvoiceEditor({
       projectName: projects.find((p) => p.id === form.caflouProjectId)?.label ?? invoice.projectName ?? null,
       rezimDph: form.rezimDph,
       jazyk: form.jazyk === 'EN' ? ('en' as const) : ('cs' as const),
+      // Aby sleva byla vidět i v náhledu PDF, ne až po uložení.
+      slevaProcent: form.slevaProcent,
+      slevaMinor: form.slevaMinor,
+      slevaPopis: form.slevaPopis,
       items: items.map((i) => ({
         description: i.description,
         quantity: Number(i.quantity) || 0,
@@ -789,10 +806,33 @@ export function InvoiceEditor({
 
         <div className="border-t border-line p-6 flex justify-end">
           <div className="w-full max-w-xs flex flex-col gap-1.5">
+            {/* Zaklad PRED slevou, at je videt, z ceho se slevovalo. Bez
+                slevy je to totez cislo jako doted. */}
             <div className="flex items-center justify-between text-sm font-heading">
-              <span className="text-muted">Základ bez DPH</span>
-              <span className="text-ink tabular-nums">{formatMoney(totals.exVat, form.currency)}</span>
+              <span className="text-muted">{totals.sleva > 0 ? 'Mezisoučet bez DPH' : 'Základ bez DPH'}</span>
+              <span className="text-ink tabular-nums">
+                {formatMoney(totals.exVatPredSlevou, form.currency)}
+              </span>
             </div>
+
+            <SlevaPole
+              hodnoty={{
+                slevaProcent: form.slevaProcent,
+                slevaMinor: form.slevaMinor,
+                slevaPopis: form.slevaPopis,
+              }}
+              onZmena={(zmena) => setForm((f) => ({ ...f, ...zmena }))}
+              currency={form.currency}
+              totals={totals}
+              locked={locked}
+            />
+
+            {totals.sleva > 0 && (
+              <div className="flex items-center justify-between text-sm font-heading">
+                <span className="text-muted">Základ bez DPH po slevě</span>
+                <span className="text-ink tabular-nums">{formatMoney(totals.exVat, form.currency)}</span>
+              </div>
+            )}
             {totals.byRate.map((r) => (
               <div key={r.rate} className="flex items-center justify-between text-sm font-heading">
                 <span className="text-muted">DPH {r.rate} %</span>

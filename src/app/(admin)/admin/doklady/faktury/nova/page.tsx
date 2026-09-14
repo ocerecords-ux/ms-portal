@@ -89,6 +89,10 @@ export default async function NewInvoiceFromOfferPage({
         // Nova faktura zacina v beznem rezimu a v jazyce nabidky.
         rezimDph: 'STANDARD',
         jazyk: offer.jazyk,
+        // Sleva se prenese z nabidky - klient ji v ni videl (14. 9. 2026).
+        slevaProcent: offer.slevaProcent,
+        slevaMinor: offer.slevaMinor,
+        slevaPopis: offer.slevaPopis,
         items: offer.items.map((i) => ({
           description: i.description,
           quantity: i.quantity,
@@ -189,6 +193,9 @@ async function PrazdnaFaktura({
         projectName: null,
         rezimDph: 'STANDARD',
         jazyk: 'CS',
+        slevaProcent: 0,
+        slevaMinor: 0,
+        slevaPopis: null,
         items: [],
       }}
       issuer={{

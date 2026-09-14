@@ -37,6 +37,10 @@ const schema = z.object({
   // Rezim DPH a jazyk vytisteneho dokladu (zadani 10. 9. 2026).
   rezimDph: z.enum(['STANDARD', 'PRENESENA', 'MIMO_PREDMET']).optional(),
   jazyk: z.enum(['CS', 'EN']).optional(),
+  // Sleva na celem dokladu (zadani 14. 9. 2026).
+  slevaProcent: z.number().min(0).max(100).optional(),
+  slevaMinor: z.number().int().min(0).optional(),
+  slevaPopis: z.string().trim().max(200).optional(),
   items: z.array(itemSchema).max(100).optional(),
 });
 
@@ -176,6 +180,11 @@ export async function POST(req: NextRequest) {
             projectName: projekt.projectName,
             rezimDph: input.rezimDph ?? 'STANDARD',
             jazyk: input.jazyk ?? offer?.jazyk ?? 'CS',
+            // Pri prevodu nabidky na fakturu se sleva prenese s ni - klient
+            // ji videl v nabidce a na fakture ji ceka taky.
+            slevaProcent: input.slevaProcent ?? offer?.slevaProcent ?? 0,
+            slevaMinor: input.slevaMinor ?? offer?.slevaMinor ?? 0,
+            slevaPopis: input.slevaPopis || offer?.slevaPopis || null,
             ...(polozky.length > 0
               ? {
                   items: {

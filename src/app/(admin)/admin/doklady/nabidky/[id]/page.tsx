@@ -56,6 +56,9 @@ export default async function OfferDetailPage({ params }: { params: { id: string
           caflouProjectId: offer.caflouProjectId ?? '',
           projectName: offer.projectName,
           jazyk: offer.jazyk,
+          slevaProcent: offer.slevaProcent,
+          slevaMinor: offer.slevaMinor,
+          slevaPopis: offer.slevaPopis,
           items: offer.items.map((i) => ({
             description: i.description,
             quantity: i.quantity,

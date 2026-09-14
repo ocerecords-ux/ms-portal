@@ -78,7 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       );
     }
 
-    const totals = computeTotals(invoice.items);
+    const totals = computeTotals(invoice.items, invoice);
 
     // Faktura jde klientovi i jako PDF - je na nem QR platba (zadani 13. 9.
     // 2026). Kdyz se PDF nepodari vykreslit, mail odejde bez nej: text v nem

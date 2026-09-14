@@ -53,23 +53,76 @@ export type Totals = {
   incVat: number;
   /** Rozpis podle sazby DPH - na dokladu se uvádí zvlášť. */
   byRate: { rate: number; base: number; vat: number }[];
+  /** Základ PŘED slevou. Beze slevy je stejný jako `exVat`. */
+  exVatPredSlevou: number;
+  /** Odečtená sleva bez DPH; 0 = žádná nebyla. */
+  sleva: number;
+  slevaPopis: string | null;
 };
 
-/** Součet položek. Zaokrouhluje se až DPH u každé sazby, ne u každé položky. */
-export function computeTotals(items: LineItem[]): Totals {
+/**
+ * Sleva na celém dokladu (zadání 14. 9. 2026: „potřebuju u nabídek a faktur
+ * mít možnost přidat nějakou slevu").
+ *
+ * Buď procenta, nebo pevná částka. Obojí naráz nedává smysl, takže platí
+ * procenta, když jsou vyplněná.
+ */
+export type Sleva = {
+  slevaProcent?: number | null;
+  slevaMinor?: number | null;
+  slevaPopis?: string | null;
+};
+
+/**
+ * Součet položek. Zaokrouhluje se až DPH u každé sazby, ne u každé položky.
+ *
+ * SLEVA SE ROZPOČÍTÁ MEZI SAZBY podle jejich podílu na základu, ne až
+ * z výsledku. U dokladu, kde je něco s 21 % a něco bez daně, by sleva
+ * odečtená až na konci znamenala, že se odvede daň z částky, kterou zákazník
+ * nezaplatil. Zbytek po zaokrouhlení padne na první (nejnižší) sazbu, aby
+ * součet vyšel do haléře.
+ */
+export function computeTotals(items: LineItem[], sleva?: Sleva | null): Totals {
   const bases = new Map<number, number>();
   for (const item of items) {
     const base = Math.round(item.quantity * item.unitPriceMinor);
     bases.set(item.vatRate, (bases.get(item.vatRate) ?? 0) + base);
   }
 
-  const byRate = Array.from(bases.entries())
-    .sort((a, b) => a[0] - b[0])
-    .map(([rate, base]) => ({ rate, base, vat: Math.round((base * rate) / 100) }));
+  const zaklady = Array.from(bases.entries()).sort((a, b) => a[0] - b[0]);
+  const exVatPredSlevou = zaklady.reduce((sum, [, base]) => sum + base, 0);
+
+  const procent = Number(sleva?.slevaProcent ?? 0);
+  const pevna = Number(sleva?.slevaMinor ?? 0);
+  let odecet =
+    procent > 0 ? Math.round((exVatPredSlevou * procent) / 100) : pevna > 0 ? Math.round(pevna) : 0;
+  // Sleva nikdy nesmí přetáhnout doklad do záporu.
+  odecet = Math.max(0, Math.min(odecet, Math.max(0, exVatPredSlevou)));
+
+  let rozdano = 0;
+  const byRate = zaklady.map(([rate, base], i) => {
+    const podil =
+      exVatPredSlevou > 0
+        ? i === zaklady.length - 1
+          ? odecet - rozdano
+          : Math.round((odecet * base) / exVatPredSlevou)
+        : 0;
+    rozdano += podil;
+    const snizeny = base - podil;
+    return { rate, base: snizeny, vat: Math.round((snizeny * rate) / 100) };
+  });
 
   const exVat = byRate.reduce((sum, r) => sum + r.base, 0);
   const vat = byRate.reduce((sum, r) => sum + r.vat, 0);
-  return { exVat, vat, incVat: exVat + vat, byRate };
+  return {
+    exVat,
+    vat,
+    incVat: exVat + vat,
+    byRate,
+    exVatPredSlevou,
+    sleva: odecet,
+    slevaPopis: sleva?.slevaPopis?.trim() || null,
+  };
 }
 
 /**

@@ -57,6 +57,9 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           projectName: invoice.projectName,
           rezimDph: invoice.rezimDph,
           jazyk: invoice.jazyk,
+          slevaProcent: invoice.slevaProcent,
+          slevaMinor: invoice.slevaMinor,
+          slevaPopis: invoice.slevaPopis,
           items: invoice.items.map((i) => ({
             description: i.description,
             quantity: i.quantity,

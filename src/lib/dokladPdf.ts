@@ -128,6 +128,8 @@ export type DokladData = {
   platba?: PlatebniUdaje | null;
   rezimDph: RezimDph;
   jazyk: 'cs' | 'en';
+  /** Sleva na celém dokladu (zadání 14. 9. 2026) - viz computeTotals. */
+  sleva?: { slevaProcent?: number | null; slevaMinor?: number | null; slevaPopis?: string | null } | null;
 };
 
 // --- Slovník ---------------------------------------------------------------
@@ -158,6 +160,8 @@ const SLOVNIK: Record<'cs' | 'en', Slova> = {
     rekapitulace: 'REKAPITULACE DPH',
     sazba: 'SAZBA',
     zaklad: 'ZÁKLAD',
+    mezisoucet: 'MEZISOUČET',
+    sleva: 'SLEVA',
     kUhrade: 'CELKEM K ÚHRADĚ',
     celkemNabidka: 'CELKEM',
     platba: 'PLATEBNÍ ÚDAJE',
@@ -196,6 +200,8 @@ const SLOVNIK: Record<'cs' | 'en', Slova> = {
     rekapitulace: 'VAT SUMMARY',
     sazba: 'RATE',
     zaklad: 'BASE',
+    mezisoucet: 'SUBTOTAL',
+    sleva: 'DISCOUNT',
     kUhrade: 'TOTAL DUE',
     celkemNabidka: 'TOTAL',
     platba: 'PAYMENT DETAILS',
@@ -437,6 +443,26 @@ function zaver(
     y = Math.max(y, yr + 10);
   }
 
+  /**
+   * Sleva (zadání 14. 9. 2026). Tiskne se VŽDY, i na dokladu bez DPH - klient
+   * musí vidět, z čeho se slevovalo a kolik. Mezisoučet nad ní je základ před
+   * slevou; řádek „Základ" pod ní už je po slevě.
+   */
+  if (soucty.sleva > 0) {
+    popisek(c, s.mezisoucet, souhrnX, ySouhrn + 8);
+    vpravo(c, false, castka(soucty.exVatPredSlevou, data.mena, data.jazyk), 10.5, RIGHT, ySouhrn + 8, INK);
+    const popisSlevy = [
+      s.sleva,
+      data.sleva?.slevaProcent ? `${data.sleva.slevaProcent} %` : '',
+      soucty.slevaPopis ?? '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    popisek(c, popisSlevy, souhrnX, ySouhrn + 26);
+    vpravo(c, false, `-${castka(soucty.sleva, data.mena, data.jazyk)}`, 10.5, RIGHT, ySouhrn + 26, INK);
+    ySouhrn += 38;
+  }
+
   // Souhrn.
   if (sDph) {
     popisek(c, s.zaklad, souhrnX, ySouhrn + 8);
@@ -557,7 +583,8 @@ function vyskaZaveru(
   let vyska = 12;
 
   const rekapitulace = sDph && soucty.byRate.length > 0 ? 44 + soucty.byRate.length * 16 + 10 : 0;
-  const souhrn = (sDph ? 38 : 0) + 46;
+  // Sleva pridava dva radky (mezisoucet + sleva), viz zaver().
+  const souhrn = (soucty.sleva > 0 ? 38 : 0) + (sDph ? 38 : 0) + 46;
   vyska += Math.max(rekapitulace, souhrn);
 
   if (data.rezimDph !== 'STANDARD' || !data.dodavatelPlatceDph) {
@@ -602,6 +629,7 @@ export function renderDokladPdf(data: DokladData): Buffer {
   const sDph = data.dodavatelPlatceDph && !prenesena;
   const soucty = computeTotals(
     polozky.map((p) => ({ quantity: p.quantity, unitPriceMinor: p.unitPriceMinor, vatRate: p.vatRate })),
+    data.sleva ?? null,
   );
 
   const stranky: Kresba[] = [];

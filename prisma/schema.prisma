@@ -1109,6 +1109,18 @@ model Offer {
   caflouProjectId String?
   projectName     String?
 
+  /// SLEVA NA CELEM DOKLADU (zadani 14. 9. 2026: „potrebuju u nabidek
+  /// a faktur mit moznost pridat nejakou slevu").
+  ///
+  /// Bud procenta, nebo pevna castka - obe naraz nedavaji smysl, takze plati
+  /// procenta, kdyz jsou vyplnena. Sleva je VZDY BEZ DPH a rozpocita se mezi
+  /// sazby podle jejich podilu na zaklade; jinak by u dokladu se dvema
+  /// sazbami neseldila odvedena dan.
+  slevaProcent Float   @default(0)
+  slevaMinor   Int     @default(0)
+  /// Co se na dokladu vytiskne vedle slevy, napr. „Sleva za objem".
+  slevaPopis   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1205,6 +1217,18 @@ model Invoice {
   // citelny, kdyz projekt v Caflou zmizi nebo se prejmenuje.
   caflouProjectId String?
   projectName     String?
+
+  /// SLEVA NA CELEM DOKLADU (zadani 14. 9. 2026: „potrebuju u nabidek
+  /// a faktur mit moznost pridat nejakou slevu").
+  ///
+  /// Bud procenta, nebo pevna castka - obe naraz nedavaji smysl, takze plati
+  /// procenta, kdyz jsou vyplnena. Sleva je VZDY BEZ DPH a rozpocita se mezi
+  /// sazby podle jejich podilu na zaklade; jinak by u dokladu se dvema
+  /// sazbami neseldila odvedena dan.
+  slevaProcent Float   @default(0)
+  slevaMinor   Int     @default(0)
+  /// Co se na dokladu vytiskne vedle slevy, napr. „Sleva za objem".
+  slevaPopis   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

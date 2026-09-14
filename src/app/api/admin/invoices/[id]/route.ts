@@ -30,6 +30,10 @@ const schema = z.object({
   // Rezim DPH a jazyk vytisteneho dokladu (zadani 10. 9. 2026).
   rezimDph: z.enum(['STANDARD', 'PRENESENA', 'MIMO_PREDMET']).optional(),
   jazyk: z.enum(['CS', 'EN']).optional(),
+  // Sleva na celem dokladu (zadani 14. 9. 2026).
+  slevaProcent: z.number().min(0).max(100).optional(),
+  slevaMinor: z.number().int().min(0).optional(),
+  slevaPopis: z.string().trim().max(200).optional(),
   items: z.array(itemSchema).max(100).optional(),
   /** Znovu si říct ČNB o kurz k datu vystavení. */
   refreshRate: z.boolean().optional(),
@@ -66,6 +70,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.variableSymbol !== undefined) data.variableSymbol = d.variableSymbol || invoice.variableSymbol;
     if (d.rezimDph !== undefined) data.rezimDph = d.rezimDph;
     if (d.jazyk !== undefined) data.jazyk = d.jazyk;
+    if (d.slevaProcent !== undefined) data.slevaProcent = d.slevaProcent;
+    if (d.slevaMinor !== undefined) data.slevaMinor = d.slevaMinor;
+    if (d.slevaPopis !== undefined) data.slevaPopis = d.slevaPopis || null;
     if (d.caflouProjectId !== undefined) {
       const projekt = await resolveProject(d.caflouProjectId);
       data.caflouProjectId = projekt.caflouProjectId;

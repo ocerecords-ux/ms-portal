@@ -72,6 +72,9 @@ export default async function NovaNabidkaPage({
         caflouProjectId: '',
         projectName: null,
         jazyk: 'CS',
+        slevaProcent: 0,
+        slevaMinor: 0,
+        slevaPopis: null,
         items: [],
       }}
       issuer={{

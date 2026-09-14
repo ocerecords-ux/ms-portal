@@ -43,7 +43,7 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
   const stavPoradi: Record<string, number> = { SENT: 0, DRAFT: 1, APPROVED: 2, REJECTED: 3 };
 
   const radkyTabulky: NabidkaRadek[] = offers.map((offer) => {
-    const totals = computeTotals(offer.items);
+    const totals = computeTotals(offer.items, offer);
     return {
       id: offer.id,
       nazev: offer.subject || 'Bez názvu',

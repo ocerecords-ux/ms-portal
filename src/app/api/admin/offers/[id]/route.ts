@@ -27,6 +27,10 @@ const schema = z.object({
   caflouProjectId: z.string().trim().nullable().optional(),
   // Jazyk vytistene nabidky (zadani 10. 9. 2026).
   jazyk: z.enum(['CS', 'EN']).optional(),
+  // Sleva na celem dokladu (zadani 14. 9. 2026).
+  slevaProcent: z.number().min(0).max(100).optional(),
+  slevaMinor: z.number().int().min(0).optional(),
+  slevaPopis: z.string().trim().max(200).optional(),
   items: z.array(itemSchema).max(100).optional(),
 });
 
@@ -62,6 +66,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.subject !== undefined) data.subject = d.subject || null;
     if (d.note !== undefined) data.note = d.note || null;
     if (d.jazyk !== undefined) data.jazyk = d.jazyk;
+    if (d.slevaProcent !== undefined) data.slevaProcent = d.slevaProcent;
+    if (d.slevaMinor !== undefined) data.slevaMinor = d.slevaMinor;
+    if (d.slevaPopis !== undefined) data.slevaPopis = d.slevaPopis || null;
     if (d.caflouProjectId !== undefined) {
       const projekt = await resolveProject(d.caflouProjectId);
       data.caflouProjectId = projekt.caflouProjectId;

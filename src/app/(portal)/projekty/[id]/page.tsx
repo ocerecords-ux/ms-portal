@@ -242,7 +242,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       title: o.subject || 'Bez názvu',
       number: o.number,
       date: dokladDatum(o.issueDate),
-      amountMinor: computeTotals(o.items).incVat,
+      amountMinor: computeTotals(o.items, o).incVat,
       currency: o.currency,
       statusLabel: stav.label,
       statusClass: stav.className,
@@ -257,7 +257,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       title: i.subject || 'Bez názvu',
       number: i.number,
       date: dokladDatum(i.issueDate),
-      amountMinor: computeTotals(i.items).incVat,
+      amountMinor: computeTotals(i.items, i).incVat,
       currency: i.currency,
       statusLabel: stav.label,
       statusClass: stav.className,
@@ -366,10 +366,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const korunyBezDph = (minor: number) => minor / 100;
   const cenaZFaktur = invoices
     .filter((i) => vCzk(i.currency) && invoiceStatus(i.status).label !== 'Stornovaná')
-    .reduce((soucet, i) => soucet + korunyBezDph(computeTotals(i.items).exVat), 0);
+    .reduce((soucet, i) => soucet + korunyBezDph(computeTotals(i.items, i).exVat), 0);
   const cenaZNabidek = offers
     .filter((o) => vCzk(o.currency))
-    .reduce((soucet, o) => soucet + korunyBezDph(computeTotals(o.items).exVat), 0);
+    .reduce((soucet, o) => soucet + korunyBezDph(computeTotals(o.items, o).exVat), 0);
   const vydajeCelkem = expenses
     .filter((e) => vCzk(e.currency))
     .reduce((soucet, e) => soucet + korunyBezDph(e.amountExVatMinor), 0);

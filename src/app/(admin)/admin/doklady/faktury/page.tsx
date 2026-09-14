@@ -68,7 +68,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
   const unpaid = invoices.filter((i) => i.status === 'SENT');
   const unpaidByCurrency = new Map<string, number>();
   for (const invoice of unpaid) {
-    const totals = computeTotals(invoice.items);
+    const totals = computeTotals(invoice.items, invoice);
     unpaidByCurrency.set(invoice.currency, (unpaidByCurrency.get(invoice.currency) ?? 0) + totals.incVat);
   }
 
@@ -76,7 +76,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
   // text a k nemu cislo pro razeni - podle vypsaneho textu by razeni datumu
   // ani castek nefungovalo.
   const radkyTabulky: FakturaRadek[] = invoices.map((invoice) => {
-    const totals = computeTotals(invoice.items);
+    const totals = computeTotals(invoice.items, invoice);
     return {
       id: invoice.id,
       nazev: invoice.subject || 'Bez názvu',

@@ -30,6 +30,10 @@ export type RozepsanyDoklad = {
   projectName?: string | null;
   rezimDph?: RezimDph | null;
   jazyk?: 'cs' | 'en' | null;
+  /** Sleva na dokladu (zadání 14. 9. 2026) - v náhledu musí být vidět taky. */
+  slevaProcent?: number | null;
+  slevaMinor?: number | null;
+  slevaPopis?: string | null;
   items?: {
     description?: string | null;
     quantity?: number | null;
@@ -151,6 +155,11 @@ export async function nahledDokladu(
         : null,
     rezimDph: rozepsane.rezimDph ?? 'STANDARD',
     jazyk: rozepsane.jazyk === 'en' ? 'en' : 'cs',
+    sleva: {
+      slevaProcent: rozepsane.slevaProcent ?? 0,
+      slevaMinor: rozepsane.slevaMinor ?? 0,
+      slevaPopis: rozepsane.slevaPopis ?? null,
+    },
   };
 
   return { ok: true, pdf: renderDokladPdf(data) };
@@ -192,6 +201,11 @@ export async function pdfFaktury(
     projectName: faktura.projectName,
     rezimDph: faktura.rezimDph,
     jazyk: faktura.jazyk === 'EN' ? 'en' : 'cs',
+    sleva: {
+      slevaProcent: faktura.slevaProcent,
+      slevaMinor: faktura.slevaMinor,
+      slevaPopis: faktura.slevaPopis,
+    },
     items: faktura.items.map((i) => ({
       description: i.description,
       quantity: i.quantity,

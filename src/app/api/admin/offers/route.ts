@@ -30,6 +30,10 @@ const schema = z.object({
   validUntil: z.string().trim().nullable().optional(),
   caflouProjectId: z.string().trim().nullable().optional(),
   jazyk: z.enum(['CS', 'EN']).optional(),
+  // Sleva na celem dokladu (zadani 14. 9. 2026).
+  slevaProcent: z.number().min(0).max(100).optional(),
+  slevaMinor: z.number().int().min(0).optional(),
+  slevaPopis: z.string().trim().max(200).optional(),
   items: z.array(itemSchema).max(100).optional(),
 });
 
@@ -81,6 +85,9 @@ export async function POST(req: NextRequest) {
             subject: subject || null,
             note: input.note || null,
             jazyk: input.jazyk ?? 'CS',
+            slevaProcent: input.slevaProcent ?? 0,
+            slevaMinor: input.slevaMinor ?? 0,
+            slevaPopis: input.slevaPopis || null,
             ...(toDate(input.issueDate) ? { issueDate: toDate(input.issueDate)! } : {}),
             validUntil: toDate(input.validUntil),
             ...(projekt.caflouProjectId
