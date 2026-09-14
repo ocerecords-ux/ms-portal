@@ -13,6 +13,7 @@ import { loadColumnSettings } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 import { nactiPreposlechPrehled } from '@/lib/preposlechServer';
+import { odkazyPreposlechu } from '@/lib/preposlechOdkaz';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 import { odkazNaFotku } from '@/lib/fotky';
 import { posledniStrany } from '@/lib/brunoServer';
@@ -121,6 +122,12 @@ export default async function ProjektyPage() {
   const preposlechMapa = await nactiPreposlechPrehled(active.map((p) => String(p.id)));
   const preposlech = Object.fromEntries(preposlechMapa);
 
+  // Proklik do AudioTaggeru misto zelene fajfky (zadani 14. 9. 2026). Jednim
+  // dotazem pro celou stranku - viz odkazyPreposlechu.
+  const odkazyAudioTaggeru = Object.fromEntries(
+    await odkazyPreposlechu(active.map((p) => String(p.id))),
+  );
+
   return (
     <section className="flex flex-col gap-8">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
@@ -139,6 +146,7 @@ export default async function ProjektyPage() {
           emptyText="Aktuálně tu nemáte žádný rozpracovaný projekt. Vidíte jen zakázky, u kterých jste vedení jako kontaktní osoba — kdyby vám nějaká chyběla, dejte nám vědět."
           rodneListy={rodneListy}
           preposlech={preposlech}
+          odkazyAudioTaggeru={odkazyAudioTaggeru}
         />
       </div>
 

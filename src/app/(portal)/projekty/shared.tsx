@@ -53,9 +53,16 @@ export function ProjectsTable({
   emptyText,
   rodneListy,
   preposlech,
+  odkazyAudioTaggeru,
 }: {
   projects: DisplayProject[];
   emptyText: string;
+  /**
+   * Odkaz do AudioTaggeru podle ID projektu (zadání 14. 9. 2026). Ukazuje se
+   * ve sloupci „K přeposlechu" místo zelené fajfky — klient tak z přehledu
+   * rovnou klikne do poslechu místo aby odkaz hledal v mailu.
+   */
+  odkazyAudioTaggeru?: Record<string, string>;
   /**
    * Stav přeposlechu podle ID projektu (zadání 12. 9. 2026). Když se prop
    * nepředá, sloupce se nevykreslí — u dokončených projektů nemá smysl
@@ -157,7 +164,12 @@ export function ProjectsTable({
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
                 </td>
-                {showPreposlech && <BunkaKPreposlechu stav={preposlech?.[String(p.id)]} />}
+                {showPreposlech && (
+                  <BunkaKPreposlechu
+                    stav={preposlech?.[String(p.id)]}
+                    odkaz={odkazyAudioTaggeru?.[String(p.id)]}
+                  />
+                )}
                 {showPreposlech && <BunkaPreposlechnuto stav={preposlech?.[String(p.id)]} />}
                 {showRodnyList && (
                   <td className="px-4 py-0 text-sm font-heading whitespace-nowrap">
@@ -854,8 +866,41 @@ function SortableHeader({
  * projektů by jinak znamenalo padesát dotazů do Google API při každém
  * otevření přehledu.
  */
-function BunkaKPreposlechu({ stav }: { stav?: { stop: number } }) {
+function BunkaKPreposlechu({ stav, odkaz }: { stav?: { stop: number }; odkaz?: string }) {
   const pripraveno = (stav?.stop ?? 0) > 0;
+
+  /**
+   * MÍSTO FAJFKY PROKLIK (zadání 14. 9. 2026: „mohlo by to být vlastně v poli
+   * Přeposlech, objevit se místo té zelené fajfky").
+   *
+   * Zelená fajfka říkala „je co poslouchat" a tím to skončilo — klient pak
+   * odkaz hledal ve starém mailu. Když odkaz existuje, je z toho rovnou dveře
+   * do AudioTaggeru; fajfka zůstává jen tam, kde odkaz ještě nikdo nevyrobil.
+   *
+   * Odkaz je TENTÝŽ token, který chodí v mailu o prvních tracích - nic se
+   * nezpřístupňuje navíc a „Vygenerovat nový" u projektu ho zhasne i tady.
+   */
+  if (pripraveno && odkaz) {
+    return (
+      <td className="px-4 py-0 whitespace-nowrap">
+        <a
+          href={odkaz}
+          target="_blank"
+          rel="noreferrer"
+          title={`Otevřít AudioTagger — nachystáno ${stav?.stop} stop`}
+          className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-2.5 py-1 rounded-pill border border-brand-purple/40 bg-brand-purple/10 text-brand-purple no-underline hover:bg-brand-purple/20 transition-colors"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden="true">
+            <path d="M3 12v-1a9 9 0 0 1 18 0v1" />
+            <rect x="2.5" y="12" width="5" height="7" rx="2" />
+            <rect x="16.5" y="12" width="5" height="7" rx="2" />
+          </svg>
+          Poslechnout
+        </a>
+      </td>
+    );
+  }
+
   return (
     <td className="px-4 py-0 whitespace-nowrap">
       <span

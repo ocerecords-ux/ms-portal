@@ -141,6 +141,32 @@ export async function zapisOtevreni(token: string): Promise<void> {
 }
 
 /** Stav odkazu pro kartu projektu. */
+/**
+ * Odkazy do AudioTaggeru pro CELOU STRÁNKU projektů naráz (zadání
+ * 14. 9. 2026: „přidej u klientů možnost, kdy budou mít u projektu proklik na
+ * AudioTagger… mohlo by to být vlastně v poli Přeposlech, objevit se místo té
+ * zelené fajfky").
+ *
+ * Jedním dotazem, ne dotazem na každý řádek — klient má v přehledu klidně
+ * padesát projektů.
+ *
+ * Zneplatněné odkazy se nevracejí: „Vygenerovat nový" u projektu ten starý
+ * zhasíná a klient by přes něj stejně neprošel.
+ */
+export async function odkazyPreposlechu(caflouProjectIds: string[]): Promise<Map<string, string>> {
+  if (caflouProjectIds.length === 0) return new Map();
+  try {
+    const zaznamy = await prisma.preposlechOdkaz.findMany({
+      where: { caflouProjectId: { in: caflouProjectIds }, zneplatnenoAt: null },
+      select: { caflouProjectId: true, token: true },
+    });
+    return new Map(zaznamy.map((z) => [z.caflouProjectId, urlPreposlechu(z.token)]));
+  } catch {
+    // Odkaz je pohodli navic - kdyz se nenacte, prehled se vykresli bez nej.
+    return new Map();
+  }
+}
+
 export async function stavOdkazu(caflouProjectId: string): Promise<{
   url: string | null;
   otevrenoAt: string | null;
