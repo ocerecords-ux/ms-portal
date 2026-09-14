@@ -439,9 +439,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const rozpocetSVykazy = rozpocet && (
     <div className="flex flex-col gap-6">
       {/* Na sirokem okne rozpocet vlevo a graf vpravo, na uzkem pod sebou.
-          items-start: karty maji ruznou vysku a nemaji se natahovat. */}
+          STEJNE VYSOKE RAMECKY (zadani 14. 9. 2026: „jen srovnej ty ramecky,
+          at nejsou ruzne velke"). Drive tu bylo items-start, takze si kazda
+          karta vzala svou vysku a vedle sebe pak pusobily jako dva ruzne
+          vysoke schody. Vychozi natahovani mrizky je srovna - vyssi z nich
+          urcuje vysku radku a druha ji dorovna. */}
       {grafCerpani ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {rozpocet}
           {grafCerpani}
         </div>

@@ -116,9 +116,12 @@ export function CerpaniPoDruzich({
         </div>
       )}
 
-      <p className="text-xs font-body text-muted m-0">
-        Proti rozpočtu stojí výkazy zvukařů podle druhu práce. Bonus se nezapočítává — je to
-        odměna za dokončenou knihu, ne odpracované hodiny.
+      {/* Jedna poznamka misto dvou (zadani 14. 9. 2026: srovnat vysku karet).
+          Dve odstavce pod sebou delaly z teto karty o hlavu vyssi ramecek nez
+          rozpocet vedle. */}
+      <p className="text-xs font-body text-muted m-0 mt-auto">
+        Proti rozpočtu stojí výkazy zvukařů. Bonus se nezapočítává — je to odměna za dokončenou
+        knihu, ne odpracované hodiny.
       </p>
     </div>
   );
@@ -254,6 +257,7 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
       <p className="text-[11px] font-body text-muted m-0 text-center">
         Světlý obrys je rozpočet, barevná výplň vykázané peníze.
       </p>
+
     </div>
   );
 }

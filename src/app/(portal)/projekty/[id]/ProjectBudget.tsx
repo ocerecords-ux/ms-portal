@@ -89,7 +89,10 @@ export function ProjectBudget({
         </p>
       </div>
 
-      <div className="border-t border-line pt-4">
+      {/* mt-auto: karta se vedle grafu natahuje na spolecnou vysku (zadani
+          14. 9. 2026) a zisk ma v tom pripade sednout na spodek, ne nechat
+          pod sebou prazdno. Kdyz je karta sama, nedela mt-auto nic. */}
+      <div className="border-t border-line pt-4 mt-auto">
         <div className="flex items-baseline justify-between gap-3 flex-wrap">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">Zisk</span>
           {revenue == null ? (
