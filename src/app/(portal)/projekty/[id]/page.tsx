@@ -213,6 +213,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     naklady: [],
   };
   const nakladovePolozky = naklady.map((n) => ({ nazev: n.nazev, castka: n.castka }));
+  /**
+   * Jména herců k našeptávání u položkových nákladů (zadání 14. 9. 2026).
+   * Je to jen nápověda - do políčka jde napsat i někdo, kdo v portálu účet
+   * nemá, nebo úplně jiná položka. Viz NakladyProjektu.
+   */
+  const jmenaHercu = herci.map((h) => h.name || h.email).filter(Boolean);
 
   const settings = budgetSettings ?? DEFAULT_BUDGET_SETTINGS;
   const showBudget =
@@ -406,6 +412,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       hoursLogged={hoursLogged}
       caflouProjectId={caflouProjectId}
       pocatecniPolozky={nakladovePolozky}
+      jmenaHercu={jmenaHercu}
       naKlic={company?.audioknihyNaKlic === true}
       cenaZDokladu={cenaZakazky}
       zdrojCeny={zdrojCeny}
@@ -419,6 +426,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       hoursLogged={hoursLogged}
       vydaje={vydajeCelkem}
       pocatecniPolozky={nakladovePolozky}
+      jmenaHercu={jmenaHercu}
     />
   );
 

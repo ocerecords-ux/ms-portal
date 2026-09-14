@@ -6,6 +6,12 @@ export type NakladovaPolozka = { nazev: string; castka: number };
 
 const czk = (v: number) => `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
 
+/** Text z pole na koruny. Prázdno i nesmysl je nula. */
+function cislo(text: string): number {
+  const n = Number(String(text).replace(/\s/g, '').replace(',', '.'));
+  return Number.isFinite(n) ? n : 0;
+}
+
 /**
  * Položkové náklady projektu (zadání 11. 9. 2026: „do té karty mi dej třeba
  * položkové menu náklady, tak napíšu náklady na herce a tak dále").
@@ -20,6 +26,7 @@ export function NakladyProjektu({
   onZmena,
   nadpis = 'Náklady po položkách',
   napoveda = 'Bez DPH. Honoráře, studio, hudba — co portál sám neví.',
+  jmena = [],
 }: {
   caflouProjectId: string;
   pocatecni: NakladovaPolozka[];
@@ -28,12 +35,30 @@ export function NakladyProjektu({
   /** U audioknihy na klíč se tomu říká jinak - viz ProjectBudget. */
   nadpis?: string;
   napoveda?: string;
+  /**
+   * Jména herců z databáze - jen jako NÁPOVĚDA (zadání 14. 9. 2026: „chci
+   * tady mít možnost přidat konkrétního herce z databáze, ale i cokoli
+   * napsat v textu. Chci to jen našeptávat").
+   *
+   * Není to výběr ze seznamu: honorář se platí i tomu, kdo v portálu účet
+   * nemá, a řádek může být klidně „studio Brno" nebo „úprava textu". Proto
+   * se vybrané jméno jen vepíše do pole a dá se přepsat.
+   */
+  jmena?: string[];
 }) {
-  const [polozky, setPolozky] = useState<NakladovaPolozka[]>(pocatecni);
+  /**
+   * ČÁSTKA SE DRŽÍ JAKO TEXT, ne jako číslo (14. 9. 2026: „zase tam musím
+   * nejdříve smazat nulu v tom poli"). Nový řádek měl v částce nulu, kterou
+   * musel člověk před psaním smazat. Prázdné pole ale číslem zapsat nejde -
+   * `0` a „nevyplněno" by byly totéž. Na číslo se to převede až při ukládání.
+   */
+  const [polozky, setPolozky] = useState<{ nazev: string; castka: string }[]>(() =>
+    pocatecni.map((p) => ({ nazev: p.nazev, castka: p.castka ? String(p.castka) : '' })),
+  );
   const [stav, setStav] = useState<'nic' | 'uklada' | 'ulozeno' | 'chyba'>('nic');
   const prvniRef = useRef(true);
 
-  const soucet = polozky.reduce((s, p) => s + (Number.isFinite(p.castka) ? p.castka : 0), 0);
+  const soucet = polozky.reduce((s, p) => s + cislo(p.castka), 0);
 
   useEffect(() => {
     onZmena?.(soucet);
@@ -51,7 +76,9 @@ export function NakladyProjektu({
         const res = await fetch(`/api/projekty/${encodeURIComponent(caflouProjectId)}/naklady`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ polozky: polozky.map((p) => ({ nazev: p.nazev, castka: Math.round(p.castka || 0) })) }),
+          body: JSON.stringify({
+            polozky: polozky.map((p) => ({ nazev: p.nazev, castka: Math.round(cislo(p.castka)) })),
+          }),
         });
         setStav(res.ok ? 'ulozeno' : 'chyba');
       } catch {
@@ -61,7 +88,7 @@ export function NakladyProjektu({
     return () => clearTimeout(cas);
   }, [polozky, caflouProjectId]);
 
-  function uprav(i: number, zmena: Partial<NakladovaPolozka>) {
+  function uprav(i: number, zmena: Partial<{ nazev: string; castka: string }>) {
     setPolozky((s) => s.map((p, j) => (j === i ? { ...p, ...zmena } : p)));
   }
 
@@ -77,17 +104,15 @@ export function NakladyProjektu({
       <div className="flex flex-col gap-1.5">
         {polozky.map((p, i) => (
           <div key={i} className="flex items-center gap-2">
-            <input
-              type="text"
-              value={p.nazev}
-              onChange={(e) => uprav(i, { nazev: e.target.value })}
-              placeholder="Honorář herce, studio, hudba…"
-              className="flex-1 min-w-0 rounded-lg border border-line bg-field px-3 py-1.5 text-ink font-body text-sm outline-none focus:border-brand-purple"
+            <PoleSNapovedou
+              hodnota={p.nazev}
+              onZmena={(v) => uprav(i, { nazev: v })}
+              jmena={jmena}
             />
             <input
               type="number"
-              value={Number.isFinite(p.castka) ? p.castka : ''}
-              onChange={(e) => uprav(i, { castka: e.target.value === '' ? 0 : Number(e.target.value) })}
+              value={p.castka}
+              onChange={(e) => uprav(i, { castka: e.target.value })}
               placeholder="0"
               className="w-32 rounded-lg border border-line bg-field px-3 py-1.5 text-ink font-heading text-sm text-right tabular-nums outline-none focus:border-brand-purple"
             />
@@ -107,7 +132,7 @@ export function NakladyProjektu({
       <div className="flex items-center justify-between gap-3 mt-2">
         <button
           type="button"
-          onClick={() => setPolozky((s) => [...s, { nazev: '', castka: 0 }])}
+          onClick={() => setPolozky((s) => [...s, { nazev: '', castka: '' }])}
           className="text-xs font-heading font-semibold text-brand-purple hover:underline"
         >
           + Přidat položku
@@ -119,6 +144,87 @@ export function NakladyProjektu({
         )}
       </div>
       <p className="text-xs font-body text-muted mt-1.5 m-0">{napoveda}</p>
+    </div>
+  );
+}
+
+/**
+ * Políčko s názvem položky a našeptáváním jmen (zadání 14. 9. 2026).
+ *
+ * VÍTĚZÍ NAPSANÝ TEXT, ne seznam. Nabídka se ukáže, jen když se do políčka
+ * píše a něco se trefí; kliknutím se jméno vepíše a dá se dál upravovat.
+ * Kdo v portálu účet nemá, se prostě napíše celý - proto tu není výběr,
+ * ze kterého by se nedalo vystoupit.
+ */
+function PoleSNapovedou({
+  hodnota,
+  onZmena,
+  jmena,
+}: {
+  hodnota: string;
+  onZmena: (v: string) => void;
+  jmena: string[];
+}) {
+  const [otevreno, setOtevreno] = useState(false);
+  const obal = useRef<HTMLDivElement>(null);
+
+  // Nabidku zavira klik MIMO ni - blur prijde uz pri zmacknuti tlacitka mysi,
+  // takze by se polozka pod kurzorem stihla ztratit driv, nez by se na ni
+  // kliklo. Stejne to resi i vyber projektu.
+  useEffect(() => {
+    if (!otevreno) return;
+    function mimo(e: MouseEvent) {
+      if (obal.current && !obal.current.contains(e.target as Node)) setOtevreno(false);
+    }
+    document.addEventListener('mousedown', mimo);
+    return () => document.removeEventListener('mousedown', mimo);
+  }, [otevreno]);
+
+  const hledany = hodnota.trim().toLowerCase();
+  const nalezena = hledany
+    ? jmena.filter((j) => j.toLowerCase().includes(hledany) && j.toLowerCase() !== hledany).slice(0, 6)
+    : [];
+
+  return (
+    <div ref={obal} className="relative flex-1 min-w-0">
+      <input
+        type="text"
+        value={hodnota}
+        onChange={(e) => {
+          onZmena(e.target.value);
+          setOtevreno(true);
+        }}
+        onFocus={() => setOtevreno(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && otevreno) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOtevreno(false);
+          }
+        }}
+        placeholder="Honorář herce, studio, hudba…"
+        className="w-full rounded-lg border border-line bg-field px-3 py-1.5 text-ink font-body text-sm outline-none focus:border-brand-purple"
+      />
+      {otevreno && nalezena.length > 0 && (
+        <div className="absolute z-30 left-0 right-0 mt-1 rounded-lg border border-line bg-surface shadow-lg overflow-hidden">
+          {nalezena.map((j) => (
+            <button
+              key={j}
+              type="button"
+              // Bez tohohle by kliknuti sebralo focus policku a nabidka by
+              // problikla driv, nez by se stihl vyber.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onZmena(j);
+                setOtevreno(false);
+              }}
+              className="w-full text-left px-3 py-2 text-sm font-body text-ink hover:bg-surfaceSoft"
+            >
+              {j}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

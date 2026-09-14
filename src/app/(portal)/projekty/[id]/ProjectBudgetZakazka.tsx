@@ -29,6 +29,7 @@ export function ProjectBudgetZakazka({
   hoursLogged,
   vydaje,
   pocatecniPolozky,
+  jmenaHercu,
 }: {
   caflouProjectId: string;
   /** Cena zakázky bez DPH v korunách; null = není z čeho ji vzít. */
@@ -40,6 +41,8 @@ export function ProjectBudgetZakazka({
   /** Výdaje navázané na projekt (doklady), bez DPH. */
   vydaje: number;
   pocatecniPolozky: NakladovaPolozka[];
+  /** Jména herců jako našeptávač u položek (zadání 14. 9. 2026). */
+  jmenaHercu: string[];
 }) {
   const [polozky, setPolozky] = useState(
     pocatecniPolozky.reduce((s, p) => s + p.castka, 0),
@@ -135,6 +138,7 @@ export function ProjectBudgetZakazka({
         caflouProjectId={caflouProjectId}
         pocatecni={pocatecniPolozky}
         onZmena={setPolozky}
+        jmena={jmenaHercu}
       />
     </div>
   );

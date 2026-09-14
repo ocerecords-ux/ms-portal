@@ -40,6 +40,7 @@ export function ProjectBudget({
   hoursLogged,
   caflouProjectId,
   pocatecniPolozky,
+  jmenaHercu,
   naKlic,
   cenaZDokladu,
   zdrojCeny,
@@ -53,6 +54,8 @@ export function ProjectBudget({
   hoursLogged: number;
   caflouProjectId: string;
   pocatecniPolozky: NakladovaPolozka[];
+  /** Jména herců jako našeptávač u položek (zadání 14. 9. 2026). */
+  jmenaHercu: string[];
   /** Delame pro tuhle firmu audioknihy na klic? (Company.audioknihyNaKlic) */
   naKlic: boolean;
   /** Cena z nabidky, nebo z faktury - viz zdrojCeny. */
@@ -175,6 +178,7 @@ export function ProjectBudget({
             caflouProjectId={caflouProjectId}
             pocatecni={pocatecniPolozky}
             onZmena={setPolozky}
+            jmena={jmenaHercu}
             nadpis="Další položky"
             napoveda="Bez DPH. Honorář herce, přeposlech, úprava textu. Do rozpočtu na výrobu se nepočítají — sčítají se až v celkovém rozpočtu."
           />
