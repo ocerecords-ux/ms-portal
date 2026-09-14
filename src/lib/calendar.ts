@@ -437,37 +437,43 @@ export function gridPosition(startMinutes: number, endMinutes: number) {
 
 /**
  * Barva události podle STUDIA, odlišená podle stavu (zprava uzivatele
- * 9. 9. 2026: "každý bude mít jinou barvu"). Potvrzené je plnou barvou,
- * držené a nabídnuté průhlednější — barva tak drží studio, sytost stav.
+ * 9. 9. 2026: "každý bude mít jinou barvu").
+ *
+ * PRŮHLEDNÉ PODKLADY, TEXT Z MOTIVU (zadání 14. 9. 2026: „ty segmenty
+ * v kalendáři musí být průhledné, vypadá to hrozně, nemůže být bílá barva
+ * textu na zeleném podkladu").
+ *
+ * Do 14. 9. 2026 se barva textu psala natvrdo - bílá na plné barvě studia,
+ * tmavá na světlé. Jenže barvu si u studia nastavuje člověk: na fialové byla
+ * bílá čitelná, na zelené ne. A v tmavém režimu seděl tmavý text na tmavém
+ * podkladu.
+ *
+ * Proto je podklad průhledný a text se bere z motivu (`--c-ink`). Tím se
+ * stará o čitelnost motiv, ne tabulka natvrdo psaných barev, a funguje to
+ * ve světlém i tmavém režimu s libovolnou barvou studia. Že událost patří
+ * konkrétnímu studiu, nese plný rámeček a silný pruh vlevo - stejně jako
+ * v Kalendáři na Macu nebo na Googlu.
+ *
+ * Sytost průhlednosti odlišuje stav: čím jistější termín, tím výraznější.
  */
 export function eventColors(studioColor: string, state: string): { background: string; border: string; text: string } {
-  if (state === 'CONFIRMED') {
-    return { background: studioColor, border: studioColor, text: '#FFFFFF' };
+  const text = 'rgb(var(--c-ink))';
+
+  // Pevná rezervace a ručně zapsané natáčení - nejvýraznější.
+  if (state === 'CONFIRMED' || state === 'NATACENI') {
+    return { background: `${studioColor}4D`, border: studioColor, text };
   }
-  if (state === 'SELECTED') {
-    return { background: `${studioColor}66`, border: studioColor, text: '#201A33' };
+  // Drženo hercem a střih - o stupeň tišší.
+  if (state === 'SELECTED' || state === 'STRIH') {
+    return { background: `${studioColor}2E`, border: studioColor, text };
   }
+  // Jen nabídnuto, zatím nic nedrží.
   if (state === 'OFFERED') {
-    return { background: `${studioColor}26`, border: studioColor, text: '#201A33' };
+    return { background: `${studioColor}1A`, border: studioColor, text };
   }
   /**
-   * Rucne zapsana prace ve studiu (zadani 14. 9. 2026: „udelej to barevne
-   * a kazdy kalendar zvlast ... jako na Googlu").
-   *
-   * BARVU URCUJE STUDIO, ne druh prace - studio je nas „kalendar" a kazde ma
-   * svou barvu uz v hlavicce. Nataceni je plne, strih tyz odstín svetleji
-   * s plnym ramecke: na prvni pohled je videt, ve kterem studiu se pracuje,
-   * a az pak, jestli se toci nebo strihá.
-   *
-   * Seda zustava vyhrazena tomu, kdy se NETOCI (svatek, udrzba, dovolena) -
-   * kdyby v ni svitil zapsany natáčecí den, cetl by se jako volno.
+   * Kdy se NETOCI - svatek, udrzba, dovolena, uvolneny termin. Seda je
+   * schvalne bez barvy studia: neni to prace, je to dira v kalendari.
    */
-  if (state === 'NATACENI') {
-    return { background: studioColor, border: studioColor, text: '#FFFFFF' };
-  }
-  if (state === 'STRIH') {
-    return { background: `${studioColor}59`, border: studioColor, text: '#201A33' };
-  }
-  // Blokace a uvolnene terminy - seda, at se nepletou s natacením.
-  return { background: '#E4DFFB', border: '#6E6580', text: '#201A33' };
+  return { background: 'rgb(var(--c-muted) / 0.16)', border: 'rgb(var(--c-muted))', text };
 }

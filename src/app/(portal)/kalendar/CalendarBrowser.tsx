@@ -455,6 +455,9 @@ function MrizkaPohled({
                           height: `${pozice.height}px`,
                           backgroundColor: barvy.background,
                           borderColor: barvy.border,
+                          // Silny pruh vlevo nese barvu studia i tam, kde je
+                          // podklad skoro pruhledny (14. 9. 2026).
+                          borderLeftWidth: '3px',
                           color: barvy.text,
                         }}
                         className="absolute left-0.5 right-0.5 rounded border px-1.5 py-0.5 text-left overflow-hidden"
@@ -525,7 +528,12 @@ function MesicniPohled({
                     key={e.id}
                     type="button"
                     onClick={() => onDetail(e)}
-                    style={{ backgroundColor: barvy.background, borderColor: barvy.border, color: barvy.text }}
+                    style={{
+                      backgroundColor: barvy.background,
+                      borderColor: barvy.border,
+                      borderLeftWidth: '3px',
+                      color: barvy.text,
+                    }}
                     className="rounded px-1.5 py-0.5 text-[10px] font-heading text-left truncate border"
                   >
                     {e.title}
