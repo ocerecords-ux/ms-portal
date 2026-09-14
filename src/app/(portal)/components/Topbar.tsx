@@ -152,9 +152,16 @@ export function Topbar({
     // a zvonecek se da na dalsi radek, chci at se to upravuje na tom samem
     // miste"). Drive tu bylo flex-wrap a v rezimu uprav pribyly krizky,
     // tlacitko "+" a Hotovo/Zrusit/Vychozi - rada se proto zalomila a cela
-    // lista poskocila. Ted se misto toho v uzkem miste posouvaji odkazy do
-    // stran; jmeno, zvonecek ani prepinac se nikam nestehuji.
-    <header className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex items-center justify-between gap-2 sm:gap-4 shadow-md">
+    // lista poskocila. Zalomit se proto smi JEN cely blok odkazu (viz nize) -
+    // jmeno, zvonecek ani prepinac se nikam nestehuji.
+    // NA TELEFONU MA LISTA DVA RADKY (zadani 14. 9. 2026: „v mobilu ted
+    // zmizely nebo se schovaly ty odkazy na Projekty, firmy atd. ... protahnul
+    // bych tu fialovou listu a dal ty odkazy na druhy radek"). Na jednom radku
+    // se odkazy schovaly do posuvneho pruhu za znacku a prakticky se k nim
+    // neslo dostat. Zalamuje se schvalne jen v uzkem miste: `flex-wrap` plus
+    // `w-full` u odkazu je posle pod znacku a ovladaci prvky, od tabletu vys
+    // (`sm:`) zustava lista presne takova, jaka byla - jeden radek.
+    <header className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 sm:gap-4 shadow-md">
       {/* Branding "MS portal | [logo]" podle referencniho mockupu uzivatele
           (12. 9. 2026) - svisla oddelovaci cara misto "by" a znatelne vetsi
           logo (jeste zvetseno 5. 9. 2026). */}
@@ -164,7 +171,7 @@ export function Topbar({
           povyrostla a zbytek z ni vytlacil ven. Tady je text na jeden radek,
           mensi, logo nizsi a delici cara az od tabletu - na telefonu je to
           jen dalsi svisly pruh v uzkem miste. */}
-      <Link href="/projekty" className="flex items-center gap-2 sm:gap-4 no-underline shrink-0">
+      <Link href="/projekty" className="order-1 flex items-center gap-2 sm:gap-4 no-underline shrink-0">
         <span className="font-body text-brand-green font-semibold text-lg sm:text-3xl whitespace-nowrap">
           MS portal
         </span>
@@ -177,7 +184,7 @@ export function Topbar({
           u odkazu cni nahoru, takze se usekavaly (zprava uzivatele
           9. 9. 2026: "jsou useknute krizky"). Svisle odsazeni jim udela
           misto uvnitr pruhu, zaporny okraj vrati liste puvodni vysku. */}
-      <nav className="flex items-center gap-5 sm:gap-8 font-heading text-sm font-medium min-w-0 py-3 -my-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="order-3 sm:order-2 w-full sm:w-auto flex items-center gap-5 sm:gap-8 font-heading text-sm font-medium min-w-0 py-3 -my-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {shown.map((item, index) => {
           const external = isExternalHref(item.href);
           // "/admin" (Firmy) by jinak jako prefix odpovidal i "/admin/users" -
@@ -321,7 +328,7 @@ export function Topbar({
           rozbalovaci nabidku i tu sipku") - kliknuti na jmeno vede rovnou na
           Muj ucet, vedle je jen odhlaseni. Do administrace se chodi odkazy
           v liste (Firmy, Uzivatele, Ceniky, Doklady). */}
-      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+      <div className="order-2 sm:order-3 flex items-center gap-1 sm:gap-2 shrink-0">
         <PrepinacJazyka />
         <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
@@ -373,7 +380,7 @@ export function Topbar({
       </div>
 
       {error && (
-        <p className="w-full text-xs text-white bg-red-600/80 rounded-lg px-3 py-2 m-0">{error}</p>
+        <p className="order-4 w-full text-xs text-white bg-red-600/80 rounded-lg px-3 py-2 m-0">{error}</p>
       )}
     </header>
   );

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
 
 /**
  * Profilová fotka uživatele jako obrázek (10. 9. 2026).
@@ -41,8 +42,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!uzivatel?.photoUrl) return new NextResponse(null, { status: 404 });
 
   // Fotka uložená jinde (R2, Disk) - jen ukážeme kam, ať se nepřenáší přes nás.
+  //
+  // Oprava 14. 9. 2026 ("nejde mu přidat profilová fotka"): uložená adresa
+  // míří na ROZHRANÍ úložiště (`...r2.cloudflarestorage.com`), a to bez
+  // podpisu nikomu nic nevydá - prohlížeč dostal 401 a v portálu svítily
+  // iniciály, jako by se fotka vůbec nenahrála. Nahraná přitom byla.
+  // Odkaz si proto podepíšeme. Když se to nepovede (klíč z adresy nejde
+  // vyčíst, úložiště není nastavené), pošleme adresu tak, jak je - u
+  // veřejného úložiště fungovala a fungovat bude.
   if (!uzivatel.photoUrl.startsWith('data:')) {
-    return NextResponse.redirect(uzivatel.photoUrl, 307);
+    const klic = klicZAdresyUloziste(uzivatel.photoUrl);
+    const podepsany = klic ? await podepsanyOdkazNaPrilohu(klic, 'fotka', false) : null;
+    return NextResponse.redirect(podepsany || uzivatel.photoUrl, 307);
   }
 
   const obrazek = rozeber(uzivatel.photoUrl);

@@ -107,6 +107,33 @@ function getClient() {
   });
 }
 
+/**
+ * Klic souboru vytazeny z adresy, pod kterou ho ulozila tahle aplikace.
+ *
+ * PROC TO JE (14. 9. 2026): profilove fotky se ukladaji do R2 a v databazi
+ * z nich zustane cela adresa - jenze adresa R2 (`...r2.cloudflarestorage.com`)
+ * je ROZHRANI ULOZISTE, ne verejny odkaz. Kdo na ni prijde bez podpisu,
+ * dostane 401 a v portalu pak misto fotky svitily iniciály. Z adresy proto
+ * vytahneme klic a odkaz si podepiseme sami - viz api/uzivatele/[id]/fotka.
+ *
+ * Pocita s obema tvary, ktere aplikace zaklada: `<server>/<bucket>/<klic>`
+ * (vlastni uloziste, forcePathStyle) i `<bucket>.s3.amazonaws.com/<klic>`.
+ */
+export function klicZAdresyUloziste(adresa: string): string | null {
+  const bucket = (process.env.S3_BUCKET || '').trim();
+  if (!adresa.startsWith('http') || !bucket) return null;
+  let cesta: string;
+  try {
+    cesta = decodeURIComponent(new URL(adresa).pathname.replace(/^\/+/, ''));
+  } catch {
+    return null;
+  }
+  if (!cesta) return null;
+  if (cesta === bucket) return null;
+  if (cesta.startsWith(`${bucket}/`)) return cesta.slice(bucket.length + 1) || null;
+  return cesta;
+}
+
 /** Je uloziste souboru vubec nastavene? Pouziva i /api/health pro diagnostiku. */
 export function isStorageConfigured(): boolean {
   return Boolean(process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY && process.env.S3_BUCKET);

@@ -19,6 +19,12 @@ export default async function TimesheetsPage() {
   const isAdmin = role === 'ADMIN';
   // Vykaz si pise jen zvukar (zadani 6. 9. 2026: "Nikdo ze Žůžo Labůžo si
   // výkazy nedělá") - Zuzo-labuzo ma tuhle stranku jen jako prehled.
+  //
+  // UPRAVOVAT uz ale smi oba (zadani 14. 9. 2026: "A melo by jit upravit
+  // vykazy. Prava na to budou mit Zuzo-labuzo i zvukari"). Zalozit novy vykaz
+  // Zuzo-labuzo porad nemuze - to by bylo proti zadani z 6. 9.; muze jen
+  // opravit ten, co uz nekdo napsal. Stejne jako u mazani, ktere tu ma od
+  // zacatku.
   const canWrite = role === 'ZVUKAR';
 
   const [me, entries] = await Promise.all([
@@ -43,7 +49,9 @@ export default async function TimesheetsPage() {
    * ho produkce uzavre, a zvukar pak nemel kam vykaz napsat. Jsou proto
    * oznacene a v seznamu az za rozdelanymi, at se na ne neklikne omylem.
    */
-  const projectOptions = canWrite
+  // Seznam se nacita i pro Zuzo-labuzo - potrebuje ho pri UPRAVE ciziho
+  // vykazu (14. 9. 2026), kde se projekt da prehodit.
+  const projectOptions = canWrite || isAdmin
     ? await (async () => {
         const { projects } = await loadInternalProjects();
         return projects
@@ -68,6 +76,7 @@ export default async function TimesheetsPage() {
         startMinutes: e.startMinutes,
         endMinutes: e.endMinutes,
         workType: e.workType,
+        projectId: e.caflouProjectId,
         projectName: e.projectName,
         note: e.note,
         hourlyRateSnapshot: e.hourlyRateSnapshot,

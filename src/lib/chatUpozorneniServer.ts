@@ -64,6 +64,62 @@ export function jeZminen(body: string, jmeno: string | null, email: string): boo
   return false;
 }
 
+/**
+ * Koho zpráva doopravdy zmiňuje (oprava 14. 9. 2026: „Ondřej Černý ml. má
+ * problém, když ho někdo označí, že označí mě").
+ *
+ * PROČ TO NEJDE POSOUDIT U KAŽDÉHO ZVLÁŠŤ: `jeZminen` se ptá „je tenhle
+ * člověk zmíněný?" a na „@Ondřej Černý ml." odpoví ANO i u účtu „Ondřej
+ * Černý" — jeho jméno je začátkem toho delšího a za ním následuje mezera,
+ * tedy konec slova. Upozornění pak chodilo oběma.
+ *
+ * Rozhoduje se proto nad CELÝM seznamem naráz a na každém zavináči vyhraje
+ * NEJDELŠÍ jméno, které tam sedí. Kratší jméno, které je jen začátkem toho
+ * delšího, se tím vyřadí.
+ *
+ * Shodně dlouhé podoby se berou všechny: „@Ondřej" je u dvou Ondřejů opravdu
+ * nejednoznačné a hádat, který to je, by bylo horší než dát vědět oběma.
+ */
+export function zmineniVeZprave(
+  body: string,
+  lide: { id: string; name: string | null; email: string }[],
+): Set<string> {
+  const text = klic(body);
+  const zminky = new Set<string>();
+  if (!text.includes('@')) return zminky;
+
+  const podoby: { podoba: string; id: string }[] = [];
+  for (const clovek of lide) {
+    const cele = (clovek.name || '').trim();
+    if (cele) {
+      podoby.push({ podoba: klic(cele), id: clovek.id });
+      const prvni = cele.split(/\s+/)[0];
+      if (prvni.length >= 3) podoby.push({ podoba: klic(prvni), id: clovek.id });
+    }
+    const pred = clovek.email.split('@')[0];
+    if (pred.length >= 3) podoby.push({ podoba: klic(pred), id: clovek.id });
+  }
+  podoby.sort((a, b) => b.podoba.length - a.podoba.length);
+
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== '@') continue;
+    const zbytek = text.slice(i + 1);
+    let nejdelsi = 0;
+    for (const { podoba, id } of podoby) {
+      // Serazeno od nejdelsiho: jakmile jsou kratsi nez uz nalezena shoda,
+      // nema smysl pokracovat.
+      if (podoba.length < nejdelsi) break;
+      if (!zbytek.startsWith(podoba)) continue;
+      // Hned za jmenem nesmi pokracovat pismeno - „@petra" neni zminka Petra.
+      const dalsi = zbytek[podoba.length];
+      if (dalsi && /[\p{L}\p{N}]/u.test(dalsi)) continue;
+      nejdelsi = podoba.length;
+      zminky.add(id);
+    }
+  }
+  return zminky;
+}
+
 /** Je teď u tohohle člověka noční klid? Hodiny se počítají v Praze. */
 export function jeTicho(od: number | null, doo: number | null, ted = new Date()): boolean {
   if (od === null || doo === null || od === doo) return false;
@@ -138,6 +194,8 @@ export async function komuPoslatUpozorneni(
       clenstvi.filter((c) => c.upozorneni).map((c): [string, ChatUpozorneni] => [c.userId, c.upozorneni!]),
     );
     const veVlakne = new Set(vlakno.map((m) => m.userId));
+    // Zminky se vyhodnocuji nad celym seznamem naraz - viz zmineniVeZprave.
+    const zmineni = zmineniVeZprave(zprava.body, lide);
 
     return lide
       .filter((clovek) => {
@@ -156,7 +214,7 @@ export async function komuPoslatUpozorneni(
         if (rezim === 'VSE') return true;
 
         // ZMINKY: zminka jmenem, nebo odpoved ve vlakne, kde uz clovek mluvil.
-        return jeZminen(zprava.body, clovek.name, clovek.email) || veVlakne.has(clovek.id);
+        return zmineni.has(clovek.id) || veVlakne.has(clovek.id);
       })
       .map((clovek) => clovek.id);
   } catch (err) {

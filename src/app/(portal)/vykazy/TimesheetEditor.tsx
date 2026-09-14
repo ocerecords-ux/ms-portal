@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { WorkType } from '@prisma/client';
 import {
@@ -22,6 +22,7 @@ type Entry = {
   startMinutes: number;
   endMinutes: number;
   workType: WorkType;
+  projectId: string | null;
   projectName: string | null;
   note: string | null;
   hourlyRateSnapshot: number;
@@ -103,6 +104,16 @@ export function TimesheetEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Uprava vykazu (zadani 14. 9. 2026). Zamerne se NEDELA primo v radku
+  // tabulky: radek ma sedm sloupcu a na telefonu by se do nej formular
+  // nevesel. Misto toho se do nej nacte tentyz formular, ve kterem se vykaz
+  // zapisuje - clovek tak upravuje v poli, ktere uz zna.
+  const [editId, setEditId] = useState<string | null>(null);
+  // Sazba UPRAVOVANEHO vykazu. Je to sazba platna v dobe zapisu, ne dnesni -
+  // nahled "kolik to dela" proto musi pocitat s ni, jinak by pri uprave
+  // stareho vykazu ukazoval jine cislo, nez jake se pak ulozi.
+  const [editRate, setEditRate] = useState<number | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
   // Filtry nad seznamem (zadani 6. 9. 2026): mesic, hledani, ciho vykazu a razeni.
   // Otevira se rovnou na aktualnim mesici (zadani 8. 9. 2026: "kdyz se na tu
   // stranku prokliknu, chci mit zobrazeny ten dany mesic") - castka nahore se
@@ -180,14 +191,28 @@ export function TimesheetEditor({
     const end = parseTime(form.to);
     if (start === null || end === null || start === end) return null;
     const minutes = durationMinutes(start, end);
-    return { minutes, amount: entryAmount(start, end, hourlyRate) };
-  }, [form.from, form.to, hourlyRate]);
+    return { minutes, amount: entryAmount(start, end, editRate ?? hourlyRate) };
+  }, [form.from, form.to, hourlyRate, editRate]);
 
   // U druhu prace "Ostatni" se projekt nevybira (zadani 8. 9. 2026), takze se
   // ani nevyzaduje. Jinak je povinny stejne jako cas (zadani 6. 9. 2026).
   const needsProject = requiresProject(form.workType);
   const missing =
     !form.date || !form.from || !form.to || !form.workType || (needsProject && !form.project);
+
+  /**
+   * Nabidka projektu pro formular. Pri uprave stareho vykazu se do ni prida
+   * i projekt, ktery uz v seznamu neni (napr. se mezitim smazal) - jinak by
+   * se z upravovaneho vykazu projekt pri ulozeni ztratil, aniz by si toho
+   * nekdo vsiml.
+   */
+  const nabidkaProjektu = useMemo(() => {
+    if (!editId) return projectOptions;
+    const upravovany = entries.find((e) => e.id === editId);
+    if (!upravovany?.projectId || !upravovany.projectName) return projectOptions;
+    if (projectOptions.some((p) => p.id === upravovany.projectId)) return projectOptions;
+    return [{ id: upravovany.projectId, label: upravovany.projectName }, ...projectOptions];
+  }, [editId, entries, projectOptions]);
 
   const totals = useMemo(() => {
     let minutes = 0;
@@ -198,6 +223,32 @@ export function TimesheetEditor({
     }
     return { minutes, amount };
   }, [visibleEntries]);
+
+  /** Nacte vykaz do formulare a odroluje k nemu (zadani 14. 9. 2026). */
+  function zacniUpravu(entry: Entry) {
+    setEditId(entry.id);
+    setEditRate(entry.hourlyRateSnapshot);
+    setError(null);
+    setForm({
+      date: entry.date,
+      from: formatTime(entry.startMinutes),
+      to: formatTime(entry.endMinutes),
+      workType: entry.workType,
+      project: entry.projectId ?? '',
+      note: entry.note ?? '',
+    });
+    // Formular je nad tabulkou; bez odrolovani by se pri uprave radku dole
+    // zdanlive nic nestalo.
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  }
+
+  /** Zpatky na prazdny formular. U Zuzo-labuzo se formular uplne schova. */
+  function zrusUpravu() {
+    setEditId(null);
+    setEditRate(null);
+    setError(null);
+    setForm({ date: todayIso(), from: '', to: '', workType: '', project: '', note: '' });
+  }
 
   async function addEntry(e: React.FormEvent) {
     e.preventDefault();
@@ -212,9 +263,9 @@ export function TimesheetEditor({
     setSaving(true);
     setError(null);
     try {
-      const selected = needsProject ? projectOptions.find((p) => p.id === form.project) : undefined;
-      const res = await fetch('/api/timesheets', {
-        method: 'POST',
+      const selected = needsProject ? nabidkaProjektu.find((p) => p.id === form.project) : undefined;
+      const res = await fetch(editId ? `/api/timesheets/${editId}` : '/api/timesheets', {
+        method: editId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date: form.date,
@@ -231,7 +282,11 @@ export function TimesheetEditor({
         setError(data?.error || 'Uložení se nezdařilo.');
         return;
       }
-      setForm((f) => ({ ...f, note: '' }));
+      if (editId) {
+        zrusUpravu();
+      } else {
+        setForm((f) => ({ ...f, note: '' }));
+      }
       router.refresh();
     } catch {
       setError('Uložení se nezdařilo.');
@@ -243,6 +298,9 @@ export function TimesheetEditor({
   async function removeEntry(id: string) {
     setBusyId(id);
     setError(null);
+    // Kdyz se maze prave upravovany vykaz, nesmi formular zustat "nad" nicim -
+    // ulozeni by pak skoncilo hlaskou "Výkaz nenalezen".
+    if (editId === id) zrusUpravu();
     try {
       const res = await fetch(`/api/timesheets/${id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -283,9 +341,14 @@ export function TimesheetEditor({
         </div>
       </div>
 
-      {canWrite && (
-        <form onSubmit={addEntry} className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nový výkaz</h2>
+      {/* Formular se ukazuje zvukari porad (pise si vykazy) a Zuzo-labuzo jen
+          ve chvili, kdy nejaky vykaz upravuje - zalozit novy si nesmi
+          (zadani 6. 9. 2026), opravit cizi ano (zadani 14. 9. 2026). */}
+      {(canWrite || editId) && (
+        <form ref={formRef} onSubmit={addEntry} className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
+          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+            {editId ? 'Úprava výkazu' : 'Nový výkaz'}
+          </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <label className="flex flex-col gap-1.5">
@@ -358,12 +421,12 @@ export function TimesheetEditor({
               {/* Misto rolovaciho seznamu se sedmi sty polozkami se projekt
                   HLEDA PSANIM (zadani 11. 9. 2026) - viz VyberProjektu.tsx. */}
               <VyberProjektu
-                projekty={projectOptions}
+                projekty={nabidkaProjektu}
                 hodnota={form.project}
                 onZmena={(id) => setForm({ ...form, project: id })}
               />
               <span className="text-xs text-muted font-body">
-                {projectOptions.length === 0
+                {nabidkaProjektu.length === 0
                   ? 'Zatím se nenačetly žádné projekty.'
                   : 'Pište název projektu, firmu nebo číslo. V nabídce jsou i dokončené projekty.'}
               </span>
@@ -391,8 +454,18 @@ export function TimesheetEditor({
               disabled={saving || missing}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              {saving ? 'Ukládám…' : 'Přidat výkaz'}
+              {saving ? 'Ukládám…' : editId ? 'Uložit změny' : 'Přidat výkaz'}
             </button>
+            {editId && (
+              <button
+                type="button"
+                onClick={zrusUpravu}
+                disabled={saving}
+                className="font-heading font-semibold text-sm text-muted hover:text-ink transition-colors disabled:opacity-60"
+              >
+                Zrušit úpravu
+              </button>
+            )}
             {preview ? (
               <span className="text-sm font-heading text-ink">
                 {formatDuration(preview.minutes)} ·{' '}
@@ -459,7 +532,9 @@ export function TimesheetEditor({
           </div>
         </div>
 
-      {!canWrite && error && (
+      {/* Chyby z formulare se vypisuji primo v nem; tohle je pro Zuzo-labuzo,
+          ktere formular otevreny nema (napr. nepovedene mazani). */}
+      {!canWrite && !editId && error && (
         <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>
       )}
 
@@ -523,15 +598,30 @@ export function TimesheetEditor({
                       {formatCzk(entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot))}
                     </td>
                     <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                      {/* Upravit i Smazat vidi ten, kdo na ne ma pravo:
+                          zvukar u svych vykazu, Zuzo-labuzo u vsech
+                          (zadani 14. 9. 2026). Kontrola je znovu na serveru. */}
                       {(e.mine || isAdmin) && (
-                        <button
-                          type="button"
-                          onClick={() => removeEntry(e.id)}
-                          disabled={busyId === e.id}
-                          className="text-danger text-sm font-heading disabled:opacity-50"
-                        >
-                          Smazat
-                        </button>
+                        <span className="inline-flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => zacniUpravu(e)}
+                            disabled={busyId === e.id}
+                            className={`text-sm font-heading disabled:opacity-50 ${
+                              editId === e.id ? 'text-brand-purpleDark font-semibold' : 'text-brand-purple'
+                            }`}
+                          >
+                            {editId === e.id ? 'Upravuje se' : 'Upravit'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeEntry(e.id)}
+                            disabled={busyId === e.id}
+                            className="text-danger text-sm font-heading disabled:opacity-50"
+                          >
+                            Smazat
+                          </button>
+                        </span>
                       )}
                     </td>
                   </tr>
