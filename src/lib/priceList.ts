@@ -61,6 +61,57 @@ export async function isRodnyListProjectType(projectType: string | null | undefi
 }
 
 /**
+ * DRUH NOTIFIKACE PODLE TYPU PROJEKTU (zadani 14. 9. 2026: „musime jeste
+ * vymyslet dva druhy notifikaci. Jeden druh je pro Audioknihy a druhy pro
+ * reklamy").
+ *
+ * Rozhoduje priznak `reklama` na polozce ceniku. Kdyz ho nema zaskrtnuty
+ * ZADNA polozka, bere se jako reklama aspon to, co ma `rodnyList` - stare
+ * ceniky tak funguji bez toho, aby to nekdo musel dozaskrtavat, a jakmile
+ * se prvni „Reklama" zaskrtne, plati uz jen ta.
+ */
+export async function listReklamaProjectTypes(): Promise<string[]> {
+  try {
+    const zaskrtnute = await prisma.priceListItem.findMany({
+      where: { reklama: true },
+      select: { name: true },
+    });
+    if (zaskrtnute.length > 0) return zaskrtnute.map((i) => i.name);
+    // Zaloha pro ceniky, kde „Reklama" jeste nikdo nezaskrtl - viz
+    // druhNotifikaceProTyp nize.
+    const sRodnymListem = await prisma.priceListItem.findMany({
+      where: { rodnyList: true },
+      select: { name: true },
+    });
+    return sRodnymListem.map((i) => i.name);
+  } catch (err) {
+    console.error('Nacteni reklamnich typu projektu selhalo:', err);
+    return [];
+  }
+}
+
+export async function druhNotifikaceProTyp(
+  projectType: string | null | undefined,
+): Promise<'AUDIOKNIHA' | 'REKLAMA'> {
+  const typ = projectType?.trim();
+  if (!typ) return 'AUDIOKNIHA';
+  try {
+    const item = await prisma.priceListItem.findUnique({
+      where: { name: typ },
+      select: { reklama: true, rodnyList: true },
+    });
+    if (!item) return 'AUDIOKNIHA';
+    if (item.reklama) return 'REKLAMA';
+    const uzSeZaskrtava = await prisma.priceListItem.count({ where: { reklama: true } });
+    if (uzSeZaskrtava > 0) return 'AUDIOKNIHA';
+    return item.rodnyList ? 'REKLAMA' : 'AUDIOKNIHA';
+  } catch (err) {
+    console.error('Urceni druhu notifikace podle typu projektu selhalo:', err);
+    return 'AUDIOKNIHA';
+  }
+}
+
+/**
  * Ikona ke kazdemu typu projektu (zadani 10. 9. 2026).
  *
  * Vraci se cely ciselnik naráz, ne ikona po ikone: prehled projektu je jedna

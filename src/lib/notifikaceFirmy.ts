@@ -49,6 +49,44 @@ export const CO_SE_POSILA: Record<string, string> = {
   'Schváleno - k fakturaci': 'Na disku jsou opravené tracky k vydání.',
 };
 
+/**
+ * DRUH ZPRAVY (zadani 14. 9. 2026: „musime jeste vymyslet dva druhy
+ * notifikaci. Jeden druh je pro Audioknihy a druhy pro reklamy. U reklam bych
+ * to potreboval trosku jinak zformulovat a odesilaji se jen ve stavu
+ * Dokonceno - ke schvaleni").
+ *
+ * Audiokniha projde dlouhou cestou a klient chce vedet o kazdem kroku.
+ * Reklama je hotova naraz - spot bud je, nebo neni - takze zprava je jedna
+ * a prijde ve chvili, kdy je co schvalovat.
+ */
+export type DruhNotifikace = 'AUDIOKNIHA' | 'REKLAMA';
+
+export const DRUHY_NOTIFIKACI: DruhNotifikace[] = ['AUDIOKNIHA', 'REKLAMA'];
+
+export const DRUH_POPISKY: Record<DruhNotifikace, string> = {
+  AUDIOKNIHA: 'Audioknihy',
+  REKLAMA: 'Reklamy',
+};
+
+/** Jediny stav, ve kterem u reklamy zprava odchazi. */
+export const STAV_REKLAMY = 'Dokončeno - ke schválení';
+
+export const STAVY_S_NOTIFIKACI_REKLAMA: string[] = [STAV_REKLAMY];
+
+/** Stavy, ve kterych se posila zprava daneho druhu. */
+export function stavySNotifikaci(druh: DruhNotifikace): string[] {
+  return druh === 'REKLAMA' ? STAVY_S_NOTIFIKACI_REKLAMA : STAVY_S_NOTIFIKACI;
+}
+
+/**
+ * Co se u reklamy posila. Znění je jen vychozi - produkce si ho prepise
+ * v Administraci → Vzory zprav, stejne jako u audioknih.
+ */
+export const CO_SE_POSILA_REKLAMA: Record<string, string> = {
+  [STAV_REKLAMY]:
+    'spot je hotový a připravený ke schválení. Poslechněte si ho prosím a dejte nám vědět, jestli je všechno v pořádku, nebo co ještě upravit.',
+};
+
 export function popisStavuProNotifikaci(stav: string): string {
   return STAVY_PROJEKTU.find((s) => s.nazev === stav)?.popis ?? '';
 }

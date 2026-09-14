@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
-import { STAVY_S_NOTIFIKACI } from '@/lib/notifikaceFirmy';
+import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
+import { druhNotifikaceProTyp } from '@/lib/priceList';
 import { dosadPromenne } from '@/lib/vzoryZprav';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { buildStavProjektuHtml } from '@/lib/email';
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       name: true,
       statusName: true,
       driveUrl: true,
+      projectType: true,
       companyId: true,
       companyName: true,
       company: { select: { name: true, driveFolderUrl: true } },
@@ -45,9 +47,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   });
   if (!projekt) return NextResponse.json({ error: 'Projekt není v portálu.' }, { status: 404 });
 
+  // Dva druhy zprav (zadani 14. 9. 2026) - nahled musi ukazat ten, ktery
+  // projektu opravdu patri, vcetne toho, ze u reklamy jde jen jeden stav.
+  const druh = await druhNotifikaceProTyp(projekt.projectType);
+  const stavy = stavySNotifikaci(druh);
   const zadany = req.nextUrl.searchParams.get('stav');
-  const stav = zadany && STAVY_S_NOTIFIKACI.includes(zadany) ? zadany : projekt.statusName ?? '';
-  if (!STAVY_S_NOTIFIKACI.includes(stav)) {
+  const stav = zadany && stavy.includes(zadany) ? zadany : projekt.statusName ?? '';
+  if (!stavy.includes(stav)) {
     return NextResponse.json({ error: `Ke stavu „${stav}" se zpráva neposílá.` }, { status: 400 });
   }
 
@@ -77,7 +83,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       : slozka;
 
   let odkazNaPreposlech: string | null = null;
-  if (znackaStavu(stav) === ZNACKA_PRVNI_TRACKY) {
+  if (druh !== 'REKLAMA' && znackaStavu(stav) === ZNACKA_PRVNI_TRACKY) {
     odkazNaPreposlech = platnyToken
       ? urlPreposlechu(platnyToken)
       : `${zaklad}/preposlech/ukazkovy-odkaz`;
@@ -85,7 +91,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const nazevProjektu = projekt.name || `Projekt ${params.id}`;
   const nazevFirmy = projekt.company?.name ?? projekt.companyName ?? '';
-  const vzor = await vzorProStav(stav);
+  const vzor = await vzorProStav(stav, druh);
   const hodnoty = {
     projekt: nazevProjektu,
     firma: nazevFirmy,
@@ -104,6 +110,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     nadpis: dosadPromenne(vzor.nadpis, hodnoty),
     text: dosadPromenne(vzor.text, hodnoty),
     odkazNaDisk,
+    popisekOdkazu: druh === 'REKLAMA' ? 'Poslechnout spot ve složce' : null,
     odkazNaPreposlech,
   });
 

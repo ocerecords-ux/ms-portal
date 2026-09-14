@@ -14,6 +14,7 @@ type Item = {
   active: boolean;
   /** Rádiový spot - jen u něj se vyrábí Rodný list. */
   rodnyList: boolean;
+  reklama: boolean;
   /** Ikona, která svítí před názvem projektu (zadání 10. 9. 2026). */
   ikona: string | null;
 };
@@ -29,7 +30,14 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   const [busy, setBusy] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: '', priceExVat: '', priceIncVat: '' });
-  const [newItem, setNewItem] = useState({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false, ikona: '' });
+  const [newItem, setNewItem] = useState({
+    name: '',
+    priceExVat: '',
+    priceIncVat: '',
+    rodnyList: false,
+    reklama: false,
+    ikona: '',
+  });
 
   // Razeni kliknutim na nazev sloupce (zadani 9. 9. 2026). Vychozi je podle
   // nazvu - cenik se cte jako seznam, ne jako poradi.
@@ -41,6 +49,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
     // V nabidce napred pri vzestupnem razeni.
     vNabidce: (i) => (i.active ? 0 : 1),
     rodnyList: (i) => (i.rodnyList ? 0 : 1),
+    reklama: (i) => (i.reklama ? 0 : 1),
   });
 
   async function send(url: string, method: string, body?: unknown) {
@@ -71,7 +80,8 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   async function addItem(e: React.FormEvent) {
     e.preventDefault();
     const created = await send('/api/admin/pricelist', 'POST', newItem);
-    if (created) setNewItem({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false, ikona: '' });
+    if (created)
+      setNewItem({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false, reklama: false, ikona: '' });
   }
 
   function startEdit(item: Item) {
@@ -123,13 +133,22 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                   prepni={prepni}
                   title="U projektů s tímhle typem se při dokončení vyrobí Rodný list"
                 />
+                {/* Reklama (zadani 14. 9. 2026) - rozhoduje, podle kterych
+                    vzoru chodi klientovi zpravy. */}
+                <ThRadit
+                  label="Reklama"
+                  sloupec="reklama"
+                  razeni={razeni}
+                  prepni={prepni}
+                  title="Zprávy klientovi se berou ze vzorů pro reklamy a odcházejí jen ve stavu „Dokončeno - ke schválení“"
+                />
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted text-sm font-body">
                     Ceník je zatím prázdný. Přidejte první položku formulářem níže.
                   </td>
                 </tr>
@@ -169,6 +188,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                     </td>
                     <td className="px-4 py-3 text-sm font-heading text-muted">{item.active ? 'Ano' : 'Ne'}</td>
                     <td className="px-4 py-3 text-sm font-heading text-muted">{item.rodnyList ? 'Ano' : 'Ne'}</td>
+                    <td className="px-4 py-3 text-sm font-heading text-muted">{item.reklama ? 'Ano' : 'Ne'}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <span className="inline-flex items-center gap-3">
                         <button
@@ -235,6 +255,17 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                         className={item.rodnyList ? 'text-brand-greenDeep' : 'text-muted'}
                       >
                         {item.rodnyList ? 'Ano' : 'Ne'}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-heading">
+                      <button
+                        type="button"
+                        onClick={() => send(`/api/admin/pricelist/${item.id}`, 'PATCH', { reklama: !item.reklama })}
+                        disabled={busy}
+                        title="Zprávy klientovi se berou ze vzorů pro reklamy a odcházejí jen ve stavu „Dokončeno - ke schválení“"
+                        className={item.reklama ? 'text-brand-greenDeep' : 'text-muted'}
+                      >
+                        {item.reklama ? 'Ano' : 'Ne'}
                       </button>
                     </td>
                     {/* Tlacitko Upravit tu bylo zbytecne (zadani 9. 9. 2026) -
@@ -307,6 +338,15 @@ export function PriceListEditor({ items }: { items: Item[] }) {
             onChange={(e) => setNewItem({ ...newItem, rodnyList: e.target.checked })}
           />
           Rádiový spot — u projektů s tímhle typem se při dokončení vyrobí Rodný list
+        </label>
+        <label className="flex items-center gap-2 text-sm font-heading text-ink">
+          <input
+            type="checkbox"
+            checked={newItem.reklama}
+            onChange={(e) => setNewItem({ ...newItem, reklama: e.target.checked })}
+          />
+          Reklama — zprávy klientovi se berou ze vzorů pro reklamy a chodí jen ve stavu „Dokončeno - ke
+          schválení"
         </label>
         <div>
           <AddButton type="submit" disabled={busy}>

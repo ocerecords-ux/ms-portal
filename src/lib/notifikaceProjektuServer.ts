@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
-import { STAVY_S_NOTIFIKACI, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
+import { stavySNotifikaci, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
+import { druhNotifikaceProTyp } from '@/lib/priceList';
 import { dosadPromenne } from '@/lib/vzoryZprav';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { sendStavProjektuEmail } from '@/lib/email';
@@ -59,13 +60,12 @@ export async function posliNotifikaciKeStavu(
   moznosti?: { uvod?: string | null },
 ): Promise<VysledekNotifikace> {
   try {
-    if (!STAVY_S_NOTIFIKACI.includes(stav)) return { stav: 'vypnuto' };
-
     const projekt = await prisma.projectMeta.findUnique({
       where: { caflouProjectId },
       select: {
         name: true,
         driveUrl: true,
+        projectType: true,
         companyId: true,
         companyName: true,
         company: { select: { name: true, driveFolderUrl: true, interniPrijemci: true } },
@@ -73,6 +73,16 @@ export async function posliNotifikaciKeStavu(
       },
     });
     if (!projekt?.companyId) return { stav: 'vypnuto' };
+
+    /**
+     * DVA DRUHY ZPRAV (zadani 14. 9. 2026). Audiokniha vzniká po krocích a
+     * klient chce vědět o každém; reklama je hotová naráz, takže se posílá
+     * jediná zpráva, a to ve stavu „Dokončeno - ke schválení". Právě proto
+     * se seznam stavů ptá až po zjištění druhu - u reklamy jsou ostatní
+     * stavy mimo hru, i kdyby je firma měla zapnuté.
+     */
+    const druh = await druhNotifikaceProTyp(projekt.projectType);
+    if (!stavySNotifikaci(druh).includes(stav)) return { stav: 'vypnuto' };
 
     const nastaveni = await prisma.notifikaceFirmy.findUnique({
       where: { companyId_stav: { companyId: projekt.companyId, stav } },
@@ -159,7 +169,7 @@ export async function posliNotifikaciKeStavu(
      */
     const nazevProjektu = projekt.name || `Projekt ${caflouProjectId}`;
     const nazevFirmy = projekt.company?.name ?? projekt.companyName ?? '';
-    const vzor = await vzorProStav(stav);
+    const vzor = await vzorProStav(stav, druh);
     const hodnoty = {
       projekt: nazevProjektu,
       firma: nazevFirmy,
@@ -181,6 +191,8 @@ export async function posliNotifikaciKeStavu(
       text: dosadPromenne(vzor.text, hodnoty),
       odkazNaDisk,
       odkazNaPreposlech,
+      // „Stáhnout nahrávky ze složky" sedí na audioknihu, u spotu ne.
+      popisekOdkazu: druh === 'REKLAMA' ? 'Poslechnout spot ve složce' : null,
     });
 
     if (!vysledek.sent) {

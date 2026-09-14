@@ -25,9 +25,13 @@ export default async function VzoryZpravPage() {
         <p className="text-sm font-body text-muted m-0 mt-2 max-w-[70ch]">
           Co klientovi dorazí, když projekt přejde do daného stavu. Komu to jde a jestli vůbec,
           se nastavuje zvlášť u každé firmy pod záložkou Notifikace — tady se píše jen znění.
+          Audioknihy mají zprávu ke každému kroku, reklamy jedinou, a to ve stavu
+          „Dokončeno - ke schválení". Že jde o reklamu, se pozná podle zaškrtnutí u typu projektu v Ceníku.
         </p>
       </div>
-      <VzoryEditor pocatecni={await nactiVzory()} />
+      {/* Oba druhy najednou (zadani 14. 9. 2026) - prepina se zalozkou
+          v editoru, at se kvuli tomu nemusi znovu nacitat stranka. */}
+      <VzoryEditor pocatecni={[...(await nactiVzory('AUDIOKNIHA')), ...(await nactiVzory('REKLAMA'))]} />
     </div>
   );
 }

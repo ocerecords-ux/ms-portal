@@ -1,4 +1,9 @@
-import { CO_SE_POSILA, STAVY_S_NOTIFIKACI } from '@/lib/notifikaceFirmy';
+import {
+  CO_SE_POSILA,
+  CO_SE_POSILA_REKLAMA,
+  stavySNotifikaci,
+  type DruhNotifikace,
+} from '@/lib/notifikaceFirmy';
 
 /**
  * Vzory zpráv klientovi (zadání 11. 9. 2026: „udělejme vzory a já si je pak
@@ -40,16 +45,32 @@ export const PROMENNE: { klic: string; popis: string; ukazka: string }[] = [
 export const VYCHOZI_PREDMET = '{projekt} - {stav}';
 
 /**
+ * Předmět u reklamy (zadání 14. 9. 2026). Stav v předmětu by klientovi
+ * z agentury nic neřekl - zajímá ho, že je co schvalovat.
+ */
+export const VYCHOZI_PREDMET_REKLAMA = '{projekt} - ke schválení';
+
+/** Nadpis nad textem u reklamy - audioknihy ho nemají, tady dává smysl. */
+export const VYCHOZI_NADPIS_REKLAMA = 'Spot je hotový';
+
+/**
  * Výchozí znění. Texty jsou přesně ty, které portál posílal doteď
  * (CO_SE_POSILA), aby se změnou vzorů nikomu nic nezměnilo pod rukama.
  * Nadpis je prázdný ze stejného důvodu - do teď zprávy žádný neměly.
  */
-export function vychoziVzor(stav: string): Vzor {
+export function vychoziVzor(stav: string, druh: DruhNotifikace = 'AUDIOKNIHA'): Vzor {
+  if (druh === 'REKLAMA') {
+    return {
+      predmet: VYCHOZI_PREDMET_REKLAMA,
+      nadpis: VYCHOZI_NADPIS_REKLAMA,
+      text: CO_SE_POSILA_REKLAMA[stav] ?? '',
+    };
+  }
   return { predmet: VYCHOZI_PREDMET, nadpis: '', text: CO_SE_POSILA[stav] ?? '' };
 }
 
-export function vychoziVzory(): Record<string, Vzor> {
-  return Object.fromEntries(STAVY_S_NOTIFIKACI.map((s) => [s, vychoziVzor(s)]));
+export function vychoziVzory(druh: DruhNotifikace = 'AUDIOKNIHA'): Record<string, Vzor> {
+  return Object.fromEntries(stavySNotifikaci(druh).map((s) => [s, vychoziVzor(s, druh)]));
 }
 
 /**

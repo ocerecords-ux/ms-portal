@@ -1455,6 +1455,12 @@ export type StavProjektuInput = {
   text: string;
   odkazNaDisk: string | null;
   /**
+   * Popisek tlačítka na složku (zadání 14. 9. 2026 - reklamy se formulují
+   * jinak než audioknihy). Prázdné = „Stáhnout nahrávky ze složky", jak to
+   * chodilo doteď.
+   */
+  popisekOdkazu?: string | null;
+  /**
    * Druhé tlačítko — celoobrazovkový AudioTagger (zadání 11. 9. 2026).
    * Posílá se jen u zprávy o prvních tracích; jindy zůstává prázdné.
    */
@@ -1502,7 +1508,7 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     tlacitka.push(
       `<a href="${escapeHtml(input.odkazNaDisk)}" class="${
         input.odkazNaPreposlech ? 'cta-dark' : 'cta'
-      }">Stáhnout nahrávky ze složky</a>`,
+      }">${escapeHtml(input.popisekOdkazu?.trim() || 'Stáhnout nahrávky ze složky')}</a>`,
     );
   }
   // Kazde tlacitko na svem radku - na telefonu by se vedle sebe nevesla.
@@ -1606,7 +1612,9 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
       input.odkazNaPreposlech
         ? 'Nahravka se pusti hned v prohlizeci, text bezi vedle, chybu v nem rovnou oznacite. Na konci kliknete na Preposlechnuto.'
         : '',
-      input.odkazNaDisk ? `Slozka s nahravkami: ${input.odkazNaDisk}` : 'Odkaz na nahravky zatim neni vyplneny.',
+      input.odkazNaDisk
+        ? `${input.popisekOdkazu?.trim() || 'Slozka s nahravkami'}: ${input.odkazNaDisk}`
+        : 'Odkaz na nahravky zatim neni vyplneny.',
     ]
       .filter(Boolean)
       .join('\n'),

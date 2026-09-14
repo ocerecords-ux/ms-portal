@@ -11,6 +11,8 @@ const schema = z.object({
   priceIncVat: z.string().trim().optional(),
   active: z.boolean().optional(),
   rodnyList: z.boolean().optional(),
+  // Reklama (zadani 14. 9. 2026) - podle ktereho vzoru chodi zpravy klientovi.
+  reklama: z.boolean().optional(),
   /** Klic ikony z lib/ikonyTypu.tsx; prazdny retezec = zadna ikona. */
   ikona: z.string().trim().max(40).optional(),
 });
@@ -58,6 +60,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(priceIncVat !== undefined ? { priceIncVat } : {}),
         ...(data.active !== undefined ? { active: data.active } : {}),
         ...(data.rodnyList !== undefined ? { rodnyList: data.rodnyList } : {}),
+        ...(data.reklama !== undefined ? { reklama: data.reklama } : {}),
         ...(data.ikona !== undefined ? { ikona: data.ikona || null } : {}),
       },
     });

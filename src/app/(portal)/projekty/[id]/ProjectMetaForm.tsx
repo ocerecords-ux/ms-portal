@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { STAVY_PROJEKTU, barvaStavu, popisStavu } from '@/lib/stavyProjektu';
-import { STAVY_S_NOTIFIKACI } from '@/lib/notifikaceFirmy';
+import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
 import { KresbaIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
@@ -97,6 +97,7 @@ export function ProjectMetaForm({
   klientNameZCaflou,
   companyDriveFolderUrl,
   projectTypeOptions,
+  reklamniTypy,
   ikonyTypu,
   initial,
   dotoceniHercu,
@@ -119,6 +120,12 @@ export function ProjectMetaForm({
   companyDriveFolderUrl: string | null;
   /** Nazvy polozek ceniku - jen z nich jde typ projektu vybrat (zadani 5. 9. 2026). */
   projectTypeOptions: string[];
+  /**
+   * Typy projektu, u kterych zpravy klientovi chodi podle vzoru pro reklamy
+   * (zadani 14. 9. 2026). Priznak sedi na polozce ceniku, takze ho sem musi
+   * poslat server - v prohlizeci ho neni jak zjistit.
+   */
+  reklamniTypy: string[];
   /** Ikony k typum projektu z Ceniku (zadani 10. 9. 2026). */
   ikonyTypu: Record<string, string>;
   initial: Initial;
@@ -452,7 +459,11 @@ export function ProjectMetaForm({
             {/* Zprava ke kazdemu stavu odejde z projektu jen jednou - jinak by ji
                 klient dostal pokazde, co nekdo stav prehodi tam a zpatky. Tohle
                 je cesta, jak ji poslat znovu (zadani 11. 9. 2026). */}
-            <PoslatZnovu caflouProjectId={caflouProjectId} stav={values.statusName} />
+            <PoslatZnovu
+              caflouProjectId={caflouProjectId}
+              stav={values.statusName}
+              jeReklama={reklamniTypy.includes(values.projectType)}
+            />
           </div>
 
 
@@ -724,7 +735,15 @@ function Karta({ nadpis, children }: { nadpis?: string; children: React.ReactNod
  * spadla do spamu. Tohle tu známku smaže a pošle to znovu; komu a jestli
  * vůbec, o tom pořád rozhoduje nastavení u firmy.
  */
-function PoslatZnovu({ caflouProjectId, stav }: { caflouProjectId: string; stav: string }) {
+function PoslatZnovu({
+  caflouProjectId,
+  stav,
+  jeReklama,
+}: {
+  caflouProjectId: string;
+  stav: string;
+  jeReklama: boolean;
+}) {
   const [posila, setPosila] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
   // Veta navic nad textem ze vzoru - typicky omluva, kdyz predchozi zprava
@@ -732,7 +751,9 @@ function PoslatZnovu({ caflouProjectId, stav }: { caflouProjectId: string; stav:
   const [uvod, setUvod] = useState('');
   const [pisu, setPisu] = useState(false);
 
-  if (!STAVY_S_NOTIFIKACI.includes(stav)) return null;
+  // U reklamy odchazi jedina zprava, a to ve stavu „Dokonceno - ke schvaleni"
+  // (zadani 14. 9. 2026) - v jinem stavu nemá co nabizet.
+  if (!stavySNotifikaci(jeReklama ? 'REKLAMA' : 'AUDIOKNIHA').includes(stav)) return null;
 
   async function posli() {
     setPosila(true);

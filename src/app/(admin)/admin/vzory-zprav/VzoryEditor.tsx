@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { DRUHY_NOTIFIKACI, DRUH_POPISKY, type DruhNotifikace } from '@/lib/notifikaceFirmy';
 import { PROMENNE, type Vzor } from '@/lib/vzoryZprav';
 
 /**
@@ -15,19 +16,32 @@ import { PROMENNE, type Vzor } from '@/lib/vzoryZprav';
  * projevil až v odeslané zprávě.
  */
 
-type VzorSeStavem = Vzor & { stav: string; upraveno: boolean; upravilJmeno: string | null };
+type VzorSeStavem = Vzor & {
+  druh: DruhNotifikace;
+  stav: string;
+  upraveno: boolean;
+  upravilJmeno: string | null;
+};
 
 export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
   const [vzory, setVzory] = useState(pocatecni);
+  /**
+   * Dva druhy zprav (zadani 14. 9. 2026): audioknihy maji zpravu ke kazdemu
+   * kroku, reklamy jedinou. Znění se pise zvlast, proto zalozka nahore.
+   */
+  const [druh, setDruh] = useState<DruhNotifikace>('AUDIOKNIHA');
+  const proDruh = vzory.filter((v) => v.druh === druh);
   const [vybrany, setVybrany] = useState(pocatecni[0]?.stav ?? '');
   const [ulozeno, setUlozeno] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
   const [pracuje, setPracuje] = useState(false);
 
-  const vzor = vzory.find((v) => v.stav === vybrany) ?? null;
+  const vzor = proDruh.find((v) => v.stav === vybrany) ?? proDruh[0] ?? null;
 
   function uprav(zmena: Partial<Vzor>) {
-    setVzory((soucasne) => soucasne.map((v) => (v.stav === vybrany ? { ...v, ...zmena } : v)));
+    setVzory((soucasne) =>
+      soucasne.map((v) => (v.druh === druh && v.stav === vzor?.stav ? { ...v, ...zmena } : v)),
+    );
     setUlozeno(null);
   }
 
@@ -41,8 +55,10 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
         setChyba((data as { error?: string })?.error || 'Nepodařilo se to uložit.');
         return false;
       }
-      if (Array.isArray((data as { vzory?: VzorSeStavem[] }).vzory)) {
-        setVzory((data as { vzory: VzorSeStavem[] }).vzory);
+      const vracene = (data as { vzory?: VzorSeStavem[] }).vzory;
+      if (Array.isArray(vracene)) {
+        // Server posila jen druh, o ktery slo - druhy zustava, jak byl.
+        setVzory((soucasne) => [...soucasne.filter((v) => v.druh !== druh), ...vracene]);
       }
       return true;
     } catch {
@@ -58,14 +74,23 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
     const ok = await posli({
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stav: vzor.stav, predmet: vzor.predmet, nadpis: vzor.nadpis, text: vzor.text }),
+      body: JSON.stringify({
+        druh,
+        stav: vzor.stav,
+        predmet: vzor.predmet,
+        nadpis: vzor.nadpis,
+        text: vzor.text,
+      }),
     });
     if (ok) setUlozeno(vzor.stav);
   }
 
   async function vychozi() {
     if (!vzor) return;
-    const ok = await posli({ method: 'DELETE' }, `/api/admin/vzory-zprav?stav=${encodeURIComponent(vzor.stav)}`);
+    const ok = await posli(
+      { method: 'DELETE' },
+      `/api/admin/vzory-zprav?druh=${druh}&stav=${encodeURIComponent(vzor.stav)}`,
+    );
     if (ok) setUlozeno(null);
   }
 
@@ -73,7 +98,36 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,520px)] gap-6 items-start">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-1.5 flex-wrap">
-          {vzory.map((v) => (
+          {DRUHY_NOTIFIKACI.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => {
+                setDruh(d);
+                setVybrany(vzory.find((v) => v.druh === d)?.stav ?? '');
+                setChyba(null);
+                setUlozeno(null);
+              }}
+              className={`px-4 py-2 text-sm font-heading font-semibold rounded-lg transition-colors ${
+                d === druh
+                  ? 'bg-brand-purple text-white'
+                  : 'bg-surface border border-line text-muted hover:text-ink'
+              }`}
+            >
+              {DRUH_POPISKY[d]}
+            </button>
+          ))}
+        </div>
+
+        {druh === 'REKLAMA' && (
+          <p className="text-sm font-body text-muted bg-tint border border-line rounded-lg px-3 py-2 m-0">
+            U reklam odchází jediná zpráva, a to ve stavu „Dokončeno - ke schválení". Ostatní stavy se
+            u nich neposílají, i kdyby je firma měla zapnuté.
+          </p>
+        )}
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {proDruh.map((v) => (
             <button
               key={v.stav}
               type="button"
@@ -82,7 +136,9 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
                 setChyba(null);
               }}
               className={`px-3 py-1.5 text-xs font-heading font-semibold rounded-pill transition-colors ${
-                v.stav === vybrany ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-muted hover:text-ink'
+                v.stav === vzor?.stav
+                  ? 'bg-brand-purple text-white'
+                  : 'bg-surface border border-line text-muted hover:text-ink'
               }`}
             >
               {v.stav}
@@ -256,7 +312,7 @@ function Nahled({ vzor }: { vzor: VzorSeStavem }) {
         const res = await fetch('/api/admin/vzory-zprav/nahled', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ stav: vzor.stav, nadpis: vzor.nadpis, text: vzor.text }),
+          body: JSON.stringify({ druh: vzor.druh, stav: vzor.stav, nadpis: vzor.nadpis, text: vzor.text }),
         });
         if (res.ok) setHtml(await res.text());
       } catch {
@@ -264,7 +320,7 @@ function Nahled({ vzor }: { vzor: VzorSeStavem }) {
       }
     }, 400);
     return () => window.clearTimeout(casovac);
-  }, [vzor.stav, vzor.nadpis, vzor.text]);
+  }, [vzor.druh, vzor.stav, vzor.nadpis, vzor.text]);
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden xl:sticky xl:top-4">

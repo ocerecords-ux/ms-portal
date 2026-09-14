@@ -21,9 +21,10 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
   const telo = (await req.json().catch(() => null)) as
-    | { stav?: string; nadpis?: string; text?: string }
+    | { druh?: string; stav?: string; nadpis?: string; text?: string }
     | null;
   const stav = String(telo?.stav ?? '');
+  const jeReklama = telo?.druh === 'REKLAMA';
   if (!stav) return NextResponse.json({ error: 'Chybí stav.' }, { status: 400 });
 
   const hodnoty = ukazkoveHodnoty(stav);
@@ -39,7 +40,10 @@ export async function POST(req: NextRequest) {
     nadpis: dosadPromenne(String(telo?.nadpis ?? ''), hodnoty),
     text: dosadPromenne(String(telo?.text ?? ''), hodnoty),
     odkazNaDisk: `${zaklad}/nahravky`,
-    odkazNaPreposlech: PRVNI_TRACKY.has(stav) ? `${zaklad}/preposlech/ukazkovy-odkaz` : null,
+    // U reklamy se do AudioTaggeru nechodi a tlacitko na slozku se jmenuje
+    // jinak (zadani 14. 9. 2026) - nahled to musi ukazat stejne jako mail.
+    odkazNaPreposlech: !jeReklama && PRVNI_TRACKY.has(stav) ? `${zaklad}/preposlech/ukazkovy-odkaz` : null,
+    popisekOdkazu: jeReklama ? 'Poslechnout spot ve složce' : null,
   });
 
   return new NextResponse(html, {

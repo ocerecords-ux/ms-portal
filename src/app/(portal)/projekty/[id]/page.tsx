@@ -10,7 +10,12 @@ import {
   canViewProjectDocuments,
   isInternalRole,
 } from '@/lib/roles';
-import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu } from '@/lib/priceList';
+import {
+  listProjectTypeOptions,
+  listReklamaProjectTypes,
+  listRodnyListProjectTypes,
+  mapaIkonTypu,
+} from '@/lib/priceList';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
 import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
 import { ProjectBudget } from './ProjectBudget';
@@ -314,6 +319,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           zaloha pro projekty, ktere jeste neprosly prenosem - jen se
           nevypisuji zvlast. */}
 
+      {/* reklamniTypy: typy, u kterych zpravy klientovi chodi podle vzoru pro
+          reklamy (zadani 14. 9. 2026) - at tlacitko „Poslat zpravu znovu"
+          nenabizi stav, ve kterem u reklamy stejne nic neodejde. */}
       <ProjectMetaForm
         caflouProjectId={caflouProjectId}
         canEdit={canEdit}
@@ -332,6 +340,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
         projectTypeOptions={projectTypeOptions}
+        reklamniTypy={await listReklamaProjectTypes()}
         ikonyTypu={ikonyTypu}
         initial={{
           driveUrl: meta?.driveUrl ?? '',

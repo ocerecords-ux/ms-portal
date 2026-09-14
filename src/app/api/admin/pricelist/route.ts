@@ -12,6 +12,8 @@ const schema = z.object({
   priceIncVat: z.string().trim().optional(),
   /** Radiovy spot - jen u nej se vyrabi Rodny list. */
   rodnyList: z.boolean().optional(),
+  // Reklama (zadani 14. 9. 2026) - podle ktereho vzoru chodi zpravy klientovi.
+  reklama: z.boolean().optional(),
   /** Ikona typu projektu - klic z lib/ikonyTypu.tsx (zadani 10. 9. 2026). */
   ikona: z.string().trim().max(40).optional(),
 });
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
         priceExVat,
         priceIncVat,
         rodnyList: parsed.data.rodnyList ?? false,
+        reklama: parsed.data.reklama ?? false,
         ikona: parsed.data.ikona && jeKlicIkony(parsed.data.ikona) ? parsed.data.ikona : null,
         sortOrder: (last?.sortOrder ?? 0) + 10,
       },
