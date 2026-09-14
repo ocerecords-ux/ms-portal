@@ -77,6 +77,22 @@ export default async function ProjektyPage() {
       })
     : [];
 
+  /**
+   * Kdo uz ma dotoceno - jednim dotazem pro celou stranku, stejne jako
+   * v internim prehledu. Klic je projekt + herec: na jednom projektu muze
+   * mit tyz herec dotoceno a na druhem ne.
+   */
+  const dotoceniKlienta = new Set(
+    zPortalu.length
+      ? (
+          await prisma.herecDotocen.findMany({
+            where: { caflouProjectId: { in: zPortalu.map((p) => p.caflouProjectId) } },
+            select: { caflouProjectId: true, userId: true },
+          })
+        ).map((d) => `${d.caflouProjectId}:${d.userId}`)
+      : [],
+  );
+
   if (zPortalu.length > 0) {
     const vsechny: DisplayProject[] = zPortalu.map((p) => ({
       id: Number(p.caflouProjectId),
@@ -95,7 +111,11 @@ export default async function ProjektyPage() {
       herci: [
         ...p.herci.filter((h) => h.id === p.actorUserId),
         ...p.herci.filter((h) => h.id !== p.actorUserId),
-      ].map((h) => ({ jmeno: h.name || h.email })),
+      ].map((h) => ({
+        jmeno: h.name || h.email,
+        // Zelena linka „dotoceno" uz i u klienta (zadani 14. 9. 2026).
+        dotoceno: dotoceniKlienta.has(`${p.caflouProjectId}:${h.id}`),
+      })),
     }));
     active = vsechny
       .filter((p) => !p.finished)

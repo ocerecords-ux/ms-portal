@@ -93,7 +93,9 @@ export default async function PortalLayout({ children }: { children: React.React
         </p>
       )}
       <div
-        className={`obsah-portalu w-full px-4 sm:px-6 py-8 sm:py-12 pl-14 sm:pl-16 ${internal ? 'pr-16 sm:pr-20' : ''}`}
+        // Odsazeni na doky plati az od md - na telefonu zadne doky nejsou
+        // (viz nize), takze by z nich zbyl jen prazdny pruh po stranach.
+        className={`obsah-portalu w-full px-4 sm:px-6 py-8 sm:py-12 md:pl-16 ${internal ? 'md:pr-20' : ''}`}
       >
         {children}
       </div>
@@ -105,16 +107,31 @@ export default async function PortalLayout({ children }: { children: React.React
           ty rychle volby na leve strane stranky i s tim vysouvacim menu").
           Klient ma misto nich dok dotazu u prave hrany - jednu vec na jednom
           miste, ne dva vysouvaci panely na dvou stranach. */}
-      {internal && <QuickDock actions={quickActions} available={quickActionsFor(role)} />}
-      {internal && <TaskDock tasks={tasks} />}
-      {/* Chat týmu - stejný vysouvací panel, jen u spodní hrany
-          (zadani 8. 9. 2026). Taky jen pro tým Mediaspace. */}
-      {internal && <ChatDock />}
-      {/* Poutko na prave hrane, kterym se panel otevira. Vykresluje ho layout,
-          ne nektery z panelu - oprava 11. 9. 2026, viz PoutkoDoku.tsx. */}
-      {internal && <PoutkoDoku />}
-      {/* Tvare neprectenych rozhovoru nalevo od poutka (zadani 12. 9. 2026). */}
-      {internal && <NeprecteneVedleDoku />}
+      {/* NA TELEFONU ŽÁDNÉ DOKY (zadání 14. 9. 2026: „v aplikaci MS portal bych
+          dal pryč chat a úkoly, na to máme samostatnou aplikaci… a rychlé
+          volby nalevo taky smaž").
+          
+          Chat a úkoly mají vlastní aplikaci MS Chat, takže je portál na
+          telefonu nemá zdvojovat. Rychlé volby jsou navíc panel, který se
+          vysouvá z levé hrany — na šířku telefonu zabíral pruh přes celou
+          výšku a překrýval tabulku.
+
+          Schované šířkou, ne smazané: na počítači zůstávají všechny. Obal
+          `hidden md:block` je kvůli tomu, že panely samy jsou `position:
+          fixed` — schovat se musí přes rodiče, jinak by dál visely nad
+          stránkou. */}
+      <div className="hidden md:block">
+        {internal && <QuickDock actions={quickActions} available={quickActionsFor(role)} />}
+        {internal && <TaskDock tasks={tasks} />}
+        {/* Chat týmu - stejný vysouvací panel, jen u spodní hrany
+            (zadani 8. 9. 2026). Taky jen pro tým Mediaspace. */}
+        {internal && <ChatDock />}
+        {/* Poutko na prave hrane, kterym se panel otevira. Vykresluje ho layout,
+            ne nektery z panelu - oprava 11. 9. 2026, viz PoutkoDoku.tsx. */}
+        {internal && <PoutkoDoku />}
+        {/* Tvare neprectenych rozhovoru nalevo od poutka (zadani 12. 9. 2026). */}
+        {internal && <NeprecteneVedleDoku />}
+      </div>
       {/* Klientsky dok dotazu k projektum (zadani 12. 9. 2026) - vypada jako
           nas dok, ale mluvi jen s /api/dotazy, kde se u kazdeho pozadavku
           overuje, ze projekt patri firme prihlaseneho klienta. */}

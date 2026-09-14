@@ -56,6 +56,12 @@ function matches(p: InternalProject, needle: string): boolean {
     .every((word) => haystack.includes(word));
 }
 
+/**
+ * Sloupce, které zbydou na telefonu - v tomhle pořadí, ne v tom nastaveném.
+ * Na úzké obrazovce se čte shora dolů „co to je, kdy to má být, kde to je".
+ */
+const SLOUPCE_NA_TELEFONU = ['name', 'endDate', 'statusName'];
+
 export function InternalProjectsBrowser({
   active,
   finished,
@@ -144,7 +150,35 @@ export function InternalProjectsBrowser({
     </span>
   );
 
-  const zobrazene = visibleColumns(editing ? draft : columns);
+  /**
+   * NA TELEFONU JEN TŘI SLOUPCE (zadání 14. 9. 2026: „v mobilu bych taky
+   * omezil položky v přehledu projektu. Nechal bych tam jen název projektu,
+   * datum odevzdání a stav. Vše další pak bude v detailu").
+   *
+   * Devět sloupců na šířku telefonu znamená, že se z každého vejde pár
+   * písmen — viz screenshot, kde se hlavička „Datum dokončení" překrývala
+   * s „Datum vydání". Míň sloupců je tu čitelnější než všechny useknuté.
+   *
+   * NEMĚNÍ TO NASTAVENÍ SLOUPCŮ. Je to jen jiný pohled na touž tabulku;
+   * co si kdo nastavil, zůstává a na počítači se ukáže celé. Při úpravě
+   * sloupců se nezužuje vůbec — skryté sloupce by nešlo přetáhnout zpátky.
+   */
+  const [uzkaObrazovka, setUzkaObrazovka] = useState(false);
+  useEffect(() => {
+    const dotaz = window.matchMedia('(max-width: 767px)');
+    const uprav = () => setUzkaObrazovka(dotaz.matches);
+    uprav();
+    dotaz.addEventListener('change', uprav);
+    return () => dotaz.removeEventListener('change', uprav);
+  }, []);
+
+  const vsechnyZobrazene = visibleColumns(editing ? draft : columns);
+  const zobrazene =
+    uzkaObrazovka && !editing
+      ? (SLOUPCE_NA_TELEFONU.map((klic) => vsechnyZobrazene.find((c) => c.key === klic)).filter(
+          Boolean,
+        ) as ColumnSetting[])
+      : vsechnyZobrazene;
   const skryte = (editing ? draft : columns).filter((c) => c.hidden);
 
   function prejmenuj(key: string, label: string) {

@@ -141,14 +141,22 @@ export function ProjectsTable({
                     12. 9. 2026: „pojdme stejny princip s bublinama udelat
                     i v tom klientskem prehledu"). Bublinu ma jen herec
                     s uctem v portalu; jmeno z Caflou zustava sedym textem,
-                    protoze na nem nic nestoji. Zelena linka „dotoceno" sem
-                    nepatri - to je nase vyroba, klientovi staci stav. */}
+                    protoze na nem nic nestoji.
+
+                    ZELENA LINKA „DOTOCENO" UZ I TADY (zadani 14. 9. 2026:
+                    „na strane klienta nejde videt, ze je dotoceny herec,
+                    neni tam ta zelena linka"). Do te doby se klientovi
+                    posilalo natvrdo false s tim, ze je to nase vyroba
+                    a jemu staci stav - to se timhle rusi. U audioknihy
+                    s vic herci je „tenhle uz ma odtocene" informace
+                    i pro nej. */}
                 <td className="px-4 py-0 text-sm font-heading align-middle">
                   {p.herci && p.herci.length > 0 ? (
-                    // Herci pod sebou, stejne jako v internim prehledu (zadani
-                    // 12. 9. 2026). Dotoceno se klientovi neukazuje - to je
-                    // nase vyroba, jemu staci stav.
-                    <HerciBunka herci={p.herci.map((h) => ({ jmeno: h.jmeno, dotoceno: false }))} />
+                    // Herci pod sebou, stejne jako v internim prehledu
+                    // (zadani 12. 9. 2026).
+                    <HerciBunka
+                      herci={p.herci.map((h) => ({ jmeno: h.jmeno, dotoceno: h.dotoceno === true }))}
+                    />
                   ) : (
                     <span className="text-muted" title={p.narrator ?? undefined}>
                       {p.narrator ?? '—'}

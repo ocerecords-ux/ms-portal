@@ -41,7 +41,12 @@ export type DisplayProject = {
    * Nepovinné: starší volající to neposílají a pak se ukáže jméno z pole
    * `narrator` jako obyčejný text, jako dosud. Hlavní herec je první.
    */
-  herci?: { jmeno: string }[];
+  /**
+   * Herci do bubliny. `dotoceno` se od 14. 9. 2026 ukazuje i klientovi
+   * (zadání: „na straně klienta nejde vidět, že je dotočený herec, není tam
+   * ta zelená linka") - do té doby se mu posílalo natvrdo false.
+   */
+  herci?: { jmeno: string; dotoceno?: boolean }[];
 };
 
 export type AdminDisplayProject = DisplayProject & {
