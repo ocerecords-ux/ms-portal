@@ -17,6 +17,7 @@ import {
   gridPosition,
   minutesInZone,
   minutesToTime,
+  utcParts,
   zonedToUtc,
   jePraceVeStudiu,
   type CalendarView,
@@ -284,7 +285,8 @@ export function CalendarBrowser({
             canManage
               ? (denKey, minuty) => {
                   const [y, m, d] = denKey.split('-').map(Number);
-                  // Zaokrouhli na celou hodinu a nabídni hodinu dlouhou blokaci.
+                  // Zaokrouhli na celou hodinu - je to jen návrh, čas od-do
+                  // se pak dopíše ve formuláři (zadání 14. 9. 2026).
                   const od = Math.floor(minuty / 60) * 60;
                   setNovaBlokace({
                     studioId: selectedStudioIds[0],
@@ -575,7 +577,6 @@ function UdalostForm({
   const [nazev, setNazev] = useState('');
   // Kalendář se otevírá kvůli natáčení, ne kvůli údržbě - proto je předvybrané.
   const [druh, setDruh] = useState('NATACENI');
-  const [hodin, setHodin] = useState(4);
   const [projektId, setProjektId] = useState('');
   const [herecId, setHerecId] = useState('');
   const [zvukarId, setZvukarId] = useState('');
@@ -585,16 +586,57 @@ function UdalostForm({
   const jePrace = jePraceVeStudiu(druh);
   const jeNataceni = druh === 'NATACENI';
 
-  const start = new Date(vychozi.start);
-  const konec = new Date(start.getTime() + hodin * 60 * 60 * 1000);
+  /**
+   * DATUM A ČAS OD–DO (zadání 14. 9. 2026: „potřebuji tam zadat i čas - od,
+   * do"). Dvojklik do mřížky je jen návrh - do kolika se točí, ví člověk,
+   * ne mřížka. Původně se zadávala jen délka v hodinách, takže konec šel
+   * nastavit jen na celé hodiny od místa kliknutí.
+   *
+   * ČAS SE ČTE JAKO STĚNOVÝ ČAS VYBRANÉHO STUDIA, ne jako čas prohlížeče.
+   * Když se v Praze zapisuje natáčení v Londýně, „10:00" znamená deset hodin
+   * londýnských - jinak by se událost v kalendáři objevila o hodinu vedle.
+   */
+  const pasmoStudia = studios.find((s) => s.id === studioId)?.timezone ?? timezone;
+  const navrh = new Date(vychozi.start);
+  const navrhCasti = utcParts(navrh, pasmoStudia);
+  const navrhOd = navrhCasti.hour * 60 + navrhCasti.minute;
+
+  const [datum, setDatum] = useState(
+    `${navrhCasti.year}-${String(navrhCasti.month).padStart(2, '0')}-${String(navrhCasti.day).padStart(2, '0')}`,
+  );
+  const [od, setOd] = useState(minutesToTime(navrhOd));
+  const [doKdy, setDoKdy] = useState(minutesToTime(Math.min(24 * 60, navrhOd + 4 * 60)));
+
+  function naMinuty(hodnota: string): number | null {
+    const shoda = /^(\d{1,2}):(\d{2})$/.exec(hodnota.trim());
+    if (!shoda) return null;
+    const h = Number(shoda[1]);
+    const m = Number(shoda[2]);
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return h * 60 + m;
+  }
+
+  const denCasti = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datum);
+  const minutyOd = naMinuty(od);
+  const minutyDo = naMinuty(doKdy);
+  const casSedi = Boolean(denCasti) && minutyOd !== null && minutyDo !== null && minutyDo > minutyOd;
+
+  const start =
+    denCasti && minutyOd !== null
+      ? zonedToUtc(Number(denCasti[1]), Number(denCasti[2]), Number(denCasti[3]), minutyOd, pasmoStudia)
+      : navrh;
+  const konec =
+    denCasti && minutyDo !== null
+      ? zonedToUtc(Number(denCasti[1]), Number(denCasti[2]), Number(denCasti[3]), minutyDo, pasmoStudia)
+      : new Date(start.getTime() + 4 * 60 * 60 * 1000);
 
   const projekt = projekty.find((p) => p.id === projektId);
   const herec = herci.find((h) => h.id === herecId);
   const zvukar = zvukari.find((z) => z.id === zvukarId);
 
-  const chybi = jePrace
-    ? !projekt || !zvukar || (jeNataceni && !herec)
-    : !nazev.trim();
+  const chybi =
+    !casSedi ||
+    (jePrace ? !projekt || !zvukar || (jeNataceni && !herec) : !nazev.trim());
 
   async function uloz() {
     setBusy(true);
@@ -643,13 +685,13 @@ function UdalostForm({
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nová událost</h2>
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">
             {new Intl.DateTimeFormat('cs-CZ', {
-              timeZone: timezone,
+              timeZone: pasmoStudia,
               weekday: 'long',
               day: 'numeric',
               month: 'numeric',
             }).format(start)}{' '}
             <span className="tabular-nums">
-              {minutesToTime(minutesInZone(start, timezone))}–{minutesToTime(minutesInZone(konec, timezone))}
+              {minutesToTime(minutesInZone(start, pasmoStudia))}–{minutesToTime(minutesInZone(konec, pasmoStudia))}
             </span>
           </p>
         </div>
@@ -680,16 +722,53 @@ function UdalostForm({
           </select>
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Délka (hodin)</span>
+          <span className="text-sm font-body text-ink">Datum</span>
           <input
-            type="number"
-            min={1}
-            max={24}
-            value={hodin}
-            onChange={(e) => setHodin(Math.min(24, Math.max(1, Number(e.target.value) || 1)))}
+            type="date"
+            value={datum}
+            onChange={(e) => setDatum(e.target.value)}
             className={`${inputClass} tabular-nums`}
           />
         </label>
+      </div>
+
+      {/* Čas od-do místo délky (zadání 14. 9. 2026). Krok po půlhodinách -
+          frekvence se plánují na půlhodiny, ne na minuty. */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">
+            Od <span className="text-danger">*</span>
+          </span>
+          <input
+            type="time"
+            step={1800}
+            value={od}
+            onChange={(e) => setOd(e.target.value)}
+            className={`${inputClass} tabular-nums`}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">
+            Do <span className="text-danger">*</span>
+          </span>
+          <input
+            type="time"
+            step={1800}
+            value={doKdy}
+            onChange={(e) => setDoKdy(e.target.value)}
+            className={`${inputClass} tabular-nums`}
+          />
+        </label>
+        <div className="flex flex-col gap-1.5 justify-end pb-2.5">
+          {casSedi ? (
+            <span className="text-xs font-body text-muted tabular-nums">
+              {(((minutyDo ?? 0) - (minutyOd ?? 0)) / 60).toLocaleString('cs-CZ', { maximumFractionDigits: 1 })} h
+              {pasmoStudia !== timezone ? ` · místní čas studia` : ''}
+            </span>
+          ) : (
+            <span className="text-xs font-body text-danger">Konec musí být po začátku.</span>
+          )}
+        </div>
       </div>
 
       {jePrace ? (
