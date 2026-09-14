@@ -231,26 +231,55 @@ export function DriveBrowser({
     setPlayingId((id) => (id === item.id ? null : item.id));
   }
 
-  async function copyLink(item: DriveItem) {
-    if (!item.webViewLink) return;
+  /**
+   * ODKAZ, KTERY JDE PREPOSLAT (zadani 14. 9. 2026: „at ma moznost zkopirovat
+   * odkaz na slozku a nekomu poslat").
+   *
+   * Klient z mailu (`jenCteni`) NESMI dostat adresu na Google Disk - tam se
+   * nedostane on ani ten, komu ji posle (11. 9. 2026: „sel mail na klienta
+   * s timto odkazem a on se tam nedostane"). Jemu se proto kopiruje adresa
+   * TETO stranky - ta same, po ktere prisel: otevrena, bez prihlasovani,
+   * s tokenem v ceste.
+   *
+   * Prihlaseny tym dal dostava odkaz na Disk - ten uz je pro nej ta prava
+   * adresa, kde se souborem da neco delat.
+   */
+  function odkazNaStranku(): string {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}${window.location.pathname}`;
+  }
+
+  /** Adresa jednoho souboru, kterou otevre i ten, kdo se nikam neprihlasuje. */
+  function odkazNaSoubor(item: DriveItem): string {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/api/drive/download?fileId=${encodeURIComponent(item.id)}${klic}`;
+  }
+
+  async function zkopiruj(text: string): Promise<boolean> {
+    if (!text) return false;
     try {
-      await navigator.clipboard.writeText(item.webViewLink);
-      setCopiedId(item.id);
-      setTimeout(() => setCopiedId((id) => (id === item.id ? null : id)), 2000);
+      await navigator.clipboard.writeText(text);
+      return true;
     } catch {
       // schránka nemusí být z nějakého důvodu dostupná - tiše ignorujeme
+      return false;
     }
   }
 
+  async function copyLink(item: DriveItem) {
+    const odkaz = jenCteni ? odkazNaSoubor(item) : item.webViewLink;
+    if (!odkaz) return;
+    if (!(await zkopiruj(odkaz))) return;
+    setCopiedId(item.id);
+    setTimeout(() => setCopiedId((id) => (id === item.id ? null : id)), 2000);
+  }
+
   async function copyFolderLink() {
-    if (!folderLink) return;
-    try {
-      await navigator.clipboard.writeText(folderLink);
-      setFolderLinkCopied(true);
-      setTimeout(() => setFolderLinkCopied(false), 2000);
-    } catch {
-      // schránka nemusí být dostupná - tiše ignorujeme
-    }
+    const odkaz = jenCteni ? odkazNaStranku() : folderLink;
+    if (!odkaz) return;
+    if (!(await zkopiruj(odkaz))) return;
+    setFolderLinkCopied(true);
+    setTimeout(() => setFolderLinkCopied(false), 2000);
   }
 
   /**
@@ -402,15 +431,20 @@ export function DriveBrowser({
             </svg>
             {zipBusy ? 'Připravuji ZIP…' : 'Stáhnout vše'}
           </button>
-          {/* Odkaz vede na Google Disk, kam klient pristup nema - jemu by to
-              bylo jen dalsi zavrene dvere (11. 9. 2026: „sel mail na klienta
-              s timto odkazem a on se tam nedostane"). */}
-          {!jenCteni && (
+          {/* Tymu se kopiruje odkaz na Google Disk, klientovi z mailu adresa
+              teto stranky - na Disk se nedostane on ani ten, komu by ji
+              poslal dal (11. 9. 2026: „sel mail na klienta s timto odkazem
+              a on se tam nedostane"). Tlacitko proto vidi oba, jen kazdy
+              kopiruje neco jineho - viz copyFolderLink. */}
           <button
             type="button"
             onClick={copyFolderLink}
-            disabled={!folderLink}
-            title="Kopírovat odkaz na celou složku"
+            disabled={!jenCteni && !folderLink}
+            title={
+              jenCteni
+                ? 'Kopírovat odkaz na tyhle nahrávky — můžete ho komukoliv přeposlat'
+                : 'Kopírovat odkaz na celou složku'
+            }
             className="inline-flex items-center gap-1.5 rounded-lg border border-white/40 text-white text-xs font-heading font-semibold px-3 py-2 hover:bg-white hover:text-brand-purple transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-white"
           >
             {folderLinkCopied ? (
@@ -424,7 +458,6 @@ export function DriveBrowser({
             )}
             {folderLinkCopied ? 'Zkopírováno' : 'Odkaz na složku'}
           </button>
-          )}
         </div>
       </div>
 
@@ -597,7 +630,9 @@ export function DriveBrowser({
                         </svg>
                       </a>
                     )}
-                    {item.isFolder && item.webViewLink && (
+                    {/* Odkaz na Disk zase jen pro tym - klient se tam
+                        nedostane, slozku si otevre dvojklikem tady. */}
+                    {!jenCteni && item.isFolder && item.webViewLink && (
                       <a
                         href={item.webViewLink}
                         target="_blank"
@@ -610,11 +645,14 @@ export function DriveBrowser({
                         </svg>
                       </a>
                     )}
-                    {item.webViewLink && (
+                    {/* Klientovi se kopiruje primy odkaz na soubor, ktery
+                        otevre i ten, kdo se nikam neprihlasuje. U slozky
+                        takovy odkaz nemame, proto je tam tlacitko schovane. */}
+                    {(jenCteni ? !item.isFolder : Boolean(item.webViewLink)) && (
                       <button
                         type="button"
                         onClick={() => copyLink(item)}
-                        title="Kopírovat odkaz ke sdílení"
+                        title={jenCteni ? 'Kopírovat odkaz na tuhle nahrávku' : 'Kopírovat odkaz ke sdílení'}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
                       >
                         {copiedId === item.id ? (
