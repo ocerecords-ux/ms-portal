@@ -3,8 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
-import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
-import { druhNotifikaceProTyp } from '@/lib/priceList';
+import { druhNotifikaceFirmy, stavySNotifikaci } from '@/lib/notifikaceFirmy';
 import { posliNotifikaciKeStavu, znackaStavu } from '@/lib/notifikaceProjektuServer';
 
 /**
@@ -38,7 +37,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId: params.id },
-    select: { statusName: true, projectType: true },
+    select: {
+      statusName: true,
+      company: { select: { dealsAudiobooks: true, dealsAds: true } },
+    },
   });
   const stav = meta?.statusName ?? '';
   if (!stav) {
@@ -46,7 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
   // U reklamy se posila jen ve stavu „Dokonceno - ke schvaleni"
   // (zadani 14. 9. 2026) - viz stavySNotifikaci.
-  const druh = await druhNotifikaceProTyp(meta?.projectType);
+  const druh = druhNotifikaceFirmy(meta?.company);
   if (!stavySNotifikaci(druh).includes(stav)) {
     return NextResponse.json({ zprava: `Ke stavu „${stav}" se zpráva neposílá.` });
   }

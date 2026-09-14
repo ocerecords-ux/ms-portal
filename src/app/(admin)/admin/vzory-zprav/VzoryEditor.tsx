@@ -122,7 +122,8 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
         {druh === 'REKLAMA' && (
           <p className="text-sm font-body text-muted bg-tint border border-line rounded-lg px-3 py-2 m-0">
             U reklam odchází jediná zpráva, a to ve stavu „Dokončeno - ke schválení". Ostatní stavy se
-            u nich neposílají, i kdyby je firma měla zapnuté.
+            u nich neposílají, i kdyby je firma měla zapnuté. Tohle znění dostanou firmy, které mají
+            na kartě v „Druh zakázek" zaškrtnuté jen Reklamy.
           </p>
         )}
 

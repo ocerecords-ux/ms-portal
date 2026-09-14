@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/db';
-import { stavySNotifikaci, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
-import { druhNotifikaceProTyp } from '@/lib/priceList';
+import { druhNotifikaceFirmy, stavySNotifikaci, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
 import { dosadPromenne } from '@/lib/vzoryZprav';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { sendStavProjektuEmail } from '@/lib/email';
@@ -65,10 +64,18 @@ export async function posliNotifikaciKeStavu(
       select: {
         name: true,
         driveUrl: true,
-        projectType: true,
         companyId: true,
         companyName: true,
-        company: { select: { name: true, driveFolderUrl: true, interniPrijemci: true } },
+        company: {
+          select: {
+            name: true,
+            driveFolderUrl: true,
+            interniPrijemci: true,
+            // Druh zprav se ridi zaskrtavatky „Druh zakazek" na karte firmy.
+            dealsAudiobooks: true,
+            dealsAds: true,
+          },
+        },
         klient: { select: { name: true, email: true } },
       },
     });
@@ -81,7 +88,7 @@ export async function posliNotifikaciKeStavu(
      * se seznam stavů ptá až po zjištění druhu - u reklamy jsou ostatní
      * stavy mimo hru, i kdyby je firma měla zapnuté.
      */
-    const druh = await druhNotifikaceProTyp(projekt.projectType);
+    const druh = druhNotifikaceFirmy(projekt.company);
     if (!stavySNotifikaci(druh).includes(stav)) return { stav: 'vypnuto' };
 
     const nastaveni = await prisma.notifikaceFirmy.findUnique({

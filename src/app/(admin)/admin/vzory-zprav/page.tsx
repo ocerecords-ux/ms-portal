@@ -26,7 +26,8 @@ export default async function VzoryZpravPage() {
           Co klientovi dorazí, když projekt přejde do daného stavu. Komu to jde a jestli vůbec,
           se nastavuje zvlášť u každé firmy pod záložkou Notifikace — tady se píše jen znění.
           Audioknihy mají zprávu ke každému kroku, reklamy jedinou, a to ve stavu
-          „Dokončeno - ke schválení". Že jde o reklamu, se pozná podle zaškrtnutí u typu projektu v Ceníku.
+          „Dokončeno - ke schválení". Které znění firma dostane, se řídí zaškrtnutím „Druh zakázek"
+          na její kartě — jen Reklamy znamená reklamní vzory.
         </p>
       </div>
       {/* Oba druhy najednou (zadani 14. 9. 2026) - prepina se zalozkou

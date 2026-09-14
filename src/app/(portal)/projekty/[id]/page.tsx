@@ -10,12 +10,8 @@ import {
   canViewProjectDocuments,
   isInternalRole,
 } from '@/lib/roles';
-import {
-  listProjectTypeOptions,
-  listReklamaProjectTypes,
-  listRodnyListProjectTypes,
-  mapaIkonTypu,
-} from '@/lib/priceList';
+import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu } from '@/lib/priceList';
+import { druhNotifikaceFirmy } from '@/lib/notifikaceFirmy';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
 import { durationMinutes, entryAmount, toHours } from '@/lib/timesheets';
 import { ProjectBudget } from './ProjectBudget';
@@ -180,12 +176,28 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const company = meta?.companyId
     ? await prisma.company.findUnique({
         where: { id: meta.companyId },
-        select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true, audioknihyNaKlic: true },
+        select: {
+          id: true,
+          name: true,
+          driveFolderUrl: true,
+          ratePerPage: true,
+          dealsAudiobooks: true,
+          dealsAds: true,
+          audioknihyNaKlic: true,
+        },
       })
     : zSeznamu?.caflouCompanyId
       ? await prisma.company.findFirst({
           where: { caflouCompanyId: zSeznamu.caflouCompanyId },
-          select: { id: true, name: true, driveFolderUrl: true, ratePerPage: true, dealsAudiobooks: true, audioknihyNaKlic: true },
+          select: {
+          id: true,
+          name: true,
+          driveFolderUrl: true,
+          ratePerPage: true,
+          dealsAudiobooks: true,
+          dealsAds: true,
+          audioknihyNaKlic: true,
+        },
         })
       : null;
 
@@ -319,9 +331,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           zaloha pro projekty, ktere jeste neprosly prenosem - jen se
           nevypisuji zvlast. */}
 
-      {/* reklamniTypy: typy, u kterych zpravy klientovi chodi podle vzoru pro
-          reklamy (zadani 14. 9. 2026) - at tlacitko „Poslat zpravu znovu"
-          nenabizi stav, ve kterem u reklamy stejne nic neodejde. */}
+      {/* jeReklamniFirma: u reklamni firmy odejde jedina zprava (zadani
+          14. 9. 2026) - at tlacitko „Poslat zpravu znovu" nenabizi stav,
+          ve kterem stejne nic neodejde. */}
       <ProjectMetaForm
         caflouProjectId={caflouProjectId}
         canEdit={canEdit}
@@ -340,7 +352,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
         projectTypeOptions={projectTypeOptions}
-        reklamniTypy={await listReklamaProjectTypes()}
+        jeReklamniFirma={druhNotifikaceFirmy(company) === 'REKLAMA'}
         ikonyTypu={ikonyTypu}
         initial={{
           driveUrl: meta?.driveUrl ?? '',

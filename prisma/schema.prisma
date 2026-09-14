@@ -618,15 +618,6 @@ model PriceListItem {
   /// a pribyvaji, tohle si tym prepne v administraci.
   rodnyList   Boolean  @default(false)
 
-  /// REKLAMA (zadani 14. 9. 2026) - projekty tohohle typu dostavaji zpravy
-  /// podle vzoru pro reklamy a jen ve stavu „Dokonceno - ke schvaleni".
-  ///
-  /// Je to samostatny priznak, ne odvozeni z `rodnyList`: rodny list se dela
-  /// jen u radiovych spotu, ale reklama muze byt i televizni. Kdyz neni
-  /// zaskrtnuty nikde, bere se jako reklama aspon to, co ma rodny list -
-  /// at stare ceniky funguji bez zasahu.
-  reklama     Boolean  @default(false)
-
   /// Ikona typu projektu (zadani 10. 9. 2026) - klic z lib/ikonyTypu.tsx.
   /// Sviti pred nazvem projektu v prehledu. Je to na polozce ceniku, ne
   /// v kodu: typy projektu si tym pridava sam a napevno zadana ikona by nove

@@ -304,7 +304,13 @@ export function CompanyForm({ company }: { company: Company }) {
 
       {isClient && (
         <>
-          <AdminField label="Druh zakázek" hint="podle toho klient uvidí jen příslušný typ objednávky">
+          {/* Tahle dve zaskrtavatka rozhoduji i o ZNENI ZPRAV klientovi
+              (zadani 14. 9. 2026): kdo dela jen reklamy, dostava reklamni
+              vzory a jedinou zpravu ve stavu „Dokonceno - ke schvaleni". */}
+          <AdminField
+            label="Druh zakázek"
+            hint="klient uvidí jen příslušný typ objednávky — a podle toho mu chodí i zprávy o stavu projektu"
+          >
             <div className="flex flex-col gap-1.5">
               <label className="flex items-center gap-2 text-sm font-heading text-ink">
                 <input type="checkbox" checked={dealsAudiobooks} onChange={(e) => setDealsAudiobooks(e.target.checked)} />
@@ -314,6 +320,10 @@ export function CompanyForm({ company }: { company: Company }) {
                 <input type="checkbox" checked={dealsAds} onChange={(e) => setDealsAds(e.target.checked)} />
                 Reklamy
               </label>
+              <span className="text-xs font-body text-muted">
+                Jen Reklamy = zprávy podle vzorů pro reklamy, a to jen ve stavu „Dokončeno - ke schválení".
+                Audioknihy (i spolu s reklamami) = zpráva ke každému kroku.
+              </span>
             </div>
           </AdminField>
 

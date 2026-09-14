@@ -97,7 +97,7 @@ export function ProjectMetaForm({
   klientNameZCaflou,
   companyDriveFolderUrl,
   projectTypeOptions,
-  reklamniTypy,
+  jeReklamniFirma,
   ikonyTypu,
   initial,
   dotoceniHercu,
@@ -121,11 +121,11 @@ export function ProjectMetaForm({
   /** Nazvy polozek ceniku - jen z nich jde typ projektu vybrat (zadani 5. 9. 2026). */
   projectTypeOptions: string[];
   /**
-   * Typy projektu, u kterych zpravy klientovi chodi podle vzoru pro reklamy
-   * (zadani 14. 9. 2026). Priznak sedi na polozce ceniku, takze ho sem musi
-   * poslat server - v prohlizeci ho neni jak zjistit.
+   * Dela firma jen reklamy? (zadani 14. 9. 2026: „budeme se ridit
+   * zaskrtavacim polem v detailu firmy"). Podle toho chodi klientovi zpravy
+   * podle reklamnich vzoru, a to jen ve stavu „Dokonceno - ke schvaleni".
    */
-  reklamniTypy: string[];
+  jeReklamniFirma: boolean;
   /** Ikony k typum projektu z Ceniku (zadani 10. 9. 2026). */
   ikonyTypu: Record<string, string>;
   initial: Initial;
@@ -462,7 +462,7 @@ export function ProjectMetaForm({
             <PoslatZnovu
               caflouProjectId={caflouProjectId}
               stav={values.statusName}
-              jeReklama={reklamniTypy.includes(values.projectType)}
+              jeReklama={jeReklamniFirma}
             />
           </div>
 

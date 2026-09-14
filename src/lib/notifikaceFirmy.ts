@@ -73,6 +73,23 @@ export const STAV_REKLAMY = 'Dokončeno - ke schválení';
 
 export const STAVY_S_NOTIFIKACI_REKLAMA: string[] = [STAV_REKLAMY];
 
+/**
+ * PODLE CEHO SE DRUH POZNA (zadani 14. 9. 2026: „to, kdy pozna system, ze je
+ * to reklama, udelejme jednoduse. Budeme se ridit zaskrtavacim polem
+ * v detailu firmy").
+ *
+ * Jde o zaskrtavatka „Druh zakazek" na karte firmy, ktera uz existuji kvuli
+ * objednavkam. Kdo dela jen reklamy, dostava reklamni zneni; kdo dela
+ * audioknihy - nebo oboji - to audioknizni, protoze tam je zprav vic a
+ * o zadnou se tim neprijde.
+ */
+export function druhNotifikaceFirmy(
+  firma: { dealsAudiobooks?: boolean | null; dealsAds?: boolean | null } | null | undefined,
+): DruhNotifikace {
+  if (!firma) return 'AUDIOKNIHA';
+  return firma.dealsAds && !firma.dealsAudiobooks ? 'REKLAMA' : 'AUDIOKNIHA';
+}
+
 /** Stavy, ve kterych se posila zprava daneho druhu. */
 export function stavySNotifikaci(druh: DruhNotifikace): string[] {
   return druh === 'REKLAMA' ? STAVY_S_NOTIFIKACI_REKLAMA : STAVY_S_NOTIFIKACI;

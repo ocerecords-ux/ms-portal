@@ -3,8 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
-import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
-import { druhNotifikaceProTyp } from '@/lib/priceList';
+import { druhNotifikaceFirmy, stavySNotifikaci } from '@/lib/notifikaceFirmy';
 import { dosadPromenne } from '@/lib/vzoryZprav';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { buildStavProjektuHtml } from '@/lib/email';
@@ -38,10 +37,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       name: true,
       statusName: true,
       driveUrl: true,
-      projectType: true,
       companyId: true,
       companyName: true,
-      company: { select: { name: true, driveFolderUrl: true } },
+      company: { select: { name: true, driveFolderUrl: true, dealsAudiobooks: true, dealsAds: true } },
       klient: { select: { name: true } },
     },
   });
@@ -49,7 +47,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   // Dva druhy zprav (zadani 14. 9. 2026) - nahled musi ukazat ten, ktery
   // projektu opravdu patri, vcetne toho, ze u reklamy jde jen jeden stav.
-  const druh = await druhNotifikaceProTyp(projekt.projectType);
+  const druh = druhNotifikaceFirmy(projekt.company);
   const stavy = stavySNotifikaci(druh);
   const zadany = req.nextUrl.searchParams.get('stav');
   const stav = zadany && stavy.includes(zadany) ? zadany : projekt.statusName ?? '';
