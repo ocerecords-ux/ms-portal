@@ -40,8 +40,6 @@ type Druh = {
   nazev: string;
   rozpocet: number;
   vykazano: number;
-  /** „9 × 1 000 Kč" - at je vedle grafu videt, z ceho ten strop je. */
-  popisJednotek: string;
 };
 
 export function CerpaniPoDruzich({
@@ -49,15 +47,11 @@ export function CerpaniPoDruzich({
   rozpocetStrih,
   vykazanoNataceni,
   vykazanoStrih,
-  popisNataceni,
-  popisStrihu,
 }: {
   rozpocetNataceni: number;
   rozpocetStrih: number;
   vykazanoNataceni: number;
   vykazanoStrih: number;
-  popisNataceni: string;
-  popisStrihu: string;
 }) {
   const [podoba, setPodoba] = useState<'sloupce' | 'kolac'>('sloupce');
 
@@ -67,14 +61,12 @@ export function CerpaniPoDruzich({
       nazev: 'Natáčení',
       rozpocet: rozpocetNataceni,
       vykazano: vykazanoNataceni,
-      popisJednotek: popisNataceni,
     },
     {
       klic: 'strih',
       nazev: 'Střih',
       rozpocet: rozpocetStrih,
       vykazano: vykazanoStrih,
-      popisJednotek: popisStrihu,
     },
   ];
 
@@ -84,7 +76,7 @@ export function CerpaniPoDruzich({
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Čerpání po druzích práce
+          Čerpání
         </h2>
         <div className="flex items-center gap-1">
           <Prepinac aktivni={podoba === 'sloupce'} onClick={() => setPodoba('sloupce')}>
@@ -247,7 +239,7 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
               </span>
               <span className="text-[11px] font-heading tabular-nums text-ink">{czk(d.vykazano)}</span>
               <span className="text-[10px] font-body text-muted tabular-nums">
-                z {czk(d.rozpocet)} · {d.popisJednotek}
+                z {czk(d.rozpocet)}
               </span>
             </div>
           ))}

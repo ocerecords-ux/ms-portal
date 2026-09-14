@@ -158,7 +158,13 @@ export type ChatToken =
   | { kind: 'mention'; value: string }
   | { kind: 'smajlik'; value: string }
   /** Zmínka projektu (#Název) - vykresluje se jako odkaz na jeho detail. */
-  | { kind: 'projekt'; value: string; id: string };
+  | { kind: 'projekt'; value: string; id: string }
+  /**
+   * Odkaz napsaný ve zprávě (zadání 14. 9. 2026: „v chatu když pošlu link,
+   * tak se z něj neudělá odkaz"). `value` je to, co člověk napsal, `href` to,
+   * kam se má jít - u adresy začínající „www." se dopisuje https://.
+   */
+  | { kind: 'odkaz'; value: string; href: string };
 
 /** Projekt, na který se dá ve zprávě odkázat mřížkou. */
 export type ProjektZminka = { id: string; name: string };
@@ -214,6 +220,42 @@ export function splitProjektyVTextu(
  * Zkratka, kterou v sade nenajdeme, zustava textem - stare zpravy se tak
  * nikdy nezmeni v prazdne misto, kdyz se sada prekresli.
  */
+/**
+ * Adresa ve zprávě. Bere http(s):// i holé „www." - lidi píšou obojí.
+ *
+ * Závorky a běžná interpunkce se do odkazu nepočítají: „mrkni na
+ * https://msportal.cz/projekty." končí odkaz před tečkou, ne za ní, jinak by
+ * se tečka stala součástí adresy a odkaz by neplatil.
+ */
+const ODKAZ_REGEX = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/gi;
+
+/** Interpunkce na konci uz k adrese nepatri. */
+function orizniKonecOdkazu(text: string): { odkaz: string; zbytek: string } {
+  const m = /[.,;:!?)\]}»"']+$/.exec(text);
+  if (!m) return { odkaz: text, zbytek: '' };
+  return { odkaz: text.slice(0, m.index), zbytek: text.slice(m.index) };
+}
+
+/** Rozdeli kus textu na odkazy a zbytek. */
+function rozdelOdkazy(text: string): { odkaz?: { value: string; href: string }; text?: string }[] {
+  const out: { odkaz?: { value: string; href: string }; text?: string }[] = [];
+  let posledni = 0;
+  for (const nalez of text.matchAll(ODKAZ_REGEX)) {
+    const cely = nalez[0];
+    const zacatek = nalez.index ?? 0;
+    const { odkaz, zbytek } = orizniKonecOdkazu(cely);
+    if (!odkaz) continue;
+    if (zacatek > posledni) out.push({ text: text.slice(posledni, zacatek) });
+    out.push({
+      odkaz: { value: odkaz, href: odkaz.startsWith('www.') ? `https://${odkaz}` : odkaz },
+    });
+    if (zbytek) out.push({ text: zbytek });
+    posledni = zacatek + cely.length;
+  }
+  if (posledni < text.length) out.push({ text: text.slice(posledni) });
+  return out.length ? out : [{ text }];
+}
+
 export function splitChatBody(body: string, names: string[], projekty: ProjektZminka[] = []): ChatToken[] {
   const out: ChatToken[] = [];
 
@@ -227,10 +269,18 @@ export function splitChatBody(body: string, names: string[], projekty: ProjektZm
         out.push({ kind: 'projekt', value: castProjektu.text, id: castProjektu.projekt.id });
         continue;
       }
-      for (const kousek of castProjektu.text.split(MS_SMAJLIK_REGEX)) {
-        if (!kousek) continue;
-        if (najdiSmajlika(kousek)) out.push({ kind: 'smajlik', value: kousek });
-        else out.push({ kind: 'text', value: kousek });
+      // Odkazy se hledaji PRED smajliky: adresa zadny smajlik neobsahuje,
+      // ale smajlik by se v ni dal najit („:ms-" v query retezci).
+      for (const castOdkazu of rozdelOdkazy(castProjektu.text)) {
+        if (castOdkazu.odkaz) {
+          out.push({ kind: 'odkaz', value: castOdkazu.odkaz.value, href: castOdkazu.odkaz.href });
+          continue;
+        }
+        for (const kousek of (castOdkazu.text ?? '').split(MS_SMAJLIK_REGEX)) {
+          if (!kousek) continue;
+          if (najdiSmajlika(kousek)) out.push({ kind: 'smajlik', value: kousek });
+          else out.push({ kind: 'text', value: kousek });
+        }
       }
     }
   }

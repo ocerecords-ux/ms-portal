@@ -373,6 +373,24 @@ function Telo({
             </strong>
           );
         }
+        if (cast.kind === 'odkaz') {
+          // Odkaz z textu zpravy (zadani 14. 9. 2026). Otevira se ve vlastni
+          // zalozce - chat je vysouvaci panel a odchod z nej by znamenal
+          // ztratu rozepsane zpravy. noreferrer je u ciziho odkazu povinnost.
+          return (
+            <a
+              key={index}
+              href={cast.href}
+              target="_blank"
+              rel="noreferrer noopener"
+              className={`underline underline-offset-2 break-all ${
+                mine ? 'text-white' : 'text-brand-purple'
+              }`}
+            >
+              {cast.value}
+            </a>
+          );
+        }
         if (cast.kind === 'smajlik') return <MsSmajlik key={index} code={cast.value} />;
         return <span key={index}>{cast.value}</span>;
       })}
@@ -433,7 +451,17 @@ function Psatko({
   const [smajlici, setSmajlici] = useState(false);
   const poleRef = useRef<HTMLDivElement | null>(null);
   /** Text, který jsme naposledy poslali ven - podle něj se pozná cizí změna. */
-  const posledni = useRef(hodnota);
+  /**
+   * Co uz je v poli vykreslene. `null`, dokud se pole nenaplnilo ani jednou.
+   *
+   * PROC NE useRef(hodnota) (oprava 14. 9. 2026: „když dám upravit nějakou
+   * zprávu, tak se tam objeví prázdné okno"): pole na úpravu se připojuje
+   * rovnou s textem zprávy, takže `posledni` bylo hned na startu rovné
+   * `hodnota` a efekt níž se ukončil dřív, než stihl text do pole vepsat.
+   * Zpráva zůstala ve stavu, ale v poli nebylo nic. U hlavního psacího pole
+   * se to neprojevilo - to začíná prázdné, takže prázdné pole bylo správně.
+   */
+  const posledni = useRef<string | null>(null);
 
   /** Obsah pole zpátky na text se zkratkami. */
   const naText = useCallback((el: HTMLElement): string => {

@@ -431,8 +431,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       rozpocetStrih={budget.editingCost}
       vykazanoNataceni={vykazanoNataceni}
       vykazanoStrih={vykazanoStrih}
-      popisNataceni={`${budget.sessions} × ${budget.unitPrice.toLocaleString('cs-CZ')} Kč`}
-      popisStrihu={`${budget.editingUnits} × ${budget.unitPrice.toLocaleString('cs-CZ')} Kč`}
     />
   ) : null;
 
