@@ -112,7 +112,25 @@ export function VyberProjektu({
     setZvyrazneny(0);
   }, [hledani, otevreno]);
 
+  /**
+   * PRÁVĚ JSME VYBRALI (oprava 14. 9. 2026: „když něco vyberu v tom hledání,
+   * tak mi pod tím zůstane viset takhle seznam").
+   *
+   * Políčko sedí uvnitř `<label>`. Kliknutí kamkoliv do labelu - a nabídka je
+   * uvnitř něj - prohlížeč PŘEPOŠLE na políčko, které label popisuje. Takže
+   * hned po výběru přišel focus zpátky na input, `onFocus` nabídku zase
+   * otevřel a seznam zůstal viset pod vyplněným polem.
+   *
+   * Příznak platí jen do konce téhle události; další, opravdové kliknutí do
+   * políčka nabídku otevře normálně.
+   */
+  const praveVybrano = useRef(false);
+
   function vyber(p: ProjektKVyberu) {
+    praveVybrano.current = true;
+    setTimeout(() => {
+      praveVybrano.current = false;
+    }, 0);
     onZmena(p.id);
     setHledani('');
     setOtevreno(false);
@@ -134,6 +152,7 @@ export function VyberProjektu({
         value={otevreno ? hledani : (vybrany?.label ?? '')}
         placeholder={vybrany ? vybrany.label : placeholder}
         onFocus={() => {
+          if (praveVybrano.current) return;
           setHledani('');
           setOtevreno(true);
         }}
@@ -200,6 +219,10 @@ export function VyberProjektu({
                 <li key={p.id}>
                   <button
                     type="button"
+                    // Bez tohohle by kliknuti nejdriv sebralo focus policku
+                    // a nabidka by problikla; takhle zustane focus, kde je,
+                    // a zavre ji az vyber.
+                    onMouseDown={(e) => e.preventDefault()}
                     onMouseEnter={() => setZvyrazneny(i)}
                     onClick={() => vyber(p)}
                     className={`w-full text-left flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-body transition-colors ${
