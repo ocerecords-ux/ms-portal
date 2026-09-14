@@ -1,4 +1,5 @@
 import { formatSignedAt } from '@/lib/contracts';
+import { rozdelNaStranky } from '@/lib/smlouvaStranky';
 
 export type PaperSignature = {
   role: 'MEDIASPACE' | 'PROTISTRANA';
@@ -26,6 +27,7 @@ export function ContractPaper({
   body,
   signatures,
   currentHash,
+  potvrzovani,
 }: {
   title: string;
   number: string;
@@ -33,6 +35,19 @@ export function ContractPaper({
   signatures: PaperSignature[];
   /** Otisk textu, jak vypadá teď — porovnává se s otiskem u podpisů. */
   currentHash: string;
+  /**
+   * ODKLIKÁVÁNÍ STRÁNEK (zadání 13. 9. 2026: „aby jsi odklikával i jednotlivé
+   * stránky, jak je to třeba u Signi"). Když je to vyplněné, text se rozdělí
+   * na stránky a pod každou přibude potvrzení.
+   *
+   * Nepovinné schválně: v administraci se smlouva jen čte a odklikávat tam
+   * není co. Sazba textu zůstává tatáž, takže obě strany pořád vidí identický
+   * dokument — jen jedna z nich ho prochází po stránkách.
+   */
+  potvrzovani?: {
+    potvrzene: number[];
+    onPotvrdit: (index: number) => void;
+  };
 }) {
   const nase = signatures.find((s) => s.role === 'MEDIASPACE') ?? null;
   const protistrana = signatures.find((s) => s.role === 'PROTISTRANA') ?? null;
@@ -58,9 +73,13 @@ export function ContractPaper({
       </header>
       <div className="h-1 bg-brand-green" aria-hidden="true" />
 
-      <div className="px-6 sm:px-10 py-8 font-body text-[15px] leading-relaxed text-ink">
-        <TextSmlouvy body={body} />
-      </div>
+      {potvrzovani ? (
+        <StrankyKPotvrzeni body={body} potvrzovani={potvrzovani} />
+      ) : (
+        <div className="px-6 sm:px-10 py-8 font-body text-[15px] leading-relaxed text-ink">
+          <TextSmlouvy body={body} />
+        </div>
+      )}
 
       <div className="px-6 sm:px-10 pb-10 grid grid-cols-1 sm:grid-cols-2 gap-8">
         <SignatureBox label="Za Mediaspace" signature={nase} currentHash={currentHash} />
@@ -76,6 +95,67 @@ export function ContractPaper({
 }
 
 /**
+ * Smlouva rozdělená na stránky, každá s vlastním potvrzením.
+ *
+ * PROČ VŮBEC: u Signi člověk projde dokument stránku po stránce a je z toho
+ * doložitelné, že ho viděl celý. Tady stránky nejsou v textu vyznačené —
+ * počítá je lib/smlouvaStranky.ts deterministicky z těla, takže se dají
+ * kdykoliv spočítat znovu a ověřit, co přesně bylo na které.
+ *
+ * Potvrzení JDE VZÍT ZPĚT. Je to „četl jsem", ne podpis; podpis je až ten
+ * dole a ten vzít zpět nejde.
+ */
+function StrankyKPotvrzeni({
+  body,
+  potvrzovani,
+}: {
+  body: string;
+  potvrzovani: { potvrzene: number[]; onPotvrdit: (index: number) => void };
+}) {
+  const stranky = rozdelNaStranky(body);
+
+  return (
+    <div className="flex flex-col">
+      {stranky.map((stranka, i) => {
+        const potvrzena = potvrzovani.potvrzene.includes(i);
+        return (
+          <div key={i} className={i > 0 ? 'border-t border-line' : undefined}>
+            <div className="px-6 sm:px-10 pt-6 flex items-center justify-between gap-3">
+              <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
+                Strana {i + 1} z {stranky.length}
+              </span>
+              {potvrzena && (
+                <span className="text-[11px] font-heading font-semibold text-brand-greenDeep dark:text-brand-green">
+                  Přečteno
+                </span>
+              )}
+            </div>
+            <div className="px-6 sm:px-10 py-5 font-body text-[15px] leading-relaxed text-ink">
+              {/* Velky titul smlouvy patri jen na prvni stranku. */}
+              <TextSmlouvy body={stranka} titulek={i === 0} />
+            </div>
+            <div className="px-6 sm:px-10 pb-6">
+              <button
+                type="button"
+                onClick={() => potvrzovani.onPotvrdit(i)}
+                aria-pressed={potvrzena}
+                className={`w-full rounded-card border-2 px-4 py-3 text-sm font-heading font-semibold transition-colors ${
+                  potvrzena
+                    ? 'border-brand-green bg-brand-green/10 text-brand-greenDeep dark:text-brand-green'
+                    : 'border-dashed border-line text-muted hover:border-brand-purple hover:text-brand-purple'
+                }`}
+              >
+                {potvrzena ? `Strana ${i + 1} přečtena — klepnutím zrušíte` : `Přečetl jsem stranu ${i + 1}`}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * Text smlouvy se sazbou. Je to pořád jeden kus textu — nic se nepřepisuje
  * ani nepřeskupuje, jen se podle tvaru řádku pozná, co je nadpis.
  *
@@ -84,9 +164,11 @@ export function ContractPaper({
  * a spolehlivá — VELKÁ PÍSMENA a římská číslice jsou nadpis, zbytek je text,
  * takže si do šablony může kdokoliv psát vlastní články a sazba drží.
  */
-function TextSmlouvy({ body }: { body: string }) {
+export function TextSmlouvy({ body, titulek = true }: { body: string; titulek?: boolean }) {
   const radky = body.replace(/\r\n/g, '\n').split('\n');
-  let prvniNeprazdny = true;
+  // Velky nadpis se sazi jen z PRVNI stranky (zadani 13. 9. 2026) - na druhe
+  // strance uz je prvni radek obycejny text, ne titul smlouvy.
+  let prvniNeprazdny = titulek;
 
   return (
     <div className="flex flex-col">

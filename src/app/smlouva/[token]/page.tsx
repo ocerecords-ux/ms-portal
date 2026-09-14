@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { documentHash } from '@/lib/contractsServer';
-import { ContractPaper } from '@/app/(admin)/admin/doklady/smlouvy/ContractPaper';
-import { ContractSigning } from './ContractSigning';
+import { SmlouvaKPodpisu } from './SmlouvaKPodpisu';
 
 /**
  * Podpis smlouvy protistranou (zadani 8. 9. 2026). Veřejná stránka — člověk
@@ -44,7 +43,10 @@ export default async function PublicContractPage({ params }: { params: { token: 
           </p>
         </div>
 
-        <ContractPaper
+        {/* Dokument i podpis drzi jedna klientska komponenta - potrebuji spolu
+            sdilet, co uz je odklikane (zadani 13. 9. 2026). */}
+        <SmlouvaKPodpisu
+          token={params.token}
           title={contract.title}
           number={contract.number}
           body={contract.body}
@@ -58,10 +60,6 @@ export default async function PublicContractPage({ params }: { params: { token: 
             documentHash: s.documentHash,
           }))}
           currentHash={documentHash(contract.body)}
-        />
-
-        <ContractSigning
-          token={params.token}
           status={contract.status}
           signerName={contract.signerName}
           alreadySigned={podepsanoJimi}

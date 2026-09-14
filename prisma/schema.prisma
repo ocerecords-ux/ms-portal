@@ -1457,6 +1457,15 @@ model ContractSignature {
   /// Otisk textu, který podepisující v tu chvíli viděl.
   documentHash String
 
+  /// Kolik stranek smlouva mela a kolik jich podepisujici odklikal (zadani
+  /// 13. 9. 2026). Stranky nejsou v textu nijak vyznacene - pocita je
+  /// lib/smlouvaStranky.ts deterministicky z tela, takze se daji kdykoliv
+  /// spocitat znovu a overit, co presne clovek videl.
+  ///
+  /// Volitelne kvuli podpisum, ktere vznikly driv, nez strankovani existovalo.
+  stranekCelkem    Int?
+  stranekPotvrzeno Int?
+
   @@index([contractId])
 }
 

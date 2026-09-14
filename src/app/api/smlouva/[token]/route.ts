@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { documentHash, signatureContext, validSignatureImage } from '@/lib/contractsServer';
+import { pocetStranek } from '@/lib/smlouvaStranky';
 
 // Podpis (nebo odmitnuti) protistranou. VEREJNY endpoint - smlouva se hleda
 // vyhradne podle tokenu z odkazu, zadne ID z adresy se nikam nepropisuje.
@@ -49,6 +50,23 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     const hash = documentHash(contract.body);
     const ctx = signatureContext(req.headers);
 
+    /**
+     * KOLIK STRANEK CLOVEK ODKLIKAL (zadani 13. 9. 2026). Pocet stranek si
+     * server spocita SAM z tela smlouvy - kdyby veril cislu z prohlizece,
+     * dalo by se poslat cokoliv a udaj by nemel zadnou vahu.
+     *
+     * Kdyz neodklikal vsechny, podpis se neprijme. Prohlizec to hlida taky,
+     * ale tam je to jen pohodli; rozhodnout to musi server.
+     */
+    const stranekCelkem = pocetStranek(contract.body);
+    const potvrzeno = Number(telo?.potvrzenoStranek);
+    if (!Number.isFinite(potvrzeno) || potvrzeno < stranekCelkem) {
+      return NextResponse.json(
+        { error: 'Nejdřív si prosím projděte a odklikněte všechny stránky smlouvy.' },
+        { status: 400 },
+      );
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.contractSignature.create({
         data: {
@@ -60,6 +78,8 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
           ip: ctx.ip,
           userAgent: ctx.userAgent,
           documentHash: hash,
+          stranekCelkem,
+          stranekPotvrzeno: stranekCelkem,
         },
       });
       const hotovo = contract.signatures.some((s) => s.role === 'MEDIASPACE');
