@@ -601,11 +601,22 @@ function UdalostForm({
   const navrhCasti = utcParts(navrh, pasmoStudia);
   const navrhOd = navrhCasti.hour * 60 + navrhCasti.minute;
 
+  /**
+   * `<input type="time">` bere jen dvouciferné hodiny - "5:00" zahodí a pole
+   * zůstane prázdné. minutesToTime hodinu nedoplňuje (v mřížce se píše 5:00,
+   * ne 05:00), takže se tu doplní zvlášť.
+   */
+  function proPole(minuty: number): string {
+    const h = Math.floor(minuty / 60);
+    const m = minuty % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
   const [datum, setDatum] = useState(
     `${navrhCasti.year}-${String(navrhCasti.month).padStart(2, '0')}-${String(navrhCasti.day).padStart(2, '0')}`,
   );
-  const [od, setOd] = useState(minutesToTime(navrhOd));
-  const [doKdy, setDoKdy] = useState(minutesToTime(Math.min(24 * 60, navrhOd + 4 * 60)));
+  const [od, setOd] = useState(proPole(navrhOd));
+  const [doKdy, setDoKdy] = useState(proPole(Math.min(24 * 60 - 30, navrhOd + 4 * 60)));
 
   function naMinuty(hodnota: string): number | null {
     const shoda = /^(\d{1,2}):(\d{2})$/.exec(hodnota.trim());
