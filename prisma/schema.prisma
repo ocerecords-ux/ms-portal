@@ -1914,6 +1914,14 @@ model PreposlechStopa {
   /// Kdo dojel na konec - u tokenu „Klient", jinak jmeno z uctu.
   kdo             String?
 
+  /// „Tenhle track mam hotovy" - RUCNI zaskrtnuti preposlouchavace
+  /// (zadani 14. 9. 2026). Neplete se s poslechnutoAt: to se zapise samo,
+  /// kdyz prehravani dojede na konec. Doposlechnout stopu a mit ji vyrizenou
+  /// jsou dve ruzne veci - clovek si ji muze pustit celou a stejne se k ni
+  /// jeste vracet.
+  hotovoAt        DateTime?
+  hotovoKdo       String?
+
   @@unique([caflouProjectId, trackIndex])
   @@index([caflouProjectId])
 }

@@ -20,6 +20,12 @@ export const dynamic = 'force-dynamic';
 const schema = z.object({
   trackIndex: z.number().int().min(1).max(500),
   trackName: z.string().trim().min(1).max(300),
+  /**
+   * RUCNI odskrtnuti „tenhle track mam hotovy" (zadani 14. 9. 2026).
+   * Kdyz chybi, jde o automaticky zapis po doposlechnuti a s hotovo se
+   * nehybe - jinak by dojeti stopy na konec smazalo, co clovek odskrtl.
+   */
+  hotovo: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -31,6 +37,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   try {
     const kdo = pristup.jmeno ?? (pristup.pres_odkaz ? 'Klient' : null);
+    const hotovo = parsed.data.hotovo;
+    const zmenaHotovo =
+      hotovo === undefined
+        ? {}
+        : hotovo
+          ? { hotovoAt: new Date(), hotovoKdo: kdo }
+          : { hotovoAt: null, hotovoKdo: null };
+
     await prisma.preposlechStopa.upsert({
       where: {
         caflouProjectId_trackIndex: {
@@ -40,12 +54,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
       // Nazev stopy muze prijit presnejsi nez pri prvnim zapisu; kdo a kdy
       // zustava ten prvni - zajima nas, kdy se stopa poslechla poprve.
-      update: { trackName: parsed.data.trackName },
+      update: { trackName: parsed.data.trackName, ...zmenaHotovo },
       create: {
         caflouProjectId: params.id,
         trackIndex: parsed.data.trackIndex,
         trackName: parsed.data.trackName,
         kdo,
+        ...zmenaHotovo,
       },
     });
     return NextResponse.json({ ok: true });

@@ -22,6 +22,8 @@ export type PreposlechStavData = {
     createdByName: string | null;
     createdAt: string;
   }[];
+  /** Pořadí stop (od 1), které přeposlouchávač odškrtl jako hotové. */
+  hotoveStopy: number[];
 };
 
 /**
@@ -78,13 +80,19 @@ export async function nactiPreposlechPrehled(
 
 export async function nactiPreposlech(caflouProjectId: string): Promise<PreposlechStavData> {
   try {
-    const [chyby, stav] = await Promise.all([
+    const [chyby, stav, hotove] = await Promise.all([
       prisma.preposlechChyba.findMany({
         where: { caflouProjectId },
         orderBy: [{ trackIndex: 'asc' }, { localTime: 'asc' }],
         take: 2000,
       }),
       prisma.preposlechStav.findUnique({ where: { caflouProjectId } }),
+      // Odskrtnute stopy (zadani 14. 9. 2026) - jen poradi, nic vic z nich
+      // AudioTagger nepotrebuje.
+      prisma.preposlechStopa.findMany({
+        where: { caflouProjectId, hotovoAt: { not: null } },
+        select: { trackIndex: true },
+      }),
     ]);
 
     return {
@@ -102,10 +110,11 @@ export async function nactiPreposlech(caflouProjectId: string): Promise<Preposle
         createdByName: ch.createdByName,
         createdAt: ch.createdAt.toISOString(),
       })),
+      hotoveStopy: hotove.map((h) => h.trackIndex),
     };
   } catch (err) {
     // Prazdny preposlech nikdy nesmi shodit cely detail projektu.
     console.error('Nacteni preposlechu selhalo:', err);
-    return { reviewed: false, reviewedByName: null, reviewedAt: null, chyby: [] };
+    return { reviewed: false, reviewedByName: null, reviewedAt: null, chyby: [], hotoveStopy: [] };
   }
 }

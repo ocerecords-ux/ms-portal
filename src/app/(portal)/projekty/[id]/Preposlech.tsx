@@ -75,6 +75,8 @@ type Stav = {
   reviewedAt: string | null;
   chyby: ChybaZeServeru[];
   historie?: Udalost[];
+  /** Pořadí stop (od 1), které si přeposlouchávač odškrtl jako hotové. */
+  hotoveStopy?: number[];
 };
 
 type Stopa = {
@@ -360,6 +362,53 @@ export function Preposlech({
    * dalším dohrání.
    */
   const poslaneStopy = useRef<Set<number>>(new Set());
+
+  /**
+   * HOTOVÉ STOPY (zadání 14. 9. 2026: „přeposlouchávač zaškrtne, že má hotový
+   * track... takto zaškrtnutý by mohl třeba změnit barvu").
+   *
+   * Je to něco jiného než doposlechnutí, které se zapisuje samo na konci
+   * stopy. Člověk si stopu pustí celou, něco si k ní poznamená a vrátí se
+   * k ní — hotová je až ve chvíli, kdy to sám řekne.
+   */
+  const [hotoveStopy, setHotoveStopy] = useState<Set<number>>(
+    () => new Set(pocatecniStav.hotoveStopy ?? []),
+  );
+
+  const prepniHotovo = useCallback(
+    (index: number) => {
+      const stopa = stopyRef.current[index];
+      if (!stopa) return;
+      const poradi = index + 1;
+      const nove = !hotoveStopy.has(poradi);
+      // Zaškrtnutí se projeví hned; kdyby zápis selhal, vrátí se zpátky.
+      setHotoveStopy((s) => {
+        const kopie = new Set(s);
+        if (nove) kopie.add(poradi);
+        else kopie.delete(poradi);
+        return kopie;
+      });
+      void fetch(sKlicem(`${zaklad}/stopa`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackIndex: poradi, trackName: stopa.name, hotovo: nove }),
+      })
+        .then((res) => {
+          if (res.ok) return;
+          throw new Error('nepovedlo se');
+        })
+        .catch((err) => {
+          console.error('Zapis hotove stopy selhal:', err);
+          setHotoveStopy((s) => {
+            const kopie = new Set(s);
+            if (nove) kopie.delete(poradi);
+            else kopie.add(poradi);
+            return kopie;
+          });
+        });
+    },
+    [hotoveStopy, sKlicem, zaklad],
+  );
 
   const nahlasDoposlechnuto = useCallback(
     (index: number) => {
@@ -1829,7 +1878,13 @@ export function Preposlech({
                     : 'Ve složce projektu zatím nejsou žádné nahrávky. Stopy se řadí podle čísla na začátku názvu — 01_, 02_, 03_.'}
                 </p>
               ) : (
-                stopy.map((stopa, index) => (
+                stopy.map((stopa, index) => {
+                  // Odskrtnuta stopa je zelena (zadani 14. 9. 2026: „takto
+                  // zaskrtnuty by mohl treba zmenit barvu"). Zelena vyhrava
+                  // i nad fialovou u prave hrane stopy - jinak by hotova
+                  // stopa pri kliknuti zdanlive zase zezelenala zpatky.
+                  const jeHotova = hotoveStopy.has(index + 1);
+                  return (
                   <div
                     key={`${index}-${stopa.name}`}
                     // shrink-0 je tu povinne: seznam je flex sloupec s pevnou
@@ -1837,9 +1892,26 @@ export function Preposlech({
                     // toho, aby je nechal prescnout a rolovat. Pri dvanacti
                     // stopach z nich byly 12px prouzky (11. 9. 2026).
                     className={`shrink-0 rounded-lg border overflow-hidden ${
-                      index === aktivni ? 'border-brand-purple bg-tint' : 'border-line bg-surface'
+                      jeHotova
+                        ? index === aktivni
+                          ? 'border-status-done bg-okTint'
+                          : 'border-status-done/50 bg-okTint'
+                        : index === aktivni
+                          ? 'border-brand-purple bg-tint'
+                          : 'border-line bg-surface'
                     }`}
                   >
+                    <div className="flex items-center gap-1.5 pl-2.5">
+                      {/* Zaskrtavatko stoji VEDLE tlacitka, ne v nem - odskrtnuti
+                          stopy nesmi zaroven prepnout prehravani. */}
+                      <input
+                        type="checkbox"
+                        checked={jeHotova}
+                        onChange={() => prepniHotovo(index)}
+                        title={jeHotova ? 'Stopa je hotová — odškrtnutím ji vrátíte zpět' : 'Označit stopu jako hotovou'}
+                        aria-label={`Stopa ${pad2(index + 1)} hotová`}
+                        className="w-3.5 h-3.5 shrink-0 accent-status-done cursor-pointer"
+                      />
                     <button
                       type="button"
                       onClick={() =>
@@ -1848,7 +1920,7 @@ export function Preposlech({
                         // zalozce.
                         vyberStopu(index, zalozka?.trackIndex === index + 1 ? zalozka.localTime : undefined)
                       }
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left"
+                      className="flex-1 min-w-0 flex items-center gap-2 pr-3 py-1.5 text-left"
                     >
                       <span className="text-[11px] font-heading font-bold tabular-nums bg-field rounded px-1.5 py-0.5">{pad2(index + 1)}</span>
                       <span className="flex-1 min-w-0 text-xs font-body text-ink truncate">{stopa.name}</span>
@@ -1877,6 +1949,7 @@ export function Preposlech({
                         <span className="text-[10px] font-heading text-muted tabular-nums">+{hms(index * DELKA_STOPY_V_CUBASE)}</span>
                       )}
                     </button>
+                    </div>
                     <canvas
                       data-stopa={index}
                       className="w-full h-[56px] block bg-field cursor-pointer"
@@ -1900,7 +1973,8 @@ export function Preposlech({
                       }}
                     />
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
