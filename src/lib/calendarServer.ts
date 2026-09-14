@@ -127,7 +127,24 @@ export type Occupancy = {
     label: string;
     requestId: string;
   }[];
-  blocks: { id: string; studioId: string; start: Date; end: Date; title: string; kind: string }[];
+  blocks: {
+    id: string;
+    studioId: string;
+    start: Date;
+    end: Date;
+    title: string;
+    kind: string;
+    /**
+     * Rozepsané údaje ručně zapsané události (zadání 14. 9. 2026) - kalendář
+     * z nich plní formulář při úpravě. U svátku a údržby jsou prázdné.
+     */
+    caflouProjectId: string | null;
+    projectName: string | null;
+    actorUserId: string | null;
+    actorName: string | null;
+    zvukarUserId: string | null;
+    zvukarName: string | null;
+  }[];
 };
 
 /**
@@ -177,6 +194,12 @@ export async function loadOccupancy(
       end: b.end,
       title: b.title,
       kind: b.kind,
+      caflouProjectId: b.caflouProjectId,
+      projectName: b.projectName,
+      actorUserId: b.actorUserId,
+      actorName: b.actorName,
+      zvukarUserId: b.zvukarUserId,
+      zvukarName: b.zvukarName,
     })),
   };
 }

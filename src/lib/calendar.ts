@@ -445,6 +445,84 @@ export const HOUR_PX = 34;
 /** Kam se má mřížka po otevření nascrollovat — ať se nekouká na noc. */
 export const GRID_SCROLL_TO_HOUR = 7;
 
+/**
+ * ROZVRŽENÍ PŘEKRÝVAJÍCÍCH SE UDÁLOSTÍ (zadání 14. 9. 2026: „podívej se
+ * pořádně na ten Google kalendář, jak mají vyřešeno to překrývání událostí,
+ * chci to stejné").
+ *
+ * Do teď ležela každá událost přes celou šířku sloupce, takže dvě natáčení
+ * ve stejnou hodinu se úplně zakryla a to spodní nebylo vidět ani myší.
+ *
+ * Postupuje se jako v Google Kalendáři:
+ *
+ *  1. Události, které se řetězově překrývají, tvoří JEDEN SHLUK. Stačí, že
+ *     A zasahuje do B a B do C - všechny tři se dělí o šířku dohromady, i
+ *     když se A s C nepotkají.
+ *  2. Uvnitř shluku dostane každá událost první SLOUPEC, který je v jejím
+ *     čase volný. Řadí se podle začátku, při shodě delší napřed - dlouhá
+ *     frekvence tak drží levý kraj a krátké zápisy se skládají vedle ní.
+ *  3. Nakonec se každá roztáhne doprava přes všechny sloupce, které má po
+ *     celou svou dobu volné. Bez toho by osamocená událost vedle jednoho
+ *     krátkého překryvu zbytečně držela půlku šířky.
+ *
+ * Vrací zlomky šířky sloupce dne: `posun` je levý okraj, `podil` šířka.
+ */
+export type Prekryv = { posun: number; podil: number };
+
+export function rozvrhniPrekryvy<T extends { id: string; od: number; do: number }>(
+  polozky: T[],
+): Map<string, Prekryv> {
+  const vysledek = new Map<string, Prekryv>();
+  if (polozky.length === 0) return vysledek;
+
+  const serazene = [...polozky].sort((a, b) => a.od - b.od || b.do - a.do);
+
+  let shluk: T[] = [];
+  let konecShluku = -Infinity;
+
+  const dokonciShluk = () => {
+    if (shluk.length === 0) return;
+    // Sloupce shluku - v kazdem si drzime konec posledni udalosti.
+    const sloupce: number[] = [];
+    const kam = new Map<string, number>();
+    for (const u of shluk) {
+      let i = sloupce.findIndex((konec) => konec <= u.od);
+      if (i === -1) {
+        i = sloupce.length;
+        sloupce.push(u.do);
+      } else {
+        sloupce[i] = u.do;
+      }
+      kam.set(u.id, i);
+    }
+    const celkem = sloupce.length;
+    for (const u of shluk) {
+      const od = kam.get(u.id)!;
+      // Kam az doprava se da roztahnout, nez narazi na jinou udalost.
+      let az = od + 1;
+      while (az < celkem) {
+        const obsazeno = shluk.some(
+          (j) => j.id !== u.id && kam.get(j.id) === az && j.od < u.do && j.do > u.od,
+        );
+        if (obsazeno) break;
+        az += 1;
+      }
+      vysledek.set(u.id, { posun: od / celkem, podil: (az - od) / celkem });
+    }
+    shluk = [];
+    konecShluku = -Infinity;
+  };
+
+  for (const u of serazene) {
+    if (u.od >= konecShluku) dokonciShluk();
+    shluk.push(u);
+    konecShluku = Math.max(konecShluku, u.do);
+  }
+  dokonciShluk();
+
+  return vysledek;
+}
+
 /** Pozice a výška události v mřížce, v pixelech. */
 export function gridPosition(startMinutes: number, endMinutes: number) {
   const top = ((startMinutes - GRID_START_HOUR * 60) * HOUR_PX) / 60;

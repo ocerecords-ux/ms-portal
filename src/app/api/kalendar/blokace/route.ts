@@ -33,6 +33,38 @@ const schema = z.object({
   zvukarName: z.string().trim().max(200).optional(),
 });
 
+type Vstup = z.infer<typeof schema>;
+
+/**
+ * Co musí být vyplněné (zadání 14. 9. 2026: „událost, která bude obsahovat
+ * název projektu, herce (když to bude natáčení) nebo střih a jméno zvukaře").
+ *
+ * Herec se vyžaduje jen u natáčení - u střihu žádný není a prázdné pole by
+ * tam jen strašilo. Stejná pravidla platí pro zápis i pro úpravu, proto to
+ * sedí tady a ne dvakrát v obou routách.
+ */
+function zkontrolujVstup(kind: string, d: Vstup): string | null {
+  if (jePraceVeStudiu(kind)) {
+    if (!d.projectName?.trim()) return 'Vyberte projekt.';
+    if (!d.zvukarName?.trim()) return 'Vyberte zvukaře.';
+    if (kind === 'NATACENI' && !d.actorName?.trim()) return 'Vyberte herce.';
+    return null;
+  }
+  return d.title?.trim() ? null : 'Vyplňte, čeho se blokace týká.';
+}
+
+/** Rozepsané údaje události. U střihu se herec neukládá - žádný není. */
+function poliUdalosti(kind: string, d: Vstup) {
+  return {
+    caflouProjectId: d.caflouProjectId || null,
+    projectName: d.projectName || null,
+    actorUserId: kind === 'NATACENI' ? d.actorUserId || null : null,
+    actorName: kind === 'NATACENI' ? d.actorName || null : null,
+    zvukarUserId: d.zvukarUserId || null,
+    zvukarName: d.zvukarName || null,
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -49,32 +81,13 @@ export async function POST(req: NextRequest) {
     const kind = d.kind ?? 'INTERNAL';
     const jePrace = jePraceVeStudiu(kind);
 
-    /**
-     * Co musí být vyplněné (zadání 14. 9. 2026: „událost, která bude
-     * obsahovat název projektu, herce (když to bude natáčení) nebo střih
-     * a jméno zvukaře").
-     *
-     * Herec se vyžaduje jen u natáčení - u střihu žádný není a prázdné pole
-     * by tam jen strašilo.
-     */
-    if (jePrace) {
-      if (!d.projectName?.trim()) {
-        return NextResponse.json({ error: 'Vyberte projekt.' }, { status: 400 });
-      }
-      if (!d.zvukarName?.trim()) {
-        return NextResponse.json({ error: 'Vyberte zvukaře.' }, { status: 400 });
-      }
-      if (kind === 'NATACENI' && !d.actorName?.trim()) {
-        return NextResponse.json({ error: 'Vyberte herce.' }, { status: 400 });
-      }
-    } else if (!d.title?.trim()) {
-      return NextResponse.json({ error: 'Vyplňte, čeho se blokace týká.' }, { status: 400 });
-    }
+    const chyba = zkontrolujVstup(kind, d);
+    if (chyba) return NextResponse.json({ error: chyba }, { status: 400 });
 
     const start = new Date(d.start);
     const end = new Date(d.end);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
-      return NextResponse.json({ error: 'Konec blokace musí být po začátku.' }, { status: 400 });
+      return NextResponse.json({ error: 'Konec události musí být po začátku.' }, { status: 400 });
     }
 
     // Pres uz domluvene nataceni se blokace nedava.
@@ -97,25 +110,9 @@ export async function POST(req: NextRequest) {
         kind,
         // Popis se u natáčení a střihu skládá ze zapsaných polí - v mřížce
         // pak všechny události vypadají stejně a nikdo nevymýšlí názvy.
-        title: jePrace
-          ? popisUdalosti({
-              projectName: d.projectName,
-              actorName: kind === 'NATACENI' ? d.actorName : null,
-              zvukarName: d.zvukarName,
-              kind,
-            })
-          : (d.title ?? ''),
+        title: jePrace ? popisUdalosti({ ...poliUdalosti(kind, d), kind }) : (d.title ?? ''),
         note: d.note || null,
-        ...(jePrace
-          ? {
-              caflouProjectId: d.caflouProjectId || null,
-              projectName: d.projectName || null,
-              actorUserId: kind === 'NATACENI' ? d.actorUserId || null : null,
-              actorName: kind === 'NATACENI' ? d.actorName || null : null,
-              zvukarUserId: d.zvukarUserId || null,
-              zvukarName: d.zvukarName || null,
-            }
-          : {}),
+        ...(jePrace ? poliUdalosti(kind, d) : {}),
         createdById: session.user.id,
       },
     });
@@ -123,6 +120,87 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(block, { status: 201 });
   } catch (err) {
     console.error('POST /api/kalendar/blokace selhalo:', err);
+    const message = err instanceof Error ? err.message : 'Neznámá chyba.';
+    return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
+  }
+}
+
+/**
+ * Úprava už zapsané události (zadání 14. 9. 2026: „chybí mi možnost upravit
+ * událost"). Beze změny zůstává jen to, co se neposílá.
+ *
+ * Kontrola kolize při úpravě MUSÍ VYNECHAT SAMU SEBE - jinak by posun
+ * natáčení o půl hodiny narazil na „v tomhle čase už ve studiu něco je",
+ * totiž na tu samou událost, kterou člověk zrovna posouvá.
+ */
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || !canManageCalendar(session.user.role)) {
+      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    }
+
+    const id = new URL(req.url).searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'Chybí událost.' }, { status: 400 });
+
+    const puvodni = await prisma.studioBlock.findUnique({ where: { id } });
+    if (!puvodni) return NextResponse.json({ error: 'Událost nenalezena.' }, { status: 404 });
+
+    const parsed = schema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
+    }
+    const d = parsed.data;
+    const kind = d.kind ?? puvodni.kind;
+    const jePrace = jePraceVeStudiu(kind);
+
+    const chyba = zkontrolujVstup(kind, d);
+    if (chyba) return NextResponse.json({ error: chyba }, { status: 400 });
+
+    const start = new Date(d.start);
+    const end = new Date(d.end);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      return NextResponse.json({ error: 'Konec události musí být po začátku.' }, { status: 400 });
+    }
+
+    const obsazeno = await loadOccupancy([d.studioId], start, end);
+    if (obsazeno.slots.length > 0) {
+      return NextResponse.json(
+        { error: `V tomhle čase je natáčení: ${obsazeno.slots.map((s) => s.label).join(', ')}.` },
+        { status: 409 },
+      );
+    }
+    if (obsazeno.blocks.some((b) => b.id !== id)) {
+      return NextResponse.json({ error: 'V tomhle čase už ve studiu něco je.' }, { status: 409 });
+    }
+
+    const upravena = await prisma.studioBlock.update({
+      where: { id },
+      data: {
+        studioId: d.studioId,
+        start,
+        end,
+        kind,
+        title: jePrace ? popisUdalosti({ ...poliUdalosti(kind, d), kind }) : (d.title ?? ''),
+        note: d.note || null,
+        // Kdyz se z natáčení stane svatek, musi rozepsane udaje zmizet -
+        // jinak by u nej dal visel herec, ktery s nim nema nic spolecneho.
+        ...(jePrace
+          ? poliUdalosti(kind, d)
+          : {
+              caflouProjectId: null,
+              projectName: null,
+              actorUserId: null,
+              actorName: null,
+              zvukarUserId: null,
+              zvukarName: null,
+            }),
+      },
+    });
+
+    return NextResponse.json(upravena);
+  } catch (err) {
+    console.error('PATCH /api/kalendar/blokace selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';
     return NextResponse.json({ error: `Uložení se nezdařilo (${message}).` }, { status: 500 });
   }

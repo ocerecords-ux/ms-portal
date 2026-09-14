@@ -17,6 +17,7 @@ import {
   gridPosition,
   minutesInZone,
   minutesToTime,
+  rozvrhniPrekryvy,
   utcParts,
   zonedToUtc,
   jePraceVeStudiu,
@@ -49,6 +50,18 @@ export type CalendarEvent = {
   title: string;
   subtitle?: string;
   href?: string;
+  /**
+   * Rozepsané údaje ručně zapsané události - z nich se plní formulář při
+   * úpravě (zadání 14. 9. 2026: „chybí mi možnost upravit událost").
+   */
+  udalost?: {
+    caflouProjectId: string | null;
+    projectName: string | null;
+    actorUserId: string | null;
+    actorName: string | null;
+    zvukarUserId: string | null;
+    zvukarName: string | null;
+  };
 };
 
 type Studio = { id: string; shortName: string; name: string; timezone: string; color: string };
@@ -89,6 +102,8 @@ export function CalendarBrowser({
   const [hledani, setHledani] = useState('');
   const [detail, setDetail] = useState<CalendarEvent | null>(null);
   const [novaBlokace, setNovaBlokace] = useState<{ studioId: string; start: string; end: string } | null>(null);
+  /** Událost otevřená k úpravě (zadání 14. 9. 2026). */
+  const [upravovana, setUpravovana] = useState<CalendarEvent | null>(null);
 
   const viditelne = useMemo(() => {
     const dotaz = hledani.trim().toLowerCase();
@@ -299,17 +314,31 @@ export function CalendarBrowser({
         />
       )}
 
-      {novaBlokace && (
+      {(novaBlokace || upravovana) && (
         <UdalostForm
-          studios={studios.filter((s) => selectedStudioIds.includes(s.id))}
-          vychozi={novaBlokace}
+          // Pri uprave se nastavuje klic - jinak by React nechal ve formulari
+          // stav po predchozi udalosti a clovek by upravoval cizi udaje.
+          key={upravovana?.id ?? 'nova'}
+          studios={studios}
+          vychozi={
+            novaBlokace ?? {
+              studioId: upravovana!.studioId,
+              start: upravovana!.start,
+              end: upravovana!.end,
+            }
+          }
+          upravovana={upravovana}
           timezone={timezone}
           projekty={projekty}
           herci={herci}
           zvukari={zvukari}
-          onClose={() => setNovaBlokace(null)}
+          onClose={() => {
+            setNovaBlokace(null);
+            setUpravovana(null);
+          }}
           onHotovo={() => {
             setNovaBlokace(null);
+            setUpravovana(null);
             router.refresh();
           }}
         />
@@ -320,6 +349,11 @@ export function CalendarBrowser({
           event={detail}
           timezone={timezone}
           canManage={canManage}
+          onUpravit={() => {
+            setUpravovana(detail);
+            setNovaBlokace(null);
+            setDetail(null);
+          }}
           onClose={() => setDetail(null)}
           onSmazano={() => {
             setDetail(null);
@@ -435,10 +469,21 @@ function MrizkaPohled({
                     </>
                   )}
 
-                  {(podleDnu.get(den.key) ?? []).map((e) => {
+                  {(() => {
+                    const vDni = podleDnu.get(den.key) ?? [];
+                    const casy = vDni.map((e) => ({
+                      id: e.id,
+                      od: minutesInZone(new Date(e.start), timezone),
+                      do: minutesInZone(new Date(e.end), timezone) || 24 * 60,
+                    }));
+                    // Kdo s kym se prekryva a jak se o sirku podeli - viz
+                    // rozvrhniPrekryvy (zadani 14. 9. 2026).
+                    const rozvrh = rozvrhniPrekryvy(casy);
+                    return vDni.map((e) => {
                     const od = minutesInZone(new Date(e.start), timezone);
                     const doo = minutesInZone(new Date(e.end), timezone) || 24 * 60;
                     const pozice = gridPosition(od, doo);
+                    const misto = rozvrh.get(e.id) ?? { posun: 0, podil: 1 };
                     // U blokace je ve `state` jeji DRUH - natáčení a střih z něj poznaji
                     // svou barvu (14. 9. 2026: „je to strasne, kdyz jsou ty pole
                     // v kalendari po ulozeni bile"). Driv se sem posilalo natvrdo
@@ -453,6 +498,10 @@ function MrizkaPohled({
                         style={{
                           top: `${pozice.top}px`,
                           height: `${pozice.height}px`,
+                          // Vedle sebe misto pres sebe. 2px mezera, at jsou
+                          // dve sousedni udalosti od sebe rozeznatelne.
+                          left: `calc(${misto.posun * 100}% + 2px)`,
+                          width: `calc(${misto.podil * 100}% - 4px)`,
                           backgroundColor: barvy.background,
                           borderColor: barvy.border,
                           // Silny pruh vlevo nese barvu studia i tam, kde je
@@ -460,7 +509,7 @@ function MrizkaPohled({
                           borderLeftWidth: '3px',
                           color: barvy.text,
                         }}
-                        className="absolute left-0.5 right-0.5 rounded border px-1.5 py-0.5 text-left overflow-hidden"
+                        className="absolute rounded border px-1.5 py-0.5 text-left overflow-hidden"
                       >
                         {/* Popisek je dvouřádkový (zadání 14. 9. 2026):
                             projekt - herec, pod tím ZVUKAŘ: jméno. Druhý řádek
@@ -488,7 +537,8 @@ function MrizkaPohled({
                         )}
                       </button>
                     );
-                  })}
+                    });
+                  })()}
                 </div>
               ))}
             </div>
@@ -586,6 +636,7 @@ function MesicniPohled({
 function UdalostForm({
   studios,
   vychozi,
+  upravovana,
   timezone,
   projekty,
   herci,
@@ -595,6 +646,8 @@ function UdalostForm({
 }: {
   studios: Studio[];
   vychozi: { studioId: string; start: string; end: string };
+  /** Když je vyplněná, formulář existující událost UPRAVUJE (14. 9. 2026). */
+  upravovana?: CalendarEvent | null;
   timezone: string;
   projekty: Volba[];
   herci: Volba[];
@@ -602,13 +655,15 @@ function UdalostForm({
   onClose: () => void;
   onHotovo: () => void;
 }) {
-  const [studioId, setStudioId] = useState(vychozi.studioId);
-  const [nazev, setNazev] = useState('');
+  const [studioId, setStudioId] = useState(upravovana?.studioId ?? vychozi.studioId);
+  const [nazev, setNazev] = useState(
+    upravovana && !jePraceVeStudiu(upravovana.state) ? upravovana.title : '',
+  );
   // Kalendář se otevírá kvůli natáčení, ne kvůli údržbě - proto je předvybrané.
-  const [druh, setDruh] = useState('NATACENI');
-  const [projektId, setProjektId] = useState('');
-  const [herecId, setHerecId] = useState('');
-  const [zvukarId, setZvukarId] = useState('');
+  const [druh, setDruh] = useState(upravovana?.state ?? 'NATACENI');
+  const [projektId, setProjektId] = useState(upravovana?.udalost?.caflouProjectId ?? '');
+  const [herecId, setHerecId] = useState(upravovana?.udalost?.actorUserId ?? '');
+  const [zvukarId, setZvukarId] = useState(upravovana?.udalost?.zvukarUserId ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -626,7 +681,8 @@ function UdalostForm({
    * londýnských - jinak by se událost v kalendáři objevila o hodinu vedle.
    */
   const pasmoStudia = studios.find((s) => s.id === studioId)?.timezone ?? timezone;
-  const navrh = new Date(vychozi.start);
+  const navrh = new Date(upravovana?.start ?? vychozi.start);
+  const navrhKonec = upravovana ? new Date(upravovana.end) : null;
   const navrhCasti = utcParts(navrh, pasmoStudia);
   const navrhOd = navrhCasti.hour * 60 + navrhCasti.minute;
 
@@ -645,7 +701,13 @@ function UdalostForm({
     `${navrhCasti.year}-${String(navrhCasti.month).padStart(2, '0')}-${String(navrhCasti.day).padStart(2, '0')}`,
   );
   const [od, setOd] = useState(proPole(navrhOd));
-  const [doKdy, setDoKdy] = useState(proPole(Math.min(24 * 60 - 30, navrhOd + 4 * 60)));
+  const [doKdy, setDoKdy] = useState(
+    proPole(
+      navrhKonec
+        ? (utcParts(navrhKonec, pasmoStudia).hour * 60 + utcParts(navrhKonec, pasmoStudia).minute) || 24 * 60
+        : Math.min(24 * 60 - 30, navrhOd + 4 * 60),
+    ),
+  );
 
   function naMinuty(hodnota: string): number | null {
     const shoda = /^(\d{1,2}):(\d{2})$/.exec(hodnota.trim());
@@ -682,8 +744,10 @@ function UdalostForm({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch('/api/kalendar/blokace', {
-        method: 'POST',
+      const res = await fetch(
+        upravovana ? `/api/kalendar/blokace?id=${encodeURIComponent(upravovana.id)}` : '/api/kalendar/blokace',
+        {
+        method: upravovana ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studioId,
@@ -702,7 +766,8 @@ function UdalostForm({
               }
             : { title: nazev }),
         }),
-      });
+      },
+      );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || 'Událost se nepodařilo uložit.');
@@ -723,7 +788,9 @@ function UdalostForm({
     <div className="bg-surface rounded-card border-2 border-brand-purple shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nová událost</h2>
+          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+            {upravovana ? 'Úprava události' : 'Nová událost'}
+          </h2>
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">
             {new Intl.DateTimeFormat('cs-CZ', {
               timeZone: pasmoStudia,
@@ -876,7 +943,7 @@ function UdalostForm({
           disabled={busy || chybi}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {busy ? 'Ukládám…' : 'Přidat do kalendáře'}
+          {busy ? 'Ukládám…' : upravovana ? 'Uložit změny' : 'Přidat do kalendáře'}
         </button>
         <button type="button" onClick={onClose} className="text-muted text-sm font-heading">
           Zrušit
@@ -895,12 +962,15 @@ function DetailUdalosti({
   event,
   timezone,
   canManage,
+  onUpravit,
   onClose,
   onSmazano,
 }: {
   event: CalendarEvent;
   timezone: string;
   canManage: boolean;
+  /** Otevře formulář s vyplněnou událostí (zadání 14. 9. 2026). */
+  onUpravit: () => void;
   onClose: () => void;
   onSmazano: () => void;
 }) {
@@ -955,6 +1025,18 @@ function DetailUdalosti({
             Otevřít nabídku termínů →
           </Link>
         )}
+        {/* Upravit smi jen rucne zapsanou udalost. Termin z nabidky se
+            posouva v te nabidce, ne tady - jinak by se herci pod rukama
+            zmenil cas, ktery si sam vybral (14. 9. 2026). */}
+        {event.kind === 'BLOCK' && canManage && (
+          <button
+            type="button"
+            onClick={onUpravit}
+            className="text-sm font-heading font-semibold text-brand-purple"
+          >
+            Upravit
+          </button>
+        )}
         {event.kind === 'BLOCK' && canManage && (
           <button
             type="button"
@@ -962,7 +1044,7 @@ function DetailUdalosti({
             disabled={busy}
             className="text-sm font-heading font-semibold text-danger disabled:opacity-60"
           >
-            Smazat blokaci
+            Smazat událost
           </button>
         )}
       </div>

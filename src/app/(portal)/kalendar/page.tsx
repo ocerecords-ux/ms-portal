@@ -192,6 +192,15 @@ export default async function KalendarPage({
       state: b.kind,
       title: b.title,
       subtitle: BLOCK_KIND_LABELS[b.kind] ?? 'Blokace',
+      // Rozepsané údaje pro úpravu události (zadání 14. 9. 2026).
+      udalost: {
+        caflouProjectId: b.caflouProjectId,
+        projectName: b.projectName,
+        actorUserId: b.actorUserId,
+        actorName: b.actorName,
+        zvukarUserId: b.zvukarUserId,
+        zvukarName: b.zvukarName,
+      },
     })),
   ];
 
