@@ -1,4 +1,8 @@
+'use client';
+
+import { useState } from 'react';
 import { budgetUsedPercent, type Budget } from '@/lib/budget';
+import { NakladyProjektu, type NakladovaPolozka } from './NakladyProjektu';
 
 const czk = (v: number) => `${v.toLocaleString('cs-CZ')} Kč`;
 
@@ -6,6 +10,19 @@ const czk = (v: number) => `${v.toLocaleString('cs-CZ')} Kč`;
  * Rozpocet projektu (zadani 6. 9. 2026) - vidi ho jen Zuzo-labuzo.
  * Naklady se pocitaji z poctu normostran, cerpani z vykazu zvukaru a zisk
  * jako cena zakazky minus naklady.
+ *
+ * POLOZKOVE NAKLADY I TADY (zadani 14. 9. 2026: „potrebuju pridat Naklady po
+ * polozkach i k audioknihám, ted je to jen u reklam"). Honorar herce, studio
+ * nebo hudba se z normostran spocitat nedaji - portal o nich nevi, dokud je
+ * nekdo nenapise. Jsou to SKUTECNE naklady navic k tomu, co vyjde ze vzorce.
+ *
+ * Kam se propisuji:
+ *   - Naklady celkem = rozpocet z normostran + polozky,
+ *   - Zisk = cena zakazky - naklady celkem.
+ *
+ * CERPANI SE JICH NEDOTYKA. Ten pruh porovnava VYKAZY ZVUKARU s rozpoctem na
+ * praci; honorar herce do nej nepatri a kdyby se do nej pricetl, prestalo by
+ * cislo odpovidat tomu, co ukazuje graf cerpani vedle.
  */
 export function ProjectBudget({
   budget,
@@ -13,6 +30,8 @@ export function ProjectBudget({
   revenue,
   ratePerPage,
   hoursLogged,
+  caflouProjectId,
+  pocatecniPolozky,
 }: {
   budget: Budget;
   /** Uz vykazane penize podle vykazu zvukaru. */
@@ -21,7 +40,12 @@ export function ProjectBudget({
   revenue: number | null;
   ratePerPage: number | null;
   hoursLogged: number;
+  caflouProjectId: string;
+  pocatecniPolozky: NakladovaPolozka[];
 }) {
+  const [polozky, setPolozky] = useState(pocatecniPolozky.reduce((s, p) => s + p.castka, 0));
+  const nakladyCelkem = budget.total + polozky;
+
   const percent = budgetUsedPercent(spent, budget.total);
   const over = spent > budget.total;
   const remaining = budget.total - spent;
@@ -58,10 +82,15 @@ export function ProjectBudget({
             </td>
             <td className="py-1 text-ink tabular-nums text-right">{czk(budget.bonus)}</td>
           </tr>
+          <tr>
+            <td className="py-1 text-ink">Náklady po položkách</td>
+            <td className="py-1 text-muted whitespace-nowrap">viz níž</td>
+            <td className="py-1 text-ink tabular-nums text-right">{czk(polozky)}</td>
+          </tr>
           <tr className="border-t border-line">
             <td className="pt-2 text-ink font-semibold">Náklady celkem</td>
             <td></td>
-            <td className="pt-2 text-ink tabular-nums text-right font-semibold">{czk(budget.total)}</td>
+            <td className="pt-2 text-ink tabular-nums text-right font-semibold">{czk(nakladyCelkem)}</td>
           </tr>
         </tbody>
       </table>
@@ -101,9 +130,9 @@ export function ProjectBudget({
             </span>
           ) : (
             <span className="text-sm font-heading text-ink tabular-nums">
-              {czk(revenue)} − {czk(budget.total)} ={' '}
-              <strong className={revenue - budget.total >= 0 ? 'text-brand-greenDeep' : 'text-danger'}>
-                {czk(revenue - budget.total)}
+              {czk(revenue)} − {czk(nakladyCelkem)} ={' '}
+              <strong className={revenue - nakladyCelkem >= 0 ? 'text-brand-greenDeep' : 'text-danger'}>
+                {czk(revenue - nakladyCelkem)}
               </strong>
             </span>
           )}
@@ -114,6 +143,8 @@ export function ProjectBudget({
           </p>
         )}
       </div>
+
+      <NakladyProjektu caflouProjectId={caflouProjectId} pocatecni={pocatecniPolozky} onZmena={setPolozky} />
     </div>
   );
 }

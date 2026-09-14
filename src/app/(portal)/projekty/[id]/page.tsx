@@ -404,6 +404,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       revenue={revenue}
       ratePerPage={company?.ratePerPage ?? null}
       hoursLogged={hoursLogged}
+      caflouProjectId={caflouProjectId}
+      pocatecniPolozky={nakladovePolozky}
     />
   ) : (
     <ProjectBudgetZakazka
