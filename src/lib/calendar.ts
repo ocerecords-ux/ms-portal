@@ -451,14 +451,22 @@ export function eventColors(studioColor: string, state: string): { background: s
     return { background: `${studioColor}26`, border: studioColor, text: '#201A33' };
   }
   /**
-   * Rucne zapsana prace ve studiu (zadani 14. 9. 2026) vypada jako potvrzene
-   * nataceni - protoze to potvrzene nataceni JE, jen se nedomlouvalo pres
-   * nabidku. Seda barva je vyhrazena tomu, kdy se netoci (svatek, udrzba,
-   * dovolena) - kdyby v ni svitil zapsany natáčecí den, cetl by se jako
-   * volno.
+   * Rucne zapsana prace ve studiu (zadani 14. 9. 2026: „udelej to barevne
+   * a kazdy kalendar zvlast ... jako na Googlu").
+   *
+   * BARVU URCUJE STUDIO, ne druh prace - studio je nas „kalendar" a kazde ma
+   * svou barvu uz v hlavicce. Nataceni je plne, strih tyz odstín svetleji
+   * s plnym ramecke: na prvni pohled je videt, ve kterem studiu se pracuje,
+   * a az pak, jestli se toci nebo strihá.
+   *
+   * Seda zustava vyhrazena tomu, kdy se NETOCI (svatek, udrzba, dovolena) -
+   * kdyby v ni svitil zapsany natáčecí den, cetl by se jako volno.
    */
-  if (jePraceVeStudiu(state)) {
+  if (state === 'NATACENI') {
     return { background: studioColor, border: studioColor, text: '#FFFFFF' };
+  }
+  if (state === 'STRIH') {
+    return { background: `${studioColor}59`, border: studioColor, text: '#201A33' };
   }
   // Blokace a uvolnene terminy - seda, at se nepletou s natacením.
   return { background: '#E4DFFB', border: '#6E6580', text: '#201A33' };

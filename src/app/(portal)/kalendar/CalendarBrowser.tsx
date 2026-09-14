@@ -439,7 +439,11 @@ function MrizkaPohled({
                     const od = minutesInZone(new Date(e.start), timezone);
                     const doo = minutesInZone(new Date(e.end), timezone) || 24 * 60;
                     const pozice = gridPosition(od, doo);
-                    const barvy = eventColors(e.color, e.kind === 'BLOCK' ? 'BLOCK' : e.state);
+                    // U blokace je ve `state` jeji DRUH - natáčení a střih z něj poznaji
+                    // svou barvu (14. 9. 2026: „je to strasne, kdyz jsou ty pole
+                    // v kalendari po ulozeni bile"). Driv se sem posilalo natvrdo
+                    // 'BLOCK', takze kazdy zapsany den zesedivel.
+                    const barvy = eventColors(e.color, e.state);
                     return (
                       <button
                         key={e.id}
@@ -515,7 +519,7 @@ function MesicniPohled({
                 {cislo}
               </span>
               {udalosti.slice(0, 3).map((e) => {
-                const barvy = eventColors(e.color, e.kind === 'BLOCK' ? 'BLOCK' : e.state);
+                const barvy = eventColors(e.color, e.state);
                 return (
                   <button
                     key={e.id}
@@ -799,14 +803,14 @@ function UdalostForm({
               <span className="text-sm font-body text-ink">
                 Herec <span className="text-danger">*</span>
               </span>
-              <select value={herecId} onChange={(e) => setHerecId(e.target.value)} className={inputClass}>
-                <option value="">— vyberte herce —</option>
-                {herci.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.label}
-                  </option>
-                ))}
-              </select>
+              <VyberProjektu
+                projekty={herci}
+                hodnota={herecId}
+                onZmena={setHerecId}
+                placeholder="Začněte psát jméno herce…"
+                prazdnyText="Takového herce jsme nenašli. Zkuste jen příjmení."
+                popisZruseni="Zrušit výběr herce"
+              />
             </label>
           )}
 
@@ -814,14 +818,14 @@ function UdalostForm({
             <span className="text-sm font-body text-ink">
               Zvukař <span className="text-danger">*</span>
             </span>
-            <select value={zvukarId} onChange={(e) => setZvukarId(e.target.value)} className={inputClass}>
-              <option value="">— vyberte zvukaře —</option>
-              {zvukari.map((z) => (
-                <option key={z.id} value={z.id}>
-                  {z.label}
-                </option>
-              ))}
-            </select>
+            <VyberProjektu
+              projekty={zvukari}
+              hodnota={zvukarId}
+              onZmena={setZvukarId}
+              placeholder="Začněte psát jméno zvukaře…"
+              prazdnyText="Takového zvukaře jsme nenašli. Zkuste jen příjmení."
+              popisZruseni="Zrušit výběr zvukaře"
+            />
           </label>
         </div>
       ) : (
@@ -881,7 +885,7 @@ function DetailUdalosti({
       : SLOT_STATE_LABELS[event.state] ?? event.state;
 
   async function smaz() {
-    if (!window.confirm('Opravdu smazat tuhle blokaci?')) return;
+    if (!window.confirm('Opravdu smazat tuhle událost z kalendáře?')) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/kalendar/blokace?id=${event.id}`, { method: 'DELETE' });

@@ -51,6 +51,8 @@ export function VyberProjektu({
   onZmena,
   disabled,
   placeholder = 'Začněte psát název projektu, firmu nebo číslo…',
+  prazdnyText = 'Nic takového jsme nenašli. Zkuste jen část názvu nebo jméno firmy.',
+  popisZruseni = 'Zrušit výběr projektu',
 }: {
   projekty: ProjektKVyberu[];
   /** ID vybraného projektu, nebo prázdno. */
@@ -58,6 +60,14 @@ export function VyberProjektu({
   onZmena: (id: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  /**
+   * Texty se dají přepsat, protože stejné políčko používá i výběr herce
+   * a zvukaře v kalendáři (zadání 14. 9. 2026: „všechny pole herec atd. musí
+   * mít vyhledávání lupou, ne seznam. Jako u projektů"). Rolovací seznam se
+   * osmdesáti herci je na tom stejně jako seznam se sedmi sty projekty.
+   */
+  prazdnyText?: string;
+  popisZruseni?: string;
 }) {
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
@@ -166,7 +176,7 @@ export function VyberProjektu({
           type="button"
           onClick={() => onZmena('')}
           title="Zrušit výběr"
-          aria-label="Zrušit výběr projektu"
+          aria-label={popisZruseni}
           className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 grid place-items-center rounded-full text-muted hover:text-danger hover:bg-surface"
         >
           ×
@@ -176,9 +186,7 @@ export function VyberProjektu({
       {otevreno && (
         <div className="absolute z-30 left-0 right-0 mt-1 max-h-[280px] overflow-y-auto rounded-lg border border-line bg-surface shadow-lg">
           {viditelne.length === 0 ? (
-            <p className="text-sm font-body text-muted m-0 px-3 py-3">
-              Nic takového jsme nenašli. Zkuste jen část názvu nebo jméno firmy.
-            </p>
+            <p className="text-sm font-body text-muted m-0 px-3 py-3">{prazdnyText}</p>
           ) : (
             <ul className="list-none m-0 p-1 flex flex-col">
               {viditelne.map((p, i) => (
