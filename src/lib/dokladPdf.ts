@@ -451,13 +451,14 @@ function zaver(
   if (soucty.sleva > 0) {
     popisek(c, s.mezisoucet, souhrnX, ySouhrn + 8);
     vpravo(c, false, castka(soucty.exVatPredSlevou, data.mena, data.jazyk), 10.5, RIGHT, ySouhrn + 8, INK);
+    // Oddelovac musi byt znak, ktery je v podmnozine vlozeneho fontu - „·"
+    // v ni neni a kreslitko ho tisklo jako FALLBACK_CHAR „?" (14. 9. 2026).
     const popisSlevy = [
-      s.sleva,
-      data.sleva?.slevaProcent ? `${data.sleva.slevaProcent} %` : '',
-      soucty.slevaPopis ?? '',
+      [s.sleva, data.sleva?.slevaProcent ? `${data.sleva.slevaProcent} %` : ''].filter(Boolean).join(' '),
+      soucty.slevaPopis ? `(${soucty.slevaPopis})` : '',
     ]
       .filter(Boolean)
-      .join(' · ');
+      .join(' ');
     popisek(c, popisSlevy, souhrnX, ySouhrn + 26);
     vpravo(c, false, `-${castka(soucty.sleva, data.mena, data.jazyk)}`, 10.5, RIGHT, ySouhrn + 26, INK);
     ySouhrn += 38;

@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { formatMoney, minorToInput, parseMoneyToMinor, type Totals } from '@/lib/doklady';
 import type { Currency } from '@prisma/client';
 
@@ -20,6 +22,12 @@ export type SlevaHodnoty = {
   slevaPopis: string;
 };
 
+/** „12,5" i „12.5" i prazdno - pole se nesmi branit rozepsanemu cislu. */
+function cisloZTextu(text: string): number {
+  const n = Number(String(text).replace(/\s/g, '').replace(',', '.'));
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function SlevaPole({
   hodnoty,
   onZmena,
@@ -33,7 +41,20 @@ export function SlevaPole({
   totals: Totals;
   locked?: boolean;
 }) {
-  const druh = hodnoty.slevaProcent > 0 ? 'PROCENTA' : hodnoty.slevaMinor > 0 ? 'CASTKA' : 'ZADNA';
+  // Zadani 14. 9. 2026: „do toho pole s castkou slevy nemuzu napsat libovolne
+  // cislo. Je tam nejaky divny format." Puvodne bylo pole plne rizene z minor
+  // jednotek - kazda klavesa se prepocitala pres minorToInput a vratila jako
+  // „5.00", takze kurzor skakal a „1 500" nebo „15" nesly vubec napsat.
+  // Drzime proto v poli syrovy text a na haléře prevadime az pri predani ven.
+  const [druh, setDruh] = useState<'ZADNA' | 'PROCENTA' | 'CASTKA'>(
+    hodnoty.slevaProcent > 0 ? 'PROCENTA' : hodnoty.slevaMinor > 0 ? 'CASTKA' : 'ZADNA',
+  );
+  const [textCastka, setTextCastka] = useState<string>(
+    hodnoty.slevaMinor > 0 ? minorToInput(hodnoty.slevaMinor) : '',
+  );
+  const [textProcent, setTextProcent] = useState<string>(
+    hodnoty.slevaProcent > 0 ? String(hodnoty.slevaProcent) : '',
+  );
 
   const inputClass =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple';
@@ -57,12 +78,21 @@ export function SlevaPole({
         <select
           value={druh}
           onChange={(e) => {
-            const v = e.target.value;
+            const v = e.target.value as 'ZADNA' | 'PROCENTA' | 'CASTKA';
+            setDruh(v);
             // Prepnuti druhu vzdy vynuluje to druhe - jinak by v databazi
             // zustala viset stara hodnota a pri dalsi uprave se vratila.
-            if (v === 'ZADNA') onZmena({ slevaProcent: 0, slevaMinor: 0 });
-            else if (v === 'PROCENTA') onZmena({ slevaMinor: 0, slevaProcent: 10 });
-            else onZmena({ slevaProcent: 0, slevaMinor: 100 });
+            if (v === 'ZADNA') {
+              setTextCastka('');
+              setTextProcent('');
+              onZmena({ slevaProcent: 0, slevaMinor: 0 });
+            } else if (v === 'PROCENTA') {
+              setTextCastka('');
+              onZmena({ slevaMinor: 0, slevaProcent: cisloZTextu(textProcent) });
+            } else {
+              setTextProcent('');
+              onZmena({ slevaProcent: 0, slevaMinor: parseMoneyToMinor(textCastka) });
+            }
           }}
           className={`${inputClass} flex-1 min-w-0`}
         >
@@ -74,12 +104,15 @@ export function SlevaPole({
         {druh === 'PROCENTA' && (
           <div className="flex items-center gap-1.5">
             <input
-              type="number"
-              min={0}
-              max={100}
-              step={0.5}
-              value={hodnoty.slevaProcent || ''}
-              onChange={(e) => onZmena({ slevaProcent: Number(e.target.value) || 0, slevaMinor: 0 })}
+              type="text"
+              inputMode="decimal"
+              value={textProcent}
+              onChange={(e) => {
+                const t = e.target.value;
+                setTextProcent(t);
+                onZmena({ slevaProcent: cisloZTextu(t), slevaMinor: 0 });
+              }}
+              placeholder="10"
               className={`${inputClass} w-24 text-right tabular-nums`}
             />
             <span className="text-sm font-heading text-muted">%</span>
@@ -90,9 +123,13 @@ export function SlevaPole({
           <input
             type="text"
             inputMode="decimal"
-            value={hodnoty.slevaMinor ? minorToInput(hodnoty.slevaMinor) : ''}
-            onChange={(e) => onZmena({ slevaMinor: parseMoneyToMinor(e.target.value), slevaProcent: 0 })}
-            placeholder="0.00"
+            value={textCastka}
+            onChange={(e) => {
+              const t = e.target.value;
+              setTextCastka(t);
+              onZmena({ slevaMinor: parseMoneyToMinor(t), slevaProcent: 0 });
+            }}
+            placeholder="0"
             className={`${inputClass} w-32 text-right tabular-nums`}
           />
         )}
