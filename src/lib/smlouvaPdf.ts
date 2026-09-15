@@ -172,7 +172,16 @@ export function smlouvaPdf(data: SmlouvaPdfData): Buffer {
   }
 
   // --- Text smlouvy --------------------------------------------------------
-  const radky = data.body.replace(/\r\n/g, '\n').split('\n');
+  /**
+   * Prázdné řádky na konci těla se zahazují a delší mezery se krátí: ve
+   * smlouvě na ně nikdo nekouká, ale posčítaly se do výšky a podpisy kvůli
+   * nim odskočily na další stránku (viděno 15. 9. 2026 na S2026001).
+   */
+  const radky = data.body
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\s+$/, '')
+    .split('\n');
   let prvniNeprazdny = true;
 
   for (const syrovy of radky) {
@@ -294,7 +303,9 @@ export function smlouvaPdf(data: SmlouvaPdfData): Buffer {
     const y = PAGE_H - 40;
     stranka.c.line(LEFT, y - 12, RIGHT, y - 12, BORDER, 1);
     stranka.c.text(FONT_BOLD, 'FB', 'Mediaspace', 8, LEFT, y, PURPLE);
-    const cislo = `Smlouva ${data.number} · strana ${i + 1} z ${stranky.length}`;
+    // Oddelovac musi byt znak z podmnoziny vlozeneho fontu - „·" v ni neni
+    // a tisklo se „?" (overeno na produkci 15. 9. 2026).
+    const cislo = `Smlouva ${data.number} – strana ${i + 1} z ${stranky.length}`;
     stranka.c.text(FONT_REGULAR, 'FR', cislo, 7.5, RIGHT - textWidth(FONT_REGULAR, cislo, 7.5), y, MUTED);
   });
 
