@@ -49,6 +49,18 @@ export const ROLE_GROUPS: { label: string; roles: Role[] }[] = [
   { label: 'Robot (účet bez člověka)', roles: ROBOT_ROLES },
 ];
 
+/**
+ * Vidi projekty ve stavu „V přípravě"? (zadání 15. 9. 2026: „zvukaři nevidí
+ * projekty v přípravě, vidí je až ve chvíli, kdy se překlopí do Natáčíme").
+ *
+ * Projekt v přípravě je zatím jen objednávka: není domluvený termín ani herec
+ * a v seznamu zvukaře by jen přibývalo něco, s čím zatím nemá co dělat.
+ * Žůžo-labůžo, produkce, klienti a herci ho vidí od začátku.
+ */
+export function vidiProjektyVPriprave(role: Role): boolean {
+  return role !== 'ZVUKAR';
+}
+
 export function roleRequiresCompany(role: Role): boolean {
   return COMPANY_ROLES.includes(role);
 }

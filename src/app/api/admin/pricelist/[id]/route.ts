@@ -11,6 +11,7 @@ const schema = z.object({
   priceIncVat: z.string().trim().optional(),
   active: z.boolean().optional(),
   rodnyList: z.boolean().optional(),
+  proObjednavkyAudioknih: z.boolean().optional(),
   /** Klic ikony z lib/ikonyTypu.tsx; prazdny retezec = zadna ikona. */
   ikona: z.string().trim().max(40).optional(),
 });
@@ -50,6 +51,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     let priceIncVat = data.priceIncVat !== undefined ? toIntOrNull(data.priceIncVat) : undefined;
     if (priceIncVat === null && priceExVat != null) priceIncVat = withVat(priceExVat);
 
+    // Typ pro objednane audioknihy smi byt jen jeden - zaskrtnuti jinde se
+    // zhasne, at portal nema dva rovnocenne typy a nemusel mezi nimi hadat.
+    if (data.proObjednavkyAudioknih === true) {
+      await prisma.priceListItem.updateMany({
+        where: { proObjednavkyAudioknih: true, NOT: { id: params.id } },
+        data: { proObjednavkyAudioknih: false },
+      });
+    }
+
     const updated = await prisma.priceListItem.update({
       where: { id: params.id },
       data: {
@@ -58,6 +68,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(priceIncVat !== undefined ? { priceIncVat } : {}),
         ...(data.active !== undefined ? { active: data.active } : {}),
         ...(data.rodnyList !== undefined ? { rodnyList: data.rodnyList } : {}),
+        ...(data.proObjednavkyAudioknih !== undefined
+          ? { proObjednavkyAudioknih: data.proObjednavkyAudioknih }
+          : {}),
         ...(data.ikona !== undefined ? { ikona: data.ikona || null } : {}),
       },
     });
@@ -92,7 +105,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     // jen ji vyradime, at se u historickych projektu typ neztrati.
     const used = await prisma.projectMeta.count({ where: { projectType: item.name } });
     if (used > 0) {
-      const updated = await prisma.priceListItem.update({ where: { id: params.id }, data: { active: false } });
+      const updated = await prisma.priceListItem.update({
+        where: { id: params.id },
+        data: { active: false },
+      });
       return NextResponse.json({ ...updated, deactivatedInsteadOfDeleted: true, usedByProjects: used });
     }
 

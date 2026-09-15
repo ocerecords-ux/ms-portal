@@ -219,6 +219,17 @@ export async function POST(req: NextRequest) {
       });
 
       /**
+       * TYP PROJEKTU (zadani 15. 9. 2026: „rovnou pridej typ projektu").
+       * Bere se polozka ceniku zaskrtnuta v Cenicich jako typ pro objednane
+       * audioknihy - bez typu se projektu nespocita rozpocet. V ProjectMeta
+       * se uklada nazev polozky, stejne jako kdyz typ vybere clovek.
+       */
+      const typProjektu = await prisma.priceListItem.findFirst({
+        where: { active: true, proObjednavkyAudioknih: true },
+        select: { name: true },
+      });
+
+      /**
        * HERCI (zadani 15. 9. 2026: „herce nemuzeme vybrat konkretniho? A kdyz
        * neni, tak text?"). Klient vybira ze seznamu hercu, ale do objednavky
        * se to ulozi jako jmena oddelena carkami. Co sedi na ucet herce, navaze
@@ -272,6 +283,7 @@ export async function POST(req: NextRequest) {
           companyName: company.name,
           klientUserId: userId,
           managerUserId: vedouci?.id ?? null,
+          projectType: typProjektu?.name ?? null,
           pageCount,
           // Hlavni herec = prvni v seznamu, stejne jako u rucne zalozeneho
           // projektu.

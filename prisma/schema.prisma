@@ -641,6 +641,13 @@ model PriceListItem {
   /// a pribyvaji, tohle si tym prepne v administraci.
   rodnyList   Boolean  @default(false)
 
+  /// Typ projektu, ktery dostane projekt zalozeny z OBJEDNAVKY AUDIOKNIHY
+  /// (zadani 15. 9. 2026: „rovnou pridej typ projektu"). Priznak sedi na
+  /// polozce ceniku ze stejneho duvodu jako `rodnyList`: nazvy se meni a
+  /// hadat typ podle slova „audiokniha" by po prvnim prejmenovani prestalo
+  /// platit. Zaskrtnuta smi byt jen jedna polozka - vyber je v Cenicich.
+  proObjednavkyAudioknih Boolean @default(false)
+
   /// Ikona typu projektu (zadani 10. 9. 2026) - klic z lib/ikonyTypu.tsx.
   /// Sviti pred nazvem projektu v prehledu. Je to na polozce ceniku, ne
   /// v kodu: typy projektu si tym pridava sam a napevno zadana ikona by nove

@@ -14,6 +14,8 @@ type Item = {
   active: boolean;
   /** Rádiový spot - jen u něj se vyrábí Rodný list. */
   rodnyList: boolean;
+  /** Typ, který dostane projekt založený z objednávky audioknihy. */
+  proObjednavkyAudioknih: boolean;
   /** Ikona, která svítí před názvem projektu (zadání 10. 9. 2026). */
   ikona: string | null;
 };
@@ -30,6 +32,14 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: '', priceExVat: '', priceIncVat: '' });
   const [newItem, setNewItem] = useState({ name: '', priceExVat: '', priceIncVat: '', rodnyList: false, ikona: '' });
+
+  /**
+   * Typ projektu pro objednané audioknihy (zadání 15. 9. 2026). Je to výběr
+   * JEDNÉ položky, ne příznak u každé - proto jeden rozbalovací seznam nad
+   * tabulkou a ne další sloupec „Ano/Ne". Server zhasne zaškrtnutí u ostatních,
+   * takže tu nemůžou vzniknout dva rovnocenné typy.
+   */
+  const proAudioknihy = items.find((i) => i.proObjednavkyAudioknih)?.id ?? '';
 
   // Razeni kliknutim na nazev sloupce (zadani 9. 9. 2026). Vychozi je podle
   // nazvu - cenik se cte jako seznam, ne jako poradi.
@@ -102,6 +112,37 @@ export function PriceListEditor({ items }: { items: Item[] }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Co dostane projekt z objednávky audioknihy. Bez toho se u projektu
+          nespočítá rozpočet - typ určuje frekvence, střih i bonus. */}
+      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
+        <span className="font-heading font-semibold text-sm text-ink">
+          Objednávka audioknihy zakládá projekt typu
+        </span>
+        <select
+          value={proAudioknihy}
+          disabled={busy}
+          onChange={(e) => {
+            const id = e.target.value;
+            if (!id) return;
+            void send(`/api/admin/pricelist/${id}`, 'PATCH', { proObjednavkyAudioknih: true });
+          }}
+          className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple max-w-md"
+        >
+          <option value="">— zatím nevybráno —</option>
+          {items
+            .filter((i) => i.active)
+            .map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.name}
+              </option>
+            ))}
+        </select>
+        <span className="text-xs font-body text-muted">
+          Podle typu se projektu počítá rozpočet. Když tu nic nevyberete, projekt z objednávky přijde
+          bez typu a rozpočet zůstane prázdný.
+        </span>
+      </div>
+
       <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse">

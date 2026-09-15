@@ -166,3 +166,11 @@ export function barvaStavu(nazev: string | null | undefined, dokonceny = false):
   if (stav) return stav.barva;
   return dokonceny ? BARVA_DOKONCENY : BARVA_ROZPRACOVANY;
 }
+
+/**
+ * Je projekt teprve v přípravě? Stav se porovnává s prvním krokem cesty, ne
+ * s napsaným řetězcem - kdyby se stav jednou přejmenoval, drží to dál.
+ */
+export function jeVPriprave(statusName: string | null | undefined): boolean {
+  return (statusName ?? '').trim() === STAVY_PROJEKTU[0].nazev;
+}

@@ -36,7 +36,10 @@ export async function GET() {
     // vterinovem zadrhelu, se kterym neni nic spatne. Stejny pristup uz
     // pouziva build (scripts/priprav-databazi.mjs).
     const [konverzace, tym] = await zkusDatabazi(() =>
-      Promise.all([loadConversations(session.user.id), loadTeam(session.user.id)]),
+      Promise.all([
+        loadConversations(session.user.id, session.user.role),
+        loadTeam(session.user.id),
+      ]),
     );
     return NextResponse.json({ konverzace, tym });
   } catch (err) {

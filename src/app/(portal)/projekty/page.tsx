@@ -2,7 +2,13 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import type { DisplayProject } from '@/lib/projektyTypy';
-import { canEditProjectMeta, canViewProjectBusinessInfo, isInternalRole } from '@/lib/roles';
+import {
+  canEditProjectMeta,
+  canViewProjectBusinessInfo,
+  isInternalRole,
+  vidiProjektyVPriprave,
+} from '@/lib/roles';
+import { jeVPriprave } from '@/lib/stavyProjektu';
 import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
@@ -37,6 +43,7 @@ export default async function ProjektyPage() {
         isAdmin={session!.user.role === 'ADMIN'}
         muzeMenitStav={canEditProjectMeta(session!.user.role)}
         vidiObchodniUdaje={canViewProjectBusinessInfo(session!.user.role)}
+        vidiVPriprave={vidiProjektyVPriprave(session!.user.role)}
       />
     );
   }
@@ -180,15 +187,23 @@ async function InternalProjektySection({
   isAdmin,
   muzeMenitStav,
   vidiObchodniUdaje,
+  vidiVPriprave,
 }: {
   isAdmin: boolean;
   /** Prehazovat stav projektu smi Produkce a Zuzo-labuzo. */
   muzeMenitStav: boolean;
   /** Zvukar nevidi datum vydani - viz canViewProjectBusinessInfo. */
   vidiObchodniUdaje: boolean;
+  /** Zvukar vidi projekt az od stavu „Natáčíme" - viz vidiProjektyVPriprave. */
+  vidiVPriprave: boolean;
 }) {
   // Projekty jsou nase - jeden dotaz do databaze (viz lib/projektySeznamServer.ts).
-  const { projects, error } = await loadInternalProjects();
+  const { projects: vsechnyProjekty, error } = await loadInternalProjects();
+  // Projekt v pripravě je zatim jen objednavka - zvukari se v seznamu
+  // neukazuje (zadani 15. 9. 2026).
+  const projects = vidiVPriprave
+    ? vsechnyProjekty
+    : vsechnyProjekty.filter((p) => !jeVPriprave(p.statusName));
 
   // Rodne listy reklamnich spotu (zadani 9. 9. 2026). Porovnava se s poslednim
   // videnym stavem prave tady - interni prehled projektu je misto, kam se

@@ -9,7 +9,9 @@ import {
   canViewProjectBusinessInfo,
   canViewProjectDocuments,
   isInternalRole,
+  vidiProjektyVPriprave,
 } from '@/lib/roles';
+import { jeVPriprave } from '@/lib/stavyProjektu';
 import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu } from '@/lib/priceList';
 import { druhNotifikaceFirmy } from '@/lib/notifikaceFirmy';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
@@ -203,6 +205,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       : null;
 
   const project = zSeznamu?.project ?? null;
+
+  // Projekt v pripravě zvukar nevidi ani na primy odkaz (zadani 15. 9. 2026) -
+  // jinak by staci otevrit adresu a seznam by ho chranil jen naoko.
+  if (
+    !vidiProjektyVPriprave(session.user.role) &&
+    jeVPriprave(meta?.statusName ?? project?.statusName ?? null)
+  ) {
+    redirect('/projekty');
+  }
 
 
   // Rodny list i Hudba ve spotu se delaji jen u radiovych spotu (upresneni

@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { loadInternalProjects } from '@/lib/projektySeznamServer';
+import { jeVPriprave } from '@/lib/stavyProjektu';
 import { DEFAULT_HOURLY_RATE } from '@/lib/timesheets';
 import { TimesheetEditor } from './TimesheetEditor';
 import { BonusyPanel, type Bonus } from './BonusyPanel';
@@ -62,6 +63,9 @@ export default async function TimesheetsPage({
     ? await (async () => {
         const { projects } = await loadInternalProjects();
         return projects
+          // Projekt v pripravě zvukar nevidi ani tady (zadani 15. 9. 2026);
+          // Zuzo-labuzo upravuje cizi vykazy, tomu se nabizeji vsechny.
+          .filter((p) => isAdmin || !jeVPriprave(p.statusName))
           .map((p) => ({
             id: String(p.id),
             label: p.companyName ? `${p.name} — ${p.companyName}` : p.name,

@@ -1,7 +1,8 @@
 import type { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { odkazNaFotku } from '@/lib/fotky';
-import { isInternalRole } from '@/lib/roles';
+import { isInternalRole, vidiProjektyVPriprave } from '@/lib/roles';
+import { jeVPriprave } from '@/lib/stavyProjektu';
 import type { ChatConversation, ChatReaction } from '@/lib/chat';
 
 // Serverova cast chatu - oddelena od lib/chat.ts, protoze konstanty odtamtud
@@ -26,7 +27,11 @@ export function canUseChat(role: Role): boolean {
  * neprectene zpravy - podle lastReadAt jeho radku clenstvi; kdyz radek jeste
  * nema (kanal, kam nikdy nezasel), pocitaji se vsechny cizi zpravy.
  */
-export async function loadConversations(userId: string): Promise<ChatConversation[]> {
+export async function loadConversations(
+  userId: string,
+  /** Role ctenare - zvukari se neukazuji kanaly projektu v pripravě. */
+  role?: Role,
+): Promise<ChatConversation[]> {
   const conversations = await prisma.conversation.findMany({
     where: {
       // Skupina „Mediaspace All" je videt kazdemu z tymu, i kdyz v ni radek
@@ -95,10 +100,32 @@ export async function loadConversations(userId: string): Promise<ChatConversatio
     });
   }
 
+  /**
+   * Kanaly projektu, ktere jsou teprve v pripravě, zvukar nevidi (zadani
+   * 15. 9. 2026). Kanal vznika uz pri objednavce, takze bez tohohle by se
+   * zvukari v chatu objevil projekt driv, nez ho vidi v Projektech.
+   */
+  let skryteKanaly = new Set<string>();
+  if (role && !vidiProjektyVPriprave(role)) {
+    const idProjektu = conversations
+      .map((c) => c.caflouProjectId)
+      .filter((id): id is string => Boolean(id));
+    if (idProjektu.length > 0) {
+      const vPripraveMeta = await prisma.projectMeta.findMany({
+        where: { caflouProjectId: { in: idProjektu } },
+        select: { caflouProjectId: true, statusName: true },
+      });
+      skryteKanaly = new Set(
+        vPripraveMeta.filter((m) => jeVPriprave(m.statusName)).map((m) => m.caflouProjectId),
+      );
+    }
+  }
+
   // UKLIZENE ROZHOVORY (zadani 12. 9. 2026). Zmizi ze seznamu, dokud v nich
   // nekdo nenapise - pak se vrati samy, protoze prijit o zpravu kvuli jednomu
   // prejeti prstem by bylo horsi nez mit v seznamu radek navic.
   const videt = conversations.filter((c) => {
+    if (c.caflouProjectId && skryteKanaly.has(c.caflouProjectId)) return false;
     const moje = c.members.find((m) => m.userId === userId);
     if (!moje?.skryto) return true;
     return moje.skrytoAt ? c.lastMessageAt > moje.skrytoAt : false;
