@@ -2109,6 +2109,12 @@ model BonusZvukare {
 
   stav StavBonusu @default(NAVRZENO)
 
+  /// Pridal ho clovek rucne (zadani 15. 9. 2026: „potrebuju, aby Peter mohl
+  /// mit moznost pridat bonus rucne")? U takoveho bonusu podil na strihu nic
+  /// neznamena - portal ho nepocital, jen ho doplnil podle vykazu, pokud
+  /// nejake byly.
+  rucne Boolean @default(false)
+
   navrzenoAt   DateTime  @default(now())
   rozhodnutoAt DateTime?
   /// Kdo bonus schvalil nebo zamitl.

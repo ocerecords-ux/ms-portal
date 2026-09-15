@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatCzk, formatDuration } from '@/lib/timesheets';
+import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 
 /**
  * BONUSY ZVUKAŘŮ (zadání 15. 9. 2026: „na tyto bonusy bych udělal zvlášť
@@ -32,7 +33,13 @@ export type Bonus = {
   rozhodlJmeno: string | null;
   /** Vlastní bonus si schválit nesmí ani Žůžo-labůžo. */
   vlastni: boolean;
+  /** Přidal ho člověk ručně - podíl na střihu pak nic neznamená. */
+  rucne: boolean;
+  poznamka: string | null;
 };
+
+export type VolbaProjektu = { id: string; label: string };
+export type VolbaZvukare = { id: string; label: string };
 
 const STAV_POPISKY: Record<Bonus['stav'], string> = {
   NAVRZENO: 'Čeká na schválení',
@@ -52,10 +59,69 @@ function formatDatum(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? '—' : new Intl.DateTimeFormat('cs-CZ').format(d);
 }
 
-export function BonusyPanel({ bonusy, muzeSchvalovat }: { bonusy: Bonus[]; muzeSchvalovat: boolean }) {
+export function BonusyPanel({
+  bonusy,
+  muzeSchvalovat,
+  projekty,
+  zvukari,
+}: {
+  bonusy: Bonus[];
+  muzeSchvalovat: boolean;
+  projekty: VolbaProjektu[];
+  zvukari: VolbaZvukare[];
+}) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
+  /**
+   * Ručně přidaný bonus (zadání 15. 9. 2026). Formulář je schovaný, dokud
+   * o něj někdo neřekne - běžně se bonusy jen odklikávají.
+   */
+  const [otevreno, setOtevreno] = useState(false);
+  const [projekt, setProjekt] = useState('');
+  const [zvukar, setZvukar] = useState('');
+  // Castka jako TEXT, ne cislo: pole s cislem se brani rozepsanemu zapisu
+  // a nutilo by mazat predvyplnenou nulu.
+  const [castka, setCastka] = useState('');
+  const [poznamka, setPoznamka] = useState('');
+  const [pridavam, setPridavam] = useState(false);
+
+  async function pridej() {
+    const cislo = Number(castka.replace(/\s/g, '').replace(',', '.'));
+    if (!projekt || !zvukar || !Number.isFinite(cislo) || cislo <= 0) {
+      setChyba('Vyberte projekt, zvukaře a vyplňte částku.');
+      return;
+    }
+    setPridavam(true);
+    setChyba(null);
+    try {
+      const res = await fetch('/api/bonusy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caflouProjectId: projekt,
+          userId: zvukar,
+          castka: Math.round(cislo),
+          poznamka: poznamka.trim() || undefined,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setChyba(data?.error || 'Bonus se nepodařilo přidat.');
+        return;
+      }
+      setOtevreno(false);
+      setProjekt('');
+      setZvukar('');
+      setCastka('');
+      setPoznamka('');
+      router.refresh();
+    } catch {
+      setChyba('Nepodařilo se spojit se serverem.');
+    } finally {
+      setPridavam(false);
+    }
+  }
   const cekaji = bonusy.filter((b) => b.stav === 'NAVRZENO');
   const rozhodnute = bonusy.filter((b) => b.stav !== 'NAVRZENO');
 
@@ -92,6 +158,85 @@ export function BonusyPanel({ bonusy, muzeSchvalovat }: { bonusy: Bonus[]; muzeS
           ? 'Portál navrhne bonus sám, když projekt poprvé přejde do stavu „Dokončeno - ke schválení" a zvukař na něm udělal aspoň 90 % střihu. Přiznat ho musí člověk — dokud tady nikdo neklepne na Schválit, je to jen návrh.'
           : 'Bonus za audioknihu navrhuje portál sám, když na ní uděláte aspoň 90 % střihu. Přiznává ho Žůžo-labůžo.'}
       </p>
+
+      {muzeSchvalovat && (
+        <div className="flex flex-col gap-3">
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setOtevreno((v) => !v);
+                setChyba(null);
+              }}
+              className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:border-brand-purple transition-colors"
+            >
+              {otevreno ? 'Zavřít' : 'Přidat bonus ručně'}
+            </button>
+          </div>
+
+          {otevreno && (
+            <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
+              <p className="text-sm font-body text-muted m-0">
+                Pro případy, na které portál nedosáhne — kniha navíc, zachráněný termín, práce, která se
+                do výkazů nevešla. Přidaný bonus je rovnou schválený; podíl na střihu se dopočítá z výkazů,
+                pokud nějaké jsou.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-body text-ink">Projekt</span>
+                  <VyberProjektu projekty={projekty} hodnota={projekt} onZmena={setProjekt} />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-body text-ink">Zvukař</span>
+                  <select
+                    value={zvukar}
+                    onChange={(e) => setZvukar(e.target.value)}
+                    className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+                  >
+                    <option value="">— vyberte —</option>
+                    {zvukari.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-body text-ink">Částka (Kč)</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={castka}
+                    onChange={(e) => setCastka(e.target.value)}
+                    placeholder="např. 1200"
+                    className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple tabular-nums"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-body text-ink">Za co (nepovinné)</span>
+                  <input
+                    type="text"
+                    value={poznamka}
+                    onChange={(e) => setPoznamka(e.target.value)}
+                    placeholder="např. převzal knihu po kolegovi"
+                    className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+                  />
+                </label>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => void pridej()}
+                  disabled={pridavam}
+                  className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+                >
+                  {pridavam ? 'Přidávám…' : 'Přidat bonus'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {chyba && (
         <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{chyba}</p>
@@ -168,15 +313,27 @@ function Tabulka({
                     <span className="block text-xs font-body text-muted">
                       Navrženo {formatDatum(b.navrzenoAt)}
                     </span>
+                    {b.poznamka && (
+                      <span className="block text-xs font-body text-muted italic">{b.poznamka}</span>
+                    )}
                   </td>
                   {muzeSchvalovat && (
                     <td className="px-4 py-3 text-sm font-heading text-ink">{b.userLabel}</td>
                   )}
                   <td className="px-4 py-3">
-                    <span className="block text-sm font-heading text-ink tabular-nums">{b.podilProcent} %</span>
-                    <span className="block text-xs font-body text-muted tabular-nums">
-                      {formatDuration(b.minutZvukare)} z {formatDuration(b.minutCelkem)}
-                    </span>
+                    {b.rucne && b.minutCelkem === 0 ? (
+                      <span className="block text-sm font-body text-muted">Přidáno ručně</span>
+                    ) : (
+                      <>
+                        <span className="block text-sm font-heading text-ink tabular-nums">{b.podilProcent} %</span>
+                        <span className="block text-xs font-body text-muted tabular-nums">
+                          {formatDuration(b.minutZvukare)} z {formatDuration(b.minutCelkem)}
+                        </span>
+                      </>
+                    )}
+                    {b.rucne && b.minutCelkem > 0 && (
+                      <span className="block text-xs font-body text-muted">Přidáno ručně</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm font-heading text-ink tabular-nums text-right">
                     {formatCzk(b.castka)}

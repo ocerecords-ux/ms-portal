@@ -100,7 +100,24 @@ export default async function TimesheetsPage({
     rozhodnutoAt: b.rozhodnutoAt ? b.rozhodnutoAt.toISOString() : null,
     rozhodlJmeno: b.rozhodlJmeno,
     vlastni: b.userId === session.user.id,
+    rucne: b.rucne,
+    poznamka: b.poznamka,
   }));
+
+  /**
+   * Nabídka pro ruční přidání bonusu (zadání 15. 9. 2026). Zvukaři z portálu;
+   * projekty tytéž, jaké se nabízejí u výkazu, takže se hledá lupou a ne
+   * v seznamu se stovkami řádků.
+   */
+  const zvukari = isAdmin
+    ? (
+        await prisma.user.findMany({
+          where: { role: 'ZVUKAR', active: true },
+          select: { id: true, name: true, email: true },
+          orderBy: { name: 'asc' },
+        })
+      ).map((u) => ({ id: u.id, label: u.name || u.email }))
+    : [];
   const keSchvaleni = bonusy.filter((b) => b.stav === 'NAVRZENO').length;
   const naBonusech = searchParams?.zalozka === 'bonusy';
 
@@ -130,7 +147,12 @@ export default async function TimesheetsPage({
       </div>
 
       {naBonusech ? (
-        <BonusyPanel bonusy={bonusy} muzeSchvalovat={isAdmin} />
+        <BonusyPanel
+          bonusy={bonusy}
+          muzeSchvalovat={isAdmin}
+          projekty={projectOptions.map((p) => ({ id: p.id, label: p.label }))}
+          zvukari={zvukari}
+        />
       ) : (
     <TimesheetEditor
       isAdmin={isAdmin}
