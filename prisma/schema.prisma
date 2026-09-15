@@ -1149,7 +1149,6 @@ model Offer {
   @@index([companyId])
   @@index([status])
   @@index([caflouProjectId])
-  @@index([offerId])
 }
 
 // Polozka nabidky. Cena se drzi v nejmensi jednotce meny (halere, centy,
