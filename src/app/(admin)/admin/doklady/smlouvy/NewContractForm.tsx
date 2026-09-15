@@ -23,6 +23,12 @@ import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
  * Po výběru projektu se nabídnou jeho herci a z karty vybraného se do smlouvy
  * vezme jméno, e-mail, adresa i RČ nebo IČ — podle toho, co má vyplněné.
  * Název díla se bere z názvu projektu.
+ *
+ * U SMLOUVY NA AUDIOKNIHU JE TOHO PŘEDVYPLNĚNÉHO VÍC (zadání 15. 9. 2026):
+ * název smlouvy je „název projektu - herec", protistrana se jmenuje rovnou
+ * Herec, odměna se dá vybrat z položkových nákladů projektu (nebo napsat
+ * ručně), termín se bere z data odevzdání projektu a splatnost je 30 dnů.
+ * Všechno jde přepsat - je to předvyplnění, ne zámek.
  */
 export function NewContractForm({
   issuers,
@@ -55,7 +61,15 @@ export function NewContractForm({
     actorUserId: '',
   });
   const [herci, setHerci] = useState<Herec[]>([]);
-  const [pole, setPole] = useState<Record<string, string>>({});
+  const [naklady, setNaklady] = useState<Naklad[]>([]);
+  const [projektInfo, setProjektInfo] = useState<{ nazev: string; odevzdani: string | null } | null>(null);
+  // Splatnost je 30 dnu, dokud ji nekdo neprepise (zadani 15. 9. 2026).
+  const [pole, setPole] = useState<Record<string, string>>({ splatnost: '30' });
+  // Odkud se bere odmena: '' = jeste nevybrano, 'rucne' = napisu sam,
+  // jinak poradi polozky v nakladech projektu.
+  const [odmenaZdroj, setOdmenaZdroj] = useState('');
+  // Napsal si nazev smlouvy clovek sam? Pak uz ho portal neprepisuje.
+  const [nazevRucne, setNazevRucne] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +83,8 @@ export function NewContractForm({
     const projekt = form.caflouProjectId;
     if (!projekt) {
       setHerci([]);
+      setNaklady([]);
+      setProjektInfo(null);
       return;
     }
     let platne = true;
@@ -78,11 +94,25 @@ export function NewContractForm({
         if (!platne) return;
         const seznam: Herec[] = data?.herci ?? [];
         setHerci(seznam);
+        setNaklady(data?.naklady ?? []);
+        setProjektInfo(data?.projekt ?? null);
+        setOdmenaZdroj('');
+        // Termin dokonceni nataceni = datum odevzdani projektu (zadani
+        // 15. 9. 2026). Co uz je napsane, se neprepisuje.
+        const odevzdani = data?.projekt?.odevzdani ? new Date(data.projekt.odevzdani) : null;
+        if (odevzdani && !Number.isNaN(odevzdani.getTime())) {
+          setPole((s) => (s.termin?.trim() ? s : { ...s, termin: datumCesky(odevzdani) }));
+        }
         // Jeden herec na projektu je nejcastejsi pripad - vybrat ho rovnou,
         // ale uz napsane jmeno mu neprepisovat.
         if (seznam.length === 1) vyberHerce(seznam[0], false);
       })
-      .catch(() => platne && setHerci([]));
+      .catch(() => {
+        if (!platne) return;
+        setHerci([]);
+        setNaklady([]);
+        setProjektInfo(null);
+      });
     return () => {
       platne = false;
     };
@@ -102,6 +132,39 @@ export function NewContractForm({
       signerEmail: herec && (prepsat || !f.signerEmail) ? herec.email : f.signerEmail,
     }));
   }
+
+  /**
+   * Smlouva na audioknihu. Pozná se podle názvu šablony - šablony si admin
+   * upravuje sám, takže zadrátovat ID nejde.
+   */
+  const jeAudiokniha = useMemo(
+    () => /audiokn/i.test(templates.find((t) => t.id === form.templateId)?.name ?? ''),
+    [templates, form.templateId],
+  );
+
+  /** Název projektu bez firmy - „NĚCO — Audiotéka" je v názvu smlouvy navíc. */
+  const nazevProjektu = useMemo(() => {
+    if (projektInfo?.nazev?.trim()) return projektInfo.nazev.trim();
+    const volba = projects.find((p) => p.id === form.caflouProjectId);
+    return volba ? volba.label.split(' — ')[0].trim() : '';
+  }, [projektInfo, projects, form.caflouProjectId]);
+
+  /**
+   * Název smlouvy „Projekt - Herec" (zadání 15. 9. 2026). Skládá se sám,
+   * dokud si ho člověk nepřepíše - pak už na něj portál nesahá.
+   */
+  useEffect(() => {
+    if (nazevRucne) return;
+    const herec = form.signerName.trim();
+    const slozeny = [nazevProjektu, herec].filter(Boolean).join(' - ');
+    setForm((f) => (f.title === slozeny ? f : { ...f, title: slozeny }));
+  }, [nazevRucne, nazevProjektu, form.signerName]);
+
+  // U audioknihy se firma nevybira, takze po prepnuti sablony nesmi zustat
+  // vybrana z drivejska - jinak by se do smlouvy dostala misto herce.
+  useEffect(() => {
+    if (jeAudiokniha && form.companyId) setForm((f) => ({ ...f, companyId: '' }));
+  }, [jeAudiokniha, form.companyId]);
 
   /** Ruční pole, která ve vybrané šabloně skutečně jsou. */
   const rucniPole = useMemo(() => {
@@ -159,6 +222,17 @@ export function NewContractForm({
 
   const vybranyHerec = herci.find((h) => h.id === form.actorUserId) ?? null;
 
+  /**
+   * Název ručního pole. U audioknihy se termín jmenuje jinak (zadání
+   * 15. 9. 2026: „Termín předání/natáčení - změnit na Termín dokončení
+   * natáčení"); u ostatních smluv {{termin}} znamená něco jiného (předání
+   * díla, pořízení záznamu), takže se přejmenovává jen tady.
+   */
+  function popisekPole(key: string, vychozi: string): string {
+    if (jeAudiokniha && key === 'termin') return 'Termín dokončení natáčení';
+    return vychozi;
+  }
+
   const inputClass =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full';
 
@@ -183,10 +257,18 @@ export function NewContractForm({
           required
           autoFocus
           value={form.title}
-          onChange={(e) => set('title', e.target.value)}
+          onChange={(e) => {
+            setNazevRucne(true);
+            set('title', e.target.value);
+          }}
           placeholder="např. Smlouva o hlasovém výkonu — Tři mušketýři"
           className={inputClass}
         />
+        {!nazevRucne && nazevProjektu && (
+          <span className="text-xs font-body text-muted">
+            Skládá se z názvu projektu a jména herce. Přepsáním si ho zamknete.
+          </span>
+        )}
       </label>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -217,18 +299,24 @@ export function NewContractForm({
         </label>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Protistrana (firma)</span>
-          <select value={form.companyId} onChange={(e) => vyberFirmu(e.target.value)} className={inputClass}>
-            <option value="">— bez firmy (herec) —</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      {/* U audioknihy je protistranou vzdycky herec (zadani 15. 9. 2026:
+          „Protistrana - prejmenovat na Herec"), takze se misto vyberu firmy
+          vybira herec z projektu - viz pole niz. Adresu i RC nebo ICO si
+          portal vezme z jeho karty. */}
+      <div className={`grid grid-cols-1 gap-3 ${jeAudiokniha ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+        {!jeAudiokniha && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Protistrana (firma)</span>
+            <select value={form.companyId} onChange={(e) => vyberFirmu(e.target.value)} className={inputClass}>
+              <option value="">— bez firmy (herec) —</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Kdo podepisuje</span>
           <input
@@ -265,7 +353,7 @@ export function NewContractForm({
 
         {herci.length > 0 && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Herec z projektu</span>
+            <span className="text-sm font-body text-ink">{jeAudiokniha ? 'Herec' : 'Herec z projektu'}</span>
             <select
               value={form.actorUserId}
               onChange={(e) => vyberHerce(herci.find((h) => h.id === e.target.value) ?? null)}
@@ -297,17 +385,68 @@ export function NewContractForm({
             jako „…" a dopíšete to v editoru.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {rucniPole.map((p) => (
-              <label key={p.key} className="flex flex-col gap-1.5">
-                <span className="text-sm font-body text-ink">{p.label}</span>
-                <input
-                  value={pole[p.key] ?? ''}
-                  onChange={(e) => setPole((s) => ({ ...s, [p.key]: e.target.value }))}
-                  placeholder={NAPOVEDA[p.key] ?? ''}
-                  className={inputClass}
-                />
-              </label>
-            ))}
+            {rucniPole.map((p) => {
+              // Odmena se da vybrat z polozkovych nakladu projektu (zadani
+              // 15. 9. 2026: „da na vyber polozky z nakladu u projektu nebo
+              // i moznost napsat rucne"). Kdyz projekt naklady nema, zustane
+              // tu obycejne pole jako driv.
+              if (p.key === 'odmena' && naklady.length > 0) {
+                const rucne = odmenaZdroj === 'rucne';
+                return (
+                  <label key={p.key} className="flex flex-col gap-1.5">
+                    <span className="text-sm font-body text-ink">{popisekPole(p.key, p.label)}</span>
+                    <select
+                      value={odmenaZdroj}
+                      onChange={(e) => {
+                        const volba = e.target.value;
+                        setOdmenaZdroj(volba);
+                        if (volba === 'rucne') {
+                          setPole((s) => ({ ...s, odmena: '' }));
+                          return;
+                        }
+                        const polozka = naklady[Number(volba)];
+                        setPole((s) => ({ ...s, odmena: polozka ? korun(polozka.castka) : '' }));
+                      }}
+                      className={inputClass}
+                    >
+                      <option value="">— vyberte z nákladů projektu —</option>
+                      {naklady.map((n, i) => (
+                        <option key={`${n.nazev}-${i}`} value={String(i)}>
+                          {n.nazev || 'Bez názvu'} · {korun(n.castka)}
+                        </option>
+                      ))}
+                      <option value="rucne">— napíšu ručně —</option>
+                    </select>
+                    {rucne && (
+                      <input
+                        autoFocus
+                        value={pole.odmena ?? ''}
+                        onChange={(e) => setPole((s) => ({ ...s, odmena: e.target.value }))}
+                        placeholder={NAPOVEDA.odmena}
+                        className={inputClass}
+                      />
+                    )}
+                    {!rucne && pole.odmena && (
+                      <span className="text-xs font-body text-muted">Do smlouvy půjde {pole.odmena} bez DPH.</span>
+                    )}
+                  </label>
+                );
+              }
+              return (
+                <label key={p.key} className="flex flex-col gap-1.5">
+                  <span className="text-sm font-body text-ink">{popisekPole(p.key, p.label)}</span>
+                  <input
+                    value={pole[p.key] ?? ''}
+                    onChange={(e) => setPole((s) => ({ ...s, [p.key]: e.target.value }))}
+                    placeholder={NAPOVEDA[p.key] ?? ''}
+                    className={inputClass}
+                  />
+                  {p.key === 'termin' && projektInfo?.odevzdani && (
+                    <span className="text-xs font-body text-muted">Předvyplněno z data odevzdání projektu.</span>
+                  )}
+                </label>
+              );
+            })}
           </div>
         </div>
       )}
@@ -324,6 +463,18 @@ export function NewContractForm({
       </div>
     </form>
   );
+}
+
+type Naklad = { nazev: string; castka: number };
+
+/** Částka v celých korunách, jak se píše do smlouvy. */
+function korun(castka: number): string {
+  return `${Math.round(castka).toLocaleString('cs-CZ')} Kč`;
+}
+
+/** Datum ve tvaru, v jakém se píše do smlouvy: 20. 9. 2026. */
+function datumCesky(datum: Date): string {
+  return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' }).format(datum);
 }
 
 type Herec = {

@@ -10,6 +10,13 @@ import { requireAdmin } from '@/lib/adminGuard';
  * Vrací herce navázané na projekt i s tím, čím se identifikují. Formulář
  * podle toho nabídne protistranu jedním kliknutím místo přepisování adresy
  * a rodného čísla z jiné obrazovky.
+ *
+ * Od 15. 9. 2026 k tomu přibyl NÁZEV PROJEKTU, DATUM ODEVZDÁNÍ a POLOŽKOVÉ
+ * NÁKLADY (zadání: „Název smlouvy - bude si brát název projektu a jméno
+ * herce", „dá na výběr položky z nákladů u projektu nebo i možnost napsat
+ * ručně", „Termín dokončení natáčení - nastavit datum automaticky dle data
+ * odevzdání projektu"). Všechno to portál zná, takže není důvod to
+ * přepisovat ručně z jiné obrazovky.
  */
 export const dynamic = 'force-dynamic';
 
@@ -19,11 +26,14 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
     const projekt = req.nextUrl.searchParams.get('projekt')?.trim();
-    if (!projekt) return NextResponse.json({ herci: [] });
+    if (!projekt) return NextResponse.json({ herci: [], projekt: null, naklady: [] });
 
-    const meta = await prisma.projectMeta.findUnique({
+    const [meta, naklady] = await Promise.all([
+      prisma.projectMeta.findUnique({
       where: { caflouProjectId: projekt },
       select: {
+        name: true,
+        endDate: true,
         herci: {
           select: {
             id: true,
@@ -38,7 +48,13 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-    });
+      }),
+      prisma.projektNaklad.findMany({
+        where: { caflouProjectId: projekt },
+        orderBy: [{ poradi: 'asc' }, { createdAt: 'asc' }],
+        select: { nazev: true, castka: true },
+      }),
+    ]);
 
     const herci = (meta?.herci ?? []).map((h) => ({
       id: h.id,
@@ -50,9 +66,14 @@ export async function GET(req: NextRequest) {
       maAdresu: Boolean(h.addressStreet || h.addressCity || h.addressZip),
     }));
 
-    return NextResponse.json({ herci });
+    return NextResponse.json({
+      herci,
+      projekt: { nazev: meta?.name ?? '', odevzdani: meta?.endDate ? meta.endDate.toISOString() : null },
+      // Prazdne radky (clovek si zalozil polozku a nedopsal ji) do nabidky nepatri.
+      naklady: naklady.filter((n) => n.nazev.trim() !== '' || n.castka > 0),
+    });
   } catch (err) {
     console.error('GET /api/admin/contracts/podklady selhalo:', err);
-    return NextResponse.json({ herci: [] });
+    return NextResponse.json({ herci: [], projekt: null, naklady: [] });
   }
 }
