@@ -2069,6 +2069,20 @@ model VzorZpravy {
   @@id([druh, stav])
 }
 
+/// ZAPNUTI / VYPNUTI AUTOMATICKE ZPRAVY (zadani 15. 9. 2026: „udelejme pro
+/// tyhle maily a notifikace pak nekde administraci").
+///
+/// Radek existuje jen pro zpravu, u ktere nekdo prepnul vychozi stav.
+/// Co tu neni, je ZAPNUTE - novou zpravu nema smysl nasazovat vypnutou.
+model NastaveniOznameni {
+  /// Klic zpravy - viz OZNAMENI v lib/oznameni.ts.
+  klic String @id
+
+  zapnuto   Boolean  @default(true)
+  zmenilJmeno String?
+  updatedAt DateTime @updatedAt
+}
+
 /// ODESLANY MESICNI PREHLED VYKAZU (zadani 15. 9. 2026: „jednou za mesic
 /// prijde notifikace s prehledem vykazu za minuly mesic zvukari na mail.
 /// Melo by to chodit vzdy 6. den v mesici za minuly").

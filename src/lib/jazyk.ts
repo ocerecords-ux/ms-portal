@@ -60,6 +60,7 @@ const ODKAZY_EN: Record<string, string> = {
   '/admin/doklady': 'Invoicing',
   '/admin/archiv': 'Archive',
   '/admin/vzory-zprav': 'Message templates',
+  '/admin/zpravy-portalu': 'Portal messages',
   '/admin/caflou-firmy': 'Caflou companies',
   '/chat': 'Chat',
 };

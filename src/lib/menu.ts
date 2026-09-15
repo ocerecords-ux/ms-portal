@@ -43,6 +43,7 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // zustava - je to posledni cesta, jak neco z Caflou dohledat.
   '/admin/caflou-firmy': ['ADMIN'],
   '/admin/vzory-zprav': ['ADMIN'],
+  '/admin/zpravy-portalu': ['ADMIN'],
   '/admin/users': ['ADMIN'],
   '/admin/ceniky': ['ADMIN'],
   '/admin/studia': ['ADMIN'],
@@ -82,6 +83,7 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/ceniky', label: 'Ceníky' },
   { href: '/admin/studia', label: 'Studia' },
+  { href: '/admin/zpravy-portalu', label: 'Zprávy portálu' },
   { href: '/admin/doklady', label: 'Doklady' },
   // Archiv smazanych zaznamu (zadani 10. 9. 2026). Neni ve vychozi liste -
   // clovek tam chodi jednou za rok, kdyz neco smazal a chce to zpatky.

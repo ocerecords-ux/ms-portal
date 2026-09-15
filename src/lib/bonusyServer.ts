@@ -3,6 +3,7 @@ import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
 import { durationMinutes, formatCzk } from '@/lib/timesheets';
 import { notify } from '@/lib/notifications';
 import { sendBonusEmail } from '@/lib/email';
+import { jeZapnuto } from '@/lib/oznameniServer';
 
 /**
  * BONUS ZVUKAŘE ZA AUDIOKNIHU (zadání 15. 9. 2026: „aby nám portál
@@ -130,6 +131,8 @@ export async function oznamSchvalenyBonus(bonusId: string): Promise<void> {
       include: { user: { select: { id: true, email: true } } },
     });
     if (!bonus || bonus.stav !== 'SCHVALENO') return;
+    // Zprava se da vypnout v Administraci → Zpravy portalu (zadani 15. 9. 2026).
+    if (!(await jeZapnuto('BONUS_SCHVALEN'))) return;
 
     const nazev = bonus.projectName || `Projekt ${bonus.caflouProjectId}`;
     const castka = formatCzk(bonus.castka);

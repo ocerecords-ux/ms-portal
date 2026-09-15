@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { durationMinutes, entryAmount, formatCzk, formatDuration } from '@/lib/timesheets';
 import { sendMesicniPrehledEmail } from '@/lib/email';
 import { notify } from '@/lib/notifications';
+import { jeZapnuto } from '@/lib/oznameniServer';
 
 /**
  * MĚSÍČNÍ PŘEHLED VÝKAZŮ ZVUKAŘI (zadání 15. 9. 2026: „jednou za měsíc přijde
@@ -25,6 +26,8 @@ export type VysledekRozeslani = {
   odeslano: number;
   preskoceno: number;
   chyby: number;
+  /** Zprava je v administraci vypnuta - nic se nerozesilalo. */
+  vypnuto?: boolean;
 };
 
 /** Předchozí měsíc vůči dnešku jako „2026-08". */
@@ -143,6 +146,10 @@ export async function spoctiPrehledy(mesic: string): Promise<PrehledZvukare[]> {
 
 /** Rozešle přehledy za daný měsíc. Co už odešlo, se přeskočí. */
 export async function rozesliMesicniPrehledy(mesic: string): Promise<VysledekRozeslani> {
+  // Vypinac v Administraci → Zpravy portalu (zadani 15. 9. 2026).
+  if (!(await jeZapnuto('MESICNI_PREHLED'))) {
+    return { mesic, odeslano: 0, preskoceno: 0, chyby: 0, vypnuto: true };
+  }
   const prehledy = await spoctiPrehledy(mesic);
   const zaklad = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
 
