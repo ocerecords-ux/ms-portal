@@ -225,6 +225,12 @@ model User {
   /// na karte uzivatele, nesedi to v promenne prostredi.
   dostavaObjednavky Boolean @default(false)
 
+  /// Vychozi manazer objednanych audioknih (zadani 15. 9. 2026: „manazer
+  /// projektu u audioknih je vzdy Karolina"). Projekt zalozeny z objednavky
+  /// audioknihy se priradi tomu, kdo to ma zaskrtnute - zase priznak na uctu,
+  /// ne jmeno v kodu. Kdyz to nema nikdo, zustane manazer prazdny jako driv.
+  vychoziManazerAudioknih Boolean @default(false)
+
   /// U kterych projektu je tenhle herec dotoceny.
   dotoceniHerce HerecDotocen[] @relation("DotocenyHerec")
 

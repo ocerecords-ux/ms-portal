@@ -9,6 +9,9 @@ import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/em
 import { noveIdProjektu } from '@/lib/projektId';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
 import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
+import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
+import { bezTitulu } from '@/lib/jmena';
+import { notifyMany } from '@/lib/notifications';
 
 // Druh objednavky (zadani 12. 9. 2026 - viz OrderKind ve schema.prisma).
 // AUDIOBOOK je vychozi a zachovava puvodni chovani (normostrany, cena,
@@ -121,13 +124,33 @@ export async function POST(req: NextRequest) {
   //    na karte uzivatele (zadani: "jednotlive adresy uzivatelu tymu, ktere
   //    si nastavim na webu v portalu"), ne promennou prostredi. Nacita se to
   //    az tady a ne v e-mailove vrstve, aby lib/email.ts nesahal do databaze.
+  /**
+   * Komu objednavka jde. Zaskrtnuti „Dostava objednavky" na karte uzivatele;
+   * kdyz to nema nikdo, vezmou se vsichni Zuzo-labuzo, at objednavka nespadne
+   * do prazdna (zadani 15. 9. 2026: „ten mail objednavky@mediaspace.cz bych
+   * nakonec vynechal a neposilal" - spolecna schranka uz nikde neni).
+   */
+  let hlidaci: { id: string; email: string }[] = [];
   try {
-    const prijemci = (
-      await prisma.user.findMany({
-        where: { active: true, dostavaObjednavky: true },
-        select: { email: true },
-      })
-    ).map((u) => u.email);
+    hlidaci = await prisma.user.findMany({
+      where: { active: true, dostavaObjednavky: true },
+      select: { id: true, email: true },
+    });
+    if (hlidaci.length === 0) {
+      hlidaci = await prisma.user.findMany({
+        where: { active: true, role: 'ADMIN' },
+        select: { id: true, email: true },
+      });
+      console.warn(
+        `Objednávka „${title}": nikdo nemá zaškrtnuté „Dostává objednávky", posílám všem adminům.`,
+      );
+    }
+  } catch (err) {
+    console.error('Seznam příjemců objednávky se nepodařilo načíst:', err);
+  }
+
+  try {
+    const prijemci = hlidaci.map((u) => u.email);
 
     const result = await sendOrderNotificationEmail({
       prijemci,
@@ -150,6 +173,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('Odeslání e-mailu o objednávce selhalo:', err);
   }
+
 
   // 2b) Potvrzeni klientovi (zadani 5. 9. 2026) - opet best effort, aby
   //     neodeslany e-mail nikdy neshodil samotnou objednavku.
@@ -179,9 +203,67 @@ export async function POST(req: NextRequest) {
   //    Best effort: projekt navic nesmi shodit prijatou objednavku. Slozka na
   //    Disku se tady nezaklada - projekt zatim nikdo nepotvrdil a prazdnych
   //    slozek by pribyvalo; zaklada se az pri zalozeni projektu produkci.
+  let idProjektu: string | null = null;
   if (isAudiobook) {
     try {
       const caflouProjectId = noveIdProjektu();
+
+      /**
+       * MANAZER (zadani 15. 9. 2026: „manazer projektu u audioknih je vzdy
+       * Karolina"). Bere se z priznaku na uctu, ne ze jmena v kodu - az to
+       * jednou bude nekdo jiny, prekliknete to na karte uzivatele.
+       */
+      const vedouci = await prisma.user.findFirst({
+        where: { active: true, vychoziManazerAudioknih: true },
+        select: { id: true },
+      });
+
+      /**
+       * HERCI (zadani 15. 9. 2026: „herce nemuzeme vybrat konkretniho? A kdyz
+       * neni, tak text?"). Klient vybira ze seznamu hercu, ale do objednavky
+       * se to ulozi jako jmena oddelena carkami. Co sedi na ucet herce, navaze
+       * se na projekt doopravdy; co nesedi (herec, ktereho v portalu nemame),
+       * zustane textem v poli „herec z Caflou" jako preni klienta.
+       */
+      const jmena = (preferredNarrator ?? '')
+        .split(',')
+        .map((j) => j.trim())
+        .filter(Boolean);
+      const klic = (t: string) =>
+        t
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim();
+      const ucty = jmena.length
+        ? await prisma.user.findMany({
+            where: { role: 'HEREC', active: true },
+            select: { id: true, name: true, code: true },
+          })
+        : [];
+      const herciIds: string[] = [];
+      const zbylaJmena: string[] = [];
+      for (const jmeno of jmena) {
+        const shoda = ucty.find(
+          (u) => klic(bezTitulu(u.name) || '') === klic(jmeno) || u.code === jmeno,
+        );
+        if (shoda && !herciIds.includes(shoda.id)) herciIds.push(shoda.id);
+        else if (!shoda) zbylaJmena.push(jmeno);
+      }
+
+      /**
+       * SLOZKA NA DISKU (zadani 15. 9. 2026: „mela by se zalozit slozka podle
+       * nazvu"). Vznika ve slozce firmy a pojmenuje se podle objednavky.
+       * Kdyz firma svou slozku vyplnenou nema nebo Disk odmitne, projekt se
+       * zalozi bez odkazu - prijit kvuli Disku o objednavku by bylo horsi.
+       */
+      let driveUrl: string | null = null;
+      if (company.driveFolderUrl) {
+        const vysledek = await vytvorSlozkuProjektu(company.driveFolderUrl, title);
+        if ('chyba' in vysledek) console.error(`Složka projektu „${title}": ${vysledek.chyba}`);
+        else driveUrl = vysledek.url;
+      }
+
       await prisma.projectMeta.create({
         data: {
           caflouProjectId,
@@ -189,17 +271,46 @@ export async function POST(req: NextRequest) {
           companyId,
           companyName: company.name,
           klientUserId: userId,
+          managerUserId: vedouci?.id ?? null,
           pageCount,
-          narrator: preferredNarrator,
+          // Hlavni herec = prvni v seznamu, stejne jako u rucne zalozeneho
+          // projektu.
+          actorUserId: herciIds[0] ?? null,
+          ...(herciIds.length > 0 ? { herci: { connect: herciIds.map((id) => ({ id })) } } : {}),
+          narrator: zbylaJmena.length > 0 ? zbylaJmena.join(', ') : null,
+          driveUrl,
           statusName: STAVY_PROJEKTU[0].nazev,
           priority: 'MEDIUM',
           zdroj: 'PORTAL',
         },
       });
+      idProjektu = caflouProjectId;
       await prisma.order.update({
         where: { id: order.id },
         data: { caflouProjectId, caflouSyncStatus: 'OK' },
       });
+
+      /**
+       * KANAL V CHATU (zadani 15. 9. 2026: „mela by se zalozit slozka podle
+       * nazvu a kanal"). Kanaly projektu vidi cely tym; clenem je od zacatku
+       * manazer, aby mu v nem chodila upozorneni bez toho, ze by ho musel
+       * nejdriv otevrit.
+       */
+      const zakladatel = vedouci?.id ?? null;
+      if (zakladatel) {
+        await prisma.conversation
+          .create({
+            data: {
+              kind: 'PROJEKT',
+              name: title,
+              caflouProjectId,
+              createdById: zakladatel,
+              members: { create: { userId: zakladatel } },
+            },
+          })
+          .catch((err) => console.error('Kanál k objednávce se nepodařilo založit:', err));
+      }
+
       void zapisZalozeniProjektu(caflouProjectId, title, {
         id: userId,
         jmeno: orderingUser?.name ?? session.user.email,
@@ -217,6 +328,27 @@ export async function POST(req: NextRequest) {
         .catch(() => undefined);
     }
   }
+
+  /**
+   * Zvonecek v liste (zadani 15. 9. 2026: „mailem i zvoneckem"). Mail se da
+   * prehlednout mezi stovkou jinych; zvonek pocka, nez clovek portal otevre,
+   * a vede rovnou do zalozeneho projektu.
+   */
+  void notifyMany(
+    hlidaci.map((u) => u.id),
+    {
+      kind: 'objednavka',
+      title: isAudiobook ? `Nová objednávka audioknihy — ${title}` : `Nová objednávka — ${title}`,
+      body: [
+        company.name,
+        pageCount ? `${pageCount} NS` : null,
+        deadline ? `do ${deadline.toLocaleDateString('cs-CZ')}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      url: idProjektu ? `/projekty/${idProjektu}` : '/projekty',
+    },
+  ).catch(() => undefined);
 
   return NextResponse.json(
     {

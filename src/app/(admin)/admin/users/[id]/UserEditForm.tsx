@@ -31,6 +31,7 @@ type EditableUser = {
   prijimaDotazyKlientu: boolean;
   dostavaDotoceno: boolean;
   dostavaObjednavky: boolean;
+  vychoziManazerAudioknih: boolean;
   studioLocations: string[];
   birthNumber: string | null;
   ic: string | null;
@@ -65,6 +66,7 @@ export function UserEditForm({
   const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
+  const [vychoziManazerAudioknih, setVychoziManazerAudioknih] = useState(user.vychoziManazerAudioknih);
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
   const [active, setActive] = useState(user.active);
   // Tvrde smazani (zadani 10. 9. 2026) - jen kdyz na uctu nic nevisi.
@@ -121,6 +123,9 @@ export function UserEditForm({
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
+        if (isMediaspace) {
+          fd.set('vychoziManazerAudioknih', vychoziManazerAudioknih ? '1' : '0');
+        }
         if (photo) fd.set('photo', photo);
         else if (removePhoto) fd.set('removePhoto', 'true');
       }
@@ -315,7 +320,29 @@ export function UserEditForm({
               <span className="text-sm font-body text-ink">
                 Dostává objednávky
                 <span className="block text-xs text-muted">
-                  mail pokaždé, když klient odešle objednávku; klient tuhle adresu nevidí
+                  mail i zvoneček pokaždé, když klient odešle objednávku; klient tuhle adresu nevidí
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Vychozi manazer audioknih (zadani 15. 9. 2026: „manazer projektu
+            u audioknih je vzdy Karolina"). Projekt z objednavky audioknihy
+            dostane rovnou jeho, at nezustava nicí. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={vychoziManazerAudioknih}
+                onChange={(e) => setVychoziManazerAudioknih(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Vede objednané audioknihy
+                <span className="block text-xs text-muted">
+                  projekt z objednávky audioknihy se rovnou přiřadí jemu jako manažerovi
                 </span>
               </span>
             </label>

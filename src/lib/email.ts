@@ -330,23 +330,23 @@ function buildInternalNotificationText(input: OrderEmailInput): string {
  * Zpráva o nové objednávce týmu Mediaspace. KLIENT JI NIKDY NEDOSTANE - jde
  * výhradně na adresy z `input.prijemci`.
  *
- * Adresáti se od 14. 9. 2026 nastavují v portálu na kartě uživatele
- * („Dostává objednávky"), ne proměnnou prostředí. Společná schránka
- * `ORDER_NOTIFICATION_EMAIL` zůstává jen jako ZÁCHRANNÁ SÍŤ pro případ, že to
- * nikdo zaškrtnuté nemá - objednávka je obchodní případ a nesmí skončit tak,
- * že se o ní nikdo nedozví. Že se sáhlo po záloze, se pozná z logu.
+ * Adresáti se nastavují v portálu na kartě uživatele („Dostává objednávky"),
+ * ne proměnnou prostředí. Od 15. 9. 2026 už není žádná společná záložní
+ * schránka: kdo objednávky hlídá, je vidět v portálu, a když si to nikdo
+ * nezaškrtne, sáhne volající po adminech (viz /api/orders). Sem se pak
+ * dostane hotový seznam adres.
  */
 export async function sendOrderNotificationEmail(input: OrderEmailInput) {
   const transport = getTransport();
-  const nastaveni = input.prijemci.map((a) => a.trim()).filter(Boolean);
-  const zaloha = process.env.ORDER_NOTIFICATION_EMAIL?.trim() || 'objednavky@mediaspace.cz';
-  if (nastaveni.length === 0) {
-    console.warn(
-      `Objednávka „${input.title}": nikdo nemá zaškrtnuté „Dostává objednávky", ` +
-        'posílám na záložní schránku.',
-    );
+  // Spolecna schranka objednavky@mediaspace.cz uz se nepouziva (zadani
+  // 15. 9. 2026: „ten mail bych nakonec vynechal a nepouzival"). Komu
+  // objednavka jde, urcuje volajici podle zaskrtnuti na kartach uzivatelu;
+  // kdyz nikomu, neni co odesilat.
+  const to = input.prijemci.map((a) => a.trim()).filter(Boolean);
+  if (to.length === 0) {
+    console.warn(`Objednávka „${input.title}": není komu ji poslat.`);
+    return { sent: false, reason: 'BEZ_PRIJEMCE' as const };
   }
-  const to = nastaveni.length > 0 ? nastaveni : [zaloha];
 
   if (!transport) {
     // SMTP zatim neni nakonfigurovane - objednavka se presto ulozi,

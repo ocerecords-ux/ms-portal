@@ -33,6 +33,7 @@ const schema = z.object({
   prijimaDotazyKlientu: z.string().trim().optional(),
   dostavaDotoceno: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
+  vychoziManazerAudioknih: z.string().trim().optional(),
   studioLocations: z.array(z.string()).optional(),
   birthNumber: z.string().trim().optional(),
   ic: z.string().trim().optional(),
@@ -63,6 +64,9 @@ function readFormData(formData: FormData) {
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
     dostavaObjednavky: has('dostavaObjednavky') ? formData.get('dostavaObjednavky') : undefined,
+    vychoziManazerAudioknih: has('vychoziManazerAudioknih')
+      ? formData.get('vychoziManazerAudioknih')
+      : undefined,
     studioLocations: has('studioLocations') ? formData.getAll('studioLocations').map(String) : undefined,
     birthNumber: has('birthNumber') ? formData.get('birthNumber') : undefined,
     ic: has('ic') ? formData.get('ic') : undefined,
@@ -147,6 +151,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.smlouvyPodepisuje !== undefined ? { smlouvyPodepisuje: data.smlouvyPodepisuje === '1' } : {}),
       ...(data.dostavaDotoceno !== undefined
         ? { dostavaDotoceno: data.dostavaDotoceno === '1' }
+        : {}),
+      ...(data.vychoziManazerAudioknih !== undefined
+        ? { vychoziManazerAudioknih: data.vychoziManazerAudioknih === '1' }
         : {}),
       ...(data.dostavaObjednavky !== undefined
         ? { dostavaObjednavky: data.dostavaObjednavky === '1' }
