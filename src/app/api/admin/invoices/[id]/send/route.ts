@@ -4,6 +4,10 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { sendInvoiceEmail } from '@/lib/email';
 import { cisloUctuSKodem, computeTotals } from '@/lib/doklady';
 import { pdfFaktury } from '@/lib/dokladNahledServer';
+import { zapisZmenyProjektu } from '@/lib/projektLogServer';
+
+/** Stav, do ktereho projekt prejde odeslanim faktury (zadani 15. 9. 2026). */
+const STAV_PO_FAKTURE = 'Vyfakturováno';
 
 /**
  * Odeslani faktury odberateli (zadani 6. 9. 2026). Mail nese vsechno, co klient
@@ -51,7 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const meta = invoice.caflouProjectId
       ? await prisma.projectMeta.findUnique({
           where: { caflouProjectId: invoice.caflouProjectId },
-          select: { klient: { select: { email: true } } },
+          select: { statusName: true, finished: true, klient: { select: { email: true } } },
         })
       : null;
     const mailKlienta = meta?.klient?.email?.trim() || null;
@@ -116,6 +120,34 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { id: invoice.id },
       data: { status: invoice.status === 'DRAFT' ? 'SENT' : invoice.status, sentAt: new Date() },
     });
+
+    /**
+     * ODESLANA FAKTURA UKONCUJE PROJEKT (zadani 15. 9. 2026: „projekt by se
+     * nemel ukoncit prehozenim stavu na Schvaleno - k fakturaci. Ukoncit by
+     * se mel az ve chvili, kdy odesleme fakturu na klienta").
+     *
+     * Do te doby projekt spadl do Dokoncenych uz pri schvaleni nahravek,
+     * takze zakazka, ktera jeste nebyla vyfakturovana, zmizela z Aktivnich.
+     *
+     * Deje se to jen u projektu, ktery jeste ukonceny neni, a nikdy to
+     * neshodi odeslani faktury - ta uz je u klienta, chyba patri do logu.
+     */
+    if (invoice.caflouProjectId && meta && !meta.finished) {
+      try {
+        await prisma.projectMeta.update({
+          where: { caflouProjectId: invoice.caflouProjectId },
+          data: { statusName: STAV_PO_FAKTURE, finished: true },
+        });
+        await zapisZmenyProjektu({
+          caflouProjectId: invoice.caflouProjectId,
+          pred: { statusName: meta.statusName, finished: meta.finished },
+          ulozeno: { statusName: STAV_PO_FAKTURE, finished: true },
+          puvodce: { id: session.user.id, jmeno: session.user.name || session.user.email || null },
+        });
+      } catch (err) {
+        console.error(`Projekt ${invoice.caflouProjectId} se po odeslani faktury nepodarilo uzavrit:`, err);
+      }
+    }
 
     return NextResponse.json({ ok: true, to, kopie, sPrilohou: dokument.ok });
   } catch (err) {

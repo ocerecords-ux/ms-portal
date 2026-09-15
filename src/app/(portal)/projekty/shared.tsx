@@ -15,7 +15,10 @@ import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
 // pripadne pridavej sem - vse ostatni se zobrazuje tak, jak prijde z Caflou.
 const STATUS_LABEL_OVERRIDES: Record<string, string> = {
-  'Schváleno - k fakturaci': 'Dokončeno',
+  // „Dokonceno" uz tady nesedi: od 15. 9. 2026 projekt konci az odeslanou
+  // fakturou, ne timhle stavem.
+  'Schváleno - k fakturaci': 'Hotovo, fakturujeme',
+  'Vyfakturováno': 'Dokončeno',
 };
 
 function displayStatusName(statusName: string): string {

@@ -349,10 +349,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
        * zpráva odešla znovu — a u dávno hotových zakázek, kde se klient jen
        * doplňoval zpětně, aby odešla vůbec poprvé, roky po odevzdání.
        *
-       * Rozhoduje stav PŘED uložením: přechod do posledního stavu
-       * („Schváleno - k fakturaci") je pořád živá změna na živém projektu,
-       * takže poslední zpráva klientovi normálně odejde. Až projekt tímhle
-       * přechodem zhasne, další už nic neposílá.
+       * Rozhoduje stav PŘED uložením. Projekt zhasíná až odeslanou fakturou
+       * (zadání 15. 9. 2026), takže všechny zprávy včetně té poslední
+       * („Schváleno - k fakturaci") normálně odejdou; po vyfakturování už
+       * nic.
        */
       const stavSeZmenil = data.statusName !== (pred?.statusName ?? null);
       if (stavSeZmenil && !pred?.finished) {

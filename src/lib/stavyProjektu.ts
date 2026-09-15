@@ -39,6 +39,7 @@ export type StavProjektu = {
  *   Dokončeno - ke schválení zelená
  *   Čekáme na opravy         fialová
  *   Schváleno - k fakturaci  červená
+ *   Vyfakturováno            zelená (přibylo 15. 9. 2026 - projekt končí až fakturou)
  *
  * Zbylé dva stavy v zadání nebyly. Jsou to dvojčata dvou jmenovaných
  * („Dotočeno" k „Natáčíme", „Dotočeno/stříháme" k „Natáčíme/stříháme"), takže
@@ -107,10 +108,21 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
   },
   {
     nazev: 'Schváleno - k fakturaci',
-    popis: 'Opravené nahrávky jsou na disku, projekt je hotový.',
-    rozpracovany: false,
+    // Zadani 15. 9. 2026: „projekt by se nemel ukoncit prehozenim stavu na
+    // Schvaleno - k fakturaci. Ukoncit by se mel az ve chvili, kdy odesleme
+    // fakturu na klienta." Prace na projektu tedy skoncila, ale zakazka bezi
+    // dal - proto rozpracovany.
+    popis: 'Opravené nahrávky jsou na disku, čeká se na fakturu.',
+    rozpracovany: true,
     barva:
       'bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/20 dark:text-red-200 dark:border-red-400/40',
+  },
+  {
+    nazev: 'Vyfakturováno',
+    popis: 'Faktura je u klienta — projekt je uzavřený.',
+    rozpracovany: false,
+    barva:
+      'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-400/40',
   },
 ];
 

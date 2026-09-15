@@ -75,12 +75,14 @@ export const ACTIVE_PROJECT_STATUSES: string[] = [
   'Čekáme na opravy',
   'Zapracovány opravy',
   'V realizaci',
+  // Prace skoncila, zakazka ne - projekt konci az odeslanou fakturou
+  // (zadani 15. 9. 2026).
+  'Schváleno - k fakturaci',
 ];
 
 /** Stavy, kterymi projekt v Caflou konci (i kdyz jeste neni uzavreny). */
 export const FINISHED_PROJECT_STATUSES: string[] = [
   'Dokončeno - ke schválení',
-  'Schváleno - k fakturaci',
   'Vyfakturováno',
   'Dokončeno',
   'Hotovo',
