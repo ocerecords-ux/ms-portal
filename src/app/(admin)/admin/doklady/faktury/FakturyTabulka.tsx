@@ -1,7 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { RaditelnaTabulka, type SloupecTabulky } from '@/app/(portal)/components/RaditelnaTabulka';
+import {
+  RaditelnaTabulka,
+  moznostiZ,
+  type SloupecTabulky,
+} from '@/app/(portal)/components/RaditelnaTabulka';
 
 /**
  * Tabulka vydaných faktur, řaditelná kliknutím na název sloupce (zadání
@@ -108,6 +112,34 @@ export function FakturyTabulka({ radky }: { radky: FakturaRadek[] }) {
       vychoziSmer="desc"
       prazdno="Tady zatím nic není."
       minSirka={860}
+      // Hledá se ve všem, co je na řádku vidět - včetně čísla faktury
+      // a projektu (zadání 15. 9. 2026).
+      hledat={(r) => `${r.nazev} ${r.cislo} ${r.projekt ?? ''} ${r.odberatel} ${r.stav}`}
+      hledatPlaceholder="Hledat fakturu, odběratele, projekt…"
+      filtry={[
+        {
+          key: 'odberatel',
+          label: 'Odběratel',
+          moznosti: moznostiZ(radky, (r) => r.odberatel),
+          vyhovuje: (r, h) => r.odberatel === h,
+        },
+        {
+          key: 'projekt',
+          label: 'Projekt',
+          moznosti: moznostiZ(radky, (r) => r.projekt),
+          vyhovuje: (r, h) => r.projekt === h,
+        },
+        {
+          key: 'stav',
+          label: 'Stav',
+          moznosti: [
+            ...moznostiZ(radky, (r) => r.stav),
+            { hodnota: 'po-splatnosti', popisek: 'Po splatnosti' },
+          ],
+          vyhovuje: (r, h) => (h === 'po-splatnosti' ? r.poSplatnosti : r.stav === h),
+        },
+      ]}
+      rozsahDatumu={{ label: 'Vystaveno', ms: (r) => r.vystavenoMs }}
     />
   );
 }

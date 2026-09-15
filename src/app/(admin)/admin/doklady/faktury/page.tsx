@@ -43,7 +43,11 @@ function formatDate(date: Date | null): string {
 }
 
 export default async function InvoicesPage({ searchParams }: { searchParams: { tab?: string } }) {
-  const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[0];
+  // NEUHRAZENE JSOU PRVNI (zadani 15. 9. 2026: „kdyz se dostanu na zalozku
+  // Faktury, chci videt nejdriv neuhrazene faktury"). Rozpracovane zustavaji
+  // v zalozkach, jen uz nejsou to prvni, co clovek uvidi.
+  const vychoziTab = TABS.find((t) => t.key === 'neuhrazene') ?? TABS[0];
+  const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? vychoziTab;
 
   const [invoices, issuers, counts] = await Promise.all([
     prisma.invoice.findMany({

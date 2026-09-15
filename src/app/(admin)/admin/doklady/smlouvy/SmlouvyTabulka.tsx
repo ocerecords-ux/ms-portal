@@ -1,7 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { RaditelnaTabulka, type SloupecTabulky } from '@/app/(portal)/components/RaditelnaTabulka';
+import {
+  RaditelnaTabulka,
+  moznostiZ,
+  type SloupecTabulky,
+} from '@/app/(portal)/components/RaditelnaTabulka';
 
 /**
  * Tabulka smluv, řaditelná kliknutím na název sloupce (zadání 9. 9. 2026).
@@ -105,6 +109,31 @@ export function SmlouvyTabulka({ radky }: { radky: SmlouvaRadek[] }) {
       vychoziSmer="desc"
       prazdno="Tady zatím nic není."
       minSirka={860}
+      hledat={(r) =>
+        `${r.nazev} ${r.cislo} ${r.projekt ?? ''} ${r.podepisujici} ${r.podepisujiciDoplnek} ${r.stav}`
+      }
+      hledatPlaceholder="Hledat smlouvu, herce, projekt…"
+      filtry={[
+        {
+          key: 'podepisujici',
+          label: 'Podepisující',
+          moznosti: moznostiZ(radky, (r) => r.podepisujici),
+          vyhovuje: (r, h) => r.podepisujici === h,
+        },
+        {
+          key: 'projekt',
+          label: 'Projekt',
+          moznosti: moznostiZ(radky, (r) => r.projekt),
+          vyhovuje: (r, h) => r.projekt === h,
+        },
+        {
+          key: 'stav',
+          label: 'Stav',
+          moznosti: moznostiZ(radky, (r) => r.stav),
+          vyhovuje: (r, h) => r.stav === h,
+        },
+      ]}
+      rozsahDatumu={{ label: 'Vytvořeno', ms: (r) => r.vytvorenoMs }}
     />
   );
 }

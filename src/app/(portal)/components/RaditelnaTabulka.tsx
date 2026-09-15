@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * Tabulka, která se řadí kliknutím na název sloupce (zadání 9. 9. 2026:
@@ -17,6 +19,52 @@ import { useMemo, useState, type ReactNode } from 'react';
  */
 
 export type SmerRazeni = 'asc' | 'desc';
+
+/**
+ * HLEDÁNÍ A FILTRY NAD TABULKOU (zadání 15. 9. 2026: „tady to chce přidat
+ * hledání a detailnější filtry").
+ *
+ * Je to schválně tady, ne v každé tabulce zvlášť: jakmile to umí společná
+ * tabulka, chová se hledání ve Fakturách, Výdajích, Nabídkách i Smlouvách
+ * stejně a nové tabulky to dostanou zadarmo.
+ */
+export type FiltrTabulky<T> = {
+  key: string;
+  label: string;
+  moznosti: { hodnota: string; popisek: string }[];
+  /** Vyhovuje řádek vybrané hodnotě? Prázdná hodnota znamená „nefiltrovat". */
+  vyhovuje: (radek: T, hodnota: string) => boolean;
+};
+
+/** Filtr „od - do" nad jedním datem (vystaveno, splatnost, ...). */
+export type RozsahDatumu<T> = {
+  label: string;
+  ms: (radek: T) => number | null;
+};
+
+/** Porovnávací tvar - bez diakritiky, malými písmeny. */
+function zjednodus(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/** Nabídka do filtru - unikátní hodnoty sloupce, česky seřazené. */
+export function moznostiZ<T>(radky: T[], ber: (radek: T) => string | null | undefined) {
+  const hodnoty = [...new Set(radky.map((r) => ber(r)?.trim()).filter((h): h is string => Boolean(h)))];
+  hodnoty.sort((a, b) => a.localeCompare(b, 'cs', { numeric: true }));
+  return hodnoty.map((h) => ({ hodnota: h, popisek: h }));
+}
+
+function Lupa() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 text-muted" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M16 16l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export type SloupecTabulky<T> = {
   /** Vlastní klíč sloupce, používá se jen pro stav řazení. */
@@ -81,6 +129,10 @@ export function RaditelnaTabulka<T>({
   prazdno,
   minSirka = 760,
   tridaRadku,
+  hledat,
+  hledatPlaceholder = 'Hledat…',
+  filtry,
+  rozsahDatumu,
 }: {
   radky: T[];
   sloupce: SloupecTabulky<T>[];
@@ -91,19 +143,66 @@ export function RaditelnaTabulka<T>({
   prazdno: string;
   minSirka?: number;
   tridaRadku?: (radek: T) => string;
+  /** Text řádku, ve kterém se hledá. Bez něj se hledací pole neukáže. */
+  hledat?: (radek: T) => string;
+  hledatPlaceholder?: string;
+  filtry?: FiltrTabulky<T>[];
+  rozsahDatumu?: RozsahDatumu<T>;
 }) {
   const [razeni, setRazeni] = useState<{ key: string; smer: SmerRazeni } | null>(
     vychoziSloupec ? { key: vychoziSloupec, smer: vychoziSmer } : null,
   );
 
+  const [dotaz, setDotaz] = useState('');
+  const [volby, setVolby] = useState<Record<string, string>>({});
+  const [od, setOd] = useState('');
+  const [doKdy, setDoKdy] = useState('');
+
+  const maListu = Boolean(hledat || (filtry && filtry.length > 0) || rozsahDatumu);
+  const neco = Boolean(dotaz.trim() || od || doKdy || Object.values(volby).some(Boolean));
+
+  const filtrovane = useMemo(() => {
+    let vysledek = radky;
+
+    if (hledat && dotaz.trim()) {
+      // Hledá se po slovech nezávisle na pořadí a bez diakritiky - stejně
+      // jako ve výběrových polích s lupou.
+      const slova = zjednodus(dotaz).split(/\s+/).filter(Boolean);
+      vysledek = vysledek.filter((r) => {
+        const seno = zjednodus(hledat(r));
+        return slova.every((slovo) => seno.includes(slovo));
+      });
+    }
+
+    for (const filtr of filtry ?? []) {
+      const hodnota = volby[filtr.key];
+      if (hodnota) vysledek = vysledek.filter((r) => filtr.vyhovuje(r, hodnota));
+    }
+
+    if (rozsahDatumu && (od || doKdy)) {
+      const odMs = od ? new Date(`${od}T00:00:00`).getTime() : null;
+      const doMs = doKdy ? new Date(`${doKdy}T23:59:59`).getTime() : null;
+      vysledek = vysledek.filter((r) => {
+        const ms = rozsahDatumu.ms(r);
+        if (ms == null) return false;
+        if (odMs != null && ms < odMs) return false;
+        if (doMs != null && ms > doMs) return false;
+        return true;
+      });
+    }
+
+    return vysledek;
+  }, [radky, hledat, dotaz, filtry, volby, rozsahDatumu, od, doKdy]);
+
   const serazene = useMemo(() => {
+    const radky = filtrovane;
     if (!razeni) return radky;
     const sloupec = sloupce.find((s) => s.key === razeni.key);
     if (!sloupec?.hodnota) return radky;
     const ber = sloupec.hodnota;
     // Kopie, ne řazení na místě - vstupní pole patří volajícímu.
     return [...radky].sort((a, b) => porovnej(ber(a), ber(b), razeni.smer));
-  }, [radky, sloupce, razeni]);
+  }, [filtrovane, sloupce, razeni]);
 
   function prepni(key: string) {
     setRazeni((soucasne) =>
@@ -113,8 +212,83 @@ export function RaditelnaTabulka<T>({
     );
   }
 
+  const poleTridy =
+    'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple';
+
   return (
-    <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
+    <div className="flex flex-col gap-3">
+      {maListu && (
+        <div className="bg-surface rounded-card border border-line shadow-sm px-4 py-3 flex flex-wrap items-center gap-2">
+          {hledat && (
+            <label className={`${poleTridy} flex items-center gap-2 flex-1 min-w-[220px] py-0`}>
+              <Lupa />
+              <input
+                value={dotaz}
+                onChange={(e) => setDotaz(e.target.value)}
+                placeholder={hledatPlaceholder}
+                className="bg-transparent outline-none border-0 py-2 w-full text-ink font-heading text-sm"
+              />
+              {dotaz && (
+                <button
+                  type="button"
+                  onClick={() => setDotaz('')}
+                  title="Vymazat hledání"
+                  className="text-muted hover:text-ink text-sm leading-none px-1"
+                >
+                  ×
+                </button>
+              )}
+            </label>
+          )}
+
+          {(filtry ?? []).map((filtr) => (
+            <VyberPole
+              key={filtr.key}
+              value={volby[filtr.key] ?? ''}
+              onChange={(e) => setVolby((s) => ({ ...s, [filtr.key]: e.target.value }))}
+              className={`${poleTridy} min-w-[170px]`}
+            >
+              <option value="">{filtr.label}: vše</option>
+              {filtr.moznosti.map((m) => (
+                <option key={m.hodnota} value={m.hodnota}>
+                  {m.popisek}
+                </option>
+              ))}
+            </VyberPole>
+          ))}
+
+          {rozsahDatumu && (
+            <span className="flex items-center gap-1.5">
+              <span className="text-xs font-body text-muted whitespace-nowrap">{rozsahDatumu.label} od</span>
+              <DatumPole value={od} onChange={(e) => setOd(e.target.value)} className={poleTridy} />
+              <span className="text-xs font-body text-muted">do</span>
+              <DatumPole value={doKdy} onChange={(e) => setDoKdy(e.target.value)} className={poleTridy} />
+            </span>
+          )}
+
+          {neco && (
+            <>
+              <span className="text-xs font-body text-muted tabular-nums">
+                {serazene.length} z {radky.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDotaz('');
+                  setVolby({});
+                  setOd('');
+                  setDoKdy('');
+                }}
+                className="text-sm font-heading text-brand-purple hover:underline"
+              >
+                Zrušit filtry
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       {/* Sloupců bývá hodně a na užším okně se tabulka nevejde; posouvání do
           stran proto musí být vidět (zadání 8. 9. 2026). */}
       <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
@@ -183,6 +357,7 @@ export function RaditelnaTabulka<T>({
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

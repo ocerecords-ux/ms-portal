@@ -1,7 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { RaditelnaTabulka, type SloupecTabulky } from '@/app/(portal)/components/RaditelnaTabulka';
+import {
+  RaditelnaTabulka,
+  moznostiZ,
+  type SloupecTabulky,
+} from '@/app/(portal)/components/RaditelnaTabulka';
 
 /**
  * Tabulka výdajů, řaditelná kliknutím na název sloupce (zadání 9. 9. 2026).
@@ -130,6 +134,35 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
       vychoziSmer="desc"
       prazdno="Tady zatím nic není."
       minSirka={900}
+      hledat={(r) => `${r.nazev} ${r.podnadpis ?? ''} ${r.kategorie}`}
+      hledatPlaceholder="Hledat doklad, dodavatele, projekt…"
+      filtry={[
+        {
+          key: 'kategorie',
+          label: 'Kategorie',
+          moznosti: moznostiZ(radky, (r) => r.kategorie),
+          vyhovuje: (r, h) => r.kategorie === h,
+        },
+        {
+          key: 'stav',
+          label: 'Stav',
+          moznosti: [
+            { hodnota: 'uhrazene', popisek: 'Uhrazené' },
+            { hodnota: 'neuhrazene', popisek: 'Neuhrazené' },
+            { hodnota: 'po-splatnosti', popisek: 'Po splatnosti' },
+            { hodnota: 's-prilohou', popisek: 'S přílohou' },
+            { hodnota: 'bez-prilohy', popisek: 'Bez přílohy' },
+          ],
+          vyhovuje: (r, h) => {
+            if (h === 'uhrazene') return r.uhrazeno;
+            if (h === 'neuhrazene') return !r.uhrazeno;
+            if (h === 'po-splatnosti') return r.poSplatnosti;
+            if (h === 's-prilohou') return r.maPrilohu;
+            return !r.maPrilohu;
+          },
+        },
+      ]}
+      rozsahDatumu={{ label: 'Datum', ms: (r) => r.datumMs }}
     />
   );
 }
