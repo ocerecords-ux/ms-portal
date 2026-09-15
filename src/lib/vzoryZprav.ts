@@ -51,6 +51,12 @@ export const PROMENNE: { klic: string; popis: string; ukazka: string }[] = [
   { klic: 'firma', popis: 'Název firmy klienta', ukazka: 'AUDIOTÉKA.CZ s.r.o.' },
   { klic: 'klient', popis: 'Jméno člověka, kterému zpráva jde (oslovení)', ukazka: 'Radka' },
   { klic: 'stav', popis: 'Stav projektu', ukazka: 'Natáčíme/stříháme' },
+  /**
+   * Celý první řádek zprávy včetně 5. pádu (zadání 15. 9. 2026). Dřív ho
+   * portál psal sám a nešel přepsat; teď je to obyčejná proměnná, takže se
+   * dá přesunout, přeformulovat i úplně vynechat.
+   */
+  { klic: 'osloveni', popis: 'Oslovení („Dobrý den, Radko,")', ukazka: 'Dobrý den, Radko,' },
 ];
 
 /** Výchozí předmět - stejný, jaký chodil do 11. 9. 2026. */

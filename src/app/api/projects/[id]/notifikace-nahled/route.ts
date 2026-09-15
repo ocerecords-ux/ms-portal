@@ -7,6 +7,7 @@ import { druhNotifikaceFirmy, stavySNotifikaci } from '@/lib/notifikaceFirmy';
 import { dosadPromenne } from '@/lib/vzoryZprav';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { buildStavProjektuHtml } from '@/lib/email';
+import { pozdrav } from '@/lib/osloveni';
 import { urlNahravek, urlPreposlechu, zakladPortalu } from '@/lib/preposlechOdkaz';
 
 
@@ -94,6 +95,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     firma: nazevFirmy,
     klient: projekt.klient?.name ?? '',
     stav,
+    osloveni: pozdrav(projekt.klient?.name ?? null),
   };
 
   const html = buildStavProjektuHtml({

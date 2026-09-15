@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { druhNotifikaceFirmy, stavySNotifikaci, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
 import { dosadPromenne } from '@/lib/vzoryZprav';
+import { pozdrav } from '@/lib/osloveni';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { sendStavProjektuEmail } from '@/lib/email';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
@@ -184,6 +185,9 @@ export async function posliNotifikaciKeStavu(
       firma: nazevFirmy,
       klient: projekt.klient?.name ?? '',
       stav,
+      // Osloveni uz neni v mailu natvrdo, ale ve vzoru (zadani 15. 9. 2026).
+      // Interni zprava nema komu vykat jmenem.
+      osloveni: nastaveni.komu === 'INTERNE' ? 'Dobrý den,' : pozdrav(projekt.klient?.name ?? null),
     };
 
     const vysledek = await sendStavProjektuEmail({

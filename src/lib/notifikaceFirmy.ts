@@ -39,14 +39,26 @@ export const STAVY_S_NOTIFIKACI: string[] = [
   'Schváleno - k fakturaci',
 ];
 
-/** Co se u kterého stavu v mailu píše - ať je vidět, co klientovi dorazí. */
+/**
+ * Co se u kterého stavu v mailu píše.
+ *
+ * Od 15. 9. 2026 je to CELÉ TĚLO ZPRÁVY včetně oslovení a názvu projektu
+ * (zadání: „potřebuji měnit celý ten text zprávy. Dobrý den Radko a Annie bot
+ * se nedá měnit") - do té doby oslovení i titul projektu stály natvrdo v mailu
+ * a nešly přepsat. „**takhle**" se v mailu vysází tučně.
+ */
 export const CO_SE_POSILA: Record<string, string> = {
-  'Natáčíme/stříháme': 'Na disk jsme přidali první tracky, můžete poslouchat.',
-  'Dotočeno': 'S hercem je dotočeno, pustili jsme se do střihu.',
-  'Dotočeno/stříháme': 'Na disk jsme přidali první tracky k poslechu.',
-  'Dokončeno - ke schválení': 'Na disku jsou všechny tracky, čekáme na finální opravy.',
-  'Čekáme na opravy': 'Sedm dní po odevzdání jsme nedostali opravy — připomínka.',
-  'Schváleno - k fakturaci': 'Na disku jsou opravené tracky k vydání.',
+  'Natáčíme/stříháme':
+    '{osloveni}\n\n**{projekt}**\n\nNa disk jsme přidali první tracky, můžete poslouchat.',
+  'Dotočeno': '{osloveni}\n\n**{projekt}**\n\nS hercem je dotočeno, pustili jsme se do střihu.',
+  'Dotočeno/stříháme':
+    '{osloveni}\n\n**{projekt}**\n\nNa disk jsme přidali první tracky k poslechu.',
+  'Dokončeno - ke schválení':
+    '{osloveni}\n\n**{projekt}**\n\nNa disku jsou všechny tracky, čekáme na finální opravy.',
+  'Čekáme na opravy':
+    '{osloveni}\n\n**{projekt}**\n\nSedm dní po odevzdání jsme nedostali opravy — připomínka.',
+  'Schváleno - k fakturaci':
+    '{osloveni}\n\n**{projekt}**\n\nNa disku jsou opravené tracky k vydání.',
 };
 
 /**
@@ -101,7 +113,7 @@ export function stavySNotifikaci(druh: DruhNotifikace): string[] {
  */
 export const CO_SE_POSILA_REKLAMA: Record<string, string> = {
   [STAV_REKLAMY]:
-    'spot je hotový a připravený ke schválení. Poslechněte si ho prosím a dejte nám vědět, jestli je všechno v pořádku, nebo co ještě upravit.',
+    '{osloveni}\n\n**{projekt}**\n\nspot je hotový a připravený ke schválení. Poslechněte si ho prosím a dejte nám vědět, jestli je všechno v pořádku, nebo co ještě upravit.',
 };
 
 export function popisStavuProNotifikaci(stav: string): string {

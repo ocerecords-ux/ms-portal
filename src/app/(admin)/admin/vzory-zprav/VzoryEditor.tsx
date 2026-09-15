@@ -294,8 +294,9 @@ function PoleText({ hodnota, onZmena }: { hodnota: string; onZmena: (v: string) 
         className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
       />
       <span className="text-xs text-muted font-body">
-        Prázdný řádek oddělí odstavce. Odkazy psát nemusíte — tlačítka na složku a na AudioTagger
-        se do zprávy doplní sama.
+        Tohle je celá zpráva včetně oslovení — {'{osloveni}'} se nahradí za „Dobrý den, Radko,". Prázdný
+        řádek oddělí odstavce, {'**takhle**'} se vysází tučně. Odkazy psát nemusíte — tlačítka na složku
+        a na AudioTagger se do zprávy doplní sama.
       </span>
     </label>
   );

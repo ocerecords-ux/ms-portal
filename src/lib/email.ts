@@ -1584,9 +1584,6 @@ export type StavProjektuInput = {
 };
 
 export function buildStavProjektuHtml(input: StavProjektuInput): string {
-  // Jmeno se sklonuje do 5. padu - viz lib/osloveni.ts (zadani 11. 9. 2026).
-  const osloveni = escapeHtml(input.jenInterne ? 'Dobrý den,' : pozdrav(input.jmenoKlienta));
-
   /**
    * Dvě výrazná tlačítka (zadání 11. 9. 2026). Zelené je to hlavní —
    * přeposlech v AudioTaggeru; tmavé vede do složky projektu. Když
@@ -1633,7 +1630,15 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     .split(/\n\s*\n/)
     .map((o) => o.trim())
     .filter(Boolean)
-    .map((o) => `<p>${escapeHtml(o).replace(/\n/g, '<br />')}</p>`)
+    .map(
+      (o) =>
+        `<p>${escapeHtml(o)
+          .replace(/\n/g, '<br />')
+          // „**takhle**" ztucni (zadani 15. 9. 2026) - vzor se pise jako
+          // obycejny text, tohle je jediny povoleny kus formatovani.
+          // Escapovani probehlo pred tim, takze se sem HTML nepropasuje.
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`,
+    )
     .join('\n    ');
 
   const nadpis = input.nadpis?.trim()
@@ -1683,13 +1688,24 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
    */
   return emailShell({
     tag: input.predmet?.trim() || `MS Portal - ${input.stav}`,
-    preheader: `${input.nazevProjektu}: ${input.text.replace(/\s+/g, ' ').slice(0, 120)}`,
+    // Radek, ktery klient vidi v seznamu posty pod predmetem. Hvezdicky
+    // tucneho textu by v nem byly videt jako hvezdicky.
+    preheader: `${input.nazevProjektu}: ${input.text
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\s+/g, ' ')
+      .slice(0, 120)}`,
+    /**
+     * CELÉ TĚLO JE ZE VZORU (zadání 15. 9. 2026: „potřebuji měnit celý ten
+     * text zprávy. Dobrý den Radko a Annie bot se nedá měnit").
+     *
+     * Do té doby tu bylo oslovení i název projektu natvrdo a produkce je
+     * nemohla přepsat ani odebrat. Teď jsou to proměnné {osloveni}
+     * a {projekt} ve vzoru - viz lib/vzoryZprav.ts.
+     */
     body: `
     ${nadpis}
-    <p>${osloveni}</p>
     ${interniPoznamka}
     ${uvod}
-    <p><strong>${escapeHtml(input.nazevProjektu)}</strong></p>
     ${odstavce}
     <div class="cta-row" style="padding-top:8px;">${tlacitko}</div>
     ${oTaggeru}
@@ -1715,12 +1731,11 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
     bcc: skryta.length > 0 ? skryta.join(', ') : undefined,
     subject: input.predmet?.trim() || `${input.nazevProjektu} - ${input.stav}`,
     text: [
-      input.jenInterne ? 'Dobry den,' : pozdrav(input.jmenoKlienta),
-      '',
       input.jenInterne ? 'INTERNI ZPRAVA - klientovi nic neslo.' : '',
       input.uvod?.trim() || '',
-      input.nazevProjektu,
-      input.text,
+      // Osloveni i nazev projektu uz jsou soucasti textu ze vzoru
+      // (zadani 15. 9. 2026). „**tucne**" v prostem textu nema smysl.
+      input.text.replace(/\*\*(.+?)\*\*/g, '$1'),
       '',
       input.odkazNaPreposlech ? `Preposlech v AudioTaggeru: ${input.odkazNaPreposlech}` : '',
       input.odkazNaPreposlech
