@@ -116,25 +116,40 @@ export function castkaDoSmlouvy(text: string): string {
 }
 
 /**
+ * DŮLEŽITÁ POLE SE VE SMLOUVĚ SÁZEJÍ TUČNĚ (zadání 15. 9. 2026: „a MEDIA SPACE
+ * s.r.o. by mělo být všude tučně", pak „s tím tučným textem to udělej u všech
+ * ostatních smluv").
+ *
+ * Zvýrazňuje se při skládání textu, ne v šabloně - jinak by se hvězdičky
+ * musely hlídat v každé šabloně zvlášť, u těch stávajících i u těch, které si
+ * někdo teprve napíše. Když si už v šabloně někdo pole vytučnil sám
+ * („**{{splatnost}} dnů**"), nechá se to na pokoji.
+ */
+const TUCNA_POLE = new Set(['nase_firma', 'protistrana', 'odmena', 'termin', 'splatnost', 'misto']);
+
+function zvyrazniDulezitaPole(body: string): string {
+  return body.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (cele, klic: string, index: number, cely: string) => {
+    if (!TUCNA_POLE.has(klic.toLowerCase())) return cele;
+    // Lichý počet hvězdiček před polem znamená, že tučný úsek už běží.
+    const zacatekRadku = cely.lastIndexOf('\n', index) + 1;
+    const hvezdicky = cely.slice(zacatekRadku, index).match(/\*\*/g)?.length ?? 0;
+    return hvezdicky % 2 === 1 ? cele : `**${cele}**`;
+  });
+}
+
+/**
  * Doplní {{pole}} v šabloně. Co neznáme a stojí to ve výčtu za čárkou, zmizí
  * i s tou čárkou; co chybí uprostřed věty, zůstane jako `…` - ať je při čtení
- * hned vidět, že se to má doplnit ručně. Název naší firmy zvýrazňujeme tučně.
+ * hned vidět, že se to má doplnit ručně.
  */
 export function expandPlaceholders(body: string, values: Record<string, string | null | undefined>): string {
   // Značka pro pole, které nemáme čím vyplnit. Rozhodnout se, co s ním, jde až
   // po doplnění - podle toho, kde ve větě stojí (viz úklid níž).
   const PRAZDNE = '\u0000';
 
-  const doplneny = body.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_cele, klic: string) => {
+  const doplneny = zvyrazniDulezitaPole(body).replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_cele, klic: string) => {
     const hodnota = values[klic.toLowerCase()];
-    if (hodnota == null || String(hodnota).trim() === '') return PRAZDNE;
-
-    const text = String(hodnota);
-    // NÁZEV NAŠÍ FIRMY JE VŽDYCKY TUČNĚ (zadání 15. 9. 2026: „a MEDIA SPACE
-    // s.r.o. by mělo být všude tučně"). Ve smlouvě je na třiceti místech,
-    // takže je jednodušší zvýraznit ho při doplňování než hlídat hvězdičky
-    // v každé šabloně.
-    return klic.toLowerCase() === 'nase_firma' ? `**${text}**` : text;
+    return hodnota == null || String(hodnota).trim() === '' ? PRAZDNE : String(hodnota);
   });
 
   /**
