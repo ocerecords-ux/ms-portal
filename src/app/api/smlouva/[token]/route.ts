@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import {
   documentHash,
+  podepisZaNas,
   posliPodepsanouSmlouvu,
   signatureContext,
   validSignatureImage,
@@ -55,6 +56,17 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     const ctx = signatureContext(req.headers);
 
     /**
+     * NÁŠ PODPIS MUSÍ BÝT NA MÍSTĚ DŘÍV (oprava 15. 9. 2026: „a hlavně není
+     * v tu chvíli podepsaná"). Od 15. 9. se připojuje už při odeslání, tohle
+     * je pojistka pro smlouvy odeslané dřív a pro případ, že se to tehdy
+     * nepovedlo - jinak by herec podepsal a dostal PDF, kde z naší strany
+     * podpis chybí.
+     */
+    const nasPodpis = contract.signatures.some((s) => s.role === 'MEDIASPACE')
+      ? true
+      : Boolean(await podepisZaNas(contract.id, ctx));
+
+    /**
      * ODKLIKAVANI JEDNOTLIVYCH STRANEK UZ NENI (zadani 15. 9. 2026: „pojdme
      * u tech smluv obecne zrusit to podepisovani kazde strany zvlast. Nechme
      * to zpet jen na jeden souhlas"). Puvodne se muselo projit a odklepnout
@@ -76,22 +88,28 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
           documentHash: hash,
         },
       });
-      const hotovo = contract.signatures.some((s) => s.role === 'MEDIASPACE');
       await tx.contract.update({
         where: { id: contract.id },
         data: {
           bodyHash: contract.bodyHash ?? hash,
-          ...(hotovo ? { status: 'SIGNED', completedAt: new Date() } : {}),
+          ...(nasPodpis ? { status: 'SIGNED', completedAt: new Date() } : {}),
         },
       });
     });
 
-    // Podepsano obema stranami -> mail s odkazem i PDF (zadani 14. 9. 2026).
-    // Az po transakci a bez vyhozeni: podpis uz je ulozeny, mail ho nesmi
-    // shodit.
-    if (contract.signatures.some((s) => s.role === 'MEDIASPACE')) {
-      await posliPodepsanouSmlouvu(contract.id);
-    }
+    /**
+     * MAIL S ODKAZEM I PDF ODCHÁZÍ HNED PO PODPISU (zadání 15. 9. 2026:
+     * „potřebuju, ať po tom, co herec smlouvu podepíše, ať mu přijde rovnou
+     * odkaz i samotné PDF podepsané smlouvy do mailu").
+     *
+     * Dřív se čekalo, až bude smlouva podepsaná z obou stran - když u nás
+     * podpis chyběl, herec nedostal nic. Teď se posílá vždycky; co v PDF je,
+     * to je v něm vidět.
+     *
+     * Až po transakci a bez vyhození: podpis už je uložený, mail ho nesmí
+     * shodit.
+     */
+    await posliPodepsanouSmlouvu(contract.id);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

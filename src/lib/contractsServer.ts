@@ -199,7 +199,14 @@ export async function posliPodepsanouSmlouvu(contractId: string): Promise<void> 
       where: { id: contractId },
       include: { issuer: true, signatures: { orderBy: { signedAt: 'asc' } } },
     });
-    if (!contract || contract.status !== 'SIGNED') return;
+    /**
+     * STAČÍ PODPIS PROTISTRANY (oprava 15. 9. 2026: „ať po tom, co herec
+     * smlouvu podepíše, ať mu přijde rovnou odkaz i samotné PDF podepsané
+     * smlouvy do mailu"). Dřív se čekalo na stav SIGNED, tedy na podpisy obou
+     * stran - když u nás podpis chyběl, herec nedostal nic a ani nevěděl proč.
+     */
+    if (!contract) return;
+    if (!contract.signatures.some((s) => s.role === 'PROTISTRANA')) return;
 
     const { smlouvaPdf, nazevSouboruSmlouvy } = await import('@/lib/smlouvaPdf');
     const { sendPodepsanaSmlouvaEmail } = await import('@/lib/email');

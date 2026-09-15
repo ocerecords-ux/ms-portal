@@ -2,6 +2,22 @@ import nodemailer from 'nodemailer';
 import { pozdrav } from '@/lib/osloveni';
 import { bezZnacek, znackyNaHtml } from '@/lib/formatovaniZpravy';
 
+/**
+ * SPOJENÍ SE SMTP SE DRŽÍ (oprava 15. 9. 2026: „smlouvy chodí na mail se
+ * strašným zpožděním a musím dát několikrát odeslat znovu").
+ *
+ * Dřív se pro KAŽDÝ e-mail vyráběl nový transport, tedy nové TCP spojení,
+ * TLS handshake a přihlášení - u pomalého poštovního serveru to je klidně
+ * deset vteřin, a když se do toho vejde limit funkce, odeslání spadne
+ * a člověk klikne znovu. Odtud „strašné zpoždění" i několik kopií naráz.
+ *
+ * Teď se transport drží v paměti instance (na Vercelu jich běží víc, ale
+ * teplá instance obslouží několik mailů za sebou bez dalšího přihlašování)
+ * a má POOL a ROZUMNÉ ČASOVÉ LIMITY: když poštovní server neodpovídá, chyba
+ * přijde za pár vteřin a je vidět, místo aby požadavek visel do limitu.
+ */
+let transportCache: { klic: string; transport: nodemailer.Transporter } | null = null;
+
 function getTransport() {
   // Hodnoty se ORIZAVAJI: heslo i jmeno se do nastaveni vkladaji ze schranky
   // a nalepena mezera nebo konec radku znamena "535 authentication failed",
@@ -12,12 +28,25 @@ function getTransport() {
   if (!host || !user || !heslo) return null;
 
   const port = Number(process.env.SMTP_PORT?.trim()) || 587;
-  return nodemailer.createTransport({
+  const klic = `${host}:${port}:${user}`;
+  if (transportCache?.klic === klic) return transportCache.transport;
+
+  const transport = nodemailer.createTransport({
     host,
     port,
     secure: port === 465,
     auth: { user, pass: heslo },
+    // Spojeni se drzi a pouzije na dalsi mail - viz komentar vyse.
+    pool: true,
+    maxConnections: 2,
+    maxMessages: 50,
+    // Kdyz server neodpovida, at to spadne rychle a s jasnou hlaskou.
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 25_000,
   });
+  transportCache = { klic, transport };
+  return transport;
 }
 
 /**
