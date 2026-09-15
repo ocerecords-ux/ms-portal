@@ -16,7 +16,6 @@ export async function GET() {
 
   const html = buildBonusHtml({
     to: '',
-    jmeno: 'Richard',
     projekt: 'ANNIE BOT',
     castka: '1 040 Kč',
     podilProcent: 93,

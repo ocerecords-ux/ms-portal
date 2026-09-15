@@ -1265,13 +1265,12 @@ export async function sendPodepsanaSmlouvaEmail(input: PodepsanaSmlouvaInput) {
 // prijit notifikace, ze bonus byl schvalen")
 //
 // Kratka zprava - je to dobra zprava, ne dokument. Podstatne je, ZA CO to je
-// a KOLIK to je; zbytek najde ve Vykazech.
+// a KOLIK to je; zbytek najde ve Vykazech. Od 15. 9. 2026 bez osloveni a bez
+// uvodni vety - zustava jen tabulka s udaji.
 // ===========================================================================
 
 type BonusEmailInput = {
   to: string;
-  /** Jmeno zvukare do osloveni. */
-  jmeno: string | null;
   projekt: string;
   castka: string;
   /** Podil na strihu v procentech; 0 = bonus pridany rucne. */
@@ -1283,11 +1282,27 @@ type BonusEmailInput = {
 };
 
 export function buildBonusHtml(input: BonusEmailInput): string {
-  const duvod = input.poznamka
-    ? escapeHtml(input.poznamka)
-    : input.podilProcent > 0
-      ? `Na střihu téhle knihy máte ${input.podilProcent} % — tím je podmínka pro bonus splněná.`
-      : '';
+  /**
+   * BEZ OSLOVENÍ A BEZ ÚVODNÍ VĚTY (zadání 15. 9. 2026: „dejme pryč tu
+   * zprávu: Dobrý den, Richarde… Nechme tam jen tu tabulku").
+   *
+   * Všechno podstatné je proto v tabulce - i důvod, který dřív stál v textu
+   * pod ní: u návrhu podíl na střihu, u ručně přidaného bonusu to, co k němu
+   * někdo napsal.
+   */
+  const radky = [
+    `<tr><td class="label">Bonus</td><td class="value">${escapeHtml(input.castka)}</td></tr>`,
+    `<tr><td class="label">Kniha</td><td class="value regular">${escapeHtml(input.projekt)}</td></tr>`,
+    input.podilProcent > 0
+      ? `<tr><td class="label">Podíl na střihu</td><td class="value regular">${input.podilProcent} %</td></tr>`
+      : '',
+    input.poznamka
+      ? `<tr><td class="label">Za co</td><td class="value regular">${escapeHtml(input.poznamka)}</td></tr>`
+      : '',
+    input.schvalil
+      ? `<tr><td class="label">Schválil(a)</td><td class="value regular">${escapeHtml(input.schvalil)}</td></tr>`
+      : '',
+  ].filter(Boolean);
 
   return emailShell({
     tag: 'Schválený bonus',
@@ -1295,16 +1310,10 @@ export function buildBonusHtml(input: BonusEmailInput): string {
     body: `
     <span class="badge">Bonus</span>
     <h2>${escapeHtml(input.projekt)}</h2>
-    <p>${escapeHtml(pozdrav(input.jmeno))}</p>
-    <p>máme pro vás dobrou zprávu — bonus za tuhle knihu je schválený.</p>
 
     <table role="presentation" class="field-table">
-      <tr><td class="label">Bonus</td><td class="value">${escapeHtml(input.castka)}</td></tr>
-      <tr><td class="label">Kniha</td><td class="value regular">${escapeHtml(input.projekt)}</td></tr>
-      ${input.schvalil ? `<tr><td class="label">Schválil(a)</td><td class="value regular">${escapeHtml(input.schvalil)}</td></tr>` : ''}
+      ${radky.join('\n      ')}
     </table>
-
-    ${duvod ? `<p>${duvod}</p>` : ''}
 
     <div class="cta-row">
       <a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít ve Výkazech</a>
@@ -1324,15 +1333,13 @@ export async function sendBonusEmail(input: BonusEmailInput) {
     ...odesilatelMediaspace(),
     to: input.to,
     subject: `Schválený bonus — ${input.projekt}`,
+    // Prosty text drzi krok s HTML - taky bez osloveni, jen udaje.
     text: [
-      pozdrav(input.jmeno),
-      '',
-      'mame pro vas dobrou zpravu - bonus za tuhle knihu je schvaleny.',
-      '',
-      `Kniha: ${input.projekt}`,
       `Bonus: ${input.castka}`,
-      input.schvalil ? `Schvalil(a): ${input.schvalil}` : '',
+      `Kniha: ${input.projekt}`,
+      input.podilProcent > 0 ? `Podil na strihu: ${input.podilProcent} %` : '',
       input.poznamka ? `Za co: ${input.poznamka}` : '',
+      input.schvalil ? `Schvalil(a): ${input.schvalil}` : '',
       '',
       'Ve Vykazech ho najdete tady:',
       input.odkaz,

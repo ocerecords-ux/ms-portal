@@ -127,7 +127,7 @@ export async function oznamSchvalenyBonus(bonusId: string): Promise<void> {
   try {
     const bonus = await prisma.bonusZvukare.findUnique({
       where: { id: bonusId },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true, email: true } } },
     });
     if (!bonus || bonus.stav !== 'SCHVALENO') return;
 
@@ -147,7 +147,6 @@ export async function oznamSchvalenyBonus(bonusId: string): Promise<void> {
     if (bonus.user.email) {
       const vysledek = await sendBonusEmail({
         to: bonus.user.email,
-        jmeno: bonus.user.name,
         projekt: nazev,
         castka,
         podilProcent: bonus.rucne ? 0 : bonus.podilProcent,
