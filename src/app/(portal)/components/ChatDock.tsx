@@ -1102,7 +1102,7 @@ function Svetlo({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[min(92vw,max(340px,34vw))] max-h-[70vh] bg-bar rounded-card shadow-lg border border-white/15 flex flex-col overflow-hidden"
+        className="w-[520px] max-w-[92vw] max-h-[70vh] bg-bar rounded-card shadow-lg border border-white/15 flex flex-col overflow-hidden"
       >
       <div className="flex items-center gap-3 px-4 py-3 text-white" onClick={(e) => e.stopPropagation()}>
         <span className="min-w-0 flex-1">

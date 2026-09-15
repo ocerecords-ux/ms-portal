@@ -118,7 +118,7 @@ export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
       </button>
 
       {otevreno && (
-        <div className="absolute right-0 mt-2 w-[min(92vw,420px)] bg-surface border border-line rounded-card shadow-lg p-4 z-50 flex flex-col gap-3">
+        <div className="absolute right-0 mt-2 w-[420px] max-w-[92vw] bg-surface border border-line rounded-card shadow-lg p-4 z-50 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-heading font-semibold text-sm text-ink m-0">Připomínka k portálu</h3>
