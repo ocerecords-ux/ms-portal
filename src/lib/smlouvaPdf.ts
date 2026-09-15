@@ -1,4 +1,5 @@
 import { deflateSync } from 'zlib';
+import { popisekDruheStrany, popisekNaseStrany } from '@/lib/contracts';
 import { FONT_BOLD, FONT_REGULAR, LOGO, type EmbeddedImage } from '@/lib/rodnyListAssets';
 import {
   A4,
@@ -76,6 +77,8 @@ export type SmlouvaPdfData = {
   podpisy: PodpisDoPdf[];
   /** Otisk textu, jak vypadá teď - porovnává se s otiskem u podpisů. */
   currentHash: string;
+  /** Naše firma - píše se k podpisu („ZA MEDIA SPACE S.R.O."). */
+  issuerName?: string | null;
 };
 
 /** Nadpis / popisek strany / běžný odstavec - stejné pravidlo jako ContractPaper. */
@@ -296,9 +299,10 @@ export function smlouvaPdf(data: SmlouvaPdfData): Buffer {
 
   const sloupec = (SIRKA - 22) / 2;
   const zacatek = s.top;
+  // Popisky u podpisu - stejne jako na strance (zadani 15. 9. 2026).
   const strany: { popisek: string; role: PodpisDoPdf['role'] }[] = [
-    { popisek: 'ZA MEDIASPACE', role: 'MEDIASPACE' },
-    { popisek: 'ZA PROTISTRANU', role: 'PROTISTRANA' },
+    { popisek: popisekNaseStrany(data.issuerName).toLocaleUpperCase('cs-CZ'), role: 'MEDIASPACE' },
+    { popisek: popisekDruheStrany(data.body).toLocaleUpperCase('cs-CZ'), role: 'PROTISTRANA' },
   ];
 
   strany.forEach((strana, i) => {

@@ -413,6 +413,7 @@ export function ContractEditor({
           body={form.body || 'Smlouva zatím nemá žádný text.'}
           signatures={contract.signatures}
           currentHash={contract.currentHash}
+          issuerName={contract.issuerName}
         />
       </div>
     </div>

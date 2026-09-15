@@ -123,6 +123,23 @@ export function expandPlaceholders(body: string, values: Record<string, string |
   });
 }
 
+/**
+ * POPISKY U PODPISŮ (zadání 15. 9. 2026: „tady musí být za MEDIA SPACE s.r.o.
+ * a za interpreta"). Naše strana se jmenuje přesně tak, jak je firma zapsaná;
+ * druhá podle toho, jak jí říká samotná smlouva - u audioknihy Interpret,
+ * u smlouvy o dílo Zhotovitel, jinak obecně protistrana.
+ */
+export function popisekNaseStrany(issuerName?: string | null): string {
+  return `Za ${issuerName?.trim() || 'Mediaspace'}`;
+}
+
+export function popisekDruheStrany(body: string): string {
+  if (/\bInterpret/.test(body)) return 'Za interpreta';
+  if (/\bUmělec/.test(body)) return 'Za umělce';
+  if (/\bZhotovitel/.test(body)) return 'Za zhotovitele';
+  return 'Za protistranu';
+}
+
 /** Kolik podpisů smlouva potřebuje: obě strany. */
 export const REQUIRED_SIGNERS = ['MEDIASPACE', 'PROTISTRANA'] as const;
 
@@ -158,8 +175,8 @@ export const DEFAULT_CONTRACT_TEMPLATES: { name: string; body: string; sortOrder
 
 Účastníci smlouvy
 
-Zhotovitel:
-{{protistrana}}
+Interpret:
+**{{protistrana}}**, dále jen „Interpret"
 Se sídlem: {{protistrana_adresa}}
 {{protistrana_identifikace}}
 

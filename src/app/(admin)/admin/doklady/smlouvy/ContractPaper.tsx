@@ -1,4 +1,4 @@
-import { formatSignedAt } from '@/lib/contracts';
+import { formatSignedAt, popisekDruheStrany, popisekNaseStrany } from '@/lib/contracts';
 
 export type PaperSignature = {
   role: 'MEDIASPACE' | 'PROTISTRANA';
@@ -26,6 +26,7 @@ export function ContractPaper({
   body,
   signatures,
   currentHash,
+  issuerName,
 }: {
   title: string;
   number: string;
@@ -33,6 +34,8 @@ export function ContractPaper({
   signatures: PaperSignature[];
   /** Otisk textu, jak vypadá teď — porovnává se s otiskem u podpisů. */
   currentHash: string;
+  /** Naše firma - píše se k podpisu („Za MEDIA SPACE s.r.o."). */
+  issuerName?: string | null;
 }) {
   const nase = signatures.find((s) => s.role === 'MEDIASPACE') ?? null;
   const protistrana = signatures.find((s) => s.role === 'PROTISTRANA') ?? null;
@@ -63,8 +66,8 @@ export function ContractPaper({
       </div>
 
       <div className="px-6 sm:px-10 pb-10 grid grid-cols-1 sm:grid-cols-2 gap-8">
-        <SignatureBox label="Za Mediaspace" signature={nase} currentHash={currentHash} />
-        <SignatureBox label="Za protistranu" signature={protistrana} currentHash={currentHash} />
+        <SignatureBox label={popisekNaseStrany(issuerName)} signature={nase} currentHash={currentHash} />
+        <SignatureBox label={popisekDruheStrany(body)} signature={protistrana} currentHash={currentHash} />
       </div>
 
       <footer className="border-t border-line px-6 sm:px-10 py-3 flex items-center justify-between gap-3">

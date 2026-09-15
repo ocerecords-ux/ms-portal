@@ -48,6 +48,7 @@ export function SmlouvaKPodpisu({
         body={body}
         signatures={signatures}
         currentHash={currentHash}
+        issuerName={issuerName}
       />
 
       <ContractSigning

@@ -20,7 +20,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const contract = await prisma.contract.findUnique({
     where: { id: params.id },
-    include: { signatures: { orderBy: { signedAt: 'asc' } } },
+    include: { issuer: { select: { name: true } }, signatures: { orderBy: { signedAt: 'asc' } } },
   });
   if (!contract) return NextResponse.json({ error: 'Smlouva nenalezena.' }, { status: 404 });
 
@@ -29,6 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     title: contract.title,
     body: contract.body,
     currentHash: documentHash(contract.body),
+    issuerName: contract.issuer?.name ?? null,
     podpisy: contract.signatures.map((s) => ({
       role: s.role,
       name: s.name,

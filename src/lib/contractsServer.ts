@@ -227,6 +227,7 @@ export async function posliPodepsanouSmlouvu(contractId: string): Promise<void> 
           title: contract.title,
           body: contract.body,
           currentHash: hash,
+          issuerName: contract.issuer?.name ?? null,
           podpisy: contract.signatures.map((s) => ({
             role: s.role,
             name: s.name,
