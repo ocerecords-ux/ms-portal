@@ -310,8 +310,102 @@ export async function posliPodepsanouSmlouvu(contractId: string): Promise<void> 
         jmenoPrijemce: nas?.name ?? null,
       });
     }
+
+    // Podepsana smlouva je podklad pro honorar - at nikdo neprepisuje rucne,
+    // co uz portal vi (zadani 15. 9. 2026).
+    await zalozVydajZeSmlouvy(contract.id, pdf);
   } catch (err) {
     console.error('posliPodepsanouSmlouvu selhalo:', err);
+  }
+}
+
+/**
+ * VÝDAJ Z PODEPSANÉ SMLOUVY (zadání 15. 9. 2026: „podepsané smlouvy by se
+ * měly automaticky uložit do výdajů").
+ *
+ * Smlouva s hercem JE závazek zaplatit - dokud se z ní výdaj nepřepisoval
+ * ručně, chyběl v rozpočtu projektu do chvíle, než přišla faktura. Zakládá se
+ * až po podpisu druhé strany a jen jednou (drží to `Contract.vydajId`).
+ *
+ * Když se částka ze smlouvy nedá spolehlivě přečíst (třeba „5 000 Kč za
+ * natáčecí den"), doklad vznikne s nulou a nechá se NEZARAZENY - ať ho účetní
+ * uvidí mezi nezařazenými a doplní, místo aby se do součtů dostalo číslo,
+ * které si portál domyslel.
+ */
+export async function zalozVydajZeSmlouvy(
+  contractId: string,
+  pdf: { nazev: string; obsah: Buffer } | null,
+): Promise<void> {
+  try {
+    const contract = await prisma.contract.findUnique({
+      where: { id: contractId },
+      select: {
+        id: true,
+        number: true,
+        title: true,
+        odmenaText: true,
+        vydajId: true,
+        companyId: true,
+        issuerCompanyId: true,
+        signerName: true,
+        caflouProjectId: true,
+        projectName: true,
+        completedAt: true,
+        company: { select: { dic: true } },
+      },
+    });
+    if (!contract || contract.vydajId) return;
+
+    const { parseMoneyToMinor } = await import('@/lib/doklady');
+
+    // Holá částka v korunách - nic jiného se nepřepočítává.
+    const text = contract.odmenaText?.trim() ?? '';
+    const ciste = /^\d[\d\s\u00a0]*([.,]\d{1,2})?(\s*Kč)?$/i.test(text);
+    const castka = ciste ? parseMoneyToMinor(text.replace(/Kč/i, '')) : 0;
+
+    const kategorie = await prisma.expenseCategory.findFirst({
+      where: { active: true, name: { contains: 'Honorář', mode: 'insensitive' } },
+      select: { id: true },
+    });
+
+    // Priloha je ta sama podepsana smlouva, kterou dostal herec mailem.
+    let priloha: { url: string; name: string } | null = null;
+    if (pdf) {
+      try {
+        const { uploadExpenseBuffer } = await import('@/lib/storage');
+        const vysledek = await uploadExpenseBuffer(pdf.obsah, pdf.nazev, 'application/pdf');
+        if (vysledek && !('error' in vysledek)) priloha = vysledek;
+      } catch (err) {
+        console.error(`Přílohu výdaje ze smlouvy ${contract.number} se nepodařilo uložit:`, err);
+      }
+    }
+
+    const vydaj = await prisma.expense.create({
+      data: {
+        number: contract.number,
+        supplierCompanyId: contract.companyId,
+        supplierName: bezTitulu(contract.signerName) || contract.signerName,
+        categoryId: kategorie?.id ?? null,
+        issuerCompanyId: contract.issuerCompanyId,
+        description: contract.title,
+        amountExVatMinor: castka,
+        // Herci vetsinou platci DPH nejsou; kdyz protistrana DIC ma, 21 %.
+        vatRate: contract.company?.dic ? 21 : 0,
+        issueDate: contract.completedAt ?? new Date(),
+        caflouProjectId: contract.caflouProjectId,
+        projectName: contract.projectName,
+        attachmentUrl: priloha?.url ?? null,
+        attachmentName: priloha?.name ?? null,
+        note: ciste ? `Ze smlouvy ${contract.number}.` : `Ze smlouvy ${contract.number}. Odměna ve smlouvě: ${text || 'neuvedena'}.`,
+        stav: ciste && castka > 0 ? 'ZARAZENY' : 'NEZARAZENY',
+        zdroj: 'SMLOUVA',
+      },
+      select: { id: true },
+    });
+
+    await prisma.contract.update({ where: { id: contract.id }, data: { vydajId: vydaj.id } });
+  } catch (err) {
+    console.error('zalozVydajZeSmlouvy selhalo:', err);
   }
 }
 

@@ -85,6 +85,10 @@ export async function POST(req: NextRequest) {
         signerEmail: d.signerEmail,
         caflouProjectId: projekt.caflouProjectId,
         projectName: projekt.projectName,
+        // Odmena se drzi i zvlast (ne jen ve vete smlouvy) - po podpisu z ni
+        // vznikne vydaj (zadani 15. 9. 2026: „podepsane smlouvy by se mely
+        // automaticky ulozit do vydaju").
+        odmenaText: values.odmena?.trim() || null,
         accessToken: newAccessToken(),
       },
     });

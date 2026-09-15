@@ -5,7 +5,6 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { nextCode, codePrefixForRole } from '@/lib/codes';
 import { uploadUserPhoto } from '@/lib/storage';
-import { sjednotLokace } from '@/lib/lokaceHercu';
 
 const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE', 'ROBOT'] as const;
 // Tyto role jsou vazane na klientskou firmu - viz src/lib/roles.ts (COMPANY_ROLES).
@@ -64,7 +63,7 @@ function readFormData(formData: FormData) {
     role: formData.get('role'),
     birthDate: has('birthDate') ? formData.get('birthDate') : undefined,
     hourlyRate: has('hourlyRate') ? formData.get('hourlyRate') : undefined,
-    studioLocations: has('studioLocations') ? sjednotLokace(formData.getAll('studioLocations').map(String)) : undefined,
+    studioLocations: has('studioLocations') ? formData.getAll('studioLocations').map(String) : undefined,
     birthNumber: has('birthNumber') ? formData.get('birthNumber') : undefined,
     ic: has('ic') ? formData.get('ic') : undefined,
     dic: has('dic') ? formData.get('dic') : undefined,

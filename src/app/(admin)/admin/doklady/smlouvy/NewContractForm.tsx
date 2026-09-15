@@ -140,15 +140,10 @@ export function NewContractForm({
   }
 
   /**
-   * Smlouva na audioknihu. Pozná se podle názvu šablony - šablony si admin
-   * upravuje sám, takže zadrátovat ID nejde.
+   * Typ šablony. Pozná se podle názvu - šablony si admin upravuje sám, takže
+   * zadrátovat ID nejde. Podle něj se jmenuje pole s termínem (popisekPole)
+   * a pozná se smlouva s hercem (sHercem).
    */
-  const jeAudiokniha = useMemo(
-    () => /audiokn/i.test(templates.find((t) => t.id === form.templateId)?.name ?? ''),
-    [templates, form.templateId],
-  );
-
-  /** Typ šablony - podle něj se jmenuje pole s termínem (viz popisekPole). */
   const druhSmlouvy = useMemo(() => {
     const nazev = templates.find((t) => t.id === form.templateId)?.name ?? '';
     if (/audiokn/i.test(nazev)) return 'audiokniha' as const;
@@ -156,6 +151,15 @@ export function NewContractForm({
     if (/o d[ií]lo/i.test(nazev)) return 'dilo' as const;
     return 'jine' as const;
   }, [templates, form.templateId]);
+
+  /**
+   * SMLOUVA S HERCEM Z PROJEKTU (zadání 15. 9. 2026: „u reklam by měla být
+   * při zakládání smlouvy stejná pole jako u audioknihy, mělo by si to vzít
+   * vše z projektu"). U audioknihy i u reklamy podepisuje sám herec, takže
+   * se firma nevybírá a všechno - jméno, adresa, RČ/IČ, místo - se bere
+   * z jeho karty na projektu.
+   */
+  const sHercem = druhSmlouvy === 'audiokniha' || druhSmlouvy === 'reklama';
 
   /** Název projektu bez firmy - „NĚCO — Audiotéka" je v názvu smlouvy navíc. */
   const nazevProjektu = useMemo(() => {
@@ -179,8 +183,8 @@ export function NewContractForm({
   // U audioknihy se firma nevybira, takze po prepnuti sablony nesmi zustat
   // vybrana z drivejska - jinak by se do smlouvy dostala misto herce.
   useEffect(() => {
-    if (jeAudiokniha && form.companyId) setForm((f) => ({ ...f, companyId: '' }));
-  }, [jeAudiokniha, form.companyId]);
+    if (sHercem && form.companyId) setForm((f) => ({ ...f, companyId: '' }));
+  }, [sHercem, form.companyId]);
 
   /** Ruční pole, která ve vybrané šabloně skutečně jsou. */
   const rucniPole = useMemo(() => {
@@ -299,7 +303,7 @@ export function NewContractForm({
 
         {herci.length > 0 && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">{jeAudiokniha ? 'Herec' : 'Herec z projektu'}</span>
+            <span className="text-sm font-body text-ink">{sHercem ? 'Herec' : 'Herec z projektu'}</span>
             <VyberPole
               value={form.actorUserId}
               onChange={(e) => vyberHerce(herci.find((h) => h.id === e.target.value) ?? null)}
@@ -352,12 +356,12 @@ export function NewContractForm({
         </label>
       </div>
 
-      {/* U audioknihy je protistranou vzdycky herec (zadani 15. 9. 2026:
+      {/* U audioknihy a u reklamy je protistranou vzdycky herec (zadani 15. 9. 2026:
           „Protistrana - prejmenovat na Herec"), takze se misto vyberu firmy
           vybira herec z projektu - viz pole niz. Adresu i RC nebo ICO si
           portal vezme z jeho karty. */}
-      <div className={`grid grid-cols-1 gap-3 ${jeAudiokniha ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
-        {!jeAudiokniha && (
+      <div className={`grid grid-cols-1 gap-3 ${sHercem ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+        {!sHercem && (
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Protistrana (firma)</span>
             <VyberPole value={form.companyId} onChange={(e) => vyberFirmu(e.target.value)} className={inputClass}>

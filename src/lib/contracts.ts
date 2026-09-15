@@ -79,16 +79,19 @@ export const CONTRACT_PLACEHOLDERS: { key: string; label: string; rucne?: boolea
  * místě a vypsat tři by z ní udělalo hádanku.
  */
 export function mistoNataceni(lokace: string[] | null | undefined): string {
-  // Od 15. 9. 2026 jsou lokace rovnou mesta („Brno"), starsi zapisy ale porad
-  // muzou byt „MS Studio - Brno II" - proto se predpona i cislo mistnosti
-  // nize jeste odstranuji.
+  // Do smlouvy patri MESTO, ne mistnost (zadani 15. 9. 2026: „na smlouvu se
+  // musi propsat Brno nebo Praha"). Na karte herce se drzi cela studia
+  // („MS Studio - Brno II") - tady se z nich udela mesto.
   const prvni = (lokace ?? []).map((l) => l.trim()).filter(Boolean)[0];
   if (!prvni) return 'Brno';
-  const mesto = prvni
-    .replace(/^MS\s*Studio\s*[-–]\s*/i, '')
-    .replace(/\s+(I{1,3}|IV|V|VI{0,3})$/i, '')
-    .trim();
-  return mesto || 'Brno';
+  const bezDiakritiky = prvni
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  if (bezDiakritiky.includes('praha') || bezDiakritiky.includes('prague')) return 'Praha';
+  // Brno je zaroven pojistka: nataci se u nas bud v Brne, nebo v Praze, a
+  // prazdne misto ve smlouve je horsi nez to castejsi z obou.
+  return 'Brno';
 }
 
 /**

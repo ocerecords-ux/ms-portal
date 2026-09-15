@@ -79,7 +79,12 @@ export const USER_TABS: { key: string; label: string; roles: Role[] }[] = [
  *
  * Starší zápisy se převádějí samy - viz sjednotLokaci v lib/lokaceHercu.ts.
  */
-export const HEREC_STUDIOS: string[] = ['Brno', 'Praha'];
+export const HEREC_STUDIOS: string[] = [
+  'MS Studio - Brno I',
+  'MS Studio - Brno II',
+  'MS Studio - Praha',
+  'MS Studio - London',
+];
 
 /** Popisky typu firmy - viz CompanyType (schema.prisma). */
 export const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {

@@ -7,7 +7,6 @@ import { uploadUserPhoto } from '@/lib/storage';
 import { popisPrekazek, prekazkyUzivatele } from '@/lib/mazani';
 import { jeZpusobSmazani } from '@/lib/archiv';
 import { odstranUzivatele } from '@/lib/archivServer';
-import { sjednotLokace } from '@/lib/lokaceHercu';
 
 const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE', 'ROBOT'] as const;
 const COMPANY_REQUIRED_ROLES: string[] = ['CLIENT'];
@@ -64,7 +63,7 @@ function readFormData(formData: FormData) {
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
     dostavaObjednavky: has('dostavaObjednavky') ? formData.get('dostavaObjednavky') : undefined,
-    studioLocations: has('studioLocations') ? sjednotLokace(formData.getAll('studioLocations').map(String)) : undefined,
+    studioLocations: has('studioLocations') ? formData.getAll('studioLocations').map(String) : undefined,
     birthNumber: has('birthNumber') ? formData.get('birthNumber') : undefined,
     ic: has('ic') ? formData.get('ic') : undefined,
     dic: has('dic') ? formData.get('dic') : undefined,

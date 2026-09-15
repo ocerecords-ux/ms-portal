@@ -1517,6 +1517,12 @@ model Contract {
   /// Otisk textu v okamžiku odeslání k podpisu.
   bodyHash String?
 
+  /// Odměna tak, jak ji člověk zadal při zakládání - z ní vzniká výdaj po podpisu.
+  odmenaText String?
+
+  /// Výdaj založený po podpisu smlouvy (zadání 15. 9. 2026), ať nevznikne podruhé.
+  vydajId String? @unique
+
   signatures ContractSignature[]
 
   createdAt DateTime @default(now())
