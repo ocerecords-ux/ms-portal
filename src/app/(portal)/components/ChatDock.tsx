@@ -1093,8 +1093,17 @@ function Svetlo({
       // Podklad je „bar", ne „ink": ink je barva TEXTU a v tmavem rezimu
       // zesvetla, takze by vrstva byla temer bila a bile popisky na ni
       // nebylo videt (oprava pri zkousce 15. 9. 2026).
-      className="fixed inset-0 z-[60] bg-bar/95 backdrop-blur-[2px] flex flex-col"
+      // NE NA CELOU OBRAZOVKU (zadani 15. 9. 2026: „obrazek v chatu uz se
+      // otevira, ale na celou obrazovku je to zbytecne. Muze to byt tretinovy
+      // nahled"). Vrstva jen ztmavi pozadi, samotny nahled je karta velka
+      // zhruba tretinu okna - na uzkem displeji se roztahne, at zustane
+      // citelny.
+      className="fixed inset-0 z-[60] bg-bar/70 backdrop-blur-[2px] flex items-center justify-center p-4"
     >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-[min(92vw,max(340px,34vw))] max-h-[70vh] bg-bar rounded-card shadow-lg border border-white/15 flex flex-col overflow-hidden"
+      >
       <div className="flex items-center gap-3 px-4 py-3 text-white" onClick={(e) => e.stopPropagation()}>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-heading font-semibold truncate">{p.name}</span>
@@ -1151,6 +1160,7 @@ function Svetlo({
             <Chevron direction="right" />
           </button>
         )}
+      </div>
       </div>
     </div>,
     document.body,

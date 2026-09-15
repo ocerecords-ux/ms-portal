@@ -9,8 +9,6 @@ import { VyberFirmy, type FirmaVolba } from '../../VyberFirmy';
 import { NahledDokladu } from '../../NahledDokladu';
 import { SlevaPole } from '../../SlevaPole';
 import {
-import { VyberPole } from '@/components/VyberPole';
-import { DatumPole } from '@/components/DatumPole';
   CURRENCIES,
   CURRENCY_LABELS,
   CURRENCY_NAMES,
@@ -22,6 +20,8 @@ import { DatumPole } from '@/components/DatumPole';
   OFFER_STATUS_LABELS,
   formatAddress,
 } from '@/lib/doklady';
+import { DatumPole } from '@/components/DatumPole';
+import { VyberPole } from '@/components/VyberPole';
 
 type Item = {
   description: string;

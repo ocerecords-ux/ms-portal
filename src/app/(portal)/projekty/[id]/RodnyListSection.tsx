@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-import { DatumPole } from '@/components/DatumPole';
   missingRodnyListFields,
   rodnyListFileName,
   rodnyListVersionLabel,
 } from '@/lib/rodnyList';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * Záložka „Rodný list" na detailu projektu - zadání 9. 9. 2026.

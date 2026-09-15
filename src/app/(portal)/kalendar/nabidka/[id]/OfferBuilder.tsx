@@ -3,8 +3,6 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-import { VyberPole } from '@/components/VyberPole';
-import { DatumPole } from '@/components/DatumPole';
   RECORDING_STATUS_CLASSES,
   RECORDING_STATUS_LABELS,
   SLOT_STATE_LABELS,
@@ -14,6 +12,8 @@ import { DatumPole } from '@/components/DatumPole';
   overlaps,
   zonedToUtc,
 } from '@/lib/calendar';
+import { DatumPole } from '@/components/DatumPole';
+import { VyberPole } from '@/components/VyberPole';
 
 type Request = {
   id: string;
