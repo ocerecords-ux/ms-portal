@@ -56,50 +56,22 @@ export function BonusyPanel({ bonusy, muzeSchvalovat }: { bonusy: Bonus[]; muzeS
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
-  const [prepocet, setPrepocet] = useState<string | null>(null);
-  const [prepocitavam, setPrepocitavam] = useState(false);
-
-  /** Dohnat knihy schválené dřív, než portál bonusy uměl. */
-  async function prepocitej() {
-    setPrepocitavam(true);
-    setChyba(null);
-    setPrepocet(null);
-    try {
-      const res = await fetch('/api/admin/bonusy/prepocet', { method: 'POST' });
-      const data = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        projektu?: number;
-        pribylo?: number;
-      };
-      if (!res.ok) {
-        setChyba(data?.error || 'Přepočet se nepodařil.');
-        return;
-      }
-      setPrepocet(
-        data.pribylo
-          ? `Prošlo ${data.projektu} hotových knih, přibylo ${data.pribylo} návrhů.`
-          : `Prošlo ${data.projektu} hotových knih, nic nového nepřibylo.`,
-      );
-      router.refresh();
-    } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
-    } finally {
-      setPrepocitavam(false);
-    }
-  }
-
   const cekaji = bonusy.filter((b) => b.stav === 'NAVRZENO');
   const rozhodnute = bonusy.filter((b) => b.stav !== 'NAVRZENO');
 
-  async function rozhodni(id: string, akce: 'schvalit' | 'zamitnout' | 'zpet') {
+  /** „smazat" zahodi navrh uplne; zbytek je rozhodnuti. */
+  async function rozhodni(id: string, akce: 'schvalit' | 'zamitnout' | 'zpet' | 'smazat') {
     setBusyId(id);
     setChyba(null);
     try {
-      const res = await fetch(`/api/bonusy/${id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ akce }),
-      });
+      const res =
+        akce === 'smazat'
+          ? await fetch(`/api/bonusy/${id}`, { method: 'DELETE' })
+          : await fetch(`/api/bonusy/${id}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ akce }),
+            });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setChyba((data as { error?: string })?.error || 'Nepodařilo se to uložit.');
@@ -117,36 +89,16 @@ export function BonusyPanel({ bonusy, muzeSchvalovat }: { bonusy: Bonus[]; muzeS
     <div className="flex flex-col gap-5">
       <p className="text-sm font-body text-muted m-0 max-w-[80ch]">
         {muzeSchvalovat
-          ? 'Portál navrhne bonus sám, jakmile projekt přejde do stavu „Schváleno - k fakturaci" a zvukař na něm udělal aspoň 90 % střihu. Přiznat ho musí člověk — dokud tady nikdo neklepne na Schválit, je to jen návrh.'
+          ? 'Portál navrhne bonus sám, když projekt poprvé přejde do stavu „Dokončeno - ke schválení" a zvukař na něm udělal aspoň 90 % střihu. Přiznat ho musí člověk — dokud tady nikdo neklepne na Schválit, je to jen návrh.'
           : 'Bonus za audioknihu navrhuje portál sám, když na ní uděláte aspoň 90 % střihu. Přiznává ho Žůžo-labůžo.'}
       </p>
-
-      {muzeSchvalovat && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <button
-            type="button"
-            onClick={() => void prepocitej()}
-            disabled={prepocitavam}
-            className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:border-brand-purple transition-colors disabled:opacity-60"
-          >
-            {prepocitavam ? 'Procházím…' : 'Projít hotové knihy'}
-          </button>
-          <span className="text-xs font-body text-muted">
-            Dožene návrhy u knih schválených dřív, než portál bonusy uměl. Nic nepřepisuje ani neschvaluje.
-          </span>
-        </div>
-      )}
-
-      {prepocet && (
-        <p className="text-sm text-ink bg-tint border border-line rounded-lg px-3 py-2 m-0">{prepocet}</p>
-      )}
 
       {chyba && (
         <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{chyba}</p>
       )}
 
       <Tabulka
-        nadpis={muzeSchvalovat ? 'Čeká na schválení' : 'Čeká na schválení'}
+        nadpis="Čeká na schválení"
         bonusy={cekaji}
         prazdno="Teď není co schvalovat."
         muzeSchvalovat={muzeSchvalovat}
@@ -181,7 +133,7 @@ function Tabulka({
   prazdno: string;
   muzeSchvalovat: boolean;
   busyId: string | null;
-  rozhodni: (id: string, akce: 'schvalit' | 'zamitnout' | 'zpet') => void;
+  rozhodni: (id: string, akce: 'schvalit' | 'zamitnout' | 'zpet' | 'smazat') => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -260,6 +212,17 @@ function Tabulka({
                           className="text-danger text-xs font-heading disabled:opacity-60"
                         >
                           Zamítnout
+                        </button>
+                        {/* Smazat = „tenhle navrh sem vubec nepatri".
+                            Zamitnuty bonus zustava v historii, smazany ne. */}
+                        <button
+                          type="button"
+                          onClick={() => rozhodni(b.id, 'smazat')}
+                          disabled={busyId === b.id}
+                          title="Zahodit návrh úplně"
+                          className="text-muted text-xs font-heading hover:text-danger disabled:opacity-60"
+                        >
+                          Smazat
                         </button>
                       </span>
                     )}

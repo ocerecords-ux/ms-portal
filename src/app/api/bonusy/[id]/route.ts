@@ -70,3 +70,27 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Rozhodnutí se nepodařilo uložit.' }, { status: 500 });
   }
 }
+
+/**
+ * Smazání NÁVRHU (zadání 15. 9. 2026: „pojďme to vynulovat a spustit ty
+ * bonusy až od teď").
+ *
+ * Jen návrh, se kterým se ještě nic nestalo. Schválený ani zamítnutý bonus
+ * smazat nejde - to by zahodilo stopu, že se o penězích rozhodovalo; ten se
+ * vrací tlačítkem „Vrátit k rozhodnutí".
+ */
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
+  if (session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Bonusy spravuje Žůžo-labůžo.' }, { status: 403 });
+  }
+
+  const smazano = await prisma.bonusZvukare.deleteMany({
+    where: { id: params.id, stav: 'NAVRZENO' },
+  });
+  if (smazano.count === 0) {
+    return NextResponse.json({ error: 'Smazat jde jen návrh, o kterém se ještě nerozhodlo.' }, { status: 409 });
+  }
+  return NextResponse.json({ ok: true });
+}

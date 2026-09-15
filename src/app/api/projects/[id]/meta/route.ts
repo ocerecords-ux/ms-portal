@@ -10,8 +10,12 @@ import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
 import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
 import { navrhniBonusyZaProjekt } from '@/lib/bonusyServer';
 
-/** Stav, pri kterem portal navrhne bonus zvukari (zadani 15. 9. 2026). */
-const STAV_PRO_BONUS = 'Schváleno - k fakturaci';
+/**
+ * Stav, pri kterem portal navrhne bonus zvukari (zadani 15. 9. 2026,
+ * upresneno tyz den: „spustit ty bonusy az od ted - od prvniho preklopeni
+ * stavu na Dokonceno - ke schvaleni").
+ */
+const STAV_PRO_BONUS = 'Dokončeno - ke schválení';
 import { uzavriDotazyProjektu } from '@/lib/dotazyServer';
 import { isActiveProjectStatus } from '@/lib/projectTypes';
 import { zapisZmenyProjektu, type CitelnaJmena } from '@/lib/projektLogServer';
@@ -364,12 +368,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
 
       /**
-       * NÁVRH BONUSU ZVUKAŘI (zadání 15. 9. 2026). Až tady, protože do
-       * schválení nahrávek se podíl na střihu mění s každým výkazem.
-       * Portál bonus jen NAVRHNE - přiznat ho musí člověk v záložce
-       * Bonusy ke schválení.
+       * NÁVRH BONUSU ZVUKAŘI (zadání 15. 9. 2026).
+       *
+       * Jen při PRVNÍM překlopení do „Dokončeno - ke schválení": v tu chvíli
+       * je střih hotový a podíl platí. Uložení téhož stavu podruhé (formulář
+       * posílá všechna pole) už nic nedělá, a u projektu, který je ukončený,
+       * se bonus neřeší vůbec — zpětně se nic nedohání.
+       *
+       * Portál bonus jen NAVRHNE; přiznat ho musí člověk v záložce Bonusy
+       * ke schválení.
        */
-      if (data.statusName === STAV_PRO_BONUS) {
+      if (stavSeZmenil && !pred?.finished && data.statusName === STAV_PRO_BONUS) {
         void navrhniBonusyZaProjekt(params.id).catch(() => undefined);
       }
 

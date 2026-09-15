@@ -104,16 +104,18 @@ export default async function TimesheetsPage({
   const keSchvaleni = bonusy.filter((b) => b.stav === 'NAVRZENO').length;
   const naBonusech = searchParams?.zalozka === 'bonusy';
 
+  // Stejna sazba jako mesicni zalozky uvnitr vykazu - at je na prvni pohled
+  // videt, ze je to zalozka, ne tlacitko (zadani 15. 9. 2026).
   const zalozkaClass = (aktivni: boolean) =>
-    `px-4 py-2 rounded-lg text-sm font-heading font-semibold no-underline transition-colors ${
-      aktivni ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-muted hover:text-ink'
+    `px-4 py-2.5 text-sm font-heading font-semibold rounded-t-lg -mb-px border border-b-0 no-underline transition-colors ${
+      aktivni ? 'bg-surface border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
     }`;
 
   return (
     <div className="flex flex-col gap-6">
       {/* Zalozky nad celou strankou. Drzi se v adrese, ne ve stavu - odznak
           v liste na ni tak muze rovnou odkazat. */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-1 flex-wrap border-b border-line">
         <Link href="/vykazy" className={zalozkaClass(!naBonusech)}>
           Výkazy
         </Link>
