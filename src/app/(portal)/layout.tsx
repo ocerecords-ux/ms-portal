@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/db';
+import { pocetOtevrenychPripominek } from '@/lib/pripominkyServer';
 import { pocetBonusuKeSchvaleni } from '@/lib/bonusyServer';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from './components/Topbar';
@@ -76,6 +77,8 @@ export default async function PortalLayout({ children }: { children: React.React
   // Bonusy ke schvaleni do odznaku v liste (zadani 15. 9. 2026). Vlastni
   // dotaz mimo blok vys: kdyz nevyjde, lista se kvuli nemu nema rozbit.
   const bonusyKeSchvaleni = role === 'ADMIN' ? await pocetBonusuKeSchvaleni() : 0;
+  // Pripominky k portalu ceka vyridit jen Zuzo-labuzo (zadani 15. 9. 2026).
+  const pripominkyKVyrizeni = role === 'ADMIN' ? await pocetOtevrenychPripominek() : 0;
 
   return (
     <JazykProvider jazyk={jazyk}>
@@ -89,6 +92,7 @@ export default async function PortalLayout({ children }: { children: React.React
         pageOptions={pageOptionsFor(role)}
         unreadNotifications={unread}
         odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
+        pripominky={pripominkyKVyrizeni}
       />
       {/* Panel Úkolů je připnutý na pravé hraně okna, takže obsahu vpravo
           uvolníme místo - jinak se přes něj tabulky "usekávaly"

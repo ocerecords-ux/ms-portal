@@ -534,3 +534,49 @@ export async function zkusUloziste(): Promise<{
     };
   }
 }
+
+/** Printscreen u připomínky uložený v databázi nesmí nafouknout řádek. */
+const MAX_INLINE_SCREENSHOT_BYTES = 900 * 1024;
+
+/**
+ * Printscreen k připomínce k portálu (zadání 15. 9. 2026: „s možností, že by
+ * mohli přiložit i printscreeny").
+ *
+ * Stejný princip jako u příloh výdajů a fotek: když je nastavené S3/R2, jde
+ * obrázek tam; když ne, uloží se jako data URL do databáze. Prohlížeč ho před
+ * odesláním zmenší na 1600 px na šířku, takže jde o desítky až stovky kB.
+ */
+export async function uploadPripominkaObrazek(
+  buffer: Buffer,
+  nazev: string,
+  typSouboru?: string,
+): Promise<{ url: string; name: string } | { error: string }> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+
+  if (client && bucket) {
+    try {
+      const key = `pripominky/${randomUUID()}-${bezpecnyNazev(nazev)}`;
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: typSouboru || 'image/png',
+        }),
+      );
+      const endpoint = process.env.S3_ENDPOINT;
+      const url = endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
+      return { url, name: nazev };
+    } catch (err) {
+      console.error('uploadPripominkaObrazek: S3 selhalo, ukladam do databaze:', err);
+    }
+  }
+
+  if (buffer.byteLength > MAX_INLINE_SCREENSHOT_BYTES) {
+    return { error: 'Obrázek je moc velký. Zkuste ho oříznout jen na tu část obrazovky, o kterou jde.' };
+  }
+
+  const mime = typSouboru || 'image/png';
+  return { url: `data:${mime};base64,${buffer.toString('base64')}`, name: nazev };
+}

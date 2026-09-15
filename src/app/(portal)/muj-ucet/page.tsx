@@ -5,6 +5,8 @@ import { prisma } from '@/lib/db';
 import { ROLE_LABELS, isInternalRole } from '@/lib/roles';
 import { MyAccountForm } from './MyAccountForm';
 import { FakturaceKarta } from './FakturaceKarta';
+import { PripominkyKarta } from './PripominkyKarta';
+import { mojePripominky, vsechnyPripominky } from '@/lib/pripominkyServer';
 
 // "Můj účet" - kazdy prihlaseny uzivatel si tu upravi svoje udaje (zadani
 // 5. 9. 2026). Role, kod uctu a firma jsou tu jen k precteni; menit je smi
@@ -26,6 +28,13 @@ export default async function MyAccountPage() {
   if (!user) redirect('/login');
 
   const internal = isInternalRole(user.role);
+
+  // Zpetna vazba k portalu (zadani 15. 9. 2026): vsechny pripominky vidi jen
+  // Zuzo-labuzo ve svem profilu, kazdy jiny tu ma jen svoje.
+  const jsemSpravce = user.role === 'ADMIN';
+  const pripominky = jsemSpravce
+    ? await vsechnyPripominky()
+    : { otevrene: await mojePripominky(user.id), hotove: [] };
 
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
@@ -77,6 +86,12 @@ export default async function MyAccountPage() {
           }}
         />
       )}
+
+      <PripominkyKarta
+        otevrene={pripominky.otevrene}
+        hotove={pripominky.hotove}
+        jsemSpravce={jsemSpravce}
+      />
     </section>
   );
 }

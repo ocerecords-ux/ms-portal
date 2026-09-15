@@ -9,6 +9,7 @@ import { initials } from '@/lib/chat';
 import { NotificationBell } from './NotificationBell';
 import { ThemeToggle } from './ThemeToggle';
 import { PrepinacJazyka } from './PrepinacJazyka';
+import { ZpetnaVazba } from './ZpetnaVazba';
 import { useJazyk, usePreklad } from './JazykProvider';
 import { nazevOdkazu } from '@/lib/jazyk';
 import { IkonaListy } from '@/lib/ikonyListy';
@@ -32,6 +33,7 @@ export function Topbar({
   pageOptions,
   unreadNotifications = 0,
   odznaky,
+  pripominky = 0,
 }: {
   userLabel: string;
   /** Fotka z karty uživatele; bez ní se ukážou iniciály. */
@@ -49,6 +51,8 @@ export function Topbar({
    * s číslem"). Nula se nekreslí - odznak má znamenat „něco na tebe čeká".
    */
   odznaky?: Record<string, number>;
+  /** Kolik připomínek k portálu čeká na vyřízení (jen Žůžo-labůžo). */
+  pripominky?: number;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -356,6 +360,9 @@ export function Topbar({
           v liste (Firmy, Uzivatele, Ceniky, Doklady). */}
       <div className="order-2 sm:order-3 flex items-center gap-1 sm:gap-2 shrink-0">
         <PrepinacJazyka />
+        {/* Pripominka k portalu (zadani 15. 9. 2026) - vedle zvonku, at je
+            po ruce na kazde strance. */}
+        <ZpetnaVazba odznak={pripominky} />
         <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
         <Link

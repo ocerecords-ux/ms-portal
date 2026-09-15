@@ -225,6 +225,9 @@ model User {
   /// (zadani 15. 9. 2026 - viz model BonusZvukare).
   bonusy BonusZvukare[] @relation("BonusZvukare")
 
+  /// Pripominky k portalu, ktere tenhle clovek poslal (zadani 15. 9. 2026).
+  pripominky PripominkaPortalu[] @relation("PripominkyPortalu")
+
   // --- Herec - zadani 5. 9. 2026: samostatna fyzicka osoba, bez firmy ---
   /// Projekty, ve kterych herec hraje (zadani 10. 9. 2026, vic hercu na projekt).
   projektyJakoHerec ProjectMeta[] @relation("ProjektHerci")
@@ -2311,4 +2314,68 @@ model PreposlechUdalost {
   createdAt       DateTime @default(now())
 
   @@index([caflouProjectId, createdAt])
+}
+
+
+// ---------------------------------------------------------------------------
+// ZPETNA VAZBA K PORTALU (zadani 15. 9. 2026: „potreboval bych vymyslet
+// nejakou zpetnou vazbu k portalu. Me by se objevoval nejaky seznam - to do
+// list, roztrideny od kazdeho uzivatele a vsechny pripominky bych videl jen
+// ja ve svem profilu. Uzivatele by to psali jako jednotlive polozky
+// s moznosti, ze by mohli prilozit i printscreeny. Ja bych si to pak jen
+// odskrtaval a jim by to mizelo.")
+// ---------------------------------------------------------------------------
+
+enum StavPripominky {
+  NOVA
+  HOTOVA
+}
+
+/// Jedna pripominka k portalu. Pise ji kdokoliv, cte je jen Zuzo-labuzo.
+model PripominkaPortalu {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("PripominkyPortalu", fields: [userId], references: [id], onDelete: Cascade)
+
+  text String @db.Text
+
+  /// Kde v portalu to bylo - adresa stranky, ze ktere pripominka odesla.
+  /// Sami od sebe to lidi nenapisou a bez toho se pulka pripominek nedohleda.
+  odkud String?
+
+  stav StavPripominky @default(NOVA)
+
+  /// Odskrtnuti: kdy, kdo a pripadna poznamka („opraveno", „nedela se").
+  hotovoAt     DateTime?
+  hotovoById   String?
+  hotovoJmeno  String?
+  poznamka     String?
+
+  /// Podobna pripominka, ke ktere se tahle pripojila. Duplicit je u zpetne
+  /// vazby vic nez cehokoliv jineho - portal na ne upozorni pri psani a kdo
+  /// chce, pripoji se k existujici misto zakladani dalsi.
+  podobnaId String?
+
+  prilohy PripominkaPriloha[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([stav])
+  @@index([podobnaId])
+}
+
+/// Printscreen k pripomince. Stejne uloziste jako prilohy vydaju - kdyz neni
+/// nastavene S3, ulozi se obrazek jako data URL primo do databaze.
+model PripominkaPriloha {
+  id           String            @id @default(cuid())
+  pripominkaId String
+  pripominka   PripominkaPortalu @relation(fields: [pripominkaId], references: [id], onDelete: Cascade)
+
+  url   String @db.Text
+  nazev String
+
+  createdAt DateTime @default(now())
+
+  @@index([pripominkaId])
 }

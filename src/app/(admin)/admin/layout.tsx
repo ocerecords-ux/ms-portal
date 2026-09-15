@@ -8,6 +8,7 @@ import { ChatDock } from '@/app/(portal)/components/ChatDock';
 import { PoutkoDoku } from '@/app/(portal)/components/PoutkoDoku';
 import { NeprecteneVedleDoku } from '@/app/(portal)/components/NeprecteneVedleDoku';
 import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
+import { pocetOtevrenychPripominek } from '@/lib/pripominkyServer';
 import { pocetBonusuKeSchvaleni } from '@/lib/bonusyServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { loadQuickActions } from '@/lib/quickActionsServer';
@@ -23,12 +24,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== 'ADMIN') redirect('/login');
 
-  const [entries, tasks, quickActions, bonusyKeSchvaleni] = await Promise.all([
+  const [entries, tasks, quickActions, bonusyKeSchvaleni, pripominkyKVyrizeni] = await Promise.all([
     loadMenuEntries(session.user.id),
     loadMyTasks(session.user.id, session.user.role),
     loadQuickActions(session.user.id, session.user.role),
     // Odznak u Vykazu - viz zadani 15. 9. 2026.
     pocetBonusuKeSchvaleni(),
+    // Odznak u bubliny se zpetnou vazbou - viz zadani 15. 9. 2026.
+    pocetOtevrenychPripominek(),
   ]);
 
   return (
@@ -38,6 +41,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         items={visibleFor(entries, 'ADMIN')}
         pageOptions={pageOptionsFor('ADMIN')}
         odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
+        pripominky={pripominkyKVyrizeni}
       />
       {/* Od 5. 9. 2026 stejne siroky obsah jako v klientske casti portalu
           (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.
