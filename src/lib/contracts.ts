@@ -163,12 +163,17 @@ export function expandPlaceholders(body: string, values: Record<string, string |
    * ať po smazané hodnotě nezůstane prázdné tučné místo.
    */
   const znacka = '(?:\\*\\*)?\u0000(?:\\*\\*)?';
-  return doplneny
-    .replace(new RegExp(`[ \\t]*[,;–-][ \\t]*${znacka}`, 'g'), '')
-    .replace(new RegExp(znacka, 'g'), '…')
-    .replace(/\*{4}/g, '**')
-    .replace(/[ \t]{2,}/g, ' ')
-    .replace(/[ \t]+([.,;:])/g, '$1');
+  return (
+    doplneny
+      // Tučný úsek, ve kterém chybí hodnota („**{{splatnost}} dnů**"), přijde
+      // o hvězdičky celý - jinak by po vypuštění zůstala jedna viset v textu.
+      .replace(new RegExp('\\*\\*([^*\\n]*\u0000[^*\\n]*)\\*\\*', 'g'), '$1')
+      .replace(new RegExp(`[ \\t]*[,;–-][ \\t]*${znacka}`, 'g'), '')
+      .replace(new RegExp(znacka, 'g'), '…')
+      .replace(/\*{4}/g, '**')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/[ \t]+([.,;:])/g, '$1')
+  );
 }
 
 /**
