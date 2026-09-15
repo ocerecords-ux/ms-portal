@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { MAX_DELKA_TEXTU, MAX_PRILOH, type PodobnaPripominka } from '@/lib/pripominky';
 
@@ -33,6 +33,18 @@ export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
   const [hotovo, setHotovo] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const souborRef = useRef<HTMLInputElement>(null);
+  const tlacitkoRef = useRef<HTMLButtonElement>(null);
+  // Panel se kresli na PEVNE pozici u praveho okraje okna, ne pod tlacitkem.
+  // Bublina sedi uprostred ovladacich prvku, takze v uzkem okne by panel
+  // zakotveny na jeji pravou hranu vylezl vlevo z obrazovky (zkouska
+  // 15. 9. 2026 - chybel zacatek kazdeho radku).
+  const [shora, setShora] = useState(64);
+
+  useLayoutEffect(() => {
+    if (!otevreno) return;
+    const misto = tlacitkoRef.current?.getBoundingClientRect();
+    if (misto) setShora(misto.bottom + 8);
+  }, [otevreno]);
 
   // Hlídání duplicit - se zpožděním, ať se neptáme po každém písmenu.
   useEffect(() => {
@@ -98,6 +110,7 @@ export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
   return (
     <div className="relative">
       <button
+        ref={tlacitkoRef}
         type="button"
         onClick={() => (otevreno ? zavri() : setOtevreno(true))}
         title="Připomínka k portálu"
@@ -118,7 +131,10 @@ export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
       </button>
 
       {otevreno && (
-        <div className="absolute right-0 mt-2 w-[420px] max-w-[92vw] bg-surface border border-line rounded-card shadow-lg p-4 z-50 flex flex-col gap-3">
+        <div
+          style={{ top: shora }}
+          className="fixed right-3 sm:right-6 w-[420px] max-w-[calc(100vw-24px)] bg-surface border border-line rounded-card shadow-lg p-4 z-50 flex flex-col gap-3"
+        >
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-heading font-semibold text-sm text-ink m-0">Připomínka k portálu</h3>
