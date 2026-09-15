@@ -23,6 +23,12 @@ import { durationMinutes } from '@/lib/timesheets';
 export const PODIL_PRO_BONUS = 90;
 
 /**
+ * Stavy, ve kterých je kniha hotová a bonus má smysl řešit. „Vyfakturováno"
+ * je tu kvůli knihám, které mezitím prošly dál - viz prepoctiBonusyHotovych.
+ */
+export const STAVY_S_BONUSEM = ['Schváleno - k fakturaci', 'Vyfakturováno'] as const;
+
+/**
  * Projde projekt a na každého zvukaře, který splnil podmínku, založí návrh
  * bonusu. Vrací, kolik návrhů přibylo.
  *
@@ -99,6 +105,28 @@ export async function navrhniBonusyZaProjekt(caflouProjectId: string): Promise<n
     console.error(`Návrh bonusů u projektu ${caflouProjectId} selhal:`, err);
     return 0;
   }
+}
+
+/**
+ * Projde VŠECHNY hotové audioknihy a doplní chybějící návrhy.
+ *
+ * Proč to tu je: návrh vzniká při přehození stavu, takže knihy schválené
+ * dřív, než tahle funkce existovala, by bonus nedostaly nikdy. Tohle je
+ * dožene. Spouští se ručně tlačítkem v záložce Bonusy - nic nepřepisuje,
+ * jen zakládá to, co chybí.
+ */
+export async function prepoctiBonusyHotovych(): Promise<{ projektu: number; pribylo: number }> {
+  const projekty = await prisma.projectMeta.findMany({
+    where: { statusName: { in: [...STAVY_S_BONUSEM] } },
+    select: { caflouProjectId: true },
+    take: 1000,
+  });
+
+  let pribylo = 0;
+  for (const p of projekty) {
+    pribylo += await navrhniBonusyZaProjekt(p.caflouProjectId);
+  }
+  return { projektu: projekty.length, pribylo };
 }
 
 /** Kolik bonusů čeká na schválení - číslo do odznaku v liště. */

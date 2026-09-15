@@ -56,6 +56,37 @@ export function BonusyPanel({ bonusy, muzeSchvalovat }: { bonusy: Bonus[]; muzeS
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
+  const [prepocet, setPrepocet] = useState<string | null>(null);
+  const [prepocitavam, setPrepocitavam] = useState(false);
+
+  /** Dohnat knihy schválené dřív, než portál bonusy uměl. */
+  async function prepocitej() {
+    setPrepocitavam(true);
+    setChyba(null);
+    setPrepocet(null);
+    try {
+      const res = await fetch('/api/admin/bonusy/prepocet', { method: 'POST' });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        projektu?: number;
+        pribylo?: number;
+      };
+      if (!res.ok) {
+        setChyba(data?.error || 'Přepočet se nepodařil.');
+        return;
+      }
+      setPrepocet(
+        data.pribylo
+          ? `Prošlo ${data.projektu} hotových knih, přibylo ${data.pribylo} návrhů.`
+          : `Prošlo ${data.projektu} hotových knih, nic nového nepřibylo.`,
+      );
+      router.refresh();
+    } catch {
+      setChyba('Nepodařilo se spojit se serverem.');
+    } finally {
+      setPrepocitavam(false);
+    }
+  }
 
   const cekaji = bonusy.filter((b) => b.stav === 'NAVRZENO');
   const rozhodnute = bonusy.filter((b) => b.stav !== 'NAVRZENO');
@@ -89,6 +120,26 @@ export function BonusyPanel({ bonusy, muzeSchvalovat }: { bonusy: Bonus[]; muzeS
           ? 'Portál navrhne bonus sám, jakmile projekt přejde do stavu „Schváleno - k fakturaci" a zvukař na něm udělal aspoň 90 % střihu. Přiznat ho musí člověk — dokud tady nikdo neklepne na Schválit, je to jen návrh.'
           : 'Bonus za audioknihu navrhuje portál sám, když na ní uděláte aspoň 90 % střihu. Přiznává ho Žůžo-labůžo.'}
       </p>
+
+      {muzeSchvalovat && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => void prepocitej()}
+            disabled={prepocitavam}
+            className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:border-brand-purple transition-colors disabled:opacity-60"
+          >
+            {prepocitavam ? 'Procházím…' : 'Projít hotové knihy'}
+          </button>
+          <span className="text-xs font-body text-muted">
+            Dožene návrhy u knih schválených dřív, než portál bonusy uměl. Nic nepřepisuje ani neschvaluje.
+          </span>
+        </div>
+      )}
+
+      {prepocet && (
+        <p className="text-sm text-ink bg-tint border border-line rounded-lg px-3 py-2 m-0">{prepocet}</p>
+      )}
 
       {chyba && (
         <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{chyba}</p>
