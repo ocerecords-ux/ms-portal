@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/db';
+import { pocetBonusuKeSchvaleni } from '@/lib/bonusyServer';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from './components/Topbar';
 import { TaskDock } from './components/TaskDock';
@@ -72,15 +73,22 @@ export default async function PortalLayout({ children }: { children: React.React
     nouzovyRezim = true;
   }
 
+  // Bonusy ke schvaleni do odznaku v liste (zadani 15. 9. 2026). Vlastni
+  // dotaz mimo blok vys: kdyz nevyjde, lista se kvuli nemu nema rozbit.
+  const bonusyKeSchvaleni = role === 'ADMIN' ? await pocetBonusuKeSchvaleni() : 0;
+
   return (
     <JazykProvider jazyk={jazyk}>
     <div className="min-h-screen bg-paper">
+      {/* odznaky: kolik bonusu ceka na schvaleni u odkazu Vykazy (zadani
+          15. 9. 2026). Tyka se jen Zuzo-labuzo - zvukar bonusy neschvaluje. */}
       <Topbar
         userLabel={session.user.name || session.user.email}
         userPhotoUrl={odkazNaFotku(session.user.id, ucet?.maFotku)}
         items={visibleFor(entries, role)}
         pageOptions={pageOptionsFor(role)}
         unreadNotifications={unread}
+        odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
       />
       {/* Panel Úkolů je připnutý na pravé hraně okna, takže obsahu vpravo
           uvolníme místo - jinak se přes něj tabulky "usekávaly"

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -5,13 +6,18 @@ import { prisma } from '@/lib/db';
 import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { DEFAULT_HOURLY_RATE } from '@/lib/timesheets';
 import { TimesheetEditor } from './TimesheetEditor';
+import { BonusyPanel, type Bonus } from './BonusyPanel';
 
 // Výkazy zvukařů (zadani 6. 9. 2026). Vidi je zvukar (VYHRADNE svoje) a
 // Zuzo-labuzo (vsechny, jen ke cteni - vykazy si nedela) - produkce ani
 // klienti se sem nedostanou.
 export const dynamic = 'force-dynamic';
 
-export default async function TimesheetsPage() {
+export default async function TimesheetsPage({
+  searchParams,
+}: {
+  searchParams?: { zalozka?: string };
+}) {
   const session = await getServerSession(authOptions);
   const role = session?.user?.role;
   if (!session?.user?.id || (role !== 'ZVUKAR' && role !== 'ADMIN')) redirect('/projekty');
@@ -64,7 +70,66 @@ export default async function TimesheetsPage() {
       })()
     : [];
 
+  /**
+   * BONUSY ZVUKAŘŮ (zadání 15. 9. 2026: „na tyto bonusy bych udělal zvlášť
+   * záložku ve výkazech: Bonusy ke schválení").
+   *
+   * Žůžo-labůžo vidí všechny, zvukař jen svoje - filtruje se v dotazu, ne až
+   * v prohlížeči, stejně jako u výkazů samotných.
+   */
+  const bonusyRaw = await prisma.bonusZvukare
+    .findMany({
+      where: isAdmin ? {} : { userId: session.user.id },
+      orderBy: [{ stav: 'asc' }, { navrzenoAt: 'desc' }],
+      take: 300,
+      include: { user: { select: { name: true, email: true } } },
+    })
+    .catch(() => []);
+
+  const bonusy: Bonus[] = bonusyRaw.map((b) => ({
+    id: b.id,
+    projectId: b.caflouProjectId,
+    projectName: b.projectName,
+    userLabel: b.user.name || b.user.email,
+    castka: b.castka,
+    podilProcent: b.podilProcent,
+    minutZvukare: b.minutZvukare,
+    minutCelkem: b.minutCelkem,
+    stav: b.stav,
+    navrzenoAt: b.navrzenoAt.toISOString(),
+    rozhodnutoAt: b.rozhodnutoAt ? b.rozhodnutoAt.toISOString() : null,
+    rozhodlJmeno: b.rozhodlJmeno,
+    vlastni: b.userId === session.user.id,
+  }));
+  const keSchvaleni = bonusy.filter((b) => b.stav === 'NAVRZENO').length;
+  const naBonusech = searchParams?.zalozka === 'bonusy';
+
+  const zalozkaClass = (aktivni: boolean) =>
+    `px-4 py-2 rounded-lg text-sm font-heading font-semibold no-underline transition-colors ${
+      aktivni ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-muted hover:text-ink'
+    }`;
+
   return (
+    <div className="flex flex-col gap-6">
+      {/* Zalozky nad celou strankou. Drzi se v adrese, ne ve stavu - odznak
+          v liste na ni tak muze rovnou odkazat. */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Link href="/vykazy" className={zalozkaClass(!naBonusech)}>
+          Výkazy
+        </Link>
+        <Link href="/vykazy?zalozka=bonusy" className={zalozkaClass(naBonusech)}>
+          {isAdmin ? 'Bonusy ke schválení' : 'Moje bonusy'}
+          {keSchvaleni > 0 && (
+            <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-pill bg-danger text-white text-[11px] tabular-nums">
+              {keSchvaleni}
+            </span>
+          )}
+        </Link>
+      </div>
+
+      {naBonusech ? (
+        <BonusyPanel bonusy={bonusy} muzeSchvalovat={isAdmin} />
+      ) : (
     <TimesheetEditor
       isAdmin={isAdmin}
       canWrite={canWrite}
@@ -85,5 +150,7 @@ export default async function TimesheetsPage() {
         mine: e.userId === session.user.id,
       }))}
     />
+      )}
+    </div>
   );
 }

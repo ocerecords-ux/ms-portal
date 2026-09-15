@@ -8,6 +8,10 @@ import { jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
 import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
+import { navrhniBonusyZaProjekt } from '@/lib/bonusyServer';
+
+/** Stav, pri kterem portal navrhne bonus zvukari (zadani 15. 9. 2026). */
+const STAV_PRO_BONUS = 'Schváleno - k fakturaci';
 import { uzavriDotazyProjektu } from '@/lib/dotazyServer';
 import { isActiveProjectStatus } from '@/lib/projectTypes';
 import { zapisZmenyProjektu, type CitelnaJmena } from '@/lib/projektLogServer';
@@ -357,6 +361,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       const stavSeZmenil = data.statusName !== (pred?.statusName ?? null);
       if (stavSeZmenil && !pred?.finished) {
         void posliNotifikaciKeStavu(params.id, data.statusName).catch(() => undefined);
+      }
+
+      /**
+       * NÁVRH BONUSU ZVUKAŘI (zadání 15. 9. 2026). Až tady, protože do
+       * schválení nahrávek se podíl na střihu mění s každým výkazem.
+       * Portál bonus jen NAVRHNE - přiznat ho musí člověk v záložce
+       * Bonusy ke schválení.
+       */
+      if (data.statusName === STAV_PRO_BONUS) {
+        void navrhniBonusyZaProjekt(params.id).catch(() => undefined);
       }
 
       // Dokoncenym projektem se uzavira i kanal dotazu klienta (zadani

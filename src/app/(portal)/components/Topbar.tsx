@@ -30,6 +30,7 @@ export function Topbar({
   items,
   pageOptions,
   unreadNotifications = 0,
+  odznaky,
 }: {
   userLabel: string;
   /** Fotka z karty uživatele; bez ní se ukážou iniciály. */
@@ -40,6 +41,13 @@ export function Topbar({
   items: NavItem[];
   /** Stránky, které si smí do lišty přidat. */
   pageOptions: NavItem[];
+  /**
+   * Čísla k odkazům (adresa → počet). Ukazují se jako odznak vedle názvu
+   * (zadání 15. 9. 2026: „když tam přibude nový bonus, který má Petr
+   * schvalovat, tak se mu v hlavním menu u odkazu Výkazy objeví odznak
+   * s číslem"). Nula se nekreslí - odznak má znamenat „něco na tebe čeká".
+   */
+  odznaky?: Record<string, number>;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -234,6 +242,8 @@ export function Topbar({
             );
           }
 
+          const odznak = odznaky?.[item.href] ?? 0;
+
           return (
             <Link
               key={`${item.href}-${index}`}
@@ -246,6 +256,11 @@ export function Topbar({
               className={className}
             >
               {nazevOdkazu(jazyk, item.href, item.label)}
+              {odznak > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-pill bg-brand-green text-[11px] font-semibold text-[#0F2A18] tabular-nums align-middle">
+                  {odznak > 99 ? '99+' : odznak}
+                </span>
+              )}
             </Link>
           );
         })}

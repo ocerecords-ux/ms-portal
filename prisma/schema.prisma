@@ -221,6 +221,10 @@ model User {
   /// Kam se s timhle hercem doteklo natacení (vede Bruno - viz BrunoNatoceno).
   brunoNatoceno BrunoNatoceno[] @relation("BrunoNatocenoHerec")
 
+  /// Bonusy za audioknihy, ktere portal navrhl tomuhle zvukari
+  /// (zadani 15. 9. 2026 - viz model BonusZvukare).
+  bonusy BonusZvukare[] @relation("BonusZvukare")
+
   // --- Herec - zadani 5. 9. 2026: samostatna fyzicka osoba, bez firmy ---
   /// Projekty, ve kterych herec hraje (zadani 10. 9. 2026, vic hercu na projekt).
   projektyJakoHerec ProjectMeta[] @relation("ProjektHerci")
@@ -2063,6 +2067,59 @@ model VzorZpravy {
   updatedAt    DateTime @updatedAt
 
   @@id([druh, stav])
+}
+
+/// STAV NAVRZENEHO BONUSU ZVUKARE (zadani 15. 9. 2026).
+enum StavBonusu {
+  NAVRZENO
+  SCHVALENO
+  ZAMITNUTO
+}
+
+/// BONUS ZVUKARE ZA AUDIOKNIHU (zadani 15. 9. 2026: „aby nam portal
+/// automaticky navrhnul schvaleni bonusu pro zvukare u audioknih. Podminka
+/// ziskani bonusu je ta, ze zvukar ma na audioknize ve strihu splneno alespon
+/// 90 % v ramci celeho strihu").
+///
+/// Navrh vznika SAM ve chvili, kdy projekt prejde do stavu „Schvaleno -
+/// k fakturaci". Castka i podil se ulozi tak, jak vysly TEHDY - pozdejsi
+/// dopsany vykaz nebo zmena normostran uz schvalenym bonusem nehne, jinak by
+/// se cislo, ktere nekdo odklikl, pod rukama menilo.
+///
+/// Jeden radek na dvojici projekt + zvukar: druhy navrh na tehoz cloveka
+/// u tehoz projektu nema co rikat.
+model BonusZvukare {
+  id String @id @default(cuid())
+
+  caflouProjectId String
+  /// Nazev projektu textem - bonus zustane citelny i po prejmenovani.
+  projectName     String?
+
+  userId String
+  user   User   @relation("BonusZvukare", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Castka bonusu v celych Kc, z rozpoctu v okamziku navrzeni.
+  castka Int
+
+  /// Podil zvukare na strihu projektu v procentech (0-100) v okamziku navrzeni.
+  podilProcent Int
+  /// Odpracovane minuty strihu - jeho a celkove. Z nich podil vysel.
+  minutZvukare Int
+  minutCelkem  Int
+
+  stav StavBonusu @default(NAVRZENO)
+
+  navrzenoAt   DateTime  @default(now())
+  rozhodnutoAt DateTime?
+  /// Kdo bonus schvalil nebo zamitl.
+  rozhodlId     String?
+  rozhodlJmeno  String?
+  /// Duvod zamitnuti, pripadne poznamka ke schvaleni.
+  poznamka      String?
+
+  @@unique([caflouProjectId, userId])
+  @@index([stav])
+  @@index([userId])
 }
 
 /// Polozkove naklady projektu (zadani 11. 9. 2026: „do te karty mi dej treba
