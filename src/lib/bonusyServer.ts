@@ -116,16 +116,74 @@ export async function navrhniBonusyZaProjekt(caflouProjectId: string): Promise<n
  * jen zakládá to, co chybí.
  */
 export async function prepoctiBonusyHotovych(): Promise<{ projektu: number; pribylo: number }> {
+  /**
+   * Hromadne, ne projekt po projektu: pri padesati knihach by to bylo pres
+   * sto dotazu za sebou a pozadavek by vyprsel driv, nez dobehne (overeno
+   * na zivo 15. 9. 2026). Takhle jsou to ctyri dotazy plus zapisy.
+   */
   const projekty = await prisma.projectMeta.findMany({
-    where: { statusName: { in: [...STAVY_S_BONUSEM] } },
-    select: { caflouProjectId: true },
+    where: {
+      statusName: { in: [...STAVY_S_BONUSEM] },
+      pageCount: { gt: 0 },
+      company: { dealsAudiobooks: true },
+    },
+    select: { caflouProjectId: true, name: true, pageCount: true },
     take: 1000,
   });
+  if (projekty.length === 0) return { projektu: 0, pribylo: 0 };
+
+  const idProjektu = projekty.map((p) => p.caflouProjectId);
+  const [nastaveni, vykazy, uzNavrzene] = await Promise.all([
+    prisma.budgetSettings.findUnique({ where: { id: 'default' } }),
+    prisma.timesheetEntry.findMany({
+      where: { caflouProjectId: { in: idProjektu }, workType: 'EDITING' },
+      select: { caflouProjectId: true, userId: true, startMinutes: true, endMinutes: true },
+    }),
+    prisma.bonusZvukare.findMany({
+      where: { caflouProjectId: { in: idProjektu } },
+      select: { caflouProjectId: true, userId: true },
+    }),
+  ]);
+
+  const uz = new Set(uzNavrzene.map((b) => `${b.caflouProjectId}|${b.userId}`));
+  const strih = new Map<string, Map<string, number>>();
+  for (const v of vykazy) {
+    if (!v.caflouProjectId) continue;
+    const podleZvukare = strih.get(v.caflouProjectId) ?? new Map<string, number>();
+    podleZvukare.set(v.userId, (podleZvukare.get(v.userId) ?? 0) + durationMinutes(v.startMinutes, v.endMinutes));
+    strih.set(v.caflouProjectId, podleZvukare);
+  }
 
   let pribylo = 0;
-  for (const p of projekty) {
-    pribylo += await navrhniBonusyZaProjekt(p.caflouProjectId);
+  for (const projekt of projekty) {
+    const podleZvukare = strih.get(projekt.caflouProjectId);
+    if (!podleZvukare) continue;
+    const rozpocet = computeBudget(projekt.pageCount ?? 0, nastaveni ?? DEFAULT_BUDGET_SETTINGS);
+    if (rozpocet.bonus <= 0) continue;
+
+    let minutCelkem = 0;
+    for (const minut of podleZvukare.values()) minutCelkem += minut;
+    if (minutCelkem <= 0) continue;
+
+    for (const [userId, minut] of podleZvukare) {
+      if (uz.has(`${projekt.caflouProjectId}|${userId}`)) continue;
+      const podil = Math.round((minut / minutCelkem) * 100);
+      if (podil < PODIL_PRO_BONUS) continue;
+      await prisma.bonusZvukare.create({
+        data: {
+          caflouProjectId: projekt.caflouProjectId,
+          projectName: projekt.name,
+          userId,
+          castka: rozpocet.bonus,
+          podilProcent: podil,
+          minutZvukare: minut,
+          minutCelkem,
+        },
+      });
+      pribylo += 1;
+    }
   }
+
   return { projektu: projekty.length, pribylo };
 }
 
