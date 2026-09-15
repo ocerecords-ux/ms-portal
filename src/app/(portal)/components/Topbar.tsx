@@ -11,6 +11,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { PrepinacJazyka } from './PrepinacJazyka';
 import { useJazyk, usePreklad } from './JazykProvider';
 import { nazevOdkazu } from '@/lib/jazyk';
+import { IkonaListy } from '@/lib/ikonyListy';
 
 /**
  * Horní fialová lišta. Odkazy si upravuje přímo tady každý sám - tři tečky
@@ -148,6 +149,10 @@ export function Topbar({
   }
 
   const shown: NavItem[] = editing ? draft : items;
+  // Ikony jsou vzdycky zelene, i u neaktivnich odkazu (zadani 15. 9. 2026:
+  // "mely by byt zelene a nad tim napisem") - proto maji barvu natvrdo
+  // a nededi ji z odkazu, ktery je bily / pri aktivite zeleny.
+  const tridaIkony = 'w-5 h-5 sm:w-[22px] sm:h-[22px] text-brand-green shrink-0';
   const missingPages = pageOptions.filter((p) => !draft.some((d) => d.href === p.href));
 
   return (
@@ -203,7 +208,8 @@ export function Topbar({
               : item.href === '/admin'
                 ? pathname === '/admin' || pathname.startsWith('/admin/companies')
                 : pathname.startsWith(item.href);
-          const className = `pb-2 border-b-2 transition-colors ${
+          // Ikona nad nazvem (zadani 15. 9. 2026) - polozka je proto sloupec.
+          const className = `flex flex-col items-center gap-1 pb-2 border-b-2 transition-colors ${
             active ? 'text-brand-green border-brand-green' : 'text-white/90 border-transparent hover:text-white'
           }`;
 
@@ -218,8 +224,9 @@ export function Topbar({
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => onDrop(index)}
                 title="Přetažením změníte pořadí"
-                className="relative pb-2 border-b-2 border-dashed border-white/40 text-white/90 select-none cursor-grab active:cursor-grabbing"
+                className="relative flex flex-col items-center gap-1 pb-2 border-b-2 border-dashed border-white/40 text-white/90 select-none cursor-grab active:cursor-grabbing"
               >
+                <IkonaListy href={item.href} className={tridaIkony} />
                 {item.label}
                 <button
                   type="button"
@@ -237,6 +244,7 @@ export function Topbar({
           if (external) {
             return (
               <a key={`${item.href}-${index}`} href={item.href} target="_blank" rel="noreferrer" className={className}>
+                <IkonaListy href={item.href} className={tridaIkony} />
                 {item.label}
               </a>
             );
@@ -255,12 +263,15 @@ export function Topbar({
               // tomu okamžitý a Caflou to nezatěžuje.
               className={className}
             >
-              {nazevOdkazu(jazyk, item.href, item.label)}
-              {odznak > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-pill bg-brand-green text-[11px] font-semibold text-[#0F2A18] tabular-nums align-middle">
-                  {odznak > 99 ? '99+' : odznak}
-                </span>
-              )}
+              <IkonaListy href={item.href} className={tridaIkony} />
+              <span className="inline-flex items-center whitespace-nowrap">
+                {nazevOdkazu(jazyk, item.href, item.label)}
+                {odznak > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-pill bg-brand-green text-[11px] font-semibold text-[#0F2A18] tabular-nums align-middle">
+                    {odznak > 99 ? '99+' : odznak}
+                  </span>
+                )}
+              </span>
             </Link>
           );
         })}
