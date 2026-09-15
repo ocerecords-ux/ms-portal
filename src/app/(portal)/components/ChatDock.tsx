@@ -1090,7 +1090,10 @@ function Svetlo({
       aria-modal="true"
       aria-label={p.name}
       onClick={zavri}
-      className="fixed inset-0 z-[60] bg-ink/85 backdrop-blur-[2px] flex flex-col"
+      // Podklad je „bar", ne „ink": ink je barva TEXTU a v tmavem rezimu
+      // zesvetla, takze by vrstva byla temer bila a bile popisky na ni
+      // nebylo videt (oprava pri zkousce 15. 9. 2026).
+      className="fixed inset-0 z-[60] bg-bar/95 backdrop-blur-[2px] flex flex-col"
     >
       <div className="flex items-center gap-3 px-4 py-3 text-white" onClick={(e) => e.stopPropagation()}>
         <span className="min-w-0 flex-1">
