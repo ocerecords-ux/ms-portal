@@ -13,6 +13,7 @@ import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from
 import { OdznakStrany, posledniStranyHercu } from '../OdznakStrany';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 import { OdznakSelect } from '../OdznakSelect';
+import { VyberPole } from '@/components/VyberPole';
 
 /**
  * Stav, priorita a typ projektu jako barevný odznak (zadání 10. 9. 2026:
@@ -437,7 +438,7 @@ export function ProjectMetaForm({
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Stav projektu</span>
             {/* Odznak v barve stavu je ZAROVEN ovladac - stejne jako v prehledu
-                projektu (zadani 10. 9. 2026). Puvodne tu byl <select> a pod nim
+                projektu (zadani 10. 9. 2026). Puvodne tu byl <VyberPole> a pod nim
                 jeste odznak s touz hodnotou, coz byla tataz vec dvakrat. */}
             <OdznakSelect
               hodnota={values.statusName}
@@ -492,7 +493,7 @@ export function ProjectMetaForm({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Firma</span>
-            <select
+            <VyberPole
               value={values.companyId}
               onChange={(e) => set('companyId', e.target.value)}
               className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
@@ -503,7 +504,7 @@ export function ProjectMetaForm({
                   {f.label}
                 </option>
               ))}
-            </select>
+            </VyberPole>
             <span className="text-xs text-muted font-body">Pro koho se projekt dělá.</span>
           </label>
 
@@ -515,7 +516,7 @@ export function ProjectMetaForm({
           {vidiKlienta && (
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Klient</span>
-              <select
+              <VyberPole
                 value={values.klientUserId}
                 onChange={(e) => set('klientUserId', e.target.value)}
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
@@ -543,7 +544,7 @@ export function ProjectMetaForm({
                       </option>
                     ))}
                 </optgroup>
-              </select>
+              </VyberPole>
               <span className="text-xs text-muted font-body">
                 {klientNameZCaflou
                   ? `Na tuhle osobu chodí zprávy o projektu. V Caflou tu byl štítek „${klientNameZCaflou}".`
@@ -555,7 +556,7 @@ export function ProjectMetaForm({
 
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Manažer projektu</span>
-            <select
+            <VyberPole
               value={values.managerUserId}
               onChange={(e) => set('managerUserId', e.target.value)}
               className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
@@ -566,7 +567,7 @@ export function ProjectMetaForm({
                   {m.label}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
 
 

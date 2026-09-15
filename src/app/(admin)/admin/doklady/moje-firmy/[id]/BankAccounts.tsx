@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import type { Currency } from '@prisma/client';
 import { CURRENCIES, CURRENCY_LABELS, CURRENCY_NAMES } from '@/lib/doklady';
+import { VyberPole } from '@/components/VyberPole';
 
 type Account = {
   id: string;
@@ -159,7 +160,7 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Měna</span>
-              <select
+              <VyberPole
                 value={draft.currency}
                 onChange={(e) => setDraft({ ...draft, currency: e.target.value as Currency })}
                 className={inputClass}
@@ -169,7 +170,7 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
                     {CURRENCY_NAMES[c]}
                   </option>
                 ))}
-              </select>
+              </VyberPole>
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Číslo účtu</span>

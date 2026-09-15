@@ -7,6 +7,7 @@ import { AdminField } from '../../../NewCompanyForm';
 import { CountrySelect } from '../../../CountrySelect';
 import { CURRENCIES, CURRENCY_NAMES, previewNumbers } from '@/lib/doklady';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
+import { VyberPole } from '@/components/VyberPole';
 
 type Issuer = {
   id: string;
@@ -246,7 +247,7 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
         <div className="flex gap-4 flex-wrap">
           <div className="flex-1 min-w-[200px]">
             <AdminField label="Výchozí měna">
-              <select
+              <VyberPole
                 value={form.defaultCurrency}
                 onChange={(e) => set('defaultCurrency', e.target.value as Currency)}
                 className="admin-input"
@@ -256,7 +257,7 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
                     {CURRENCY_NAMES[c]}
                   </option>
                 ))}
-              </select>
+              </VyberPole>
             </AdminField>
           </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { VyberPole } from '@/components/VyberPole';
 
 /**
  * Upozornění na nové zprávy (zadání 9. 9. 2026, rozšířeno 12. 9. 2026:
@@ -409,7 +410,7 @@ function Prepinac({
 
 function Hodina({ hodnota, onZmena }: { hodnota: number; onZmena: (v: number) => void }) {
   return (
-    <select
+    <VyberPole
       value={hodnota}
       onChange={(e) => onZmena(Number(e.target.value))}
       className="rounded-lg border border-line bg-field px-2 py-1 text-xs font-heading text-ink outline-none"
@@ -419,7 +420,7 @@ function Hodina({ hodnota, onZmena }: { hodnota: number; onZmena: (v: number) =>
           {String(h).padStart(2, '0')}:00
         </option>
       ))}
-    </select>
+    </VyberPole>
   );
 }
 

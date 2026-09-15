@@ -24,6 +24,8 @@ import {
   type CalendarView,
 } from '@/lib/calendar';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 
 /** Položka rozbalovacího seznamu lidí a projektů. */
 export type Volba = { id: string; label: string; dokonceny?: boolean; nazev?: string };
@@ -290,7 +292,7 @@ export function CalendarBrowser({
           placeholder="Hledat projekt nebo herce…"
           className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple w-full sm:w-64"
         />
-        <select
+        <VyberPole
           value={filtrStavu}
           onChange={(e) => setFiltrStavu(e.target.value)}
           className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
@@ -301,7 +303,7 @@ export function CalendarBrowser({
               {label}
             </option>
           ))}
-        </select>
+        </VyberPole>
         {canManage && view !== 'mesic' && (
           <span className="text-xs font-body text-muted ml-auto">
             Dvojklikem do volného místa zapíšete událost.
@@ -864,28 +866,27 @@ function UdalostForm({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Druh</span>
-          <select value={druh} onChange={(e) => setDruh(e.target.value)} className={inputClass}>
+          <VyberPole value={druh} onChange={(e) => setDruh(e.target.value)} className={inputClass}>
             {Object.entries(BLOCK_KIND_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
                 {label}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Studio</span>
-          <select value={studioId} onChange={(e) => setStudioId(e.target.value)} className={inputClass}>
+          <VyberPole value={studioId} onChange={(e) => setStudioId(e.target.value)} className={inputClass}>
             {studios.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.shortName}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Datum</span>
-          <input
-            type="date"
+          <DatumPole
             value={datum}
             onChange={(e) => setDatum(e.target.value)}
             className={`${inputClass} tabular-nums`}

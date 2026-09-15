@@ -9,6 +9,8 @@ import { PhotoDropzone } from './PhotoDropzone';
 import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany } from '@/lib/roles';
 import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 
@@ -177,7 +179,7 @@ export function NewUserForm({
         </div>
         <div className="flex-1 min-w-[200px]">
           <AdminField label="Typ přístupu" required>
-            <select required value={role} onChange={(e) => setRole(e.target.value as Role)} className="admin-input">
+            <VyberPole required value={role} onChange={(e) => setRole(e.target.value as Role)} className="admin-input">
               {ROLE_GROUPS.map((group) => (
                 <optgroup key={group.label} label={group.label}>
                   {group.roles.map((r) => (
@@ -187,20 +189,20 @@ export function NewUserForm({
                   ))}
                 </optgroup>
               ))}
-            </select>
+            </VyberPole>
           </AdminField>
         </div>
         {needsCompany && (
           <div className="flex-1 min-w-[200px]">
             <AdminField label="Firma" required>
-              <select required value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="admin-input">
+              <VyberPole required value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="admin-input">
                 <option value="">— vyberte firmu —</option>
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </VyberPole>
             </AdminField>
           </div>
         )}
@@ -223,7 +225,7 @@ export function NewUserForm({
         <div className="flex gap-4 flex-wrap">
           <div className="flex-1 min-w-[160px]">
             <AdminField label="Datum narození">
-              <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="admin-input" />
+              <DatumPole value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="admin-input" />
             </AdminField>
           </div>
         </div>

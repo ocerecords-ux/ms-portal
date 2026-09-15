@@ -8,6 +8,8 @@ import { nazevZpusobuUhrady } from '@/lib/uctenka';
 import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
 import { formatRate, toCzkMinor } from '@/lib/cnb';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 
 type Expense = {
   id: string;
@@ -334,7 +336,7 @@ export function ExpenseEditor({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Dodavatel z Firem</span>
-            <select
+            <VyberPole
               value={form.supplierCompanyId}
               onChange={(e) => set('supplierCompanyId', e.target.value)}
               className={inputClass}
@@ -345,7 +347,7 @@ export function ExpenseEditor({
                   {c.name}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Nebo jméno dodavatele</span>
@@ -362,14 +364,14 @@ export function ExpenseEditor({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Kategorie</span>
-            <select value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={inputClass}>
+            <VyberPole value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={inputClass}>
               <option value="">— bez kategorie —</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
         </div>
 
@@ -402,17 +404,17 @@ export function ExpenseEditor({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">DPH</span>
-            <select value={form.vatRate} onChange={(e) => set('vatRate', Number(e.target.value))} className={inputClass}>
+            <VyberPole value={form.vatRate} onChange={(e) => set('vatRate', Number(e.target.value))} className={inputClass}>
               {EXPENSE_VAT_RATES.map((r) => (
                 <option key={r} value={r}>
                   {r === 0 ? 'bez DPH' : `${r} %`}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Splatnost</span>
-            <input type="date" value={form.dueDate} onChange={(e) => set('dueDate', e.target.value)} className={inputClass} />
+            <DatumPole value={form.dueDate} onChange={(e) => set('dueDate', e.target.value)} className={inputClass} />
           </label>
         </div>
 

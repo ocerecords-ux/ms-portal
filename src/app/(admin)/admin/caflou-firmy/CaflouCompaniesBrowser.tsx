@@ -9,6 +9,7 @@ import {
   CONTACT_KIND_OPTIONS,
 } from '@/lib/caflouCompanies';
 import { useRazeni, ThRadit } from '@/app/(portal)/components/RaditelnaTabulka';
+import { VyberPole } from '@/components/VyberPole';
 
 export type CaflouCompanyRow = {
   id: string;
@@ -441,7 +442,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                     )}
                   </td>
                   <td className="px-3 py-3.5 whitespace-nowrap">
-                    <select
+                    <VyberPole
                       value={item.kind}
                       disabled={busyId === item.id}
                       onChange={(e) => setKind(item.id, e.target.value as CaflouContactKind)}
@@ -452,7 +453,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
                           {CONTACT_KIND_LABELS[kind]}
                         </option>
                       ))}
-                    </select>
+                    </VyberPole>
                     {item.kindReason && (
                       <span className="block text-xs font-body text-muted/80 mt-1 max-w-[180px] whitespace-normal">
                         {item.kindReason}

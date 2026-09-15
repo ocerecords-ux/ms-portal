@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
   RECORDING_STATUS_CLASSES,
   RECORDING_STATUS_LABELS,
   SLOT_STATE_LABELS,
@@ -504,21 +506,21 @@ export function OfferBuilder({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Studio</span>
-              <select value={form.studioId} onChange={(e) => set('studioId', e.target.value)} className={inputClass}>
+              <VyberPole value={form.studioId} onChange={(e) => set('studioId', e.target.value)} className={inputClass}>
                 {studios.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
                 ))}
-              </select>
+              </VyberPole>
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Období od</span>
-              <input type="date" value={form.periodFrom} onChange={(e) => set('periodFrom', e.target.value)} className={inputClass} />
+              <DatumPole value={form.periodFrom} onChange={(e) => set('periodFrom', e.target.value)} className={inputClass} />
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Období do</span>
-              <input type="date" value={form.periodTo} onChange={(e) => set('periodTo', e.target.value)} className={inputClass} />
+              <DatumPole value={form.periodTo} onChange={(e) => set('periodTo', e.target.value)} className={inputClass} />
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Počet frekvencí</span>
@@ -572,7 +574,7 @@ export function OfferBuilder({
           <div className="flex items-end gap-2 flex-wrap">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Den</span>
-              <select value={den} onChange={(e) => setDen(e.target.value)} className={inputClass}>
+              <VyberPole value={den} onChange={(e) => setDen(e.target.value)} className={inputClass}>
                 {dny.map((d) => (
                   <option key={d} value={d}>
                     {new Intl.DateTimeFormat('cs-CZ', {
@@ -583,7 +585,7 @@ export function OfferBuilder({
                     }).format(new Date(`${d}T12:00:00.000Z`))}
                   </option>
                 ))}
-              </select>
+              </VyberPole>
             </label>
             {presets.map((p) => {
               const startIso = isoZDne(den, p.startMinutes);

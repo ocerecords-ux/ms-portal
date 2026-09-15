@@ -38,7 +38,7 @@ export const CONTRACT_STATUS_CLASSES: Record<string, string> = {
  * ani termín nejsou nikde v systému a hádat je by bylo horší než prázdné
  * místo, které je na první pohled vidět.
  */
-export const CONTRACT_PLACEHOLDERS: { key: string; label: string; rucne?: boolean }[] = [
+export const CONTRACT_PLACEHOLDERS: { key: string; label: string; rucne?: boolean; datum?: boolean }[] = [
   { key: 'cislo_smlouvy', label: 'Číslo smlouvy' },
   { key: 'nase_firma', label: 'Naše firma (název)' },
   { key: 'nase_ic', label: 'Naše IČ' },
@@ -56,7 +56,9 @@ export const CONTRACT_PLACEHOLDERS: { key: string; label: string; rucne?: boolea
   { key: 'nazev_dila', label: 'Název díla (z projektu)' },
   { key: 'datum', label: 'Dnešní datum' },
   { key: 'odmena', label: 'Odměna / cena', rucne: true },
-  { key: 'termin', label: 'Termín předání / natáčení', rucne: true },
+  // Datum se vybira z kalendare, nepise se (zadani 15. 9. 2026: „pole datum
+  // se musi dat vybrat hodnota z kalendare. Opet skrz cely portal").
+  { key: 'termin', label: 'Termín předání / natáčení', rucne: true, datum: true },
   { key: 'splatnost', label: 'Splatnost ve dnech', rucne: true },
   { key: 'rozsah_dila', label: 'Rozsah díla (co se dělá)', rucne: true },
   { key: 'uziti', label: 'Účel a území užití (reklama)', rucne: true },

@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { formatMoney, minorToInput, parseMoneyToMinor, type Totals } from '@/lib/doklady';
 import type { Currency } from '@prisma/client';
+import { VyberPole } from '@/components/VyberPole';
 
 /**
  * Sleva na dokladu (zadání 14. 9. 2026: „potřebuju u nabídek a faktur mít
@@ -75,7 +76,7 @@ export function SlevaPole({
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-2 mt-1">
       <div className="flex items-center gap-2">
-        <select
+        <VyberPole
           value={druh}
           onChange={(e) => {
             const v = e.target.value as 'ZADNA' | 'PROCENTA' | 'CASTKA';
@@ -99,7 +100,7 @@ export function SlevaPole({
           <option value="ZADNA">Bez slevy</option>
           <option value="PROCENTA">Sleva v procentech</option>
           <option value="CASTKA">Sleva pevnou částkou</option>
-        </select>
+        </VyberPole>
 
         {druh === 'PROCENTA' && (
           <div className="flex items-center gap-1.5">

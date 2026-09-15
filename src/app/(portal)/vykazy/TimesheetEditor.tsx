@@ -15,6 +15,8 @@ import {
   requiresProject,
 } from '@/lib/timesheets';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 
 type Entry = {
   id: string;
@@ -439,8 +441,7 @@ export function TimesheetEditor({
               <span className="text-sm font-body text-ink">
                 Datum <span className="text-danger">*</span>
               </span>
-              <input
-                type="date"
+              <DatumPole
                 required
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
@@ -477,7 +478,7 @@ export function TimesheetEditor({
               <span className="text-sm font-body text-ink">
                 Druh práce <span className="text-danger">*</span>
               </span>
-              <select
+              <VyberPole
                 required
                 value={form.workType}
                 onChange={(e) => {
@@ -494,7 +495,7 @@ export function TimesheetEditor({
                     {WORK_TYPE_LABELS[t]}
                   </option>
                 ))}
-              </select>
+              </VyberPole>
             </label>
 
             {needsProject && (
@@ -598,16 +599,14 @@ export function TimesheetEditor({
                 znamena „bez omezeni" - da se tak napsat i „od 1. 9. dal". */}
             <span className="flex items-center gap-1.5">
               <span className="text-xs font-heading text-muted uppercase tracking-wide">Období</span>
-              <input
-                type="date"
+              <DatumPole
                 value={odDatum}
                 onChange={(e) => setOdDatum(e.target.value)}
                 title="Od data"
                 className="rounded-lg border border-line bg-surface px-2.5 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
               />
               <span className="text-muted text-sm">–</span>
-              <input
-                type="date"
+              <DatumPole
                 value={doDatum}
                 onChange={(e) => setDoDatum(e.target.value)}
                 title="Do data"
@@ -629,7 +628,7 @@ export function TimesheetEditor({
             </span>
 
             {/* Druh prace - nataceni / strih / ostatni (zadani 15. 9. 2026). */}
-            <select
+            <VyberPole
               value={druhPrace}
               onChange={(e) => setDruhPrace(e.target.value as 'all' | WorkType)}
               className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
@@ -640,14 +639,14 @@ export function TimesheetEditor({
                   {WORK_TYPE_LABELS[t]}
                 </option>
               ))}
-            </select>
+            </VyberPole>
 
             {/* Prepinac "ciho vykazu" ma smysl jen pro Zuzo-labuzo, ktere vidi
                 cely tym. Zvukar vidi jen svoje (filtruje server), takze by mu
                 nabizel jedinou moznost. Volba "Jen moje" tu uz neni - Zuzo
                 -labuzo si vykazy nedela (zadani 6. 9. 2026). */}
             {isAdmin && people.length > 1 && (
-              <select
+              <VyberPole
                 value={userFilter}
                 onChange={(e) => setUserFilter(e.target.value)}
                 className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
@@ -658,7 +657,7 @@ export function TimesheetEditor({
                     {p.label}
                   </option>
                 ))}
-              </select>
+              </VyberPole>
             )}
             <div className="relative">
               <input

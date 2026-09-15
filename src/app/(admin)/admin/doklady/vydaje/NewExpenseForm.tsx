@@ -9,6 +9,8 @@ import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
 import { MAX_FOTKA_BYTES, ZPUSOBY_UHRADY, zaplacenoRovnou, type PrectenaUctenka } from '@/lib/uctenka';
 import { ProjectSelect, type ProjectChoice } from '../ProjectSelect';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * Zadání přijatého dokladu. Schválně jedna obrazovka bez překlikávání —
@@ -287,8 +289,7 @@ export function NewExpenseForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Datum dokladu</span>
-          <input
-            type="date"
+          <DatumPole
             required
             value={form.issueDate}
             onChange={(e) => set('issueDate', e.target.value)}
@@ -297,7 +298,7 @@ export function NewExpenseForm({
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Splatnost</span>
-          <input type="date" value={form.dueDate} onChange={(e) => set('dueDate', e.target.value)} className={inputClass} />
+          <DatumPole value={form.dueDate} onChange={(e) => set('dueDate', e.target.value)} className={inputClass} />
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Číslo dokladu</span>
@@ -315,14 +316,14 @@ export function NewExpenseForm({
             </button>
           </span>
           {novaKategorie === null ? (
-            <select value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={inputClass}>
+            <VyberPole value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={inputClass}>
               <option value="">— bez kategorie —</option>
               {kategorie.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           ) : (
             <span className="flex gap-2">
               <input
@@ -388,17 +389,17 @@ export function NewExpenseForm({
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">DPH</span>
-          <select value={form.vatRate} onChange={(e) => set('vatRate', Number(e.target.value))} className={inputClass}>
+          <VyberPole value={form.vatRate} onChange={(e) => set('vatRate', Number(e.target.value))} className={inputClass}>
             {EXPENSE_VAT_RATES.map((r) => (
               <option key={r} value={r}>
                 {r === 0 ? 'bez DPH' : `${r} %`}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Měna</span>
-          <select
+          <VyberPole
             value={form.currency}
             onChange={(e) => set('currency', e.target.value as Currency)}
             className={inputClass}
@@ -408,13 +409,13 @@ export function NewExpenseForm({
                 {CURRENCY_NAMES[c]}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
         {/* Zpusob uhrady (zadani 10. 9. 2026). Kartou a hotove je zaplaceno uz
             v okamziku vzniku dokladu, tak se rovnou prepne i prepinac vpravo. */}
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Hrazeno</span>
-          <select
+          <VyberPole
             value={form.paymentMethod}
             onChange={(e) => {
               const zpusob = e.target.value as PaymentMethod;
@@ -427,7 +428,7 @@ export function NewExpenseForm({
                 {z.nazev}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
       </div>
 

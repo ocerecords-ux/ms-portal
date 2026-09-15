@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import { BLOCK_KIND_LABELS, WEEKDAY_LABELS, formatDateTime, minutesToTime } from '@/lib/calendar';
+import { VyberPole } from '@/components/VyberPole';
 
 type Hodiny = { weekday: number; startMinutes: number; endMinutes: number; byArrangement: boolean };
 type Studio = {
@@ -266,7 +267,7 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
         <div className="flex items-end gap-3 flex-wrap">
           <label className="flex flex-col gap-1.5 w-44">
             <span className="text-sm font-body text-ink">Studio</span>
-            <select
+            <VyberPole
               value={blokace.studioId}
               onChange={(e) => setBlokace((b) => ({ ...b, studioId: e.target.value }))}
               className={inputClass}
@@ -276,7 +277,7 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
                   {s.shortName}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Od</span>
@@ -298,7 +299,7 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
           </label>
           <label className="flex flex-col gap-1.5 w-40">
             <span className="text-sm font-body text-ink">Druh</span>
-            <select
+            <VyberPole
               value={blokace.kind}
               onChange={(e) => setBlokace((b) => ({ ...b, kind: e.target.value }))}
               className={inputClass}
@@ -308,7 +309,7 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
                   {label}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
             <span className="text-sm font-body text-ink">Popis</span>

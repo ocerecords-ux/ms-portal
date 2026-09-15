@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { RECORDING_STATUS_CLASSES, RECORDING_STATUS_LABELS, formatDateTime } from '@/lib/calendar';
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 
 type Nabidka = {
   id: string;
@@ -181,7 +183,7 @@ export function RecordingSection({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Herec</span>
-              <select
+              <VyberPole
                 required
                 value={form.actorUserId}
                 onChange={(e) => set('actorUserId', e.target.value)}
@@ -193,20 +195,20 @@ export function RecordingSection({
                     {h.label}
                   </option>
                 ))}
-              </select>
+              </VyberPole>
               <span className="text-xs font-body text-muted">
                 Volba se u projektu zapamatuje — v Caflou je herec jen text.
               </span>
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Studio</span>
-              <select value={form.studioId} onChange={(e) => set('studioId', e.target.value)} className={inputClass}>
+              <VyberPole value={form.studioId} onChange={(e) => set('studioId', e.target.value)} className={inputClass}>
                 {studios.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
                 ))}
-              </select>
+              </VyberPole>
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Normostrany pro tohoto herce</span>
@@ -234,8 +236,7 @@ export function RecordingSection({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Období od</span>
-              <input
-                type="date"
+              <DatumPole
                 required
                 value={form.periodFrom}
                 onChange={(e) => set('periodFrom', e.target.value)}
@@ -244,8 +245,7 @@ export function RecordingSection({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Období do</span>
-              <input
-                type="date"
+              <DatumPole
                 required
                 value={form.periodTo}
                 onChange={(e) => set('periodTo', e.target.value)}

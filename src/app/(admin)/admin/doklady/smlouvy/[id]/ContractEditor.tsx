@@ -6,6 +6,7 @@ import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS, formatSignedAt } from 
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 import { PodpisVyber } from '../PodpisVyber';
 import { ContractPaper, type PaperSignature } from '../ContractPaper';
+import { VyberPole } from '@/components/VyberPole';
 
 type Contract = {
   id: string;
@@ -335,7 +336,7 @@ export function ContractEditor({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Protistrana (firma)</span>
-            <select
+            <VyberPole
               value={form.companyId}
               disabled={locked}
               onChange={(e) => set('companyId', e.target.value)}
@@ -347,7 +348,7 @@ export function ContractEditor({
                   {c.name}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Kdo podepisuje</span>

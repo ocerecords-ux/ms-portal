@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatCzk, formatDuration } from '@/lib/timesheets';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
+import { VyberPole } from '@/components/VyberPole';
 
 /**
  * BONUSY ZVUKAŘŮ (zadání 15. 9. 2026: „na tyto bonusy bych udělal zvlášť
@@ -188,7 +189,7 @@ export function BonusyPanel({
                 </label>
                 <label className="flex flex-col gap-1.5">
                   <span className="text-sm font-body text-ink">Zvukař</span>
-                  <select
+                  <VyberPole
                     value={zvukar}
                     onChange={(e) => setZvukar(e.target.value)}
                     className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
@@ -199,7 +200,7 @@ export function BonusyPanel({
                         {z.label}
                       </option>
                     ))}
-                  </select>
+                  </VyberPole>
                 </label>
                 <label className="flex flex-col gap-1.5">
                   <span className="text-sm font-body text-ink">Částka (Kč)</span>

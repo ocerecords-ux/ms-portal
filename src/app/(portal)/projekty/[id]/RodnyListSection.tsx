@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+import { DatumPole } from '@/components/DatumPole';
   missingRodnyListFields,
   rodnyListFileName,
   rodnyListVersionLabel,
@@ -470,8 +471,7 @@ export function RodnyListSection({
 
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Datum výroby</span>
-            <input
-              type="date"
+            <DatumPole
               disabled={!canEdit}
               value={values.productionDate}
               onChange={(e) => set('productionDate', e.target.value)}

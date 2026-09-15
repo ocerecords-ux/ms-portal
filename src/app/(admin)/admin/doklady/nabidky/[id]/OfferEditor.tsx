@@ -9,6 +9,8 @@ import { VyberFirmy, type FirmaVolba } from '../../VyberFirmy';
 import { NahledDokladu } from '../../NahledDokladu';
 import { SlevaPole } from '../../SlevaPole';
 import {
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
   CURRENCIES,
   CURRENCY_LABELS,
   CURRENCY_NAMES,
@@ -539,7 +541,7 @@ export function OfferEditor({
             {locked ? (
               <p className="font-heading font-semibold text-ink m-0">{issuer.name}</p>
             ) : (
-              <select
+              <VyberPole
                 value={form.issuerCompanyId}
                 onChange={(e) => set('issuerCompanyId', e.target.value)}
                 className={inputClass}
@@ -549,7 +551,7 @@ export function OfferEditor({
                     {i.name}
                   </option>
                 ))}
-              </select>
+              </VyberPole>
             )}
             <p className="text-sm font-body text-muted m-0">
               {formatAddress(issuer) || '—'}
@@ -610,8 +612,7 @@ export function OfferEditor({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Vystaveno</span>
-            <input
-              type="date"
+            <DatumPole
               value={form.issueDate}
               disabled={locked}
               onChange={(e) => set('issueDate', e.target.value)}
@@ -620,8 +621,7 @@ export function OfferEditor({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Platnost do</span>
-            <input
-              type="date"
+            <DatumPole
               value={form.validUntil}
               disabled={locked}
               onChange={(e) => set('validUntil', e.target.value)}
@@ -630,7 +630,7 @@ export function OfferEditor({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Měna</span>
-            <select
+            <VyberPole
               value={form.currency}
               disabled={locked}
               onChange={(e) => set('currency', e.target.value as Currency)}
@@ -641,11 +641,11 @@ export function OfferEditor({
                   {CURRENCY_NAMES[c]}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Jazyk nabídky</span>
-            <select
+            <VyberPole
               value={form.jazyk}
               disabled={locked}
               onChange={(e) => set('jazyk', e.target.value as typeof form.jazyk)}
@@ -653,7 +653,7 @@ export function OfferEditor({
             >
               <option value="CS">Čeština</option>
               <option value="EN">Angličtina</option>
-            </select>
+            </VyberPole>
           </label>
         </div>
 
@@ -726,7 +726,7 @@ export function OfferEditor({
                   </label>
                   <label className="flex flex-col gap-1 w-24">
                     <span className={popiskaClass}>DPH</span>
-                    <select
+                    <VyberPole
                       value={item.vatRate}
                       disabled={locked}
                       onChange={(e) => updateItem(index, { vatRate: Number(e.target.value) })}
@@ -737,7 +737,7 @@ export function OfferEditor({
                           {r} %
                         </option>
                       ))}
-                    </select>
+                    </VyberPole>
                   </label>
                   <span className="ml-auto flex flex-col gap-1 items-end">
                     <span className={popiskaClass}>Celkem</span>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { PhotoDropzone } from '@/app/(admin)/admin/users/PhotoDropzone';
+import { DatumPole } from '@/components/DatumPole';
 
 type Values = {
   name: string;
@@ -136,8 +137,7 @@ export function MyAccountForm({
         {internal && (
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Datum narození</span>
-            <input
-              type="date"
+            <DatumPole
               value={values.birthDate}
               onChange={(e) => set('birthDate', e.target.value)}
               className={inputClass}

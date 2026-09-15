@@ -1,5 +1,7 @@
 'use client';
 
+import { VyberPole } from '@/components/VyberPole';
+
 export type ProjectChoice = { id: string; label: string; finished: boolean };
 
 /**
@@ -38,7 +40,7 @@ export function ProjectSelect({
   const mimoNabidku = Boolean(value) && !rozpracovane.some((p) => p.id === value);
 
   return (
-    <select
+    <VyberPole
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
@@ -53,6 +55,6 @@ export function ProjectSelect({
           {p.label}
         </option>
       ))}
-    </select>
+    </VyberPole>
   );
 }

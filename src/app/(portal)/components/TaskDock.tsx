@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * Úkoly pořád po ruce (zadani 8. 9. 2026: "aby byl ten to do list pořád po
@@ -168,8 +169,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
           className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full"
         />
         <div className="flex items-center gap-2">
-          <input
-            type="date"
+          <DatumPole
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
             title="Termín (nepovinné)"

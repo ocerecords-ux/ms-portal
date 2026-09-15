@@ -18,6 +18,8 @@ import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 import { VyberFirmy, type FirmaVolba } from '../../VyberFirmy';
 import { NahledDokladu } from '../../NahledDokladu';
 import { SlevaPole } from '../../SlevaPole';
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 
 type Item = {
   description: string;
@@ -552,7 +554,7 @@ export function InvoiceEditor({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Měna</span>
-            <select
+            <VyberPole
               value={form.currency}
               disabled={locked}
               onChange={(e) => set('currency', e.target.value as Currency)}
@@ -563,7 +565,7 @@ export function InvoiceEditor({
                   {CURRENCY_NAMES[c]}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
 
           {/* Rezim DPH VYBIRA CLOVEK (zadani 10. 9. 2026) - portal ho nehada
@@ -607,7 +609,7 @@ export function InvoiceEditor({
           </div>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Jazyk dokladu</span>
-            <select
+            <VyberPole
               value={form.jazyk}
               disabled={locked}
               onChange={(e) => set('jazyk', e.target.value as typeof form.jazyk)}
@@ -615,13 +617,12 @@ export function InvoiceEditor({
             >
               <option value="CS">Čeština</option>
               <option value="EN">Angličtina</option>
-            </select>
+            </VyberPole>
           </label>
 
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Vystaveno</span>
-            <input
-              type="date"
+            <DatumPole
               value={form.issueDate}
               disabled={locked}
               onChange={(e) => set('issueDate', e.target.value)}
@@ -630,8 +631,7 @@ export function InvoiceEditor({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Datum zdanitelného plnění</span>
-            <input
-              type="date"
+            <DatumPole
               value={form.taxDate}
               disabled={locked}
               onChange={(e) => set('taxDate', e.target.value)}
@@ -640,8 +640,7 @@ export function InvoiceEditor({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Splatnost</span>
-            <input
-              type="date"
+            <DatumPole
               value={form.dueDate}
               disabled={locked}
               onChange={(e) => set('dueDate', e.target.value)}
@@ -650,7 +649,7 @@ export function InvoiceEditor({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Účet</span>
-            <select
+            <VyberPole
               value={form.bankAccountId}
               disabled={locked}
               onChange={(e) => set('bankAccountId', e.target.value)}
@@ -662,7 +661,7 @@ export function InvoiceEditor({
                   {a.label} · {[a.accountNumber, a.iban].filter(Boolean).join(' / ')}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
         </div>
 
@@ -769,7 +768,7 @@ export function InvoiceEditor({
                   </label>
                   <label className="flex flex-col gap-1 w-24">
                     <span className={popiskaClass}>DPH</span>
-                    <select
+                    <VyberPole
                       value={item.vatRate}
                       disabled={locked}
                       onChange={(e) => updateItem(index, { vatRate: Number(e.target.value) })}
@@ -780,7 +779,7 @@ export function InvoiceEditor({
                           {r} %
                         </option>
                       ))}
-                    </select>
+                    </VyberPole>
                   </label>
                   <span className="ml-auto flex flex-col gap-1 items-end">
                     <span className={popiskaClass}>Celkem</span>

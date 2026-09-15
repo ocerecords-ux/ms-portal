@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * Objednavka reklamy (zadani 12. 9. 2026) - klienti, kteri poptavaji jen
@@ -116,7 +117,7 @@ export function AdOrderForm() {
       </Field>
 
       <Field label="Datum odevzdání">
-        <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
+        <DatumPole value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
       </Field>
 
       <Field label="Poznámka">

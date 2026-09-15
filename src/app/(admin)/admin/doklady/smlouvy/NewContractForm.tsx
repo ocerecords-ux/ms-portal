@@ -6,6 +6,8 @@ import { AddButton } from '@/components/AddButton';
 import { CONTRACT_PLACEHOLDERS } from '@/lib/contracts';
 import { ProjectSelect, type ProjectChoice } from '../ProjectSelect';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * Založení smlouvy. Šablona se vybere, pole se předvyplní z databáze a text
@@ -65,6 +67,9 @@ export function NewContractForm({
   const [projektInfo, setProjektInfo] = useState<{ nazev: string; odevzdani: string | null } | null>(null);
   // Splatnost je 30 dnu, dokud ji nekdo neprepise (zadani 15. 9. 2026).
   const [pole, setPole] = useState<Record<string, string>>({ splatnost: '30' });
+  // Datumova rucni pole se drzi jako YYYY-MM-DD (to chce kalendar); do smlouvy
+  // se posila cesky zapis, jaky by tam clovek napsal rucne.
+  const [datumy, setDatumy] = useState<Record<string, string>>({});
   // Odkud se bere odmena: '' = jeste nevybrano, 'rucne' = napisu sam,
   // jinak poradi polozky v nakladech projektu.
   const [odmenaZdroj, setOdmenaZdroj] = useState('');
@@ -98,9 +103,11 @@ export function NewContractForm({
         setOdmenaZdroj('');
         // Termin dokonceni nataceni = datum odevzdani projektu (zadani
         // 15. 9. 2026). Co uz je napsane, se neprepisuje.
-        const odevzdani = data?.projekt?.odevzdani ? new Date(data.projekt.odevzdani) : null;
-        if (odevzdani && !Number.isNaN(odevzdani.getTime())) {
-          setPole((s) => (s.termin?.trim() ? s : { ...s, termin: datumCesky(odevzdani) }));
+        const odevzdani: string | null = data?.projekt?.odevzdani ?? null;
+        if (odevzdani) {
+          const iso = odevzdani.slice(0, 10);
+          setDatumy((s) => (s.termin ? s : { ...s, termin: iso }));
+          setPole((s) => (s.termin?.trim() ? s : { ...s, termin: datumCesky(new Date(odevzdani)) }));
         }
         // Jeden herec na projektu je nejcastejsi pripad - vybrat ho rovnou,
         // ale uz napsane jmeno mu neprepisovat.
@@ -280,7 +287,7 @@ export function NewContractForm({
         {herci.length > 0 && (
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">{jeAudiokniha ? 'Herec' : 'Herec z projektu'}</span>
-            <select
+            <VyberPole
               value={form.actorUserId}
               onChange={(e) => vyberHerce(herci.find((h) => h.id === e.target.value) ?? null)}
               className={inputClass}
@@ -292,7 +299,7 @@ export function NewContractForm({
                   {h.identifikace ? ` · ${h.identifikace}` : ' · bez RČ a IČ'}
                 </option>
               ))}
-            </select>
+            </VyberPole>
             <span className="text-xs font-body text-muted">
               {vybranyHerec
                 ? vybranyHerec.identifikace
@@ -307,18 +314,18 @@ export function NewContractForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Šablona</span>
-          <select value={form.templateId} onChange={(e) => set('templateId', e.target.value)} className={inputClass}>
+          <VyberPole value={form.templateId} onChange={(e) => set('templateId', e.target.value)} className={inputClass}>
             <option value="">— prázdná smlouva —</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Za naši firmu</span>
-          <select
+          <VyberPole
             value={form.issuerCompanyId}
             onChange={(e) => set('issuerCompanyId', e.target.value)}
             className={inputClass}
@@ -328,7 +335,7 @@ export function NewContractForm({
                 {i.name}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
       </div>
 
@@ -340,14 +347,14 @@ export function NewContractForm({
         {!jeAudiokniha && (
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Protistrana (firma)</span>
-            <select value={form.companyId} onChange={(e) => vyberFirmu(e.target.value)} className={inputClass}>
+            <VyberPole value={form.companyId} onChange={(e) => vyberFirmu(e.target.value)} className={inputClass}>
               <option value="">— bez firmy (herec) —</option>
               {companies.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
-            </select>
+            </VyberPole>
           </label>
         )}
         <label className="flex flex-col gap-1.5">
@@ -390,7 +397,7 @@ export function NewContractForm({
                 return (
                   <label key={p.key} className="flex flex-col gap-1.5">
                     <span className="text-sm font-body text-ink">{popisekPole(p.key, p.label)}</span>
-                    <select
+                    <VyberPole
                       value={odmenaZdroj}
                       onChange={(e) => {
                         const volba = e.target.value;
@@ -411,7 +418,7 @@ export function NewContractForm({
                         </option>
                       ))}
                       <option value="rucne">— napíšu ručně —</option>
-                    </select>
+                    </VyberPole>
                     {rucne && (
                       <input
                         autoFocus
@@ -430,12 +437,24 @@ export function NewContractForm({
               return (
                 <label key={p.key} className="flex flex-col gap-1.5">
                   <span className="text-sm font-body text-ink">{popisekPole(p.key, p.label)}</span>
+                  {p.datum ? (
+                    <DatumPole
+                      value={datumy[p.key] ?? ''}
+                      onChange={(e) => {
+                        const iso = e.target.value;
+                        setDatumy((s) => ({ ...s, [p.key]: iso }));
+                        setPole((s) => ({ ...s, [p.key]: iso ? datumCesky(new Date(`${iso}T12:00:00`)) : '' }));
+                      }}
+                      className={inputClass}
+                    />
+                  ) : (
                   <input
                     value={pole[p.key] ?? ''}
                     onChange={(e) => setPole((s) => ({ ...s, [p.key]: e.target.value }))}
                     placeholder={NAPOVEDA[p.key] ?? ''}
                     className={inputClass}
                   />
+                  )}
                   {p.key === 'termin' && projektInfo?.odevzdani && (
                     <span className="text-xs font-body text-muted">Předvyplněno z data odevzdání projektu.</span>
                   )}

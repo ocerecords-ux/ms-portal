@@ -8,6 +8,8 @@ import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { type Herec } from './VyberHerce';
 import { VyberHercu } from './VyberHercu';
+import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * Založení projektu (zadání 10. 9. 2026). Do teď projekty vznikaly v Caflou;
@@ -126,19 +128,19 @@ export function NovyProjektForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Firma</span>
-          <select value={form.companyId} onChange={(e) => set('companyId', e.target.value)} className={tridaPole}>
+          <VyberPole value={form.companyId} onChange={(e) => set('companyId', e.target.value)} className={tridaPole}>
             <option value="">— bez priority —</option>
             {firmy.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Klient</span>
-          <select
+          <VyberPole
             value={form.klientUserId}
             onChange={(e) => set('klientUserId', e.target.value)}
             className={tridaPole}
@@ -158,12 +160,12 @@ export function NovyProjektForm({
                   {k.label}
                 </option>
               ))}
-          </select>
+          </VyberPole>
         </label>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Typ projektu</span>
-          <select
+          <VyberPole
             value={form.projectType}
             onChange={(e) => set('projectType', e.target.value)}
             className={tridaPole}
@@ -174,12 +176,12 @@ export function NovyProjektForm({
                 {t}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Manažer projektu</span>
-          <select
+          <VyberPole
             value={form.managerUserId}
             onChange={(e) => set('managerUserId', e.target.value)}
             className={tridaPole}
@@ -190,7 +192,7 @@ export function NovyProjektForm({
                 {m.label}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
       </div>
 
@@ -217,8 +219,7 @@ export function NovyProjektForm({
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Datum vydání</span>
-          <input
-            type="date"
+          <DatumPole
             value={form.releaseDate}
             onChange={(e) => set('releaseDate', e.target.value)}
             className={tridaPole}
@@ -227,26 +228,26 @@ export function NovyProjektForm({
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Priorita</span>
-          <select value={form.priority} onChange={(e) => set('priority', e.target.value)} className={tridaPole}>
+          <VyberPole value={form.priority} onChange={(e) => set('priority', e.target.value)} className={tridaPole}>
             <option value="">— bez priority —</option>
             {PRIORITY_OPTIONS.map((p) => (
               <option key={p} value={p}>
                 {PRIORITY_LABELS[p]}
               </option>
             ))}
-          </select>
+          </VyberPole>
         </label>
       </div>
 
       <label className="flex flex-col gap-1.5 sm:max-w-sm">
         <span className="text-sm font-body text-ink">Stav</span>
-        <select value={form.statusName} onChange={(e) => set('statusName', e.target.value)} className={tridaPole}>
+        <VyberPole value={form.statusName} onChange={(e) => set('statusName', e.target.value)} className={tridaPole}>
           {STAVY_PROJEKTU.map((s) => (
             <option key={s.nazev} value={s.nazev}>
               {s.nazev}
             </option>
           ))}
-        </select>
+        </VyberPole>
         <span className="text-xs text-muted font-body">{popisStavu(form.statusName)}</span>
       </label>
 

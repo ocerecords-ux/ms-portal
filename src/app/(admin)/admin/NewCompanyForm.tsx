@@ -7,6 +7,7 @@ import type { CompanyType } from '@prisma/client';
 import { CountrySelect } from './CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
+import { VyberPole } from '@/components/VyberPole';
 
 // Firmy se od 5. 9. 2026 deli na Klienty a Dodavatele (CompanyType) - typ se
 // prednastavi podle zalozky, na ktere admin prave je (viz page.tsx), pole
@@ -171,10 +172,10 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
       <h2 className="font-display text-xl text-ink m-0">{type === 'KLIENT' ? 'Nový klient' : 'Nový dodavatel'}</h2>
 
       <AdminField label="Typ firmy" required>
-        <select value={type} onChange={(e) => setType(e.target.value as CompanyType)} className="admin-input">
+        <VyberPole value={type} onChange={(e) => setType(e.target.value as CompanyType)} className="admin-input">
           <option value="KLIENT">Klient</option>
           <option value="DODAVATEL">Dodavatel</option>
-        </select>
+        </VyberPole>
       </AdminField>
 
       {/* IC hned nahore - kdyz ho admin zna, zbytek se doplni z registru sam. */}

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { NarratorMultiSelect, type NarratorOption } from './NarratorMultiSelect';
 import {
+import { DatumPole } from '@/components/DatumPole';
   formatujCislo,
   formatujNormostrany,
   sklonujNormostrany,
@@ -241,7 +242,7 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       </div>
 
       <Field label="Datum odevzdání">
-        <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
+        <DatumPole value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
       </Field>
 
       <Field label="Preferovaný herec" tooltip="Vyberte jednoho nebo víc herců z databáze, nebo napište vlastní jméno.">
