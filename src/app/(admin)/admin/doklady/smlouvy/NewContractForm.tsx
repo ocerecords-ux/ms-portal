@@ -383,8 +383,8 @@ export function NewContractForm({
       {rucniPole.length > 0 && (
         <div className="rounded-card border border-line bg-field/60 p-4 flex flex-col gap-3">
           <p className="text-sm font-body text-muted m-0">
-            Co portál neví — doplní se rovnou do textu smlouvy. Co necháte prázdné, bude ve smlouvě
-            jako „…" a dopíšete to v editoru.
+            Co portál neví — doplní se rovnou do textu smlouvy. Co necháte prázdné, se ve smlouvě
+            buď vynechá (když stojí ve výčtu), nebo zůstane jako „…" a dopíšete to v editoru.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {rucniPole.map((p) => {
