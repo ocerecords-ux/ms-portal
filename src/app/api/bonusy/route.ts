@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { durationMinutes } from '@/lib/timesheets';
+import { oznamSchvalenyBonus } from '@/lib/bonusyServer';
 
 /**
  * RUČNĚ PŘIDANÝ BONUS (zadání 15. 9. 2026: „potřebuju, aby Petr mohl mít
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
     const sobe = userId === session.user.id;
     const kdo = session.user.name || session.user.email || null;
 
-    await prisma.bonusZvukare.create({
+    const vytvoreny = await prisma.bonusZvukare.create({
       data: {
         caflouProjectId,
         projectName: projekt.name,
@@ -100,6 +101,10 @@ export async function POST(req: NextRequest) {
             }),
       },
     });
+
+    // Rucne pridany bonus je rovnou schvaleny, takze o nem zvukar musi vedet
+    // stejne jako o odkliknutem navrhu (zadani 15. 9. 2026).
+    if (!sobe) await oznamSchvalenyBonus(vytvoreny.id);
 
     return NextResponse.json({ ok: true, ceka: sobe });
   } catch (err) {

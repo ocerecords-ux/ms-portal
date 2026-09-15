@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { oznamSchvalenyBonus } from '@/lib/bonusyServer';
 
 /**
  * Rozhodnutí o navrženém bonusu zvukaře (zadání 15. 9. 2026: „navrhne to pak
@@ -63,6 +64,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         poznamka: parsed.data.poznamka || null,
       },
     });
+
+    // O schvaleni se ma zvukar dozvedet (zadani 15. 9. 2026) - zvonek
+    // v portalu i mail. Zamitnuti se neoznamuje: to je vec k rozhovoru,
+    // ne k automatickemu mailu.
+    if (parsed.data.akce === 'schvalit') {
+      await oznamSchvalenyBonus(bonus.id);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

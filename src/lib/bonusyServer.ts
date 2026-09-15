@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
-import { durationMinutes } from '@/lib/timesheets';
+import { durationMinutes, formatCzk } from '@/lib/timesheets';
+import { notify } from '@/lib/notifications';
+import { sendBonusEmail } from '@/lib/email';
 
 /**
  * BONUS ZVUKAŘE ZA AUDIOKNIHU (zadání 15. 9. 2026: „aby nám portál
@@ -110,5 +112,54 @@ export async function pocetBonusuKeSchvaleni(): Promise<number> {
     // Chybejici tabulka (jeste nedobehl `prisma db push`) nesmi shodit listu.
     console.error('Počet bonusů ke schválení se nepodařilo načíst:', err);
     return 0;
+  }
+}
+
+/**
+ * Zvukař se má o schváleném bonusu dozvědět (zadání 15. 9. 2026: „měla by
+ * tomu danému zvukaři přijít notifikace, že bonus byl schválen").
+ *
+ * Dvěma cestami: zvonek v portálu a e-mail. NIKDY NEVYHAZUJE - bonus je už
+ * schválený a uložený; kdyby rozeslání shodilo odpověď, vypadalo by to, že
+ * se schválení nepovedlo.
+ */
+export async function oznamSchvalenyBonus(bonusId: string): Promise<void> {
+  try {
+    const bonus = await prisma.bonusZvukare.findUnique({
+      where: { id: bonusId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    if (!bonus || bonus.stav !== 'SCHVALENO') return;
+
+    const nazev = bonus.projectName || `Projekt ${bonus.caflouProjectId}`;
+    const castka = formatCzk(bonus.castka);
+    const zaklad = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
+    const odkaz = `${zaklad}/vykazy?zalozka=bonusy`;
+
+    await notify({
+      userId: bonus.userId,
+      kind: 'BONUS_SCHVALEN',
+      title: `Schválený bonus — ${nazev}`,
+      body: `${castka}${bonus.poznamka ? ` · ${bonus.poznamka}` : ''}`,
+      url: '/vykazy?zalozka=bonusy',
+    });
+
+    if (bonus.user.email) {
+      const vysledek = await sendBonusEmail({
+        to: bonus.user.email,
+        jmeno: bonus.user.name,
+        projekt: nazev,
+        castka,
+        podilProcent: bonus.rucne ? 0 : bonus.podilProcent,
+        poznamka: bonus.poznamka,
+        schvalil: bonus.rozhodlJmeno,
+        odkaz,
+      });
+      if (!vysledek.sent) {
+        console.error(`Mail o bonusu ${bonusId} neodešel: ${vysledek.reason}`);
+      }
+    }
+  } catch (err) {
+    console.error(`Oznámení o bonusu ${bonusId} selhalo:`, err);
   }
 }

@@ -1261,6 +1261,92 @@ export async function sendPodepsanaSmlouvaEmail(input: PodepsanaSmlouvaInput) {
 
 
 // ===========================================================================
+// SCHVALENY BONUS ZVUKARI (zadani 15. 9. 2026: „mela by tomu danemu zvukari
+// prijit notifikace, ze bonus byl schvalen")
+//
+// Kratka zprava - je to dobra zprava, ne dokument. Podstatne je, ZA CO to je
+// a KOLIK to je; zbytek najde ve Vykazech.
+// ===========================================================================
+
+type BonusEmailInput = {
+  to: string;
+  /** Jmeno zvukare do osloveni. */
+  jmeno: string | null;
+  projekt: string;
+  castka: string;
+  /** Podil na strihu v procentech; 0 = bonus pridany rucne. */
+  podilProcent: number;
+  /** Za co - u rucne pridaneho bonusu to je jedina vysvetlujici veta. */
+  poznamka: string | null;
+  schvalil: string | null;
+  odkaz: string;
+};
+
+export function buildBonusHtml(input: BonusEmailInput): string {
+  const duvod = input.poznamka
+    ? escapeHtml(input.poznamka)
+    : input.podilProcent > 0
+      ? `Na střihu téhle knihy máte ${input.podilProcent} % — tím je podmínka pro bonus splněná.`
+      : '';
+
+  return emailShell({
+    tag: 'Schválený bonus',
+    preheader: `${input.projekt}: bonus ${input.castka} je schválený.`,
+    body: `
+    <span class="badge">Bonus</span>
+    <h2>${escapeHtml(input.projekt)}</h2>
+    <p>${escapeHtml(pozdrav(input.jmeno))}</p>
+    <p>máme pro vás dobrou zprávu — bonus za tuhle knihu je schválený.</p>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Bonus</td><td class="value">${escapeHtml(input.castka)}</td></tr>
+      <tr><td class="label">Kniha</td><td class="value regular">${escapeHtml(input.projekt)}</td></tr>
+      ${input.schvalil ? `<tr><td class="label">Schválil(a)</td><td class="value regular">${escapeHtml(input.schvalil)}</td></tr>` : ''}
+    </table>
+
+    ${duvod ? `<p>${duvod}</p>` : ''}
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít ve Výkazech</a>
+    </div>
+
+    <p class="small">Bonus je jednorázová odměna nad rámec výkazu — do odpracovaných hodin se
+       nezapočítává a proti rozpočtu projektu nestojí.</p>
+  `,
+  });
+}
+
+export async function sendBonusEmail(input: BonusEmailInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: `Schválený bonus — ${input.projekt}`,
+    text: [
+      pozdrav(input.jmeno),
+      '',
+      'mame pro vas dobrou zpravu - bonus za tuhle knihu je schvaleny.',
+      '',
+      `Kniha: ${input.projekt}`,
+      `Bonus: ${input.castka}`,
+      input.schvalil ? `Schvalil(a): ${input.schvalil}` : '',
+      input.poznamka ? `Za co: ${input.poznamka}` : '',
+      '',
+      'Ve Vykazech ho najdete tady:',
+      input.odkaz,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildBonusHtml(input),
+  });
+
+  return { sent: true as const };
+}
+
+
+// ===========================================================================
 // NABIDKA NATACECICH TERMINU (zadani 8. 9. 2026)
 //
 // Herec dostane odkaz s jednorazovym tokenem - vybere si terminy bez
