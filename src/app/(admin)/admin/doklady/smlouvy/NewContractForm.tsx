@@ -261,7 +261,7 @@ export function NewContractForm({
           a herce (zadání 15. 9. 2026). */}
       <div className="rounded-card border border-line bg-tint px-4 py-3">
         <span className="block text-[11px] font-heading uppercase tracking-wide text-muted">Název smlouvy</span>
-        <p className={`m-0 font-heading font-semibold text-lg ${form.title ? 'text-brand-purpleDark' : 'text-muted'}`}>
+        <p className={`m-0 font-heading font-semibold text-lg ${form.title ? 'text-ink' : 'text-muted'}`}>
           {form.title || 'Vyberte projekt a herce — název se složí sám'}
         </p>
       </div>
