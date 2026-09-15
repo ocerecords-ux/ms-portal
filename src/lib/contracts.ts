@@ -79,6 +79,9 @@ export const CONTRACT_PLACEHOLDERS: { key: string; label: string; rucne?: boolea
  * místě a vypsat tři by z ní udělalo hádanku.
  */
 export function mistoNataceni(lokace: string[] | null | undefined): string {
+  // Od 15. 9. 2026 jsou lokace rovnou mesta („Brno"), starsi zapisy ale porad
+  // muzou byt „MS Studio - Brno II" - proto se predpona i cislo mistnosti
+  // nize jeste odstranuji.
   const prvni = (lokace ?? []).map((l) => l.trim()).filter(Boolean)[0];
   if (!prvni) return 'Brno';
   const mesto = prvni
@@ -302,8 +305,8 @@ V Brně dne {{datum}}`,
 
 Účastníci smlouvy
 
-Zhotovitel:
-{{protistrana}}
+Umělec:
+**{{protistrana}}**, dále jen „Umělec"
 Se sídlem: {{protistrana_adresa}}
 {{protistrana_identifikace}}
 

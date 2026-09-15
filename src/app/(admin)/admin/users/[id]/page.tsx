@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
 import { UserEditForm } from './UserEditForm';
 import { InviteButton } from '../InviteButton';
+import { sjednotLokace } from '@/lib/lokaceHercu';
 
 export default async function UserEditPage({ params }: { params: { id: string } }) {
   const [user, companies] = await Promise.all([
@@ -81,7 +82,8 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           prijimaDotazyKlientu: user.prijimaDotazyKlientu,
           dostavaDotoceno: user.dostavaDotoceno,
           dostavaObjednavky: user.dostavaObjednavky,
-          studioLocations: user.studioLocations,
+          // Starsi zapisy („MS Studio - Brno II") se ctou jako mesto (15. 9. 2026).
+          studioLocations: sjednotLokace(user.studioLocations),
           birthNumber: user.birthNumber,
           ic: user.ic,
           dic: user.dic,

@@ -68,12 +68,18 @@ export const USER_TABS: { key: string; label: string; roles: Role[] }[] = [
 ];
 
 /** Ctyri fyzicka studia, ve kterych je herec schopen natacet - zadani 5. 9. 2026. */
-export const HEREC_STUDIOS: string[] = [
-  'MS Studio - Brno I',
-  'MS Studio - Brno II',
-  'MS Studio - Praha',
-  'MS Studio - London',
-];
+/**
+ * LOKACE HERCE - kde je schopen fyzicky natáčet.
+ *
+ * Jen MĚSTA (zadání 15. 9. 2026: „místo změň na jednoduše jen Brno, Praha").
+ * Do 15. 9. 2026 se tu vybíraly konkrétní studia („MS Studio - Brno II").
+ * K ničemu to nebylo: pro rozhodnutí „kam ho pozvat" i pro smlouvu je
+ * podstatné město, ne která místnost - a která místnost bude volná, stejně
+ * rozhoduje kalendář.
+ *
+ * Starší zápisy se převádějí samy - viz sjednotLokaci v lib/lokaceHercu.ts.
+ */
+export const HEREC_STUDIOS: string[] = ['Brno', 'Praha'];
 
 /** Popisky typu firmy - viz CompanyType (schema.prisma). */
 export const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {

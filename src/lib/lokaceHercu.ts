@@ -47,7 +47,33 @@ export function barvaLokace(lokace: string): string {
  * v seznamu jen zabírá místo a nic nerozlišuje.
  */
 export function popisekLokace(lokace: string): string {
-  return lokace.replace(/^MS\s*Studio\s*-\s*/i, '').trim() || lokace;
+  return lokace.replace(/^MS\s*Studio\s*[-–]\s*/i, '').trim() || lokace;
+}
+
+/**
+ * Převod starších zápisů na město (zadání 15. 9. 2026: „místo změň na
+ * jednoduše jen Brno, Praha").
+ *
+ * Herci mají na kartách uložené ještě konkrétní studia („MS Studio - Brno
+ * II"). Nemažou se - jen se čtou jako město, takže zaškrtnutí zůstane
+ * zaškrtnuté a po prvním uložení karty se srovná i v databázi.
+ */
+export function sjednotLokaci(lokace: string): string {
+  switch (mesto(lokace)) {
+    case 'brno':
+      return 'Brno';
+    case 'praha':
+      return 'Praha';
+    case 'london':
+      return 'Londýn';
+    default:
+      return popisekLokace(lokace);
+  }
+}
+
+/** Totéž pro celý seznam - bez duplicit a bez prázdných hodnot. */
+export function sjednotLokace(lokace: string[] | null | undefined): string[] {
+  return [...new Set((lokace ?? []).map((l) => sjednotLokaci(l)).filter(Boolean))];
 }
 
 /** Legenda k paletě - používá se tam, kde se lokace zaškrtávají. */

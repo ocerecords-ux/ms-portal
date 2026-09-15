@@ -4,6 +4,7 @@ import { NewUserForm } from './NewUserForm';
 import { UsersTable, type UsersColumn, type UserRow } from './UsersTable';
 import { ROLE_LABELS, USER_TABS } from '@/lib/roles';
 import { AdminSearch } from '../AdminSearch';
+import { sjednotLokace } from '@/lib/lokaceHercu';
 
 // Bez companyId (default pohled) se uzivatele tridi do 3 zalozek podle
 // zadani 5. 9. 2026 (upresneni) - Mediaspace / Klienti / Herci. Dodavatele uz
@@ -59,8 +60,8 @@ export default async function UsersAdminPage({
     photoUrl: u.photoUrl ?? null,
     birthDate: u.birthDate ? dateFmt.format(u.birthDate) : null,
     birthDateMs: u.birthDate ? u.birthDate.getTime() : null,
-    studioLocations: u.studioLocations.length > 0 ? u.studioLocations.join(', ') : null,
-    lokace: u.studioLocations,
+    studioLocations: u.studioLocations.length > 0 ? sjednotLokace(u.studioLocations).join(', ') : null,
+    lokace: sjednotLokace(u.studioLocations),
     companyName: u.company?.name ?? null,
     companyId: u.company?.id ?? null,
   }));
