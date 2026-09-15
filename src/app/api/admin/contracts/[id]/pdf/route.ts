@@ -40,7 +40,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     })),
   });
 
-  return new NextResponse(pdf, {
+  // Uint8Array, ne Buffer - NextResponse ho jinak neprijme (stejne jako
+  // u ostatnich PDF rout).
+  return new NextResponse(new Uint8Array(pdf), {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `inline; filename="${nazevSouboruSmlouvy(contract.number)}"`,
