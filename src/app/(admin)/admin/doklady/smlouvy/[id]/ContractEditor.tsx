@@ -249,6 +249,17 @@ export function ContractEditor({
                 {contract.status === 'SENT' ? 'Poslat znovu' : 'Odeslat k podpisu'}
               </button>
             )}
+            {/* Stejne PDF, jake po podpisu obou stran odejde v priloze mailu
+                (zadani 14. 9. 2026). Da se stahnout kdykoliv - pred podpisem
+                jsou podpisova mista prazdna. */}
+            <a
+              href={`/api/admin/contracts/${contract.id}/pdf`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-heading font-semibold text-sm rounded-lg border border-line px-4 py-2 text-ink no-underline hover:border-brand-purple"
+            >
+              Stáhnout PDF
+            </a>
             {contract.status !== 'SIGNED' && contract.status !== 'CANCELLED' && (
               <button type="button" onClick={zrusit} disabled={busy} className="text-muted text-sm font-heading px-2">
                 Zrušit smlouvu

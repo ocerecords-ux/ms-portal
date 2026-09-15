@@ -27,6 +27,8 @@ type UlozenyVzor = {
   predmet: string | null;
   nadpis: string | null;
   text: string;
+  /** null = „jak to chodilo doteď" - viz vychoziVzor. */
+  audiotagger: boolean | null;
   upravilJmeno: string | null;
 };
 
@@ -50,6 +52,7 @@ export async function nactiVzory(druh: DruhNotifikace = 'AUDIOKNIHA'): Promise<V
       predmet: u?.predmet || vychozi.predmet,
       nadpis: u?.nadpis ?? vychozi.nadpis,
       text: u?.text ?? vychozi.text,
+      audiotagger: u?.audiotagger ?? vychozi.audiotagger,
       upraveno: Boolean(u),
       upravilJmeno: u?.upravilJmeno ?? null,
     };
@@ -66,6 +69,7 @@ export async function vzorProStav(stav: string, druh: DruhNotifikace = 'AUDIOKNI
       predmet: u.predmet || vychozi.predmet,
       nadpis: u.nadpis ?? vychozi.nadpis,
       text: u.text ?? vychozi.text,
+      audiotagger: u.audiotagger ?? vychozi.audiotagger,
     };
   } catch (err) {
     console.error(`Vzor pro stav „${stav}" se nepodařilo načíst:`, err);
@@ -81,8 +85,22 @@ export async function ulozVzor(
 ): Promise<void> {
   await prisma.vzorZpravy.upsert({
     where: { druh_stav: { druh, stav } },
-    create: { druh, stav, predmet: vzor.predmet, nadpis: vzor.nadpis, text: vzor.text, upravilJmeno },
-    update: { predmet: vzor.predmet, nadpis: vzor.nadpis, text: vzor.text, upravilJmeno },
+    create: {
+      druh,
+      stav,
+      predmet: vzor.predmet,
+      nadpis: vzor.nadpis,
+      text: vzor.text,
+      audiotagger: vzor.audiotagger,
+      upravilJmeno,
+    },
+    update: {
+      predmet: vzor.predmet,
+      nadpis: vzor.nadpis,
+      text: vzor.text,
+      audiotagger: vzor.audiotagger,
+      upravilJmeno,
+    },
   });
 }
 

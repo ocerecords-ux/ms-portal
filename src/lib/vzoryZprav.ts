@@ -24,7 +24,19 @@ export type Vzor = {
   /** Prázdné = zpráva nemá velký nadpis (tak to bylo do 11. 9. 2026). */
   nadpis: string;
   text: string;
+  /**
+   * Přidat do zprávy tlačítko „Přeposlechnout v AudioTaggeru"? (zadání
+   * 14. 9. 2026: „může se někdy stát, že všechny tracky posíláme najednou").
+   *
+   * Do té doby se to odvozovalo ze stavu - AudioTagger chodil jen se zprávou
+   * o prvních tracích. Jenže když se odevzdává všechno naráz, je přeposlech
+   * potřeba právě u „Dokončeno - ke schválení". Rozhoduje tedy vzor, ne kód.
+   */
+  audiotagger: boolean;
 };
+
+/** Stavy, u kterých AudioTagger chodil, než se z toho stalo zaškrtávátko. */
+const AUDIOTAGGER_VYCHOZI = new Set(['Natáčíme/stříháme', 'Dotočeno/stříháme']);
 
 /**
  * Proměnné, které se ve vzoru dají použít. Do zprávy se dosadí těsně před
@@ -64,9 +76,16 @@ export function vychoziVzor(stav: string, druh: DruhNotifikace = 'AUDIOKNIHA'): 
       predmet: VYCHOZI_PREDMET_REKLAMA,
       nadpis: VYCHOZI_NADPIS_REKLAMA,
       text: CO_SE_POSILA_REKLAMA[stav] ?? '',
+      // U reklamy se nepřeposlouchává po stopách - spot je jeden kus.
+      audiotagger: false,
     };
   }
-  return { predmet: VYCHOZI_PREDMET, nadpis: '', text: CO_SE_POSILA[stav] ?? '' };
+  return {
+    predmet: VYCHOZI_PREDMET,
+    nadpis: '',
+    text: CO_SE_POSILA[stav] ?? '',
+    audiotagger: AUDIOTAGGER_VYCHOZI.has(stav),
+  };
 }
 
 export function vychoziVzory(druh: DruhNotifikace = 'AUDIOKNIHA'): Record<string, Vzor> {

@@ -180,3 +180,102 @@ export function validSignatureImage(value: unknown): value is string {
   if (!value.startsWith('data:image/png;base64,')) return false;
   return value.length > 200 && value.length < 400_000;
 }
+
+/**
+ * ROZESLÁNÍ PODEPSANÉ SMLOUVY (zadání 14. 9. 2026: „u podepsaných smluv oboji.
+ * Odkaz i pdf").
+ *
+ * Volá se z OBOU podpisových cest — z podpisu za Mediaspace i z podpisu
+ * protistrany — vždycky až ve chvíli, kdy je podepsáno z obou stran. Která
+ * strana byla poslední, je jedno; pošle se to samé.
+ *
+ * NIKDY NEVYHAZUJE. Podpis je hotový a uložený; kdyby ho shodilo to, že
+ * nejede SMTP nebo se nepovedlo vykreslit PDF, byla by to ta horší varianta.
+ * Chyba se jen zapíše do logu.
+ */
+export async function posliPodepsanouSmlouvu(contractId: string): Promise<void> {
+  try {
+    const contract = await prisma.contract.findUnique({
+      where: { id: contractId },
+      include: { issuer: true, signatures: { orderBy: { signedAt: 'asc' } } },
+    });
+    if (!contract || contract.status !== 'SIGNED') return;
+
+    const { smlouvaPdf, nazevSouboruSmlouvy } = await import('@/lib/smlouvaPdf');
+    const { sendPodepsanaSmlouvaEmail } = await import('@/lib/email');
+
+    const hash = documentHash(contract.body);
+
+    // PDF je to podstatne, ale ne za cenu celeho mailu - kdyz se nevykresli,
+    // odejde aspon odkaz.
+    let pdf: { nazev: string; obsah: Buffer } | null = null;
+    try {
+      pdf = {
+        nazev: nazevSouboruSmlouvy(contract.number),
+        obsah: smlouvaPdf({
+          number: contract.number,
+          title: contract.title,
+          body: contract.body,
+          currentHash: hash,
+          podpisy: contract.signatures.map((s) => ({
+            role: s.role,
+            name: s.name,
+            email: s.email,
+            signedAt: s.signedAt,
+            ip: s.ip,
+            documentHash: s.documentHash,
+            imageData: s.imageData,
+          })),
+        }),
+      };
+    } catch (err) {
+      console.error(`PDF smlouvy ${contract.number} se nepodařilo vykreslit:`, err);
+    }
+
+    const zaklad = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
+    const odkaz = `${zaklad}/smlouva/${contract.accessToken}`;
+
+    const podepsali = contract.signatures.map((s) => ({
+      role: s.role as string,
+      name: s.name,
+      signedAt: s.signedAt,
+    }));
+
+    const spolecne = {
+      number: contract.number,
+      title: contract.title,
+      issuerName: contract.issuer?.name ?? 'Mediaspace',
+      projectName: contract.projectName,
+      podepsali,
+      contractUrl: odkaz,
+      pdf,
+    };
+
+    // 1) Protistrana - na adresu, na kterou jsme smlouvu poslali k podpisu.
+    if (contract.signerEmail) {
+      await sendPodepsanaSmlouvaEmail({
+        ...spolecne,
+        prijemci: [contract.signerEmail],
+        jmenoPrijemce: contract.signerName,
+      });
+    }
+
+    /**
+     * 2) My. Mail jde tomu, kdo smlouvu podepsal za Mediaspace; když u podpisu
+     * adresa není (starší záznamy), zaskočí e-mail vlastní firmy. Zvlášť,
+     * ne ve skryté kopii té první zprávy - naše kopie má mít vlastní oslovení
+     * a hlavně ať se nestane, že se odpověď klienta rozejde do obou.
+     */
+    const nas = contract.signatures.find((s) => s.role === 'MEDIASPACE');
+    const nasEmail = nas?.email?.trim() || contract.issuer?.email?.trim() || null;
+    if (nasEmail) {
+      await sendPodepsanaSmlouvaEmail({
+        ...spolecne,
+        prijemci: [nasEmail],
+        jmenoPrijemce: nas?.name ?? null,
+      });
+    }
+  } catch (err) {
+    console.error('posliPodepsanouSmlouvu selhalo:', err);
+  }
+}

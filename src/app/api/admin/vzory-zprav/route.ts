@@ -21,6 +21,8 @@ const schema = z.object({
   predmet: z.string().trim().max(200),
   nadpis: z.string().trim().max(200),
   text: z.string().trim().min(1, 'Text zprávy nesmí být prázdný.').max(4000),
+  // Tlacitko na AudioTagger (zadani 14. 9. 2026).
+  audiotagger: z.boolean().optional(),
 });
 
 /** „REKLAMA" z adresy; cokoliv jineho znamena audioknihy. */
@@ -43,8 +45,9 @@ export async function PUT(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
-  const { stav, druh: druhZTela, ...vzor } = parsed.data;
+  const { stav, druh: druhZTela, audiotagger, ...zbytek } = parsed.data;
   const druh: DruhNotifikace = druhZTela ?? 'AUDIOKNIHA';
+  const vzor = { ...zbytek, audiotagger: audiotagger ?? false };
   if (!stavySNotifikaci(druh).includes(stav)) {
     return NextResponse.json({ error: `Ke stavu „${stav}" se zpráva neposílá.` }, { status: 400 });
   }

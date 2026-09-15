@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { documentHash, signatureContext, validSignatureImage } from '@/lib/contractsServer';
+import {
+  documentHash,
+  posliPodepsanouSmlouvu,
+  signatureContext,
+  validSignatureImage,
+} from '@/lib/contractsServer';
 import { pocetStranek } from '@/lib/smlouvaStranky';
 
 // Podpis (nebo odmitnuti) protistranou. VEREJNY endpoint - smlouva se hleda
@@ -91,6 +96,13 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
         },
       });
     });
+
+    // Podepsano obema stranami -> mail s odkazem i PDF (zadani 14. 9. 2026).
+    // Az po transakci a bez vyhozeni: podpis uz je ulozeny, mail ho nesmi
+    // shodit.
+    if (contract.signatures.some((s) => s.role === 'MEDIASPACE')) {
+      await posliPodepsanouSmlouvu(contract.id);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

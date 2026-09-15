@@ -161,15 +161,6 @@ export async function posliNotifikaciKeStavu(
         : slozka;
 
     /**
-     * Druhé tlačítko: „Přeposlechnout v AudioTaggeru" (zadání 11. 9. 2026).
-     * Jen u zprávy o prvních tracích — u ostatních stavů není co poslouchat.
-     */
-    let odkazNaPreposlech: string | null = null;
-    if (znackaStavu(stav) === ZNACKA_PRVNI_TRACKY && token) {
-      odkazNaPreposlech = urlPreposlechu(token);
-    }
-
-    /**
      * Znění zprávy se bere ze VZORU (zadání 11. 9. 2026), ne z kódu. Proměnné
      * se dosazují až tady - vzor si pamatuje „{projekt}", ne konkrétní název,
      * takže se dá napsat jednou a platí pro všechny projekty.
@@ -177,6 +168,17 @@ export async function posliNotifikaciKeStavu(
     const nazevProjektu = projekt.name || `Projekt ${caflouProjectId}`;
     const nazevFirmy = projekt.company?.name ?? projekt.companyName ?? '';
     const vzor = await vzorProStav(stav, druh);
+
+    /**
+     * Druhé tlačítko: „Přeposlechnout v AudioTaggeru". Do 14. 9. 2026 chodilo
+     * jen se zprávou o prvních tracích; teď o něm rozhoduje ZAŠKRTÁVÁTKO VE
+     * VZORU (zadání: „může se někdy stát, že všechny tracky posíláme
+     * najednou" - pak je přeposlech potřeba u „Dokončeno - ke schválení").
+     */
+    let odkazNaPreposlech: string | null = null;
+    if (vzor.audiotagger && token) {
+      odkazNaPreposlech = urlPreposlechu(token);
+    }
     const hodnoty = {
       projekt: nazevProjektu,
       firma: nazevFirmy,

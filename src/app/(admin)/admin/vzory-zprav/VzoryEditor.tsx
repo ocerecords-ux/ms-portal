@@ -80,6 +80,7 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
         predmet: vzor.predmet,
         nadpis: vzor.nadpis,
         text: vzor.text,
+        audiotagger: vzor.audiotagger,
       }),
     });
     if (ok) setUlozeno(vzor.stav);
@@ -154,7 +155,7 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
               popisek="Předmět"
               hodnota={vzor.predmet}
               onZmena={(v) => uprav({ predmet: v })}
-              napoveda="Co uvidí klient v seznamu pošty."
+              napoveda="Co uvidí klient v seznamu pošty — a co se propíše do fialového pruhu v hlavičce zprávy."
             />
             <Pole
               popisek="Nadpis ve zprávě"
@@ -164,6 +165,26 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
               napoveda="Velký nadpis nad textem. Nechte prázdné a zpráva vypadá jako doteď."
             />
             <PoleText hodnota={vzor.text} onZmena={(v) => uprav({ text: v })} />
+
+            {/* Zadani 14. 9. 2026: „muze se nekdy stat, ze vsechny tracky
+                posilame najednou" - pak je preposlech potreba i u stavu,
+                kde driv nechodil. */}
+            <label className="flex items-start gap-2.5 text-sm font-heading text-ink">
+              <input
+                type="checkbox"
+                checked={vzor.audiotagger}
+                onChange={(e) => uprav({ audiotagger: e.target.checked })}
+                className="mt-0.5"
+              />
+              <span>
+                Přidat tlačítko „Přeposlechnout v AudioTaggeru"
+                <br />
+                <span className="text-xs font-body text-muted">
+                  Klient si tracky pustí rovnou v prohlížeči a chyby označí v textu. Hodí se všude, kde už
+                  je co poslouchat — i když se všechny tracky odevzdávají najednou.
+                </span>
+              </span>
+            </label>
 
             <div className="flex items-center gap-3 flex-wrap border-t border-line pt-4">
               <button
@@ -313,7 +334,14 @@ function Nahled({ vzor }: { vzor: VzorSeStavem }) {
         const res = await fetch('/api/admin/vzory-zprav/nahled', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ druh: vzor.druh, stav: vzor.stav, nadpis: vzor.nadpis, text: vzor.text }),
+          body: JSON.stringify({
+            druh: vzor.druh,
+            stav: vzor.stav,
+            predmet: vzor.predmet,
+            nadpis: vzor.nadpis,
+            text: vzor.text,
+            audiotagger: vzor.audiotagger,
+          }),
         });
         if (res.ok) setHtml(await res.text());
       } catch {
@@ -321,7 +349,7 @@ function Nahled({ vzor }: { vzor: VzorSeStavem }) {
       }
     }, 400);
     return () => window.clearTimeout(casovac);
-  }, [vzor.druh, vzor.stav, vzor.nadpis, vzor.text]);
+  }, [vzor.druh, vzor.stav, vzor.predmet, vzor.nadpis, vzor.text, vzor.audiotagger]);
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden xl:sticky xl:top-4">

@@ -8,7 +8,7 @@ import { dosadPromenne } from '@/lib/vzoryZprav';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { buildStavProjektuHtml } from '@/lib/email';
 import { urlNahravek, urlPreposlechu, zakladPortalu } from '@/lib/preposlechOdkaz';
-import { ZNACKA_PRVNI_TRACKY, znackaStavu } from '@/lib/notifikaceProjektuServer';
+
 
 /**
  * Náhled zprávy, která jde klientovi (zadání 11. 9. 2026: „potřebuju dostat
@@ -80,16 +80,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       ? `${zaklad}/nahravky/ukazkovy-odkaz`
       : slozka;
 
+  // O AudioTaggeru rozhoduje zaskrtavatko ve vzoru (zadani 14. 9. 2026).
   let odkazNaPreposlech: string | null = null;
-  if (druh !== 'REKLAMA' && znackaStavu(stav) === ZNACKA_PRVNI_TRACKY) {
-    odkazNaPreposlech = platnyToken
-      ? urlPreposlechu(platnyToken)
-      : `${zaklad}/preposlech/ukazkovy-odkaz`;
-  }
 
   const nazevProjektu = projekt.name || `Projekt ${params.id}`;
   const nazevFirmy = projekt.company?.name ?? projekt.companyName ?? '';
   const vzor = await vzorProStav(stav, druh);
+  if (vzor.audiotagger) {
+    odkazNaPreposlech = platnyToken ? urlPreposlechu(platnyToken) : `${zaklad}/preposlech/ukazkovy-odkaz`;
+  }
   const hodnoty = {
     projekt: nazevProjektu,
     firma: nazevFirmy,

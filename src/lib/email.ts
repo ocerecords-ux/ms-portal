@@ -1158,6 +1158,108 @@ export async function sendContractEmail(input: ContractEmailInput) {
 
 
 // ===========================================================================
+// PODEPSANA SMLOUVA (zadani 14. 9. 2026: „u podepsanych smluv oboji. Odkaz
+// i pdf")
+//
+// Odchazi ve chvili, kdy podepsou OBE strany - protistrane i nam. Odkaz vede
+// na tutez stranku, kde se podepisovalo, a v priloze je PDF, aby se smlouva
+// dala zalozit do slozky zakazky a do ucetnictvi bez toho, aby si ji nekdo
+// musel stahovat z webu.
+// ===========================================================================
+
+type PodepsanaSmlouvaInput = {
+  prijemci: string[];
+  /** Nase adresy do skryte kopie - klient nema videt, kdo vsechno u nas o smlouve vi. */
+  skrytaKopie?: string[];
+  /** Komu je zprava adresovana (osloveni). Kdyz jde vic lidem, nechat prazdne. */
+  jmenoPrijemce: string | null;
+  number: string;
+  title: string;
+  issuerName: string;
+  projectName: string | null;
+  podepsali: { role: string; name: string; signedAt: Date }[];
+  contractUrl: string;
+  pdf: { nazev: string; obsah: Buffer } | null;
+};
+
+function podpisRadek(p: { role: string; name: string; signedAt: Date }): string {
+  const kdy = new Intl.DateTimeFormat('cs-CZ', {
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Prague',
+  }).format(p.signedAt);
+  return `${p.name} (${kdy})`;
+}
+
+export function buildPodepsanaSmlouvaHtml(input: PodepsanaSmlouvaInput): string {
+  const nase = input.podepsali.find((p) => p.role === 'MEDIASPACE') ?? null;
+  const protistrana = input.podepsali.find((p) => p.role === 'PROTISTRANA') ?? null;
+
+  return emailShell({
+    tag: `Podepsaná smlouva ${input.number}`,
+    preheader: `Smlouva ${input.number} je podepsaná oběma stranami.`,
+    body: `
+    <span class="badge">Smlouva ${escapeHtml(input.number)}</span>
+    <h2>${escapeHtml(input.title)}</h2>
+    <p>${escapeHtml(pozdrav(input.jmenoPrijemce))}</p>
+    <p>smlouva je podepsaná oběma stranami. Kompletní znění i s podpisy máte
+       <strong>v příloze jako PDF</strong>; odkazem níž se k ní kdykoliv dostanete i online.</p>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Číslo smlouvy</td><td class="value">${escapeHtml(input.number)}</td></tr>
+      ${input.projectName ? `<tr><td class="label">Projekt</td><td class="value regular">${escapeHtml(input.projectName)}</td></tr>` : ''}
+      ${nase ? `<tr><td class="label">Za ${escapeHtml(input.issuerName)}</td><td class="value regular">${escapeHtml(podpisRadek(nase))}</td></tr>` : ''}
+      ${protistrana ? `<tr><td class="label">Za protistranu</td><td class="value regular">${escapeHtml(podpisRadek(protistrana))}</td></tr>` : ''}
+    </table>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.contractUrl)}" class="cta">Otevřít podepsanou smlouvu</a>
+    </div>
+
+    <p class="small">U každého podpisu je uložený čas, IP adresa a otisk textu, který měl
+       podepisující před sebou — podle něj je poznat, že se smlouva od podpisu nezměnila.</p>
+  `,
+  });
+}
+
+export async function sendPodepsanaSmlouvaEmail(input: PodepsanaSmlouvaInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (input.prijemci.length === 0) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+
+  const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
+
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.prijemci.join(', '),
+    bcc: skryta.length > 0 ? skryta.join(', ') : undefined,
+    subject: `Podepsaná smlouva ${input.number} — ${input.title}`,
+    text: [
+      pozdrav(input.jmenoPrijemce),
+      '',
+      `smlouva ${input.number} je podepsana obema stranami.`,
+      input.projectName ? `Projekt: ${input.projectName}` : '',
+      ...input.podepsali.map((p) => `Podepsal: ${podpisRadek(p)}`),
+      '',
+      'Kompletni zneni je v priloze jako PDF. Online ji najdete zde:',
+      input.contractUrl,
+      '',
+      input.issuerName,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildPodepsanaSmlouvaHtml(input),
+    ...(input.pdf ? { attachments: [{ filename: input.pdf.nazev, content: input.pdf.obsah }] } : {}),
+  });
+
+  return { sent: true as const, reason: undefined };
+}
+
+
+// ===========================================================================
 // NABIDKA NATACECICH TERMINU (zadani 8. 9. 2026)
 //
 // Herec dostane odkaz s jednorazovym tokenem - vybere si terminy bez
@@ -1567,8 +1669,20 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
       ).replace(/\n/g, '<br />')}</p>`
     : '';
 
+  /**
+   * ŠTÍTEK V HLAVIČCE JDE Z PŘEDMĚTU (zadání 14. 9. 2026: „v předmětu jsem
+   * změnil to schváleno k fakturaci, ale v té grafice mailu mi to zůstalo.
+   * Potřebuji měnit i to v tom obrázku podle předmětu mailu").
+   *
+   * Do té doby tu stálo natvrdo „MS Portal - <stav>", takže si klient v jedné
+   * zprávě přečetl dvě různé věty o tomtéž - jednu v předmětu a druhou na
+   * fialovém pruhu. Teď je to jedna věta; když je předmět prázdný, zůstává
+   * původní tvar, ať zpráva nezačíná prázdným pruhem.
+   *
+   * emailShell si štítek escapuje sám - proto se sem posílá syrový text.
+   */
   return emailShell({
-    tag: `MS Portal - ${escapeHtml(input.stav)}`,
+    tag: input.predmet?.trim() || `MS Portal - ${input.stav}`,
     preheader: `${input.nazevProjektu}: ${input.text.replace(/\s+/g, ' ').slice(0, 120)}`,
     body: `
     ${nadpis}

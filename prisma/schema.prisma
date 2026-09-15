@@ -2049,6 +2049,16 @@ model VzorZpravy {
   /// Hlavni text. Prazdny radek oddeluje odstavce.
   text    String  @db.Text
 
+  /// PRIDAT TLACITKO „Preposlechnout v AudioTaggeru"? (zadani 14. 9. 2026:
+  /// „pridej moznost nejakym zaskrtavacim tlacitkem, kdy se bude posilat
+  /// i moznost poslechnout v Audiotaggeru. Treba u Dokonceno - ke schvaleni
+  /// by taky mela byt. Muze se nekdy stat, ze vsechny tracky posilame
+  /// najednou.")
+  ///
+  /// Do te doby to bylo zadratovane na stav „prvni tracky". Prazdno (null)
+  /// znamena „jak to chodilo doted" - viz vychoziVzor v lib/vzoryZprav.ts.
+  audiotagger Boolean?
+
   upravilJmeno String?
   updatedAt    DateTime @updatedAt
 

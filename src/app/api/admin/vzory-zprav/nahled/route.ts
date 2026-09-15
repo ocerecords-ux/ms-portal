@@ -14,14 +14,12 @@ import { zakladPortalu } from '@/lib/preposlechOdkaz';
  */
 export const dynamic = 'force-dynamic';
 
-const PRVNI_TRACKY = new Set(['Natáčíme/stříháme', 'Dotočeno/stříháme']);
-
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
   const telo = (await req.json().catch(() => null)) as
-    | { druh?: string; stav?: string; nadpis?: string; text?: string }
+    | { druh?: string; stav?: string; predmet?: string; nadpis?: string; text?: string; audiotagger?: boolean }
     | null;
   const stav = String(telo?.stav ?? '');
   const jeReklama = telo?.druh === 'REKLAMA';
@@ -37,12 +35,15 @@ export async function POST(req: NextRequest) {
     nazevProjektu: hodnoty.projekt,
     nazevFirmy: hodnoty.firma,
     stav,
+    // Predmet je videt i na fialovem pruhu v hlavicce - viz
+    // sendStavProjektuEmail (zadani 14. 9. 2026).
+    predmet: dosadPromenne(String(telo?.predmet ?? ''), hodnoty),
     nadpis: dosadPromenne(String(telo?.nadpis ?? ''), hodnoty),
     text: dosadPromenne(String(telo?.text ?? ''), hodnoty),
     odkazNaDisk: `${zaklad}/nahravky`,
-    // U reklamy se do AudioTaggeru nechodi a tlacitko na slozku se jmenuje
-    // jinak (zadani 14. 9. 2026) - nahled to musi ukazat stejne jako mail.
-    odkazNaPreposlech: !jeReklama && PRVNI_TRACKY.has(stav) ? `${zaklad}/preposlech/ukazkovy-odkaz` : null,
+    // O AudioTaggeru rozhoduje zaskrtavatko ve vzoru (zadani 14. 9. 2026) -
+    // nahled to musi ukazat stejne jako mail.
+    odkazNaPreposlech: telo?.audiotagger ? `${zaklad}/preposlech/ukazkovy-odkaz` : null,
     popisekOdkazu: jeReklama ? 'Poslechnout spot ve složce' : null,
   });
 

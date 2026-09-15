@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
-import { documentHash, signatureContext, validSignatureImage } from '@/lib/contractsServer';
+import {
+  documentHash,
+  posliPodepsanouSmlouvu,
+  signatureContext,
+  validSignatureImage,
+} from '@/lib/contractsServer';
 
 // Podpis za Mediaspace. Podepisuje prihlaseny clovek, takze jmeno bereme ze
 // session - nedava smysl ho psat rucne.
@@ -55,6 +60,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         },
       });
     });
+
+    // Podepsano obema stranami -> mail s odkazem i PDF (zadani 14. 9. 2026).
+    if (contract.signatures.some((s) => s.role === 'PROTISTRANA')) {
+      await posliPodepsanouSmlouvu(contract.id);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
