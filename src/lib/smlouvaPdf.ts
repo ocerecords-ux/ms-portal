@@ -1,5 +1,5 @@
 import { deflateSync } from 'zlib';
-import { popisekDruheStrany, popisekNaseStrany } from '@/lib/contracts';
+import { jeCisloSmlouvy, nezlomitelneCastky, popisekDruheStrany, popisekNaseStrany } from '@/lib/contracts';
 import { FONT_BOLD, FONT_REGULAR, LOGO, type EmbeddedImage } from '@/lib/rodnyListAssets';
 import {
   A4,
@@ -140,11 +140,19 @@ function naUseky(text: string): { text: string; tucne: boolean }[] {
   return out.length ? out : [{ text, tucne: false }];
 }
 
+/**
+ * Znacka misto mezery uvnitr castky. Pevna mezera (U+00A0) v subsetu fontu
+ * neni a vysazela by se jako otaznik, takze se castka drzi pohromade tehle
+ * znackou a tesne pred kreslenim se z ni udela zase obycejna mezera.
+ */
+const SPOJKA = '\u0001';
+
 function naSlova(text: string, zakladTucny: boolean): Slovo[] {
   const out: Slovo[] = [];
-  for (const usek of naUseky(text)) {
-    for (const slovo of usek.text.split(/\s+/).filter(Boolean)) {
-      out.push({ slovo, tucne: zakladTucny || usek.tucne });
+  for (const usek of naUseky(nezlomitelneCastky(text, SPOJKA))) {
+    for (const slovo of usek.text.split(/[ \t\n\r]+/).filter(Boolean)) {
+      // „7<SPOJKA>888<SPOJKA>Kč" je jedno slovo - zalomeni ho uz nerozdeli.
+      out.push({ slovo: slovo.split(SPOJKA).join(' '), tucne: zakladTucny || usek.tucne });
     }
   }
   return out;
@@ -262,6 +270,26 @@ export function smlouvaPdf(data: SmlouvaPdfData): Buffer {
         s.top += 19;
       }
       s.top += 10;
+      continue;
+    }
+
+    // Cislo smlouvy patri vpravo a tucne - stejne jako na strance
+    // (zadani 15. 9. 2026).
+    if (jeCisloSmlouvy(text)) {
+      const cisty = text.replace(/\*\*/g, '');
+      for (const radek of zalom(FONT_BOLD, cisty, TEXT_SIZE, SIRKA)) {
+        mistoNeboNova(RADEK);
+        s.c.text(
+          FONT_BOLD,
+          'FB',
+          radek,
+          TEXT_SIZE,
+          RIGHT - textWidth(FONT_BOLD, radek, TEXT_SIZE),
+          s.top + 8,
+          INK,
+        );
+        s.top += RADEK;
+      }
       continue;
     }
 

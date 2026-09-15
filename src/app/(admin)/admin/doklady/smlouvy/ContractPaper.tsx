@@ -1,4 +1,10 @@
-import { formatSignedAt, popisekDruheStrany, popisekNaseStrany } from '@/lib/contracts';
+import {
+  formatSignedAt,
+  jeCisloSmlouvy,
+  nezlomitelneCastky,
+  popisekDruheStrany,
+  popisekNaseStrany,
+} from '@/lib/contracts';
 
 export type PaperSignature = {
   role: 'MEDIASPACE' | 'PROTISTRANA';
@@ -113,6 +119,16 @@ export function TextSmlouvy({ body, titulek = true }: { body: string; titulek?: 
           );
         }
 
+        // Cislo smlouvy patri vpravo a tucne - jako na papirovych smlouvach
+        // (zadani 15. 9. 2026).
+        if (jeCisloSmlouvy(text)) {
+          return (
+            <p key={i} className="m-0 text-right font-heading font-semibold text-ink">
+              {bezHvezdicek(text)}
+            </p>
+          );
+        }
+
         const druh = druhRadku(text);
 
         if (druh === 'nadpis') {
@@ -146,7 +162,7 @@ export function TextSmlouvy({ body, titulek = true }: { body: string; titulek?: 
 
 /** Hvězdičky v nadpisu nemají co dělat - tam se sází tučně všechno. */
 function bezHvezdicek(text: string): string {
-  return text.replace(/\*\*/g, '');
+  return nezlomitelneCastky(text.replace(/\*\*/g, ''));
 }
 
 /**
@@ -161,10 +177,10 @@ export function STucnym({ text }: { text: string }) {
       {kousky.map((kousek, i) =>
         kousek.startsWith('**') && kousek.endsWith('**') && kousek.length > 4 ? (
           <strong key={i} className="font-semibold">
-            {kousek.slice(2, -2)}
+            {nezlomitelneCastky(kousek.slice(2, -2))}
           </strong>
         ) : (
-          <span key={i}>{kousek}</span>
+          <span key={i}>{nezlomitelneCastky(kousek)}</span>
         ),
       )}
     </>

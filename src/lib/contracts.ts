@@ -157,6 +157,32 @@ export function expandPlaceholders(body: string, values: Record<string, string |
 }
 
 /**
+ * ČÁSTKA SE NESMÍ ROZPADNOUT NA DVA ŘÁDKY (zadání 15. 9. 2026: „a částka
+ * nemůže být takhle rozbitá na dva řádky"). „7 888 Kč" je jeden údaj, ne tři
+ * slova - tak se má i zalamovat.
+ *
+ * Do uloženého textu smlouvy se pevná mezera nepíše schválně: font v PDF ji
+ * neumí a vysázel by místo ní otazník. Proto se doplňuje až při sazbě - na
+ * stránce pevnou mezerou, v PDF vlastní značkou, ze které se před kreslením
+ * zase udělá obyčejná mezera (viz naSlova v lib/smlouvaPdf).
+ */
+export function nezlomitelneCastky(text: string, mezera = '\u00A0'): string {
+  return text
+    .replace(/(\d)[ \t](?=\d{3}(?!\d))/g, `$1${mezera}`)
+    .replace(/(\d)[ \t](?=Kč)/g, `$1${mezera}`);
+}
+
+/**
+ * ŘÁDEK S ČÍSLEM SMLOUVY (zadání 15. 9. 2026: „číslo smlouvy v textu by mělo
+ * být vpravo a tučně"). Sází se jinak než zbytek textu, a protože smlouva
+ * musí v PDF vypadat přesně jako na stránce, poznávají ho obě sazby
+ * (ContractPaper i smlouvaPdf) podle tohohle jednoho pravidla.
+ */
+export function jeCisloSmlouvy(text: string): boolean {
+  return /^\s*(?:\*\*)?\s*číslo\s+smlouvy\s*:/i.test(text);
+}
+
+/**
  * POPISKY U PODPISŮ (zadání 15. 9. 2026: „tady musí být za MEDIA SPACE s.r.o.
  * a za interpreta"). Naše strana se jmenuje přesně tak, jak je firma zapsaná;
  * druhá podle toho, jak jí říká samotná smlouva - u audioknihy Interpret,
