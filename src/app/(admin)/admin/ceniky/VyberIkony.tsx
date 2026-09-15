@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { IKONY_TYPU, KresbaIkony, popisekIkony } from '@/lib/ikonyTypu';
+import { IKONY_TYPU, KresbaIkony, popisekIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 
 /**
  * Výběr ikony u položky ceníku (zadání 10. 9. 2026: „chtěl bych to měnit
@@ -45,7 +45,7 @@ export function VyberIkony({
         title={hodnota ? `Ikona: ${popisekIkony(hodnota)}` : 'Vybrat ikonu'}
         className={`inline-grid place-items-center w-[34px] h-[34px] rounded-pill border transition-colors disabled:opacity-60 ${
           hodnota
-            ? 'bg-brand-purple/15 text-brand-purpleDeep dark:text-brand-purpleLight border-transparent'
+            ? `${tridaBarvyIkony(hodnota)} border-transparent`
             : 'border-dashed border-line text-muted hover:text-ink'
         }`}
       >
@@ -64,11 +64,12 @@ export function VyberIkony({
                   onZmena(i.klic);
                   setOtevreno(false);
                 }}
-                className={`inline-grid place-items-center w-[42px] h-[42px] rounded-lg transition-colors ${
-                  hodnota === i.klic
-                    ? 'bg-brand-purple text-white'
-                    : 'text-muted hover:bg-field hover:text-brand-purpleDeep dark:hover:text-brand-purpleLight'
-                }`}
+                /* Ikony se nabizi rovnou v barve, kterou pak maji u projektu
+                   (zadani 15. 9. 2026) - vybira se tvar i barva naraz. Vybrana
+                   se pozna rameckem, ne prebarvenim, at barva zustane videt. */
+                className={`inline-grid place-items-center w-[42px] h-[42px] rounded-lg transition-transform ${tridaBarvyIkony(
+                  i.klic,
+                )} ${hodnota === i.klic ? 'ring-2 ring-brand-purple scale-105' : 'hover:scale-105'}`}
               >
                 <KresbaIkony klic={i.klic} velikost={20} />
               </button>

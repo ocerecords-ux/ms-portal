@@ -6,10 +6,16 @@
  * JEDNA RODINA. Mřížka 24, tah 1.8, zakulacené konce, žádná výplň — vedle
  * sebe pak vypadají jako sada, ne jako posbírané klipy.
  *
- * BARVA JE JEDNA, LIŠÍ SE TVAR. V řádku projektu už barvy jsou: bublina
- * stavu jich nese osm a nese je záměrně. Kdyby typ přidal další, seznam se
- * rozsvítí a barva stavu přestane být informace. Ikona je proto vždycky
- * firemní fialová.
+ * BARVA SE LIŠÍ PODLE RODINY (zadání 15. 9. 2026: „jsou tvarově ok, ale bylo
+ * by dobré je udělat v různých barvách, ať se ti hezky odliší v tom seznamu").
+ * Do té doby byly všechny firemně fialové, aby barvu v řádku držela jenom
+ * bublina stavu - jenže při deseti typech se od sebe samotné tvary v 17 px
+ * poznávaly těžko.
+ *
+ * Barev je proto MÁLO A TLUMENÝCH: kolečko je podklad na 15 % a barevná je
+ * až kresba. Typy si je dělí po rodinách (audiokniha, vysílání, nahrávání,
+ * postprodukce, obraz, jazyky, lidé, ostatní), takže seznam rozlišuje, ale
+ * nesvítí - a bublina stavu vedle toho zůstane tím nejvýraznějším.
  *
  * IKONA SE NEHÁDÁ. Typ projektu se bere z Ceníku, takže i ikona patří
  * k položce ceníku (PriceListItem.ikona) - položka bez ikony ji prostě nemá.
@@ -18,12 +24,42 @@
 
 export type KlicIkony = string;
 
-type Ikona = { klic: KlicIkony; popisek: string; kresba: React.ReactNode };
+/** Rodiny barev. Víc jich schválně není - viz poznámka nahoře. */
+export type BarvaIkony =
+  | 'fialova'
+  | 'zelena'
+  | 'jantarova'
+  | 'modra'
+  | 'tyrkysova'
+  | 'ruzova'
+  | 'seda';
+
+/**
+ * Třídy kolečka pro každou rodinu. Podklad je vždycky slabý, barvu nese
+ * kresba; v tmavém režimu se kresba rozsvítí, aby ji bylo vidět.
+ */
+export const TRIDY_BAREV: Record<BarvaIkony, string> = {
+  fialova: 'bg-brand-purple/15 text-brand-purpleDeep dark:text-brand-purpleLight',
+  zelena: 'bg-brand-green/15 text-brand-greenDeep dark:text-brand-green',
+  jantarova: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+  modra: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  tyrkysova: 'bg-teal-500/15 text-teal-700 dark:text-teal-300',
+  ruzova: 'bg-rose-500/15 text-rose-600 dark:text-rose-300',
+  seda: 'bg-slate-500/15 text-slate-600 dark:text-slate-300',
+};
+
+type Ikona = { klic: KlicIkony; popisek: string; barva: BarvaIkony; kresba: React.ReactNode };
+
+/** Třídy kolečka pro daný klíč; neznámá ikona dostane firemní fialovou. */
+export function tridaBarvyIkony(klic: string | null | undefined): string {
+  return TRIDY_BAREV[najdiIkonu(klic)?.barva ?? 'fialova'];
+}
 
 /** Nabídka ikon. Přidat další znamená dopsat sem jeden řádek. */
 export const IKONY_TYPU: Ikona[] = [
   {
     klic: 'kniha',
+    barva: 'fialova',
     popisek: 'Kniha',
     kresba: (
       <>
@@ -37,6 +73,7 @@ export const IKONY_TYPU: Ikona[] = [
     // s mikrofonem". Kniha drzi levou polovinu, mikrofon stoji vpravo - dva
     // tvary vedle sebe se v 17 px prectou lip nez jeden slozity.
     klic: 'kniha-mikrofon',
+    barva: 'fialova',
     popisek: 'Audiokniha (kniha a mikrofon)',
     kresba: (
       <>
@@ -52,6 +89,7 @@ export const IKONY_TYPU: Ikona[] = [
     // Zadani 12. 9. 2026: „pro radiovy spot bych jeste vytvoril ikonku
     // radia". Prijimac s antenou, ladicim kolečkem a stupnici.
     klic: 'radio',
+    barva: 'jantarova',
     popisek: 'Rádio (rádiový spot)',
     kresba: (
       <>
@@ -68,6 +106,7 @@ export const IKONY_TYPU: Ikona[] = [
     // ikonu mikrofon + mixazni pult". Pult jsou dva fadery s cepickou; tri uz
     // by se v te velikosti slily.
     klic: 'mikrofon-mix',
+    barva: 'modra',
     popisek: 'Mikrofon a mixážní pult',
     kresba: (
       <>
@@ -83,6 +122,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'sluchatka',
+    barva: 'modra',
     popisek: 'Sluchátka',
     kresba: (
       <>
@@ -94,6 +134,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'mikrofon',
+    barva: 'modra',
     popisek: 'Mikrofon',
     kresba: (
       <>
@@ -105,6 +146,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'mikrofon-studio',
+    barva: 'modra',
     popisek: 'Studiový mikrofon',
     kresba: (
       <>
@@ -116,6 +158,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'vlny',
+    barva: 'jantarova',
     popisek: 'Vysílání',
     kresba: (
       <>
@@ -129,11 +172,13 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'vlna',
+    barva: 'tyrkysova',
     popisek: 'Zvuková vlna',
     kresba: <path d="M2.5 10.5v3M7 5.5v13M11.5 8.5v7M16 3.5v17M20.5 9.5v5" />,
   },
   {
     klic: 'ekvalizer',
+    barva: 'tyrkysova',
     popisek: 'Ekvalizér',
     kresba: (
       <>
@@ -146,6 +191,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'reproduktor',
+    barva: 'tyrkysova',
     popisek: 'Reproduktor',
     kresba: (
       <>
@@ -157,6 +203,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'megafon',
+    barva: 'jantarova',
     popisek: 'Reklama',
     kresba: (
       <>
@@ -168,6 +215,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'klapka',
+    barva: 'ruzova',
     popisek: 'Klapka / film',
     kresba: (
       <>
@@ -179,6 +227,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'obrazovka',
+    barva: 'ruzova',
     popisek: 'Obrazovka / TV',
     kresba: (
       <>
@@ -189,6 +238,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'noty',
+    barva: 'ruzova',
     popisek: 'Hudba',
     kresba: (
       <>
@@ -200,6 +250,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'zvonek',
+    barva: 'ruzova',
     popisek: 'Znělka',
     kresba: (
       <>
@@ -210,6 +261,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'globus',
+    barva: 'zelena',
     popisek: 'Lokalizace',
     kresba: (
       <>
@@ -221,6 +273,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'vlajka',
+    barva: 'zelena',
     popisek: 'Jazyková mutace',
     kresba: (
       <>
@@ -231,6 +284,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'lide',
+    barva: 'zelena',
     popisek: 'Casting',
     kresba: (
       <>
@@ -243,6 +297,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'hodiny',
+    barva: 'seda',
     popisek: 'Termín',
     kresba: (
       <>
@@ -253,6 +308,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'dokument',
+    barva: 'seda',
     popisek: 'Dokument',
     kresba: (
       <>
@@ -263,6 +319,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'stitek',
+    barva: 'seda',
     popisek: 'Štítek',
     kresba: (
       <>
@@ -273,16 +330,19 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'hvezda',
+    barva: 'jantarova',
     popisek: 'Hvězda',
     kresba: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z" />,
   },
   {
     klic: 'blesk',
+    barva: 'jantarova',
     popisek: 'Rychlovka',
     kresba: <path d="M13.5 2.5 4.5 13.5h6l-1 8 9-11h-6z" />,
   },
   {
     klic: 'ovladac',
+    barva: 'ruzova',
     popisek: 'Hra',
     kresba: (
       <>
@@ -295,6 +355,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'telefon',
+    barva: 'seda',
     popisek: 'Telefon',
     kresba: (
       <path d="M5.5 3.5h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5l1.5-2 4 1.5v3a2 2 0 0 1-2 2A16.5 16.5 0 0 1 3.5 5.5a2 2 0 0 1 2-2" />
@@ -302,6 +363,7 @@ export const IKONY_TYPU: Ikona[] = [
   },
   {
     klic: 'srdce',
+    barva: 'ruzova',
     popisek: 'Srdce',
     kresba: <path d="M12 20.5S3.5 15 3.5 9a4.5 4.5 0 0 1 8.5-2 4.5 4.5 0 0 1 8.5 2c0 6-8.5 11.5-8.5 11.5" />,
   },
@@ -370,7 +432,7 @@ export function IkonaTypu({
   return (
     <span
       title={typProjektu || ikona.popisek}
-      className="shrink-0 inline-grid place-items-center w-[30px] h-[30px] rounded-pill bg-brand-purple/15 text-brand-purpleDeep dark:text-brand-purpleLight"
+      className={`shrink-0 inline-grid place-items-center w-[30px] h-[30px] rounded-pill ${tridaBarvyIkony(ikona.klic)}`}
     >
       <KresbaIkony klic={ikona.klic} />
     </span>
