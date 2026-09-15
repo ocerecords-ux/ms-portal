@@ -101,15 +101,31 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     if (!item) return NextResponse.json({ error: 'Položka nenalezena.' }, { status: 404 });
 
 
-    // Polozku, kterou uz nekdo pouzil jako typ projektu, radeji nemazeme -
-    // jen ji vyradime, at se u historickych projektu typ neztrati.
-    const used = await prisma.projectMeta.count({ where: { projectType: item.name } });
-    if (used > 0) {
+    /**
+     * Polozku, kterou uz nekdo pouzil jako typ projektu, radeji nemazeme -
+     * jen ji vyradime, at se u historickych projektu typ neztrati.
+     *
+     * VRACIME I JMENA PROJEKTU (zadani 15. 9. 2026: „nejde mi smazat Zvukova
+     * postprodukce, pritom u zadneho projektu neni"). Samotny pocet clovek
+     * neoveri - musel by projit vsechny projekty a hledat, ktery to je.
+     */
+    const pouzivaji = await prisma.projectMeta.findMany({
+      where: { projectType: item.name },
+      select: { caflouProjectId: true, name: true },
+      orderBy: { name: 'asc' },
+      take: 20,
+    });
+    if (pouzivaji.length > 0) {
       const updated = await prisma.priceListItem.update({
         where: { id: params.id },
         data: { active: false },
       });
-      return NextResponse.json({ ...updated, deactivatedInsteadOfDeleted: true, usedByProjects: used });
+      return NextResponse.json({
+        ...updated,
+        deactivatedInsteadOfDeleted: true,
+        usedByProjects: pouzivaji.length,
+        projekty: pouzivaji.map((p) => ({ id: p.caflouProjectId, name: p.name ?? 'projekt bez názvu' })),
+      });
     }
 
     await prisma.priceListItem.delete({ where: { id: params.id } });

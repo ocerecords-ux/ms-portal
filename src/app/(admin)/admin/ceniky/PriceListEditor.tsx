@@ -101,9 +101,24 @@ export function PriceListEditor({ items }: { items: Item[] }) {
   async function removeItem(item: Item) {
     const result = await send(`/api/admin/pricelist/${item.id}`, 'DELETE');
     if (result?.deactivatedInsteadOfDeleted) {
-      setNote(
-        `Položku „${item.name}" už používá ${result.usedByProjects} projektů, takže jsme ji jen vyřadili z nabídky — u těch projektů zůstane.`,
-      );
+      /**
+       * Rovnou JMENOVAT projekty, které položku drží (zadání 15. 9. 2026:
+       * „nejde mi smazat Zvuková postprodukce, přitom u žádného projektu
+       * není"). Samotný počet se nedal ověřit — člověk by musel projít
+       * všechny projekty a hádat, který to je.
+       */
+      const projekty: { id: string; name: string }[] = result.projekty ?? [];
+      const jmena = projekty.slice(0, 3).map((p) => p.name).join(', ');
+      const dalsi = projekty.length > 3 ? ` a další ${projekty.length - 3}` : '';
+      const kdo =
+        projekty.length === 0
+          ? `Používá ji ${result.usedByProjects} projektů.`
+          : projekty.length === 1
+            ? `Má ji projekt ${jmena}.`
+            : projekty.length <= 4
+              ? `Mají ji projekty ${jmena}.`
+              : `Má ji ${projekty.length} projektů: ${jmena}${dalsi}.`;
+      setNote(`Položku „${item.name}" jsme jen vyřadili z nabídky — u projektů zůstane. ${kdo}`);
     }
   }
 
