@@ -384,7 +384,11 @@ export function UserEditForm({
                   >
                     {studio.popisek}
                   </span>
-                  <span className="text-muted text-xs font-body">{studio.nazev}</span>
+                  {/* Od 15. 9. 2026 je lokace rovnou mesto, takze nazev za
+                      odznakem uz by jen opakoval totez. */}
+                  {studio.popisek !== studio.nazev && (
+                    <span className="text-muted text-xs font-body">{studio.nazev}</span>
+                  )}
                 </label>
               ))}
             </div>
