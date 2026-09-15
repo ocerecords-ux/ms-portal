@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import type { ConversationKind } from '@prisma/client';
 import { MS_SMAJLICI, najdiSmajlika } from '@/lib/msSmajlici';
@@ -1038,7 +1039,126 @@ function ZvukovaPriloha({ priloha, odkaz }: { priloha: ChatPriloha; odkaz: strin
   );
 }
 
+/**
+ * Obrázek na celou obrazovku přímo v portálu (zadání 15. 9. 2026: „obrázky
+ * v chatu se otevírají v Chromu. Udělej to tak, ať se otevřou v okně chatu").
+ *
+ * Odkaz na přílohu vede přes portál, takže prohlížeč ho otevřel jako
+ * samostatnou stránku a člověk skončil mimo chat — a na telefonu mimo
+ * aplikaci. Teď se obrázek ukáže přes celé okno a zavře se křížkem, klávesou
+ * Esc nebo klepnutím vedle; šipkami se listuje mezi obrázky téže zprávy.
+ *
+ * Stahování zůstává odkazem, ať se soubor dá pořád uložit.
+ */
+function Svetlo({
+  obrazky,
+  index,
+  zavri,
+}: {
+  obrazky: ChatPriloha[];
+  index: number;
+  zavri: () => void;
+}) {
+  const [kde, setKde] = useState(index);
+
+  useEffect(() => setKde(index), [index]);
+
+  useEffect(() => {
+    function klavesa(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        zavri();
+        return;
+      }
+      if (obrazky.length < 2) return;
+      if (e.key === 'ArrowRight') setKde((i) => (i + 1) % obrazky.length);
+      if (e.key === 'ArrowLeft') setKde((i) => (i - 1 + obrazky.length) % obrazky.length);
+    }
+    window.addEventListener('keydown', klavesa);
+    return () => window.removeEventListener('keydown', klavesa);
+  }, [obrazky.length, zavri]);
+
+  const p = obrazky[kde];
+  if (!p || typeof document === 'undefined') return null;
+  const odkaz = `/api/chat/prilohy/${p.id}`;
+
+  // Portál do <body>: přílohy se kreslí uvnitř bubliny poskládané ze samých
+  // <span>, a <div> by v ní byl neplatný. Zároveň se tím vrstva dostane nad
+  // panel chatu bez ohledu na jeho ořezávání.
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={p.name}
+      onClick={zavri}
+      className="fixed inset-0 z-[60] bg-ink/85 backdrop-blur-[2px] flex flex-col"
+    >
+      <div className="flex items-center gap-3 px-4 py-3 text-white" onClick={(e) => e.stopPropagation()}>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-heading font-semibold truncate">{p.name}</span>
+          <span className="block text-[11px] font-body text-white/70">
+            {formatVelikost(p.size)}
+            {obrazky.length > 1 ? ` · ${kde + 1}/${obrazky.length}` : ''}
+          </span>
+        </span>
+        <TlacitkoStahnout odkaz={odkaz} nazev={p.name} tmave />
+        <button
+          type="button"
+          onClick={zavri}
+          title="Zavřít"
+          aria-label="Zavřít"
+          className="inline-flex items-center justify-center w-9 h-9 shrink-0 rounded-lg border border-white/40 text-white hover:bg-white/20 transition-colors text-xl leading-none"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="flex-1 min-h-0 flex items-center justify-center gap-2 px-2 pb-4">
+        {obrazky.length > 1 && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setKde((i) => (i - 1 + obrazky.length) % obrazky.length);
+            }}
+            title="Předchozí"
+            aria-label="Předchozí obrázek"
+            className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors"
+          >
+            <Chevron direction="left" />
+          </button>
+        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={odkaz}
+          alt={p.name}
+          onClick={(e) => e.stopPropagation()}
+          className="max-h-full max-w-full object-contain rounded-card"
+        />
+        {obrazky.length > 1 && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setKde((i) => (i + 1) % obrazky.length);
+            }}
+            title="Další"
+            aria-label="Další obrázek"
+            className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors"
+          >
+            <Chevron direction="right" />
+          </button>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function Prilohy({ prilohy }: { prilohy: ChatPriloha[] }) {
+  /** Který obrázek je otevřený přes celé okno; `null` = žádný. */
+  const [otevreny, setOtevreny] = useState<string | null>(null);
+  const obrazky = prilohy.filter((p) => jeObrazek(p.mime));
+
   if (prilohy.length === 0) return null;
 
   return (
@@ -1051,16 +1171,15 @@ function Prilohy({ prilohy }: { prilohy: ChatPriloha[] }) {
         if (jeObrazek(p.mime)) {
           return (
             <span key={p.id} className="relative block max-w-[280px]">
-              <a
-                href={odkaz}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={() => setOtevreny(p.id)}
                 title={`${p.name} (${formatVelikost(p.size)})`}
-                className="block rounded-card overflow-hidden border border-line"
+                className="block w-full rounded-card overflow-hidden border border-line cursor-zoom-in"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={odkaz} alt={p.name} className="block w-full max-h-[240px] object-cover" />
-              </a>
+              </button>
               {/* Na obrazku samotnem by svetle tlacitko zaniklo, proto tmava
                   varianta s pruhlednym podkladem. */}
               <span className="absolute top-1.5 right-1.5 rounded-lg bg-ink/45 backdrop-blur-[2px] p-0.5">
@@ -1093,6 +1212,14 @@ function Prilohy({ prilohy }: { prilohy: ChatPriloha[] }) {
           </span>
         );
       })}
+
+      {otevreny && (
+        <Svetlo
+          obrazky={obrazky}
+          index={Math.max(0, obrazky.findIndex((o) => o.id === otevreny))}
+          zavri={() => setOtevreny(null)}
+        />
+      )}
     </span>
   );
 }
