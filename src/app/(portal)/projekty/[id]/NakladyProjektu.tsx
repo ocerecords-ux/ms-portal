@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
 
 export type NakladovaPolozka = { nazev: string; castka: number };
 
@@ -156,6 +157,15 @@ export function NakladyProjektu({
  * Kdo v portálu účet nemá, se prostě napíše celý - proto tu není výběr,
  * ze kterého by se nedalo vystoupit.
  */
+/** Porovnávací tvar jména - bez diakritiky, malými písmeny. */
+function zjednodus(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 function PoleSNapovedou({
   hodnota,
   onZmena,
@@ -166,7 +176,11 @@ function PoleSNapovedou({
   jmena: string[];
 }) {
   const [otevreno, setOtevreno] = useState(false);
+  // Rozepsaná položka: dokud se v ní píše, je to obyčejné pole. Jakmile
+  // sedne na herce z databáze, ukáže se jako bublina - viz níž.
+  const [upravuje, setUpravuje] = useState(false);
   const obal = useRef<HTMLDivElement>(null);
+  const poleRef = useRef<HTMLInputElement>(null);
 
   // Nabidku zavira klik MIMO ni - blur prijde uz pri zmacknuti tlacitka mysi,
   // takze by se polozka pod kurzorem stihla ztratit driv, nez by se na ni
@@ -180,14 +194,50 @@ function PoleSNapovedou({
     return () => document.removeEventListener('mousedown', mimo);
   }, [otevreno]);
 
-  const hledany = hodnota.trim().toLowerCase();
+  const hledany = zjednodus(hodnota);
   const nalezena = hledany
-    ? jmena.filter((j) => j.toLowerCase().includes(hledany) && j.toLowerCase() !== hledany).slice(0, 6)
+    ? jmena.filter((j) => zjednodus(j).includes(hledany) && zjednodus(j) !== hledany).slice(0, 6)
     : [];
+
+  /**
+   * HEREC Z DATABÁZE SE POZNÁ NA PRVNÍ POHLED (zadání 15. 9. 2026: „když
+   * přidávám herce do nákladů, chtěl by, ať se identifikuje herec z databáze.
+   * Ať je to jasné, tak by tam mohl naskočit v té bublině, jak máme
+   * u projektu").
+   *
+   * Řádek nákladů je pořád obyčejný text - honorář se platí i tomu, kdo
+   * v portálu účet nemá, a položka může být klidně „studio Brno". Když ale
+   * napsané jméno sedne na herce z databáze, vykreslí se jako fialová bublina,
+   * úplně stejná jako u projektu. Kliknutím se zase rozepíše.
+   */
+  const herecZDatabaze = hodnota.trim() ? jmena.find((j) => zjednodus(j) === hledany) ?? null : null;
+
+  if (herecZDatabaze && !upravuje) {
+    return (
+      <div className="relative flex-1 min-w-0">
+        <button
+          type="button"
+          onClick={() => {
+            setUpravuje(true);
+            setTimeout(() => poleRef.current?.focus(), 0);
+          }}
+          title="Upravit položku"
+          className="w-full rounded-lg border border-line bg-field px-2 py-1 text-left flex items-center min-h-[34px]"
+        >
+          <span
+            className={`inline-flex items-center max-w-full whitespace-nowrap px-3 py-0.5 text-sm font-heading font-semibold truncate ${TRIDA_BUBLINY_HERCE}`}
+          >
+            {herecZDatabaze}
+          </span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div ref={obal} className="relative flex-1 min-w-0">
       <input
+        ref={poleRef}
         type="text"
         value={hodnota}
         onChange={(e) => {
@@ -195,6 +245,7 @@ function PoleSNapovedou({
           setOtevreno(true);
         }}
         onFocus={() => setOtevreno(true)}
+        onBlur={() => setUpravuje(false)}
         onKeyDown={(e) => {
           if (e.key === 'Escape' && otevreno) {
             e.preventDefault();
@@ -216,6 +267,7 @@ function PoleSNapovedou({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 onZmena(j);
+                setUpravuje(false);
                 setOtevreno(false);
               }}
               className="w-full text-left px-3 py-2 text-sm font-body text-ink hover:bg-surfaceSoft"
