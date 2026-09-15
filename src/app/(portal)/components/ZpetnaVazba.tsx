@@ -37,7 +37,20 @@ type PripominkaVPanelu = {
  * všech připomínek"). Odškrtává se přímo v panelu - kvůli třem hotovým věcem
  * není proč chodit do Mého účtu.
  */
-export function ZpetnaVazba({ odznak = 0, spravce = false }: { odznak?: number; spravce?: boolean }) {
+export function ZpetnaVazba({
+  odznak = 0,
+  spravce = false,
+  interni = false,
+}: {
+  odznak?: number;
+  spravce?: boolean;
+  /**
+   * Je to někdo z Mediaspace? Tým ví, komu připomínky chodí, a je pro něj
+   * praktické to vidět; klientovi ani herci se jméno neuvádí (zadání
+   * 15. 9. 2026: „u zbytku - klientů, herců to nech obecně za nás").
+   */
+  interni?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [otevreno, setOtevreno] = useState(false);
@@ -189,7 +202,7 @@ export function ZpetnaVazba({ odznak = 0, spravce = false }: { odznak?: number; 
               <p className="text-xs font-body text-muted m-0 mt-0.5">
                 {spravce && !pise
                   ? 'Co lidem v portálu vadí. Odškrtnutá položka jim zmizí.'
-                  : 'Co nefunguje, co chybí, co by šlo líp. Jde to rovnou Ondřejovi.'}
+                  : `Co nefunguje, co chybí, co by šlo líp. Jde to rovnou ${interni ? 'Ondřejovi' : 'nám'}.`}
               </p>
             </div>
             <button type="button" onClick={zavri} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">

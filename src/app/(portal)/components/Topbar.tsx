@@ -35,6 +35,7 @@ export function Topbar({
   odznaky,
   pripominky = 0,
   spravcePripominek = false,
+  interni = false,
 }: {
   userLabel: string;
   /** Fotka z karty uživatele; bez ní se ukážou iniciály. */
@@ -56,6 +57,8 @@ export function Topbar({
   pripominky?: number;
   /** Vidí v bublině rovnou celý seznam připomínek? (zadání 15. 9. 2026) */
   spravcePripominek?: boolean;
+  /** Je přihlášený někdo z Mediaspace? Mění to text u zpětné vazby. */
+  interni?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -365,7 +368,7 @@ export function Topbar({
         <PrepinacJazyka />
         {/* Pripominka k portalu (zadani 15. 9. 2026) - vedle zvonku, at je
             po ruce na kazde strance. */}
-        <ZpetnaVazba odznak={pripominky} spravce={spravcePripominek} />
+        <ZpetnaVazba odznak={pripominky} spravce={spravcePripominek} interni={interni} />
         <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
         <Link
