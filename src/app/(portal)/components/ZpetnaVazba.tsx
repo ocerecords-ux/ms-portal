@@ -150,7 +150,7 @@ export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
                   }
                 }}
                 rows={4}
-                placeholder="Např. „Ve výkazech nejde vybrat projekt, když má dlouhý název." Printscreen můžete vložit rovnou přes Ctrl+V."
+                placeholder={'Např. „Ve výkazech nejde vybrat projekt, když má dlouhý název.“ Printscreen můžete vložit rovnou přes Ctrl+V.'}
                 className="w-full rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
               />
 
