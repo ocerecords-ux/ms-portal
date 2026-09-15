@@ -51,6 +51,13 @@ function monthLabel(key: string): string {
   return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${year}`;
 }
 
+/** „1. 9. 2026 – 30. 9. 2026", „od 1. 9. 2026", „do 30. 9. 2026". */
+function popisObdobi(od: string, doData: string): string {
+  if (od && doData) return `${formatDate(od)} – ${formatDate(doData)}`;
+  if (od) return `od ${formatDate(od)}`;
+  return `do ${formatDate(doData)}`;
+}
+
 type SortKey = 'date' | 'user' | 'duration' | 'workType' | 'project' | 'amount';
 type Sort = { key: SortKey; dir: 'asc' | 'desc' };
 
@@ -122,6 +129,20 @@ export function TimesheetEditor({
   const [query, setQuery] = useState('');
   const [userFilter, setUserFilter] = useState<string>('all');
   const [sort, setSort] = useState<Sort>({ key: 'date', dir: 'desc' });
+  /**
+   * VLASTNÍ OBDOBÍ OD–DO a FILTR PODLE DRUHU PRÁCE (zadání 15. 9. 2026:
+   * „ve výkazech v obecném přehledu potřebuji podrobnější filtr — vybrat si
+   * období od do, pak filtrovat podle střihu a natáčení").
+   *
+   * Záložky s měsíci zůstávají - na běžné „kolik jsem tenhle měsíc udělal"
+   * jsou rychlejší. Období od–do je pro všechno ostatní: čtvrtletí, půlka
+   * měsíce, období jedné zakázky. Když je vyplněné, měsíční záložky
+   * neplatí (a naopak) - dva filtry nad týmž sloupcem by se jen pletly.
+   */
+  const [odDatum, setOdDatum] = useState('');
+  const [doDatum, setDoDatum] = useState('');
+  const [druhPrace, setDruhPrace] = useState<'all' | WorkType>('all');
+  const vlastniObdobi = Boolean(odDatum || doDatum);
 
   // Zalozky s mesici se skladaji z toho, co ve vykazech opravdu je - plus
   // vzdy aktualni mesic, at je na cem zacit i prvniho v mesici, kdy jeste
@@ -149,7 +170,14 @@ export function TimesheetEditor({
   const visibleEntries = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const rows = entries.filter((e) => {
-      if (month !== 'all' && !e.date.startsWith(month)) return false;
+      // Datumy jsou „2026-09-15", takze se daji porovnavat jako retezce.
+      if (vlastniObdobi) {
+        if (odDatum && e.date < odDatum) return false;
+        if (doDatum && e.date > doDatum) return false;
+      } else if (month !== 'all' && !e.date.startsWith(month)) {
+        return false;
+      }
+      if (druhPrace !== 'all' && e.workType !== druhPrace) return false;
       if (userFilter !== 'all' && e.userId !== userFilter) return false;
       if (!needle) return true;
       const haystack = [e.projectName ?? '', e.note ?? '', e.userLabel, WORK_TYPE_LABELS[e.workType], formatDate(e.date)]
@@ -183,7 +211,7 @@ export function TimesheetEditor({
         }
       }
     });
-  }, [entries, month, userFilter, query, sort]);
+  }, [entries, month, userFilter, query, sort, vlastniObdobi, odDatum, doDatum, druhPrace]);
 
   // Živý náhled: kolik hodin to je a kolik to dělá peněz.
   const preview = useMemo(() => {
@@ -333,8 +361,12 @@ export function TimesheetEditor({
           )}
         </div>
         <div className="text-right">
+          {/* Souctu se tyka KAZDY filtr, takze nadpis musi rict, ceho se to
+              tyka - jinak by „Celkem · Září" lhalo, kdyz je zapnuty strih
+              nebo vlastni obdobi (zadani 15. 9. 2026). */}
           <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">
-            Celkem · {month === 'all' ? 'vše' : monthLabel(month)}
+            Celkem · {vlastniObdobi ? popisObdobi(odDatum, doDatum) : month === 'all' ? 'vše' : monthLabel(month)}
+            {druhPrace !== 'all' ? ` · ${WORK_TYPE_LABELS[druhPrace]}` : ''}
           </p>
           <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatCzk(totals.amount)}</p>
           <p className="text-xs font-body text-muted m-0">{formatDuration(totals.minutes)}</p>
@@ -485,12 +517,79 @@ export function TimesheetEditor({
       <div className="flex flex-col gap-4">
         <div className="flex items-end justify-between gap-4 flex-wrap border-b border-line">
           <div className="flex items-center gap-1 flex-wrap">
-            <MonthTab active={month === 'all'} onClick={() => setMonth('all')} label="Vše" />
+            {/* Kliknuti na mesic zahazuje vlastni obdobi - jinak by zalozka
+                svitila, ale seznam by se ridil necim jinym. */}
+            <MonthTab
+              active={!vlastniObdobi && month === 'all'}
+              onClick={() => {
+                setMonth('all');
+                setOdDatum('');
+                setDoDatum('');
+              }}
+              label="Vše"
+            />
             {months.map((m) => (
-              <MonthTab key={m} active={month === m} onClick={() => setMonth(m)} label={monthLabel(m)} />
+              <MonthTab
+                key={m}
+                active={!vlastniObdobi && month === m}
+                onClick={() => {
+                  setMonth(m);
+                  setOdDatum('');
+                  setDoDatum('');
+                }}
+                label={monthLabel(m)}
+              />
             ))}
           </div>
           <div className="flex items-center gap-3 mb-2 flex-wrap">
+            {/* Vlastni obdobi od-do (zadani 15. 9. 2026). Prazdna strana
+                znamena „bez omezeni" - da se tak napsat i „od 1. 9. dal". */}
+            <span className="flex items-center gap-1.5">
+              <span className="text-xs font-heading text-muted uppercase tracking-wide">Období</span>
+              <input
+                type="date"
+                value={odDatum}
+                onChange={(e) => setOdDatum(e.target.value)}
+                title="Od data"
+                className="rounded-lg border border-line bg-surface px-2.5 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+              />
+              <span className="text-muted text-sm">–</span>
+              <input
+                type="date"
+                value={doDatum}
+                onChange={(e) => setDoDatum(e.target.value)}
+                title="Do data"
+                className="rounded-lg border border-line bg-surface px-2.5 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+              />
+              {vlastniObdobi && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOdDatum('');
+                    setDoDatum('');
+                  }}
+                  title="Zrušit období a vrátit se k měsícům"
+                  className="text-xs font-heading text-muted hover:text-danger px-1"
+                >
+                  ✕
+                </button>
+              )}
+            </span>
+
+            {/* Druh prace - nataceni / strih / ostatni (zadani 15. 9. 2026). */}
+            <select
+              value={druhPrace}
+              onChange={(e) => setDruhPrace(e.target.value as 'all' | WorkType)}
+              className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
+            >
+              <option value="all">Všechny druhy práce</option>
+              {WORK_TYPE_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {WORK_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+
             {/* Prepinac "ciho vykazu" ma smysl jen pro Zuzo-labuzo, ktere vidi
                 cely tym. Zvukar vidi jen svoje (filtruje server), takze by mu
                 nabizel jedinou moznost. Volba "Jen moje" tu uz neni - Zuzo
