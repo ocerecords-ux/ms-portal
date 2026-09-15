@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getRateForCurrency } from '@/lib/cnb';
 import { InvoiceEditor } from '../[id]/InvoiceEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
+import { computeTotals } from '@/lib/doklady';
 
 /**
  * Faktura z nabídky PŘED uložením (zadani 8. 9. 2026: "chci se dostat ještě
@@ -35,13 +36,25 @@ export default async function NewInvoiceFromOfferPage({
       items: { orderBy: { sortOrder: 'asc' } },
       issuer: true,
       company: true,
-      invoice: { select: { id: true } },
+      /**
+       * UŽ VYSTAVENÉ FAKTURY Z TÉHLE NABÍDKY (zadání 15. 9. 2026: „jestli to
+       * bude v pohodě, když z jedné nabídky udělám dvě faktury"). Dřív se
+       * druhá faktura nedala vystavit vůbec - klik vedl na tu první. Teď se
+       * jen spočítá, kolik z nabídky zbývá, a doklad se tím předvyplní.
+       */
+      invoices: {
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          number: true,
+          slevaProcent: true,
+          slevaMinor: true,
+          items: { select: { quantity: true, unitPriceMinor: true, vatRate: true } },
+        },
+      },
     },
   });
   if (!offer) notFound();
-
-  // Z jedné nabídky jen jedna faktura - když už existuje, jdeme rovnou na ni.
-  if (offer.invoice) redirect(`/admin/doklady/faktury/${offer.invoice.id}`);
 
   const [companies, bankAccounts, rate] = await Promise.all([
     prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, ic: true } }),
@@ -55,6 +68,22 @@ export default async function NewInvoiceFromOfferPage({
 
   const projects = await listProjectOptions();
 
+  /**
+   * Kolik z nabídky už je vyfakturováno. Počítá se ze VŠECH faktur, které
+   * z ní vyšly - včetně slevy na dokladu, ať sedí s tím, co klient dostal.
+   */
+  const vyfakturovanoMinor = offer.invoices.reduce(
+    (soucet, f) =>
+      soucet +
+      computeTotals(f.items, { slevaProcent: f.slevaProcent, slevaMinor: f.slevaMinor, slevaPopis: null }).incVat,
+    0,
+  );
+  const celkemMinor = computeTotals(offer.items, {
+    slevaProcent: offer.slevaProcent,
+    slevaMinor: offer.slevaMinor,
+    slevaPopis: offer.slevaPopis,
+  }).incVat;
+
   const dnes = new Date();
   const splatnost = new Date(dnes);
   splatnost.setDate(splatnost.getDate() + (offer.company.paymentTermDays ?? 14));
@@ -64,6 +93,13 @@ export default async function NewInvoiceFromOfferPage({
     <InvoiceEditor
       issuerCompanyId={offer.issuerCompanyId}
       draftFromOfferId={offer.id}
+      zNabidky={{
+        cislo: offer.number,
+        celkemMinor,
+        vyfakturovanoMinor,
+        mena: offer.currency,
+        faktury: offer.invoices.map((f) => ({ id: f.id, number: f.number })),
+      }}
       invoice={{
         id: 'nova',
         number: 'Nová faktura',

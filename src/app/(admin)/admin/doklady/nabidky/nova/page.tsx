@@ -75,6 +75,8 @@ export default async function NovaNabidkaPage({
         slevaProcent: 0,
         slevaMinor: 0,
         slevaPopis: null,
+        // Nova nabidka zadnou fakturu jeste nema.
+        faktury: [],
         items: [],
       }}
       issuer={{

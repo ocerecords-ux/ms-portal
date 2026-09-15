@@ -122,6 +122,7 @@ export function InvoiceEditor({
    * rozpracovany doklad a snedlo cislo z rady.
    */
   draftFromOfferId,
+  zNabidky,
 }: {
   invoice: Invoice;
   /** Vydavatel dokladu - kvuli nahledu, ktery si ho tahne ze serveru. */
@@ -132,6 +133,18 @@ export function InvoiceEditor({
   bankAccounts: { id: string; label: string; accountNumber: string | null; iban: string | null; currency: Currency }[];
   projects: ProjectChoice[];
   draftFromOfferId?: string;
+  /**
+   * Kolik z nabídky už je vyfakturováno (zadání 15. 9. 2026: „když bude
+   * nabídka na nějakou cenu a my to pak částečně vyfakturujeme"). Ukazuje se
+   * jen u dokladu rozepsaného z nabídky, ze které už nějaká faktura vyšla.
+   */
+  zNabidky?: {
+    cislo: string;
+    celkemMinor: number;
+    vyfakturovanoMinor: number;
+    mena: Currency;
+    faktury: { id: string; number: string }[];
+  } | null;
 }) {
   const router = useRouter();
   // Neulozeny doklad: bud se chysta z nabidky, nebo se zaklada od nuly -
@@ -369,6 +382,21 @@ export function InvoiceEditor({
   // zbyl uzky a nizky.
   return (
     <div className="flex flex-col gap-5 w-full max-w-[1460px] mx-auto">
+      {/* Kolik z nabidky uz je vyfakturovano (zadani 15. 9. 2026). Ukazuje se
+          jen u dokladu rozepsaneho z nabidky, ze ktere uz nejaka faktura vysla. */}
+      {zNabidky && zNabidky.faktury.length > 0 && (
+        <p className="text-sm font-body text-ink bg-tint border border-line rounded-card px-4 py-3 m-0">
+          Z nabídky <strong>{zNabidky.cislo}</strong> (celkem{' '}
+          {formatMoney(zNabidky.celkemMinor, zNabidky.mena)}) už je vyfakturováno{' '}
+          <strong>{formatMoney(zNabidky.vyfakturovanoMinor, zNabidky.mena)}</strong>
+          {' '}— {zNabidky.faktury.map((f) => f.number).join(', ')}. Zbývá{' '}
+          <strong>
+            {formatMoney(Math.max(0, zNabidky.celkemMinor - zNabidky.vyfakturovanoMinor), zNabidky.mena)}
+          </strong>
+          . Položky níž jsou z nabídky celé — upravte je na tu část, kterou fakturujete teď.
+        </p>
+      )}
+
       <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="font-display text-2xl text-ink">

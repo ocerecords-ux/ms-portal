@@ -65,6 +65,12 @@ type Offer = {
   slevaProcent: number;
   slevaMinor: number;
   slevaPopis: string | null;
+  /**
+   * Faktury vystavené z téhle nabídky (zadání 15. 9. 2026: „když bude nabídka
+   * na nějakou cenu a my to pak částečně vyfakturujeme"). Můžou být dvě i víc
+   * - portál k nim dopočítá, kolik z nabídky zbývá.
+   */
+  faktury: { id: string; number: string; status: string; celkemMinor: number }[];
   items: Item[];
 };
 
@@ -178,10 +184,14 @@ export function OfferEditor({
   const [kdoSchvalil, setKdoSchvalil] = useState('');
   const [schvaluji, setSchvaluji] = useState(false);
 
+  // Kolik z nabidky uz odeslo ve fakturach a kolik zbyva (zadani 15. 9. 2026).
+  const vyfakturovano = offer.faktury.reduce((soucet, f) => soucet + f.celkemMinor, 0);
+
   const totals = useMemo(
     () => computeTotals(items, { slevaProcent: form.slevaProcent, slevaMinor: form.slevaMinor, slevaPopis: form.slevaPopis }),
     [items, form.slevaProcent, form.slevaMinor, form.slevaPopis],
   );
+  const zbyva = Math.max(0, totals.incVat - vyfakturovano);
   const approvalUrl = typeof window !== 'undefined' ? `${window.location.origin}/nabidka/${offer.approvalToken}` : '';
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -377,6 +387,38 @@ export function OfferEditor({
   // zbyl uzky a nizky.
   return (
     <div className="flex flex-col gap-5 w-full max-w-[1460px] mx-auto">
+      {/* CO UŽ JE Z NABÍDKY VYFAKTUROVANÉ (zadání 15. 9. 2026: „když bude
+          nabídka na nějakou cenu a my to pak částečně vyfakturujeme… jestli to
+          bude v pohodě, když z jedné nabídky udělám dvě faktury"). Faktur může
+          být víc; tady je vidět kolik z nabídky padlo a co zbývá. */}
+      {offer.faktury.length > 0 && (
+        <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-2">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">Vyfakturováno z nabídky</span>
+            <span className="text-sm font-heading text-ink">
+              {formatMoney(vyfakturovano, form.currency)} z {formatMoney(totals.incVat, form.currency)}
+              {zbyva > 0 ? (
+                <span className="text-muted"> · zbývá {formatMoney(zbyva, form.currency)}</span>
+              ) : (
+                <span className="text-status-done"> · vyfakturováno celé</span>
+              )}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {offer.faktury.map((f) => (
+              <a
+                key={f.id}
+                href={`/admin/doklady/faktury/${f.id}`}
+                className="inline-flex items-center gap-2 rounded-pill border border-line bg-field px-3 py-1 text-xs font-heading text-ink no-underline hover:border-brand-purple"
+              >
+                {f.number}
+                <span className="text-muted">{formatMoney(f.celkemMinor, form.currency)}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Lišta se stavem a akcemi - drží se nahoře, aby byla pořád po ruce. */}
       <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
@@ -425,7 +467,7 @@ export function OfferEditor({
               disabled={saving || sending}
               className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60 whitespace-nowrap"
             >
-              Vystavit fakturu
+              {offer.faktury.length > 0 ? 'Vystavit další fakturu' : 'Vystavit fakturu'}
             </button>
           )}
           {!locked && (

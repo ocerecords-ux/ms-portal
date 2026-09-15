@@ -1118,7 +1118,14 @@ model Offer {
   rejectedAt     DateTime?
 
   items   OfferItem[]
-  invoice Invoice?
+  /**
+   * Faktury z teto nabidky. VIC NEZ JEDNA (zadani 15. 9. 2026: „kdyz bude
+   * nabidka na nejakou cenu a my to pak castecne vyfakturujeme... jestli to
+   * bude v pohode, kdyz z jedne nabidky udelam dve faktury"). Do 15. 9. 2026
+   * platilo jedna nabidka = jedna faktura a druha se odmitla; u vetsich
+   * zakazek se ale bezne fakturuje po castech.
+   */
+  invoices Invoice[]
 
   // Vazba na projekt v Caflou (zadani 8. 9. 2026: "chtel bych mit Doklady
   // navazane na projekty"). Nazev drzime i textove, aby doklad zustal
@@ -1144,6 +1151,7 @@ model Offer {
   @@index([companyId])
   @@index([status])
   @@index([caflouProjectId])
+  @@index([offerId])
 }
 
 // Polozka nabidky. Cena se drzi v nejmensi jednotce meny (halere, centy,
@@ -1224,7 +1232,7 @@ model Invoice {
   paidAmountMinor Int?
 
   // Faktura muze vzniknout z odsouhlasene nabidky - polozky se prenesou.
-  offerId String? @unique
+  offerId String?
   offer   Offer?  @relation(fields: [offerId], references: [id])
 
   items InvoiceItem[]
@@ -1253,6 +1261,7 @@ model Invoice {
   @@index([companyId])
   @@index([status])
   @@index([caflouProjectId])
+  @@index([offerId])
 }
 
 model InvoiceItem {

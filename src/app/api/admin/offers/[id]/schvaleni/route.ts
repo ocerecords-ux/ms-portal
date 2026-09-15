@@ -67,7 +67,12 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
     const offer = await prisma.offer.findUnique({
       where: { id: params.id },
-      select: { id: true, status: true, sentAt: true, invoice: { select: { id: true, number: true } } },
+      select: {
+        id: true,
+        status: true,
+        sentAt: true,
+        invoices: { select: { id: true, number: true }, orderBy: { createdAt: 'asc' } },
+      },
     });
     if (!offer) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
     if (offer.status !== 'APPROVED') {
@@ -75,9 +80,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     }
     // Kdyz uz z nabidky visi faktura, schvaleni je podklad k ni - zrusit ho
     // by znamenalo, ze fakturujeme neco, co nikdo neodsouhlasil.
-    if (offer.invoice) {
+    if (offer.invoices.length > 0) {
       return NextResponse.json(
-        { error: `Z nabídky už je vystavená faktura ${offer.invoice.number} — schválení nejde vzít zpět.` },
+        {
+          error: `Z nabídky už je vystavená faktura ${offer.invoices.map((f) => f.number).join(', ')} — schválení nejde vzít zpět.`,
+        },
         { status: 409 },
       );
     }

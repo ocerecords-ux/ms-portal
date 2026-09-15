@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     if (input.offerId) {
       offer = await prisma.offer.findUnique({
         where: { id: input.offerId },
-        include: { items: { orderBy: { sortOrder: 'asc' } }, invoice: { select: { id: true } } },
+        include: { items: { orderBy: { sortOrder: 'asc' } } },
       });
       if (!offer) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
       // Puvodne slo fakturovat jen z odsouhlasene nabidky. Schvalovani pres
@@ -78,12 +78,16 @@ export async function POST(req: NextRequest) {
       if (offer.status === 'REJECTED') {
         return NextResponse.json({ error: 'Tuhle nabídku klient odmítl.' }, { status: 409 });
       }
-      if (offer.invoice) {
-        return NextResponse.json(
-          { error: 'Z téhle nabídky už faktura vystavená je.', invoiceId: offer.invoice.id },
-          { status: 409 },
-        );
-      }
+      /**
+       * Z JEDNE NABIDKY MUZE BYT VIC FAKTUR (zadani 15. 9. 2026: „kdyz bude
+       * nabidka na nejakou cenu a my to pak castecne vyfakturujeme... jestli
+       * to bude v pohode, kdyz z jedne nabidky udelam dve faktury").
+       *
+       * Do 15. 9. 2026 se druha faktura odmitla. U vetsich zakazek se ale
+       * bezne fakturuje po castech - zaloha nezalohova, proste dva ostre
+       * doklady. Kolik uz je z nabidky vyfakturovano a kolik zbyva, ukazuje
+       * nabidka sama (viz OfferEditor).
+       */
     }
 
     const issuerCompanyId = offer?.issuerCompanyId ?? input.issuerCompanyId;

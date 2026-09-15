@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { OfferEditor } from './OfferEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
+import { computeTotals } from '@/lib/doklady';
 
 // Detail nabidky - editor, ktery vypada jako samotny doklad (zadani 8. 9. 2026:
 // "hlavně, ať je vše přehledné a intuitivní").
@@ -16,6 +17,19 @@ export default async function OfferDetailPage({ params }: { params: { id: string
         issuer: true,
         company: true,
         items: { orderBy: { sortOrder: 'asc' } },
+        // Faktury vystavene z teto nabidky - muze jich byt vic (zadani
+        // 15. 9. 2026: fakturuje se i po castech).
+        invoices: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            number: true,
+            status: true,
+            slevaProcent: true,
+            slevaMinor: true,
+            items: { select: { quantity: true, unitPriceMinor: true, vatRate: true } },
+          },
+        },
       },
     }),
     prisma.issuerCompany.findMany({ where: { active: true }, orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] }),
@@ -56,6 +70,16 @@ export default async function OfferDetailPage({ params }: { params: { id: string
           caflouProjectId: offer.caflouProjectId ?? '',
           projectName: offer.projectName,
           jazyk: offer.jazyk,
+          faktury: offer.invoices.map((f) => ({
+            id: f.id,
+            number: f.number,
+            status: f.status,
+            celkemMinor: computeTotals(f.items, {
+              slevaProcent: f.slevaProcent,
+              slevaMinor: f.slevaMinor,
+              slevaPopis: null,
+            }).incVat,
+          })),
           slevaProcent: offer.slevaProcent,
           slevaMinor: offer.slevaMinor,
           slevaPopis: offer.slevaPopis,
