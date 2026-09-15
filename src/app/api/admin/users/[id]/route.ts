@@ -29,6 +29,7 @@ const schema = z.object({
   hourlyRate: z.string().trim().optional(),
   /** "1" / "0" - smi byt manazerem projektu (zadani 10. 9. 2026). */
   manazerProjektu: z.string().trim().optional(),
+  smlouvyPodepisuje: z.string().trim().optional(),
   prijimaDotazyKlientu: z.string().trim().optional(),
   dostavaDotoceno: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
@@ -58,6 +59,7 @@ function readFormData(formData: FormData) {
     birthDate: has('birthDate') ? formData.get('birthDate') : undefined,
     hourlyRate: has('hourlyRate') ? formData.get('hourlyRate') : undefined,
     manazerProjektu: has('manazerProjektu') ? formData.get('manazerProjektu') : undefined,
+    smlouvyPodepisuje: has('smlouvyPodepisuje') ? formData.get('smlouvyPodepisuje') : undefined,
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
     dostavaObjednavky: has('dostavaObjednavky') ? formData.get('dostavaObjednavky') : undefined,
@@ -142,6 +144,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(photoUrl !== undefined ? { photoUrl } : {}),
       // Hodinova sazba dava smysl jen u zvukare (zadani 6. 9. 2026).
       ...(data.manazerProjektu !== undefined ? { manazerProjektu: data.manazerProjektu === '1' } : {}),
+      ...(data.smlouvyPodepisuje !== undefined ? { smlouvyPodepisuje: data.smlouvyPodepisuje === '1' } : {}),
       ...(data.dostavaDotoceno !== undefined
         ? { dostavaDotoceno: data.dostavaDotoceno === '1' }
         : {}),

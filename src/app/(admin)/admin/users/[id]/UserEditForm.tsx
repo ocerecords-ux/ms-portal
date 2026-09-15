@@ -26,6 +26,8 @@ type EditableUser = {
   hourlyRate: number | null;
   /** Smí být manažerem projektu (zadání 10. 9. 2026). */
   manazerProjektu: boolean;
+  /** Podepisuje za Mediaspace smlouvy (zadání 15. 9. 2026). */
+  smlouvyPodepisuje: boolean;
   prijimaDotazyKlientu: boolean;
   dostavaDotoceno: boolean;
   dostavaObjednavky: boolean;
@@ -59,6 +61,7 @@ export function UserEditForm({
   const [role, setRole] = useState<Role>(user.role);
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
   const [manazerProjektu, setManazerProjektu] = useState(user.manazerProjektu);
+  const [smlouvyPodepisuje, setSmlouvyPodepisuje] = useState(user.smlouvyPodepisuje);
   const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
@@ -114,6 +117,7 @@ export function UserEditForm({
         fd.set('birthDate', birthDate);
         if (role === 'ZVUKAR') fd.set('hourlyRate', hourlyRate);
         if (isMediaspace) fd.set('manazerProjektu', manazerProjektu ? '1' : '0');
+        if (isMediaspace) fd.set('smlouvyPodepisuje', smlouvyPodepisuje ? '1' : '0');
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
@@ -227,6 +231,26 @@ export function UserEditForm({
               <span className="text-sm font-body text-ink">
                 Může být manažer projektu
                 <span className="block text-xs text-muted">nabízí se u projektů ve výběru manažera</span>
+              </span>
+            </label>
+          </div>
+        )}
+        {/* Kdo za Mediaspace podepisuje smlouvy (zadani 15. 9. 2026). Jeho
+            podpis se ke smlouve pripoji sam pri odeslani k podpisu. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={smlouvyPodepisuje}
+                onChange={(e) => setSmlouvyPodepisuje(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Podepisuje smlouvy za Mediaspace
+                <span className="block text-xs text-muted">
+                  odeslaná smlouva je od nás rovnou podepsaná jeho jménem
+                </span>
               </span>
             </label>
           </div>

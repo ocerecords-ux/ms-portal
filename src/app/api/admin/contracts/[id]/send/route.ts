@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { sendContractEmail } from '@/lib/email';
-import { documentHash } from '@/lib/contractsServer';
+import { documentHash, podepisZaNas, signatureContext } from '@/lib/contractsServer';
 
-// Odeslani smlouvy k podpisu. Odkaz nese jednorazovy token - podepisujici se
-// nikam neprihlasuje a nikam nezadava zadny kod (zadani 8. 9. 2026).
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+/**
+ * Odeslani smlouvy k podpisu. Odkaz nese jednorazovy token - podepisujici se
+ * nikam neprihlasuje a nikam nezadava zadny kod (zadani 8. 9. 2026).
+ *
+ * SMLOUVA ODCHAZI UZ PODEPSANA OD NAS (zadani 15. 9. 2026: „ve chvili, kdy
+ * posilame smlouvu k podpisu, je z nasi strany uz za Karolinu podepsana").
+ * Drive musel nekdo z Mediaspace kliknout na podpis zvlast - a kdyz na to
+ * zapomnel, smlouva visela podepsana jen hercem. Ted se nas podpis pripoji
+ * sam tesne pred odeslanim, takze podpisem druhe strany je smlouva hotova.
+ */
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
     if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
@@ -26,6 +34,11 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Zrušenou smlouvu nelze poslat.' }, { status: 409 });
     }
 
+    // Nas podpis se pripoji PRED odeslanim - mail pak rovnou rekne, ze od nas
+    // uz smlouva podepsana je.
+    const podepsalZaNas = await podepisZaNas(contract.id, signatureContext(req.headers));
+    const nasePodpisy = podepsalZaNas || contract.signatures.some((s) => s.role === 'MEDIASPACE');
+
     const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
     const result = await sendContractEmail({
       to: contract.signerEmail,
@@ -34,7 +47,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       number: contract.number,
       title: contract.title,
       projectName: contract.projectName,
-      alreadySignedByUs: contract.signatures.some((s) => s.role === 'MEDIASPACE'),
+      alreadySignedByUs: Boolean(nasePodpisy),
       contractUrl: `${baseUrl}/smlouva/${contract.accessToken}`,
     });
 
@@ -55,7 +68,13 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       },
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      podepsalZaNas,
+      // Kdyz nikdo nema zaskrtnute „podepisuje smlouvy", at je to videt -
+      // jinak by se tise posilaly smlouvy bez naseho podpisu.
+      bezNasehoPodpisu: !nasePodpisy,
+    });
   } catch (err) {
     console.error('POST /api/admin/contracts/[id]/send selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';

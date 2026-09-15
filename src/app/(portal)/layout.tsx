@@ -93,6 +93,7 @@ export default async function PortalLayout({ children }: { children: React.React
         unreadNotifications={unread}
         odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
         pripominky={pripominkyKVyrizeni}
+        spravcePripominek={role === 'ADMIN'}
       />
       {/* Panel Úkolů je připnutý na pravé hraně okna, takže obsahu vpravo
           uvolníme místo - jinak se přes něj tabulky "usekávaly"

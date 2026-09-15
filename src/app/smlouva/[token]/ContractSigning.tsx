@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatSignedAt } from '@/lib/contracts';
 import { PodpisVyber } from '@/app/(admin)/admin/doklady/smlouvy/PodpisVyber';
-import { pocetStranek } from '@/lib/smlouvaStranky';
 
 /**
  * Podpisová část veřejné stránky. Bez ověřovacích kódů — identitu nese
@@ -18,8 +17,6 @@ export function ContractSigning({
   completedAt,
   rejectedAt,
   issuerName,
-  potvrzenoStranek,
-  body,
 }: {
   token: string;
   status: string;
@@ -28,10 +25,6 @@ export function ContractSigning({
   completedAt: string | null;
   rejectedAt: string | null;
   issuerName: string;
-  /** Kolik stranek uz clovek odklikal - viz SmlouvaKPodpisu. */
-  potvrzenoStranek: number;
-  /** Telo smlouvy, aby sla spocitat celkova delka stranek. */
-  body: string;
 }) {
   const router = useRouter();
   const [jmeno, setJmeno] = useState(signerName);
@@ -41,11 +34,6 @@ export function ContractSigning({
   const [duvod, setDuvod] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Pocet stranek se pocita z tela TOUZ funkci jako na serveru - kdyby se
-  // cisla rozesla, tlacitko by slo zmacknout a server by podpis odmitl.
-  const strankyCelkem = pocetStranek(body);
-  const vseProslo = potvrzenoStranek >= strankyCelkem;
 
   async function posli(payload: Record<string, unknown>) {
     setBusy(true);
@@ -143,16 +131,6 @@ export function ContractSigning({
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
       <h2 className="font-heading font-semibold text-sm text-brand-purple uppercase tracking-wide m-0">Váš podpis</h2>
 
-      {/* Dokud neni smlouva prectena cela, podpis se nenabizi. Server si to
-          hlida taky - tady je to jen proto, aby clovek nekliknul do chyby. */}
-      {!vseProslo && (
-        <p className="text-sm font-body text-muted bg-field border border-line rounded-lg px-4 py-3 m-0">
-          Projděte si prosím smlouvu a odklikněte všechny stránky —
-          {' '}
-          {potvrzenoStranek} z {strankyCelkem} máte přečtených.
-        </p>
-      )}
-
       <label className="flex flex-col gap-1.5 max-w-sm">
         <span className="text-sm font-body text-ink">Jméno a příjmení</span>
         <input
@@ -183,9 +161,9 @@ export function ContractSigning({
         <button
           type="button"
           onClick={() =>
-            posli({ action: 'sign', name: jmeno, imageData: podpis, potvrzenoStranek })
+            posli({ action: 'sign', name: jmeno, imageData: podpis })
           }
-          disabled={busy || !podpis || !souhlas || !jmeno.trim() || !vseProslo}
+          disabled={busy || !podpis || !souhlas || !jmeno.trim()}
           /* Zelene jako „Schvaluji nabidku" - hlavni krok klienta ma v portalu
              vsude stejnou barvu (zadani 13. 9. 2026: „v nasem brandu"). */
           className="bg-brand-green text-onAccent font-heading font-semibold text-base rounded-lg px-6 py-3 hover:brightness-95 transition-[filter] disabled:opacity-50"

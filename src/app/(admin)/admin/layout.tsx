@@ -42,6 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         pageOptions={pageOptionsFor('ADMIN')}
         odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
         pripominky={pripominkyKVyrizeni}
+        spravcePripominek
       />
       {/* Od 5. 9. 2026 stejne siroky obsah jako v klientske casti portalu
           (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.

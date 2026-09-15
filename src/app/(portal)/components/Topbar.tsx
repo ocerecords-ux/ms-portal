@@ -34,6 +34,7 @@ export function Topbar({
   unreadNotifications = 0,
   odznaky,
   pripominky = 0,
+  spravcePripominek = false,
 }: {
   userLabel: string;
   /** Fotka z karty uživatele; bez ní se ukážou iniciály. */
@@ -53,6 +54,8 @@ export function Topbar({
   odznaky?: Record<string, number>;
   /** Kolik připomínek k portálu čeká na vyřízení (jen Žůžo-labůžo). */
   pripominky?: number;
+  /** Vidí v bublině rovnou celý seznam připomínek? (zadání 15. 9. 2026) */
+  spravcePripominek?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -362,7 +365,7 @@ export function Topbar({
         <PrepinacJazyka />
         {/* Pripominka k portalu (zadani 15. 9. 2026) - vedle zvonku, at je
             po ruce na kazde strance. */}
-        <ZpetnaVazba odznak={pripominky} />
+        <ZpetnaVazba odznak={pripominky} spravce={spravcePripominek} />
         <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
         <Link

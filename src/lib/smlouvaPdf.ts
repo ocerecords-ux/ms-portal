@@ -251,7 +251,13 @@ export function smlouvaPdf(data: SmlouvaPdfData): Buffer {
 
     if (podpis) {
       const obraz = obrazekPodpisu(podpis);
-      if (obraz) {
+      if (!obraz) {
+        // Podpis bez obrazku - to je nas automaticky podpis pri odeslani
+        // (zadani 15. 9. 2026). Misto obrazku se napise jmeno; dolozka pod
+        // nim je stejna jako u nakresleneho podpisu, takze dukazni hodnota
+        // je tataz.
+        s.c.text(FONT_BOLD, 'FB', podpis.name, 13, ramX + 4, ramTop + ramH - 10, INK);
+      } else {
         const maxH = 68;
         const maxW = sloupec - 8;
         let h = maxH;

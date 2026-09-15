@@ -1,22 +1,17 @@
 'use client';
 
-import { useState } from 'react';
 import { ContractPaper, type PaperSignature } from '@/app/(admin)/admin/doklady/smlouvy/ContractPaper';
 import { ContractSigning } from './ContractSigning';
 
 /**
- * Smlouva k podpisu: dokument po stránkách a pod ním podpis (zadání
- * 13. 9. 2026: „bylo by dobré, aby jsi odklikával i jednotlivé stránky, jak
- * je to třeba u Signi").
+ * Smlouva k podpisu: celý dokument a pod ním jeden podpis.
  *
- * PROČ TO DRŽÍ JEDNA KOMPONENTA: stav „co už mám přečtené" musí vidět
- * dokument i podpisová část zároveň — dokument aby stránku označil, podpis
- * aby zůstal zamčený, dokud se neprojde celý. Na serveru to jde těžko,
- * proto je tenhle obal klientský a stránka zůstává serverová.
- *
- * ODKLIKÁVÁNÍ SE UKAZUJE, JEN KDYŽ JE CO PODEPSAT. Podepsaná nebo odmítnutá
- * smlouva se čte jako obyčejný dokument — nutit někoho odklikávat stránky
- * něčeho, co už podepsal, by bylo jen otravné.
+ * ODKLIKÁVÁNÍ JEDNOTLIVÝCH STRÁNEK UŽ NENÍ (zadání 15. 9. 2026: „pojďme
+ * u těch smluv obecně zrušit to podepisování každé strany zvlášť. Nechme to
+ * zpět jen na jeden souhlas"). Od 13. 9. se muselo projít a odklepnout každou
+ * stránku zvlášť, jako to má Signi - pro herce to byla jen práce navíc.
+ * Důkazní hodnota podpisu se tím nemění: pořád se k němu ukládá čas,
+ * IP adresa a otisk textu, který měl člověk před sebou.
  */
 export function SmlouvaKPodpisu({
   token,
@@ -45,14 +40,6 @@ export function SmlouvaKPodpisu({
   rejectedAt: string | null;
   issuerName: string;
 }) {
-  const [potvrzene, setPotvrzene] = useState<number[]>([]);
-
-  const podepisujeSe = !alreadySigned && status !== 'SIGNED' && status !== 'CANCELLED' && !rejectedAt;
-
-  function prepni(index: number) {
-    setPotvrzene((s) => (s.includes(index) ? s.filter((i) => i !== index) : [...s, index]));
-  }
-
   return (
     <>
       <ContractPaper
@@ -61,7 +48,6 @@ export function SmlouvaKPodpisu({
         body={body}
         signatures={signatures}
         currentHash={currentHash}
-        potvrzovani={podepisujeSe ? { potvrzene, onPotvrdit: prepni } : undefined}
       />
 
       <ContractSigning
@@ -72,8 +58,6 @@ export function SmlouvaKPodpisu({
         completedAt={completedAt}
         rejectedAt={rejectedAt}
         issuerName={issuerName}
-        potvrzenoStranek={potvrzene.length}
-        body={body}
       />
     </>
   );

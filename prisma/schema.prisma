@@ -179,6 +179,16 @@ model User {
   /// po nasazeni zustala nabidka prazdna a projekt by nesel zalozit.
   manazerProjektu Boolean @default(false)
 
+  /// Podepisuje za Mediaspace smlouvy (zadani 15. 9. 2026: „ve chvili, kdy
+  /// posilame smlouvu k podpisu, je z nasi strany uz za Karolinu podepsana").
+  /// Kdo to ma zaskrtnute, toho podpis se ke smlouve pripoji sam v okamziku
+  /// odeslani - druha strana uz dostava dokument podepsany od nas.
+  smlouvyPodepisuje Boolean @default(false)
+
+  /// Vlastni podpis na smlouvy - PNG v data URL, ulozeny v Mem uctu.
+  /// Kdyz chybi, podepisuje se jmenem (psany podpis), ne obrazkem.
+  podpisSmluv String? @db.Text
+
   /// Dostava dotazy klientu (zadani 11. 9. 2026). Kdo to ma zaskrtnute, sedi
   /// v kazdem kanalu, ktery klient otevre tlacitkem "Zeptat se" u projektu.
   prijimaDotazyKlientu Boolean @default(false)

@@ -1,8 +1,18 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { MAX_DELKA_TEXTU, MAX_PRILOH, type PodobnaPripominka } from '@/lib/pripominky';
+
+/** Co z připomínky ukazuje panel v liště. */
+type PripominkaVPanelu = {
+  id: string;
+  text: string;
+  autor: string;
+  odkud: string | null;
+  pridalSe: number;
+  prilohy: { id: string; url: string; nazev: string }[];
+};
 
 /**
  * Zpětná vazba k portálu (zadání 15. 9. 2026: „potřeboval bych vymyslet
@@ -21,9 +31,15 @@ import { MAX_DELKA_TEXTU, MAX_PRILOH, type PodobnaPripominka } from '@/lib/pripo
  * UPOZORNĚNÍ NA DUPLICITU: jakmile je napsaná věta, portál se zeptá serveru,
  * jestli něco podobného už neleží v seznamu, a nabídne připojení k tomu
  * místo založení další položky.
+ *
+ * ŽŮŽO-LABŮŽO TU MÁ ROVNOU CELÝ SEZNAM (zadání 15. 9. 2026: „když se na tu
+ * ikonu zpětné vazby prokliknu já ze svého profilu, tak se mi ukáže přehled
+ * všech připomínek"). Odškrtává se přímo v panelu - kvůli třem hotovým věcem
+ * není proč chodit do Mého účtu.
  */
-export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
+export function ZpetnaVazba({ odznak = 0, spravce = false }: { odznak?: number; spravce?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [otevreno, setOtevreno] = useState(false);
   const [text, setText] = useState('');
   const [obrazky, setObrazky] = useState<{ soubor: File; nahled: string }[]>([]);
@@ -32,6 +48,11 @@ export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
   const [odesila, setOdesila] = useState(false);
   const [hotovo, setHotovo] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
+  // Seznam pro Zuzo-labuzo. Nacita se az pri otevreni panelu - na kazde
+  // strance portalu by to byl dotaz navic pro nic.
+  const [seznam, setSeznam] = useState<PripominkaVPanelu[] | null>(null);
+  const [pise, setPise] = useState(false);
+  const [pracuje, setPracuje] = useState<string | null>(null);
   const souborRef = useRef<HTMLInputElement>(null);
   const tlacitkoRef = useRef<HTMLButtonElement>(null);
   // Panel se kresli na PEVNE pozici u praveho okraje okna, ne pod tlacitkem.
@@ -45,6 +66,30 @@ export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
     const misto = tlacitkoRef.current?.getBoundingClientRect();
     if (misto) setShora(misto.bottom + 8);
   }, [otevreno]);
+
+  // Seznam vsech pripominek - jen pro spravce a jen kdyz je panel otevreny.
+  useEffect(() => {
+    if (!otevreno || !spravce) return;
+    fetch('/api/pripominky?vse=1')
+      .then((r) => r.json())
+      .then((d) => setSeznam(d?.otevrene ?? []))
+      .catch(() => setSeznam([]));
+  }, [otevreno, spravce]);
+
+  async function odskrtni(id: string) {
+    setPracuje(id);
+    try {
+      await fetch(`/api/pripominky/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hotovo: true }),
+      });
+      setSeznam((s) => (s ? s.filter((p) => p.id !== id) : s));
+      router.refresh();
+    } finally {
+      setPracuje(null);
+    }
+  }
 
   // Hlídání duplicit - se zpožděním, ať se neptáme po každém písmenu.
   useEffect(() => {
@@ -72,6 +117,7 @@ export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
     setChyba(null);
     setHotovo(false);
     setPripojitK(null);
+    setPise(false);
   }
 
   async function odesli() {
@@ -137,9 +183,13 @@ export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="font-heading font-semibold text-sm text-ink m-0">Připomínka k portálu</h3>
+              <h3 className="font-heading font-semibold text-sm text-ink m-0">
+                {spravce && !pise ? 'Připomínky k portálu' : 'Připomínka k portálu'}
+              </h3>
               <p className="text-xs font-body text-muted m-0 mt-0.5">
-                Co nefunguje, co chybí, co by šlo líp. Jde to rovnou Ondřejovi.
+                {spravce && !pise
+                  ? 'Co lidem v portálu vadí. Odškrtnutá položka jim zmizí.'
+                  : 'Co nefunguje, co chybí, co by šlo líp. Jde to rovnou Ondřejovi.'}
               </p>
             </div>
             <button type="button" onClick={zavri} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
@@ -147,7 +197,72 @@ export function ZpetnaVazba({ odznak = 0 }: { odznak?: number }) {
             </button>
           </div>
 
-          {hotovo ? (
+          {spravce && !pise && !hotovo ? (
+            <>
+              <div className="max-h-[50vh] overflow-y-auto flex flex-col gap-2 -mx-1 px-1">
+                {seznam === null ? (
+                  <p className="text-sm font-body text-muted m-0 py-2">Načítám…</p>
+                ) : seznam.length === 0 ? (
+                  <p className="text-sm font-body text-muted m-0 py-2">
+                    Nic nečeká. Lidem se portál zatím líbí.
+                  </p>
+                ) : (
+                  seznam.map((p) => (
+                    <div
+                      key={p.id}
+                      className={`rounded-lg border border-line bg-field/60 px-3 py-2.5 flex gap-2.5 ${
+                        pracuje === p.id ? 'opacity-60' : ''
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={false}
+                        onChange={() => odskrtni(p.id)}
+                        disabled={pracuje === p.id}
+                        title="Odškrtnout"
+                        className="mt-0.5 w-4 h-4 shrink-0 accent-brand-green cursor-pointer"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-body text-ink m-0">{p.text}</p>
+                        <p className="text-[11px] font-body text-muted m-0 mt-1 flex flex-wrap gap-x-3">
+                          <span>{p.autor}</span>
+                          {p.odkud && <span>{p.odkud}</span>}
+                          {p.pridalSe > 0 && (
+                            <span className="text-brand-purpleDark">+{p.pridalSe} hlásí totéž</span>
+                          )}
+                        </p>
+                        {p.prilohy.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {p.prilohy.map((o) => (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                key={o.id}
+                                src={o.url}
+                                alt={o.nazev}
+                                className="w-10 h-10 object-cover rounded border border-line"
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
+                <button
+                  type="button"
+                  onClick={() => setPise(true)}
+                  className="text-xs font-heading text-brand-purpleDark hover:underline"
+                >
+                  + Napsat připomínku
+                </button>
+                <a href="/muj-ucet" className="text-xs font-heading text-muted hover:text-ink">
+                  Celý seznam v Mém účtu
+                </a>
+              </div>
+            </>
+          ) : hotovo ? (
             <p className="text-sm font-body text-status-done bg-okTint border border-line rounded-lg px-3 py-3 m-0">
               Díky! Připomínka je v seznamu.
             </p>

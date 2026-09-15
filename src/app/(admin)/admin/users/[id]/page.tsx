@@ -77,6 +77,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           photoUrl: user.photoUrl,
           hourlyRate: user.hourlyRate,
           manazerProjektu: user.manazerProjektu,
+          smlouvyPodepisuje: user.smlouvyPodepisuje,
           prijimaDotazyKlientu: user.prijimaDotazyKlientu,
           dostavaDotoceno: user.dostavaDotoceno,
           dostavaObjednavky: user.dostavaObjednavky,

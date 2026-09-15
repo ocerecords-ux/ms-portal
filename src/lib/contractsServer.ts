@@ -279,3 +279,69 @@ export async function posliPodepsanouSmlouvu(contractId: string): Promise<void> 
     console.error('posliPodepsanouSmlouvu selhalo:', err);
   }
 }
+
+/**
+ * KDO ZA NÁS SMLOUVY PODEPISUJE (zadání 15. 9. 2026: „ve chvíli, kdy
+ * posíláme smlouvu k podpisu, je z naší strany už za Karolínu podepsaná").
+ *
+ * Řídí se to příznakem na účtu (User.smlouvyPodepisuje), ne jménem v kódu —
+ * lidi se mění a kód by o tom nevěděl. Když není označený nikdo, podpis se
+ * nepřipojí a smlouva odejde jako dřív; portál na to upozorní v odpovědi.
+ */
+export async function kdoPodepisujeSmlouvy() {
+  try {
+    return await prisma.user.findFirst({
+      where: { smlouvyPodepisuje: true, active: true },
+      select: { id: true, name: true, email: true, podpisSmluv: true },
+      orderBy: [{ name: 'asc' }],
+    });
+  } catch (err) {
+    console.error('kdoPodepisujeSmlouvy selhalo:', err);
+    return null;
+  }
+}
+
+/**
+ * Připojí ke smlouvě náš podpis, pokud tam ještě není. Volá se při odeslání
+ * k podpisu - druhá strana tak dostane dokument, který je z naší strany
+ * hotový, a jejím podpisem je smlouva rovnou uzavřená.
+ *
+ * Nikdy nevyhazuje: kdyby se podpis nepovedl, smlouva se pořád má odeslat.
+ * Vrací, čí podpis se připojil (nebo null).
+ */
+export async function podepisZaNas(
+  contractId: string,
+  ctx: { ip: string | null; userAgent: string | null },
+): Promise<string | null> {
+  try {
+    const contract = await prisma.contract.findUnique({
+      where: { id: contractId },
+      include: { signatures: true },
+    });
+    if (!contract) return null;
+    if (contract.signatures.some((s) => s.role === 'MEDIASPACE')) return null;
+
+    const kdo = await kdoPodepisujeSmlouvy();
+    if (!kdo) return null;
+
+    const hash = documentHash(contract.body);
+    await prisma.contractSignature.create({
+      data: {
+        contractId: contract.id,
+        role: 'MEDIASPACE',
+        name: kdo.name || kdo.email,
+        email: kdo.email,
+        // Bez uloženého podpisu se vykreslí jméno psaným písmem - viz
+        // ContractPaper a smlouvaPdf.
+        imageData: kdo.podpisSmluv ?? '',
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+        documentHash: hash,
+      },
+    });
+    return kdo.name || kdo.email;
+  } catch (err) {
+    console.error(`Podpis za Mediaspace u smlouvy ${contractId} selhal:`, err);
+    return null;
+  }
+}

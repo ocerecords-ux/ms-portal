@@ -6,6 +6,7 @@ import { ROLE_LABELS, isInternalRole } from '@/lib/roles';
 import { MyAccountForm } from './MyAccountForm';
 import { FakturaceKarta } from './FakturaceKarta';
 import { PripominkyKarta } from './PripominkyKarta';
+import { PodpisKarta } from './PodpisKarta';
 import { mojePripominky, vsechnyPripominky } from '@/lib/pripominkyServer';
 
 // "Můj účet" - kazdy prihlaseny uzivatel si tu upravi svoje udaje (zadani
@@ -84,6 +85,16 @@ export default async function MyAccountPage() {
             contactEmail: user.company.contactEmail ?? '',
             fakturyKlientovi: user.company.fakturyKlientovi,
           }}
+        />
+      )}
+
+      {/* Podpis na smlouvy - jen interni ucty, klient ani herec za Mediaspace
+          nic nepodepisuji (zadani 15. 9. 2026). */}
+      {internal && (
+        <PodpisKarta
+          ulozeny={user.podpisSmluv}
+          jmeno={user.name || user.email}
+          podepisujeSmlouvy={user.smlouvyPodepisuje}
         />
       )}
 
