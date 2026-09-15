@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { ExpenseEditor } from './ExpenseEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
+import { expenseTotalMinor } from '@/lib/expenses';
+import { QrPlatba } from '@/components/QrPlatba';
 
 // Detail prijateho dokladu.
 export const dynamic = 'force-dynamic';
@@ -11,7 +13,11 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
   const [expense, categories, companies] = await Promise.all([
     prisma.expense.findUnique({
       where: { id: params.id },
-      include: { category: true, supplier: { select: { name: true } }, issuer: { select: { name: true } } },
+      include: {
+        category: true,
+        supplier: { select: { name: true, bankAccount: true } },
+        issuer: { select: { name: true } },
+      },
     }),
     prisma.expenseCategory.findMany({ where: { active: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
     prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
@@ -20,11 +26,29 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
 
   const projects = await listProjectOptions();
 
+  // Ucet je bud primo na dokladu (dorazil ze smlouvy s hercem), nebo u firmy
+  // dodavatele. Kdyz neni ani jeden, QR se nekresli.
+  const ucetPrijemce = expense.supplierAccount?.trim() || expense.supplier?.bankAccount?.trim() || null;
+  const kUhrade = expenseTotalMinor(expense.amountExVatMinor, expense.vatRate);
+  const prijemce = expense.supplier?.name ?? expense.supplierName ?? null;
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       <Link href="/admin/doklady/vydaje" className="text-muted text-sm font-heading no-underline">
         ← Zpět na výdaje
       </Link>
+
+      {!expense.paid && (
+        <QrPlatba
+          ucet={ucetPrijemce}
+          castkaMinor={kUhrade}
+          mena={expense.currency}
+          variabilniSymbol={expense.number}
+          zprava={[prijemce, expense.projectName].filter(Boolean).join(' - ') || expense.description}
+          splatnost={expense.dueDate}
+          prijemce={prijemce}
+        />
+      )}
 
       <ExpenseEditor
         expense={{

@@ -89,6 +89,8 @@ export async function POST(req: NextRequest) {
         // vznikne vydaj (zadani 15. 9. 2026: „podepsane smlouvy by se mely
         // automaticky ulozit do vydaju").
         odmenaText: values.odmena?.trim() || null,
+        splatnostText: values.splatnost?.trim() || null,
+        actorUserId: d.actorUserId || null,
         accessToken: newAccessToken(),
       },
     });

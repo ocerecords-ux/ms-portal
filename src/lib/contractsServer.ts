@@ -344,6 +344,8 @@ export async function zalozVydajZeSmlouvy(
         number: true,
         title: true,
         odmenaText: true,
+        splatnostText: true,
+        actorUserId: true,
         vydajId: true,
         companyId: true,
         issuerCompanyId: true,
@@ -362,6 +364,30 @@ export async function zalozVydajZeSmlouvy(
     const text = contract.odmenaText?.trim() ?? '';
     const ciste = /^\d[\d\s\u00a0]*([.,]\d{1,2})?(\s*Kč)?$/i.test(text);
     const castka = ciste ? parseMoneyToMinor(text.replace(/Kč/i, '')) : 0;
+
+    /**
+     * ÚČET NA QR PLATBU (zadání 15. 9. 2026: „u těch dokladů, smluv s herci,
+     * kde máme číslo účtu, QR kód pro platbu"). Herec firmu ze sekce Firmy
+     * většinou nemá, takže se účet opíše z jeho karty rovnou na doklad - a
+     * zůstane na něm, i kdyby si ho herec později změnil.
+     */
+    const herec = contract.actorUserId
+      ? await prisma.user.findUnique({
+          where: { id: contract.actorUserId },
+          select: { bankAccount: true },
+        })
+      : null;
+
+    /**
+     * SPLATNOST SE DOPOČÍTÁ (zadání 15. 9. 2026: „a tu splatnost dopočítej").
+     * Ve smlouvě je počet dnů, na dokladu se hlídá datum - tak ať to portál
+     * nenechává na tom, kdo doklad otevře.
+     */
+    const dny = Number.parseInt(contract.splatnostText?.replace(/\D/g, '') ?? '', 10);
+    const vystaveno = contract.completedAt ?? new Date();
+    const splatnost = Number.isFinite(dny) && dny > 0 && dny <= 365
+      ? new Date(vystaveno.getTime() + dny * 24 * 60 * 60 * 1000)
+      : null;
 
     const kategorie = await prisma.expenseCategory.findFirst({
       where: { active: true, name: { contains: 'Honorář', mode: 'insensitive' } },
@@ -391,7 +417,9 @@ export async function zalozVydajZeSmlouvy(
         amountExVatMinor: castka,
         // Herci vetsinou platci DPH nejsou; kdyz protistrana DIC ma, 21 %.
         vatRate: contract.company?.dic ? 21 : 0,
-        issueDate: contract.completedAt ?? new Date(),
+        issueDate: vystaveno,
+        dueDate: splatnost,
+        supplierAccount: herec?.bankAccount?.trim() || null,
         caflouProjectId: contract.caflouProjectId,
         projectName: contract.projectName,
         attachmentUrl: priloha?.url ?? null,

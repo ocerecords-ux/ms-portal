@@ -1361,6 +1361,10 @@ model Expense {
   attachmentUrl  String?
   attachmentName String?
 
+  // Ucet prijemce, kdyz ho neni kde vzit (herec nema firmu ze sekce Firmy).
+  // Z nej se kresli QR platba (zadani 15. 9. 2026).
+  supplierAccount String?
+
   note String?
 
   // Vazba na projekt v Caflou (zadani 8. 9. 2026: "chtel bych mit Doklady
@@ -1519,6 +1523,12 @@ model Contract {
 
   /// Odměna tak, jak ji člověk zadal při zakládání - z ní vzniká výdaj po podpisu.
   odmenaText String?
+
+  /// Splatnost ze zakládacího formuláře (ve dnech) - výdaj z ní dopočítá datum splatnosti.
+  splatnostText String?
+
+  /// Herec z projektu, pro kterého smlouva je - z jeho karty se bere účet na QR platbu.
+  actorUserId String?
 
   /// Výdaj založený po podpisu smlouvy (zadání 15. 9. 2026), ať nevznikne podruhé.
   vydajId String? @unique
