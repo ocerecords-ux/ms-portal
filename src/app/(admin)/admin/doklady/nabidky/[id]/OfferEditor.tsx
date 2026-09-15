@@ -128,6 +128,15 @@ export function OfferEditor({
     slevaPopis: offer.slevaPopis ?? '',
   });
   const [items, setItems] = useState<Item[]>(offer.items.length > 0 ? offer.items : [emptyItem()]);
+  /**
+   * NÁZEV SE BERE Z PROJEKTU (zadání 15. 9. 2026: „když tvořím novou nabídku,
+   * mohlo by si to taky brát název nabídky z názvu projektu. Pak chci ale
+   * název mít možnost upravit, když třeba budou varianty nabídek").
+   *
+   * Doplní se jen do PRÁZDNÉHO pole a jen dokud si název nikdo nepřepsal -
+   * u druhé varianty nabídky („…varianta B") by ho portál jinak přepsal zpátky.
+   */
+  const [nazevRucne, setNazevRucne] = useState(Boolean(offer.subject.trim()));
 
   /** Co se posílá do náhledu - jen to, co je na dokumentu vidět. */
   const nahledTelo = {
@@ -592,10 +601,18 @@ export function OfferEditor({
             <input
               value={form.subject}
               disabled={locked}
-              onChange={(e) => set('subject', e.target.value)}
+              onChange={(e) => {
+                setNazevRucne(true);
+                set('subject', e.target.value);
+              }}
               placeholder="např. Výroba audioknihy Tři mušketýři"
               className={inputClass}
             />
+            {!nazevRucne && (
+              <span className="text-xs font-body text-muted">
+                Doplní se z názvu projektu. Přepsáním si ho zamknete — třeba pro variantu nabídky.
+              </span>
+            )}
           </label>
           {/* Projekt (zadani 8. 9. 2026) - nabidka se pak ukaze v detailu projektu
               a vazba se prenese i na fakturu z ni vystavenou. */}
@@ -603,7 +620,14 @@ export function OfferEditor({
             <span className="text-sm font-body text-ink">Projekt</span>
             <ProjectSelect
               value={form.caflouProjectId}
-              onChange={(id) => set('caflouProjectId', id)}
+              onChange={(id) => {
+                const nazevProjektu = projects.find((p) => p.id === id)?.label.split(' — ')[0].trim() ?? '';
+                setForm((f) => ({
+                  ...f,
+                  caflouProjectId: id,
+                  subject: !nazevRucne && nazevProjektu ? nazevProjektu : f.subject,
+                }));
+              }}
               projects={projects}
               currentName={offer.projectName}
               disabled={locked}
