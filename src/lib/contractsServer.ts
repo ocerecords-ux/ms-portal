@@ -76,8 +76,15 @@ export async function contractValues(input: {
    * zustane prazdne a bez nej by ve smlouve nebylo nic.
    */
   actorUserId?: string | null;
+  /**
+   * Projekt, ze kterého se bere termín (zadání 15. 9. 2026: „chybí tady
+   * datum"). Formulář ho sice předvyplňuje, ale kdo smlouvu zakládá bez
+   * projektu v prohlížeči nebo termín omylem smaže, ať to má portál odkud
+   * vzít - datum odevzdání projektu je přesně ten termín, o který jde.
+   */
+  caflouProjectId?: string | null;
 }): Promise<Record<string, string>> {
-  const [issuer, company, herec] = await Promise.all([
+  const [issuer, company, herec, projekt] = await Promise.all([
     prisma.issuerCompany.findUnique({ where: { id: input.issuerCompanyId } }),
     input.companyId ? prisma.company.findUnique({ where: { id: input.companyId } }) : Promise.resolve(null),
     input.actorUserId
@@ -96,7 +103,19 @@ export async function contractValues(input: {
           },
         })
       : Promise.resolve(null),
+    input.caflouProjectId
+      ? prisma.projectMeta.findUnique({
+          where: { caflouProjectId: input.caflouProjectId },
+          select: { endDate: true },
+        })
+      : Promise.resolve(null),
   ]);
+
+  const denMesicRok = new Intl.DateTimeFormat('cs-CZ', {
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  });
 
   const dnes = new Intl.DateTimeFormat('cs-CZ', {
     day: 'numeric',
@@ -152,6 +171,9 @@ export async function contractValues(input: {
     misto: mistoNataceni(herec?.studioLocations),
     // Nazev dila je nazev projektu - portal ho zna, neni proc se na nej ptat.
     nazev_dila: input.projectName ?? '',
+    // Termin = datum odevzdani projektu. Co je napsane ve formulari, ma
+    // prednost - prepise se to az v route.ts.
+    termin: projekt?.endDate ? denMesicRok.format(projekt.endDate) : '',
     datum: dnes,
   };
 }

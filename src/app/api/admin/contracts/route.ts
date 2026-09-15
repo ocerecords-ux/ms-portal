@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
       projectName: projekt.projectName,
       contractNumber: number,
       actorUserId: d.actorUserId || null,
+      caflouProjectId: d.caflouProjectId || null,
     });
 
     const rucni: Record<string, string> = d.pole ?? {};
