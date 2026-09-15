@@ -15,6 +15,8 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
       company: true,
       offer: { select: { id: true, number: true } },
       items: { orderBy: { sortOrder: 'asc' } },
+      // Komu a kdy faktura odesla (zadani 15. 9. 2026).
+      odeslani: { orderBy: { createdAt: 'desc' } },
     },
   });
   if (!invoice) notFound();
@@ -51,6 +53,13 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           subject: invoice.subject ?? '',
           note: invoice.note ?? '',
           sentAt: invoice.sentAt ? invoice.sentAt.toISOString() : null,
+          odeslani: invoice.odeslani.map((o) => ({
+            id: o.id,
+            prijemci: o.prijemci,
+            odeslalJmeno: o.odeslalJmeno,
+            sRodnymListem: o.sRodnymListem,
+            kdy: o.createdAt.toISOString(),
+          })),
           paidAt: invoice.paidAt ? invoice.paidAt.toISOString() : null,
           offerNumber: invoice.offer?.number ?? null,
           caflouProjectId: invoice.caflouProjectId ?? '',

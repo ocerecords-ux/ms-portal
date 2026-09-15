@@ -56,6 +56,17 @@ type Invoice = {
   subject: string;
   note: string;
   sentAt: string | null;
+  /**
+   * Komu a kdy faktura odešla (zadání 15. 9. 2026: „a záznam někde o tom, kdy
+   * a na koho ta faktura šla"). Nejnovější odeslání je první.
+   */
+  odeslani?: {
+    id: string;
+    prijemci: string[];
+    odeslalJmeno: string | null;
+    sRodnymListem: boolean;
+    kdy: string;
+  }[];
   paidAt: string | null;
   offerNumber: string | null;
   caflouProjectId: string;
@@ -395,6 +406,25 @@ export function InvoiceEditor({
           </strong>
           . Položky níž jsou z nabídky celé — upravte je na tu část, kterou fakturujete teď.
         </p>
+      )}
+
+      {/* Komu a kdy faktura odesla - viz invoice.odeslani. */}
+      {invoice.odeslani && invoice.odeslani.length > 0 && (
+        <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-2">
+          <span className="text-xs font-heading text-muted uppercase tracking-wide">Odesláno</span>
+          <ul className="list-none m-0 p-0 flex flex-col gap-1.5">
+            {invoice.odeslani.map((o) => (
+              <li key={o.id} className="text-sm font-body text-ink">
+                <span className="font-heading">{formatDateTime(o.kdy)}</span>{' '}
+                <span className="text-muted">→</span> {o.prijemci.join(', ')}
+                <span className="block text-[11px] font-body text-muted">
+                  {o.odeslalJmeno ? `odeslal ${o.odeslalJmeno}` : 'odesláno z portálu'}
+                  {o.sRodnymListem ? ' · s rodným listem' : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">

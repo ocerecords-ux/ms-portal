@@ -1255,10 +1255,36 @@ model Invoice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// Komu a kdy faktura odesla (zadani 15. 9. 2026: „a zaznam nekde o tom,
+  /// kdy a na koho ta faktura sla").
+  odeslani OdeslaniFaktury[]
+
   @@index([companyId])
   @@index([status])
   @@index([caflouProjectId])
   @@index([offerId])
+}
+
+/// JEDNO ODESLANI FAKTURY (zadani 15. 9. 2026). Faktura se posila i vickrat -
+/// klient ji nenajde, ucetni chce kopii - a pak se hodi vedet, kdy a komu
+/// presne odesla. Samotne `sentAt` na fakture rekne jen to posledni.
+model OdeslaniFaktury {
+  id        String  @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  /// Adresy, na ktere mail odesel - prvni je hlavni prijemce, zbytek kopie.
+  prijemci String[]
+  /// Kdo odeslani spustil.
+  odeslalId    String?
+  odeslalJmeno String?
+  /// Sla s mailem i priloha (PDF faktury, pripadne rodny list)?
+  sPrilohou    Boolean @default(false)
+  sRodnymListem Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
 }
 
 model InvoiceItem {

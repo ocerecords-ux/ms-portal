@@ -73,13 +73,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
     // Duplicita nastane, kdyz je klient projektu zaroven kontaktem firmy.
     const [to, ...kopie] = [...new Set(prijemci)];
+    /**
+     * KDYZ CHYBI JEDNA ADRESA, POSILA SE NA TU DRUHOU (upresneni 15. 9. 2026:
+     * „co se stane, kdyz u firmy nebudeme mit vyplneny mail, kde maji faktury,
+     * ale mame zaskrtnute pole posilat i na klienta? ... Pokud ne, tak bych to
+     * takhle chtel."). Chybejici e-mail firmy tedy odeslani neblokuje, dokud
+     * je komu poslat - faktura odejde klientovi projektu.
+     *
+     * Odmitne se to, az kdyz neni ani jedna adresa; hlaska rekne, ktera chybi.
+     */
     if (!to) {
+      const duvody: string[] = [];
+      if (chceFirmu && !mailFirmy) duvody.push(`firma „${invoice.company.name}" nemá kontaktní e-mail`);
+      if (chceKlienta && !mailKlienta) duvody.push('projekt nemá klienta s e-mailem');
+      if (duvody.length === 0) duvody.push('není vybraný žádný příjemce');
       return NextResponse.json(
-        {
-          error: chceKlienta && !chceFirmu
-            ? 'Projekt nemá přiřazeného klienta — komu fakturu poslat?'
-            : `Firma „${invoice.company.name}" nemá vyplněný kontaktní e-mail — doplňte ho v Firmy.`,
-        },
+        { error: `Fakturu není komu poslat — ${duvody.join(' a ')}.` },
         { status: 400 },
       );
     }
@@ -142,6 +151,28 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { id: invoice.id },
       data: { status: invoice.status === 'DRAFT' ? 'SENT' : invoice.status, sentAt: new Date() },
     });
+
+    /**
+     * ZAZNAM O ODESLANI (zadani 15. 9. 2026: „a zaznam nekde o tom, kdy a na
+     * koho ta faktura sla"). Faktura se posila i vickrat - `sentAt` rekne jen
+     * to posledni, tady je videt cela historie i s adresami.
+     *
+     * Nikdy neshodi odeslani: mail uz je u klienta, zaznam patri do logu.
+     */
+    try {
+      await prisma.odeslaniFaktury.create({
+        data: {
+          invoiceId: invoice.id,
+          prijemci: [to, ...kopie],
+          odeslalId: session.user.id,
+          odeslalJmeno: session.user.name || session.user.email || null,
+          sPrilohou: dokument.ok,
+          sRodnymListem: rodnyList.potreba && rodnyList.ok,
+        },
+      });
+    } catch (err) {
+      console.error(`Zaznam o odeslani faktury ${invoice.number} se nepodarilo ulozit:`, err);
+    }
 
     /**
      * ODESLANA FAKTURA UKONCUJE PROJEKT (zadani 15. 9. 2026: „projekt by se
