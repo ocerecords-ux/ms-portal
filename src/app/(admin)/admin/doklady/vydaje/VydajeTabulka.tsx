@@ -1,5 +1,7 @@
 'use client';
 
+import { QrTlacitko } from '@/components/QrTlacitko';
+
 import Link from 'next/link';
 import {
   RaditelnaTabulka,
@@ -20,6 +22,11 @@ import {
 export type VydajRadek = {
   id: string;
   nazev: string;
+  /** Řetězec QR platby (SPD 1.0). null = neznáme účet nebo je doklad zaplacený. */
+  qrText: string | null;
+  ucet: string | null;
+  prijemce: string;
+  cisloDokladu: string | null;
   podnadpis: string | null;
   maPrilohu: boolean;
   datum: string;
@@ -125,6 +132,24 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
     },
   ];
 
+  // QR platba na konci radku - vedle castky, kterou se plati.
+  sloupce.push({
+    key: 'qr',
+    label: 'Platba',
+    trida: 'whitespace-nowrap',
+    bunka: (r) =>
+      r.qrText && r.ucet ? (
+        <QrTlacitko
+          text={r.qrText}
+          castka={r.celkem}
+          prijemce={r.prijemce}
+          ucet={r.ucet}
+          variabilniSymbol={r.cisloDokladu}
+          splatnost={r.splatnost !== '—' ? r.splatnost : null}
+        />
+      ) : null,
+  });
+
   return (
     <RaditelnaTabulka
       radky={radky}
@@ -133,7 +158,7 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
       vychoziSloupec="datum"
       vychoziSmer="desc"
       prazdno="Tady zatím nic není."
-      minSirka={900}
+      minSirka={960}
       hledat={(r) => `${r.nazev} ${r.podnadpis ?? ''} ${r.kategorie}`}
       hledatPlaceholder="Hledat doklad, dodavatele, projekt…"
       filtry={[

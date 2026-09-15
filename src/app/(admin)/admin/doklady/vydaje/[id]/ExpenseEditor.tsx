@@ -454,15 +454,24 @@ export function ExpenseEditor({
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">Příloha</span>
           {expense.attachmentUrl ? (
-            <a
-              href={expense.attachmentUrl}
-              target="_blank"
-              rel="noreferrer"
-              download={expense.attachmentName ?? undefined}
-              className="text-sm font-heading text-brand-purple"
-            >
-              {expense.attachmentName || 'Otevřít přílohu'}
-            </a>
+            // Ne primo do uloziste - to vraci chybu bez podpisu (oprava
+            // 15. 9. 2026). Portal odkaz podepise sam.
+            <span className="flex items-center gap-3 flex-wrap">
+              <a
+                href={`/api/admin/expenses/${expense.id}/priloha`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-heading text-brand-purple"
+              >
+                {expense.attachmentName || 'Otevřít přílohu'}
+              </a>
+              <a
+                href={`/api/admin/expenses/${expense.id}/priloha?stahnout=1`}
+                className="text-xs font-heading text-muted hover:text-ink no-underline"
+              >
+                Stáhnout
+              </a>
+            </span>
           ) : (
             <p className="text-sm text-muted font-body m-0">Bez přílohy.</p>
           )}

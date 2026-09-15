@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { formatMoney } from '@/lib/doklady';
 import { ensureExpenseCategories, expenseTotalMinor } from '@/lib/expenses';
+import { ibanZTuzemskehoUctu, jeIbanPlatny, spdRetezec } from '@/lib/pdf/qrPlatba';
 import { NewExpenseForm } from './NewExpenseForm';
 import { CategoryManager } from './CategoryManager';
 import { VydajeTabulka, type VydajRadek } from './VydajeTabulka';
@@ -47,7 +48,7 @@ export default async function ExpensesPage({
       },
       orderBy: [{ issueDate: 'desc' }, { createdAt: 'desc' }],
       take: 300,
-      include: { category: true, supplier: { select: { name: true } } },
+      include: { category: true, supplier: { select: { name: true, bankAccount: true } } },
     }),
     prisma.expenseCategory.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -99,9 +100,33 @@ export default async function ExpensesPage({
     ]
       .filter(Boolean)
       .join(' · ');
+    /**
+     * QR PLATBA UŽ V PŘEHLEDU (zadání 15. 9. 2026). Řetězec skládá server,
+     * v prohlížeči se z něj po kliknutí jen vykreslí čtverečky. Bez účtu
+     * (nebo u zaplaceného dokladu) se ikonka vůbec neukáže.
+     */
+    const ucet = e.supplierAccount?.trim() || e.supplier?.bankAccount?.trim() || null;
+    const iban = ucet ? (jeIbanPlatny(ucet) ? ucet.replace(/\s/g, '').toUpperCase() : ibanZTuzemskehoUctu(ucet)) : null;
+    const kUhrade = expenseTotalMinor(e.amountExVatMinor, e.vatRate);
+    const qrText =
+      iban && !e.paid
+        ? spdRetezec({
+            iban,
+            castkaMinor: kUhrade,
+            mena: e.currency,
+            variabilniSymbol: e.number,
+            zprava: [e.supplier?.name || e.supplierName, e.projectName].filter(Boolean).join(' - ') || e.description,
+            splatnost: e.dueDate,
+          })
+        : null;
+
     return {
       id: e.id,
       nazev: e.description || 'Bez názvu',
+      qrText,
+      ucet,
+      prijemce: e.supplier?.name || e.supplierName || '—',
+      cisloDokladu: e.number,
       podnadpis: podnadpis || null,
       maPrilohu: Boolean(e.attachmentUrl),
       datum: formatDate(e.issueDate),
