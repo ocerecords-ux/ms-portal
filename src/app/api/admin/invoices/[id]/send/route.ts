@@ -5,6 +5,7 @@ import { sendInvoiceEmail } from '@/lib/email';
 import { cisloUctuSKodem, computeTotals } from '@/lib/doklady';
 import { pdfFaktury } from '@/lib/dokladNahledServer';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
+import { rodnyListKFakture } from '@/lib/rodnyListServer';
 
 /** Stav, do ktereho projekt prejde odeslanim faktury (zadani 15. 9. 2026). */
 const STAV_PO_FAKTURE = 'Vyfakturováno';
@@ -22,6 +23,13 @@ const STAV_PO_FAKTURE = 'Vyfakturováno';
  *
  * Jina adresa nez tyhle dve se dosadit neda; posilat faktury kamkoliv neni
  * potreba a je to zbytecna dira.
+ *
+ * RODNY LIST JEDE S FAKTUROU (zadani 15. 9. 2026: „kdyz posleme fakturu
+ * klientovi, tak automaticky s tim odeslal i rodny list a zaroven se ulozil
+ * na disk k danemu projektu"). Plati JEN u radiovych spotu - tam, kde se
+ * rodny list dela. Kdyz u projektu chybi udaje (typicky hudba, nebo
+ * zaskrtnuti, ze ve spotu zadna nebyla), faktura NEODEJDE a vrati se hlaska,
+ * co doplnit - tohle je to „musi to zarvat" ze zadani.
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -82,6 +90,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       );
     }
 
+    // Rodny list PRED odeslanim - kdyz neco chybi, faktura nikam nejde.
+    const rodnyList = invoice.caflouProjectId
+      ? await rodnyListKFakture({
+          caflouProjectId: invoice.caflouProjectId,
+          projectName: invoice.projectName || invoice.subject || `Projekt ${invoice.caflouProjectId}`,
+          portalCompanyId: invoice.companyId,
+          userId: session.user.id,
+        })
+      : ({ potreba: false } as const);
+    if (rodnyList.potreba && !rodnyList.ok) {
+      return NextResponse.json({ error: rodnyList.message }, { status: 400 });
+    }
+
     const totals = computeTotals(invoice.items, invoice);
 
     // Faktura jde klientovi i jako PDF - je na nem QR platba (zadani 13. 9.
@@ -110,6 +131,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       accountNumber: cisloUctuSKodem(invoice.bankAccount.accountNumber, invoice.bankAccount.bankName),
       iban: invoice.bankAccount.iban,
       pdf: dokument.ok ? { nazev: dokument.nazev, obsah: dokument.pdf } : null,
+      rodnyList: rodnyList.potreba && rodnyList.ok ? { nazev: rodnyList.nazev, obsah: rodnyList.pdf } : null,
     });
 
     if (!result.sent) {
@@ -149,7 +171,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       }
     }
 
-    return NextResponse.json({ ok: true, to, kopie, sPrilohou: dokument.ok });
+    return NextResponse.json({
+      ok: true,
+      to,
+      kopie,
+      sPrilohou: dokument.ok,
+      sRodnymListem: rodnyList.potreba && rodnyList.ok,
+    });
   } catch (err) {
     console.error('POST /api/admin/invoices/[id]/send selhalo:', err);
     const message = err instanceof Error ? err.message : 'Neznámá chyba.';

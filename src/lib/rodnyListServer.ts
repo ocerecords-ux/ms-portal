@@ -50,6 +50,12 @@ export type ProjectStatusSnapshot = {
   projectName: string;
   statusName: string;
   caflouCompanyId: string | null;
+  /**
+   * Firma z portálu, když ji projekt sám nemá. Používá to odeslání faktury -
+   * u faktury firma vždycky je, takže RL nespadne na „není napojená firma"
+   * jen proto, že si to u projektu nikdo nevyplnil.
+   */
+  portalCompanyId?: string | null;
 };
 
 /** Proc se Rodny list nepovedlo vyrobit - stejne duvody u nahledu i naostro. */
@@ -201,10 +207,11 @@ async function vytvorRodnyList(
     // Firma projektu: nejdriv podle toho, co je vyplnene v portalu, teprve
     // pak podle ID z Caflou. Projekt zalozeny v portalu zadne caflouCompanyId
     // nema - drive na tom vyroba RL vzdycky spadla na "neni napojena firma".
+    const companyId = meta?.companyId ?? projekt.portalCompanyId ?? null;
     const company =
-      (meta?.companyId
+      (companyId
         ? await prisma.company.findUnique({
-            where: { id: meta.companyId },
+            where: { id: companyId },
             select: { id: true, name: true, driveFolderUrl: true },
           })
         : null) ??
@@ -558,5 +565,168 @@ export async function nahledRodnehoListu(
     console.error(`Náhled Rodného listu k projektu ${caflouProjectId} selhal:`, err);
     const detail = err instanceof Error ? err.message : 'neznámá chyba';
     return { ok: false, reason: 'FAILED', message: `Náhled se nepodařilo vyrobit (${detail}).` };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RODNÝ LIST K FAKTUŘE (zadání 15. 9. 2026)
+//
+// „Když pošleme fakturu klientovi, tak automaticky s tím odeslal i rodný list
+// a zároveň se uložil na disk k danému projektu. Když nebude mít vyplněné
+// údaje o hudbě, nebo zaškrtnuté tlačítko, že nebyla ve spotu použita hudba,
+// tak to musí zařvat a bez toho se faktura neodešle. Nastavit jen u rádiových
+// spotů, kde se dělá rodný list."
+//
+// Kontrola se dělá nad SOUČASNÝMI údaji projektu, ne nad tím, co bylo v RL
+// vyrobeném před měsícem - jinak by odešel rodný list, který už neplatí.
+// ---------------------------------------------------------------------------
+
+/** Co odeslání faktury o rodném listu potřebuje vědět. */
+export type RodnyListKFakture =
+  | { potreba: false }
+  | { potreba: true; ok: false; message: string }
+  | { potreba: true; ok: true; nazev: string; pdf: Buffer; rodnyListId: string; version: number };
+
+/**
+ * Připraví rodný list pro odeslání faktury: zkontroluje údaje, v případě
+ * potřeby vyrobí novou verzi (a nahraje ji na Disk projektu) a vrátí PDF do
+ * přílohy. U projektů, které nejsou rádiový spot, vrací `potreba: false` -
+ * faktura pak odejde jako dřív.
+ */
+export async function rodnyListKFakture(input: {
+  caflouProjectId: string;
+  projectName: string;
+  portalCompanyId?: string | null;
+  userId?: string;
+}): Promise<RodnyListKFakture> {
+  const { caflouProjectId, projectName } = input;
+  try {
+    const meta = await prisma.projectMeta.findUnique({ where: { caflouProjectId } });
+
+    // Jen rádiové spoty - stejná podmínka jako u výroby RL (typ projektu
+    // z ceníku, ne zaškrtávátko u firmy).
+    if (!(await isRodnyListProjectType(meta?.projectType))) return { potreba: false };
+
+    const company =
+      (meta?.companyId ?? input.portalCompanyId)
+        ? await prisma.company.findUnique({
+            where: { id: (meta?.companyId ?? input.portalCompanyId) as string },
+            select: { name: true },
+          })
+        : null;
+
+    const fields = fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
+    const klientNaRL = ((meta?.rlClientName as string | null) || '').trim() || company?.name || '';
+    const chybi = missingRodnyListFields({ ...fields, clientName: klientNaRL });
+    if (chybi.length > 0) {
+      return {
+        potreba: true,
+        ok: false,
+        message: `${missingFieldsMessage(chybi)} Doplňte je v detailu projektu — bez rodného listu fakturu odeslat nejde.`,
+      };
+    }
+
+    const hudba = musicLines(fields);
+    const spotName = fields.spotName.trim();
+    const spotLength = formatSpotLength(fields.spotLengthSeconds);
+    const director = fields.directorName.trim();
+    const datum = formatProductionDate(fields.productionDate);
+
+    const posledni = await prisma.rodnyList.findFirst({
+      where: { caflouProjectId },
+      orderBy: { version: 'desc' },
+    });
+
+    // Sedí poslední verze na dnešní údaje? Když ne (nebo když ještě žádná
+    // není), vyrobí se nová - ta se rovnou uloží i na Disk projektu.
+    const sedi =
+      posledni &&
+      posledni.clientName === klientNaRL &&
+      posledni.spotName === spotName &&
+      posledni.spotLength === spotLength &&
+      posledni.director === director &&
+      (posledni.musicTitle ?? '') === hudba.title &&
+      (posledni.musicAuthor ?? '') === hudba.author &&
+      formatProductionDate(posledni.productionDate) === datum;
+
+    if (!sedi) {
+      const vysledek = await vytvorRodnyList(
+        {
+          caflouProjectId,
+          projectName,
+          statusName: meta?.statusName ?? '',
+          caflouCompanyId: null,
+          portalCompanyId: input.portalCompanyId ?? null,
+        },
+        { trigger: 'MANUAL', userId: input.userId },
+      );
+      if (!vysledek.ok) return { potreba: true, ok: false, message: vysledek.message };
+      const novy = await prisma.rodnyList.findUnique({ where: { id: vysledek.rodnyListId } });
+      if (!novy) return { potreba: true, ok: false, message: 'Rodný list se nepodařilo načíst.' };
+      return {
+        potreba: true,
+        ok: true,
+        nazev: novy.fileName,
+        pdf: renderRodnyListPdf({
+          clientName: novy.clientName,
+          spotName: novy.spotName,
+          spotLength: novy.spotLength,
+          director: novy.director,
+          musicTitle: novy.musicTitle ?? '',
+          musicAuthor: novy.musicAuthor ?? '',
+          productionDate: formatProductionDate(novy.productionDate),
+        }),
+        rodnyListId: novy.id,
+        version: novy.version,
+      };
+    }
+
+    // Platná verze existuje. PDF se vykreslí znovu z uložených hodnot -
+    // je to levnější a spolehlivější než tahat soubor z úložiště.
+    const pdf = renderRodnyListPdf({
+      clientName: posledni!.clientName,
+      spotName: posledni!.spotName,
+      spotLength: posledni!.spotLength,
+      director: posledni!.director,
+      musicTitle: posledni!.musicTitle ?? '',
+      musicAuthor: posledni!.musicAuthor ?? '',
+      productionDate: formatProductionDate(posledni!.productionDate),
+    });
+
+    // Na Disku ještě není? Zkusí se to znovu - „zároveň se uložil na disk
+    // k danému projektu" platí i pro rodný list, který vznikl dřív, než měl
+    // projekt vlastní složku. Když to nevyjde, faktura kvůli tomu nespadne.
+    if (!posledni!.driveFileId) {
+      const slozka = meta?.driveUrl || null;
+      if (slozka) {
+        try {
+          const drive = await uploadPdfToDriveFolder(slozka, posledni!.fileName, pdf);
+          if (drive?.ok) {
+            await prisma.rodnyList.update({
+              where: { id: posledni!.id },
+              data: { driveFileId: drive.id, driveUrl: drive.webViewLink, driveError: null },
+            });
+          }
+        } catch (err) {
+          console.error(`Rodný list ${posledni!.id} se na Disk nepodařilo uložit:`, err);
+        }
+      }
+    }
+
+    return {
+      potreba: true,
+      ok: true,
+      nazev: posledni!.fileName,
+      pdf,
+      rodnyListId: posledni!.id,
+      version: posledni!.version,
+    };
+  } catch (err) {
+    console.error(`Rodný list k faktuře (projekt ${caflouProjectId}) selhal:`, err);
+    return {
+      potreba: true,
+      ok: false,
+      message: 'Rodný list se nepodařilo připravit — zkuste ho vyrobit v detailu projektu.',
+    };
   }
 }

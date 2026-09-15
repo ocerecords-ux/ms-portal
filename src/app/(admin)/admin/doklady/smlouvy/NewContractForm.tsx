@@ -68,8 +68,7 @@ export function NewContractForm({
   // Odkud se bere odmena: '' = jeste nevybrano, 'rucne' = napisu sam,
   // jinak poradi polozky v nakladech projektu.
   const [odmenaZdroj, setOdmenaZdroj] = useState('');
-  // Napsal si nazev smlouvy clovek sam? Pak uz ho portal neprepisuje.
-  const [nazevRucne, setNazevRucne] = useState(false);
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,15 +149,16 @@ export function NewContractForm({
   }, [projektInfo, projects, form.caflouProjectId]);
 
   /**
-   * Název smlouvy „Projekt - Herec" (zadání 15. 9. 2026). Skládá se sám,
-   * dokud si ho člověk nepřepíše - pak už na něj portál nesahá.
+   * Název smlouvy „Projekt - Herec" (zadání 15. 9. 2026). NEDÁ SE MĚNIT
+   * (upřesnění tentýž den: „název smlouvy může svítit nad tím třeba graficky,
+   * nedá se měnit") - skládá se sám z projektu a herce, které se vybírají
+   * hned nahoře, a jen se ukazuje.
    */
   useEffect(() => {
-    if (nazevRucne) return;
     const herec = form.signerName.trim();
     const slozeny = [nazevProjektu, herec].filter(Boolean).join(' - ');
     setForm((f) => (f.title === slozeny ? f : { ...f, title: slozeny }));
-  }, [nazevRucne, nazevProjektu, form.signerName]);
+  }, [nazevProjektu, form.signerName]);
 
   // U audioknihy se firma nevybira, takze po prepnuti sablony nesmi zustat
   // vybrana z drivejska - jinak by se do smlouvy dostala misto herce.
@@ -188,6 +188,12 @@ export function NewContractForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // Nazev se sklada z projektu a herce, takze prazdny znamena, ze ani jedno
+    // neni vybrane - smlouva bez nazvu se v prehledu nedá najít.
+    if (!form.title.trim()) {
+      setError('Vyberte projekt a herce — z nich se skládá název smlouvy.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -251,25 +257,52 @@ export function NewContractForm({
     >
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nová smlouva</h2>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Název smlouvy</span>
-        <input
-          required
-          autoFocus
-          value={form.title}
-          onChange={(e) => {
-            setNazevRucne(true);
-            set('title', e.target.value);
-          }}
-          placeholder="např. Smlouva o hlasovém výkonu — Tři mušketýři"
-          className={inputClass}
-        />
-        {!nazevRucne && nazevProjektu && (
-          <span className="text-xs font-body text-muted">
-            Skládá se z názvu projektu a jména herce. Přepsáním si ho zamknete.
-          </span>
+      {/* Název smlouvy se nezadává - svítí nahoře a skládá se z projektu
+          a herce (zadání 15. 9. 2026). */}
+      <div className="rounded-card border border-line bg-tint px-4 py-3">
+        <span className="block text-[11px] font-heading uppercase tracking-wide text-muted">Název smlouvy</span>
+        <p className={`m-0 font-heading font-semibold text-lg ${form.title ? 'text-brand-purpleDark' : 'text-muted'}`}>
+          {form.title || 'Vyberte projekt a herce — název se složí sám'}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Projekt</span>
+          <ProjectSelect
+            value={form.caflouProjectId}
+            onChange={(id) => set('caflouProjectId', id)}
+            projects={projects}
+            className={inputClass}
+          />
+        </label>
+
+        {herci.length > 0 && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">{jeAudiokniha ? 'Herec' : 'Herec z projektu'}</span>
+            <select
+              value={form.actorUserId}
+              onChange={(e) => vyberHerce(herci.find((h) => h.id === e.target.value) ?? null)}
+              className={inputClass}
+            >
+              <option value="">— nevybírat, vyplním ručně —</option>
+              {herci.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.jmeno}
+                  {h.identifikace ? ` · ${h.identifikace}` : ' · bez RČ a IČ'}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs font-body text-muted">
+              {vybranyHerec
+                ? vybranyHerec.identifikace
+                  ? `Do smlouvy půjde ${vybranyHerec.identifikace}${vybranyHerec.maAdresu ? ' a adresa z jeho karty.' : '. Adresu na kartě nemá — doplní se „…".'}`
+                  : 'Na kartě nemá RČ ani IČ — ve smlouvě bude „…" a dopíšete to v textu.'
+                : 'Adresu i RČ nebo IČ si portál vezme z karty herce.'}
+            </span>
+          </label>
         )}
-      </label>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="flex flex-col gap-1.5">
@@ -338,44 +371,6 @@ export function NewContractForm({
             className={inputClass}
           />
         </label>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Projekt</span>
-          <ProjectSelect
-            value={form.caflouProjectId}
-            onChange={(id) => set('caflouProjectId', id)}
-            projects={projects}
-            className={inputClass}
-          />
-        </label>
-
-        {herci.length > 0 && (
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">{jeAudiokniha ? 'Herec' : 'Herec z projektu'}</span>
-            <select
-              value={form.actorUserId}
-              onChange={(e) => vyberHerce(herci.find((h) => h.id === e.target.value) ?? null)}
-              className={inputClass}
-            >
-              <option value="">— nevybírat, vyplním ručně —</option>
-              {herci.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.jmeno}
-                  {h.identifikace ? ` · ${h.identifikace}` : ' · bez RČ a IČ'}
-                </option>
-              ))}
-            </select>
-            <span className="text-xs font-body text-muted">
-              {vybranyHerec
-                ? vybranyHerec.identifikace
-                  ? `Do smlouvy půjde ${vybranyHerec.identifikace}${vybranyHerec.maAdresu ? ' a adresa z jeho karty.' : '. Adresu na kartě nemá — doplní se „…".'}`
-                  : 'Na kartě nemá RČ ani IČ — ve smlouvě bude „…" a dopíšete to v textu.'
-                : 'Adresu i RČ nebo IČ si portál vezme z karty herce.'}
-            </span>
-          </label>
-        )}
       </div>
 
       {rucniPole.length > 0 && (

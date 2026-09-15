@@ -1006,6 +1006,12 @@ type InvoiceEmailInput = {
   iban: string | null;
   /** Faktura v PDF - jde do přílohy a nese QR platbu (zadání 13. 9. 2026). */
   pdf?: { nazev: string; obsah: Buffer } | null;
+  /**
+   * Rodný list spotu (zadání 15. 9. 2026: „když pošleme fakturu klientovi,
+   * tak automaticky s tím odeslal i rodný list"). Jen u rádiových spotů —
+   * u ostatních projektů žádný rodný list neexistuje.
+   */
+  rodnyList?: { nazev: string; obsah: Buffer } | null;
 };
 
 export function buildInvoiceHtml(input: InvoiceEmailInput): string {
@@ -1032,6 +1038,7 @@ export function buildInvoiceHtml(input: InvoiceEmailInput): string {
     </table>
 
     ${input.pdf ? '<p class="small">Fakturu posíláme i v příloze — je na ní QR kód, kterým se platba v bankovní aplikaci vyplní sama.</p>' : ''}
+    ${input.rodnyList ? '<p class="small">V příloze je i rodný list spotu.</p>' : ''}
 
     <p class="small">Kdyby cokoliv nesedělo, stačí na tento e-mail odpovědět.</p>
     <p class="small">${escapeHtml(input.issuerName)}</p>
@@ -1063,13 +1070,20 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
       `Bankovni ucet: ${[input.accountNumber, input.iban].filter(Boolean).join(' / ') || input.accountLabel}`,
       `Variabilni symbol: ${input.variableSymbol}`,
       input.pdf ? 'Fakturu posilame i v priloze, je na ni QR kod k platbe.' : '',
+      input.rodnyList ? 'V priloze je i rodny list spotu.' : '',
       '',
       input.issuerName,
     ]
       .filter(Boolean)
       .join('\n'),
     html: buildInvoiceHtml(input),
-    ...(input.pdf ? { attachments: [{ filename: input.pdf.nazev, content: input.pdf.obsah }] } : {}),
+    ...(() => {
+      const prilohy = [
+        input.pdf ? { filename: input.pdf.nazev, content: input.pdf.obsah } : null,
+        input.rodnyList ? { filename: input.rodnyList.nazev, content: input.rodnyList.obsah } : null,
+      ].filter((p): p is { filename: string; content: Buffer } => p !== null);
+      return prilohy.length ? { attachments: prilohy } : {};
+    })(),
   };
 
   await transport.sendMail(zprava);
