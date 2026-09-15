@@ -116,14 +116,44 @@ export function castkaDoSmlouvy(text: string): string {
 }
 
 /**
- * Doplní {{pole}} v šabloně. Co neznáme, necháme jako `…` — ať je při čtení
- * hned vidět, co se má doplnit ručně, místo prázdného místa.
+ * Doplní {{pole}} v šabloně. Co neznáme a stojí to ve výčtu za čárkou, zmizí
+ * i s tou čárkou; co chybí uprostřed věty, zůstane jako `…` - ať je při čtení
+ * hned vidět, že se to má doplnit ručně. Název naší firmy zvýrazňujeme tučně.
  */
 export function expandPlaceholders(body: string, values: Record<string, string | null | undefined>): string {
-  return body.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_full, key: string) => {
-    const value = values[key.toLowerCase()];
-    return value != null && String(value).trim() !== '' ? String(value) : '…';
+  // Značka pro pole, které nemáme čím vyplnit. Rozhodnout se, co s ním, jde až
+  // po doplnění - podle toho, kde ve větě stojí (viz úklid níž).
+  const PRAZDNE = '\u0000';
+
+  const doplneny = body.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_cele, klic: string) => {
+    const hodnota = values[klic.toLowerCase()];
+    if (hodnota == null || String(hodnota).trim() === '') return PRAZDNE;
+
+    const text = String(hodnota);
+    // NÁZEV NAŠÍ FIRMY JE VŽDYCKY TUČNĚ (zadání 15. 9. 2026: „a MEDIA SPACE
+    // s.r.o. by mělo být všude tučně"). Ve smlouvě je na třiceti místech,
+    // takže je jednodušší zvýraznit ho při doplňování než hlídat hvězdičky
+    // v každé šabloně.
+    return klic.toLowerCase() === 'nase_firma' ? `**${text}**` : text;
   });
+
+  /**
+   * ÚKLID PO NEVYPLNĚNÝCH POLÍCH (upřesnění 15. 9. 2026: „ještě mi vadí ty tři
+   * tečky za Brno").
+   *
+   * Když pole stojí ve výčtu za čárkou („studio MEDIA SPACE, Brno,
+   * {{termin}}."), zmizí i s tou čárkou a věta prostě skončí dřív. Uprostřed
+   * věty („ve výši {{odmena}} bez DPH") zůstane „…" - tam je potřeba na první
+   * pohled vidět, že se má něco doplnit. Hvězdičky kolem pole beru s sebou,
+   * ať po smazané hodnotě nezůstane prázdné tučné místo.
+   */
+  const znacka = '(?:\\*\\*)?\u0000(?:\\*\\*)?';
+  return doplneny
+    .replace(new RegExp(`[ \\t]*[,;–-][ \\t]*${znacka}`, 'g'), '')
+    .replace(new RegExp(znacka, 'g'), '…')
+    .replace(/\*{4}/g, '**')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+([.,;:])/g, '$1');
 }
 
 /**
