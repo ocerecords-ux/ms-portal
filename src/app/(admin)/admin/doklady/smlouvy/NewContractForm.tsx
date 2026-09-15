@@ -148,6 +148,15 @@ export function NewContractForm({
     [templates, form.templateId],
   );
 
+  /** Typ šablony - podle něj se jmenuje pole s termínem (viz popisekPole). */
+  const druhSmlouvy = useMemo(() => {
+    const nazev = templates.find((t) => t.id === form.templateId)?.name ?? '';
+    if (/audiokn/i.test(nazev)) return 'audiokniha' as const;
+    if (/reklam/i.test(nazev)) return 'reklama' as const;
+    if (/o d[ií]lo/i.test(nazev)) return 'dilo' as const;
+    return 'jine' as const;
+  }, [templates, form.templateId]);
+
   /** Název projektu bez firmy - „NĚCO — Audiotéka" je v názvu smlouvy navíc. */
   const nazevProjektu = useMemo(() => {
     if (projektInfo?.nazev?.trim()) return projektInfo.nazev.trim();
@@ -236,13 +245,17 @@ export function NewContractForm({
   const vybranyHerec = herci.find((h) => h.id === form.actorUserId) ?? null;
 
   /**
-   * Název ručního pole. U audioknihy se termín jmenuje jinak (zadání
+   * Název ručního pole. Termín znamená v každé smlouvě něco jiného (zadání
    * 15. 9. 2026: „Termín předání/natáčení - změnit na Termín dokončení
-   * natáčení"); u ostatních smluv {{termin}} znamená něco jiného (předání
-   * díla, pořízení záznamu), takže se přejmenovává jen tady.
+   * natáčení", pak „tím pádem by se tam to pole termín odevzdání u téhle
+   * šablony mělo ukázat"), a obecné „Termín předání / natáčení" člověku
+   * neřekne, co má vyplnit.
    */
   function popisekPole(key: string, vychozi: string): string {
-    if (jeAudiokniha && key === 'termin') return 'Termín dokončení natáčení';
+    if (key !== 'termin') return vychozi;
+    if (druhSmlouvy === 'audiokniha') return 'Termín dokončení natáčení';
+    if (druhSmlouvy === 'reklama') return 'Termín pořízení záznamu';
+    if (druhSmlouvy === 'dilo') return 'Termín odevzdání díla';
     return vychozi;
   }
 
@@ -455,8 +468,15 @@ export function NewContractForm({
                     className={inputClass}
                   />
                   )}
-                  {p.key === 'termin' && projektInfo?.odevzdani && (
-                    <span className="text-xs font-body text-muted">Předvyplněno z data odevzdání projektu.</span>
+                  {p.key === 'termin' && form.caflouProjectId && (
+                    // Kdyz projekt datum odevzdani nema, at je videt PROC je
+                    // policko prazdne - jinak clovek ceka, ze se doplni samo
+                    // (zadani 15. 9. 2026).
+                    <span className="text-xs font-body text-muted">
+                      {projektInfo?.odevzdani
+                        ? 'Předvyplněno z data odevzdání projektu.'
+                        : 'Projekt nemá datum odevzdání — vyplňte termín ručně.'}
+                    </span>
                   )}
                 </label>
               );
