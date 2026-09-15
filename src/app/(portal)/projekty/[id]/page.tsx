@@ -27,7 +27,7 @@ import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
 import { RecordingSection } from './RecordingSection';
 import { ProjectTabs, type ProjectTab } from './ProjectTabs';
 import { ProtokolNataceni } from './ProtokolNataceni';
-import { VykazyProjektu, type VykazRadek } from './VykazyProjektu';
+import { VykazyProjektu, type BonusRadek, type VykazRadek } from './VykazyProjektu';
 import { CerpaniPoDruzich } from './CerpaniPoDruzich';
 import { RodnyListSection } from './RodnyListSection';
 import { HistorieProjektu } from './HistorieProjektu';
@@ -413,6 +413,29 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     kdo: t.user?.name || t.user?.email || '—',
   }));
 
+  /**
+   * Schvalene bonusy k projektu (zadani 15. 9. 2026: „ani v detailu projektu
+   * v zalozce vykazy nevidime bonusy"). Jen schvalene - navrh, o kterem se
+   * jeste nerozhodlo, nikomu nepatri.
+   */
+  const bonusyRadky: BonusRadek[] = showDocuments
+    ? (
+        await prisma.bonusZvukare
+          .findMany({
+            where: { caflouProjectId, stav: 'SCHVALENO' },
+            orderBy: { rozhodnutoAt: 'desc' },
+            include: { user: { select: { name: true, email: true } } },
+          })
+          .catch(() => [])
+      ).map((b) => ({
+        id: b.id,
+        kdo: b.user.name || b.user.email,
+        castka: b.castka,
+        schvalenoDen: b.rozhodnutoAt ? b.rozhodnutoAt.toISOString() : null,
+        poznamka: b.poznamka,
+      }))
+    : [];
+
   // Vykazane penize zvlast za nataceni a zvlast za strih (zadani 14. 9. 2026).
   // „Ostatni" se nepocita - ten druh prace k projektu nepatri.
   const castka = (e: (typeof timesheets)[number]) =>
@@ -484,7 +507,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       ) : (
         rozpocet
       )}
-      <VykazyProjektu vykazy={vykazyRadky} />
+      <VykazyProjektu vykazy={vykazyRadky} bonusy={bonusyRadky} />
     </div>
   );
 

@@ -7,6 +7,7 @@ import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { DEFAULT_HOURLY_RATE } from '@/lib/timesheets';
 import { TimesheetEditor } from './TimesheetEditor';
 import { BonusyPanel, type Bonus } from './BonusyPanel';
+import type { BonusRadek } from './TimesheetEditor';
 
 // Výkazy zvukařů (zadani 6. 9. 2026). Vidi je zvukar (VYHRADNE svoje) a
 // Zuzo-labuzo (vsechny, jen ke cteni - vykazy si nedela) - produkce ani
@@ -119,6 +120,22 @@ export default async function TimesheetsPage({
       ).map((u) => ({ id: u.id, label: u.name || u.email }))
     : [];
   const keSchvaleni = bonusy.filter((b) => b.stav === 'NAVRZENO').length;
+
+  /**
+   * Schvalene bonusy do prehledu vykazu (zadani 15. 9. 2026). Radi se podle
+   * dne, kdy se schvalily - to je den, kdy zvukari „prisly".
+   */
+  const bonusyDoPrehledu: BonusRadek[] = bonusyRaw
+    .filter((b) => b.stav === 'SCHVALENO')
+    .map((b) => ({
+      id: b.id,
+      den: (b.rozhodnutoAt ?? b.navrzenoAt).toISOString().slice(0, 10),
+      projectName: b.projectName,
+      userId: b.userId,
+      userLabel: b.user.name || b.user.email,
+      castka: b.castka,
+      poznamka: b.poznamka,
+    }));
   const naBonusech = searchParams?.zalozka === 'bonusy';
 
   // Stejna sazba jako mesicni zalozky uvnitr vykazu - at je na prvni pohled
@@ -157,6 +174,7 @@ export default async function TimesheetsPage({
     <TimesheetEditor
       isAdmin={isAdmin}
       canWrite={canWrite}
+      bonusy={bonusyDoPrehledu}
       hourlyRate={me?.hourlyRate ?? DEFAULT_HOURLY_RATE}
       projectOptions={projectOptions}
       entries={entries.map((e) => ({

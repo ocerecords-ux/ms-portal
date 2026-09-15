@@ -22,6 +22,23 @@ import { WORK_TYPE_LABELS, durationMinutes, entryAmount, formatDuration, formatT
  * neobjeví nikdy: u toho druhu se projekt nevybírá (viz requiresProject).
  */
 
+/**
+ * SCHVÁLENÝ BONUS K PROJEKTU (zadání 15. 9. 2026: „ani v detailu projektu
+ * v záložce výkazy nevidíme bonusy").
+ *
+ * Bonus NENÍ řádek výkazu - je to jednorázová odměna, ne odpracované hodiny.
+ * Proto stojí pod tabulkou zvlášť a nesčítá se s částkou za práci: do čerpání
+ * rozpočtu nepatří (viz CerpaniPoDruzich) a smíchaný součet by lhal.
+ */
+export type BonusRadek = {
+  id: string;
+  kdo: string;
+  castka: number;
+  /** ISO řetězec dne, kdy se bonus schválil. */
+  schvalenoDen: string | null;
+  poznamka: string | null;
+};
+
 export type VykazRadek = {
   id: string;
   /** ISO řetězec - server komponenta nesmí posílat Date. */
@@ -36,7 +53,7 @@ export type VykazRadek = {
 
 const czk = (v: number) => `${v.toLocaleString('cs-CZ')} Kč`;
 
-export function VykazyProjektu({ vykazy }: { vykazy: VykazRadek[] }) {
+export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; bonusy?: BonusRadek[] }) {
   const [filtr, setFiltr] = useState<WorkType | 'VSE'>('VSE');
 
   /** Druhy práce, které u projektu skutečně jsou - v pořadí natáčení, střih. */
@@ -56,7 +73,9 @@ export function VykazyProjektu({ vykazy }: { vykazy: VykazRadek[] }) {
     return { minut, castka };
   }, [videt]);
 
-  if (vykazy.length === 0) {
+  const bonusCelkem = bonusy.reduce((s, b) => s + b.castka, 0);
+
+  if (vykazy.length === 0 && bonusy.length === 0) {
     return (
       <div className="bg-surface rounded-card border border-line shadow-sm p-6">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0 mb-2">
@@ -98,6 +117,7 @@ export function VykazyProjektu({ vykazy }: { vykazy: VykazRadek[] }) {
         </div>
       )}
 
+      {vykazy.length > 0 && (
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -145,6 +165,40 @@ export function VykazyProjektu({ vykazy }: { vykazy: VykazRadek[] }) {
           </tbody>
         </table>
       </div>
+      )}
+
+      {/* Bonusy zvlast - viz poznamka u typu BonusRadek. */}
+      {bonusy.length > 0 && (
+        <div className="border-t border-line pt-4 flex flex-col gap-2">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+              Schválené bonusy
+            </h3>
+            <span className="text-sm font-heading text-ink tabular-nums">{czk(bonusCelkem)}</span>
+          </div>
+          <ul className="list-none p-0 m-0 flex flex-col gap-1">
+            {bonusy.map((b) => (
+              <li key={b.id} className="flex items-baseline justify-between gap-3 text-[13px] font-heading">
+                <span className="text-ink">
+                  {b.kdo}
+                  {b.schvalenoDen && (
+                    <span className="text-muted font-body">
+                      {' '}
+                      · schváleno {new Date(b.schvalenoDen).toLocaleDateString('cs-CZ')}
+                    </span>
+                  )}
+                  {b.poznamka && <span className="text-muted font-body"> · {b.poznamka}</span>}
+                </span>
+                <span className="text-ink tabular-nums whitespace-nowrap">{czk(b.castka)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs font-body text-muted m-0">
+            Bonus je jednorázová odměna nad rámec výkazu — do odpracovaných hodin ani do čerpání
+            rozpočtu se nezapočítává.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

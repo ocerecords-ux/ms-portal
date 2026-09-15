@@ -33,6 +33,25 @@ type Entry = {
 
 type ProjectOption = { id: string; label: string; dokonceny?: boolean };
 
+/**
+ * SCHVÁLENÝ BONUS V PŘEHLEDU (zadání 15. 9. 2026: „v tom celkovém hlavním
+ * přehledu výkazů nevidíme bonusy").
+ *
+ * Bonus není řádek výkazu - nemá hodiny ani druh práce. Do tabulky výkazů
+ * proto nepatří; stojí pod ní zvlášť a řídí se týmž obdobím a týmž zvukařem,
+ * protože otázka „kolik to za tohle období dělá" se ptá na obojí.
+ */
+export type BonusRadek = {
+  id: string;
+  /** Den schválení (ISO, jen datum) - podle něj se řadí a filtruje. */
+  den: string;
+  projectName: string | null;
+  userId: string;
+  userLabel: string;
+  castka: number;
+  poznamka: string | null;
+};
+
 function todayIso(): string {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -79,6 +98,7 @@ function formatDate(iso: string): string {
 export function TimesheetEditor({
   isAdmin,
   canWrite,
+  bonusy = [],
   hourlyRate,
   projectOptions,
   entries,
@@ -86,6 +106,8 @@ export function TimesheetEditor({
   isAdmin: boolean;
   /** Smi si tenhle uzivatel psat vykazy? (jen zvukar) */
   canWrite: boolean;
+  /** Schválené bonusy - v přehledu se ukazují pod tabulkou výkazů. */
+  bonusy?: BonusRadek[];
   hourlyRate: number;
   projectOptions: ProjectOption[];
   entries: Entry[];
@@ -242,6 +264,30 @@ export function TimesheetEditor({
     return [{ id: upravovany.projectId, label: upravovany.projectName }, ...projectOptions];
   }, [editId, entries, projectOptions]);
 
+  /**
+   * Bonusy se řídí TÝMŽ obdobím a týmž zvukařem jako výkazy. Filtr na druh
+   * práce je ale vynechává: bonus není natáčení ani střih, a nechat ho
+   * v součtu „kolik nás stál střih" by ten součet rozbilo.
+   */
+  const visibleBonusy = useMemo(() => {
+    if (druhPrace !== 'all') return [];
+    const needle = query.trim().toLowerCase();
+    return bonusy
+      .filter((b) => {
+        if (vlastniObdobi) {
+          if (odDatum && b.den < odDatum) return false;
+          if (doDatum && b.den > doDatum) return false;
+        } else if (month !== 'all' && !b.den.startsWith(month)) {
+          return false;
+        }
+        if (userFilter !== 'all' && b.userId !== userFilter) return false;
+        if (!needle) return true;
+        const seno = [b.projectName ?? '', b.poznamka ?? '', b.userLabel, 'bonus'].join(' ').toLowerCase();
+        return needle.split(/\s+/).filter(Boolean).every((slovo) => seno.includes(slovo));
+      })
+      .sort((a, b) => b.den.localeCompare(a.den));
+  }, [bonusy, druhPrace, month, vlastniObdobi, odDatum, doDatum, userFilter, query]);
+
   const totals = useMemo(() => {
     let minutes = 0;
     let amount = 0;
@@ -249,8 +295,11 @@ export function TimesheetEditor({
       minutes += durationMinutes(e.startMinutes, e.endMinutes);
       amount += entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot);
     }
-    return { minutes, amount };
-  }, [visibleEntries]);
+    const bonus = visibleBonusy.reduce((sum, b) => sum + b.castka, 0);
+    // „Celkem" je to, co se za období vydělalo - tedy i s bonusy. Hodiny
+    // zůstávají jen za odpracovanou práci; bonus žádné nemá.
+    return { minutes, amount, bonus, celkem: amount + bonus };
+  }, [visibleEntries, visibleBonusy]);
 
   /** Nacte vykaz do formulare a odroluje k nemu (zadani 14. 9. 2026). */
   function zacniUpravu(entry: Entry) {
@@ -368,8 +417,11 @@ export function TimesheetEditor({
             Celkem · {vlastniObdobi ? popisObdobi(odDatum, doDatum) : month === 'all' ? 'vše' : monthLabel(month)}
             {druhPrace !== 'all' ? ` · ${WORK_TYPE_LABELS[druhPrace]}` : ''}
           </p>
-          <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatCzk(totals.amount)}</p>
-          <p className="text-xs font-body text-muted m-0">{formatDuration(totals.minutes)}</p>
+          <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatCzk(totals.celkem)}</p>
+          <p className="text-xs font-body text-muted m-0">
+            {formatDuration(totals.minutes)}
+            {totals.bonus > 0 && ` · z toho bonusy ${formatCzk(totals.bonus)}`}
+          </p>
         </div>
       </div>
 
@@ -730,6 +782,42 @@ export function TimesheetEditor({
           </table>
         </div>
       </div>
+
+      {/* BONUSY (zadani 15. 9. 2026). Zvlast pod tabulkou - nejsou to hodiny
+          a v tabulce vykazu by mely prazdne sloupce Od-do i Hodiny. */}
+      {visibleBonusy.length > 0 && (
+        <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
+          <div className="px-4 py-3 border-b border-line flex items-baseline justify-between gap-3 flex-wrap">
+            <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+              Schválené bonusy
+            </h2>
+            <span className="text-sm font-heading text-ink tabular-nums">{formatCzk(totals.bonus)}</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <tbody>
+                {visibleBonusy.map((b) => (
+                  <tr key={b.id} className="border-t border-line first:border-t-0">
+                    <td className="px-4 py-3 text-sm font-heading text-ink tabular-nums whitespace-nowrap">
+                      {formatDate(b.den)}
+                    </td>
+                    {isAdmin && (
+                      <td className="px-4 py-3 text-sm font-heading text-muted whitespace-nowrap">{b.userLabel}</td>
+                    )}
+                    <td className="px-4 py-3 text-sm font-heading text-muted">
+                      {b.projectName || <span className="text-muted/60">—</span>}
+                      {b.poznamka && <span className="block text-xs text-muted/80 font-body">{b.poznamka}</span>}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-heading text-ink tabular-nums text-right whitespace-nowrap">
+                      {formatCzk(b.castka)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
       </div>
     </section>
   );
