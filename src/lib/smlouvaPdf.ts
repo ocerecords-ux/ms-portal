@@ -112,6 +112,64 @@ function zalom(font: typeof FONT_REGULAR, text: string, size: number, sirka: num
   return radky;
 }
 
+
+/**
+ * TUČNÉ KOUSKY V TEXTU (zadání 15. 9. 2026: „důležité věci bych zvýraznil
+ * tučně"). V šabloně se píší jako **takhle** - stejný zápis, jaký portál
+ * používá ve zprávách klientům.
+ *
+ * Sází se to po slovech: každé slovo se změří vlastním řezem písma, takže
+ * tučný kousek uprostřed věty nerozhodí zalomení řádku.
+ */
+type Slovo = { slovo: string; tucne: boolean };
+
+function naUseky(text: string): { text: string; tucne: boolean }[] {
+  const out: { text: string; tucne: boolean }[] = [];
+  const re = /\*\*([^*]+)\*\*/g;
+  let i = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    if (m.index > i) out.push({ text: text.slice(i, m.index), tucne: false });
+    out.push({ text: m[1], tucne: true });
+    i = m.index + m[0].length;
+  }
+  if (i < text.length) out.push({ text: text.slice(i), tucne: false });
+  return out.length ? out : [{ text, tucne: false }];
+}
+
+function naSlova(text: string, zakladTucny: boolean): Slovo[] {
+  const out: Slovo[] = [];
+  for (const usek of naUseky(text)) {
+    for (const slovo of usek.text.split(/\s+/).filter(Boolean)) {
+      out.push({ slovo, tucne: zakladTucny || usek.tucne });
+    }
+  }
+  return out;
+}
+
+/** Zalomení textu s tučnými kousky - vrací řádky složené ze slov. */
+function zalomSlova(slova: Slovo[], size: number, sirka: number): Slovo[][] {
+  if (slova.length === 0) return [[]];
+  const mezera = textWidth(FONT_REGULAR, ' ', size);
+  const radky: Slovo[][] = [];
+  let radek: Slovo[] = [];
+  let sirkaRadku = 0;
+  for (const s of slova) {
+    const w = textWidth(s.tucne ? FONT_BOLD : FONT_REGULAR, s.slovo, size);
+    const pridat = radek.length === 0 ? w : sirkaRadku + mezera + w;
+    if (pridat <= sirka || radek.length === 0) {
+      radek.push(s);
+      sirkaRadku = pridat;
+    } else {
+      radky.push(radek);
+      radek = [s];
+      sirkaRadku = w;
+    }
+  }
+  if (radek.length) radky.push(radek);
+  return radky;
+}
+
 function datumCas(d: Date): string {
   return new Intl.DateTimeFormat('cs-CZ', {
     day: 'numeric',
@@ -195,7 +253,7 @@ export function smlouvaPdf(data: SmlouvaPdfData): Buffer {
       // Titul smlouvy - na sirku, vycentrovany, jako na strance.
       prvniNeprazdny = false;
       mistoNeboNova(40);
-      for (const radek of zalom(FONT_BOLD, text.toLocaleUpperCase('cs-CZ'), 14, SIRKA)) {
+      for (const radek of zalom(FONT_BOLD, text.replace(/\*\*/g, '').toLocaleUpperCase('cs-CZ'), 14, SIRKA)) {
         const x = LEFT + (SIRKA - textWidth(FONT_BOLD, radek, 14)) / 2;
         s.c.text(FONT_BOLD, 'FB', radek, 14, x, s.top + 11, INK, 0.6);
         s.top += 19;
@@ -209,7 +267,7 @@ export function smlouvaPdf(data: SmlouvaPdfData): Buffer {
     if (druh === 'nadpis') {
       mistoNeboNova(34);
       s.top += 10;
-      for (const radek of zalom(FONT_BOLD, text, NADPIS_SIZE, SIRKA)) {
+      for (const radek of zalom(FONT_BOLD, text.replace(/\*\*/g, ''), NADPIS_SIZE, SIRKA)) {
         s.c.text(FONT_BOLD, 'FB', radek, NADPIS_SIZE, LEFT, s.top + 8, PURPLE, 0.8);
         s.top += RADEK;
       }
@@ -217,11 +275,16 @@ export function smlouvaPdf(data: SmlouvaPdfData): Buffer {
       continue;
     }
 
-    const font = druh === 'popisek' ? FONT_BOLD : FONT_REGULAR;
-    const nazev = druh === 'popisek' ? 'FB' : 'FR';
-    for (const radek of zalom(font, text, TEXT_SIZE, SIRKA)) {
+    // Tucne kousky **takhle** se sazi po slovech - viz zalomSlova.
+    const mezera = textWidth(FONT_REGULAR, ' ', TEXT_SIZE);
+    for (const radek of zalomSlova(naSlova(text, druh === 'popisek'), TEXT_SIZE, SIRKA)) {
       mistoNeboNova(RADEK);
-      s.c.text(font, nazev, radek, TEXT_SIZE, LEFT, s.top + 8, INK);
+      let x = LEFT;
+      for (const slovo of radek) {
+        const font = slovo.tucne ? FONT_BOLD : FONT_REGULAR;
+        s.c.text(font, slovo.tucne ? 'FB' : 'FR', slovo.slovo, TEXT_SIZE, x, s.top + 8, INK);
+        x += textWidth(font, slovo.slovo, TEXT_SIZE) + mezera;
+      }
       s.top += RADEK;
     }
   }

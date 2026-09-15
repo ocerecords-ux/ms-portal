@@ -481,9 +481,14 @@ export function NewContractForm({
 
 type Naklad = { nazev: string; castka: number };
 
-/** Částka v celých korunách, jak se píše do smlouvy. */
+/**
+ * Částka v celých korunách, jak se píše do smlouvy: „30 000 Kč".
+ *
+ * Mezery jsou OBYČEJNÉ, ne pevné - pevná mezera není v podmnožině písma, se
+ * kterou se sází PDF smlouvy, a vyšel by z ní otazník.
+ */
 function korun(castka: number): string {
-  return `${Math.round(castka).toLocaleString('cs-CZ')} Kč`;
+  return `${Math.round(castka).toLocaleString('cs-CZ').replace(/\u00a0/g, ' ')} Kč`;
 }
 
 /** Datum ve tvaru, v jakém se píše do smlouvy: 20. 9. 2026. */

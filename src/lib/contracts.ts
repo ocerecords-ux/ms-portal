@@ -53,6 +53,9 @@ export const CONTRACT_PLACEHOLDERS: { key: string; label: string; rucne?: boolea
   { key: 'podepisujici', label: 'Jméno podepisujícího' },
   { key: 'email', label: 'E-mail podepisujícího' },
   { key: 'projekt', label: 'Název projektu' },
+  // Misto nataceni podle lokace herce (zadani 15. 9. 2026) - portal ho zna,
+  // neni proc se na nej ptat.
+  { key: 'misto', label: 'Místo natáčení (z lokace herce)' },
   { key: 'nazev_dila', label: 'Název díla (z projektu)' },
   { key: 'datum', label: 'Dnešní datum' },
   { key: 'odmena', label: 'Odměna / cena', rucne: true },
@@ -64,6 +67,50 @@ export const CONTRACT_PLACEHOLDERS: { key: string; label: string; rucne?: boolea
   { key: 'uziti', label: 'Účel a území užití (reklama)', rucne: true },
   { key: 'doba_licence', label: 'Doba licence (reklama)', rucne: true },
 ];
+
+/**
+ * MÍSTO NATÁČENÍ (zadání 15. 9. 2026: „to místo by měla být proměnná a měla
+ * by odpovídat tomu, co má herec zaškrtnuto v lokaci. V případě, že nebude mít
+ * nic, tak bych tam jako pojistku Brno. Ať tam alespoň něco je.").
+ *
+ * Z lokace „MS Studio - Brno II" zůstane do smlouvy jen město: do textu patří
+ * „Nahrávací studio MEDIA SPACE, Brno", ne interní název studia s číslem.
+ * Když má herec zaškrtnutých víc měst, bere se první - smlouva mluví o jednom
+ * místě a vypsat tři by z ní udělalo hádanku.
+ */
+export function mistoNataceni(lokace: string[] | null | undefined): string {
+  const prvni = (lokace ?? []).map((l) => l.trim()).filter(Boolean)[0];
+  if (!prvni) return 'Brno';
+  const mesto = prvni
+    .replace(/^MS\s*Studio\s*[-–]\s*/i, '')
+    .replace(/\s+(I{1,3}|IV|V|VI{0,3})$/i, '')
+    .trim();
+  return mesto || 'Brno';
+}
+
+/**
+ * ČÁSTKA DO SMLOUVY (zadání 15. 9. 2026: „ten formát ceny je takový škaredý.
+ * U cen by měla být měna Kč").
+ *
+ * Z „30000" udělá „30 000 Kč". Co už měnu nebo jiný tvar má (třeba „5 000 Kč
+ * za natáčecí den" nebo „1 200 EUR"), se nechává být - do textu smlouvy si
+ * člověk může napsat cokoliv a portál mu to nemá přepisovat.
+ *
+ * Mezery jsou OBYČEJNÉ, ne pevné: pevná mezera není v podmnožině písma, se
+ * kterou se sází PDF, a vyšel by z ní otazník.
+ */
+export function castkaDoSmlouvy(text: string): string {
+  const cistý = text.trim();
+  if (!cistý) return cistý;
+  // Jen holé číslo (klidně s mezerami nebo desetinnou čárkou) - nic jiného.
+  if (!/^\d[\d\s\u00a0]*([.,]\d{1,2})?$/.test(cistý)) return cistý;
+  const cislo = Number(cistý.replace(/[\s\u00a0]/g, '').replace(',', '.'));
+  if (!Number.isFinite(cislo)) return cistý;
+  const zaokrouhlene = Number.isInteger(cislo)
+    ? cislo.toLocaleString('cs-CZ')
+    : cislo.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${zaokrouhlene.replace(/\u00a0/g, ' ')} Kč`;
+}
 
 /**
  * Doplní {{pole}} v šabloně. Co neznáme, necháme jako `…` — ať je při čtení
@@ -127,7 +174,7 @@ I. Úvodní ustanovení
 
 2. Dílo vzniká pro projekt „{{projekt}}", pracovní název díla: {{nazev_dila}}.
 
-3. Místo a čas provedení Díla: Nahrávací studio MEDIA SPACE, {{termin}}.
+3. Místo a čas provedení Díla: Nahrávací studio MEDIA SPACE, **{{misto}}**, **{{termin}}**.
 
 4. Interpret prohlašuje, že bude jediným tvůrcem a autorem Díla a že tedy bude nositelem všech osobnostních a majetkových práv k Dílu, nezbytných pro zpřístupnění a další využití Díla společností {{nase_firma}} v rozsahu sjednaném níže v této smlouvě.
 
@@ -175,11 +222,11 @@ II. Předmět smlouvy
 
 III. Odměna
 
-1. Strany si sjednaly odměnu za poskytnutí Licence dle této smlouvy ve výši {{odmena}} bez DPH. Tato odměna je konečnou, jednorázovou a paušálně stanovenou úplatou, pokrývající i všechny náklady spojené s tvorbou Díla (dále jen „Odměna").
+1. Strany si sjednaly odměnu za poskytnutí Licence dle této smlouvy ve výši **{{odmena}}** bez DPH. Tato odměna je konečnou, jednorázovou a paušálně stanovenou úplatou, pokrývající i všechny náklady spojené s tvorbou Díla (dále jen „Odměna").
 
 2. Odměna není stanovena v závislosti na výnosech z využití licence.
 
-3. Odměna bude Interpretovi uhrazena na základě daňového dokladu – faktury či platebního příkazu vystaveného Interpretem, a to ve splatnosti {{splatnost}} dnů od data uskutečnění zdanitelného plnění. Vystavenou fakturu zašlete na {{nas_email}}. Interpret prohlašuje, že z brutto honoráře si své daňové povinnosti vyplývající z tohoto příjmu vypořádá sám ve smyslu zákona č. 586/1992 Sb.
+3. Odměna bude Interpretovi uhrazena na základě daňového dokladu – faktury či platebního příkazu vystaveného Interpretem, a to ve splatnosti **{{splatnost}} dnů** od data uskutečnění zdanitelného plnění. Vystavenou fakturu zašlete na {{nas_email}}. Interpret prohlašuje, že z brutto honoráře si své daňové povinnosti vyplývající z tohoto příjmu vypořádá sám ve smyslu zákona č. 586/1992 Sb.
 
 4. Strany se dohodly, že využití oprávnění daného Interpretem a jeho poskytnutí součinnosti dle čl. II. odst. 8, 10, 11 a 12 se sjednává jako bezplatné a Interpretovi z tohoto titulu nepřísluší žádná náhrada či odměna.
 
@@ -268,9 +315,9 @@ IČO: {{nase_ic}}    DIČ: {{nase_dic}}
 
 3. SMLUVNÍ ODMĚNA
 
-3.1 Smluvní strany se dohodly, že odměna za umělecký výkon a poskytnutí licence činí: {{odmena}}.
+3.1 Smluvní strany se dohodly, že odměna za umělecký výkon a poskytnutí licence činí: **{{odmena}}**.
 
-3.2 Odměna bude uhrazena bankovním převodem na účet Umělce nejpozději do {{splatnost}} dnů ode dne vystavení příslušné faktury.
+3.2 Odměna bude uhrazena bankovním převodem na účet Umělce nejpozději do **{{splatnost}} dnů** ode dne vystavení příslušné faktury.
 
 3.3 Sjednaná odměna podle této smlouvy je uvedena bez DPH. Je-li Umělec registrován k DPH v České republice a je-li podle právních předpisů povinen účtovat DPH za služby poskytované podle této smlouvy, připočte k příslušné faktuře DPH v platné sazbě.
 
@@ -282,7 +329,7 @@ IČO: {{nase_ic}}    DIČ: {{nase_dic}}
 
 4.2 Umělec se zavazuje provést umělecký výkon na profesionální úrovni, zejména tak, aby nesnižoval hodnotu výsledného uměleckého díla.
 
-4.3 Termín pořízení záznamu: {{termin}}.
+4.3 Termín pořízení záznamu: **{{termin}}**.
 
 5. UMĚLÁ INTELIGENCE
 
@@ -327,17 +374,17 @@ I. Předmět smlouvy
 
 II. Termín plnění
 
-1. Zhotovitel se zavazuje předat Dílo nejpozději do {{termin}}.
+1. Zhotovitel se zavazuje předat Dílo nejpozději do **{{termin}}**.
 
 2. Dílo bude předáno elektronicky ve formátu DOCX, PDF nebo jiném předem dohodnutém formátu.
 
 III. Cena díla a platební podmínky
 
-1. Smluvní strany sjednávají cenu za provedení Díla ve výši {{odmena}}.
+1. Smluvní strany sjednávají cenu za provedení Díla ve výši **{{odmena}}**.
 
 2. Cena je konečná.
 
-3. Objednatel uhradí cenu na základě této smlouvy po předání Díla se splatností {{splatnost}} dnů. Vystavenou fakturu zašlete na {{nas_email}}.
+3. Objednatel uhradí cenu na základě této smlouvy po předání Díla se splatností **{{splatnost}} dnů**. Vystavenou fakturu zašlete na {{nas_email}}.
 
 IV. Předání a převzetí díla
 

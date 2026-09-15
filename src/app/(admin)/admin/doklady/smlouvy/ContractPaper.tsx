@@ -105,7 +105,7 @@ export function TextSmlouvy({ body, titulek = true }: { body: string; titulek?: 
               key={i}
               className="font-display text-xl sm:text-2xl text-ink text-center uppercase tracking-wide m-0 mb-2"
             >
-              {text}
+              {bezHvezdicek(text)}
             </h2>
           );
         }
@@ -118,7 +118,7 @@ export function TextSmlouvy({ body, titulek = true }: { body: string; titulek?: 
               key={i}
               className="font-heading font-semibold text-sm sm:text-base text-brand-purple uppercase tracking-wide m-0 mt-5 mb-1"
             >
-              {text}
+              {bezHvezdicek(text)}
             </h3>
           );
         }
@@ -126,18 +126,45 @@ export function TextSmlouvy({ body, titulek = true }: { body: string; titulek?: 
         if (druh === 'popisek') {
           return (
             <p key={i} className="font-heading font-semibold text-ink m-0">
-              {text}
+              {bezHvezdicek(text)}
             </p>
           );
         }
 
         return (
           <p key={i} className="m-0 whitespace-pre-wrap break-words">
-            {radek}
+            <STucnym text={radek} />
           </p>
         );
       })}
     </div>
+  );
+}
+
+/** Hvězdičky v nadpisu nemají co dělat - tam se sází tučně všechno. */
+function bezHvezdicek(text: string): string {
+  return text.replace(/\*\*/g, '');
+}
+
+/**
+ * TUČNÉ KOUSKY V TEXTU (zadání 15. 9. 2026: „důležité věci bych zvýraznil
+ * tučně"). V šabloně se píší jako **takhle** - stejný zápis, jaký portál
+ * používá ve zprávách klientům, a stejně se sází i do PDF (lib/smlouvaPdf).
+ */
+export function STucnym({ text }: { text: string }) {
+  const kousky = text.split(/(\*\*[^*]+\*\*)/g).filter((k) => k !== '');
+  return (
+    <>
+      {kousky.map((kousek, i) =>
+        kousek.startsWith('**') && kousek.endsWith('**') && kousek.length > 4 ? (
+          <strong key={i} className="font-semibold">
+            {kousek.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={i}>{kousek}</span>
+        ),
+      )}
+    </>
   );
 }
 

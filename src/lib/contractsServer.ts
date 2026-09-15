@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'crypto';
 import { prisma } from '@/lib/db';
 import { formatAddress, expandNumberFormat } from '@/lib/doklady';
-import { DEFAULT_CONTRACT_TEMPLATES } from '@/lib/contracts';
+import { DEFAULT_CONTRACT_TEMPLATES, mistoNataceni } from '@/lib/contracts';
 
 /**
  * Serverová část smluv — sahá do databáze, takže se nesmí dostat do
@@ -91,6 +91,7 @@ export async function contractValues(input: {
             addressStreet: true,
             addressCity: true,
             addressZip: true,
+            studioLocations: true,
           },
         })
       : Promise.resolve(null),
@@ -145,6 +146,8 @@ export async function contractValues(input: {
     podepisujici: input.signerName ?? '',
     email: input.signerEmail ?? '',
     projekt: input.projectName ?? '',
+    // Misto nataceni podle lokace herce, jinak Brno (zadani 15. 9. 2026).
+    misto: mistoNataceni(herec?.studioLocations),
     // Nazev dila je nazev projektu - portal ho zna, neni proc se na nej ptat.
     nazev_dila: input.projectName ?? '',
     datum: dnes,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
-import { CONTRACT_PLACEHOLDERS, expandPlaceholders } from '@/lib/contracts';
+import { CONTRACT_PLACEHOLDERS, castkaDoSmlouvy, expandPlaceholders } from '@/lib/contracts';
 import { contractValues, newAccessToken, nextContractNumber } from '@/lib/contractsServer';
 import { resolveProject } from '@/lib/projectOptions';
 
@@ -67,7 +67,10 @@ export async function POST(req: NextRequest) {
 
     const rucni: Record<string, string> = d.pole ?? {};
     for (const [klic, hodnota] of Object.entries(rucni)) {
-      if (RUCNI_KLICE.has(klic) && hodnota) values[klic] = hodnota;
+      if (!RUCNI_KLICE.has(klic) || !hodnota) continue;
+      // „30000" je ve smlouve skaredé - do textu patri „30 000 Kč"
+      // (zadani 15. 9. 2026).
+      values[klic] = klic === 'odmena' ? castkaDoSmlouvy(hodnota) : hodnota;
     }
 
     const contract = await prisma.contract.create({
