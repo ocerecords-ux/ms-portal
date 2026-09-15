@@ -2069,6 +2069,26 @@ model VzorZpravy {
   @@id([druh, stav])
 }
 
+/// ODESLANY MESICNI PREHLED VYKAZU (zadani 15. 9. 2026: „jednou za mesic
+/// prijde notifikace s prehledem vykazu za minuly mesic zvukari na mail.
+/// Melo by to chodit vzdy 6. den v mesici za minuly").
+///
+/// Jeden radek na dvojici zvukar + mesic. Diky nemu muze uloha bezet
+/// klidne vickrat - druhy mail uz neodejde.
+model MesicniPrehledOdeslan {
+  id String @id @default(cuid())
+
+  userId String
+  /// Mesic, ZA KTERY prehled je, ve tvaru „2026-08".
+  mesic  String
+
+  /// Na jakou adresu to slo - at je pozdeji dohledatelne kam.
+  prijemce   String?
+  odeslanoAt DateTime @default(now())
+
+  @@unique([userId, mesic])
+}
+
 /// STAV NAVRZENEHO BONUSU ZVUKARE (zadani 15. 9. 2026).
 enum StavBonusu {
   NAVRZENO

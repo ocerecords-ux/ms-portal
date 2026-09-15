@@ -1354,6 +1354,129 @@ export async function sendBonusEmail(input: BonusEmailInput) {
 
 
 // ===========================================================================
+// MESICNI PREHLED VYKAZU (zadani 15. 9. 2026: „jednou za mesic prijde
+// notifikace s prehledem vykazu za minuly mesic zvukari na mail")
+//
+// Neni to vyzva k akci, je to vypis - proto tabulky a zadne velke tlacitko
+// navic krome odkazu do Vykazu, kdyby chtel videt jednotlive dny.
+// ===========================================================================
+
+type MesicniPrehledInput = {
+  to: string;
+  /** „Srpen 2026". */
+  mesic: string;
+  hodiny: string;
+  /** Castka za odpracovanou praci. */
+  castka: string;
+  /** Castka vcetne bonusu. */
+  celkem: string;
+  druhy: { nazev: string; hodiny: string; castka: string }[];
+  projekty: { nazev: string; hodiny: string }[];
+  bonusy: { nazev: string; castka: string }[];
+  /** Null, kdyz v mesici zadny bonus nebyl. */
+  bonusCelkem: string | null;
+  odkaz: string;
+};
+
+export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
+  const radekDruhu = (d: { nazev: string; hodiny: string; castka: string }) =>
+    `<tr><td class="label">${escapeHtml(d.nazev)}</td><td class="value regular">${escapeHtml(d.hodiny)} · ${escapeHtml(d.castka)}</td></tr>`;
+
+  const projekty = input.projekty.length
+    ? `<table role="presentation" class="field-table">
+      ${input.projekty
+        .map(
+          (p) =>
+            `<tr><td class="label">${escapeHtml(p.nazev)}</td><td class="value regular">${escapeHtml(p.hodiny)}</td></tr>`,
+        )
+        .join('\n      ')}
+    </table>`
+    : '';
+
+  const bonusy = input.bonusCelkem
+    ? `<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">Bonusy</h3>
+    <table role="presentation" class="field-table">
+      ${input.bonusy
+        .map(
+          (b) =>
+            `<tr><td class="label">${escapeHtml(b.nazev)}</td><td class="value">${escapeHtml(b.castka)}</td></tr>`,
+        )
+        .join('\n      ')}
+    </table>`
+    : '';
+
+  return emailShell({
+    tag: `Přehled výkazů · ${input.mesic}`,
+    preheader: `${input.mesic}: ${input.hodiny}, ${input.celkem}.`,
+    body: `
+    <span class="badge">${escapeHtml(input.mesic)}</span>
+    <h2>${escapeHtml(input.hodiny)} · ${escapeHtml(input.celkem)}</h2>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Odpracováno</td><td class="value">${escapeHtml(input.hodiny)}</td></tr>
+      <tr><td class="label">Za práci</td><td class="value">${escapeHtml(input.castka)}</td></tr>
+      ${input.bonusCelkem ? `<tr><td class="label">Bonusy</td><td class="value">${escapeHtml(input.bonusCelkem)}</td></tr>` : ''}
+      <tr><td class="label">Celkem</td><td class="value">${escapeHtml(input.celkem)}</td></tr>
+    </table>
+
+    <h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">Podle druhu práce</h3>
+    <table role="presentation" class="field-table">
+      ${input.druhy.map(radekDruhu).join('\n      ')}
+    </table>
+
+    ${input.projekty.length ? '<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">Projekty</h3>' : ''}
+    ${projekty}
+
+    ${bonusy}
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít výkazy</a>
+    </div>
+
+    <p class="small">Přehled chodí vždycky šestého za měsíc minulý. Když v něm něco nesedí, výkaz
+       se dá opravit ve Výkazech — a napište nám, ať to víme.</p>
+  `,
+  });
+}
+
+export async function sendMesicniPrehledEmail(input: MesicniPrehledInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: `Přehled výkazů — ${input.mesic}`,
+    text: [
+      `Prehled vykazu za ${input.mesic}`,
+      '',
+      `Odpracovano: ${input.hodiny}`,
+      `Za praci: ${input.castka}`,
+      input.bonusCelkem ? `Bonusy: ${input.bonusCelkem}` : '',
+      `Celkem: ${input.celkem}`,
+      '',
+      'Podle druhu prace:',
+      ...input.druhy.map((d) => `  ${d.nazev}: ${d.hodiny} · ${d.castka}`),
+      input.projekty.length ? '' : '',
+      input.projekty.length ? 'Projekty:' : '',
+      ...input.projekty.map((p) => `  ${p.nazev}: ${p.hodiny}`),
+      input.bonusy.length ? '' : '',
+      input.bonusy.length ? 'Bonusy:' : '',
+      ...input.bonusy.map((b) => `  ${b.nazev}: ${b.castka}`),
+      '',
+      'Jednotlive dny najdete tady:',
+      input.odkaz,
+    ]
+      .filter((r) => r !== '')
+      .join('\n'),
+    html: buildMesicniPrehledHtml(input),
+  });
+
+  return { sent: true as const };
+}
+
+
+// ===========================================================================
 // NABIDKA NATACECICH TERMINU (zadani 8. 9. 2026)
 //
 // Herec dostane odkaz s jednorazovym tokenem - vybere si terminy bez
