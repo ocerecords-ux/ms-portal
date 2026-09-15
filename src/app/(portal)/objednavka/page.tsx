@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { OrderForm } from './OrderForm';
 import { AdOrderForm } from './AdOrderForm';
 import { OrderTypeSwitcher } from './OrderTypeSwitcher';
+import { bezTitulu } from '@/lib/jmena';
 
 export default async function ObjednavkaPage() {
   const session = await getServerSession(authOptions);
@@ -48,7 +49,7 @@ export default async function ObjednavkaPage() {
           select: { id: true, name: true, code: true },
           orderBy: { name: 'asc' },
         })
-      ).map((h) => ({ id: h.id, label: h.name || h.code || h.id }))
+      ).map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.code || h.id }))
     : [];
 
   return (

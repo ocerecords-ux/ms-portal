@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
 import { loadCalendarSettings, newAccessToken, recordEvent } from '@/lib/calendarServer';
 import { sessionsForPages } from '@/lib/calendar';
+import { bezTitulu } from '@/lib/jmena';
 
 // Zalozeni nabidky terminu z projektove karty (zadani 8. 9. 2026).
 // Projekt zije v Caflou, takze se sem klicuje pres caflouProjectId - stejne
@@ -77,7 +78,8 @@ export async function POST(req: NextRequest) {
         projectName: d.projectName,
         companyId: d.companyId || null,
         actorUserId: herec.id,
-        actorName: herec.name || herec.email,
+        // Tituly pred a za jmenem se nevypisuji (zadani 15. 9. 2026).
+        actorName: bezTitulu(herec.name) || herec.email,
         actorEmail: herec.email,
         studioId: d.studioId,
         pageCount: d.pageCount ?? null,

@@ -15,6 +15,7 @@ import {
   type CalendarView,
 } from '@/lib/calendar';
 import { CalendarBrowser, type CalendarEvent, type CalendarDay } from './CalendarBrowser';
+import { bezTitulu } from '@/lib/jmena';
 
 /**
  * Kalendář studií (zadani 8. 9. 2026, upraveno 9. 9. 2026). Den / týden /
@@ -158,9 +159,10 @@ export default async function KalendarPage({
       ])
     : [[], []];
 
+  // Tituly pred a za jmenem se u hercu nevypisuji (zadani 15. 9. 2026).
   const herci = lideProUdalost
     .filter((u) => u.role === 'HEREC')
-    .map((u) => ({ id: u.id, label: u.name || u.email }));
+    .map((u) => ({ id: u.id, label: bezTitulu(u.name) || u.email }));
   const zvukari = lideProUdalost
     .filter((u) => u.role === 'ZVUKAR')
     .map((u) => ({ id: u.id, label: u.name || u.email }));

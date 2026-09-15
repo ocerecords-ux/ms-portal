@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { zapisBrunoUdalost } from '@/lib/projektLogServer';
 import { jeZminen } from '@/lib/chatUpozorneniServer';
 import { anthropicHlavicky } from '@/lib/anthropic';
+import { bezTitulu } from '@/lib/jmena';
 
 /**
  * BRUNO — asistent studia (zadání 12. 9. 2026: „pojďme přidat našeho firemního
@@ -323,7 +324,7 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
       ? [
           ...meta.herci.filter((h) => h.id === meta.actorUserId),
           ...meta.herci.filter((h) => h.id !== meta.actorUserId),
-        ].map((h) => ({ id: h.id, jmeno: h.name || h.email }))
+        ].map((h) => ({ id: h.id, jmeno: bezTitulu(h.name) || h.email }))
       : [];
 
     const kontext: Kontext = {

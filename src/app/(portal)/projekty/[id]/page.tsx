@@ -42,6 +42,7 @@ import { loadRodneListy } from '@/lib/rodnyListServer';
 import { bezStarePredpony, dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
 import { nactiPenizeProjektu } from '@/lib/projektPenizeServer';
 import { natoceniProjektu } from '@/lib/brunoServer';
+import { bezTitulu } from '@/lib/jmena';
 
 // Detail projektu (zadani 5. 9. 2026). Od 11. 9. 2026 projekt zije v portalu -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -235,7 +236,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
    * Je to jen nápověda - do políčka jde napsat i někdo, kdo v portálu účet
    * nemá, nebo úplně jiná položka. Viz NakladyProjektu.
    */
-  const jmenaHercu = herci.map((h) => h.name || h.email).filter(Boolean);
+  const jmenaHercu = herci.map((h) => bezTitulu(h.name) || h.email).filter(Boolean);
 
   const settings = budgetSettings ?? DEFAULT_BUDGET_SETTINGS;
   const showBudget =
@@ -344,7 +345,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           companyId: k.companyId,
         }))}
         firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
-        herci={herciUctu.map((h) => ({ id: h.id, label: h.name || h.email }))}
+        herci={herciUctu.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
         dotoceniHercu={dotoceniPodleHerce}
         natoceniZaznamy={zaznamyNatoceni}
         vidiKlienta={canViewProjectBusinessInfo(session.user.role)}
@@ -519,7 +520,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           pageCount={project?.pageCount ?? null}
           sessionsFromPages={sessionsForPages(project?.pageCount ?? 0, calendarSettings.pagesPerSession)}
           narratorFromCaflou={project?.narrator ?? null}
-          herci={herci.map((h) => ({ id: h.id, label: h.name || h.email }))}
+          herci={herci.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
           studios={studia.map((s) => ({ id: s.id, name: s.name }))}
           defaultActorUserId={meta?.actorUserId ?? null}
           requests={recordingRequests.map((r) => ({

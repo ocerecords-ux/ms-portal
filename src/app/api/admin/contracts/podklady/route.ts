@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { bezTitulu } from '@/lib/jmena';
 
 /**
  * Co portál o projektu ví, když se zakládá smlouva (zadání 13. 9. 2026:
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
 
     const herci = (meta?.herci ?? []).map((h) => ({
       id: h.id,
-      jmeno: h.name || h.email,
+      jmeno: bezTitulu(h.name) || h.email,
       email: h.email,
       // Co se dostane do smlouvy jako identifikace - at je při výběru vidět,
       // jestli je čím člověka označit, nebo se to bude dopisovat ručně.

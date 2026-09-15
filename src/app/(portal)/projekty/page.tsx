@@ -17,6 +17,7 @@ import { odkazyPreposlechu } from '@/lib/preposlechOdkaz';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 import { odkazNaFotku } from '@/lib/fotky';
 import { posledniStrany } from '@/lib/brunoServer';
+import { bezTitulu } from '@/lib/jmena';
 
 // DULEZITE: stránka čte projekty při každém zobrazení - nesmí ji Next.js
 // pri buildu "zamrazit" jako statickou stránku (to by klientovi natvrdo
@@ -112,7 +113,7 @@ export default async function ProjektyPage() {
         ...p.herci.filter((h) => h.id === p.actorUserId),
         ...p.herci.filter((h) => h.id !== p.actorUserId),
       ].map((h) => ({
-        jmeno: h.name || h.email,
+        jmeno: bezTitulu(h.name) || h.email,
         // Zelena linka „dotoceno" uz i u klienta (zadani 14. 9. 2026).
         dotoceno: dotoceniKlienta.has(`${p.caflouProjectId}:${h.id}`),
       })),
@@ -281,7 +282,7 @@ async function InternalProjektySection({
           ...m.herci.filter((h) => h.id === m.actorUserId),
           ...m.herci.filter((h) => h.id !== m.actorUserId),
         ].map((h) => ({
-          jmeno: h.name || h.email,
+          jmeno: bezTitulu(h.name) || h.email,
           dotoceno: dotoceni.has(`${m.caflouProjectId}:${h.id}`),
           // Zapis bez herce patri jedinemu herci projektu - stejne pravidlo
           // jako v detailu.
@@ -290,7 +291,7 @@ async function InternalProjektySection({
             (m.herci.length === 1 ? strany.get(`${m.caflouProjectId}:`) : undefined) ??
             null,
         })),
-        herciJmenaText: m.herci.map((h) => h.name || h.email).join(' '),
+        herciJmenaText: m.herci.map((h) => bezTitulu(h.name) || h.email).join(' '),
       },
     ]),
   );
@@ -304,7 +305,7 @@ async function InternalProjektySection({
         finished: m.finished,
         // Prednost ma pridelený ucet herce; text z Caflou je jen zaloha,
         // dokud ucet prirazeny neni (zadani 10. 9. 2026).
-        narrator: m.actor ? m.actor.name || m.actor.email : m.narrator,
+        narrator: m.actor ? bezTitulu(m.actor.name) || m.actor.email : m.narrator,
       },
     ]),
   );
@@ -368,7 +369,7 @@ async function InternalProjektySection({
                 companyId: k.companyId,
               }))}
               manazeri={manazeriProFormular}
-              herci={herciProFormular.map((h) => ({ id: h.id, label: h.name || h.email }))}
+              herci={herciProFormular.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
               typyProjektu={typyProjektu}
             />
           ) : null

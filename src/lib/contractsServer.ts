@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'crypto';
 import { prisma } from '@/lib/db';
 import { formatAddress, expandNumberFormat } from '@/lib/doklady';
 import { DEFAULT_CONTRACT_TEMPLATES, mistoNataceni } from '@/lib/contracts';
+import { bezTitulu } from '@/lib/jmena';
 
 /**
  * Serverová část smluv — sahá do databáze, takže se nesmí dostat do
@@ -127,7 +128,8 @@ export async function contractValues(input: {
         })
       : '',
     nas_email: nasEmail,
-    protistrana: company?.name ?? herec?.name ?? input.signerName ?? '',
+    // Tituly pred a za jmenem se nevypisuji (zadani 15. 9. 2026).
+    protistrana: company?.name ?? (herec ? bezTitulu(herec.name) : null) ?? input.signerName ?? '',
     protistrana_ic: company?.ic ?? herec?.ic ?? '',
     protistrana_dic: company?.dic ?? herec?.dic ?? '',
     protistrana_adresa:
@@ -143,7 +145,7 @@ export async function contractValues(input: {
       dic: company?.dic ?? herec?.dic ?? null,
       rodneCislo: company ? null : (herec?.birthNumber ?? null),
     }),
-    podepisujici: input.signerName ?? '',
+    podepisujici: bezTitulu(input.signerName) || (input.signerName ?? ''),
     email: input.signerEmail ?? '',
     projekt: input.projectName ?? '',
     // Misto nataceni podle lokace herce, jinak Brno (zadani 15. 9. 2026).

@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { DoplnitPanel, type ProjektKDoplneni } from './DoplnitPanel';
+import { bezTitulu } from '@/lib/jmena';
 
 /**
  * Doplnění „Dotočeno" zpětně (zadání 13. 9. 2026: „ve chvíli, kdy jsme
@@ -50,7 +51,7 @@ export default async function DoplnitDotocenoPage() {
       stav: p.statusName ?? '',
       herci: p.herci.map((h) => ({
         id: h.id,
-        jmeno: h.name || h.email,
+        jmeno: bezTitulu(h.name) || h.email,
         dotoceno: maFajfku.has(`${p.caflouProjectId}:${h.id}`),
       })),
     }))
