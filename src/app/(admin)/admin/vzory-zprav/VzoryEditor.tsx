@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { DRUHY_NOTIFIKACI, DRUH_POPISKY, type DruhNotifikace } from '@/lib/notifikaceFirmy';
+import { BARVY_TEXTU, VELIKOSTI_TEXTU } from '@/lib/formatovaniZpravy';
 import { PROMENNE, type Vzor } from '@/lib/vzoryZprav';
 
 /**
@@ -280,23 +281,89 @@ function Pole({
 
 function PoleText({ hodnota, onZmena }: { hodnota: string; onZmena: (v: string) => void }) {
   const ref = useRef<HTMLTextAreaElement | null>(null);
+
+  /** Obalí označený text značkou; bez označení vloží značku prázdnou. */
+  function obal(pred: string, za: string) {
+    onZmena(obalVyber(ref.current, hodnota, pred, za, onZmena));
+  }
+
+  const tlacitkoClass =
+    'rounded-lg border border-line bg-field px-2.5 py-1 text-xs font-heading text-ink hover:border-brand-purple transition-colors';
+
   return (
     <label className="flex flex-col gap-1.5">
       <span className="flex items-center justify-between gap-3 flex-wrap">
         <span className="text-sm font-body text-ink">Text zprávy</span>
         <Znacky vloz={(z) => onZmena(vlozNaKurzor(ref.current, hodnota, z, onZmena))} />
       </span>
+
+      {/* Lišta formátování (zadání 15. 9. 2026). Označí se text a klepne na
+          tlačítko - značky se píšou samy, aby si je nikdo nemusel pamatovat.
+          Víc toho nenabízíme schválně: zbytek CSS e-mailoví klienti stejně
+          spolehlivě neumí. */}
+      <span
+        className="flex items-center gap-1.5 flex-wrap"
+        // Kliknuti nesmi presunout kurzor pryc z textarea - jinak by se
+        // oznaceny text ztratil driv, nez ho stihneme obalit.
+        onMouseDown={(e) => e.preventDefault()}
+      >
+        <button type="button" onClick={() => obal('**', '**')} title="Tučně" className={`${tlacitkoClass} font-bold`}>
+          B
+        </button>
+        <button type="button" onClick={() => obal('*', '*')} title="Kurzíva" className={`${tlacitkoClass} italic`}>
+          I
+        </button>
+        <button
+          type="button"
+          onClick={() => obal('__', '__')}
+          title="Podtrženo"
+          className={`${tlacitkoClass} underline`}
+        >
+          U
+        </button>
+
+        <span className="w-px h-4 bg-line" aria-hidden="true" />
+
+        {BARVY_TEXTU.map((b) => (
+          <button
+            key={b.klic}
+            type="button"
+            onClick={() => obal(`[barva=${b.klic}]`, '[/barva]')}
+            title={`Barva: ${b.nazev}`}
+            className="w-5 h-5 rounded-full border border-line"
+            style={{ backgroundColor: b.hex }}
+          >
+            <span className="sr-only">{b.nazev}</span>
+          </button>
+        ))}
+
+        <span className="w-px h-4 bg-line" aria-hidden="true" />
+
+        {VELIKOSTI_TEXTU.map((v) => (
+          <button
+            key={v.px}
+            type="button"
+            onClick={() => obal(`[velikost=${v.px}]`, '[/velikost]')}
+            title={`Velikost písma ${v.px} px`}
+            className={tlacitkoClass}
+          >
+            {v.nazev}
+          </button>
+        ))}
+      </span>
+
       <textarea
         ref={ref}
         value={hodnota}
         onChange={(e) => onZmena(e.target.value)}
-        rows={7}
+        rows={8}
         className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
       />
       <span className="text-xs text-muted font-body">
         Tohle je celá zpráva včetně oslovení — {'{osloveni}'} se nahradí za „Dobrý den, Radko,". Prázdný
-        řádek oddělí odstavce, {'**takhle**'} se vysází tučně. Odkazy psát nemusíte — tlačítka na složku
-        a na AudioTagger se do zprávy doplní sama.
+        řádek oddělí odstavce. Formátování: {'**tučně**'}, {'*kurzívou*'}, {'__podtrženo__'},{' '}
+        {'[barva=cervena]…[/barva]'}, {'[velikost=18]…[/velikost]'} — nebo označte text a klepněte na
+        tlačítko výš. Odkazy psát nemusíte, tlačítka na složku a na AudioTagger se doplní sama.
       </span>
     </label>
   );
@@ -317,6 +384,31 @@ function vlozNaKurzor(
   window.setTimeout(() => {
     pole.focus();
     pole.setSelectionRange(od + znacka.length, od + znacka.length);
+  }, 0);
+  onZmena(nova);
+  return nova;
+}
+
+/**
+ * Obalí označený text značkami (zadání 15. 9. 2026). Když není nic označené,
+ * vloží obě značky k sobě a kurzor postaví mezi ně - dá se rovnou psát.
+ */
+function obalVyber(
+  pole: HTMLTextAreaElement | null,
+  hodnota: string,
+  pred: string,
+  za: string,
+  onZmena: (v: string) => void,
+): string {
+  if (!pole) return `${hodnota}${pred}${za}`;
+  const od = pole.selectionStart ?? hodnota.length;
+  const doKonce = pole.selectionEnd ?? od;
+  const vybrane = hodnota.slice(od, doKonce);
+  const nova = `${hodnota.slice(0, od)}${pred}${vybrane}${za}${hodnota.slice(doKonce)}`;
+  const kurzor = od + pred.length + vybrane.length;
+  window.setTimeout(() => {
+    pole.focus();
+    pole.setSelectionRange(od + pred.length, kurzor);
   }, 0);
   onZmena(nova);
   return nova;

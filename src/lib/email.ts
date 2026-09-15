@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { pozdrav } from '@/lib/osloveni';
+import { bezZnacek, znackyNaHtml } from '@/lib/formatovaniZpravy';
 
 function getTransport() {
   // Hodnoty se ORIZAVAJI: heslo i jmeno se do nastaveni vkladaji ze schranky
@@ -1632,12 +1633,10 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     .filter(Boolean)
     .map(
       (o) =>
-        `<p>${escapeHtml(o)
-          .replace(/\n/g, '<br />')
-          // „**takhle**" ztucni (zadani 15. 9. 2026) - vzor se pise jako
-          // obycejny text, tohle je jediny povoleny kus formatovani.
-          // Escapovani probehlo pred tim, takze se sem HTML nepropasuje.
-          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`,
+        // Nejdriv escapovat, teprve pak z povolenych znacek udelat HTML -
+        // viz lib/formatovaniZpravy.ts (zadani 15. 9. 2026). Do zpravy se
+        // tak z ulozeneho vzoru neda propasovat zadna vlastni znacka.
+        `<p>${znackyNaHtml(escapeHtml(o).replace(/\n/g, '<br />'))}</p>`,
     )
     .join('\n    ');
 
@@ -1690,10 +1689,7 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     tag: input.predmet?.trim() || `MS Portal - ${input.stav}`,
     // Radek, ktery klient vidi v seznamu posty pod predmetem. Hvezdicky
     // tucneho textu by v nem byly videt jako hvezdicky.
-    preheader: `${input.nazevProjektu}: ${input.text
-      .replace(/\*\*(.+?)\*\*/g, '$1')
-      .replace(/\s+/g, ' ')
-      .slice(0, 120)}`,
+    preheader: `${input.nazevProjektu}: ${bezZnacek(input.text).replace(/\s+/g, ' ').slice(0, 120)}`,
     /**
      * CELÉ TĚLO JE ZE VZORU (zadání 15. 9. 2026: „potřebuji měnit celý ten
      * text zprávy. Dobrý den Radko a Annie bot se nedá měnit").
@@ -1734,8 +1730,8 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
       input.jenInterne ? 'INTERNI ZPRAVA - klientovi nic neslo.' : '',
       input.uvod?.trim() || '',
       // Osloveni i nazev projektu uz jsou soucasti textu ze vzoru
-      // (zadani 15. 9. 2026). „**tucne**" v prostem textu nema smysl.
-      input.text.replace(/\*\*(.+?)\*\*/g, '$1'),
+      // (zadani 15. 9. 2026). Znacky formatovani v prostem textu nemaji smysl.
+      bezZnacek(input.text),
       '',
       input.odkazNaPreposlech ? `Preposlech v AudioTaggeru: ${input.odkazNaPreposlech}` : '',
       input.odkazNaPreposlech
