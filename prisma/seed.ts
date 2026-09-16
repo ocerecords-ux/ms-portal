@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
+import { POZVANKA_HERCE } from './navodPozvankaHerce';
 
 const prisma = new PrismaClient();
 
@@ -167,7 +168,6 @@ async function main() {
 
   await seedStudios();
   await doplnKalendarDoListy();
-  await doplnVykazyZvukarumDoListy();
   await zapniRodnyListURadiovehoSpotu();
 
   await backfillCodes();
@@ -175,6 +175,7 @@ async function main() {
   await skupinaProCelyTym();
   await doplnIkonyTypu();
   await srovnejPriznakFotky();
+  await zalozPrvniNavod();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -297,43 +298,6 @@ async function doplnKalendarDoListy() {
     await prisma.userMenuItem.create({
       data: { userId: u.id, label: 'Kalendář', href: '/kalendar', sortOrder: posledni + 10 },
     });
-  }
-
-  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
-}
-
-/**
- * Vykazy zpatky do listy zvukaru (14. 9. 2026: "nevidi vykazy").
- *
- * PROC: do 8. 9. 2026 byla horni lista JEDNA SPOLECNA pro cely portal. Kdyz
- * si ji tehdy nekdo upravil a Vykazy z ni vyhodil, zmizely vsem - vcetne
- * zvukaru, kterym jsou urcene. Lista je od te doby na kazdeho zvlast, jenze
- * ulozene radky uz tenkrat vznikly bez Vykazu a same od sebe se nevrati:
- * uzivatel s vlastni listou se k vychozi sade nikdy nedostane.
- *
- * Dopln se proto jen tomu, kdo ma vlastni listu a Vykazy v ni nema - a jen
- * zvukarum. Zuzo-labuzo si Vykazy z listy vyhodilo vedome (vykaz si nepise,
- * ma je jen jako prehled), takze tomu je zpatky necpeme.
- */
-async function doplnVykazyZvukarumDoListy() {
-  const ZNAMKA = 'menu-backfill-vykazy-zvukari';
-  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
-  if (uz) return;
-
-  const uzivatele = await prisma.user.findMany({
-    where: { role: 'ZVUKAR' },
-    select: { id: true },
-  });
-
-  for (const u of uzivatele) {
-    const radky = await prisma.userMenuItem.findMany({ where: { userId: u.id } });
-    if (radky.length === 0) continue; // vychozi lista, Vykazy uz v ni jsou
-    if (radky.some((r) => r.href === '/vykazy')) continue;
-    const posledni = radky.reduce((max, r) => Math.max(max, r.sortOrder), 0);
-    await prisma.userMenuItem.create({
-      data: { userId: u.id, label: 'Výkazy', href: '/vykazy', sortOrder: posledni + 10 },
-    });
-    console.log('  lista: doplneny Vykazy zvukari');
   }
 
   await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
@@ -566,4 +530,43 @@ async function doplnIkonyTypu() {
     doplneno += 1;
   }
   if (doplneno > 0) console.log(`  ikony typu projektu doplneny u ${doplneno} polozek ceniku`);
+}
+
+/**
+ * PRVNÍ NÁVOD DO NÁPOVĚDY.
+ *
+ * Zakládá se jen jednou. Kdyby ho seed přepisoval při každém nasazení, přišel
+ * by člověk o každou svoji úpravu - a návody se mají psát v portálu, ne tady.
+ */
+async function zalozPrvniNavod() {
+  const n = POZVANKA_HERCE;
+  try {
+    const uz = await prisma.navod.findUnique({ where: { slug: n.slug }, select: { id: true } });
+    if (uz) return;
+
+    const hledaci = [n.nazev, n.perex, n.obsah]
+      .join(' \n ')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    await prisma.navod.create({
+      data: {
+        slug: n.slug,
+        nazev: n.nazev,
+        perex: n.perex,
+        kategorie: n.kategorie,
+        poradi: n.poradi,
+        obsah: n.obsah,
+        hledaci,
+        zverejneno: true,
+      },
+    });
+    console.log('  navod: zalozen "' + n.nazev + '"');
+  } catch (err) {
+    // Navod je jen obsah - kdyby se nepovedl, nesmi to shodit cely seed.
+    console.warn('  navod se nepodarilo zalozit:', err);
+  }
 }

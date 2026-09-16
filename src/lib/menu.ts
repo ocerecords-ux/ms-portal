@@ -28,6 +28,8 @@ export const ALL_ROLES: Role[] = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKC
 export const PAGE_ACCESS: Record<string, Role[]> = {
   '/projekty': ALL_ROLES,
   '/muj-ucet': ALL_ROLES,
+  // Navody k portalu (zadani 16. 9. 2026: „aby se k nim vsichni dostali").
+  '/napoveda': ALL_ROLES,
   // Objednavka a Nahravky jsou klientska agenda.
   '/objednavka': ['CLIENT'],
   '/nahravky': ['CLIENT'],
@@ -55,6 +57,7 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/archiv': ['ADMIN'],
   // Co Bruno vi o nasi praci (zadani 16. 9. 2026).
   '/admin/bruno': ['ADMIN'],
+  '/admin/navody': ['ADMIN'],
   // Zadosti o udaje hercu a firem odkazem (zadani 16. 9. 2026).
   '/admin/udaje': ['ADMIN'],
 };
@@ -103,6 +106,9 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/admin/udaje', label: 'Údaje' },
   // Pozvanky hercu (zadani 16. 9. 2026) - pro Zuzo-labuzo i Produkci.
   { href: '/pozvanky', label: 'Pozvánky' },
+  // Navody k portalu (zadani 16. 9. 2026).
+  { href: '/napoveda', label: 'Nápověda' },
+  { href: '/admin/navody', label: 'Návody' },
   { href: '/muj-ucet', label: 'Můj účet' },
 ];
 

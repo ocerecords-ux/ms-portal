@@ -214,3 +214,49 @@ body {
     transform: scaleY(0.55);
   }
 }
+
+/* TEXT NÁVODU (zadání 16. 9. 2026). Obsah je HTML složené na serveru
+   z Markdownu (lib/navody.ts), takže se nedá otagovat třídami - styly proto
+   sedí na značkách uvnitř .navod-text. */
+.navod-text {
+  color: rgb(var(--c-ink));
+  font-family: 'Acid Grotesk', var(--font-poppins);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.navod-text > :first-child { margin-top: 0; }
+.navod-text > :last-child { margin-bottom: 0; }
+.navod-text h2 {
+  font-family: 'Acid Grotesk', var(--font-jost);
+  font-size: 22px;
+  font-weight: 500;
+  margin: 28px 0 10px;
+}
+.navod-text h3 {
+  font-family: 'Acid Grotesk', var(--font-jost);
+  font-size: 18px;
+  font-weight: 500;
+  margin: 22px 0 8px;
+}
+.navod-text h4 { font-size: 16px; font-weight: 600; margin: 18px 0 6px; }
+.navod-text p { margin: 0 0 14px; }
+.navod-text ul, .navod-text ol { margin: 0 0 14px; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.navod-text li { margin: 0; }
+.navod-text a { color: #7b55ff; }
+.navod-text code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  background: rgb(var(--c-field));
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.navod-text img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--c-line));
+  margin: 16px 0;
+}
+.navod-text hr { border: 0; border-top: 1px solid rgb(var(--c-line)); margin: 24px 0; }
+.navod-text strong { font-weight: 600; }

@@ -340,6 +340,9 @@ model User {
   pozvankyUdaju        PozvankaUdaju[] @relation("PozvankaUdajuKomu")
   /// Zadosti o udaje, ktere tenhle clovek rozeslal.
   pozvankyUdajuVytvoril PozvankaUdaju[] @relation("PozvankaUdajuVytvoril")
+
+  /// Navody, ktere tenhle clovek napsal nebo naposledy upravil.
+  navody Navod[] @relation("NavodAutor")
 }
 
 model Order {
@@ -2584,4 +2587,46 @@ model PozvankaUdaju {
   @@index([stav])
   @@index([userId])
   @@index([companyId])
+}
+
+/// NÁVODY V PORTÁLU (zadání 16. 9. 2026: „přemýšlím, že by tyhle manuály mohly
+/// být někde dostupné v portálu, aby se k nim všichni dostali. Udělejme nějakou
+/// přehlednou sekci a tam budeme vše postupně přidávat. I s nějakým fulltext
+/// hledáním").
+///
+/// Návody si portál drží sám, ne jako soubory v repozitáři: píše je a opravuje
+/// člověk, ne programátor, a hledá se v nich za běhu.
+///
+/// `hledaci` je text bez diakritiky a malými písmeny (název + perex + obsah).
+/// Díky němu najde „nahravka" i „nahrávka" - Postgres by jinak potřeboval
+/// rozšíření unaccent, které na Supabase zapínat nechceme kvůli jednomu poli.
+model Navod {
+  id     String @id @default(cuid())
+  /// Adresa návodu: /napoveda/<slug>.
+  slug   String @unique
+  nazev  String
+  /// Jedna věta do seznamu - o čem návod je.
+  perex  String?
+  /// Do které skupiny v přehledu patří („Herci", „Doklady"…).
+  kategorie String @default("Ostatní")
+  /// Text návodu v Markdownu.
+  obsah  String @db.Text
+  /// Připravený text pro hledání - viz poznámka u modelu.
+  hledaci String @db.Text
+
+  /// Pořadí uvnitř kategorie; menší číslo je výš.
+  poradi     Int     @default(100)
+  /// Rozepsaný návod vidí jen Zuzo-labuzo.
+  zverejneno Boolean @default(true)
+  /// Komu se návod ukáže. Prázdné = všem přihlášeným.
+  proRole    String[] @default([])
+
+  autorId String?
+  autor   User?   @relation("NavodAutor", fields: [autorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kategorie, poradi])
+  @@index([zverejneno])
 }

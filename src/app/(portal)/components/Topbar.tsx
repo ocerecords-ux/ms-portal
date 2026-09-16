@@ -369,6 +369,30 @@ export function Topbar({
         {/* Pripominka k portalu (zadani 15. 9. 2026) - vedle zvonku, at je
             po ruce na kazde strance. */}
         <ZpetnaVazba odznak={pripominky} spravce={spravcePripominek} interni={interni} />
+        {/* Napoveda (zadani 16. 9. 2026: „aby se k nim vsichni dostali").
+            Schvalne tady, ne v liste - listu si kazdy upravuje po svem a
+            navody musi byt po ruce i tomu, kdo si ji uz prerovnal. */}
+        <Link
+          href="/napoveda"
+          title="Nápověda"
+          aria-label="Nápověda"
+          className="flex items-center justify-center w-9 h-9 rounded-pill text-white/80 hover:text-white hover:bg-white/10 transition-colors no-underline"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-[18px] h-[18px]"
+            aria-hidden
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M9.6 9.3a2.5 2.5 0 0 1 4.9.7c0 1.7-2.5 2.2-2.5 4" />
+            <path d="M12 17.2h.01" />
+          </svg>
+        </Link>
         <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
         <Link
