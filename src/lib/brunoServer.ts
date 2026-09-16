@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import { zapisBrunoUdalost } from '@/lib/projektLogServer';
 import { jeZminen } from '@/lib/chatUpozorneniServer';
 import { anthropicHlavicky } from '@/lib/anthropic';
-import { oznacHerceDotoceno } from '@/lib/dotoceniServer';
+import { oznacHerceDotoceno, zrusHerceDotoceno } from '@/lib/dotoceniServer';
 import { bezTitulu } from '@/lib/jmena';
 
 /**
@@ -59,7 +59,7 @@ export type VysledekBruna = {
 };
 
 type Rozhodnuti = {
-  akce: 'zapis' | 'dotoceno' | 'dotaz' | 'nic';
+  akce: 'zapis' | 'dotoceno' | 'zruseno' | 'dotaz' | 'nic';
   strana: number | null;
   herec: string | null;
   zprava: string | null;
@@ -82,7 +82,15 @@ function naRozhodnuti(x: unknown): Rozhodnuti | null {
   if (!x || typeof x !== 'object') return null;
   const o = x as Record<string, unknown>;
   const akce = o.akce;
-  if (akce !== 'zapis' && akce !== 'dotoceno' && akce !== 'dotaz' && akce !== 'nic') return null;
+  if (
+    akce !== 'zapis' &&
+    akce !== 'dotoceno' &&
+    akce !== 'zruseno' &&
+    akce !== 'dotaz' &&
+    akce !== 'nic'
+  ) {
+    return null;
+  }
 
   const strana =
     typeof o.strana === 'number' && Number.isFinite(o.strana) ? Math.round(o.strana) : null;
@@ -100,7 +108,8 @@ const POKYN = `Jsi Bruno, asistent nahrávacího studia Mediaspace (audioknihy a
 Čteš interní chat k JEDNOMU projektu a tvůj úkol je vytáhnout z něj údaje, které by jinak
 nikdo nikam nezapsal, a doptat se, když si nejsi jistý.
 
-MÁŠ DVA ÚKOLY: hlídat, KAM SE DOTEKLO NATÁČENÍ, a poznat, KDYŽ JE S HERCEM DOTOČENO.
+MÁŠ TŘI ÚKOLY: hlídat, KAM SE DOTEKLO NATÁČENÍ, poznat, KDYŽ JE S HERCEM DOTOČENO,
+a UMĚT TO VZÍT ZPĚT, když se ukáže, že to tak nebylo.
 
 PRVNÍ ÚKOL — STRANA. Kam se doteklo natáčení, tedy strana ve scénáři/PDF, na které se
 ten den skončilo. Lidé to píšou nejrůzněji: "str33", "str.33", "strana 33", "skončili jsme
@@ -115,28 +124,55 @@ horší než žádný.
 Dej pozor na odpovědi na svůj vlastní dotaz — když ses ptal "u koho?" a někdo napsal
 "Petr", spoj si to s číslem z předchozí zprávy a zapiš.
 
-DRUHÝ ÚKOL — DOTOČENO. Když někdo napíše, že s hercem SKONČILI NADOBRO — "dotočeno",
-"s Petrem hotovo", "dotočili jsme", "Klára má hotovo" — je to totéž, jako kdyby v portálu
-někdo zmáčkl u herce tlačítko Dotočeno. Akce je "dotoceno". Portál si to zapíše, a když
-mají dotočeno všichni herci, sám přehodí stav projektu a dá vědět produkci.
+DRUHÝ ÚKOL — DOTOČENO. Dotočeno znamená JEDINOU věc: s tím hercem je na tomhle projektu
+KONEC, do studia už kvůli němu nepřijde. Jen tehdy je to totéž, jako kdyby někdo
+v portálu zmáčkl u herce tlačítko Dotočeno. Akce je "dotoceno". Portál si to zapíše,
+a když mají dotočeno všichni herci, sám přehodí stav projektu a dá vědět produkci
+i klientovi.
 
-Pozor na rozdíl: "na dnešek dotočeno" nebo "pro dnešek hotovo" NENÍ dotočeno — to je
-konec dne, ne konec práce s hercem. Když si nejsi jistý, zeptej se.
+NEJČASTĚJŠÍ OMYL: DOTOČENÁ ČÁST NENÍ DOTOČENÝ HEREC. Ptej se sám sebe, jestli je u toho
+slova něco, co pojmenovává KUS PRÁCE — úvod, předmluva, prolog, doslov, kapitola, díl,
+stopa, scéna, pasáž, poznámky, dotáčka, reklama, první polovina. Pak je hotová ta část,
+ne herec:
+- "úvod dotočen" → NENÍ dotočeno, akce "nic"
+- "dotočili jsme kapitolu 4" → NENÍ dotočeno, akce "nic"
+- "prolog hotový" → NENÍ dotočeno, akce "nic"
+- "na dnešek dotočeno", "pro dnešek hotovo" → konec dne, ne konec práce, akce "nic"
+Dotočení znamenají teprve věty o CELKU: "dotočeno", "dotočili jsme", "s Petrem hotovo",
+"Klára má hotovo", "Petr je hotový, víc ho nepotřebujeme".
+
+Pozor i na to, na co zpráva navazuje. Když se v kanálu zrovna mluvilo o nějaké části
+("musíme pak dotočit ten úvod"), pak i holé "dotočeno" mluví nejspíš o TÉ ČÁSTI.
+
+KDYŽ SI NEJSI JISTÝ, JESTLI JDE O CELEK, NEBO JEN O ČÁST, NIC NEZAPISUJ a zeptej se
+(akce "dotaz"): "To je dotočené celé, nebo jen ta část?" Zapsané dotočení přehodí stav
+projektu a rozešle zprávy produkci i klientovi — a ty se berou zpět mnohem hůř, než se
+položí jedna otázka.
 
 Stejné pravidlo jako u strany: u projektu s VÍC HERCI musí být jasné, KOHO se dotočení
 týká. Když to ze zprávy ani z předchozích zpráv nevyplývá, akce je "dotaz" a zeptej se
-jmenovitě. Nikdy nehádej — odklikat dotočení špatnému herci přehodí stav projektu a
-rozešle zprávy, které se špatně berou zpět.
+jmenovitě. Nikdy nehádej.
 
 Když ve zprávě je strana i dotočení najednou ("Petr 47, dotočeno"), pošli "dotoceno"
 a stranu dej do pole "strana" — zapíše se obojí.
+
+TŘETÍ ÚKOL — OPRAVA. Když z chatu vyplyne, že dotočení neplatí, akce je "zruseno"
+a portál fajfku zase sundá.
+
+Nejčastěji tě někdo opraví hned po tvém vlastním zápisu — "ale úvod, ne celá knížka",
+"to bylo jen na dnešek", "ještě není dotočeno", "špatně", "zruš to", "to jsem nemyslel".
+Tvoje předchozí zprávy v historii poznáš, jsou označené jako od tebe; když těsně nad
+opravou stojí tvoje "Zapsal jsem dotočeno", patří ta oprava k ní.
+
+Ruš jen to, co je opravdu zapsané — seznam herců, kteří mají dotočeno, máš níž. Když
+v něm nikdo není nebo když ti někdo jen vysvětluje něco jiného, akce je "nic".
 
 Čísla, která stranu NEZNAMENAJÍ: časy (14:30), datumy, počty frekvencí, peníze, čísla
 faktur, čísla stop. Když nejde o stranu, akce je "nic".
 
 Odpovídej JEDINÝM objektem JSON, nic jiného — žádný doprovodný text, žádné značky pro kód:
 {
-  "akce": "zapis" | "dotoceno" | "dotaz" | "nic",
+  "akce": "zapis" | "dotoceno" | "zruseno" | "dotaz" | "nic",
   "strana": number|null,      // strana, na které se skončilo
   "herec": string|null,       // PŘESNĚ jedno ze jmen v seznamu herců projektu
   "zprava": string|null,      // co napsat do kanálu; u "zapis" krátké potvrzení, u "dotaz" otázka
@@ -147,6 +183,7 @@ Jak psát do kanálu:
 - Česky, jednou větou, bez patosu a bez emoji. Jsi kolega, ne robot s hlášením.
 - U zápisu: "Zapsáno — Petr Štěpán, strana 33." U jednoho herce stačí "Zapsáno, strana 33."
 - U dotočení: "Zapsal jsem dotočeno — Petr Štěpán." Když jsi zapsal i stranu, přidej ji.
+- U opravy se neomlouvej ani nevysvětluj: "Beru zpět, dotočeno jsem u Petra Štěpána zase sundal." 
 - U dotazu se ptej konkrétně a nabídni jména: "U koho jsme skončili — Petr Štěpán, nebo Klára Nováková?"
 - U dotazu na dotočení stejně: "S kým je dotočeno — Petr Štěpán, nebo Klára Nováková?"
 - Když se nic neděje, akce "nic" a zprava null. Radši mlč, než abys plnil kanál.
@@ -331,7 +368,9 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
       caflouProjectId
         ? prisma.herecDotocen.findMany({
             where: { caflouProjectId },
-            select: { user: { select: { name: true, email: true } } },
+            // userId je tu kvuli oprave („zruseno"): kdyz nikdo nejmenuje
+            // herce a fajfku ma prave jeden, je jasne, koho sundat.
+            select: { userId: true, user: { select: { name: true, email: true } } },
           })
         : Promise.resolve([]),
       prisma.brunoPamet.findMany({
@@ -361,6 +400,9 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
           ...meta.herci.filter((h) => h.id !== meta.actorUserId),
         ].map((h) => ({ id: h.id, jmeno: bezTitulu(h.name) || h.email }))
       : [];
+
+    /** ID herců, kteří fajfku opravdu mají - podle toho se ruší (viz níž). */
+    const dotoceniIds = dotoceni.map((d) => d.userId);
 
     const kontext: Kontext = {
       caflouProjectId,
@@ -446,6 +488,52 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
       }
     }
 
+    /**
+     * OPRAVA (zadani 16. 9. 2026: „zapsal dotoceno, ale tykalo se to neceho
+     * jineho. Vzal jen to slovo").
+     *
+     * Bruno zapsal dotoceno na „uvod dotocen" - slovo sedelo, smysl ne. Kdyz
+     * ho nekdo v kanale opravi, musi fajfku umet sundat; do te doby to musel
+     * jit odklikat clovek v portalu, a kdyz si toho nikdo nevsiml, zustal
+     * projekt prehozeny ve stavu, ve kterem neni.
+     *
+     * KOHO: bud je jmenovany, nebo ma fajfku prave jeden herec - pak je to
+     * bez pochyb on. Jinak se Bruno zepta, stejne jako u zapisu.
+     */
+    if (rozhodnuti.akce === 'zruseno' && caflouProjectId) {
+      const herec = najdiHerce() ?? (dotoceniIds.length === 1
+        ? herci.find((h) => h.id === dotoceniIds[0]) ?? null
+        : null);
+
+      if (dotoceniIds.length === 0) {
+        // Neni co brat zpet - radsi mlcet nez psat do kanalu zmatek.
+        rozhodnuti.zprava = null;
+      } else if (!herec || !dotoceniIds.includes(herec.id)) {
+        const jmena = herci
+          .filter((h) => dotoceniIds.includes(h.id))
+          .map((h) => h.jmeno)
+          .join(', ');
+        rozhodnuti.zprava =
+          rozhodnuti.zprava ?? (jmena ? `U koho mám dotočeno sundat — ${jmena}?` : null);
+      } else {
+        await zrusHerceDotoceno(caflouProjectId, herec.id, {
+          id: bruno.id,
+          jmeno: 'Bruno (z chatu)',
+        }).catch((err) => {
+          console.error('Bruno: zruseni dotoceni selhalo:', err);
+        });
+
+        await zapisBrunoUdalost({
+          caflouProjectId,
+          popis: `Dotočeno zrušeno — ${herec.jmeno}.`,
+          nova: 'Dotočeno zrušeno',
+        });
+
+        rozhodnuti.zprava =
+          rozhodnuti.zprava ?? `Beru zpět, dotočeno jsem u ${herec.jmeno} zase sundal.`;
+      }
+    }
+
     // Zapisovat stranu jde jen u projektu - jinde neni kam. Strana se zapise
     // i u akce "dotoceno", kdyz ji nekdo napsal jednou zpravou s dotocenim.
     if (
@@ -509,7 +597,13 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
     }
 
     if (rozhodnuti.zprava) return { stav: 'odpovedel', duvod: rozhodnuti.zprava };
-    if (rozhodnuti.akce === 'zapis' || rozhodnuti.akce === 'dotoceno') return { stav: 'zapsano' };
+    if (
+      rozhodnuti.akce === 'zapis' ||
+      rozhodnuti.akce === 'dotoceno' ||
+      rozhodnuti.akce === 'zruseno'
+    ) {
+      return { stav: 'zapsano' };
+    }
     return { stav: 'nic', duvod: 'model neviděl důvod se ozvat' };
   } catch (err) {
     const hlaska = err instanceof Error ? err.message : 'neznámá chyba';
