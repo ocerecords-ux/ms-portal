@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * Úprava údajů projektu přímo v přehledu (zadání 10. 9. 2026: "věci, které
@@ -111,7 +112,20 @@ export function UpravitelnyVyber({
   );
 }
 
-/** Datum. Prázdná hodnota se uloží jako "žádné datum". */
+/**
+ * Datum. Prázdná hodnota se uloží jako „žádné datum".
+ *
+ * UKLÁDÁ SE PŘI ZMĚNĚ, NE PŘI OPUŠTĚNÍ POLÍČKA (oprava 16. 9. 2026:
+ * „to přidávání datumů nějak mizí a blbne pořád").
+ *
+ * Předtím se ukládalo v `onBlur`. Jenže rozepsané datum má `<input type="date">`
+ * prázdné — dokud nejsou vyplněné všechny tři části, `value` je "". Kdo tedy
+ * začal psát a klikl jinam, uložil PRÁZDNO a buňka se vrátila na pomlčku;
+ * a při výběru z kalendáře přišel blur dřív, než prohlížeč hodnotu zapsal, tak
+ * se datum „ztratilo" i tehdy. Událost `change` u data přijde až s hotovou
+ * hodnotou (a taky při vymazání), takže je to přesně ta chvíle, kdy se má
+ * ukládat. Blur už jen zavře editaci.
+ */
 export function UpravitelneDatum({
   caflouProjectId,
   pole,
@@ -129,6 +143,8 @@ export function UpravitelneDatum({
   const [upravuje, setUpravuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [uklada, setUklada] = useState(false);
+  /** Co je zrovna v políčku. Rozepsané datum vrací prohlížeč jako "". */
+  const [navrh, setNavrh] = useState(hodnota);
 
   async function zmen(nove: string) {
     setUpravuje(false);
@@ -161,16 +177,24 @@ export function UpravitelneDatum({
   }
 
   return (
-    <input
-      type="date"
-      autoFocus
-      defaultValue={hodnota}
-      onBlur={(e) => void zmen(e.target.value)}
+    <span
       onKeyDown={(e) => {
-        if (e.key === 'Enter') void zmen((e.target as HTMLInputElement).value);
         if (e.key === 'Escape') setUpravuje(false);
       }}
-      className="rounded-lg border border-brand-purple bg-field px-2 py-1 text-sm font-heading text-ink outline-none"
-    />
+    >
+      {/* Společné políčko portálu - kalendář se otevře klepnutím kamkoliv,
+          ne jen na drobnou ikonku vpravo. */}
+      <DatumPole
+        autoFocus
+        value={navrh}
+        onChange={(e) => {
+          setNavrh(e.target.value);
+          void zmen(e.target.value);
+        }}
+        onBlur={() => setUpravuje(false)}
+        title="Vyberte datum z kalendáře"
+        className="rounded-lg border border-brand-purple bg-field px-2 py-1 text-sm font-heading text-ink outline-none"
+      />
+    </span>
   );
 }

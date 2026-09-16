@@ -25,6 +25,7 @@ export function DatumPole({
   max,
   title,
   onBlur,
+  autoFocus,
 }: {
   value: string;
   /** Stejný tvar jako u <input>, ať se volající kód nemusí měnit. */
@@ -37,6 +38,8 @@ export function DatumPole({
   max?: string;
   title?: string;
   onBlur?: () => void;
+  /** Políčko, které se objeví až po kliknutí (buňka v tabulce), chce fokus rovnou. */
+  autoFocus?: boolean;
 }) {
   const ref = useRef<HTMLInputElement>(null);
 
@@ -57,6 +60,7 @@ export function DatumPole({
       value={value}
       onChange={onChange}
       onBlur={onBlur}
+      autoFocus={autoFocus}
       onClick={otevriKalendar}
       disabled={disabled}
       required={required}
