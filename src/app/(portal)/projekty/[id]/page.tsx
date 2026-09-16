@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import {
   canEditProjectMeta,
   canManageCalendar,
+  canViewProjectBudget,
   canViewProjectBusinessInfo,
   canViewProjectDocuments,
   isInternalRole,
@@ -61,8 +62,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const caflouProjectId = params.id;
   const canEdit = canEditProjectMeta(session.user.role);
 
-  // Kdo smi videt doklady - musi se vedet driv, nez se pro ne pojede do databaze.
+  // Kdo co smi videt - musi se vedet driv, nez se pro to pojede do databaze.
+  //
+  // DVA RUZNE KRUHY (zadani 16. 9. 2026: „povol Helce, at vidi polozky
+  // rozpoctu v detailu projektu. Nemela by videt doklady jako nabidky
+  // a faktury"): rozpocet vidi Zuzo-labuzo i produkce, doklady jen
+  // Zuzo-labuzo. Zvukar ani jedno.
   const showDocuments = canViewProjectDocuments(session.user.role);
+  const showRozpocet = canViewProjectBudget(session.user.role);
 
   // POZOR NA PORADI (zprava 9. 9. 2026: "web se mi zdá zpomalený"): drive se
   // tady cekalo postupne na tri skupiny dotazu za sebou, a teprve pak na dalsi.
@@ -128,7 +135,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     listRodnyListProjectTypes(),
     // Rozpocet a doklady - jen pro toho, kdo na ne ma pravo. Viz
     // lib/projektPenizeServer.ts; zvukari se ta cisla ani nenactou.
-    showDocuments ? nactiPenizeProjektu(caflouProjectId) : null,
+    //
+    // Ridi se to rozpoctem, ne doklady: produkce rozpocet vidi, a ten se bez
+    // nabidky nebo faktury nespocita (cena zakazky je z nich). Doklady same
+    // se ji ale nikde nevypisuji - viz zalozka Doklady nize.
+    showRozpocet ? nactiPenizeProjektu(caflouProjectId) : null,
     // Natacecí frekvence (zadani 8. 9. 2026) - nabidky terminu k tomuhle
     // projektu, seznam hercu a studii pro zalozeni nove.
     prisma.recordingRequest.findMany({
@@ -229,9 +240,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Firma projektu tak, jak je vyplnena v portalu.
   const firmaProjektu = metaPoSync?.company ?? null;
 
-  // Rozpocet (zadani 6. 9. 2026) - jen u audioknih, kde zname pocet normostran,
-  // a vidi ho jen Zuzo-labuzo. Zvukar ani produkce se k cislum nedostanou
-  // (zadani 11. 9. 2026) - viz canViewProjectDocuments v lib/roles.ts.
+  // Rozpocet (zadani 6. 9. 2026) - jen u audioknih, kde zname pocet normostran.
+  // Vidi ho Zuzo-labuzo a od 16. 9. 2026 i produkce; zvukar se k cislum
+  // nedostane (zadani 11. 9. 2026) - viz canViewProjectBudget v lib/roles.ts.
   const { budgetSettings, timesheets, offers, invoices, expenses, contracts, naklady } = penize ?? {
     budgetSettings: null,
     timesheets: [],
@@ -251,7 +262,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   const settings = budgetSettings ?? DEFAULT_BUDGET_SETTINGS;
   const showBudget =
-    showDocuments && company?.dealsAudiobooks === true && (project?.pageCount ?? 0) > 0;
+    showRozpocet && company?.dealsAudiobooks === true && (project?.pageCount ?? 0) > 0;
   const budget = showBudget ? computeBudget(project!.pageCount!, settings) : null;
   const spent = timesheets.reduce(
     (sum, e) => sum + entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot),
@@ -430,7 +441,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
    * v zalozce vykazy nevidime bonusy"). Jen schvalene - navrh, o kterem se
    * jeste nerozhodlo, nikomu nepatri.
    */
-  const bonusyRadky: BonusRadek[] = showDocuments
+  const bonusyRadky: BonusRadek[] = showRozpocet
     ? (
         await prisma.bonusZvukare
           .findMany({
@@ -459,7 +470,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     .filter((e) => e.workType === 'EDITING')
     .reduce((sum, e) => sum + castka(e), 0);
 
-  const rozpocet = !showDocuments ? null : budget ? (
+  const rozpocet = !showRozpocet ? null : budget ? (
     <ProjectBudget
       budget={budget}
       spent={spent}
@@ -604,7 +615,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   const tabs: ProjectTab[] = [{ key: 'prehled', label: 'Přehled', content: prehled }];
   // Zalozka je u kazdeho projektu, ale jen pro toho, kdo na cisla ma pravo
-  // (canViewProjectDocuments) - zvukar ani produkce ji nevidi.
+  // (canViewProjectBudget) - Zuzo-labuzo a produkce ano, zvukar ne.
   if (rozpocet) {
     tabs.push({ key: 'rozpocet', label: 'Rozpočet', content: rozpocetSVykazy });
   }
@@ -682,6 +693,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       content: <HistorieProjektu udalosti={historie} />,
     });
   }
+  // DOKLADY ZUSTAVAJI JEN ZUZO-LABUZO (zadani 16. 9. 2026: „nemela by videt
+  // doklady jako nabidky a faktury"). Produkce ma o zalozku vys rozpocet, ale
+  // seznam nabidek, faktur, vydaju a smluv se ji tu neukaze - a odkazy z nej
+  // vedou do /admin, kam ji middleware stejne nepusti.
   if (showDocuments) {
     tabs.push({
       key: 'doklady',

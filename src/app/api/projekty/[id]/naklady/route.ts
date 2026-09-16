@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/db';
-import { requireAdmin } from '@/lib/adminGuard';
+import { authOptions } from '@/lib/auth';
+import { canViewProjectBudget } from '@/lib/roles';
 
 /**
  * Položkové náklady projektu (zadání 11. 9. 2026: „do té karty mi dej třeba
@@ -11,9 +13,14 @@ import { requireAdmin } from '@/lib/adminGuard';
  * jeden souvislý zápis — kdyby se posílaly po jedné, musel by portál řešit
  * pořadí, poloviční uložení a mizející id řádku, který ještě neexistuje.
  *
- * Vidí i mění to jen ten, kdo má právo na doklady a rozpočty — tedy
- * Žůžo-labužo (zadání 11. 9. 2026: „zvukaři by neměli vidět u projektů žádné
- * doklady ani rozpočty").
+ * Vidí i mění to ten, kdo má právo na rozpočet projektu — Žůžo-labužo
+ * a produkce (zadání 16. 9. 2026: „povol Helče, ať vidí položky rozpočtu
+ * v detailu projektu"). Zvukař ne (zadání 11. 9. 2026: „zvukaři by neměli
+ * vidět u projektů žádné doklady ani rozpočty").
+ *
+ * PSÁT SMÍ TEN, KDO ČTE: položkové náklady jsou přesně to, co do rozpočtu
+ * píše produkce („napíšu náklady na herce"). Kdyby je směla jen číst,
+ * zůstala by v kartě políčka, která při uložení vrátí 403.
  */
 export const dynamic = 'force-dynamic';
 
@@ -40,14 +47,18 @@ async function seznam(caflouProjectId: string) {
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  const session = await getServerSession(authOptions);
+  if (!session?.user || !canViewProjectBudget(session.user.role)) {
+    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  }
   return NextResponse.json(await seznam(params.id));
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  const session = await getServerSession(authOptions);
+  if (!session?.user || !canViewProjectBudget(session.user.role)) {
+    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

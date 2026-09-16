@@ -140,10 +140,26 @@ export function canEditProjectMeta(role: Role): boolean {
  */
 export function canViewProjectDocuments(role: Role): boolean {
   // Zvukar ani produkce sem nepatri (potvrzeno 11. 9. 2026: "zvukari by
-  // nemeli videt u projektu zadne doklady ani rozpocty"). Podle tehoz
-  // prepinace se ridi i rozpocet projektu a to, jestli se ta data vubec
-  // nactou - viz projekty/[id]/page.tsx.
+  // nemeli videt u projektu zadne doklady ani rozpocty").
+  //
+  // OD 16. 9. 2026 UZ TENHLE PREPINAC NEROZHODUJE O ROZPOCTU - produkce ho
+  // vidi (canViewProjectBudget vyse), doklady porad ne. Do te doby to bylo
+  // jedno pravo pro oboji, takze se Helca nedostala ani k rozpoctu.
   return role === 'ADMIN';
+}
+
+/**
+ * Kdo smi u projektu videt ROZPOCET - cisla rozpoctu, polozkove naklady,
+ * vykazy a bonusy (zadani 16. 9. 2026: „povol Helce, at vidi polozky rozpoctu
+ * v detailu projektu. Nemela by videt doklady jako nabidky a faktury").
+ *
+ * Je to schvalne UZSI kruh nez doklady a zaroven sirsi nez driv: produkce
+ * rozpocet projektu resi (ona do nej pise naklady na herce), ale k nabidkam
+ * a fakturam se dostat nema - ty zustavaji na canViewProjectDocuments.
+ * Zvukar nema ani jedno (zadani 11. 9. 2026).
+ */
+export function canViewProjectBudget(role: Role): boolean {
+  return role === 'ADMIN' || role === 'PRODUKCE';
 }
 
 /**

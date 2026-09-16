@@ -5,7 +5,9 @@ import { prisma } from '@/lib/db';
  * vidět u projektů žádné doklady ani rozpočty").
  *
  * Je to schválně jedna funkce a volá se jen tehdy, když na to má člověk právo
- * (`canViewProjectDocuments`). Nejde totiž jen o to, že se záložka nevykreslí
+ * (`canViewProjectBudget` — od 16. 9. 2026 tedy i produkce, která rozpočet
+ * vede; samotné doklady se jí ale nikde nevypisují, o tom rozhoduje zvlášť
+ * `canViewProjectDocuments`). Nejde totiž jen o to, že se záložka nevykreslí
  * — komu to nepatří, tomu se ta čísla ani nenačtou. Kdyby se někdy někdo
  * v zobrazování upsal, není co prozradit; a zvukaři se detail projektu navíc
  * otevře rychleji, protože mu odpadne šest dotazů do databáze.
