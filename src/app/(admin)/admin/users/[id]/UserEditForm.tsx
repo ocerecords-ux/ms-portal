@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import type { Role } from '@prisma/client';
 import { AdminField } from '../../NewCompanyForm';
+import { CountrySelect } from '../../CountrySelect';
+import { kodZeme } from '@/lib/countries';
 import { PhotoDropzone } from '../PhotoDropzone';
 import { ROLE_GROUPS, ROLE_LABELS, USER_TABS, roleRequiresCompany } from '@/lib/roles';
 import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
@@ -93,7 +95,8 @@ export function UserEditForm({
   const [addressStreet, setAddressStreet] = useState(user.addressStreet ?? '');
   const [addressCity, setAddressCity] = useState(user.addressCity ?? '');
   const [addressZip, setAddressZip] = useState(user.addressZip ?? '');
-  const [addressCountry, setAddressCountry] = useState(user.addressCountry ?? '');
+  // Ve starých záznamech je země napsaná slovem; nabídka chce kód.
+  const [addressCountry, setAddressCountry] = useState(kodZeme(user.addressCountry));
 
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -532,7 +535,7 @@ export function UserEditForm({
             </div>
             <div className="flex-1 min-w-[140px]">
               <AdminField label="Země">
-                <input value={addressCountry} onChange={(e) => setAddressCountry(e.target.value)} className="admin-input" />
+                <CountrySelect value={addressCountry} onChange={setAddressCountry} />
               </AdminField>
             </div>
           </div>

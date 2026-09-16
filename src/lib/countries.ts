@@ -68,3 +68,40 @@ export function countryName(code: string | null | undefined): string {
   if (!code) return '';
   return COUNTRIES.find((c) => c.code === code.toUpperCase())?.name ?? code;
 }
+
+/** Text bez háčků, čárek a velkých písmen - kvůli hledání i porovnávání. */
+export function bezDiakritiky(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+/**
+ * ISO kod z čehokoliv, co je v databázi uložené.
+ *
+ * U firem se země vybírá z nabídky a ukládá se kód, ale u lidí bylo dlouho
+ * obyčejné textové pole - leží tam „Česká republika", „ČR" i „cz". Tohle to
+ * srovná na kód, aby nabídka s vlaječkami hned ukázala tu správnou zemi.
+ * Co se poznat nedá, zůstane, jak je - radši cizí text než smazaná adresa.
+ */
+export function kodZeme(hodnota: string | null | undefined): string {
+  if (!hodnota) return '';
+  const text = hodnota.trim();
+  if (!text) return '';
+  if (/^[A-Za-z]{2}$/.test(text)){
+    const kod = text.toUpperCase();
+    if (COUNTRIES.some((c) => c.code === kod)) return kod;
+  }
+  const klic = bezDiakritiky(text);
+  const podleJmena = COUNTRIES.find((c) => bezDiakritiky(c.name) === klic);
+  if (podleJmena) return podleJmena.code;
+  // Běžné zkratky a lidové názvy, na které se v portálu narazí.
+  const zkratky: Record<string, string> = {
+    'cr': 'CZ', 'ceska republika': 'CZ', 'cesko': 'CZ', 'czech republic': 'CZ', 'czechia': 'CZ',
+    'sr': 'SK', 'slovenska republika': 'SK', 'slovakia': 'SK',
+    'deutschland': 'DE', 'germany': 'DE', 'nemecko': 'DE',
+    'austria': 'AT', 'osterreich': 'AT',
+    'poland': 'PL', 'polska': 'PL',
+    'uk': 'GB', 'velka britanie': 'GB', 'anglie': 'GB',
+    'usa': 'US', 'spojene staty': 'US',
+  };
+  return zkratky[klic] ?? text;
+}

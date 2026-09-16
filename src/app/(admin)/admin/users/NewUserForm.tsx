@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import type { Role } from '@prisma/client';
 import { AdminField } from '../NewCompanyForm';
+import { CountrySelect } from '../CountrySelect';
+import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { PhotoDropzone } from './PhotoDropzone';
 import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany } from '@/lib/roles';
 import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
@@ -57,7 +59,7 @@ export function NewUserForm({
   const [addressStreet, setAddressStreet] = useState('');
   const [addressCity, setAddressCity] = useState('');
   const [addressZip, setAddressZip] = useState('');
-  const [addressCountry, setAddressCountry] = useState('');
+  const [addressCountry, setAddressCountry] = useState(DEFAULT_COUNTRY);
 
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<string | null>(null);
@@ -313,7 +315,7 @@ export function NewUserForm({
             </div>
             <div className="flex-1 min-w-[140px]">
               <AdminField label="Země">
-                <input value={addressCountry} onChange={(e) => setAddressCountry(e.target.value)} className="admin-input" />
+                <CountrySelect value={addressCountry} onChange={setAddressCountry} />
               </AdminField>
             </div>
           </div>

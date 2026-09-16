@@ -15,6 +15,7 @@ import {
   type RGB,
 } from '@/lib/pdf/kreslitko';
 import { computeTotals } from '@/lib/doklady';
+import { countryName, kodZeme } from '@/lib/countries';
 import { qrModuly, spdRetezec } from '@/lib/pdf/qrPlatba';
 
 /**
@@ -269,7 +270,11 @@ function adresa(strana: StranaDokladu): string[] {
   if (strana.street) radky.push(strana.street);
   const mesto = [strana.zip, strana.city].filter(Boolean).join(' ');
   if (mesto) radky.push(mesto);
-  if (strana.country && strana.country.toUpperCase() !== 'CZ') radky.push(strana.country);
+  // Zeme se pise jen u ciziny - u tuzemskeho dokladu by byla navic. V databazi
+  // je ISO kod, na doklad ale patri jmeno zeme, ne „SK".
+  if (strana.country && kodZeme(strana.country).toUpperCase() !== 'CZ') {
+    radky.push(countryName(kodZeme(strana.country)));
+  }
   return radky;
 }
 
