@@ -7,7 +7,12 @@ import { InviteButton } from '../InviteButton';
 
 export default async function UserEditPage({ params }: { params: { id: string } }) {
   const [user, companies] = await Promise.all([
-    prisma.user.findUnique({ where: { id: params.id } }),
+    prisma.user.findUnique({
+      where: { id: params.id },
+      // Firma-dodavatel zalozena z herce (zadani 16. 9. 2026) - podle ni se
+      // na karte ukazuje bud tlacitko „Prenest do dodavatelu", nebo odkaz.
+      include: { dodavatelCompany: { select: { id: true, name: true, code: true } } },
+    }),
     prisma.company.findMany({ where: { type: 'KLIENT' }, orderBy: { name: 'asc' } }),
   ]);
   if (!user) notFound();
@@ -94,6 +99,14 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           addressCity: user.addressCity,
           addressZip: user.addressZip,
           addressCountry: user.addressCountry,
+          // Firma-dodavatel zalozena z tohohle herce (zadani 16. 9. 2026).
+          dodavatel: user.dodavatelCompany
+            ? {
+                id: user.dodavatelCompany.id,
+                name: user.dodavatelCompany.name,
+                code: user.dodavatelCompany.code,
+              }
+            : null,
         }}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
       />

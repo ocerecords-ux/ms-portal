@@ -133,6 +133,8 @@ model Company {
   updatedAt      DateTime  @updatedAt
 
   users    User[]
+  /// Herci, kteri jsou touhle firmou-dodavatelem (zadani 16. 9. 2026).
+  herciDodavatele User[] @relation("HerecDodavatel")
   projekty ProjectMeta[] @relation("ProjektFirma")
   notifikace NotifikaceFirmy[]
   orders    Order[]
@@ -243,6 +245,16 @@ model User {
   /// audioknihy se priradi tomu, kdo to ma zaskrtnute - zase priznak na uctu,
   /// ne jmeno v kodu. Kdyz to nema nikdo, zustane manazer prazdny jako driv.
   vychoziManazerAudioknih Boolean @default(false)
+
+  /// HEREC, KTERY JE ZAROVEN DODAVATEL (zadani 16. 9. 2026: „nekdy se nam
+  /// stane, ze herec je i dodavatel, takze bych potreboval mit u herce moznost
+  /// prenest ho do dodavatelu. Aby pak byl zaroven herec, ale i dodavatel").
+  ///
+  /// Nemeni se tim role ani firma uctu: herec zustava hercem a `companyId`
+  /// (firma, POD kterou clovek patri) se nehne - tohle je firma, kterou
+  /// SAM JE. Smlouva o dilo se uzavira s ni, ne s uctem.
+  dodavatelCompanyId String?
+  dodavatelCompany   Company? @relation("HerecDodavatel", fields: [dodavatelCompanyId], references: [id])
 
   /// U kterych projektu je tenhle herec dotoceny.
   dotoceniHerce HerecDotocen[] @relation("DotocenyHerec")

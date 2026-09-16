@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import type { Role } from '@prisma/client';
@@ -44,6 +45,8 @@ type EditableUser = {
   addressCity: string | null;
   addressZip: string | null;
   addressCountry: string | null;
+  /** Firma-dodavatel založená z tohohle herce (zadání 16. 9. 2026). */
+  dodavatel: { id: string; name: string; code: string | null } | null;
 };
 
 // Editace VSECH udaju existujiciho uzivatele (email, jmeno, telefon, role,
@@ -95,6 +98,35 @@ export function UserEditForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  /**
+   * HEREC, KTERÝ JE ZÁROVEŇ DODAVATEL (zadání 16. 9. 2026). Založí z jeho
+   * karty firmu typu Dodavatel; hercem zůstává. Viz
+   * /api/admin/users/[id]/dodavatel.
+   */
+  const [dodavatel, setDodavatel] = useState(user.dodavatel);
+  const [prenaseni, setPrenaseni] = useState(false);
+
+  async function prenesDoDodavatelu() {
+    setPrenaseni(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(user.id)}/dodavatel`, {
+        method: 'POST',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((data as { error?: string })?.error || 'Přenos do dodavatelů se nezdařil.');
+        return;
+      }
+      setDodavatel((data as { firma?: typeof dodavatel })?.firma ?? null);
+      router.refresh();
+    } catch {
+      setError('Přenos do dodavatelů se nezdařil.');
+    } finally {
+      setPrenaseni(false);
+    }
+  }
 
   const needsCompany = roleRequiresCompany(role);
   const isMediaspace = INTERNAL_ROLES.includes(role);
@@ -503,6 +535,43 @@ export function UserEditForm({
                 <input value={addressCountry} onChange={(e) => setAddressCountry(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
+          </div>
+
+          {/* HEREC MŮŽE BÝT ZÁROVEŇ DODAVATEL (zadání 16. 9. 2026: „někdy se
+              nám stane, že herec je i dodavatel… aby pak byl zároveň herec,
+              ale i dodavatel"). Nepřesouvá se, zdvojuje se: z karty vznikne
+              firma typu Dodavatel a herec zůstane hercem. Smlouva o dílo si
+              protistranu bere právě z dodavatelů, takže bez téhle firmy
+              s ním nejde uzavřít.
+
+              Zakládá se z ÚDAJŮ, KTERÉ JSOU NA KARTĚ TEĎ, proto je tlačítko
+              až pod nimi - kdo doplní IČ a adresu, má je rovnou i ve firmě. */}
+          <div className="border-t border-line pt-4 flex items-start gap-4 flex-wrap">
+            <div className="flex-1 min-w-[260px]">
+              <p className="font-heading font-semibold text-sm text-ink m-0">Také dodavatel</p>
+              <p className="text-xs font-body text-muted m-0 mt-1">
+                {dodavatel
+                  ? 'Herec je zároveň veden jako firma mezi dodavateli. Smlouvu o dílo s ním uzavřete přes ni.'
+                  : 'Založí z téhle karty firmu mezi dodavateli. Hercem zůstává — jen s ním půjde uzavřít i smlouvu o dílo. Nejdřív uložte IČ a adresu, převezmou se do firmy.'}
+              </p>
+            </div>
+            {dodavatel ? (
+              <Link
+                href={`/admin/companies/${dodavatel.id}`}
+                className="text-sm font-heading font-semibold text-brand-purple no-underline rounded-pill border border-brand-purple px-3 py-1.5"
+              >
+                Otevřít {dodavatel.code ? `${dodavatel.name} (${dodavatel.code})` : dodavatel.name}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={prenaseni}
+                onClick={() => void prenesDoDodavatelu()}
+                className="text-sm font-heading font-semibold rounded-pill border border-line px-3 py-1.5 text-ink hover:border-brand-purple hover:text-brand-purple transition-colors disabled:opacity-60"
+              >
+                {prenaseni ? 'Zakládám…' : 'Přenést do dodavatelů'}
+              </button>
+            )}
           </div>
         </>
       )}

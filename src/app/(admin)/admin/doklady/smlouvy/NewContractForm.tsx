@@ -26,6 +26,13 @@ import { DatumPole } from '@/components/DatumPole';
  * vezme jméno, e-mail, adresa i RČ nebo IČ — podle toho, co má vyplněné.
  * Název díla se bere z názvu projektu.
  *
+ * SMLOUVA O DÍLO SE UZAVÍRÁ S DODAVATELEM (zadání 16. 9. 2026: „tuto smlouvu
+ * budeme uzavírat s dodavateli, takže protistranu bude čerpat z firmy-dodavatel
+ * a pole Protistrana by se mělo přejmenovat na Dodavatel"). Nabídka firem se
+ * u ní zúží na dodavatele a jmenuje se Dodavatel; u ostatních šablon zůstává
+ * jako dřív. Herec, který dodává i jako firma, se do té nabídky dostane
+ * tlačítkem „Přenést do dodavatelů" na své kartě.
+ *
  * U SMLOUVY NA AUDIOKNIHU JE TOHO PŘEDVYPLNĚNÉHO VÍC (zadání 15. 9. 2026):
  * název smlouvy je „název projektu - herec", protistrana se jmenuje rovnou
  * Herec, odměna se dá vybrat z položkových nákladů projektu (nebo napsat
@@ -39,7 +46,14 @@ export function NewContractForm({
   projects,
 }: {
   issuers: { id: string; name: string; isDefault: boolean }[];
-  companies: { id: string; name: string; contactName: string | null; contactEmail: string | null }[];
+  companies: {
+    id: string;
+    name: string;
+    /** KLIENT / DODAVATEL — smlouva o dílo se uzavírá jen s dodavateli. */
+    typ: 'KLIENT' | 'DODAVATEL';
+    contactName: string | null;
+    contactEmail: string | null;
+  }[];
   templates: { id: string; name: string; body: string }[];
   projects: ProjectChoice[];
 }) {
@@ -161,6 +175,25 @@ export function NewContractForm({
    */
   const sHercem = druhSmlouvy === 'audiokniha' || druhSmlouvy === 'reklama';
 
+  /**
+   * SMLOUVA O DÍLO = DODAVATEL (zadání 16. 9. 2026). U ní se nabízejí jen
+   * firmy typu Dodavatel; u ostatních smluv bez herce zůstává celá nabídka,
+   * protože se tam podepisuje i s klienty.
+   */
+  const jeDilo = druhSmlouvy === 'dilo';
+  const nabidkaFirem = useMemo(
+    () => (jeDilo ? companies.filter((c) => c.typ === 'DODAVATEL') : companies),
+    [companies, jeDilo],
+  );
+
+  // Po prepnuti na smlouvu o dilo nesmi zustat vybrana firma, ktera mezi
+  // dodavateli neni - jinak by se do smlouvy dostal klient.
+  useEffect(() => {
+    if (!form.companyId) return;
+    if (nabidkaFirem.some((c) => c.id === form.companyId)) return;
+    setForm((f) => ({ ...f, companyId: '' }));
+  }, [nabidkaFirem, form.companyId]);
+
   /** Název projektu bez firmy - „NĚCO — Audiotéka" je v názvu smlouvy navíc. */
   const nazevProjektu = useMemo(() => {
     if (projektInfo?.nazev?.trim()) return projektInfo.nazev.trim();
@@ -211,7 +244,11 @@ export function NewContractForm({
     // Nazev se sklada z projektu a herce, takze prazdny znamena, ze ani jedno
     // neni vybrane - smlouva bez nazvu se v prehledu nedá najít.
     if (!form.title.trim()) {
-      setError('Vyberte projekt a herce — z nich se skládá název smlouvy.');
+      setError(
+        jeDilo
+          ? 'Vyberte projekt a dodavatele — z nich se skládá název smlouvy.'
+          : 'Vyberte projekt a herce — z nich se skládá název smlouvy.',
+      );
       return;
     }
     setBusy(true);
@@ -363,15 +400,27 @@ export function NewContractForm({
       <div className={`grid grid-cols-1 gap-3 ${sHercem ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
         {!sHercem && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Protistrana (firma)</span>
-            <VyberPole value={form.companyId} onChange={(e) => vyberFirmu(e.target.value)} className={inputClass}>
-              <option value="">— bez firmy (herec) —</option>
-              {companies.map((c) => (
+            <span className="text-sm font-body text-ink">{jeDilo ? 'Dodavatel' : 'Protistrana (firma)'}</span>
+            <VyberPole
+              required={jeDilo}
+              value={form.companyId}
+              onChange={(e) => vyberFirmu(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">{jeDilo ? '— vyberte dodavatele —' : '— bez firmy (herec) —'}</option>
+              {nabidkaFirem.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
             </VyberPole>
+            {jeDilo && (
+              <span className="text-xs font-body text-muted">
+                {nabidkaFirem.length === 0
+                  ? 'Mezi firmami zatím není žádný dodavatel. Herce, který dodává i jako firma, přenesete do dodavatelů tlačítkem na jeho kartě.'
+                  : 'IČ, DIČ i adresu si smlouva vezme z karty dodavatele. Herec, který dodává i jako firma, se sem dostane tlačítkem „Přenést do dodavatelů" na své kartě.'}
+              </span>
+            )}
           </label>
         )}
         <label className="flex flex-col gap-1.5">

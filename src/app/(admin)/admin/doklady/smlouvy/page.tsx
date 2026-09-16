@@ -42,7 +42,9 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
     prisma.company.findMany({
       where: { active: true },
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, contactName: true, contactEmail: true },
+      // Typ firmy potrebuje formular: smlouva o dilo se uzavira jen
+      // s dodavateli (zadani 16. 9. 2026).
+      select: { id: true, name: true, type: true, contactName: true, contactEmail: true },
     }),
     prisma.contractTemplate.findMany({
       where: { active: true },
@@ -102,7 +104,13 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
           </Link>
           <NewContractForm
             issuers={issuers}
-            companies={companies}
+            companies={companies.map((c) => ({
+              id: c.id,
+              name: c.name,
+              typ: c.type,
+              contactName: c.contactName,
+              contactEmail: c.contactEmail,
+            }))}
             templates={templates}
             projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
           />
