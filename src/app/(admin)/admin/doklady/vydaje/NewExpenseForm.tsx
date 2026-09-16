@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import type { Currency, PaymentMethod } from '@prisma/client';
@@ -63,6 +63,33 @@ export function NewExpenseForm({
   const [fotka, setFotka] = useState<File | null>(null);
   const [cteni, setCteni] = useState(false);
   const [cteniZprava, setCteniZprava] = useState<string | null>(null);
+
+  /**
+   * FOŤÁK JEN NA TELEFONU (zadání 16. 9. 2026: „ve výdajích na počítači by
+   * měla být jen možnost vybrat přílohu, ne vyfotit. Ale mělo by to mít
+   * stejnou funkci — rozpoznat údaje z účtenky").
+   *
+   * Na počítači nemá „Vyfotit doklad" co otevřít — atribut capture tam stejně
+   * jen vyvolá obyčejný výběr souboru, takže tlačítko slibovalo něco, co se
+   * nestane. Čtení dokladu zůstává u obojího stejné.
+   *
+   * Pozná se to podle toho, čím člověk ukazuje: hrubý ukazatel (prst) =
+   * telefon nebo tablet. Šířka okna by lhala u zmenšeného okna na notebooku.
+   */
+  const [jeDotykovy, setJeDotykovy] = useState(false);
+  useEffect(() => {
+    setJeDotykovy(window.matchMedia?.('(pointer: coarse)').matches ?? false);
+  }, []);
+
+  /**
+   * ČÁSTKA SE DÁ ZADAT I S DPH (zadání 16. 9. 2026: „to pole částka bez DPH
+   * otočit nějakýma šipkama, abych přehodil a naopak vkládal částku s DPH").
+   *
+   * Na účtence bývá velkým písmem jen částka VČETNE daně, takže ji člověk
+   * musel před opsáním v hlavě dělit. Ukládá se pořád částka bez DPH -
+   * přepínač mění jen to, co se píše do políčka.
+   */
+  const [zadavamSDph, setZadavamSDph] = useState(false);
 
   // Kategorie se daji zalozit primo tady (zadani 8. 9. 2026) - kdyz se zadava
   // doklad a kategorie jeste neexistuje, neni duvod kvuli tomu odchazet pryc.
@@ -145,6 +172,13 @@ export function NewExpenseForm({
     setFileName(soubor.name);
     setError(null);
 
+    // PDF se přiloží, ale nepřečte - čtečka umí obrázky (viz POVOLENE_TYPY
+    // v /api/admin/expenses/precti). Radši to říct, než tiše nic nedoplnit.
+    if (soubor.type === 'application/pdf') {
+      setCteniZprava('PDF jsem přiložil. Číst zatím umím jen obrázek — údaje vyplňte ručně.');
+      return;
+    }
+
     if (soubor.size > MAX_FOTKA_BYTES) {
       setCteniZprava('Fotka je moc velká na přečtení, údaje vyplňte ručně.');
       return;
@@ -189,7 +223,8 @@ export function NewExpenseForm({
       if (form.issuerCompanyId) body.set('issuerCompanyId', form.issuerCompanyId);
       body.set('currency', form.currency);
       if (form.description) body.set('description', form.description);
-      body.set('amount', form.amount);
+      // Uklada se castka BEZ DPH, at clovek psal cokoliv (zadani 16. 9. 2026).
+      body.set('amount', zadavamSDph ? naVstup(bezDph ?? 0) : form.amount);
       body.set('vatRate', String(form.vatRate));
       body.set('paid', form.paid ? 'true' : 'false');
       body.set('paymentMethod', form.paymentMethod);
@@ -222,9 +257,26 @@ export function NewExpenseForm({
     }
   }
 
-  // Zivy prepocet na castku s DPH - jen kdyz uz je co pocitat.
-  const bezDph = form.amount.trim() ? parseMoneyToMinor(form.amount) : null;
+  /**
+   * Co je v políčku a co z toho vyjde. `form.amount` drží TO, CO ČLOVĚK PÍŠE -
+   * podle přepínače je to částka bez DPH, nebo s DPH. Ukládá se vždycky ta
+   * bez DPH (viz submit).
+   */
+  const napsano = form.amount.trim() ? parseMoneyToMinor(form.amount) : null;
+  const bezDph = napsano === null ? null : zadavamSDph ? naBezDph(napsano, form.vatRate) : napsano;
   const sDph = bezDph === null ? null : expenseTotalMinor(bezDph, form.vatRate);
+  /** Druhá částka pod políčkem - vždycky ta, kterou člověk zrovna nepíše. */
+  const protejsek = zadavamSDph ? bezDph : sDph;
+
+  /** Přehození pole. Co je napsané, se přepočítá, ať číslo pořád platí. */
+  function prehodDph() {
+    const nove = !zadavamSDph;
+    if (napsano !== null) {
+      const prepocet = nove ? expenseTotalMinor(bezDph ?? 0, form.vatRate) : (bezDph ?? 0);
+      set('amount', naVstup(prepocet));
+    }
+    setZadavamSDph(nove);
+  }
 
   const inputClass =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full';
@@ -244,14 +296,17 @@ export function NewExpenseForm({
     >
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nový výdaj</h2>
 
-      {/* Vyfoceni dokladu (zadani 10. 9. 2026). Na mobilu otevre rovnou zadni
-          fotoaparat, na pocitaci vyber souboru - stejne tlacitko posluzi obojimu. */}
+      {/* Doklad se přečte sám (zadání 10. 9. 2026). NA TELEFONU foťákem, NA
+          POČÍTAČI výběrem souboru (zadání 16. 9. 2026: „na počítači by měla
+          být jen možnost vybrat přílohu, ne vyfotit. Ale mělo by to mít
+          stejnou funkci"). Čtení je v obou případech totéž - liší se jen to,
+          odkud se obrázek vezme, a proto i popisek. */}
       <div className="flex flex-wrap items-center gap-3 bg-tint border border-line rounded-lg px-4 py-3">
         <input
           ref={fotoRef}
           type="file"
-          accept="image/*"
-          capture="environment"
+          accept={jeDotykovy ? 'image/*' : 'application/pdf,image/*'}
+          {...(jeDotykovy ? { capture: 'environment' as const } : {})}
           className="hidden"
           onChange={(e) => {
             const soubor = e.target.files?.[0];
@@ -264,11 +319,14 @@ export function NewExpenseForm({
           disabled={cteni}
           className="inline-flex items-center gap-2 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          <IkonaFotak />
-          {cteni ? 'Čtu doklad…' : 'Vyfotit doklad'}
+          {jeDotykovy ? <IkonaFotak /> : <IkonaSoubor />}
+          {cteni ? 'Čtu doklad…' : jeDotykovy ? 'Vyfotit doklad' : 'Vybrat doklad'}
         </button>
         <span className="text-xs font-body text-muted flex-1 min-w-[200px]">
-          {cteniZprava ?? 'Vyfoťte účtenku a částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.'}
+          {cteniZprava ??
+            (jeDotykovy
+              ? 'Vyfoťte účtenku a částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.'
+              : 'Vyberte sken nebo fotku účtenky a částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.')}
         </span>
       </div>
 
@@ -371,22 +429,52 @@ export function NewExpenseForm({
       </label>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Částka bez DPH</span>
-          <input
-            required
-            inputMode="decimal"
-            value={form.amount}
-            onChange={(e) => set('amount', e.target.value)}
-            placeholder="0,00"
-            className={`${inputClass} text-right tabular-nums`}
-          />
-          {/* Kolik to dela s DPH je videt hned pri psani (zadani 8. 9. 2026) -
-              na dokladu byva uvedena castka VCETNE, tak at se da zkontrolovat. */}
-          <span className="text-xs font-body text-muted text-right tabular-nums">
-            {sDph === null ? 's DPH —' : `s DPH ${formatMoney(sDph, form.currency)}`}
+        <div className="flex flex-col gap-1.5">
+          {/* ŠIPKY PŘEHODÍ, CO SE PÍŠE (zadání 16. 9. 2026). Na účtence bývá
+              velkým písmem částka VČETNE daně; tohle ji nechá opsat tak, jak
+              tam stojí. Uloží se pořád částka bez DPH. */}
+          <span className="flex items-center gap-2">
+            <span className="text-sm font-body text-ink">
+              {zadavamSDph ? 'Částka s DPH' : 'Částka bez DPH'}
+            </span>
+            <button
+              type="button"
+              onClick={prehodDph}
+              title={
+                zadavamSDph
+                  ? 'Přepnout na zadávání částky bez DPH'
+                  : 'Přepnout na zadávání částky s DPH'
+              }
+              aria-label={
+                zadavamSDph
+                  ? 'Přepnout na zadávání částky bez DPH'
+                  : 'Přepnout na zadávání částky s DPH'
+              }
+              className="text-muted hover:text-brand-purple transition-colors leading-none"
+            >
+              <IkonaPrehodit />
+            </button>
           </span>
-        </label>
+          <label className="flex flex-col gap-1.5">
+            <input
+              required
+              inputMode="decimal"
+              value={form.amount}
+              onChange={(e) => set('amount', e.target.value)}
+              placeholder="0,00"
+              className={`${inputClass} text-right tabular-nums`}
+            />
+            {/* Druha castka je videt hned pri psani (zadani 8. 9. 2026) - at
+                se da zkontrolovat proti dokladu. */}
+            <span className="text-xs font-body text-muted text-right tabular-nums">
+              {protejsek === null
+                ? zadavamSDph
+                  ? 'bez DPH —'
+                  : 's DPH —'
+                : `${zadavamSDph ? 'bez DPH' : 's DPH'} ${formatMoney(protejsek, form.currency)}`}
+            </span>
+          </label>
+        </div>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">DPH</span>
           <VyberPole value={form.vatRate} onChange={(e) => set('vatRate', Number(e.target.value))} className={inputClass}>
@@ -489,6 +577,28 @@ export function NewExpenseForm({
   );
 }
 
+/** Soubor - na počítači se doklad vybírá, nefotí (zadání 16. 9. 2026). */
+function IkonaSoubor() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+    </svg>
+  );
+}
+
+/** Dvě šipky nad sebou - přehození částky bez DPH / s DPH (zadání 16. 9. 2026). */
+function IkonaPrehodit() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+      <path d="M7 4v16" />
+      <path d="M4 7l3-3 3 3" />
+      <path d="M17 20V4" />
+      <path d="M20 17l-3 3-3-3" />
+    </svg>
+  );
+}
+
 function IkonaFotak() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
@@ -496,4 +606,21 @@ function IkonaFotak() {
       <circle cx="12" cy="13" r="3.4" />
     </svg>
   );
+}
+
+/**
+ * Z částky S DPH zpátky na částku bez DPH (zadání 16. 9. 2026).
+ *
+ * Zaokrouhluje se na haléře, takže zpětný převod nemusí dát přesně to samé
+ * číslo, ze kterého se vyšlo - u 21 % to hraje o haléř. Doklad se ukládá
+ * v částce bez DPH, tak ať je zaokrouhlení vidět hned pod políčkem.
+ */
+function naBezDph(sDphMinor: number, vatRate: number): number {
+  if (!vatRate) return sDphMinor;
+  return Math.round((sDphMinor * 100) / (100 + vatRate));
+}
+
+/** Haléře do tvaru, v jakém se píšou do políčka: „826,45". */
+function naVstup(minor: number): string {
+  return (minor / 100).toFixed(2).replace('.', ',');
 }
