@@ -395,7 +395,7 @@ function Prepinac({ aktivni, onClick, text }: { aktivni: boolean; onClick: () =>
       onClick={onClick}
       className={`text-sm font-heading font-semibold rounded-pill border px-4 py-2.5 transition-colors ${
         aktivni
-          ? 'border-brand-purple text-brand-purple bg-accentTint'
+          ? 'border-brand-purple text-brand-purple bg-tint'
           : 'border-line text-muted hover:border-brand-purple'
       }`}
     >
