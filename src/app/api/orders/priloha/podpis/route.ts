@@ -20,8 +20,14 @@ import { isStorageConfigured, podepsanyUploadObjednavky } from '@/lib/storage';
  */
 export const dynamic = 'force-dynamic';
 
-/** Strop pro přílohu objednávky. Rukopisy bývají velké, ale ne takhle. */
-export const MAX_PRILOHA_OBJEDNAVKY = 200 * 1024 * 1024;
+/**
+ * Strop pro přílohu objednávky. Rukopisy bývají velké, ale ne takhle.
+ *
+ * NEEXPORTOVAT: soubor routy smí vyvážet jen to, co Next.js zná (GET, POST,
+ * dynamic…). Cokoliv navíc shodí build hláškou „does not match the required
+ * types of a Next.js Route".
+ */
+const MAX_PRILOHA_OBJEDNAVKY = 200 * 1024 * 1024;
 
 const schema = z.object({
   name: z.string().trim().min(1).max(255),
