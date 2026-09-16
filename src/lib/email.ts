@@ -2093,3 +2093,119 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
 
   return { sent: true as const, reason: undefined };
 }
+
+/* ==========================================================================
+   ŽÁDOST O ÚDAJE ODKAZEM (zadání 16. 9. 2026)
+   ========================================================================== */
+
+export type PozvankaUdajuInput = {
+  to: string;
+  /** Komu píšeme - herci jménem, firmě názvem. */
+  jmeno: string | null;
+  druh: 'HEREC' | 'FIRMA';
+  odkaz: string;
+  /** Do kdy odkaz platí, už naformátované („15. 10. 2026"). */
+  platiDo: string;
+  /** Proč to posíláme - napíše se to do mailu, když je to vyplněné. */
+  poznamka?: string | null;
+};
+
+function vetaOZadosti(druh: 'HEREC' | 'FIRMA'): string {
+  return druh === 'HEREC'
+    ? 'potřebujeme od vás pár údajů do smlouvy a k výplatě honoráře. Vyplnění zabere dvě minuty a jde to i z telefonu.'
+    : 'potřebujeme od vás fakturační údaje. Stačí zadat IČ, zbytek se doplní z obchodního rejstříku sám.';
+}
+
+export function buildPozvankaUdajuHtml(input: PozvankaUdajuInput): string {
+  return emailShell({
+    tag: 'Vaše údaje',
+    preheader: 'Formulář na vyplnění údajů pro Mediaspace.',
+    body: `
+    <p>${escapeHtml(pozdrav(input.jmeno))}</p>
+    <p>${escapeHtml(vetaOZadosti(input.druh))}</p>
+    ${input.poznamka ? `<p>${escapeHtml(input.poznamka)}</p>` : ''}
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">Vyplnit údaje</a>
+    </div>
+
+    <p class="small">Odkaz je jen pro vás a platí do ${escapeHtml(input.platiDo)}. Nikam se nepřihlašujete.</p>
+`,
+  });
+}
+
+export async function sendPozvankaUdajuEmail(input: PozvankaUdajuInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: 'Vyplnte prosim sve udaje - Mediaspace',
+    text: [
+      pozdrav(input.jmeno),
+      '',
+      vetaOZadosti(input.druh),
+      ...(input.poznamka ? ['', input.poznamka] : []),
+      '',
+      input.odkaz,
+      '',
+      `Odkaz plati do ${input.platiDo}.`,
+    ].join('\n'),
+    html: buildPozvankaUdajuHtml(input),
+  });
+
+  return { sent: true as const, reason: undefined };
+}
+
+export type VyplneneUdajeInput = {
+  to: string;
+  jmenoPrijemce: string | null;
+  /** Kdo údaje vyplnil. */
+  kdo: string;
+  /** Je to rovnou v portálu, nebo to čeká na odkliknutí? */
+  hotovo: boolean;
+  kolikCeka: number;
+  odkaz: string;
+};
+
+function vetaOVyplneni(input: VyplneneUdajeInput): string {
+  if (input.hotovo) return `${input.kdo} vyplnil(a) své údaje a portál je má zapsané.`;
+  return `${input.kdo} vyplnil(a) své údaje. ${
+    input.kolikCeka === 1 ? 'Jeden údaj mění' : `${input.kolikCeka} údajů mění`
+  } to, co už bylo vyplněné — proto to čeká na vaše odkliknutí.`;
+}
+
+export function buildVyplneneUdajeHtml(input: VyplneneUdajeInput): string {
+  return emailShell({
+    tag: input.hotovo ? 'Údaje vyplněny' : 'Údaje čekají',
+    preheader: `${input.kdo} vyplnil údaje.`,
+    body: `
+    <p>${escapeHtml(pozdrav(input.jmenoPrijemce))}</p>
+    <p>${escapeHtml(vetaOVyplneni(input))}</p>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${input.hotovo ? 'Zobrazit údaje' : 'Odkliknout změny'}</a>
+    </div>
+`,
+  });
+}
+
+export async function sendVyplneneUdajeEmail(input: VyplneneUdajeInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: input.hotovo
+      ? `Udaje vyplneny - ${input.kdo}`
+      : `Udaje cekaji na odklepnuti - ${input.kdo}`,
+    text: [pozdrav(input.jmenoPrijemce), '', vetaOVyplneni(input), '', input.odkaz].join('\n'),
+    html: buildVyplneneUdajeHtml(input),
+  });
+
+  return { sent: true as const, reason: undefined };
+}

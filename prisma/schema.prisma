@@ -145,6 +145,8 @@ model Company {
   contracts Contract[]
   recordingRequests RecordingRequest[]
   rodneListy RodnyList[]
+  /// Zadosti o udaje, ktere se tykaji teto firmy.
+  pozvankyUdaju PozvankaUdaju[] @relation("PozvankaUdajuFirma")
 }
 
 model User {
@@ -240,6 +242,12 @@ model User {
   /// na karte uzivatele, nesedi to v promenne prostredi.
   dostavaObjednavky Boolean @default(false)
 
+  /// Dostava vyplnene udaje z odkazu pro herce a firmy (zadani 16. 9. 2026:
+  /// „kdyz ho vyplni, tak se nam to automaticky propise do systemu a zahlasi
+  /// Karoline - tohle bych chtel mit ale taky moznost menit do budoucna, komu
+  /// to bude hlasit"). Zase priznak na uctu, ne jmeno v kodu.
+  dostavaVyplneneUdaje Boolean @default(false)
+
   /// Vychozi manazer objednanych audioknih (zadani 15. 9. 2026: „manazer
   /// projektu u audioknih je vzdy Karolina"). Projekt zalozeny z objednavky
   /// audioknihy se priradi tomu, kdo to ma zaskrtnute - zase priznak na uctu,
@@ -319,6 +327,11 @@ model User {
   studioBlocks       StudioBlock[]      @relation("StudioBlockCreatedBy")
   notifications      Notification[]
   calendarFeeds      CalendarFeed[]
+
+  /// Zadosti o udaje, ktere se tykaji tohohle cloveka (doplneni jeho karty).
+  pozvankyUdaju        PozvankaUdaju[] @relation("PozvankaUdajuKomu")
+  /// Zadosti o udaje, ktere tenhle clovek rozeslal.
+  pozvankyUdajuVytvoril PozvankaUdaju[] @relation("PozvankaUdajuVytvoril")
 }
 
 model Order {
@@ -2494,4 +2507,73 @@ model PripominkaPriloha {
   createdAt DateTime @default(now())
 
   @@index([pripominkaId])
+}
+
+/// Koho se zadost o udaje tyka.
+enum PozvankaDruh {
+  HEREC
+  FIRMA
+}
+
+/// Kde zadost o udaje stoji.
+enum PozvankaStav {
+  /// Odkaz je vyrobeny (a nejspis odeslany), ceka se na vyplneni.
+  CEKA
+  /// Clovek formular odeslal, ale menil uz vyplnene udaje - ceka na odkliknuti.
+  VYPLNENA
+  /// Udaje jsou v portalu.
+  HOTOVA
+  /// Zrusena rucne, nebo uz neplati.
+  ZRUSENA
+}
+
+/// ZADOST O UDAJE ODKAZEM (zadani 16. 9. 2026: „potrebuji vymyslet nejaky
+/// system, kdy budeme hercum nebo firmam - kazdy zvlast - posilat odkaz, na
+/// kterem bude formular, kde vyplni sve udaje").
+///
+/// Odkaz je otevreny, jako podpis smlouvy: clovek se nikam neprihlasuje, jen
+/// klikne a vyplni. Token je jedina vec, ktera zadost identifikuje, takze je
+/// dlouhy a plati omezenou dobu.
+///
+/// CO SE VYPLNI, SE DRZI V `data` I POTOM, co je to v portale zapsane -
+/// je to doklad o tom, co clovek sam napsal a kdy. Portal se podle nej da
+/// kdykoli zpetne srovnat.
+model PozvankaUdaju {
+  id    String       @id @default(cuid())
+  token String       @unique
+  druh  PozvankaDruh
+  stav  PozvankaStav @default(CEKA)
+
+  /// Koho se to tyka, kdyz uz v portalu je. Kdyz je oboji prazdne, zaklada se
+  /// novy zaznam z toho, co clovek vyplni.
+  userId    String?
+  user      User?    @relation("PozvankaUdajuKomu", fields: [userId], references: [id], onDelete: SetNull)
+  companyId String?
+  company   Company? @relation("PozvankaUdajuFirma", fields: [companyId], references: [id], onDelete: SetNull)
+
+  /// Pro koho je odkaz urceny, nez z nej vznikne zaznam - at je v seznamu videt,
+  /// komu se psalo.
+  jmeno String?
+  email String?
+
+  platiDo DateTime
+
+  vytvorilId String?
+  vytvoril   User?   @relation("PozvankaUdajuVytvoril", fields: [vytvorilId], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime  @default(now())
+  odeslanoAt   DateTime?
+  vyplnenoAt   DateTime?
+  zpracovanoAt DateTime?
+
+  /// Co clovek vyplnil - cely formular tak, jak ho odeslal.
+  data Json?
+
+  /// Poznamka od nas (proc se to posilalo), i to, co pripsal on.
+  poznamka  String?
+  vzkazOdNej String? @db.Text
+
+  @@index([stav])
+  @@index([userId])
+  @@index([companyId])
 }

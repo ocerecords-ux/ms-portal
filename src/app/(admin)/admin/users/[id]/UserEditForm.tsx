@@ -36,6 +36,7 @@ type EditableUser = {
   /** Klient chce vědět o dotočeném herci na svém projektu (zadání 16. 9. 2026). */
   dostavaDotocenoKlient: boolean;
   dostavaObjednavky: boolean;
+  dostavaVyplneneUdaje: boolean;
   vychoziManazerAudioknih: boolean;
   studioLocations: string[];
   birthNumber: string | null;
@@ -74,6 +75,7 @@ export function UserEditForm({
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
   const [dostavaDotocenoKlient, setDostavaDotocenoKlient] = useState(user.dostavaDotocenoKlient);
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
+  const [dostavaVyplneneUdaje, setDostavaVyplneneUdaje] = useState(user.dostavaVyplneneUdaje);
   const [vychoziManazerAudioknih, setVychoziManazerAudioknih] = useState(user.vychoziManazerAudioknih);
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
   const [active, setActive] = useState(user.active);
@@ -162,6 +164,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
+        if (isMediaspace) fd.set('dostavaVyplneneUdaje', dostavaVyplneneUdaje ? '1' : '0');
         if (isMediaspace) {
           fd.set('vychoziManazerAudioknih', vychoziManazerAudioknih ? '1' : '0');
         }
@@ -361,6 +364,28 @@ export function UserEditForm({
                 Dostává objednávky
                 <span className="block text-xs text-muted">
                   mail i zvoneček pokaždé, když klient odešle objednávku; klient tuhle adresu nevidí
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Vyplnene udaje z odkazu (zadani 16. 9. 2026: „zahlasi Karoline -
+            tohle bych chtel mit ale taky moznost menit do budoucna, komu to
+            bude hlasit"). Proto prepinac u uctu, ne jmeno v kodu. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dostavaVyplneneUdaje}
+                onChange={(e) => setDostavaVyplneneUdaje(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Dostává vyplněné údaje
+                <span className="block text-xs text-muted">
+                  mail i zvoneček pokaždé, když herec nebo firma vyplní údaje z odkazu
                 </span>
               </span>
             </label>

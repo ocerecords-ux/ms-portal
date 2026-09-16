@@ -34,6 +34,7 @@ const schema = z.object({
   dostavaDotoceno: z.string().trim().optional(),
   dostavaDotocenoKlient: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
+  dostavaVyplneneUdaje: z.string().trim().optional(),
   vychoziManazerAudioknih: z.string().trim().optional(),
   studioLocations: z.array(z.string()).optional(),
   birthNumber: z.string().trim().optional(),
@@ -68,6 +69,7 @@ function readFormData(formData: FormData) {
       ? formData.get('dostavaDotocenoKlient')
       : undefined,
     dostavaObjednavky: has('dostavaObjednavky') ? formData.get('dostavaObjednavky') : undefined,
+    dostavaVyplneneUdaje: has('dostavaVyplneneUdaje') ? formData.get('dostavaVyplneneUdaje') : undefined,
     vychoziManazerAudioknih: has('vychoziManazerAudioknih')
       ? formData.get('vychoziManazerAudioknih')
       : undefined,
@@ -162,6 +164,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         : {}),
       ...(data.vychoziManazerAudioknih !== undefined
         ? { vychoziManazerAudioknih: data.vychoziManazerAudioknih === '1' }
+        : {}),
+      ...(data.dostavaVyplneneUdaje !== undefined
+        ? { dostavaVyplneneUdaje: data.dostavaVyplneneUdaje === '1' }
         : {}),
       ...(data.dostavaObjednavky !== undefined
         ? { dostavaObjednavky: data.dostavaObjednavky === '1' }
