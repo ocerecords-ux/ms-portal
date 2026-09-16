@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { computeTotals, formatMoney } from '@/lib/doklady';
 import { NewInvoiceForm } from './NewInvoiceForm';
+import { StahnoutPrilohy } from '../StahnoutPrilohy';
 import { FakturyTabulka, type FakturaRadek } from './FakturyTabulka';
 
 // Prehled vydanych faktur (zadani 6. 9. 2026). Zalozky podle stavu - nejdulezitejsi
@@ -136,7 +137,11 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
                 );
               })}
             </div>
-            <NewInvoiceForm />
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Vystavené faktury za měsíc v jednom ZIPu (zadání 16. 9. 2026). */}
+              <StahnoutPrilohy druh="faktury" />
+              <NewInvoiceForm />
+            </div>
           </div>
 
           {unpaidByCurrency.size > 0 && (

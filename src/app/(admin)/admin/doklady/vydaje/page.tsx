@@ -4,6 +4,7 @@ import { formatMoney } from '@/lib/doklady';
 import { ensureExpenseCategories, expenseTotalMinor } from '@/lib/expenses';
 import { ibanZTuzemskehoUctu, jeIbanPlatny, spdRetezec } from '@/lib/pdf/qrPlatba';
 import { NewExpenseForm } from './NewExpenseForm';
+import { StahnoutPrilohy } from '../StahnoutPrilohy';
 import { CategoryManager } from './CategoryManager';
 import { VydajeTabulka, type VydajRadek } from './VydajeTabulka';
 import { listProjectOptions } from '@/lib/projectOptions';
@@ -165,6 +166,9 @@ export default async function ExpensesPage({
           })}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Přílohy dokladů za měsíc v jednom ZIPu (zadání 16. 9. 2026) -
+              jednou měsíčně to jde účetní. */}
+          <StahnoutPrilohy druh="vydaje" />
           <PostaTlacitko stav={posta} />
           <NewExpenseForm
             categories={categories.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name }))}
