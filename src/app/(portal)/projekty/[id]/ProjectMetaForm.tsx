@@ -14,6 +14,7 @@ import { OdznakStrany, posledniStranyHercu } from '../OdznakStrany';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 import { OdznakSelect } from '../OdznakSelect';
 import { VyberPole } from '@/components/VyberPole';
+import { UkonceniProjektu } from './UkonceniProjektu';
 
 /**
  * Stav, priorita a typ projektu jako barevný odznak (zadání 10. 9. 2026:
@@ -104,6 +105,7 @@ export function ProjectMetaForm({
   dotoceniHercu,
   natoceniZaznamy,
   vidiKlienta,
+  ukonceny,
 }: {
   caflouProjectId: string;
   canEdit: boolean;
@@ -132,6 +134,8 @@ export function ProjectMetaForm({
   initial: Initial;
   /** Kdo z herců má dotočeno - ID účtu -> datum (zadání 11. 9. 2026). */
   dotoceniHercu: Record<string, string>;
+  /** Je projekt ukončený? (zadání 16. 9. 2026 - viz UkonceniProjektu.) */
+  ukonceny: boolean;
   /**
    * Zvukař klienta u projektu nevidí (zadání 13. 9. 2026) - viz
    * canViewProjectBusinessInfo. Firma zůstává: podle ní pozná, čí nahrávku
@@ -710,6 +714,15 @@ export function ProjectMetaForm({
           <span className="text-muted">Změny se ukládají samy.</span>
         )}
       </div>
+
+      {/* UKONČENÍ PROJEKTU (zadání 16. 9. 2026). Vlastní karta hned nad
+          mazáním: je to taky rozhodnutí o celém projektu, ne políčko, které
+          se ukládá samo. Na rozdíl od mazání je vratné. */}
+      {canEdit && (
+        <Karta>
+          <UkonceniProjektu caflouProjectId={caflouProjectId} ukonceny={ukonceny} />
+        </Karta>
+      )}
 
       {/* Mazani ma vlastni kartu, ne patu formulare: je to jedina
           nevratna vec na cele strance a nema splyvat s poli, ktera se

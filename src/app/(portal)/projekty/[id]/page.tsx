@@ -371,6 +371,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         dotoceniHercu={dotoceniPodleHerce}
         natoceniZaznamy={zaznamyNatoceni}
         vidiKlienta={canViewProjectBusinessInfo(session.user.role)}
+        ukonceny={metaPoSync?.finished ?? project?.finished ?? false}
         herecZCaflou={meta?.narrator ?? project?.narrator ?? null}
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
