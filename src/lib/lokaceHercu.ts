@@ -82,3 +82,33 @@ export const LOKACE_S_BARVOU = HEREC_STUDIOS.map((l) => ({
   popisek: popisekLokace(l),
   barva: barvaLokace(l),
 }));
+
+/**
+ * MĚSTA, NA KTERÁ SE PTÁME HERCE (zadání 16. 9. 2026: „v lokaci bych ve
+ * formuláři nechal jen jedno Brno. Samozřejmě nám se pak v kartě zaškrtnou obě
+ * studia v Brně. Je to jen pro zjednodušení pro herce").
+ *
+ * Herec neví, jestli se natáčí v Brně I nebo Brně II, a vědět to nepotřebuje —
+ * rozhoduje o tom kalendář. Odpovídá tedy na město a portál si sám zaškrtne
+ * všechna studia, která k němu patří.
+ */
+export const MESTA_PRO_HERCE: { mesto: string; studia: string[] }[] = [
+  { mesto: 'Brno', studia: ['MS Studio - Brno I', 'MS Studio - Brno II'] },
+  { mesto: 'Praha', studia: ['MS Studio - Praha'] },
+  { mesto: 'Londýn', studia: ['MS Studio - London'] },
+];
+
+/** Z vybraných měst udělá studia na kartu herce. */
+export function studiaZMest(mesta: string[]): string[] {
+  const out: string[] = [];
+  for (const m of MESTA_PRO_HERCE) {
+    if (mesta.includes(m.mesto)) out.push(...m.studia);
+  }
+  return out;
+}
+
+/** Opačně - z toho, co má herec na kartě, se zaškrtnou města ve formuláři. */
+export function mestaZeStudii(studia: string[] | null | undefined): string[] {
+  const zapsana = sjednotLokace(studia);
+  return MESTA_PRO_HERCE.filter((m) => zapsana.includes(m.mesto)).map((m) => m.mesto);
+}

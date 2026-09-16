@@ -383,9 +383,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Dostává vyplněné údaje
+                Dostává vyplněné údaje herců
                 <span className="block text-xs text-muted">
-                  mail i zvoneček pokaždé, když herec nebo firma vyplní údaje z odkazu
+                  mail i zvoneček pokaždé, když herec vyplní údaje po pozvánce
                 </span>
               </span>
             </label>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { CountrySelect } from '@/app/(admin)/admin/CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
-import { HEREC_STUDIOS } from '@/lib/roles';
+import { MESTA_PRO_HERCE, mestaZeStudii, studiaZMest } from '@/lib/lokaceHercu';
 
 /**
  * PRŮVODCE PRO NOVÉHO HERCE (zadání 16. 9. 2026: „po tom, co si herec nastaví
@@ -18,7 +18,7 @@ import { HEREC_STUDIOS } from '@/lib/roles';
  * vznikl by z poloviny vyplněný účet pokaždé, když někdo zavře okno.
  *
  * CO JE POVINNÉ: jméno, adresa, rodné číslo nebo IČ a číslo účtu — bez toho
- * se nedá uzavřít smlouva ani poslat honorář. Studia se dají přeskočit;
+ * se nedá uzavřít smlouva ani poslat honorář. Města se dají přeskočit;
  * kdo neví, doplní si je později v Mém účtu.
  */
 
@@ -34,10 +34,17 @@ type Udaje = {
   dic: string;
   vatPayer: boolean;
   bankAccount: string;
-  studioLocations: string[];
+  /** Města, ne konkrétní studia - viz MESTA_PRO_HERCE. */
+  mesta: string[];
+  /** Které číslo herec vyplňuje. */
+  druhCisla: 'rc' | 'ic';
 };
 
-export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
+export function DoplneniUdaju({
+  vychozi,
+}: {
+  vychozi: Partial<Omit<Udaje, 'mesta' | 'druhCisla'>> & { studioLocations?: string[] };
+}) {
   const [u, setU] = useState<Udaje>(() => ({
     name: '',
     addressStreet: '',
@@ -48,10 +55,13 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
     dic: '',
     vatPayer: false,
     bankAccount: '',
-    studioLocations: [],
     ...vychozi,
     // Prázdná země z karty by přebila výchozí Českou republiku.
     addressCountry: vychozi.addressCountry || DEFAULT_COUNTRY,
+    // Co už na kartě je, se zaškrtne - ale jako města, ne jednotlivá studia.
+    mesta: mestaZeStudii(vychozi.studioLocations),
+    // Kdo má na kartě IČ, tomu se rovnou nabídne IČ.
+    druhCisla: vychozi.ic ? 'ic' : 'rc',
   }));
   const [krok, setKrok] = useState(0);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -151,33 +161,50 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
     },
     {
       /**
-       * Rodné číslo NEBO IČ - podle toho, kdo jak hraje. Nevybírá se to
-       * přepínačem: kdo fakturuje, vyplní IČ, ostatní rodné číslo, a je to
-       * z polí samo vidět. DIČ se ptá jen plátce DPH; bez něj by fakturu
-       * s DPH nevystavil.
+       * NEJDŘÍV VÝBĚR, POTOM JEDNO POLE (zadání 16. 9. 2026: „s tím IČ nebo RČ
+       * bych to změnil buď na výběr to nebo to"). Dvě pole pod sebou sváděla
+       * k vyplnění obou; takhle je z obrazovky jasné, že se čeká jedno číslo.
+       *
+       * DIČ se ptá jen plátce DPH - bez něj by fakturu s DPH nevystavil.
        */
       nadpis: 'Rodné číslo, nebo IČ',
-      popis: 'Stačí to, co se vás týká — do smlouvy potřebujeme jedno z toho.',
+      popis: 'Vyberte, co nám dáte — stačí jedno z toho.',
       obsah: (
         <div className="flex flex-col gap-4">
-          <Popisek text="Rodné číslo">
-            <input
-              value={u.birthNumber}
-              onChange={(e) => nastav('birthNumber', e.target.value)}
-              autoFocus
-              className="admin-input"
-              placeholder="800101/1234"
+          <div className="flex gap-2 flex-wrap">
+            <Prepinac
+              aktivni={u.druhCisla === 'rc'}
+              onClick={() => nastav('druhCisla', 'rc')}
+              text="Rodné číslo"
             />
-          </Popisek>
-          <Popisek text="IČ (když fakturujete)">
-            <input
-              value={u.ic}
-              onChange={(e) => nastav('ic', e.target.value)}
-              inputMode="numeric"
-              className="admin-input"
-              placeholder="12345678"
+            <Prepinac
+              aktivni={u.druhCisla === 'ic'}
+              onClick={() => nastav('druhCisla', 'ic')}
+              text="IČ"
             />
-          </Popisek>
+          </div>
+          {u.druhCisla === 'rc' ? (
+            <Popisek text="Rodné číslo">
+              <input
+                value={u.birthNumber}
+                onChange={(e) => nastav('birthNumber', e.target.value)}
+                autoFocus
+                className="admin-input"
+                placeholder="800101/1234"
+              />
+            </Popisek>
+          ) : (
+            <Popisek text="IČ">
+              <input
+                value={u.ic}
+                onChange={(e) => nastav('ic', e.target.value)}
+                inputMode="numeric"
+                autoFocus
+                className="admin-input"
+                placeholder="12345678"
+              />
+            </Popisek>
+          )}
           {u.vatPayer && (
             <Popisek text="DIČ">
               <input
@@ -191,7 +218,8 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
         </div>
       ),
       hotovo: () => {
-        if (!u.birthNumber.trim() && !u.ic.trim()) return 'Vyplňte prosím rodné číslo, nebo IČ.';
+        if (u.druhCisla === 'rc' && !u.birthNumber.trim()) return 'Vyplňte prosím rodné číslo.';
+        if (u.druhCisla === 'ic' && !u.ic.trim()) return 'Vyplňte prosím IČ.';
         if (u.vatPayer && !u.dic.trim()) return 'Jako plátce DPH vyplňte prosím i DIČ.';
         return null;
       },
@@ -211,26 +239,29 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
       hotovo: () => (u.bankAccount.trim() ? null : 'Vyplňte prosím číslo účtu.'),
     },
     {
+      /**
+       * JEN MĚSTA (zadání 16. 9. 2026: „v lokaci bych ve formuláři nechal jen
+       * jedno Brno"). Na kartě herce se pak zaškrtnou obě brněnská studia -
+       * viz studiaZMest.
+       */
       nadpis: 'Kde můžete natáčet?',
-      popis: 'Zaškrtněte studia, kam se dostanete. Dá se to kdykoliv změnit.',
+      popis: 'Zaškrtněte města, kam se dostanete. Dá se to kdykoliv změnit.',
       obsah: (
         <div className="flex flex-col gap-2">
-          {HEREC_STUDIOS.map((studio) => (
-            <label key={studio} className="flex items-center gap-2.5 cursor-pointer">
+          {MESTA_PRO_HERCE.map(({ mesto }) => (
+            <label key={mesto} className="flex items-center gap-2.5 cursor-pointer">
               <input
                 type="checkbox"
-                checked={u.studioLocations.includes(studio)}
+                checked={u.mesta.includes(mesto)}
                 onChange={(e) =>
                   nastav(
-                    'studioLocations',
-                    e.target.checked
-                      ? [...u.studioLocations, studio]
-                      : u.studioLocations.filter((s) => s !== studio),
+                    'mesta',
+                    e.target.checked ? [...u.mesta, mesto] : u.mesta.filter((m) => m !== mesto),
                   )
                 }
                 className="w-4 h-4 accent-brand-purple"
               />
-              <span className="text-sm font-body text-ink">{studio}</span>
+              <span className="text-sm font-body text-ink">{mesto}</span>
             </label>
           ))}
         </div>
@@ -249,12 +280,14 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
               .join(', ')}
           />
           <Radek popisek="DPH" hodnota={u.vatPayer ? `plátce, DIČ ${u.dic}` : 'nejsem plátce'} />
-          <Radek popisek="Rodné číslo" hodnota={u.birthNumber} />
-          <Radek popisek="IČ" hodnota={u.ic} />
+          <Radek
+            popisek={u.druhCisla === 'rc' ? 'Rodné číslo' : 'IČ'}
+            hodnota={u.druhCisla === 'rc' ? u.birthNumber : u.ic}
+          />
           <Radek popisek="Číslo účtu" hodnota={u.bankAccount} />
           <Radek
             popisek="Natáčení"
-            hodnota={u.studioLocations.length ? u.studioLocations.join(', ') : 'zatím nevybráno'}
+            hodnota={u.mesta.length ? u.mesta.join(', ') : 'zatím nevybráno'}
           />
         </dl>
       ),
@@ -292,13 +325,16 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
           addressCity: u.addressCity,
           addressZip: u.addressZip,
           addressCountry: u.addressCountry,
-          birthNumber: u.birthNumber,
-          ic: u.ic,
+          // Posílá se jen to číslo, které herec vybral - druhé by bylo jen
+          // zbytkem po přepnutí volby.
+          birthNumber: u.druhCisla === 'rc' ? u.birthNumber : '',
+          ic: u.druhCisla === 'ic' ? u.ic : '',
           // DIČ má smysl jen u plátce - po přepnutí zpátky by zůstal viset.
           dic: u.vatPayer ? u.dic : '',
           vatPayer: u.vatPayer,
           bankAccount: u.bankAccount,
-          studioLocations: u.studioLocations,
+          // Z měst se na kartě stanou konkrétní studia (obě brněnská u Brna).
+          studioLocations: studiaZMest(u.mesta),
         }),
       });
       const data = await res.json().catch(() => ({}));
