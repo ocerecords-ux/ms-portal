@@ -2,13 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
-import { sendHerecDotocenEmail } from '@/lib/email';
-import { zakladPortalu } from '@/lib/preposlechOdkaz';
-import { zapisNotifikaci } from '@/lib/projektLogServer';
-import { prehodStavPodleDotoceni, vratStavPoOdskrtnuti } from '@/lib/dotoceniStavServer';
-import { isRodnyListProjectType } from '@/lib/priceList';
+import { oznacHerceDotoceno, zrusHerceDotoceno } from '@/lib/dotoceniServer';
 
 /**
  * Dotočený herec na projektu (zadání 11. 9. 2026: „u herců v projektech
@@ -19,28 +14,10 @@ import { isRodnyListProjectType } from '@/lib/priceList';
  * Je to vlastnost DVOJICE projekt + herec: na audioknize bývá herců víc a
  * každý končí jindy.
  *
- * STAV PROJEKTU SE PŘEHODÍ SÁM (zadání 11. 9. 2026) — „Natáčíme" na
- * „Dotočeno", „Natáčíme/stříháme" na „Dotočeno/stříháme", a to až když mají
- * fajfku všichni herci. V jiných stavech se na stav nesahá. Podrobně
- * v lib/dotoceniStavServer.ts.
- *
- * ZPRÁVA ODCHÁZÍ JEN PŘI ZAŠKRTNUTÍ, ne při odškrtnutí: odškrtnutí je v praxi
- * oprava překlepu a mail o tom by byl jen šum. Neodeslaná zpráva nesmí shodit
- * samotné odškrtnutí — to je ta důležitější věc.
- *
- * U REKLAM NEODEJDE NIC (zadání 13. 9. 2026: „u reklam nepůjde žádná
- * notifikace nikam, když se dotočí s hercem"). Spot se točí jedno
- * odpoledne — zpráva o každém hercovi by u něj byla šum, ne informace,
- * a stejnou cestou se u reklam nedozvídáme dotočení z portálu, ale
- * z kalendáře přes Bruna.
- *
- * „Žádná notifikace nikam" platí doslova: kromě mailu o hercovi se u reklamy
- * mlčky provede i překlopení stavu, které jinak zprávu KLIENTOVI posílá.
- * Stav se přehodí úplně stejně jako jindy, jen o tom nikdo nedostane mail.
- *
- * Reklama se pozná podle typu projektu — položky Ceníku s příznakem „Rodný
- * list", tedy tamtéž, odkud se bere záložka Rodný list. Není to nikde v kódu
- * napevno a nepozná se to podle firmy.
+ * SAMOTNÁ PRÁCE JE V lib/dotoceniServer.ts (16. 9. 2026) — stejnou věc dělá
+ * i Bruno, když někdo napíše „dotočeno" do kanálu projektu. Tady zůstala jen
+ * práva a tvar odpovědi; co se přesně stane (fajfka, překlopení stavu, zpráva
+ * Helče, mlčení u reklam) je popsané tam.
  */
 export const dynamic = 'force-dynamic';
 
@@ -61,97 +38,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
   const { userId, dotoceno } = parsed.data;
-
-  const [projekt, herec] = await Promise.all([
-    prisma.projectMeta.findUnique({
-      where: { caflouProjectId: params.id },
-      select: {
-        name: true,
-        companyName: true,
-        projectType: true,
-        company: { select: { name: true } },
-      },
-    }),
-    prisma.user.findFirst({ where: { id: userId, role: 'HEREC' }, select: { id: true, name: true, email: true } }),
-  ]);
-  if (!projekt) return NextResponse.json({ error: 'Projekt nenalezen.' }, { status: 404 });
-  if (!herec) return NextResponse.json({ error: 'Herec nenalezen.' }, { status: 404 });
-
-  const kdo = session.user.name || session.user.email || null;
+  const kdo = { id: session.user.id, jmeno: session.user.name || session.user.email || null };
 
   if (!dotoceno) {
-    await prisma.herecDotocen.deleteMany({ where: { caflouProjectId: params.id, userId } });
-    const stav = await vratStavPoOdskrtnuti(params.id, { id: session.user.id, jmeno: kdo });
+    const stav = await zrusHerceDotoceno(params.id, userId, kdo);
     return NextResponse.json({ dotoceno: false, stav });
   }
 
-  const zaznam = await prisma.herecDotocen.upsert({
-    where: { caflouProjectId_userId: { caflouProjectId: params.id, userId } },
-    create: {
-      caflouProjectId: params.id,
-      userId,
-      potvrdilUserId: session.user.id,
-      potvrdilJmeno: kdo,
-    },
-    update: { dotocenoAt: new Date(), potvrdilUserId: session.user.id, potvrdilJmeno: kdo },
+  const vysledek = await oznacHerceDotoceno(params.id, userId, kdo);
+  if (!vysledek) return NextResponse.json({ error: 'Projekt nebo herec nenalezen.' }, { status: 404 });
+
+  return NextResponse.json({
+    dotoceno: true,
+    dotocenoAt: vysledek.dotocenoAt,
+    stav: vysledek.stav,
   });
-
-  const jmenoHerce = herec.name || herec.email;
-  const nazevProjektu = projekt.name || `Projekt ${params.id}`;
-
-  // Reklama? Pak mlci uplne vsechno - viz poznamka na zacatku souboru.
-  const jeReklama = await isRodnyListProjectType(projekt.projectType);
-
-  // Stav se prehodi PRED odeslanim zpravy o hercovi - kdyby to bylo naopak,
-  // Helca by dostala mail driv, nez by se stav v portalu zmenil.
-  const stav = await prehodStavPodleDotoceni(
-    params.id,
-    { id: session.user.id, jmeno: kdo },
-    jeReklama,
-  );
-
-  if (jeReklama) {
-    return NextResponse.json({ dotoceno: true, dotocenoAt: zaznam.dotocenoAt.toISOString(), stav });
-  }
-
-  // Zprava je best effort - odskrtnuti uz je v databazi a nesmi na ni cekat.
-  void (async () => {
-    try {
-      const prijemci = (
-        await prisma.user.findMany({
-          where: { active: true, dostavaDotoceno: true },
-          select: { email: true },
-        })
-      ).map((u) => u.email);
-
-      if (prijemci.length === 0) {
-        console.warn(
-          `Dotoceno (${jmenoHerce}, ${nazevProjektu}): zpravu nema komu poslat - nikdo nema zaskrtnute "Dostava zpravy o dotoceni".`,
-        );
-        return;
-      }
-
-      const vysledek = await sendHerecDotocenEmail({
-        prijemci,
-        jmenoHerce,
-        nazevProjektu,
-        nazevFirmy: projekt.company?.name ?? projekt.companyName ?? null,
-        potvrdil: kdo,
-        odkazNaProjekt: `${zakladPortalu()}/projekty/${encodeURIComponent(params.id)}`,
-      });
-
-      await zapisNotifikaci({
-        caflouProjectId: params.id,
-        stav: 'Dotočeno',
-        popis: vysledek.sent
-          ? `${jmenoHerce} má dotočeno — zpráva odešla.`
-          : `${jmenoHerce} má dotočeno — zprávu se nepodařilo odeslat (${vysledek.reason ?? 'neznámý důvod'}).`,
-        prijemci,
-      });
-    } catch (err) {
-      console.error('Zprava o dotocenem herci selhala:', err);
-    }
-  })();
-
-  return NextResponse.json({ dotoceno: true, dotocenoAt: zaznam.dotocenoAt.toISOString(), stav });
 }
