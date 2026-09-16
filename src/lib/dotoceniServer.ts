@@ -25,7 +25,8 @@ export type KdoPotvrdil = { id: string; jmeno: string | null };
 export type VysledekDotoceni = {
   dotoceno: true;
   dotocenoAt: string;
-  stav: Awaited<ReturnType<typeof prehodStavPodleDotoceni>>;
+  /** Co se stalo se stavem projektu; `null`, když se nesahalo (herec už fajfku měl). */
+  stav: Awaited<ReturnType<typeof prehodStavPodleDotoceni>> | null;
   /** Herec fajfku měl už předtím - stav se nepřehazoval a zpráva neodešla. */
   uzMel: boolean;
   jmenoHerce: string;
