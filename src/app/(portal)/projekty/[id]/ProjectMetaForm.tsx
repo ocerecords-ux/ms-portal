@@ -106,6 +106,7 @@ export function ProjectMetaForm({
   natoceniZaznamy,
   vidiKlienta,
   ukonceny,
+  dnuDoOprav,
 }: {
   caflouProjectId: string;
   canEdit: boolean;
@@ -136,6 +137,12 @@ export function ProjectMetaForm({
   dotoceniHercu: Record<string, string>;
   /** Je projekt ukončený? (zadání 16. 9. 2026 - viz UkonceniProjektu.) */
   ukonceny: boolean;
+  /**
+   * Za kolik dní se stav sám překlopí na „Čekáme na opravy" (zadání
+   * 16. 9. 2026: „bylo by dobré tam mít o tom nějaký údaj, za kolik dní se to
+   * překlopí"). `null` = projekt v tom stavu není nebo to nejde spočítat.
+   */
+  dnuDoOprav: number | null;
   /**
    * Zvukař klienta u projektu nevidí (zadání 13. 9. 2026) - viz
    * canViewProjectBusinessInfo. Firma zůstává: podle ní pozná, čí nahrávku
@@ -496,6 +503,16 @@ export function ProjectMetaForm({
             <span className="text-xs text-muted font-body">
               {popisStavu(values.statusName) ?? 'Stav přehazujete ručně podle toho, kde projekt je.'}
             </span>
+            {/* ODPOČET DO AUTOMATICKÉHO PŘEKLOPENÍ (zadání 16. 9. 2026).
+                Ukazuje se jen u uloženého stavu „Dokončeno - ke schválení" -
+                jakmile se v nabídce přepne jinam, číslo by už neplatilo. */}
+            {dnuDoOprav !== null && values.statusName === initial.statusName && (
+              <span className="text-xs font-body text-brand-purple">
+                {dnuDoOprav === 0
+                  ? 'Dnes v noci se sám překlopí na „Čekáme na opravy".'
+                  : `Za ${dnuDoOprav} ${dnySklonovane(dnuDoOprav)} se sám překlopí na „Čekáme na opravy".`}
+              </span>
+            )}
             {/* Zprava ke kazdemu stavu odejde z projektu jen jednou - jinak by ji
                 klient dostal pokazde, co nekdo stav prehodi tam a zpatky. Tohle
                 je cesta, jak ji poslat znovu (zadani 11. 9. 2026). */}
@@ -868,3 +885,9 @@ function PoslatZnovu({
   );
 }
 
+/** „1 den", „3 dny", „7 dnů" - abychom v portálu nepsali „3 den". */
+function dnySklonovane(pocet: number): string {
+  if (pocet === 1) return 'den';
+  if (pocet >= 2 && pocet <= 4) return 'dny';
+  return 'dnů';
+}

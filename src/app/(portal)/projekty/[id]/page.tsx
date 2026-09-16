@@ -13,6 +13,7 @@ import {
   vidiProjektyVPriprave,
 } from '@/lib/roles';
 import { jeVPriprave } from '@/lib/stavyProjektu';
+import { STAV_ODEVZDANO, dnuDoPreklopeni, kdyVstoupilDoStavu } from '@/lib/cekameNaOpravyServer';
 import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu } from '@/lib/priceList';
 import { druhNotifikaceFirmy } from '@/lib/notifikaceFirmy';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget } from '@/lib/budget';
@@ -240,6 +241,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Firma projektu tak, jak je vyplnena v portalu.
   const firmaProjektu = metaPoSync?.company ?? null;
 
+  /**
+   * ZA KOLIK DNÍ SE STAV PŘEKLOPÍ SÁM (zadání 16. 9. 2026: „bylo by dobré tam
+   * mít o tom nějaký údaj, za kolik dní se to překlopí").
+   *
+   * Počítá se jen u projektu, který v tom stavu opravdu je a není ukončený -
+   * jinde by to bylo číslo bez významu. Odkdy v něm je, se bere z historie
+   * projektu; viz lib/cekameNaOpravyServer.ts.
+   */
+  const dnuDoOprav =
+    metaPoSync?.statusName === STAV_ODEVZDANO && !metaPoSync?.finished
+      ? dnuDoPreklopeni(await kdyVstoupilDoStavu(caflouProjectId, STAV_ODEVZDANO))
+      : null;
+
   // Rozpocet (zadani 6. 9. 2026) - jen u audioknih, kde zname pocet normostran.
   // Vidi ho Zuzo-labuzo a od 16. 9. 2026 i produkce; zvukar se k cislum
   // nedostane (zadani 11. 9. 2026) - viz canViewProjectBudget v lib/roles.ts.
@@ -372,6 +386,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         natoceniZaznamy={zaznamyNatoceni}
         vidiKlienta={canViewProjectBusinessInfo(session.user.role)}
         ukonceny={metaPoSync?.finished ?? project?.finished ?? false}
+        dnuDoOprav={dnuDoOprav}
         herecZCaflou={meta?.narrator ?? project?.narrator ?? null}
         klientNameZCaflou={meta?.klientName ?? null}
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
