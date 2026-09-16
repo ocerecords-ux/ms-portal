@@ -169,6 +169,8 @@ export function ProjectMetaForm({
    */
   const strany = posledniStranyHercu(natoceniZaznamy);
   const [dotoceniBezi, setDotoceniBezi] = useState<string | null>(null);
+  /** Vysledek tlacitka „Poslat klientovi" - kratka hlaska pod vyberem hercu. */
+  const [zpravaKlientovi, setZpravaKlientovi] = useState<string | null>(null);
 
   async function prepniDotoceno(userId: string, dotocenoNove: boolean) {
     setDotoceniBezi(userId);
@@ -194,6 +196,39 @@ export function ProjectMetaForm({
       router.refresh();
     } catch {
       setError('Nepodařilo se to uložit.');
+    } finally {
+      setDotoceniBezi(null);
+    }
+  }
+
+  /**
+   * Poslat klientovi znovu zprávu o dotočení (zadání 16. 9. 2026: „a můžeme
+   * teď poslat Radce zpětně info o tom, že je dotočeno s Lubošem Ondráčkem?").
+   *
+   * Nic se tím nepřepisuje — jen odejde mail a zvoneček. Viz
+   * /api/projekty/[id]/herci-dotoceno/klientovi.
+   */
+  async function poslatKlientovi(userId: string) {
+    setDotoceniBezi(userId);
+    setError(null);
+    setZpravaKlientovi(null);
+    try {
+      const res = await fetch(
+        `/api/projekty/${encodeURIComponent(caflouProjectId)}/herci-dotoceno/klientovi`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((data as { error?: string })?.error || 'Zprávu se nepodařilo poslat.');
+        return;
+      }
+      setZpravaKlientovi((data as { zprava?: string })?.zprava ?? 'Odesláno.');
+    } catch {
+      setError('Zprávu se nepodařilo poslat.');
     } finally {
       setDotoceniBezi(null);
     }
@@ -477,9 +512,13 @@ export function ProjectMetaForm({
               puvodniText={herecZCaflou}
               dotoceni={dotoceni}
               onPrepnoutDotoceno={(id, stav) => void prepniDotoceno(id, stav)}
+              onPoslatKlientovi={(id) => void poslatKlientovi(id)}
               dotoceniBezi={dotoceniBezi}
               strany={strany}
             />
+            {zpravaKlientovi && (
+              <span className="text-xs font-body text-brand-greenDeep">{zpravaKlientovi}</span>
+            )}
             <span className="text-xs text-muted font-body">
               Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění
               šipkou.

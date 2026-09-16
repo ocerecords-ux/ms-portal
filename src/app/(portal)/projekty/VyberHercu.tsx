@@ -37,6 +37,7 @@ export function VyberHercu({
   disabled,
   dotoceni,
   onPrepnoutDotoceno,
+  onPoslatKlientovi,
   dotoceniBezi,
   strany,
 }: {
@@ -54,6 +55,11 @@ export function VyberHercu({
    */
   dotoceni?: Record<string, string>;
   onPrepnoutDotoceno?: (userId: string, dotoceno: boolean) => void;
+  /**
+   * Poslat klientovi znovu zprávu o dotočení (zadání 16. 9. 2026). Ukazuje se
+   * jen u herce, který dotočeno UŽ MÁ — jinde by to nemělo co poslat.
+   */
+  onPoslatKlientovi?: (userId: string) => void;
   /** ID herce, u kterého se zrovna ukládá - tlačítko na něj chvíli nereaguje. */
   dotoceniBezi?: string | null;
   /**
@@ -134,15 +140,33 @@ export function VyberHercu({
                   audioknize byva hercu vic a kazdy konci jindy. */}
               {onPrepnoutDotoceno &&
                 (dotoceni?.[h.id] ? (
-                  <button
-                    type="button"
-                    disabled={disabled || dotoceniBezi === h.id}
-                    onClick={() => onPrepnoutDotoceno(h.id, false)}
-                    title={`Dotočeno ${new Date(dotoceni[h.id]).toLocaleDateString('cs-CZ')} — klepnutím zrušíte`}
-                    className="text-xs font-heading font-semibold rounded-pill border border-brand-green px-2.5 py-1 text-brand-greenDeep disabled:opacity-50"
-                  >
-                    Zrušit dotočeno
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      disabled={disabled || dotoceniBezi === h.id}
+                      onClick={() => onPrepnoutDotoceno(h.id, false)}
+                      title={`Dotočeno ${new Date(dotoceni[h.id]).toLocaleDateString('cs-CZ')} — klepnutím zrušíte`}
+                      className="text-xs font-heading font-semibold rounded-pill border border-brand-green px-2.5 py-1 text-brand-greenDeep disabled:opacity-50"
+                    >
+                      Zrušit dotočeno
+                    </button>
+                    {/* POSLAT KLIENTOVI ZNOVU (zadani 16. 9. 2026). Klientovi
+                        se fajfka oznamuje jen jednou, v okamziku, kdy vznikne
+                        - kdyz si upozorneni zapnul az potom, jde zprava poslat
+                        odsud. Nic se tim neprepisuje, jen odejde mail
+                        a zvonecek; proto to NENI odskrtnout a zaskrtnout. */}
+                    {onPoslatKlientovi && (
+                      <button
+                        type="button"
+                        disabled={disabled || dotoceniBezi === h.id}
+                        onClick={() => onPoslatKlientovi(h.id)}
+                        title="Poslat klientovi mail a zvoneček o tomhle dotočení znovu"
+                        className="text-xs font-heading rounded-pill border border-line px-2.5 py-1 text-muted hover:border-brand-purple hover:text-brand-purple transition-colors disabled:opacity-50"
+                      >
+                        Poslat klientovi
+                      </button>
+                    )}
+                  </>
                 ) : (
                   <button
                     type="button"

@@ -855,13 +855,23 @@ type HerecDotocenKlientoviInput = {
 export function buildHerecDotocenKlientoviHtml(input: HerecDotocenKlientoviInput): string {
   return emailShell({
     tag: 'Dotočeno',
-    preheader: `${input.nazevProjektu}: s hercem ${input.jmenoHerce} máme dotočeno.`,
+    preheader: `${input.nazevProjektu} — dotočeno, ${input.jmenoHerce}.`,
     body: `
     <span class="badge">Dotočeno</span>
-    <h2>${escapeHtml(input.nazevProjektu)}</h2>
+    <h2>Máme dotočeno</h2>
     <p>${escapeHtml(pozdrav(input.jmenoKlienta))}</p>
-    <p>ve studiu máme dotočeno s hercem <strong>${escapeHtml(input.jmenoHerce)}</strong>.
-       Nahrávka teď jde do postprodukce; jakmile bude hotová, ozveme se.</p>
+    <p>ve studiu jsme dokončili natáčení:</p>
+
+    <!-- Jmena jdou do tabulky, ne do vety. V cestine by „s hercem Lubos
+         Ondracek" bylo spatne a sklonovat prijmeni do 7. padu portal neumi
+         (lib/osloveni.ts resi jen 5. pad u krestniho jmena). Takhle jsou
+         oba udaje v 1. pade a veta drzi at se herec jmenuje jakkoliv. -->
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Projekt</td><td class="value">${escapeHtml(input.nazevProjektu)}</td></tr>
+      <tr><td class="label">Herec</td><td class="value">${escapeHtml(input.jmenoHerce)}</td></tr>
+    </table>
+
+    <p>Nahrávka teď jde do postprodukce. Jakmile bude hotová, ozveme se.</p>
 
     <div class="cta-row">
       <a href="${escapeHtml(input.odkazNaPortal)}" class="cta">Otevřít portál</a>
@@ -881,12 +891,16 @@ export async function sendHerecDotocenKlientoviEmail(input: HerecDotocenKlientov
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `${input.nazevProjektu} - dotoceno s hercem ${input.jmenoHerce}`,
+    subject: `Dotoceno - ${input.jmenoHerce} - ${input.nazevProjektu}`,
     text: [
       pozdrav(input.jmenoKlienta),
       '',
-      `ve studiu mame dotoceno s hercem ${input.jmenoHerce} (projekt ${input.nazevProjektu}).`,
-      'Nahravka ted jde do postprodukce; jakmile bude hotova, ozveme se.',
+      've studiu jsme dokoncili natacení.',
+      '',
+      `Projekt: ${input.nazevProjektu}`,
+      `Herec: ${input.jmenoHerce}`,
+      '',
+      'Nahravka ted jde do postprodukce. Jakmile bude hotova, ozveme se.',
       '',
       input.odkazNaPortal,
     ].join('\n'),

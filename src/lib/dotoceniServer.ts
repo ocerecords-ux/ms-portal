@@ -141,28 +141,13 @@ export async function oznacHerceDotoceno(
         ]);
 
         if (klient) {
-          // Zvonecek i mail - stejne jako u objednavek (zadani 15. 9. 2026).
-          // Zvonecek prvni: je to zapis do nasi databaze, ktery nemuze
-          // skoncit u ciziho SMTP serveru.
-          await notify({
-            userId: klient.id,
-            kind: 'dotoceno-klient',
-            title: `${nazevProjektu}: dotočeno s hercem`,
-            body: `S hercem ${jmenoHerce} máme dotočeno.`,
-            url: '/projekty',
+          // Presne totez, co dela tlacitko „Poslat klientovi znovu" - jedna
+          // funkce, aby se ta dve odeslani nerozesla (viz nize).
+          await posliKlientovi({
+            klient,
+            jmenoHerce,
+            nazevProjektu,
           });
-
-          try {
-            await sendHerecDotocenKlientoviEmail({
-              to: klient.email,
-              jmenoKlienta: klient.name,
-              jmenoHerce,
-              nazevProjektu,
-              odkazNaPortal: `${zakladPortalu()}/projekty`,
-            });
-          } catch (err) {
-            console.error('Zprava klientovi o dotocenem herci selhala:', err);
-          }
         }
 
         if (prijemci.length === 0) {
@@ -212,4 +197,95 @@ export async function zrusHerceDotoceno(
 ) {
   await prisma.herecDotocen.deleteMany({ where: { caflouProjectId, userId } });
   return vratStavPoOdskrtnuti(caflouProjectId, kdo);
+}
+
+/** Jedno odeslani klientovi - mail i zvonecek. Pouziva ho fajfka i „poslat znovu". */
+async function posliKlientovi(vstup: {
+  klient: { id: string; name: string | null; email: string };
+  jmenoHerce: string;
+  nazevProjektu: string;
+}) {
+  // Zvonecek prvni: je to zapis do nasi databaze, ktery nemuze skoncit
+  // u ciziho SMTP serveru.
+  await notify({
+    userId: vstup.klient.id,
+    kind: 'dotoceno-klient',
+    title: `${vstup.nazevProjektu}: dotočeno`,
+    body: `Herec ${vstup.jmenoHerce} má dotočeno.`,
+    url: '/projekty',
+  });
+
+  try {
+    await sendHerecDotocenKlientoviEmail({
+      to: vstup.klient.email,
+      jmenoKlienta: vstup.klient.name,
+      jmenoHerce: vstup.jmenoHerce,
+      nazevProjektu: vstup.nazevProjektu,
+      odkazNaPortal: `${zakladPortalu()}/projekty`,
+    });
+  } catch (err) {
+    console.error('Zprava klientovi o dotocenem herci selhala:', err);
+  }
+}
+
+export type VysledekKlientovi =
+  | { poslano: true; jmenoKlienta: string }
+  | {
+      poslano: false;
+      duvod: 'neznamy-projekt' | 'neni-dotoceno' | 'bez-klienta' | 'nema-zapnuto' | 'reklama';
+    };
+
+/**
+ * POSLAT KLIENTOVI ZNOVU (zadani 16. 9. 2026: „a muzeme ted poslat Radce
+ * zpetne info o tom, ze je dotoceno s Lubosem Ondrackem?").
+ *
+ * Fajfka se schvalne neoznamuje dvakrat - v chatu se „dotoceno" napise klidne
+ * dvakrat a klient by dostal dva stejne maily. Kdyz ale upozorneni vzniklo az
+ * potom, co se dotocilo, je potreba ho poslat dodatecne. Jde to jedine odsud,
+ * a jedine k hercum, kteri fajfku OPRAVDU maji - nedela to z toho zpusob, jak
+ * klientovi oznamit neco, co se nestalo.
+ *
+ * Nic se tim neprepisuje: datum dotoceni, stav projektu ani nase interni
+ * zpravy se nehnou. Odejde jen ten jeden mail a zvonecek.
+ */
+export async function poslatKlientoviZnovu(
+  caflouProjectId: string,
+  userId: string,
+): Promise<VysledekKlientovi> {
+  const [projekt, herec, fajfka] = await Promise.all([
+    prisma.projectMeta.findUnique({
+      where: { caflouProjectId },
+      select: { name: true, projectType: true, klientUserId: true },
+    }),
+    prisma.user.findFirst({
+      where: { id: userId, role: 'HEREC' },
+      select: { name: true, email: true },
+    }),
+    prisma.herecDotocen.findUnique({
+      where: { caflouProjectId_userId: { caflouProjectId, userId } },
+      select: { dotocenoAt: true },
+    }),
+  ]);
+
+  if (!projekt || !herec) return { poslano: false, duvod: 'neznamy-projekt' };
+  if (!fajfka) return { poslano: false, duvod: 'neni-dotoceno' };
+  if (await isRodnyListProjectType(projekt.projectType)) {
+    return { poslano: false, duvod: 'reklama' };
+  }
+  if (!projekt.klientUserId) return { poslano: false, duvod: 'bez-klienta' };
+
+  const klient = await prisma.user.findFirst({
+    where: { id: projekt.klientUserId, active: true, role: 'CLIENT' },
+    select: { id: true, name: true, email: true, dostavaDotocenoKlient: true },
+  });
+  if (!klient) return { poslano: false, duvod: 'bez-klienta' };
+  if (!klient.dostavaDotocenoKlient) return { poslano: false, duvod: 'nema-zapnuto' };
+
+  await posliKlientovi({
+    klient,
+    jmenoHerce: herec.name || herec.email,
+    nazevProjektu: projekt.name || `Projekt ${caflouProjectId}`,
+  });
+
+  return { poslano: true, jmenoKlienta: klient.name || klient.email };
 }
