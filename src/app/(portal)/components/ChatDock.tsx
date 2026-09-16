@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import type { ConversationKind } from '@prisma/client';
 import { MS_SMAJLICI, najdiSmajlika } from '@/lib/msSmajlici';
+import { naVelke, zacatekVety } from '@/lib/velkePismena';
 import { MsSmajlik } from './MsSmajlik';
 import {
   CHAT_TABS,
@@ -549,6 +550,52 @@ function Psatko({
     vyberTextu?.addRange(rozsah);
   }, [autoFocus]);
 
+  /**
+   * VELKÉ PÍSMENO NA ZAČÁTKU VĚTY (zadání 16. 9. 2026: „v chatu bych
+   * potřeboval zapnout, aby na začátku věty bylo automaticky velké písmeno").
+   *
+   * Telefon to dělá sám klávesnicí (viz autoCapitalize níž), počítač ne.
+   * Odchytí se tedy chvíle, kdy člověk zmáčkne písmeno, a když stojí na
+   * začátku věty, vloží se rovnou velké. O tom, kdy věta začíná, rozhoduje
+   * lib/velkePismena.ts - datum ani zkratka větu nekončí.
+   *
+   * PROČ `beforeinput` A NE PŘEPIS HOTOVÉHO TEXTU: prohlížeč si pak vloží
+   * znak sám a kurzor zůstane, kde má být. Přepisování obsahu pole by
+   * v editovatelném bloku s obrázky smajlíků kurzor odhodilo na konec.
+   *
+   * Sahá se jen na PRÁVĚ NAPSANÉ písmeno. Kdo si ho opraví zpátky na malé,
+   * už mu ho nic nepřepíše.
+   */
+  useEffect(() => {
+    const pole = poleRef.current;
+    if (!pole) return;
+
+    function naVstupu(e: Event) {
+      const udalost = e as InputEvent;
+      if (udalost.inputType !== 'insertText' || !udalost.data) return;
+      const velke = naVelke(udalost.data);
+      if (!velke) return;
+
+      const vyberTextu = window.getSelection();
+      if (!vyberTextu || vyberTextu.rangeCount === 0 || !vyberTextu.isCollapsed) return;
+      const kurzor = vyberTextu.getRangeAt(0);
+      const obal = poleRef.current;
+      if (!obal || !obal.contains(kurzor.startContainer)) return;
+
+      // Všechno, co v poli stojí před kurzorem.
+      const pred = document.createRange();
+      pred.selectNodeContents(obal);
+      pred.setEnd(kurzor.startContainer, kurzor.startOffset);
+      if (!zacatekVety(pred.toString())) return;
+
+      e.preventDefault();
+      document.execCommand('insertText', false, velke);
+    }
+
+    pole.addEventListener('beforeinput', naVstupu);
+    return () => pole.removeEventListener('beforeinput', naVstupu);
+  }, []);
+
   function posliVen() {
     const pole = poleRef.current;
     if (!pole) return;
@@ -670,6 +717,9 @@ function Psatko({
           ref={poleRef}
           contentEditable
           suppressContentEditableWarning
+          /* Na telefonu velké písmeno na začátku věty zařídí klávesnice sama;
+             na počítači to dělá efekt výš (zadání 16. 9. 2026). */
+          autoCapitalize="sentences"
           role="textbox"
           aria-multiline="true"
           aria-label={placeholder}
