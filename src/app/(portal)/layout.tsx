@@ -52,7 +52,7 @@ export default async function PortalLayout({ children }: { children: React.React
   let entries: Awaited<ReturnType<typeof loadMenuEntries>> = [];
   let tasks: Awaited<ReturnType<typeof loadMyTasks>> = [];
   let unread = 0;
-  let ucet: { maFotku: boolean } | null = null;
+  let ucet: { maFotku: boolean; udajeDoplneny: boolean } | null = null;
   let quickActions: Awaited<ReturnType<typeof loadQuickActions>> = [];
   let nouzovyRezim = false;
   try {
@@ -64,7 +64,12 @@ export default async function PortalLayout({ children }: { children: React.React
         // Fotka do lišty (zadani 9. 9. 2026) - v session není, bere se z karty účtu.
         // Jen priznak, ne samotna fotka - ta se vydava zvlast a prohlizec si
         // ji drzi v mezipameti (12. 9. 2026, egress na Supabase).
-        prisma.user.findUnique({ where: { id: session.user.id }, select: { maFotku: true } }),
+        prisma.user.findUnique({
+          where: { id: session.user.id },
+          // `udajeDoplneny` je brana nize - herec, ktery prisel pozvankou,
+          // ma napred vyplnit sve udaje (zadani 16. 9. 2026).
+          select: { maFotku: true, udajeDoplneny: true },
+        }),
         // Rychle volby v levem panelu (zadani 9. 9. 2026).
         loadQuickActions(session.user.id, role),
       ]),
@@ -73,6 +78,19 @@ export default async function PortalLayout({ children }: { children: React.React
     console.error('Layout portálu: databáze neodpovídá, jedu v nouzovém režimu.', err);
     nouzovyRezim = true;
   }
+
+  /**
+   * NOVÝ HEREC NEJDŘÍV DOPLNÍ ÚDAJE (zadání 16. 9. 2026: „po tom, co si herec
+   * nastaví heslo, ho to vyzve, ať doplní údaje").
+   *
+   * Brána stojí tady, ne až po nastavení hesla: herec se po pozvánce přihlásí
+   * jako každý jiný a rovnou z přihlášení jde do portálu. Zastaví ho to
+   * i v případě, že formulář poprvé zavřel.
+   *
+   * V nouzovém režimu (`ucet` chybí) se nezastavuje nikdo - nefunkční
+   * databáze nesmí zavřít portál.
+   */
+  if (role === 'HEREC' && ucet && !ucet.udajeDoplneny) redirect('/doplnit-udaje');
 
   // Bonusy ke schvaleni do odznaku v liste (zadani 15. 9. 2026). Vlastni
   // dotaz mimo blok vys: kdyz nevyjde, lista se kvuli nemu nema rozbit.

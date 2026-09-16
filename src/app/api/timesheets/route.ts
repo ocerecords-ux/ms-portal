@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { DEFAULT_HOURLY_RATE } from '@/lib/timesheets';
 import { polozkyVykazu, schemaVykazu } from '@/lib/timesheetyVstup';
+import { hlaskaOKolizi, najdiKolizi } from '@/lib/timesheetyKolize';
 
 // Vykazy zvukaru (zadani 6. 9. 2026).
 //
@@ -29,6 +30,13 @@ export async function POST(req: NextRequest) {
     const pripraveno = polozkyVykazu(parsed.data);
     if (!pripraveno.ok) {
       return NextResponse.json({ error: pripraveno.chyba }, { status: 400 });
+    }
+
+    // Dvakrat tentyz vykaz (zadani 16. 9. 2026) - jinak se mesic vyfakturuje
+    // dvakrat a nikdo si toho nevsimne.
+    const kolize = await najdiKolizi(session.user.id, pripraveno.data);
+    if (kolize) {
+      return NextResponse.json({ error: hlaskaOKolizi(kolize) }, { status: 409 });
     }
 
     const user = await prisma.user.findUnique({

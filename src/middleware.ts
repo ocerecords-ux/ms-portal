@@ -29,6 +29,8 @@ export const config = {
     '/vykazy/:path*',
     '/kalendar/:path*',
     '/moje-terminy/:path*',
+    '/pozvanky/:path*',
+    '/doplnit-udaje/:path*',
     '/admin/:path*',
   ],
 };

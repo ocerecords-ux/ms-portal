@@ -4,6 +4,7 @@ import { NewUserForm } from './NewUserForm';
 import { UsersTable, type UsersColumn, type UserRow } from './UsersTable';
 import { ROLE_LABELS, USER_TABS } from '@/lib/roles';
 import { AdminSearch } from '../AdminSearch';
+import { NovaPozvankaHerce } from '@/components/NovaPozvankaHerce';
 
 // Bez companyId (default pohled) se uzivatele tridi do 3 zalozek podle
 // zadani 5. 9. 2026 (upresneni) - Mediaspace / Klienti / Herci. Dodavatele uz
@@ -102,7 +103,13 @@ export default async function UsersAdminPage({
             </p>
           )}
         </div>
-        <div className="max-w-3xl w-full sm:w-auto">{zalozitUzivatele}</div>
+        <div className="flex items-start gap-3 flex-wrap max-w-3xl w-full sm:w-auto justify-end">
+          {/* Novy herec se nezaklada rucne, ale pozvankou (zadani 16. 9. 2026:
+              „v Uzivatelich, hercich bude nahore tlacitko Nova pozvanka") -
+              jmeno a cislo uctu si vyplni sam, at se to neopisuje z telefonu. */}
+          {!filteredCompany && activeTab.key === 'herci' && <NovaPozvankaHerce />}
+          {zalozitUzivatele}
+        </div>
       </div>
 
       {!filteredCompany && (

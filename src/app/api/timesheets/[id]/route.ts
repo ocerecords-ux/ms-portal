@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { polozkyVykazu, schemaVykazu } from '@/lib/timesheetyVstup';
+import { hlaskaOKolizi, najdiKolizi } from '@/lib/timesheetyKolize';
 
 // Smazani vykazu. Zvukar smi mazat jen svoje, admin cokoliv.
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -62,6 +63,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const pripraveno = polozkyVykazu(parsed.data);
     if (!pripraveno.ok) {
       return NextResponse.json({ error: pripraveno.chyba }, { status: 400 });
+    }
+
+    // Stejne hlidani jako pri zalozeni - upravou se nesmi vyrobit to, co by
+    // zalozeni neproslo. Sam se sebou se vykaz nebije (kromeId).
+    const kolize = await najdiKolizi(entry.userId, pripraveno.data, entry.id);
+    if (kolize) {
+      return NextResponse.json({ error: hlaskaOKolizi(kolize) }, { status: 409 });
     }
 
     const upraveny = await prisma.timesheetEntry.update({

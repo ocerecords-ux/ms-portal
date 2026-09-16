@@ -22,7 +22,7 @@ export function NovaZadostForm({
   firmy: { id: string; name: string }[];
 }) {
   const router = useRouter();
-  const [druh, setDruh] = useState<'HEREC' | 'FIRMA'>('HEREC');
+  const druh: 'HEREC' | 'FIRMA' = 'HEREC';
   const [komu, setKomu] = useState<'novy' | 'stavajici'>('novy');
   const [id, setId] = useState('');
   const [jmeno, setJmeno] = useState('');
@@ -90,25 +90,10 @@ export function NovaZadostForm({
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <h2 className="font-heading font-semibold text-ink m-0">Nová žádost</h2>
 
-      <div className="flex gap-2 flex-wrap">
-        {(['HEREC', 'FIRMA'] as const).map((d) => (
-          <button
-            key={d}
-            type="button"
-            onClick={() => {
-              setDruh(d);
-              setId('');
-            }}
-            className={`text-sm font-heading font-semibold rounded-pill border px-4 py-2 transition-colors ${
-              druh === d
-                ? 'border-brand-purple text-brand-purple bg-accentTint'
-                : 'border-line text-muted hover:border-brand-purple'
-            }`}
-          >
-            {d === 'HEREC' ? 'Herec' : 'Firma'}
-          </button>
-        ))}
-      </div>
+      {/* FORMULÁŘ PRO FIRMY SE ZATÍM NEDĚLÁ (zadání 16. 9. 2026: „pro firmy
+          ten formulář dělat nebudeme zatím"). Nabídka druhu je proto pryč -
+          žádá se jen po hercích. Zbytek kódu na firmy čeká připravený, až na
+          to přijde řeč. */}
 
       <div className="flex gap-4 flex-wrap text-sm font-body text-ink">
         <label className="flex items-center gap-2">

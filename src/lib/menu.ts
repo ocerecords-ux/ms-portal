@@ -37,6 +37,10 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // zvukar jen cte. Herec ma vlastni, uzsi pohled.
   '/kalendar': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
   '/moje-terminy': ['HEREC'],
+  // Pozvanky hercu (zadani 16. 9. 2026: „tohle tlacitko musi mit zaple
+  // Zuzo-labuzo i Helca - produkce"). Administrace je jen pro ADMIN,
+  // proto samostatna stranka i pro Produkci.
+  '/pozvanky': ['ADMIN', 'PRODUKCE'],
   // Administrace - jen Zuzo-labuzo.
   '/admin': ['ADMIN'],
   // Firmy z Caflou uz nejsou v menu (odpojeni 11. 9. 2026), stranka ale
@@ -97,6 +101,8 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/admin/bruno', label: 'Bruno' },
   // Zadosti o udaje odkazem (zadani 16. 9. 2026).
   { href: '/admin/udaje', label: 'Údaje' },
+  // Pozvanky hercu (zadani 16. 9. 2026) - pro Zuzo-labuzo i Produkci.
+  { href: '/pozvanky', label: 'Pozvánky' },
   { href: '/muj-ucet', label: 'Můj účet' },
 ];
 

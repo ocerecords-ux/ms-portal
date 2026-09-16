@@ -295,6 +295,14 @@ model User {
   addressZip      String?   // PSC
   addressCountry  String?   // zeme
 
+  /// JESTE NEDOPLNIL SVE UDAJE (zadani 16. 9. 2026: „po tom, co si herec
+  /// nastavi heslo, ho to vyzve, at doplni udaje").
+  ///
+  /// Vychozi je TRUE, tedy „neni co doplnovat" - jinak by portal po nasazeni
+  /// zastavil u formulare vsechny herce, kteri uz v nem davno jsou. Na false
+  /// se to dava jen tem, kdo prijdou novou pozvankou.
+  udajeDoplneny Boolean @default(true)
+
   // --- Pozvanka do portalu (zadani 5. 9. 2026) ---
   // Misto rucniho rozesilani hesel posle admin uzivateli pozvanku; odkaz v
   // e-mailu obsahuje jednorazovy token, kterym si uzivatel sam nastavi heslo.

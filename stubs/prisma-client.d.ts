@@ -89,6 +89,7 @@ declare module '@prisma/client' {
     dostavaDotocenoKlient: boolean;
     dostavaObjednavky: boolean;
     dostavaVyplneneUdaje: boolean;
+    udajeDoplneny: boolean;
     vychoziManazerAudioknih: boolean;
     dodavatelCompanyId: string | null;
     birthNumber: string | null;
