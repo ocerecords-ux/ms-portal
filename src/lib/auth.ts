@@ -2,6 +2,7 @@ import { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
+import { jeZahlceniDatabaze, zkusDatabazi } from '@/lib/dbZnovu';
 
 /**
  * Ucty klientu zaklada vyhradne administrator Mediaspace (zadna verejna
@@ -22,13 +23,39 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'E-mail', type: 'email' },
         password: { label: 'Heslo', type: 'password' },
       },
+      /**
+       * PROČ SE TU LOGUJE: přihlášení umí odpovědět jedinou větou „nesprávný
+       * e-mail nebo heslo" — schválně, aby stránka neprozrazovala, které
+       * adresy v portálu existují. Jenže pak nejde poznat rozdíl mezi
+       * překlepem v heslu, vypnutým účtem a databází, která zrovna
+       * neodpověděla (16. 9. 2026: „nemůžu se teď přihlásit pod svým účtem").
+       * Do logu proto jde DŮVOD - nikdy heslo.
+       */
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+        const email = credentials.email.toLowerCase().trim();
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() },
-        });
-        if (!user || !user.active) return null;
+        let user: Awaited<ReturnType<typeof prisma.user.findUnique>> = null;
+        try {
+          // Přeplněný pooler Supabase se tvářil jako špatné heslo - viz
+          // lib/dbZnovu.ts. Pár set milisekund a místo je zpátky.
+          user = await zkusDatabazi(() => prisma.user.findUnique({ where: { email } }));
+        } catch (err) {
+          console.error(
+            `Prihlaseni "${email}": databaze neodpovedela${jeZahlceniDatabaze(err) ? ' (plny pooler)' : ''}:`,
+            err,
+          );
+          return null;
+        }
+
+        if (!user) {
+          console.warn(`Prihlaseni "${email}": takovy ucet v portalu neni.`);
+          return null;
+        }
+        if (!user.active) {
+          console.warn(`Prihlaseni "${email}": ucet je vypnuty.`);
+          return null;
+        }
         /**
          * ROBOT SE NEPRIHLASI (zadani 12. 9. 2026). Ucty jako Bruno maji
          * nahodne heslo, ktere nikde neexistuje, ale spolehat se na to je
@@ -42,7 +69,10 @@ export const authOptions: NextAuthOptions = {
         if (user.role === 'ROBOT') return null;
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          console.warn(`Prihlaseni "${email}": nesouhlasi heslo.`);
+          return null;
+        }
 
         return {
           id: user.id,
