@@ -5,6 +5,7 @@ import { ExpenseEditor } from './ExpenseEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
 import { expenseTotalMinor } from '@/lib/expenses';
 import { QrPlatba } from '@/components/QrPlatba';
+import { NahledPrilohy } from './NahledPrilohy';
 
 // Detail prijateho dokladu.
 export const dynamic = 'force-dynamic';
@@ -32,11 +33,31 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
   const kUhrade = expenseTotalMinor(expense.amountExVatMinor, expense.vatRate);
   const prijemce = expense.supplier?.name ?? expense.supplierName ?? null;
 
+  /**
+   * NÁHLED PŘÍLOHY VEDLE FORMULÁŘE (zadání 16. 9. 2026: „ať se mi na pravé
+   * straně obrazovky zobrazí rovnou náhled té přílohy").
+   *
+   * Účtenku člověk při vyplňování opisuje - částku, datum, dodavatele - a
+   * otevírat ji na druhé záložce znamená přepínat u každého políčka. Doklad
+   * bez přílohy zůstává úzký jako dřív; roztažená stránka s prázdnou půlkou
+   * by vypadala rozbitě.
+   */
+  const maPrilohu = Boolean(expense.attachmentUrl);
+
   return (
-    <div className="flex flex-col gap-6 max-w-3xl">
+    <div className={`flex flex-col gap-6 ${maPrilohu ? 'max-w-[1400px]' : 'max-w-3xl'}`}>
       <Link href="/admin/doklady/vydaje" className="text-muted text-sm font-heading no-underline">
         ← Zpět na výdaje
       </Link>
+
+      <div
+        className={
+          maPrilohu
+            ? 'grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(420px,44%)] gap-6 items-start'
+            : ''
+        }
+      >
+        <div className="flex flex-col gap-6 min-w-0">
 
       {!expense.paid && (
         <QrPlatba
@@ -85,6 +106,16 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
         companies={companies}
         projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
       />
+        </div>
+
+        {/* Náhled drží na místě i při rolování formuláře - jinak by u delšího
+            dokladu zmizel nahoře a byl by k ničemu. */}
+        {maPrilohu && (
+          <div className="xl:sticky xl:top-6">
+            <NahledPrilohy expenseId={expense.id} nazev={expense.attachmentName} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
