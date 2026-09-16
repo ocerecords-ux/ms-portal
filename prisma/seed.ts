@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
-import { POZVANKA_HERCE } from './navodPozvankaHerce';
+import { VYCHOZI_NAVODY } from './vychoziNavody';
 
 const prisma = new PrismaClient();
 
@@ -175,7 +175,7 @@ async function main() {
   await skupinaProCelyTym();
   await doplnIkonyTypu();
   await srovnejPriznakFotky();
-  await zalozPrvniNavod();
+  await zalozVychoziNavody();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -533,40 +533,42 @@ async function doplnIkonyTypu() {
 }
 
 /**
- * PRVNÍ NÁVOD DO NÁPOVĚDY.
+ * VÝCHOZÍ NÁVODY DO NÁPOVĚDY.
  *
- * Zakládá se jen jednou. Kdyby ho seed přepisoval při každém nasazení, přišel
- * by člověk o každou svoji úpravu - a návody se mají psát v portálu, ne tady.
+ * Zakládají se jen jednou. Kdyby je seed přepisoval při každém nasazení,
+ * přišel by člověk o každou svoji úpravu - a návody se mají psát v portálu,
+ * ne tady.
  */
-async function zalozPrvniNavod() {
-  const n = POZVANKA_HERCE;
-  try {
-    const uz = await prisma.navod.findUnique({ where: { slug: n.slug }, select: { id: true } });
-    if (uz) return;
+async function zalozVychoziNavody() {
+  for (const n of VYCHOZI_NAVODY) {
+    try {
+      const uz = await prisma.navod.findUnique({ where: { slug: n.slug }, select: { id: true } });
+      if (uz) continue;
 
-    const hledaci = [n.nazev, n.perex, n.obsah]
-      .join(' \n ')
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .toLowerCase()
-      .replace(/\s+/g, ' ')
-      .trim();
+      const hledaci = [n.nazev, n.perex, n.obsah]
+        .join(' \n ')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
 
-    await prisma.navod.create({
-      data: {
-        slug: n.slug,
-        nazev: n.nazev,
-        perex: n.perex,
-        kategorie: n.kategorie,
-        poradi: n.poradi,
-        obsah: n.obsah,
-        hledaci,
-        zverejneno: true,
-      },
-    });
-    console.log('  navod: zalozen "' + n.nazev + '"');
-  } catch (err) {
-    // Navod je jen obsah - kdyby se nepovedl, nesmi to shodit cely seed.
-    console.warn('  navod se nepodarilo zalozit:', err);
+      await prisma.navod.create({
+        data: {
+          slug: n.slug,
+          nazev: n.nazev,
+          perex: n.perex,
+          kategorie: n.kategorie,
+          poradi: n.poradi,
+          obsah: n.obsah,
+          hledaci,
+          zverejneno: true,
+        },
+      });
+      console.log('  navod: zalozen "' + n.nazev + '"');
+    } catch (err) {
+      // Navod je jen obsah - kdyby se nepovedl, nesmi to shodit cely seed.
+      console.warn('  navod "' + n.nazev + '" se nepodarilo zalozit:', err);
+    }
   }
 }
