@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { z } from 'zod';
-import { authOptions } from '@/lib/auth';
+import { kdoJe } from '@/lib/kdoJe';
 import { pozviHerce } from '@/lib/pozvankaHerce';
 
 /**
@@ -19,10 +18,15 @@ const SMI_ZVAT = ['ADMIN', 'PRODUKCE'];
 const schema = z.object({ email: z.string().trim().min(3).max(200) });
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
-  if (!SMI_ZVAT.includes(session.user.role)) {
-    return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  const ja = await kdoJe(req);
+  if (!ja) {
+    return NextResponse.json(
+      { error: 'Přihlášení vypršelo. Načtěte prosím stránku znovu.' },
+      { status: 401 },
+    );
+  }
+  if (!SMI_ZVAT.includes(ja.role)) {
+    return NextResponse.json({ error: 'Nemáte oprávnění zvát herce.' }, { status: 403 });
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
