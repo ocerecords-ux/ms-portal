@@ -145,6 +145,53 @@ export function isStorageConfigured(): boolean {
  * jeste neni nakonfigurovane (chybi env promenne), priloha se preskoci -
  * objednavka se presto ulozi, jen bez souboru.
  */
+/**
+ * Adresa, pod kterou v úložišti leží soubor s tímhle klíčem. Skládá se stejně
+ * jako při ukládání - viz uploadOrderAttachment níž.
+ */
+export function adresaVUlozisti(key: string): string | null {
+  const bucket = process.env.S3_BUCKET;
+  if (!bucket) return null;
+  const endpoint = process.env.S3_ENDPOINT;
+  return endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
+}
+
+/**
+ * PŘÍLOHA OBJEDNÁVKY JDE DO ÚLOŽIŠTĚ ROVNOU Z PROHLÍŽEČE (oprava 16. 9. 2026:
+ * „klientovi se nepodařilo odeslat objednávku").
+ *
+ * Objednávka s přílohou šla celá přes portál, a funkce na Vercelu mají strop
+ * na velikost požadavku kolem 4,5 MB. Naskenovaný rukopis ho přeleze snadno —
+ * klientce se stodevítistránkové PDF dvakrát vrátilo s chybou 413 a formulář
+ * uměl říct jen „Objednávku se nepodařilo odeslat". Přitom chat tudy soubory
+ * posílá odjakživa (viz podepsanyUploadPrilohy); objednávka na to jen nebyla
+ * napojená.
+ *
+ * Klíč si určuje server, stejně jako u chatu - kdyby ho posílal prohlížeč,
+ * dal by se jím přepsat cizí soubor.
+ */
+export async function podepsanyUploadObjednavky(
+  fileName: string,
+  mime: string,
+  companyId: string,
+): Promise<{ key: string; uploadUrl: string } | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+
+  const key = `objednavky/${companyId}/${randomUUID()}-${bezpecnyNazev(fileName)}`;
+  const uploadUrl = await getSignedUrl(
+    client,
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: mime || 'application/octet-stream',
+    }),
+    { expiresIn: PLATNOST_UPLOADU },
+  );
+  return { key, uploadUrl };
+}
+
 export async function uploadOrderAttachment(file: File, companyId: string): Promise<{ url: string; name: string } | null> {
   const client = getClient();
   const bucket = process.env.S3_BUCKET;
@@ -162,10 +209,7 @@ export async function uploadOrderAttachment(file: File, companyId: string): Prom
     }),
   );
 
-  const endpoint = process.env.S3_ENDPOINT;
-  const url = endpoint ? `${endpoint}/${bucket}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
-
-  return { url, name: file.name };
+  return { url: adresaVUlozisti(key) ?? '', name: file.name };
 }
 
 /** Fotka ulozena primo v databazi nesmi nafouknout radek uzivatele. */

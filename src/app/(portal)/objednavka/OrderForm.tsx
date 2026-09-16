@@ -56,7 +56,12 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       formData.set('deadline', deadline);
       formData.set('preferredNarrator', narrators.join(', '));
       formData.set('note', note);
-      if (file) formData.set('attachment', file);
+      // Priloha jde do uloziste zvlast, objednavka pak nese jen klic.
+      if (file) {
+        const klic = await nahrajPrilohu(file);
+        formData.set('attachmentKey', klic);
+        formData.set('attachmentName', file.name);
+      }
 
       const res = await fetch('/api/orders', { method: 'POST', body: formData });
       const body = await res.json().catch(() => ({}));
@@ -437,4 +442,35 @@ function Field({
       {children}
     </div>
   );
+}
+
+/**
+ * Pošle přílohu rovnou do úložiště a vrátí klíč, pod kterým tam leží
+ * (oprava 16. 9. 2026: „klientovi se nepodařilo odeslat objednávku").
+ *
+ * Soubor SCHVÁLNĚ NEJDE PŘES PORTÁL: funkce na Vercelu mají strop na velikost
+ * požadavku kolem 4,5 MB a naskenovaný rukopis ho přeleze snadno — objednávka
+ * pak spadla na chybu 413 a formulář uměl říct jen „nepodařilo se odeslat".
+ * Stejnou cestou posílá soubory chat.
+ */
+async function nahrajPrilohu(soubor: File): Promise<string> {
+  const podpis = await fetch('/api/orders/priloha/podpis', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: soubor.name, mime: soubor.type, size: soubor.size }),
+  });
+  const data = await podpis.json().catch(() => ({}));
+  if (!podpis.ok || !data?.uploadUrl) {
+    throw new Error(data?.error || 'Přílohu se nepodařilo připravit k odeslání.');
+  }
+
+  const nahrano = await fetch(data.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': soubor.type || 'application/octet-stream' },
+    body: soubor,
+  });
+  if (!nahrano.ok) {
+    throw new Error('Přílohu se nepodařilo nahrát. Zkuste to prosím znovu.');
+  }
+  return data.key as string;
 }

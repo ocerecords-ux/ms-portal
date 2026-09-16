@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { calculatePrice } from '@/lib/price';
-import { uploadOrderAttachment } from '@/lib/storage';
+import { adresaVUlozisti, overPrilohu, uploadOrderAttachment } from '@/lib/storage';
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/email';
 import { noveIdProjektu } from '@/lib/projektId';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
@@ -81,8 +81,35 @@ export async function POST(req: NextRequest) {
   // ale ted se to aspon zapise do logu a REKNE ODESILATELI.
   let attachment: { url: string; name: string } | null = null;
   let prilohaSelhala: string | null = null;
+
+  /**
+   * PŘÍLOHA UŽ V ÚLOŽIŠTI LEŽÍ (oprava 16. 9. 2026: „klientovi se nepodařilo
+   * odeslat objednávku").
+   *
+   * Prohlížeč ji tam pošle sám na podepsanou adresu (/api/orders/priloha/podpis)
+   * a sem přijde jen klíč. Soubor tak neprochází portálem a nenaráží na strop
+   * velikosti požadavku, o který se stodevítistránkové PDF dvakrát rozbilo.
+   *
+   * Že soubor opravdu leží v úložišti, se OVĚŘUJE - prohlížeč hlásí, co chce,
+   * a objednávka nesmí odkazovat na nic.
+   */
+  const attachmentKey = String(formData.get('attachmentKey') ?? '').trim();
+  const attachmentName = String(formData.get('attachmentName') ?? '').trim();
   const file = formData.get('attachment');
-  if (file instanceof File && file.size > 0) {
+
+  if (attachmentKey) {
+    const overeno = await overPrilohu(attachmentKey);
+    const url = overeno ? adresaVUlozisti(attachmentKey) : null;
+    if (url) {
+      attachment = { url, name: attachmentName || 'příloha' };
+    } else {
+      console.error(
+        `Priloha objednavky nedorazila do uloziste (firma ${companyId}, klic "${attachmentKey}").`,
+      );
+      prilohaSelhala = attachmentName || 'příloha';
+    }
+  } else if (file instanceof File && file.size > 0) {
+    // Zaloha pro starsi formulare a male soubory - jde porad pres portal.
     attachment = await uploadOrderAttachment(file, companyId);
     if (!attachment) {
       console.error(
