@@ -3,6 +3,7 @@ import { zapisBrunoUdalost } from '@/lib/projektLogServer';
 import { jeZminen } from '@/lib/chatUpozorneniServer';
 import { anthropicHlavicky } from '@/lib/anthropic';
 import { oznacHerceDotoceno, zrusHerceDotoceno } from '@/lib/dotoceniServer';
+import { nactiPrirucku } from '@/lib/brunoPrirucka';
 import { bezTitulu } from '@/lib/jmena';
 
 /**
@@ -197,7 +198,19 @@ type Kontext = {
   caflouProjectId: string | null;
   /** Oslovil ho nekdo jmenem? Pak ma odpovedet vzdycky. */
   oslovenPrimo: boolean;
+  /**
+   * „Jak to u nas chodi" - psana lidmi v administraci (zadani 16. 9. 2026).
+   * Viz lib/brunoPrirucka.ts; dostane ji i mimo kanal projektu, protoze
+   * i v soukrome zprave se ho nekdo muze zeptat, jak co u nas funguje.
+   */
+  prirucka: string;
   nazevProjektu: string | null;
+  /**
+   * Co portal o projektu vi (zadani 16. 9. 2026). Do ted Bruno videl jen
+   * nazev a herce, takze nepoznal audioknihu od reklamy a ptal se na veci,
+   * ktere ma portal vyplnene.
+   */
+  oProjektu: { popisek: string; hodnota: string }[];
   herci: { id: string; jmeno: string }[];
   natoceno: { jmeno: string | null; strana: number }[];
   /** Jmena hercu, kteri uz maji dotoceno - at se Bruno neptá zbytecne. */
@@ -220,6 +233,10 @@ function sestavDotaz(k: Kontext): string {
 
   const poznamky = k.poznamky.length ? k.poznamky.map((p) => `- ${p}`).join('\n') : '- (zatím nic)';
 
+  const oProjektu = k.oProjektu.length
+    ? k.oProjektu.map((u) => `- ${u.popisek}: ${u.hodnota}`).join('\n')
+    : '- (portál toho o projektu zatím moc neví)';
+
   const zpravy = k.zpravy
     .map((z) => `${z.jeBruno ? 'Bruno (ty)' : z.kdo}: ${z.text}`)
     .join('\n');
@@ -227,7 +244,10 @@ function sestavDotaz(k: Kontext): string {
   if (!k.caflouProjectId) {
     // Mimo kanal projektu nema Bruno co hlidat - jen odpovida tomu, kdo ho
     // oslovil. Zbytek kontextu by ho jen mátl.
-    return `Tohle NENÍ kanál projektu, je to ${k.nazevProjektu ? `rozhovor „${k.nazevProjektu}"` : 'soukromá zpráva'}.
+    return `JAK TO U NÁS CHODÍ (napsali lidi z Mediaspace — tohle platí, i když si chat říká něco jiného):
+${k.prirucka}
+
+Tohle NENÍ kanál projektu, je to ${k.nazevProjektu ? `rozhovor „${k.nazevProjektu}"` : 'soukromá zpráva'}.
 Někdo tě oslovil jménem. Odpověz mu.
 
 CO SI PAMATUJEŠ:
@@ -241,7 +261,13 @@ bude „dotaz" se zprávou do kanálu — odpověz krátce a k věci, a když se
 na něco, co nevíš, řekni to rovnou.`;
   }
 
-  return `PROJEKT: ${k.nazevProjektu}
+  return `JAK TO U NÁS CHODÍ (napsali lidi z Mediaspace — tohle platí, i když si chat říká něco jiného):
+${k.prirucka}
+
+PROJEKT: ${k.nazevProjektu}
+
+CO O PROJEKTU VÍ PORTÁL:
+${oProjektu}
 
 HERCI NA PROJEKTU:
 ${herci}
@@ -356,6 +382,16 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
               name: true,
               actorUserId: true,
               herci: { select: { id: true, name: true, email: true } },
+              // Co portal o projektu vi (zadani 16. 9. 2026) - at se Bruno
+              // neptá na vyplnene udaje a pozna audioknihu od reklamy.
+              projectType: true,
+              statusName: true,
+              pageCount: true,
+              releaseDate: true,
+              companyName: true,
+              company: { select: { name: true } },
+              manager: { select: { name: true, email: true } },
+              klient: { select: { name: true, email: true } },
             },
           })
         : Promise.resolve(null),
@@ -404,10 +440,37 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
     /** ID herců, kteří fajfku opravdu mají - podle toho se ruší (viz níž). */
     const dotoceniIds = dotoceni.map((d) => d.userId);
 
+    /**
+     * Prirucka „jak to u nas chodi" (zadani 16. 9. 2026). Nacita se ke kazdemu
+     * rozhodnuti, at se zmena v administraci projevi hned - je to jeden radek
+     * a Bruno stejne ceka na model.
+     */
+    const prirucka = await nactiPrirucku();
+
+    /** Udaje o projektu do zadani - prazdne se vynechavaji, at to neni seznam pomlcek. */
+    const oProjektu: { popisek: string; hodnota: string }[] = [];
+    if (meta) {
+      const pridej = (popisek: string, hodnota: string | null | undefined) => {
+        const t = hodnota?.trim();
+        if (t) oProjektu.push({ popisek, hodnota: t });
+      };
+      pridej('Typ projektu', meta.projectType);
+      pridej('Stav', meta.statusName);
+      pridej('Firma', meta.company?.name ?? meta.companyName);
+      pridej('Klient', meta.klient?.name || meta.klient?.email);
+      pridej('Manažer projektu', meta.manager?.name || meta.manager?.email);
+      if (meta.pageCount) pridej('Rozsah', `${meta.pageCount} normostran`);
+      if (meta.releaseDate) {
+        pridej('Vychází', meta.releaseDate.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' }));
+      }
+    }
+
     const kontext: Kontext = {
       caflouProjectId,
       oslovenPrimo,
+      prirucka,
       nazevProjektu: meta?.name || zprava.conversation.name || null,
+      oProjektu,
       herci,
       natoceno: natoceno.map((n) => ({
         jmeno: n.user ? n.user.name || n.user.email : null,

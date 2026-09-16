@@ -2351,6 +2351,26 @@ model BrunoPamet {
   @@index([caflouProjectId, createdAt])
 }
 
+/// Příručka pro Bruna - jak to u nás chodí (zadání 16. 9. 2026: „nedokázali
+/// bychom Bruna naučit vnímat i naši workflow, aby znal, jak funguje portál
+/// a naše procesy?").
+///
+/// Rozdíl proti BrunoPamet: tohle píšou LIDI v administraci a Bruno to jen
+/// čte. Patří sem věci, které si nemá odvozovat z chatu - co který stav
+/// projektu znamená, kdo co dělá, co u nás znamená „dotáčka" nebo
+/// „přeposlech". Pamět si naopak plní sám a jsou v ní zvyklosti, které
+/// z chatu vypozoroval.
+///
+/// Jeden řádek, id "default" - stejně jako BudgetSettings. Když řádek není,
+/// použije se výchozí text z lib/brunoPrirucka.ts.
+model BrunoPrirucka {
+  id        String   @id @default("default")
+  text      String   @db.Text
+  updatedAt DateTime @updatedAt
+  /// Kdo příručku naposledy uložil - jméno, ne vazba; je to jen popisek.
+  updatedBy String?
+}
+
 /// Kdo prave pise v konverzaci (zadani 12. 9. 2026: „aby bylo videt, kdyz
 /// s nekym chatujes, ze na te druhe strane ten clovek pise").
 ///

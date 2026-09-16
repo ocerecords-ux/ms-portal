@@ -49,6 +49,8 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/studia': ['ADMIN'],
   '/admin/doklady': ['ADMIN'],
   '/admin/archiv': ['ADMIN'],
+  // Co Bruno vi o nasi praci (zadani 16. 9. 2026).
+  '/admin/bruno': ['ADMIN'],
 };
 
 /** Uvidi uzivatel s touhle roli tenhle odkaz? Vlastni odkaz vidi kazdy. */
@@ -88,6 +90,9 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   // Archiv smazanych zaznamu (zadani 10. 9. 2026). Neni ve vychozi liste -
   // clovek tam chodi jednou za rok, kdyz neco smazal a chce to zpatky.
   { href: '/admin/archiv', label: 'Archiv' },
+  // Prirucka pro Bruna (zadani 16. 9. 2026). Neni ve vychozi liste - clovek
+  // tam jde, kdyz se Bruno chova jinak, nez by mel.
+  { href: '/admin/bruno', label: 'Bruno' },
   { href: '/muj-ucet', label: 'Můj účet' },
 ];
 
