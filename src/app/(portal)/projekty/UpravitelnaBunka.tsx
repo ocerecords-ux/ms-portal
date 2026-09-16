@@ -193,7 +193,10 @@ export function UpravitelneDatum({
         }}
         onBlur={() => setUpravuje(false)}
         title="Vyberte datum z kalendáře"
-        className="rounded-lg border border-brand-purple bg-field px-2 py-1 text-sm font-heading text-ink outline-none"
+        /* Pevná šířka na celé „dd.mm.rrrr" - v úzkém sloupci se políčko jinak
+           zmáčkne a ukousne rok (16. 9. 2026). Radši ať přeteče přes buňku,
+           než aby člověk psal do něčeho, co nevidí celé. */
+        className="w-[9.5rem] rounded-lg border border-brand-purple bg-field px-2 py-1 text-sm font-heading text-ink outline-none"
       />
     </span>
   );
