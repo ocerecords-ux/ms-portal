@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { pozdrav } from '@/lib/osloveni';
+import { pozdrav, sedmyPad } from '@/lib/osloveni';
 import { bezZnacek, znackyNaHtml } from '@/lib/formatovaniZpravy';
 
 /**
@@ -852,33 +852,33 @@ type HerecDotocenKlientoviInput = {
   odkazNaPortal: string;
 };
 
+/**
+ * Věta o dotočení. Jméno herce jde do 7. pádu — „s Lubošem Ondráčkem"
+ * (zadání 16. 9. 2026). Když se jméno skloňovat nedá (přezdívka, závorka,
+ * cizí tvar), věta se o něj zkrátí; první pád uprostřed věty by byl horší
+ * než žádné jméno.
+ */
+function vetaODotoceni(jmenoHerce: string): string {
+  const sedmy = sedmyPad(jmenoHerce);
+  return sedmy
+    ? `právě jsme dokončili natáčení s ${sedmy}.`
+    : 'právě jsme dokončili natáčení.';
+}
+
 export function buildHerecDotocenKlientoviHtml(input: HerecDotocenKlientoviInput): string {
   return emailShell({
     tag: 'Dotočeno',
     preheader: `${input.nazevProjektu} — dotočeno, ${input.jmenoHerce}.`,
+    // KRATKÁ ZPRÁVA (zadání 16. 9. 2026: „zbytek pryč, jen nechat tlačítko
+    // do portálu"). Pozdrav, jedna věta, tlačítko - nic víc. Název projektu
+    // nese předmět mailu.
     body: `
-    <span class="badge">Dotočeno</span>
-    <h2>Máme dotočeno</h2>
     <p>${escapeHtml(pozdrav(input.jmenoKlienta))}</p>
-    <p>ve studiu jsme dokončili natáčení:</p>
-
-    <!-- Jmena jdou do tabulky, ne do vety. V cestine by „s hercem Lubos
-         Ondracek" bylo spatne a sklonovat prijmeni do 7. padu portal neumi
-         (lib/osloveni.ts resi jen 5. pad u krestniho jmena). Takhle jsou
-         oba udaje v 1. pade a veta drzi at se herec jmenuje jakkoliv. -->
-    <table role="presentation" class="field-table">
-      <tr><td class="label">Projekt</td><td class="value">${escapeHtml(input.nazevProjektu)}</td></tr>
-      <tr><td class="label">Herec</td><td class="value">${escapeHtml(input.jmenoHerce)}</td></tr>
-    </table>
-
-    <p>Nahrávka teď jde do postprodukce. Jakmile bude hotová, ozveme se.</p>
+    <p>${escapeHtml(vetaODotoceni(input.jmenoHerce))}</p>
 
     <div class="cta-row">
       <a href="${escapeHtml(input.odkazNaPortal)}" class="cta">Otevřít portál</a>
     </div>
-
-    <p class="small">Tuhle zprávu dostáváte, protože máte v MS Portalu v „Můj účet"
-       zapnuté upozornění na dotočené herce. Tamtéž se dá vypnout.</p>
 `,
   });
 }
@@ -895,12 +895,7 @@ export async function sendHerecDotocenKlientoviEmail(input: HerecDotocenKlientov
     text: [
       pozdrav(input.jmenoKlienta),
       '',
-      've studiu jsme dokoncili natacení.',
-      '',
-      `Projekt: ${input.nazevProjektu}`,
-      `Herec: ${input.jmenoHerce}`,
-      '',
-      'Nahravka ted jde do postprodukce. Jakmile bude hotova, ozveme se.',
+      vetaODotoceni(input.jmenoHerce),
       '',
       input.odkazNaPortal,
     ].join('\n'),

@@ -148,6 +148,10 @@ function patyPad(slovo: string): string {
 export function oslovit(jmeno: string | null | undefined): string {
   if (!jmeno) return '';
   const slova = jmeno
+    // „MgA.Robert Jícha" - tečka nalepená na další slovo. Bez mezery je to
+    // jeden token, který pak neprojde kontrolou níž a jméno by se neskloňovalo
+    // vůbec. V portálu takhle zapsaná jména opravdu jsou.
+    .replace(/\.(?=\p{L})/gu, '. ')
     .replace(/[,;]/g, ' ')
     .split(/\s+/)
     .map((s) => s.trim())
@@ -167,4 +171,107 @@ export function oslovit(jmeno: string | null | undefined): string {
 export function pozdrav(jmeno: string | null | undefined): string {
   const oslovene = oslovit(jmeno);
   return oslovene ? `Dobrý den, ${oslovene},` : 'Dobrý den,';
+}
+
+// ===========================================================================
+// 7. PÁD (zadání 16. 9. 2026: „právě jsme dokončili natáčení s Lubošem
+// Ondráčkem")
+//
+// Tady se skloňuje CELÉ jméno, křestní i příjmení — jinak by ve větě zůstalo
+// „s Luboš Ondráček". Oslovení výš si vystačí s křestním, protože stojí
+// samo; uvnitř věty to nejde.
+// ===========================================================================
+
+/** Mužská jména zakončená na -a. Bez nich by je rod podle zakončení hádal jako ženská. */
+const MUZSKA_NA_A = new Set([
+  'honza', 'jirka', 'ondra', 'kuba', 'pepa', 'franta', 'tonda', 'standa',
+  'venca', 'nikita', 'ilja', 'saša', 'sasa', 'míra', 'mira', 'láďa', 'lada',
+  'péťa', 'peta', 'sláva', 'slava',
+]);
+
+/** Prchavé -e- v 7. pádu: Pavel → Pavlem. Marcel ho naopak drží. */
+const VYJIMKY_SEDMY: Record<string, string> = {
+  pavel: 'Pavlem',
+  karel: 'Karlem',
+  havel: 'Havlem',
+};
+
+/**
+ * Ženské jméno? Rozhoduje příjmení na -ová/-á, pak křestní.
+ *
+ * Je to odhad, ne jistota, a záleží na něm jediná věc: jestli se příjmení
+ * zakončené na souhlásku skloní (muž: Novák → Novákem), nebo nechá být
+ * (žena: Gonzalez → Gonzalez). U zakončení na -a vyjde stejný tvar pro obojí
+ * (Brátka → Brátkou), takže tam se splést nedá.
+ */
+function jeZenske(slova: string[]): boolean {
+  const prijmeni = maleJmeno(slova[slova.length - 1] ?? '');
+  if (/(ová|á)$/.test(prijmeni)) return true;
+
+  const krestni = maleJmeno(slova[0] ?? '');
+  if (MUZSKA_NA_A.has(krestni)) return false;
+  // Ženská nesklonná jména (Dagmar, Ester…) mají ve VYJIMKY tvar shodný
+  // s původním - podle toho se poznají.
+  if (VYJIMKY[krestni] && VYJIMKY[krestni] === slova[0]) return true;
+  return /[aeáě]$/.test(krestni);
+}
+
+/** Jedno slovo do 7. pádu. */
+function sedmyPadSlova(slovo: string, zenske: boolean): string {
+  const male = maleJmeno(slovo);
+  if (slovo.length < 2) return slovo;
+  const posledni = male.slice(-1);
+
+  if (SAMOHLASKY.includes(posledni)) {
+    // Radka → Radkou, Kopecká → Kopeckou, Brátka → Brátkou.
+    if (posledni === 'a' || posledni === 'á') return `${slovo.slice(0, -1)}ou`;
+    // Marie → Marií, Lucie → Lucií.
+    if (posledni === 'e' || posledni === 'ě') return `${slovo.slice(0, -1)}í`;
+    // Černý → Černým, Novotný → Novotným.
+    if (posledni === 'ý') return `${slovo.slice(0, -1)}ým`;
+    // Jiří → Jiřím, Krejčí → Krejčím.
+    if (posledni === 'í') return `${slovo}m`;
+    // Ivo → Ivem, Hugo → Hugem.
+    if (posledni === 'o' && !zenske) return `${slovo.slice(0, -1)}em`;
+    return slovo;
+  }
+
+  // Ženské jméno na souhlásku se v češtině neskloňuje vůbec.
+  if (zenske) return slovo;
+
+  if (VYJIMKY_SEDMY[male]) return VYJIMKY_SEDMY[male];
+
+  // Prchavé -e-: Marek → Markem, Ondráček → Ondráčkem, Němec → Němcem.
+  if (male.endsWith('ěk')) return `${zmekci(slovo.slice(0, -2))}kem`;
+  if (male.endsWith('ek')) return `${slovo.slice(0, -2)}kem`;
+  if (male.endsWith('ec')) return `${slovo.slice(0, -2)}cem`;
+
+  // Zbytek bere -em bez ohledu na tvrdost: Luboš → Lubošem, Petr → Petrem,
+  // Jan → Janem, Vojtěch → Vojtěchem, Marek → Markem.
+  return `${slovo}em`;
+}
+
+/**
+ * Celé jméno do 7. pádu — „Luboš Ondráček" → „Lubošem Ondráčkem". Tituly
+ * vypadnou stejně jako u oslovení. Když jméno rozpoznat nejde, vrátí prázdno
+ * a volající větu přeformuluje, ať tam nezůstane 1. pád uprostřed věty.
+ */
+export function sedmyPad(jmeno: string | null | undefined): string {
+  if (!jmeno) return '';
+  const slova = jmeno
+    // „MgA.Robert Jícha" - tečka nalepená na další slovo. Bez mezery je to
+    // jeden token, který pak neprojde kontrolou níž a jméno by se neskloňovalo
+    // vůbec. V portálu takhle zapsaná jména opravdu jsou.
+    .replace(/\.(?=\p{L})/gu, '. ')
+    .replace(/[,;]/g, ' ')
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((s) => !TITULY.has(maleJmeno(s).replace(/\.$/, '')));
+
+  if (slova.length === 0) return '';
+  if (!slova.every((s) => /^\p{L}[\p{L}'-]*$/u.test(s))) return '';
+
+  const zenske = jeZenske(slova);
+  return slova.map((s) => sedmyPadSlova(s, zenske)).join(' ');
 }
