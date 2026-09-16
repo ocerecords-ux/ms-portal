@@ -33,6 +33,9 @@ export default async function DoplnitUdajePage() {
       bankAccount: true,
       studioLocations: true,
       vatPayer: true,
+      birthNumber: true,
+      ic: true,
+      dic: true,
     },
   });
   if (!ucet) redirect('/login');
@@ -58,6 +61,9 @@ export default async function DoplnitUdajePage() {
             bankAccount: ucet.bankAccount ?? '',
             studioLocations: ucet.studioLocations ?? [],
             vatPayer: ucet.vatPayer ?? false,
+            birthNumber: ucet.birthNumber ?? '',
+            ic: ucet.ic ?? '',
+            dic: ucet.dic ?? '',
           }}
         />
       </div>

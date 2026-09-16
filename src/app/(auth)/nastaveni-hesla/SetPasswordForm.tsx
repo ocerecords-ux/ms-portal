@@ -2,15 +2,26 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 
-/** Nastaveni hesla z pozvanky - stejny vzhled jako prihlasovaci stranka. */
+/**
+ * Nastaveni hesla z pozvanky - stejny vzhled jako prihlasovaci stranka.
+ *
+ * PO NASTAVENI HESLA SE ROVNOU PRIHLASUJEME (zadani 16. 9. 2026: „po tomto ho
+ * uspesne prihlasime do portalu"). Drive to cloveka poslalo na prihlaseni,
+ * kde musel tytez udaje vyplnit podruhe - a novy herec v tu chvili casto
+ * skoncil. Heslo prave zadal, takze ho znamé a prihlaseni je jen formalita.
+ *
+ * Kdyz se prihlaseni nepovede, nic se neztraci: heslo ulozene je a clovek
+ * dostane odkaz na prihlaseni.
+ */
 export function SetPasswordForm({ token }: { token: string }) {
-  const router = useRouter();
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  /** Povedlo se rovnou prihlasit? Dokud to bezi, drzi se true. */
+  const [samoPrihlaseni, setSamoPrihlaseni] = useState(true);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -37,7 +48,21 @@ export function SetPasswordForm({ token }: { token: string }) {
         return;
       }
       setDone(true);
-      setTimeout(() => router.push('/login'), 2500);
+
+      // Prihlaseni tymz heslem. `redirect: false` proto, aby se chyba dala
+      // ukazat tady a ne jako holá stránka NextAuthu.
+      const prihlaseni = await signIn('credentials', {
+        email: data?.email || '',
+        password,
+        redirect: false,
+      });
+      if (prihlaseni?.ok) {
+        // Tvrde nacteni, ne router.push: stranka si musi precist cerstvou
+        // session. Pruvodce sam posle dal toho, kdo uz nic doplnovat nema.
+        window.location.href = '/doplnit-udaje';
+        return;
+      }
+      setSamoPrihlaseni(false);
     } catch {
       setError('Nastavení hesla se nezdařilo.');
     } finally {
@@ -68,10 +93,16 @@ export function SetPasswordForm({ token }: { token: string }) {
             <div className="px-8 pb-8">
               <h1 className="font-display text-2xl text-brand-green m-0 mb-3">Heslo je nastavené</h1>
               <p className="text-white/90 text-sm font-body m-0">
-                Za chvíli vás přesměrujeme na přihlášení.{' '}
-                <Link href="/login" className="text-brand-green underline">
-                  Přihlásit se hned
-                </Link>
+                {samoPrihlaseni ? (
+                  'Přihlašuji vás do portálu…'
+                ) : (
+                  <>
+                    Přihlaste se prosím novým heslem.{' '}
+                    <Link href="/login" className="text-brand-green underline">
+                      Přihlásit se
+                    </Link>
+                  </>
+                )}
               </p>
             </div>
           ) : (
