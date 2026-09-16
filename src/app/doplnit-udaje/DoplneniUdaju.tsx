@@ -28,8 +28,7 @@ type Udaje = {
   addressCity: string;
   addressZip: string;
   addressCountry: string;
-  /** Fyzická osoba uvede rodné číslo, OSVČ nebo firma IČ. */
-  jakoOsvc: boolean;
+  /** Fyzická osoba vyplní rodné číslo, kdo fakturuje, vyplní IČ. */
   birthNumber: string;
   ic: string;
   dic: string;
@@ -53,8 +52,6 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
     ...vychozi,
     // Prázdná země z karty by přebila výchozí Českou republiku.
     addressCountry: vychozi.addressCountry || DEFAULT_COUNTRY,
-    // Kdo má na kartě IČ, tomu se rovnou nabídne fakturace.
-    jakoOsvc: Boolean(vychozi.ic),
   }));
   const [krok, setKrok] = useState(0);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -73,8 +70,8 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
     hotovo: () => string | null;
   }[] = [
     {
-      nadpis: 'Jak se jmenujete?',
-      popis: 'Jméno a příjmení tak, jak má stát ve smlouvě.',
+      nadpis: 'Vaše jméno a příjmení',
+      popis: 'Tak, jak má stát ve smlouvě.',
       obsah: (
         <input
           value={u.name}
@@ -88,8 +85,8 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
       hotovo: () => (u.name.trim() ? null : 'Vyplňte prosím jméno a příjmení.'),
     },
     {
-      nadpis: 'Kde bydlíte?',
-      popis: 'Adresa trvalého bydliště — patří do smlouvy.',
+      nadpis: 'Adresa trvalého bydliště',
+      popis: 'Patří do smlouvy.',
       obsah: (
         <div className="flex flex-col gap-4">
           <Popisek text="Ulice a č. p.">
@@ -133,70 +130,59 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
         u.addressStreet.trim() && u.addressCity.trim() ? null : 'Vyplňte prosím ulici a město.',
     },
     {
-      nadpis: 'Fakturujete nám, nebo hrajete jako fyzická osoba?',
-      popis: 'Podle toho potřebujeme rodné číslo, nebo IČ.',
+      /**
+       * JEN OTÁZKA NA DPH (zadání 16. 9. 2026: „tady potřebuji dát jen otázku
+       * Plátce DPH, ano nebo ne — licenční smlouvy posíláme tak nebo tak, ale
+       * ve chvíli, kdy je herec plátce DPH, tak musí následně vystavit
+       * fakturu, kde připočte DPH").
+       *
+       * Ptát se, jestli je OSVČ nebo fyzická osoba, nemá smysl: na podobu
+       * smlouvy to nemá vliv. Jediné, co se tím mění, je faktura.
+       */
+      nadpis: 'Jste plátce DPH?',
+      popis: 'Kdo je plátce, vystavuje nám pak fakturu s DPH.',
       obsah: (
-        <div className="flex flex-col gap-4">
-          <div className="flex gap-2 flex-wrap">
-            <Prepinac
-              aktivni={!u.jakoOsvc}
-              onClick={() => nastav('jakoOsvc', false)}
-              text="Fyzická osoba"
-            />
-            <Prepinac
-              aktivni={u.jakoOsvc}
-              onClick={() => nastav('jakoOsvc', true)}
-              text="Fakturuji (OSVČ / firma)"
-            />
-          </div>
-          {u.jakoOsvc ? (
-            <Popisek text="IČ">
-              <input
-                value={u.ic}
-                onChange={(e) => nastav('ic', e.target.value)}
-                inputMode="numeric"
-                autoFocus
-                className="admin-input"
-                placeholder="12345678"
-              />
-            </Popisek>
-          ) : (
-            <Popisek text="Rodné číslo">
-              <input
-                value={u.birthNumber}
-                onChange={(e) => nastav('birthNumber', e.target.value)}
-                autoFocus
-                className="admin-input"
-                placeholder="800101/1234"
-              />
-            </Popisek>
-          )}
+        <div className="flex gap-2 flex-wrap">
+          <Prepinac aktivni={!u.vatPayer} onClick={() => nastav('vatPayer', false)} text="Nejsem plátce" />
+          <Prepinac aktivni={u.vatPayer} onClick={() => nastav('vatPayer', true)} text="Jsem plátce DPH" />
         </div>
       ),
-      hotovo: () =>
-        u.jakoOsvc
-          ? u.ic.trim()
-            ? null
-            : 'Vyplňte prosím IČ.'
-          : u.birthNumber.trim()
-            ? null
-            : 'Vyplňte prosím rodné číslo.',
+      hotovo: () => null,
     },
     {
-      nadpis: 'Jste plátce DPH?',
-      popis: 'Když ano, potřebujeme i DIČ.',
+      /**
+       * Rodné číslo NEBO IČ - podle toho, kdo jak hraje. Nevybírá se to
+       * přepínačem: kdo fakturuje, vyplní IČ, ostatní rodné číslo, a je to
+       * z polí samo vidět. DIČ se ptá jen plátce DPH; bez něj by fakturu
+       * s DPH nevystavil.
+       */
+      nadpis: 'Rodné číslo, nebo IČ',
+      popis: 'Stačí to, co se vás týká — do smlouvy potřebujeme jedno z toho.',
       obsah: (
         <div className="flex flex-col gap-4">
-          <div className="flex gap-2 flex-wrap">
-            <Prepinac aktivni={!u.vatPayer} onClick={() => nastav('vatPayer', false)} text="Nejsem plátce" />
-            <Prepinac aktivni={u.vatPayer} onClick={() => nastav('vatPayer', true)} text="Jsem plátce DPH" />
-          </div>
+          <Popisek text="Rodné číslo">
+            <input
+              value={u.birthNumber}
+              onChange={(e) => nastav('birthNumber', e.target.value)}
+              autoFocus
+              className="admin-input"
+              placeholder="800101/1234"
+            />
+          </Popisek>
+          <Popisek text="IČ (když fakturujete)">
+            <input
+              value={u.ic}
+              onChange={(e) => nastav('ic', e.target.value)}
+              inputMode="numeric"
+              className="admin-input"
+              placeholder="12345678"
+            />
+          </Popisek>
           {u.vatPayer && (
             <Popisek text="DIČ">
               <input
                 value={u.dic}
                 onChange={(e) => nastav('dic', e.target.value)}
-                autoFocus
                 className="admin-input"
                 placeholder="CZ12345678"
               />
@@ -204,7 +190,11 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
           )}
         </div>
       ),
-      hotovo: () => (u.vatPayer && !u.dic.trim() ? 'Vyplňte prosím DIČ.' : null),
+      hotovo: () => {
+        if (!u.birthNumber.trim() && !u.ic.trim()) return 'Vyplňte prosím rodné číslo, nebo IČ.';
+        if (u.vatPayer && !u.dic.trim()) return 'Jako plátce DPH vyplňte prosím i DIČ.';
+        return null;
+      },
     },
     {
       nadpis: 'Kam vám posílat honorář?',
@@ -259,8 +249,9 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
               .filter(Boolean)
               .join(', ')}
           />
-          <Radek popisek={u.jakoOsvc ? 'IČ' : 'Rodné číslo'} hodnota={u.jakoOsvc ? u.ic : u.birthNumber} />
           <Radek popisek="DPH" hodnota={u.vatPayer ? `plátce, DIČ ${u.dic}` : 'nejsem plátce'} />
+          <Radek popisek="Rodné číslo" hodnota={u.birthNumber} />
+          <Radek popisek="IČ" hodnota={u.ic} />
           <Radek popisek="Číslo účtu" hodnota={u.bankAccount} />
           <Radek
             popisek="Natáčení"
@@ -302,10 +293,9 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
           addressCity: u.addressCity,
           addressZip: u.addressZip,
           addressCountry: u.addressCountry,
-          // Uloží se jen to, co k sobě patří - IČ u fyzické osoby a rodné
-          // číslo u OSVČ by byly jen zbytky po přepnutí volby.
-          birthNumber: u.jakoOsvc ? '' : u.birthNumber,
-          ic: u.jakoOsvc ? u.ic : '',
+          birthNumber: u.birthNumber,
+          ic: u.ic,
+          // DIČ má smysl jen u plátce - po přepnutí zpátky by zůstal viset.
           dic: u.vatPayer ? u.dic : '',
           vatPayer: u.vatPayer,
           bankAccount: u.bankAccount,
