@@ -238,8 +238,7 @@ export function DoplneniUdaju({ vychozi }: { vychozi: Partial<Udaje> }) {
       hotovo: () => null,
     },
     {
-      nadpis: 'Sedí to?',
-      popis: 'Poslední pohled, než vás pustíme do portálu.',
+      nadpis: 'Rekapitulace',
       obsah: (
         <dl className="m-0 flex flex-col gap-2">
           <Radek popisek="Jméno" hodnota={u.name} />
