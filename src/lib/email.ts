@@ -199,6 +199,16 @@ type OrderEmailInput = {
   attachmentName: string | null;
   requestedByName: string | null;
   requestedByEmail: string;
+  /**
+   * Zpráva BEZ PŘEDBĚŽNÉ CENY (zadání 16. 9. 2026: „Helča, která má přístup
+   * Produkce, by neměla vidět cenu. Jen normostrany").
+   *
+   * Řádek s cenou se vynechá celý — ne prázdný, ne „—". Prázdná kolonka
+   * vypadá jako chybějící údaj a člověk pak shání, co se nespočítalo.
+   * Rozhoduje o tom volající podle role příjemce (viz vidiCenuObjednavky
+   * v lib/roles.ts), ne e-mailová vrstva.
+   */
+  bezCeny?: boolean;
 };
 
 // HTML sablona interniho e-mailu (tym Mediaspace) - schvaleny design, viz
@@ -288,7 +298,7 @@ function buildInternalNotificationHtml(input: OrderEmailInput): string {
     <table class="field-table" role="presentation">
       <tr><td class="label">Firma</td><td class="value">${escapeHtml(input.companyName)}</td></tr>
       <tr><td class="label">Počet normostran</td><td class="value">${pageCountText}</td></tr>
-      <tr><td class="label">Předběžná cena</td><td class="value">${priceText}</td></tr>
+      ${input.bezCeny ? '' : `<tr><td class="label">Předběžná cena</td><td class="value">${priceText}</td></tr>`}
       <tr><td class="label">Termín odevzdání</td><td class="value">${deadlineText}</td></tr>
       <tr><td class="label">Preferovaný herec</td><td class="value">${narratorText}</td></tr>
       <tr><td class="label">Poznámka klienta</td><td class="value regular">${noteText}</td></tr>
@@ -316,7 +326,9 @@ function buildInternalNotificationText(input: OrderEmailInput): string {
     '',
     `Nazev: ${input.title}`,
     `Pocet normostran: ${input.pageCount ?? '-'}`,
-    `Predbezna cena: ${input.priceEstimate != null ? input.priceEstimate + ' Kc' : '-'}`,
+    ...(input.bezCeny
+      ? []
+      : [`Predbezna cena: ${input.priceEstimate != null ? input.priceEstimate + ' Kc' : '-'}`]),
     `Datum odevzdani: ${input.deadline ?? '-'}`,
     `Preferovany herec: ${input.preferredNarrator ?? '-'}`,
     `Poznamka: ${input.note ?? '-'}`,

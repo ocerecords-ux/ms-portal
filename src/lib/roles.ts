@@ -149,6 +149,23 @@ export function canViewProjectDocuments(role: Role): boolean {
 }
 
 /**
+ * Kdo smi videt CENU NA OBJEDNAVCE (zadani 16. 9. 2026: „kdyz prijde nova
+ * objednavka na audioknihu, tam by Helca, ktera ma pristup Produkce, nemela
+ * videt cenu. Jen normostrany").
+ *
+ * Predbezna cena je obchodni udaj - co si u nas firma objednava a za kolik.
+ * Produkce z objednavky potrebuje rozsah a termin, aby mohla planovat studio
+ * a herce; kolik to stoji, k tomu nepotrebuje.
+ *
+ * ZUZO-LABUZO, NE PRODUKCE - schvalne uzsi nez canViewProjectBudget: rozpocet
+ * projektu je nase vnitrni kalkulace (kolik nas to stoji), tohle je cena pro
+ * klienta.
+ */
+export function vidiCenuObjednavky(role: Role): boolean {
+  return role === 'ADMIN';
+}
+
+/**
  * Kdo smi u projektu videt ROZPOCET - cisla rozpoctu, polozkove naklady,
  * vykazy a bonusy (zadani 16. 9. 2026: „povol Helce, at vidi polozky rozpoctu
  * v detailu projektu. Nemela by videt doklady jako nabidky a faktury").

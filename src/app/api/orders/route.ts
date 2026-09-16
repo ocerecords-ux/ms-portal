@@ -12,6 +12,8 @@ import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
 import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
 import { bezTitulu } from '@/lib/jmena';
 import { notifyMany } from '@/lib/notifications';
+import { vidiCenuObjednavky } from '@/lib/roles';
+import type { Role } from '@prisma/client';
 
 // Druh objednavky (zadani 12. 9. 2026 - viz OrderKind ve schema.prisma).
 // AUDIOBOOK je vychozi a zachovava puvodni chovani (normostrany, cena,
@@ -130,16 +132,18 @@ export async function POST(req: NextRequest) {
    * do prazdna (zadani 15. 9. 2026: „ten mail objednavky@mediaspace.cz bych
    * nakonec vynechal a neposilal" - spolecna schranka uz nikde neni).
    */
-  let hlidaci: { id: string; email: string }[] = [];
+  let hlidaci: { id: string; email: string; role: Role }[] = [];
   try {
     hlidaci = await prisma.user.findMany({
       where: { active: true, dostavaObjednavky: true },
-      select: { id: true, email: true },
+      // Role rozhoduje, jestli se v mailu ukaze predbezna cena (zadani
+      // 16. 9. 2026) - viz vidiCenuObjednavky v lib/roles.ts.
+      select: { id: true, email: true, role: true },
     });
     if (hlidaci.length === 0) {
       hlidaci = await prisma.user.findMany({
         where: { active: true, role: 'ADMIN' },
-        select: { id: true, email: true },
+        select: { id: true, email: true, role: true },
       });
       console.warn(
         `Objednávka „${title}": nikdo nemá zaškrtnuté „Dostává objednávky", posílám všem adminům.`,
@@ -150,10 +154,19 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const prijemci = hlidaci.map((u) => u.email);
+    /**
+     * DVA MAILY, NE JEDEN (zadani 16. 9. 2026: „Helca, ktera ma pristup
+     * Produkce, by nemela videt cenu. Jen normostrany").
+     *
+     * Do ted sla objednavka vsem jednou zpravou vcetne predbezne ceny. Jedna
+     * zprava ale nejde rozdelit podle toho, kdo ji cte - komu cena nepatri,
+     * musi dostat jinou. Obsah je jinak uplne stejny: rozsah, termin, herec,
+     * poznamka i priloha zustavaji, vypadne jedina radka.
+     */
+    const sCenou = hlidaci.filter((u) => vidiCenuObjednavky(u.role)).map((u) => u.email);
+    const bezCeny = hlidaci.filter((u) => !vidiCenuObjednavky(u.role)).map((u) => u.email);
 
-    const result = await sendOrderNotificationEmail({
-      prijemci,
+    const spolecne = {
       companyId,
       companyName: company.name,
       title,
@@ -166,8 +179,18 @@ export async function POST(req: NextRequest) {
       attachmentName: attachment?.name ?? null,
       requestedByName: orderingUser?.name ?? null,
       requestedByEmail: session.user.email,
-    });
-    if (result.sent) {
+    };
+
+    const vysledky = await Promise.all([
+      sCenou.length
+        ? sendOrderNotificationEmail({ ...spolecne, prijemci: sCenou })
+        : Promise.resolve({ sent: false as const }),
+      bezCeny.length
+        ? sendOrderNotificationEmail({ ...spolecne, prijemci: bezCeny, bezCeny: true })
+        : Promise.resolve({ sent: false as const }),
+    ]);
+
+    if (vysledky.some((v) => v.sent)) {
       await prisma.order.update({ where: { id: order.id }, data: { emailSentAt: new Date() } });
     }
   } catch (err) {
