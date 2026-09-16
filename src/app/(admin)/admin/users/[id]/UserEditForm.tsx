@@ -30,6 +30,8 @@ type EditableUser = {
   smlouvyPodepisuje: boolean;
   prijimaDotazyKlientu: boolean;
   dostavaDotoceno: boolean;
+  /** Klient chce vědět o dotočeném herci na svém projektu (zadání 16. 9. 2026). */
+  dostavaDotocenoKlient: boolean;
   dostavaObjednavky: boolean;
   vychoziManazerAudioknih: boolean;
   studioLocations: string[];
@@ -65,6 +67,7 @@ export function UserEditForm({
   const [smlouvyPodepisuje, setSmlouvyPodepisuje] = useState(user.smlouvyPodepisuje);
   const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
+  const [dostavaDotocenoKlient, setDostavaDotocenoKlient] = useState(user.dostavaDotocenoKlient);
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
   const [vychoziManazerAudioknih, setVychoziManazerAudioknih] = useState(user.vychoziManazerAudioknih);
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
@@ -96,6 +99,7 @@ export function UserEditForm({
   const needsCompany = roleRequiresCompany(role);
   const isMediaspace = INTERNAL_ROLES.includes(role);
   const isHerec = role === 'HEREC';
+  const isKlient = role === 'CLIENT';
 
   function toggleStudio(studio: string) {
     setStudioLocations((prev) => (prev.includes(studio) ? prev.filter((s) => s !== studio) : [...prev, studio]));
@@ -129,6 +133,7 @@ export function UserEditForm({
         if (photo) fd.set('photo', photo);
         else if (removePhoto) fd.set('removePhoto', 'true');
       }
+      if (isKlient) fd.set('dostavaDotocenoKlient', dostavaDotocenoKlient ? '1' : '0');
       if (isHerec) {
         studioLocations.forEach((s) => fd.append('studioLocations', s));
         fd.set('birthNumber', birthNumber);
@@ -343,6 +348,31 @@ export function UserEditForm({
                 Vede objednané audioknihy
                 <span className="block text-xs text-muted">
                   projekt z objednávky audioknihy se rovnou přiřadí jemu jako manažerovi
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* UPOZORNENI KLIENTOVI NA DOTOCENEHO HERCE (zadani 16. 9. 2026:
+            „potrebuji mit moznost nastavit u konkretnich klientu, aby jim
+            chodily notifikace o tom, ze jsme dotocili s konkretnim hercem").
+            Tyka se jen projektu, u kterych je tenhle clovek napsany jako
+            klient - tedy tech, ktere v portalu vidi. Tyz prepinac ma
+            i u sebe v „Muj ucet", at si to zapne a vypne sam. */}
+        {isKlient && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dostavaDotocenoKlient}
+                onChange={(e) => setDostavaDotocenoKlient(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Upozornit na dotočeného herce
+                <span className="block text-xs text-muted">
+                  mail i zvoneček, když u jeho projektu dotočíme s hercem
                 </span>
               </span>
             </label>

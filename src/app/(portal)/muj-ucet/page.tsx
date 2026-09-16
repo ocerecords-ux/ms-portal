@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { ROLE_LABELS, isInternalRole } from '@/lib/roles';
 import { MyAccountForm } from './MyAccountForm';
 import { FakturaceKarta } from './FakturaceKarta';
+import { UpozorneniKarta } from './UpozorneniKarta';
 import { PripominkyKarta } from './PripominkyKarta';
 import { PodpisKarta } from './PodpisKarta';
 import { mojePripominky, vsechnyPripominky } from '@/lib/pripominkyServer';
@@ -86,6 +87,13 @@ export default async function MyAccountPage() {
             fakturyKlientovi: user.company.fakturyKlientovi,
           }}
         />
+      )}
+
+      {/* Co ma klientovi chodit (zadani 16. 9. 2026: „klienti by meli mit
+          moznost si to pak zapnout v portalu individualne"). Jen klient - my
+          i herci mame upozorneni jinde a jinak. */}
+      {user.role === 'CLIENT' && (
+        <UpozorneniKarta initial={{ dotoceno: user.dostavaDotocenoKlient }} />
       )}
 
       {/* Podpis na smlouvy - jen interni ucty, klient ani herec za Mediaspace

@@ -831,6 +831,71 @@ export async function sendHerecDotocenEmail(input: HerecDotocenInput) {
   return { sent: true as const, reason: undefined };
 }
 
+// ---------------------------------------------------------------------------
+// DOTOČENO — ZPRÁVA KLIENTOVI (zadání 16. 9. 2026)
+//
+// „Potřebuji mít možnost nastavit u konkrétních klientů, aby jim chodily
+// notifikace o tom, že jsme dotočili s konkrétním hercem."
+//
+// Je to JINÝ mail než ten pro nás, ne tentýž s jiným příjemcem. Klientovi
+// nic neříká, kdo to v portálu odškrtl, ani odkaz do detailu projektu — ten
+// se mu stejně neotevře. Čte to jako zprávu od nás: s hercem jsme hotovi.
+// ---------------------------------------------------------------------------
+
+type HerecDotocenKlientoviInput = {
+  to: string;
+  /** Oslovení — jméno člověka u klienta. */
+  jmenoKlienta: string | null;
+  jmenoHerce: string;
+  nazevProjektu: string;
+  /** Kam v portálu klient kouká na svoje projekty. */
+  odkazNaPortal: string;
+};
+
+export function buildHerecDotocenKlientoviHtml(input: HerecDotocenKlientoviInput): string {
+  return emailShell({
+    tag: 'Dotočeno',
+    preheader: `${input.nazevProjektu}: s hercem ${input.jmenoHerce} máme dotočeno.`,
+    body: `
+    <span class="badge">Dotočeno</span>
+    <h2>${escapeHtml(input.nazevProjektu)}</h2>
+    <p>${escapeHtml(pozdrav(input.jmenoKlienta))}</p>
+    <p>ve studiu máme dotočeno s hercem <strong>${escapeHtml(input.jmenoHerce)}</strong>.
+       Nahrávka teď jde do postprodukce; jakmile bude hotová, ozveme se.</p>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkazNaPortal)}" class="cta">Otevřít portál</a>
+    </div>
+
+    <p class="small">Tuhle zprávu dostáváte, protože máte v MS Portalu v „Můj účet"
+       zapnuté upozornění na dotočené herce. Tamtéž se dá vypnout.</p>
+`,
+  });
+}
+
+export async function sendHerecDotocenKlientoviEmail(input: HerecDotocenKlientoviInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: `${input.nazevProjektu} - dotoceno s hercem ${input.jmenoHerce}`,
+    text: [
+      pozdrav(input.jmenoKlienta),
+      '',
+      `ve studiu mame dotoceno s hercem ${input.jmenoHerce} (projekt ${input.nazevProjektu}).`,
+      'Nahravka ted jde do postprodukce; jakmile bude hotova, ozveme se.',
+      '',
+      input.odkazNaPortal,
+    ].join('\n'),
+    html: buildHerecDotocenKlientoviHtml(input),
+  });
+
+  return { sent: true as const, reason: undefined };
+}
+
 export async function sendPasswordResetEmail(input: PasswordResetInput) {
   const transport = getTransport();
   if (!transport) {

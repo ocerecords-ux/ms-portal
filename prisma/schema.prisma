@@ -219,6 +219,19 @@ model User {
   /// preklikne se to na karte uzivatele.
   dostavaDotoceno Boolean @default(false)
 
+  /// KLIENT chce vedet, kdyz s hercem dotocime (zadani 16. 9. 2026:
+  /// „potrebuji mit moznost nastavit u konkretnich klientu, aby jim chodily
+  /// notifikace o tom, ze jsme dotocili s konkretnim hercem").
+  ///
+  /// Schvalne zvlast od dostavaDotoceno: ten je interni a nese VSECHNY
+  /// projekty. Tenhle nese jen projekty, u kterych je ten clovek napsany jako
+  /// klient - tedy presne ty, ktere v portalu vubec vidi. Bez toho by se
+  /// zapnutim upozorneni dozvedel o zakazkach jinych oddeleni sve firmy.
+  ///
+  /// Zapina se na karte uzivatele v administraci, ale klient si to smi
+  /// prepnout i sam v „Muj ucet" (zadani tyz den).
+  dostavaDotocenoKlient Boolean @default(false)
+
   /// Dostava mail o nove objednavce od klienta (zadani 14. 9. 2026: "jednotlive
   /// adresy uzivatelu tymu, ktere si nastavim na webu v portalu").
   /// Stejny princip jako dostavaDotoceno - kdo objednavky hlida, se prekliká

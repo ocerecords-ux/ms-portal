@@ -32,6 +32,7 @@ const schema = z.object({
   smlouvyPodepisuje: z.string().trim().optional(),
   prijimaDotazyKlientu: z.string().trim().optional(),
   dostavaDotoceno: z.string().trim().optional(),
+  dostavaDotocenoKlient: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
   vychoziManazerAudioknih: z.string().trim().optional(),
   studioLocations: z.array(z.string()).optional(),
@@ -63,6 +64,9 @@ function readFormData(formData: FormData) {
     smlouvyPodepisuje: has('smlouvyPodepisuje') ? formData.get('smlouvyPodepisuje') : undefined,
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
+    dostavaDotocenoKlient: has('dostavaDotocenoKlient')
+      ? formData.get('dostavaDotocenoKlient')
+      : undefined,
     dostavaObjednavky: has('dostavaObjednavky') ? formData.get('dostavaObjednavky') : undefined,
     vychoziManazerAudioknih: has('vychoziManazerAudioknih')
       ? formData.get('vychoziManazerAudioknih')
@@ -151,6 +155,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.smlouvyPodepisuje !== undefined ? { smlouvyPodepisuje: data.smlouvyPodepisuje === '1' } : {}),
       ...(data.dostavaDotoceno !== undefined
         ? { dostavaDotoceno: data.dostavaDotoceno === '1' }
+        : {}),
+      // Upozorneni klientovi na dotoceneho herce (zadani 16. 9. 2026).
+      ...(data.dostavaDotocenoKlient !== undefined
+        ? { dostavaDotocenoKlient: data.dostavaDotocenoKlient === '1' }
         : {}),
       ...(data.vychoziManazerAudioknih !== undefined
         ? { vychoziManazerAudioknih: data.vychoziManazerAudioknih === '1' }

@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/db';
-import { sendHerecDotocenEmail } from '@/lib/email';
+import { sendHerecDotocenEmail, sendHerecDotocenKlientoviEmail } from '@/lib/email';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
+import { notify } from '@/lib/notifications';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
+import { INTERNAL_ROLES } from '@/lib/roles';
 import { prehodStavPodleDotoceni, vratStavPoOdskrtnuti } from '@/lib/dotoceniStavServer';
 import { isRodnyListProjectType } from '@/lib/priceList';
 
@@ -25,7 +27,7 @@ export type KdoPotvrdil = { id: string; jmeno: string | null };
 export type VysledekDotoceni = {
   dotoceno: true;
   dotocenoAt: string;
-  /** Co se stalo se stavem projektu; `null`, když se nesahalo (herec už fajfku měl). */
+  /** Stav projektu po přeskoku. `null`, když se nepřehazoval (herec fajfku už měl). */
   stav: Awaited<ReturnType<typeof prehodStavPodleDotoceni>> | null;
   /** Herec fajfku měl už předtím - stav se nepřehazoval a zpráva neodešla. */
   uzMel: boolean;
@@ -52,6 +54,11 @@ export async function oznacHerceDotoceno(
         companyName: true,
         projectType: true,
         company: { select: { name: true } },
+        // Klient projektu - jemu se posila zprava, kdyz si ji zapnul
+        // (zadani 16. 9. 2026). Je to TENTYZ sloupec, podle ktereho klient
+        // projekt vubec vidi v portalu, takze se upozorneni nemuze dostat
+        // k nikomu, kdo o projektu nema vedet.
+        klientUserId: true,
       },
     }),
     prisma.user.findFirst({
@@ -101,12 +108,62 @@ export async function oznacHerceDotoceno(
     // Zprava je best effort - fajfka uz je v databazi a nesmi na ni cekat.
     void (async () => {
       try {
-        const prijemci = (
-          await prisma.user.findMany({
-            where: { active: true, dostavaDotoceno: true },
-            select: { email: true },
-          })
-        ).map((u) => u.email);
+        /**
+         * DVA RUZNE OKRUHY PRIJEMCU (zadani 16. 9. 2026: „potrebuji mit
+         * moznost nastavit u konkretnich klientu, aby jim chodily notifikace
+         * o tom, ze jsme dotocili s konkretnim hercem").
+         *
+         * My: kdo ma na karte zaskrtnute „Dostava zpravy o dotoceni" - vidi
+         * vsechny projekty, dostane interni mail s odkazem do detailu.
+         *
+         * Klient: jen ten jeden clovek, ktery je u projektu napsany jako
+         * klient, a jen kdyz si to zapnul. Dostane jinou zpravu - do detailu
+         * projektu se stejne nedostane a kdo to odskrtl, mu nic nerika.
+         */
+        const [prijemci, klient] = await Promise.all([
+          prisma.user
+            .findMany({
+              where: { active: true, dostavaDotoceno: true, role: { in: INTERNAL_ROLES } },
+              select: { email: true },
+            })
+            .then((lide) => lide.map((u) => u.email)),
+          projekt.klientUserId
+            ? prisma.user.findFirst({
+                where: {
+                  id: projekt.klientUserId,
+                  active: true,
+                  role: 'CLIENT',
+                  dostavaDotocenoKlient: true,
+                },
+                select: { id: true, name: true, email: true },
+              })
+            : Promise.resolve(null),
+        ]);
+
+        if (klient) {
+          // Zvonecek i mail - stejne jako u objednavek (zadani 15. 9. 2026).
+          // Zvonecek prvni: je to zapis do nasi databaze, ktery nemuze
+          // skoncit u ciziho SMTP serveru.
+          await notify({
+            userId: klient.id,
+            kind: 'dotoceno-klient',
+            title: `${nazevProjektu}: dotočeno s hercem`,
+            body: `S hercem ${jmenoHerce} máme dotočeno.`,
+            url: '/projekty',
+          });
+
+          try {
+            await sendHerecDotocenKlientoviEmail({
+              to: klient.email,
+              jmenoKlienta: klient.name,
+              jmenoHerce,
+              nazevProjektu,
+              odkazNaPortal: `${zakladPortalu()}/projekty`,
+            });
+          } catch (err) {
+            console.error('Zprava klientovi o dotocenem herci selhala:', err);
+          }
+        }
 
         if (prijemci.length === 0) {
           console.warn(
@@ -130,7 +187,7 @@ export async function oznacHerceDotoceno(
           popis: vysledek.sent
             ? `${jmenoHerce} má dotočeno — zpráva odešla.`
             : `${jmenoHerce} má dotočeno — zprávu se nepodařilo odeslat (${vysledek.reason ?? 'neznámý důvod'}).`,
-          prijemci,
+          prijemci: klient ? [...prijemci, klient.email] : prijemci,
         });
       } catch (err) {
         console.error('Zprava o dotocenem herci selhala:', err);
