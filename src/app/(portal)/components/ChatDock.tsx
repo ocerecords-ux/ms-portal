@@ -554,10 +554,16 @@ function Psatko({
    * VELKÉ PÍSMENO NA ZAČÁTKU VĚTY (zadání 16. 9. 2026: „v chatu bych
    * potřeboval zapnout, aby na začátku věty bylo automaticky velké písmeno").
    *
-   * Telefon to dělá sám klávesnicí (viz autoCapitalize níž), počítač ne.
-   * Odchytí se tedy chvíle, kdy člověk zmáčkne písmeno, a když stojí na
-   * začátku věty, vloží se rovnou velké. O tom, kdy věta začíná, rozhoduje
-   * lib/velkePismena.ts - datum ani zkratka větu nekončí.
+   * JEN NA POČÍTAČI. Na telefonu to umí klávesnice sama (viz autoCapitalize
+   * a autoCorrect u pole níž) a je v tom lepší - ví, co člověk zrovna píše,
+   * a k tomu opravuje překlepy.
+   *
+   * A hlavně: tenhle kód by jí v tom PŘEKÁŽEL (oprava 16. 9. 2026: „nefunguje
+   * to tak, že samo přepne i klávesnici na telefonu. A nejdou autokorekce").
+   * Zahodit napsaný znak a vložit místo něj vlastní znamená, že klávesnice
+   * ztratí přehled o rozepsaném slově - přestane nabízet opravy a přestane
+   * sama přepínat na velké písmeno. Na dotykovém zařízení proto portál do
+   * psaní nesahá vůbec.
    *
    * PROČ `beforeinput` A NE PŘEPIS HOTOVÉHO TEXTU: prohlížeč si pak vloží
    * znak sám a kurzor zůstane, kde má být. Přepisování obsahu pole by
@@ -569,10 +575,14 @@ function Psatko({
   useEffect(() => {
     const pole = poleRef.current;
     if (!pole) return;
+    // Dotykové zařízení = klávesnice telefonu. Ta to umí líp, viz komentář výš.
+    if (window.matchMedia?.('(pointer: coarse)').matches) return;
 
     function naVstupu(e: Event) {
       const udalost = e as InputEvent;
       if (udalost.inputType !== 'insertText' || !udalost.data) return;
+      // Rozepsané slovo (diakritika přes mrtvou klávesu, čínština) necháme být.
+      if (udalost.isComposing) return;
       const velke = naVelke(udalost.data);
       if (!velke) return;
 
@@ -717,9 +727,19 @@ function Psatko({
           ref={poleRef}
           contentEditable
           suppressContentEditableWarning
-          /* Na telefonu velké písmeno na začátku věty zařídí klávesnice sama;
-             na počítači to dělá efekt výš (zadání 16. 9. 2026). */
+          /* NASTAVENÍ PRO KLÁVESNICI TELEFONU (zadání 16. 9. 2026: „nefunguje
+             to tak, že samo přepne i klávesnici na telefonu. A nejdou
+             autokorekce, když je má člověk v telefonu zapnuté").
+
+             `autoCapitalize` přepne klávesnici na velké písmeno na začátku
+             věty, `autoCorrect` a `spellCheck` pustí opravy překlepů a našeptávání.
+             Bez nich se editovatelný blok chová jako pole pro kód, ne pro text.
+             `lang` říká, jakým jazykem se opravuje - bez něj bere telefon
+             jazyk celé stránky a české háčky mu chybí. */
           autoCapitalize="sentences"
+          autoCorrect="on"
+          spellCheck
+          lang="cs"
           role="textbox"
           aria-multiline="true"
           aria-label={placeholder}
