@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { naVelke, zacatekVety } from '../src/lib/velkePismena';
+import { doplnVelkaPismena, naVelke, zacatekVety } from '../src/lib/velkePismena';
 
 describe('zacatekVety', () => {
   it('začátek zprávy', () => {
@@ -50,5 +50,29 @@ describe('naVelke', () => {
     expect(naVelke('1')).toBeNull();
     expect(naVelke(' ')).toBeNull();
     expect(naVelke('ab')).toBeNull();
+  });
+});
+
+describe('doplnVelkaPismena', () => {
+  it('začátek zprávy i každé další věty', () => {
+    expect(doplnVelkaPismena('ahoj')).toBe('Ahoj');
+    expect(doplnVelkaPismena('ahoj. jak se máš?')).toBe('Ahoj. Jak se máš?');
+    expect(doplnVelkaPismena('ahoj. jak je? dobře! super')).toBe('Ahoj. Jak je? Dobře! Super');
+    expect(doplnVelkaPismena('první řádek\ndruhý řádek')).toBe('První řádek\nDruhý řádek');
+    expect(doplnVelkaPismena('  odsazené')).toBe('  Odsazené');
+  });
+
+  it('hotový text nechá být', () => {
+    expect(doplnVelkaPismena('Ahoj. Jak se máš?')).toBe('Ahoj. Jak se máš?');
+  });
+
+  it('datum, zkratku ani adresu nerozbije', () => {
+    expect(doplnVelkaPismena('natáčíme 16. září')).toBe('Natáčíme 16. září');
+    expect(doplnVelkaPismena('napsal jsem to např. ondrovi')).toBe('Napsal jsem to např. ondrovi');
+    expect(doplnVelkaPismena('mrkni na www.seznam.cz ok')).toBe('Mrkni na www.seznam.cz ok');
+  });
+
+  it('zkratku smajlíka nechá být', () => {
+    expect(doplnVelkaPismena(':ms-palec: ahoj')).toBe(':ms-palec: ahoj');
   });
 });

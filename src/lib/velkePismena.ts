@@ -2,13 +2,15 @@
  * VELKÉ PÍSMENO NA ZAČÁTKU VĚTY (zadání 16. 9. 2026: „v chatu bych potřeboval
  * zapnout, aby na začátku věty bylo automaticky velké písmeno").
  *
- * Telefony to dělají samy, počítač ne — a tým píše do chatu z obojího, takže
- * půlka zpráv chodila s malým písmenem na začátku. Tohle dělá na počítači
- * totéž, co dělá klávesnice na mobilu.
+ * Na počítači žádná klávesnice nepomůže. A jak se ukázalo (16. 9. 2026),
+ * na telefonu taky ne: klávesnice umí přepnout na velké písmeno v obyčejném
+ * políčku, ale naše psací pole je editovatelný blok (kvůli smajlíkům, které
+ * se vykreslují jako obrázky) a v něm si značky `autocapitalize` nevšímá.
+ * Velká písmena proto dělá portál sám, na obojím.
  *
- * ZVĚTŠUJE SE JEN PRÁVĚ NAPSANÉ PÍSMENO, nikdy hotový text. Kdo si pak písmeno
- * opraví zpátky na malé, nic mu ho znovu nepřepíše — soubor rozhoduje jen
- * o jediném znaku v okamžiku, kdy ho člověk zmáčkne.
+ * ZVĚTŠUJE SE JEN PÍSMENO NA ZAČÁTKU VĚTY, nikdy nic jiného. `naVelke`
+ * a `zacatekVety` rozhodují o jediném znaku, `doplnVelkaPismena` projde
+ * hotový text a udělá totéž na všech začátcích vět.
  */
 
 /**
@@ -70,4 +72,25 @@ export function naVelke(znak: string): string | null {
   const velke = znak.toLocaleUpperCase('cs-CZ');
   if (velke === znak || velke.length !== 1) return null;
   return velke;
+}
+
+/**
+ * Velká písmena na začátcích vět v hotovém textu.
+ *
+ * Používá se ve dvou chvílích: na telefonu po dopsaném slově (klávesnice to
+ * neumí, viz ChatDock) a pak ještě jednou, když zpráva odchází - poslední
+ * věta totiž nemusí končit mezerou, takže se k ní do té doby nikdo nedostal.
+ *
+ * Text, který je už v pořádku, se vrátí BEZ ZMĚNY (`===` na původní řetězec),
+ * aby se podle toho dalo poznat, že není co přepisovat.
+ */
+export function doplnVelkaPismena(text: string): string {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const znak = text[i];
+    const velke = naVelke(znak);
+    // `out` je tentýž text jako `text.slice(0, i)`, jen už s opravami.
+    out += velke && zacatekVety(out) ? velke : znak;
+  }
+  return out;
 }

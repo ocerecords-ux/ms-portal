@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import type { ConversationKind } from '@prisma/client';
 import { MS_SMAJLICI, najdiSmajlika } from '@/lib/msSmajlici';
-import { naVelke, zacatekVety } from '@/lib/velkePismena';
+import { doplnVelkaPismena, naVelke, zacatekVety } from '@/lib/velkePismena';
 import { MsSmajlik } from './MsSmajlik';
 import {
   CHAT_TABS,
@@ -554,29 +554,35 @@ function Psatko({
    * VELKÉ PÍSMENO NA ZAČÁTKU VĚTY (zadání 16. 9. 2026: „v chatu bych
    * potřeboval zapnout, aby na začátku věty bylo automaticky velké písmeno").
    *
-   * JEN NA POČÍTAČI. Na telefonu to umí klávesnice sama (viz autoCapitalize
-   * a autoCorrect u pole níž) a je v tom lepší - ví, co člověk zrovna píše,
-   * a k tomu opravuje překlepy.
+   * NA POČÍTAČI hned při psaní: odchytí se stisk písmene a když stojí na
+   * začátku věty, vloží se rovnou velké. `beforeinput` proto, že znak si pak
+   * vloží prohlížeč sám a kurzor zůstane, kde má být.
    *
-   * A hlavně: tenhle kód by jí v tom PŘEKÁŽEL (oprava 16. 9. 2026: „nefunguje
-   * to tak, že samo přepne i klávesnici na telefonu. A nejdou autokorekce").
-   * Zahodit napsaný znak a vložit místo něj vlastní znamená, že klávesnice
-   * ztratí přehled o rozepsaném slově - přestane nabízet opravy a přestane
-   * sama přepínat na velké písmeno. Na dotykovém zařízení proto portál do
-   * psaní nesahá vůbec.
+   * NA TELEFONU AŽ PO DOPSANÉM SLOVĚ (viz `opravZacatkyVet` níž). Nejdřív se
+   * to zkusilo nechat na klávesnici - značka `autocapitalize` je přesně na to
+   * a klávesnice u toho umí i opravovat překlepy. Jenže tohle není obyčejné
+   * políčko, ale editovatelný blok (smajlíci jsou obrázky) a v něm si té
+   * značky telefon nevšímá: „ted to zase nefunguje, automaticky nedává velká
+   * písmena na začátku věty" (16. 9. 2026). Značky u pole zůstávají - nic
+   * nekazí a kdyby se to v prohlížečích někdy spravilo, bude to fungovat samo.
    *
-   * PROČ `beforeinput` A NE PŘEPIS HOTOVÉHO TEXTU: prohlížeč si pak vloží
-   * znak sám a kurzor zůstane, kde má být. Přepisování obsahu pole by
-   * v editovatelném bloku s obrázky smajlíků kurzor odhodilo na konec.
+   * PROČ NA TELEFONU AŽ PO SLOVĚ a ne hned při stisku jako na počítači:
+   * zahodit napsaný znak a vložit místo něj vlastní by znamenalo, že
+   * klávesnice ztratí přehled o rozepsaném slově a přestane nabízet opravy
+   * („nejdou autokorekce, když je má člověk v telefonu zapnuté"). Po mezeře
+   * je slovo hotové a klávesnici už na něm nezáleží.
    *
-   * Sahá se jen na PRÁVĚ NAPSANÉ písmeno. Kdo si ho opraví zpátky na malé,
-   * už mu ho nic nepřepíše.
+   * Sahá se jen na PÍSMENO NA ZAČÁTKU VĚTY. Kdo si ho opraví zpátky na malé,
+   * přepíše se mu znovu až po další mezeře - ale nic jiného v textu ne.
    */
+  /** Dotykové zařízení = klávesnice telefonu. Rozhoduje, kdy se opravuje. */
+  const dotykove = useRef(false);
+
   useEffect(() => {
     const pole = poleRef.current;
     if (!pole) return;
-    // Dotykové zařízení = klávesnice telefonu. Ta to umí líp, viz komentář výš.
-    if (window.matchMedia?.('(pointer: coarse)').matches) return;
+    dotykove.current = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    if (dotykove.current) return;
 
     function naVstupu(e: Event) {
       const udalost = e as InputEvent;
@@ -604,6 +610,86 @@ function Psatko({
 
     pole.addEventListener('beforeinput', naVstupu);
     return () => pole.removeEventListener('beforeinput', naVstupu);
+  }, []);
+
+  /**
+   * Velké písmeno na začátku věty PO DOPSANÉM SLOVĚ (telefon).
+   *
+   * Pustí se jen tehdy, když text končí mezerou nebo koncem řádku - to je
+   * chvíle, kdy je slovo hotové a klávesnice na něm už nepracuje. Opraví se
+   * poslední začátek věty, který je ještě malým písmenem.
+   *
+   * KURZOR MUSÍ STÁT NA KONCI POLE. Kdo se vrátí doprostřed textu a opravuje
+   * překlep, tomu do toho portál nesahá - kurzor by mu odskočil.
+   */
+  const opravZacatkyVet = useCallback(() => {
+    const pole = poleRef.current;
+    if (!pole) return;
+    const vyber = window.getSelection();
+    if (!vyber || vyber.rangeCount === 0 || !vyber.isCollapsed) return;
+
+    const konec = document.createRange();
+    konec.selectNodeContents(pole);
+    konec.collapse(false);
+    if (vyber.getRangeAt(0).compareBoundaryPoints(Range.START_TO_START, konec) !== 0) return;
+
+    /**
+     * Text pole i s tím, ve kterém uzlu který znak leží - jinak by se k písmenu
+     * nedalo vrátit. Smajlík zastupuje `·`: zvětšit se nedá a větu nekončí,
+     * takže se chová jako obyčejné slovo uprostřed.
+     */
+    const uzly: { uzel: Text; od: number }[] = [];
+    let text = '';
+    const projdi = (rodic: Node) => {
+      rodic.childNodes.forEach((n) => {
+        if (n.nodeType === Node.TEXT_NODE) {
+          uzly.push({ uzel: n as Text, od: text.length });
+          text += n.textContent ?? '';
+          return;
+        }
+        if (!(n instanceof HTMLElement)) return;
+        if (n.dataset.code) {
+          text += '·';
+          return;
+        }
+        if (n.tagName === 'BR') {
+          text += '\n';
+          return;
+        }
+        if ((n.tagName === 'DIV' || n.tagName === 'P') && text && !text.endsWith('\n')) text += '\n';
+        projdi(n);
+      });
+    };
+    projdi(pole);
+
+    // Rozepsané slovo se nechává být - opravuje se až to dopsané.
+    if (!/[\s]$/.test(text)) return;
+
+    for (let i = text.length - 1; i >= 0; i--) {
+      const velke = naVelke(text[i]);
+      if (!velke || !zacatekVety(text.slice(0, i))) continue;
+
+      const misto = uzly.find(
+        (u) => i >= u.od && i < u.od + (u.uzel.textContent?.length ?? 0),
+      );
+      if (!misto) return;
+
+      // Písmeno se vymění vložením textu, ne sáhnutím do uzlu - prohlížeč si
+      // pak správně vede i vracení zpět (Cmd+Z).
+      const rozsah = document.createRange();
+      rozsah.setStart(misto.uzel, i - misto.od);
+      rozsah.setEnd(misto.uzel, i - misto.od + 1);
+      vyber.removeAllRanges();
+      vyber.addRange(rozsah);
+      document.execCommand('insertText', false, velke);
+
+      const zpet = document.createRange();
+      zpet.selectNodeContents(pole);
+      zpet.collapse(false);
+      vyber.removeAllRanges();
+      vyber.addRange(zpet);
+      return;
+    }
   }, []);
 
   function posliVen() {
@@ -743,7 +829,14 @@ function Psatko({
           role="textbox"
           aria-multiline="true"
           aria-label={placeholder}
-          onInput={posliVen}
+          onInput={(e) => {
+            // Na telefonu se opravuje až dopsané slovo; rozepsané ne, jinak
+            // by klávesnice přestala nabízet opravy překlepů.
+            if (dotykove.current && !(e.nativeEvent as InputEvent).isComposing) {
+              opravZacatkyVet();
+            }
+            posliVen();
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
@@ -2185,7 +2278,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    */
   async function odesli(e: React.FormEvent, doVlakna = false) {
     e.preventDefault();
-    const text = (doVlakna ? vlaknoDraft : draft).trim();
+    // Posledni veta nemusi koncit mezerou, takze se k ni oprava behem
+    // psani nedostane - tady projde cela zprava jeste jednou.
+    const text = doplnVelkaPismena((doVlakna ? vlaknoDraft : draft).trim());
     const soubory = doVlakna ? prilohyVlakno : prilohyHlavni;
     // Samotna fotka bez textu je v poradku - prazdna zprava bez priloh ne.
     if (!openId || sending) return;
