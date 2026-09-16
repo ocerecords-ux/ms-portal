@@ -14,3 +14,8 @@ mobil/prazdno/
 
 # docasny balicek pro typovou kontrolu (Claude)
 .msc-check.tgz
+
+# Nahradni deklarace typu pro kontrolu bez node_modules (Claude). Do buildu
+# nepatri - ambientni `declare module '@prisma/client'` by prebilo skutecneho
+# vygenerovaneho klienta a build by spadl na chybejicich metodach.
+stubs/
