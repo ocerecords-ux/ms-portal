@@ -392,6 +392,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         companyDriveFolderUrl={company?.driveFolderUrl ?? null}
         projectTypeOptions={projectTypeOptions}
         jeReklamniFirma={druhNotifikaceFirmy(company) === 'REKLAMA'}
+        rodnyListTypy={rodnyListTypy}
         ikonyTypu={ikonyTypu}
         initial={{
           driveUrl: meta?.driveUrl ?? '',
@@ -406,6 +407,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           actorUserIds: seradHerce(meta?.herci ?? [], meta?.actorUserId ?? null),
           klientUserId: meta?.klientUserId ?? '',
           companyId: meta?.companyId ?? company?.id ?? '',
+          // Data jsou v databazi ulozena jako pulnoc UTC, at se den neposune
+          // podle pasma - do policka jdou proto uriznuta z ISO, ne pres
+          // lokalni formatovani.
+          endDate: naDatumPole(meta?.endDate ?? null),
+          releaseDate: naDatumPole(meta?.releaseDate ?? null),
         }}
       />
     </>
@@ -761,4 +767,14 @@ function seradHerce(herci: { id: string }[], hlavni: string | null): string[] {
   const ids = herci.map((h) => h.id);
   if (!hlavni || !ids.includes(hlavni)) return ids;
   return [hlavni, ...ids.filter((id) => id !== hlavni)];
+}
+
+/**
+ * Datum z databáze do políčka ve formuláři: „RRRR-MM-DD", nebo prázdno.
+ *
+ * Schválně přes ISO, ne přes lokální formátování - data se ukládají jako
+ * půlnoc UTC a `getDate()` by v západním pásmu vrátilo den předtím.
+ */
+function naDatumPole(d: Date | null): string {
+  return d ? d.toISOString().slice(0, 10) : '';
 }

@@ -14,6 +14,7 @@ import { OdznakStrany, posledniStranyHercu } from '../OdznakStrany';
 import { OdkazTlacitko } from '@/app/(portal)/components/OdkazTlacitko';
 import { OdznakSelect } from '../OdznakSelect';
 import { VyberPole } from '@/components/VyberPole';
+import { DatumPole } from '@/components/DatumPole';
 import { UkonceniProjektu } from './UkonceniProjektu';
 
 /**
@@ -80,7 +81,24 @@ type Initial = {
   klientUserId: string;
   /** Firma, pro kterou se projekt dela. */
   companyId: string;
+  /**
+   * DVE DATA V DETAILU (zadani 17. 9. 2026: „potrebuju mit v detailu projektu
+   * zobrazena obe data. Dokonceni i vydani").
+   *
+   * Do ted byla jen v prehledu projektu jako sloupce, takze kdo mel projekt
+   * otevreny, musel se pro ne vracet do seznamu. Drzi se jako "RRRR-MM-DD" -
+   * tentyz tvar, jaky posila <DatumPole> i cte /api/projects/[id]/meta.
+   */
+  endDate: string;
+  releaseDate: string;
 };
+
+/** „2026-09-17" na „17. 9. 2026". Bez Date - datum je den, ne okamzik v pasmu. */
+function datumTextem(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  if (!m) return '—';
+  return `${Number(m[3])}. ${Number(m[2])}. ${m[1]}`;
+}
 
 /**
  * Interni atributy projektu (zadani 5. 9. 2026) - odkaz na KZ, manazer
@@ -100,6 +118,7 @@ export function ProjectMetaForm({
   companyDriveFolderUrl,
   projectTypeOptions,
   jeReklamniFirma,
+  rodnyListTypy,
   ikonyTypu,
   initial,
   dotoceniHercu,
@@ -130,6 +149,17 @@ export function ProjectMetaForm({
    * podle reklamnich vzoru, a to jen ve stavu „Dokonceno - ke schvaleni".
    */
   jeReklamniFirma: boolean;
+  /**
+   * Typy projektu, u kterych se dela Rodny list - tedy REKLAMY (radiove
+   * spoty). Rozhoduje TYP PROJEKTU, ne firma: reklamni agentura si u nas
+   * muze nechat natocit i neco jineho.
+   *
+   * K cemu to tady je: u reklamy se neptame na datum vydani (zadani
+   * 17. 9. 2026: „bacha u reklam jen datum dokonceni"). Seznam jde az sem,
+   * aby se policko schovalo hned po prepnuti typu v nabidce - ne teprve po
+   * ulozeni a nacteni stranky.
+   */
+  rodnyListTypy: string[];
   /** Ikony k typum projektu z Ceniku (zadani 10. 9. 2026). */
   ikonyTypu: Record<string, string>;
   initial: Initial;
@@ -346,6 +376,18 @@ export function ProjectMetaForm({
 
   const managerLabel = managers.find((m) => m.id === values.managerUserId)?.label ?? '—';
 
+  /**
+   * Je to reklama? Pak se datum vydání neptáme ani neukazujeme (zadání
+   * 17. 9. 2026). Spot se vyrobí a odevzdá; „vydání" je pojem z audioknihy.
+   *
+   * Bere se to z toho, co je zrovna vybrané v nabídce, ne z uloženého typu -
+   * jinak by políčko po přepnutí typu zmizelo až po uložení.
+   */
+  const jeReklama = rodnyListTypy.includes(values.projectType);
+
+  /** Datum vydání zvukaři ne (zadání 13. 9. 2026) - stejně jako v přehledu. */
+  const vidiDatumVydani = vidiKlienta && !jeReklama;
+
   if (!canEdit) {
     return (
       // Stejne rozdeleni do karet jako editacni podoba (zadani 13. 9. 2026),
@@ -449,6 +491,20 @@ export function ProjectMetaForm({
                 />
               </dd>
             </div>
+            <div>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Datum dokončení</dt>
+              <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">
+                {datumTextem(values.endDate)}
+              </dd>
+            </div>
+            {vidiDatumVydani && (
+              <div>
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide">Datum vydání</dt>
+                <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">
+                  {datumTextem(values.releaseDate)}
+                </dd>
+              </div>
+            )}
           </dl>
         </Karta>
 
@@ -642,6 +698,33 @@ export function ProjectMetaForm({
             />
           </label>
 
+
+          {/* DVĚ DATA (zadání 17. 9. 2026). Vedle sebe, protože se čtou spolu:
+              dokončení je náš termín, vydání je termín klienta. U reklamy je
+              jen to první - viz jeReklama. */}
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Datum dokončení</span>
+            <DatumPole
+              value={values.endDate}
+              onChange={(e) => set('endDate', e.target.value)}
+              onBlur={ulozHned}
+              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+            />
+            <span className="text-xs text-muted font-body">Do kdy to máme odevzdat.</span>
+          </label>
+
+          {vidiDatumVydani && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">Datum vydání</span>
+              <DatumPole
+                value={values.releaseDate}
+                onChange={(e) => set('releaseDate', e.target.value)}
+                onBlur={ulozHned}
+                className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+              />
+              <span className="text-xs text-muted font-body">Kdy to má klient vydat.</span>
+            </label>
+          )}
 
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-sm font-body text-ink">Typ projektu</span>
