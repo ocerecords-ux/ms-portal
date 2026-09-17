@@ -380,7 +380,8 @@ async function InternalProjektySection({
               }))}
               klienti={klientiProFormular.map((k) => ({
                 id: k.id,
-                label: k.company?.name ? `${k.name || k.email} — ${k.company.name}` : k.name || k.email,
+                jmeno: k.name || k.email,
+                firma: k.company?.name ?? null,
                 companyId: k.companyId,
               }))}
               manazeri={manazeriProFormular}

@@ -27,7 +27,12 @@ export function NovyProjektForm({
   typyProjektu,
 }: {
   firmy: { id: string; label: string; maSlozku: boolean }[];
-  klienti: { id: string; label: string; companyId: string | null }[];
+  /**
+   * Účty klientů. Jméno a firma zvlášť, ne slepené do jednoho popisku -
+   * nabídka se podle firmy zužuje a popisek se skládá až tady (zadání
+   * 17. 9. 2026).
+   */
+  klienti: { id: string; jmeno: string; firma: string | null; companyId: string | null }[];
   manazeri: { id: string; label: string }[];
   /** Ucty hercu - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
   herci: Herec[];
@@ -63,6 +68,42 @@ export function NovyProjektForm({
   }
 
   const firma = firmy.find((f) => f.id === form.companyId);
+
+  /**
+   * Přehození firmy shodí klienta, který pod ni nepatří - jinak by ve formuláři
+   * zůstalo jméno, které v nabídce už není vidět, a odeslalo by se s projektem.
+   */
+  function zmenFirmu(companyId: string) {
+    setForm((f) => {
+      const vybrany = klienti.find((k) => k.id === f.klientUserId);
+      const sedi = !vybrany || !companyId || vybrany.companyId === companyId || !vybrany.companyId;
+      return { ...f, companyId, klientUserId: sedi ? f.klientUserId : '' };
+    });
+  }
+
+  /**
+   * KLIENTI PODLE VYBRANÉ FIRMY (zadání 17. 9. 2026: „když zakládám projekt
+   * a dám firmu, tak by mi to mělo nabídnout jen jména klientů, kteří jsou
+   * pod firmou. A bez firmy potom za pomlčkou").
+   *
+   * S vybranou firmou se nabídka ZÚŽÍ na její lidi a na ty, kdo firmu nemají
+   * vyplněnou; ostatní firmy do ní nepatří - dřív tu stálo všech dvě stě
+   * jmen a ta správná se v nich musela hledat. Koprodukce, kde u projektu
+   * sedí člověk z jiné firmy, se nastaví v detailu projektu, kde se nabídka
+   * nezužuje.
+   *
+   * Za pomlčkou je vždycky vidět, kam člověk patří - i když firmu nemá.
+   */
+  const klientiKVyberu = klienti
+    .filter((k) => !form.companyId || k.companyId === form.companyId || !k.companyId)
+    .map((k) => ({
+      id: k.id,
+      label: `${k.jmeno} — ${k.firma ?? 'bez firmy'}`,
+      /** Lidé vybrané firmy první, teprve pak ti bez firmy. */
+      poradi: form.companyId && k.companyId === form.companyId ? 0 : k.companyId ? 1 : 2,
+      jmeno: k.jmeno,
+    }))
+    .sort((a, b) => a.poradi - b.poradi || a.jmeno.localeCompare(b.jmeno, 'cs'));
 
   async function odesli(e: React.FormEvent) {
     e.preventDefault();
@@ -128,8 +169,8 @@ export function NovyProjektForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Firma</span>
-          <VyberPole value={form.companyId} onChange={(e) => set('companyId', e.target.value)} className={tridaPole}>
-            <option value="">— bez priority —</option>
+          <VyberPole value={form.companyId} onChange={(e) => zmenFirmu(e.target.value)} className={tridaPole}>
+            <option value="">— bez firmy —</option>
             {firmy.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
@@ -145,22 +186,18 @@ export function NovyProjektForm({
             onChange={(e) => set('klientUserId', e.target.value)}
             className={tridaPole}
           >
-            <option value="">— bez priority —</option>
-            {klienti
-              .slice()
-              .sort((a, b) => {
-                // Lide z vybrane firmy nahoru - u koprodukci ale musi jit
-                // vybrat i nekdo odjinud, takze se nabidka neomezuje.
-                const aSedi = form.companyId && a.companyId === form.companyId ? 0 : 1;
-                const bSedi = form.companyId && b.companyId === form.companyId ? 0 : 1;
-                return aSedi - bSedi || a.label.localeCompare(b.label, 'cs');
-              })
-              .map((k) => (
-                <option key={k.id} value={k.id}>
-                  {k.label}
-                </option>
-              ))}
+            <option value="">— bez klienta —</option>
+            {klientiKVyberu.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label}
+              </option>
+            ))}
           </VyberPole>
+          {firma && (
+            <span className="text-xs text-muted font-body">
+              Nabízíme lidi z firmy {firma.label} a ty, kdo firmu vyplněnou nemají.
+            </span>
+          )}
         </label>
 
         <label className="flex flex-col gap-1.5">
@@ -170,7 +207,7 @@ export function NovyProjektForm({
             onChange={(e) => set('projectType', e.target.value)}
             className={tridaPole}
           >
-            <option value="">— bez priority —</option>
+            <option value="">— bez typu —</option>
             {typyProjektu.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -186,7 +223,7 @@ export function NovyProjektForm({
             onChange={(e) => set('managerUserId', e.target.value)}
             className={tridaPole}
           >
-            <option value="">— bez priority —</option>
+            <option value="">— bez manažera —</option>
             {manazeri.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}
