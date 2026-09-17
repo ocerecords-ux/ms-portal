@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import { CONTRACT_PLACEHOLDERS } from '@/lib/contracts';
@@ -99,6 +99,22 @@ export function NewContractForm({
   // Odkud se bere odmena: '' = jeste nevybrano, 'rucne' = napisu sam,
   // jinak poradi polozky v nakladech projektu.
   const [odmenaZdroj, setOdmenaZdroj] = useState('');
+  /**
+   * Tytéž hodnoty ještě v refu. Dosazování odměny běží z obsluhy výběru herce
+   * i z načtení podkladů - a to druhé čte stav z chvíle, kdy se měnil projekt.
+   * Přes ref se pozná, co je ve formuláři TEĎ, ne co tam bylo při renderu.
+   */
+  const odmenaZdrojRef = useRef('');
+  const herciRef = useRef<Herec[]>([]);
+
+  function nastavOdmenuZdroj(hodnota: string) {
+    odmenaZdrojRef.current = hodnota;
+    setOdmenaZdroj(hodnota);
+  }
+  function nastavHerce(seznam: Herec[]) {
+    herciRef.current = seznam;
+    setHerci(seznam);
+  }
   /** Podepisujícího píšu ručně, i když jsou v nabídce herci (17. 9. 2026). */
   const [rucniPodpis, setRucniPodpis] = useState(false);
 
@@ -114,9 +130,11 @@ export function NewContractForm({
   useEffect(() => {
     const projekt = form.caflouProjectId;
     if (!projekt) {
-      setHerci([]);
+      nastavHerce([]);
       setNaklady([]);
       setProjektInfo(null);
+      nastavOdmenuZdroj('');
+      setPole((s) => ({ ...s, odmena: '' }));
       return;
     }
     let platne = true;
@@ -125,10 +143,13 @@ export function NewContractForm({
       .then((data) => {
         if (!platne) return;
         const seznam: Herec[] = data?.herci ?? [];
-        setHerci(seznam);
+        nastavHerce(seznam);
         setNaklady(data?.naklady ?? []);
         setProjektInfo(data?.projekt ?? null);
-        setOdmenaZdroj('');
+        // Odmena patri k projektu - pri zmene projektu se zahazuje, at se do
+        // smlouvy nedostane castka z rozpoctu jineho projektu.
+        nastavOdmenuZdroj('');
+        setPole((s) => ({ ...s, odmena: '' }));
         // Termin dokonceni nataceni = datum odevzdani projektu (zadani
         // 15. 9. 2026). Co uz je napsane, se neprepisuje.
         /**
@@ -151,7 +172,7 @@ export function NewContractForm({
       })
       .catch(() => {
         if (!platne) return;
-        setHerci([]);
+        nastavHerce([]);
         setNaklady([]);
         setProjektInfo(null);
       });
@@ -184,22 +205,42 @@ export function NewContractForm({
    * se to netrefí jednoznačně, nabídka zůstane prázdná a člověk si položku
    * vybere sám; špatně dosazená částka ve smlouvě je horší než prázdné pole.
    *
-   * Ručně napsanou odměnu to nepřepisuje.
+   * VÝBĚR HERCE PŘEPÍŠE ODMĚNU (zadání 17. 9. 2026: „když vyberu, kdo
+   * podepisuje, tak do pole Odměna/cena užití by se měla automaticky přepsat ta
+   * cena z rozpočtu"). Když herce vybral člověk, přepíše se i to, co v poli
+   * bylo - i ručně napsaná částka patřila předchozímu herci. Co vybral portál
+   * sám (jediný herec projektu), hotovou volbu nepřepisuje.
+   *
+   * Když se částka ví, ale položka rozpočtu k ní nesedí, zapíše se do pole
+   * ručně - číslo musí být vidět tak jako tak.
    */
   function dosadOdmenuHerce(herec: Herec | null, seznam: Naklad[], prepsat: boolean) {
-    if (!herec || seznam.length === 0) return;
-    if (odmenaZdroj === 'rucne') return;
-    if (!prepsat && odmenaZdroj) return;
+    if (!herec) return;
+    if (!prepsat && odmenaZdrojRef.current !== '') return;
 
-    // Nejdřív částka, kterou k hercovi našel server v rozpočtu; teprve když ji
-    // nemá, zkusí se najít položka podle jména tady.
-    const index =
-      typeof herec.castka === 'number'
-        ? seznam.findIndex((n) => n.castka === herec.castka)
-        : najdiNakladHerce(seznam, herec.jmeno, herci.length || 1);
-    if (index === null || index < 0) return;
-    setOdmenaZdroj(String(index));
-    setPole((s) => ({ ...s, odmena: korun(seznam[index].castka) }));
+    const index = najdiPolozkuHerce(herec, seznam);
+    if (index !== null) {
+      nastavOdmenuZdroj(String(index));
+      setPole((s) => ({ ...s, odmena: korun(seznam[index].castka) }));
+      return;
+    }
+    if (typeof herec.castka === 'number') {
+      nastavOdmenuZdroj('rucne');
+      setPole((s) => ({ ...s, odmena: korun(herec.castka as number) }));
+    }
+  }
+
+  /** Která položka rozpočtu patří vybranému herci - nebo `null`. */
+  function najdiPolozkuHerce(herec: Herec, seznam: Naklad[]): number | null {
+    if (seznam.length === 0) return null;
+    // Pořadí položky, kterou k němu našel server - to je nejjistější.
+    if (typeof herec.nakladIndex === 'number' && seznam[herec.nakladIndex]) return herec.nakladIndex;
+    // Záloha, kdyby index nedorazil: položka s touž částkou, pak podle jména.
+    if (typeof herec.castka === 'number') {
+      const podleCastky = seznam.findIndex((n) => n.castka === herec.castka);
+      if (podleCastky >= 0) return podleCastky;
+    }
+    return najdiNakladHerce(seznam, herec.jmeno, herciRef.current.length || 1);
   }
 
   /**
@@ -588,7 +629,7 @@ export function NewContractForm({
                       value={odmenaZdroj}
                       onChange={(e) => {
                         const volba = e.target.value;
-                        setOdmenaZdroj(volba);
+                        nastavOdmenuZdroj(volba);
                         if (volba === 'rucne') {
                           setPole((s) => ({ ...s, odmena: '' }));
                           return;
@@ -699,6 +740,8 @@ type Herec = {
   maAdresu: boolean;
   /** Částka z položky rozpočtu, která na něj sedí (zadání 17. 9. 2026). */
   castka?: number | null;
+  /** Pořadí té položky v nákladech projektu - podle něj se vybere v selectu. */
+  nakladIndex?: number | null;
   /** Portál ho našel v rozpočtu, u projektu navázaný není. */
   zRozpoctu?: boolean;
 };

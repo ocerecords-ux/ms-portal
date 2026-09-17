@@ -78,11 +78,18 @@ export async function GET(req: NextRequest) {
       maAdresu: Boolean(h.addressStreet || h.addressCity || h.addressZip),
       /** Částka z položky rozpočtu, která na něj sedí. */
       castka: null as number | null,
+      /** Pořadí té položky v `naklady` níž - formulář ji podle toho rovnou vybere. */
+      nakladIndex: null as number | null,
       /** Je tu jen proto, že ho portál našel v rozpočtu, ne u projektu? */
       zRozpoctu: false,
     });
 
     const herci = (meta?.herci ?? []).map(naZaznam);
+
+    // Prazdne radky (clovek si zalozil polozku a nedopsal ji) do nabidky nepatri.
+    // Filtruje se JESTE PRED parovanim herců, aby poradi polozky, ktere se
+    // posila do formulare, sedelo na to, co si clovek vybira v selectu.
+    const polozky = naklady.filter((n) => n.nazev.trim() !== '' || n.castka > 0);
 
     /**
      * HERCI Z ROZPOČTU (zadání 17. 9. 2026: „u projektu Strabag mám
@@ -113,19 +120,22 @@ export async function GET(req: NextRequest) {
     });
     const podleId = new Map(kandidati.map((k) => [k.id, k]));
     const nalezeni = hercizRozpoctu(
-      naklady,
+      polozky,
       kandidati.map((k) => ({ id: k.id, jmeno: bezTitulu(k.name) || k.email })),
     );
 
-    for (const { clovek, castka } of nalezeni) {
+    for (const { clovek, castka, index } of nalezeni) {
       const uz = herci.find((h) => h.id === clovek.id);
       if (uz) {
-        if (uz.castka === null) uz.castka = castka;
+        if (uz.castka === null) {
+          uz.castka = castka;
+          uz.nakladIndex = index;
+        }
         continue;
       }
       const ucet = podleId.get(clovek.id);
       if (!ucet) continue;
-      herci.push({ ...naZaznam(ucet), castka, zRozpoctu: true });
+      herci.push({ ...naZaznam(ucet), castka, nakladIndex: index, zRozpoctu: true });
     }
 
     return NextResponse.json({
@@ -136,8 +146,7 @@ export async function GET(req: NextRequest) {
         // Ucel a uzemi uziti licence - predvyplni se do smlouvy (17. 9. 2026).
         licenceUziti: meta?.licenceUziti ?? null,
       },
-      // Prazdne radky (clovek si zalozil polozku a nedopsal ji) do nabidky nepatri.
-      naklady: naklady.filter((n) => n.nazev.trim() !== '' || n.castka > 0),
+      naklady: polozky,
     });
   } catch (err) {
     console.error('GET /api/admin/contracts/podklady selhalo:', err);
