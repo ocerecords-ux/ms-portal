@@ -54,11 +54,14 @@ const STAVY: Record<string, { text: string; trida: string }> = {
 };
 
 export function BankaKlient({
+  otevrenaVsem,
   nastaveno,
   napojeni,
   pohyby,
   faktury,
 }: {
+  /** Sekci zatím vidí všichni Žůžo-labůžo, protože příznak nemá nikdo. */
+  otevrenaVsem: boolean;
   nastaveno: boolean;
   napojeni: NapojeniRadek[];
   pohyby: PohybRadek[];
@@ -180,6 +183,16 @@ export function BankaKlient({
 
   return (
     <div className="flex flex-col gap-6">
+      {otevrenaVsem && (
+        <div className="rounded-card border border-status-progress bg-status-progress/10 px-4 py-3 text-sm font-body text-ink">
+          <p className="m-0 font-semibold">Tuhle sekci zatím vidí každé Žůžo-labůžo.</p>
+          <p className="m-0 mt-1 text-muted">
+            V Adminu ▸ Uživatelé zaškrtni „Vidí sekci Banka" těm, kdo na pohyby mají vidět. Jakmile to bude mít
+            aspoň jeden účet, ostatním záložka zmizí.
+          </p>
+        </div>
+      )}
+
       {!nastaveno && (
         <div className="rounded-card border border-line bg-tint px-4 py-3 text-sm font-body text-ink">
           <p className="m-0 font-semibold">Napojení na banku ještě není nastavené.</p>
