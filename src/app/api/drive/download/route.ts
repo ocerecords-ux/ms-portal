@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAccessToken, getFileMeta, isWithinRoot } from '@/lib/googleDrive';
 import { korenProZadost } from '@/lib/drivePristup';
 
+export const dynamic = 'force-dynamic';
+/**
+ * Video a delší nahrávky se přes funkci jen protékají, ale u velkých souborů
+ * to trvá - výchozích 10 s Vercelu nestačí (17. 9. 2026, kvůli mp4 na Disku).
+ */
+export const maxDuration = 300;
+
 export async function GET(req: NextRequest) {
   const fileId = req.nextUrl.searchParams.get('fileId');
   if (!fileId) {

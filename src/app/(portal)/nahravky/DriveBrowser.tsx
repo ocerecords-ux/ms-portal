@@ -35,6 +35,20 @@ function isAudioFile(item: DriveItem): boolean {
   return item.mimeType.startsWith('audio/');
 }
 
+/**
+ * VIDEO SE PŘEHRAJE STEJNĚ JAKO ZVUK (zadání 17. 9. 2026: „teď budem dávat na
+ * disk video v mp4. Bude se dát přehrát a stáhnout, když klientovi přijde
+ * notifikace do mailu a proklikne se?").
+ *
+ * Stahování fungovalo u videa i předtím - tlačítko stažení je u každého
+ * souboru. Chybělo přehrání: play mělo jen audio, takže klient musel video
+ * nejdřív stáhnout. Teď se přehraje rovnou v okně, u klienta z mailu taky -
+ * /api/drive/download umí Range, takže jde i přeskakovat.
+ */
+function isVideoFile(item: DriveItem): boolean {
+  return item.mimeType.startsWith('video/');
+}
+
 // Nektere soubory (typicky Google Dokumenty vytvorene primo na Disku) nemaji
 // v nazvu klasickou koncovku (.mp3, .docx...). Aby bylo na prvni pohled
 // jasne, o jaky typ souboru jde, dopocitame priponu z mime typu Disku.
@@ -58,6 +72,10 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   'audio/aac': 'AAC',
   'audio/flac': 'FLAC',
   'audio/ogg': 'OGG',
+  'video/mp4': 'MP4',
+  'video/quicktime': 'MOV',
+  'video/x-matroska': 'MKV',
+  'video/webm': 'WEBM',
   'image/png': 'PNG',
   'image/jpeg': 'JPG',
 };
@@ -541,6 +559,7 @@ export function DriveBrowser({
           {sorted.map((item) => {
             const badge = extensionBadge(item);
             const audio = isAudioFile(item);
+            const video = isVideoFile(item);
             const isPlaying = playingId === item.id;
             return (
               <div key={item.id}>
@@ -605,11 +624,11 @@ export function DriveBrowser({
                     onDoubleClick={(e) => e.stopPropagation()}
                     className="flex items-center justify-end gap-1.5 shrink-0 w-[108px]"
                   >
-                    {audio && (
+                    {(audio || video) && (
                       <button
                         type="button"
                         onClick={() => togglePlay(item)}
-                        title={isPlaying ? 'Zastavit přehrávání' : 'Přehrát'}
+                        title={isPlaying ? 'Zavřít přehrávač' : 'Přehrát'}
                         className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${
                           isPlaying
                             ? 'bg-brand-green border-brand-green text-onAccent'
@@ -675,6 +694,22 @@ export function DriveBrowser({
                       autoPlay
                       src={`/api/drive/download?fileId=${encodeURIComponent(item.id)}&disposition=inline${klic}`}
                     />
+                  </div>
+                )}
+                {video && isPlaying && (
+                  <div className="px-6 pb-4 -mt-1 bg-field">
+                    {/* Vlastni prehravac jako u zvuku nedava smysl - obraz
+                        umi prohlizec sam a ovladani zna kazdy. */}
+                    <video
+                      key={item.id}
+                      autoPlay
+                      controls
+                      preload="metadata"
+                      className="w-full max-h-[70vh] rounded-card bg-black"
+                      src={`/api/drive/download?fileId=${encodeURIComponent(item.id)}&disposition=inline${klic}`}
+                    >
+                      Přehrávání videa tenhle prohlížeč neumí — soubor jde stáhnout tlačítkem vedle.
+                    </video>
                   </div>
                 )}
               </div>
