@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import { HromadneMazani, VyberRadku } from '@/components/HromadneMazani';
 import {
   RaditelnaTabulka,
   moznostiZ,
@@ -32,8 +34,45 @@ export type FakturaRadek = {
   castkaMinor: number;
 };
 
-export function FakturyTabulka({ radky }: { radky: FakturaRadek[] }) {
+export function FakturyTabulka({
+  radky,
+  lzeMazat = false,
+}: {
+  radky: FakturaRadek[];
+  /**
+   * Zaškrtávátka a hromadné mazání (zadání 17. 9. 2026: „a co stornované
+   * faktury? Ty potřebuju taky mazat"). Zapíná se jen v záložce Stornované -
+   * jinde se doklad nejdřív stornuje a teprve stornovaný jde smazat natrvalo,
+   * aby se odeslaná faktura nedala ztratit jedním kliknutím.
+   */
+  lzeMazat?: boolean;
+}) {
+  const [vybrane, setVybrane] = useState<Set<string>>(new Set());
+
   const sloupce: SloupecTabulky<FakturaRadek>[] = [
+    ...(lzeMazat
+      ? [
+          {
+            key: 'vyber',
+            label: '',
+            trida: 'w-8',
+            bunka: (r: FakturaRadek) => (
+              <VyberRadku
+                zaskrtnuto={vybrane.has(r.id)}
+                onZmena={() =>
+                  setVybrane((v) => {
+                    const dalsi = new Set(v);
+                    if (dalsi.has(r.id)) dalsi.delete(r.id);
+                    else dalsi.add(r.id);
+                    return dalsi;
+                  })
+                }
+                popisek={`Vybrat fakturu ${r.cislo}`}
+              />
+            ),
+          } as SloupecTabulky<FakturaRadek>,
+        ]
+      : []),
     {
       key: 'nazev',
       label: 'Název',
@@ -140,6 +179,19 @@ export function FakturyTabulka({ radky }: { radky: FakturaRadek[] }) {
         },
       ]}
       rozsahDatumu={{ label: 'Vystaveno', ms: (r) => r.vystavenoMs }}
+      hromadneAkce={
+        lzeMazat
+          ? (viditelne) => (
+              <HromadneMazani
+                viditelneIds={viditelne.map((r) => r.id)}
+                vybrane={vybrane}
+                onZmena={setVybrane}
+                endpoint="/api/admin/invoices/hromadne-smazani"
+                poznamka="Smazání je nevratné a v číselné řadě po dokladu zůstane díra. Portál smaže jen stornované faktury — ostatní se musí nejdřív stornovat."
+              />
+            )
+          : undefined
+      }
     />
   );
 }

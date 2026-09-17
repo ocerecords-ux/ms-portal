@@ -155,7 +155,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
             </div>
           )}
 
-          <FakturyTabulka radky={radkyTabulky} />
+          {/* Mazat jde jen ve Stornovanych (zadani 17. 9. 2026). */}
+          <FakturyTabulka radky={radkyTabulky} lzeMazat={activeTab.key === 'stornovane'} />
         </>
       )}
     </div>
