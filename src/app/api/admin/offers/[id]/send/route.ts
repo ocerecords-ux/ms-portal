@@ -3,9 +3,13 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { sendOfferEmail } from '@/lib/email';
 import { computeTotals } from '@/lib/doklady';
+import { najdiPrijemceNabidky } from '@/lib/prijemceNabidky';
 
-// Odeslani nabidky klientovi (zadani 6. 9. 2026). Mail jde na e-mail vedeny u
-// firmy a nese odkaz se schvalovacim tokenem, aby klient nemusel byt prihlaseny.
+// Odeslani nabidky klientovi (zadani 6. 9. 2026). Mail nese odkaz se
+// schvalovacim tokenem, aby klient nemusel byt prihlaseny.
+//
+// KOMU: klientovi vedenemu u projektu, a teprve kdyz projekt klienta nema,
+// na kontakt firmy (zadani 17. 9. 2026) - viz lib/prijemceNabidky.ts.
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
@@ -21,13 +25,21 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Nabídka nemá žádné položky.' }, { status: 400 });
     }
 
-    const to = offer.company.contactEmail;
-    if (!to) {
+    const prijemce = await najdiPrijemceNabidky({
+      caflouProjectId: offer.caflouProjectId,
+      company: offer.company,
+    });
+    if (!prijemce) {
       return NextResponse.json(
-        { error: `Firma „${offer.company.name}" nemá vyplněný kontaktní e-mail — doplňte ho v Firmy.` },
+        {
+          error: offer.caflouProjectId
+            ? `Nabídku není komu poslat — projekt nemá vyplněného klienta s e-mailem a firma „${offer.company.name}" nemá kontaktní e-mail.`
+            : `Nabídku není komu poslat — není navázaná na projekt a firma „${offer.company.name}" nemá kontaktní e-mail.`,
+        },
         { status: 400 },
       );
     }
+    const to = prijemce.email;
 
     const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
     const totals = computeTotals(offer.items, offer);
@@ -63,7 +75,9 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
     const result = await sendOfferEmail({
       to,
-      contactName: offer.company.contactName,
+      // Osloveni podle toho, komu to opravdu jde - u klienta projektu jeho
+      // jmeno, u firmy jeji kontaktni osoba.
+      contactName: prijemce.jmeno,
       companyName: offer.company.name,
       issuerName: offer.issuer.name,
       number: offer.number,

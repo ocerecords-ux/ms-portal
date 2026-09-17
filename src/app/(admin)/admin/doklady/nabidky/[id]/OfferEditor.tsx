@@ -98,6 +98,7 @@ export function OfferEditor({
   companies,
   bankAccounts,
   projects,
+  klientiProjektu,
 }: {
   offer: Offer;
   issuer: Party;
@@ -106,6 +107,11 @@ export function OfferEditor({
   companies: FirmaVolba[];
   bankAccounts: { label: string; accountNumber: string | null; iban: string | null }[];
   projects: ProjectChoice[];
+  /**
+   * Klient vedený u projektu (ID projektu -> jméno a e-mail). Podle něj se
+   * pozná, komu nabídka poletí - zadání 17. 9. 2026.
+   */
+  klientiProjektu: Record<string, { jmeno: string | null; email: string }>;
 }) {
   const router = useRouter();
   const locked = offer.status === 'APPROVED';
@@ -143,6 +149,19 @@ export function OfferEditor({
    * u druhé varianty nabídky („…varianta B") by ho portál jinak přepsal zpátky.
    */
   const [nazevRucne, setNazevRucne] = useState(Boolean(offer.subject.trim()));
+
+  /**
+   * Komu nabídka poletí. Stejné pořadí jako na serveru (lib/prijemceNabidky.ts):
+   * klient vyplněný u projektu, a teprve když ho projekt nemá, kontakt firmy.
+   * Počítá se ze současného výběru, ať je to vidět hned po přehození projektu.
+   */
+  const klientProjektu = form.caflouProjectId ? klientiProjektu[form.caflouProjectId] : undefined;
+  const prijemce: { jmeno: string | null; email: string; zdroj: 'klient' | 'firma' } | null =
+    klientProjektu
+      ? { ...klientProjektu, zdroj: 'klient' }
+      : company.contactEmail
+        ? { jmeno: null, email: company.contactEmail, zdroj: 'firma' }
+        : null;
 
   /** Co se posílá do náhledu - jen to, co je na dokumentu vidět. */
   const nahledTelo = {
@@ -625,10 +644,31 @@ export function OfferEditor({
               <br />
               {company.ic ? `IČ ${company.ic}` : ''} {company.dic ? `· DIČ ${company.dic}` : ''}
             </p>
-            {/* Az kdyz je nekdo vybrany (13. 9. 2026). */}
-            {form.companyId && !company.contactEmail && (
-              <p className="text-xs text-danger font-body m-0">
-                Firma nemá kontaktní e-mail — bez něj nabídku nepošlete.
+            {/* KOMU TO POLETÍ (zadání 17. 9. 2026: „mělo by tady být spíše
+                vidět, na jakého klienta nabídku vystavuji"). Nabídka jde
+                klientovi vyplněnému u projektu, a teprve když ho projekt nemá,
+                na kontakt firmy - stejně to počítá server při odeslání, viz
+                lib/prijemceNabidky.ts. Az kdyz je nekdo vybrany (13. 9. 2026). */}
+            {form.companyId && (
+              <p
+                className={`text-xs font-body m-0 ${prijemce ? 'text-muted' : 'text-danger'}`}
+              >
+                {prijemce ? (
+                  <>
+                    Nabídku pošleme{' '}
+                    <b className="text-ink font-heading">{prijemce.jmeno ?? prijemce.email}</b>
+                    {prijemce.jmeno ? ` · ${prijemce.email}` : ''}
+                    <span className="block">
+                      {prijemce.zdroj === 'klient'
+                        ? 'klient vyplněný u projektu'
+                        : 'kontakt firmy — projekt nemá vyplněného klienta'}
+                    </span>
+                  </>
+                ) : form.caflouProjectId ? (
+                  'Nabídku není komu poslat — projekt nemá klienta s e-mailem a firma nemá kontaktní e-mail.'
+                ) : (
+                  'Nabídku není komu poslat — vyberte níže projekt s klientem, nebo firmě doplňte kontaktní e-mail.'
+                )}
               </p>
             )}
           </div>
