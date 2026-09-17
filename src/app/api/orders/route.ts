@@ -8,6 +8,7 @@ import { adresaVUlozisti, overPrilohu, uploadOrderAttachment } from '@/lib/stora
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/email';
 import { noveIdProjektu } from '@/lib/projektId';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
+import { zalozKanalProjektu } from '@/lib/kanalProjektuServer';
 import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
 import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
 import { bezTitulu } from '@/lib/jmena';
@@ -360,17 +361,12 @@ export async function POST(req: NextRequest) {
        */
       const zakladatel = vedouci?.id ?? null;
       if (zakladatel) {
-        await prisma.conversation
-          .create({
-            data: {
-              kind: 'PROJEKT',
-              name: title,
-              caflouProjectId,
-              createdById: zakladatel,
-              members: { create: { userId: zakladatel } },
-            },
-          })
-          .catch((err) => console.error('Kanál k objednávce se nepodařilo založit:', err));
+        await zalozKanalProjektu({
+          caflouProjectId,
+          nazev: title,
+          zakladatelId: zakladatel,
+          managerUserId: zakladatel,
+        });
       }
 
       void zapisZalozeniProjektu(caflouProjectId, title, {

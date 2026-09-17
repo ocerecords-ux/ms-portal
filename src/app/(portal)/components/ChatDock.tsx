@@ -2197,17 +2197,28 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     }
   }
 
+  /**
+   * Seznam projektů pro záložku Projekty.
+   *
+   * NAČÍTÁ SE PŘI KAŽDÉM OTEVŘENÍ ZÁLOŽKY (oprava 17. 9. 2026: „dnes mi chybí
+   * třeba kanál projektu u SPČR"). Dřív se načetl jen jednou za život doku,
+   * takže projekt založený s otevřeným portálem se v chatu objevil až po
+   * načtení stránky znovu.
+   *
+   * Starý seznam se přitom nezahazuje - nový se dosadí, až dorazí. Jinak by
+   * záložka při každém přepnutí bliknula na „Načítám projekty…".
+   */
   async function nactiProjekty() {
-    if (projekty !== null) return;
     setProjektyChyba(null);
     try {
-      const res: Response = await fetch('/api/chat/projekty');
+      const res: Response = await fetch('/api/chat/projekty', { cache: 'no-store' });
       const data: any = await res.json().catch(() => ({}));
-      setProjekty(Array.isArray(data?.projekty) ? data.projekty : []);
+      if (Array.isArray(data?.projekty)) setProjekty(data.projekty);
+      else if (projekty === null) setProjekty([]);
       if (data?.chyba) setProjektyChyba(String(data.chyba));
     } catch {
-      setProjekty([]);
-      setProjektyChyba('Projekty se nepodařilo načíst z Caflou.');
+      if (projekty === null) setProjekty([]);
+      setProjektyChyba('Projekty se nepodařilo načíst.');
     }
   }
 

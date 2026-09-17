@@ -7,6 +7,7 @@ import { canEditProjectMeta } from '@/lib/roles';
 import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
 import { STAVY_PROJEKTU, jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
+import { zalozKanalProjektu } from '@/lib/kanalProjektuServer';
 import { noveIdProjektu } from '@/lib/projektId';
 
 /**
@@ -153,6 +154,18 @@ export async function POST(req: NextRequest) {
         driveUrl,
         zdroj: 'PORTAL',
       },
+    });
+
+    /**
+     * KANAL V CHATU rovnou (zadani 17. 9. 2026). Ceka se na nej: kdyz clovek
+     * po zalozeni skoci do projektu a do chatu, ma tam kanal uz byt. Je to
+     * jeden zapis a nikdy nevyhazuje - viz lib/kanalProjektuServer.ts.
+     */
+    await zalozKanalProjektu({
+      caflouProjectId,
+      nazev: d.name,
+      zakladatelId: session.user.id,
+      managerUserId: d.managerUserId || null,
     });
 
     // Prvni radek historie projektu (zadani 10. 9. 2026). Bez cekani - zaznam
