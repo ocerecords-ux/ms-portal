@@ -7,6 +7,7 @@ import { CONTRACT_PLACEHOLDERS } from '@/lib/contracts';
 import { ProjectSelect, type ProjectChoice } from '../ProjectSelect';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { VyberPole } from '@/components/VyberPole';
+import { najdiNakladHerce } from '@/lib/nakladHerce';
 import { DatumPole } from '@/components/DatumPole';
 
 /**
@@ -125,7 +126,7 @@ export function NewContractForm({
         }
         // Jeden herec na projektu je nejcastejsi pripad - vybrat ho rovnou,
         // ale uz napsane jmeno mu neprepisovat.
-        if (seznam.length === 1) vyberHerce(seznam[0], false);
+        if (seznam.length === 1) vyberHerce(seznam[0], false, data?.naklady ?? []);
       })
       .catch(() => {
         if (!platne) return;
@@ -144,13 +145,35 @@ export function NewContractForm({
    * dotáhne z jeho karty sám. `prepsat` je false, když herce vybral portál:
    * co už je napsané, se nepřepisuje.
    */
-  function vyberHerce(herec: Herec | null, prepsat = true) {
+  function vyberHerce(herec: Herec | null, prepsat = true, seznamNakladu?: Naklad[]) {
     setForm((f) => ({
       ...f,
       actorUserId: herec?.id ?? '',
       signerName: herec && (prepsat || !f.signerName) ? herec.jmeno : f.signerName,
       signerEmail: herec && (prepsat || !f.signerEmail) ? herec.email : f.signerEmail,
     }));
+    dosadOdmenuHerce(herec, seznamNakladu ?? naklady, prepsat);
+  }
+
+  /**
+   * ODMĚNA SE DOSADÍ S HERCEM (zadání 17. 9. 2026: „mělo by to jít vybrat
+   * automaticky i s cenou jako položka rozpočtu herec u daného projektu").
+   *
+   * Hledá se v nákladech projektu podle jména - viz lib/nakladHerce.ts. Když
+   * se to netrefí jednoznačně, nabídka zůstane prázdná a člověk si položku
+   * vybere sám; špatně dosazená částka ve smlouvě je horší než prázdné pole.
+   *
+   * Ručně napsanou odměnu to nepřepisuje.
+   */
+  function dosadOdmenuHerce(herec: Herec | null, seznam: Naklad[], prepsat: boolean) {
+    if (!herec || seznam.length === 0) return;
+    if (odmenaZdroj === 'rucne') return;
+    if (!prepsat && odmenaZdroj) return;
+
+    const index = najdiNakladHerce(seznam, herec.jmeno, herci.length || 1);
+    if (index === null) return;
+    setOdmenaZdroj(String(index));
+    setPole((s) => ({ ...s, odmena: korun(seznam[index].castka) }));
   }
 
   /**
@@ -337,6 +360,21 @@ export function NewContractForm({
             className={inputClass}
           />
         </label>
+
+        {/* PROJEKT BEZ HERCE (upřesnění 17. 9. 2026). Dřív se políčko prostě
+            neukázalo a nebylo poznat, jestli portál herce nenabízí, nebo ho
+            projekt nemá vyplněného. U smlouvy, kterou podepisuje herec, je
+            to ta první věc, kterou je potřeba vědět. */}
+        {sHercem && form.caflouProjectId && herci.length === 0 && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Herec</span>
+            <span className={`${inputClass} text-muted`}>— projekt nemá herce —</span>
+            <span className="text-xs font-body text-danger">
+              Doplňte herce u projektu a smlouva si z jeho karty vezme jméno, adresu i RČ nebo IČ.
+              Odměnu si pak vezme z položky rozpočtu, která na něj sedí.
+            </span>
+          </label>
+        )}
 
         {herci.length > 0 && (
           <label className="flex flex-col gap-1.5">
