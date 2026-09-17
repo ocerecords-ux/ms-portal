@@ -401,6 +401,23 @@ export function ProjectMetaForm({
             Jen ke čtení
           </span>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 m-0">
+            {/* Data nahore, stejne jako v editacni podobe (zadani 17. 9. 2026). */}
+            <div>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Datum dokončení</dt>
+              <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">
+                {datumTextem(values.endDate)}
+              </dd>
+            </div>
+            {vidiDatumVydani ? (
+              <div>
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide">Datum vydání</dt>
+                <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">
+                  {datumTextem(values.releaseDate)}
+                </dd>
+              </div>
+            ) : (
+              <span aria-hidden />
+            )}
             <div>
               <dt className="text-xs font-heading text-muted uppercase tracking-wide">Stav projektu</dt>
               <dd className="m-0 mt-1">
@@ -491,20 +508,6 @@ export function ProjectMetaForm({
                 />
               </dd>
             </div>
-            <div>
-              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Datum dokončení</dt>
-              <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">
-                {datumTextem(values.endDate)}
-              </dd>
-            </div>
-            {vidiDatumVydani && (
-              <div>
-                <dt className="text-xs font-heading text-muted uppercase tracking-wide">Datum vydání</dt>
-                <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">
-                  {datumTextem(values.releaseDate)}
-                </dd>
-              </div>
-            )}
           </dl>
         </Karta>
 
@@ -535,8 +538,43 @@ export function ProjectMetaForm({
     <div className="flex flex-col gap-6">
       <Karta nadpis="Výroba">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* DVĚ DATA ÚPLNĚ NAHOŘE (zadání 17. 9. 2026: „to datum by mohlo být
+              v kartě spíše nahoře"). Termín je to první, na co se člověk
+              u projektu ptá - proto stojí nad stavem i herci.
+              Vedle sebe, protože se čtou spolu: dokončení je náš termín,
+              vydání je termín klienta. U reklamy je jen to první -
+              viz vidiDatumVydani. */}
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Datum dokončení</span>
+            <DatumPole
+              value={values.endDate}
+              onChange={(e) => set('endDate', e.target.value)}
+              onBlur={ulozHned}
+              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+            />
+            <span className="text-xs text-muted font-body">Do kdy to máme odevzdat.</span>
+          </label>
+
+          {vidiDatumVydani ? (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">Datum vydání</span>
+              <DatumPole
+                value={values.releaseDate}
+                onChange={(e) => set('releaseDate', e.target.value)}
+                onBlur={ulozHned}
+                className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+              />
+              <span className="text-xs text-muted font-body">Kdy to má klient vydat.</span>
+            </label>
+          ) : (
+            // U reklamy musi druhe misto v radku zustat prazdne - jinak by se
+            // stav projektu vysunul nahoru vedle data a rozpadlo by se poradi.
+            <span aria-hidden />
+          )}
+
           {/* Stav a herec se od 10. 9. 2026 prehazuji rucne (odchod z Caflou).
-              Stav je prvni, protoze se s nim pracuje nejcasteji. */}
+              Ze vsech ovladacu se s nimi pracuje nejcasteji - proto hned pod
+              daty a pred kartou Zakazka. */}
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Stav projektu</span>
             {/* Odznak v barve stavu je ZAROVEN ovladac - stejne jako v prehledu
@@ -698,33 +736,6 @@ export function ProjectMetaForm({
             />
           </label>
 
-
-          {/* DVĚ DATA (zadání 17. 9. 2026). Vedle sebe, protože se čtou spolu:
-              dokončení je náš termín, vydání je termín klienta. U reklamy je
-              jen to první - viz jeReklama. */}
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Datum dokončení</span>
-            <DatumPole
-              value={values.endDate}
-              onChange={(e) => set('endDate', e.target.value)}
-              onBlur={ulozHned}
-              className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-            />
-            <span className="text-xs text-muted font-body">Do kdy to máme odevzdat.</span>
-          </label>
-
-          {vidiDatumVydani && (
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Datum vydání</span>
-              <DatumPole
-                value={values.releaseDate}
-                onChange={(e) => set('releaseDate', e.target.value)}
-                onBlur={ulozHned}
-                className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-              />
-              <span className="text-xs text-muted font-body">Kdy to má klient vydat.</span>
-            </label>
-          )}
 
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-sm font-body text-ink">Typ projektu</span>
