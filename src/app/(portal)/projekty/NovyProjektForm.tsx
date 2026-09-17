@@ -25,6 +25,7 @@ export function NovyProjektForm({
   manazeri,
   herci,
   typyProjektu,
+  typAudioknihy,
 }: {
   firmy: { id: string; label: string; maSlozku: boolean }[];
   /**
@@ -37,6 +38,12 @@ export function NovyProjektForm({
   /** Ucty hercu - herec je konkretni osoba, ne text (zadani 10. 9. 2026). */
   herci: Herec[];
   typyProjektu: string[];
+  /**
+   * Název typu projektu, který znamená audioknihu (položka ceníku zaškrtnutá
+   * jako „pro objednávky audioknih"). Jen u něj má smysl počet normostran -
+   * zadání 17. 9. 2026. `null` = v ceníku není žádná taková položka.
+   */
+  typAudioknihy: string | null;
 }) {
   const router = useRouter();
   const [otevreno, setOtevreno] = useState(false);
@@ -69,6 +76,9 @@ export function NovyProjektForm({
 
   const firma = firmy.find((f) => f.id === form.companyId);
 
+  /** Normostrany dávají smysl jen u audioknihy - viz typAudioknihy. */
+  const jeAudiokniha = Boolean(typAudioknihy) && form.projectType === typAudioknihy;
+
   /**
    * Přehození firmy shodí klienta, který pod ni nepatří - jinak by ve formuláři
    * zůstalo jméno, které v nabídce už není vidět, a odeslalo by se s projektem.
@@ -92,13 +102,21 @@ export function NovyProjektForm({
    * sedí člověk z jiné firmy, se nastaví v detailu projektu, kde se nabídka
    * nezužuje.
    *
-   * Za pomlčkou je vždycky vidět, kam člověk patří - i když firmu nemá.
+   * POPISEK: s vybranou firmou stačí jméno (upřesnění 17. 9. 2026: „u klienta
+   * je tam pořád ta pomlčka za jménem klienta s tou firmou"). Firmu má
+   * vybranou člověk o dvě políčka vedle a v tom úzkém poli se stejně
+   * nevešla - uřízla se uprostřed názvu. Kdo firmu vyplněnou nemá, zůstává
+   * označený, ať se nespletou s ostatními; a bez vybrané firmy se firma
+   * píše u všech, jinak by nešlo poznat, kdo je kdo.
    */
   const klientiKVyberu = klienti
     .filter((k) => !form.companyId || k.companyId === form.companyId || !k.companyId)
     .map((k) => ({
       id: k.id,
-      label: `${k.jmeno} — ${k.firma ?? 'bez firmy'}`,
+      label:
+        form.companyId && k.companyId === form.companyId
+          ? k.jmeno
+          : `${k.jmeno} — ${k.firma ?? 'bez firmy'}`,
       /** Lidé vybrané firmy první, teprve pak ti bez firmy. */
       poradi: form.companyId && k.companyId === form.companyId ? 0 : k.companyId ? 1 : 2,
       jmeno: k.jmeno,
@@ -243,16 +261,22 @@ export function NovyProjektForm({
           />
         </div>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Počet normostran</span>
-          <input
-            inputMode="numeric"
-            value={form.pageCount}
-            onChange={(e) => set('pageCount', e.target.value)}
-            placeholder="0"
-            className={`${tridaPole} text-right tabular-nums`}
-          />
-        </label>
+        {/* NORMOSTRANY JEN U AUDIOKNIHY (zadání 17. 9. 2026: „když to není
+            audiokniha, tak není třeba pole normostrany"). U voiceoveru ani
+            u spotu se na normostrany nic nepočítá - ani rozpočet, ani délka
+            frekvence - takže je to políčko, do kterého nemá co přijít. */}
+        {jeAudiokniha && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Počet normostran</span>
+            <input
+              inputMode="numeric"
+              value={form.pageCount}
+              onChange={(e) => set('pageCount', e.target.value)}
+              placeholder="0"
+              className={`${tridaPole} text-right tabular-nums`}
+            />
+          </label>
+        )}
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Datum vydání</span>

@@ -44,6 +44,27 @@ export async function listRodnyListProjectTypes(): Promise<string[]> {
   }
 }
 
+/**
+ * Nazev typu projektu, ktery znamena AUDIOKNIHU - tedy polozka ceniku
+ * zaskrtnuta jako „pro objednavky audioknih" (zaskrtnuta smi byt jen jedna).
+ *
+ * Pouziva se i k tomu, u ktereho projektu ma smysl pocet normostran (zadani
+ * 17. 9. 2026: „kdyz to neni audiokniha, tak neni treba pole normostrany").
+ * Zamerne se nehada podle nazvu - stejny duvod jako u rodneho listu.
+ */
+export async function nazevTypuAudioknihy(): Promise<string | null> {
+  try {
+    const item = await prisma.priceListItem.findFirst({
+      where: { proObjednavkyAudioknih: true },
+      select: { name: true },
+    });
+    return item?.name ?? null;
+  } catch (err) {
+    console.error('Nacteni typu projektu pro audioknihy selhalo:', err);
+    return null;
+  }
+}
+
 /** Je tenhle typ projektu radiovy spot, ke kteremu se dela Rodny list? */
 export async function isRodnyListProjectType(projectType: string | null | undefined): Promise<boolean> {
   const typ = projectType?.trim();

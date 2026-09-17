@@ -13,7 +13,7 @@ import { ProjectsTable, type InternalProject, type InternalProjectMeta } from '.
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { NovyProjektForm } from './NovyProjektForm';
-import { listProjectTypeOptions, mapaIkonTypu } from '@/lib/priceList';
+import { listProjectTypeOptions, mapaIkonTypu, nazevTypuAudioknihy } from '@/lib/priceList';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadColumnSettings } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/projektySeznamServer';
@@ -219,8 +219,15 @@ async function InternalProjektySection({
   );
 
   // Ciselniky pro zalozeni projektu (zadani 10. 9. 2026).
-  const [firmyProFormular, klientiProFormular, manazeriProFormular, herciProFormular, typyProjektu, ikonyTypu] =
-    await Promise.all([
+  const [
+    firmyProFormular,
+    klientiProFormular,
+    manazeriProFormular,
+    herciProFormular,
+    typyProjektu,
+    ikonyTypu,
+    typAudioknihy,
+  ] = await Promise.all([
     prisma.company.findMany({
       where: { type: 'KLIENT' },
       select: { id: true, name: true, driveFolderUrl: true },
@@ -244,6 +251,9 @@ async function InternalProjektySection({
     // Ikony typu projektu (zadani 10. 9. 2026) - jednim dotazem pro cely
     // seznam, ne pro kazdy radek zvlast.
     mapaIkonTypu(),
+    // Typ projektu, ktery znamena audioknihu - jen u nej se ptame na
+    // normostrany (zadani 17. 9. 2026).
+    nazevTypuAudioknihy(),
   ]);
 
   // Nase vlastni atributy k projektum (priorita, typ, manazer) - jednim
@@ -387,6 +397,7 @@ async function InternalProjektySection({
               manazeri={manazeriProFormular}
               herci={herciProFormular.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
               typyProjektu={typyProjektu}
+              typAudioknihy={typAudioknihy}
             />
           ) : null
         }
