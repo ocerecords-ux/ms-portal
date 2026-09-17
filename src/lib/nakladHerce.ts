@@ -79,3 +79,53 @@ export function najdiNakladHerce(
 
   return null;
 }
+
+/**
+ * OPAČNÝ SMĚR: KTERÝ HEREC SEDÍ NA POLOŽKU ROZPOČTU (zadání 17. 9. 2026:
+ * „u projektu Strabag mám v rozpočtu konkrétní herce a částky... chci přímo
+ * vybrat herce a aby se načetly jeho údaje i částka z rozpočtu").
+ *
+ * Na projektu nemusí být herci navázaní jako účty - u reklam se často jen
+ * napíšou do rozpočtu. Tahle funkce z těch řádků vytáhne, o koho jde, aby
+ * se dal vybrat jedním kliknutím i s částkou.
+ *
+ * Opatrně jako v opačném směru: jméno musí v názvu položky sedět celé, a když
+ * na jednu položku sedí víc lidí, nevrací se nikdo. Příjmení samo stačí jen
+ * tehdy, když ho v portálu nosí jediný herec - jinak by smlouvu podepsal
+ * jmenovec.
+ */
+export function hercizRozpoctu<T extends { id: string; jmeno: string }>(
+  naklady: NakladProjektu[],
+  lide: T[],
+): { clovek: T; index: number; castka: number }[] {
+  const out: { clovek: T; index: number; castka: number }[] = [];
+  const pouziti = new Set<string>();
+
+  naklady.forEach((naklad, index) => {
+    const nazev = srovnej(naklad.nazev);
+    if (!nazev) return;
+
+    const podleJmena = lide.filter((c) => {
+      const jmeno = srovnej(c.jmeno);
+      return jmeno.length >= 5 && nazev.includes(jmeno);
+    });
+
+    let nalezeny: T | null = podleJmena.length === 1 ? podleJmena[0] : null;
+
+    if (!nalezeny && podleJmena.length === 0) {
+      const podlePrijmeni = lide.filter((c) => {
+        const slova = slovaJmena(c.jmeno);
+        const prijmeni = slova[slova.length - 1];
+        return Boolean(prijmeni) && nazev.includes(prijmeni);
+      });
+      // Jeden jediny clovek s timhle prijmenim v portalu - jinak radeji nic.
+      if (podlePrijmeni.length === 1) nalezeny = podlePrijmeni[0];
+    }
+
+    if (!nalezeny || pouziti.has(nalezeny.id)) return;
+    pouziti.add(nalezeny.id);
+    out.push({ clovek: nalezeny, index, castka: naklad.castka });
+  });
+
+  return out;
+}

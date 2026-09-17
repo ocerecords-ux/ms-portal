@@ -91,6 +91,12 @@ type Initial = {
    */
   endDate: string;
   releaseDate: string;
+  /**
+   * ÚČEL A ÚZEMÍ UŽITÍ LICENCE (zadání 17. 9. 2026: „užití licence bych ještě
+   * dal jako atribut v detailu projektu a na smlouvu by se taky předvyplnil").
+   * Je to údaj projektu - do každé smlouvy na ten spot se píše stejný.
+   */
+  licenceUziti: string;
 };
 
 /** „2026-09-17" na „17. 9. 2026". Bez Date - datum je den, ne okamzik v pasmu. */
@@ -508,6 +514,16 @@ export function ProjectMetaForm({
                 />
               </dd>
             </div>
+            {jeReklama && (
+              <div>
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                  Účel a území užití licence
+                </dt>
+                <dd className="text-sm font-heading text-ink m-0 mt-1">
+                  {values.licenceUziti || '—'}
+                </dd>
+              </div>
+            )}
           </dl>
         </Karta>
 
@@ -736,6 +752,24 @@ export function ProjectMetaForm({
             />
           </label>
 
+
+          {/* UŽITÍ LICENCE jen u reklamy - u audioknihy se licence řeší jinak
+              a prázdné pole navíc by v kartě jen překáželo (17. 9. 2026). */}
+          {jeReklama && (
+            <label className="flex flex-col gap-1.5 sm:col-span-2">
+              <span className="text-sm font-body text-ink">Účel a území užití licence</span>
+              <input
+                value={values.licenceUziti}
+                onChange={(e) => set('licenceUziti', e.target.value, true)}
+                onBlur={ulozHned}
+                placeholder="např. audio reklama na Spotify, CZ+SK"
+                className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+              />
+              <span className="text-xs text-muted font-body">
+                Předvyplní se do smlouvy na tenhle spot.
+              </span>
+            </label>
+          )}
 
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-sm font-body text-ink">Typ projektu</span>

@@ -412,6 +412,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           // lokalni formatovani.
           endDate: naDatumPole(meta?.endDate ?? null),
           releaseDate: naDatumPole(meta?.releaseDate ?? null),
+          // Ucel a uzemi uziti licence - predvyplni se do smlouvy (17. 9. 2026).
+          licenceUziti: meta?.licenceUziti ?? '',
         }}
       />
     </>

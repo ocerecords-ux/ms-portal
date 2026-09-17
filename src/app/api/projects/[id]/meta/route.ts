@@ -44,6 +44,8 @@ const schema = z.object({
   name: z.string().trim().max(300).optional(),
   /** YYYY-MM-DD, prazdny retezec = smazat. Upravuje se i primo v prehledu. */
   endDate: z.string().trim().optional(),
+  // Ucel a uzemi uziti licence u reklamy (zadani 17. 9. 2026).
+  licenceUziti: z.string().trim().max(300).optional(),
   releaseDate: z.string().trim().optional(),
   /**
    * Ucty hercu v poradi - prvni je hlavni (zadani 10. 9. 2026: "chci jich tam
@@ -219,6 +221,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('priority', data.priority);
     text('projectType', data.projectType);
     text('narrator', data.narrator);
+    text('licenceUziti', data.licenceUziti);
     if (data.name) values.name = data.name;
     // Data se drzi jako pulnoc UTC - v prehledu se tiskne jen datum a nesmi
     // se posunout podle pasma, ve kterem se zrovna uklada.

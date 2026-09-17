@@ -79,15 +79,28 @@ export function NewContractForm({
   });
   const [herci, setHerci] = useState<Herec[]>([]);
   const [naklady, setNaklady] = useState<Naklad[]>([]);
-  const [projektInfo, setProjektInfo] = useState<{ nazev: string; odevzdani: string | null } | null>(null);
-  // Splatnost je 30 dnu, dokud ji nekdo neprepise (zadani 15. 9. 2026).
-  const [pole, setPole] = useState<Record<string, string>>({ splatnost: '30' });
+  const [projektInfo, setProjektInfo] = useState<{
+    nazev: string;
+    odevzdani: string | null;
+    licenceUziti?: string | null;
+  } | null>(null);
+  /**
+   * Předvyplněná ruční pole. Splatnost 30 dnů (zadání 15. 9. 2026), doba
+   * licence jeden rok (zadání 17. 9. 2026: „doba licence by měla být defaultně
+   * nastavena na 1 rok, případně se pak může měnit"). Obojí jde přepsat.
+   */
+  const [pole, setPole] = useState<Record<string, string>>({
+    splatnost: '30',
+    doba_licence: VYCHOZI_DOBA_LICENCE,
+  });
   // Datumova rucni pole se drzi jako YYYY-MM-DD (to chce kalendar); do smlouvy
   // se posila cesky zapis, jaky by tam clovek napsal rucne.
   const [datumy, setDatumy] = useState<Record<string, string>>({});
   // Odkud se bere odmena: '' = jeste nevybrano, 'rucne' = napisu sam,
   // jinak poradi polozky v nakladech projektu.
   const [odmenaZdroj, setOdmenaZdroj] = useState('');
+  /** Podepisujícího píšu ručně, i když jsou v nabídce herci (17. 9. 2026). */
+  const [rucniPodpis, setRucniPodpis] = useState(false);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +131,14 @@ export function NewContractForm({
         setOdmenaZdroj('');
         // Termin dokonceni nataceni = datum odevzdani projektu (zadani
         // 15. 9. 2026). Co uz je napsane, se neprepisuje.
+        /**
+         * ÚČEL A ÚZEMÍ UŽITÍ z karty projektu (zadání 17. 9. 2026). Co už je
+         * ve formuláři napsané, se nepřepisuje - člověk to mohl upravit pro
+         * tuhle jednu smlouvu.
+         */
+        const uziti: string | null = data?.projekt?.licenceUziti ?? null;
+        if (uziti?.trim()) setPole((s) => (s.uziti?.trim() ? s : { ...s, uziti: uziti.trim() }));
+
         const odevzdani: string | null = data?.projekt?.odevzdani ?? null;
         if (odevzdani) {
           const iso = odevzdani.slice(0, 10);
@@ -170,8 +191,13 @@ export function NewContractForm({
     if (odmenaZdroj === 'rucne') return;
     if (!prepsat && odmenaZdroj) return;
 
-    const index = najdiNakladHerce(seznam, herec.jmeno, herci.length || 1);
-    if (index === null) return;
+    // Nejdřív částka, kterou k hercovi našel server v rozpočtu; teprve když ji
+    // nemá, zkusí se najít položka podle jména tady.
+    const index =
+      typeof herec.castka === 'number'
+        ? seznam.findIndex((n) => n.castka === herec.castka)
+        : najdiNakladHerce(seznam, herec.jmeno, herci.length || 1);
+    if (index === null || index < 0) return;
     setOdmenaZdroj(String(index));
     setPole((s) => ({ ...s, odmena: korun(seznam[index].castka) }));
   }
@@ -376,9 +402,9 @@ export function NewContractForm({
           </label>
         )}
 
-        {herci.length > 0 && (
+        {!sHercem && herci.length > 0 && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">{sHercem ? 'Herec' : 'Herec z projektu'}</span>
+            <span className="text-sm font-body text-ink">Herec z projektu</span>
             <VyberPole
               value={form.actorUserId}
               onChange={(e) => vyberHerce(herci.find((h) => h.id === e.target.value) ?? null)}
@@ -463,13 +489,70 @@ export function NewContractForm({
         )}
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Kdo podepisuje</span>
-          <input
-            required
-            value={form.signerName}
-            onChange={(e) => set('signerName', e.target.value)}
-            placeholder="Jméno a příjmení"
-            className={inputClass}
-          />
+          {/* U SMLOUVY S HERCEM SE PODEPISUJÍCÍ VYBÍRÁ, NEPÍŠE (zadání
+              17. 9. 2026: „místo Kdo podepisuje chci přímo vybrat herce a aby
+              se načetly jeho údaje i částka z rozpočtu"). V nabídce jsou herci
+              projektu i ti, které portál poznal v jeho rozpočtu - u nich je
+              rovnou vidět částka, která se dosadí do odměny. */}
+          {sHercem && herci.length > 0 && !rucniPodpis ? (
+            <>
+              <VyberPole
+                value={form.actorUserId}
+                onChange={(e) => {
+                  if (e.target.value === 'rucne') {
+                    setRucniPodpis(true);
+                    vyberHerce(null);
+                    return;
+                  }
+                  vyberHerce(herci.find((h) => h.id === e.target.value) ?? null);
+                }}
+                className={inputClass}
+              >
+                <option value="">— vyberte herce —</option>
+                {herci.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.jmeno}
+                    {typeof h.castka === 'number' ? ` · ${korun(h.castka)}` : ''}
+                    {h.identifikace ? ` · ${h.identifikace}` : ' · bez RČ a IČ'}
+                  </option>
+                ))}
+                <option value="rucne">— napíšu ručně —</option>
+              </VyberPole>
+              <span className="text-xs font-body text-muted">
+                {vybranyHerec
+                  ? [
+                      vybranyHerec.identifikace
+                        ? `Do smlouvy půjde ${vybranyHerec.identifikace}`
+                        : 'Na kartě nemá RČ ani IČ — ve smlouvě bude „…"',
+                      vybranyHerec.maAdresu ? 'a adresa z jeho karty' : 'adresu na kartě nemá',
+                      typeof vybranyHerec.castka === 'number' ? 'odměna je z rozpočtu projektu' : null,
+                    ]
+                      .filter(Boolean)
+                      .join(', ') + '.'
+                  : 'Adresu i RČ nebo IČ si portál vezme z karty herce.'}
+                {vybranyHerec?.zRozpoctu ? ' U projektu navázaný není — portál ho poznal v rozpočtu.' : ''}
+              </span>
+            </>
+          ) : (
+            <>
+              <input
+                required
+                value={form.signerName}
+                onChange={(e) => set('signerName', e.target.value)}
+                placeholder="Jméno a příjmení"
+                className={inputClass}
+              />
+              {sHercem && herci.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRucniPodpis(false)}
+                  className="text-xs font-heading text-brand-purple hover:underline self-start"
+                >
+                  Vybrat herce ze seznamu
+                </button>
+              )}
+            </>
+          )}
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">E-mail podepisujícího</span>
@@ -614,7 +697,18 @@ type Herec = {
   /** „IČO: 07459424" nebo „RČ: 666008/1549" — prázdné, když nemá ani jedno. */
   identifikace: string;
   maAdresu: boolean;
+  /** Částka z položky rozpočtu, která na něj sedí (zadání 17. 9. 2026). */
+  castka?: number | null;
+  /** Portál ho našel v rozpočtu, u projektu navázaný není. */
+  zRozpoctu?: boolean;
 };
+
+/**
+ * Výchozí doba licence u reklamy (zadání 17. 9. 2026). Je to text, který jde
+ * rovnou do věty ve smlouvě („na dobu jednoho (1) roku"), takže se sem píše
+ * tak, jak se to čte - ne „1 rok".
+ */
+const VYCHOZI_DOBA_LICENCE = 'jednoho (1) roku';
 
 /** Nápověda k ručním polím — ať je vidět, v jakém tvaru to má být. */
 const NAPOVEDA: Record<string, string> = {

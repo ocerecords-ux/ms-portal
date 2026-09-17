@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { bezTitulu } from '@/lib/jmena';
+import { hercizRozpoctu } from '@/lib/nakladHerce';
 
 /**
  * Co portál o projektu ví, když se zakládá smlouva (zadání 13. 9. 2026:
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
       select: {
         name: true,
         endDate: true,
+        licenceUziti: true,
         herci: {
           select: {
             id: true,
@@ -57,7 +59,16 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    const herci = (meta?.herci ?? []).map((h) => ({
+    const naZaznam = (h: {
+      id: string;
+      name: string | null;
+      email: string;
+      ic: string | null;
+      birthNumber: string | null;
+      addressStreet: string | null;
+      addressCity: string | null;
+      addressZip: string | null;
+    }) => ({
       id: h.id,
       jmeno: bezTitulu(h.name) || h.email,
       email: h.email,
@@ -65,11 +76,66 @@ export async function GET(req: NextRequest) {
       // jestli je čím člověka označit, nebo se to bude dopisovat ručně.
       identifikace: h.ic ? `IČO: ${h.ic}` : h.birthNumber ? `RČ: ${h.birthNumber}` : '',
       maAdresu: Boolean(h.addressStreet || h.addressCity || h.addressZip),
-    }));
+      /** Částka z položky rozpočtu, která na něj sedí. */
+      castka: null as number | null,
+      /** Je tu jen proto, že ho portál našel v rozpočtu, ne u projektu? */
+      zRozpoctu: false,
+    });
+
+    const herci = (meta?.herci ?? []).map(naZaznam);
+
+    /**
+     * HERCI Z ROZPOČTU (zadání 17. 9. 2026: „u projektu Strabag mám
+     * v rozpočtu konkrétní herce a částky... chci přímo vybrat herce a aby se
+     * načetly jeho údaje i částka z rozpočtu").
+     *
+     * U reklam se herci k projektu často nenavazují jako účty - jen se napíšou
+     * do rozpočtu. Portál je proto v těch řádcích zkusí poznat a nabídne je
+     * k výběru i s částkou. Kdo je u projektu navázaný, dostane jen částku;
+     * nepřidává se podruhé.
+     *
+     * Jistota je na prvním místě: jméno musí v položce sedět celé (nebo
+     * příjmení, které v portálu nosí jediný herec) - viz lib/nakladHerce.ts.
+     */
+    const kandidati = await prisma.user.findMany({
+      where: { role: 'HEREC', active: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        ic: true,
+        dic: true,
+        birthNumber: true,
+        addressStreet: true,
+        addressCity: true,
+        addressZip: true,
+      },
+    });
+    const podleId = new Map(kandidati.map((k) => [k.id, k]));
+    const nalezeni = hercizRozpoctu(
+      naklady,
+      kandidati.map((k) => ({ id: k.id, jmeno: bezTitulu(k.name) || k.email })),
+    );
+
+    for (const { clovek, castka } of nalezeni) {
+      const uz = herci.find((h) => h.id === clovek.id);
+      if (uz) {
+        if (uz.castka === null) uz.castka = castka;
+        continue;
+      }
+      const ucet = podleId.get(clovek.id);
+      if (!ucet) continue;
+      herci.push({ ...naZaznam(ucet), castka, zRozpoctu: true });
+    }
 
     return NextResponse.json({
       herci,
-      projekt: { nazev: meta?.name ?? '', odevzdani: meta?.endDate ? meta.endDate.toISOString() : null },
+      projekt: {
+        nazev: meta?.name ?? '',
+        odevzdani: meta?.endDate ? meta.endDate.toISOString() : null,
+        // Ucel a uzemi uziti licence - predvyplni se do smlouvy (17. 9. 2026).
+        licenceUziti: meta?.licenceUziti ?? null,
+      },
       // Prazdne radky (clovek si zalozil polozku a nedopsal ji) do nabidky nepatri.
       naklady: naklady.filter((n) => n.nazev.trim() !== '' || n.castka > 0),
     });
