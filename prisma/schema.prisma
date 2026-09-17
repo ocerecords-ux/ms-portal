@@ -1070,11 +1070,13 @@ model Task {
 // s kodem meny, nikdy jako hole cislo.
 // ===========================================================================
 
-// Meny, ve kterych Mediaspace fakturuje (zadani 8. 9. 2026: CZK, EUR a libry).
+// Meny, ve kterych Mediaspace fakturuje (zadani 8. 9. 2026: CZK, EUR a libry;
+// 17. 9. 2026 pribyl dolar kvuli vydajum placenym v USD).
 enum Currency {
   CZK
   EUR
   GBP
+  USD
 }
 
 // "Moje firmy" - fakturacni jednotky, za ktere Mediaspace vystavuje doklady.

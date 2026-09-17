@@ -8,17 +8,23 @@ import type { Currency } from '@prisma/client';
  * rozjížděly koruny a doklad by nakonec neseděl.
  */
 
-export const CURRENCIES = ['CZK', 'EUR', 'GBP'] as const;
+/**
+ * Měny, které jdou na dokladu vybrat. Dolar přibyl 17. 9. 2026 kvůli výdajům
+ * placeným v USD; kurz si portál bere z ČNB stejně jako u eura a libry.
+ */
+export const CURRENCIES = ['CZK', 'EUR', 'USD', 'GBP'] as const;
 
 export const CURRENCY_LABELS: Record<Currency, string> = {
   CZK: 'Kč',
   EUR: '€',
+  USD: '$',
   GBP: '£',
 };
 
 export const CURRENCY_NAMES: Record<Currency, string> = {
   CZK: 'Koruna česká (CZK)',
   EUR: 'Euro (EUR)',
+  USD: 'Americký dolar (USD)',
   GBP: 'Britská libra (GBP)',
 };
 

@@ -3,7 +3,7 @@ import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
-import { expandNumberFormat } from '@/lib/doklady';
+import { CURRENCIES, expandNumberFormat } from '@/lib/doklady';
 import { resolveProject } from '@/lib/projectOptions';
 
 // Zalozeni nabidky (zadani 6. 9. 2026). Cislo se bere z ciselne rady vlastni
@@ -25,7 +25,7 @@ const schema = z.object({
   companyId: z.string().trim().min(1, 'Vyberte odběratele.'),
   subject: z.string().trim().max(200).optional(),
   note: z.string().trim().max(3000).optional(),
-  currency: z.enum(['CZK', 'EUR', 'GBP']).optional(),
+  currency: z.enum(CURRENCIES).optional(),
   issueDate: z.string().trim().min(8).optional(),
   validUntil: z.string().trim().nullable().optional(),
   caflouProjectId: z.string().trim().nullable().optional(),

@@ -958,7 +958,7 @@ type OfferEmailInput = {
   issuerName: string;
   number: string;
   subject: string | null;
-  currency: 'CZK' | 'EUR' | 'GBP';
+  currency: 'CZK' | 'EUR' | 'USD' | 'GBP';
   totalExVat: number; // v halerich/centech
   totalIncVat: number;
   validUntil: Date | null;
@@ -973,7 +973,7 @@ type OfferEmailInput = {
   senderPhotoUrl?: string | null;
 };
 
-const OFFER_CURRENCY_SYMBOL: Record<string, string> = { CZK: 'Kč', EUR: '€', GBP: '£' };
+const OFFER_CURRENCY_SYMBOL: Record<string, string> = { CZK: 'Kč', EUR: '€', USD: '$', GBP: '£' };
 
 function formatOfferMoney(minor: number, currency: string): string {
   const value = minor / 100;
@@ -1111,7 +1111,7 @@ type InvoiceEmailInput = {
   issuerName: string;
   number: string;
   subject: string | null;
-  currency: 'CZK' | 'EUR' | 'GBP';
+  currency: 'CZK' | 'EUR' | 'USD' | 'GBP';
   totalExVat: number;
   totalIncVat: number;
   dueDate: Date | null;

@@ -17,7 +17,7 @@ declare module '@prisma/client' {
   export type ConversationKind = 'PROJEKT' | 'SOUKROMA' | 'SKUPINA' | 'DOTAZ';
   export type PozvankaDruh = 'HEREC' | 'FIRMA';
   export type PozvankaStav = 'CEKA' | 'VYPLNENA' | 'HOTOVA' | 'ZRUSENA';
-  export type Currency = 'CZK' | 'EUR' | 'GBP';
+  export type Currency = 'CZK' | 'EUR' | 'USD' | 'GBP';
   export type OfferStatus = 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED';
   export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PAID' | 'CANCELLED';
   export type RezimDph = 'STANDARD' | 'PRENESENA' | 'MIMO_PREDMET';
