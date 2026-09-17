@@ -117,7 +117,8 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
         </div>
       </div>
 
-      <SmlouvyTabulka radky={radkyTabulky} />
+      {/* Mazat jde jen v Odmitnutych a zrusenych (zadani 17. 9. 2026). */}
+      <SmlouvyTabulka radky={radkyTabulky} lzeMazat={activeTab.key === 'ostatni'} />
     </div>
   );
 }

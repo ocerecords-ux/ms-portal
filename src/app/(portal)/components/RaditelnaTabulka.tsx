@@ -133,6 +133,7 @@ export function RaditelnaTabulka<T>({
   hledatPlaceholder = 'Hledat…',
   filtry,
   rozsahDatumu,
+  hromadneAkce,
 }: {
   radky: T[];
   sloupce: SloupecTabulky<T>[];
@@ -148,6 +149,12 @@ export function RaditelnaTabulka<T>({
   hledatPlaceholder?: string;
   filtry?: FiltrTabulky<T>[];
   rozsahDatumu?: RozsahDatumu<T>;
+  /**
+   * Lišta nad tabulkou pro hromadné akce (zadání 17. 9. 2026 - mazání smluv).
+   * Dostane řádky, které jsou PRÁVĚ VIDĚT, tedy po hledání i filtrech: jinak
+   * by „vybrat vše" sáhlo i na to, co má člověk odfiltrované pryč.
+   */
+  hromadneAkce?: (viditelne: T[]) => ReactNode;
 }) {
   const [razeni, setRazeni] = useState<{ key: string; smer: SmerRazeni } | null>(
     vychoziSloupec ? { key: vychoziSloupec, smer: vychoziSmer } : null,
@@ -287,6 +294,8 @@ export function RaditelnaTabulka<T>({
           )}
         </div>
       )}
+
+      {hromadneAkce && hromadneAkce(serazene)}
 
       <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       {/* Sloupců bývá hodně a na užším okně se tabulka nevejde; posouvání do
