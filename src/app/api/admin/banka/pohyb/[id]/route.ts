@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/adminGuard';
+import { smiDoBanky } from '@/lib/bankaPristup';
 import { rozhodniOPohybu } from '@/lib/bankaServer';
 
 /** Ruční rozhodnutí o jednom pohybu: spárovat, ignorovat, odpárovat. */
@@ -14,6 +15,8 @@ const schema = z.object({
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  // Do banky smi jen ten, kdo to ma dovolene u uctu (17. 9. 2026).
+  if (!(await smiDoBanky())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });

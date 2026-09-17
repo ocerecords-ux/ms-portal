@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/adminGuard';
+import { smiDoBanky } from '@/lib/bankaPristup';
 import { sesynchronizujBanku } from '@/lib/bankaServer';
 import { bankaNastavena } from '@/lib/gocardless';
 
@@ -15,7 +15,8 @@ export const maxDuration = 300;
 async function smiSem(req: NextRequest): Promise<boolean> {
   const tajemstvi = process.env.CRON_SECRET;
   if (tajemstvi && req.headers.get('authorization') === `Bearer ${tajemstvi}`) return true;
-  return Boolean(await requireAdmin());
+  // Rucne to smi pustit jen ten, kdo na banku vubec vidi (17. 9. 2026).
+  return smiDoBanky();
 }
 
 export async function GET(req: NextRequest) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { smiDoBanky } from '@/lib/bankaPristup';
 import { AIR_BANK, bankaNastavena, nactiInstituce, zalozSouhlas, zrusSouhlas } from '@/lib/gocardless';
 
 /**
@@ -23,6 +24,8 @@ const schema = z.object({
 export async function GET() {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  // Do banky smi jen ten, kdo to ma dovolene u uctu (17. 9. 2026).
+  if (!(await smiDoBanky())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   if (!bankaNastavena()) return NextResponse.json({ banky: [], nastaveno: false });
   try {
     const banky = await nactiInstituce('cz');
@@ -39,6 +42,8 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  // Do banky smi jen ten, kdo to ma dovolene u uctu (17. 9. 2026).
+  if (!(await smiDoBanky())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   if (!bankaNastavena()) {
     return NextResponse.json(
       { error: 'Napojení na banku zatím není nastavené - chybí klíče GoCardless.' },
@@ -95,6 +100,8 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  // Do banky smi jen ten, kdo to ma dovolene u uctu (17. 9. 2026).
+  if (!(await smiDoBanky())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
   const id = req.nextUrl.searchParams.get('id')?.trim();
   if (!id) return NextResponse.json({ error: 'Chybí id napojení.' }, { status: 400 });

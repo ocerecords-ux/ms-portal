@@ -80,6 +80,7 @@ declare module '@prisma/client' {
     smlouvyPodepisuje: boolean;
     podpisSmluv: string | null;
     prijimaDotazyKlientu: boolean;
+    vidiBanku: boolean;
     chatUpozorneniZpravy: ChatUpozorneni;
     chatUpozorneniSkupiny: ChatUpozorneni;
     chatUpozorneniKanaly: ChatUpozorneni;

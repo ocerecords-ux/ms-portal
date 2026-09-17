@@ -77,9 +77,13 @@ async function neuhrazeneFaktury(issuerCompanyId: string | null): Promise<Faktur
   }));
 }
 
-/** Komu cinkne zvoneček - Žůžo-labůžo, kdo doklady vede. */
+/**
+ * Komu cinkne zvoneček. Jen těm, kdo na banku vidí (zadání 17. 9. 2026:
+ * „nastavení a párování banky bych měl vidět jen já a Bára Šiblová") - kdo
+ * se do sekce nedostane, nemá důvod vědět, kdo co zaplatil.
+ */
 async function adminiIds(): Promise<string[]> {
-  const lide = await prisma.user.findMany({ where: { role: 'ADMIN', active: true }, select: { id: true } });
+  const lide = await prisma.user.findMany({ where: { active: true, vidiBanku: true }, select: { id: true } });
   return lide.map((u) => u.id);
 }
 

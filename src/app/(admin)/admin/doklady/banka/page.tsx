@@ -1,7 +1,9 @@
+import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { formatMoney } from '@/lib/doklady';
 import { computeTotals } from '@/lib/doklady';
 import { bankaNastavena } from '@/lib/gocardless';
+import { smiDoBanky } from '@/lib/bankaPristup';
 import { BankaKlient, type NapojeniRadek, type PohybRadek, type FakturaVolba } from './BankaKlient';
 
 /**
@@ -18,6 +20,10 @@ function den(date: Date | null): string {
 }
 
 export default async function BankaPage() {
+  // Kdo na banku nemá povolení, ať se ani nedozví, že stránka existuje
+  // (zadání 17. 9. 2026: „měl bych vidět jen já a Bára Šiblová").
+  if (!(await smiDoBanky())) notFound();
+
   const [napojeni, pohyby, faktury] = await Promise.all([
     prisma.bankConnection.findMany({
       orderBy: { createdAt: 'asc' },

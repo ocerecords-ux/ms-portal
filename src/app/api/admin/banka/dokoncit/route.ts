@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
+import { smiDoBanky } from '@/lib/bankaPristup';
 import { bankaNastavena, nactiSouhlas, nactiUcet } from '@/lib/gocardless';
 
 /**
@@ -12,6 +13,8 @@ export const dynamic = 'force-dynamic';
 export async function POST() {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  // Do banky smi jen ten, kdo to ma dovolene u uctu (17. 9. 2026).
+  if (!(await smiDoBanky())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   if (!bankaNastavena()) return NextResponse.json({ error: 'Klíče GoCardless nejsou nastavené.' }, { status: 503 });
 
   const cekajici = await prisma.bankConnection.findMany({

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminGuard';
+import { smiDoBanky } from '@/lib/bankaPristup';
 import { sesynchronizujBanku } from '@/lib/bankaServer';
 import { bankaNastavena } from '@/lib/gocardless';
 
@@ -10,6 +11,8 @@ export const maxDuration = 120;
 export async function POST() {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  // Do banky smi jen ten, kdo to ma dovolene u uctu (17. 9. 2026).
+  if (!(await smiDoBanky())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   if (!bankaNastavena()) return NextResponse.json({ error: 'Klíče GoCardless nejsou nastavené.' }, { status: 503 });
 
   try {

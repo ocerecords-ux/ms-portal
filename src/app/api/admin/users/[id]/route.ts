@@ -31,6 +31,7 @@ const schema = z.object({
   manazerProjektu: z.string().trim().optional(),
   smlouvyPodepisuje: z.string().trim().optional(),
   prijimaDotazyKlientu: z.string().trim().optional(),
+  vidiBanku: z.string().trim().optional(),
   dostavaDotoceno: z.string().trim().optional(),
   dostavaDotocenoKlient: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
@@ -64,6 +65,7 @@ function readFormData(formData: FormData) {
     manazerProjektu: has('manazerProjektu') ? formData.get('manazerProjektu') : undefined,
     smlouvyPodepisuje: has('smlouvyPodepisuje') ? formData.get('smlouvyPodepisuje') : undefined,
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
+    vidiBanku: has('vidiBanku') ? formData.get('vidiBanku') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
     dostavaDotocenoKlient: has('dostavaDotocenoKlient')
       ? formData.get('dostavaDotocenoKlient')
@@ -171,6 +173,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.dostavaObjednavky !== undefined
         ? { dostavaObjednavky: data.dostavaObjednavky === '1' }
         : {}),
+      ...(data.vidiBanku !== undefined ? { vidiBanku: data.vidiBanku === '1' } : {}),
       ...(data.prijimaDotazyKlientu !== undefined
         ? { prijimaDotazyKlientu: data.prijimaDotazyKlientu === '1' }
         : {}),

@@ -197,6 +197,13 @@ model User {
   /// v kazdem kanalu, ktery klient otevre tlacitkem "Zeptat se" u projektu.
   prijimaDotazyKlientu Boolean @default(false)
 
+  /// Vidi sekci Banka - napojeni uctu a parovani plateb (zadani 17. 9. 2026:
+  /// „nastaveni a parovani banky bych mel videt jen ja a Bara Siblova").
+  /// Priznak u uctu, ne seznam jmen v kodu: lidi se meni, kod by o tom nevedel.
+  /// Vychozi je NE - do pohybu na uctu nema videt nikdo, komu se to vylozene
+  /// nedovoli, ani ostatni Zuzo-labuzo.
+  vidiBanku Boolean @default(false)
+
   // --- Upozorneni na zpravy v chatu (zadani 12. 9. 2026: „detailnejsi
   //     nastaveni notifikaci v chatu, at si nastavi kazdy sam individualne") ---
   //
