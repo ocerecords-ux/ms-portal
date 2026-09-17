@@ -15,9 +15,7 @@ declare module '@prisma/client' {
   export type WorkType = 'RECORDING' | 'EDITING' | 'OTHER';
   export type CaflouContactKind = 'NEZARAZENO' | 'KLIENT' | 'HEREC' | 'IGNOROVAT';
   export type ConversationKind = 'PROJEKT' | 'SOUKROMA' | 'SKUPINA' | 'DOTAZ';
-  export type PozvankaDruh = 'HEREC' | 'FIRMA';
-  export type PozvankaStav = 'CEKA' | 'VYPLNENA' | 'HOTOVA' | 'ZRUSENA';
-  export type Currency = 'CZK' | 'EUR' | 'USD' | 'GBP';
+  export type Currency = 'CZK' | 'EUR' | 'GBP' | 'USD';
   export type OfferStatus = 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED';
   export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PAID' | 'CANCELLED';
   export type RezimDph = 'STANDARD' | 'PRENESENA' | 'MIMO_PREDMET';
@@ -31,6 +29,8 @@ declare module '@prisma/client' {
   export type FeedScope = 'MINE' | 'STUDIO' | 'ALL';
   export type StavBonusu = 'NAVRZENO' | 'SCHVALENO' | 'ZAMITNUTO';
   export type StavPripominky = 'NOVA' | 'HOTOVA';
+  export type PozvankaDruh = 'HEREC' | 'FIRMA';
+  export type PozvankaStav = 'CEKA' | 'VYPLNENA' | 'HOTOVA' | 'ZRUSENA';
   export type Company = {
     id: string;
     code: string | null;
@@ -89,7 +89,6 @@ declare module '@prisma/client' {
     dostavaDotocenoKlient: boolean;
     dostavaObjednavky: boolean;
     dostavaVyplneneUdaje: boolean;
-    udajeDoplneny: boolean;
     vychoziManazerAudioknih: boolean;
     dodavatelCompanyId: string | null;
     birthNumber: string | null;
@@ -101,6 +100,7 @@ declare module '@prisma/client' {
     addressCity: string | null;
     addressZip: string | null;
     addressCountry: string | null;
+    udajeDoplneny: boolean;
     inviteToken: string | null;
     inviteTokenExpires: Date | null;
     invitedAt: Date | null;
@@ -180,6 +180,7 @@ declare module '@prisma/client' {
     startDate: Date | null;
     endDate: Date | null;
     popis: string | null;
+    licenceUziti: string | null;
     dotocenoStavPred: string | null;
     dotocenoStavPo: string | null;
     zdroj: ProjectSource;
@@ -969,6 +970,14 @@ declare module '@prisma/client' {
     createdAt: Date;
     [key: string]: any;
   };
+  export type PripominkaPriloha = {
+    id: string;
+    pripominkaId: string;
+    url: string;
+    nazev: string;
+    createdAt: Date;
+    [key: string]: any;
+  };
   export type PozvankaUdaju = {
     id: string;
     token: string;
@@ -984,17 +993,61 @@ declare module '@prisma/client' {
     odeslanoAt: Date | null;
     vyplnenoAt: Date | null;
     zpracovanoAt: Date | null;
-    data: Prisma.JsonValue;
+    data: any | null;
     poznamka: string | null;
     vzkazOdNej: string | null;
     [key: string]: any;
   };
-  export type PripominkaPriloha = {
+  export type Navod = {
     id: string;
-    pripominkaId: string;
-    url: string;
+    slug: string;
     nazev: string;
+    perex: string | null;
+    kategorie: string;
+    obsah: string;
+    hledaci: string;
+    poradi: number;
+    zverejneno: boolean;
+    autorId: string | null;
     createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type BankConnection = {
+    id: string;
+    institutionId: string;
+    institutionName: string;
+    requisitionId: string;
+    agreementId: string | null;
+    accountId: string | null;
+    iban: string | null;
+    label: string | null;
+    issuerCompanyId: string | null;
+    stav: string;
+    consentExpiresAt: Date | null;
+    lastSyncAt: Date | null;
+    lastSyncError: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type BankTransaction = {
+    id: string;
+    connectionId: string;
+    externalId: string;
+    bookedAt: Date;
+    amountMinor: number;
+    currency: Currency;
+    variableSymbol: string | null;
+    counterpartyName: string | null;
+    counterpartyAccount: string | null;
+    reference: string | null;
+    invoiceId: string | null;
+    stav: string;
+    navrhInvoiceId: string | null;
+    navrhDuvod: string | null;
+    createdAt: Date;
+    updatedAt: Date;
     [key: string]: any;
   };
   export class PrismaClient {
@@ -1979,6 +2032,21 @@ declare module '@prisma/client' {
       groupBy(args?: any): Promise<any[]>;
       aggregate(args?: any): Promise<any>;
     };
+    pripominkaPriloha: {
+      findUnique(args?: any): Promise<PripominkaPriloha | null>;
+      findFirst(args?: any): Promise<PripominkaPriloha | null>;
+      findMany(args?: any): Promise<PripominkaPriloha[]>;
+      create(args?: any): Promise<PripominkaPriloha>;
+      update(args?: any): Promise<PripominkaPriloha>;
+      upsert(args?: any): Promise<PripominkaPriloha>;
+      delete(args?: any): Promise<PripominkaPriloha>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
     pozvankaUdaju: {
       findUnique(args?: any): Promise<PozvankaUdaju | null>;
       findFirst(args?: any): Promise<PozvankaUdaju | null>;
@@ -1994,14 +2062,44 @@ declare module '@prisma/client' {
       groupBy(args?: any): Promise<any[]>;
       aggregate(args?: any): Promise<any>;
     };
-    pripominkaPriloha: {
-      findUnique(args?: any): Promise<PripominkaPriloha | null>;
-      findFirst(args?: any): Promise<PripominkaPriloha | null>;
-      findMany(args?: any): Promise<PripominkaPriloha[]>;
-      create(args?: any): Promise<PripominkaPriloha>;
-      update(args?: any): Promise<PripominkaPriloha>;
-      upsert(args?: any): Promise<PripominkaPriloha>;
-      delete(args?: any): Promise<PripominkaPriloha>;
+    navod: {
+      findUnique(args?: any): Promise<Navod | null>;
+      findFirst(args?: any): Promise<Navod | null>;
+      findMany(args?: any): Promise<Navod[]>;
+      create(args?: any): Promise<Navod>;
+      update(args?: any): Promise<Navod>;
+      upsert(args?: any): Promise<Navod>;
+      delete(args?: any): Promise<Navod>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    bankConnection: {
+      findUnique(args?: any): Promise<BankConnection | null>;
+      findFirst(args?: any): Promise<BankConnection | null>;
+      findMany(args?: any): Promise<BankConnection[]>;
+      create(args?: any): Promise<BankConnection>;
+      update(args?: any): Promise<BankConnection>;
+      upsert(args?: any): Promise<BankConnection>;
+      delete(args?: any): Promise<BankConnection>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    bankTransaction: {
+      findUnique(args?: any): Promise<BankTransaction | null>;
+      findFirst(args?: any): Promise<BankTransaction | null>;
+      findMany(args?: any): Promise<BankTransaction[]>;
+      create(args?: any): Promise<BankTransaction>;
+      update(args?: any): Promise<BankTransaction>;
+      upsert(args?: any): Promise<BankTransaction>;
+      delete(args?: any): Promise<BankTransaction>;
       deleteMany(args?: any): Promise<any>;
       createMany(args?: any): Promise<any>;
       updateMany(args?: any): Promise<any>;

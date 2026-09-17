@@ -1118,6 +1118,8 @@ model IssuerCompany {
   invoices     Invoice[]
   expenses     Expense[]
   contracts    Contract[]
+  /// Napojene ucty u GoCardless (17. 9. 2026).
+  bankConnections BankConnection[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1303,6 +1305,9 @@ model Invoice {
   offer   Offer?  @relation(fields: [offerId], references: [id])
 
   items InvoiceItem[]
+
+  /// Pohyby na uctu, ktere k teto fakture portal priradil (17. 9. 2026).
+  bankTransactions BankTransaction[]
 
   // Vazba na projekt v Caflou (zadani 8. 9. 2026: "chtel bych mit Doklady
   // navazane na projekty"). Nazev drzime i textove, aby doklad zustal
@@ -2637,4 +2642,92 @@ model Navod {
 
   @@index([kategorie, poradi])
   @@index([zverejneno])
+}
+
+// ===========================================================================
+// BANKA (zadani 17. 9. 2026: „potrebuju, at se ta banka paruje sama")
+//
+// Air Bank ma vlastni PSD2 API jen pro registrovane TPP s eIDAS certifikatem,
+// takze se na nej primo napojit nejde. Chodi se pres GoCardless Bank Account
+// Data (drive Nordigen), ktery je pro tenhle rozsah zdarma: clovek jednou
+// odklikne souhlas v internetovem bankovnictvi a portal si pak sam stahuje
+// pohyby. Souhlas ma omezenou platnost (~90 dnu) a obnovuje se stejnym
+// kliknutim - proto se u napojeni drzi datum, do kdy plati.
+// ===========================================================================
+
+/// Napojeny bankovni ucet. Jeden radek = jeden ucet u GoCardless.
+model BankConnection {
+  id String @id @default(cuid())
+
+  /// Kod banky u GoCardless, napr. AIRBANK_AIRACZPP.
+  institutionId   String
+  institutionName String
+
+  /// Id souhlasu (requisition) a dohody (agreement) u GoCardless.
+  requisitionId String  @unique
+  agreementId   String?
+
+  /// Id uctu u GoCardless - teprve po odkliknuti souhlasu.
+  accountId String?
+  iban      String?
+  /// Jak se ucet jmenuje v portalu („Air Bank CZK").
+  label String?
+
+  /// Ke ktere nasi firme ucet patri - kvuli parovani faktur.
+  issuerCompanyId String?
+  issuer          IssuerCompany? @relation(fields: [issuerCompanyId], references: [id], onDelete: SetNull)
+
+  /// CEKA (souhlas jeste neodkliknut) | AKTIVNI | VYPRSELO | CHYBA
+  stav             String    @default("CEKA")
+  consentExpiresAt DateTime?
+
+  lastSyncAt    DateTime?
+  lastSyncError String?
+
+  transactions BankTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stav])
+}
+
+/// Jeden pohyb na uctu. Drzi se i to, co se nesparovalo - jinak by clovek
+/// nemel kde overit, proc faktura zustala neuhrazena.
+model BankTransaction {
+  id           String         @id @default(cuid())
+  connectionId String
+  connection   BankConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  /// Id transakce od banky - podle nej se pozna, ze uz ji portal zna.
+  externalId String
+
+  bookedAt DateTime
+  /// Kladna castka = prichozi platba. V nejmensi jednotce meny.
+  amountMinor Int
+  currency    Currency @default(CZK)
+
+  variableSymbol      String?
+  counterpartyName    String?
+  counterpartyAccount String?
+  /// Zprava pro prijemce, poznamka, cokoliv textoveho od banky.
+  reference String?
+
+  /// Sparovana faktura.
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  /// NOVA | AUTO (sparovano samo) | NAVRH (ceka na potvrzeni) | RUCNE
+  /// | IGNOROVANA (clovek rekl, ze k zadne fakture nepatri)
+  stav String @default("NOVA")
+  /// Kdyz je stav NAVRH: ke ktere fakture a proc.
+  navrhInvoiceId String?
+  navrhDuvod     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([connectionId, externalId])
+  @@index([stav, bookedAt])
+  @@index([invoiceId])
 }
