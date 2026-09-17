@@ -42,10 +42,21 @@ export async function notifyMany(userIds: (string | null | undefined)[], input: 
   }
 }
 
+/**
+ * Druhy, které se pod zvonkem NEUKAZUJÍ.
+ *
+ * `chat-zminka` sem přibyl 17. 9. 2026 („do zvonečku na horní liště by neměly
+ * chodit notifikace zmínky z chatu"). Nové už nevznikají — viz
+ * /api/chat/konverzace/[id]/zpravy — ale ty, které vznikly mezi 14. a 17. 9.,
+ * jsou v databázi a bez tohohle by pod zvonkem visely dál. Nemažou se:
+ * schovat řádek jde vrátit, smazaný se nevrátí.
+ */
+const SKRYTE_DRUHY = ['chat-zminka'];
+
 export async function loadNotifications(userId: string, limit = 20) {
   try {
     return await prisma.notification.findMany({
-      where: { userId },
+      where: { userId, kind: { notIn: SKRYTE_DRUHY } },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
@@ -59,7 +70,9 @@ export async function loadNotifications(userId: string, limit = 20) {
 
 export async function countUnread(userId: string): Promise<number> {
   try {
-    return await prisma.notification.count({ where: { userId, readAt: null } });
+    return await prisma.notification.count({
+      where: { userId, readAt: null, kind: { notIn: SKRYTE_DRUHY } },
+    });
   } catch {
     return 0;
   }

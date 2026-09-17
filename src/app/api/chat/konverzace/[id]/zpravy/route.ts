@@ -10,7 +10,6 @@ import { posliPush } from '@/lib/pushServer';
 import { canUseChat, shrnReakce, userLabel } from '@/lib/chatServer';
 import { odkazNaFotku } from '@/lib/fotky';
 import { komuPoslatUpozorneni, zminenyTym } from '@/lib/chatUpozorneniServer';
-import { notifyMany } from '@/lib/notifications';
 
 // Zpravy jedne konverzace (zadani 8. 9. 2026). Otevreni konverzace zaroven
 // znamena "precteno" - proto se pri GET posouva lastReadAt.
@@ -302,26 +301,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       });
 
       /**
-       * Zmínka jde i pod zvonek v liště (oprava 14. 9. 2026). Push funguje
-       * jen tomu, kdo prohlížeči povolil upozornění — a když ho nepovolil,
-       * nezbylo po zmínce vůbec nic. Zvonek počká, než člověk portál
-       * otevře, takže se zmínka neztratí ani přes noc.
+       * ZMÍNKA POD ZVONEK NEJDE (zadání 17. 9. 2026: „do zvonečku na horní
+       * liště by neměly chodit notifikace zmínky z chatu").
        *
-       * Běžné zprávy pod zvonek nepatří: od toho je počítadlo nepřečtených
-       * u chatu, jinak by tam byla za den stovka řádků.
+       * Od 14. 9. 2026 tu zmínka zakládala i řádek pod zvonkem, aby se
+       * neztratila tomu, kdo prohlížeči nepovolil upozornění. V praxi z toho
+       * byl zvonek plný chatu - a chat na sebe upozorňuje sám: odznakem
+       * u doku, počítadlem nepřečtených u konverzace a pushem.
+       *
+       * Staré řádky, které takhle vznikly, se pod zvonkem neukazují - viz
+       * lib/notifications.ts.
        */
-      const zminenPrijemci = prijemci.filter((id) => zmineni.includes(id));
-      if (zminenPrijemci.length > 0) {
-        void notifyMany(zminenPrijemci, {
-          kind: 'chat-zminka',
-          title:
-            conversation.kind === 'PROJEKT'
-              ? `${kdo} vás zmínil v # ${conversation.name ?? 'projektu'}`
-              : `${kdo} vás zmínil v chatu`,
-          body: nahled,
-          url: `/chat?konverzace=${conversation.id}`,
-        });
-      }
     }
 
     return NextResponse.json(
