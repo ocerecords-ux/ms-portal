@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Currency, PaymentMethod } from '@prisma/client';
@@ -479,14 +480,12 @@ export function ExpenseEditor({
       </div>
 
       <div>
-        <button
-          type="button"
-          onClick={remove}
+        <TlacitkoSmazat
+          onSmazat={remove}
           disabled={saving}
-          className="text-danger text-sm font-heading disabled:opacity-60"
-        >
-          Smazat doklad
-        </button>
+          popisek="Smazat doklad"
+          otazka="Opravdu smazat doklad?"
+        />
       </div>
     </div>
   );

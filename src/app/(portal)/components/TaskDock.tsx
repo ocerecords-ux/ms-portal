@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
@@ -216,15 +217,14 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
                 </span>
               )}
             </span>
-            <button
-              type="button"
-              onClick={() => send(`/api/tasks/${task.id}`, 'DELETE')}
+            {/* Pojistka (18. 9. 2026) - úkol nezmizí na jedno ťuknutí. */}
+            <TlacitkoSmazat
+              onSmazat={() => send(`/api/tasks/${task.id}`, 'DELETE')}
               disabled={busy}
-              title="Smazat úkol"
-              className="text-muted hover:text-danger text-xs font-heading opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-            >
-              ✕
-            </button>
+              popisek="✕"
+              otazka="Opravdu smazat?"
+              trida="text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            />
           </li>
         ))}
       </ul>
@@ -250,15 +250,13 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
                     className="mt-0.5 w-4 h-4 accent-[#6C4BF4] shrink-0"
                   />
                   <span className="flex-1 min-w-0 text-sm font-body text-muted line-through break-words">{task.title}</span>
-                  <button
-                    type="button"
-                    onClick={() => send(`/api/tasks/${task.id}`, 'DELETE')}
+                  <TlacitkoSmazat
+                    onSmazat={() => send(`/api/tasks/${task.id}`, 'DELETE')}
                     disabled={busy}
-                    title="Smazat úkol"
-                    className="text-muted hover:text-danger text-xs font-heading opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                  >
-                    ✕
-                  </button>
+                    popisek="✕"
+                    otazka="Opravdu smazat?"
+                    trida="text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  />
                 </li>
               ))}
             </ul>

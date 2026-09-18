@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import type { WorkType } from '@prisma/client';
 import {
   WORK_TYPE_LABELS,
@@ -763,14 +764,14 @@ export function TimesheetEditor({
                           >
                             {editId === e.id ? 'Upravuje se' : 'Upravit'}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => removeEntry(e.id)}
-                            disabled={busyId === e.id}
-                            className="text-danger text-sm font-heading disabled:opacity-50"
-                          >
-                            Smazat
-                          </button>
+                          {/* POJISTKA (zadání 18. 9. 2026: „když chci smazat
+                              výkaz, měla by tam být všude pojistka"). První
+                              klepnutí se jen zeptá. */}
+                          <TlacitkoSmazat
+                            onSmazat={() => removeEntry(e.id)}
+                            bezi={busyId === e.id}
+                            otazka="Opravdu smazat výkaz?"
+                          />
                         </span>
                       )}
                     </td>

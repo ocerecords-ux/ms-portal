@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatCzk, formatDuration } from '@/lib/timesheets';
@@ -373,15 +374,12 @@ function Tabulka({
                         </button>
                         {/* Smazat = „tenhle navrh sem vubec nepatri".
                             Zamitnuty bonus zustava v historii, smazany ne. */}
-                        <button
-                          type="button"
-                          onClick={() => rozhodni(b.id, 'smazat')}
-                          disabled={busyId === b.id}
-                          title="Zahodit návrh úplně"
-                          className="text-muted text-xs font-heading hover:text-danger disabled:opacity-60"
-                        >
-                          Smazat
-                        </button>
+                        <TlacitkoSmazat
+                          onSmazat={() => rozhodni(b.id, 'smazat')}
+                          bezi={busyId === b.id}
+                          otazka="Opravdu zahodit návrh?"
+                          trida="text-xs"
+                        />
                       </span>
                     )}
                     {muzeSchvalovat && b.vlastni && b.stav === 'NAVRZENO' && (

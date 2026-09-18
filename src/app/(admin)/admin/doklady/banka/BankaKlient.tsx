@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { VyberPole } from '@/components/VyberPole';
@@ -240,14 +241,16 @@ export function BankaKlient({
                     {n.nazev}
                     {n.firma ? ` · ${n.firma}` : ''}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => odpoj(n.id)}
+                  {/* Odpojením se ztratí i souhlas v bance - znovu se napojuje
+                      přes přihlášení do Air Banky, tak ať to není na jedno
+                      kliknutí (18. 9. 2026). */}
+                  <TlacitkoSmazat
+                    onSmazat={() => odpoj(n.id)}
                     disabled={busy !== null}
-                    className="text-xs font-heading text-muted hover:text-status-danger"
-                  >
-                    Odpojit
-                  </button>
+                    popisek="Odpojit"
+                    otazka="Opravdu odpojit účet?"
+                    trida="text-xs"
+                  />
                 </div>
                 <p className="text-xs font-body text-muted m-0">
                   {n.iban ? `${n.iban} · ` : ''}

@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRazeni, ThRadit } from '@/app/(portal)/components/RaditelnaTabulka';
 import { useRouter } from 'next/navigation';
@@ -297,14 +298,11 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                         polozka se upravuje kliknutim na nazev, stejne jako
                         uzivatel v seznamu uzivatelu. */}
                     <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item)}
+                      <TlacitkoSmazat
+                        onSmazat={() => removeItem(item)}
                         disabled={busy}
-                        className="text-danger text-sm font-heading disabled:opacity-60"
-                      >
-                        Smazat
-                      </button>
+                        otazka="Opravdu smazat položku?"
+                      />
                     </td>
                   </tr>
                 ),

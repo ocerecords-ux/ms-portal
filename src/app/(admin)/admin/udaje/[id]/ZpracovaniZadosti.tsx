@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { RozdilPole } from '@/lib/pozvankaUdaju';
@@ -204,14 +205,13 @@ export function ZpracovaniZadosti({
       {chyba && <p className="text-sm font-body text-danger m-0">{chyba}</p>}
 
       {(stav === 'CEKA' || stav === 'VYPLNENA') && (
-        <button
-          type="button"
+        <TlacitkoSmazat
+          onSmazat={() => zrus()}
           disabled={bezi}
-          onClick={() => void zrus()}
-          className="self-start text-sm font-heading text-muted hover:text-danger bg-transparent border-0 p-0 cursor-pointer disabled:opacity-60"
-        >
-          Zrušit žádost
-        </button>
+          popisek="Zrušit žádost"
+          otazka="Opravdu zrušit žádost?"
+          trida="self-start"
+        />
       )}
     </div>
   );

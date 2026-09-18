@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
@@ -181,17 +182,15 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
               >
                 {otevrena.active ? 'Vyřadit z nabídky' : 'Vrátit do nabídky'}
               </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={async () => {
+              <TlacitkoSmazat
+                onSmazat={async () => {
                   const ok = await posli(`/api/admin/contract-templates/${otevrena.id}`, 'DELETE');
                   if (ok) setOpenId(null);
                 }}
-                className="text-danger text-sm font-heading ml-auto"
-              >
-                Smazat
-              </button>
+                disabled={busy}
+                otazka="Opravdu smazat šablonu?"
+                trida="ml-auto"
+              />
             </div>
           </div>
         )}

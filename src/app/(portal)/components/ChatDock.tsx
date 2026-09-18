@@ -7,6 +7,7 @@ import type { ConversationKind } from '@prisma/client';
 import { MS_SMAJLICI, najdiSmajlika } from '@/lib/msSmajlici';
 import { doplnVelkaPismena, naVelke, zacatekVety } from '@/lib/velkePismena';
 import { MsSmajlik } from './MsSmajlik';
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import {
   CHAT_TABS,
   CHAT_ZALOZKY,
@@ -3339,14 +3340,13 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         >
                           Zrušit
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => void opustSkupinu()}
+                        <TlacitkoSmazat
+                          onSmazat={() => opustSkupinu()}
                           disabled={spravaUklada}
-                          className="ml-auto font-heading text-xs text-muted hover:text-danger disabled:opacity-50"
-                        >
-                          Odejít ze skupiny
-                        </button>
+                          popisek="Odejít ze skupiny"
+                          otazka="Opravdu odejít?"
+                          trida="ml-auto text-xs"
+                        />
                       </div>
                     </div>
                   )}

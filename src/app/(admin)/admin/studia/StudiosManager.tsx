@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
@@ -347,14 +348,12 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
                   {formatDateTime(b.end)}
                 </span>
               </span>
-              <button
-                type="button"
+              <TlacitkoSmazat
+                onSmazat={() => posli(`/api/admin/studia/blokace?id=${b.id}`, 'DELETE')}
                 disabled={busy}
-                onClick={() => posli(`/api/admin/studia/blokace?id=${b.id}`, 'DELETE')}
-                className="text-danger text-xs font-heading font-semibold disabled:opacity-60"
-              >
-                Smazat
-              </button>
+                otazka="Opravdu smazat blokaci?"
+                trida="text-xs font-semibold"
+              />
             </li>
           ))}
         </ul>

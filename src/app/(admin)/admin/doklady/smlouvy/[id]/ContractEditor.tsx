@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS, formatSignedAt } from '@/lib/contracts';
@@ -267,9 +268,12 @@ export function ContractEditor({
               </button>
             )}
             {contract.status === 'DRAFT' && (
-              <button type="button" onClick={smazat} disabled={busy} className="text-danger text-sm font-heading px-2">
-                Smazat
-              </button>
+              <TlacitkoSmazat
+                onSmazat={smazat}
+                disabled={busy}
+                otazka="Opravdu smazat smlouvu?"
+                trida="px-2"
+              />
             )}
           </div>
         </div>

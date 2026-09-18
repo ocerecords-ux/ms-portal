@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
@@ -953,14 +954,12 @@ export function OfferEditor({
 
       {!locked && !jesteNeulozena && (
         <div>
-          <button
-            type="button"
-            onClick={remove}
+          <TlacitkoSmazat
+            onSmazat={remove}
             disabled={saving}
-            className="text-danger text-sm font-heading disabled:opacity-60"
-          >
-            Smazat nabídku
-          </button>
+            popisek="Smazat nabídku"
+            otazka="Opravdu smazat nabídku?"
+          />
         </div>
       )}
     </div>

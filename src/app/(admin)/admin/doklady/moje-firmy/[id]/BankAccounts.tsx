@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
@@ -129,14 +130,11 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
                     Nastavit výchozí
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => send(`/api/admin/ucty/${a.id}`, 'DELETE')}
+                <TlacitkoSmazat
+                  onSmazat={() => send(`/api/admin/ucty/${a.id}`, 'DELETE')}
                   disabled={busy}
-                  className="text-danger text-sm font-heading disabled:opacity-60"
-                >
-                  Smazat
-                </button>
+                  otazka="Opravdu smazat účet?"
+                />
               </div>
             </li>
           ))}

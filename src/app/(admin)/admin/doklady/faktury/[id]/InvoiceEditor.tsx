@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
@@ -932,18 +933,27 @@ export function InvoiceEditor({
 
       {!jesteNeulozena && (
         <div className="flex flex-col gap-1">
-          <button
-            type="button"
-            onClick={remove}
+          {/* Pojistka (18. 9. 2026): faktura ani storno nezmizí na jedno
+              kliknutí - první klepnutí se jen zeptá. */}
+          <TlacitkoSmazat
+            onSmazat={remove}
             disabled={saving}
-            className="text-danger text-sm font-heading disabled:opacity-60 self-start"
-          >
-            {invoice.status === 'DRAFT'
-              ? 'Smazat fakturu'
-              : invoice.status === 'CANCELLED'
-                ? 'Smazat natrvalo'
-                : 'Stornovat fakturu'}
-          </button>
+            popisek={
+              invoice.status === 'DRAFT'
+                ? 'Smazat fakturu'
+                : invoice.status === 'CANCELLED'
+                  ? 'Smazat natrvalo'
+                  : 'Stornovat fakturu'
+            }
+            otazka={
+              invoice.status === 'DRAFT'
+                ? 'Opravdu smazat fakturu?'
+                : invoice.status === 'CANCELLED'
+                  ? 'Opravdu smazat natrvalo?'
+                  : 'Opravdu stornovat fakturu?'
+            }
+            trida="self-start"
+          />
           {invoice.status === 'CANCELLED' && (
             <span className="text-xs font-body text-muted">
               Stornovaná faktura v číselné řadě normálně zůstává. Smazat natrvalo má smysl u dokladů,

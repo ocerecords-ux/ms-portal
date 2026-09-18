@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
@@ -98,14 +99,11 @@ export function CategoryManager({
               >
                 {c.active ? 'Vyřadit' : 'Vrátit do nabídky'}
               </button>
-              <button
-                type="button"
-                onClick={() => remove(c)}
+              <TlacitkoSmazat
+                onSmazat={() => remove(c)}
                 disabled={busy}
-                className="text-danger text-sm font-heading disabled:opacity-60"
-              >
-                Smazat
-              </button>
+                otazka="Opravdu smazat kategorii?"
+              />
             </div>
           </li>
         ))}

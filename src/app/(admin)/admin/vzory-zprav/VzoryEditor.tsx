@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useEffect, useRef, useState } from 'react';
 import { DRUHY_NOTIFIKACI, DRUH_POPISKY, type DruhNotifikace } from '@/lib/notifikaceFirmy';
 import { BARVY_TEXTU, VELIKOSTI_TEXTU } from '@/lib/formatovaniZpravy';
@@ -199,15 +200,16 @@ export function VzoryEditor({ pocatecni }: { pocatecni: VzorSeStavem[] }) {
               {ulozeno === vzor.stav && (
                 <span className="text-sm font-heading text-brand-greenDeep">Uloženo</span>
               )}
+              {/* Obnovením se vlastní znění zahodí - proto pojistka
+                  (18. 9. 2026). */}
               {vzor.upraveno && (
-                <button
-                  type="button"
-                  onClick={() => void vychozi()}
+                <TlacitkoSmazat
+                  onSmazat={() => vychozi()}
                   disabled={pracuje}
-                  className="ml-auto font-heading text-xs text-muted hover:text-danger disabled:opacity-50"
-                >
-                  Obnovit výchozí znění
-                </button>
+                  popisek="Obnovit výchozí znění"
+                  otazka="Opravdu zahodit vlastní znění?"
+                  trida="ml-auto text-xs"
+                />
               )}
             </div>
 

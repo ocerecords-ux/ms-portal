@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Prekazka } from '@/lib/mazani';
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 
 /**
  * Smazání firmy / uživatele / projektu, na kterém něco visí (zadání
@@ -62,16 +63,22 @@ export function SmazatSPrekazkami({
   }
 
   if (!ptaSe) {
+    /**
+     * POJISTKA I TADY (zadání 18. 9. 2026: „měla by tam být všude pojistka").
+     *
+     * Tři kroky níž se ukážou jen tehdy, když na záznamu něco visí. Firma bez
+     * navázaných věcí se do teď smazala prvním kliknutím - a to je právě ten
+     * případ, kdy nic nevaruje.
+     */
     return (
       <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => void zkus()}
-          disabled={pracuje}
-          className="self-start font-heading font-semibold text-sm text-danger hover:underline disabled:opacity-60"
-        >
-          {pracuje ? 'Pracuji…' : popisek}
-        </button>
+        <TlacitkoSmazat
+          onSmazat={() => zkus()}
+          bezi={pracuje}
+          popisek={popisek}
+          otazka={`Opravdu smazat: ${co}?`}
+          trida="self-start font-semibold"
+        />
         {chyba && <p className="text-sm text-danger m-0">{chyba}</p>}
       </div>
     );

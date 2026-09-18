@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 
 /**
@@ -108,15 +109,16 @@ export function OdkazProKlienta({
         >
           {stav.url ? 'Vygenerovat nový' : 'Vyrobit odkaz'}
         </button>
+        {/* Zavřením odkaz přestane fungovat i tomu, komu ho klient přeposlal -
+            proto se portál ptá podruhé (18. 9. 2026). */}
         {stav.url && (
-          <button
-            type="button"
+          <TlacitkoSmazat
+            onSmazat={() => posli(zaklad, { method: 'DELETE' })}
             disabled={pracuje}
-            onClick={() => void posli(zaklad, { method: 'DELETE' })}
-            className="font-heading text-xs text-muted hover:text-danger disabled:opacity-50"
-          >
-            Zavřít
-          </button>
+            popisek="Zavřít"
+            otazka="Opravdu zavřít odkaz?"
+            trida="text-xs"
+          />
         )}
       </div>
     </div>

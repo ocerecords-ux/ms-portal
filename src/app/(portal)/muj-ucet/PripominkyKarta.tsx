@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PripominkaRadek } from '@/lib/pripominkyServer';
@@ -203,16 +204,14 @@ function Polozka({
           </div>
         )}
       </div>
-      <button
-        type="button"
-        onClick={onSmazat}
+      {/* Křížek mizel na jedno ťuknutí - teď se nejdřív zeptá (18. 9. 2026). */}
+      <TlacitkoSmazat
+        onSmazat={onSmazat}
         disabled={pracuje}
-        title="Smazat připomínku"
-        aria-label="Smazat připomínku"
-        className="text-muted hover:text-danger text-sm leading-none self-start"
-      >
-        ×
-      </button>
+        popisek="×"
+        otazka="Opravdu smazat?"
+        trida="self-start leading-none"
+      />
     </div>
   );
 }
