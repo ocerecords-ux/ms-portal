@@ -1,5 +1,11 @@
 import { prisma } from '@/lib/db';
-import { extractDriveFolderId, getAccessToken, getFileMeta, isWithinRoot } from '@/lib/googleDrive';
+import {
+  extractDriveFolderId,
+  getAccessToken,
+  getFileMeta,
+  isWithinRoot,
+  listFolder,
+} from '@/lib/googleDrive';
 import { projektPodleTokenu } from '@/lib/preposlechOdkaz';
 
 /**
@@ -102,5 +108,51 @@ export async function jeReklamniKlient(caflouProjectId: string): Promise<boolean
   } catch (err) {
     console.error('Overeni reklamniho klienta selhalo:', err);
     return false;
+  }
+}
+
+/**
+ * SPOTY VE SLOŽCE PROJEKTU (zadání 18. 9. 2026: „pravděpodobně tam bude
+ * 1 stopa v 90 % případů, ale může se stát, že jich tam bude i více - více
+ * spotů").
+ *
+ * Vrací zvuk i video z kořenové složky projektu, aby se šlo mezi spoty
+ * přepínat přímo v taggeru. Podsložky se neprohledávají: spoty leží u sebe
+ * a rekurze by z jedné obrazovky udělala prohlížeč Disku.
+ */
+export type SpotVeSlozce = {
+  id: string;
+  nazev: string;
+  mimeType: string;
+  velikost: number | null;
+  /** Zvuk se tagguje jen ve vlně, video má nad vlnou ještě náhled. */
+  jeVideo: boolean;
+};
+
+export async function seznamSpotu(caflouProjectId: string): Promise<SpotVeSlozce[]> {
+  try {
+    const meta = await prisma.projectMeta.findUnique({
+      where: { caflouProjectId },
+      select: { driveUrl: true },
+    });
+    const rootId = meta?.driveUrl ? extractDriveFolderId(meta.driveUrl) : null;
+    if (!rootId) return [];
+
+    const token = await getAccessToken();
+    if (!token) return [];
+
+    const polozky = await listFolder(rootId, token);
+    return polozky
+      .filter((p) => !p.isFolder && (p.mimeType.startsWith('audio/') || p.mimeType.startsWith('video/')))
+      .map((p) => ({
+        id: p.id,
+        nazev: p.name,
+        mimeType: p.mimeType,
+        velikost: p.size ? Number(p.size) : null,
+        jeVideo: p.mimeType.startsWith('video/'),
+      }));
+  } catch (err) {
+    console.error('Nacteni spotu ve slozce selhalo:', err);
+    return [];
   }
 }

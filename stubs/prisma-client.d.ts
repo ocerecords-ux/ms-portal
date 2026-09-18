@@ -185,6 +185,7 @@ declare module '@prisma/client' {
     licenceUziti: string | null;
     dotocenoStavPred: string | null;
     dotocenoStavPo: string | null;
+    schvalenoKlientemAt: Date | null;
     zdroj: ProjectSource;
     prenesenoAt: Date | null;
     createdAt: Date;

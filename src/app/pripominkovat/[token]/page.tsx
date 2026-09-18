@@ -3,9 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
-import { nactiPripominky, pristupKVideu } from '@/lib/reklamaPripominky';
-import { zapisOtevreni } from '@/lib/preposlechOdkaz';
-import { VideoTagger } from './VideoTagger';
+import { nactiPripominky, pristupKVideu, seznamSpotu } from '@/lib/reklamaPripominky';
+import { projektPodleTokenu, zapisOtevreni } from '@/lib/preposlechOdkaz';
+import { stavSchvaleni } from '@/lib/schvaleniKlientem';
+import { SchvalitSpot } from '@/components/SchvalitSpot';
+import { SpotTagger } from './VideoTagger';
 
 /**
  * PŘIPOMÍNKOVÁNÍ REKLAMNÍHO SPOTU (zadání 18. 9. 2026).
@@ -42,27 +44,54 @@ export default async function PripominkovatPage({
   params: { token: string };
   searchParams?: { soubor?: string };
 }) {
-  const fileId = searchParams?.soubor?.trim();
-  if (!fileId) {
+  const zadano = searchParams?.soubor?.trim();
+
+  /**
+   * Bez `?soubor=` se vezme jediný spot ve složce (zadání 18. 9. 2026:
+   * „v 90 % případů tam bude jedna stopa"). Kde jich je víc, vybere si člověk
+   * v přepínači nahoře - a odkaz na konkrétní spot pořád funguje.
+   */
+  const pristupProSeznam = zadano ? await pristupKVideu(params.token, zadano) : null;
+  if (pristupProSeznam && 'chyba' in pristupProSeznam) {
+    return <Hlaska nadpis="Odkaz nefunguje" text={pristupProSeznam.chyba} />;
+  }
+
+  const projektZOdkazu =
+    pristupProSeznam && !('chyba' in pristupProSeznam)
+      ? pristupProSeznam.caflouProjectId
+      : await projektPodleTokenu(params.token);
+  if (!projektZOdkazu) {
     return (
       <Hlaska
-        nadpis="Chybí video"
-        text="Tenhle odkaz neříká, ke kterému souboru se má připomínkovat. Otevřete ho prosím znovu z přehledu nahrávek."
+        nadpis="Odkaz už neplatí"
+        text="Tenhle odkaz byl uzavřený nebo nahrazený novým. Napište nám a pošleme vám aktuální."
       />
     );
   }
 
-  const pristup = await pristupKVideu(params.token, fileId);
+  const spoty = await seznamSpotu(projektZOdkazu);
+  const fileId = zadano || spoty[0]?.id || '';
+  if (!fileId) {
+    return (
+      <Hlaska
+        nadpis="Zatím tu není co poslouchat"
+        text="Ve složce projektu není žádný spot ani video. Jakmile tam něco přibude, otevřete odkaz znovu."
+      />
+    );
+  }
+
+  const pristup = pristupProSeznam ?? (await pristupKVideu(params.token, fileId));
   if ('chyba' in pristup) {
     return <Hlaska nadpis="Odkaz nefunguje" text={pristup.chyba} />;
   }
 
-  const [meta, pripominky, session] = await Promise.all([
+  const [meta, pripominky, session, schvaleni] = await Promise.all([
     prisma.projectMeta
       .findUnique({ where: { caflouProjectId: pristup.caflouProjectId }, select: { name: true } })
       .catch(() => null),
     nactiPripominky(pristup.caflouProjectId, pristup.fileId),
     getServerSession(authOptions),
+    stavSchvaleni(pristup.caflouProjectId),
   ]);
 
   // Statistika otevreni - u projektu je pak videt, ze si to klient pustil.
@@ -87,11 +116,26 @@ export default async function PripominkovatPage({
           </div>
         </div>
 
-        <VideoTagger
+        {schvaleni.lzeSchvalit && (
+          <SchvalitSpot token={params.token} schvalenoAt={schvaleni.schvalenoAt} />
+        )}
+
+        <SpotTagger
           token={params.token}
-          fileId={pristup.fileId}
-          nazev={pristup.nazev}
-          velikost={pristup.velikost}
+          spoty={
+            spoty.length > 0
+              ? spoty
+              : [
+                  {
+                    id: pristup.fileId,
+                    nazev: pristup.nazev,
+                    mimeType: pristup.mimeType,
+                    velikost: pristup.velikost,
+                    jeVideo: pristup.mimeType.startsWith('video/'),
+                  },
+                ]
+          }
+          vybranyId={pristup.fileId}
           pocatecni={pripominky}
           jsemZTymu={jsemZTymu}
         />

@@ -1,24 +1,29 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { STROP_PRO_KRIVKU, spocitejKrivku, type Peaks } from '@/lib/krivkaZvuku';
-import type { PripominkaKVideu } from '@/lib/reklamaPripominky';
+import type { PripominkaKVideu, SpotVeSlozce } from '@/lib/reklamaPripominky';
 
 /**
- * AUDIOTAGGER PRO REKLAMY (zadání 18. 9. 2026, upřesněné tentýž den:
- * „vlevo by měl být video náhled, pod tím se načíst zvlášť zvuková stopa,
- * poběží tam v naší grafice kurzor, tak jak je to v AudioTaggeru u knih,
- * a na pravé straně se budou zapisovat ty chyby, bez jména, a pak tam bude
- * jen tlačítko odeslat připomínky").
+ * TAGGER REKLAMNÍHO SPOTU (zadání 18. 9. 2026, upřesněné tentýž den dvakrát).
  *
- * KŘIVKA JE NAŠE, NE OD PŘEHRÁVAČE. Kreslí se do plátna přesně jako
- * u audioknih (viz Preposlech.tsx): přehraná část fialová, zbytek šedý,
- * zelený kurzor, červené značky v místech připomínek. Klik do křivky přetočí
- * video, klik na značku skočí na tu připomínku.
+ * Soubor se pořád jmenuje VideoTagger.tsx - přejmenovat ho vzdáleně nejde -
+ * ale komponenta uvnitř je SpotTagger a zvládá obojí:
  *
- * ZAPSANÉ ≠ ODESLANÉ. Každá připomínka se uloží hned, aby se při zavření
- * okna nic neztratilo, ale dokud klient nezmáčkne „Odeslat připomínky", nikomu
- * u nás nic necinká. Teprve tlačítko říká „hotovo, kouknětě se na to".
+ * - VIDEO: vlevo náhled, pod ním zvuková stopa, vpravo připomínky.
+ * - SAMOTNÝ ZVUK („udělej variantu, kdy tam bude jen zvuková stopa a ta bude
+ *   zobrazena místo videa v levé části a bude se markovat jen ve zvuku"):
+ *   žádný přehrávač s černým pruhem, jen velká vlna přes celou levou část
+ *   a vlastní ovládání v barvách portálu.
+ *
+ * VÍC SPOTŮ V JEDNÉ SLOŽCE („v 90 % případů tam bude jedna stopa, ale může se
+ * stát, že jich tam bude i více"): nad obsahem je řádek s přepínačem. Když je
+ * spot jediný, přepínač se nekreslí vůbec - nemá mezi čím vybírat. Připomínky
+ * patří vždycky ke konkrétnímu souboru, takže se přepnutím vymění i seznam.
+ *
+ * KŘIVKA JE NAŠE, NE OD PŘEHRÁVAČE - kreslí se do plátna stejně jako
+ * u audioknih (Preposlech.tsx): přehraná část fialová, zbytek šedý, zelený
+ * kurzor, červené značky v místech připomínek.
  */
 
 function cas(sekundy: number): string {
@@ -28,44 +33,93 @@ function cas(sekundy: number): string {
   return `${String(m).padStart(2, '0')}:${s.toFixed(1).padStart(4, '0')}`;
 }
 
-export function VideoTagger({
+export function SpotTagger({
   token,
-  fileId,
-  nazev,
-  velikost,
+  spoty,
+  vybranyId,
   pocatecni,
   jsemZTymu,
 }: {
   token: string;
-  fileId: string;
-  nazev: string;
-  /** Velikost souboru v bajtech - u obřích se křivka nepočítá. */
-  velikost: number | null;
+  /** Zvuk i video z kořenové složky projektu. */
+  spoty: SpotVeSlozce[];
+  vybranyId: string;
   pocatecni: PripominkaKVideu[];
   jsemZTymu: boolean;
 }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [aktivniId, setAktivniId] = useState(vybranyId);
+  const spot = useMemo(
+    () => spoty.find((s) => s.id === aktivniId) ?? spoty[0] ?? null,
+    [spoty, aktivniId],
+  );
+
+  const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [pripominky, setPripominky] = useState<PripominkaKVideu[]>(pocatecni);
   const [text, setText] = useState('');
   const [znacka, setZnacka] = useState<number | null>(null);
   const [ted, setTed] = useState(0);
   const [delka, setDelka] = useState(0);
+  const [hraje, setHraje] = useState(false);
   const [peaks, setPeaks] = useState<Peaks | null>(null);
   const [krivkaStav, setKrivkaStav] = useState<'pocita' | 'hotovo' | 'nejde'>('pocita');
   const [posilam, setPosilam] = useState(false);
   const [odesilam, setOdesilam] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
 
-  const src = `/api/drive/download?fileId=${encodeURIComponent(fileId)}&k=${encodeURIComponent(
-    token,
-  )}&disposition=inline`;
+  const fileId = spot?.id ?? '';
+  const src = fileId
+    ? `/api/drive/download?fileId=${encodeURIComponent(fileId)}&k=${encodeURIComponent(
+        token,
+      )}&disposition=inline`
+    : '';
+
+  /* ---------- přepnutí spotu ---------- */
+
+  const nactiZnovu = useCallback(
+    async (idSouboru = fileId) => {
+      if (!idSouboru) return;
+      try {
+        const res = await fetch(
+          `/api/reklama/pripominky?k=${encodeURIComponent(token)}&soubor=${encodeURIComponent(
+            idSouboru,
+          )}`,
+          { cache: 'no-store' },
+        );
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) setPripominky(data.pripominky ?? []);
+      } catch {
+        // nevadi - seznam zustane, jaky je
+      }
+    },
+    [token, fileId],
+  );
+
+  useEffect(() => {
+    if (aktivniId === vybranyId) return;
+    // Adresa jde s vyberem, at se da poslat odkaz presne na ten spot.
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('soubor', aktivniId);
+      window.history.replaceState(null, '', url.toString());
+    } catch {
+      // nevadi
+    }
+    setPeaks(null);
+    setKrivkaStav('pocita');
+    setTed(0);
+    setDelka(0);
+    setZnacka(null);
+    void nactiZnovu(aktivniId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aktivniId]);
 
   /* ---------- křivka ---------- */
 
   useEffect(() => {
     let zivy = true;
-    if (velikost !== null && velikost > STROP_PRO_KRIVKU) {
+    if (!src) return;
+    if (spot?.velikost !== null && spot?.velikost !== undefined && spot.velikost > STROP_PRO_KRIVKU) {
       setKrivkaStav('nejde');
       return;
     }
@@ -79,14 +133,17 @@ export function VideoTagger({
     return () => {
       zivy = false;
     };
-  }, [src, velikost]);
+  }, [src, spot?.velikost]);
+
+  const jenZvuk = spot ? !spot.jeVideo : false;
+  const vyskaKrivky = jenZvuk ? 200 : 72;
 
   const kresli = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
     const w = canvas.clientWidth || 600;
-    const h = canvas.clientHeight || 72;
+    const h = canvas.clientHeight || vyskaKrivky;
     if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
@@ -109,7 +166,6 @@ export function VideoTagger({
         c.fillRect(x, stred - mx * stred, Math.max(1, sirka - 0.4), Math.max(1, (mx - mn) * stred));
       }
     } else {
-      // Bez krivky aspon casova osa, at je kam klikat a kam kreslit znacky.
       c.fillStyle = '#d8d4cc';
       c.fillRect(0, stred - 1, w, 2);
       if (kurzor > 0) {
@@ -132,7 +188,7 @@ export function VideoTagger({
       c.fillRect(Math.max(0, kurzor - 1), 0, 2, h);
     }
     c.restore();
-  }, [peaks, pripominky, ted, delka]);
+  }, [peaks, pripominky, ted, delka, vyskaKrivky]);
 
   useEffect(() => {
     kresli();
@@ -147,35 +203,50 @@ export function VideoTagger({
   /* ---------- přehrávač ---------- */
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    const naCas = () => setTed(video.currentTime);
-    const naDelku = () => setDelka(Number.isFinite(video.duration) ? video.duration : 0);
-    video.addEventListener('timeupdate', naCas);
-    video.addEventListener('seeked', naCas);
-    video.addEventListener('loadedmetadata', naDelku);
-    video.addEventListener('durationchange', naDelku);
+    const media = mediaRef.current;
+    if (!media) return;
+    const naCas = () => setTed(media.currentTime);
+    const naDelku = () => setDelka(Number.isFinite(media.duration) ? media.duration : 0);
+    const naHraje = () => setHraje(true);
+    const naStop = () => setHraje(false);
+    media.addEventListener('timeupdate', naCas);
+    media.addEventListener('seeked', naCas);
+    media.addEventListener('loadedmetadata', naDelku);
+    media.addEventListener('durationchange', naDelku);
+    media.addEventListener('play', naHraje);
+    media.addEventListener('pause', naStop);
+    media.addEventListener('ended', naStop);
     return () => {
-      video.removeEventListener('timeupdate', naCas);
-      video.removeEventListener('seeked', naCas);
-      video.removeEventListener('loadedmetadata', naDelku);
-      video.removeEventListener('durationchange', naDelku);
+      media.removeEventListener('timeupdate', naCas);
+      media.removeEventListener('seeked', naCas);
+      media.removeEventListener('loadedmetadata', naDelku);
+      media.removeEventListener('durationchange', naDelku);
+      media.removeEventListener('play', naHraje);
+      media.removeEventListener('pause', naStop);
+      media.removeEventListener('ended', naStop);
     };
-  }, []);
+  }, [jenZvuk, fileId]);
 
   const skoc = useCallback((sekundy: number) => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = Math.max(0, sekundy);
-    setTed(video.currentTime);
+    const media = mediaRef.current;
+    if (!media) return;
+    media.currentTime = Math.max(0, sekundy);
+    setTed(media.currentTime);
   }, []);
+
+  function prehrajNeboStop() {
+    const media = mediaRef.current;
+    if (!media) return;
+    if (media.paused) void media.play().catch(() => undefined);
+    else media.pause();
+  }
 
   /* ---------- zápis ---------- */
 
   async function pridej(e: React.FormEvent) {
     e.preventDefault();
     const obsah = text.trim();
-    if (!obsah || posilam) return;
+    if (!obsah || posilam || !fileId) return;
     setPosilam(true);
     setChyba(null);
     try {
@@ -198,19 +269,6 @@ export function VideoTagger({
       setPosilam(false);
     }
   }
-
-  const nactiZnovu = useCallback(async () => {
-    try {
-      const res = await fetch(
-        `/api/reklama/pripominky?k=${encodeURIComponent(token)}&soubor=${encodeURIComponent(fileId)}`,
-        { cache: 'no-store' },
-      );
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) setPripominky(data.pripominky ?? []);
-    } catch {
-      // nevadi - seznam zustane, jaky je
-    }
-  }, [token, fileId]);
 
   async function smaz(id: string) {
     setPripominky((c) => c.filter((p) => p.id !== id));
@@ -249,7 +307,7 @@ export function VideoTagger({
     .pop();
 
   async function odesli() {
-    if (odesilam || neodeslane.length === 0) return;
+    if (odesilam || neodeslane.length === 0 || !fileId) return;
     setOdesilam(true);
     setChyba(null);
     try {
@@ -271,184 +329,270 @@ export function VideoTagger({
     }
   }
 
-  return (
-    <div className="flex flex-col lg:flex-row gap-4 items-start">
-      {/* VLEVO: video a pod ním zvuková stopa. */}
-      <div className="flex-1 min-w-0 w-full flex flex-col gap-3">
-        <div className="bg-black rounded-card overflow-hidden border border-line">
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-          <video
-            ref={videoRef}
-            src={src}
-            controls
-            preload="metadata"
-            playsInline
-            className="w-full max-h-[58vh] bg-black"
-          />
-        </div>
+  if (!spot) {
+    return (
+      <p className="text-sm font-body text-muted m-0">
+        Ve složce projektu zatím není žádný spot k poslechu.
+      </p>
+    );
+  }
 
-        <div className="bg-surface rounded-card border border-line shadow-sm p-3 flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.12em] text-muted">
-              Zvuková stopa
-              {krivkaStav === 'pocita' && <span className="ml-2 normal-case tracking-normal">kreslím křivku…</span>}
-              {krivkaStav === 'nejde' && (
-                <span className="ml-2 normal-case tracking-normal">
-                  křivku se nepodařilo vykreslit — čas se bere z přehrávače
-                </span>
-              )}
-            </span>
-            <span className="font-heading text-sm text-ink tabular-nums">
-              {cas(ted)} {delka > 0 && <span className="text-muted">/ {cas(delka)}</span>}
-            </span>
-          </div>
-
-          <canvas
-            ref={canvasRef}
-            className="w-full h-[72px] block bg-field cursor-pointer rounded-lg"
-            onClick={(e) => {
-              const ramecek = e.currentTarget.getBoundingClientRect();
-              const x = e.clientX - ramecek.left;
-              if (!delka) return;
-              const trefa = pripominky.find(
-                (p) => Math.abs((p.cas / delka) * ramecek.width - x) < 6,
-              );
-              skoc(trefa ? trefa.cas : (x / ramecek.width) * delka);
-            }}
-          />
-
-          <button
-            type="button"
-            onClick={() => {
-              const video = videoRef.current;
-              video?.pause();
-              setZnacka(video ? video.currentTime : ted);
-            }}
-            className="self-start bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors"
-          >
-            Označit místo ({cas(znacka ?? ted)})
-          </button>
-        </div>
-      </div>
-
-      {/* VPRAVO: zápis připomínek. Žádné jméno - jen text, čas a odeslání. */}
-      <aside className="w-full lg:w-[380px] shrink-0 flex flex-col gap-3">
-        <form
-          onSubmit={pridej}
-          className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-2.5"
+  const krivka = (
+    <>
+      <canvas
+        ref={canvasRef}
+        style={{ height: vyskaKrivky }}
+        className="w-full block bg-field cursor-pointer rounded-lg"
+        onClick={(e) => {
+          const ramecek = e.currentTarget.getBoundingClientRect();
+          const x = e.clientX - ramecek.left;
+          if (!delka) return;
+          const trefa = pripominky.find((p) => Math.abs((p.cas / delka) * ramecek.width - x) < 6);
+          skoc(trefa ? trefa.cas : (x / ramecek.width) * delka);
+        }}
+      />
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Vlastni ovladani - cerny systemovy pruh prohlizece se v portalu
+            nepouziva (zadani 5. 9. 2026: „ten černý pruh je hnusný"). */}
+        <button
+          type="button"
+          onClick={prehrajNeboStop}
+          title={hraje ? 'Pozastavit' : 'Přehrát'}
+          className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-brand-green text-onAccent"
         >
-          <div className="flex items-baseline justify-between gap-2">
-            <h2 className="font-heading font-semibold text-sm text-ink m-0">Nová připomínka</h2>
-            <span className="font-heading text-sm text-brand-purple tabular-nums">
-              {cas(znacka ?? ted)}
-            </span>
-          </div>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            placeholder="Co je potřeba upravit?"
-            className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink placeholder:text-muted outline-none focus:border-brand-purple"
-          />
-          {chyba && <p className="text-xs font-body text-danger m-0">{chyba}</p>}
-          <button
-            type="submit"
-            disabled={posilam || !text.trim()}
-            className="font-heading font-semibold text-sm rounded-lg border border-brand-purple px-4 py-2 text-brand-purple hover:bg-brand-purple hover:text-white transition-colors disabled:opacity-50"
-          >
-            {posilam ? 'Zapisuji…' : 'Zapsat k času'}
-          </button>
-        </form>
+          {hraje ? (
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+              <path d="M7 5h4v14H7zM13 5h4v14h-4z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+              <path d="M7 5v14l11-7z" />
+            </svg>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => skoc(ted - 5)}
+          title="O pět vteřin zpět"
+          className="h-9 px-3 rounded-lg border border-line text-xs font-heading font-semibold text-muted hover:text-brand-purple"
+        >
+          −5 s
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            mediaRef.current?.pause();
+            setZnacka(mediaRef.current ? mediaRef.current.currentTime : ted);
+          }}
+          className="h-9 px-4 rounded-lg bg-brand-purple text-white font-heading font-semibold text-sm hover:bg-brand-purpleDeep transition-colors"
+        >
+          Označit místo ({cas(znacka ?? ted)})
+        </button>
+        <span className="ml-auto font-heading text-sm text-ink tabular-nums">
+          {cas(ted)} {delka > 0 && <span className="text-muted">/ {cas(delka)}</span>}
+        </span>
+      </div>
+    </>
+  );
 
-        <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-line flex items-baseline justify-between gap-2">
-            <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Připomínky
-            </h2>
-            <span className="text-xs font-body text-muted">
-              {pripominky.length === 0 ? 'zatím žádné' : `${pripominky.length} celkem`}
-            </span>
-          </div>
-          <div className="max-h-[46vh] overflow-y-auto divide-y divide-line">
-            {pripominky.length === 0 && (
-              <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
-                Pusťte si spot a v místě, kde něco drhne, dejte „Označit místo".
-              </p>
-            )}
-            {pripominky.map((p) => (
-              <div key={p.id} className={`px-4 py-3 flex gap-3 ${p.vyrizeno ? 'opacity-60' : ''}`}>
-                <button
-                  type="button"
-                  onClick={() => skoc(p.cas)}
-                  title="Přehrát od tohohle místa"
-                  className="shrink-0 font-heading font-semibold text-xs text-brand-purple tabular-nums pt-0.5"
-                >
-                  {cas(p.cas)}
-                </button>
-                <div className="min-w-0 flex-1">
-                  <p
-                    className={`text-sm font-body text-ink m-0 break-words ${
-                      p.vyrizeno ? 'line-through' : ''
-                    }`}
-                  >
-                    {p.text}
-                  </p>
-                  {!p.odeslanoAt && (
-                    <span className="block text-[11px] font-body text-status-progress mt-0.5">
-                      zatím neodesláno
-                    </span>
-                  )}
-                </div>
-                <span className="shrink-0 flex flex-col items-end gap-1">
-                  {jsemZTymu && (
-                    <button
-                      type="button"
-                      onClick={() => void odskrtni(p)}
-                      title={p.vyrizeno ? 'Vrátit mezi otevřené' : 'Označit jako vyřízené'}
-                      className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
-                    >
-                      {p.vyrizeno ? 'Vrátit' : 'Hotovo'}
-                    </button>
-                  )}
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Přepínač spotů - jen když je z čeho vybírat. */}
+      {spoty.length > 1 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.12em] text-muted">
+            Spoty ve složce
+          </span>
+          {spoty.map((s, i) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setAktivniId(s.id)}
+              title={s.nazev}
+              aria-pressed={s.id === spot.id}
+              className={`px-3 py-1.5 rounded-pill text-xs font-heading font-semibold transition-colors max-w-[240px] truncate ${
+                s.id === spot.id
+                  ? 'bg-brand-purple text-white'
+                  : 'bg-surface border border-line text-muted hover:text-brand-purple'
+              }`}
+            >
+              {i + 1}. {s.nazev}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+        {/* VLEVO: u videa náhled a pod ním vlna, u zvuku rovnou velká vlna. */}
+        <div className="flex-1 min-w-0 w-full flex flex-col gap-3">
+          {spot.jeVideo ? (
+            <>
+              <div className="bg-black rounded-card overflow-hidden border border-line">
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                <video
+                  ref={mediaRef as React.RefObject<HTMLVideoElement>}
+                  src={src}
+                  controls
+                  preload="metadata"
+                  playsInline
+                  className="w-full max-h-[58vh] bg-black"
+                />
+              </div>
+              <div className="bg-surface rounded-card border border-line shadow-sm p-3 flex flex-col gap-2">
+                <StavKrivky nazev={spot.nazev} stav={krivkaStav} />
+                {krivka}
+              </div>
+            </>
+          ) : (
+            <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
+              <StavKrivky nazev={spot.nazev} stav={krivkaStav} />
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <audio ref={mediaRef as React.RefObject<HTMLAudioElement>} src={src} preload="metadata" className="hidden" />
+              {krivka}
+            </div>
+          )}
+        </div>
+
+        {/* VPRAVO: zápis připomínek. Žádné jméno - jen text, čas a odeslání. */}
+        <aside className="w-full lg:w-[380px] shrink-0 flex flex-col gap-3">
+          <form
+            onSubmit={pridej}
+            className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-2.5"
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="font-heading font-semibold text-sm text-ink m-0">Nová připomínka</h2>
+              <span className="font-heading text-sm text-brand-purple tabular-nums">
+                {cas(znacka ?? ted)}
+              </span>
+            </div>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={3}
+              placeholder="Co je potřeba upravit?"
+              className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink placeholder:text-muted outline-none focus:border-brand-purple"
+            />
+            {chyba && <p className="text-xs font-body text-danger m-0">{chyba}</p>}
+            <button
+              type="submit"
+              disabled={posilam || !text.trim()}
+              className="font-heading font-semibold text-sm rounded-lg border border-brand-purple px-4 py-2 text-brand-purple hover:bg-brand-purple hover:text-white transition-colors disabled:opacity-50"
+            >
+              {posilam ? 'Zapisuji…' : 'Zapsat k času'}
+            </button>
+          </form>
+
+          <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-line flex items-baseline justify-between gap-2">
+              <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+                Připomínky
+              </h2>
+              <span className="text-xs font-body text-muted">
+                {pripominky.length === 0 ? 'zatím žádné' : `${pripominky.length} celkem`}
+              </span>
+            </div>
+            <div className="max-h-[46vh] overflow-y-auto divide-y divide-line">
+              {pripominky.length === 0 && (
+                <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
+                  Pusťte si spot a v místě, kde něco drhne, dejte „Označit místo".
+                </p>
+              )}
+              {pripominky.map((p) => (
+                <div key={p.id} className={`px-4 py-3 flex gap-3 ${p.vyrizeno ? 'opacity-60' : ''}`}>
                   <button
                     type="button"
-                    onClick={() => void smaz(p.id)}
-                    title="Smazat připomínku"
-                    className="text-[11px] font-heading text-muted hover:text-danger"
+                    onClick={() => skoc(p.cas)}
+                    title="Přehrát od tohohle místa"
+                    className="shrink-0 font-heading font-semibold text-xs text-brand-purple tabular-nums pt-0.5"
                   >
-                    Smazat
+                    {cas(p.cas)}
                   </button>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`text-sm font-body text-ink m-0 break-words ${
+                        p.vyrizeno ? 'line-through' : ''
+                      }`}
+                    >
+                      {p.text}
+                    </p>
+                    {!p.odeslanoAt && (
+                      <span className="block text-[11px] font-body text-status-progress mt-0.5">
+                        zatím neodesláno
+                      </span>
+                    )}
+                  </div>
+                  <span className="shrink-0 flex flex-col items-end gap-1">
+                    {jsemZTymu && (
+                      <button
+                        type="button"
+                        onClick={() => void odskrtni(p)}
+                        title={p.vyrizeno ? 'Vrátit mezi otevřené' : 'Označit jako vyřízené'}
+                        className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
+                      >
+                        {p.vyrizeno ? 'Vrátit' : 'Hotovo'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void smaz(p.id)}
+                      title="Smazat připomínku"
+                      className="text-[11px] font-heading text-muted hover:text-danger"
+                    >
+                      Smazat
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-line p-3 flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => void odesli()}
+                disabled={odesilam || neodeslane.length === 0}
+                className="w-full bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-50"
+              >
+                {odesilam
+                  ? 'Odesílám…'
+                  : neodeslane.length > 0
+                    ? `Odeslat připomínky (${neodeslane.length})`
+                    : 'Vše odesláno'}
+              </button>
+              {posledniOdeslani && (
+                <span className="text-[11px] font-body text-muted text-center">
+                  Naposledy odesláno{' '}
+                  {new Intl.DateTimeFormat('cs-CZ', {
+                    day: 'numeric',
+                    month: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }).format(new Date(posledniOdeslani))}
                 </span>
-              </div>
-            ))}
+              )}
+              {spoty.length > 1 && (
+                <span className="text-[11px] font-body text-muted text-center">
+                  Odesílá se to, co je zapsané u tohohle spotu.
+                </span>
+              )}
+            </div>
           </div>
-          <div className="border-t border-line p-3 flex flex-col gap-1.5">
-            <button
-              type="button"
-              onClick={() => void odesli()}
-              disabled={odesilam || neodeslane.length === 0}
-              className="w-full bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2.5 disabled:opacity-50"
-            >
-              {odesilam
-                ? 'Odesílám…'
-                : neodeslane.length > 0
-                  ? `Odeslat připomínky (${neodeslane.length})`
-                  : 'Vše odesláno'}
-            </button>
-            {posledniOdeslani && (
-              <span className="text-[11px] font-body text-muted text-center">
-                Naposledy odesláno{' '}
-                {new Intl.DateTimeFormat('cs-CZ', {
-                  day: 'numeric',
-                  month: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }).format(new Date(posledniOdeslani))}
-              </span>
-            )}
-          </div>
-        </div>
-      </aside>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function StavKrivky({ nazev, stav }: { nazev: string; stav: 'pocita' | 'hotovo' | 'nejde' }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 flex-wrap">
+      <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.12em] text-muted truncate max-w-full">
+        {nazev}
+      </span>
+      {stav === 'pocita' && <span className="text-[11px] font-body text-muted">kreslím křivku…</span>}
+      {stav === 'nejde' && (
+        <span className="text-[11px] font-body text-muted">
+          křivku se nepodařilo vykreslit — čas se bere z přehrávače
+        </span>
+      )}
     </div>
   );
 }

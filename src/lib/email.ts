@@ -1914,6 +1914,14 @@ export type StavProjektuInput = {
    */
   odkazNaPreposlech?: string | null;
   /**
+   * Tlačítko „Spot schvaluji" (zadání 18. 9. 2026). Posílá se jen u reklamy
+   * a jen ve stavu, kdy klient spot schvaluje - vede na stránku s nahrávkami,
+   * kde je schvalovací karta. Samotný odkaz nic nepřeklápí; schvaluje se až
+   * kliknutím na stránce, jinak by spot odklepl první antivir, který si
+   * odkaz z mailu otevře.
+   */
+  odkazNaSchvaleni?: string | null;
+  /**
    * Věta navíc nad textem ze vzoru - píše se ručně u konkrétního odeslání
    * (zadání 11. 9. 2026: „popošli to rovnou jen na Radku a omluv se").
    * Vzor zůstává nedotčený, tohle platí jen pro tuhle jednu zprávu.
@@ -1954,6 +1962,12 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
       `<a href="${escapeHtml(input.odkazNaDisk)}" class="${
         input.odkazNaPreposlech ? 'cta-dark' : 'cta'
       }">${escapeHtml(input.popisekOdkazu?.trim() || 'Stáhnout nahrávky ze složky')}</a>`,
+    );
+  }
+  if (input.odkazNaSchvaleni) {
+    // Schvaleni je posledni - napred si to klient ma poslechnout.
+    tlacitka.push(
+      `<a href="${escapeHtml(input.odkazNaSchvaleni)}" class="cta">Spot schvaluji</a>`,
     );
   }
   // Kazde tlacitko na svem radku - na telefonu by se vedle sebe nevesla.
@@ -2085,6 +2099,7 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
       input.odkazNaDisk
         ? `${input.popisekOdkazu?.trim() || 'Slozka s nahravkami'}: ${input.odkazNaDisk}`
         : 'Odkaz na nahravky zatim neni vyplneny.',
+      input.odkazNaSchvaleni ? `Spot schvaluji: ${input.odkazNaSchvaleni}` : '',
     ]
       .filter(Boolean)
       .join('\n'),

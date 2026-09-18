@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { extractDriveFolderId } from '@/lib/googleDrive';
 import { projektPodleTokenu, zapisOtevreni } from '@/lib/preposlechOdkaz';
 import { jeReklamniKlient } from '@/lib/reklamaPripominky';
+import { stavSchvaleni } from '@/lib/schvaleniKlientem';
+import { SchvalitSpot } from '@/components/SchvalitSpot';
 import { DriveBrowser } from '@/app/(portal)/nahravky/DriveBrowser';
 
 /**
@@ -38,7 +40,14 @@ function Hlaska({ nadpis, text }: { nadpis: string; text: string }) {
   );
 }
 
-export default async function NahravkyOdkazemPage({ params }: { params: { token: string } }) {
+export default async function NahravkyOdkazemPage({
+  params,
+  searchParams,
+}: {
+  params: { token: string };
+  /** `?schvalit=1` z mailu - karta schválení se zvýrazní. */
+  searchParams?: { schvalit?: string };
+}) {
   const caflouProjectId = await projektPodleTokenu(params.token);
 
   if (!caflouProjectId) {
@@ -61,6 +70,9 @@ export default async function NahravkyOdkazemPage({ params }: { params: { token:
      */
     jeReklamniKlient(caflouProjectId),
   ]);
+
+  // Schvalovaci karta - jen u reklamniho klienta (zadani 18. 9. 2026).
+  const schvaleni = reklama ? await stavSchvaleni(caflouProjectId) : null;
 
   const folderId = meta?.driveUrl ? extractDriveFolderId(meta.driveUrl) : null;
   const driveConfigured = Boolean(
@@ -91,6 +103,14 @@ export default async function NahravkyOdkazemPage({ params }: { params: { token:
             <p className="text-[11px] font-body text-white/70 m-0 truncate">{meta?.name || 'Projekt'}</p>
           </div>
         </div>
+
+        {schvaleni?.lzeSchvalit && (
+          <SchvalitSpot
+            token={params.token}
+            schvalenoAt={schvaleni.schvalenoAt}
+            zvyraznit={searchParams?.schvalit === '1'}
+          />
+        )}
 
         <DriveBrowser
           initialFolderId={folderId}

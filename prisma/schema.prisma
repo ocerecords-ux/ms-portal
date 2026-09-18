@@ -565,6 +565,15 @@ model ProjectMeta {
   dotocenoStavPred String?
   dotocenoStavPo   String?
 
+  /// KLIENT SPOT SCHVALIL (zadani 18. 9. 2026: „stisknutim toho tlacitka,
+  /// kdyz to klient schvali, se nam dany spot nebo reklama preklopi do stavu
+  /// schvaleno k fakturaci").
+  ///
+  /// Ulozeny okamzik, ne jen stav: stav se muze jeste rucne prehodit, ale
+  /// „klient to odklepl tehdy a tehdy" ma zustat. Zaroven je to pojistka
+  /// proti druhemu kliknuti - schvaleni se nedeje dvakrat.
+  schvalenoKlientemAt DateTime?
+
   zdroj           ProjectSource    @default(CAFLOU)
   /// Kdy projekt prisel jednorazovym prenosem z Caflou.
   prenesenoAt     DateTime?

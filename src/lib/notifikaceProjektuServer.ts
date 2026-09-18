@@ -176,6 +176,18 @@ export async function posliNotifikaciKeStavu(
      * VZORU (zadání: „může se někdy stát, že všechny tracky posíláme
      * najednou" - pak je přeposlech potřeba u „Dokončeno - ke schválení").
      */
+    /**
+     * TLAČÍTKO „SPOT SCHVALUJI" (zadání 18. 9. 2026). Jen u reklamy a jen ve
+     * stavu, ve kterém spot klientovi posíláme ke schválení - jinde by nedávalo
+     * smysl nabízet překlopení do fakturace.
+     *
+     * Odkaz vede na stránku s nahrávkami; samotné otevření nic nepřeklápí.
+     */
+    const odkazNaSchvaleni =
+      druh === 'REKLAMA' && token && stav === 'Dokončeno - ke schválení'
+        ? `${urlNahravek(token)}?schvalit=1`
+        : null;
+
     let odkazNaPreposlech: string | null = null;
     if (vzor.audiotagger && token) {
       odkazNaPreposlech = urlPreposlechu(token);
@@ -204,6 +216,7 @@ export async function posliNotifikaciKeStavu(
       text: dosadPromenne(vzor.text, hodnoty),
       odkazNaDisk,
       odkazNaPreposlech,
+      odkazNaSchvaleni,
       // „Stáhnout nahrávky ze složky" sedí na audioknihu, u spotu ne.
       popisekOdkazu: druh === 'REKLAMA' ? 'Poslechnout spot ve složce' : null,
     });

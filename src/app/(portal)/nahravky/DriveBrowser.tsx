@@ -669,7 +669,7 @@ export function DriveBrowser({
                     {/* PŘIPOMÍNKOVAT (zadání 18. 9. 2026) - jen u videa a jen
                         u reklamních klientů. Otevře upravený AudioTagger:
                         video v náhledu, pod ním vlna, vpravo připomínky. */}
-                    {video && odkazPripominek && (
+                    {(video || audio) && odkazPripominek && (
                       <a
                         href={`${odkazPripominek}?soubor=${encodeURIComponent(item.id)}`}
                         title="Otevřít spot a zapsat k němu připomínky"
