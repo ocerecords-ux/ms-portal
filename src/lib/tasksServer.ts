@@ -5,7 +5,14 @@ import { isInternalRole } from '@/lib/roles';
 // Ukoly pro vysouvaci panel na prave hrane obrazovky (zadani 8. 9. 2026).
 // Nacitaji se v layoutu, aby byl panel na kazde strance portalu.
 
-export type DockTask = { id: string; title: string; done: boolean; dueDate: string | null };
+export type DockTask = {
+  id: string;
+  title: string;
+  done: boolean;
+  dueDate: string | null;
+  /** Kdo úkol zadal z chatu přes @úkol (zadání 18. 9. 2026); null = já sám. */
+  zadalJmeno: string | null;
+};
 
 /**
  * Ukoly prihlaseneho uzivatele. Klientum a hercum se panel nezobrazuje, takze
@@ -25,6 +32,7 @@ export async function loadMyTasks(userId: string, role: Role): Promise<DockTask[
       title: t.title,
       done: t.done,
       dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
+      zadalJmeno: t.zadalJmeno ?? null,
     }));
   } catch (err) {
     // Databaze bez tabulky Task (jeste nedobehl `prisma db push`) nesmi

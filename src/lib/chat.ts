@@ -12,9 +12,24 @@ export const CHAT_TABS: { kind: ConversationKind; label: string }[] = [
   { kind: 'PROJEKT', label: 'Projekty' },
   { kind: 'SOUKROMA', label: 'Soukromé' },
   { kind: 'SKUPINA', label: 'Skupiny' },
-  // Dotazy klientu k projektum (zadani 11. 9. 2026) - klient je zaklada
-  // tlacitkem "Zeptat se" u sveho projektu.
-  { kind: 'DOTAZ', label: 'Dotazy' },
+];
+
+/**
+ * ZÁLOŽKY CHATU (zadání 18. 9. 2026: „a rovnou místo dotazů v chatu dej
+ * Úkoly - to-do list").
+ *
+ * „Úkoly" není druh konverzace, ale čtvrtá záložka panelu: otevře se v ní
+ * vlastní to-do list. Dotazy klientů tím ze záložek zmizely — nezanikly,
+ * jen se ukazují rovnou u projektů, kam patří (viz seznam v ChatDocku),
+ * takže o ně nikdo nepřijde a v liště je místo pro to, co člověk otevírá
+ * každý den.
+ */
+export const ZALOZKA_UKOLY = 'UKOLY' as const;
+export type ZalozkaChatu = ConversationKind | typeof ZALOZKA_UKOLY;
+
+export const CHAT_ZALOZKY: { klic: ZalozkaChatu; label: string }[] = [
+  ...CHAT_TABS.map((t) => ({ klic: t.kind as ZalozkaChatu, label: t.label })),
+  { klic: ZALOZKA_UKOLY, label: 'Úkoly' },
 ];
 
 export const MAX_MESSAGE_LENGTH = 4000;

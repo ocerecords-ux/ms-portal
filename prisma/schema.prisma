@@ -1077,6 +1077,13 @@ model Task {
   dueDate   DateTime? // termin, nepovinny
   sortOrder Int       @default(0)
 
+  /// Kdo ukol zadal z chatu pres @ukol (zadani 18. 9. 2026). Ulozene jmeno,
+  /// ne vazba na ucet: ukol ma davat smysl i za rok, kdy uz ten clovek
+  /// v portalu treba nebude. Prazdne = clovek si ukol napsal sam.
+  zadalJmeno String?
+  /// Konverzace, ze ktere ukol vznikl - at se da dokliknout na souvislosti.
+  zdrojKonverzaceId String?
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

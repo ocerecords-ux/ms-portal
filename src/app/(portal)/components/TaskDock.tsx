@@ -25,6 +25,8 @@ type Task = {
   title: string;
   done: boolean;
   dueDate: string | null;
+  /** Kdo úkol zadal z chatu přes @úkol (zadání 18. 9. 2026); null = já sám. */
+  zadalJmeno?: string | null;
 };
 
 function formatDue(iso: string): string {
@@ -200,6 +202,13 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
             />
             <span className="flex-1 min-w-0 text-sm font-body text-ink break-words">
               {task.title}
+              {task.zadalJmeno && (
+                // Zadano z chatu pres @ukol - at je videt, ze si to clovek
+                // nenapsal sam a od koho to prislo.
+                <span className="block text-xs font-heading mt-0.5 text-brand-purple">
+                  od {task.zadalJmeno}
+                </span>
+              )}
               {task.dueDate && (
                 <span className={`block text-xs font-heading mt-0.5 ${task.dueDate < today ? 'text-danger' : 'text-muted'}`}>
                   {task.dueDate < today ? 'Po termínu — ' : 'Do '}

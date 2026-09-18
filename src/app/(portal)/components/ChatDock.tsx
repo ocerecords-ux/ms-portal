@@ -9,6 +9,8 @@ import { doplnVelkaPismena, naVelke, zacatekVety } from '@/lib/velkePismena';
 import { MsSmajlik } from './MsSmajlik';
 import {
   CHAT_TABS,
+  CHAT_ZALOZKY,
+  ZALOZKA_UKOLY,
   EMOJI,
   MAX_MESSAGE_LENGTH,
   RYCHLE_REAKCE,
@@ -24,7 +26,12 @@ import {
   type ChatMessage,
   type ChatReaction,
   type ChatTeamMember,
+  type ZalozkaChatu,
 } from '@/lib/chat';
+import { CHYBI_PRIJEMCE, ZNACKA_UKOLU, hledaUkol, jeUkol, nazevUkolu } from '@/lib/ukolyZChatu';
+
+/** Řádek „úkol" v nabídce pod @ - není to člověk, proto vlastní klíč. */
+const KLIC_UKOLU = '__ukol__';
 import {
   MAX_PRILOH,
   MAX_PRILOHA_BYTES,
@@ -1447,7 +1454,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   const [dok, otevriDok] = usePravyDok();
   const pocty = usePoctyDoku();
   const expanded = naStrance || dok === 'chat';
-  const [tab, setTab] = useState<ConversationKind>('PROJEKT');
+  const [tab, setTab] = useState<ZalozkaChatu>('PROJEKT');
+  /**
+   * ÚKOL Z CHATU (zadání 18. 9. 2026). Termín se vybírá v liště nad psátkem,
+   * která se ukáže, jakmile zpráva začíná „@úkol"; prázdno znamená bez
+   * termínu, což je běžný případ, ne chyba.
+   */
+  const [ukolTermin, setUkolTermin] = useState('');
+  const [ukolHlaska, setUkolHlaska] = useState<string | null>(null);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   /** Kdo prave pise v otevrene konverzaci (zadani 12. 9. 2026). */
   const [pisou, setPisou] = useState<string[]>([]);
@@ -2002,15 +2016,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    */
   const listaDruhu = (
     <span className={`${naStrance ? 'hidden sm:flex' : 'flex'} items-center gap-0.5`}>
-      {CHAT_TABS.map((t) => {
-        const jeTu = tab === t.kind;
-        const nove = neprectenePodleDruhu[t.kind] ?? 0;
+      {CHAT_ZALOZKY.map((t) => {
+        const jeTu = tab === t.klic;
+        const nove = t.klic === ZALOZKA_UKOLY ? 0 : neprectenePodleDruhu[t.klic] ?? 0;
         return (
           <button
-            key={t.kind}
+            key={t.klic}
             type="button"
             onClick={() => {
-              setTab(t.kind);
+              setTab(t.klic);
               setNovy(false);
             }}
             title={nove > 0 ? `${t.label} — ${nove} nepřečtených` : t.label}
@@ -2020,7 +2034,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               jeTu ? 'bg-white/20 text-white' : 'text-brand-green/75 hover:text-white hover:bg-white/10'
             }`}
           >
-            <IkonaZalozky kind={t.kind} />
+            <IkonaZalozky kind={t.klic} />
             {nove > 0 && (
               <span
                 aria-hidden="true"
@@ -2067,6 +2081,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   );
 
   const vZalozce = conversations.filter((c) => c.kind === tab);
+  /**
+   * Dotazy klientů. Od 18. 9. 2026 nemají vlastní záložku (uvolnily místo
+   * Úkolům), ukazují se pod kanály v Projektech - a otevřený dotaz se v tu
+   * chvíli chová jako každá jiná konverzace.
+   */
+  const dotazy = conversations.filter((c) => c.kind === 'DOTAZ');
   const otevrena = conversations.find((c) => c.id === openId) ?? null;
 
   /**
@@ -2363,11 +2383,27 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
-          doVlakna ? { body: text, parentId: vlaknoId, prilohy } : { body: text, prilohy },
+          doVlakna
+            ? { body: text, parentId: vlaknoId, prilohy, ...(jeUkol(text) ? { ukol: { termin: ukolTermin || null } } : {}) }
+            : { body: text, prilohy, ...(jeUkol(text) ? { ukol: { termin: ukolTermin || null } } : {}) },
         ),
       });
       const data: any = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'Zprávu se nepodařilo odeslat.');
+
+      /**
+       * ÚKOL (zadání 18. 9. 2026). Server vrací, komu ho založil - nebo proč
+       * ne. Nepovedený úkol nesmí schovat odeslanou zprávu, proto je to
+       * hláška pod psátkem, ne chyba odeslání.
+       */
+      if (data?.ukol?.komu) {
+        setUkolHlaska(`Úkol je v to-do listu — ${data.ukol.komu}.`);
+        setUkolTermin('');
+      } else if (data?.ukol?.chyba) {
+        setUkolHlaska(data.ukol.chyba);
+      } else {
+        setUkolHlaska(null);
+      }
 
       // Docasnou bublinu vymenime za tu ze serveru - na stejnem miste, takze
       // vypis ani neposkoci.
@@ -2687,9 +2723,33 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       druhZminky === 'projekt'
         ? text.replace(/#[\p{L}\p{N} _-]{0,40}$/u, `#${polozka.label} `)
         : text.replace(/@[\p{L}]{0,20}$/u, `@${polozka.label} `);
+    // Nova zprava zacina ukolem? Pak se lista s terminem ukaze sama.
+    if (polozka.id === KLIC_UKOLU) setUkolHlaska(null);
     if (zminkyPro === 'vlakno') setVlaknoDraft((t) => uprav(t));
     else setDraft((t) => uprav(t));
     setZminkyPro(null);
+  }
+
+  /**
+   * KOMU ÚKOL POLETÍ (zadání 18. 9. 2026: „osoba automaticky, komu píšu;
+   * když je to ve skupině, tak ho musím označit").
+   *
+   * Tohle je jen náhled do lišty nad psátkem - rozhoduje o tom server, který
+   * jediný ví, kdo je v konverzaci. Kdyby o tom rozhodoval prohlížeč, dal by
+   * se úkol poslat komukoliv.
+   */
+  function prijemceUkolu(text: string): { jmeno: string | null } {
+    if (otevrena?.kind === 'SOUKROMA') return { jmeno: otevrena.label };
+    const zminen = team.find((u) => {
+      const krestni = u.label.split(/\s+/)[0];
+      const podoby = [u.label, krestni].filter((j) => j.length >= 3);
+      return podoby.some((j) =>
+        // Konec jmena pohledem dopredu, ne `\b` - to nezna diakritiku,
+        // takze za „Siblova" zadnou hranici nevidi (viz lib/ukolyZChatu.ts).
+        new RegExp(`(^|\\s)@${j.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu').test(text),
+      );
+    });
+    return { jmeno: zminen?.label ?? null };
   }
 
   const jmenaTymu = team.map((u) => u.label);
@@ -2701,7 +2761,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
           .filter((p) => p.name.toLowerCase().includes(zminkaHledani))
           .slice(0, 8)
           .map((p) => ({ id: p.id, label: p.name, photoUrl: null }))
-      : team.filter((u) => u.label.toLowerCase().includes(zminkaHledani));
+      : [
+          // ÚKOL V NABÍDCE POD @ (zadání 18. 9. 2026). Nikdo si nemusí
+          // pamatovat, že se píše „@úkol" - stačí napsat @ a je to první
+          // řádek v nabídce.
+          ...(hledaUkol(zminkaHledani)
+            ? [{ id: KLIC_UKOLU, label: ZNACKA_UKOLU, photoUrl: null } as ChatTeamMember]
+            : []),
+          ...team.filter((u) => u.label.toLowerCase().includes(zminkaHledani)),
+        ];
 
   // POZN. 11. 9. 2026: chat se drive v nainstalovane aplikaci portalu
   // schovaval (mel byt jen jako samostatna aplikace). Uzivatel si vyzadal
@@ -2936,11 +3004,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 spodni listou. */}
             <div className="px-3 pt-2.5 pb-1">
               <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.14em] text-muted">
-                {CHAT_TABS.find((t) => t.kind === tab)?.label}
+                {CHAT_ZALOZKY.find((t) => t.klic === tab)?.label}
               </span>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 flex flex-col gap-0.5">
+              {/* ÚKOLY MÍSTO DOTAZŮ (zadání 18. 9. 2026). Není to konverzace,
+                  ale vlastní to-do list - proto vlastní komponenta a ne
+                  seznam níž. */}
+              {tab === ZALOZKA_UKOLY && <UkolyVChatu />}
               {tab === 'PROJEKT' && projekty === null && (
                 <p className="text-sm font-body text-muted m-0 px-1">Načítám projekty…</p>
               )}
@@ -2978,12 +3050,41 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 <p className="text-sm font-body text-muted m-0 px-1">Žádné rozpracované projekty.</p>
               )}
 
-              {tab !== 'PROJEKT' && vZalozce.length === 0 && !novy && (
+              {/* DOTAZY KLIENTŮ (zadání 18. 9. 2026). Vlastní záložku už nemají
+                  - jsou tady, pod kanály projektů, kam svým obsahem patří.
+                  Kdyby zmizely úplně, neměl by na otázku klienta kdo odpovědět. */}
+              {tab === 'PROJEKT' && dotazy.length > 0 && (
+                <>
+                  <span className="mt-3 mb-1 px-1 font-heading font-semibold text-[11px] uppercase tracking-[0.14em] text-muted">
+                    Dotazy klientů
+                  </span>
+                  {dotazy.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setOpenId(c.id)}
+                      className={`text-left rounded-lg px-2.5 py-1.5 transition-colors flex items-center justify-between gap-2 ${
+                        c.id === openId ? 'bg-tint text-brand-purpleDark' : 'hover:bg-field text-ink'
+                      }`}
+                    >
+                      <span className="font-heading text-sm truncate">{c.label}</span>
+                      {c.unread > 0 && (
+                        <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
+                          {c.unread}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {tab !== 'PROJEKT' && tab !== ZALOZKA_UKOLY && vZalozce.length === 0 && !novy && (
                 <p className="text-sm font-body text-muted m-0 px-1">
                   {tab === 'SOUKROMA' ? 'Zatím si s nikým nepíšete.' : 'Zatím tu není žádná skupina.'}
                 </p>
               )}
               {tab !== 'PROJEKT' &&
+                tab !== ZALOZKA_UKOLY &&
                 vZalozce.map((c) => (
                   <RadekKonverzace
                     key={c.id}
@@ -3067,7 +3168,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
             {/* Kanaly k projektum se nezakladaji rucne - berou se z aktivnich
                 projektu, takze tlacitko dava smysl jen u zbylych dvou zalozek. */}
-            {tab !== 'PROJEKT' && (
+            {tab !== 'PROJEKT' && tab !== ZALOZKA_UKOLY && (
               <div className="border-t border-line p-2">
                 <button
                   type="button"
@@ -3370,6 +3471,19 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
                   <PisouIndikator jmena={pisou} />
 
+                  {/* LIŠTA ÚKOLU (zadání 18. 9. 2026). Ukáže se, jakmile zpráva
+                      začíná „@úkol": komu poletí, do kdy - a nic víc. Termín je
+                      dobrovolný („a dát možnost i bez data"). */}
+                  {jeUkol(draft) && (
+                    <ListaUkolu
+                      prijemce={prijemceUkolu(draft).jmeno}
+                      nazev={nazevUkolu(draft, prijemceUkolu(draft).jmeno)}
+                      termin={ukolTermin}
+                      onTermin={setUkolTermin}
+                      hlaska={ukolHlaska}
+                    />
+                  )}
+
                   <Psatko
                     hodnota={draft}
                     zmena={(v) => {
@@ -3379,7 +3493,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     }}
                     odeslat={(e) => odesli(e, false)}
                     sending={sending}
-                    placeholder="Napište zprávu… (@ zmíní kolegu, # odkáže na projekt)"
+                    placeholder="Napište zprávu… (@ zmíní kolegu nebo zadá úkol, # odkáže na projekt)"
                     nabidka={zminkyPro === 'hlavni' ? nabidkaZminek : []}
                     vyber={doplnZminku}
                     prilohy={prilohyHlavni}
@@ -3529,7 +3643,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             nestalo. */}
         {naStrance && (
           <nav className="sm:hidden shrink-0 border-t border-line bg-paper flex items-stretch">
-            {CHAT_TABS.map((t) => {
+            {CHAT_ZALOZKY.map((t) => {
               /**
                * NEPŘEČTENÉ VIDÍ I SPODNÍ LIŠTA (zadání 18. 9. 2026: „na spodní
                * liště v mobilu, kde jsou zkratky na druhy konverzací, by mělo
@@ -3539,32 +3653,32 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                * Číslo, ne tečka: na telefonu je lišta jediná navigace a člověk
                * chce vědět, jestli přišla jedna zpráva, nebo dvacet.
                */
-              const nove = neprectenePodleDruhu[t.kind] ?? 0;
+              const nove = t.klic === ZALOZKA_UKOLY ? 0 : neprectenePodleDruhu[t.klic] ?? 0;
               /**
                * Ťuknutí na druh s nepřečteným rovnou otevře tu konverzaci,
                * kde něco přibylo - to je ten „proklik". Když jich je víc,
                * zůstane seznam; skákat do jedné z nich by bylo hádání.
                */
               const kOtevreni = nove > 0
-                ? conversations.filter((c) => c.kind === t.kind && c.unread > 0)
+                ? conversations.filter((c) => c.kind === t.klic && c.unread > 0)
                 : [];
               return (
                 <button
-                  key={t.kind}
+                  key={t.klic}
                   type="button"
                   onClick={() => {
-                    setTab(t.kind);
+                    setTab(t.klic);
                     setNovy(false);
                     setVlaknoId(null);
                     setOpenId(kOtevreni.length === 1 ? kOtevreni[0].id : null);
                   }}
                   title={nove > 0 ? `${t.label} — ${nove} nepřečtených` : t.label}
                   className={`relative flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-heading font-semibold transition-colors ${
-                    tab === t.kind && !novy ? 'text-brand-purple' : nove > 0 ? 'text-ink' : 'text-muted'
+                    tab === t.klic && !novy ? 'text-brand-purple' : nove > 0 ? 'text-ink' : 'text-muted'
                   }`}
                 >
                   <span className="relative">
-                    <IkonaZalozky kind={t.kind} />
+                    <IkonaZalozky kind={t.klic} />
                     {nove > 0 && (
                       <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-pill bg-brand-purple text-white text-[10px] font-heading font-bold leading-[16px] text-center ring-2 ring-paper">
                         {nove > 99 ? '99+' : nove}
@@ -3689,7 +3803,212 @@ function SmazatZpravu({
   );
 }
 
-function IkonaZalozky({ kind }: { kind: ConversationKind }) {
+/**
+ * TO-DO LIST PŘÍMO V CHATU (zadání 18. 9. 2026: „a rovnou místo dotazů
+ * v chatu dej Úkoly - to do list").
+ *
+ * Je to schválně vlastní, krátký seznam, ne celý panel z pravé hrany: v chatu
+ * jde o to úkol vidět a odškrtnout, ne ho přesouvat. Načítá si ho sám, protože
+ * chat běží na telefonu jako samostatná stránka, kde žádný layout s úkoly není.
+ */
+/**
+ * Proužek nad psátkem, který se ukáže u zprávy začínající „@úkol".
+ *
+ * Schválně jen dvě informace: komu úkol patří a do kdy. Text se bere ze
+ * zprávy, takže se nikde nepíše dvakrát.
+ */
+function ListaUkolu({
+  prijemce,
+  nazev,
+  termin,
+  onTermin,
+  hlaska,
+}: {
+  prijemce: string | null;
+  nazev: string;
+  termin: string;
+  onTermin: (v: string) => void;
+  hlaska: string | null;
+}) {
+  return (
+    <div className="mx-3 mb-1.5 rounded-lg border border-brand-purple/40 bg-tint/60 px-2.5 py-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.12em] text-brand-purple">
+        Úkol
+      </span>
+      <span className="text-xs font-body text-ink min-w-0 flex-1">
+        {prijemce ? (
+          <>
+            pro <strong className="font-heading">{prijemce}</strong>
+            {nazev ? `: ${nazev}` : ' — napište, co je potřeba udělat'}
+          </>
+        ) : (
+          CHYBI_PRIJEMCE
+        )}
+      </span>
+      <label className="flex items-center gap-1.5 text-[11px] font-body text-muted">
+        do
+        <input
+          type="date"
+          value={termin}
+          onChange={(e) => onTermin(e.target.value)}
+          className="rounded-md border border-line bg-field px-1.5 py-1 text-[11px] font-body text-ink"
+        />
+      </label>
+      {termin && (
+        <button
+          type="button"
+          onClick={() => onTermin('')}
+          className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
+        >
+          bez termínu
+        </button>
+      )}
+      {hlaska && <span className="w-full text-[11px] font-body text-brand-purple">{hlaska}</span>}
+    </div>
+  );
+}
+
+function UkolyVChatu() {
+  type Ukol = { id: string; title: string; done: boolean; dueDate: string | null; zadalJmeno: string | null };
+  const [ukoly, setUkoly] = useState<Ukol[] | null>(null);
+  const [novy, setNovy] = useState('');
+  const [termin, setTermin] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [hotove, setHotove] = useState(false);
+
+  const nacti = useCallback(async () => {
+    try {
+      const res = await fetch('/api/tasks');
+      const data = await res.json().catch(() => ({}));
+      setUkoly(Array.isArray(data?.ukoly) ? data.ukoly : []);
+    } catch {
+      setUkoly([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void nacti();
+  }, [nacti]);
+
+  async function odskrtni(u: Ukol) {
+    setUkoly((c) => (c ?? []).map((t) => (t.id === u.id ? { ...t, done: !t.done } : t)));
+    try {
+      await fetch(`/api/tasks/${u.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done: !u.done }),
+      });
+    } catch {
+      void nacti();
+    }
+  }
+
+  async function pridej(e: React.FormEvent) {
+    e.preventDefault();
+    const title = novy.trim();
+    if (!title || busy) return;
+    setBusy(true);
+    try {
+      await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, dueDate: termin || null }),
+      });
+      setNovy('');
+      setTermin('');
+      await nacti();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const otevrene = (ukoly ?? []).filter((u) => !u.done);
+  const splnene = (ukoly ?? []).filter((u) => u.done);
+
+  return (
+    <div className="flex flex-col gap-2 px-1">
+      <form onSubmit={pridej} className="flex flex-col gap-1.5">
+        <input
+          value={novy}
+          onChange={(e) => setNovy(e.target.value)}
+          placeholder="Co je potřeba udělat?"
+          className="rounded-lg border border-line bg-field px-2.5 py-1.5 text-sm font-body text-ink placeholder:text-muted"
+        />
+        <div className="flex items-center gap-1.5">
+          <input
+            type="date"
+            value={termin}
+            onChange={(e) => setTermin(e.target.value)}
+            className="flex-1 min-w-0 rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink"
+          />
+          <button
+            type="submit"
+            disabled={busy || !novy.trim()}
+            className="shrink-0 bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-50"
+          >
+            Přidat
+          </button>
+        </div>
+      </form>
+
+      {ukoly === null && <p className="text-sm font-body text-muted m-0 px-1">Načítám úkoly…</p>}
+      {ukoly !== null && otevrene.length === 0 && (
+        <p className="text-sm font-body text-muted m-0 px-1">Nic nečeká. 🎉</p>
+      )}
+      {otevrene.map((u) => (
+        <RadekUkolu key={u.id} ukol={u} onOdskrtni={() => void odskrtni(u)} />
+      ))}
+
+      {splnene.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setHotove((v) => !v)}
+          className="self-start text-[11px] font-heading font-semibold text-muted hover:text-brand-purple px-1"
+        >
+          {hotove ? 'Skrýt hotové' : `Hotové (${splnene.length})`}
+        </button>
+      )}
+      {hotove && splnene.map((u) => (
+        <RadekUkolu key={u.id} ukol={u} onOdskrtni={() => void odskrtni(u)} />
+      ))}
+    </div>
+  );
+}
+
+function RadekUkolu({
+  ukol,
+  onOdskrtni,
+}: {
+  ukol: { id: string; title: string; done: boolean; dueDate: string | null; zadalJmeno: string | null };
+  onOdskrtni: () => void;
+}) {
+  const dnes = new Date().toISOString().slice(0, 10);
+  const poTerminu = !ukol.done && ukol.dueDate !== null && ukol.dueDate < dnes;
+  return (
+    <label className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-field cursor-pointer">
+      <input
+        type="checkbox"
+        checked={ukol.done}
+        onChange={onOdskrtni}
+        className="mt-0.5 w-4 h-4 accent-brand-purple shrink-0"
+      />
+      <span className="min-w-0">
+        <span className={`block text-sm font-body ${ukol.done ? 'text-muted line-through' : 'text-ink'}`}>
+          {ukol.title}
+        </span>
+        {(ukol.dueDate || ukol.zadalJmeno) && (
+          <span className={`block text-[11px] font-body ${poTerminu ? 'text-status-danger' : 'text-muted'}`}>
+            {ukol.dueDate && new Intl.DateTimeFormat('cs-CZ').format(new Date(`${ukol.dueDate}T00:00:00`))}
+            {ukol.dueDate && ukol.zadalJmeno ? ' · ' : ''}
+            {ukol.zadalJmeno && `od ${ukol.zadalJmeno}`}
+          </span>
+        )}
+      </span>
+    </label>
+  );
+}
+
+function IkonaZalozky({ kind }: { kind: ZalozkaChatu }) {
   const spolecne = {
     viewBox: '0 0 24 24',
     fill: 'none',
@@ -3711,6 +4030,15 @@ function IkonaZalozky({ kind }: { kind: ConversationKind }) {
     return (
       <svg {...spolecne}>
         <path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
+      </svg>
+    );
+  }
+  if (kind === ZALOZKA_UKOLY) {
+    // Odskrtavatko - stejny znak, jaky ma to-do list na prave hrane.
+    return (
+      <svg {...spolecne}>
+        <path d="M3 6l2 2 3-3M3 13l2 2 3-3M3 20l2 2 3-3" />
+        <path d="M12 7h9M12 14h9M12 21h9" />
       </svg>
     );
   }

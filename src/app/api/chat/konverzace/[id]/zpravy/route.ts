@@ -10,6 +10,8 @@ import { posliPush } from '@/lib/pushServer';
 import { canUseChat, shrnReakce, userLabel } from '@/lib/chatServer';
 import { odkazNaFotku } from '@/lib/fotky';
 import { komuPoslatUpozorneni, zminenyTym } from '@/lib/chatUpozorneniServer';
+import { notify } from '@/lib/notifications';
+import { CHYBI_NAZEV, CHYBI_PRIJEMCE, jeUkol, nazevUkolu } from '@/lib/ukolyZChatu';
 
 // Zpravy jedne konverzace (zadani 8. 9. 2026). Otevreni konverzace zaroven
 // znamena "precteno" - proto se pri GET posouva lastReadAt.
@@ -31,6 +33,19 @@ const schema = z
         }),
       )
       .max(MAX_PRILOH, `Nejvýš ${MAX_PRILOH} přílohy k jedné zprávě.`)
+      .optional(),
+    /**
+     * ÚKOL Z CHATU (zadání 18. 9. 2026). Posílá se jen termín - komu úkol
+     * patří, si portál odvodí sám ze zprávy a z konverzace (viz
+     * lib/ukolyZChatu.ts a `zalozUkolZeZpravy` níž). Prohlížeč to sice ukazuje
+     * dopředu, ale rozhodnout o tom musí server: jinak by šlo poslat úkol
+     * komukoliv.
+     */
+    ukol: z
+      .object({
+        /** YYYY-MM-DD, nebo nic - úkol bez termínu je v pořádku. */
+        termin: z.string().trim().min(8).max(10).nullable().optional(),
+      })
       .optional(),
   })
   .refine((v) => v.body.length > 0 || (v.prilohy?.length ?? 0) > 0, {
@@ -149,6 +164,84 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   } catch (err) {
     console.error('GET /api/chat/konverzace/[id]/zpravy selhalo:', err);
     return NextResponse.json({ error: 'Zprávy se nepodařilo načíst.' }, { status: 500 });
+  }
+}
+
+/**
+ * Založí úkol ze zprávy, která začíná „@úkol" (zadání 18. 9. 2026).
+ *
+ * KOMU, O TOM ROZHODUJE SERVER:
+ * - v soukromé konverzaci ten druhý („osoba automaticky, komu píšu"),
+ * - jinde ten, koho zadavatel označil @jménem - a když nikoho, úkol nevznikne
+ *   a člověk se to dozví, místo aby zpráva tiše spadla do prázdna.
+ *
+ * NIKDY NEVYHAZUJE do odesílání zprávy: zpráva už je v tu chvíli uložená
+ * a nesmí o ni nikdo přijít jen proto, že se nepovedl úkol. Vrací se, co se
+ * stalo, aby to mohl chat říct nahlas.
+ */
+async function zalozUkolZeZpravy(vstup: {
+  text: string;
+  termin?: string | null;
+  conversationId: string;
+  kind: string;
+  clenove: string[];
+  zadalId: string;
+  zadalJmeno: string;
+}): Promise<{ ok: true; komu: string } | { ok: false; duvod: string }> {
+  try {
+    // Soukroma konverzace ma prave dva cleny - ten druhy je prijemce.
+    const druhy =
+      vstup.kind === 'SOUKROMA' ? vstup.clenove.find((id) => id !== vstup.zadalId) ?? null : null;
+    const zmineni = druhy ? [] : await zminenyTym(vstup.text, vstup.zadalId);
+    const komuId = druhy ?? zmineni[0] ?? null;
+    if (!komuId) return { ok: false, duvod: CHYBI_PRIJEMCE };
+
+    const komu = await prisma.user.findFirst({
+      where: { id: komuId, active: true },
+      select: { id: true, name: true, email: true },
+    });
+    if (!komu) return { ok: false, duvod: CHYBI_PRIJEMCE };
+
+    const nazev = nazevUkolu(vstup.text, komu.name);
+    if (!nazev) return { ok: false, duvod: CHYBI_NAZEV };
+
+    let dueDate: Date | null = null;
+    if (vstup.termin) {
+      const den = new Date(`${vstup.termin}T00:00:00.000Z`);
+      if (!Number.isNaN(den.getTime())) dueDate = den;
+    }
+
+    const posledni = await prisma.task.findFirst({
+      where: { userId: komu.id },
+      orderBy: { sortOrder: 'desc' },
+      select: { sortOrder: true },
+    });
+
+    await prisma.task.create({
+      data: {
+        userId: komu.id,
+        title: nazev.slice(0, 300),
+        dueDate,
+        sortOrder: (posledni?.sortOrder ?? 0) + 10,
+        zadalJmeno: vstup.zadalJmeno,
+        zdrojKonverzaceId: vstup.conversationId,
+      },
+    });
+
+    // Zvonek: ukol je na rozdil od zpravy zavazek - o tom se clovek dozvedet
+    // musi, i kdyz ma chat zrovna zabaleny.
+    await notify({
+      userId: komu.id,
+      kind: 'ukol-z-chatu',
+      title: `Nový úkol od ${vstup.zadalJmeno}`,
+      body: dueDate ? `${nazev} — do ${new Intl.DateTimeFormat('cs-CZ').format(dueDate)}` : nazev,
+      url: `/chat?konverzace=${vstup.conversationId}`,
+    });
+
+    return { ok: true, komu: userLabel(komu) };
+  } catch (err) {
+    console.error('Založení úkolu z chatu selhalo:', err);
+    return { ok: false, duvod: 'Úkol se nepodařilo založit.' };
   }
 }
 
@@ -314,10 +407,30 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
        */
     }
 
+    /**
+     * ÚKOL (zadání 18. 9. 2026) - až po uložení zprávy. Zpráva zůstává
+     * v chatu tak jako tak; když se úkol nepovede, vrátí se důvod a chat ho
+     * ukáže pod polem, ať to člověk ví hned a může to opravit.
+     */
+    let ukol: { komu: string } | { chyba: string } | null = null;
+    if (parsed.data.ukol && jeUkol(parsed.data.body ?? '')) {
+      const vysledek = await zalozUkolZeZpravy({
+        text: parsed.data.body ?? '',
+        termin: parsed.data.ukol.termin ?? null,
+        conversationId: conversation.id,
+        kind: conversation.kind,
+        clenove: conversation.members.map((m) => m.userId),
+        zadalId: me,
+        zadalJmeno: userLabel(message.user),
+      });
+      ukol = vysledek.ok ? { komu: vysledek.komu } : { chyba: vysledek.duvod };
+    }
+
     return NextResponse.json(
       {
         id: message.id,
         body: message.body,
+        ukol,
         createdAt: message.createdAt.toISOString(),
         authorId: message.userId,
         authorLabel: userLabel(message.user),

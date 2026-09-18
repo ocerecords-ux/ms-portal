@@ -383,6 +383,8 @@ declare module '@prisma/client' {
     done: boolean;
     dueDate: Date | null;
     sortOrder: number;
+    zadalJmeno: string | null;
+    zdrojKonverzaceId: string | null;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;

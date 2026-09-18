@@ -14,6 +14,41 @@ const schema = z.object({
   dueDate: z.string().trim().min(8).nullable().optional(),
 });
 
+/**
+ * Moje ukoly (zadani 18. 9. 2026: zalozka „Ukoly" primo v chatu).
+ *
+ * Panel na prave hrane dostava ukoly z layoutu, ale chat na telefonu bezi
+ * jako samostatna stranka, kde zadny layout s ukoly neni - proto si je
+ * nacita sam. Uzivatel se bere ze session, cizi ukoly se nikam nedostanou.
+ */
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || !isInternalRole(session.user.role)) {
+      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: { userId: session.user.id },
+      orderBy: [{ done: 'asc' }, { dueDate: 'asc' }, { sortOrder: 'asc' }],
+      take: 200,
+    });
+
+    return NextResponse.json({
+      ukoly: tasks.map((t) => ({
+        id: t.id,
+        title: t.title,
+        done: t.done,
+        dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
+        zadalJmeno: t.zadalJmeno ?? null,
+      })),
+    });
+  } catch (err) {
+    console.error('GET /api/tasks selhalo:', err);
+    return NextResponse.json({ ukoly: [] });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
