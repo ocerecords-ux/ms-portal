@@ -6,7 +6,7 @@ import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import type { ProjectPriority } from '@prisma/client';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { IkonaPriority } from '@/components/IkonaPriority';
-import { STAVY_PROJEKTU, barvaStavu, popisStavu } from '@/lib/stavyProjektu';
+import { STAVY_PROJEKTU, barvaStavu, popisStavu, stavyProFirmu } from '@/lib/stavyProjektu';
 import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
@@ -647,7 +647,11 @@ export function ProjectMetaForm({
                 ...(values.statusName && !STAVY_PROJEKTU.some((st) => st.nazev === values.statusName)
                   ? [{ hodnota: values.statusName, popisek: `${values.statusName} (starý stav z Caflou)` }]
                   : []),
-                ...STAVY_PROJEKTU.map((st) => ({ hodnota: st.nazev, popisek: st.nazev })),
+                // U reklamní firmy kratší nabídka (zadání 18. 9. 2026).
+                ...stavyProFirmu(jeReklamniFirma, values.statusName).map((st) => ({
+                  hodnota: st.nazev,
+                  popisek: st.nazev,
+                })),
               ]}
             />
             <span className="text-xs text-muted font-body">

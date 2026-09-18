@@ -74,8 +74,22 @@ export type VysledekPreklopeni = {
  * o tom, jestli u té firmy vzor existuje, rozhoduje notifikaceProjektuServer.
  */
 export async function preklopCekameNaOpravy(): Promise<VysledekPreklopeni> {
+  /**
+   * JEN U AUDIOKNIH (zadání 18. 9. 2026: „stav Čekáme na opravy a jeho
+   * automatické přepínání by mělo být jen u klientů, kteří mají zaškrtnuté
+   * audioknihy").
+   *
+   * U reklamy je cesta projektu krátká a tenhle stav se tam ani nenabízí -
+   * přehodit ho automat by znamenalo dostat spot do stavu, který u něj nedává
+   * smysl, a poslat o tom klientovi zprávu. Rozhoduje Druh zakázek na kartě
+   * firmy; projekt bez firmy se nepřeklápí, protože o něm nevíme nic.
+   */
   const projekty = await prisma.projectMeta.findMany({
-    where: { statusName: STAV_ODEVZDANO, finished: false },
+    where: {
+      statusName: STAV_ODEVZDANO,
+      finished: false,
+      company: { dealsAudiobooks: true },
+    },
     select: { caflouProjectId: true, name: true, statusName: true },
   });
 

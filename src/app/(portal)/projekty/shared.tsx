@@ -406,6 +406,11 @@ export type InternalProjectMeta = {
    * v seznamu se nevypisují slovy, na to není místo.
    */
   licence: { nazev: string; ikona: string | null }[];
+  /**
+   * Reklamní firma - u ní se nabízí kratší cesta projektu (zadání
+   * 18. 9. 2026). Rozhoduje Druh zakázek na kartě firmy.
+   */
+  reklamniFirma?: boolean;
 };
 
 export type InternalProject = AdminDisplayProject & {
@@ -609,7 +614,12 @@ function bunkaSloupce(
       // Stav jde prehodit rovnou v seznamu (zadani 10. 9. 2026) - kdo na to
       // nema pravo, vidi jen odznak.
       return muzeMenit ? (
-        <StavProjektuSelect caflouProjectId={String(p.id)} stav={p.statusName} dokonceny={p.finished} />
+        <StavProjektuSelect
+          caflouProjectId={String(p.id)}
+          stav={p.statusName}
+          dokonceny={p.finished}
+          jeReklama={p.meta?.reklamniFirma === true}
+        />
       ) : (
         <StatusPill finished={p.finished} statusName={p.statusName} />
       );

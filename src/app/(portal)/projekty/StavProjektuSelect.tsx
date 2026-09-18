@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { STAVY_PROJEKTU, barvaStavu } from '@/lib/stavyProjektu';
+import { STAVY_PROJEKTU, barvaStavu, stavyProFirmu } from '@/lib/stavyProjektu';
 import { OdznakSelect } from './OdznakSelect';
 
 /**
@@ -24,10 +24,13 @@ export function StavProjektuSelect({
   caflouProjectId,
   stav,
   dokonceny,
+  jeReklama = false,
 }: {
   caflouProjectId: string;
   stav: string;
   dokonceny: boolean;
+  /** Reklamní firma má kratší cestu projektu - viz lib/stavyProjektu.ts. */
+  jeReklama?: boolean;
 }) {
   const router = useRouter();
   const [hodnota, setHodnota] = useState(stav);
@@ -79,7 +82,7 @@ export function StavProjektuSelect({
           // Stav prenesený z Caflou, ktery v nasi ceste projektu neni - at se
           // pri rozbaleni nabidky nezmeni na neco jineho.
           ...(neznamyStav ? [{ hodnota, popisek: hodnota }] : []),
-          ...STAVY_PROJEKTU.map((s) => ({ hodnota: s.nazev, popisek: s.nazev })),
+          ...stavyProFirmu(jeReklama, hodnota).map((s) => ({ hodnota: s.nazev, popisek: s.nazev })),
         ]}
       />
       {chyba && <span className="text-[11px] font-body text-danger">{chyba}</span>}

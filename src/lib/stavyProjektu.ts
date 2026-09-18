@@ -129,6 +129,39 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
 const NAZVY = STAVY_PROJEKTU.map((s) => s.nazev);
 
 /**
+ * STAVY U REKLAMY (zadání 18. 9. 2026: „u reklam by měly být vidět jen stavy:
+ * V přípravě, Natáčíme, Dokončeno - ke schválení, Schváleno - k fakturaci").
+ *
+ * Spot se nenatáčí a nestříhá týdny a nečeká se u něj na opravy po částech -
+ * cesta je krátká. Zbylé stavy jsou z audioknižního světa a v nabídce jen
+ * pletly.
+ */
+const STAVY_REKLAMY = [
+  'V přípravě',
+  'Natáčíme',
+  'Dokončeno - ke schválení',
+  'Schváleno - k fakturaci',
+];
+
+/**
+ * Které stavy nabídnout. U reklamní firmy užší výběr, jinak všechny.
+ *
+ * Stav, který projekt UŽ MÁ, se nabízí vždycky - i kdyby do výběru nepatřil.
+ * Jinak by se u starého projektu nedal přepnout na nic (nabídka by neobsahovala
+ * jeho vlastní hodnotu) a vypadalo by to jako chyba.
+ */
+export function stavyProFirmu(jeReklama: boolean, aktualni?: string | null): StavProjektu[] {
+  if (!jeReklama) return STAVY_PROJEKTU;
+  const vybrane = STAVY_PROJEKTU.filter((s) => STAVY_REKLAMY.includes(s.nazev));
+  const stav = aktualni?.trim();
+  if (stav && !vybrane.some((s) => s.nazev === stav)) {
+    const chybejici = STAVY_PROJEKTU.find((s) => s.nazev === stav);
+    if (chybejici) return [...vybrane, chybejici];
+  }
+  return vybrane;
+}
+
+/**
  * Od kterého stavu je práce odevzdaná (zadání 18. 9. 2026: „když se překlopí
  * nebo bude stav na Dokončeno - ke schválení, tak se datum změní třeba na
  * bílou, protože byl odevzdán v termínu").

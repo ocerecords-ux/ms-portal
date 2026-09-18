@@ -268,6 +268,9 @@ async function InternalProjektySection({
           herci: { select: { id: true, name: true, email: true } },
           // Druhy licence - ikonky pod ikonou typu (zadani 18. 9. 2026).
           licence: { select: { nazev: true, ikona: true }, orderBy: { poradi: 'asc' } },
+          // Druh zakazek firmy - u reklamy je kratsi nabidka stavu
+          // (zadani 18. 9. 2026).
+          company: { select: { dealsAds: true, dealsAudiobooks: true } },
         },
       })
     : [];
@@ -304,6 +307,9 @@ async function InternalProjektySection({
         driveUrl: m.driveUrl,
         managerUserId: m.managerUserId,
         ikonaTypu: m.projectType ? ikonyTypu[m.projectType] ?? null : null,
+        // „Reklamni firma" = dela reklamy a ne audioknihy; stejne pravidlo
+        // jako u zprav klientovi (lib/notifikaceFirmy.ts).
+        reklamniFirma: Boolean(m.company?.dealsAds && !m.company?.dealsAudiobooks),
         // Hlavni herec prvni, at prehled i detail ukazuji stejne poradi.
         herci: [
           ...m.herci.filter((h) => h.id === m.actorUserId),
