@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import type { ProjectPriority } from '@prisma/client';
-import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
-import { IkonaPriority } from '@/components/IkonaPriority';
+import { PRIORITY_LABELS, projectTypeLabel } from '@/lib/projectTypes';
+import { IkonaPriority, VyberPriority } from '@/components/IkonaPriority';
 import { STAVY_PROJEKTU, barvaStavu, popisStavu, stavyProFirmu } from '@/lib/stavyProjektu';
 import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
@@ -47,18 +47,21 @@ function OdznakStavu({ stav }: { stav: string }) {
   return <span className={`${TRIDA_ODZNAKU} ${barvaStavu(stav)}`}>{stav}</span>;
 }
 
+/**
+ * Priorita v nahledu karty - JEN KRESBA, bez slova (upresneni 18. 9. 2026:
+ * „v nahledu nejde zmenit a objevuji se tam slova. V detailu to musi byt
+ * graficky stejne").
+ *
+ * Slovo vedle ikony delalo z jedne informace dve a v prehledu projektu zadne
+ * neni - karta pak vypadala jako jina aplikace. Cele slovo zustava v bublinove
+ * napovede, takze se nic neztratilo.
+ */
 function OdznakPriority({ priorita }: { priorita: string }) {
   const klic = priorita as keyof typeof PRIORITY_LABELS;
   if (!priorita || !PRIORITY_LABELS[klic]) {
     return <span className="text-sm font-heading text-muted">—</span>;
   }
-  // Graficky, ne slovem (18. 9. 2026) - stejna ikona jako v prehledu projektu.
-  return (
-    <span className="inline-flex items-center gap-2">
-      <IkonaPriority priorita={klic as ProjectPriority} velikost={18} />
-      <span className="text-sm font-heading text-muted">{PRIORITY_LABELS[klic]}</span>
-    </span>
-  );
+  return <IkonaPriority priorita={klic as ProjectPriority} velikost={18} />;
 }
 
 function OdznakTypu({ typ, ikona }: { typ: string | null; ikona: string | null }) {
@@ -785,16 +788,27 @@ export function ProjectMetaForm({
           </label>
 
 
-          <label className="flex flex-col gap-1.5">
+          {/* PRIORITA SE KLIKA, NEVYBIRA (upresneni 18. 9. 2026: „vymysli, jak
+              se tam ty carky budou pridavat a ubirat. Delal bych to napr
+              klikanim na tu ikonu").
+
+              Je to tataz kresba jako v prehledu projektu i v nahledu karty -
+              klepnuti na sloupecek nastavi jeho stupen, klepnuti na uz
+              nastaveny stupen prioritu zrusi. Rozbalovatko se slovy tu bylo
+              jedine misto v portalu, kde se priorita psala textem. */}
+          <div className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Priorita</span>
-            <OdznakSelect
-              hodnota={values.priority}
-              onZmena={(v) => set('priority', v)}
-              trida={PRIORITY_CLASSES[values.priority as keyof typeof PRIORITY_CLASSES] ?? TRIDA_PRAZDNEHO}
-              prazdnyPopisek="— bez priority —"
-              moznosti={PRIORITY_OPTIONS.map((p) => ({ hodnota: p, popisek: PRIORITY_LABELS[p] }))}
-            />
-          </label>
+            <span className="flex items-center gap-3 h-[34px]">
+              <VyberPriority
+                priorita={(values.priority || null) as ProjectPriority | null}
+                onZmena={(v) => set('priority', v ?? '')}
+                velikost={22}
+              />
+              <span className="text-xs font-body text-muted">
+                Klepnutím na sloupeček nastavíte stupeň, klepnutím na nastavený ho zrušíte.
+              </span>
+            </span>
+          </div>
 
 
           {/* UŽITÍ LICENCE jen u reklamy - u audioknihy se licence řeší jinak

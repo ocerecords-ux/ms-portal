@@ -392,7 +392,7 @@ async function upozorniKlienta(
       {
         kind: 'rodny-list',
         title: `${projectName} — dokončeno, ke schválení`,
-        body: 'Nahrávky jsou připravené a rodný list spotu je k dispozici.',
+        body: 'Nahrávky jsou připravené a rodný list je k dispozici.',
         url: `/api/rodny-list/${rodnyListId}`,
       },
     );

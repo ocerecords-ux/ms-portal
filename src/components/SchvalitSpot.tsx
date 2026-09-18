@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 /**
- * TLAČÍTKO „SPOT SCHVALUJI" (zadání 18. 9. 2026).
+ * TLAČÍTKO „SCHVÁLIT" (zadání 18. 9. 2026, popisek sjednocen tentýž den).
  *
  * Je na dvou místech, kam se klient z mailu dostane: ve složce s nahrávkami
  * a v taggeru spotu. Obojí jede přes stejný token, takže je to tatáž
@@ -151,7 +151,7 @@ export function SchvalitSpot({
             : 'bg-brand-green text-onAccent'
         }`}
       >
-        {bezi ? 'Ukládám…' : ptaSe ? 'Opravdu schválit? Klepněte znovu' : 'Schválit spot'}
+        {bezi ? 'Ukládám…' : ptaSe ? 'Opravdu schválit? Klepněte znovu' : 'Schválit'}
       </button>
     </div>
   );

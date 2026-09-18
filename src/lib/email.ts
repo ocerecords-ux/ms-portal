@@ -1153,7 +1153,7 @@ export function buildInvoiceHtml(input: InvoiceEmailInput): string {
     </table>
 
     ${input.pdf ? '<p class="small">Fakturu posíláme i v příloze — je na ní QR kód, kterým se platba v bankovní aplikaci vyplní sama.</p>' : ''}
-    ${input.rodnyList ? '<p class="small">V příloze je i rodný list spotu.</p>' : ''}
+    ${input.rodnyList ? '<p class="small">V příloze je i rodný list.</p>' : ''}
 
     <p class="small">Kdyby cokoliv nesedělo, stačí na tento e-mail odpovědět.</p>
     <p class="small">${escapeHtml(input.issuerName)}</p>
@@ -1185,7 +1185,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
       `Bankovni ucet: ${[input.accountNumber, input.iban].filter(Boolean).join(' / ') || input.accountLabel}`,
       `Variabilni symbol: ${input.variableSymbol}`,
       input.pdf ? 'Fakturu posilame i v priloze, je na ni QR kod k platbe.' : '',
-      input.rodnyList ? 'V priloze je i rodny list spotu.' : '',
+      input.rodnyList ? 'V priloze je i rodny list.' : '',
       '',
       input.issuerName,
     ]
@@ -1817,8 +1817,8 @@ export function buildRodnyListHtml(input: RodnyListEmailInput): string {
     <span class="badge">${escapeHtml(input.statusName)}</span>
     <h2>${escapeHtml(input.projectName)}</h2>
     <p>${escapeHtml(pozdrav(input.recipientName))}</p>
-    <p>spot máme hotový. Projekt je ve stavu <strong>${escapeHtml(input.statusName)}</strong> —
-       nahrávky jsou připravené a spolu s nimi posíláme i <strong>rodný list</strong> spotu
+    <p>nahrávku máme hotovou. Projekt je ve stavu <strong>${escapeHtml(input.statusName)}</strong> —
+       nahrávky jsou připravené a spolu s nimi posíláme i <strong>rodný list</strong>
        s údaji o délce, režii a použité hudbě.</p>
 
     <table role="presentation" class="field-table">
@@ -1853,9 +1853,9 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
     text: [
       pozdrav(input.recipientName),
       '',
-      `spot ${input.projectName} mame hotovy - projekt je ve stavu "${input.statusName}".`,
+      `nahravku ${input.projectName} mame hotovou - projekt je ve stavu "${input.statusName}".`,
       '',
-      'Rodny list spotu (PDF):',
+      'Rodny list (PDF):',
       input.rodnyListUrl,
       '',
       'Pripravene nahravky:',
@@ -1967,7 +1967,7 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
   if (input.odkazNaSchvaleni) {
     // Schvaleni je posledni - napred si to klient ma poslechnout.
     tlacitka.push(
-      `<a href="${escapeHtml(input.odkazNaSchvaleni)}" class="cta">Spot schvaluji</a>`,
+      `<a href="${escapeHtml(input.odkazNaSchvaleni)}" class="cta">Schválit</a>`,
     );
   }
   // Kazde tlacitko na svem radku - na telefonu by se vedle sebe nevesla.
@@ -2099,7 +2099,7 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
       input.odkazNaDisk
         ? `${input.popisekOdkazu?.trim() || 'Slozka s nahravkami'}: ${input.odkazNaDisk}`
         : 'Odkaz na nahravky zatim neni vyplneny.',
-      input.odkazNaSchvaleni ? `Spot schvaluji: ${input.odkazNaSchvaleni}` : '',
+      input.odkazNaSchvaleni ? `Schválit: ${input.odkazNaSchvaleni}` : '',
     ]
       .filter(Boolean)
       .join('\n'),

@@ -48,7 +48,7 @@ Připomínky si můžete odškrtávat jako vyřízené — tlačítko **Hotovo**
 
 Tlačítko **Schválit** je na třech místech a všechna dělají totéž:
 
-1. **v mailu** o hotovém spotu (tlačítko „Spot schvaluji"),
+1. **v mailu** o hotovém spotu (tlačítko **Schválit**),
 2. **ve složce s nahrávkami** a v taggeru, kam se klient z mailu dostane,
 3. **v klientském portálu** v přehledu projektů, ve sloupci Schválení — jen u reklamních firem.
 

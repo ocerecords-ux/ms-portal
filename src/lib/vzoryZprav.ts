@@ -69,7 +69,7 @@ export const VYCHOZI_PREDMET = '{projekt} - {stav}';
 export const VYCHOZI_PREDMET_REKLAMA = '{projekt} - ke schválení';
 
 /** Nadpis nad textem u reklamy - audioknihy ho nemají, tady dává smysl. */
-export const VYCHOZI_NADPIS_REKLAMA = 'Spot je hotový';
+export const VYCHOZI_NADPIS_REKLAMA = 'Nahrávka je hotová';
 
 /**
  * Výchozí znění. Texty jsou přesně ty, které portál posílal doteď

@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { ProjectPriority } from '@prisma/client';
 import { DatumPole } from '@/components/DatumPole';
+import { VyberPriority } from '@/components/IkonaPriority';
 
 /**
  * Úprava údajů projektu přímo v přehledu (zadání 10. 9. 2026: "věci, které
@@ -40,6 +42,52 @@ async function uloz(caflouProjectId: string, pole: string, hodnota: string): Pro
 function Chyba({ text }: { text: string | null }) {
   if (!text) return null;
   return <span className="block text-[11px] font-body text-danger mt-0.5">{text}</span>;
+}
+
+/**
+ * PRIORITA V PŘEHLEDU (upřesnění 18. 9. 2026: „v náhledu nejde změnit a
+ * objevují se tam slova… Vymysli, jak se tam ty čárky budou přidávat
+ * a ubírat. Dělal bych to např klikáním na tu ikonu").
+ *
+ * Schválně NEPOUŽÍVÁ `UpravitelnyVyber`: ten při klepnutí vyměnil ikonu za
+ * rozbalovátko se slovy a do úzkého sloupce se z něj vešlo jen „Vysc…".
+ * Tady se klepe rovnou do sloupečků, takže se v buňce nikdy nic nepřekreslí
+ * na text a šířka sloupce zůstává stejná.
+ *
+ * Ukládá se hned po klepnutí, stejnou cestou jako ostatní úpravy v přehledu.
+ * Když to neprojde, hodnota se vrátí (nic se lokálně nedrží) a vypíše se chyba.
+ */
+export function UpravitelnaPriorita({
+  caflouProjectId,
+  priorita,
+}: {
+  caflouProjectId: string;
+  priorita: ProjectPriority | null;
+}) {
+  const router = useRouter();
+  const [chyba, setChyba] = useState<string | null>(null);
+  const [uklada, setUklada] = useState(false);
+
+  async function zmen(nova: ProjectPriority | null) {
+    if (uklada) return;
+    setUklada(true);
+    // Prazdny retezec = „bez priority" - stejne to bere i rozbalovatko vys.
+    const problem = await uloz(caflouProjectId, 'priority', nova ?? '');
+    setUklada(false);
+    if (problem) {
+      setChyba(problem);
+      return;
+    }
+    setChyba(null);
+    router.refresh();
+  }
+
+  return (
+    <span className="inline-flex flex-col min-w-0">
+      <VyberPriority priorita={priorita} onZmena={(v) => void zmen(v)} uklada={uklada} />
+      <Chyba text={chyba} />
+    </span>
+  );
 }
 
 /** Výběr z hodnot - priorita, manažer. */

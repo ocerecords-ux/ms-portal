@@ -113,7 +113,7 @@ export function stavySNotifikaci(druh: DruhNotifikace): string[] {
  */
 export const CO_SE_POSILA_REKLAMA: Record<string, string> = {
   [STAV_REKLAMY]:
-    '{osloveni}\n\n**{projekt}**\n\nspot je hotový a připravený ke schválení. Poslechněte si ho prosím a dejte nám vědět, jestli je všechno v pořádku, nebo co ještě upravit.',
+    '{osloveni}\n\n**{projekt}**\n\nnahrávku máme hotovou a připravenou ke schválení. Poslechněte si ji prosím a dejte nám vědět, jestli je všechno v pořádku, nebo co ještě upravit.',
 };
 
 export function popisStavuProNotifikaci(stav: string): string {

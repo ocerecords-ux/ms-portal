@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { ProjectPriority } from '@prisma/client';
 import { AddButton } from '@/components/AddButton';
-import { PRIORITY_LABELS, PRIORITY_OPTIONS } from '@/lib/projectTypes';
+import { VyberPriority } from '@/components/IkonaPriority';
 import { STAVY_PROJEKTU, popisStavu } from '@/lib/stavyProjektu';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { type Herec } from './VyberHerce';
@@ -287,17 +288,21 @@ export function NovyProjektForm({
           />
         </label>
 
-        <label className="flex flex-col gap-1.5">
+        {/* Stejna ikona a stejne klikani jako v prehledu i v karte projektu
+            (upresneni 18. 9. 2026) - priorita se nikde v portalu nepise slovem. */}
+        <div className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">Priorita</span>
-          <VyberPole value={form.priority} onChange={(e) => set('priority', e.target.value)} className={tridaPole}>
-            <option value="">— bez priority —</option>
-            {PRIORITY_OPTIONS.map((p) => (
-              <option key={p} value={p}>
-                {PRIORITY_LABELS[p]}
-              </option>
-            ))}
-          </VyberPole>
-        </label>
+          <span className="flex items-center gap-3 h-[34px]">
+            <VyberPriority
+              priorita={(form.priority || null) as ProjectPriority | null}
+              onZmena={(v) => set('priority', v ?? '')}
+              velikost={22}
+            />
+            <span className="text-xs font-body text-muted">
+              Klepnutím na sloupeček nastavíte stupeň, klepnutím na nastavený ho zrušíte.
+            </span>
+          </span>
+        </div>
       </div>
 
       <label className="flex flex-col gap-1.5 sm:max-w-sm">

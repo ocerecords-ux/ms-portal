@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
-import { PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
+import { projectTypeLabel } from '@/lib/projectTypes';
 import { IkonaPriority } from '@/components/IkonaPriority';
 import { initials } from '@/lib/chat';
 import { barvaStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
@@ -10,7 +10,7 @@ import { IkonaTypu, KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { HerciBunka } from './HerciBunka';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
-import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
+import { UpravitelnaPriorita, UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
 import { SchvalitSpot } from '@/components/SchvalitSpot';
 import { dnuDoTerminu, odznakTerminu, stavTerminu, type StavTerminu } from '@/lib/terminProjektu';
 
@@ -658,14 +658,10 @@ function bunkaSloupce(
     case 'priority': {
       const hodnota = p.priority ?? p.meta?.priority ?? null;
       const odznak = <PriorityPill priority={hodnota} />;
+      // Klepe se rovnou do sloupecku - zadne rozbalovatko se slovy
+      // (upresneni 18. 9. 2026). Viz UpravitelnaBunka.tsx.
       return muzeMenit ? (
-        <UpravitelnyVyber
-          caflouProjectId={id}
-          pole="priority"
-          hodnota={hodnota ?? ''}
-          moznosti={PRIORITY_OPTIONS.map((o) => ({ hodnota: o, popisek: PRIORITY_LABELS[o] }))}
-          deti={odznak}
-        />
+        <UpravitelnaPriorita caflouProjectId={id} priorita={hodnota} />
       ) : (
         odznak
       );
@@ -865,7 +861,9 @@ const TRIDA_BUNKY: Record<string, string> = {
   name: 'px-3 py-0 font-heading font-semibold text-[13px] align-middle',
   companyName: 'px-3 py-0 text-[13px] font-heading text-muted truncate',
   statusName: 'px-3 py-0 truncate',
-  priority: 'px-2 py-0 text-[13px] font-heading truncate',
+  // Bez `truncate`: bunka uz neobsahuje text, jen tri sloupecky - a
+  // overflow:hidden by u nich orezaval tlacitka (18. 9. 2026).
+  priority: 'px-2 py-0 text-[13px] font-heading',
   // Typ projektu ani manazer se v prehledu uz nevykresluji (zadani
   // 13. 9. 2026) - tridy tu zustavaji, aby vraceni sloupce bylo na jeden
   // radek v columnLabels.

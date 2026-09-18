@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
      */
     await notifyMany([meta?.managerUserId ?? null, ...dotazy.map((u) => u.id)], {
       kind: 'reklama-pripominka',
-      title: `Připomínky ke spotu: ${meta?.name?.trim() || pristup.nazev}`,
+      title: `Připomínky k nahrávce: ${meta?.name?.trim() || pristup.nazev}`,
       body: `Klient odeslal ${davka.count} ${davka.count === 1 ? 'připomínku' : davka.count < 5 ? 'připomínky' : 'připomínek'}.`,
       url: `/pripominkovat/${encodeURIComponent(parsed.data.k)}?soubor=${encodeURIComponent(
         pristup.fileId,
