@@ -204,6 +204,13 @@ model User {
   /// nedovoli, ani ostatni Zuzo-labuzo.
   vidiBanku Boolean @default(false)
 
+  /// Hlida zmeny u projektu a vidi je pod zvonkem (zadani 18. 9. 2026:
+  /// „potrebuju jeste at Peter vidi ve zvonecku notifikace o zmene datumu
+  /// a zmene stavu projektu").
+  /// Opet priznak u uctu, ne jmeno v kodu. Vychozi je NE - zvonek by jinak
+  /// zvonil u kazde zmeny vsem a prestal by se cist.
+  sledujeZmenyProjektu Boolean @default(false)
+
   // --- Upozorneni na zpravy v chatu (zadani 12. 9. 2026: „detailnejsi
   //     nastaveni notifikaci v chatu, at si nastavi kazdy sam individualne") ---
   //

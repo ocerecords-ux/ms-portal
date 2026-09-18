@@ -1,6 +1,7 @@
 import type { DruhUdalosti } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { POLE_S_UCTEM, POPISKY_POLI, citelnaHodnota } from '@/lib/projektLog';
+import { posliZvonekOZmenach } from '@/lib/sledovaniProjektuServer';
 
 /**
  * Zápis do historie projektu (zadání 10. 9. 2026).
@@ -171,6 +172,20 @@ export async function zapisZmenyProjektu(vstup: {
   } catch (err) {
     console.error('Zápis změn do historie projektu selhal:', err);
   }
+
+  /**
+   * ZVONEK (zadání 18. 9. 2026). Je to schválně tady, a ne v jednotlivých
+   * routách: stav i termíny se mění z pěti různých míst (detail projektu,
+   * přehled, tlačítko Dotočeno, odeslaná faktura, ukončení, automat „Čekáme
+   * na opravy") a všechna končí tady. Jedno napojení tedy pokryje všechna.
+   *
+   * Záměrně bez čekání - upozornění nesmí zdržet ani shodit uložení změny.
+   */
+  void posliZvonekOZmenach({
+    caflouProjectId: vstup.caflouProjectId,
+    zmeny: radky.map((r) => ({ pole: r.pole, predchozi: r.predchozi, nova: r.nova })),
+    puvodceId: vstup.puvodce.id,
+  }).catch(() => undefined);
 }
 
 /**

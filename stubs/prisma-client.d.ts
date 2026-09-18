@@ -81,6 +81,7 @@ declare module '@prisma/client' {
     podpisSmluv: string | null;
     prijimaDotazyKlientu: boolean;
     vidiBanku: boolean;
+    sledujeZmenyProjektu: boolean;
     chatUpozorneniZpravy: ChatUpozorneni;
     chatUpozorneniSkupiny: ChatUpozorneni;
     chatUpozorneniKanaly: ChatUpozorneni;

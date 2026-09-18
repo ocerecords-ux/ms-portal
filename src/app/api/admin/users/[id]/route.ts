@@ -32,6 +32,7 @@ const schema = z.object({
   smlouvyPodepisuje: z.string().trim().optional(),
   prijimaDotazyKlientu: z.string().trim().optional(),
   vidiBanku: z.string().trim().optional(),
+  sledujeZmenyProjektu: z.string().trim().optional(),
   dostavaDotoceno: z.string().trim().optional(),
   dostavaDotocenoKlient: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
@@ -66,6 +67,7 @@ function readFormData(formData: FormData) {
     smlouvyPodepisuje: has('smlouvyPodepisuje') ? formData.get('smlouvyPodepisuje') : undefined,
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
     vidiBanku: has('vidiBanku') ? formData.get('vidiBanku') : undefined,
+    sledujeZmenyProjektu: has('sledujeZmenyProjektu') ? formData.get('sledujeZmenyProjektu') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
     dostavaDotocenoKlient: has('dostavaDotocenoKlient')
       ? formData.get('dostavaDotocenoKlient')
@@ -174,6 +176,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ? { dostavaObjednavky: data.dostavaObjednavky === '1' }
         : {}),
       ...(data.vidiBanku !== undefined ? { vidiBanku: data.vidiBanku === '1' } : {}),
+      ...(data.sledujeZmenyProjektu !== undefined
+        ? { sledujeZmenyProjektu: data.sledujeZmenyProjektu === '1' }
+        : {}),
       ...(data.prijimaDotazyKlientu !== undefined
         ? { prijimaDotazyKlientu: data.prijimaDotazyKlientu === '1' }
         : {}),

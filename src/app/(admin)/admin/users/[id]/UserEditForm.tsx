@@ -34,6 +34,8 @@ type EditableUser = {
   prijimaDotazyKlientu: boolean;
   /** Vidí sekci Banka (zadání 17. 9. 2026). */
   vidiBanku: boolean;
+  /** Chce vědět o změně stavu a termínů u projektů (zadání 18. 9. 2026). */
+  sledujeZmenyProjektu: boolean;
   dostavaDotoceno: boolean;
   /** Klient chce vědět o dotočeném herci na svém projektu (zadání 16. 9. 2026). */
   dostavaDotocenoKlient: boolean;
@@ -75,6 +77,7 @@ export function UserEditForm({
   const [smlouvyPodepisuje, setSmlouvyPodepisuje] = useState(user.smlouvyPodepisuje);
   const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
   const [vidiBanku, setVidiBanku] = useState(user.vidiBanku);
+  const [sledujeZmeny, setSledujeZmeny] = useState(user.sledujeZmenyProjektu);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
   const [dostavaDotocenoKlient, setDostavaDotocenoKlient] = useState(user.dostavaDotocenoKlient);
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
@@ -166,6 +169,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('smlouvyPodepisuje', smlouvyPodepisuje ? '1' : '0');
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
         if (isMediaspace) fd.set('vidiBanku', vidiBanku ? '1' : '0');
+        if (isMediaspace) fd.set('sledujeZmenyProjektu', sledujeZmeny ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
         if (isMediaspace) fd.set('dostavaVyplneneUdaje', dostavaVyplneneUdaje ? '1' : '0');
@@ -344,6 +348,29 @@ export function UserEditForm({
                 Vidí sekci Banka
                 <span className="block text-xs text-muted">
                   pohyby na účtu, párování plateb a napojení účtu v Dokladech
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Zvonek pri zmene u projektu (zadani 18. 9. 2026: „potrebuju jeste
+            at Peter vidi ve zvonecku notifikace o zmene datumu a zmene stavu
+            projektu"). Vychozi je NE - jinak by zvonek zvonil vsem u kazde
+            zmeny a prestal by se cist. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sledujeZmeny}
+                onChange={(e) => setSledujeZmeny(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Hlídá změny u projektů
+                <span className="block text-xs text-muted">
+                  zvoneček se ozve, když se u projektu změní stav nebo termín
                 </span>
               </span>
             </label>

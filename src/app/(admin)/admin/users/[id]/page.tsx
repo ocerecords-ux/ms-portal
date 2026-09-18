@@ -85,6 +85,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           smlouvyPodepisuje: user.smlouvyPodepisuje,
           prijimaDotazyKlientu: user.prijimaDotazyKlientu,
           vidiBanku: user.vidiBanku,
+          sledujeZmenyProjektu: user.sledujeZmenyProjektu,
           dostavaDotoceno: user.dostavaDotoceno,
           dostavaDotocenoKlient: user.dostavaDotocenoKlient,
           dostavaObjednavky: user.dostavaObjednavky,
