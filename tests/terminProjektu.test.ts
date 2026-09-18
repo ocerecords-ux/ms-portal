@@ -25,12 +25,12 @@ describe('termín dokončení', () => {
     expect(stavTerminu(-1)).toBe('po');
   });
 
-  it('po termínu odpočítává do mínusu', () => {
-    expect(odznakTerminu(3)).toBe('3 dny');
-    expect(odznakTerminu(1)).toBe('1 den');
-    expect(odznakTerminu(0)).toBe('dnes');
-    expect(odznakTerminu(-1)).toBe('−1 den');
-    expect(odznakTerminu(-5)).toBe('−5 dní');
+  it('ukazuje holá čísla se znaménkem', () => {
+    expect(odznakTerminu(3)).toBe('+3');
+    expect(odznakTerminu(1)).toBe('+1');
+    expect(odznakTerminu(0)).toBe('0');
+    expect(odznakTerminu(-1)).toBe('−1');
+    expect(odznakTerminu(-5)).toBe('−5');
     expect(odznakTerminu(9)).toBeNull();
   });
 });

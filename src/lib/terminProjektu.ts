@@ -75,13 +75,17 @@ export function dnuSlovy(pocet: number): string {
 }
 
 /**
- * Co stojí na odznaku. Po termínu se odpočítává do mínusu („−1 den"), jak
- * si zadavatel výslovně přál.
+ * Co stojí u data - HOLÉ ČÍSLO (upřesnění 18. 9. 2026: „aby se u data objevila
+ * jen čísla +1 nebo −2, nepsal bych tam dny, to je jasné, čeho se to týká").
+ *
+ * V přehledu se sází jako horní index vedle data, takže každé písmeno navíc
+ * roztahuje sloupec. Znaménko zůstává: „+2" a „−2" jsou na první pohled dvě
+ * různé zprávy, samotná dvojka by byla hádanka.
  */
 export function odznakTerminu(dnu: number | null): string | null {
   const stav = stavTerminu(dnu);
   if (dnu === null || stav === 'daleko') return null;
-  if (stav === 'dnes') return 'dnes';
-  // Typografické minus, ne spojovník - u čísla je čitelnější.
-  return stav === 'po' ? `−${dnuSlovy(dnu)}` : dnuSlovy(dnu);
+  if (stav === 'dnes') return '0';
+  // Typograficke minus, ne spojovnik - u cisla je citelnejsi.
+  return stav === 'po' ? `−${Math.abs(dnu)}` : `+${dnu}`;
 }

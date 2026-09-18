@@ -4,7 +4,7 @@ import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { initials } from '@/lib/chat';
-import { barvaStavu } from '@/lib/stavyProjektu';
+import { barvaStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
 import { IkonaTypu, KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { HerciBunka } from './HerciBunka';
 import { StavProjektuSelect } from './StavProjektuSelect';
@@ -42,45 +42,65 @@ export function formatDate(d: Date | null) {
  * je odevzdaný, už není co hlídat - a červený seznam hotových zakázek by
  * z barev udělal ozdobu, které si nikdo nevšímá.
  */
-const BARVY_TERMINU: Record<Exclude<StavTerminu, 'daleko'>, { text: string; odznak: string }> = {
-  blizko: { text: 'text-status-done', odznak: 'bg-okTint text-status-done' },
-  dnes: { text: 'text-status-progress', odznak: 'bg-warnTint text-status-progress' },
-  po: { text: 'text-danger', odznak: 'bg-dangerTint text-danger' },
+const BARVY_TERMINU: Record<Exclude<StavTerminu, 'daleko'>, string> = {
+  blizko: 'text-status-done',
+  dnes: 'text-status-progress',
+  po: 'text-danger',
 };
 
 export function TerminDokonceni({
   datum,
   hotovo,
+  statusName,
   /** Co se ukáže místo data - u upravitelné buňky je to celé tlačítko. */
   obsah,
 }: {
   datum: Date | null;
   hotovo: boolean;
+  /** Stav projektu - od „Dokončeno - ke schválení" se termín přestane hlídat. */
+  statusName?: string | null;
   obsah?: React.ReactNode;
 }) {
-  const dnu = hotovo ? null : dnuDoTerminu(datum);
-  const stav = stavTerminu(dnu);
   const telo = obsah ?? formatDate(datum);
+
+  /**
+   * ODEVZDÁNO = KLID (upřesnění 18. 9. 2026: „když bude stav na Dokončeno -
+   * ke schválení, tak se datum změní třeba na bílou, protože byl odevzdán
+   * v termínu").
+   *
+   * Datum zůstane vidět, ale bez barvy a bez odpočtu - je to už jen údaj,
+   * ne termín, který se blíží. Bílá se tu jmenuje `text-ink`: v tmavém režimu
+   * je opravdu bílá, ve světlém tmavá, aby byla na papíře vidět.
+   */
+  const odevzdano = hotovo || stavJeOdevzdany(statusName);
+  if (odevzdano) {
+    return datum ? <span className="text-ink font-semibold">{telo}</span> : <>{telo}</>;
+  }
+
+  const dnu = dnuDoTerminu(datum);
+  const stav = stavTerminu(dnu);
   if (stav === 'daleko') return <>{telo}</>;
 
-  const barvy = BARVY_TERMINU[stav];
+  const barva = BARVY_TERMINU[stav];
   const odznak = odznakTerminu(dnu);
   return (
-    <span className="inline-flex items-center gap-1.5 min-w-0">
-      <span className={`text-[15px] font-semibold ${barvy.text}`}>{telo}</span>
+    <span className={`whitespace-nowrap text-[15px] font-semibold ${barva}`}>
+      {telo}
       {odznak && (
-        <span
-          className={`shrink-0 rounded-pill px-1.5 py-0.5 text-[11px] font-heading font-bold leading-none ${barvy.odznak}`}
+        /* Horní index, ne odznak s podkladem: sloupec s datem je v přehledu
+           úzký a pilulka ho roztahovala („at nam to neroztahuje prehled"). */
+        <sup
+          className="ml-0.5 text-[10px] font-bold tabular-nums"
           title={
             stav === 'po'
-              ? 'Termín dokončení je po datu'
+              ? 'Dní po termínu dokončení'
               : stav === 'dnes'
                 ? 'Termín dokončení je dnes'
-                : 'Blíží se termín dokončení'
+                : 'Dní do termínu dokončení'
           }
         >
           {odznak}
-        </span>
+        </sup>
       )}
     </span>
   );
@@ -226,7 +246,7 @@ export function ProjectsTable({
                   {p.pageCount ?? '—'}
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  <TerminDokonceni datum={p.endDate} hotovo={p.finished} />
+                  <TerminDokonceni datum={p.endDate} hotovo={p.finished} statusName={p.statusName} />
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
@@ -331,7 +351,7 @@ export function AdminProjectsTable({
                   {p.pageCount ?? '—'}
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  <TerminDokonceni datum={p.endDate} hotovo={p.finished} />
+                  <TerminDokonceni datum={p.endDate} hotovo={p.finished} statusName={p.statusName} />
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
@@ -670,6 +690,7 @@ function bunkaSloupce(
         <TerminDokonceni
           datum={p.endDate}
           hotovo={p.finished}
+          statusName={p.statusName}
           obsah={
             muzeMenit ? (
               <UpravitelneDatum

@@ -128,6 +128,22 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
 
 const NAZVY = STAVY_PROJEKTU.map((s) => s.nazev);
 
+/**
+ * Od kterého stavu je práce odevzdaná (zadání 18. 9. 2026: „když se překlopí
+ * nebo bude stav na Dokončeno - ke schválení, tak se datum změní třeba na
+ * bílou, protože byl odevzdán v termínu").
+ *
+ * Bere se pořadí, ne jedno jméno: po odevzdání jde projekt ještě přes
+ * „Čekáme na opravy", „Schváleno - k fakturaci" a „Vyfakturováno" - a v žádném
+ * z nich už termín dokončení nemá co hlídat.
+ */
+const PRVNI_ODEVZDANY = NAZVY.indexOf('Dokončeno - ke schválení');
+
+export function stavJeOdevzdany(nazev: string | null | undefined): boolean {
+  const index = NAZVY.indexOf((nazev ?? '') as string);
+  return index >= 0 && PRVNI_ODEVZDANY >= 0 && index >= PRVNI_ODEVZDANY;
+}
+
 /** Je to stav z naší cesty projektu? Staré stavy z Caflou tu být nemusí. */
 export function jeNasStav(nazev: string | null | undefined): boolean {
   return Boolean(nazev) && NAZVY.includes(nazev as string);
