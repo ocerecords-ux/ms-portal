@@ -18,14 +18,21 @@ import { useState } from 'react';
  */
 export function SchvalitSpot({
   token,
+  projekt,
   schvalenoAt,
   zvyraznit = false,
+  varianta = 'karta',
 }: {
-  token: string;
+  /** Token z mailu - klient se nepřihlašuje. */
+  token?: string;
+  /** ID projektu - pro přihlášeného klienta v portálu. */
+  projekt?: string;
   /** ISO datum, kdy klient schválil; null = ještě ne. */
   schvalenoAt: string | null;
   /** Přišel z mailu rovnou na schválení - ať to netápe, kde tlačítko je. */
   zvyraznit?: boolean;
+  /** `karta` je pruh s vysvětlením, `radek` je samotné tlačítko do tabulky. */
+  varianta?: 'karta' | 'radek';
 }) {
   const [hotovoAt, setHotovoAt] = useState<string | null>(schvalenoAt);
   const [ptaSe, setPtaSe] = useState(false);
@@ -40,7 +47,7 @@ export function SchvalitSpot({
       const res = await fetch('/api/reklama/schvaleni', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ k: token }),
+        body: JSON.stringify(token ? { k: token } : { projekt }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -56,13 +63,49 @@ export function SchvalitSpot({
     }
   }
 
+  if (hotovoAt && varianta === 'radek') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold text-status-done whitespace-nowrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 shrink-0">
+          <path d="M4 12l6 6L20 6" />
+        </svg>
+        {new Intl.DateTimeFormat('cs-CZ').format(new Date(hotovoAt))}
+      </span>
+    );
+  }
+
+  if (varianta === 'radek') {
+    return (
+      <span className="inline-flex flex-col items-start gap-0.5">
+        <button
+          type="button"
+          disabled={bezi}
+          onClick={() => {
+            if (!ptaSe) {
+              setPtaSe(true);
+              return;
+            }
+            void schval();
+          }}
+          title="Schválením jde celý projekt k fakturaci"
+          className={`font-heading font-semibold text-xs rounded-lg px-3 py-1.5 transition-colors disabled:opacity-60 whitespace-nowrap ${
+            ptaSe ? 'bg-brand-purple text-white' : 'bg-brand-green text-onAccent'
+          }`}
+        >
+          {bezi ? 'Ukládám…' : ptaSe ? 'Opravdu? Klepněte znovu' : 'Schválit'}
+        </button>
+        {chyba && <span className="text-[11px] font-body text-danger">{chyba}</span>}
+      </span>
+    );
+  }
+
   if (hotovoAt) {
     return (
       <div className="rounded-card border border-brand-green bg-okTint px-4 py-3 flex items-center gap-2.5 flex-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-status-done shrink-0">
           <path d="M4 12l6 6L20 6" />
         </svg>
-        <span className="font-heading font-semibold text-sm text-ink">Spot je schválený</span>
+        <span className="font-heading font-semibold text-sm text-ink">Zakázka je schválená</span>
         <span className="text-xs font-body text-muted">
           {new Intl.DateTimeFormat('cs-CZ', {
             day: 'numeric',
@@ -84,10 +127,10 @@ export function SchvalitSpot({
     >
       <div className="min-w-0 flex-1">
         <span className="block font-heading font-semibold text-sm text-ink">
-          Je spot v pořádku?
+          Je zakázka v pořádku?
         </span>
         <span className="block text-xs font-body text-muted">
-          Schválením nám dáte vědět, že je hotovo — projekt tím jde k fakturaci. Když je co
+          Schválením nám dáte vědět, že je hotovo — celý projekt tím jde k fakturaci. Když je co
           upravit, napište to radši do připomínek.
         </span>
       </div>

@@ -1,3 +1,5 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { projektPodleTokenu } from '@/lib/preposlechOdkaz';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
@@ -20,6 +22,16 @@ import { stavJeDokonceny } from '@/lib/stavyProjektu';
  * JEN U REKLAMNÍCH KLIENTŮ. U audioknihy vede cesta přes opravy a stav
  * přehazujeme my; tohle je zkratka pro spot, který klient buď vezme, nebo
  * k němu napíše připomínky.
+ *
+ * SCHVALUJE SE CELÝ PROJEKT, NE JEDNOTLIVÁ NAHRÁVKA (upřesnění 18. 9. 2026:
+ * „to schválení by se mělo týkat celého projektu, ne jednotlivých nahrávek").
+ * Proto je razítko na ProjectMeta a ne u souboru - ať klient klikne ve složce,
+ * v taggeru nebo v portálu, schvaluje pokaždé tutéž zakázku.
+ *
+ * DVĚ CESTY DOVNITŘ: token z mailu (klient se nepřihlašuje), nebo přihlášený
+ * klient ve svém portálu (upřesnění 18. 9. 2026: „tuhle možnost bych dal
+ * klientům i v klientském portálu"). Přihlášenému se ověřuje, že projekt
+ * patří jeho firmě - ID projektu v těle požadavku samo o sobě nestačí.
  */
 
 export const STAV_PO_SCHVALENI = 'Schváleno - k fakturaci';
@@ -61,7 +73,30 @@ export type VysledekSchvaleni =
 export async function schvalKlientem(token: string): Promise<VysledekSchvaleni> {
   const caflouProjectId = await projektPodleTokenu(token);
   if (!caflouProjectId) return { chyba: 'Odkaz už neplatí.', status: 403 };
+  return schvalProjekt(caflouProjectId);
+}
 
+/**
+ * Schválení z klientského portálu. Projekt musí patřit firmě přihlášeného -
+ * jinak by stačilo poslat cizí ID.
+ */
+export async function schvalPrihlasenym(caflouProjectId: string): Promise<VysledekSchvaleni> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { chyba: 'Nejste přihlášen.', status: 401 };
+
+  const meta = await prisma.projectMeta.findUnique({
+    where: { caflouProjectId },
+    select: { companyId: true, klientUserId: true },
+  });
+  if (!meta) return { chyba: 'Projekt se nenašel.', status: 404 };
+
+  const jeJehoFirma = Boolean(session.user.companyId) && meta.companyId === session.user.companyId;
+  if (!jeJehoFirma) return { chyba: 'Tenhle projekt není váš.', status: 403 };
+
+  return schvalProjekt(caflouProjectId);
+}
+
+async function schvalProjekt(caflouProjectId: string): Promise<VysledekSchvaleni> {
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId },
     select: {

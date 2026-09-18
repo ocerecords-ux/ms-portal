@@ -2,6 +2,7 @@ import { MAPA_PORTALU } from './navodMapaPortalu';
 import { POZVANKA_HERCE } from './navodPozvankaHerce';
 import { AUDIOTAGGER } from './navodAudiotagger';
 import { STAVY_A_DOTOCENO } from './navodStavyDotoceno';
+import { REKLAMY_PRIPOMINKY } from './navodReklamyPripominky';
 
 /**
  * NÁVODY, KTERÉ PORTÁL ZALOŽÍ SÁM (zadání 16. 9. 2026: „udělejme nějakou
@@ -26,4 +27,6 @@ export const VYCHOZI_NAVODY: VychoziNavod[] = [
   POZVANKA_HERCE,
   STAVY_A_DOTOCENO,
   AUDIOTAGGER,
+  // Pripominkovani a schvalovani reklam (zadani 18. 9. 2026).
+  REKLAMY_PRIPOMINKY,
 ];

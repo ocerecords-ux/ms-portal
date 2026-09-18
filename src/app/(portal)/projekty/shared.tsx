@@ -11,6 +11,7 @@ import { HerciBunka } from './HerciBunka';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
+import { SchvalitSpot } from '@/components/SchvalitSpot';
 import { dnuDoTerminu, odznakTerminu, stavTerminu, type StavTerminu } from '@/lib/terminProjektu';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
@@ -139,6 +140,7 @@ export function ProjectsTable({
   rodneListy,
   preposlech,
   odkazyAudioTaggeru,
+  schvaleni,
 }: {
   projects: DisplayProject[];
   emptyText: string;
@@ -160,9 +162,19 @@ export function ProjectsTable({
    * smysl a klient, který reklamy nedělá, ho v přehledu vidět nemá.
    */
   rodneListy?: Record<string, { id: string; fileName: string }>;
+  /**
+   * SCHVALOVÁNÍ PŘÍMO V PORTÁLU (zadání 18. 9. 2026: „tuhle možnost bych dal
+   * klientům i v klientském portálu, ale zapnul bych to zatím jen u reklam").
+   *
+   * Klíč je ID projektu, hodnota kdy ho klient schválil (null = ještě ne).
+   * Když se prop nepředá, sloupec se nevykreslí vůbec - u klienta audioknih
+   * nemá co dělat.
+   */
+  schvaleni?: Record<string, string | null>;
 }) {
   const showRodnyList = rodneListy !== undefined;
   const showPreposlech = preposlech !== undefined;
+  const showSchvaleni = schvaleni !== undefined;
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       {/* Stejne jako u interniho prehledu: procentni sirky, jeden radek na
@@ -179,6 +191,7 @@ export function ProjectsTable({
               'releaseDate',
               ...(showPreposlech ? ['kPreposlechu', 'preposlechnuto'] : []),
               ...(showRodnyList ? ['rodnyList'] : []),
+              ...(showSchvaleni ? ['schvaleni'] : []),
             ]).map((sirka, i) => (
               <col key={i} style={{ width: sirka }} />
             ))}
@@ -198,13 +211,14 @@ export function ProjectsTable({
               {showPreposlech && <th className="text-left px-4 py-3.5 whitespace-nowrap">K přeposlechu</th>}
               {showPreposlech && <th className="text-left px-4 py-3.5 whitespace-nowrap">Přeposlechnuto</th>}
               {showRodnyList && <th className="text-left px-4 py-3.5">Rodný list</th>}
+              {showSchvaleni && <th className="text-left px-4 py-3.5 whitespace-nowrap">Schválení</th>}
             </tr>
           </thead>
           <tbody>
             {projects.length === 0 && (
               <tr>
                 <td
-                  colSpan={6 + (showPreposlech ? 2 : 0) + (showRodnyList ? 1 : 0)}
+                  colSpan={6 + (showPreposlech ? 2 : 0) + (showRodnyList ? 1 : 0) + (showSchvaleni ? 1 : 0)}
                   className="px-4 py-8 text-center text-muted text-sm font-body"
                 >
                   {emptyText}
@@ -264,6 +278,24 @@ export function ProjectsTable({
                   />
                 )}
                 {showPreposlech && <BunkaPreposlechnuto stav={preposlech?.[String(p.id)]} />}
+                {showSchvaleni && (
+                  <td className="px-4 py-2 text-sm font-heading whitespace-nowrap align-middle">
+                    {/* Schvaluje se CELÝ PROJEKT, ne jednotlivá nahrávka
+                        (upřesnění 18. 9. 2026). Hotové zakázky už nemá co
+                        schvalovat - u nich zůstane jen datum, nebo pomlčka. */}
+                    {schvaleni?.[String(p.id)] ? (
+                      <SchvalitSpot
+                        projekt={String(p.id)}
+                        schvalenoAt={schvaleni[String(p.id)]}
+                        varianta="radek"
+                      />
+                    ) : p.finished ? (
+                      <span className="text-muted">—</span>
+                    ) : (
+                      <SchvalitSpot projekt={String(p.id)} schvalenoAt={null} varianta="radek" />
+                    )}
+                  </td>
+                )}
                 {showRodnyList && (
                   <td className="px-4 py-0 text-sm font-heading whitespace-nowrap">
                     {rodneListy?.[String(p.id)] ? (
@@ -802,6 +834,8 @@ const VAHA_SLOUPCE: Record<string, number> = {
    * „Normostrany" si bralo sirku, kterou potrebuji nazvy knih a herci.
    */
   pageCountSirsi: 7,
+  /** Tlacitko „Schvalit" nebo datum schvaleni (zadani 18. 9. 2026). */
+  schvaleni: 10,
 };
 
 /**

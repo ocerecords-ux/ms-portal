@@ -145,6 +145,30 @@ export default async function ProjektyPage() {
   );
   const rodneListy = rodneListyMapa.size > 0 ? Object.fromEntries(rodneListyMapa) : undefined;
 
+  /**
+   * SCHVALOVÁNÍ V KLIENTSKÉM PORTÁLU (zadání 18. 9. 2026: „tuhle možnost bych
+   * dal klientům i v klientském portálu, ale zapnul bych to zatím jen
+   * u reklam").
+   *
+   * Sloupec se vykreslí jen firmě, která u nás dělá reklamy - u audioknih
+   * vede cesta přes opravy a stav přehazujeme my. Schvaluje se CELÝ PROJEKT,
+   * proto stačí jedno razítko na zakázku.
+   */
+  const schvaleniMapa = company?.dealsAds
+    ? await prisma.projectMeta.findMany({
+        where: { caflouProjectId: { in: [...active, ...finished].map((p) => String(p.id)) } },
+        select: { caflouProjectId: true, schvalenoKlientemAt: true },
+      })
+    : [];
+  const schvaleni = company?.dealsAds
+    ? Object.fromEntries(
+        schvaleniMapa.map((m) => [
+          m.caflouProjectId,
+          m.schvalenoKlientemAt ? m.schvalenoKlientemAt.toISOString() : null,
+        ]),
+      )
+    : undefined;
+
   // Stav preposlechu do dvou novych sloupcu (zadani 12. 9. 2026). Jen
   // u rozpracovanych projektu - u dokoncenych uz nema co ukazovat.
   const preposlechMapa = await nactiPreposlechPrehled(active.map((p) => String(p.id)));
@@ -175,6 +199,7 @@ export default async function ProjektyPage() {
           rodneListy={rodneListy}
           preposlech={preposlech}
           odkazyAudioTaggeru={odkazyAudioTaggeru}
+          schvaleni={schvaleni}
         />
       </div>
 
