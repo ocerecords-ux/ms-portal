@@ -13,6 +13,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/terminy",
+      "schedule": "0 6 * * *"
+    },
+    {
       "path": "/api/cron/banka",
       "schedule": "0 5,11,17 * * *"
     }

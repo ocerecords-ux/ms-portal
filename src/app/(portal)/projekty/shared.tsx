@@ -10,6 +10,7 @@ import { HerciBunka } from './HerciBunka';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
+import { dnuDoTerminu, odznakTerminu, stavTerminu, type StavTerminu } from '@/lib/terminProjektu';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -28,6 +29,61 @@ function displayStatusName(statusName: string): string {
 export function formatDate(d: Date | null) {
   if (!d) return '—';
   return new Intl.DateTimeFormat('cs-CZ').format(d);
+}
+
+/**
+ * DATUM DOKONČENÍ, KTERÉ JE VIDĚT (zadání 18. 9. 2026).
+ *
+ * Do tří dnů zeleně, v den termínu oranžově, po termínu červeně - a vždycky
+ * o kousek větší, s odznakem, kolik dní zbývá. Po termínu odznak odpočítává
+ * do mínusu („−2 dny").
+ *
+ * HOTOVÉMU PROJEKTU SE NIC NEBARVÍ. Termín, který se stihnout měl a projekt
+ * je odevzdaný, už není co hlídat - a červený seznam hotových zakázek by
+ * z barev udělal ozdobu, které si nikdo nevšímá.
+ */
+const BARVY_TERMINU: Record<Exclude<StavTerminu, 'daleko'>, { text: string; odznak: string }> = {
+  blizko: { text: 'text-status-done', odznak: 'bg-okTint text-status-done' },
+  dnes: { text: 'text-status-progress', odznak: 'bg-warnTint text-status-progress' },
+  po: { text: 'text-danger', odznak: 'bg-dangerTint text-danger' },
+};
+
+export function TerminDokonceni({
+  datum,
+  hotovo,
+  /** Co se ukáže místo data - u upravitelné buňky je to celé tlačítko. */
+  obsah,
+}: {
+  datum: Date | null;
+  hotovo: boolean;
+  obsah?: React.ReactNode;
+}) {
+  const dnu = hotovo ? null : dnuDoTerminu(datum);
+  const stav = stavTerminu(dnu);
+  const telo = obsah ?? formatDate(datum);
+  if (stav === 'daleko') return <>{telo}</>;
+
+  const barvy = BARVY_TERMINU[stav];
+  const odznak = odznakTerminu(dnu);
+  return (
+    <span className="inline-flex items-center gap-1.5 min-w-0">
+      <span className={`text-[15px] font-semibold ${barvy.text}`}>{telo}</span>
+      {odznak && (
+        <span
+          className={`shrink-0 rounded-pill px-1.5 py-0.5 text-[11px] font-heading font-bold leading-none ${barvy.odznak}`}
+          title={
+            stav === 'po'
+              ? 'Termín dokončení je po datu'
+              : stav === 'dnes'
+                ? 'Termín dokončení je dnes'
+                : 'Blíží se termín dokončení'
+          }
+        >
+          {odznak}
+        </span>
+      )}
+    </span>
+  );
 }
 
 export function StatusPill({ finished, statusName }: { finished: boolean; statusName: string }) {
@@ -170,7 +226,7 @@ export function ProjectsTable({
                   {p.pageCount ?? '—'}
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {formatDate(p.endDate)}
+                  <TerminDokonceni datum={p.endDate} hotovo={p.finished} />
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
@@ -275,7 +331,7 @@ export function AdminProjectsTable({
                   {p.pageCount ?? '—'}
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {formatDate(p.endDate)}
+                  <TerminDokonceni datum={p.endDate} hotovo={p.finished} />
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   {formatDate(p.releaseDate)}
@@ -610,15 +666,21 @@ function bunkaSloupce(
     case 'pageCount':
       return p.pageCount ?? '—';
     case 'endDate':
-      return muzeMenit ? (
-        <UpravitelneDatum
-          caflouProjectId={id}
-          pole="endDate"
-          hodnota={proInput(p.endDate)}
-          popisek={formatDate(p.endDate)}
+      return (
+        <TerminDokonceni
+          datum={p.endDate}
+          hotovo={p.finished}
+          obsah={
+            muzeMenit ? (
+              <UpravitelneDatum
+                caflouProjectId={id}
+                pole="endDate"
+                hodnota={proInput(p.endDate)}
+                popisek={formatDate(p.endDate)}
+              />
+            ) : undefined
+          }
         />
-      ) : (
-        formatDate(p.endDate)
       );
     case 'releaseDate':
       return muzeMenit ? (

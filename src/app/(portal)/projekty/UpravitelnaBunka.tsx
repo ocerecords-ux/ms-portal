@@ -137,7 +137,7 @@ export function UpravitelneDatum({
   /** YYYY-MM-DD, nebo prázdno. */
   hodnota: string;
   /** Jak se datum ukazuje, když se needituje. */
-  popisek: string;
+  popisek: React.ReactNode;
 }) {
   const router = useRouter();
   const [upravuje, setUpravuje] = useState(false);
