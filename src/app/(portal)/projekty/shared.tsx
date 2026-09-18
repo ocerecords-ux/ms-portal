@@ -475,10 +475,15 @@ function bunkaSloupce(
       // Radek uz stejne roste podle hercu (12. 9. 2026), takze zalomeny nazev
       // nic noveho nerozhodi.
       //
-      // items-start misto items-center: u dvouradkoveho nazvu ma ikona sedet
-      // u PRVNIHO radku, ne uprostred vysky bunky.
+      // NAZEV DRZI STRED BUNKY (zadani 18. 9. 2026: „nazev projektu v prehledu
+      // bych drzel vzdy uprostred toho pole, ted je nahore vuci dalsimu textu
+      // na radku"). Puvodni items-start posazovalo nazev k hornimu okraji, aby
+      // ikona sedela u prvniho radku dvouradkoveho nazvu - jenze od chvile,
+      // kdy je pod ikonou typu jeste pruh licenci, je ten sloupec vyssi a nazev
+      // vyjel nahoru proti datu a stavu vedle. items-center to srovna zpatky
+      // do jedne linie s ostatnimi sloupci.
       return (
-        <span className="flex items-start gap-2.5 min-w-0 max-w-full py-2" title={p.name}>
+        <span className="flex items-center gap-2.5 min-w-0 max-w-full py-2" title={p.name}>
           {/* Projekt bez ikony si misto ni nechava prazdno (zadani 12. 9.
               2026: „projekty, ktere nemaji ikony, by se mely spise zarovnat
               nazvem, ne podle te ikony") - nazvy tak stoji v jedne linii. */}
