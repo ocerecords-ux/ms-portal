@@ -24,8 +24,45 @@ export function NotificationBell({ unread }: { unread: number }) {
   const [items, setItems] = useState<Notifikace[] | null>(null);
   const [pocet, setPocet] = useState(unread);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * NA TELEFONU PŘES CELOU ŠÍŘKU (oprava 18. 9. 2026: „na mobilu má useklé
+   * notifikace").
+   *
+   * Panel visel `right-0` pod zvonkem a byl 320 px široký. Jenže zvonek není
+   * na kraji obrazovky — vpravo od něj je ještě avatar a odhlášení — takže se
+   * panel roztáhl mimo levý okraj a texty byly uříznuté v půlce slova.
+   *
+   * Na úzké obrazovce proto přepíná na `fixed` přes celou šířku s okraji;
+   * odkud má viset, se dopočítá ze zvonku, protože horní lišta je sama
+   * posuvná a žádná pevná výška na ni nesedí.
+   */
+  const [uzky, setUzky] = useState(false);
+  const [shora, setShora] = useState<number | null>(null);
 
   useEffect(() => setPocet(unread), [unread]);
+
+  useEffect(() => {
+    const dotaz = window.matchMedia('(max-width: 639px)');
+    const zmena = () => setUzky(dotaz.matches);
+    zmena();
+    dotaz.addEventListener('change', zmena);
+    return () => dotaz.removeEventListener('change', zmena);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !uzky) return;
+    const spocti = () => {
+      const r = wrapRef.current?.getBoundingClientRect();
+      if (r) setShora(r.bottom + 8);
+    };
+    spocti();
+    window.addEventListener('resize', spocti);
+    window.addEventListener('scroll', spocti, true);
+    return () => {
+      window.removeEventListener('resize', spocti);
+      window.removeEventListener('scroll', spocti, true);
+    };
+  }, [open, uzky]);
 
   useEffect(() => {
     function mimo(e: MouseEvent) {
@@ -82,7 +119,12 @@ export function NotificationBell({ unread }: { unread: number }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[320px] max-h-[60vh] overflow-y-auto bg-surface border border-line rounded-card shadow-xl z-50 p-2">
+        <div
+          className={`max-h-[60vh] overflow-y-auto bg-surface border border-line rounded-card shadow-xl z-50 p-2 ${
+            uzky ? 'fixed left-2 right-2' : 'absolute right-0 top-full mt-2 w-[320px]'
+          }`}
+          style={uzky ? { top: shora ?? 64 } : undefined}
+        >
           {items === null && <p className="text-sm font-body text-muted m-0 px-3 py-3">Načítám…</p>}
           {items !== null && items.length === 0 && (
             <p className="text-sm font-body text-muted m-0 px-3 py-3">Zatím tu nic není.</p>
@@ -90,8 +132,11 @@ export function NotificationBell({ unread }: { unread: number }) {
           {items?.map((n) => {
             const obsah = (
               <>
-                <span className="block text-sm font-heading font-semibold text-ink">{n.title}</span>
-                {n.body && <span className="block text-xs font-body text-muted mt-0.5">{n.body}</span>}
+                {/* Dlouhy nazev projektu se zalomi, neutece z ramecku. */}
+                <span className="block text-sm font-heading font-semibold text-ink break-words">{n.title}</span>
+                {n.body && (
+                  <span className="block text-xs font-body text-muted mt-0.5 break-words">{n.body}</span>
+                )}
                 <span className="block text-[11px] font-body text-muted mt-1 tabular-nums">
                   {formatDateTime(n.createdAt)}
                 </span>

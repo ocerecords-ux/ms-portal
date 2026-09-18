@@ -61,7 +61,7 @@ export async function posliZvonekOZmenach(vstup: {
     const url = `/projekty/${encodeURIComponent(vstup.caflouProjectId)}`;
 
     if (stav) {
-      await notifyMany(komu, {
+      await posliJednou(komu, {
         kind: 'projekt-stav',
         title: `Změna stavu: ${nazev}`,
         body: `${stav.predchozi} → ${stav.nova}`,
@@ -72,7 +72,7 @@ export async function posliZvonekOZmenach(vstup: {
     if (terminy.length > 0) {
       // Vic termínů naráz je jedno upozornění - zvonek má říct „u projektu se
       // hýbe termín", ne zaplnit se třemi řádky o tomtéž uložení.
-      await notifyMany(komu, {
+      await posliJednou(komu, {
         kind: 'projekt-termin',
         title: `Změna termínu: ${nazev}`,
         body: terminy
@@ -84,4 +84,34 @@ export async function posliZvonekOZmenach(vstup: {
   } catch (err) {
     console.error('posliZvonekOZmenach selhalo:', err);
   }
+}
+
+/**
+ * Pošle upozornění jen tomu, komu totéž nepřistálo v posledních dvou minutách
+ * (oprava 18. 9. 2026: pod zvonkem visely dvojice úplně stejných řádků).
+ *
+ * Formulář projektu umí uložit dvakrát krátce po sobě - z přehledu i z detailu,
+ * nebo když člověk dvakrát ťukne. Obě uložení si přečtou tentýž stav PŘED
+ * změnou, takže obě poctivě vidí změnu a obě pošlou stejný řádek. Historie
+ * projektu to unese, zvonek ne: dvakrát totéž vypadá jako chyba.
+ */
+async function posliJednou(
+  komu: string[],
+  zprava: { kind: string; title: string; body: string; url: string },
+): Promise<void> {
+  const hranice = new Date(Date.now() - 2 * 60 * 1000);
+  const uz = await prisma.notification.findMany({
+    where: {
+      userId: { in: komu },
+      kind: zprava.kind,
+      title: zprava.title,
+      body: zprava.body,
+      createdAt: { gte: hranice },
+    },
+    select: { userId: true },
+  });
+  const maji = new Set(uz.map((n) => n.userId));
+  const zbyli = komu.filter((id) => !maji.has(id));
+  if (zbyli.length === 0) return;
+  await notifyMany(zbyli, zprava);
 }
