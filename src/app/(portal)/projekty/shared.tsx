@@ -90,7 +90,12 @@ export function TerminDokonceni({
         /* Horní index, ne odznak s podkladem: sloupec s datem je v přehledu
            úzký a pilulka ho roztahovala („at nam to neroztahuje prehled"). */
         <sup
-          className="ml-0.5 text-[10px] font-bold tabular-nums"
+          /* Index je vzdycky JEDNOBAREVNY (upresneni 18. 9. 2026: „ty indexy
+             tech terminu uz jsou ok, akorat bych je pro prehlednost nechal
+             v jedne bile barve"). Barvu nese datum, cislo uz jen rika kolik -
+             a kdyz se nebarvi, da se sloupec cist odshora dolu jako sloupec
+             cisel. `text-ink` je v tmavem rezimu bila, ve svetlem tmava. */
+          className="ml-0.5 text-[10px] font-bold tabular-nums text-ink"
           title={
             stav === 'po'
               ? 'Dní po termínu dokončení'
