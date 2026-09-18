@@ -592,6 +592,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       contracts={contractRows}
       invoicedByCurrency={invoicedByCurrency}
       costsByCurrency={costsByCurrency}
+      caflouProjectId={caflouProjectId}
+      companyId={meta?.companyId ?? company?.id ?? null}
     />
   );
 

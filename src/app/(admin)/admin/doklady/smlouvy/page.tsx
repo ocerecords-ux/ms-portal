@@ -22,7 +22,11 @@ function formatDate(date: Date | null): string {
   return date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '—';
 }
 
-export default async function ContractsPage({ searchParams }: { searchParams: { tab?: string } }) {
+export default async function ContractsPage({
+  searchParams,
+}: {
+  searchParams: { tab?: string; projekt?: string };
+}) {
   await ensureContractTemplates();
 
   const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[0];
@@ -103,6 +107,9 @@ export default async function ContractsPage({ searchParams }: { searchParams: { 
             Šablony smluv
           </Link>
           <NewContractForm
+            /* Smlouva zakládaná z detailu projektu (zadání 18. 9. 2026):
+               formulář se rovnou rozbalí a projekt je vybraný. */
+            vychoziProjekt={searchParams?.projekt ?? null}
             issuers={issuers}
             companies={companies.map((c) => ({
               id: c.id,

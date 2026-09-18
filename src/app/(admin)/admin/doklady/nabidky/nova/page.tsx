@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { listProjectOptions } from '@/lib/projectOptions';
 import { mapaKlientuProjektu } from '@/lib/prijemceNabidky';
+import { projektProDoklad } from '@/lib/projektProDoklad';
 import { OfferEditor } from '../[id]/OfferEditor';
 
 /**
@@ -22,8 +23,11 @@ function iso(date: Date): string {
 export default async function NovaNabidkaPage({
   searchParams,
 }: {
-  searchParams: { firma?: string; vydavatel?: string; predmet?: string };
+  searchParams: { firma?: string; vydavatel?: string; predmet?: string; projekt?: string };
 }) {
+  // Nabídka založená z detailu projektu (zadání 18. 9. 2026) - projekt,
+  // klient i předmět se předvyplní, ať se nevybírá to, co portál ví.
+  const projekt = await projektProDoklad(searchParams?.projekt);
   const vydavatel = searchParams?.vydavatel
     ? await prisma.issuerCompany.findUnique({ where: { id: searchParams.vydavatel } })
     : await prisma.issuerCompany.findFirst({
@@ -45,9 +49,8 @@ export default async function NovaNabidkaPage({
     mapaKlientuProjektu(),
   ]);
 
-  const odberatel = searchParams?.firma
-    ? await prisma.company.findUnique({ where: { id: searchParams.firma } })
-    : null;
+  const firmaId = searchParams?.firma || projekt?.companyId || null;
+  const odberatel = firmaId ? await prisma.company.findUnique({ where: { id: firmaId } }) : null;
 
   const dnes = new Date();
   const platnost = new Date(dnes);
@@ -65,15 +68,15 @@ export default async function NovaNabidkaPage({
         currency: vydavatel.defaultCurrency,
         issueDate: iso(dnes),
         validUntil: iso(platnost),
-        subject: searchParams?.predmet ?? '',
+        subject: searchParams?.predmet ?? projekt?.nazev ?? '',
         note: '',
         approvalToken: '',
         sentAt: null,
         approvedAt: null,
         approvedByName: null,
         rejectedAt: null,
-        caflouProjectId: '',
-        projectName: null,
+        caflouProjectId: projekt?.caflouProjectId ?? '',
+        projectName: projekt?.nazev ?? null,
         jazyk: 'CS',
         slevaProcent: 0,
         slevaMinor: 0,

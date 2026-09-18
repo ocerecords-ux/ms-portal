@@ -45,7 +45,15 @@ export function NewContractForm({
   companies,
   templates,
   projects,
+  vychoziProjekt = null,
 }: {
+  /**
+   * Projekt, se kterým se sem přišlo z detailu projektu (zadání 18. 9. 2026:
+   * „bylo by dobré rovnou vytvořit nějaký doklad, který bude navázaný na
+   * projekt"). Formulář se s ním rovnou otevře a herce i rozpočet si dotáhne
+   * jako po ručním výběru.
+   */
+  vychoziProjekt?: string | null;
   issuers: { id: string; name: string; isDefault: boolean }[];
   companies: {
     id: string;
@@ -67,6 +75,12 @@ export function NewContractForm({
   // rozbalit - zkratka ma vest do editacniho okna, ne jen na stranku
   // (zadani 9. 9. 2026).
   useOtevriZeZkratky(() => setOpen(true));
+
+  // S projektem v adrese nemá smysl čekat na kliknutí - člověk sem přišel
+  // právě proto, aby smlouvu založil (18. 9. 2026).
+  useEffect(() => {
+    if (vychoziProjekt) setOpen(true);
+  }, [vychoziProjekt]);
   const [form, setForm] = useState({
     issuerCompanyId: defaultIssuer?.id ?? '',
     templateId: templates[0]?.id ?? '',
@@ -74,7 +88,7 @@ export function NewContractForm({
     companyId: '',
     signerName: '',
     signerEmail: '',
-    caflouProjectId: '',
+    caflouProjectId: vychoziProjekt ?? '',
     actorUserId: '',
   });
   const [herci, setHerci] = useState<Herec[]>([]);

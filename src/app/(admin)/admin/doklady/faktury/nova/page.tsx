@@ -4,6 +4,7 @@ import { getRateForCurrency } from '@/lib/cnb';
 import { InvoiceEditor } from '../[id]/InvoiceEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
 import { computeTotals } from '@/lib/doklady';
+import { projektProDoklad } from '@/lib/projektProDoklad';
 
 /**
  * Faktura z nabídky PŘED uložením (zadani 8. 9. 2026: "chci se dostat ještě
@@ -23,7 +24,7 @@ function iso(date: Date): string {
 export default async function NewInvoiceFromOfferPage({
   searchParams,
 }: {
-  searchParams: { nabidka?: string; firma?: string; vydavatel?: string; predmet?: string };
+  searchParams: { nabidka?: string; firma?: string; vydavatel?: string; predmet?: string; projekt?: string };
 }) {
   const offerId = searchParams?.nabidka;
   // Bez nabidky se zaklada prazdny doklad - taky se nic neuklada, dokud
@@ -172,8 +173,10 @@ export default async function NewInvoiceFromOfferPage({
 async function PrazdnaFaktura({
   searchParams,
 }: {
-  searchParams: { firma?: string; vydavatel?: string; predmet?: string };
+  searchParams: { firma?: string; vydavatel?: string; predmet?: string; projekt?: string };
 }) {
+  // Faktura založená z detailu projektu (zadání 18. 9. 2026).
+  const projekt = await projektProDoklad(searchParams?.projekt);
   const vydavatel = searchParams?.vydavatel
     ? await prisma.issuerCompany.findUnique({ where: { id: searchParams.vydavatel } })
     : await prisma.issuerCompany.findFirst({
@@ -192,9 +195,8 @@ async function PrazdnaFaktura({
     listProjectOptions(),
   ]);
 
-  const odberatel = searchParams?.firma
-    ? await prisma.company.findUnique({ where: { id: searchParams.firma } })
-    : null;
+  const firmaId = searchParams?.firma || projekt?.companyId || null;
+  const odberatel = firmaId ? await prisma.company.findUnique({ where: { id: firmaId } }) : null;
 
   const dnes = new Date();
   const splatnost = new Date(dnes);
@@ -220,13 +222,13 @@ async function PrazdnaFaktura({
         issueDate: iso(dnes),
         taxDate: iso(dnes),
         dueDate: iso(splatnost),
-        subject: searchParams?.predmet ?? '',
+        subject: searchParams?.predmet ?? projekt?.nazev ?? '',
         note: '',
         sentAt: null,
         paidAt: null,
         offerNumber: null,
-        caflouProjectId: '',
-        projectName: null,
+        caflouProjectId: projekt?.caflouProjectId ?? '',
+        projectName: projekt?.nazev ?? null,
         rezimDph: 'STANDARD',
         jazyk: 'CS',
         slevaProcent: 0,

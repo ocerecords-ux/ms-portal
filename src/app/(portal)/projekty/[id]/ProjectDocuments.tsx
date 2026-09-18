@@ -58,6 +58,8 @@ export function ProjectDocuments({
   contracts,
   invoicedByCurrency,
   costsByCurrency,
+  caflouProjectId,
+  companyId,
 }: {
   offers: ProjectDocRow[];
   invoices: ProjectDocRow[];
@@ -65,8 +67,31 @@ export function ProjectDocuments({
   contracts: ProjectDocRow[];
   invoicedByCurrency: { currency: Currency; minor: number }[];
   costsByCurrency: { currency: Currency; minor: number }[];
+  /** Projekt, ke kterému se nový doklad rovnou naváže (18. 9. 2026). */
+  caflouProjectId: string;
+  /** Klient projektu - předvyplní se jako odběratel. */
+  companyId?: string | null;
 }) {
   const celkem = offers.length + invoices.length + expenses.length + contracts.length;
+
+  // ZALOZENI DOKLADU ROVNOU ODSUD (zadani 18. 9. 2026: „kdyz jsem tady
+  // v dokladech na detailu projektu, tak by bylo dobre rovnou vytvorit nejaky
+  // doklad, ktery bude navazany na projekt"). Projekt (a kdyz ho zname,
+  // i klient) jde do adresy - zakladaci stranka si ho predvyplni, takze uz
+  // se nevybira to, co portal vi.
+  const sProjektem = (cesta: string) => {
+    const parametry = new URLSearchParams({ projekt: caflouProjectId });
+    if (companyId) parametry.set('firma', companyId);
+    return `${cesta}?${parametry.toString()}`;
+  };
+
+  const novy = [
+    { href: sProjektem('/admin/doklady/nabidky/nova'), label: 'Nová nabídka', druh: 'nabidka' as const },
+    { href: sProjektem('/admin/doklady/faktury/nova'), label: 'Nová faktura', druh: 'faktura' as const },
+    // Smlouva se zaklada formularem primo na seznamu smluv, ne na vlastni
+    // strance - proto adresa bez /nova.
+    { href: sProjektem('/admin/doklady/smlouvy'), label: 'Nová smlouva', druh: 'smlouva' as const },
+  ];
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-6">
@@ -79,10 +104,23 @@ export function ProjectDocuments({
         </Link>
       </div>
 
+      <div className="flex items-center gap-2 flex-wrap">
+        {novy.map((n) => (
+          <Link
+            key={n.href}
+            href={n.href}
+            className="inline-flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-pill border border-line bg-surface text-sm font-heading font-semibold text-ink no-underline hover:border-brand-purple hover:text-brand-purple transition-colors"
+          >
+            <IkonaDokladu druh={n.druh} maly />
+            {n.label}
+          </Link>
+        ))}
+      </div>
+
       {celkem === 0 ? (
         <p className="text-sm font-body text-muted m-0">
-          K tomuhle projektu zatím žádný doklad navázaný není. Projekt se vybírá přímo na nabídce,
-          faktuře nebo výdaji.
+          K tomuhle projektu zatím žádný doklad navázaný není. Založ ho tlačítkem nahoře — projekt
+          i klient se do něj předvyplní.
         </p>
       ) : (
         // PORADI PODLE TOHO, JAK DOKLAD VZNIKA (zadani 13. 9. 2026:
@@ -170,15 +208,17 @@ const KRESBY: Record<DruhDokladu, React.ReactNode> = {
   ),
 };
 
-function IkonaDokladu({ druh }: { druh: DruhDokladu }) {
+function IkonaDokladu({ druh, maly }: { druh: DruhDokladu; maly?: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className="shrink-0 grid place-items-center w-9 h-9 rounded-lg bg-brand-purple/10 text-brand-purple"
+      className={`shrink-0 grid place-items-center rounded-lg bg-brand-purple/10 text-brand-purple ${
+        maly ? 'w-6 h-6' : 'w-9 h-9'
+      }`}
     >
       <svg
-        width={18}
-        height={18}
+        width={maly ? 14 : 18}
+        height={maly ? 14 : 18}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
