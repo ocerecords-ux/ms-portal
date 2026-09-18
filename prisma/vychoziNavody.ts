@@ -1,3 +1,4 @@
+import { MAPA_PORTALU } from './navodMapaPortalu';
 import { POZVANKA_HERCE } from './navodPozvankaHerce';
 import { AUDIOTAGGER } from './navodAudiotagger';
 import { STAVY_A_DOTOCENO } from './navodStavyDotoceno';
@@ -19,4 +20,10 @@ export type VychoziNavod = {
   obsah: string;
 };
 
-export const VYCHOZI_NAVODY: VychoziNavod[] = [POZVANKA_HERCE, STAVY_A_DOTOCENO, AUDIOTAGGER];
+export const VYCHOZI_NAVODY: VychoziNavod[] = [
+  // Mapa portalu je uvod pro kazdeho, kdo portal otevre poprve (18. 9. 2026).
+  MAPA_PORTALU,
+  POZVANKA_HERCE,
+  STAVY_A_DOTOCENO,
+  AUDIOTAGGER,
+];

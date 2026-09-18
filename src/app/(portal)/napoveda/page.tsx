@@ -47,10 +47,26 @@ export default async function NapovedaPage() {
   // Návod psaný pro produkci nemá co dělat v seznamu herce.
   const moje = navody.filter((n) => n.proRole.length === 0 || n.proRole.includes(role));
 
+  /**
+   * „Začínáme" patří nahoru (18. 9. 2026). Kategorie se jinak řadí abecedně,
+   * což je u zbytku v pořádku - jen úvodní skupina by skončila na konci
+   * seznamu, a přesně tam ji nikdo nový hledat nebude.
+   */
+  const KATEGORIE_NAHORE = ['Začínáme'];
+  const poradiKategorie = (nazev: string) => {
+    const i = KATEGORIE_NAHORE.indexOf(nazev);
+    return i === -1 ? KATEGORIE_NAHORE.length : i;
+  };
+  const serazene = [...moje].sort(
+    (a, b) =>
+      poradiKategorie(a.kategorie) - poradiKategorie(b.kategorie) ||
+      a.kategorie.localeCompare(b.kategorie, 'cs'),
+  );
+
   return (
     <SeznamNavodu
       jeAdmin={jeAdmin}
-      navody={moje.map((n) => ({
+      navody={serazene.map((n) => ({
         id: n.id,
         slug: n.slug,
         nazev: n.nazev,
