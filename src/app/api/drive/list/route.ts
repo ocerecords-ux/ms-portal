@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAccessToken, getFolderInfo, isWithinRoot, listFolder } from '@/lib/googleDrive';
 import { korenProZadost } from '@/lib/drivePristup';
 
+/**
+ * Výpis se NIKDY nekešuje (oprava 18. 9. 2026). Složka na Disku se mění
+ * zvenčí - přibude track, video, opravená verze - a odpověď schovaná
+ * v prohlížeči nebo na cestě je tu vždycky špatně.
+ */
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   // Prihlaseny klient, nebo token z mailu - viz lib/drivePristup.ts.
   const koren = await korenProZadost(req);
@@ -28,7 +36,10 @@ export async function GET(req: NextRequest) {
     // Vedle obsahu vracime i udaje o samotne slozce - sekce Nahravky z toho
     // dela tlacitko "odkaz na celou složku" (zadani 5. 9. 2026).
     const [items, folder] = await Promise.all([listFolder(requestedId, token), getFolderInfo(requestedId, token)]);
-    return NextResponse.json({ items, folder });
+    return NextResponse.json(
+      { items, folder },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } },
+    );
   } catch (err) {
     console.error('Načtení obsahu Google Disku selhalo:', err);
     return NextResponse.json({ error: 'Obsah složky se nepodařilo načíst.' }, { status: 502 });

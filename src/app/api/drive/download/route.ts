@@ -94,7 +94,11 @@ export async function GET(req: NextRequest) {
   const acceptRanges = driveRes.headers.get('accept-ranges');
   if (contentRange) headers['Content-Range'] = contentRange;
   if (contentLength) headers['Content-Length'] = contentLength;
-  if (acceptRanges) headers['Accept-Ranges'] = acceptRanges;
+  // Kdyz Disk hlavicku neposle, dopiseme ji sami (18. 9. 2026). Safari bez
+  // „Accept-Ranges: bytes" u videa ani nezkusi skakat po case - a u
+  // stopadesatimegovy mp4 to znamena prehravac, ktery jen tise nic nedela.
+  // Range samotny umime, jen se o tom prohlizec musi dozvedet.
+  headers['Accept-Ranges'] = acceptRanges || (exportMime ? 'none' : 'bytes');
 
   return new NextResponse(driveRes.body, {
     status: driveRes.status,

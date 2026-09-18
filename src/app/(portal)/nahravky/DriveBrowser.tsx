@@ -214,7 +214,19 @@ export function DriveBrowser({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/drive/list?folderId=${encodeURIComponent(folderId)}${klic}`);
+      /**
+       * `no-store` (oprava 18. 9. 2026: „klient nevidí videa na našem
+       * obrandovaném rozhraní, když to otevře z mailu, i když to na Google
+       * Disku je").
+       *
+       * Adresa výpisu je pro tutéž složku pořád stejná, takže prohlížeč
+       * s klidem vrátil odpověď, kterou si schoval při prvním otevření -
+       * a v ní soubor, který na Disk přibyl až potom, prostě nebyl. Klient
+       * pak kouká na starý seznam a nemá jak poznat, že je starý.
+       */
+      const res = await fetch(`/api/drive/list?folderId=${encodeURIComponent(folderId)}${klic}`, {
+        cache: 'no-store',
+      });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Obsah složky se nepodařilo načíst.');
       setItems(body.items ?? []);
@@ -437,6 +449,22 @@ export function DriveBrowser({
 
         {/* Akce nad celou slozkou (zadani 5. 9. 2026). */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Nacist znovu (18. 9. 2026). Klient nemusi tusit o Cmd+R a hlavne
+              nema jak poznat, ze se na disku neco zmenilo - tohle je jedine
+              tlacitko, kterym se o tom presvedci. */}
+          <button
+            type="button"
+            onClick={() => void load(currentFolder.id)}
+            disabled={loading}
+            title="Načíst obsah složky znovu"
+            aria-label="Načíst znovu"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-white/40 text-white hover:bg-white hover:text-brand-purple transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-white"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}>
+              <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+              <path d="M20 4v7h-7" />
+            </svg>
+          </button>
           <button
             type="button"
             onClick={downloadAll}
