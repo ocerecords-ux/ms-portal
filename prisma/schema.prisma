@@ -2092,6 +2092,43 @@ model PreposlechChyba {
   @@index([caflouProjectId, trackIndex, localTime])
 }
 
+/// PRIPOMINKY KLIENTA K VIDEU (zadani 18. 9. 2026: „chci mit u klientu,
+/// kterym delame reklamu, modifikovany AudioTagger… po kliknuti se otevre
+/// modifikovany audiotagger pro reklamy, kde bude video v nahledu, pod nim
+/// bude vykreslena zvukova stopa a napravo se budou taggovat pripominky").
+///
+/// ZAMERNE VLASTNI MODEL, ne PreposlechChyba. U audioknihy jsou to nase
+/// poznamky ke stopam, ktere si zapisuje zvukar; tohle pisou KLIENTI k jednomu
+/// konkretnimu videu na Disku a nemaji nic spolecneho s poradim stop ani
+/// s casovou osou Cubase. Michat to dohromady by znamenalo, ze se v prehledu
+/// chyb objevi cizi text - a naopak.
+///
+/// Soubor se drzi jeho ID na Disku: klient si odkaz preposle a video se
+/// mezitim muze prejmenovat, ale ID zustava.
+model ReklamaPripominka {
+  id              String @id @default(cuid())
+  caflouProjectId String
+
+  /// ID souboru na Google Disku, ke kteremu pripominka patri.
+  driveFileId   String
+  /// Nazev v dobe zapisu - at je zaznam citelny i po prejmenovani.
+  driveFileName String
+
+  /// Cas ve videu v sekundach od zacatku.
+  cas  Float
+  text String @db.Text
+
+  /// Kdo to napsal. Klient z odkazu ucet nema, proto jen jmeno.
+  autorJmeno  String?
+  autorUserId String?
+
+  /// Odskrtnuto na nasi strane - „tohle uz je opravene".
+  vyrizeno   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([caflouProjectId, driveFileId, cas])
+}
+
 /// Stav preposlechu celeho projektu - tlacitko PREPOSLECHNUTO z prototypu.
 model PreposlechStav {
   caflouProjectId String    @id

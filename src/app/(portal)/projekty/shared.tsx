@@ -84,7 +84,7 @@ export function TerminDokonceni({
   const barva = BARVY_TERMINU[stav];
   const odznak = odznakTerminu(dnu);
   return (
-    <span className={`whitespace-nowrap text-[15px] font-semibold ${barva}`}>
+    <span className={`whitespace-nowrap text-[14px] font-semibold ${barva}`}>
       {telo}
       {odznak && (
         /* Horní index, ne odznak s podkladem: sloupec s datem je v přehledu
@@ -95,7 +95,7 @@ export function TerminDokonceni({
              v jedne bile barve"). Barvu nese datum, cislo uz jen rika kolik -
              a kdyz se nebarvi, da se sloupec cist odshora dolu jako sloupec
              cisel. `text-ink` je v tmavem rezimu bila, ve svetlem tmava. */
-          className="ml-0.5 text-[10px] font-bold tabular-nums text-ink"
+          className="ml-0.5 text-[9px] font-bold tabular-nums text-ink"
           title={
             stav === 'po'
               ? 'Dní po termínu dokončení'
@@ -762,8 +762,15 @@ const VAHA_SLOUPCE: Record<string, number> = {
    * jen o kousek.
    */
   companyName: 16,
-  endDate: 8,
-  releaseDate: 8,
+  /**
+   * ZVÝRAZNĚNÝ TERMÍN POTŘEBUJE VÍC MÍSTA (oprava 18. 9. 2026: „Karolína má
+   * problém u termínů, má to useknuté"). Blížící se termín je o dva body
+   * větší a nese za sebou horní index („11. 9. 2026 −2"), takže se do šířky
+   * počítané na obyčejné datum přestal vejít. Bere se z data vydání, které
+   * zvýraznění nemá.
+   */
+  endDate: 11,
+  releaseDate: 7,
   priority: 6,
   projectType: 8,
   pageCount: 6,
@@ -827,8 +834,15 @@ const TRIDA_BUNKY: Record<string, string> = {
   // obsahu bunky - viz vetev 'narrator' v ObsahBunky.
   narrator: 'px-3 py-0 text-[13px] font-heading text-muted align-middle',
   pageCount: 'px-2 py-0 text-[13px] font-heading text-muted tabular-nums text-right whitespace-nowrap',
-  endDate: 'px-2 py-0 text-[13px] font-heading text-muted tabular-nums whitespace-nowrap truncate',
-  releaseDate: 'px-2 py-0 text-[13px] font-heading text-muted tabular-nums whitespace-nowrap truncate',
+  /**
+   * DATUM SE NEOŘEZÁVÁ (oprava 18. 9. 2026). `truncate` s sebou nese
+   * `overflow: hidden` - a do téhle buňky se při úpravě vejíždí políčko
+   * s kalendářem široké 9,5 rem. Ořez z něj ukrajoval pravou půlku, takže se
+   * datum upravovalo poslepu. Datum má pevnou délku, takže se nemá co
+   * useknout; ať radši přeteče, než aby zmizelo.
+   */
+  endDate: 'px-2 py-0 text-[13px] font-heading text-muted tabular-nums whitespace-nowrap',
+  releaseDate: 'px-2 py-0 text-[13px] font-heading text-muted tabular-nums whitespace-nowrap',
   driveUrl: 'px-2 py-0 whitespace-nowrap',
 };
 

@@ -154,6 +154,7 @@ export function DriveBrowser({
   rootName,
   token,
   jenCteni,
+  odkazPripominek,
 }: {
   initialFolderId: string;
   rootName: string;
@@ -166,9 +167,22 @@ export function DriveBrowser({
   token?: string;
   /** Klient z odkazu soubory nepřejmenovává. */
   jenCteni?: boolean;
+  /**
+   * Základ adresy na připomínkování videa (zadání 18. 9. 2026: „chci mít
+   * u klientů, kterým děláme reklamu, modifikovaný AudioTagger… pokud tam
+   * bude ve složce video, objeví se u souboru ikonka s názvem
+   * Připomínkovat").
+   *
+   * Vyplňuje se JEN u reklamních klientů (rozhoduje zaškrtávátko Druh
+   * zakázek ▸ Reklamy na kartě firmy) a jen v odkazu z mailu, kde portál ví,
+   * o který projekt jde. Prázdné = tlačítko se nikde neukáže.
+   */
+  odkazPripominek?: string | null;
 }) {
   // Klic se lepi na KAZDOU adresu k Disku - vypis, stahovani i ZIP.
   const klic = token ? `&k=${encodeURIComponent(token)}` : '';
+  // Sloupec akci je uzky; s tlacitkem „Pripominkovat" potrebuje vic mista.
+  const sirkaAkci = odkazPripominek ? 'w-[108px] sm:w-[190px]' : 'w-[108px]';
   const [stack, setStack] = useState<{ id: string; name: string }[]>([{ id: initialFolderId, name: rootName }]);
   const [items, setItems] = useState<DriveItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -570,7 +584,7 @@ export function DriveBrowser({
             Upraveno
           </button>
           <span className="w-20 shrink-0 text-right hidden sm:block">Velikost</span>
-          <span className="w-[108px] shrink-0" />
+          <span className={`${sirkaAkci} shrink-0`} />
         </div>
       )}
 
@@ -650,8 +664,26 @@ export function DriveBrowser({
                   <div
                     onClick={(e) => e.stopPropagation()}
                     onDoubleClick={(e) => e.stopPropagation()}
-                    className="flex items-center justify-end gap-1.5 shrink-0 w-[108px]"
+                    className={`flex items-center justify-end gap-1.5 shrink-0 ${sirkaAkci}`}
                   >
+                    {/* PŘIPOMÍNKOVAT (zadání 18. 9. 2026) - jen u videa a jen
+                        u reklamních klientů. Otevře upravený AudioTagger:
+                        video v náhledu, pod ním vlna, vpravo připomínky. */}
+                    {video && odkazPripominek && (
+                      <a
+                        href={`${odkazPripominek}?soubor=${encodeURIComponent(item.id)}`}
+                        title="Otevřít spot a zapsat k němu připomínky"
+                        className="inline-flex items-center gap-1.5 h-8 rounded-lg border border-brand-purple px-2 text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
+                          <path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
+                          <path d="M9 9h6M9 12.5h4" />
+                        </svg>
+                        <span className="hidden sm:inline text-xs font-heading font-semibold whitespace-nowrap">
+                          Připomínkovat
+                        </span>
+                      </a>
+                    )}
                     {(audio || video) && (
                       <button
                         type="button"

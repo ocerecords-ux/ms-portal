@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { extractDriveFolderId } from '@/lib/googleDrive';
 import { projektPodleTokenu, zapisOtevreni } from '@/lib/preposlechOdkaz';
+import { jeReklamniKlient } from '@/lib/reklamaPripominky';
 import { DriveBrowser } from '@/app/(portal)/nahravky/DriveBrowser';
 
 /**
@@ -49,9 +50,17 @@ export default async function NahravkyOdkazemPage({ params }: { params: { token:
     );
   }
 
-  const meta = await prisma.projectMeta
-    .findUnique({ where: { caflouProjectId }, select: { name: true, driveUrl: true } })
-    .catch(() => null);
+  const [meta, reklama] = await Promise.all([
+    prisma.projectMeta
+      .findUnique({ where: { caflouProjectId }, select: { name: true, driveUrl: true } })
+      .catch(() => null),
+    /**
+     * Reklamnímu klientovi se u videa nabízí připomínkování (zadání
+     * 18. 9. 2026). Rozhoduje zaškrtávátko Druh zakázek ▸ Reklamy na kartě
+     * firmy, ne typ projektu - tak si to zadavatel vybral.
+     */
+    jeReklamniKlient(caflouProjectId),
+  ]);
 
   const folderId = meta?.driveUrl ? extractDriveFolderId(meta.driveUrl) : null;
   const driveConfigured = Boolean(
@@ -83,7 +92,13 @@ export default async function NahravkyOdkazemPage({ params }: { params: { token:
           </div>
         </div>
 
-        <DriveBrowser initialFolderId={folderId} rootName={meta?.name || 'Nahrávky'} token={params.token} jenCteni />
+        <DriveBrowser
+          initialFolderId={folderId}
+          rootName={meta?.name || 'Nahrávky'}
+          token={params.token}
+          jenCteni
+          odkazPripominek={reklama ? `/pripominkovat/${encodeURIComponent(params.token)}` : null}
+        />
       </div>
     </main>
   );

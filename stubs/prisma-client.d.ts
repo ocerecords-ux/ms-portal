@@ -812,6 +812,19 @@ declare module '@prisma/client' {
     createdAt: Date;
     [key: string]: any;
   };
+  export type ReklamaPripominka = {
+    id: string;
+    caflouProjectId: string;
+    driveFileId: string;
+    driveFileName: string;
+    cas: number;
+    text: string;
+    autorJmeno: string | null;
+    autorUserId: string | null;
+    vyrizeno: boolean;
+    createdAt: Date;
+    [key: string]: any;
+  };
   export type PreposlechStav = {
     caflouProjectId: string;
     reviewed: boolean;
@@ -1799,6 +1812,21 @@ declare module '@prisma/client' {
       update(args?: any): Promise<PreposlechChyba>;
       upsert(args?: any): Promise<PreposlechChyba>;
       delete(args?: any): Promise<PreposlechChyba>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    reklamaPripominka: {
+      findUnique(args?: any): Promise<ReklamaPripominka | null>;
+      findFirst(args?: any): Promise<ReklamaPripominka | null>;
+      findMany(args?: any): Promise<ReklamaPripominka[]>;
+      create(args?: any): Promise<ReklamaPripominka>;
+      update(args?: any): Promise<ReklamaPripominka>;
+      upsert(args?: any): Promise<ReklamaPripominka>;
+      delete(args?: any): Promise<ReklamaPripominka>;
       deleteMany(args?: any): Promise<any>;
       createMany(args?: any): Promise<any>;
       updateMany(args?: any): Promise<any>;
