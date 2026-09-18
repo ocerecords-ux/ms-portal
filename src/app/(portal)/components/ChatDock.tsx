@@ -844,6 +844,22 @@ function Psatko({
             }
           }}
           onPaste={(e) => {
+            /**
+             * OBRÁZEK ZE SCHRÁNKY (zadání 18. 9. 2026: „mělo by jít do
+             * textového pole chat vložit obrázek ze schránky. Hlavně na
+             * mobilu. Nebo i printscreen").
+             *
+             * Printscreen ani fotka ze schránky nemají co dělat v textu -
+             * přidají se jako příloha, stejně jako kdyby se vybraly sponkou.
+             * Teprve když ve schránce obrázek není, vloží se text.
+             */
+            const zeSchranky = obrazkyZeSchranky(e.clipboardData);
+            if (zeSchranky.length > 0 && onPridejPrilohy) {
+              e.preventDefault();
+              onPridejPrilohy(zeSchranky);
+              return;
+            }
+
             // Vkládáme jen čistý text - jinak by se do pole dostalo cizí
             // formátování z Wordu nebo z webu.
             e.preventDefault();
@@ -3513,24 +3529,52 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             nestalo. */}
         {naStrance && (
           <nav className="sm:hidden shrink-0 border-t border-line bg-paper flex items-stretch">
-            {CHAT_TABS.map((t) => (
-              <button
-                key={t.kind}
-                type="button"
-                onClick={() => {
-                  setTab(t.kind);
-                  setNovy(false);
-                  setOpenId(null);
-                  setVlaknoId(null);
-                }}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-heading font-semibold transition-colors ${
-                  tab === t.kind && !novy ? 'text-brand-purple' : 'text-muted'
-                }`}
-              >
-                <IkonaZalozky kind={t.kind} />
-                {t.label}
-              </button>
-            ))}
+            {CHAT_TABS.map((t) => {
+              /**
+               * NEPŘEČTENÉ VIDÍ I SPODNÍ LIŠTA (zadání 18. 9. 2026: „na spodní
+               * liště v mobilu, kde jsou zkratky na druhy konverzací, by mělo
+               * být vidět, že tam něco přibylo nového a měl bych se tam pak
+               * prokliknout").
+               *
+               * Číslo, ne tečka: na telefonu je lišta jediná navigace a člověk
+               * chce vědět, jestli přišla jedna zpráva, nebo dvacet.
+               */
+              const nove = neprectenePodleDruhu[t.kind] ?? 0;
+              /**
+               * Ťuknutí na druh s nepřečteným rovnou otevře tu konverzaci,
+               * kde něco přibylo - to je ten „proklik". Když jich je víc,
+               * zůstane seznam; skákat do jedné z nich by bylo hádání.
+               */
+              const kOtevreni = nove > 0
+                ? conversations.filter((c) => c.kind === t.kind && c.unread > 0)
+                : [];
+              return (
+                <button
+                  key={t.kind}
+                  type="button"
+                  onClick={() => {
+                    setTab(t.kind);
+                    setNovy(false);
+                    setVlaknoId(null);
+                    setOpenId(kOtevreni.length === 1 ? kOtevreni[0].id : null);
+                  }}
+                  title={nove > 0 ? `${t.label} — ${nove} nepřečtených` : t.label}
+                  className={`relative flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-heading font-semibold transition-colors ${
+                    tab === t.kind && !novy ? 'text-brand-purple' : nove > 0 ? 'text-ink' : 'text-muted'
+                  }`}
+                >
+                  <span className="relative">
+                    <IkonaZalozky kind={t.kind} />
+                    {nove > 0 && (
+                      <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-pill bg-brand-purple text-white text-[10px] font-heading font-bold leading-[16px] text-center ring-2 ring-paper">
+                        {nove > 99 ? '99+' : nove}
+                      </span>
+                    )}
+                  </span>
+                  {t.label}
+                </button>
+              );
+            })}
             <button
               type="button"
               onClick={() => {
@@ -3560,6 +3604,44 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
  * v řádku, ne oknem prohlížeče - smazaná zpráva se vrátit nedá, ale okno by
  * v panelu chatu vypadalo cize.
  */
+/**
+ * OBRÁZKY ZE SCHRÁNKY (zadání 18. 9. 2026). Printscreen i fotka vložená na
+ * telefonu chodí jako soubor ve schránce; `files` je dnes všude, `items` je
+ * záloha pro starší prohlížeče.
+ *
+ * Vložený printscreen se skoro vždycky jmenuje „image.png" - dva po sobě by
+ * v seznamu příloh vypadaly stejně, proto dostane jméno s časem.
+ */
+function obrazkyZeSchranky(data: DataTransfer | null): File[] {
+  if (!data) return [];
+
+  const soubory: File[] = data.files?.length
+    ? Array.from(data.files)
+    : Array.from(data.items ?? [])
+        .filter((i) => i.kind === 'file')
+        .map((i) => i.getAsFile())
+        .filter((f): f is File => Boolean(f));
+
+  const obrazky = soubory.filter((f) => f.type.startsWith('image/'));
+  if (obrazky.length === 0) return [];
+
+  const ted = new Date();
+  const dvojcisli = (n: number) => String(n).padStart(2, '0');
+  const razitko =
+    `${ted.getFullYear()}-${dvojcisli(ted.getMonth() + 1)}-${dvojcisli(ted.getDate())}` +
+    `-${dvojcisli(ted.getHours())}${dvojcisli(ted.getMinutes())}${dvojcisli(ted.getSeconds())}`;
+
+  return obrazky.map((f, i) => {
+    const puvodni = f.name?.trim();
+    // „image.png", prázdné jméno nebo „screenshot…" - to nikomu nic neřekne.
+    const bezJmena = !puvodni || /^(image|photo|screenshot|snimek)\b/i.test(puvodni);
+    if (!bezJmena) return f;
+    const pripona = (f.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+    const poradi = obrazky.length > 1 ? `-${i + 1}` : '';
+    return new File([f], `vlozeny-obrazek-${razitko}${poradi}.${pripona}`, { type: f.type });
+  });
+}
+
 function SmazatZpravu({
   ptaSe,
   bezi,
