@@ -179,9 +179,12 @@ export async function zapisZmenyProjektu(vstup: {
    * přehled, tlačítko Dotočeno, odeslaná faktura, ukončení, automat „Čekáme
    * na opravy") a všechna končí tady. Jedno napojení tedy pokryje všechna.
    *
-   * Záměrně bez čekání - upozornění nesmí zdržet ani shodit uložení změny.
+   * ČEKÁ SE NA NĚJ (oprava 18. 9. 2026: „Peterovi nefunguje ten zvoneček").
+   * Na Vercelu končí život funkce odeslanou odpovědí - co se pustí bez čekání
+   * až po ní, se nemusí stihnout vůbec. Zápis pod zvonek je pár dotazů a
+   * vlastní chybu si spolkne sám, takže se na něj počká.
    */
-  void posliZvonekOZmenach({
+  await posliZvonekOZmenach({
     caflouProjectId: vstup.caflouProjectId,
     zmeny: radky.map((r) => ({ pole: r.pole, predchozi: r.predchozi, nova: r.nova })),
     puvodceId: vstup.puvodce.id,

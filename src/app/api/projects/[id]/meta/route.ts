@@ -319,7 +319,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ? { ...pred, actorUserId: pred.herci.map((h) => h.id).join(',') || pred.actorUserId }
       : null;
 
-    void zapisZmenyProjektu({
+    // ČEKÁ SE (oprava 18. 9. 2026): je v tom i upozornění pod zvonek a to by
+    // po odeslané odpovědi na Vercelu nemuselo doběhnout. Viz projektLogServer.
+    await zapisZmenyProjektu({
       caflouProjectId: params.id,
       pred: predProHistorii,
       // Seznam hercu se do porovnani posila jako obycejny udaj - `values.herci`

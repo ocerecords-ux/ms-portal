@@ -138,9 +138,10 @@ async function zapisStav(
     },
   });
 
-  // Historie i zprava bez cekani - odskrtnuti herce nesmi zdrzet ani shodit
-  // to, ze zrovna nejede SMTP.
-  void zapisZmenyProjektu({
+  // Historie a s ni i zvonek se cekaji (oprava 18. 9. 2026) - po odeslane
+  // odpovedi uz je na Vercelu funkce mrtva a upozorneni by nevzniklo. Zprava
+  // klientovi niz cekani neni: ta smi dobehnout i pozdeji.
+  await zapisZmenyProjektu({
     caflouProjectId,
     pred: { statusName: zeStavu },
     ulozeno: { statusName: naStav },
