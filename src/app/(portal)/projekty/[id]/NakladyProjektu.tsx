@@ -26,7 +26,7 @@ export function NakladyProjektu({
   pocatecni,
   onZmena,
   nadpis = 'Náklady po položkách',
-  napoveda = 'Bez DPH. Honoráře, studio, hudba — co portál sám neví.',
+  napoveda = 'Bez DPH. Sem patří všechny náklady zakázky — honorář, studio, hudba. Zisk se počítá z nich.',
   jmena = [],
 }: {
   caflouProjectId: string;

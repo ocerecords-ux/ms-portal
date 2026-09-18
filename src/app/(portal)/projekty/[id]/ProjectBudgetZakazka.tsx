@@ -13,8 +13,20 @@ const czk = (v: number) => `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
  * U audioknihy portál rozpočet SPOČÍTÁ — normostrany × sazby, viz
  * ProjectBudget. U reklamy žádný takový vzorec není: cena se bere z nabídky
  * (a dokud není, z vystavené faktury) a náklady si produkce napíše sama po
- * položkách — honorář herce, studio, hudba. K nim se přičte, co portál ví
- * sám: výkazy zvukařů a výdaje navázané na projekt.
+ * položkách — honorář herce, studio, hudba.
+ *
+ * ZISK = CENA Z NABÍDKY MÍNUS POLOŽKY, NIC JINÉHO (oprava 18. 9. 2026: „tady
+ * to nepočítá správně zisk. Má to být vždy cena z nabídky minus ty položky
+ * níže. Tam budu psát veškeré náklady. Ta položka se teď zdvojila").
+ *
+ * Do teď se k položkám ještě přičítaly výkazy zvukařů a výdaje z dokladů.
+ * Jenže tentýž náklad se do portálu dostane obojí cestou — honorář herce je
+ * i přijatá faktura — a v rozpočtu se pak počítal dvakrát: 3 000 Kč položka
+ * a 3 000 Kč doklad daly náklady 6 000 Kč. Položky jsou jedno místo, kam se
+ * píše všechno, takže jsou jediné, co do zisku vstupuje.
+ *
+ * Výkazy a výdaje z dokladů zůstávají vidět POD čárou jako přehled - jsou to
+ * užitečná čísla, podle kterých se položky vyplňují, ale nic nepočítají.
  *
  * Zatím schválně jednoduché; Ondřej 11. 9. 2026: „u těch reklam to bude
  * trošku sofistikovanější, zatím to udělej jednoduše."
@@ -48,7 +60,11 @@ export function ProjectBudgetZakazka({
     pocatecniPolozky.reduce((s, p) => s + p.castka, 0),
   );
 
-  const naklady = spent + vydaje + polozky;
+  /**
+   * NÁKLADY = JEN POLOŽKY (oprava 18. 9. 2026). Výkazy ani výdaje z dokladů
+   * se nepřičítají - tentýž náklad je často v obojím a počítal by se dvakrát.
+   */
+  const naklady = polozky;
   const percent = cena && cena > 0 ? Math.round((naklady / cena) * 100) : 0;
   const over = cena != null && naklady > cena;
 
@@ -74,30 +90,33 @@ export function ProjectBudgetZakazka({
             </td>
             <td className="py-1 text-ink tabular-nums text-right">{cena == null ? '—' : czk(cena)}</td>
           </tr>
-          <tr>
-            <td className="py-1 text-ink">Práce (výkazy)</td>
-            <td className="py-1 text-muted tabular-nums whitespace-nowrap">
-              {hoursLogged > 0 ? `${hoursLogged.toLocaleString('cs-CZ', { maximumFractionDigits: 1 })} h` : '—'}
-            </td>
-            <td className="py-1 text-ink tabular-nums text-right">{czk(spent)}</td>
-          </tr>
-          <tr>
-            <td className="py-1 text-ink">Výdaje z dokladů</td>
-            <td className="py-1 text-muted whitespace-nowrap">záložka Doklady</td>
-            <td className="py-1 text-ink tabular-nums text-right">{czk(vydaje)}</td>
-          </tr>
-          <tr>
-            <td className="py-1 text-ink">Náklady po položkách</td>
-            <td className="py-1 text-muted whitespace-nowrap">viz níž</td>
-            <td className="py-1 text-ink tabular-nums text-right">{czk(polozky)}</td>
-          </tr>
           <tr className="border-t border-line">
-            <td className="pt-2 text-ink font-semibold">Náklady celkem</td>
-            <td></td>
+            <td className="pt-2 text-ink font-semibold">Náklady</td>
+            <td className="pt-2 text-muted whitespace-nowrap">položky níž</td>
             <td className="pt-2 text-ink tabular-nums text-right font-semibold">{czk(naklady)}</td>
           </tr>
         </tbody>
       </table>
+
+      {/* JEN PRO PŘEHLED, DO ZISKU NEVSTUPUJE (oprava 18. 9. 2026). Čísla se
+          hodí při vyplňování položek - ale sama se nepřičítají, protože tentýž
+          náklad bývá zároveň dokladem i položkou. */}
+      {(spent > 0 || vydaje > 0) && (
+        <p className="text-xs font-body text-muted m-0 -mt-2">
+          Jen pro přehled, do zisku se nepočítá:{' '}
+          {spent > 0 && (
+            <>
+              práce ze&nbsp;výkazů {czk(spent)}
+              {hoursLogged > 0
+                ? ` (${hoursLogged.toLocaleString('cs-CZ', { maximumFractionDigits: 1 })} h)`
+                : ''}
+              {vydaje > 0 ? ' · ' : ''}
+            </>
+          )}
+          {vydaje > 0 && <>výdaje z dokladů {czk(vydaje)}</>}. Co se má do zisku promítnout,
+          napište mezi položky.
+        </p>
+      )}
 
       {cena != null && cena > 0 && (
         <div>
