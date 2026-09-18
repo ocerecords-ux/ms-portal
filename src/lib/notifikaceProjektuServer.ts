@@ -217,8 +217,13 @@ export async function posliNotifikaciKeStavu(
       odkazNaDisk,
       odkazNaPreposlech,
       odkazNaSchvaleni,
-      // „Stáhnout nahrávky ze složky" sedí na audioknihu, u spotu ne.
-      popisekOdkazu: druh === 'REKLAMA' ? 'Poslechnout spot ve složce' : null,
+      /**
+       * „Stáhnout nahrávky ze složky" sedí na audioknihu, u spotu ne. Od
+       * 18. 9. 2026 je u reklamy popisek prostě „Otevřít": vedle tlačítka
+       * „Spot schvaluji" je jasné, co se otevírá, a krátký popisek se na
+       * telefonu vejde na jeden řádek.
+       */
+      popisekOdkazu: druh === 'REKLAMA' ? 'Otevřít' : null,
     });
 
     if (!vysledek.sent) {

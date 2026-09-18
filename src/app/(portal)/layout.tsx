@@ -21,6 +21,8 @@ import { odkazNaFotku } from '@/lib/fotky';
 import { zkusDatabazi } from '@/lib/dbZnovu';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { JazykProvider } from './components/JazykProvider';
+import { PrepinacNahledu } from './components/PrepinacNahledu';
+import { nahledZHodnoty } from '@/lib/nahledRole';
 
 // Jediné místo, které chrání celou klientskou sekci portálu. Session je
 // zdroj pravdy o tom, kdo je přihlášen a pod jakou firmu (companyId) patří
@@ -114,6 +116,11 @@ export default async function PortalLayout({ children }: { children: React.React
         spravcePripominek={role === 'ADMIN'}
         interni={internal}
       />
+      {/* Pruh náhledového účtu (zadání 18. 9. 2026). Vidí ho jen ten jeden
+          účet - ostatním se nevykreslí vůbec. */}
+      {session.user.jenNahled && (
+        <PrepinacNahledu volba={nahledZHodnoty(session.user.nahledVolba)} />
+      )}
       {/* Panel Úkolů je připnutý na pravé hraně okna, takže obsahu vpravo
           uvolníme místo - jinak se přes něj tabulky "usekávaly"
           (zadani 8. 9. 2026). */}

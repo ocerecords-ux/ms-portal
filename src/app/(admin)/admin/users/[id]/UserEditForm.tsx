@@ -36,6 +36,8 @@ type EditableUser = {
   vidiBanku: boolean;
   /** Chce vědět o změně stavu a termínů u projektů (zadání 18. 9. 2026). */
   sledujeZmenyProjektu: boolean;
+  /** Účet jen na prohlížení portálu z různých rolí (zadání 18. 9. 2026). */
+  jenNahled: boolean;
   dostavaDotoceno: boolean;
   /** Klient chce vědět o dotočeném herci na svém projektu (zadání 16. 9. 2026). */
   dostavaDotocenoKlient: boolean;
@@ -78,6 +80,7 @@ export function UserEditForm({
   const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
   const [vidiBanku, setVidiBanku] = useState(user.vidiBanku);
   const [sledujeZmeny, setSledujeZmeny] = useState(user.sledujeZmenyProjektu);
+  const [jenNahled, setJenNahled] = useState(user.jenNahled);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
   const [dostavaDotocenoKlient, setDostavaDotocenoKlient] = useState(user.dostavaDotocenoKlient);
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
@@ -161,6 +164,9 @@ export function UserEditForm({
       fd.set('role', role);
       fd.set('companyId', needsCompany ? companyId || '' : '');
       fd.set('active', String(active));
+      // Nahledovy ucet (zadani 18. 9. 2026) - jde nastavit u kazde role, proto
+      // mimo vetve podle role nize.
+      fd.set('jenNahled', jenNahled ? '1' : '0');
       if (newPassword) fd.set('password', newPassword);
       if (isMediaspace) {
         fd.set('birthDate', birthDate);
@@ -376,6 +382,31 @@ export function UserEditForm({
             </label>
           </div>
         )}
+
+        {/* ÚČET JEN NA PROHLÍŽENÍ (zadání 18. 9. 2026: „profil pro uživatele,
+            který nemůže nic měnit, jen si může vyzkoušet celý portál z různých
+            rolí. Herec, Tým, Klient").
+
+            Schválně u každé role, ne jen u Mediaspace: účet si roli stejně
+            přepíná sám v liště. Role a firma na téhle kartě rozhodují jen
+            o tom, ČÍ zakázky uvidí v pohledu Klient - proto se takový účet
+            zakládá jako Klient nějaké firmy. */}
+        <div className="flex-1 min-w-[240px] flex items-end">
+          <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={jenNahled}
+              onChange={(e) => setJenNahled(e.target.checked)}
+              className="w-4 h-4 accent-brand-purple"
+            />
+            <span className="text-sm font-body text-ink">
+              Náhledový účet (nic nemění)
+              <span className="block text-xs text-muted">
+                v liště si přepíná Tým / Klient / Herec a nic z portálu neuloží
+              </span>
+            </span>
+          </label>
+        </div>
 
         {/* Zprava o dotocenem herci (zadani 11. 9. 2026: "info o dotoceno
             s hercem jde notifikaci mailem na Helenu Rychlik"). Priznak

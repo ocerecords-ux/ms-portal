@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     // O AudioTaggeru rozhoduje zaskrtavatko ve vzoru (zadani 14. 9. 2026) -
     // nahled to musi ukazat stejne jako mail.
     odkazNaPreposlech: telo?.audiotagger ? `${zaklad}/preposlech/ukazkovy-odkaz` : null,
-    popisekOdkazu: jeReklama ? 'Poslechnout spot ve složce' : null,
+    popisekOdkazu: jeReklama ? 'Otevřít' : null,
   });
 
   return new NextResponse(html, {

@@ -109,7 +109,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     nadpis: dosadPromenne(vzor.nadpis, hodnoty),
     text: dosadPromenne(vzor.text, hodnoty),
     odkazNaDisk,
-    popisekOdkazu: druh === 'REKLAMA' ? 'Poslechnout spot ve složce' : null,
+    popisekOdkazu: druh === 'REKLAMA' ? 'Otevřít' : null,
     odkazNaPreposlech,
   });
 

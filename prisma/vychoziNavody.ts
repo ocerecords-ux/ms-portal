@@ -3,6 +3,7 @@ import { POZVANKA_HERCE } from './navodPozvankaHerce';
 import { AUDIOTAGGER } from './navodAudiotagger';
 import { STAVY_A_DOTOCENO } from './navodStavyDotoceno';
 import { REKLAMY_PRIPOMINKY } from './navodReklamyPripominky';
+import { NAHLEDOVY_UCET } from './navodNahledovyUcet';
 
 /**
  * NÁVODY, KTERÉ PORTÁL ZALOŽÍ SÁM (zadání 16. 9. 2026: „udělejme nějakou
@@ -29,4 +30,6 @@ export const VYCHOZI_NAVODY: VychoziNavod[] = [
   AUDIOTAGGER,
   // Pripominkovani a schvalovani reklam (zadani 18. 9. 2026).
   REKLAMY_PRIPOMINKY,
+  // Ucet na prohlizeni portalu z ruznych roli (zadani 18. 9. 2026).
+  NAHLEDOVY_UCET,
 ];

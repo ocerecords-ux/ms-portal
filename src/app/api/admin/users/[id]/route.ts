@@ -33,6 +33,8 @@ const schema = z.object({
   prijimaDotazyKlientu: z.string().trim().optional(),
   vidiBanku: z.string().trim().optional(),
   sledujeZmenyProjektu: z.string().trim().optional(),
+  /** "1" / "0" - ucet jen na prohlizeni portalu (zadani 18. 9. 2026). */
+  jenNahled: z.string().trim().optional(),
   dostavaDotoceno: z.string().trim().optional(),
   dostavaDotocenoKlient: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
@@ -68,6 +70,7 @@ function readFormData(formData: FormData) {
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
     vidiBanku: has('vidiBanku') ? formData.get('vidiBanku') : undefined,
     sledujeZmenyProjektu: has('sledujeZmenyProjektu') ? formData.get('sledujeZmenyProjektu') : undefined,
+    jenNahled: has('jenNahled') ? formData.get('jenNahled') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
     dostavaDotocenoKlient: has('dostavaDotocenoKlient')
       ? formData.get('dostavaDotocenoKlient')
@@ -179,6 +182,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.sledujeZmenyProjektu !== undefined
         ? { sledujeZmenyProjektu: data.sledujeZmenyProjektu === '1' }
         : {}),
+      // Nahledovy ucet (zadani 18. 9. 2026) - zamek na zapis resi middleware.ts,
+      // tady se jen prepina priznak. Projevi se do peti minut i clovekovi, ktery
+      // je zrovna prihlaseny (viz jwt callback v lib/auth.ts).
+      ...(data.jenNahled !== undefined ? { jenNahled: data.jenNahled === '1' } : {}),
       ...(data.prijimaDotazyKlientu !== undefined
         ? { prijimaDotazyKlientu: data.prijimaDotazyKlientu === '1' }
         : {}),

@@ -204,6 +204,19 @@ model User {
   /// nedovoli, ani ostatni Zuzo-labuzo.
   vidiBanku Boolean @default(false)
 
+  /// NAHLEDOVY UCET - portal na zkousku (zadani 18. 9. 2026: „vytvor mi jeste
+  /// jeden profil pro uzivatele, ktery nemuze nic menit, jen si muze
+  /// vyzkouset cely portal z ruznych roli. Herec, Tym, Klient").
+  ///
+  /// Kdo to ma zaskrtnute, si v liste prepina, jako ktera role portal vidi
+  /// (Tym / Klient / Herec) a ZADNY jeho pozadavek nic nezapise - middleware
+  /// z takoveho uctu nepusti POST, PATCH, PUT ani DELETE. Viz lib/nahledRole.ts.
+  ///
+  /// Schvalne priznak u uctu, ne nova role: role rozhoduje v celem portalu o
+  /// tom, co je videt, a nova by znamenala ukazovat neco jineho, nez vidi
+  /// skutecny klient nebo herec.
+  jenNahled Boolean @default(false)
+
   /// Hlida zmeny u projektu a vidi je pod zvonkem (zadani 18. 9. 2026:
   /// „potrebuju jeste at Peter vidi ve zvonecku notifikace o zmene datumu
   /// a zmene stavu projektu").

@@ -1,8 +1,10 @@
 import { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { jeZahlceniDatabaze, zkusDatabazi } from '@/lib/dbZnovu';
+import { NAHLED_COOKIE, nahledZHodnoty, pohledNahledu } from '@/lib/nahledRole';
 
 /**
  * Ucty klientu zaklada vyhradne administrator Mediaspace (zadna verejna
@@ -80,6 +82,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name ?? user.email,
           role: user.role,
           companyId: user.companyId,
+          jenNahled: user.jenNahled,
         };
       },
     }),
@@ -107,6 +110,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.companyId = (user as any).companyId;
+        token.jenNahled = (user as any).jenNahled === true;
         token.overenoAt = Date.now();
         token.neaktivni = false;
         return token;
@@ -119,7 +123,10 @@ export const authOptions: NextAuthOptions = {
       try {
         const ucet = await prisma.user.findUnique({
           where: { id: token.sub },
-          select: { role: true, companyId: true, active: true },
+          // `jenNahled` se overuje spolu s roli schvalne: kdyz se priznak
+          // z uctu sundá, musí zámek na zápis zmizet do pěti minut sám -
+          // ne až ve chvíli, kdy se člověk odhlásí a zase přihlásí.
+          select: { role: true, companyId: true, active: true, jenNahled: true },
         });
         if (!ucet || !ucet.active) {
           // Ucet uz neexistuje nebo je vypnuty - middleware ho pusti na login.
@@ -128,6 +135,7 @@ export const authOptions: NextAuthOptions = {
         }
         token.role = ucet.role;
         token.companyId = ucet.companyId;
+        token.jenNahled = ucet.jenNahled === true;
         token.neaktivni = false;
         token.overenoAt = Date.now();
       } catch (err) {
@@ -138,11 +146,48 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
+    /**
+     * NÁHLEDOVÝ ÚČET SI TU PŮJČUJE ROLI (zadání 18. 9. 2026: „profil pro
+     * uživatele, který nemůže nic měnit, jen si může vyzkoušet celý portál
+     * z různých rolí").
+     *
+     * Je to schválně JEDINÉ místo, kde se to děje. Session je zdroj pravdy
+     * o roli pro celý portál - stránky, serverové komponenty i API routy
+     * čtou `session.user.role`. Když se role vymění tady, chová se portál
+     * přesně tak, jak se chová skutečnému klientovi nebo herci, a nikde
+     * jinde se kvůli tomu nemuselo sáhnout do kódu.
+     *
+     * Který pohled to je, drží cookie prohlížeče - přepínač v liště ji
+     * přepíše. Cookie sama nic neotevírá: uplatní se jen u účtu, který má
+     * `jenNahled`, a jen na tři hodnoty z lib/nahledRole.ts. Kdyby si ji
+     * někdo přepsal na cokoliv jiného, spadne to na výchozí pohled.
+     *
+     * `cookies()` je v try/catch: session se čte i mimo požadavek (třeba
+     * z cronu) a tam by to spadlo - portál se kvůli prohlídce nemá rozbít.
+     */
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.sub;
         (session.user as any).role = token.role;
         (session.user as any).companyId = token.companyId;
+        (session.user as any).jenNahled = token.jenNahled === true;
+        (session.user as any).nahledVolba = null;
+
+        if (token.jenNahled === true) {
+          let vybrano: string | null = null;
+          try {
+            vybrano = cookies().get(NAHLED_COOKIE)?.value ?? null;
+          } catch {
+            vybrano = null;
+          }
+          const volba = nahledZHodnoty(vybrano);
+          const pohled = pohledNahledu(volba);
+          (session.user as any).role = pohled.role;
+          (session.user as any).companyId = pohled.sVlastniFirmou
+            ? (token.companyId ?? null)
+            : null;
+          (session.user as any).nahledVolba = volba;
+        }
       }
       return session;
     },
