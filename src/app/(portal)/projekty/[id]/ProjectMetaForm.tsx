@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
+import type { ProjectPriority } from '@prisma/client';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
+import { IkonaPriority } from '@/components/IkonaPriority';
 import { STAVY_PROJEKTU, barvaStavu, popisStavu } from '@/lib/stavyProjektu';
 import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
@@ -50,7 +52,13 @@ function OdznakPriority({ priorita }: { priorita: string }) {
   if (!priorita || !PRIORITY_LABELS[klic]) {
     return <span className="text-sm font-heading text-muted">—</span>;
   }
-  return <span className={`${TRIDA_ODZNAKU} ${PRIORITY_CLASSES[klic]}`}>{PRIORITY_LABELS[klic]}</span>;
+  // Graficky, ne slovem (18. 9. 2026) - stejna ikona jako v prehledu projektu.
+  return (
+    <span className="inline-flex items-center gap-2">
+      <IkonaPriority priorita={klic as ProjectPriority} velikost={18} />
+      <span className="text-sm font-heading text-muted">{PRIORITY_LABELS[klic]}</span>
+    </span>
+  );
 }
 
 function OdznakTypu({ typ, ikona }: { typ: string | null; ikona: string | null }) {

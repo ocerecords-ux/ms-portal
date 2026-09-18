@@ -2,7 +2,8 @@ import Link from 'next/link';
 import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
-import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
+import { PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
+import { IkonaPriority } from '@/components/IkonaPriority';
 import { initials } from '@/lib/chat';
 import { barvaStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
 import { IkonaTypu, KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
@@ -490,16 +491,13 @@ export function compareProjects(a: InternalProject, b: InternalProject, sort: Pr
   return dir * av.localeCompare(bv, 'cs');
 }
 
+/**
+ * Priorita se od 18. 9. 2026 nepíše slovem, ale kreslí - viz
+ * components/IkonaPriority.tsx. Jméno komponenty zůstalo, aby se nemusela
+ * přepisovat všechna místa, která ji používají.
+ */
 export function PriorityPill({ priority }: { priority: ProjectPriority | null }) {
-  if (!priority) return <span className="text-muted">—</span>;
-  return (
-    <span
-      title={PRIORITY_LABELS[priority]}
-      className={`inline-flex items-center max-w-full truncate text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${PRIORITY_CLASSES[priority]}`}
-    >
-      {PRIORITY_LABELS[priority]}
-    </span>
-  );
+  return <IkonaPriority priorita={priority} />;
 }
 
 function SortArrow({ dir }: { dir: 'asc' | 'desc' }) {
@@ -771,7 +769,8 @@ const VAHA_SLOUPCE: Record<string, number> = {
    */
   endDate: 11,
   releaseDate: 7,
-  priority: 6,
+  // Od 18. 9. 2026 je tu ikona, ne slovo - sloupec uz nemusi byt siroky.
+  priority: 4,
   projectType: 8,
   pageCount: 6,
   driveUrl: 4,
