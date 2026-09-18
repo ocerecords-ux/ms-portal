@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
+import { souborMarkeru } from '@/lib/cubaseMarkery';
 
 /**
  * AudioTagger — přeposlech nahrávky proti textu (zadání 11. 9. 2026).
@@ -1019,6 +1020,44 @@ export function Preposlech({
       .replace(/[\\/:*?"<>|]/g, '-');
     const odkaz = document.createElement('a');
     const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+    odkaz.href = url;
+    odkaz.download = nazev;
+    document.body.appendChild(odkaz);
+    odkaz.click();
+    odkaz.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * MARKERY DO CUBASE (zadání 18. 9. 2026: „potřebuju, abychom si v kartě
+   * přeposlech mohli stáhnout jedny markery hromadně, abychom si je nasadili
+   * do projektu v Cubase").
+   *
+   * Jeden soubor za celý projekt, ne za stopu - přesně o to šlo. Čas se počítá
+   * stejně jako v tabulce: stopa 01 od nuly, každá další o hodinu dál.
+   *
+   * V Cubase pak: Soubor ▸ Předvolby ▸ MIDI ▸ MIDI soubor ▸ zapnout
+   * „Importovat markery", a tenhle .mid naimportovat. Markery sednou na
+   * vteřiny, když má projekt tempo 120 (v souboru je zapsané).
+   */
+  function stahniMarkery() {
+    const markery = stav.chyby.map((ch) => ({
+      cas: (ch.trackIndex - 1) * DELKA_STOPY_V_CUBASE + ch.localTime,
+      // Cislo stopy a cas v ni - v Cubase je pak marker dohledatelny i zpetne
+      // v tabulce chyb; za tim zacatek popisu, at je poznat, o co slo.
+      nazev: `${pad2(ch.trackIndex)} ${cas(ch.localTime)} ${ch.description}`,
+    }));
+    if (markery.length === 0) return;
+
+    const nazev = `${projectName} - markery ${new Date().toISOString().slice(0, 10)}.mid`.replace(
+      /[\\/:*?"<>|]/g,
+      '-',
+    );
+    const odkaz = document.createElement('a');
+    const url = URL.createObjectURL(
+      // `buffer` a ne rovnou Uint8Array - typy DOM chteji ArrayBuffer.
+      new Blob([souborMarkeru(markery).buffer as ArrayBuffer], { type: 'audio/midi' }),
+    );
     odkaz.href = url;
     odkaz.download = nazev;
     document.body.appendChild(odkaz);
@@ -2053,6 +2092,17 @@ export function Preposlech({
                       <span className="text-[11px] font-body text-status-progress">
                         Některé záznamy patří stopám, které tu teď nejsou.
                       </span>
+                    )}
+                    {panel === 'chyby' && !jenPoslech && (
+                      <button
+                        type="button"
+                        onClick={stahniMarkery}
+                        disabled={stav.chyby.length === 0}
+                        title="Stáhnout všechny záznamy jako markery pro Cubase (.mid). V Cubase zapněte Předvolby ▸ MIDI ▸ MIDI soubor ▸ Importovat markery."
+                        className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-40 disabled:no-underline"
+                      >
+                        Markery do Cubase
+                      </button>
                     )}
                     {panel === 'chyby' && (
                       <button
