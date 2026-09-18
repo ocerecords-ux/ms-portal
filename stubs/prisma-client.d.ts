@@ -822,6 +822,7 @@ declare module '@prisma/client' {
     autorJmeno: string | null;
     autorUserId: string | null;
     vyrizeno: boolean;
+    odeslanoAt: Date | null;
     createdAt: Date;
     [key: string]: any;
   };

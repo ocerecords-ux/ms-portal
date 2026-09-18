@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 import { souborMarkeru } from '@/lib/cubaseMarkery';
+// Krivka se od 18. 9. 2026 pocita sdilenou funkci - kresli ji i tagger
+// reklamnich spotu, viz lib/krivkaZvuku.ts.
+import { STROP_PRO_KRIVKU, spocitejKrivku } from '@/lib/krivkaZvuku';
 
 /**
  * AudioTagger — přeposlech nahrávky proti textu (zadání 11. 9. 2026).
@@ -97,11 +100,6 @@ const RYCHLOSTI = [0.75, 1, 1.25, 1.5, 2];
 
 const DELKA_STOPY_V_CUBASE = 3600; // stopa 01 -> 0 h, 02 -> 1 h, 03 -> 2 h…
 
-/** Nad tuhle velikost se křivka nekreslí - dekódování by sežralo paměť. */
-const STROP_PRO_KRIVKU = 150 * 1024 * 1024;
-
-/** Vzorkování pro křivku. Na obrázek široký pár set bodů to bohatě stačí. */
-const KRIVKA_HZ = 8000;
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
@@ -117,42 +115,6 @@ function cas(sec: number): string {
 function hms(sec: number): string {
   const cele = Math.max(0, Math.round(sec));
   return `${pad2(Math.floor(cele / 3600))}:${pad2(Math.floor((cele % 3600) / 60))}:${pad2(cele % 60)}`;
-}
-
-/**
- * Stáhne stopu a spočítá z ní křivku. Dekóduje se do 8 kHz mono, takže
- * z hodinové nahrávky vznikne pár desítek MB místo gigabajtu.
- */
-async function spocitejKrivku(url: string, pocet = 640): Promise<[number, number][]> {
-  const odpoved = await fetch(url);
-  if (!odpoved.ok) throw new Error('nelze stáhnout');
-  const data = await odpoved.arrayBuffer();
-
-  const Offline =
-    (window as unknown as { OfflineAudioContext?: typeof OfflineAudioContext; webkitOfflineAudioContext?: typeof OfflineAudioContext })
-      .OfflineAudioContext ??
-    (window as unknown as { webkitOfflineAudioContext: typeof OfflineAudioContext }).webkitOfflineAudioContext;
-  const ctx = new Offline(1, KRIVKA_HZ, KRIVKA_HZ);
-  const buffer = await ctx.decodeAudioData(data);
-
-  const vzorky = buffer.getChannelData(0);
-  const velikost = vzorky.length / pocet;
-  const strop = 64;
-  const peaks: [number, number][] = new Array(pocet);
-  for (let i = 0; i < pocet; i += 1) {
-    const od = Math.floor(i * velikost);
-    const do_ = Math.max(od + 1, Math.floor((i + 1) * velikost));
-    const krok = Math.max(1, Math.floor((do_ - od) / strop));
-    let min = 0;
-    let max = 0;
-    for (let j = od; j < do_; j += krok) {
-      const v = vzorky[j];
-      if (v < min) min = v;
-      if (v > max) max = v;
-    }
-    peaks[i] = [min, max];
-  }
-  return peaks;
 }
 
 export function Preposlech({

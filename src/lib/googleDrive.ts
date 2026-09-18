@@ -166,14 +166,30 @@ export async function listFolder(folderId: string, token: string): Promise<Drive
 export async function getFileMeta(
   fileId: string,
   token: string,
-): Promise<{ id: string; name: string; mimeType: string; parents: string[] } | null> {
-  const res = await fetch(`${DRIVE_API}/files/${fileId}?fields=id,name,mimeType,parents&supportsAllDrives=true`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  });
+): Promise<{
+  id: string;
+  name: string;
+  mimeType: string;
+  parents: string[];
+  /** Velikost v bajtech; u souboru vytvorenych na Disku (Dokumenty) chybi. */
+  size: number | null;
+} | null> {
+  const res = await fetch(
+    `${DRIVE_API}/files/${fileId}?fields=id,name,mimeType,parents,size&supportsAllDrives=true`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    },
+  );
   if (!res.ok) return null;
   const data = await res.json();
-  return { id: data.id, name: data.name, mimeType: data.mimeType, parents: data.parents ?? [] };
+  return {
+    id: data.id,
+    name: data.name,
+    mimeType: data.mimeType,
+    parents: data.parents ?? [],
+    size: data.size ? Number(data.size) : null,
+  };
 }
 
 /**

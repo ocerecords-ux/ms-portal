@@ -2124,6 +2124,10 @@ model ReklamaPripominka {
 
   /// Odskrtnuto na nasi strane - „tohle uz je opravene".
   vyrizeno   Boolean  @default(false)
+  /// Kdy klient stiskl „Odeslat pripominky" (upresneni 18. 9. 2026: „pak tam
+  /// bude jen tlacitko odeslat pripominky"). Dokud je prazdne, klient si je
+  /// jeste rozmysli - zapsane uz jsou, ale nikoho neupozornuji.
+  odeslanoAt DateTime?
   createdAt  DateTime @default(now())
 
   @@index([caflouProjectId, driveFileId, cas])

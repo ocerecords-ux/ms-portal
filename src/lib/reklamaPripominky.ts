@@ -13,7 +13,7 @@ import { projektPodleTokenu } from '@/lib/preposlechOdkaz';
  */
 
 export type PristupKVideu =
-  | { caflouProjectId: string; fileId: string; nazev: string; mimeType: string }
+  | { caflouProjectId: string; fileId: string; nazev: string; mimeType: string; velikost: number | null }
   | { chyba: string; status: number };
 
 export async function pristupKVideu(token: string, fileId: string): Promise<PristupKVideu> {
@@ -36,7 +36,13 @@ export async function pristupKVideu(token: string, fileId: string): Promise<Pris
   const soubor = await getFileMeta(fileId, pristup);
   if (!soubor) return { chyba: 'Soubor se nenašel.', status: 404 };
 
-  return { caflouProjectId, fileId, nazev: soubor.name, mimeType: soubor.mimeType };
+  return {
+    caflouProjectId,
+    fileId,
+    nazev: soubor.name,
+    mimeType: soubor.mimeType,
+    velikost: soubor.size,
+  };
 }
 
 export type PripominkaKVideu = {
@@ -45,6 +51,8 @@ export type PripominkaKVideu = {
   text: string;
   autorJmeno: string | null;
   vyrizeno: boolean;
+  /** Kdy klient odeslal - dokud je null, ví o připomínce jen on. */
+  odeslanoAt: string | null;
   createdAt: string;
 };
 
@@ -64,6 +72,7 @@ export async function nactiPripominky(
       text: r.text,
       autorJmeno: r.autorJmeno,
       vyrizeno: r.vyrizeno,
+      odeslanoAt: r.odeslanoAt ? r.odeslanoAt.toISOString() : null,
       createdAt: r.createdAt.toISOString(),
     }));
   } catch (err) {

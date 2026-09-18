@@ -91,7 +91,7 @@ export default async function PripominkovatPage({
           token={params.token}
           fileId={pristup.fileId}
           nazev={pristup.nazev}
-          projekt={meta?.name?.trim() || pristup.nazev}
+          velikost={pristup.velikost}
           pocatecni={pripominky}
           jsemZTymu={jsemZTymu}
         />

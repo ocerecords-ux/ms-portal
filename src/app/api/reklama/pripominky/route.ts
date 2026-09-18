@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { nactiPripominky, pristupKVideu } from '@/lib/reklamaPripominky';
-import { notifyMany } from '@/lib/notifications';
 
 /**
  * Připomínky klienta k reklamnímu videu (zadání 18. 9. 2026).
@@ -17,7 +16,6 @@ const schema = z.object({
   soubor: z.string().trim().min(5),
   cas: z.number().min(0).max(86400),
   text: z.string().trim().min(1, 'Napište, co je potřeba upravit.').max(2000),
-  autor: z.string().trim().max(120).optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -42,7 +40,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
-  const { k, soubor, cas, text, autor } = parsed.data;
+  const { k, soubor, cas, text } = parsed.data;
 
   const pristup = await pristupKVideu(k, soubor);
   if ('chyba' in pristup) {
@@ -57,20 +55,16 @@ export async function POST(req: NextRequest) {
         driveFileName: pristup.nazev,
         cas,
         text,
-        autorJmeno: autor?.trim() || null,
       },
     });
 
     /**
-     * Připomínka je vzkaz zvenčí - musí se o ní někdo dozvědět, jinak si ji
-     * klient píše do prázdna. Zvonek dostane manažer projektu a ti, kdo mají
-     * na kartě „Dostává dotazy klientů" - je to tentýž druh práce.
-     *
-     * Záměrně se čeká: na Vercelu po odeslané odpovědi funkce končí a
-     * upozornění by nemuselo vzniknout.
+     * ZVONEK TU ZÁMĚRNĚ NECINKÁ (upřesnění 18. 9. 2026: „pak tam bude jen
+     * tlačítko odeslat připomínky"). Klient si spot projde, zapíše k němu
+     * třeba deset věcí - a teprve tlačítkem je pošle. Deset upozornění za
+     * sebou by z toho udělalo šum a člověk by si je přestal číst.
+     * Viz /api/reklama/pripominky/odeslat.
      */
-    await posliUpozorneni(pristup.caflouProjectId, pristup.nazev, text, k).catch(() => undefined);
-
     return NextResponse.json(
       {
         id: zapis.id,
@@ -78,6 +72,7 @@ export async function POST(req: NextRequest) {
         text: zapis.text,
         autorJmeno: zapis.autorJmeno,
         vyrizeno: zapis.vyrizeno,
+        odeslanoAt: null,
         createdAt: zapis.createdAt.toISOString(),
       },
       { status: 201 },
@@ -86,30 +81,4 @@ export async function POST(req: NextRequest) {
     console.error('Zapis pripominky k videu selhal:', err);
     return NextResponse.json({ error: 'Připomínku se nepodařilo uložit.' }, { status: 500 });
   }
-}
-
-async function posliUpozorneni(
-  caflouProjectId: string,
-  soubor: string,
-  text: string,
-  token: string,
-): Promise<void> {
-  const [meta, dotazy] = await Promise.all([
-    prisma.projectMeta.findUnique({
-      where: { caflouProjectId },
-      select: { name: true, managerUserId: true },
-    }),
-    prisma.user.findMany({
-      where: { active: true, prijimaDotazyKlientu: true },
-      select: { id: true },
-    }),
-  ]);
-
-  const komu = [meta?.managerUserId ?? null, ...dotazy.map((u) => u.id)];
-  await notifyMany(komu, {
-    kind: 'reklama-pripominka',
-    title: `Připomínka k videu: ${meta?.name?.trim() || soubor}`,
-    body: text.slice(0, 200),
-    url: `/pripominkovat/${encodeURIComponent(token)}`,
-  });
 }
