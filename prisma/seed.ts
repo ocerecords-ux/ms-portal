@@ -176,6 +176,7 @@ async function main() {
   await doplnIkonyTypu();
   await srovnejPriznakFotky();
   await zalozVychoziNavody();
+  await zalozDruhyLicence();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -586,5 +587,33 @@ async function zalozVychoziNavody() {
       // Navod je jen obsah - kdyby se nepovedl, nesmi to shodit cely seed.
       console.warn('  navod "' + n.nazev + '" se nepodarilo zalozit:', err);
     }
+  }
+}
+
+/**
+ * ZÁKLADNÍ DRUHY LICENCE (zadání 18. 9. 2026: „teď potřebuju základ. Online,
+ * TV, rádio").
+ *
+ * Zakládají se jen tehdy, když číselník ještě žádný druh nemá - jakmile si
+ * tým seznam upraví, seed do něj nesahá. Přejmenovaný ani smazaný druh se
+ * proto nevrací zpátky.
+ */
+async function zalozDruhyLicence() {
+  try {
+    const uz = await prisma.druhLicence.count();
+    if (uz > 0) return;
+
+    const zaklad = [
+      { nazev: 'Online', ikona: 'globus', poradi: 10 },
+      { nazev: 'TV', ikona: 'obrazovka', poradi: 20 },
+      { nazev: 'Rádio', ikona: 'radio', poradi: 30 },
+    ];
+    for (const d of zaklad) {
+      await prisma.druhLicence.create({ data: d });
+    }
+    console.log('  druhy licence: zalozeny (Online, TV, Radio)');
+  } catch (err) {
+    // Ciselnik je jen nabidka - kdyby se nepovedl, nesmi to shodit cely seed.
+    console.warn('  druhy licence se nepodarilo zalozit:', err);
   }
 }

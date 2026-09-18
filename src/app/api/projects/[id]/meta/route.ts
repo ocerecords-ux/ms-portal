@@ -46,6 +46,11 @@ const schema = z.object({
   endDate: z.string().trim().optional(),
   // Ucel a uzemi uziti licence u reklamy (zadani 17. 9. 2026).
   licenceUziti: z.string().trim().max(300).optional(),
+  /**
+   * DRUHY LICENCE (zadání 18. 9. 2026). Posílá se celý seznam zaškrtnutých
+   * ID - prázdné pole tedy znamená „žádná licence", ne „neměň".
+   */
+  licenceIds: z.array(z.string().trim().min(1)).max(20).optional(),
   releaseDate: z.string().trim().optional(),
   /**
    * Ucty hercu v poradi - prvni je hlavni (zadani 10. 9. 2026: "chci jich tam
@@ -250,6 +255,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // `set` prepise cely seznam, `connect` ho zaklada - upsert potrebuje
     // obojí a kazde do sve vetve.
     const vazbaHercu = herciVPoradi ? herciVPoradi.map((h) => ({ id: h.id })) : null;
+    // Licence se nastavuji celym seznamem (viz poznamka u schematu).
+    const vazbaLicenci = data.licenceIds ? data.licenceIds.map((id) => ({ id })) : null;
     text('companyId', data.companyId);
     if (companyName !== undefined) values.companyName = companyName;
     if (data.statusName !== undefined) {
@@ -296,10 +303,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         caflouProjectId: params.id,
         ...values,
         ...(vazbaHercu ? { herci: { connect: vazbaHercu } } : {}),
+        ...(vazbaLicenci ? { licence: { connect: vazbaLicenci } } : {}),
       },
       update: {
         ...values,
         ...(vazbaHercu ? { herci: { set: vazbaHercu } } : {}),
+        ...(vazbaLicenci ? { licence: { set: vazbaLicenci } } : {}),
       },
       include: { company: { select: { caflouCompanyId: true } } },
     });

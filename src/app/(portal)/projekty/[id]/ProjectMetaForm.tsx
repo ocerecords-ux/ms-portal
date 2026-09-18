@@ -6,7 +6,7 @@ import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { STAVY_PROJEKTU, barvaStavu, popisStavu } from '@/lib/stavyProjektu';
 import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
-import { KresbaIkony } from '@/lib/ikonyTypu';
+import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
 import { VyberHercu } from '../VyberHercu';
 import { TRIDA_BUBLINY_DOTOCENO, TRIDA_BUBLINY_HERCE, TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
@@ -97,6 +97,13 @@ type Initial = {
    * Je to údaj projektu - do každé smlouvy na ten spot se píše stejný.
    */
   licenceUziti: string;
+  /**
+   * DRUHY LICENCE (zadání 18. 9. 2026: „potřebuju mít možnost zaškrtnout
+   * v detailu projektu někde licenci... mělo by jít přidat i víc druhů té
+   * licence k jednomu projektu"). Drží se ID z číselníku, ne názvy -
+   * přejmenování druhu se pak propíše samo.
+   */
+  licenceIds: string[];
 };
 
 /** „2026-09-17" na „17. 9. 2026". Bez Date - datum je den, ne okamzik v pasmu. */
@@ -126,6 +133,7 @@ export function ProjectMetaForm({
   jeReklamniFirma,
   rodnyListTypy,
   ikonyTypu,
+  druhyLicence,
   initial,
   dotoceniHercu,
   natoceniZaznamy,
@@ -168,6 +176,8 @@ export function ProjectMetaForm({
   rodnyListTypy: string[];
   /** Ikony k typum projektu z Ceniku (zadani 10. 9. 2026). */
   ikonyTypu: Record<string, string>;
+  /** Číselník druhů licence z Ceníků - nabízené i ty, co projekt už má. */
+  druhyLicence: { id: string; nazev: string; ikona: string | null }[];
   initial: Initial;
   /** Kdo z herců má dotočeno - ID účtu -> datum (zadání 11. 9. 2026). */
   dotoceniHercu: Record<string, string>;
@@ -514,6 +524,28 @@ export function ProjectMetaForm({
                 />
               </dd>
             </div>
+            {values.licenceIds.length > 0 && (
+              <div>
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide">Licence</dt>
+                <dd className="m-0 mt-1 flex flex-wrap gap-1.5">
+                  {druhyLicence
+                    .filter((d) => values.licenceIds.includes(d.id))
+                    .map((d) => (
+                      <span
+                        key={d.id}
+                        className="inline-flex items-center gap-1.5 pl-1 pr-3 py-1 rounded-pill border border-line bg-field text-sm font-heading font-semibold text-ink"
+                      >
+                        <span
+                          className={`grid place-items-center w-5 h-5 rounded-full ${tridaBarvyIkony(d.ikona)}`}
+                        >
+                          {d.ikona ? <KresbaIkony klic={d.ikona} velikost={12} /> : null}
+                        </span>
+                        {d.nazev}
+                      </span>
+                    ))}
+                </dd>
+              </div>
+            )}
             {jeReklama && (
               <div>
                 <dt className="text-xs font-heading text-muted uppercase tracking-wide">
@@ -769,6 +801,49 @@ export function ProjectMetaForm({
                 Předvyplní se do smlouvy na tenhle spot.
               </span>
             </label>
+          )}
+
+          {/* DRUHY LICENCE (zadání 18. 9. 2026). Zaškrtávátka, ne výběr:
+              spot běží klidně v TV i online a číselník je krátký, takže se
+              všechny druhy vejdou na obrazovku najednou. */}
+          {druhyLicence.length > 0 && (
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <span className="text-sm font-body text-ink">Licence</span>
+              <div className="flex flex-wrap gap-2">
+                {druhyLicence.map((d) => {
+                  const zaskrtnuto = values.licenceIds.includes(d.id);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() =>
+                        set(
+                          'licenceIds',
+                          zaskrtnuto
+                            ? values.licenceIds.filter((id) => id !== d.id)
+                            : [...values.licenceIds, d.id],
+                        )
+                      }
+                      className={`inline-flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-pill border text-sm font-heading font-semibold transition-colors ${
+                        zaskrtnuto
+                          ? 'border-brand-purple bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
+                          : 'border-line bg-field text-muted hover:text-ink'
+                      }`}
+                    >
+                      <span
+                        className={`grid place-items-center w-6 h-6 rounded-full ${tridaBarvyIkony(d.ikona)}`}
+                      >
+                        {d.ikona ? <KresbaIkony klic={d.ikona} velikost={14} /> : null}
+                      </span>
+                      {d.nazev}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-xs text-muted font-body">
+                Kde všude smí klient nahrávku použít. Druhy se spravují v Cenících.
+              </span>
+            </div>
           )}
 
           <label className="flex flex-col gap-1.5 sm:col-span-2">

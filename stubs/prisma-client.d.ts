@@ -1051,6 +1051,16 @@ declare module '@prisma/client' {
     updatedAt: Date;
     [key: string]: any;
   };
+  export type DruhLicence = {
+    id: string;
+    nazev: string;
+    ikona: string | null;
+    poradi: number;
+    active: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
   export class PrismaClient {
     constructor(args?: any);
     $transaction(arg: any, opts?: any): Promise<any>;
@@ -2101,6 +2111,21 @@ declare module '@prisma/client' {
       update(args?: any): Promise<BankTransaction>;
       upsert(args?: any): Promise<BankTransaction>;
       delete(args?: any): Promise<BankTransaction>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    druhLicence: {
+      findUnique(args?: any): Promise<DruhLicence | null>;
+      findFirst(args?: any): Promise<DruhLicence | null>;
+      findMany(args?: any): Promise<DruhLicence[]>;
+      create(args?: any): Promise<DruhLicence>;
+      update(args?: any): Promise<DruhLicence>;
+      upsert(args?: any): Promise<DruhLicence>;
+      delete(args?: any): Promise<DruhLicence>;
       deleteMany(args?: any): Promise<any>;
       createMany(args?: any): Promise<any>;
       updateMany(args?: any): Promise<any>;

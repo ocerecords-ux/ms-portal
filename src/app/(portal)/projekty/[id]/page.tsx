@@ -96,6 +96,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     dotoceniHercu,
     ikonyTypu,
     natoceno,
+    druhyLicence,
   ] = await Promise.all([
     // Projekt tak, jak se ukazuje v prehledu (lib/projektySeznamServer.ts).
     findInternalProject(caflouProjectId),
@@ -105,6 +106,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         manager: { select: { id: true, name: true, email: true } },
         // Herci projektu (zadani 10. 9. 2026) - muze jich byt vic.
         herci: { select: { id: true } },
+        // Druhy licence zaskrtnute u projektu (zadani 18. 9. 2026).
+        licence: { select: { id: true } },
       },
     }),
     // Manazer projektu - jen ucty, ktere to maji na karte zaskrtnute
@@ -167,6 +170,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     mapaIkonTypu(),
     // Natacecí protokol - vede ho Bruno z chatu (zadani 12. 9. 2026).
     natoceniProjektu(caflouProjectId),
+    /**
+     * DRUHY LICENCE (zadani 18. 9. 2026). Nabizeji se aktivni druhy - a k tomu
+     * ty, ktere uz projekt ma, i kdyby je nekdo mezitim vyradil. Jinak by
+     * zaskrtnuta licence z karty tise zmizela.
+     */
+    prisma.druhLicence.findMany({
+      where: { OR: [{ active: true }, { projekty: { some: { caflouProjectId } } }] },
+      orderBy: [{ poradi: 'asc' }, { nazev: 'asc' }],
+      select: { id: true, nazev: true, ikona: true },
+    }),
   ]);
 
   // Dotoceni hercu do tvaru, ve kterem s tim pracuji komponenty: ucet -> datum.
@@ -394,6 +407,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         jeReklamniFirma={druhNotifikaceFirmy(company) === 'REKLAMA'}
         rodnyListTypy={rodnyListTypy}
         ikonyTypu={ikonyTypu}
+        druhyLicence={druhyLicence}
         initial={{
           driveUrl: meta?.driveUrl ?? '',
           managerUserId: meta?.managerUserId ?? '',
@@ -414,6 +428,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           releaseDate: naDatumPole(meta?.releaseDate ?? null),
           // Ucel a uzemi uziti licence - predvyplni se do smlouvy (17. 9. 2026).
           licenceUziti: meta?.licenceUziti ?? '',
+          licenceIds: (meta?.licence ?? []).map((l) => l.id),
         }}
       />
     </>
