@@ -18,6 +18,7 @@ export default withAuth({
 export const config = {
   matcher: [
     '/projekty/:path*',
+    '/backlog/:path*',
     '/objednavka/:path*',
     // Jen prehled nahravek pro prihlasene. Podstranka /nahravky/<token> je
     // otevreny odkaz pro klienta z mailu (zadani 11. 9. 2026: „potrebuju, at
