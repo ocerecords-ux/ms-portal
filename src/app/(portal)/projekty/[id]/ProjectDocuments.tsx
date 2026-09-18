@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { Currency } from '@prisma/client';
 import { formatMoney, OFFER_STATUS_CLASSES, OFFER_STATUS_LABELS } from '@/lib/doklady';
+import type { NavrhNabidky } from '@/lib/nabidkaZObjednavky';
+import { PridatNabidku } from '@/components/PridatNabidku';
 
 /**
  * Doklady navázané na projekt (zadani 8. 9. 2026: "chtel bych mit Doklady
@@ -60,6 +62,7 @@ export function ProjectDocuments({
   costsByCurrency,
   caflouProjectId,
   companyId,
+  navrhNabidky,
 }: {
   offers: ProjectDocRow[];
   invoices: ProjectDocRow[];
@@ -71,6 +74,12 @@ export function ProjectDocuments({
   caflouProjectId: string;
   /** Klient projektu - předvyplní se jako odběratel. */
   companyId?: string | null;
+  /**
+   * PŘEDVYPLNĚNÁ NABÍDKA Z OBJEDNÁVKY NA WEBU (zadání 18. 9. 2026).
+   * Je tu jen do chvíle, než u projektu nějaká nabídka vznikne - pak je
+   * `null` a panel se nevykreslí. Viz lib/nabidkaZObjednavky.ts.
+   */
+  navrhNabidky?: NavrhNabidky | null;
 }) {
   const celkem = offers.length + invoices.length + expenses.length + contracts.length;
 
@@ -103,6 +112,11 @@ export function ProjectDocuments({
           Přejít do Dokladů →
         </Link>
       </div>
+
+      {/* PŘEDVYPLNĚNÁ NABÍDKA Z OBJEDNÁVKY (zadání 18. 9. 2026). Stojí NAD
+          tlačítky „Nová nabídka…" schválně: kdo sem přijde k zakázce z webu,
+          má nejdřív vidět, že je nabídka spočítaná, a ne ji vypisovat znovu. */}
+      {navrhNabidky && <PridatNabidku navrh={navrhNabidky} caflouProjectId={caflouProjectId} />}
 
       <div className="flex items-center gap-2 flex-wrap">
         {novy.map((n) => (

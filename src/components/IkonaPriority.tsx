@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import type { ProjectPriority } from '@prisma/client';
 import { PRIORITY_LABELS } from '@/lib/projectTypes';
 
@@ -24,11 +23,16 @@ import { PRIORITY_LABELS } from '@/lib/projectTypes';
  *
  * Do teď se při úpravě ikona vyměnila za rozbalovátko se slovy - v přehledu
  * se do úzkého sloupce nevešlo („Vysc…") a v kartě projektu z toho byla
- * bublina s textem. Proto se teď needituje NIC JINÉHO NEŽ TA IKONA: klepnutí
- * na sloupeček nastaví jeho stupeň, klepnutí na už nastavený stupeň prioritu
- * zruší. Přidávání i ubírání jedním gestem, jako u hvězdiček.
+ * bublina s textem. Proto se teď needituje NIC JINÉHO NEŽ TA IKONA.
  *
- * Kreslí to jediná funkce `Sloupecky` - kdyby měl náhled a úprava vlastní
+ * JEDEN KLIK = JEDNA ČÁRKA NAVÍC, a po třetí se to vrátí na jednu (upřesnění
+ * 18. 9. 2026: „jedním klikem jedna čárka, druhým klikem dvě čárky a dalším
+ * klikem třetí čárka a dalším klikem zase jedna"). Celá ikona je jedno
+ * tlačítko - dřív byl každý sloupeček vlastní cíl a do tří pixelů se člověk
+ * snadno překlikl a nastavil nechtěný stupeň. Takhle je jedno, kam se
+ * klepne, a překlep se opraví dalším klepnutím na tomtéž místě.
+ *
+ * Kreslí to jediná funkce `Sloupecek` - kdyby měl náhled a úprava vlastní
  * kresbu, rozešly by se při první úpravě jedné z nich.
  */
 
@@ -86,13 +90,14 @@ export function IkonaPriority({
 }
 
 /**
- * Úprava - tatáž kresba, jen se do ní klepe.
+ * Úprava - tatáž kresba, jen je z ní tlačítko.
  *
  * Bez priority se nekreslí pomlčka, ale tři zhasnuté sloupečky: musí být
  * kam klepnout, jinak by prioritu nešlo přidat tam, kde ještě žádná není.
  *
- * Sloupeček je 3 px široký, tlačítko kolem něj 12 px - prstem na telefonu
- * se do tří pixelů netrefí nikdo.
+ * Klepnutí přidá čárku, po třetí se vrátí na jednu. Tlačítko je celá ikona
+ * i s odsazením kolem ní (záporné okraje si to místo berou zpátky, takže se
+ * kvůli tomu nikde nic neposune) - trefit se dá i prstem na telefonu.
  */
 export function VyberPriority({
   priorita,
@@ -101,50 +106,34 @@ export function VyberPriority({
   uklada = false,
 }: {
   priorita: ProjectPriority | null | undefined;
-  /** `null` = priorita se ruší. */
-  onZmena: (nova: ProjectPriority | null) => void;
+  onZmena: (nova: ProjectPriority) => void;
   velikost?: number;
   /** Ukládá se - ať je vidět, že se něco děje, a neklepe se dvakrát. */
   uklada?: boolean;
 }) {
-  const [nahled, setNahled] = useState<number | null>(null);
-
   const stupen = priorita && STUPEN[priorita] ? STUPEN[priorita] : 0;
-  // Pod kurzorem se ukazuje, co klepnutí udělá - ještě než se klepne.
-  const ukazany = nahled ?? stupen;
-  const barva = ukazany > 0 ? BARVA[PODLE_STUPNE[ukazany - 1]] : 'text-muted';
-  const popisek = priorita && PRIORITY_LABELS[priorita] ? PRIORITY_LABELS[priorita] : 'bez priority';
+  // Dokola: 1 -> 2 -> 3 -> 1. Z prazdneho se zacina jednou carkou.
+  const dalsi = PODLE_STUPNE[stupen >= 3 ? 0 : stupen];
+  const barva = stupen > 0 ? BARVA[PODLE_STUPNE[stupen - 1]] : 'text-muted';
+  const popisek = stupen > 0 ? PRIORITY_LABELS[PODLE_STUPNE[stupen - 1]] : 'bez priority';
 
   return (
-    <span
-      className={`inline-flex items-end align-middle ${barva} ${uklada ? 'opacity-60' : ''}`}
-      style={{ height: velikost }}
-      onMouseLeave={() => setNahled(null)}
-      aria-label={`Priorita: ${popisek}`}
+    <button
+      type="button"
+      disabled={uklada}
+      onClick={() => onZmena(dalsi)}
+      title={`Priorita: ${popisek} — klepnutím ${PRIORITY_LABELS[dalsi].toLowerCase()}`}
+      aria-label={`Priorita: ${popisek}. Klepnutím nastavíte: ${PRIORITY_LABELS[dalsi]}`}
+      className={`inline-flex items-end gap-[2px] align-middle px-1.5 py-1 -mx-1.5 -my-1 rounded ${barva} ${
+        uklada ? 'opacity-60' : 'hover:bg-field'
+      }`}
+      style={{ height: velikost + 8 }}
     >
-      {[1, 2, 3].map((i) => {
-        const jeAktualni = i === stupen;
-        return (
-          <button
-            key={i}
-            type="button"
-            disabled={uklada}
-            // Klepnutí na nastavený stupeň prioritu zruší - tím se dá ubírat.
-            onClick={() => onZmena(jeAktualni ? null : PODLE_STUPNE[i - 1])}
-            onMouseEnter={() => setNahled(i)}
-            onFocus={() => setNahled(i)}
-            onBlur={() => setNahled(null)}
-            title={
-              jeAktualni
-                ? `${PRIORITY_LABELS[PODLE_STUPNE[i - 1]]} — klepnutím zrušíte`
-                : `Nastavit: ${PRIORITY_LABELS[PODLE_STUPNE[i - 1]]}`
-            }
-            className="h-full w-[12px] flex items-end justify-center cursor-pointer disabled:cursor-default"
-          >
-            <Sloupecek podil={i / 3} svitici={i <= ukazany} />
-          </button>
-        );
-      })}
-    </span>
+      {[1, 2, 3].map((i) => (
+        <span key={i} className="flex items-end" style={{ height: velikost }}>
+          <Sloupecek podil={i / 3} svitici={i <= stupen} />
+        </span>
+      ))}
+    </button>
   );
 }

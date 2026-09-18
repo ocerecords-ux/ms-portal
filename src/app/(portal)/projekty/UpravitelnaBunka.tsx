@@ -68,11 +68,10 @@ export function UpravitelnaPriorita({
   const [chyba, setChyba] = useState<string | null>(null);
   const [uklada, setUklada] = useState(false);
 
-  async function zmen(nova: ProjectPriority | null) {
+  async function zmen(nova: ProjectPriority) {
     if (uklada) return;
     setUklada(true);
-    // Prazdny retezec = „bez priority" - stejne to bere i rozbalovatko vys.
-    const problem = await uloz(caflouProjectId, 'priority', nova ?? '');
+    const problem = await uloz(caflouProjectId, 'priority', nova);
     setUklada(false);
     if (problem) {
       setChyba(problem);

@@ -23,6 +23,8 @@ import { ProjectBudgetZakazka } from './ProjectBudgetZakazka';
 import { StatusPill } from '../shared';
 import { ProjectMetaForm } from './ProjectMetaForm';
 import { ProjectDocuments, invoiceStatus, offerStatus, type ProjectDocRow } from './ProjectDocuments';
+import { ZnackaZWebu } from '@/components/ZnackaZWebu';
+import { navrhNabidkyZObjednavky, objednavkaProjektu } from '@/lib/nabidkaZObjednavky';
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
 import { computeTotals } from '@/lib/doklady';
 import { expenseTotalMinor } from '@/lib/expenses';
@@ -599,6 +601,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     />
   );
 
+  /**
+   * OBJEDNÁVKA Z WEBU (zadání 18. 9. 2026). Podle ní se v hlavičce ukáže
+   * značka „z webu" a v Dokladech předvyplněná nabídka. Poznává se podle
+   * objednávky, ne podle příznaku na projektu - `zdroj` je „PORTAL" i
+   * u projektu, který v portálu založila produkce.
+   */
+  const objednavkaZWebu = await objednavkaProjektu(caflouProjectId);
+  // Nabidka je jen pro Zuzo-labuzo, stejne jako zbytek dokladu.
+  const navrhNabidky = showDocuments ? await navrhNabidkyZObjednavky(caflouProjectId) : null;
+
   const doklady = (
     <ProjectDocuments
       offers={offerRows}
@@ -609,6 +621,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       costsByCurrency={costsByCurrency}
       caflouProjectId={caflouProjectId}
       companyId={meta?.companyId ?? company?.id ?? null}
+      navrhNabidky={navrhNabidky}
     />
   );
 
@@ -767,6 +780,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               statusName={meta?.statusName ?? project.statusName}
             />
           )}
+          {/* Zakazka z objednavky na webu (zadani 18. 9. 2026). */}
+          {objednavkaZWebu && <ZnackaZWebu objednanoAt={objednavkaZWebu.createdAt} />}
         </div>
         {company && <p className="text-muted text-sm font-body mt-1">{company.name}</p>}
       </div>

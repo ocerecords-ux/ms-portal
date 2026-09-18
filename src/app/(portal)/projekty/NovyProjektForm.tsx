@@ -295,11 +295,11 @@ export function NovyProjektForm({
           <span className="flex items-center gap-3 h-[34px]">
             <VyberPriority
               priorita={(form.priority || null) as ProjectPriority | null}
-              onZmena={(v) => set('priority', v ?? '')}
+              onZmena={(v) => set('priority', v)}
               velikost={22}
             />
             <span className="text-xs font-body text-muted">
-              Klepnutím na sloupeček nastavíte stupeň, klepnutím na nastavený ho zrušíte.
+              Každé klepnutí přidá čárku, po třetí se vrátí na jednu.
             </span>
           </span>
         </div>
