@@ -542,8 +542,20 @@ async function doplnIkonyTypu() {
 async function zalozVychoziNavody() {
   for (const n of VYCHOZI_NAVODY) {
     try {
-      const uz = await prisma.navod.findUnique({ where: { slug: n.slug }, select: { id: true } });
-      if (uz) continue;
+      /**
+       * NÁVOD, DO KTERÉHO NĚKDO SÁHL, SE UŽ NEPŘEPISUJE (18. 9. 2026).
+       *
+       * Dřív se návod zakládal jen jednou a pak už se k němu seed nevracel -
+       * jenže tím se nedala opravit ani vlastní chyba v textu, který nikdo
+       * nečetl. Rozhoduje proto AUTOR: návod založený portálem ho nemá,
+       * a jakmile ho někdo uloží v Adminu ▸ Návody, autorem se stane on
+       * a seed od textu dá ruce pryč.
+       */
+      const uz = await prisma.navod.findUnique({
+        where: { slug: n.slug },
+        select: { id: true, autorId: true },
+      });
+      if (uz?.autorId) continue;
 
       const hledaci = [n.nazev, n.perex, n.obsah]
         .join(' \n ')
@@ -553,18 +565,22 @@ async function zalozVychoziNavody() {
         .replace(/\s+/g, ' ')
         .trim();
 
-      await prisma.navod.create({
-        data: {
-          slug: n.slug,
-          nazev: n.nazev,
-          perex: n.perex,
-          kategorie: n.kategorie,
-          poradi: n.poradi,
-          obsah: n.obsah,
-          hledaci,
-          zverejneno: true,
-        },
-      });
+      const data = {
+        nazev: n.nazev,
+        perex: n.perex,
+        kategorie: n.kategorie,
+        poradi: n.poradi,
+        obsah: n.obsah,
+        hledaci,
+      };
+
+      if (uz) {
+        await prisma.navod.update({ where: { id: uz.id }, data });
+        console.log('  navod: aktualizovan "' + n.nazev + '"');
+        continue;
+      }
+
+      await prisma.navod.create({ data: { slug: n.slug, ...data, zverejneno: true } });
       console.log('  navod: zalozen "' + n.nazev + '"');
     } catch (err) {
       // Navod je jen obsah - kdyby se nepovedl, nesmi to shodit cely seed.

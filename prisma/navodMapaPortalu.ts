@@ -13,10 +13,24 @@
 export const MAPA_PORTALU = {
   slug: 'mapa-portalu',
   nazev: 'Mapa portálu: co kde je a jak to funguje',
-  perex: 'Přehled celého portálu na jednom místě — hlavní sekce, cesta zakázky od objednávky po zaplacenou fakturu, kdo co vidí a co portál dělá sám.',
+  perex: 'Celá cesta zakázky na jednom obrázku — klient, my a herec krok po kroku. K tomu mapa sekcí, kdo co vidí a co portál dělá sám.',
   kategorie: 'Začínáme',
   poradi: 1,
   obsah: `MS Portal drží celou zakázku na jednom místě: objednávku, projekt, natáčení, nahrávky pro klienta, smlouvu s hercem, fakturu i to, jestli přišla platba. Dřív to bylo rozseté mezi Caflou, e-maily, Disk a tabulky. Tenhle návod je mapa — kde co je, kdo co vidí a co se děje samo.
+
+# Celá cesta zakázky na jednom obrázku
+
+Vodorovně jde čas, od objednávky po zaplacenou fakturu. Ve třech pruzích je vidět, **co v které chvíli dělá klient, co my v portálu a co herec** — a u každého kroku i to, jestli se k tomu ten člověk přihlašuje, nebo mu stačí odkaz z e-mailu.
+
+![Celá cesta zakázky: klient, Mediaspace a herec v šesti krocích](/navody/cela-cesta.png)
+
+Tři věci, které z obrázku stojí za zdůraznění:
+
+- **Klient ani herec nic neinstalují.** Schválení nabídky, podpis smlouvy, stažení nahrávek, přeposlech, výběr termínů i vyplnění údajů — všechno jde odkazem z mailu, který funguje sám o sobě. Účet v portálu je bonus, ne podmínka.
+- **Prázdné místo v pruhu znamená, že ten člověk nemá co dělat.** Herec neřeší nabídku, klient neřeší plánování studia. Každý vidí jen svůj kousek.
+- **Zelené pruhy dole jsou práce, kterou nikdo nedělá** — portál je udělá sám.
+
+# Mapa sekcí
 
 ![Mapa portálu](/navody/mapa-portalu.png)
 
