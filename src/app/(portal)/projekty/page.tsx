@@ -266,6 +266,8 @@ async function InternalProjektySection({
           actor: { select: { name: true, email: true } },
           // Herci projektu (zadani 10. 9. 2026) - v prehledu se ukazuji vsichni.
           herci: { select: { id: true, name: true, email: true } },
+          // Druhy licence - ikonky pod ikonou typu (zadani 18. 9. 2026).
+          licence: { select: { nazev: true, ikona: true }, orderBy: { poradi: 'asc' } },
         },
       })
     : [];
@@ -317,6 +319,7 @@ async function InternalProjektySection({
             null,
         })),
         herciJmenaText: m.herci.map((h) => bezTitulu(h.name) || h.email).join(' '),
+        licence: m.licence.map((l) => ({ nazev: l.nazev, ikona: l.ikona })),
       },
     ]),
   );

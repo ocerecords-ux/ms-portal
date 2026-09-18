@@ -5,7 +5,7 @@ import type { ColumnSetting } from '@/lib/columnLabels';
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_OPTIONS, projectTypeLabel } from '@/lib/projectTypes';
 import { initials } from '@/lib/chat';
 import { barvaStavu } from '@/lib/stavyProjektu';
-import { IkonaTypu } from '@/lib/ikonyTypu';
+import { IkonaTypu, KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { HerciBunka } from './HerciBunka';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
@@ -318,6 +318,12 @@ export type InternalProjectMeta = {
   herci: { jmeno: string; dotoceno: boolean; strana?: number | null }[];
   /** Jména herců jedním textem - jen pro hledání, nikde se nevypisuje. */
   herciJmenaText: string;
+  /**
+   * DRUHY LICENCE (zadání 18. 9. 2026: „v přehledu projektu pod ikonku typu
+   * projektu dej i typy licencí - ikonky"). Jen ikona a název do bublinky;
+   * v seznamu se nevypisují slovy, na to není místo.
+   */
+  licence: { nazev: string; ikona: string | null }[];
 };
 
 export type InternalProject = AdminDisplayProject & {
@@ -476,7 +482,25 @@ function bunkaSloupce(
           {/* Projekt bez ikony si misto ni nechava prazdno (zadani 12. 9.
               2026: „projekty, ktere nemaji ikony, by se mely spise zarovnat
               nazvem, ne podle te ikony") - nazvy tak stoji v jedne linii. */}
-          <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} mezeraKdyzNeni />
+          {/* Ikona typu a pod ní ikonky licencí (zadání 18. 9. 2026). Sloupec
+              má pevnou šířku, aby názvy projektů stály v jedné linii i tam,
+              kde licence nejsou. */}
+          <span className="shrink-0 w-[34px] flex flex-col items-center gap-[3px]">
+            <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} mezeraKdyzNeni />
+            {(p.meta?.licence ?? []).length > 0 && (
+              <span className="flex items-center justify-center gap-[2px] flex-wrap leading-none">
+                {(p.meta?.licence ?? []).map((l) => (
+                  <span
+                    key={l.nazev}
+                    title={`Licence: ${l.nazev}`}
+                    className={`grid place-items-center w-[13px] h-[13px] rounded-full ${tridaBarvyIkony(l.ikona)}`}
+                  >
+                    {l.ikona ? <KresbaIkony klic={l.ikona} velikost={9} /> : null}
+                  </span>
+                ))}
+              </span>
+            )}
+          </span>
           {/* break-words: nazev bez mezer (dlouhy jednoslovny titul) se jinak
               nezalomi vubec a vytekl by z bunky. */}
           <Link

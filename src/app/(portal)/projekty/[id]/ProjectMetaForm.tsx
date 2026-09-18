@@ -813,9 +813,16 @@ export function ProjectMetaForm({
                 {druhyLicence.map((d) => {
                   const zaskrtnuto = values.licenceIds.includes(d.id);
                   return (
+                    /* ZAŠKRTNUTÁ SE POZNÁ NA PRVNÍ POHLED (zadání 18. 9. 2026:
+                       „udělej jednoznačný mnohonásobný výběr, ať tam není vidět
+                       licence, která není použita"). Nepoužitá je proto celá
+                       bledá - prázdné okénko, šedá ikona, tenký rámeček; jen
+                       zaškrtnutá má fajfku, barvu i plnou ikonu. */
                     <button
                       key={d.id}
                       type="button"
+                      role="checkbox"
+                      aria-checked={zaskrtnuto}
                       onClick={() =>
                         set(
                           'licenceIds',
@@ -824,14 +831,31 @@ export function ProjectMetaForm({
                             : [...values.licenceIds, d.id],
                         )
                       }
-                      className={`inline-flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-pill border text-sm font-heading font-semibold transition-colors ${
+                      className={`inline-flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-pill border text-sm font-heading font-semibold transition-colors ${
                         zaskrtnuto
                           ? 'border-brand-purple bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
-                          : 'border-line bg-field text-muted hover:text-ink'
+                          : 'border-dashed border-line bg-transparent text-muted opacity-70 hover:opacity-100 hover:text-ink'
                       }`}
                     >
+                      {/* Okénko jako u zaškrtávátka - prázdné vedle vybraného
+                          je vidět i koutkem oka. */}
                       <span
-                        className={`grid place-items-center w-6 h-6 rounded-full ${tridaBarvyIkony(d.ikona)}`}
+                        className={`grid place-items-center w-4 h-4 rounded-[5px] border transition-colors ${
+                          zaskrtnuto
+                            ? 'bg-brand-purple border-brand-purple text-white'
+                            : 'border-line bg-field'
+                        }`}
+                      >
+                        {zaskrtnuto && (
+                          <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 12.5l4.5 4.5L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                      <span
+                        className={`grid place-items-center w-6 h-6 rounded-full ${
+                          zaskrtnuto ? tridaBarvyIkony(d.ikona) : 'bg-field text-muted'
+                        }`}
                       >
                         {d.ikona ? <KresbaIkony klic={d.ikona} velikost={14} /> : null}
                       </span>
