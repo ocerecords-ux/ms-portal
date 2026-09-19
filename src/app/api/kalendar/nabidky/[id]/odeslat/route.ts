@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
-import { recordEvent } from '@/lib/calendarServer';
-import { sendRecordingOfferEmail } from '@/lib/email';
-import { notify } from '@/lib/notifications';
-import { obnovVolnaMista } from '@/lib/volnaMistaServer';
+import { odesliNabidkuHerci } from '@/lib/nabidkaTerminuServer';
 
 // Odeslani nabidky herci. Nabidka musi obsahovat aspon tolik terminu, kolik
 // jich ma herec vybrat - jinak nema z ceho vybirat.
@@ -17,70 +13,12 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
     }
 
-    // Pred odeslanim se nabidka srovna s kalendarem - od otevreni stranky se
-    // mohlo neco obsadit nebo uvolnit.
-    await obnovVolnaMista(params.id);
-
-    const request = await prisma.recordingRequest.findUnique({
-      where: { id: params.id },
-      include: { studio: { select: { name: true } }, slots: { select: { state: true } } },
+    const vysledek = await odesliNabidkuHerci(params.id, {
+      id: session.user.id,
+      label: session.user.name || session.user.email,
     });
-    if (!request) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
-    if (['CONFIRMED', 'COMPLETED', 'CANCELLED'].includes(request.status)) {
-      return NextResponse.json({ error: 'Tuhle nabídku už poslat nejde.' }, { status: 409 });
-    }
-
-    const nabidnuto = request.slots.filter((s) => s.state === 'OFFERED').length;
-    if (nabidnuto < request.requiredSessions) {
-      return NextResponse.json(
-        {
-          error: `Herec má vybrat ${request.requiredSessions} termínů, ale v kalendáři je v zadaném období volných jen ${nabidnuto}. Posuňte začátek nebo konec období, případně uvolněte kalendář.`,
-        },
-        { status: 400 },
-      );
-    }
-
-    const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
-    const result = await sendRecordingOfferEmail({
-      to: request.actorEmail,
-      actorName: request.actorName,
-      projectName: request.projectName,
-      studioName: request.studio.name,
-      requiredSessions: request.requiredSessions,
-      offeredCount: nabidnuto,
-      periodFrom: request.periodFrom,
-      periodTo: request.periodTo,
-      note: request.note,
-      offerUrl: `${baseUrl}/terminy/${request.accessToken}`,
-    });
-
-    if (!result.sent) {
-      return NextResponse.json({ error: 'E-mail se nepodařilo odeslat — není nastavené SMTP.' }, { status: 503 });
-    }
-
-    await prisma.recordingRequest.update({
-      where: { id: request.id },
-      data: { status: 'SENT', sentAt: new Date(), decisionNote: null },
-    });
-
-    await recordEvent({
-      requestId: request.id,
-      userId: session.user.id,
-      actorLabel: session.user.name || session.user.email,
-      type: 'SENT',
-      fromStatus: request.status,
-      toStatus: 'SENT',
-      note: `Odesláno na ${request.actorEmail}, nabídnuto ${nabidnuto} termínů.`,
-    });
-
-    if (request.actorUserId) {
-      await notify({
-        userId: request.actorUserId,
-        kind: 'RECORDING_OFFER',
-        title: 'Vyberte si natáčecí termíny',
-        body: `${request.projectName} · vyberte ${request.requiredSessions} z ${nabidnuto}`,
-        url: '/moje-terminy',
-      });
+    if ('error' in vysledek) {
+      return NextResponse.json({ error: vysledek.error }, { status: vysledek.status });
     }
 
     return NextResponse.json({ ok: true });

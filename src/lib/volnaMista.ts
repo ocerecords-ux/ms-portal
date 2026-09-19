@@ -130,12 +130,16 @@ export function spocitejVolnaMista(vstup: {
 }
 
 /**
- * Poslední den, kdy může být frekvence: den PŘED datem odevzdání - v den
- * odevzdání se už předává hotová nahrávka, ne natáčí.
+ * Poslední den, kdy může být frekvence: DVA DNY PŘED datem dokončení
+ * (upřesnění 19. 9. 2026: „poslední frekvence by měla být nastavena tak,
+ * abychom stihli odevzdat. Tzn. poslední termín max. dva dny před datem
+ * dokončení"). Zbytek je čas na střih a předání.
  */
+export const DNU_PRED_DOKONCENIM = 2;
+
 export function posledniDenFrekvence(datumOdevzdani: string): string {
   const d = new Date(`${datumOdevzdani}T12:00:00.000Z`);
-  d.setUTCDate(d.getUTCDate() - 1);
+  d.setUTCDate(d.getUTCDate() - DNU_PRED_DOKONCENIM);
   return d.toISOString().slice(0, 10);
 }
 

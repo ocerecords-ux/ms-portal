@@ -8,6 +8,7 @@ import { loadCalendarSettings, newAccessToken, recordEvent } from '@/lib/calenda
 import { sessionsForPages } from '@/lib/calendar';
 import { bezTitulu } from '@/lib/jmena';
 import { obnovVolnaMista } from '@/lib/volnaMistaServer';
+import { odesliNabidkuHerci } from '@/lib/nabidkaTerminuServer';
 
 // Zalozeni nabidky terminu z projektove karty (zadani 8. 9. 2026).
 // Projekt zije v Caflou, takze se sem klicuje pres caflouProjectId - stejne
@@ -26,6 +27,11 @@ const schema = z.object({
   periodFrom: z.string().trim().min(8),
   periodTo: z.string().trim().min(8),
   note: z.string().trim().max(2000).optional(),
+  /**
+   * Rovnou odeslat herci (zadání 19. 9. 2026: plánování v jednom okně,
+   * bez druhého kroku v nabídce).
+   */
+  odeslat: z.boolean().optional(),
 });
 
 function toDate(value: string, endOfDay = false): Date | null {
@@ -117,6 +123,18 @@ export async function POST(req: NextRequest) {
 
     // Nabidka se sklada sama ze vsech volnych mist (zadani 19. 9. 2026).
     await obnovVolnaMista(request.id);
+
+    if (d.odeslat) {
+      const odeslani = await odesliNabidkuHerci(request.id, {
+        id: session.user.id,
+        label: session.user.name || session.user.email,
+      });
+      if ('error' in odeslani) {
+        // Nabidka zustava ulozena - da se doladit a poslat z jejiho detailu.
+        return NextResponse.json({ id: request.id, error: odeslani.error }, { status: odeslani.status });
+      }
+      return NextResponse.json({ id: request.id, odeslano: true }, { status: 201 });
+    }
 
     return NextResponse.json(request, { status: 201 });
   } catch (err) {

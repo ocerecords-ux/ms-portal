@@ -56,6 +56,72 @@ function zitra(): Date {
   return new Date(d.getTime() - 2 * 3600 * 1000);
 }
 
+/**
+ * Volná místa pro zadané parametry - bez uložené nabídky. Používá ji obnova
+ * nabídky i náhled v okně „Vytvořit nabídku termínů" (zadání 19. 9. 2026:
+ * „vše by mohlo být přehledně v jednom okně").
+ */
+export async function volnaMistaProParametry(p: {
+  studioId: string;
+  studioIds: string[];
+  actorUserId: string | null;
+  /** „YYYY-MM-DD" */
+  od: string;
+  doo: string;
+  sessionMinutes: number;
+  /** Termíny téhle nabídky se za obsazené nepočítají. */
+  requestId?: string;
+  vlastniDrzene?: { id: string; studioId: string; start: Date; end: Date }[];
+}) {
+  const studia = await studiaNabidky(p.studioId, p.actorUserId, p.studioIds);
+  const ids = studia.map((s) => s.id);
+  // Okraje s rezervou den na kazde strane - pasma studii se lisi.
+  const rozsahOd = new Date(new Date(`${p.od}T00:00:00.000Z`).getTime() - 24 * 3600 * 1000);
+  const rozsahDo = new Date(new Date(`${p.doo}T23:59:59.000Z`).getTime() + 24 * 3600 * 1000);
+  const mimoTuto = p.requestId ? { requestId: { not: p.requestId } } : {};
+
+  const [terminy, udalosti, hercovy] = await Promise.all([
+    prisma.recordingSlot.findMany({
+      where: {
+        studioId: { in: ids },
+        state: { in: BLOCKING_SLOT_STATES as never },
+        ...mimoTuto,
+        start: { lt: rozsahDo },
+        end: { gt: rozsahOd },
+      },
+      select: { id: true, studioId: true, start: true, end: true },
+    }),
+    prisma.studioBlock.findMany({
+      where: { studioId: { in: ids }, start: { lt: rozsahDo }, end: { gt: rozsahOd } },
+      select: { id: true, studioId: true, start: true, end: true },
+    }),
+    p.actorUserId
+      ? prisma.recordingSlot.findMany({
+          where: {
+            state: { in: BLOCKING_SLOT_STATES as never },
+            ...mimoTuto,
+            request: { actorUserId: p.actorUserId },
+            start: { lt: rozsahDo },
+            end: { gt: rozsahOd },
+          },
+          select: { id: true, start: true, end: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const drzene = p.vlastniDrzene ?? [];
+  const volna = spocitejVolnaMista({
+    studia: studia.map((s) => ({ id: s.id, timezone: s.timezone, hours: s.hours, presets: s.presets })),
+    od: p.od,
+    doo: p.doo,
+    delkaMinut: p.sessionMinutes,
+    obsazeno: [...terminy, ...udalosti, ...drzene],
+    hercovy: [...hercovy, ...drzene],
+    nejdrive: zitra(),
+  });
+  return { volna, studia };
+}
+
 export type VysledekObnovy = {
   /** Kolik míst je teď v nabídce. */
   nabidnuto: number;
@@ -80,55 +146,19 @@ export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy
   });
   if (!request || !STAVY_S_NABIDKOU.includes(request.status)) return null;
 
-  const studia = await studiaNabidky(request.studioId, request.actorUserId, request.nabizenaStudia);
-  const ids = studia.map((s) => s.id);
-  const od = request.periodFrom.toISOString().slice(0, 10);
-  const doo = request.periodTo.toISOString().slice(0, 10);
-  // Okraje s rezervou den na kazde strane - pasma studii se lisi.
-  const rozsahOd = new Date(request.periodFrom.getTime() - 24 * 3600 * 1000);
-  const rozsahDo = new Date(request.periodTo.getTime() + 24 * 3600 * 1000);
-
-  const [terminy, udalosti, hercovy] = await Promise.all([
-    prisma.recordingSlot.findMany({
-      where: {
-        studioId: { in: ids },
-        state: { in: BLOCKING_SLOT_STATES as never },
-        requestId: { not: request.id },
-        start: { lt: rozsahDo },
-        end: { gt: rozsahOd },
-      },
-      select: { id: true, studioId: true, start: true, end: true },
-    }),
-    prisma.studioBlock.findMany({
-      where: { studioId: { in: ids }, start: { lt: rozsahDo }, end: { gt: rozsahOd } },
-      select: { id: true, studioId: true, start: true, end: true },
-    }),
-    request.actorUserId
-      ? prisma.recordingSlot.findMany({
-          where: {
-            state: { in: BLOCKING_SLOT_STATES as never },
-            requestId: { not: request.id },
-            request: { actorUserId: request.actorUserId },
-            start: { lt: rozsahDo },
-            end: { gt: rozsahOd },
-          },
-          select: { id: true, start: true, end: true },
-        })
-      : Promise.resolve([]),
-  ]);
-
   // Vlastni vybrane a potvrzene terminy teto nabidky taky zabiraji misto -
   // herec nemuze mit ve stejny cas dve frekvence.
   const vlastniDrzene = request.slots.filter((s) => s.state === 'SELECTED' || s.state === 'CONFIRMED');
 
-  const volna = spocitejVolnaMista({
-    studia: studia.map((s) => ({ id: s.id, timezone: s.timezone, hours: s.hours, presets: s.presets })),
-    od,
-    doo,
-    delkaMinut: request.sessionMinutes,
-    obsazeno: [...terminy, ...udalosti, ...vlastniDrzene],
-    hercovy: [...hercovy, ...vlastniDrzene],
-    nejdrive: zitra(),
+  const { volna, studia } = await volnaMistaProParametry({
+    studioId: request.studioId,
+    studioIds: request.nabizenaStudia,
+    actorUserId: request.actorUserId,
+    od: request.periodFrom.toISOString().slice(0, 10),
+    doo: request.periodTo.toISOString().slice(0, 10),
+    sessionMinutes: request.sessionMinutes,
+    requestId: request.id,
+    vlastniDrzene,
   });
 
   const chtene = new Map(volna.map((m) => [klicMista(m), m]));

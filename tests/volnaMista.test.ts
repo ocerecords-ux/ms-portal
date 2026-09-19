@@ -72,7 +72,7 @@ describe('spocitejVolnaMista', () => {
 });
 
 describe('posledniDenFrekvence', () => {
-  it('je den před odevzdáním', () => {
-    expect(posledniDenFrekvence('2026-10-01')).toBe('2026-09-30');
+  it('jsou dva dny před dokončením', () => {
+    expect(posledniDenFrekvence('2026-10-01')).toBe('2026-09-29');
   });
 });

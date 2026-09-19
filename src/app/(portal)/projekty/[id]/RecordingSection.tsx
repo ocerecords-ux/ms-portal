@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { RECORDING_STATUS_CLASSES, RECORDING_STATUS_LABELS, formatDateTime } from '@/lib/calendar';
@@ -61,7 +61,8 @@ export function RecordingSection({
   canManage: boolean;
 }) {
   const router = useRouter();
-  const dnes = new Date();
+  // Dnesek se uz nenabizi - obdobi zacina zitra.
+  const zitra = new Date(Date.now() + 24 * 3600 * 1000);
   const zaMesic = new Date();
   zaMesic.setMonth(zaMesic.getMonth() + 1);
 
@@ -71,9 +72,9 @@ export function RecordingSection({
     studioId: studios[0]?.id ?? '',
     requiredSessions: Math.max(1, sessionsFromPages),
     pageCount: pageCount ?? 0,
-    periodFrom: dnes.toISOString().slice(0, 10),
-    // Posledni mozna frekvence = den pred odevzdanim. Bez data odevzdani
-    // mesic dopredu, jako dosud.
+    periodFrom: zitra.toISOString().slice(0, 10),
+    // Posledni mozna frekvence = dva dny pred dokoncenim. Bez data
+    // dokonceni mesic dopredu.
     periodTo: datumOdevzdani ? posledniDenFrekvence(datumOdevzdani) : zaMesic.toISOString().slice(0, 10),
     note: '',
   });
@@ -93,10 +94,72 @@ export function RecordingSection({
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  /**
+   * NÁHLED VOLNÝCH MÍST V TOMTÉŽ OKNĚ (zadání 19. 9. 2026: „nelíbí se mi,
+   * jak je to plánování na dva kroky… vše by mohlo být přehledně v jednom
+   * okně"). Přepočítá se chvilku po každé změně studií, období nebo herce -
+   * produkce hned vidí, z kolika míst bude herec vybírat, a pošle mu to
+   * jedním tlačítkem.
+   */
+  type Misto = { studio: string; timezone: string; start: string; end: string; vikend: boolean };
+  const [nahled, setNahled] = useState<{ pocet: number; mista: Misto[] } | null>(null);
+  const [nacitaNahled, setNacitaNahled] = useState(false);
+  const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || studioIds.length === 0 || !form.periodFrom || !form.periodTo) return;
+    let zruseno = false;
+    setNacitaNahled(true);
+    const casovac = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/kalendar/nabidky/nahled', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            actorUserId: form.actorUserId || undefined,
+            studioIds,
+            periodFrom: form.periodFrom,
+            periodTo: form.periodTo,
+          }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!zruseno) setNahled(res.ok && data ? data : null);
+      } catch {
+        if (!zruseno) setNahled(null);
+      } finally {
+        if (!zruseno) setNacitaNahled(false);
+      }
+    }, 350);
+    return () => {
+      zruseno = true;
+      clearTimeout(casovac);
+    };
+  }, [open, studioIds, form.periodFrom, form.periodTo, form.actorUserId]);
+
+  /** Místa po dnech - do přehledu v okně. */
+  const podleDnu = useMemo(() => {
+    const mapa = new Map<string, Misto[]>();
+    for (const m of nahled?.mista ?? []) {
+      const den = new Intl.DateTimeFormat('en-CA', { timeZone: m.timezone }).format(new Date(m.start));
+      if (!mapa.has(den)) mapa.set(den, []);
+      mapa.get(den)!.push(m);
+    }
+    return Array.from(mapa.entries());
+  }, [nahled]);
+
+  const casMista = (m: Misto) => {
+    const f = (iso: string) =>
+      new Intl.DateTimeFormat('cs-CZ', { timeZone: m.timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+    return `${f(m.start)}–${f(m.end)}`;
+  };
+  const kratkeStudio = (nazev: string) => (nazev.split(' - ').pop() ?? nazev).trim();
+  const malo = nahled !== null && nahled.pocet < form.requiredSessions;
+
   async function zaloz(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setInfo(null);
     try {
       const res = await fetch('/api/kalendar/nabidky', {
         method: 'POST',
@@ -113,14 +176,23 @@ export function RecordingSection({
           periodFrom: form.periodFrom,
           periodTo: form.periodTo,
           note: form.note || undefined,
+          // Jeden krok: zalozit a rovnou poslat herci.
+          odeslat: true,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Nabídku se nepodařilo založit.');
+        setError(
+          data?.id
+            ? `${data.error || 'Nabídku se nepodařilo odeslat.'} Nabídka je uložená v seznamu výše.`
+            : data?.error || 'Nabídku se nepodařilo založit.',
+        );
+        if (data?.id) router.refresh();
         return;
       }
-      router.push(`/kalendar/nabidka/${data.id}`);
+      setOpen(false);
+      setInfo('Nabídka termínů odešla herci e-mailem.');
+      router.refresh();
     } catch {
       setError('Nabídku se nepodařilo založit.');
     } finally {
@@ -155,6 +227,10 @@ export function RecordingSection({
           </button>
         )}
       </div>
+
+      {info && (
+        <p className="text-sm font-body text-ink bg-okTint border border-line rounded-lg px-3 py-2 m-0">{info}</p>
+      )}
 
       {requests.length > 0 && (
         <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line border-t border-line pt-1">
@@ -252,7 +328,7 @@ export function RecordingSection({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Období od</span>
+              <span className="text-sm font-body text-ink">První frekvence nejdříve</span>
               <DatumPole
                 required
                 value={form.periodFrom}
@@ -270,7 +346,7 @@ export function RecordingSection({
               />
               <span className="text-xs font-body text-muted">
                 {datumOdevzdani
-                  ? 'Den před datem dokončení projektu.'
+                  ? 'Dva dny před datem dokončení - ať stihneme odevzdat.'
                   : 'Projekt nemá datum dokončení - zadejte ručně.'}
               </span>
             </label>
@@ -281,15 +357,61 @@ export function RecordingSection({
             <input value={form.note} onChange={(e) => set('note', e.target.value)} className={inputClass} />
           </label>
 
+          {/* Nahled - co herec dostane (19. 9. 2026). */}
+          <div className="rounded-card border border-line bg-field p-4 flex flex-col gap-3">
+            <div className="flex items-baseline justify-between gap-3 flex-wrap">
+              <span className="text-sm font-heading font-semibold text-ink">
+                Volná místa k nabídnutí:{' '}
+                <span className={`tabular-nums ${malo ? 'text-status-progress' : 'text-status-done'}`}>
+                  {nacitaNahled && !nahled ? '…' : (nahled?.pocet ?? 0)}
+                </span>
+                <span className="text-muted font-body font-normal"> · herec vybere {form.requiredSessions}</span>
+              </span>
+              {nacitaNahled && <span className="text-xs font-body text-muted">Počítám…</span>}
+            </div>
+            {malo && (
+              <p className="text-sm font-body text-ink bg-warnTint border border-line rounded-lg px-3 py-2 m-0">
+                Volných míst je méně, než herec potřebuje. Posuňte období nebo zaškrtněte další studio.
+              </p>
+            )}
+            {podleDnu.length > 0 && (
+              <div className="max-h-64 overflow-y-auto flex flex-col gap-1.5 pr-1">
+                {podleDnu.map(([den, mista]) => (
+                  <div key={den} className="flex items-baseline gap-3 text-xs font-body">
+                    <span className="w-24 shrink-0 font-heading font-semibold text-ink capitalize tabular-nums">
+                      {new Intl.DateTimeFormat('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric' }).format(
+                        new Date(`${den}T12:00:00.000Z`),
+                      )}
+                    </span>
+                    <span className="flex flex-wrap gap-1.5">
+                      {mista.map((m) => (
+                        <span
+                          key={`${m.studio}-${m.start}`}
+                          className={`rounded-pill px-2 py-0.5 tabular-nums ${
+                            m.vikend ? 'bg-warnTint text-ink' : 'bg-surface text-ink border border-line'
+                          }`}
+                          title={m.vikend ? 'Víkend – po domluvě' : undefined}
+                        >
+                          {casMista(m)}
+                          {studioIds.length > 1 ? ` · ${kratkeStudio(m.studio)}` : ''}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
           <div className="flex items-center gap-3">
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || malo || !form.actorUserId || studioIds.length === 0}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              {busy ? 'Zakládám…' : 'Založit nabídku termínů'}
+              {busy ? 'Odesílám…' : 'Odeslat herci'}
             </button>
             <button type="button" onClick={() => setOpen(false)} className="text-muted text-sm font-heading">
               Zavřít
