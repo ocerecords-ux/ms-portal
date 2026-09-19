@@ -97,32 +97,67 @@ async function urciKoho(
   return { id: ucet.id, jmeno: ucet.name || ucet.email };
 }
 
+/** Dny od `od` do `doo` včetně jako „YYYY-MM-DD". */
+function dnyVRozsahu(od: string, doo: string): string[] {
+  const dny: string[] = [];
+  const d = new Date(`${od}T12:00:00.000Z`);
+  const konec = new Date(`${doo}T12:00:00.000Z`);
+  while (d <= konec && dny.length <= 366) {
+    dny.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return dny;
+}
+
+/**
+ * ROZSAH DAT JEDNÍM ZADÁNÍM (zadání 19. 9. 2026: „abych mohl nastavit jedním
+ * zadáním třeba celodenní mimo studio na zvolený počet dnů").
+ *
+ * Celodenní rozsah je JEDEN záznam od prvního do posledního dne - v kalendáři
+ * se ukáže v každém dni a smaže se najednou. Rozsah NA ČAS („každé odpoledne
+ * pondělí až středa") se zapíše do každého dne zvlášť: mezi těmi časy člověk
+ * ve studiu je, takže to nejde vyjádřit jedním úsekem od-do.
+ */
 export async function POST(req: NextRequest) {
   const session = await prihlaseny();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  const d = parsed.data;
 
-  const cas = spocitejCas(parsed.data);
-  if ('chyba' in cas) return NextResponse.json({ error: cas.chyba }, { status: 400 });
-
-  const kdo = await urciKoho(session, parsed.data.userId);
+  const kdo = await urciKoho(session, d.userId);
   if ('chyba' in kdo) return NextResponse.json({ error: kdo.chyba }, { status: kdo.status });
 
-  const zaznam = await prisma.nepritomnost.create({
-    data: {
+  const dny = d.celyDen ? [d.od] : dnyVRozsahu(d.od, d.do);
+  if (!d.celyDen && dny.length === 0) {
+    return NextResponse.json({ error: 'Poslední den nesmí být před prvním.' }, { status: 400 });
+  }
+  if (!d.celyDen && dny.length > 366) {
+    return NextResponse.json({ error: 'Najednou jde zapsat nejvýš 366 dní.' }, { status: 400 });
+  }
+
+  const zaznamy: { start: Date; end: Date }[] = [];
+  for (const den of dny) {
+    // U celodenniho plati cely rozsah od-do, u casoveho jeden den po druhem.
+    const cas = spocitejCas(d.celyDen ? d : { ...d, od: den, do: den });
+    if ('chyba' in cas) return NextResponse.json({ error: cas.chyba }, { status: 400 });
+    zaznamy.push(cas);
+  }
+
+  await prisma.nepritomnost.createMany({
+    data: zaznamy.map((cas) => ({
       userId: kdo.id,
       jmeno: kdo.jmeno,
-      druh: parsed.data.druh,
-      celyDen: parsed.data.celyDen,
+      druh: d.druh,
+      celyDen: d.celyDen,
       start: cas.start,
       end: cas.end,
-      poznamka: parsed.data.poznamka || null,
+      poznamka: d.poznamka || null,
       zapsalId: session.user.id,
-    },
+    })),
   });
-  return NextResponse.json({ id: zaznam.id }, { status: 201 });
+  return NextResponse.json({ pocet: zaznamy.length }, { status: 201 });
 }
 
 /** Najde záznam a ověří, že na něj přihlášený smí sáhnout. */

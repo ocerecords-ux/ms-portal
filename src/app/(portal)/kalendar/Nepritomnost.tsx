@@ -142,6 +142,22 @@ export function rozdelPoDnech(
   return mapa;
 }
 
+/** Den „YYYY-MM-DD" posunutý o `n` dní. Počítá se v UTC, ať ho nerozhodí změna času. */
+function posunDen(den: string, n: number): string {
+  const d = new Date(`${den}T12:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Kolik dní je od `od` do `doo` včetně obou. */
+function pocetDni(od: string, doo: string): number {
+  const rozdil = new Date(`${doo}T12:00:00.000Z`).getTime() - new Date(`${od}T12:00:00.000Z`).getTime();
+  return Math.round(rozdil / 86_400_000) + 1;
+}
+
+/** Nejvíc dní, které jde zapsat jedním zadáním. */
+const NEJVIC_DNI = 366;
+
 function minutyNaCas(d: Date): string {
   return new Intl.DateTimeFormat('cs-CZ', {
     timeZone: PASMO_NEPRITOMNOSTI,
@@ -207,7 +223,32 @@ export function NepritomnostForm({
   const [bezi, setBezi] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
 
-  const spatnyRozsah = celyDen ? doDen < od : casDo <= casOd;
+  /**
+   * ROZSAH DAT JEDNÍM ZADÁNÍM (zadání 19. 9. 2026: „chybí rozsah data, abych
+   * mohl nastavit jedním zadáním třeba celodenní mimo studio na zvolený počet
+   * dnů"). Od–do a počet dní jsou propojené: změna jednoho dopočítá druhé.
+   *
+   * Na čas (ne celý den) jde rozsah taky - zapíše se tentýž čas do každého
+   * dne zvlášť, třeba „každé odpoledne od pondělí do středy". U úpravy už
+   * zapsaného záznamu na čas je to jeden den, protože je to jeden záznam.
+   */
+  const jedenDen = Boolean(upravovana && !upravovana.celyDen);
+  const dni = pocetDni(od, doDen);
+  const spatnyRozsah =
+    !od || !doDen || doDen < od || dni > NEJVIC_DNI || (!celyDen && casDo <= casOd);
+
+  function zmenOd(nove: string) {
+    if (!nove) return;
+    // Posune se i konec - pocet dni zustava.
+    setDoDen(jedenDen ? nove : posunDen(nove, Math.max(0, dni - 1)));
+    setOd(nove);
+  }
+
+  function zmenPocet(hodnota: string) {
+    const n = Math.round(Number(hodnota));
+    if (!Number.isFinite(n) || n < 1) return;
+    setDoDen(posunDen(od, Math.min(n, NEJVIC_DNI) - 1));
+  }
 
   async function uloz() {
     if (bezi || spatnyRozsah) return;
@@ -224,7 +265,7 @@ export function NepritomnostForm({
             druh,
             celyDen,
             od,
-            do: celyDen ? doDen : od,
+            do: jedenDen ? od : doDen,
             ...(celyDen ? {} : { casOd, casDo }),
             // Poznamka se uz nepise; u stareho zaznamu se zachova.
             poznamka: upravovana?.poznamka || undefined,
@@ -296,33 +337,40 @@ export function NepritomnostForm({
         <span className="text-sm font-body text-ink">Celý den</span>
       </label>
 
-      {celyDen ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className={`grid grid-cols-1 gap-3 ${jedenDen ? '' : 'sm:grid-cols-[1fr_1fr_110px]'}`}>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">{jedenDen ? 'Den' : 'Od'}</span>
+          <DatumPole value={od} onChange={(e) => zmenOd(e.target.value)} className={`${inputClass} tabular-nums`} />
+        </label>
+        {!jedenDen && (
+          <>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">Do (včetně)</span>
+              <DatumPole
+                value={doDen}
+                onChange={(e) => e.target.value && setDoDen(e.target.value)}
+                className={`${inputClass} tabular-nums`}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">Počet dní</span>
+              <input
+                type="number"
+                min={1}
+                max={NEJVIC_DNI}
+                value={dni >= 1 ? dni : ''}
+                onChange={(e) => zmenPocet(e.target.value)}
+                className={`${inputClass} tabular-nums`}
+              />
+            </label>
+          </>
+        )}
+      </div>
+
+      {!celyDen && (
+        <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Od</span>
-            <DatumPole
-              value={od}
-              onChange={(e) => {
-                setOd(e.target.value);
-                // Posune se i konec, kdyz by jinak skoncil pred zacatkem.
-                if (e.target.value && doDen < e.target.value) setDoDen(e.target.value);
-              }}
-              className={`${inputClass} tabular-nums`}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Do (včetně)</span>
-            <DatumPole value={doDen} onChange={(e) => setDoDen(e.target.value)} className={`${inputClass} tabular-nums`} />
-          </label>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Den</span>
-            <DatumPole value={od} onChange={(e) => setOd(e.target.value)} className={`${inputClass} tabular-nums`} />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Od</span>
+            <span className="text-sm font-body text-ink">Čas od</span>
             <input
               type="time"
               step={1800}
@@ -332,7 +380,7 @@ export function NepritomnostForm({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Do</span>
+            <span className="text-sm font-body text-ink">Čas do</span>
             <input
               type="time"
               step={1800}
@@ -343,9 +391,18 @@ export function NepritomnostForm({
           </label>
         </div>
       )}
+      {!celyDen && !jedenDen && dni > 1 && !spatnyRozsah && (
+        <span className="text-xs font-body text-muted -mt-2">
+          Zapíše se {dni}× — v každém dni {casOd}–{casDo}.
+        </span>
+      )}
       {spatnyRozsah && (
         <span className="text-xs font-body text-danger -mt-2">
-          {celyDen ? 'Poslední den nesmí být před prvním.' : 'Konec musí být po začátku.'}
+          {doDen < od
+            ? 'Poslední den nesmí být před prvním.'
+            : dni > NEJVIC_DNI
+              ? `Najednou jde zapsat nejvýš ${NEJVIC_DNI} dní.`
+              : 'Konec musí být po začátku.'}
         </span>
       )}
 
