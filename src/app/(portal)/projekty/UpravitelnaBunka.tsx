@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ProjectPriority } from '@prisma/client';
 import { DatumPole } from '@/components/DatumPole';
@@ -51,12 +51,22 @@ function Chyba({ text }: { text: string | null }) {
  *
  * Schválně NEPOUŽÍVÁ `UpravitelnyVyber`: ten při klepnutí vyměnil ikonu za
  * rozbalovátko se slovy a do úzkého sloupce se z něj vešlo jen „Vysc…".
- * Tady se klepe rovnou do sloupečků, takže se v buňce nikdy nic nepřekreslí
- * na text a šířka sloupce zůstává stejná.
  *
- * Ukládá se hned po klepnutí, stejnou cestou jako ostatní úpravy v přehledu.
- * Když to neprojde, hodnota se vrátí (nic se lokálně nedrží) a vypíše se chyba.
+ * ČÁRKA SE ZMĚNÍ HNED, ULOŽÍ SE AŽ PAK (oprava 19. 9. 2026: „v tom přehledu
+ * ta priorita pořád nefunguje tak, jako v detailu. V tom detailu je to super").
+ *
+ * V detailu klepnutí jen přepne hodnotu ve formuláři - ikona odpoví okamžitě.
+ * Tady se do 19. 9. po každém klepnutí čekalo na uložení a na nové načtení
+ * celého přehledu (stovky projektů); ikona mezitím zešedla, tlačítko nebralo
+ * další klepnutí a čárka přibyla až za chvíli, nebo taky vůbec, když člověk
+ * klepl dvakrát rychle za sebou. Proto se teď ikona přepne v tu ránu, stejně
+ * jako v detailu, a uloží se až hodnota, u které se klepání zastaví.
+ *
+ * Když uložení neprojde, čárky se vrátí na to, co je opravdu v databázi,
+ * a vypíše se chyba - tabulka nesmí ukazovat něco, co uložené není.
  */
+const PRIORITA_ULOZIT_PO_MS = 600;
+
 export function UpravitelnaPriorita({
   caflouProjectId,
   priorita,
@@ -65,25 +75,46 @@ export function UpravitelnaPriorita({
   priorita: ProjectPriority | null;
 }) {
   const router = useRouter();
+  const [zobrazena, setZobrazena] = useState<ProjectPriority | null>(priorita);
   const [chyba, setChyba] = useState<string | null>(null);
-  const [uklada, setUklada] = useState(false);
+  /** Co je naposledy potvrzeně v databázi - na to se vrací při chybě. */
+  const ulozena = useRef<ProjectPriority | null>(priorita);
+  const casovac = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function zmen(nova: ProjectPriority) {
-    if (uklada) return;
-    setUklada(true);
-    const problem = await uloz(caflouProjectId, 'priority', nova);
-    setUklada(false);
-    if (problem) {
-      setChyba(problem);
-      return;
-    }
+  // Prisla nova data ze serveru (a zrovna se neklepe) - srovnat se s nimi.
+  useEffect(() => {
+    ulozena.current = priorita;
+    if (!casovac.current) setZobrazena(priorita);
+  }, [priorita]);
+
+  useEffect(
+    () => () => {
+      if (casovac.current) clearTimeout(casovac.current);
+    },
+    [],
+  );
+
+  function zmen(nova: ProjectPriority) {
+    setZobrazena(nova);
     setChyba(null);
-    router.refresh();
+    if (casovac.current) clearTimeout(casovac.current);
+    casovac.current = setTimeout(async () => {
+      casovac.current = null;
+      if (nova === ulozena.current) return;
+      const problem = await uloz(caflouProjectId, 'priority', nova);
+      if (problem) {
+        setChyba(problem);
+        setZobrazena(ulozena.current);
+        return;
+      }
+      ulozena.current = nova;
+      router.refresh();
+    }, PRIORITA_ULOZIT_PO_MS);
   }
 
   return (
     <span className="inline-flex flex-col min-w-0">
-      <VyberPriority priorita={priorita} onZmena={(v) => void zmen(v)} uklada={uklada} />
+      <VyberPriority priorita={zobrazena} onZmena={zmen} />
       <Chyba text={chyba} />
     </span>
   );
