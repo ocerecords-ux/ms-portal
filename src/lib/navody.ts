@@ -6,6 +6,24 @@
  * (hledání v seznamu, náhled při psaní). Práce s databází je v routách.
  */
 
+import { INTERNAL_ROLES } from '@/lib/roles';
+
+/**
+ * KDO NÁVOD VIDÍ (zadání 19. 9. 2026: „herci a klienti by neměli vidět naše
+ * interní nápovědy").
+ *
+ * - Nic nezaškrtnuto = návod pro CELÝ TÝM (Žůžo-labůžo, Produkce, Zvukař).
+ *   Herec ani klient ho nevidí - dřív to znamenalo „všem přihlášeným" a tím
+ *   se k herci dostaly i návody o rozpočtech a plánování.
+ * - Zaškrtnuté role = jen ty. Návod pro herce se musí herci zaškrtnout.
+ * - Žůžo-labůžo vidí všechno (píše je a kontroluje).
+ */
+export function vidiNavod(proRole: string[], role: string): boolean {
+  if (role === 'ADMIN') return true;
+  if (proRole.length === 0) return (INTERNAL_ROLES as string[]).includes(role);
+  return proRole.includes(role);
+}
+
 /** Text bez diakritiky a malými písmeny — základ hledání i adresy návodu. */
 export function bezDiakritiky(text: string): string {
   return text

@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { navodNaHtml } from '@/lib/navody';
+import { navodNaHtml, vidiNavod } from '@/lib/navody';
 
 /**
  * JEDEN NÁVOD (zadání 16. 9. 2026).
@@ -26,7 +26,7 @@ export default async function NavodPage({ params }: { params: { slug: string } }
   if (!navod) notFound();
   // Rozepsaný návod a návod psaný pro jinou roli se tváří, jako by nebyl.
   if (!navod.zverejneno && !jeAdmin) notFound();
-  if (navod.proRole.length > 0 && !navod.proRole.includes(role) && !jeAdmin) notFound();
+  if (!vidiNavod(navod.proRole, role)) notFound();
 
   return (
     <article className="flex flex-col gap-6 max-w-3xl">

@@ -39,6 +39,7 @@ export function Topbar({
   pripominky = 0,
   spravcePripominek = false,
   interni = false,
+  napoveda = true,
 }: {
   userLabel: string;
   /** Fotka z karty uživatele; bez ní se ukážou iniciály. */
@@ -68,6 +69,11 @@ export function Topbar({
   spravcePripominek?: boolean;
   /** Je přihlášený někdo z Mediaspace? Mění to text u zpětné vazby. */
   interni?: boolean;
+  /**
+   * Ukázat otazník Nápovědy? Herec a klient ho mají jen tehdy, když pro ně
+   * existuje návod - interní návody nevidí (zadání 19. 9. 2026).
+   */
+  napoveda?: boolean;
 }) {
   const pathname = usePathname();
   const zarizeni = useZarizeni();
@@ -402,6 +408,7 @@ export function Topbar({
         {/* Napoveda (zadani 16. 9. 2026: „aby se k nim vsichni dostali").
             Schvalne tady, ne v liste - listu si kazdy upravuje po svem a
             navody musi byt po ruce i tomu, kdo si ji uz prerovnal. */}
+        {napoveda && (
         <Link
           href="/napoveda"
           title="Nápověda"
@@ -423,6 +430,7 @@ export function Topbar({
             <path d="M12 17.2h.01" />
           </svg>
         </Link>
+        )}
         <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
         <Link

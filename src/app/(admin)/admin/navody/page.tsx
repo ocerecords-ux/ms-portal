@@ -1,3 +1,5 @@
+import type { Role } from '@prisma/client';
+import { ROLE_LABELS } from '@/lib/roles';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { NovyNavodButton } from './NovyNavodButton';
@@ -56,11 +58,12 @@ export default async function NavodyPage() {
                   </span>
                   <span className="font-heading font-semibold text-ink flex-1 min-w-[160px]">
                     {n.nazev}
-                    {n.proRole.length > 0 && (
-                      <span className="block text-xs font-body text-muted">
-                        jen pro: {n.proRole.join(', ')}
-                      </span>
-                    )}
+                    {/* Bez zaskrtnute role je navod jen pro tym (19. 9. 2026). */}
+                    <span className="block text-xs font-body text-muted">
+                      {n.proRole.length > 0
+                        ? `jen pro: ${n.proRole.map((r) => ROLE_LABELS[r as Role] ?? r).join(', ')}`
+                        : 'jen náš tým - herci a klienti nevidí'}
+                    </span>
                   </span>
                   <span
                     className={`text-xs font-heading rounded-pill border px-2.5 py-1 ${

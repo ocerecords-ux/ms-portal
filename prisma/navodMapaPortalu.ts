@@ -87,6 +87,7 @@ Klient, který účet má, vidí v portálu navíc své projekty, nahrávky a m�
 - **Produkce** — plánování, rozpočty, pozvánky herců. Nevidí doklady ani ceny objednávek.
 - **Žůžo-labůžo (admin)** — všechno, včetně administrace.
 - **Banka** je navíc: vidí ji jen ten, kdo to má u účtu zaškrtnuté, ani ostatní admini ne.
+- **Nápověda** je naše: návod bez zaškrtnuté role vidí jen tým (Žůžo-labůžo, Produkce, Zvukař). Herec nebo klient uvidí jen návod, u kterého je v Adminu ▸ Návody ▸ „Komu se ukáže" zaškrtnutá jeho role — a jen tehdy se mu v liště objeví otazník.
 
 # Co portál dělá sám
 

@@ -31,8 +31,10 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // a meni Zuzo-labuzo s Produkci, tem to taky patri.
   '/backlog': ['ADMIN', 'PRODUKCE'],
   '/muj-ucet': ALL_ROLES,
-  // Navody k portalu (zadani 16. 9. 2026: „aby se k nim vsichni dostali").
-  '/napoveda': ALL_ROLES,
+  // Navody k portalu (zadani 16. 9. 2026). Do listy si je muze dat jen tym -
+  // herci a klienti nase interni navody nevidi (19. 9. 2026); navod psany
+  // primo pro ne najdou pod otaznikem v liste.
+  '/napoveda': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
   // Objednavka a Nahravky jsou klientska agenda.
   '/objednavka': ['CLIENT'],
   '/nahravky': ['CLIENT'],

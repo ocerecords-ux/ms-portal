@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { SeznamNavodu } from './SeznamNavodu';
+import { vidiNavod } from '@/lib/navody';
 
 /**
  * NÁPOVĚDA — přehled návodů (zadání 16. 9. 2026: „přemýšlím, že by tyhle
@@ -44,8 +45,8 @@ export default async function NapovedaPage() {
     })
     .catch(() => []);
 
-  // Návod psaný pro produkci nemá co dělat v seznamu herce.
-  const moje = navody.filter((n) => n.proRole.length === 0 || n.proRole.includes(role));
+  // Interni navody herec ani klient nevidi (19. 9. 2026) - viz vidiNavod.
+  const moje = navody.filter((n) => vidiNavod(n.proRole, role));
 
   /**
    * „Začínáme" patří nahoru (18. 9. 2026). Kategorie se jinak řadí abecedně,

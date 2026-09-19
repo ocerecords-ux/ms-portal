@@ -103,6 +103,17 @@ export default async function PortalLayout({ children }: { children: React.React
   const bonusyKeSchvaleni = role === 'ADMIN' ? await pocetBonusuKeSchvaleni() : 0;
   // Pripominky k portalu ceka vyridit jen Zuzo-labuzo (zadani 15. 9. 2026).
   const pripominkyKVyrizeni = role === 'ADMIN' ? await pocetOtevrenychPripominek() : 0;
+  /**
+   * Otazník Nápovědy (zadání 19. 9. 2026: „herci a klienti by neměli vidět
+   * naše interní nápovědy"). Tým ho má vždy; herec a klient jen tehdy, když
+   * je zveřejněný návod zaškrtnutý přímo pro jejich roli.
+   */
+  const maNapovedu = internal
+    ? true
+    : await prisma.navod
+        .count({ where: { zverejneno: true, proRole: { has: role } } })
+        .then((n) => n > 0)
+        .catch(() => false);
 
   return (
     <JazykProvider jazyk={jazyk}>
@@ -120,6 +131,7 @@ export default async function PortalLayout({ children }: { children: React.React
         pripominky={pripominkyKVyrizeni}
         spravcePripominek={role === 'ADMIN'}
         interni={internal}
+        napoveda={maNapovedu}
       />
       {/* Pruh náhledového účtu (zadání 18. 9. 2026). Vidí ho jen ten jeden
           účet - ostatním se nevykreslí vůbec. */}

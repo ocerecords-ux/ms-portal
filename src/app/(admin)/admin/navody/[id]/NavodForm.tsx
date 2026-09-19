@@ -171,7 +171,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">
             Komu se ukáže
-            <span className="block text-xs text-muted">nic nezaškrtnuto = všem přihlášeným</span>
+            <span className="block text-xs text-muted">nic nezaškrtnuto = jen náš tým (Žůžo-labůžo, Produkce, Zvukař). Herci a klienti uvidí jen návod, kde je jejich role zaškrtnutá.</span>
           </span>
           <div className="flex gap-2 flex-wrap">
             {ALL_ROLES.map((role) => (
