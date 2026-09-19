@@ -4,6 +4,7 @@ import { AUDIOTAGGER } from './navodAudiotagger';
 import { STAVY_A_DOTOCENO } from './navodStavyDotoceno';
 import { REKLAMY_PRIPOMINKY } from './navodReklamyPripominky';
 import { NAHLEDOVY_UCET } from './navodNahledovyUcet';
+import { NATACECI_TERMINY } from './navodNataceciTerminy';
 
 /**
  * NÁVODY, KTERÉ PORTÁL ZALOŽÍ SÁM (zadání 16. 9. 2026: „udělejme nějakou
@@ -32,4 +33,6 @@ export const VYCHOZI_NAVODY: VychoziNavod[] = [
   REKLAMY_PRIPOMINKY,
   // Ucet na prohlizeni portalu z ruznych roli (zadani 18. 9. 2026).
   NAHLEDOVY_UCET,
+  // Planovani natacecich terminu od nabidky po kalendar (zadani 19. 9. 2026).
+  NATACECI_TERMINY,
 ];
