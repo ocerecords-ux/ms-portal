@@ -52,6 +52,7 @@ const ODKAZY_EN: Record<string, string> = {
   '/vykazy': 'Timesheets',
   '/kalendar': 'Calendar',
   '/moje-terminy': 'My sessions',
+  '/honorare': 'Fees',
   '/muj-ucet': 'My account',
   '/admin': 'Companies',
   '/admin/users': 'Users',

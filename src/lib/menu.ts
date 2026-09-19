@@ -44,6 +44,8 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // zvukar jen cte. Herec ma vlastni, uzsi pohled.
   '/kalendar': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
   '/moje-terminy': ['HEREC'],
+  // Honorare herce - navrhnuto / ceka na proplaceni / zaplaceno (19. 9. 2026).
+  '/honorare': ['HEREC'],
   // Pozvanky hercu (zadani 16. 9. 2026: „tohle tlacitko musi mit zaple
   // Zuzo-labuzo i Helca - produkce"). Administrace je jen pro ADMIN,
   // proto samostatna stranka i pro Produkci.
@@ -82,6 +84,7 @@ export const DEFAULT_MENU_ITEMS: { label: string; href: string; sortOrder: numbe
   { label: 'Výkazy', href: '/vykazy', sortOrder: 40 },
   { label: 'Kalendář', href: '/kalendar', sortOrder: 45 },
   { label: 'Moje termíny', href: '/moje-terminy', sortOrder: 46 },
+  { label: 'Honoráře', href: '/honorare', sortOrder: 47 },
   { label: 'Firmy', href: '/admin', sortOrder: 50 },
   { label: 'Uživatelé', href: '/admin/users', sortOrder: 60 },
   { label: 'Ceníky', href: '/admin/ceniky', sortOrder: 70 },
@@ -97,6 +100,7 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/vykazy', label: 'Výkazy' },
   { href: '/kalendar', label: 'Kalendář' },
   { href: '/moje-terminy', label: 'Moje termíny' },
+  { href: '/honorare', label: 'Honoráře' },
   { href: '/admin', label: 'Firmy' },
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/ceniky', label: 'Ceníky' },

@@ -82,7 +82,7 @@ Klient, který účet má, vidí v portálu navíc své projekty, nahrávky a m�
 # Kdo co vidí
 
 - **Klient** — jen své projekty a nahrávky, ceny jen na svých dokladech.
-- **Herec** — své termíny a údaje, smlouvy podepisuje odkazem. V Projektech vidí jen své projekty: název, normostrany, stranu, kde se skončilo na poslední frekvenci, a odkaz na text (PDF končící `_RE` ze složky projektu).
+- **Herec** — své termíny a údaje, smlouvy podepisuje odkazem. V Projektech vidí jen své projekty: název, normostrany, stranu, kde se skončilo na poslední frekvenci, a odkaz na text (PDF končící _RE ze složky projektu). V Honorářích vidí, co je navrhnuto, co čeká na proplacení a co je zaplaceno, a odtud se dostane i ke svým smlouvám.
 - **Zvukař** — projekty, kde pracuje, své výkazy a kalendář ke čtení. Nevidí rozpočty, doklady ani projekty v přípravě.
 - **Produkce** — plánování, rozpočty, pozvánky herců. Nevidí doklady ani ceny objednávek.
 - **Žůžo-labůžo (admin)** — všechno, včetně administrace.
