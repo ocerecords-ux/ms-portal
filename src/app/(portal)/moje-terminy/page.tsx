@@ -11,6 +11,7 @@ import {
   minutesInZone,
   minutesToTime,
 } from '@/lib/calendar';
+import { PridatDoKalendare } from '@/components/PridatDoKalendare';
 
 /**
  * Moje termíny — pohled herce uvnitř portálu (zadani 8. 9. 2026). Přes
@@ -40,6 +41,10 @@ export default async function MojeTerminyPage() {
   });
 
   const kVyberu = requests.filter((r) => ACTOR_OPEN_STATUSES.includes(r.status));
+  // Odkaz do kalendare (19. 9. 2026) - pres libovolnou nabidku s potvrzenym
+  // terminem; herec s uctem v nem dostane vsechny sve potvrzene frekvence.
+  const sPotvrzenym = requests.find((r) => r.slots.some((s) => s.state === 'CONFIRMED'));
+  const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
   const ostatni = requests.filter((r) => !ACTOR_OPEN_STATUSES.includes(r.status));
 
   function popisSlotu(start: Date, end: Date, tz: string): string {
@@ -57,6 +62,13 @@ export default async function MojeTerminyPage() {
       <div>
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Moje termíny</h1>
       </div>
+
+      {sPotvrzenym && (
+        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
+          <p className="text-sm font-body text-ink m-0">Potvrzené natáčení si přidejte do svého kalendáře.</p>
+          <PridatDoKalendare url={`${baseUrl}/api/terminy/${sPotvrzenym.accessToken}/kalendar`} />
+        </div>
+      )}
 
       {requests.length === 0 && (
         <p className="text-sm font-body text-muted m-0">Zatím pro vás žádné termíny nejsou.</p>

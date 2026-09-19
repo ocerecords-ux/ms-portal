@@ -1713,6 +1713,11 @@ type RecordingDecisionEmailInput = {
   /** Potvrzene terminy, uz naformatovane ("pondělí 14. 9. · 9:00–13:00"). */
   slots: string[];
   offerUrl: string;
+  /**
+   * Odkaz na potvrzené termíny ve formátu kalendáře (zadání 19. 9. 2026:
+   * „tlačítko přidat do kalendáře a mu se to tam automaticky nasype").
+   */
+  calendarUrl?: string;
 };
 
 const DECISION_TEXTS: Record<string, { tag: string; nadpis: string; uvod: string }> = {
@@ -1757,6 +1762,13 @@ export function buildRecordingDecisionHtml(input: RecordingDecisionEmailInput): 
         ? `<div class="cta-row"><a href="${escapeHtml(input.offerUrl)}" class="cta">Vybrat termíny znovu</a></div>`
         : `<div class="cta-row"><a href="${escapeHtml(input.offerUrl)}" class="cta">Zobrazit termíny</a></div>`
     }
+    ${
+      input.decision === 'CONFIRMED' && input.calendarUrl
+        ? `<div class="cta-row"><a href="${escapeHtml(input.calendarUrl)}" class="cta-dark">Přidat do kalendáře</a></div>
+    <p class="small">Termíny se přidají do kalendáře v telefonu nebo počítači. Na stránce termínů si je můžete
+       i odebírat - když se něco změní, kalendář se upraví sám.</p>`
+        : ''
+    }
   `,
   });
 }
@@ -1781,6 +1793,7 @@ export async function sendRecordingDecisionEmail(input: RecordingDecisionEmailIn
       `Studio: ${input.studioName}`,
       '',
       input.offerUrl,
+      input.decision === 'CONFIRMED' && input.calendarUrl ? `Přidat do kalendáře: ${input.calendarUrl}` : '',
     ]
       .filter(Boolean)
       .join('\n'),

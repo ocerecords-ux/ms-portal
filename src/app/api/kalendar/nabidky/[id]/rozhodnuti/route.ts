@@ -265,6 +265,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       note: note || null,
       slots: popisTerminu,
       offerUrl,
+      calendarUrl: `${baseUrl}/api/terminy/${request.accessToken}/kalendar`,
     });
 
     if (request.actorUserId) {

@@ -18,17 +18,39 @@ import { POZNAMKA_NAVRH_HERCE, POZNAMKA_VIKEND, klicMista, spocitejVolnaMista } 
 /** Stavy, ve kterých se nabídka ještě skládá nebo z ní herec vybírá. */
 export const STAVY_S_NABIDKOU = ['DRAFT', 'PREPARING', 'SENT', 'PICKING', 'RETURNED'];
 
-/** Studia, ve kterých herec umí natáčet, plus studio nabídky. */
+/**
+ * Město studia - z názvu: „MS Studio - Brno II" → „brno". Název je
+ * spolehlivější než `location`, kde může být celá adresa a dvě brněnská
+ * studia by se pak lišila. Studio s názvem bez pomlčky se bere podle
+ * `location`, a když ani ta není, je samo za sebe.
+ */
+export function mestoStudia(s: { name: string; location: string | null }): string {
+  if (s.name.includes(' - ')) {
+    const posledni = s.name.split(' - ').pop() ?? s.name;
+    return posledni.replace(/\s+[IVX]+$/, '').trim().toLowerCase();
+  }
+  return (s.location?.trim() || s.name).toLowerCase();
+}
+
+/**
+ * Studia, ze kterých se nabízí: studio nabídky, studia z lokací herce -
+ * a VŠECHNA studia ve stejném městě (zadání 19. 9. 2026: „když nabízíme
+ * termíny do Brna, tak můžeme nabídnout obě studia"). Herec, který má
+ * v profilu jen Brno I, dostane i Brno II - natáčí se stejně v Brně.
+ */
 export async function studiaNabidky(studioId: string, actorUserId: string | null) {
   const herec = actorUserId
     ? await prisma.user.findUnique({ where: { id: actorUserId }, select: { studioLocations: true } })
     : null;
   const lokace = herec?.studioLocations ?? [];
-  return prisma.studio.findMany({
-    where: { active: true, OR: [{ id: studioId }, ...(lokace.length > 0 ? [{ name: { in: lokace } }] : [])] },
+  const vsechna = await prisma.studio.findMany({
+    where: { active: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     include: { hours: true, presets: { orderBy: { sortOrder: 'asc' } } },
   });
+  const zaklad = vsechna.filter((s) => s.id === studioId || lokace.includes(s.name));
+  const mesta = new Set(zaklad.map(mestoStudia));
+  return vsechna.filter((s) => mesta.has(mestoStudia(s)));
 }
 
 /** Zítřek 0:00 v Praze - dnešek se už nenabízí, na to je pozdě. */

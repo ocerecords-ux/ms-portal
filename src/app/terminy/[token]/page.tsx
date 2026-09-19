@@ -97,6 +97,7 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
           studia={obnova?.studia ?? []}
           obdobiOd={request.periodFrom.toISOString().slice(0, 10)}
           obdobiDo={request.periodTo.toISOString().slice(0, 10)}
+          kalendarUrl={`${(process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '')}/api/terminy/${params.token}/kalendar`}
           chosen={vybrane.map((s) => ({
             id: s.id,
             start: s.start.toISOString(),

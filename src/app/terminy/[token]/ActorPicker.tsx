@@ -6,6 +6,7 @@ import { formatDateTime, minutesInZone, minutesToTime, pickingLabel, remainingTo
 import { oslovit } from '@/lib/osloveni';
 import { zonedToUtc } from '@/lib/calendar';
 import { POZNAMKA_NAVRH_HERCE } from '@/lib/volnaMista';
+import { PridatDoKalendare } from '@/components/PridatDoKalendare';
 
 type Slot = { id: string; start: string; end: string; studio: string; poznamka?: string | null };
 
@@ -27,6 +28,7 @@ export function ActorPicker({
   studia = [],
   obdobiOd,
   obdobiDo,
+  kalendarUrl,
 }: {
   token: string;
   status: string;
@@ -43,6 +45,8 @@ export function ActorPicker({
   /** Období natáčení „YYYY-MM-DD" - v něm se navrhuje. */
   obdobiOd?: string;
   obdobiDo?: string;
+  /** Potvrzené termíny ve formátu kalendáře (19. 9. 2026). */
+  kalendarUrl?: string;
 }) {
   const router = useRouter();
   const [vybrano, setVybrano] = useState<string[]>([]);
@@ -198,6 +202,7 @@ export function ActorPicker({
             </li>
           ))}
         </ul>
+        {kalendarUrl && <PridatDoKalendare url={kalendarUrl} />}
         <p className="text-sm font-body text-muted m-0">Těšíme se na vás ve studiu.</p>
       </div>
     );
