@@ -471,7 +471,14 @@ export function CalendarBrowser({
         >
           <span
             className="w-3 h-3 rounded-full shrink-0"
-            style={{ backgroundColor: ukazNepritomnost ? BARVA_NEPRITOMNOSTI : '#C9C3DC' }}
+            // Šedá je skoro stejná jako „vypnuto" u studií, takže vypnutý
+            // stav je tu prázdné kolečko - jinak by nešlo poznat, jestli je
+            // kalendář zapnutý.
+            style={
+              ukazNepritomnost
+                ? { backgroundColor: BARVA_NEPRITOMNOSTI }
+                : { border: '1.5px solid #C9C3DC', backgroundColor: 'transparent' }
+            }
           />
           {NAZEV_KALENDARE_MIMO}
         </button>

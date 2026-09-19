@@ -23,11 +23,17 @@ export const NAZEV_KALENDARE_MIMO = 'Mimo studio';
 export const PASMO_NEPRITOMNOSTI = 'Europe/Prague';
 
 /**
- * Barva kalendáře v přepínači a u událostí. Jantarová schválně: nesmí se
- * plést s žádným studiem a zároveň nemá působit jako chyba - dovolená není
- * problém, je to informace.
+ * Barva kalendáře v přepínači a u událostí - ŠEDÁ (zadání 19. 9. 2026:
+ * „změň barvu toho kalendáře, měl by být bílý nebo šedý").
+ *
+ * Šedá, ne bílá: bílá by ve světlém režimu na bílém papíře zmizela, šedá je
+ * vidět v obou. A sedí k tomu, co kalendář říká - nikdo tu nepracuje, je to
+ * jen informace, kdo chybí; barvy studií zůstávají práci.
+ *
+ * Musí to být šestimístný hex: průhlednost se k ní přidává jako přípona
+ * (`${BARVA}33`).
  */
-export const BARVA_NEPRITOMNOSTI = '#E0A23B';
+export const BARVA_NEPRITOMNOSTI = '#A7A4B0';
 
 export const DRUHY_NEPRITOMNOSTI: { druh: DruhNepritomnosti; popisek: string }[] = [
   { druh: 'DOVOLENA', popisek: 'Dovolená' },
