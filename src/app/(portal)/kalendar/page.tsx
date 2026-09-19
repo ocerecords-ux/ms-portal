@@ -16,6 +16,8 @@ import {
 } from '@/lib/calendar';
 import { CalendarBrowser, type CalendarEvent, type CalendarDay } from './CalendarBrowser';
 import { bezTitulu } from '@/lib/jmena';
+import { INTERNAL_ROLES } from '@/lib/roles';
+import type { NepritomnostVKalendari } from '@/lib/nepritomnost';
 
 /**
  * Kalendář studií (zadani 8. 9. 2026, upraveno 9. 9. 2026). Den / týden /
@@ -42,7 +44,14 @@ function parseDate(value?: string): Date {
 export default async function KalendarPage({
   searchParams,
 }: {
-  searchParams: { studia?: string; studio?: string; pohled?: string; datum?: string };
+  searchParams: {
+    studia?: string;
+    studio?: string;
+    pohled?: string;
+    datum?: string;
+    /** „0" = kalendář dovolených je vypnutý (zadání 19. 9. 2026). */
+    nepritomnost?: string;
+  };
 }) {
   const session = await getServerSession(authOptions);
   if (!session || !canViewCalendar(session.user.role)) redirect('/projekty');
@@ -167,6 +176,49 @@ export default async function KalendarPage({
     .filter((u) => u.role === 'ZVUKAR')
     .map((u) => ({ id: u.id, label: u.name || u.email }));
 
+  /**
+   * DOVOLENÉ A NEPŘÍTOMNOST (zadání 19. 9. 2026). Vlastní kalendář vedle
+   * studií - dá se zapnout a vypnout stejně jako studio, ve výchozím stavu
+   * je vidět: při plánování natáčení je to přesně to, co člověk potřebuje
+   * vědět, kdo zrovna není.
+   *
+   * Načítá se všechno, co do zobrazeného rozsahu aspoň zasahuje - i dovolená,
+   * která začala minulý týden a končí ve středu.
+   */
+  const ukazNepritomnost = searchParams?.nepritomnost !== '0';
+  const spravceKalendare = canManageCalendar(session.user.role);
+  const [radkyNepritomnosti, lidiTymu] = await Promise.all([
+    ukazNepritomnost
+      ? prisma.nepritomnost
+          .findMany({
+            where: { start: { lt: to }, end: { gt: from } },
+            orderBy: [{ start: 'asc' }, { jmeno: 'asc' }],
+          })
+          .catch(() => [])
+      : Promise.resolve([]),
+    // Za koho jde zapisovat - jen správce kalendáře píše i za ostatní.
+    spravceKalendare
+      ? prisma.user
+          .findMany({
+            where: { active: true, role: { in: INTERNAL_ROLES } },
+            select: { id: true, name: true, email: true },
+            orderBy: [{ name: 'asc' }],
+          })
+          .catch(() => [])
+      : Promise.resolve([]),
+  ]);
+  const nepritomnosti: NepritomnostVKalendari[] = radkyNepritomnosti.map((n) => ({
+    id: n.id,
+    userId: n.userId,
+    jmeno: n.jmeno,
+    druh: n.druh,
+    celyDen: n.celyDen,
+    start: n.start.toISOString(),
+    end: n.end.toISOString(),
+    poznamka: n.poznamka,
+    muzeUpravit: spravceKalendare || n.userId === session.user.id,
+  }));
+
   const barvaStudia = new Map(studios.map((s) => [s.id, s.color]));
   const nazevStudia = new Map(studios.map((s) => [s.id, s.shortName]));
 
@@ -225,6 +277,10 @@ export default async function KalendarPage({
       projekty={projektyProUdalost}
       herci={herci}
       zvukari={zvukari}
+      nepritomnosti={nepritomnosti}
+      ukazNepritomnost={ukazNepritomnost}
+      ja={{ id: session.user.id, label: session.user.name || session.user.email }}
+      lidiTymu={lidiTymu.map((u) => ({ id: u.id, label: u.name || u.email }))}
     />
   );
 }

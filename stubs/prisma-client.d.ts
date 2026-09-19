@@ -31,6 +31,7 @@ declare module '@prisma/client' {
   export type StavPripominky = 'NOVA' | 'HOTOVA';
   export type PozvankaDruh = 'HEREC' | 'FIRMA';
   export type PozvankaStav = 'CEKA' | 'VYPLNENA' | 'HOTOVA' | 'ZRUSENA';
+  export type DruhNepritomnosti = 'DOVOLENA' | 'MIMO_STUDIO' | 'JINE';
   export type Company = {
     id: string;
     code: string | null;
@@ -1076,6 +1077,20 @@ declare module '@prisma/client' {
     ikona: string | null;
     poradi: number;
     active: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  export type Nepritomnost = {
+    id: string;
+    userId: string | null;
+    jmeno: string;
+    druh: DruhNepritomnosti;
+    celyDen: boolean;
+    start: Date;
+    end: Date;
+    poznamka: string | null;
+    zapsalId: string | null;
     createdAt: Date;
     updatedAt: Date;
     [key: string]: any;
@@ -2160,6 +2175,21 @@ declare module '@prisma/client' {
       update(args?: any): Promise<DruhLicence>;
       upsert(args?: any): Promise<DruhLicence>;
       delete(args?: any): Promise<DruhLicence>;
+      deleteMany(args?: any): Promise<any>;
+      createMany(args?: any): Promise<any>;
+      updateMany(args?: any): Promise<any>;
+      count(args?: any): Promise<number>;
+      groupBy(args?: any): Promise<any[]>;
+      aggregate(args?: any): Promise<any>;
+    };
+    nepritomnost: {
+      findUnique(args?: any): Promise<Nepritomnost | null>;
+      findFirst(args?: any): Promise<Nepritomnost | null>;
+      findMany(args?: any): Promise<Nepritomnost[]>;
+      create(args?: any): Promise<Nepritomnost>;
+      update(args?: any): Promise<Nepritomnost>;
+      upsert(args?: any): Promise<Nepritomnost>;
+      delete(args?: any): Promise<Nepritomnost>;
       deleteMany(args?: any): Promise<any>;
       createMany(args?: any): Promise<any>;
       updateMany(args?: any): Promise<any>;

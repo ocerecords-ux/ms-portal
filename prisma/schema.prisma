@@ -370,6 +370,9 @@ model User {
 
   /// Navody, ktere tenhle clovek napsal nebo naposledy upravil.
   navody Navod[] @relation("NavodAutor")
+
+  /// Dovolene a dny mimo studio (zadani 19. 9. 2026) - viz model Nepritomnost.
+  nepritomnosti Nepritomnost[] @relation("NepritomnostKdo")
 }
 
 model Order {
@@ -2840,4 +2843,47 @@ model DruhLicence {
   updatedAt DateTime @updatedAt
 
   @@index([active, poradi])
+}
+
+
+/// Druh nepritomnosti v kalendari dovolenych (zadani 19. 9. 2026).
+enum DruhNepritomnosti {
+  DOVOLENA    // Dovolena
+  MIMO_STUDIO // Je mimo studio - pracuje jinde, jednani, sluzebni cesta
+  JINE        // Cokoliv jineho, co se nehodi do kolonek vyse
+}
+
+/// KALENDAR DOVOLENYCH A NEPRITOMNOSTI (zadani 19. 9. 2026: „potrebuji jeden
+/// kalendar, do ktereho si budou lidi psat dovolene a kdy jsou mimo studio.
+/// Tam neni treba projekt, jen moznost celodenni udalosti").
+///
+/// SCHVALNE ZVLAST OD StudioBlock. Blokace patri studiu - rika, kdy se v nem
+/// netoci. Dovolena patri CLOVEKU a studia se netyka: kdyz je zvukar na
+/// dovolene, studio je volne, jen on ne. Kdyby to byla blokace jednoho
+/// studia, zmizela by z kalendare ostatnich studii a v nabidkach terminu by
+/// se chovala jako obsazene studio.
+///
+/// CELODENNI je vychozi. `start` je pulnoc prvniho dne a `end` pulnoc po
+/// poslednim dni (v case Prahy) - stejne jako u ostatnich udalosti, takze se
+/// prekryvy hledaji jednim dotazem. U neceledenni je to obycejny cas od-do.
+model Nepritomnost {
+  id       String            @id @default(cuid())
+  /// Kdo je pryc. Kdyz ucet zanikne, zaznam zustane s otiskem jmena.
+  userId   String?
+  user     User?             @relation("NepritomnostKdo", fields: [userId], references: [id], onDelete: SetNull)
+  jmeno    String
+  druh     DruhNepritomnosti @default(DOVOLENA)
+  celyDen  Boolean           @default(true)
+  start    DateTime
+  end      DateTime
+  poznamka String?
+
+  /// Kdo to zapsal - produkce zapisuje i za ostatni.
+  zapsalId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([start, end])
+  @@index([userId])
 }

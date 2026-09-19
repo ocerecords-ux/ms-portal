@@ -26,6 +26,14 @@ import {
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { BARVA_NEPRITOMNOSTI, denVPraze, type NepritomnostVKalendari } from '@/lib/nepritomnost';
+import {
+  CipNepritomnosti,
+  NepritomnostForm,
+  PruhNepritomnosti,
+  rozdelPoDnech,
+  type Osoba,
+} from './Nepritomnost';
 
 /** Položka rozbalovacího seznamu lidí a projektů. */
 export type Volba = { id: string; label: string; dokonceny?: boolean; nazev?: string };
@@ -85,6 +93,10 @@ export function CalendarBrowser({
   projekty,
   herci,
   zvukari,
+  nepritomnosti,
+  ukazNepritomnost,
+  ja,
+  lidiTymu,
 }: {
   studios: Studio[];
   selectedStudioIds: string[];
@@ -98,8 +110,19 @@ export function CalendarBrowser({
   projekty: Volba[];
   herci: Volba[];
   zvukari: Volba[];
+  /** Kalendář dovolených a nepřítomnosti (zadání 19. 9. 2026). */
+  nepritomnosti: NepritomnostVKalendari[];
+  ukazNepritomnost: boolean;
+  ja: Osoba;
+  /** Za koho jde zapisovat - prázdné, když přihlášený kalendář nespravuje. */
+  lidiTymu: Osoba[];
 }) {
   const router = useRouter();
+  /** Otevřené okno dovolené: nová (den) nebo úprava. */
+  const [oknoNepritomnosti, setOknoNepritomnosti] = useState<{
+    upravovana: NepritomnostVKalendari | null;
+    den: string;
+  } | null>(null);
   const [filtrStavu, setFiltrStavu] = useState<string>('');
   const [hledani, setHledani] = useState('');
   const [detail, setDetail] = useState<CalendarEvent | null>(null);
@@ -169,13 +192,14 @@ export function CalendarBrowser({
    * Otevřené okno zavře Escape a stránka pod ním se nesmí rolovat - jinak
    * se při kolečku myši posouvá kalendář za oknem místo obsahu okna.
    */
-  const oknoOtevrene = Boolean(novaBlokace || upravovana);
+  const oknoOtevrene = Boolean(novaBlokace || upravovana || oknoNepritomnosti);
   useEffect(() => {
     if (!oknoOtevrene) return;
     function naKlavesu(e: KeyboardEvent) {
       if (e.key !== 'Escape') return;
       setNovaBlokace(null);
       setUpravovana(null);
+      setOknoNepritomnosti(null);
     }
     const puvodni = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -202,11 +226,15 @@ export function CalendarBrowser({
     return mapa;
   }, [days, viditelne]);
 
+  /** Dovolené rozdělené po dnech - vícedenní se ukáže v každém dni. */
+  const nepritomnostPodleDnu = useMemo(() => rozdelPoDnech(days, nepritomnosti), [days, nepritomnosti]);
+
   function prejdi(zmeny: Record<string, string>) {
     const params = new URLSearchParams({
       studia: selectedStudioIds.join(','),
       pohled: view,
       datum: anchorIso,
+      nepritomnost: ukazNepritomnost ? '1' : '0',
       ...zmeny,
     });
     router.push(`/kalendar?${params.toString()}`);
@@ -328,6 +356,40 @@ export function CalendarBrowser({
             </button>
           );
         })}
+        {/* DOVOLENÉ A MIMO STUDIO (zadání 19. 9. 2026) - vlastní kalendář,
+            zapíná se stejně jako studio. Tečkovaný okraj ho odliší: není to
+            místnost, je to přehled lidí. */}
+        <button
+          type="button"
+          onClick={() => prejdi({ nepritomnost: ukazNepritomnost ? '0' : '1' })}
+          aria-pressed={ukazNepritomnost}
+          title="Kdo má dovolenou nebo je mimo studio"
+          className={`flex items-center gap-2 px-3.5 py-1.5 text-sm font-heading font-semibold rounded-pill border border-dashed transition-colors ${
+            ukazNepritomnost ? 'text-ink' : 'border-line text-muted hover:text-ink'
+          }`}
+          style={
+            ukazNepritomnost
+              ? { backgroundColor: `${BARVA_NEPRITOMNOSTI}26`, borderColor: BARVA_NEPRITOMNOSTI }
+              : undefined
+          }
+        >
+          <span
+            className="w-3 h-3 rounded-full shrink-0"
+            style={{ backgroundColor: ukazNepritomnost ? BARVA_NEPRITOMNOSTI : '#C9C3DC' }}
+          />
+          Dovolené a mimo studio
+        </button>
+        {/* Zapsat jde i bez dvojkliku - zvukař do kalendáře studií nepíše,
+            ale svou dovolenou si zapsat má. */}
+        <button
+          type="button"
+          onClick={() =>
+            setOknoNepritomnosti({ upravovana: null, den: denVPraze(new Date()) })
+          }
+          className="px-3.5 py-1.5 text-sm font-heading font-semibold rounded-pill border border-line text-brand-purple hover:border-brand-purple transition-colors"
+        >
+          + Zapsat dovolenou
+        </button>
         {studios.length > 1 && (
           <span className="text-xs font-body text-muted ml-1">Klikáním zapnete a vypnete jednotlivé kalendáře.</span>
         )}
@@ -367,6 +429,8 @@ export function CalendarBrowser({
           timezone={timezone}
           onDetail={klikNaUdalost}
           onUpravit={dvojklikNaUdalost}
+          nepritomnostPodleDnu={ukazNepritomnost ? nepritomnostPodleDnu : null}
+          onOtevriNepritomnost={(n) => setOknoNepritomnosti({ upravovana: n, den: n.start })}
         />
       ) : (
         <MrizkaPohled
@@ -375,6 +439,9 @@ export function CalendarBrowser({
           timezone={timezone}
           onDetail={klikNaUdalost}
           onUpravit={dvojklikNaUdalost}
+          nepritomnostPodleDnu={ukazNepritomnost ? nepritomnostPodleDnu : null}
+          onOtevriNepritomnost={(n) => setOknoNepritomnosti({ upravovana: n, den: n.start })}
+          onNovaNepritomnost={(den) => setOknoNepritomnosti({ upravovana: null, den })}
           onNovaBlokace={
             canManage
               ? (denKey, minuty) => {
@@ -448,6 +515,29 @@ export function CalendarBrowser({
         </div>
       )}
 
+      {oknoNepritomnosti && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/55 flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target !== e.currentTarget) return;
+            setOknoNepritomnosti(null);
+          }}
+        >
+          <div className="w-full max-w-[560px] my-auto">
+            <NepritomnostForm
+              key={oknoNepritomnosti.upravovana?.id ?? `nova-${oknoNepritomnosti.den}`}
+              upravovana={oknoNepritomnosti.upravovana}
+              vychoziDen={oknoNepritomnosti.den}
+              ja={ja}
+              lidiTymu={lidiTymu}
+              onClose={() => setOknoNepritomnosti(null)}
+            />
+          </div>
+        </div>
+      )}
+
       {detail && (
         <DetailUdalosti
           event={detail}
@@ -476,6 +566,9 @@ function MrizkaPohled({
   timezone,
   onDetail,
   onUpravit,
+  nepritomnostPodleDnu,
+  onOtevriNepritomnost,
+  onNovaNepritomnost,
   onNovaBlokace,
 }: {
   days: CalendarDay[];
@@ -484,6 +577,10 @@ function MrizkaPohled({
   onDetail: (e: CalendarEvent) => void;
   /** Dvojklik na událost - otevře úpravu (19. 9. 2026). */
   onUpravit?: (e: CalendarEvent) => void;
+  /** Dovolené po dnech; null = kalendář dovolených je vypnutý. */
+  nepritomnostPodleDnu: Map<string, NepritomnostVKalendari[]> | null;
+  onOtevriNepritomnost: (n: NepritomnostVKalendari) => void;
+  onNovaNepritomnost: (denKey: string) => void;
   onNovaBlokace?: (denKey: string, minuty: number) => void;
 }) {
   const celkovaVyska = (GRID_END_HOUR - GRID_START_HOUR) * HOUR_PX;
@@ -527,6 +624,17 @@ function MrizkaPohled({
               );
             })}
           </div>
+
+          {/* Celodenní pruh s dovolenými (19. 9. 2026) - nad hodinami, aby
+              dovolená nepřikryla natáčení v mřížce. */}
+          {nepritomnostPodleDnu && (
+            <PruhNepritomnosti
+              dny={days}
+              podleDnu={nepritomnostPodleDnu}
+              onOtevri={onOtevriNepritomnost}
+              onNova={onNovaNepritomnost}
+            />
+          )}
 
           <div ref={rolovatko} className="max-h-[62vh] overflow-y-auto">
             <div className="grid" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
@@ -675,6 +783,8 @@ function MesicniPohled({
   timezone,
   onDetail,
   onUpravit,
+  nepritomnostPodleDnu,
+  onOtevriNepritomnost,
 }: {
   days: CalendarDay[];
   podleDnu: Map<string, CalendarEvent[]>;
@@ -682,6 +792,8 @@ function MesicniPohled({
   onDetail: (e: CalendarEvent) => void;
   /** Dvojklik na událost - otevře úpravu (19. 9. 2026). */
   onUpravit?: (e: CalendarEvent) => void;
+  nepritomnostPodleDnu: Map<string, NepritomnostVKalendari[]> | null;
+  onOtevriNepritomnost: (n: NepritomnostVKalendari) => void;
 }) {
   const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
   return (
@@ -709,6 +821,10 @@ function MesicniPohled({
               <span className={`text-xs font-heading tabular-nums ${den.inMonth ? 'text-ink' : 'text-muted'}`}>
                 {cislo}
               </span>
+              {/* Dovolené nahoře - stejně jako celodenní pruh v týdnu. */}
+              {(nepritomnostPodleDnu?.get(den.key) ?? []).map((n) => (
+                <CipNepritomnosti key={n.id} n={n} onOtevri={onOtevriNepritomnost} />
+              ))}
               {udalosti.slice(0, 3).map((e) => {
                 const barvy = eventColors(e.color, e.state);
                 return (
