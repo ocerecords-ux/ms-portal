@@ -9,12 +9,15 @@ export function ValecProgresu({
   progres,
   prazdne = 'text zatím nemáme',
   kompaktni = false,
+  velky = false,
 }: {
   progres: ProgresNataceni;
   /** Co ukázat, když se progres spočítat nedá. */
   prazdne?: string;
   /** Do úzké buňky tabulky - bez druhého řádku s popisem, popis v bublině. */
   kompaktni?: boolean;
+  /** Karta v detailu projektu - vyšší válec a velká procenta. */
+  velky?: boolean;
 }) {
   if (!progres) return <span className="text-xs font-body text-muted">{prazdne}</span>;
   const popis = `${progres.popis} · ${progres.procenta} %`;
@@ -22,9 +25,9 @@ export function ValecProgresu({
   const zbyva = !progres.dotoceno && progres.zbyva != null ? `zbývá ${stranText(progres.zbyva)}` : null;
   return (
     <div className="flex flex-col gap-1 min-w-[90px] w-full" title={zbyva ? `${popis} · ${zbyva}` : popis}>
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center ${kompaktni ? 'gap-2' : 'gap-4'}`}>
         <div
-          className="h-3 flex-1 rounded-pill bg-field border border-line overflow-hidden"
+          className={`${velky ? 'h-4' : 'h-3'} flex-1 rounded-pill bg-field border border-line overflow-hidden`}
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={100}
@@ -36,15 +39,21 @@ export function ValecProgresu({
             style={{ width: `${progres.procenta}%` }}
           />
         </div>
-        {kompaktni && (
-          <span className="text-xs font-heading font-semibold text-ink tabular-nums w-9 text-right">
+        {kompaktni ? (
+          <span className="text-xs font-heading font-semibold text-brand-greenDeep dark:text-brand-green tabular-nums w-9 text-right">
+            {progres.procenta} %
+          </span>
+        ) : (
+          // Procenta velka a zelena (zadani 19. 9. 2026: „ty procenta by tam
+          // mohly svitit vetsim a zelene").
+          <span className={`font-display ${velky ? 'text-3xl sm:text-4xl' : 'text-xl'} leading-none text-brand-greenDeep dark:text-brand-green tabular-nums whitespace-nowrap`}>
             {progres.procenta} %
           </span>
         )}
       </div>
       {!kompaktni && (
         <span className="text-xs font-body text-muted tabular-nums">
-          {popis}
+          {progres.popis}
           {zbyva && (
             <>
               {' · '}

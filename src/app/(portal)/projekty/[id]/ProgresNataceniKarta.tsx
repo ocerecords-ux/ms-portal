@@ -30,7 +30,7 @@ export function ProgresNataceniKarta({
         </span>
       </div>
 
-      <ValecProgresu progres={progres?.celkem ?? null} prazdne="Zatím se nedá spočítat - chybí text nebo zápis strany." />
+      <ValecProgresu velky progres={progres?.celkem ?? null} prazdne="Zatím se nedá spočítat - chybí text nebo zápis strany." />
 
       {herci.length > 1 && (
         <ul className="list-none m-0 p-0 flex flex-col gap-3 border-t border-line pt-4">
