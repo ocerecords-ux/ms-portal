@@ -1,4 +1,4 @@
-import type { ProgresNataceni } from '@/lib/progresNataceni';
+import { stranText, type ProgresNataceni } from '@/lib/progresNataceni';
 
 /**
  * Vodorovný válec „Progres natáčení" (zadání 19. 9. 2026). Stejný u herce,
@@ -18,8 +18,10 @@ export function ValecProgresu({
 }) {
   if (!progres) return <span className="text-xs font-body text-muted">{prazdne}</span>;
   const popis = `${progres.popis} · ${progres.procenta} %`;
+  // Kolik zbyva dotocit (19. 9. 2026) - u dotoceneho a souhrnu vic hercu ne.
+  const zbyva = !progres.dotoceno && progres.zbyva != null ? `zbývá ${stranText(progres.zbyva)}` : null;
   return (
-    <div className="flex flex-col gap-1 min-w-[90px] w-full" title={popis}>
+    <div className="flex flex-col gap-1 min-w-[90px] w-full" title={zbyva ? `${popis} · ${zbyva}` : popis}>
       <div className="flex items-center gap-2">
         <div
           className="h-3 flex-1 rounded-pill bg-field border border-line overflow-hidden"
@@ -40,7 +42,17 @@ export function ValecProgresu({
           </span>
         )}
       </div>
-      {!kompaktni && <span className="text-xs font-body text-muted tabular-nums">{popis}</span>}
+      {!kompaktni && (
+        <span className="text-xs font-body text-muted tabular-nums">
+          {popis}
+          {zbyva && (
+            <>
+              {' · '}
+              <span className="font-heading font-semibold text-ink">{zbyva}</span>
+            </>
+          )}
+        </span>
+      )}
     </div>
   );
 }
