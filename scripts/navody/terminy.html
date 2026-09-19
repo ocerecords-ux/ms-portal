@@ -118,7 +118,7 @@ table{border-collapse:collapse;width:100%}
  <div class="karta" style="display:flex;flex-direction:column;gap:14px">
   <div style="display:flex;justify-content:space-between;align-items:flex-start">
    <div><p class="h2" style="font-weight:500">Nabídka termínů</p><div style="font-size:28px;font-weight:500">Nová audiokniha</div><div class="muted">Jana Nováková · MS Studio - Brno I · 240 NS</div></div>
-   <span class="pill" style="background:var(--warn);color:var(--prog)">Čeká na potvrzení</span>
+   <span class="pill" style="background:var(--warn);color:var(--prog);justify-self:start;white-space:nowrap">Čeká na potvrzení</span>
   </div>
   <div style="display:flex;gap:28px;border-top:1px solid var(--line);padding-top:14px;align-items:baseline">
    <span><span class="hint" style="text-transform:uppercase">Potřeba frekvencí</span> <b style="font-size:22px">6</b></span>
@@ -177,33 +177,34 @@ table{border-collapse:collapse;width:100%}
  <div class="num" style="left:495px;top:158px">2</div>
 </div>
 
-<!-- 6: moje nataceni + prebookovani -->
+<!-- 6: moje nataceni + zmena terminu -->
 <div class="snimek" id="s6">
  <div style="font-size:34px;font-weight:500">Moje termíny</div>
  <p class="h2" style="margin-top:18px">Moje natáčení</p>
- <div class="karta" style="padding:0;margin-top:10px">
-  <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
-   <span><b>Pondělí 21. září · 9:00–13:00</b><br><span class="muted">Nová audiokniha · Brno</span></span>
-   <span class="btn obrys" style="color:var(--muted)">Zavřít</span>
-  </div>
-  <div style="border-top:1px solid var(--line);padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+ <div class="karta" style="padding:0;margin-top:10px;overflow:hidden">
+  <div style="background:var(--field);padding:8px 18px;display:flex;justify-content:space-between;font-size:12px"><b style="text-transform:uppercase">Tento týden · 21. 9. – 27. 9.</b><span class="muted">2 frekvence</span></div>
+  <div style="display:grid;grid-template-columns:100px 100px 1fr 80px 140px 150px;gap:12px;align-items:center;padding:10px 18px;border-top:1px solid var(--line)"><b>po 21. 9.</b><b>13:00–17:00</b><span class="muted">Nová audiokniha</span><b><span class="tec" style="background:var(--p);display:inline-block;margin-right:6px"></span>Brno I</b><span class="pill" style="background:var(--ok);color:var(--done);justify-self:start;white-space:nowrap">✓ Potvrzeno</span><span><span class="btn obrys" style="color:var(--muted);padding:6px 12px">Zavřít</span></span></div>
+  <div style="border-top:1px solid var(--line);background:#faf8ff;padding:14px 18px;display:flex;flex-direction:column;gap:10px">
    <span>Vyberte nový termín. Volné jsou jen časy, kdy máme místo ve studiu. Termíny po 8. 10. 2026 posouvají odevzdání a musíme je potvrdit.</span>
-   <div style="display:flex;gap:12px;align-items:baseline"><b style="width:150px;font-size:12px">úterý 23. září</b><span class="chip" style="font-weight:600;font-size:13px;padding:4px 12px">9:00–13:00</span><span class="chip" style="font-weight:600;font-size:13px;padding:4px 12px">13:00–17:00</span></div>
-   <div style="display:flex;gap:12px;align-items:baseline"><b style="width:150px;font-size:12px">pátek 9. října</b><span class="chip" style="font-weight:600;font-size:13px;padding:4px 12px;border:1px dashed var(--prog);color:var(--prog)">9:00–13:00 ⚠</span></div>
+   <div style="display:flex;gap:12px;align-items:baseline"><b style="width:120px;font-size:12px">st 23. 9.</b><span class="chip" style="font-weight:600;font-size:13px;padding:4px 12px">9:00–13:00</span><span class="chip" style="font-weight:600;font-size:13px;padding:4px 12px">13:00–17:00</span></div>
+   <div style="display:flex;gap:12px;align-items:baseline"><b style="width:120px;font-size:12px">pá 9. 10.</b><span class="chip" style="font-weight:600;font-size:13px;padding:4px 12px;border:1px dashed var(--prog);color:var(--prog)">9:00–13:00 ⚠</span></div>
   </div>
+  <div style="display:grid;grid-template-columns:100px 100px 1fr 80px 140px 150px;gap:12px;align-items:center;padding:10px 18px;border-top:1px solid var(--line)"><b>st 23. 9.</b><b>9:00–13:00</b><span class="muted">Nová audiokniha</span><b><span class="tec" style="background:var(--p);display:inline-block;margin-right:6px"></span>Brno II</b><span class="pill" style="background:var(--warn);color:var(--prog);justify-self:start;white-space:nowrap">Čeká na potvrzení</span><span></span></div>
  </div>
- <div class="karta" style="margin-top:10px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
-  <span><b>Úterý 22. září · 9:00–13:00</b><br><span class="muted">Nová audiokniha · Brno</span><br><span style="color:var(--prog);font-size:12px">Čeká na potvrzení přesunu na pátek 9. října 9:00–13:00. <u>Zrušit žádost</u></span></span>
-  <span class="btn obrys" style="color:var(--p);border-color:var(--p)">Přebookovat</span>
+ <div class="karta" style="padding:0;margin-top:10px;overflow:hidden">
+  <div style="background:var(--field);padding:8px 18px;display:flex;justify-content:space-between;font-size:12px"><b style="text-transform:uppercase">Týden · 5. 10. – 11. 10.</b><span class="muted">1 frekvence</span></div>
+  <div style="display:grid;grid-template-columns:100px 100px 1fr 80px 140px 150px;gap:12px;align-items:center;padding:10px 18px;border-top:1px solid var(--line)"><b>po 5. 10.</b><b>9:00–13:00</b><span class="muted">Nová audiokniha</span><b><span class="tec" style="background:var(--p);display:inline-block;margin-right:6px"></span>Brno I</b><span class="pill" style="background:var(--ok);color:var(--done);justify-self:start;white-space:nowrap">✓ Potvrzeno</span><span><span class="btn obrys" style="color:var(--p);border-color:var(--p);padding:6px 12px;white-space:nowrap">Změna termínu</span></span></div>
+  <p style="margin:0;padding:0 18px 10px;color:var(--prog);font-size:12px">Čeká na potvrzení přesunu na pá 9. 10. 9:00–13:00. <u>Zrušit žádost</u></p>
  </div>
  <div style="margin-top:18px;background:#fff;border:2px solid var(--prog);border-radius:16px;padding:18px 20px;max-width:460px;box-shadow:0 10px 30px rgba(0,0,0,.15)">
   <div style="font-weight:600;font-size:17px">Tenhle termín musíme potvrdit</div>
   <p style="margin:8px 0 12px">Nový termín je až po 8. 10. 2026 - posune se nám tím termín odevzdání knihy. Přesun proto musí potvrdit produkce. Do té doby platí váš původní termín.</p>
   <span class="btn">Požádat o přesun</span> <span class="muted" style="margin-left:10px">Vybrat jiný termín</span>
  </div>
- <div class="num" style="left:726px;top:150px">1</div>
- <div class="num" style="left:170px;top:272px">2</div>
- <div class="num" style="left:330px;top:312px">3</div>
- <div class="num" style="left:12px;top:545px">4</div>
+ <div class="num" style="left:12px;top:150px">1</div>
+ <div class="num" style="left:520px;top:175px">2</div>
+ <div class="num" style="left:668px;top:175px">3</div>
+ <div class="num" style="left:300px;top:325px">4</div>
+ <div class="num" style="left:12px;top:620px">5</div>
 </div>
 </body></html>

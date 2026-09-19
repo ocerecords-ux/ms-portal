@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Nejste přihlášeni.' }, { status: 401 });
   const slot = await frekvenceHerce(req.nextUrl.searchParams.get('slotId') ?? '', session.user.id);
-  if (!slot) return NextResponse.json({ error: 'Tenhle termín přebookovat nejde.' }, { status: 404 });
+  if (!slot) return NextResponse.json({ error: 'Tenhle termín změnit nejde.' }, { status: 404 });
   return NextResponse.json(await mistaProPrebook(slot));
 }
 
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const d = parsed.data;
 
     const slot = await frekvenceHerce(d.slotId, session.user.id);
-    if (!slot) return NextResponse.json({ error: 'Tenhle termín přebookovat nejde.' }, { status: 404 });
+    if (!slot) return NextResponse.json({ error: 'Tenhle termín změnit nejde.' }, { status: 404 });
 
     const start = new Date(d.start);
     const end = new Date(d.end);

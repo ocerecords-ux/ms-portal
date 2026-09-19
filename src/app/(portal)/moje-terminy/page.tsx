@@ -6,10 +6,6 @@ import { prisma } from '@/lib/db';
 import { releaseExpiredHolds } from '@/lib/calendarServer';
 import {
   ACTOR_OPEN_STATUSES,
-  RECORDING_STATUS_CLASSES,
-  RECORDING_STATUS_LABELS,
-  minutesInZone,
-  minutesToTime,
 } from '@/lib/calendar';
 import { PridatDoKalendare } from '@/components/PridatDoKalendare';
 import { MojeNataceni, type Nataceni } from './MojeNataceni';
@@ -50,13 +46,17 @@ export default async function MojeTerminyPage() {
   const nadchazejici: Nataceni[] = requests
     .flatMap((r) =>
       r.slots
-        .filter((s) => s.state === 'CONFIRMED' && s.end.getTime() > Date.now())
+        // Drzene (herec vybral, ceka na nas) i potvrzene - u kazdeho svit stav.
+        .filter((s) => (s.state === 'CONFIRMED' || s.state === 'SELECTED') && s.end.getTime() > Date.now())
         .map((s) => ({
           id: s.id,
           projekt: r.projectName,
           start: s.start.toISOString(),
           end: s.end.toISOString(),
           mesto: mesto(s.studio),
+          // Presne studio (Brno I / Brno II) - herec musi vedet, kam jde.
+          studio: (s.studio.name.split(' - ').pop() ?? s.studio.name).trim(),
+          potvrzeno: s.state === 'CONFIRMED',
           timezone: r.studio.timezone,
           zadost:
             s.prebookStart && s.prebookEnd
@@ -71,17 +71,7 @@ export default async function MojeTerminyPage() {
   // terminem; herec s uctem v nem dostane vsechny sve potvrzene frekvence.
   const sPotvrzenym = requests.find((r) => r.slots.some((s) => s.state === 'CONFIRMED'));
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
-  const ostatni = requests.filter((r) => !ACTOR_OPEN_STATUSES.includes(r.status));
 
-  function popisSlotu(start: Date, end: Date, tz: string): string {
-    const den = new Intl.DateTimeFormat('cs-CZ', {
-      timeZone: tz,
-      weekday: 'long',
-      day: 'numeric',
-      month: 'numeric',
-    }).format(start);
-    return `${den} · ${minutesToTime(minutesInZone(start, tz))}–${minutesToTime(minutesInZone(end, tz))}`;
-  }
 
   return (
     <section className="flex flex-col gap-6">
@@ -127,40 +117,8 @@ export default async function MojeTerminyPage() {
         </div>
       )}
 
-      {ostatni.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Ostatní</h2>
-          {ostatni.map((r) => {
-            const dulezite = r.slots.filter((s) => s.state === 'CONFIRMED' || s.state === 'SELECTED');
-            return (
-              <div key={r.id} className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <span>
-                    <span className="block font-heading font-semibold text-ink">{r.projectName}</span>
-                    <span className="block text-sm font-body text-muted mt-0.5">{r.studio.name}</span>
-                  </span>
-                  <span
-                    className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
-                      RECORDING_STATUS_CLASSES[r.status] ?? 'bg-field text-muted'
-                    }`}
-                  >
-                    {RECORDING_STATUS_LABELS[r.status] ?? r.status}
-                  </span>
-                </div>
-                {dulezite.length > 0 && (
-                  <ul className="list-none p-0 m-0 flex flex-col gap-1">
-                    {dulezite.map((s) => (
-                      <li key={s.id} className="text-sm font-heading text-ink capitalize">
-                        {popisSlotu(s.start, s.end, r.studio.timezone)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Sekce Ostatní zrušena (19. 9. 2026: „tu tabulku dole ostatní bych dal
+          pryč") - termíny jsou nahoře v Moje natáčení. */}
     </section>
   );
 }
