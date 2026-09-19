@@ -702,7 +702,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   if (isInternalRole(session.user.role)) {
     tabs.push({
       key: 'frekvence',
-      label: 'Natáčecí frekvence',
+      label: 'Natáčecí plán',
       count: recordingRequests.length,
       content: frekvence,
     });

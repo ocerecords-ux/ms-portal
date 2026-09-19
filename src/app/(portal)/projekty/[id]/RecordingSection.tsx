@@ -208,7 +208,7 @@ export function RecordingSection({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Natáčecí frekvence
+            Natáčecí plán
           </h2>
           <p className="text-sm font-body text-muted m-0 mt-1">
             {pageCount != null && pageCount > 0

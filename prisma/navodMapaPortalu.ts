@@ -56,7 +56,7 @@ Karta projektu má záložky a ukazují se jen ty, které dávají smysl:
 
 - **Přehled** — nahoře Progres natáčení (celý projekt a pod ním každý herec), pak stav, termíny, klient, herci, odkaz pro klienta. Vidí ho každý.
 - **Rozpočet** — položkové náklady, výkazy zvukařů, bonusy. Admin a produkce.
-- **Natáčecí frekvence** — plánování studia a herce.
+- **Natáčecí plán** — plánování studia a herce.
 - **Rodný list** — jen u rádiového spotu; PDF se vyrobí samo, když je spot hotový.
 - **Přeposlech** — AudioTagger: poslech nahrávky a zápis chyb s časem a stranou scénáře.
 - **Natáčecí protokol** — co se při natáčení stalo.
@@ -107,7 +107,7 @@ Portál běží na Vercelu, data jsou v databázi. Nahrávky bydlí na **Google 
 # Když něco hledáš
 
 - **Kde je zakázka a jak na tom je?** Projekty → karta projektu → Přehled.
-- **Kdy natáčíme a kde?** Kalendář, nebo záložka Natáčecí frekvence u projektu.
+- **Kdy natáčíme a kde?** Kalendář, nebo záložka Natáčecí plán u projektu.
 - **Co jsme klientovi poslali?** Historie u projektu.
 - **Kolik jsme fakturovali?** Doklady u projektu, nebo sekce Doklady.
 - **Přišly peníze?** Doklady → Banka (kdo na ni má právo).

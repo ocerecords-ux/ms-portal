@@ -26,7 +26,7 @@ export const NATACECI_TERMINY = {
 
 # 1. Vytvoření nabídky (produkce)
 
-V detailu projektu v sekci **Natáčecí frekvence** klikněte na **Vytvořit nabídku termínů**. Všechno je v jednom okně:
+V detailu projektu v záložce **Natáčecí plán** klikněte na **Vytvořit nabídku termínů**. Všechno je v jednom okně:
 
 ![Okno Vytvořit nabídku termínů s očíslovanými částmi](/navody/terminy-1.png)
 
