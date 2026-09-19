@@ -414,7 +414,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         managers={managers}
         klienti={klientiUctu.map((k) => ({
           id: k.id,
-          label: k.company?.name ? `${k.name || k.email} — ${k.company.name}` : k.name || k.email,
+          // Jen jmeno, bez firmy (zadani 19. 9. 2026: „nazev firmy je
+          // zbytecny") - firma je hned vedle ve vlastnim poli a lide z ni
+          // jsou v nabidce nahore ve skupine „Z vybrane firmy".
+          label: k.name || k.email,
           companyId: k.companyId,
         }))}
         firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
