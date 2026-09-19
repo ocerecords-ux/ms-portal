@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
 import { BLOCKING_SLOT_STATES } from '@/lib/calendar';
-import { POZNAMKA_NAVRH_HERCE, POZNAMKA_VIKEND, klicMista, spocitejVolnaMista } from '@/lib/volnaMista';
+import { POZNAMKA_NAVRH_HERCE, POZNAMKA_VIKEND, klicMista, mestoStudia, spocitejVolnaMista } from '@/lib/volnaMista';
+
+export { mestoStudia };
 
 /**
  * Nabídka termínů se skládá SAMA (zadání 19. 9. 2026: „nechci termíny
@@ -19,26 +21,12 @@ import { POZNAMKA_NAVRH_HERCE, POZNAMKA_VIKEND, klicMista, spocitejVolnaMista } 
 export const STAVY_S_NABIDKOU = ['DRAFT', 'PREPARING', 'SENT', 'PICKING', 'RETURNED'];
 
 /**
- * Město studia - z názvu: „MS Studio - Brno II" → „brno". Název je
- * spolehlivější než `location`, kde může být celá adresa a dvě brněnská
- * studia by se pak lišila. Studio s názvem bez pomlčky se bere podle
- * `location`, a když ani ta není, je samo za sebe.
- */
-export function mestoStudia(s: { name: string; location: string | null }): string {
-  if (s.name.includes(' - ')) {
-    const posledni = s.name.split(' - ').pop() ?? s.name;
-    return posledni.replace(/\s+[IVX]+$/, '').trim().toLowerCase();
-  }
-  return (s.location?.trim() || s.name).toLowerCase();
-}
-
-/**
  * Studia, ze kterých se nabízí: studio nabídky, studia z lokací herce -
  * a VŠECHNA studia ve stejném městě (zadání 19. 9. 2026: „když nabízíme
  * termíny do Brna, tak můžeme nabídnout obě studia"). Herec, který má
  * v profilu jen Brno I, dostane i Brno II - natáčí se stejně v Brně.
  */
-export async function studiaNabidky(studioId: string, actorUserId: string | null) {
+export async function studiaNabidky(studioId: string, actorUserId: string | null, vybrana: string[] = []) {
   const herec = actorUserId
     ? await prisma.user.findUnique({ where: { id: actorUserId }, select: { studioLocations: true } })
     : null;
@@ -48,6 +36,11 @@ export async function studiaNabidky(studioId: string, actorUserId: string | null
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     include: { hours: true, presets: { orderBy: { sortOrder: 'asc' } } },
   });
+  // Zaskrtnuta studia (19. 9. 2026) maji prednost - produkce vybrala presne.
+  if (vybrana.length > 0) {
+    const zaskrtnuta = vsechna.filter((s) => vybrana.includes(s.id));
+    if (zaskrtnuta.length > 0) return zaskrtnuta;
+  }
   const zaklad = vsechna.filter((s) => s.id === studioId || lokace.includes(s.name));
   const mesta = new Set(zaklad.map(mestoStudia));
   return vsechna.filter((s) => mesta.has(mestoStudia(s)));
@@ -77,6 +70,7 @@ export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy
       id: true,
       status: true,
       studioId: true,
+      nabizenaStudia: true,
       actorUserId: true,
       periodFrom: true,
       periodTo: true,
@@ -86,7 +80,7 @@ export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy
   });
   if (!request || !STAVY_S_NABIDKOU.includes(request.status)) return null;
 
-  const studia = await studiaNabidky(request.studioId, request.actorUserId);
+  const studia = await studiaNabidky(request.studioId, request.actorUserId, request.nabizenaStudia);
   const ids = studia.map((s) => s.id);
   const od = request.periodFrom.toISOString().slice(0, 10);
   const doo = request.periodTo.toISOString().slice(0, 10);

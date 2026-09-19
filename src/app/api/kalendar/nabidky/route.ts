@@ -18,6 +18,8 @@ const schema = z.object({
   companyId: z.string().trim().optional(),
   actorUserId: z.string().trim().min(1, 'Vyberte herce.'),
   studioId: z.string().trim().min(1, 'Vyberte studio.'),
+  /** Zaškrtnutá studia (19. 9. 2026). První z nich je hlavní studio nabídky. */
+  studioIds: z.array(z.string().trim().min(1)).max(20).optional(),
   pageCount: z.number().int().min(0).optional(),
   requiredSessions: z.number().int().min(1).max(60).optional(),
   sessionMinutes: z.number().int().min(30).max(720).optional(),
@@ -82,7 +84,8 @@ export async function POST(req: NextRequest) {
         // Tituly pred a za jmenem se nevypisuji (zadani 15. 9. 2026).
         actorName: bezTitulu(herec.name) || herec.email,
         actorEmail: herec.email,
-        studioId: d.studioId,
+        studioId: d.studioIds?.[0] ?? d.studioId,
+        nabizenaStudia: d.studioIds ?? [],
         pageCount: d.pageCount ?? null,
         requiredSessions,
         sessionMinutes: d.sessionMinutes ?? settings.sessionHours * 60,

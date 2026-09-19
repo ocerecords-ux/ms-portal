@@ -12,6 +12,7 @@ import {
 } from '@/lib/calendar';
 import { DatumPole } from '@/components/DatumPole';
 import { VyberPole } from '@/components/VyberPole';
+import { VyberStudii } from '@/components/VyberStudii';
 
 type Request = {
   id: string;
@@ -20,6 +21,8 @@ type Request = {
   actorName: string;
   actorEmail: string;
   studioId: string;
+  /** Zaškrtnutá studia nabídky (19. 9. 2026). */
+  studioIds: string[];
   studioName: string;
   timezone: string;
   pageCount: number | null;
@@ -75,7 +78,7 @@ export function OfferBuilder({
   const locked = ['CONFIRMED', 'COMPLETED', 'CANCELLED', 'REJECTED'].includes(request.status);
 
   const [form, setForm] = useState({
-    studioId: request.studioId,
+    studioIds: request.studioIds,
     requiredSessions: request.requiredSessions,
     sessionMinutes: request.sessionMinutes,
     periodFrom: request.periodFrom,
@@ -456,16 +459,10 @@ export function OfferBuilder({
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Parametry</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Studio</span>
-              <VyberPole value={form.studioId} onChange={(e) => set('studioId', e.target.value)} className={inputClass}>
-                {studios.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </VyberPole>
-            </label>
+            <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-5">
+              <span className="text-sm font-body text-ink">Studia</span>
+              <VyberStudii studia={studios} vybrana={form.studioIds} onZmena={(ids) => set('studioIds', ids)} />
+            </div>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Období od</span>
               <DatumPole value={form.periodFrom} onChange={(e) => set('periodFrom', e.target.value)} className={inputClass} />
@@ -510,7 +507,7 @@ export function OfferBuilder({
               Uložit parametry
             </button>
             <span className="text-xs font-body text-muted ml-3">
-              Po uložení se volná místa spočítají znovu. Studia se berou z lokací herce.
+              Po uložení se volná místa spočítají znovu - nabízí se ve všech zaškrtnutých studiích.
             </span>
           </div>
         </div>

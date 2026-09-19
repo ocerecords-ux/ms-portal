@@ -13,6 +13,8 @@ import { obnovVolnaMista } from '@/lib/volnaMistaServer';
 // kalendare.
 const schema = z.object({
   studioId: z.string().trim().min(1).optional(),
+  /** Zaškrtnutá studia (19. 9. 2026). */
+  studioIds: z.array(z.string().trim().min(1)).min(1).max(20).optional(),
   requiredSessions: z.number().int().min(1).max(60).optional(),
   sessionMinutes: z.number().int().min(30).max(720).optional(),
   pageCount: z.number().int().min(0).nullable().optional(),
@@ -91,8 +93,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     // Zmena studia: uz nabidnute terminy patri jinemu kalendari, takze se
     // uvolni. Radeji prazdna nabidka nez okna visici u ciziho studia.
-    const zmenaStudia = d.studioId !== undefined && d.studioId !== request.studioId;
-    if (d.studioId !== undefined) data.studioId = d.studioId;
+    // Zaskrtnuta studia: hlavni je prvni z nich. Mista v odskrtnutych studiich
+    // odebere obnova nabidky nize sama - nic se nemusi mazat natvrdo.
+    if (d.studioIds) {
+      data.nabizenaStudia = d.studioIds;
+      data.studioId = d.studioIds[0];
+    }
+    const noveStudio = d.studioIds?.[0] ?? d.studioId;
+    const zmenaStudia = !d.studioIds && noveStudio !== undefined && noveStudio !== request.studioId;
+    if (!d.studioIds && d.studioId !== undefined) data.studioId = d.studioId;
 
     await prisma.$transaction(async (tx) => {
       if (zmenaStudia) {

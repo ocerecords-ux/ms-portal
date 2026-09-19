@@ -1893,6 +1893,10 @@ model RecordingRequest {
 
   studioId String
   studio   Studio @relation(fields: [studioId], references: [id])
+  /// Zaskrtnuta studia, do kterych se nabizi (zadani 19. 9. 2026: „asi by to
+  /// tam chtelo zaskrtavaci pole"). Prazdne = studio nabidky a vsechna
+  /// studia ve stejnem meste.
+  nabizenaStudia String[] @default([])
 
   /// Normostrany pro TOHOTO herce. Predvyplni se z projektu, da se prepsat.
   pageCount        Int?

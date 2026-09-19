@@ -143,3 +143,42 @@ export function posledniDenFrekvence(datumOdevzdani: string): string {
 export function klicMista(m: { studioId: string; start: Date; end: Date }): string {
   return `${m.studioId}|${m.start.toISOString()}|${m.end.toISOString()}`;
 }
+
+/**
+ * Město studia - z názvu: „MS Studio - Brno II" → „brno". Název je
+ * spolehlivější než `location`, kde může být celá adresa a dvě brněnská
+ * studia by se pak lišila. Studio s názvem bez pomlčky se bere podle
+ * `location`, a když ani ta není, je samo za sebe.
+ */
+export function mestoStudia(s: { name: string; location?: string | null }): string {
+  if (s.name.includes(' - ')) {
+    const posledni = s.name.split(' - ').pop() ?? s.name;
+    return posledni.replace(/\s+[IVX]+$/, '').trim().toLowerCase();
+  }
+  return (s.location?.trim() || s.name).toLowerCase();
+}
+
+/**
+ * Výběr studia při plánování po MĚSTECH (zadání 19. 9. 2026: „už by se měla
+ * objevit ta studia obě brněnská tady, když plánujeme"). Nabídka stejně
+ * bere všechna studia města, takže vybírat Brno I zvlášť od Brna II by
+ * nic neznamenalo. Hodnota volby je první studio města - to se uloží
+ * k nabídce jako hlavní.
+ */
+export function volbyStudiiPodleMest(
+  studia: { id: string; name: string; location?: string | null }[],
+): { id: string; label: string; ids: string[] }[] {
+  const mesta = new Map<string, { id: string; name: string }[]>();
+  for (const s of studia) {
+    const klic = mestoStudia(s);
+    if (!mesta.has(klic)) mesta.set(klic, []);
+    mesta.get(klic)!.push(s);
+  }
+  return Array.from(mesta.values()).map((skupina) => {
+    const prvni = skupina[0];
+    if (skupina.length === 1) return { id: prvni.id, label: prvni.name, ids: [prvni.id] };
+    const mesto = (prvni.name.split(' - ').pop() ?? prvni.name).replace(/\s+[IVX]+$/, '').trim();
+    const cast = skupina.map((s) => (s.name.split(' - ').pop() ?? s.name).trim());
+    return { id: prvni.id, label: `${mesto} – všechna studia (${cast.join(' + ')})`, ids: skupina.map((s) => s.id) };
+  });
+}

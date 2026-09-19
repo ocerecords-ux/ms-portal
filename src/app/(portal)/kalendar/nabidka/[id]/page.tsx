@@ -50,6 +50,11 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
           actorName: request.actorName,
           actorEmail: request.actorEmail,
           studioId: request.studioId,
+          // Zaskrtnuta studia - bez vlastniho vyberu ta, ze kterych se opravdu nabizi.
+          studioIds:
+            request.nabizenaStudia.length > 0
+              ? request.nabizenaStudia
+              : (obnova?.studia.map((s) => s.id) ?? [request.studioId]),
           studioName: request.studio.name,
           timezone: request.studio.timezone,
           pageCount: request.pageCount,

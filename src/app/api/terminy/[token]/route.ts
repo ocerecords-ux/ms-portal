@@ -41,14 +41,14 @@ const NAVRH_MAX_MINUT = 10 * 60;
 async function navrhni(token: string, d: { studioId: string; start: string; end: string }) {
   const request = await prisma.recordingRequest.findUnique({
     where: { accessToken: token },
-    select: { id: true, status: true, studioId: true, actorUserId: true, actorName: true, periodFrom: true, periodTo: true },
+    select: { id: true, status: true, studioId: true, nabizenaStudia: true, actorUserId: true, actorName: true, periodFrom: true, periodTo: true },
   });
   if (!request) return NextResponse.json({ error: 'Nabídka nenalezena.' }, { status: 404 });
   if (!['SENT', 'PICKING', 'RETURNED'].includes(request.status)) {
     return NextResponse.json({ error: 'Tahle nabídka už výběr nepřijímá.' }, { status: 409 });
   }
 
-  const studia = await studiaNabidky(request.studioId, request.actorUserId);
+  const studia = await studiaNabidky(request.studioId, request.actorUserId, request.nabizenaStudia);
   if (!studia.some((s) => s.id === d.studioId)) {
     return NextResponse.json({ error: 'V tomhle studiu natáčení nabízet nemůžeme.' }, { status: 400 });
   }

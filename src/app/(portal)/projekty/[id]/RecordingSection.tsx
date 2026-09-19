@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { RECORDING_STATUS_CLASSES, RECORDING_STATUS_LABELS, formatDateTime } from '@/lib/calendar';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
-import { posledniDenFrekvence } from '@/lib/volnaMista';
+import { mestoStudia, posledniDenFrekvence } from '@/lib/volnaMista';
+import { VyberStudii } from '@/components/VyberStudii';
 
 type Nabidka = {
   id: string;
@@ -78,6 +79,15 @@ export function RecordingSection({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Zaškrtnutá studia (19. 9. 2026). Předvyplní se první studio a všechna
+   * ve stejném městě - v Brně tedy rovnou obě brněnská.
+   */
+  const [studioIds, setStudioIds] = useState<string[]>(() => {
+    const prvni = studios[0];
+    if (!prvni) return [];
+    return studios.filter((s) => mestoStudia(s) === mestoStudia(prvni)).map((s) => s.id);
+  });
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -96,7 +106,8 @@ export function RecordingSection({
           projectName,
           companyId: companyId || undefined,
           actorUserId: form.actorUserId,
-          studioId: form.studioId,
+          studioId: studioIds[0] ?? form.studioId,
+          studioIds,
           pageCount: form.pageCount || undefined,
           requiredSessions: form.requiredSessions,
           periodFrom: form.periodFrom,
@@ -209,16 +220,13 @@ export function RecordingSection({
                 Volba se u projektu zapamatuje — v Caflou je herec jen text.
               </span>
             </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Studio</span>
-              <VyberPole value={form.studioId} onChange={(e) => set('studioId', e.target.value)} className={inputClass}>
-                {studios.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </VyberPole>
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">Studia</span>
+              <VyberStudii studia={studios} vybrana={studioIds} onZmena={setStudioIds} />
+              <span className="text-xs font-body text-muted">
+                Herci se nabídnou volná místa ve všech zaškrtnutých studiích.
+              </span>
+            </div>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Normostrany pro tohoto herce</span>
               <input
