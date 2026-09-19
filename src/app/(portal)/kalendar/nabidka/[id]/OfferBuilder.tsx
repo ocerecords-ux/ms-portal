@@ -49,6 +49,13 @@ type Preset = { label: string; startMinutes: number; endMinutes: number };
  * ručně zadaným časem. Termínů může nabídnout víc, než kolik jich herec
  * potřebuje; to je smysl nabídky.
  */
+/** „1 termín", „2 termíny", „5 termínů". */
+function slovoTermin(n: number): string {
+  if (n === 1) return 'termín';
+  if (n >= 2 && n <= 4) return 'termíny';
+  return 'termínů';
+}
+
 export function OfferBuilder({
   request,
   slots,
@@ -86,6 +93,15 @@ export function OfferBuilder({
 
   const nabidnute = slots.filter((s) => s.state === 'OFFERED');
   const vybrane = slots.filter((s) => s.state === 'SELECTED' || s.state === 'CONFIRMED');
+
+  /**
+   * PROČ NEJDE ODESLAT (hlášení 19. 9. 2026: „chtěl jsem vyzkoušet plánování
+   * a nejde mi to odeslat herci"). Herec si vybírá `requiredSessions` termínů
+   * z nabídnutých, takže jich v nabídce musí být aspoň tolik - hlídá to i API.
+   * Do té doby bylo tlačítko jen vybledlé bez vysvětlení; teď se pod
+   * počítadlem napíše, kolik termínů chybí, s odkazem na jejich přidání.
+   */
+  const chybiTerminu = Math.max(0, form.requiredSessions - nabidnute.length);
 
   /** Dny období — z nich se skládá nabídka po zkratkách. */
   const dny = useMemo(() => {
@@ -309,7 +325,12 @@ export function OfferBuilder({
               <button
                 type="button"
                 onClick={odesli}
-                disabled={busy || nabidnute.length < form.requiredSessions}
+                disabled={busy || chybiTerminu > 0}
+                title={
+                  chybiTerminu > 0
+                    ? `Nejdřív nabídněte ještě ${chybiTerminu} ${slovoTermin(chybiTerminu)} - herec má z čeho vybírat ${form.requiredSessions}.`
+                    : undefined
+                }
                 className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
               >
                 {request.sentAt ? 'Poslat znovu' : 'Odeslat herci'}
@@ -351,6 +372,19 @@ export function OfferBuilder({
             </span>
           )}
         </div>
+
+        {!locked && chybiTerminu > 0 && (
+          <p className="text-sm font-body text-ink bg-warnTint border border-line rounded-lg px-3 py-2 m-0">
+            Než půjde nabídka odeslat herci, přidejte ještě{' '}
+            <strong className="tabular-nums">
+              {chybiTerminu} {slovoTermin(chybiTerminu)}
+            </strong>{' '}
+            - herec z nich vybírá {form.requiredSessions}.{' '}
+            <a href="#nabidnout-terminy" className="font-heading font-semibold text-brand-purple hover:underline">
+              Přidat termíny ↓
+            </a>
+          </p>
+        )}
 
         {request.actorNote && (
           <p className="text-sm font-body text-ink bg-field border border-line rounded-lg px-3 py-2 m-0">
@@ -566,7 +600,7 @@ export function OfferBuilder({
 
       {/* Pridavani terminu */}
       {!locked && (
-        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
+        <div id="nabidnout-terminy" className="scroll-mt-6 bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
             Nabídnout termíny
           </h2>
