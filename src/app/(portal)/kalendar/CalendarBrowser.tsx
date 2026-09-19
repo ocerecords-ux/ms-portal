@@ -107,6 +107,55 @@ export function CalendarBrowser({
   /** Událost otevřená k úpravě (zadání 14. 9. 2026). */
   const [upravovana, setUpravovana] = useState<CalendarEvent | null>(null);
 
+  /**
+   * DVOJKLIK NA UDÁLOST OTEVŘE ÚPRAVU (zadání 19. 9. 2026: „ať tím dvojklikem
+   * se mi otevře okno pro úpravy události stejně, jako když zakládám
+   * událost").
+   *
+   * Je to totéž okno jako u nové události, jen předvyplněné - stejně jako
+   * tlačítko Upravit v detailu. Platí stejná pravidla: upravit jde jen ručně
+   * zapsaná událost a jen tomu, kdo kalendář spravuje. Termín z nabídky se
+   * posouvá v nabídce (jinak by herci pod rukama změnil čas, který si sám
+   * vybral), takže u něj dvojklik nedělá nic navíc.
+   *
+   * JEDEN KLIK POČKÁ ČTVRT VTEŘINY. Dvojklik začíná obyčejným klikem, a ten
+   * otevírá detail - bez čekání by na okamžik vyskočil detail a hned ho
+   * překrylo okno úprav. Čeká se jen u událostí, které jdou upravit; u
+   * ostatních se detail otevře hned, protože tam dvojklik nic nedělá.
+   */
+  const casovacDetailu = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lzeUpravit = (e: CalendarEvent) => canManage && e.kind === 'BLOCK';
+
+  function klikNaUdalost(e: CalendarEvent) {
+    if (!lzeUpravit(e)) {
+      setDetail(e);
+      return;
+    }
+    if (casovacDetailu.current) clearTimeout(casovacDetailu.current);
+    casovacDetailu.current = setTimeout(() => {
+      casovacDetailu.current = null;
+      setDetail(e);
+    }, 230);
+  }
+
+  function dvojklikNaUdalost(e: CalendarEvent) {
+    if (!lzeUpravit(e)) return;
+    if (casovacDetailu.current) {
+      clearTimeout(casovacDetailu.current);
+      casovacDetailu.current = null;
+    }
+    setDetail(null);
+    setNovaBlokace(null);
+    setUpravovana(e);
+  }
+
+  useEffect(
+    () => () => {
+      if (casovacDetailu.current) clearTimeout(casovacDetailu.current);
+    },
+    [],
+  );
+
   const viditelne = useMemo(() => {
     const dotaz = hledani.trim().toLowerCase();
     return events.filter((e) => {
@@ -306,19 +355,26 @@ export function CalendarBrowser({
         </VyberPole>
         {canManage && view !== 'mesic' && (
           <span className="text-xs font-body text-muted ml-auto">
-            Dvojklikem do volného místa zapíšete událost.
+            Dvojklikem do volného místa zapíšete událost, dvojklikem na událost ji upravíte.
           </span>
         )}
       </div>
 
       {view === 'mesic' ? (
-        <MesicniPohled days={days} podleDnu={podleDnu} timezone={timezone} onDetail={setDetail} />
+        <MesicniPohled
+          days={days}
+          podleDnu={podleDnu}
+          timezone={timezone}
+          onDetail={klikNaUdalost}
+          onUpravit={dvojklikNaUdalost}
+        />
       ) : (
         <MrizkaPohled
           days={days}
           podleDnu={podleDnu}
           timezone={timezone}
-          onDetail={setDetail}
+          onDetail={klikNaUdalost}
+          onUpravit={dvojklikNaUdalost}
           onNovaBlokace={
             canManage
               ? (denKey, minuty) => {
@@ -419,12 +475,15 @@ function MrizkaPohled({
   podleDnu,
   timezone,
   onDetail,
+  onUpravit,
   onNovaBlokace,
 }: {
   days: CalendarDay[];
   podleDnu: Map<string, CalendarEvent[]>;
   timezone: string;
   onDetail: (e: CalendarEvent) => void;
+  /** Dvojklik na událost - otevře úpravu (19. 9. 2026). */
+  onUpravit?: (e: CalendarEvent) => void;
   onNovaBlokace?: (denKey: string, minuty: number) => void;
 }) {
   const celkovaVyska = (GRID_END_HOUR - GRID_START_HOUR) * HOUR_PX;
@@ -542,7 +601,12 @@ function MrizkaPohled({
                         key={e.id}
                         type="button"
                         onClick={() => onDetail(e)}
-                        onDoubleClick={(ev) => ev.stopPropagation()}
+                        // Dvojklik na udalost ji upravi; do dne pod ni nesmi
+                        // propadnout, jinak by se zakladala nova.
+                        onDoubleClick={(ev) => {
+                          ev.stopPropagation();
+                          onUpravit?.(e);
+                        }}
                         style={{
                           top: `${pozice.top}px`,
                           height: `${pozice.height}px`,
@@ -610,11 +674,14 @@ function MesicniPohled({
   podleDnu,
   timezone,
   onDetail,
+  onUpravit,
 }: {
   days: CalendarDay[];
   podleDnu: Map<string, CalendarEvent[]>;
   timezone: string;
   onDetail: (e: CalendarEvent) => void;
+  /** Dvojklik na událost - otevře úpravu (19. 9. 2026). */
+  onUpravit?: (e: CalendarEvent) => void;
 }) {
   const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
   return (
@@ -649,6 +716,7 @@ function MesicniPohled({
                     key={e.id}
                     type="button"
                     onClick={() => onDetail(e)}
+                    onDoubleClick={() => onUpravit?.(e)}
                     style={{
                       backgroundColor: barvy.background,
                       borderColor: barvy.border,
