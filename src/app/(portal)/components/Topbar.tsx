@@ -318,35 +318,6 @@ export function Topbar({
           </>
         )}
 
-        {/* Přidání zkratky. */}
-        {editing && (
-          <span className="relative">
-            <button
-              type="button"
-              onClick={() => setAddOpen((v) => !v)}
-              disabled={missingPages.length === 0}
-              title={t('listou.pridat')}
-              className="w-7 h-7 rounded-full border border-dashed border-white/60 text-white text-lg leading-none flex items-center justify-center hover:bg-white/10 disabled:opacity-40"
-            >
-              +
-            </button>
-            {addOpen && missingPages.length > 0 && (
-              <div className="absolute left-0 mt-2 bg-surface rounded-lg shadow-lg border border-line py-1 min-w-[180px] z-20">
-                {missingPages.map((p) => (
-                  <button
-                    key={p.href}
-                    type="button"
-                    onClick={() => addPage(p)}
-                    className="block w-full text-left px-4 py-2 text-sm font-body text-ink hover:bg-field"
-                  >
-                    {nazevOdkazu(jazyk, p.href, p.label)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </span>
-        )}
-
         {/* Tři tečky - jedno kliknutí a lišta se dá rovnou upravovat
             i přetahovat. Každý si upravuje svou vlastní.
 
@@ -366,34 +337,6 @@ export function Topbar({
           </button>
         )}
 
-        {editing && (
-          <span className="flex items-center gap-3">
-            {/* At je jasne, kterou listu clovek sklada - druha zustava, jak je. */}
-            <span className="text-white/70 text-xs font-heading whitespace-nowrap">
-              Lišta pro {NAZEV_ZARIZENI[zarizeni]}
-            </span>
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving}
-              className="bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-pill px-4 py-1.5 disabled:opacity-60"
-            >
-              {saving ? 'Ukládám…' : 'Hotovo'}
-            </button>
-            <button type="button" onClick={cancel} className="text-white/70 hover:text-white text-xs font-heading">
-              Zrušit
-            </button>
-            <button
-              type="button"
-              onClick={resetToDefault}
-              disabled={saving}
-              title="Vrátit lištu do původní podoby"
-              className="text-white/70 hover:text-white text-xs font-heading underline disabled:opacity-50"
-            >
-              Výchozí
-            </button>
-          </span>
-        )}
       </nav>
 
       {/* Vpravo uz zadna rozbalovaci nabidka (zadani 8. 9. 2026: "dame pryc
@@ -482,6 +425,66 @@ export function Topbar({
 
       {error && (
         <p className="order-4 w-full text-xs text-white bg-red-600/80 rounded-lg px-3 py-2 m-0">{error}</p>
+      )}
+      {/* PANEL ÚPRAV POD LIŠTOU (oprava 19. 9. 2026: „když chci upravit
+          nabídku, tak se schová po lištu"). Tlačítka a rozbalovací „+" byla
+          uvnitř posuvného pruhu odkazů - ten oreže všechno, co z něj čouhá,
+          takže nabídka stránek zmizela pod lištou a „Lišta pro…"/Hotovo se
+          odsunuly mimo obraz. Teď jsou v samostatném pruhu pod lištou, kde
+          je nic neořezává. */}
+      {editing && (
+        <div className="absolute left-0 right-0 top-full bg-brand-purpleDeep border-t border-white/15 shadow-md px-3 sm:px-10 py-2.5 flex items-center gap-3 flex-wrap">
+          <span className="text-white/80 text-xs font-heading whitespace-nowrap">
+            Upravujete lištu pro {NAZEV_ZARIZENI[zarizeni]} · křížkem odebrat, tažením přesunout
+          </span>
+          <span className="relative">
+            <button
+              type="button"
+              onClick={() => setAddOpen((v) => !v)}
+              disabled={missingPages.length === 0}
+              title={t('listou.pridat')}
+              className="inline-flex items-center gap-1.5 rounded-pill border border-dashed border-white/60 text-white text-xs font-heading font-semibold px-3 py-1.5 hover:bg-white/10 disabled:opacity-40"
+            >
+              <span className="text-base leading-none">+</span> Přidat stránku
+            </button>
+            {addOpen && missingPages.length > 0 && (
+              <div className="absolute left-0 top-full mt-2 bg-surface rounded-lg shadow-lg border border-line py-1 min-w-[200px] max-h-[60vh] overflow-y-auto z-[60]">
+                {missingPages.map((p) => (
+                  <button
+                    key={p.href}
+                    type="button"
+                    onClick={() => addPage(p)}
+                    className="block w-full text-left px-4 py-2 text-sm font-body text-ink hover:bg-field"
+                  >
+                    {nazevOdkazu(jazyk, p.href, p.label)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </span>
+          <span className="flex items-center gap-3 ml-auto">
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-pill px-4 py-1.5 disabled:opacity-60"
+            >
+              {saving ? 'Ukládám…' : 'Hotovo'}
+            </button>
+            <button type="button" onClick={cancel} className="text-white/70 hover:text-white text-xs font-heading">
+              Zrušit
+            </button>
+            <button
+              type="button"
+              onClick={resetToDefault}
+              disabled={saving}
+              title="Vrátit lištu do původní podoby"
+              className="text-white/70 hover:text-white text-xs font-heading underline disabled:opacity-50"
+            >
+              Výchozí
+            </button>
+          </span>
+        </div>
       )}
     </header>
   );
