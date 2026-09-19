@@ -51,6 +51,8 @@ import { loadRodneListy } from '@/lib/rodnyListServer';
 import { bezStarePredpony, dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
 import { nactiPenizeProjektu } from '@/lib/projektPenizeServer';
 import { natoceniProjektu } from '@/lib/brunoServer';
+import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
+import { ProgresNataceniKarta } from './ProgresNataceniKarta';
 import { bezTitulu } from '@/lib/jmena';
 
 // Detail projektu (zadani 5. 9. 2026). Od 11. 9. 2026 projekt zije v portalu -
@@ -292,6 +294,17 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
    */
   const jmenaHercu = herci.map((h) => bezTitulu(h.name) || h.email).filter(Boolean);
 
+  /**
+   * PROGRES NATÁČENÍ (zadání 19. 9. 2026: „hlavně my v detailu projektu").
+   * U reklam se nenatáčí podle stran textu, tam se karta neukazuje.
+   */
+  const herciProjektu = seradHerce(meta?.herci ?? [], meta?.actorUserId ?? null);
+  const ukazatProgres = druhNotifikaceFirmy(company) !== 'REKLAMA' && !jeRadiovySpot;
+  const progresNataceni = ukazatProgres
+    ? ((await nactiProgresNataceni([{ id: caflouProjectId, herciIds: herciProjektu }])).get(caflouProjectId) ?? null)
+    : null;
+  const jmenoHerce = new Map(herciUctu.map((h) => [h.id, bezTitulu(h.name) || h.email]));
+
   const settings = budgetSettings ?? DEFAULT_BUDGET_SETTINGS;
   const showBudget =
     showRozpocet && company?.dealsAudiobooks === true && (project?.pageCount ?? 0) > 0;
@@ -378,6 +391,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // zalozce"). Obsah se vykresli na serveru a do zalozek prijde hotovy.
   const prehled = (
     <>
+      {ukazatProgres && (
+        <ProgresNataceniKarta
+          progres={progresNataceni}
+          herci={herciProjektu.map((id) => ({ id, jmeno: jmenoHerce.get(id) ?? 'Herec' }))}
+        />
+      )}
       {/* Karta "Z Caflou" je od 10. 9. 2026 pryc (zadani). Ukazovala tytez
           udaje, ktere jsou hned pod ni ve formulari - jen ve verzi, kterou uz
           portal needituje. Dokud projekt zil v Caflou, mela smysl jako

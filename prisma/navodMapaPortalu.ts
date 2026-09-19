@@ -54,7 +54,7 @@ Kromě toho je v liště ještě **chat**, **zvoneček** s upozorněními, **ota
 
 Karta projektu má záložky a ukazují se jen ty, které dávají smysl:
 
-- **Přehled** — stav, termíny, klient, herci, odkaz pro klienta. Vidí ho každý.
+- **Přehled** — nahoře Progres natáčení (celý projekt a pod ním každý herec), pak stav, termíny, klient, herci, odkaz pro klienta. Vidí ho každý.
 - **Rozpočet** — položkové náklady, výkazy zvukařů, bonusy. Admin a produkce.
 - **Natáčecí frekvence** — plánování studia a herce.
 - **Rodný list** — jen u rádiového spotu; PDF se vyrobí samo, když je spot hotový.
@@ -81,8 +81,8 @@ Klient, který účet má, vidí v portálu navíc své projekty, nahrávky a m�
 
 # Kdo co vidí
 
-- **Klient** — jen své projekty a nahrávky, ceny jen na svých dokladech.
-- **Herec** — své termíny a údaje, smlouvy podepisuje odkazem. V Projektech vidí jen své projekty: název, Progres natáčení (válec: strana, kde se skončilo, proti počtu stran PDF s textem; po Dotočeno 100 %), normostrany, stranu, kde se skončilo na poslední frekvenci, a odkaz na text (PDF končící _RE ze složky projektu). V Honorářích vidí, co je navrhnuto, co čeká na proplacení a co je zaplaceno, a odtud se dostane i ke svým smlouvám.
+- **Klient** — jen své projekty a nahrávky, ceny jen na svých dokladech. U rozpracovaných projektů vidí Progres natáčení.
+- **Herec** — své termíny a údaje, smlouvy podepisuje odkazem. V Projektech vidí jen své projekty: název, Progres natáčení (válec: strana, kde se skončilo, proti počtu stran PDF s textem; po Dotočeno 100 %; u víc herců průměr), normostrany, stranu, kde se skončilo na poslední frekvenci, a odkaz na text (PDF končící _RE ze složky projektu). V Honorářích vidí, co je navrhnuto, co čeká na proplacení a co je zaplaceno, a odtud se dostane i ke svým smlouvám.
 - **Zvukař** — projekty, kde pracuje, své výkazy a kalendář ke čtení. Nevidí rozpočty, doklady ani projekty v přípravě.
 - **Produkce** — plánování, rozpočty, pozvánky herců. Nevidí doklady ani ceny objednávek.
 - **Žůžo-labůžo (admin)** — všechno, včetně administrace.

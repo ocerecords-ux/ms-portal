@@ -3,6 +3,8 @@ import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
 import { projectTypeLabel } from '@/lib/projectTypes';
+import { ValecProgresu } from '@/components/ValecProgresu';
+import type { ProgresNataceni } from '@/lib/progresNataceni';
 import { IkonaPriority } from '@/components/IkonaPriority';
 import { initials } from '@/lib/chat';
 import { barvaStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
@@ -141,9 +143,16 @@ export function ProjectsTable({
   preposlech,
   odkazyAudioTaggeru,
   schvaleni,
+  progres,
 }: {
   projects: DisplayProject[];
   emptyText: string;
+  /**
+   * PROGRES NATÁČENÍ podle ID projektu (zadání 19. 9. 2026: „měl by ho vidět
+   * i klient"). Když se prop nepředá, sloupec se nevykreslí - u dokončených
+   * projektů už nemá co ukazovat.
+   */
+  progres?: Record<string, ProgresNataceni>;
   /**
    * Odkaz do AudioTaggeru podle ID projektu (zadání 14. 9. 2026). Ukazuje se
    * ve sloupci „K přeposlechu" místo zelené fajfky — klient tak z přehledu
@@ -175,6 +184,7 @@ export function ProjectsTable({
   const showRodnyList = rodneListy !== undefined;
   const showPreposlech = preposlech !== undefined;
   const showSchvaleni = schvaleni !== undefined;
+  const showProgres = progres !== undefined;
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       {/* Stejne jako u interniho prehledu: procentni sirky, jeden radek na
@@ -186,6 +196,7 @@ export function ProjectsTable({
               'name',
               'statusName',
               'narrator',
+              ...(showProgres ? ['progres'] : []),
               'pageCountSirsi',
               'endDate',
               'releaseDate',
@@ -201,6 +212,7 @@ export function ProjectsTable({
               <th className="text-left px-4 py-3.5">Projekt</th>
               <th className="text-left px-4 py-3.5">Stav</th>
               <th className="text-left px-4 py-3.5">Herec</th>
+              {showProgres && <th className="text-left px-4 py-3.5 whitespace-nowrap">Progres natáčení</th>}
               {/* „NS" misto „Normostrany" - usetrena sirka se hodi nazvum
                   a hercum (zadani 12. 9. 2026). */}
               <th className="text-right px-4 py-3.5 whitespace-nowrap" title="Normostrany">NS</th>
@@ -218,7 +230,7 @@ export function ProjectsTable({
             {projects.length === 0 && (
               <tr>
                 <td
-                  colSpan={6 + (showPreposlech ? 2 : 0) + (showRodnyList ? 1 : 0) + (showSchvaleni ? 1 : 0)}
+                  colSpan={6 + (showProgres ? 1 : 0) + (showPreposlech ? 2 : 0) + (showRodnyList ? 1 : 0) + (showSchvaleni ? 1 : 0)}
                   className="px-4 py-8 text-center text-muted text-sm font-body"
                 >
                   {emptyText}
@@ -262,6 +274,11 @@ export function ProjectsTable({
                     </span>
                   )}
                 </td>
+                {showProgres && (
+                  <td className="px-4 py-2 align-middle">
+                    <ValecProgresu progres={progres?.[String(p.id)] ?? null} prazdne="—" kompaktni />
+                  </td>
+                )}
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
                   {p.pageCount ?? '—'}
                 </td>
@@ -811,6 +828,8 @@ const VAHA_SLOUPCE: Record<string, number> = {
   priority: 4,
   projectType: 8,
   pageCount: 6,
+  // Progres natáčení - válec s procenty (19. 9. 2026).
+  progres: 13,
   driveUrl: 4,
   /**
    * Klientsky prehled ma sloupec navic, ktery nese TLACITKO, ne text - kdyz

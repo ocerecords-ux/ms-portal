@@ -24,6 +24,7 @@ import { odkazyPreposlechu } from '@/lib/preposlechOdkaz';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 import { odkazNaFotku } from '@/lib/fotky';
 import { posledniStrany } from '@/lib/brunoServer';
+import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
 import { bezTitulu } from '@/lib/jmena';
 
 // DULEZITE: stránka čte projekty při každém zobrazení - nesmí ji Next.js
@@ -177,6 +178,17 @@ export default async function ProjektyPage() {
       )
     : undefined;
 
+  /**
+   * PROGRES NATÁČENÍ u klienta (zadání 19. 9. 2026: „měl by ho vidět i
+   * klient"). Jen rozpracované projekty - viz lib/progresNataceniServer.ts.
+   */
+  const progresMapa = await nactiProgresNataceni(
+    zPortalu
+      .filter((p) => !p.finished)
+      .map((p) => ({ id: p.caflouProjectId, herciIds: p.herci.map((h) => h.id) })),
+  );
+  const progres = Object.fromEntries(Array.from(progresMapa, ([id, v]) => [id, v.celkem]));
+
   // Stav preposlechu do dvou novych sloupcu (zadani 12. 9. 2026). Jen
   // u rozpracovanych projektu - u dokoncenych uz nema co ukazovat.
   const preposlechMapa = await nactiPreposlechPrehled(active.map((p) => String(p.id)));
@@ -208,6 +220,7 @@ export default async function ProjektyPage() {
           preposlech={preposlech}
           odkazyAudioTaggeru={odkazyAudioTaggeru}
           schvaleni={schvaleni}
+          progres={progres}
         />
       </div>
 

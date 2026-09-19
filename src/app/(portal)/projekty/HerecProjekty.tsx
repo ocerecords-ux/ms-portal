@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
 import { posledniStrany } from '@/lib/brunoServer';
-import { pocetStranTextu } from '@/lib/textProjektuServer';
+import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
+import { ValecProgresu } from '@/components/ValecProgresu';
+import type { ProgresNataceni } from '@/lib/progresNataceni';
 
 /**
  * PROJEKTY HERCE (zadání 19. 9. 2026: „v projektech by měl herec vidět
@@ -31,7 +33,7 @@ export async function HerecProjekty({ userId }: { userId: string }) {
   });
   const ids = projekty.map((p) => p.caflouProjectId);
 
-  const [strany, nabidky, dotoceno, stranTextu] = await Promise.all([
+  const [strany, nabidky, progresy] = await Promise.all([
     posledniStrany(ids),
     ids.length
       ? prisma.recordingRequest.findMany({
@@ -40,24 +42,12 @@ export async function HerecProjekty({ userId }: { userId: string }) {
           select: { caflouProjectId: true, pageCount: true },
         })
       : Promise.resolve([]),
-    ids.length
-      ? prisma.herecDotocen.findMany({
-          where: { caflouProjectId: { in: ids }, userId },
-          select: { caflouProjectId: true },
-        })
-      : Promise.resolve([]),
-    // Pocet stran PDF s textem - jen u rozpracovanych (dokoncene maji 100 %
-    // tlacitkem Dotoceno, nebo je progres uz nezajima).
-    pocetStranTextu(projekty.filter((p) => !p.finished).map((p) => p.caflouProjectId)),
+    // Progres natáčení jen u rozpracovaných - stejný výpočet jako klient
+    // a detail projektu (lib/progresNataceniServer.ts).
+    nactiProgresNataceni(
+      projekty.filter((p) => !p.finished).map((p) => ({ id: p.caflouProjectId, herciIds: [userId] })),
+    ),
   ]);
-
-  /**
-   * PROGRES NATÁČENÍ (zadání 19. 9. 2026: „má počítat strany v PDF versus
-   * zápis stránka, na které se skončilo"). Strana je poslední zápis „kam
-   * jsme se dotočili", celek je počet stran PDF s textem (lib/pdfStrany.ts).
-   * Tlačítko Dotočeno u herce znamená 100 % bez ohledu na čísla.
-   */
-  const dotocenoIds = new Set(dotoceno.map((d) => d.caflouProjectId));
   const nsHerce = new Map<string, number>();
   for (const n of nabidky) {
     if (n.pageCount != null && !nsHerce.has(n.caflouProjectId)) nsHerce.set(n.caflouProjectId, n.pageCount);
@@ -68,15 +58,7 @@ export async function HerecProjekty({ userId }: { userId: string }) {
     nazev: p.name ?? '',
     ns: nsHerce.get(p.caflouProjectId) ?? p.pageCount,
     strana: strany.get(`${p.caflouProjectId}:${userId}`) ?? strany.get(`${p.caflouProjectId}:`) ?? null,
-    progres: dotocenoIds.has(p.caflouProjectId)
-      ? { hotovo: 1, celkem: 1, dotoceno: true }
-      : stranTextu.has(p.caflouProjectId)
-        ? {
-            hotovo: strany.get(`${p.caflouProjectId}:${userId}`) ?? strany.get(`${p.caflouProjectId}:`) ?? 0,
-            celkem: stranTextu.get(p.caflouProjectId)!,
-            dotoceno: false,
-          }
-        : null,
+    progres: progresy.get(p.caflouProjectId)?.herci[userId] ?? null,
     hotovo: p.finished,
     konec: p.endDate?.getTime() ?? Infinity,
   }));
@@ -109,39 +91,7 @@ export async function HerecProjekty({ userId }: { userId: string }) {
   );
 }
 
-type Progres = { hotovo: number; celkem: number; dotoceno: boolean } | null;
-type Radek = { id: string; nazev: string; ns: number | null; strana: number | null; progres: Progres };
-
-/** Vodorovný válec s procenty - Progres natáčení (19. 9. 2026). */
-function ValecProgresu({ progres }: { progres: Progres }) {
-  if (!progres || progres.celkem === 0) {
-    return <span className="text-sm font-body text-muted">text zatím nemáme</span>;
-  }
-  const procenta = Math.min(100, Math.round((progres.hotovo / progres.celkem) * 100));
-  const popis = progres.dotoceno
-    ? 'Dotočeno'
-    : `str. ${Math.min(progres.hotovo, progres.celkem)} z ${progres.celkem}`;
-  return (
-    <div className="flex flex-col gap-1 min-w-[140px]">
-      <div
-        className="h-3 w-full rounded-pill bg-field border border-line overflow-hidden"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={procenta}
-        aria-label="Progres natáčení"
-      >
-        <div
-          className="h-full rounded-pill bg-brand-green transition-[width] duration-500"
-          style={{ width: `${procenta}%` }}
-        />
-      </div>
-      <span className="text-xs font-body text-muted tabular-nums">
-        {popis} · {procenta} %
-      </span>
-    </div>
-  );
-}
+type Radek = { id: string; nazev: string; ns: number | null; strana: number | null; progres: ProgresNataceni };
 
 function TabulkaHerce({ radky, prazdne }: { radky: Radek[]; prazdne: string }) {
   return (
