@@ -13,6 +13,7 @@ import { ProjectsTable, type InternalProject, type InternalProjectMeta } from '.
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { NovyProjektForm } from './NovyProjektForm';
+import { HerecProjekty } from './HerecProjekty';
 import { listProjectTypeOptions, mapaIkonTypu, nazevTypuAudioknihy } from '@/lib/priceList';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadMojeSloupce } from '@/lib/columnLabelsServer';
@@ -47,6 +48,12 @@ export default async function ProjektyPage() {
         vidiVPriprave={vidiProjektyVPriprave(session!.user.role)}
       />
     );
+  }
+
+  // Herec ma vlastni, uzsi prehled (zadani 19. 9. 2026) - nazev, NS, strana
+  // z posledni frekvence a odkaz na text. Klientske sloupce nepotrebuje.
+  if (session!.user.role === 'HEREC') {
+    return <HerecProjekty userId={session!.user.id} />;
   }
 
   // Klic tenant izolace: companyId bereme VYHRADNE ze session, nikdy z query/parametru.
