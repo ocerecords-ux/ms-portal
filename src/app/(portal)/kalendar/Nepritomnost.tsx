@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import type { DruhNepritomnosti } from '@prisma/client';
 import {
   BARVA_NEPRITOMNOSTI,
-  DRUHY_NEPRITOMNOSTI,
+  NAZEV_KALENDARE_MIMO,
   PASMO_NEPRITOMNOSTI,
   denVPraze,
-  popisDruhu,
   posledniDen,
   rozsahSlovy,
   type NepritomnostVKalendari,
@@ -18,16 +17,13 @@ import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 
 /**
- * KALENDÁŘ DOVOLENÝCH A NEPŘÍTOMNOSTI - kousky, které se kreslí do kalendáře
- * studií (zadání 19. 9. 2026: „potřebuji jeden kalendář, do kterého si budou
- * lidi psát dovolené a kdy jsou mimo studio. Tam není třeba projekt, jen
- * možnost celodenní události").
+ * KALENDÁŘ MIMO STUDIO - kousky, které se kreslí do kalendáře studií (zadání
+ * 19. 9. 2026, viz lib/nepritomnost.ts).
  *
- * Dovolená nemá čas v hodinové mřížce - je to celý den, a v mřížce by
- * zabrala sloupec od půlnoci do půlnoci a přikryla natáčení. Proto má vlastní
- * pruh NAD hodinami, jako celodenní události v každém běžném kalendáři.
- * I nepřítomnost na pár hodin („odpoledne u notáře") jde do toho pruhu, jen
- * s časem - v mřížce by se pletla s prací ve studiu.
+ * Chová se jako každý jiný kalendář: událost na pár hodin je v hodinové
+ * mřížce na svém místě, CELODENNÍ má vlastní pruh nad hodinami - v mřížce by
+ * zabrala sloupec od půlnoci do půlnoci a přikryla natáčení. Stejně to dělá
+ * každý běžný kalendář.
  */
 
 export type Osoba = { id: string; label: string };
@@ -40,7 +36,7 @@ export function CipNepritomnosti({
   n: NepritomnostVKalendari;
   onOtevri: (n: NepritomnostVKalendari) => void;
 }) {
-  const popis = `${n.jmeno} · ${popisDruhu(n.druh)} · ${rozsahSlovy(n)}${n.poznamka ? ` · ${n.poznamka}` : ''}`;
+  const popis = `${NAZEV_KALENDARE_MIMO}: ${n.jmeno} · ${rozsahSlovy(n)}${n.poznamka ? ` · ${n.poznamka}` : ''}`;
   return (
     <button
       type="button"
@@ -69,7 +65,7 @@ export function CipNepritomnosti({
         </span>
       )}
       {n.jmeno}
-      <span className="text-muted"> · {popisDruhu(n.druh)}</span>
+      {n.poznamka && <span className="text-muted"> · {n.poznamka}</span>}
     </button>
   );
 }
@@ -97,9 +93,9 @@ export function PruhNepritomnosti({
     >
       <div
         className="px-1 py-1.5 text-[9px] font-heading text-muted uppercase tracking-wide text-right leading-tight self-center"
-        title="Dovolené a mimo studio"
+        title="Celodenní události v kalendáři Mimo studio"
       >
-        Pryč
+        Mimo studio
       </div>
       {dny.map((den) => {
         const vDni = podleDnu.get(den.key) ?? [];
@@ -108,7 +104,7 @@ export function PruhNepritomnosti({
             key={den.key}
             className="border-l border-line p-1 flex flex-col gap-0.5 min-h-[28px]"
             onDoubleClick={() => onNova(den.key)}
-            title={vDni.length === 0 ? 'Dvojklikem zapíšete dovolenou nebo den mimo studio' : undefined}
+            title={vDni.length === 0 ? 'Dvojklikem zapíšete celý den mimo studio' : undefined}
           >
             {vDni.map((n) => (
               <CipNepritomnosti key={n.id} n={n} onOtevri={onOtevri} />
@@ -123,8 +119,11 @@ export function PruhNepritomnosti({
 /** Rozdělí nepřítomnosti do dnů - vícedenní dovolená se ukáže v každém. */
 export function rozdelPoDnech(
   dny: { key: string; startIso: string; endIso: string }[],
-  nepritomnosti: NepritomnostVKalendari[],
+  vsechny: NepritomnostVKalendari[],
+  /** Jen celodenní - do pruhu nad mřížkou. Ty na pár hodin jsou v mřížce. */
+  jenCelodenni = false,
 ): Map<string, NepritomnostVKalendari[]> {
+  const nepritomnosti = jenCelodenni ? vsechny.filter((n) => n.celyDen) : vsechny;
   // Celodenni se porovnava podle DATA, ne podle okamziku: kdyz se kalendar
   // kresli v pasmu Londyna, zacina prazsky den uz ve 23:00 predchoziho dne
   // a dovolena by jinak presahla i do dne pred ni.
@@ -159,6 +158,9 @@ function minutyNaCas(d: Date): string {
 export function NepritomnostForm({
   upravovana,
   vychoziDen,
+  vychoziCelyDen = true,
+  vychoziCasOd,
+  vychoziCasDo,
   ja,
   lidiTymu,
   onClose,
@@ -166,6 +168,14 @@ export function NepritomnostForm({
   upravovana: NepritomnostVKalendari | null;
   /** YYYY-MM-DD - den, do kterého se dvojkliklo. */
   vychoziDen: string;
+  /**
+   * Dvojklik do hodinové mřížky zakládá událost na čas, do pruhu nebo do
+   * měsíce na celý den - stejně jako v jiných kalendářích.
+   */
+  vychoziCelyDen?: boolean;
+  /** HH:MM */
+  vychoziCasOd?: string;
+  vychoziCasDo?: string;
   ja: Osoba;
   /** Za koho jde zapisovat. Prázdné = jen za sebe (není správce kalendáře). */
   lidiTymu: Osoba[];
@@ -175,17 +185,19 @@ export function NepritomnostForm({
   const spravce = lidiTymu.length > 0;
 
   const [kdo, setKdo] = useState(upravovana?.userId ?? ja.id);
-  const [druh, setDruh] = useState<DruhNepritomnosti>(upravovana?.druh ?? 'DOVOLENA');
-  const [celyDen, setCelyDen] = useState(upravovana?.celyDen ?? true);
+  // Druh se nevybira (upresneni 19. 9. 2026) - vsechno je „mimo studio".
+  // U stareho zaznamu se puvodni druh jen zachova.
+  const druh: DruhNepritomnosti = upravovana?.druh ?? 'MIMO_STUDIO';
+  const [celyDen, setCelyDen] = useState(upravovana?.celyDen ?? vychoziCelyDen);
   const [od, setOd] = useState(upravovana ? denVPraze(new Date(upravovana.start)) : vychoziDen);
   const [doDen, setDoDen] = useState(
     upravovana ? (upravovana.celyDen ? posledniDen(upravovana.end) : denVPraze(new Date(upravovana.start))) : vychoziDen,
   );
   const [casOd, setCasOd] = useState(
-    upravovana && !upravovana.celyDen ? minutyNaCas(new Date(upravovana.start)) : '09:00',
+    upravovana && !upravovana.celyDen ? minutyNaCas(new Date(upravovana.start)) : vychoziCasOd ?? '09:00',
   );
   const [casDo, setCasDo] = useState(
-    upravovana && !upravovana.celyDen ? minutyNaCas(new Date(upravovana.end)) : '13:00',
+    upravovana && !upravovana.celyDen ? minutyNaCas(new Date(upravovana.end)) : vychoziCasDo ?? '13:00',
   );
   const [poznamka, setPoznamka] = useState(upravovana?.poznamka ?? '');
   const [bezi, setBezi] = useState(false);
@@ -250,29 +262,11 @@ export function NepritomnostForm({
     >
       <div className="flex items-start justify-between gap-4">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          {upravovana ? 'Úprava nepřítomnosti' : 'Dovolená / mimo studio'}
+          {upravovana ? `Úprava — ${NAZEV_KALENDARE_MIMO.toLowerCase()}` : NAZEV_KALENDARE_MIMO}
         </h2>
         <button type="button" onClick={onClose} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
           ×
         </button>
-      </div>
-
-      {/* Druh - tři tlačítka místo rozbalovátka, jsou jen tři. */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {DRUHY_NEPRITOMNOSTI.map((d) => (
-          <button
-            key={d.druh}
-            type="button"
-            onClick={() => setDruh(d.druh)}
-            aria-pressed={druh === d.druh}
-            className={`px-3.5 py-1.5 rounded-pill text-sm font-heading font-semibold border transition-colors ${
-              druh === d.druh ? 'border-transparent text-ink' : 'border-line text-muted hover:text-ink'
-            }`}
-            style={druh === d.druh ? { backgroundColor: `${BARVA_NEPRITOMNOSTI}40` } : undefined}
-          >
-            {d.popisek}
-          </button>
-        ))}
       </div>
 
       <label className="flex flex-col gap-1.5">
@@ -359,7 +353,7 @@ export function NepritomnostForm({
         <input
           value={poznamka}
           onChange={(e) => setPoznamka(e.target.value)}
-          placeholder="Nepovinné — třeba „na telefonu dostupný“"
+          placeholder="Nepovinné — třeba „dovolená“ nebo „jednání v Praze“"
           maxLength={500}
           className={inputClass}
         />

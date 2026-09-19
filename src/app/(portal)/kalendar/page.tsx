@@ -49,7 +49,7 @@ export default async function KalendarPage({
     studio?: string;
     pohled?: string;
     datum?: string;
-    /** „0" = kalendář dovolených je vypnutý (zadání 19. 9. 2026). */
+    /** „0" = kalendář Mimo studio je vypnutý (zadání 19. 9. 2026). */
     nepritomnost?: string;
   };
 }) {
@@ -177,7 +177,7 @@ export default async function KalendarPage({
     .map((u) => ({ id: u.id, label: u.name || u.email }));
 
   /**
-   * DOVOLENÉ A NEPŘÍTOMNOST (zadání 19. 9. 2026). Vlastní kalendář vedle
+   * KALENDÁŘ MIMO STUDIO (zadání 19. 9. 2026). Vlastní kalendář vedle
    * studií - dá se zapnout a vypnout stejně jako studio, ve výchozím stavu
    * je vidět: při plánování natáčení je to přesně to, co člověk potřebuje
    * vědět, kdo zrovna není.

@@ -8,7 +8,7 @@ import { zonedToUtc } from '@/lib/calendar';
 import { PASMO_NEPRITOMNOSTI } from '@/lib/nepritomnost';
 
 /**
- * Zápis do kalendáře dovolených (zadání 19. 9. 2026: „kalendář, do kterého si
+ * Zápis do kalendáře Mimo studio (zadání 19. 9. 2026: „kalendář, do kterého si
  * budou lidi psát dovolené a kdy jsou mimo studio").
  *
  * KDO SMÍ PSÁT: celý tým, i zvukaři. Do kalendáře studií zvukař jen kouká,
@@ -93,7 +93,7 @@ async function urciKoho(
     select: { id: true, name: true, email: true, role: true, active: true },
   });
   if (!ucet || !ucet.active) return { chyba: 'Takového člověka v týmu nemáme.', status: 400 };
-  if (!isInternalRole(ucet.role)) return { chyba: 'Dovolené se zapisují jen lidem z týmu.', status: 400 };
+  if (!isInternalRole(ucet.role)) return { chyba: 'Do kalendáře Mimo studio se zapisují jen lidé z týmu.', status: 400 };
   return { id: ucet.id, jmeno: ucet.name || ucet.email };
 }
 
@@ -134,7 +134,7 @@ async function zaznamKUprave(id: string | null) {
   if (!zaznam) return { chyba: 'Záznam už neexistuje.', status: 404 } as const;
   const svuj = zaznam.userId === session.user.id;
   if (!svuj && !canManageCalendar(session.user.role)) {
-    return { chyba: 'Cizí dovolenou může upravit jen produkce.', status: 403 } as const;
+    return { chyba: 'Cizí záznam v kalendáři Mimo studio může upravit jen produkce.', status: 403 } as const;
   }
   return { session, zaznam } as const;
 }

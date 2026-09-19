@@ -1,13 +1,23 @@
 import type { DruhNepritomnosti } from '@prisma/client';
 
 /**
- * KALENDÁŘ DOVOLENÝCH A NEPŘÍTOMNOSTI (zadání 19. 9. 2026: „potřebuji jeden
- * kalendář, do kterého si budou lidi psát dovolené a kdy jsou mimo studio.
- * Tam není třeba projekt, jen možnost celodenní události").
+ * KALENDÁŘ „MIMO STUDIO" (zadání 19. 9. 2026: „potřebuji jeden kalendář, do
+ * kterého si budou lidi psát dovolené a kdy jsou mimo studio. Tam není třeba
+ * projekt, jen možnost celodenní události"; upřesněno tentýž den: „pojmenujme
+ * to jen Mimo studio, ne dovolená. A chovat by se to mělo stejně jako ostatní
+ * kalendáře - přidám dvojklikem. Akorát rozdíl je v tom, že přidávat můžou
+ * všichni").
+ *
+ * Proč je člověk pryč, se nerozlišuje - dovolená, jednání, práce jinde, to
+ * všechno je „mimo studio" a kdo chce, napíše důvod do poznámky. Druh v
+ * databázi zůstal kvůli záznamům zapsaným první den, v portálu se nevybírá.
  *
  * Tenhle soubor nesahá do databáze - používá ho i kalendář v prohlížeči.
  * Zápis je v lib/nepritomnostServer.ts a v /api/kalendar/nepritomnost.
  */
+
+/** Jak se kalendář jmenuje všude v portálu. */
+export const NAZEV_KALENDARE_MIMO = 'Mimo studio';
 
 /** Pásmo, ve kterém se počítá „celý den". Tým sedí v Česku. */
 export const PASMO_NEPRITOMNOSTI = 'Europe/Prague';

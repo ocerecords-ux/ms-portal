@@ -26,7 +26,12 @@ import {
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
-import { BARVA_NEPRITOMNOSTI, denVPraze, type NepritomnostVKalendari } from '@/lib/nepritomnost';
+import {
+  BARVA_NEPRITOMNOSTI,
+  NAZEV_KALENDARE_MIMO,
+  PASMO_NEPRITOMNOSTI,
+  type NepritomnostVKalendari,
+} from '@/lib/nepritomnost';
 import {
   CipNepritomnosti,
   NepritomnostForm,
@@ -50,7 +55,8 @@ export type CalendarDay = {
 
 export type CalendarEvent = {
   id: string;
-  kind: 'SLOT' | 'BLOCK';
+  /** MIMO = kalendář Mimo studio na pár hodin (19. 9. 2026). */
+  kind: 'SLOT' | 'BLOCK' | 'MIMO';
   studioId: string;
   studioName: string;
   color: string;
@@ -72,7 +78,19 @@ export type CalendarEvent = {
     zvukarUserId: string | null;
     zvukarName: string | null;
   };
+  /** Záznam z kalendáře Mimo studio - z něj se plní jeho okno. */
+  mimo?: NepritomnostVKalendari;
 };
+
+/** HH:MM v Praze - předvyplněný čas v okně Mimo studio. */
+function casVPraze(iso: string): string {
+  return new Intl.DateTimeFormat('cs-CZ', {
+    timeZone: PASMO_NEPRITOMNOSTI,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(iso));
+}
 
 type Studio = { id: string; shortName: string; name: string; timezone: string; color: string };
 
@@ -118,10 +136,13 @@ export function CalendarBrowser({
   lidiTymu: Osoba[];
 }) {
   const router = useRouter();
-  /** Otevřené okno dovolené: nová (den) nebo úprava. */
+  /** Otevřené okno Mimo studio: nová událost, nebo úprava. */
   const [oknoNepritomnosti, setOknoNepritomnosti] = useState<{
     upravovana: NepritomnostVKalendari | null;
     den: string;
+    celyDen?: boolean;
+    casOd?: string;
+    casDo?: string;
   } | null>(null);
   const [filtrStavu, setFiltrStavu] = useState<string>('');
   const [hledani, setHledani] = useState('');
@@ -150,6 +171,13 @@ export function CalendarBrowser({
   const lzeUpravit = (e: CalendarEvent) => canManage && e.kind === 'BLOCK';
 
   function klikNaUdalost(e: CalendarEvent) {
+    // Mimo studio nemá detail s tlačítky - klik rovnou otevře úpravu, stejně
+    // jako u celodenního štítku. Cizí záznam ukáže jen detail ke čtení.
+    if (e.kind === 'MIMO' && e.mimo) {
+      if (e.mimo.muzeUpravit) setOknoNepritomnosti({ upravovana: e.mimo, den: e.start });
+      else setDetail(e);
+      return;
+    }
     if (!lzeUpravit(e)) {
       setDetail(e);
       return;
@@ -162,6 +190,7 @@ export function CalendarBrowser({
   }
 
   function dvojklikNaUdalost(e: CalendarEvent) {
+    if (e.kind === 'MIMO') return; // uz ji otevrel prvni klik
     if (!lzeUpravit(e)) return;
     if (casovacDetailu.current) {
       clearTimeout(casovacDetailu.current);
@@ -179,14 +208,39 @@ export function CalendarBrowser({
     [],
   );
 
+  /**
+   * Mimo studio na pár hodin se kreslí v hodinové mřížce jako každá jiná
+   * událost (upřesnění 19. 9. 2026: „chovat by se to mělo stejně jako ostatní
+   * kalendáře"). Celodenní jsou v pruhu nad ní.
+   */
+  const udalostiMimo = useMemo<CalendarEvent[]>(
+    () =>
+      nepritomnosti
+        .filter((n) => !n.celyDen)
+        .map((n) => ({
+          id: `mimo-${n.id}`,
+          kind: 'MIMO' as const,
+          studioId: '',
+          studioName: NAZEV_KALENDARE_MIMO,
+          color: BARVA_NEPRITOMNOSTI,
+          start: n.start,
+          end: n.end,
+          state: 'MIMO',
+          title: n.poznamka ? `${n.jmeno}\n${n.poznamka}` : n.jmeno,
+          subtitle: NAZEV_KALENDARE_MIMO,
+          mimo: n,
+        })),
+    [nepritomnosti],
+  );
+
   const viditelne = useMemo(() => {
     const dotaz = hledani.trim().toLowerCase();
-    return events.filter((e) => {
+    return [...events, ...udalostiMimo].filter((e) => {
       if (filtrStavu && e.state !== filtrStavu) return false;
       if (dotaz && !e.title.toLowerCase().includes(dotaz)) return false;
       return true;
     });
-  }, [events, filtrStavu, hledani]);
+  }, [events, udalostiMimo, filtrStavu, hledani]);
 
   /**
    * Otevřené okno zavře Escape a stránka pod ním se nesmí rolovat - jinak
@@ -228,6 +282,48 @@ export function CalendarBrowser({
 
   /** Dovolené rozdělené po dnech - vícedenní se ukáže v každém dni. */
   const nepritomnostPodleDnu = useMemo(() => rozdelPoDnech(days, nepritomnosti), [days, nepritomnosti]);
+  /** Do pruhu nad mřížkou jen celodenní - ty na čas jsou v mřížce. */
+  const celodenniPodleDnu = useMemo(
+    () => rozdelPoDnech(days, nepritomnosti, true),
+    [days, nepritomnosti],
+  );
+
+  /**
+   * DVOJKLIK DO KALENDÁŘE (upřesnění 19. 9. 2026: „přidám dvojklikem. Akorát
+   * rozdíl je v tom, že přidávat můžou všichni").
+   *
+   * Kdo spravuje studia, dostane okno události jako dřív - a v něm si místo
+   * studia vybere kalendář Mimo studio. Ostatní (zvukař) do studií nepíšou,
+   * takže jim dvojklik otevře rovnou Mimo studio.
+   */
+  function novaVMrizce(denKey: string, minuty: number) {
+    const [y, m, d] = denKey.split('-').map(Number);
+    // Zaokrouhli na celou hodinu - je to jen návrh, čas od-do se pak dopíše
+    // ve formuláři (zadání 14. 9. 2026).
+    const od = Math.floor(minuty / 60) * 60;
+    const start = zonedToUtc(y, m, d, od, timezone).toISOString();
+    const end = zonedToUtc(y, m, d, Math.min(24 * 60, od + 60), timezone).toISOString();
+    if (canManage) {
+      setNovaBlokace({ studioId: selectedStudioIds[0], start, end });
+      return;
+    }
+    setOknoNepritomnosti({
+      upravovana: null,
+      den: denKey,
+      celyDen: false,
+      casOd: casVPraze(start),
+      casDo: casVPraze(end),
+    });
+  }
+
+  /** Dvojklik na den v měsíci - bez času, takže u Mimo studio celý den. */
+  function novaVMesici(denKey: string) {
+    if (canManage) {
+      novaVMrizce(denKey, 9 * 60);
+      return;
+    }
+    setOknoNepritomnosti({ upravovana: null, den: denKey, celyDen: true });
+  }
 
   function prejdi(zmeny: Record<string, string>) {
     const params = new URLSearchParams({
@@ -356,14 +452,14 @@ export function CalendarBrowser({
             </button>
           );
         })}
-        {/* DOVOLENÉ A MIMO STUDIO (zadání 19. 9. 2026) - vlastní kalendář,
-            zapíná se stejně jako studio. Tečkovaný okraj ho odliší: není to
-            místnost, je to přehled lidí. */}
+        {/* MIMO STUDIO (zadání 19. 9. 2026) - vlastní kalendář, zapíná se
+            stejně jako studio. Tečkovaný okraj ho odliší: není to místnost,
+            je to přehled lidí. Přidává se dvojklikem jako všude jinde. */}
         <button
           type="button"
           onClick={() => prejdi({ nepritomnost: ukazNepritomnost ? '0' : '1' })}
           aria-pressed={ukazNepritomnost}
-          title="Kdo má dovolenou nebo je mimo studio"
+          title="Kdo je mimo studio"
           className={`flex items-center gap-2 px-3.5 py-1.5 text-sm font-heading font-semibold rounded-pill border border-dashed transition-colors ${
             ukazNepritomnost ? 'text-ink' : 'border-line text-muted hover:text-ink'
           }`}
@@ -377,18 +473,7 @@ export function CalendarBrowser({
             className="w-3 h-3 rounded-full shrink-0"
             style={{ backgroundColor: ukazNepritomnost ? BARVA_NEPRITOMNOSTI : '#C9C3DC' }}
           />
-          Dovolené a mimo studio
-        </button>
-        {/* Zapsat jde i bez dvojkliku - zvukař do kalendáře studií nepíše,
-            ale svou dovolenou si zapsat má. */}
-        <button
-          type="button"
-          onClick={() =>
-            setOknoNepritomnosti({ upravovana: null, den: denVPraze(new Date()) })
-          }
-          className="px-3.5 py-1.5 text-sm font-heading font-semibold rounded-pill border border-line text-brand-purple hover:border-brand-purple transition-colors"
-        >
-          + Zapsat dovolenou
+          {NAZEV_KALENDARE_MIMO}
         </button>
         {studios.length > 1 && (
           <span className="text-xs font-body text-muted ml-1">Klikáním zapnete a vypnete jednotlivé kalendáře.</span>
@@ -415,11 +500,11 @@ export function CalendarBrowser({
             </option>
           ))}
         </VyberPole>
-        {canManage && view !== 'mesic' && (
-          <span className="text-xs font-body text-muted ml-auto">
-            Dvojklikem do volného místa zapíšete událost, dvojklikem na událost ji upravíte.
-          </span>
-        )}
+        <span className="text-xs font-body text-muted ml-auto">
+          {canManage
+            ? 'Dvojklikem do volného místa zapíšete událost, dvojklikem na událost ji upravíte.'
+            : 'Dvojklikem do volného místa zapíšete, kdy jste mimo studio.'}
+        </span>
       </div>
 
       {view === 'mesic' ? (
@@ -431,6 +516,7 @@ export function CalendarBrowser({
           onUpravit={dvojklikNaUdalost}
           nepritomnostPodleDnu={ukazNepritomnost ? nepritomnostPodleDnu : null}
           onOtevriNepritomnost={(n) => setOknoNepritomnosti({ upravovana: n, den: n.start })}
+          onNovaVeDni={novaVMesici}
         />
       ) : (
         <MrizkaPohled
@@ -439,24 +525,10 @@ export function CalendarBrowser({
           timezone={timezone}
           onDetail={klikNaUdalost}
           onUpravit={dvojklikNaUdalost}
-          nepritomnostPodleDnu={ukazNepritomnost ? nepritomnostPodleDnu : null}
+          nepritomnostPodleDnu={ukazNepritomnost ? celodenniPodleDnu : null}
           onOtevriNepritomnost={(n) => setOknoNepritomnosti({ upravovana: n, den: n.start })}
-          onNovaNepritomnost={(den) => setOknoNepritomnosti({ upravovana: null, den })}
-          onNovaBlokace={
-            canManage
-              ? (denKey, minuty) => {
-                  const [y, m, d] = denKey.split('-').map(Number);
-                  // Zaokrouhli na celou hodinu - je to jen návrh, čas od-do
-                  // se pak dopíše ve formuláři (zadání 14. 9. 2026).
-                  const od = Math.floor(minuty / 60) * 60;
-                  setNovaBlokace({
-                    studioId: selectedStudioIds[0],
-                    start: zonedToUtc(y, m, d, od, timezone).toISOString(),
-                    end: zonedToUtc(y, m, d, Math.min(24 * 60, od + 60), timezone).toISOString(),
-                  });
-                }
-              : undefined
-          }
+          onNovaNepritomnost={(den) => setOknoNepritomnosti({ upravovana: null, den, celyDen: true })}
+          onNovaBlokace={novaVMrizce}
         />
       )}
 
@@ -501,6 +573,16 @@ export function CalendarBrowser({
           projekty={projekty}
           herci={herci}
           zvukari={zvukari}
+          // Jen u NOVE udalosti - existujici natáčení se na Mimo studio
+          // neprevadi (je to jiny zaznam, ne jina barva).
+          onMimoStudio={
+            upravovana
+              ? undefined
+              : (den, casOd, casDo) => {
+                  setNovaBlokace(null);
+                  setOknoNepritomnosti({ upravovana: null, den, celyDen: false, casOd, casDo });
+                }
+          }
           onClose={() => {
             setNovaBlokace(null);
             setUpravovana(null);
@@ -530,6 +612,9 @@ export function CalendarBrowser({
               key={oknoNepritomnosti.upravovana?.id ?? `nova-${oknoNepritomnosti.den}`}
               upravovana={oknoNepritomnosti.upravovana}
               vychoziDen={oknoNepritomnosti.den}
+              vychoziCelyDen={oknoNepritomnosti.celyDen}
+              vychoziCasOd={oknoNepritomnosti.casOd}
+              vychoziCasDo={oknoNepritomnosti.casDo}
               ja={ja}
               lidiTymu={lidiTymu}
               onClose={() => setOknoNepritomnosti(null)}
@@ -785,6 +870,7 @@ function MesicniPohled({
   onUpravit,
   nepritomnostPodleDnu,
   onOtevriNepritomnost,
+  onNovaVeDni,
 }: {
   days: CalendarDay[];
   podleDnu: Map<string, CalendarEvent[]>;
@@ -794,6 +880,8 @@ function MesicniPohled({
   onUpravit?: (e: CalendarEvent) => void;
   nepritomnostPodleDnu: Map<string, NepritomnostVKalendari[]> | null;
   onOtevriNepritomnost: (n: NepritomnostVKalendari) => void;
+  /** Dvojklik do dne (19. 9. 2026) - přidává se i v měsíci. */
+  onNovaVeDni: (denKey: string) => void;
 }) {
   const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
   return (
@@ -807,13 +895,16 @@ function MesicniPohled({
       </div>
       <div className="grid grid-cols-7">
         {days.map((den) => {
-          const udalosti = podleDnu.get(den.key) ?? [];
+          // Mimo studio je v mesici celé ve štítcích nahoře (i to na čas),
+          // tak se tu nesmí ukázat podruhé.
+          const udalosti = (podleDnu.get(den.key) ?? []).filter((e) => e.kind !== 'MIMO');
           const cislo = new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, day: 'numeric' }).format(
             new Date(den.startIso),
           );
           return (
             <div
               key={den.key}
+              onDoubleClick={() => onNovaVeDni(den.key)}
               className={`min-h-[92px] border-t border-l border-line p-1.5 flex flex-col gap-1 ${
                 den.inMonth ? '' : 'bg-paper'
               } ${den.key === dnesKey ? 'bg-tint' : ''}`}
@@ -832,7 +923,11 @@ function MesicniPohled({
                     key={e.id}
                     type="button"
                     onClick={() => onDetail(e)}
-                    onDoubleClick={() => onUpravit?.(e)}
+                    onDoubleClick={(ev) => {
+                      // Do dne pod udalosti nesmi propadnout - zalozila by se nova.
+                      ev.stopPropagation();
+                      onUpravit?.(e);
+                    }}
                     style={{
                       backgroundColor: barvy.background,
                       borderColor: barvy.border,
@@ -880,11 +975,17 @@ function UdalostForm({
   projekty,
   herci,
   zvukari,
+  onMimoStudio,
   onClose,
   onHotovo,
 }: {
   studios: Studio[];
   vychozi: { studioId: string; start: string; end: string };
+  /**
+   * Vybrání kalendáře Mimo studio (19. 9. 2026) - okno se vymění za jeho
+   * vlastní, s datem a časem, které už byly vyplněné.
+   */
+  onMimoStudio?: (den: string, casOd: string, casDo: string) => void;
   /** Když je vyplněná, formulář existující událost UPRAVUJE (14. 9. 2026). */
   upravovana?: CalendarEvent | null;
   timezone: string;
@@ -1059,13 +1160,24 @@ function UdalostForm({
           </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Studio</span>
-          <VyberPole value={studioId} onChange={(e) => setStudioId(e.target.value)} className={inputClass}>
+          <span className="text-sm font-body text-ink">Kalendář</span>
+          <VyberPole
+            value={studioId}
+            onChange={(e) => {
+              if (e.target.value === '__mimo__') {
+                onMimoStudio?.(datum, od, doKdy);
+                return;
+              }
+              setStudioId(e.target.value);
+            }}
+            className={inputClass}
+          >
             {studios.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.shortName}
               </option>
             ))}
+            {onMimoStudio && <option value="__mimo__">{NAZEV_KALENDARE_MIMO}</option>}
           </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">

@@ -562,6 +562,11 @@ export function eventColors(studioColor: string, state: string): { background: s
   if (state === 'SELECTED' || state === 'STRIH') {
     return { background: `${studioColor}2E`, border: studioColor, text };
   }
+  // Kalendář Mimo studio (19. 9. 2026) - vlastní barva, žádná šedá: je to
+  // údaj o člověku, ne díra v kalendáři studia.
+  if (state === 'MIMO') {
+    return { background: `${studioColor}33`, border: studioColor, text };
+  }
   // Jen nabídnuto, zatím nic nedrží.
   if (state === 'OFFERED') {
     return { background: `${studioColor}1A`, border: studioColor, text };
