@@ -1,0 +1,179 @@
+<!-- Replika obrazovek pro návod „Natáčecí termíny" - snímky: node scripts/navody/snimky.mjs terminy -->
+<!doctype html>
+<html lang="cs"><head><meta charset="utf-8"><title>Natáčecí termíny</title>
+<style>
+:root{--p:#7b55ff;--pd:#6b2af0;--ink:#201a33;--paper:#fbfaff;--s:#fff;--field:#f6f6f6;--line:#e4dffb;--muted:#6e6580;--tint:#f1ecff;--green:#1fdf67;--ok:#e3f9ec;--warn:#fdf1de;--done:#149e4b;--prog:#e08a00;}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e7f2;font-family:'Poppins',sans-serif;color:var(--ink);font-size:14px}
+.snimek{width:900px;background:var(--paper);padding:28px;margin:0 0 40px;position:relative}
+.karta{background:var(--s);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(32,26,51,.05)}
+.h2{font-weight:600;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0}
+.muted{color:var(--muted)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pole{display:flex;flex-direction:column;gap:6px}
+.pole>span{font-size:14px}
+.vstup{border:1px solid var(--line);background:var(--field);border-radius:8px;padding:8px 12px;font-weight:500;font-size:14px}
+.hint{font-size:12px;color:var(--muted)}
+.btn{display:inline-block;background:var(--p);color:#fff;font-weight:600;border-radius:8px;padding:10px 20px;font-size:14px}
+.btn.zel{background:var(--done)}
+.btn.obrys{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.volba{display:inline-flex;align-items:center;gap:8px;border-radius:999px;border:1px solid var(--p);background:rgba(123,85,255,.1);color:var(--pd);padding:6px 14px 6px 8px;font-weight:600}
+.volba.ne{border:1px dashed var(--line);background:transparent;color:var(--muted);opacity:.75}
+.ok{width:16px;height:16px;border-radius:5px;background:var(--p);color:#fff;display:grid;place-items:center;font-size:10px}
+.volba.ne .ok{background:var(--field);border:1px solid var(--line);color:transparent}
+.tec{width:10px;height:10px;border-radius:50%}
+.chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:12px;background:var(--s)}
+.num{position:absolute;width:30px;height:30px;border-radius:50%;background:#ff3d7f;color:#fff;font-weight:700;display:grid;place-items:center;font-size:15px;box-shadow:0 0 0 4px rgba(255,61,127,.25);z-index:5}
+.lista{background:var(--p);color:#fff;border-radius:16px;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 20px rgba(107,42,240,.3)}
+.kolo{min-width:44px;height:44px;border-radius:999px;background:#fff;color:var(--pd);display:grid;place-items:center;font-size:24px;font-weight:600}
+.slot{background:var(--s);border:1px solid var(--line);border-radius:16px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.slot.vyb{background:var(--tint);border-color:var(--p)}
+.ctv{width:20px;height:20px;border-radius:5px;border:1px solid var(--line);display:grid;place-items:center;font-size:12px;color:transparent;font-weight:700}
+.vyb .ctv{background:var(--p);border-color:var(--p);color:#fff}
+.den{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:18px;font-weight:600}
+.link{color:var(--p);font-weight:600;font-size:12px}
+.pill{display:inline-block;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600}
+table{border-collapse:collapse;width:100%}
+.kal td,.kal th{border:1px solid var(--line);height:36px;vertical-align:top;font-size:11px}
+.kal th{background:var(--s);color:var(--muted);font-weight:600;padding:6px}
+.ev{border-left:3px solid var(--p);background:rgba(123,85,255,.12);border-radius:6px;padding:4px 6px;font-size:11px;line-height:1.3}
+.overlay{background:rgba(0,0,0,.45);padding:28px;border-radius:12px}
+</style></head><body>
+
+<!-- 1: okno vytvoreni nabidky -->
+<div class="snimek" id="s1">
+ <div class="karta" style="display:flex;flex-direction:column;gap:18px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+   <div><p class="h2">Natáčecí frekvence</p><p class="muted" style="margin:4px 0 0">240 normostran → 6 frekvencí</p></div>
+  </div>
+  <div style="border-top:1px solid var(--line);padding-top:18px;display:flex;flex-direction:column;gap:14px">
+   <div class="grid3">
+    <div class="pole"><span>Herec</span><div class="vstup">Jana Nováková</div></div>
+    <div class="pole" style="grid-column:span 2;position:relative"><span>Studia</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+       <span class="volba"><span class="ok">✓</span><span class="tec" style="background:#7b55ff"></span>MS Studio - Brno I</span>
+       <span class="volba"><span class="ok">✓</span><span class="tec" style="background:#1fdf67"></span>MS Studio - Brno II</span>
+       <span class="volba ne"><span class="ok">✓</span><span class="tec" style="background:#c9c3dc"></span>MS Studio - Praha</span>
+       <span class="volba ne"><span class="ok">✓</span><span class="tec" style="background:#c9c3dc"></span>MS Studio - London</span>
+      </div>
+      <span class="hint">Herci se nabídnou volná místa ve všech zaškrtnutých studiích.</span>
+    </div>
+   </div>
+   <div class="grid3">
+    <div class="pole"><span>Normostrany pro tohoto herce</span><div class="vstup">240</div></div>
+    <div class="pole"><span>Počet frekvencí</span><div class="vstup">6</div></div>
+    <div class="pole"><span>První frekvence nejdříve</span><div class="vstup">21.09.2026</div></div>
+   </div>
+   <div class="grid3">
+    <div class="pole"><span>Poslední frekvence nejpozději</span><div class="vstup">08.10.2026</div><span class="hint">Dva dny před datem dokončení - ať stihneme odevzdat.</span></div>
+    <div class="pole" style="grid-column:span 2"><span>Poznámka pro herce</span><div class="vstup muted">Text dorazí v pondělí, scénář pošlu e-mailem.</div></div>
+   </div>
+   <div style="border:1px solid var(--line);background:var(--field);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px">
+    <div style="font-weight:600">Volná místa k nabídnutí: <span style="color:var(--done)">31</span> <span class="muted" style="font-weight:400">· herec vybere 6</span></div>
+    <div style="display:flex;gap:12px;font-size:12px"><b style="width:90px">po 21. 9.</b><span class="chip">9:00–13:00 · Brno I</span><span class="chip">13:00–17:00 · Brno I</span></div>
+    <div style="display:flex;gap:12px;font-size:12px"><b style="width:90px">út 22. 9.</b><span class="chip">9:00–13:00 · Brno II</span><span class="chip">13:00–17:00 · Brno I</span></div>
+    <div style="display:flex;gap:12px;font-size:12px"><b style="width:90px">st 23. 9.</b><span class="chip">13:00–17:00 · Brno I</span></div>
+    <div class="muted" style="font-size:12px">…</div>
+   </div>
+   <div style="display:flex;gap:12px;align-items:center"><span class="btn">Odeslat herci</span><span class="muted">Zavřít</span></div>
+  </div>
+ </div>
+ <div class="num" style="left:330px;top:108px">1</div>
+ <div class="num" style="left:12px;top:292px">2</div>
+ <div class="num" style="left:12px;top:392px">3</div>
+ <div class="num" style="left:12px;top:520px">4</div>
+</div>
+
+<!-- 2: vyber hercem -->
+<div class="snimek" id="s2">
+ <p class="h2" style="font-weight:500">Natáčecí termíny</p>
+ <div style="font-size:34px;font-weight:500;margin-top:4px">Nová audiokniha</div>
+ <div class="muted">Brno</div>
+ <p style="margin:18px 0">Dobrý den, Jano. Vyberte si prosím <b>6 termínů</b> z nabídnutých. Když vám čas nesedí, u každého termínu si můžete zvolit vlastní.</p>
+ <div class="lista">
+  <div style="display:flex;align-items:center;gap:12px"><span class="kolo">4</span><span style="font-weight:600;line-height:1.2">ještě zbývá vybrat<br><span style="font-size:12px;font-weight:400;opacity:.8">Vybráno: 2 z 6</span></span></div>
+  <span style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-weight:600;border-radius:8px;padding:10px 18px">Odeslat ke schválení</span>
+ </div>
+ <div class="den">Pondělí 21. září</div>
+ <div class="slot vyb"><span style="display:flex;gap:12px;align-items:center"><span class="ctv">✓</span><b>9:00 – 13:00</b></span><span class="link">Vybrat vlastní čas</span></div>
+ <div class="slot"><span style="display:flex;gap:12px;align-items:center"><span class="ctv"></span><b>13:00 – 17:00</b></span><span class="link">Vybrat vlastní čas</span></div>
+ <div class="den">Úterý 22. září</div>
+ <div class="slot vyb"><span style="display:flex;gap:12px;align-items:center"><span class="ctv">✓</span><b>9:00 – 13:00</b></span><span class="link">Vybrat vlastní čas</span></div>
+ <div class="slot" style="flex-direction:column;align-items:stretch;padding:0">
+   <div style="display:flex;justify-content:space-between;padding:12px 16px"><span style="display:flex;gap:12px;align-items:center"><span class="ctv"></span><b>13:00 – 17:00</b></span></div>
+   <div style="border-top:1px solid var(--line);padding:12px 16px;display:flex;gap:12px;align-items:flex-end">
+     <div class="pole"><span class="hint">Od</span><div class="vstup" style="background:#fff">14:00</div></div>
+     <div class="pole"><span class="hint">Do</span><div class="vstup" style="background:#fff">18:00</div></div>
+     <span class="btn">Použít tento čas</span><span class="muted">Zrušit</span>
+   </div>
+ </div>
+ <div class="num" style="left:40px;top:250px">1</div>
+ <div class="num" style="left:835px;top:250px">2</div>
+ <div class="num" style="left:700px;top:322px">3</div>
+ <div class="num" style="left:835px;top:560px">4</div>
+</div>
+
+<!-- 3: potvrzeni produkci -->
+<div class="snimek" id="s3">
+ <div class="karta" style="display:flex;flex-direction:column;gap:14px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+   <div><p class="h2" style="font-weight:500">Nabídka termínů</p><div style="font-size:28px;font-weight:500">Nová audiokniha</div><div class="muted">Jana Nováková · MS Studio - Brno I · 240 NS</div></div>
+   <span class="pill" style="background:var(--warn);color:var(--prog)">Čeká na potvrzení</span>
+  </div>
+  <div style="display:flex;gap:28px;border-top:1px solid var(--line);padding-top:14px;align-items:baseline">
+   <span><span class="hint" style="text-transform:uppercase">Potřeba frekvencí</span> <b style="font-size:22px">6</b></span>
+   <span><span class="hint" style="text-transform:uppercase">Herec vybral</span> <b style="font-size:22px">6</b></span>
+   <span style="color:var(--prog);font-size:12px">Termíny drženy do 23. 9. 2026 18:00</span>
+  </div>
+ </div>
+ <div class="karta" style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
+  <p class="h2">Herec vybral termíny</p>
+  <div>pondělí 21. 9. · 9:00–13:00<br>úterý 22. 9. · 9:00–13:00<br>úterý 22. 9. · 14:00–18:00 <span class="chip">Návrh herce</span><br><span class="muted">…</span></div>
+  <div class="pole"><span>Vzkaz herci (u vrácení a zamítnutí se hodí důvod)</span><div class="vstup muted">Uvidíme se v Brně I.</div></div>
+  <div style="display:flex;gap:12px;align-items:center"><span class="btn zel">Potvrdit termíny</span><span class="btn obrys" style="color:var(--prog);border-color:var(--prog)">Vrátit k přepracování</span><span style="color:#dc2626;font-weight:600">Zamítnout</span></div>
+ </div>
+ <div class="num" style="left:12px;top:480px">1</div>
+</div>
+
+<!-- 4: kalendar + uprava -->
+<div class="snimek" id="s4">
+ <table class="kal" style="background:var(--s)">
+  <tr><th style="width:52px"></th><th>PO 21. 9.</th><th>ÚT 22. 9.</th><th>ST 23. 9.</th></tr>
+  <tr><td class="muted">9:00</td><td rowspan="4" style="padding:3px"><div class="ev" style="height:136px"><b>Nová audiokniha · Jana Nováková</b><br>ZVUKAŘ: Petr<br><span class="muted">9:00–13:00 · Brno I</span></div></td><td rowspan="4" style="padding:3px"><div class="ev" style="height:136px"><b>Nová audiokniha · Jana Nováková</b><br><span class="muted">9:00–13:00 · Brno I</span></div></td><td></td></tr>
+  <tr><td class="muted">10:00</td><td></td></tr><tr><td class="muted">11:00</td><td></td></tr><tr><td class="muted">12:00</td><td></td></tr>
+ </table>
+ <div class="overlay" style="margin-top:16px">
+  <div class="karta" style="border:2px solid var(--p);display:flex;flex-direction:column;gap:14px">
+   <div><p class="h2">Úprava frekvence</p><div class="muted">úterý 22. 9. 9:00–13:00</div></div>
+   <div class="grid3">
+    <div class="pole"><span>Druh</span><div class="vstup">Natáčení</div><span class="hint">Přepnutím na Střih se frekvence zruší a vznikne střih.</span></div>
+    <div class="pole"><span>Kalendář</span><div class="vstup">Brno II</div></div>
+    <div class="pole"><span>Datum</span><div class="vstup">22.09.2026</div></div>
+   </div>
+   <div class="grid3">
+    <div class="pole"><span>Od</span><div class="vstup">10:00</div></div>
+    <div class="pole"><span>Do</span><div class="vstup">14:00</div></div>
+    <div class="pole"><span>Zvukař</span><div class="vstup">Petr Dvořák</div></div>
+   </div>
+   <div class="pole"><span>Poznámka</span><div class="vstup muted">Připravit druhý mikrofon.</div></div>
+   <div style="display:flex;gap:14px;align-items:center"><span class="btn">Uložit změny</span><span class="muted">Zrušit</span><span style="color:#dc2626;font-weight:600">Zrušit frekvenci</span></div>
+  </div>
+ </div>
+ <div class="num" style="left:390px;top:100px">1</div>
+ <div class="num" style="left:40px;top:300px">2</div>
+ <div class="num" style="left:40px;top:560px">3</div>
+</div>
+
+<!-- 5: potvrzeno + pridat do kalendare -->
+<div class="snimek" id="s5">
+ <div style="background:var(--ok);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:12px">
+  <div style="font-size:24px;font-weight:500">Termíny jsou potvrzené</div>
+  <div>Pondělí 21. září <span class="muted">· 9:00 – 13:00</span><br>Úterý 22. září <span class="muted">· 9:00 – 13:00</span><br><span class="muted">…</span></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="btn">Přidat do kalendáře</span><span class="btn obrys" style="color:var(--p);border-color:var(--p)">Odebírat (aktualizuje se samo)</span><span class="btn obrys">Google Kalendář</span></div>
+  <span class="hint">Při odběru se v kalendáři objeví i pozdější změny - přesun nebo zrušení termínu.</span>
+  <span class="muted">Těšíme se na vás ve studiu.</span>
+ </div>
+ <div class="num" style="left:12px;top:190px">1</div>
+ <div class="num" style="left:495px;top:158px">2</div>
+</div>
+</body></html>

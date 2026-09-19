@@ -6,6 +6,14 @@
  * vlastního času), potvrzení produkcí, úpravy v kalendáři a přidání do
  * kalendáře herce. Text je jen začátek - jakmile ho někdo v portálu upraví,
  * seed už do něj nesahá.
+ *
+ * OBRÁZKY (zadání 19. 9. 2026: „chybí mi tam obrázky. Návody musí být hodně
+ * jasné… a hlavně je pak automaticky přepracuj, jakmile se něco změní")
+ * jsou v public/navody/terminy-1..5.png. Kreslí se z repliky obrazovek
+ * s očíslovanými místy; čísla v obrázku odpovídají číslovanému seznamu pod
+ * ním. PŘI KAŽDÉ ZMĚNĚ plánování termínů (okno nabídky, výběr hercem,
+ * potvrzení, úprava v kalendáři, přidání do kalendáře) se musí upravit text
+ * i obrázky tady.
  */
 export const NATACECI_TERMINY = {
   slug: 'nataceci-terminy',
@@ -20,14 +28,12 @@ export const NATACECI_TERMINY = {
 
 V detailu projektu v sekci **Natáčecí frekvence** klikněte na **Vytvořit nabídku termínů**. Všechno je v jednom okně:
 
-- **Herec** — předvyplní se herec projektu.
-- **Studia** — zaškrtnutá studia, ze kterých se nabízí. Předvybere se studio a všechna ve stejném městě (v Brně tedy Brno I i Brno II rovnou).
-- **Normostrany a Počet frekvencí** — počet se spočítá z normostran (40 NS na frekvenci), dá se přepsat.
-- **První frekvence nejdříve** — nejdřív zítra, dnešek se nenabízí.
-- **Poslední frekvence nejpozději** — sama se nastaví na **dva dny před datem dokončení projektu**, ať stihneme stříhat a odevzdat. Když projekt datum dokončení nemá, je tu měsíc dopředu a je potřeba ho upravit ručně.
-- **Poznámka pro herce** — přijde mu v e-mailu i na stránce s výběrem.
+![Okno Vytvořit nabídku termínů s očíslovanými částmi](/navody/terminy-1.png)
 
-Pod formulářem je **živý náhled**: kolik volných míst herec dostane a jejich přehled po dnech. Přepočítá se hned, jak změníte studia, období nebo herce.
+1. **Studia** — kliknutím zapnete nebo vypnete studio, ze kterého se nabízí. Zapnuté je fialové s fajfkou. Předvybere se studio a všechna ve stejném městě (v Brně tedy Brno I i Brno II rovnou). **Herec** nad tím je předvyplněný podle projektu.
+2. **Normostrany a Počet frekvencí** — počet se spočítá z normostran (40 NS na frekvenci), dá se přepsat. **První frekvence nejdříve** je zítřek — dnešek se nenabízí.
+3. **Poslední frekvence nejpozději** — sama se nastaví na **dva dny před datem dokončení projektu**, ať stihneme stříhat a odevzdat. Když projekt datum dokončení nemá, je tu měsíc dopředu a je potřeba ho upravit ručně. Vedle je **Poznámka pro herce** — přijde mu v e-mailu i na stránce s výběrem.
+4. **Živý náhled** — kolik volných míst herec dostane a jejich přehled po dnech. Přepočítá se hned, jak změníte studia, období nebo herce.
 
 Tlačítkem **Odeslat herci** se nabídka založí a rovnou odejde e-mailem. Když je volných míst méně, než herec potřebuje, tlačítko je zamčené a náhled poradí posunout období nebo přidat studio.
 
@@ -42,38 +48,50 @@ Tlačítkem **Odeslat herci** se nabídka založí a rovnou odejde e-mailem. Kdy
 
 Herec dostane e-mail s odkazem (přihlašovat se nemusí; kdo účet má, najde totéž v **Moje termíny**).
 
-- Vidí jen **dny a časy za město** — ne studio, ne víkendy zvlášť.
-- Zaškrtne přesně tolik termínů, kolik je frekvencí. Dva termíny ve stejný čas vybrat nejde.
-- U každého termínu má tlačítko **Vybrat vlastní čas** — posune nebo zkrátí ho (třeba 14–18, nebo jen tři hodiny). Portál ověří, že je v tu dobu ve studiu volno (v Brně zkusí obě studia), a vlastní čas nahradí původní termín. V nabídce je pak označený jako návrh herce.
-- Nahoře má přilepenou lištu s velkým číslem, **kolik ještě zbývá vybrat**, a tlačítko **Odeslat ke schválení**, které se rozsvítí, až je vybráno všechno.
+Vidí jen **dny a časy za město** — ne studio, ne víkendy zvlášť. Kliknutím na termín ho zaškrtne; dva termíny ve stejný čas vybrat nejde.
+
+![Stránka, kde si herec vybírá termíny](/navody/terminy-2.png)
+
+1. **Kolik ještě zbývá vybrat** — velké číslo v liště, která při rolování zůstává nahoře.
+2. **Odeslat ke schválení** — je šedé, dokud herec nevybere přesně tolik termínů, kolik je frekvencí. Pak se rozsvítí zeleně.
+3. **Vybrat vlastní čas** — u každého termínu. Když herci čas nesedí, posune nebo zkrátí ho (třeba 14–18, nebo jen tři hodiny).
+4. **Použít tento čas** — portál ověří, že je v tu dobu ve studiu volno (v Brně zkusí obě studia). Vlastní čas nahradí původní termín a rovnou se zaškrtne. Produkce ho pak vidí označený jako **Návrh herce**.
 
 Po odeslání se vybrané termíny **drží** (délka držení je v Cenících). Produkci přijde oznámení.
 
 # 4. Potvrzení (produkce)
 
-Oznámení vede na stránku nabídky. Tam výběr:
+Oznámení vede na stránku nabídky. Nahoře vidíte, kolik frekvencí je potřeba, kolik herec vybral a do kdy se termíny drží. Pod tím je jeho výběr.
 
-- **potvrdíte** — termíny se zapíšou do kalendáře a herci přijde e-mail,
-- **vrátíte** herci k novému výběru (se vzkazem proč),
-- nebo **zamítnete**.
+![Stránka nabídky s výběrem herce a tlačítky pro rozhodnutí](/navody/terminy-3.png)
+
+1. Napište případně **vzkaz herci** a rozhodněte:
+   - **Potvrdit termíny** — termíny se zapíšou do kalendáře a herci přijde e-mail,
+   - **Vrátit k přepracování** — herec vybírá znovu (do vzkazu napište proč),
+   - **Zamítnout** — termíny se uvolní.
 
 Když se držení nestihne potvrdit, termíny se samy vrátí do nabídky a herec může vybírat znovu.
 
 # 5. Kalendář
 
-- V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a potvrzené. Nabídnutá volná místa se tam neukazují, jinak by zaplnila celý týden.
-- **Dvojklikem** na drženou nebo potvrzenou frekvenci ji upravíte: studio, datum, čas, **zvukař** a **poznámka**. Herce změnit nejde — ten patří k nabídce.
-- Když frekvenci přepnete na **Střih**, frekvence se zruší a na jejím místě vznikne střih (vyberte zvukaře).
-- Tlačítkem **Zrušit frekvenci** ji zrušíte úplně.
-- Herec dostane v portálu **oznámení** o každém přesunu i zrušení.
+V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a potvrzené. Nabídnutá volná místa se tam neukazují, jinak by zaplnila celý týden.
+
+![Kalendář s frekvencí a otevřené okno Úprava frekvence](/navody/terminy-4.png)
+
+1. **Dvojklikem** na frekvenci otevřete její úpravu. Zvukař, jakmile ho doplníte, se ukazuje přímo v bloku.
+2. Změnit jde **studio (Kalendář), datum, čas i zvukaře**. Herce změnit nejde — ten patří k nabídce. Když **Druh** přepnete na **Střih**, frekvence se zruší a na jejím místě vznikne střih (vyberte zvukaře).
+3. **Poznámka** pro tým — ukáže se v detailu události. Dole je **Zrušit frekvenci**, když se nenatáčí vůbec.
+
+Herec dostane v portálu **oznámení** o každém přesunu i zrušení.
 
 # 6. Termíny v kalendáři herce
 
-V potvrzovacím e-mailu, na stránce s termíny i v **Moje termíny** má herec tlačítka:
+Na stránce s termíny i v **Moje termíny** má herec po potvrzení tři tlačítka (v potvrzovacím e-mailu je jen **Přidat do kalendáře**):
 
-- **Přidat do kalendáře** — telefon nebo počítač nabídne přidat všechny potvrzené termíny najednou.
-- **Odebírat (aktualizuje se samo)** — kalendář si termíny obnovuje sám, takže se v něm projeví i přesun nebo zrušení. Aktualizace může trvat i několik hodin — iPhone a Google si odebírané kalendáře stahují po svém.
-- **Google Kalendář** — pro ty, kdo používají Google.
+![Potvrzené termíny s tlačítky pro přidání do kalendáře](/navody/terminy-5.png)
+
+1. **Přidat do kalendáře** — telefon nebo počítač nabídne přidat všechny potvrzené termíny najednou.
+2. **Odebírat (aktualizuje se samo)** — kalendář si termíny obnovuje sám, takže se v něm projeví i přesun nebo zrušení. Aktualizace může trvat i několik hodin — iPhone a Google si odebírané kalendáře stahují po svém. Vedle je **Google Kalendář** pro ty, kdo používají Google.
 
 # Časté otázky
 
