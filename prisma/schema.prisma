@@ -2223,6 +2223,13 @@ model PreposlechStav {
   pocetStop       Int       @default(0)
   stopyZjistenyAt DateTime?
 
+  /// Pocet stran PDF s textem (zadani 19. 9. 2026: „Progres nataceni ma
+  /// pocitat strany v PDF versus zapis stranky, na ktere se skoncilo").
+  /// Drzi se k ID souboru na Disku - kdyz se text vymeni, pocita se znovu.
+  textSouborId    String?
+  textStran       Int?
+  textStranAt     DateTime?
+
   updatedAt       DateTime  @updatedAt
 }
 

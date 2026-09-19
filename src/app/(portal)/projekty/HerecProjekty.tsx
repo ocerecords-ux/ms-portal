@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { posledniStrany } from '@/lib/brunoServer';
+import { pocetStranTextu } from '@/lib/textProjektuServer';
 
 /**
  * PROJEKTY HERCE (zadání 19. 9. 2026: „v projektech by měl herec vidět
@@ -13,6 +14,7 @@ import { posledniStrany } from '@/lib/brunoServer';
  *
  * - NS: normostrany pro TOHOTO herce z nabídky termínů (kniha dělená mezi
  *   víc herců), jinak normostrany projektu.
+ * - Progres natáčení: strana z posledního zápisu / počet stran PDF.
  * - Strana: poslední zápis „kam jsme se dotočili" (Bruno z chatu) pro tohoto
  *   herce; u projektu s jediným hercem zápis bez herce.
  * - Text: PDF ze složky projektu přes /api/projekty/[id]/text - herec do
@@ -29,7 +31,7 @@ export async function HerecProjekty({ userId }: { userId: string }) {
   });
   const ids = projekty.map((p) => p.caflouProjectId);
 
-  const [strany, nabidky, frekvence, dotoceno] = await Promise.all([
+  const [strany, nabidky, dotoceno, stranTextu] = await Promise.all([
     posledniStrany(ids),
     ids.length
       ? prisma.recordingRequest.findMany({
@@ -38,44 +40,23 @@ export async function HerecProjekty({ userId }: { userId: string }) {
           select: { caflouProjectId: true, pageCount: true },
         })
       : Promise.resolve([]),
-    // Frekvence herce na projektech (Progres natáčení, zadání 19. 9. 2026).
-    ids.length
-      ? prisma.recordingRequest.findMany({
-          where: {
-            caflouProjectId: { in: ids },
-            actorUserId: userId,
-            status: { notIn: ['DRAFT', 'PREPARING', 'CANCELLED', 'REJECTED'] },
-          },
-          select: {
-            caflouProjectId: true,
-            requiredSessions: true,
-            slots: { where: { state: 'CONFIRMED' }, select: { end: true } },
-          },
-        })
-      : Promise.resolve([]),
     ids.length
       ? prisma.herecDotocen.findMany({
           where: { caflouProjectId: { in: ids }, userId },
           select: { caflouProjectId: true },
         })
       : Promise.resolve([]),
+    // Pocet stran PDF s textem - jen u rozpracovanych (dokoncene maji 100 %
+    // tlacitkem Dotoceno, nebo je progres uz nezajima).
+    pocetStranTextu(projekty.filter((p) => !p.finished).map((p) => p.caflouProjectId)),
   ]);
 
   /**
-   * PROGRES NATÁČENÍ (zadání 19. 9. 2026: „progres projektu nějakým
-   * horizontálním válcem"). Počítá se z FREKVENCÍ, ne ze stran: strana
-   * ve scénáři a normostrany jsou jiné jednotky a počet stran PDF portál
-   * nezná. Odtočená frekvence = potvrzený termín, který už skončil.
-   * Tlačítko Dotočeno u herce znamená 100 % bez ohledu na počty.
+   * PROGRES NATÁČENÍ (zadání 19. 9. 2026: „má počítat strany v PDF versus
+   * zápis stránka, na které se skončilo"). Strana je poslední zápis „kam
+   * jsme se dotočili", celek je počet stran PDF s textem (lib/pdfStrany.ts).
+   * Tlačítko Dotočeno u herce znamená 100 % bez ohledu na čísla.
    */
-  const ted = Date.now();
-  const progres = new Map<string, { hotovo: number; celkem: number }>();
-  for (const f of frekvence) {
-    const p = progres.get(f.caflouProjectId) ?? { hotovo: 0, celkem: 0 };
-    p.celkem += Math.max(f.requiredSessions, f.slots.length);
-    p.hotovo += f.slots.filter((sl) => sl.end.getTime() <= ted).length;
-    progres.set(f.caflouProjectId, p);
-  }
   const dotocenoIds = new Set(dotoceno.map((d) => d.caflouProjectId));
   const nsHerce = new Map<string, number>();
   for (const n of nabidky) {
@@ -89,8 +70,12 @@ export async function HerecProjekty({ userId }: { userId: string }) {
     strana: strany.get(`${p.caflouProjectId}:${userId}`) ?? strany.get(`${p.caflouProjectId}:`) ?? null,
     progres: dotocenoIds.has(p.caflouProjectId)
       ? { hotovo: 1, celkem: 1, dotoceno: true }
-      : progres.has(p.caflouProjectId)
-        ? { ...progres.get(p.caflouProjectId)!, dotoceno: false }
+      : stranTextu.has(p.caflouProjectId)
+        ? {
+            hotovo: strany.get(`${p.caflouProjectId}:${userId}`) ?? strany.get(`${p.caflouProjectId}:`) ?? 0,
+            celkem: stranTextu.get(p.caflouProjectId)!,
+            dotoceno: false,
+          }
         : null,
     hotovo: p.finished,
     konec: p.endDate?.getTime() ?? Infinity,
@@ -130,12 +115,12 @@ type Radek = { id: string; nazev: string; ns: number | null; strana: number | nu
 /** Vodorovný válec s procenty - Progres natáčení (19. 9. 2026). */
 function ValecProgresu({ progres }: { progres: Progres }) {
   if (!progres || progres.celkem === 0) {
-    return <span className="text-sm font-body text-muted">termíny se plánují</span>;
+    return <span className="text-sm font-body text-muted">text zatím nemáme</span>;
   }
   const procenta = Math.min(100, Math.round((progres.hotovo / progres.celkem) * 100));
   const popis = progres.dotoceno
     ? 'Dotočeno'
-    : `${progres.hotovo} z ${progres.celkem} ${progres.celkem === 1 ? 'frekvence' : 'frekvencí'}`;
+    : `str. ${Math.min(progres.hotovo, progres.celkem)} z ${progres.celkem}`;
   return (
     <div className="flex flex-col gap-1 min-w-[140px]">
       <div
