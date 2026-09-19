@@ -78,6 +78,10 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
           state: s.state,
           studioName: s.studio.name,
           note: s.note,
+          zadost:
+            s.prebookStart && s.prebookEnd
+              ? { start: s.prebookStart.toISOString(), end: s.prebookEnd.toISOString() }
+              : null,
         }))}
         studiaNabidky={obnova?.studia.map((s) => s.name) ?? [request.studio.name]}
         studios={studios.map((s) => ({ id: s.id, name: s.name, color: s.color }))}

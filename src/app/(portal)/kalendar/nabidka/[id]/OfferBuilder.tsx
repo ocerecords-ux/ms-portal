@@ -40,7 +40,16 @@ type Request = {
   offerUrl: string;
 };
 
-type Slot = { id: string; start: string; end: string; state: string; studioName: string; note: string | null };
+type Slot = {
+  id: string;
+  start: string;
+  end: string;
+  state: string;
+  studioName: string;
+  note: string | null;
+  /** Žádost herce o přesun za termín odevzdání (19. 9. 2026). */
+  zadost?: { start: string; end: string } | null;
+};
 
 /**
  * Nabídka termínů. Termíny se NEPŘIDÁVAJÍ RUČNĚ (zadání 19. 9. 2026: „Nechci
@@ -184,6 +193,38 @@ export function OfferBuilder({
       setBusy(false);
     }
   }
+
+  /** Rozhodnutí o žádosti herce o přesun za termín odevzdání. */
+  async function rozhodniPresun(slotId: string, action: 'approve' | 'reject') {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/kalendar/terminy/prebook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slotId, action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Rozhodnutí se nepodařilo uložit.');
+        return;
+      }
+      setInfo(action === 'approve' ? 'Přesun potvrzen, herci přišlo oznámení.' : 'Přesun zamítnut, termín zůstává.');
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+  const zadostiOPresun = slots.filter((s) => s.zadost);
+  const kdy = (iso: string) =>
+    new Intl.DateTimeFormat('cs-CZ', {
+      timeZone: request.timezone,
+      weekday: 'short',
+      day: 'numeric',
+      month: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(iso));
 
   async function zrus() {
     if (!window.confirm('Opravdu zrušit celou nabídku? Termíny se uvolní.')) return;
@@ -451,6 +492,43 @@ export function OfferBuilder({
           >
             Označit jako dokončené
           </button>
+        </div>
+      )}
+
+      {/* ŽÁDOSTI HERCE O PŘESUN ZA TERMÍN ODEVZDÁNÍ (19. 9. 2026) */}
+      {zadostiOPresun.length > 0 && (
+        <div className="bg-warnTint rounded-card border border-status-progress p-5 flex flex-col gap-3">
+          <h2 className="font-heading font-semibold text-sm text-status-progress uppercase tracking-wide m-0">
+            Herec žádá přesun za termín odevzdání
+          </h2>
+          <p className="text-sm font-body text-ink m-0">
+            Potvrzením se termín přesune - a tím i odevzdání. Datum dokončení projektu případně upravte v jeho detailu.
+          </p>
+          {zadostiOPresun.map((s) => (
+            <div key={s.id} className="flex items-center justify-between gap-3 flex-wrap bg-surface rounded-lg border border-line px-4 py-3">
+              <span className="text-sm font-heading text-ink tabular-nums">
+                {kdy(s.start)} <span className="text-muted">→</span> <strong>{kdy(s.zadost!.start)}</strong>
+              </span>
+              <span className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => rozhodniPresun(s.id, 'approve')}
+                  className="bg-solidDone text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 disabled:opacity-60"
+                >
+                  Potvrdit přesun
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => rozhodniPresun(s.id, 'reject')}
+                  className="text-danger text-sm font-heading font-semibold disabled:opacity-60"
+                >
+                  Zamítnout
+                </button>
+              </span>
+            </div>
+          ))}
         </div>
       )}
 

@@ -1965,6 +1965,15 @@ model RecordingSlot {
   zvukarUserId String?
   zvukarName   String?
 
+  /// PŘEBOOKOVÁNÍ HERCEM ZA TERMÍN ODEVZDÁNÍ (zadání 19. 9. 2026: „jakmile to
+  /// bude mimo datum, tak to půjde, ale musí mu tam vyskočit hláška, že to
+  /// musíme potvrdit"). Termín zůstává, kde byl, dokud produkce žádost
+  /// nepotvrdí - tady je jen to, kam se chce herec přesunout.
+  prebookStart    DateTime?
+  prebookEnd      DateTime?
+  prebookStudioId String?
+  prebookAt       DateTime?
+
   events RecordingEvent[]
 
   createdAt DateTime @default(now())

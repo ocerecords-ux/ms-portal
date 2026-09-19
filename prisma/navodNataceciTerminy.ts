@@ -9,7 +9,7 @@
  *
  * OBRÁZKY (zadání 19. 9. 2026: „chybí mi tam obrázky. Návody musí být hodně
  * jasné… a hlavně je pak automaticky přepracuj, jakmile se něco změní")
- * jsou v public/navody/terminy-1..5.png. Kreslí se z repliky obrazovek
+ * jsou v public/navody/terminy-1..6.png. Kreslí se z repliky obrazovek
  * s očíslovanými místy; čísla v obrázku odpovídají číslovanému seznamu pod
  * ním. PŘI KAŽDÉ ZMĚNĚ plánování termínů (okno nabídky, výběr hercem,
  * potvrzení, úprava v kalendáři, přidání do kalendáře) se musí upravit text
@@ -19,7 +19,7 @@ export const NATACECI_TERMINY = {
   slug: 'nataceci-terminy',
   nazev: 'Natáčecí termíny - od nabídky po kalendář',
   perex:
-    'Jak herci poslat nabídku termínů jedním oknem, jak si herec vybírá a jak se potvrzené frekvence upravují v kalendáři.',
+    'Jak herci poslat nabídku termínů jedním oknem, jak si herec vybírá, přebookovává a jak se potvrzené frekvence upravují v kalendáři.',
   kategorie: 'Kalendář',
   poradi: 40,
   obsah: `Termíny se herci nenabízejí ručně. Portál spočítá, kolik frekvencí je potřeba, a nabídne mu **všechna volná místa** ve zvolených studiích až do poslední možné frekvence. Herec si z nich vybere přesně tolik, kolik je potřeba, a produkce výběr potvrdí.
@@ -92,6 +92,19 @@ Na stránce s termíny i v **Moje termíny** má herec po potvrzení tři tlač�
 
 1. **Přidat do kalendáře** — telefon nebo počítač nabídne přidat všechny potvrzené termíny najednou.
 2. **Odebírat (aktualizuje se samo)** — kalendář si termíny obnovuje sám, takže se v něm projeví i přesun nebo zrušení. Aktualizace může trvat i několik hodin — iPhone a Google si odebírané kalendáře stahují po svém. Vedle je **Google Kalendář** pro ty, kdo používají Google.
+
+# 7. Moje natáčení a přebookování (herec)
+
+Když má herec účet, najde po přihlášení v **Moje termíny** nahoře seznam **Moje natáčení** — všechny svoje potvrzené frekvence napříč projekty, s datem, časem a městem. A může si termín sám přebookovat.
+
+![Moje termíny s rozbaleným přebookováním a hláškou o posunu odevzdání](/navody/terminy-6.png)
+
+1. **Přebookovat** — u každého termínu. Rozbalí volné termíny ve stejném městě na měsíc dopředu.
+2. **Termín do poslední možné frekvence** (dva dny před datem dokončení projektu) — kliknutím se termín **přesune hned**. Produkce dostane oznámení.
+3. **Termín s ⚠** je až **po** poslední možné frekvenci — posunul by odevzdání.
+4. Po kliknutí na něj vyskočí hláška **„Tenhle termín musíme potvrdit"**. Herec může **Požádat o přesun** — původní termín platí dál a u něj se ukáže „Čeká na potvrzení přesunu". Žádost může sám zrušit.
+
+**Produkce** dostane oznámení a na stránce nabídky se objeví žlutý rámeček **Herec žádá přesun za termín odevzdání** s tlačítky **Potvrdit přesun** a **Zamítnout**. Po potvrzení se termín přesune a herci přijde oznámení. **Datum dokončení projektu se samo neposune** — upravte ho v detailu projektu.
 
 # Časté otázky
 

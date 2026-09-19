@@ -12,6 +12,7 @@ import {
   minutesToTime,
 } from '@/lib/calendar';
 import { PridatDoKalendare } from '@/components/PridatDoKalendare';
+import { MojeNataceni, type Nataceni } from './MojeNataceni';
 
 /**
  * Moje termíny — pohled herce uvnitř portálu (zadani 8. 9. 2026). Přes
@@ -36,9 +37,34 @@ export default async function MojeTerminyPage() {
     orderBy: { createdAt: 'desc' },
     include: {
       studio: { select: { name: true, location: true, timezone: true } },
-      slots: { orderBy: { start: 'asc' } },
+      slots: { orderBy: { start: 'asc' }, include: { studio: { select: { name: true, location: true } } } },
     },
   });
+
+  /**
+   * NADCHÁZEJÍCÍ POTVRZENÁ NATÁČENÍ napříč projekty (zadání 19. 9. 2026: „aby
+   * viděl své termíny v portálu, když se přihlásí") - s možností přebookovat.
+   */
+  const mesto = (s: { name: string; location: string | null }) =>
+    s.location || (s.name.split(' - ').pop() ?? s.name).replace(/\s+[IVX]+$/, '').trim();
+  const nadchazejici: Nataceni[] = requests
+    .flatMap((r) =>
+      r.slots
+        .filter((s) => s.state === 'CONFIRMED' && s.end.getTime() > Date.now())
+        .map((s) => ({
+          id: s.id,
+          projekt: r.projectName,
+          start: s.start.toISOString(),
+          end: s.end.toISOString(),
+          mesto: mesto(s.studio),
+          timezone: r.studio.timezone,
+          zadost:
+            s.prebookStart && s.prebookEnd
+              ? { start: s.prebookStart.toISOString(), end: s.prebookEnd.toISOString() }
+              : null,
+        })),
+    )
+    .sort((a, b) => a.start.localeCompare(b.start));
 
   const kVyberu = requests.filter((r) => ACTOR_OPEN_STATUSES.includes(r.status));
   // Odkaz do kalendare (19. 9. 2026) - pres libovolnou nabidku s potvrzenym
@@ -62,6 +88,9 @@ export default async function MojeTerminyPage() {
       <div>
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Moje termíny</h1>
       </div>
+
+      {/* Nahore to, co herce zajima nejvic - kdy a kam jde tocit. */}
+      <MojeNataceni terminy={nadchazejici} />
 
       {sPotvrzenym && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
