@@ -9,6 +9,7 @@ import {
 } from '@/lib/calendar';
 import { PridatDoKalendare } from '@/components/PridatDoKalendare';
 import { MojeNataceni, type Nataceni } from './MojeNataceni';
+import { ProbehlaNataceni, type ProbehleNataceni } from './ProbehlaNataceni';
 
 /**
  * Moje termíny — pohled herce uvnitř portálu (zadani 8. 9. 2026). Přes
@@ -66,6 +67,27 @@ export default async function MojeTerminyPage() {
     )
     .sort((a, b) => a.start.localeCompare(b.start));
 
+  /**
+   * PROBĚHLÁ NATÁČENÍ (zadání 19. 9. 2026: „když ty termíny proběhnou, tak
+   * se přiřadí do proběhlá natáčení") - potvrzené a už skončené, nejnovější
+   * první. Termín, který herec jen vybral a nikdo ho nepotvrdil, sem nepatří.
+   */
+  const ted = Date.now();
+  const probehle: ProbehleNataceni[] = requests
+    .flatMap((r) =>
+      r.slots
+        .filter((s) => s.state === 'CONFIRMED' && s.end.getTime() <= ted)
+        .map((s) => ({
+          id: s.id,
+          projekt: r.projectName,
+          start: s.start.toISOString(),
+          end: s.end.toISOString(),
+          studio: (s.studio.name.split(' - ').pop() ?? s.studio.name).trim(),
+          timezone: r.studio.timezone,
+        })),
+    )
+    .sort((a, b) => b.start.localeCompare(a.start));
+
   const kVyberu = requests.filter((r) => ACTOR_OPEN_STATUSES.includes(r.status));
   // Odkaz do kalendare (19. 9. 2026) - pres libovolnou nabidku s potvrzenym
   // terminem; herec s uctem v nem dostane vsechny sve potvrzene frekvence.
@@ -116,6 +138,8 @@ export default async function MojeTerminyPage() {
           ))}
         </div>
       )}
+
+      <ProbehlaNataceni terminy={probehle} />
 
       {/* Sekce Ostatní zrušena (19. 9. 2026: „tu tabulku dole ostatní bych dal
           pryč") - termíny jsou nahoře v Moje natáčení. */}

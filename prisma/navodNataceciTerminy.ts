@@ -105,6 +105,8 @@ Když má herec účet, najde po přihlášení v **Moje termíny** blok **Moje 
 4. **Termín s ⚠** je až **po** poslední možné frekvenci — posunul by odevzdání.
 5. Po kliknutí na něj vyskočí hláška **„Tenhle termín musíme potvrdit"**. Herec může **Požádat o přesun** — původní termín platí dál a pod ním se ukáže „Čeká na potvrzení přesunu". Žádost může sám zrušit.
 
+**Proběhlá natáčení** — jakmile potvrzený termín skončí, sám se přesune z Moje natáčení do bloku **Proběhlá natáčení** pod ním (šedě, se štítkem *Proběhlo*, po měsících; aktuální měsíc je rozbalený). Nic se u toho neklikne a v kalendáři se nic nemění. Termín, který herec jen vybral a my ho nepotvrdili, tam nepatří.
+
 **Produkce** dostane oznámení a na stránce nabídky se objeví žlutý rámeček **Herec žádá přesun za termín odevzdání** s tlačítky **Potvrdit přesun** a **Zamítnout**. Po potvrzení se termín přesune a herci přijde oznámení. **Datum dokončení projektu se samo neposune** — upravte ho v detailu projektu.
 
 # Časté otázky
