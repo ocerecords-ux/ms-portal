@@ -1951,7 +1951,15 @@ model RecordingSlot {
 
   state      SlotState @default(OFFERED)
   selectedAt DateTime?
+  /// Poznamka / vzkaz k frekvenci. V nabidce taky znacka mista
+  /// ("Víkend – po domluvě", "Návrh herce").
   note       String?
+
+  /// Zvukar potvrzene frekvence - doplnuje se v kalendari dvojklikem
+  /// (zadani 19. 9. 2026: „aby pak šly dvojklikem editovat a šlo by přidat
+  /// zvukaře a změnit studio i čas").
+  zvukarUserId String?
+  zvukarName   String?
 
   events RecordingEvent[]
 

@@ -231,8 +231,18 @@ export default async function KalendarPage({
       start: s.start.toISOString(),
       end: s.end.toISOString(),
       state: s.state,
-      title: s.label,
+      // Zvukar primo v nadpisu, stejne jako u rucne zapsane udalosti.
+      title: s.zvukarName ? `${s.label}\nZVUKAŘ: ${s.zvukarName}` : s.label,
       href: `/kalendar/nabidka/${s.requestId}`,
+      poznamka: s.note,
+      udalost: {
+        caflouProjectId: s.caflouProjectId,
+        projectName: s.projectName,
+        actorUserId: s.actorUserId,
+        actorName: s.actorName,
+        zvukarUserId: s.zvukarUserId,
+        zvukarName: s.zvukarName,
+      },
     })),
     ...occupancy.blocks.map((b) => ({
       id: b.id,
@@ -245,6 +255,7 @@ export default async function KalendarPage({
       state: b.kind,
       title: b.title,
       subtitle: BLOCK_KIND_LABELS[b.kind] ?? 'Blokace',
+      poznamka: b.note,
       // Rozepsané údaje pro úpravu události (zadání 14. 9. 2026).
       udalost: {
         caflouProjectId: b.caflouProjectId,

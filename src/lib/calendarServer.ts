@@ -126,6 +126,14 @@ export type Occupancy = {
     state: string;
     label: string;
     requestId: string;
+    /** Rozepsané údaje - kalendář z nich plní formulář úpravy (19. 9. 2026). */
+    caflouProjectId: string;
+    projectName: string;
+    actorUserId: string | null;
+    actorName: string;
+    zvukarUserId: string | null;
+    zvukarName: string | null;
+    note: string | null;
   }[];
   blocks: {
     id: string;
@@ -144,6 +152,7 @@ export type Occupancy = {
     actorName: string | null;
     zvukarUserId: string | null;
     zvukarName: string | null;
+    note: string | null;
   }[];
 };
 
@@ -168,7 +177,11 @@ export async function loadOccupancy(
         start: { lt: to },
         end: { gt: from },
       },
-      include: { request: { select: { id: true, projectName: true, actorName: true } } },
+      include: {
+        request: {
+          select: { id: true, projectName: true, actorName: true, caflouProjectId: true, actorUserId: true },
+        },
+      },
       orderBy: { start: 'asc' },
     }),
     prisma.studioBlock.findMany({
@@ -186,6 +199,13 @@ export async function loadOccupancy(
       state: s.state,
       requestId: s.requestId,
       label: `${s.request.projectName} · ${s.request.actorName}`,
+      caflouProjectId: s.request.caflouProjectId,
+      projectName: s.request.projectName,
+      actorUserId: s.request.actorUserId,
+      actorName: s.request.actorName,
+      zvukarUserId: s.zvukarUserId,
+      zvukarName: s.zvukarName,
+      note: s.note,
     })),
     blocks: blocks.map((b) => ({
       id: b.id,
@@ -200,6 +220,7 @@ export async function loadOccupancy(
       actorName: b.actorName,
       zvukarUserId: b.zvukarUserId,
       zvukarName: b.zvukarName,
+      note: b.note,
     })),
   };
 }

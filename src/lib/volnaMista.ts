@@ -22,8 +22,9 @@ import {
  * - den od zítřka do posledního dne období (poslední možná frekvence),
  * - okno podle zkratek studia (9–13, 13–17); studio bez zkratek se rozdělí
  *   na bloky o délce frekvence od začátku pracovní doby,
- * - jen v běžné pracovní době: víkendy „po domluvě" se samy nenabízí,
- *   domlouvají se se zvukařem,
+ * - v pracovní době studia, VČETNĚ víkendů „po domluvě" (upřesnění
+ *   19. 9. 2026: „pak bych takto nabídnul i víkendy") - víkendové místo nese
+ *   příznak `poDomluve` a herec u něj vidí, že se potvrzuje se zvukařem,
  * - nic, co je v kalendáři obsazené: vybraný nebo potvrzený termín jiné
  *   nabídky, jakákoli událost ve studiu (natáčení, střih, svátek, údržba)
  *   a jiné natáčení téhož herce.
@@ -39,7 +40,16 @@ export type StudioProNabidku = {
   presets: { startMinutes: number; endMinutes: number }[];
 };
 
-export type VolneMisto = { studioId: string; start: Date; end: Date };
+export type VolneMisto = { studioId: string; start: Date; end: Date; poDomluve: boolean };
+
+/**
+ * Poznámka u místa v nabídce. Víkendové místo se tím označí pro herce;
+ * NAVRH_HERCE je čas, který si herec navrhl sám (zadání 19. 9. 2026: „herec
+ * měl možnost navrhnout, že může třeba 14-18, nebo chce natáčet jen tři
+ * hodiny"). Takové místo obnova nabídky nemaže - není ze zkratek studia.
+ */
+export const POZNAMKA_VIKEND = 'Víkend – po domluvě';
+export const POZNAMKA_NAVRH_HERCE = 'Návrh herce';
 
 /** Dny „YYYY-MM-DD" od `od` do `doo` včetně. Pojistka proti nekonečnu: rok. */
 export function dnyObdobi(od: string, doo: string): string[] {
@@ -94,8 +104,8 @@ export function spocitejVolnaMista(vstup: {
       const [y, m, d] = den.split('-').map(Number);
       const poledne = zonedToUtc(y, m, d, 12 * 60, studio.timezone);
       const pravidlo = studio.hours.find((h) => h.weekday === weekdayInZone(poledne, studio.timezone));
-      // Zavreno, nebo vikend "po domluve" - automaticky se nenabizi.
-      if (!pravidlo || pravidlo.byArrangement) continue;
+      // Zavreno - nic. Vikend "po domluve" se nabizi taky, jen s priznakem.
+      if (!pravidlo) continue;
 
       for (const okno of oknaDne(studio, pravidlo, vstup.delkaMinut)) {
         const start = zonedToUtc(y, m, d, okno.od, studio.timezone);
@@ -103,7 +113,7 @@ export function spocitejVolnaMista(vstup: {
         if (start < vstup.nejdrive || end <= start) continue;
 
         const doba = checkOpeningHours({ start, end }, studio.timezone, studio.hours);
-        if (!doba.ok || doba.byArrangement) continue;
+        if (!doba.ok) continue;
 
         const kolize = findCollisions(
           { start, end },
@@ -111,7 +121,7 @@ export function spocitejVolnaMista(vstup: {
         );
         if (kolize.length > 0) continue;
 
-        vysledek.push({ studioId: studio.id, start, end });
+        vysledek.push({ studioId: studio.id, start, end, poDomluve: pravidlo.byArrangement });
       }
     }
   }

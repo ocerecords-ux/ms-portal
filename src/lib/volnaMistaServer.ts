@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db';
 import { BLOCKING_SLOT_STATES } from '@/lib/calendar';
-import { klicMista, spocitejVolnaMista } from '@/lib/volnaMista';
+import { POZNAMKA_NAVRH_HERCE, POZNAMKA_VIKEND, klicMista, spocitejVolnaMista } from '@/lib/volnaMista';
 
 /**
  * Nabídka termínů se skládá SAMA (zadání 19. 9. 2026: „nechci termíny
@@ -19,7 +19,7 @@ import { klicMista, spocitejVolnaMista } from '@/lib/volnaMista';
 export const STAVY_S_NABIDKOU = ['DRAFT', 'PREPARING', 'SENT', 'PICKING', 'RETURNED'];
 
 /** Studia, ve kterých herec umí natáčet, plus studio nabídky. */
-async function studiaNabidky(studioId: string, actorUserId: string | null) {
+export async function studiaNabidky(studioId: string, actorUserId: string | null) {
   const herec = actorUserId
     ? await prisma.user.findUnique({ where: { id: actorUserId }, select: { studioLocations: true } })
     : null;
@@ -44,8 +44,8 @@ function zitra(): Date {
 export type VysledekObnovy = {
   /** Kolik míst je teď v nabídce. */
   nabidnuto: number;
-  /** Názvy studií, ze kterých se nabízí. */
-  studia: string[];
+  /** Studia, ze kterých se nabízí. */
+  studia: { id: string; name: string }[];
 };
 
 export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy | null> {
@@ -59,7 +59,7 @@ export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy
       periodFrom: true,
       periodTo: true,
       sessionMinutes: true,
-      slots: { select: { id: true, studioId: true, start: true, end: true, state: true } },
+      slots: { select: { id: true, studioId: true, start: true, end: true, state: true, note: true } },
     },
   });
   if (!request || !STAVY_S_NABIDKOU.includes(request.status)) return null;
@@ -116,7 +116,10 @@ export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy
   });
 
   const chtene = new Map(volna.map((m) => [klicMista(m), m]));
-  const nabidnute = request.slots.filter((s) => s.state === 'OFFERED');
+  // Vlastni navrhy herce se neprepocitavaji - nejsou ze zkratek studia a
+  // obnova by je jinak smazala hned po zapsani.
+  const nabidnute = request.slots.filter((s) => s.state === 'OFFERED' && s.note !== POZNAMKA_NAVRH_HERCE);
+  const navrhu = request.slots.filter((s) => s.state === 'OFFERED' && s.note === POZNAMKA_NAVRH_HERCE).length;
   const uzJsou = new Set(nabidnute.map(klicMista));
 
   const odebrat = nabidnute.filter((s) => !chtene.has(klicMista(s))).map((s) => s.id);
@@ -132,10 +135,11 @@ export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy
           start: m.start,
           end: m.end,
           state: 'OFFERED' as const,
+          note: m.poDomluve ? POZNAMKA_VIKEND : null,
         })),
       }),
     ]);
   }
 
-  return { nabidnuto: chtene.size, studia: studia.map((s) => s.name) };
+  return { nabidnuto: chtene.size + navrhu, studia: studia.map((s) => ({ id: s.id, name: s.name })) };
 }

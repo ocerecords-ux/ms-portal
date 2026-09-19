@@ -35,12 +35,13 @@ const zaklad = {
 };
 
 describe('spocitejVolnaMista', () => {
-  it('nabídne obě okna v každém pracovním dni, víkend ne', () => {
+  it('nabídne obě okna v každém dni, víkend s příznakem po domluvě', () => {
     const mista = spocitejVolnaMista(zaklad);
-    expect(mista).toHaveLength(10);
+    expect(mista).toHaveLength(14);
+    expect(mista.filter((m) => m.poDomluve)).toHaveLength(4);
     // 9:00 v Brne v zari = 7:00 UTC
     expect(mista[0].start.toISOString()).toBe('2026-09-21T07:00:00.000Z');
-    expect(mista[9].end.toISOString()).toBe('2026-09-25T15:00:00.000Z');
+    expect(mista[13].end.toISOString()).toBe('2026-09-27T15:00:00.000Z');
   });
 
   it('vynechá obsazené studio a jiné natáčení herce', () => {
@@ -53,14 +54,14 @@ describe('spocitejVolnaMista', () => {
       ],
       hercovy: [{ id: 'z', start: new Date('2026-09-23T12:00:00Z'), end: new Date('2026-09-23T13:00:00Z') }],
     });
-    expect(mista).toHaveLength(8);
+    expect(mista).toHaveLength(12);
     expect(mista.some((m) => m.start.toISOString() === '2026-09-21T07:00:00.000Z')).toBe(false);
     expect(mista.some((m) => m.start.toISOString() === '2026-09-23T11:00:00.000Z')).toBe(false);
   });
 
   it('nenabídne nic před nejdřívějším okamžikem', () => {
     const mista = spocitejVolnaMista({ ...zaklad, nejdrive: new Date('2026-09-23T00:00:00Z') });
-    expect(mista).toHaveLength(6);
+    expect(mista).toHaveLength(10);
   });
 
   it('studio bez zkratek rozdělí pracovní dobu na frekvence', () => {

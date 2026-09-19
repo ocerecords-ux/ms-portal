@@ -37,7 +37,7 @@ type Request = {
   offerUrl: string;
 };
 
-type Slot = { id: string; start: string; end: string; state: string; studioName: string };
+type Slot = { id: string; start: string; end: string; state: string; studioName: string; note: string | null };
 
 /**
  * Nabídka termínů. Termíny se NEPŘIDÁVAJÍ RUČNĚ (zadání 19. 9. 2026: „Nechci
@@ -545,6 +545,7 @@ export function OfferBuilder({
                     {minutesToTime(minutesInZone(start, request.timezone))}–
                     {minutesToTime(minutesInZone(end, request.timezone))}
                     {studiaNabidky.length > 1 ? ` · ${s.studioName}` : ''}
+                    {s.note ? ` · ${s.note}` : ''}
                   </span>
                 </span>
                 <span className="flex items-center gap-3 shrink-0">

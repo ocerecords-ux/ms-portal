@@ -80,7 +80,17 @@ export type CalendarEvent = {
   };
   /** Záznam z kalendáře Mimo studio - z něj se plní jeho okno. */
   mimo?: NepritomnostVKalendari;
+  /** Poznámka / vzkaz k události (19. 9. 2026). */
+  poznamka?: string | null;
 };
+
+/**
+ * Termín z nabídky, který jde v kalendáři upravit - vybraný nebo potvrzený
+ * (zadání 19. 9. 2026: „aby pak šly dvojklikem editovat… prostě všechno").
+ */
+function jeUpravitelnaFrekvence(e: CalendarEvent): boolean {
+  return e.kind === 'SLOT' && (e.state === 'CONFIRMED' || e.state === 'SELECTED');
+}
 
 /** HH:MM v Praze - předvyplněný čas v okně Mimo studio. */
 function casVPraze(iso: string): string {
@@ -157,10 +167,10 @@ export function CalendarBrowser({
    * událost").
    *
    * Je to totéž okno jako u nové události, jen předvyplněné - stejně jako
-   * tlačítko Upravit v detailu. Platí stejná pravidla: upravit jde jen ručně
-   * zapsaná událost a jen tomu, kdo kalendář spravuje. Termín z nabídky se
-   * posouvá v nabídce (jinak by herci pod rukama změnil čas, který si sám
-   * vybral), takže u něj dvojklik nedělá nic navíc.
+   * tlačítko Upravit v detailu. Upravit smí jen ten, kdo kalendář spravuje.
+   * Od 19. 9. 2026 jde upravit i potvrzená frekvence z nabídky (studio, čas,
+   * zvukař, poznámka, případně předělat na střih) - herec o změně dostane
+   * oznámení.
    *
    * JEDEN KLIK POČKÁ ČTVRT VTEŘINY. Dvojklik začíná obyčejným klikem, a ten
    * otevírá detail - bez čekání by na okamžik vyskočil detail a hned ho
@@ -168,7 +178,7 @@ export function CalendarBrowser({
    * ostatních se detail otevře hned, protože tam dvojklik nic nedělá.
    */
   const casovacDetailu = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lzeUpravit = (e: CalendarEvent) => canManage && e.kind === 'BLOCK';
+  const lzeUpravit = (e: CalendarEvent) => canManage && (e.kind === 'BLOCK' || jeUpravitelnaFrekvence(e));
 
   function klikNaUdalost(e: CalendarEvent) {
     // Mimo studio nemá detail s tlačítky - klik rovnou otevře úpravu, stejně
@@ -1002,12 +1012,15 @@ function UdalostForm({
   onClose: () => void;
   onHotovo: () => void;
 }) {
+  /** Upravuje se frekvence z nabídky, ne ručně zapsaná událost (19. 9. 2026). */
+  const jeFrekvence = upravovana?.kind === 'SLOT';
   const [studioId, setStudioId] = useState(upravovana?.studioId ?? vychozi.studioId);
   const [nazev, setNazev] = useState(
-    upravovana && !jePraceVeStudiu(upravovana.state) ? upravovana.title : '',
+    upravovana && !jeFrekvence && !jePraceVeStudiu(upravovana.state) ? upravovana.title : '',
   );
   // Kalendář se otevírá kvůli natáčení, ne kvůli údržbě - proto je předvybrané.
-  const [druh, setDruh] = useState(upravovana?.state ?? 'NATACENI');
+  const [druh, setDruh] = useState(jeFrekvence ? 'NATACENI' : (upravovana?.state ?? 'NATACENI'));
+  const [poznamka, setPoznamka] = useState(upravovana?.poznamka ?? '');
   const [projektId, setProjektId] = useState(upravovana?.udalost?.caflouProjectId ?? '');
   const [herecId, setHerecId] = useState(upravovana?.udalost?.actorUserId ?? '');
   const [zvukarId, setZvukarId] = useState(upravovana?.udalost?.zvukarUserId ?? '');
@@ -1083,16 +1096,50 @@ function UdalostForm({
   const herec = herci.find((h) => h.id === herecId);
   const zvukar = zvukari.find((z) => z.id === zvukarId);
 
+  // U frekvence je herec dany nabidkou a zvukar se teprve doplnuje -
+  // povinny je jen u strihu, na ktery se frekvence predelava.
   const chybi =
     !casSedi ||
-    (jePrace ? !projekt || !zvukar || (jeNataceni && !herec) : !nazev.trim());
+    (jeFrekvence
+      ? jeNataceni
+        ? false
+        : jePrace
+          ? !zvukar
+          : !nazev.trim()
+      : jePrace
+        ? !projekt || !zvukar || (jeNataceni && !herec)
+        : !nazev.trim());
+
+  /** Zrušení frekvence z kalendáře (19. 9. 2026). */
+  async function zrusFrekvenci() {
+    if (!upravovana || !window.confirm('Zrušit tuhle frekvenci? Herec dostane oznámení.')) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/kalendar/terminy?id=${encodeURIComponent(upravovana.id)}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Frekvenci se nepodařilo zrušit.');
+        return;
+      }
+      onHotovo();
+    } catch {
+      setError('Frekvenci se nepodařilo zrušit.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function uloz() {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch(
-        upravovana ? `/api/kalendar/blokace?id=${encodeURIComponent(upravovana.id)}` : '/api/kalendar/blokace',
+        jeFrekvence
+          ? `/api/kalendar/terminy?id=${encodeURIComponent(upravovana!.id)}`
+          : upravovana
+            ? `/api/kalendar/blokace?id=${encodeURIComponent(upravovana.id)}`
+            : '/api/kalendar/blokace',
         {
         method: upravovana ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1101,11 +1148,12 @@ function UdalostForm({
           start: start.toISOString(),
           end: konec.toISOString(),
           kind: druh,
+          note: poznamka.trim() || undefined,
           ...(jePrace
             ? {
-                caflouProjectId: projekt?.id ?? '',
+                caflouProjectId: projekt?.id ?? upravovana?.udalost?.caflouProjectId ?? '',
                 // Bez firmy (zadání 14. 9. 2026: „firma je tady zbytečná").
-                projectName: projekt?.nazev ?? projekt?.label ?? '',
+                projectName: projekt?.nazev ?? projekt?.label ?? upravovana?.udalost?.projectName ?? '',
                 actorUserId: jeNataceni ? (herec?.id ?? '') : '',
                 actorName: jeNataceni ? (herec?.label ?? '') : '',
                 zvukarUserId: zvukar?.id ?? '',
@@ -1136,7 +1184,7 @@ function UdalostForm({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            {upravovana ? 'Úprava události' : 'Nová událost'}
+            {jeFrekvence ? 'Úprava frekvence' : upravovana ? 'Úprava události' : 'Nová událost'}
           </h2>
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">
             {new Intl.DateTimeFormat('cs-CZ', {
@@ -1248,7 +1296,16 @@ function UdalostForm({
 
           {/* Herec jen u natáčení. U střihu žádný není a prázdné pole by tam
               jen strašilo (zadání 14. 9. 2026). */}
-          {jeNataceni && (
+          {jeNataceni && jeFrekvence && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">Herec</span>
+              {/* Herec patri k nabidce - jiny herec = jina nabidka. */}
+              <span className="rounded-lg border border-line bg-field px-3 py-2 text-muted font-heading text-sm">
+                {upravovana?.udalost?.actorName ?? '—'}
+              </span>
+            </div>
+          )}
+          {jeNataceni && !jeFrekvence && (
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
                 Herec <span className="text-danger">*</span>
@@ -1266,7 +1323,7 @@ function UdalostForm({
 
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">
-              Zvukař <span className="text-danger">*</span>
+              Zvukař {!(jeFrekvence && jeNataceni) && <span className="text-danger">*</span>}
             </span>
             <VyberProjektu
               projekty={zvukari}
@@ -1291,6 +1348,25 @@ function UdalostForm({
         </label>
       )}
 
+      {/* Poznamka / vzkaz (19. 9. 2026) - u frekvence i u rucni udalosti. */}
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-body text-ink">Poznámka</span>
+        <textarea
+          value={poznamka}
+          onChange={(e) => setPoznamka(e.target.value)}
+          rows={2}
+          placeholder="Vzkaz pro tým - třeba co se bude točit, co připravit…"
+          className={inputClass}
+        />
+      </label>
+
+      {jeFrekvence && !jeNataceni && (
+        <p className="text-xs font-body text-ink bg-warnTint border border-line rounded-lg px-3 py-2 m-0">
+          Frekvence se zruší a na jejím místě vznikne {jePrace ? 'střih' : 'událost'} v kalendáři. Herec dostane
+          oznámení.
+        </p>
+      )}
+
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -1305,7 +1381,17 @@ function UdalostForm({
         <button type="button" onClick={onClose} className="text-muted text-sm font-heading">
           Zrušit
         </button>
-        {jePrace && (
+        {jeFrekvence && (
+          <button
+            type="button"
+            onClick={zrusFrekvenci}
+            disabled={busy}
+            className="text-sm font-heading font-semibold text-danger disabled:opacity-60"
+          >
+            Zrušit frekvenci
+          </button>
+        )}
+        {jePrace && !jeFrekvence && (
           <span className="text-xs font-body text-muted">
             Zápis do kalendáře. Nabídku termínů herci zakládáte tlačítkem v detailu projektu.
           </span>
@@ -1376,16 +1462,20 @@ function DetailUdalosti({
         {formatDateTime(event.start, timezone)} – {formatDateTime(event.end, timezone)}
       </p>
       {event.subtitle && <p className="text-sm font-body text-muted m-0">{event.subtitle}</p>}
+      {event.poznamka && (
+        <p className="text-sm font-body text-ink bg-field border border-line rounded-lg px-3 py-2 m-0 whitespace-pre-line">
+          {event.poznamka}
+        </p>
+      )}
       <div className="flex items-center gap-4">
         {event.href && canManage && (
           <Link href={event.href} className="text-sm font-heading font-semibold text-brand-purple no-underline">
             Otevřít nabídku termínů →
           </Link>
         )}
-        {/* Upravit smi jen rucne zapsanou udalost. Termin z nabidky se
-            posouva v te nabidce, ne tady - jinak by se herci pod rukama
-            zmenil cas, ktery si sam vybral (14. 9. 2026). */}
-        {event.kind === 'BLOCK' && canManage && (
+        {/* Upravit jde rucne zapsana udalost i vybrana/potvrzena frekvence
+            (od 19. 9. 2026) - herec o zmene frekvence dostane oznameni. */}
+        {(event.kind === 'BLOCK' || jeUpravitelnaFrekvence(event)) && canManage && (
           <button
             type="button"
             onClick={onUpravit}

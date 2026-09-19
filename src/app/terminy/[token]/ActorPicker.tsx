@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDateTime, minutesInZone, minutesToTime, pickingLabel, remainingToPick } from '@/lib/calendar';
 import { oslovit } from '@/lib/osloveni';
+import { zonedToUtc } from '@/lib/calendar';
+import { POZNAMKA_NAVRH_HERCE } from '@/lib/volnaMista';
 
-type Slot = { id: string; start: string; end: string; studio: string };
+type Slot = { id: string; start: string; end: string; studio: string; poznamka?: string | null };
 
 /**
  * Samotný výběr. Tlačítko „Odeslat ke schválení" je aktivní jen při PŘESNÉM
@@ -22,6 +24,9 @@ export function ActorPicker({
   holdUntil,
   offered,
   chosen,
+  studia = [],
+  obdobiOd,
+  obdobiDo,
 }: {
   token: string;
   status: string;
@@ -33,6 +38,11 @@ export function ActorPicker({
   holdUntil: string | null;
   offered: Slot[];
   chosen: (Slot & { state: string })[];
+  /** Studia, ve kterých si herec může navrhnout vlastní čas. */
+  studia?: { id: string; name: string }[];
+  /** Období natáčení „YYYY-MM-DD" - v něm se navrhuje. */
+  obdobiOd?: string;
+  obdobiDo?: string;
 }) {
   const router = useRouter();
   const [vybrano, setVybrano] = useState<string[]>([]);
@@ -41,6 +51,56 @@ export function ActorPicker({
   const [error, setError] = useState<string | null>(null);
 
   const zbyva = remainingToPick(requiredSessions, vybrano.length);
+
+  // --- Vlastni navrh casu (zadani 19. 9. 2026) ------------------------------
+  const zitra = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const [navrhOtevreny, setNavrhOtevreny] = useState(false);
+  const [navrhDen, setNavrhDen] = useState(obdobiOd && obdobiOd > zitra ? obdobiOd : zitra);
+  const [navrhStudio, setNavrhStudio] = useState(studia[0]?.id ?? '');
+  const [navrhOd, setNavrhOd] = useState('14:00');
+  const [navrhDo, setNavrhDo] = useState('18:00');
+  const [navrhChyba, setNavrhChyba] = useState<string | null>(null);
+
+  async function navrhni() {
+    setNavrhChyba(null);
+    const [y, m, d] = navrhDen.split('-').map(Number);
+    const naMin = (t: string) => {
+      const [h, mm] = t.split(':').map(Number);
+      return h * 60 + mm;
+    };
+    if (!y || !navrhOd || !navrhDo || naMin(navrhDo) <= naMin(navrhOd)) {
+      setNavrhChyba('Vyplňte den a čas - konec musí být po začátku.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/terminy/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'navrh',
+          studioId: navrhStudio,
+          start: zonedToUtc(y, m, d, naMin(navrhOd), timezone).toISOString(),
+          end: zonedToUtc(y, m, d, naMin(navrhDo), timezone).toISOString(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNavrhChyba(data?.error || 'Návrh se nepodařilo uložit.');
+        return;
+      }
+      // Navrzeny cas se rovnou zaskrtne - kvuli nemu ho herec pridaval.
+      if (data?.id && vybrano.length < requiredSessions) {
+        setVybrano((cur) => (cur.includes(data.id) ? cur : [...cur, data.id]));
+      }
+      setNavrhOtevreny(false);
+      router.refresh();
+    } catch {
+      setNavrhChyba('Návrh se nepodařilo uložit.');
+    } finally {
+      setBusy(false);
+    }
+  }
   /** Nabídka může mít místa ve víc studiích - pak se u času píše, kde. */
   const viceStudii = new Set(offered.map((s) => s.studio)).size > 1;
 
@@ -246,6 +306,15 @@ export function ActorPicker({
                       </span>
                       <span className="font-heading font-semibold text-ink tabular-nums">{popisCasu(slot)}</span>
                       {viceStudii && <span className="text-sm font-body text-muted">{slot.studio}</span>}
+                      {slot.poznamka && (
+                        <span
+                          className={`text-xs font-heading font-semibold rounded-pill px-2 py-0.5 ${
+                            slot.poznamka === POZNAMKA_NAVRH_HERCE ? 'bg-tint text-brand-purple' : 'bg-warnTint text-ink'
+                          }`}
+                        >
+                          {slot.poznamka === POZNAMKA_NAVRH_HERCE ? 'Váš návrh' : slot.poznamka}
+                        </span>
+                      )}
                     </span>
                     <span className="text-xs font-body text-muted">
                       {zvoleno ? 'vybráno' : soubeh ? 've stejný čas už máte vybráno' : plno ? '' : 'vybrat'}
@@ -257,6 +326,98 @@ export function ActorPicker({
           </div>
         ))}
       </div>
+
+      {studia.length > 0 && (
+        <div className="bg-surface border border-line rounded-card p-4 flex flex-col gap-3">
+          {!navrhOtevreny ? (
+            <button
+              type="button"
+              onClick={() => setNavrhOtevreny(true)}
+              className="self-start text-sm font-heading font-semibold text-brand-purple hover:underline"
+            >
+              + Nehodí se vám tyhle časy? Navrhněte vlastní
+            </button>
+          ) : (
+            <>
+              <p className="text-sm font-body text-ink m-0">
+                Navrhněte den a čas, kdy můžete - třeba 14–18, nebo jen tři hodiny. Když je studio volné, přidá
+                se do nabídky a rovnou se vám vybere.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <label className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                  <span className="text-xs font-heading text-muted">Den</span>
+                  <input
+                    type="date"
+                    value={navrhDen}
+                    min={obdobiOd && obdobiOd > zitra ? obdobiOd : zitra}
+                    max={obdobiDo}
+                    onChange={(e) => setNavrhDen(e.target.value)}
+                    className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink"
+                  />
+                </label>
+                {studia.length > 1 && (
+                  <label className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                    <span className="text-xs font-heading text-muted">Studio</span>
+                    <select
+                      value={navrhStudio}
+                      onChange={(e) => setNavrhStudio(e.target.value)}
+                      className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink"
+                    >
+                      {studia.map((st) => (
+                        <option key={st.id} value={st.id}>
+                          {st.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-heading text-muted">Od</span>
+                  <input
+                    type="time"
+                    step={1800}
+                    value={navrhOd}
+                    onChange={(e) => setNavrhOd(e.target.value)}
+                    className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink tabular-nums"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-heading text-muted">Do</span>
+                  <input
+                    type="time"
+                    step={1800}
+                    value={navrhDo}
+                    onChange={(e) => setNavrhDo(e.target.value)}
+                    className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink tabular-nums"
+                  />
+                </label>
+              </div>
+              {navrhChyba && (
+                <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">
+                  {navrhChyba}
+                </p>
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={navrhni}
+                  disabled={busy}
+                  className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
+                >
+                  Přidat můj čas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNavrhOtevreny(false)}
+                  className="text-sm font-heading text-muted"
+                >
+                  Zavřít
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {offered.length > 0 && (
         <>

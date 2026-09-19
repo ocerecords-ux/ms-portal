@@ -23,7 +23,7 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
     select: { id: true },
   });
   if (!zaklad) notFound();
-  await obnovVolnaMista(zaklad.id);
+  const obnova = await obnovVolnaMista(zaklad.id);
 
   const request = await prisma.recordingRequest.findUnique({
     where: { accessToken: params.token },
@@ -92,7 +92,11 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
             start: s.start.toISOString(),
             end: s.end.toISOString(),
             studio: s.studio.name,
+            poznamka: s.note,
           }))}
+          studia={obnova?.studia ?? []}
+          obdobiOd={request.periodFrom.toISOString().slice(0, 10)}
+          obdobiDo={request.periodTo.toISOString().slice(0, 10)}
           chosen={vybrane.map((s) => ({
             id: s.id,
             start: s.start.toISOString(),
