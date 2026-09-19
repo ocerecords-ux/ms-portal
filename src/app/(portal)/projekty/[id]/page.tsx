@@ -40,7 +40,10 @@ import { HistorieProjektu } from './HistorieProjektu';
 import { Preposlech } from './Preposlech';
 import { OdkazProKlienta } from './OdkazProKlienta';
 import { nactiPreposlech } from '@/lib/preposlechServer';
-import { stavOdkazu } from '@/lib/preposlechOdkaz';
+import { stavOdkazu, zajistiOdkaz } from '@/lib/preposlechOdkaz';
+import { nactiPripominky, seznamSpotu } from '@/lib/reklamaPripominky';
+import { stavSchvaleni } from '@/lib/schvaleniKlientem';
+import { SpotTagger } from '@/app/pripominkovat/[token]/VideoTagger';
 import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
 import { findInternalProject } from '@/lib/projektySeznamServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
@@ -700,7 +703,94 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   }
   // AudioTagger - preposlech nahravky proti textu (zadani 11. 9. 2026).
   // Jen pro tym Mediaspace; zaznamy chyb patri tomuhle projektu.
-  if (isInternalRole(session.user.role)) {
+  //
+  // U REKLAMY JSOU TO PŘIPOMÍNKY (zadání 19. 9. 2026: „když jde o reklamu,
+  // tak by se ta karta měla jmenovat Připomínky a mělo by to vypadat jako na
+  // straně klienta. Tzn. vlevo tracky a napravo připomínky. Když tam bude
+  // video, tak i náhled toho videa a informace o tom, jestli je schváleno").
+  //
+  // Reklama se nepřeposlouchává proti textu - klient si pustí spot a píše
+  // k času, co drhne. Karta proto ukazuje TENTÝŽ tagger, který má klient na
+  // odkazu, se stejnými připomínkami; jen bez tlačítka „Odeslat", které
+  // patří klientovi. Reklama = firma má zaškrtnuté Reklamy, stejné pravidlo
+  // jako u mailů.
+  const jeReklama = druhNotifikaceFirmy(company) === 'REKLAMA';
+  if (isInternalRole(session.user.role) && jeReklama) {
+    /**
+     * Tagger chodí pro soubory a připomínky přes token odkazu pro klienta -
+     * stejnou cestou jako klient, takže vidíme přesně to, co on. Když odkaz
+     * ještě není, založí se (klientovi nic neodchází, dokud mu ho někdo
+     * nepošle).
+     */
+    const [odkaz, spoty, schvaleni, token] = await Promise.all([
+      stavOdkazu(caflouProjectId),
+      seznamSpotu(caflouProjectId),
+      stavSchvaleni(caflouProjectId),
+      zajistiOdkaz(caflouProjectId, session.user.name),
+    ]);
+    const prvni = spoty[0]?.id ?? '';
+    const pripominky = prvni ? await nactiPripominky(caflouProjectId, prvni) : [];
+    const kdySchvaleno = schvaleni.schvalenoAt
+      ? new Intl.DateTimeFormat('cs-CZ', {
+          day: 'numeric',
+          month: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }).format(new Date(schvaleni.schvalenoAt))
+      : null;
+
+    tabs.push({
+      key: 'pripominky',
+      label: 'Připomínky',
+      count: pripominky.filter((p) => !p.vyrizeno).length,
+      content: (
+        <div className="flex flex-col gap-4">
+          {/* Schvaleni klientem - jen informace, schvaluje klient. */}
+          {kdySchvaleno ? (
+            <div className="rounded-card border border-brand-green bg-okTint px-4 py-3 flex items-center gap-2.5 flex-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-status-done shrink-0" aria-hidden="true">
+                <path d="M4 12l6 6L20 6" />
+              </svg>
+              <span className="font-heading font-semibold text-sm text-ink">Klient zakázku schválil</span>
+              <span className="text-xs font-body text-muted">{kdySchvaleno}</span>
+            </div>
+          ) : (
+            <div className="rounded-card border border-line bg-surface px-4 py-3 flex items-center gap-2.5 flex-wrap">
+              <span className="w-2.5 h-2.5 rounded-full bg-status-progress shrink-0" aria-hidden="true" />
+              <span className="font-heading font-semibold text-sm text-ink">Zatím neschváleno</span>
+              <span className="text-xs font-body text-muted">
+                Klient schvaluje tlačítkem Schválit v mailu, ve složce nebo ve svém portálu.
+              </span>
+            </div>
+          )}
+
+          <OdkazProKlienta caflouProjectId={caflouProjectId} pocatecni={odkaz} />
+
+          {!token ? (
+            <p className="text-sm font-body text-muted m-0">
+              Odkaz pro klienta se nepodařilo připravit, a bez něj se nahrávky nenačtou. Zkuste
+              stránku načíst znovu.
+            </p>
+          ) : spoty.length === 0 ? (
+            <p className="text-sm font-body text-muted m-0">
+              Ve složce projektu zatím není žádný zvuk ani video. Jakmile tam něco přibude, objeví
+              se tady i s připomínkami klienta.
+            </p>
+          ) : (
+            <SpotTagger
+              token={token}
+              spoty={spoty}
+              vybranyId={prvni}
+              pocatecni={pripominky}
+              jsemZTymu
+              vKarteProjektu
+            />
+          )}
+        </div>
+      ),
+    });
+  } else if (isInternalRole(session.user.role)) {
     const [preposlech, odkaz] = await Promise.all([
       nactiPreposlech(caflouProjectId),
       stavOdkazu(caflouProjectId),

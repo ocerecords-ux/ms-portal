@@ -39,6 +39,7 @@ export function SpotTagger({
   vybranyId,
   pocatecni,
   jsemZTymu,
+  vKarteProjektu = false,
 }: {
   token: string;
   /** Zvuk i video z kořenové složky projektu. */
@@ -46,6 +47,17 @@ export function SpotTagger({
   vybranyId: string;
   pocatecni: PripominkaKVideu[];
   jsemZTymu: boolean;
+  /**
+   * Tagger je v kartě projektu u nás, ne na odkazu pro klienta (zadání
+   * 19. 9. 2026: „v detailu, v záložce přeposlech… když jde o reklamu, tak
+   * by se ta karta měla jmenovat Připomínky a mělo by to vypadat jako na
+   * straně klienta").
+   *
+   * Vypadá to stejně, jen chybí „Odeslat připomínky": to tlačítko hlásí
+   * manažerovi, že klient něco poslal. Kdyby ho zmáčkl někdo od nás, cinkl by
+   * zvonek, jako by psal klient.
+   */
+  vKarteProjektu?: boolean;
 }) {
   const [aktivniId, setAktivniId] = useState(vybranyId);
   const spot = useMemo(
@@ -544,6 +556,7 @@ export function SpotTagger({
                 </div>
               ))}
             </div>
+            {!vKarteProjektu && (
             <div className="border-t border-line p-3 flex flex-col gap-1.5">
               <button
                 type="button"
@@ -574,6 +587,7 @@ export function SpotTagger({
                 </span>
               )}
             </div>
+            )}
           </div>
         </aside>
       </div>
