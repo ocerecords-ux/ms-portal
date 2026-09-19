@@ -589,6 +589,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           herci={herci.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
           studios={studia.map((s) => ({ id: s.id, name: s.name }))}
           defaultActorUserId={meta?.actorUserId ?? null}
+          datumOdevzdani={naDatumPole(meta?.endDate ?? null) || null}
           requests={recordingRequests.map((r) => ({
             id: r.id,
             actorName: r.actorName,

@@ -58,6 +58,18 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       return NextResponse.json({ error: 'Některý z vybraných termínů už není volný.' }, { status: 409 });
     }
 
+    // Herec nemuze byt ve stejny cas ve dvou studiich - nabidka ted obsahuje
+    // mista ze vsech studii jeho lokace (zadani 19. 9. 2026).
+    const podleCasu = [...vybrane].sort((a, b) => a.start.getTime() - b.start.getTime());
+    for (let i = 1; i < podleCasu.length; i += 1) {
+      if (podleCasu[i].start < podleCasu[i - 1].end) {
+        return NextResponse.json(
+          { error: 'Dva vybrané termíny jsou ve stejný čas. Nechte prosím jen jeden z nich.' },
+          { status: 400 },
+        );
+      }
+    }
+
     // Druha kontrola kolizi - mezi odeslanim nabidky a vyberem se studio
     // mohlo obsadit jinym projektem.
     for (const slot of vybrane) {

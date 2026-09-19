@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   RECORDING_STATUS_CLASSES,
@@ -9,8 +9,6 @@ import {
   formatDateTime,
   minutesInZone,
   minutesToTime,
-  overlaps,
-  zonedToUtc,
 } from '@/lib/calendar';
 import { DatumPole } from '@/components/DatumPole';
 import { VyberPole } from '@/components/VyberPole';
@@ -39,35 +37,37 @@ type Request = {
   offerUrl: string;
 };
 
-type Slot = { id: string; start: string; end: string; state: string };
-type Obsazeno = { id: string; start: string; end: string; title: string };
-type Preset = { label: string; startMinutes: number; endMinutes: number };
+type Slot = { id: string; start: string; end: string; state: string; studioName: string };
 
 /**
- * Sestavení nabídky termínů. Produkční vybere období a studio, pak přidává
- * volná okna — buď zkratkou (nejčastější frekvence 9–13 a 13–17), nebo
- * ručně zadaným časem. Termínů může nabídnout víc, než kolik jich herec
- * potřebuje; to je smysl nabídky.
+ * Nabídka termínů. Termíny se NEPŘIDÁVAJÍ RUČNĚ (zadání 19. 9. 2026: „Nechci
+ * termíny nabídnout ručně. Prostě když se to spočítá na 7 frekvencí, tak herec
+ * musí zakliknout 7 termínů, může vybírat všude tam, kde je místo v rámci jeho
+ * lokace a studia"). Nabídka obsahuje všechna volná místa ve studiích herce
+ * od začátku období do poslední možné frekvence - počítá je
+ * lib/volnaMista.ts a srovnává se s kalendářem při každém otevření.
+ *
+ * Produkce tu jen upraví parametry (období, počet frekvencí), odešle herci
+ * a potvrdí jeho výběr.
  */
-/** „1 termín", „2 termíny", „5 termínů". */
-function slovoTermin(n: number): string {
-  if (n === 1) return 'termín';
-  if (n >= 2 && n <= 4) return 'termíny';
-  return 'termínů';
+/** „1 termín", „2 termíny", „5 termínů" - nebo totéž s „místo". */
+function slovoTermin(n: number, misto = false): string {
+  if (n === 1) return misto ? 'volné místo' : 'termín';
+  if (n >= 2 && n <= 4) return misto ? 'volná místa' : 'termíny';
+  return misto ? 'volných míst' : 'termínů';
 }
 
 export function OfferBuilder({
   request,
   slots,
-  occupancy,
-  presets,
+  studiaNabidky,
   studios,
   historie,
 }: {
   request: Request;
   slots: Slot[];
-  occupancy: Obsazeno[];
-  presets: Preset[];
+  /** Studia, ze kterých se nabízí - lokace herce plus studio nabídky. */
+  studiaNabidky: string[];
   studios: { id: string; name: string }[];
   historie: { id: string; type: string; actorLabel: string; note: string | null; createdAt: string }[];
 }) {
@@ -82,9 +82,6 @@ export function OfferBuilder({
     periodTo: request.periodTo,
     note: request.note,
   });
-  const [den, setDen] = useState(request.periodFrom);
-  const [od, setOd] = useState('9:00');
-  const [doo, setDoo] = useState('13:00');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -95,27 +92,10 @@ export function OfferBuilder({
   const vybrane = slots.filter((s) => s.state === 'SELECTED' || s.state === 'CONFIRMED');
 
   /**
-   * PROČ NEJDE ODESLAT (hlášení 19. 9. 2026: „chtěl jsem vyzkoušet plánování
-   * a nejde mi to odeslat herci"). Herec si vybírá `requiredSessions` termínů
-   * z nabídnutých, takže jich v nabídce musí být aspoň tolik - hlídá to i API.
-   * Do té doby bylo tlačítko jen vybledlé bez vysvětlení; teď se pod
-   * počítadlem napíše, kolik termínů chybí, s odkazem na jejich přidání.
+   * Kolik volných míst chybí, aby měl herec z čeho vybrat. Nabídka se skládá
+   * sama, takže nedostatek znamená plný kalendář nebo krátké období.
    */
   const chybiTerminu = Math.max(0, form.requiredSessions - nabidnute.length);
-
-  /** Dny období — z nich se skládá nabídka po zkratkách. */
-  const dny = useMemo(() => {
-    const seznam: string[] = [];
-    const konec = new Date(`${request.periodTo}T12:00:00.000Z`);
-    const d = new Date(`${request.periodFrom}T12:00:00.000Z`);
-    let pojistka = 0;
-    while (d <= konec && pojistka < 200) {
-      seznam.push(d.toISOString().slice(0, 10));
-      d.setUTCDate(d.getUTCDate() + 1);
-      pojistka += 1;
-    }
-    return seznam;
-  }, [request.periodFrom, request.periodTo]);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -140,59 +120,6 @@ export function OfferBuilder({
       router.refresh();
     } catch {
       setError('Uložení se nezdařilo.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /** Přidá termín. `force` projde i přes upozornění (víkend, mimo dobu). */
-  async function pridej(startIso: string, endIso: string, force = false) {
-    setBusy(true);
-    setError(null);
-    setInfo(null);
-    try {
-      const res = await fetch(`/api/kalendar/nabidky/${request.id}/terminy`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add', start: startIso, end: endIso, force }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.error || 'Termín se nepodařilo přidat.');
-        return;
-      }
-      if (data?.needsConfirm) {
-        // Vikend nebo mimo pracovni dobu - zeptame se a pak posleme znovu.
-        if (window.confirm(`${data.warning}\n\nPřidat termín i tak?`)) {
-          await pridej(startIso, endIso, true);
-        }
-        return;
-      }
-      router.refresh();
-    } catch {
-      setError('Termín se nepodařilo přidat.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function odeber(slotId: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/kalendar/nabidky/${request.id}/terminy`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'remove', slotId }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Termín se nepodařilo odebrat.');
-        return;
-      }
-      router.refresh();
-    } catch {
-      setError('Termín se nepodařilo odebrat.');
     } finally {
       setBusy(false);
     }
@@ -275,28 +202,6 @@ export function OfferBuilder({
     }
   }
 
-  /** Je okno volné? Kontroluje se i tady, aby zkratka nenabízela obsazené časy. */
-  function volno(startIso: string, endIso: string): boolean {
-    const start = new Date(startIso);
-    const end = new Date(endIso);
-    const obsazene = [...occupancy, ...slots.map((s) => ({ start: s.start, end: s.end }))];
-    return !obsazene.some((o) => overlaps(start, end, new Date(o.start), new Date(o.end)));
-  }
-
-  function isoZDne(denKey: string, minuty: number): string {
-    const [y, m, d] = denKey.split('-').map(Number);
-    return zonedToUtc(y, m, d, minuty, request.timezone).toISOString();
-  }
-
-  function parsujCas(hodnota: string): number | null {
-    const shoda = hodnota.trim().match(/^(\d{1,2})[:.](\d{2})$/);
-    if (!shoda) return null;
-    const h = Number(shoda[1]);
-    const m = Number(shoda[2]);
-    if (h > 23 || m > 59) return null;
-    return h * 60 + m;
-  }
-
   const inputClass =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full disabled:opacity-60';
 
@@ -328,7 +233,7 @@ export function OfferBuilder({
                 disabled={busy || chybiTerminu > 0}
                 title={
                   chybiTerminu > 0
-                    ? `Nejdřív nabídněte ještě ${chybiTerminu} ${slovoTermin(chybiTerminu)} - herec má z čeho vybírat ${form.requiredSessions}.`
+                    ? `V období chybí ${chybiTerminu} ${slovoTermin(chybiTerminu, true)} - prodlužte období.`
                     : undefined
                 }
                 className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
@@ -373,16 +278,29 @@ export function OfferBuilder({
           )}
         </div>
 
-        {!locked && chybiTerminu > 0 && (
-          <p className="text-sm font-body text-ink bg-warnTint border border-line rounded-lg px-3 py-2 m-0">
-            Než půjde nabídka odeslat herci, přidejte ještě{' '}
-            <strong className="tabular-nums">
-              {chybiTerminu} {slovoTermin(chybiTerminu)}
-            </strong>{' '}
-            - herec z nich vybírá {form.requiredSessions}.{' '}
-            <a href="#nabidnout-terminy" className="font-heading font-semibold text-brand-purple hover:underline">
-              Přidat termíny ↓
-            </a>
+        {!locked && (
+          <p
+            className={`text-sm font-body text-ink border border-line rounded-lg px-3 py-2 m-0 ${
+              chybiTerminu > 0 ? 'bg-warnTint' : 'bg-field'
+            }`}
+          >
+            {chybiTerminu > 0 ? (
+              <>
+                V zadaném období je volných jen{' '}
+                <strong className="tabular-nums">{nabidnute.length}</strong> míst, herec jich potřebuje{' '}
+                <strong className="tabular-nums">{form.requiredSessions}</strong>. Posuňte v Parametrech začátek nebo
+                konec období.
+              </>
+            ) : (
+              <>
+                Herec dostane všechna volná místa ({nabidnute.length}) ve studiích{' '}
+                <strong>{studiaNabidky.join(', ')}</strong> do{' '}
+                {new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' }).format(
+                  new Date(`${request.periodTo}T12:00:00.000Z`),
+                )}{' '}
+                a vybere si z nich {form.requiredSessions}. Obsazené časy v kalendáři se vynechávají samy.
+              </>
+            )}
           </p>
         )}
 
@@ -553,7 +471,7 @@ export function OfferBuilder({
               <DatumPole value={form.periodFrom} onChange={(e) => set('periodFrom', e.target.value)} className={inputClass} />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Období do</span>
+              <span className="text-sm font-body text-ink">Poslední frekvence nejpozději</span>
               <DatumPole value={form.periodTo} onChange={(e) => set('periodTo', e.target.value)} className={inputClass} />
             </label>
             <label className="flex flex-col gap-1.5">
@@ -592,80 +510,8 @@ export function OfferBuilder({
               Uložit parametry
             </button>
             <span className="text-xs font-body text-muted ml-3">
-              Změna studia zruší už nabídnuté termíny — patřily jinému kalendáři.
+              Po uložení se volná místa spočítají znovu. Studia se berou z lokací herce.
             </span>
-          </div>
-        </div>
-      )}
-
-      {/* Pridavani terminu */}
-      {!locked && (
-        <div id="nabidnout-terminy" className="scroll-mt-6 bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Nabídnout termíny
-          </h2>
-
-          <div className="flex items-end gap-2 flex-wrap">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Den</span>
-              <VyberPole value={den} onChange={(e) => setDen(e.target.value)} className={inputClass}>
-                {dny.map((d) => (
-                  <option key={d} value={d}>
-                    {new Intl.DateTimeFormat('cs-CZ', {
-                      timeZone: request.timezone,
-                      weekday: 'short',
-                      day: 'numeric',
-                      month: 'numeric',
-                    }).format(new Date(`${d}T12:00:00.000Z`))}
-                  </option>
-                ))}
-              </VyberPole>
-            </label>
-            {presets.map((p) => {
-              const startIso = isoZDne(den, p.startMinutes);
-              const endIso = isoZDne(den, p.endMinutes);
-              const jeVolno = volno(startIso, endIso);
-              return (
-                <button
-                  key={p.label}
-                  type="button"
-                  disabled={busy || !jeVolno}
-                  onClick={() => pridej(startIso, endIso)}
-                  title={jeVolno ? 'Přidat do nabídky' : 'V tomhle čase je studio obsazené'}
-                  className="rounded-lg border border-brand-purple px-4 py-2 text-sm font-heading font-semibold text-brand-purple hover:bg-tint transition-colors disabled:opacity-40 disabled:border-line disabled:text-muted"
-                >
-                  + {minutesToTime(p.startMinutes)}–{minutesToTime(p.endMinutes)}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-end gap-2 flex-wrap border-t border-line pt-4">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide w-full">Vlastní čas</span>
-            <label className="flex flex-col gap-1.5 w-28">
-              <span className="text-sm font-body text-ink">Od</span>
-              <input value={od} onChange={(e) => setOd(e.target.value)} placeholder="8:00" className={inputClass} />
-            </label>
-            <label className="flex flex-col gap-1.5 w-28">
-              <span className="text-sm font-body text-ink">Do</span>
-              <input value={doo} onChange={(e) => setDoo(e.target.value)} placeholder="12:00" className={inputClass} />
-            </label>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                const zacatek = parsujCas(od);
-                const konec = parsujCas(doo);
-                if (zacatek === null || konec === null || konec <= zacatek) {
-                  setError('Čas zadejte ve tvaru 8:00 a konec musí být po začátku.');
-                  return;
-                }
-                void pridej(isoZDne(den, zacatek), isoZDne(den, konec));
-              }}
-              className="rounded-lg border border-line px-4 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors disabled:opacity-60"
-            >
-              Přidat
-            </button>
           </div>
         </div>
       )}
@@ -676,9 +522,11 @@ export function OfferBuilder({
           Termíny v nabídce <span className="tabular-nums">({slots.length})</span>
         </h2>
         {slots.length === 0 && (
-          <p className="text-sm font-body text-muted m-0">Zatím žádný termín. Přidejte je nahoře.</p>
+          <p className="text-sm font-body text-muted m-0">
+            V zadaném období není v kalendáři žádné volné místo. Upravte období v Parametrech.
+          </p>
         )}
-        <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
+        <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line max-h-[28rem] overflow-y-auto">
           {slots.map((s) => {
             const start = new Date(s.start);
             const end = new Date(s.end);
@@ -696,22 +544,13 @@ export function OfferBuilder({
                   <span className="block text-xs font-body text-muted tabular-nums">
                     {minutesToTime(minutesInZone(start, request.timezone))}–
                     {minutesToTime(minutesInZone(end, request.timezone))}
+                    {studiaNabidky.length > 1 ? ` · ${s.studioName}` : ''}
                   </span>
                 </span>
                 <span className="flex items-center gap-3 shrink-0">
                   <span className="text-xs font-heading font-semibold text-muted">
                     {SLOT_STATE_LABELS[s.state] ?? s.state}
                   </span>
-                  {!locked && s.state === 'OFFERED' && (
-                    <button
-                      type="button"
-                      onClick={() => odeber(s.id)}
-                      disabled={busy}
-                      className="text-xs font-heading font-semibold text-danger disabled:opacity-60"
-                    >
-                      Odebrat
-                    </button>
-                  )}
                 </span>
               </li>
             );

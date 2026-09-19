@@ -7,6 +7,7 @@ import { canManageCalendar } from '@/lib/roles';
 import { loadCalendarSettings, newAccessToken, recordEvent } from '@/lib/calendarServer';
 import { sessionsForPages } from '@/lib/calendar';
 import { bezTitulu } from '@/lib/jmena';
+import { obnovVolnaMista } from '@/lib/volnaMistaServer';
 
 // Zalozeni nabidky terminu z projektove karty (zadani 8. 9. 2026).
 // Projekt zije v Caflou, takze se sem klicuje pres caflouProjectId - stejne
@@ -110,6 +111,9 @@ export async function POST(req: NextRequest) {
       toStatus: 'PREPARING',
       note: `Nabídka pro ${request.actorName}, ${requiredSessions} frekvencí.`,
     });
+
+    // Nabidka se sklada sama ze vsech volnych mist (zadani 19. 9. 2026).
+    await obnovVolnaMista(request.id);
 
     return NextResponse.json(request, { status: 201 });
   } catch (err) {

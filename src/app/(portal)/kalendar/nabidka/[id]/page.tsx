@@ -4,12 +4,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
-import { loadOccupancy, loadStudios, releaseExpiredHolds } from '@/lib/calendarServer';
+import { loadStudios, releaseExpiredHolds } from '@/lib/calendarServer';
+import { obnovVolnaMista } from '@/lib/volnaMistaServer';
 import { OfferBuilder } from './OfferBuilder';
 
-// Sestaveni nabidky terminu (zadani 8. 9. 2026). Produkcni tu vybira volna
-// okna z kalendare studia - muze jich nabidnout vic, nez kolik jich herec
-// potrebuje.
+// Nabidka terminu (zadani 8. 9. 2026). Od 19. 9. 2026 se termíny nenabízí
+// ručně - nabídka obsahuje všechna volná místa ve studiích herce až do
+// poslední možné frekvence (viz lib/volnaMista.ts). Produkce tu jen upraví
+// parametry, odešle a pak potvrdí, co herec vybral.
 export const dynamic = 'force-dynamic';
 
 export default async function OfferPage({ params }: { params: { id: string } }) {
@@ -17,21 +19,20 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
   if (!session || !canManageCalendar(session.user.role)) redirect('/projekty');
 
   await releaseExpiredHolds();
+  // Srovnat nabidku s aktualnim kalendarem, nez se ukaze.
+  const obnova = await obnovVolnaMista(params.id);
 
   const request = await prisma.recordingRequest.findUnique({
     where: { id: params.id },
     include: {
       studio: { include: { presets: { orderBy: { sortOrder: 'asc' } } } },
-      slots: { orderBy: { start: 'asc' } },
+      slots: { orderBy: { start: 'asc' }, include: { studio: { select: { name: true } } } },
       events: { orderBy: { createdAt: 'desc' }, take: 30 },
     },
   });
   if (!request) notFound();
 
   const studios = await loadStudios();
-
-  // Obsazenost studia v celem obdobi nabidky - at je videt, kam se da sahnout.
-  const occupancy = await loadOccupancy([request.studioId], request.periodFrom, request.periodTo);
 
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
 
@@ -70,23 +71,9 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
           start: s.start.toISOString(),
           end: s.end.toISOString(),
           state: s.state,
+          studioName: s.studio.name,
         }))}
-        occupancy={[
-          ...occupancy.slots
-            .filter((s) => s.requestId !== request.id)
-            .map((s) => ({ id: s.id, start: s.start.toISOString(), end: s.end.toISOString(), title: s.label })),
-          ...occupancy.blocks.map((b) => ({
-            id: b.id,
-            start: b.start.toISOString(),
-            end: b.end.toISOString(),
-            title: b.title,
-          })),
-        ]}
-        presets={request.studio.presets.map((p) => ({
-          label: p.label,
-          startMinutes: p.startMinutes,
-          endMinutes: p.endMinutes,
-        }))}
+        studiaNabidky={obnova?.studia ?? [request.studio.name]}
         studios={studios.map((s) => ({ id: s.id, name: s.name }))}
         historie={request.events.map((e) => ({
           id: e.id,

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { formatDateTime, minutesInZone, minutesToTime, pickingLabel, remainingToPick } from '@/lib/calendar';
 import { oslovit } from '@/lib/osloveni';
 
-type Slot = { id: string; start: string; end: string };
+type Slot = { id: string; start: string; end: string; studio: string };
 
 /**
  * Samotný výběr. Tlačítko „Odeslat ke schválení" je aktivní jen při PŘESNÉM
@@ -41,6 +41,21 @@ export function ActorPicker({
   const [error, setError] = useState<string | null>(null);
 
   const zbyva = remainingToPick(requiredSessions, vybrano.length);
+  /** Nabídka může mít místa ve víc studiích - pak se u času píše, kde. */
+  const viceStudii = new Set(offered.map((s) => s.studio)).size > 1;
+
+  /** Překrývá se místo s už vybraným? Herec nemůže být ve dvou studiích naráz. */
+  function koliduje(slot: Slot): boolean {
+    const od = new Date(slot.start).getTime();
+    const doo = new Date(slot.end).getTime();
+    return offered.some(
+      (o) =>
+        o.id !== slot.id &&
+        vybrano.includes(o.id) &&
+        new Date(o.start).getTime() < doo &&
+        new Date(o.end).getTime() > od,
+    );
+  }
   const hotovo = vybrano.length === requiredSessions;
 
   function prepni(id: string) {
@@ -117,6 +132,9 @@ export function ActorPicker({
             <li key={s.id} className="text-sm font-heading text-ink">
               <span className="capitalize">{popisDne(s.start)}</span>
               <span className="text-muted font-body tabular-nums"> · {popisCasu(s)}</span>
+              {viceStudii || new Set(chosen.map((c) => c.studio)).size > 1 ? (
+                <span className="text-muted font-body"> · {s.studio}</span>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -134,6 +152,9 @@ export function ActorPicker({
             <li key={s.id} className="text-sm font-heading text-ink">
               <span className="capitalize">{popisDne(s.start)}</span>
               <span className="text-muted font-body tabular-nums"> · {popisCasu(s)}</span>
+              {viceStudii || new Set(chosen.map((c) => c.studio)).size > 1 ? (
+                <span className="text-muted font-body"> · {s.studio}</span>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -197,13 +218,14 @@ export function ActorPicker({
                 const zvoleno = vybrano.includes(slot.id);
                 // Kdyz uz je vybrano dost, ostatni se zesedi - at je jasne,
                 // ze se ma neco nejdriv odebrat.
-                const plno = !zvoleno && hotovo;
+                const soubeh = !zvoleno && koliduje(slot);
+                const plno = !zvoleno && (hotovo || soubeh);
                 return (
                   <button
                     key={slot.id}
                     type="button"
                     onClick={() => prepni(slot.id)}
-                    disabled={busy}
+                    disabled={busy || soubeh}
                     aria-pressed={zvoleno}
                     className={`flex items-center justify-between gap-4 rounded-card border px-4 py-3 text-left transition-colors ${
                       zvoleno
@@ -223,9 +245,10 @@ export function ActorPicker({
                         ✓
                       </span>
                       <span className="font-heading font-semibold text-ink tabular-nums">{popisCasu(slot)}</span>
+                      {viceStudii && <span className="text-sm font-body text-muted">{slot.studio}</span>}
                     </span>
                     <span className="text-xs font-body text-muted">
-                      {zvoleno ? 'vybráno' : plno ? '' : 'vybrat'}
+                      {zvoleno ? 'vybráno' : soubeh ? 've stejný čas už máte vybráno' : plno ? '' : 'vybrat'}
                     </span>
                   </button>
                 );

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { RECORDING_STATUS_CLASSES, RECORDING_STATUS_LABELS, formatDateTime } from '@/lib/calendar';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { posledniDenFrekvence } from '@/lib/volnaMista';
 
 type Nabidka = {
   id: string;
@@ -37,6 +38,7 @@ export function RecordingSection({
   herci,
   studios,
   defaultActorUserId,
+  datumOdevzdani,
   requests,
   canManage,
 }: {
@@ -49,6 +51,11 @@ export function RecordingSection({
   herci: { id: string; label: string }[];
   studios: { id: string; name: string }[];
   defaultActorUserId: string | null;
+  /**
+   * Datum dokončení projektu „YYYY-MM-DD" (Do kdy to máme odevzdat). Z něj se
+   * vymezí poslední možná frekvence (zadání 19. 9. 2026).
+   */
+  datumOdevzdani: string | null;
   requests: Nabidka[];
   canManage: boolean;
 }) {
@@ -64,7 +71,9 @@ export function RecordingSection({
     requiredSessions: Math.max(1, sessionsFromPages),
     pageCount: pageCount ?? 0,
     periodFrom: dnes.toISOString().slice(0, 10),
-    periodTo: zaMesic.toISOString().slice(0, 10),
+    // Posledni mozna frekvence = den pred odevzdanim. Bez data odevzdani
+    // mesic dopredu, jako dosud.
+    periodTo: datumOdevzdani ? posledniDenFrekvence(datumOdevzdani) : zaMesic.toISOString().slice(0, 10),
     note: '',
   });
   const [busy, setBusy] = useState(false);
@@ -244,13 +253,18 @@ export function RecordingSection({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Období do</span>
+              <span className="text-sm font-body text-ink">Poslední frekvence nejpozději</span>
               <DatumPole
                 required
                 value={form.periodTo}
                 onChange={(e) => set('periodTo', e.target.value)}
                 className={inputClass}
               />
+              <span className="text-xs font-body text-muted">
+                {datumOdevzdani
+                  ? 'Den před datem dokončení projektu.'
+                  : 'Projekt nemá datum dokončení - zadejte ručně.'}
+              </span>
             </label>
           </div>
 
@@ -267,7 +281,7 @@ export function RecordingSection({
               disabled={busy}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              {busy ? 'Zakládám…' : 'Založit a vybrat termíny'}
+              {busy ? 'Zakládám…' : 'Založit nabídku termínů'}
             </button>
             <button type="button" onClick={() => setOpen(false)} className="text-muted text-sm font-heading">
               Zavřít

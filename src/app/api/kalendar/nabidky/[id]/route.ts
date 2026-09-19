@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
 import { recordEvent } from '@/lib/calendarServer';
+import { obnovVolnaMista } from '@/lib/volnaMistaServer';
 
 // Uprava parametru nabidky (studio, obdobi, delka frekvence, poznamka) a
 // jeji zruseni. Zmena studia nebo delky se dotyka uz nabidnutych terminu,
@@ -106,9 +107,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         userId: session.user.id,
         actorLabel: session.user.name || session.user.email,
         type: 'STUDIO_CHANGED',
-        note: 'Změna studia — nabídnuté termíny se zrušily.',
+        note: 'Změna studia — nabídnutá místa se spočítala znovu.',
       });
     }
+
+    // Jine obdobi, studio nebo delka = jina volna mista. Nabidka se hned
+    // prepocita, at produkce vidi, co herec dostane.
+    await obnovVolnaMista(request.id);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

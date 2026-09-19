@@ -1,0 +1,135 @@
+import {
+  checkOpeningHours,
+  findCollisions,
+  weekdayInZone,
+  zonedToUtc,
+  type TimeRange,
+} from '@/lib/calendar';
+
+/**
+ * AUTOMATICKÁ NABÍDKA TERMÍNŮ (zadání 19. 9. 2026: „Počítá se potřebný počet
+ * frekvencí a podle data odevzdání se vymezí poslední možná frekvence
+ * k nabídnutí. Nabídne to v podstatě možná místa všechna, kromě těch
+ * obsazených v našem kalendáři. Nechci termíny nabízet ručně… herec musí
+ * zakliknout 7 termínů, může vybírat všude tam, kde je místo v rámci jeho
+ * lokace a studia").
+ *
+ * Tenhle soubor jen POČÍTÁ - nesahá do databáze, takže se dá otestovat.
+ * Načtení dat a zápis nabídky je v lib/volnaMistaServer.ts.
+ *
+ * CO JE „MOŽNÉ MÍSTO":
+ * - studio, ve kterém herec umí natáčet (jeho lokace), plus studio nabídky,
+ * - den od zítřka do posledního dne období (poslední možná frekvence),
+ * - okno podle zkratek studia (9–13, 13–17); studio bez zkratek se rozdělí
+ *   na bloky o délce frekvence od začátku pracovní doby,
+ * - jen v běžné pracovní době: víkendy „po domluvě" se samy nenabízí,
+ *   domlouvají se se zvukařem,
+ * - nic, co je v kalendáři obsazené: vybraný nebo potvrzený termín jiné
+ *   nabídky, jakákoli událost ve studiu (natáčení, střih, svátek, údržba)
+ *   a jiné natáčení téhož herce.
+ *
+ * Nabídnutá místa jiných nabídek NEblokují - obsadí je až ten, kdo si je
+ * vybere první. Při odeslání výběru se to ověřuje znovu.
+ */
+
+export type StudioProNabidku = {
+  id: string;
+  timezone: string;
+  hours: { weekday: number; startMinutes: number; endMinutes: number; byArrangement: boolean }[];
+  presets: { startMinutes: number; endMinutes: number }[];
+};
+
+export type VolneMisto = { studioId: string; start: Date; end: Date };
+
+/** Dny „YYYY-MM-DD" od `od` do `doo` včetně. Pojistka proti nekonečnu: rok. */
+export function dnyObdobi(od: string, doo: string): string[] {
+  const dny: string[] = [];
+  const d = new Date(`${od}T12:00:00.000Z`);
+  const konec = new Date(`${doo}T12:00:00.000Z`);
+  while (d <= konec && dny.length < 366) {
+    dny.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return dny;
+}
+
+/** Okna jednoho dne ve studiu - zkratky, nebo bloky délky frekvence. */
+function oknaDne(
+  studio: StudioProNabidku,
+  pravidlo: { startMinutes: number; endMinutes: number },
+  delkaMinut: number,
+): { od: number; do: number }[] {
+  if (studio.presets.length > 0) {
+    return studio.presets.map((p) => ({ od: p.startMinutes, do: p.endMinutes }));
+  }
+  const okna: { od: number; do: number }[] = [];
+  const krok = Math.max(30, delkaMinut);
+  for (let od = pravidlo.startMinutes; od + krok <= pravidlo.endMinutes; od += krok) {
+    okna.push({ od, do: od + krok });
+  }
+  return okna;
+}
+
+export function spocitejVolnaMista(vstup: {
+  studia: StudioProNabidku[];
+  /** První den období „YYYY-MM-DD". */
+  od: string;
+  /** Poslední den, kdy ještě může být frekvence, „YYYY-MM-DD". */
+  doo: string;
+  /** Délka frekvence - použije se jen u studia bez zkratek. */
+  delkaMinut: number;
+  /** Obsazené časy ve studiích (vybrané/potvrzené termíny a události). */
+  obsazeno: (TimeRange & { id: string; studioId: string })[];
+  /** Jiná natáčení téhož herce - kdekoli. */
+  hercovy: (TimeRange & { id: string })[];
+  /** Nic, co začíná dřív, se nenabízí. */
+  nejdrive: Date;
+}): VolneMisto[] {
+  const vysledek: VolneMisto[] = [];
+  const dny = dnyObdobi(vstup.od, vstup.doo);
+
+  for (const studio of vstup.studia) {
+    const obsazenoTady = vstup.obsazeno.filter((o) => o.studioId === studio.id);
+    for (const den of dny) {
+      const [y, m, d] = den.split('-').map(Number);
+      const poledne = zonedToUtc(y, m, d, 12 * 60, studio.timezone);
+      const pravidlo = studio.hours.find((h) => h.weekday === weekdayInZone(poledne, studio.timezone));
+      // Zavreno, nebo vikend "po domluve" - automaticky se nenabizi.
+      if (!pravidlo || pravidlo.byArrangement) continue;
+
+      for (const okno of oknaDne(studio, pravidlo, vstup.delkaMinut)) {
+        const start = zonedToUtc(y, m, d, okno.od, studio.timezone);
+        const end = zonedToUtc(y, m, d, okno.do, studio.timezone);
+        if (start < vstup.nejdrive || end <= start) continue;
+
+        const doba = checkOpeningHours({ start, end }, studio.timezone, studio.hours);
+        if (!doba.ok || doba.byArrangement) continue;
+
+        const kolize = findCollisions(
+          { start, end },
+          { studioSlots: obsazenoTady, actorSlots: vstup.hercovy },
+        );
+        if (kolize.length > 0) continue;
+
+        vysledek.push({ studioId: studio.id, start, end });
+      }
+    }
+  }
+
+  return vysledek.sort((a, b) => a.start.getTime() - b.start.getTime() || a.studioId.localeCompare(b.studioId));
+}
+
+/**
+ * Poslední den, kdy může být frekvence: den PŘED datem odevzdání - v den
+ * odevzdání se už předává hotová nahrávka, ne natáčí.
+ */
+export function posledniDenFrekvence(datumOdevzdani: string): string {
+  const d = new Date(`${datumOdevzdani}T12:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Klíč místa - podle něj se pozná, co v nabídce už je. */
+export function klicMista(m: { studioId: string; start: Date; end: Date }): string {
+  return `${m.studioId}|${m.start.toISOString()}|${m.end.toISOString()}`;
+}

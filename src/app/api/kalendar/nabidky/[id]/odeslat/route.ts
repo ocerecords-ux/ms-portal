@@ -6,6 +6,7 @@ import { canManageCalendar } from '@/lib/roles';
 import { recordEvent } from '@/lib/calendarServer';
 import { sendRecordingOfferEmail } from '@/lib/email';
 import { notify } from '@/lib/notifications';
+import { obnovVolnaMista } from '@/lib/volnaMistaServer';
 
 // Odeslani nabidky herci. Nabidka musi obsahovat aspon tolik terminu, kolik
 // jich ma herec vybrat - jinak nema z ceho vybirat.
@@ -15,6 +16,10 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     if (!session?.user?.id || !canManageCalendar(session.user.role)) {
       return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
     }
+
+    // Pred odeslanim se nabidka srovna s kalendarem - od otevreni stranky se
+    // mohlo neco obsadit nebo uvolnit.
+    await obnovVolnaMista(params.id);
 
     const request = await prisma.recordingRequest.findUnique({
       where: { id: params.id },
@@ -29,7 +34,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     if (nabidnuto < request.requiredSessions) {
       return NextResponse.json(
         {
-          error: `Herec má vybrat ${request.requiredSessions} termínů, ale v nabídce jich je jen ${nabidnuto}. Přidejte další.`,
+          error: `Herec má vybrat ${request.requiredSessions} termínů, ale v kalendáři je v zadaném období volných jen ${nabidnuto}. Posuňte začátek nebo konec období, případně uvolněte kalendář.`,
         },
         { status: 400 },
       );

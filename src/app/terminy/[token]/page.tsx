@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { recordEvent } from '@/lib/calendarServer';
+import { obnovVolnaMista } from '@/lib/volnaMistaServer';
 import { ActorPicker } from './ActorPicker';
 
 /**
@@ -15,11 +16,20 @@ import { ActorPicker } from './ActorPicker';
 export const dynamic = 'force-dynamic';
 
 export default async function ActorOfferPage({ params }: { params: { token: string } }) {
+  // Herec vidi vzdy aktualni volna mista - od odeslani e-mailu se kalendar
+  // mohl zmenit (zadani 19. 9. 2026: vybira „vsude tam, kde je misto").
+  const zaklad = await prisma.recordingRequest.findUnique({
+    where: { accessToken: params.token },
+    select: { id: true },
+  });
+  if (!zaklad) notFound();
+  await obnovVolnaMista(zaklad.id);
+
   const request = await prisma.recordingRequest.findUnique({
     where: { accessToken: params.token },
     include: {
       studio: { select: { name: true, location: true, timezone: true } },
-      slots: { orderBy: { start: 'asc' } },
+      slots: { orderBy: { start: 'asc' }, include: { studio: { select: { name: true } } } },
     },
   });
   if (!request) notFound();
@@ -81,11 +91,13 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
             id: s.id,
             start: s.start.toISOString(),
             end: s.end.toISOString(),
+            studio: s.studio.name,
           }))}
           chosen={vybrane.map((s) => ({
             id: s.id,
             start: s.start.toISOString(),
             end: s.end.toISOString(),
+            studio: s.studio.name,
             state: s.state,
           }))}
         />
