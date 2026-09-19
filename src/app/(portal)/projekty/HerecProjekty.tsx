@@ -87,7 +87,7 @@ function TabulkaHerce({ radky, prazdne }: { radky: Radek[]; prazdne: string }) {
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[480px] border-collapse">
+        <table className="w-full min-w-[560px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
               <th className="text-left px-4 py-3.5">Projekt</th>
@@ -95,7 +95,7 @@ function TabulkaHerce({ radky, prazdne }: { radky: Radek[]; prazdne: string }) {
                 NS
               </th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap w-48">Skončili jsme na straně</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap w-32">Text</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap w-48">Text</th>
             </tr>
           </thead>
           <tbody>
@@ -120,14 +120,28 @@ function TabulkaHerce({ radky, prazdne }: { radky: Radek[]; prazdne: string }) {
                   )}
                 </td>
                 <td className="px-4 py-2 text-sm">
-                  <a
-                    href={`/api/projekty/${encodeURIComponent(r.id)}/text`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-heading font-semibold text-brand-purpleDeep dark:text-brand-purpleLight no-underline hover:underline whitespace-nowrap"
-                  >
-                    Otevřít text ↗
-                  </a>
+                  {/* Otevrit i stahnout (zadani 19. 9. 2026). */}
+                  <span className="inline-flex items-center gap-3 whitespace-nowrap">
+                    <a
+                      href={`/api/projekty/${encodeURIComponent(r.id)}/text`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-heading font-semibold text-brand-purpleDeep dark:text-brand-purpleLight no-underline hover:underline"
+                    >
+                      Otevřít ↗
+                    </a>
+                    <a
+                      href={`/api/projekty/${encodeURIComponent(r.id)}/text?stahnout=1`}
+                      download
+                      title="Stáhnout text jako PDF"
+                      className="inline-flex items-center gap-1 font-heading font-semibold text-brand-purpleDeep dark:text-brand-purpleLight no-underline hover:underline"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
+                        <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />
+                      </svg>
+                      Stáhnout
+                    </a>
+                  </span>
                 </td>
               </tr>
             ))}

@@ -22,7 +22,7 @@ function hlaska(text: string, status: number) {
   return new NextResponse(html, { status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return hlaska('Nejdřív se přihlaste do portálu.', 401);
 
@@ -57,7 +57,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const delka = odpoved.headers.get('content-length');
   if (delka) hlavicky.set('Content-Length', delka);
   hlavicky.set('Cache-Control', 'private, max-age=600');
-  // Otevre se v prohlizeci; pri ulozeni dostane puvodni nazev.
-  hlavicky.set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(obsah.text.name)}`);
+  // Otevre se v prohlizeci, s ?stahnout=1 se rovnou stahne (zadani
+  // 19. 9. 2026: „text by mel jit i stahnout"). Nazev zustava puvodni.
+  const stahnout = req.nextUrl.searchParams.get('stahnout') === '1';
+  hlavicky.set(
+    'Content-Disposition',
+    `${stahnout ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(obsah.text.name)}`,
+  );
   return new NextResponse(odpoved.body, { status: 200, headers: hlavicky });
 }

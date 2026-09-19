@@ -72,6 +72,15 @@ const KRESBY: Record<string, ReactNode> = {
       <circle {...akcent} cx="12" cy="15" r="2.4" />
     </>
   ),
+  // Honoráře (19. 9. 2026: „ikonku s nějakými penězi") - bankovka
+  // a před ní plná mince.
+  '/honorare': (
+    <>
+      <rect {...obrys} x="2.5" y="6" width="15" height="9.5" rx="1.8" />
+      <circle {...obrys} cx="10" cy="10.75" r="2.1" />
+      <circle {...akcent} cx="17" cy="16.5" r="4.2" />
+    </>
+  ),
   // Firmy - dům s vyplněnými okny.
   '/admin': (
     <>
