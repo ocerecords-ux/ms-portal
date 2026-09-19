@@ -128,13 +128,13 @@ export default async function KalendarPage({
   const from = new Date(days[0].startIso);
   const to = new Date(days[days.length - 1].endIso);
 
-  // includeOffered: nabídnutá okna nezabírají studio, ale produkce je vidět chce.
-  const occupancy = await loadOccupancy(
-    aktivni.map((s) => s.id),
-    from,
-    to,
-    { includeOffered: true },
-  );
+  // NABÍDNUTÁ MÍSTA SE V KALENDÁŘI NEUKAZUJÍ (19. 9. 2026: „nejdou mi upravit
+  // ani smazat"). Od chvíle, kdy se nabídka skládá sama ze VŠECH volných míst,
+  // by kalendář zaplnily desítky bloků „Nabídnuto" - nejsou to rezervace,
+  // studio nezabírají a upravit ani smazat nejdou (obnova nabídky by je
+  // vrátila). V kalendáři je jen to, co opravdu platí: termín, který si herec
+  // vybral (drženo), a potvrzená frekvence - ty jdou dvojklikem upravit.
+  const occupancy = await loadOccupancy(aktivni.map((s) => s.id), from, to);
 
   /**
    * Nabídka do ručně zapsané události (zadání 14. 9. 2026) - projekt, herec
