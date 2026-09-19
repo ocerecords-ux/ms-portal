@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { checkSlot, loadCalendarSettings, recordEvent } from '@/lib/calendarServer';
 import { notify } from '@/lib/notifications';
 import { POZNAMKA_NAVRH_HERCE } from '@/lib/volnaMista';
-import { studiaNabidky } from '@/lib/volnaMistaServer';
+import { mestoStudia, studiaNabidky } from '@/lib/volnaMistaServer';
 
 /**
  * Výběr termínů hercem (zadani 8. 9. 2026). VEŘEJNÝ endpoint — nabídka se
@@ -70,30 +70,51 @@ async function navrhni(token: string, d: { studioId: string; start: string; end:
     return NextResponse.json({ error: 'Termín je mimo období natáčení.' }, { status: 400 });
   }
 
-  const kontrola = await checkSlot({
-    studioId: d.studioId,
-    start,
-    end,
-    actorUserId: request.actorUserId,
-    ignoreRequestId: request.id,
-  });
-  if (!kontrola.ok) {
-    return NextResponse.json({ error: 'V tomhle čase už je studio obsazené. Zkuste prosím jiný.' }, { status: 409 });
+  /**
+   * VOLNÉ STUDIO VE MĚSTĚ (zadání 19. 9. 2026: „když bude volno v obou, tak
+   * to automaticky přiřadí do studia Brno I"). Zkusí se nejdřív studio, ze
+   * kterého byl termín, pak ostatní studia téhož města v pořadí studií.
+   */
+  const puvodni = studia.find((s) => s.id === d.studioId)!;
+  const kandidati = [
+    puvodni,
+    ...studia.filter((s) => s.id !== puvodni.id && mestoStudia(s) === mestoStudia(puvodni)),
+  ];
+  let studioId: string | null = null;
+  let upozorneni: string | null = null;
+  for (const kandidat of kandidati) {
+    const kontrola = await checkSlot({
+      studioId: kandidat.id,
+      start,
+      end,
+      actorUserId: request.actorUserId,
+      ignoreRequestId: request.id,
+    });
+    if (!kontrola.ok) continue;
+    // Mimo oteviraci dobu uplne (ne vikend po domluve) - checkSlot to vraci
+    // jen jako upozorneni, tady se to nepusti.
+    if (kontrola.warning && !/Víkend/.test(kontrola.warning)) {
+      upozorneni = kontrola.warning;
+      continue;
+    }
+    studioId = kandidat.id;
+    break;
   }
-  // Mimo oteviraci dobu uplne (ne vikend po domluve) - checkSlot to vraci
-  // jen jako upozorneni, tady se to nepusti.
-  if (kontrola.warning && !/Víkend/.test(kontrola.warning)) {
-    return NextResponse.json({ error: kontrola.warning }, { status: 400 });
+  if (!studioId) {
+    return NextResponse.json(
+      { error: upozorneni ?? 'V tomhle čase už je studio obsazené. Zkuste prosím jiný čas.' },
+      { status: 409 },
+    );
   }
 
   const uzJe = await prisma.recordingSlot.findFirst({
-    where: { requestId: request.id, studioId: d.studioId, start, end, state: 'OFFERED' },
+    where: { requestId: request.id, studioId, start, end, state: 'OFFERED' },
     select: { id: true },
   });
   const slot =
     uzJe ??
     (await prisma.recordingSlot.create({
-      data: { requestId: request.id, studioId: d.studioId, start, end, state: 'OFFERED', note: POZNAMKA_NAVRH_HERCE },
+      data: { requestId: request.id, studioId, start, end, state: 'OFFERED', note: POZNAMKA_NAVRH_HERCE },
       select: { id: true },
     }));
 

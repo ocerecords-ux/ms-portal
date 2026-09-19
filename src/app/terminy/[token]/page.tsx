@@ -67,8 +67,8 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
           <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">Natáčecí termíny</p>
           <h1 className="font-display text-3xl sm:text-4xl text-ink m-0 mt-1">{request.projectName}</h1>
           <p className="text-muted text-sm mt-2 font-body m-0">
-            {request.studio.name}
-            {request.studio.location ? ` · ${request.studio.location}` : ''}
+            {/* Herci jen mesto, ne mistnost (19. 9. 2026: „terminy za Brno"). */}
+            {request.studio.location || request.studio.name}
           </p>
         </div>
 
@@ -92,6 +92,7 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
             start: s.start.toISOString(),
             end: s.end.toISOString(),
             studio: s.studio.name,
+            studioId: s.studioId,
             poznamka: s.note,
           }))}
           studia={obnova?.studia ?? []}

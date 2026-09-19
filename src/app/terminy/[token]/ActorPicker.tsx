@@ -8,7 +8,7 @@ import { zonedToUtc } from '@/lib/calendar';
 import { POZNAMKA_NAVRH_HERCE } from '@/lib/volnaMista';
 import { PridatDoKalendare } from '@/components/PridatDoKalendare';
 
-type Slot = { id: string; start: string; end: string; studio: string; poznamka?: string | null };
+type Slot = { id: string; start: string; end: string; studio: string; studioId?: string; poznamka?: string | null };
 
 /**
  * Samotný výběr. Tlačítko „Odeslat ke schválení" je aktivní jen při PŘESNÉM
@@ -25,9 +25,6 @@ export function ActorPicker({
   holdUntil,
   offered,
   chosen,
-  studia = [],
-  obdobiOd,
-  obdobiDo,
   kalendarUrl,
 }: {
   token: string;
@@ -42,7 +39,6 @@ export function ActorPicker({
   chosen: (Slot & { state: string })[];
   /** Studia, ve kterých si herec může navrhnout vlastní čas. */
   studia?: { id: string; name: string }[];
-  /** Období natáčení „YYYY-MM-DD" - v něm se navrhuje. */
   obdobiOd?: string;
   obdobiDo?: string;
   /** Potvrzené termíny ve formátu kalendáře (19. 9. 2026). */
@@ -56,26 +52,36 @@ export function ActorPicker({
 
   const zbyva = remainingToPick(requiredSessions, vybrano.length);
 
-  // --- Vlastni navrh casu (zadani 19. 9. 2026) ------------------------------
-  const zitra = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
-  const [navrhOtevreny, setNavrhOtevreny] = useState(false);
-  const [navrhDen, setNavrhDen] = useState(obdobiOd && obdobiOd > zitra ? obdobiOd : zitra);
-  const [navrhStudio, setNavrhStudio] = useState(studia[0]?.id ?? '');
-  const [navrhOd, setNavrhOd] = useState('14:00');
-  const [navrhDo, setNavrhDo] = useState('18:00');
-  const [navrhChyba, setNavrhChyba] = useState<string | null>(null);
+  // --- Vlastni cas u terminu (zadani 19. 9. 2026) ---------------------------
+  /**
+   * „U každého času a termínu bych dal ještě tlačítko Vybrat vlastní čas."
+   * Otevře se přímo pod termínem s jeho časem předvyplněným - herec ho posune
+   * nebo zkrátí (14–18, jen tři hodiny). Server ověří, že je ve studiu v tu
+   * dobu volno; když je obsazené jedno brněnské studio, zkusí druhé.
+   */
+  const [vlastni, setVlastni] = useState<{ slotId: string; od: string; doo: string } | null>(null);
+  const [vlastniChyba, setVlastniChyba] = useState<string | null>(null);
 
-  async function navrhni() {
-    setNavrhChyba(null);
-    const [y, m, d] = navrhDen.split('-').map(Number);
+  const hhmm = (iso: string) =>
+    new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
+      new Date(iso),
+    );
+
+  async function ulozVlastni(slot: Slot) {
+    if (!vlastni) return;
+    setVlastniChyba(null);
     const naMin = (t: string) => {
       const [h, mm] = t.split(':').map(Number);
       return h * 60 + mm;
     };
-    if (!y || !navrhOd || !navrhDo || naMin(navrhDo) <= naMin(navrhOd)) {
-      setNavrhChyba('Vyplňte den a čas - konec musí být po začátku.');
+    if (!vlastni.od || !vlastni.doo || naMin(vlastni.doo) <= naMin(vlastni.od)) {
+      setVlastniChyba('Konec musí být po začátku.');
       return;
     }
+    const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: timezone })
+      .format(new Date(slot.start))
+      .split('-')
+      .map(Number);
     setBusy(true);
     try {
       const res = await fetch(`/api/terminy/${token}`, {
@@ -83,30 +89,39 @@ export function ActorPicker({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'navrh',
-          studioId: navrhStudio,
-          start: zonedToUtc(y, m, d, naMin(navrhOd), timezone).toISOString(),
-          end: zonedToUtc(y, m, d, naMin(navrhDo), timezone).toISOString(),
+          studioId: slot.studioId,
+          start: zonedToUtc(y, m, d, naMin(vlastni.od), timezone).toISOString(),
+          end: zonedToUtc(y, m, d, naMin(vlastni.doo), timezone).toISOString(),
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setNavrhChyba(data?.error || 'Návrh se nepodařilo uložit.');
+        setVlastniChyba(data?.error || 'Vlastní čas se nepodařilo uložit.');
         return;
       }
-      // Navrzeny cas se rovnou zaskrtne - kvuli nemu ho herec pridaval.
-      if (data?.id && vybrano.length < requiredSessions) {
-        setVybrano((cur) => (cur.includes(data.id) ? cur : [...cur, data.id]));
+      // Vlastni cas nahradi termin, u ktereho ho herec zadal.
+      if (data?.id) {
+        setVybrano((cur) => {
+          const bez = cur.filter((x) => x !== slot.id && x !== data.id);
+          return bez.length < requiredSessions ? [...bez, data.id] : bez;
+        });
       }
-      setNavrhOtevreny(false);
+      setVlastni(null);
       router.refresh();
     } catch {
-      setNavrhChyba('Návrh se nepodařilo uložit.');
+      setVlastniChyba('Vlastní čas se nepodařilo uložit.');
     } finally {
       setBusy(false);
     }
   }
-  /** Nabídka může mít místa ve víc studiích - pak se u času píše, kde. */
-  const viceStudii = new Set(offered.map((s) => s.studio)).size > 1;
+
+  /**
+   * Herci se studio NEUKAZUJE (zadání 19. 9. 2026: „nabízel bych jednoduše
+   * jen termíny za Brno"). Místo se mu přidělí samo, přednostně Brno I.
+   * Jen když nabídka zasahuje do víc měst, napíše se u času město.
+   */
+  const mestoZ = (nazev: string) => (nazev.split(' - ').pop() ?? nazev).replace(/\s+[IVX]+$/, '').trim();
+  const viceStudii = new Set(offered.map((s) => mestoZ(s.studio))).size > 1;
 
   /** Překrývá se místo s už vybraným? Herec nemůže být ve dvou studiích naráz. */
   function koliduje(slot: Slot): boolean {
@@ -196,8 +211,8 @@ export function ActorPicker({
             <li key={s.id} className="text-sm font-heading text-ink">
               <span className="capitalize">{popisDne(s.start)}</span>
               <span className="text-muted font-body tabular-nums"> · {popisCasu(s)}</span>
-              {viceStudii || new Set(chosen.map((c) => c.studio)).size > 1 ? (
-                <span className="text-muted font-body"> · {s.studio}</span>
+              {viceStudii || new Set(chosen.map((c) => mestoZ(c.studio))).size > 1 ? (
+                <span className="text-muted font-body"> · {mestoZ(s.studio)}</span>
               ) : null}
             </li>
           ))}
@@ -217,8 +232,8 @@ export function ActorPicker({
             <li key={s.id} className="text-sm font-heading text-ink">
               <span className="capitalize">{popisDne(s.start)}</span>
               <span className="text-muted font-body tabular-nums"> · {popisCasu(s)}</span>
-              {viceStudii || new Set(chosen.map((c) => c.studio)).size > 1 ? (
-                <span className="text-muted font-body"> · {s.studio}</span>
+              {viceStudii || new Set(chosen.map((c) => mestoZ(c.studio))).size > 1 ? (
+                <span className="text-muted font-body"> · {mestoZ(s.studio)}</span>
               ) : null}
             </li>
           ))}
@@ -240,6 +255,7 @@ export function ActorPicker({
     if (!podleDnu.has(den)) podleDnu.set(den, []);
     podleDnu.get(den)!.push(slot);
   }
+  const slovo = (n: number) => (n === 1 ? 'termín' : n >= 2 && n <= 4 ? 'termíny' : 'termínů');
 
   return (
     <div className="flex flex-col gap-5">
@@ -253,18 +269,50 @@ export function ActorPicker({
       <p className="text-sm font-body text-ink m-0">
         Dobrý den, {oslovit(actorName) || actorName}. Vyberte si prosím{' '}
         <strong>
-          {requiredSessions} {requiredSessions === 1 ? 'termín' : requiredSessions < 5 ? 'termíny' : 'termínů'}
+          {requiredSessions} {slovo(requiredSessions)}
         </strong>{' '}
-        z nabídnutých.
+        z nabídnutých. Když vám čas nesedí, u každého termínu si můžete zvolit vlastní.
       </p>
 
-      {/* Pocitadlo je videt porad, i pri rolovani dlouhym seznamem */}
-      <div className="sticky top-2 z-10 bg-brand-purple text-white rounded-card px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
-        <span className="font-heading font-semibold">{pickingLabel(requiredSessions, vybrano.length)}</span>
-        <span className="text-sm font-body text-white/85">
-          {hotovo ? 'Můžete odeslat' : `Zbývá vybrat ${zbyva}`}
+      {/* ODESLAT JE NAHOŘE A POŘÁD NA OČÍCH (zadání 19. 9. 2026: „tlačítko
+          odeslat je až dole a když je tam hodně termínů, člověk musí rolovat.
+          Držel bych ho nahoře a prosvítí se, až budou vyplněny… a zvýraznil
+          bych číslo, kolik frekvencí je ještě potřeba zakliknout"). */}
+      <div className="sticky top-2 z-10 bg-brand-purple text-white rounded-card px-4 sm:px-5 py-3 flex items-center justify-between gap-3 shadow-lg">
+        <span className="flex items-center gap-3 min-w-0">
+          {hotovo ? (
+            <span className="font-heading font-semibold">Vybráno všech {requiredSessions} ✓</span>
+          ) : (
+            <>
+              <span className="grid place-items-center min-w-[2.75rem] h-11 px-2 rounded-full bg-white text-brand-purpleDeep font-display text-2xl tabular-nums leading-none">
+                {zbyva}
+              </span>
+              <span className="font-heading font-semibold leading-tight">
+                {zbyva === requiredSessions ? 'zbývá vybrat' : 'ještě zbývá vybrat'}
+                <span className="block text-xs font-body text-white/80">
+                  {pickingLabel(requiredSessions, vybrano.length)}
+                </span>
+              </span>
+            </>
+          )}
         </span>
+        <button
+          type="button"
+          onClick={odesli}
+          disabled={busy || !hotovo}
+          className={`shrink-0 font-heading font-semibold rounded-lg px-4 sm:px-5 py-2.5 transition-all ${
+            hotovo
+              ? 'bg-brand-green text-[#0F2A18] shadow-[0_0_0_4px_rgba(123,255,150,0.25)] hover:brightness-105'
+              : 'bg-white/15 text-white/60 cursor-not-allowed'
+          }`}
+        >
+          {busy ? 'Odesílám…' : 'Odeslat ke schválení'}
+        </button>
       </div>
+
+      {error && (
+        <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>
+      )}
 
       {offered.length === 0 && (
         <p className="text-sm font-body text-muted m-0">
@@ -281,18 +329,14 @@ export function ActorPicker({
             <div className="flex flex-col gap-2">
               {sloty.map((slot) => {
                 const zvoleno = vybrano.includes(slot.id);
-                // Kdyz uz je vybrano dost, ostatni se zesedi - at je jasne,
-                // ze se ma neco nejdriv odebrat.
                 const soubeh = !zvoleno && koliduje(slot);
                 const plno = !zvoleno && (hotovo || soubeh);
+                const upravuje = vlastni?.slotId === slot.id;
+                const jeNavrh = slot.poznamka === POZNAMKA_NAVRH_HERCE;
                 return (
-                  <button
+                  <div
                     key={slot.id}
-                    type="button"
-                    onClick={() => prepni(slot.id)}
-                    disabled={busy || soubeh}
-                    aria-pressed={zvoleno}
-                    className={`flex items-center justify-between gap-4 rounded-card border px-4 py-3 text-left transition-colors ${
+                    className={`rounded-card border transition-colors ${
                       zvoleno
                         ? 'bg-tint border-brand-purple'
                         : plno
@@ -300,31 +344,88 @@ export function ActorPicker({
                           : 'bg-surface border-line hover:border-brand-purple'
                     }`}
                   >
-                    <span className="flex items-center gap-3">
-                      <span
-                        className={`w-5 h-5 rounded border flex items-center justify-center text-xs font-bold ${
-                          zvoleno ? 'bg-brand-purple border-brand-purple text-white' : 'border-line text-transparent'
-                        }`}
-                        aria-hidden="true"
+                    <div className="flex items-center justify-between gap-3 px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => prepni(slot.id)}
+                        disabled={busy || soubeh}
+                        aria-pressed={zvoleno}
+                        className="flex items-center gap-3 text-left flex-1 min-w-0"
                       >
-                        ✓
-                      </span>
-                      <span className="font-heading font-semibold text-ink tabular-nums">{popisCasu(slot)}</span>
-                      {viceStudii && <span className="text-sm font-body text-muted">{slot.studio}</span>}
-                      {slot.poznamka && (
                         <span
-                          className={`text-xs font-heading font-semibold rounded-pill px-2 py-0.5 ${
-                            slot.poznamka === POZNAMKA_NAVRH_HERCE ? 'bg-tint text-brand-purple' : 'bg-warnTint text-ink'
+                          className={`w-5 h-5 rounded border flex items-center justify-center text-xs font-bold shrink-0 ${
+                            zvoleno ? 'bg-brand-purple border-brand-purple text-white' : 'border-line text-transparent'
                           }`}
+                          aria-hidden="true"
                         >
-                          {slot.poznamka === POZNAMKA_NAVRH_HERCE ? 'Váš návrh' : slot.poznamka}
+                          ✓
                         </span>
+                        <span className="font-heading font-semibold text-ink tabular-nums">{popisCasu(slot)}</span>
+                        {viceStudii && <span className="text-sm font-body text-muted">{mestoZ(slot.studio)}</span>}
+                        {jeNavrh && (
+                          <span className="text-xs font-heading font-semibold rounded-pill px-2 py-0.5 bg-tint text-brand-purple">
+                            Váš čas
+                          </span>
+                        )}
+                        {soubeh && <span className="text-xs font-body text-muted">ve stejný čas už máte vybráno</span>}
+                      </button>
+                      {!upravuje && !soubeh && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVlastniChyba(null);
+                            setVlastni({ slotId: slot.id, od: hhmm(slot.start), doo: hhmm(slot.end) });
+                          }}
+                          disabled={busy}
+                          className="shrink-0 text-xs font-heading font-semibold text-brand-purple hover:underline"
+                        >
+                          Vybrat vlastní čas
+                        </button>
                       )}
-                    </span>
-                    <span className="text-xs font-body text-muted">
-                      {zvoleno ? 'vybráno' : soubeh ? 've stejný čas už máte vybráno' : plno ? '' : 'vybrat'}
-                    </span>
-                  </button>
+                    </div>
+                    {upravuje && vlastni && (
+                      <div className="border-t border-line px-4 py-3 flex items-end gap-3 flex-wrap">
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-heading text-muted">Od</span>
+                          <input
+                            type="time"
+                            step={1800}
+                            value={vlastni.od}
+                            onChange={(e) => setVlastni({ ...vlastni, od: e.target.value })}
+                            className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink tabular-nums"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-heading text-muted">Do</span>
+                          <input
+                            type="time"
+                            step={1800}
+                            value={vlastni.doo}
+                            onChange={(e) => setVlastni({ ...vlastni, doo: e.target.value })}
+                            className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink tabular-nums"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => ulozVlastni(slot)}
+                          disabled={busy}
+                          className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
+                        >
+                          Použít tento čas
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVlastni(null)}
+                          className="text-sm font-heading text-muted"
+                        >
+                          Zrušit
+                        </button>
+                        {vlastniChyba && (
+                          <p className="w-full text-sm text-danger m-0">{vlastniChyba}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -332,123 +433,16 @@ export function ActorPicker({
         ))}
       </div>
 
-      {studia.length > 0 && (
-        <div className="bg-surface border border-line rounded-card p-4 flex flex-col gap-3">
-          {!navrhOtevreny ? (
-            <button
-              type="button"
-              onClick={() => setNavrhOtevreny(true)}
-              className="self-start text-sm font-heading font-semibold text-brand-purple hover:underline"
-            >
-              + Nehodí se vám tyhle časy? Navrhněte vlastní
-            </button>
-          ) : (
-            <>
-              <p className="text-sm font-body text-ink m-0">
-                Navrhněte den a čas, kdy můžete - třeba 14–18, nebo jen tři hodiny. Když je studio volné, přidá
-                se do nabídky a rovnou se vám vybere.
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <label className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
-                  <span className="text-xs font-heading text-muted">Den</span>
-                  <input
-                    type="date"
-                    value={navrhDen}
-                    min={obdobiOd && obdobiOd > zitra ? obdobiOd : zitra}
-                    max={obdobiDo}
-                    onChange={(e) => setNavrhDen(e.target.value)}
-                    className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink"
-                  />
-                </label>
-                {studia.length > 1 && (
-                  <label className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
-                    <span className="text-xs font-heading text-muted">Studio</span>
-                    <select
-                      value={navrhStudio}
-                      onChange={(e) => setNavrhStudio(e.target.value)}
-                      className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink"
-                    >
-                      {studia.map((st) => (
-                        <option key={st.id} value={st.id}>
-                          {st.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-heading text-muted">Od</span>
-                  <input
-                    type="time"
-                    step={1800}
-                    value={navrhOd}
-                    onChange={(e) => setNavrhOd(e.target.value)}
-                    className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink tabular-nums"
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-heading text-muted">Do</span>
-                  <input
-                    type="time"
-                    step={1800}
-                    value={navrhDo}
-                    onChange={(e) => setNavrhDo(e.target.value)}
-                    className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink tabular-nums"
-                  />
-                </label>
-              </div>
-              {navrhChyba && (
-                <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">
-                  {navrhChyba}
-                </p>
-              )}
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={navrhni}
-                  disabled={busy}
-                  className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
-                >
-                  Přidat můj čas
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNavrhOtevreny(false)}
-                  className="text-sm font-heading text-muted"
-                >
-                  Zavřít
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
       {offered.length > 0 && (
-        <>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Poznámka pro produkci (nepovinné)</span>
-            <textarea
-              value={poznamka}
-              onChange={(e) => setPoznamka(e.target.value)}
-              rows={3}
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full"
-            />
-          </label>
-
-          {error && (
-            <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>
-          )}
-
-          <button
-            type="button"
-            onClick={odesli}
-            disabled={busy || !hotovo}
-            className="bg-brand-purple text-white font-heading font-semibold rounded-lg px-6 py-3.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50 self-start"
-          >
-            {busy ? 'Odesílám…' : 'Odeslat ke schválení'}
-          </button>
-        </>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">Poznámka pro produkci (nepovinné)</span>
+          <textarea
+            value={poznamka}
+            onChange={(e) => setPoznamka(e.target.value)}
+            rows={3}
+            className="rounded-lg border border-line bg-surface px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full"
+          />
+        </label>
       )}
     </div>
   );

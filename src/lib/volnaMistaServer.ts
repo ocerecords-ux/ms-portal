@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db';
 import { BLOCKING_SLOT_STATES } from '@/lib/calendar';
-import { POZNAMKA_NAVRH_HERCE, POZNAMKA_VIKEND, klicMista, mestoStudia, spocitejVolnaMista } from '@/lib/volnaMista';
+import { POZNAMKA_NAVRH_HERCE, klicMista, mestoStudia, spocitejVolnaMista } from '@/lib/volnaMista';
 
 export { mestoStudia };
 
@@ -110,7 +110,7 @@ export async function volnaMistaProParametry(p: {
   ]);
 
   const drzene = p.vlastniDrzene ?? [];
-  const volna = spocitejVolnaMista({
+  const vsechnaVolna = spocitejVolnaMista({
     studia: studia.map((s) => ({ id: s.id, timezone: s.timezone, hours: s.hours, presets: s.presets })),
     od: p.od,
     doo: p.doo,
@@ -119,6 +119,23 @@ export async function volnaMistaProParametry(p: {
     hercovy: [...hercovy, ...drzene],
     nejdrive: zitra(),
   });
+
+  /**
+   * JEDNO MÍSTO ZA MĚSTO (zadání 19. 9. 2026: „nabízel bych jednoduše jen
+   * termíny za Brno, tam kde budeme mít volno. A když bude volno v obou, tak
+   * to automaticky přiřadí do studia Brno I"). Stejný čas ve dvou brněnských
+   * studiích je pro herce jeden termín - dostane ho studio, které je v pořadí
+   * studií první (Brno I), a druhé jen tehdy, když je první obsazené.
+   */
+  const poradi = new Map(studia.map((s, i) => [s.id, i]));
+  const mestoPodleId = new Map(studia.map((s) => [s.id, mestoStudia(s)]));
+  const nejlepsi = new Map<string, (typeof vsechnaVolna)[number]>();
+  for (const m of vsechnaVolna) {
+    const klic = `${mestoPodleId.get(m.studioId)}|${m.start.toISOString()}|${m.end.toISOString()}`;
+    const uz = nejlepsi.get(klic);
+    if (!uz || (poradi.get(m.studioId) ?? 99) < (poradi.get(uz.studioId) ?? 99)) nejlepsi.set(klic, m);
+  }
+  const volna = Array.from(nejlepsi.values()).sort((a, b) => a.start.getTime() - b.start.getTime());
   return { volna, studia };
 }
 
@@ -181,7 +198,9 @@ export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy
           start: m.start,
           end: m.end,
           state: 'OFFERED' as const,
-          note: m.poDomluve ? POZNAMKA_VIKEND : null,
+          // Vikend se herci neoznacuje (19. 9. 2026: „dejme pryc info ohledne
+          // vikendu, produkce to musi stejne potvrdit").
+          note: null,
         })),
       }),
     ]);

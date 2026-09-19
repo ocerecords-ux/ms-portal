@@ -387,10 +387,7 @@ export function RecordingSection({
                       {mista.map((m) => (
                         <span
                           key={`${m.studio}-${m.start}`}
-                          className={`rounded-pill px-2 py-0.5 tabular-nums ${
-                            m.vikend ? 'bg-warnTint text-ink' : 'bg-surface text-ink border border-line'
-                          }`}
-                          title={m.vikend ? 'Víkend – po domluvě' : undefined}
+                          className="rounded-pill px-2 py-0.5 tabular-nums bg-surface text-ink border border-line"
                         >
                           {casMista(m)}
                           {studioIds.length > 1 ? ` · ${kratkeStudio(m.studio)}` : ''}

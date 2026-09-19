@@ -542,7 +542,7 @@ export function OfferBuilder({
                     {minutesToTime(minutesInZone(start, request.timezone))}–
                     {minutesToTime(minutesInZone(end, request.timezone))}
                     {studiaNabidky.length > 1 ? ` · ${s.studioName}` : ''}
-                    {s.note ? ` · ${s.note}` : ''}
+                    {s.note && s.note !== 'Víkend – po domluvě' ? ` · ${s.note}` : ''}
                   </span>
                 </span>
                 <span className="flex items-center gap-3 shrink-0">
