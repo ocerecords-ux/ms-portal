@@ -15,9 +15,10 @@ import { PASMO_NEPRITOMNOSTI } from '@/lib/nepritomnost';
  * ale svou dovolenou si má zapsat sám - kdyby to za něj musela dělat
  * produkce, nikdo by to nedělal.
  *
- * ZA KOHO: každý za sebe. Produkce a Žůžo-labůžo (kdo spravuje kalendář)
- * i za ostatní - typicky když jim někdo řekne „příští týden nejsem".
- * Stejně tak upravit a smazat: svou vždycky, cizí jen správce kalendáře.
+ * ZA KOHO: osobu si vybere každý, předvyplněný je přihlášený (upřesnění
+ * 19. 9. 2026: „chci jen vybrat osobu. Ta bude předvyplněná podle
+ * přihlášeného uživatele"). Upravit a smazat smí ten, koho se záznam týká,
+ * ten, kdo ho zapsal, a správce kalendáře (produkce, Žůžo-labůžo).
  */
 
 const schema = z.object({
@@ -86,8 +87,7 @@ async function urciKoho(
   session: NonNullable<Awaited<ReturnType<typeof prihlaseny>>>,
   chtene: string | undefined,
 ): Promise<{ id: string; jmeno: string } | { chyba: string; status: number }> {
-  const spravce = canManageCalendar(session.user.role);
-  const id = spravce && chtene ? chtene : session.user.id;
+  const id = chtene || session.user.id;
   const ucet = await prisma.user.findUnique({
     where: { id },
     select: { id: true, name: true, email: true, role: true, active: true },
@@ -130,9 +130,12 @@ async function zaznamKUprave(id: string | null) {
   const session = await prihlaseny();
   if (!session) return { chyba: 'Nemáte oprávnění.', status: 403 } as const;
   if (!id) return { chyba: 'Chybí, co upravit.', status: 400 } as const;
-  const zaznam = await prisma.nepritomnost.findUnique({ where: { id }, select: { id: true, userId: true } });
+  const zaznam = await prisma.nepritomnost.findUnique({
+    where: { id },
+    select: { id: true, userId: true, zapsalId: true },
+  });
   if (!zaznam) return { chyba: 'Záznam už neexistuje.', status: 404 } as const;
-  const svuj = zaznam.userId === session.user.id;
+  const svuj = zaznam.userId === session.user.id || zaznam.zapsalId === session.user.id;
   if (!svuj && !canManageCalendar(session.user.role)) {
     return { chyba: 'Cizí záznam v kalendáři Mimo studio může upravit jen produkce.', status: 403 } as const;
   }
@@ -149,7 +152,6 @@ export async function PATCH(req: NextRequest) {
   const cas = spocitejCas(parsed.data);
   if ('chyba' in cas) return NextResponse.json({ error: cas.chyba }, { status: 400 });
 
-  // Kdo neni spravce, nemuze zaznam „prepsat" na nekoho jineho.
   const kdo = await urciKoho(k.session, parsed.data.userId ?? k.zaznam.userId ?? undefined);
   if ('chyba' in kdo) return NextResponse.json({ error: kdo.chyba }, { status: kdo.status });
 

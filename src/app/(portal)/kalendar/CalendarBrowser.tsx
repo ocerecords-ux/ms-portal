@@ -132,7 +132,7 @@ export function CalendarBrowser({
   nepritomnosti: NepritomnostVKalendari[];
   ukazNepritomnost: boolean;
   ja: Osoba;
-  /** Za koho jde zapisovat - prázdné, když přihlášený kalendář nespravuje. */
+  /** Lidé z týmu - výběr osoby v okně Mimo studio. */
   lidiTymu: Osoba[];
 }) {
   const router = useRouter();

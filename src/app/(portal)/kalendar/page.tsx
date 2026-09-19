@@ -196,16 +196,14 @@ export default async function KalendarPage({
           })
           .catch(() => [])
       : Promise.resolve([]),
-    // Za koho jde zapisovat - jen správce kalendáře píše i za ostatní.
-    spravceKalendare
-      ? prisma.user
-          .findMany({
-            where: { active: true, role: { in: INTERNAL_ROLES } },
-            select: { id: true, name: true, email: true },
-            orderBy: [{ name: 'asc' }],
-          })
-          .catch(() => [])
-      : Promise.resolve([]),
+    // Z koho se v okně Mimo studio vybírá - pro všechny (19. 9. 2026).
+    prisma.user
+      .findMany({
+        where: { active: true, role: { in: INTERNAL_ROLES } },
+        select: { id: true, name: true, email: true },
+        orderBy: [{ name: 'asc' }],
+      })
+      .catch(() => []),
   ]);
   const nepritomnosti: NepritomnostVKalendari[] = radkyNepritomnosti.map((n) => ({
     id: n.id,
@@ -216,7 +214,8 @@ export default async function KalendarPage({
     start: n.start.toISOString(),
     end: n.end.toISOString(),
     poznamka: n.poznamka,
-    muzeUpravit: spravceKalendare || n.userId === session.user.id,
+    muzeUpravit:
+      spravceKalendare || n.userId === session.user.id || n.zapsalId === session.user.id,
   }));
 
   const barvaStudia = new Map(studios.map((s) => [s.id, s.color]));

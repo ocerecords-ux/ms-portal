@@ -152,8 +152,12 @@ function minutyNaCas(d: Date): string {
 }
 
 /**
- * Okno pro zápis a úpravu nepřítomnosti. Schválně krátké: kdo, co, od kdy do
- * kdy. Žádný projekt ani studio - dovolená se týká člověka, ne studia.
+ * Okno pro zápis a úpravu v kalendáři Mimo studio. JEN OSOBA A ČAS (upřesnění
+ * 19. 9. 2026: „v tom kalendáři Mimo studio chci jen vybrat osobu. Ta bude
+ * předvyplněná podle přihlášeného uživatele, a čas a celodenní událost").
+ *
+ * Žádný projekt, studio, druh ani poznámka. Osobu si může přepnout každý -
+ * třeba když zapisuje za kolegu, který o tom řekl na chodbě.
  */
 export function NepritomnostForm({
   upravovana,
@@ -177,12 +181,13 @@ export function NepritomnostForm({
   vychoziCasOd?: string;
   vychoziCasDo?: string;
   ja: Osoba;
-  /** Za koho jde zapisovat. Prázdné = jen za sebe (není správce kalendáře). */
+  /** Lidé z týmu, ze kterých se vybírá osoba. */
   lidiTymu: Osoba[];
   onClose: () => void;
 }) {
   const router = useRouter();
-  const spravce = lidiTymu.length > 0;
+  // Prihlaseny v seznamu byt musi, i kdyby se nenacetl - jinak by ho nesel vybrat.
+  const lide = lidiTymu.some((l) => l.id === ja.id) ? lidiTymu : [ja, ...lidiTymu];
 
   const [kdo, setKdo] = useState(upravovana?.userId ?? ja.id);
   // Druh se nevybira (upresneni 19. 9. 2026) - vsechno je „mimo studio".
@@ -199,7 +204,6 @@ export function NepritomnostForm({
   const [casDo, setCasDo] = useState(
     upravovana && !upravovana.celyDen ? minutyNaCas(new Date(upravovana.end)) : vychoziCasDo ?? '13:00',
   );
-  const [poznamka, setPoznamka] = useState(upravovana?.poznamka ?? '');
   const [bezi, setBezi] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
 
@@ -216,13 +220,14 @@ export function NepritomnostForm({
           method: upravovana ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: spravce ? kdo : undefined,
+            userId: kdo,
             druh,
             celyDen,
             od,
             do: celyDen ? doDen : od,
             ...(celyDen ? {} : { casOd, casDo }),
-            poznamka: poznamka.trim() || undefined,
+            // Poznamka se uz nepise; u stareho zaznamu se zachova.
+            poznamka: upravovana?.poznamka || undefined,
           }),
         },
       );
@@ -270,19 +275,15 @@ export function NepritomnostForm({
       </div>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Kdo</span>
-        {spravce ? (
-          <VyberProjektu
-            projekty={lidiTymu}
-            hodnota={kdo}
-            onZmena={(v) => setKdo(v || ja.id)}
-            placeholder="Začněte psát jméno…"
-            prazdnyText="Takového člověka v týmu nemáme."
-            popisZruseni="Zpátky na mě"
-          />
-        ) : (
-          <span className="text-sm font-heading font-semibold text-ink">{upravovana?.jmeno ?? ja.label}</span>
-        )}
+        <span className="text-sm font-body text-ink">Osoba</span>
+        <VyberProjektu
+          projekty={lide}
+          hodnota={kdo}
+          onZmena={(v) => setKdo(v || ja.id)}
+          placeholder="Začněte psát jméno…"
+          prazdnyText="Takového člověka v týmu nemáme."
+          popisZruseni="Zpátky na mě"
+        />
       </label>
 
       <label className="inline-flex items-center gap-2.5 cursor-pointer w-fit">
@@ -347,17 +348,6 @@ export function NepritomnostForm({
           {celyDen ? 'Poslední den nesmí být před prvním.' : 'Konec musí být po začátku.'}
         </span>
       )}
-
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Poznámka</span>
-        <input
-          value={poznamka}
-          onChange={(e) => setPoznamka(e.target.value)}
-          placeholder="Nepovinné — třeba „dovolená“ nebo „jednání v Praze“"
-          maxLength={500}
-          className={inputClass}
-        />
-      </label>
 
       {chyba && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{chyba}</p>}
 
