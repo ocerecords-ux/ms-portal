@@ -52,13 +52,14 @@ export default async function PortalLayout({ children }: { children: React.React
   // říká, co se děje - obsah samotné stránky může mít data z jiného zdroje a
   // fungovat dál.
   let entries: Awaited<ReturnType<typeof loadMenuEntries>> = [];
+  let entriesMobil: Awaited<ReturnType<typeof loadMenuEntries>> = [];
   let tasks: Awaited<ReturnType<typeof loadMyTasks>> = [];
   let unread = 0;
   let ucet: { maFotku: boolean; udajeDoplneny: boolean } | null = null;
   let quickActions: Awaited<ReturnType<typeof loadQuickActions>> = [];
   let nouzovyRezim = false;
   try {
-    [entries, tasks, unread, ucet, quickActions] = await zkusDatabazi(() =>
+    [entries, tasks, unread, ucet, quickActions, entriesMobil] = await zkusDatabazi(() =>
       Promise.all([
         loadMenuEntries(session.user.id),
         loadMyTasks(session.user.id, role),
@@ -74,6 +75,9 @@ export default async function PortalLayout({ children }: { children: React.React
         }),
         // Rychle volby v levem panelu (zadani 9. 9. 2026).
         loadQuickActions(session.user.id, role),
+        // Lista pro mobil (zadani 19. 9. 2026) - kdo si ji neupravil, ma
+        // stejnou jako na pocitaci.
+        loadMenuEntries(session.user.id, 'MOBIL'),
       ]),
     );
   } catch (err) {
@@ -109,6 +113,7 @@ export default async function PortalLayout({ children }: { children: React.React
         userLabel={session.user.name || session.user.email}
         userPhotoUrl={odkazNaFotku(session.user.id, ucet?.maFotku)}
         items={visibleFor(entries, role)}
+        itemsMobil={visibleFor(entriesMobil, role)}
         pageOptions={pageOptionsFor(role)}
         unreadNotifications={unread}
         odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}

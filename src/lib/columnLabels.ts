@@ -116,3 +116,64 @@ export function visibleColumns(columns: ColumnSetting[]): ColumnSetting[] {
 export function labelsOf(columns: ColumnSetting[]): Record<string, string> {
   return Object.fromEntries(columns.map((c) => [c.key, c.label]));
 }
+
+// ---------------------------------------------------------------------------
+// Vlastní sloupce podle člověka a zařízení (zadání 19. 9. 2026: „a taky to,
+// jaké se mi zobrazují sloupce v přehledu projektu" - jinak v mobilu a jinak
+// na počítači).
+//
+// Názvy sloupců jsou SPOLEČNÉ (výše, mění je Žůžo-labůžo). Každý si k nim
+// nastavuje jen pořadí a co vidí - zvlášť pro počítač a pro mobil.
+// ---------------------------------------------------------------------------
+
+/**
+ * Co se ukáže v mobilu tomu, kdo si mobil ještě nenastavil (zadání
+ * 14. 9. 2026: „nechal bych tam jen název projektu, datum odevzdání a stav").
+ */
+export const VYCHOZI_SLOUPCE_MOBIL: Record<string, string[]> = {
+  [PROJECTS_TABLE_KEY]: ['name', 'endDate', 'statusName'],
+};
+
+/** Uložené nastavení jednoho člověka pro jedno zařízení. */
+export type VlastniSloupec = { columnKey: string; sortOrder: number; hidden: boolean };
+
+/**
+ * Sloupce pro zařízení: společné názvy, pořadí a viditelnost podle toho, co
+ * si člověk uložil. Bez uloženého nastavení platí na počítači společná
+ * podoba tabulky a v mobilu jen pár základních sloupců.
+ *
+ * Sloupec, který přibyl do kódu až po uložení, se přidá na konec - na
+ * počítači zobrazený (ať se objeví sám), v mobilu schovaný (ať nerozbije
+ * úzkou tabulku).
+ */
+export function sloupceProZarizeni(
+  tableKey: string,
+  spolecne: ColumnSetting[],
+  ulozene: VlastniSloupec[],
+  zarizeni: 'POCITAC' | 'MOBIL',
+): ColumnSetting[] {
+  if (ulozene.length === 0) {
+    if (zarizeni === 'POCITAC') return spolecne;
+    const zaklad = VYCHOZI_SLOUPCE_MOBIL[tableKey] ?? spolecne.map((c) => c.key);
+    const vybrane = zaklad
+      .map((klic) => spolecne.find((c) => c.key === klic))
+      .filter((c): c is ColumnSetting => Boolean(c))
+      .map((c) => ({ ...c, hidden: false }));
+    const zbytek = spolecne.filter((c) => !zaklad.includes(c.key)).map((c) => ({ ...c, hidden: true }));
+    return [...vybrane, ...zbytek];
+  }
+
+  const podleKlice = new Map(ulozene.map((u) => [u.columnKey, u]));
+  const znama = spolecne
+    .filter((c) => podleKlice.has(c.key))
+    .map((c) => ({ ...c, hidden: podleKlice.get(c.key)!.hidden, poradi: podleKlice.get(c.key)!.sortOrder }))
+    .sort((a, b) => a.poradi - b.poradi)
+    .map(({ key, label, hidden }) => ({ key, label, hidden }));
+  const nove = spolecne
+    .filter((c) => !podleKlice.has(c.key))
+    .map((c) => ({ ...c, hidden: zarizeni === 'MOBIL' ? true : c.hidden }));
+  const vysledek = [...znama, ...nove];
+  // Kdyby vsechno zbylo skryte (treba se sloupec prejmenoval v kodu), radsi
+  // ukazat vychozi podobu nez prazdnou tabulku.
+  return vysledek.some((c) => !c.hidden) ? vysledek : sloupceProZarizeni(tableKey, spolecne, [], zarizeni);
+}

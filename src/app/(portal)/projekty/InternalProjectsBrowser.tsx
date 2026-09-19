@@ -11,6 +11,8 @@ import {
 } from './shared';
 import { projectTypeLabel } from '@/lib/projectTypes';
 import { PROJECTS_TABLE_KEY, visibleColumns, type ColumnSetting } from '@/lib/columnLabels';
+import { useZarizeni } from '@/lib/useZarizeni';
+import { NAZEV_ZARIZENI } from '@/lib/zarizeni';
 
 // Zadani 5. 9. 2026: "Na stránce bude max. padesát aktivních projektů. Nahoře
 // budou dvě záložky, kde se bude přepínat mezi projekty Aktivní a Dokončené.
@@ -57,16 +59,19 @@ function matches(p: InternalProject, needle: string): boolean {
 }
 
 /**
- * Sloupce, které zbydou na telefonu - v tomhle pořadí, ne v tom nastaveném.
- * Na úzké obrazovce se čte shora dolů „co to je, kdy to má být, kde to je".
+ * Úzká tabulka (bez minimální šířky, s telefonními vahami sloupců) se hodí
+ * jen na pár sloupců. Kdo si jich do mobilu dá víc, dostane tabulku, která
+ * se posouvá do strany - radši než sloupce po dvou písmenech.
  */
-const SLOUPCE_NA_TELEFONU = ['name', 'endDate', 'statusName'];
+const UZKA_TABULKA_NEJVYS = 4;
 
 export function InternalProjectsBrowser({
   active,
   finished,
   finishedNote,
   columns,
+  columnsMobil,
+  spolecneSloupce,
   canEditLabels,
   canEditStatus,
   novyProjekt,
@@ -76,9 +81,19 @@ export function InternalProjectsBrowser({
   finished: InternalProject[];
   /** Vysvetleni pro zalozku Dokoncene, kdyz se dokoncene projekty netahaji. */
   finishedNote?: string;
-  /** Sloupce tabulky - vychozi podoba prepsana tim, co je ulozene. */
+  /**
+   * Sloupce na počítači - společné názvy, pořadí a výběr podle přihlášeného
+   * (zadání 19. 9. 2026: „a taky to, jaké se mi zobrazují sloupce").
+   */
   columns: ColumnSetting[];
-  /** Upravovat sloupce smi jen Zuzo-labuzo. */
+  /** Sloupce v mobilu - každý si je skládá zvlášť. */
+  columnsMobil?: ColumnSetting[];
+  /** Společná podoba tabulky - z ní se ukládají přejmenování. */
+  spolecneSloupce?: ColumnSetting[];
+  /**
+   * Přejmenovat sloupce smí jen Žůžo-labůžo - názvy platí pro všechny.
+   * Pořadí a výběr sloupců si od 19. 9. 2026 upravuje každý sám.
+   */
   canEditLabels?: boolean;
   /** Prehazovat stav projektu smi Produkce a Zuzo-labuzo (zadani 10. 9. 2026). */
   canEditStatus?: boolean;
@@ -108,13 +123,16 @@ export function InternalProjectsBrowser({
   // pretahovani a krizek, uplne stejne jako u horni listy portalu
   // (zadani 8. 9. 2026, rozsireno 9. 9. 2026).
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<ColumnSetting[]>(columns);
+  const zarizeni = useZarizeni();
+  /** Sloupce zařízení, na kterém se právě kouká - ty se ukazují i upravují. */
+  const mojeSloupce = zarizeni === 'MOBIL' ? (columnsMobil ?? columns) : columns;
+  const [draft, setDraft] = useState<ColumnSetting[]>(mojeSloupce);
   const [saving, setSaving] = useState(false);
   const [labelError, setLabelError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!editing) setDraft(columns);
-  }, [columns, editing]);
+    if (!editing) setDraft(mojeSloupce);
+  }, [mojeSloupce, editing]);
 
   // Tlacitka rezimu uprav. Vykresluji se v liste NAD tabulkou (viz vyse) -
   // v hlavicce tabulky utikala mimo obraz, jakmile se sloupce roztahly.
@@ -131,7 +149,7 @@ export function InternalProjectsBrowser({
       <button
         type="button"
         onClick={() => {
-          setDraft(columns);
+          setDraft(mojeSloupce);
           setEditing(false);
           setLabelError(null);
         }}
@@ -151,35 +169,17 @@ export function InternalProjectsBrowser({
   );
 
   /**
-   * NA TELEFONU JEN TŘI SLOUPCE (zadání 14. 9. 2026: „v mobilu bych taky
-   * omezil položky v přehledu projektu. Nechal bych tam jen název projektu,
-   * datum odevzdání a stav. Vše další pak bude v detailu").
+   * NA TELEFONU JINÉ SLOUPCE NEŽ NA POČÍTAČI (zadání 14. 9. 2026: „v mobilu
+   * bych omezil položky v přehledu projektu"; od 19. 9. 2026 si je každý
+   * skládá sám: „jaké se mi zobrazují sloupce" jinak v mobilu a jinak na
+   * počítači). Výchozí mobil = název, datum dokončení a stav.
    *
-   * Devět sloupců na šířku telefonu znamená, že se z každého vejde pár
-   * písmen — viz screenshot, kde se hlavička „Datum dokončení" překrývala
-   * s „Datum vydání". Míň sloupců je tu čitelnější než všechny useknuté.
-   *
-   * NEMĚNÍ TO NASTAVENÍ SLOUPCŮ. Je to jen jiný pohled na touž tabulku;
-   * co si kdo nastavil, zůstává a na počítači se ukáže celé. Při úpravě
-   * sloupců se nezužuje vůbec — skryté sloupce by nešlo přetáhnout zpátky.
+   * Tři tečky upravují sloupce zařízení, na kterém se právě kouká. Druhé
+   * zařízení zůstává, jak je.
    */
-  const [uzkaObrazovka, setUzkaObrazovka] = useState(false);
-  useEffect(() => {
-    const dotaz = window.matchMedia('(max-width: 767px)');
-    const uprav = () => setUzkaObrazovka(dotaz.matches);
-    uprav();
-    dotaz.addEventListener('change', uprav);
-    return () => dotaz.removeEventListener('change', uprav);
-  }, []);
-
-  const vsechnyZobrazene = visibleColumns(editing ? draft : columns);
-  const zobrazene =
-    uzkaObrazovka && !editing
-      ? (SLOUPCE_NA_TELEFONU.map((klic) => vsechnyZobrazene.find((c) => c.key === klic)).filter(
-          Boolean,
-        ) as ColumnSetting[])
-      : vsechnyZobrazene;
-  const skryte = (editing ? draft : columns).filter((c) => c.hidden);
+  const zobrazene = visibleColumns(editing ? draft : mojeSloupce);
+  const uzkaObrazovka = zarizeni === 'MOBIL' && zobrazene.length <= UZKA_TABULKA_NEJVYS;
+  const skryte = (editing ? draft : mojeSloupce).filter((c) => c.hidden);
 
   function prejmenuj(key: string, label: string) {
     setDraft((cols) => cols.map((c) => (c.key === key ? { ...c, label } : c)));
@@ -223,10 +223,36 @@ export function InternalProjectsBrowser({
     setSaving(true);
     setLabelError(null);
     try {
-      const res = await fetch('/api/admin/column-labels', {
+      // 1) Prejmenovani (jen Zuzo-labuzo) - nazvy jsou spolecne pro vsechny,
+      //    ukladaji se ke spolecne podobe tabulky a jeji poradi se nemeni.
+      const spolecne = spolecneSloupce ?? columns;
+      const noveNazvy = new Map(draft.map((c) => [c.key, c.label]));
+      const prejmenovano = spolecne.some((c) => (noveNazvy.get(c.key) ?? c.label) !== c.label);
+      if (canEditLabels && prejmenovano) {
+        const res = await fetch('/api/admin/column-labels', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tableKey: PROJECTS_TABLE_KEY,
+            columns: spolecne.map((c) => ({ ...c, label: noveNazvy.get(c.key) ?? c.label })),
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setLabelError(data?.error || 'Uložení názvů se nezdařilo.');
+          return;
+        }
+      }
+
+      // 2) Poradi a vyber sloupcu - vlastni, pro tohle zarizeni.
+      const res = await fetch('/api/sloupce', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tableKey: PROJECTS_TABLE_KEY, columns: draft }),
+        body: JSON.stringify({
+          tableKey: PROJECTS_TABLE_KEY,
+          zarizeni,
+          columns: draft.map((c) => ({ key: c.key, hidden: c.hidden })),
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -246,7 +272,10 @@ export function InternalProjectsBrowser({
     setSaving(true);
     setLabelError(null);
     try {
-      const res = await fetch(`/api/admin/column-labels?tableKey=${PROJECTS_TABLE_KEY}`, { method: 'DELETE' });
+      // Vlastni sloupce tohoto zarizeni pryc - spolecne nazvy zustavaji.
+      const res = await fetch(`/api/sloupce?tableKey=${PROJECTS_TABLE_KEY}&zarizeni=${zarizeni}`, {
+        method: 'DELETE',
+      });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setLabelError(data?.error || 'Obnovení se nezdařilo.');
@@ -391,8 +420,9 @@ export function InternalProjectsBrowser({
               tabulkou je vidět vždycky, ať je tabulka jakkoliv široká. */}
           <div className="flex items-center gap-3 flex-wrap rounded-card border border-brand-purple bg-tint px-3 py-2">
             <p className="text-xs font-body text-brand-purpleDark m-0 flex-1 min-w-[220px]">
-              Název přepište přímo v hlavičce, pořadí změníte přetažením, křížkem sloupec odeberete.
-              Změna platí pro všechny.
+              <strong>Sloupce pro {NAZEV_ZARIZENI[zarizeni]}.</strong> Pořadí změníte přetažením, křížkem
+              sloupec odeberete - platí jen pro vás a jen tady.
+              {canEditLabels ? ' Přejmenování v hlavičce platí pro všechny.' : ''}
             </p>
             {editAkce}
           </div>
@@ -425,11 +455,12 @@ export function InternalProjectsBrowser({
         columns={zobrazene}
         uzke={uzkaObrazovka && !editing}
         editing={editing}
-        canEditColumns={canEditLabels}
+        canEditColumns
+        canRenameColumns={canEditLabels}
         canEditStatus={canEditStatus}
         manazeri={manazeri}
         onStartEditing={() => {
-          setDraft(columns);
+          setDraft(mojeSloupce);
           setEditing(true);
           setLabelError(null);
         }}

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { mergeColumns, defaultColumns, type ColumnSetting } from '@/lib/columnLabels';
+import { mergeColumns, defaultColumns, sloupceProZarizeni, type ColumnSetting } from '@/lib/columnLabels';
 
 // Serverova cast nastaveni sloupcu - oddelena od lib/columnLabels.ts,
 // protoze konstanty odtamtud pouzivaji i klientske komponenty.
@@ -58,4 +58,29 @@ export async function loadColumnSettings(tableKey: string): Promise<ColumnSettin
     console.error('Nacteni nastaveni sloupcu selhalo, pouzivam vychozi:', err);
     return defaultColumns(tableKey);
   }
+}
+
+/**
+ * Sloupce přihlášeného člověka pro počítač i pro mobil (zadání 19. 9. 2026).
+ * Když se vlastní nastavení nepodaří načíst, platí výchozí podoba.
+ */
+export async function loadMojeSloupce(
+  tableKey: string,
+  userId: string,
+): Promise<{ spolecne: ColumnSetting[]; pocitac: ColumnSetting[]; mobil: ColumnSetting[] }> {
+  const spolecne = await loadColumnSettings(tableKey);
+  let radky: { zarizeni: string; columnKey: string; sortOrder: number; hidden: boolean }[] = [];
+  try {
+    radky = await prisma.userColumnSetting.findMany({
+      where: { userId, tableKey },
+      select: { zarizeni: true, columnKey: true, sortOrder: true, hidden: true },
+    });
+  } catch (err) {
+    console.error('Nacteni vlastnich sloupcu selhalo, pouzivam vychozi:', err);
+  }
+  return {
+    spolecne,
+    pocitac: sloupceProZarizeni(tableKey, spolecne, radky.filter((r) => r.zarizeni === 'POCITAC'), 'POCITAC'),
+    mobil: sloupceProZarizeni(tableKey, spolecne, radky.filter((r) => r.zarizeni === 'MOBIL'), 'MOBIL'),
+  };
 }

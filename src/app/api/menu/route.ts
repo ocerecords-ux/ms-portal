@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canSee } from '@/lib/menu';
+import { jeZarizeni, type Zarizeni } from '@/lib/zarizeni';
 
 // Uprava odkazu v horni liste. Kazdy si upravuje SVOJI listu (zadani
 // 8. 9. 2026) - proto tu neni zadna kontrola na admina, jen prihlaseni.
@@ -24,7 +25,12 @@ const itemSchema = z.object({
     }),
 });
 
-const schema = z.object({ items: z.array(itemSchema).max(30, 'Do lišty se vejde nejvýš 30 položek.') });
+// Lista se sklada zvlast pro pocitac a pro mobil (zadani 19. 9. 2026).
+// Bez udaje o zarizeni jde o pocitac - tak to posilala starsi verze.
+const schema = z.object({
+  items: z.array(itemSchema).max(30, 'Do lišty se vejde nejvýš 30 položek.'),
+  zarizeni: z.enum(['POCITAC', 'MOBIL']).default('POCITAC'),
+});
 
 export async function PUT(req: NextRequest) {
   try {
@@ -37,15 +43,17 @@ export async function PUT(req: NextRequest) {
     }
     const role = session.user.role;
     const items = parsed.data.items.filter((i) => canSee(i.href, role));
+    const zarizeni: Zarizeni = parsed.data.zarizeni;
 
     await prisma.$transaction([
-      prisma.userMenuItem.deleteMany({ where: { userId: session.user.id } }),
+      prisma.userMenuItem.deleteMany({ where: { userId: session.user.id, zarizeni } }),
       prisma.userMenuItem.createMany({
         data: items.map((item, index) => ({
           userId: session.user.id,
           label: item.label,
           href: item.href,
           sortOrder: (index + 1) * 10,
+          zarizeni,
         })),
       }),
     ]);
@@ -58,13 +66,18 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-/** Vratit se k vychozi liste - smazeme vlastni radky a bere se sada z kodu. */
-export async function DELETE() {
+/**
+ * Vratit se k vychozi liste - smazeme vlastni radky daneho zarizeni.
+ * Pocitac se vrati na sadu z kodu, mobil na listu pocitace.
+ */
+export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: 'Nejste přihlášeni.' }, { status: 401 });
 
-    await prisma.userMenuItem.deleteMany({ where: { userId: session.user.id } });
+    const pozadovane = req.nextUrl.searchParams.get('zarizeni');
+    const zarizeni: Zarizeni = jeZarizeni(pozadovane) ? pozadovane : 'POCITAC';
+    await prisma.userMenuItem.deleteMany({ where: { userId: session.user.id, zarizeni } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/menu selhalo:', err);

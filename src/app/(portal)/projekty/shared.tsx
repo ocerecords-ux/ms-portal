@@ -933,6 +933,7 @@ function SortableHeader({
   sort,
   onSort,
   editing,
+  muzePrejmenovat = true,
   onLabelChange,
   onMove,
   onHide,
@@ -942,6 +943,11 @@ function SortableHeader({
   sort: ProjectSort;
   onSort: (key: ProjectSortKey) => void;
   editing?: boolean;
+  /**
+   * Přejmenovat smí jen Žůžo-labůžo - názvy jsou společné. Ostatní v režimu
+   * úprav jen přetahují a odebírají (zadání 19. 9. 2026).
+   */
+  muzePrejmenovat?: boolean;
   onLabelChange?: (key: string, label: string) => void;
   onMove?: (from: number, to: number) => void;
   onHide?: (key: string) => void;
@@ -991,6 +997,13 @@ function SortableHeader({
           >
             <Uchyt />
           </span>
+          {!muzePrejmenovat ? (
+            <span
+              className={`min-w-[60px] px-1 py-0.5 font-heading text-xs text-white ${vpravo ? 'text-right' : ''}`}
+            >
+              {sloupec.label}
+            </span>
+          ) : (
           <input
             value={sloupec.label}
             onChange={(e) => onLabelChange?.(sloupec.key, e.target.value)}
@@ -1001,6 +1014,7 @@ function SortableHeader({
               vpravo ? 'text-right' : ''
             }`}
           />
+          )}
           <button
             type="button"
             draggable={false}
@@ -1175,6 +1189,7 @@ export function InternalProjectsTable({
   columns,
   editing,
   canEditColumns,
+  canRenameColumns = true,
   onStartEditing,
   onLabelChange,
   onMoveColumn,
@@ -1202,6 +1217,8 @@ export function InternalProjectsTable({
   manazeri?: { id: string; label: string }[];
   /** Upravovat sloupce smí jen Žůžo-labůžo. */
   canEditColumns?: boolean;
+  /** Přejmenovat sloupce smí jen Žůžo-labůžo (viz SortableHeader). */
+  canRenameColumns?: boolean;
   onStartEditing?: () => void;
   onLabelChange?: (key: string, label: string) => void;
   onMoveColumn?: (from: number, to: number) => void;
@@ -1235,6 +1252,7 @@ export function InternalProjectsTable({
                   sort={sort}
                   onSort={onSort}
                   editing={editing}
+                  muzePrejmenovat={canRenameColumns}
                   onLabelChange={onLabelChange}
                   onMove={onMoveColumn}
                   onHide={onHideColumn}

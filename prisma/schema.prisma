@@ -345,6 +345,8 @@ model User {
   timesheets      TimesheetEntry[]
   tasks           Task[]
   menuItems       UserMenuItem[]
+  /// Vlastni sloupce v tabulkach, zvlast pro pocitac a mobil (zadani 19. 9. 2026).
+  nastaveniSloupcu UserColumnSetting[]
   quickActions    UserQuickAction[]
   conversationsCreated Conversation[]       @relation("ConversationCreatedBy")
   conversationMembers  ConversationMember[]
@@ -846,10 +848,37 @@ model UserMenuItem {
   label     String   // co je videt v liste
   href      String   // "/projekty" nebo vlastni https:// odkaz
   sortOrder Int      @default(0)
+  /// Pro jake zarizeni lista plati: "POCITAC" nebo "MOBIL" (zadani 19. 9. 2026:
+  /// „moznost si jinak poskladat hlavni nabidku v mobilni aplikaci a jinak na
+  /// pocitaci"). Starsi radky jsou lista pocitace.
+  zarizeni  String   @default("POCITAC")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, sortOrder])
+  @@index([userId, zarizeni])
+}
+
+/// SLOUPCE V TABULKACH PODLE CLOVEKA A ZARIZENI (zadani 19. 9. 2026: „a taky
+/// to, jake se mi zobrazuji sloupce v prehledu projektu" - jinak v mobilu,
+/// jinak na pocitaci). Kazdy si nastavuje JEN poradi a skryti; nazvy sloupcu
+/// jsou spolecne pro vsechny (ColumnLabel) a meni je Zuzo-labuzo.
+model UserColumnSetting {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tableKey  String
+  /// "POCITAC" nebo "MOBIL"
+  zarizeni  String
+  columnKey String
+  sortOrder Int     @default(0)
+  hidden    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, tableKey, zarizeni, columnKey])
+  @@index([userId, tableKey, zarizeni])
 }
 
 

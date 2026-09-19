@@ -1,6 +1,7 @@
 import type { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { DEFAULT_MENU_ITEMS, PORTAL_PAGES, canSee, type MenuEntry, type NavItem } from '@/lib/menu';
+import type { Zarizeni } from '@/lib/zarizeni';
 
 // Serverova cast listy (zadani 6. 9. 2026, prepracovano 8. 9. 2026) -
 // oddelena od lib/menu.ts, protoze konstanty a typy odtamtud pouziva i
@@ -15,15 +16,19 @@ import { DEFAULT_MENU_ITEMS, PORTAL_PAGES, canSee, type MenuEntry, type NavItem 
  * vychozi sadu z lib/menu.ts - nikam se nic nezaklada, takze cerstvy ucet
  * nema v databazi zadny radek a porad vidi aktualni vychozi listu.
  */
-export async function loadMenuEntries(userId: string): Promise<MenuEntry[]> {
+export async function loadMenuEntries(userId: string, zarizeni: Zarizeni = 'POCITAC'): Promise<MenuEntry[]> {
   try {
     const items = await prisma.userMenuItem.findMany({
-      where: { userId },
+      where: { userId, zarizeni },
       orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }],
     });
     if (items.length > 0) {
       return items.map((i) => ({ id: i.id, label: i.label, href: i.href }));
     }
+    // LISTA MOBILU, KTEROU SI NIKDO NEUPRAVIL (zadani 19. 9. 2026), je stejna
+    // jako lista pocitace - kdo si ji na pocitaci poskladal, nechce ji v mobilu
+    // skladat znovu od nuly. Rozejdou se az ve chvili, kdy si mobil upravi.
+    if (zarizeni === 'MOBIL') return loadMenuEntries(userId, 'POCITAC');
   } catch (err) {
     // Databaze bez tabulky UserMenuItem (jeste nedobehl `prisma db push`) nesmi
     // shodit cely portal - lista proste zustane ve vychozim stavu.

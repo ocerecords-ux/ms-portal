@@ -15,7 +15,7 @@ import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { NovyProjektForm } from './NovyProjektForm';
 import { listProjectTypeOptions, mapaIkonTypu, nazevTypuAudioknihy } from '@/lib/priceList';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
-import { loadColumnSettings } from '@/lib/columnLabelsServer';
+import { loadMojeSloupce } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 import { nactiPreposlechPrehled } from '@/lib/preposlechServer';
@@ -41,6 +41,7 @@ export default async function ProjektyPage() {
     return (
       <InternalProjektySection
         isAdmin={session!.user.role === 'ADMIN'}
+        userId={session!.user.id}
         muzeMenitStav={canEditProjectMeta(session!.user.role)}
         vidiObchodniUdaje={canViewProjectBusinessInfo(session!.user.role)}
         vidiVPriprave={vidiProjektyVPriprave(session!.user.role)}
@@ -210,11 +211,14 @@ export default async function ProjektyPage() {
 
 async function InternalProjektySection({
   isAdmin,
+  userId,
   muzeMenitStav,
   vidiObchodniUdaje,
   vidiVPriprave,
 }: {
   isAdmin: boolean;
+  /** Prihlaseny - sloupce si kazdy sklada sam (zadani 19. 9. 2026). */
+  userId: string;
   /** Prehazovat stav projektu smi Produkce a Zuzo-labuzo. */
   muzeMenitStav: boolean;
   /** Zvukar nevidi datum vydani - viz canViewProjectBusinessInfo. */
@@ -380,16 +384,16 @@ async function InternalProjektySection({
     };
   });
 
-  // Sloupce tabulky - vychozi podoba prepsana tim, co si Zuzo-labuzo
-  // nastavilo (nazev, poradi, skryti).
-  const columnSettingsVse = await loadColumnSettings(PROJECTS_TABLE_KEY);
+  // Sloupce tabulky - spolecne nazvy (meni Zuzo-labuzo) a k nim vlastni
+  // poradi a vyber sloupcu kazdeho cloveka, zvlast pro pocitac a pro mobil
+  // (zadani 19. 9. 2026).
+  const sloupce = await loadMojeSloupce(PROJECTS_TABLE_KEY, userId);
 
   // DATUM VYDANI ZVUKARI NE (zadani 13. 9. 2026). Sloupec se zahazuje tady,
   // ne az v tabulce: takhle o nem nevi ani sirky sloupcu, ani razeni, ani
   // nastaveni sloupcu - proste pro nej neexistuje.
-  const columnSettings = vidiObchodniUdaje
-    ? columnSettingsVse
-    : columnSettingsVse.filter((c) => c.key !== 'releaseDate');
+  const bezVydani = (cols: typeof sloupce.pocitac) =>
+    vidiObchodniUdaje ? cols : cols.filter((c) => c.key !== 'releaseDate');
 
   const active = withMeta
     .filter((p) => !p.finished)
@@ -437,7 +441,9 @@ async function InternalProjektySection({
         }
         active={active}
         finished={finished}
-        columns={columnSettings}
+        columns={bezVydani(sloupce.pocitac)}
+        columnsMobil={bezVydani(sloupce.mobil)}
+        spolecneSloupce={bezVydani(sloupce.spolecne)}
         canEditLabels={isAdmin}
         canEditStatus={muzeMenitStav}
         manazeri={manazeriProFormular}

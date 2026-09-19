@@ -13,6 +13,8 @@ import { ZpetnaVazba } from './ZpetnaVazba';
 import { useJazyk, usePreklad } from './JazykProvider';
 import { nazevOdkazu } from '@/lib/jazyk';
 import { IkonaListy } from '@/lib/ikonyListy';
+import { useZarizeni } from '@/lib/useZarizeni';
+import { NAZEV_ZARIZENI } from '@/lib/zarizeni';
 
 /**
  * Horní fialová lišta. Odkazy si upravuje přímo tady každý sám - tři tečky
@@ -30,6 +32,7 @@ export function Topbar({
   userLabel,
   userPhotoUrl,
   items,
+  itemsMobil,
   pageOptions,
   unreadNotifications = 0,
   odznaky,
@@ -42,8 +45,14 @@ export function Topbar({
   userPhotoUrl?: string | null;
   /** Kolik nepřečtených oznámení má uživatel pod zvonkem. */
   unreadNotifications?: number;
-  /** Vlastní lišta přihlášeného uživatele. */
+  /** Vlastní lišta přihlášeného uživatele - na počítači. */
   items: NavItem[];
+  /**
+   * Lišta v mobilu (zadání 19. 9. 2026: „možnost si jinak poskládat hlavní
+   * nabídku nahoře na liště v mobilní aplikaci a jinak na počítači"). Kdo si
+   * ji neupravil, má tu stejnou jako na počítači.
+   */
+  itemsMobil?: NavItem[];
   /** Stránky, které si smí do lišty přidat. */
   pageOptions: NavItem[];
   /**
@@ -61,6 +70,9 @@ export function Topbar({
   interni?: boolean;
 }) {
   const pathname = usePathname();
+  const zarizeni = useZarizeni();
+  /** Lišta zařízení, na kterém se právě kouká - ta se upravuje. */
+  const listaZarizeni = zarizeni === 'MOBIL' ? (itemsMobil ?? items) : items;
   const router = useRouter();
   // Lista je u kazdeho vlastni a v databazi ulozena cesky, takze se nazvy
   // prekladaji podle adresy odkazu, ne podle textu (zadani 13. 9. 2026).
@@ -78,18 +90,18 @@ export function Topbar({
 
   // Kdyz server posle novy seznam, prepiseme rozdelanou praci jen mimo rezim uprav.
   useEffect(() => {
-    if (!editing) setDraft(items);
-  }, [items, editing]);
+    if (!editing) setDraft(listaZarizeni);
+  }, [listaZarizeni, editing]);
 
   function startEditing() {
-    setDraft(items);
+    setDraft(listaZarizeni);
     setEditing(true);
     setAddOpen(false);
     setError(null);
   }
 
   function cancel() {
-    setDraft(items);
+    setDraft(listaZarizeni);
     setEditing(false);
     setAddOpen(false);
     setError(null);
@@ -121,7 +133,7 @@ export function Topbar({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/menu', { method: 'DELETE' });
+      const res = await fetch(`/api/menu?zarizeni=${zarizeni}`, { method: 'DELETE' });
       if (!res.ok) {
         setError('Obnovení se nezdařilo.');
         return;
@@ -142,7 +154,7 @@ export function Topbar({
       const res = await fetch('/api/menu', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: draft.map((d) => ({ label: d.label, href: d.href })) }),
+        body: JSON.stringify({ items: draft.map((d) => ({ label: d.label, href: d.href })), zarizeni }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -158,57 +170,14 @@ export function Topbar({
     }
   }
 
-  const shown: NavItem[] = editing ? draft : items;
   // Ikony jsou vzdycky zelene, i u neaktivnich odkazu (zadani 15. 9. 2026:
   // "mely by byt zelene a nad tim napisem") - proto maji barvu natvrdo
   // a nededi ji z odkazu, ktery je bily / pri aktivite zeleny.
   const tridaIkony = 'w-5 h-5 sm:w-[22px] sm:h-[22px] text-brand-green shrink-0';
   const missingPages = pageOptions.filter((p) => !draft.some((d) => d.href === p.href));
 
-  return (
-    // Lista zustava nahore i pri rolovani (zadani 9. 9. 2026: "hlavni fialova
-    // lista at je na celem portalu zakotvena, ze nezmizi"). Vyssi vrstva nez
-    // vysouvaci panely po stranach, at ji nic neprekryje.
-    //
-    // Lista se pri uprave NESMI prelamovat (zprava uzivatele 9. 9. 2026:
-    // "cele to menu pri uprave ujede nekam doprava a jmeno s fotkou
-    // a zvonecek se da na dalsi radek, chci at se to upravuje na tom samem
-    // miste"). Drive tu bylo flex-wrap a v rezimu uprav pribyly krizky,
-    // tlacitko "+" a Hotovo/Zrusit/Vychozi - rada se proto zalomila a cela
-    // lista poskocila. Zalomit se proto smi JEN cely blok odkazu (viz nize) -
-    // jmeno, zvonecek ani prepinac se nikam nestehuji.
-    // NA TELEFONU MA LISTA DVA RADKY (zadani 14. 9. 2026: „v mobilu ted
-    // zmizely nebo se schovaly ty odkazy na Projekty, firmy atd. ... protahnul
-    // bych tu fialovou listu a dal ty odkazy na druhy radek"). Na jednom radku
-    // se odkazy schovaly do posuvneho pruhu za znacku a prakticky se k nim
-    // neslo dostat. Zalamuje se schvalne jen v uzkem miste: `flex-wrap` plus
-    // `w-full` u odkazu je posle pod znacku a ovladaci prvky, od tabletu vys
-    // (`sm:`) zustava lista presne takova, jaka byla - jeden radek.
-    <header className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 sm:gap-4 shadow-md">
-      {/* Branding "MS portal | [logo]" podle referencniho mockupu uzivatele
-          (12. 9. 2026) - svisla oddelovaci cara misto "by" a znatelne vetsi
-          logo (jeste zvetseno 5. 9. 2026). */}
-      {/* NA TELEFONU SE ZNACKA SMRSTI (zadani 14. 9. 2026: „je rozbita ta
-          horni lista v portalu na mobilu v apce"). „MS portal" ve 2xl se na
-          sirku telefonu nevesel a zalomil se na dva radky, cimz lista
-          povyrostla a zbytek z ni vytlacil ven. Tady je text na jeden radek,
-          mensi, logo nizsi a delici cara az od tabletu - na telefonu je to
-          jen dalsi svisly pruh v uzkem miste. */}
-      <Link href="/projekty" className="order-1 flex items-center gap-2 sm:gap-4 no-underline shrink-0">
-        <span className="font-body text-brand-green font-semibold text-lg sm:text-3xl whitespace-nowrap">
-          MS portal
-        </span>
-        <span className="hidden sm:block w-px h-8 sm:h-10 bg-white/40" aria-hidden="true" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 sm:h-16 w-auto" />
-      </Link>
-
-      {/* py-3 -my-3: posuvny pruh oreze vsechno, co z nej cni - a krizky
-          u odkazu cni nahoru, takze se usekavaly (zprava uzivatele
-          9. 9. 2026: "jsou useknute krizky"). Svisle odsazeni jim udela
-          misto uvnitr pruhu, zaporny okraj vrati liste puvodni vysku. */}
-      <nav className="order-3 sm:order-2 w-full sm:w-auto flex items-center gap-5 sm:gap-8 font-heading text-sm font-medium min-w-0 py-3 -my-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {shown.map((item, index) => {
+  /** Jeden odkaz lišty - v režimu úprav s křížkem a přetahováním. */
+  const vykresli = (item: NavItem, index: number) => {
           const external = isExternalHref(item.href);
           // "/admin" (Firmy) by jinak jako prefix odpovidal i "/admin/users" -
           // proto je Firmy aktivni jen presne na /admin nebo na detailu firmy.
@@ -284,7 +253,64 @@ export function Topbar({
               </span>
             </Link>
           );
-        })}
+        };
+
+  return (
+    // Lista zustava nahore i pri rolovani (zadani 9. 9. 2026: "hlavni fialova
+    // lista at je na celem portalu zakotvena, ze nezmizi"). Vyssi vrstva nez
+    // vysouvaci panely po stranach, at ji nic neprekryje.
+    //
+    // Lista se pri uprave NESMI prelamovat (zprava uzivatele 9. 9. 2026:
+    // "cele to menu pri uprave ujede nekam doprava a jmeno s fotkou
+    // a zvonecek se da na dalsi radek, chci at se to upravuje na tom samem
+    // miste"). Drive tu bylo flex-wrap a v rezimu uprav pribyly krizky,
+    // tlacitko "+" a Hotovo/Zrusit/Vychozi - rada se proto zalomila a cela
+    // lista poskocila. Zalomit se proto smi JEN cely blok odkazu (viz nize) -
+    // jmeno, zvonecek ani prepinac se nikam nestehuji.
+    // NA TELEFONU MA LISTA DVA RADKY (zadani 14. 9. 2026: „v mobilu ted
+    // zmizely nebo se schovaly ty odkazy na Projekty, firmy atd. ... protahnul
+    // bych tu fialovou listu a dal ty odkazy na druhy radek"). Na jednom radku
+    // se odkazy schovaly do posuvneho pruhu za znacku a prakticky se k nim
+    // neslo dostat. Zalamuje se schvalne jen v uzkem miste: `flex-wrap` plus
+    // `w-full` u odkazu je posle pod znacku a ovladaci prvky, od tabletu vys
+    // (`sm:`) zustava lista presne takova, jaka byla - jeden radek.
+    <header className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 sm:gap-4 shadow-md">
+      {/* Branding "MS portal | [logo]" podle referencniho mockupu uzivatele
+          (12. 9. 2026) - svisla oddelovaci cara misto "by" a znatelne vetsi
+          logo (jeste zvetseno 5. 9. 2026). */}
+      {/* NA TELEFONU SE ZNACKA SMRSTI (zadani 14. 9. 2026: „je rozbita ta
+          horni lista v portalu na mobilu v apce"). „MS portal" ve 2xl se na
+          sirku telefonu nevesel a zalomil se na dva radky, cimz lista
+          povyrostla a zbytek z ni vytlacil ven. Tady je text na jeden radek,
+          mensi, logo nizsi a delici cara az od tabletu - na telefonu je to
+          jen dalsi svisly pruh v uzkem miste. */}
+      <Link href="/projekty" className="order-1 flex items-center gap-2 sm:gap-4 no-underline shrink-0">
+        <span className="font-body text-brand-green font-semibold text-lg sm:text-3xl whitespace-nowrap">
+          MS portal
+        </span>
+        <span className="hidden sm:block w-px h-8 sm:h-10 bg-white/40" aria-hidden="true" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mediaspace-logo.gif" alt="Mediaspace" className="h-8 sm:h-16 w-auto" />
+      </Link>
+
+      {/* py-3 -my-3: posuvny pruh oreze vsechno, co z nej cni - a krizky
+          u odkazu cni nahoru, takze se usekavaly (zprava uzivatele
+          9. 9. 2026: "jsou useknute krizky"). Svisle odsazeni jim udela
+          misto uvnitr pruhu, zaporny okraj vrati liste puvodni vysku. */}
+      <nav className="order-3 sm:order-2 w-full sm:w-auto flex items-center gap-5 sm:gap-8 font-heading text-sm font-medium min-w-0 py-3 -my-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {editing ? (
+          draft.map(vykresli)
+        ) : (
+          <>
+            {/* DVĚ LIŠTY, KAŽDÁ PRO JINÉ ZAŘÍZENÍ (zadání 19. 9. 2026). Vykreslí
+                se obě a přepíná je CSS podle šířky - server neví, na čem
+                se kouká, a přepnutí až v prohlížeči by lištou po načtení
+                cuklo. `contents` = obal nemá vlastní krabici, odkazy se
+                chovají jako přímé položky lišty. */}
+            <span className="contents md:hidden">{(itemsMobil ?? items).map(vykresli)}</span>
+            <span className="hidden md:contents">{items.map(vykresli)}</span>
+          </>
+        )}
 
         {/* Přidání zkratky. */}
         {editing && (
@@ -336,6 +362,10 @@ export function Topbar({
 
         {editing && (
           <span className="flex items-center gap-3">
+            {/* At je jasne, kterou listu clovek sklada - druha zustava, jak je. */}
+            <span className="text-white/70 text-xs font-heading whitespace-nowrap">
+              Lišta pro {NAZEV_ZARIZENI[zarizeni]}
+            </span>
             <button
               type="button"
               onClick={save}
