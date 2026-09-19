@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { CountrySelect } from '@/app/(admin)/admin/CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { HEREC_STUDIOS } from '@/lib/roles';
@@ -238,22 +239,15 @@ function Pole({
     return (
       <div className="flex flex-col gap-2">
         <span className="text-sm font-heading font-semibold text-ink">{pole.popisek}</span>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {HEREC_STUDIOS.map((studio) => (
-            <label key={studio} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={vybrano.includes(studio)}
-                onChange={(e) =>
-                  nastav(
-                    pole.klic,
-                    e.target.checked ? [...vybrano, studio] : vybrano.filter((s) => s !== studio),
-                  )
-                }
-                className="w-4 h-4 accent-brand-purple"
-              />
-              <span className="text-sm font-body text-ink">{studio}</span>
-            </label>
+            <Volba
+              key={studio}
+              vybrano={vybrano.includes(studio)}
+              onZmena={(zapnout) => nastav(pole.klic, prepniVSeznamu(vybrano, studio, zapnout))}
+            >
+              {studio}
+            </Volba>
           ))}
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Volba } from '@/components/Volba';
 import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
 import { AdminField } from '../../NewCompanyForm';
@@ -312,14 +313,14 @@ export function CompanyForm({ company }: { company: Company }) {
             hint="klient uvidí jen příslušný typ objednávky — a podle toho mu chodí i zprávy o stavu projektu"
           >
             <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-2 text-sm font-heading text-ink">
-                <input type="checkbox" checked={dealsAudiobooks} onChange={(e) => setDealsAudiobooks(e.target.checked)} />
-                Audioknihy
-              </label>
-              <label className="flex items-center gap-2 text-sm font-heading text-ink">
-                <input type="checkbox" checked={dealsAds} onChange={(e) => setDealsAds(e.target.checked)} />
-                Reklamy
-              </label>
+              <div className="flex flex-wrap gap-2">
+                <Volba vybrano={dealsAudiobooks} onZmena={setDealsAudiobooks}>
+                  Audioknihy
+                </Volba>
+                <Volba vybrano={dealsAds} onZmena={setDealsAds}>
+                  Reklamy
+                </Volba>
+              </div>
               <span className="text-xs font-body text-muted">
                 Jen Reklamy = zprávy podle vzorů pro reklamy, a to jen ve stavu „Dokončeno - ke schválení".
                 Audioknihy (i spolu s reklamami) = zpráva ke každému kroku.

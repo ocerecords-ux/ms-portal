@@ -71,7 +71,7 @@ export function OfferBuilder({
   slots: Slot[];
   /** Studia, ze kterých se nabízí - lokace herce plus studio nabídky. */
   studiaNabidky: string[];
-  studios: { id: string; name: string }[];
+  studios: { id: string; name: string; color?: string | null }[];
   historie: { id: string; type: string; actorLabel: string; note: string | null; createdAt: string }[];
 }) {
   const router = useRouter();

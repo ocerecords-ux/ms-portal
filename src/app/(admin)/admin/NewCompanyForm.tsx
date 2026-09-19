@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Volba } from '@/components/Volba';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import type { CompanyType } from '@prisma/client';
@@ -264,14 +265,14 @@ export function NewCompanyForm({ defaultType }: { defaultType: CompanyType }) {
         <>
           <AdminField label="Druh zakázek" hint="podle toho klient uvidí jen příslušný typ objednávky">
             <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-2 text-sm font-heading text-ink">
-                <input type="checkbox" checked={dealsAudiobooks} onChange={(e) => setDealsAudiobooks(e.target.checked)} />
-                Audioknihy
-              </label>
-              <label className="flex items-center gap-2 text-sm font-heading text-ink">
-                <input type="checkbox" checked={dealsAds} onChange={(e) => setDealsAds(e.target.checked)} />
-                Reklamy
-              </label>
+              <div className="flex flex-wrap gap-2">
+                <Volba vybrano={dealsAudiobooks} onZmena={setDealsAudiobooks}>
+                  Audioknihy
+                </Volba>
+                <Volba vybrano={dealsAds} onZmena={setDealsAds}>
+                  Reklamy
+                </Volba>
+              </div>
             </div>
           </AdminField>
 

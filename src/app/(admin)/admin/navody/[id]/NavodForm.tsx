@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { useRouter } from 'next/navigation';
 import { KATEGORIE_NAVODU, navodNaHtml } from '@/lib/navody';
 import { ROLE_LABELS } from '@/lib/roles';
@@ -172,24 +173,16 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
             Komu se ukáže
             <span className="block text-xs text-muted">nic nezaškrtnuto = všem přihlášeným</span>
           </span>
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-2 flex-wrap">
             {ALL_ROLES.map((role) => (
-              <label key={role} className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={n.proRole.includes(role)}
-                  onChange={(e) =>
-                    nastav(
-                      'proRole',
-                      e.target.checked
-                        ? [...n.proRole, role]
-                        : n.proRole.filter((r) => r !== role),
-                    )
-                  }
-                  className="w-4 h-4 accent-brand-purple"
-                />
-                <span className="text-xs font-body text-ink">{ROLE_LABELS[role]}</span>
-              </label>
+              <Volba
+                key={role}
+                maly
+                vybrano={n.proRole.includes(role)}
+                onZmena={(zapnout) => nastav('proRole', prepniVSeznamu(n.proRole, role, zapnout))}
+              >
+                {ROLE_LABELS[role]}
+              </Volba>
             ))}
           </div>
         </div>

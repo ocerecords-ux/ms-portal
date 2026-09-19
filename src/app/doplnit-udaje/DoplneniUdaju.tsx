@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { CountrySelect } from '@/app/(admin)/admin/CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { MESTA_PRO_HERCE, mestaZeStudii, studiaZMest } from '@/lib/lokaceHercu';
@@ -247,22 +248,15 @@ export function DoplneniUdaju({
       nadpis: 'Kde můžete natáčet?',
       popis: 'Zaškrtněte města, kam se dostanete. Dá se to kdykoliv změnit.',
       obsah: (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-2">
           {MESTA_PRO_HERCE.map(({ mesto }) => (
-            <label key={mesto} className="flex items-center gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={u.mesta.includes(mesto)}
-                onChange={(e) =>
-                  nastav(
-                    'mesta',
-                    e.target.checked ? [...u.mesta, mesto] : u.mesta.filter((m) => m !== mesto),
-                  )
-                }
-                className="w-4 h-4 accent-brand-purple"
-              />
-              <span className="text-sm font-body text-ink">{mesto}</span>
-            </label>
+            <Volba
+              key={mesto}
+              vybrano={u.mesta.includes(mesto)}
+              onZmena={(zapnout) => nastav('mesta', prepniVSeznamu(u.mesta, mesto, zapnout))}
+            >
+              {mesto}
+            </Volba>
           ))}
         </div>
       ),

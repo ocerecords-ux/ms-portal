@@ -1,12 +1,14 @@
 'use client';
 
+import { Volba } from '@/components/Volba';
+
 /**
- * Zaškrtávací výběr studií, do kterých se nabízí termíny (zadání 19. 9. 2026:
- * „už by se měla objevit ta studia obě brněnská, když plánujeme" → „asi by
- * to tam chtělo zaškrtávací pole").
+ * Výběr studií, do kterých se nabízí termíny (zadání 19. 9. 2026: „asi by to
+ * tam chtělo zaškrtávací pole" → „v grafice, jak máme kalendáře nebo
+ * licence"). Jednotné zaškrtávátko portálu s barvou studia.
  *
- * Herci se nabídnou volná místa ve VŠECH zaškrtnutých studiích. Aspoň jedno
- * musí zůstat - poslední zaškrtnuté nejde odškrtnout.
+ * Herci se nabídnou volná místa ve VŠECH vybraných studiích. Aspoň jedno
+ * musí zůstat - poslední vybrané nejde odškrtnout.
  */
 export function VyberStudii({
   studia,
@@ -14,40 +16,35 @@ export function VyberStudii({
   onZmena,
   disabled,
 }: {
-  studia: { id: string; name: string }[];
+  studia: { id: string; name: string; color?: string | null }[];
   vybrana: string[];
   onZmena: (ids: string[]) => void;
   disabled?: boolean;
 }) {
-  function prepni(id: string) {
-    if (vybrana.includes(id)) {
-      if (vybrana.length === 1) return;
-      onZmena(vybrana.filter((x) => x !== id));
-    } else {
-      // Poradi podle seznamu studii - prvni zaskrtnute je hlavni studio nabidky.
-      onZmena(studia.map((s) => s.id).filter((x) => x === id || vybrana.includes(x)));
-    }
-  }
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-2 py-1">
+    <div className="flex flex-wrap gap-2 py-0.5">
       {studia.map((s) => {
-        const zaskrtnute = vybrana.includes(s.id);
+        const zapnute = vybrana.includes(s.id);
+        const posledni = zapnute && vybrana.length === 1;
         return (
-          <label
+          <Volba
             key={s.id}
-            className={`inline-flex items-center gap-2 text-sm font-heading cursor-pointer select-none ${
-              zaskrtnute ? 'text-ink' : 'text-muted'
-            }`}
+            vybrano={zapnute}
+            barva={s.color || '#7B55FF'}
+            disabled={disabled}
+            title={posledni ? 'Aspoň jedno studio musí zůstat vybrané' : s.name}
+            onZmena={(zapnout) => {
+              if (!zapnout) {
+                if (posledni) return;
+                onZmena(vybrana.filter((x) => x !== s.id));
+              } else {
+                // Poradi podle seznamu studii - prvni vybrane je hlavni studio.
+                onZmena(studia.map((x) => x.id).filter((x) => x === s.id || vybrana.includes(x)));
+              }
+            }}
           >
-            <input
-              type="checkbox"
-              checked={zaskrtnute}
-              disabled={disabled || (zaskrtnute && vybrana.length === 1)}
-              onChange={() => prepni(s.id)}
-              className="w-4 h-4 accent-[var(--brand-purple,#7B55FF)]"
-            />
             {s.name}
-          </label>
+          </Volba>
         );
       })}
     </div>

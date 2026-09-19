@@ -50,7 +50,7 @@ export function RecordingSection({
   sessionsFromPages: number;
   narratorFromCaflou: string | null;
   herci: { id: string; label: string }[];
-  studios: { id: string; name: string }[];
+  studios: { id: string; name: string; color?: string | null }[];
   defaultActorUserId: string | null;
   /**
    * Datum dokončení projektu „YYYY-MM-DD" (Do kdy to máme odevzdat). Z něj se

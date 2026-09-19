@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import type { ConversationKind } from '@prisma/client';
@@ -3140,21 +3141,21 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     placeholder="Název skupiny"
                     className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
                   />
-                  {team.map((u) => (
-                    <label key={u.id} className="flex items-center gap-2 text-sm font-body text-ink px-1">
-                      <input
-                        type="checkbox"
-                        checked={vybraniLide.includes(u.id)}
-                        onChange={(e) =>
-                          setVybraniLide((current) =>
-                            e.target.checked ? [...current, u.id] : current.filter((id) => id !== u.id),
-                          )
-                        }
-                      />
-                      <Avatar label={u.label} photoUrl={u.photoUrl} size={22} />
-                      <span className="truncate">{u.label}</span>
-                    </label>
-                  ))}
+                  <div className="flex flex-wrap gap-1.5">
+                    {team.map((u) => (
+                      <Volba
+                        key={u.id}
+                        maly
+                        vybrano={vybraniLide.includes(u.id)}
+                        onZmena={(zapnout) => setVybraniLide((current) => prepniVSeznamu(current, u.id, zapnout))}
+                      >
+                        <span className="inline-flex items-center gap-1.5">
+                          <Avatar label={u.label} photoUrl={u.photoUrl} size={18} />
+                          <span className="truncate">{u.label}</span>
+                        </span>
+                      </Volba>
+                    ))}
+                  </div>
                   <button
                     type="button"
                     disabled={!nazevSkupiny.trim() || vybraniLide.length === 0}
@@ -3304,21 +3305,19 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">
                         Kdo do skupiny vidí
                       </p>
-                      <div className="flex flex-col gap-1 max-h-[180px] overflow-y-auto">
+                      <div className="flex flex-wrap gap-1.5 max-h-[180px] overflow-y-auto">
                         {team.map((u) => (
-                          <label key={u.id} className="flex items-center gap-2 text-sm font-body text-ink px-1">
-                            <input
-                              type="checkbox"
-                              checked={spravaClenove.includes(u.id)}
-                              onChange={(e) =>
-                                setSpravaClenove((current) =>
-                                  e.target.checked ? [...current, u.id] : current.filter((id) => id !== u.id),
-                                )
-                              }
-                            />
-                            <Avatar label={u.label} photoUrl={u.photoUrl} size={22} />
-                            <span className="truncate">{u.label}</span>
-                          </label>
+                          <Volba
+                            key={u.id}
+                            maly
+                            vybrano={spravaClenove.includes(u.id)}
+                            onZmena={(zapnout) => setSpravaClenove((current) => prepniVSeznamu(current, u.id, zapnout))}
+                          >
+                            <span className="inline-flex items-center gap-1.5">
+                              <Avatar label={u.label} photoUrl={u.photoUrl} size={18} />
+                              <span className="truncate">{u.label}</span>
+                            </span>
+                          </Volba>
                         ))}
                       </div>
                       <p className="text-[11px] font-body text-muted m-0">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Volba } from '@/components/Volba';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { SmazatSPrekazkami } from '@/components/SmazatSPrekazkami';
@@ -569,28 +570,20 @@ export function UserEditForm({
                 10. 9. 2026) - kdo si ji zapamatuje tady, precte pak seznam
                 bez cteni textu. Brno I a Brno II sdileji barvu: jsou to dve
                 mistnosti v jednom meste. */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {LOKACE_S_BARVOU.map((studio) => (
-                <label
+                <Volba
                   key={studio.nazev}
-                  className="flex items-center gap-2 text-sm font-heading text-ink cursor-pointer"
+                  vybrano={studioLocations.includes(studio.nazev)}
+                  onZmena={() => toggleStudio(studio.nazev)}
+                  title={studio.nazev}
                 >
-                  <input
-                    type="checkbox"
-                    checked={studioLocations.includes(studio.nazev)}
-                    onChange={() => toggleStudio(studio.nazev)}
-                  />
                   <span
-                    className={`inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-heading font-semibold ${studio.barva}`}
+                    className={`inline-flex items-center rounded-pill px-2 py-0.5 text-xs font-heading font-semibold ${studio.barva}`}
                   >
                     {studio.popisek}
                   </span>
-                  {/* Od 15. 9. 2026 je lokace rovnou mesto, takze nazev za
-                      odznakem uz by jen opakoval totez. */}
-                  {studio.popisek !== studio.nazev && (
-                    <span className="text-muted text-xs font-body">{studio.nazev}</span>
-                  )}
-                </label>
+                </Volba>
               ))}
             </div>
           </AdminField>
