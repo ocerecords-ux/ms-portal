@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { PosunGestem } from './PosunGestem';
 import { OdberKalendare } from './OdberKalendare';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import Link from 'next/link';
@@ -362,7 +363,12 @@ export function CalendarBrowser({
     prejdi({ studia: dalsi.join(',') });
   }
 
+  // Odkud se prislo - po posunu zpet se tyden v mobilu ukaze od konce
+  // (nedele), po posunu vpred od zacatku, at gesto navazuje (20. 9. 2026).
+  const [smerPosunu, setSmerPosunu] = useState<-1 | 1>(1);
+
   function posun(smer: -1 | 1) {
+    setSmerPosunu(smer);
     const d = new Date(`${anchorIso}T12:00:00.000Z`);
     if (view === 'den') d.setUTCDate(d.getUTCDate() + smer);
     else if (view === 'tyden') d.setUTCDate(d.getUTCDate() + 7 * smer);
@@ -515,6 +521,7 @@ export function CalendarBrowser({
         />
       </div>
 
+      <PosunGestem onPosun={posun}>
       {view === 'mesic' ? (
         <MesicniPohled
           days={days}
@@ -537,8 +544,10 @@ export function CalendarBrowser({
           onOtevriNepritomnost={(n) => setOknoNepritomnosti({ upravovana: n, den: n.start })}
           onNovaNepritomnost={(den) => setOknoNepritomnosti({ upravovana: null, den, celyDen: true })}
           onNovaBlokace={novaVMrizce}
+          smerPosunu={smerPosunu}
         />
       )}
+      </PosunGestem>
 
       {/* FORMULÁŘ JE UPROSTŘED OBRAZOVKY (zadání 14. 9. 2026: „to editační
           okno bych dal někam doprostřed kalendáře. Dole vůbec nevím, že se
@@ -664,7 +673,10 @@ function MrizkaPohled({
   onOtevriNepritomnost,
   onNovaNepritomnost,
   onNovaBlokace,
+  smerPosunu = 1,
 }: {
+  /** Z které strany se na týden přišlo gestem/šipkou - kam vodorovně narolovat. */
+  smerPosunu?: -1 | 1;
   days: CalendarDay[];
   podleDnu: Map<string, CalendarEvent[]>;
   timezone: string;
@@ -681,6 +693,25 @@ function MrizkaPohled({
   const hodiny = Array.from({ length: GRID_END_HOUR - GRID_START_HOUR }, (_, i) => GRID_START_HOUR + i);
   const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
   const rolovatko = useRef<HTMLDivElement | null>(null);
+  const vodorovne = useRef<HTMLDivElement | null>(null);
+  // Novy tyden v mobilu: vpred od pondeli, zpet od nedele.
+  // Pri otevreni (a v tydnu s dneskem) se v mobilu ukaze dnesek.
+  const prvniDen = days[0]?.key;
+  const uzOtevreno = useRef(false);
+  useEffect(() => {
+    const el = vodorovne.current;
+    if (!el || el.scrollWidth <= el.clientWidth + 1) return;
+    const dnes = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+    const iDnes = days.findIndex((d) => d.key === dnes);
+    if (!uzOtevreno.current && iDnes >= 0) {
+      const sloupec = (el.scrollWidth - 52) / days.length;
+      el.scrollLeft = Math.max(0, iDnes * sloupec);
+    } else {
+      el.scrollLeft = smerPosunu === -1 ? el.scrollWidth : 0;
+    }
+    uzOtevreno.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prvniDen]);
 
   /**
    * Po otevreni se nascrolluje tam, kde zacina PRVNI UDALOST zobrazeneho
@@ -728,8 +759,9 @@ function MrizkaPohled({
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
-      {/* Hlavicka dnu zustava nad rolovanim */}
-      <div className="overflow-x-auto">
+      {/* Hlavicka dnu zustava nad rolovanim. data-vodorovne: gesto posunu
+          (PosunGestem) nejdriv doroluje tyden ke kraji, pak prepne. */}
+      <div ref={vodorovne} data-vodorovne className="overflow-x-auto [overscroll-behavior-x:contain]">
         <div className="min-w-[720px]">
           <div className="grid border-b border-line" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
             <div />

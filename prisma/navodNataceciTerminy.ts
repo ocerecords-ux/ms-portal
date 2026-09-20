@@ -74,6 +74,8 @@ Když se držení nestihne potvrdit, termíny se samy vrátí do nabídky a here
 
 # 5. Kalendář
 
+**Na další nebo předchozí týden** se nemusíte proklikávat šipkami: v mobilu **táhněte prstem** doleva nebo doprava, na Macu posuňte **dvěma prsty po touchpadu** (nebo po Magic Mouse) do strany. V mobilu se týden nejdřív doroluje ke kraji (neděli) a teprve další tah přepne na další týden. Stejně to funguje u dne i měsíce.
+
 V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a potvrzené. Nabídnutá volná místa se tam neukazují, jinak by zaplnila celý týden.
 
 **Jedním kliknutím** na událost bublina **vystoupí dopředu a zvětší se přímo na svém místě** — kalendář kolem zůstává vidět. Zavře se **dalším kliknutím na bublinu**, klikem jinam, klávesou Esc nebo zarolováním (křížek tam není).
