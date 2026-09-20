@@ -884,6 +884,7 @@ function MrizkaPohled({
                               key={i}
                               className="block text-[10px] font-heading font-semibold leading-tight truncate"
                             >
+                              <IkonaDruhu druh={druhPrace(e)} className="w-2.5 h-2.5 mr-0.5" />
                               {radek}
                             </span>
                           ) : (
@@ -997,6 +998,7 @@ function MesicniPohled({
                   >
                     {/* V měsíci je na řádek místo jen na to podstatné - název
                         a zvukař (20. 9. 2026: „nejsou tam vidět zvukaři"). */}
+                    <IkonaDruhu druh={druhPrace(e)} className="w-2.5 h-2.5 mr-0.5" />
                     {e.title.split('\n')[0]}
                     {(() => {
                       const zv = e.title.split('\n').find((r) => r.startsWith('ZVUKAŘ:'));
@@ -1172,6 +1174,29 @@ function UdalostForm({
       onHotovo();
     } catch {
       setError('Frekvenci se nepodařilo zrušit.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * Smazání ručně zapsané události přímo z úpravy (20. 9. 2026: „upravit,
+   * smazat se bude řešit v tom editu, když poklepeš dvakrát").
+   */
+  async function smazUdalost() {
+    if (!upravovana || !window.confirm('Opravdu smazat tuhle událost z kalendáře?')) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/kalendar/blokace?id=${encodeURIComponent(upravovana.id)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || 'Událost se nepodařilo smazat.');
+        return;
+      }
+      onHotovo();
+    } catch {
+      setError('Událost se nepodařilo smazat.');
     } finally {
       setBusy(false);
     }
@@ -1428,6 +1453,16 @@ function UdalostForm({
         <button type="button" onClick={onClose} className="text-muted text-sm font-heading">
           Zrušit
         </button>
+        {upravovana && upravovana.kind === 'BLOCK' && (
+          <button
+            type="button"
+            onClick={smazUdalost}
+            disabled={busy}
+            className="ml-auto text-sm font-heading font-semibold text-danger disabled:opacity-60"
+          >
+            Smazat událost
+          </button>
+        )}
         {jeFrekvence && (
           <button
             type="button"
@@ -1445,6 +1480,63 @@ function UdalostForm({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * IKONA DRUHU PRÁCE (zadání 20. 9. 2026: „ohledně natáčení a střihu bychom
+ * měli nějak pracovat i s ikonami"). Natáčení = mikrofon, střih = nůžky,
+ * údržba = klíč, svátek/dovolená = slunce. Frekvence z nabídky je natáčení.
+ * Kreslí se barvou textu, takže sedí ve světlém i tmavém režimu.
+ */
+export function druhPrace(e: Pick<CalendarEvent, 'kind' | 'state'>): 'NATACENI' | 'STRIH' | 'UDRZBA' | 'VOLNO' | null {
+  if (e.kind === 'SLOT') return 'NATACENI';
+  if (e.kind !== 'BLOCK') return null;
+  if (e.state === 'NATACENI') return 'NATACENI';
+  if (e.state === 'STRIH') return 'STRIH';
+  if (e.state === 'MAINTENANCE') return 'UDRZBA';
+  if (e.state === 'HOLIDAY' || e.state === 'VACATION') return 'VOLNO';
+  return null;
+}
+
+function IkonaDruhu({ druh, className = 'w-3 h-3' }: { druh: ReturnType<typeof druhPrace>; className?: string }) {
+  if (!druh) return null;
+  const spolecne = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2.2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    className: `${className} shrink-0 inline-block align-[-0.125em]`,
+    'aria-hidden': true,
+  };
+  if (druh === 'NATACENI')
+    return (
+      <svg {...spolecne}>
+        <rect x="9" y="3" width="6" height="11" rx="3" />
+        <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" />
+      </svg>
+    );
+  if (druh === 'STRIH')
+    return (
+      <svg {...spolecne}>
+        <circle cx="6" cy="6.5" r="2.8" />
+        <circle cx="6" cy="17.5" r="2.8" />
+        <path d="M8.3 8.2 20 18M8.3 15.8 20 6" />
+      </svg>
+    );
+  if (druh === 'UDRZBA')
+    return (
+      <svg {...spolecne}>
+        <path d="M14.5 5.5a4 4 0 0 0 4.9 4.9L21 12l-9 9-3-3 9-9-1.6-1.6a4 4 0 0 0-4.9-4.9l2.5 2.5-1.5 1.5z" />
+      </svg>
+    );
+  return (
+    <svg {...spolecne}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+    </svg>
   );
 }
 
@@ -1475,22 +1567,10 @@ function DetailUdalosti({
   onClose: () => void;
   onSmazano: () => void;
 }) {
-  const [busy, setBusy] = useState(false);
   const stav =
     event.kind === 'BLOCK'
       ? BLOCK_KIND_LABELS[event.state] ?? 'Blokace'
       : SLOT_STATE_LABELS[event.state] ?? event.state;
-
-  async function smaz() {
-    if (!window.confirm('Opravdu smazat tuhle událost z kalendáře?')) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/kalendar/blokace?id=${event.id}`, { method: 'DELETE' });
-      if (res.ok) onSmazano();
-    } finally {
-      setBusy(false);
-    }
-  }
 
   // Zavrit klavesou Esc, rolovanim nebo zmenou okna (bublina uz by jinde).
   useEffect(() => {
@@ -1510,6 +1590,12 @@ function DetailUdalosti({
 
   const u = event.udalost;
   const radky = event.title.split('\n');
+  // Technicka stopa z prevodu Google kalendare se neukazuje (20. 9. 2026).
+  const poznamka = (event.poznamka ?? '')
+    .split(' · ')
+    .filter((cast) => !cast.startsWith('Z Google kalendáře:'))
+    .join(' · ')
+    .trim();
   const barvy = eventColors(event.color, event.state);
   const cas = (iso: string) =>
     new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
@@ -1554,7 +1640,10 @@ function DetailUdalosti({
           style={{ backgroundColor: barvy.background, borderColor: barvy.border, borderLeftWidth: '4px', color: barvy.text }}
         >
           <div className="flex items-start justify-between gap-2">
-            <span className="text-[10px] font-heading font-semibold uppercase tracking-wide opacity-75">{stav}</span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-heading font-semibold uppercase tracking-wide opacity-80">
+              <IkonaDruhu druh={druhPrace(event)} className="w-3.5 h-3.5" />
+              {stav}
+            </span>
             <button
               type="button"
               onClick={onClose}
@@ -1583,19 +1672,17 @@ function DetailUdalosti({
           {u?.actorName && !event.title.includes(u.actorName) && (
             <p className="m-0 text-sm font-heading">Herec: {u.actorName}</p>
           )}
-          {event.subtitle && <p className="m-0 text-xs font-body opacity-75">{event.subtitle}</p>}
-          {event.poznamka && (
+          {/* Druh prace je jen nahore (20. 9. 2026) - subtitle ho opakoval.
+              Mimo studio si svuj popisek necha, tam nejde o druh prace. */}
+          {event.subtitle && event.kind === 'MIMO' && <p className="m-0 text-xs font-body opacity-75">{event.subtitle}</p>}
+          {poznamka && (
             <p className="m-0 mt-1 text-xs font-body opacity-90 whitespace-pre-line break-words border-t border-black/10 dark:border-white/15 pt-1.5">
-              {event.poznamka}
+              {poznamka}
             </p>
           )}
-          {(u?.caflouProjectId || (canManage && (event.href || event.kind === 'BLOCK' || jeUpravitelnaFrekvence(event)))) && (
+          {/* Upravit a smazat jen v uprave - dvojklik (20. 9. 2026). */}
+          {(u?.caflouProjectId || (canManage && event.href)) && (
             <div className="flex items-center gap-3 flex-wrap mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/15 text-xs font-heading font-semibold">
-              {canManage && (event.kind === 'BLOCK' || jeUpravitelnaFrekvence(event)) && (
-                <button type="button" onClick={onUpravit} className="underline underline-offset-2">
-                  Upravit
-                </button>
-              )}
               {u?.caflouProjectId && (
                 <Link href={`/projekty/${u.caflouProjectId}`} className="underline underline-offset-2" style={{ color: 'inherit' }}>
                   Projekt
@@ -1605,11 +1692,6 @@ function DetailUdalosti({
                 <Link href={event.href} className="underline underline-offset-2" style={{ color: 'inherit' }}>
                   Nabídka termínů
                 </Link>
-              )}
-              {canManage && event.kind === 'BLOCK' && (
-                <button type="button" onClick={smaz} disabled={busy} className="ml-auto text-danger disabled:opacity-60">
-                  Smazat
-                </button>
               )}
             </div>
           )}

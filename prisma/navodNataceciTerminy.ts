@@ -80,10 +80,12 @@ V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a
 
 ![Bublina po jednom kliknutí vystoupí a zvětší se](/navody/terminy-7.png)
 
-1. **Celý text** — název, herec a řádek ZVUKAŘ, nic se neořezává. Pod tím den, čas a studio, případně poznámka.
-2. **Odkazy** dole — **Upravit** (jako dvojklik), **Projekt**, u frekvence **Nabídka termínů** a u ručních událostí **Smazat**.
+1. **Druh práce s ikonou** nahoře (🎙 mikrofon = natáčení, ✂ nůžky = střih, klíč = údržba, slunce = svátek/dovolená) a pod ním celý text — název, herec a řádek ZVUKAŘ, nic se neořezává. Pod tím den, čas a studio, případně poznámka.
+2. **Odkazy** dole — **Projekt** a u frekvence **Nabídka termínů**.
 
-Zvukař je vidět i přímo v bublině události — v týdnu na druhém řádku, v měsíci za tečkou.
+**Upravit a smazat** se dá jen v úpravě — **dvojklikem** na událost. Tlačítko **Smazat událost** je dole v okně úpravy.
+
+Ikona druhu je i přímo v bublině v kalendáři, zvukař taky — v týdnu na druhém řádku, v měsíci za tečkou.
 
 ![Kalendář s frekvencí a otevřené okno Úprava frekvence](/navody/terminy-4.png)
 
