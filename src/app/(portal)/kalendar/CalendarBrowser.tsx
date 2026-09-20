@@ -158,6 +158,8 @@ export function CalendarBrowser({
   const [filtrStavu, setFiltrStavu] = useState<string>('');
   const [hledani, setHledani] = useState('');
   const [detail, setDetail] = useState<CalendarEvent | null>(null);
+  /** Kde na obrazovce je bublina, ze ktere detail vystoupi (20. 9. 2026). */
+  const [kotvaDetailu, setKotvaDetailu] = useState<Kotva | null>(null);
   const [novaBlokace, setNovaBlokace] = useState<{ studioId: string; start: string; end: string } | null>(null);
   /** Událost otevřená k úpravě (zadání 14. 9. 2026). */
   const [upravovana, setUpravovana] = useState<CalendarEvent | null>(null);
@@ -181,22 +183,26 @@ export function CalendarBrowser({
   const casovacDetailu = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lzeUpravit = (e: CalendarEvent) => canManage && (e.kind === 'BLOCK' || jeUpravitelnaFrekvence(e));
 
-  function klikNaUdalost(e: CalendarEvent) {
+  function klikNaUdalost(e: CalendarEvent, kotva?: Kotva) {
+    const otevri = () => {
+      setKotvaDetailu(kotva ?? null);
+      setDetail(e);
+    };
     // Mimo studio nemá detail s tlačítky - klik rovnou otevře úpravu, stejně
     // jako u celodenního štítku. Cizí záznam ukáže jen detail ke čtení.
     if (e.kind === 'MIMO' && e.mimo) {
       if (e.mimo.muzeUpravit) setOknoNepritomnosti({ upravovana: e.mimo, den: e.start });
-      else setDetail(e);
+      else otevri();
       return;
     }
     if (!lzeUpravit(e)) {
-      setDetail(e);
+      otevri();
       return;
     }
     if (casovacDetailu.current) clearTimeout(casovacDetailu.current);
     casovacDetailu.current = setTimeout(() => {
       casovacDetailu.current = null;
-      setDetail(e);
+      otevri();
     }, 230);
   }
 
@@ -647,6 +653,7 @@ export function CalendarBrowser({
       {detail && (
         <DetailUdalosti
           event={detail}
+          kotva={kotvaDetailu}
           timezone={timezone}
           canManage={canManage}
           onUpravit={() => {
@@ -680,7 +687,7 @@ function MrizkaPohled({
   days: CalendarDay[];
   podleDnu: Map<string, CalendarEvent[]>;
   timezone: string;
-  onDetail: (e: CalendarEvent) => void;
+  onDetail: (e: CalendarEvent, kotva?: Kotva) => void;
   /** Dvojklik na událost - otevře úpravu (19. 9. 2026). */
   onUpravit?: (e: CalendarEvent) => void;
   /** Dovolené po dnech; null = kalendář dovolených je vypnutý. */
@@ -838,7 +845,7 @@ function MrizkaPohled({
                       <button
                         key={e.id}
                         type="button"
-                        onClick={() => onDetail(e)}
+                        onClick={(ev) => onDetail(e, kotvaZ(ev.currentTarget))}
                         // Dvojklik na udalost ji upravi; do dne pod ni nesmi
                         // propadnout, jinak by se zakladala nova.
                         onDoubleClick={(ev) => {
@@ -920,7 +927,7 @@ function MesicniPohled({
   days: CalendarDay[];
   podleDnu: Map<string, CalendarEvent[]>;
   timezone: string;
-  onDetail: (e: CalendarEvent) => void;
+  onDetail: (e: CalendarEvent, kotva?: Kotva) => void;
   /** Dvojklik na událost - otevře úpravu (19. 9. 2026). */
   onUpravit?: (e: CalendarEvent) => void;
   nepritomnostPodleDnu: Map<string, NepritomnostVKalendari[]> | null;
@@ -973,7 +980,7 @@ function MesicniPohled({
                   <button
                     key={e.id}
                     type="button"
-                    onClick={() => onDetail(e)}
+                    onClick={(ev) => onDetail(e, kotvaZ(ev.currentTarget))}
                     onDoubleClick={(ev) => {
                       // Do dne pod udalosti nesmi propadnout - zalozila by se nova.
                       ev.stopPropagation();
@@ -1441,8 +1448,17 @@ function UdalostForm({
   );
 }
 
+/** Poloha bubliny na obrazovce - z ní detail „vystoupí". */
+type Kotva = { left: number; top: number; width: number; height: number };
+
+function kotvaZ(el: Element): Kotva {
+  const r = el.getBoundingClientRect();
+  return { left: r.left, top: r.top, width: r.width, height: r.height };
+}
+
 function DetailUdalosti({
   event,
+  kotva,
   timezone,
   canManage,
   onUpravit,
@@ -1450,6 +1466,8 @@ function DetailUdalosti({
   onSmazano,
 }: {
   event: CalendarEvent;
+  /** Bublina, ze které se kliklo - bez ní se detail ukáže uprostřed. */
+  kotva: Kotva | null;
   timezone: string;
   canManage: boolean;
   /** Otevře formulář s vyplněnou událostí (zadání 14. 9. 2026). */
@@ -1474,138 +1492,129 @@ function DetailUdalosti({
     }
   }
 
-  // Zavrit klavesou Esc.
+  // Zavrit klavesou Esc, rolovanim nebo zmenou okna (bublina uz by jinde).
   useEffect(() => {
     const klavesa = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') onClose();
     };
+    const pryc = () => onClose();
     window.addEventListener('keydown', klavesa);
-    return () => window.removeEventListener('keydown', klavesa);
+    window.addEventListener('resize', pryc);
+    window.addEventListener('scroll', pryc, true);
+    return () => {
+      window.removeEventListener('keydown', klavesa);
+      window.removeEventListener('resize', pryc);
+      window.removeEventListener('scroll', pryc, true);
+    };
   }, [onClose]);
 
   const u = event.udalost;
-  const [prvniRadek, ...dalsiRadky] = event.title.split('\n');
-  // Radky „ZVUKAŘ: ..." jsou v detailu zvlast jako udaj, ne v nadpisu.
-  const zvukar = u?.zvukarName ?? dalsiRadky.find((r) => r.startsWith('ZVUKAŘ:'))?.replace('ZVUKAŘ:', '').trim() ?? null;
-  const ostatniRadky = dalsiRadky.filter((r) => !r.startsWith('ZVUKAŘ:'));
-  const udaje: { popis: string; hodnota: React.ReactNode }[] = [
-    {
-      popis: 'Kdy',
-      hodnota: `${formatDateTime(event.start, timezone)} – ${formatDateTime(event.end, timezone)}`,
-    },
-    { popis: 'Studio', hodnota: event.studioName || '—' },
-    ...(u?.projectName
-      ? [
-          {
-            popis: 'Projekt',
-            hodnota: u.caflouProjectId ? (
-              <Link href={`/projekty/${u.caflouProjectId}`} className="text-brand-purple font-semibold no-underline hover:underline">
-                {u.projectName} →
-              </Link>
-            ) : (
-              u.projectName
-            ),
-          },
-        ]
-      : []),
-    ...(u?.actorName ? [{ popis: 'Herec', hodnota: u.actorName }] : []),
-    ...(zvukar ? [{ popis: 'Zvukař', hodnota: zvukar }] : []),
-  ];
+  const radky = event.title.split('\n');
+  const barvy = eventColors(event.color, event.state);
+  const cas = (iso: string) =>
+    new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+  const den = new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, weekday: 'short', day: 'numeric', month: 'numeric' }).format(
+    new Date(event.start),
+  );
 
   /**
-   * DETAIL „VYSTOUPÍ DOPŘEDU" (zadání 20. 9. 2026: „když na tu událost
-   * kliknu jednou, tak vystoupí jakoby dopředu před všechny a ukáže se mi
-   * zvětšený náhled, kde vidím vše"). Dřív se detail kreslil jako karta pod
-   * kalendářem - na velké obrazovce ho nikdo neviděl. Teď je to okno nad
-   * ztmaveným kalendářem; zavře se křížkem, klikem vedle nebo Esc.
+   * BUBLINA „VYSTOUPÍ" (zadání 20. 9. 2026, upřesnění: „náhled je moc velký
+   * a složitý. Potřebuju, ať jen vystoupí ta bublina a vše ostatní kolem jde
+   * vidět. Jen se to zvětší natolik, aby šlo přečíst všechna data").
+   *
+   * Žádné ztmavení ani okno uprostřed: stejná bublina (barva, pruh vlevo)
+   * se zvětší přímo na svém místě, nic se neořezává a text se zalamuje.
+   * Kalendář kolem zůstává vidět; klik jinam, Esc nebo rolování ji zavře.
    */
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const sirka = Math.min(vw - 16, Math.max(260, Math.min(340, (kotva?.width ?? 0) * 1.5)));
+  const stred = kotva ? kotva.left + kotva.width / 2 : vw / 2;
+  const left = Math.max(8, Math.min(vw - sirka - 8, stred - sirka / 2));
+  // Bublina ve spodni casti obrazovky roste nahoru, jinak dolu.
+  const dole = kotva ? kotva.top > vh * 0.6 : false;
+  const poloha: React.CSSProperties = kotva
+    ? dole
+      ? { left, bottom: Math.max(8, vh - (kotva.top + Math.min(kotva.height, 120))), maxHeight: vh - 16 }
+      : { left, top: Math.max(8, kotva.top - 4), maxHeight: vh - Math.max(8, kotva.top - 4) - 8 }
+    : { left, top: vh * 0.2, maxHeight: vh * 0.7 };
+
   return (
-    <div
-      className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 ms-zatmeni"
-      role="dialog"
-      aria-modal="true"
-      aria-label={prvniRadek}
-      onMouseDown={(ev) => {
-        if (ev.target === ev.currentTarget) onClose();
-      }}
-    >
+    <>
+      {/* Pruhledna vrstva jen chyta klik mimo bublinu - nic neztmavuje. */}
+      <div className="fixed inset-0 z-[69]" onMouseDown={onClose} aria-hidden />
       <div
-        className="ms-vystoupeni w-full max-w-lg bg-surface rounded-card shadow-2xl overflow-hidden border border-line"
-        style={{ borderTop: `6px solid ${event.color}` }}
+        role="dialog"
+        aria-label={radky[0]}
+        className="fixed z-[70] ms-vystoupeni rounded-lg bg-surface shadow-2xl overflow-y-auto"
+        style={{ ...poloha, width: sirka, transformOrigin: dole ? 'center bottom' : 'center top' }}
       >
-        <div className="p-6 flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <span
-                className="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-0.5 text-xs font-heading font-semibold"
-                style={{ backgroundColor: `${event.color}22`, color: 'inherit' }}
-              >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: event.color }} />
-                {stav}
-              </span>
-              <h2 className="font-display text-2xl sm:text-3xl text-ink m-0 mt-2 break-words">{prvniRadek}</h2>
-              {ostatniRadky.map((radek, i) => (
-                <p key={i} className="text-sm font-heading text-muted m-0 mt-1">
-                  {radek}
-                </p>
-              ))}
-            </div>
+        <div
+          className="rounded-lg border px-3 py-2.5 flex flex-col gap-1"
+          style={{ backgroundColor: barvy.background, borderColor: barvy.border, borderLeftWidth: '4px', color: barvy.text }}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-[10px] font-heading font-semibold uppercase tracking-wide opacity-75">{stav}</span>
             <button
               type="button"
               onClick={onClose}
               aria-label="Zavřít"
-              className="w-8 h-8 shrink-0 grid place-items-center rounded-full text-muted hover:text-ink hover:bg-field text-xl leading-none"
+              className="-mt-1 -mr-1 w-6 h-6 grid place-items-center rounded-full opacity-60 hover:opacity-100 text-base leading-none"
             >
               ×
             </button>
           </div>
-
-          <dl className="grid grid-cols-[6rem_1fr] gap-x-4 gap-y-2.5 m-0">
-            {udaje.map((d) => (
-              <div key={d.popis} className="contents">
-                <dt className="text-xs font-heading text-muted uppercase tracking-wide pt-0.5">{d.popis}</dt>
-                <dd className="text-sm font-heading text-ink m-0">{d.hodnota}</dd>
-              </div>
-            ))}
-          </dl>
-
-          {event.subtitle && <p className="text-sm font-body text-muted m-0">{event.subtitle}</p>}
+          {/* Stejne radky jako v bubline, jen vetsi a cele. */}
+          {radky.map((radek, i) => (
+            <p
+              key={i}
+              className={
+                i === 0
+                  ? 'm-0 text-base font-heading font-semibold leading-snug break-words'
+                  : 'm-0 text-sm font-heading leading-snug break-words'
+              }
+            >
+              {radek}
+            </p>
+          ))}
+          <p className="m-0 text-sm font-body opacity-80 tabular-nums">
+            {den} · {cas(event.start)}–{cas(event.end)} · {event.studioName}
+          </p>
+          {u?.actorName && !event.title.includes(u.actorName) && (
+            <p className="m-0 text-sm font-heading">Herec: {u.actorName}</p>
+          )}
+          {event.subtitle && <p className="m-0 text-xs font-body opacity-75">{event.subtitle}</p>}
           {event.poznamka && (
-            <p className="text-sm font-body text-ink bg-field border border-line rounded-lg px-3 py-2 m-0 whitespace-pre-line">
+            <p className="m-0 mt-1 text-xs font-body opacity-90 whitespace-pre-line break-words border-t border-black/10 dark:border-white/15 pt-1.5">
               {event.poznamka}
             </p>
           )}
-
-          {canManage && (event.href || event.kind === 'BLOCK' || jeUpravitelnaFrekvence(event)) && (
-            <div className="flex items-center gap-4 flex-wrap border-t border-line pt-4">
-              {(event.kind === 'BLOCK' || jeUpravitelnaFrekvence(event)) && (
-                <button
-                  type="button"
-                  onClick={onUpravit}
-                  className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep"
-                >
+          {(u?.caflouProjectId || (canManage && (event.href || event.kind === 'BLOCK' || jeUpravitelnaFrekvence(event)))) && (
+            <div className="flex items-center gap-3 flex-wrap mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/15 text-xs font-heading font-semibold">
+              {canManage && (event.kind === 'BLOCK' || jeUpravitelnaFrekvence(event)) && (
+                <button type="button" onClick={onUpravit} className="underline underline-offset-2">
                   Upravit
                 </button>
               )}
-              {event.href && (
-                <Link href={event.href} className="text-sm font-heading font-semibold text-brand-purple no-underline">
-                  Otevřít nabídku termínů →
+              {u?.caflouProjectId && (
+                <Link href={`/projekty/${u.caflouProjectId}`} className="underline underline-offset-2" style={{ color: 'inherit' }}>
+                  Projekt
                 </Link>
               )}
-              {event.kind === 'BLOCK' && (
-                <button
-                  type="button"
-                  onClick={smaz}
-                  disabled={busy}
-                  className="ml-auto text-sm font-heading font-semibold text-danger disabled:opacity-60"
-                >
-                  Smazat událost
+              {canManage && event.href && (
+                <Link href={event.href} className="underline underline-offset-2" style={{ color: 'inherit' }}>
+                  Nabídka termínů
+                </Link>
+              )}
+              {canManage && event.kind === 'BLOCK' && (
+                <button type="button" onClick={smaz} disabled={busy} className="ml-auto text-danger disabled:opacity-60">
+                  Smazat
                 </button>
               )}
             </div>
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }

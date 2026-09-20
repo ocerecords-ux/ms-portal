@@ -76,13 +76,12 @@ Když se držení nestihne potvrdit, termíny se samy vrátí do nabídky a here
 
 V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a potvrzené. Nabídnutá volná místa se tam neukazují, jinak by zaplnila celý týden.
 
-**Jedním kliknutím** na jakoukoli událost se otevře **zvětšený náhled** nad kalendářem. Zavře se křížkem, klikem vedle nebo klávesou Esc.
+**Jedním kliknutím** na událost bublina **vystoupí dopředu a zvětší se přímo na svém místě** — kalendář kolem zůstává vidět. Zavře se klikem jinam, klávesou Esc nebo zarolováním.
 
-![Zvětšený náhled události po jednom kliknutí](/navody/terminy-7.png)
+![Bublina po jednom kliknutí vystoupí a zvětší se](/navody/terminy-7.png)
 
-1. **Druh a název** — natáčení, střih, svátek…; nahoře proužek v barvě studia.
-2. **Všechny údaje** — kdy, studio, projekt (klikem do detailu projektu), herec, **zvukař** a pod nimi poznámka.
-3. **Upravit** otevře úpravu (stejně jako dvojklik), u frekvence je i odkaz na nabídku termínů.
+1. **Celý text** — název, herec a řádek ZVUKAŘ, nic se neořezává. Pod tím den, čas a studio, případně poznámka.
+2. **Odkazy** dole — **Upravit** (jako dvojklik), **Projekt**, u frekvence **Nabídka termínů** a u ručních událostí **Smazat**.
 
 Zvukař je vidět i přímo v bublině události — v týdnu na druhém řádku, v měsíci za tečkou.
 
