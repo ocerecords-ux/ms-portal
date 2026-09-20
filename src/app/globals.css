@@ -294,3 +294,70 @@ body {
 }
 .navod-text hr { border: 0; border-top: 1px solid rgb(var(--c-line)); margin: 24px 0; }
 .navod-text strong { font-weight: 600; }
+
+/* -------------------------------------------------------------------------
+   TISK NÁVODU DO PDF (zadání 20. 9. 2026: „dej mi u těch manuálů i možnost
+   ho stáhnout v pdf").
+
+   PDF vyrábí sám prohlížeč (Tisk → Uložit jako PDF). Do papíru patří jen
+   obsah označený třídou `tisk`, tedy samotný návod - lišta, doky, tlačítka
+   a odkaz zpět se schovají. Viditelnost místo display:none proto, že se tak
+   nemusí sahat na desítky komponent v layoutu.
+   ------------------------------------------------------------------------- */
+@media print {
+  @page {
+    margin: 15mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  .tisk,
+  .tisk * {
+    visibility: visible !important;
+  }
+  .tisk {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  /* Na papíře vždycky černá na bílé - i když má člověk zapnutý tmavý režim. */
+  .tisk,
+  .tisk * {
+    color: #16121f !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .tisk .netisknout,
+  .netisknout {
+    display: none !important;
+  }
+  .tisk .navod-text {
+    border: 0 !important;
+    padding: 0 !important;
+  }
+  /* Obrázek ani nadpis se nemá lámat přes dvě stránky. */
+  .navod-text img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border-color: #d8d4e4 !important;
+  }
+  .navod-text h1,
+  .navod-text h2,
+  .navod-text h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  .navod-text a {
+    color: #16121f !important;
+    text-decoration: underline;
+  }
+}

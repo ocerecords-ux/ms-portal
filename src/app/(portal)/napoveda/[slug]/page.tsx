@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { navodNaHtml, vidiNavod } from '@/lib/navody';
+import { StahnoutPdf } from './StahnoutPdf';
 
 /**
  * JEDEN NÁVOD (zadání 16. 9. 2026).
@@ -29,9 +30,10 @@ export default async function NavodPage({ params }: { params: { slug: string } }
   if (!vidiNavod(navod.proRole, role)) notFound();
 
   return (
-    <article className="flex flex-col gap-6 max-w-3xl">
+    // `tisk` = co se má dostat do PDF (styly pro tisk jsou v globals.css).
+    <article className="tisk flex flex-col gap-6 max-w-3xl">
       <div>
-        <Link href="/napoveda" className="text-sm font-heading text-muted no-underline">
+        <Link href="/napoveda" className="netisknout text-sm font-heading text-muted no-underline">
           ← Nápověda
         </Link>
         <p className="text-xs font-heading text-muted uppercase tracking-wide m-0 mt-3">
@@ -53,14 +55,18 @@ export default async function NavodPage({ params }: { params: { slug: string } }
         dangerouslySetInnerHTML={{ __html: navodNaHtml(navod.obsah) }}
       />
 
-      {jeAdmin && (
-        <Link
-          href={`/admin/navody/${navod.id}`}
-          className="self-start text-sm font-heading font-semibold rounded-pill border border-line text-ink px-4 py-2 no-underline hover:border-brand-purple"
-        >
-          Upravit návod
-        </Link>
-      )}
+      <div className="netisknout flex items-center gap-2 flex-wrap">
+        {/* PDF (20. 9. 2026): tisk prohlizece → „Uložit jako PDF". */}
+        <StahnoutPdf nazev={`MS portal – ${navod.nazev}`} />
+        {jeAdmin && (
+          <Link
+            href={`/admin/navody/${navod.id}`}
+            className="text-sm font-heading font-semibold rounded-pill border border-line text-ink px-4 py-2 no-underline hover:border-brand-purple"
+          >
+            Upravit návod
+          </Link>
+        )}
+      </div>
     </article>
   );
 }
