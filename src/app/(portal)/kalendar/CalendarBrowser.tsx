@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { PosunGestem } from './PosunGestem';
 import { VyskytyHledani } from './VyskytyHledani';
 import { OdberKalendare } from './OdberKalendare';
@@ -423,13 +423,26 @@ export function CalendarBrowser({
   // (nedele), po posunu vpred od zacatku, at gesto navazuje (20. 9. 2026).
   const [smerPosunu, setSmerPosunu] = useState<-1 | 1>(1);
 
+  /**
+   * POSUN JAKO PAPÍR (zadání 20. 9. 2026: „když posunuju ten kalendář doprava
+   * nebo doleva na další dny, tak nechci, ať to preblikne, ale ať to posunuju
+   * celé jako papír").
+   *
+   * Načtení dalšího týdne je skok na server. Bez tohohle mřížka na okamžik
+   * zmizí a nová se objeví - to je to probliknutí. `useTransition` starou
+   * mřížku podrží, dokud nová nedorazí; my ji mezitím odsuneme do strany a
+   * v okamžiku výměny ji pustíme zpátky na nulu. Jede to na jednom a tomtéž
+   * prvku, takže oko vidí jeden plynulý posun, ne dva obrázky.
+   */
+  const [prechod, zacniPrechod] = useTransition();
+
   function posun(smer: -1 | 1) {
     setSmerPosunu(smer);
     const d = new Date(`${anchorIso}T12:00:00.000Z`);
     if (view === 'den') d.setUTCDate(d.getUTCDate() + smer);
     else if (view === 'tyden') d.setUTCDate(d.getUTCDate() + 7 * smer);
     else d.setUTCMonth(d.getUTCMonth() + smer);
-    prejdi({ datum: d.toISOString().slice(0, 10) });
+    zacniPrechod(() => prejdi({ datum: d.toISOString().slice(0, 10) }));
   }
 
   const nadpis = useMemo(() => {
@@ -651,6 +664,18 @@ export function CalendarBrowser({
       )}
 
       <PosunGestem onPosun={posun}>
+      {/* Papír: dokud se načítá další týden, mřížka odjede do strany a po
+          výměně dojede zpátky. `overflow-x-clip` drží odsunutý papír uvnitř
+          stránky, ať se dole neobjeví vodorovné rolování. */}
+      <div
+        className={`overflow-x-clip transition-[transform,opacity] duration-200 ease-out will-change-transform ${
+          prechod
+            ? smerPosunu === 1
+              ? '-translate-x-10 opacity-35'
+              : 'translate-x-10 opacity-35'
+            : 'translate-x-0 opacity-100'
+        }`}
+      >
       {view === 'mesic' ? (
         <MesicniPohled
           days={days}
@@ -676,6 +701,7 @@ export function CalendarBrowser({
           smerPosunu={smerPosunu}
         />
       )}
+      </div>
       </PosunGestem>
 
       {/* FORMULÁŘ JE UPROSTŘED OBRAZOVKY (zadání 14. 9. 2026: „to editační

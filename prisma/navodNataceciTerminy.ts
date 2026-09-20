@@ -85,7 +85,7 @@ Poslední zapnutý kalendář se kolečkem vypnout nedá, aby mřížka nezůsta
 
 **Hledání nad kalendářem** projde **celý kalendář**, ne jen zobrazený týden. Napište kus názvu projektu, jméno herce nebo zvukaře a pod polem se vypíše **seznam výskytů** — kdy, kde, co to bylo a s kým, od nejnovějšího. Nahoře je i počet, kolikrát se kdo objevil. Kliknutím na řádek kalendář skočí na ten den a rovnou zapne studio, kdyby bylo vypnuté. Seznam zavřete tlačítkem **Zavřít seznam**, klávesou Esc nebo smazáním textu.
 
-**Na další nebo předchozí týden** se nemusíte proklikávat šipkami: v mobilu **táhněte prstem** doleva nebo doprava, na Macu posuňte **dvěma prsty po touchpadu** (nebo po Magic Mouse) do strany. V mobilu se týden nejdřív doroluje ke kraji (neděli) a teprve další tah přepne na další týden. Stejně to funguje u dne i měsíce.
+**Na další nebo předchozí týden** se nemusíte proklikávat šipkami: v mobilu **táhněte prstem** doleva nebo doprava, na Macu posuňte **dvěma prsty po touchpadu** (nebo po Magic Mouse) do strany. V mobilu se týden nejdřív doroluje ke kraji (neděli) a teprve další tah přepne na další týden. Stejně to funguje u dne i měsíce. Kalendář se přitom **posune jako papír** — stará mřížka odjede do strany a nová dojede na její místo, nic neproblikne.
 
 V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a potvrzené. Nabídnutá volná místa se tam neukazují, jinak by zaplnila celý týden.
 
