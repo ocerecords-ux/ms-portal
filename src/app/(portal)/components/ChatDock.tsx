@@ -1854,6 +1854,54 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     el.scrollTop = el.scrollHeight;
   }, []);
 
+  /**
+   * DRŽ SE KONCE, DOKUD SE VÝPIS NEUSADÍ (zadání 20. 9. 2026: „když otevřu
+   * chat, tak musím pokaždé porolovat na poslední zprávu někam dolů, nebo
+   * musím počkat, až se to tam za pár vteřin posune samo").
+   *
+   * Jedno nastavení scrollTop po otevření nestačí: panel se rozjíždí
+   * animací, výpis v tu chvíli ještě nemá výšku, doskládají se písma,
+   * avatary a obrázky. Proto se konec dorovnává přes celou první vteřinu -
+   * v každém snímku, dokud se výška nepřestane měnit. Jakmile si člověk
+   * sám odroluje nahoru (hlídá to `drzetDole`), dorovnávání skončí.
+   */
+  const dorovnejNaKonec = useCallback(() => {
+    let zrusen = false;
+    let posledniVyska = -1;
+    const konec = Date.now() + 1200;
+    const krok = () => {
+      if (zrusen) return;
+      const el = vypisRef.current;
+      if (el) {
+        if (!drzetDole.current) return;
+        if (el.scrollHeight !== posledniVyska || el.scrollTop + el.clientHeight < el.scrollHeight - 1) {
+          posledniVyska = el.scrollHeight;
+          el.scrollTop = el.scrollHeight;
+        }
+      }
+      if (Date.now() < konec) requestAnimationFrame(krok);
+    };
+    requestAnimationFrame(krok);
+    return () => {
+      zrusen = true;
+    };
+  }, []);
+
+  /**
+   * Výpis se objeví až s otevřeným panelem - callback ref proto srovná konec
+   * hned, jak prvek vznikne, ještě než se stihne vykreslit odrolovaný nahoře.
+   */
+  const nastavVypis = useCallback(
+    (el: HTMLDivElement | null) => {
+      vypisRef.current = el;
+      if (!el) return;
+      drzetDole.current = true;
+      el.scrollTop = el.scrollHeight;
+      dorovnejNaKonec();
+    },
+    [dorovnejNaKonec],
+  );
+
   /** Cte si clovek starsi zpravy? Pak mu vypis pod rukama neposouvame. */
   const hlidejOdrolovani = useCallback(() => {
     const el = vypisRef.current;
@@ -1868,20 +1916,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   useEffect(() => {
     drzetDole.current = true;
     naKonec(true);
-    const snimek = requestAnimationFrame(() => naKonec(true));
-    const brzy = setTimeout(() => naKonec(true), 150);
-    return () => {
-      cancelAnimationFrame(snimek);
-      clearTimeout(brzy);
-    };
-  }, [openId, naKonec]);
+    // Dorovnavani bezi po celou dobu, nez se panel a obsah usadi.
+    return dorovnejNaKonec();
+  }, [openId, expanded, naKonec, dorovnejNaKonec]);
 
   // Nova zprava (i doplneni historie) - dolu jen tehdy, kdyz uz tam clovek je.
   useEffect(() => {
     naKonec();
-    const snimek = requestAnimationFrame(() => naKonec());
-    return () => cancelAnimationFrame(snimek);
-  }, [messages, naKonec]);
+    return dorovnejNaKonec();
+  }, [messages, naKonec, dorovnejNaKonec]);
 
   /**
    * Zmena velikosti vypisu (psaci pole vyrostlo, klavesnice, otoceni
@@ -1895,6 +1938,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     // Obrazky nemaji predem znamou vysku, takze `load` chytame v zachytne
     // fazi - na bublinach nebublina.
     el.addEventListener('load', znovu, true);
+    // Pismo dorazi pozdeji nez prvni vykresleni a zmeni vysku bublin.
+    (document as Document & { fonts?: FontFaceSet }).fonts?.ready?.then(() => znovu()).catch(() => null);
     let pozorovatel: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined') {
       pozorovatel = new ResizeObserver(znovu);
@@ -1904,7 +1949,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       el.removeEventListener('load', znovu, true);
       pozorovatel?.disconnect();
     };
-  }, [openId, naKonec]);
+  }, [openId, expanded, naKonec]);
 
   /**
    * Klepnutí na upozornění na telefonu otevře TU konverzaci, ze které přišlo
@@ -3354,7 +3399,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       pozadi splyvaly bile bubliny s okolim (zprava uzivatele
                       8. 9. 2026: "cele je to takove bile, sterilni"). */}
                   <div
-                    ref={vypisRef}
+                    ref={nastavVypis}
                     onScroll={hlidejOdrolovani}
                     className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-surfaceSoft"
                   >
