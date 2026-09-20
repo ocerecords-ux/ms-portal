@@ -1618,7 +1618,13 @@ function DetailUdalosti({
       <div
         role="dialog"
         aria-label={radky[0]}
-        className="fixed z-[70] ms-vystoupeni rounded-lg bg-surface shadow-2xl overflow-y-auto"
+        className="fixed z-[70] ms-vystoupeni rounded-lg bg-surface shadow-2xl overflow-y-auto cursor-pointer"
+        title="Klikni pro zavření"
+        // Zadny krizek (20. 9. 2026): dalsi klik na bublinu ji zavre. Odkazy funguji dal.
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest('a,button')) return;
+          onClose();
+        }}
         style={{ ...poloha, width: sirka, transformOrigin: dole ? 'center bottom' : 'center top' }}
       >
         <div
@@ -1630,14 +1636,6 @@ function DetailUdalosti({
               <IkonaDruhu druh={druhPrace(event)} velikost={22} />
               {stav}
             </span>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Zavřít"
-              className="-mt-1 -mr-1 w-6 h-6 grid place-items-center rounded-full opacity-60 hover:opacity-100 text-base leading-none"
-            >
-              ×
-            </button>
           </div>
           {/* Stejne radky jako v bubline, jen vetsi a cele. */}
           {radky.map((radek, i) => (
