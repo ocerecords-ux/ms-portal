@@ -1846,6 +1846,11 @@ model StudioBlock {
   createdById String?
   createdBy   User?   @relation("StudioBlockCreatedBy", fields: [createdById], references: [id])
 
+  /// Klic udalosti prevzate ze stareho Google kalendare (zadani 20. 9. 2026).
+  /// Seed podle nej udalost zaklada jen jednou a opravu v datech prepise.
+  /// Rucne zapsane udalosti ho nemaji.
+  importKlic String? @unique
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

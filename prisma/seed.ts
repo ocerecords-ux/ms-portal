@@ -2,6 +2,9 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { VYCHOZI_NAVODY } from './vychoziNavody';
+import { GOOGLE_KALENDAR } from './importKalendare/googleKalendar';
+import { prahaNaUtc, rozeberUdalost, srovnej } from '../src/lib/importGoogleKalendar';
+import { bezTitulu } from '../src/lib/jmena';
 
 const prisma = new PrismaClient();
 
@@ -177,6 +180,7 @@ async function main() {
   await srovnejPriznakFotky();
   await zalozVychoziNavody();
   await zalozDruhyLicence();
+  await prevezmiGoogleKalendar();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -393,6 +397,104 @@ async function srovnejPriznakFotky() {
      WHERE "maFotku" <> ("photoUrl" IS NOT NULL AND "photoUrl" <> '')`,
   );
   if (zmeneno > 0) console.log(`  priznak fotky srovnan u ${zmeneno} uzivatelu`);
+}
+
+/**
+ * PŘEVZETÍ STARÉHO GOOGLE KALENDÁŘE (zadání 20. 9. 2026). Data jsou
+ * v prisma/importKalendare/googleKalendar.ts, rozbor textu v
+ * src/lib/importGoogleKalendar.ts.
+ *
+ * - Natáčení / střih se zapíšou jako událost studia (StudioBlock) s druhem
+ *   NATACENI / STRIH, stejně jako ručně zapsaná událost v Kalendáři.
+ * - Herec, zvukař a projekt se napárují na účty a projekty v portálu podle
+ *   jména (bez diakritiky a titulů). Co se nenapáruje, zůstane jako text.
+ * - Každý řádek má klíč (importKlic): založí se jednou, opravený řádek se
+ *   přepíše, smazaný řádek zmizí. Ruční události se nemění.
+ */
+async function prevezmiGoogleKalendar() {
+  try {
+    const [studia, lide, projekty] = await Promise.all([
+      prisma.studio.findMany({ select: { id: true, name: true, shortName: true } }),
+      prisma.user.findMany({ where: { active: true }, select: { id: true, name: true, role: true } }),
+      prisma.projectMeta.findMany({
+        where: { name: { not: null } },
+        select: { caflouProjectId: true, name: true, finished: true },
+      }),
+    ]);
+
+    const najdiStudio = (nazev: string) =>
+      studia.find((s) => srovnej(s.shortName ?? '') === srovnej(nazev) || srovnej(s.name) === srovnej(nazev)) ??
+      studia.find((s) => srovnej(s.name).endsWith(srovnej(nazev)));
+    const najdiCloveka = (jmeno: string | null, role: string[]) => {
+      if (!jmeno) return null;
+      const hledane = srovnej(jmeno);
+      const shody = lide.filter((u) => role.includes(u.role) && srovnej(bezTitulu(u.name)) === hledane);
+      return shody.length === 1 ? shody[0] : null;
+    };
+    const najdiProjekt = (nazev: string) => {
+      const hledane = srovnej(nazev);
+      if (!hledane) return null;
+      const presne = projekty.filter((p) => srovnej(p.name ?? '') === hledane);
+      const zacina = presne.length ? presne : projekty.filter((p) => srovnej(p.name ?? '').startsWith(hledane + ' '));
+      // Radeji rozpracovany; kdyz je jich vic, nehada se.
+      const kandidati = zacina.filter((p) => !p.finished).length ? zacina.filter((p) => !p.finished) : zacina;
+      return kandidati.length === 1 ? kandidati[0] : null;
+    };
+
+    const klice = new Set<string>();
+    let zalozeno = 0;
+    let neznameStudio = 0;
+    for (const r of GOOGLE_KALENDAR) {
+      const studio = najdiStudio(r.studio);
+      if (!studio) {
+        neznameStudio += 1;
+        continue;
+      }
+      const u = rozeberUdalost(r.text);
+      const start = prahaNaUtc(r.datum, r.od);
+      const end = prahaNaUtc(r.datum, r.do);
+      const importKlic = `gcal:${studio.id}:${start.toISOString()}:${end.toISOString()}:${srovnej(r.text)}`.slice(0, 250);
+      klice.add(importKlic);
+
+      const herec = najdiCloveka(u.herec, ['HEREC']);
+      const zvukar = najdiCloveka(u.zvukar, ['ADMIN', 'ZVUKAR', 'PRODUKCE']);
+      const projekt = najdiProjekt(u.projekt);
+      const data = {
+        studioId: studio.id,
+        start,
+        end,
+        kind: u.druh,
+        title: projekt?.name ?? u.projekt,
+        note: [...u.znacky, `Z Google kalendáře: ${r.text}`].join(' · '),
+        caflouProjectId: projekt?.caflouProjectId ?? null,
+        // Strih bez projektu (jen 'Střih (TI)') projekt nema.
+        projectName: projekt?.name ?? (u.druh === 'STRIH' && u.projekt === 'Střih' ? null : u.projekt),
+        actorUserId: herec?.id ?? null,
+        actorName: herec ? bezTitulu(herec.name) : u.herec,
+        zvukarUserId: zvukar?.id ?? null,
+        zvukarName: zvukar ? bezTitulu(zvukar.name) : u.zvukar ?? u.zvukarZkratka,
+      };
+      const uz = await prisma.studioBlock.findUnique({ where: { importKlic }, select: { id: true } });
+      if (uz) {
+        await prisma.studioBlock.update({ where: { id: uz.id }, data });
+      } else {
+        await prisma.studioBlock.create({ data: { ...data, importKlic } });
+        zalozeno += 1;
+      }
+    }
+
+    // Radek z dat zmizel (opraveny cas, smazana udalost) - pryc i z portalu.
+    const smazano = await prisma.studioBlock.deleteMany({
+      where: { importKlic: { startsWith: 'gcal:', notIn: Array.from(klice) } },
+    });
+    console.log(
+      `  google kalendar: ${GOOGLE_KALENDAR.length} radku, nove ${zalozeno}, odebrano ${smazano.count}` +
+        (neznameStudio ? `, ${neznameStudio} s neznamym studiem preskoceno` : ''),
+    );
+  } catch (err) {
+    // Import je jen obsah - nesmi shodit cely seed (a s nim nasazeni).
+    console.warn('  google kalendar se nepodarilo prevzit:', err);
+  }
 }
 
 main()
