@@ -541,8 +541,9 @@ async function prevezmiGoogleKalendar() {
         end,
         kind: u.druh,
         title: projekt?.name ?? u.projekt,
-        // Puvodni text z Googlu uz se do poznamky nepise (20. 9. 2026) - jen znacky (☎).
-        note: u.znacky.length ? u.znacky.join(' ') : null,
+        // Znacky z Googlu (☎ ✈️ 📝 ‼️ CUT) se neprenaseji (20. 9. 2026: „ty značky dej pryč,
+        // uděláme nové postupně") - poznamka zustava prazdna.
+        note: null,
         caflouProjectId: projekt?.caflouProjectId ?? null,
         // Strih bez projektu (jen 'Střih (TI)') projekt nema.
         projectName: !pracovni ? null : projekt?.name ?? (u.druh === 'STRIH' && u.projekt === 'Střih' ? null : u.projekt),
