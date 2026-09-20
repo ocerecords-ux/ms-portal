@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { ZALOZKY_PREHLEDU } from './ZalozkyPrehledu';
+import { ZALOZKY_PREHLEDU } from './zalozky';
 
 /**
  * Přehledy nemají rozcestník - první záložka je rovnou obsah (zadání

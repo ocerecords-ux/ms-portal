@@ -2,15 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ZALOZKY_PREHLEDU } from './zalozky';
 
 /**
- * Záložky sekce Přehledy (zadání 20. 9. 2026: „z něj pak uděláme záložku, ne
- * toto") - místo rozcestníku s kartami se přepíná nahoře, stejně jako na
- * detailu projektu. Další přehledy se sem přidají jedním řádkem.
+ * Lišta záložek sekce Přehledy (zadání 20. 9. 2026: „z něj pak uděláme
+ * záložku, ne toto") - místo rozcestníku s kartami se přepíná nahoře, stejně
+ * jako na detailu projektu. Seznam záložek je v `zalozky.ts`, aby si na něj
+ * mohl sáhnout i server.
  */
-export const ZALOZKY_PREHLEDU: { href: string; label: string }[] = [
-  { href: '/prehledy/kapacita', label: 'Kapacita studií' },
-];
 
 export function ZalozkyPrehledu() {
   const cesta = usePathname();
