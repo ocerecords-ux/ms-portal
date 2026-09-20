@@ -369,7 +369,7 @@ export function CalendarBrowser({
    * Adresa kalendáře. `studia` a `nepritomnost` drží PŮVODNÍ zaškrtnutí i
    * během sóla - proto se dá sólo kdykoli sundat a výběr se vrátí.
    */
-  function prejdi(zmeny: Record<string, string>) {
+  function adresa(zmeny: Record<string, string>) {
     const params = new URLSearchParams({
       // Prázdný seznam v adrese znamená „všechna studia", takže vypnutá
       // studia se musí napsat značkou (20. 9. 2026).
@@ -381,7 +381,20 @@ export function CalendarBrowser({
       ...zmeny,
     });
     if (!params.get('solo')) params.delete('solo');
-    router.push(`/kalendar?${params.toString()}`);
+    return `/kalendar?${params.toString()}`;
+  }
+
+  function prejdi(zmeny: Record<string, string>) {
+    router.push(adresa(zmeny));
+  }
+
+  /** Datum o `smer` dopředu nebo dozadu podle zvoleného pohledu. */
+  function datumPosunu(smer: -1 | 1): string {
+    const d = new Date(`${anchorIso}T12:00:00.000Z`);
+    if (view === 'den') d.setUTCDate(d.getUTCDate() + smer);
+    else if (view === 'tyden') d.setUTCDate(d.getUTCDate() + 7 * smer);
+    else d.setUTCMonth(d.getUTCMonth() + smer);
+    return d.toISOString().slice(0, 10);
   }
 
   /**
@@ -424,26 +437,83 @@ export function CalendarBrowser({
   const [smerPosunu, setSmerPosunu] = useState<-1 | 1>(1);
 
   /**
-   * POSUN JAKO PAPÍR (zadání 20. 9. 2026: „když posunuju ten kalendář doprava
-   * nebo doleva na další dny, tak nechci, ať to preblikne, ale ať to posunuju
-   * celé jako papír").
+   * POSUN JAKO PAPÍR (zadání 20. 9. 2026: „nechci, ať to preblikne, ale ať to
+   * posunuju celé jako papír" → „nefunguje to dobře, jen to problikne, chci,
+   * ať to klouže").
    *
-   * Načtení dalšího týdne je skok na server. Bez tohohle mřížka na okamžik
-   * zmizí a nová se objeví - to je to probliknutí. `useTransition` starou
-   * mřížku podrží, dokud nová nedorazí; my ji mezitím odsuneme do strany a
-   * v okamžiku výměny ji pustíme zpátky na nulu. Jede to na jednom a tomtéž
-   * prvku, takže oko vidí jeden plynulý posun, ne dva obrázky.
+   * První pokus jen odsunul mřížku o kousek, dokud se načítala - to při rychlé
+   * odpovědi serveru vypadalo jako cuknutí. Teď to jede na tři doby:
+   *   1. VEN - stará mřížka odjede o celou svoji šířku do strany,
+   *   2. SKOK - mimo obraz se (bez animace) přendá na druhou stranu; právě
+   *      tady proběhne výměna obsahu, takže ji oko nevidí,
+   *   3. DOVNITŘ - nová mřížka dojede zpátky na místo.
+   * Výměna je schovaná za okrajem, takže nic nebliká.
+   *
+   * `useTransition` drží starou mřížku, dokud nová nedorazí, a sousední týdny
+   * se přednačítají dopředu - díky tomu se na krok 2 nečeká.
    */
+  const OUT_MS = 170;
+  const IN_MS = 230;
+  const [faze, setFaze] = useState<'klid' | 'ven' | 'skok' | 'dovnitr'>('klid');
+  const [venDoraz, setVenDoraz] = useState(false);
+  const [nouze, setNouze] = useState(false);
   const [prechod, zacniPrechod] = useTransition();
 
   function posun(smer: -1 | 1) {
+    // Druhé švihnutí během animace by papír roztrhlo napůl.
+    if (faze !== 'klid') return;
     setSmerPosunu(smer);
-    const d = new Date(`${anchorIso}T12:00:00.000Z`);
-    if (view === 'den') d.setUTCDate(d.getUTCDate() + smer);
-    else if (view === 'tyden') d.setUTCDate(d.getUTCDate() + 7 * smer);
-    else d.setUTCMonth(d.getUTCMonth() + smer);
-    zacniPrechod(() => prejdi({ datum: d.toISOString().slice(0, 10) }));
+    setVenDoraz(false);
+    setNouze(false);
+    setFaze('ven');
+    window.setTimeout(() => setVenDoraz(true), OUT_MS);
+    // Pojistka: kdyby server odpovídal dlouho, nenecháme prázdnou plochu -
+    // papír se vrátí i tak a obsah se vymění až pod ním.
+    window.setTimeout(() => setNouze(true), OUT_MS + 700);
+    zacniPrechod(() => prejdi({ datum: datumPosunu(smer) }));
   }
+
+  // Jakmile papír odjel A nová data dorazila: přendat na druhou stranu a
+  // pustit zpátky. Dvě rAF, aby prohlížeč stihl vykreslit stav bez animace -
+  // jinak by skok zanimoval taky a papír by přelétl přes celou obrazovku.
+  useEffect(() => {
+    if (faze !== 'ven' || !venDoraz || (prechod && !nouze)) return;
+    setFaze('skok');
+    let druhy = 0;
+    const prvni = requestAnimationFrame(() => {
+      druhy = requestAnimationFrame(() => setFaze('dovnitr'));
+    });
+    return () => {
+      cancelAnimationFrame(prvni);
+      if (druhy) cancelAnimationFrame(druhy);
+    };
+  }, [faze, venDoraz, prechod, nouze]);
+
+  useEffect(() => {
+    if (faze !== 'dovnitr') return;
+    const t = window.setTimeout(() => setFaze('klid'), IN_MS);
+    return () => window.clearTimeout(t);
+  }, [faze]);
+
+  // Sousední týden si necháme přinést dopředu, ať se po švihnutí nečeká na
+  // server (Next si odpověď chvíli podrží v paměti).
+  useEffect(() => {
+    router.prefetch(adresa({ datum: datumPosunu(-1) }));
+    router.prefetch(adresa({ datum: datumPosunu(1) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniStudioIds.join(',')]);
+
+  /** Třída papíru podle fáze posunu. */
+  const tridaPapiru =
+    faze === 'ven'
+      ? `${smerPosunu === 1 ? '-translate-x-full' : 'translate-x-full'} transition-transform ease-in`
+      : faze === 'skok'
+        ? `${smerPosunu === 1 ? 'translate-x-full' : '-translate-x-full'} transition-none`
+        : faze === 'dovnitr'
+          ? 'translate-x-0 transition-transform ease-out'
+          : // V klidu žádný transform - ať nevzniká nový rámec pro
+            // napevno umístěné prvky (dialogy, nabídky).
+            '';
 
   const nadpis = useMemo(() => {
     const prvni = new Date(days[0].startIso);
@@ -667,14 +737,10 @@ export function CalendarBrowser({
       {/* Papír: dokud se načítá další týden, mřížka odjede do strany a po
           výměně dojede zpátky. `overflow-x-clip` drží odsunutý papír uvnitř
           stránky, ať se dole neobjeví vodorovné rolování. */}
+      <div className="overflow-x-clip">
       <div
-        className={`overflow-x-clip transition-[transform,opacity] duration-200 ease-out will-change-transform ${
-          prechod
-            ? smerPosunu === 1
-              ? '-translate-x-10 opacity-35'
-              : 'translate-x-10 opacity-35'
-            : 'translate-x-0 opacity-100'
-        }`}
+        className={`will-change-transform ${tridaPapiru}`}
+        style={{ transitionDuration: faze === 'ven' ? `${OUT_MS}ms` : faze === 'dovnitr' ? `${IN_MS}ms` : undefined }}
       >
       {view === 'mesic' ? (
         <MesicniPohled
@@ -701,6 +767,7 @@ export function CalendarBrowser({
           smerPosunu={smerPosunu}
         />
       )}
+      </div>
       </div>
       </PosunGestem>
 
