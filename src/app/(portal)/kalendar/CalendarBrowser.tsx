@@ -156,7 +156,6 @@ export function CalendarBrowser({
     casOd?: string;
     casDo?: string;
   } | null>(null);
-  const [filtrStavu, setFiltrStavu] = useState<string>('');
   const [hledani, setHledani] = useState('');
   const [detail, setDetail] = useState<CalendarEvent | null>(null);
   /** Kde na obrazovce je bublina, ze ktere detail vystoupi (20. 9. 2026). */
@@ -254,11 +253,10 @@ export function CalendarBrowser({
   const viditelne = useMemo(() => {
     const dotaz = hledani.trim().toLowerCase();
     return [...events, ...udalostiMimo].filter((e) => {
-      if (filtrStavu && e.state !== filtrStavu) return false;
       if (dotaz && !e.title.toLowerCase().includes(dotaz)) return false;
       return true;
     });
-  }, [events, udalostiMimo, filtrStavu, hledani]);
+  }, [events, udalostiMimo, hledani]);
 
   /**
    * Otevřené okno zavře Escape a stránka pod ním se nesmí rolovat - jinak
@@ -503,36 +501,17 @@ export function CalendarBrowser({
           />
           {NAZEV_KALENDARE_MIMO}
         </button>
-        {studios.length > 1 && (
-          <span className="text-xs font-body text-muted ml-1">Klikáním zapnete a vypnete jednotlivé kalendáře.</span>
-        )}
-      </div>
-
-      {/* Filtry */}
-      <div className="flex items-center gap-3 flex-wrap">
+        {/* Hledani na stejnem radku jako kalendare (zadani 20. 9. 2026:
+            „hledání může být na řádku s výběrem kalendářů a stavy dejme úplně
+            pryč"). Napovedy k dvojkliku jsou v Napovede, nad kalendarem
+            jen zabiraly misto. */}
         <input
           value={hledani}
           onChange={(e) => setHledani(e.target.value)}
           placeholder="Hledat projekt nebo herce…"
-          className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple w-full sm:w-64"
+          aria-label="Hledat projekt nebo herce"
+          className="ml-auto rounded-pill border border-line bg-field px-4 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-full sm:w-64"
         />
-        <VyberPole
-          value={filtrStavu}
-          onChange={(e) => setFiltrStavu(e.target.value)}
-          className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
-        >
-          <option value="">Všechny stavy</option>
-          {Object.entries(SLOT_STATE_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </VyberPole>
-        <span className="text-xs font-body text-muted ml-auto">
-          {canManage
-            ? 'Dvojklikem do volného místa zapíšete událost, dvojklikem na událost ji upravíte.'
-            : 'Dvojklikem do volného místa zapíšete, kdy jste mimo studio.'}
-        </span>
       </div>
 
       {view === 'mesic' ? (
