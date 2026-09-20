@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { zonedToUtc } from '@/lib/calendar';
 
 /**
  * KAPACITA STUDIÍ (zadání 20. 9. 2026 a jeho upřesnění: „potřebuji vidět
@@ -10,6 +11,12 @@ import { prisma } from '@/lib/db';
  * Proto se počítá CELÝ ROK po dnech: dvanáct tabulek měsíců, v každé řádek =
  * den a sloupec = studio. Hodiny zůstávají jen v bublině po najetí myší.
  *
+ * Den je navíc rozdělený na FREKVENCE (zadání 20. 9. 2026: „potřebuju ještě,
+ * aby to bylo rozděleno na ranní a odpolední frekvence" - v tabulce, kterou
+ * k tomu poslal, má každé studio sloupce 9-13 a 13-17). Okna se berou ze
+ * zkratek studia (Administrace → Studia), a když studio žádné nemá, použijí
+ * se běžné 9-13 a 13-17.
+ *
  * Počítá se JEN NATÁČENÍ - potvrzené frekvence z nabídky a ručně zapsané
  * natáčení. Střih, casting, údržba, svátky ani dovolené ne: kapacita studia
  * je o tom, kolik hodin se v kabině dá točit.
@@ -19,15 +26,50 @@ import { prisma } from '@/lib/db';
  * se v nich točí, je to vidět - proto může měsíc vyjít přes 100 %.
  */
 
+/** Jedna frekvence (ranní / odpolední) jednoho dne v jednom studiu. */
+export type BunkaFrekvence = {
+  /** Délka okna frekvence v minutách - podle ní se kreslí zaplněnost. */
+  oknoMinut: number;
+  /** Kolik z okna je v otevírací době; 0 = zavřeno nebo jen po domluvě. */
+  kapacitaMinut: number;
+  /** Minuty natáčení, které do okna spadají. */
+  natoceno: number;
+  /** Kolik natáčení se okna týká. */
+  pocet: number;
+};
+
 /** Jeden den v jednom studiu. */
 export type BunkaDne = {
-  /** Minuty otevírací doby; 0 = zavřeno nebo jen po domluvě. */
+  /** Minuty otevírací doby za celý den; 0 = zavřeno nebo jen po domluvě. */
   kapacitaMinut: number;
-  /** Minuty natáčení, které do dne spadají. */
+  /** Minuty natáčení, které do dne spadají (i mimo frekvence). */
   natoceno: number;
   /** Kolik natáčení se dne týká. */
   pocet: number;
+  /** Ve stejném pořadí jako `frekvence` u studia. */
+  casti: BunkaFrekvence[];
 };
+
+/** Okno frekvence ve studiu - sloupec v tabulce. */
+export type Frekvence = {
+  /** Popisek do záhlaví, třeba „9-13". */
+  popis: string;
+  /** Minuty od půlnoci. */
+  od: number;
+  do: number;
+};
+
+/** Když studio nemá zkratky, počítá se s běžnými dvěma frekvencemi. */
+const VYCHOZI_FREKVENCE: Frekvence[] = [
+  { popis: '9-13', od: 9 * 60, do: 13 * 60 },
+  { popis: '13-17', od: 13 * 60, do: 17 * 60 },
+];
+
+/** „9-13" z minut od půlnoci; půlhodiny se vypíšou jako 9:30. */
+function popisOkna(od: number, doo: number): string {
+  const cas = (m: number) => (m % 60 === 0 ? `${Math.floor(m / 60)}` : `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`);
+  return `${cas(od)}-${cas(doo)}`;
+}
 
 export type DenKapacity = {
   den: number;
@@ -50,6 +92,8 @@ export type StudioSloupec = {
   id: string;
   nazev: string;
   barva: string;
+  /** Sloupečky uvnitř studia - ranní a odpolední frekvence. */
+  frekvence: Frekvence[];
   /** Součty za celý rok. */
   kapacitaMinut: number;
   natoceno: number;
@@ -135,7 +179,7 @@ export async function nactiKapacituRoku(rok: number): Promise<KapacitaRoku> {
   const studia = await prisma.studio.findMany({
     where: { active: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    include: { hours: true },
+    include: { hours: true, presets: { orderBy: { sortOrder: 'asc' } } },
   });
 
   const nataceni = await nactiNataceni(
@@ -174,15 +218,47 @@ export async function nactiKapacituRoku(rok: number): Promise<KapacitaRoku> {
 
   const sloupce: StudioSloupec[] = studia.map((s) => {
     const hodinyDne = new Map<number, Hodiny>((s.hours as Hodiny[]).map((h) => [h.weekday, h]));
+    // Zkratky studia = sloupečky frekvencí. Bez nich se počítá 9-13 a 13-17.
+    const zkratky = s.presets as { label: string; startMinutes: number; endMinutes: number }[];
+    const frekvence: Frekvence[] =
+      zkratky.length > 0
+        ? zkratky.map((z) => ({
+            popis: popisOkna(z.startMinutes, z.endMinutes),
+            od: z.startMinutes,
+            do: z.endMinutes,
+          }))
+        : VYCHOZI_FREKVENCE;
+
     // Hranice dnů v pásmu studia - o jednu víc, ať má i poslední den konec.
     const hranice: Date[] = [];
     for (let i = 0; i <= dnuVRoce; i += 1) hranice.push(pulnoc(rok, 1, 1 + i, s.timezone));
+    // Okna frekvencí po dnech, ve skutečném čase (kvůli letnímu času).
+    const oknaDne: { od: Date; do: Date }[][] = misto.map((m) =>
+      frekvence.map((f) => ({
+        od: zonedToUtc(rok, m.mesic + 1, m.den + 1, f.od, s.timezone),
+        do: zonedToUtc(rok, m.mesic + 1, m.den + 1, f.do, s.timezone),
+      })),
+    );
 
-    const bunky: BunkaDne[] = misto.map((m) => {
+    const bunky: BunkaDne[] = misto.map((m, i) => {
       const denVTydnu = mesice[m.mesic].dny[m.den].denVTydnu;
       const h = hodinyDne.get(denVTydnu);
-      const kapacita = !h || h.byArrangement ? 0 : Math.max(0, h.endMinutes - h.startMinutes);
-      return { kapacitaMinut: kapacita, natoceno: 0, pocet: 0 };
+      const otevreno = Boolean(h) && !h!.byArrangement;
+      const kapacita = otevreno ? Math.max(0, h!.endMinutes - h!.startMinutes) : 0;
+      return {
+        kapacitaMinut: kapacita,
+        natoceno: 0,
+        pocet: 0,
+        casti: frekvence.map((f) => ({
+          oknoMinut: Math.max(0, f.do - f.od),
+          // Kapacitou okna je jen ta část, která padne do otevírací doby.
+          kapacitaMinut: otevreno
+            ? Math.max(0, Math.min(f.do, h!.endMinutes) - Math.max(f.od, h!.startMinutes))
+            : 0,
+          natoceno: 0,
+          pocet: 0,
+        })),
+      };
     });
 
     for (const u of podleStudia.get(s.id) ?? []) {
@@ -192,6 +268,12 @@ export async function nactiKapacituRoku(rok: number): Promise<KapacitaRoku> {
         if (minut > 0) {
           bunky[i].natoceno += minut;
           bunky[i].pocet += 1;
+          oknaDne[i].forEach((okno, k) => {
+            const vOkne = prekryvMinut(u.start, u.end, okno.od, okno.do);
+            if (vOkne <= 0) return;
+            bunky[i].casti[k].natoceno += vOkne;
+            bunky[i].casti[k].pocet += 1;
+          });
         }
         i += 1;
       }
@@ -201,6 +283,7 @@ export async function nactiKapacituRoku(rok: number): Promise<KapacitaRoku> {
       id: s.id,
       nazev: (s.shortName ?? s.name.split(' - ').pop() ?? s.name).trim(),
       barva: s.color,
+      frekvence,
       kapacitaMinut: 0,
       natoceno: 0,
       dnuSNatacenim: 0,

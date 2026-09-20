@@ -56,7 +56,7 @@ Karta projektu má záložky a ukazují se jen ty, které dávají smysl:
 
 - **Přehled** — nahoře Progres natáčení (celý projekt a pod ním každý herec), pak stav, termíny, klient, herci, odkaz pro klienta. Vidí ho každý.
 - **Rozpočet** — položkové náklady, výkazy zvukařů, bonusy. Admin a produkce.
-- **Přehledy → Kapacita studií** — měsíc na jedné obrazovce: řádek den, sloupec studio, každý den obdélníček. Čím tmavší, tím víc **natáčení** proti otevírací době studia; prázdné místo je díra. Víkendy mají vlastní podklad, hodiny ukáže najetí myší, nad tabulkou je proužek dvanácti měsíců s procenty. Střih, casting ani blokace se nepočítají. Admin a produkce.
+- **Přehledy → Kapacita studií** — měsíc na jedné obrazovce: řádek den, sloupec studio a v něm ranní a odpolední frekvence (9-13, 13-17 podle zkratek studia), každá jako obdélníček. Čím tmavší, tím víc **natáčení** proti otevírací době studia; prázdné místo je díra. Víkendy mají vlastní podklad, hodiny ukáže najetí myší, nad tabulkou je proužek dvanácti měsíců s procenty. Střih, casting ani blokace se nepočítají. Admin a produkce.
 - **Natáčecí plán** — plánování studia a herce.
 - **Rodný list** — jen u rádiového spotu; PDF se vyrobí samo, když je spot hotový.
 - **Přeposlech** — AudioTagger: poslech nahrávky a zápis chyb s časem a stranou scénáře.

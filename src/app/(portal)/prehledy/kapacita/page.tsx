@@ -154,8 +154,8 @@ export default async function KapacitaPage({
 
         <div className="overflow-x-auto">
           <div className="min-w-[420px]">
-            {/* Záhlaví se studii */}
-            <div className="flex items-end gap-2 pb-2 border-b border-line">
+            {/* Záhlaví: studio a pod ním jeho frekvence (9-13, 13-17) */}
+            <div className="flex items-end gap-3 pb-2 border-b border-line">
               <span className="w-16 shrink-0" />
               {zaMesic.map((s) => {
                 const p = procenta(s);
@@ -167,6 +167,16 @@ export default async function KapacitaPage({
                     </span>
                     <span className="block text-[11px] font-body text-muted tabular-nums">
                       {p === null ? '—' : `${p} %`} · {s.dnuSNatacenim} dnů
+                    </span>
+                    <span className="flex gap-1 mt-1">
+                      {s.frekvence.map((f) => (
+                        <span
+                          key={f.popis}
+                          className="flex-1 text-[10px] font-heading text-muted text-center tabular-nums"
+                        >
+                          {f.popis}
+                        </span>
+                      ))}
                     </span>
                   </span>
                 );
@@ -180,7 +190,7 @@ export default async function KapacitaPage({
                 return (
                   <div
                     key={d.den}
-                    className={`flex items-center gap-2 rounded ${d.vikend ? 'bg-surfaceSoft' : ''} ${
+                    className={`flex items-center gap-3 rounded ${d.vikend ? 'bg-surfaceSoft' : ''} ${
                       dnes ? 'outline outline-1 outline-brand-purple' : ''
                     }`}
                   >
@@ -192,25 +202,39 @@ export default async function KapacitaPage({
                       {DNY_KRATCE[d.denVTydnu]} {d.den}.
                     </span>
                     {d.bunky.map((b, i) => {
-                      const p = procenta(b);
                       const studio = prehled.studia[i];
                       return (
-                        <span
-                          key={studio.id}
-                          className={`flex-1 min-w-0 h-3.5 rounded-[3px] ${
-                            b.kapacitaMinut === 0 && b.natoceno === 0 ? 'opacity-30' : ''
-                          }`}
-                          style={odstin(p)}
-                          title={`${DNY_KRATCE[d.denVTydnu]} ${d.den}. ${MESICE[mesic - 1]} · ${studio.nazev}: ${
-                            b.natoceno > 0
-                              ? `${hodiny(b.natoceno)} h natáčení (${b.pocet}×)${
-                                  b.kapacitaMinut > 0 ? ` z ${hodiny(b.kapacitaMinut)} h` : ', mimo otevírací dobu'
-                                }`
-                              : b.kapacitaMinut > 0
-                                ? `volno, ${hodiny(b.kapacitaMinut)} h k dispozici`
-                                : 'zavřeno / jen po domluvě'
-                          }`}
-                        />
+                        <span key={studio.id} className="flex-1 min-w-0 flex gap-1">
+                          {b.casti.map((c, k) => {
+                            const okno = studio.frekvence[k];
+                            // Zaplněnost se měří k oknu frekvence: čtyři hodiny
+                            // natáčení v okně 9-13 je plno.
+                            const p = procenta({
+                              kapacitaMinut: c.kapacitaMinut > 0 ? c.kapacitaMinut : c.oknoMinut,
+                              natoceno: c.natoceno,
+                            });
+                            return (
+                              <span
+                                key={okno.popis}
+                                className={`flex-1 min-w-0 h-3.5 rounded-[3px] ${
+                                  c.kapacitaMinut === 0 && c.natoceno === 0 ? 'opacity-30' : ''
+                                }`}
+                                style={odstin(p)}
+                                title={`${DNY_KRATCE[d.denVTydnu]} ${d.den}. ${MESICE[mesic - 1]} · ${studio.nazev} ${
+                                  okno.popis
+                                }: ${
+                                  c.natoceno > 0
+                                    ? `${hodiny(c.natoceno)} h natáčení (${c.pocet}×)${
+                                        c.kapacitaMinut > 0 ? '' : ', mimo otevírací dobu'
+                                      }`
+                                    : c.kapacitaMinut > 0
+                                      ? 'volno'
+                                      : 'zavřeno / jen po domluvě'
+                                }`}
+                              />
+                            );
+                          })}
+                        </span>
                       );
                     })}
                   </div>
