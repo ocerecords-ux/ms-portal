@@ -76,8 +76,9 @@ export function rozeberUdalost(text: string): UdalostZGoogle {
   }
 
   // „CASTING Nicole Tisotová" - samostatny druh prace (20. 9. 2026), herec bez projektu.
-  const casting = /^casting\s+/i.exec(t);
+  const casting = /^casting\b[\s:–-]*/i.exec(t);
   if (casting) {
+    // I samotne „CASTING" bez jmena je casting, ne natáčení (Praha, historie).
     return { druh: 'CASTING', herec: t.slice(casting[0].length).trim() || null, projekt: '', zvukarZkratka, zvukar, znacky };
   }
   // „Míma Krajčová – CASTING" - herec a za pomlckou casting.
