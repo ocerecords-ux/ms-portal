@@ -681,12 +681,33 @@ function MrizkaPohled({
   const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
   const rolovatko = useRef<HTMLDivElement | null>(null);
 
-  // Po otevreni se nascrolluje na rano - noc nikoho nezajima, ale je videt.
-  useEffect(() => {
-    if (rolovatko.current) {
-      rolovatko.current.scrollTop = (GRID_SCROLL_TO_HOUR - GRID_START_HOUR) * HOUR_PX;
+  /**
+   * Po otevreni se nascrolluje tam, kde zacina PRVNI UDALOST zobrazeneho
+   * tydne/dne (zadani 20. 9. 2026: „když otevřu kalendář, tak by to mohlo být
+   * narolované primárně tam, kde začíná první událost toho týdne"), s pul
+   * hodinou rezervy nad ni. Prazdny tyden -> rano jako driv.
+   * Jen pri otevreni a pri prechodu na jiny tyden - po uprave udalosti
+   * kalendar neposkakuje.
+   */
+  const naRolovanyTyden = useRef<string | null>(null);
+  const prvniMinuta = useMemo(() => {
+    let min: number | null = null;
+    for (const den of days) {
+      for (const e of podleDnu.get(den.key) ?? []) {
+        if (e.kind === 'MIMO') continue;
+        const od = minutesInZone(new Date(e.start), timezone);
+        if (min === null || od < min) min = od;
+      }
     }
-  }, []);
+    return min;
+  }, [days, podleDnu, timezone]);
+  const klicTydne = days.length ? `${days[0].key}:${days.length}` : '';
+  useEffect(() => {
+    if (!rolovatko.current || naRolovanyTyden.current === klicTydne) return;
+    naRolovanyTyden.current = klicTydne;
+    const minuta = prvniMinuta !== null ? Math.max(0, prvniMinuta - 30) : GRID_SCROLL_TO_HOUR * 60;
+    rolovatko.current.scrollTop = ((minuta - GRID_START_HOUR * 60) * HOUR_PX) / 60;
+  }, [klicTydne, prvniMinuta]);
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
