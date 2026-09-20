@@ -662,6 +662,20 @@ export function CalendarBrowser({
   );
 }
 
+/**
+ * Jméno na porovnání: bez diakritiky, titulů a velkých písmen. „Mgr. Ondřej
+ * Černý ml." a „ondrej cerny ml" jsou tak tentýž člověk (20. 9. 2026).
+ */
+function srovnejJmeno(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\b(mgr|bc|ing|mga|phdr|mudr|dis)\b\.?/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 /** Denní a týdenní mřížka: sloupce = dny, řádky = hodiny, celých 0–24. */
 function MrizkaPohled({
   days,
@@ -1127,7 +1141,27 @@ function UdalostForm({
   const [druh, setDruh] = useState(jeFrekvence ? 'NATACENI' : (upravovana?.state ?? 'NATACENI'));
   const [poznamka, setPoznamka] = useState(upravovana?.poznamka ?? '');
   const [projektId, setProjektId] = useState(upravovana?.udalost?.caflouProjectId ?? '');
-  const [herecId, setHerecId] = useState(upravovana?.udalost?.actorUserId ?? '');
+  /**
+   * DOHLEDÁNÍ PODLE JMÉNA (20. 9. 2026: „když dám editovat, tak pole zvukař
+   * je prázdné").
+   *
+   * Události převzaté z Google kalendáře mají jen JMÉNO zvukaře nebo herce,
+   * ne odkaz na účet - v úpravě pak políčko zůstávalo prázdné a uložení ho
+   * smazalo. Jméno se proto v seznamu dohledá (bez diakritiky, titulů
+   * a bez ohledu na velikost písmen).
+   */
+  const podleJmena = (seznam: Volba[], jmeno: string | null | undefined) => {
+    const hledane = srovnejJmeno(jmeno ?? '');
+    if (!hledane) return '';
+    const shoda =
+      seznam.find((v) => srovnejJmeno(v.label) === hledane) ??
+      seznam.find((v) => srovnejJmeno(v.label).includes(hledane) || hledane.includes(srovnejJmeno(v.label)));
+    return shoda?.id ?? '';
+  };
+
+  const [herecId, setHerecId] = useState(
+    upravovana?.udalost?.actorUserId ?? podleJmena(herci, upravovana?.udalost?.actorName),
+  );
   /**
    * HEREC U CASTINGU JE JEN TEXT (zadání 20. 9. 2026: „u castingu musí být
    * pole Herec čistě jen na psaný text. Nebudeme vybírat z databáze, protože
@@ -1135,7 +1169,9 @@ function UdalostForm({
    * účet nemají - vybírat je ze seznamu by nešlo.
    */
   const [herecText, setHerecText] = useState(upravovana?.udalost?.actorName ?? '');
-  const [zvukarId, setZvukarId] = useState(upravovana?.udalost?.zvukarUserId ?? '');
+  const [zvukarId, setZvukarId] = useState(
+    upravovana?.udalost?.zvukarUserId ?? podleJmena(zvukari, upravovana?.udalost?.zvukarName),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

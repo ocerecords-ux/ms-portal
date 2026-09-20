@@ -18,6 +18,10 @@ export const ZVUKARI_ZKRATKY: Record<string, string> = {
   TM: 'Tomáš Moravec',
   TI: 'Tomáš Ilavský',
   R: 'Richard Hanula',
+  // Praha (20. 9. 2026): „vidím v tom kalendáři jen O, přitom je tam
+  // Ondřej Černý ml.". Zkratky Dan, Jonas, Matej a P zatím nevíme, komu
+  // patří - ukazují se tak, jak byly v Googlu.
+  O: 'Ondřej Černý ml.',
 };
 
 export type UdalostZGoogle = {

@@ -255,9 +255,11 @@ export default async function KalendarPage({
       state: b.kind,
       // Zvukar i herec primo v bubline, stejne jako u frekvence z nabidky
       // (20. 9. 2026: „nejsou tam nikde videt zvukari").
+      // Popis převzatých událostí už řádek se zvukařem obsahuje (skládá ho
+      // popisUdalosti), takže se nesmí přidat podruhé (20. 9. 2026).
       title: [
         b.actorName && !b.title.includes(b.actorName) ? `${b.title} – ${b.actorName}` : b.title,
-        b.zvukarName ? `ZVUKAŘ: ${b.zvukarName}` : null,
+        b.zvukarName && !b.title.includes('ZVUKAŘ:') ? `ZVUKAŘ: ${b.zvukarName}` : null,
       ]
         .filter(Boolean)
         .join('\n'),
