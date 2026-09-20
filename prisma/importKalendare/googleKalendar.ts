@@ -47,4 +47,19 @@ export const GOOGLE_KALENDAR: RadekGoogle[] = [
 
   // ---- Brno I · týden 12.–18. 10. 2026 ----
   { studio: 'Brno I', datum: '2026-10-16', od: '09:00', do: '13:00', text: 'Tomáš Žilinský – Kousek tebe' },
+
+  // ---- Brno II · týden 21.–27. 9. 2026 ----
+  { studio: 'Brno II', datum: '2026-09-21', od: '09:00', do: '13:00', text: 'Šárka Šildová – Poslední naživu (R)' },
+  { studio: 'Brno II', datum: '2026-09-21', od: '13:00', do: '17:00', text: 'Strih (R)' },
+  // Na screenshotu jen useknuty kratky zaznam kolem 14:00 - cas i konec textu jsou odhad.
+  { studio: 'Brno II', datum: '2026-09-21', od: '14:00', do: '14:15', text: '☎ Míma Krajčová – CASTING' },
+  { studio: 'Brno II', datum: '2026-09-22', od: '09:00', do: '13:00', text: 'Šárka Šildová – Poslední naživu (TM)' },
+  { studio: 'Brno II', datum: '2026-09-22', od: '13:00', do: '17:00', text: 'Střih (TM)' },
+  { studio: 'Brno II', datum: '2026-09-23', od: '13:00', do: '17:00', text: 'Střih (R)' },
+  { studio: 'Brno II', datum: '2026-09-24', od: '10:30', do: '14:30', text: 'Střih (R)' },
+  { studio: 'Brno II', datum: '2026-09-24', od: '14:30', do: '18:30', text: '☎ Tomáš Žilinský - Kousek tebe (R)' },
+  { studio: 'Brno II', datum: '2026-09-25', od: '09:00', do: '17:00', text: 'Střih (R)' },
+
+  // ---- Brno II · týden 28. 9.–4. 10. 2026 ----
+  { studio: 'Brno II', datum: '2026-09-30', od: '15:00', do: '18:00', text: '☎ Martin Sláma – Galerie Hodonín (P)' },
 ];
