@@ -473,27 +473,49 @@ export function CalendarBrowser({
     zacniPrechod(() => prejdi({ datum: datumPosunu(smer) }));
   }
 
-  // Jakmile papír odjel A nová data dorazila: přendat na druhou stranu a
-  // pustit zpátky. Dvě rAF, aby prohlížeč stihl vykreslit stav bez animace -
-  // jinak by skok zanimoval taky a papír by přelétl přes celou obrazovku.
+  // Jakmile papír odjel A nová data dorazila, přendáme ho na druhou stranu.
   useEffect(() => {
     if (faze !== 'ven' || !venDoraz || (prechod && !nouze)) return;
     setFaze('skok');
-    let druhy = 0;
-    const prvni = requestAnimationFrame(() => {
-      druhy = requestAnimationFrame(() => setFaze('dovnitr'));
+  }, [faze, venDoraz, prechod, nouze]);
+
+  // Teprve v další snímek pustíme papír zpátky. Dvě rAF, ať prohlížeč stihne
+  // vykreslit odskočený stav bez animace - jinak by se zanimoval i skok a
+  // papír by přeletěl přes celou obrazovku.
+  //
+  // POZOR: časovače se tu nesmí rušit v úklidu podle `faze`. Když se fáze
+  // změní hned v dalším renderu, úklid rAF zruší dřív, než stihne proběhnout,
+  // a papír zůstane trčet mimo obraz - přesně tak zmizel 20. 9. 2026 celý
+  // kalendář. Proto se hlídá jen odpojení celé komponenty.
+  useEffect(() => {
+    if (faze !== 'skok') return;
+    let zive = true;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (zive) setFaze('dovnitr');
+      });
     });
     return () => {
-      cancelAnimationFrame(prvni);
-      if (druhy) cancelAnimationFrame(druhy);
+      zive = false;
     };
-  }, [faze, venDoraz, prechod, nouze]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faze === 'skok']);
 
   useEffect(() => {
     if (faze !== 'dovnitr') return;
     const t = window.setTimeout(() => setFaze('klid'), IN_MS);
     return () => window.clearTimeout(t);
-  }, [faze]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faze === 'dovnitr']);
+
+  // Poslední záchrana: ať se stane cokoli, do vteřiny a půl je mřížka zpátky
+  // na svém místě. Radši seknutá animace než prázdná stránka.
+  useEffect(() => {
+    if (faze === 'klid') return;
+    const t = window.setTimeout(() => setFaze('klid'), 1500);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faze === 'klid']);
 
   // Sousední týden si necháme přinést dopředu, ať se po švihnutí nečeká na
   // server (Next si odpověď chvíli podrží v paměti).
