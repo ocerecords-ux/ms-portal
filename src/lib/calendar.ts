@@ -116,6 +116,14 @@ export const BLOCK_KIND_LABELS: Record<string, string> = {
 export const PRACOVNI_DRUHY = ['NATACENI', 'STRIH', 'CASTING'] as const;
 
 /**
+ * Značka v adrese kalendáře pro „žádné studio". Prázdný seznam studií v
+ * adrese znamená „všechna" (ať krátké odkazy fungují), takže stav, kdy jsou
+ * všechna studia zhasnutá a svítí jen kalendář Mimo studio, potřebuje vlastní
+ * slovo (20. 9. 2026: klik na název štítku zapne jen ten kalendář).
+ */
+export const ZADNE_STUDIO = 'zadne';
+
+/**
  * Druhy s hercem. Casting (20. 9. 2026: „Casting by měl být samostatný druh
  * práce… jako třetí") má herce jako natáčení, ale projekt u něj není povinný
  * - často se castuje dřív, než projekt v portálu je.

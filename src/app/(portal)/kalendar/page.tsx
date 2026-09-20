@@ -12,6 +12,7 @@ import {
   startOfWeek,
   utcParts,
   zonedToUtc,
+  ZADNE_STUDIO,
   type CalendarView,
 } from '@/lib/calendar';
 import { CalendarBrowser, type CalendarEvent, type CalendarDay } from './CalendarBrowser';
@@ -76,18 +77,24 @@ export default async function KalendarPage({
 
   // Vybraná studia: seznam v adrese, jinak všechna. `studio` je stará podoba
   // odkazu s jedním studiem - ať fungují uložené odkazy dál.
-  const zAdresy = (searchParams?.studia ?? searchParams?.studio ?? '')
+  const parametrStudii = (searchParams?.studia ?? searchParams?.studio ?? '').trim();
+  const zAdresy = parametrStudii
     .split(',')
     .map((x) => x.trim())
     .filter(Boolean);
   const vybrana = studios.filter((s) => zAdresy.includes(s.id));
-  const aktivni = vybrana.length > 0 ? vybrana : studios;
+  // Značka „zadne" = všechna studia zhasnutá, v kalendáři zbyl jen Mimo
+  // studio (klik na jeho název, 20. 9. 2026). Prázdný parametr dál znamená
+  // „všechna studia", aby zkrácené odkazy fungovaly jako dřív.
+  const aktivni = parametrStudii === ZADNE_STUDIO ? [] : vybrana.length > 0 ? vybrana : studios;
+  // Mřížka (pásmo a otevírací doba) se musí o něco opřít i bez studií.
+  const mrizkaPodle = aktivni[0] ?? studios[0];
 
   const view = parseView(searchParams?.pohled);
   const anchor = parseDate(searchParams?.datum);
   // Mřížka se kreslí v pásmu prvního vybraného studia; u víc studií naráz se
   // musí zvolit jedno, jinak by sloupce nesouhlasily.
-  const tz = aktivni[0].timezone;
+  const tz = mrizkaPodle.timezone;
 
   const anchorParts = utcParts(anchor, tz);
   const anchorLocal = new Date(anchorParts.year, anchorParts.month - 1, anchorParts.day);
@@ -113,7 +120,7 @@ export default async function KalendarPage({
     const weekday = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getDay();
     // Pracovní doba se bere z prvního studia - u prolnutých kalendářů je to
     // jen vodítko, ne zákaz.
-    const pravidlo = aktivni[0].hours.find((h) => h.weekday === weekday);
+    const pravidlo = mrizkaPodle.hours.find((h) => h.weekday === weekday);
     days.push({
       key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
       startIso: start.toISOString(),

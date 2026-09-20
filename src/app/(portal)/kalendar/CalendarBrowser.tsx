@@ -26,6 +26,7 @@ import {
   zonedToUtc,
   jePraceVeStudiu,
   maHerce,
+  ZADNE_STUDIO,
   type CalendarView,
 } from '@/lib/calendar';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
@@ -325,7 +326,9 @@ export function CalendarBrowser({
     const start = zonedToUtc(y, m, d, od, timezone).toISOString();
     const end = zonedToUtc(y, m, d, Math.min(24 * 60, od + 60), timezone).toISOString();
     if (canManage) {
-      setNovaBlokace({ studioId: selectedStudioIds[0], start, end });
+      // Kdyz jsou studia zhasnuta (svitilo jen Mimo studio), nova udalost
+      // spadne do prvniho studia - v okne se da prepnout.
+      setNovaBlokace({ studioId: selectedStudioIds[0] ?? studios[0].id, start, end });
       return;
     }
     setOknoNepritomnosti({
@@ -348,7 +351,9 @@ export function CalendarBrowser({
 
   function prejdi(zmeny: Record<string, string>) {
     const params = new URLSearchParams({
-      studia: selectedStudioIds.join(','),
+      // Prázdný seznam v adrese znamená „všechna studia", takže vypnutá
+      // studia se musí napsat značkou (20. 9. 2026).
+      studia: selectedStudioIds.length > 0 ? selectedStudioIds.join(',') : ZADNE_STUDIO,
       pohled: view,
       datum: anchorIso,
       nepritomnost: ukazNepritomnost ? '1' : '0',
@@ -357,13 +362,27 @@ export function CalendarBrowser({
     router.push(`/kalendar?${params.toString()}`);
   }
 
-  /** Zapnutí a vypnutí studia. Poslední zapnuté se vypnout nedá. */
+  /**
+   * Kulička u štítku: zapnutí a vypnutí kalendáře vedle ostatních. Poslední
+   * zapnutý kalendář se vypnout nedá - prázdný kalendář nikomu nepomůže.
+   */
   function prepniStudio(id: string) {
     const dalsi = selectedStudioIds.includes(id)
       ? selectedStudioIds.filter((x) => x !== id)
       : [...selectedStudioIds, id];
-    if (dalsi.length === 0) return;
-    prejdi({ studia: dalsi.join(',') });
+    if (dalsi.length === 0 && !ukazNepritomnost) return;
+    prejdi({ studia: dalsi.length > 0 ? dalsi.join(',') : ZADNE_STUDIO });
+  }
+
+  /** Kulička u Mimo studio - stejné pravidlo jako u studií. */
+  function prepniMimoStudio() {
+    if (ukazNepritomnost && selectedStudioIds.length === 0) return;
+    prejdi({ nepritomnost: ukazNepritomnost ? '0' : '1' });
+  }
+
+  /** Klik na název štítku: nechá svítit jen tenhle kalendář. */
+  function jenTentoKalendar(id: string) {
+    prejdi({ studia: id, nepritomnost: '0' });
   }
 
   // Odkud se prislo - po posunu zpet se tyden v mobilu ukaze od konce
@@ -457,40 +476,56 @@ export function CalendarBrowser({
         </div>
       </div>
 
-      {/* Studia - dají se prolnout, každé má svou barvu */}
+      {/* Studia - dají se prolnout, každé má svou barvu.
+
+          Štítek má dvě poloviny (zadání 20. 9. 2026: „když kliknu na tu
+          kuličku u kalendáře, tak se buď zapne nebo vypne, a když kliknu na
+          název, tak se naopak zapne jen ten kalendář"):
+            - KULIČKA přidá nebo odebere kalendář k těm ostatním,
+            - NÁZEV nechá zapnutý jen jeho (ostatní i Mimo studio zhasnou). */}
       <div className="flex items-center gap-2 flex-wrap">
         {studios.map((s) => {
           const zapnute = selectedStudioIds.includes(s.id);
           return (
-            <button
+            <span
               key={s.id}
-              type="button"
-              onClick={() => prepniStudio(s.id)}
-              title={s.name}
-              aria-pressed={zapnute}
-              className={`flex items-center gap-2 px-3.5 py-1.5 text-sm font-heading font-semibold rounded-pill border transition-colors ${
-                zapnute ? 'border-transparent text-ink' : 'border-line text-muted hover:text-ink'
+              className={`inline-flex items-center rounded-pill border text-sm font-heading font-semibold transition-colors ${
+                zapnute ? 'border-transparent text-ink' : 'border-line text-muted'
               }`}
               style={zapnute ? { backgroundColor: `${s.color}26` } : undefined}
             >
-              <span
-                className="w-3 h-3 rounded-full shrink-0"
-                style={{ backgroundColor: zapnute ? s.color : '#C9C3DC' }}
-              />
-              {s.shortName}
-            </button>
+              <button
+                type="button"
+                onClick={() => prepniStudio(s.id)}
+                title={zapnute ? `Vypnout ${s.name}` : `Zapnout ${s.name}`}
+                aria-label={zapnute ? `Vypnout ${s.name}` : `Zapnout ${s.name}`}
+                aria-pressed={zapnute}
+                className="flex items-center rounded-l-pill pl-3 pr-1.5 py-1.5"
+              >
+                <span
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: zapnute ? s.color : '#C9C3DC' }}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={() => jenTentoKalendar(s.id)}
+                title={`Zobrazit jen ${s.name}`}
+                className={`rounded-r-pill pl-0.5 pr-3.5 py-1.5 transition-colors ${
+                  zapnute ? '' : 'hover:text-ink'
+                }`}
+              >
+                {s.shortName}
+              </button>
+            </span>
           );
         })}
         {/* MIMO STUDIO (zadání 19. 9. 2026) - vlastní kalendář, zapíná se
             stejně jako studio. Tečkovaný okraj ho odliší: není to místnost,
             je to přehled lidí. Přidává se dvojklikem jako všude jinde. */}
-        <button
-          type="button"
-          onClick={() => prejdi({ nepritomnost: ukazNepritomnost ? '0' : '1' })}
-          aria-pressed={ukazNepritomnost}
-          title="Kdo je mimo studio"
-          className={`flex items-center gap-2 px-3.5 py-1.5 text-sm font-heading font-semibold rounded-pill border border-dashed transition-colors ${
-            ukazNepritomnost ? 'text-ink' : 'border-line text-muted hover:text-ink'
+        <span
+          className={`inline-flex items-center rounded-pill border border-dashed text-sm font-heading font-semibold transition-colors ${
+            ukazNepritomnost ? 'text-ink' : 'border-line text-muted'
           }`}
           style={
             ukazNepritomnost
@@ -498,19 +533,37 @@ export function CalendarBrowser({
               : undefined
           }
         >
-          <span
-            className="w-3 h-3 rounded-full shrink-0"
-            // Šedá je skoro stejná jako „vypnuto" u studií, takže vypnutý
-            // stav je tu prázdné kolečko - jinak by nešlo poznat, jestli je
-            // kalendář zapnutý.
-            style={
-              ukazNepritomnost
-                ? { backgroundColor: BARVA_NEPRITOMNOSTI }
-                : { border: '1.5px solid #C9C3DC', backgroundColor: 'transparent' }
-            }
-          />
-          {NAZEV_KALENDARE_MIMO}
-        </button>
+          <button
+            type="button"
+            onClick={prepniMimoStudio}
+            aria-pressed={ukazNepritomnost}
+            title={ukazNepritomnost ? 'Vypnout Mimo studio' : 'Zapnout Mimo studio'}
+            aria-label={ukazNepritomnost ? 'Vypnout Mimo studio' : 'Zapnout Mimo studio'}
+            className="flex items-center rounded-l-pill pl-3 pr-1.5 py-1.5"
+          >
+            <span
+              className="w-3 h-3 rounded-full shrink-0"
+              // Šedá je skoro stejná jako „vypnuto" u studií, takže vypnutý
+              // stav je tu prázdné kolečko - jinak by nešlo poznat, jestli je
+              // kalendář zapnutý.
+              style={
+                ukazNepritomnost
+                  ? { backgroundColor: BARVA_NEPRITOMNOSTI }
+                  : { border: '1.5px solid #C9C3DC', backgroundColor: 'transparent' }
+              }
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => prejdi({ studia: ZADNE_STUDIO, nepritomnost: '1' })}
+            title="Zobrazit jen Mimo studio"
+            className={`rounded-r-pill pl-0.5 pr-3.5 py-1.5 transition-colors ${
+              ukazNepritomnost ? '' : 'hover:text-ink'
+            }`}
+          >
+            {NAZEV_KALENDARE_MIMO}
+          </button>
+        </span>
         {/* Hledani na stejnem radku jako kalendare (zadani 20. 9. 2026:
             „hledání může být na řádku s výběrem kalendářů a stavy dejme úplně
             pryč"). Napovedy k dvojkliku jsou v Napovede, nad kalendarem
