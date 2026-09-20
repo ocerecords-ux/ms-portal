@@ -8,6 +8,8 @@ import { jeVPriprave } from '@/lib/stavyProjektu';
 import { DEFAULT_HOURLY_RATE } from '@/lib/timesheets';
 import { TimesheetEditor } from './TimesheetEditor';
 import { BonusyPanel, type Bonus } from './BonusyPanel';
+import { NavrhyZKalendare } from './NavrhyZKalendare';
+import { nactiNavrhy, pripravNavrhy } from '@/lib/vykazNavrhyServer';
 import type { BonusRadek } from './TimesheetEditor';
 
 // Výkazy zvukařů (zadani 6. 9. 2026). Vidi je zvukar (VYHRADNE svoje) a
@@ -142,6 +144,18 @@ export default async function TimesheetsPage({
     }));
   const naBonusech = searchParams?.zalozka === 'bonusy';
 
+  /**
+   * NABÍDKA VÝKAZU Z KALENDÁŘE (zadání 20. 9. 2026). Návrhy dělá úloha
+   * každých 5 minut, ale když si zvukař Výkazy otevře dřív, doplní se rovnou
+   * tady - ať nečeká na další běh. Týká se jen jeho vlastních frekvencí.
+   */
+  const navrhy = canWrite
+    ? await (async () => {
+        await pripravNavrhy(session.user.id).catch(() => null);
+        return nactiNavrhy(session.user.id);
+      })()
+    : [];
+
   // Stejna sazba jako mesicni zalozky uvnitr vykazu - at je na prvni pohled
   // videt, ze je to zalozka, ne tlacitko (zadani 15. 9. 2026).
   const zalozkaClass = (aktivni: boolean) =>
@@ -166,6 +180,14 @@ export default async function TimesheetsPage({
           )}
         </Link>
       </div>
+
+      {!naBonusech && canWrite && navrhy.length > 0 && (
+        <NavrhyZKalendare
+          navrhy={navrhy}
+          projekty={projectOptions.map((p) => ({ id: p.id, label: p.label, dokonceny: p.dokonceny }))}
+          hourlyRate={me?.hourlyRate ?? DEFAULT_HOURLY_RATE}
+        />
+      )}
 
       {naBonusech ? (
         <BonusyPanel

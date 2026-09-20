@@ -97,6 +97,7 @@ Klient, který účet má, vidí v portálu navíc své projekty, nahrávky a m�
 - **Čte účtárenskou schránku** a z příloh zakládá nezařazené výdaje — z účtenky si navíc přečte částku, datum i dodavatele.
 - **Vyrobí rodný list** spotu, jakmile je reklama hotová.
 - **Navrhne bonus** zvukaři, který odvedl většinu střihu.
+- **Nabídne zvukaři výkaz** pět minut před koncem jeho natáčení, castingu nebo střihu v kalendáři — přijde upozornění do zvonečku i do mobilu a ve **Výkazech** čeká řádek, který se jedním klikem („Přidat výkaz") překlopí do výkazu. Produkce s tím nic nedělá.
 - **Šestého v měsíci** pošle zvukařům přehled jejich výkazů za minulý měsíc.
 - **Bruno** čte kanály projektů v chatu, pozná, kam se doteklo natáčení, a zapíše to do karty projektu. Když si není jistý, zeptá se v kanálu.
 

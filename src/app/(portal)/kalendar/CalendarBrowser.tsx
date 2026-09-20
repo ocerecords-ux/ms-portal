@@ -1419,7 +1419,7 @@ function UdalostForm({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label className="flex flex-col gap-1.5 sm:col-span-1">
             <span className="text-sm font-body text-ink">
-              Projekt {projektPovinny && <span className="text-danger">*</span>}
+              Projekt {projektPovinny ? <span className="text-danger">*</span> : <span className="text-muted font-body">(nepovinné)</span>}
             </span>
             {/* Stejné hledání psaním jako u výkazů - projektů jsou stovky. */}
             <VyberProjektu projekty={projekty} hodnota={projektId} onZmena={setProjektId} />

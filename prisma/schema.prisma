@@ -343,6 +343,7 @@ model User {
   /// Nabidky, ktere tenhle clovek klientovi odeslal (zadani 13. 9. 2026).
   odeslaneNabidky Offer[]         @relation("NabidkaOdeslal")
   timesheets      TimesheetEntry[]
+  navrhyVykazu    NavrhVykazu[]
   tasks           Task[]
   menuItems       UserMenuItem[]
   /// Vlastni sloupce v tabulkach, zvlast pro pocitac a mobil (zadani 19. 9. 2026).
@@ -2952,4 +2953,48 @@ model Nepritomnost {
 
   @@index([start, end])
   @@index([userId])
+}
+
+/// NÁVRH VÝKAZU Z KALENDÁŘE (zadání 20. 9. 2026: „nabídnutí výkazu zvukařům
+/// po skončené frekvenci… nabídnout by to mělo 5 min. před skončením").
+///
+/// Jedna skončená práce v kalendáři (frekvence z nabídky nebo ručně zapsané
+/// natáčení, střih, casting) = jeden návrh pro zvukaře, který u ní je. Návrh
+/// si drží stav, aby se po zapsání nebo odmítnutí nenabízel znovu, a `zdroj`
+/// říká, ze které události vznikl (slot:<id> / blok:<id>).
+model NavrhVykazu {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// „slot:<id>" nebo „blok:<id>" - podle toho se pozná, že návrh už existuje.
+  zdroj String
+
+  start DateTime
+  end   DateTime
+
+  workType        WorkType
+  caflouProjectId String?
+  projectName     String?
+  /// Jen pro popis v nabídce - studio a herec, ať zvukař pozná, o co šlo.
+  studioName String?
+  actorName  String?
+
+  stav      StavNavrhu @default(CEKA)
+  /// Výkaz, který z návrhu vznikl - kdyby se ho někdo ptal zpětně.
+  timesheetEntryId String?
+  /// Kdy se o něm zvukař dozvěděl (zvoneček + push). Prázdné = ještě ne.
+  oznamenoAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, zdroj])
+  @@index([userId, stav])
+}
+
+enum StavNavrhu {
+  CEKA      // čeká na zvukaře
+  ZAPSANO   // zvukař z něj udělal výkaz
+  ODMITNUTO // zvukař řekl, že se vykazovat nemá
 }
