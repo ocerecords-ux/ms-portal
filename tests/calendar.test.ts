@@ -178,3 +178,14 @@ describe('rozvrhniPrekryvy – Apple', () => {
     expect(r.get('c')!.vrstva).toBeGreaterThan(r.get('b')!.vrstva);
   });
 });
+
+/** Střih kabinu nedrží (20. 9. 2026). */
+import { zabiraStudio } from '../src/lib/calendar';
+describe('zabiraStudio', () => {
+  it('jen střih se smí překrývat', () => {
+    expect(zabiraStudio('STRIH')).toBe(false);
+    expect(zabiraStudio('NATACENI')).toBe(true);
+    expect(zabiraStudio('CASTING')).toBe(true);
+    expect(zabiraStudio('MAINTENANCE')).toBe(true);
+  });
+});

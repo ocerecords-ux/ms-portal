@@ -8,6 +8,7 @@ import {
   canTransition,
   checkOpeningHours,
   findCollisions,
+  zabiraStudio,
   type Collision,
 } from '@/lib/calendar';
 
@@ -287,7 +288,8 @@ export async function checkSlot(input: {
     { start, end },
     {
       studioSlots: obsazenost.slots.filter((s) => s.id !== input.ignoreSlotId && s.requestId !== input.ignoreRequestId),
-      blocks: obsazenost.blocks,
+      // Strih kabinu nedrzi - nabidce terminu nevadi (20. 9. 2026).
+      blocks: obsazenost.blocks.filter((b) => zabiraStudio(b.kind)),
       actorSlots: hercovy.filter((s) => s.id !== input.ignoreSlotId),
     },
   );

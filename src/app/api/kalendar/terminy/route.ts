@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
 import { checkSlot, loadOccupancy, recordEvent } from '@/lib/calendarServer';
-import { popisUdalosti } from '@/lib/calendar';
+import { popisUdalosti, zabiraStudio } from '@/lib/calendar';
 import { notify } from '@/lib/notifications';
 
 /**
@@ -135,9 +135,14 @@ export async function PATCH(req: NextRequest) {
     }
 
     // --- Jiny druh: frekvence se rusi a vznika udalost kalendare -----------
-    const obsazeno = await loadOccupancy([d.studioId], start, end);
-    if (obsazeno.slots.some((s) => s.id !== slot.id) || obsazeno.blocks.length > 0) {
-      return NextResponse.json({ error: 'V tomhle čase už ve studiu něco je.' }, { status: 409 });
+    // Strih se vejde vedle jine prace, ostatni druhy kabinu drzi (20. 9. 2026).
+    if (zabiraStudio(d.kind)) {
+      const obsazeno = await loadOccupancy([d.studioId], start, end);
+      const prekazka =
+        obsazeno.slots.some((s) => s.id !== slot.id) || obsazeno.blocks.some((b) => zabiraStudio(b.kind));
+      if (prekazka) {
+        return NextResponse.json({ error: 'V tomhle čase už ve studiu něco je.' }, { status: 409 });
+      }
     }
     // Strih a casting (20. 9. 2026) se zapisuji jako prace ve studiu; casting si
     // herce z frekvence necha.

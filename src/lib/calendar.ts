@@ -124,6 +124,20 @@ export function maHerce(kind: string): boolean {
   return kind === 'NATACENI' || kind === 'CASTING';
 }
 
+/**
+ * ZABÍRÁ UDÁLOST STUDIO? (zadání 20. 9. 2026: „v jednom studiu můžou být dva
+ * zvukaři v jednu dobu a překrývat se v rámci střihu. Nejdou jen naplánovat
+ * dvě natáčení.")
+ *
+ * Střih se nedělá v nahrávací kabině, dělá se u stolu - dva střihy vedle
+ * sebe si nevadí a nevadí ani natáčení, které zrovna běží. Všechno ostatní
+ * (natáčení, casting, svátek, údržba, dovolená, blokace) kabinu drží, a přes
+ * to se druhé natáčení zapsat nedá.
+ */
+export function zabiraStudio(kind: string): boolean {
+  return kind !== 'STRIH';
+}
+
 export function jePraceVeStudiu(kind: string): boolean {
   return (PRACOVNI_DRUHY as readonly string[]).includes(kind);
 }

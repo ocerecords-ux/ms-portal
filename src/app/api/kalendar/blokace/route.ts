@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
 import { loadOccupancy } from '@/lib/calendarServer';
-import { jePraceVeStudiu, maHerce, popisUdalosti } from '@/lib/calendar';
+import { jePraceVeStudiu, maHerce, popisUdalosti, zabiraStudio } from '@/lib/calendar';
 
 /**
  * Blokace založená přímo z kalendáře dvojklikem (zprava uzivatele 9. 9. 2026:
@@ -91,16 +91,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Konec události musí být po začátku.' }, { status: 400 });
     }
 
-    // Pres uz domluvene nataceni se blokace nedava.
-    const obsazeno = await loadOccupancy([d.studioId], start, end);
-    if (obsazeno.slots.length > 0) {
-      return NextResponse.json(
-        { error: `V tomhle čase je natáčení: ${obsazeno.slots.map((s) => s.label).join(', ')}.` },
-        { status: 409 },
-      );
-    }
-    if (obsazeno.blocks.length > 0) {
-      return NextResponse.json({ error: 'V tomhle čase už ve studiu něco je.' }, { status: 409 });
+    // Pres uz domluvene nataceni se blokace nedava. Strih se ale vejde
+    // vedle cehokoliv - viz zabiraStudio (20. 9. 2026).
+    if (zabiraStudio(kind)) {
+      const obsazeno = await loadOccupancy([d.studioId], start, end);
+      if (obsazeno.slots.length > 0) {
+        return NextResponse.json(
+          { error: `V tomhle čase je natáčení: ${obsazeno.slots.map((s) => s.label).join(', ')}.` },
+          { status: 409 },
+        );
+      }
+      const prekazka = obsazeno.blocks.find((b) => zabiraStudio(b.kind));
+      if (prekazka) {
+        return NextResponse.json({ error: `V tomhle čase už ve studiu je: ${prekazka.title}.` }, { status: 409 });
+      }
     }
 
     const block = await prisma.studioBlock.create({
@@ -164,15 +168,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Konec události musí být po začátku.' }, { status: 400 });
     }
 
-    const obsazeno = await loadOccupancy([d.studioId], start, end);
-    if (obsazeno.slots.length > 0) {
-      return NextResponse.json(
-        { error: `V tomhle čase je natáčení: ${obsazeno.slots.map((s) => s.label).join(', ')}.` },
-        { status: 409 },
-      );
-    }
-    if (obsazeno.blocks.some((b) => b.id !== id)) {
-      return NextResponse.json({ error: 'V tomhle čase už ve studiu něco je.' }, { status: 409 });
+    if (zabiraStudio(kind)) {
+      const obsazeno = await loadOccupancy([d.studioId], start, end);
+      if (obsazeno.slots.length > 0) {
+        return NextResponse.json(
+          { error: `V tomhle čase je natáčení: ${obsazeno.slots.map((s) => s.label).join(', ')}.` },
+          { status: 409 },
+        );
+      }
+      const prekazka = obsazeno.blocks.find((b) => b.id !== id && zabiraStudio(b.kind));
+      if (prekazka) {
+        return NextResponse.json({ error: `V tomhle čase už ve studiu je: ${prekazka.title}.` }, { status: 409 });
+      }
     }
 
     const upravena = await prisma.studioBlock.update({

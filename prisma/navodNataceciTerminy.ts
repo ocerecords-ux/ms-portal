@@ -89,6 +89,8 @@ V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a
 
 Ikona druhu je i přímo v bublině v kalendáři, zvukař taky — v týdnu na druhém řádku, v měsíci za tečkou.
 
+**Střih se smí překrývat.** Ve studiu můžou v jednu chvíli pracovat dva zvukaři, takže střih jde zapsat i tam, kde už natáčení nebo jiný střih je. Co studio opravdu drží, je **natáčení, casting, svátek, údržba a blokace** — přes ně se druhé natáčení zapsat nedá a nenabízejí se ani herci v nabídce termínů.
+
 **Druhy práce** při zápisu dvojklikem do volného místa jsou tři: **Natáčení** (projekt, herec, zvukař), **Střih** (projekt, zvukař) a **Casting** (herec a zvukař; projekt vyplníte, jen když už je).
 
 ![Kalendář s frekvencí a otevřené okno Úprava frekvence](/navody/terminy-4.png)
