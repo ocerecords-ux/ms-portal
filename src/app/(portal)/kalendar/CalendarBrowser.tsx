@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PosunGestem } from './PosunGestem';
+import { VyskytyHledani } from './VyskytyHledani';
 import { OdberKalendare } from './OdberKalendare';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import Link from 'next/link';
@@ -159,6 +160,8 @@ export function CalendarBrowser({
     casDo?: string;
   } | null>(null);
   const [hledani, setHledani] = useState('');
+  /** Seznam výskytů v celém kalendáři (20. 9. 2026) - dá se zavřít křížkem. */
+  const [seznamVyskytu, setSeznamVyskytu] = useState(true);
   const [detail, setDetail] = useState<CalendarEvent | null>(null);
   /** Kde na obrazovce je bublina, ze ktere detail vystoupi (20. 9. 2026). */
   const [kotvaDetailu, setKotvaDetailu] = useState<Kotva | null>(null);
@@ -514,12 +517,31 @@ export function CalendarBrowser({
             jen zabiraly misto. */}
         <input
           value={hledani}
-          onChange={(e) => setHledani(e.target.value)}
-          placeholder="Hledat projekt nebo herce…"
-          aria-label="Hledat projekt nebo herce"
-          className="ml-auto rounded-pill border border-line bg-field px-4 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-full sm:w-64"
+          onChange={(e) => {
+            setHledani(e.target.value);
+            setSeznamVyskytu(true);
+          }}
+          placeholder="Hledat projekt, herce nebo zvukaře…"
+          aria-label="Hledat projekt, herce nebo zvukaře"
+          className="ml-auto rounded-pill border border-line bg-field px-4 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-full sm:w-72"
         />
       </div>
+
+      {/* SEZNAM VÝSKYTŮ V CELÉM KALENDÁŘI (20. 9. 2026). Mřížka pod ním dál
+          ukazuje jen vybraný týden - tohle je přehled napříč časem. */}
+      {seznamVyskytu && (
+        <VyskytyHledani
+          dotaz={hledani}
+          onZavri={() => setSeznamVyskytu(false)}
+          onSkoc={(den, studioId) => {
+            const studia = selectedStudioIds.includes(studioId)
+              ? selectedStudioIds
+              : [...selectedStudioIds, studioId];
+            prejdi({ datum: den, studia: studia.join(',') });
+            setSeznamVyskytu(false);
+          }}
+        />
+      )}
 
       <PosunGestem onPosun={posun}>
       {view === 'mesic' ? (
