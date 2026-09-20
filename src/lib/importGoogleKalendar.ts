@@ -65,7 +65,10 @@ export function rozeberUdalost(text: string): UdalostZGoogle {
     znacky.push('CUT');
   }
 
-  if (/^[úu]klid\b/i.test(t)) {
+  // Provozni veci studia (20. 9. 2026: v historii Brna I je „VÝPADEK
+  // ELEKTŘINY" nebo „Káblovánie P+T"). Bez tohohle by z nich bylo natáčení
+  // a nafoukly by kapacitu studia.
+  if (/^[úu]klid\b/i.test(t) || /(v[ýy]padek|k[áa]blov[áa]n|servis|odst[áa]vka|rekonstrukce)/i.test(t)) {
     return { druh: 'MAINTENANCE', herec: null, projekt: t, zvukarZkratka, zvukar, znacky };
   }
   if (/\bporada\b/i.test(t)) {

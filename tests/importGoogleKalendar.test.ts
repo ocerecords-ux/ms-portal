@@ -59,3 +59,18 @@ describe('rozeberUdalost – casting', () => {
     expect(rozeberUdalost('☎ Míma Krajčová – CASTING')).toMatchObject({ druh: 'CASTING', herec: 'Míma Krajčová' });
   });
 });
+
+/** Provozní události studia z historie Brna I (20. 9. 2026). */
+describe('provoz studia není natáčení', () => {
+  it('výpadek elektřiny a káblování jsou blokace', () => {
+    expect(rozeberUdalost('VÝPADEK ELEKTŘINY').druh).toBe('MAINTENANCE');
+    expect(rozeberUdalost('Káblovánie P+T').druh).toBe('MAINTENANCE');
+    expect(rozeberUdalost('ÚKLID STUDIA').druh).toBe('MAINTENANCE');
+  });
+  it('natáčení s hercem zůstává natáčením', () => {
+    const u = rozeberUdalost('Luboš Ondráček – Starožitná smrt (T)');
+    expect(u.druh).toBe('NATACENI');
+    expect(u.herec).toBe('Luboš Ondráček');
+    expect(u.projekt).toBe('Starožitná smrt');
+  });
+});
