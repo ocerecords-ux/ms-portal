@@ -627,6 +627,8 @@ enum DruhArchivu {
   FIRMA
   UZIVATEL
   PROJEKT
+  // Hromadne vycisteni kalendare studia (zadani 20. 9. 2026).
+  KALENDAR
 }
 
 model Archiv {

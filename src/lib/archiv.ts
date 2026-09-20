@@ -13,6 +13,7 @@ export const POPISKY_DRUHU_ARCHIVU: Record<DruhArchivu, string> = {
   FIRMA: 'Firma',
   UZIVATEL: 'Uživatel',
   PROJEKT: 'Projekt',
+  KALENDAR: 'Kalendář studia',
 };
 
 /** Jak se má naložit s tím, co na záznamu visí. */

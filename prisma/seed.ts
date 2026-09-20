@@ -180,6 +180,7 @@ async function main() {
   await srovnejPriznakFotky();
   await zalozVychoziNavody();
   await zalozDruhyLicence();
+  await vycistiBrnoII();
   await prevezmiGoogleKalendar();
 
   console.log('Seed hotov.');
@@ -397,6 +398,79 @@ async function srovnejPriznakFotky() {
      WHERE "maFotku" <> ("photoUrl" IS NOT NULL AND "photoUrl" <> '')`,
   );
   if (zmeneno > 0) console.log(`  priznak fotky srovnan u ${zmeneno} uzivatelu`);
+}
+
+/**
+ * JEDNORÁZOVÉ VYČIŠTĚNÍ KALENDÁŘE BRNA II (zadání 20. 9. 2026: „všechno
+ * v Brně II teď vymaž a pak půjdem na události v Brně II" - upřesněno:
+ * úplně všechno, i natáčení z nabídek herců).
+ *
+ * Běží JEDNOU (značka v Counteru), a to PŘED převzetím Google kalendáře -
+ * události Brna II, které se převezmou potom, už zůstanou.
+ *
+ * Smaže:
+ *  - všechny události studia (ruční i převzaté),
+ *  - všechny termíny z nabídek herců v Brně II (nabídnuté, vybrané i potvrzené).
+ * Nabídka, které tím nezbyde žádný termín, se vrátí do konceptu (DRAFT) -
+ * herec ji nevidí a produkce ji může poslat znovu.
+ *
+ * Nic se neztratí nadobro: všechno, co se maže, se napřed uloží do Archivu
+ * (Admin ▸ Archiv, druh „Kalendář studia").
+ */
+async function vycistiBrnoII() {
+  const ZNAMKA = 'kalendar-vycisteni-brno-ii-2026-09-20';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const studio = await prisma.studio.findUnique({ where: { name: 'MS Studio - Brno II' }, select: { id: true } });
+    if (!studio) {
+      await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+      return;
+    }
+
+    const [bloky, sloty] = await Promise.all([
+      prisma.studioBlock.findMany({ where: { studioId: studio.id } }),
+      prisma.recordingSlot.findMany({ where: { studioId: studio.id } }),
+    ]);
+
+    if (bloky.length + sloty.length > 0) {
+      await prisma.archiv.create({
+        data: {
+          druh: 'KALENDAR',
+          nazev: 'MS Studio - Brno II',
+          puvodniId: studio.id,
+          souhrn: `${bloky.length}x událost studia, ${sloty.length}x termín z nabídky`,
+          pocetZaznamu: bloky.length + sloty.length,
+          obsah: JSON.parse(JSON.stringify({ udalosti: bloky, terminy: sloty })),
+          uzivatelJmeno: 'Vyčištění kalendáře (seed)',
+        },
+      });
+    }
+
+    const dotceneNabidky = Array.from(new Set(sloty.map((s) => s.requestId)));
+    await prisma.$transaction([
+      prisma.studioBlock.deleteMany({ where: { studioId: studio.id } }),
+      prisma.recordingSlot.deleteMany({ where: { studioId: studio.id } }),
+    ]);
+
+    // Nabidka bez jedineho terminu -> zpet do konceptu.
+    let doKonceptu = 0;
+    for (const requestId of dotceneNabidky) {
+      const zbyva = await prisma.recordingSlot.count({ where: { requestId } });
+      if (zbyva === 0) {
+        await prisma.recordingRequest.update({ where: { id: requestId }, data: { status: 'DRAFT' } });
+        doKonceptu += 1;
+      }
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(
+      `  brno II: smazano ${bloky.length} udalosti a ${sloty.length} terminu (archivovano), ${doKonceptu} nabidek do konceptu`,
+    );
+  } catch (err) {
+    console.warn('  vycisteni Brna II se nepodarilo:', err);
+  }
 }
 
 /**
