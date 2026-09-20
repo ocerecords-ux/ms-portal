@@ -44,6 +44,10 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // zvukar jen cte. Herec ma vlastni, uzsi pohled.
   '/kalendar': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
   '/moje-terminy': ['HEREC'],
+  // Přehledy (zadání 20. 9. 2026: „samostatnou kategorii na hlavním panelu
+  // s názvem Přehledy") - zatím Kapacita studií. Je to pohled na vytížení
+  // firmy, takže Žůžo-labůžo a produkce.
+  '/prehledy': ['ADMIN', 'PRODUKCE'],
   // Honorare herce - navrhnuto / ceka na proplaceni / zaplaceno (19. 9. 2026).
   '/honorare': ['HEREC'],
   // Pozvanky hercu (zadani 16. 9. 2026: „tohle tlacitko musi mit zaple
@@ -83,6 +87,7 @@ export const DEFAULT_MENU_ITEMS: { label: string; href: string; sortOrder: numbe
   { label: 'Nahrávky', href: '/nahravky', sortOrder: 30 },
   { label: 'Výkazy', href: '/vykazy', sortOrder: 40 },
   { label: 'Kalendář', href: '/kalendar', sortOrder: 45 },
+  { label: 'Přehledy', href: '/prehledy', sortOrder: 48 },
   { label: 'Moje termíny', href: '/moje-terminy', sortOrder: 46 },
   { label: 'Honoráře', href: '/honorare', sortOrder: 47 },
   { label: 'Firmy', href: '/admin', sortOrder: 50 },
@@ -99,6 +104,7 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/nahravky', label: 'Nahrávky' },
   { href: '/vykazy', label: 'Výkazy' },
   { href: '/kalendar', label: 'Kalendář' },
+  { href: '/prehledy', label: 'Přehledy' },
   { href: '/moje-terminy', label: 'Moje termíny' },
   { href: '/honorare', label: 'Honoráře' },
   { href: '/admin', label: 'Firmy' },

@@ -80,6 +80,7 @@ export const config = {
     '/muj-ucet/:path*',
     '/vykazy/:path*',
     '/kalendar/:path*',
+    '/prehledy/:path*',
     '/moje-terminy/:path*',
     '/pozvanky/:path*',
     '/doplnit-udaje/:path*',

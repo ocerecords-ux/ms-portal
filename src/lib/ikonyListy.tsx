@@ -64,6 +64,15 @@ const KRESBY: Record<string, ReactNode> = {
       <rect {...akcent} x="6.6" y="12.4" width="4" height="4" rx="1.2" />
     </>
   ),
+  // Přehledy (20. 9. 2026) - sloupcový graf, poslední sloupec plný.
+  '/prehledy': (
+    <>
+      <path {...obrys} d="M3.5 20.5h17" />
+      <rect {...obrys} x="5" y="12" width="3.6" height="6" rx="1.2" />
+      <rect {...obrys} x="10.2" y="8.5" width="3.6" height="9.5" rx="1.2" />
+      <rect {...akcent} x="15.4" y="4.5" width="3.6" height="13.5" rx="1.2" />
+    </>
+  ),
   // Moje termíny - stejný list, ale vybarvený den je jen jeden a kulatý.
   '/moje-terminy': (
     <>
