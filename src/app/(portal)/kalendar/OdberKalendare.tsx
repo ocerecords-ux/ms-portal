@@ -8,21 +8,39 @@ import { useEffect, useState } from 'react';
  * nebo Apple kalendář. Jen pro čtení").
  *
  * Jedno tlačítko v hlavičce Kalendáře → okno se třemi kroky:
- *  1. CO odebírat (celý kalendář / jedno studio / jen moje),
+ *  1. CO odebírat (každé studio zvlášť / celý kalendář / jen moje),
  *  2. KAM (Apple, Google, ostatní přes zkopírovaný odkaz),
  *  3. hotovo - kalendář se sám obnovuje, v telefonu je jen ke čtení.
  *
  * Odkaz je osobní. Kdo ho zneplatní, tomu v kalendáři přestane chodit
  * (a kdo odejde z týmu, tomu přestane chodit sám - viz /api/ical).
  */
-type Rozsah = 'ALL' | 'STUDIO' | 'MINE';
-type Odber = { id: string; scope: Rozsah; studioId: string | null; url: string; naposledy: string | null };
+/**
+ * KAŽDÉ STUDIO ZVLÁŠŤ (zadání 20. 9. 2026: „aby se to objevilo jako
+ * samostatné čtyři separátní kalendáře, ať si dokážu vypínat jednotlivé
+ * kalendáře a zapínat"). Jeden odebíraný odkaz = jeden kalendář v telefonu,
+ * víc kalendářů v jednom souboru Apple ani Google neumí. Proto „Zvlášť"
+ * připraví odkaz pro každé studio (+ Mimo studio) a každý se přidá svým
+ * tlačítkem - v telefonu jsou pak samostatné kalendáře s vlastní barvou.
+ */
+type Rozsah = 'ZVLAST' | 'ALL' | 'MINE';
+type Odber = {
+  id: string;
+  scope: 'ALL' | 'STUDIO' | 'MINE' | 'MIMO';
+  studioId: string | null;
+  url: string;
+  naposledy: string | null;
+};
+type Pripraveny = { klic: string; nazev: string; barva: string; url: string; qr: string | null };
+const BARVA_MIMO = '#A7A4B0';
 
 export function OdberKalendare({ studios }: { studios: { id: string; name: string; color: string | null }[] }) {
   const [otevreno, setOtevreno] = useState(false);
-  const [rozsah, setRozsah] = useState<Rozsah>('ALL');
-  const [studioId, setStudioId] = useState(studios[0]?.id ?? '');
+  const [rozsah, setRozsah] = useState<Rozsah>('ZVLAST');
   const [odkaz, setOdkaz] = useState<string | null>(null);
+  const [zvlast, setZvlast] = useState<Pripraveny[] | null>(null);
+  const [qrOtevreny, setQrOtevreny] = useState<string | null>(null);
+  const [zkopirovanyKlic, setZkopirovanyKlic] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [odbery, setOdbery] = useState<Odber[]>([]);
   const [bezi, setBezi] = useState(false);
@@ -30,12 +48,14 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
   const [zkopirovano, setZkopirovano] = useState(false);
 
   const kratce = (nazev: string) => (nazev.split(' - ').pop() ?? nazev).trim();
-  const popisRozsahu = (o: { scope: Rozsah; studioId: string | null }) =>
+  const popisRozsahu = (o: Pick<Odber, 'scope' | 'studioId'>) =>
     o.scope === 'ALL'
       ? 'Celý kalendář'
       : o.scope === 'MINE'
         ? 'Jen moje'
-        : `Studio ${kratce(studios.find((s) => s.id === o.studioId)?.name ?? '')}`;
+        : o.scope === 'MIMO'
+          ? 'Mimo studio'
+          : `Studio ${kratce(studios.find((s) => s.id === o.studioId)?.name ?? '')}`;
 
   async function nactiOdbery() {
     const res = await fetch('/api/kalendar/odber');
@@ -51,26 +71,50 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
   useEffect(() => {
     setOdkaz(null);
     setQr(null);
+    setZvlast(null);
+    setQrOtevreny(null);
     setZkopirovano(false);
-  }, [rozsah, studioId]);
+  }, [rozsah]);
+
+  async function pozadej(telo: Record<string, string>): Promise<{ url: string; qr: string | null }> {
+    const res = await fetch('/api/kalendar/odber', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(telo),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || 'Odkaz se nepodařilo vytvořit.');
+    return { url: data.url, qr: data.qr ?? null };
+  }
 
   async function vytvor() {
     setBezi(true);
     setChyba(null);
     try {
-      const res = await fetch('/api/kalendar/odber', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scope: rozsah, studioId: rozsah === 'STUDIO' ? studioId : undefined }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setChyba(data?.error || 'Odkaz se nepodařilo vytvořit.');
-        return;
+      if (rozsah === 'ZVLAST') {
+        // Kazde studio + Mimo studio. Server vraci pro stejny rozsah porad
+        // stejny odkaz, takze opakovane kliknuti nic nerozbije.
+        const polozky = [
+          ...studios.map((s) => ({
+            klic: s.id,
+            nazev: kratce(s.name),
+            barva: s.color ?? '#7B55FF',
+            telo: { scope: 'STUDIO', studioId: s.id },
+          })),
+          { klic: 'mimo', nazev: 'Mimo studio', barva: BARVA_MIMO, telo: { scope: 'MIMO' } },
+        ];
+        const hotove = await Promise.all(
+          polozky.map(async (p) => ({ klic: p.klic, nazev: p.nazev, barva: p.barva, ...(await pozadej(p.telo)) })),
+        );
+        setZvlast(hotove);
+      } else {
+        const r = await pozadej({ scope: rozsah });
+        setOdkaz(r.url);
+        setQr(r.qr);
       }
-      setOdkaz(data.url);
-      setQr(data.qr ?? null);
       void nactiOdbery();
+    } catch (err) {
+      setChyba(err instanceof Error ? err.message : 'Odkaz se nepodařilo vytvořit.');
     } finally {
       setBezi(false);
     }
@@ -82,13 +126,20 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ revokeId: id }),
     });
-    if (odbery.find((o) => o.id === id)?.url === odkaz) setOdkaz(null);
+    const url = odbery.find((o) => o.id === id)?.url;
+    if (url === odkaz) setOdkaz(null);
+    if (url && zvlast?.some((z) => z.url === url)) setZvlast(null);
     void nactiOdbery();
   }
 
-  async function kopiruj(text: string) {
+  async function kopiruj(text: string, klic?: string) {
     try {
       await navigator.clipboard.writeText(text);
+      if (klic) {
+        setZkopirovanyKlic(klic);
+        setTimeout(() => setZkopirovanyKlic(null), 2500);
+        return;
+      }
       setZkopirovano(true);
       setTimeout(() => setZkopirovano(false), 2500);
     } catch {
@@ -99,9 +150,12 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
   const webcal = odkaz?.replace(/^https?:\/\//, 'webcal://') ?? '';
   const google = odkaz ? `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}` : '';
 
+  const naWebcal = (url: string) => url.replace(/^https?:\/\//, 'webcal://');
+  const naGoogle = (url: string) => `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(naWebcal(url))}`;
+
   const VOLBY: { klic: Rozsah; nazev: string; popis: string }[] = [
-    { klic: 'ALL', nazev: 'Celý kalendář', popis: 'Všechna studia a Mimo studio' },
-    { klic: 'STUDIO', nazev: 'Jedno studio', popis: 'Jen natáčení a události vybraného studia' },
+    { klic: 'ZVLAST', nazev: 'Každé studio zvlášť', popis: 'Samostatné kalendáře, zapnete a vypnete je jednotlivě' },
+    { klic: 'ALL', nazev: 'Celý kalendář', popis: 'Všechna studia a Mimo studio v jednom' },
     { klic: 'MINE', nazev: 'Jen moje', popis: 'Kde jsem zvukař a moje Mimo studio' },
   ];
 
@@ -173,31 +227,80 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                   </button>
                 ))}
               </div>
-              {rozsah === 'STUDIO' && (
-                <div className="flex gap-2 flex-wrap">
-                  {studios.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setStudioId(s.id)}
-                      className={`inline-flex items-center gap-2 rounded-pill border px-3 py-1.5 text-sm font-heading font-semibold ${
-                        studioId === s.id
-                          ? 'border-brand-purple bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
-                          : 'border-dashed border-line text-muted hover:text-ink'
-                      }`}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color ?? '#7B55FF' }} />
-                      {kratce(s.name)}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* 2. Kam */}
             <div className="flex flex-col gap-2">
               <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0">2. Kam ho přidat</p>
-              {!odkaz ? (
+              {rozsah === 'ZVLAST' && zvlast ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-body text-muted m-0">
+                    Každý kalendář přidejte jeho vlastním tlačítkem. V Apple i Google kalendáři pak budou vedle sebe
+                    a zapnete nebo vypnete je jednotlivě.
+                  </p>
+                  <ul className="list-none m-0 p-0 flex flex-col gap-1.5">
+                    {zvlast.map((z) => (
+                      <li key={z.klic} className="rounded-lg border border-line px-3 py-2 flex flex-col gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-2 font-heading font-semibold text-sm text-ink mr-auto">
+                            <span className="w-3 h-3 rounded-full shrink-0" style={{ background: z.barva }} />
+                            {z.nazev}
+                          </span>
+                          <a
+                            href={naWebcal(z.url)}
+                            className="rounded-lg bg-brand-purple text-white px-3 py-1.5 text-xs font-heading font-semibold no-underline hover:bg-brand-purpleDeep"
+                          >
+                            Apple
+                          </a>
+                          <a
+                            href={naGoogle(z.url)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-lg bg-brand-purple text-white px-3 py-1.5 text-xs font-heading font-semibold no-underline hover:bg-brand-purpleDeep"
+                          >
+                            Google
+                          </a>
+                          {z.qr && (
+                            <button
+                              type="button"
+                              onClick={() => setQrOtevreny(qrOtevreny === z.klic ? null : z.klic)}
+                              aria-pressed={qrOtevreny === z.klic}
+                              className="rounded-lg border border-line px-3 py-1.5 text-xs font-heading font-semibold text-ink hover:border-brand-purple"
+                            >
+                              QR
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => void kopiruj(z.url, z.klic)}
+                            className="rounded-lg border border-line px-3 py-1.5 text-xs font-heading font-semibold text-ink hover:border-brand-purple whitespace-nowrap"
+                          >
+                            {zkopirovanyKlic === z.klic ? '✓ Zkopírováno' : 'Kopírovat odkaz'}
+                          </button>
+                        </div>
+                        {qrOtevreny === z.klic && z.qr && (
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-28 h-28 shrink-0 bg-white rounded-md p-1 [&>svg]:w-full [&>svg]:h-full"
+                              dangerouslySetInnerHTML={{ __html: z.qr }}
+                              aria-label={`QR kód odběru – ${z.nazev}`}
+                              role="img"
+                            />
+                            <p className="text-xs font-body text-muted m-0">
+                              Naskenujte iPhonem fotoaparátem a potvrďte <b>Odebírat</b>. Pak otevřete QR dalšího
+                              kalendáře.
+                            </p>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs font-body text-muted m-0 bg-field rounded-lg px-3 py-2">
+                    Nechcete některý? Prostě ho nepřidávejte - nebo ho v telefonu jen vypněte. Kalendáře se obnovují
+                    samy (Apple a Outlook zhruba každou hodinu, Google podle sebe). Odkazy jsou vaše osobní.
+                  </p>
+                </div>
+              ) : !odkaz ? (
                 <div>
                   <button
                     type="button"
@@ -205,7 +308,7 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                     disabled={bezi}
                     className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep disabled:opacity-60"
                   >
-                    {bezi ? 'Připravuji…' : 'Připravit odkaz'}
+                    {bezi ? 'Připravuji…' : rozsah === 'ZVLAST' ? 'Připravit kalendáře' : 'Připravit odkaz'}
                   </button>
                   {chyba && <p className="text-sm text-danger m-0 mt-2">{chyba}</p>}
                 </div>

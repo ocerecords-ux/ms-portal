@@ -2040,6 +2040,7 @@ enum FeedScope {
   MINE   // jen moje terminy
   STUDIO // cely kalendar jednoho studia
   ALL    // vsechna studia
+  MIMO   // jen Mimo studio (20. 9. 2026 - kazdy kalendar zvlast)
 }
 
 /// Osobni ICS odkaz. Nahodny, odvolatelny, filtruje se podle prav vlastnika -

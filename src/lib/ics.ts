@@ -71,7 +71,7 @@ function fold(line: string): string {
   return casti.map((c, i) => (i === 0 ? c : ` ${c}`)).join('\r\n');
 }
 
-export function buildIcs(name: string, events: IcsEvent[]): string {
+export function buildIcs(name: string, events: IcsEvent[], barva?: string | null): string {
   const radky: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -85,6 +85,11 @@ export function buildIcs(name: string, events: IcsEvent[]): string {
     'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
     'X-PUBLISHED-TTL:PT1H',
   ];
+  // Barva kalendare (20. 9. 2026 - kazde studio zvlast). Apple ji bere pri
+  // odberu jako navrh, ostatni ji ignoruji.
+  if (barva && /^#[0-9a-f]{6}$/i.test(barva)) {
+    radky.push(`X-APPLE-CALENDAR-COLOR:${barva.toUpperCase()}`, `COLOR:${barva.toUpperCase()}`);
+  }
 
   for (const e of events) {
     radky.push(

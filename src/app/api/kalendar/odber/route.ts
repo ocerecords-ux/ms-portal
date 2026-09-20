@@ -16,7 +16,7 @@ import { qrSvg } from '@/lib/qr';
  * fungovat. Nový odkaz vznikne jen po zneplatnění starého.
  */
 const schema = z.object({
-  scope: z.enum(['MINE', 'STUDIO', 'ALL']).optional(),
+  scope: z.enum(['MINE', 'STUDIO', 'ALL', 'MIMO']).optional(),
   studioId: z.string().trim().optional(),
   /** Zneplatnit jeden odkaz. */
   revokeId: z.string().trim().optional(),

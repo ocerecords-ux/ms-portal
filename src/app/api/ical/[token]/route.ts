@@ -34,7 +34,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
     where: { token },
     include: {
       user: { select: { id: true, name: true, email: true, role: true, active: true } },
-      studio: { select: { id: true, name: true, location: true } },
+      studio: { select: { id: true, name: true, location: true, color: true } },
     },
   });
 
@@ -73,6 +73,29 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       updatedAt: s.updatedAt,
     }));
     return odpoved(`MS portal — ${kdo.name || kdo.email}`, events, feed.id);
+  }
+
+  // Jen Mimo studio (20. 9. 2026: „aby se to objevilo jako samostatné
+  // kalendáře, ať si dokážu vypínat jednotlivé kalendáře") - pátý kalendář
+  // vedle čtyř studií, jen dovolené a nepřítomnosti celého týmu.
+  if (feed.scope === 'MIMO') {
+    const mimo = await prisma.nepritomnost
+      .findMany({ where: vRozsahu, orderBy: { start: 'asc' } })
+      .catch(() => []);
+    return odpoved(
+      'MS kalendář — Mimo studio',
+      mimo.map((n) => ({
+        uid: `mimo-${n.id}@msportal.cz`,
+        start: n.start,
+        end: n.end,
+        celyDen: n.celyDen,
+        summary: `${popisDruhu(n.druh)}: ${n.jmeno}`,
+        description: n.poznamka,
+        updatedAt: n.updatedAt,
+      })),
+      feed.id,
+      '#A7A4B0',
+    );
   }
 
   const [slots, bloky, nepritomnosti] = await Promise.all([
@@ -165,12 +188,12 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       ? `MS kalendář — ${kratce(feed.studio.name)}`
       : 'MS kalendář';
 
-  return odpoved(nazev, events, feed.id);
+  return odpoved(nazev, events, feed.id, feed.studio?.color ?? null);
 }
 
-async function odpoved(nazev: string, events: IcsEvent[], feedId: string) {
+async function odpoved(nazev: string, events: IcsEvent[], feedId: string, barva?: string | null) {
   await prisma.calendarFeed.update({ where: { id: feedId }, data: { lastReadAt: new Date() } }).catch(() => null);
-  return new NextResponse(buildIcs(nazev, events), {
+  return new NextResponse(buildIcs(nazev, events, barva), {
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
       'Content-Disposition': 'inline; filename="ms-kalendar.ics"',

@@ -28,30 +28,36 @@ export const ODBER_KALENDARE = {
 
 # 2. Vyberte, co chcete vidět
 
-![Okno s výběrem: Celý kalendář, Jedno studio, Jen moje](/navody/odber-2.png)
+![Okno s výběrem: Každé studio zvlášť, Celý kalendář, Jen moje](/navody/odber-2.png)
 
 2. **Co chcete vidět:**
-   - **Celý kalendář** — všechna studia a Mimo studio (dovolené).
-   - **Jedno studio** — jen natáčení a události vybraného studia.
+   - **Každé studio zvlášť** (doporučeno) — Brno I, Brno II, Praha, London a Mimo studio jako **samostatné kalendáře**, každý ve své barvě. V telefonu je pak zapínáte a vypínáte jednotlivě.
+   - **Celý kalendář** — všechna studia a Mimo studio v jednom kalendáři.
    - **Jen moje** — natáčení, střihy a castingy, kde jste zvukař, a vaše Mimo studio.
-3. Klikněte na **Připravit odkaz**.
+3. Klikněte na **Připravit kalendáře** (u ostatních voleb **Připravit odkaz**).
 
-# 3. Přidejte ho do svého kalendáře
+# 3. Přidejte kalendáře do svého kalendáře
 
-![Tlačítka Apple a Google, QR kód pro iPhone, odkaz ke zkopírování a seznam mých odběrů](/navody/odber-3.png)
+![Seznam kalendářů – každý s tlačítky Apple, Google, QR a Kopírovat odkaz](/navody/odber-3.png)
 
-4. **Apple Kalendář** (iPhone, iPad, Mac) — klepněte na tlačítko, kalendář se otevře sám a vy jen potvrdíte **Odebírat**. **Google Kalendář** — otevře se Google, potvrdíte **Přidat**. Na telefonu s Androidem se pak kalendář objeví v aplikaci Google Kalendář sám (v jejím nastavení ho případně zapněte k synchronizaci).
-5. **QR kód pro iPhone** — nejrychlejší cesta z počítače do telefonu: otevřete na iPhonu fotoaparát, namiřte na kód a klepněte na nabídku, která se objeví nahoře. Kalendář se zeptá, jestli ho chcete odebírat — potvrďte **Odebírat**. (Android kód přečte, ale Google Kalendář v telefonu odběr přidat neumí — použijte tlačítko Google Kalendář na počítači, do telefonu se pak dostane sám.)
-6. **Outlook a ostatní** — klikněte na **Kopírovat** a v kalendáři zvolte *Přidat kalendář → Z internetu* (Outlook) nebo *Podle adresy URL*.
+Každý kalendář má **vlastní řádek a vlastní tlačítka** — přidáváte je po jednom. Jeden odebíraný odkaz je v telefonu vždycky jeden kalendář; víc kalendářů najednou Apple ani Google přidat neumí. Které nechcete, prostě nepřidávejte.
+
+4. **Apple** (iPhone, iPad, Mac) — klepněte, kalendář se otevře sám a vy jen potvrdíte **Odebírat**. **Google** — otevře se Google, potvrdíte **Přidat**. Pak to samé u dalšího řádku. Na Androidu se kalendáře objeví v aplikaci Google Kalendář samy (v jejím nastavení je případně zapněte k synchronizaci).
+5. **QR** — nejrychlejší cesta z počítače do iPhonu: klikněte na **QR** u studia, na iPhonu otevřete fotoaparát, namiřte na kód a klepněte na nabídku nahoře, potvrďte **Odebírat**. Pak QR dalšího studia. (Google Kalendář v telefonu s Androidem odběr přidat neumí — použijte tlačítko Google na počítači.)
+6. **Outlook a ostatní** — **Kopírovat odkaz** a v kalendáři zvolte *Přidat kalendář → Z internetu* (Outlook) nebo *Podle adresy URL*. U každého studia zvlášť.
 7. **Moje odběry** — co odebíráte a kdy si to váš kalendář naposledy stáhl. **Zneplatnit** odkaz vypne — hodí se, když telefon ztratíte nebo odkaz omylem pošlete dál.
 
-Odběrů můžete mít víc najednou, třeba celý kalendář v Google a jen Brno I v telefonu.
+**Vypnutí jednoho kalendáře:** v Apple Kalendáři klepněte dole na **Kalendáře** a odškrtněte ho; v Google Kalendáři ho vlevo v seznamu odškrtněte. Kalendář zůstane přidaný, jen se nezobrazuje.
+
+**Už odebíráte „Celý kalendář" a chcete zvlášť?** Přidejte kalendáře zvlášť a ten celý v telefonu smažte (nebo ho tady zneplatněte) — jinak uvidíte vše dvakrát.
+
+Odběrů můžete mít víc najednou, třeba celý kalendář v Google a jen Brno I a Mimo studio v telefonu.
 
 # Co v kalendáři uvidíte
 
 - **Potvrzená natáčení** — projekt, herec a studio v názvu; v popisu zvukař a poznámka.
 - **Ručně zapsané události** — natáčení, střih, casting, svátek, údržba…
-- **Mimo studio** — dovolené jako celodenní události (jen u celého kalendáře a u Jen moje).
+- **Mimo studio** — dovolené jako celodenní události (vlastní kalendář Mimo studio, v celém kalendáři a u Jen moje).
 - **Nabídky termínů** a termíny, které herec vybral, ale my je ještě nepotvrdili, tam **nejsou**.
 - Kalendář nese 2 měsíce zpátky a rok dopředu.
 
