@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { PosunGestem } from './PosunGestem';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { VyskytyHledani } from './VyskytyHledani';
 import { OdberKalendare } from './OdberKalendare';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
@@ -117,6 +116,7 @@ type Studio = { id: string; shortName: string; name: string; timezone: string; c
  * Dvojklik do volného místa založí blokaci.
  */
 export function CalendarBrowser({
+  panely,
   studios,
   selectedStudioIds,
   timezone,
@@ -142,6 +142,11 @@ export function CalendarBrowser({
   view: CalendarView;
   anchorIso: string;
   days: CalendarDay[];
+  /**
+   * Tři období vedle sebe (předchozí, zobrazené, následující) - kalendář se
+   * roluje jako jeden dlouhý pás (zadání 20. 9. 2026).
+   */
+  panely: { klic: string; days: CalendarDay[] }[];
   events: CalendarEvent[];
   canManage: boolean;
   /** Nabídka do ručně zapsané události (zadání 14. 9. 2026). */
@@ -302,28 +307,38 @@ export function CalendarBrowser({
     };
   }, [oknoOtevrene]);
 
+  /**
+   * Všechny dny pásu (tři období za sebou, bez opakování). Měsíční pásy se
+   * na krajích překrývají, tak se stejný den nesmí objevit dvakrát.
+   */
+  const dnyPasu = useMemo(() => {
+    const mapa = new Map<string, CalendarDay>();
+    for (const p of panely) for (const d of p.days) if (!mapa.has(d.key)) mapa.set(d.key, d);
+    return Array.from(mapa.values()).sort((a, b) => (a.key < b.key ? -1 : 1));
+  }, [panely]);
+
   /** Události rozdělené po dnech — klíčem je den v pásmu studia. */
   const podleDnu = useMemo(() => {
     const mapa = new Map<string, CalendarEvent[]>();
-    for (const den of days) mapa.set(den.key, []);
-    for (const e of viditelne) {
-      const start = new Date(e.start);
-      for (const den of days) {
-        if (start >= new Date(den.startIso) && start < new Date(den.endIso)) {
-          mapa.get(den.key)!.push(e);
-          break;
-        }
-      }
-    }
+    for (const den of dnyPasu) mapa.set(den.key, []);
+    // Den události = její začátek v pásmu studia. en-CA píše datum jako
+    // 2026-09-20, tedy přesně v podobě klíče dne.
+    const naDen = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    for (const e of viditelne) mapa.get(naDen.format(new Date(e.start)))?.push(e);
     return mapa;
-  }, [days, viditelne]);
+  }, [dnyPasu, viditelne, timezone]);
 
   /** Dovolené rozdělené po dnech - vícedenní se ukáže v každém dni. */
-  const nepritomnostPodleDnu = useMemo(() => rozdelPoDnech(days, nepritomnosti), [days, nepritomnosti]);
+  const nepritomnostPodleDnu = useMemo(() => rozdelPoDnech(dnyPasu, nepritomnosti), [dnyPasu, nepritomnosti]);
   /** Do pruhu nad mřížkou jen celodenní - ty na čas jsou v mřížce. */
   const celodenniPodleDnu = useMemo(
-    () => rozdelPoDnech(days, nepritomnosti, true),
-    [days, nepritomnosti],
+    () => rozdelPoDnech(dnyPasu, nepritomnosti, true),
+    [dnyPasu, nepritomnosti],
   );
 
   /**
@@ -437,105 +452,112 @@ export function CalendarBrowser({
   const [smerPosunu, setSmerPosunu] = useState<-1 | 1>(1);
 
   /**
-   * POSUN JAKO PAPÍR (zadání 20. 9. 2026: „nechci, ať to preblikne, ale ať to
-   * posunuju celé jako papír" → „nefunguje to dobře, jen to problikne, chci,
-   * ať to klouže").
+   * JEDEN DLOUHÝ PÁS (zadání 20. 9. 2026: „chci to posouvat, jako by to byl
+   * jeden dlouhý pás").
    *
-   * První pokus jen odsunul mřížku o kousek, dokud se načítala - to při rychlé
-   * odpovědi serveru vypadalo jako cuknutí. Teď to jede na tři doby:
-   *   1. VEN - stará mřížka odjede o celou svoji šířku do strany,
-   *   2. SKOK - mimo obraz se (bez animace) přendá na druhou stranu; právě
-   *      tady proběhne výměna obsahu, takže ji oko nevidí,
-   *   3. DOVNITŘ - nová mřížka dojede zpátky na místo.
-   * Výměna je schovaná za okrajem, takže nic nebliká.
+   * Předchozí pokusy posouvaly stránku: mřížka odjela, vyměnila se a přijela
+   * zpátky. Ať to bylo časované jakkoli, byl to pořád přeskok. Tohle je něco
+   * jiného - vedle sebe leží TŘI období (minulé, zobrazené, příští) a jedou
+   * v obyčejném vodorovném rolování prohlížeče. Prst i dva prsty na touchpadu
+   * tak táhnou pás přímo, bez animace a bez čekání na server: obsah sousedů
+   * už je načtený (viz `panely` v page.tsx).
    *
-   * `useTransition` drží starou mřížku, dokud nová nedorazí, a sousední týdny
-   * se přednačítají dopředu - díky tomu se na krok 2 nečeká.
+   * Jakmile se pás zastaví u souseda, tiše se přepíše adresa a server pošle
+   * nové trojče. Pás se pak bez animace vrátí doprostřed - a protože
+   * prostřední období je teď to, na které se uživatel dorolovval, na obrazovce
+   * se nic nezmění.
    */
-  const OUT_MS = 170;
-  const IN_MS = 230;
-  const [faze, setFaze] = useState<'klid' | 'ven' | 'skok' | 'dovnitr'>('klid');
-  const [venDoraz, setVenDoraz] = useState(false);
-  const [nouze, setNouze] = useState(false);
-  const [prechod, zacniPrechod] = useTransition();
+  const pas = useRef<HTMLDivElement | null>(null);
+  /** Šířka jednoho období = šířka okna pásu. */
+  const sirkaPole = () => pas.current?.clientWidth ?? 0;
+  /** Běží přepis adresy? Do té doby se další zastavení neřeší. */
+  const prepisujeme = useRef(false);
 
-  function posun(smer: -1 | 1) {
-    // Druhé švihnutí během animace by papír roztrhlo napůl.
-    if (faze !== 'klid') return;
+  // Po výměně obsahu pás okamžitě (bez animace) na prostřední období.
+  // useLayoutEffect: ještě než prohlížeč vykreslí, aby to nepoposkočilo.
+  useLayoutEffect(() => {
+    const el = pas.current;
+    if (!el) return;
+    const naStred = () => {
+      const puvodni = el.style.scrollBehavior;
+      el.style.scrollBehavior = 'auto';
+      el.scrollLeft = sirkaPole();
+      el.style.scrollBehavior = puvodni;
+    };
+    naStred();
+    // Šířka se po prvním vykreslení může ještě ustálit (písma, rolovátko).
+    const snimek = requestAnimationFrame(naStred);
+    prepisujeme.current = false;
+    return () => cancelAnimationFrame(snimek);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniStudioIds.join(',')]);
+
+  // Když se okno zvětší nebo zmenší, prostřední období musí zůstat prostřední.
+  useEffect(() => {
+    const el = pas.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const sledovac = new ResizeObserver(() => {
+      if (!prepisujeme.current) el.scrollLeft = sirkaPole();
+    });
+    sledovac.observe(el);
+    return () => sledovac.disconnect();
+  }, []);
+
+  /** Pás se zastavil - jsme u souseda? Pak přepsat adresu. */
+  function dojelo() {
+    const el = pas.current;
+    if (!el || prepisujeme.current) return;
+    const sirka = sirkaPole();
+    if (sirka <= 0) return;
+    const pole = Math.round(el.scrollLeft / sirka);
+    if (pole === 1) return;
+    const smer: -1 | 1 = pole < 1 ? -1 : 1;
+    prepisujeme.current = true;
     setSmerPosunu(smer);
-    setVenDoraz(false);
-    setNouze(false);
-    setFaze('ven');
-    window.setTimeout(() => setVenDoraz(true), OUT_MS);
-    // Pojistka: kdyby server odpovídal dlouho, nenecháme prázdnou plochu -
-    // papír se vrátí i tak a obsah se vymění až pod ním.
-    window.setTimeout(() => setNouze(true), OUT_MS + 700);
-    zacniPrechod(() => prejdi({ datum: datumPosunu(smer) }));
+    // Pojistka: kdyby odpověď nedorazila, ať pás nezůstane hluchý napořád.
+    window.setTimeout(() => (prepisujeme.current = false), 2500);
+    // `scroll: false` - stránka nesmí odskočit nahoru, jsme uprostřed čtení.
+    router.replace(adresa({ datum: datumPosunu(smer) }), { scroll: false });
   }
 
-  // Jakmile papír odjel A nová data dorazila, přendáme ho na druhou stranu.
+  // Zastavení pásu. `scrollend` umí novější prohlížeče; jinde se čeká, až se
+  // rolování na chvilku utiší.
   useEffect(() => {
-    if (faze !== 'ven' || !venDoraz || (prechod && !nouze)) return;
-    setFaze('skok');
-  }, [faze, venDoraz, prechod, nouze]);
-
-  // Teprve v další snímek pustíme papír zpátky. Dvě rAF, ať prohlížeč stihne
-  // vykreslit odskočený stav bez animace - jinak by se zanimoval i skok a
-  // papír by přeletěl přes celou obrazovku.
-  //
-  // POZOR: časovače se tu nesmí rušit v úklidu podle `faze`. Když se fáze
-  // změní hned v dalším renderu, úklid rAF zruší dřív, než stihne proběhnout,
-  // a papír zůstane trčet mimo obraz - přesně tak zmizel 20. 9. 2026 celý
-  // kalendář. Proto se hlídá jen odpojení celé komponenty.
-  useEffect(() => {
-    if (faze !== 'skok') return;
-    let zive = true;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (zive) setFaze('dovnitr');
-      });
-    });
-    return () => {
-      zive = false;
+    const el = pas.current;
+    if (!el) return;
+    let casovac: number | undefined;
+    const maScrollEnd = 'onscrollend' in window;
+    const prirolovani = () => {
+      if (maScrollEnd) return;
+      window.clearTimeout(casovac);
+      casovac = window.setTimeout(dojelo, 120);
     };
+    el.addEventListener('scroll', prirolovani, { passive: true });
+    if (maScrollEnd) el.addEventListener('scrollend', dojelo);
+    return () => {
+      el.removeEventListener('scroll', prirolovani);
+      if (maScrollEnd) el.removeEventListener('scrollend', dojelo);
+      window.clearTimeout(casovac);
+    };
+    // Závislosti musí obsahovat všechno, z čeho se skládá adresa - jinak by
+    // posluchač držel starý výběr studií a švihnutí by ho vrátilo zpátky.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [faze === 'skok']);
+  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniStudioIds.join(',')]);
 
-  useEffect(() => {
-    if (faze !== 'dovnitr') return;
-    const t = window.setTimeout(() => setFaze('klid'), IN_MS);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [faze === 'dovnitr']);
+  /** Šipky: stejný pohyb, jen ho rozjede prohlížeč sám a plynule. */
+  function posun(smer: -1 | 1) {
+    const el = pas.current;
+    if (!el || prepisujeme.current) return;
+    setSmerPosunu(smer);
+    el.scrollTo({ left: sirkaPole() * (1 + smer), behavior: 'smooth' });
+  }
 
-  // Poslední záchrana: ať se stane cokoli, do vteřiny a půl je mřížka zpátky
-  // na svém místě. Radši seknutá animace než prázdná stránka.
-  useEffect(() => {
-    if (faze === 'klid') return;
-    const t = window.setTimeout(() => setFaze('klid'), 1500);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [faze === 'klid']);
-
-  // Sousední týden si necháme přinést dopředu, ať se po švihnutí nečeká na
-  // server (Next si odpověď chvíli podrží v paměti).
+  // Sousední období se přednačítají, ať je po zastavení pásu výměna hned.
   useEffect(() => {
     router.prefetch(adresa({ datum: datumPosunu(-1) }));
     router.prefetch(adresa({ datum: datumPosunu(1) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anchorIso, view, solo, puvodniNepritomnost, puvodniStudioIds.join(',')]);
-
-  /** Třída papíru podle fáze posunu. */
-  const tridaPapiru =
-    faze === 'ven'
-      ? `${smerPosunu === 1 ? '-translate-x-full' : 'translate-x-full'} transition-transform ease-in`
-      : faze === 'skok'
-        ? `${smerPosunu === 1 ? 'translate-x-full' : '-translate-x-full'} transition-none`
-        : faze === 'dovnitr'
-          ? 'translate-x-0 transition-transform ease-out'
-          : // V klidu žádný transform - ať nevzniká nový rámec pro
-            // napevno umístěné prvky (dialogy, nabídky).
-            '';
 
   const nadpis = useMemo(() => {
     const prvni = new Date(days[0].startIso);
@@ -755,43 +777,49 @@ export function CalendarBrowser({
         />
       )}
 
-      <PosunGestem onPosun={posun}>
-      {/* Papír: dokud se načítá další týden, mřížka odjede do strany a po
-          výměně dojede zpátky. `overflow-x-clip` drží odsunutý papír uvnitř
-          stránky, ať se dole neobjeví vodorovné rolování. */}
-      <div className="overflow-x-clip">
+      {/* PÁS TŘÍ OBDOBÍ (20. 9. 2026). Vodorovné rolování dělá prohlížeč sám,
+          takže prst i touchpad táhnou kalendář přímo a plynule. `snap`
+          dorovná pás na celé období, `overscroll-behavior-x: contain`
+          zabrání tomu, aby tah za kraj listoval v historii prohlížeče. */}
       <div
-        className={`will-change-transform ${tridaPapiru}`}
-        style={{ transitionDuration: faze === 'ven' ? `${OUT_MS}ms` : faze === 'dovnitr' ? `${IN_MS}ms` : undefined }}
+        ref={pas}
+        className="overflow-x-auto snap-x snap-mandatory [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-      {view === 'mesic' ? (
-        <MesicniPohled
-          days={days}
-          podleDnu={podleDnu}
-          timezone={timezone}
-          onDetail={klikNaUdalost}
-          onUpravit={dvojklikNaUdalost}
-          nepritomnostPodleDnu={ukazNepritomnost ? nepritomnostPodleDnu : null}
-          onOtevriNepritomnost={(n) => setOknoNepritomnosti({ upravovana: n, den: n.start })}
-          onNovaVeDni={novaVMesici}
-        />
-      ) : (
-        <MrizkaPohled
-          days={days}
-          podleDnu={podleDnu}
-          timezone={timezone}
-          onDetail={klikNaUdalost}
-          onUpravit={dvojklikNaUdalost}
-          nepritomnostPodleDnu={ukazNepritomnost ? celodenniPodleDnu : null}
-          onOtevriNepritomnost={(n) => setOknoNepritomnosti({ upravovana: n, den: n.start })}
-          onNovaNepritomnost={(den) => setOknoNepritomnosti({ upravovana: null, den, celyDen: true })}
-          onNovaBlokace={novaVMrizce}
-          smerPosunu={smerPosunu}
-        />
-      )}
+        <div className="flex items-start">
+          {panely.map((pole) => (
+            // Klíč podle prvního dne období: po výměně se ten samý pruh
+            // jen posune o jedno místo a React ho použije znovu - nic se
+            // nepřekresluje a svislé rolování zůstává, kde bylo.
+            <div key={pole.klic} className="w-full shrink-0 snap-start">
+              {view === 'mesic' ? (
+                <MesicniPohled
+                  days={pole.days}
+                  podleDnu={podleDnu}
+                  timezone={timezone}
+                  onDetail={klikNaUdalost}
+                  onUpravit={dvojklikNaUdalost}
+                  nepritomnostPodleDnu={ukazNepritomnost ? nepritomnostPodleDnu : null}
+                  onOtevriNepritomnost={(n) => setOknoNepritomnosti({ upravovana: n, den: n.start })}
+                  onNovaVeDni={novaVMesici}
+                />
+              ) : (
+                <MrizkaPohled
+                  days={pole.days}
+                  podleDnu={podleDnu}
+                  timezone={timezone}
+                  onDetail={klikNaUdalost}
+                  onUpravit={dvojklikNaUdalost}
+                  nepritomnostPodleDnu={ukazNepritomnost ? celodenniPodleDnu : null}
+                  onOtevriNepritomnost={(n) => setOknoNepritomnosti({ upravovana: n, den: n.start })}
+                  onNovaNepritomnost={(den) => setOknoNepritomnosti({ upravovana: null, den, celyDen: true })}
+                  onNovaBlokace={novaVMrizce}
+                  smerPosunu={smerPosunu}
+                />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-      </div>
-      </PosunGestem>
 
       {/* FORMULÁŘ JE UPROSTŘED OBRAZOVKY (zadání 14. 9. 2026: „to editační
           okno bych dal někam doprostřed kalendáře. Dole vůbec nevím, že se
@@ -1017,9 +1045,10 @@ function MrizkaPohled({
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
-      {/* Hlavicka dnu zustava nad rolovanim. data-vodorovne: gesto posunu
-          (PosunGestem) nejdriv doroluje tyden ke kraji, pak prepne. */}
-      <div ref={vodorovne} data-vodorovne className="overflow-x-auto [overscroll-behavior-x:contain]">
+      {/* Hlavicka dnu zustava nad rolovanim. V mobilu je tyden sirsi nez
+          displej, takze ma vlastni vodorovne rolovani; pas obdobi je o uroven
+          vys a prebira tah, az kdyz je tyden dorolovany ke kraji. */}
+      <div ref={vodorovne} data-vodorovne className="overflow-x-auto">
         <div className="min-w-[720px]">
           <div className="grid border-b border-line" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
             <div />

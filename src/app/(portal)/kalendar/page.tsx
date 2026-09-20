@@ -116,41 +116,65 @@ export default async function KalendarPage({
   const anchorParts = utcParts(anchor, tz);
   const anchorLocal = new Date(anchorParts.year, anchorParts.month - 1, anchorParts.day);
 
-  let firstLocal: Date;
-  let dayCount: number;
-  if (view === 'den') {
-    firstLocal = anchorLocal;
-    dayCount = 1;
-  } else if (view === 'tyden') {
-    firstLocal = startOfWeek(anchorLocal);
-    dayCount = 7;
-  } else {
-    firstLocal = startOfWeek(startOfMonth(anchorLocal));
-    dayCount = 42; // šest týdnů, ať měsíc vždycky vyjde celý
+  /**
+   * JEDEN DLOUHÝ PÁS (zadání 20. 9. 2026: „chci to posouvat, jako by to byl
+   * jeden dlouhý pás").
+   *
+   * Kalendář se neposouvá po stránkách - vedle sebe leží TŘI období
+   * (předchozí, zobrazené, následující) a rolují se jako jeden pruh. Proto se
+   * ze serveru posílají všechna tři: kdyby se soused načítal až po švihnutí,
+   * pás by měl na kraji díru.
+   */
+  function dnyObdobi(prvni: Date, pocet: number, mesicPodle: Date): CalendarDay[] {
+    const vysledek: CalendarDay[] = [];
+    for (let i = 0; i < pocet; i++) {
+      const d = addDays(prvni, i);
+      const start = zonedToUtc(d.getFullYear(), d.getMonth() + 1, d.getDate(), 0, tz);
+      const end = zonedToUtc(d.getFullYear(), d.getMonth() + 1, d.getDate() + 1, 0, tz);
+      const weekday = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getDay();
+      // Pracovní doba se bere z prvního studia - u prolnutých kalendářů je to
+      // jen vodítko, ne zákaz.
+      const pravidlo = mrizkaPodle.hours.find((h) => h.weekday === weekday);
+      vysledek.push({
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+        startIso: start.toISOString(),
+        endIso: end.toISOString(),
+        // „Patří do měsíce" se u každého pásu měří k JEHO měsíci, ne
+        // k zobrazenému - jinak by sousední měsíc byl celý zašedlý.
+        inMonth: d.getMonth() === mesicPodle.getMonth() && d.getFullYear() === mesicPodle.getFullYear(),
+        byArrangement: pravidlo?.byArrangement ?? false,
+        openFrom: pravidlo?.startMinutes ?? null,
+        openTo: pravidlo?.endMinutes ?? null,
+      });
+    }
+    return vysledek;
   }
 
-  const days: CalendarDay[] = [];
-  for (let i = 0; i < dayCount; i++) {
-    const d = addDays(firstLocal, i);
-    const start = zonedToUtc(d.getFullYear(), d.getMonth() + 1, d.getDate(), 0, tz);
-    const end = zonedToUtc(d.getFullYear(), d.getMonth() + 1, d.getDate() + 1, 0, tz);
-    const weekday = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getDay();
-    // Pracovní doba se bere z prvního studia - u prolnutých kalendářů je to
-    // jen vodítko, ne zákaz.
-    const pravidlo = mrizkaPodle.hours.find((h) => h.weekday === weekday);
-    days.push({
-      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-      startIso: start.toISOString(),
-      endIso: end.toISOString(),
-      inMonth: d.getMonth() === anchorLocal.getMonth(),
-      byArrangement: pravidlo?.byArrangement ?? false,
-      openFrom: pravidlo?.startMinutes ?? null,
-      openTo: pravidlo?.endMinutes ?? null,
-    });
+  /** Začátek období, které je o `posun` dál (-1 dozadu, +1 dopředu). */
+  function obdobi(posun: number): { prvni: Date; pocet: number; mesic: Date } {
+    if (view === 'den') {
+      const d = addDays(anchorLocal, posun);
+      return { prvni: d, pocet: 1, mesic: d };
+    }
+    if (view === 'tyden') {
+      const d = addDays(startOfWeek(anchorLocal), 7 * posun);
+      return { prvni: d, pocet: 7, mesic: d };
+    }
+    const m = new Date(anchorLocal.getFullYear(), anchorLocal.getMonth() + posun, 1);
+    // šest týdnů, ať měsíc vždycky vyjde celý
+    return { prvni: startOfWeek(startOfMonth(m)), pocet: 42, mesic: m };
   }
 
-  const from = new Date(days[0].startIso);
-  const to = new Date(days[days.length - 1].endIso);
+  const panely = [-1, 0, 1].map((posun) => {
+    const o = obdobi(posun);
+    const dny = dnyObdobi(o.prvni, o.pocet, o.mesic);
+    return { klic: dny[0].key, days: dny };
+  });
+  const days = panely[1].days;
+
+  // Rozsah dat pokrývá celý pás, ne jen prostřední období.
+  const from = new Date(panely[0].days[0].startIso);
+  const to = new Date(panely[2].days[panely[2].days.length - 1].endIso);
 
   // NABÍDNUTÁ MÍSTA SE V KALENDÁŘI NEUKAZUJÍ (19. 9. 2026: „nejdou mi upravit
   // ani smazat"). Od chvíle, kdy se nabídka skládá sama ze VŠECH volných míst,
@@ -318,6 +342,7 @@ export default async function KalendarPage({
       view={view}
       anchorIso={anchorLocal.toISOString().slice(0, 10)}
       days={days}
+      panely={panely}
       events={events}
       canManage={muzeZapisovat}
       projekty={projektyProUdalost}
