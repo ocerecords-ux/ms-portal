@@ -38,11 +38,12 @@ export const ODBER_KALENDARE = {
 
 # 3. Přidejte ho do svého kalendáře
 
-![Tlačítka Apple a Google, odkaz ke zkopírování a seznam mých odběrů](/navody/odber-3.png)
+![Tlačítka Apple a Google, QR kód pro iPhone, odkaz ke zkopírování a seznam mých odběrů](/navody/odber-3.png)
 
 4. **Apple Kalendář** (iPhone, iPad, Mac) — klepněte na tlačítko, kalendář se otevře sám a vy jen potvrdíte **Odebírat**. **Google Kalendář** — otevře se Google, potvrdíte **Přidat**. Na telefonu s Androidem se pak kalendář objeví v aplikaci Google Kalendář sám (v jejím nastavení ho případně zapněte k synchronizaci).
-5. **Outlook a ostatní** — klikněte na **Kopírovat** a v kalendáři zvolte *Přidat kalendář → Z internetu* (Outlook) nebo *Podle adresy URL*.
-6. **Moje odběry** — co odebíráte a kdy si to váš kalendář naposledy stáhl. **Zneplatnit** odkaz vypne — hodí se, když telefon ztratíte nebo odkaz omylem pošlete dál.
+5. **QR kód pro iPhone** — nejrychlejší cesta z počítače do telefonu: otevřete na iPhonu fotoaparát, namiřte na kód a klepněte na nabídku, která se objeví nahoře. Kalendář se zeptá, jestli ho chcete odebírat — potvrďte **Odebírat**. (Android kód přečte, ale Google Kalendář v telefonu odběr přidat neumí — použijte tlačítko Google Kalendář na počítači, do telefonu se pak dostane sám.)
+6. **Outlook a ostatní** — klikněte na **Kopírovat** a v kalendáři zvolte *Přidat kalendář → Z internetu* (Outlook) nebo *Podle adresy URL*.
+7. **Moje odběry** — co odebíráte a kdy si to váš kalendář naposledy stáhl. **Zneplatnit** odkaz vypne — hodí se, když telefon ztratíte nebo odkaz omylem pošlete dál.
 
 Odběrů můžete mít víc najednou, třeba celý kalendář v Google a jen Brno I v telefonu.
 

@@ -23,6 +23,7 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
   const [rozsah, setRozsah] = useState<Rozsah>('ALL');
   const [studioId, setStudioId] = useState(studios[0]?.id ?? '');
   const [odkaz, setOdkaz] = useState<string | null>(null);
+  const [qr, setQr] = useState<string | null>(null);
   const [odbery, setOdbery] = useState<Odber[]>([]);
   const [bezi, setBezi] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
   // Kazda zmena rozsahu = jiny odkaz; stary se schova, at nikdo neodebira omylem.
   useEffect(() => {
     setOdkaz(null);
+    setQr(null);
     setZkopirovano(false);
   }, [rozsah, studioId]);
 
@@ -67,6 +69,7 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
         return;
       }
       setOdkaz(data.url);
+      setQr(data.qr ?? null);
       void nactiOdbery();
     } finally {
       setBezi(false);
@@ -223,6 +226,29 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                       <span className="block text-xs opacity-80">Otevře se Google, potvrdíte Přidat</span>
                     </a>
                   </div>
+                  {/* QR (20. 9. 2026) - pocitac ukaze kod, iPhone ho nacte
+                      fotoaparatem a Kalendar rovnou nabidne odber. */}
+                  {qr && (
+                    <div className="flex items-center gap-4 rounded-lg border border-line p-3">
+                      <div
+                        className="w-32 h-32 shrink-0 bg-white rounded-md p-1 [&>svg]:w-full [&>svg]:h-full"
+                        dangerouslySetInnerHTML={{ __html: qr }}
+                        aria-label="QR kód odběru kalendáře"
+                        role="img"
+                      />
+                      <div className="text-sm font-body text-ink">
+                        <p className="font-heading font-semibold m-0">Naskenujte iPhonem</p>
+                        <p className="text-xs text-muted m-0 mt-1">
+                          Otevřete fotoaparát, namiřte na kód a klepněte na nabídku nahoře. Kalendář se zeptá, jestli ho
+                          chcete odebírat - potvrďte <b>Odebírat</b>.
+                        </p>
+                        <p className="text-xs text-muted m-0 mt-1">
+                          Android: Google Kalendář v telefonu odběr přidat neumí - použijte tlačítko Google Kalendář na
+                          počítači, v telefonu se pak objeví sám.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex flex-col gap-1.5">
                     <span className="text-xs font-body text-muted">
                       Outlook a ostatní: zkopírujte odkaz a v kalendáři zvolte „Přidat kalendář z internetu / podle URL".

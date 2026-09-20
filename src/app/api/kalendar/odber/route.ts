@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canViewCalendar } from '@/lib/roles';
 import { newAccessToken } from '@/lib/calendarServer';
+import { qrSvg } from '@/lib/qr';
 
 /**
  * ODBĚRY KALENDÁŘE (zadání 8. 9. 2026, přepracováno 20. 9. 2026).
@@ -22,6 +23,20 @@ const schema = z.object({
   /** Zneplatnit všechny moje odkazy (starší chování). */
   revoke: z.boolean().optional(),
 });
+
+/**
+ * QR KÓD ODBĚRU (zadání 20. 9. 2026: „dokážem tam dát třeba nějaký QR
+ * kód?"). Nese webcal:// adresu - iPhone ji po naskenování fotoaparátem
+ * rovnou nabídne k odběru v Kalendáři. Kreslí se na serveru (lib/qr.ts),
+ * do prohlížeče jde hotové SVG.
+ */
+async function qrOdberu(url: string): Promise<string | null> {
+  try {
+    return await qrSvg(url.replace(/^https?:\/\//, 'webcal://'));
+  } catch {
+    return null;
+  }
+}
 
 function adresa(token: string): string {
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
@@ -79,12 +94,15 @@ export async function POST(req: NextRequest) {
       where: { userId: session.user.id, revokedAt: null, scope, studioId },
       select: { token: true, id: true },
     });
-    if (uz) return NextResponse.json({ id: uz.id, url: adresa(uz.token) });
+    if (uz) return NextResponse.json({ id: uz.id, url: adresa(uz.token), qr: await qrOdberu(adresa(uz.token)) });
 
     const feed = await prisma.calendarFeed.create({
       data: { userId: session.user.id, token: newAccessToken(), scope, studioId },
     });
-    return NextResponse.json({ id: feed.id, url: adresa(feed.token) }, { status: 201 });
+    return NextResponse.json(
+      { id: feed.id, url: adresa(feed.token), qr: await qrOdberu(adresa(feed.token)) },
+      { status: 201 },
+    );
   } catch (err) {
     console.error('POST /api/kalendar/odber selhalo:', err);
     return NextResponse.json({ error: 'Odkaz se nepodařilo vytvořit.' }, { status: 500 });
