@@ -446,28 +446,33 @@ export const HOUR_PX = 34;
 export const GRID_SCROLL_TO_HOUR = 7;
 
 /**
- * ROZVRŽENÍ PŘEKRÝVAJÍCÍCH SE UDÁLOSTÍ (zadání 14. 9. 2026: „podívej se
- * pořádně na ten Google kalendář, jak mají vyřešeno to překrývání událostí,
- * chci to stejné").
+ * ROZVRŽENÍ PŘEKRÝVAJÍCÍCH SE UDÁLOSTÍ - jako Apple Kalendář (zadání
+ * 20. 9. 2026: „pojďme ty bubliny přes sebe překrývat, aby tam byly vidět ty
+ * názvy událostí co nejvíce, tak jak je to na Applu").
  *
- * Do teď ležela každá událost přes celou šířku sloupce, takže dvě natáčení
- * ve stejnou hodinu se úplně zakryla a to spodní nebylo vidět ani myší.
+ * Dřív (14. 9. 2026, podle Googlu) se všechny překrývající se události dělily
+ * o šířku vedle sebe - při čtyřech naráz zbyl každé proužek a z názvu jen
+ * „Stř…". Apple to dělá jinak a my teď taky:
  *
- * Postupuje se jako v Google Kalendáři:
+ *  1. Události, které začínají SKORO NARÁZ (do půl hodiny od sebe), stojí
+ *     VEDLE SEBE - jinak by se jejich názvy na horním okraji zakryly.
+ *  2. Událost, která začne POZDĚJI, zatímco jiná ještě běží, se položí
+ *     PŘES ni, jen kousek odsazená zleva (o jednu úroveň na každou
+ *     rozběhnutou událost pod ní). Název té spodní zůstane vidět nahoře,
+ *     protože ta nová začíná až pod ním, a nová má skoro celou šířku.
+ *  3. Pozdější leží navrchu (`vrstva`), odsazení se zastaví na polovině
+ *     šířky, ať ani desátá vrstva není úzký proužek.
  *
- *  1. Události, které se řetězově překrývají, tvoří JEDEN SHLUK. Stačí, že
- *     A zasahuje do B a B do C - všechny tři se dělí o šířku dohromady, i
- *     když se A s C nepotkají.
- *  2. Uvnitř shluku dostane každá událost první SLOUPEC, který je v jejím
- *     čase volný. Řadí se podle začátku, při shodě delší napřed - dlouhá
- *     frekvence tak drží levý kraj a krátké zápisy se skládají vedle ní.
- *  3. Nakonec se každá roztáhne doprava přes všechny sloupce, které má po
- *     celou svou dobu volné. Bez toho by osamocená událost vedle jednoho
- *     krátkého překryvu zbytečně držela půlku šířky.
- *
- * Vrací zlomky šířky sloupce dne: `posun` je levý okraj, `podil` šířka.
+ * Vrací zlomky šířky sloupce dne: `posun` je levý okraj, `podil` šířka,
+ * `vrstva` pořadí nad sebou (z-index).
  */
-export type Prekryv = { posun: number; podil: number };
+export type Prekryv = { posun: number; podil: number; vrstva: number };
+
+/** Do kolika minut od sebe se události berou jako „začínají naráz". */
+export const PREKRYV_NARAZ_MIN = 30;
+/** Odsazení jedné úrovně a nejvíc kam se smí odsadit (zlomek šířky). */
+const PREKRYV_ODSAZENI = 0.12;
+const PREKRYV_MAX_ODSAZENI = 0.5;
 
 export function rozvrhniPrekryvy<T extends { id: string; od: number; do: number }>(
   polozky: T[],
@@ -475,50 +480,46 @@ export function rozvrhniPrekryvy<T extends { id: string; od: number; do: number 
   const vysledek = new Map<string, Prekryv>();
   if (polozky.length === 0) return vysledek;
 
+  // Podle zacatku, pri shode delsi napred - dlouha udalost lezi dole vlevo.
   const serazene = [...polozky].sort((a, b) => a.od - b.od || b.do - a.do);
 
-  let shluk: T[] = [];
-  let konecShluku = -Infinity;
-
-  const dokonciShluk = () => {
-    if (shluk.length === 0) return;
-    // Sloupce shluku - v kazdem si drzime konec posledni udalosti.
-    const sloupce: number[] = [];
-    const kam = new Map<string, number>();
-    for (const u of shluk) {
-      let i = sloupce.findIndex((konec) => konec <= u.od);
-      if (i === -1) {
-        i = sloupce.length;
-        sloupce.push(u.do);
-      } else {
-        sloupce[i] = u.do;
-      }
-      kam.set(u.id, i);
-    }
-    const celkem = sloupce.length;
-    for (const u of shluk) {
-      const od = kam.get(u.id)!;
-      // Kam az doprava se da roztahnout, nez narazi na jinou udalost.
-      let az = od + 1;
-      while (az < celkem) {
-        const obsazeno = shluk.some(
-          (j) => j.id !== u.id && kam.get(j.id) === az && j.od < u.do && j.do > u.od,
-        );
-        if (obsazeno) break;
-        az += 1;
-      }
-      vysledek.set(u.id, { posun: od / celkem, podil: (az - od) / celkem });
-    }
-    shluk = [];
-    konecShluku = -Infinity;
-  };
+  type Skupina = { start: number; hloubka: number; cleni: T[] };
+  const hloubkaUdalosti = new Map<string, number>();
+  const skupinaUdalosti = new Map<string, Skupina>();
+  const skupiny: Skupina[] = [];
+  const umistene: T[] = [];
 
   for (const u of serazene) {
-    if (u.od >= konecShluku) dokonciShluk();
-    shluk.push(u);
-    konecShluku = Math.max(konecShluku, u.do);
+    // Pod cim lezi: udalosti, ktere jeste bezi a zacaly o dost driv.
+    let hloubka = 0;
+    for (const p of umistene) {
+      if (p.do > u.od && u.od - p.od >= PREKRYV_NARAZ_MIN) {
+        hloubka = Math.max(hloubka, (hloubkaUdalosti.get(p.id) ?? 0) + 1);
+      }
+    }
+    // Ke komu se postavi vedle: stejna uroven, zacatek do pul hodiny a jeste bezi.
+    const vedle = skupiny.find(
+      (g) =>
+        g.hloubka === hloubka &&
+        u.od - g.start < PREKRYV_NARAZ_MIN &&
+        g.cleni.some((c) => c.do > u.od),
+    );
+    const skupina = vedle ?? { start: u.od, hloubka, cleni: [] };
+    if (!vedle) skupiny.push(skupina);
+    skupina.cleni.push(u);
+    hloubkaUdalosti.set(u.id, hloubka);
+    skupinaUdalosti.set(u.id, skupina);
+    umistene.push(u);
   }
-  dokonciShluk();
+
+  serazene.forEach((u, poradi) => {
+    const g = skupinaUdalosti.get(u.id)!;
+    const zaklad = Math.min(g.hloubka * PREKRYV_ODSAZENI, PREKRYV_MAX_ODSAZENI);
+    const n = g.cleni.length;
+    const i = g.cleni.indexOf(u);
+    const podil = (1 - zaklad) / n;
+    vysledek.set(u.id, { posun: zaklad + i * podil, podil, vrstva: poradi + 1 });
+  });
 
   return vysledek;
 }

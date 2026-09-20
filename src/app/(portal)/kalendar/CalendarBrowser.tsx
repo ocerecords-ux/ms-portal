@@ -782,7 +782,7 @@ function MrizkaPohled({
               {days.map((den) => (
                 <div
                   key={den.key}
-                  className={`relative border-l border-line ${den.key === dnesKey ? 'bg-brand-green/[0.06]' : ''}`}
+                  className={`relative isolate border-l border-line ${den.key === dnesKey ? 'bg-brand-green/[0.06]' : ''}`}
                   style={{ height: `${celkovaVyska}px` }}
                   onDoubleClick={(e) => {
                     if (!onNovaBlokace) return;
@@ -802,7 +802,7 @@ function MrizkaPohled({
                   {/* Zelena cara „ted" v dnesnim sloupci (20. 9. 2026). */}
                   {den.key === dnesKey && (
                     <div
-                      className="absolute left-0 right-0 z-10 pointer-events-none border-t-2 border-brand-green"
+                      className="absolute left-0 right-0 z-[500] pointer-events-none border-t-2 border-brand-green"
                       style={{ top: `${((minutesInZone(new Date(), timezone) - GRID_START_HOUR * 60) * HOUR_PX) / 60}px` }}
                     >
                       <span className="absolute -left-1 -top-[5px] w-2 h-2 rounded-full bg-brand-green" />
@@ -836,7 +836,7 @@ function MrizkaPohled({
                     const od = minutesInZone(new Date(e.start), timezone);
                     const doo = minutesInZone(new Date(e.end), timezone) || 24 * 60;
                     const pozice = gridPosition(od, doo);
-                    const misto = rozvrh.get(e.id) ?? { posun: 0, podil: 1 };
+                    const misto = rozvrh.get(e.id) ?? { posun: 0, podil: 1, vrstva: 1 };
                     // U blokace je ve `state` jeji DRUH - natáčení a střih z něj poznaji
                     // svou barvu (14. 9. 2026: „je to strasne, kdyz jsou ty pole
                     // v kalendari po ulozeni bile"). Driv se sem posilalo natvrdo
@@ -856,11 +856,17 @@ function MrizkaPohled({
                         style={{
                           top: `${pozice.top}px`,
                           height: `${pozice.height}px`,
-                          // Vedle sebe misto pres sebe. 2px mezera, at jsou
-                          // dve sousedni udalosti od sebe rozeznatelne.
-                          left: `calc(${misto.posun * 100}% + 2px)`,
-                          width: `calc(${misto.podil * 100}% - 4px)`,
-                          backgroundColor: barvy.background,
+                          // Pres sebe jako Apple (20. 9. 2026): pozdejsi lezi
+                          // navrch, kousek odsazena. 1px mezera mezi sousedy.
+                          left: `calc(${misto.posun * 100}% + 1px)`,
+                          width: `calc(${misto.podil * 100}% - 2px)`,
+                          zIndex: misto.vrstva,
+                          // Barva udalosti je pruhledna - pod ni se musi dat
+                          // plny podklad, jinak by se prekryte udalosti slily.
+                          backgroundColor: 'rgb(var(--c-surface))',
+                          backgroundImage: `linear-gradient(${barvy.background}, ${barvy.background})`,
+                          // Tenky lem v barve podkladu oddeli bublinu od te pod ni.
+                          boxShadow: '0 0 0 1px rgb(var(--c-surface))',
                           borderColor: barvy.border,
                           // Silny pruh vlevo nese barvu studia i tam, kde je
                           // podklad skoro pruhledny (14. 9. 2026).
@@ -1638,7 +1644,9 @@ function DetailUdalosti({
             </span>
           </div>
           {/* Stejne radky jako v bubline, jen vetsi a cele. */}
-          {radky.map((radek, i) => (
+          {/* Radek, ktery jen opakuje druh prace z hlavicky (napr. „Střih"),
+              se v detailu nevypisuje podruhe (20. 9. 2026). */}
+          {radky.filter((radek) => radek.trim().toLocaleLowerCase('cs') !== String(stav).trim().toLocaleLowerCase('cs')).map((radek, i) => (
             <p
               key={i}
               className={

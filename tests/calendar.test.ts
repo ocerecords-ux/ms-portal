@@ -161,3 +161,20 @@ describe('výběr termínů hercem', () => {
     expect(remainingToPick(3, 5)).toBe(0);
   });
 });
+
+/** Překrývání jako Apple (20. 9. 2026). */
+import { rozvrhniPrekryvy as rozvrhApple } from '../src/lib/calendar';
+describe('rozvrhniPrekryvy – Apple', () => {
+  it('naráz vedle sebe, později přes ně a odsazeně', () => {
+    const r = rozvrhApple([
+      { id: 'a', od: 540, do: 1020 },
+      { id: 'b', od: 540, do: 780 },
+      { id: 'c', od: 600, do: 840 },
+    ]);
+    expect(r.get('a')).toMatchObject({ posun: 0, podil: 0.5 });
+    expect(r.get('b')).toMatchObject({ posun: 0.5, podil: 0.5 });
+    expect(r.get('c')!.posun).toBeCloseTo(0.12);
+    expect(r.get('c')!.podil).toBeCloseTo(0.88);
+    expect(r.get('c')!.vrstva).toBeGreaterThan(r.get('b')!.vrstva);
+  });
+});
