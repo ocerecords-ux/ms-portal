@@ -3,17 +3,17 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { canSee } from '@/lib/menu';
-import { hodiny, nactiKapacituMesice, procenta } from '@/lib/kapacitaServer';
+import { hodiny, nactiKapacituRoku, procenta } from '@/lib/kapacitaServer';
 
 /**
- * KAPACITA STUDIÍ (zadání 20. 9. 2026: „potřebuji vidět jasně, kolik a které
- * dny z toho měsíce jsou obsazeny. Takže spíš jednotlivá studia jako sloupce
- * a pod nimi dny. Vyznačit víkendy").
+ * KAPACITA STUDIÍ (zadání 20. 9. 2026: „chci to mít všechno na jedné stránce,
+ * ať jasně vidím, kde jsou díry. A nemusí tam být ten počet hodin, jen
+ * obdélníčky").
  *
- * Měsíc den po dni: řádek = den, sloupec = studio, v buňce natočené hodiny a
- * barva podle toho, jak je den zaplněný. Víkendy mají svůj podklad a jsou
- * popsané, dnešek rámeček. Nad tabulkou je proužek dvanácti měsíců, ať jde
- * skočit na ten vytížený.
+ * Celý rok najednou: dvanáct tabulek měsíců, v každé řádek = den a sloupec =
+ * studio. Každý den je jen obdélníček - čím tmavší, tím plnější; prázdný
+ * obdélníček je díra. Víkendy mají svůj podklad, dnešek rámeček. Hodiny a
+ * počet natáčení se ukážou v bublině po najetí myší.
  *
  * Počítá se jen NATÁČENÍ proti otevírací době studia - viz lib/kapacitaServer.
  */
@@ -33,257 +33,189 @@ const MESICE = [
   'listopad',
   'prosinec',
 ];
-const MESICE_KRATCE = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
 const DNY_KRATCE = ['ne', 'po', 'út', 'st', 'čt', 'pá', 'so'];
 
-/** Barva buňky podle toho, jak je den zaplněný. */
-function odstin(p: number | null): { trida: string; styl?: React.CSSProperties } {
-  if (p === null || p <= 0) return { trida: 'text-muted' };
-  if (p >= 95) return { trida: 'text-white', styl: { backgroundColor: '#6b2af0' } };
-  if (p >= 70) return { trida: 'text-white', styl: { backgroundColor: '#7b55ff' } };
-  if (p >= 45) return { trida: 'text-ink', styl: { backgroundColor: 'rgba(123,85,255,0.45)' } };
-  if (p >= 20) return { trida: 'text-ink', styl: { backgroundColor: 'rgba(123,85,255,0.24)' } };
-  return { trida: 'text-ink', styl: { backgroundColor: 'rgba(123,85,255,0.12)' } };
+/** Barva obdélníčku podle toho, jak je den zaplněný. */
+function odstin(p: number | null): React.CSSProperties {
+  if (p === null || p <= 0) return { backgroundColor: 'rgb(var(--c-field))' };
+  if (p >= 95) return { backgroundColor: '#5c1fe0' };
+  if (p >= 70) return { backgroundColor: '#7b55ff' };
+  if (p >= 45) return { backgroundColor: 'rgba(123,85,255,0.55)' };
+  if (p >= 20) return { backgroundColor: 'rgba(123,85,255,0.32)' };
+  return { backgroundColor: 'rgba(123,85,255,0.16)' };
 }
 
-export default async function KapacitaPage({
-  searchParams,
-}: {
-  searchParams?: { rok?: string; mesic?: string };
-}) {
+export default async function KapacitaPage({ searchParams }: { searchParams?: { rok?: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect('/login');
   if (!canSee('/prehledy', session.user.role)) redirect('/projekty');
 
   const ted = new Date();
-  const dnesniRok = ted.getUTCFullYear();
-  const rok = Number(searchParams?.rok) || dnesniRok;
-  const zadanyMesic = Number(searchParams?.mesic);
-  const mesic = zadanyMesic >= 1 && zadanyMesic <= 12 ? zadanyMesic : ted.getUTCMonth() + 1;
-  const prehled = await nactiKapacituMesice(rok, mesic);
-
-  const odkaz = (r: number, m: number) => `/prehledy/kapacita?rok=${r}&mesic=${m}`;
-  const predchozi = mesic === 1 ? odkaz(rok - 1, 12) : odkaz(rok, mesic - 1);
-  const dalsi = mesic === 12 ? odkaz(rok + 1, 1) : odkaz(rok, mesic + 1);
-  const dnesniDatum = `${dnesniRok}-${String(ted.getUTCMonth() + 1).padStart(2, '0')}-${String(
-    ted.getUTCDate(),
-  ).padStart(2, '0')}`;
+  const rok = Number(searchParams?.rok) || ted.getUTCFullYear();
+  const prehled = await nactiKapacituRoku(rok);
+  const dnesniMesic = ted.getUTCFullYear() === rok ? ted.getUTCMonth() + 1 : 0;
+  const dnesniDen = ted.getUTCDate();
 
   const soucet = prehled.studia.reduce(
-    (a, s) => ({
-      kapacitaMinut: a.kapacitaMinut + s.kapacitaMinut,
-      natoceno: a.natoceno + s.natoceno,
-    }),
+    (a, s) => ({ kapacitaMinut: a.kapacitaMinut + s.kapacitaMinut, natoceno: a.natoceno + s.natoceno }),
     { kapacitaMinut: 0, natoceno: 0 },
   );
   const celkemProcent = procenta(soucet);
-  const dnuSNatacenim = prehled.dny.filter((d) => d.bunky.some((b) => b.natoceno > 0)).length;
+  const odkazRoku = (r: number) => `/prehledy/kapacita?rok=${r}`;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-4 flex-wrap">
-        <p className="text-muted font-body m-0 max-w-xl">
-          Které dny jsou ve studiích zabrané <b>natáčením</b> a kolik hodin z otevírací doby zbývá. Střih, casting ani
-          blokace se nepočítají.
+        <p className="text-muted font-body m-0 max-w-2xl">
+          Celý rok po dnech. Každý obdélníček je jeden den v jednom studiu — čím tmavší, tím plnější{' '}
+          <b>natáčením</b>; prázdné místo je díra. Střih, casting ani blokace se nepočítají. Podrobnosti ukáže najetí
+          myší.
         </p>
         <div className="flex items-center gap-1">
           <Link
-            href={predchozi}
+            href={odkazRoku(rok - 1)}
             className="rounded-pill border border-line px-3 py-1.5 text-sm font-heading text-ink no-underline hover:border-brand-purple"
           >
-            ‹
+            ‹ {rok - 1}
           </Link>
-          <span className="rounded-pill bg-brand-purple text-white px-4 py-1.5 text-sm font-heading font-semibold">
-            {MESICE[mesic - 1]} {rok}
+          <span className="rounded-pill bg-brand-purple text-white px-4 py-1.5 text-sm font-heading font-semibold tabular-nums">
+            {rok}
           </span>
           <Link
-            href={dalsi}
+            href={odkazRoku(rok + 1)}
             className="rounded-pill border border-line px-3 py-1.5 text-sm font-heading text-ink no-underline hover:border-brand-purple"
           >
-            ›
+            {rok + 1} ›
           </Link>
         </div>
       </div>
 
-      {/* Proužek roku - kam v roce skočit */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <Link
-          href={odkaz(rok - 1, mesic)}
-          className="text-sm font-heading text-muted no-underline hover:text-ink px-1"
-        >
-          ‹ {rok - 1}
-        </Link>
-        {prehled.rokPoMesicich.map((m) => {
-          const p = procenta(m);
-          const vybrany = m.mesic === mesic;
+      {/* Která studia jsou ve sloupcích a jak jsou na tom za celý rok */}
+      <div className="flex items-center gap-x-5 gap-y-2 flex-wrap bg-surface rounded-card border border-line shadow-sm px-4 py-3">
+        {prehled.studia.map((s, i) => {
+          const p = procenta(s);
           return (
-            <Link
-              key={m.mesic}
-              href={odkaz(rok, m.mesic)}
-              title={`${MESICE[m.mesic - 1]} ${rok}: ${hodiny(m.natoceno)} h natáčení`}
-              className={`rounded-lg px-2.5 py-1 text-xs font-heading no-underline border tabular-nums ${
-                vybrany ? 'border-brand-purple text-ink' : 'border-line text-muted hover:text-ink'
-              }`}
-            >
-              {MESICE_KRATCE[m.mesic - 1]} <span className="opacity-70">{p === null ? '—' : `${p} %`}</span>
-            </Link>
+            <span key={s.id} className="inline-flex items-center gap-2 text-sm font-heading text-ink">
+              <span
+                className="w-5 h-5 rounded grid place-items-center text-[10px] font-bold text-white shrink-0"
+                style={{ background: s.barva }}
+              >
+                {i + 1}
+              </span>
+              {s.nazev}
+              <span className="font-body text-muted tabular-nums">
+                {p === null ? '—' : `${p} %`} · {hodiny(s.natoceno)} h · {s.dnuSNatacenim} dnů
+              </span>
+            </span>
           );
         })}
-        <Link
-          href={odkaz(rok + 1, mesic)}
-          className="text-sm font-heading text-muted no-underline hover:text-ink px-1"
-        >
-          {rok + 1} ›
-        </Link>
+        <span className="ml-auto text-sm font-heading text-ink tabular-nums">
+          Rok {rok}: {celkemProcent === null ? '—' : `${celkemProcent} %`}
+          <span className="font-body text-muted"> ({hodiny(soucet.natoceno)} z {hodiny(soucet.kapacitaMinut)} h)</span>
+        </span>
       </div>
 
-      {/* Souhrn za zobrazený měsíc */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { popis: 'Natočeno', hodnota: `${hodiny(soucet.natoceno)} h` },
-          { popis: 'Kapacita', hodnota: `${hodiny(soucet.kapacitaMinut)} h` },
-          { popis: 'Obsazenost', hodnota: celkemProcent === null ? '—' : `${celkemProcent} %` },
-          { popis: 'Dnů s natáčením', hodnota: `${dnuSNatacenim} z ${prehled.dny.length}` },
-        ].map((k) => (
-          <div key={k.popis} className="bg-surface rounded-card border border-line shadow-sm p-4">
-            <p className="text-xs font-heading uppercase tracking-wide text-muted m-0">{k.popis}</p>
-            <p className="font-display text-2xl sm:text-3xl text-ink m-0 mt-1 tabular-nums">{k.hodnota}</p>
-          </div>
-        ))}
-      </div>
+      {/* Dvanáct měsíců vedle sebe - celý rok na jedné obrazovce */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+        {prehled.mesice.map((m) => {
+          const pMesic = procenta(m);
+          return (
+            <div key={m.mesic} className="bg-surface rounded-card border border-line shadow-sm p-2.5">
+              <p
+                className={`text-xs font-heading font-semibold m-0 mb-1.5 flex items-baseline justify-between gap-2 ${
+                  m.mesic === dnesniMesic ? 'text-brand-purple' : 'text-ink'
+                }`}
+              >
+                {MESICE[m.mesic - 1]}
+                <span className="font-body text-[11px] text-muted tabular-nums">
+                  {pMesic === null ? '—' : `${pMesic} %`}
+                </span>
+              </p>
 
-      {/* Mapa měsíce: řádek den, sloupec studio */}
-      <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse min-w-[560px]">
-            <thead>
-              <tr className="border-b border-line">
-                <th className="text-left text-[11px] font-heading uppercase tracking-wide text-muted px-4 py-3 w-28">
-                  Den
-                </th>
-                {prehled.studia.map((s) => (
-                  <th key={s.id} className="px-2 py-3 text-center">
-                    <span className="inline-flex items-center gap-2 font-heading font-semibold text-ink text-sm">
-                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: s.barva }} />
-                      {s.nazev}
-                    </span>
-                    <span className="block text-[11px] font-body text-muted tabular-nums mt-0.5">
-                      {hodiny(s.natoceno)} / {hodiny(s.kapacitaMinut)} h
-                    </span>
-                  </th>
-                ))}
-                <th className="text-right text-[11px] font-heading uppercase tracking-wide text-muted px-4 py-3">
-                  Den celkem
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {prehled.dny.map((d) => {
-                const denCelkem = d.bunky.reduce((a, b) => a + b.natoceno, 0);
-                const dnes = d.datum === dnesniDatum;
-                return (
-                  <tr
-                    key={d.datum}
-                    className={`border-t border-line ${d.vikend ? 'bg-surfaceSoft' : ''} ${
-                      dnes ? 'outline outline-1 outline-brand-purple' : ''
-                    }`}
+              {/* Mřížka dnů se drží uprostřed karty, ať pruh víkendu končí
+                  u posledního obdélníčku a nejede přes celou kartu. */}
+              <div className="w-fit mx-auto">
+              {/* Záhlaví: pořadová čísla studií podle legendy nahoře */}
+              <div className="flex items-center gap-[3px] pl-5 mb-[3px]">
+                {prehled.studia.map((s, i) => (
+                  <span
+                    key={s.id}
+                    title={s.nazev}
+                    className="w-4 text-[9px] font-heading text-center text-muted leading-none"
                   >
-                    <td className="px-4 py-1.5 whitespace-nowrap">
+                    {i + 1}
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-[2px]">
+                {m.dny.map((d) => {
+                  const dnes = m.mesic === dnesniMesic && d.den === dnesniDen;
+                  return (
+                    <div
+                      key={d.den}
+                      className={`flex items-center gap-[3px] rounded-sm ${d.vikend ? 'bg-surfaceSoft' : ''} ${
+                        dnes ? 'outline outline-1 outline-brand-purple' : ''
+                      }`}
+                    >
                       <span
-                        className={`font-heading text-sm tabular-nums ${
-                          d.vikend ? 'text-muted' : 'text-ink'
-                        } ${dnes ? 'font-bold text-brand-purple' : ''}`}
+                        className={`w-5 pr-1 text-[9px] font-heading text-right tabular-nums leading-none ${
+                          dnes ? 'text-brand-purple font-bold' : d.vikend ? 'text-muted' : 'text-muted/70'
+                        }`}
                       >
-                        {DNY_KRATCE[d.denVTydnu]} {d.den}.
+                        {d.den}
                       </span>
-                      {d.vikend && <span className="ml-1.5 text-[10px] font-body text-muted">víkend</span>}
-                    </td>
-                    {d.bunky.map((b) => {
-                      const p = procenta(b);
-                      const { trida, styl } = odstin(p);
-                      const popisDne = `${DNY_KRATCE[d.denVTydnu]} ${d.den}. ${MESICE[mesic - 1]}`;
-                      return (
-                        <td key={b.studioId} className="px-1.5 py-1">
-                          <div
-                            className={`rounded-lg h-8 grid place-items-center leading-none ${trida} ${
-                              b.natoceno === 0 && b.kapacitaMinut === 0 ? 'opacity-40' : ''
+                      {d.bunky.map((b, i) => {
+                        const p = procenta(b);
+                        const studio = prehled.studia[i];
+                        return (
+                          <span
+                            key={studio.id}
+                            className={`w-4 h-[9px] rounded-[2px] ${
+                              b.kapacitaMinut === 0 && b.natoceno === 0 ? 'opacity-30' : ''
                             }`}
-                            style={styl}
-                            title={
+                            style={odstin(p)}
+                            title={`${DNY_KRATCE[d.denVTydnu]} ${d.den}. ${MESICE[m.mesic - 1]} · ${studio.nazev}: ${
                               b.natoceno > 0
-                                ? `${popisDne}: ${hodiny(b.natoceno)} h natáčení (${b.pocet}×)${
-                                    b.kapacitaMinut > 0
-                                      ? ` z ${hodiny(b.kapacitaMinut)} h otevírací doby`
-                                      : ', mimo otevírací dobu'
+                                ? `${hodiny(b.natoceno)} h natáčení (${b.pocet}×)${
+                                    b.kapacitaMinut > 0 ? ` z ${hodiny(b.kapacitaMinut)} h` : ', mimo otevírací dobu'
                                   }`
                                 : b.kapacitaMinut > 0
-                                  ? `${popisDne}: volno (${hodiny(b.kapacitaMinut)} h k dispozici)`
-                                  : `${popisDne}: zavřeno / jen po domluvě`
-                            }
-                          >
-                            <span className="text-xs font-heading font-semibold tabular-nums">
-                              {b.natoceno > 0 ? `${hodiny(b.natoceno)} h` : b.kapacitaMinut > 0 ? '' : '·'}
-                            </span>
-                          </div>
-                        </td>
-                      );
-                    })}
-                    <td className="px-4 py-1.5 text-right whitespace-nowrap">
-                      <span
-                        className={`font-heading text-sm tabular-nums ${denCelkem > 0 ? 'text-ink' : 'text-muted'}`}
-                      >
-                        {denCelkem > 0 ? `${hodiny(denCelkem)} h` : '—'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-              <tr className="border-t border-line bg-surfaceSoft">
-                <td className="px-4 py-2.5 font-heading font-semibold text-ink text-sm">Měsíc</td>
-                {prehled.studia.map((s) => {
-                  const p = procenta(s);
-                  return (
-                    <td key={s.id} className="px-1.5 py-2.5 text-center">
-                      <span className="font-heading font-semibold text-ink text-sm tabular-nums">
-                        {p === null ? '—' : `${p} %`}
-                      </span>
-                      <span className="block text-[11px] font-body text-muted tabular-nums">
-                        {s.dnuSNatacenim} dnů
-                      </span>
-                    </td>
+                                  ? `volno, ${hodiny(b.kapacitaMinut)} h k dispozici`
+                                  : 'zavřeno / jen po domluvě'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
                   );
                 })}
-                <td className="px-4 py-2.5 text-right font-heading font-semibold text-ink tabular-nums">
-                  {hodiny(soucet.natoceno)} h
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+              </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="flex items-center gap-3 flex-wrap text-xs font-body text-muted">
         <span>Zaplněnost dne:</span>
         {[
-          { popis: 'volno', styl: undefined as React.CSSProperties | undefined },
-          { popis: 'do 20 %', styl: { backgroundColor: 'rgba(123,85,255,0.12)' } },
-          { popis: 'do 45 %', styl: { backgroundColor: 'rgba(123,85,255,0.24)' } },
-          { popis: 'do 70 %', styl: { backgroundColor: 'rgba(123,85,255,0.45)' } },
-          { popis: 'do 95 %', styl: { backgroundColor: '#7b55ff' } },
-          { popis: 'plno', styl: { backgroundColor: '#6b2af0' } },
+          { popis: 'volno', p: 0 },
+          { popis: 'do 20 %', p: 10 },
+          { popis: 'do 45 %', p: 30 },
+          { popis: 'do 70 %', p: 50 },
+          { popis: 'do 95 %', p: 80 },
+          { popis: 'plno', p: 100 },
         ].map((l) => (
           <span key={l.popis} className="inline-flex items-center gap-1.5">
-            <span
-              className={`w-5 h-4 rounded ${l.styl ? '' : 'border border-line'}`}
-              style={l.styl}
-              aria-hidden
-            />
+            <span className="w-5 h-3 rounded-[2px] border border-line" style={odstin(l.p)} aria-hidden />
             {l.popis}
           </span>
         ))}
-        <span className="ml-auto max-w-xl text-right">
-          Kapacita je otevírací doba studia (Administrace → Studia). Dny „jen po domluvě" (obvykle víkendy) kapacitu
-          nemají — natáčení v nich je vidět, ale do procent se nepočítá. Tečka znamená zavřeno.
+        <span className="ml-auto max-w-2xl text-right">
+          Čísla ve sloupcích odpovídají studiím v legendě nahoře. Kapacita je otevírací doba studia (Administrace →
+          Studia); dny „jen po domluvě" (obvykle víkendy) kapacitu nemají — natáčení v nich je vidět, ale do procent se
+          nepočítá.
         </span>
       </div>
     </div>
