@@ -63,7 +63,14 @@ Odběrů můžete mít víc najednou, třeba celý kalendář v Google a jen Brn
 
 # Časté otázky
 
-**Změnil jsem termín v portálu a v telefonu ho nevidím.** Kalendáře si odběr stahují samy: Apple a Outlook zhruba každou hodinu, **Google podle sebe — i několik hodin**. Stačí počkat.
+**Jak často se to obnovuje a jde to zrychlit na 5 minut?** V odkazu posíláme interval **5 minut** — Outlook a většina klientů ho poslechnou. **Apple Kalendář se řídí vlastním nastavením** (ve výchozím stavu zhruba hodina), přepnout jde u každého odebíraného kalendáře zvlášť:
+
+- **iPhone a iPad:** Nastavení → Aplikace → Kalendář → Účty → **Odebírané kalendáře** → vyberte kalendář → **Aktualizovat** → *Každých 5 minut*.
+- **Mac:** v Kalendáři klikněte pravým tlačítkem na kalendář v seznamu vlevo → **Informace** (nebo Get Info) → **Aktualizovat** → *Každých 5 minut*. Nastavení se přenese i na iPhone, pokud kalendář odebíráte přes iCloud.
+
+**Google Kalendář si interval určuje sám** — bývá to i půl dne a nastavit to nejde ani nám, ani vám. Kdo potřebuje vidět změny hned, ať kalendář odebírá v Apple nebo Outlooku, nebo se podívá do portálu.
+
+**Změnil jsem termín v portálu a v telefonu ho nevidím.** Nejspíš se odběr ještě nestáhl — viz interval výš. Stačí počkat, nebo v Apple Kalendáři stáhnout seznam kalendářů dolů (obnovit ručně).
 
 **Můžu událost upravit v telefonu?** Ne — kalendář je jen pro čtení. Upravujte v portálu, do telefonu se to propíše samo.
 

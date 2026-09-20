@@ -296,8 +296,10 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                     ))}
                   </ul>
                   <p className="text-xs font-body text-muted m-0 bg-field rounded-lg px-3 py-2">
-                    Nechcete některý? Prostě ho nepřidávejte - nebo ho v telefonu jen vypněte. Kalendáře se obnovují
-                    samy (Apple a Outlook zhruba každou hodinu, Google podle sebe). Odkazy jsou vaše osobní.
+                    Nechcete některý? Prostě ho nepřidávejte - nebo ho v telefonu jen vypněte. Kalendáře se
+                    obnovují samy. V Apple Kalendáři si u každého nastavte <b>Aktualizovat: každých 5 minut</b>
+                    (iPhone: Nastavení → Aplikace → Kalendář → Účty → Odebírané kalendáře; Mac: klik pravým na
+                    kalendář → Informace). Google si interval určuje sám, bývá to i půl dne. Odkazy jsou vaše osobní.
                   </p>
                 </div>
               ) : !odkaz ? (
@@ -376,8 +378,9 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                     </div>
                   </div>
                   <p className="text-xs font-body text-muted m-0 bg-field rounded-lg px-3 py-2">
-                    Kalendář se obnovuje sám - Apple a Outlook zhruba každou hodinu, Google podle sebe (bývá to i
-                    několik hodin). Odkaz je váš osobní, neposílejte ho mimo tým.
+                    Kalendář se obnovuje sám. Posíláme mu interval 5 minut - Outlook a většina klientů ho poslechne,
+                    v Apple Kalendáři si <b>Aktualizovat</b> přepněte na 5 minut u daného kalendáře, Google si
+                    interval určuje sám (bývá to i půl dne). Odkaz je váš osobní, neposílejte ho mimo tým.
                   </p>
                 </div>
               )}

@@ -80,10 +80,12 @@ export function buildIcs(name: string, events: IcsEvent[], barva?: string | null
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${esc(name)}`,
     'X-WR-TIMEZONE:Europe/Prague',
-    // Jak casto si ma kalendar odber obnovit. Apple a Outlook to ctou,
-    // Google si interval urcuje sam (nekolik hodin).
-    'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
-    'X-PUBLISHED-TTL:PT1H',
+    // Jak casto si ma kalendar odber obnovit (zadani 20. 9. 2026: „aby se
+    // synchronizoval co 5 min"). Posilame 5 minut; Outlook a dalsi klienti se
+    // tim ridi, Apple ma vlastni nastaveni u kalendare (default hodina) a
+    // Google si interval urcuje sam (12-24 h).
+    'REFRESH-INTERVAL;VALUE=DURATION:PT5M',
+    'X-PUBLISHED-TTL:PT5M',
   ];
   // Barva kalendare (20. 9. 2026 - kazde studio zvlast). Apple ji bere pri
   // odberu jako navrh, ostatni ji ignoruji.
