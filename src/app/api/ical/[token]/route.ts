@@ -94,7 +94,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       where: {
         ...vRozsahu,
         ...(studioId ? { studioId } : {}),
-        ...(jenMoje ? { OR: [{ zvukarUserId: kdo.id }, { createdById: kdo.id, kind: { in: ['NATACENI', 'STRIH'] } }] } : {}),
+        ...(jenMoje ? { OR: [{ zvukarUserId: kdo.id }, { createdById: kdo.id, kind: { in: ['NATACENI', 'STRIH', 'CASTING'] } }] } : {}),
       },
       orderBy: { start: 'asc' },
       include: { studio: { select: { name: true, location: true } } },

@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
 import { loadOccupancy } from '@/lib/calendarServer';
-import { jePraceVeStudiu, popisUdalosti } from '@/lib/calendar';
+import { jePraceVeStudiu, maHerce, popisUdalosti } from '@/lib/calendar';
 
 /**
  * Blokace založená přímo z kalendáře dvojklikem (zprava uzivatele 9. 9. 2026:
@@ -19,7 +19,7 @@ const schema = z.object({
   start: z.string().trim().min(8),
   end: z.string().trim().min(8),
   kind: z
-    .enum(['NATACENI', 'STRIH', 'HOLIDAY', 'VACATION', 'MAINTENANCE', 'INTERNAL', 'OTHER'])
+    .enum(['NATACENI', 'STRIH', 'CASTING', 'HOLIDAY', 'VACATION', 'MAINTENANCE', 'INTERNAL', 'OTHER'])
     .optional(),
   // U natáčení a střihu se popis skládá ze zapsaných polí, takže sem nechodí.
   title: z.string().trim().max(160).optional(),
@@ -45,9 +45,10 @@ type Vstup = z.infer<typeof schema>;
  */
 function zkontrolujVstup(kind: string, d: Vstup): string | null {
   if (jePraceVeStudiu(kind)) {
-    if (!d.projectName?.trim()) return 'Vyberte projekt.';
+    // U castingu projekt povinny neni (20. 9. 2026).
+    if (kind !== 'CASTING' && !d.projectName?.trim()) return 'Vyberte projekt.';
     if (!d.zvukarName?.trim()) return 'Vyberte zvukaře.';
-    if (kind === 'NATACENI' && !d.actorName?.trim()) return 'Vyberte herce.';
+    if (maHerce(kind) && !d.actorName?.trim()) return 'Vyberte herce.';
     return null;
   }
   return d.title?.trim() ? null : 'Vyplňte, čeho se blokace týká.';
@@ -58,8 +59,8 @@ function poliUdalosti(kind: string, d: Vstup) {
   return {
     caflouProjectId: d.caflouProjectId || null,
     projectName: d.projectName || null,
-    actorUserId: kind === 'NATACENI' ? d.actorUserId || null : null,
-    actorName: kind === 'NATACENI' ? d.actorName || null : null,
+    actorUserId: maHerce(kind) ? d.actorUserId || null : null,
+    actorName: maHerce(kind) ? d.actorName || null : null,
     zvukarUserId: d.zvukarUserId || null,
     zvukarName: d.zvukarName || null,
   };

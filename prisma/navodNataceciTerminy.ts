@@ -40,7 +40,7 @@ Tlačítkem **Odeslat herci** se nabídka založí a rovnou odejde e-mailem. Kdy
 # 2. Co se do nabídky počítá
 
 - Frekvence podle zkratek studia — **9:00–13:00** a **13:00–17:00** — v otevírací době studia, včetně víkendů.
-- **Vynechá se** všechno, co je v kalendáři obsazené: potvrzené a držené termíny jiných nabídek, jakákoli událost ve studiu (natáčení, střih, svátek, údržba) a jiné natáčení téhož herce.
+- **Vynechá se** všechno, co je v kalendáři obsazené: potvrzené a držené termíny jiných nabídek, jakákoli událost ve studiu (natáčení, střih, casting, svátek, údržba) a jiné natáčení téhož herce.
 - **Jedno místo za město.** Když je stejný čas volný v obou brněnských studiích, herec ho uvidí jen jednou a patří **Brnu I**. Brno II dostane jen tehdy, když je Brno I v tu dobu obsazené.
 - Nabídka se srovnává s kalendářem **pokaždé, když ji kdo otevře** — co se mezitím obsadí, zmizí; co se uvolní, přibude.
 
@@ -76,21 +76,23 @@ Když se držení nestihne potvrdit, termíny se samy vrátí do nabídky a here
 
 V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a potvrzené. Nabídnutá volná místa se tam neukazují, jinak by zaplnila celý týden.
 
-**Jedním kliknutím** na událost bublina **vystoupí dopředu a zvětší se přímo na svém místě** — kalendář kolem zůstává vidět. Zavře se klikem jinam, klávesou Esc nebo zarolováním.
+**Jedním kliknutím** na událost bublina **vystoupí dopředu a zvětší se přímo na svém místě** — kalendář kolem zůstává vidět. Zavře se **dalším kliknutím na bublinu**, klikem jinam, klávesou Esc nebo zarolováním (křížek tam není).
 
 ![Bublina po jednom kliknutí vystoupí a zvětší se](/navody/terminy-7.png)
 
-1. **Druh práce s ikonou** nahoře v barevném kolečku jako u typů projektů (modrý mikrofon = natáčení, zelená rozstřižená zvuková vlna = střih, šedý klíč = údržba, oranžové slunce = svátek/dovolená) a pod ním celý text — název, herec a řádek ZVUKAŘ, nic se neořezává. Pod tím den, čas a studio, případně poznámka.
+1. **Druh práce s ikonou** nahoře v barevném kolečku jako u typů projektů (modrý mikrofon = natáčení, zelená rozstřižená zvuková vlna = střih, růžový herec s hvězdičkou = casting, šedý klíč = údržba, oranžové slunce = svátek/dovolená) a pod ním celý text — název, herec a řádek ZVUKAŘ, nic se neořezává. Pod tím den, čas a studio, případně poznámka.
 2. **Odkazy** dole — **Projekt** a u frekvence **Nabídka termínů**.
 
 **Upravit a smazat** se dá jen v úpravě — **dvojklikem** na událost. Tlačítko **Smazat událost** je dole v okně úpravy.
 
 Ikona druhu je i přímo v bublině v kalendáři, zvukař taky — v týdnu na druhém řádku, v měsíci za tečkou.
 
+**Druhy práce** při zápisu dvojklikem do volného místa jsou tři: **Natáčení** (projekt, herec, zvukař), **Střih** (projekt, zvukař) a **Casting** (herec a zvukař; projekt vyplníte, jen když už je).
+
 ![Kalendář s frekvencí a otevřené okno Úprava frekvence](/navody/terminy-4.png)
 
 1. **Dvojklikem** na frekvenci otevřete její úpravu. Zvukař, jakmile ho doplníte, se ukazuje přímo v bloku.
-2. Změnit jde **studio (Kalendář), datum, čas i zvukaře**. Herce změnit nejde — ten patří k nabídce. Když **Druh** přepnete na **Střih**, frekvence se zruší a na jejím místě vznikne střih (vyberte zvukaře).
+2. Změnit jde **studio (Kalendář), datum, čas i zvukaře**. Herce změnit nejde — ten patří k nabídce. Když **Druh** přepnete na **Střih**, frekvence se zruší a na jejím místě vznikne střih (vyberte zvukaře). Stejně to jde na **Casting** — herec z frekvence zůstane.
 3. **Poznámka** pro tým — ukáže se v detailu události. Dole je **Zrušit frekvenci**, když se nenatáčí vůbec.
 
 Herec dostane v portálu **oznámení** o každém přesunu i zrušení.

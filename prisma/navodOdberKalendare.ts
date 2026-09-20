@@ -33,7 +33,7 @@ export const ODBER_KALENDARE = {
 2. **Co chcete vidět:**
    - **Celý kalendář** — všechna studia a Mimo studio (dovolené).
    - **Jedno studio** — jen natáčení a události vybraného studia.
-   - **Jen moje** — natáčení a střihy, kde jste zvukař, a vaše Mimo studio.
+   - **Jen moje** — natáčení, střihy a castingy, kde jste zvukař, a vaše Mimo studio.
 3. Klikněte na **Připravit odkaz**.
 
 # 3. Přidejte ho do svého kalendáře
@@ -50,7 +50,7 @@ Odběrů můžete mít víc najednou, třeba celý kalendář v Google a jen Brn
 # Co v kalendáři uvidíte
 
 - **Potvrzená natáčení** — projekt, herec a studio v názvu; v popisu zvukař a poznámka.
-- **Ručně zapsané události** — natáčení, střih, svátek, údržba…
+- **Ručně zapsané události** — natáčení, střih, casting, svátek, údržba…
 - **Mimo studio** — dovolené jako celodenní události (jen u celého kalendáře a u Jen moje).
 - **Nabídky termínů** a termíny, které herec vybral, ale my je ještě nepotvrdili, tam **nejsou**.
 - Kalendář nese 2 měsíce zpátky a rok dopředu.

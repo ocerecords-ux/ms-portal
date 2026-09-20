@@ -23,6 +23,7 @@ import {
   utcParts,
   zonedToUtc,
   jePraceVeStudiu,
+  maHerce,
   type CalendarView,
 } from '@/lib/calendar';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
@@ -701,12 +702,28 @@ function MrizkaPohled({
     }
     return min;
   }, [days, podleDnu, timezone]);
-  const klicTydne = days.length ? `${days[0].key}:${days.length}` : '';
+  // Klic = tyden + zacatek prvni udalosti. Udalosti noveho tydne dorazi ze
+  // serveru az PO prepnuti dnu - driv se tak rolovalo podle prazdneho tydne
+  // (na 7:00) a prvni udalosti byly useknute (20. 9. 2026). Ted se znovu
+  // doroluje, jakmile se prvni udalost tydne zmeni.
+  const klicTydne = days.length ? `${days[0].key}:${days.length}:${prvniMinuta ?? '-'}` : '';
   useEffect(() => {
-    if (!rolovatko.current || naRolovanyTyden.current === klicTydne) return;
+    const el = rolovatko.current;
+    if (!el || naRolovanyTyden.current === klicTydne) return;
     naRolovanyTyden.current = klicTydne;
     const minuta = prvniMinuta !== null ? Math.max(0, prvniMinuta - 30) : GRID_SCROLL_TO_HOUR * 60;
-    rolovatko.current.scrollTop = ((minuta - GRID_START_HOUR * 60) * HOUR_PX) / 60;
+    const cil = ((minuta - GRID_START_HOUR * 60) * HOUR_PX) / 60;
+    el.scrollTop = cil;
+    // Pojistka: kdyby prohlizec po vykresleni rolovani vratil (obnova pozice).
+    const srovnej = () => {
+      if (Math.abs(el.scrollTop - cil) > 2) el.scrollTop = cil;
+    };
+    const snimek = requestAnimationFrame(srovnej);
+    const pozdeji = window.setTimeout(srovnej, 150);
+    return () => {
+      cancelAnimationFrame(snimek);
+      window.clearTimeout(pozdeji);
+    };
   }, [klicTydne, prvniMinuta]);
 
   return (
@@ -1085,6 +1102,9 @@ function UdalostForm({
 
   const jePrace = jePraceVeStudiu(druh);
   const jeNataceni = druh === 'NATACENI';
+  // Herce ma natáčení i casting; casting nemusi mit projekt (20. 9. 2026).
+  const sHercem = maHerce(druh);
+  const projektPovinny = druh !== 'CASTING';
 
   /**
    * DATUM A ČAS OD–DO (zadání 14. 9. 2026: „potřebuji tam zadat i čas - od,
@@ -1163,7 +1183,7 @@ function UdalostForm({
           ? !zvukar
           : !nazev.trim()
       : jePrace
-        ? !projekt || !zvukar || (jeNataceni && !herec)
+        ? (projektPovinny && !projekt) || !zvukar || (sHercem && !herec)
         : !nazev.trim());
 
   /** Zrušení frekvence z kalendáře (19. 9. 2026). */
@@ -1233,8 +1253,8 @@ function UdalostForm({
                 caflouProjectId: projekt?.id ?? upravovana?.udalost?.caflouProjectId ?? '',
                 // Bez firmy (zadání 14. 9. 2026: „firma je tady zbytečná").
                 projectName: projekt?.nazev ?? projekt?.label ?? upravovana?.udalost?.projectName ?? '',
-                actorUserId: jeNataceni ? (herec?.id ?? '') : '',
-                actorName: jeNataceni ? (herec?.label ?? '') : '',
+                actorUserId: sHercem ? (herec?.id ?? '') : '',
+                actorName: sHercem ? (herec?.label ?? '') : '',
                 zvukarUserId: zvukar?.id ?? '',
                 zvukarName: zvukar?.label ?? '',
               }
@@ -1367,7 +1387,7 @@ function UdalostForm({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label className="flex flex-col gap-1.5 sm:col-span-1">
             <span className="text-sm font-body text-ink">
-              Projekt <span className="text-danger">*</span>
+              Projekt {projektPovinny && <span className="text-danger">*</span>}
             </span>
             {/* Stejné hledání psaním jako u výkazů - projektů jsou stovky. */}
             <VyberProjektu projekty={projekty} hodnota={projektId} onZmena={setProjektId} />
@@ -1375,7 +1395,7 @@ function UdalostForm({
 
           {/* Herec jen u natáčení. U střihu žádný není a prázdné pole by tam
               jen strašilo (zadání 14. 9. 2026). */}
-          {jeNataceni && jeFrekvence && (
+          {sHercem && jeFrekvence && (
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">Herec</span>
               {/* Herec patri k nabidce - jiny herec = jina nabidka. */}
@@ -1384,7 +1404,7 @@ function UdalostForm({
               </span>
             </div>
           )}
-          {jeNataceni && !jeFrekvence && (
+          {sHercem && !jeFrekvence && (
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
                 Herec <span className="text-danger">*</span>
@@ -1441,7 +1461,7 @@ function UdalostForm({
 
       {jeFrekvence && !jeNataceni && (
         <p className="text-xs font-body text-ink bg-warnTint border border-line rounded-lg px-3 py-2 m-0">
-          Frekvence se zruší a na jejím místě vznikne {jePrace ? 'střih' : 'událost'} v kalendáři. Herec dostane
+          Frekvence se zruší a na jejím místě vznikne {jePrace ? (druh === 'CASTING' ? 'casting' : 'střih') : 'událost'} v kalendáři. Herec dostane
           oznámení.
         </p>
       )}
@@ -1496,11 +1516,14 @@ function UdalostForm({
  * údržba = klíč, svátek/dovolená = slunce. Frekvence z nabídky je natáčení.
  * Kreslí se barvou textu, takže sedí ve světlém i tmavém režimu.
  */
-export function druhPrace(e: Pick<CalendarEvent, 'kind' | 'state'>): 'NATACENI' | 'STRIH' | 'UDRZBA' | 'VOLNO' | null {
+export function druhPrace(
+  e: Pick<CalendarEvent, 'kind' | 'state'>,
+): 'NATACENI' | 'STRIH' | 'CASTING' | 'UDRZBA' | 'VOLNO' | null {
   if (e.kind === 'SLOT') return 'NATACENI';
   if (e.kind !== 'BLOCK') return null;
   if (e.state === 'NATACENI') return 'NATACENI';
   if (e.state === 'STRIH') return 'STRIH';
+  if (e.state === 'CASTING') return 'CASTING';
   if (e.state === 'MAINTENANCE') return 'UDRZBA';
   if (e.state === 'HOLIDAY' || e.state === 'VACATION') return 'VOLNO';
   return null;
@@ -1510,6 +1533,7 @@ export function druhPrace(e: Pick<CalendarEvent, 'kind' | 'state'>): 'NATACENI' 
 const IKONA_DRUHU: Record<NonNullable<ReturnType<typeof druhPrace>>, string> = {
   NATACENI: 'mikrofon-studio',
   STRIH: 'strih',
+  CASTING: 'casting',
   UDRZBA: 'klic',
   VOLNO: 'slunce',
 };

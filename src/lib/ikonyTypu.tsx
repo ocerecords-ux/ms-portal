@@ -386,6 +386,19 @@ export const IKONY_TYPU: Ikona[] = [
     ),
   },
   {
+    klic: 'casting',
+    barva: 'ruzova',
+    popisek: 'Casting',
+    // Hlava a ramena herce, vedle hvezdicka - zkouska, vyber hlasu.
+    kresba: (
+      <>
+        <circle cx="10" cy="8" r="3.6" />
+        <path d="M3.5 20.5a6.5 6.5 0 0 1 13 0" />
+        <path d="m18.5 3.2.9 1.9 2.1.3-1.5 1.5.4 2.1-1.9-1-1.9 1 .4-2.1-1.5-1.5 2.1-.3z" />
+      </>
+    ),
+  },
+  {
     klic: 'klic',
     barva: 'seda',
     popisek: 'Údržba',

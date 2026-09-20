@@ -533,20 +533,20 @@ async function prevezmiGoogleKalendar() {
       const herec = najdiCloveka(u.herec, ['HEREC']);
       const zvukar = najdiCloveka(u.zvukar, ['ADMIN', 'ZVUKAR', 'PRODUKCE']);
       // Uklid a porada nejsou prace na projektu - zadne parovani.
-      const pracovni = u.druh === 'NATACENI' || u.druh === 'STRIH';
-      const projekt = pracovni ? najdiProjekt(u.projekt) : null;
+      const pracovni = u.druh === 'NATACENI' || u.druh === 'STRIH' || u.druh === 'CASTING';
+      const projekt = pracovni && u.projekt ? najdiProjekt(u.projekt) : null;
       const data = {
         studioId: studio.id,
         start,
         end,
         kind: u.druh,
-        title: projekt?.name ?? u.projekt,
+        title: projekt?.name ?? (u.projekt || u.herec || 'Casting'),
         // Znacky z Googlu (☎ ✈️ 📝 ‼️ CUT) se neprenaseji (20. 9. 2026: „ty značky dej pryč,
         // uděláme nové postupně") - poznamka zustava prazdna.
         note: null,
         caflouProjectId: projekt?.caflouProjectId ?? null,
         // Strih bez projektu (jen 'Střih (TI)') projekt nema.
-        projectName: !pracovni ? null : projekt?.name ?? (u.druh === 'STRIH' && u.projekt === 'Střih' ? null : u.projekt),
+        projectName: !pracovni ? null : projekt?.name ?? (u.druh === 'STRIH' && u.projekt === 'Střih' ? null : u.projekt || null),
         actorUserId: herec?.id ?? null,
         actorName: herec ? bezTitulu(herec.name) : u.herec,
         zvukarUserId: zvukar?.id ?? null,

@@ -1816,6 +1816,7 @@ enum StudioBlockKind {
   // terminu herci - ta se porad zaklada tlacitkem v detailu projektu.
   NATACENI    // natáčení s hercem
   STRIH       // střih
+  CASTING     // casting (zadani 20. 9. 2026 - treti druh prace)
 }
 
 /// Cas, kdy se ve studiu netoci. Do obsazenosti se pocita stejne jako

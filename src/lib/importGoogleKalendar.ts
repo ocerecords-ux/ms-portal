@@ -22,7 +22,7 @@ export const ZVUKARI_ZKRATKY: Record<string, string> = {
 
 export type UdalostZGoogle = {
   /** NATACENI/STRIH jako dřív; úklid = MAINTENANCE, porada = INTERNAL (Praha, 20. 9. 2026). */
-  druh: 'NATACENI' | 'STRIH' | 'MAINTENANCE' | 'INTERNAL';
+  druh: 'NATACENI' | 'STRIH' | 'CASTING' | 'MAINTENANCE' | 'INTERNAL';
   herec: string | null;
   projekt: string;
   zvukarZkratka: string | null;
@@ -64,10 +64,15 @@ export function rozeberUdalost(text: string): UdalostZGoogle {
     return { druh: 'INTERNAL', herec: null, projekt: t, zvukarZkratka, zvukar, znacky };
   }
 
-  // „CASTING Nicole Tisotová" - casting s hercem.
+  // „CASTING Nicole Tisotová" - samostatny druh prace (20. 9. 2026), herec bez projektu.
   const casting = /^casting\s+/i.exec(t);
   if (casting) {
-    return { druh: 'NATACENI', herec: t.slice(casting[0].length).trim() || null, projekt: 'CASTING', zvukarZkratka, zvukar, znacky };
+    return { druh: 'CASTING', herec: t.slice(casting[0].length).trim() || null, projekt: '', zvukarZkratka, zvukar, znacky };
+  }
+  // „Míma Krajčová – CASTING" - herec a za pomlckou casting.
+  const castingZa = /^(.+?)\s*[–—-]\s*casting$/i.exec(t);
+  if (castingZa) {
+    return { druh: 'CASTING', herec: castingZa[1].trim(), projekt: '', zvukarZkratka, zvukar, znacky };
   }
 
   const strih = /^st[řr]ih\b[\s:–-]*/i.exec(t);

@@ -101,6 +101,7 @@ export const BLOCKING_SLOT_STATES = ['SELECTED', 'CONFIRMED'];
 export const BLOCK_KIND_LABELS: Record<string, string> = {
   NATACENI: 'Natáčení',
   STRIH: 'Střih',
+  CASTING: 'Casting',
   HOLIDAY: 'Svátek',
   VACATION: 'Dovolená',
   MAINTENANCE: 'Údržba',
@@ -112,7 +113,16 @@ export const BLOCK_KIND_LABELS: Record<string, string> = {
  * Druhy, u kterých se v kalendáři vyplňuje projekt, herec a zvukař (zadání
  * 14. 9. 2026). Ostatní druhy zůstávají obyčejná blokace s popisem.
  */
-export const PRACOVNI_DRUHY = ['NATACENI', 'STRIH'] as const;
+export const PRACOVNI_DRUHY = ['NATACENI', 'STRIH', 'CASTING'] as const;
+
+/**
+ * Druhy s hercem. Casting (20. 9. 2026: „Casting by měl být samostatný druh
+ * práce… jako třetí") má herce jako natáčení, ale projekt u něj není povinný
+ * - často se castuje dřív, než projekt v portálu je.
+ */
+export function maHerce(kind: string): boolean {
+  return kind === 'NATACENI' || kind === 'CASTING';
+}
 
 export function jePraceVeStudiu(kind: string): boolean {
   return (PRACOVNI_DRUHY as readonly string[]).includes(kind);
@@ -145,6 +155,8 @@ export function popisUdalosti(casti: {
   const zvukar = (casti.zvukarName ?? '').trim();
 
   const vpravo = herec || (casti.kind === 'STRIH' ? 'střih' : '');
+  // Casting bez projektu je jen herec - druh ukazuje ruzova ikona a hlavicka
+  // detailu, slovo „Casting" by se opakovalo (20. 9. 2026).
   const prvni = [projekt, vpravo].filter(Boolean).join(' - ');
   const druhy = zvukar ? `ZVUKAŘ: ${zvukar}` : '';
   return [prvni, druhy].filter(Boolean).join('\n');
@@ -560,7 +572,7 @@ export function eventColors(studioColor: string, state: string): { background: s
     return { background: `${studioColor}4D`, border: studioColor, text };
   }
   // Drženo hercem a střih - o stupeň tišší.
-  if (state === 'SELECTED' || state === 'STRIH') {
+  if (state === 'SELECTED' || state === 'STRIH' || state === 'CASTING') {
     return { background: `${studioColor}2E`, border: studioColor, text };
   }
   // Kalendář Mimo studio (19. 9. 2026) - vlastní barva, žádná šedá: je to

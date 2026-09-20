@@ -41,7 +41,7 @@ describe('rozeberUdalost – Praha', () => {
     expect(rozeberUdalost('✈️ Strih (Matej) Vlakař_CUT')).toMatchObject({ druh: 'STRIH', projekt: 'Vlakař', zvukarZkratka: 'Matej', znacky: ['✈️', 'CUT'] });
   });
   it('casting s hercem', () => {
-    expect(rozeberUdalost('☎ CASTING Nicole Tisotová (O)')).toMatchObject({ druh: 'NATACENI', herec: 'Nicole Tisotová', projekt: 'CASTING', zvukarZkratka: 'O' });
+    expect(rozeberUdalost('☎ CASTING Nicole Tisotová (O)')).toMatchObject({ druh: 'CASTING', herec: 'Nicole Tisotová', zvukarZkratka: 'O' });
   });
   it('dlouhá pomlčka bez mezery před ní', () => {
     expect(rozeberUdalost('Robin Ferro– Tajná mise Salamandr')).toMatchObject({ herec: 'Robin Ferro', projekt: 'Tajná mise Salamandr' });
@@ -49,5 +49,13 @@ describe('rozeberUdalost – Praha', () => {
   it('úklid a porada nejsou natáčení', () => {
     expect(rozeberUdalost('Úklid studia').druh).toBe('MAINTENANCE');
     expect(rozeberUdalost('TECHNICKÁ PORADA O+P+T+M').druh).toBe('INTERNAL');
+  });
+});
+
+/** Casting jako samostatný druh práce (20. 9. 2026). */
+describe('rozeberUdalost – casting', () => {
+  it('CASTING jméno i jméno – CASTING', () => {
+    expect(rozeberUdalost('☎ CASTING Nicole Tisotová (O)')).toMatchObject({ druh: 'CASTING', herec: 'Nicole Tisotová', projekt: '' });
+    expect(rozeberUdalost('☎ Míma Krajčová – CASTING')).toMatchObject({ druh: 'CASTING', herec: 'Míma Krajčová' });
   });
 });

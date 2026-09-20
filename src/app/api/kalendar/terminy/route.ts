@@ -29,7 +29,7 @@ const schema = z.object({
   studioId: z.string().trim().min(1),
   start: z.string().trim().min(8),
   end: z.string().trim().min(8),
-  kind: z.enum(['NATACENI', 'STRIH', 'HOLIDAY', 'VACATION', 'MAINTENANCE', 'INTERNAL', 'OTHER']),
+  kind: z.enum(['NATACENI', 'STRIH', 'CASTING', 'HOLIDAY', 'VACATION', 'MAINTENANCE', 'INTERNAL', 'OTHER']),
   note: z.string().trim().max(1000).optional(),
   title: z.string().trim().max(160).optional(),
   caflouProjectId: z.string().trim().max(100).optional(),
@@ -139,12 +139,15 @@ export async function PATCH(req: NextRequest) {
     if (obsazeno.slots.some((s) => s.id !== slot.id) || obsazeno.blocks.length > 0) {
       return NextResponse.json({ error: 'V tomhle čase už ve studiu něco je.' }, { status: 409 });
     }
-    const jeStrih = d.kind === 'STRIH';
+    // Strih a casting (20. 9. 2026) se zapisuji jako prace ve studiu; casting si
+    // herce z frekvence necha.
+    const jeStrih = d.kind === 'STRIH' || d.kind === 'CASTING';
+    const jeCasting = d.kind === 'CASTING';
     const pole = {
       caflouProjectId: d.caflouProjectId || slot.request.caflouProjectId,
       projectName: d.projectName || slot.request.projectName,
-      actorUserId: null,
-      actorName: null,
+      actorUserId: jeCasting ? slot.request.actorUserId : null,
+      actorName: jeCasting ? slot.request.actorName : null,
       zvukarUserId: d.zvukarUserId || null,
       zvukarName: d.zvukarName || null,
     };
@@ -176,7 +179,7 @@ export async function PATCH(req: NextRequest) {
       userId: session.user.id,
       actorLabel: kdo,
       type: 'SLOT_CANCELLED',
-      note: `Frekvence ${kdy(slot.start)} zrušena a v kalendáři změněna na ${jeStrih ? 'střih' : d.kind}.`,
+      note: `Frekvence ${kdy(slot.start)} zrušena a v kalendáři změněna na ${d.kind === 'STRIH' ? 'střih' : jeCasting ? 'casting' : d.kind}.`,
     });
     if (slot.request.actorUserId) {
       await notify({
