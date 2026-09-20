@@ -6,14 +6,23 @@ import { UserEditForm } from './UserEditForm';
 import { InviteButton } from '../InviteButton';
 
 export default async function UserEditPage({ params }: { params: { id: string } }) {
-  const [user, companies] = await Promise.all([
+  const [user, companies, studia] = await Promise.all([
     prisma.user.findUnique({
       where: { id: params.id },
       // Firma-dodavatel zalozena z herce (zadani 16. 9. 2026) - podle ni se
       // na karte ukazuje bud tlacitko „Prenest do dodavatelu", nebo odkaz.
-      include: { dodavatelCompany: { select: { id: true, name: true, code: true } } },
+      include: {
+        dodavatelCompany: { select: { id: true, name: true, code: true } },
+        // Studia zvukare (zadani 20. 9. 2026) - zaskrtavatka na karte.
+        zvukarStudia: { select: { id: true } },
+      },
     }),
     prisma.company.findMany({ where: { type: 'KLIENT' }, orderBy: { name: 'asc' } }),
+    prisma.studio.findMany({
+      where: { active: true },
+      select: { id: true, shortName: true, name: true, color: true },
+      orderBy: { sortOrder: 'asc' },
+    }),
   ]);
   if (!user) notFound();
 
@@ -94,6 +103,8 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           vychoziManazerAudioknih: user.vychoziManazerAudioknih,
           // Starsi zapisy („MS Studio - Brno II") se ctou jako mesto (15. 9. 2026).
           studioLocations: user.studioLocations,
+          // Ve kterych studiich zvukar toci (zadani 20. 9. 2026).
+          zvukarStudia: user.zvukarStudia.map((s) => s.id),
           birthNumber: user.birthNumber,
           ic: user.ic,
           dic: user.dic,
@@ -113,6 +124,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
             : null,
         }}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+        studia={studia}
       />
     </section>
   );

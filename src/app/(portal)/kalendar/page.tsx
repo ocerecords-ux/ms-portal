@@ -209,7 +209,9 @@ export default async function KalendarPage({
         prisma.user
           .findMany({
             where: { active: true, role: { in: ['HEREC', 'ZVUKAR'] } },
-            select: { id: true, name: true, email: true, role: true },
+            // Studia zvukare (zadani 20. 9. 2026) - podle nich se v nabidce
+            // radi nejdriv ti, kteri v tom studiu toci.
+            select: { id: true, name: true, email: true, role: true, zvukarStudia: { select: { id: true } } },
             orderBy: [{ name: 'asc' }],
           })
           .catch(() => []),
@@ -222,7 +224,7 @@ export default async function KalendarPage({
     .map((u) => ({ id: u.id, label: bezTitulu(u.name) || u.email }));
   const zvukari = lideProUdalost
     .filter((u) => u.role === 'ZVUKAR')
-    .map((u) => ({ id: u.id, label: u.name || u.email }));
+    .map((u) => ({ id: u.id, label: u.name || u.email, studia: u.zvukarStudia.map((s) => s.id) }));
 
   /**
    * KALENDÁŘ MIMO STUDIO (zadání 19. 9. 2026). Vlastní kalendář vedle

@@ -19,11 +19,14 @@ export const ZVUKARI_ZKRATKY: Record<string, string> = {
   TI: 'Tomáš Ilavský',
   R: 'Richard Hanula',
   // Praha (20. 9. 2026): v Googlu byly jen zkratky a křestní jména, portál
-  // potřebuje celé jméno, aby si událost spároval s účtem. Zkratky Jonas a P
-  // zatím nevíme, komu patří - ukazují se tak, jak byly v Googlu.
+  // potřebuje celé jméno, aby si událost spároval s účtem. Zkratka P zatím
+  // nevíme, komu patří - ukazuje se tak, jak byla v Googlu.
   O: 'Ondřej Černý ml.',
   D: 'Daniel Vlček',
   Dan: 'Daniel Vlček',
+  // Doplněno 20. 9. 2026 podle rozdělení zvukařů po studiích.
+  Jonas: 'Jonáš Čupa',
+  Jonáš: 'Jonáš Čupa',
   M: 'Matěj Suk',
   Matej: 'Matěj Suk',
 };

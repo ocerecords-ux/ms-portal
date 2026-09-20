@@ -46,6 +46,8 @@ type EditableUser = {
   dostavaVyplneneUdaje: boolean;
   vychoziManazerAudioknih: boolean;
   studioLocations: string[];
+  /** Studia, ve kterých zvukař točí (zadání 20. 9. 2026). */
+  zvukarStudia: string[];
   birthNumber: string | null;
   ic: string | null;
   dic: string | null;
@@ -66,9 +68,12 @@ type EditableUser = {
 export function UserEditForm({
   user,
   companies,
+  studia,
 }: {
   user: EditableUser;
   companies: { id: string; name: string }[];
+  /** Studia z administrace - z nich jsou zaškrtávátka u zvukaře. */
+  studia: { id: string; shortName: string; name: string; color: string }[];
 }) {
   const router = useRouter();
   const [email, setEmail] = useState(user.email);
@@ -96,6 +101,9 @@ export function UserEditForm({
   const [birthDate, setBirthDate] = useState(user.birthDate ?? '');
   const [photo, setPhoto] = useState<File | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
+
+  // Zvukař - ve kterých studiích točí (zadání 20. 9. 2026)
+  const [zvukarStudia, setZvukarStudia] = useState<string[]>(user.zvukarStudia);
 
   // Herec
   const [studioLocations, setStudioLocations] = useState<string[]>(user.studioLocations);
@@ -146,7 +154,13 @@ export function UserEditForm({
   const needsCompany = roleRequiresCompany(role);
   const isMediaspace = INTERNAL_ROLES.includes(role);
   const isHerec = role === 'HEREC';
+  const isZvukar = role === 'ZVUKAR';
   const isKlient = role === 'CLIENT';
+
+  /** Zaškrtnutí studia u zvukaře. */
+  function prepniStudioZvukare(id: string) {
+    setZvukarStudia((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
 
   function toggleStudio(studio: string) {
     setStudioLocations((prev) => (prev.includes(studio) ? prev.filter((s) => s !== studio) : [...prev, studio]));
@@ -187,6 +201,12 @@ export function UserEditForm({
         else if (removePhoto) fd.set('removePhoto', 'true');
       }
       if (isKlient) fd.set('dostavaDotocenoKlient', dostavaDotocenoKlient ? '1' : '0');
+      if (isZvukar) {
+        // Prázdný seznam se musí poslat taky - jinak by odškrtnutí posledního
+        // studia server nepoznal od „tohle pole neposílám".
+        fd.set('zvukarStudiaPrazdne', '1');
+        zvukarStudia.forEach((id) => fd.append('zvukarStudia', id));
+      }
       if (isHerec) {
         studioLocations.forEach((s) => fd.append('studioLocations', s));
         fd.set('birthNumber', birthNumber);
@@ -278,6 +298,41 @@ export function UserEditForm({
                 placeholder="250"
                 className="admin-input"
               />
+            </AdminField>
+          </div>
+        )}
+        {/* LOKALIZACE ZVUKAŘŮ (zadání 20. 9. 2026: „ještě pojďme udělat
+            lokalizace zvukařů ... uděl[ej] asi ze zvukařů v uživatelích
+            zaškrtávátka"). Zaškrtávátka jsou ze skutečných studií, takže se
+            nově přidané studio objeví samo. Brno I a Brno II jsou dvě
+            místnosti - kdo točí v obou, má zaškrtnuté obě. */}
+        {isZvukar && (
+          <div className="w-full">
+            <AdminField label="Studia" hint="ve kterých studiích zvukař točí">
+              <div className="flex flex-wrap gap-2">
+                {studia.map((studio) => (
+                  <Volba
+                    key={studio.id}
+                    vybrano={zvukarStudia.includes(studio.id)}
+                    onZmena={() => prepniStudioZvukare(studio.id)}
+                    title={studio.name}
+                  >
+                    <span className="inline-flex items-center gap-1.5 text-sm font-body text-ink">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ background: studio.color }}
+                        aria-hidden
+                      />
+                      {studio.shortName}
+                    </span>
+                  </Volba>
+                ))}
+                {studia.length === 0 && (
+                  <span className="text-sm font-body text-muted">
+                    Zatím tu není žádné studio - založte ho v Administraci → Studia.
+                  </span>
+                )}
+              </div>
             </AdminField>
           </div>
         )}

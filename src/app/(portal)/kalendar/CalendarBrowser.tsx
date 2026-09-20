@@ -47,7 +47,14 @@ import {
 } from './Nepritomnost';
 
 /** Položka rozbalovacího seznamu lidí a projektů. */
-export type Volba = { id: string; label: string; dokonceny?: boolean; nazev?: string };
+export type Volba = {
+  id: string;
+  label: string;
+  dokonceny?: boolean;
+  nazev?: string;
+  /** U zvukaře id studií, ve kterých točí (zadání 20. 9. 2026). */
+  studia?: string[];
+};
 
 export type CalendarDay = {
   key: string;
@@ -1519,6 +1526,19 @@ function UdalostForm({
       ? zonedToUtc(Number(denCasti[1]), Number(denCasti[2]), Number(denCasti[3]), minutyDo, pasmoStudia)
       : new Date(start.getTime() + 4 * 60 * 60 * 1000);
 
+  /**
+   * ZVUKAŘI PODLE STUDIA (zadání 20. 9. 2026: „pojďme udělat lokalizace
+   * zvukařů"). Nabídka začíná těmi, kdo v tomhle studiu točí - kdo je odjinud,
+   * je až za nimi. Nikdo se neschovává: jednou za čas zaskočí kolega z Brna
+   * do Prahy a portál mu v tom nemá bránit.
+   */
+  const zvukariVPoradi = useMemo(() => {
+    const prednost = (z: Volba) => (!z.studia || z.studia.length === 0 ? 2 : z.studia.includes(studioId) ? 0 : 1);
+    return [...zvukari].sort(
+      (a, b) => prednost(a) - prednost(b) || a.label.localeCompare(b.label, 'cs'),
+    );
+  }, [zvukari, studioId]);
+
   const projekt = projekty.find((p) => p.id === projektId);
   const herec = herci.find((h) => h.id === herecId);
   /** Jméno herce do uložení: u castingu napsané, jinak vybrané ze seznamu. */
@@ -1796,7 +1816,7 @@ function UdalostForm({
               Zvukař {!(jeFrekvence && jeNataceni) && <span className="text-danger">*</span>}
             </span>
             <VyberProjektu
-              projekty={zvukari}
+              projekty={zvukariVPoradi}
               hodnota={zvukarId}
               onZmena={setZvukarId}
               placeholder="Začněte psát jméno zvukaře…"

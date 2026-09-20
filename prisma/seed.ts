@@ -180,6 +180,7 @@ async function main() {
   await srovnejPriznakFotky();
   await zalozVychoziNavody();
   await zalozDruhyLicence();
+  await doplnStudiaZvukaru();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
 
@@ -795,5 +796,73 @@ async function zalozDruhyLicence() {
   } catch (err) {
     // Ciselnik je jen nabidka - kdyby se nepovedl, nesmi to shodit cely seed.
     console.warn('  druhy licence se nepodarilo zalozit:', err);
+  }
+}
+
+/**
+ * LOKALIZACE ZVUKAŘŮ (zadání 20. 9. 2026: „ještě pojďme udělat lokalizace
+ * zvukařů ... udělej asi ze zvukařů v uživatelích zaškrtávátka").
+ *
+ * Kdo v kterém studiu točí, se zaškrtává na kartě uživatele. Tohle jen jednou
+ * doplní, jak to je dnes — jinak by po nasazení byla všechna zaškrtávátka
+ * prázdná a kalendář by o tom nevěděl nic.
+ *
+ * BĚŽÍ PRÁVĚ JEDNOU za život databáze (známka v Counteru) a sahá jen na
+ * zvukaře, kteří zatím nemají zaškrtnuté ŽÁDNÉ studio. Když si to tým
+ * přepíše, seed už do toho nemluví.
+ */
+async function doplnStudiaZvukaru() {
+  const ZNAMKA = 'zvukari-backfill-studia';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    // Brno I a Brno II drží ti samí lidé, Praha svoje (zadání 20. 9. 2026).
+    const ROZDELENI: { jmena: string[]; studia: string[] }[] = [
+      {
+        jmena: ['Richard Hanula', 'Tomáš Ilavský', 'Tomáš Moravec'],
+        studia: ['MS Studio - Brno I', 'MS Studio - Brno II'],
+      },
+      {
+        jmena: ['Ondřej Černý ml.', 'Jonáš Čupa', 'Daniel Vlček'],
+        studia: ['MS Studio - Praha'],
+      },
+    ];
+
+    const [studia, lide] = await Promise.all([
+      prisma.studio.findMany({ select: { id: true, name: true } }),
+      prisma.user.findMany({
+        where: { role: { in: ['ZVUKAR', 'ADMIN', 'PRODUKCE'] } },
+        select: { id: true, name: true, zvukarStudia: { select: { id: true } } },
+      }),
+    ]);
+
+    let doplneno = 0;
+    for (const skupina of ROZDELENI) {
+      const idStudii = skupina.studia
+        .map((nazev) => studia.find((s) => srovnej(s.name) === srovnej(nazev))?.id)
+        .filter((x): x is string => Boolean(x));
+      if (idStudii.length === 0) continue;
+
+      for (const jmeno of skupina.jmena) {
+        const hledane = srovnej(bezTitulu(jmeno));
+        const shody = lide.filter((u) => srovnej(bezTitulu(u.name)) === hledane);
+        // Když jsou dva stejná jména, nehádáme se - ať si to tým zaškrtne sám.
+        if (shody.length !== 1) continue;
+        const clovek = shody[0];
+        if (clovek.zvukarStudia.length > 0) continue;
+        await prisma.user.update({
+          where: { id: clovek.id },
+          data: { zvukarStudia: { set: idStudii.map((id) => ({ id })) } },
+        });
+        doplneno += 1;
+      }
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    if (doplneno > 0) console.log(`  zvukari: doplnena studia u ${doplneno} lidi`);
+  } catch (err) {
+    // Je to jen doplneni udaje - kdyby se nepovedlo, nesmi to shodit seed.
+    console.warn('  studia zvukaru se nepodarilo doplnit:', err);
   }
 }

@@ -41,6 +41,8 @@ const schema = z.object({
   dostavaVyplneneUdaje: z.string().trim().optional(),
   vychoziManazerAudioknih: z.string().trim().optional(),
   studioLocations: z.array(z.string()).optional(),
+  /** Id studií, ve kterých zvukař točí (zadání 20. 9. 2026). */
+  zvukarStudia: z.array(z.string()).optional(),
   birthNumber: z.string().trim().optional(),
   ic: z.string().trim().optional(),
   dic: z.string().trim().optional(),
@@ -81,6 +83,11 @@ function readFormData(formData: FormData) {
       ? formData.get('vychoziManazerAudioknih')
       : undefined,
     studioLocations: has('studioLocations') ? formData.getAll('studioLocations').map(String) : undefined,
+    // `zvukarStudiaPrazdne` posílá formulář vždycky - podle něj se pozná
+    // odškrtnutí VŠECH studií od „tohle pole se neposílá".
+    zvukarStudia: has('zvukarStudiaPrazdne')
+      ? formData.getAll('zvukarStudia').map(String)
+      : undefined,
     birthNumber: has('birthNumber') ? formData.get('birthNumber') : undefined,
     ic: has('ic') ? formData.get('ic') : undefined,
     dic: has('dic') ? formData.get('dic') : undefined,
@@ -191,6 +198,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         : {}),
       ...(nextRole === 'ZVUKAR' && data.hourlyRate !== undefined
         ? { hourlyRate: data.hourlyRate ? parseInt(data.hourlyRate, 10) || null : null }
+        : {}),
+      // Studia zvukare (zadani 20. 9. 2026). `set` prepise cely seznam, takze
+      // odskrtnute studio zmizi. U jine role se vazba necha byt - clovek
+      // prepnuty na chvili na PRODUKCI o svoje studia neprijde.
+      ...(nextRole === 'ZVUKAR' && data.zvukarStudia !== undefined
+        ? { zvukarStudia: { set: data.zvukarStudia.map((id) => ({ id })) } }
         : {}),
       ...(nextRole === 'HEREC'
         ? {

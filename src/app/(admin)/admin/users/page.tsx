@@ -34,7 +34,9 @@ export default async function UsersAdminPage({
   const [users, companies, roleCounts] = await Promise.all([
     prisma.user.findMany({
       where: companyId ? { companyId, ...searchWhere } : { role: { in: activeTab.roles }, ...searchWhere },
-      include: { company: true },
+      // Studia zvukare (zadani 20. 9. 2026) - v zalozce Mediaspace se
+      // ukazuji ve sloupci Lokace, stejne jako mesta u hercu.
+      include: { company: true, zvukarStudia: { select: { shortName: true } } },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.company.findMany({ where: { type: 'KLIENT' }, orderBy: { name: 'asc' } }),
@@ -60,8 +62,11 @@ export default async function UsersAdminPage({
     photoUrl: u.photoUrl ?? null,
     birthDate: u.birthDate ? dateFmt.format(u.birthDate) : null,
     birthDateMs: u.birthDate ? u.birthDate.getTime() : null,
-    studioLocations: u.studioLocations.length > 0 ? u.studioLocations.join(', ') : null,
-    lokace: u.studioLocations,
+    // U zvukare jsou to jeho studia, u herce mesta, ve kterych toci.
+    ...(() => {
+      const lokace = u.role === 'ZVUKAR' ? u.zvukarStudia.map((x) => x.shortName) : u.studioLocations;
+      return { studioLocations: lokace.length > 0 ? lokace.join(', ') : null, lokace };
+    })(),
     companyName: u.company?.name ?? null,
     companyId: u.company?.id ?? null,
   }));
@@ -69,7 +74,7 @@ export default async function UsersAdminPage({
   const sloupce: UsersColumn[] = filteredCompany
     ? ['jmeno', 'kod', 'email', 'telefon', 'role', 'aktivni']
     : activeTab.key === 'mediaspace'
-      ? ['jmeno', 'kod', 'email', 'telefon', 'role', 'narozeni', 'aktivni']
+      ? ['jmeno', 'kod', 'email', 'telefon', 'role', 'lokace', 'narozeni', 'aktivni']
       : activeTab.key === 'herci'
         ? ['jmeno', 'kod', 'email', 'telefon', 'lokace', 'aktivni']
         : ['jmeno', 'kod', 'email', 'telefon', 'firma', 'aktivni'];
