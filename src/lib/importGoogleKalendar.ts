@@ -21,7 +21,8 @@ export const ZVUKARI_ZKRATKY: Record<string, string> = {
 };
 
 export type UdalostZGoogle = {
-  druh: 'NATACENI' | 'STRIH';
+  /** NATACENI/STRIH jako dřív; úklid = MAINTENANCE, porada = INTERNAL (Praha, 20. 9. 2026). */
+  druh: 'NATACENI' | 'STRIH' | 'MAINTENANCE' | 'INTERNAL';
   herec: string | null;
   projekt: string;
   zvukarZkratka: string | null;
@@ -40,9 +41,9 @@ export function rozeberUdalost(text: string): UdalostZGoogle {
     t = t.slice(symbol[0].length);
   }
 
-  // Zvukar: posledni zavorka s kratkou zkratkou velkymi pismeny.
+  // Zvukar: posledni zavorka se zkratkou (TM, O) nebo krestnim jmenem (Matej, Jonas, Dan) - Praha.
   let zvukarZkratka: string | null = null;
-  const zavorky = Array.from(t.matchAll(/\(([A-ZÁ-Ž]{1,3})\)/g));
+  const zavorky = Array.from(t.matchAll(/\(([A-ZÁ-Ž]{1,3}|[A-ZÁ-Ž][a-zá-ž]{1,11})\)/g));
   if (zavorky.length > 0) {
     const posledni = zavorky[zavorky.length - 1];
     zvukarZkratka = posledni[1];
@@ -50,14 +51,33 @@ export function rozeberUdalost(text: string): UdalostZGoogle {
   }
   const zvukar = zvukarZkratka ? (ZVUKARI_ZKRATKY[zvukarZkratka] ?? null) : null;
 
+  // Pracovni verze „_CUT" u projektu (Praha) - projekt se paruje bez ni, znacka zustane v poznamce.
+  if (/[_\s]cut$/i.test(t)) {
+    t = t.replace(/[_\s]+cut$/i, '').trim();
+    znacky.push('CUT');
+  }
+
+  if (/^[úu]klid\b/i.test(t)) {
+    return { druh: 'MAINTENANCE', herec: null, projekt: t, zvukarZkratka, zvukar, znacky };
+  }
+  if (/\bporada\b/i.test(t)) {
+    return { druh: 'INTERNAL', herec: null, projekt: t, zvukarZkratka, zvukar, znacky };
+  }
+
+  // „CASTING Nicole Tisotová" - casting s hercem.
+  const casting = /^casting\s+/i.exec(t);
+  if (casting) {
+    return { druh: 'NATACENI', herec: t.slice(casting[0].length).trim() || null, projekt: 'CASTING', zvukarZkratka, zvukar, znacky };
+  }
+
   const strih = /^st[řr]ih\b[\s:–-]*/i.exec(t);
   if (strih) {
     const projekt = t.slice(strih[0].length).replace(/^[\s:–-]+/, '').trim();
     return { druh: 'STRIH', herec: null, projekt: projekt || 'Střih', zvukarZkratka, zvukar, znacky };
   }
 
-  // Herec – Projekt (pomlcka dlouha i kratka s mezerami).
-  const deleni = /\s+[–—-]\s+/.exec(t);
+  // Herec – Projekt (pomlcka dlouha i kratka s mezerami; dlouha i bez mezery pred ni - „Robin Ferro– Tajná mise").
+  const deleni = /\s*[–—]\s*|\s+-\s+/.exec(t);
   if (deleni) {
     return {
       druh: 'NATACENI',

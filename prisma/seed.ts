@@ -526,13 +526,15 @@ async function prevezmiGoogleKalendar() {
       }
       const u = rozeberUdalost(r.text);
       const start = prahaNaUtc(r.datum, r.od);
-      const end = prahaNaUtc(r.datum, r.do);
+      const end = prahaNaUtc(r.doDatum ?? r.datum, r.do);
       const importKlic = `gcal:${studio.id}:${start.toISOString()}:${end.toISOString()}:${srovnej(r.text)}`.slice(0, 250);
       klice.add(importKlic);
 
       const herec = najdiCloveka(u.herec, ['HEREC']);
       const zvukar = najdiCloveka(u.zvukar, ['ADMIN', 'ZVUKAR', 'PRODUKCE']);
-      const projekt = najdiProjekt(u.projekt);
+      // Uklid a porada nejsou prace na projektu - zadne parovani.
+      const pracovni = u.druh === 'NATACENI' || u.druh === 'STRIH';
+      const projekt = pracovni ? najdiProjekt(u.projekt) : null;
       const data = {
         studioId: studio.id,
         start,
@@ -543,7 +545,7 @@ async function prevezmiGoogleKalendar() {
         note: u.znacky.length ? u.znacky.join(' ') : null,
         caflouProjectId: projekt?.caflouProjectId ?? null,
         // Strih bez projektu (jen 'Střih (TI)') projekt nema.
-        projectName: projekt?.name ?? (u.druh === 'STRIH' && u.projekt === 'Střih' ? null : u.projekt),
+        projectName: !pracovni ? null : projekt?.name ?? (u.druh === 'STRIH' && u.projekt === 'Střih' ? null : u.projekt),
         actorUserId: herec?.id ?? null,
         actorName: herec ? bezTitulu(herec.name) : u.herec,
         zvukarUserId: zvukar?.id ?? null,

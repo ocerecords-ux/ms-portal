@@ -34,3 +34,20 @@ describe('prahaNaUtc', () => {
     expect(prahaNaUtc('2026-12-01', '09:00').toISOString()).toBe('2026-12-01T08:00:00.000Z');
   });
 });
+
+/** Praha (20. 9. 2026): zvukař křestním jménem, casting, úklid, porada, _CUT. */
+describe('rozeberUdalost – Praha', () => {
+  it('zvukař jménem a pracovní verze _CUT', () => {
+    expect(rozeberUdalost('✈️ Strih (Matej) Vlakař_CUT')).toMatchObject({ druh: 'STRIH', projekt: 'Vlakař', zvukarZkratka: 'Matej', znacky: ['✈️', 'CUT'] });
+  });
+  it('casting s hercem', () => {
+    expect(rozeberUdalost('☎ CASTING Nicole Tisotová (O)')).toMatchObject({ druh: 'NATACENI', herec: 'Nicole Tisotová', projekt: 'CASTING', zvukarZkratka: 'O' });
+  });
+  it('dlouhá pomlčka bez mezery před ní', () => {
+    expect(rozeberUdalost('Robin Ferro– Tajná mise Salamandr')).toMatchObject({ herec: 'Robin Ferro', projekt: 'Tajná mise Salamandr' });
+  });
+  it('úklid a porada nejsou natáčení', () => {
+    expect(rozeberUdalost('Úklid studia').druh).toBe('MAINTENANCE');
+    expect(rozeberUdalost('TECHNICKÁ PORADA O+P+T+M').druh).toBe('INTERNAL');
+  });
+});
