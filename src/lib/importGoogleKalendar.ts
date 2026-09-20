@@ -18,12 +18,16 @@
  * Zkratky zvukařů z Google kalendáře na celá jména. Zkratky jsou SPOLEČNÉ pro
  * všechna studia - kdyby se někdy stejné písmeno trefilo ve dvou studiích do
  * dvou lidí, nestačí sem přidat řádek a musí se to rozlišit podle studia.
- * Zatím se to nestalo: P i V jsou jen v Brně, Jonas, J, Marek a Matej jen
+ * Zatím se to nestalo: P, T i V jsou jen v Brně, Jonas, J, Marek a Matej jen
  * v Praze.
  */
 export const ZVUKARI_ZKRATKY: Record<string, string> = {
   TM: 'Tomáš Moravec',
   TI: 'Tomáš Ilavský',
+  // Samotné T je taky Ilavský (20. 9. 2026: „T je Tomáš Ilavský. Pak se to
+  // rozlišilo, když přišel Tomáš Moravec") - ve starších záznamech Brna ještě
+  // nebylo koho rozlišovat.
+  T: 'Tomáš Ilavský',
   R: 'Richard Hanula',
   // Brno (20. 9. 2026): „brněnské V je naše bývalá kolegyně Viola
   // a brněnské P je Peter Dratva". Viola je jen křestní jméno - účet
@@ -39,6 +43,9 @@ export const ZVUKARI_ZKRATKY: Record<string, string> = {
   // Doplněno 20. 9. 2026 podle rozdělení zvukařů po studiích.
   Jonas: 'Jonáš Čupa',
   Jonáš: 'Jonáš Čupa',
+  // Pražské J je bývalý kolega Jen (20. 9. 2026). Účet v portálu nemá, takže
+  // se u události ukáže tak, jak je tady - stejně jako brněnská Viola.
+  J: 'Jen',
   M: 'Matěj Suk',
   Matej: 'Matěj Suk',
 };
