@@ -80,7 +80,7 @@ V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a
 
 ![Bublina po jednom kliknutí vystoupí a zvětší se](/navody/terminy-7.png)
 
-1. **Druh práce s ikonou** nahoře (🎙 mikrofon = natáčení, ✂ nůžky = střih, klíč = údržba, slunce = svátek/dovolená) a pod ním celý text — název, herec a řádek ZVUKAŘ, nic se neořezává. Pod tím den, čas a studio, případně poznámka.
+1. **Druh práce s ikonou** nahoře v barevném kolečku jako u typů projektů (modrý mikrofon = natáčení, zelená rozstřižená zvuková vlna = střih, šedý klíč = údržba, oranžové slunce = svátek/dovolená) a pod ním celý text — název, herec a řádek ZVUKAŘ, nic se neořezává. Pod tím den, čas a studio, případně poznámka.
 2. **Odkazy** dole — **Projekt** a u frekvence **Nabídka termínů**.
 
 **Upravit a smazat** se dá jen v úpravě — **dvojklikem** na událost. Tlačítko **Smazat událost** je dole v okně úpravy.

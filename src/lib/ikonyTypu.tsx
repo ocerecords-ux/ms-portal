@@ -367,6 +367,43 @@ export const IKONY_TYPU: Ikona[] = [
     popisek: 'Srdce',
     kresba: <path d="M12 20.5S3.5 15 3.5 9a4.5 4.5 0 0 1 8.5-2 4.5 4.5 0 0 1 8.5 2c0 6-8.5 11.5-8.5 11.5" />,
   },
+  /**
+   * DRUHY PRÁCE V KALENDÁŘI (zadání 20. 9. 2026: „chci to ve stylu typů
+   * projektů"). Stejná mřížka a tah jako zbytek sady; natáčení bere
+   * studiový mikrofon výše.
+   */
+  {
+    klic: 'strih',
+    barva: 'zelena',
+    popisek: 'Střih',
+    // Zvukova vlna rozstrizena - dva kusy a mezi nimi strih.
+    kresba: (
+      <>
+        <path d="M3 10.5v3M6 7.5v9M9 9.5v5" />
+        <path d="M15 8.5v7M18 6v12M21 10.5v3" />
+        <path d="M12 2.5v2.5M12 8v2.5M12 13.5v2.5M12 19v2.5" strokeWidth="1.4" />
+      </>
+    ),
+  },
+  {
+    klic: 'klic',
+    barva: 'seda',
+    popisek: 'Údržba',
+    kresba: (
+      <path d="M14.5 3.8a5 5 0 0 0-5.3 6.6L3.5 16.1v4.4h4.4l5.7-5.7a5 5 0 0 0 6.6-5.3l-3 3-3-.9-.9-3z" />
+    ),
+  },
+  {
+    klic: 'slunce',
+    barva: 'jantarova',
+    popisek: 'Volno',
+    kresba: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+      </>
+    ),
+  },
 ];
 
 const PODLE_KLICE = new Map(IKONY_TYPU.map((i) => [i.klic, i]));

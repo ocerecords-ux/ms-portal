@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { OdberKalendare } from './OdberKalendare';
+import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -884,7 +885,7 @@ function MrizkaPohled({
                               key={i}
                               className="block text-[10px] font-heading font-semibold leading-tight truncate"
                             >
-                              <IkonaDruhu druh={druhPrace(e)} className="w-2.5 h-2.5 mr-0.5" />
+                              <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                               {radek}
                             </span>
                           ) : (
@@ -998,7 +999,7 @@ function MesicniPohled({
                   >
                     {/* V měsíci je na řádek místo jen na to podstatné - název
                         a zvukař (20. 9. 2026: „nejsou tam vidět zvukaři"). */}
-                    <IkonaDruhu druh={druhPrace(e)} className="w-2.5 h-2.5 mr-0.5" />
+                    <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                     {e.title.split('\n')[0]}
                     {(() => {
                       const zv = e.title.split('\n').find((r) => r.startsWith('ZVUKAŘ:'));
@@ -1499,44 +1500,29 @@ export function druhPrace(e: Pick<CalendarEvent, 'kind' | 'state'>): 'NATACENI' 
   return null;
 }
 
-function IkonaDruhu({ druh, className = 'w-3 h-3' }: { druh: ReturnType<typeof druhPrace>; className?: string }) {
+/** Klíč ikony ze sady typů projektu (lib/ikonyTypu.tsx) pro druh práce. */
+const IKONA_DRUHU: Record<NonNullable<ReturnType<typeof druhPrace>>, string> = {
+  NATACENI: 'mikrofon-studio',
+  STRIH: 'strih',
+  UDRZBA: 'klic',
+  VOLNO: 'slunce',
+};
+
+/**
+ * Ikona druhu práce ve stylu typů projektů (zadání 20. 9. 2026) - kolečko
+ * s tlumeným podkladem a barevnou kresbou, jen menší.
+ */
+function IkonaDruhu({ druh, velikost = 16 }: { druh: ReturnType<typeof druhPrace>; velikost?: number }) {
   if (!druh) return null;
-  const spolecne = {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 2.2,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    className: `${className} shrink-0 inline-block align-[-0.125em]`,
-    'aria-hidden': true,
-  };
-  if (druh === 'NATACENI')
-    return (
-      <svg {...spolecne}>
-        <rect x="9" y="3" width="6" height="11" rx="3" />
-        <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" />
-      </svg>
-    );
-  if (druh === 'STRIH')
-    return (
-      <svg {...spolecne}>
-        <circle cx="6" cy="6.5" r="2.8" />
-        <circle cx="6" cy="17.5" r="2.8" />
-        <path d="M8.3 8.2 20 18M8.3 15.8 20 6" />
-      </svg>
-    );
-  if (druh === 'UDRZBA')
-    return (
-      <svg {...spolecne}>
-        <path d="M14.5 5.5a4 4 0 0 0 4.9 4.9L21 12l-9 9-3-3 9-9-1.6-1.6a4 4 0 0 0-4.9-4.9l2.5 2.5-1.5 1.5z" />
-      </svg>
-    );
+  const klic = IKONA_DRUHU[druh];
   return (
-    <svg {...spolecne}>
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
-    </svg>
+    <span
+      aria-hidden
+      className={`shrink-0 inline-grid place-items-center rounded-pill align-middle mr-1 ${tridaBarvyIkony(klic)}`}
+      style={{ width: velikost, height: velikost }}
+    >
+      <KresbaIkony klic={klic} velikost={Math.round(velikost * 0.62)} />
+    </span>
   );
 }
 
@@ -1641,7 +1627,7 @@ function DetailUdalosti({
         >
           <div className="flex items-start justify-between gap-2">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-heading font-semibold uppercase tracking-wide opacity-80">
-              <IkonaDruhu druh={druhPrace(event)} className="w-3.5 h-3.5" />
+              <IkonaDruhu druh={druhPrace(event)} velikost={22} />
               {stav}
             </span>
             <button
