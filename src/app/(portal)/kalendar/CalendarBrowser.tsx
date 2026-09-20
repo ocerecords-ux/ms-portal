@@ -1136,7 +1136,9 @@ function UdalostForm({
   const jeNataceni = druh === 'NATACENI';
   // Herce ma natáčení i casting; casting nemusi mit projekt (20. 9. 2026).
   const sHercem = maHerce(druh);
-  const projektPovinny = druh !== 'CASTING';
+  // U castingu se projekt neřeší vůbec (20. 9. 2026: „to pole Projekt dej
+  // úplně pryč ve chvíli, kdy zvolím typ práce Casting") - stačí herec.
+  const sProjektem = druh !== 'CASTING';
 
   /**
    * DATUM A ČAS OD–DO (zadání 14. 9. 2026: „potřebuji tam zadat i čas - od,
@@ -1215,7 +1217,7 @@ function UdalostForm({
           ? !zvukar
           : !nazev.trim()
       : jePrace
-        ? (projektPovinny && !projekt) || !zvukar || (sHercem && !herec)
+        ? (sProjektem && !projekt) || !zvukar || (sHercem && !herec)
         : !nazev.trim());
 
   /** Zrušení frekvence z kalendáře (19. 9. 2026). */
@@ -1282,9 +1284,11 @@ function UdalostForm({
           note: poznamka.trim() || undefined,
           ...(jePrace
             ? {
-                caflouProjectId: projekt?.id ?? upravovana?.udalost?.caflouProjectId ?? '',
+                caflouProjectId: sProjektem ? (projekt?.id ?? upravovana?.udalost?.caflouProjectId ?? '') : '',
                 // Bez firmy (zadání 14. 9. 2026: „firma je tady zbytečná").
-                projectName: projekt?.nazev ?? projekt?.label ?? upravovana?.udalost?.projectName ?? '',
+                projectName: sProjektem
+                  ? (projekt?.nazev ?? projekt?.label ?? upravovana?.udalost?.projectName ?? '')
+                  : '',
                 actorUserId: sHercem ? (herec?.id ?? '') : '',
                 actorName: sHercem ? (herec?.label ?? '') : '',
                 zvukarUserId: zvukar?.id ?? '',
@@ -1417,13 +1421,15 @@ function UdalostForm({
 
       {jePrace ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <label className="flex flex-col gap-1.5 sm:col-span-1">
-            <span className="text-sm font-body text-ink">
-              Projekt {projektPovinny ? <span className="text-danger">*</span> : <span className="text-muted font-body">(nepovinné)</span>}
-            </span>
-            {/* Stejné hledání psaním jako u výkazů - projektů jsou stovky. */}
-            <VyberProjektu projekty={projekty} hodnota={projektId} onZmena={setProjektId} />
-          </label>
+          {sProjektem && (
+            <label className="flex flex-col gap-1.5 sm:col-span-1">
+              <span className="text-sm font-body text-ink">
+                Projekt <span className="text-danger">*</span>
+              </span>
+              {/* Stejné hledání psaním jako u výkazů - projektů jsou stovky. */}
+              <VyberProjektu projekty={projekty} hodnota={projektId} onZmena={setProjektId} />
+            </label>
+          )}
 
           {/* Herec jen u natáčení. U střihu žádný není a prázdné pole by tam
               jen strašilo (zadání 14. 9. 2026). */}

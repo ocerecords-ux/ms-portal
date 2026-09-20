@@ -31,12 +31,16 @@ export const NABIDNOUT_MINUT_PRED_KONCEM = 5;
  */
 export const NABIZET_OD = new Date('2026-09-21T00:00:00.000Z');
 
-/** Druhy událostí kalendáře, ze kterých výkaz vzniká, a jejich druh práce. */
-const DRUH_PRACE: Record<string, 'RECORDING' | 'EDITING'> = {
-  NATACENI: 'RECORDING',
-  CASTING: 'RECORDING',
-  STRIH: 'EDITING',
-};
+/**
+ * Druh práce ve výkazu podle události v kalendáři. Casting bez projektu jde
+ * jako „Ostatní" - projekt je u výkazu povinný všude jinde a u castingu se
+ * projekt nezadává (20. 9. 2026).
+ */
+function druhPrace(kind: string, maProjekt: boolean): 'RECORDING' | 'EDITING' | 'OTHER' {
+  if (kind === 'STRIH') return 'EDITING';
+  if (kind === 'CASTING') return maProjekt ? 'RECORDING' : 'OTHER';
+  return 'RECORDING';
+}
 
 export type NavrhProZvukare = {
   id: string;
@@ -121,7 +125,7 @@ export async function pripravNavrhy(userId?: string): Promise<{ nove: number; id
       zdroj: `blok:${b.id}`,
       start: b.start,
       end: b.end,
-      workType: DRUH_PRACE[b.kind] ?? ('RECORDING' as const),
+      workType: druhPrace(b.kind, Boolean(b.projectName || b.caflouProjectId)),
       caflouProjectId: b.caflouProjectId,
       projectName: b.projectName,
       studioName: kratce(b.studio),
@@ -211,7 +215,7 @@ export async function oznamNavrhy(): Promise<{ oznameno: number }> {
 
     for (const [userId, seznam] of podleZvukare) {
       const prvni = seznam[0];
-      const nazev = prvni.projectName ?? (prvni.workType === 'EDITING' ? 'Střih' : 'Natáčení');
+      const nazev = prvni.projectName ?? prvni.actorName ?? (prvni.workType === 'EDITING' ? 'Střih' : 'Natáčení');
       const titulek = seznam.length === 1 ? 'Přidejte si výkaz' : `Přidejte si výkaz (${seznam.length}×)`;
       const text =
         seznam.length === 1

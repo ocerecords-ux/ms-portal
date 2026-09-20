@@ -167,7 +167,7 @@ export function NavrhyZKalendare({
   async function pridejVse() {
     setChyba(null);
     for (const n of navrhy) {
-      if (!n.projectName) continue;
+      if (!n.projectName && n.workType !== 'OTHER') continue;
       setBezi(n.id);
       try {
         const res = await fetch('/api/vykazy-navrhy', {
@@ -186,7 +186,7 @@ export function NavrhyZKalendare({
     router.refresh();
   }
 
-  const sProjektem = navrhy.filter((n) => n.projectName).length;
+  const sProjektem = navrhy.filter((n) => n.projectName || n.workType === 'OTHER').length;
   const castka = (n: Navrh) => {
     const minut = durationMinutes(
       parseTime(cas(n.start)) ?? 0,
@@ -230,7 +230,8 @@ export function NavrhyZKalendare({
         {navrhy.map((n) => {
           const upravuje = upravovany === n.id;
           const { minut, castka: kolik } = castka(n);
-          const chybiProjekt = !n.projectName;
+          // „Ostatní" (casting bez projektu) projekt nepotřebuje.
+          const chybiProjekt = !n.projectName && n.workType !== 'OTHER';
           return (
             <li
               key={n.id}
@@ -240,7 +241,7 @@ export function NavrhyZKalendare({
                 <Ikona druh={n.workType} />
                 <div className="min-w-[200px] mr-auto">
                   <p className="m-0 font-heading font-semibold text-ink">
-                    {n.projectName ?? (n.workType === 'EDITING' ? 'Střih' : 'Natáčení')}
+                    {n.projectName ?? (n.workType === 'EDITING' ? 'Střih' : n.actorName ? 'Casting' : 'Natáčení')}
                     {n.actorName ? ` — ${n.actorName}` : ''}
                   </p>
                   <p className="m-0 text-xs font-body text-muted">
