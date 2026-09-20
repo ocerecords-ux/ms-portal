@@ -22,9 +22,9 @@ export const ODBER_KALENDARE = {
 
 # 1. Otevřete okno
 
-![Tlačítko Do mého kalendáře v hlavičce Kalendáře](/navody/odber-1.png)
+![Ikonka kalendáře s plusem vpravo v hlavičce Kalendáře](/navody/odber-1.png)
 
-1. V **Kalendáři** klikněte vpravo nahoře na **Do mého kalendáře**.
+1. V **Kalendáři** klikněte vpravo nahoře, hned za přepínačem Týden / Měsíc, na **malou ikonku kalendáře s plusem**. Po najetí myší se ukáže popisek „Přidat MS kalendář do svého kalendáře".
 
 # 2. Vyberte, co chcete vidět
 

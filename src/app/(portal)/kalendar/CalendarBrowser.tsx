@@ -399,8 +399,6 @@ export function CalendarBrowser({
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">{nadpis}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* MS kalendar do Google/Apple (zadani 20. 9. 2026). */}
-          <OdberKalendare studios={studios.map((s) => ({ id: s.id, name: s.name, color: s.color }))} />
           <button
             type="button"
             onClick={() => posun(-1)}
@@ -438,6 +436,9 @@ export function CalendarBrowser({
               </button>
             ))}
           </span>
+          {/* MS kalendar do Google/Apple (zadani 20. 9. 2026) - jen ikonka
+              na konci, pouziva se jednou. */}
+          <OdberKalendare studios={studios.map((s) => ({ id: s.id, name: s.name, color: s.color }))} />
         </div>
       </div>
 

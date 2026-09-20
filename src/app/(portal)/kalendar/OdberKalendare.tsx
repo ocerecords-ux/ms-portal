@@ -107,17 +107,20 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
 
   return (
     <>
+      {/* Jen nenapadna ikonka (zadani 20. 9. 2026: „tlacitko je strasne
+          velke a zbytecne na to, ze se to prida jednou a pak uz se
+          nepouziva"). Popis je v bublince po najeti mysi. */}
       <button
         type="button"
         onClick={() => setOtevreno(true)}
-        className="inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors"
-        title="Přidat MS kalendář do Google, Apple nebo jiného kalendáře"
+        aria-label="Přidat MS kalendář do svého kalendáře (Google, Apple, Outlook)"
+        title="Přidat MS kalendář do svého kalendáře (Google, Apple, Outlook)"
+        className="w-9 h-9 grid place-items-center rounded-lg text-muted hover:text-brand-purple hover:bg-field transition-colors"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]" aria-hidden>
           <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
           <path d="M3.5 10h17M8 3.5v3M16 3.5v3M12 13v5M9.5 15.5h5" />
         </svg>
-        Do mého kalendáře
       </button>
 
       {otevreno && (
