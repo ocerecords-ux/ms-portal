@@ -107,7 +107,7 @@ Ikona druhu je i přímo v bublině v kalendáři, zvukař taky — v týdnu na 
 ![Kalendář s frekvencí a otevřené okno Úprava frekvence](/navody/terminy-4.png)
 
 1. **Dvojklikem** na frekvenci otevřete její úpravu. Zvukař, jakmile ho doplníte, se ukazuje přímo v bloku.
-2. Změnit jde **studio (Kalendář), datum, čas i zvukaře**. Herce změnit nejde — ten patří k nabídce. Když **Druh** přepnete na **Střih**, frekvence se zruší a na jejím místě vznikne střih (vyberte zvukaře). Stejně to jde na **Casting** — herec z frekvence zůstane.
+2. Změnit jde **studio (Kalendář), datum, čas i zvukaře**. V nabídce zvukařů jsou **jen ti, kdo v daném studiu točí** (zaškrtává se jim to na kartě uživatele v Administraci) — brněnského zvukaře na pražskou frekvenci zapsat nejde. Když přepnete studio, zvukař z toho původního se odznačí. Herce změnit nejde — ten patří k nabídce. Když **Druh** přepnete na **Střih**, frekvence se zruší a na jejím místě vznikne střih (vyberte zvukaře). Stejně to jde na **Casting** — herec z frekvence zůstane.
 3. **Poznámka** pro tým — ukáže se v detailu události. Dole je **Zrušit frekvenci**, když se nenatáčí vůbec.
 
 Herec dostane v portálu **oznámení** o každém přesunu i zrušení.

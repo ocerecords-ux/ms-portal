@@ -106,6 +106,14 @@ export async function POST(req: NextRequest) {
     const photo = formData.get('photo');
     if (INTERNAL_ROLES.includes(data.role) && photo instanceof File && photo.size > 0) {
       photoUrl = await uploadUserPhoto(photo);
+      // Driv se ucet zalozil a fotka tise zmizela - stejna oprava jako
+      // u „Muj ucet" a u karty uzivatele (20. 9. 2026).
+      if (photoUrl === null) {
+        return NextResponse.json(
+          { error: 'Fotku se nepodařilo uložit - zkuste menší obrázek.' },
+          { status: 400 },
+        );
+      }
     }
 
     const code = await nextCode(codePrefixForRole(data.role));
@@ -122,7 +130,10 @@ export async function POST(req: NextRequest) {
         ...(INTERNAL_ROLES.includes(data.role)
           ? {
               birthDate: data.birthDate ? new Date(data.birthDate) : null,
+              // Priznak jde s fotkou - bez nej by se fotka nikde neukazala
+              // (20. 9. 2026, viz lib/fotky.ts).
               photoUrl,
+              maFotku: photoUrl !== null,
             }
           : {}),
         // Hodinova sazba dava smysl jen u zvukare (zadani 6. 9. 2026);

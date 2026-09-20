@@ -1527,17 +1527,39 @@ function UdalostForm({
       : new Date(start.getTime() + 4 * 60 * 60 * 1000);
 
   /**
-   * ZVUKAŘI PODLE STUDIA (zadání 20. 9. 2026: „pojďme udělat lokalizace
-   * zvukařů"). Nabídka začíná těmi, kdo v tomhle studiu točí - kdo je odjinud,
-   * je až za nimi. Nikdo se neschovává: jednou za čas zaskočí kolega z Brna
-   * do Prahy a portál mu v tom nemá bránit.
+   * ZVUKAŘI JEN Z TOHOHLE STUDIA (zadání 20. 9. 2026: „hlavně by nemělo jít
+   * přiřadit zvukaře a mělo by to jen nabízet zvukaře v Brně na brněnské
+   * frekvence a pražské na Prahu").
+   *
+   * Nabídka tedy neřadí, ale FILTRUJE - na brněnskou frekvenci se pražský
+   * zvukař vybrat nedá. Dvě pojistky, ať se formulář nezasekne:
+   *   1. když v tom studiu zatím nikdo zaškrtnutý není, nabízejí se všichni
+   *      (jinak by po nasazení nešla zapsat jediná frekvence),
+   *   2. kdo je u události napsaný už teď, v nabídce zůstane - úprava starého
+   *      záznamu nemá ticho smazat jméno, které v něm je.
    */
-  const zvukariVPoradi = useMemo(() => {
-    const prednost = (z: Volba) => (!z.studia || z.studia.length === 0 ? 2 : z.studia.includes(studioId) ? 0 : 1);
-    return [...zvukari].sort(
-      (a, b) => prednost(a) - prednost(b) || a.label.localeCompare(b.label, 'cs'),
-    );
-  }, [zvukari, studioId]);
+  /** Jméno studia, ke kterému se událost píše - do popisku u pole Zvukař. */
+  const nazevStudiaVOkne = studios.find((s) => s.id === studioId)?.shortName ?? 'tohoto studia';
+
+  const zvukariProStudio = useMemo(() => {
+    const vStudiu = zvukari.filter((z) => z.studia && z.studia.includes(studioId));
+    if (vStudiu.length === 0) return zvukari;
+    const uzNapsany = zvukari.find((z) => z.id === zvukarId && !vStudiu.some((v) => v.id === z.id));
+    return uzNapsany ? [...vStudiu, uzNapsany] : vStudiu;
+  }, [zvukari, studioId, zvukarId]);
+
+  // Přepnutí studia: kdo v novém studiu netočí, se odznačí. Jinak by v poli
+  // zůstal někdo, koho tam vybrat nešlo.
+  const posledniStudio = useRef(studioId);
+  useEffect(() => {
+    if (posledniStudio.current === studioId) return;
+    posledniStudio.current = studioId;
+    if (zvukarId && !zvukari.some((z) => z.id === zvukarId && z.studia && z.studia.includes(studioId))) {
+      const vStudiu = zvukari.filter((z) => z.studia && z.studia.includes(studioId));
+      if (vStudiu.length > 0) setZvukarId('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studioId]);
 
   const projekt = projekty.find((p) => p.id === projektId);
   const herec = herci.find((h) => h.id === herecId);
@@ -1814,13 +1836,15 @@ function UdalostForm({
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">
               Zvukař {!(jeFrekvence && jeNataceni) && <span className="text-danger">*</span>}
+              {/* Ať je jasné, proč v nabídce nejsou všichni (20. 9. 2026). */}
+              <span className="text-muted font-normal"> · jen {nazevStudiaVOkne}</span>
             </span>
             <VyberProjektu
-              projekty={zvukariVPoradi}
+              projekty={zvukariProStudio}
               hodnota={zvukarId}
               onZmena={setZvukarId}
               placeholder="Začněte psát jméno zvukaře…"
-              prazdnyText="Takového zvukaře jsme nenašli. Zkuste jen příjmení."
+              prazdnyText={`V tomhle studiu takového zvukaře nemáme. Studia se zaškrtávají na kartě uživatele.`}
               popisZruseni="Zrušit výběr zvukaře"
             />
           </label>

@@ -66,6 +66,30 @@ function poliUdalosti(kind: string, d: Vstup) {
   };
 }
 
+/**
+ * ZVUKAŘ MUSÍ PATŘIT KE STUDIU (zadání 20. 9. 2026: „hlavně by nemělo jít
+ * přiřadit zvukaře a mělo by to jen nabízet zvukaře v Brně na brněnské
+ * frekvence a pražské na Prahu").
+ *
+ * Nabídku ve formuláři filtruje prohlížeč, tohle je pojistka na serveru -
+ * adresa API je otevřená komukoli z týmu a překlep v ní by jinak přiřadil
+ * pražského zvukaře do Brna.
+ *
+ * Komu studia zaškrtnutá nejsou, ten projde: dokud je nemá vyplněný celý tým,
+ * nesmí to zablokovat zápis do kalendáře.
+ */
+async function zvukarNepatriKeStudiu(zvukarUserId: string | undefined, studioId: string): Promise<string | null> {
+  if (!zvukarUserId) return null;
+  const zvukar = await prisma.user.findUnique({
+    where: { id: zvukarUserId },
+    select: { name: true, email: true, zvukarStudia: { select: { id: true, shortName: true } } },
+  });
+  if (!zvukar || zvukar.zvukarStudia.length === 0) return null;
+  if (zvukar.zvukarStudia.some((s) => s.id === studioId)) return null;
+  const kde = zvukar.zvukarStudia.map((s) => s.shortName).join(', ');
+  return `${zvukar.name || zvukar.email} točí jen ve studiu ${kde} - do tohohle studia ho zapsat nejde. Studia se zaškrtávají na kartě uživatele.`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -90,6 +114,8 @@ export async function POST(req: NextRequest) {
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
       return NextResponse.json({ error: 'Konec události musí být po začátku.' }, { status: 400 });
     }
+    const mimoStudio = await zvukarNepatriKeStudiu(jePrace ? d.zvukarUserId : undefined, d.studioId);
+    if (mimoStudio) return NextResponse.json({ error: mimoStudio }, { status: 400 });
 
     // Pres uz domluvene nataceni se blokace nedava. Strih se ale vejde
     // vedle cehokoliv - viz zabiraStudio (20. 9. 2026).
@@ -167,6 +193,8 @@ export async function PATCH(req: NextRequest) {
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
       return NextResponse.json({ error: 'Konec události musí být po začátku.' }, { status: 400 });
     }
+    const mimoStudio = await zvukarNepatriKeStudiu(jePrace ? d.zvukarUserId : undefined, d.studioId);
+    if (mimoStudio) return NextResponse.json({ error: mimoStudio }, { status: 400 });
 
     if (zabiraStudio(kind)) {
       const obsazeno = await loadOccupancy([d.studioId], start, end);

@@ -42,7 +42,7 @@ Tři věci, které z obrázku stojí za zdůraznění:
 
 **Uživatelé** jsou lidé. Kromě role se u účtu zaškrtává, co ten člověk smí a co mu chodí: jestli může být manažerem projektu, jestli podepisuje smlouvy za Mediaspace, jestli vidí sekci Banka, komu chodí objednávky. Je to schválně **u účtu, ne v kódu** — lidi se mění a portál o tom jinak neví.
 
-U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích točí. Kdo jezdí do Brna I i Brna II, má zaškrtnutá obě. Projeví se to na dvou místech: v seznamu uživatelů je to vidět ve sloupci Lokace a v kalendáři se u frekvence nabízejí **nejdřív zvukaři toho studia**. Nikdo se neschovává — když do Prahy výjimečně zaskočí kolega z Brna, vybrat se dá dál, jen je v nabídce níž. Zaškrtávátka jsou ze skutečných studií, takže nově založené studio v nabídce přibude samo.
+U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích točí. Kdo jezdí do Brna I i Brna II, má zaškrtnutá obě. Projeví se to na dvou místech: v seznamu uživatelů je to vidět ve sloupci Lokace a v kalendáři jde k události vybrat **jen zvukaře z toho studia** — na brněnskou frekvenci pražského nezapíšete, a naopak. Hlídá to i server, ne jen nabídka ve formuláři. Dokud u nikoho v daném studiu není nic zaškrtnuté, nabízejí se všichni, ať jde frekvence zapsat; kdo je u starší události napsaný, v ní zůstane. Zaškrtávátka jsou ze skutečných studií, takže nově založené studio v nabídce přibude samo.
 
 **Ceníky** jsou dvě věci najednou: ceny služeb a zároveň seznam typů projektu. U projektu jde vybrat jen takový typ, který je v ceníku — proto se nové typy přidávají tady.
 

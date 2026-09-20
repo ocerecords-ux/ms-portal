@@ -74,7 +74,10 @@ export default async function MyAccountPage() {
           phone: user.phone ?? '',
           birthDate: user.birthDate ? user.birthDate.toISOString().slice(0, 10) : '',
         }}
-        photoUrl={user.photoUrl ?? null}
+        // Adresa, ne samotná fotka: u fotek v úložišti R2 se přímý odkaz
+        // bez podpisu nenačte a vypadalo to, že se fotka neuložila
+        // (20. 9. 2026).
+        photoUrl={user.photoUrl ? `/api/uzivatele/${user.id}/fotka` : null}
       />
 
       {/* Fakturaci si spravuje klient sam (zadani 13. 9. 2026) - u internich

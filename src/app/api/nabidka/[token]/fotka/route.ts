@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
 
 /**
  * Fotka manažera projektu u konkrétní nabídky (zadání 13. 9. 2026: „a co
@@ -49,8 +50,15 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   }
   if (!fotka) return new NextResponse(null, { status: 404 });
 
-  // Fotka uložená jinde (R2, Disk) - jen ukážeme kam, ať se nepřenáší přes nás.
-  if (!fotka.startsWith('data:')) return NextResponse.redirect(fotka, 307);
+  // Fotka uložená jinde (R2, Disk) - jen ukážeme kam, ať se nepřenáší přes
+  // nás. Adresa míří na ROZHRANÍ úložiště, a to bez podpisu nikomu nic
+  // nevydá - v mailu i na stránce nabídky by zůstal prázdný rámeček
+  // (20. 9. 2026, stejná oprava jako u /api/uzivatele/[id]/fotka).
+  if (!fotka.startsWith('data:')) {
+    const klic = klicZAdresyUloziste(fotka);
+    const podepsany = klic ? await podepsanyOdkazNaPrilohu(klic, 'fotka', false) : null;
+    return NextResponse.redirect(podepsany || fotka, 307);
+  }
 
   const obrazek = rozeber(fotka);
   if (!obrazek) return new NextResponse(null, { status: 404 });

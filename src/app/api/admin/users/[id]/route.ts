@@ -165,7 +165,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(INTERNAL_ROLES.includes(nextRole) && data.birthDate !== undefined
         ? { birthDate: data.birthDate ? new Date(data.birthDate) : null }
         : {}),
-      ...(photoUrl !== undefined ? { photoUrl } : {}),
+      // PŘÍZNAK MUSÍ JÍT S FOTKOU (20. 9. 2026: „mám pocit, že Ondřej Černý
+      // ml. se snažil dát si fotku, ale nezobrazuje se").
+      //
+      // Seznamy, lišta a chat fotku NEČTOU z `photoUrl` - vybírají jen
+      // `maFotku` a adresu obrázku složí z id (viz lib/fotky.ts, kvůli
+      // egressu). Když se tady uložila jen fotka a příznak zůstal na `false`,
+      // byla fotka v databázi, na kartě uživatele se ukazovala - a všude
+      // jinde svítily iniciály.
+      ...(photoUrl !== undefined ? { photoUrl, maFotku: photoUrl !== null } : {}),
       // Hodinova sazba dava smysl jen u zvukare (zadani 6. 9. 2026).
       ...(data.manazerProjektu !== undefined ? { manazerProjektu: data.manazerProjektu === '1' } : {}),
       ...(data.smlouvyPodepisuje !== undefined ? { smlouvyPodepisuje: data.smlouvyPodepisuje === '1' } : {}),

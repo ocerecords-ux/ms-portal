@@ -35,11 +35,18 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         <div className="flex items-center gap-4 mt-2">
           {/* Fotku vedou jen interni ucty Mediaspace - u ostatnich se misto ni
               nic nezobrazuje (zadani 6. 9. 2026). */}
+          {/* FOTKA SE BERE PŘES /api/uzivatele/<id>/fotka (20. 9. 2026:
+              „prověř zobrazování profilových fotek"). Přímá adresa z
+              `photoUrl` ukazuje u novějších účtů do úložiště R2, které bez
+              podpisu nikomu nic nevydá - fotka byla nahraná, ale na kartě
+              i v „Můj účet" zůstal prázdný kolečko, takže to vypadalo, že se
+              nenahrála. Endpoint adresu podepíše (a u fotek uložených
+              v databázi navíc ušetří desítky kB v HTML). */}
           {isInternalRole(user.role) &&
             (user.photoUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
-                src={user.photoUrl}
+                src={`/api/uzivatele/${user.id}/fotka`}
                 alt=""
                 className="w-16 h-16 rounded-full object-cover border border-line shrink-0"
               />
@@ -88,7 +95,8 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           companyId: user.companyId,
           active: user.active,
           birthDate: user.birthDate ? user.birthDate.toISOString().slice(0, 10) : null,
-          photoUrl: user.photoUrl,
+          // Do formuláře jde jen adresa, ne samotná data - viz výš.
+          photoUrl: user.photoUrl ? `/api/uzivatele/${user.id}/fotka` : null,
           hourlyRate: user.hourlyRate,
           manazerProjektu: user.manazerProjektu,
           smlouvyPodepisuje: user.smlouvyPodepisuje,
