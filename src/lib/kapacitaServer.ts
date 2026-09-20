@@ -1,47 +1,73 @@
 import { prisma } from '@/lib/db';
 
 /**
- * KAPACITA STUDIÍ (zadání 20. 9. 2026: „potřebuju udělat přehled všech studií
- * v rámci obsazení termínů natáčením… jednoduchý grafický přehled, taková
- * mapa obsazenosti, abych viděl všechna studia po měsících a jen natáčení.
- * Jde mi o to analyzovat, jakou máme aktuálně kapacitu").
+ * KAPACITA STUDIÍ (zadání 20. 9. 2026, upřesnění téhož dne: „potřebuji vidět
+ * jasně, kolik a které dny z toho měsíce jsou obsazeny. Takže spíš jednotlivá
+ * studia jako sloupce a pod nimi dny. Vyznačit víkendy").
+ *
+ * Přehled je proto po DNECH jednoho měsíce: řádek = den, sloupec = studio.
+ * Vedle toho se počítá i celý rok, ale jen jako proužek měsíců nahoře, aby
+ * bylo vidět, kam v roce skočit.
  *
  * Počítá se JEN NATÁČENÍ - potvrzené frekvence z nabídky a ručně zapsané
- * natáčení. Střih, casting, údržba, svátky ani dovolené se do obsazenosti
- * nepočítají: kapacita studia je o tom, kolik hodin se v kabině dá točit.
+ * natáčení. Střih, casting, údržba, svátky ani dovolené ne: kapacita studia
+ * je o tom, kolik hodin se v kabině dá točit.
  *
- * Kapacita měsíce = otevírací doba studia (Studia → hodiny) den po dni.
- * Dny „jen po domluvě" (víkendy) se do kapacity NEPOČÍTAJÍ, ale natáčení,
- * které v nich je, ano - proto může u některého měsíce vyjít přes 100 %.
- * Je to tak čitelnější než počítat víkendy, které se běžně netočí.
+ * Kapacita dne = otevírací doba studia pro ten den v týdnu (Administrace →
+ * Studia). Dny „jen po domluvě" (typicky víkendy) kapacitu nemají, ale když
+ * se v nich točí, natočené hodiny se ukážou - proto může měsíc vyjít přes
+ * 100 %.
  */
 
-export type MesicKapacity = {
-  /** 1-12 */
-  mesic: number;
-  /** Minuty otevírací doby (bez dnů jen po domluvě). */
+/** Jeden den v jednom studiu. */
+export type BunkaDne = {
+  studioId: string;
+  /** Minuty otevírací doby; 0 = zavřeno nebo jen po domluvě. */
   kapacitaMinut: number;
-  /** Minuty natáčení. */
+  /** Minuty natáčení, které do dne spadají. */
   natoceno: number;
-  /** Kolik frekvencí/událostí natáčení do měsíce spadlo. */
+  /** Kolik natáčení se dne týká. */
   pocet: number;
+  /** Den „jen po domluvě" - kapacita se nepočítá, točit se v něm dá. */
+  poDomluve: boolean;
 };
 
-export type StudioKapacita = {
+export type DenKapacity = {
+  /** YYYY-MM-DD */
+  datum: string;
+  den: number;
+  /** 0 = neděle, 6 = sobota. */
+  denVTydnu: number;
+  vikend: boolean;
+  bunky: BunkaDne[];
+};
+
+export type StudioSloupec = {
   id: string;
   nazev: string;
   barva: string;
-  mesice: MesicKapacity[];
+  /** Součty za zobrazený měsíc. */
   kapacitaMinut: number;
   natoceno: number;
   pocet: number;
+  /** V kolika dnech měsíce se v tom studiu točilo. */
+  dnuSNatacenim: number;
 };
 
-export type PrehledKapacity = {
+export type MesicRoku = {
+  /** 1-12 */
+  mesic: number;
+  kapacitaMinut: number;
+  natoceno: number;
+};
+
+export type KapacitaMesice = {
   rok: number;
-  studia: StudioKapacita[];
-  /** Součet přes všechna studia, po měsících. */
-  celkem: MesicKapacity[];
+  mesic: number;
+  studia: StudioSloupec[];
+  dny: DenKapacity[];
+  /** Proužek celého roku nad tabulkou - přes všechna studia. */
+  rokPoMesicich: MesicRoku[];
 };
 
 /** Průnik dvou úseků v minutách. */
@@ -74,89 +100,136 @@ function pulnoc(rok: number, mesic: number, den: number, pasmo: string): Date {
   return new Date(odhad - posun * 60000);
 }
 
-function prazdneMesice(): MesicKapacity[] {
-  return Array.from({ length: 12 }, (_, i) => ({
-    mesic: i + 1,
-    kapacitaMinut: 0,
-    natoceno: 0,
-    pocet: 0,
-  }));
+/** Kolik dní má měsíc. */
+export function dnuVMesici(rok: number, mesic: number): number {
+  return new Date(Date.UTC(rok, mesic, 0)).getUTCDate();
 }
 
-export async function nactiKapacitu(rok: number): Promise<PrehledKapacity> {
+type Hodiny = { weekday: number; startMinutes: number; endMinutes: number; byArrangement: boolean };
+type Udalost = { studioId: string; start: Date; end: Date };
+
+/** Otevírací doba studia po dnech v týdnu. */
+function otviraci(hours: Hodiny[]): Map<number, Hodiny> {
+  return new Map(hours.map((h) => [h.weekday, h]));
+}
+
+/** Natáčení ve studiích v daném rozsahu - potvrzené frekvence i ruční zápisy. */
+async function nactiNataceni(od: Date, doKdy: Date): Promise<Udalost[]> {
+  const [sloty, bloky] = await Promise.all([
+    prisma.recordingSlot.findMany({
+      where: { state: 'CONFIRMED', start: { lt: doKdy }, end: { gt: od } },
+      select: { studioId: true, start: true, end: true },
+    }),
+    prisma.studioBlock.findMany({
+      where: { kind: 'NATACENI', start: { lt: doKdy }, end: { gt: od } },
+      select: { studioId: true, start: true, end: true },
+    }),
+  ]);
+  return [...sloty, ...bloky];
+}
+
+/**
+ * Měsíc po dnech. Vrací sloupce (studia), řádky (dny) a k tomu proužek
+ * celého roku, aby šlo přeskočit na vytížený měsíc.
+ */
+export async function nactiKapacituMesice(rok: number, mesic: number): Promise<KapacitaMesice> {
   const studia = await prisma.studio.findMany({
     where: { active: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     include: { hours: true },
   });
 
-  const zacatek = new Date(Date.UTC(rok - 1, 11, 25));
-  const konec = new Date(Date.UTC(rok + 1, 0, 7));
+  // Rok se načítá celý - proužek měsíců nad tabulkou z něj žije a je to
+  // jedno kolečko do databáze navíc, ne dvanáct.
+  const nataceni = await nactiNataceni(
+    new Date(Date.UTC(rok - 1, 11, 25)),
+    new Date(Date.UTC(rok + 1, 0, 7)),
+  );
+  const podleStudia = new Map<string, Udalost[]>();
+  for (const u of nataceni) {
+    const seznam = podleStudia.get(u.studioId) ?? [];
+    seznam.push(u);
+    podleStudia.set(u.studioId, seznam);
+  }
 
-  const [sloty, bloky] = await Promise.all([
-    prisma.recordingSlot.findMany({
-      where: { state: 'CONFIRMED', start: { lt: konec }, end: { gt: zacatek } },
-      select: { studioId: true, start: true, end: true },
-    }),
-    prisma.studioBlock.findMany({
-      where: { kind: 'NATACENI', start: { lt: konec }, end: { gt: zacatek } },
-      select: { studioId: true, start: true, end: true },
-    }),
-  ]);
-  const nataceni = [...sloty, ...bloky];
-
-  const vysledek: StudioKapacita[] = studia.map((s) => {
-    type Hodiny = { weekday: number; startMinutes: number; endMinutes: number; byArrangement: boolean };
-    const podleDne = new Map<number, Hodiny>(
-      (s.hours as Hodiny[]).map((h) => [h.weekday, h]),
-    );
-    const mesice = prazdneMesice();
-
-    for (let m = 1; m <= 12; m += 1) {
-      const zacatekMesice = pulnoc(rok, m, 1, s.timezone);
-      const konecMesice = m === 12 ? pulnoc(rok + 1, 1, 1, s.timezone) : pulnoc(rok, m + 1, 1, s.timezone);
-
-      // Kapacita: den po dni podle otevírací doby studia.
-      const dnu = new Date(Date.UTC(rok, m, 0)).getUTCDate();
-      let kapacita = 0;
-      for (let d = 1; d <= dnu; d += 1) {
-        const denVTydnu = new Date(Date.UTC(rok, m - 1, d)).getUTCDay();
-        const h = podleDne.get(denVTydnu);
-        if (!h || h.byArrangement) continue;
-        kapacita += Math.max(0, h.endMinutes - h.startMinutes);
-      }
-      mesice[m - 1].kapacitaMinut = kapacita;
-
-      for (const u of nataceni) {
-        if (u.studioId !== s.id) continue;
-        const minut = prekryvMinut(u.start, u.end, zacatekMesice, konecMesice);
-        if (minut <= 0) continue;
-        mesice[m - 1].natoceno += minut;
-        mesice[m - 1].pocet += 1;
-      }
-    }
-
+  const pocetDnu = dnuVMesici(rok, mesic);
+  const dny: DenKapacity[] = Array.from({ length: pocetDnu }, (_, i) => {
+    const den = i + 1;
+    const denVTydnu = new Date(Date.UTC(rok, mesic - 1, den)).getUTCDay();
     return {
-      id: s.id,
-      nazev: (s.shortName ?? s.name.split(' - ').pop() ?? s.name).trim(),
-      barva: s.color,
-      mesice,
-      kapacitaMinut: mesice.reduce((a, m) => a + m.kapacitaMinut, 0),
-      natoceno: mesice.reduce((a, m) => a + m.natoceno, 0),
-      pocet: mesice.reduce((a, m) => a + m.pocet, 0),
+      datum: `${rok}-${String(mesic).padStart(2, '0')}-${String(den).padStart(2, '0')}`,
+      den,
+      denVTydnu,
+      vikend: denVTydnu === 0 || denVTydnu === 6,
+      bunky: [],
     };
   });
 
-  const celkem = prazdneMesice();
-  for (const s of vysledek) {
-    s.mesice.forEach((m, i) => {
-      celkem[i].kapacitaMinut += m.kapacitaMinut;
-      celkem[i].natoceno += m.natoceno;
-      celkem[i].pocet += m.pocet;
-    });
+  const sloupce: StudioSloupec[] = [];
+  const rokPoMesicich: MesicRoku[] = Array.from({ length: 12 }, (_, i) => ({
+    mesic: i + 1,
+    kapacitaMinut: 0,
+    natoceno: 0,
+  }));
+
+  for (const s of studia) {
+    const hodiny = otviraci(s.hours as Hodiny[]);
+    const udalosti = podleStudia.get(s.id) ?? [];
+    const sloupec: StudioSloupec = {
+      id: s.id,
+      nazev: (s.shortName ?? s.name.split(' - ').pop() ?? s.name).trim(),
+      barva: s.color,
+      kapacitaMinut: 0,
+      natoceno: 0,
+      pocet: 0,
+      dnuSNatacenim: 0,
+    };
+
+    // Zobrazený měsíc den po dni.
+    for (const den of dny) {
+      const zacatek = pulnoc(rok, mesic, den.den, s.timezone);
+      const konec = pulnoc(rok, mesic, den.den + 1, s.timezone);
+      const h = hodiny.get(den.denVTydnu);
+      const poDomluve = h?.byArrangement ?? false;
+      const kapacita = !h || poDomluve ? 0 : Math.max(0, h.endMinutes - h.startMinutes);
+
+      let natoceno = 0;
+      let pocet = 0;
+      for (const u of udalosti) {
+        const minut = prekryvMinut(u.start, u.end, zacatek, konec);
+        if (minut <= 0) continue;
+        natoceno += minut;
+        pocet += 1;
+      }
+
+      den.bunky.push({ studioId: s.id, kapacitaMinut: kapacita, natoceno, pocet, poDomluve });
+      sloupec.kapacitaMinut += kapacita;
+      sloupec.natoceno += natoceno;
+      sloupec.pocet += pocet;
+      if (natoceno > 0) sloupec.dnuSNatacenim += 1;
+    }
+
+    // Proužek roku - stejný výpočet, jen bez podrobností po dnech.
+    for (let m = 1; m <= 12; m += 1) {
+      const dnu = dnuVMesici(rok, m);
+      for (let d = 1; d <= dnu; d += 1) {
+        const denVTydnu = new Date(Date.UTC(rok, m - 1, d)).getUTCDay();
+        const h = hodiny.get(denVTydnu);
+        if (h && !h.byArrangement) {
+          rokPoMesicich[m - 1].kapacitaMinut += Math.max(0, h.endMinutes - h.startMinutes);
+        }
+      }
+      const zacatek = pulnoc(rok, m, 1, s.timezone);
+      const konec = m === 12 ? pulnoc(rok + 1, 1, 1, s.timezone) : pulnoc(rok, m + 1, 1, s.timezone);
+      for (const u of udalosti) {
+        rokPoMesicich[m - 1].natoceno += prekryvMinut(u.start, u.end, zacatek, konec);
+      }
+    }
+
+    sloupce.push(sloupec);
   }
 
-  return { rok, studia: vysledek, celkem };
+  return { rok, mesic, studia: sloupce, dny, rokPoMesicich };
 }
 
 /** Obsazenost v procentech; bez kapacity (zavřené studio) vrací null. */
