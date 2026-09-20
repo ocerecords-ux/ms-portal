@@ -6,14 +6,16 @@ import { canSee } from '@/lib/menu';
 import { hodiny, nactiKapacituRoku, procenta } from '@/lib/kapacitaServer';
 
 /**
- * KAPACITA STUDIÍ (zadání 20. 9. 2026: „chci to mít všechno na jedné stránce,
- * ať jasně vidím, kde jsou díry. A nemusí tam být ten počet hodin, jen
+ * KAPACITA STUDIÍ (zadání 20. 9. 2026: „potřebuji to vidět po měsících, ale
+ * všechna studia na jedné stránce" + „nemusí tam být ten počet hodin, jen
  * obdélníčky").
  *
- * Celý rok najednou: dvanáct tabulek měsíců, v každé řádek = den a sloupec =
- * studio. Každý den je jen obdélníček - čím tmavší, tím plnější; prázdný
- * obdélníček je díra. Víkendy mají svůj podklad, dnešek rámeček. Hodiny a
- * počet natáčení se ukážou v bublině po najetí myší.
+ * Jeden měsíc na obrazovku: řádek = den, sloupec = studio, buňka = obdélníček.
+ * Čím tmavší, tím plnější natáčením; prázdný obdélníček je díra. Celý měsíc se
+ * vejde bez rolování, takže jsou volné dny vidět na první pohled.
+ *
+ * Nad tabulkou je proužek dvanácti měsíců s procenty - přeskočí se jím na
+ * vytížený měsíc a je z něj vidět celý rok.
  *
  * Počítá se jen NATÁČENÍ proti otevírací době studia - viz lib/kapacitaServer.
  */
@@ -33,6 +35,7 @@ const MESICE = [
   'listopad',
   'prosinec',
 ];
+const MESICE_KRATCE = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
 const DNY_KRATCE = ['ne', 'po', 'út', 'st', 'čt', 'pá', 'so'];
 
 /** Barva obdélníčku podle toho, jak je den zaplněný. */
@@ -45,156 +48,177 @@ function odstin(p: number | null): React.CSSProperties {
   return { backgroundColor: 'rgba(123,85,255,0.16)' };
 }
 
-export default async function KapacitaPage({ searchParams }: { searchParams?: { rok?: string } }) {
+export default async function KapacitaPage({
+  searchParams,
+}: {
+  searchParams?: { rok?: string; mesic?: string };
+}) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect('/login');
   if (!canSee('/prehledy', session.user.role)) redirect('/projekty');
 
   const ted = new Date();
   const rok = Number(searchParams?.rok) || ted.getUTCFullYear();
+  const zadanyMesic = Number(searchParams?.mesic);
+  const mesic = zadanyMesic >= 1 && zadanyMesic <= 12 ? zadanyMesic : ted.getUTCMonth() + 1;
+
   const prehled = await nactiKapacituRoku(rok);
+  const otevreny = prehled.mesice[mesic - 1];
+
   const dnesniMesic = ted.getUTCFullYear() === rok ? ted.getUTCMonth() + 1 : 0;
   const dnesniDen = ted.getUTCDate();
 
-  const soucet = prehled.studia.reduce(
-    (a, s) => ({ kapacitaMinut: a.kapacitaMinut + s.kapacitaMinut, natoceno: a.natoceno + s.natoceno }),
-    { kapacitaMinut: 0, natoceno: 0 },
-  );
-  const celkemProcent = procenta(soucet);
-  const odkazRoku = (r: number) => `/prehledy/kapacita?rok=${r}`;
+  const odkaz = (r: number, m: number) => `/prehledy/kapacita?rok=${r}&mesic=${m}`;
+  const predchozi = mesic === 1 ? odkaz(rok - 1, 12) : odkaz(rok, mesic - 1);
+  const dalsi = mesic === 12 ? odkaz(rok + 1, 1) : odkaz(rok, mesic + 1);
+
+  /** Součty studia za zobrazený měsíc - do záhlaví sloupců. */
+  const zaMesic = prehled.studia.map((s, i) => {
+    let kapacitaMinut = 0;
+    let natoceno = 0;
+    let dnu = 0;
+    for (const d of otevreny.dny) {
+      const b = d.bunky[i];
+      kapacitaMinut += b.kapacitaMinut;
+      natoceno += b.natoceno;
+      if (b.natoceno > 0) dnu += 1;
+    }
+    return { ...s, kapacitaMinut, natoceno, dnuSNatacenim: dnu };
+  });
+  const pMesic = procenta(otevreny);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <p className="text-muted font-body m-0 max-w-2xl">
-          Celý rok po dnech. Každý obdélníček je jeden den v jednom studiu — čím tmavší, tím plnější{' '}
-          <b>natáčením</b>; prázdné místo je díra. Střih, casting ani blokace se nepočítají. Podrobnosti ukáže najetí
-          myší.
+          Celý měsíc na jedné obrazovce: řádek je den, sloupec studio. Čím tmavší obdélníček, tím víc{' '}
+          <b>natáčení</b> proti otevírací době studia — prázdné místo je díra. Střih, casting ani blokace se
+          nepočítají; hodiny ukáže najetí myší.
         </p>
         <div className="flex items-center gap-1">
           <Link
-            href={odkazRoku(rok - 1)}
+            href={predchozi}
             className="rounded-pill border border-line px-3 py-1.5 text-sm font-heading text-ink no-underline hover:border-brand-purple"
           >
-            ‹ {rok - 1}
+            ‹
           </Link>
-          <span className="rounded-pill bg-brand-purple text-white px-4 py-1.5 text-sm font-heading font-semibold tabular-nums">
-            {rok}
+          <span className="rounded-pill bg-brand-purple text-white px-4 py-1.5 text-sm font-heading font-semibold">
+            {MESICE[mesic - 1]} {rok}
           </span>
           <Link
-            href={odkazRoku(rok + 1)}
+            href={dalsi}
             className="rounded-pill border border-line px-3 py-1.5 text-sm font-heading text-ink no-underline hover:border-brand-purple"
           >
-            {rok + 1} ›
+            ›
           </Link>
         </div>
       </div>
 
-      {/* Která studia jsou ve sloupcích a jak jsou na tom za celý rok */}
-      <div className="flex items-center gap-x-5 gap-y-2 flex-wrap bg-surface rounded-card border border-line shadow-sm px-4 py-3">
-        {prehled.studia.map((s, i) => {
-          const p = procenta(s);
+      {/* Proužek roku - kam v roce skočit */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Link href={odkaz(rok - 1, mesic)} className="text-sm font-heading text-muted no-underline hover:text-ink px-1">
+          ‹ {rok - 1}
+        </Link>
+        {prehled.mesice.map((m) => {
+          const p = procenta(m);
+          const vybrany = m.mesic === mesic;
           return (
-            <span key={s.id} className="inline-flex items-center gap-2 text-sm font-heading text-ink">
-              <span
-                className="w-5 h-5 rounded grid place-items-center text-[10px] font-bold text-white shrink-0"
-                style={{ background: s.barva }}
-              >
-                {i + 1}
-              </span>
-              {s.nazev}
-              <span className="font-body text-muted tabular-nums">
-                {p === null ? '—' : `${p} %`} · {hodiny(s.natoceno)} h · {s.dnuSNatacenim} dnů
-              </span>
-            </span>
+            <Link
+              key={m.mesic}
+              href={odkaz(rok, m.mesic)}
+              title={`${MESICE[m.mesic - 1]} ${rok}: ${hodiny(m.natoceno)} h natáčení`}
+              className={`rounded-lg px-2.5 py-1 text-xs font-heading no-underline border tabular-nums ${
+                vybrany ? 'border-brand-purple text-ink' : 'border-line text-muted hover:text-ink'
+              }`}
+            >
+              {MESICE_KRATCE[m.mesic - 1]} <span className="opacity-70">{p === null ? '—' : `${p} %`}</span>
+            </Link>
           );
         })}
-        <span className="ml-auto text-sm font-heading text-ink tabular-nums">
-          Rok {rok}: {celkemProcent === null ? '—' : `${celkemProcent} %`}
-          <span className="font-body text-muted"> ({hodiny(soucet.natoceno)} z {hodiny(soucet.kapacitaMinut)} h)</span>
-        </span>
+        <Link href={odkaz(rok + 1, mesic)} className="text-sm font-heading text-muted no-underline hover:text-ink px-1">
+          {rok + 1} ›
+        </Link>
       </div>
 
-      {/* Dvanáct měsíců vedle sebe - celý rok na jedné obrazovce */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-        {prehled.mesice.map((m) => {
-          const pMesic = procenta(m);
-          return (
-            <div key={m.mesic} className="bg-surface rounded-card border border-line shadow-sm p-2.5">
-              <p
-                className={`text-xs font-heading font-semibold m-0 mb-1.5 flex items-baseline justify-between gap-2 ${
-                  m.mesic === dnesniMesic ? 'text-brand-purple' : 'text-ink'
-                }`}
-              >
-                {MESICE[m.mesic - 1]}
-                <span className="font-body text-[11px] text-muted tabular-nums">
-                  {pMesic === null ? '—' : `${pMesic} %`}
-                </span>
-              </p>
+      {/* Měsíc: řádek den, sloupec studio */}
+      <div className="bg-surface rounded-card border border-line shadow-sm p-4">
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
+          <span className="font-heading font-semibold text-ink">
+            {MESICE[mesic - 1]} {rok}
+          </span>
+          <span className="text-sm font-body text-muted tabular-nums">
+            obsazenost {pMesic === null ? '—' : `${pMesic} %`} · {hodiny(otevreny.natoceno)} z{' '}
+            {hodiny(otevreny.kapacitaMinut)} h
+          </span>
+        </div>
 
-              {/* Mřížka dnů se drží uprostřed karty, ať pruh víkendu končí
-                  u posledního obdélníčku a nejede přes celou kartu. */}
-              <div className="w-fit mx-auto">
-              {/* Záhlaví: pořadová čísla studií podle legendy nahoře */}
-              <div className="flex items-center gap-[3px] pl-5 mb-[3px]">
-                {prehled.studia.map((s, i) => (
-                  <span
-                    key={s.id}
-                    title={s.nazev}
-                    className="w-4 text-[9px] font-heading text-center text-muted leading-none"
-                  >
-                    {i + 1}
+        <div className="overflow-x-auto">
+          <div className="min-w-[420px]">
+            {/* Záhlaví se studii */}
+            <div className="flex items-end gap-2 pb-2 border-b border-line">
+              <span className="w-16 shrink-0" />
+              {zaMesic.map((s) => {
+                const p = procenta(s);
+                return (
+                  <span key={s.id} className="flex-1 min-w-0 text-center">
+                    <span className="inline-flex items-center gap-1.5 font-heading font-semibold text-ink text-sm">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.barva }} />
+                      {s.nazev}
+                    </span>
+                    <span className="block text-[11px] font-body text-muted tabular-nums">
+                      {p === null ? '—' : `${p} %`} · {s.dnuSNatacenim} dnů
+                    </span>
                   </span>
-                ))}
-              </div>
+                );
+              })}
+            </div>
 
-              <div className="flex flex-col gap-[2px]">
-                {m.dny.map((d) => {
-                  const dnes = m.mesic === dnesniMesic && d.den === dnesniDen;
-                  return (
-                    <div
-                      key={d.den}
-                      className={`flex items-center gap-[3px] rounded-sm ${d.vikend ? 'bg-surfaceSoft' : ''} ${
-                        dnes ? 'outline outline-1 outline-brand-purple' : ''
+            {/* Dny pod sebou - celý měsíc bez rolování */}
+            <div className="flex flex-col gap-[3px] pt-2">
+              {otevreny.dny.map((d) => {
+                const dnes = mesic === dnesniMesic && d.den === dnesniDen;
+                return (
+                  <div
+                    key={d.den}
+                    className={`flex items-center gap-2 rounded ${d.vikend ? 'bg-surfaceSoft' : ''} ${
+                      dnes ? 'outline outline-1 outline-brand-purple' : ''
+                    }`}
+                  >
+                    <span
+                      className={`w-16 shrink-0 pl-1 text-[11px] font-heading tabular-nums leading-none ${
+                        dnes ? 'text-brand-purple font-bold' : d.vikend ? 'text-muted' : 'text-ink'
                       }`}
                     >
-                      <span
-                        className={`w-5 pr-1 text-[9px] font-heading text-right tabular-nums leading-none ${
-                          dnes ? 'text-brand-purple font-bold' : d.vikend ? 'text-muted' : 'text-muted/70'
-                        }`}
-                      >
-                        {d.den}
-                      </span>
-                      {d.bunky.map((b, i) => {
-                        const p = procenta(b);
-                        const studio = prehled.studia[i];
-                        return (
-                          <span
-                            key={studio.id}
-                            className={`w-4 h-[9px] rounded-[2px] ${
-                              b.kapacitaMinut === 0 && b.natoceno === 0 ? 'opacity-30' : ''
-                            }`}
-                            style={odstin(p)}
-                            title={`${DNY_KRATCE[d.denVTydnu]} ${d.den}. ${MESICE[m.mesic - 1]} · ${studio.nazev}: ${
-                              b.natoceno > 0
-                                ? `${hodiny(b.natoceno)} h natáčení (${b.pocet}×)${
-                                    b.kapacitaMinut > 0 ? ` z ${hodiny(b.kapacitaMinut)} h` : ', mimo otevírací dobu'
-                                  }`
-                                : b.kapacitaMinut > 0
-                                  ? `volno, ${hodiny(b.kapacitaMinut)} h k dispozici`
-                                  : 'zavřeno / jen po domluvě'
-                            }`}
-                          />
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-              </div>
+                      {DNY_KRATCE[d.denVTydnu]} {d.den}.
+                    </span>
+                    {d.bunky.map((b, i) => {
+                      const p = procenta(b);
+                      const studio = prehled.studia[i];
+                      return (
+                        <span
+                          key={studio.id}
+                          className={`flex-1 min-w-0 h-3.5 rounded-[3px] ${
+                            b.kapacitaMinut === 0 && b.natoceno === 0 ? 'opacity-30' : ''
+                          }`}
+                          style={odstin(p)}
+                          title={`${DNY_KRATCE[d.denVTydnu]} ${d.den}. ${MESICE[mesic - 1]} · ${studio.nazev}: ${
+                            b.natoceno > 0
+                              ? `${hodiny(b.natoceno)} h natáčení (${b.pocet}×)${
+                                  b.kapacitaMinut > 0 ? ` z ${hodiny(b.kapacitaMinut)} h` : ', mimo otevírací dobu'
+                                }`
+                              : b.kapacitaMinut > 0
+                                ? `volno, ${hodiny(b.kapacitaMinut)} h k dispozici`
+                                : 'zavřeno / jen po domluvě'
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap text-xs font-body text-muted">
@@ -208,14 +232,13 @@ export default async function KapacitaPage({ searchParams }: { searchParams?: { 
           { popis: 'plno', p: 100 },
         ].map((l) => (
           <span key={l.popis} className="inline-flex items-center gap-1.5">
-            <span className="w-5 h-3 rounded-[2px] border border-line" style={odstin(l.p)} aria-hidden />
+            <span className="w-6 h-3 rounded-[3px] border border-line" style={odstin(l.p)} aria-hidden />
             {l.popis}
           </span>
         ))}
         <span className="ml-auto max-w-2xl text-right">
-          Čísla ve sloupcích odpovídají studiím v legendě nahoře. Kapacita je otevírací doba studia (Administrace →
-          Studia); dny „jen po domluvě" (obvykle víkendy) kapacitu nemají — natáčení v nich je vidět, ale do procent se
-          nepočítá.
+          Kapacita je otevírací doba studia (Administrace → Studia). Dny „jen po domluvě" (obvykle víkendy) kapacitu
+          nemají — natáčení v nich je vidět, ale do procent se nepočítá, proto může měsíc přesáhnout 100 %.
         </span>
       </div>
     </div>
