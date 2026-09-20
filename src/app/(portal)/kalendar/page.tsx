@@ -253,7 +253,14 @@ export default async function KalendarPage({
       start: b.start.toISOString(),
       end: b.end.toISOString(),
       state: b.kind,
-      title: b.title,
+      // Zvukar i herec primo v bubline, stejne jako u frekvence z nabidky
+      // (20. 9. 2026: „nejsou tam nikde videt zvukari").
+      title: [
+        b.actorName && !b.title.includes(b.actorName) ? `${b.title} – ${b.actorName}` : b.title,
+        b.zvukarName ? `ZVUKAŘ: ${b.zvukarName}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n'),
       subtitle: BLOCK_KIND_LABELS[b.kind] ?? 'Blokace',
       poznamka: b.note,
       // Rozepsané údaje pro úpravu události (zadání 14. 9. 2026).

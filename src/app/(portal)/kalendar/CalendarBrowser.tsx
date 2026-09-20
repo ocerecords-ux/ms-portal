@@ -956,9 +956,15 @@ function MesicniPohled({
                       color: barvy.text,
                     }}
                     className="rounded px-1.5 py-0.5 text-[10px] font-heading text-left truncate border"
+                    title={e.title}
                   >
-                    {/* V měsíci je na řádek místo jen na to podstatné. */}
+                    {/* V měsíci je na řádek místo jen na to podstatné - název
+                        a zvukař (20. 9. 2026: „nejsou tam vidět zvukaři"). */}
                     {e.title.split('\n')[0]}
+                    {(() => {
+                      const zv = e.title.split('\n').find((r) => r.startsWith('ZVUKAŘ:'));
+                      return zv ? <span className="opacity-80"> · {zv.replace('ZVUKAŘ:', '').trim()}</span> : null;
+                    })()}
                   </button>
                 );
               })}
@@ -1438,66 +1444,137 @@ function DetailUdalosti({
     }
   }
 
+  // Zavrit klavesou Esc.
+  useEffect(() => {
+    const klavesa = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', klavesa);
+    return () => window.removeEventListener('keydown', klavesa);
+  }, [onClose]);
+
+  const u = event.udalost;
+  const [prvniRadek, ...dalsiRadky] = event.title.split('\n');
+  // Radky „ZVUKAŘ: ..." jsou v detailu zvlast jako udaj, ne v nadpisu.
+  const zvukar = u?.zvukarName ?? dalsiRadky.find((r) => r.startsWith('ZVUKAŘ:'))?.replace('ZVUKAŘ:', '').trim() ?? null;
+  const ostatniRadky = dalsiRadky.filter((r) => !r.startsWith('ZVUKAŘ:'));
+  const udaje: { popis: string; hodnota: React.ReactNode }[] = [
+    {
+      popis: 'Kdy',
+      hodnota: `${formatDateTime(event.start, timezone)} – ${formatDateTime(event.end, timezone)}`,
+    },
+    { popis: 'Studio', hodnota: event.studioName || '—' },
+    ...(u?.projectName
+      ? [
+          {
+            popis: 'Projekt',
+            hodnota: u.caflouProjectId ? (
+              <Link href={`/projekty/${u.caflouProjectId}`} className="text-brand-purple font-semibold no-underline hover:underline">
+                {u.projectName} →
+              </Link>
+            ) : (
+              u.projectName
+            ),
+          },
+        ]
+      : []),
+    ...(u?.actorName ? [{ popis: 'Herec', hodnota: u.actorName }] : []),
+    ...(zvukar ? [{ popis: 'Zvukař', hodnota: zvukar }] : []),
+  ];
+
+  /**
+   * DETAIL „VYSTOUPÍ DOPŘEDU" (zadání 20. 9. 2026: „když na tu událost
+   * kliknu jednou, tak vystoupí jakoby dopředu před všechny a ukáže se mi
+   * zvětšený náhled, kde vidím vše"). Dřív se detail kreslil jako karta pod
+   * kalendářem - na velké obrazovce ho nikdo neviděl. Teď je to okno nad
+   * ztmaveným kalendářem; zavře se křížkem, klikem vedle nebo Esc.
+   */
   return (
-    <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <span className="w-3 h-3 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: event.color }} />
-          <div>
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">
-              {stav} · {event.studioName}
-            </span>
-            <h2 className="font-display text-xl text-ink m-0 mt-0.5">{event.title.split('\n')[0]}</h2>
-            {event.title
-              .split('\n')
-              .slice(1)
-              .map((radek, i) => (
-                <p key={i} className="text-sm font-heading text-muted m-0 mt-0.5">
+    <div
+      className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 ms-zatmeni"
+      role="dialog"
+      aria-modal="true"
+      aria-label={prvniRadek}
+      onMouseDown={(ev) => {
+        if (ev.target === ev.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="ms-vystoupeni w-full max-w-lg bg-surface rounded-card shadow-2xl overflow-hidden border border-line"
+        style={{ borderTop: `6px solid ${event.color}` }}
+      >
+        <div className="p-6 flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-0.5 text-xs font-heading font-semibold"
+                style={{ backgroundColor: `${event.color}22`, color: 'inherit' }}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: event.color }} />
+                {stav}
+              </span>
+              <h2 className="font-display text-2xl sm:text-3xl text-ink m-0 mt-2 break-words">{prvniRadek}</h2>
+              {ostatniRadky.map((radek, i) => (
+                <p key={i} className="text-sm font-heading text-muted m-0 mt-1">
                   {radek}
                 </p>
               ))}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Zavřít"
+              className="w-8 h-8 shrink-0 grid place-items-center rounded-full text-muted hover:text-ink hover:bg-field text-xl leading-none"
+            >
+              ×
+            </button>
           </div>
+
+          <dl className="grid grid-cols-[6rem_1fr] gap-x-4 gap-y-2.5 m-0">
+            {udaje.map((d) => (
+              <div key={d.popis} className="contents">
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide pt-0.5">{d.popis}</dt>
+                <dd className="text-sm font-heading text-ink m-0">{d.hodnota}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {event.subtitle && <p className="text-sm font-body text-muted m-0">{event.subtitle}</p>}
+          {event.poznamka && (
+            <p className="text-sm font-body text-ink bg-field border border-line rounded-lg px-3 py-2 m-0 whitespace-pre-line">
+              {event.poznamka}
+            </p>
+          )}
+
+          {canManage && (event.href || event.kind === 'BLOCK' || jeUpravitelnaFrekvence(event)) && (
+            <div className="flex items-center gap-4 flex-wrap border-t border-line pt-4">
+              {(event.kind === 'BLOCK' || jeUpravitelnaFrekvence(event)) && (
+                <button
+                  type="button"
+                  onClick={onUpravit}
+                  className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep"
+                >
+                  Upravit
+                </button>
+              )}
+              {event.href && (
+                <Link href={event.href} className="text-sm font-heading font-semibold text-brand-purple no-underline">
+                  Otevřít nabídku termínů →
+                </Link>
+              )}
+              {event.kind === 'BLOCK' && (
+                <button
+                  type="button"
+                  onClick={smaz}
+                  disabled={busy}
+                  className="ml-auto text-sm font-heading font-semibold text-danger disabled:opacity-60"
+                >
+                  Smazat událost
+                </button>
+              )}
+            </div>
+          )}
         </div>
-        <button type="button" onClick={onClose} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
-          ×
-        </button>
-      </div>
-      <p className="text-sm font-body text-muted m-0">
-        {formatDateTime(event.start, timezone)} – {formatDateTime(event.end, timezone)}
-      </p>
-      {event.subtitle && <p className="text-sm font-body text-muted m-0">{event.subtitle}</p>}
-      {event.poznamka && (
-        <p className="text-sm font-body text-ink bg-field border border-line rounded-lg px-3 py-2 m-0 whitespace-pre-line">
-          {event.poznamka}
-        </p>
-      )}
-      <div className="flex items-center gap-4">
-        {event.href && canManage && (
-          <Link href={event.href} className="text-sm font-heading font-semibold text-brand-purple no-underline">
-            Otevřít nabídku termínů →
-          </Link>
-        )}
-        {/* Upravit jde rucne zapsana udalost i vybrana/potvrzena frekvence
-            (od 19. 9. 2026) - herec o zmene frekvence dostane oznameni. */}
-        {(event.kind === 'BLOCK' || jeUpravitelnaFrekvence(event)) && canManage && (
-          <button
-            type="button"
-            onClick={onUpravit}
-            className="text-sm font-heading font-semibold text-brand-purple"
-          >
-            Upravit
-          </button>
-        )}
-        {event.kind === 'BLOCK' && canManage && (
-          <button
-            type="button"
-            onClick={smaz}
-            disabled={busy}
-            className="text-sm font-heading font-semibold text-danger disabled:opacity-60"
-          >
-            Smazat událost
-          </button>
-        )}
       </div>
     </div>
   );
