@@ -27,6 +27,7 @@ import {
   jePraceVeStudiu,
   maHerce,
   ZADNE_STUDIO,
+  SOLO_MIMO,
   type CalendarView,
 } from '@/lib/calendar';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
@@ -129,6 +130,9 @@ export function CalendarBrowser({
   zvukari,
   nepritomnosti,
   ukazNepritomnost,
+  puvodniStudioIds,
+  puvodniNepritomnost,
+  solo,
   ja,
   lidiTymu,
 }: {
@@ -147,6 +151,18 @@ export function CalendarBrowser({
   /** Kalendář dovolených a nepřítomnosti (zadání 19. 9. 2026). */
   nepritomnosti: NepritomnostVKalendari[];
   ukazNepritomnost: boolean;
+  /**
+   * SOLO REŽIM (zadání 20. 9. 2026: „ať to funguje jako prozatímní sólo
+   * funkce. Když kliknu znova, tak se vrátí původní zaškrtnutí kalendářů,
+   * tak jak to bylo před kliknutím").
+   *
+   * Původní zaškrtnutí zůstává v adrese (`studia`, `nepritomnost`), sólo je
+   * jen `solo=<studio|mimo>` navíc. Odebráním `solo` se výběr vrátí přesně
+   * do stavu před kliknutím - i po obnovení stránky nebo z odkazu.
+   */
+  puvodniStudioIds: string[];
+  puvodniNepritomnost: boolean;
+  solo: string;
   ja: Osoba;
   /** Lidé z týmu - výběr osoby v okně Mimo studio. */
   lidiTymu: Osoba[];
@@ -349,41 +365,59 @@ export function CalendarBrowser({
     setOknoNepritomnosti({ upravovana: null, den: denKey, celyDen: true });
   }
 
+  /**
+   * Adresa kalendáře. `studia` a `nepritomnost` drží PŮVODNÍ zaškrtnutí i
+   * během sóla - proto se dá sólo kdykoli sundat a výběr se vrátí.
+   */
   function prejdi(zmeny: Record<string, string>) {
     const params = new URLSearchParams({
       // Prázdný seznam v adrese znamená „všechna studia", takže vypnutá
       // studia se musí napsat značkou (20. 9. 2026).
-      studia: selectedStudioIds.length > 0 ? selectedStudioIds.join(',') : ZADNE_STUDIO,
+      studia: puvodniStudioIds.length > 0 ? puvodniStudioIds.join(',') : ZADNE_STUDIO,
       pohled: view,
       datum: anchorIso,
-      nepritomnost: ukazNepritomnost ? '1' : '0',
+      nepritomnost: puvodniNepritomnost ? '1' : '0',
+      solo,
       ...zmeny,
     });
+    if (!params.get('solo')) params.delete('solo');
     router.push(`/kalendar?${params.toString()}`);
   }
 
   /**
-   * Kulička u štítku: zapnutí a vypnutí kalendáře vedle ostatních. Poslední
-   * zapnutý kalendář se vypnout nedá - prázdný kalendář nikomu nepomůže.
+   * Kulička u štítku: zapnutí a vypnutí kalendáře vedle ostatních. Sólo tím
+   * končí - kdo sahá na zaškrtnutí, chce zpátky svůj výběr. Poslední zapnutý
+   * kalendář se vypnout nedá, prázdná mřížka nikomu nepomůže.
    */
   function prepniStudio(id: string) {
-    const dalsi = selectedStudioIds.includes(id)
-      ? selectedStudioIds.filter((x) => x !== id)
-      : [...selectedStudioIds, id];
-    if (dalsi.length === 0 && !ukazNepritomnost) return;
-    prejdi({ studia: dalsi.length > 0 ? dalsi.join(',') : ZADNE_STUDIO });
+    const dalsi = puvodniStudioIds.includes(id)
+      ? puvodniStudioIds.filter((x) => x !== id)
+      : [...puvodniStudioIds, id];
+    if (dalsi.length === 0 && !puvodniNepritomnost) return;
+    prejdi({ studia: dalsi.length > 0 ? dalsi.join(',') : ZADNE_STUDIO, solo: '' });
   }
 
   /** Kulička u Mimo studio - stejné pravidlo jako u studií. */
   function prepniMimoStudio() {
-    if (ukazNepritomnost && selectedStudioIds.length === 0) return;
-    prejdi({ nepritomnost: ukazNepritomnost ? '0' : '1' });
+    if (puvodniNepritomnost && puvodniStudioIds.length === 0) return;
+    prejdi({ nepritomnost: puvodniNepritomnost ? '0' : '1', solo: '' });
   }
 
-  /** Klik na název štítku: nechá svítit jen tenhle kalendář. */
+  /**
+   * Klik na název štítku: prozatímní sólo. Druhý klik na stejný název sólo
+   * sundá a vrátí zaškrtnutí, jaké bylo předtím; klik na jiný název sólo
+   * přehodí na něj.
+   */
   function jenTentoKalendar(id: string) {
-    prejdi({ studia: id, nepritomnost: '0' });
+    prejdi({ solo: solo === id ? '' : id });
   }
+
+  /** Jméno sólujícího kalendáře do popisku nad mřížkou. */
+  const nazevSola = solo
+    ? solo === SOLO_MIMO
+      ? NAZEV_KALENDARE_MIMO
+      : (studios.find((s) => s.id === solo)?.shortName ?? '')
+    : '';
 
   // Odkud se prislo - po posunu zpet se tyden v mobilu ukaze od konce
   // (nedele), po posunu vpred od zacatku, at gesto navazuje (20. 9. 2026).
@@ -482,16 +516,18 @@ export function CalendarBrowser({
           kuličku u kalendáře, tak se buď zapne nebo vypne, a když kliknu na
           název, tak se naopak zapne jen ten kalendář"):
             - KULIČKA přidá nebo odebere kalendář k těm ostatním,
-            - NÁZEV nechá zapnutý jen jeho (ostatní i Mimo studio zhasnou). */}
+            - NÁZEV zapne PROZATÍMNÍ SÓLO - svítí jen on, orámovaný, a druhý
+              klik na stejný název vrátí zaškrtnutí, jaké bylo předtím. */}
       <div className="flex items-center gap-2 flex-wrap">
         {studios.map((s) => {
-          const zapnute = selectedStudioIds.includes(s.id);
+          const zapnute = solo ? solo === s.id : selectedStudioIds.includes(s.id);
+          const soluje = solo === s.id;
           return (
             <span
               key={s.id}
               className={`inline-flex items-center rounded-pill border text-sm font-heading font-semibold transition-colors ${
                 zapnute ? 'border-transparent text-ink' : 'border-line text-muted'
-              }`}
+              } ${soluje ? 'ring-2 ring-brand-purple ring-offset-2 ring-offset-paper' : ''}`}
               style={zapnute ? { backgroundColor: `${s.color}26` } : undefined}
             >
               <button
@@ -510,7 +546,7 @@ export function CalendarBrowser({
               <button
                 type="button"
                 onClick={() => jenTentoKalendar(s.id)}
-                title={`Zobrazit jen ${s.name}`}
+                title={soluje ? 'Zpět na původní výběr kalendářů' : `Dočasně jen ${s.name} (sólo)`}
                 className={`rounded-r-pill pl-0.5 pr-3.5 py-1.5 transition-colors ${
                   zapnute ? '' : 'hover:text-ink'
                 }`}
@@ -526,7 +562,7 @@ export function CalendarBrowser({
         <span
           className={`inline-flex items-center rounded-pill border border-dashed text-sm font-heading font-semibold transition-colors ${
             ukazNepritomnost ? 'text-ink' : 'border-line text-muted'
-          }`}
+          } ${solo === SOLO_MIMO ? 'ring-2 ring-brand-purple ring-offset-2 ring-offset-paper' : ''}`}
           style={
             ukazNepritomnost
               ? { backgroundColor: `${BARVA_NEPRITOMNOSTI}26`, borderColor: BARVA_NEPRITOMNOSTI }
@@ -555,8 +591,10 @@ export function CalendarBrowser({
           </button>
           <button
             type="button"
-            onClick={() => prejdi({ studia: ZADNE_STUDIO, nepritomnost: '1' })}
-            title="Zobrazit jen Mimo studio"
+            onClick={() => jenTentoKalendar(SOLO_MIMO)}
+            title={
+              solo === SOLO_MIMO ? 'Zpět na původní výběr kalendářů' : 'Dočasně jen Mimo studio (sólo)'
+            }
             className={`rounded-r-pill pl-0.5 pr-3.5 py-1.5 transition-colors ${
               ukazNepritomnost ? '' : 'hover:text-ink'
             }`}
@@ -564,6 +602,20 @@ export function CalendarBrowser({
             {NAZEV_KALENDARE_MIMO}
           </button>
         </span>
+        {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
+            (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
+            orámovat, aby to bylo jasné, že je to v sólo režimu"). */}
+        {solo && (
+          <button
+            type="button"
+            onClick={() => prejdi({ solo: '' })}
+            title="Vrátit zaškrtnutí kalendářů, jaké bylo před sólem"
+            className="inline-flex items-center gap-2 rounded-pill border border-brand-purple bg-brand-purple/10 pl-3 pr-3.5 py-1.5 text-sm font-heading font-semibold text-brand-purple"
+          >
+            SÓLO: {nazevSola}
+            <span className="font-body font-normal text-muted">zpět na výběr</span>
+          </button>
+        )}
         {/* Hledani na stejnem radku jako kalendare (zadani 20. 9. 2026:
             „hledání může být na řádku s výběrem kalendářů a stavy dejme úplně
             pryč"). Napovedy k dvojkliku jsou v Napovede, nad kalendarem
@@ -587,10 +639,12 @@ export function CalendarBrowser({
           dotaz={hledani}
           onZavri={() => setSeznamVyskytu(false)}
           onSkoc={(den, studioId) => {
-            const studia = selectedStudioIds.includes(studioId)
-              ? selectedStudioIds
-              : [...selectedStudioIds, studioId];
-            prejdi({ datum: den, studia: studia.join(',') });
+            // Skok z hledání sólo ruší - jinak by výskyt v jiném studiu
+            // nebyl vidět (20. 9. 2026).
+            const studia = puvodniStudioIds.includes(studioId)
+              ? puvodniStudioIds
+              : [...puvodniStudioIds, studioId];
+            prejdi({ datum: den, studia: studia.join(','), solo: '' });
             setSeznamVyskytu(false);
           }}
         />

@@ -124,6 +124,12 @@ export const PRACOVNI_DRUHY = ['NATACENI', 'STRIH', 'CASTING'] as const;
 export const ZADNE_STUDIO = 'zadne';
 
 /**
+ * Hodnota `solo=mimo` v adrese kalendáře - sólo kalendáře Mimo studio
+ * (20. 9. 2026). Studia mají v `solo` rovnou své id.
+ */
+export const SOLO_MIMO = 'mimo';
+
+/**
  * Druhy s hercem. Casting (20. 9. 2026: „Casting by měl být samostatný druh
  * práce… jako třetí") má herce jako natáčení, ale projekt u něj není povinný
  * - často se castuje dřív, než projekt v portálu je.

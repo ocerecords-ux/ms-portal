@@ -77,7 +77,9 @@ Když se držení nestihne potvrdit, termíny se samy vrátí do nabídky a here
 **Štítky kalendářů** nad mřížkou (Brno I, Brno II, Praha, London, Mimo studio) mají dvě poloviny:
 
 - **kolečko** vlevo kalendář **přidá nebo odebere** k těm, které jsou zapnuté — tak se kalendáře prolínají,
-- **název** vedle něj nechá svítit **jen ten jeden** kalendář; ostatní i Mimo studio zhasnou.
+- **název** zapne **sólo** — dočasně svítí jen ten jeden kalendář, štítek se orámuje a vedle štítků přibude štítek **SÓLO** s jeho názvem.
+
+Sólo je jen na chvíli: **dalším kliknutím na stejný název** (nebo na štítek SÓLO) se vrátí zaškrtnutí přesně tak, jak bylo předtím. Kliknutím na jiný název se sólo přehodí na něj, kolečkem sólo skončí a kalendář se přidá nebo odebere z původního výběru. Sólo přežije i přepnutí týdne a zůstane v odkazu, takže se dá poslat.
 
 Poslední zapnutý kalendář se kolečkem vypnout nedá, aby mřížka nezůstala prázdná. Vypnutý štítek má šedé kolečko (Mimo studio prázdné kolečko), zapnutý svítí svou barvou.
 

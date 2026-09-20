@@ -13,6 +13,7 @@ import {
   utcParts,
   zonedToUtc,
   ZADNE_STUDIO,
+  SOLO_MIMO,
   type CalendarView,
 } from '@/lib/calendar';
 import { CalendarBrowser, type CalendarEvent, type CalendarDay } from './CalendarBrowser';
@@ -52,6 +53,12 @@ export default async function KalendarPage({
     datum?: string;
     /** „0" = kalendář Mimo studio je vypnutý (zadání 19. 9. 2026). */
     nepritomnost?: string;
+    /**
+     * Prozatímní sólo jednoho kalendáře (zadání 20. 9. 2026): id studia nebo
+     * „mimo". `studia` a `nepritomnost` zůstávají netknuté, takže odebráním
+     * `solo` se vrátí zaškrtnutí, jaké bylo před kliknutím.
+     */
+    solo?: string;
   };
 }) {
   const session = await getServerSession(authOptions);
@@ -86,9 +93,19 @@ export default async function KalendarPage({
   // Značka „zadne" = všechna studia zhasnutá, v kalendáři zbyl jen Mimo
   // studio (klik na jeho název, 20. 9. 2026). Prázdný parametr dál znamená
   // „všechna studia", aby zkrácené odkazy fungovaly jako dřív.
-  const aktivni = parametrStudii === ZADNE_STUDIO ? [] : vybrana.length > 0 ? vybrana : studios;
+  const puvodni = parametrStudii === ZADNE_STUDIO ? [] : vybrana.length > 0 ? vybrana : studios;
+  const puvodniNepritomnost = searchParams?.nepritomnost !== '0';
+
+  // SÓLO (20. 9. 2026) - dočasně svítí jen jeden kalendář, původní výběr
+  // zůstává v adrese a vrátí se, jakmile sólo zmizí.
+  const soloZAdresy = (searchParams?.solo ?? '').trim();
+  const soloStudio = studios.find((s) => s.id === soloZAdresy) ?? null;
+  const soloMimo = soloZAdresy === SOLO_MIMO;
+  const solo = soloStudio ? soloStudio.id : soloMimo ? SOLO_MIMO : '';
+
+  const aktivni = solo ? (soloStudio ? [soloStudio] : []) : puvodni;
   // Mřížka (pásmo a otevírací doba) se musí o něco opřít i bez studií.
-  const mrizkaPodle = aktivni[0] ?? studios[0];
+  const mrizkaPodle = aktivni[0] ?? puvodni[0] ?? studios[0];
 
   const view = parseView(searchParams?.pohled);
   const anchor = parseDate(searchParams?.datum);
@@ -192,7 +209,7 @@ export default async function KalendarPage({
    * Načítá se všechno, co do zobrazeného rozsahu aspoň zasahuje - i dovolená,
    * která začala minulý týden a končí ve středu.
    */
-  const ukazNepritomnost = searchParams?.nepritomnost !== '0';
+  const ukazNepritomnost = solo ? soloMimo : puvodniNepritomnost;
   const spravceKalendare = canManageCalendar(session.user.role);
   const [radkyNepritomnosti, lidiTymu] = await Promise.all([
     ukazNepritomnost
@@ -294,6 +311,9 @@ export default async function KalendarPage({
         color: s.color,
       }))}
       selectedStudioIds={aktivni.map((s) => s.id)}
+      puvodniStudioIds={puvodni.map((s) => s.id)}
+      puvodniNepritomnost={puvodniNepritomnost}
+      solo={solo}
       timezone={tz}
       view={view}
       anchorIso={anchorLocal.toISOString().slice(0, 10)}
