@@ -14,10 +14,22 @@
  *   „Strih (TI) annie bot"  /  „Strih (TM) -Nástroje pro život" → střih
  */
 
+/**
+ * Zkratky zvukařů z Google kalendáře na celá jména. Zkratky jsou SPOLEČNÉ pro
+ * všechna studia - kdyby se někdy stejné písmeno trefilo ve dvou studiích do
+ * dvou lidí, nestačí sem přidat řádek a musí se to rozlišit podle studia.
+ * Zatím se to nestalo: P i V jsou jen v Brně, Jonas, J, Marek a Matej jen
+ * v Praze.
+ */
 export const ZVUKARI_ZKRATKY: Record<string, string> = {
   TM: 'Tomáš Moravec',
   TI: 'Tomáš Ilavský',
   R: 'Richard Hanula',
+  // Brno (20. 9. 2026): „brněnské V je naše bývalá kolegyně Viola
+  // a brněnské P je Peter Dratva". Viola je jen křestní jméno - účet
+  // v portálu nemá, takže se u události ukáže tak, jak je tady.
+  V: 'Viola',
+  P: 'Peter Dratva',
   // Praha (20. 9. 2026): v Googlu byly jen zkratky a křestní jména, portál
   // potřebuje celé jméno, aby si událost spároval s účtem. Zkratka P zatím
   // nevíme, komu patří - ukazuje se tak, jak byla v Googlu.
