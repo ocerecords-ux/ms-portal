@@ -719,13 +719,28 @@ function MrizkaPohled({
               return (
                 <div
                   key={den.key}
-                  className={`px-2 py-2 text-center border-l border-line ${den.key === dnesKey ? 'bg-tint' : ''}`}
+                  className={`px-2 py-2 text-center border-l border-line ${
+                    den.key === dnesKey ? 'bg-brand-green/15 border-b-2 border-b-brand-green' : ''
+                  }`}
                 >
-                  <span className="block text-[11px] font-heading text-muted uppercase tracking-wide">
-                    {WEEKDAY_SHORT[dow]}
+                  {/* DNESEK ZELENE A VETSI (zadani 20. 9. 2026: „zvyraznil bych
+                      dnesni den, treba zelene, aby to bylo vyrazne, mozna
+                      o neco vetsi velikost fontu"). */}
+                  <span
+                    className={`block text-[11px] font-heading uppercase tracking-wide ${
+                      den.key === dnesKey ? 'text-brand-greenDeep dark:text-brand-green font-semibold' : 'text-muted'
+                    }`}
+                  >
+                    {den.key === dnesKey ? `Dnes · ${WEEKDAY_SHORT[dow]}` : WEEKDAY_SHORT[dow]}
                     {den.byArrangement && <span title="Jen po domluvě se zvukařem"> ·</span>}
                   </span>
-                  <span className="block text-sm font-heading font-semibold text-ink tabular-nums">{cislo}</span>
+                  {den.key === dnesKey ? (
+                    <span className="inline-block mt-0.5 rounded-pill bg-brand-green text-onAccent px-2.5 text-base font-heading font-bold tabular-nums">
+                      {cislo}
+                    </span>
+                  ) : (
+                    <span className="block text-sm font-heading font-semibold text-ink tabular-nums">{cislo}</span>
+                  )}
                 </div>
               );
             })}
@@ -759,7 +774,7 @@ function MrizkaPohled({
               {days.map((den) => (
                 <div
                   key={den.key}
-                  className="relative border-l border-line"
+                  className={`relative border-l border-line ${den.key === dnesKey ? 'bg-brand-green/[0.06]' : ''}`}
                   style={{ height: `${celkovaVyska}px` }}
                   onDoubleClick={(e) => {
                     if (!onNovaBlokace) return;
@@ -776,6 +791,15 @@ function MrizkaPohled({
                       style={{ top: `${(h - GRID_START_HOUR) * HOUR_PX}px` }}
                     />
                   ))}
+                  {/* Zelena cara „ted" v dnesnim sloupci (20. 9. 2026). */}
+                  {den.key === dnesKey && (
+                    <div
+                      className="absolute left-0 right-0 z-10 pointer-events-none border-t-2 border-brand-green"
+                      style={{ top: `${((minutesInZone(new Date(), timezone) - GRID_START_HOUR * 60) * HOUR_PX) / 60}px` }}
+                    >
+                      <span className="absolute -left-1 -top-[5px] w-2 h-2 rounded-full bg-brand-green" />
+                    </div>
+                  )}
                   {/* Mimo pracovni dobu studia */}
                   {den.openFrom !== null && den.openTo !== null && (
                     <>
@@ -928,11 +952,17 @@ function MesicniPohled({
               onDoubleClick={() => onNovaVeDni(den.key)}
               className={`min-h-[92px] border-t border-l border-line p-1.5 flex flex-col gap-1 ${
                 den.inMonth ? '' : 'bg-paper'
-              } ${den.key === dnesKey ? 'bg-tint' : ''}`}
+              } ${den.key === dnesKey ? 'bg-brand-green/10 ring-2 ring-inset ring-brand-green' : ''}`}
             >
-              <span className={`text-xs font-heading tabular-nums ${den.inMonth ? 'text-ink' : 'text-muted'}`}>
-                {cislo}
-              </span>
+              {den.key === dnesKey ? (
+                <span className="self-start rounded-pill bg-brand-green text-onAccent px-2 text-sm font-heading font-bold tabular-nums">
+                  {cislo} · dnes
+                </span>
+              ) : (
+                <span className={`text-xs font-heading tabular-nums ${den.inMonth ? 'text-ink' : 'text-muted'}`}>
+                  {cislo}
+                </span>
+              )}
               {/* Dovolené nahoře - stejně jako celodenní pruh v týdnu. */}
               {(nepritomnostPodleDnu?.get(den.key) ?? []).map((n) => (
                 <CipNepritomnosti key={n.id} n={n} onOtevri={onOtevriNepritomnost} />
