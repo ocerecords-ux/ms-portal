@@ -1128,6 +1128,13 @@ function UdalostForm({
   const [poznamka, setPoznamka] = useState(upravovana?.poznamka ?? '');
   const [projektId, setProjektId] = useState(upravovana?.udalost?.caflouProjectId ?? '');
   const [herecId, setHerecId] = useState(upravovana?.udalost?.actorUserId ?? '');
+  /**
+   * HEREC U CASTINGU JE JEN TEXT (zadání 20. 9. 2026: „u castingu musí být
+   * pole Herec čistě jen na psaný text. Nebudeme vybírat z databáze, protože
+   * ho tam ještě logicky nemáme"). Na casting chodí lidi, kteří v portálu
+   * účet nemají - vybírat je ze seznamu by nešlo.
+   */
+  const [herecText, setHerecText] = useState(upravovana?.udalost?.actorName ?? '');
   const [zvukarId, setZvukarId] = useState(upravovana?.udalost?.zvukarUserId ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1139,6 +1146,7 @@ function UdalostForm({
   // U castingu se projekt neřeší vůbec (20. 9. 2026: „to pole Projekt dej
   // úplně pryč ve chvíli, kdy zvolím typ práce Casting") - stačí herec.
   const sProjektem = druh !== 'CASTING';
+  const herecPsany = druh === 'CASTING';
 
   /**
    * DATUM A ČAS OD–DO (zadání 14. 9. 2026: „potřebuji tam zadat i čas - od,
@@ -1204,6 +1212,8 @@ function UdalostForm({
 
   const projekt = projekty.find((p) => p.id === projektId);
   const herec = herci.find((h) => h.id === herecId);
+  /** Jméno herce do uložení: u castingu napsané, jinak vybrané ze seznamu. */
+  const herecJmeno = herecPsany ? herecText.trim() : (herec?.label ?? '');
   const zvukar = zvukari.find((z) => z.id === zvukarId);
 
   // U frekvence je herec dany nabidkou a zvukar se teprve doplnuje -
@@ -1217,7 +1227,7 @@ function UdalostForm({
           ? !zvukar
           : !nazev.trim()
       : jePrace
-        ? (sProjektem && !projekt) || !zvukar || (sHercem && !herec)
+        ? (sProjektem && !projekt) || !zvukar || (sHercem && !herecJmeno)
         : !nazev.trim());
 
   /** Zrušení frekvence z kalendáře (19. 9. 2026). */
@@ -1289,8 +1299,9 @@ function UdalostForm({
                 projectName: sProjektem
                   ? (projekt?.nazev ?? projekt?.label ?? upravovana?.udalost?.projectName ?? '')
                   : '',
-                actorUserId: sHercem ? (herec?.id ?? '') : '',
-                actorName: sHercem ? (herec?.label ?? '') : '',
+                // U castingu je herec jen jméno - zadny ucet k nemu neni.
+                actorUserId: sHercem && !herecPsany ? (herec?.id ?? '') : '',
+                actorName: sHercem ? herecJmeno : '',
                 zvukarUserId: zvukar?.id ?? '',
                 zvukarName: zvukar?.label ?? '',
               }
@@ -1442,7 +1453,20 @@ function UdalostForm({
               </span>
             </div>
           )}
-          {sHercem && !jeFrekvence && (
+          {sHercem && !jeFrekvence && herecPsany && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">
+                Herec <span className="text-danger">*</span>
+              </span>
+              <input
+                value={herecText}
+                onChange={(e) => setHerecText(e.target.value)}
+                placeholder="Napište jméno herce…"
+                className={inputClass}
+              />
+            </label>
+          )}
+          {sHercem && !jeFrekvence && !herecPsany && (
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
                 Herec <span className="text-danger">*</span>
