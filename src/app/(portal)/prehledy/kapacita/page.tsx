@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { canSee } from '@/lib/menu';
 import { hodiny, nactiKapacituRoku, procenta } from '@/lib/kapacitaServer';
+import { analyzaRoku } from '@/lib/kapacitaAnalyzy';
+import { Analyzy } from './Analyzy';
 
 /**
  * KAPACITA STUDIÍ (zadání 20. 9. 2026: „potřebuji to vidět po měsících, ale
@@ -86,6 +88,9 @@ export default async function KapacitaPage({
     return { ...s, kapacitaMinut, natoceno, dnuSNatacenim: dnu };
   });
   const pMesic = procenta(otevreny);
+  // Grafy pod mřížkou (20. 9. 2026) - počítají se z téhož ročního přehledu,
+  // takže to nestojí ani jeden dotaz do databáze navíc.
+  const analyza = analyzaRoku(prehled);
 
   return (
     <div className="flex flex-col gap-4">
@@ -265,6 +270,13 @@ export default async function KapacitaPage({
           nemají — natáčení v nich je vidět, ale do procent se nepočítá, proto může měsíc přesáhnout 100 %.
         </span>
       </div>
+
+      {/* Grafy a data ke stažení - pod mřížkou (zadání 20. 9. 2026). */}
+      <Analyzy
+        analyza={analyza}
+        studia={prehled.studia.map((s) => ({ id: s.id, nazev: s.nazev, barva: s.barva }))}
+        rok={rok}
+      />
     </div>
   );
 }
