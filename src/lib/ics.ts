@@ -17,7 +17,18 @@ export type IcsEvent = {
   /** Kdy byl záznam naposled změněn - podle toho se kalendáře aktualizují. */
   updatedAt: Date;
   cancelled?: boolean;
+  /**
+   * Celodenní událost (dovolená, svátek) - v kalendáři se ukáže nahoře
+   * v řádku dne, ne jako blok přes celou mřížku. `end` je vyloučený konec
+   * (půlnoc PO posledním dni), přesně jak to iCalendar chce.
+   */
+  celyDen?: boolean;
 };
+
+/** Den v Praze jako „20260914" - pro celodenní události. */
+function icsDen(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(date).replace(/-/g, '');
+}
 
 /** "2026-09-14T07:00:00.000Z" -> "20260914T070000Z" */
 function icsDate(date: Date): string {
@@ -36,19 +47,28 @@ function esc(text: string): string {
     .replace(/\r?\n/g, '\\n');
 }
 
-/** Řádek delší než 75 oktetů se podle normy zalamuje mezerou na začátku. */
+/**
+ * Řádek delší než 75 OKTETŮ se podle normy zalamuje mezerou na začátku.
+ * Počítají se bajty, ne znaky - „č" má v UTF-8 dva a přísnější kalendáře
+ * (Apple, Outlook) by jinak dostaly moc dlouhé řádky (oprava 20. 9. 2026).
+ * Znak se nikdy nerozdělí napůl.
+ */
 function fold(line: string): string {
-  if (line.length <= 74) return line;
+  const bajty = (t: string) => Buffer.byteLength(t, 'utf8');
+  if (bajty(line) <= 75) return line;
   const casti: string[] = [];
-  let zbytek = line;
-  casti.push(zbytek.slice(0, 74));
-  zbytek = zbytek.slice(74);
-  while (zbytek.length > 73) {
-    casti.push(` ${zbytek.slice(0, 73)}`);
-    zbytek = zbytek.slice(73);
+  let aktualni = '';
+  let limit = 75;
+  for (const znak of line) {
+    if (bajty(aktualni + znak) > limit) {
+      casti.push(aktualni);
+      aktualni = '';
+      limit = 74; // pokracovaci radek zacina mezerou
+    }
+    aktualni += znak;
   }
-  if (zbytek.length) casti.push(` ${zbytek}`);
-  return casti.join('\r\n');
+  if (aktualni) casti.push(aktualni);
+  return casti.map((c, i) => (i === 0 ? c : ` ${c}`)).join('\r\n');
 }
 
 export function buildIcs(name: string, events: IcsEvent[]): string {
@@ -60,6 +80,10 @@ export function buildIcs(name: string, events: IcsEvent[]): string {
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${esc(name)}`,
     'X-WR-TIMEZONE:Europe/Prague',
+    // Jak casto si ma kalendar odber obnovit. Apple a Outlook to ctou,
+    // Google si interval urcuje sam (nekolik hodin).
+    'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
+    'X-PUBLISHED-TTL:PT1H',
   ];
 
   for (const e of events) {
@@ -67,8 +91,8 @@ export function buildIcs(name: string, events: IcsEvent[]): string {
       'BEGIN:VEVENT',
       `UID:${e.uid}`,
       `DTSTAMP:${icsDate(e.updatedAt)}`,
-      `DTSTART:${icsDate(e.start)}`,
-      `DTEND:${icsDate(e.end)}`,
+      e.celyDen ? `DTSTART;VALUE=DATE:${icsDen(e.start)}` : `DTSTART:${icsDate(e.start)}`,
+      e.celyDen ? `DTEND;VALUE=DATE:${icsDen(e.end)}` : `DTEND:${icsDate(e.end)}`,
       `SUMMARY:${esc(e.summary)}`,
     );
     if (e.description) radky.push(`DESCRIPTION:${esc(e.description)}`);

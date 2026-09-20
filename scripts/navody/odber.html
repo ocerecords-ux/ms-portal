@@ -1,0 +1,131 @@
+<!-- Replika obrazovek pro návod „MS kalendář v telefonu" - snímky: node scripts/navody/snimky.mjs odber -->
+<!doctype html>
+<html lang="cs"><head><meta charset="utf-8"><title>MS kalendář v telefonu</title>
+<style>
+:root{--p:#7b55ff;--pd:#6b2af0;--ink:#201a33;--paper:#fbfaff;--s:#fff;--field:#f6f6f6;--line:#e4dffb;--muted:#6e6580;--tint:#f1ecff;--green:#1fdf67;--ok:#e3f9ec;--warn:#fdf1de;--done:#149e4b;--prog:#e08a00;}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e7f2;font-family:'Poppins',sans-serif;color:var(--ink);font-size:14px}
+.snimek{width:900px;background:var(--paper);padding:28px;margin:0 0 40px;position:relative}
+.karta{background:var(--s);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(32,26,51,.05)}
+.h2{font-weight:600;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0}
+.muted{color:var(--muted)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pole{display:flex;flex-direction:column;gap:6px}
+.pole>span{font-size:14px}
+.vstup{border:1px solid var(--line);background:var(--field);border-radius:8px;padding:8px 12px;font-weight:500;font-size:14px}
+.hint{font-size:12px;color:var(--muted)}
+.btn{display:inline-block;background:var(--p);color:#fff;font-weight:600;border-radius:8px;padding:10px 20px;font-size:14px}
+.btn.zel{background:var(--done)}
+.btn.obrys{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.volba{display:inline-flex;align-items:center;gap:8px;border-radius:999px;border:1px solid var(--p);background:rgba(123,85,255,.1);color:var(--pd);padding:6px 14px 6px 8px;font-weight:600}
+.volba.ne{border:1px dashed var(--line);background:transparent;color:var(--muted);opacity:.75}
+.ok{width:16px;height:16px;border-radius:5px;background:var(--p);color:#fff;display:grid;place-items:center;font-size:10px}
+.volba.ne .ok{background:var(--field);border:1px solid var(--line);color:transparent}
+.tec{width:10px;height:10px;border-radius:50%}
+.chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:12px;background:var(--s)}
+.num{position:absolute;width:30px;height:30px;border-radius:50%;background:#ff3d7f;color:#fff;font-weight:700;display:grid;place-items:center;font-size:15px;box-shadow:0 0 0 4px rgba(255,61,127,.25);z-index:5}
+.lista{background:var(--p);color:#fff;border-radius:16px;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 20px rgba(107,42,240,.3)}
+.kolo{min-width:44px;height:44px;border-radius:999px;background:#fff;color:var(--pd);display:grid;place-items:center;font-size:24px;font-weight:600}
+.slot{background:var(--s);border:1px solid var(--line);border-radius:16px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.slot.vyb{background:var(--tint);border-color:var(--p)}
+.ctv{width:20px;height:20px;border-radius:5px;border:1px solid var(--line);display:grid;place-items:center;font-size:12px;color:transparent;font-weight:700}
+.vyb .ctv{background:var(--p);border-color:var(--p);color:#fff}
+.den{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:18px;font-weight:600}
+.link{color:var(--p);font-weight:600;font-size:12px}
+.pill{display:inline-block;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600}
+table{border-collapse:collapse;width:100%}
+.kal td,.kal th{border:1px solid var(--line);height:36px;vertical-align:top;font-size:11px}
+.kal th{background:var(--s);color:var(--muted);font-weight:600;padding:6px}
+.ev{border-left:3px solid var(--p);background:rgba(123,85,255,.12);border-radius:6px;padding:4px 6px;font-size:11px;line-height:1.3}
+.overlay{background:rgba(0,0,0,.45);padding:28px;border-radius:12px}
+.opt{border:1px dashed var(--line);border-radius:8px;padding:10px 12px}
+.opt.vyb{border:1px solid var(--p);background:rgba(123,85,255,.1)}
+.opt b{display:block;font-size:14px}.opt span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.modal{max-width:600px;margin:0 auto;background:var(--s);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:18px;position:relative}
+.nad{font-family:'Jost','Poppins',sans-serif;font-size:24px;margin:0}
+.krok{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}
+.velke{display:block;background:var(--p);color:#fff;border-radius:8px;padding:12px 16px}
+.velke b{display:block;font-size:14px}.velke span{display:block;font-size:12px;opacity:.85}
+.url{flex:1;border:1px solid var(--line);background:var(--field);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:12px}
+.pozn{font-size:12px;color:var(--muted);background:var(--field);border-radius:8px;padding:8px 12px}
+.hlav{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.tl{border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-weight:600;font-size:14px;background:var(--s)}
+.tl.fial{background:var(--p);color:#fff;border-color:var(--p)}
+</style></head><body>
+
+<!-- 1: tlacitko v hlavicce kalendare -->
+<div class="snimek" id="s1">
+  <div class="hlav">
+    <div><p class="nad" style="font-size:34px">Kalendář</p><p class="muted" style="margin:4px 0 0">21. – 27. září 2026</p></div>
+    <div style="display:flex;gap:8px;align-items:center;position:relative">
+      <span class="tl" style="border-color:var(--p);box-shadow:0 0 0 3px rgba(123,85,255,.25)">📅 Do mého kalendáře</span>
+      <span class="tl">‹</span><span class="tl">Dnes</span><span class="tl">›</span>
+      <span class="tl fial">Týden</span><span class="tl">Měsíc</span>
+      <span class="num" style="left:40px;top:-40px">1</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:18px">
+    <span class="volba"><span class="ok">✓</span><span class="tec" style="background:#7b55ff"></span>Brno I</span>
+    <span class="volba"><span class="ok">✓</span><span class="tec" style="background:#1fdf67"></span>Brno II</span>
+    <span class="volba"><span class="ok">✓</span><span class="tec" style="background:#ff9f1c"></span>Praha</span>
+    <span class="volba"><span class="ok">✓</span><span class="tec" style="background:#a7a4b0"></span>Mimo studio</span>
+  </div>
+  <table class="kal" style="margin-top:14px">
+    <tr><th></th><th>po 21. 9.</th><th>út 22. 9.</th><th>st 23. 9.</th><th>čt 24. 9.</th><th>pá 25. 9.</th></tr>
+    <tr><th>9:00</th><td><div class="ev">Poslední naživu · Šárka Šildová</div></td><td></td><td><div class="ev" style="border-color:#1fdf67;background:rgba(31,223,103,.12)">Střih: Krvavý cejch</div></td><td></td><td></td></tr>
+    <tr><th>13:00</th><td></td><td><div class="ev">Špatný střelec · Tomáš Žilinský</div></td><td></td><td><div class="ev" style="border-color:#ff9f1c;background:rgba(255,159,28,.12)">Hladina v plamenech</div></td><td></td></tr>
+  </table>
+</div>
+
+<!-- 2: okno - co chcete videt -->
+<div class="snimek" id="s2">
+  <div class="overlay">
+  <div class="modal">
+    <div><p class="nad">MS kalendář do mého kalendáře</p><p class="muted" style="margin:6px 0 0;font-size:13px">Uvidíte ho v Google, Apple nebo Outlook kalendáři vedle svých událostí. Jen pro čtení - měnit se dá dál jen tady v portálu.</p></div>
+    <div style="position:relative">
+      <p class="krok">1. Co chcete vidět</p>
+      <div class="grid3">
+        <div class="opt vyb"><b>Celý kalendář</b><span>Všechna studia a Mimo studio</span></div>
+        <div class="opt"><b>Jedno studio</b><span>Jen natáčení a události vybraného studia</span></div>
+        <div class="opt"><b>Jen moje</b><span>Kde jsem zvukař a moje Mimo studio</span></div>
+      </div>
+      <span class="num" style="left:-44px;top:30px">2</span>
+    </div>
+    <div style="position:relative">
+      <p class="krok">2. Kam ho přidat</p>
+      <span class="btn">Připravit odkaz</span>
+      <span class="num" style="left:-44px;top:30px">3</span>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- 3: okno - odkaz pripraveny -->
+<div class="snimek" id="s3">
+  <div class="overlay">
+  <div class="modal">
+    <div><p class="nad">MS kalendář do mého kalendáře</p></div>
+    <div style="position:relative">
+      <p class="krok">2. Kam ho přidat</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <span class="velke"><b>Apple Kalendář</b><span>iPhone, iPad, Mac - otevře se a potvrdíte Odebírat</span></span>
+        <span class="velke"><b>Google Kalendář</b><span>Otevře se Google, potvrdíte Přidat</span></span>
+      </div>
+      <span class="num" style="left:-44px;top:40px">4</span>
+    </div>
+    <div style="position:relative">
+      <p class="hint" style="margin:0 0 6px">Outlook a ostatní: zkopírujte odkaz a v kalendáři zvolte „Přidat kalendář z internetu / podle URL".</p>
+      <div style="display:flex;gap:8px"><span class="url">https://www.msportal.cz/api/ical/Xk3v…9QzA</span><span class="tl">Kopírovat</span></div>
+      <span class="num" style="left:-44px;top:20px">5</span>
+    </div>
+    <p class="pozn" style="margin:0">Kalendář se obnovuje sám - Apple a Outlook zhruba každou hodinu, Google podle sebe (bývá to i několik hodin). Odkaz je váš osobní, neposílejte ho mimo tým.</p>
+    <div style="border-top:1px solid var(--line);padding-top:14px;position:relative">
+      <p class="krok">Moje odběry</p>
+      <div style="display:flex;justify-content:space-between"><span style="font-weight:500">Celý kalendář <span class="hint">naposledy staženo 20. 9. 10:05</span></span><span class="hint" style="text-decoration:underline">Zneplatnit</span></div>
+      <span class="num" style="left:-44px;top:26px">6</span>
+    </div>
+  </div>
+  </div>
+</div>
+
+</body></html>

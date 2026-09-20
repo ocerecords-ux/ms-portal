@@ -5,6 +5,7 @@ import { STAVY_A_DOTOCENO } from './navodStavyDotoceno';
 import { REKLAMY_PRIPOMINKY } from './navodReklamyPripominky';
 import { NAHLEDOVY_UCET } from './navodNahledovyUcet';
 import { NATACECI_TERMINY } from './navodNataceciTerminy';
+import { ODBER_KALENDARE } from './navodOdberKalendare';
 
 /**
  * NÁVODY, KTERÉ PORTÁL ZALOŽÍ SÁM (zadání 16. 9. 2026: „udělejme nějakou
@@ -35,4 +36,6 @@ export const VYCHOZI_NAVODY: VychoziNavod[] = [
   NAHLEDOVY_UCET,
   // Planovani natacecich terminu od nabidky po kalendar (zadani 19. 9. 2026).
   NATACECI_TERMINY,
+  // MS kalendar v Google/Apple kalendari (zadani 20. 9. 2026).
+  ODBER_KALENDARE,
 ];

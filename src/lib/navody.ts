@@ -173,15 +173,18 @@ export function navodNaHtml(markdown: string): string {
       continue;
     }
 
-    const cislo = /^\s*\d+[.)]\s+(.*)$/.exec(text);
+    const cislo = /^\s*(\d+)[.)]\s+(.*)$/.exec(text);
     if (cislo) {
       zavriOdstavec();
       if (seznam !== 'ol') {
         zavriSeznam();
-        out.push('<ol>');
+        // Cislovani pokracuje i za obrazkem (20. 9. 2026): „4." za obrazkem
+        // ma byt 4, ne znovu 1 - cisla v textu odpovidaji cislum v obrazku.
+        const od = Number(cislo[1]);
+        out.push(od > 1 ? `<ol start="${od}">` : '<ol>');
         seznam = 'ol';
       }
-      out.push(`<li>${radek(cislo[1])}</li>`);
+      out.push(`<li>${radek(cislo[2])}</li>`);
       continue;
     }
 

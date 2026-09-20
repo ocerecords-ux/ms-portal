@@ -108,6 +108,7 @@ Portál běží na Vercelu, data jsou v databázi. Nahrávky bydlí na **Google 
 
 - **Kde je zakázka a jak na tom je?** Projekty → karta projektu → Přehled.
 - **Kdy natáčíme a kde?** Kalendář, nebo záložka Natáčecí plán u projektu.
+- **Chci kalendář v telefonu?** Kalendář → **Do mého kalendáře** (Google, Apple, Outlook; jen pro čtení).
 - **Co jsme klientovi poslali?** Historie u projektu.
 - **Kolik jsme fakturovali?** Doklady u projektu, nebo sekce Doklady.
 - **Přišly peníze?** Doklady → Banka (kdo na ni má právo).
