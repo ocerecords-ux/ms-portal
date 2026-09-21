@@ -2345,9 +2345,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         });
       } catch (err) {
         console.error('Nahrání přílohy do úložiště selhalo:', err);
+        // Hláška dřív tvrdila „nejspíš CORS" - jenže stejně vypadá i odmítnutý
+        // podpis (21. 9. 2026 to byl právě podpis). Který z nich to je, řekne
+        // /api/admin/uloziste-test.
         setError(
           `Přílohu ${soubor.name} se nepodařilo nahrát - úložiště odmítlo požadavek z portálu. ` +
-            'Nejspíš mu chybí povolení pro www.msportal.cz (nastavení CORS u bucketu).',
+            'Zkuste to prosím znovu; když to nepůjde, dejte vědět správci portálu.',
         );
         return null;
       }

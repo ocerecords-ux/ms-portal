@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { zkusUloziste } from '@/lib/storage';
+import { zkusNahravani, zkusUloziste } from '@/lib/storage';
 
 /**
  * Zkouska spojeni s uloziste souboru (9. 9. 2026). Jen pro Zuzo-labuzo.
@@ -28,5 +28,9 @@ export async function GET() {
   }
 
   const vysledek = await zkusUloziste();
-  return NextResponse.json(vysledek, { status: vysledek.ok ? 200 : 500 });
+  // Od 21. 9. 2026 i zkouška nahrávání přes podepsanou adresu a nastavení
+  // CORS - viz zkusNahravani. Přesně tudy jdou přílohy chatu.
+  const nahravani = vysledek.ok ? await zkusNahravani() : null;
+  const ok = vysledek.ok && Boolean(nahravani?.ok);
+  return NextResponse.json({ ...vysledek, ok, nahravani }, { status: ok ? 200 : 500 });
 }

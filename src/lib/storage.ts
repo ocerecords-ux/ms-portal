@@ -4,6 +4,7 @@ import {
   HeadObjectCommand,
   GetObjectCommand,
   ListObjectsV2Command,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
@@ -87,7 +88,29 @@ function getClient() {
   // jineho, podpis nesedi a uloziste zapis odmitne.
   const jeR2 = Boolean(endpoint && endpoint.includes('r2.cloudflarestorage.com'));
 
+  // BEZ AUTOMATICKÝCH KONTROLNÍCH SOUČTŮ (21. 9. 2026: „v chatu nejde
+  // příloha").
+  //
+  // Novější SDK od Amazonu přidává ke každému PutObject kontrolní součet
+  // CRC32 - a u PODEPSANÉ ADRESY ho spočítá předem, z prázdného těla, protože
+  // soubor v tu chvíli ještě nemá. Prohlížeč pak pošle skutečný soubor, součet
+  // nesedí a úložiště požadavek odmítne. Odmítnutí přijde bez hlaviček CORS,
+  // takže prohlížeč hlásí jen „Failed to fetch" - na pohled k nerozeznání od
+  // špatně nastaveného CORS. Balíček se instaluje v nejnovější verzi (není
+  // zamčený), takže se to mohlo rozbít „samo" s kterýmkoli nasazením.
+  //
+  // WHEN_REQUIRED = součet jen tam, kde ho služba vyžaduje; R2 u nahrávání
+  // nevyžaduje. Volby jdou do konfigurace rozbalením: starší verze SDK je
+  // neznají a u rozbaleného objektu TypeScript navíc přidané vlastnosti
+  // nekontroluje, takže překlad projde s kteroukoli verzí. Za běhu je starší
+  // verze jen ignoruje.
+  const bezSouctu = {
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
+  } as const;
+
   return new S3Client({
+    ...bezSouctu,
     region: S3_REGION || (jeR2 ? 'auto' : 'eu-central-1'),
     endpoint, // prazdne = AWS S3, jinak napr. Cloudflare R2
     // SDK od Amazonu sklada adresu jako <bucket>.<server>/<klic>. R2 tohle
@@ -623,4 +646,96 @@ export async function uploadPripominkaObrazek(
 
   const mime = typSouboru || 'image/png';
   return { url: `data:${mime};base64,${buffer.toString('base64')}`, name: nazev };
+}
+
+
+/**
+ * ZKOUŠKA NAHRÁVÁNÍ PŘES PODEPSANOU ADRESU (21. 9. 2026: „v chatu nejde
+ * příloha").
+ *
+ * Přílohy chatu jdou z prohlížeče rovnou do úložiště. Když to selže,
+ * prohlížeč řekne jen „Failed to fetch" a nedá se poznat, jestli vadí CORS
+ * u bucketu, nebo podpis. Tady se obojí zkusí ZE SERVERU, kde CORS neplatí:
+ *
+ *  1. PŘEDLET (OPTIONS) s hlavičkou Origin portálu - úložiště odpoví podle
+ *     svého nastavení CORS, takže je vidět, jestli PUT z portálu vůbec pustí.
+ *  2. PUT na podepsanou adresu úplně stejně jako chat (malý textový soubor).
+ *     Když projde, podpis je v pořádku; soubor se hned zase smaže.
+ *
+ * Nevrací žádné tajné hodnoty - z podepsané adresy jen JMÉNA parametrů.
+ */
+export async function zkusNahravani(): Promise<{
+  ok: boolean;
+  parametryPodpisu?: string[];
+  predlet?: { origin: string; status: number; povolenyOrigin: string | null; povoleneMetody: string | null; povoleneHlavicky: string | null }[];
+  nahrani?: { status: number; odpoved: string };
+  uklid?: string;
+  chyba?: string;
+}> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return { ok: false, chyba: 'Úložiště není nastavené.' };
+
+  const key = `chat/_zkouska-${randomUUID()}.txt`;
+  try {
+    const uploadUrl = await getSignedUrl(
+      client,
+      new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: 'text/plain' }),
+      { expiresIn: 120 },
+    );
+    const parametryPodpisu = Array.from(new URL(uploadUrl).searchParams.keys()).sort();
+
+    // 1) Předlet z obou adres portálu - s www i bez.
+    const predlet: {
+      origin: string;
+      status: number;
+      povolenyOrigin: string | null;
+      povoleneMetody: string | null;
+      povoleneHlavicky: string | null;
+    }[] = [];
+    for (const origin of ['https://www.msportal.cz', 'https://msportal.cz']) {
+      try {
+        const r = await fetch(uploadUrl, {
+          method: 'OPTIONS',
+          headers: {
+            Origin: origin,
+            'Access-Control-Request-Method': 'PUT',
+            'Access-Control-Request-Headers': 'content-type',
+          },
+        });
+        predlet.push({
+          origin,
+          status: r.status,
+          povolenyOrigin: r.headers.get('access-control-allow-origin'),
+          povoleneMetody: r.headers.get('access-control-allow-methods'),
+          povoleneHlavicky: r.headers.get('access-control-allow-headers'),
+        });
+      } catch (err) {
+        predlet.push({ origin, status: 0, povolenyOrigin: null, povoleneMetody: null, povoleneHlavicky: String(err).slice(0, 120) });
+      }
+    }
+
+    // 2) Nahrání stejně jako z chatu.
+    const r = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'text/plain', Origin: 'https://www.msportal.cz' },
+      body: 'zkouska nahravani z portalu',
+    });
+    const nahrani = { status: r.status, odpoved: (await r.text()).slice(0, 400) };
+
+    let uklid = 'nebylo co mazat';
+    if (r.ok) {
+      try {
+        await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+        uklid = 'zkušební soubor smazán';
+      } catch (err) {
+        uklid = `zkušební soubor se nepodařilo smazat (${key}): ${String(err).slice(0, 120)}`;
+      }
+    }
+
+    const corsPusti = predlet.some((p) => p.status >= 200 && p.status < 300 && p.povolenyOrigin);
+    return { ok: r.ok && corsPusti, parametryPodpisu, predlet, nahrani, uklid };
+  } catch (err) {
+    return { ok: false, chyba: err instanceof Error ? err.message : String(err) };
+  }
 }
