@@ -12,6 +12,7 @@ import {
 } from '@/lib/mesicniPrehledServer';
 import { VyberMesice } from './VyberMesice';
 import { NastaveniPrehledu } from './NastaveniPrehledu';
+import { NahledMailu, UkazatNahled } from './NahledMailu';
 
 /**
  * CO CHODÍ ZVUKAŘŮM (zadání 21. 9. 2026: „chtěl bych někde vidět přehledy, co
@@ -87,6 +88,8 @@ export default async function ZvukariPage({ searchParams }: { searchParams?: { m
         <Dlazdice nazev="Celkem s bonusy" hodnota={formatCzk(soucet.castka + soucet.bonus)} />
       </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(420px,40%)] gap-5 items-start">
+      <div className="flex flex-col gap-5 min-w-0">
       <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
           {nazevMesice(mesic)} po zvukařích
@@ -117,14 +120,7 @@ export default async function ZvukariPage({ searchParams }: { searchParams?: { m
                       <span className="text-sm tabular-nums text-muted">+ bonusy {formatCzk(p.bonusCelkem)}</span>
                     )}
                     <span className={`text-xs font-heading ml-auto ${stav.trida}`}>{stav.text}</span>
-                    <a
-                      href={`/api/admin/vykazy/nahled-mesicni?mesic=${mesic}&user=${encodeURIComponent(p.userId)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs font-heading font-semibold text-brand-purple no-underline"
-                    >
-                      Náhled mailu ↗
-                    </a>
+                    <UkazatNahled user={p.userId} />
                   </summary>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 pl-6 text-sm font-body">
                     <Seznam
@@ -160,6 +156,17 @@ export default async function ZvukariPage({ searchParams }: { searchParams?: { m
         nazevMesice={nazevMesice(mesic)}
         cekaNaOdeslani={prehledy.filter((p) => p.email && !odeslanoKomu.has(p.userId)).length}
       />
+      </div>
+
+      {/* Náhled drží na místě při rolování (21. 9. 2026). */}
+      <div className="xl:sticky xl:top-6">
+        <NahledMailu
+          mesic={mesic}
+          prvni={prehledy[0]?.userId ?? null}
+          jmena={Object.fromEntries(prehledy.map((p) => [p.userId, p.jmeno]))}
+        />
+      </div>
+      </div>
     </div>
   );
 }

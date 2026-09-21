@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { VyberPole } from '@/components/VyberPole';
+import { zmenNahled } from './NahledMailu';
 
 type Nastaveni = {
   den: number;
@@ -39,6 +40,26 @@ export function NastaveniPrehledu({
   const [rozesila, setRozesila] = useState(false);
 
   const zmeneno = JSON.stringify(n) !== JSON.stringify(nastaveni);
+
+  // Náhled vpravo sleduje formulář hned, i před uložením.
+  const prvniBeh = useRef(true);
+  useEffect(() => {
+    if (prvniBeh.current) {
+      prvniBeh.current = false;
+      return;
+    }
+    zmenNahled({
+      nastaveni: {
+        den: n.den,
+        castky: n.castky,
+        druhy: n.druhy,
+        projekty: n.projekty,
+        bonusy: n.bonusy,
+        poznamka: n.poznamka,
+      },
+      neulozene: zmeneno,
+    });
+  }, [n, zmeneno]);
   const set = <K extends keyof Nastaveni>(k: K, v: Nastaveni[K]) => {
     setN((x) => ({ ...x, [k]: v }));
     setZprava(null);
@@ -150,14 +171,6 @@ export function NastaveniPrehledu({
         >
           {uklada ? 'Ukládám…' : 'Uložit nastavení'}
         </button>
-        <a
-          href={`/api/admin/vykazy/nahled-mesicni?mesic=${mesic}`}
-          target="_blank"
-          rel="noreferrer"
-          className="text-sm font-heading font-semibold text-brand-purple no-underline"
-        >
-          Náhled mailu ↗
-        </a>
         {cekaNaOdeslani > 0 && (
           <button
             type="button"

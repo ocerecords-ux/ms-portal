@@ -25,10 +25,24 @@ export async function GET(req: NextRequest) {
 
   const zadany = req.nextUrl.searchParams.get('mesic');
   const mesic = zadany && /^\d{4}-\d{2}$/.test(zadany) ? zadany : minulyMesic();
-  const [prehledy, nastaveni] = await Promise.all([
+  const [prehledy, ulozene] = await Promise.all([
     spoctiPrehledy(mesic).catch(() => []),
     nactiNastaveniPrehledu(),
   ]);
+  // Neuložené nastavení z Přehledy → Zvukaři (21. 9. 2026) - náhled vedle
+  // formuláře se mění hned při klikání, ještě před uložením.
+  const q = req.nextUrl.searchParams;
+  const ano = (k: string, v: boolean) => (q.has(k) ? q.get(k) === '1' : v);
+  const den = Number(q.get('den'));
+  const nastaveni = {
+    ...ulozene,
+    den: den >= 1 && den <= 28 ? den : ulozene.den,
+    castky: ano('castky', ulozene.castky),
+    druhy: ano('druhy', ulozene.druhy),
+    projekty: ano('projekty', ulozene.projekty),
+    bonusy: ano('bonusy', ulozene.bonusy),
+    poznamka: q.has('poznamka') ? q.get('poznamka')?.trim() || null : ulozene.poznamka,
+  };
   // ?user=<id> ukáže mail konkrétního zvukaře (Přehledy → Zvukaři, 21. 9. 2026).
   const kdo = req.nextUrl.searchParams.get('user');
   const p = (kdo ? prehledy.find((x) => x.userId === kdo) : prehledy[0]) ?? null;
