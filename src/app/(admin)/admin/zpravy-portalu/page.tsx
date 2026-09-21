@@ -50,7 +50,7 @@ export default async function ZpravyPortaluPage() {
         ← Zpět do administrace
       </Link>
       <div>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Zprávy portálu</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Zprávy portálu</h1>
         <p className="text-sm font-body text-muted m-0 mt-2 max-w-[80ch]">
           Maily a oznámení, která portál posílá nám — zvukařům o bonusu a o měsíčním přehledu výkazů.
           Zprávy klientovi se píšou jinde, ve Vzorech zpráv.

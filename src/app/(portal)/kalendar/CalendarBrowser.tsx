@@ -724,7 +724,7 @@ export function CalendarBrowser({
       {/* Hlavicka: pohled a posun v case */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
+          <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">{nadpis}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

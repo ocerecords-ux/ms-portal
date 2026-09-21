@@ -57,7 +57,7 @@ export function TemplateManager({ templates }: { templates: Template[] }) {
     <div className="flex flex-col gap-5">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-ink m-0">Šablony smluv</h1>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Šablony smluv</h1>
         </div>
         <div className="flex items-end gap-2">
           <label className="flex flex-col gap-1.5">

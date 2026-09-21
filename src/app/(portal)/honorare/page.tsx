@@ -160,7 +160,7 @@ export default async function HonorarePage() {
 
   return (
     <section className="flex flex-col gap-8">
-      <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Honoráře</h1>
+      <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Honoráře</h1>
 
       {/* Tri souhrny nahore - na prvni pohled, kolik je v kterem stavu. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

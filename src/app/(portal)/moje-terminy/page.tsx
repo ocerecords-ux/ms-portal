@@ -98,7 +98,7 @@ export default async function MojeTerminyPage() {
   return (
     <section className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Moje termíny</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Moje termíny</h1>
       </div>
 
       {/* Nahore to, co herce zajima nejvic - kdy a kam jde tocit. */}

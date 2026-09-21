@@ -32,7 +32,7 @@ export default async function NavodyPage() {
     <section className="flex flex-col gap-6 max-w-3xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-ink m-0">Návody</h1>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Návody</h1>
           <p className="text-sm font-body text-muted m-0 mt-1">
             Co je tu zveřejněné, najde celý tým v Nápovědě — včetně hledání v textu.
           </p>

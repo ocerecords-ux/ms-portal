@@ -50,7 +50,7 @@ export default async function PozvankyPage() {
     <section className="flex flex-col gap-8 max-w-3xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-ink m-0">Pozvánky herců</h1>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Pozvánky herců</h1>
           <p className="text-sm font-body text-muted m-0 mt-1">
             Pošlete herci e-mail a zbytek si vyplní sám — jméno, adresu, číslo účtu, kde může
             natáčet a jestli je plátce DPH.

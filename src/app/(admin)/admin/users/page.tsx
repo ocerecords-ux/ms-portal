@@ -98,7 +98,7 @@ export default async function UsersAdminPage({
           tabulkou, kde ho pri delsim seznamu nebylo videt. */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-ink m-0">Uživatelé</h1>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Uživatelé</h1>
           {filteredCompany && (
             <p className="text-sm font-heading mt-2">
               Filtr: <strong>{filteredCompany.name}</strong>{' '}

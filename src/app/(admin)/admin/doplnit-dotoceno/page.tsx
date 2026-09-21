@@ -63,7 +63,7 @@ export default async function DoplnitDotocenoPage() {
         ← Zpět do administrace
       </Link>
       <div className="flex flex-col gap-2">
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Doplnit dotočeno zpětně</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Doplnit dotočeno zpětně</h1>
         <p className="text-sm font-body text-muted m-0 max-w-[70ch]">
           Pro projekty přenesené z Caflou, u kterých se dotočilo dřív, než tlačítko „Dotočeno"
           vzniklo. Zaškrtnutí uloží fajfku a u projektu v „Natáčíme" nebo „Natáčíme/stříháme"

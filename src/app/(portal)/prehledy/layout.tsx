@@ -8,7 +8,7 @@ import { ZalozkyPrehledu } from './ZalozkyPrehledu';
 export default function PrehledyLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Přehledy</h1>
+      <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Přehledy</h1>
       <ZalozkyPrehledu />
       {children}
     </div>

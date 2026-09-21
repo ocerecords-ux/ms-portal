@@ -23,7 +23,7 @@ export default async function BacklogPage() {
   return (
     <main className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 flex flex-col gap-5">
       <div>
-        <h1 className="font-display text-3xl text-ink m-0">Backlog</h1>
+        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Backlog</h1>
         <p className="text-sm font-body text-muted m-0 mt-1">
           Kdy měl být projekt hotový a kdy se opravdu odevzdal. Za odevzdání se bere okamžik, kdy
           projekt poprvé přešel do stavu „Dokončeno - ke schválení". Kladné číslo jsou dny k dobru,

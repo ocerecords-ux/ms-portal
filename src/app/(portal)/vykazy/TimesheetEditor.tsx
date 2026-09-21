@@ -403,7 +403,7 @@ export function TimesheetEditor({
     <section className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Výkazy</h1>
+          <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Výkazy</h1>
           {canWrite && (
             // Navod pryc (zadani 9. 9. 2026), sazba zustava - to je udaj,
             // ne vysvetlivka.

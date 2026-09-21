@@ -21,7 +21,7 @@ export default async function PrenosProjektuPage() {
       <Link href="/admin" className="text-muted text-sm font-heading no-underline">
         ← Zpět do administrace
       </Link>
-      <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Přenos projektů z Caflou</h1>
+      <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Přenos projektů z Caflou</h1>
       <PrenosPanel />
     </div>
   );

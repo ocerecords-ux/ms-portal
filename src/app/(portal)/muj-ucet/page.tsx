@@ -41,7 +41,7 @@ export default async function MyAccountPage() {
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
       <div>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Můj účet</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Můj účet</h1>
       </div>
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-5">

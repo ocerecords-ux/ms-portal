@@ -58,7 +58,7 @@ export default async function UdajePage() {
   return (
     <section className="flex flex-col gap-8 max-w-5xl">
       <div>
-        <h1 className="font-display text-3xl text-ink m-0">Žádosti o údaje</h1>
+        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Žádosti o údaje</h1>
         <p className="text-sm font-body text-muted m-0 mt-1">
           Pošlete herci nebo firmě odkaz, ať si své údaje vyplní sami. Co vyplní, se propíše do
           portálu — u někoho, koho už v portálu máme, se přepisy nejdřív ukážou vám.

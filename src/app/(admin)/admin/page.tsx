@@ -57,7 +57,7 @@ export default async function AdminHomePage({
     <section className="flex flex-col gap-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-ink m-0">Firmy</h1>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Firmy</h1>
         </div>
         {/* Zneni zprav klientovi (zadani 11. 9. 2026). */}
         <Link

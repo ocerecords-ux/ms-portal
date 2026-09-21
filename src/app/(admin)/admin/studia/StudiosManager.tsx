@@ -94,7 +94,7 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display text-3xl text-ink m-0">Studia</h1>
+        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Studia</h1>
       </div>
 
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}

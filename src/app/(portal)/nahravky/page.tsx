@@ -88,7 +88,7 @@ export default async function NahravkyPage({
   return (
     <section>
       <div className="mb-6">
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Nahrávky</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Nahrávky</h1>
         {projektovaSlozka && projekt?.name && (
           <p className="text-sm font-body text-muted m-0 mt-2">
             Projekt <span className="text-ink font-heading font-semibold">{projekt.name}</span>

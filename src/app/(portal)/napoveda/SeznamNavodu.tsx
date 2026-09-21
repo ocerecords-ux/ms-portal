@@ -55,7 +55,7 @@ export function SeznamNavodu({
     <section className="flex flex-col gap-6 max-w-3xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-ink m-0">Nápověda</h1>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Nápověda</h1>
           <p className="text-sm font-body text-muted m-0 mt-1">
             Návody k portálu. Hledá se v celém textu — stačí slovo, které si pamatujete.
           </p>

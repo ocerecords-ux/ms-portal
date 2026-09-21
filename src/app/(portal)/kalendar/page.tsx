@@ -78,7 +78,7 @@ export default async function KalendarPage({
   if (studios.length === 0) {
     return (
       <section className="flex flex-col gap-4">
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
         <p className="text-sm font-body text-muted m-0">
           Zatím tu není žádné studio. Studia se zakládají v administraci.
         </p>

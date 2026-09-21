@@ -48,7 +48,7 @@ export default async function BrunoPage() {
   return (
     <section className="flex flex-col gap-8 max-w-4xl">
       <div>
-        <h1 className="font-display text-3xl text-ink m-0">Bruno</h1>
+        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Bruno</h1>
         <p className="text-sm font-body text-muted m-0 mt-1">
           Co Bruno ví o naší práci, než se rozhodne, jestli něco zapíše.
         </p>

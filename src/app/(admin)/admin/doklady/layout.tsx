@@ -10,7 +10,7 @@ export default async function DokladyLayout({ children }: { children: React.Reac
   return (
     <section className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display text-3xl text-ink m-0">Doklady</h1>
+        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Doklady</h1>
       </div>
 
       <DokladyTabs banka={banka} />

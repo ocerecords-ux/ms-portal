@@ -282,7 +282,7 @@ export function CaflouCompaniesBrowser({ items }: { items: CaflouCompanyRow[] })
     <section className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-ink m-0">Firmy z Caflou</h1>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Firmy z Caflou</h1>
         </div>
         <div className="text-right">
           <div className="flex items-center gap-3 justify-end flex-wrap">

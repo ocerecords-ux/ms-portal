@@ -24,7 +24,7 @@ export default async function PriceListPage() {
   return (
     <section className="flex flex-col gap-8">
       <div>
-        <h1 className="font-display text-3xl text-ink m-0">Ceníky</h1>
+        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Ceníky</h1>
       </div>
 
       <PriceListEditor

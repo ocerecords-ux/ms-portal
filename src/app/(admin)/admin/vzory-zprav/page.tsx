@@ -21,7 +21,7 @@ export default async function VzoryZpravPage() {
         ← Zpět do administrace
       </Link>
       <div>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Vzory zpráv klientovi</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Vzory zpráv klientovi</h1>
         <p className="text-sm font-body text-muted m-0 mt-2 max-w-[70ch]">
           Co klientovi dorazí, když projekt přejde do daného stavu. Komu to jde a jestli vůbec,
           se nastavuje zvlášť u každé firmy pod záložkou Notifikace — tady se píše jen znění.
