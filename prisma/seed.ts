@@ -6,6 +6,8 @@ import { GOOGLE_KALENDAR } from './importKalendare/googleKalendar';
 import { prahaNaUtc, rozeberUdalost, srovnej } from '../src/lib/importGoogleKalendar';
 import { bezTitulu } from '../src/lib/jmena';
 import { PODPIS_ONDREJ } from './podpisOndrej';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const prisma = new PrismaClient();
 
@@ -188,6 +190,7 @@ async function main() {
   await prevezmiGoogleKalendar();
   await brunoZpetneOznamPreposlech();
   await vlozPodpisNaFaktury();
+  await importujFakturyZCaflou();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -1046,5 +1049,144 @@ async function vlozPodpisNaFaktury() {
     console.log(`  podpis na faktury: vlozen k ${r.count} firmam`);
   } catch (e) {
     console.warn('  podpis na faktury selhal:', e);
+  }
+}
+
+/**
+ * FAKTURY Z CAFLOU (21. 9. 2026: „stáhnul jsem fyzicky pdf faktur za letošní
+ * rok. Co s tím?"). Údaje jsou vyčtené z PDF do importFaktur/caflou-2026.json
+ * (2026157-2026206) - v portálu pak sedí obrat, přehled klientů i projekty.
+ *
+ * Jednorázově (známka v Counter). Faktura, jejíž číslo už v portálu je, se
+ * přeskočí - nic se nepřepisuje. Všechny nesly razítko „Již uhrazeno", takže
+ * jdou jako uhrazené; datum úhrady z PDF nejde poznat, bere se splatnost.
+ * Odběratel se páruje podle IČO, jinak se založí. Projekt podle názvu.
+ */
+async function importujFakturyZCaflou() {
+  const ZNAMKA = 'import-faktur-caflou-2026';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    type Polozka = { popis: string; mnozstvi: number; cena: number; zaklad: number; dph: number };
+    type Faktura = {
+      cislo: string;
+      vystaveno: string;
+      duzp: string | null;
+      splatnost: string | null;
+      mena: 'CZK' | 'EUR';
+      odberatel: string;
+      ico: string | null;
+      dic: string | null;
+      ulice: string | null;
+      mesto: string | null;
+      psc: string | null;
+      predmet: string | null;
+      projekt: string | null;
+      polozky: Polozka[];
+    };
+    const faktury = JSON.parse(
+      readFileSync(join(process.cwd(), 'prisma/importFaktur/caflou-2026.json'), 'utf8'),
+    ) as Faktura[];
+
+    const vydavatel =
+      (await prisma.issuerCompany.findFirst({ where: { ic: '07459424' } })) ??
+      (await prisma.issuerCompany.findFirst({ orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }] }));
+    if (!vydavatel) {
+      console.warn('  import faktur: neni fakturacni firma, zkusi se pri dalsim nasazeni');
+      return;
+    }
+    const ucet = await prisma.bankAccount.findFirst({
+      where: { issuerCompanyId: vydavatel.id, accountNumber: { contains: '3169021011' } },
+      select: { id: true },
+    });
+    const den = (d: string | null) => (d ? new Date(`${d}T00:00:00.000Z`) : null);
+    const projekty = await prisma.projectMeta.findMany({
+      where: { name: { not: null } },
+      select: { caflouProjectId: true, name: true },
+    });
+    const podleNazvu = new Map(projekty.map((p: { caflouProjectId: string; name: string | null }) => [(p.name ?? '').trim().toLowerCase(), p]));
+
+    let vlozeno = 0;
+    const preskoceno: string[] = [];
+    for (const f of faktury) {
+      const existuje = await prisma.invoice.findUnique({ where: { number: f.cislo }, select: { id: true } });
+      if (existuje) {
+        preskoceno.push(f.cislo);
+        continue;
+      }
+
+      let firma = f.ico
+        ? await prisma.company.findFirst({ where: { ic: f.ico }, select: { id: true } })
+        : null;
+      if (!firma) {
+        firma = await prisma.company.findFirst({
+          where: { name: { equals: f.odberatel, mode: 'insensitive' } },
+          select: { id: true },
+        });
+      }
+      if (!firma) {
+        const c = await prisma.counter.upsert({
+          where: { name: 'F' },
+          create: { name: 'F', value: 1 },
+          update: { value: { increment: 1 } },
+        });
+        firma = await prisma.company.create({
+          data: {
+            code: `MSF${String(c.value).padStart(4, '0')}`,
+            type: 'KLIENT',
+            name: f.odberatel,
+            ic: f.ico,
+            dic: f.dic,
+            addressStreet: f.ulice,
+            addressCity: f.mesto,
+            addressZip: f.psc,
+            addressCountry: 'CZ',
+          },
+          select: { id: true },
+        });
+      }
+
+      const projekt = f.projekt ? podleNazvu.get(f.projekt.trim().toLowerCase()) : undefined;
+      const splatnost = den(f.splatnost);
+      const vystaveno = den(f.vystaveno)!;
+      const ted = new Date();
+      await prisma.invoice.create({
+        data: {
+          number: f.cislo,
+          variableSymbol: f.cislo.replace(/\D/g, ''),
+          issuerCompanyId: vydavatel.id,
+          companyId: firma.id,
+          bankAccountId: ucet?.id ?? null,
+          currency: f.mena,
+          exchangeRate: 1,
+          issueDate: vystaveno,
+          taxDate: den(f.duzp),
+          dueDate: splatnost,
+          subject: f.projekt || f.predmet,
+          note: 'Importováno z PDF faktury z Caflou.',
+          status: 'PAID',
+          sentAt: vystaveno,
+          paidAt: splatnost && splatnost < ted ? splatnost : vystaveno,
+          caflouProjectId: projekt?.caflouProjectId ?? null,
+          projectName: projekt?.name ?? f.projekt,
+          items: {
+            create: f.polozky.map((p, i) => ({
+              description: p.popis,
+              quantity: p.mnozstvi,
+              unitPriceMinor: Math.round(p.cena * 100),
+              vatRate: p.dph,
+              sortOrder: i,
+            })),
+          },
+        },
+      });
+      vlozeno += 1;
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: vlozeno } });
+    console.log(`  import faktur z Caflou: vlozeno ${vlozeno}, preskoceno (cislo uz je v portalu): ${preskoceno.join(', ') || '-'}`);
+  } catch (e) {
+    console.warn('  import faktur z Caflou selhal:', e);
   }
 }
