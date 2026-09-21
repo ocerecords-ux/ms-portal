@@ -170,6 +170,7 @@ async function main() {
   }
 
   await seedStudios();
+  await nastavBarvyStudii();
   await doplnKalendarDoListy();
   await zapniRodnyListURadiovehoSpotu();
 
@@ -203,11 +204,13 @@ async function main() {
  *
  * Idempotentni - bezi po kazdem nasazeni, existujici studia nechava byt.
  */
+// Barvy podle kalendáře, na který je tým zvyklý z Googlu (21. 9. 2026:
+// „ještě nastavme takto barvy kalendáře"). Viz nastavBarvyStudii níž.
 const STUDIA: { name: string; shortName: string; location: string; color: string; timezone: string }[] = [
-  { name: 'MS Studio - Brno I', shortName: 'Brno I', location: 'Brno', color: '#7B55FF', timezone: 'Europe/Prague' },
-  { name: 'MS Studio - Brno II', shortName: 'Brno II', location: 'Brno', color: '#1FDF67', timezone: 'Europe/Prague' },
-  { name: 'MS Studio - Praha', shortName: 'Praha', location: 'Praha', color: '#F2A03D', timezone: 'Europe/Prague' },
-  { name: 'MS Studio - London', shortName: 'London', location: 'London', color: '#4FC3F7', timezone: 'Europe/London' },
+  { name: 'MS Studio - Brno I', shortName: 'Brno I', location: 'Brno', color: '#5422F1', timezone: 'Europe/Prague' },
+  { name: 'MS Studio - Brno II', shortName: 'Brno II', location: 'Brno', color: '#D320AE', timezone: 'Europe/Prague' },
+  { name: 'MS Studio - Praha', shortName: 'Praha', location: 'Praha', color: '#34C12E', timezone: 'Europe/Prague' },
+  { name: 'MS Studio - London', shortName: 'London', location: 'London', color: '#9395F4', timezone: 'Europe/London' },
 ];
 
 const PRESETY = [
@@ -864,5 +867,33 @@ async function doplnStudiaZvukaru() {
   } catch (err) {
     // Je to jen doplneni udaje - kdyby se nepovedlo, nesmi to shodit seed.
     console.warn('  studia zvukaru se nepodarilo doplnit:', err);
+  }
+}
+
+/**
+ * BARVY KALENDÁŘŮ JAKO V GOOGLU (zadání 21. 9. 2026: „ještě nastavme takto
+ * barvy kalendáře" + screenshot z Google kalendáře).
+ *
+ * Brno I fialová, Brno II purpurová, Praha zelená, London levandulová.
+ * Kalendář Mimo studio (v Googlu „Dovolené") má vlastní barvu a nechává se
+ * být; Schůzky zatím v portálu nejsou.
+ *
+ * Studia už v databázi existují a seed je jinak nechává na pokoji, takže se
+ * barvy přepíšou JEDNOU (známka v Counteru). Když je pak někdo změní
+ * v Administraci → Studia, seed už do toho nesahá.
+ */
+async function nastavBarvyStudii() {
+  const ZNAMKA = 'studia-barvy-google-2026-09-21';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    for (const studio of STUDIA) {
+      const zmena = await prisma.studio.updateMany({ where: { name: studio.name }, data: { color: studio.color } });
+      if (zmena.count > 0) console.log(`  studio ${studio.shortName}: barva ${studio.color}`);
+    }
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+  } catch (err) {
+    // Je to jen vzhled - kdyby se nepovedl, nesmi to shodit seed.
+    console.warn('  barvy studii se nepodarilo nastavit:', err);
   }
 }
