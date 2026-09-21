@@ -52,7 +52,9 @@ U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích toč�
 
 Kromě toho je v liště ještě **chat**, **zvoneček** s upozorněními, **otazník** (tahle Nápověda) a vlevo panel s rychlými volbami.
 
-**Úkoly z chatu.** Zpráva začínající **@úkol** založí úkol tomu, komu píšete (ve skupině tomu, koho označíte @jménem). Co jste takhle zadali ostatním, najdete v panelu **Úkoly** (i v záložce Úkoly v chatu) dole v části **Zadal jsem**: pro koho, do kdy a jestli už je hotovo. Když ho příjemce odškrtne, přijde vám zpráva pod **zvoneček**; stejně tak, když nesplněný úkol smaže. Kliknutím na úkol se otevře konverzace, ze které vznikl.
+**Úkoly z chatu.** Zpráva začínající **@úkol** založí úkol tomu, komu píšete (ve skupině tomu, koho označíte @jménem). Co jste takhle zadali ostatním, najdete v panelu **Úkoly** (i v záložce Úkoly v chatu) dole v části **Zadal jsem**: pro koho, do kdy a jestli už je hotovo. Když ho příjemce odškrtne, přijde vám zpráva pod **zvoneček**; stejně tak, když nesplněný úkol smaže. Kliknutím na úkol se otevře konverzace, ze které vznikl. Tužkou ✎ vedle úkolu ho můžete **upravit** — název, datum i čas — nebo **zrušit**; tomu, komu patří, o tom přijde zpráva. Odškrtnout ho za něj nejde.
+
+**Termín s časem.** U každého úkolu (vlastního, zadaného v chatu i v panelu) jde vedle data vyplnit i **čas, do kdy** má být hotový. Je dobrovolný — bez času platí úkol do konce dne. Po termínu se úkol obarví červeně hned, jak čas uplyne.
 
 # Uvnitř projektu
 

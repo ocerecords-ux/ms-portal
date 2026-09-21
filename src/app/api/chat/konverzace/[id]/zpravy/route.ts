@@ -12,6 +12,7 @@ import { odkazNaFotku } from '@/lib/fotky';
 import { komuPoslatUpozorneni, zminenyTym } from '@/lib/chatUpozorneniServer';
 import { notify } from '@/lib/notifications';
 import { CHYBI_NAZEV, CHYBI_PRIJEMCE, jeUkol, nazevUkolu } from '@/lib/ukolyZChatu';
+import { CAS_UKOLU, popisTerminu } from '@/lib/terminUkolu';
 
 // Zpravy jedne konverzace (zadani 8. 9. 2026). Otevreni konverzace zaroven
 // znamena "precteno" - proto se pri GET posouva lastReadAt.
@@ -45,6 +46,8 @@ const schema = z
       .object({
         /** YYYY-MM-DD, nebo nic - úkol bez termínu je v pořádku. */
         termin: z.string().trim().min(8).max(10).nullable().optional(),
+        /** „HH:MM" (21. 9. 2026) - dobrovolný, jen s datem. */
+        cas: z.string().trim().regex(CAS_UKOLU).nullable().optional(),
       })
       .optional(),
   })
@@ -182,6 +185,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 async function zalozUkolZeZpravy(vstup: {
   text: string;
   termin?: string | null;
+  cas?: string | null;
   conversationId: string;
   kind: string;
   clenove: string[];
@@ -222,6 +226,7 @@ async function zalozUkolZeZpravy(vstup: {
         userId: komu.id,
         title: nazev.slice(0, 300),
         dueDate,
+        dueTime: dueDate ? vstup.cas || null : null,
         sortOrder: (posledni?.sortOrder ?? 0) + 10,
         zadalJmeno: vstup.zadalJmeno,
         // Zadavatel si úkol uvidí v „Zadal jsem" a dozví se, až bude
@@ -237,7 +242,7 @@ async function zalozUkolZeZpravy(vstup: {
       userId: komu.id,
       kind: 'ukol-z-chatu',
       title: `Nový úkol od ${vstup.zadalJmeno}`,
-      body: dueDate ? `${nazev} — do ${new Intl.DateTimeFormat('cs-CZ').format(dueDate)}` : nazev,
+      body: dueDate && vstup.termin ? `${nazev} — do ${popisTerminu(vstup.termin, vstup.cas || null)}` : nazev,
       url: `/chat?konverzace=${vstup.conversationId}`,
     });
 
@@ -420,6 +425,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const vysledek = await zalozUkolZeZpravy({
         text: parsed.data.body ?? '',
         termin: parsed.data.ukol.termin ?? null,
+        cas: parsed.data.ukol.cas ?? null,
         conversationId: conversation.id,
         kind: conversation.kind,
         clenove: conversation.members.map((m) => m.userId),

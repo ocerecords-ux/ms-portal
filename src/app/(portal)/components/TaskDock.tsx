@@ -7,6 +7,7 @@ import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
 import { DatumPole } from '@/components/DatumPole';
 import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
+import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
 
 /**
  * Úkoly pořád po ruce (zadani 8. 9. 2026: "aby byl ten to do list pořád po
@@ -27,19 +28,11 @@ type Task = {
   title: string;
   done: boolean;
   dueDate: string | null;
+  /** Čas termínu „HH:MM" (21. 9. 2026). */
+  dueTime?: string | null;
   /** Kdo úkol zadal z chatu přes @úkol (zadání 18. 9. 2026); null = já sám. */
   zadalJmeno?: string | null;
 };
-
-function formatDue(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? iso : new Intl.DateTimeFormat('cs-CZ').format(d);
-}
-
-function todayIso(): string {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-}
 
 export function ChecklistIcon() {
   return (
@@ -74,6 +67,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   const expanded = dok === 'ukoly';
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
@@ -94,10 +88,11 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   }, [dok]);
 
   // Stav si pamatujeme v prohlizeci, at se panel neotevira porad znovu.
-  const today = todayIso();
   const open = tasks.filter((t) => !t.done);
   const done = tasks.filter((t) => t.done);
-  const overdue = open.filter((t) => t.dueDate && t.dueDate < today);
+  // Po termínu i s časem (21. 9. 2026) - úkol do 14:00 je po termínu už
+  // odpoledne, ne až zítra.
+  const overdue = open.filter((t) => jePoTerminu(t.dueDate, t.dueTime ?? null));
 
   // Zalozka Ukoly ukazuje sve cislo i v hlavicce chatu - viz pravyDok.ts.
   useEffect(() => {
@@ -137,10 +132,15 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
     e.preventDefault();
     const value = title.trim();
     if (!value) return;
-    const ok = await send('/api/tasks', 'POST', { title: value, dueDate: dueDate || null });
+    const ok = await send('/api/tasks', 'POST', {
+      title: value,
+      dueDate: dueDate || null,
+      dueTime: dueDate && dueTime ? dueTime : null,
+    });
     if (ok) {
       setTitle('');
       setDueDate('');
+      setDueTime('');
     }
   }
 
@@ -195,6 +195,15 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
             title="Termín (nepovinné)"
             className="flex-1 min-w-0 rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-xs outline-none focus:border-brand-purple"
           />
+          {/* Do kolika hodin (21. 9. 2026) - dobrovolné, jen s datem. */}
+          <input
+            type="time"
+            value={dueTime}
+            onChange={(e) => setDueTime(e.target.value)}
+            disabled={!dueDate}
+            title={dueDate ? 'Do kolika hodin (nepovinné)' : 'Nejdřív vyberte datum'}
+            className="w-[84px] shrink-0 rounded-lg border border-line bg-field px-2 py-2 text-ink font-heading text-xs outline-none focus:border-brand-purple disabled:opacity-40"
+          />
           <button
             type="submit"
             disabled={busy || !title.trim()}
@@ -227,12 +236,15 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
                   od {task.zadalJmeno}
                 </span>
               )}
-              {task.dueDate && (
-                <span className={`block text-xs font-heading mt-0.5 ${task.dueDate < today ? 'text-danger' : 'text-muted'}`}>
-                  {task.dueDate < today ? 'Po termínu — ' : 'Do '}
-                  {formatDue(task.dueDate)}
-                </span>
-              )}
+              {task.dueDate && (() => {
+                const po = jePoTerminu(task.dueDate, task.dueTime ?? null);
+                return (
+                  <span className={`block text-xs font-heading mt-0.5 ${po ? 'text-danger' : 'text-muted'}`}>
+                    {po ? 'Po termínu — ' : 'Do '}
+                    {popisTerminu(task.dueDate, task.dueTime ?? null)}
+                  </span>
+                );
+              })()}
             </span>
             {/* Pojistka (18. 9. 2026) - úkol nezmizí na jedno ťuknutí. */}
             <TlacitkoSmazat
@@ -281,7 +293,13 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         </div>
       )}
 
-      <ZadaneUkoly ukoly={zadane} />
+      <ZadaneUkoly
+        ukoly={zadane}
+        onZmena={() => {
+          void nactiZadane();
+          router.refresh();
+        }}
+      />
       </div>
       </div>
     </aside>

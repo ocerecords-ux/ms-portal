@@ -10,6 +10,8 @@ export type DockTask = {
   title: string;
   done: boolean;
   dueDate: string | null;
+  /** Čas termínu „HH:MM" (21. 9. 2026); null = do konce dne. */
+  dueTime: string | null;
   /** Kdo úkol zadal z chatu přes @úkol (zadání 18. 9. 2026); null = já sám. */
   zadalJmeno: string | null;
 };
@@ -32,6 +34,7 @@ export async function loadMyTasks(userId: string, role: Role): Promise<DockTask[
       title: t.title,
       done: t.done,
       dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
+      dueTime: t.dueTime ?? null,
       zadalJmeno: t.zadalJmeno ?? null,
     }));
   } catch (err) {
@@ -54,6 +57,7 @@ export type ZadanyUkol = {
   title: string;
   done: boolean;
   dueDate: string | null;
+  dueTime: string | null;
   /** Kdy ho příjemce odškrtl (ISO), u starších splněných null. */
   splnenoAt: string | null;
   /** Komu úkol patří. */
@@ -78,6 +82,7 @@ export async function loadZadaneMnou(userId: string, role: Role): Promise<Zadany
       title: t.title,
       done: t.done,
       dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
+      dueTime: t.dueTime ?? null,
       splnenoAt: t.splnenoAt ? t.splnenoAt.toISOString() : null,
       komu: t.user?.name || t.user?.email || '—',
       zadanoAt: t.createdAt.toISOString(),

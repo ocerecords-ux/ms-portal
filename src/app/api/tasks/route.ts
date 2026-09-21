@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
 import { loadZadaneMnou } from '@/lib/tasksServer';
+import { CAS_UKOLU } from '@/lib/terminUkolu';
 
 // Ukoly na profilu clena tymu Mediaspace (zadani 5. 9. 2026).
 //
@@ -13,6 +14,8 @@ import { loadZadaneMnou } from '@/lib/tasksServer';
 const schema = z.object({
   title: z.string().trim().min(1, 'Napište, co je potřeba udělat.').max(300),
   dueDate: z.string().trim().min(8).nullable().optional(),
+  /** „HH:MM" (21. 9. 2026) - jen spolu s datem. */
+  dueTime: z.string().trim().regex(CAS_UKOLU, 'Neplatný čas.').nullable().optional(),
 });
 
 /**
@@ -45,6 +48,7 @@ export async function GET() {
         title: t.title,
         done: t.done,
         dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
+        dueTime: t.dueTime ?? null,
         zadalJmeno: t.zadalJmeno ?? null,
       })),
     });
@@ -86,6 +90,8 @@ export async function POST(req: NextRequest) {
         userId: session.user.id,
         title: parsed.data.title,
         dueDate,
+        // Čas bez data nedává smysl - zahodí se.
+        dueTime: dueDate ? parsed.data.dueTime || null : null,
         sortOrder: (last?.sortOrder ?? 0) + 10,
       },
     });

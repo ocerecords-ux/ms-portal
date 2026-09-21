@@ -1,6 +1,7 @@
 'use client';
 
 import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
+import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { createPortal } from 'react-dom';
@@ -1464,6 +1465,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * termínu, což je běžný případ, ne chyba.
    */
   const [ukolTermin, setUkolTermin] = useState('');
+  const [ukolCas, setUkolCas] = useState('');
   const [ukolHlaska, setUkolHlaska] = useState<string | null>(null);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   /** Kdo prave pise v otevrene konverzaci (zadani 12. 9. 2026). */
@@ -2435,8 +2437,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
           doVlakna
-            ? { body: text, parentId: vlaknoId, prilohy, ...(jeUkol(text) ? { ukol: { termin: ukolTermin || null } } : {}) }
-            : { body: text, prilohy, ...(jeUkol(text) ? { ukol: { termin: ukolTermin || null } } : {}) },
+            ? { body: text, parentId: vlaknoId, prilohy, ...(jeUkol(text) ? { ukol: { termin: ukolTermin || null, cas: ukolTermin && ukolCas ? ukolCas : null } } : {}) }
+            : { body: text, prilohy, ...(jeUkol(text) ? { ukol: { termin: ukolTermin || null, cas: ukolTermin && ukolCas ? ukolCas : null } } : {}) },
         ),
       });
       const data: any = await res.json().catch(() => ({}));
@@ -2450,6 +2452,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       if (data?.ukol?.komu) {
         setUkolHlaska(`Úkol je v to-do listu — ${data.ukol.komu}.`);
         setUkolTermin('');
+        setUkolCas('');
       } else if (data?.ukol?.chyba) {
         setUkolHlaska(data.ukol.chyba);
       } else {
@@ -3528,6 +3531,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       nazev={nazevUkolu(draft, prijemceUkolu(draft).jmeno)}
                       termin={ukolTermin}
                       onTermin={setUkolTermin}
+                      cas={ukolCas}
+                      onCas={setUkolCas}
                       hlaska={ukolHlaska}
                     />
                   )}
@@ -3870,12 +3875,17 @@ function ListaUkolu({
   nazev,
   termin,
   onTermin,
+  cas,
+  onCas,
   hlaska,
 }: {
   prijemce: string | null;
   nazev: string;
   termin: string;
   onTermin: (v: string) => void;
+  /** Do kolika hodin (21. 9. 2026) - jen s datem. */
+  cas: string;
+  onCas: (v: string) => void;
   hlaska: string | null;
 }) {
   return (
@@ -3903,9 +3913,22 @@ function ListaUkolu({
         />
       </label>
       {termin && (
+        <input
+          type="time"
+          value={cas}
+          onChange={(e) => onCas(e.target.value)}
+          title="Do kolika hodin (nepovinné)"
+          aria-label="Čas"
+          className="rounded-md border border-line bg-field px-1.5 py-1 text-[11px] font-body text-ink"
+        />
+      )}
+      {termin && (
         <button
           type="button"
-          onClick={() => onTermin('')}
+          onClick={() => {
+            onTermin('');
+            onCas('');
+          }}
           className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
         >
           bez termínu
@@ -3917,10 +3940,18 @@ function ListaUkolu({
 }
 
 function UkolyVChatu() {
-  type Ukol = { id: string; title: string; done: boolean; dueDate: string | null; zadalJmeno: string | null };
+  type Ukol = {
+    id: string;
+    title: string;
+    done: boolean;
+    dueDate: string | null;
+    dueTime?: string | null;
+    zadalJmeno: string | null;
+  };
   const [ukoly, setUkoly] = useState<Ukol[] | null>(null);
   const [novy, setNovy] = useState('');
   const [termin, setTermin] = useState('');
+  const [casTerminu, setCasTerminu] = useState('');
   const [busy, setBusy] = useState(false);
   const [hotove, setHotove] = useState(false);
   // Úkoly, které jsem zadal ostatním (21. 9. 2026).
@@ -3963,10 +3994,11 @@ function UkolyVChatu() {
       await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, dueDate: termin || null }),
+        body: JSON.stringify({ title, dueDate: termin || null, dueTime: termin && casTerminu ? casTerminu : null }),
       });
       setNovy('');
       setTermin('');
+      setCasTerminu('');
       await nacti();
     } finally {
       setBusy(false);
@@ -3991,6 +4023,15 @@ function UkolyVChatu() {
             value={termin}
             onChange={(e) => setTermin(e.target.value)}
             className="flex-1 min-w-0 rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink"
+          />
+          <input
+            type="time"
+            value={casTerminu}
+            onChange={(e) => setCasTerminu(e.target.value)}
+            disabled={!termin}
+            title={termin ? 'Do kolika hodin (nepovinné)' : 'Nejdřív vyberte datum'}
+            aria-label="Čas"
+            className="w-[84px] shrink-0 rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink disabled:opacity-40"
           />
           <button
             type="submit"
@@ -4023,7 +4064,7 @@ function UkolyVChatu() {
         <RadekUkolu key={u.id} ukol={u} onOdskrtni={() => void odskrtni(u)} />
       ))}
 
-      <ZadaneUkoly ukoly={zadane} />
+      <ZadaneUkoly ukoly={zadane} onZmena={() => void nacti()} />
     </div>
   );
 }
@@ -4032,11 +4073,10 @@ function RadekUkolu({
   ukol,
   onOdskrtni,
 }: {
-  ukol: { id: string; title: string; done: boolean; dueDate: string | null; zadalJmeno: string | null };
+  ukol: { id: string; title: string; done: boolean; dueDate: string | null; dueTime?: string | null; zadalJmeno: string | null };
   onOdskrtni: () => void;
 }) {
-  const dnes = new Date().toISOString().slice(0, 10);
-  const poTerminu = !ukol.done && ukol.dueDate !== null && ukol.dueDate < dnes;
+  const poTerminu = !ukol.done && jePoTerminu(ukol.dueDate, ukol.dueTime ?? null);
   return (
     <label className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-field cursor-pointer">
       <input
@@ -4051,7 +4091,7 @@ function RadekUkolu({
         </span>
         {(ukol.dueDate || ukol.zadalJmeno) && (
           <span className={`block text-[11px] font-body ${poTerminu ? 'text-status-danger' : 'text-muted'}`}>
-            {ukol.dueDate && new Intl.DateTimeFormat('cs-CZ').format(new Date(`${ukol.dueDate}T00:00:00`))}
+            {ukol.dueDate && popisTerminu(ukol.dueDate, ukol.dueTime ?? null)}
             {ukol.dueDate && ukol.zadalJmeno ? ' · ' : ''}
             {ukol.zadalJmeno && `od ${ukol.zadalJmeno}`}
           </span>

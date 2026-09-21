@@ -1141,6 +1141,9 @@ model Task {
   title     String
   done      Boolean   @default(false)
   dueDate   DateTime? // termin, nepovinny
+  /// Cas terminu „HH:MM" v Praze (zadani 21. 9. 2026: „u ukolu potrebuji
+  /// nastavit i cas do kdy"). Prazdny = do konce dne, jako driv.
+  dueTime   String?
   sortOrder Int       @default(0)
 
   /// Kdo ukol zadal z chatu pres @ukol (zadani 18. 9. 2026). Ulozene jmeno,

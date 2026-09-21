@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
 
 /**
  * „ZADAL JSEM" (zadání 21. 9. 2026: „když vytvořím někomu dalšímu úkol
@@ -9,9 +10,9 @@ import { useState } from 'react';
  * splnil").
  *
  * Úkoly, které jsem přes @úkol v chatu dal někomu jinému. Odškrtnout je
- * nejde - to je věc toho, komu patří. Tady se jen sleduje: pro koho, do kdy
- * a jestli už je hotovo. Když ho příjemce odškrtne, přijde zadavateli
- * i zpráva pod zvonek.
+ * nejde - to je věc toho, komu patří. Zadavatel je ale smí UPRAVIT (název,
+ * datum, čas) a ZRUŠIT (zadání tentýž den: „a když někomu zadám úkol, chci ho
+ * editovat"); příjemci o tom přijde zpráva pod zvonek.
  *
  * Stejný seznam je v panelu Úkoly na pravé hraně i v záložce Úkoly v chatu.
  */
@@ -20,26 +21,41 @@ export type ZadanyUkolVSeznamu = {
   title: string;
   done: boolean;
   dueDate: string | null;
+  dueTime: string | null;
   splnenoAt: string | null;
   komu: string;
   zdrojKonverzaceId: string | null;
 };
 
 const datum = (iso: string) =>
-  new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(
-    new Date(iso.length === 10 ? `${iso}T12:00:00` : iso),
-  );
+  new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(new Date(iso));
 
-export function ZadaneUkoly({ ukoly }: { ukoly: ZadanyUkolVSeznamu[] }) {
+const pole =
+  'rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink outline-none focus:border-brand-purple';
+
+export function ZadaneUkoly({ ukoly, onZmena }: { ukoly: ZadanyUkolVSeznamu[]; onZmena: () => void }) {
   const [splneneVidet, setSplneneVidet] = useState(false);
+  const [upravovany, setUpravovany] = useState<string | null>(null);
   if (ukoly.length === 0) return null;
 
   const cekaji = ukoly.filter((u) => !u.done);
   const splnene = ukoly.filter((u) => u.done);
-  const dnes = new Date().toISOString().slice(0, 10);
 
   const radek = (u: ZadanyUkolVSeznamu) => {
-    const poTerminu = !u.done && u.dueDate !== null && u.dueDate < dnes;
+    if (upravovany === u.id) {
+      return (
+        <li key={u.id}>
+          <UpravaUkolu
+            ukol={u}
+            onKonec={(zmeneno) => {
+              setUpravovany(null);
+              if (zmeneno) onZmena();
+            }}
+          />
+        </li>
+      );
+    }
+    const poTerminu = !u.done && jePoTerminu(u.dueDate, u.dueTime);
     const obsah = (
       <>
         {/* Stav místo zaškrtávátka: odškrtává ten, komu úkol patří. */}
@@ -62,7 +78,7 @@ export function ZadaneUkoly({ ukoly }: { ukoly: ZadanyUkolVSeznamu[] }) {
             ) : (
               <span className={poTerminu ? 'text-danger' : 'text-muted'}>
                 {' · '}
-                {u.dueDate ? `${poTerminu ? 'po termínu, ' : ''}do ${datum(u.dueDate)}` : 'čeká'}
+                {u.dueDate ? `${poTerminu ? 'po termínu, ' : ''}do ${popisTerminu(u.dueDate, u.dueTime)}` : 'čeká'}
               </span>
             )}
           </span>
@@ -70,17 +86,28 @@ export function ZadaneUkoly({ ukoly }: { ukoly: ZadanyUkolVSeznamu[] }) {
       </>
     );
     return (
-      <li key={u.id}>
+      <li key={u.id} className="flex items-start gap-1 group">
         {u.zdrojKonverzaceId ? (
           <Link
             href={`/chat?konverzace=${u.zdrojKonverzaceId}`}
             title="Otevřít konverzaci, ze které úkol vznikl"
-            className="flex items-start gap-2.5 py-2 px-1 rounded-lg no-underline hover:bg-field"
+            className="flex-1 min-w-0 flex items-start gap-2.5 py-2 px-1 rounded-lg no-underline hover:bg-field"
           >
             {obsah}
           </Link>
         ) : (
-          <div className="flex items-start gap-2.5 py-2 px-1">{obsah}</div>
+          <div className="flex-1 min-w-0 flex items-start gap-2.5 py-2 px-1">{obsah}</div>
+        )}
+        {!u.done && (
+          <button
+            type="button"
+            onClick={() => setUpravovany(u.id)}
+            title="Upravit úkol"
+            aria-label="Upravit úkol"
+            className="mt-1.5 shrink-0 rounded-md px-1.5 py-1 text-xs text-muted hover:text-brand-purple hover:bg-field opacity-60 group-hover:opacity-100"
+          >
+            ✎
+          </button>
         )}
       </li>
     );
@@ -110,5 +137,98 @@ export function ZadaneUkoly({ ukoly }: { ukoly: ZadanyUkolVSeznamu[] }) {
         </>
       )}
     </section>
+  );
+}
+
+/** Úprava zadaného úkolu přímo v seznamu - název, datum, čas, nebo zrušení. */
+function UpravaUkolu({ ukol, onKonec }: { ukol: ZadanyUkolVSeznamu; onKonec: (zmeneno: boolean) => void }) {
+  const [nazev, setNazev] = useState(ukol.title);
+  const [den, setDen] = useState(ukol.dueDate ?? '');
+  const [cas, setCas] = useState(ukol.dueTime ?? '');
+  const [busy, setBusy] = useState(false);
+  const [chyba, setChyba] = useState<string | null>(null);
+  const [potvrditZruseni, setPotvrditZruseni] = useState(false);
+
+  async function posli(metoda: 'PATCH' | 'DELETE') {
+    setBusy(true);
+    setChyba(null);
+    try {
+      const res = await fetch(`/api/tasks/${ukol.id}`, {
+        method: metoda,
+        headers: metoda === 'PATCH' ? { 'Content-Type': 'application/json' } : undefined,
+        body:
+          metoda === 'PATCH'
+            ? JSON.stringify({ title: nazev.trim(), dueDate: den || null, dueTime: den && cas ? cas : null })
+            : undefined,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setChyba(data?.error || 'Nepodařilo se uložit.');
+        return;
+      }
+      onKonec(true);
+    } catch {
+      setChyba('Nepodařilo se uložit.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (nazev.trim()) void posli('PATCH');
+      }}
+      className="flex flex-col gap-1.5 rounded-lg border border-brand-purple/40 bg-tint/40 p-2 my-1"
+    >
+      <span className="text-[11px] font-heading text-brand-purple">Úkol pro {ukol.komu}</span>
+      <input
+        autoFocus
+        value={nazev}
+        onChange={(e) => setNazev(e.target.value)}
+        className={`${pole} text-sm`}
+        aria-label="Název úkolu"
+      />
+      <div className="flex items-center gap-1.5">
+        <input type="date" value={den} onChange={(e) => setDen(e.target.value)} className={`${pole} flex-1 min-w-0`} aria-label="Termín" />
+        <input
+          type="time"
+          value={cas}
+          onChange={(e) => setCas(e.target.value)}
+          disabled={!den}
+          title={den ? 'Do kolika hodin (nepovinné)' : 'Nejdřív vyberte datum'}
+          className={`${pole} w-[92px] disabled:opacity-40`}
+          aria-label="Čas"
+        />
+      </div>
+      {chyba && <span className="text-[11px] font-body text-danger">{chyba}</span>}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="submit"
+          disabled={busy || !nazev.trim()}
+          className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-50"
+        >
+          Uložit
+        </button>
+        <button
+          type="button"
+          onClick={() => onKonec(false)}
+          className="text-xs font-heading text-muted hover:text-ink px-1"
+        >
+          Zpět
+        </button>
+        <span className="flex-1" />
+        {/* Zrušení až na druhé klepnutí - úkol zmizí i tomu, komu patří. */}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => (potvrditZruseni ? void posli('DELETE') : setPotvrditZruseni(true))}
+          className="text-xs font-heading font-semibold text-danger hover:underline px-1"
+        >
+          {potvrditZruseni ? 'Opravdu zrušit?' : 'Zrušit úkol'}
+        </button>
+      </div>
+    </form>
   );
 }
