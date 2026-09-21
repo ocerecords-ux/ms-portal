@@ -1849,8 +1849,41 @@ model Studio {
   /// Zvukari, kteri v tomhle studiu tocí (zadani 20. 9. 2026).
   zvukari  User[] @relation("ZvukarStudia")
 
+  /// TABULE VE STUDIU (zadani 21. 9. 2026). Tajny klic v adrese
+  /// /tabule/<klic> - dotykovy displej se neprihlasuje. Null = tabule vypnuta.
+  tabuleKlic      String?          @unique
+  tabulePoznamky  StudioPoznamka[]
+  tabuleChybi     StudioChybi[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Poznamka na tabuli ve studiu (21. 9. 2026). Zustava, dokud ji nekdo
+/// neodskrtne (hotovoAt).
+model StudioPoznamka {
+  id        String    @id @default(cuid())
+  studioId  String
+  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  text      String    @db.Text
+  autor     String?
+  createdAt DateTime  @default(now())
+  hotovoAt  DateTime?
+
+  @@index([studioId, hotovoAt])
+}
+
+/// Co ve studiu chybi (kava, toaletak...) - nahlaseno na tabuli ťuknutim.
+/// Aktivni = doplnenoAt je null. Klic polozky viz POLOZKY_TABULE v lib/tabule.ts.
+model StudioChybi {
+  id          String    @id @default(cuid())
+  studioId    String
+  studio      Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  polozka     String
+  nahlasenoAt DateTime  @default(now())
+  doplnenoAt  DateTime?
+
+  @@index([studioId, doplnenoAt])
 }
 
 /// Pracovni doba studia po dnech v tydnu. Minuty od pulnoci, at se s tim da
