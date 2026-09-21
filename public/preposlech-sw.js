@@ -41,6 +41,25 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
+  // Knihovna na PDF (pdf.js) jde z CDN - bez ni by se text offline neotevrel
+  // (doplneno 21. 9. 2026). Verze je v adrese, takze se nemeni: z cache,
+  // kdyz tam je, jinak ze site a rovnou ulozit.
+  if (request.method === 'GET' && url.hostname === 'cdnjs.cloudflare.com' && url.pathname.includes('/pdf.js/')) {
+    event.respondWith(
+      caches.open(CACHE).then((cache) =>
+        cache.match(request.url).then(
+          (ulozeno) =>
+            ulozeno ||
+            fetch(request).then((odpoved) => {
+              if (odpoved.ok) cache.put(request.url, odpoved.clone()).catch(() => {});
+              return odpoved;
+            }),
+        ),
+      ),
+    );
+    return;
+  }
+
   // Nahravka nebo text stazeny na cestu - odtud, i se signalem (je to rychlejsi).
   if (request.method === 'GET' && url.pathname.endsWith('/preposlech/soubor') && !request.headers.has('range')) {
     event.respondWith(

@@ -1,3 +1,5 @@
+import { PDFJS_CDN } from '@/lib/pdfJs';
+
 /**
  * AUDIOTAGGER OFFLINE - strana prohlížeče (zadání 21. 9. 2026: „bylo by super
  * přidat možnost, aby mohl klient v AudioTaggeru pracovat offline, když bude
@@ -94,10 +96,21 @@ export async function stahniNaCestu(
  */
 async function ulozStrankuProOffline(cache: Cache) {
   const adresy = new Set<string>([window.location.href]);
+  // Knihovna na PDF z CDN - bez ni se text offline neotevre (21. 9. 2026).
+  const knihovnaPdf = [`${PDFJS_CDN}/pdf.min.mjs`, `${PDFJS_CDN}/pdf.worker.min.mjs`];
   for (const zaznam of performance.getEntriesByType('resource')) {
     const u = new URL(zaznam.name);
     if (u.origin !== window.location.origin) continue;
     if (u.pathname.startsWith('/_next/static/') || /\.(png|svg|gif|ico|woff2?)$/.test(u.pathname)) adresy.add(u.toString());
+  }
+  for (const a of knihovnaPdf) {
+    try {
+      if (await cache.match(a)) continue;
+      const odpoved = await fetch(a, { mode: 'cors' });
+      if (odpoved.ok) await cache.put(a, odpoved);
+    } catch {
+      // Bez signalu uz to nestahneme - text pak offline pujde jen v otevrenem okne.
+    }
   }
   for (const a of Array.from(adresy)) {
     try {
