@@ -111,7 +111,7 @@ Upravit poradu smí každý účastník. U opakované se upravuje celá řada; j
 
 **Kalendář se obnovuje sám.** Když někdo jiný zapíše, přesune nebo smaže událost, uvidíte to do pár vteřin bez obnovování stránky — v prohlížeči i v aplikaci v telefonu. Rozepsaný formulář se tím nezavře.
 
-**Události přes sebe leží jako papíry na stole.** Název každé události zůstane vidět: co začíná skoro naráz, leží vedle sebe (a úzká bublina dá názvu dva řádky), co začíná později, si lehne navrch přes celou šířku — ale až pod názvy těch předchozích. Když na bublinu najedete myší, zvedne se navrch a přečtete ji celou.
+**Události přes sebe leží jako papíry na stole.** Název každé události zůstane vidět: co začíná skoro naráz, leží vedle sebe (a úzká bublina dá názvu dva řádky), co začíná později, si lehne navrch přes celou šířku — ale až pod názvy těch předchozích. Celý detail události se otevře kliknutím.
 
 **Střih se smí překrývat.** Ve studiu můžou v jednu chvíli pracovat dva zvukaři, takže střih jde zapsat i tam, kde už natáčení nebo jiný střih je. Co studio opravdu drží, je **natáčení, casting, svátek, údržba a blokace** — přes ně se druhé natáčení zapsat nedá a nenabízejí se ani herci v nabídce termínů.
 

@@ -1412,11 +1412,11 @@ function MrizkaPohled({
                           // rozvrhniPrekryvy. 1px mezera mezi sousedy.
                           left: `calc(${misto.posun * 100}% + 1px)`,
                           width: `calc(${misto.podil * 100}% - 2px)`,
-                          // Vrstva jde přes proměnnou, ne přes zIndex: najetím
-                          // myší se papír „zvedne ze stolu" navrch a přečte se
-                          // celý (hover:z-[450] v className, 21. 9. 2026).
-                          // Inline zIndex by třídu přebil.
-                          ['--vrstva' as string]: misto.vrstva,
+                          // Papír zůstává ve své vrstvě i pod myší (21. 9. 2026:
+                          // „chci dát pryč z kalendáře tu funkci, že když na
+                          // událost najedu myší, tak vystoupí a překryje všechny
+                          // ostatní. Detail zobrazíme jen klikem").
+                          zIndex: misto.vrstva,
                           // Barva udalosti je pruhledna - pod ni se musi dat
                           // plny podklad, jinak by se prekryte udalosti slily.
                           backgroundColor: 'rgb(var(--c-surface))',
@@ -1438,7 +1438,7 @@ function MrizkaPohled({
                         // horniho rohu"). Sirku si radky drzi cele (vychozi
                         // items-stretch), jinak by se dlouhy nazev neorezal
                         // teckami, ale jen usekl.
-                        className="absolute z-[var(--vrstva)] hover:z-[450] rounded border px-1.5 py-0.5 text-left overflow-hidden flex flex-col justify-start"
+                        className="absolute rounded border px-1.5 py-0.5 text-left overflow-hidden flex flex-col justify-start"
                       >
                         {/* Popisek je dvouřádkový (zadání 14. 9. 2026):
                             projekt - herec, pod tím ZVUKAŘ: jméno. Druhý řádek
