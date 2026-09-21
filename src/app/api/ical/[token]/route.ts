@@ -131,43 +131,50 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   ]);
 
   const kratce = (nazev: string) => (nazev.split(' - ').pop() ?? nazev).trim();
-  const misto = (s: { name: string; location: string | null }) => [s.name, s.location].filter(Boolean).join(', ');
+
+  /**
+   * CO NEJMÍŇ TEXTU (zadání 21. 9. 2026: „když si zobrazuju v Apple kalendáři,
+   * tak tam chci posílat co nejmíň věcí. Hlavně ať je tam název projektu, čas,
+   * jméno zvukaře, jméno herce. Teď tam je dvakrát střih a adresa a studio je
+   * zbytečné").
+   *
+   * Název události = jen to podstatné, oddělené tečkou:
+   *   natáčení  →  Projekt · Herec · Zvukař
+   *   střih     →  Střih · Projekt · Zvukař   (bez projektu jen Střih · Zvukař)
+   *   casting   →  Casting · Herec · Zvukař
+   * Čas ukazuje kalendář sám. Studio ani adresa se neposílají - každé studio
+   * je v telefonu vlastní kalendář s vlastní barvou. Popis nese jen poznámku,
+   * a to jen když nějaká je.
+   */
+  const spoj = (casti: (string | null | undefined)[]) =>
+    casti.map((c) => (c ?? '').trim()).filter(Boolean).join(' · ');
 
   const events: IcsEvent[] = [
     ...slots.map((s) => ({
       uid: `slot-${s.id}@msportal.cz`,
       start: s.start,
       end: s.end,
-      summary: `${s.request.projectName} · ${s.request.actorName} (${kratce(s.studio.name)})`,
-      description: [
-        `Natáčení — ${s.request.projectName}`,
-        `Herec: ${s.request.actorName}`,
-        s.zvukarName ? `Zvukař: ${s.zvukarName}` : null,
-        s.note ? `Poznámka: ${s.note}` : null,
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      location: misto(s.studio),
+      summary: spoj([s.request.projectName, s.request.actorName, s.zvukarName]),
+      description: s.note || null,
       updatedAt: s.updatedAt,
     })),
     ...bloky.map((b) => {
       const druh = BLOCK_KIND_LABELS[b.kind] ?? 'Blokace';
-      const nazev = b.projectName || b.title;
+      const summary =
+        b.kind === 'NATACENI'
+          ? spoj([b.projectName || druh, b.actorName, b.zvukarName])
+          : b.kind === 'STRIH'
+            ? spoj([druh, b.projectName, b.zvukarName])
+            : b.kind === 'CASTING'
+              ? spoj([druh, b.actorName, b.zvukarName])
+              : // Údržba, svátek, porada… - stačí, co to je.
+                b.title || druh;
       return {
         uid: `blok-${b.id}@msportal.cz`,
         start: b.start,
         end: b.end,
-        summary: `${druh}: ${nazev}${b.actorName ? ` · ${b.actorName}` : ''} (${kratce(b.studio.name)})`,
-        description: [
-          druh,
-          b.projectName && b.title !== b.projectName ? b.title : null,
-          b.actorName ? `Herec: ${b.actorName}` : null,
-          b.zvukarName ? `Zvukař: ${b.zvukarName}` : null,
-          b.note ? `Poznámka: ${b.note}` : null,
-        ]
-          .filter(Boolean)
-          .join('\n'),
-        location: misto(b.studio),
+        summary,
+        description: b.note || null,
         updatedAt: b.updatedAt,
       };
     }),

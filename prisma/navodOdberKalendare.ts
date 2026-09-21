@@ -49,6 +49,8 @@ Každý kalendář má **vlastní řádek a vlastní tlačítka** — přidává
 
 **Vypnutí jednoho kalendáře:** v Apple Kalendáři klepněte dole na **Kalendáře** a odškrtněte ho; v Google Kalendáři ho vlevo v seznamu odškrtněte. Kalendář zůstane přidaný, jen se nezobrazuje.
 
+**Co v událostech uvidíte.** Schválně jen to podstatné, ať se to na telefonu vejde: **projekt · herec · zvukař** (u střihu *Střih · projekt · zvukař*, u castingu *Casting · herec · zvukař*). Čas ukazuje kalendář sám, studio poznáte podle barvy kalendáře. Adresa se neposílá; poznámka jen tehdy, když nějaká je.
+
 **Už odebíráte „Celý kalendář" a chcete zvlášť?** Přidejte kalendáře zvlášť a ten celý v telefonu smažte (nebo ho tady zneplatněte) — jinak uvidíte vše dvakrát.
 
 Odběrů můžete mít víc najednou, třeba celý kalendář v Google a jen Brno I a Mimo studio v telefonu.
