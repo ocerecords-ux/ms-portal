@@ -126,8 +126,20 @@ Stopy k přeposlechu chodí po kouscích, takže „3 z 5 stop" o celé knize ni
 - Stejné procento je v seznamu projektů ve sloupci **Přeposlechnuto** (počet doposlechnutých stop je v bublině po najetí myší).
 - Když se na Disku vymění PDF, procento začne znovu od nuly.
 
+# Hledání v textu
+
+Nad textem je políčko **🔍 Hledat v textu** (nebo **Ctrl+F / ⌘F**). Hledá v celé knize, i na stranách, kam jste ještě nedorolovali.
+
+- **Bez ohledu na diakritiku a velikost písmen** — „prilis" najde „Příliš".
+- Najde i **slovo rozdělené na konci řádku** („roz-/hodl") a frázi přes konec řádku.
+- Nálezy jsou v textu **fialově podbarvené**, ten aktuální oranžově. **Enter** = další, **Shift+Enter** = předchozí (nebo šipky ▲▼), **Esc** hledání zruší. Vedle políčka je „3 / 27".
+- **☰** otevře seznam všech nálezů se stranou a úryvkem kolem — kliknutím se na nález skočí.
+- **Aa** — jak hledat: **Jen celá slova** („les" nenajde „lesník"), **Přibližně** (najde i překlep nebo jiný tvar slova — „Novak" → „Nováka"; hodí se, když hledáte podle sluchu), **Přesně** (rozlišuje diakritiku a velká písmena).
+- Při prvním hledání se chvíli připravuje text celé knihy (u políčka běží procenta), pak je hledání okamžité.
+- Nenajde text, který v PDF není textem (sken, poznámka vložená v PDF editoru).
+
 # Co se teprve chystá
 
-- Zvětšování a zmenšování textu a sofistikovanější hledání v PDF — hotové v prototypu, do portálu se to teprve překlopí.
+- Zvětšování a zmenšování textu — hotové v prototypu, do portálu se to teprve překlopí.
 - Export značek pro Cubase (marker / EDL). Data pro něj už v každém záznamu jsou, zatím je z nich jen CSV pro člověka.`,
 };

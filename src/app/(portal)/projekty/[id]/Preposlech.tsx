@@ -9,6 +9,7 @@ import { STROP_PRO_KRIVKU, spocitejKrivku } from '@/lib/krivkaZvuku';
 import type { PostupPreposlechu } from '@/lib/preposlechPostup';
 import { PosluchaciPreposlechu } from './PosluchaciPreposlechu';
 import { NaCestu } from './NaCestu';
+import { HledaniVPdf } from './HledaniVPdf';
 import {
   blobZCesty,
   jeChybaSite,
@@ -194,6 +195,9 @@ export function Preposlech({
   const [pdfNazev, setPdfNazev] = useState('');
   const [pdfStran, setPdfStran] = useState(0);
   const [pdfStrana, setPdfStrana] = useState(1);
+  /** Načtené PDF a knihovna - pro hledání v textu (21. 9. 2026). */
+  const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [pdfjsLib, setPdfjsLib] = useState<any>(null);
   /**
    * Strana a počet stran i mimo render - zápis záložky je posílá každých
    * deset vteřin a procento přeposlechu se z nich počítá (21. 9. 2026).
@@ -974,6 +978,12 @@ export function Preposlech({
       znacky.className = 'absolute inset-0 pointer-events-none';
       ramecek.appendChild(znacky);
 
+      // Podbarveni nalezu z hledani (21. 9. 2026) - viz HledaniVPdf.
+      const hledani = document.createElement('div');
+      hledani.dataset.hledani = '1';
+      hledani.className = 'absolute inset-0 pointer-events-none';
+      ramecek.appendChild(hledani);
+
       const textovaVrstva = document.createElement('div');
       textovaVrstva.dataset.text = '1';
       textovaVrstva.className = 'absolute inset-0 select-text cursor-text';
@@ -1078,6 +1088,8 @@ export function Preposlech({
         .getDocument(ulozeny ? { data: new Uint8Array(await ulozeny.arrayBuffer()) } : { url })
         .promise;
       pdfDocRef.current = doc;
+      setPdfDoc(doc);
+      setPdfjsLib(pdfjs);
       setPdfNazev(nazev);
       setPdfStran(doc.numPages);
       setPdfStrana(1);
@@ -2067,6 +2079,9 @@ export function Preposlech({
                 />
               </label>
             )}
+            {/* Hledani v textu (21. 9. 2026: „v PDF bych chtel
+                sofistikovanejsi vyhledavani slov"). */}
+            <HledaniVPdf doc={pdfDoc} pdfjs={pdfjsLib} obalRef={pdfObalRef} />
             {pdfStran > 0 && (
               <span className="flex items-center gap-1.5 ml-auto">
                 <button type="button" onClick={() => naStranu(pdfStrana - 1)} className="text-muted hover:text-brand-purple px-1.5">
