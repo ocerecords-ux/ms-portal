@@ -1849,12 +1849,25 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * neodroluje nahoru, kazda zmena velikosti vypis zase stahne dolu.
    */
   const drzetDole = useRef(true);
+  /**
+   * Kam jsme výpis naposledy odrolovali MY (21. 9. 2026: „když otevřu
+   * konverzaci, neobjeví se poslední zpráva, ale jsem o pár řádků výš").
+   *
+   * Příčina: událost `scroll` chodí se zpožděním. Odrolovali jsme na konec,
+   * mezitím se doskládaly zprávy (výpis povyrostl) a teprve pak doběhla
+   * událost - ta změřila „jsi 300 px od konce" a usoudila, že si člověk
+   * odroloval nahoru. Výpis se pak přestal držet dole, pár řádků nad koncem.
+   * Teď se za odrolování nahoru bere jen to, když je výpis VÝŠ než místo,
+   * kam jsme ho sami poslali - to jinak než rukou nejde.
+   */
+  const nasePoziceRef = useRef(0);
 
   const naKonec = useCallback((vzdy = false) => {
     const el = vypisRef.current;
     if (!el) return;
     if (!vzdy && !drzetDole.current) return;
     el.scrollTop = el.scrollHeight;
+    nasePoziceRef.current = el.scrollTop;
   }, []);
 
   /**
@@ -1880,6 +1893,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         if (el.scrollHeight !== posledniVyska || el.scrollTop + el.clientHeight < el.scrollHeight - 1) {
           posledniVyska = el.scrollHeight;
           el.scrollTop = el.scrollHeight;
+          nasePoziceRef.current = el.scrollTop;
         }
       }
       if (Date.now() < konec) requestAnimationFrame(krok);
@@ -1900,6 +1914,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       if (!el) return;
       drzetDole.current = true;
       el.scrollTop = el.scrollHeight;
+      nasePoziceRef.current = el.scrollTop;
       dorovnejNaKonec();
     },
     [dorovnejNaKonec],
@@ -1911,7 +1926,19 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     if (!el) return;
     // 80 px tolerance: „skoro dole" je porad dole - jinak by staclio drobne
     // setrveni prstu a vypis by se u nove zpravy prestal posouvat.
-    drzetDole.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    const dole = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (dole) {
+      drzetDole.current = true;
+      return;
+    }
+    // Daleko od konce, ale NE výš, než kam jsme výpis poslali sami =
+    // zprávy mezitím povyrostly. Člověk nerolovat - srovnáme to na konec.
+    if (drzetDole.current && el.scrollTop >= nasePoziceRef.current - 4) {
+      el.scrollTop = el.scrollHeight;
+      nasePoziceRef.current = el.scrollTop;
+      return;
+    }
+    drzetDole.current = false;
   }, []);
 
   // Otevreni konverzace zacina vzdy na konci, i kdyz byl clovek v te
