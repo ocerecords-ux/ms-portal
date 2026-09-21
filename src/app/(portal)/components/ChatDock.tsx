@@ -1,5 +1,6 @@
 'use client';
 
+import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { createPortal } from 'react-dom';
@@ -3922,12 +3923,15 @@ function UkolyVChatu() {
   const [termin, setTermin] = useState('');
   const [busy, setBusy] = useState(false);
   const [hotove, setHotove] = useState(false);
+  // Úkoly, které jsem zadal ostatním (21. 9. 2026).
+  const [zadane, setZadane] = useState<ZadanyUkolVSeznamu[]>([]);
 
   const nacti = useCallback(async () => {
     try {
       const res = await fetch('/api/tasks');
       const data = await res.json().catch(() => ({}));
       setUkoly(Array.isArray(data?.ukoly) ? data.ukoly : []);
+      setZadane(Array.isArray(data?.zadane) ? data.zadane : []);
     } catch {
       setUkoly([]);
     }
@@ -4018,6 +4022,8 @@ function UkolyVChatu() {
       {hotove && splnene.map((u) => (
         <RadekUkolu key={u.id} ukol={u} onOdskrtni={() => void odskrtni(u)} />
       ))}
+
+      <ZadaneUkoly ukoly={zadane} />
     </div>
   );
 }

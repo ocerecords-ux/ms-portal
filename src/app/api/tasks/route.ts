@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
+import { loadZadaneMnou } from '@/lib/tasksServer';
 
 // Ukoly na profilu clena tymu Mediaspace (zadani 5. 9. 2026).
 //
@@ -34,7 +35,11 @@ export async function GET() {
       take: 200,
     });
 
+    // „Zadal jsem" - úkoly, které jsem dal někomu jinému (21. 9. 2026).
+    const zadane = await loadZadaneMnou(session.user.id, session.user.role);
+
     return NextResponse.json({
+      zadane,
       ukoly: tasks.map((t) => ({
         id: t.id,
         title: t.title,

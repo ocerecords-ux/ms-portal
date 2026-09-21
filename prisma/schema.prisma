@@ -1150,10 +1150,20 @@ model Task {
   /// Konverzace, ze ktere ukol vznikl - at se da dokliknout na souvislosti.
   zdrojKonverzaceId String?
 
+  /// KDO UKOL ZADAL - id uctu (zadani 21. 9. 2026: „kdyz vytvorim nekomu
+  /// dalsimu ukol z chatu, potrebuji videt nekde, ze jsem ho vytvoril a ze
+  /// ho pak ten clovek splnil"). Podle nej se zadavateli skladá seznam
+  /// „Zadal jsem" a chodi mu zprava, kdyz je ukol splneny. Zamerne bez vazby
+  /// na User (stejne jako zadalJmeno): kdyz ucet zmizi, ukol zustava.
+  zadalId   String?
+  /// Kdy prijemce ukol odskrtl. Vraceni mezi otevrene ho zase smaze.
+  splnenoAt DateTime?
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   @@index([userId, done])
+  @@index([zadalId, done])
 }
 
 

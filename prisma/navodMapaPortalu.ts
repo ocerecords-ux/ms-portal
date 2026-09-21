@@ -52,6 +52,8 @@ U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích toč�
 
 Kromě toho je v liště ještě **chat**, **zvoneček** s upozorněními, **otazník** (tahle Nápověda) a vlevo panel s rychlými volbami.
 
+**Úkoly z chatu.** Zpráva začínající **@úkol** založí úkol tomu, komu píšete (ve skupině tomu, koho označíte @jménem). Co jste takhle zadali ostatním, najdete v panelu **Úkoly** (i v záložce Úkoly v chatu) dole v části **Zadal jsem**: pro koho, do kdy a jestli už je hotovo. Když ho příjemce odškrtne, přijde vám zpráva pod **zvoneček**; stejně tak, když nesplněný úkol smaže. Kliknutím na úkol se otevře konverzace, ze které vznikl.
+
 # Uvnitř projektu
 
 Karta projektu má záložky a ukazují se jen ty, které dávají smysl:

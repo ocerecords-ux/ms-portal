@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
 import { DatumPole } from '@/components/DatumPole';
+import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
 
 /**
  * Úkoly pořád po ruce (zadani 8. 9. 2026: "aby byl ten to do list pořád po
@@ -76,6 +77,21 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
+  // „Zadal jsem" (21. 9. 2026) - načítá se, až když je panel otevřený; layout
+  // tak nemusí na každé stránce tahat úkoly ostatních.
+  const [zadane, setZadane] = useState<ZadanyUkolVSeznamu[]>([]);
+  const nactiZadane = async () => {
+    try {
+      const res = await fetch('/api/tasks');
+      const data = await res.json().catch(() => ({}));
+      if (Array.isArray(data?.zadane)) setZadane(data.zadane);
+    } catch {
+      // Nevadí - seznam jen zůstane, jak byl.
+    }
+  };
+  useEffect(() => {
+    if (dok === 'ukoly') void nactiZadane();
+  }, [dok]);
 
   // Stav si pamatujeme v prohlizeci, at se panel neotevira porad znovu.
   const today = todayIso();
@@ -107,6 +123,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         return false;
       }
       router.refresh();
+      void nactiZadane();
       return true;
     } catch {
       setError('Nepodařilo se uložit.');
@@ -263,6 +280,8 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
           )}
         </div>
       )}
+
+      <ZadaneUkoly ukoly={zadane} />
       </div>
       </div>
     </aside>

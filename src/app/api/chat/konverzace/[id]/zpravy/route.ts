@@ -224,6 +224,9 @@ async function zalozUkolZeZpravy(vstup: {
         dueDate,
         sortOrder: (posledni?.sortOrder ?? 0) + 10,
         zadalJmeno: vstup.zadalJmeno,
+        // Zadavatel si úkol uvidí v „Zadal jsem" a dozví se, až bude
+        // splněný (21. 9. 2026).
+        zadalId: vstup.zadalId,
         zdrojKonverzaceId: vstup.conversationId,
       },
     });

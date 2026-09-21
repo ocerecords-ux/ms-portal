@@ -182,6 +182,7 @@ async function main() {
   await zalozVychoziNavody();
   await zalozDruhyLicence();
   await doplnStudiaZvukaru();
+  await doplnZadavateleUkolu();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
 
@@ -907,5 +908,46 @@ async function nastavBarvyStudii() {
   } catch (err) {
     // Je to jen vzhled - kdyby se nepovedl, nesmi to shodit seed.
     console.warn('  barvy studii se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * ZADAVATEL U STARŠÍCH ÚKOLŮ Z CHATU (21. 9. 2026: „potřebuji vidět někde, že
+ * jsem ho vytvořil a že ho pak ten člověk splnil").
+ *
+ * Úkoly z chatu mají od 18. 9. uložené JMÉNO zadavatele, ale ne jeho účet -
+ * bez toho by v „Zadal jsem" chyběly. Doplní se podle jména (jen jednoznačná
+ * shoda); u už splněných se jako čas splnění vezme poslední změna úkolu.
+ * Běží jednou (známka v Counteru).
+ */
+async function doplnZadavateleUkolu() {
+  const ZNAMKA = 'ukoly-backfill-zadal-id';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const [ukoly, lide] = await Promise.all([
+      prisma.task.findMany({
+        where: { zadalJmeno: { not: null }, zadalId: null },
+        select: { id: true, zadalJmeno: true, done: true, updatedAt: true },
+      }),
+      prisma.user.findMany({
+        where: { role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] } },
+        select: { id: true, name: true, email: true },
+      }),
+    ]);
+    let doplneno = 0;
+    for (const u of ukoly) {
+      const shody = lide.filter((c) => (c.name || c.email) === u.zadalJmeno);
+      if (shody.length !== 1) continue;
+      await prisma.task.update({
+        where: { id: u.id },
+        data: { zadalId: shody[0].id, ...(u.done ? { splnenoAt: u.updatedAt } : {}) },
+      });
+      doplneno += 1;
+    }
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    if (doplneno > 0) console.log(`  ukoly z chatu: doplnen zadavatel u ${doplneno}`);
+  } catch (err) {
+    console.warn('  zadavatele ukolu se nepodarilo doplnit:', err);
   }
 }

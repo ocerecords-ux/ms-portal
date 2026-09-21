@@ -41,3 +41,51 @@ export async function loadMyTasks(userId: string, role: Role): Promise<DockTask[
     return [];
   }
 }
+
+/**
+ * ÚKOLY, KTERÉ JSEM ZADAL JÁ (zadání 21. 9. 2026: „když vytvořím někomu
+ * dalšímu úkol z chatu, potřebuji vidět někde, že jsem ho vytvořil a že ho
+ * pak ten člověk splnil").
+ *
+ * Jen úkoly pro JINÉ lidi - co si člověk zadal sám sobě, má ve svém seznamu.
+ */
+export type ZadanyUkol = {
+  id: string;
+  title: string;
+  done: boolean;
+  dueDate: string | null;
+  /** Kdy ho příjemce odškrtl (ISO), u starších splněných null. */
+  splnenoAt: string | null;
+  /** Komu úkol patří. */
+  komu: string;
+  zadanoAt: string;
+  /** Konverzace, ze které úkol vznikl. */
+  zdrojKonverzaceId: string | null;
+};
+
+export async function loadZadaneMnou(userId: string, role: Role): Promise<ZadanyUkol[]> {
+  if (!isInternalRole(role)) return [];
+  try {
+    const tasks = await prisma.task.findMany({
+      where: { zadalId: userId, NOT: { userId } },
+      // Otevřené napřed, pak nejčerstvěji splněné.
+      orderBy: [{ done: 'asc' }, { splnenoAt: 'desc' }, { createdAt: 'desc' }],
+      take: 100,
+      include: { user: { select: { name: true, email: true } } },
+    });
+    return tasks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      done: t.done,
+      dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
+      splnenoAt: t.splnenoAt ? t.splnenoAt.toISOString() : null,
+      komu: t.user?.name || t.user?.email || '—',
+      zadanoAt: t.createdAt.toISOString(),
+      zdrojKonverzaceId: t.zdrojKonverzaceId ?? null,
+    }));
+  } catch (err) {
+    // Sloupec zadalId ještě nemusí být v databázi (nedoběhl db push).
+    console.error('Nacteni zadanych ukolu selhalo:', err);
+    return [];
+  }
+}
