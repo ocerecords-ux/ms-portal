@@ -64,7 +64,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.
           telefonni cislo se lamalo na dva radky. */}
       {/* Vpravo je připnutý panel Úkolů - obsahu tam necháme místo. */}
-      <div className="obsah-portalu w-full px-4 sm:px-6 py-8 sm:py-12 md:pl-16 md:pr-20">{children}</div>
+      <div className="obsah-portalu w-full px-4 sm:px-6 pt-3 pb-8 sm:py-12 md:pl-16 md:pr-20">{children}</div>
       {/* NA TELEFONU ZADNE DOKY - stejne jako ve zbytku portalu, viz
           (portal)/layout.tsx. Chat a ukoly maji vlastni aplikaci MS Chat. */}
       <div className="hidden md:block">

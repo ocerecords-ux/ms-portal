@@ -720,26 +720,32 @@ export function CalendarBrowser({
   }, [days, view, timezone, anchorIso]);
 
   return (
-    <section className="flex flex-col gap-5">
-      {/* Hlavicka: pohled a posun v case */}
+    <section className="flex flex-col gap-3 sm:gap-5">
+      {/* Hlavicka: pohled a posun v case.
+
+          NA TELEFONU DVA ŘÁDKY MÍSTO ŠESTI (zadání 21. 9. 2026: „zredukujme
+          řádky u kalendáře v mobilu, aby se posunul víc nahoru k horní
+          liště"): datum a ‹ Dnes › na jednom, Den/Týden/Měsíc pod tím,
+          kalendáře v jednom posuvném pruhu a pod nimi hledání. */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div>
+        <div className="hidden sm:block">
           <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">{nadpis}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
+          <p className="sm:hidden mr-auto text-sm font-heading text-muted m-0 capitalize">{nadpis}</p>
           <button
             type="button"
             onClick={() => posun(-1)}
             aria-label="Předchozí"
-            className="w-9 h-9 rounded-lg border border-line text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-line text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
           >
             ‹
           </button>
           <button
             type="button"
             onClick={() => prejdi({ datum: new Date().toISOString().slice(0, 10) })}
-            className="rounded-lg border border-line px-4 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors"
+            className="rounded-lg border border-line px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors"
           >
             Dnes
           </button>
@@ -747,17 +753,19 @@ export function CalendarBrowser({
             type="button"
             onClick={() => posun(1)}
             aria-label="Další"
-            className="w-9 h-9 rounded-lg border border-line text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-line text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
           >
             ›
           </button>
-          <span className="inline-flex rounded-lg border border-line overflow-hidden ml-2">
+          {/* Na telefonu zalomí Den/Týden/Měsíc na další řádek. */}
+          <span className="basis-full h-0 sm:hidden" aria-hidden="true" />
+          <span className="inline-flex rounded-lg border border-line overflow-hidden sm:ml-2">
             {CALENDAR_VIEWS.map((v) => (
               <button
                 key={v.key}
                 type="button"
                 onClick={() => prejdi({ pohled: v.key })}
-                className={`px-4 py-2 text-sm font-heading font-semibold transition-colors ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-heading font-semibold transition-colors ${
                   v.key === view ? 'bg-brand-purple text-white' : 'bg-surface text-muted hover:text-ink'
                 }`}
               >
@@ -779,14 +787,15 @@ export function CalendarBrowser({
             - KULIČKA přidá nebo odebere kalendář k těm ostatním,
             - NÁZEV zapne PROZATÍMNÍ SÓLO - svítí jen on, orámovaný, a druhý
               klik na stejný název vrátí zaškrtnutí, jaké bylo předtím. */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* Na telefonu jeden posuvný pruh (21. 9. 2026), od tabletu se lámou. */}
+      <div className="flex items-center gap-2 flex-nowrap sm:flex-wrap overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 py-1 sm:py-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {studios.map((s) => {
           const zapnute = solo ? solo === s.id : selectedStudioIds.includes(s.id);
           const soluje = solo === s.id;
           return (
             <span
               key={s.id}
-              className={`inline-flex items-center rounded-pill border text-sm font-heading font-semibold transition-colors ${
+              className={`shrink-0 whitespace-nowrap inline-flex items-center rounded-pill border text-xs sm:text-sm font-heading font-semibold transition-colors ${
                 zapnute ? 'border-transparent text-ink' : 'border-line text-muted'
               } ${soluje ? 'ring-2 ring-brand-purple ring-offset-2 ring-offset-paper' : ''}`}
               style={zapnute ? { backgroundColor: `${s.color}26` } : undefined}
@@ -797,7 +806,7 @@ export function CalendarBrowser({
                 title={zapnute ? `Vypnout ${s.name}` : `Zapnout ${s.name}`}
                 aria-label={zapnute ? `Vypnout ${s.name}` : `Zapnout ${s.name}`}
                 aria-pressed={zapnute}
-                className="flex items-center rounded-l-pill pl-3 pr-1.5 py-1.5"
+                className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
               >
                 <span
                   className="w-3 h-3 rounded-full shrink-0"
@@ -808,7 +817,7 @@ export function CalendarBrowser({
                 type="button"
                 onClick={() => jenTentoKalendar(s.id)}
                 title={soluje ? 'Zpět na původní výběr kalendářů' : `Dočasně jen ${s.name} (sólo)`}
-                className={`rounded-r-pill pl-0.5 pr-3.5 py-1.5 transition-colors ${
+                className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${
                   zapnute ? '' : 'hover:text-ink'
                 }`}
               >
@@ -821,7 +830,7 @@ export function CalendarBrowser({
             stejně jako studio. Tečkovaný okraj ho odliší: není to místnost,
             je to přehled lidí. Přidává se dvojklikem jako všude jinde. */}
         <span
-          className={`inline-flex items-center rounded-pill border border-dashed text-sm font-heading font-semibold transition-colors ${
+          className={`shrink-0 whitespace-nowrap inline-flex items-center rounded-pill border border-dashed text-xs sm:text-sm font-heading font-semibold transition-colors ${
             ukazNepritomnost ? 'text-ink' : 'border-line text-muted'
           } ${solo === SOLO_MIMO ? 'ring-2 ring-brand-purple ring-offset-2 ring-offset-paper' : ''}`}
           style={
@@ -836,7 +845,7 @@ export function CalendarBrowser({
             aria-pressed={ukazNepritomnost}
             title={ukazNepritomnost ? 'Vypnout Mimo studio' : 'Zapnout Mimo studio'}
             aria-label={ukazNepritomnost ? 'Vypnout Mimo studio' : 'Zapnout Mimo studio'}
-            className="flex items-center rounded-l-pill pl-3 pr-1.5 py-1.5"
+            className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
           >
             <span
               className="w-3 h-3 rounded-full shrink-0"
@@ -856,7 +865,7 @@ export function CalendarBrowser({
             title={
               solo === SOLO_MIMO ? 'Zpět na původní výběr kalendářů' : 'Dočasně jen Mimo studio (sólo)'
             }
-            className={`rounded-r-pill pl-0.5 pr-3.5 py-1.5 transition-colors ${
+            className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${
               ukazNepritomnost ? '' : 'hover:text-ink'
             }`}
           >
@@ -867,7 +876,7 @@ export function CalendarBrowser({
             vidí jen porady, na které je pozvaný. Zapíná se a sóluje stejně
             jako ostatní kalendáře. */}
         <span
-          className={`inline-flex items-center rounded-pill border text-sm font-heading font-semibold transition-colors ${
+          className={`shrink-0 whitespace-nowrap inline-flex items-center rounded-pill border text-xs sm:text-sm font-heading font-semibold transition-colors ${
             ukazPorady ? 'text-ink' : 'border-line text-muted'
           } ${solo === SOLO_PORADY ? 'ring-2 ring-brand-purple ring-offset-2 ring-offset-paper' : ''}`}
           style={ukazPorady ? { backgroundColor: `${BARVA_PORAD}26`, borderColor: BARVA_PORAD } : undefined}
@@ -878,7 +887,7 @@ export function CalendarBrowser({
             aria-pressed={ukazPorady}
             title={ukazPorady ? 'Vypnout Porady' : 'Zapnout Porady'}
             aria-label={ukazPorady ? 'Vypnout Porady' : 'Zapnout Porady'}
-            className="flex items-center rounded-l-pill pl-3 pr-1.5 py-1.5"
+            className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
           >
             <span
               className="w-3 h-3 rounded-full shrink-0"
@@ -889,7 +898,7 @@ export function CalendarBrowser({
             type="button"
             onClick={() => jenTentoKalendar(SOLO_PORADY)}
             title={solo === SOLO_PORADY ? 'Zpět na původní výběr kalendářů' : 'Dočasně jen Porady (sólo)'}
-            className={`rounded-r-pill pl-0.5 pr-3.5 py-1.5 transition-colors ${ukazPorady ? '' : 'hover:text-ink'}`}
+            className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${ukazPorady ? '' : 'hover:text-ink'}`}
           >
             {NAZEV_KALENDARE_PORADY}
           </button>
@@ -902,7 +911,7 @@ export function CalendarBrowser({
             type="button"
             onClick={() => prejdi({ solo: '' })}
             title="Vrátit zaškrtnutí kalendářů, jaké bylo před sólem"
-            className="inline-flex items-center gap-2 rounded-pill border border-brand-purple bg-brand-purple/10 pl-3 pr-3.5 py-1.5 text-sm font-heading font-semibold text-brand-purple"
+            className="shrink-0 whitespace-nowrap inline-flex items-center gap-2 rounded-pill border border-brand-purple bg-brand-purple/10 pl-3 pr-3.5 py-1.5 text-xs sm:text-sm font-heading font-semibold text-brand-purple"
           >
             SÓLO: {nazevSola}
             <span className="font-body font-normal text-muted">zpět na výběr</span>
@@ -920,9 +929,21 @@ export function CalendarBrowser({
           }}
           placeholder="Hledat projekt, herce nebo zvukaře…"
           aria-label="Hledat projekt, herce nebo zvukaře"
-          className="ml-auto rounded-pill border border-line bg-field px-4 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-full sm:w-72"
+          className="hidden sm:block ml-auto rounded-pill border border-line bg-field px-4 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-72"
         />
       </div>
+      {/* Hledání na telefonu pod pruhem kalendářů - v posuvném pruhu by se
+          ztratilo. Stejný stav jako políčko výš. */}
+      <input
+        value={hledani}
+        onChange={(e) => {
+          setHledani(e.target.value);
+          setSeznamVyskytu(true);
+        }}
+        placeholder="Hledat projekt, herce nebo zvukaře…"
+        aria-label="Hledat projekt, herce nebo zvukaře"
+        className="sm:hidden rounded-pill border border-line bg-field px-4 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-full"
+      />
 
       {/* SEZNAM VÝSKYTŮ V CELÉM KALENDÁŘI (20. 9. 2026). Mřížka pod ním dál
           ukazuje jen vybraný týden - tohle je přehled napříč časem. */}

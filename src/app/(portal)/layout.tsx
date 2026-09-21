@@ -151,7 +151,7 @@ export default async function PortalLayout({ children }: { children: React.React
       <div
         // Odsazeni na doky plati az od md - na telefonu zadne doky nejsou
         // (viz nize), takze by z nich zbyl jen prazdny pruh po stranach.
-        className={`obsah-portalu w-full px-4 sm:px-6 py-8 sm:py-12 md:pl-16 ${internal ? 'md:pr-20' : ''}`}
+        className={`obsah-portalu w-full px-4 sm:px-6 pt-3 pb-8 sm:py-12 md:pl-16 ${internal ? 'md:pr-20' : ''}`}
       >
         {children}
       </div>
