@@ -38,7 +38,7 @@ export const OZNAMENI: PopisOznameni[] = [
     klic: 'MESICNI_PREHLED',
     nazev: 'Měsíční přehled výkazů',
     popis: 'Odpracované hodiny a částka, rozpad podle druhu práce, projekty a schválené bonusy.',
-    kdy: 'Šestého v měsíci, za měsíc minulý.',
+    kdy: 'Za měsíc minulý, v den nastavený v Přehledy → Zvukaři (výchozí šestého).',
     komu: 'Každému zvukaři, který v tom měsíci něco vykázal.',
     nahled: '/api/admin/vykazy/nahled-mesicni',
   },

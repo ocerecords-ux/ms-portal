@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminGuard';
-import { minulyMesic, rozesliMesicniPrehledy } from '@/lib/mesicniPrehledServer';
+import {
+  dnesniDenPraha,
+  minulyMesic,
+  nactiNastaveniPrehledu,
+  rozesliMesicniPrehledy,
+} from '@/lib/mesicniPrehledServer';
 
 /**
- * Měsíční rozeslání přehledu výkazů (zadání 15. 9. 2026). Pouští to Vercel
- * Cron šestého v měsíci — viz vercel.json.
+ * Měsíční rozeslání přehledu výkazů (zadání 15. 9. 2026). Vercel Cron to
+ * pouští KAŽDÝ DEN (vercel.json) a tady se rozhodne, jestli už je den
+ * nastavený v Přehledy → Zvukaři (zadání 21. 9. 2026: „abych mohl nastavit,
+ * kdy jim to chodí"). Od toho dne dál se zkouší každý den - kdyby úloha jeden
+ * den neproběhla, přehled odejde další den; co už odešlo, se neopakuje.
  *
  * KDO SEM SMÍ: úloha z Vercelu (nese `Authorization: Bearer CRON_SECRET`),
  * nebo přihlášené Žůžo-labůžo, když chce rozeslání spustit ručně. Když
@@ -17,19 +25,27 @@ import { minulyMesic, rozesliMesicniPrehledy } from '@/lib/mesicniPrehledServer'
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-async function smiSem(req: NextRequest): Promise<boolean> {
+/** 'cron' = úloha z Vercelu, 'admin' = ruční spuštění, null = nikdo. */
+async function kdoVola(req: NextRequest): Promise<'cron' | 'admin' | null> {
   const tajemstvi = process.env.CRON_SECRET;
-  if (tajemstvi && req.headers.get('authorization') === `Bearer ${tajemstvi}`) return true;
-  return Boolean(await requireAdmin());
+  if (tajemstvi && req.headers.get('authorization') === `Bearer ${tajemstvi}`) return 'cron';
+  return (await requireAdmin()) ? 'admin' : null;
 }
 
 async function spust(req: NextRequest) {
-  if (!(await smiSem(req))) {
+  const kdo = await kdoVola(req);
+  if (!kdo) {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   }
 
   const zadany = req.nextUrl.searchParams.get('mesic');
   const mesic = zadany && /^\d{4}-\d{2}$/.test(zadany) ? zadany : minulyMesic();
+
+  // Úloha z Vercelu běží denně - před nastaveným dnem nic nedělá.
+  if (kdo === 'cron' && !zadany) {
+    const { den } = await nactiNastaveniPrehledu();
+    if (dnesniDenPraha() < den) return NextResponse.json({ ok: true, ceka: true, den });
+  }
 
   try {
     const vysledek = await rozesliMesicniPrehledy(mesic);

@@ -6,7 +6,7 @@
   "crons": [
     {
       "path": "/api/cron/mesicni-prehled",
-      "schedule": "0 6 6 * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/cekame-na-opravy",

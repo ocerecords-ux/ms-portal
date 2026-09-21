@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db';
 import { durationMinutes, entryAmount, formatCzk, formatDuration } from '@/lib/timesheets';
-import { sendMesicniPrehledEmail } from '@/lib/email';
+import { sendMesicniPrehledEmail, type MesicniPrehledInput } from '@/lib/email';
 import { notify } from '@/lib/notifications';
 import { jeZapnuto } from '@/lib/oznameniServer';
 
@@ -29,6 +29,78 @@ export type VysledekRozeslani = {
   /** Zprava je v administraci vypnuta - nic se nerozesilalo. */
   vypnuto?: boolean;
 };
+
+// --- Nastavení: kdy a co (zadání 21. 9. 2026) ------------------------------
+
+export type NastaveniPrehledu = {
+  den: number;
+  castky: boolean;
+  druhy: boolean;
+  projekty: boolean;
+  bonusy: boolean;
+  poznamka: string | null;
+  zmenilJmeno: string | null;
+  zmenenoAt: Date | null;
+};
+
+export const VYCHOZI_NASTAVENI: NastaveniPrehledu = {
+  den: 6,
+  castky: true,
+  druhy: true,
+  projekty: true,
+  bonusy: true,
+  poznamka: null,
+  zmenilJmeno: null,
+  zmenenoAt: null,
+};
+
+/** Co není uložené, platí výchozí - nedostupná tabulka nesmí přehled umlčet. */
+export async function nactiNastaveniPrehledu(): Promise<NastaveniPrehledu> {
+  try {
+    const r = await prisma.nastaveniPrehleduZvukaru.findUnique({ where: { id: 'vychozi' } });
+    if (!r) return VYCHOZI_NASTAVENI;
+    return {
+      den: Math.min(28, Math.max(1, r.den)),
+      castky: r.castky,
+      druhy: r.druhy,
+      projekty: r.projekty,
+      bonusy: r.bonusy,
+      poznamka: r.poznamka?.trim() || null,
+      zmenilJmeno: r.zmenilJmeno,
+      zmenenoAt: r.updatedAt,
+    };
+  } catch (err) {
+    console.error('Nastavení měsíčního přehledu se nepodařilo načíst:', err);
+    return VYCHOZI_NASTAVENI;
+  }
+}
+
+/** Z přehledu zvukaře a nastavení poskládá obsah mailu. */
+export function vstupMailu(p: PrehledZvukare, mesic: string, n: NastaveniPrehledu, odkaz: string): MesicniPrehledInput {
+  const bonusy = n.castky && n.bonusy;
+  return {
+    to: p.email ?? '',
+    mesic: nazevMesice(mesic),
+    hodiny: formatDuration(p.minut),
+    castka: formatCzk(p.castka),
+    celkem: formatCzk(p.castka + (bonusy ? p.bonusCelkem : 0)),
+    druhy: n.druhy
+      ? p.druhy.map((d) => ({ nazev: d.nazev, hodiny: formatDuration(d.minut), castka: formatCzk(d.castka) }))
+      : [],
+    projekty: n.projekty ? p.projekty.map((pr) => ({ nazev: pr.nazev, hodiny: formatDuration(pr.minut) })) : [],
+    bonusy: bonusy ? p.bonusy.map((b) => ({ nazev: b.nazev, castka: formatCzk(b.castka) })) : [],
+    bonusCelkem: bonusy && p.bonusCelkem > 0 ? formatCzk(p.bonusCelkem) : null,
+    odkaz,
+    castkyViditelne: n.castky,
+    poznamka: n.poznamka,
+    den: n.den,
+  };
+}
+
+/** Dnešní den v měsíci v pražském čase. */
+export function dnesniDenPraha(dnes = new Date()): number {
+  return Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Prague', day: 'numeric' }).format(dnes));
+}
 
 /** Předchozí měsíc vůči dnešku jako „2026-08". */
 export function minulyMesic(dnes = new Date()): string {
@@ -151,6 +223,7 @@ export async function rozesliMesicniPrehledy(mesic: string): Promise<VysledekRoz
     return { mesic, odeslano: 0, preskoceno: 0, chyby: 0, vypnuto: true };
   }
   const prehledy = await spoctiPrehledy(mesic);
+  const nastaveni = await nactiNastaveniPrehledu();
   const zaklad = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
 
   let odeslano = 0;
@@ -171,22 +244,7 @@ export async function rozesliMesicniPrehledy(mesic: string): Promise<VysledekRoz
     }
 
     try {
-      const vysledek = await sendMesicniPrehledEmail({
-        to: p.email,
-        mesic: nazevMesice(mesic),
-        hodiny: formatDuration(p.minut),
-        castka: formatCzk(p.castka),
-        celkem: formatCzk(p.castka + p.bonusCelkem),
-        druhy: p.druhy.map((d) => ({
-          nazev: d.nazev,
-          hodiny: formatDuration(d.minut),
-          castka: formatCzk(d.castka),
-        })),
-        projekty: p.projekty.map((pr) => ({ nazev: pr.nazev, hodiny: formatDuration(pr.minut) })),
-        bonusy: p.bonusy.map((b) => ({ nazev: b.nazev, castka: formatCzk(b.castka) })),
-        bonusCelkem: p.bonusCelkem > 0 ? formatCzk(p.bonusCelkem) : null,
-        odkaz: `${zaklad}/vykazy`,
-      });
+      const vysledek = await sendMesicniPrehledEmail(vstupMailu(p, mesic, nastaveni, `${zaklad}/vykazy`));
       if (!vysledek.sent) {
         chyby += 1;
         console.error(`Měsíční přehled pro ${p.email} neodešel: ${vysledek.reason}`);
@@ -200,7 +258,9 @@ export async function rozesliMesicniPrehledy(mesic: string): Promise<VysledekRoz
         userId: p.userId,
         kind: 'MESICNI_PREHLED',
         title: `Přehled výkazů — ${nazevMesice(mesic)}`,
-        body: `${formatDuration(p.minut)} · ${formatCzk(p.castka + p.bonusCelkem)}`,
+        body: nastaveni.castky
+          ? `${formatDuration(p.minut)} · ${formatCzk(p.castka + (nastaveni.bonusy ? p.bonusCelkem : 0))}`
+          : formatDuration(p.minut),
         url: '/vykazy',
       });
       odeslano += 1;

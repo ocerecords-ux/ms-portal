@@ -2526,6 +2526,23 @@ model MesicniPrehledOdeslan {
   @@unique([userId, mesic])
 }
 
+/// KDY A CO CHODI ZVUKARUM V MESICNIM PREHLEDU (zadani 21. 9. 2026: „abych
+/// nekde mohl nastavit kdy jim to chodi a co"). Jediny radek s id „vychozi";
+/// kdyz chybi, plati vychozi hodnoty (sesteho, vsechno).
+model NastaveniPrehleduZvukaru {
+  id          String   @id @default("vychozi")
+  /// Den v mesici (1-28), kdy prehled za minuly mesic odejde.
+  den         Int      @default(6)
+  castky      Boolean  @default(true)
+  druhy       Boolean  @default(true)
+  projekty    Boolean  @default(true)
+  bonusy      Boolean  @default(true)
+  /// Vlastni vzkaz, ktery se vlozi do mailu nad odkaz na vykazy.
+  poznamka    String?  @db.Text
+  zmenilJmeno String?
+  updatedAt   DateTime @updatedAt
+}
+
 /// STAV NAVRZENEHO BONUSU ZVUKARE (zadani 15. 9. 2026).
 enum StavBonusu {
   NAVRZENO

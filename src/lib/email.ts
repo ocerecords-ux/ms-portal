@@ -1490,7 +1490,7 @@ export async function sendBonusEmail(input: BonusEmailInput) {
 // navic krome odkazu do Vykazu, kdyby chtel videt jednotlive dny.
 // ===========================================================================
 
-type MesicniPrehledInput = {
+export type MesicniPrehledInput = {
   to: string;
   /** „Srpen 2026". */
   mesic: string;
@@ -1505,11 +1505,17 @@ type MesicniPrehledInput = {
   /** Null, kdyz v mesici zadny bonus nebyl. */
   bonusCelkem: string | null;
   odkaz: string;
+  /** Nastaveni v Prehledy → Zvukari (21. 9. 2026). Bez nej plati: castky ano, 6. den. */
+  castkyViditelne?: boolean;
+  poznamka?: string | null;
+  den?: number;
 };
 
 export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
+  const sCastkou = input.castkyViditelne !== false;
+  const den = input.den ?? 6;
   const radekDruhu = (d: { nazev: string; hodiny: string; castka: string }) =>
-    `<tr><td class="label">${escapeHtml(d.nazev)}</td><td class="value regular">${escapeHtml(d.hodiny)} · ${escapeHtml(d.castka)}</td></tr>`;
+    `<tr><td class="label">${escapeHtml(d.nazev)}</td><td class="value regular">${escapeHtml(d.hodiny)}${sCastkou ? ` · ${escapeHtml(d.castka)}` : ''}</td></tr>`;
 
   const projekty = input.projekty.length
     ? `<table role="presentation" class="field-table">
@@ -1522,7 +1528,7 @@ export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
     </table>`
     : '';
 
-  const bonusy = input.bonusCelkem
+  const bonusy = input.bonusCelkem && sCastkou
     ? `<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">Bonusy</h3>
     <table role="presentation" class="field-table">
       ${input.bonusy
@@ -1536,33 +1542,39 @@ export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
 
   return emailShell({
     tag: `Přehled výkazů · ${input.mesic}`,
-    preheader: `${input.mesic}: ${input.hodiny}, ${input.celkem}.`,
+    preheader: sCastkou ? `${input.mesic}: ${input.hodiny}, ${input.celkem}.` : `${input.mesic}: ${input.hodiny}.`,
     body: `
     <span class="badge">${escapeHtml(input.mesic)}</span>
-    <h2>${escapeHtml(input.hodiny)} · ${escapeHtml(input.celkem)}</h2>
+    <h2>${escapeHtml(input.hodiny)}${sCastkou ? ` · ${escapeHtml(input.celkem)}` : ''}</h2>
 
     <table role="presentation" class="field-table">
       <tr><td class="label">Odpracováno</td><td class="value">${escapeHtml(input.hodiny)}</td></tr>
-      <tr><td class="label">Za práci</td><td class="value">${escapeHtml(input.castka)}</td></tr>
-      ${input.bonusCelkem ? `<tr><td class="label">Bonusy</td><td class="value">${escapeHtml(input.bonusCelkem)}</td></tr>` : ''}
-      <tr><td class="label">Celkem</td><td class="value">${escapeHtml(input.celkem)}</td></tr>
+      ${sCastkou ? `<tr><td class="label">Za práci</td><td class="value">${escapeHtml(input.castka)}</td></tr>` : ''}
+      ${sCastkou && input.bonusCelkem ? `<tr><td class="label">Bonusy</td><td class="value">${escapeHtml(input.bonusCelkem)}</td></tr>` : ''}
+      ${sCastkou ? `<tr><td class="label">Celkem</td><td class="value">${escapeHtml(input.celkem)}</td></tr>` : ''}
     </table>
 
-    <h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">Podle druhu práce</h3>
+    ${
+      input.druhy.length
+        ? `<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">Podle druhu práce</h3>
     <table role="presentation" class="field-table">
       ${input.druhy.map(radekDruhu).join('\n      ')}
-    </table>
+    </table>`
+        : ''
+    }
 
     ${input.projekty.length ? '<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">Projekty</h3>' : ''}
     ${projekty}
 
     ${bonusy}
 
+    ${input.poznamka ? `<p>${escapeHtml(input.poznamka).replace(/\n/g, '<br>')}</p>` : ''}
+
     <div class="cta-row">
       <a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít výkazy</a>
     </div>
 
-    <p class="small">Přehled chodí vždycky šestého za měsíc minulý. Když v něm něco nesedí, výkaz
+    <p class="small">Přehled chodí vždycky ${den}. dne v měsíci za měsíc minulý. Když v něm něco nesedí, výkaz
        se dá opravit ve Výkazech — a napište nám, ať to víme.</p>
   `,
   });
@@ -1580,18 +1592,20 @@ export async function sendMesicniPrehledEmail(input: MesicniPrehledInput) {
       `Prehled vykazu za ${input.mesic}`,
       '',
       `Odpracovano: ${input.hodiny}`,
-      `Za praci: ${input.castka}`,
-      input.bonusCelkem ? `Bonusy: ${input.bonusCelkem}` : '',
-      `Celkem: ${input.celkem}`,
+      input.castkyViditelne !== false ? `Za praci: ${input.castka}` : '',
+      input.castkyViditelne !== false && input.bonusCelkem ? `Bonusy: ${input.bonusCelkem}` : '',
+      input.castkyViditelne !== false ? `Celkem: ${input.celkem}` : '',
       '',
-      'Podle druhu prace:',
-      ...input.druhy.map((d) => `  ${d.nazev}: ${d.hodiny} · ${d.castka}`),
+      input.druhy.length ? 'Podle druhu prace:' : '',
+      ...input.druhy.map((d) => `  ${d.nazev}: ${d.hodiny}${input.castkyViditelne !== false ? ` · ${d.castka}` : ''}`),
       input.projekty.length ? '' : '',
       input.projekty.length ? 'Projekty:' : '',
       ...input.projekty.map((p) => `  ${p.nazev}: ${p.hodiny}`),
       input.bonusy.length ? '' : '',
       input.bonusy.length ? 'Bonusy:' : '',
       ...input.bonusy.map((b) => `  ${b.nazev}: ${b.castka}`),
+      input.poznamka ? '' : '',
+      input.poznamka || '',
       '',
       'Jednotlive dny najdete tady:',
       input.odkaz,

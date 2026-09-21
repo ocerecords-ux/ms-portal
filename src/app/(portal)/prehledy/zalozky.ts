@@ -13,4 +13,6 @@ export const ZALOZKY_PREHLEDU: { href: string; label: string; role?: string[] }[
   { href: '/prehledy/backlog', label: 'Backlog' },
   // Peníze firmy vidí jen admin (21. 9. 2026).
   { href: '/prehledy/finance', label: 'Obrat a zisk', role: ['ADMIN'] },
+  // Co chodí zvukařům a kdy (21. 9. 2026) - peníze lidí, jen admin.
+  { href: '/prehledy/zvukari', label: 'Zvukaři', role: ['ADMIN'] },
 ];

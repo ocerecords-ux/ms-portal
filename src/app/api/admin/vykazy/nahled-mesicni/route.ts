@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminGuard';
 import { buildMesicniPrehledHtml } from '@/lib/email';
-import { formatCzk, formatDuration } from '@/lib/timesheets';
-import { minulyMesic, nazevMesice, spoctiPrehledy } from '@/lib/mesicniPrehledServer';
+import {
+  minulyMesic,
+  nactiNastaveniPrehledu,
+  spoctiPrehledy,
+  vstupMailu,
+} from '@/lib/mesicniPrehledServer';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
 
 /**
@@ -21,46 +25,42 @@ export async function GET(req: NextRequest) {
 
   const zadany = req.nextUrl.searchParams.get('mesic');
   const mesic = zadany && /^\d{4}-\d{2}$/.test(zadany) ? zadany : minulyMesic();
-  const prehledy = await spoctiPrehledy(mesic).catch(() => []);
-  const p = prehledy[0] ?? null;
+  const [prehledy, nastaveni] = await Promise.all([
+    spoctiPrehledy(mesic).catch(() => []),
+    nactiNastaveniPrehledu(),
+  ]);
+  // ?user=<id> ukáže mail konkrétního zvukaře (Přehledy → Zvukaři, 21. 9. 2026).
+  const kdo = req.nextUrl.searchParams.get('user');
+  const p = (kdo ? prehledy.find((x) => x.userId === kdo) : prehledy[0]) ?? null;
   const odkaz = `${zakladPortalu()}/vykazy`;
 
   const html = p
-    ? buildMesicniPrehledHtml({
-        to: '',
-        mesic: nazevMesice(mesic),
-        hodiny: formatDuration(p.minut),
-        castka: formatCzk(p.castka),
-        celkem: formatCzk(p.castka + p.bonusCelkem),
-        druhy: p.druhy.map((d) => ({
-          nazev: d.nazev,
-          hodiny: formatDuration(d.minut),
-          castka: formatCzk(d.castka),
-        })),
-        projekty: p.projekty.map((pr) => ({ nazev: pr.nazev, hodiny: formatDuration(pr.minut) })),
-        bonusy: p.bonusy.map((b) => ({ nazev: b.nazev, castka: formatCzk(b.castka) })),
-        bonusCelkem: p.bonusCelkem > 0 ? formatCzk(p.bonusCelkem) : null,
-        odkaz,
-      })
-    : buildMesicniPrehledHtml({
-        to: '',
-        mesic: nazevMesice(mesic),
-        hodiny: '92 h 30 min',
-        castka: '23 125 Kč',
-        celkem: '24 197 Kč',
-        druhy: [
-          { nazev: 'Střih', hodiny: '61 h', castka: '15 250 Kč' },
-          { nazev: 'Natáčení', hodiny: '31 h 30 min', castka: '7 875 Kč' },
-        ],
-        projekty: [
-          { nazev: 'ANNA, CESTA ZE SUDET', hodiny: '38 h' },
-          { nazev: 'POSLEDNÍ DOPIS', hodiny: '29 h 30 min' },
-          { nazev: 'ROK PRASETE', hodiny: '25 h' },
-        ],
-        bonusy: [{ nazev: 'ANNA, CESTA ZE SUDET', castka: '1 072 Kč' }],
-        bonusCelkem: '1 072 Kč',
-        odkaz,
-      });
+    ? buildMesicniPrehledHtml(vstupMailu(p, mesic, nastaveni, odkaz))
+    : buildMesicniPrehledHtml(
+        vstupMailu(
+          {
+            userId: '',
+            jmeno: 'Ukázka',
+            email: null,
+            minut: 5550,
+            castka: 23125,
+            druhy: [
+              { nazev: 'Střih', minut: 3660, castka: 15250 },
+              { nazev: 'Natáčení', minut: 1890, castka: 7875 },
+            ],
+            projekty: [
+              { nazev: 'ANNA, CESTA ZE SUDET', minut: 2280 },
+              { nazev: 'POSLEDNÍ DOPIS', minut: 1770 },
+              { nazev: 'ROK PRASETE', minut: 1500 },
+            ],
+            bonusy: [{ nazev: 'ANNA, CESTA ZE SUDET', castka: 1072 }],
+            bonusCelkem: 1072,
+          },
+          mesic,
+          nastaveni,
+          odkaz,
+        ),
+      );
 
   return new NextResponse(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
