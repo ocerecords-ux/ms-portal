@@ -27,7 +27,8 @@ export const ALL_ROLES: Role[] = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKC
  */
 export const PAGE_ACCESS: Record<string, Role[]> = {
   '/projekty': ALL_ROLES,
-  // Backlog - odevzdali jsme v terminu? (zadani 18. 9. 2026). Terminy planuje
+  // Backlog - odevzdali jsme v terminu? (zadani 18. 9. 2026). Od 21. 9. 2026
+  // je to zalozka Prehledu, /backlog jen presmerovava. Terminy planuje
   // a meni Zuzo-labuzo s Produkci, tem to taky patri.
   '/backlog': ['ADMIN', 'PRODUKCE'],
   '/muj-ucet': ALL_ROLES,
@@ -82,7 +83,6 @@ export function canSee(href: string, role: Role): boolean {
 /** Vychozi obsah listy - odpovida stavu pred zavedenim editace. */
 export const DEFAULT_MENU_ITEMS: { label: string; href: string; sortOrder: number }[] = [
   { label: 'Projekty', href: '/projekty', sortOrder: 10 },
-  { label: 'Backlog', href: '/backlog', sortOrder: 15 },
   { label: 'Objednávka', href: '/objednavka', sortOrder: 20 },
   { label: 'Nahrávky', href: '/nahravky', sortOrder: 30 },
   { label: 'Výkazy', href: '/vykazy', sortOrder: 40 },
@@ -99,7 +99,6 @@ export const DEFAULT_MENU_ITEMS: { label: string; href: string; sortOrder: numbe
 /** Stranky, ktere jde pridat zpet do listy pres "+" v rezimu Upravit. */
 export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/projekty', label: 'Projekty' },
-  { href: '/backlog', label: 'Backlog' },
   { href: '/objednavka', label: 'Objednávka' },
   { href: '/nahravky', label: 'Nahrávky' },
   { href: '/vykazy', label: 'Výkazy' },

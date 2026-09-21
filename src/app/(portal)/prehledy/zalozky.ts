@@ -9,6 +9,8 @@
  */
 export const ZALOZKY_PREHLEDU: { href: string; label: string; role?: string[] }[] = [
   { href: '/prehledy/kapacita', label: 'Kapacita studií' },
+  // Backlog - dřív samostatně v liště (přesun 21. 9. 2026).
+  { href: '/prehledy/backlog', label: 'Backlog' },
   // Peníze firmy vidí jen admin (21. 9. 2026).
   { href: '/prehledy/finance', label: 'Obrat a zisk', role: ['ADMIN'] },
 ];

@@ -190,6 +190,7 @@ async function main() {
   await prevezmiGoogleKalendar();
   await brunoZpetneOznamPreposlech();
   await vlozPodpisNaFaktury();
+  await backlogZListyDoPrehledu();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
 
@@ -1189,5 +1190,21 @@ async function importujFakturyZCaflou(soubor: string, ZNAMKA: string) {
     console.log(`  import faktur z Caflou: vlozeno ${vlozeno}, preskoceno (cislo uz je v portalu): ${preskoceno.join(', ') || '-'}`);
   } catch (e) {
     console.warn('  import faktur z Caflou selhal:', e);
+  }
+}
+
+/**
+ * Backlog se přestěhoval do Přehledů (21. 9. 2026). Z upravených lišt se
+ * položka /backlog odebere, ať tam nevisí odkaz, který jen přesměrovává.
+ */
+async function backlogZListyDoPrehledu() {
+  const ZNAMKA = 'backlog-do-prehledu';
+  try {
+    if (await prisma.counter.findUnique({ where: { name: ZNAMKA } })) return;
+    const r = await prisma.userMenuItem.deleteMany({ where: { href: '/backlog' } });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: r.count } });
+    console.log(`  backlog z listy: odebrano ${r.count} polozek`);
+  } catch (e) {
+    console.warn('  backlog z listy selhal:', e);
   }
 }
