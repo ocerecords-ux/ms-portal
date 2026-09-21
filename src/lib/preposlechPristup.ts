@@ -41,6 +41,28 @@ export async function pristupKPreposlechu(
 ): Promise<PristupKPreposlechu> {
   if (token) {
     const projekt = await projektPodleTokenu(token);
+    /**
+     * NÁŠ ČLOVĚK NA KLIENTOVĚ ODKAZU (zadání 21. 9. 2026: „chceme, abychom na
+     * naší straně studia interně neovlivňovali posun PDF ani přehrávání
+     * nahrávek, kde se skončilo, ať v tom neděláme chaos klientovi").
+     *
+     * Kdo z týmu otevře odkaz, který šel klientovi (třeba na kontrolu, jak to
+     * klient vidí), vystupoval dřív jako klient: přepisoval mu záložku,
+     * probarvení stop a procenta přeposlechu. Teď se pozná podle přihlášení
+     * a počítá se jako náš - se svou záložkou a bez vlivu na klienta.
+     */
+    if (projekt === caflouProjectId) {
+      const session = await getServerSession(authOptions).catch(() => null);
+      if (session?.user?.id && isInternalRole(session.user.role)) {
+        return {
+          ok: true,
+          userId: session.user.id,
+          jmeno: session.user.name || session.user.email || null,
+          interni: true,
+          pres_odkaz: false,
+        };
+      }
+    }
     if (projekt === caflouProjectId) {
       const ja = await posluchacZCookie(caflouProjectId);
       return {

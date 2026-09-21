@@ -99,6 +99,24 @@ Seznam se dá kdykoli upravit tlačítkem **👤 Posluchači** v hlavičce Audio
 
 **Kdo co udělal** je vidět v záložce **Historie**: kdo odkaz otevřel, kdo se představil, komu byl přeposlech předán, komu odešla zpráva o nových stopách — a u poznámek jméno toho, kdo je napsal.
 
+# Poslech bez signálu (Na cestu)
+
+Tlačítko **⬇ Na cestu** v hlavičce stáhne všechny nahrávky a text do prohlížeče. Pak jde poslouchat, číst i psát poznámky **bez připojení** — třeba ve vlaku nebo v letadle.
+
+- Stahuje se se signálem, předem. U tlačítka je vidět, kolik to bude megabajtů; po stažení svítí **✓ Na cestu**.
+- Stažené stopy hrají z počítače (i se signálem — je to rychlejší).
+- Bez signálu svítí v hlavičce **Offline**. Poznámky, úpravy, záložka, odškrtnuté stopy i PŘEPOSLECHNUTO se uloží do fronty („3 čeká") a **odejdou samy**, jakmile je signál zpátky. Nová poznámka je do té doby podepsaná „čeká na signál".
+- Odkaz je nejlepší otevřít ještě se signálem a nezavírat ho. Klientský odkaz se po stažení otevře i offline, portál (detail projektu) jen v okně, které zůstalo otevřené.
+- Když přibudou nové stopy, stačí **Stáhnout zbytek**. **Smazat z počítače** uvolní místo.
+
+# Náš poslech klientovi nic nemění
+
+Když někdo z týmu poslouchá — v portálu i na odkazu, který šel klientovi (je přihlášený) — počítá se jako **náš**: má vlastní záložku a probarvení stop, nepřidává klientovi procenta, nezapisuje „doposlechnuto" do počtu stop a do historie se nezapíše jako otevření odkazu klientem. Okno „Kdo bude poslouchat?" se nám neukazuje. Ruční zaškrtnutí stopy jako hotové a PŘEPOSLECHNUTO jsou vědomé kroky a platí dál.
+
+# Bruno ohlásí dokončený přeposlech
+
+Jakmile někdo označí nahrávku jako **PŘEPOSLECHNUTO**, napíše **Bruno do kanálu projektu v chatu**: kdo to označil, kolik je poznámek k opravě, kolik stop a kolik procent textu. Cinkne to těm, kdo jsou v kanálu, podle jejich nastavení upozornění.
+
 # Kolik je přeposlechnuto (procenta)
 
 Stopy k přeposlechu chodí po kouscích, takže „3 z 5 stop" o celé knize nic neřekne. Procento se proto počítá **podle stran PDF**: v hlavičce je proužek a „Přeposlechnuto 42 % · strana 120 z 286".

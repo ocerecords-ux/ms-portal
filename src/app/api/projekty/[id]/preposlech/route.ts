@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
+import { oznamDokoncenyPreposlech } from '@/lib/brunoOznameni';
 
 /**
  * Záznamy chyb z přeposlechu nahrávky (AudioTagger) — zadání 11. 9. 2026.
@@ -201,6 +202,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const telo = await req.json().catch(() => ({}));
   const reviewed = Boolean((telo as { reviewed?: unknown })?.reviewed);
+  const predtim = await prisma.preposlechStav
+    .findUnique({ where: { caflouProjectId: params.id }, select: { reviewed: true } })
+    .catch(() => null);
 
   await prisma.preposlechStav.upsert({
     where: { caflouProjectId: params.id },
@@ -223,6 +227,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     reviewed ? 'Označil(a) nahrávku jako přeposlechnutou.' : 'Vrátil(a) nahrávku k přeposlechu.',
     pristup.jmeno,
   );
+
+  /**
+   * BRUNO TO OHLÁSÍ V KANÁLU PROJEKTU (zadání 21. 9. 2026: „potřebujeme dostat
+   * notifikaci do kanálu projektu do chatu od Bruna o tom, že klient dokončil
+   * přeposlech"). Jen při skutečném přepnutí na hotovo, ne při opakovaném
+   * kliknutí.
+   */
+  if (reviewed && !predtim?.reviewed) {
+    await oznamDokoncenyPreposlech(params.id, pristup.jmeno, !pristup.interni);
+  }
 
   return NextResponse.json(await stav(params.id, pristup));
 }

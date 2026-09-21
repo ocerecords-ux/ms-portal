@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { nactiPreposlech } from '@/lib/preposlechServer';
 import { projektPodleTokenu, zapisOtevreni } from '@/lib/preposlechOdkaz';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { isInternalRole } from '@/lib/roles';
 import { posluchacZCookie } from '@/lib/preposlechPristup';
 import { Preposlech } from '@/app/(portal)/projekty/[id]/Preposlech';
 
@@ -53,8 +56,12 @@ export default async function PreposlechOdkazemPage({ params }: { params: { toke
 
   // Statistika otevreni - at je u projektu videt, jestli si to klient pustil.
   // Od 21. 9. 2026 i KDO - kdo se u prohlizece predstavil e-mailem.
-  const ja = await posluchacZCookie(caflouProjectId);
-  void zapisOtevreni(params.token, ja ? ja.jmeno?.trim() || ja.email : null);
+  // Nas clovek na klientove odkazu se do statistiky otevreni nepocita
+  // (21. 9. 2026) - klient by jinak „otevrel odkaz", i kdyz to byl Ondrej.
+  const session = await getServerSession(authOptions).catch(() => null);
+  const interni = Boolean(session?.user?.id && isInternalRole(session.user.role));
+  const ja = interni ? null : await posluchacZCookie(caflouProjectId);
+  if (!interni) void zapisOtevreni(params.token, ja ? ja.jmeno?.trim() || ja.email : null);
 
   return (
     <main className="min-h-screen bg-page p-3 sm:p-5">

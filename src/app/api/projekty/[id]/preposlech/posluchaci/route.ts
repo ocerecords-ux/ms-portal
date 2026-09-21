@@ -55,6 +55,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     lide,
     ja: p.posluchacId ?? null,
     vychoziEmail: projekt?.klient?.email ?? null,
+    // Nas clovek na klientove odkazu - okno „Kdo bude poslouchat?" mu
+    // nevyskakuje (21. 9. 2026).
+    interni: p.interni,
   });
 }
 

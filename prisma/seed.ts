@@ -185,6 +185,7 @@ async function main() {
   await doplnZadavateleUkolu();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
+  await brunoZpetneOznamPreposlech();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -949,5 +950,81 @@ async function doplnZadavateleUkolu() {
     if (doplneno > 0) console.log(`  ukoly z chatu: doplnen zadavatel u ${doplneno}`);
   } catch (err) {
     console.warn('  zadavatele ukolu se nepodarilo doplnit:', err);
+  }
+}
+
+/**
+ * BRUNO ZPĚTNĚ OHLÁSÍ DOKONČENÝ PŘEPOSLECH (zadání 21. 9. 2026: „potřebujeme
+ * dostat notifikaci do kanálu projektu do chatu od Bruna o tom, že klient
+ * dokončil přeposlech. Teď se to stalo u Annie bot a nevěděli jsme to. Může to
+ * vyzkoušet udělat Bruno zpětně?").
+ *
+ * Nově to Bruno hlásí sám při odškrtnutí PŘEPOSLECHNUTO (lib/brunoOznameni.ts).
+ * Tohle jednou dohoní projekty, které byly přeposlechnuté dřív - jen ty
+ * s „Annie" v názvu, o které šlo. Známka v Counteru, ať se to neopakuje.
+ * Text je zkrácená kopie z lib/brunoOznameni.ts (seed nesahá na „@/..." importy).
+ */
+async function brunoZpetneOznamPreposlech() {
+  const ZNAMKA = 'bruno-zpetne-preposlech-annie';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const bruno = await prisma.user.findUnique({ where: { email: 'bruno@mediaspace.cz' }, select: { id: true } });
+    if (!bruno) {
+      console.warn('  bruno zpetne: Bruno nema ucet, zkusi se pri dalsim nasazeni');
+      return;
+    }
+
+    const projekty = await prisma.projectMeta.findMany({
+      where: { name: { contains: 'annie', mode: 'insensitive' } },
+      select: { caflouProjectId: true, name: true },
+    });
+    let ohlaseno = 0;
+    for (const projekt of projekty) {
+      const stav = await prisma.preposlechStav.findUnique({
+        where: { caflouProjectId: projekt.caflouProjectId },
+        select: { reviewed: true, reviewedAt: true, reviewedByName: true, pocetStop: true },
+      });
+      if (!stav?.reviewed) continue;
+
+      const poznamek = await prisma.preposlechChyba.count({ where: { caflouProjectId: projekt.caflouProjectId } });
+      const kdy = stav.reviewedAt
+        ? new Intl.DateTimeFormat('cs-CZ', {
+            day: 'numeric',
+            month: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Europe/Prague',
+          }).format(stav.reviewedAt)
+        : null;
+      const text = [
+        `✅ Přeposlech je dokončený (hlásím zpětně). ${stav.reviewedByName?.trim() || 'Klient'} označil(a) nahrávku jako přeposlechnutou${kdy ? ` ${kdy}` : ''}.`,
+        `Poznámek k opravě: ${poznamek}${stav.pocetStop ? ` · stop: ${stav.pocetStop}` : ''}.`,
+        poznamek > 0 ? 'Poznámky jsou v AudioTaggeru v detailu projektu.' : 'Žádná poznámka k opravě.',
+      ].join('\n');
+
+      let kanal = await prisma.conversation.findUnique({
+        where: { caflouProjectId: projekt.caflouProjectId },
+        select: { id: true },
+      });
+      if (!kanal) {
+        kanal = await prisma.conversation.create({
+          data: { kind: 'PROJEKT', name: projekt.name || 'Projekt', caflouProjectId: projekt.caflouProjectId, createdById: bruno.id },
+          select: { id: true },
+        });
+      }
+      const ted = new Date();
+      await prisma.message.create({ data: { conversationId: kanal.id, userId: bruno.id, body: text, createdAt: ted } });
+      await prisma.conversation.update({ where: { id: kanal.id }, data: { lastMessageAt: ted } });
+      console.log('  bruno zpetne: ohlasen dokonceny preposlech "' + projekt.name + '"');
+      ohlaseno += 1;
+    }
+
+    // Znamka jen kdyz se neco ohlasilo - jinak to zkusi pri dalsim nasazeni.
+    if (ohlaseno > 0) await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    else console.log('  bruno zpetne: preposlechnuty projekt "Annie" nenalezen');
+  } catch (err) {
+    console.warn('  bruno zpetne: nepovedlo se', err);
   }
 }

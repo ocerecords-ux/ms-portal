@@ -8,6 +8,17 @@ import { souborMarkeru } from '@/lib/cubaseMarkery';
 import { STROP_PRO_KRIVKU, spocitejKrivku } from '@/lib/krivkaZvuku';
 import type { PostupPreposlechu } from '@/lib/preposlechPostup';
 import { PosluchaciPreposlechu } from './PosluchaciPreposlechu';
+import { NaCestu } from './NaCestu';
+import {
+  blobZCesty,
+  jeChybaSite,
+  nactiFrontu,
+  novyZapis,
+  stazeneAdresy,
+  ulozFrontu,
+  zaregistrujOfflineWorker,
+  type ZapisVeFronte,
+} from '@/lib/preposlechOffline';
 
 /**
  * AudioTagger — přeposlech nahrávky proti textu (zadání 11. 9. 2026).
@@ -325,6 +336,124 @@ export function Preposlech({
     [token],
   );
 
+  /* ---------- offline (zadání 21. 9. 2026) ---------- */
+
+  /**
+   * PRÁCE BEZ SIGNÁLU (zadání 21. 9. 2026: „bylo by super přidat možnost, aby
+   * mohl klient v AudioTaggeru pracovat offline, když bude vědět, že bude mimo
+   * signál"). Podrobně v lib/preposlechOffline.ts.
+   *
+   * `stazene` = adresy nahrávek a textu, které jsou stažené v počítači.
+   * `fronta` = zápisy, které čekají na signál.
+   */
+  const [stazene, setStazene] = useState<Set<string>>(new Set());
+  const stazeneRef = useRef<Set<string>>(new Set());
+  stazeneRef.current = stazene;
+  const [online, setOnline] = useState(true);
+  const [fronta, setFronta] = useState<ZapisVeFronte[]>([]);
+  const frontaRef = useRef<ZapisVeFronte[]>([]);
+  const odesilaFrontuRef = useRef(false);
+  /** Adresa PDF z Disku - kvůli stažení na cestu. */
+  const [textUrl, setTextUrl] = useState<string | null>(null);
+
+  const nastavFrontu = useCallback(
+    (nova: ZapisVeFronte[]) => {
+      frontaRef.current = nova;
+      setFronta(nova);
+      ulozFrontu(caflouProjectId, nova);
+    },
+    [caflouProjectId],
+  );
+
+  /** Zařadí zápis do fronty; se stejným `klic` nahradí ten předchozí. */
+  const zarad = useCallback(
+    (z: Omit<ZapisVeFronte, 'id' | 'kdy'>) => {
+      const bez = z.klic ? frontaRef.current.filter((x) => x.klic !== z.klic) : frontaRef.current;
+      nastavFrontu([...bez, novyZapis(z)]);
+    },
+    [nastavFrontu],
+  );
+
+  /** Zápis, který nesmí přijít nazmar: bez signálu počká ve frontě. */
+  const odesliNeboZarad = useCallback(
+    async (url: string, method: ZapisVeFronte['method'], body: unknown, klic?: string) => {
+      const telo = JSON.stringify(body);
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: telo, keepalive: true });
+        return res;
+      } catch (err) {
+        if (jeChybaSite(err)) zarad({ url, method, body: telo, klic });
+        return null;
+      }
+    },
+    [zarad],
+  );
+
+  useEffect(() => {
+    frontaRef.current = nactiFrontu(caflouProjectId);
+    setFronta(frontaRef.current);
+    setOnline(typeof navigator === 'undefined' ? true : navigator.onLine);
+    // Klientsky odkaz se po stazeni otevre i bez signalu - obstara to
+    // service worker (public/preposlech-sw.js).
+    if (token) zaregistrujOfflineWorker();
+  }, [caflouProjectId, token]);
+
+  /**
+   * Odeslání fronty, když je signál zpátky. Po řadě, jak se to psalo; při
+   * první chybě sítě se zastaví a zkusí to příště. Co server odmítne (4xx),
+   * z fronty vypadne - opakovat to nemá smysl a zbytek by se zasekl.
+   */
+  const odesliFrontu = useCallback(async () => {
+    if (odesilaFrontuRef.current || frontaRef.current.length === 0) return;
+    odesilaFrontuRef.current = true;
+    let neco = false;
+    try {
+      for (const z of [...frontaRef.current]) {
+        let res: Response;
+        try {
+          res = await fetch(z.url, {
+            method: z.method,
+            headers: z.body ? { 'Content-Type': 'application/json' } : undefined,
+            body: z.body,
+          });
+        } catch {
+          break;
+        }
+        if (res.status >= 500) break;
+        nastavFrontu(frontaRef.current.filter((x) => x.id !== z.id));
+        neco = true;
+      }
+    } finally {
+      odesilaFrontuRef.current = false;
+    }
+    if (neco) {
+      // Docasne poznamky nahradi skutecne ze serveru.
+      const znovu = await fetch(sKlicem(zaklad)).catch(() => null);
+      const novy = znovu && znovu.ok ? await znovu.json().catch(() => null) : null;
+      if (novy) setStav(novy as Stav);
+    }
+  }, [nastavFrontu, sKlicem, zaklad]);
+
+  useEffect(() => {
+    const naSignalu = () => {
+      setOnline(true);
+      void odesliFrontu();
+    };
+    const bezSignalu = () => setOnline(false);
+    window.addEventListener('online', naSignalu);
+    window.addEventListener('offline', bezSignalu);
+    // Udalost „online" nekdy neprijde (usnuly notebook) - proto i hodiny.
+    const tik = window.setInterval(() => {
+      if (frontaRef.current.length > 0 && navigator.onLine) void odesliFrontu();
+    }, 30_000);
+    if (navigator.onLine) void odesliFrontu();
+    return () => {
+      window.removeEventListener('online', naSignalu);
+      window.removeEventListener('offline', bezSignalu);
+      window.clearInterval(tik);
+    };
+  }, [odesliFrontu]);
+
   /**
    * DOPOSLECHNUTÁ STOPA SE ZAPÍŠE SAMA (zadání 12. 9. 2026: „Přeposlechnuto —
    * tam bude počet tracků a kolik je z nich přeposlechnuto, třeba 3 z 24").
@@ -380,13 +509,15 @@ export function Preposlech({
         else kopie.delete(poradi);
         return kopie;
       });
-      void fetch(sKlicem(`${zaklad}/stopa`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trackIndex: poradi, trackName: stopa.name, hotovo: nove }),
-      })
+      // Bez signalu pocka ve fronte a zaskrtnuti zustane (21. 9. 2026).
+      void odesliNeboZarad(
+        sKlicem(`${zaklad}/stopa`),
+        'POST',
+        { trackIndex: poradi, trackName: stopa.name, hotovo: nove },
+        `hotovo:${poradi}`,
+      )
         .then((res) => {
-          if (res.ok) return;
+          if (res === null || res.ok) return;
           throw new Error('nepovedlo se');
         })
         .catch((err) => {
@@ -399,7 +530,7 @@ export function Preposlech({
           });
         });
     },
-    [hotoveStopy, sKlicem, zaklad],
+    [hotoveStopy, odesliNeboZarad, sKlicem, zaklad],
   );
 
   const nahlasDoposlechnuto = useCallback(
@@ -407,17 +538,18 @@ export function Preposlech({
       const stopa = stopyRef.current[index];
       if (!stopa || poslaneStopy.current.has(index)) return;
       poslaneStopy.current.add(index);
-      void fetch(sKlicem(`${zaklad}/stopa`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trackIndex: index + 1, trackName: stopa.name }),
-      }).catch((err) => {
+      void odesliNeboZarad(
+        sKlicem(`${zaklad}/stopa`),
+        'POST',
+        { trackIndex: index + 1, trackName: stopa.name },
+        `doposlechnuto:${index + 1}`,
+      ).catch((err) => {
         // Nepovedlo se - zkusi se zase pri pristim dohrani.
         poslaneStopy.current.delete(index);
         console.error('Zapis doposlechnute stopy selhal:', err);
       });
     },
-    [sKlicem, zaklad],
+    [odesliNeboZarad, sKlicem, zaklad],
   );
 
   /**
@@ -576,7 +708,16 @@ export function Preposlech({
 
     kresliciRef.current = true;
     setStopy((s) => s.map((x, i) => (i === naRade ? { ...x, krivkaStav: 'pocita' } : x)));
-    spocitejKrivku(stopa.url)
+    // Stazena stopa se kresli z pocitace - bez signalu by to jinak neslo.
+    const zdrojKrivky: Promise<{ url: string; uvolnit: boolean }> = stazeneRef.current.has(stopa.url)
+      ? blobZCesty(stopa.url).then((b) => (b ? { url: URL.createObjectURL(b), uvolnit: true } : { url: stopa.url, uvolnit: false }))
+      : Promise.resolve({ url: stopa.url, uvolnit: false });
+    zdrojKrivky
+      .then((z) =>
+        spocitejKrivku(z.url).finally(() => {
+          if (z.uvolnit) URL.revokeObjectURL(z.url);
+        }),
+      )
       .then((peaks) => {
         if (!zivyRef.current) return;
         setStopy((s) => s.map((x, i) => (i === naRade ? { ...x, peaks, krivkaStav: 'hotovo' } : x)));
@@ -592,30 +733,63 @@ export function Preposlech({
 
   /* ---------- přehrávání ---------- */
 
+  /** Která stopa je v přehrávači (adresa z Disku) a blob, když hraje z počítače. */
+  const zdrojStopyRef = useRef<string | null>(null);
+  const blobStopyRef = useRef<string | null>(null);
+
   const vyberStopu = useCallback((index: number, skocNa?: number) => {
     const stopa = stopyRef.current[index];
     const audio = audioRef.current;
     if (!stopa || !audio) return;
     setAktivni(index);
     aktivniRef.current = index;
-    if (audio.src !== stopa.url) {
-      audio.src = stopa.url;
-      audio.load();
+
+    const dokonci = () => {
+      // Novy soubor = rychlost zpatky na 1, tak ji hned vratime na vybranou.
+      audio.playbackRate = rychlostRef.current;
+      setDelka(Number.isFinite(audio.duration) ? audio.duration : 0);
+      if (typeof skocNa === 'number') {
+        const nastav = () => {
+          audio.currentTime = skocNa;
+          setPozice(skocNa);
+        };
+        if (audio.readyState >= 1) nastav();
+        else audio.addEventListener('loadedmetadata', nastav, { once: true });
+      } else {
+        audio.currentTime = 0;
+        setPozice(0);
+      }
+    };
+
+    if (zdrojStopyRef.current === stopa.url) {
+      dokonci();
+      return;
     }
-    // Novy soubor = rychlost zpatky na 1, tak ji hned vratime na vybranou.
-    audio.playbackRate = rychlostRef.current;
-    setDelka(Number.isFinite(audio.duration) ? audio.duration : 0);
-    if (typeof skocNa === 'number') {
-      const nastav = () => {
-        audio.currentTime = skocNa;
-        setPozice(skocNa);
-      };
-      if (audio.readyState >= 1) nastav();
-      else audio.addEventListener('loadedmetadata', nastav, { once: true });
-    } else {
-      audio.currentTime = 0;
-      setPozice(0);
+    zdrojStopyRef.current = stopa.url;
+
+    /**
+     * STAŽENÁ STOPA HRAJE Z POČÍTAČE (offline, 21. 9. 2026). Přes blob, ne
+     * přes cache v service workeru: přehrávač si říká o kousky souboru
+     * (Range) a to z cache neumí každý prohlížeč.
+     */
+    if (stazeneRef.current.has(stopa.url)) {
+      void blobZCesty(stopa.url).then((blob) => {
+        if (zdrojStopyRef.current !== stopa.url) return;
+        if (blobStopyRef.current) URL.revokeObjectURL(blobStopyRef.current);
+        blobStopyRef.current = blob ? URL.createObjectURL(blob) : null;
+        audio.src = blobStopyRef.current ?? stopa.url;
+        audio.load();
+        dokonci();
+      });
+      return;
     }
+    if (blobStopyRef.current) {
+      URL.revokeObjectURL(blobStopyRef.current);
+      blobStopyRef.current = null;
+    }
+    audio.src = stopa.url;
+    audio.load();
+    dokonci();
   }, []);
 
   function prehrajNeboPauzni() {
@@ -660,11 +834,15 @@ export function Preposlech({
       setSlozkaUrl(data.slozkaUrl ?? null);
       setPoznamka(data.poznamkaKTextu ?? null);
       setZDisku('hotovo');
-
+      const pdfUrl = data.text?.id ? sKlicem(`${zaklad}/soubor?soubor=${encodeURIComponent(data.text.id)}`) : null;
+      setTextUrl(pdfUrl);
+      // Co uz je stazene na cestu (21. 9. 2026) - pred prvni stopou, at hraje
+      // rovnou z pocitace.
+      const uzStazene = await stazeneAdresy([...nove.map((x) => x.url), ...(pdfUrl ? [pdfUrl] : [])]);
+      stazeneRef.current = uzStazene;
+      setStazene(uzStazene);
       if (nove.length > 0) setTimeout(() => vyberStopu(0), 0);
-      if (data.text?.id) {
-        void nactiPdfZUrl(sKlicem(`${zaklad}/soubor?soubor=${encodeURIComponent(data.text.id)}`), data.text.name);
-      }
+      if (pdfUrl) void nactiPdfZUrl(pdfUrl, data.text.name);
     } catch {
       setZDisku('nejde');
       setPoznamka('Složku projektu se nepodařilo načíst.');
@@ -893,7 +1071,12 @@ export function Preposlech({
     try {
       const pdfjs = await nactiPdfJs();
       await nastavPdfWorker(pdfjs);
-      const doc = await pdfjs.getDocument({ url }).promise;
+      // Text stazeny na cestu se otevre z pocitace (21. 9. 2026) - PDF.js si
+      // ho jinak taha po kouscich ze site.
+      const ulozeny = url.startsWith('blob:') ? null : await blobZCesty(url);
+      const doc = await pdfjs
+        .getDocument(ulozeny ? { data: new Uint8Array(await ulozeny.arrayBuffer()) } : { url })
+        .promise;
       pdfDocRef.current = doc;
       setPdfNazev(nazev);
       setPdfStran(doc.numPages);
@@ -980,18 +1163,40 @@ export function Preposlech({
 
   /* ---------- záznamy chyb ---------- */
 
-  async function posli(cesta: string, init: RequestInit): Promise<boolean> {
+  /**
+   * Zápis poznámky / úpravy / přeposlechnuto. BEZ SIGNÁLU (21. 9. 2026) se
+   * zápis zařadí do fronty a změna se hned ukáže (`lokalne`) - odejde sama,
+   * až se signál vrátí. `docasneId` = nová poznámka, kterou zatím ukazujeme
+   * pod dočasným ID.
+   */
+  async function posli(
+    cesta: string,
+    init: RequestInit,
+    offline?: { lokalne: (s: Stav) => Stav; docasneId?: string },
+  ): Promise<boolean> {
     setChybaHlaska(null);
     try {
       const res = await fetch(cesta, init);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // Offline stranka ze service workeru odpovi 503 - taky fronta.
+        if (res.status === 503 && offline && !navigator.onLine) throw new TypeError('offline');
         setChybaHlaska(data?.error || 'Nepodařilo se uložit.');
         return false;
       }
       setStav(data as Stav);
       return true;
-    } catch {
+    } catch (err) {
+      if (offline && jeChybaSite(err)) {
+        zarad({
+          url: cesta,
+          method: (init.method as ZapisVeFronte['method']) ?? 'POST',
+          body: typeof init.body === 'string' ? init.body : undefined,
+          docasneId: offline.docasneId,
+        });
+        setStav((s) => offline.lokalne(s));
+        return true;
+      }
       setChybaHlaska('Nepodařilo se uložit.');
       return false;
     }
@@ -1129,11 +1334,24 @@ export function Preposlech({
   async function ulozChybu() {
     if (!zachyt || !popis.trim() || uklada) return;
     setUklada(true);
-    const ok = await posli(sKlicem(zaklad), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...zachyt, description: popis.trim() }),
-    });
+    const docasneId = `offline-${Date.now().toString(36)}`;
+    const nova: ChybaZeServeru = {
+      id: docasneId,
+      ...zachyt,
+      description: popis.trim(),
+      createdByName: 'čeká na signál',
+      createdAt: new Date().toISOString(),
+      muzuUpravit: true,
+    };
+    const ok = await posli(
+      sKlicem(zaklad),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...zachyt, description: popis.trim() }),
+      },
+      { docasneId, lokalne: (st) => ({ ...st, chyby: [...st.chyby, nova] }) },
+    );
     setUklada(false);
     if (ok) {
       setFormOtevreny(false);
@@ -1143,7 +1361,18 @@ export function Preposlech({
   }
 
   async function smazChybu(id: string) {
-    await posli(sKlicem(`${zaklad}?chyba=${encodeURIComponent(id)}`), { method: 'DELETE' });
+    // Poznamka napsana bez signalu jeste na serveru neni - staci ji vyndat
+    // z fronty.
+    if (id.startsWith('offline-')) {
+      nastavFrontu(frontaRef.current.filter((z) => z.docasneId !== id));
+      setStav((st) => ({ ...st, chyby: st.chyby.filter((ch) => ch.id !== id) }));
+      return;
+    }
+    await posli(
+      sKlicem(`${zaklad}?chyba=${encodeURIComponent(id)}`),
+      { method: 'DELETE' },
+      { lokalne: (st) => ({ ...st, chyby: st.chyby.filter((ch) => ch.id !== id) }) },
+    );
   }
 
   /**
@@ -1157,11 +1386,36 @@ export function Preposlech({
   async function ulozUpravu(id: string) {
     const text = upravaText.trim();
     if (!text) return;
-    const ok = await posli(sKlicem(zaklad), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chyba: id, description: text }),
+    const zmenLokalne = (st: Stav): Stav => ({
+      ...st,
+      chyby: st.chyby.map((ch) => (ch.id === id ? { ...ch, description: text } : ch)),
     });
+    // Poznamka z fronty se opravi primo ve fronte.
+    if (id.startsWith('offline-')) {
+      nastavFrontu(
+        frontaRef.current.map((z) => {
+          if (z.docasneId !== id || !z.body) return z;
+          try {
+            return { ...z, body: JSON.stringify({ ...JSON.parse(z.body), description: text }) };
+          } catch {
+            return z;
+          }
+        }),
+      );
+      setStav(zmenLokalne);
+      setUpravovana(null);
+      setUpravaText('');
+      return;
+    }
+    const ok = await posli(
+      sKlicem(zaklad),
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chyba: id, description: text }),
+      },
+      { lokalne: zmenLokalne },
+    );
     if (ok) {
       setUpravovana(null);
       setUpravaText('');
@@ -1199,11 +1453,23 @@ export function Preposlech({
   }
 
   async function prepniPreposlechnuto() {
-    await posli(sKlicem(zaklad), {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewed: !stav.reviewed }),
-    });
+    const reviewed = !stav.reviewed;
+    await posli(
+      sKlicem(zaklad),
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewed }),
+      },
+      {
+        lokalne: (st) => ({
+          ...st,
+          reviewed,
+          reviewedAt: reviewed ? new Date().toISOString() : null,
+          reviewedByName: reviewed ? 'odejde se signálem' : null,
+        }),
+      },
+    );
   }
 
   function skocNaChybu(ch: ChybaZeServeru) {
@@ -1273,24 +1539,24 @@ export function Preposlech({
       const audio = audioRef.current;
       const index = aktivniRef.current;
       if (!audio || index === null || !Number.isFinite(audio.currentTime)) return;
-      void fetch(sKlicem(`${zaklad}/pozice`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        // `hraje` je to, z ceho se u nas interne pozna, ze u nahravky
-        // nekdo zrovna sedi - viz signalizace v hlavicce.
-        // Strana PDF, na ktere clovek je - z ni se pocita procento
-        // preposlechu (21. 9. 2026). Bez nacteneho textu se neposila.
-        body: JSON.stringify({
+      // Strana PDF, na ktere clovek je - z ni se pocita procento
+      // preposlechu (21. 9. 2026). Bez nacteneho textu se neposila.
+      // Bez signalu pocka zapis ve fronte (klic = stopa, drzi se posledni).
+      void odesliNeboZarad(
+        sKlicem(`${zaklad}/pozice`),
+        'PUT',
+        {
           trackIndex: index + 1,
           localTime: audio.currentTime,
-          hraje: !audio.paused,
+          // Ve fronte uz nehraje - az dojde, nikdo u toho nesedi.
+          hraje: !audio.paused && navigator.onLine,
           ...(pdfStranRef.current > 0 ? { strana: pdfStranaRef.current, stran: pdfStranRef.current } : {}),
           // Kam az je stopa poslechnuta - server drzi maximum (21. 9. 2026).
           ...(dosazenoRef.current[index + 1] ? { podil: dosazenoRef.current[index + 1] } : {}),
-        }),
-        keepalive: true,
-      })
-        .then((r) => (r.ok ? r.json() : null))
+        },
+        `pozice:${index + 1}`,
+      )
+        .then((r) => (r && r.ok ? r.json() : null))
         .then((d) => {
           if (d?.postup) setPostup(d.postup);
         })
@@ -1309,7 +1575,7 @@ export function Preposlech({
       audio?.removeEventListener('play', uloz);
       window.clearInterval(tik);
     };
-  }, [sKlicem, zaklad]);
+  }, [odesliNeboZarad, sKlicem, zaklad]);
 
   /** Pauza se záložkou: nahrávka stojí, obrazovka je zamčená. */
   function zaloz() {
@@ -1319,12 +1585,7 @@ export function Preposlech({
     if (audio && index !== null && Number.isFinite(audio.currentTime)) {
       const misto = { trackIndex: index + 1, localTime: audio.currentTime };
       setZalozka(misto);
-      void fetch(sKlicem(`${zaklad}/pozice`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(misto),
-        keepalive: true,
-      }).catch(() => {});
+      void odesliNeboZarad(sKlicem(`${zaklad}/pozice`), 'PUT', misto, `pozice:${misto.trackIndex}`);
     }
     otevriZalozku();
   }
@@ -1552,17 +1813,17 @@ export function Preposlech({
             dosazenoRef.current = { ...dosazenoRef.current, [poradi]: 1 };
             nahlasDoposlechnuto(aktivniRef.current);
             const audio = audioRef.current;
-            void fetch(sKlicem(`${zaklad}/pozice`), {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+            void odesliNeboZarad(
+              sKlicem(`${zaklad}/pozice`),
+              'PUT',
+              {
                 trackIndex: poradi,
                 localTime: audio && Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
                 hraje: false,
                 podil: 1,
-              }),
-              keepalive: true,
-            }).catch(() => {});
+              },
+              `pozice:${poradi}`,
+            );
           }
         }}
         onError={() => setChybaHlaska('Stopu se nepodařilo načíst z Disku.')}
@@ -1644,6 +1905,23 @@ export function Preposlech({
           {/* Kdo posloucha a komu chodi zpravy o novych stopach (zadani
               21. 9. 2026). Klientovi z odkazu pri prvnim otevreni vyskoci
               okno na e-mail. */}
+          {/* Na cestu / offline (21. 9. 2026). */}
+          <NaCestu
+            soubory={[
+              ...stopy
+                .filter((st) => !st.url.startsWith('blob:'))
+                .map((st) => ({ url: st.url, velikost: st.velikost, nazev: st.name })),
+              ...(textUrl ? [{ url: textUrl, velikost: null, nazev: pdfNazev || 'Text (PDF)' }] : []),
+            ]}
+            stazene={stazene}
+            onStazene={(nove) => {
+              stazeneRef.current = nove;
+              setStazene(nove);
+            }}
+            online={online}
+            cekaZapisu={fronta.length}
+            onOdeslat={() => void odesliFrontu()}
+          />
           <PosluchaciPreposlechu
             zaklad={zaklad}
             sKlicem={sKlicem}

@@ -28,7 +28,13 @@ type Posluchac = {
   pridal: string | null;
 };
 
-type Odpoved = { lide?: Posluchac[]; ja?: string | null; vychoziEmail?: string | null; error?: string };
+type Odpoved = {
+  lide?: Posluchac[];
+  ja?: string | null;
+  vychoziEmail?: string | null;
+  interni?: boolean;
+  error?: string;
+};
 
 const pole =
   'rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple w-full';
@@ -71,7 +77,7 @@ export function PosluchaciPreposlechu({
         setVychoziEmail(d.vychoziEmail ?? '');
         setNacteno(true);
         // Jen poprve - kdyz u projektu jeste nikdo zapsany neni.
-        if (jenPoslech && (d.lide?.length ?? 0) === 0) setOkno(true);
+        if (jenPoslech && !d.interni && (d.lide?.length ?? 0) === 0) setOkno(true);
       })
       .catch(() => {});
     return () => {

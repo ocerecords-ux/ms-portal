@@ -35,6 +35,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
 
+  /**
+   * NÁŠ POSLECH KLIENTOVI NIC NEPŘEPISUJE (zadání 21. 9. 2026: „chceme, abychom
+   * na naší straně studia interně neovlivňovali posun PDF ani přehrávání
+   * nahrávek, kde se skončilo, ať v tom neděláme chaos klientovi").
+   * Doposlechnutí stopy (sloupec „Přeposlechnuto" a počty stop) se proto
+   * zapisuje jen za klienta. Ruční „hotovo" je vědomý krok a zůstává.
+   */
+  if (parsed.data.hotovo === undefined && pristup.interni) {
+    return NextResponse.json({ ok: true, preskoceno: 'interni' });
+  }
+
   try {
     const kdo = pristup.jmeno ?? (pristup.pres_odkaz ? 'Klient' : null);
     const hotovo = parsed.data.hotovo;
