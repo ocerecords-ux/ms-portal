@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { nactiZDisku } from '@/lib/preposlechDriveServer';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 import { prisma } from '@/lib/db';
+import { oznamNoveStopy } from '@/lib/preposlechPosluchaciServer';
 
 /**
  * Stopy a text pro přeposlech, načtené ze složky projektu na Disku
@@ -22,14 +23,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   // projektů by to bylo padesát dotazů do Google API při každém otevření.
   // Tady už složku v ruce máme, takže stačí zapsat, co v ní je.
   //
-  // Bez await: zápis nemá zdržovat načtení stop, a když se nepovede, ukáže se
-  // jen starší počet.
-  void prisma.preposlechStav
+  // S await (od 21. 9. 2026): na Vercelu by se zpráva o nových stopách po
+  // odeslání odpovědi už nemusela stihnout odeslat. Chyba zápisu načtení
+  // stop neshodí - ukáže se jen starší počet.
+  await prisma.preposlechStav
     .upsert({
       where: { caflouProjectId: params.id },
       update: { pocetStop: vysledek.stopy.length, stopyZjistenyAt: new Date() },
       create: { caflouProjectId: params.id, pocetStop: vysledek.stopy.length, stopyZjistenyAt: new Date() },
     })
+    // Pribyly stopy? Posluchacum odkazu odejde zprava (21. 9. 2026) - kdo
+    // tu slozku otevre prvni, ten to zjisti; jinak hodinova kontrola.
+    .then(() => oznamNoveStopy(params.id, vysledek.stopy.length))
     .catch((err) => console.error('Ulozeni poctu stop selhalo:', err));
 
   return NextResponse.json({

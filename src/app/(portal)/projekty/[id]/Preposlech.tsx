@@ -6,6 +6,8 @@ import { souborMarkeru } from '@/lib/cubaseMarkery';
 // Krivka se od 18. 9. 2026 pocita sdilenou funkci - kresli ji i tagger
 // reklamnich spotu, viz lib/krivkaZvuku.ts.
 import { STROP_PRO_KRIVKU, spocitejKrivku } from '@/lib/krivkaZvuku';
+import type { PostupPreposlechu } from '@/lib/preposlechPostup';
+import { PosluchaciPreposlechu } from './PosluchaciPreposlechu';
 
 /**
  * AudioTagger — přeposlech nahrávky proti textu (zadání 11. 9. 2026).
@@ -181,6 +183,16 @@ export function Preposlech({
   const [pdfNazev, setPdfNazev] = useState('');
   const [pdfStran, setPdfStran] = useState(0);
   const [pdfStrana, setPdfStrana] = useState(1);
+  /**
+   * Strana a počet stran i mimo render - zápis záložky je posílá každých
+   * deset vteřin a procento přeposlechu se z nich počítá (21. 9. 2026).
+   */
+  const pdfStranaRef = useRef(1);
+  pdfStranaRef.current = pdfStrana;
+  const pdfStranRef = useRef(0);
+  pdfStranRef.current = pdfStran;
+  /** Kolik procent knihy klient přeposlechl - podle stran PDF, viz lib/preposlechPostup. */
+  const [postup, setPostup] = useState<PostupPreposlechu | null>(null);
   /**
    * Co je zrovna napsané v políčku s číslem strany.
    *
@@ -1176,7 +1188,9 @@ export function Preposlech({
     fetch(sKlicem(`${zaklad}/pozice`))
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (zruseno || !d?.pozice) return;
+        if (zruseno) return;
+        if (d?.postup) setPostup(d.postup);
+        if (!d?.pozice) return;
         // Prvnich par vterin neni pauza, je to zacatek - tam netreba nic
         // nabizet.
         if (d.pozice.localTime > 10 || d.pozice.trackIndex > 1) {
@@ -1206,9 +1220,21 @@ export function Preposlech({
         headers: { 'Content-Type': 'application/json' },
         // `hraje` je to, z ceho se u nas interne pozna, ze u nahravky
         // nekdo zrovna sedi - viz signalizace v hlavicce.
-        body: JSON.stringify({ trackIndex: index + 1, localTime: audio.currentTime, hraje: !audio.paused }),
+        // Strana PDF, na ktere clovek je - z ni se pocita procento
+        // preposlechu (21. 9. 2026). Bez nacteneho textu se neposila.
+        body: JSON.stringify({
+          trackIndex: index + 1,
+          localTime: audio.currentTime,
+          hraje: !audio.paused,
+          ...(pdfStranRef.current > 0 ? { strana: pdfStranaRef.current, stran: pdfStranRef.current } : {}),
+        }),
         keepalive: true,
-      }).catch(() => {});
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d?.postup) setPostup(d.postup);
+        })
+        .catch(() => {});
     }
 
     const audio = audioRef.current;
@@ -1334,7 +1360,9 @@ export function Preposlech({
     async function zjisti() {
       try {
         const d = await fetch(sKlicem(`${zaklad}/pozice`)).then((r) => (r.ok ? r.json() : null));
-        if (!zruseno) setPosluchaci(d?.posluchaci ?? []);
+        if (zruseno) return;
+        setPosluchaci(d?.posluchaci ?? []);
+        if (d?.postup) setPostup(d.postup);
       } catch {
         // Vypadek site neni duvod nic hlasit - kontrolka proste nesviti.
       }
@@ -1493,6 +1521,28 @@ export function Preposlech({
             <b className="text-white">{stav.chyby.length}</b> · Text:{' '}
             <b className="text-white">{pdfNazev || '—'}</b>
           </span>
+          {/* PROCENTO PŘEPOSLECHU (zadání 21. 9. 2026: „potřeboval bych, aby
+              se mu ukazovala procenta, kolik má přeposlechnuto ... celkový
+              počet stran / kde zrovna je"). Podle stran PDF, ne podle stop -
+              ty chodí po kouscích. Vidí to klient i my. */}
+          {pdfStran > 0 && (
+            <span
+              className="flex items-center gap-2 text-[11px] font-heading text-white/80"
+              title={
+                postup
+                  ? `${jenPoslech ? 'Přeposlechnuto' : 'Klient přeposlechl'} ${postup.slyseno} z ${postup.stran} stran textu. Strana se počítá, když na ní při přehrávání máte text.`
+                  : 'Procento přeposlechu se počítá podle stran textu, na kterých při přehrávání jste.'
+              }
+            >
+              <span className="w-16 h-1.5 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">
+                <span className="block h-full bg-brand-green" style={{ width: `${postup?.procent ?? 0}%` }} />
+              </span>
+              <span>
+                {jenPoslech ? 'Přeposlechnuto' : 'Klient'} <b className="text-white tabular-nums">{postup?.procent ?? 0} %</b>
+                {' · '}strana <b className="text-white tabular-nums">{pdfStrana}</b> z {pdfStran}
+              </span>
+            </span>
+          )}
           <span className="text-[11px] font-heading text-white/60 hidden xl:inline">
             Mezerník · ←/→ ±5 s · E = chyba · označ text myší
           </span>
@@ -1512,6 +1562,23 @@ export function Preposlech({
             </span>
           )}
 
+          {/* Kdo posloucha a komu chodi zpravy o novych stopach (zadani
+              21. 9. 2026). Klientovi z odkazu pri prvnim otevreni vyskoci
+              okno na e-mail. */}
+          <PosluchaciPreposlechu
+            zaklad={zaklad}
+            sKlicem={sKlicem}
+            jenPoslech={jenPoslech}
+            onZmena={() => {
+              // Historie - pridani a predani se do ni zapisuje.
+              void fetch(sKlicem(zaklad))
+                .then((r) => (r.ok ? r.json() : null))
+                .then((novy) => {
+                  if (novy) setStav(novy as Stav);
+                })
+                .catch(() => {});
+            }}
+          />
           {/* Na celou obrazovku (zadani 11. 9. 2026). U 330stranneho textu
               a dvanacti stop je kazdy pixel k uzitku. */}
           <button
@@ -2229,7 +2296,7 @@ function Historie({ zaznamy, onVratit }: { zaznamy: Udalost[]; onVratit: (id: st
                 ? 'bg-brand-green'
                 : u.typ === 'SMAZANA'
                   ? 'bg-danger'
-                  : u.typ === 'OTEVRENO'
+                  : u.typ === 'OTEVRENO' || u.typ === 'POSLUCHAC' || u.typ === 'NOVE_STOPY'
                     ? 'bg-brand-purple'
                     : 'bg-line'
             }`}

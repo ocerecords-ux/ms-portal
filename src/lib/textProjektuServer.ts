@@ -42,7 +42,13 @@ async function spocitej(caflouProjectId: string, puvodni: { textSouborId: string
   await prisma.preposlechStav.upsert({
     where: { caflouProjectId },
     create: { caflouProjectId, textSouborId: obsah.text.id, textStran: stran, textStranAt: new Date() },
-    update: { textSouborId: obsah.text.id, textStran: stran, textStranAt: new Date() },
+    update: {
+      textSouborId: obsah.text.id,
+      textStran: stran,
+      textStranAt: new Date(),
+      // Vymeneny text = jine strany; stare procento preposlechu by lhalo.
+      ...(puvodni?.textSouborId ? { slyseneStrany: [], slyseneStranyZ: stran } : {}),
+    },
   });
   return stran;
 }

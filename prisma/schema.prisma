@@ -2280,6 +2280,18 @@ model PreposlechStav {
   textStran       Int?
   textStranAt     DateTime?
 
+  /// Strany PDF, ktere klient PRI PREHRAVANI mel pred ocima (zadani
+  /// 21. 9. 2026: „potreboval bych, aby se mu ukazovaly procenta, kolik ma
+  /// preposlechnuto. Ale tracky tam vetsinou davame po kouskach. Takze by to
+  /// melo brat asi informace z pdf"). Podil techto stran z celku = procento
+  /// preposlechu. Pocita se jen poslech klienta, ne nas.
+  slyseneStrany   Int[]     @default([])
+  /// Kolik stran melo PDF, kdyz se strany pocitaly naposledy.
+  slyseneStranyZ  Int?
+  /// Pri kolika stopach dostali posluchaci naposledy zpravu o novych
+  /// trackach (21. 9. 2026). Kdyz je jich na Disku vic, poslou se znovu.
+  oznamenoStop    Int?
+
   updatedAt       DateTime  @updatedAt
 }
 
@@ -2307,6 +2319,31 @@ model PreposlechStopa {
   hotovoKdo       String?
 
   @@unique([caflouProjectId, trackIndex])
+  @@index([caflouProjectId])
+}
+
+/// Kdo posloucha projekt odkazem (zadani 21. 9. 2026: „aby vyskocilo po
+/// kliknuti na odkaz AudioTaggeru okno, kde se zada mail, kvuli identifikaci.
+/// Primarne asi mail, na ktery se to posle + kdyz chci nekomu delegovat
+/// preposlech ... Tem lidem pak nastavime podle mailu i notifikace, ze tam
+/// pribyly nove tracky").
+///
+/// Odkaz je porad jeden na projekt; tohle je seznam lidi, kteri ho pouzivaji.
+/// Prohlizec si pamatuje, kdo z nich u nej sedi (cookie), a podle toho se
+/// podepisuji poznamky a zapisuje historie - „aby tam byl zaznam o tom, kdo
+/// co udelal".
+model PreposlechPosluchac {
+  id              String   @id @default(cuid())
+  caflouProjectId String
+  email           String
+  jmeno           String?
+  /// Chodi mu zpravy o novych trackach.
+  notifikace      Boolean  @default(true)
+  /// Kdo ho pridal - jmeno textem.
+  pridal          String?
+  createdAt       DateTime @default(now())
+
+  @@unique([caflouProjectId, email])
   @@index([caflouProjectId])
 }
 
@@ -2540,6 +2577,9 @@ model PreposlechPozice {
   /// Hralo to pri poslednim zapisu? Spolu s updatedAt z toho vyjde
   /// "prave posloucha" - viz signalizace v AudioTaggeru.
   hraje Boolean @default(false)
+  /// Strana PDF, na ktere byl pri poslednim zapisu (21. 9. 2026) - podle ni
+  /// se doplni strana, kterou preskocil jednim otocenim o dve.
+  strana Int?
 
   updatedAt DateTime @updatedAt
 

@@ -2237,3 +2237,103 @@ export async function sendVyplneneUdajeEmail(input: VyplneneUdajeInput) {
 
   return { sent: true as const, reason: undefined };
 }
+
+/* ==========================================================================
+   POSLUCHAČI PŘEPOSLECHU (zadání 21. 9. 2026: „když chci někomu delegovat
+   přeposlech ... těm lidem pak nastavíme podle mailu i notifikace, že tam
+   přibyly nové tracky")
+   ========================================================================== */
+
+export type PreposlechPosluchaciInput = {
+  to: string;
+  jmeno: string | null;
+  nazevProjektu: string;
+  odkaz: string;
+};
+
+export type PreposlechPredanInput = PreposlechPosluchaciInput & {
+  /** Kdo přeposlech předal - jméno nebo e-mail. */
+  kdo: string | null;
+};
+
+function vetaPredani(input: PreposlechPredanInput): string {
+  return `${input.kdo ? `${input.kdo} vám předal(a)` : 'Dostáváte'} přeposlech nahrávky „${input.nazevProjektu}".`;
+}
+
+export function buildPreposlechPredanHtml(input: PreposlechPredanInput): string {
+  return emailShell({
+    tag: 'Přeposlech',
+    preheader: `Přeposlech nahrávky ${input.nazevProjektu}`,
+    body: `
+    <p>${escapeHtml(pozdrav(input.jmeno))}</p>
+    <p>${escapeHtml(vetaPredani(input))}</p>
+    <p>Nahrávka se pustí hned v prohlížeči, text běží vedle a chybu v něm rovnou označíte. Nikam se nepřihlašujete.</p>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít přeposlech</a>
+    </div>
+
+    <p class="small">Až u nahrávky přibudou nové stopy, dáme vám vědět na tenhle e-mail.</p>
+`,
+  });
+}
+
+export async function sendPreposlechPredanEmail(input: PreposlechPredanInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: `Preposlech: ${input.nazevProjektu}`,
+    text: [pozdrav(input.jmeno), '', vetaPredani(input), '', input.odkaz].join('\n'),
+    html: buildPreposlechPredanHtml(input),
+  });
+  return { sent: true as const, reason: undefined };
+}
+
+export type NoveStopyInput = PreposlechPosluchaciInput & {
+  pribylo: number;
+  celkem: number;
+};
+
+function vetaNoveStopy(input: NoveStopyInput): string {
+  const kolik =
+    input.pribylo === 1
+      ? 'přibyla 1 nová stopa'
+      : input.pribylo < 5
+        ? `přibyly ${input.pribylo} nové stopy`
+        : `přibylo ${input.pribylo} nových stop`;
+  return `u nahrávky „${input.nazevProjektu}" ${kolik} k přeposlechu (celkem ${input.celkem}).`;
+}
+
+export function buildNoveStopyHtml(input: NoveStopyInput): string {
+  return emailShell({
+    tag: 'Nové stopy',
+    preheader: vetaNoveStopy(input),
+    body: `
+    <p>${escapeHtml(pozdrav(input.jmeno))}</p>
+    <p>${escapeHtml(vetaNoveStopy(input))}</p>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">Pokračovat v přeposlechu</a>
+    </div>
+
+    <p class="small">AudioTagger si pamatuje, kde jste skončili.</p>
+`,
+  });
+}
+
+export async function sendNoveStopyEmail(input: NoveStopyInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: `Nove stopy k preposlechu: ${input.nazevProjektu}`,
+    text: [pozdrav(input.jmeno), '', vetaNoveStopy(input), '', input.odkaz].join('\n'),
+    html: buildNoveStopyHtml(input),
+  });
+  return { sent: true as const, reason: undefined };
+}

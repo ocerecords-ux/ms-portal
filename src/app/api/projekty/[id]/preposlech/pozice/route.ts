@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
+import { pridejStrany, spocitejPostup } from '@/lib/preposlechPostup';
 
 /**
  * Záložka v přeposlechu (zadání 11. 9. 2026: „aby si nějak jednoduše
@@ -23,7 +24,15 @@ async function kdo(req: NextRequest, caflouProjectId: string) {
   }
   // Prihlaseny ucet ma prednost - stejny clovek muze prijit i pres odkaz
   // a zalozku chceme mit jednu.
-  const posluchac = pristup.userId ? `u:${pristup.userId}` : token ? `t:${token}` : null;
+  // Predstaveny posluchac odkazu (21. 9. 2026) ma zalozku svoji - dva lide
+  // s jednim odkazem si ji neprepisuji.
+  const posluchac = pristup.userId
+    ? `u:${pristup.userId}`
+    : pristup.posluchacId
+      ? `p:${pristup.posluchacId}`
+      : token
+        ? `t:${token}`
+        : null;
   return { posluchac, jmeno: pristup.jmeno ?? 'Klient', interni: Boolean(pristup.interni) };
 }
 
@@ -73,13 +82,27 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json({
     pozice: pozice ? { ...pozice, updatedAt: pozice.updatedAt.toISOString() } : null,
     posluchaci,
+    postup: await nactiPostup(params.id),
   });
+}
+
+/** Procento přeposlechu podle stran PDF - viz lib/preposlechPostup.ts. */
+async function nactiPostup(caflouProjectId: string) {
+  const stav = await prisma.preposlechStav
+    .findUnique({ where: { caflouProjectId }, select: { slyseneStrany: true, slyseneStranyZ: true, textStran: true } })
+    .catch(() => null);
+  if (!stav) return null;
+  return spocitejPostup(stav.slyseneStrany ?? [], stav.slyseneStranyZ ?? stav.textStran);
 }
 
 const schema = z.object({
   trackIndex: z.number().int().min(1).max(999),
   localTime: z.number().min(0).max(24 * 3600),
   hraje: z.boolean().optional(),
+  /** Strana PDF, kterou má posluchač zrovna před očima (21. 9. 2026). */
+  strana: z.number().int().min(1).max(10000).optional(),
+  /** Kolik stran PDF má. */
+  stran: z.number().int().min(1).max(10000).optional(),
 });
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
@@ -96,13 +119,44 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     hraje: parsed.data.hraje ?? false,
     jmeno: kdoJe.jmeno,
   };
+  const { strana, stran } = parsed.data;
+  const klic = { caflouProjectId_posluchac: { caflouProjectId: params.id, posluchac: kdoJe.posluchac } };
+  const predchozi = strana
+    ? await prisma.preposlechPozice.findUnique({ where: klic, select: { strana: true } }).catch(() => null)
+    : null;
   await prisma.preposlechPozice.upsert({
-    where: { caflouProjectId_posluchac: { caflouProjectId: params.id, posluchac: kdoJe.posluchac } },
-    create: { ...spolecne, caflouProjectId: params.id, posluchac: kdoJe.posluchac },
+    where: klic,
+    create: { ...spolecne, strana: strana ?? null, caflouProjectId: params.id, posluchac: kdoJe.posluchac },
     // updatedAt se prepisuje i pri stejnych hodnotach - prave z nej se pozna,
     // ze u toho nekdo porad sedi.
-    update: spolecne,
+    update: { ...spolecne, ...(strana ? { strana } : {}) },
   });
 
-  return NextResponse.json({ ulozeno: true });
+  /**
+   * PROCENTO PŘEPOSLECHU (zadání 21. 9. 2026). Počítá se jen poslech
+   * KLIENTA a jen když nahrávka hraje - naše kontrola uvnitř knihy ani
+   * listování textem bez zvuku klientovi procenta nepřidá.
+   */
+  if (!kdoJe.interni && spolecne.hraje && strana && stran) {
+    try {
+      const stav = await prisma.preposlechStav.findUnique({
+        where: { caflouProjectId: params.id },
+        select: { slyseneStrany: true, slyseneStranyZ: true },
+      });
+      const dosud = stav?.slyseneStrany ?? [];
+      const nove = pridejStrany(dosud, strana, predchozi?.strana ?? null, stran);
+      if (nove.length !== dosud.length || stav?.slyseneStranyZ !== stran) {
+        await prisma.preposlechStav.upsert({
+          where: { caflouProjectId: params.id },
+          create: { caflouProjectId: params.id, slyseneStrany: nove, slyseneStranyZ: stran },
+          update: { slyseneStrany: nove, slyseneStranyZ: stran },
+        });
+      }
+    } catch (err) {
+      // Procento je navic - zalozka se kvuli nemu ztratit nesmi.
+      console.error('Zapis slysenych stran selhal:', err);
+    }
+  }
+
+  return NextResponse.json({ ulozeno: true, postup: await nactiPostup(params.id) });
 }

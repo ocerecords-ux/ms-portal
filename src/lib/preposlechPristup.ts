@@ -1,4 +1,5 @@
 import { getServerSession } from 'next-auth';
+import { cookies } from 'next/headers';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
@@ -26,6 +27,11 @@ export type PristupKPreposlechu =
       interni: boolean;
       /** Přišel odkazem z mailu (nepřihlášený klient). */
       pres_odkaz: boolean;
+      /**
+       * Kdo z posluchačů odkazu u prohlížeče sedí (21. 9. 2026) - podle něj se
+       * podepisují poznámky a zapisuje historie. null = zatím se nepředstavil.
+       */
+      posluchacId?: string | null;
     }
   | { ok: false; status: 401 | 403; message: string };
 
@@ -36,7 +42,15 @@ export async function pristupKPreposlechu(
   if (token) {
     const projekt = await projektPodleTokenu(token);
     if (projekt === caflouProjectId) {
-      return { ok: true, userId: null, jmeno: null, interni: false, pres_odkaz: true };
+      const ja = await posluchacZCookie(caflouProjectId);
+      return {
+        ok: true,
+        userId: null,
+        jmeno: ja ? ja.jmeno?.trim() || ja.email : null,
+        interni: false,
+        pres_odkaz: true,
+        posluchacId: ja?.id ?? null,
+      };
     }
     // Neplatny token radsi neprohlasujeme za "chybu odkazu" - muze to byt i
     // nas clovek s proslym odkazem v jinem okne, takze se jeste zkusi sezeni.
@@ -66,4 +80,28 @@ export async function pristupKPreposlechu(
   }
 
   return { ok: true, userId: session.user.id, jmeno, interni: false, pres_odkaz: false };
+}
+
+/**
+ * Cookie, ve kterém si prohlížeč pamatuje, kdo z posluchačů odkazu u něj sedí
+ * (zadání 21. 9. 2026: „aby tam byl záznam o tom, kdo co udělal"). Jedno na
+ * projekt - kolega s odkazem na dvě knihy je u každé zvlášť.
+ */
+export function cookiePosluchace(caflouProjectId: string): string {
+  return `ms_pp_${caflouProjectId.replace(/[^A-Za-z0-9_-]/g, '')}`;
+}
+
+export async function posluchacZCookie(
+  caflouProjectId: string,
+): Promise<{ id: string; email: string; jmeno: string | null } | null> {
+  try {
+    const id = cookies().get(cookiePosluchace(caflouProjectId))?.value;
+    if (!id) return null;
+    return await prisma.preposlechPosluchac.findFirst({
+      where: { id, caflouProjectId },
+      select: { id: true, email: true, jmeno: true },
+    });
+  } catch {
+    return null;
+  }
 }

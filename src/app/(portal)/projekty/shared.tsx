@@ -164,7 +164,7 @@ export function ProjectsTable({
    * nepředá, sloupce se nevykreslí — u dokončených projektů nemá smysl
    * ukazovat, kolik zbývá doposlechnout.
    */
-  preposlech?: Record<string, { stop: number; poslechnuto: number; hotovo: boolean }>;
+  preposlech?: Record<string, { stop: number; poslechnuto: number; hotovo: boolean; procent?: number | null }>;
   /**
    * Rodné listy reklamních spotů podle ID projektu v Caflou (zadání 9. 9. 2026).
    * Když se prop nepředá, sloupec se vůbec nevykreslí - u audioknih nemá RL
@@ -1156,7 +1156,11 @@ function BunkaKPreposlechu({ stav, odkaz }: { stav?: { stop: number }; odkaz?: s
  * Stopa se počítá, až když ji někdo doposlechl do konce — viz
  * /api/projekty/[id]/preposlech/stopa.
  */
-function BunkaPreposlechnuto({ stav }: { stav?: { stop: number; poslechnuto: number; hotovo: boolean } }) {
+function BunkaPreposlechnuto({
+  stav,
+}: {
+  stav?: { stop: number; poslechnuto: number; hotovo: boolean; procent?: number | null };
+}) {
   if (stav?.hotovo) {
     return (
       <td className="px-4 py-0 whitespace-nowrap">
@@ -1168,6 +1172,24 @@ function BunkaPreposlechnuto({ stav }: { stav?: { stop: number; poslechnuto: num
   }
   if (!stav || stav.stop === 0) {
     return <td className="px-4 py-0 text-sm font-heading text-muted whitespace-nowrap">—</td>;
+  }
+  // Od 21. 9. 2026 hlavne PROCENTO podle stran PDF - stopy chodi po
+  // kouscich, takze „3 z 5" o cele knize nic nerekne. Stopy zustavaji
+  // v bublince.
+  if (stav.procent !== null && stav.procent !== undefined) {
+    return (
+      <td
+        className="px-4 py-0 text-sm font-heading text-muted whitespace-nowrap"
+        title={`Doposlechnuté stopy: ${stav.poslechnuto} z ${stav.stop}`}
+      >
+        <span className="inline-flex items-center gap-2">
+          <span className="w-12 h-1.5 rounded-full bg-field border border-line overflow-hidden" aria-hidden="true">
+            <span className="block h-full bg-brand-green" style={{ width: `${stav.procent}%` }} />
+          </span>
+          <span className={`tabular-nums ${stav.procent > 0 ? 'text-ink font-semibold' : ''}`}>{stav.procent} %</span>
+        </span>
+      </td>
+    );
   }
   return (
     <td className="px-4 py-0 text-sm font-heading text-muted whitespace-nowrap">

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { nactiPreposlech } from '@/lib/preposlechServer';
 import { projektPodleTokenu, zapisOtevreni } from '@/lib/preposlechOdkaz';
+import { posluchacZCookie } from '@/lib/preposlechPristup';
 import { Preposlech } from '@/app/(portal)/projekty/[id]/Preposlech';
 
 /**
@@ -51,7 +52,9 @@ export default async function PreposlechOdkazemPage({ params }: { params: { toke
   ]);
 
   // Statistika otevreni - at je u projektu videt, jestli si to klient pustil.
-  void zapisOtevreni(params.token);
+  // Od 21. 9. 2026 i KDO - kdo se u prohlizece predstavil e-mailem.
+  const ja = await posluchacZCookie(caflouProjectId);
+  void zapisOtevreni(params.token, ja ? ja.jmeno?.trim() || ja.email : null);
 
   return (
     <main className="min-h-screen bg-page p-3 sm:p-5">

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { spocitejPostup } from '@/lib/preposlechPostup';
 
 /**
  * Načtení záznamů přeposlechu (AudioTagger) pro detail projektu - zadání
@@ -42,6 +43,11 @@ export type PreposlechPrehled = {
   poslechnuto: number;
   /** Klient klepl na PŘEPOSLECHNUTO. */
   hotovo: boolean;
+  /**
+   * Kolik procent textu klient přeposlechl - podle stran PDF (21. 9. 2026).
+   * null = text ještě nikdo neotevřel, stran nevíme.
+   */
+  procent: number | null;
 };
 
 export async function nactiPreposlechPrehled(
@@ -54,7 +60,14 @@ export async function nactiPreposlechPrehled(
     const [stavy, poslechnute] = await Promise.all([
       prisma.preposlechStav.findMany({
         where: { caflouProjectId: { in: caflouProjectIds } },
-        select: { caflouProjectId: true, reviewed: true, pocetStop: true },
+        select: {
+          caflouProjectId: true,
+          reviewed: true,
+          pocetStop: true,
+          slyseneStrany: true,
+          slyseneStranyZ: true,
+          textStran: true,
+        },
       }),
       prisma.preposlechStopa.groupBy({
         by: ['caflouProjectId'],
@@ -69,6 +82,7 @@ export async function nactiPreposlechPrehled(
         stop: stav.pocetStop,
         poslechnuto: pocty.get(stav.caflouProjectId) ?? 0,
         hotovo: stav.reviewed,
+        procent: spocitejPostup(stav.slyseneStrany ?? [], stav.slyseneStranyZ ?? stav.textStran)?.procent ?? null,
       });
     }
   } catch (err) {

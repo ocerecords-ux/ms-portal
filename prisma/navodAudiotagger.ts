@@ -70,11 +70,35 @@ Nad AudioTaggerem je v kartě projektu proužek, odkud se klientovi vygeneruje o
 
 Co klient může a nemůže:
 
-- **může** poslouchat, číst text, označovat v textu a psát chyby — jeho záznamy jsou podepsané „Klient",
+- **může** poslouchat, číst text, označovat v textu a psát chyby — záznamy se podepisují e-mailem nebo jménem, které zadal (kdo se nepředstavil, je „Klient"),
 - **nemůže** mazat záznamy, označit PŘEPOSLECHNUTO, měnit PDF ani přeskládávat stopy,
 - **nevidí** čas v Cubase.
 
 **Na projekt je živý vždycky jeden odkaz.** Opakovaná zpráva o projektu ten předchozí nezneplatní — a **Vygenerovat nový** je zároveň jediný způsob, jak už rozeslaný odkaz zavřít. Kdo odkaz dostane dál, dostane se dovnitř taky; posílejte ho proto jen tomu, komu má patřit.
+
+# Kdo poslouchá a zprávy o nových stopách
+
+Když klient otevře odkaz **u projektu poprvé** (u projektu ještě nikdo zapsaný není), vyskočí mu okno **Kdo bude poslouchat?**. E-mail je předvyplněný tím, na který šel odkaz; jméno je nepovinné. Rovnou tam může přeposlech **předat dalším lidem** — každý přidaný dostane e-mail s odkazem. Po uložení už okno nevyskakuje.
+
+Seznam se dá kdykoli upravit tlačítkem **👤 Posluchači** v hlavičce AudioTaggeru — vidí ho klient i my:
+
+- **Přidat a poslat odkaz** — přidá e-mail a pošle mu odkaz (= předání přeposlechu),
+- **🔔** — zapne/vypne zprávy o nových stopách pro daný e-mail,
+- **Odebrat** — na druhé klepnutí,
+- **To jsem já** (jen u klienta) — prohlížeč si zapamatuje, kdo u něj sedí, a tím jménem se pak podepisují poznámky.
+
+**Zprávy o nových stopách:** jakmile ve složce na Disku přibudou stopy, odejde všem posluchačům se zapnutým 🔔 e-mail „Nové stopy k přeposlechu" s odkazem. Portál to zjistí při otevření AudioTaggeru a navíc to kontroluje každou hodinu. Posílá se jen o tom, co přibylo od chvíle, kdy byl posluchač zapsaný; po PŘEPOSLECHNUTO nebo se zavřeným odkazem se už nic neposílá.
+
+**Kdo co udělal** je vidět v záložce **Historie**: kdo odkaz otevřel, kdo se představil, komu byl přeposlech předán, komu odešla zpráva o nových stopách — a u poznámek jméno toho, kdo je napsal.
+
+# Kolik je přeposlechnuto (procenta)
+
+Stopy k přeposlechu chodí po kouscích, takže „3 z 5 stop" o celé knize nic neřekne. Procento se proto počítá **podle stran PDF**: v hlavičce je proužek a „Přeposlechnuto 42 % · strana 120 z 286".
+
+- Strana se počítá jako přeposlechnutá, když na ní klient **při přehrávání** má text (zapisuje se každých 10 vteřin). Jen prolistování bez puštěné nahrávky se nepočítá.
+- Počítá se jen poslech **klienta** — naše kontrola uvnitř knihy mu procenta nepřidá. My v hlavičce vidíme „Klient 42 %".
+- Stejné procento je v seznamu projektů ve sloupci **Přeposlechnuto** (počet doposlechnutých stop je v bublině po najetí myší).
+- Když se na Disku vymění PDF, procento začne znovu od nuly.
 
 # Co se teprve chystá
 

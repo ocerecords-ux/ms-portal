@@ -115,7 +115,7 @@ export async function projektPodleTokenu(token: string): Promise<string | null> 
 }
 
 /** Zápis do statistiky otevření. Nikdy nevyhazuje. */
-export async function zapisOtevreni(token: string): Promise<void> {
+export async function zapisOtevreni(token: string, kdo?: string | null): Promise<void> {
   const zaznam = await prisma.preposlechOdkaz
     .update({
       where: { token },
@@ -132,8 +132,8 @@ export async function zapisOtevreni(token: string): Promise<void> {
         data: {
           caflouProjectId: zaznam.caflouProjectId,
           typ: 'OTEVRENO',
-          popis: 'Klient otevřel odkaz.',
-          kdo: 'Klient',
+          popis: kdo ? `${kdo} otevřel(a) odkaz.` : 'Klient otevřel odkaz.',
+          kdo: kdo || 'Klient',
         },
       })
       .catch(() => undefined);
