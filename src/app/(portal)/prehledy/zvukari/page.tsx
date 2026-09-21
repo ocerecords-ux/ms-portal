@@ -88,7 +88,7 @@ export default async function ZvukariPage({ searchParams }: { searchParams?: { m
         <Dlazdice nazev="Celkem s bonusy" hodnota={formatCzk(soucet.castka + soucet.bonus)} />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(420px,40%)] gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(380px,42%)] gap-5 items-start">
       <div className="flex flex-col gap-5 min-w-0">
       <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
@@ -154,12 +154,18 @@ export default async function ZvukariPage({ searchParams }: { searchParams?: { m
         }
         mesic={mesic}
         nazevMesice={nazevMesice(mesic)}
-        cekaNaOdeslani={prehledy.filter((p) => p.email && !odeslanoKomu.has(p.userId)).length}
+        // Rozeslat ručně jde jen měsíc, který už skončil - rozpracovaný měsíc
+        // by zvukaři dostali s neúplnými čísly.
+        cekaNaOdeslani={
+          Date.UTC(rok, cislo, 1) <= Date.now()
+            ? prehledy.filter((p) => p.email && !odeslanoKomu.has(p.userId)).length
+            : 0
+        }
       />
       </div>
 
       {/* Náhled drží na místě při rolování (21. 9. 2026). */}
-      <div className="xl:sticky xl:top-6">
+      <div className="lg:sticky lg:top-32">
         <NahledMailu
           mesic={mesic}
           prvni={prehledy[0]?.userId ?? null}

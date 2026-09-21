@@ -89,7 +89,7 @@ export function NahledMailu({
           </a>
         )}
       </div>
-      {src && <iframe title="Náhled mailu" src={src} className="w-full h-[70vh] xl:h-[calc(100vh-180px)] bg-white border-0" />}
+      {src && <iframe title="Náhled mailu" src={src} className="w-full h-[70vh] lg:h-[calc(100vh-190px)] bg-white border-0" />}
     </section>
   );
 }
