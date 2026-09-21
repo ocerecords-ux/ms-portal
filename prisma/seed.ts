@@ -190,7 +190,8 @@ async function main() {
   await prevezmiGoogleKalendar();
   await brunoZpetneOznamPreposlech();
   await vlozPodpisNaFaktury();
-  await importujFakturyZCaflou();
+  await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
+  await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -1055,15 +1056,15 @@ async function vlozPodpisNaFaktury() {
 /**
  * FAKTURY Z CAFLOU (21. 9. 2026: „stáhnul jsem fyzicky pdf faktur za letošní
  * rok. Co s tím?"). Údaje jsou vyčtené z PDF do importFaktur/caflou-2026.json
- * (2026157-2026206) - v portálu pak sedí obrat, přehled klientů i projekty.
+ * (2026157-2026206) a caflou-2026-duben-cerven.json (2026107-2026156) - v portálu
+ * pak sedí obrat, přehled klientů i projekty. Každý soubor má vlastní známku.
  *
  * Jednorázově (známka v Counter). Faktura, jejíž číslo už v portálu je, se
  * přeskočí - nic se nepřepisuje. Všechny nesly razítko „Již uhrazeno", takže
  * jdou jako uhrazené; datum úhrady z PDF nejde poznat, bere se splatnost.
  * Odběratel se páruje podle IČO, jinak se založí. Projekt podle názvu.
  */
-async function importujFakturyZCaflou() {
-  const ZNAMKA = 'import-faktur-caflou-2026';
+async function importujFakturyZCaflou(soubor: string, ZNAMKA: string) {
   try {
     const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
     if (uz) return;
@@ -1086,7 +1087,7 @@ async function importujFakturyZCaflou() {
       polozky: Polozka[];
     };
     const faktury = JSON.parse(
-      readFileSync(join(process.cwd(), 'prisma/importFaktur/caflou-2026.json'), 'utf8'),
+      readFileSync(join(process.cwd(), 'prisma/importFaktur', soubor), 'utf8'),
     ) as Faktura[];
 
     const vydavatel =
