@@ -339,6 +339,23 @@ export function Preposlech({
   const poslaneStopy = useRef<Set<number>>(new Set());
 
   /**
+   * KAM AŽ JE KTERÁ STOPA POSLECHNUTÁ (zadání 21. 9. 2026: „když poslouchám
+   * stopu v AudioTaggeru, tak by stopa měla zůstat probarvená na místě, kde to
+   * přeruším nebo zastavím, když to znova otevřu, ať jasně vidím, kde jsem
+   * skončil, nebo že je přeposlechnutá").
+   *
+   * Pořadí stopy (od 1) → podíl 0-1, kam až došlo PŘEHRÁVÁNÍ. Drží se
+   * nejdál dosažené místo: kdo se vrátí o kus zpátky, o probarvení nepřijde.
+   * Posouvá se jen při souvislém přehrávání - pouhé kliknutí do křivky nic
+   * „neposlechne". Ukládá se se záložkou (pozice) zvlášť pro každého
+   * posluchače.
+   */
+  const [dosazeno, setDosazeno] = useState<Record<number, number>>({});
+  const dosazenoRef = useRef<Record<number, number>>({});
+  dosazenoRef.current = dosazeno;
+  const minulaPoziceRef = useRef<{ index: number | null; cas: number }>({ index: null, cas: 0 });
+
+  /**
    * HOTOVÉ STOPY (zadání 14. 9. 2026: „přeposlouchávač zaškrtne, že má hotový
    * track... takto zaškrtnutý by mohl třeba změnit barvu").
    *
@@ -403,6 +420,25 @@ export function Preposlech({
     [sKlicem, zaklad],
   );
 
+  /**
+   * Posun probarvení při přehrávání. Počítá se jen souvislé přehrávání -
+   * rozdíl proti minulé pozici je malý (i při dvojnásobné rychlosti).
+   * Skok kliknutím do křivky tedy nic nepřidá, až teprve další vteřiny
+   * poslechu od toho místa.
+   */
+  useEffect(() => {
+    const minula = minulaPoziceRef.current;
+    minulaPoziceRef.current = { index: aktivni, cas: pozice };
+    if (aktivni === null || !hraje || delka <= 0 || minula.index !== aktivni) return;
+    const krok = pozice - minula.cas;
+    if (krok <= 0 || krok > 4) return;
+    const podil = Math.min(1, pozice / delka);
+    const poradi = aktivni + 1;
+    if (podil > (dosazenoRef.current[poradi] ?? 0) + 0.002) {
+      setDosazeno((d) => ({ ...d, [poradi]: Math.max(d[poradi] ?? 0, podil) }));
+    }
+  }, [aktivni, delka, hraje, pozice]);
+
   /* ---------- křivka ---------- */
 
   const kresliStopu = useCallback(
@@ -428,22 +464,30 @@ export function Preposlech({
       const jeAktivni = index === aktivniRef.current;
       const trvani = jeAktivni && delka > 0 ? delka : 0;
       const kurzor = jeAktivni && trvani ? (pozice / trvani) * w : -1;
+      /**
+       * PROBARVENÍ ZŮSTÁVÁ (21. 9. 2026): fialově až kam stopa došla při
+       * poslechu - i u stopy, která zrovna nehraje, a i po novém otevření.
+       * Stopa poslechnutá do konce je celá zelená.
+       */
+      const hranice = Math.max(jeAktivni ? kurzor : -1, (dosazeno[index + 1] ?? 0) * w);
+      const cela = (dosazeno[index + 1] ?? 0) >= 0.995;
+      const barvaPoslechnuto = cela ? '#1FB85A' : '#7B55FF';
 
       if (stopa.peaks) {
         const sirkaSloupce = w / stopa.peaks.length;
         for (let i = 0; i < stopa.peaks.length; i += 1) {
           const [mn, mx] = stopa.peaks[i];
           const x = i * sirkaSloupce;
-          c.fillStyle = jeAktivni && x < kurzor ? '#7B55FF' : '#a29c8f';
+          c.fillStyle = x < hranice ? barvaPoslechnuto : '#a29c8f';
           c.fillRect(x, stred - mx * stred, Math.max(1, sirkaSloupce - 0.4), Math.max(1, (mx - mn) * stred));
         }
       } else {
         // Bez krivky aspon casova osa, at je kam klikat a kam kreslit znacky.
         c.fillStyle = '#d8d4cc';
         c.fillRect(0, stred - 1, w, 2);
-        if (jeAktivni && kurzor > 0) {
-          c.fillStyle = '#7B55FF';
-          c.fillRect(0, stred - 1, kurzor, 2);
+        if (hranice > 0) {
+          c.fillStyle = barvaPoslechnuto;
+          c.fillRect(0, stred - 1, hranice, 2);
         }
       }
 
@@ -476,7 +520,7 @@ export function Preposlech({
       }
       c.restore();
     },
-    [delka, pozice, stav.chyby],
+    [delka, dosazeno, pozice, stav.chyby],
   );
 
   /** Běží zrovna výpočet křivky? Víc než jeden naráz nechceme. */
@@ -493,7 +537,7 @@ export function Preposlech({
 
   useEffect(() => {
     kresliVse();
-  }, [kresliVse, stopy, pozice, delka, stav.chyby, zalozka]);
+  }, [kresliVse, stopy, pozice, delka, stav.chyby, zalozka, dosazeno]);
 
   useEffect(() => {
     window.addEventListener('resize', kresliVse);
@@ -1191,6 +1235,20 @@ export function Preposlech({
         if (zruseno) return;
         if (d?.postup) setPostup(d.postup);
         if (!d?.pozice) return;
+        // Probarveni stop - kam az dosel minule (21. 9. 2026).
+        const ulozene = d.pozice.stopyDoKam as Record<string, number> | null | undefined;
+        if (ulozene && typeof ulozene === 'object') {
+          const nacteno: Record<number, number> = {};
+          for (const [k, v] of Object.entries(ulozene)) {
+            const n = Number(k);
+            if (Number.isInteger(n) && n > 0 && typeof v === 'number') nacteno[n] = Math.min(1, Math.max(0, v));
+          }
+          setDosazeno((dos) => {
+            const spojeno = { ...nacteno };
+            for (const [k, v] of Object.entries(dos)) spojeno[Number(k)] = Math.max(spojeno[Number(k)] ?? 0, v);
+            return spojeno;
+          });
+        }
         // Prvnich par vterin neni pauza, je to zacatek - tam netreba nic
         // nabizet.
         if (d.pozice.localTime > 10 || d.pozice.trackIndex > 1) {
@@ -1227,6 +1285,8 @@ export function Preposlech({
           localTime: audio.currentTime,
           hraje: !audio.paused,
           ...(pdfStranRef.current > 0 ? { strana: pdfStranaRef.current, stran: pdfStranRef.current } : {}),
+          // Kam az je stopa poslechnuta - server drzi maximum (21. 9. 2026).
+          ...(dosazenoRef.current[index + 1] ? { podil: dosazenoRef.current[index + 1] } : {}),
         }),
         keepalive: true,
       })
@@ -1484,7 +1544,26 @@ export function Preposlech({
         onEnded={() => {
           setHraje(false);
           // Dojelo to na konec - stopa je poslechnuta (zadani 12. 9. 2026).
-          if (aktivniRef.current !== null) nahlasDoposlechnuto(aktivniRef.current);
+          if (aktivniRef.current !== null) {
+            const poradi = aktivniRef.current + 1;
+            // Cela zelena (21. 9. 2026) - i kdyby posledni vterina
+            // proklouzla mezi dvema timeupdate.
+            setDosazeno((d) => ({ ...d, [poradi]: 1 }));
+            dosazenoRef.current = { ...dosazenoRef.current, [poradi]: 1 };
+            nahlasDoposlechnuto(aktivniRef.current);
+            const audio = audioRef.current;
+            void fetch(sKlicem(`${zaklad}/pozice`), {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                trackIndex: poradi,
+                localTime: audio && Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
+                hraje: false,
+                podil: 1,
+              }),
+              keepalive: true,
+            }).catch(() => {});
+          }
         }}
         onError={() => setChybaHlaska('Stopu se nepodařilo načíst z Disku.')}
         className="hidden"
@@ -2012,6 +2091,16 @@ export function Preposlech({
                           <span className="tabular-nums">{cas(zalozka.localTime)}</span>
                         </span>
                       )}
+                      {/* Kolik ze stopy uz slysel (21. 9. 2026). */}
+                      {(dosazeno[index + 1] ?? 0) >= 0.995 ? (
+                        <span className="shrink-0 text-[10px] font-heading font-semibold text-status-done" title="Stopa je poslechnutá do konce">
+                          ✓ poslechnuto
+                        </span>
+                      ) : (dosazeno[index + 1] ?? 0) > 0.01 ? (
+                        <span className="shrink-0 text-[10px] font-heading text-muted tabular-nums" title="Kolik ze stopy jste už poslechli">
+                          {Math.floor((dosazeno[index + 1] ?? 0) * 100)} %
+                        </span>
+                      ) : null}
                       {stopa.krivkaStav === 'pocita' && <span className="text-[10px] font-heading text-muted">kreslím křivku…</span>}
                       {!jenPoslech && (
                         <span className="text-[10px] font-heading text-muted tabular-nums">+{hms(index * DELKA_STOPY_V_CUBASE)}</span>

@@ -2580,6 +2580,10 @@ model PreposlechPozice {
   /// Strana PDF, na ktere byl pri poslednim zapisu (21. 9. 2026) - podle ni
   /// se doplni strana, kterou preskocil jednim otocenim o dve.
   strana Int?
+  /// Kam az je ktera stopa poslechnuta (zadani 21. 9. 2026: „stopa by mela
+  /// zustat probarvena na miste, kde to prerusim"): { "<poradi stopy>": podil
+  /// 0-1 }. Drzi se nejdal dosazene misto; 1 = do konce.
+  stopyDoKam Json?
 
   updatedAt DateTime @updatedAt
 

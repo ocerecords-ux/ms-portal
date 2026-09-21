@@ -49,7 +49,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const pozice = await prisma.preposlechPozice.findUnique({
     where: { caflouProjectId_posluchac: { caflouProjectId: params.id, posluchac: kdoJe.posluchac } },
-    select: { trackIndex: true, localTime: true, updatedAt: true },
+    select: { trackIndex: true, localTime: true, updatedAt: true, stopyDoKam: true },
   });
 
   /**
@@ -103,6 +103,8 @@ const schema = z.object({
   strana: z.number().int().min(1).max(10000).optional(),
   /** Kolik stran PDF má. */
   stran: z.number().int().min(1).max(10000).optional(),
+  /** Kam až (podíl 0-1) je aktuální stopa poslechnutá (21. 9. 2026). */
+  podil: z.number().min(0).max(1).optional(),
 });
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
@@ -121,15 +123,39 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   };
   const { strana, stran } = parsed.data;
   const klic = { caflouProjectId_posluchac: { caflouProjectId: params.id, posluchac: kdoJe.posluchac } };
-  const predchozi = strana
-    ? await prisma.preposlechPozice.findUnique({ where: klic, select: { strana: true } }).catch(() => null)
-    : null;
+  const predchozi = await prisma.preposlechPozice
+    .findUnique({ where: klic, select: { strana: true, stopyDoKam: true } })
+    .catch(() => null);
+
+  /**
+   * PROBARVENÍ STOP (zadání 21. 9. 2026: „stopa by měla zůstat probarvená na
+   * místě, kde to přeruším nebo zastavím"). U každé stopy se drží NEJDÁL
+   * dosažené místo - návrat o kus zpátky ho nezmenší.
+   */
+  let stopyDoKam: Record<string, number> | undefined;
+  const { podil } = parsed.data;
+  if (podil !== undefined) {
+    const dosud =
+      predchozi?.stopyDoKam && typeof predchozi.stopyDoKam === 'object' && !Array.isArray(predchozi.stopyDoKam)
+        ? (predchozi.stopyDoKam as Record<string, number>)
+        : {};
+    const klicStopy = String(parsed.data.trackIndex);
+    const novy = podil >= 0.995 ? 1 : Math.round(podil * 1000) / 1000;
+    if (novy > (Number(dosud[klicStopy]) || 0)) stopyDoKam = { ...dosud, [klicStopy]: novy };
+  }
+
   await prisma.preposlechPozice.upsert({
     where: klic,
-    create: { ...spolecne, strana: strana ?? null, caflouProjectId: params.id, posluchac: kdoJe.posluchac },
+    create: {
+      ...spolecne,
+      strana: strana ?? null,
+      ...(stopyDoKam ? { stopyDoKam } : {}),
+      caflouProjectId: params.id,
+      posluchac: kdoJe.posluchac,
+    },
     // updatedAt se prepisuje i pri stejnych hodnotach - prave z nej se pozna,
     // ze u toho nekdo porad sedi.
-    update: { ...spolecne, ...(strana ? { strana } : {}) },
+    update: { ...spolecne, ...(strana ? { strana } : {}), ...(stopyDoKam ? { stopyDoKam } : {}) },
   });
 
   /**

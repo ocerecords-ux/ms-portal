@@ -46,6 +46,14 @@ Bez textu to jde taky: tlačítkem **+ Přidat chybu** nebo klávesou **E** se z
 
 V seznamu záznamů se dá na chybu **kliknout a skočit na to místo v nahrávce**, znění upravit a záznam smazat.
 
+# Kde jste skončili (probarvené stopy)
+
+Každá stopa zůstává **probarvená fialově až tam, kam jste ji doposlouchali** — i když ji zastavíte, přepnete na jinou nebo AudioTagger zavřete a otevřete znovu. Vedle názvu stopy je vidět, kolik procent z ní máte za sebou. Stopa poslechnutá do konce je **celá zelená** s nápisem „✓ poslechnuto".
+
+- Počítá se jen skutečné přehrávání — kliknutí dopředu do křivky samo o sobě nic neprobarví.
+- Drží se nejdál dosažené místo; když se vrátíte o kus zpátky, probarvení nezmizí.
+- Každý posluchač má svoje (klient své, my svoje).
+
 # Pauza se záložkou
 
 Tlačítko **🔖 Pauza** zamkne přeposlech a založí místo, kde jste skončili — přes obrazovku sjede fialová záložka s číslem stopy a časem. Tlačítkem **Pokračovat odtud** (nebo Enterem či Escapem) se vytáhne a nahrávka se rovnou nastaví na to místo. Je to na odskočení od počítače, ne na krátkou pauzu uprostřed věty.
