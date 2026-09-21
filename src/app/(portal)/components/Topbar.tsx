@@ -343,11 +343,19 @@ export function Topbar({
           rozbalovaci nabidku i tu sipku") - kliknuti na jmeno vede rovnou na
           Muj ucet, vedle je jen odhlaseni. Do administrace se chodi odkazy
           v liste (Firmy, Uzivatele, Ceniky, Doklady). */}
-      <div className="order-2 sm:order-3 flex items-center gap-1 sm:gap-2 shrink-0">
-        <PrepinacJazyka />
-        {/* Pripominka k portalu (zadani 15. 9. 2026) - vedle zvonku, at je
-            po ruce na kazde strance. */}
-        <ZpetnaVazba odznak={pripominky} spravce={spravcePripominek} interni={interni} />
+      <div className="order-2 sm:order-3 flex items-center gap-0.5 sm:gap-2 shrink-0">
+        {/* NA TELEFONU POD JEDNOU IKONOU (zadání 21. 9. 2026: „zredukoval
+            bych jazyk, připomínky a noční režim pod jednu ikonu a dal to
+            nahoru na řádek s logem"). Na počítači zůstávají vedle sebe jako
+            dřív - obal je tam `contents`, takže se chová, jako by nebyl.
+            Vykreslují se jen jednou; na telefonu je obal rozbalovací panel. */}
+        <DalsiVolby odznak={pripominky ?? 0}>
+          <PrepinacJazyka />
+          {/* Pripominka k portalu (zadani 15. 9. 2026) - vedle zvonku, at je
+              po ruce na kazde strance. */}
+          <ZpetnaVazba odznak={pripominky} spravce={spravcePripominek} interni={interni} />
+          <ThemeToggle />
+        </DalsiVolby>
         {/* Napoveda (zadani 16. 9. 2026: „aby se k nim vsichni dostali").
             Schvalne tady, ne v liste - listu si kazdy upravuje po svem a
             navody musi byt po ruce i tomu, kdo si ji uz prerovnal. */}
@@ -374,7 +382,6 @@ export function Topbar({
           </svg>
         </Link>
         )}
-        <ThemeToggle />
         <NotificationBell unread={unreadNotifications} />
         <Link
           href="/muj-ucet"
@@ -487,5 +494,63 @@ export function Topbar({
         </div>
       )}
     </header>
+  );
+}
+
+/**
+ * „DALŠÍ VOLBY" NA TELEFONU (21. 9. 2026). Jedna ikona, pod ní jazyk,
+ * připomínky a světlý/tmavý režim. Od tabletu výš (`sm:`) se obal rozpustí
+ * (`contents`) a volby stojí v liště vedle sebe jako dřív.
+ *
+ * Panel se zavírá klepnutím mimo něj - ne klepnutím dovnitř: připomínky v něm
+ * otevírají vlastní okno, které by se jinak hned zase zavřelo.
+ */
+function DalsiVolby({ odznak, children }: { odznak: number; children: React.ReactNode }) {
+  const [otevreno, setOtevreno] = useState(false);
+  const obal = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!otevreno) return;
+    function mimo(e: PointerEvent) {
+      const cil = e.target as Node | null;
+      if (cil && obal.current?.contains(cil)) return;
+      // Okno pripominek se vykresluje mimo panel (fixed) - klik do nej panel
+      // nezavira.
+      if (cil instanceof Element && cil.closest('[role="dialog"]')) return;
+      setOtevreno(false);
+    }
+    document.addEventListener('pointerdown', mimo);
+    return () => document.removeEventListener('pointerdown', mimo);
+  }, [otevreno]);
+
+  return (
+    <div ref={obal} className="relative sm:contents">
+      <button
+        type="button"
+        onClick={() => setOtevreno((v) => !v)}
+        title="Jazyk, připomínky, režim"
+        aria-label="Jazyk, připomínky, režim"
+        aria-expanded={otevreno}
+        className="sm:hidden relative w-8 h-8 rounded-full text-white/85 hover:text-white hover:bg-white/15 inline-flex items-center justify-center"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+          <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+          <circle cx="16" cy="7" r="2.2" />
+          <circle cx="10" cy="17" r="2.2" />
+        </svg>
+        {odznak > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-pill bg-brand-green text-[10px] font-semibold text-[#0F2A18] grid place-items-center tabular-nums">
+            {odznak > 99 ? '99+' : odznak}
+          </span>
+        )}
+      </button>
+      <div
+        className={`${
+          otevreno ? 'flex' : 'hidden'
+        } absolute right-0 top-full mt-2 z-[60] items-center gap-1 rounded-card bg-brand-purpleDeep border border-white/20 shadow-xl p-2 sm:contents`}
+      >
+        {children}
+      </div>
+    </div>
   );
 }

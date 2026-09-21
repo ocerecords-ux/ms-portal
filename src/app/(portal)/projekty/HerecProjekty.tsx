@@ -67,7 +67,7 @@ export async function HerecProjekty({ userId }: { userId: string }) {
 
   return (
     <section className="flex flex-col gap-8">
-      <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
+      <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
 
       <div>
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">

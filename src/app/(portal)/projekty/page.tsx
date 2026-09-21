@@ -203,7 +203,9 @@ export default async function ProjektyPage() {
   return (
     <section className="flex flex-col gap-8">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
+        {/* Na telefonu bez nadpisu (21. 9. 2026: „nápis Projekty taky. Stačí,
+            když to svítí zaškrtlé nahoře v nabídce na panelu"). */}
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
       </div>
 
       <div>
@@ -429,7 +431,9 @@ async function InternalProjektySection({
   return (
     <section className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
-        <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
+        {/* Na telefonu bez nadpisu (21. 9. 2026: „nápis Projekty taky. Stačí,
+            když to svítí zaškrtlé nahoře v nabídce na panelu"). */}
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
         {error && (
           <span className="text-xs font-heading text-danger bg-dangerTint border border-line rounded-lg px-3 py-2">
             Projekty se nepodařilo načíst. {error}

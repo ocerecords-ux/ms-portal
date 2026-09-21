@@ -159,7 +159,9 @@ export function NovyProjektForm({
 
   if (!otevreno) {
     return (
-      <span id={KOTVA_NOVE}>
+      // Na telefonu se projekt nezakládá (21. 9. 2026: „tlačítko Nový projekt
+      // dej pryč. V mobilu to nepůjde").
+      <span id={KOTVA_NOVE} className="hidden sm:inline">
         <AddButton onClick={() => setOtevreno(true)}>Nový projekt</AddButton>
       </span>
     );

@@ -374,7 +374,7 @@ export function InternalProjectsBrowser({
           })}
         </div>
 
-        <div className="flex items-start gap-3 mb-2 flex-wrap">{novyProjekt}</div>
+        <div className="hidden sm:flex items-start gap-3 mb-2 flex-wrap">{novyProjekt}</div>
       </div>
 
       {/* HLEDÁNÍ MÁ VLASTNÍ ŘÁDEK, a to vlevo (zadání 11. 9. 2026: „chtělo by
