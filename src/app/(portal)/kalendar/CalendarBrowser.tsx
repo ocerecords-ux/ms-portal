@@ -1197,6 +1197,8 @@ function MrizkaPohled({
                     // v kalendari po ulozeni bile"). Driv se sem posilalo natvrdo
                     // 'BLOCK', takze kazdy zapsany den zesedivel.
                     const barvy = eventColors(e.color, e.state);
+                    /** Papír má míň než ~60 % sloupce - leží vedle jiného. */
+                    const uzky = misto.podil < 0.6;
                     return (
                       <button
                         key={e.id}
@@ -1211,17 +1213,23 @@ function MrizkaPohled({
                         style={{
                           top: `${pozice.top}px`,
                           height: `${pozice.height}px`,
-                          // Pres sebe jako Apple (20. 9. 2026): pozdejsi lezi
-                          // navrch, kousek odsazena. 1px mezera mezi sousedy.
+                          // Papiry na stole (21. 9. 2026) - viz
+                          // rozvrhniPrekryvy. 1px mezera mezi sousedy.
                           left: `calc(${misto.posun * 100}% + 1px)`,
                           width: `calc(${misto.podil * 100}% - 2px)`,
-                          zIndex: misto.vrstva,
+                          // Vrstva jde přes proměnnou, ne přes zIndex: najetím
+                          // myší se papír „zvedne ze stolu" navrch a přečte se
+                          // celý (hover:z-[450] v className, 21. 9. 2026).
+                          // Inline zIndex by třídu přebil.
+                          ['--vrstva' as string]: misto.vrstva,
                           // Barva udalosti je pruhledna - pod ni se musi dat
                           // plny podklad, jinak by se prekryte udalosti slily.
                           backgroundColor: 'rgb(var(--c-surface))',
                           backgroundImage: `linear-gradient(${barvy.background}, ${barvy.background})`,
-                          // Tenky lem v barve podkladu oddeli bublinu od te pod ni.
-                          boxShadow: '0 0 0 1px rgb(var(--c-surface))',
+                          // Tenky lem v barve podkladu oddeli bublinu od te pod
+                          // ni, jemny stin z ni udela papir lezici na stole
+                          // (21. 9. 2026: „jako papiry na stole").
+                          boxShadow: '0 0 0 1px rgb(var(--c-surface)), 0 2px 6px rgb(0 0 0 / 0.28)',
                           borderColor: barvy.border,
                           // Silny pruh vlevo nese barvu studia i tam, kde je
                           // podklad skoro pruhledny (14. 9. 2026).
@@ -1235,16 +1243,21 @@ function MrizkaPohled({
                         // horniho rohu"). Sirku si radky drzi cele (vychozi
                         // items-stretch), jinak by se dlouhy nazev neorezal
                         // teckami, ale jen usekl.
-                        className="absolute rounded border px-1.5 py-0.5 text-left overflow-hidden flex flex-col justify-start"
+                        className="absolute z-[var(--vrstva)] hover:z-[450] rounded border px-1.5 py-0.5 text-left overflow-hidden flex flex-col justify-start"
                       >
                         {/* Popisek je dvouřádkový (zadání 14. 9. 2026):
                             projekt - herec, pod tím ZVUKAŘ: jméno. Druhý řádek
                             se ukáže, jen když je na něj v bloku místo. */}
+                        {/* Úzký papír (dva a víc vedle sebe) dá názvu dva
+                            řádky místo useknutého „Stř…" - zvukař přijde na
+                            řadu, až když je papír dost vysoký (21. 9. 2026). */}
                         {e.title.split('\n').map((radek, i) =>
                           i === 0 ? (
                             <span
                               key={i}
-                              className="block text-[10px] font-heading font-semibold leading-tight truncate"
+                              className={`block text-[10px] font-heading font-semibold leading-tight ${
+                                uzky ? 'line-clamp-2 break-words' : 'truncate'
+                              }`}
                             >
                               <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                               {radek}
@@ -1253,14 +1266,14 @@ function MrizkaPohled({
                               )}
                             </span>
                           ) : (
-                            pozice.height > 30 && (
+                            pozice.height > (uzky ? 44 : 30) && (
                               <span key={i} className="block text-[9px] font-heading opacity-90 leading-tight truncate">
                                 {radek}
                               </span>
                             )
                           ),
                         )}
-                        {pozice.height > 44 && (
+                        {pozice.height > (uzky ? 58 : 44) && (
                           <span className="block text-[9px] font-body opacity-70 tabular-nums truncate">
                             {minutesToTime(od)}–{minutesToTime(doo)} · {e.studioName}
                           </span>
@@ -1594,7 +1607,11 @@ function UdalostForm({
           ? !zvukar
           : !nazev.trim()
       : jePrace
-        ? (sProjektem && !projekt) || !zvukar || (sHercem && !herecJmeno)
+        ? // Projekt, herec ani zvukař nejsou povinné (21. 9. 2026: „zruš
+          // povinné pole zvukař a název projektu a herec, když zakládám
+          // novou událost") - často se ví jen, že studio je obsazené, a
+          // zbytek se doplní později dvojklikem.
+          false
         : !nazev.trim());
 
   /** Zrušení frekvence z kalendáře (19. 9. 2026). */
@@ -1802,7 +1819,7 @@ function UdalostForm({
           {sProjektem && (
             <label className="flex flex-col gap-1.5 sm:col-span-1">
               <span className="text-sm font-body text-ink">
-                Projekt <span className="text-danger">*</span>
+                Projekt
               </span>
               {/* Stejné hledání psaním jako u výkazů - projektů jsou stovky. */}
               <VyberProjektu projekty={projekty} hodnota={projektId} onZmena={setProjektId} />
@@ -1823,7 +1840,7 @@ function UdalostForm({
           {sHercem && !jeFrekvence && herecPsany && (
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Herec <span className="text-danger">*</span>
+                Herec
               </span>
               <input
                 value={herecText}
@@ -1836,7 +1853,7 @@ function UdalostForm({
           {sHercem && !jeFrekvence && !herecPsany && (
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Herec <span className="text-danger">*</span>
+                Herec
               </span>
               <VyberProjektu
                 projekty={herci}
@@ -1851,7 +1868,10 @@ function UdalostForm({
 
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">
-              Zvukař {!(jeFrekvence && jeNataceni) && <span className="text-danger">*</span>}
+              {/* Povinný jen u frekvence předělávané na střih - ta bez
+                  zvukaře nedává smysl. Ručně zapsaná událost ho mít nemusí
+                  (21. 9. 2026). */}
+              Zvukař {jeFrekvence && !jeNataceni && <span className="text-danger">*</span>}
               {/* Ať je jasné, proč v nabídce nejsou všichni (20. 9. 2026). */}
               <span className="text-muted font-normal"> · jen {nazevStudiaVOkne}</span>
             </span>

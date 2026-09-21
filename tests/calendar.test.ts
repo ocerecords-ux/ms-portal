@@ -162,20 +162,48 @@ describe('výběr termínů hercem', () => {
   });
 });
 
-/** Překrývání jako Apple (20. 9. 2026). */
-import { rozvrhniPrekryvy as rozvrhApple } from '../src/lib/calendar';
-describe('rozvrhniPrekryvy – Apple', () => {
-  it('naráz vedle sebe, později přes ně a odsazeně', () => {
-    const r = rozvrhApple([
-      { id: 'a', od: 540, do: 1020 },
-      { id: 'b', od: 540, do: 780 },
-      { id: 'c', od: 600, do: 840 },
-    ]);
-    expect(r.get('a')).toMatchObject({ posun: 0, podil: 0.5 });
-    expect(r.get('b')).toMatchObject({ posun: 0.5, podil: 0.5 });
-    expect(r.get('c')!.posun).toBeCloseTo(0.12);
-    expect(r.get('c')!.podil).toBeCloseTo(0.88);
-    expect(r.get('c')!.vrstva).toBeGreaterThan(r.get('b')!.vrstva);
+/** Papíry na stole (21. 9. 2026): žádný název nesmí být zakrytý. */
+import { rozvrhniPrekryvy as rozvrhPapiry, HLAVICKA_PX, HOUR_PX as HODINA } from '../src/lib/calendar';
+describe('rozvrhniPrekryvy – papíry na stole', () => {
+  const m = (h: string) => {
+    const [a, b] = h.split(':').map(Number);
+    return a * 60 + b;
+  };
+  // Pondělí 21. 9. 2026 ze screenshotu - tři studia, střihy přes celý den.
+  const den = [
+    { id: 'A', od: m('6:00'), do: m('14:00') },
+    { id: 'B', od: m('9:00'), do: m('17:00') },
+    { id: 'C', od: m('9:00'), do: m('13:00') },
+    { id: 'D', od: m('10:00'), do: m('14:00') },
+    { id: 'E', od: m('12:00'), do: m('15:00') },
+    { id: 'F', od: m('13:00'), do: m('17:00') },
+    { id: 'G', od: m('14:00'), do: m('14:15') },
+    { id: 'H', od: m('14:00'), do: m('16:00') },
+    { id: 'I', od: m('14:30'), do: m('15:30') },
+  ];
+  const r = rozvrhPapiry(den);
+
+  it('naráz začínající leží vedle sebe', () => {
+    expect(r.get('B')!.posun + r.get('B')!.podil).toBeLessThanOrEqual(r.get('C')!.posun + 1e-9);
+  });
+
+  it('pozdější papír pod názvy ostatních dostane skoro celou šířku', () => {
+    for (const id of ['D', 'E', 'F']) expect(r.get(id)!.podil).toBeGreaterThan(0.8);
+  });
+
+  it('žádná hlavička není zakrytá papírem, který leží výš', () => {
+    const hlavickaMin = (HLAVICKA_PX * 60) / HODINA;
+    for (const p of den) {
+      for (const q of den) {
+        if (p === q) continue;
+        const rp = r.get(p.id)!;
+        const rq = r.get(q.id)!;
+        if (rq.vrstva <= rp.vrstva) continue;
+        const svisle = q.od < Math.min(p.od + hlavickaMin, Math.max(p.do, p.od + (16 * 60) / HODINA)) && q.od >= p.od;
+        const vodorovne = rq.posun < rp.posun + rp.podil - 1e-9 && rp.posun < rq.posun + rq.podil - 1e-9;
+        expect(svisle && vodorovne, `${q.id} zakrývá název ${p.id}`).toBe(false);
+      }
+    }
   });
 });
 

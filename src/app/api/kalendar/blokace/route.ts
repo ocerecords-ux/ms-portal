@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
 import { loadOccupancy } from '@/lib/calendarServer';
-import { jePraceVeStudiu, maHerce, popisUdalosti, zabiraStudio } from '@/lib/calendar';
+import { BLOCK_KIND_LABELS, jePraceVeStudiu, maHerce, popisUdalosti, zabiraStudio } from '@/lib/calendar';
 
 /**
  * Blokace založená přímo z kalendáře dvojklikem (zprava uzivatele 9. 9. 2026:
@@ -44,14 +44,22 @@ type Vstup = z.infer<typeof schema>;
  * sedí tady a ne dvakrát v obou routách.
  */
 function zkontrolujVstup(kind: string, d: Vstup): string | null {
-  if (jePraceVeStudiu(kind)) {
-    // U castingu projekt povinny neni (20. 9. 2026).
-    if (kind !== 'CASTING' && !d.projectName?.trim()) return 'Vyberte projekt.';
-    if (!d.zvukarName?.trim()) return 'Vyberte zvukaře.';
-    if (maHerce(kind) && !d.actorName?.trim()) return 'Vyberte herce.';
-    return null;
-  }
+  // Natáčení, střih a casting nemají povinné nic kromě času (21. 9. 2026:
+  // „zruš povinné pole zvukař a název projektu a herec, když zakládám novou
+  // událost"). Často se ví jen, že studio je obsazené - zbytek se doplní.
+  if (jePraceVeStudiu(kind)) return null;
   return d.title?.trim() ? null : 'Vyplňte, čeho se blokace týká.';
+}
+
+/**
+ * Popis události do mřížky. Bez projektu, herce i zvukaře by zůstal prázdný
+ * a bublina by byla jen ikonka - pak aspoň druh práce („Natáčení").
+ */
+function popisPrace(kind: string, d: Vstup): string {
+  const popis = popisUdalosti({ ...poliUdalosti(kind, d), kind }) || BLOCK_KIND_LABELS[kind] || 'Událost';
+  // Samotný střih je v popisu malým písmenem („Hobit - střih") - sám stojí
+  // na začátku, tak velkým.
+  return popis.charAt(0).toLocaleUpperCase('cs') + popis.slice(1);
 }
 
 /** Rozepsané údaje události. U střihu se herec neukládá - žádný není. */
@@ -141,7 +149,7 @@ export async function POST(req: NextRequest) {
         kind,
         // Popis se u natáčení a střihu skládá ze zapsaných polí - v mřížce
         // pak všechny události vypadají stejně a nikdo nevymýšlí názvy.
-        title: jePrace ? popisUdalosti({ ...poliUdalosti(kind, d), kind }) : (d.title ?? ''),
+        title: jePrace ? popisPrace(kind, d) : (d.title ?? ''),
         note: d.note || null,
         ...(jePrace ? poliUdalosti(kind, d) : {}),
         createdById: session.user.id,
@@ -219,7 +227,7 @@ export async function PATCH(req: NextRequest) {
         start,
         end,
         kind,
-        title: jePrace ? popisUdalosti({ ...poliUdalosti(kind, d), kind }) : (d.title ?? ''),
+        title: jePrace ? popisPrace(kind, d) : (d.title ?? ''),
         note: d.note || null,
         // Kdyz se z natáčení stane svatek, musi rozepsane udaje zmizet -
         // jinak by u nej dal visel herec, ktery s nim nema nic spolecneho.

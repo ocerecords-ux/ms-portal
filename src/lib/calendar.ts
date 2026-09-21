@@ -486,79 +486,102 @@ export const HOUR_PX = 34;
 export const GRID_SCROLL_TO_HOUR = 7;
 
 /**
- * ROZVRŽENÍ PŘEKRÝVAJÍCÍCH SE UDÁLOSTÍ - jako Apple Kalendář (zadání
- * 20. 9. 2026: „pojďme ty bubliny přes sebe překrývat, aby tam byly vidět ty
- * názvy událostí co nejvíce, tak jak je to na Applu").
+ * ROZVRŽENÍ PŘEKRÝVAJÍCÍCH SE UDÁLOSTÍ - JAKO PAPÍRY NA STOLE (zadání
+ * 21. 9. 2026: „by šlo rozhodit ty události tak, aby šly vidět názvy. Jako
+ * papíry na stole. Zkus držet tuto logiku").
  *
- * Dřív (14. 9. 2026, podle Googlu) se všechny překrývající se události dělily
- * o šířku vedle sebe - při čtyřech naráz zbyl každé proužek a z názvu jen
- * „Stř…". Apple to dělá jinak a my teď taky:
+ * Předchozí verze (20. 9. 2026, podle Applu) odsazovala každou další událost
+ * o kus doprava za KAŽDOU, která pod ní ještě běžela. Ve plném dni (pondělí
+ * 21. 9.: tři studia, střihy přes celý den) tak odpolední události skončily
+ * odsunuté o půl sloupce a jejich názvy byly „St…" - přestože pod nimi žádný
+ * název nebyl a nic nepřekrývaly.
  *
- *  1. Události, které začínají SKORO NARÁZ (do půl hodiny od sebe), stojí
- *     VEDLE SEBE - jinak by se jejich názvy na horním okraji zakryly.
- *  2. Událost, která začne POZDĚJI, zatímco jiná ještě běží, se položí
- *     PŘES ni, jen kousek odsazená zleva (o jednu úroveň na každou
- *     rozběhnutou událost pod ní). Název té spodní zůstane vidět nahoře,
- *     protože ta nová začíná až pod ním, a nová má skoro celou šířku.
- *  3. Pozdější leží navrchu (`vrstva`), odsazení se zastaví na polovině
- *     šířky, ať ani desátá vrstva není úzký proužek.
+ * Papíry na stole mají jediné pravidlo: **hlavička žádného papíru nesmí být
+ * zakrytá.** Tělo papíru pod ní zakrýt jde - to je v pořádku, začátek a název
+ * je vidět nahoře. Z toho plyne všechno ostatní:
+ *
+ *  1. HLAVIČKA = horní pruh bubliny s názvem a zvukařem (HLAVICKA_PX). Jak
+ *     dlouho v minutách trvá, záleží na výšce hodiny v mřížce.
+ *  2. Papíry, jejichž hlavičky se časově potkávají (začínají skoro naráz),
+ *     se NA STOLE NESMÍ PŘEKRÝT - leží vedle sebe v drahách. Dráhu dostanou
+ *     hladově: první volná, kde už hlavička předchozího papíru skončila.
+ *  3. Papír, který začíná až POD hlavičkami ostatních, dostane CELOU šířku
+ *     a lehne si navrch. Žádnou hlavičku tím nezakryje - všechny jsou výš.
+ *  4. Aby bylo vidět, že pod papírem ještě něco běží, posune se o kousek
+ *     doprava od papírů pod ním (KASKADA_KROK), nejvýš o KASKADA_MAX.
+ *     Posun už se nesčítá s každou událostí dne - proto odpoledne nezúží.
  *
  * Vrací zlomky šířky sloupce dne: `posun` je levý okraj, `podil` šířka,
- * `vrstva` pořadí nad sebou (z-index).
+ * `vrstva` pořadí nad sebou (z-index, pozdější navrchu).
  */
 export type Prekryv = { posun: number; podil: number; vrstva: number };
 
-/** Do kolika minut od sebe se události berou jako „začínají naráz". */
-export const PREKRYV_NARAZ_MIN = 30;
-/** Odsazení jedné úrovně a nejvíc kam se smí odsadit (zlomek šířky). */
-const PREKRYV_ODSAZENI = 0.12;
-const PREKRYV_MAX_ODSAZENI = 0.5;
+/** Výška hlavičky bubliny (název + řádek se zvukařem) v pixelech mřížky. */
+export const HLAVICKA_PX = 30;
+/** Nejmenší výška bubliny - viz gridPosition. */
+const MIN_VYSKA_PX = 16;
+/** Posun papíru doprava od papírů pod ním a strop posunu (zlomek šířky). */
+const KASKADA_KROK = 0.06;
+const KASKADA_MAX = 0.18;
 
 export function rozvrhniPrekryvy<T extends { id: string; od: number; do: number }>(
   polozky: T[],
+  hodinaPx: number = HOUR_PX,
 ): Map<string, Prekryv> {
   const vysledek = new Map<string, Prekryv>();
   if (polozky.length === 0) return vysledek;
 
-  // Podle zacatku, pri shode delsi napred - dlouha udalost lezi dole vlevo.
-  const serazene = [...polozky].sort((a, b) => a.od - b.od || b.do - a.do);
+  const minutZPx = (px: number) => (px * 60) / hodinaPx;
+  // Krátká událost (15min casting) se kreslí aspoň MIN_VYSKA_PX vysoká -
+  // na stole zabírá víc místa, než kolik trvá.
+  const papiry = polozky
+    .map((u) => {
+      const vizDo = Math.max(u.do, u.od + minutZPx(MIN_VYSKA_PX));
+      return { u, vizDo, hlavickaDo: Math.min(vizDo, u.od + minutZPx(HLAVICKA_PX)) };
+    })
+    // Podle začátku, při shodě delší napřed - dlouhý papír leží vlevo dole.
+    .sort((a, b) => a.u.od - b.u.od || b.u.do - a.u.do);
 
-  type Skupina = { start: number; hloubka: number; cleni: T[] };
-  const hloubkaUdalosti = new Map<string, number>();
-  const skupinaUdalosti = new Map<string, Skupina>();
-  const skupiny: Skupina[] = [];
-  const umistene: T[] = [];
-
-  for (const u of serazene) {
-    // Pod cim lezi: udalosti, ktere jeste bezi a zacaly o dost driv.
-    let hloubka = 0;
-    for (const p of umistene) {
-      if (p.do > u.od && u.od - p.od >= PREKRYV_NARAZ_MIN) {
-        hloubka = Math.max(hloubka, (hloubkaUdalosti.get(p.id) ?? 0) + 1);
-      }
-    }
-    // Ke komu se postavi vedle: stejna uroven, zacatek do pul hodiny a jeste bezi.
-    const vedle = skupiny.find(
-      (g) =>
-        g.hloubka === hloubka &&
-        u.od - g.start < PREKRYV_NARAZ_MIN &&
-        g.cleni.some((c) => c.do > u.od),
-    );
-    const skupina = vedle ?? { start: u.od, hloubka, cleni: [] };
-    if (!vedle) skupiny.push(skupina);
-    skupina.cleni.push(u);
-    hloubkaUdalosti.set(u.id, hloubka);
-    skupinaUdalosti.set(u.id, skupina);
-    umistene.push(u);
+  // --- Skupiny papírů, jejichž hlavičky se časově potkávají ---------------
+  // Seřazené podle začátku: nová skupina začíná, až když skončily hlavičky
+  // VŠECH dosavadních papírů. Hlavička pozdější skupiny tak nikdy neleží
+  // pod hlavičkou dřívější - a pozdější papír nemůže zakrýt žádný název.
+  type Papir = (typeof papiry)[number] & { draha: number; skupina: number };
+  const skupiny: Papir[][] = [];
+  let konecHlavicek = -Infinity;
+  for (const p of papiry) {
+    if (p.u.od >= konecHlavicek) skupiny.push([]);
+    const skupina = skupiny[skupiny.length - 1];
+    // Hladové dráhy: první, kde hlavička posledního papíru už skončila.
+    const konceDrah: number[] = [];
+    for (const q of skupina) konceDrah[q.draha] = Math.max(konceDrah[q.draha] ?? -Infinity, q.hlavickaDo);
+    let draha = konceDrah.findIndex((konec) => konec <= p.u.od);
+    if (draha === -1) draha = konceDrah.length;
+    skupina.push({ ...p, draha, skupina: skupiny.length - 1 });
+    konecHlavicek = Math.max(konecHlavicek, p.hlavickaDo);
   }
 
-  serazene.forEach((u, poradi) => {
-    const g = skupinaUdalosti.get(u.id)!;
-    const zaklad = Math.min(g.hloubka * PREKRYV_ODSAZENI, PREKRYV_MAX_ODSAZENI);
-    const n = g.cleni.length;
-    const i = g.cleni.indexOf(u);
-    const podil = (1 - zaklad) / n;
-    vysledek.set(u.id, { posun: zaklad + i * podil, podil, vrstva: poradi + 1 });
+  // --- Posun doprava a šířka ---------------------------------------------
+  const posunSkupiny: number[] = [];
+  const umistene: { od: number; vizDo: number; skupina: number }[] = [];
+  let vrstva = 0;
+  skupiny.forEach((skupina, index) => {
+    // Pod skupinou ještě leží papíry z dřívějších skupin? Pak kousek doprava
+    // od nejvíc posunutého z nich, ať je vidět jejich okraj.
+    let posun = 0;
+    for (const p of umistene) {
+      const lezi = skupina.some((q) => p.od <= q.u.od && p.vizDo > q.u.od);
+      if (lezi) posun = Math.max(posun, Math.min(KASKADA_MAX, posunSkupiny[p.skupina] + KASKADA_KROK));
+    }
+    posunSkupiny[index] = posun;
+
+    const drah = Math.max(...skupina.map((q) => q.draha)) + 1;
+    const podil = (1 - posun) / drah;
+    for (const q of skupina) {
+      vrstva += 1;
+      vysledek.set(q.u.id, { posun: posun + q.draha * podil, podil, vrstva });
+      umistene.push({ od: q.u.od, vizDo: q.vizDo, skupina: index });
+    }
   });
 
   return vysledek;
