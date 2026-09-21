@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { smazZCesty, stahniNaCestu, stazeneAdresy } from '@/lib/preposlechOffline';
 
 /**
- * „NA CESTU" - AudioTagger bez signálu (zadání 21. 9. 2026: „bylo by super
+ * „POSLOUCHAT OFFLINE" (do 21. 9. 2026 „Na cestu") - AudioTagger bez signálu (zadání 21. 9. 2026: „bylo by super
  * přidat možnost, aby mohl klient v AudioTaggeru pracovat offline, když bude
  * vědět, že bude mimo signál").
  *
@@ -69,8 +69,8 @@ export function NaCestu({
     : prubeh
       ? `Stahuji ${prubeh.hotovo}/${prubeh.celkem}`
       : vse
-        ? '✓ Na cestu'
-        : '⬇ Na cestu';
+        ? '✓ Poslouchat offline'
+        : '⬇ Poslouchat offline';
 
   return (
     <span className="relative">
@@ -147,7 +147,7 @@ export function NaCestu({
                 onClick={() => void stahni()}
                 className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-2 disabled:opacity-50"
               >
-                {nejakeStazene ? 'Stáhnout zbytek' : `Stáhnout na cestu${velikost > 0 ? ` (${mb(velikost)})` : ''}`}
+                {nejakeStazene ? 'Stáhnout zbytek' : `Stáhnout pro offline${velikost > 0 ? ` (${mb(velikost)})` : ''}`}
               </button>
             )}
             {nejakeStazene && !prubeh && (

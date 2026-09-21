@@ -99,11 +99,11 @@ Seznam se dá kdykoli upravit tlačítkem **👤 Posluchači** v hlavičce Audio
 
 **Kdo co udělal** je vidět v záložce **Historie**: kdo odkaz otevřel, kdo se představil, komu byl přeposlech předán, komu odešla zpráva o nových stopách — a u poznámek jméno toho, kdo je napsal.
 
-# Poslech bez signálu (Na cestu)
+# Poslech bez signálu (Poslouchat offline)
 
-Tlačítko **⬇ Na cestu** v hlavičce stáhne všechny nahrávky a text do prohlížeče. Pak jde poslouchat, číst i psát poznámky **bez připojení** — třeba ve vlaku nebo v letadle.
+Tlačítko **⬇ Poslouchat offline** v hlavičce stáhne všechny nahrávky a text do prohlížeče. Pak jde poslouchat, číst i psát poznámky **bez připojení** — třeba ve vlaku nebo v letadle.
 
-- Stahuje se se signálem, předem. U tlačítka je vidět, kolik to bude megabajtů; po stažení svítí **✓ Na cestu**.
+- Stahuje se se signálem, předem. U tlačítka je vidět, kolik to bude megabajtů; po stažení svítí **✓ Poslouchat offline**.
 - Stažené stopy hrají z počítače (i se signálem — je to rychlejší).
 - Bez signálu svítí v hlavičce **Offline**. Poznámky, úpravy, záložka, odškrtnuté stopy i PŘEPOSLECHNUTO se uloží do fronty („3 čeká") a **odejdou samy**, jakmile je signál zpátky. Nová poznámka je do té doby podepsaná „čeká na signál".
 - Odkaz je nejlepší otevřít ještě se signálem a nezavírat ho. Klientský odkaz se po stažení otevře i offline, portál (detail projektu) jen v okně, které zůstalo otevřené.
