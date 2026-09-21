@@ -1866,10 +1866,23 @@ model StudioBlock {
   /// Rucne zapsane udalosti ho nemaji.
   importKlic String? @unique
 
+  /// Upraveno v portálu (21. 9. 2026: „u střihu nevidíme název projektu").
+  /// Převzaté události se při každém nasazení srovnávají s daty z Googlu -
+  /// bez tohohle by doplněný projekt, přesunutý čas nebo jiný zvukař
+  /// s dalším nasazením tiše zmizely. Co tým jednou upravil, seed nechá být.
+  upravenoVPortalu Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([studioId, start, end])
+}
+
+/// Převzatá událost z Google kalendáře, kterou tým v portálu SMAZAL
+/// (21. 9. 2026). Seed ji podle klíče jinak při dalším nasazení založil znovu.
+model SmazanyImport {
+  importKlic String   @id
+  smazano    DateTime @default(now())
 }
 
 enum RecordingStatus {

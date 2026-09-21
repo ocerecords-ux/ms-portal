@@ -500,6 +500,10 @@ async function prevezmiGoogleKalendar() {
       }),
     ]);
 
+    const smazane = new Set(
+      (await prisma.smazanyImport.findMany({ select: { importKlic: true } })).map((x) => x.importKlic),
+    );
+
     const najdiStudio = (nazev: string) =>
       studia.find((s) => srovnej(s.shortName ?? '') === srovnej(nazev) || srovnej(s.name) === srovnej(nazev)) ??
       studia.find((s) => srovnej(s.name).endsWith(srovnej(nazev)));
@@ -556,9 +560,17 @@ async function prevezmiGoogleKalendar() {
         zvukarUserId: zvukar?.id ?? null,
         zvukarName: zvukar ? bezTitulu(zvukar.name) : u.zvukar ?? u.zvukarZkratka,
       };
-      const uz = await prisma.studioBlock.findUnique({ where: { importKlic }, select: { id: true } });
+      // Smazané v portálu se nevrací (21. 9. 2026).
+      if (smazane.has(importKlic)) continue;
+      const uz = await prisma.studioBlock.findUnique({
+        where: { importKlic },
+        select: { id: true, upravenoVPortalu: true },
+      });
       if (uz) {
-        await prisma.studioBlock.update({ where: { id: uz.id }, data });
+        // Co tým v portálu upravil (doplněný projekt u střihu, jiný čas),
+        // se už z dat Googlu nepřepisuje - jinak by to s každým nasazením
+        // zmizelo (21. 9. 2026).
+        if (!uz.upravenoVPortalu) await prisma.studioBlock.update({ where: { id: uz.id }, data });
       } else {
         await prisma.studioBlock.create({ data: { ...data, importKlic } });
         zalozeno += 1;

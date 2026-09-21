@@ -213,6 +213,8 @@ export async function PATCH(req: NextRequest) {
     const upravena = await prisma.studioBlock.update({
       where: { id },
       data: {
+        // Převzatou událost z Googlu už seed nesmí přepsat zpátky (21. 9. 2026).
+        upravenoVPortalu: true,
         studioId: d.studioId,
         start,
         end,
@@ -251,6 +253,16 @@ export async function DELETE(req: NextRequest) {
     const id = new URL(req.url).searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Chybí blokace.' }, { status: 400 });
 
+    // Převzatá událost z Googlu by se s dalším nasazením vrátila - klíč se
+    // proto poznamená a seed ji znovu nezaloží (21. 9. 2026).
+    const blok = await prisma.studioBlock.findUnique({ where: { id }, select: { importKlic: true } });
+    if (blok?.importKlic) {
+      await prisma.smazanyImport.upsert({
+        where: { importKlic: blok.importKlic },
+        update: {},
+        create: { importKlic: blok.importKlic },
+      });
+    }
     await prisma.studioBlock.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (err) {

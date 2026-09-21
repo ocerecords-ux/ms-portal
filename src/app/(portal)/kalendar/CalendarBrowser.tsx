@@ -47,6 +47,18 @@ import {
 } from './Nepritomnost';
 
 /** Položka rozbalovacího seznamu lidí a projektů. */
+/**
+ * STŘIH BEZ PROJEKTU (21. 9. 2026: „u střihu nevidíme název projektu").
+ *
+ * Střihy převzaté z Google kalendáře tam byly zapsané jen jako „Střih (TI)" -
+ * projekt v nich nikdy nebyl, takže ho portál nemá odkud vzít a hádat ho
+ * nebudeme. Bublina to aspoň řekne nahlas, ať to nevypadá jako chyba
+ * zobrazení; dvojklik projekt doplní a seed ho už nepřepíše.
+ */
+function strihBezProjektu(e: CalendarEvent): boolean {
+  return e.kind === 'BLOCK' && e.state === 'STRIH' && !e.udalost?.projectName;
+}
+
 export type Volba = {
   id: string;
   label: string;
@@ -1236,6 +1248,9 @@ function MrizkaPohled({
                             >
                               <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                               {radek}
+                              {strihBezProjektu(e) && (
+                                <span className="font-normal italic opacity-70"> · bez projektu</span>
+                              )}
                             </span>
                           ) : (
                             pozice.height > 30 && (
@@ -1350,6 +1365,7 @@ function MesicniPohled({
                         a zvukař (20. 9. 2026: „nejsou tam vidět zvukaři"). */}
                     <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                     {e.title.split('\n')[0]}
+                    {strihBezProjektu(e) && <span className="italic opacity-70"> · bez projektu</span>}
                     {(() => {
                       const zv = e.title.split('\n').find((r) => r.startsWith('ZVUKAŘ:'));
                       return zv ? <span className="opacity-80"> · {zv.replace('ZVUKAŘ:', '').trim()}</span> : null;
@@ -2102,6 +2118,13 @@ function DetailUdalosti({
           </p>
           {u?.actorName && !event.title.includes(u.actorName) && (
             <p className="m-0 text-sm font-heading">Herec: {u.actorName}</p>
+          )}
+          {/* Střih převzatý z Googlu projekt nemá - ať je jasné proč a co s tím
+              (21. 9. 2026). */}
+          {strihBezProjektu(event) && (
+            <p className="m-0 text-xs font-body italic opacity-80">
+              Projekt není vyplněný{canManage ? ' — doplníte ho dvojklikem na událost.' : '.'}
+            </p>
           )}
           {/* Druh prace je jen nahore (20. 9. 2026) - subtitle ho opakoval.
               Mimo studio si svuj popisek necha, tam nejde o druh prace. */}

@@ -102,6 +102,8 @@ Ikona druhu je i přímo v bublině v kalendáři, zvukař taky — v týdnu na 
 
 **Střih se smí překrývat.** Ve studiu můžou v jednu chvíli pracovat dva zvukaři, takže střih jde zapsat i tam, kde už natáčení nebo jiný střih je. Co studio opravdu drží, je **natáčení, casting, svátek, údržba a blokace** — přes ně se druhé natáčení zapsat nedá a nenabízejí se ani herci v nabídce termínů.
 
+**Střih bez projektu.** Střihy převzaté ze starého Google kalendáře tam byly zapsané jen jako „Střih (TI)“ — projekt v nich nikdy nebyl. V kalendáři mají proto u názvu poznámku **· bez projektu**. Projekt doplníte **dvojklikem** na událost; co v převzaté události upravíte (projekt, čas, zvukaře) nebo smažete, už se s dalším nasazením portálu nevrátí.
+
 **Druhy práce** při zápisu dvojklikem do volného místa jsou tři: **Natáčení** (projekt, herec, zvukař), **Střih** (projekt, zvukař) a **Casting** (jen herec a zvukař — projekt se nezadává a **jméno herce se píše ručně**, protože ten, kdo přijde na casting, v portálu většinou účet nemá).
 
 ![Kalendář s frekvencí a otevřené okno Úprava frekvence](/navody/terminy-4.png)
