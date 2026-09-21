@@ -776,6 +776,20 @@ export function CalendarBrowser({
           {/* MS kalendar do Google/Apple (zadani 20. 9. 2026) - jen ikonka
               na konci, pouziva se jednou. */}
           <OdberKalendare studios={studios.map((s) => ({ id: s.id, name: s.name, color: s.color }))} />
+          {/* Hledání na telefonu na řádku s Den/Týden/Měsíc (21. 9. 2026:
+              „pole hledat by mohlo být na řádku, kde se přepínají den,
+              týden, měsíc. Vejde se to tam"). Stejný stav jako políčko
+              u kalendářů na počítači. */}
+          <input
+            value={hledani}
+            onChange={(e) => {
+              setHledani(e.target.value);
+              setSeznamVyskytu(true);
+            }}
+            placeholder="Hledat…"
+            aria-label="Hledat projekt, herce nebo zvukaře"
+            className="sm:hidden flex-1 min-w-0 rounded-pill border border-line bg-field px-3 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
+          />
         </div>
       </div>
 
@@ -932,18 +946,7 @@ export function CalendarBrowser({
           className="hidden sm:block ml-auto rounded-pill border border-line bg-field px-4 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-72"
         />
       </div>
-      {/* Hledání na telefonu pod pruhem kalendářů - v posuvném pruhu by se
-          ztratilo. Stejný stav jako políčko výš. */}
-      <input
-        value={hledani}
-        onChange={(e) => {
-          setHledani(e.target.value);
-          setSeznamVyskytu(true);
-        }}
-        placeholder="Hledat projekt, herce nebo zvukaře…"
-        aria-label="Hledat projekt, herce nebo zvukaře"
-        className="sm:hidden rounded-pill border border-line bg-field px-4 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-full"
-      />
+
 
       {/* SEZNAM VÝSKYTŮ V CELÉM KALENDÁŘI (20. 9. 2026). Mřížka pod ním dál
           ukazuje jen vybraný týden - tohle je přehled napříč časem. */}

@@ -63,7 +63,7 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
   });
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3 sm:gap-6">
       {issuers.length === 0 ? (
         <div className="bg-surface rounded-card border border-line shadow-sm px-6 py-10 text-center">
           <p className="font-heading font-semibold text-ink m-0">Nejdřív si založte fakturační firmu</p>
@@ -79,15 +79,15 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
         </div>
       ) : (
         <>
-          <div className="flex items-end justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-1 flex-wrap">
+          <div className="flex items-end justify-between gap-3 sm:gap-4 flex-wrap">
+            <div className="flex items-center gap-1 flex-nowrap sm:flex-wrap overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 w-[calc(100%+2rem)] sm:w-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {TABS.map((tab) => {
                 const active = tab.key === activeTab.key;
                 return (
                   <Link
                     key={tab.key}
                     href={`/admin/doklady/nabidky?tab=${tab.key}`}
-                    className={`px-4 py-2 text-sm font-heading font-semibold rounded-pill no-underline transition-colors ${
+                    className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-heading font-semibold rounded-pill no-underline transition-colors ${
                       active ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
                     }`}
                   >
@@ -96,7 +96,10 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
                 );
               })}
             </div>
-            <NewOfferForm />
+            {/* Na telefonu se doklady nezakládají (21. 9. 2026: „takto zredukujme i stránku Doklady v mobilu") - stejně jako Nový projekt. */}
+            <span className="hidden sm:contents">
+              <NewOfferForm />
+            </span>
           </div>
 
           <NabidkyTabulka radky={radkyTabulky} />

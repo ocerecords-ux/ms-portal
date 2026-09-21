@@ -222,12 +222,22 @@ export function RaditelnaTabulka<T>({
   const poleTridy =
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple';
 
+  /**
+   * FILTRY NA TELEFONU SCHOVANÉ (zadání 21. 9. 2026: „takto zredukujme
+   * i stránku Doklady v mobilu"). Hledání zůstává, výběry a datum se
+   * rozbalí tlačítkem „Filtry" - počet u něj ukazuje, kolik jich platí.
+   * Od tabletu výš je všechno vidět jako dřív.
+   */
+  const [filtryOtevrene, setFiltryOtevrene] = useState(false);
+  const maFiltry = (filtry?.length ?? 0) > 0 || Boolean(rozsahDatumu);
+  const aktivnichFiltru = Object.values(volby).filter(Boolean).length + (od || doKdy ? 1 : 0);
+
   return (
     <div className="flex flex-col gap-3">
       {maListu && (
-        <div className="bg-surface rounded-card border border-line shadow-sm px-4 py-3 flex flex-wrap items-center gap-2">
+        <div className="bg-surface rounded-card border border-line shadow-sm px-3 sm:px-4 py-2 sm:py-3 flex flex-wrap items-center gap-2">
           {hledat && (
-            <label className={`${poleTridy} flex items-center gap-2 flex-1 min-w-[220px] py-0`}>
+            <label className={`${poleTridy} flex items-center gap-2 flex-1 min-w-0 sm:min-w-[220px] py-0`}>
               <Lupa />
               <input
                 value={dotaz}
@@ -248,6 +258,20 @@ export function RaditelnaTabulka<T>({
             </label>
           )}
 
+          {maFiltry && (
+            <button
+              type="button"
+              onClick={() => setFiltryOtevrene((v) => !v)}
+              aria-expanded={filtryOtevrene}
+              className={`sm:hidden shrink-0 rounded-lg border px-3 py-2 text-sm font-heading font-semibold ${
+                filtryOtevrene || aktivnichFiltru > 0 ? 'border-brand-purple text-brand-purple' : 'border-line text-muted'
+              }`}
+            >
+              Filtry{aktivnichFiltru > 0 ? ` (${aktivnichFiltru})` : ''}
+            </button>
+          )}
+
+          <div className={`${filtryOtevrene ? 'flex' : 'hidden'} sm:contents w-full flex-col gap-2`}>
           {(filtry ?? []).map((filtr) => (
             <VyberPole
               key={filtr.key}
@@ -272,6 +296,7 @@ export function RaditelnaTabulka<T>({
               <DatumPole value={doKdy} onChange={(e) => setDoKdy(e.target.value)} className={poleTridy} />
             </span>
           )}
+          </div>
 
           {neco && (
             <>

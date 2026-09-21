@@ -27,7 +27,7 @@ export default async function IssuersPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3 sm:gap-6">
       <p className="text-sm text-muted font-body m-0 max-w-3xl">
         Vlastní fakturační údaje na jednom místě. U každé firmy si nastavíte číselné řady (aby šlo navázat na řadu z
         Caflou) a bankovní účty — klidně několik, každý ve své měně.

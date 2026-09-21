@@ -8,8 +8,8 @@ export default async function DokladyLayout({ children }: { children: React.Reac
   // Zalozka Banka se ukazuje jen tomu, kdo na ni ma pravo (17. 9. 2026).
   const banka = await smiDoBanky();
   return (
-    <section className="flex flex-col gap-6">
-      <div>
+    <section className="flex flex-col gap-3 sm:gap-6">
+      <div className="hidden sm:block">
         <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Doklady</h1>
       </div>
 
