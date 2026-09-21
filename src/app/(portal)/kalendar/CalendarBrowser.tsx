@@ -192,6 +192,51 @@ export function CalendarBrowser({
   lidiTymu: Osoba[];
 }) {
   const router = useRouter();
+
+  /**
+   * KALENDÁŘ SE AKTUALIZUJE SÁM (zadání 21. 9. 2026: „aby se aktualizoval
+   * kalendář sám, když mám otevřený prohlížeč nebo aplikaci, co nejdříve").
+   *
+   * Každých pár vteřin se zeptá /api/kalendar/zmena na krátký otisk dat. Když
+   * se od minula liší (někdo jiný zapsal, přesunul nebo smazal událost), stáhne
+   * kalendář znovu - `router.refresh()` vymění jen data, rozepsaný formulář ani
+   * posunutý pás se nezavřou. Ve skryté záložce se neptá vůbec; po návratu do
+   * okna (nebo do aplikace v telefonu) se zeptá hned.
+   */
+  useEffect(() => {
+    const INTERVAL_MS = 8000;
+    let posledni: string | null = null;
+    let bezi = false;
+    const zkontroluj = async () => {
+      if (bezi || document.visibilityState !== 'visible') return;
+      bezi = true;
+      try {
+        const res = await fetch('/api/kalendar/zmena', { cache: 'no-store' });
+        const data = await res.json().catch(() => null);
+        const otisk: string | null = data?.otisk ?? null;
+        if (otisk) {
+          if (posledni !== null && otisk !== posledni) router.refresh();
+          posledni = otisk;
+        }
+      } catch {
+        // Bez sítě se prostě zkusí příště.
+      } finally {
+        bezi = false;
+      }
+    };
+    void zkontroluj();
+    const casovac = window.setInterval(() => void zkontroluj(), INTERVAL_MS);
+    const naNavrat = () => {
+      if (document.visibilityState === 'visible') void zkontroluj();
+    };
+    document.addEventListener('visibilitychange', naNavrat);
+    window.addEventListener('focus', naNavrat);
+    return () => {
+      window.clearInterval(casovac);
+      document.removeEventListener('visibilitychange', naNavrat);
+      window.removeEventListener('focus', naNavrat);
+    };
+  }, [router]);
   /** Otevřené okno Mimo studio: nová událost, nebo úprava. */
   const [oknoNepritomnosti, setOknoNepritomnosti] = useState<{
     upravovana: NepritomnostVKalendari | null;
