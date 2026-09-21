@@ -458,6 +458,9 @@ export function TimesheetEditor({
                 required
                 step={1800}
                 value={form.from}
+                onFocus={() => {
+                  if (!form.from) setForm((f) => (f.from ? f : { ...f, from: celaHodina(0) }));
+                }}
                 onChange={(e) => setForm({ ...form, from: e.target.value })}
                 className={inputClass}
               />
@@ -471,6 +474,9 @@ export function TimesheetEditor({
                 required
                 step={1800}
                 value={form.to}
+                onFocus={() => {
+                  if (!form.to) setForm((f) => (f.to ? f : { ...f, to: celaHodina(1, f.from) }));
+                }}
                 onChange={(e) => setForm({ ...form, to: e.target.value })}
                 className={inputClass}
               />
@@ -879,4 +885,17 @@ function SortHeader({
       </button>
     </th>
   );
+}
+
+/**
+ * VÝCHOZÍ ČAS NA CELOU HODINU (zadání 21. 9. 2026: „změnil bych defaultní
+ * časování výkazů z :30 na :00"). Prázdné pole si při kliknutí samo předvyplní
+ * celou hodinu - jinak výběr času (hlavně kolečko v telefonu) nabídl aktuální
+ * čas zaokrouhlený na půlhodinu. „Do" navazuje hodinu po „Od".
+ */
+function celaHodina(posun: number, od?: string): string {
+  const zaklad = od ? parseTime(od) : null;
+  const hodina =
+    zaklad !== null ? Math.floor(zaklad / 60) + posun : new Date().getHours() + posun;
+  return `${String(((hodina % 24) + 24) % 24).padStart(2, '0')}:00`;
 }
