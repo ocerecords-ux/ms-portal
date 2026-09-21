@@ -7,6 +7,9 @@ import { pdfFaktury } from '@/lib/dokladNahledServer';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
 import { rodnyListKFakture } from '@/lib/rodnyListServer';
 
+/** Automatické ukončení projektu po odeslání faktury - zatím vypnuté (21. 9. 2026). */
+const UKONCIT_PROJEKT_PO_FAKTURE = false;
+
 /** Stav, do ktereho projekt prejde odeslanim faktury (zadani 15. 9. 2026). */
 const STAV_PO_FAKTURE = 'Vyfakturováno';
 
@@ -185,7 +188,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
      * Deje se to jen u projektu, ktery jeste ukonceny neni, a nikdy to
      * neshodi odeslani faktury - ta uz je u klienta, chyba patri do logu.
      */
-    if (invoice.caflouProjectId && meta && !meta.finished) {
+    /*
+     * VYPNUTO 21. 9. 2026 („tak zrušme teď to automatické ukončení projektu po
+     * fakturaci, než to domyslíme"): posíláme i ostré zálohové faktury s DPH
+     * a projekt se pak uzavřel už po záloze. Než bude u faktury druh
+     * (zálohová / konečná) a volba při odeslání, ukončuje se projekt jen
+     * ručně. Kód zůstává, zapíná ho UKONCIT_PROJEKT_PO_FAKTURE.
+     */
+    if (UKONCIT_PROJEKT_PO_FAKTURE && invoice.caflouProjectId && meta && !meta.finished) {
       try {
         await prisma.projectMeta.update({
           where: { caflouProjectId: invoice.caflouProjectId },

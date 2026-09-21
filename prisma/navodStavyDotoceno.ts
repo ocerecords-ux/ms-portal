@@ -30,7 +30,7 @@ Pořadí v nabídce není abecední — jde tak, jak projekt opravdu putuje, aby
 - **Schváleno - k fakturaci** — opravené nahrávky jsou na disku, čeká se na fakturu.
 - **Vyfakturováno** — faktura je u klienta, projekt je uzavřený.
 
-**Projekt končí až fakturou.** Ve „Schváleno - k fakturaci" je práce hotová, ale zakázka běží dál, takže projekt zůstává mezi aktivními. Do dokončených spadne až ve „Vyfakturováno".
+**Projekt končí až fakturou.** Ve „Schváleno - k fakturaci" je práce hotová, ale zakázka běží dál, takže projekt zůstává mezi aktivními. Do dokončených spadne až ve „Vyfakturováno". Na „Vyfakturováno" se projekt přepíná **ručně** — odeslání faktury ho samo neuzavře (posíláme i zálohové faktury, po kterých zakázka pokračuje).
 
 Každý stav má svou barvu a každý odznak má i rámeček — aby se stavy daly rozeznat i na černobílém výtisku nebo když někdo barvy nerozezná. Stav přenesený z Caflou, který v téhle cestě není, dostane neutrální šedou (nebo zelenou, když je projekt dokončený), aby odznak nikdy nevypadal rozbitě.
 
