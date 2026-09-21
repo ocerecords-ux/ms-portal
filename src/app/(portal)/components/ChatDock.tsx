@@ -3281,9 +3281,22 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         počet lidí, který otevře správu skupiny — tam jsou
                         jmenovitě a dá se s nimi něco dělat. */}
                     <span className="min-w-0 flex-1 flex flex-col">
-                      <span className="font-heading font-semibold text-sm text-ink leading-tight break-words">
-                        {otevrena.kind === 'PROJEKT' ? `# ${otevrena.label}` : otevrena.label}
-                      </span>
+                      {/* NÁZEV PROJEKTU JE ODKAZ (zadání 21. 9. 2026: „tady nahoře
+                          v chatu ten název projektu by mohl vždycky být odkaz, abych
+                          se proklikl na projekt"). */}
+                      {otevrena.kind === 'PROJEKT' && otevrena.caflouProjectId ? (
+                        <Link
+                          href={`/projekty/${encodeURIComponent(otevrena.caflouProjectId)}`}
+                          title="Otevřít projekt"
+                          className="font-heading font-semibold text-sm text-ink leading-tight break-words no-underline hover:text-brand-purple hover:underline"
+                        >
+                          # {otevrena.label} <span aria-hidden="true" className="text-muted text-xs">↗</span>
+                        </Link>
+                      ) : (
+                        <span className="font-heading font-semibold text-sm text-ink leading-tight break-words">
+                          {otevrena.kind === 'PROJEKT' ? `# ${otevrena.label}` : otevrena.label}
+                        </span>
+                      )}
                       {otevrena.kind === 'SKUPINA' && (
                         <button
                           type="button"

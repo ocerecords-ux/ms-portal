@@ -3,6 +3,7 @@ import type { Currency } from '@prisma/client';
 import { formatMoney, OFFER_STATUS_CLASSES, OFFER_STATUS_LABELS } from '@/lib/doklady';
 import type { NavrhNabidky } from '@/lib/nabidkaZObjednavky';
 import { PridatNabidku } from '@/components/PridatNabidku';
+import { SmlouvyKlienta } from './SmlouvyKlienta';
 
 /**
  * Doklady navázané na projekt (zadani 8. 9. 2026: "chtel bych mit Doklady
@@ -130,6 +131,10 @@ export function ProjectDocuments({
           </Link>
         ))}
       </div>
+
+      {/* Archiv podepsaných smluv od klienta (21. 9. 2026) - PDF, které
+          přišlo zvenku; naše smlouvy k podpisu jsou níž ve „Smlouvy". */}
+      <SmlouvyKlienta caflouProjectId={caflouProjectId} />
 
       {celkem === 0 ? (
         <p className="text-sm font-body text-muted m-0">

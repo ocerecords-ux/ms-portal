@@ -449,6 +449,27 @@ export async function podepsanyUploadPrilohy(
 }
 
 /**
+ * Podepsaná adresa na nahrání SMLOUVY OD KLIENTA (21. 9. 2026) - stejně jako
+ * přílohy v chatu jde soubor rovnou z prohlížeče do úložiště, protože
+ * naskenovaná smlouva snadno přeroste limit Vercelu (4,5 MB).
+ */
+export async function podepsanyUploadSmlouvy(
+  fileName: string,
+): Promise<{ key: string; uploadUrl: string } | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+
+  const key = `smlouvy-klientu/${randomUUID()}-${bezpecnyNazev(fileName)}`;
+  const uploadUrl = await getSignedUrl(
+    client,
+    new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: 'application/pdf' }),
+    { expiresIn: PLATNOST_UPLOADU },
+  );
+  return { key, uploadUrl };
+}
+
+/**
  * Opravdu ten soubor v úložišti leží, a jak je velký? Volá se před uložením
  * zprávy - prohlížeč hlásí velikost sám, takže se na jeho údaj nespoléháme.
  */

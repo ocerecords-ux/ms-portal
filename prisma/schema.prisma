@@ -1659,6 +1659,36 @@ enum ContractSignerRole {
 }
 
 /// Šablona smlouvy s poli {{jmeno}}, {{projekt}}… - viz lib/contracts.ts.
+/// SMLOUVA OD KLIENTA - archiv (zadani 21. 9. 2026: „potrebuju nekam do
+/// dokladu projektu nahrat smlouvu v PDF, kterou nam posila k podpisu klient na
+/// praci. Ve chvili, kdy ji vkladam, uz je podepsana, chci ji jen archivovat.
+/// A taky tam chci nejake tlacitko, kdyz ji tam Karolina vlozi, tak ho zmackne
+/// a Bruno napise treba soukrome do chatu Bare Siblove, ze je tam podepsana
+/// smlouva").
+///
+/// Neni to Contract (ta se u nas pise a podepisuje v portalu) - tohle je
+/// hotove PDF od klienta, jen ulozene k projektu.
+model SmlouvaKlienta {
+  id              String    @id @default(cuid())
+  caflouProjectId String
+  /// Popis, jak ho clovek napsal (vychozi = nazev souboru).
+  nazev           String
+  /// Klic v ulozisti (R2) - soubor jde primo z prohlizece, viz podepsanyUploadSmlouvy.
+  souborKlic      String
+  nazevSouboru    String
+  velikost        Int?
+  /// Kdy klient smlouvu podepsal - nepovinne.
+  podepsanoDne    DateTime?
+  nahralUserId    String?
+  nahralJmeno     String?
+  /// Bruno o ni dal vedet (komu a kdy) - tlacitko se pak zmeni na potvrzeni.
+  oznamenoAt      DateTime?
+  oznamenoKomu    String?
+  createdAt       DateTime  @default(now())
+
+  @@index([caflouProjectId])
+}
+
 model ContractTemplate {
   id        String   @id @default(cuid())
   name      String   @unique
