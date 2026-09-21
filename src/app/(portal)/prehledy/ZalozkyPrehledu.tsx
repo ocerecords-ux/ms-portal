@@ -11,11 +11,11 @@ import { ZALOZKY_PREHLEDU } from './zalozky';
  * mohl sáhnout i server.
  */
 
-export function ZalozkyPrehledu() {
+export function ZalozkyPrehledu({ role }: { role?: string | null }) {
   const cesta = usePathname();
   return (
     <nav className="flex items-center gap-1 flex-wrap border-b border-line">
-      {ZALOZKY_PREHLEDU.map((z) => {
+      {ZALOZKY_PREHLEDU.filter((z) => !z.role || (role && z.role.includes(role))).map((z) => {
         const aktivni = cesta === z.href || cesta.startsWith(`${z.href}/`);
         return (
           <Link

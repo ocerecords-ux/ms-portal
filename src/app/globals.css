@@ -45,6 +45,10 @@
    Zapis je "R G B" bez rgb(), aby fungovaly i zapisy s pruhlednosti
    (text-muted/60). Tmavy rezim se zapina tridou .dark na <html>. */
 :root {
+  /* Barvy grafu obratu (21. 9. 2026) - ověřené na odlišitelnost i pro
+     barvoslepé; tmavý režim má vlastní odstíny níž v .dark. */
+  --viz-obrat: #7b55ff;
+  --viz-naklady: #eb6834;
   --brand-purple: #7b55ff;
   --brand-purple-deep: #6b2af0;
   --brand-green: #1fdf67;
@@ -78,6 +82,8 @@
 }
 
 .dark {
+  --viz-obrat: #8f6fff;
+  --viz-naklady: #d95926;
   --c-ink: 236 233 247; /* svetly text */
   --c-bar: 45 39 70; /* pruh zůstává tmavý, jen o odstín světlejší než karta */
   --c-paper: 20 17 28; /* podklad stranky */
