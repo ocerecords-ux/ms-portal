@@ -2,6 +2,15 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { VyskytyHledani } from './VyskytyHledani';
+import { PoradaForm } from './Porady';
+import {
+  BARVA_PORAD,
+  NAZEV_KALENDARE_PORADY,
+  SOLO_PORADY,
+  platnyOdkaz,
+  popisOpakovani,
+  type PoradaVKalendari,
+} from '@/lib/porady';
 import { OdberKalendare } from './OdberKalendare';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import Link from 'next/link';
@@ -80,8 +89,8 @@ export type CalendarDay = {
 
 export type CalendarEvent = {
   id: string;
-  /** MIMO = kalendář Mimo studio na pár hodin (19. 9. 2026). */
-  kind: 'SLOT' | 'BLOCK' | 'MIMO';
+  /** MIMO = kalendář Mimo studio na pár hodin (19. 9. 2026), PORADA = porada (21. 9. 2026). */
+  kind: 'SLOT' | 'BLOCK' | 'MIMO' | 'PORADA';
   studioId: string;
   studioName: string;
   color: string;
@@ -105,6 +114,8 @@ export type CalendarEvent = {
   };
   /** Záznam z kalendáře Mimo studio - z něj se plní jeho okno. */
   mimo?: NepritomnostVKalendari;
+  /** Výskyt porady (21. 9. 2026) - z něj se plní její okno a detail. */
+  porada?: PoradaVKalendari;
   /** Poznámka / vzkaz k události (19. 9. 2026). */
   poznamka?: string | null;
 };
@@ -149,6 +160,9 @@ export function CalendarBrowser({
   zvukari,
   nepritomnosti,
   ukazNepritomnost,
+  porady,
+  ukazPorady,
+  puvodniPorady,
   puvodniStudioIds,
   puvodniNepritomnost,
   solo,
@@ -175,6 +189,13 @@ export function CalendarBrowser({
   /** Kalendář dovolených a nepřítomnosti (zadání 19. 9. 2026). */
   nepritomnosti: NepritomnostVKalendari[];
   ukazNepritomnost: boolean;
+  /**
+   * PORADY (zadání 21. 9. 2026) - jen ty, na které je přihlášený pozvaný.
+   * `puvodniPorady` je zaškrtnutí v adrese (jako `puvodniNepritomnost`).
+   */
+  porady: PoradaVKalendari[];
+  ukazPorady: boolean;
+  puvodniPorady: boolean;
   /**
    * SOLO REŽIM (zadání 20. 9. 2026: „ať to funguje jako prozatímní sólo
    * funkce. Když kliknu znova, tak se vrátí původní zaškrtnutí kalendářů,
@@ -245,6 +266,13 @@ export function CalendarBrowser({
     casOd?: string;
     casDo?: string;
   } | null>(null);
+  /** Otevřené okno porady: nová, nebo úprava (21. 9. 2026). */
+  const [oknoPorady, setOknoPorady] = useState<{
+    upravovana: PoradaVKalendari | null;
+    den: string;
+    casOd?: string;
+    casDo?: string;
+  } | null>(null);
   const [hledani, setHledani] = useState('');
   /** Seznam výskytů v celém kalendáři (20. 9. 2026) - dá se zavřít křížkem. */
   const [seznamVyskytu, setSeznamVyskytu] = useState(true);
@@ -272,7 +300,9 @@ export function CalendarBrowser({
    * ostatních se detail otevře hned, protože tam dvojklik nic nedělá.
    */
   const casovacDetailu = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lzeUpravit = (e: CalendarEvent) => canManage && (e.kind === 'BLOCK' || jeUpravitelnaFrekvence(e));
+  // Poradu vidí jen účastníci - a každý účastník ji smí upravit (21. 9. 2026).
+  const lzeUpravit = (e: CalendarEvent) =>
+    e.kind === 'PORADA' || (canManage && (e.kind === 'BLOCK' || jeUpravitelnaFrekvence(e)));
 
   function klikNaUdalost(e: CalendarEvent, kotva?: Kotva) {
     const otevri = () => {
@@ -305,6 +335,10 @@ export function CalendarBrowser({
       casovacDetailu.current = null;
     }
     setDetail(null);
+    if (e.kind === 'PORADA' && e.porada) {
+      setOknoPorady({ upravovana: e.porada, den: e.porada.den });
+      return;
+    }
     setNovaBlokace(null);
     setUpravovana(e);
   }
@@ -341,19 +375,40 @@ export function CalendarBrowser({
     [nepritomnosti],
   );
 
+  /** Výskyty porad jako události mřížky (21. 9. 2026). */
+  const udalostiPorad = useMemo<CalendarEvent[]>(
+    () =>
+      porady.map((p) => ({
+        id: `porada-${p.id}`,
+        kind: 'PORADA' as const,
+        studioId: '',
+        studioName: NAZEV_KALENDARE_PORADY,
+        color: BARVA_PORAD,
+        start: p.start,
+        end: p.end,
+        state: 'PORADA',
+        // Druhý řádek jsou účastníci - u porady to je to „kdo s kým".
+        title: `${p.nazev}\n${p.ucastnici.map((u) => u.label).join(', ')}`,
+        subtitle: NAZEV_KALENDARE_PORADY,
+        poznamka: p.poznamka,
+        porada: p,
+      })),
+    [porady],
+  );
+
   const viditelne = useMemo(() => {
     const dotaz = hledani.trim().toLowerCase();
-    return [...events, ...udalostiMimo].filter((e) => {
+    return [...events, ...udalostiMimo, ...udalostiPorad].filter((e) => {
       if (dotaz && !e.title.toLowerCase().includes(dotaz)) return false;
       return true;
     });
-  }, [events, udalostiMimo, hledani]);
+  }, [events, udalostiMimo, udalostiPorad, hledani]);
 
   /**
    * Otevřené okno zavře Escape a stránka pod ním se nesmí rolovat - jinak
    * se při kolečku myši posouvá kalendář za oknem místo obsahu okna.
    */
-  const oknoOtevrene = Boolean(novaBlokace || upravovana || oknoNepritomnosti);
+  const oknoOtevrene = Boolean(novaBlokace || upravovana || oknoNepritomnosti || oknoPorady);
   useEffect(() => {
     if (!oknoOtevrene) return;
     function naKlavesu(e: KeyboardEvent) {
@@ -361,6 +416,7 @@ export function CalendarBrowser({
       setNovaBlokace(null);
       setUpravovana(null);
       setOknoNepritomnosti(null);
+      setOknoPorady(null);
     }
     const puvodni = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -420,6 +476,11 @@ export function CalendarBrowser({
     const od = Math.floor(minuty / 60) * 60;
     const start = zonedToUtc(y, m, d, od, timezone).toISOString();
     const end = zonedToUtc(y, m, d, Math.min(24 * 60, od + 60), timezone).toISOString();
+    // Svítí jen Porady - dvojklik zakládá rovnou poradu (21. 9. 2026).
+    if (solo === SOLO_PORADY) {
+      setOknoPorady({ upravovana: null, den: denKey, casOd: casVPraze(start), casDo: casVPraze(end) });
+      return;
+    }
     if (canManage) {
       // Kdyz jsou studia zhasnuta (svitilo jen Mimo studio), nova udalost
       // spadne do prvniho studia - v okne se da prepnout.
@@ -456,6 +517,7 @@ export function CalendarBrowser({
       pohled: view,
       datum: anchorIso,
       nepritomnost: puvodniNepritomnost ? '1' : '0',
+      porady: puvodniPorady ? '1' : '0',
       solo,
       ...zmeny,
     });
@@ -485,14 +547,20 @@ export function CalendarBrowser({
     const dalsi = puvodniStudioIds.includes(id)
       ? puvodniStudioIds.filter((x) => x !== id)
       : [...puvodniStudioIds, id];
-    if (dalsi.length === 0 && !puvodniNepritomnost) return;
+    if (dalsi.length === 0 && !puvodniNepritomnost && !puvodniPorady) return;
     prejdi({ studia: dalsi.length > 0 ? dalsi.join(',') : ZADNE_STUDIO, solo: '' });
   }
 
   /** Kulička u Mimo studio - stejné pravidlo jako u studií. */
   function prepniMimoStudio() {
-    if (puvodniNepritomnost && puvodniStudioIds.length === 0) return;
+    if (puvodniNepritomnost && puvodniStudioIds.length === 0 && !puvodniPorady) return;
     prejdi({ nepritomnost: puvodniNepritomnost ? '0' : '1', solo: '' });
+  }
+
+  /** Kulička u Porad (21. 9. 2026) - stejné pravidlo jako u ostatních. */
+  function prepniPorady() {
+    if (puvodniPorady && puvodniStudioIds.length === 0 && !puvodniNepritomnost) return;
+    prejdi({ porady: puvodniPorady ? '0' : '1', solo: '' });
   }
 
   /**
@@ -508,7 +576,9 @@ export function CalendarBrowser({
   const nazevSola = solo
     ? solo === SOLO_MIMO
       ? NAZEV_KALENDARE_MIMO
-      : (studios.find((s) => s.id === solo)?.shortName ?? '')
+      : solo === SOLO_PORADY
+        ? NAZEV_KALENDARE_PORADY
+        : (studios.find((s) => s.id === solo)?.shortName ?? '')
     : '';
 
   // Odkud se prislo - po posunu zpet se tyden v mobilu ukaze od konce
@@ -554,7 +624,7 @@ export function CalendarBrowser({
     prepisujeme.current = false;
     return () => cancelAnimationFrame(snimek);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniStudioIds.join(',')]);
+  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniStudioIds.join(',')]);
 
   // Když se okno zvětší nebo zmenší, prostřední období musí zůstat prostřední.
   useEffect(() => {
@@ -606,7 +676,7 @@ export function CalendarBrowser({
     // Závislosti musí obsahovat všechno, z čeho se skládá adresa - jinak by
     // posluchač držel starý výběr studií a švihnutí by ho vrátilo zpátky.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniStudioIds.join(',')]);
+  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniStudioIds.join(',')]);
 
   /** Šipky: stejný pohyb, jen ho rozjede prohlížeč sám a plynule. */
   function posun(smer: -1 | 1) {
@@ -621,7 +691,7 @@ export function CalendarBrowser({
     router.prefetch(adresa({ datum: datumPosunu(-1) }));
     router.prefetch(adresa({ datum: datumPosunu(1) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniStudioIds.join(',')]);
+  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniStudioIds.join(',')]);
 
   const nadpis = useMemo(() => {
     const prvni = new Date(days[0].startIso);
@@ -793,6 +863,37 @@ export function CalendarBrowser({
             {NAZEV_KALENDARE_MIMO}
           </button>
         </span>
+        {/* PORADY (zadání 21. 9. 2026) - žlutý kalendář schůzek. Každý v něm
+            vidí jen porady, na které je pozvaný. Zapíná se a sóluje stejně
+            jako ostatní kalendáře. */}
+        <span
+          className={`inline-flex items-center rounded-pill border text-sm font-heading font-semibold transition-colors ${
+            ukazPorady ? 'text-ink' : 'border-line text-muted'
+          } ${solo === SOLO_PORADY ? 'ring-2 ring-brand-purple ring-offset-2 ring-offset-paper' : ''}`}
+          style={ukazPorady ? { backgroundColor: `${BARVA_PORAD}26`, borderColor: BARVA_PORAD } : undefined}
+        >
+          <button
+            type="button"
+            onClick={prepniPorady}
+            aria-pressed={ukazPorady}
+            title={ukazPorady ? 'Vypnout Porady' : 'Zapnout Porady'}
+            aria-label={ukazPorady ? 'Vypnout Porady' : 'Zapnout Porady'}
+            className="flex items-center rounded-l-pill pl-3 pr-1.5 py-1.5"
+          >
+            <span
+              className="w-3 h-3 rounded-full shrink-0"
+              style={{ backgroundColor: ukazPorady ? BARVA_PORAD : '#C9C3DC' }}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => jenTentoKalendar(SOLO_PORADY)}
+            title={solo === SOLO_PORADY ? 'Zpět na původní výběr kalendářů' : 'Dočasně jen Porady (sólo)'}
+            className={`rounded-r-pill pl-0.5 pr-3.5 py-1.5 transition-colors ${ukazPorady ? '' : 'hover:text-ink'}`}
+          >
+            {NAZEV_KALENDARE_PORADY}
+          </button>
+        </span>
         {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
             (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
             orámovat, aby to bylo jasné, že je to v sólo režimu"). */}
@@ -926,6 +1027,15 @@ export function CalendarBrowser({
           projekty={projekty}
           herci={herci}
           zvukari={zvukari}
+          // Nová událost jde přepnout i na poradu (21. 9. 2026).
+          onPorada={
+            upravovana
+              ? undefined
+              : (den, casOd, casDo) => {
+                  setNovaBlokace(null);
+                  setOknoPorady({ upravovana: null, den, casOd, casDo });
+                }
+          }
           // Jen u NOVE udalosti - existujici natáčení se na Mimo studio
           // neprevadi (je to jiny zaznam, ne jina barva).
           onMimoStudio={
@@ -971,6 +1081,41 @@ export function CalendarBrowser({
               ja={ja}
               lidiTymu={lidiTymu}
               onClose={() => setOknoNepritomnosti(null)}
+              // Kdo nespravuje studia, dostane po dvojkliku rovnou Mimo
+              // studio - poradu si odsud přepne (21. 9. 2026).
+              onPorada={
+                oknoNepritomnosti.upravovana
+                  ? undefined
+                  : (den, casOd, casDo) => {
+                      setOknoNepritomnosti(null);
+                      setOknoPorady({ upravovana: null, den, casOd, casDo });
+                    }
+              }
+            />
+          </div>
+        </div>
+      )}
+
+      {oknoPorady && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/55 flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target !== e.currentTarget) return;
+            setOknoPorady(null);
+          }}
+        >
+          <div className="w-full max-w-[620px] my-auto">
+            <PoradaForm
+              key={oknoPorady.upravovana?.id ?? `nova-${oknoPorady.den}`}
+              upravovana={oknoPorady.upravovana}
+              vychoziDen={oknoPorady.den}
+              vychoziCasOd={oknoPorady.casOd}
+              vychoziCasDo={oknoPorady.casDo}
+              ja={ja}
+              lidiTymu={lidiTymu}
+              onClose={() => setOknoPorady(null)}
             />
           </div>
         </div>
@@ -983,6 +1128,11 @@ export function CalendarBrowser({
           timezone={timezone}
           canManage={canManage}
           onUpravit={() => {
+            if (detail.kind === 'PORADA' && detail.porada) {
+              setOknoPorady({ upravovana: detail.porada, den: detail.porada.den });
+              setDetail(null);
+              return;
+            }
             setUpravovana(detail);
             setNovaBlokace(null);
             setDetail(null);
@@ -1466,10 +1616,13 @@ function UdalostForm({
   herci,
   zvukari,
   onMimoStudio,
+  onPorada,
   onClose,
   onHotovo,
 }: {
   studios: Studio[];
+  /** Přepnutí nové události na poradu (21. 9. 2026). */
+  onPorada?: (den: string, casOd: string, casDo: string) => void;
   vychozi: { studioId: string; start: string; end: string };
   /**
    * Vybrání kalendáře Mimo studio (19. 9. 2026) - okno se vymění za jeho
@@ -1798,6 +1951,10 @@ function UdalostForm({
                 onMimoStudio?.(datum, od, doKdy);
                 return;
               }
+              if (e.target.value === '__porada__') {
+                onPorada?.(datum, od, doKdy);
+                return;
+              }
               setStudioId(e.target.value);
             }}
             className={inputClass}
@@ -1808,6 +1965,7 @@ function UdalostForm({
               </option>
             ))}
             {onMimoStudio && <option value="__mimo__">{NAZEV_KALENDARE_MIMO}</option>}
+            {onPorada && <option value="__porada__">{NAZEV_KALENDARE_PORADY}</option>}
           </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">
@@ -2080,9 +2238,14 @@ function DetailUdalosti({
   onSmazano: () => void;
 }) {
   const stav =
-    event.kind === 'BLOCK'
-      ? BLOCK_KIND_LABELS[event.state] ?? 'Blokace'
-      : SLOT_STATE_LABELS[event.state] ?? event.state;
+    event.kind === 'PORADA'
+      ? event.porada && event.porada.opakovani !== 'NE'
+        ? `Porada · ${popisOpakovani(event.porada.opakovani).toLowerCase()}`
+        : 'Porada'
+      : event.kind === 'BLOCK'
+        ? BLOCK_KIND_LABELS[event.state] ?? 'Blokace'
+        : SLOT_STATE_LABELS[event.state] ?? event.state;
+  const odkazVideo = event.kind === 'PORADA' ? platnyOdkaz(event.porada?.odkazVideo) : null;
 
   // Zavrit klavesou Esc, rolovanim nebo zmenou okna (bublina uz by jinde).
   useEffect(() => {
@@ -2198,6 +2361,25 @@ function DetailUdalosti({
             <p className="m-0 mt-1 text-xs font-body opacity-90 whitespace-pre-line break-words border-t border-black/10 dark:border-white/15 pt-1.5">
               {poznamka}
             </p>
+          )}
+          {/* PORADA (21. 9. 2026): připojení na videohovor jedním klepnutím
+              a úprava pro každého účastníka. */}
+          {event.kind === 'PORADA' && (
+            <div className="flex items-center gap-3 flex-wrap mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/15 text-xs font-heading font-semibold">
+              {odkazVideo && (
+                <a
+                  href={odkazVideo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-pill bg-brand-purple text-white px-3 py-1.5 no-underline hover:bg-brand-purpleDeep"
+                >
+                  ▶ Připojit se k hovoru
+                </a>
+              )}
+              <button type="button" onClick={onUpravit} className="underline underline-offset-2" style={{ color: 'inherit' }}>
+                Upravit
+              </button>
+            </div>
           )}
           {/* Upravit a smazat jen v uprave - dvojklik (20. 9. 2026). */}
           {(u?.caflouProjectId || (canManage && event.href)) && (

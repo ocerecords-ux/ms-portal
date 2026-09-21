@@ -184,8 +184,11 @@ export function NepritomnostForm({
   ja,
   lidiTymu,
   onClose,
+  onPorada,
 }: {
   upravovana: NepritomnostVKalendari | null;
+  /** Přepnutí nového záznamu na poradu (21. 9. 2026). */
+  onPorada?: (den: string, casOd: string, casDo: string) => void;
   /** YYYY-MM-DD - den, do kterého se dvojkliklo. */
   vychoziDen: string;
   /**
@@ -310,6 +313,15 @@ export function NepritomnostForm({
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
           {upravovana ? `Úprava — ${NAZEV_KALENDARE_MIMO.toLowerCase()}` : NAZEV_KALENDARE_MIMO}
         </h2>
+        {onPorada && (
+          <button
+            type="button"
+            onClick={() => onPorada(od, casOd, casDo)}
+            className="ml-auto text-xs font-heading font-semibold text-brand-purple hover:underline"
+          >
+            Místo toho porada →
+          </button>
+        )}
         <button type="button" onClick={onClose} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
           ×
         </button>

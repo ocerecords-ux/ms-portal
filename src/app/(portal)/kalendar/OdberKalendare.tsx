@@ -1,4 +1,5 @@
 'use client';
+import { BARVA_PORAD } from '@/lib/porady';
 
 import { useEffect, useState } from 'react';
 
@@ -26,7 +27,7 @@ import { useEffect, useState } from 'react';
 type Rozsah = 'ZVLAST' | 'ALL' | 'MINE';
 type Odber = {
   id: string;
-  scope: 'ALL' | 'STUDIO' | 'MINE' | 'MIMO';
+  scope: 'ALL' | 'STUDIO' | 'MINE' | 'MIMO' | 'PORADY';
   studioId: string | null;
   url: string;
   naposledy: string | null;
@@ -55,6 +56,8 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
         ? 'Jen moje'
         : o.scope === 'MIMO'
           ? 'Mimo studio'
+          : o.scope === 'PORADY'
+            ? 'Porady'
           : `Studio ${kratce(studios.find((s) => s.id === o.studioId)?.name ?? '')}`;
 
   async function nactiOdbery() {
@@ -102,6 +105,8 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
             telo: { scope: 'STUDIO', studioId: s.id },
           })),
           { klic: 'mimo', nazev: 'Mimo studio', barva: BARVA_MIMO, telo: { scope: 'MIMO' } },
+          // Porady (21. 9. 2026) - jen ty, na kterých je ten, kdo odebírá.
+          { klic: 'porady', nazev: 'Porady', barva: BARVA_PORAD, telo: { scope: 'PORADY' } },
         ];
         const hotove = await Promise.all(
           polozky.map(async (p) => ({ klic: p.klic, nazev: p.nazev, barva: p.barva, ...(await pozadej(p.telo)) })),

@@ -31,7 +31,7 @@ export const ODBER_KALENDARE = {
 ![Okno s výběrem: Každé studio zvlášť, Celý kalendář, Jen moje](/navody/odber-2.png)
 
 2. **Co chcete vidět:**
-   - **Každé studio zvlášť** (doporučeno) — Brno I, Brno II, Praha, London a Mimo studio jako **samostatné kalendáře**, každý ve své barvě. V telefonu je pak zapínáte a vypínáte jednotlivě.
+   - **Každé studio zvlášť** (doporučeno) — Brno I, Brno II, Praha, London, Mimo studio a Porady jako **samostatné kalendáře**, každý ve své barvě. V telefonu je pak zapínáte a vypínáte jednotlivě.
    - **Celý kalendář** — všechna studia a Mimo studio v jednom kalendáři.
    - **Jen moje** — natáčení, střihy a castingy, kde jste zvukař, a vaše Mimo studio.
 3. Klikněte na **Připravit kalendáře** (u ostatních voleb **Připravit odkaz**).
@@ -48,6 +48,8 @@ Každý kalendář má **vlastní řádek a vlastní tlačítka** — přidává
 7. **Moje odběry** — co odebíráte a kdy si to váš kalendář naposledy stáhl. **Zneplatnit** odkaz vypne — hodí se, když telefon ztratíte nebo odkaz omylem pošlete dál.
 
 **Vypnutí jednoho kalendáře:** v Apple Kalendáři klepněte dole na **Kalendáře** a odškrtněte ho; v Google Kalendáři ho vlevo v seznamu odškrtněte. Kalendář zůstane přidaný, jen se nezobrazuje.
+
+**Porady** jsou v telefonu vlastní žlutý kalendář a obsahují jen porady, na kterých jste. Odkaz na videohovor je v místě události — v Apple kalendáři na něj stačí klepnout.
 
 **Co v událostech uvidíte.** Schválně jen to podstatné, ať se to na telefonu vejde: **projekt · herec · zvukař** (u střihu *Střih · projekt · zvukař*, u castingu *Casting · herec · zvukař*). Čas ukazuje kalendář sám, studio poznáte podle barvy kalendáře. Adresa se neposílá; poznámka jen tehdy, když nějaká je.
 

@@ -26,15 +26,23 @@ export async function GET() {
   }
 
   try {
-    const [bloky, sloty, nabidky, nepritomnosti] = await Promise.all([
+    const [bloky, sloty, nabidky, nepritomnosti, porady] = await Promise.all([
       prisma.studioBlock.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
       prisma.recordingSlot.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
       prisma.recordingRequest.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
       prisma.nepritomnost.aggregate({ _count: { _all: true }, _max: { updatedAt: true } }),
+      // Porady (21. 9. 2026) - jen ty, na kterých je přihlášený.
+      prisma.porada
+        .aggregate({
+          where: { ucastnici: { some: { userId: session.user.id } } },
+          _count: { _all: true },
+          _max: { updatedAt: true },
+        })
+        .catch(() => ({ _count: { _all: 0 }, _max: { updatedAt: null } })),
     ]);
     const cast = (a: { _count: { _all: number }; _max: { updatedAt: Date | null } }) =>
       `${a._count._all}:${a._max.updatedAt?.getTime() ?? 0}`;
-    const otisk = [bloky, sloty, nabidky, nepritomnosti].map(cast).join('|');
+    const otisk = [bloky, sloty, nabidky, nepritomnosti, porady].map(cast).join('|');
     return NextResponse.json({ otisk }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (err) {
     console.error('GET /api/kalendar/zmena selhalo:', err);

@@ -385,6 +385,8 @@ model User {
 
   /// Dovolene a dny mimo studio (zadani 19. 9. 2026) - viz model Nepritomnost.
   nepritomnosti Nepritomnost[] @relation("NepritomnostKdo")
+  /// Porady, na které je pozvaný (zadání 21. 9. 2026).
+  poradyUcast   PoradaUcastnik[]
 }
 
 model Order {
@@ -2079,6 +2081,7 @@ enum FeedScope {
   STUDIO // cely kalendar jednoho studia
   ALL    // vsechna studia
   MIMO   // jen Mimo studio (20. 9. 2026 - kazdy kalendar zvlast)
+  PORADY // jen porady, na kterych je vlastnik odkazu (21. 9. 2026)
 }
 
 /// Osobni ICS odkaz. Nahodny, odvolatelny, filtruje se podle prav vlastnika -
@@ -3034,4 +3037,57 @@ enum StavNavrhu {
   CEKA      // čeká na zvukaře
   ZAPSANO   // zvukař z něj udělal výkaz
   ODMITNUTO // zvukař řekl, že se vykazovat nemá
+}
+
+// ===========================================================================
+// PORADY (zadani 21. 9. 2026: „pojdme ted udelat jeste jeden kalendar Porady,
+// ktery bude zlutou barvou. Tam by bylo super, kdyby ho videli jen lidi
+// z tymu, kteri si vytvori skupinu, jako je to v chatu ... Melo by tam jit
+// i nastavit opakovani udalosti a pridat link na videohovor").
+//
+// Porada neni vazana na studio - je to schuzka lidi. VIDI JI JEN UCASTNICI
+// (ani spravce kalendare ne, kdyz na ni neni pozvany). Opakovani se uklada
+// jako pravidlo, ne jako stovky radku: vyskyty se dopocitavaji pro zobrazeny
+// rozsah (lib/porady.ts). Jednotlivy vyskyt jde vynechat.
+// ===========================================================================
+
+enum OpakovaniPorady {
+  NE
+  DENNE
+  PRACOVNI_DNY
+  TYDNE
+  KAZDE_DVA_TYDNY
+  MESICNE
+}
+
+model Porada {
+  id          String          @id @default(cuid())
+  nazev       String
+  /// Prvni vyskyt - zacatek a konec. Delka se u opakovani drzi stejna.
+  start       DateTime
+  end         DateTime
+  opakovani   OpakovaniPorady @default(NE)
+  /// Posledni den, kdy se jeste opakuje (vcetne). Prazdne = porad dal.
+  opakovatDo  DateTime?
+  /// Vynechane vyskyty - dny YYYY-MM-DD (v Praze), smazane jednotlive.
+  vynechano   String[]        @default([])
+  /// Odkaz na videohovor (Meet, Zoom, Teams…).
+  odkazVideo  String?
+  poznamka    String?
+  zalozilId   String?
+  ucastnici   PoradaUcastnik[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([start])
+}
+
+model PoradaUcastnik {
+  poradaId String
+  porada   Porada @relation(fields: [poradaId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([poradaId, userId])
+  @@index([userId])
 }

@@ -100,6 +100,15 @@ V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a
 
 Ikona druhu je i přímo v bublině v kalendáři, zvukař taky — v týdnu na druhém řádku, v měsíci za tečkou.
 
+**Porady (žlutý kalendář).** Porady, schůzky a hovory týmu. **Každý vidí jen porady, na které je pozvaný** — když založíte poradu jen pro sebe a Karolínu, nikdo jiný ji v kalendáři neuvidí (ani ten, kdo kalendář spravuje).
+
+1. **Dvojklik** do mřížky → v okně události přepněte **Kalendář** na **Porady** (zvukař má v okně Mimo studio vpravo nahoře odkaz *Místo toho porada*). Když svítí jen Porady (sólo), dvojklik otevře poradu rovnou.
+2. Vyplňte **název**, den a čas a zaškrtněte, **kdo je na poradě** — jako když zakládáte skupinu v chatu. Vy jste na ní vždycky.
+3. **Opakování**: každý den, každý pracovní den, každý týden, každé dva týdny nebo každý měsíc; volitelně **do kdy**. Čas se drží i přes změnu letního času.
+4. **Odkaz na videohovor** (Meet, Zoom, Teams…) — v detailu porady je pak tlačítko **Připojit se k hovoru**.
+
+Upravit poradu smí každý účastník. U opakované se upravuje celá řada; jeden termín jde **zrušit samostatně** (když pondělní porada jednou odpadne). O pozvání, změně i zrušení přijde účastníkům zpráva pod **zvoneček**.
+
 **Kalendář se obnovuje sám.** Když někdo jiný zapíše, přesune nebo smaže událost, uvidíte to do pár vteřin bez obnovování stránky — v prohlížeči i v aplikaci v telefonu. Rozepsaný formulář se tím nezavře.
 
 **Události přes sebe leží jako papíry na stole.** Název každé události zůstane vidět: co začíná skoro naráz, leží vedle sebe (a úzká bublina dá názvu dva řádky), co začíná později, si lehne navrch přes celou šířku — ale až pod názvy těch předchozích. Když na bublinu najedete myší, zvedne se navrch a přečtete ji celou.

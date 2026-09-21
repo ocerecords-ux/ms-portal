@@ -4,6 +4,8 @@ import { buildIcs, type IcsEvent } from '@/lib/ics';
 import { canViewCalendar } from '@/lib/roles';
 import { BLOCK_KIND_LABELS } from '@/lib/calendar';
 import { popisDruhu } from '@/lib/nepritomnost';
+import { BARVA_PORAD, platnyOdkaz } from '@/lib/porady';
+import { nactiPorady } from '@/lib/poradyServer';
 
 /**
  * ODBĚR KALENDÁŘE MS PORTALU (zadání 8. 9. 2026, rozšířeno 20. 9. 2026:
@@ -78,6 +80,27 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   // Jen Mimo studio (20. 9. 2026: „aby se to objevilo jako samostatné
   // kalendáře, ať si dokážu vypínat jednotlivé kalendáře") - pátý kalendář
   // vedle čtyř studií, jen dovolené a nepřítomnosti celého týmu.
+  // PORADY (21. 9. 2026) - vlastní kalendář, jen porady, na kterých je
+  // vlastník odkazu. Odkaz na videohovor jde do místa: v Apple kalendáři na
+  // něj jde rovnou klepnout. V popisu jsou účastníci, nic víc.
+  if (feed.scope === 'PORADY') {
+    const porady = tym ? await nactiPorady(kdo.id, od, doo) : [];
+    return odpoved(
+      'MS kalendář — Porady',
+      porady.map((p) => ({
+        uid: `porada-${p.id.replace(':', '-')}@msportal.cz`,
+        start: new Date(p.start),
+        end: new Date(p.end),
+        summary: p.nazev,
+        location: platnyOdkaz(p.odkazVideo),
+        description: [p.ucastnici.map((u) => u.label).join(', '), p.poznamka].filter(Boolean).join('\n'),
+        updatedAt: new Date(p.upraveno),
+      })),
+      feed.id,
+      BARVA_PORAD,
+    );
+  }
+
   if (feed.scope === 'MIMO') {
     const mimo = await prisma.nepritomnost
       .findMany({ where: vRozsahu, orderBy: { start: 'asc' } })

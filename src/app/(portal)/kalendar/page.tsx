@@ -20,6 +20,8 @@ import { CalendarBrowser, type CalendarEvent, type CalendarDay } from './Calenda
 import { bezTitulu } from '@/lib/jmena';
 import { INTERNAL_ROLES } from '@/lib/roles';
 import type { NepritomnostVKalendari } from '@/lib/nepritomnost';
+import { SOLO_PORADY } from '@/lib/porady';
+import { nactiPorady } from '@/lib/poradyServer';
 
 /**
  * Kalendář studií (zadani 8. 9. 2026, upraveno 9. 9. 2026). Den / týden /
@@ -59,6 +61,8 @@ export default async function KalendarPage({
      * `solo` se vrátí zaškrtnutí, jaké bylo před kliknutím.
      */
     solo?: string;
+    /** „0" = kalendář Porady je vypnutý (zadání 21. 9. 2026). */
+    porady?: string;
   };
 }) {
   const session = await getServerSession(authOptions);
@@ -101,7 +105,9 @@ export default async function KalendarPage({
   const soloZAdresy = (searchParams?.solo ?? '').trim();
   const soloStudio = studios.find((s) => s.id === soloZAdresy) ?? null;
   const soloMimo = soloZAdresy === SOLO_MIMO;
-  const solo = soloStudio ? soloStudio.id : soloMimo ? SOLO_MIMO : '';
+  const soloPorady = soloZAdresy === SOLO_PORADY;
+  const solo = soloStudio ? soloStudio.id : soloMimo ? SOLO_MIMO : soloPorady ? SOLO_PORADY : '';
+  const puvodniPorady = searchParams?.porady !== '0';
 
   const aktivni = solo ? (soloStudio ? [soloStudio] : []) : puvodni;
   // Mřížka (pásmo a otevírací doba) se musí o něco opřít i bez studií.
@@ -236,6 +242,9 @@ export default async function KalendarPage({
    * která začala minulý týden a končí ve středu.
    */
   const ukazNepritomnost = solo ? soloMimo : puvodniNepritomnost;
+  // PORADY (21. 9. 2026) - jen ty, na které je přihlášený pozvaný.
+  const ukazPorady = solo ? soloPorady : puvodniPorady;
+  const porady = ukazPorady ? await nactiPorady(session.user.id, from, to) : [];
   const spravceKalendare = canManageCalendar(session.user.role);
   const [radkyNepritomnosti, lidiTymu] = await Promise.all([
     ukazNepritomnost
@@ -352,6 +361,9 @@ export default async function KalendarPage({
       zvukari={zvukari}
       nepritomnosti={nepritomnosti}
       ukazNepritomnost={ukazNepritomnost}
+      porady={porady}
+      ukazPorady={ukazPorady}
+      puvodniPorady={puvodniPorady}
       ja={{ id: session.user.id, label: session.user.name || session.user.email }}
       lidiTymu={lidiTymu.map((u) => ({ id: u.id, label: u.name || u.email }))}
     />
