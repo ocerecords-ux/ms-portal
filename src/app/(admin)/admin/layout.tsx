@@ -13,6 +13,9 @@ import { pocetBonusuKeSchvaleni } from '@/lib/bonusyServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { loadQuickActions } from '@/lib/quickActionsServer';
 import { quickActionsFor } from '@/lib/quickActions';
+import { prisma } from '@/lib/db';
+import { countUnread } from '@/lib/notifications';
+import { odkazNaFotku } from '@/lib/fotky';
 
 // Administrace Mediaspace - pristupna jen uctum s roli ADMIN. Middleware
 // (src/middleware.ts) uz neprihlasene/neadminy blokuje na urovni routovani,
@@ -24,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== 'ADMIN') redirect('/login');
 
-  const [entries, tasks, quickActions, bonusyKeSchvaleni, pripominkyKVyrizeni] = await Promise.all([
+  const [entries, tasks, quickActions, bonusyKeSchvaleni, pripominkyKVyrizeni, entriesMobil, unread, ucet] = await Promise.all([
     loadMenuEntries(session.user.id),
     loadMyTasks(session.user.id, session.user.role),
     loadQuickActions(session.user.id, session.user.role),
@@ -32,13 +35,25 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     pocetBonusuKeSchvaleni(),
     // Odznak u bubliny se zpetnou vazbou - viz zadani 15. 9. 2026.
     pocetOtevrenychPripominek(),
+    // LISTA PRO MOBIL, FOTKA A ZVONEK (21. 9. 2026: „když kliknu na Doklady,
+    // tak se mi tam ukáže výchozí nabídka na panelu"). Administrace (Doklady,
+    // Firmy, Uživatelé…) má vlastní layout a do té doby liště neposílala
+    // mobilní nabídku - telefon pak ukázal tu z počítače. Stejně tak chyběla
+    // fotka a počet nepřečtených pod zvonkem.
+    loadMenuEntries(session.user.id, 'MOBIL'),
+    countUnread(session.user.id).catch(() => 0),
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { maFotku: true } }).catch(() => null),
   ]);
 
   return (
     <div className="min-h-screen bg-paper">
       <Topbar
         userLabel={session.user.name || session.user.email}
+        userPhotoUrl={odkazNaFotku(session.user.id, ucet?.maFotku)}
         items={visibleFor(entries, 'ADMIN')}
+        itemsMobil={visibleFor(entriesMobil, 'ADMIN')}
+        unreadNotifications={unread}
+        napoveda
         pageOptions={pageOptionsFor('ADMIN')}
         odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
         pripominky={pripominkyKVyrizeni}
