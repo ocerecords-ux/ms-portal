@@ -215,6 +215,21 @@ export function CalendarBrowser({
   const router = useRouter();
 
   /**
+   * TELEFON NA ŠÍŘKU = JEN MŘÍŽKA (zadání 21. 9. 2026: „když jsem na stránce
+   * kalendář a otočím mobil na šířku, tak se mi zobrazí na fullscreen
+   * a zobrazí se jen mřížka kalendáře"). Stránka si tu značku dá na <html>
+   * a zbytek obstará CSS v globals.css (media query na šířku a nízkou
+   * výšku) - lišta, ovládání a panely zmizí, mřížka dostane celou výšku.
+   * Po odchodu z kalendáře se značka zase sundá.
+   */
+  useEffect(() => {
+    document.documentElement.dataset.kalendar = '1';
+    return () => {
+      delete document.documentElement.dataset.kalendar;
+    };
+  }, []);
+
+  /**
    * KALENDÁŘ SE AKTUALIZUJE SÁM (zadání 21. 9. 2026: „aby se aktualizoval
    * kalendář sám, když mám otevřený prohlížeč nebo aplikaci, co nejdříve").
    *
@@ -720,14 +735,14 @@ export function CalendarBrowser({
   }, [days, view, timezone, anchorIso]);
 
   return (
-    <section className="flex flex-col gap-3 sm:gap-5">
+    <section data-kal-sekce className="flex flex-col gap-3 sm:gap-5">
       {/* Hlavicka: pohled a posun v case.
 
           NA TELEFONU DVA ŘÁDKY MÍSTO ŠESTI (zadání 21. 9. 2026: „zredukujme
           řádky u kalendáře v mobilu, aby se posunul víc nahoru k horní
           liště"): datum a ‹ Dnes › na jednom, Den/Týden/Měsíc pod tím,
           kalendáře v jednom posuvném pruhu a pod nimi hledání. */}
-      <div className="flex items-end justify-between gap-4 flex-wrap">
+      <div data-kal-ovladani className="flex items-end justify-between gap-4 flex-wrap">
         <div className="hidden sm:block">
           <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">{nadpis}</p>
@@ -802,7 +817,7 @@ export function CalendarBrowser({
             - NÁZEV zapne PROZATÍMNÍ SÓLO - svítí jen on, orámovaný, a druhý
               klik na stejný název vrátí zaškrtnutí, jaké bylo předtím. */}
       {/* Na telefonu jeden posuvný pruh (21. 9. 2026), od tabletu se lámou. */}
-      <div className="flex items-center gap-2 flex-nowrap sm:flex-wrap overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 py-1 sm:py-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div data-kal-ovladani className="flex items-center gap-2 flex-nowrap sm:flex-wrap overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 py-1 sm:py-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {studios.map((s) => {
           const zapnute = solo ? solo === s.id : selectedStudioIds.includes(s.id);
           const soluje = solo === s.id;
@@ -1339,7 +1354,7 @@ function MrizkaPohled({
             />
           )}
 
-          <div ref={rolovatko} className="max-h-[62vh] overflow-y-auto">
+          <div ref={rolovatko} data-kal-mrizka className="max-h-[62vh] overflow-y-auto">
             <div className="grid" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
               <div className="relative" style={{ height: `${celkovaVyska}px` }}>
                 {hodiny.map((h) => (

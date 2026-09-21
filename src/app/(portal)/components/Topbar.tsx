@@ -280,7 +280,7 @@ export function Topbar({
     // neslo dostat. Zalamuje se schvalne jen v uzkem miste: `flex-wrap` plus
     // `w-full` u odkazu je posle pod znacku a ovladaci prvky, od tabletu vys
     // (`sm:`) zustava lista presne takova, jaka byla - jeden radek.
-    <header className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 sm:gap-4 shadow-md">
+    <header data-lista className="sticky top-0 z-50 bg-gradient-to-b from-brand-purple to-brand-purpleDeep px-3 sm:px-10 py-3 sm:py-5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 sm:gap-4 shadow-md">
       {/* Branding "MS portal | [logo]" podle referencniho mockupu uzivatele
           (12. 9. 2026) - svisla oddelovaci cara misto "by" a znatelne vetsi
           logo (jeste zvetseno 5. 9. 2026). */}

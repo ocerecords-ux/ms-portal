@@ -176,7 +176,7 @@ export default async function PortalLayout({ children }: { children: React.React
           `hidden md:block` je kvůli tomu, že panely samy jsou `position:
           fixed` — schovat se musí přes rodiče, jinak by dál visely nad
           stránkou. */}
-      <div className="hidden md:block">
+      <div data-doky className="hidden md:block">
         {internal && <QuickDock actions={quickActions} available={quickActionsFor(role)} />}
         {internal && <TaskDock tasks={tasks} />}
         {/* Chat týmu - stejný vysouvací panel, jen u spodní hrany

@@ -361,3 +361,27 @@ body {
     text-decoration: underline;
   }
 }
+
+/*
+ * KALENDÁŘ NA TELEFONU OTOČENÉM NA ŠÍŘKU (zadání 21. 9. 2026: „když otočím
+ * mobil na šířku, tak se mi zobrazí na fullscreen a zobrazí se jen mřížka
+ * kalendáře"). Značku data-kalendar dává na <html> CalendarBrowser.
+ * Nízká výška odliší telefon na šířku od tabletu i počítače.
+ */
+@media (orientation: landscape) and (max-height: 560px) {
+  html[data-kalendar] [data-lista],
+  html[data-kalendar] [data-doky],
+  html[data-kalendar] [data-kal-ovladani] {
+    display: none !important;
+  }
+  html[data-kalendar] .obsah-portalu {
+    padding: 0 max(6px, env(safe-area-inset-right)) 0 max(6px, env(safe-area-inset-left)) !important;
+  }
+  html[data-kalendar] [data-kal-sekce] {
+    gap: 0 !important;
+  }
+  /* Hlavička dnů a pruh Mimo studio zůstávají nahoře, zbytek výšky mřížka. */
+  html[data-kalendar] [data-kal-mrizka] {
+    max-height: calc(100dvh - 96px) !important;
+  }
+}
