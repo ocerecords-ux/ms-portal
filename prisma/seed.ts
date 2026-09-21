@@ -5,6 +5,7 @@ import { VYCHOZI_NAVODY } from './vychoziNavody';
 import { GOOGLE_KALENDAR } from './importKalendare/googleKalendar';
 import { prahaNaUtc, rozeberUdalost, srovnej } from '../src/lib/importGoogleKalendar';
 import { bezTitulu } from '../src/lib/jmena';
+import { PODPIS_ONDREJ } from './podpisOndrej';
 
 const prisma = new PrismaClient();
 
@@ -186,6 +187,7 @@ async function main() {
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
   await brunoZpetneOznamPreposlech();
+  await vlozPodpisNaFaktury();
 
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
@@ -1026,5 +1028,23 @@ async function brunoZpetneOznamPreposlech() {
     else console.log('  bruno zpetne: preposlechnuty projekt "Annie" nenalezen');
   } catch (err) {
     console.warn('  bruno zpetne: nepovedlo se', err);
+  }
+}
+
+/**
+ * Podpis na faktury (21. 9. 2026: „na fakturách chybí můj podpis"). Jednorázově
+ * ho vloží ke všem vlastním firmám, které podpis ještě nemají. Pak už se
+ * nahrává/mění/odebírá v Doklady → Moje firmy → detail firmy.
+ */
+async function vlozPodpisNaFaktury() {
+  const ZNAMKA = 'podpis-na-faktury';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const r = await prisma.issuerCompany.updateMany({ where: { podpis: null }, data: { podpis: PODPIS_ONDREJ } });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  podpis na faktury: vlozen k ${r.count} firmam`);
+  } catch (e) {
+    console.warn('  podpis na faktury selhal:', e);
   }
 }

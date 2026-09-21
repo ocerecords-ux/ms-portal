@@ -23,10 +23,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
 
   try {
-    const expense = await prisma.expense.findUnique({
-      where: { id: params.id },
-      select: { attachmentUrl: true, attachmentName: true },
-    });
+    // Dalsi priloha (21. 9. 2026) se vybira parametrem ?priloha=<id>,
+    // bez nej jde o hlavni prilohu dokladu.
+    const dalsiId = req.nextUrl.searchParams.get('priloha');
+    const expense = dalsiId
+      ? await prisma.prilohaVydaje
+          .findFirst({ where: { id: dalsiId, expenseId: params.id }, select: { url: true, nazev: true } })
+          .then((p) => (p ? { attachmentUrl: p.url, attachmentName: p.nazev } : null))
+      : await prisma.expense.findUnique({
+          where: { id: params.id },
+          select: { attachmentUrl: true, attachmentName: true },
+        });
     if (!expense?.attachmentUrl) {
       return NextResponse.json({ error: 'Doklad přílohu nemá.' }, { status: 404 });
     }

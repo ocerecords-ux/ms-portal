@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { CURRENCIES } from '@/lib/doklady';
+import { dekodujPng } from '@/lib/pdf/png';
 
 // Uprava vlastni fakturacni firmy vcetne ciselnych rad (zadani 6. 9. 2026).
 const schema = z.object({
@@ -25,6 +26,8 @@ const schema = z.object({
   defaultCurrency: z.enum(CURRENCIES).optional(),
   isDefault: z.boolean().optional(),
   active: z.boolean().optional(),
+  // PNG data URL podpisu, null = odebrat. Velikost hlídá i klient (zmenšuje).
+  podpis: z.string().max(600000).nullable().optional(),
 });
 
 function toPositiveInt(v: string | number | undefined): number | undefined {
@@ -71,6 +74,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.offerNumberFormat !== undefined) data.offerNumberFormat = d.offerNumberFormat;
     if (d.defaultCurrency !== undefined) data.defaultCurrency = d.defaultCurrency;
     if (d.active !== undefined) data.active = d.active;
+    if (d.podpis !== undefined) {
+      if (d.podpis && !dekodujPng(d.podpis)) {
+        return NextResponse.json({ error: 'Podpis musí být obrázek PNG.' }, { status: 400 });
+      }
+      data.podpis = d.podpis || null;
+    }
 
     if (d.contractNumberFormat !== undefined) data.contractNumberFormat = d.contractNumberFormat;
 

@@ -18,6 +18,7 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
         category: true,
         supplier: { select: { name: true, bankAccount: true } },
         issuer: { select: { name: true } },
+        prilohy: { orderBy: { createdAt: 'asc' }, select: { id: true, nazev: true } },
       },
     }),
     prisma.expenseCategory.findMany({ where: { active: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
@@ -105,6 +106,7 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
         categories={categories.map((c) => ({ id: c.id, name: c.name }))}
         companies={companies}
         projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
+        dalsiPrilohy={expense.prilohy}
       />
         </div>
 

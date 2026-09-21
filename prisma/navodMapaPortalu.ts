@@ -46,7 +46,7 @@ U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích toč�
 
 **Ceníky** jsou dvě věci najednou: ceny služeb a zároveň seznam typů projektu. U projektu jde vybrat jen takový typ, který je v ceníku — proto se nové typy přidávají tady.
 
-**Doklady** jsou peníze: nabídky, faktury, přijaté výdaje, smlouvy, banka a „Moje firmy" (za kterou firmu doklad vystavujeme, číselné řady, bankovní účty).
+**Doklady** jsou peníze: nabídky, faktury, přijaté výdaje, smlouvy, banka a „Moje firmy" (za kterou firmu doklad vystavujeme, číselné řady, bankovní účty, podpis na faktury). U výdaje se nahraje PDF nebo fotka dokladu (i víc souborů) — údaje se z něj přečtou samy; přílohy i údaje jde kdykoli později doplnit v detailu výdaje.
 
 **Kalendář** je studio a natáčení: kdo kdy natáčí, kdy je studio blokované a nabídky termínů pro herce.
 
@@ -68,7 +68,7 @@ Karta projektu má záložky a ukazují se jen ty, které dávají smysl:
 - **Přeposlech** — AudioTagger: poslech nahrávky a zápis chyb s časem a stranou scénáře.
 - **Natáčecí protokol** — co se při natáčení stalo.
 - **Historie** — co se u projektu měnilo a jaké zprávy odešly klientovi.
-- **Doklady** — nabídky, faktury, výdaje a smlouvy navázané na projekt. Jen admin. Odsud jde nový doklad rovnou založit, projekt i klient se předvyplní.
+- **Doklady** — nabídky, faktury, výdaje a smlouvy navázané na projekt. Jen admin. Odsud jde nový doklad (i výdaj, také k ukončenému projektu) rovnou založit, projekt i klient se předvyplní.
 
 # Cesta zakázky
 

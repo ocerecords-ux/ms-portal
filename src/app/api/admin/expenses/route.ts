@@ -100,6 +100,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Dalsi prilohy (21. 9. 2026) - vse, co clovek vybral krome prvniho
+    // souboru. Nahraji se predem, aby chyba zastavila ulozeni celeho dokladu.
+    const dalsi: { url: string; nazev: string }[] = [];
+    for (const soubor of formData.getAll('dalsi')) {
+      if (!(soubor instanceof File) || soubor.size === 0) continue;
+      const r = await uploadExpenseAttachment(soubor);
+      if (r && 'error' in r) return NextResponse.json({ error: r.error }, { status: 400 });
+      if (r) dalsi.push({ url: r.url, nazev: r.name });
+    }
+
     // Kurz CNB ke dni dokladu.
     const rate = await getRateForCurrency(d.currency, issueDate);
 
@@ -130,6 +140,7 @@ export async function POST(req: NextRequest) {
         attachmentUrl,
         attachmentName,
         note: d.note || null,
+        ...(dalsi.length > 0 ? { prilohy: { create: dalsi } } : {}),
       },
     });
 

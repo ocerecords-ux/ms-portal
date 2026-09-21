@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { VyberPole } from '@/components/VyberPole';
 
 export type ProjectChoice = { id: string; label: string; finished: boolean };
@@ -16,7 +17,13 @@ export type ProjectChoice = { id: string; label: string; finished: boolean };
  * se nabídne vždycky — i když je mezitím dokončený nebo z Caflou zmizel.
  * Doklad k dokončenému projektu tak jde dál otevřít a uložit, jen se k němu
  * nový nepřiřadí omylem.
+ *
+ * UKONČENÉ NA POŽÁDÁNÍ (zadání 21. 9. 2026: „potřebuju přidat výdaje i na
+ * ukončený projekt"). Poslední volba seznamu „Zobrazit i ukončené projekty"
+ * je přidá pod rozpracované - výchozí seznam zůstává krátký.
  */
+const UKAZ_UKONCENE = '__ukoncene__';
+
 export function ProjectSelect({
   value,
   onChange,
@@ -32,7 +39,9 @@ export function ProjectSelect({
   disabled?: boolean;
   className?: string;
 }) {
+  const [iUkoncene, setIUkoncene] = useState(false);
   const rozpracovane = projects.filter((p) => !p.finished);
+  const ukoncene = iUkoncene ? projects.filter((p) => p.finished && p.id !== value) : [];
   // Projekt uz ulozeny u dokladu: bud je mezi dokoncenymi, nebo v seznamu
   // vubec neni. V obou pripadech se musi nabidnout, jinak by ho ulozeni
   // shodilo.
@@ -42,7 +51,13 @@ export function ProjectSelect({
   return (
     <VyberPole
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        if (e.target.value === UKAZ_UKONCENE) {
+          setIUkoncene(true);
+          return;
+        }
+        onChange(e.target.value);
+      }}
       disabled={disabled}
       className={className}
     >
@@ -55,6 +70,14 @@ export function ProjectSelect({
           {p.label}
         </option>
       ))}
+      {ukoncene.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.label} (ukončený)
+        </option>
+      ))}
+      {!iUkoncene && projects.some((p) => p.finished) && (
+        <option value={UKAZ_UKONCENE}>+ Zobrazit i ukončené projekty…</option>
+      )}
     </VyberPole>
   );
 }

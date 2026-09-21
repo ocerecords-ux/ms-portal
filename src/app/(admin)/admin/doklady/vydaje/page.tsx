@@ -33,7 +33,7 @@ function formatDate(date: Date | null): string {
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: { tab?: string; kategorie?: string };
+  searchParams: { tab?: string; kategorie?: string; projekt?: string };
 }) {
   await ensureExpenseCategories();
 
@@ -180,6 +180,7 @@ export default async function ExpensesPage({
               currency: i.defaultCurrency,
             }))}
             projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
+            vychoziProjekt={searchParams?.projekt || null}
           />
         </div>
       </div>

@@ -101,6 +101,9 @@ export function ProjectDocuments({
     // Smlouva se zaklada formularem primo na seznamu smluv, ne na vlastni
     // strance - proto adresa bez /nova.
     { href: sProjektem('/admin/doklady/smlouvy'), label: 'Nová smlouva', druh: 'smlouva' as const },
+    // Vydaj i k ukoncenemu projektu (21. 9. 2026: „potrebuju pridat vydaje
+    // i na ukonceny projekt") - formular se otevre s projektem predvyplnenym.
+    { href: `/admin/doklady/vydaje?projekt=${encodeURIComponent(caflouProjectId)}`, label: 'Nový výdaj', druh: 'vydaj' as const },
   ];
 
   return (

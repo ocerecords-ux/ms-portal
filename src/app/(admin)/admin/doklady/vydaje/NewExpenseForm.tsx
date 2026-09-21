@@ -22,17 +22,21 @@ export function NewExpenseForm({
   categories,
   issuers,
   projects,
+  vychoziProjekt,
 }: {
   categories: { id: string; name: string }[];
   issuers: { id: string; name: string; isDefault: boolean; currency: Currency }[];
   projects: ProjectChoice[];
+  /** Projekt z adresy (?projekt=) - výdaj založený z detailu projektu (21. 9. 2026). */
+  vychoziProjekt?: string | null;
 }) {
   const router = useRouter();
   const defaultIssuer = issuers.find((i) => i.isDefault) ?? issuers[0];
-  const fileRef = useRef<HTMLInputElement>(null);
   const fotoRef = useRef<HTMLInputElement>(null);
+  const souborRef = useRef<HTMLInputElement>(null);
 
-  const [open, setOpen] = useState(false);
+  // Z detailu projektu se sem chodi rovnou zakladat - formular je pak otevreny.
+  const [open, setOpen] = useState(Boolean(vychoziProjekt));
 
   // Prisel sem clovek pres rychlou volbu z leveho panelu? Pak rovnou
   // rozbalit - zkratka ma vest do editacniho okna, ne jen na stranku
@@ -43,7 +47,7 @@ export function NewExpenseForm({
     dueDate: '',
     number: '',
     categoryId: categories[0]?.id ?? '',
-    caflouProjectId: '',
+    caflouProjectId: vychoziProjekt ?? '',
     issuerCompanyId: defaultIssuer?.id ?? '',
     currency: (defaultIssuer?.currency ?? 'CZK') as Currency,
     description: '',
@@ -53,14 +57,15 @@ export function NewExpenseForm({
     paymentMethod: 'TRANSFER' as PaymentMethod,
     note: '',
   });
-  const [fileName, setFileName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Vyfoceny doklad (zadani 10. 9. 2026). Drzi se ve stavu, ne v inputu na
-  // prilohu - do file inputu se soubor programove vlozit neda a fotka se
-  // ma prilozit ke dokladu stejne jako rucne vybrany soubor.
-  const [fotka, setFotka] = useState<File | null>(null);
+  // PŘÍLOHY NA JEDNOM MÍSTĚ (zadání 21. 9. 2026: „při vkládání dokladu se
+  // tady dubluje vkládání příloh, chtělo by to sjednotit"). Dřív byl nahoře
+  // „Vybrat doklad" (přečetl se) a dole ještě „Příloha" - a nebylo jasné,
+  // co kam. Teď je jen seznam souborů: první je doklad, ze kterého se čtou
+  // údaje a ukazuje se v náhledu, další jsou přílohy navíc.
+  const [soubory, setSoubory] = useState<File[]>([]);
   const [cteni, setCteni] = useState(false);
   const [cteniZprava, setCteniZprava] = useState<string | null>(null);
 
@@ -167,20 +172,24 @@ export function NewExpenseForm({
     });
   }
 
-  async function nactiZFotky(soubor: File) {
-    setFotka(soubor);
-    setFileName(soubor.name);
+  /** Přidá vybrané soubory. Když zatím žádný nebyl, první se přečte. */
+  function pridejSoubory(nove: File[]) {
+    if (nove.length === 0) return;
+    const bylPrazdny = soubory.length === 0;
+    setSoubory((s) => [...s, ...nove]);
     setError(null);
+    if (bylPrazdny) void nactiZFotky(nove[0]);
+  }
 
-    // PDF se přiloží, ale nepřečte - čtečka umí obrázky (viz POVOLENE_TYPY
-    // v /api/admin/expenses/precti). Radši to říct, než tiše nic nedoplnit.
-    if (soubor.type === 'application/pdf') {
-      setCteniZprava('PDF jsem přiložil. Číst zatím umím jen obrázek — údaje vyplňte ručně.');
-      return;
-    }
+  function odeberSoubor(index: number) {
+    setSoubory((s) => s.filter((_, i) => i !== index));
+    if (index === 0) setCteniZprava(null);
+  }
 
+  async function nactiZFotky(soubor: File) {
+    // PDF se čte stejně jako fotka (21. 9. 2026: „aby uměl číst údaje i z pdf").
     if (soubor.size > MAX_FOTKA_BYTES) {
-      setCteniZprava('Fotka je moc velká na přečtení, údaje vyplňte ručně.');
+      setCteniZprava('Soubor je moc velký na přečtení, údaje vyplňte ručně.');
       return;
     }
 
@@ -200,7 +209,7 @@ export function NewExpenseForm({
       setCteniZprava(
         jistota !== null && jistota < 0.7
           ? 'Doklad šel číst špatně — překontrolujte prosím částku a datum.'
-          : 'Údaje jsou z fotky — zkontrolujte je a uložte.',
+          : 'Údaje jsou z dokladu — zkontrolujte je a uložte.',
       );
     } catch {
       setCteniZprava('Doklad se nepodařilo přečíst, vyplňte údaje ručně.');
@@ -229,9 +238,8 @@ export function NewExpenseForm({
       body.set('paid', form.paid ? 'true' : 'false');
       body.set('paymentMethod', form.paymentMethod);
       if (form.note) body.set('note', form.note);
-      // Vyfoceny doklad ma prednost - kdyz clovek fotil, chce prilozit fotku.
-      const file = fotka ?? fileRef.current?.files?.[0];
-      if (file) body.set('attachment', file);
+      // Prvni soubor je doklad, zbytek dalsi prilohy.
+      soubory.forEach((soubor, i) => body.append(i === 0 ? 'attachment' : 'dalsi', soubor));
 
       const res = await fetch('/api/admin/expenses', { method: 'POST', body });
       const data = await res.json().catch(() => ({}));
@@ -243,11 +251,10 @@ export function NewExpenseForm({
       // v seznamu a je jasné, že se opravdu uložil.
       // Projekt zustava vybrany - doklady k jednomu projektu chodi po davkach.
       setForm((f) => ({ ...f, number: '', description: '', amount: '', note: '', dueDate: '' }));
-      setFileName(null);
-      setFotka(null);
+      setSoubory([]);
       setCteniZprava(null);
-      if (fileRef.current) fileRef.current.value = '';
       if (fotoRef.current) fotoRef.current.value = '';
+      if (souborRef.current) souborRef.current.value = '';
       setOpen(false);
       router.refresh();
     } catch {
@@ -301,33 +308,79 @@ export function NewExpenseForm({
           být jen možnost vybrat přílohu, ne vyfotit. Ale mělo by to mít
           stejnou funkci"). Čtení je v obou případech totéž - liší se jen to,
           odkud se obrázek vezme, a proto i popisek. */}
-      <div className="flex flex-wrap items-center gap-3 bg-tint border border-line rounded-lg px-4 py-3">
+      <div className="flex flex-col gap-3 bg-tint border border-line rounded-lg px-4 py-3">
         <input
           ref={fotoRef}
           type="file"
-          accept={jeDotykovy ? 'image/*' : 'application/pdf,image/*'}
-          {...(jeDotykovy ? { capture: 'environment' as const } : {})}
+          accept="image/*"
+          capture="environment"
           className="hidden"
           onChange={(e) => {
-            const soubor = e.target.files?.[0];
-            if (soubor) void nactiZFotky(soubor);
+            pridejSoubory(Array.from(e.target.files ?? []));
+            e.target.value = '';
           }}
         />
-        <button
-          type="button"
-          onClick={() => fotoRef.current?.click()}
-          disabled={cteni}
-          className="inline-flex items-center gap-2 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
-        >
-          {jeDotykovy ? <IkonaFotak /> : <IkonaSoubor />}
-          {cteni ? 'Čtu doklad…' : jeDotykovy ? 'Vyfotit doklad' : 'Vybrat doklad'}
-        </button>
-        <span className="text-xs font-body text-muted flex-1 min-w-[200px]">
-          {cteniZprava ??
-            (jeDotykovy
-              ? 'Vyfoťte účtenku a částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.'
-              : 'Vyberte sken nebo fotku účtenky a částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.')}
-        </span>
+        <input
+          ref={souborRef}
+          type="file"
+          multiple
+          accept="application/pdf,image/*"
+          className="hidden"
+          onChange={(e) => {
+            pridejSoubory(Array.from(e.target.files ?? []));
+            e.target.value = '';
+          }}
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => (jeDotykovy && soubory.length === 0 ? fotoRef : souborRef).current?.click()}
+            disabled={cteni}
+            className="inline-flex items-center gap-2 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+          >
+            {jeDotykovy && soubory.length === 0 ? <IkonaFotak /> : <IkonaSoubor />}
+            {cteni
+              ? 'Čtu doklad…'
+              : soubory.length > 0
+                ? 'Přidat další přílohu'
+                : jeDotykovy
+                  ? 'Vyfotit doklad'
+                  : 'Vybrat doklad'}
+          </button>
+          {jeDotykovy && soubory.length === 0 && (
+            <button
+              type="button"
+              onClick={() => souborRef.current?.click()}
+              className="text-sm font-heading font-semibold text-brand-purple bg-transparent border-0"
+            >
+              nebo vybrat soubor / PDF
+            </button>
+          )}
+          <span className="text-xs font-body text-muted flex-1 min-w-[200px]">
+            {cteniZprava ??
+              (soubory.length > 0
+                ? 'Další soubory se jen přiloží.'
+                : 'Vyberte PDF, sken nebo fotku dokladu (klidně víc souborů) - částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.')}
+          </span>
+        </div>
+        {soubory.length > 0 && (
+          <ul className="list-none m-0 p-0 flex flex-col gap-1">
+            {soubory.map((soubor, i) => (
+              <li key={`${soubor.name}-${i}`} className="flex items-center gap-2 text-sm font-body text-ink min-w-0">
+                <span className="text-xs font-heading text-muted shrink-0">{i === 0 ? 'Doklad' : 'Příloha'}</span>
+                <span className="truncate">{soubor.name}</span>
+                <button
+                  type="button"
+                  onClick={() => odeberSoubor(i)}
+                  aria-label={`Odebrat ${soubor.name}`}
+                  className="text-muted hover:text-danger bg-transparent border-0 px-1 leading-none"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Nazev je prvni - zadava se jako prvni (zadani 8. 9. 2026). Dodavatel
@@ -520,18 +573,7 @@ export function NewExpenseForm({
         </label>
       </div>
 
-      <div className="flex items-end gap-4 flex-wrap">
-        <label className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
-          <span className="text-sm font-body text-ink">Příloha (PDF nebo foto)</span>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/pdf,image/*"
-            onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
-            className="text-sm font-body text-muted file:mr-3 file:rounded-lg file:border file:border-line file:bg-field file:px-3 file:py-2 file:text-sm file:font-heading file:text-ink"
-          />
-          {fileName && <span className="text-xs text-muted font-body truncate">{fileName}</span>}
-        </label>
+      <div className="flex items-end gap-4 flex-wrap justify-end">
         {/* Prepinac se dvema stavy misto jednoho tlacitka (zadani 8. 9. 2026)
             - je z nej videt, ktera moznost plati, i bez najeti mysi. */}
         <span className="mb-0.5 inline-flex rounded-lg border border-line overflow-hidden">

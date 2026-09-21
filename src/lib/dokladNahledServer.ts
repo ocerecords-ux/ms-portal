@@ -120,6 +120,7 @@ export async function nahledDokladu(
       phone: vydavatel.phone,
     },
     dodavatelPlatceDph: vydavatel.vatPayer,
+    podpis: vydavatel.podpis,
     odberatel: {
       name: odberatel?.name ?? '—',
       ic: odberatel?.ic ?? null,

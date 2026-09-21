@@ -78,6 +78,8 @@ export async function GET(req: NextRequest) {
         issueDate: true,
         attachmentUrl: true,
         attachmentName: true,
+        // Dalsi prilohy (21. 9. 2026) jdou do ZIPu taky, s poradim v nazvu.
+        prilohy: { orderBy: { createdAt: 'asc' }, select: { url: true, nazev: true } },
       },
     });
 
@@ -99,6 +101,14 @@ export async function GET(req: NextRequest) {
         nazev: `${popis}${pripona}`,
         datum: v.issueDate,
         nacti: async () => nactiPrilohu(v.attachmentUrl!, v.attachmentName || 'priloha'),
+      });
+      v.prilohy.forEach((p: { url: string; nazev: string }, i: number) => {
+        const pr = p.nazev.includes('.') ? `.${p.nazev.split('.').pop()}` : '';
+        polozky.push({
+          nazev: `${popis} (priloha ${i + 2})${pr}`,
+          datum: v.issueDate,
+          nacti: async () => nactiPrilohu(p.url, p.nazev),
+        });
       });
     }
   } else {

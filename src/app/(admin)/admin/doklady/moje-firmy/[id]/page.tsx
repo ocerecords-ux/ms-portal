@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { IssuerForm } from './IssuerForm';
 import { BankAccounts } from './BankAccounts';
+import { PodpisFirmy } from './PodpisFirmy';
 import { ibanZTuzemskehoUctu } from '@/lib/pdf/qrPlatba';
 
 // Detail vlastni fakturacni firmy - udaje, ciselne rady a bankovni ucty.
@@ -45,6 +46,8 @@ export default async function IssuerDetailPage({ params }: { params: { id: strin
           active: issuer.active,
         }}
       />
+
+      <PodpisFirmy issuerId={issuer.id} podpis={issuer.podpis} />
 
       <BankAccounts
         issuerId={issuer.id}

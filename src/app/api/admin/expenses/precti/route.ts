@@ -14,7 +14,8 @@ export const dynamic = 'force-dynamic';
 // Čtení fotky trvá pár vteřin, výchozích deset by na horším signálu nestačilo.
 export const maxDuration = 60;
 
-const POVOLENE_TYPY = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+// PDF cte model stejne jako fotku (21. 9. 2026: aby umel cist udaje i z PDF).
+const POVOLENE_TYPY = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
   // místo aby čekal na odpověď, která stejně nic nenajde.
   const typ = soubor.type.toLowerCase();
   if (!POVOLENE_TYPY.includes(typ)) {
-    return NextResponse.json({ error: 'Tenhle formát obrázku číst neumíme.' }, { status: 400 });
+    return NextResponse.json({ error: 'Tenhle formát číst neumíme - pošlete PDF nebo fotku.' }, { status: 400 });
   }
   if (typ === 'image/heic' || typ === 'image/heif') {
     return NextResponse.json(

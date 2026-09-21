@@ -5,7 +5,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Currency, PaymentMethod } from '@prisma/client';
 import { formatMoney, minorToInput, parseMoneyToMinor } from '@/lib/doklady';
-import { nazevZpusobuUhrady } from '@/lib/uctenka';
+import { nazevZpusobuUhrady, ZPUSOBY_UHRADY } from '@/lib/uctenka';
+import { CURRENCIES, CURRENCY_NAMES } from '@/lib/doklady';
+import { PrilohyVydaje, type DalsiPriloha } from './PrilohyVydaje';
 import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
 import { formatRate, toCzkMinor } from '@/lib/cnb';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
@@ -115,11 +117,13 @@ export function ExpenseEditor({
   categories,
   companies,
   projects,
+  dalsiPrilohy,
 }: {
   expense: Expense;
   categories: { id: string; name: string }[];
   companies: { id: string; name: string }[];
   projects: ProjectChoice[];
+  dalsiPrilohy: DalsiPriloha[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -133,6 +137,10 @@ export function ExpenseEditor({
     vatRate: expense.vatRate,
     dueDate: expense.dueDate,
     note: expense.note,
+    // Zpetne upravy (21. 9. 2026) - i datum, mena a zpusob uhrady.
+    issueDate: expense.issueDate,
+    currency: expense.currency,
+    paymentMethod: expense.paymentMethod,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -166,6 +174,9 @@ export function ExpenseEditor({
           vatRate: form.vatRate,
           dueDate: form.dueDate || null,
           note: form.note,
+          issueDate: form.issueDate,
+          paymentMethod: form.paymentMethod,
+          ...(form.currency !== expense.currency ? { currency: form.currency } : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -212,6 +223,9 @@ export function ExpenseEditor({
           vatRate: form.vatRate,
           dueDate: form.dueDate || null,
           note: form.note,
+          issueDate: form.issueDate,
+          paymentMethod: form.paymentMethod,
+          ...(form.currency !== expense.currency ? { currency: form.currency } : {}),
           stav: 'ZARAZENY',
         }),
       });
@@ -419,9 +433,39 @@ export function ExpenseEditor({
           </label>
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Datum dokladu</span>
+            <DatumPole value={form.issueDate} onChange={(e) => set('issueDate', e.target.value)} className={inputClass} />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Měna</span>
+            <VyberPole value={form.currency} onChange={(e) => set('currency', e.target.value as Currency)} className={inputClass}>
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {CURRENCY_NAMES[c]}
+                </option>
+              ))}
+            </VyberPole>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Hrazeno</span>
+            <VyberPole
+              value={form.paymentMethod}
+              onChange={(e) => set('paymentMethod', e.target.value as PaymentMethod)}
+              className={inputClass}
+            >
+              {ZPUSOBY_UHRADY.map((z) => (
+                <option key={z.hodnota} value={z.hodnota}>
+                  {z.nazev}
+                </option>
+              ))}
+            </VyberPole>
+          </label>
+        </div>
+
         <div className="border-t border-line pt-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="text-sm font-heading text-muted">
-            Datum dokladu {new Intl.DateTimeFormat('cs-CZ').format(new Date(`${expense.issueDate}T00:00:00`))}
             {expense.currency !== 'CZK' && expense.exchangeRateDate && (
               <span className="block text-xs font-body">
                 Kurz ČNB: 1 {expense.currency} = {formatRate(expense.exchangeRate)} Kč ke dni{' '}
@@ -431,7 +475,7 @@ export function ExpenseEditor({
           </div>
           <div className="text-right">
             <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">Celkem</p>
-            <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatMoney(total, expense.currency)}</p>
+            <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatMoney(total, form.currency)}</p>
             {expense.currency !== 'CZK' && (
               <p className="text-xs font-body text-muted m-0 tabular-nums">
                 {formatMoney(toCzkMinor(total, expense.exchangeRate), 'CZK')}
@@ -452,31 +496,11 @@ export function ExpenseEditor({
           />
         </div>
 
-        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
-          <span className="text-xs font-heading text-muted uppercase tracking-wide">Příloha</span>
-          {expense.attachmentUrl ? (
-            // Ne primo do uloziste - to vraci chybu bez podpisu (oprava
-            // 15. 9. 2026). Portal odkaz podepise sam.
-            <span className="flex items-center gap-3 flex-wrap">
-              <a
-                href={`/api/admin/expenses/${expense.id}/priloha`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm font-heading text-brand-purple"
-              >
-                {expense.attachmentName || 'Otevřít přílohu'}
-              </a>
-              <a
-                href={`/api/admin/expenses/${expense.id}/priloha?stahnout=1`}
-                className="text-xs font-heading text-muted hover:text-ink no-underline"
-              >
-                Stáhnout
-              </a>
-            </span>
-          ) : (
-            <p className="text-sm text-muted font-body m-0">Bez přílohy.</p>
-          )}
-        </div>
+        <PrilohyVydaje
+          expenseId={expense.id}
+          hlavni={expense.attachmentUrl ? { nazev: expense.attachmentName } : null}
+          dalsi={dalsiPrilohy}
+        />
       </div>
 
       <div>

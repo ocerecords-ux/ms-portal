@@ -1,5 +1,6 @@
 import { deflateSync } from 'zlib';
-import { FONT_BOLD, FONT_REGULAR, LOGO } from '@/lib/rodnyListAssets';
+import { FONT_BOLD, FONT_REGULAR, LOGO, type EmbeddedImage } from '@/lib/rodnyListAssets';
+import { dekodujPng } from '@/lib/pdf/png';
 import {
   A4,
   BILA,
@@ -131,6 +132,8 @@ export type DokladData = {
   jazyk: 'cs' | 'en';
   /** Sleva na celém dokladu (zadání 14. 9. 2026) - viz computeTotals. */
   sleva?: { slevaProcent?: number | null; slevaMinor?: number | null; slevaPopis?: string | null } | null;
+  /** Podpis vystavitele (PNG data URL) - kreslí se jen na fakturu (21. 9. 2026). */
+  podpis?: string | null;
 };
 
 // --- Slovník ---------------------------------------------------------------
@@ -172,6 +175,7 @@ const SLOVNIK: Record<'cs' | 'en', Slova> = {
     qr: 'QR PLATBA',
     qrPopis: 'Načtěte v mobilní bance',
     poznamka: 'POZNÁMKA',
+    vystavil: 'VYSTAVIL',
     strana: 'Strana',
     zPokracovani: 'pokračování',
     neplatce: 'Nejsme plátci DPH.',
@@ -212,6 +216,7 @@ const SLOVNIK: Record<'cs' | 'en', Slova> = {
     qr: 'QR PAYMENT',
     qrPopis: 'Scan in your banking app',
     poznamka: 'NOTE',
+    vystavil: 'ISSUED BY',
     strana: 'Page',
     zPokracovani: 'continued',
     neplatce: 'Not a VAT payer.',
@@ -423,6 +428,7 @@ function zaver(
   vrch: number,
   soucty: ReturnType<typeof computeTotals>,
   sDph: boolean,
+  podpis: EmbeddedImage | null = null,
 ): number {
   let y = vrch + 12;
 
@@ -572,7 +578,30 @@ function zaver(
     }
   }
 
+  // Podpis vystavitele vpravo pod vším ostatním (jen faktura).
+  if (podpis) {
+    const { sirka, vyska } = rozmerPodpisu(podpis);
+    const x = RIGHT - PODPIS_SIRKA;
+    y += PODPIS_MEZERA;
+    popisek(c, s.vystavil, x, y);
+    c.image('ImPodpis', x + (PODPIS_SIRKA - sirka) / 2, y + 6, sirka, vyska);
+    y += 6 + vyska + 4;
+    c.line(x, y, RIGHT, y, BORDER, 1);
+    y += 12;
+    c.text(FONT_REGULAR, 'FR', data.dodavatel.name, 8.5, x, y, MUTED);
+  }
+
   return y;
+}
+
+const PODPIS_SIRKA = 150;
+const PODPIS_MAX_V = 62;
+const PODPIS_MEZERA = 26;
+
+/** Podpis se vejde do rámečku 150 × 62 b a zachová poměr stran. */
+function rozmerPodpisu(p: EmbeddedImage): { sirka: number; vyska: number } {
+  const k = Math.min((PODPIS_SIRKA - 10) / p.width, PODPIS_MAX_V / p.height);
+  return { sirka: p.width * k, vyska: p.height * k };
 }
 
 /**
@@ -585,6 +614,7 @@ function vyskaZaveru(
   s: Slova,
   soucty: ReturnType<typeof computeTotals>,
   sDph: boolean,
+  podpis: EmbeddedImage | null = null,
 ): number {
   let vyska = 12;
 
@@ -608,6 +638,8 @@ function vyskaZaveru(
 
   if (data.poznamka) vyska += 16 + 16 + zalom(data.poznamka, SIRKA, 9.5).length * 13;
 
+  if (podpis) vyska += PODPIS_MEZERA + 6 + rozmerPodpisu(podpis).vyska + 4 + 12;
+
   return vyska;
 }
 
@@ -625,6 +657,8 @@ export function renderDokladPdf(data: DokladData): Buffer {
   const regularId = embedFont(pdf, FONT_REGULAR, 'LiberationSans');
   const boldId = embedFont(pdf, FONT_BOLD, 'LiberationSans-Bold');
   const logoId = embedImage(pdf, LOGO);
+  const podpis = data.druh === 'FAKTURA' && data.podpis ? dekodujPng(data.podpis) : null;
+  const podpisId = podpis ? embedImage(pdf, podpis) : null;
 
   const s = SLOVNIK[data.jazyk];
   const prenesena = data.rezimDph !== 'STANDARD';
@@ -710,13 +744,13 @@ export function renderDokladPdf(data: DokladData): Buffer {
   // Souhrn se nesmí utrhnout od tabulky - když se nevejde, jde celý na další
   // stránku. Výška se počítá, ne odhaduje: paušální rezerva lámala stránku
   // i tam, kde se závěr pohodlně vešel.
-  if (y + vyskaZaveru(data, s, soucty, sDph) > PATA_Y) {
+  if (y + vyskaZaveru(data, s, soucty, sDph, podpis) > PATA_Y) {
     c = new Kresba(A4.h);
     stranky.push(c);
     hlavicka(c, data, s, false);
     y = HLAVICKA_DALSI_H + 20;
   }
-  zaver(c, data, s, y, soucty, sDph);
+  zaver(c, data, s, y, soucty, sDph, podpis);
 
   // Patička se dokresluje až teď - dřív se neví, kolik stránek doklad má.
   stranky.forEach((stranka, i) => {
@@ -730,7 +764,7 @@ export function renderDokladPdf(data: DokladData): Buffer {
   const pagesId = pdf.reserve();
   const zdroje =
     `/Resources << /Font << /FR ${regularId} 0 R /FB ${boldId} 0 R >> ` +
-    `/XObject << /ImLogo ${logoId} 0 R >> >>`;
+    `/XObject << /ImLogo ${logoId} 0 R${podpisId ? ` /ImPodpis ${podpisId} 0 R` : ''} >> >>`;
   const ids = stranky.map((stranka) => {
     const contentId = pdf.addStream('/Filter /FlateDecode', deflateSync(stranka.toBuffer(), { level: 9 }));
     return pdf.add(

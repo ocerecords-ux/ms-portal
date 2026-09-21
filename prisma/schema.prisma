@@ -1205,6 +1205,9 @@ model IssuerCompany {
   email          String?  // odesilatel dokladu
   phone          String?
   logoUrl        String?
+  /// Naskenovany podpis jako PNG data URL (pruhledne pozadi) - tiskne se na
+  /// faktury (zadani 21. 9. 2026: „na fakturach chybi muj podpis").
+  podpis         String?  @db.Text
 
   // Ciselne rady. Format se sklada ze zastupnych znaku - {YYYY} rok, {YY} rok
   // dvojcislim, {MM} mesic, {NNN}/{NNNN}/{NNNNN} poradove cislo doplnene
@@ -1575,6 +1578,11 @@ model Expense {
   // i ta pole, ktera uz mezitim prepsala.
   navrhJson String?
 
+  /// Dalsi prilohy k dokladu (zadani 21. 9. 2026: „zpetne upravovat vydaje
+  /// a pridavat prilohy"). Hlavni priloha zustava v attachmentUrl - cte se
+  /// z ni a ukazuje se v nahledu; tady je vsechno ostatni.
+  prilohy PrilohaVydaje[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1582,6 +1590,18 @@ model Expense {
   @@index([categoryId])
   @@index([caflouProjectId])
   @@index([stav])
+}
+
+/// Dalsi priloha vydaje (21. 9. 2026). url je adresa v ulozisti nebo data URL.
+model PrilohaVydaje {
+  id        String   @id @default(cuid())
+  expenseId String
+  expense   Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  url       String   @db.Text
+  nazev     String
+  createdAt DateTime @default(now())
+
+  @@index([expenseId])
 }
 
 /// Doklad ze schranky ceka na prekontrolovani, rucne zadany uz je zarazeny.
