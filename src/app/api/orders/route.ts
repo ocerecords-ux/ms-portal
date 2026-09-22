@@ -8,6 +8,7 @@ import { adresaVUlozisti, overPrilohu, uploadOrderAttachment } from '@/lib/stora
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/email';
 import { noveIdProjektu } from '@/lib/projektId';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
+import { nazevProjektuVelky } from '@/lib/nazevProjektu';
 import { zalozKanalProjektu } from '@/lib/kanalProjektuServer';
 import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
 import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
@@ -69,7 +70,9 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
-  const { kind, title, note } = parsed.data;
+  const { kind, note } = parsed.data;
+  // Název projektu i objednávky držíme velkými (zadání 22. 9. 2026).
+  const title = nazevProjektuVelky(parsed.data.title);
   const isAudiobook = kind === 'AUDIOBOOK';
   const preferredNarrator = parsed.data.preferredNarrator?.trim() || null;
   const pageCount = isAudiobook && parsed.data.pageCount ? parseInt(parsed.data.pageCount, 10) : null;

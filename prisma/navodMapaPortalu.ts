@@ -46,6 +46,8 @@ U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích toč�
 
 Kdo má jinou roli (třeba Žůžo-labůžo) a občas dělá i zvukaře, má na kartě zaškrtnuté **Může být i zvukař**. Role mu zůstane, jen se navíc nabízí mezi zvukaři u natáčení a střihu v kalendáři. Když nemá zaškrtnutá žádná studia, nabízí se ve všech. Takhle je nastavený Peter Dratva.
 
+Názvy projektů portál drží **velkými písmeny** — ať už je někdo zadá jakkoli, uloží se velkými a stejně se jmenuje i kanál projektu v chatu. Přejmenování projektu přepíše i název kanálu.
+
 **Wikipedie** (Administrace → Wikipedie) je místo, kde si článek o sobě na Wikipedii napíšete a vyladíte: vlevo wikitext, vpravo náhled, jak ho vykreslí Wikipedie, a uložené verze, ke kterým se jde vrátit. Portál na Wikipedii nic neukládá. Text zkopírujete a vložíte tam sami svým účtem, návod je přímo na stránce. Až bude článek venku, napište jeho název do Hlídání a portál vám každou hodinu zvonkem ohlásí, když ho někdo upraví. Každý tu vidí jen svůj článek. V záložce **Údaje o sobě** se vyplní jméno, datum a místo narození, povolání, fotka z Commons, zdroje, milníky a tvorba; tlačítko **Sestavit text z údajů** z toho poskládá hotový wikitext včetně referencí.
 
 **Ceníky** jsou dvě věci najednou: ceny služeb a zároveň seznam typů projektu. U projektu jde vybrat jen takový typ, který je v ceníku — proto se nové typy přidávají tady.

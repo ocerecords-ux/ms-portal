@@ -7,6 +7,7 @@ import { canEditProjectMeta } from '@/lib/roles';
 import { jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
+import { nazevProjektuVelky } from '@/lib/nazevProjektu';
 import { posliNotifikaciPoProdleve } from '@/lib/prodlevaNotifikaciServer';
 import { navrhniBonusyZaProjekt } from '@/lib/bonusyServer';
 
@@ -232,7 +233,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('licenceUziti', data.licenceUziti);
     text('uvodKnihy', data.uvodKnihy);
     text('zaverKnihy', data.zaverKnihy);
-    if (data.name) values.name = data.name;
+    // Název projektu držíme velkými (zadání 22. 9. 2026) - i když ho někdo
+    // napíše malými.
+    if (data.name) values.name = nazevProjektuVelky(data.name);
     // Data se drzi jako pulnoc UTC - v prehledu se tiskne jen datum a nesmi
     // se posunout podle pasma, ve kterem se zrovna uklada.
     for (const klic of ['endDate', 'releaseDate'] as const) {
@@ -353,7 +356,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // 10. 9. 2026). Zamerne bez cekani a bez hlaseni chyby - kdyz Disk
     // nespolupracuje, nazev projektu se stejne ulozit ma.
     if (data.name && meta.driveUrl) {
-      void prejmenujSlozkuProjektu(meta.driveUrl, data.name).catch(() => undefined);
+      void prejmenujSlozkuProjektu(meta.driveUrl, meta.name ?? data.name).catch(() => undefined);
+    }
+
+    // Přejmenování projektu přejmenuje i jeho kanál v chatu (22. 9. 2026:
+    // „ať je to jednotné v názvech i v kanálech v chatu").
+    if (data.name && meta.name) {
+      void prisma.conversation
+        .updateMany({ where: { caflouProjectId: params.id }, data: { name: meta.name } })
+        .catch(() => undefined);
     }
 
     // Rodny list se vyrabi pri prechodu do stavu "Dokonceno - ke schvaleni".

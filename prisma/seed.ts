@@ -187,6 +187,7 @@ async function main() {
   await doplnStudiaZvukaru();
   await doplnZadavateleUkolu();
   await peterTakyZvukar();
+  await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
   await brunoZpetneOznamPreposlech();
@@ -972,6 +973,38 @@ async function peterTakyZvukar() {
     await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
   } catch (err) {
     console.warn('  Petera jako zvukare se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * NÁZVY PROJEKTŮ VELKÝMI (22. 9. 2026: „i když ho někdo zadá malými písmeny,
+ * držme prosím formát vždy kapitálkama velkými. Ať je to jednotné v názvech
+ * i v kanálech v chatu"). Jednou srovná, co v databázi už je - projekty
+ * i jejich kanály v chatu. Nové názvy už velkými ukládá portál sám.
+ */
+async function nazvyProjektuVelkymi() {
+  const ZNAMKA = 'nazvy-projektu-velkymi';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const projekty = await prisma.projectMeta.findMany({
+      where: { name: { not: null } },
+      select: { caflouProjectId: true, name: true },
+    });
+    let zmeneno = 0;
+    for (const p of projekty) {
+      const velky = (p.name ?? '').replace(/\s+/g, ' ').trim().toLocaleUpperCase('cs-CZ');
+      if (!velky || velky === p.name) continue;
+      await prisma.projectMeta.update({ where: { caflouProjectId: p.caflouProjectId }, data: { name: velky } });
+      await prisma.conversation
+        .updateMany({ where: { caflouProjectId: p.caflouProjectId }, data: { name: velky } })
+        .catch(() => undefined);
+      zmeneno += 1;
+    }
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    if (zmeneno > 0) console.log(`  nazvy projektu velkymi: ${zmeneno}`);
+  } catch (err) {
+    console.warn('  nazvy projektu se nepodarilo srovnat:', err);
   }
 }
 

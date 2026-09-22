@@ -7,6 +7,7 @@ import { canEditProjectMeta } from '@/lib/roles';
 import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
 import { STAVY_PROJEKTU, jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
+import { nazevProjektuVelky } from '@/lib/nazevProjektu';
 import { zalozKanalProjektu } from '@/lib/kanalProjektuServer';
 import { noveIdProjektu } from '@/lib/projektId';
 
@@ -134,7 +135,8 @@ export async function POST(req: NextRequest) {
     const projekt = await prisma.projectMeta.create({
       data: {
         caflouProjectId,
-        name: d.name,
+        // Název projektu držíme velkými (22. 9. 2026).
+        name: nazevProjektuVelky(d.name),
         companyId: d.companyId || null,
         companyName,
         klientUserId: d.klientUserId || null,

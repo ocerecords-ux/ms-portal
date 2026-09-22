@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { nazevProjektuVelky } from '@/lib/nazevProjektu';
 
 /**
  * KANÁL PROJEKTU V CHATU (zadání 17. 9. 2026: „potřebuji, ať se založí rovnou
@@ -39,7 +40,7 @@ export async function zalozKanalProjektu(vstup: {
     await prisma.conversation.create({
       data: {
         kind: 'PROJEKT',
-        name: nazev,
+        name: nazevProjektuVelky(nazev),
         caflouProjectId,
         createdById: zakladatelId,
         members: { create: clenove.map((userId) => ({ userId })) },
