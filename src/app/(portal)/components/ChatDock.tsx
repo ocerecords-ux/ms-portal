@@ -1253,19 +1253,78 @@ function Svetlo({
 
   useEffect(() => setKde(index), [index]);
 
+  /**
+   * LUPA (zadání 22. 9. 2026: „náhled by mohl být v základu o něco větší
+   * a pak by se dal roztahovat a lupou zvětšovat a zmenšovat").
+   *
+   * - karta je větší a za pravý dolní roh se dá roztáhnout (CSS resize),
+   * - kolečkem myši / gestem na touchpadu se zvětšuje k místu pod kurzorem,
+   *   tlačítky − a + po krocích, klávesami + − 0,
+   * - dvojklik přepne mezi „celý obrázek" a 2×,
+   * - zvětšený obrázek se posouvá tažením.
+   */
+  const [zoom, setZoom] = useState(1);
+  const [posun, setPosun] = useState({ x: 0, y: 0 });
+  const plocha = useRef<HTMLDivElement | null>(null);
+  const tah = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 8;
+
+  useEffect(() => {
+    setZoom(1);
+    setPosun({ x: 0, y: 0 });
+  }, [kde]);
+
+  /** Zvětšení na `novy`, bod (cx, cy) vůči středu plochy zůstane na místě. */
+  // Aktuální zvětšení i mimo render (kolečko, klávesy) - bez vnořených
+  // setState, které by React ve vývoji pouštěl dvakrát.
+  const zoomRef = useRef(1);
+  const posunRef = useRef({ x: 0, y: 0 });
+  zoomRef.current = zoom;
+  posunRef.current = posun;
+  const priblizit = useCallback((novy: number, cx = 0, cy = 0) => {
+    const stary = zoomRef.current;
+    const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, novy));
+    const p = posunRef.current;
+    const dalsi = z <= 1 ? { x: 0, y: 0 } : { x: cx - ((cx - p.x) * z) / stary, y: cy - ((cy - p.y) * z) / stary };
+    zoomRef.current = z;
+    posunRef.current = dalsi;
+    setZoom(z);
+    setPosun(dalsi);
+  }, []);
+
+  // Kolečko musí být „nepasivní", jinak nejde zastavit rolování stránky.
+  useEffect(() => {
+    const el = plocha.current;
+    if (!el) return;
+    function kolecko(e: WheelEvent) {
+      e.preventDefault();
+      const r = el!.getBoundingClientRect();
+      const cx = e.clientX - r.left - r.width / 2;
+      const cy = e.clientY - r.top - r.height / 2;
+      const krok = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0025));
+      priblizit(zoomRef.current * krok, cx, cy);
+    }
+    el.addEventListener('wheel', kolecko, { passive: false });
+    return () => el.removeEventListener('wheel', kolecko);
+  }, [priblizit, kde]);
+
   useEffect(() => {
     function klavesa(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         zavri();
         return;
       }
+      if (e.key === '+' || e.key === '=') priblizit(zoomRef.current * 1.25);
+      if (e.key === '-') priblizit(zoomRef.current / 1.25);
+      if (e.key === '0') priblizit(1);
       if (obrazky.length < 2) return;
       if (e.key === 'ArrowRight') setKde((i) => (i + 1) % obrazky.length);
       if (e.key === 'ArrowLeft') setKde((i) => (i - 1 + obrazky.length) % obrazky.length);
     }
     window.addEventListener('keydown', klavesa);
     return () => window.removeEventListener('keydown', klavesa);
-  }, [obrazky.length, zavri]);
+  }, [obrazky.length, zavri, priblizit]);
 
   const p = obrazky[kde];
   if (!p || typeof document === 'undefined') return null;
@@ -1292,7 +1351,9 @@ function Svetlo({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[520px] max-w-[92vw] max-h-[70vh] bg-bar rounded-card shadow-lg border border-white/15 flex flex-col overflow-hidden"
+        // Větší výchozí náhled a roztahování za pravý dolní roh (22. 9. 2026).
+        style={{ resize: 'both' }}
+        className="w-[880px] h-[78vh] min-w-[320px] min-h-[260px] max-w-[96vw] max-h-[94vh] bg-bar rounded-card shadow-lg border border-white/15 flex flex-col overflow-hidden"
       >
       <div className="flex items-center gap-3 px-4 py-3 text-white" onClick={(e) => e.stopPropagation()}>
         <span className="min-w-0 flex-1">
@@ -1301,6 +1362,34 @@ function Svetlo({
             {formatVelikost(p.size)}
             {obrazky.length > 1 ? ` · ${kde + 1}/${obrazky.length}` : ''}
           </span>
+        </span>
+        <span className="inline-flex items-center rounded-lg border border-white/40 text-white shrink-0">
+          <button
+            type="button"
+            onClick={() => priblizit(zoom / 1.25)}
+            title="Zmenšit (−)"
+            aria-label="Zmenšit"
+            className="w-8 h-9 text-lg leading-none hover:bg-white/20 rounded-l-lg"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            onClick={() => priblizit(1)}
+            title="Celý obrázek (0)"
+            className="min-w-[52px] h-9 px-1 text-xs font-heading font-semibold tabular-nums hover:bg-white/20"
+          >
+            {Math.round(zoom * 100)} %
+          </button>
+          <button
+            type="button"
+            onClick={() => priblizit(zoom * 1.25)}
+            title="Zvětšit (+)"
+            aria-label="Zvětšit"
+            className="w-8 h-9 text-lg leading-none hover:bg-white/20 rounded-r-lg"
+          >
+            +
+          </button>
         </span>
         <TlacitkoStahnout odkaz={odkaz} nazev={p.name} tmave />
         <button
@@ -1329,13 +1418,45 @@ function Svetlo({
             <Chevron direction="left" />
           </button>
         )}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={odkaz}
-          alt={p.name}
-          onClick={(e) => e.stopPropagation()}
-          className="max-h-full max-w-full object-contain rounded-card"
-        />
+        <div
+          ref={plocha}
+          className={`relative flex-1 self-stretch min-w-0 overflow-hidden flex items-center justify-center touch-none select-none ${
+            zoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'
+          }`}
+          onDoubleClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            if (zoom > 1) priblizit(1);
+            else priblizit(2, e.clientX - r.left - r.width / 2, e.clientY - r.top - r.height / 2);
+          }}
+          onPointerDown={(e) => {
+            if (zoom <= 1) return;
+            e.currentTarget.setPointerCapture(e.pointerId);
+            tah.current = { x: e.clientX, y: e.clientY, px: posun.x, py: posun.y };
+          }}
+          onPointerMove={(e) => {
+            const t = tah.current;
+            if (!t) return;
+            setPosun({ x: t.px + e.clientX - t.x, y: t.py + e.clientY - t.y });
+          }}
+          onPointerUp={() => {
+            tah.current = null;
+          }}
+          onPointerCancel={() => {
+            tah.current = null;
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={odkaz}
+            alt={p.name}
+            draggable={false}
+            style={{
+              transform: `translate(${posun.x}px, ${posun.y}px) scale(${zoom})`,
+              transition: tah.current ? 'none' : 'transform 80ms ease-out',
+            }}
+            className="max-h-full max-w-full object-contain rounded-card origin-center"
+          />
+        </div>
         {obrazky.length > 1 && (
           <button
             type="button"
