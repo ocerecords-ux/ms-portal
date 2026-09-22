@@ -478,7 +478,10 @@ export function OrderForm({
       </div>
 
       <style jsx>{`
-        .input {
+        /* :global - políčko s datem (DatumPole) je samostatná komponenta a
+           scoped třída styled-jsx se na něj nedostane; bez tohohle mělo bílé
+           písmo na bílém poli a klient neviděl, co píše (oprava 22. 9. 2026). */
+        :global(.input) {
           font-family: 'Acid Grotesk', var(--font-inter);
           font-size: 14.5px;
           border-radius: 8px;
@@ -487,16 +490,17 @@ export function OrderForm({
           background: #fff;
           color: #201a33;
           width: 100%;
+          color-scheme: light;
         }
-        .input::placeholder {
+        :global(.input)::placeholder {
           color: #a9a2c2;
         }
-        .input:focus {
+        :global(.input):focus {
           outline: none;
           border-color: #fff;
           box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
         }
-        .input-readonly {
+        :global(.input-readonly) {
           background: #f6f6f6;
           font-weight: 600;
           font-variant-numeric: tabular-nums;
