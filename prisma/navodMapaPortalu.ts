@@ -46,6 +46,8 @@ U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích toč�
 
 Kdo má jinou roli (třeba Žůžo-labůžo) a občas dělá i zvukaře, má na kartě zaškrtnuté **Může být i zvukař**. Role mu zůstane, jen se navíc nabízí mezi zvukaři u natáčení a střihu v kalendáři. Když nemá zaškrtnutá žádná studia, nabízí se ve všech. Takhle je nastavený Peter Dratva.
 
+**Wikipedie** (Administrace → Wikipedie) je místo, kde si článek o sobě na Wikipedii napíšete a vyladíte: vlevo wikitext, vpravo náhled, jak ho vykreslí Wikipedie, a uložené verze, ke kterým se jde vrátit. Portál na Wikipedii nic neukládá. Text zkopírujete a vložíte tam sami svým účtem, návod je přímo na stránce. Až bude článek venku, napište jeho název do Hlídání a portál vám každou hodinu zvonkem ohlásí, když ho někdo upraví. Každý tu vidí jen svůj článek.
+
 **Ceníky** jsou dvě věci najednou: ceny služeb a zároveň seznam typů projektu. U projektu jde vybrat jen takový typ, který je v ceníku — proto se nové typy přidávají tady.
 
 **Doklady** jsou peníze: nabídky, faktury, přijaté výdaje, smlouvy, banka a „Moje firmy" (za kterou firmu doklad vystavujeme, číselné řady, bankovní účty, podpis na faktury). U výdaje se nahraje PDF nebo fotka dokladu (i víc souborů) — údaje se z něj přečtou samy; přílohy i údaje jde kdykoli později doplnit v detailu výdaje.

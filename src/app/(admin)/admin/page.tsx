@@ -66,6 +66,13 @@ export default async function AdminHomePage({
         >
           Vzory zpráv klientovi
         </Link>
+        {/* Koncept a hlidani clanku na Wikipedii (zadani 22. 9. 2026). */}
+        <Link
+          href="/admin/wikipedie"
+          className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
+        >
+          Wikipedie
+        </Link>
         {/* Zpravy, ktere portal posila nam - bonusy a mesicni prehled
             (zadani 15. 9. 2026). */}
         <Link

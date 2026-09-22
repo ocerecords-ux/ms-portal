@@ -3367,3 +3367,38 @@ model InstagramUcet {
   chyba     String?
   updatedAt DateTime  @updatedAt
 }
+
+/// WIKIPEDIE - KONCEPT A HLIDANI CLANKU (zadani 22. 9. 2026: „chtel bych u
+/// sebe udelat nejaky modul na wikipedii a editaci me osoby. Ucet na wiki
+/// nemam" → „Koncept + hlidani", clanek bude novy).
+///
+/// Portal na Wikipedii NIC neuklada - clanek se tu pise a ladi (wikitext
+/// s nahledem), na Wikipedii ho vlozi clovek svym uctem. Kdyz je vyplneny
+/// `sledovanyNazev`, portal kazdou hodinu kontroluje zivy clanek a o cizi
+/// uprave da vedet zvonkem. Jeden clanek na ucet.
+model WikiClanek {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  jazyk            String    @default("cs")
+  /// Navrzeny nazev clanku (napr. „Ondřej Černý (režisér)").
+  nazev            String
+  wikitext         String    @db.Text
+  /// Nazev zive stranky na Wikipedii, ktera se hlida (az bude vlozena).
+  sledovanyNazev   String?
+  posledniRevize   Int?
+  posledniKontrola DateTime?
+  chybaKontroly    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+/// Ulozene verze konceptu - at jde vratit starsi text.
+model WikiVerze {
+  id        String   @id @default(cuid())
+  clanekId  String
+  wikitext  String   @db.Text
+  autor     String?
+  createdAt DateTime @default(now())
+
+  @@index([clanekId, createdAt])
+}
