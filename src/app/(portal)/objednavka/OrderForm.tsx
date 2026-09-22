@@ -15,6 +15,7 @@ import {
   type RozborTextu,
 } from '@/lib/normostrany';
 import { DatumPole } from '@/components/DatumPole';
+import { UpravaPdf } from './UpravaPdf';
 import { vygenerujUvod, vygenerujZaver, REZISER_UVODU } from '@/lib/uvodZaver';
 
 export function OrderForm({
@@ -48,6 +49,16 @@ export function OrderForm({
   const uvodText = uvodVlastni ?? vygenerujUvod(udajeUvodu);
   const zaverText = zaverVlastni ?? vygenerujZaver(udajeUvodu);
   const [file, setFile] = useState<File | null>(null);
+  /**
+   * Původní PDF, jak ho klient vybral (22. 9. 2026) - z něj se kreslí náhled
+   * stránek. `file` je to, co se odešle: po vyřazení nebo otočení stránek
+   * už upravená kopie.
+   */
+  const [puvodniPdf, setPuvodniPdf] = useState<File | null>(null);
+  const vyberSoubor = (f: File | null) => {
+    setFile(f);
+    setPuvodniPdf(f && /\.pdf$/i.test(f.name) ? f : null);
+  };
   const [dragOver, setDragOver] = useState(false);
   /**
    * Normostrany z přiloženého textu (zadání 12. 9. 2026: „když tam načteš
@@ -114,7 +125,7 @@ export function OrderForm({
       setNakladatelstvi('');
       setUvodVlastni(null);
       setZaverVlastni(null);
-      setFile(null);
+      vyberSoubor(null);
       setRozbor(null);
       setChybaRozboru(null);
       setDetailChyby(null);
@@ -130,7 +141,7 @@ export function OrderForm({
     e.preventDefault();
     setDragOver(false);
     const dropped = e.dataTransfer.files?.[0];
-    if (dropped) setFile(dropped);
+    if (dropped) vyberSoubor(dropped);
   }
 
   /**
@@ -363,9 +374,12 @@ export function OrderForm({
           </span>
           <label className="ml-auto shrink-0 bg-white text-brand-purpleDeep rounded-md px-3 py-1.5 text-xs font-heading font-semibold cursor-pointer">
             Vybrat soubor
-            <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <input type="file" className="hidden" onChange={(e) => vyberSoubor(e.target.files?.[0] ?? null)} />
           </label>
         </div>
+
+        {/* Náhled a úprava PDF - mazání a otáčení stránek (22. 9. 2026). */}
+        {puvodniPdf && <UpravaPdf soubor={puvodniPdf} onZmena={setFile} />}
 
         {/* Kalkulačka normostran nad přílohou (zadání 12. 9. 2026). */}
         {file && (
