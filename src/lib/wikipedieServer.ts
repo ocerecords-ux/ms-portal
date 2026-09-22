@@ -114,3 +114,66 @@ export async function zkontrolujClanky(): Promise<{ zkontrolovano: number; zmeny
   }
   return { zkontrolovano: clanky.length, zmeny };
 }
+
+/**
+ * ODESLÁNÍ ÚPRAVY NA WIKIPEDII (zadání 22. 9. 2026: „chci to rovnou odesílat
+ * z portálu").
+ *
+ * Portál píše POD ÚČTEM UŽIVATELE - přes osobní přístupový token z OAuth
+ * (na meta.wikimedia.org, druh „owner-only", takže ho schvalovat nikdo
+ * nemusí). Token si každý uloží sám v modulu a portál ho nikdy nevrací zpátky
+ * do prohlížeče; slouží jen k tomuhle volání.
+ *
+ * Nejdřív se vyzvedne editační token (csrf) a s ním se teprve ukládá - tak to
+ * MediaWiki vyžaduje.
+ */
+export async function odesliNaWiki(vstup: {
+  jazyk: string;
+  titul: string;
+  wikitext: string;
+  shrnuti: string;
+  token: string;
+}): Promise<{ ok: true; url: string; revid: number | null } | { ok: false; chyba: string }> {
+  const { jazyk, titul, wikitext, shrnuti, token } = vstup;
+  const hlavicky = { 'User-Agent': UA, 'Api-User-Agent': UA, Authorization: `Bearer ${token}` };
+  try {
+    const rt = await fetch(`${api(jazyk)}?action=query&meta=tokens&type=csrf&format=json&formatversion=2`, {
+      headers: hlavicky,
+      cache: 'no-store',
+    });
+    const dt = (await rt.json().catch(() => ({}))) as {
+      query?: { tokens?: { csrftoken?: string } };
+      error?: { info?: string };
+    };
+    const csrf = dt.query?.tokens?.csrftoken;
+    if (!csrf || csrf === '+\\') {
+      return { ok: false, chyba: dt.error?.info || 'Wikipedie token nepřijala - zkontrolujte přístupový token v Odesílání.' };
+    }
+
+    const telo = new URLSearchParams({
+      action: 'edit',
+      title: titul,
+      text: wikitext,
+      summary: shrnuti || 'Úprava z MS Portalu',
+      token: csrf,
+      format: 'json',
+      formatversion: '2',
+    });
+    const re = await fetch(api(jazyk), {
+      method: 'POST',
+      headers: { ...hlavicky, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: telo,
+      cache: 'no-store',
+    });
+    const de = (await re.json().catch(() => ({}))) as {
+      edit?: { result?: string; newrevid?: number; title?: string };
+      error?: { code?: string; info?: string };
+    };
+    if (de.error || de.edit?.result !== 'Success') {
+      return { ok: false, chyba: de.error?.info || `Úpravu se nepodařilo uložit (${de.edit?.result ?? re.status}).` };
+    }
+    return { ok: true, url: adresaWiki(jazyk, de.edit.title ?? titul), revid: de.edit.newrevid ?? null };
+  } catch (err) {
+    return { ok: false, chyba: (err as Error).message || 'Wikipedie neodpověděla.' };
+  }
+}

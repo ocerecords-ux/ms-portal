@@ -55,6 +55,8 @@ export default async function WikipediePage() {
             ...((clanek?.udaje as Partial<UdajeOsoby> | null) ?? {}),
           } as UdajeOsoby,
           sledovanyNazev: clanek?.sledovanyNazev ?? '',
+          maToken: Boolean(clanek?.token),
+          cilStranka: clanek?.cilStranka ?? '',
           ulozeno: clanek ? clanek.updatedAt.toISOString() : null,
           posledniKontrola: clanek?.posledniKontrola ? clanek.posledniKontrola.toISOString() : null,
           chybaKontroly: clanek?.chybaKontroly ?? null,

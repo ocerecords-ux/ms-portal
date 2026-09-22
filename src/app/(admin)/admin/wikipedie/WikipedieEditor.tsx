@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { sestavWikitext, type UdajeOsoby } from '@/lib/wikipedieUdaje';
 import { UdajeForm } from './UdajeForm';
 import {
+  ADRESA_OAUTH,
   JAZYKY_WIKI,
   adresaPiskoviste,
   adresaRegistrace,
@@ -23,6 +24,9 @@ type Pocatecni = {
   wikitext: string;
   udaje: UdajeOsoby;
   sledovanyNazev: string;
+  /** Je uložený přístupový token k Wikipedii? Samotný token se sem nikdy nedostane. */
+  maToken: boolean;
+  cilStranka: string;
   ulozeno: string | null;
   posledniKontrola: string | null;
   chybaKontroly: string | null;
@@ -83,6 +87,14 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
   const [nahled, setNahled] = useState<string | null>(null);
   const [nahledChyba, setNahledChyba] = useState<string | null>(null);
   const [nahledNacita, setNahledNacita] = useState(false);
+
+  // Odesílání na Wikipedii (22. 9. 2026).
+  const [token, setToken] = useState('');
+  const [maToken, setMaToken] = useState(pocatecni.maToken);
+  const [cil, setCil] = useState(pocatecni.cilStranka);
+  const [shrnutiUpravy, setShrnutiUpravy] = useState('');
+  const [odesilam, setOdesilam] = useState(false);
+  const [odeslano, setOdeslano] = useState<string | null>(null);
 
   const [revize, setRevize] = useState<Revize[] | null>(null);
   const [stavChyba, setStavChyba] = useState<string | null>(null);
@@ -201,6 +213,78 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
     }
     setWikitext(data.wikitext);
     setHlaska('Starší verze je v editoru - uložte ji, pokud ji chcete ponechat.');
+  }
+
+  async function ulozToken() {
+    setPracuje(true);
+    setChyba(null);
+    setHlaska(null);
+    try {
+      const res = await fetch('/api/admin/wikipedie/token', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token.trim() }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; ulozen?: boolean };
+      if (!res.ok) {
+        setChyba(data.error || 'Token se nepodařilo uložit.');
+        return;
+      }
+      setMaToken(Boolean(data.ulozen));
+      setToken('');
+      setHlaska('Token je uložený.');
+    } catch {
+      setChyba('Nepodařilo se spojit se serverem.');
+    } finally {
+      setPracuje(false);
+    }
+  }
+
+  async function smazToken() {
+    if (!window.confirm('Opravdu token smazat? Odesílání z portálu pak nebude fungovat.')) return;
+    setToken('');
+    setPracuje(true);
+    try {
+      await fetch('/api/admin/wikipedie/token', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: '' }),
+      });
+      setMaToken(false);
+      setHlaska('Token je smazaný.');
+    } finally {
+      setPracuje(false);
+    }
+  }
+
+  /** Odeslání uložené verze na Wikipedii - vždy s potvrzením, je to veřejná úprava. */
+  async function odesli() {
+    const kam = cil.trim();
+    if (!kam) return;
+    if (!window.confirm(`Uložit koncept na Wikipedii jako „${kam}"? Úprava bude veřejná a pod vaším účtem.`)) return;
+    setOdesilam(true);
+    setChyba(null);
+    setHlaska(null);
+    setOdeslano(null);
+    try {
+      const res = await fetch('/api/admin/wikipedie/odeslat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cil: kam, shrnuti: shrnutiUpravy.trim() }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
+      if (!res.ok || !data.url) {
+        setChyba(data.error || 'Odeslání se nepovedlo.');
+        return;
+      }
+      setOdeslano(data.url);
+      setHlaska('Hotovo — text je na Wikipedii.');
+      if (!sledovany.trim()) setSledovany(kam);
+    } catch {
+      setChyba('Nepodařilo se spojit se serverem.');
+    } finally {
+      setOdesilam(false);
+    }
   }
 
   async function nactiStav() {
@@ -405,6 +489,78 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+
+      {/* Odesílání na Wikipedii */}
+      <div className={karta}>
+        <h2 className="font-heading font-semibold text-base text-ink m-0">Odeslání na Wikipedii</h2>
+        <p className="text-sm font-body text-muted m-0 max-w-[80ch]">
+          Portál umí uloženou verzi konceptu zapsat na Wikipedii pod vaším účtem. Potřebuje k tomu osobní
+          přístupový token:{' '}
+          <a href={ADRESA_OAUTH} target="_blank" rel="noreferrer" className="text-brand-purple">
+            vytvořit token ↗
+          </a>{' '}
+          — v žádosti vyberte „This consumer is for use only by <em>vaše jméno</em>", jako povolení stačí
+          úprava a zakládání stránek. Schvalovat to nikdo nemusí, token dostanete hned. Vložte ho sem;
+          portál ho uloží a už nikdy neukáže.
+        </p>
+        <div className="flex items-end gap-3 flex-wrap">
+          <label className="flex flex-col gap-1 flex-1 min-w-[260px]">
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">Přístupový token</span>
+            <input
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder={maToken ? 'uložený — vyplňte jen při výměně' : 'vložte token z Wikimedie'}
+              autoComplete="off"
+              className={pole}
+            />
+          </label>
+          <button type="button" onClick={ulozToken} disabled={pracuje || !token.trim()} className={tlacitko2}>
+            Uložit token
+          </button>
+          {maToken && (
+            <button type="button" onClick={smazToken} disabled={pracuje} className={tlacitko2}>
+              Smazat token
+            </button>
+          )}
+        </div>
+        <div className="flex items-end gap-3 flex-wrap border-t border-line pt-3">
+          <label className="flex flex-col gap-1 flex-1 min-w-[260px]">
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">Kam uložit</span>
+            <input
+              value={cil}
+              onChange={(e) => setCil(e.target.value)}
+              placeholder="Wikipedista:VaseJmeno/Pískoviště"
+              className={pole}
+            />
+          </label>
+          <label className="flex flex-col gap-1 flex-1 min-w-[220px]">
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">Shrnutí úpravy</span>
+            <input
+              value={shrnutiUpravy}
+              onChange={(e) => setShrnutiUpravy(e.target.value)}
+              placeholder="doplnění zdrojů"
+              className={pole}
+            />
+          </label>
+          <button type="button" onClick={odesli} disabled={odesilam || !maToken || !cil.trim() || zmeneno} className={tlacitko}>
+            {odesilam ? 'Odesílám…' : 'Odeslat na Wikipedii'}
+          </button>
+        </div>
+        <p className="text-xs font-body text-muted m-0">
+          Odesílá se POSLEDNÍ ULOŽENÁ verze konceptu, takže před odesláním uložte. Úprava se na Wikipedii
+          objeví pod vaším jménem a je veřejně dohledatelná — u článku o sobě nezapomeňte na střet zájmů.
+          {zmeneno ? ' Máte neuložené změny, proto je odesílání zamčené.' : ''}
+        </p>
+        {odeslano && (
+          <p className="text-sm font-body text-ink m-0">
+            Uloženo na Wikipedii —{' '}
+            <a href={odeslano} target="_blank" rel="noreferrer" className="text-brand-purple">
+              otevřít stránku ↗
+            </a>
+          </p>
         )}
       </div>
 

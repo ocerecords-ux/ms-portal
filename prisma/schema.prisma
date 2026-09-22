@@ -3387,6 +3387,12 @@ model WikiClanek {
   udaje            Json?
   /// Nazev zive stranky na Wikipedii, ktera se hlida (az bude vlozena).
   sledovanyNazev   String?
+  /// Osobni pristupovy token (OAuth 2.0 „owner-only" na meta.wikimedia.org),
+  /// kterym portal odesila upravy za uzivatele (zadani 22. 9. 2026: „chci to
+  /// rovnou odesilat z portalu"). Nikdy se nevraci do prohlizece.
+  token            String?
+  /// Kam se odesila - vychozi je vlastni piskoviste.
+  cilStranka       String?
   posledniRevize   Int?
   posledniKontrola DateTime?
   chybaKontroly    String?

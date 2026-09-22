@@ -22,6 +22,9 @@ export function adresaPiskoviste(jazyk: string): string {
   return adresaWiki(jazyk, stranka, { action: 'edit' });
 }
 
+/** Registrace osobního tokenu (OAuth „owner-only") - vyřizuje se hned. */
+export const ADRESA_OAUTH = 'https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2';
+
 export function adresaRegistrace(jazyk: string): string {
   return adresaWiki(jazyk, 'Special:CreateAccount');
 }
