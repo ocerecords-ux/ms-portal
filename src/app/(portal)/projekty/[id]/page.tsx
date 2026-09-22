@@ -37,6 +37,8 @@ import { ProtokolNataceni } from './ProtokolNataceni';
 import { VykazyProjektu, type BonusRadek, type VykazRadek } from './VykazyProjektu';
 import { CerpaniPoDruzich } from './CerpaniPoDruzich';
 import { RodnyListSection } from './RodnyListSection';
+import { LicencniListSection } from './LicencniListSection';
+import { nactiLicencniListy, vychoziLicencniList } from '@/lib/licencniListServer';
 import { HistorieProjektu } from './HistorieProjektu';
 import { Preposlech } from './Preposlech';
 import { OdkazProKlienta } from './OdkazProKlienta';
@@ -743,6 +745,32 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // patří klientovi. Reklama = firma má zaškrtnuté Reklamy, stejné pravidlo
   // jako u mailů.
   const jeReklama = druhNotifikaceFirmy(company) === 'REKLAMA';
+
+  /**
+   * LICENČNÍ LIST (zadání 22. 9. 2026: „u reklam budeme klientovi vystavovat
+   * licenční listy, netýká se to rádiových spotů"). Záložka u projektů firem,
+   * které dělají reklamy, kromě rádiového spotu (ten má Rodný list).
+   */
+  if (isInternalRole(session.user.role) && (jeReklama || Boolean(company?.dealsAds)) && !jeRadiovySpot) {
+    const [listy, vychoziLL] = await Promise.all([
+      nactiLicencniListy(caflouProjectId),
+      vychoziLicencniList(caflouProjectId),
+    ]);
+    tabs.push({
+      key: 'licencni-list',
+      label: 'Licenční list',
+      count: listy.length,
+      content: (
+        <LicencniListSection
+          caflouProjectId={caflouProjectId}
+          canEdit={canEdit}
+          listy={listy.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() }))}
+          vychozi={vychoziLL}
+        />
+      ),
+    });
+  }
+
   if (isInternalRole(session.user.role) && jeReklama) {
     /**
      * Tagger chodí pro soubory a připomínky přes token odkazu pro klienta -

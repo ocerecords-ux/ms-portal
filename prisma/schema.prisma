@@ -3275,3 +3275,43 @@ model ZalohaTextu {
   @@unique([zdrojId, md5])
   @@index([md5])
 }
+
+/// LICENČNÍ LIST (zadání 22. 9. 2026: „u reklam budeme klientovi vystavovat
+/// licenční listy, netýká se to rádiových spotů. Jde o vymezení licence pro
+/// daného herce"). Jeden řádek = jeden vystavený dokument pro jednoho
+/// interpreta. Hodnoty jsou uložené tak, jak jsou vytištěné v PDF.
+model LicencniList {
+  id              String   @id @default(cuid())
+  caflouProjectId String
+  projectName     String
+  companyId       String?
+  /// Herec z projektu, pokud je to účet v portálu (jinak jen jméno níže).
+  actorUserId     String?
+
+  fileName String
+  /// PDF v úložišti (nebo data URL, když úložiště není) - jako u Rodného listu.
+  url      String  @db.Text
+  driveFileId String?
+  driveUrl    String?
+  driveError  String?
+
+  nazevSpotu   String
+  klient       String
+  objednatel   String
+  dodavatel    String
+  interpret    String
+  typDila      String
+  uzemi        String
+  media        String
+  delkaLicence String
+  typLicence   String
+  datumVyroby  DateTime
+  podminky     String   @db.Text
+  misto        String
+  podepisuje   String
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([caflouProjectId])
+}
