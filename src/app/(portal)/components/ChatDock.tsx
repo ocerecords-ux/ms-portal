@@ -1003,21 +1003,32 @@ function Reakce({
   return (
     <span className="mt-1 flex items-center gap-1 flex-wrap">
       {reactions.map((r) => (
-        <button
-          key={r.code}
-          type="button"
-          onClick={() => onToggle(r.code)}
-          title={r.kdo.join(', ')}
-          aria-pressed={r.mine}
-          className={`inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 leading-none transition-colors ${
-            r.mine
-              ? 'border-brand-purple bg-tint text-brand-purple'
-              : 'border-line bg-surface text-muted hover:border-brand-purple'
-          }`}
-        >
-          <ZnakReakce code={r.code} />
-          <span className="text-[11px] font-heading font-semibold tabular-nums">{r.count}</span>
-        </button>
+        /* Kdo reagoval, ukáže bublina hned při najetí myší (zadání 22. 9. 2026:
+           „když přejedu myší po reakci smajlíkem, aby mi zobrazilo, kdo všechno
+           na to reaguje"). Vlastní bublina místo `title`, které naskakuje až po
+           vteřině a na dotyku se neukáže vůbec. */
+        <span key={r.code} className="relative inline-flex group">
+          <button
+            type="button"
+            onClick={() => onToggle(r.code)}
+            aria-label={`${r.count}× reakce: ${r.kdo.join(', ')}`}
+            aria-pressed={r.mine}
+            className={`inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 leading-none transition-colors ${
+              r.mine
+                ? 'border-brand-purple bg-tint text-brand-purple'
+                : 'border-line bg-surface text-muted hover:border-brand-purple'
+            }`}
+          >
+            <ZnakReakce code={r.code} />
+            <span className="text-[11px] font-heading font-semibold tabular-nums">{r.count}</span>
+          </button>
+          <span
+            role="tooltip"
+            className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1 hidden -translate-x-1/2 whitespace-pre rounded-lg border border-line bg-surface px-2 py-1 text-[11px] font-body text-ink shadow-md group-hover:block group-focus-within:block"
+          >
+            {r.kdo.join('\n')}
+          </span>
+        </span>
       ))}
     </span>
   );

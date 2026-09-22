@@ -3383,6 +3383,8 @@ model WikiClanek {
   /// Navrzeny nazev clanku (napr. „Ondřej Černý (režisér)").
   nazev            String
   wikitext         String    @db.Text
+  /// Vyplneny formular „Udaje", ze ktereho se wikitext sklada (22. 9. 2026).
+  udaje            Json?
   /// Nazev zive stranky na Wikipedii, ktera se hlida (az bude vlozena).
   sledovanyNazev   String?
   posledniRevize   Int?

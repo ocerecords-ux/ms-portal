@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { sestavWikitext, type UdajeOsoby } from '@/lib/wikipedieUdaje';
+import { UdajeForm } from './UdajeForm';
 import {
   JAZYKY_WIKI,
   adresaPiskoviste,
@@ -19,6 +21,7 @@ type Pocatecni = {
   jazyk: string;
   nazev: string;
   wikitext: string;
+  udaje: UdajeOsoby;
   sledovanyNazev: string;
   ulozeno: string | null;
   posledniKontrola: string | null;
@@ -58,13 +61,24 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
   const [jazyk, setJazyk] = useState<JazykWiki>((JAZYKY_WIKI as readonly string[]).includes(pocatecni.jazyk) ? (pocatecni.jazyk as JazykWiki) : 'cs');
   const [nazev, setNazev] = useState(pocatecni.nazev);
   const [wikitext, setWikitext] = useState(pocatecni.wikitext);
+  const [udaje, setUdaje] = useState<UdajeOsoby>(pocatecni.udaje);
+  const [zalozka, setZalozka] = useState<'udaje' | 'text'>('udaje');
   const [sledovany, setSledovany] = useState(pocatecni.sledovanyNazev);
   const [ulozeno, setUlozeno] = useState(pocatecni.ulozeno);
-  const [ulozenyStav, setUlozenyStav] = useState({ jazyk, nazev, wikitext, sledovany: pocatecni.sledovanyNazev });
+  const [ulozenyStav, setUlozenyStav] = useState({
+    jazyk,
+    nazev,
+    wikitext,
+    sledovany: pocatecni.sledovanyNazev,
+    udaje: JSON.stringify(pocatecni.udaje),
+  });
   const [verze, setVerze] = useState(verzePocatecni);
   const [pracuje, setPracuje] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
+
+  /** Poslední text, který vyrobilo „Sestavit" - podle něj se pozná ruční úprava. */
+  const poslednSestaveny = useRef('');
 
   const [nahled, setNahled] = useState<string | null>(null);
   const [nahledChyba, setNahledChyba] = useState<string | null>(null);
@@ -80,7 +94,8 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
     jazyk !== ulozenyStav.jazyk ||
     nazev !== ulozenyStav.nazev ||
     wikitext !== ulozenyStav.wikitext ||
-    sledovany !== ulozenyStav.sledovany;
+    sledovany !== ulozenyStav.sledovany ||
+    JSON.stringify(udaje) !== ulozenyStav.udaje;
 
   const pocetSlov = useMemo(() => wikitext.replace(/<!--[\s\S]*?-->/g, '').split(/\s+/).filter(Boolean).length, [wikitext]);
   // Pojmenovaná reference použitá víckrát je jeden zdroj.
@@ -107,6 +122,18 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
     return () => window.removeEventListener('beforeunload', h);
   }, [zmeneno]);
 
+  /** Z formuláře poskládá wikitext. Ručně upravený text nepřepíše bez dotazu. */
+  function sestav() {
+    const novy = sestavWikitext(udaje);
+    const rucne = wikitext.trim() && wikitext !== poslednSestaveny.current && wikitext !== pocatecni.wikitext;
+    if (rucne && !window.confirm('Text v záložce Wikitext se přepíše textem z údajů. Pokračovat?')) return;
+    poslednSestaveny.current = novy;
+    setWikitext(novy);
+    setNazev((n) => n || udaje.jmeno);
+    setZalozka('text');
+    setHlaska('Text je sestavený z údajů - projděte ho a uložte.');
+  }
+
   async function uloz() {
     setPracuje(true);
     setChyba(null);
@@ -115,7 +142,7 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       const res = await fetch('/api/admin/wikipedie', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jazyk, nazev, wikitext, sledovanyNazev: sledovany || null }),
+        body: JSON.stringify({ jazyk, nazev, wikitext, udaje, sledovanyNazev: sledovany || null }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; ulozeno?: string; verze?: Verze[] };
       if (!res.ok) {
@@ -124,7 +151,7 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
       }
       setUlozeno(data.ulozeno ?? new Date().toISOString());
       if (data.verze) setVerze(data.verze);
-      setUlozenyStav({ jazyk, nazev, wikitext, sledovany });
+      setUlozenyStav({ jazyk, nazev, wikitext, sledovany, udaje: JSON.stringify(udaje) });
       setHlaska('Uloženo.');
     } catch {
       setChyba('Nepodařilo se spojit se serverem.');
@@ -270,12 +297,42 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
             Kopírovat wikitext
           </button>
         </div>
+        <div className="flex items-center gap-2 flex-wrap border-t border-line pt-3">
+          <div className="flex rounded-lg border border-line overflow-hidden">
+            {(['udaje', 'text'] as const).map((z) => (
+              <button
+                key={z}
+                type="button"
+                onClick={() => setZalozka(z)}
+                className={`font-heading font-semibold text-sm px-4 py-2 border-0 cursor-pointer ${
+                  zalozka === z ? 'bg-brand-purple text-white' : 'bg-transparent text-ink'
+                }`}
+              >
+                {z === 'udaje' ? 'Údaje o sobě' : 'Wikitext'}
+              </button>
+            ))}
+          </div>
+          {zalozka === 'udaje' && (
+            <button type="button" onClick={sestav} className={tlacitko}>
+              Sestavit text z údajů
+            </button>
+          )}
+        </div>
         <p className="text-xs font-body text-muted m-0">
           {pocetSlov} slov · {pocetZdroju} {pocetZdroju === 1 ? 'zdroj' : pocetZdroju >= 2 && pocetZdroju <= 4 ? 'zdroje' : 'zdrojů'}
           {ulozeno ? ` · uloženo ${datum(ulozeno)}` : ' · zatím neuloženo'}
           {zmeneno ? ' · máte neuložené změny' : ''}
         </p>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {zalozka === 'udaje' && (
+          <>
+            <p className="text-sm font-body text-muted m-0 max-w-[80ch]">
+              Vyplňte, co o sobě chcete mít v článku. „Sestavit text z údajů" z toho poskládá celý wikitext
+              i s referencemi a přepíše jím záložku Wikitext — ručních úprav textu se tedy předtím zeptá.
+            </p>
+            <UdajeForm udaje={udaje} zmena={setUdaje} />
+          </>
+        )}
+        <div className={`${zalozka === 'text' ? 'grid' : 'hidden'} grid-cols-1 xl:grid-cols-2 gap-4`}>
           <textarea
             value={wikitext}
             onChange={(e) => setWikitext(e.target.value)}

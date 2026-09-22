@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { vychoziKoncept } from '@/lib/wikipedie';
+import { PRAZDNE_UDAJE, type UdajeOsoby } from '@/lib/wikipedieUdaje';
 import { WikipedieEditor } from './WikipedieEditor';
 
 /**
@@ -48,6 +49,11 @@ export default async function WikipediePage() {
           jazyk: clanek?.jazyk ?? 'cs',
           nazev: clanek?.nazev ?? vychozi.nazev,
           wikitext: clanek?.wikitext ?? vychozi.wikitext,
+          udaje: {
+            ...PRAZDNE_UDAJE,
+            jmeno: session.user.name || '',
+            ...((clanek?.udaje as Partial<UdajeOsoby> | null) ?? {}),
+          } as UdajeOsoby,
           sledovanyNazev: clanek?.sledovanyNazev ?? '',
           ulozeno: clanek ? clanek.updatedAt.toISOString() : null,
           posledniKontrola: clanek?.posledniKontrola ? clanek.posledniKontrola.toISOString() : null,

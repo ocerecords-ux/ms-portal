@@ -16,6 +16,8 @@ const schema = z.object({
   jazyk: z.enum(JAZYKY_WIKI),
   nazev: z.string().trim().min(1, 'Vyplňte název článku.').max(200),
   wikitext: z.string().max(300_000),
+  // Formulář „Údaje" - ukládá se, jak přišel; skládá se z něj wikitext.
+  udaje: z.unknown().optional(),
   sledovanyNazev: z.string().trim().max(200).optional().nullable(),
 });
 
@@ -33,11 +35,12 @@ export async function PUT(req: NextRequest) {
 
   const clanek = await prisma.wikiClanek.upsert({
     where: { userId },
-    create: { userId, jazyk: d.jazyk, nazev: d.nazev, wikitext: d.wikitext, sledovanyNazev: sledovany },
+    create: { userId, jazyk: d.jazyk, nazev: d.nazev, wikitext: d.wikitext, sledovanyNazev: sledovany, udaje: (d.udaje ?? null) as object | null },
     update: {
       jazyk: d.jazyk,
       nazev: d.nazev,
       wikitext: d.wikitext,
+      ...(d.udaje !== undefined ? { udaje: d.udaje as object | null } : {}),
       sledovanyNazev: sledovany,
       // Jiný hlídaný článek = začíná se znovu (první kontrola si jen zapamatuje revizi).
       ...(pred && (pred.sledovanyNazev !== sledovany || pred.jazyk !== d.jazyk)
