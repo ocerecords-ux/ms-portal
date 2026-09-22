@@ -3,11 +3,13 @@ import { StudiosManager } from './StudiosManager';
 import { TabuleStudii } from './TabuleStudii';
 import { nazevPolozky } from '@/lib/tabule';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
+import { instagramNastaven, stavInstagramu } from '@/lib/instagramServer';
 
 // Studia, jejich pracovni doba a blokace (zadani 8. 9. 2026).
 export const dynamic = 'force-dynamic';
 
-export default async function StudiaPage() {
+export default async function StudiaPage({ searchParams }: { searchParams?: { instagram?: string } }) {
+  const igStav = await stavInstagramu();
   const [studios, blocks, tabule] = await Promise.all([
     prisma.studio.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -29,6 +31,7 @@ export default async function StudiaPage() {
           name: true,
           color: true,
           tabuleKlic: true,
+          tabuleInstagram: true,
           tabuleUcty: { select: { id: true, email: true, active: true } },
           tabuleChybi: { where: { doplnenoAt: null }, orderBy: { nahlasenoAt: 'asc' } },
           tabulePoznamky: { where: { hotovoAt: null }, orderBy: { createdAt: 'desc' } },
@@ -41,6 +44,7 @@ export default async function StudiaPage() {
     name: string;
     color: string;
     tabuleKlic: string | null;
+    tabuleInstagram: boolean;
     tabuleUcty: { id: string; email: string; active: boolean }[];
     tabuleChybi: { polozka: string; nahlasenoAt: Date }[];
     tabulePoznamky: { id: string; text: string; autor: string | null; createdAt: Date }[];
@@ -81,11 +85,19 @@ export default async function StudiaPage() {
     />
     <TabuleStudii
       zaklad={zakladPortalu()}
+      instagram={{
+        nastaven: instagramNastaven(),
+        ucet: igStav ? igStav.username ?? '(bez jména)' : null,
+        platiDo: igStav ? igStav.tokenDo.toISOString() : null,
+        chyba: igStav?.chyba ?? null,
+        hlaska: searchParams?.instagram ?? null,
+      }}
       studia={tabuleStudii.map((t) => ({
         id: t.id,
         nazev: t.name,
         barva: t.color,
         klic: t.tabuleKlic,
+        instagram: t.tabuleInstagram,
         ucty: t.tabuleUcty.map((u) => ({ id: u.id, email: u.email, aktivni: u.active })),
         chybi: t.tabuleChybi.map((c) => ({ polozka: c.polozka, nazev: nazevPolozky(c.polozka), kdy: c.nahlasenoAt.toISOString() })),
         poznamky: t.tabulePoznamky.map((p) => ({ id: p.id, text: p.text, autor: p.autor, kdy: p.createdAt.toISOString() })),

@@ -326,6 +326,8 @@ export function Tabule({ klic, pocatecni }: { klic: string; pocatecni: DataTabul
             )}
           </div>
 
+          {data.instagram && <InstagramOkno ig={data.instagram} />}
+
           <Panel klic={klic} zaklad={zaklad} data={data} setData={setData} obnov={nacti} />
         </div>
       </div>
@@ -633,6 +635,84 @@ function Panel({
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * OKNO S INSTAGRAMEM (zadání 22. 9. 2026: „aby se tam promítaly i příběhy
+ * v nějakém okně"). Formát příběhu 9:16 mezi programem a panelem. Fotky
+ * po 7 vteřinách, videa celá (bez zvuku), pak další a znovu dokola. Pruhy
+ * nahoře ukazují, kolikátý příběh běží - jako v aplikaci.
+ */
+function InstagramOkno({ ig }: { ig: NonNullable<DataTabule['instagram']> }) {
+  const [kde, setKde] = useState(0);
+  const polozky = ig.polozky;
+  const p = polozky[kde % polozky.length];
+  const dalsi = useCallback(() => setKde((k) => (k + 1) % Math.max(1, polozky.length)), [polozky.length]);
+
+  useEffect(() => {
+    if (!p || p.typ === 'VIDEO') return;
+    const t = setTimeout(dalsi, 7000);
+    return () => clearTimeout(t);
+  }, [p, dalsi]);
+
+  // Když se seznam změní (nové příběhy), nezůstat mimo rozsah.
+  useEffect(() => {
+    if (kde >= polozky.length) setKde(0);
+  }, [kde, polozky.length]);
+
+  if (!p) return null;
+  const SIRKA_OKNA = 420;
+  return (
+    <div style={{ width: SIRKA_OKNA, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>
+        {ig.druh === 'pribehy' ? 'PŘÍBĚHY' : 'INSTAGRAM'}
+        {ig.ucet ? ` · @${ig.ucet.toUpperCase()}` : ''}
+      </span>
+      <div
+        style={{
+          position: 'relative',
+          width: SIRKA_OKNA,
+          aspectRatio: '9 / 16',
+          maxHeight: '100%',
+          borderRadius: 28,
+          overflow: 'hidden',
+          background: BARVY.karta,
+        }}
+      >
+        {p.typ === 'VIDEO' ? (
+          <video
+            key={p.id}
+            src={p.url}
+            poster={p.nahled ?? undefined}
+            autoPlay
+            muted
+            playsInline
+            onEnded={dalsi}
+            onError={dalsi}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={p.id} src={p.url} alt="" onError={dalsi} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        )}
+        {polozky.length > 1 && (
+          <div style={{ position: 'absolute', top: 14, left: 14, right: 14, display: 'flex', gap: 6 }}>
+            {polozky.map((x, i) => (
+              <span
+                key={x.id}
+                style={{
+                  flex: 1,
+                  height: 5,
+                  borderRadius: 999,
+                  background: i <= kde % polozky.length ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.35)',
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

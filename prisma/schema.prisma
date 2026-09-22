@@ -1887,6 +1887,8 @@ model Studio {
   /// TABULE VE STUDIU (zadani 21. 9. 2026). Tajny klic v adrese
   /// /tabule/<klic> - dotykovy displej se neprihlasuje. Null = tabule vypnuta.
   tabuleKlic      String?          @unique
+  /// Okno s příběhy z Instagramu na tabuli (22. 9. 2026) - dá se u studia vypnout.
+  tabuleInstagram Boolean          @default(true)
   tabulePoznamky  StudioPoznamka[]
   tabuleChybi     StudioChybi[]
 
@@ -3328,4 +3330,22 @@ model LicencniList {
   createdAt       DateTime @default(now())
 
   @@index([caflouProjectId])
+}
+
+/// INSTAGRAM NA TABULÍCH (zadání 22. 9. 2026: „můžeme propojit tu tabuli ve
+/// studiu s účtem na Instagramu? Že by se tam promítaly i příběhy v nějakém
+/// okně"). Jeden připojený účet pro celé studio. Token vydá Instagram po
+/// přihlášení (Instagram API s přihlášením přes Instagram), platí 60 dní
+/// a portál si ho sám prodlužuje. Příběhy se drží v mezipaměti ~10 minut.
+model InstagramUcet {
+  id        String    @id @default("hlavni")
+  igUserId  String
+  username  String?
+  token     String    @db.Text
+  tokenDo   DateTime
+  /// Poslední stažené příběhy / příspěvky (JSON pole) a kdy.
+  cache     Json?
+  cacheAt   DateTime?
+  chyba     String?
+  updatedAt DateTime  @updatedAt
 }

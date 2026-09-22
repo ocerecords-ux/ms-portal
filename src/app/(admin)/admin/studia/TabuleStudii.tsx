@@ -8,6 +8,8 @@ type StudioTabule = {
   nazev: string;
   barva: string;
   klic: string | null;
+  /** Okno s Instagramem na tabuli (22. 9. 2026). */
+  instagram: boolean;
   /** Účty počítačů u obrazovky (role Tabule ve studiu) - 22. 9. 2026. */
   ucty: { id: string; email: string; aktivni: boolean }[];
   chybi: { polozka: string; nazev: string; kdy: string }[];
@@ -19,7 +21,23 @@ type StudioTabule = {
  * adresa, kterou se otevře na displeji ve studiu. Zároveň je tu vidět, co
  * ve studiích chybí a jaké poznámky tam visí - a jde to odškrtnout i odsud.
  */
-export function TabuleStudii({ studia, zaklad }: { studia: StudioTabule[]; zaklad: string }) {
+type StavInstagramu = {
+  nastaven: boolean;
+  ucet: string | null;
+  platiDo: string | null;
+  chyba: string | null;
+  hlaska: string | null;
+};
+
+export function TabuleStudii({
+  studia,
+  zaklad,
+  instagram,
+}: {
+  studia: StudioTabule[];
+  zaklad: string;
+  instagram: StavInstagramu;
+}) {
   const router = useRouter();
   const [pracuji, setPracuji] = useState<string | null>(null);
   const [zkopirovano, setZkopirovano] = useState<string | null>(null);
@@ -43,6 +61,21 @@ export function TabuleStudii({ studia, zaklad }: { studia: StudioTabule[]; zakla
       return;
     }
     setUdaje({ studioId, login: telo.login, heslo: telo.heslo });
+    router.refresh();
+  }
+
+  async function odpojInstagram() {
+    if (!window.confirm('Odpojit Instagram? Z tabulí zmizí okno s příběhy.')) return;
+    await fetch('/api/admin/instagram', { method: 'DELETE' }).catch(() => null);
+    router.refresh();
+  }
+
+  async function instagramStudia(studioId: string, zapnuto: boolean) {
+    await fetch('/api/admin/instagram', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studioId, zapnuto }),
+    }).catch(() => null);
     router.refresh();
   }
 
@@ -95,6 +128,48 @@ export function TabuleStudii({ studia, zaklad }: { studia: StudioTabule[]; zakla
           displeji v prohlížeči přes celou obrazovku, nebo se na počítači u displeje přihlaste účtem tabule. Když někdo ťukne, že něco chybí, Bruno napíše
           Báře Šiblové.
         </p>
+      </div>
+
+      {/* INSTAGRAM (22. 9. 2026): příběhy z účtu studia v okně na tabuli. */}
+      <div className="rounded-lg border border-line px-4 py-3 flex flex-col gap-1.5">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">Instagram</span>
+          {instagram.ucet ? (
+            <>
+              <span className="text-sm font-heading font-semibold text-ink">@{instagram.ucet}</span>
+              <span className="text-xs text-muted">příběhy se ukazují na tabulích, které to mají zapnuté</span>
+              <span className="ml-auto flex gap-3">
+                <a href="/api/admin/instagram/pripojit" className="text-xs font-heading text-muted hover:text-ink no-underline">
+                  Připojit znovu
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void odpojInstagram()}
+                  className="text-xs font-heading text-muted hover:text-danger bg-transparent border-0 cursor-pointer"
+                >
+                  Odpojit
+                </button>
+              </span>
+            </>
+          ) : instagram.nastaven ? (
+            <a
+              href="/api/admin/instagram/pripojit"
+              className="text-sm font-heading font-semibold rounded-lg px-4 py-2 bg-brand-purple text-white no-underline"
+            >
+              Připojit Instagram
+            </a>
+          ) : (
+            <span className="text-sm text-muted">
+              Čeká na aplikaci v Meta for Developers - na Vercelu chybí INSTAGRAM_APP_ID a INSTAGRAM_APP_SECRET.
+            </span>
+          )}
+        </div>
+        {instagram.hlaska && (
+          <span className={`text-sm ${instagram.hlaska === 'ok' ? 'text-status-done' : 'text-danger'}`}>
+            {instagram.hlaska === 'ok' ? 'Instagram je připojený.' : `Připojení se nepovedlo: ${instagram.hlaska}`}
+          </span>
+        )}
+        {instagram.chyba && <span className="text-sm text-danger">Poslední načtení: {instagram.chyba}</span>}
       </div>
 
       <div className="flex flex-col divide-y divide-line">
@@ -151,6 +226,17 @@ export function TabuleStudii({ studia, zaklad }: { studia: StudioTabule[]; zakla
                   </button>
                 )}
               </div>
+
+              {instagram.ucet && (
+                <label className="pl-6 flex items-center gap-2 text-sm text-ink cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={s.instagram}
+                    onChange={(e) => void instagramStudia(s.id, e.target.checked)}
+                  />
+                  Ukazovat na tabuli příběhy z Instagramu
+                </label>
+              )}
 
               {/* ÚČET POČÍTAČE U OBRAZOVKY (22. 9. 2026): jméno a heslo bez
                   e-mailu. Přihlásí se jím v Chromu a portál rovnou ukáže

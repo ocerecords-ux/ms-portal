@@ -86,4 +86,10 @@ export type DataTabule = {
   poznamky: { id: string; text: string; autor: string | null; kdy: string }[];
   chybi: { polozka: string; kdy: string }[];
   ted: string;
+  /** Příběhy z Instagramu (22. 9. 2026); null = okno se neukáže. */
+  instagram?: {
+    ucet: string | null;
+    druh: 'pribehy' | 'prispevky';
+    polozky: { id: string; typ: 'IMAGE' | 'VIDEO'; url: string; nahled: string | null; kdy: string }[];
+  } | null;
 };
