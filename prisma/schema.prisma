@@ -429,6 +429,11 @@ model Order {
   uvodKnihy            String?
   zaverKnihy           String?
 
+  /// Příloha ve složce projektu na Disku (22. 9. 2026) - ID souboru, nebo
+  /// proč se tam nedostala (ukazuje se v detailu projektu).
+  diskPrilohaId        String?
+  diskPrilohaChyba     String?
+
   status               OrderStatus       @default(NEW)
   emailSentAt          DateTime?
 

@@ -4,13 +4,15 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { calculatePrice } from '@/lib/price';
-import { adresaVUlozisti, klicZAdresyUloziste, overPrilohu, stahniZUloziste, uploadOrderAttachment } from '@/lib/storage';
+import { adresaVUlozisti, overPrilohu, uploadOrderAttachment } from '@/lib/storage';
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/email';
 import { noveIdProjektu } from '@/lib/projektId';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
 import { zalozKanalProjektu } from '@/lib/kanalProjektuServer';
 import { zapisZalozeniProjektu } from '@/lib/projektLogServer';
-import { nahrajSouborDoSlozky, vytvorSlozkuProjektu } from '@/lib/googleDrive';
+import { vytvorSlozkuProjektu } from '@/lib/googleDrive';
+import { nahrajPrilohuObjednavkyNaDisk } from '@/lib/prilohaObjednavkyServer';
+import { zakladPortalu } from '@/lib/preposlechOdkaz';
 import { bezTitulu } from '@/lib/jmena';
 import { notifyMany } from '@/lib/notifications';
 import { vidiCenuObjednavky } from '@/lib/roles';
@@ -234,7 +236,9 @@ export async function POST(req: NextRequest) {
         ]
           .filter(Boolean)
           .join('\n\n') || null,
-      attachmentUrl: attachment?.url ?? null,
+      // Odkaz přes portál, ne rovnou do úložiště - to je soukromé a přímý
+      // odkaz končil „Access denied" (22. 9. 2026).
+      attachmentUrl: attachment ? `${zakladPortalu()}/api/orders/${order.id}/priloha` : null,
       attachmentName: attachment?.name ?? null,
       requestedByName: orderingUser?.name ?? null,
       requestedByEmail: session.user.email,
@@ -356,23 +360,6 @@ export async function POST(req: NextRequest) {
         if ('chyba' in vysledek) console.error(`Složka projektu „${title}": ${vysledek.chyba}`);
         else {
           driveUrl = vysledek.url;
-          /**
-           * PŘÍLOHA DO SLOŽKY (zadání 22. 9. 2026: „když přijde objednávka
-           * audioknihy a někdo vloží PDF, tak se sice udělá nová složka, ale
-           * PDF se tam neuloží"). Soubor leží v našem úložišti - stáhne se
-           * a nahraje do nové složky. Best effort: v úložišti zůstává
-           * a odkaz v mailu na něj vede dál.
-           */
-          if (attachment) {
-            const klicPrilohy = klicZAdresyUloziste(attachment.url);
-            const soubor = klicPrilohy ? await stahniZUloziste(klicPrilohy) : null;
-            if (!soubor) {
-              console.error(`Přílohu objednávky „${attachment.name}" se nepodařilo stáhnout z úložiště pro Disk.`);
-            } else {
-              const nahrano = await nahrajSouborDoSlozky(vysledek.id, attachment.name, soubor.bytes, soubor.mime);
-              if (!nahrano.ok) console.error(`Příloha „${attachment.name}" na Disk: ${nahrano.duvod}`);
-            }
-          }
         }
       }
 
@@ -411,6 +398,15 @@ export async function POST(req: NextRequest) {
         where: { id: order.id },
         data: { caflouProjectId, caflouSyncStatus: 'OK' },
       });
+
+      /**
+       * PŘÍLOHA DO SLOŽKY PROJEKTU (zadání 22. 9. 2026). Až teď, když projekt
+       * i složka existují; výsledek (nebo důvod selhání) se zapíše
+       * k objednávce a je vidět v detailu projektu.
+       */
+      if (attachment && driveUrl) {
+        await nahrajPrilohuObjednavkyNaDisk(order.id);
+      }
 
       /**
        * KANAL V CHATU (zadani 15. 9. 2026: „mela by se zalozit slozka podle

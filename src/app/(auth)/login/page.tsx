@@ -73,8 +73,15 @@ export default function LoginPage() {
     }
     // Čekání schválně nevypínáme - pokračuje se přesměrováním do portálu.
     setPhase('redirecting');
-    router.push('/projekty');
-    router.refresh();
+    // Návrat tam, odkud člověk přišel - třeba odkaz na přílohu objednávky
+    // z mailu (22. 9. 2026). Jen cesta v portálu, nikdy cizí adresa.
+    const zpet = new URLSearchParams(window.location.search).get('callbackUrl') || '';
+    const cil = zpet.startsWith('/') && !zpet.startsWith('//') ? zpet : '/projekty';
+    if (cil.startsWith('/api/')) window.location.href = cil;
+    else {
+      router.push(cil);
+      router.refresh();
+    }
   }
 
   return (

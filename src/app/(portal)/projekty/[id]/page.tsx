@@ -38,6 +38,7 @@ import { VykazyProjektu, type BonusRadek, type VykazRadek } from './VykazyProjek
 import { CerpaniPoDruzich } from './CerpaniPoDruzich';
 import { RodnyListSection } from './RodnyListSection';
 import { LicencniListSection } from './LicencniListSection';
+import { PrilohaObjednavky } from '@/components/PrilohaObjednavky';
 import { nactiLicencniListy, vychoziLicencniList } from '@/lib/licencniListServer';
 import { HistorieProjektu } from './HistorieProjektu';
 import { Preposlech } from './Preposlech';
@@ -930,6 +931,18 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           {objednavkaZWebu && <ZnackaZWebu objednanoAt={objednavkaZWebu.createdAt} />}
         </div>
         {company && <p className="text-muted text-sm font-body mt-1">{company.name}</p>}
+        {/* Text z objednávky - odkaz a stav kopie na Disku (22. 9. 2026). */}
+        {objednavkaZWebu?.attachmentUrl && isInternalRole(session.user.role) && (
+          <div className="mt-1">
+            <PrilohaObjednavky
+              orderId={objednavkaZWebu.id}
+              nazev={objednavkaZWebu.attachmentName || 'příloha'}
+              naDisku={Boolean(objednavkaZWebu.diskPrilohaId)}
+              chyba={objednavkaZWebu.diskPrilohaChyba}
+              muzeZkusit={canEdit}
+            />
+          </div>
+        )}
       </div>
 
       <ProjectTabs tabs={tabs} />

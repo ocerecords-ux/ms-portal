@@ -62,6 +62,10 @@ export async function objednavkaProjektu(caflouProjectId: string) {
         priceEstimate: true,
         companyId: true,
         company: { select: { name: true } },
+        attachmentName: true,
+        attachmentUrl: true,
+        diskPrilohaId: true,
+        diskPrilohaChyba: true,
       },
     });
   } catch (err) {
