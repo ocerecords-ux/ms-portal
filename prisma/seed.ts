@@ -186,6 +186,7 @@ async function main() {
   await zalozDruhyLicence();
   await doplnStudiaZvukaru();
   await doplnZadavateleUkolu();
+  await peterTakyZvukar();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
   await brunoZpetneOznamPreposlech();
@@ -954,6 +955,23 @@ async function nastavBarvyStudii() {
   } catch (err) {
     // Je to jen vzhled - kdyby se nepovedl, nesmi to shodit seed.
     console.warn('  barvy studii se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * PETER DRATVA I JAKO ZVUKAŘ (22. 9. 2026: „přidej Petera Dratvu, aby se mohl
+ * občas i přidat jako zvukař k některým projektům"). Jednou zapne „Může být
+ * i zvukař" - kdyby to pak někdo na kartě vypnul, seed to znovu nezapne.
+ */
+async function peterTakyZvukar() {
+  const ZNAMKA = 'peter-dratva-taky-zvukar';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    await prisma.user.updateMany({ where: { email: 'peter.dratva@mediaspace.cz' }, data: { takyZvukar: true } });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+  } catch (err) {
+    console.warn('  Petera jako zvukare se nepodarilo nastavit:', err);
   }
 }
 

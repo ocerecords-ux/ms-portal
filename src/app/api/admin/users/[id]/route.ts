@@ -38,6 +38,7 @@ const schema = z.object({
   dostavaDotoceno: z.string().trim().optional(),
   dostavaDotocenoKlient: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
+  takyZvukar: z.string().trim().optional(),
   dostavaVyplneneUdaje: z.string().trim().optional(),
   vychoziManazerAudioknih: z.string().trim().optional(),
   studioLocations: z.array(z.string()).optional(),
@@ -79,6 +80,7 @@ function readFormData(formData: FormData) {
       ? formData.get('dostavaDotocenoKlient')
       : undefined,
     dostavaObjednavky: has('dostavaObjednavky') ? formData.get('dostavaObjednavky') : undefined,
+    takyZvukar: has('takyZvukar') ? formData.get('takyZvukar') : undefined,
     dostavaVyplneneUdaje: has('dostavaVyplneneUdaje') ? formData.get('dostavaVyplneneUdaje') : undefined,
     vychoziManazerAudioknih: has('vychoziManazerAudioknih')
       ? formData.get('vychoziManazerAudioknih')
@@ -195,6 +197,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.dostavaObjednavky !== undefined
         ? { dostavaObjednavky: data.dostavaObjednavky === '1' }
         : {}),
+      ...(data.takyZvukar !== undefined ? { takyZvukar: data.takyZvukar === '1' } : {}),
       ...(data.vidiBanku !== undefined ? { vidiBanku: data.vidiBanku === '1' } : {}),
       ...(data.sledujeZmenyProjektu !== undefined
         ? { sledujeZmenyProjektu: data.sledujeZmenyProjektu === '1' }

@@ -273,6 +273,11 @@ model User {
   /// na karte uzivatele, nesedi to v promenne prostredi.
   dostavaObjednavky Boolean @default(false)
 
+  /// Muze byt i zvukar (zadani 22. 9. 2026: „pridej Petera Dratvu, aby se mohl
+  /// obcas i pridat jako zvukar k nekterym projektum"). Ucet si necha svou
+  /// roli (napr. Zuzo-labuzo), jen se navic nabizi mezi zvukari v kalendari.
+  takyZvukar Boolean @default(false)
+
   /// Dostava vyplnene udaje z odkazu pro herce a firmy (zadani 16. 9. 2026:
   /// „kdyz ho vyplni, tak se nam to automaticky propise do systemu a zahlasi
   /// Karoline - tohle bych chtel mit ale taky moznost menit do budoucna, komu

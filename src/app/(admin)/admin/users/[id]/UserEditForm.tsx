@@ -43,6 +43,7 @@ type EditableUser = {
   /** Klient chce vědět o dotočeném herci na svém projektu (zadání 16. 9. 2026). */
   dostavaDotocenoKlient: boolean;
   dostavaObjednavky: boolean;
+  takyZvukar: boolean;
   dostavaVyplneneUdaje: boolean;
   vychoziManazerAudioknih: boolean;
   studioLocations: string[];
@@ -92,6 +93,7 @@ export function UserEditForm({
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
   const [dostavaDotocenoKlient, setDostavaDotocenoKlient] = useState(user.dostavaDotocenoKlient);
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
+  const [takyZvukar, setTakyZvukar] = useState(user.takyZvukar);
   const [dostavaVyplneneUdaje, setDostavaVyplneneUdaje] = useState(user.dostavaVyplneneUdaje);
   const [vychoziManazerAudioknih, setVychoziManazerAudioknih] = useState(user.vychoziManazerAudioknih);
   const [companyId, setCompanyId] = useState(user.companyId ?? '');
@@ -196,6 +198,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('sledujeZmenyProjektu', sledujeZmeny ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
+        if (isMediaspace && role !== 'ZVUKAR') fd.set('takyZvukar', takyZvukar ? '1' : '0');
         if (isMediaspace) fd.set('dostavaVyplneneUdaje', dostavaVyplneneUdaje ? '1' : '0');
         if (isMediaspace) {
           fd.set('vychoziManazerAudioknih', vychoziManazerAudioknih ? '1' : '0');
@@ -511,6 +514,27 @@ export function UserEditForm({
                 Dostává zprávy o dotočení
                 <span className="block text-xs text-muted">
                   mail pokaždé, když se u projektu odškrtne dotočený herec
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* I ZVUKAŘ (zadání 22. 9. 2026: „aby se mohl občas i přidat jako
+            zvukař k některým projektům"). Účet si nechá svou roli. */}
+        {isMediaspace && role !== 'ZVUKAR' && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={takyZvukar}
+                onChange={(e) => setTakyZvukar(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Může být i zvukař
+                <span className="block text-xs text-muted">
+                  nabízí se mezi zvukaři u natáčení a střihu v kalendáři
                 </span>
               </span>
             </label>

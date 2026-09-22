@@ -44,6 +44,8 @@ Tři věci, které z obrázku stojí za zdůraznění:
 
 U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích točí. Kdo jezdí do Brna I i Brna II, má zaškrtnutá obě. Projeví se to na dvou místech: v seznamu uživatelů je to vidět ve sloupci Lokace a v kalendáři jde k události vybrat **jen zvukaře z toho studia** — na brněnskou frekvenci pražského nezapíšete, a naopak. Hlídá to i server, ne jen nabídka ve formuláři. Dokud u nikoho v daném studiu není nic zaškrtnuté, nabízejí se všichni, ať jde frekvence zapsat; kdo je u starší události napsaný, v ní zůstane. Zaškrtávátka jsou ze skutečných studií, takže nově založené studio v nabídce přibude samo.
 
+Kdo má jinou roli (třeba Žůžo-labůžo) a občas dělá i zvukaře, má na kartě zaškrtnuté **Může být i zvukař**. Role mu zůstane, jen se navíc nabízí mezi zvukaři u natáčení a střihu v kalendáři. Když nemá zaškrtnutá žádná studia, nabízí se ve všech. Takhle je nastavený Peter Dratva.
+
 **Ceníky** jsou dvě věci najednou: ceny služeb a zároveň seznam typů projektu. U projektu jde vybrat jen takový typ, který je v ceníku — proto se nové typy přidávají tady.
 
 **Doklady** jsou peníze: nabídky, faktury, přijaté výdaje, smlouvy, banka a „Moje firmy" (za kterou firmu doklad vystavujeme, číselné řady, bankovní účty, podpis na faktury). U výdaje se nahraje PDF nebo fotka dokladu (i víc souborů) — údaje se z něj přečtou samy; přílohy i údaje jde kdykoli později doplnit v detailu výdaje.

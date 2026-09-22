@@ -76,6 +76,8 @@ export type Volba = {
   nazev?: string;
   /** U zvukaře id studií, ve kterých točí (zadání 20. 9. 2026). */
   studia?: string[];
+  /** „I zvukař" bez zaškrtnutých studií - nabízí se všude. */
+  vsude?: boolean;
 };
 
 export type CalendarDay = {
@@ -1871,8 +1873,9 @@ function UdalostForm({
   const nazevStudiaVOkne = studios.find((s) => s.id === studioId)?.shortName ?? 'tohoto studia';
 
   const zvukariProStudio = useMemo(() => {
-    const vStudiu = zvukari.filter((z) => z.studia && z.studia.includes(studioId));
-    if (vStudiu.length === 0) return zvukari;
+    const vlastni = zvukari.filter((z) => z.studia && z.studia.includes(studioId));
+    if (vlastni.length === 0) return zvukari;
+    const vStudiu = [...vlastni, ...zvukari.filter((z) => z.vsude && !vlastni.includes(z))];
     const uzNapsany = zvukari.find((z) => z.id === zvukarId && !vStudiu.some((v) => v.id === z.id));
     return uzNapsany ? [...vStudiu, uzNapsany] : vStudiu;
   }, [zvukari, studioId, zvukarId]);
@@ -1883,7 +1886,7 @@ function UdalostForm({
   useEffect(() => {
     if (posledniStudio.current === studioId) return;
     posledniStudio.current = studioId;
-    if (zvukarId && !zvukari.some((z) => z.id === zvukarId && z.studia && z.studia.includes(studioId))) {
+    if (zvukarId && !zvukari.some((z) => z.id === zvukarId && (z.vsude || (z.studia && z.studia.includes(studioId))))) {
       const vStudiu = zvukari.filter((z) => z.studia && z.studia.includes(studioId));
       if (vStudiu.length > 0) setZvukarId('');
     }

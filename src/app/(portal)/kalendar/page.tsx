@@ -231,10 +231,11 @@ export default async function KalendarPage({
           .catch(() => []),
         prisma.user
           .findMany({
-            where: { active: true, role: { in: ['HEREC', 'ZVUKAR'] } },
+            // „Může být i zvukař" (22. 9. 2026) - např. Peter Dratva.
+            where: { active: true, OR: [{ role: { in: ['HEREC', 'ZVUKAR'] } }, { takyZvukar: true }] },
             // Studia zvukare (zadani 20. 9. 2026) - podle nich se v nabidce
             // radi nejdriv ti, kteri v tom studiu toci.
-            select: { id: true, name: true, email: true, role: true, zvukarStudia: { select: { id: true } } },
+            select: { id: true, name: true, email: true, role: true, takyZvukar: true, zvukarStudia: { select: { id: true } } },
             orderBy: [{ name: 'asc' }],
           })
           .catch(() => []),
@@ -246,8 +247,15 @@ export default async function KalendarPage({
     .filter((u) => u.role === 'HEREC')
     .map((u) => ({ id: u.id, label: bezTitulu(u.name) || u.email }));
   const zvukari = lideProUdalost
-    .filter((u) => u.role === 'ZVUKAR')
-    .map((u) => ({ id: u.id, label: u.name || u.email, studia: u.zvukarStudia.map((s) => s.id) }));
+    .filter((u) => u.role === 'ZVUKAR' || u.takyZvukar)
+    // Kdo je „i zvukař" a studia zaškrtnutá nemá (Peter Dratva), nabízí se
+    // ve všech studiích.
+    .map((u) => ({
+      id: u.id,
+      label: u.name || u.email,
+      studia: u.zvukarStudia.map((s) => s.id),
+      vsude: u.role !== 'ZVUKAR' && u.zvukarStudia.length === 0,
+    }));
 
   /**
    * KALENDÁŘ MIMO STUDIO (zadání 19. 9. 2026). Vlastní kalendář vedle
