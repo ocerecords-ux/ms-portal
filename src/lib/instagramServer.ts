@@ -38,8 +38,16 @@ export type InstagramNaTabuli = {
   polozky: PolozkaInstagramu[];
 };
 
+/** Hodnoty z Vercelu bez mezer a zalomení (vložený klíč s koncovým Enterem Instagram odmítne). */
+function appId(): string {
+  return (process.env.INSTAGRAM_APP_ID || '').trim();
+}
+function appSecret(): string {
+  return (process.env.INSTAGRAM_APP_SECRET || '').trim();
+}
+
 export function instagramNastaven(): boolean {
-  return Boolean(process.env.INSTAGRAM_APP_ID && process.env.INSTAGRAM_APP_SECRET);
+  return Boolean(appId() && appSecret());
 }
 
 export function adresaNavratu(): string {
@@ -50,7 +58,7 @@ export function odkazPrihlaseni(state: string): string {
   const p = new URLSearchParams({
     enable_fb_login: '0',
     force_authentication: '1',
-    client_id: process.env.INSTAGRAM_APP_ID || '',
+    client_id: appId(),
     redirect_uri: adresaNavratu(),
     response_type: 'code',
     scope: 'instagram_business_basic',
@@ -62,19 +70,27 @@ export function odkazPrihlaseni(state: string): string {
 /** Kód z přihlášení → dlouhodobý token, uloží se. */
 export async function pripojUcet(kod: string): Promise<{ ok: true; username: string | null } | { ok: false; chyba: string }> {
   const telo = new URLSearchParams({
-    client_id: process.env.INSTAGRAM_APP_ID || '',
-    client_secret: process.env.INSTAGRAM_APP_SECRET || '',
+    client_id: appId(),
+    client_secret: appSecret(),
     grant_type: 'authorization_code',
     redirect_uri: adresaNavratu(),
     code: kod.replace(/#_$/, ''),
   });
   const r1 = await fetch('https://api.instagram.com/oauth/access_token', { method: 'POST', body: telo, cache: 'no-store' });
   const d1 = (await r1.json().catch(() => ({}))) as { access_token?: string; user_id?: string | number; error_message?: string };
-  if (!r1.ok || !d1.access_token) return { ok: false, chyba: d1.error_message || `Instagram odmítl přihlášení (${r1.status}).` };
+  if (!r1.ok || !d1.access_token) {
+    console.error('[instagram] výměna kódu selhala', r1.status, JSON.stringify(d1), {
+      redirect_uri: adresaNavratu(),
+      client_id: appId(),
+      delkaTajemstvi: appSecret().length,
+      delkaKodu: kod.length,
+    });
+    return { ok: false, chyba: d1.error_message || `Instagram odmítl přihlášení (${r1.status}).` };
+  }
 
   const p2 = new URLSearchParams({
     grant_type: 'ig_exchange_token',
-    client_secret: process.env.INSTAGRAM_APP_SECRET || '',
+    client_secret: appSecret(),
     access_token: d1.access_token,
   });
   const r2 = await fetch(`${API}/access_token?${p2.toString()}`, { cache: 'no-store' });
