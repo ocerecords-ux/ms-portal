@@ -396,6 +396,12 @@ export async function POST(req: NextRequest) {
           priority: 'MEDIUM',
           zdroj: 'PORTAL',
           // Úvod a závěr z objednávky (22. 9. 2026) - v detailu jdou upravit.
+          // Požadované datum z objednávky = datum dokončení projektu
+          // (22. 9. 2026: „v projektu se nastavilo 22. 9., mělo se propsat
+          // 17. 11."). Den se drží jako půlnoc UTC, stejně jako v detailu.
+          endDate: parsed.data.deadline && /^\d{4}-\d{2}-\d{2}$/.test(parsed.data.deadline)
+            ? new Date(`${parsed.data.deadline}T00:00:00.000Z`)
+            : null,
           uvodKnihy: knihaUdaje.uvodKnihy,
           zaverKnihy: knihaUdaje.zaverKnihy,
         },

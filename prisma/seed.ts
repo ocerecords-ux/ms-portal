@@ -195,6 +195,43 @@ async function main() {
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
 
+  // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
+  // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
+  // založené z objednávky, kde datum dokončení chybí nebo je den založení.
+  {
+    const ZNAMKA = 'objednavky-datum-dokonceni-2026-09-22';
+    try {
+      const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+      if (!uz) {
+        const objednavky = await prisma.order.findMany({
+          where: { deadline: { not: null }, caflouProjectId: { not: null } },
+          select: { caflouProjectId: true, deadline: true },
+        });
+        let opraveno = 0;
+        for (const o of objednavky) {
+          const meta = await prisma.projectMeta.findUnique({
+            where: { caflouProjectId: o.caflouProjectId! },
+            select: { endDate: true, createdAt: true },
+          });
+          if (!meta) continue;
+          const den = (d: Date) => d.toISOString().slice(0, 10);
+          const dnyObjednavky = den(o.deadline!);
+          if (meta.endDate && den(meta.endDate) !== den(meta.createdAt)) continue;
+          if (meta.endDate && den(meta.endDate) === dnyObjednavky) continue;
+          await prisma.projectMeta.update({
+            where: { caflouProjectId: o.caflouProjectId! },
+            data: { endDate: new Date(`${dnyObjednavky}T00:00:00.000Z`) },
+          });
+          opraveno += 1;
+        }
+        await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+        console.log(`  objednavky: datum dokonceni doplneno u ${opraveno} projektu`);
+      }
+    } catch (err) {
+      console.error('Doplneni data dokonceni z objednavek selhalo:', err);
+    }
+  }
+
   console.log('Seed hotov.');
   console.log(`  admin ucet: ${adminEmail}${adminResetPassword ? ' (heslo nastaveno z ADMIN_INITIAL_PASSWORD)' : ''}`);
   console.log('  ocerecords@gmail.com / zmente-toto-heslo');
