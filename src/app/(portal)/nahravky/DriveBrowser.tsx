@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { WaveformPlayer } from '../components/WaveformPlayer';
 
 type DriveItem = {
@@ -358,13 +358,46 @@ export function DriveBrowser({
     setSelectedId(item.id);
   }
 
-  /** Dvojklik = otevřít složku, u souboru přejmenovat. */
+  /**
+   * DVOJKLIK = OTEVŘÍT (zadání 22. 9. 2026: „ať funguje to, co je napsané
+   * dole i u souborů… a dvojklikem, když poklikám na stopu, ať se otevře
+   * grafická waveforma a začne se přehrávat").
+   *
+   * Složka se otevře, nahrávka a video se rozbalí a hned hrají, ostatní
+   * soubory (PDF…) se otevřou v nové záložce. Dřív dvojklik na soubor
+   * spouštěl přejmenování - klientovi z odkazu (ten přejmenovávat nesmí)
+   * pak neudělal vůbec nic, a u stopy člověk čeká přehrání, ne přepis názvu.
+   * Přejmenování je teď jako ve Finderu: Enter, nebo klik na název už
+   * označené položky.
+   */
   function activateItem(item: DriveItem) {
+    zrusCasovacPrejmenovani();
     if (item.isFolder) {
       openFolder(item);
       return;
     }
-    startRename(item);
+    setSelectedId(item.id);
+    if (isAudioFile(item) || isVideoFile(item)) {
+      setPlayingId(item.id);
+      return;
+    }
+    window.open(`/api/drive/download?fileId=${encodeURIComponent(item.id)}&disposition=inline${klic}`, '_blank', 'noopener');
+  }
+
+  // Klik na název UŽ OZNAČENÉ položky = přejmenovat (Finder). Čeká se chvilku,
+  // jestli z toho není dvojklik - ten má přednost a přejmenování zruší.
+  const casovacPrejmenovani = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function zrusCasovacPrejmenovani() {
+    if (casovacPrejmenovani.current) clearTimeout(casovacPrejmenovani.current);
+    casovacPrejmenovani.current = null;
+  }
+  function klikNaNazev(e: React.MouseEvent, item: DriveItem) {
+    if (jenCteni || selectedId !== item.id || e.detail > 1) return;
+    zrusCasovacPrejmenovani();
+    casovacPrejmenovani.current = setTimeout(() => {
+      casovacPrejmenovani.current = null;
+      startRename(item);
+    }, 450);
   }
 
   function startRename(item: DriveItem) {
@@ -613,9 +646,15 @@ export function DriveBrowser({
                   onClick={() => selectItem(item)}
                   onDoubleClick={() => activateItem(item)}
                   onKeyDown={(e) => {
+                    // Enter = přejmenovat (Finder), kde se smí; jinak otevřít.
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      activateItem(item);
+                      if (!jenCteni && !item.isFolder) startRename(item);
+                      else activateItem(item);
+                    }
+                    if (e.key === ' ' && (audio || video)) {
+                      e.preventDefault();
+                      togglePlay(item);
                     }
                     if (e.key === 'Escape') setSelectedId(null);
                   }}
@@ -642,7 +681,14 @@ export function DriveBrowser({
                     />
                   ) : (
                     <span
-                      title={item.isFolder ? 'Dvojklikem otevřete složku' : 'Dvojklikem přejmenujete'}
+                      onClick={(e) => klikNaNazev(e, item)}
+                      title={
+                        item.isFolder
+                          ? 'Dvojklikem otevřete složku'
+                          : audio || video
+                            ? 'Dvojklikem přehrajete'
+                            : 'Dvojklikem otevřete'
+                      }
                       className={`flex-1 min-w-0 flex items-center gap-2 text-left text-sm font-body text-ink select-none ${
                         item.isFolder ? 'font-semibold' : ''
                       }`}
@@ -780,7 +826,8 @@ export function DriveBrowser({
 
       {!loading && !error && sorted.length > 0 && (
         <p className="px-6 py-2.5 border-t border-line bg-field text-[11px] font-body text-muted m-0">
-          Jeden klik položku označí, dvojklik otevře složku nebo umožní přejmenovat soubor.
+          Jeden klik položku označí, dvojklik otevře složku, přehraje nahrávku nebo otevře soubor.
+          {!jenCteni && ' Přejmenovat: klikněte znovu na název označené položky, nebo stiskněte Enter.'}
         </p>
       )}
     </div>

@@ -128,6 +128,8 @@ export const ZADNE_STUDIO = 'zadne';
  * (20. 9. 2026). Studia mají v `solo` rovnou své id.
  */
 export const SOLO_MIMO = 'mimo';
+/** Sólo „Jen moje" (22. 9. 2026) - jen události přihlášeného (zvukař, herec). */
+export const SOLO_MOJE = 'moje';
 
 /**
  * Druhy s hercem. Casting (20. 9. 2026: „Casting by měl být samostatný druh

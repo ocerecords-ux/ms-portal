@@ -36,6 +36,7 @@ import {
   maHerce,
   ZADNE_STUDIO,
   SOLO_MIMO,
+  SOLO_MOJE,
   type CalendarView,
 } from '@/lib/calendar';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
@@ -614,7 +615,9 @@ export function CalendarBrowser({
       ? NAZEV_KALENDARE_MIMO
       : solo === SOLO_PORADY
         ? NAZEV_KALENDARE_PORADY
-        : (studios.find((s) => s.id === solo)?.shortName ?? '')
+        : solo === SOLO_MOJE
+          ? 'Jen moje události'
+          : (studios.find((s) => s.id === solo)?.shortName ?? '')
     : '';
 
   // Odkud se prislo - po posunu zpet se tyden v mobilu ukaze od konce
@@ -858,7 +861,7 @@ export function CalendarBrowser({
       {/* Na telefonu jeden posuvný pruh (21. 9. 2026), od tabletu se lámou. */}
       <div data-kal-ovladani className="flex items-center gap-2 flex-nowrap sm:flex-wrap overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 py-1 sm:py-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {studios.map((s) => {
-          const zapnute = solo ? solo === s.id : selectedStudioIds.includes(s.id);
+          const zapnute = solo ? solo === s.id || solo === SOLO_MOJE : selectedStudioIds.includes(s.id);
           const soluje = solo === s.id;
           return (
             <span
@@ -971,6 +974,25 @@ export function CalendarBrowser({
             {NAZEV_KALENDARE_PORADY}
           </button>
         </span>
+        {/* JEN MOJE (zadání 22. 9. 2026: „ikona, na kterou když kliknou, tak
+            se jim zobrazí jen jejich události v kalendáři. Fungovat by to
+            mělo jako sólo") - druhý klik vrátí původní výběr kalendářů. */}
+        <button
+          type="button"
+          onClick={() => jenTentoKalendar(SOLO_MOJE)}
+          aria-pressed={solo === SOLO_MOJE}
+          title={solo === SOLO_MOJE ? 'Zpět na původní výběr kalendářů' : 'Jen moje události (sólo)'}
+          className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-pill border pl-2.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 text-xs sm:text-sm font-heading font-semibold transition-colors ${
+            solo === SOLO_MOJE
+              ? 'border-transparent bg-brand-purple/15 text-ink ring-2 ring-brand-purple ring-offset-2 ring-offset-paper'
+              : 'border-line text-muted hover:text-ink'
+          }`}
+        >
+          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0" aria-hidden="true">
+            <path d="M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0 1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" />
+          </svg>
+          Moje
+        </button>
         {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
             (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
             orámovat, aby to bylo jasné, že je to v sólo režimu"). */}

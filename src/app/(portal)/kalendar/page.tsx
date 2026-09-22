@@ -22,6 +22,7 @@ import { bezTitulu } from '@/lib/jmena';
 import { INTERNAL_ROLES } from '@/lib/roles';
 import type { NepritomnostVKalendari } from '@/lib/nepritomnost';
 import { SOLO_PORADY } from '@/lib/porady';
+import { SOLO_MOJE } from '@/lib/calendar';
 import { nactiPorady } from '@/lib/poradyServer';
 
 /**
@@ -107,10 +108,23 @@ export default async function KalendarPage({
   const soloStudio = studios.find((s) => s.id === soloZAdresy) ?? null;
   const soloMimo = soloZAdresy === SOLO_MIMO;
   const soloPorady = soloZAdresy === SOLO_PORADY;
-  const solo = soloStudio ? soloStudio.id : soloMimo ? SOLO_MIMO : soloPorady ? SOLO_PORADY : '';
+  // JEN MOJE (zadání 22. 9. 2026: „ikona, na kterou když kliknou, tak se jim
+  // zobrazí jen jejich události v kalendáři. Fungovat by to mělo jako sólo").
+  // Svítí všechna studia, Mimo studio i Porady, ale jen to, kde je přihlášený
+  // zvukař nebo herec (a jeho vlastní nepřítomnost).
+  const soloMoje = soloZAdresy === SOLO_MOJE;
+  const solo = soloStudio
+    ? soloStudio.id
+    : soloMimo
+      ? SOLO_MIMO
+      : soloPorady
+        ? SOLO_PORADY
+        : soloMoje
+          ? SOLO_MOJE
+          : '';
   const puvodniPorady = searchParams?.porady !== '0';
 
-  const aktivni = solo ? (soloStudio ? [soloStudio] : []) : puvodni;
+  const aktivni = soloMoje ? studios : solo ? (soloStudio ? [soloStudio] : []) : puvodni;
   // Mřížka (pásmo a otevírací doba) se musí o něco opřít i bez studií.
   const mrizkaPodle = aktivni[0] ?? puvodni[0] ?? studios[0];
 
@@ -244,16 +258,16 @@ export default async function KalendarPage({
    * Načítá se všechno, co do zobrazeného rozsahu aspoň zasahuje - i dovolená,
    * která začala minulý týden a končí ve středu.
    */
-  const ukazNepritomnost = solo ? soloMimo : puvodniNepritomnost;
+  const ukazNepritomnost = solo ? soloMimo || soloMoje : puvodniNepritomnost;
   // PORADY (21. 9. 2026) - jen ty, na které je přihlášený pozvaný.
-  const ukazPorady = solo ? soloPorady : puvodniPorady;
+  const ukazPorady = solo ? soloPorady || soloMoje : puvodniPorady;
   const porady = ukazPorady ? await nactiPorady(session.user.id, from, to) : [];
   const spravceKalendare = canManageCalendar(session.user.role);
   const [radkyNepritomnosti, lidiTymu] = await Promise.all([
     ukazNepritomnost
       ? prisma.nepritomnost
           .findMany({
-            where: { start: { lt: to }, end: { gt: from } },
+            where: { start: { lt: to }, end: { gt: from }, ...(soloMoje ? { userId: session.user.id } : {}) },
             orderBy: [{ start: 'asc' }, { jmeno: 'asc' }],
           })
           .catch(() => [])
@@ -283,8 +297,13 @@ export default async function KalendarPage({
   const barvaStudia = new Map(studios.map((s) => [s.id, s.color]));
   const nazevStudia = new Map(studios.map((s) => [s.id, s.shortName]));
 
+  const jeMoje = (u: { zvukarUserId: string | null; actorUserId: string | null }) =>
+    u.zvukarUserId === session.user.id || u.actorUserId === session.user.id;
+  const sloty = soloMoje ? occupancy.slots.filter(jeMoje) : occupancy.slots;
+  const bloky = soloMoje ? occupancy.blocks.filter(jeMoje) : occupancy.blocks;
+
   const events: CalendarEvent[] = [
-    ...occupancy.slots.map((s) => ({
+    ...sloty.map((s) => ({
       id: s.id,
       kind: 'SLOT' as const,
       studioId: s.studioId,
@@ -306,7 +325,7 @@ export default async function KalendarPage({
         zvukarName: s.zvukarName,
       },
     })),
-    ...occupancy.blocks.map((b) => ({
+    ...bloky.map((b) => ({
       id: b.id,
       kind: 'BLOCK' as const,
       studioId: b.studioId,
