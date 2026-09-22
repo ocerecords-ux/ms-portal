@@ -1,5 +1,6 @@
 'use client';
 
+import { TlacitkoRozdeleni } from './RozdeleneOkno';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
@@ -382,6 +383,8 @@ export function Topbar({
           </svg>
         </Link>
         )}
+        {/* Rozdělené okno (22. 9. 2026) - jen tým, na telefonu ne. */}
+        {interni && <TlacitkoRozdeleni />}
         <NotificationBell unread={unreadNotifications} />
         <Link
           href="/muj-ucet"

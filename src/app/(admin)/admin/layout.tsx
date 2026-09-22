@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from '@/app/(portal)/components/Topbar';
+import { RozdeleneOkno } from '@/app/(portal)/components/RozdeleneOkno';
 import { TaskDock } from '@/app/(portal)/components/TaskDock';
 import { QuickDock } from '@/app/(portal)/components/QuickDock';
 import { ChatDock } from '@/app/(portal)/components/ChatDock';
@@ -64,10 +65,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           (max-w-7xl): v max-w-4xl se tabulka uzivatelu nevesla a napr.
           telefonni cislo se lamalo na dva radky. */}
       {/* Vpravo je připnutý panel Úkolů - obsahu tam necháme místo. */}
-      <div className="obsah-portalu w-full px-4 sm:px-6 pt-3 pb-8 sm:py-12 md:pl-16 md:pr-20">{children}</div>
+      <div className="obsah-portalu w-full px-4 sm:px-6 pt-3 pb-8 sm:py-12 md:pl-16 md:pr-20">
+        <RozdeleneOkno>{children}</RozdeleneOkno>
+      </div>
       {/* NA TELEFONU ZADNE DOKY - stejne jako ve zbytku portalu, viz
           (portal)/layout.tsx. Chat a ukoly maji vlastni aplikaci MS Chat. */}
-      <div className="hidden md:block">
+      <div data-doky className="hidden md:block">
         {/* Rychle volby na leve hrane - stejny panel jako ve zbytku portalu. */}
         <QuickDock actions={quickActions} available={quickActionsFor('ADMIN')} />
         {/* Úkoly po ruce i v administraci - stejný panel jako ve zbytku portálu. */}

@@ -391,3 +391,13 @@ body {
     max-height: calc(100dvh - 96px) !important;
   }
 }
+
+/* ROZDĚLENÉ OKNO (22. 9. 2026) - pravá půlka je portál ve vloženém okně.
+   Lišta, doky a pruhy tam nemají co dělat, jen obsah bez velkých okrajů. */
+html[data-v-panelu] [data-lista],
+html[data-v-panelu] [data-doky] {
+  display: none !important;
+}
+html[data-v-panelu] .obsah-portalu {
+  padding: 12px 14px 24px !important;
+}

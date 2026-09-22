@@ -55,4 +55,6 @@ export const SKRIPT_MOTIVU = `(function(){try{
 var u=localStorage.getItem('${KLIC_MOTIVU}');
 var t=u==='tmavy'||u==='svetly'?u:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'tmavy':'svetly');
 if(t==='tmavy'){document.documentElement.classList.add('dark');}
-}catch(e){}})();`;
+}catch(e){}
+try{if(window.self!==window.top){document.documentElement.setAttribute('data-v-panelu','1');}}catch(e){document.documentElement.setAttribute('data-v-panelu','1');}
+})();`;

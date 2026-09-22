@@ -5,6 +5,7 @@ import { pocetOtevrenychPripominek } from '@/lib/pripominkyServer';
 import { pocetBonusuKeSchvaleni } from '@/lib/bonusyServer';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from './components/Topbar';
+import { RozdeleneOkno } from './components/RozdeleneOkno';
 import { TaskDock } from './components/TaskDock';
 import { QuickDock } from './components/QuickDock';
 import { ChatDock } from './components/ChatDock';
@@ -155,7 +156,7 @@ export default async function PortalLayout({ children }: { children: React.React
         // (viz nize), takze by z nich zbyl jen prazdny pruh po stranach.
         className={`obsah-portalu w-full px-4 sm:px-6 pt-3 pb-8 sm:py-12 md:pl-16 ${internal ? 'md:pr-20' : ''}`}
       >
-        {children}
+        {internal ? <RozdeleneOkno>{children}</RozdeleneOkno> : children}
       </div>
       {/* Úkoly po ruce na každé stránce - vysouvací panel na pravé hraně
           (zadani 8. 9. 2026). Jen pro tým Mediaspace. */}
