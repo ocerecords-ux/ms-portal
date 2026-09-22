@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import { listRodnyListProjectTypes } from '@/lib/priceList';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
-import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
+import { posliNotifikaciPoProdleve } from '@/lib/prodlevaNotifikaciServer';
 
 /**
  * PO SEDMI DNECH SE ČEKÁ NA OPRAVY (zadání 10. 9. 2026, dodělané 16. 9. 2026:
@@ -125,7 +125,7 @@ export async function preklopCekameNaOpravy(): Promise<VysledekPreklopeni> {
         puvodce: { id: null, jmeno: `Portál (po ${DNU_NA_OPRAVY} dnech)` },
       });
       // Zpráva klientovi je best effort - stav už je přehozený a nesmí na ni čekat.
-      void posliNotifikaciKeStavu(p.caflouProjectId, STAV_CEKAME).catch(() => undefined);
+      posliNotifikaciPoProdleve(p.caflouProjectId, STAV_CEKAME);
       preklopeno.push({ caflouProjectId: p.caflouProjectId, nazev: p.name });
     } catch (err) {
       console.error(`Preklopeni projektu ${p.caflouProjectId} na "${STAV_CEKAME}" selhalo:`, err);

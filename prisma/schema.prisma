@@ -2618,6 +2618,19 @@ model NastaveniPrehleduZvukaru {
   updatedAt   DateTime @updatedAt
 }
 
+/// PRODLEVA NOTIFIKACI PRI ZMENE STAVU (zadani 22. 9. 2026: „nastav jeste
+/// z bezpecnostnich duvodu latenci v posilani notifikaci pri zmene stavu.
+/// 10s. bylo by dobre, kdybych to pozdeji mohl nekde hromadne nastavit").
+/// Zprava klientovi odchazi az po prodleve - kdyz se mezitim stav prehodi
+/// jinam (preklep), neodejde. Jediny radek s id „vychozi"; kdyz chybi,
+/// plati 10 s.
+model NastaveniNotifikaci {
+  id             String   @id @default("vychozi")
+  prodlevaSekund Int      @default(10)
+  zmenilJmeno    String?
+  updatedAt      DateTime @updatedAt
+}
+
 /// STAV NAVRZENEHO BONUSU ZVUKARE (zadani 15. 9. 2026).
 enum StavBonusu {
   NAVRZENO

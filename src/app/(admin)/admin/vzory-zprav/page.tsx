@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nactiVzory } from '@/lib/vzoryZpravServer';
 import { VzoryEditor } from './VzoryEditor';
+import { ProdlevaNotifikaci } from './ProdlevaNotifikaci';
+import { MAX_PRODLEVA_S, nactiProdlevu } from '@/lib/prodlevaNotifikaciServer';
 
 /**
  * Vzory zpráv klientovi (zadání 11. 9. 2026: „uděláme vzory a já si je pak
@@ -30,6 +32,7 @@ export default async function VzoryZpravPage() {
           na její kartě — jen Reklamy znamená reklamní vzory.
         </p>
       </div>
+      <ProdlevaNotifikaci pocatecni={await nactiProdlevu()} max={MAX_PRODLEVA_S} />
       {/* Oba druhy najednou (zadani 14. 9. 2026) - prepina se zalozkou
           v editoru, at se kvuli tomu nemusi znovu nacitat stranka. */}
       <VzoryEditor pocatecni={[...(await nactiVzory('AUDIOKNIHA')), ...(await nactiVzory('REKLAMA'))]} />

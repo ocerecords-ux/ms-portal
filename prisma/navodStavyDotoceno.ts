@@ -70,6 +70,10 @@ Jsou to **dva různé okruhy**:
 
 Když si klient upozornění zapne až potom, co se dotočilo, samo mu už nic nepřijde — fajfka se schválně neoznamuje dvakrát. Od toho je vedle tlačítko **Poslat klientovi**: pošle ten jeden mail a zvoneček dodatečně a nic tím nepřepíše. Proto to nedělejte odškrtnutím a znovuzaškrtnutím — tím by se přepsalo datum dotočení a produkci by mail přišel podruhé.
 
+## Zpráva klientovi odchází s prodlevou
+
+Po přehození stavu portál chvíli počká (výchozí **10 sekund**) a teprve pak klientovi pošle zprávu. Když se stav mezitím změní jinam, třeba po překlepu, zpráva k původnímu stavu neodejde vůbec. Délku prodlevy pro všechny firmy najednou nastavíte v **Administrace → Vzory zpráv**, 0 znamená posílat hned.
+
 ## Bruno umí totéž
 
 Když někdo napíše do kanálu projektu **„dotočeno"**, Bruno udělá přesně to samé co ten klik — zapíše fajfku, přehodí stav, když mají dotočeno všichni, a pošle zprávu. U záznamu je pak vidět, jestli fajfku kliknul člověk, nebo ji vyčetl Bruno z chatu. Napsat „dotočeno" dvakrát nevadí: kdo fajfku už má, tomu se nic nepřepíše a nikomu znovu nic nechodí.

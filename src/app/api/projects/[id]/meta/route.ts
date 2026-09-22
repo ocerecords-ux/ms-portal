@@ -7,7 +7,7 @@ import { canEditProjectMeta } from '@/lib/roles';
 import { jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
-import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
+import { posliNotifikaciPoProdleve } from '@/lib/prodlevaNotifikaciServer';
 import { navrhniBonusyZaProjekt } from '@/lib/bonusyServer';
 
 /**
@@ -383,7 +383,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
        */
       const stavSeZmenil = data.statusName !== (pred?.statusName ?? null);
       if (stavSeZmenil && !pred?.finished) {
-        void posliNotifikaciKeStavu(params.id, data.statusName).catch(() => undefined);
+        // Po prodlevě a jen když stav vydrží (zadání 22. 9. 2026).
+        posliNotifikaciPoProdleve(params.id, data.statusName);
       }
 
       /**

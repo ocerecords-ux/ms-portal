@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db';
 import { stavJeDokonceny } from '@/lib/stavyProjektu';
-import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
+import { posliNotifikaciPoProdleve } from '@/lib/prodlevaNotifikaciServer';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
 import type { Puvodce } from '@/lib/projektLogServer';
 
@@ -150,5 +150,5 @@ async function zapisStav(
 
   // Zprava klientovi NE, kdyz se srovnava historie (zadani 13. 9. 2026:
   // „ale aby neodesly notifikace"). Zapis do historie vys bezi i tak.
-  if (!tise) void posliNotifikaciKeStavu(caflouProjectId, naStav).catch(() => undefined);
+  if (!tise) posliNotifikaciPoProdleve(caflouProjectId, naStav);
 }
