@@ -100,11 +100,13 @@ export function spdRetezec(prikaz: PrikazKPlatbe): string | null {
     const vs = prikaz.variabilniSymbol.replace(/\D/g, '').slice(0, 10);
     if (vs) casti.push(`X-VS:${vs}`);
   }
-  if (prikaz.splatnost) {
-    const d = prikaz.splatnost;
-    const den = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-    casti.push(`DT:${den}`);
-  }
+  /*
+   * DATUM SPLATNOSTI SE DO QR NEDÁVÁ (zadání 22. 9. 2026: „když nám někdo
+   * platí a chce to udělat hned, tak se tam nastaví dle splatnosti faktury.
+   * Chci, ať je tam nastavené datum dnes při té platbě"). Bez pole DT
+   * bankovní aplikace předvyplní dnešek - platba odejde hned, ne až v den
+   * splatnosti. Splatnost dál stojí na faktuře vedle kódu.
+   */
   if (prikaz.zprava) {
     const zprava = ocistiHodnotu(prikaz.zprava, 60);
     if (zprava) casti.push(`MSG:${zprava}`);
