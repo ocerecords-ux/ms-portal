@@ -20,6 +20,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   ZVUKAR: 'Zvukař',
   PRODUKCE: 'Produkce',
   ROBOT: 'Robot',
+  TABULE: 'Tabule ve studiu',
 };
 
 /**
@@ -47,6 +48,7 @@ export const ROLE_GROUPS: { label: string; roles: Role[] }[] = [
   { label: 'Herec', roles: ['HEREC'] },
   { label: 'Interní (Mediaspace)', roles: INTERNAL_ROLES },
   { label: 'Robot (účet bez člověka)', roles: ROBOT_ROLES },
+  { label: 'Obrazovka ve studiu', roles: ['TABULE'] },
 ];
 
 /**
@@ -74,7 +76,7 @@ export function roleRequiresCompany(role: Role): boolean {
 export const USER_TABS: { key: string; label: string; roles: Role[] }[] = [
   // Robot sedi v zalozce Mediaspace, at je videt, ze existuje - prava
   // s internim tymem nesdili, jen misto v seznamu.
-  { key: 'mediaspace', label: 'Mediaspace', roles: [...INTERNAL_ROLES, ...ROBOT_ROLES] },
+  { key: 'mediaspace', label: 'Mediaspace', roles: [...INTERNAL_ROLES, ...ROBOT_ROLES, 'TABULE'] },
   { key: 'klienti', label: 'Klienti', roles: ['CLIENT'] },
   { key: 'herci', label: 'Herci', roles: ['HEREC'] },
 ];

@@ -29,6 +29,7 @@ export default async function StudiaPage() {
           name: true,
           color: true,
           tabuleKlic: true,
+          tabuleUcty: { select: { id: true, email: true, active: true } },
           tabuleChybi: { where: { doplnenoAt: null }, orderBy: { nahlasenoAt: 'asc' } },
           tabulePoznamky: { where: { hotovoAt: null }, orderBy: { createdAt: 'desc' } },
         },
@@ -40,6 +41,7 @@ export default async function StudiaPage() {
     name: string;
     color: string;
     tabuleKlic: string | null;
+    tabuleUcty: { id: string; email: string; active: boolean }[];
     tabuleChybi: { polozka: string; nahlasenoAt: Date }[];
     tabulePoznamky: { id: string; text: string; autor: string | null; createdAt: Date }[];
   };
@@ -84,6 +86,7 @@ export default async function StudiaPage() {
         nazev: t.name,
         barva: t.color,
         klic: t.tabuleKlic,
+        ucty: t.tabuleUcty.map((u) => ({ id: u.id, email: u.email, aktivni: u.active })),
         chybi: t.tabuleChybi.map((c) => ({ polozka: c.polozka, nazev: nazevPolozky(c.polozka), kdy: c.nahlasenoAt.toISOString() })),
         poznamky: t.tabulePoznamky.map((p) => ({ id: p.id, text: p.text, autor: p.autor, kdy: p.createdAt.toISOString() })),
       }))}

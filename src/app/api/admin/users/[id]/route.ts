@@ -8,7 +8,7 @@ import { popisPrekazek, prekazkyUzivatele } from '@/lib/mazani';
 import { jeZpusobSmazani } from '@/lib/archiv';
 import { odstranUzivatele } from '@/lib/archivServer';
 
-const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE', 'ROBOT'] as const;
+const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE', 'ROBOT', 'TABULE'] as const;
 const COMPANY_REQUIRED_ROLES: string[] = ['CLIENT'];
 const INTERNAL_ROLES: string[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 

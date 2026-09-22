@@ -31,6 +31,8 @@ import { nahledZHodnoty } from '@/lib/nahledRole';
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
+  // Účet obrazovky ve studiu do portálu nesmí - jen na svou tabuli (22. 9. 2026).
+  if (session.user.role === 'TABULE') redirect('/tabule/moje');
 
   const role = session.user.role;
   const internal = isInternalRole(role);
