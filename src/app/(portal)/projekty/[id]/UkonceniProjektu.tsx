@@ -63,7 +63,7 @@ export function UkonceniProjektu({
         <p className="text-xs font-body text-muted m-0 mt-1">
           {hotovo
             ? 'Je mezi dokončenými a klient už se na něj nezeptá. Kdyby to bylo omylem, vrátí se mezi aktivní.'
-            : 'Když fakturu klientovi posíláte z portálu, projekt se ukončí sám. Tohle je pro případ, že už odešla jinudy — přehodí stav na „Vyfakturováno" a projekt zmizí z aktivních. Klientovi odsud nic nechodí.'}
+            : 'Když je projekt ve stavu „Schváleno - k fakturaci“ a fakturu klientovi pošlete z portálu, Bruno ho ukončí sám. Tohle je pro případ, že už odešla jinudy — přehodí stav na „Vyfakturováno" a projekt zmizí z aktivních. Klientovi odsud nic nechodí.'}
         </p>
         {chyba && <p className="text-sm font-body text-danger m-0 mt-1">{chyba}</p>}
       </div>

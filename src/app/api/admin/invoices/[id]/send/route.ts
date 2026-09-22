@@ -6,9 +6,22 @@ import { cisloUctuSKodem, computeTotals } from '@/lib/doklady';
 import { pdfFaktury } from '@/lib/dokladNahledServer';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
 import { rodnyListKFakture } from '@/lib/rodnyListServer';
+import { brunoNapisDoKanalu } from '@/lib/brunoOznameni';
 
-/** Automatické ukončení projektu po odeslání faktury - zatím vypnuté (21. 9. 2026). */
-const UKONCIT_PROJEKT_PO_FAKTURE = false;
+/**
+ * Automatické ukončení projektu po odeslání faktury - vypnuté 21. 9. 2026,
+ * znovu zapnuté 22. 9. 2026 s podmínkou stavu (viz STAV_PRED_FAKTUROU).
+ */
+const UKONCIT_PROJEKT_PO_FAKTURE = true;
+
+/**
+ * Projekt se ukončí JEN z tohohle stavu (zadání 22. 9. 2026: „Bruno
+ * automaticky ukončí projekt po tom, co se odešle faktura, ale s jednou
+ * podmínkou. Projekt musí být v té chvíli ve stavu Schváleno - k fakturaci").
+ * Zálohová faktura odchází, když se ještě točí - projekt je tehdy v jiném
+ * stavu, takže ho neukončí.
+ */
+const STAV_PRED_FAKTUROU = 'Schváleno - k fakturaci';
 
 /** Stav, do ktereho projekt prejde odeslanim faktury (zadani 15. 9. 2026). */
 const STAV_PO_FAKTURE = 'Vyfakturováno';
@@ -194,8 +207,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
      * a projekt se pak uzavřel už po záloze. Než bude u faktury druh
      * (zálohová / konečná) a volba při odeslání, ukončuje se projekt jen
      * ručně. Kód zůstává, zapíná ho UKONCIT_PROJEKT_PO_FAKTURE.
+     *
+     * ZNOVU ZAPNUTO 22. 9. 2026 - ale jen když je projekt ve stavu
+     * „Schváleno - k fakturaci“ (STAV_PRED_FAKTUROU). Záloha odchází dřív,
+     * v jiném stavu, takže projekt neukončí.
      */
-    if (UKONCIT_PROJEKT_PO_FAKTURE && invoice.caflouProjectId && meta && !meta.finished) {
+    let projektUkoncen = false;
+    if (
+      UKONCIT_PROJEKT_PO_FAKTURE &&
+      invoice.caflouProjectId &&
+      meta &&
+      !meta.finished &&
+      (meta.statusName ?? '').trim() === STAV_PRED_FAKTUROU
+    ) {
       try {
         await prisma.projectMeta.update({
           where: { caflouProjectId: invoice.caflouProjectId },
@@ -205,8 +229,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           caflouProjectId: invoice.caflouProjectId,
           pred: { statusName: meta.statusName, finished: meta.finished },
           ulozeno: { statusName: STAV_PO_FAKTURE, finished: true },
-          puvodce: { id: session.user.id, jmeno: session.user.name || session.user.email || null },
+          // Ukončuje Bruno (22. 9. 2026) - v historii je vidět, že to udělal
+          // automat po odeslání faktury, ne člověk rukou.
+          puvodce: { id: null, jmeno: 'Bruno (po odeslání faktury)' },
         });
+        projektUkoncen = true;
+        void brunoNapisDoKanalu(
+          invoice.caflouProjectId,
+          `Faktura ${invoice.number} odešla klientovi, projekt jsem ukončil (${STAV_PO_FAKTURE}). Kdyby to bylo omylem, vraťte ho v detailu projektu mezi aktivní.`,
+        ).catch(() => undefined);
       } catch (err) {
         console.error(`Projekt ${invoice.caflouProjectId} se po odeslani faktury nepodarilo uzavrit:`, err);
       }
@@ -218,6 +249,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       kopie,
       sPrilohou: dokument.ok,
       sRodnymListem: rodnyList.potreba && rodnyList.ok,
+      projektUkoncen,
     });
   } catch (err) {
     console.error('POST /api/admin/invoices/[id]/send selhalo:', err);
