@@ -74,14 +74,27 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
   const [stavChyba, setStavChyba] = useState<string | null>(null);
   const [existuje, setExistuje] = useState<boolean | null>(null);
 
+  // Dokud koncept nikdy uložený nebyl, jde uložit i beze změny.
   const zmeneno =
+    !ulozeno ||
     jazyk !== ulozenyStav.jazyk ||
     nazev !== ulozenyStav.nazev ||
     wikitext !== ulozenyStav.wikitext ||
     sledovany !== ulozenyStav.sledovany;
 
   const pocetSlov = useMemo(() => wikitext.replace(/<!--[\s\S]*?-->/g, '').split(/\s+/).filter(Boolean).length, [wikitext]);
-  const pocetZdroju = useMemo(() => (wikitext.match(/<ref[\s>]/g) ?? []).length, [wikitext]);
+  // Pojmenovaná reference použitá víckrát je jeden zdroj.
+  const pocetZdroju = useMemo(() => {
+    const znacky = wikitext.replace(/<!--[\s\S]*?-->/g, '').match(/<ref(\s[^>]*)?>/g) ?? [];
+    const jmena = new Set<string>();
+    let bezJmena = 0;
+    for (const z of znacky) {
+      const m = z.match(/name\s*=\s*"?([^"\/>]+?)"?\s*\/?>$/) ?? z.match(/name\s*=\s*"([^"]+)"/);
+      if (m) jmena.add(m[1].trim());
+      else if (!z.endsWith('/>')) bezJmena += 1;
+    }
+    return jmena.size + bezJmena;
+  }, [wikitext]);
 
   // Neuložené změny - upozornit před odchodem ze stránky.
   useEffect(() => {
