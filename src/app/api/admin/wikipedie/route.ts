@@ -35,12 +35,21 @@ export async function PUT(req: NextRequest) {
 
   const clanek = await prisma.wikiClanek.upsert({
     where: { userId },
-    create: { userId, jazyk: d.jazyk, nazev: d.nazev, wikitext: d.wikitext, sledovanyNazev: sledovany, udaje: (d.udaje ?? null) as object | null },
+    // Prázdné údaje se do JSON sloupce neposílají vůbec - Prisma pro „null"
+    // chce vlastní hodnotu a formulář stejně posílá objekt.
+    create: {
+      userId,
+      jazyk: d.jazyk,
+      nazev: d.nazev,
+      wikitext: d.wikitext,
+      sledovanyNazev: sledovany,
+      ...(d.udaje ? { udaje: d.udaje as object } : {}),
+    },
     update: {
       jazyk: d.jazyk,
       nazev: d.nazev,
       wikitext: d.wikitext,
-      ...(d.udaje !== undefined ? { udaje: d.udaje as object | null } : {}),
+      ...(d.udaje ? { udaje: d.udaje as object } : {}),
       sledovanyNazev: sledovany,
       // Jiný hlídaný článek = začíná se znovu (první kontrola si jen zapamatuje revizi).
       ...(pred && (pred.sledovanyNazev !== sledovany || pred.jazyk !== d.jazyk)
