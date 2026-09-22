@@ -760,3 +760,23 @@ export async function zkusNahravani(): Promise<{
     return { ok: false, chyba: err instanceof Error ? err.message : String(err) };
   }
 }
+
+/**
+ * Stáhne soubor z úložiště do paměti (zadání 22. 9. 2026 - příloha objednávky
+ * se kopíruje do nové složky projektu na Disku). Nikdy nevyhazuje.
+ */
+export async function stahniZUloziste(key: string): Promise<{ bytes: Buffer; mime: string } | null> {
+  const client = getClient();
+  const bucket = process.env.S3_BUCKET;
+  if (!client || !bucket) return null;
+  try {
+    const odpoved = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    const telo = odpoved.Body as { transformToByteArray?: () => Promise<Uint8Array> } | undefined;
+    if (!telo?.transformToByteArray) return null;
+    const bytes = Buffer.from(await telo.transformToByteArray());
+    return { bytes, mime: odpoved.ContentType || 'application/octet-stream' };
+  } catch (err) {
+    console.error('stahniZUloziste selhalo:', err);
+    return null;
+  }
+}

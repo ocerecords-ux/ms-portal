@@ -3256,3 +3256,22 @@ model PoradaUcastnik {
   @@id([poradaId, userId])
   @@index([userId])
 }
+
+/// ZÁLOHA TEXTŮ (zadání 22. 9. 2026: „když se ve složce projektu vytvoří PDF
+/// s _RE, musí se duplikovat a udělat záloha textu do složky… zároveň musíme
+/// hlídat duplicity"). Jeden řádek = jedna verze souboru (id + obsah), která
+/// už v zálohové složce je - podle toho se nekopíruje dvakrát.
+model ZalohaTextu {
+  id        String   @id @default(cuid())
+  zdrojId   String
+  /// Otisk obsahu z Disku - stejný soubor se stejným obsahem se nezálohuje znovu.
+  md5       String
+  kopieId   String?
+  nazev     String
+  /// Proč kopie nevznikla ("duplicita" = stejný obsah už v záloze je).
+  poznamka  String?
+  createdAt DateTime @default(now())
+
+  @@unique([zdrojId, md5])
+  @@index([md5])
+}

@@ -471,3 +471,147 @@ export async function presunDoKoseNaDisku(fileId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Nahraje libovolný soubor do složky na Disku - i velký (zadání 22. 9. 2026:
+ * „když přijde objednávka audioknihy a někdo vloží PDF, tak se sice udělá
+ * nová složka, ale PDF se tam neuloží").
+ *
+ * Jde přes „resumable" nahrávání: obyčejné multipart má u Disku strop 5 MB
+ * a naskenované rukopisy mají klidně stovky MB. Nikdy nevyhazuje.
+ */
+export async function nahrajSouborDoSlozky(
+  folderId: string,
+  nazev: string,
+  bytes: Buffer,
+  mime = 'application/octet-stream',
+): Promise<NahraniNaDisk> {
+  const token = await getAccessToken(DRIVE_WRITE_SCOPE);
+  if (!token) return { ok: false, duvod: 'Portál se nepřihlásil ke Google Disku.' };
+  try {
+    const start = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,webViewLink',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json; charset=UTF-8',
+          'X-Upload-Content-Type': mime,
+          'X-Upload-Content-Length': String(bytes.length),
+        },
+        body: JSON.stringify({ name: nazev, parents: [folderId] }),
+        cache: 'no-store',
+      },
+    );
+    const adresa = start.headers.get('location');
+    if (!start.ok || !adresa) {
+      const telo = await start.text().catch(() => '');
+      console.error('Google Drive: zahajeni nahravani selhalo', start.status, telo);
+      return { ok: false, duvod: popisChybyDisku(start.status, telo) };
+    }
+    const res = await fetch(adresa, {
+      method: 'PUT',
+      headers: { 'Content-Type': mime, 'Content-Length': String(bytes.length) },
+      body: bytes,
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const telo = await res.text().catch(() => '');
+      console.error('Google Drive: nahrani souboru selhalo', res.status, telo);
+      return { ok: false, duvod: popisChybyDisku(res.status, telo) };
+    }
+    const data = (await res.json()) as { id?: string; webViewLink?: string };
+    if (!data.id) return { ok: false, duvod: 'Disk soubor přijal, ale nevrátil jeho ID.' };
+    return { ok: true, id: data.id, webViewLink: data.webViewLink ?? null };
+  } catch (err) {
+    console.error('Google Drive: nahrani souboru spadlo:', err);
+    return { ok: false, duvod: 'Disk neodpověděl.' };
+  }
+}
+
+/** Soubor na Disku pro zálohu textů (viz lib/zalohaTextuServer.ts). */
+export type SouborNaDisku = {
+  id: string;
+  name: string;
+  parents: string[];
+  md5Checksum: string | null;
+  createdTime: string;
+};
+
+/** Hledání souborů na všech discích, které portál vidí. Nikdy nevyhazuje. */
+export async function hledejNaDisku(q: string, token: string, maxStran = 20): Promise<SouborNaDisku[]> {
+  const vysledek: SouborNaDisku[] = [];
+  let stranka: string | undefined;
+  for (let i = 0; i < maxStran; i++) {
+    const params = new URLSearchParams({
+      q,
+      fields: 'nextPageToken,files(id,name,parents,md5Checksum,createdTime)',
+      pageSize: '200',
+      supportsAllDrives: 'true',
+      includeItemsFromAllDrives: 'true',
+      corpora: 'allDrives',
+    });
+    if (stranka) params.set('pageToken', stranka);
+    const res = await fetch(`${DRIVE_API}/files?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.error('Drive hledani selhalo:', res.status, await res.text().catch(() => ''));
+      break;
+    }
+    const data = (await res.json()) as { nextPageToken?: string; files?: any[] };
+    for (const f of data.files ?? []) {
+      vysledek.push({
+        id: f.id,
+        name: f.name,
+        parents: f.parents ?? [],
+        md5Checksum: f.md5Checksum ?? null,
+        createdTime: f.createdTime,
+      });
+    }
+    stranka = data.nextPageToken;
+    if (!stranka) break;
+  }
+  return vysledek;
+}
+
+/** Rodiče složky (pro kontrolu, jestli soubor leží v projektu). */
+export async function rodiceNaDisku(id: string, token: string): Promise<string[]> {
+  try {
+    const res = await fetch(`${DRIVE_API}/files/${encodeURIComponent(id)}?fields=parents&supportsAllDrives=true`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { parents?: string[] };
+    return data.parents ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** Kopie souboru na Disku do jiné složky. Nikdy nevyhazuje. */
+export async function zkopirujNaDisku(
+  id: string,
+  doSlozky: string,
+  nazev: string,
+  token: string,
+): Promise<{ ok: true; id: string } | { ok: false; duvod: string }> {
+  try {
+    const res = await fetch(`${DRIVE_API}/files/${encodeURIComponent(id)}/copy?supportsAllDrives=true&fields=id`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: nazev, parents: [doSlozky] }),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const telo = await res.text().catch(() => '');
+      return { ok: false, duvod: popisChybyDisku(res.status, telo) };
+    }
+    const data = (await res.json()) as { id?: string };
+    return data.id ? { ok: true, id: data.id } : { ok: false, duvod: 'Disk nevrátil ID kopie.' };
+  } catch {
+    return { ok: false, duvod: 'Disk neodpověděl.' };
+  }
+}
