@@ -153,6 +153,8 @@ export function ProjectMetaForm({
   natoceniZaznamy,
   vidiKlienta,
   nabizetUvodZaver = false,
+  firmaDelaReklamy = false,
+  typAudioknihy = null,
   ukonceny,
   dnuDoOprav,
 }: {
@@ -215,6 +217,10 @@ export function ProjectMetaForm({
    * objednává (Audiotéka), nebo když už je text vyplněný.
    */
   nabizetUvodZaver?: boolean;
+  /** Firma dělá reklamy (i když třeba i audioknihy) - 22. 9. 2026. */
+  firmaDelaReklamy?: boolean;
+  /** Název typu projektu „audiokniha" z Ceníků. */
+  typAudioknihy?: string | null;
   /**
    * Natáčecí protokol — jeden záznam na každý zápis Bruna z chatu, od
    * nejnovějšího. Celý se vypisuje ve vlastní záložce (ProtokolNataceni);
@@ -422,7 +428,16 @@ export function ProjectMetaForm({
   const jeReklama = rodnyListTypy.includes(values.projectType);
 
   /** Datum vydání zvukaři ne (zadání 13. 9. 2026) - stejně jako v přehledu. */
-  const vidiDatumVydani = vidiKlienta && !jeReklama;
+  /**
+   * DATUM VYDÁNÍ U REKLAMY VŮBEC (22. 9. 2026: „datum vydání u projektu typu
+   * reklama vůbec nemusí být"). Nejen rádiový spot - reklama je i projekt
+   * reklamní firmy, a u firmy, která dělá obojí, každý typ kromě audioknihy.
+   */
+  const bezDataVydani =
+    jeReklama ||
+    jeReklamniFirma ||
+    Boolean(firmaDelaReklamy && typAudioknihy && values.projectType && values.projectType !== typAudioknihy);
+  const vidiDatumVydani = vidiKlienta && !bezDataVydani;
 
   if (!canEdit) {
     return (

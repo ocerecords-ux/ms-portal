@@ -76,9 +76,12 @@ export function roleRequiresCompany(role: Role): boolean {
 export const USER_TABS: { key: string; label: string; roles: Role[] }[] = [
   // Robot sedi v zalozce Mediaspace, at je videt, ze existuje - prava
   // s internim tymem nesdili, jen misto v seznamu.
-  { key: 'mediaspace', label: 'Mediaspace', roles: [...INTERNAL_ROLES, ...ROBOT_ROLES, 'TABULE'] },
+  { key: 'mediaspace', label: 'Mediaspace', roles: [...INTERNAL_ROLES, ...ROBOT_ROLES] },
   { key: 'klienti', label: 'Klienti', roles: ['CLIENT'] },
   { key: 'herci', label: 'Herci', roles: ['HEREC'] },
+  // Účty obrazovek ve studiích (22. 9. 2026: „na ty uživatele Tabule vytvoř
+  // zvlášť záložku").
+  { key: 'tabule', label: 'Tabule', roles: ['TABULE'] },
 ];
 
 /** Ctyri fyzicka studia, ve kterych je herec schopen natacet - zadani 5. 9. 2026. */

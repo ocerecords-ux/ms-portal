@@ -36,7 +36,10 @@ export type VstupLicencnihoListu = {
 };
 
 export type VychoziLicencniList = Omit<VstupLicencnihoListu, 'actorUserId' | 'interpret'> & {
+  /** Herci projektu (předvybraní). */
   herci: { id: string; jmeno: string }[];
+  /** Všichni herci z portálu - dají se přidat i ti, co u projektu nejsou. */
+  vsichniHerci: { id: string; jmeno: string }[];
 };
 
 function datumCesky(d: Date): string {
@@ -58,6 +61,9 @@ export async function vychoziLicencniList(caflouProjectId: string): Promise<Vych
       licence: { select: { nazev: true } },
     },
   });
+  const vsichni = await prisma.user
+    .findMany({ where: { role: 'HEREC', active: true }, select: { id: true, name: true, email: true }, orderBy: { name: 'asc' } })
+    .catch(() => []);
   const herci = [
     ...(meta?.herci ?? []).filter((h) => h.id === meta?.actorUserId),
     ...(meta?.herci ?? []).filter((h) => h.id !== meta?.actorUserId),
@@ -66,6 +72,7 @@ export async function vychoziLicencniList(caflouProjectId: string): Promise<Vych
   const firma = meta?.company?.name ?? '';
   return {
     herci,
+    vsichniHerci: vsichni.map((h) => ({ id: h.id, jmeno: bezTitulu(h.name) || h.email })),
     nazevSpotu: meta?.spotName || meta?.name || '',
     klient: meta?.rlClientName || firma,
     objednatel: firma,

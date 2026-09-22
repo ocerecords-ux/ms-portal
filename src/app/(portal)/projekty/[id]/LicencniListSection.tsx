@@ -28,6 +28,7 @@ export type LicencniListRadek = {
 
 export type LicencniListVychozi = {
   herci: { id: string; jmeno: string }[];
+  vsichniHerci: { id: string; jmeno: string }[];
   nazevSpotu: string;
   klient: string;
   objednatel: string;
@@ -58,32 +59,57 @@ export function LicencniListSection({
   vychozi: LicencniListVychozi;
 }) {
   const router = useRouter();
-  const prvni = vychozi.herci[0];
-  const [v, setV] = useState({
-    ...vychozi,
-    actorUserId: prvni?.id ?? '',
-    interpret: prvni?.jmeno ?? '',
-  });
+  /**
+   * VÍC HERCŮ NAJEDNOU (22. 9. 2026: „u těch licenčních listů chci vybírat
+   * konkrétní herce a mnohonásobný výběr"). Zaškrtnutí herci projektu, další
+   * jdou přidat z celé databáze nebo napsat jménem. Každý dostane vlastní
+   * licenční list se stejným rozsahem licence.
+   */
+  const [vybrani, setVybrani] = useState<{ id: string | null; jmeno: string }[]>(
+    vychozi.herci.map((h) => ({ id: h.id, jmeno: h.jmeno })),
+  );
+  const [hledani, setHledani] = useState('');
+  const { herci: _herci, vsichniHerci: _vsichni, ...zbytek } = vychozi;
+  const [v, setV] = useState(zbytek);
+  const jeVybrany = (jmeno: string, id: string | null) =>
+    vybrani.some((x) => (id ? x.id === id : x.jmeno.toLowerCase() === jmeno.toLowerCase()));
+  const prepniHerce = (h: { id: string | null; jmeno: string }) =>
+    setVybrani((p) =>
+      jeVybrany(h.jmeno, h.id) ? p.filter((x) => (h.id ? x.id !== h.id : x.jmeno !== h.jmeno)) : [...p, h],
+    );
+  const bezDiakritiky = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const navrhy = hledani.trim()
+    ? vychozi.vsichniHerci
+        .filter((h) => !jeVybrany(h.jmeno, h.id) && bezDiakritiky(h.jmeno).includes(bezDiakritiky(hledani.trim())))
+        .slice(0, 8)
+    : [];
   const [bezi, setBezi] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
-  const [hotovo, setHotovo] = useState<string | null>(null);
+  const [hotovo, setHotovo] = useState<string[]>([]);
 
   const nastav = <K extends keyof typeof v>(k: K, hodnota: (typeof v)[K]) => setV((p) => ({ ...p, [k]: hodnota }));
 
   async function vystav() {
+    if (vybrani.length === 0) {
+      setChyba('Vyberte aspoň jednoho herce.');
+      return;
+    }
     setBezi(true);
     setChyba(null);
-    setHotovo(null);
+    setHotovo([]);
     try {
-      const { herci: _h, ...data } = v;
-      const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/licencni-list`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, actorUserId: v.actorUserId || null }),
-      });
-      const telo = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(telo.error || 'Licenční list se nepodařilo vystavit.');
-      setHotovo(telo.id);
+      const nova: string[] = [];
+      for (const h of vybrani) {
+        const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/licencni-list`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...v, interpret: h.jmeno, actorUserId: h.id }),
+        });
+        const telo = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(`${h.jmeno}: ${telo.error || 'licenční list se nepodařilo vystavit.'}`);
+        nova.push(telo.id);
+      }
+      setHotovo(nova);
       router.refresh();
     } catch (err) {
       setChyba(err instanceof Error ? err.message : 'Licenční list se nepodařilo vystavit.');
@@ -121,38 +147,70 @@ export function LicencniListSection({
               Nový licenční list
             </h2>
             <p className="text-xs text-muted font-body m-0 mt-1">
-              Vymezení licence pro jednoho interpreta. Údaje jsou předvyplněné z projektu, všechno jde přepsat.
+              Vymezení licence pro vybrané herce - každý dostane svůj list. Údaje jsou předvyplněné z projektu, všechno jde přepsat.
             </p>
           </div>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Interpret</span>
-            {vychozi.herci.length > 0 && (
-              <select
-                value={v.actorUserId}
-                onChange={(e) => {
-                  const h = vychozi.herci.find((x) => x.id === e.target.value);
-                  setV((p) => ({ ...p, actorUserId: e.target.value, interpret: h?.jmeno ?? p.interpret }));
-                }}
-                className={pole}
-              >
-                {vychozi.herci.map((h) => (
-                  <option key={h.id} value={h.id}>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-body text-ink">Interpreti</span>
+            <div className="flex flex-wrap gap-2">
+              {[...vychozi.herci.map((h) => ({ id: h.id as string | null, jmeno: h.jmeno })), ...vybrani.filter((x) => !vychozi.herci.some((h) => h.id === x.id))].map((h) => {
+                const zapnuto = jeVybrany(h.jmeno, h.id);
+                return (
+                  <button
+                    key={h.id ?? h.jmeno}
+                    type="button"
+                    onClick={() => prepniHerce(h)}
+                    aria-pressed={zapnuto}
+                    className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-sm font-heading transition-colors ${
+                      zapnuto ? 'border-brand-purple bg-brand-purple/10 text-ink' : 'border-line text-muted hover:text-ink'
+                    }`}
+                  >
+                    <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[10px] ${zapnuto ? 'bg-brand-purple border-brand-purple text-white' : 'border-line'}`}>
+                      {zapnuto ? '✓' : ''}
+                    </span>
                     {h.jmeno}
-                  </option>
-                ))}
-                <option value="">Jiný interpret…</option>
-              </select>
-            )}
-            {(v.actorUserId === '' || vychozi.herci.length === 0) && (
+                  </button>
+                );
+              })}
+            </div>
+            <div className="relative">
               <input
-                value={v.interpret}
-                onChange={(e) => nastav('interpret', e.target.value)}
-                placeholder="Jméno interpreta"
-                className={pole}
+                value={hledani}
+                onChange={(e) => setHledani(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && hledani.trim()) {
+                    e.preventDefault();
+                    const shoda = navrhy[0];
+                    prepniHerce(shoda ? { id: shoda.id, jmeno: shoda.jmeno } : { id: null, jmeno: hledani.trim() });
+                    setHledani('');
+                  }
+                }}
+                placeholder="Přidat dalšího herce - začněte psát jméno…"
+                className={`${pole} w-full`}
               />
-            )}
-          </label>
+              {navrhy.length > 0 && (
+                <div className="absolute z-20 left-0 right-0 mt-1 rounded-lg border border-line bg-surface shadow-lg overflow-hidden">
+                  {navrhy.map((h) => (
+                    <button
+                      key={h.id}
+                      type="button"
+                      onClick={() => {
+                        prepniHerce({ id: h.id, jmeno: h.jmeno });
+                        setHledani('');
+                      }}
+                      className="block w-full text-left px-3 py-2 text-sm font-heading text-ink hover:bg-brand-purple/10"
+                    >
+                      {h.jmeno}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <span className="text-xs text-muted font-body">
+              Každý vybraný herec dostane vlastní licenční list se stejným rozsahem. Kdo není v databázi, napište jméno a potvrďte Enterem.
+            </span>
+          </div>
 
           {policko('nazevSpotu', 'Název spotu')}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -206,17 +264,12 @@ export function LicencniListSection({
               disabled={bezi}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              {bezi ? 'Vystavuji…' : 'Vystavit licenční list'}
+              {bezi ? 'Vystavuji…' : vybrani.length > 1 ? `Vystavit ${vybrani.length} licenční listy` : 'Vystavit licenční list'}
             </button>
-            {hotovo && (
-              <a
-                href={`/api/licencni-list/${hotovo}`}
-                target="_blank"
-                rel="noopener"
-                className="text-sm font-heading font-semibold text-brand-purple hover:underline"
-              >
-                Hotovo, otevřít PDF
-              </a>
+            {hotovo.length > 0 && (
+              <span className="text-sm font-heading text-brand-greenDeep">
+                Hotovo - vystaveno {hotovo.length === 1 ? '1 licenční list' : `${hotovo.length} licenčních listů`}.
+              </span>
             )}
           </div>
         </section>

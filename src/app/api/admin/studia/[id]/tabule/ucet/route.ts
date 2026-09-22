@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { randomInt } from 'crypto';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
@@ -13,7 +12,7 @@ import { nextCode, codePrefixForRole } from '@/lib/codes';
  *
  * Účet nemá e-mail, jen přihlašovací jméno podle studia („brno1", „praha").
  * Drží se v políčku `email` (unikátní klíč přihlášení) - přihlašovací
- * formulář bere e-mail i jméno. Heslo portál vymyslí sám a ukáže ho jednou.
+ * formulář bere e-mail i jméno. Heslo je u všech tabulí 1111.
  *
  * POST {} - založí účet (nebo existujícímu vymyslí nové heslo) a vrátí
  * { login, heslo }. Po přihlášení vidí jen tabuli svého studia.
@@ -40,13 +39,7 @@ function loginZeStudia(zkratka: string): string {
   return slova.join('') || 'tabule';
 }
 
-/** Heslo, které jde opsat z papírku: bez 0/O a 1/l/I. */
-function vymysliHeslo(): string {
-  const znaky = 'abcdefghjkmnpqrstuvwxyz23456789';
-  let h = '';
-  for (let i = 0; i < 10; i++) h += znaky[randomInt(znaky.length)];
-  return `${h.slice(0, 5)}-${h.slice(5)}`;
-}
+const VYCHOZI_HESLO_TABULE = '1111';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await requireAdmin())) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
@@ -58,7 +51,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const studio = await prisma.studio.findUnique({ where: { id: params.id }, select: { id: true, name: true, shortName: true } });
   if (!studio) return NextResponse.json({ error: 'Studio nenalezeno.' }, { status: 404 });
 
-  const heslo = vymysliHeslo();
+  // Výchozí heslo tabulí je 1111 (22. 9. 2026: „heslo primárně nastav všude
+  // u těch tabulí na 1111"). Účet nic nesmí, jen ukazuje tabuli svého studia.
+  const heslo = VYCHOZI_HESLO_TABULE;
   const passwordHash = await bcrypt.hash(heslo, 10);
 
   // Účet tohohle studia už je → jen nové heslo.

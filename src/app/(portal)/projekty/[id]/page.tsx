@@ -1,3 +1,4 @@
+import { nazevTypuAudioknihy } from '@/lib/priceList';
 import { firmaChceUvodZaver } from '@/lib/uvodZaver';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -431,6 +432,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         natoceniZaznamy={zaznamyNatoceni}
         vidiKlienta={canViewProjectBusinessInfo(session.user.role)}
         nabizetUvodZaver={firmaChceUvodZaver(firmaProjektu?.name ?? company?.name)}
+        firmaDelaReklamy={Boolean(company?.dealsAds)}
+        typAudioknihy={await nazevTypuAudioknihy()}
         ukonceny={metaPoSync?.finished ?? project?.finished ?? false}
         dnuDoOprav={dnuDoOprav}
         herecZCaflou={meta?.narrator ?? project?.narrator ?? null}

@@ -28,7 +28,7 @@ export function TabuleStudii({ studia, zaklad }: { studia: StudioTabule[]; zakla
   const [chybaUctu, setChybaUctu] = useState<string | null>(null);
 
   async function vytvorUcet(studioId: string, noveHeslo: boolean) {
-    if (noveHeslo && !window.confirm('Vymyslet nové heslo? Staré přestane platit.')) return;
+    if (noveHeslo && !window.confirm('Nastavit heslo zpátky na 1111?')) return;
     setPracuji(studioId);
     setChybaUctu(null);
     const res = await fetch(`/api/admin/studia/${studioId}/tabule/ucet`, {
@@ -168,7 +168,7 @@ export function TabuleStudii({ studia, zaklad }: { studia: StudioTabule[]; zakla
                         onClick={() => void vytvorUcet(s.id, true)}
                         className="text-xs font-heading text-muted hover:text-ink bg-transparent border-0 cursor-pointer"
                       >
-                        Nové heslo
+                        Heslo na 1111
                       </button>
                       <button
                         type="button"
@@ -193,7 +193,7 @@ export function TabuleStudii({ studia, zaklad }: { studia: StudioTabule[]; zakla
                 {udaje?.studioId === s.id && (
                   <div className="rounded-lg border border-brand-purple/40 bg-brand-purple/5 px-3 py-2 text-sm">
                     Přihlášení na počítači u obrazovky: jméno <strong className="font-heading">{udaje.login}</strong>, heslo{' '}
-                    <strong className="font-heading tracking-wide">{udaje.heslo}</strong>. Heslo si opište - víc se neukáže.
+                    <strong className="font-heading tracking-wide">{udaje.heslo}</strong>.
                   </div>
                 )}
                 {chybaUctu && pracuji === null && <span className="text-sm text-danger">{chybaUctu}</span>}
