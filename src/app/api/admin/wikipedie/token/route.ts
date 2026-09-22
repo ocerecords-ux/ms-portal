@@ -11,7 +11,8 @@ import { vychoziKoncept } from '@/lib/wikipedie';
  */
 export const dynamic = 'force-dynamic';
 
-const schema = z.object({ token: z.string().trim().max(500) });
+// Token z Wikimedie je JWT a bývá přes tisíc znaků - krátký limit ho odmítal.
+const schema = z.object({ token: z.string().trim().max(8000) });
 
 export async function PUT(req: NextRequest) {
   const session = await requireAdmin();
