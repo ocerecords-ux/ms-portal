@@ -239,7 +239,7 @@ export function Tabule({ klic, pocatecni }: { klic: string; pocatecni: DataTabul
                   </>
                 ) : (
                   <span style={{ fontSize: 30, color: BARVY.text2 }}>
-                    {data.zitra ? `Zítra ${cas(data.zitra.od)}: ${data.zitra.nazev} · ${data.zitra.druh.toLowerCase()}` : 'Zítra zatím nic naplánováno.'}
+                    {data.zitra ? `Zítra ${cas(data.zitra.od)}: ${zitraText(data.zitra)}` : 'Zítra zatím nic naplánováno.'}
                   </span>
                 )}
               </div>
@@ -321,7 +321,7 @@ export function Tabule({ klic, pocatecni }: { klic: string; pocatecni: DataTabul
             )}
             {(probiha || dalsi) && data.zitra && (
               <span style={{ marginTop: 'auto', fontSize: 24, color: BARVY.sedy }}>
-                Zítra {cas(data.zitra.od)}: {data.zitra.nazev} · {data.zitra.druh.toLowerCase()}
+                Zítra {cas(data.zitra.od)}: {zitraText(data.zitra)}
               </span>
             )}
           </div>
@@ -331,6 +331,11 @@ export function Tabule({ klic, pocatecni }: { klic: string; pocatecni: DataTabul
       </div>
     </div>
   );
+}
+
+/** „Střih · střih" nedává smysl - druh jen když se liší od názvu. */
+function zitraText(z: { nazev: string; druh: string }): string {
+  return z.nazev.toLowerCase() === z.druh.toLowerCase() ? z.nazev : `${z.nazev} · ${z.druh.toLowerCase()}`;
 }
 
 function Lide({ u, cas }: { u: { druh: string; herec: string | null; zvukar: string | null }; cas: string }) {
