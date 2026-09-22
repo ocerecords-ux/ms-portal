@@ -511,8 +511,9 @@ export async function nahrajSouborDoSlozky(
     }
     const res = await fetch(adresa, {
       method: 'PUT',
-      headers: { 'Content-Type': mime, 'Content-Length': String(bytes.length) },
-      body: bytes,
+      headers: { 'Content-Type': mime },
+      // Uint8Array, ne Buffer - Buffer typy fetch na Vercelu neberou (build 22. 9. 2026).
+      body: new Uint8Array(bytes),
       cache: 'no-store',
     });
     if (!res.ok) {
