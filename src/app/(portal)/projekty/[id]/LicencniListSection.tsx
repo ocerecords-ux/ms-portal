@@ -27,7 +27,7 @@ export type LicencniListRadek = {
 };
 
 export type LicencniListVychozi = {
-  herci: { id: string; jmeno: string }[];
+  herci: { id: string | null; jmeno: string }[];
   vsichniHerci: { id: string; jmeno: string }[];
   nazevSpotu: string;
   klient: string;
@@ -154,7 +154,7 @@ export function LicencniListSection({
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">Interpreti</span>
             <div className="flex flex-wrap gap-2">
-              {[...vychozi.herci.map((h) => ({ id: h.id as string | null, jmeno: h.jmeno })), ...vybrani.filter((x) => !vychozi.herci.some((h) => h.id === x.id))].map((h) => {
+              {[...vychozi.herci, ...vybrani.filter((x) => !vychozi.herci.some((h) => (h.id ? h.id === x.id : h.jmeno === x.jmeno)))].map((h) => {
                 const zapnuto = jeVybrany(h.jmeno, h.id);
                 return (
                   <button

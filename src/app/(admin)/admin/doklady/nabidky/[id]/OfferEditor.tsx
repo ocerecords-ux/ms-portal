@@ -100,6 +100,7 @@ export function OfferEditor({
   bankAccounts,
   projects,
   klientiProjektu,
+  herciProjektu = {},
 }: {
   offer: Offer;
   issuer: Party;
@@ -113,6 +114,8 @@ export function OfferEditor({
    * pozná, komu nabídka poletí - zadání 17. 9. 2026.
    */
   klientiProjektu: Record<string, { jmeno: string | null; email: string }>;
+  /** Herci projektu (ID projektu → jména) pro tlačítko „Přidat herce z projektu". */
+  herciProjektu?: Record<string, string[]>;
 }) {
   const router = useRouter();
   const locked = offer.status === 'APPROVED';
@@ -226,6 +229,27 @@ export function OfferEditor({
 
   function addItem() {
     setItems((current) => [...current, emptyItem()]);
+  }
+
+  /**
+   * HERCI Z PROJEKTU DO POLOŽEK (zadání 22. 9. 2026: „jakmile budu tvořit
+   * nabídku, tak se mi nějakým tlačítkem přenesou i do položkového rozpočtu
+   * a já si k nim napíšu jen ceny"). Každý herec = jedna položka bez ceny;
+   * kdo už v položkách je, nepřidá se znovu. Prázdný první řádek se nahradí.
+   */
+  const herciVybranehoProjektu = form.caflouProjectId ? herciProjektu[form.caflouProjectId] ?? [] : [];
+  const popisHerce = (jmeno: string) => (form.jazyk === 'EN' ? `Voice-over – ${jmeno}` : `Hlasový výkon – ${jmeno}`);
+  const chybejiciHerci = herciVybranehoProjektu.filter(
+    (j) => !items.some((i) => i.description.trim().toLowerCase() === popisHerce(j).toLowerCase()),
+  );
+  function pridatHerce() {
+    setItems((current) => {
+      const bezPrazdnych = current.filter((i) => i.description.trim() || i.unitPriceMinor);
+      return [
+        ...bezPrazdnych,
+        ...chybejiciHerci.map((j) => ({ ...emptyItem(), description: popisHerce(j) })),
+      ];
+    });
   }
 
   function removeItem(index: number) {
@@ -858,9 +882,21 @@ export function OfferEditor({
           </div>
 
           {!locked && (
-            <AddButton type="button" onClick={addItem} className="self-start">
-              Přidat položku
-            </AddButton>
+            <div className="flex items-center gap-3 flex-wrap">
+              <AddButton type="button" onClick={addItem} className="self-start">
+                Přidat položku
+              </AddButton>
+              {chybejiciHerci.length > 0 && (
+                <button
+                  type="button"
+                  onClick={pridatHerce}
+                  title={chybejiciHerci.join(', ')}
+                  className="text-sm font-heading font-semibold rounded-lg px-3 py-2 border border-line text-ink hover:border-brand-purple"
+                >
+                  + Herci z projektu ({chybejiciHerci.length})
+                </button>
+              )}
+            </div>
           )}
         </div>
 

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { bezTitulu as bezTituluJmena } from '@/lib/jmena';
 
 /**
  * KOMU JDE NABÍDKA (zadání 17. 9. 2026: „zasílání nabídek by mělo mít takovou
@@ -84,6 +85,43 @@ export async function mapaKlientuProjektu(): Promise<
     return out;
   } catch (err) {
     console.error('Klienty projektů se nepodařilo načíst:', err);
+    return {};
+  }
+}
+
+/**
+ * HERCI PROJEKTU DO NABÍDKY (zadání 22. 9. 2026: „jakmile budu tvořit
+ * nabídku, tak se mi nějakým tlačítkem přenesou [herci] i do položkového
+ * rozpočtu a já si k nim napíšu jen ceny"). ID projektu → jména herců,
+ * hlavní první; ruční jména z pole „herec" (bez účtu) na konci.
+ */
+export async function mapaHercuProjektu(): Promise<Record<string, string[]>> {
+  try {
+    const radky = await prisma.projectMeta.findMany({
+      where: { OR: [{ herci: { some: {} } }, { narrator: { not: null } }], finished: false },
+      select: {
+        caflouProjectId: true,
+        actorUserId: true,
+        narrator: true,
+        herci: { select: { id: true, name: true, email: true } },
+      },
+    });
+    const out: Record<string, string[]> = {};
+    for (const r of radky) {
+      const ucty = [
+        ...r.herci.filter((h) => h.id === r.actorUserId),
+        ...r.herci.filter((h) => h.id !== r.actorUserId),
+      ].map((h) => bezTituluJmena(h.name) || h.email);
+      const rucne = (r.narrator ?? '')
+        .split(/[,;\n]/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+      const vse = [...ucty, ...rucne.filter((j) => !ucty.includes(j))];
+      if (vse.length) out[r.caflouProjectId] = vse;
+    }
+    return out;
+  } catch (err) {
+    console.error('Herce projektů se nepodařilo načíst:', err);
     return {};
   }
 }

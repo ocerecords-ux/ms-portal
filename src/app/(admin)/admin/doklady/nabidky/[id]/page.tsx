@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { OfferEditor } from './OfferEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
-import { mapaKlientuProjektu } from '@/lib/prijemceNabidky';
+import { mapaHercuProjektu, mapaKlientuProjektu } from '@/lib/prijemceNabidky';
 import { computeTotals } from '@/lib/doklady';
 
 // Detail nabidky - editor, ktery vypada jako samotny doklad (zadani 8. 9. 2026:
@@ -40,7 +40,7 @@ export default async function OfferDetailPage({ params }: { params: { id: string
 
   const projects = await listProjectOptions();
   // Komu nabidka poleti - viz lib/prijemceNabidky.ts (zadani 17. 9. 2026).
-  const klientiProjektu = await mapaKlientuProjektu();
+  const [klientiProjektu, herciProjektu] = await Promise.all([mapaKlientuProjektu(), mapaHercuProjektu()]);
 
   const bankAccounts = await prisma.bankAccount.findMany({
     where: { issuerCompanyId: offer.issuerCompanyId, currency: offer.currency },
@@ -121,6 +121,7 @@ export default async function OfferDetailPage({ params }: { params: { id: string
         }))}
         projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
         klientiProjektu={klientiProjektu}
+        herciProjektu={herciProjektu}
       />
     </div>
   );

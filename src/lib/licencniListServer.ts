@@ -36,8 +36,8 @@ export type VstupLicencnihoListu = {
 };
 
 export type VychoziLicencniList = Omit<VstupLicencnihoListu, 'actorUserId' | 'interpret'> & {
-  /** Herci projektu (předvybraní). */
-  herci: { id: string; jmeno: string }[];
+  /** Herci projektu (předvybraní); `id` null = jen jméno bez účtu. */
+  herci: { id: string | null; jmeno: string }[];
   /** Všichni herci z portálu - dají se přidat i ti, co u projektu nejsou. */
   vsichniHerci: { id: string; jmeno: string }[];
 };
@@ -57,6 +57,7 @@ export async function vychoziLicencniList(caflouProjectId: string): Promise<Vych
       productionDate: true,
       company: { select: { name: true } },
       actorUserId: true,
+      narrator: true,
       herci: { select: { id: true, name: true, email: true } },
       licence: { select: { nazev: true } },
     },
@@ -68,10 +69,16 @@ export async function vychoziLicencniList(caflouProjectId: string): Promise<Vych
     ...(meta?.herci ?? []).filter((h) => h.id === meta?.actorUserId),
     ...(meta?.herci ?? []).filter((h) => h.id !== meta?.actorUserId),
   ].map((h) => ({ id: h.id, jmeno: bezTitulu(h.name) || h.email }));
+  // Herci napsaní u projektu jen jménem (bez účtu) - navrhnou se taky (22. 9. 2026).
+  const rucne = (meta?.narrator ?? '')
+    .split(/[,;\n]/)
+    .map((x) => x.trim())
+    .filter((j) => j && !herci.some((h) => h.jmeno === j));
+  const navrzeni: { id: string | null; jmeno: string }[] = [...herci, ...rucne.map((j) => ({ id: null, jmeno: j }))];
   const media = (meta?.licence ?? []).map((l) => l.nazev).join(', ');
   const firma = meta?.company?.name ?? '';
   return {
-    herci,
+    herci: navrzeni,
     vsichniHerci: vsichni.map((h) => ({ id: h.id, jmeno: bezTitulu(h.name) || h.email })),
     nazevSpotu: meta?.spotName || meta?.name || '',
     klient: meta?.rlClientName || firma,

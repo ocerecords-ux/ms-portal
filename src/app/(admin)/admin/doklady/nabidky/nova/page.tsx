@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { listProjectOptions } from '@/lib/projectOptions';
-import { mapaKlientuProjektu } from '@/lib/prijemceNabidky';
+import { mapaHercuProjektu, mapaKlientuProjektu } from '@/lib/prijemceNabidky';
 import { projektProDoklad } from '@/lib/projektProDoklad';
 import { OfferEditor } from '../[id]/OfferEditor';
 
@@ -36,7 +36,7 @@ export default async function NovaNabidkaPage({
       });
   if (!vydavatel) redirect('/admin/doklady/moje-firmy');
 
-  const [issuers, companies, bankAccounts, projects, klientiProjektu] = await Promise.all([
+  const [issuers, companies, bankAccounts, projects, klientiProjektu, herciProjektu] = await Promise.all([
     prisma.issuerCompany.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     prisma.company.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, ic: true } }),
     prisma.bankAccount.findMany({
@@ -47,6 +47,7 @@ export default async function NovaNabidkaPage({
     listProjectOptions(),
     // Komu nabidka poleti - viz lib/prijemceNabidky.ts (zadani 17. 9. 2026).
     mapaKlientuProjektu(),
+    mapaHercuProjektu(),
   ]);
 
   const firmaId = searchParams?.firma || projekt?.companyId || null;
@@ -109,6 +110,7 @@ export default async function NovaNabidkaPage({
       bankAccounts={bankAccounts}
       projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
       klientiProjektu={klientiProjektu}
+      herciProjektu={herciProjektu}
     />
   );
 }
