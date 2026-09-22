@@ -773,6 +773,27 @@ export function CalendarBrowser({
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
           <p className="sm:hidden mr-auto text-sm font-heading text-muted m-0 capitalize">{nadpis}</p>
+          {/* JEN MOJE (zadání 22. 9. 2026: „ikona, na kterou když kliknou, tak
+              se jim zobrazí jen jejich události… jako sólo"; „ať je vždycky na
+              očích, ale ať je nenápadné"). Malá ikonka vedle šipek - vidí ji
+              i telefon, kde se štítky kalendářů posouvají mimo obrazovku.
+              Druhý klik vrátí původní výběr kalendářů. */}
+          <button
+            type="button"
+            onClick={() => jenTentoKalendar(SOLO_MOJE)}
+            aria-pressed={solo === SOLO_MOJE}
+            aria-label="Jen moje události"
+            title={solo === SOLO_MOJE ? 'Zpět na původní výběr kalendářů' : 'Jen moje události (sólo)'}
+            className={`inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border transition-colors ${
+              solo === SOLO_MOJE
+                ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
+                : 'border-line text-muted hover:text-brand-purple hover:border-brand-purple'
+            }`}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+              <path d="M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0 1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" />
+            </svg>
+          </button>
           <button
             type="button"
             onClick={() => posun(-1)}
@@ -974,25 +995,6 @@ export function CalendarBrowser({
             {NAZEV_KALENDARE_PORADY}
           </button>
         </span>
-        {/* JEN MOJE (zadání 22. 9. 2026: „ikona, na kterou když kliknou, tak
-            se jim zobrazí jen jejich události v kalendáři. Fungovat by to
-            mělo jako sólo") - druhý klik vrátí původní výběr kalendářů. */}
-        <button
-          type="button"
-          onClick={() => jenTentoKalendar(SOLO_MOJE)}
-          aria-pressed={solo === SOLO_MOJE}
-          title={solo === SOLO_MOJE ? 'Zpět na původní výběr kalendářů' : 'Jen moje události (sólo)'}
-          className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 rounded-pill border pl-2.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 text-xs sm:text-sm font-heading font-semibold transition-colors ${
-            solo === SOLO_MOJE
-              ? 'border-transparent bg-brand-purple/15 text-ink ring-2 ring-brand-purple ring-offset-2 ring-offset-paper'
-              : 'border-line text-muted hover:text-ink'
-          }`}
-        >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0" aria-hidden="true">
-            <path d="M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0 1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" />
-          </svg>
-          Moje
-        </button>
         {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
             (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
             orámovat, aby to bylo jasné, že je to v sólo režimu"). */}

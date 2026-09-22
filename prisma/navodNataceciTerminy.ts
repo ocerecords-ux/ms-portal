@@ -81,7 +81,7 @@ Když se držení nestihne potvrdit, termíny se samy vrátí do nabídky a here
 
 Sólo je jen na chvíli: **dalším kliknutím na stejný název** (nebo na štítek SÓLO) se vrátí zaškrtnutí přesně tak, jak bylo předtím. Kliknutím na jiný název se sólo přehodí na něj, kolečkem sólo skončí a kalendář se přidá nebo odebere z původního výběru. Sólo přežije i přepnutí týdne a zůstane v odkazu, takže se dá poslat.
 
-Tlačítko **Moje** (s ikonkou postavy) funguje stejně jako sólo: ukáže jen **vaše** události — natáčení a bloky, kde jste zvukař nebo herec, vaše dny mimo studio a vaše porady — ze všech studií najednou. Dalším kliknutím se vrátí původní výběr kalendářů.
+Malá ikonka **postavy** vedle šipek ‹ Dnes › funguje stejně jako sólo: ukáže jen **vaše** události — natáčení a bloky, kde jste zvukař nebo herec, vaše dny mimo studio a vaše porady — ze všech studií najednou. Dalším kliknutím se vrátí původní výběr kalendářů.
 
 Poslední zapnutý kalendář se kolečkem vypnout nedá, aby mřížka nezůstala prázdná. Vypnutý štítek má šedé kolečko (Mimo studio prázdné kolečko), zapnutý svítí svou barvou.
 
