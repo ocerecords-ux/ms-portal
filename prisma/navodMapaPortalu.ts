@@ -68,7 +68,7 @@ Karta projektu má záložky a ukazují se jen ty, které dávají smysl:
 - **Tabule ve studiích** — dotykový displej ve studiu: datum a čas, dnešní program studia z kalendáře (co právě probíhá, nebo dokdy je volno a co je další), poznámky (zůstávají, dokud je někdo neodškrtne) a dlaždice „co chybí“ (káva, toaletní papír, kapesníky…). Ťuknutí na chybějící věc pošle Báře Šiblové zprávu od Bruna. Zapíná se a adresa pro displej se bere v Administrace → Studia; displej se nepřihlašuje.
 - **Natáčecí plán** — plánování studia a herce.
 - **Rodný list** — jen u rádiového spotu; PDF se vyrobí samo, když je spot hotový.
-- **Tabule ve studiích** — obrazovka ve studiu s dnešním programem, poznámkami a tím, co chybí. V Administraci → Studia se u studia vytvoří **účet tabule** (e-mail a heslo); počítač u obrazovky se jím přihlásí v Chromu a portál rovnou ukáže tabuli toho studia. Do zbytku portálu se tímhle účtem nedostane.
+- **Tabule ve studiích** — obrazovka ve studiu s dnešním programem, poznámkami a tím, co chybí. Každé studio má **účet tabule** (jméno jako „brno1“ a heslo, bez e-mailu, spravuje se v Administraci → Studia); počítač u obrazovky se jím přihlásí v Chromu a portál rovnou ukáže tabuli toho studia. Do zbytku portálu se tímhle účtem nedostane.
 - **Licenční list** — u ostatních reklam (ne u rádiového spotu). Vymezení licence pro jednoho herce: území, média, délka a typ licence. Formulář je předvyplněný z projektu, PDF se uloží i do složky projektu na Disku.
 - **Přeposlech** — AudioTagger: poslech nahrávky a zápis chyb s časem a stranou scénáře.
 - **Natáčecí protokol** — co se při natáčení stalo.

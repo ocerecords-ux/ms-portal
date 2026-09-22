@@ -120,7 +120,11 @@ export default function LoginPage() {
               </label>
               <input
                 id="email"
-                type="email"
+                // Text, ne e-mail: účty obrazovek ve studiích se přihlašují
+                // jménem („brno1"), e-mail nemají (22. 9. 2026).
+                type="text"
+                autoComplete="username"
+                autoCapitalize="none"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

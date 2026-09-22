@@ -88,7 +88,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   // --- přihlášení ---
   'prihlaseni.nadpis': { cs: 'Přihlášení', en: 'Sign in' },
-  'prihlaseni.email': { cs: 'E-mail', en: 'Email' },
+  'prihlaseni.email': { cs: 'E-mail nebo jméno', en: 'Email or username' },
   'prihlaseni.heslo': { cs: 'Heslo', en: 'Password' },
   'prihlaseni.tlacitko': { cs: 'Přihlásit se', en: 'Sign in' },
   'prihlaseni.probiha': { cs: 'Přihlašuji…', en: 'Signing in…' },
