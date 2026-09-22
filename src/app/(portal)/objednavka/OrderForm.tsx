@@ -15,14 +15,38 @@ import {
   type RozborTextu,
 } from '@/lib/normostrany';
 import { DatumPole } from '@/components/DatumPole';
+import { vygenerujUvod, vygenerujZaver, REZISER_UVODU } from '@/lib/uvodZaver';
 
-export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: NarratorOption[] }) {
+export function OrderForm({
+  ratePerPage,
+  herci,
+  uvodZaver = false,
+}: {
+  ratePerPage: number;
+  herci: NarratorOption[];
+  /** Úvod a závěr audioknihy (22. 9. 2026) - zatím jen Audiotéka. */
+  uvodZaver?: boolean;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [pageCount, setPageCount] = useState('');
   const [deadline, setDeadline] = useState('');
   const [narrators, setNarrators] = useState<string[]>([]);
   const [note, setNote] = useState('');
+  /**
+   * ÚVOD A ZÁVĚR (zadání 22. 9. 2026). Text se skládá sám z názvu, autora,
+   * překladatele a nakladatelství - dokud do něj klient nesáhne. Jakmile ho
+   * přepíše, drží se jeho znění a automat ho už nepřepisuje; tlačítkem se dá
+   * vrátit k automatickému.
+   */
+  const [autor, setAutor] = useState('');
+  const [prekladatel, setPrekladatel] = useState('');
+  const [nakladatelstvi, setNakladatelstvi] = useState('');
+  const [uvodVlastni, setUvodVlastni] = useState<string | null>(null);
+  const [zaverVlastni, setZaverVlastni] = useState<string | null>(null);
+  const udajeUvodu = { nazev: title, autor, prekladatel, nakladatelstvi, herec: narrators.join(', ') };
+  const uvodText = uvodVlastni ?? vygenerujUvod(udajeUvodu);
+  const zaverText = zaverVlastni ?? vygenerujZaver(udajeUvodu);
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   /**
@@ -56,6 +80,13 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       formData.set('deadline', deadline);
       formData.set('preferredNarrator', narrators.join(', '));
       formData.set('note', note);
+      if (uvodZaver) {
+        formData.set('autorKnihy', autor);
+        formData.set('prekladatelKnihy', prekladatel);
+        formData.set('nakladatelstviKnihy', nakladatelstvi);
+        formData.set('uvodKnihy', uvodText);
+        formData.set('zaverKnihy', zaverText);
+      }
       // Priloha jde do uloziste zvlast, objednavka pak nese jen klic.
       if (file) {
         const klic = await nahrajPrilohu(file);
@@ -78,6 +109,11 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       setDeadline('');
       setNarrators([]);
       setNote('');
+      setAutor('');
+      setPrekladatel('');
+      setNakladatelstvi('');
+      setUvodVlastni(null);
+      setZaverVlastni(null);
       setFile(null);
       setRozbor(null);
       setChybaRozboru(null);
@@ -253,6 +289,53 @@ export function OrderForm({ ratePerPage, herci }: { ratePerPage: number; herci: 
       <Field label="Preferovaný herec" tooltip="Vyberte jednoho nebo víc herců z databáze, nebo napište vlastní jméno.">
         <NarratorMultiSelect options={herci} value={narrators} onChange={setNarrators} />
       </Field>
+
+      {uvodZaver && (
+        <div className="flex flex-col gap-3 rounded-lg border border-white/20 bg-white/5 p-4">
+          <div>
+            <p className="m-0 font-heading font-semibold text-sm text-brand-green">Úvod a závěr audioknihy</p>
+            <p className="m-0 mt-1 text-[11px] font-body text-white/75">
+              Text se složí sám z údajů níže. Můžete ho upravit, nebo celý přepsat vlastním. Režie je vždy{' '}
+              {REZISER_UVODU}.
+            </p>
+          </div>
+          <div className="flex gap-4 flex-wrap">
+            <Field label="Autor" className="flex-1 min-w-[180px]">
+              <input value={autor} onChange={(e) => setAutor(e.target.value)} placeholder="např. Emil Hruška" className="input" />
+            </Field>
+            <Field label="Překladatel" className="flex-1 min-w-[180px]">
+              <input
+                value={prekladatel}
+                onChange={(e) => setPrekladatel(e.target.value)}
+                placeholder="u původně české knihy nechte prázdné"
+                className="input"
+              />
+            </Field>
+            <Field label="Nakladatelství" className="flex-1 min-w-[180px]">
+              <input
+                value={nakladatelstvi}
+                onChange={(e) => setNakladatelstvi(e.target.value)}
+                placeholder="např. Epocha"
+                className="input"
+              />
+            </Field>
+          </div>
+          <TextUvodu
+            nadpis="Úvod"
+            hodnota={uvodText}
+            vlastni={uvodVlastni !== null}
+            onZmena={setUvodVlastni}
+            onVratit={() => setUvodVlastni(null)}
+          />
+          <TextUvodu
+            nadpis="Závěr"
+            hodnota={zaverText}
+            vlastni={zaverVlastni !== null}
+            onZmena={setZaverVlastni}
+            onVratit={() => setZaverVlastni(null)}
+          />
+        </div>
+      )}
 
       <Field label="Poznámka">
         <textarea
@@ -473,4 +556,42 @@ async function nahrajPrilohu(soubor: File): Promise<string> {
     throw new Error('Přílohu se nepodařilo nahrát. Zkuste to prosím znovu.');
   }
   return data.key as string;
+}
+
+/** Jeden text (úvod nebo závěr) - automatický, dokud ho klient nepřepíše. */
+function TextUvodu({
+  nadpis,
+  hodnota,
+  vlastni,
+  onZmena,
+  onVratit,
+}: {
+  nadpis: string;
+  hodnota: string;
+  vlastni: boolean;
+  onZmena: (text: string) => void;
+  onVratit: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-[13.5px] font-body text-white">{nadpis}</span>
+        <span className="text-[11px] font-body text-white/60">{vlastni ? 'upraveno ručně' : 'skládá se automaticky'}</span>
+        {vlastni && (
+          <button
+            type="button"
+            onClick={onVratit}
+            className="ml-auto text-[11px] font-heading font-semibold text-brand-green hover:underline"
+          >
+            Vrátit automatický text
+          </button>
+        )}
+      </div>
+      <textarea
+        value={hodnota}
+        onChange={(e) => onZmena(e.target.value)}
+        className="input min-h-[80px] font-body resize-y"
+      />
+    </div>
+  );
 }

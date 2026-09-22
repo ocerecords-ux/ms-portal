@@ -29,6 +29,12 @@ const orderSchema = z.object({
   deadline: z.string().optional(),
   note: z.string().optional(),
   preferredNarrator: z.string().optional(),
+  // Úvod a závěr audioknihy (zadání 22. 9. 2026, Audiotéka).
+  autorKnihy: z.string().trim().max(300).optional(),
+  prekladatelKnihy: z.string().trim().max(300).optional(),
+  nakladatelstviKnihy: z.string().trim().max(300).optional(),
+  uvodKnihy: z.string().trim().max(3000).optional(),
+  zaverKnihy: z.string().trim().max(3000).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -48,6 +54,11 @@ export async function POST(req: NextRequest) {
     deadline: formData.get('deadline'),
     note: formData.get('note'),
     preferredNarrator: formData.get('preferredNarrator'),
+    autorKnihy: formData.get('autorKnihy') ?? undefined,
+    prekladatelKnihy: formData.get('prekladatelKnihy') ?? undefined,
+    nakladatelstviKnihy: formData.get('nakladatelstviKnihy') ?? undefined,
+    uvodKnihy: formData.get('uvodKnihy') ?? undefined,
+    zaverKnihy: formData.get('zaverKnihy') ?? undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
@@ -57,6 +68,13 @@ export async function POST(req: NextRequest) {
   const preferredNarrator = parsed.data.preferredNarrator?.trim() || null;
   const pageCount = isAudiobook && parsed.data.pageCount ? parseInt(parsed.data.pageCount, 10) : null;
   const deadline = parsed.data.deadline ? new Date(parsed.data.deadline) : null;
+  const knihaUdaje = {
+    autorKnihy: (isAudiobook && parsed.data.autorKnihy) || null,
+    prekladatelKnihy: (isAudiobook && parsed.data.prekladatelKnihy) || null,
+    nakladatelstviKnihy: (isAudiobook && parsed.data.nakladatelstviKnihy) || null,
+    uvodKnihy: (isAudiobook && parsed.data.uvodKnihy) || null,
+    zaverKnihy: (isAudiobook && parsed.data.zaverKnihy) || null,
+  };
 
   const [company, orderingUser] = await Promise.all([
     prisma.company.findUnique({ where: { id: companyId } }),
@@ -137,6 +155,7 @@ export async function POST(req: NextRequest) {
       preferredNarrator,
       attachmentUrl: attachment?.url ?? null,
       attachmentName: attachment?.name ?? null,
+      ...knihaUdaje,
       project: {
         create: {
           companyId,
@@ -202,7 +221,15 @@ export async function POST(req: NextRequest) {
       priceEstimate,
       deadline: deadline ? deadline.toLocaleDateString('cs-CZ') : null,
       preferredNarrator,
-      note: note || null,
+      // Úvod a závěr audioknihy jdou týmu do mailu k poznámce (22. 9. 2026).
+      note:
+        [
+          note || null,
+          knihaUdaje.uvodKnihy ? `Úvod: ${knihaUdaje.uvodKnihy}` : null,
+          knihaUdaje.zaverKnihy ? `Závěr: ${knihaUdaje.zaverKnihy}` : null,
+        ]
+          .filter(Boolean)
+          .join('\n\n') || null,
       attachmentUrl: attachment?.url ?? null,
       attachmentName: attachment?.name ?? null,
       requestedByName: orderingUser?.name ?? null,
@@ -345,6 +372,9 @@ export async function POST(req: NextRequest) {
           statusName: STAVY_PROJEKTU[0].nazev,
           priority: 'MEDIUM',
           zdroj: 'PORTAL',
+          // Úvod a závěr z objednávky (22. 9. 2026) - v detailu jdou upravit.
+          uvodKnihy: knihaUdaje.uvodKnihy,
+          zaverKnihy: knihaUdaje.zaverKnihy,
         },
       });
       idProjektu = caflouProjectId;

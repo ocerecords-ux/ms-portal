@@ -115,6 +115,9 @@ type Initial = {
    * přejmenování druhu se pak propíše samo.
    */
   licenceIds: string[];
+  /** Úvod a závěr audioknihy (zadání 22. 9. 2026) - přijde z objednávky. */
+  uvodKnihy: string;
+  zaverKnihy: string;
 };
 
 /** „2026-09-17" na „17. 9. 2026". Bez Date - datum je den, ne okamzik v pasmu. */
@@ -149,6 +152,7 @@ export function ProjectMetaForm({
   dotoceniHercu,
   natoceniZaznamy,
   vidiKlienta,
+  nabizetUvodZaver = false,
   ukonceny,
   dnuDoOprav,
 }: {
@@ -206,6 +210,11 @@ export function ProjectMetaForm({
    * má na stole.
    */
   vidiKlienta: boolean;
+  /**
+   * Úvod a závěr audioknihy (22. 9. 2026) - pole se ukáže u firmy, která je
+   * objednává (Audiotéka), nebo když už je text vyplněný.
+   */
+  nabizetUvodZaver?: boolean;
   /**
    * Natáčecí protokol — jeden záznam na každý zápis Bruna z chatu, od
    * nejnovějšího. Celý se vypisuje ve vlastní záložce (ProtokolNataceni);
@@ -567,6 +576,18 @@ export function ProjectMetaForm({
                 </dd>
               </div>
             )}
+            {!jeReklama && (values.uvodKnihy || values.zaverKnihy) && (
+              <>
+                <div>
+                  <dt className="text-xs font-heading text-muted uppercase tracking-wide">Úvod audioknihy</dt>
+                  <dd className="text-sm font-body text-ink m-0 mt-1 whitespace-pre-wrap">{values.uvodKnihy || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-heading text-muted uppercase tracking-wide">Závěr audioknihy</dt>
+                  <dd className="text-sm font-body text-ink m-0 mt-1 whitespace-pre-wrap">{values.zaverKnihy || '—'}</dd>
+                </div>
+              </>
+            )}
           </dl>
         </Karta>
 
@@ -812,6 +833,36 @@ export function ProjectMetaForm({
             </span>
           </div>
 
+
+          {/* ÚVOD A ZÁVĚR AUDIOKNIHY (zadání 22. 9. 2026) - přijde z objednávky
+              Audiotéky, tady se dá doladit. Čte ho herec na začátku a na konci. */}
+          {!jeReklama && (nabizetUvodZaver || values.uvodKnihy || values.zaverKnihy) && (
+            <>
+              <label className="flex flex-col gap-1.5 sm:col-span-2">
+                <span className="text-sm font-body text-ink">Úvod audioknihy</span>
+                <textarea
+                  value={values.uvodKnihy}
+                  onChange={(e) => set('uvodKnihy', e.target.value, true)}
+                  onBlur={ulozHned}
+                  rows={2}
+                  placeholder="Audiotéka uvádí audioknihu …"
+                  className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 sm:col-span-2">
+                <span className="text-sm font-body text-ink">Závěr audioknihy</span>
+                <textarea
+                  value={values.zaverKnihy}
+                  onChange={(e) => set('zaverKnihy', e.target.value, true)}
+                  onBlur={ulozHned}
+                  rows={3}
+                  placeholder="Autor: Název. Připravila Audiotéka … Režie Ondřej Černý. …"
+                  className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
+                />
+                <span className="text-xs text-muted font-body">Přijde z objednávky klienta, tady se dá upravit.</span>
+              </label>
+            </>
+          )}
 
           {/* UŽITÍ LICENCE jen u reklamy - u audioknihy se licence řeší jinak
               a prázdné pole navíc by v kartě jen překáželo (17. 9. 2026). */}

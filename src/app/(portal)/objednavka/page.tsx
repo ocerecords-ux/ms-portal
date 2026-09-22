@@ -5,6 +5,7 @@ import { OrderForm } from './OrderForm';
 import { AdOrderForm } from './AdOrderForm';
 import { OrderTypeSwitcher } from './OrderTypeSwitcher';
 import { bezTitulu } from '@/lib/jmena';
+import { firmaChceUvodZaver } from '@/lib/uvodZaver';
 
 export default async function ObjednavkaPage() {
   const session = await getServerSession(authOptions);
@@ -52,12 +53,15 @@ export default async function ObjednavkaPage() {
       ).map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.code || h.id }))
     : [];
 
+  // Úvod a závěr audioknihy (22. 9. 2026) - zatím jen Audiotéka.
+  const uvodZaver = firmaChceUvodZaver(company.name);
+
   return (
     <section>
       {company.dealsAudiobooks && company.dealsAds ? (
-        <OrderTypeSwitcher ratePerPage={company.ratePerPage!} herci={herci} />
+        <OrderTypeSwitcher ratePerPage={company.ratePerPage!} herci={herci} uvodZaver={uvodZaver} />
       ) : company.dealsAudiobooks ? (
-        <OrderForm ratePerPage={company.ratePerPage!} herci={herci} />
+        <OrderForm ratePerPage={company.ratePerPage!} herci={herci} uvodZaver={uvodZaver} />
       ) : (
         <AdOrderForm />
       )}

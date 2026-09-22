@@ -10,7 +10,15 @@ import type { NarratorOption } from './NarratorMultiSelect';
  * si tu prepina, jaky typ objednavky prave zaklada. Klient jen s jednim
  * druhem zakazek tenhle prepinac vubec nevidi - viz objednavka/page.tsx.
  */
-export function OrderTypeSwitcher({ ratePerPage, herci }: { ratePerPage: number; herci: NarratorOption[] }) {
+export function OrderTypeSwitcher({
+  ratePerPage,
+  herci,
+  uvodZaver = false,
+}: {
+  ratePerPage: number;
+  herci: NarratorOption[];
+  uvodZaver?: boolean;
+}) {
   const [tab, setTab] = useState<'audiokniha' | 'reklama'>('audiokniha');
 
   return (
@@ -36,7 +44,7 @@ export function OrderTypeSwitcher({ ratePerPage, herci }: { ratePerPage: number;
         </button>
       </div>
 
-      <div className="w-full">{tab === 'audiokniha' ? <OrderForm ratePerPage={ratePerPage} herci={herci} /> : <AdOrderForm />}</div>
+      <div className="w-full">{tab === 'audiokniha' ? <OrderForm ratePerPage={ratePerPage} herci={herci} uvodZaver={uvodZaver} /> : <AdOrderForm />}</div>
     </div>
   );
 }

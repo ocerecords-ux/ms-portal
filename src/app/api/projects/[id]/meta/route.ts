@@ -46,6 +46,9 @@ const schema = z.object({
   endDate: z.string().trim().optional(),
   // Ucel a uzemi uziti licence u reklamy (zadani 17. 9. 2026).
   licenceUziti: z.string().trim().max(300).optional(),
+  // Úvod a závěr audioknihy (zadání 22. 9. 2026).
+  uvodKnihy: z.string().trim().max(3000).optional(),
+  zaverKnihy: z.string().trim().max(3000).optional(),
   /**
    * DRUHY LICENCE (zadání 18. 9. 2026). Posílá se celý seznam zaškrtnutých
    * ID - prázdné pole tedy znamená „žádná licence", ne „neměň".
@@ -227,6 +230,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('projectType', data.projectType);
     text('narrator', data.narrator);
     text('licenceUziti', data.licenceUziti);
+    text('uvodKnihy', data.uvodKnihy);
+    text('zaverKnihy', data.zaverKnihy);
     if (data.name) values.name = data.name;
     // Data se drzi jako pulnoc UTC - v prehledu se tiskne jen datum a nesmi
     // se posunout podle pasma, ve kterem se zrovna uklada.

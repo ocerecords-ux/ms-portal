@@ -75,7 +75,7 @@ Karta projektu má záložky a ukazují se jen ty, které dávají smysl:
 
 # Cesta zakázky
 
-1. **Objednávka.** Klient ji pošle v portálu (audiokniha nebo reklama). Vznikne projekt, kanál v chatu a složka na Disku, a nám přijde mail.
+1. **Objednávka.** Klient ji pošle v portálu (audiokniha nebo reklama). Vznikne projekt, kanál v chatu a složka na Disku, a nám přijde mail. U Audiotéky se v objednávce navíc vyplní autor, překladatel a nakladatelství a z nich se sám složí **úvod a závěr audioknihy** (režie vždy Ondřej Černý) — klient ho může upravit nebo přepsat, v detailu projektu je vidět a dá se doladit.
 2. **Nabídka.** Vystaví se v Dokladech a odejde klientovi odkazem. Klient ji otevře, prohlédne a **schválí jedním kliknutím** — a na zvonečku to cinkne manažerovi projektu.
 3. **Natáčení.** Produkce sestaví hercovi nabídku termínů, herec si z odkazu vybere, produkce potvrdí — a tím vzniká rezervace studia. Smlouva s hercem se založí ze šablony a herec ji podepíše taky odkazem.
 4. **Práce a nahrávky.** Zvukař si píše výkazy, nahrávky se ukládají na Disk a klient se k nim dostane odkazem z mailu — bez přihlašování. V přeposlechu píše, co chce opravit.

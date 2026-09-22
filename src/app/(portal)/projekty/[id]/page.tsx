@@ -1,3 +1,4 @@
+import { firmaChceUvodZaver } from '@/lib/uvodZaver';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
@@ -426,6 +427,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         dotoceniHercu={dotoceniPodleHerce}
         natoceniZaznamy={zaznamyNatoceni}
         vidiKlienta={canViewProjectBusinessInfo(session.user.role)}
+        nabizetUvodZaver={firmaChceUvodZaver(firmaProjektu?.name ?? company?.name)}
         ukonceny={metaPoSync?.finished ?? project?.finished ?? false}
         dnuDoOprav={dnuDoOprav}
         herecZCaflou={meta?.narrator ?? project?.narrator ?? null}
@@ -457,6 +459,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           // Ucel a uzemi uziti licence - predvyplni se do smlouvy (17. 9. 2026).
           licenceUziti: meta?.licenceUziti ?? '',
           licenceIds: (meta?.licence ?? []).map((l) => l.id),
+          uvodKnihy: meta?.uvodKnihy ?? '',
+          zaverKnihy: meta?.zaverKnihy ?? '',
         }}
       />
     </>

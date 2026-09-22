@@ -414,6 +414,14 @@ model Order {
   attachmentUrl        String?
   attachmentName       String?
 
+  /// Úvod a závěr audioknihy (zadání 22. 9. 2026, zatím Audiotéka) - údaje,
+  /// ze kterých se text skládá, a výsledné texty tak, jak je klient odeslal.
+  autorKnihy           String?
+  prekladatelKnihy     String?
+  nakladatelstviKnihy  String?
+  uvodKnihy            String?
+  zaverKnihy           String?
+
   status               OrderStatus       @default(NEW)
   emailSentAt          DateTime?
 
@@ -587,6 +595,12 @@ model ProjectMeta {
   /// Spotify, CZ+SK". Je to udaj projektu, ne smlouvy: pise se do kazde
   /// smlouvy na ten spot stejne.
   licenceUziti    String?
+
+  /// ÚVOD A ZÁVĚR AUDIOKNIHY (zadání 22. 9. 2026) - přijde z objednávky
+  /// (Audiotéka), v detailu projektu se dá upravit. Čte ho herec na začátku
+  /// a na konci nahrávky.
+  uvodKnihy       String?
+  zaverKnihy      String?
 
   /// DRUHY LICENCE (zadani 18. 9. 2026: „potrebuju mit moznost zaskrtnout
   /// v detailu projektu nekde licenci... melo by jit pridat i vic druhu te
