@@ -650,8 +650,10 @@ export function ProjectMetaForm({
                 ...(values.statusName && !STAVY_PROJEKTU.some((st) => st.nazev === values.statusName)
                   ? [{ hodnota: values.statusName, popisek: `${values.statusName} (starý stav z Caflou)` }]
                   : []),
-                // U reklamní firmy kratší nabídka (zadání 18. 9. 2026).
-                ...stavyProFirmu(jeReklamniFirma, values.statusName).map((st) => ({
+                // U reklamní firmy kratší nabídka (zadání 18. 9. 2026), od
+                // 22. 9. 2026 i u projektu, který je sám reklama - „Čekáme
+                // na opravy“ se u reklam vůbec nemá objevit.
+                ...stavyProFirmu(jeReklamniFirma || jeReklama, values.statusName).map((st) => ({
                   hodnota: st.nazev,
                   popisek: st.nazev,
                 })),
@@ -663,7 +665,7 @@ export function ProjectMetaForm({
             {/* ODPOČET DO AUTOMATICKÉHO PŘEKLOPENÍ (zadání 16. 9. 2026).
                 Ukazuje se jen u uloženého stavu „Dokončeno - ke schválení" -
                 jakmile se v nabídce přepne jinam, číslo by už neplatilo. */}
-            {dnuDoOprav !== null && values.statusName === initial.statusName && (
+            {dnuDoOprav !== null && !jeReklama && values.statusName === initial.statusName && (
               <span className="text-xs font-body text-brand-purple">
                 {dnuDoOprav === 0
                   ? 'Dnes v noci se sám překlopí na „Čekáme na opravy".'

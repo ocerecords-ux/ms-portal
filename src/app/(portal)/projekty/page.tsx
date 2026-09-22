@@ -14,7 +14,7 @@ import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { NovyProjektForm } from './NovyProjektForm';
 import { HerecProjekty } from './HerecProjekty';
-import { listProjectTypeOptions, mapaIkonTypu, nazevTypuAudioknihy } from '@/lib/priceList';
+import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu, nazevTypuAudioknihy } from '@/lib/priceList';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadMojeSloupce } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/projektySeznamServer';
@@ -278,6 +278,7 @@ async function InternalProjektySection({
     typyProjektu,
     ikonyTypu,
     typAudioknihy,
+    typyReklamy,
   ] = await Promise.all([
     prisma.company.findMany({
       where: { type: 'KLIENT' },
@@ -305,6 +306,9 @@ async function InternalProjektySection({
     // Typ projektu, ktery znamena audioknihu - jen u nej se ptame na
     // normostrany (zadani 17. 9. 2026).
     nazevTypuAudioknihy(),
+    // Typy projektu = reklama (Rodný list) - u nich se nenabízí „Čekáme na
+    // opravy“ (zadání 22. 9. 2026).
+    listRodnyListProjectTypes(),
   ]);
 
   // Nase vlastni atributy k projektum (priorita, typ, manazer) - jednim
@@ -360,7 +364,11 @@ async function InternalProjektySection({
         ikonaTypu: m.projectType ? ikonyTypu[m.projectType] ?? null : null,
         // „Reklamni firma" = dela reklamy a ne audioknihy; stejne pravidlo
         // jako u zprav klientovi (lib/notifikaceFirmy.ts).
-        reklamniFirma: Boolean(m.company?.dealsAds && !m.company?.dealsAudiobooks),
+        // Od 22. 9. 2026 i projekt, který je SÁM reklama (typ s Rodným
+        // listem) - „u reklam se vůbec nemá počítat stav Čekáme na opravy“.
+        reklamniFirma:
+          Boolean(m.company?.dealsAds && !m.company?.dealsAudiobooks) ||
+          Boolean(m.projectType && typyReklamy.includes(m.projectType)),
         // Hlavni herec prvni, at prehled i detail ukazuji stejne poradi.
         herci: [
           ...m.herci.filter((h) => h.id === m.actorUserId),

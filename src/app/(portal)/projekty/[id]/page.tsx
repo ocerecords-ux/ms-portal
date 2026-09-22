@@ -269,8 +269,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
    * jinde by to bylo číslo bez významu. Odkdy v něm je, se bere z historie
    * projektu; viz lib/cekameNaOpravyServer.ts.
    */
+  // U reklamy se nepřeklápí vůbec (22. 9. 2026) - viz cekameNaOpravyServer.
   const dnuDoOprav =
-    metaPoSync?.statusName === STAV_ODEVZDANO && !metaPoSync?.finished
+    metaPoSync?.statusName === STAV_ODEVZDANO && !metaPoSync?.finished && !jeRadiovySpot
       ? dnuDoPreklopeni(await kdyVstoupilDoStavu(caflouProjectId, STAV_ODEVZDANO))
       : null;
 

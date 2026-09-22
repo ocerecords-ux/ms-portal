@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { listRodnyListProjectTypes } from '@/lib/priceList';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
 import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
@@ -84,11 +85,18 @@ export async function preklopCekameNaOpravy(): Promise<VysledekPreklopeni> {
    * smysl, a poslat o tom klientovi zprávu. Rozhoduje Druh zakázek na kartě
    * firmy; projekt bez firmy se nepřeklápí, protože o něm nevíme nic.
    */
+  // A ani u projektu, který je SÁM reklama (typ s Rodným listem), i když
+  // firma dělá i audioknihy (zadání 22. 9. 2026: „u reklam se vůbec nemá
+  // počítat stav Čekáme na opravy“).
+  const typyReklamy = await listRodnyListProjectTypes();
   const projekty = await prisma.projectMeta.findMany({
     where: {
       statusName: STAV_ODEVZDANO,
       finished: false,
       company: { dealsAudiobooks: true },
+      ...(typyReklamy.length > 0
+        ? { OR: [{ projectType: null }, { projectType: { notIn: typyReklamy } }] }
+        : {}),
     },
     select: { caflouProjectId: true, name: true, statusName: true },
   });
