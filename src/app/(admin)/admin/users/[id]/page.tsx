@@ -15,6 +15,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         dodavatelCompany: { select: { id: true, name: true, code: true } },
         // Studia zvukare (zadani 20. 9. 2026) - zaskrtavatka na karte.
         zvukarStudia: { select: { id: true } },
+        vedeStudia: { select: { id: true } },
       },
     }),
     prisma.company.findMany({ where: { type: 'KLIENT' }, orderBy: { name: 'asc' } }),
@@ -113,6 +114,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           studioLocations: user.studioLocations,
           // Ve kterych studiich zvukar toci (zadani 20. 9. 2026).
           zvukarStudia: user.zvukarStudia.map((s) => s.id),
+          vedeStudia: (user.vedeStudia as { id: string }[]).map((s) => s.id),
           birthNumber: user.birthNumber,
           ic: user.ic,
           dic: user.dic,

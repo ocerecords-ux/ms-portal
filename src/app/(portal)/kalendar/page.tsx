@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canManageCalendar, canViewCalendar } from '@/lib/roles';
+import { spravovanaStudia, spravujeNeco } from '@/lib/spravaKalendare';
 import { loadOccupancy, loadStudios, releaseExpiredHolds } from '@/lib/calendarServer';
 import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import {
@@ -195,7 +196,9 @@ export default async function KalendarPage({
    * a zvukař. Načítá se jen tomu, kdo do kalendáře smí psát; zvukař ho jen
    * čte, takže by tahal seznamy, se kterými nic neudělá.
    */
-  const muzeZapisovat = canManageCalendar(session.user.role);
+  // Produkce všude, vedoucí pobočky ve svých studiích (22. 9. 2026).
+  const sprava = await spravovanaStudia(session.user.id, session.user.role);
+  const muzeZapisovat = spravujeNeco(sprava);
   const [projektyProUdalost, lideProUdalost] = muzeZapisovat
     ? await Promise.all([
         loadInternalProjects()
@@ -356,6 +359,7 @@ export default async function KalendarPage({
       panely={panely}
       events={events}
       canManage={muzeZapisovat}
+      spravovanaStudia={sprava === 'vse' ? null : sprava}
       projekty={projektyProUdalost}
       herci={herci}
       zvukari={zvukari}

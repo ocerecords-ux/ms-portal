@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { canManageCalendar } from '@/lib/roles';
+import { smiStudio, spravovanaStudia } from '@/lib/spravaKalendare';
 import { checkSlot, loadOccupancy, recordEvent } from '@/lib/calendarServer';
 import { popisUdalosti, zabiraStudio } from '@/lib/calendar';
 import { notify } from '@/lib/notifications';
@@ -40,9 +40,11 @@ const schema = z.object({
 
 async function nactiFrekvenci(id: string | null) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || !canManageCalendar(session.user.role)) {
+  if (!session?.user?.id) {
     return { chyba: NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 }) } as const;
   }
+  // Produkce všude, vedoucí pobočky ve svých studiích (22. 9. 2026).
+  const sprava = await spravovanaStudia(session.user.id, session.user.role);
   if (!id) return { chyba: NextResponse.json({ error: 'Chybí termín.' }, { status: 400 }) } as const;
   const slot = await prisma.recordingSlot.findUnique({
     where: { id },
@@ -53,12 +55,15 @@ async function nactiFrekvenci(id: string | null) {
     },
   });
   if (!slot) return { chyba: NextResponse.json({ error: 'Termín nenalezen.' }, { status: 404 }) } as const;
+  if (!smiStudio(sprava, slot.studioId)) {
+    return { chyba: NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 }) } as const;
+  }
   if (slot.state !== 'CONFIRMED' && slot.state !== 'SELECTED') {
     return {
       chyba: NextResponse.json({ error: 'Upravit jde jen vybraný nebo potvrzený termín.' }, { status: 409 }),
     } as const;
   }
-  return { session, slot } as const;
+  return { session, slot, sprava } as const;
 }
 
 function kdy(d: Date): string {
@@ -76,6 +81,9 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
     const d = parsed.data;
+    if (!smiStudio(k.sprava, d.studioId)) {
+      return NextResponse.json({ error: 'Do kalendáře tohoto studia zapisovat nemůžete.' }, { status: 403 });
+    }
     const start = new Date(d.start);
     const end = new Date(d.end);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {

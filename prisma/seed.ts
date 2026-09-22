@@ -191,6 +191,7 @@ async function main() {
   await brunoZpetneOznamPreposlech();
   await vlozPodpisNaFaktury();
   await backlogZListyDoPrehledu();
+  await vedouciPobocek();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
 
@@ -1206,5 +1207,40 @@ async function backlogZListyDoPrehledu() {
     console.log(`  backlog z listy: odebrano ${r.count} polozek`);
   } catch (e) {
     console.warn('  backlog z listy selhal:', e);
+  }
+}
+
+/**
+ * Vedoucí poboček (22. 9. 2026: „Tomáš Ilavský by měl mít přístup k úpravám
+ * i brněnských kalendářů. Je to vedoucí pobočky. A to samé Ondřej Černý ml.
+ * v Praze"). Jednorázově; dál se to zaškrtává na kartě uživatele.
+ */
+async function vedouciPobocek() {
+  const ZNAMKA = 'vedouci-pobocek';
+  try {
+    if (await prisma.counter.findUnique({ where: { name: ZNAMKA } })) return;
+    const studia = await prisma.studio.findMany({ select: { id: true, shortName: true } });
+    const podle = (k: string) => studia.filter((s: { shortName: string }) => s.shortName === k).map((s: { id: string }) => ({ id: s.id }));
+
+    const tomas = await prisma.user.findFirst({
+      where: { OR: [{ email: 'tomas.ilavsky@mediaspace.cz' }, { name: { contains: 'Ilavsk', mode: 'insensitive' } }] },
+      select: { id: true },
+    });
+    const ondrej = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { code: 'MSI0013' },
+          { email: { contains: 'ondrej.cernyml', mode: 'insensitive' } },
+          { name: { contains: 'Černý ml', mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (tomas) await prisma.user.update({ where: { id: tomas.id }, data: { vedeStudia: { connect: [...podle('Brno I'), ...podle('Brno II')] } } });
+    if (ondrej) await prisma.user.update({ where: { id: ondrej.id }, data: { vedeStudia: { connect: podle('Praha') } } });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  vedouci pobocek: Tomas ${tomas ? 'ano' : 'NENALEZEN'}, Ondrej ml. ${ondrej ? 'ano' : 'NENALEZEN'}`);
+  } catch (e) {
+    console.warn('  vedouci pobocek selhalo:', e);
   }
 }

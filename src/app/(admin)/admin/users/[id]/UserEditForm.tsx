@@ -48,6 +48,8 @@ type EditableUser = {
   studioLocations: string[];
   /** Studia, ve kterých zvukař točí (zadání 20. 9. 2026). */
   zvukarStudia: string[];
+  /** Vedoucí pobočky - smí upravovat kalendář těchto studií (22. 9. 2026). */
+  vedeStudia: string[];
   birthNumber: string | null;
   ic: string | null;
   dic: string | null;
@@ -104,6 +106,7 @@ export function UserEditForm({
 
   // Zvukař - ve kterých studiích točí (zadání 20. 9. 2026)
   const [zvukarStudia, setZvukarStudia] = useState<string[]>(user.zvukarStudia);
+  const [vedeStudia, setVedeStudia] = useState<string[]>(user.vedeStudia);
 
   // Herec
   const [studioLocations, setStudioLocations] = useState<string[]>(user.studioLocations);
@@ -202,6 +205,8 @@ export function UserEditForm({
       }
       if (isKlient) fd.set('dostavaDotocenoKlient', dostavaDotocenoKlient ? '1' : '0');
       if (isZvukar) {
+        fd.set('vedeStudiaPrazdne', '1');
+        vedeStudia.forEach((id) => fd.append('vedeStudia', id));
         // Prázdný seznam se musí poslat taky - jinak by odškrtnutí posledního
         // studia server nepoznal od „tohle pole neposílám".
         fd.set('zvukarStudiaPrazdne', '1');
@@ -334,6 +339,31 @@ export function UserEditForm({
                 )}
               </div>
             </AdminField>
+            {/* VEDOUCÍ POBOČKY (zadání 22. 9. 2026: „Tomáš Ilavský by měl mít
+                přístup k úpravám i brněnských kalendářů. Je to vedoucí
+                pobočky"). V zaškrtnutých studiích upravuje kalendář jako
+                produkce. */}
+            <div className="mt-3">
+              <AdminField label="Vedoucí pobočky" hint="v těchto studiích smí zapisovat, posouvat a mazat události v kalendáři">
+                <div className="flex flex-wrap gap-2">
+                  {studia.map((studio) => (
+                    <Volba
+                      key={studio.id}
+                      vybrano={vedeStudia.includes(studio.id)}
+                      onZmena={() =>
+                        setVedeStudia((p) => (p.includes(studio.id) ? p.filter((x) => x !== studio.id) : [...p, studio.id]))
+                      }
+                      title={studio.name}
+                    >
+                      <span className="inline-flex items-center gap-1.5 text-sm font-body text-ink">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: studio.color }} aria-hidden />
+                        {studio.shortName}
+                      </span>
+                    </Volba>
+                  ))}
+                </div>
+              </AdminField>
+            </div>
           </div>
         )}
         {/* Kdo se nabizi jako manazer projektu (zadani 10. 9. 2026). */}

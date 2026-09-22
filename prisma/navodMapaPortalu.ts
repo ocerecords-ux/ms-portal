@@ -48,7 +48,7 @@ U **zvukaře** se navíc zaškrtává **Studia** — ve kterých studiích toč�
 
 **Doklady** jsou peníze: nabídky, faktury, přijaté výdaje, smlouvy, banka a „Moje firmy" (za kterou firmu doklad vystavujeme, číselné řady, bankovní účty, podpis na faktury). U výdaje se nahraje PDF nebo fotka dokladu (i víc souborů) — údaje se z něj přečtou samy; přílohy i údaje jde kdykoli později doplnit v detailu výdaje.
 
-**Kalendář** je studio a natáčení: kdo kdy natáčí, kdy je studio blokované a nabídky termínů pro herce.
+**Kalendář** je studio a natáčení: kdo kdy natáčí, kdy je studio blokované a nabídky termínů pro herce. Události zapisuje a upravuje produkce a vedoucí pobočky ve svých studiích (zaškrtává se na kartě uživatele – Tomáš Ilavský Brno, Ondřej Černý ml. Praha); ostatní si zapisují Mimo studio. Tlačítko „+ Přidat“ vedle přepínače Den/Týden/Měsíc otevře zápis i bez dvojkliku.
 
 Kromě toho je v liště ještě **chat**, **zvoneček** s upozorněními, **otazník** (tahle Nápověda) a vlevo panel s rychlými volbami.
 

@@ -43,6 +43,7 @@ const schema = z.object({
   studioLocations: z.array(z.string()).optional(),
   /** Id studií, ve kterých zvukař točí (zadání 20. 9. 2026). */
   zvukarStudia: z.array(z.string()).optional(),
+  vedeStudia: z.array(z.string()).optional(),
   birthNumber: z.string().trim().optional(),
   ic: z.string().trim().optional(),
   dic: z.string().trim().optional(),
@@ -85,6 +86,7 @@ function readFormData(formData: FormData) {
     studioLocations: has('studioLocations') ? formData.getAll('studioLocations').map(String) : undefined,
     // `zvukarStudiaPrazdne` posílá formulář vždycky - podle něj se pozná
     // odškrtnutí VŠECH studií od „tohle pole se neposílá".
+    vedeStudia: has('vedeStudiaPrazdne') ? formData.getAll('vedeStudia').map(String) : undefined,
     zvukarStudia: has('zvukarStudiaPrazdne')
       ? formData.getAll('zvukarStudia').map(String)
       : undefined,
@@ -210,6 +212,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // Studia zvukare (zadani 20. 9. 2026). `set` prepise cely seznam, takze
       // odskrtnute studio zmizi. U jine role se vazba necha byt - clovek
       // prepnuty na chvili na PRODUKCI o svoje studia neprijde.
+      // Vedouci pobocky (22. 9. 2026) - smi upravovat kalendar techto studii.
+      ...(nextRole === 'ZVUKAR' && data.vedeStudia !== undefined
+        ? { vedeStudia: { set: data.vedeStudia.map((id) => ({ id })) } }
+        : {}),
       ...(nextRole === 'ZVUKAR' && data.zvukarStudia !== undefined
         ? { zvukarStudia: { set: data.zvukarStudia.map((id) => ({ id })) } }
         : {}),

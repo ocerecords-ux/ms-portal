@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { canManageCalendar } from '@/lib/roles';
+import { smiStudio, spravovanaStudia, spravujeNeco } from '@/lib/spravaKalendare';
 import { loadOccupancy } from '@/lib/calendarServer';
 import { BLOCK_KIND_LABELS, jePraceVeStudiu, maHerce, popisUdalosti, zabiraStudio } from '@/lib/calendar';
 
@@ -101,7 +101,12 @@ async function zvukarNepatriKeStudiu(zvukarUserId: string | undefined, studioId:
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !canManageCalendar(session.user.role)) {
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    }
+    // Produkce všude, vedoucí pobočky ve svých studiích (22. 9. 2026).
+    const sprava = await spravovanaStudia(session.user.id, session.user.role);
+    if (!spravujeNeco(sprava)) {
       return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
     }
 
@@ -110,6 +115,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
     const d = parsed.data;
+    if (!smiStudio(sprava, d.studioId)) {
+      return NextResponse.json({ error: 'Do kalendáře tohoto studia zapisovat nemůžete.' }, { status: 403 });
+    }
 
     const kind = d.kind ?? 'INTERNAL';
     const jePrace = jePraceVeStudiu(kind);
@@ -175,7 +183,12 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !canManageCalendar(session.user.role)) {
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    }
+    // Produkce všude, vedoucí pobočky ve svých studiích (22. 9. 2026).
+    const sprava = await spravovanaStudia(session.user.id, session.user.role);
+    if (!spravujeNeco(sprava)) {
       return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
     }
 
@@ -190,6 +203,9 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
     const d = parsed.data;
+    if (!smiStudio(sprava, puvodni.studioId) || !smiStudio(sprava, d.studioId)) {
+      return NextResponse.json({ error: 'Kalendář tohoto studia upravovat nemůžete.' }, { status: 403 });
+    }
     const kind = d.kind ?? puvodni.kind;
     const jePrace = jePraceVeStudiu(kind);
 
@@ -255,7 +271,12 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !canManageCalendar(session.user.role)) {
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+    }
+    // Produkce všude, vedoucí pobočky ve svých studiích (22. 9. 2026).
+    const sprava = await spravovanaStudia(session.user.id, session.user.role);
+    if (!spravujeNeco(sprava)) {
       return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
     }
     const id = new URL(req.url).searchParams.get('id');
@@ -263,7 +284,10 @@ export async function DELETE(req: NextRequest) {
 
     // Převzatá událost z Googlu by se s dalším nasazením vrátila - klíč se
     // proto poznamená a seed ji znovu nezaloží (21. 9. 2026).
-    const blok = await prisma.studioBlock.findUnique({ where: { id }, select: { importKlic: true } });
+    const blok = await prisma.studioBlock.findUnique({ where: { id }, select: { importKlic: true, studioId: true } });
+    if (blok && !smiStudio(sprava, blok.studioId)) {
+      return NextResponse.json({ error: 'Kalendář tohoto studia upravovat nemůžete.' }, { status: 403 });
+    }
     if (blok?.importKlic) {
       await prisma.smazanyImport.upsert({
         where: { importKlic: blok.importKlic },

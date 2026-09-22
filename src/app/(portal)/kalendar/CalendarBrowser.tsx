@@ -155,6 +155,7 @@ export function CalendarBrowser({
   days,
   events,
   canManage,
+  spravovanaStudia,
   projekty,
   herci,
   zvukari,
@@ -182,6 +183,11 @@ export function CalendarBrowser({
   panely: { klic: string; days: CalendarDay[] }[];
   events: CalendarEvent[];
   canManage: boolean;
+  /**
+   * Vedoucí pobočky (22. 9. 2026) upravuje jen svá studia - tady jejich id.
+   * null = všechna (produkce, Žůžo-labůžo).
+   */
+  spravovanaStudia: string[] | null;
   /** Nabídka do ručně zapsané události (zadání 14. 9. 2026). */
   projekty: Volba[];
   herci: Volba[];
@@ -316,8 +322,12 @@ export function CalendarBrowser({
    */
   const casovacDetailu = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Poradu vidí jen účastníci - a každý účastník ji smí upravit (21. 9. 2026).
+  const smiStudio = (studioId: string | null | undefined) =>
+    canManage && (spravovanaStudia === null || (Boolean(studioId) && spravovanaStudia.includes(studioId as string)));
   const lzeUpravit = (e: CalendarEvent) =>
-    e.kind === 'PORADA' || (canManage && (e.kind === 'BLOCK' || jeUpravitelnaFrekvence(e)));
+    e.kind === 'PORADA' || (smiStudio(e.studioId) && (e.kind === 'BLOCK' || jeUpravitelnaFrekvence(e)));
+  /** Studia, do kterých přihlášený smí zapisovat - nabídka ve formuláři. */
+  const mojeStudia = spravovanaStudia === null ? studios : studios.filter((s) => spravovanaStudia.includes(s.id));
 
   function klikNaUdalost(e: CalendarEvent, kotva?: Kotva) {
     const otevri = () => {
@@ -344,7 +354,16 @@ export function CalendarBrowser({
 
   function dvojklikNaUdalost(e: CalendarEvent) {
     if (e.kind === 'MIMO') return; // uz ji otevrel prvni klik
-    if (!lzeUpravit(e)) return;
+    if (!lzeUpravit(e)) {
+      // CIZÍ UDÁLOST NESMÍ ZABLOKOVAT ZÁPIS (22. 9. 2026: „Tomášovi nejde
+      // přidávat události do kalendáře mimo studio"). Když je den plný
+      // střihů, nebylo kam dvojkliknout - dvojklik na událost, kterou
+      // člověk upravit nesmí, proto založí novou ve stejném čase.
+      setDetail(null);
+      const den = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date(e.start));
+      novaVMrizce(den, minutesInZone(new Date(e.start), timezone));
+      return;
+    }
     if (casovacDetailu.current) {
       clearTimeout(casovacDetailu.current);
       casovacDetailu.current = null;
@@ -496,10 +515,12 @@ export function CalendarBrowser({
       setOknoPorady({ upravovana: null, den: denKey, casOd: casVPraze(start), casDo: casVPraze(end) });
       return;
     }
-    if (canManage) {
+    if (canManage && mojeStudia.length > 0) {
       // Kdyz jsou studia zhasnuta (svitilo jen Mimo studio), nova udalost
-      // spadne do prvniho studia - v okne se da prepnout.
-      setNovaBlokace({ studioId: selectedStudioIds[0] ?? studios[0].id, start, end });
+      // spadne do prvniho studia - v okne se da prepnout. Vedouci pobocky
+      // dostane jen sva studia (22. 9. 2026).
+      const vybrane = selectedStudioIds.find((id) => mojeStudia.some((s) => s.id === id));
+      setNovaBlokace({ studioId: vybrane ?? mojeStudia[0].id, start, end });
       return;
     }
     setOknoNepritomnosti({
@@ -513,7 +534,7 @@ export function CalendarBrowser({
 
   /** Dvojklik na den v měsíci - bez času, takže u Mimo studio celý den. */
   function novaVMesici(denKey: string) {
-    if (canManage) {
+    if (canManage && mojeStudia.length > 0) {
       novaVMrizce(denKey, 9 * 60);
       return;
     }
@@ -791,6 +812,24 @@ export function CalendarBrowser({
           {/* MS kalendar do Google/Apple (zadani 20. 9. 2026) - jen ikonka
               na konci, pouziva se jednou. */}
           <OdberKalendare studios={studios.map((s) => ({ id: s.id, name: s.name, color: s.color }))} />
+          {/* PŘIDAT BEZ DVOJKLIKU (22. 9. 2026) - na telefonu dvojklik
+              nefunguje a v plném dni nebylo kam kliknout. Kdo spravuje studio,
+              dostane okno události (v něm jde přepnout i na Mimo studio),
+              ostatní rovnou Mimo studio. */}
+          <button
+            type="button"
+            onClick={() => {
+              const dnes = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+              const den = days.some((d) => d.key === dnes) ? dnes : (days[0]?.key ?? dnes);
+              novaVMrizce(den, 9 * 60);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-purple text-white px-3 py-1.5 sm:py-2 text-sm font-heading font-semibold hover:bg-brand-purpleDeep transition-colors shrink-0"
+            aria-label="Přidat událost"
+            title="Přidat událost"
+          >
+            <span aria-hidden="true">+</span>
+            <span className="hidden sm:inline">Přidat</span>
+          </button>
           {/* Hledání na telefonu na řádku s Den/Týden/Měsíc (21. 9. 2026:
               „pole hledat by mohlo být na řádku, kde se přepínají den,
               týden, měsíc. Vejde se to tam"). Stejný stav jako políčko
@@ -1053,7 +1092,7 @@ export function CalendarBrowser({
           // Pri uprave se nastavuje klic - jinak by React nechal ve formulari
           // stav po predchozi udalosti a clovek by upravoval cizi udaje.
           key={upravovana?.id ?? 'nova'}
-          studios={studios}
+          studios={mojeStudia}
           vychozi={
             novaBlokace ?? {
               studioId: upravovana!.studioId,
@@ -1165,7 +1204,7 @@ export function CalendarBrowser({
           event={detail}
           kotva={kotvaDetailu}
           timezone={timezone}
-          canManage={canManage}
+          canManage={lzeUpravit(detail)}
           onUpravit={() => {
             if (detail.kind === 'PORADA' && detail.porada) {
               setOknoPorady({ upravovana: detail.porada, den: detail.porada.den });

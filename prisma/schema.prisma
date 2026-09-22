@@ -318,6 +318,11 @@ model User {
   /// Brno II, Praha) a podle toho se nabizi ke konkretni frekvenci. Kdyz
   /// pribude studio, zaskrtavatko se objevi samo.
   zvukarStudia Studio[] @relation("ZvukarStudia")
+  /// VEDOUCI POBOCKY (zadani 22. 9. 2026: „Tomas Ilavsky by mel mit pristup
+  /// k upravam i brnenskych kalendaru. Je to vedouci pobocky. A to same
+  /// Ondrej Cerny ml. v Praze"). V techto studiich smi upravovat kalendar
+  /// jako produkce - zapsat, posunout a smazat udalost.
+  vedeStudia   Studio[] @relation("VedouciStudia")
   birthNumber     String?   // RC, nebo datum narozeni jako text, pokud herec RC nema (cizinec apod.)
   ic              String?
   dic             String?
@@ -1848,6 +1853,8 @@ model Studio {
   feeds    CalendarFeed[]
   /// Zvukari, kteri v tomhle studiu tocí (zadani 20. 9. 2026).
   zvukari  User[] @relation("ZvukarStudia")
+  /// Vedouci pobocky - smi upravovat kalendar tohoto studia (22. 9. 2026).
+  vedouci  User[] @relation("VedouciStudia")
 
   /// TABULE VE STUDIU (zadani 21. 9. 2026). Tajny klic v adrese
   /// /tabule/<klic> - dotykovy displej se neprihlasuje. Null = tabule vypnuta.
