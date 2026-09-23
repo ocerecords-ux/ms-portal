@@ -23,7 +23,7 @@ export const AUDIOTAGGER = {
 
 # Režim pro nevidomé
 
-Na klientově odkazu je vpravo nahoře tlačítko **Režim pro nevidomé**. Přepne přeposlech do podoby, kterou zvládne čtečka obrazovky: místo obrázku PDF čitelný text po odstavcích, systémový přehrávač, velká tlačítka s popisky a ohlašování po každé akci (stopa, čas, uložená připomínka). Ovládá se z klávesnice — mezerník přehraje a pozastaví, šipky posouvají o pět vteřin (se Shiftem o třicet), N a P přepínají stopu, Z otevře zápis připomínky, I ohlásí, kde člověk je. Připomínky přijdou do portálu úplně stejně jako z běžného přeposlechu. Volba se pamatuje v prohlížeči, takže při dalším otevření odkazu je režim rovnou zapnutý.
+Na klientově odkazu je tlačítko **Režim pro nevidomé** schválně nenápadné: nahoře je schované a vyskočí, až když se na něj někdo dostane tabulátorem (čtečka obrazovky na něj narazí jako na první věc na stránce), a úplně dole na stránce je ještě drobný odkaz. Vidoucího klienta tak neruší. Přepne přeposlech do podoby, kterou zvládne čtečka obrazovky: místo obrázku PDF čitelný text po odstavcích, systémový přehrávač, velká tlačítka s popisky a ohlašování po každé akci (stopa, čas, uložená připomínka). Ovládá se z klávesnice — mezerník přehraje a pozastaví, šipky posouvají o pět vteřin (se Shiftem o třicet), N a P přepínají stopu, Z otevře zápis připomínky, I ohlásí, kde člověk je. Připomínky přijdou do portálu úplně stejně jako z běžného přeposlechu. Volba se pamatuje v prohlížeči, takže při dalším otevření odkazu je režim rovnou zapnutý.
 
 # Ovládání
 
