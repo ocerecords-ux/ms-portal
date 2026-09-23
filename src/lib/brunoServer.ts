@@ -3,6 +3,8 @@ import { zapisBrunoUdalost } from '@/lib/projektLogServer';
 import { jeZminen } from '@/lib/chatUpozorneniServer';
 import { anthropicHlavicky } from '@/lib/anthropic';
 import { oznacHerceDotoceno, zrusHerceDotoceno } from '@/lib/dotoceniServer';
+import { denZDotazu } from '@/lib/brunoDenDotaz';
+import { prehledNaDen } from '@/lib/ranniPrehledServer';
 import { nactiPrirucku } from '@/lib/brunoPrirucka';
 import { bezTitulu } from '@/lib/jmena';
 
@@ -368,6 +370,38 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
      * i v soukromé zprávě, kde žádný projekt není.
      */
     const oslovenPrimo = jeZminen(zprava.body, 'Bruno', BRUNO_EMAIL);
+
+    /**
+     * „CO MÁM DNESKA?" (zadání 23. 9. 2026: „když se ho zeptám v chatu na daný
+     * den, tak mi to řekne, co tam mám"). Na otázku na program odpovídá
+     * Bruno rovnou z kalendáře - stejným textem jako ranní přehled, bez
+     * jazykového modelu, ať na to sednou přesná data.
+     */
+    if (oslovenPrimo) {
+      const den = denZDotazu(zprava.body);
+      if (den) {
+        const text = await prehledNaDen(zprava.userId, den).catch(() => null);
+        if (text) {
+          await prisma.message
+            .create({
+              data: {
+                conversationId: zprava.conversationId,
+                userId: bruno.id,
+                body: text,
+                parentId: zprava.parentId ?? zprava.id,
+              },
+            })
+            .then(() =>
+              prisma.conversation.update({
+                where: { id: zprava.conversationId },
+                data: { lastMessageAt: new Date() },
+              }),
+            )
+            .catch((err) => console.error('Bruno: prehled dne se nepodarilo odeslat:', err));
+          return { stav: 'odpovedel', duvod: 'přehled dne' };
+        }
+      }
+    }
     const caflouProjectId =
       zprava.conversation.kind === 'PROJEKT' ? zprava.conversation.caflouProjectId : null;
     if (!caflouProjectId && !oslovenPrimo) {

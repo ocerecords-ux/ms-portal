@@ -3,6 +3,7 @@ import { brunoNapisSoukrome } from '@/lib/brunoOznameni';
 import { nactiPorady } from '@/lib/poradyServer';
 import { minutesInZone, minutesToTime, utcParts, zonedToUtc } from '@/lib/calendar';
 import { INTERNAL_ROLES } from '@/lib/roles';
+import { oznacRezii } from '@/lib/rezieOnlineServer';
 
 /**
  * RANNÍ PŘEHLED OD BRUNA (zadání 23. 9. 2026: „chtěl bych, aby mi Bruno
@@ -12,6 +13,9 @@ import { INTERNAL_ROLES } from '@/lib/roles';
  * Co se do přehledu počítá jako „moje":
  *  - natáčení, kde jsem herec nebo zvukař (termín z nabídky i ručně zapsaná
  *    událost v kalendáři),
+ *  - události s REŽIÍ NA DÁLKU, když na ně chodím (User.rezieNaDalku,
+ *    zadání 23. 9. 2026: „mě se týkají jen ty režie online a porady
+ *    a schůzky"),
  *  - porady, na které jsem pozvaný,
  *  - otevřené úkoly na dnešek a všechno, co je po termínu.
  *
@@ -80,8 +84,29 @@ export async function posliRanniPrehledy(options: { vynutit?: boolean } = {}): P
   return { odeslano, preskoceno };
 }
 
+/**
+ * Přehled na libovolný den - tenhle text umí Bruno poslat i na vyžádání
+ * v chatu (zadání 23. 9. 2026: „když se ho zeptám v chatu na daný den, tak
+ * mi to řekne, co tam mám").
+ */
+export async function prehledNaDen(userId: string, kdy: Date): Promise<string> {
+  const p = utcParts(kdy, PASMO);
+  const od = zonedToUtc(p.year, p.month, p.day, 0, PASMO);
+  const doKdy = zonedToUtc(p.year, p.month, p.day + 1, 0, PASMO);
+  return slozPrehled(userId, od, doKdy, { pozdrav: false });
+}
+
 /** Text přehledu. Když není nic, řekne se to - prázdná zpráva mate. */
-async function slozPrehled(userId: string, od: Date, doKdy: Date): Promise<string> {
+async function slozPrehled(
+  userId: string,
+  od: Date,
+  doKdy: Date,
+  volby: { pozdrav?: boolean } = {},
+): Promise<string> {
+  const clovek = await prisma.user
+    .findUnique({ where: { id: userId }, select: { rezieNaDalku: true } })
+    .catch(() => null);
+
   const [sloty, bloky, porady, ukoly] = await Promise.all([
     prisma.recordingSlot
       .findMany({
@@ -89,11 +114,13 @@ async function slozPrehled(userId: string, od: Date, doKdy: Date): Promise<strin
           state: { in: ['SELECTED', 'CONFIRMED'] as never },
           start: { lt: doKdy },
           end: { gt: od },
-          OR: [{ zvukarUserId: userId }, { request: { actorUserId: userId } }],
+          // Režie na dálku znamená „všechno, co ten den jede" - ze seznamu
+          // se pak nechá jen to s ikonou režie (viz níž).
+          ...(clovek?.rezieNaDalku ? {} : { OR: [{ zvukarUserId: userId }, { request: { actorUserId: userId } }] }),
         },
         include: {
           studio: { select: { shortName: true } },
-          request: { select: { projectName: true, actorName: true } },
+          request: { select: { projectName: true, actorName: true, caflouProjectId: true, actorUserId: true } },
         },
         orderBy: { start: 'asc' },
       })
@@ -103,7 +130,7 @@ async function slozPrehled(userId: string, od: Date, doKdy: Date): Promise<strin
         where: {
           start: { lt: doKdy },
           end: { gt: od },
-          OR: [{ zvukarUserId: userId }, { actorUserId: userId }],
+          ...(clovek?.rezieNaDalku ? {} : { OR: [{ zvukarUserId: userId }, { actorUserId: userId }] }),
         },
         include: { studio: { select: { shortName: true } } },
         orderBy: { start: 'asc' },
@@ -119,6 +146,40 @@ async function slozPrehled(userId: string, od: Date, doKdy: Date): Promise<strin
       .catch(() => []),
   ]);
 
+  /**
+   * REŽIE NA DÁLKU (23. 9. 2026). Kdo na ni chodí, má v přehledu i události,
+   * kde není zvukař ani herec - právě ty, u kterých v kalendáři svítí
+   * telefon (první frekvence s hercem a každý casting).
+   */
+  const sRezii = clovek?.rezieNaDalku
+    ? await oznacRezii([
+        ...sloty.map((s) => ({
+          id: s.id,
+          caflouProjectId: s.request.caflouProjectId,
+          actorUserId: s.request.actorUserId,
+          actorName: s.request.actorName,
+          rezieOnline: s.rezieOnline,
+        })),
+        ...bloky
+          .filter((b) => b.kind === 'NATACENI' || b.kind === 'CASTING')
+          .map((b) => ({
+            id: b.id,
+            caflouProjectId: b.caflouProjectId,
+            actorUserId: b.actorUserId,
+            actorName: b.actorName,
+            rezieOnline: b.rezieOnline,
+            vzdy: b.kind === 'CASTING',
+          })),
+      ]).catch(() => new Set<string>())
+    : new Set<string>();
+
+  const mojeSloty = sloty.filter(
+    (s) => !clovek?.rezieNaDalku || sRezii.has(s.id) || s.zvukarUserId === userId || s.request.actorUserId === userId,
+  );
+  const mojeBloky = bloky.filter(
+    (b) => !clovek?.rezieNaDalku || sRezii.has(b.id) || b.zvukarUserId === userId || b.actorUserId === userId,
+  );
+
   const radky: string[] = [];
   const datum = new Intl.DateTimeFormat('cs-CZ', {
     timeZone: PASMO,
@@ -126,16 +187,18 @@ async function slozPrehled(userId: string, od: Date, doKdy: Date): Promise<strin
     day: 'numeric',
     month: 'numeric',
   }).format(od);
-  radky.push(`Dobré ráno, tady je ${datum}.`);
+  radky.push(volby.pozdrav === false ? `${datum[0].toLocaleUpperCase('cs')}${datum.slice(1)}:` : `Dobré ráno, tady je ${datum}.`);
+
+  const znacka = (id: string) => (sRezii.has(id) ? ' · režie na dálku' : '');
 
   const udalosti: { cas: string; popis: string }[] = [
-    ...sloty.map((s) => ({
+    ...mojeSloty.map((s) => ({
       cas: `${cas(s.start)}–${cas(s.end)}`,
-      popis: `${s.request.projectName} · ${s.request.actorName} (${s.studio.shortName})`,
+      popis: `${s.request.projectName} · ${s.request.actorName} (${s.studio.shortName})${znacka(s.id)}`,
     })),
-    ...bloky.map((b) => ({
+    ...mojeBloky.map((b) => ({
       cas: `${cas(b.start)}–${cas(b.end)}`,
-      popis: `${b.title} (${b.studio.shortName})`,
+      popis: `${b.title} (${b.studio.shortName})${znacka(b.id)}`,
     })),
     ...porady.map((p) => ({
       cas: `${cas(new Date(p.start))}–${cas(new Date(p.end))}`,
@@ -145,9 +208,9 @@ async function slozPrehled(userId: string, od: Date, doKdy: Date): Promise<strin
 
   radky.push('');
   if (udalosti.length === 0) {
-    radky.push('V kalendáři dnes nic vašeho nemám.');
+    radky.push('V kalendáři ten den nic vašeho nemám.');
   } else {
-    radky.push('Dnes vás čeká:');
+    radky.push('Čeká vás:');
     for (const u of udalosti) radky.push(`• ${u.cas} — ${u.popis}`);
   }
 
@@ -155,7 +218,9 @@ async function slozPrehled(userId: string, od: Date, doKdy: Date): Promise<strin
     radky.push('');
     radky.push('Úkoly:');
     for (const u of ukoly) {
-      const termin = u.dueDate ? ` (do ${new Intl.DateTimeFormat('cs-CZ', { timeZone: PASMO, day: 'numeric', month: 'numeric' }).format(u.dueDate)}${u.dueTime ? ` ${u.dueTime}` : ''})` : '';
+      const termin = u.dueDate
+        ? ` (do ${new Intl.DateTimeFormat('cs-CZ', { timeZone: PASMO, day: 'numeric', month: 'numeric' }).format(u.dueDate)}${u.dueTime ? ` ${u.dueTime}` : ''})`
+        : '';
       radky.push(`• ${u.title}${termin}`);
     }
   }

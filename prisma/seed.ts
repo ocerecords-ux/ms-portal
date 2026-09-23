@@ -192,7 +192,7 @@ async function main() {
   await klientAlbatrosu();
   await dotocenoStrabag();
   await odkazyNaHovory();
-  await ranniPrehledAdminum();
+  await ranniPrehledOndrejovi();
   await albatrosCenuUrcujeSam();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
@@ -1211,23 +1211,41 @@ async function odkazyNaHovory() {
 }
 
 /**
- * RANNÍ PŘEHLED ZAPNUTÝ ADMINŮM (zadání 23. 9. 2026: „chtěl bych, aby mi
- * Bruno sesumíroval události na daný den"). Jednou; dál si to každý přepíná
- * sám v Můj účet.
+ * RANNÍ PŘEHLED ZATÍM JEN ONDŘEJOVI (zadání 23. 9. 2026: „ten ranní přehled
+ * zapni zatím jen mi"). Ostatním se vypne - kdyby ho někomu zapla starší
+ * verze seedu. Dál si to každý přepíná sám v Můj účet.
+ *
+ * Zároveň se u něj zapne „chodím na režii na dálku", takže v přehledu má
+ * i cizí natáčení, u kterých v kalendáři svítí telefon.
  */
-async function ranniPrehledAdminum() {
-  const ZNAMKA = 'ranni-prehled-adminum';
+async function ranniPrehledOndrejovi() {
+  const ZNAMKA = 'ranni-prehled-jen-ondrej';
   try {
     const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
     if (uz) return;
-    const vysledek = await prisma.user.updateMany({
-      where: { role: 'ADMIN', active: true },
-      data: { ranniPrehled: true },
+    const ondrej = await prisma.user.findFirst({
+      where: {
+        role: 'ADMIN',
+        active: true,
+        name: { contains: 'Ondřej Černý', mode: 'insensitive' },
+        NOT: { name: { contains: 'ml.', mode: 'insensitive' } },
+      },
+      select: { id: true, email: true },
+    });
+    // Nejdřív všem pryč, pak jemu - ať v tom není nepořádek z dřívějška.
+    await prisma.user.updateMany({ where: { ranniPrehled: true }, data: { ranniPrehled: false } });
+    if (!ondrej) {
+      console.warn('  ranni prehled: Ondrejuv ucet nenalezen, nikomu se nezapina');
+      return;
+    }
+    await prisma.user.update({
+      where: { id: ondrej.id },
+      data: { ranniPrehled: true, rezieNaDalku: true },
     });
     await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
-    console.log(`  ranni prehled zapnut u ${vysledek.count} adminu`);
+    console.log(`  ranni prehled zapnut jen u ${ondrej.email}`);
   } catch (err) {
-    console.warn('  ranni prehled se nepodarilo zapnout:', err);
+    console.warn('  ranni prehled se nepodarilo nastavit:', err);
   }
 }
 

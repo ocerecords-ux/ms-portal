@@ -56,7 +56,7 @@ Názvy projektů portál drží **velkými písmeny** — ať už je někdo zad�
 
 **Kalendář** je studio a natáčení: kdo kdy natáčí, kdy je studio blokované a nabídky termínů pro herce. Události zapisuje a upravuje produkce a vedoucí pobočky ve svých studiích (zaškrtává se na kartě uživatele – Tomáš Ilavský Brno, Ondřej Černý ml. Praha); ostatní si zapisují Mimo studio. Tlačítko „+ Přidat“ vedle přepínače Den/Týden/Měsíc otevře zápis i bez dvojkliku.
 
-**Ranní přehled od Bruna.** V Můj účet se dá zapnout **ranní přehled**: každý den v sedm ráno napíše Bruno do soukromého chatu, co vás ten den čeká — natáčení a střihy, kde jste zvukař nebo herec, porady, na které jste pozvaní — a otevřené úkoly.
+**Ranní přehled od Bruna.** V Můj účet se dá zapnout **ranní přehled**: každý den v sedm ráno napíše Bruno do soukromého chatu, co vás ten den čeká — natáčení a střihy, kde jste zvukař nebo herec, porady, na které jste pozvaní, a u koho chodí **režie na dálku** i natáčení s telefonem v kalendáři — a pod tím otevřené úkoly. **Zeptat se jde i kdykoliv jindy:** napište Brunovi do chatu „Bruno, co mám dneska?“ (nebo zítra, v pátek, 30. 9.) a přehled pošle hned.
 
 Kromě toho je v liště ještě **chat**, **zvoneček** s upozorněními, **otazník** (tahle Nápověda) a vlevo panel s rychlými volbami.
 

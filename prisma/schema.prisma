@@ -281,6 +281,10 @@ model User {
   /// na dany den udalosti, ktere se me tykaji. Pripadne i ukoly co mam").
   /// Zapina se v Muj ucet; posila se do soukromeho chatu s Brunem.
   ranniPrehled   Boolean   @default(false)
+  /// CHODIM NA REZII NA DALKU (zadani 23. 9. 2026: „me se tykaji jen ty
+  /// rezie online a porady a schuzky"). Kdo to ma, vidi v prehledu i cizi
+  /// natáčení, u kterych v kalendari sviti telefon.
+  rezieNaDalku   Boolean   @default(false)
   /// Kdy odesel posledni ranni prehled - aby nesel dvakrat za den.
   ranniPrehledAt DateTime?
 
