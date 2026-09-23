@@ -121,8 +121,11 @@ export default async function PortalLayout({ children }: { children: React.React
 
   /**
    * KONFLIKTY V KALENDÁŘI (zadání 23. 9. 2026: „měla by být notifikace
-   * u ikony kalendáře na hlavním panelu"). Číslo je součet mých konfliktů
-   * a provozních; kdo na kalendář nesmí, dostane nulu a odznak se nekreslí.
+   * u ikony kalendáře na hlavním panelu", upřesnění „na tom panelu by to
+   * mohlo být možná jen červené kolečko").
+   *
+   * V liště je jen tečka, ne číslo: lišta se dívá čtrnáct dní dopředu,
+   * kalendář na zobrazený týden - dvě různá čísla vedle sebe mátla.
    */
   const konflikty = internal ? await pocetKonfliktu(session.user.id, role) : 0;
   /**
@@ -149,10 +152,8 @@ export default async function PortalLayout({ children }: { children: React.React
         itemsMobil={sTabuli(visibleFor(entriesMobil, role), maTabuli, vychoziLista(entriesMobil))}
         pageOptions={pageOptionsFor(role, maTabuli)}
         unreadNotifications={unread}
-        odznaky={{
-          ...(bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : {}),
-          ...(konflikty > 0 ? { '/kalendar': konflikty } : {}),
-        }}
+        odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
+        tecky={konflikty > 0 ? ['/kalendar'] : undefined}
         pripominky={pripominkyKVyrizeni}
         spravcePripominek={role === 'ADMIN'}
         interni={internal}

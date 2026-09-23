@@ -37,6 +37,7 @@ export function Topbar({
   pageOptions,
   unreadNotifications = 0,
   odznaky,
+  tecky,
   pripominky = 0,
   spravcePripominek = false,
   interni = false,
@@ -64,6 +65,14 @@ export function Topbar({
    * s číslem"). Nula se nekreslí - odznak má znamenat „něco na tebe čeká".
    */
   odznaky?: Record<string, number>;
+  /**
+   * Odkazy, u kterých svítí jen ČERVENÉ KOLEČKO bez čísla (zadání
+   * 23. 9. 2026: „na tom panelu by to mohlo být možná jen červené kolečko").
+   * Používá se u Kalendáře pro konflikty: číslo v liště stejně nesedělo
+   * s číslem v kalendáři - lišta kouká dva týdny dopředu, kalendář na
+   * zobrazený týden - a dvě různá čísla vedle sebe mátla.
+   */
+  tecky?: string[];
   /** Kolik připomínek k portálu čeká na vyřízení (jen Žůžo-labůžo). */
   pripominky?: number;
   /** Vidí v bublině rovnou celý seznam připomínek? (zadání 15. 9. 2026) */
@@ -237,6 +246,7 @@ export function Topbar({
           }
 
           const odznak = odznaky?.[item.href] ?? 0;
+          const tecka = tecky?.includes(item.href) ?? false;
 
           return (
             <Link
@@ -256,6 +266,14 @@ export function Topbar({
                   <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-pill bg-brand-green text-[11px] font-semibold text-[#0F2A18] tabular-nums align-middle">
                     {odznak > 99 ? '99+' : odznak}
                   </span>
+                )}
+                {tecka && odznak === 0 && (
+                  <span
+                    title="Něco se tu pere — podrobnosti uvnitř"
+                    aria-label="Upozornění"
+                    className="ml-1.5 inline-block w-2 h-2 rounded-full align-middle"
+                    style={{ backgroundColor: '#f97316' }}
+                  />
                 )}
               </span>
             </Link>

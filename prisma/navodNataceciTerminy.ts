@@ -125,7 +125,7 @@ Upravit poradu smí každý účastník. U opakované se upravuje celá řada; j
 
 Zvukaři Schůzky nevidí a v liště se jim ani nenabídnou.
 
-**Konflikty.** Když se dvě věci perou, objeví se nad kalendářem oranžový štítek **Konflikty** s číslem a u odkazu **Kalendář** v horní liště svítí odznak. Po kliknutí na štítek je seznam: co s čím, v kolik a který den — klik na řádek na ten den skočí. Dělí se na dvě části:
+**Konflikty.** Když se dvě věci perou, objeví se nad kalendářem oranžový štítek **Konflikty** s číslem a u odkazu **Kalendář** v horní liště se rozsvítí **oranžové kolečko**. Číslo na štítku platí pro **zobrazený týden nebo měsíc**, kolečko v liště hlídá **čtrnáct dní dopředu** — proto se rozsvítí i tehdy, když v zobrazeném týdnu žádný konflikt není. Po kliknutí na štítek je seznam: co s čím, v kolik a který den — klik na řádek na ten den skočí. Dělí se na dvě části:
 
 - **Moje** — dvě moje věci naráz (casting a schůzka, porada přes natáčení). **Vidím je jen já.**
 - **Natáčení** — dvakrát obsazené studio, herec nebo zvukař na dvou místech naráz. Ukazuje se **jen tam, kde jste označený** (jako zvukař nebo herec u jedné z těch dvou událostí); cizí kolize v cizím studiu je šum.
