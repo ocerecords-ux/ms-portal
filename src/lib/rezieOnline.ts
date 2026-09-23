@@ -37,4 +37,4 @@ export function klicRezie(
 }
 
 /** Popisek ikony - používá ho kalendář i návod. */
-export const POPIS_REZIE = 'Režie online — první frekvence s hercem';
+export const POPIS_REZIE = 'Režie na dálku — první frekvence s hercem';

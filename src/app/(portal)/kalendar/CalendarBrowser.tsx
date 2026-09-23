@@ -14,6 +14,9 @@ import {
 import { OdberKalendare } from './OdberKalendare';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { POPIS_REZIE } from '@/lib/rezieOnline';
+
+/** Červený rámeček události, kde je režie na dálku (zadání 23. 9. 2026). */
+const BARVA_REZIE = '#ef4444';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -1537,8 +1540,10 @@ function MrizkaPohled({
                           // Tenky lem v barve podkladu oddeli bublinu od te pod
                           // ni, jemny stin z ni udela papir lezici na stole
                           // (21. 9. 2026: „jako papiry na stole").
-                          boxShadow: '0 0 0 1px rgb(var(--c-surface)), 0 2px 6px rgb(0 0 0 / 0.28)',
-                          borderColor: barvy.border,
+                          boxShadow: e.rezie
+                            ? `0 0 0 2px ${BARVA_REZIE}, 0 2px 6px rgb(0 0 0 / 0.28)`
+                            : '0 0 0 1px rgb(var(--c-surface)), 0 2px 6px rgb(0 0 0 / 0.28)',
+                          borderColor: e.rezie ? BARVA_REZIE : barvy.border,
                           // Silny pruh vlevo nese barvu studia i tam, kde je
                           // podklad skoro pruhledny (14. 9. 2026).
                           borderLeftWidth: '3px',
@@ -1676,7 +1681,7 @@ function MesicniPohled({
                     }}
                     style={{
                       backgroundColor: barvy.background,
-                      borderColor: barvy.border,
+                      borderColor: e.rezie ? BARVA_REZIE : barvy.border,
                       borderLeftWidth: '3px',
                       color: barvy.text,
                     }}
@@ -2009,7 +2014,7 @@ function UdalostForm({
                 zvukarUserId: zvukar?.id ?? '',
                 zvukarName: zvukar?.label ?? '',
                 // Režie online (23. 9. 2026) - ukládá se jen u natáčení.
-                ...(jeNataceni ? { rezieOnline: rezie } : {}),
+                ...(jeNataceni || druh === 'CASTING' ? { rezieOnline: rezie } : {}),
               }
             : { title: nazev }),
         }),
@@ -2227,7 +2232,7 @@ function UdalostForm({
 
       {/* REŽIE ONLINE (23. 9. 2026) - u natáčení. Zaškrtnutí drží kalendář
           sám u první frekvence herce na projektu, tady se dá přebít. */}
-      {jeNataceni && (
+      {(jeNataceni || druh === 'CASTING') && (
         <label className="flex items-start gap-2.5 rounded-lg border border-line bg-field px-3 py-2.5">
           <input
             type="checkbox"
@@ -2236,9 +2241,9 @@ function UdalostForm({
             className="mt-0.5"
           />
           <span className="text-sm font-body text-ink">
-            Režie online
+            Režie na dálku
             <span className="block text-xs text-muted">
-              Sluchátka v kalendáři. Samo se to zaškrtne u první frekvence herce na projektu — tady jde odškrtnout.
+              Červený rámeček a telefon v kalendáři. Samo se to zaškrtne u první frekvence herce na projektu a u každého castingu — tady jde odškrtnout.
             </span>
           </span>
         </label>
@@ -2354,19 +2359,19 @@ function IkonaDruhu({ druh, velikost = 16 }: { druh: ReturnType<typeof druhPrace
 }
 
 /**
- * IKONA REŽIE ONLINE (zadání 23. 9. 2026). Sluchátka se svítí u první
- * frekvence každého herce na projektu - tam se Ondřej připojuje na hovor
- * jako režie. V úpravě události se dá odškrtnout.
+ * IKONA REŽIE ONLINE (zadání 23. 9. 2026). Telefon s vlnami - režie
+ * připojená na dálku - svítí u první frekvence každého herce na projektu.
+ * V úpravě události se dá odškrtnout.
  */
 function IkonaRezie({ velikost = 14 }: { velikost?: number }) {
   return (
     <span
       title={POPIS_REZIE}
       aria-label={POPIS_REZIE}
-      className={`shrink-0 inline-grid place-items-center rounded-pill align-middle mr-1 ${tridaBarvyIkony('sluchatka')}`}
+      className={`shrink-0 inline-grid place-items-center rounded-pill align-middle mr-1 ${tridaBarvyIkony('rezie-na-dalku')}`}
       style={{ width: velikost, height: velikost }}
     >
-      <KresbaIkony klic="sluchatka" velikost={Math.round(velikost * 0.62)} />
+      <KresbaIkony klic="rezie-na-dalku" velikost={Math.round(velikost * 0.62)} />
     </span>
   );
 }

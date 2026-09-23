@@ -73,8 +73,9 @@ function poliUdalosti(kind: string, d: Vstup) {
     actorName: maHerce(kind) ? d.actorName || null : null,
     zvukarUserId: d.zvukarUserId || null,
     zvukarName: d.zvukarName || null,
-    // Režie online (23. 9. 2026) - jen u natáčení, jinde nedává smysl.
-    rezieOnline: kind === 'NATACENI' ? (d.rezieOnline ?? null) : null,
+    // Režie na dálku (23. 9. 2026) - u natáčení a castingu, jinde nedává
+    // smysl. Casting ji má sám od sebe, tady se drží jen ruční výjimka.
+    rezieOnline: kind === 'NATACENI' || kind === 'CASTING' ? (d.rezieOnline ?? null) : null,
   };
 }
 

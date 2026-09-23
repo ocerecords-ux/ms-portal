@@ -17,6 +17,11 @@ export type UdalostProRezii = {
   actorName: string | null;
   /** Výjimka uložená u události: true / false ji zapne nebo vypne natvrdo. */
   rezieOnline: boolean | null;
+  /**
+   * CASTING MÁ REŽII VŽDYCKY (zadání 23. 9. 2026: „a u castingu to bude
+   * pokaždé") - na casting se režie připojuje na každý, ne jen na první.
+   */
+  vzdy?: boolean;
 };
 
 /**
@@ -30,6 +35,7 @@ export async function oznacRezii(udalosti: UdalostProRezii[]): Promise<Set<strin
   const projekty = new Set<string>();
   for (const u of udalosti) {
     if (u.rezieOnline === true) vysledek.add(u.id);
+    if (u.rezieOnline === null && u.vzdy) vysledek.add(u.id);
     if (klicRezie(u.caflouProjectId, u.actorUserId, u.actorName)) {
       projekty.add((u.caflouProjectId ?? '').trim());
     }

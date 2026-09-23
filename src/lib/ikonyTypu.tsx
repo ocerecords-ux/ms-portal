@@ -362,6 +362,24 @@ export const IKONY_TYPU: Ikona[] = [
     ),
   },
   {
+    /**
+     * REŽIE NA DÁLKU (zadání 23. 9. 2026: „spíš bych zvolil ikonu telefonu
+     * nějakého na dálku a režiséra, místo sluchátek"). Sluchátko a vlny -
+     * režie připojená na hovor, ne člověk ve studiu. Používá ji kalendář
+     * u první frekvence s hercem (viz lib/rezieOnline.ts).
+     */
+    klic: 'rezie-na-dalku',
+    barva: 'modra',
+    popisek: 'Režie na dálku',
+    kresba: (
+      <>
+        <path d="M4.4 4h2.5l1.2 3.2-1.6 1.2a10 10 0 0 0 4.6 4.6l1.2-1.6 3.2 1.2v2.5a1.7 1.7 0 0 1-1.7 1.7A13.8 13.8 0 0 1 2.7 5.7 1.7 1.7 0 0 1 4.4 4" />
+        <path d="M15.2 3.4a6 6 0 0 1 5.4 5.4" />
+        <path d="M15 6.8a2.7 2.7 0 0 1 2.2 2.2" />
+      </>
+    ),
+  },
+  {
     klic: 'srdce',
     barva: 'ruzova',
     popisek: 'Srdce',

@@ -324,13 +324,15 @@ export default async function KalendarPage({
       rezieOnline: s.rezieOnline,
     })),
     ...bloky
-      .filter((b) => b.kind === 'NATACENI')
+      .filter((b) => b.kind === 'NATACENI' || b.kind === 'CASTING')
       .map((b) => ({
         id: b.id,
         caflouProjectId: b.caflouProjectId,
         actorUserId: b.actorUserId,
         actorName: b.actorName,
         rezieOnline: b.rezieOnline,
+        // Casting má režii pokaždé (23. 9. 2026), natáčení jen to první.
+        vzdy: b.kind === 'CASTING',
       })),
   ]);
 
