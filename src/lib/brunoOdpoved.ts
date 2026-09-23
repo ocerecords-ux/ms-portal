@@ -23,6 +23,8 @@ import { utcParts } from '@/lib/calendar';
 const MODEL = process.env.BRUNO_MODEL || 'claude-sonnet-4-5';
 const ADRESA = 'https://api.anthropic.com/v1/messages';
 const KOL_MAX = 5;
+/** Kolik znaků smí mít odpověď - delší text chat stejně nepobere. */
+const DELKA_MAX = 6000;
 const PASMO = 'Europe/Prague';
 
 type Blok =
@@ -50,9 +52,20 @@ function pokyn(z: ZadaniOdpovedi): string {
   const d = utcParts(new Date(), PASMO);
   const dnes = `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`;
 
-  return `Jsi Bruno, asistent nahrávacího studia Mediaspace (audioknihy a reklamní spoty).
-Bavíš se s kolegou v chatu portálu. Tvoje práce je rozumět tomu, na co se ptá, a odpovědět -
-klidně krátce. Mluvíš česky, normálně, bez patosu a bez omluv.
+  return `Jsi Bruno, kolega z nahrávacího studia Mediaspace (audioknihy a reklamní spoty).
+Bavíš se s člověkem v chatu portálu. Mluvíš česky, normálně, bez patosu a bez omluv.
+
+JSI JAZYKOVÝ MODEL, NE FORMULÁŘ (upřesnění 23. 9. 2026: „chtěl bych si s Brunem povídat
+jako s normálním jazykovým modelem"). Bav se o čemkoliv: napiš text nebo mail, přelož,
+vymysli názvy, vysvětli, spočítej, oponuj, poraď - i o věcech, které s portálem nemají nic
+společného. Studio je tvoje doma, ne tvoje hranice. Neodbíhej k „na tohle jsem tu nebyl
+udělaný" a neposílej člověka jinam, když mu můžeš odpovědět rovnou.
+
+DRŽÍŠ NIT. Čteš celou konverzaci, ne jen poslední větu: „a co zítra" navazuje na to, co
+bylo předtím. Odpovídáš tak dlouze, jak věc potřebuje - na krátkou otázku krátce, na
+rozepsání textu klidně na odstavce.
+
+PÍŠE TI ${z.jmeno}${z.nazevKonverzace ? ` ve skupině „${z.nazevKonverzace}" (u každé repliky je napsané, kdo mluví)` : ' mezi čtyřma očima'}.
 
 DNES JE ${dnes} (Praha). Z toho počítej „zítra", „v pátek" i „za týden".
 
@@ -65,8 +78,9 @@ celý den ve všech studiích. Když se někdo ptá, co se natáčí, kdo kde je
 den ve studiích, ber provoz_dne - a klidně obojí. NIKDY neodpovídej „to nevidím", dokud
 sis to nezkusil vytáhnout.
 
-CO NEVÍŠ, ŘEKNI. Nevymýšlej si termíny, jména ani odkazy. Odkazy piš jen ty, které máš
-v zadání nebo které ti vrátil nástroj (třeba /projekty/123 nebo /napoveda/neco).
+CO NEVÍŠ, ŘEKNI. U věcí z portálu si nevymýšlej termíny, jména ani odkazy - ty ber jen
+ze zadání nebo z nástroje (třeba /projekty/123 nebo /napoveda/neco). Jinde platí, co u
+každého rozumného kolegy: když si nejsi jistý, řekni to a odhad označ za odhad.
 
 ODPOVÍDÁŠ TEXTEM, ne JSONem. Žádné uvozovky kolem celé odpovědi, žádné vysvětlování, co
 sis kde zjistil - prostě odpověz, jako bys to věděl.
@@ -77,18 +91,40 @@ ${z.prirucka}
 ${z.napoveda}`;
 }
 
-function dotaz(z: ZadaniOdpovedi): string {
-  const zpravy = z.zpravy
-    .map((m) => `${m.jeBruno ? 'Bruno (ty)' : m.kdo}: ${m.text}`)
-    .join('\n');
+/**
+ * Historie chatu jako OPRAVDOVÁ KONVERZACE (23. 9. 2026: „chtěl bych si
+ * s Brunem povídat jako s normálním jazykovým modelem").
+ *
+ * Do teď šly všechny zprávy do jednoho bloku textu, na který se Bruno díval
+ * jako na zadání k vyřízení. Teď jsou to střídavě repliky: co napsal on, je
+ * jeho řeč, co napsali lidi, je řeč druhé strany. Odtud navazování - „a co
+ * zítra" dává smysl jen tomu, kdo si pamatuje, o čem byla řeč.
+ *
+ * Ve skupině se před každou replikou píše, kdo mluví; v soukromé konverzaci
+ * to je zbytečné, jsou tam dva.
+ */
+function konverzace(z: ZadaniOdpovedi): Zprava[] {
+  const vysledek: Zprava[] = [];
 
-  return `${z.nazevKonverzace ? `Skupina „${z.nazevKonverzace}"` : `Soukromá konverzace s tebou`}.
-Píše ti ${z.jmeno}.
+  for (const m of z.zpravy) {
+    const role = m.jeBruno ? 'assistant' : 'user';
+    const text = m.jeBruno || !z.nazevKonverzace ? m.text : `${m.kdo}: ${m.text}`;
+    const posledni = vysledek[vysledek.length - 1];
+    // Dvě zprávy za sebou od téhož musí do jedné repliky - API střídání hlídá.
+    if (posledni && posledni.role === role && typeof posledni.content === 'string') {
+      posledni.content = `${posledni.content}\n${text}`;
+    } else {
+      vysledek.push({ role, content: text });
+    }
+  }
 
-POSLEDNÍ ZPRÁVY (nejstarší nahoře, poslední je ta nová):
-${zpravy}
-
-Odpověz na tu poslední zprávu.`;
+  // Konverzace musí začínat člověkem a končit jím taky - jinak by Bruno
+  // odpovídal sám sobě.
+  while (vysledek.length > 0 && vysledek[0].role === 'assistant') vysledek.shift();
+  if (vysledek.length === 0 || vysledek[vysledek.length - 1].role !== 'user') {
+    vysledek.push({ role: 'user', content: '(pokračuj)' });
+  }
+  return vysledek;
 }
 
 /** Brunova odpověď, nebo null, když nemá co říct (nebo se to nepovedlo). */
@@ -96,7 +132,7 @@ export async function brunoOdpoved(z: ZadaniOdpovedi): Promise<string | null> {
   const klic = process.env.ANTHROPIC_API_KEY;
   if (!klic) return null;
 
-  const zpravy: Zprava[] = [{ role: 'user', content: dotaz(z) }];
+  const zpravy: Zprava[] = konverzace(z);
 
   for (let kolo = 0; kolo < KOL_MAX; kolo += 1) {
     const odpoved = await fetch(ADRESA, {
@@ -104,7 +140,7 @@ export async function brunoOdpoved(z: ZadaniOdpovedi): Promise<string | null> {
       headers: anthropicHlavicky(klic),
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1200,
+        max_tokens: 2000,
         system: pokyn(z),
         tools: NASTROJE,
         messages: zpravy,
@@ -134,7 +170,7 @@ export async function brunoOdpoved(z: ZadaniOdpovedi): Promise<string | null> {
         .map((b) => b.text.trim())
         .join('\n')
         .trim();
-      return text ? text.slice(0, 2000) : null;
+      return text ? text.slice(0, DELKA_MAX) : null;
     }
 
     // Model si řekl o data. Spustíme, co chtěl, a pokračujeme dalším kolem.

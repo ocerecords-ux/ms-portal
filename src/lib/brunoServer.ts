@@ -42,8 +42,11 @@ const ADRESA = 'https://api.anthropic.com/v1/messages';
 /** Účet, pod kterým Bruno píše. Zakládá ho seed. */
 export const BRUNO_EMAIL = 'bruno@mediaspace.cz';
 
-/** Kolik posledních zpráv kanálu dostane k posouzení. */
-const KONTEXT_ZPRAV = 14;
+/**
+ * Kolik posledních zpráv dostane k posouzení. Od 23. 9. 2026 víc - v soukromé
+ * konverzaci se s ním dá normálně povídat a rozhovor bez paměti není rozhovor.
+ */
+const KONTEXT_ZPRAV = 24;
 /** Kolik svých poznámek si vezme s sebou. */
 const KONTEXT_POZNAMEK = 12;
 
