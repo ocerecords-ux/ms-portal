@@ -49,8 +49,10 @@ Připomínky si můžete odškrtávat jako vyřízené — tlačítko **Hotovo**
 Tlačítko **Schválit** je na třech místech a všechna dělají totéž:
 
 1. **v mailu** o hotovém spotu (tlačítko **Schválit**),
-2. **ve složce s nahrávkami** a v taggeru, kam se klient z mailu dostane,
+2. **ve složce s nahrávkami**, v **taggeru spotu** i v **AudioTaggeru** — všude, kam se klient z odkazu dostane,
 3. **v klientském portálu** v přehledu projektů, ve sloupci Schválení — jen u reklamních firem.
+
+**Odkaz pro klienta** v záložce Připomínky vede u reklamy rovnou do taggeru spotu (`/pripominkovat/…`) — tam klient píše připomínky k času a má tlačítko Schválit.
 
 **Schvaluje se celý projekt, ne jednotlivá nahrávka.** Ať klient klikne kdekoliv, schvaluje tutéž zakázku.
 

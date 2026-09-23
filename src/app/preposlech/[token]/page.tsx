@@ -11,6 +11,8 @@ import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
 import { JazykProvider } from '@/app/(portal)/components/JazykProvider';
 import { PrepinacRezimu } from './PrepinacRezimu';
+import { stavSchvaleni } from '@/lib/schvaleniKlientem';
+import { SchvalitSpot } from '@/components/SchvalitSpot';
 
 /**
  * Celoobrazovkový přeposlech pro klienta (zadání 11. 9. 2026: „prostě mu
@@ -55,11 +57,18 @@ export default async function PreposlechOdkazemPage({ params }: { params: { toke
     );
   }
 
-  const [meta, stav] = await Promise.all([
+  const [meta, stav, schvaleni] = await Promise.all([
     prisma.projectMeta
       .findUnique({ where: { caflouProjectId }, select: { name: true } })
       .catch(() => null),
     nactiPreposlech(caflouProjectId),
+    /**
+     * SCHVÁLIT I ODSUD (oprava 23. 9. 2026: „klient schválil projekt Strabag,
+     * ale nikam se to nepropsalo"). Reklamní klient, který dostal odkaz do
+     * AudioTaggeru, tu do teď žádné tlačítko neměl - odklepnout spot šlo jen
+     * ve složce s nahrávkami nebo v taggeru spotu.
+     */
+    stavSchvaleni(caflouProjectId),
   ]);
 
   // Statistika otevreni - at je u projektu videt, jestli si to klient pustil.
@@ -77,6 +86,11 @@ export default async function PreposlechOdkazemPage({ params }: { params: { toke
         {/* Stranka lezi mimo skupinu (portal), takze si jazyk pro komponenty
             v prohlizeci musi rozdat sama (zadani 13. 9. 2026). */}
         <JazykProvider jazyk={jazyk}>
+          {schvaleni.lzeSchvalit && (
+            <div className="mb-3">
+              <SchvalitSpot token={params.token} schvalenoAt={schvaleni.schvalenoAt} />
+            </div>
+          )}
           {/* Režim pro nevidomé (23. 9. 2026) - přepíná se tlačítkem nahoře. */}
           <PrepinacRezimu
             caflouProjectId={caflouProjectId}

@@ -41,6 +41,19 @@ export function urlNahravek(token: string): string {
 }
 
 /**
+ * ODKAZ NA SPOT PRO KLIENTA U REKLAMY (oprava 23. 9. 2026: „klient schválil
+ * projekt Strabag, ale nikam se to nepropsalo").
+ *
+ * Reklamnímu klientovi patří tagger spotu - tam píše připomínky k času
+ * a hlavně tam má tlačítko **Schválit**. Odkaz do AudioTaggeru (urlPreposlechu)
+ * je pro audioknihu a tlačítko na schválení v něm není; kdo dostal ten,
+ * neměl spot jak odklepnout.
+ */
+export function urlPripominek(token: string): string {
+  return `${zakladPortalu()}/pripominkovat/${encodeURIComponent(token)}`;
+}
+
+/**
  * Vrátí platný token projektu; když žádný nemá, založí ho.
  * Nikdy nevyhazuje — odkaz navíc nesmí shodit odesílání zprávy.
  */
@@ -167,7 +180,11 @@ export async function odkazyPreposlechu(caflouProjectIds: string[]): Promise<Map
   }
 }
 
-export async function stavOdkazu(caflouProjectId: string): Promise<{
+export async function stavOdkazu(
+  caflouProjectId: string,
+  /** U reklamy vede odkaz do taggeru spotu (je v něm Schválit), 23. 9. 2026. */
+  varianta: 'preposlech' | 'pripominky' = 'preposlech',
+): Promise<{
   url: string | null;
   otevrenoAt: string | null;
   pocetOtevreni: number;
@@ -179,7 +196,7 @@ export async function stavOdkazu(caflouProjectId: string): Promise<{
     });
     if (!zaznam || zaznam.zneplatnenoAt) return { url: null, otevrenoAt: null, pocetOtevreni: 0 };
     return {
-      url: urlPreposlechu(zaznam.token),
+      url: varianta === 'pripominky' ? urlPripominek(zaznam.token) : urlPreposlechu(zaznam.token),
       otevrenoAt: zaznam.otevrenoAt ? zaznam.otevrenoAt.toISOString() : null,
       pocetOtevreni: zaznam.pocetOtevreni,
     };

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isInternalRole } from '@/lib/roles';
 import { obnovOdkaz, stavOdkazu, zajistiOdkaz, zavriOdkaz } from '@/lib/preposlechOdkaz';
+import { prisma } from '@/lib/db';
+import { isRodnyListProjectType } from '@/lib/priceList';
 
 /**
  * Správa klientského odkazu na přeposlech (zadání 11. 9. 2026).
@@ -13,6 +15,17 @@ import { obnovOdkaz, stavOdkazu, zajistiOdkaz, zavriOdkaz } from '@/lib/preposle
  * `DELETE` ho zavře bez náhrady.
  */
 export const dynamic = 'force-dynamic';
+
+/**
+ * U reklamy je odkaz pro klienta tagger spotu (je v něm tlačítko Schválit),
+ * u audioknihy AudioTagger - oprava 23. 9. 2026.
+ */
+async function variantaOdkazu(caflouProjectId: string): Promise<'preposlech' | 'pripominky'> {
+  const meta = await prisma.projectMeta
+    .findUnique({ where: { caflouProjectId }, select: { projectType: true } })
+    .catch(() => null);
+  return (await isRodnyListProjectType(meta?.projectType)) ? 'pripominky' : 'preposlech';
+}
 
 async function overTym() {
   const session = await getServerSession(authOptions);
@@ -26,7 +39,7 @@ async function overTym() {
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const pristup = await overTym();
   if ('chyba' in pristup) return pristup.chyba;
-  return NextResponse.json(await stavOdkazu(params.id));
+  return NextResponse.json(await stavOdkazu(params.id, await variantaOdkazu(params.id)));
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -39,12 +52,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     : await zajistiOdkaz(params.id, pristup.jmeno);
   if (!token) return NextResponse.json({ error: 'Odkaz se nepodařilo vyrobit.' }, { status: 500 });
 
-  return NextResponse.json(await stavOdkazu(params.id));
+  return NextResponse.json(await stavOdkazu(params.id, await variantaOdkazu(params.id)));
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const pristup = await overTym();
   if ('chyba' in pristup) return pristup.chyba;
   await zavriOdkaz(params.id);
-  return NextResponse.json(await stavOdkazu(params.id));
+  return NextResponse.json(await stavOdkazu(params.id, await variantaOdkazu(params.id)));
 }

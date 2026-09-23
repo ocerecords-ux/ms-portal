@@ -796,7 +796,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
      * nepošle).
      */
     const [odkaz, spoty, schvaleni, token] = await Promise.all([
-      stavOdkazu(caflouProjectId),
+      // U reklamy vede odkaz pro klienta do taggeru spotu - je v něm
+      // tlačítko Schválit (oprava 23. 9. 2026).
+      stavOdkazu(caflouProjectId, 'pripominky'),
       seznamSpotu(caflouProjectId),
       stavSchvaleni(caflouProjectId),
       zajistiOdkaz(caflouProjectId, session.user.name),
