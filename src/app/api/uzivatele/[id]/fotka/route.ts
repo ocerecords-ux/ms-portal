@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
+import { zakladPortalu } from '@/lib/preposlechOdkaz';
 
 /**
  * Profilová fotka uživatele jako obrázek (10. 9. 2026).
@@ -50,6 +51,19 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   // Odkaz si proto podepíšeme. Když se to nepovede (klíč z adresy nejde
   // vyčíst, úložiště není nastavené), pošleme adresu tak, jak je - u
   // veřejného úložiště fungovala a fungovat bude.
+  /**
+   * FOTKA ULOŽENÁ JAKO ADRESA NA NAŠEM WEBU (oprava 23. 9. 2026: „vždyť Bruno
+   * fotku už má"). Bruno má v účtu obrázek z public/ (bruno-znacka.png), jenže
+   * dole se každá http adresa brala jako soubor v úložišti: z adresy se vyčetl
+   * „klíč", podepsal se odkaz do R2 a prohlížeč dostal 404 - a v chatu i v
+   * seznamu lidí svítily iniciály, přestože fotka byla v pořádku uložená.
+   *
+   * Vlastní adresu proto pošleme rovnou, bez podepisování.
+   */
+  if (!uzivatel.photoUrl.startsWith('data:') && jeNaNasemWebu(uzivatel.photoUrl)) {
+    return NextResponse.redirect(new URL(uzivatel.photoUrl, zakladPortalu()), 307);
+  }
+
   if (!uzivatel.photoUrl.startsWith('data:')) {
     const klic = klicZAdresyUloziste(uzivatel.photoUrl);
     const podepsany = klic ? await podepsanyOdkazNaPrilohu(klic, 'fotka', false) : null;
@@ -75,4 +89,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       'Cache-Control': 'private, max-age=300, must-revalidate',
     },
   });
+}
+
+/**
+ * Míří adresa na portál sám (nebo je to cesta bez domény)? Takový obrázek
+ * leží v public/ a vydává ho Vercel - do úložiště se pro něj nechodí.
+ */
+function jeNaNasemWebu(adresa: string): boolean {
+  if (adresa.startsWith('/')) return true;
+  try {
+    return new URL(adresa).host === new URL(zakladPortalu()).host;
+  } catch {
+    return false;
+  }
 }
