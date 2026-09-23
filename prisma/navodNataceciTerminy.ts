@@ -125,6 +125,13 @@ Upravit poradu smí každý účastník. U opakované se upravuje celá řada; j
 
 Zvukaři Schůzky nevidí a v liště se jim ani nenabídnou.
 
+**Konflikty.** Když se dvě věci perou, objeví se nad kalendářem oranžový štítek **Konflikty** s číslem a u odkazu **Kalendář** v horní liště svítí odznak. Po kliknutí na štítek je seznam: co s čím, v kolik a který den — klik na řádek na ten den skočí. Dělí se na dvě části:
+
+- **Moje** — dvě moje věci naráz (casting a schůzka, porada přes natáčení). **Vidím je jen já.**
+- **Provoz** — dvakrát obsazené studio, herec nebo zvukař na dvou místech naráz. Tohle **vidí každý, kdo vidí kalendář**, protože to musí někdo přeložit.
+
+Portál přitom nic nezakazuje: zapsat událost přes kolizi jde dál (tlačítko **Uložit i tak**), jen se o tom ví.
+
 **Kalendář se obnovuje sám.** Když někdo jiný zapíše, přesune nebo smaže událost, uvidíte to do pár vteřin bez obnovování stránky — v prohlížeči i v aplikaci v telefonu. Rozepsaný formulář se tím nezavře.
 
 **Události přes sebe leží jako papíry na stole.** Název každé události zůstane vidět: co začíná skoro naráz, leží vedle sebe (a úzká bublina dá názvu dva řádky), co začíná později, si lehne navrch přes celou šířku — ale až pod názvy těch předchozích. Celý detail události se otevře kliknutím.

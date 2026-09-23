@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/db';
 import { pocetOtevrenychPripominek } from '@/lib/pripominkyServer';
+import { pocetKonfliktu } from '@/lib/konfliktyServer';
 import { pocetBonusuKeSchvaleni } from '@/lib/bonusyServer';
 import { authOptions } from '@/lib/auth';
 import { Topbar } from './components/Topbar';
@@ -117,6 +118,13 @@ export default async function PortalLayout({ children }: { children: React.React
   const bonusyKeSchvaleni = role === 'ADMIN' ? await pocetBonusuKeSchvaleni() : 0;
   // Pripominky k portalu ceka vyridit jen Zuzo-labuzo (zadani 15. 9. 2026).
   const pripominkyKVyrizeni = role === 'ADMIN' ? await pocetOtevrenychPripominek() : 0;
+
+  /**
+   * KONFLIKTY V KALENDÁŘI (zadání 23. 9. 2026: „měla by být notifikace
+   * u ikony kalendáře na hlavním panelu"). Číslo je součet mých konfliktů
+   * a provozních; kdo na kalendář nesmí, dostane nulu a odznak se nekreslí.
+   */
+  const konflikty = internal ? await pocetKonfliktu(session.user.id, role) : 0;
   /**
    * Otazník Nápovědy (zadání 19. 9. 2026: „herci a klienti by neměli vidět
    * naše interní nápovědy"). Tým ho má vždy; herec a klient jen tehdy, když
@@ -141,7 +149,10 @@ export default async function PortalLayout({ children }: { children: React.React
         itemsMobil={sTabuli(visibleFor(entriesMobil, role), maTabuli, vychoziLista(entriesMobil))}
         pageOptions={pageOptionsFor(role, maTabuli)}
         unreadNotifications={unread}
-        odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
+        odznaky={{
+          ...(bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : {}),
+          ...(konflikty > 0 ? { '/kalendar': konflikty } : {}),
+        }}
         pripominky={pripominkyKVyrizeni}
         spravcePripominek={role === 'ADMIN'}
         interni={internal}
