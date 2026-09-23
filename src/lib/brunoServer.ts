@@ -3,10 +3,9 @@ import { zapisBrunoUdalost } from '@/lib/projektLogServer';
 import { jeZminen } from '@/lib/chatUpozorneniServer';
 import { anthropicHlavicky } from '@/lib/anthropic';
 import { oznacHerceDotoceno, zrusHerceDotoceno } from '@/lib/dotoceniServer';
-import { denZDotazu } from '@/lib/brunoDenDotaz';
-import { prehledNaDen } from '@/lib/ranniPrehledServer';
 import { nactiPrirucku } from '@/lib/brunoPrirucka';
 import { napovedaProRoli } from '@/lib/brunoNapoveda';
+import { brunoOdpoved } from '@/lib/brunoOdpoved';
 import { bezTitulu } from '@/lib/jmena';
 
 /**
@@ -427,37 +426,6 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
       ? zprava.parentId ?? null
       : zprava.parentId ?? zprava.id;
 
-    /**
-     * „CO MÁM DNESKA?" (zadání 23. 9. 2026: „když se ho zeptám v chatu na daný
-     * den, tak mi to řekne, co tam mám"). Na otázku na program odpovídá
-     * Bruno rovnou z kalendáře - stejným textem jako ranní přehled, bez
-     * jazykového modelu, ať na to sednou přesná data.
-     */
-    if (oslovenPrimo) {
-      const den = denZDotazu(zprava.body);
-      if (den) {
-        const text = await prehledNaDen(zprava.userId, den).catch(() => null);
-        if (text) {
-          await prisma.message
-            .create({
-              data: {
-                conversationId: zprava.conversationId,
-                userId: bruno.id,
-                body: text,
-                parentId: kamOdpovedet,
-              },
-            })
-            .then(() =>
-              prisma.conversation.update({
-                where: { id: zprava.conversationId },
-                data: { lastMessageAt: new Date() },
-              }),
-            )
-            .catch((err) => console.error('Bruno: prehled dne se nepodarilo odeslat:', err));
-          return { stav: 'odpovedel', duvod: 'přehled dne' };
-        }
-      }
-    }
     const caflouProjectId =
       zprava.conversation.kind === 'PROJEKT' ? zprava.conversation.caflouProjectId : null;
     if (!caflouProjectId && !oslovenPrimo) {
@@ -564,6 +532,61 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
       }
     }
 
+    /** Poslední zprávy pro model - stejný text pro obě cesty (viz níž). */
+    const zpravyProModel = historie
+      .slice()
+      .reverse()
+      .filter((m) => m.body?.trim())
+      .map((m) => ({
+        kdo: m.user.name || m.user.email,
+        text: m.body.replace(/:ms-[a-z-]+:/g, '').trim().slice(0, 400),
+        jeBruno: Boolean(bruno && m.userId === bruno.id),
+      }));
+
+    /**
+     * MIMO KANÁL PROJEKTU MÁ BRUNO MOZEK (zadání 23. 9. 2026: „on by měl
+     * normálně mít mozek a vnímat všechno, na co se ptám").
+     *
+     * V soukromé zprávě a ve skupině se nehlídají strany ani dotočení - je to
+     * rozhovor. Bruno tam proto nepočítá žádné rozhodnutí k zapsání: přečte
+     * otázku, sám si zjistí, co potřebuje (kalendář, projekty, úkoly, návody
+     * — právy toho, kdo se ptá) a odpoví textem. Viz lib/brunoOdpoved.ts.
+     */
+    if (!caflouProjectId) {
+      if (!pisatel) return { stav: 'preskoceno', duvod: 'nevím, kdo píše' };
+
+      const text = await brunoOdpoved({
+        kdo: { userId: zprava.userId, role: pisatel.role },
+        jmeno: bezTitulu(zpravyProModel[zpravyProModel.length - 1]?.kdo ?? '') || 'kolego',
+        prirucka,
+        napoveda,
+        zpravy: zpravyProModel,
+        nazevKonverzace:
+          zprava.conversation.kind === 'SKUPINA' ? zprava.conversation.name ?? null : null,
+      });
+
+      if (!text) return { stav: 'nic', duvod: 'model neodpověděl' };
+
+      await prisma.message
+        .create({
+          data: {
+            conversationId: zprava.conversationId,
+            userId: bruno.id,
+            body: text,
+            parentId: kamOdpovedet,
+          },
+        })
+        .then(() =>
+          prisma.conversation.update({
+            where: { id: zprava.conversationId },
+            data: { lastMessageAt: new Date() },
+          }),
+        )
+        .catch((err) => console.error('Bruno: odpověď se nepodařilo odeslat:', err));
+
+      return { stav: 'odpovedel', duvod: 'odpověď na dotaz' };
+    }
+
     const kontext: Kontext = {
       caflouProjectId,
       oslovenPrimo,
@@ -578,14 +601,7 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
       })),
       dotoceni: dotoceni.map((d) => d.user.name || d.user.email),
       poznamky: poznamky.map((p) => p.poznamka).reverse(),
-      zpravy: historie
-        .reverse()
-        .filter((m) => m.body?.trim())
-        .map((m) => ({
-          kdo: m.user.name || m.user.email,
-          text: m.body.replace(/:ms-[a-z-]+:/g, '').trim().slice(0, 400),
-          jeBruno: Boolean(bruno && m.userId === bruno.id),
-        })),
+      zpravy: zpravyProModel,
     };
 
     const rozhodnuti = await zeptejSeModelu(sestavDotaz(kontext));
