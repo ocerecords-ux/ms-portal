@@ -35,7 +35,9 @@ export default async function ObjednavkaPage() {
   // firmy poptavajici audioknihy by ho ale mely mit vyplnene, bez sazby
   // nejde spocitat predbeznou cenu. U firem jen s reklamou sazba nedava
   // smysl a nekontroluje se (viz take /api/orders).
-  if (company.dealsAudiobooks && company.ratePerPage == null) {
+  // Firma, ktera si cenu navrhuje sama (zadani 23. 9. 2026 - Albatros),
+  // sazbu nepotrebuje: cena se nepocita, klient ji do objednavky napise.
+  if (company.dealsAudiobooks && company.ratePerPage == null && !company.cenuUrcujeKlient) {
     return (
       <p className="text-muted font-body">
         Vaší firmě zatím není nastavená sazba za normostranu. Kontaktujte prosím Mediaspace.
@@ -59,9 +61,19 @@ export default async function ObjednavkaPage() {
   return (
     <section>
       {company.dealsAudiobooks && company.dealsAds ? (
-        <OrderTypeSwitcher ratePerPage={company.ratePerPage!} herci={herci} uvodZaver={uvodZaver} />
+        <OrderTypeSwitcher
+          ratePerPage={company.ratePerPage ?? 0}
+          cenuUrcujeKlient={company.cenuUrcujeKlient}
+          herci={herci}
+          uvodZaver={uvodZaver}
+        />
       ) : company.dealsAudiobooks ? (
-        <OrderForm ratePerPage={company.ratePerPage!} herci={herci} uvodZaver={uvodZaver} />
+        <OrderForm
+          ratePerPage={company.ratePerPage ?? 0}
+          cenuUrcujeKlient={company.cenuUrcujeKlient}
+          herci={herci}
+          uvodZaver={uvodZaver}
+        />
       ) : (
         <AdOrderForm />
       )}

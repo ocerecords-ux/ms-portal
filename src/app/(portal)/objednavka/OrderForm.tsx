@@ -20,10 +20,20 @@ import { vygenerujUvod, vygenerujZaver, REZISER_UVODU } from '@/lib/uvodZaver';
 
 export function OrderForm({
   ratePerPage,
+  cenuUrcujeKlient = false,
   herci,
   uvodZaver = false,
 }: {
   ratePerPage: number;
+  /**
+   * CENU NAVRHUJE KLIENT (zadání 23. 9. 2026: „u Albatrosu bych dal pryč
+   * výpočet ceny z normostran. Jen tam nechal pole NS a cenu, ale nic
+   * nepočítal. Oni totiž cenu navrhují sami.").
+   *
+   * Pole „Počet normostran" i „Cena" zůstávají, jen se cena nepočítá ze
+   * sazby - klient ji vyplní sám a sazba se nikde neukazuje.
+   */
+  cenuUrcujeKlient?: boolean;
   herci: NarratorOption[];
   /** Úvod a závěr audioknihy (22. 9. 2026) - zatím jen Audiotéka. */
   uvodZaver?: boolean;
@@ -74,10 +84,14 @@ export function OrderForm({
   const [lastOrder, setLastOrder] = useState<{ title: string; price: number; varovani: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /** Cena, kterou klient navrhuje sám (jen když cenuUrcujeKlient). */
+  const [cenaVlastni, setCenaVlastni] = useState('');
+
   const price = useMemo(() => {
+    if (cenuUrcujeKlient) return Math.round(parseFloat(cenaVlastni.replace(/\s/g, '').replace(',', '.')) || 0);
     const n = parseFloat(pageCount) || 0;
     return Math.round(n * ratePerPage);
-  }, [pageCount, ratePerPage]);
+  }, [cenaVlastni, cenuUrcujeKlient, pageCount, ratePerPage]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,6 +102,9 @@ export function OrderForm({
       formData.set('kind', 'AUDIOBOOK');
       formData.set('title', title);
       formData.set('pageCount', pageCount);
+      // Cenu posílá jen klient, který si ji navrhuje sám - jinak si ji portál
+      // spočítá ze sazby a z formuláře by ji nikdo přebíjet neměl.
+      if (cenuUrcujeKlient) formData.set('price', String(price));
       formData.set('deadline', deadline);
       formData.set('preferredNarrator', narrators.join(', '));
       formData.set('note', note);
@@ -117,6 +134,7 @@ export function OrderForm({
       setDone(true);
       setTitle('');
       setPageCount('');
+      setCenaVlastni('');
       setDeadline('');
       setNarrators([]);
       setNote('');
@@ -253,9 +271,13 @@ export function OrderForm({
 
       <div>
         <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka audioknihy</h2>
-        <p className="text-white/75 text-xs font-heading mt-1.5">
-          Vaše sazba: <strong className="text-brand-green font-semibold">{ratePerPage} Kč</strong> / normostrana, bez DPH
-        </p>
+        {cenuUrcujeKlient ? (
+          <p className="text-white/75 text-xs font-heading mt-1.5">Cenu bez DPH vyplňte podle vaší nabídky.</p>
+        ) : (
+          <p className="text-white/75 text-xs font-heading mt-1.5">
+            Vaše sazba: <strong className="text-brand-green font-semibold">{ratePerPage} Kč</strong> / normostrana, bez DPH
+          </p>
+        )}
       </div>
 
       <div className="flex gap-4 flex-wrap">
@@ -282,14 +304,31 @@ export function OrderForm({
         <Field
           label="Cena bez DPH"
           className="flex-1 min-w-[140px]"
-          tooltip="Cena se vypočítává dle dohodnuté ceny za normostranu. Uvedená částka je bez DPH."
+          tooltip={
+            cenuUrcujeKlient
+              ? 'Cenu navrhujete sami. Uvedená částka je bez DPH.'
+              : 'Cena se vypočítává dle dohodnuté ceny za normostranu. Uvedená částka je bez DPH.'
+          }
         >
-          <input
-            readOnly
-            value={`${new Intl.NumberFormat('cs-CZ').format(price)} Kč`}
-            title="Cena se vypočítává dle dohodnuté ceny za normostranu. Uvedená částka je bez DPH."
-            className="input input-readonly"
-          />
+          {cenuUrcujeKlient ? (
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={cenaVlastni}
+              onChange={(e) => setCenaVlastni(e.target.value)}
+              placeholder="0"
+              title="Cenu navrhujete sami. Uvedená částka je bez DPH."
+              className="input"
+            />
+          ) : (
+            <input
+              readOnly
+              value={`${new Intl.NumberFormat('cs-CZ').format(price)} Kč`}
+              title="Cena se vypočítává dle dohodnuté ceny za normostranu. Uvedená částka je bez DPH."
+              className="input input-readonly"
+            />
+          )}
         </Field>
       </div>
 

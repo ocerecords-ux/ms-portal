@@ -36,6 +36,7 @@ const schema = z.object({
   driveFolderUrl: z.string().trim().optional(),
   dealsAudiobooks: z.boolean().optional(),
   audioknihyNaKlic: z.boolean().optional(),
+  cenuUrcujeKlient: z.boolean().optional(),
   dealsAds: z.boolean().optional(),
   active: z.boolean().optional(),
 });
@@ -83,6 +84,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               driveFolderUrl: data.driveFolderUrl || null,
               ...(data.dealsAudiobooks !== undefined ? { dealsAudiobooks: data.dealsAudiobooks } : {}),
               ...(data.audioknihyNaKlic !== undefined ? { audioknihyNaKlic: data.audioknihyNaKlic } : {}),
+              // Cenu navrhuje klient (23. 9. 2026) - objednavka pak cenu
+              // nepocita ze sazby, klient ji vyplni sam.
+              ...(data.cenuUrcujeKlient !== undefined ? { cenuUrcujeKlient: data.cenuUrcujeKlient } : {}),
               ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
             }
           : {}),

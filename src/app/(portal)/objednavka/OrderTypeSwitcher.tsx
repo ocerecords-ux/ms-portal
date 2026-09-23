@@ -12,10 +12,13 @@ import type { NarratorOption } from './NarratorMultiSelect';
  */
 export function OrderTypeSwitcher({
   ratePerPage,
+  cenuUrcujeKlient = false,
   herci,
   uvodZaver = false,
 }: {
   ratePerPage: number;
+  /** Cenu navrhuje klient (23. 9. 2026) - viz OrderForm. */
+  cenuUrcujeKlient?: boolean;
   herci: NarratorOption[];
   uvodZaver?: boolean;
 }) {
@@ -44,7 +47,7 @@ export function OrderTypeSwitcher({
         </button>
       </div>
 
-      <div className="w-full">{tab === 'audiokniha' ? <OrderForm ratePerPage={ratePerPage} herci={herci} uvodZaver={uvodZaver} /> : <AdOrderForm />}</div>
+      <div className="w-full">{tab === 'audiokniha' ? <OrderForm ratePerPage={ratePerPage} cenuUrcujeKlient={cenuUrcujeKlient} herci={herci} uvodZaver={uvodZaver} /> : <AdOrderForm />}</div>
     </div>
   );
 }

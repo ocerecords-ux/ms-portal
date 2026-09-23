@@ -189,6 +189,8 @@ async function main() {
   await peterTakyZvukar();
   await pristupNaTabule();
   await tabuleDoListy();
+  await klientAlbatrosu();
+  await albatrosCenuUrcujeSam();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1040,6 +1042,91 @@ async function tabuleDoListy() {
     console.log(`  tabule do listy: ${sPristupem.length} uctu`);
   } catch (err) {
     console.warn('  tabuli do listy se nepodarilo pridat:', err);
+  }
+}
+
+/**
+ * KLIENT U PŘENESENÝCH PROJEKTŮ ALBATROSU (23. 9. 2026: „potřebuju ještě
+ * doplnit klienta u projektu, co jsme přenesli z Caflou pro Albatros, aby se
+ * jim objevili v dokončených na portálu ... ale potichu, aby neodešla žádná
+ * notifikace").
+ *
+ * Píše se rovnou do databáze, takže neběží nic, co posílá zprávy. Sahá jen
+ * na projekty té firmy, které klienta zatím NEMAJÍ - cizí jméno nikomu
+ * nepřepíše. Běží jednou.
+ */
+async function klientAlbatrosu() {
+  const ZNAMKA = 'klient-albatros-prenesene';
+  const EMAIL = 'tereza.bohdalova@albatrosmedia.cz';
+  /**
+   * Projekty, u kterych je klientkou Nikola Trochtova (zadani 23. 9. 2026:
+   * "A tady taky Albatros a klient Nikola Trochtova"). Zbytek prenesenych
+   * projektu Albatrosu pripadne Tereze Bohdalove.
+   */
+  const NIKOLA = ['RIVAL DARLING', 'POHLEDNÝ ĎÁBEL', 'POSLEDNÍ DOPIS', 'KLEKÁNICE'];
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const klient = await prisma.user.findFirst({ where: { email: EMAIL }, select: { id: true, companyId: true } });
+    if (!klient) {
+      console.warn(`  klient ${EMAIL} v portalu neni, projekty Albatrosu zustavaji bez klienta`);
+      return;
+    }
+    const firmaId = klient.companyId;
+    if (!firmaId) {
+      console.warn('  klient Albatrosu nema firmu, preskakuji');
+      return;
+    }
+
+    // Nikola Trochtova - hledame ji ve stejne firme podle prijmeni, aby to
+    // preslo i pri jinem tvaru e-mailu.
+    const nikola = await prisma.user.findFirst({
+      where: { companyId: firmaId, name: { contains: 'Trochtová' } },
+      select: { id: true },
+    });
+    let nikoline = 0;
+    if (nikola) {
+      for (const nazev of NIKOLA) {
+        const vysledek = await prisma.projectMeta.updateMany({
+          where: { companyId: firmaId, klientUserId: null, name: { startsWith: nazev } },
+          data: { klientUserId: nikola.id },
+        });
+        nikoline += vysledek.count;
+      }
+    } else {
+      console.warn('  Nikola Trochtova v portalu neni, jeji projekty zustavaji Tereze');
+    }
+
+    const vysledek = await prisma.projectMeta.updateMany({
+      where: { companyId: firmaId, klientUserId: null },
+      data: { klientUserId: klient.id },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  klient Albatrosu doplnen: Nikola u ${nikoline}, Tereza u ${vysledek.count} projektu`);
+  } catch (err) {
+    console.warn('  klienta Albatrosu se nepodarilo doplnit:', err);
+  }
+}
+
+/**
+ * CENU SI ALBATROS NAVRHUJE SAM (zadani 23. 9. 2026: "u Albatrosu bych dal
+ * pryc vypocet ceny z normostran. Jen tam nechal pole NS a cenu, ale nic
+ * nepocital. Oni totiz cenu navrhuji sami."). Priznak jde jinak zaskrtnout
+ * i rucne na karte firmy.
+ */
+async function albatrosCenuUrcujeSam() {
+  const ZNAMKA = 'albatros-cenu-urcuje-klient';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.company.updateMany({
+      where: { name: { startsWith: 'Albatros' } },
+      data: { cenuUrcujeKlient: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  Albatros: cenu urcuje klient (${vysledek.count} firem)`);
+  } catch (err) {
+    console.warn('  priznak "cenu urcuje klient" se u Albatrosu nepodarilo nastavit:', err);
   }
 }
 

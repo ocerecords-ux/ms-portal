@@ -43,8 +43,29 @@ export default async function MojeTabule() {
    * Jedna tabule se otevře rovnou, u víc se nabídne, která.
    */
   if (session.user.role !== 'TABULE') {
-    const povolene = (ucet?.tabulePristup ?? []) as { id: string; name: string; tabuleKlic: string | null }[];
-    if (povolene.length === 0) redirect('/projekty');
+    /**
+     * ADMIN VIDÍ VŠECHNY TABULE (oprava 23. 9. 2026: „když kliknu na odkaz
+     * tabule na hlavní liště, tam mě to přesměruje na projekty"). Admin nemá
+     * proč mít sám sobě povolovat pobočky na kartě - vybere si tady.
+     */
+    const povolene =
+      session.user.role === 'ADMIN'
+        ? await prisma.studio.findMany({
+            where: { active: true, parentStudioId: null },
+            select: { id: true, name: true, tabuleKlic: true },
+            orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+          })
+        : ((ucet?.tabulePristup ?? []) as { id: string; name: string; tabuleKlic: string | null }[]);
+    if (povolene.length === 0) {
+      return (
+        <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0f0c17', color: '#f3f0fb', fontFamily: 'system-ui', padding: 24, textAlign: 'center' }}>
+          <div>
+            <h1 style={{ fontSize: 32, margin: 0 }}>Tabule vám zatím nikdo nepovolil</h1>
+            <p style={{ opacity: 0.7, fontSize: 18 }}>Napište Mediaspace, které studio chcete vidět - přístup se zapíná na kartě uživatele.</p>
+          </div>
+        </main>
+      );
+    }
     if (povolene.length === 1) redirect(`/tabule/${await klicStudia(povolene[0])}`);
     const odkazy = await Promise.all(
       povolene.map(async (s) => ({ nazev: s.name, klic: await klicStudia(s) })),

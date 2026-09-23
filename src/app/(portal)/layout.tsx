@@ -90,8 +90,13 @@ export default async function PortalLayout({ children }: { children: React.React
     nouzovyRezim = true;
   }
 
-  /** Tabule v liště (23. 9. 2026) - jen komu ji admin na kartě povolil. */
-  const maTabuli = ((ucet?.tabulePristup ?? []) as { id: string }[]).length > 0;
+  /**
+   * Tabule v liště (23. 9. 2026) - komu ji admin na kartě povolil. Admin ji
+   * má vždycky: vybere si na /tabule/moje, kterou pobočku chce (oprava
+   * 23. 9. 2026: „když kliknu na odkaz tabule na hlavní liště, tam mě to
+   * přesměruje na projekty").
+   */
+  const maTabuli = role === 'ADMIN' || ((ucet?.tabulePristup ?? []) as { id: string }[]).length > 0;
 
   /**
    * NOVÝ HEREC NEJDŘÍV DOPLNÍ ÚDAJE (zadání 16. 9. 2026: „po tom, co si herec

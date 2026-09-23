@@ -33,6 +33,9 @@ const orderSchema = z.object({
   kind: z.enum(ORDER_KINDS).default('AUDIOBOOK'),
   title: z.string().trim().min(1, 'Název je povinný.'),
   pageCount: z.string().optional(),
+  // Cena od klienta (23. 9. 2026) - jen u firem, ktere si ji navrhuji samy
+  // (Company.cenuUrcujeKlient). U ostatnich se ignoruje a pocita se ze sazby.
+  price: z.string().optional(),
   deadline: z.string().optional(),
   note: z.string().optional(),
   preferredNarrator: z.string().optional(),
@@ -58,6 +61,7 @@ export async function POST(req: NextRequest) {
     kind: formData.get('kind') || undefined,
     title: formData.get('title'),
     pageCount: formData.get('pageCount'),
+    price: formData.get('price') ?? undefined,
     deadline: formData.get('deadline'),
     note: formData.get('note'),
     preferredNarrator: formData.get('preferredNarrator'),
@@ -95,11 +99,22 @@ export async function POST(req: NextRequest) {
   // ratePerPage/normostrany davaji smysl jen u objednavky audioknihy - u
   // reklamy (kind AD) se cena zatim nepocita (zadani 12. 9. 2026: "zbytek si
   // vyspecifikujeme později").
-  if (isAudiobook && company.ratePerPage == null) {
+  // Firma, ktera si cenu navrhuje sama (zadani 23. 9. 2026 - Albatros),
+  // sazbu za normostranu vubec nepotrebuje.
+  if (isAudiobook && company.ratePerPage == null && !company.cenuUrcujeKlient) {
     return NextResponse.json({ error: 'Vaší firmě zatím není nastavená sazba za normostranu.' }, { status: 400 });
   }
 
-  const priceEstimate = isAudiobook ? calculatePrice(pageCount, company.ratePerPage ?? 0) : null;
+  const cenaOdKlienta = (() => {
+    const raw = (parsed.data.price ?? '').replace(/\s/g, '').replace(',', '.');
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
+  })();
+  const priceEstimate = !isAudiobook
+    ? null
+    : company.cenuUrcujeKlient
+      ? cenaOdKlienta
+      : calculatePrice(pageCount, company.ratePerPage ?? 0);
 
   // Priloha objednavky. Kdyz uloziste souboru neni nastavene (coz je k
   // 9. 9. 2026 na produkci porad pripad), uploadOrderAttachment vrati null -

@@ -7,6 +7,10 @@ import { authOptions } from '@/lib/auth';
 import { isInternalRole } from '@/lib/roles';
 import { posluchacZCookie } from '@/lib/preposlechPristup';
 import { Preposlech } from '@/app/(portal)/projekty/[id]/Preposlech';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
+import { JazykProvider } from '@/app/(portal)/components/JazykProvider';
+import { PrepinacRezimu } from './PrepinacRezimu';
 
 /**
  * Celoobrazovkový přeposlech pro klienta (zadání 11. 9. 2026: „prostě mu
@@ -24,23 +28,27 @@ import { Preposlech } from '@/app/(portal)/projekty/[id]/Preposlech';
  */
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Přeposlech nahrávky',
-  // Odkaz je sice neuhodnutelny, ale ve vyhledavaci nema co delat.
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: prelozit(nactiJazyk(), 'preposlechOdkaz.titulek'),
+    // Odkaz je sice neuhodnutelny, ale ve vyhledavaci nema co delat.
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function PreposlechOdkazemPage({ params }: { params: { token: string } }) {
   const caflouProjectId = await projektPodleTokenu(params.token);
+  const jazyk = nactiJazyk();
 
   if (!caflouProjectId) {
     return (
       <main className="min-h-screen bg-page flex items-center justify-center p-6">
         <div className="bg-surface rounded-card border border-line shadow-sm max-w-[420px] p-7 text-center">
-          <h1 className="font-heading font-semibold text-lg text-ink m-0 mb-2">Odkaz už neplatí</h1>
+          <h1 className="font-heading font-semibold text-lg text-ink m-0 mb-2">
+            {prelozit(jazyk, 'preposlechOdkaz.neplatnyNadpis')}
+          </h1>
           <p className="text-sm font-body text-muted m-0">
-            Tenhle odkaz na přeposlech byl uzavřený nebo nahrazený novým. Napište nám a pošleme vám
-            aktuální.
+            {prelozit(jazyk, 'preposlechOdkaz.neplatnyText')}
           </p>
         </div>
       </main>
@@ -66,13 +74,24 @@ export default async function PreposlechOdkazemPage({ params }: { params: { toke
   return (
     <main className="min-h-screen bg-page p-3 sm:p-5">
       <div className="max-w-[1600px] mx-auto">
-        <Preposlech
-          caflouProjectId={caflouProjectId}
-          projectName={meta?.name || 'Nahrávka'}
-          pocatecniStav={stav}
-          jenPoslech
-          token={params.token}
-        />
+        {/* Stranka lezi mimo skupinu (portal), takze si jazyk pro komponenty
+            v prohlizeci musi rozdat sama (zadani 13. 9. 2026). */}
+        <JazykProvider jazyk={jazyk}>
+          {/* Režim pro nevidomé (23. 9. 2026) - přepíná se tlačítkem nahoře. */}
+          <PrepinacRezimu
+            caflouProjectId={caflouProjectId}
+            projectName={meta?.name || prelozit(jazyk, 'preposlechOdkaz.zalohaNazvu')}
+            token={params.token}
+          >
+            <Preposlech
+              caflouProjectId={caflouProjectId}
+              projectName={meta?.name || prelozit(jazyk, 'preposlechOdkaz.zalohaNazvu')}
+              pocatecniStav={stav}
+              jenPoslech
+              token={params.token}
+            />
+          </PrepinacRezimu>
+        </JazykProvider>
       </div>
     </main>
   );

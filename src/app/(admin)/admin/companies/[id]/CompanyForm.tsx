@@ -59,6 +59,12 @@ export function CompanyForm({ company }: { company: Company }) {
    * rozpočet se ziskem z knihy. Rozpočtu na výrobu se to nedotkne.
    */
   const [naKlic, setNaKlic] = useState(company.audioknihyNaKlic ?? false);
+  /**
+   * Cenu navrhuje klient (zadání 23. 9. 2026: „u Albatrosu bych dal pryč
+   * výpočet ceny z normostran"). Objednávka pak cenu nepočítá - klient si ji
+   * do ní napíše sám a sazba za normostranu není potřeba.
+   */
+  const [cenuUrcujeKlient, setCenuUrcujeKlient] = useState(company.cenuUrcujeKlient ?? false);
   // Vyrazeni misto mazani (zadani 10. 9. 2026): na firme visi doklady
   // a projekty, ktere musi zustat citelne.
   const [aktivni, setAktivni] = useState(company.active);
@@ -130,6 +136,7 @@ export function CompanyForm({ company }: { company: Company }) {
                 dealsAudiobooks,
                 dealsAds,
                 audioknihyNaKlic: dealsAudiobooks ? naKlic : false,
+                cenuUrcujeKlient: dealsAudiobooks ? cenuUrcujeKlient : false,
               }
             : {}),
         }),
@@ -342,9 +349,28 @@ export function CompanyForm({ company }: { company: Company }) {
             </AdminField>
           )}
 
-          {/* Sazba za normostranu dava smysl jen u audioknih - u reklamnich
-              klientu se cena bude pocitat kalkulackou nad Cenikem. */}
+          {/* Cenu navrhuje klient (23. 9. 2026) - pak se z normostran nic
+              nepocita a sazba neni potreba. */}
           {dealsAudiobooks && (
+            <AdminField
+              label="Cenu navrhuje klient"
+              hint="v objednávce se cena nepočítá z normostran — klient si ji vyplní sám (pole Počet normostran i Cena zůstávají)"
+            >
+              <label className="flex items-center gap-2 text-sm font-heading text-ink">
+                <input
+                  type="checkbox"
+                  checked={cenuUrcujeKlient}
+                  onChange={(e) => setCenuUrcujeKlient(e.target.checked)}
+                />
+                Cenu si navrhuje sám
+              </label>
+            </AdminField>
+          )}
+
+          {/* Sazba za normostranu dava smysl jen u audioknih - u reklamnich
+              klientu se cena bude pocitat kalkulackou nad Cenikem. A u firmy,
+              ktera si cenu navrhuje sama, se nepouzije vubec. */}
+          {dealsAudiobooks && !cenuUrcujeKlient && (
             <AdminField label="Sazba za normostranu (Kč bez DPH)" required>
               <input required type="number" min={0} value={rate} onChange={(e) => setRate(e.target.value)} className="admin-input" />
             </AdminField>

@@ -98,6 +98,15 @@ model Company {
   /// kde je videt zisk z knihy. Viz ProjectBudget.tsx.
   audioknihyNaKlic Boolean @default(false)
 
+  /// CENU NAVRHUJE KLIENT (zadani 23. 9. 2026: "u Albatrosu bych dal pryc
+  /// vypocet ceny z normostran. Jen tam nechal pole NS a cenu, ale nic
+  /// nepocital. Oni totiz cenu navrhuji sami.").
+  ///
+  /// U takove firmy se v objednavce audioknihy cena NEPOCITA ze sazby za
+  /// normostranu - klient ji vyplni sam a sazba za normostranu nemusi byt
+  /// vubec nastavena. Pole "Pocet normostran" zustava.
+  cenuUrcujeKlient Boolean @default(false)
+
   // --- Dodavatel (type = DODAVATEL) - fakturacni/kontaktni udaje, zadani 5. 9. 2026 ---
   contactName    String?   // kontaktni osoba
   /// Posílat faktury i klientovi projektu (zadání 13. 9. 2026). Na kontaktní
