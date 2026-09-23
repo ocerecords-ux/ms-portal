@@ -42,6 +42,8 @@ type EditableUser = {
   dostavaDotoceno: boolean;
   /** Zvonek, kdyz klient schvali reklamu (23. 9. 2026). */
   schvaleniReklam: boolean;
+  /** Striha externe - v kalendari letadlo, do obsazenosti studia se nepocita. */
+  strihaExterne: boolean;
   /** Vidi znacku stavu nabidky u reklam (23. 9. 2026). */
   nabidkyReklam: boolean;
   /** Klient chce vědět o dotočeném herci na svém projektu (zadání 16. 9. 2026). */
@@ -97,6 +99,7 @@ export function UserEditForm({
   const [jenNahled, setJenNahled] = useState(user.jenNahled);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
   const [schvaleniReklam, setSchvaleniReklam] = useState(user.schvaleniReklam);
+  const [strihaExterne, setStrihaExterne] = useState(user.strihaExterne);
   const [nabidkyReklam, setNabidkyReklam] = useState(user.nabidkyReklam);
   const [dostavaDotocenoKlient, setDostavaDotocenoKlient] = useState(user.dostavaDotocenoKlient);
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
@@ -206,6 +209,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('sledujeZmenyProjektu', sledujeZmeny ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('schvaleniReklam', schvaleniReklam ? '1' : '0');
+        if (isMediaspace) fd.set('strihaExterne', strihaExterne ? '1' : '0');
         if (isMediaspace) fd.set('nabidkyReklam', nabidkyReklam ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
         if (isMediaspace && role !== 'ZVUKAR') fd.set('takyZvukar', takyZvukar ? '1' : '0');
@@ -581,6 +585,28 @@ export function UserEditForm({
                 Zvonek: klient schválil reklamu
                 <span className="block text-xs text-muted">
                   notifikace pokaždé, když klient odklepne spot k fakturaci
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Striha externe (zadani 23. 9. 2026: „vyjimka je Matej Suk, ktery
+            striha externe"). V kalendari u jeho udalosti sviti letadlo
+            a studio se u nich nepocita jako obsazene. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={strihaExterne}
+                onChange={(e) => setStrihaExterne(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Stříhá externě
+                <span className="block text-xs text-muted">
+                  v kalendáři svítí letadlo a jeho práce nedrží místo ve studiu
                 </span>
               </span>
             </label>

@@ -16,9 +16,11 @@ import type { Role } from '@prisma/client';
  *
  *  - MOJE: co se překrývá mně osobně - casting a schůzka naráz, porada přes
  *    natáčení. Vidím je JEN JÁ; nikoho jiného nezajímá, že mám plno.
- *  - PROVOZ: co drhne ve studiu - dvě věci v jednom studiu, herec nebo zvukař
- *    na dvou místech naráz. Tohle vidí každý, kdo vidí kalendář, protože to
- *    musí někdo přeložit.
+ *  - PROVOZ: co drhne v natáčení - dvě věci v jednom studiu, herec nebo zvukař
+ *    na dvou místech naráz. JEN TAM, KDE JE ČLOVĚK OZNAČENÝ (upřesnění
+ *    23. 9. 2026: „mě nezajímají konflikty v natáčení. Jen tam, kde jsem
+ *    označený") - jako zvukař nebo herec u jedné z těch dvou událostí. Cizí
+ *    kolize v cizím studiu je šum, ne informace.
  *
  * JE TO UPOZORNĚNÍ, NE ZÁKAZ. Portál nic nezakazuje ani nepřepisuje - jen
  * řekne, že se dvě věci perou, a ukáže které. Zápis přes kolizi jde dál
@@ -46,6 +48,17 @@ type Polozka = {
   start: Date;
   end: Date;
   popis: string;
+  /**
+   * ZABÍRÁ MÍSTO VE STUDIU? (upřesnění 23. 9. 2026: „můžou být dva střihy
+   * v každém studiu. Buď je v jednom studiu jedno natáčení a jeden střih,
+   * nebo dva střihy. Nemůžou být jen dvě natáčení ve stejný čas v jednom
+   * studiu.")
+   *
+   * Střih běží u stolu, ne v kabině - dva střihy vedle sebe jsou normální
+   * provoz. Konflikt studia je tedy jen tam, kde se potkají DVĚ VĚCI, které
+   * potřebují kabinu: natáčení, casting nebo blokace studia.
+   */
+  obsazujeStudio: boolean;
   studioId: string | null;
   studioName: string | null;
   herecId: string | null;
@@ -72,7 +85,11 @@ const prunik = (a: Polozka, b: Polozka) => {
  * Provozní konflikty v rozsahu. Čte celý kalendář, ne jen svoje - proto se
  * ptá na právo na kalendář a nic dalšího nefiltruje.
  */
-async function provozniKonflikty(od: Date, doKdy: Date): Promise<Konflikt[]> {
+async function provozniKonflikty(
+  od: Date,
+  doKdy: Date,
+  kdo: { userId: string; jmeno: string | null },
+): Promise<Konflikt[]> {
   const [sloty, bloky] = await Promise.all([
     prisma.recordingSlot
       .findMany({
@@ -91,12 +108,29 @@ async function provozniKonflikty(od: Date, doKdy: Date): Promise<Konflikt[]> {
       .catch(() => []),
   ]);
 
+  /**
+   * KDO STŘÍHÁ EXTERNĚ (23. 9. 2026: „výjimka je Matěj Suk, který stříhá
+   * externě … ale Matěj se píše pod Prahu"). Jeho práce se do kalendáře píše
+   * pod studio, ale v tom studiu nesedí - do obsazenosti se nepočítá vůbec.
+   */
+  const externiIds = new Set(
+    (
+      await prisma.user
+        .findMany({ where: { strihaExterne: true }, select: { id: true } })
+        .catch(() => [])
+    ).map((u) => u.id),
+  );
+
+  /** Druhy blokace, které opravdu drží kabinu. Střih a volno ne. */
+  const OBSAZUJE = ['NATACENI', 'CASTING', 'INTERNAL', 'MAINTENANCE'];
+
   const polozky: Polozka[] = [
     ...sloty.map((s) => ({
       klic: `slot:${s.id}`,
       start: s.start,
       end: s.end,
       popis: `${s.request.projectName} · ${s.request.actorName} (${s.studio.shortName})`,
+      obsazujeStudio: !(s.zvukarUserId && externiIds.has(s.zvukarUserId)),
       studioId: s.studio.id,
       studioName: s.studio.shortName,
       herecId: s.request.actorUserId,
@@ -109,6 +143,8 @@ async function provozniKonflikty(od: Date, doKdy: Date): Promise<Konflikt[]> {
       start: b.start,
       end: b.end,
       popis: `${b.title} (${b.studio.shortName})`,
+      obsazujeStudio:
+        OBSAZUJE.includes(String(b.kind)) && !(b.zvukarUserId && externiIds.has(b.zvukarUserId)),
       studioId: b.studio.id,
       studioName: b.studio.shortName,
       herecId: b.actorUserId,
@@ -137,7 +173,7 @@ async function provozniKonflikty(od: Date, doKdy: Date): Promise<Konflikt[]> {
       if (!koliduje(a, b)) continue;
 
       const duvody: string[] = [];
-      if (a.studioId && a.studioId === b.studioId) {
+      if (a.studioId && a.studioId === b.studioId && a.obsazujeStudio && b.obsazujeStudio) {
         duvody.push(`Studio ${a.studioName} je obsazené dvakrát`);
       }
       const herecA = jmeno(a.herecId, a.herecJmeno);
@@ -148,9 +184,21 @@ async function provozniKonflikty(od: Date, doKdy: Date): Promise<Konflikt[]> {
       const zvukarA = jmeno(a.zvukarId, a.zvukarJmeno);
       const zvukarB = jmeno(b.zvukarId, b.zvukarJmeno);
       if (zvukarA && zvukarB && (a.zvukarId ? a.zvukarId === b.zvukarId : zvukarA === zvukarB)) {
+        // Tohle platí i pro externistu: dvě věci naráz nestihne ani on.
         duvody.push(`Zvukař ${zvukarA} je na dvou místech naráz`);
       }
       if (duvody.length === 0) continue;
+
+      /**
+       * JEN MOJE NATÁČENÍ (23. 9. 2026). Konflikt se ukáže tomu, kdo je
+       * u jedné z těch dvou událostí napsaný - zvukař nebo herec. Kdo u toho
+       * není, tomu je to jedno a v seznamu by to jen překáželo.
+       */
+      const mojeUdalost = (p: Polozka) =>
+        p.herecId === kdo.userId ||
+        p.zvukarId === kdo.userId ||
+        (kdo.jmeno !== null && (p.herecJmeno === kdo.jmeno || p.zvukarJmeno === kdo.jmeno));
+      if (!mojeUdalost(a) && !mojeUdalost(b)) continue;
 
       const p = prunik(a, b);
       konflikty.push({
@@ -212,9 +260,16 @@ export async function najdiKonflikty(
   od: Date,
   doKdy: Date,
 ): Promise<Konflikty> {
+  const ja = await prisma.user
+    .findUnique({ where: { id: userId }, select: { name: true, email: true } })
+    .catch(() => null);
+  const jmeno = ja ? bezTitulu(ja.name) || ja.email : null;
+
   const [moje, provoz] = await Promise.all([
     mojeKonflikty(userId, od, doKdy),
-    canViewCalendar(role as Role) ? provozniKonflikty(od, doKdy) : Promise.resolve([]),
+    canViewCalendar(role as Role)
+      ? provozniKonflikty(od, doKdy, { userId, jmeno })
+      : Promise.resolve([]),
   ]);
 
   const podleCasu = (a: Konflikt, b: Konflikt) => (a.den + a.cas).localeCompare(b.den + b.cas);

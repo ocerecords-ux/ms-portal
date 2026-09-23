@@ -128,7 +128,9 @@ Zvukaři Schůzky nevidí a v liště se jim ani nenabídnou.
 **Konflikty.** Když se dvě věci perou, objeví se nad kalendářem oranžový štítek **Konflikty** s číslem a u odkazu **Kalendář** v horní liště svítí odznak. Po kliknutí na štítek je seznam: co s čím, v kolik a který den — klik na řádek na ten den skočí. Dělí se na dvě části:
 
 - **Moje** — dvě moje věci naráz (casting a schůzka, porada přes natáčení). **Vidím je jen já.**
-- **Provoz** — dvakrát obsazené studio, herec nebo zvukař na dvou místech naráz. Tohle **vidí každý, kdo vidí kalendář**, protože to musí někdo přeložit.
+- **Natáčení** — dvakrát obsazené studio, herec nebo zvukař na dvou místech naráz. Ukazuje se **jen tam, kde jste označený** (jako zvukař nebo herec u jedné z těch dvou událostí); cizí kolize v cizím studiu je šum.
+
+**Co konflikt studia je a co ne:** v jednom studiu můžou být klidně **dva střihy** nebo **natáčení a střih** — střih se dělá u stolu, ne v kabině. Konflikt se hlásí, jen když se potkají **dvě věci, které kabinu potřebují** (natáčení, casting, blokace studia). Kdo má na kartě **Stříhá externě** (Matěj Suk), tomu svítí v kalendáři **letadlo** a jeho práce místo ve studiu nedrží vůbec, i když je psaná pod Prahou.
 
 Portál přitom nic nezakazuje: zapsat událost přes kolizi jde dál (tlačítko **Uložit i tak**), jen se o tom ví.
 

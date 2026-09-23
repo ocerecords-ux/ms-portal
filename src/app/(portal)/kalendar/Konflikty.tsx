@@ -10,9 +10,10 @@ import { useEffect, useState } from 'react';
  * kliknutí se rozbalí seznam: co s čím se pere, v kolik a který den; klik na
  * řádek skočí v kalendáři na ten den.
  *
- * DVA ODDÍLY (upřesnění: „mé konflikty zobrazuj jen mi a zbytek všem"):
- * „Moje" jsou dvě věci naráz u mě, „Provoz" je dvakrát obsazené studio nebo
- * herec či zvukař na dvou místech. Moje vidím jen já, provozní všichni.
+ * DVA ODDÍLY: „Moje" jsou dvě věci naráz u mě (casting a schůzka), „Natáčení"
+ * je dvakrát obsazené studio nebo herec či zvukař na dvou místech. Natáčení
+ * se ukazuje jen tam, KDE JE ČLOVĚK OZNAČENÝ (upřesnění 23. 9. 2026: „mě
+ * nezajímají konflikty v natáčení. Jen tam, kde jsem označený").
  *
  * Počítá se to na serveru pro zobrazený rozsah - viz /api/kalendar/konflikty.
  */
@@ -124,7 +125,7 @@ export function Konflikty({
           {provoz.length > 0 && (
             <span className="flex flex-col gap-1.5">
               <span className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted">
-                Provoz ({provoz.length}) — studia, herci, zvukaři
+                Natáčení ({provoz.length}) — kde jste označený
               </span>
               {radky(provoz)}
             </span>

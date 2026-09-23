@@ -361,6 +361,21 @@ export default async function KalendarPage({
       })),
   ]);
 
+  /**
+   * KDO STŘÍHÁ EXTERNĚ (zadání 23. 9. 2026: „u Matěje by defaultně mohla
+   * svítit ikona s letadlem, ať je to jasné. Ale Matěj se píše pod Prahu").
+   * Jeho práce se do kalendáře píše pod studio, ale v tom studiu nesedí.
+   */
+  const externiZvukari = new Set(
+    (
+      await prisma.user
+        .findMany({ where: { strihaExterne: true }, select: { id: true } })
+        .catch(() => [])
+    ).map((u) => u.id),
+  );
+  const jeExterni = (zvukarUserId: string | null) =>
+    Boolean(zvukarUserId && externiZvukari.has(zvukarUserId));
+
   const events: CalendarEvent[] = [
     ...sloty.map((s) => ({
       id: s.id,
@@ -377,6 +392,7 @@ export default async function KalendarPage({
       poznamka: s.note,
       rezie: sRezii.has(s.id),
       rezieRucne: s.rezieOnline,
+      externi: jeExterni(s.zvukarUserId),
       hovorOdkaz: odkazHovoru.get(s.studioId) ?? null,
       udalost: {
         caflouProjectId: s.caflouProjectId,
@@ -410,6 +426,7 @@ export default async function KalendarPage({
       poznamka: b.note,
       rezie: sRezii.has(b.id),
       rezieRucne: b.rezieOnline,
+      externi: jeExterni(b.zvukarUserId),
       hovorOdkaz: odkazHovoru.get(b.studioId) ?? null,
       // Rozepsané údaje pro úpravu události (zadání 14. 9. 2026).
       udalost: {

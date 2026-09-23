@@ -108,6 +108,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           jenNahled: user.jenNahled,
           dostavaDotoceno: user.dostavaDotoceno,
           schvaleniReklam: user.schvaleniReklam,
+          strihaExterne: user.strihaExterne,
           nabidkyReklam: user.nabidkyReklam,
           dostavaDotocenoKlient: user.dostavaDotocenoKlient,
           dostavaObjednavky: user.dostavaObjednavky,

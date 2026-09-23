@@ -194,6 +194,7 @@ async function main() {
   await odkazyNaHovory();
   await ranniPrehledOndrejovi();
   await schvaleniReklamZvonek();
+  await matejStrihaExterne();
   await albatrosCenuUrcujeSam();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
@@ -1304,6 +1305,37 @@ async function schvaleniReklamZvonek() {
     );
   } catch (err) {
     console.warn('  zvonek o schvaleni reklam se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * MATĚJ SUK STŘÍHÁ EXTERNĚ (zadání 23. 9. 2026: „výjimka je Matěj Suk, který
+ * stříhá externě. U Matěje by defaultně mohla svítit ikona s letadlem, ať je
+ * to jasné. Ale Matěj se píše pod Prahu").
+ *
+ * Jeho práce zůstává v kalendáři pod Prahou, ale místo ve studiu nedrží -
+ * proto se u ní nehlásí konflikt obsazenosti. Dál se to překlikává na kartě
+ * uživatele.
+ */
+async function matejStrihaExterne() {
+  const ZNAMKA = 'matej-striha-externe';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const matej = await prisma.user.findFirst({
+      where: { active: true, name: { contains: 'Matěj Suk', mode: 'insensitive' } },
+      select: { id: true, email: true },
+    });
+    if (!matej) {
+      console.warn('  externi strih: ucet Mateje Suka nenalezen');
+      return;
+    }
+    await prisma.user.update({ where: { id: matej.id }, data: { strihaExterne: true } });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  externi strih zapnut u ${matej.email}`);
+  } catch (err) {
+    console.warn('  externi strih se nepodarilo nastavit:', err);
   }
 }
 

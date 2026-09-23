@@ -288,6 +288,11 @@ model User {
   /// rezie online a porady a schuzky"). Kdo to ma, vidi v prehledu i cizi
   /// natáčení, u kterych v kalendari sviti telefon.
   rezieNaDalku   Boolean   @default(false)
+  /// STRIHA EXTERNE, MIMO STUDIO (zadani 23. 9. 2026: „vyjimka je Matej Suk,
+  /// ktery striha externe. U mateje by defaultne mohla svitit ikona
+  /// s letadlem"). Jeho udalosti se pisou pod studio, ale misto v nem
+  /// nezabiraji - do konfliktu studia se nepocitaji.
+  strihaExterne  Boolean   @default(false)
 
   /// ZVONEK, KDYZ KLIENT SCHVALI REKLAMU (zadani 23. 9. 2026: „u reklam ma
   /// jit notifikace zvonečkem na mě a Petera Dratvu"). Zaskrtava se na karte

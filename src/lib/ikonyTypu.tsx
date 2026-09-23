@@ -425,6 +425,14 @@ export const IKONY_TYPU: Ikona[] = [
     ),
   },
   {
+    klic: 'letadlo',
+    barva: 'modra',
+    popisek: 'Externě, mimo studio',
+    kresba: (
+      <path d="M10.2 12.6 3 10.4l1.6-1.6 3.4.6 2.6-2.6-6.1-3 1.9-1.9 8 2 3.6-3.6a2 2 0 0 1 2.8 2.8l-3.6 3.6 2 8-1.9 1.9-3-6.1-2.6 2.6.6 3.4-1.6 1.6z" />
+    ),
+  },
+  {
     klic: 'slunce',
     barva: 'jantarova',
     popisek: 'Volno',

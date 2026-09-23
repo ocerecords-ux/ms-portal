@@ -136,6 +136,11 @@ export type CalendarEvent = {
    * natáčení daného herce na daném projektu. Ikona se kreslí podle tohohle.
    */
   rezie?: boolean;
+  /**
+   * Zvukař u té události stříhá externě (23. 9. 2026) - v bublině svítí
+   * letadlo, ať je jasné, že ve studiu nesedí.
+   */
+  externi?: boolean;
   /** Ruční výjimka uložená u události: null = počítá se samo. */
   rezieRucne?: boolean | null;
   /** Odkaz na videohovor studia (23. 9. 2026) - ikona režie je proklik. */
@@ -1681,6 +1686,7 @@ function MrizkaPohled({
                             >
                               <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                               {e.rezie && <IkonaRezie velikost={14} odkaz={e.hovorOdkaz ?? null} />}
+                              {e.externi && <IkonaExterni velikost={13} />}
                               {radek}
                               {strihBezProjektu(e) && (
                                 <span className="font-normal italic opacity-70"> · bez projektu</span>
@@ -1799,6 +1805,7 @@ function MesicniPohled({
                         a zvukař (20. 9. 2026: „nejsou tam vidět zvukaři"). */}
                     <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                     {e.rezie && <IkonaRezie velikost={14} odkaz={e.hovorOdkaz ?? null} />}
+                    {e.externi && <IkonaExterni velikost={13} />}
                     {e.title.split('\n')[0]}
                     {strihBezProjektu(e) && <span className="italic opacity-70"> · bez projektu</span>}
                     {(() => {
@@ -2501,6 +2508,29 @@ function IkonaDruhu({ druh, velikost = 16 }: { druh: ReturnType<typeof druhPrace
       style={{ width: velikost, height: velikost }}
     >
       <KresbaIkony klic={klic} velikost={Math.round(velikost * 0.62)} />
+    </span>
+  );
+}
+
+/**
+ * IKONA EXTERNÍHO STŘIHU (zadání 23. 9. 2026: „u Matěje by defaultně mohla
+ * svítit ikona s letadlem, ať je to jasné. Ale Matěj se píše pod Prahu").
+ *
+ * Letadlo u události znamená, že zvukař u ní stříhá externě - v kalendáři je
+ * pod studiem, ale místo v něm nedrží. Proto se taky nepočítá do konfliktů
+ * obsazenosti studia (viz lib/konfliktyServer.ts). Zapíná se na kartě
+ * uživatele, ne tady.
+ */
+function IkonaExterni({ velikost = 13 }: { velikost?: number }) {
+  const popis = 'Stříhá externě, ve studiu nesedí';
+  return (
+    <span
+      title={popis}
+      aria-label={popis}
+      className={`shrink-0 inline-grid place-items-center rounded-pill align-middle mr-1 ${tridaBarvyIkony('letadlo')}`}
+      style={{ width: velikost, height: velikost }}
+    >
+      <KresbaIkony klic="letadlo" velikost={Math.round(velikost * 0.62)} />
     </span>
   );
 }
