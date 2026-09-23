@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { prehledNaDen } from '@/lib/ranniPrehledServer';
+import { prehledDneData } from '@/lib/ranniPrehledServer';
 import { utcParts } from '@/lib/calendar';
 
 /**
@@ -43,8 +43,8 @@ export async function GET() {
       return NextResponse.json({ ukazat: false });
     }
 
-    const text = await prehledNaDen(session.user.id, ted);
-    return NextResponse.json({ ukazat: true, text, den: dnes });
+    const data = await prehledDneData(session.user.id, ted);
+    return NextResponse.json({ ukazat: true, ...data });
   } catch (err) {
     console.error('GET /api/prehled-dne selhalo:', err);
     return NextResponse.json({ ukazat: false });

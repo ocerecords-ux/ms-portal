@@ -100,6 +100,62 @@ export async function posliRanniPrehledy(options: { vynutit?: boolean } = {}): P
 }
 
 /**
+ * PŘEHLED DNE PRO OKNO V PORTÁLU (23. 9. 2026) - data, ne text, ať se dají
+ * vykreslit ikony a barvy. Text pro chat skládá slozPrehled níž ze stejného
+ * základu.
+ */
+export type PrehledDneData = {
+  /** „Čtvrtek 24. 9." */
+  den: string;
+  udalosti: {
+    cas: string;
+    druh: DruhUdalosti;
+    nazev: string;
+    detail: string | null;
+    studio: string | null;
+    rezie: boolean;
+  }[];
+  ukoly: { text: string; cas: string | null }[];
+};
+
+export async function prehledDneData(userId: string, kdy: Date): Promise<PrehledDneData> {
+  const p = utcParts(kdy, PASMO);
+  const od = zonedToUtc(p.year, p.month, p.day, 0, PASMO);
+  const doKdy = zonedToUtc(p.year, p.month, p.day + 1, 0, PASMO);
+
+  const [udalosti, ukoly] = await Promise.all([
+    udalostiCloveka(userId, od, doKdy),
+    prisma.task
+      .findMany({
+        where: { userId, done: false, dueDate: { gte: od, lt: doKdy } },
+        orderBy: [{ dueDate: 'asc' }, { sortOrder: 'asc' }],
+        take: 20,
+      })
+      .catch(() => []),
+  ]);
+
+  const datum = new Intl.DateTimeFormat('cs-CZ', {
+    timeZone: PASMO,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'numeric',
+  }).format(od);
+
+  return {
+    den: `${datum[0].toLocaleUpperCase('cs')}${datum.slice(1)}`,
+    udalosti: udalosti.map((u) => ({
+      cas: u.cas,
+      druh: u.druh,
+      nazev: u.nazev,
+      detail: u.detail,
+      studio: u.studio,
+      rezie: u.rezie,
+    })),
+    ukoly: ukoly.map((u) => ({ text: u.title, cas: u.dueTime || null })),
+  };
+}
+
+/**
  * Přehled na libovolný den - tenhle text umí Bruno poslat i na vyžádání
  * v chatu (zadání 23. 9. 2026: „když se ho zeptám v chatu na daný den, tak
  * mi to řekne, co tam mám").
@@ -112,6 +168,8 @@ export async function prehledNaDen(userId: string, kdy: Date): Promise<string> {
 }
 
 /** Jedna položka programu - z ní se skládá text i připomínka 15 minut předem. */
+export type DruhUdalosti = 'NATACENI' | 'STRIH' | 'CASTING' | 'PORADA' | 'SCHUZKA' | 'JINE';
+
 export type UdalostCloveka = {
   /** Klíč pro připomínku, ať nechodí dvakrát: `<typ>:<id>`. */
   klic: string;
@@ -119,7 +177,18 @@ export type UdalostCloveka = {
   end: Date;
   /** „9:00–13:00" */
   cas: string;
+  /** Jednořádkový popis do textu (chat, připomínka). */
   popis: string;
+  /** Druh - podle něj se v okně vykreslí ikona (23. 9. 2026). */
+  druh: DruhUdalosti;
+  /** Hlavní název - projekt, porada, blokace. */
+  nazev: string;
+  /** Druhý řádek: herec, účastníci, poznámka. */
+  detail: string | null;
+  /** Zkratka studia, když se událost děje ve studiu. */
+  studio: string | null;
+  /** Červený rámeček a telefon - první frekvence s hercem a castingy. */
+  rezie: boolean;
 };
 
 /**
@@ -129,7 +198,7 @@ export type UdalostCloveka = {
  */
 export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Promise<UdalostCloveka[]> {
   const clovek = await prisma.user
-    .findUnique({ where: { id: userId }, select: { rezieNaDalku: true } })
+    .findUnique({ where: { id: userId }, select: { rezieNaDalku: true, role: true } })
     .catch(() => null);
 
   const [sloty, bloky, porady] = await Promise.all([
@@ -161,7 +230,9 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
         orderBy: { start: 'asc' },
       })
       .catch(() => []),
-    nactiPorady(userId, od, doKdy).catch(() => []),
+    // Role se posílá schválně: kalendář Schůzky vidí Žůžo-labůžo a produkce
+    // celý, ne jen to, na co jsou pozvaní (upřesnění 23. 9. 2026).
+    nactiPorady(userId, od, doKdy, clovek?.role).catch(() => []),
   ]);
 
   /**
@@ -200,6 +271,9 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
 
   const znacka = (id: string) => (sRezii.has(id) ? ' · režie na dálku' : '');
 
+  const druhBloku = (kind: string): DruhUdalosti =>
+    kind === 'NATACENI' || kind === 'STRIH' || kind === 'CASTING' ? (kind as DruhUdalosti) : 'JINE';
+
   const udalosti: UdalostCloveka[] = [
     ...mojeSloty.map((s) => ({
       klic: `slot:${s.id}`,
@@ -207,6 +281,11 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
       end: s.end,
       cas: `${cas(s.start)}–${cas(s.end)}`,
       popis: `${s.request.projectName} · ${s.request.actorName} (${s.studio.shortName})${znacka(s.id)}`,
+      druh: 'NATACENI' as DruhUdalosti,
+      nazev: s.request.projectName,
+      detail: s.request.actorName,
+      studio: s.studio.shortName,
+      rezie: sRezii.has(s.id),
     })),
     ...mojeBloky.map((b) => ({
       klic: `blok:${b.id}`,
@@ -214,6 +293,11 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
       end: b.end,
       cas: `${cas(b.start)}–${cas(b.end)}`,
       popis: `${b.title} (${b.studio.shortName})${znacka(b.id)}`,
+      druh: druhBloku(String(b.kind)),
+      nazev: b.title,
+      detail: b.actorName ?? null,
+      studio: b.studio.shortName,
+      rezie: sRezii.has(b.id),
     })),
     ...porady.map((p) => ({
       klic: `porada:${p.poradaId}:${p.den}`,
@@ -221,6 +305,11 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
       end: new Date(p.end),
       cas: `${cas(new Date(p.start))}–${cas(new Date(p.end))}`,
       popis: `${p.nazev} (${p.druh === 'SCHUZKA' ? 'schůzka' : 'porada'})`,
+      druh: (p.druh === 'SCHUZKA' ? 'SCHUZKA' : 'PORADA') as DruhUdalosti,
+      nazev: p.nazev,
+      detail: p.ucastnici.map((u) => u.label).join(', ') || null,
+      studio: null,
+      rezie: false,
     })),
   ].sort((a, b) => a.start.getTime() - b.start.getTime());
 
@@ -236,9 +325,14 @@ async function slozPrehled(
 ): Promise<string> {
   const [udalosti, ukoly] = await Promise.all([
     udalostiCloveka(userId, od, doKdy),
+    /**
+     * JEN ÚKOLY NA TEN DEN (upřesnění 23. 9. 2026: „úkoly bych zobrazoval jen
+     * ty, které mají dnešní datum. Dlouhodobé ne"). Úkoly bez termínu ani ty
+     * s termínem jindy do přehledu dne nepatří - od toho je to-do list.
+     */
     prisma.task
       .findMany({
-        where: { userId, done: false, OR: [{ dueDate: { lt: doKdy } }, { dueDate: null }] },
+        where: { userId, done: false, dueDate: { gte: od, lt: doKdy } },
         orderBy: [{ dueDate: 'asc' }, { sortOrder: 'asc' }],
         take: 20,
       })
