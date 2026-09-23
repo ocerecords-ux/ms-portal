@@ -191,115 +191,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // 2) E-mail timu Mediaspace - best effort, nezablokuje objednavku.
-  //
-  //    Komu presne, se od 14. 9. 2026 ridi zaskrtnutkem "Dostava objednavky"
-  //    na karte uzivatele (zadani: "jednotlive adresy uzivatelu tymu, ktere
-  //    si nastavim na webu v portalu"), ne promennou prostredi. Nacita se to
-  //    az tady a ne v e-mailove vrstve, aby lib/email.ts nesahal do databaze.
-  /**
-   * Komu objednavka jde. Zaskrtnuti „Dostava objednavky" na karte uzivatele;
-   * kdyz to nema nikdo, vezmou se vsichni Zuzo-labuzo, at objednavka nespadne
-   * do prazdna (zadani 15. 9. 2026: „ten mail objednavky@mediaspace.cz bych
-   * nakonec vynechal a neposilal" - spolecna schranka uz nikde neni).
-   */
-  let hlidaci: { id: string; email: string; role: Role }[] = [];
-  try {
-    hlidaci = await prisma.user.findMany({
-      where: { active: true, dostavaObjednavky: true },
-      // Role rozhoduje, jestli se v mailu ukaze predbezna cena (zadani
-      // 16. 9. 2026) - viz vidiCenuObjednavky v lib/roles.ts.
-      select: { id: true, email: true, role: true },
-    });
-    if (hlidaci.length === 0) {
-      hlidaci = await prisma.user.findMany({
-        where: { active: true, role: 'ADMIN' },
-        select: { id: true, email: true, role: true },
-      });
-      console.warn(
-        `Objednávka „${title}": nikdo nemá zaškrtnuté „Dostává objednávky", posílám všem adminům.`,
-      );
-    }
-  } catch (err) {
-    console.error('Seznam příjemců objednávky se nepodařilo načíst:', err);
-  }
-
-  try {
-    /**
-     * DVA MAILY, NE JEDEN (zadani 16. 9. 2026: „Helca, ktera ma pristup
-     * Produkce, by nemela videt cenu. Jen normostrany").
-     *
-     * Do ted sla objednavka vsem jednou zpravou vcetne predbezne ceny. Jedna
-     * zprava ale nejde rozdelit podle toho, kdo ji cte - komu cena nepatri,
-     * musi dostat jinou. Obsah je jinak uplne stejny: rozsah, termin, herec,
-     * poznamka i priloha zustavaji, vypadne jedina radka.
-     */
-    const sCenou = hlidaci.filter((u) => vidiCenuObjednavky(u.role)).map((u) => u.email);
-    const bezCeny = hlidaci.filter((u) => !vidiCenuObjednavky(u.role)).map((u) => u.email);
-
-    const spolecne = {
-      companyId,
-      companyName: company.name,
-      title,
-      pageCount,
-      priceEstimate,
-      deadline: deadline ? deadline.toLocaleDateString('cs-CZ') : null,
-      preferredNarrator,
-      // Úvod a závěr audioknihy jdou týmu do mailu k poznámce (22. 9. 2026).
-      note:
-        [
-          note || null,
-          knihaUdaje.uvodKnihy ? `Úvod: ${knihaUdaje.uvodKnihy}` : null,
-          knihaUdaje.zaverKnihy ? `Závěr: ${knihaUdaje.zaverKnihy}` : null,
-        ]
-          .filter(Boolean)
-          .join('\n\n') || null,
-      // Odkaz přes portál, ne rovnou do úložiště - to je soukromé a přímý
-      // odkaz končil „Access denied" (22. 9. 2026).
-      attachmentUrl: attachment ? `${zakladPortalu()}/api/orders/${order.id}/priloha` : null,
-      attachmentName: attachment?.name ?? null,
-      requestedByName: orderingUser?.name ?? null,
-      requestedByEmail: session.user.email,
-    };
-
-    const vysledky = await Promise.all([
-      sCenou.length
-        ? sendOrderNotificationEmail({ ...spolecne, prijemci: sCenou })
-        : Promise.resolve({ sent: false as const }),
-      bezCeny.length
-        ? sendOrderNotificationEmail({ ...spolecne, prijemci: bezCeny, bezCeny: true })
-        : Promise.resolve({ sent: false as const }),
-    ]);
-
-    if (vysledky.some((v) => v.sent)) {
-      await prisma.order.update({ where: { id: order.id }, data: { emailSentAt: new Date() } });
-    }
-  } catch (err) {
-    console.error('Odeslání e-mailu o objednávce selhalo:', err);
-  }
-
-
-  // 2b) Potvrzeni klientovi (zadani 5. 9. 2026) - opet best effort, aby
-  //     neodeslany e-mail nikdy neshodil samotnou objednavku.
-  try {
-    await sendOrderConfirmationEmail({
-      to: session.user.email,
-      name: orderingUser?.name ?? null,
-      isAudiobook,
-      title,
-      companyName: company.name,
-      pageCount,
-      priceEstimate,
-      deadline: deadline ? deadline.toLocaleDateString('cs-CZ') : null,
-      preferredNarrator,
-      note: note || null,
-      attachmentName: attachment?.name ?? null,
-    });
-  } catch (err) {
-    console.error('Odeslání potvrzení objednávky klientovi selhalo:', err);
-  }
-
-  // 3) Zalozeni projektu V PORTALU (zadani 9. 9. 2026: "Caflou casem nebudeme
+  // 2) Zalozeni projektu V PORTALU (zadani 9. 9. 2026: "Caflou casem nebudeme
   //    potrebovat a projekty budeme zakladat na MS portalu"; odpojeno
   //    11. 9. 2026). Zatim jen pro objednavky audioknihy - u reklamy
   //    normostrany ani cena zatim nedavaji smysl, viz vyse.
@@ -458,6 +350,123 @@ export async function POST(req: NextRequest) {
         })
         .catch(() => undefined);
     }
+  }
+
+  // 3) E-mail timu Mediaspace - AZ TED, KDYZ PROJEKT EXISTUJE (zadani
+  //    23. 9. 2026: „tlacitko otevrit firmu bych zmenil na Otevrit
+  //    v projektech a dostal se na detail toho projektu"). Odkaz do projektu
+  //    jinak neni na co navazat - driv se mail posilal driv, nez projekt
+  //    vznikl.
+  //
+  //    Best effort: neodeslany mail nikdy neshodi prijatou objednavku.
+  //
+  //    Komu presne, se od 14. 9. 2026 ridi zaskrtnutkem "Dostava objednavky"
+  //    na karte uzivatele (zadani: "jednotlive adresy uzivatelu tymu, ktere
+  //    si nastavim na webu v portalu"), ne promennou prostredi. Nacita se to
+  //    az tady a ne v e-mailove vrstve, aby lib/email.ts nesahal do databaze.
+  /**
+   * Komu objednavka jde. Zaskrtnuti „Dostava objednavky" na karte uzivatele;
+   * kdyz to nema nikdo, vezmou se vsichni Zuzo-labuzo, at objednavka nespadne
+   * do prazdna (zadani 15. 9. 2026: „ten mail objednavky@mediaspace.cz bych
+   * nakonec vynechal a neposilal" - spolecna schranka uz nikde neni).
+   */
+  let hlidaci: { id: string; email: string; role: Role }[] = [];
+  try {
+    hlidaci = await prisma.user.findMany({
+      where: { active: true, dostavaObjednavky: true },
+      // Role rozhoduje, jestli se v mailu ukaze predbezna cena (zadani
+      // 16. 9. 2026) - viz vidiCenuObjednavky v lib/roles.ts.
+      select: { id: true, email: true, role: true },
+    });
+    if (hlidaci.length === 0) {
+      hlidaci = await prisma.user.findMany({
+        where: { active: true, role: 'ADMIN' },
+        select: { id: true, email: true, role: true },
+      });
+      console.warn(
+        `Objednávka „${title}": nikdo nemá zaškrtnuté „Dostává objednávky", posílám všem adminům.`,
+      );
+    }
+  } catch (err) {
+    console.error('Seznam příjemců objednávky se nepodařilo načíst:', err);
+  }
+
+  try {
+    /**
+     * DVA MAILY, NE JEDEN (zadani 16. 9. 2026: „Helca, ktera ma pristup
+     * Produkce, by nemela videt cenu. Jen normostrany").
+     *
+     * Do ted sla objednavka vsem jednou zpravou vcetne predbezne ceny. Jedna
+     * zprava ale nejde rozdelit podle toho, kdo ji cte - komu cena nepatri,
+     * musi dostat jinou. Obsah je jinak uplne stejny: rozsah, termin, herec,
+     * poznamka i priloha zustavaji, vypadne jedina radka.
+     */
+    const sCenou = hlidaci.filter((u) => vidiCenuObjednavky(u.role)).map((u) => u.email);
+    const bezCeny = hlidaci.filter((u) => !vidiCenuObjednavky(u.role)).map((u) => u.email);
+
+    const spolecne = {
+      companyId,
+      companyName: company.name,
+      title,
+      pageCount,
+      priceEstimate,
+      deadline: deadline ? deadline.toLocaleDateString('cs-CZ') : null,
+      preferredNarrator,
+      // Úvod a závěr audioknihy jdou týmu do mailu k poznámce (22. 9. 2026).
+      note:
+        [
+          note || null,
+          knihaUdaje.uvodKnihy ? `Úvod: ${knihaUdaje.uvodKnihy}` : null,
+          knihaUdaje.zaverKnihy ? `Závěr: ${knihaUdaje.zaverKnihy}` : null,
+        ]
+          .filter(Boolean)
+          .join('\n\n') || null,
+      // Odkaz přes portál, ne rovnou do úložiště - to je soukromé a přímý
+      // odkaz končil „Access denied" (22. 9. 2026).
+      attachmentUrl: attachment ? `${zakladPortalu()}/api/orders/${order.id}/priloha` : null,
+      attachmentName: attachment?.name ?? null,
+      requestedByName: orderingUser?.name ?? null,
+      requestedByEmail: session.user.email,
+      // Tlacitko v mailu vede do projektu (23. 9. 2026); kdyz projekt
+      // nevznikl, zustane v nem puvodni odkaz na firmu v administraci.
+      projectId: idProjektu,
+    };
+
+    const vysledky = await Promise.all([
+      sCenou.length
+        ? sendOrderNotificationEmail({ ...spolecne, prijemci: sCenou })
+        : Promise.resolve({ sent: false as const }),
+      bezCeny.length
+        ? sendOrderNotificationEmail({ ...spolecne, prijemci: bezCeny, bezCeny: true })
+        : Promise.resolve({ sent: false as const }),
+    ]);
+
+    if (vysledky.some((v) => v.sent)) {
+      await prisma.order.update({ where: { id: order.id }, data: { emailSentAt: new Date() } });
+    }
+  } catch (err) {
+    console.error('Odeslání e-mailu o objednávce selhalo:', err);
+  }
+
+
+  // 2b) Potvrzeni klientovi (zadani 5. 9. 2026) - opet best effort, aby
+  //     neodeslany e-mail nikdy neshodil samotnou objednavku.
+  try {
+    await sendOrderConfirmationEmail({
+      to: session.user.email,
+      name: orderingUser?.name ?? null,
+      isAudiobook,
+      title,
+      companyName: company.name,
+      pageCount,
+      priceEstimate,
+      deadline: deadline ? deadline.toLocaleDateString('cs-CZ') : null,
+      preferredNarrator,
+      note: note || null,
+      attachmentName: attachment?.name ?? null,
+    });
+  } catch (err) {
+    console.error('Odeslání potvrzení objednávky klientovi selhalo:', err);
   }
 
   /**

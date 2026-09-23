@@ -57,6 +57,8 @@ import { loadRodneListy } from '@/lib/rodnyListServer';
 import { bezStarePredpony, dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
 import { nactiPenizeProjektu } from '@/lib/projektPenizeServer';
 import { natoceniProjektu } from '@/lib/brunoServer';
+import { nactiPoznamkyProjektu } from '@/lib/poznamkyProjektuServer';
+import { PoznamkyProjektu } from './PoznamkyProjektu';
 import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
 import { ProgresNataceniKarta } from './ProgresNataceniKarta';
 import { bezTitulu } from '@/lib/jmena';
@@ -918,6 +920,31 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       label: 'Natáčecí protokol',
       count: zaznamyNatoceni.length,
       content: <ProtokolNataceni zaznamy={zaznamyNatoceni} />,
+    });
+  }
+  /**
+   * POZNÁMKY (zadání 23. 9. 2026: „udělal bych u projektu taky v detailu
+   * Poznámky, kde se bude dát vložit poznámka. Primárně bych tam propisoval
+   * i poznámky z objednávek. Vidíme jen Žůžo-labůžo a produkce").
+   *
+   * Zvukaři se záložka vůbec neukáže - má detail projektu ke čtení a tohle
+   * jsou naše vnitřní věci. Poznámka z objednávky se do seznamu čte rovnou
+   * z objednávky, takže je i u zakázek přijatých dřív.
+   */
+  if (canEdit) {
+    const poznamky = await nactiPoznamkyProjektu(caflouProjectId);
+    tabs.push({
+      key: 'poznamky',
+      label: 'Poznámky',
+      count: poznamky.length,
+      content: (
+        <PoznamkyProjektu
+          caflouProjectId={caflouProjectId}
+          pocatecni={poznamky}
+          jaId={session.user.id}
+          jsemAdmin={session.user.role === 'ADMIN'}
+        />
+      ),
     });
   }
   // Historie je jen pro nas - klient se na detail projektu stejne nedostane,

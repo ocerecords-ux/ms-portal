@@ -188,6 +188,16 @@ type OrderEmailInput = {
    */
   prijemci: string[];
   companyId: string;
+  /**
+   * PROJEKT, KTERÝ Z OBJEDNÁVKY VZNIKL (zadání 23. 9. 2026: „tlačítko otevřít
+   * firmu bych změnil na Otevřít v projektech a dostal se na detail toho
+   * projektu").
+   *
+   * Když projekt není (objednávka reklamy ho zatím nezakládá), zůstává
+   * v tlačítku původní odkaz na firmu v administraci - prázdné tlačítko
+   * nebo odkaz nikam by byl horší.
+   */
+  projectId?: string | null;
   companyName: string;
   title: string;
   pageCount: number | null;
@@ -234,6 +244,9 @@ function buildInternalNotificationHtml(input: OrderEmailInput): string {
   });
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
   const companyAdminUrl = `${baseUrl}/admin/companies/${encodeURIComponent(input.companyId)}`;
+  const projektUrl = input.projectId ? `${baseUrl}/projekty/${encodeURIComponent(input.projectId)}` : null;
+  const ctaUrl = projektUrl ?? companyAdminUrl;
+  const ctaText = projektUrl ? 'Otevřít v projektech →' : 'Otevřít firmu v adminu →';
 
   return `<!doctype html>
 <html>
@@ -309,7 +322,7 @@ function buildInternalNotificationHtml(input: OrderEmailInput): string {
     </table>
 
     <div class="cta-row">
-      <a href="${companyAdminUrl}" class="cta">Otevřít firmu v adminu →</a>
+      <a href="${ctaUrl}" class="cta">${ctaText}</a>
     </div>
   </td></tr>
   <tr><td class="email-footer">
@@ -335,6 +348,12 @@ function buildInternalNotificationText(input: OrderEmailInput): string {
     `Priloha: ${input.attachmentUrl ?? 'zadna'}`,
     `Jmeno: ${input.requestedByName ?? '-'}`,
     `Objednal: ${input.requestedByEmail}`,
+    ...(input.projectId
+      ? [
+          '',
+          `Projekt: ${(process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '')}/projekty/${input.projectId}`,
+        ]
+      : []),
   ].join('\n');
 }
 

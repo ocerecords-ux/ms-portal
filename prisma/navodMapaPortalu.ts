@@ -80,12 +80,13 @@ Karta projektu má záložky a ukazují se jen ty, které dávají smysl:
 - **Licenční list** — u ostatních reklam (ne u rádiového spotu). Vymezení licence pro jednoho herce: území, média, délka a typ licence. Formulář je předvyplněný z projektu, PDF se uloží i do složky projektu na Disku.
 - **Přeposlech** — AudioTagger: poslech nahrávky a zápis chyb s časem a stranou scénáře.
 - **Natáčecí protokol** — co se při natáčení stalo.
+- **Poznámky** — vnitřní blok pod projektem: co je k zakázce potřeba vědět a nepatří do žádné kolonky. Kdokoliv z nás sem napíše poznámku, dole je vždycky **poznámka klienta z objednávky** (ta se nemaže, čte se rovnou z objednávky). Vidí je jen Žůžo-labůžo a produkce, zvukař ne.
 - **Historie** — co se u projektu měnilo a jaké zprávy odešly klientovi.
 - **Doklady** — nabídky, faktury, výdaje a smlouvy navázané na projekt. Jen admin. Odsud jde nový doklad (i výdaj, také k ukončenému projektu) rovnou založit, projekt i klient se předvyplní.
 
 # Cesta zakázky
 
-1. **Objednávka.** Klient ji pošle v portálu (audiokniha nebo reklama). Vznikne projekt, kanál v chatu a složka na Disku, a nám přijde mail. U Audiotéky se v objednávce navíc vyplní autor, překladatel a nakladatelství a z nich se sám složí **úvod a závěr audioknihy** (režie vždy Ondřej Černý) — klient ho může upravit nebo přepsat, v detailu projektu je vidět a dá se doladit. Cena v objednávce se počítá ze sazby za normostranu; u firmy, která si **cenu navrhuje sama** (zaškrtávátko na kartě firmy — takhle to má Albatros), se nepočítá nic: pole Počet normostran i Cena zůstávají a klient si je vyplní sám, sazba se u ní vůbec nenastavuje.
+1. **Objednávka.** Klient ji pošle v portálu (audiokniha nebo reklama). Vznikne projekt, kanál v chatu a složka na Disku, a nám přijde mail — tlačítko v něm vede **rovnou na detail toho projektu** a poznámka z objednávky je u projektu v záložce Poznámky. U Audiotéky se v objednávce navíc vyplní autor, překladatel a nakladatelství a z nich se sám složí **úvod a závěr audioknihy** (režie vždy Ondřej Černý) — klient ho může upravit nebo přepsat, v detailu projektu je vidět a dá se doladit. Cena v objednávce se počítá ze sazby za normostranu; u firmy, která si **cenu navrhuje sama** (zaškrtávátko na kartě firmy — takhle to má Albatros), se nepočítá nic: pole Počet normostran i Cena zůstávají a klient si je vyplní sám, sazba se u ní vůbec nenastavuje.
 2. **Nabídka.** Vystaví se v Dokladech a odejde klientovi odkazem. Klient ji otevře, prohlédne a **schválí jedním kliknutím** — a na zvonečku to cinkne manažerovi projektu.
 3. **Natáčení.** Produkce sestaví hercovi nabídku termínů, herec si z odkazu vybere, produkce potvrdí — a tím vzniká rezervace studia. Smlouva s hercem se založí ze šablony a herec ji podepíše taky odkazem.
 4. **Práce a nahrávky.** Zvukař si píše výkazy, nahrávky se ukládají na Disk a klient se k nim dostane odkazem z mailu — bez přihlašování. V přeposlechu píše, co chce opravit.

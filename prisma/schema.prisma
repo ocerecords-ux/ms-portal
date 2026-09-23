@@ -3434,6 +3434,27 @@ model PripomenutaUdalost {
 /// Jeden radek = jedna zmena. Nazev i cas se ukladaji JAKO OTISK, ne odkazem:
 /// zaznam ma davat smysl i potom, co udalost nekdo smaze nebo prejmenuje -
 /// prave tehdy se v historii hleda nejcasteji.
+/// POZNÁMKY U PROJEKTU (zadání 23. 9. 2026: „udělal bych u projektu taky
+/// v detailu Poznámky, kde se bude dát vložit poznámka").
+///
+/// Vidí je jen Žůžo-labůžo a produkce - je to náš vnitřní blok pod projektem,
+/// ne nic, co by mělo jít ke klientovi nebo zvukaři.
+///
+/// POZNÁMKA Z OBJEDNÁVKY SE SEM NEKOPÍRUJE. Čte se rovnou z objednávky (viz
+/// lib/poznamkyProjektuServer.ts), takže sedí i u zakázek přijatých dřív, než
+/// tohle vzniklo, a nemůže se rozejít s tím, co klient napsal.
+model PoznamkaProjektu {
+  id              String   @id @default(cuid())
+  caflouProjectId String
+  text            String
+  autorId         String?
+  autorJmeno      String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([caflouProjectId, createdAt])
+}
+
 model KalendarZmena {
   id        String   @id @default(cuid())
   /// SLOT (frekvence z nabidky) | BLOK | PORADA | SCHUZKA | MIMO
