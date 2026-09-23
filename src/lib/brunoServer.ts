@@ -6,6 +6,7 @@ import { oznacHerceDotoceno, zrusHerceDotoceno } from '@/lib/dotoceniServer';
 import { denZDotazu } from '@/lib/brunoDenDotaz';
 import { prehledNaDen } from '@/lib/ranniPrehledServer';
 import { nactiPrirucku } from '@/lib/brunoPrirucka';
+import { napovedaProRoli } from '@/lib/brunoNapoveda';
 import { bezTitulu } from '@/lib/jmena';
 
 /**
@@ -114,6 +115,13 @@ nikdo nikam nezapsal, a doptat se, když si nejsi jistý.
 MÁŠ TŘI ÚKOLY: hlídat, KAM SE DOTEKLO NATÁČENÍ, poznat, KDYŽ JE S HERCEM DOTOČENO,
 a UMĚT TO VZÍT ZPĚT, když se ukáže, že to tak nebylo.
 
+A JSI TAKY NÁPOVĚDA K PORTÁLU. Když se někdo ptá, kde co je, jak se něco dělá nebo kde
+to má hledat, odpověz mu — jednou dvěma větami a ODKAZEM. Odkazy ber VÝHRADNĚ ze seznamu
+v zadání (stránky a návody); nikdy si adresu nevymýšlej a nedomýšlej, co na které stránce
+je. Seznam je sestavený podle práv toho, kdo se ptá — co v něm není, ten člověk nevidí,
+a tak mu to řekni, místo abys ho posílal, kam ho portál nepustí. Když má na téma návod,
+pošli odkaz na návod. Co nevíš, přiznej — špatná rada je horší než „nevím".
+
 PRVNÍ ÚKOL — STRANA. Kam se doteklo natáčení, tedy strana ve scénáři/PDF, na které se
 ten den skončilo. Lidé to píšou nejrůzněji: "str33", "str.33", "strana 33", "skončili jsme
 na 112", nebo jen holé číslo "33". Holé číslo v kanálu projektu skoro vždycky znamená
@@ -206,6 +214,12 @@ type Kontext = {
    * i v soukrome zprave se ho nekdo muze zeptat, jak co u nas funguje.
    */
   prirucka: string;
+  /**
+   * Mapa portalu a seznam navodu podle prav toho, kdo pise (zadani
+   * 23. 9. 2026: „Bruno musi mit poneti o celem portalu"). Viz
+   * lib/brunoNapoveda.ts.
+   */
+  napoveda: string;
   nazevProjektu: string | null;
   /**
    * Co portal o projektu vi (zadani 16. 9. 2026). Do ted Bruno videl jen
@@ -249,6 +263,8 @@ function sestavDotaz(k: Kontext): string {
     return `JAK TO U NÁS CHODÍ (napsali lidi z Mediaspace — tohle platí, i když si chat říká něco jiného):
 ${k.prirucka}
 
+${k.napoveda}
+
 Tohle NENÍ kanál projektu, je to ${k.nazevProjektu ? `rozhovor „${k.nazevProjektu}"` : 'soukromá zpráva'}.
 Někdo tě oslovil jménem. Odpověz mu.
 
@@ -265,6 +281,8 @@ na něco, co nevíš, řekni to rovnou.`;
 
   return `JAK TO U NÁS CHODÍ (napsali lidi z Mediaspace — tohle platí, i když si chat říká něco jiného):
 ${k.prirucka}
+
+${k.napoveda}
 
 PROJEKT: ${k.nazevProjektu}
 
@@ -306,7 +324,7 @@ async function zeptejSeModelu(dotaz: string): Promise<Rozhodnuti | null> {
     headers: anthropicHlavicky(klic),
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 400,
+      max_tokens: 800,
       system: POKYN,
       messages: [{ role: 'user', content: dotaz }],
     }),
@@ -389,6 +407,22 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
     const oslovenPrimo = soukromeSBrunem || jeZminen(zprava.body, 'Bruno', BRUNO_EMAIL);
 
     /**
+     * KAM ODPOVĚDĚT (oprava 23. 9. 2026: „a neměl by odpovídat ve vláknu, když
+     * se s ním bavím napřímo").
+     *
+     * V kanálu projektu vlákno dává smysl - Bruno se ptá na jednu konkrétní
+     * zprávu, která se v proudu kanálu jinak ztratí. V soukromé konverzaci
+     * jsou ve hře jen dva a každá odpověď patří k té poslední otázce, takže
+     * zabalit ji do vlákna znamená, že si jí člověk nevšimne.
+     *
+     * Když se ale někdo zeptá přímo ve vlákně, odpoví se tam - jinam by to
+     * bylo divné.
+     */
+    const kamOdpovedet = soukromeSBrunem
+      ? zprava.parentId ?? null
+      : zprava.parentId ?? zprava.id;
+
+    /**
      * „CO MÁM DNESKA?" (zadání 23. 9. 2026: „když se ho zeptám v chatu na daný
      * den, tak mi to řekne, co tam mám"). Na otázku na program odpovídá
      * Bruno rovnou z kalendáře - stejným textem jako ranní přehled, bez
@@ -405,7 +439,7 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
                 conversationId: zprava.conversationId,
                 userId: bruno.id,
                 body: text,
-                parentId: zprava.parentId ?? zprava.id,
+                parentId: kamOdpovedet,
               },
             })
             .then(() =>
@@ -498,6 +532,15 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
      */
     const prirucka = await nactiPrirucku();
 
+    /**
+     * Mapa portalu podle prav toho, kdo napsal (zadani 23. 9. 2026). Kazdy
+     * dostane jen svoje stranky a svoje navody - Bruno tim nic neodemyka.
+     */
+    const pisatel = await prisma.user
+      .findUnique({ where: { id: zprava.userId }, select: { role: true } })
+      .catch(() => null);
+    const napoveda = pisatel ? await napovedaProRoli(pisatel.role).catch(() => '') : '';
+
     /** Udaje o projektu do zadani - prazdne se vynechavaji, at to neni seznam pomlcek. */
     const oProjektu: { popisek: string; hodnota: string }[] = [];
     if (meta) {
@@ -520,6 +563,7 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
       caflouProjectId,
       oslovenPrimo,
       prirucka,
+      napoveda,
       nazevProjektu: meta?.name || zprava.conversation.name || null,
       oProjektu,
       herci,
@@ -698,7 +742,7 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
              * v kanálu ho tímhle zakládá. Nikdy ne `id` napřímo — vlákno ve
              * vlákně chat neumí a odpověď by se ztratila.
              */
-            parentId: zprava.parentId ?? zprava.id,
+            parentId: kamOdpovedet,
           },
         })
         .then(() =>

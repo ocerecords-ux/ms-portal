@@ -14,12 +14,22 @@ import { utcParts, zonedToUtc } from '@/lib/calendar';
 
 const PASMO = 'Europe/Prague';
 
-/** Ptá se ta věta na program dne? */
+/**
+ * Ptá se ta věta na program dne?
+ *
+ * Mezi „co" a sloveso se vejde pár slov (oprava 23. 9. 2026: „Co mě zítra
+ * čeká?" nejdřív neprošlo, protože se hledalo jen „co mě čeká" těsně za
+ * sebou). Čeština si ta slova přehazuje, jak ji napadne - „co mám zítra",
+ * „co mě zítra čeká", „co tam dneska máme".
+ */
 const PTA_SE = [
-  /\bco\s+(m[áa]m|m[ěe]\s+[čc]ek[áa]|je)\b/iu,
-  /\bco\s+tam\s+m[áa]m\b/iu,
-  /\bm[áa]m\s+(n[ěe]co|n[áa]hodou)\b/iu,
-  /\b(program|rozvrh|kalend[áa][řr]|p[řr]ehled)\b/iu,
+  /\bco\s+(?:\S+\s+){0,3}?(m[áa]m|m[áa]me|[čc]ek[áa]|[čc]ek[áa]me)\b/iu,
+  /\b(m[áa]m|m[áa]me)\s+(?:\S+\s+){0,3}?(n[ěe]co|n[áa]hodou)\b/iu,
+  /\b(m[ůu]j|moje|m[áa]m|m[áa]me)\s+(?:\S+\s+){0,2}?(program|rozvrh|harmonogram)\b/iu,
+  /\bp[řr]ehled\s+na\b/iu,
+  // „Co je dneska?" - tady uz slovo „dnes" musi stat hned u slovesa, jinak by
+  // se chytlo i „co je s tím projektem".
+  /\bco\s+(je|bude)\s+(dnes|dneska|z[íi]tra|poz[íi]t[řr][íi])\b/iu,
 ];
 
 const DNY_V_TYDNU = [

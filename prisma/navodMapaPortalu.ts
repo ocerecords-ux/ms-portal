@@ -120,6 +120,7 @@ Klient, který účet má, vidí v portálu navíc své projekty, nahrávky a m�
 - **Nabídne zvukaři výkaz** pět minut před koncem jeho natáčení, castingu nebo střihu v kalendáři — přijde upozornění do zvonečku i do mobilu a ve **Výkazech** čeká řádek, který se jedním klikem („Přidat výkaz") překlopí do výkazu. Produkce s tím nic nedělá.
 - **Šestého v měsíci** pošle zvukařům přehled jejich výkazů za minulý měsíc.
 - **Bruno** čte kanály projektů v chatu, pozná, kam se doteklo natáčení, a zapíše to do karty projektu. Když si není jistý, zeptá se v kanálu.
+- **Bruno je zároveň nápověda k portálu** (23. 9. 2026). Napište mu do chatu — v kanálu přes „Bruno, …", v soukromé konverzaci rovnou — třeba „kde zapíšu výkaz" nebo „kde se dělá rodný list", a pošle krátkou odpověď s odkazem. Zná stránky portálu i návody z Nápovědy, ale **vždycky jen ty vaše**: co vám role nepouští, to vám ani nenabídne.
 
 # Na čem to stojí
 

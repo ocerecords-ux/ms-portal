@@ -32,3 +32,27 @@ describe('denZDotazu', () => {
     expect(denZDotazu('33', CTVRTEK)).toBeNull();
   });
 });
+
+describe('denZDotazu - přeházená slova (oprava 23. 9. 2026)', () => {
+  it('„co mě zítra čeká" je zítřek', () => {
+    expect(den(denZDotazu('Co mě zítra čeká?', CTVRTEK))).toBe('2026-09-25');
+  });
+
+  it('„co mám v pátek za program" je pátek', () => {
+    expect(den(denZDotazu('Bruno, co mám v pátek za program?', CTVRTEK))).toBe('2026-09-25');
+  });
+
+  it('otázka na portál není otázka na den', () => {
+    expect(denZDotazu('Kde najdu kalendář?', CTVRTEK)).toBeNull();
+    expect(denZDotazu('Co je s tím projektem?', CTVRTEK)).toBeNull();
+  });
+
+  it('„co tam dneska máme" je dnešek', () => {
+    expect(den(denZDotazu('Co tam dneska máme?', CTVRTEK))).toBe('2026-09-24');
+  });
+
+  it('věta o práci pořád dotaz na program není', () => {
+    expect(denZDotazu('Zítra dotočíme s Petrem.', CTVRTEK)).toBeNull();
+    expect(denZDotazu('Poslal jsem ti to včera mailem.', CTVRTEK)).toBeNull();
+  });
+});
