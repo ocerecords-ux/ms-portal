@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { RECORDING_STATUS_CLASSES, RECORDING_STATUS_LABELS, formatDateTime } from '@/lib/calendar';
+import { RECORDING_STATUS_CLASSES, RECORDING_STATUS_LABELS, formatDateTime, sessionsForPages } from '@/lib/calendar';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { mestoStudia, posledniDenFrekvence } from '@/lib/volnaMista';
@@ -35,10 +35,12 @@ export function RecordingSection({
   companyId,
   pageCount,
   sessionsFromPages,
+  stranNaFrekvenci,
   narratorFromCaflou,
   herci,
   studios,
   defaultActorUserId,
+  normostranyHercu,
   datumOdevzdani,
   requests,
   canManage,
@@ -48,10 +50,18 @@ export function RecordingSection({
   companyId: string | null;
   pageCount: number | null;
   sessionsFromPages: number;
+  /** Kolik normostran je jedna frekvence (z Ceníků) - pro přepočet u herce. */
+  stranNaFrekvenci: number;
   narratorFromCaflou: string | null;
   herci: { id: string; label: string }[];
   studios: { id: string; name: string; color?: string | null }[];
   defaultActorUserId: string | null;
+  /**
+   * NORMOSTRANY JEDNOTLIVÝCH HERCŮ (zadání 23. 9. 2026) - ID účtu -> NS.
+   * Přepnutím herce se do nabídky předvyplní jeho díl knihy, ne celý rozsah
+   * projektu. Přepsat se to dá pořád.
+   */
+  normostranyHercu?: Record<string, number>;
   /**
    * Datum dokončení projektu „YYYY-MM-DD" (Do kdy to máme odevzdat). Z něj se
    * vymezí poslední možná frekvence (zadání 19. 9. 2026).
@@ -80,6 +90,22 @@ export function RecordingSection({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Přepnutí herce přenese i JEHO normostrany (23. 9. 2026) - u knihy dělené
+   * mezi víc herců má každý svůj díl a s ním i svůj počet frekvencí. Kdo díl
+   * vyplněný nemá, dostane rozsah celého projektu jako dřív.
+   */
+  function vyberHerce(id: string) {
+    const jeho = id ? normostranyHercu?.[id] : undefined;
+    const ns = jeho ?? pageCount ?? 0;
+    setForm((f) => ({
+      ...f,
+      actorUserId: id,
+      pageCount: ns,
+      requiredSessions: Math.max(1, sessionsForPages(ns, stranNaFrekvenci)),
+    }));
+  }
   /**
    * Zaškrtnutá studia (19. 9. 2026). Předvyplní se první studio a všechna
    * ve stejném městě - v Brně tedy rovnou obě brněnská.
@@ -282,7 +308,7 @@ export function RecordingSection({
               <VyberPole
                 required
                 value={form.actorUserId}
-                onChange={(e) => set('actorUserId', e.target.value)}
+                onChange={(e) => vyberHerce(e.target.value)}
                 className={inputClass}
               >
                 <option value="">— vyberte herce —</option>
@@ -311,7 +337,12 @@ export function RecordingSection({
                 value={form.pageCount}
                 onChange={(e) => {
                   const ns = Number(e.target.value) || 0;
-                  setForm((f) => ({ ...f, pageCount: ns }));
+                  // Frekvence se dopočítají, ale dají se přepsat pod tím.
+                  setForm((f) => ({
+                    ...f,
+                    pageCount: ns,
+                    requiredSessions: Math.max(1, sessionsForPages(ns, stranNaFrekvenci)),
+                  }));
                 }}
                 className={`${inputClass} tabular-nums`}
               />

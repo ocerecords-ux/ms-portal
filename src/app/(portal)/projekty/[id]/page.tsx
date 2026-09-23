@@ -106,6 +106,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     calendarSettings,
     historie,
     dotoceniHercu,
+    normostranyHercu,
     ikonyTypu,
     natoceno,
     druhyLicence,
@@ -178,6 +179,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       where: { caflouProjectId },
       select: { userId: true, dotocenoAt: true },
     }),
+    // Normostrany jednotlivých herců (23. 9. 2026) - podle nich se plánují
+    // frekvence, když je kniha dělená mezi víc herců.
+    prisma.herecNormostrany
+      .findMany({ where: { caflouProjectId }, select: { userId: true, pageCount: true } })
+      .catch(() => []),
     // Ikony typu projektu z Ceniku - do odznaku u typu (zadani 10. 9. 2026).
     mapaIkonTypu(),
     // Natacecí protokol - vede ho Bruno z chatu (zadani 12. 9. 2026).
@@ -197,6 +203,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Dotoceni hercu do tvaru, ve kterem s tim pracuji komponenty: ucet -> datum.
   const dotoceniPodleHerce: Record<string, string> = Object.fromEntries(
     dotoceniHercu.map((d) => [d.userId, d.dotocenoAt.toISOString()]),
+  );
+  /** Normostrany podle herce (23. 9. 2026) - ID účtu -> NS. */
+  const normostranyPodleHerce: Record<string, number> = Object.fromEntries(
+    (normostranyHercu as { userId: string; pageCount: number }[]).map((n) => [n.userId, n.pageCount]),
   );
 
   // Zapisy Bruna jako zaznamy (zadani 13. 9. 2026: „v detailu bych to delal
@@ -429,6 +439,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         firmy={klientskeFirmy.map((f) => ({ id: f.id, label: f.name }))}
         herci={herciUctu.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
         dotoceniHercu={dotoceniPodleHerce}
+        normostranyHercu={normostranyPodleHerce}
         natoceniZaznamy={zaznamyNatoceni}
         vidiKlienta={canViewProjectBusinessInfo(session.user.role)}
         nabizetUvodZaver={firmaChceUvodZaver(firmaProjektu?.name ?? company?.name)}
@@ -618,10 +629,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           companyId={company?.id ?? null}
           pageCount={project?.pageCount ?? null}
           sessionsFromPages={sessionsForPages(project?.pageCount ?? 0, calendarSettings.pagesPerSession)}
+          stranNaFrekvenci={calendarSettings.pagesPerSession}
           narratorFromCaflou={project?.narrator ?? null}
           herci={herci.map((h) => ({ id: h.id, label: bezTitulu(h.name) || h.email }))}
           studios={studia.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
           defaultActorUserId={meta?.actorUserId ?? null}
+          normostranyHercu={normostranyPodleHerce}
           datumOdevzdani={naDatumPole(meta?.endDate ?? null) || null}
           requests={recordingRequests.map((r) => ({
             id: r.id,

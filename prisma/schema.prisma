@@ -323,6 +323,8 @@ model User {
 
   /// U kterych projektu je tenhle herec dotoceny.
   dotoceniHerce HerecDotocen[] @relation("DotocenyHerec")
+  /// Normostrany herce na projektech (23. 9. 2026).
+  normostranyHerce HerecNormostrany[] @relation("HerecNormostrany")
 
   /// Kam se s timhle hercem doteklo natacení (vede Bruno - viz BrunoNatoceno).
   brunoNatoceno BrunoNatoceno[] @relation("BrunoNatocenoHerec")
@@ -2564,6 +2566,33 @@ model PreposlechOdkaz {
   pocetOtevreni Int       @default(0)
 }
 
+
+/// NORMOSTRANY JEDNOHO HERCE NA PROJEKTU (zadani 23. 9. 2026: „v pripade,
+/// ze bude vice jak jeden herec u projektu, tak bych potreboval mit u nich
+/// moznost pridat ke kazdemu pocet normostran, kvuli planovani").
+///
+/// Kniha delena mezi vic hercu: kazdy ma svuj dil a podle nej se planuji
+/// jeho frekvence. Celkovy rozsah projektu (ProjectMeta.pageCount) zustava,
+/// jak byl - tohle je rozpad, ne nahrada.
+///
+/// Zamerne vlastni tabulka: vazba projekt-herci je many-to-many bez dalsich
+/// poli, pridat do ni cislo nejde.
+model HerecNormostrany {
+  id              String @id @default(cuid())
+  caflouProjectId String
+
+  userId String
+  user   User   @relation("HerecNormostrany", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Normostrany tohoto herce. Prazdny radek se nedrzi - maze se.
+  pageCount Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([caflouProjectId, userId])
+  @@index([caflouProjectId])
+}
 
 /// Dotoceny herec na projektu (zadani 11. 9. 2026: "u hercu v projektech
 /// v detailu vlozit vedle jeho jmena tlacitko Dotoceno, jakmile ho nekdo

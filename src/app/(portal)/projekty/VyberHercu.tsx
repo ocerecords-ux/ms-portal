@@ -40,6 +40,8 @@ export function VyberHercu({
   onPoslatKlientovi,
   dotoceniBezi,
   strany,
+  normostrany,
+  onZmenitNormostrany,
 }: {
   herci: Herec[];
   /** ID vybraných účtů v pořadí - první je Herec 1. */
@@ -67,6 +69,15 @@ export function VyberHercu({
    * zobrazuje jako odznak na bublině; výběr herců s ní nic nedělá.
    */
   strany?: Record<string, number>;
+  /**
+   * NORMOSTRANY JEDNOHO HERCE (zadání 23. 9. 2026: „v případě, že bude více
+   * jak jeden herec u projektu, tak bych potřeboval mít u nich možnost přidat
+   * ke každému počet normostran, kvůli plánování"). ID účtu -> normostrany.
+   * Políčko se ukazuje, až když jsou herci aspoň dva - u jednoho je rozsah
+   * celého projektu a druhé číslo by jen mátlo.
+   */
+  normostrany?: Record<string, number>;
+  onZmenitNormostrany?: (userId: string, pageCount: number | null) => void;
 }) {
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
@@ -178,6 +189,29 @@ export function VyberHercu({
                     {dotoceniBezi === h.id ? 'Ukládám…' : 'Dotočeno'}
                   </button>
                 ))}
+              {/* Normostrany herce (23. 9. 2026) - jen u víc herců naráz. */}
+              {onZmenitNormostrany && vybrani.length > 1 && (
+                <label className="inline-flex items-center gap-1 text-[11px] font-heading text-muted">
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={disabled}
+                    defaultValue={normostrany?.[h.id] ?? ''}
+                    onBlur={(e) => {
+                      const hodnota = e.target.value.trim();
+                      const cislo = hodnota === '' ? null : Number(hodnota);
+                      if (cislo !== null && (!Number.isFinite(cislo) || cislo < 0)) return;
+                      const puvodni = normostrany?.[h.id] ?? null;
+                      if ((cislo ?? null) === puvodni) return;
+                      onZmenitNormostrany(h.id, cislo);
+                    }}
+                    placeholder="0"
+                    title="Normostrany tohoto herce - podle nich se plánují jeho frekvence"
+                    className="w-16 rounded-lg border border-line bg-field px-2 py-1 text-ink font-heading text-xs tabular-nums outline-none focus:border-brand-purple disabled:opacity-50"
+                  />
+                  NS
+                </label>
+              )}
               {i > 0 && (
                 <button
                   type="button"

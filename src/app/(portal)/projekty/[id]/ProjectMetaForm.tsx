@@ -150,6 +150,7 @@ export function ProjectMetaForm({
   druhyLicence,
   initial,
   dotoceniHercu,
+  normostranyHercu,
   natoceniZaznamy,
   vidiKlienta,
   nabizetUvodZaver = false,
@@ -198,6 +199,8 @@ export function ProjectMetaForm({
   initial: Initial;
   /** Kdo z herců má dotočeno - ID účtu -> datum (zadání 11. 9. 2026). */
   dotoceniHercu: Record<string, string>;
+  /** Normostrany jednotlivých herců (23. 9. 2026) - ID účtu -> NS. */
+  normostranyHercu: Record<string, number>;
   /** Je projekt ukončený? (zadání 16. 9. 2026 - viz UkonceniProjektu.) */
   ukonceny: boolean;
   /**
@@ -244,6 +247,37 @@ export function ProjectMetaForm({
    * přehodil prioritu.
    */
   const [dotoceni, setDotoceni] = useState<Record<string, string>>(dotoceniHercu);
+  /**
+   * NORMOSTRANY JEDNOTLIVÝCH HERCŮ (zadání 23. 9. 2026). Ukládá se hned při
+   * vyplnění, stejně jako dotočeno - je to číslo pro plánování frekvencí.
+   */
+  const [normostrany, setNormostrany] = useState<Record<string, number>>(normostranyHercu);
+
+  async function ulozNormostrany(userId: string, pageCount: number | null) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/projekty/${encodeURIComponent(caflouProjectId)}/herci-normostrany`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, pageCount }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((data as { error?: string })?.error || 'Normostrany se nepodařilo uložit.');
+        return;
+      }
+      setNormostrany((soucasne) => {
+        const dalsi = { ...soucasne };
+        if (pageCount && pageCount > 0) dalsi[userId] = pageCount;
+        else delete dalsi[userId];
+        return dalsi;
+      });
+      // Podle nich se předvyplňuje nabídka termínů - ať tam sedí hned.
+      router.refresh();
+    } catch {
+      setError('Normostrany se nepodařilo uložit.');
+    }
+  }
 
   /**
    * Poslední strana pro každého herce — do odznaku na bublině. Nepatří do
@@ -731,13 +765,17 @@ export function ProjectMetaForm({
               onPoslatKlientovi={(id) => void poslatKlientovi(id)}
               dotoceniBezi={dotoceniBezi}
               strany={strany}
+              normostrany={normostrany}
+              onZmenitNormostrany={(id, ns) => void ulozNormostrany(id, ns)}
             />
             {zpravaKlientovi && (
               <span className="text-xs font-body text-brand-greenDeep">{zpravaKlientovi}</span>
             )}
             <span className="text-xs text-muted font-body">
               Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění
-              šipkou.
+              šipkou. U dvou a víc herců se vedle každého vyplňují jeho{' '}
+              <strong className="font-heading font-semibold">normostrany</strong> — podle nich se pak
+              plánují jeho frekvence.
             </span>
           </div>
 

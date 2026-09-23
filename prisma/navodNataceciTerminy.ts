@@ -31,7 +31,7 @@ V detailu projektu v záložce **Natáčecí plán** klikněte na **Vytvořit na
 ![Okno Vytvořit nabídku termínů s očíslovanými částmi](/navody/terminy-1.png)
 
 1. **Studia** — kliknutím zapnete nebo vypnete studio, ze kterého se nabízí. Zapnuté je fialové s fajfkou. Předvybere se studio a všechna ve stejném městě (v Brně tedy Brno I i Brno II rovnou). **Herec** nad tím je předvyplněný podle projektu.
-2. **Normostrany a Počet frekvencí** — počet se spočítá z normostran (40 NS na frekvenci), dá se přepsat. **První frekvence nejdříve** je zítřek — dnešek se nenabízí.
+2. **Normostrany a Počet frekvencí** — počet se spočítá z normostran (40 NS na frekvenci), dá se přepsat. Když má projekt **víc herců**, vyplňte každému jeho normostrany rovnou v detailu projektu (políčko **NS** vedle jména) — přepnutím herce v tomhle okně se pak předvyplní jeho díl knihy, ne rozsah celé; kdo díl vyplněný nemá, dostane rozsah projektu jako dřív. **První frekvence nejdříve** je zítřek — dnešek se nenabízí.
 3. **Poslední frekvence nejpozději** — sama se nastaví na **dva dny před datem dokončení projektu**, ať stihneme stříhat a odevzdat. Když projekt datum dokončení nemá, je tu měsíc dopředu a je potřeba ho upravit ručně. Vedle je **Poznámka pro herce** — přijde mu v e-mailu i na stránce s výběrem.
 4. **Živý náhled** — kolik volných míst herec dostane a jejich přehled po dnech. Přepočítá se hned, jak změníte studia, období nebo herce.
 
