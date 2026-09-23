@@ -39,6 +39,8 @@ const schema = z.object({
   zvukarName: z.string().trim().max(200).optional(),
   /** Režie online (23. 9. 2026) - ruční výjimka proti automatu. */
   rezieOnline: z.boolean().optional(),
+  /** Uložit i tak, i když se to s něčím kryje (23. 9. 2026) - viz blokace. */
+  presto: z.boolean().optional(),
 });
 
 async function nactiFrekvenci(id: string | null) {
@@ -103,8 +105,11 @@ export async function PATCH(req: NextRequest) {
         actorUserId: slot.request.actorUserId,
         ignoreSlotId: slot.id,
       });
-      if (!kontrola.ok) {
-        return NextResponse.json({ error: kontrola.collisions.map((c) => c.message).join(' ') }, { status: 409 });
+      if (!kontrola.ok && !d.presto) {
+        return NextResponse.json(
+          { error: kontrola.collisions.map((c) => c.message).join(' '), kolize: true },
+          { status: 409 },
+        );
       }
 
       const posun =
@@ -168,12 +173,12 @@ export async function PATCH(req: NextRequest) {
 
     // --- Jiny druh: frekvence se rusi a vznika udalost kalendare -----------
     // Strih se vejde vedle jine prace, ostatni druhy kabinu drzi (20. 9. 2026).
-    if (zabiraStudio(d.kind)) {
+    if (zabiraStudio(d.kind) && !d.presto) {
       const obsazeno = await loadOccupancy([d.studioId], start, end);
       const prekazka =
         obsazeno.slots.some((s) => s.id !== slot.id) || obsazeno.blocks.some((b) => zabiraStudio(b.kind));
       if (prekazka) {
-        return NextResponse.json({ error: 'V tomhle čase už ve studiu něco je.' }, { status: 409 });
+        return NextResponse.json({ error: 'V tomhle čase už ve studiu něco je.', kolize: true }, { status: 409 });
       }
     }
     // Strih a casting (20. 9. 2026) se zapisuji jako prace ve studiu; casting si

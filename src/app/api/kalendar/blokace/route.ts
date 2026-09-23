@@ -34,6 +34,13 @@ const schema = z.object({
   zvukarName: z.string().trim().max(200).optional(),
   /** Režie online (23. 9. 2026) - ruční výjimka proti automatu. */
   rezieOnline: z.boolean().optional(),
+  /**
+   * ULOŽIT I TAK (zadání 23. 9. 2026: „Helča nemůže přidávat castingy, měla
+   * by mít práva měnit cokoli v kalendáři"). Kdo do kalendáře studia smí
+   * psát, musí umět zapsat i něco, co se s jinou událostí kryje - castingy
+   * a domluvy se běžně dějí vedle natáčení. Portál se na to nejdřív zeptá.
+   */
+  presto: z.boolean().optional(),
 });
 
 type Vstup = z.infer<typeof schema>;
@@ -149,17 +156,23 @@ export async function POST(req: NextRequest) {
 
     // Pres uz domluvene nataceni se blokace nedava. Strih se ale vejde
     // vedle cehokoliv - viz zabiraStudio (20. 9. 2026).
-    if (zabiraStudio(kind)) {
+    if (zabiraStudio(kind) && !d.presto) {
       const obsazeno = await loadOccupancy([d.studioId], start, end);
       if (obsazeno.slots.length > 0) {
         return NextResponse.json(
-          { error: `V tomhle čase je natáčení: ${obsazeno.slots.map((s) => s.label).join(', ')}.` },
+          {
+            error: `V tomhle čase je natáčení: ${obsazeno.slots.map((s) => s.label).join(', ')}.`,
+            kolize: true,
+          },
           { status: 409 },
         );
       }
       const prekazka = obsazeno.blocks.find((b) => zabiraStudio(b.kind));
       if (prekazka) {
-        return NextResponse.json({ error: `V tomhle čase už ve studiu je: ${prekazka.title}.` }, { status: 409 });
+        return NextResponse.json(
+          { error: `V tomhle čase už ve studiu je: ${prekazka.title}.`, kolize: true },
+          { status: 409 },
+        );
       }
     }
 
@@ -247,17 +260,23 @@ export async function PATCH(req: NextRequest) {
     const mimoStudio = await zvukarNepatriKeStudiu(jePrace ? d.zvukarUserId : undefined, d.studioId);
     if (mimoStudio) return NextResponse.json({ error: mimoStudio }, { status: 400 });
 
-    if (zabiraStudio(kind)) {
+    if (zabiraStudio(kind) && !d.presto) {
       const obsazeno = await loadOccupancy([d.studioId], start, end);
       if (obsazeno.slots.length > 0) {
         return NextResponse.json(
-          { error: `V tomhle čase je natáčení: ${obsazeno.slots.map((s) => s.label).join(', ')}.` },
+          {
+            error: `V tomhle čase je natáčení: ${obsazeno.slots.map((s) => s.label).join(', ')}.`,
+            kolize: true,
+          },
           { status: 409 },
         );
       }
       const prekazka = obsazeno.blocks.find((b) => b.id !== id && zabiraStudio(b.kind));
       if (prekazka) {
-        return NextResponse.json({ error: `V tomhle čase už ve studiu je: ${prekazka.title}.` }, { status: 409 });
+        return NextResponse.json(
+          { error: `V tomhle čase už ve studiu je: ${prekazka.title}.`, kolize: true },
+          { status: 409 },
+        );
       }
     }
 

@@ -1809,6 +1809,12 @@ function UdalostForm({
   const [rezie, setRezie] = useState(upravovana?.rezie ?? false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * ULOŽIT I TAK (zadání 23. 9. 2026: „měla by mít práva měnit cokoli
+   * v kalendáři"). Když se událost s něčím kryje, portál to nejdřív řekne -
+   * a nabídne uložení i tak. Castingy a domluvy vedle natáčení jsou běžné.
+   */
+  const [kolize, setKolize] = useState(false);
 
   const jePrace = jePraceVeStudiu(druh);
   const jeNataceni = druh === 'NATACENI';
@@ -1984,9 +1990,10 @@ function UdalostForm({
     }
   }
 
-  async function uloz() {
+  async function uloz(presto = false) {
     setBusy(true);
     setError(null);
+    if (!presto) setKolize(false);
     try {
       const res = await fetch(
         jeFrekvence
@@ -2003,6 +2010,7 @@ function UdalostForm({
           end: konec.toISOString(),
           kind: druh,
           note: poznamka.trim() || undefined,
+          ...(presto ? { presto: true } : {}),
           ...(jePrace
             ? {
                 caflouProjectId: sProjektem ? (projekt?.id ?? upravovana?.udalost?.caflouProjectId ?? '') : '',
@@ -2025,6 +2033,7 @@ function UdalostForm({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || 'Událost se nepodařilo uložit.');
+        setKolize(Boolean(data?.kolize));
         return;
       }
       onHotovo();
@@ -2278,12 +2287,27 @@ function UdalostForm({
         </p>
       )}
 
-      {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
+      {error && (
+        <div className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 flex flex-col gap-2">
+          <p className="m-0">{error}</p>
+          {/* Kdo do kalendáře studia píše, může zapsat i to, co se kryje. */}
+          {kolize && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void uloz(true)}
+              className="self-start rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-heading font-semibold text-ink hover:border-brand-purple disabled:opacity-60"
+            >
+              Uložit i tak
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center gap-3 flex-wrap">
         <button
           type="button"
-          onClick={uloz}
+          onClick={() => void uloz()}
           disabled={busy || chybi}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
