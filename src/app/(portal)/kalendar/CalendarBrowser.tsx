@@ -845,7 +845,19 @@ export function CalendarBrowser({
           kalendáře v jednom posuvném pruhu a pod nimi hledání. */}
       <div data-kal-ovladani className="flex items-end justify-between gap-4 flex-wrap">
         <div className="hidden sm:block">
-          <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
+          {/* KONFLIKTY A HISTORIE U NADPISU (zadání 23. 9. 2026: „tu historii
+              a konflikty dej někam k nápisu kalendář a dej tam jen ikony").
+              Mezi štítky kalendářů překážely - nejsou to kalendáře, jsou to
+              nástroje nad nimi. */}
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
+            <Konflikty
+              od={days[0]?.startIso ?? anchorIso}
+              doKdy={days[days.length - 1]?.endIso ?? days[0]?.startIso ?? anchorIso}
+              naDen={(den) => prejdi({ datum: den, pohled: 'den' })}
+            />
+            <HistorieKalendare naDen={(den) => prejdi({ datum: den, pohled: 'den' })} />
+          </div>
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">{nadpis}</p>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
@@ -1105,15 +1117,6 @@ export function CalendarBrowser({
             </button>
           </span>
         )}
-        {/* KONFLIKTY (zadání 23. 9. 2026) - oranžový trojúhelník se svítí, jen
-            když je co řešit. Rozsah je ten, co je zrovna vidět. */}
-        <Konflikty
-          od={days[0]?.startIso ?? anchorIso}
-          doKdy={days[days.length - 1]?.endIso ?? days[0]?.startIso ?? anchorIso}
-          naDen={(den) => prejdi({ datum: den, pohled: 'den' })}
-        />
-        {/* HISTORIE (zadání 23. 9. 2026) - kdo kdy co v kalendáři změnil. */}
-        <HistorieKalendare naDen={(den) => prejdi({ datum: den, pohled: 'den' })} />
         {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
             (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
             orámovat, aby to bylo jasné, že je to v sólo režimu"). */}

@@ -72,21 +72,23 @@ export function HistorieKalendare({ naDen }: { naDen: (den: string) => void }) {
 
   return (
     <span className="relative inline-flex shrink-0">
+      {/* Jen ikona hodin se šipkou zpět (zadání 23. 9. 2026: „dej tam jen
+          ikony") - u nadpisu Kalendář, vedle konfliktů. */}
       <button
         type="button"
         onClick={() => setOtevreno((o) => !o)}
         aria-expanded={otevreno}
+        aria-label="Historie kalendáře"
         title="Kdo kdy co v kalendáři změnil"
-        className={`inline-flex items-center gap-1.5 rounded-pill border border-line px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-heading transition-colors ${
-          otevreno ? 'text-ink' : 'text-muted hover:text-ink'
+        className={`inline-flex items-center justify-center w-9 h-9 rounded-lg border border-line transition-colors ${
+          otevreno ? 'text-ink border-brand-purple' : 'text-muted hover:text-ink hover:border-brand-purple'
         }`}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
           <path d="M3 3.5v4h4" />
           <path d="M12 7.5V12l3 1.8" />
         </svg>
-        Historie
       </button>
 
       {otevreno && (
