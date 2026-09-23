@@ -6,7 +6,6 @@ import { cisloUctuSKodem, computeTotals } from '@/lib/doklady';
 import { pdfFaktury } from '@/lib/dokladNahledServer';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
 import { rodnyListKFakture } from '@/lib/rodnyListServer';
-import { brunoNapisDoKanalu } from '@/lib/brunoOznameni';
 
 /**
  * Automatické ukončení projektu po odeslání faktury - vypnuté 21. 9. 2026,
@@ -234,10 +233,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           puvodce: { id: null, jmeno: 'Bruno (po odeslání faktury)' },
         });
         projektUkoncen = true;
-        void brunoNapisDoKanalu(
-          invoice.caflouProjectId,
-          `Faktura ${invoice.number} odešla klientovi, projekt jsem ukončil (${STAV_PO_FAKTURE}). Kdyby to bylo omylem, vraťte ho v detailu projektu mezi aktivní.`,
-        ).catch(() => undefined);
+        // Do kanálu projektu se o tom NEPÍŠE (zadání 23. 9. 2026: „ať Bruno
+        // tohle nepíše do chatu"). Že projekt ukončil automat po odeslání
+        // faktury, je vidět v historii projektu - do chatu to nepatří.
       } catch (err) {
         console.error(`Projekt ${invoice.caflouProjectId} se po odeslani faktury nepodarilo uzavrit:`, err);
       }
