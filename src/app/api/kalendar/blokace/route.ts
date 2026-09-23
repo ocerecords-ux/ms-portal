@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { smiStudio, spravovanaStudia, spravujeNeco } from '@/lib/spravaKalendare';
 import { loadOccupancy } from '@/lib/calendarServer';
 import { BLOCK_KIND_LABELS, jePraceVeStudiu, maHerce, popisUdalosti, zabiraStudio } from '@/lib/calendar';
+import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
 import { synchronizujUkolUdalosti, zrusUkolUdalosti } from '@/lib/kalendarUkolyServer';
 
 /**
@@ -111,6 +112,14 @@ async function zvukarNepatriKeStudiu(zvukarUserId: string | undefined, studioId:
   return `${zvukar.name || zvukar.email} točí jen ve studiu ${kde} - do tohohle studia ho zapsat nejde. Studia se zaškrtávají na kartě uživatele.`;
 }
 
+/** Zkratka studia do historie kalendáře - „Brno I" místo cuid. */
+async function nazevStudia(studioId: string): Promise<string | null> {
+  const studio = await prisma.studio
+    .findUnique({ where: { id: studioId }, select: { shortName: true } })
+    .catch(() => null);
+  return studio?.shortName ?? null;
+}
+
 /** Pásmo studia - termín úkolu má sedět na to, kdy se ve studiu točí. */
 async function pasmoStudia(studioId: string): Promise<string> {
   const studio = await prisma.studio
@@ -201,6 +210,17 @@ export async function POST(req: NextRequest) {
       nazevUdalosti: block.title || null,
       zacatek: block.start,
       pasmo: await pasmoStudia(block.studioId),
+      kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
+    });
+
+    await zapisZmenuKalendare({
+      typ: 'BLOK',
+      akce: 'VZNIK',
+      zaznamId: block.id,
+      nazev: [block.title, block.actorName].filter(Boolean).join(' · ') || 'Blokace',
+      start: block.start,
+      end: block.end,
+      kde: await nazevStudia(block.studioId),
       kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
     });
 
@@ -319,6 +339,26 @@ export async function PATCH(req: NextRequest) {
       kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
     });
 
+    /**
+     * Do historie se píše, co se změnilo - čas nebo studio se hledá nejčastěji
+     * („kdo to přesunul?"). Zbytek se shrne jako „upraveny údaje".
+     */
+    const zmenaCasu =
+      puvodni.start.getTime() !== upravena.start.getTime() ||
+      puvodni.end.getTime() !== upravena.end.getTime() ||
+      puvodni.studioId !== upravena.studioId;
+    await zapisZmenuKalendare({
+      typ: 'BLOK',
+      akce: 'UPRAVA',
+      zaznamId: upravena.id,
+      nazev: [upravena.title, upravena.actorName].filter(Boolean).join(' · ') || 'Blokace',
+      start: upravena.start,
+      end: upravena.end,
+      kde: await nazevStudia(upravena.studioId),
+      podrobnosti: zmenaCasu ? 'Přesunuto nebo změněn čas' : 'Upraveny údaje',
+      kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
+    });
+
     return NextResponse.json(upravena);
   } catch (err) {
     console.error('PATCH /api/kalendar/blokace selhalo:', err);
@@ -343,7 +383,7 @@ export async function DELETE(req: NextRequest) {
 
     // Převzatá událost z Googlu by se s dalším nasazením vrátila - klíč se
     // proto poznamená a seed ji znovu nezaloží (21. 9. 2026).
-    const blok = await prisma.studioBlock.findUnique({ where: { id }, select: { importKlic: true, studioId: true } });
+    const blok = await prisma.studioBlock.findUnique({ where: { id } });
     if (blok && !smiStudio(sprava, blok.studioId)) {
       return NextResponse.json({ error: 'Kalendář tohoto studia upravovat nemůžete.' }, { status: 403 });
     }
@@ -357,6 +397,20 @@ export async function DELETE(req: NextRequest) {
     // Úkol, který na události visel, jde pryč s ní (23. 9. 2026).
     await zrusUkolUdalosti('BLOCK', id);
     await prisma.studioBlock.delete({ where: { id } });
+
+    if (blok) {
+      await zapisZmenuKalendare({
+        typ: 'BLOK',
+        akce: 'ZRUSENI',
+        zaznamId: blok.id,
+        nazev: [blok.title, blok.actorName].filter(Boolean).join(' · ') || 'Blokace',
+        start: blok.start,
+        end: blok.end,
+        kde: await nazevStudia(blok.studioId),
+        kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
+      });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/kalendar/blokace selhalo:', err);

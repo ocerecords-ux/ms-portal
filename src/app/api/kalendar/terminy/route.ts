@@ -7,6 +7,7 @@ import { smiStudio, spravovanaStudia } from '@/lib/spravaKalendare';
 import { checkSlot, loadOccupancy, recordEvent } from '@/lib/calendarServer';
 import { popisUdalosti, zabiraStudio } from '@/lib/calendar';
 import { notify } from '@/lib/notifications';
+import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
 import { synchronizujUkolUdalosti, zrusUkolUdalosti } from '@/lib/kalendarUkolyServer';
 
 /**
@@ -134,7 +135,7 @@ export async function PATCH(req: NextRequest) {
        * není, počká se. Viz lib/kalendarUkolyServer.ts.
        */
       const studio = await prisma.studio
-        .findUnique({ where: { id: d.studioId }, select: { timezone: true } })
+        .findUnique({ where: { id: d.studioId }, select: { timezone: true, shortName: true } })
         .catch(() => null);
       await synchronizujUkolUdalosti({
         typ: 'SLOT',
@@ -159,6 +160,18 @@ export async function PATCH(req: NextRequest) {
           nove: { studioId: d.studioId, start: start.toISOString(), end: end.toISOString() },
         },
       });
+      await zapisZmenuKalendare({
+        typ: 'SLOT',
+        akce: 'UPRAVA',
+        zaznamId: slot.id,
+        nazev: `${slot.request.projectName} · ${slot.request.actorName}`,
+        start,
+        end,
+        kde: studio?.shortName ?? null,
+        podrobnosti: posun ? `Přesunuto z ${kdy(slot.start)}` : 'Upraveny údaje frekvence',
+        kdo: { id: session.user.id, jmeno: kdo },
+      });
+
       if (posun && slot.request.actorUserId) {
         await notify({
           userId: slot.request.actorUserId,
@@ -242,6 +255,16 @@ export async function PATCH(req: NextRequest) {
       type: 'SLOT_CANCELLED',
       note: `Frekvence ${kdy(slot.start)} zrušena a v kalendáři změněna na ${d.kind === 'STRIH' ? 'střih' : jeCasting ? 'casting' : d.kind}.`,
     });
+    await zapisZmenuKalendare({
+      typ: 'SLOT',
+      akce: 'ZRUSENI',
+      zaznamId: slot.id,
+      nazev: `${slot.request.projectName} · ${slot.request.actorName}`,
+      start: slot.start,
+      end: slot.end,
+      kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
+    });
+
     if (slot.request.actorUserId) {
       await notify({
         userId: slot.request.actorUserId,

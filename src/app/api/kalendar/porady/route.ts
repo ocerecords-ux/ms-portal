@@ -7,6 +7,7 @@ import { canManageCalendar, isInternalRole } from '@/lib/roles';
 import { zonedToUtc } from '@/lib/calendar';
 import { notifyMany } from '@/lib/notifications';
 import { userLabel } from '@/lib/chatServer';
+import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
 import { PASMO_PORAD, platnyOdkaz, popisOpakovani, type Opakovani } from '@/lib/porady';
 
 /**
@@ -24,7 +25,7 @@ const OPAKOVANI = ['NE', 'DENNE', 'PRACOVNI_DNY', 'TYDNE', 'KAZDE_DVA_TYDNY', 'M
 
 const schema = z.object({
   /**
-   * Do kterého kalendáře to patří (23. 9. 2026). SCHUZKA = Další schůzky,
+   * Do kterého kalendáře to patří (23. 9. 2026). SCHUZKA = Schůzky,
    * ty zakládá a mění jen Žůžo-labůžo a produkce - vidí je celá produkce,
    * tak ať je nezaloží někdo, komu se pak neukážou.
    */
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
     if (parsed.data.druh === 'SCHUZKA' && !canManageCalendar(ja.role)) {
-      return NextResponse.json({ error: 'Další schůzky zakládá produkce.' }, { status: 403 });
+      return NextResponse.json({ error: 'Schůzky zakládá produkce.' }, { status: 403 });
     }
 
     const p = await priprav(parsed.data, ja.id);
@@ -147,6 +148,16 @@ export async function POST(req: NextRequest) {
       },
     );
 
+    await zapisZmenuKalendare({
+      typ: parsed.data.druh === 'SCHUZKA' ? 'SCHUZKA' : 'PORADA',
+      akce: 'VZNIK',
+      zaznamId: porada.id,
+      nazev: parsed.data.nazev,
+      start: porada.start,
+      end: porada.end,
+      kdo: { id: ja.id, jmeno },
+    });
+
     return NextResponse.json({ id: porada.id }, { status: 201 });
   } catch (err) {
     console.error('POST /api/kalendar/porady selhalo:', err);
@@ -160,7 +171,7 @@ export async function PATCH(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Chybí porada.' }, { status: 400 });
   try {
-    // Poradu smí měnit jen její účastník; Další schůzku kdokoliv z produkce -
+    // Poradu smí měnit jen její účastník; Schůzku kdokoliv z produkce -
     // je to společný kalendář, ne soukromá skupina.
     const puvodni = await prisma.porada.findFirst({
       where: { id, ...(canManageCalendar(ja.role) ? {} : { ucastnici: { some: { userId: ja.id } } }) },
@@ -176,7 +187,7 @@ export async function PATCH(req: NextRequest) {
       (parsed.data.druh === 'SCHUZKA' || puvodni.druh === 'SCHUZKA') &&
       !canManageCalendar(ja.role)
     ) {
-      return NextResponse.json({ error: 'Další schůzky mění produkce.' }, { status: 403 });
+      return NextResponse.json({ error: 'Schůzky mění produkce.' }, { status: 403 });
     }
 
     const p = await priprav(parsed.data, ja.id);
@@ -204,6 +215,18 @@ export async function PATCH(req: NextRequest) {
     const zustali = p.ucastnici.filter((u) => puvodniLide.includes(u));
     const popis = `${parsed.data.nazev} — ${popisTerminu(parsed.data)}`;
     const url = `/kalendar?datum=${parsed.data.den}`;
+    await zapisZmenuKalendare({
+      typ: parsed.data.druh === 'SCHUZKA' ? 'SCHUZKA' : 'PORADA',
+      akce: 'UPRAVA',
+      zaznamId: id,
+      nazev: parsed.data.nazev,
+      start: p.data.start,
+      end: p.data.end,
+      podrobnosti:
+        p.data.start.getTime() !== puvodni.start.getTime() ? 'Změněn termín' : 'Upraveny údaje',
+      kdo: { id: ja.id, jmeno },
+    });
+
     await notifyMany(zustali.filter((u) => u !== ja.id), { kind: 'porada-zmena', title: `${jmeno} upravil(a) poradu`, body: popis, url });
     await notifyMany(noviLide.filter((u) => u !== ja.id), { kind: 'porada-pozvanka', title: `${jmeno} vás pozval(a) na poradu`, body: popis, url });
     await notifyMany(odebrani.filter((u) => u !== ja.id), { kind: 'porada-zrusena', title: `Na poradě už nejste`, body: puvodni.nazev, url: null });
@@ -233,7 +256,7 @@ export async function DELETE(req: NextRequest) {
     });
     if (!porada) return NextResponse.json({ error: 'Porada nenalezena.' }, { status: 404 });
     if (porada.druh === 'SCHUZKA' && !canManageCalendar(ja.role)) {
-      return NextResponse.json({ error: 'Další schůzky ruší produkce.' }, { status: 403 });
+      return NextResponse.json({ error: 'Schůzky ruší produkce.' }, { status: 403 });
     }
 
     const jmeno = userLabel({ name: ja.name ?? null, email: ja.email ?? '' });
@@ -247,11 +270,31 @@ export async function DELETE(req: NextRequest) {
       const kdy = new Intl.DateTimeFormat('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric' }).format(
         new Date(`${den}T12:00:00`),
       );
+      await zapisZmenuKalendare({
+        typ: porada.druh === 'SCHUZKA' ? 'SCHUZKA' : 'PORADA',
+        akce: 'ZRUSENI',
+        zaznamId: porada.id,
+        nazev: porada.nazev,
+        start: porada.start,
+        end: porada.end,
+        podrobnosti: `Zrušen jeden termín (${kdy})`,
+        kdo: { id: ja.id, jmeno },
+      });
       await notifyMany(ostatni, { kind: 'porada-zrusena', title: `${jmeno} zrušil(a) poradu ${kdy}`, body: porada.nazev, url: `/kalendar?datum=${den}` });
       return NextResponse.json({ ok: true });
     }
 
     await prisma.porada.delete({ where: { id } });
+    await zapisZmenuKalendare({
+      typ: porada.druh === 'SCHUZKA' ? 'SCHUZKA' : 'PORADA',
+      akce: 'ZRUSENI',
+      zaznamId: porada.id,
+      nazev: porada.nazev,
+      start: porada.start,
+      end: porada.end,
+      podrobnosti: porada.opakovani !== 'NE' ? 'Zrušena celá řada' : null,
+      kdo: { id: ja.id, jmeno },
+    });
     await notifyMany(ostatni, {
       kind: 'porada-zrusena',
       title: `${jmeno} zrušil(a) poradu`,

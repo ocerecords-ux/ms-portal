@@ -3428,6 +3428,35 @@ model PripomenutaUdalost {
   @@index([createdAt])
 }
 
+/// HISTORIE KALENDÁŘE (zadani 23. 9. 2026: „jeste by to chtelo nekam dat
+/// historii, kdo kdy upravil nejakou vec v kalendari").
+///
+/// Jeden radek = jedna zmena. Nazev i cas se ukladaji JAKO OTISK, ne odkazem:
+/// zaznam ma davat smysl i potom, co udalost nekdo smaze nebo prejmenuje -
+/// prave tehdy se v historii hleda nejcasteji.
+model KalendarZmena {
+  id        String   @id @default(cuid())
+  /// SLOT (frekvence z nabidky) | BLOK | PORADA | SCHUZKA | MIMO
+  typ       String
+  /// VZNIK | UPRAVA | ZRUSENI
+  akce      String
+  zaznamId  String?
+  /// „KOUSEK TEBE · Tereza Jarcevska"
+  nazev     String
+  /// Den udalosti v Praze (YYYY-MM-DD) - klik v historii na nej skoci.
+  den       String?
+  /// „14:30-18:30 · Brno II"
+  kdy       String?
+  /// Co se zmenilo, kdyz to jde rict jednou vetou.
+  podrobnosti String?
+  kdoId     String?
+  kdoJmeno  String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([den])
+}
+
 model PoradaUcastnik {
   poradaId String
   porada   Porada @relation(fields: [poradaId], references: [id], onDelete: Cascade)

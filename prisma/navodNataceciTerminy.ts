@@ -134,6 +134,8 @@ Zvukaři Schůzky nevidí a v liště se jim ani nenabídnou.
 
 Portál přitom nic nezakazuje: zapsat událost přes kolizi jde dál (tlačítko **Uložit i tak**), jen se o tom ví.
 
+**Historie.** Vedle kalendářů je štítek **Historie**: kdo kdy co v kalendáři zapsal, upravil nebo zrušil — natáčení, události, porady, schůzky i Mimo studio. U každého řádku je název, čas události, co se změnilo a kdy; klik na řádek skočí na den té události. Název a čas se do historie ukládají jako text, takže záznam dává smysl i u události, která už je smazaná — právě u ní se hledá nejčastěji.
+
 **Kalendář se obnovuje sám.** Když někdo jiný zapíše, přesune nebo smaže událost, uvidíte to do pár vteřin bez obnovování stránky — v prohlížeči i v aplikaci v telefonu. Rozepsaný formulář se tím nezavře.
 
 **Události přes sebe leží jako papíry na stole.** Název každé události zůstane vidět: co začíná skoro naráz, leží vedle sebe (a úzká bublina dá názvu dva řádky), co začíná později, si lehne navrch přes celou šířku — ale až pod názvy těch předchozích. Celý detail události se otevře kliknutím.

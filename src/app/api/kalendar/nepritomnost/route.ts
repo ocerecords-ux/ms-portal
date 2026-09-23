@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
 import { canManageCalendar, isInternalRole } from '@/lib/roles';
 import { zonedToUtc } from '@/lib/calendar';
 import { PASMO_NEPRITOMNOSTI } from '@/lib/nepritomnost';
@@ -157,6 +158,16 @@ export async function POST(req: NextRequest) {
       zapsalId: session.user.id,
     })),
   });
+  await zapisZmenuKalendare({
+    typ: 'MIMO',
+    akce: 'VZNIK',
+    nazev: kdo.jmeno,
+    start: zaznamy[0]?.start ?? null,
+    end: zaznamy[0]?.end ?? null,
+    kde: 'Mimo studio',
+    podrobnosti: zaznamy.length > 1 ? `${zaznamy.length} dní` : null,
+    kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
+  });
   return NextResponse.json({ pocet: zaznamy.length }, { status: 201 });
 }
 
@@ -202,12 +213,35 @@ export async function PATCH(req: NextRequest) {
       poznamka: parsed.data.poznamka || null,
     },
   });
+  await zapisZmenuKalendare({
+    typ: 'MIMO',
+    akce: 'UPRAVA',
+    zaznamId: k.zaznam.id,
+    nazev: kdo.jmeno,
+    start: cas.start,
+    end: cas.end,
+    kde: 'Mimo studio',
+    kdo: { id: k.session.user.id, jmeno: k.session.user.name || k.session.user.email },
+  });
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: NextRequest) {
   const k = await zaznamKUprave(req.nextUrl.searchParams.get('id'));
   if ('chyba' in k) return NextResponse.json({ error: k.chyba }, { status: k.status });
+  const smazany = await prisma.nepritomnost
+    .findUnique({ where: { id: k.zaznam.id }, select: { jmeno: true, start: true, end: true } })
+    .catch(() => null);
   await prisma.nepritomnost.delete({ where: { id: k.zaznam.id } });
+  await zapisZmenuKalendare({
+    typ: 'MIMO',
+    akce: 'ZRUSENI',
+    zaznamId: k.zaznam.id,
+    nazev: smazany?.jmeno ?? 'Mimo studio',
+    start: smazany?.start ?? null,
+    end: smazany?.end ?? null,
+    kde: 'Mimo studio',
+    kdo: { id: k.session.user.id, jmeno: k.session.user.name || k.session.user.email },
+  });
   return NextResponse.json({ ok: true });
 }

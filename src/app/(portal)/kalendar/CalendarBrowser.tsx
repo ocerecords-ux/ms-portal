@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { VyskytyHledani } from './VyskytyHledani';
 import { PoradaForm } from './Porady';
 import { Konflikty } from './Konflikty';
+import { HistorieKalendare } from './HistorieKalendare';
 import {
   BARVA_PORAD,
   NAZEV_KALENDARE_PORADY,
@@ -1111,6 +1112,8 @@ export function CalendarBrowser({
           doKdy={days[days.length - 1]?.endIso ?? days[0]?.startIso ?? anchorIso}
           naDen={(den) => prejdi({ datum: den, pohled: 'den' })}
         />
+        {/* HISTORIE (zadání 23. 9. 2026) - kdo kdy co v kalendáři změnil. */}
+        <HistorieKalendare naDen={(den) => prejdi({ datum: den, pohled: 'den' })} />
         {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
             (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
             orámovat, aby to bylo jasné, že je to v sólo režimu"). */}
