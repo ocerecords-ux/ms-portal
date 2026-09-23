@@ -136,6 +136,7 @@ export default async function TimesheetsPage({
     .map((b) => ({
       id: b.id,
       den: (b.rozhodnutoAt ?? b.navrzenoAt).toISOString().slice(0, 10),
+      projectId: b.caflouProjectId,
       projectName: b.projectName,
       userId: b.userId,
       userLabel: b.user.name || b.user.email,

@@ -1039,10 +1039,13 @@ function NabidkaReakci({
   mine,
   onVyber,
   onZavri,
+  onKopirovat,
 }: {
   mine: boolean;
   onVyber: (code: string) => void;
   onZavri: () => void;
+  /** Kopírování textu - systémová nabídka je na bublině vypnutá (23. 9. 2026). */
+  onKopirovat?: () => void;
 }) {
   useEffect(() => {
     function naKlavesu(e: KeyboardEvent) {
@@ -1072,6 +1075,15 @@ function NabidkaReakci({
             <ZnakReakce code={code} size={22} />
           </button>
         ))}
+        {onKopirovat && (
+          <button
+            type="button"
+            onClick={onKopirovat}
+            className="ml-0.5 rounded px-2 py-1.5 text-xs font-heading text-muted hover:bg-field whitespace-nowrap"
+          >
+            Kopírovat
+          </button>
+        )}
       </span>
     </>
   );
@@ -1093,10 +1105,13 @@ function NabidkaReakci({
 function BublinaZpravy({
   mine,
   onReakce,
+  text,
   children,
 }: {
   mine: boolean;
   onReakce: (code: string) => void;
+  /** Holý text zprávy - kopíruje se z nabídky. */
+  text?: string;
   children: React.ReactNode;
 }) {
   const [nabidka, setNabidka] = useState(false);
@@ -1140,7 +1155,12 @@ function BublinaZpravy({
           zrusCekani();
           setNabidka(true);
         }}
-        className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm [-webkit-touch-callout:none] ${
+        /* Výběr textu je na bublině vypnutý (23. 9. 2026: „když v mobilu chci
+           reagovat na koment, tak se mi označí celá stránka, když podržím
+           prst"). iOS jinak na podržení spustí svoje Kopírovat / Vyhledat
+           a naše nabídka se k slovu nedostane. Kopírování zůstává - je
+           v nabídce, která se podržením otevře. */
+        className={`mt-0.5 mb-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words shadow-sm select-none [-webkit-user-select:none] [-webkit-touch-callout:none] ${
           mine ? 'bg-brand-purple text-white' : 'bg-surface border border-line text-ink'
         }`}
       >
@@ -1154,6 +1174,14 @@ function BublinaZpravy({
             setNabidka(false);
           }}
           onZavri={() => setNabidka(false)}
+          onKopirovat={
+            text
+              ? () => {
+                  void navigator.clipboard?.writeText(text).catch(() => undefined);
+                  setNabidka(false);
+                }
+              : undefined
+          }
         />
       )}
     </span>
@@ -3629,7 +3657,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                             </div>
                           ) : (
                             <>
-                              <BublinaZpravy mine={m.mine} onReakce={(code) => prepniReakci(m.id, code)}>
+                              <BublinaZpravy mine={m.mine} text={m.body} onReakce={(code) => prepniReakci(m.id, code)}>
                                 <Telo body={m.body} jmena={jmenaTymu} projekty={projektyProZminky} mine={m.mine} />
                               </BublinaZpravy>
                               <Prilohy prilohy={m.prilohy ?? []} />
@@ -3811,7 +3839,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               </div>
                             ) : (
                               <>
-                                <BublinaZpravy mine={m.mine} onReakce={(code) => prepniReakci(m.id, code)}>
+                                <BublinaZpravy mine={m.mine} text={m.body} onReakce={(code) => prepniReakci(m.id, code)}>
                                   <Telo body={m.body} jmena={jmenaTymu} projekty={projektyProZminky} mine={m.mine} />
                                 </BublinaZpravy>
                                 <Prilohy prilohy={m.prilohy ?? []} />

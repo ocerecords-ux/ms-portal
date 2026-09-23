@@ -18,6 +18,23 @@ import {
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import Link from 'next/link';
+
+/**
+ * Projekt ve výkazu je odkaz na jeho stránku (zadání 23. 9. 2026 od Tomáše
+ * Moravce: „ve výkazech udělat položky sloupečku PROJEKT click through /
+ * hyperlink, aby tě to rovnou hodilo na stránku projektu - člověk to pak
+ * nemusí hledat v projektech"). Bez ID projektu zůstane jen text.
+ */
+function NazevProjektu({ id, nazev }: { id: string | null; nazev: string | null }) {
+  if (!nazev) return <span className="text-muted/60">—</span>;
+  if (!id) return <>{nazev}</>;
+  return (
+    <Link href={`/projekty/${encodeURIComponent(id)}`} className="text-brand-purple no-underline hover:underline">
+      {nazev}
+    </Link>
+  );
+}
 
 type Entry = {
   id: string;
@@ -48,6 +65,7 @@ export type BonusRadek = {
   id: string;
   /** Den schválení (ISO, jen datum) - podle něj se řadí a filtruje. */
   den: string;
+  projectId: string | null;
   projectName: string | null;
   userId: string;
   userLabel: string;
@@ -748,7 +766,7 @@ export function TimesheetEditor({
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading text-muted">
-                      {e.projectName || <span className="text-muted/60">—</span>}
+                      <NazevProjektu id={e.projectId} nazev={e.projectName} />
                       {e.note && <span className="block text-xs text-muted/80 font-body">{e.note}</span>}
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading text-ink tabular-nums text-right whitespace-nowrap">
@@ -811,7 +829,7 @@ export function TimesheetEditor({
                       <td className="px-4 py-3 text-sm font-heading text-muted whitespace-nowrap">{b.userLabel}</td>
                     )}
                     <td className="px-4 py-3 text-sm font-heading text-muted">
-                      {b.projectName || <span className="text-muted/60">—</span>}
+                      <NazevProjektu id={b.projectId} nazev={b.projectName} />
                       {b.poznamka && <span className="block text-xs text-muted/80 font-body">{b.poznamka}</span>}
                     </td>
                     <td className="px-4 py-3 text-sm font-heading text-ink tabular-nums text-right whitespace-nowrap">
