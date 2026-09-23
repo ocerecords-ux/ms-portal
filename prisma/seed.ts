@@ -192,6 +192,7 @@ async function main() {
   await klientAlbatrosu();
   await dotocenoStrabag();
   await odkazyNaHovory();
+  await ranniPrehledAdminum();
   await albatrosCenuUrcujeSam();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
@@ -1206,6 +1207,27 @@ async function odkazyNaHovory() {
     console.log(`  odkazy na videohovory doplneny u ${doplneno} studii`);
   } catch (err) {
     console.warn('  odkazy na videohovory se nepodarilo doplnit:', err);
+  }
+}
+
+/**
+ * RANNÍ PŘEHLED ZAPNUTÝ ADMINŮM (zadání 23. 9. 2026: „chtěl bych, aby mi
+ * Bruno sesumíroval události na daný den"). Jednou; dál si to každý přepíná
+ * sám v Můj účet.
+ */
+async function ranniPrehledAdminum() {
+  const ZNAMKA = 'ranni-prehled-adminum';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const vysledek = await prisma.user.updateMany({
+      where: { role: 'ADMIN', active: true },
+      data: { ranniPrehled: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  ranni prehled zapnut u ${vysledek.count} adminu`);
+  } catch (err) {
+    console.warn('  ranni prehled se nepodarilo zapnout:', err);
   }
 }
 

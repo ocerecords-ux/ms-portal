@@ -276,6 +276,14 @@ model User {
   /// prepnout i sam v „Muj ucet" (zadani tyz den).
   dostavaDotocenoKlient Boolean @default(false)
 
+  /// RANNÍ PŘEHLED OD BRUNA (zadani 23. 9. 2026: „chtel bych, aby mi Bruno
+  /// sesumiroval udalosti na danny den. Vzdycky at mi to posle v sedm rano
+  /// na dany den udalosti, ktere se me tykaji. Pripadne i ukoly co mam").
+  /// Zapina se v Muj ucet; posila se do soukromeho chatu s Brunem.
+  ranniPrehled   Boolean   @default(false)
+  /// Kdy odesel posledni ranni prehled - aby nesel dvakrat za den.
+  ranniPrehledAt DateTime?
+
   /// Dostava mail o nove objednavce od klienta (zadani 14. 9. 2026: "jednotlive
   /// adresy uzivatelu tymu, ktere si nastavim na webu v portalu").
   /// Stejny princip jako dostavaDotoceno - kdo objednavky hlida, se prekliká
@@ -1185,6 +1193,35 @@ model MessageReaction {
 // Ukoly (to-do) na profilu clena tymu Mediaspace - zadani 5. 9. 2026
 // ("nejaky widget s ukoly u profilu Mediaspace"). Ukol patri vzdy konkretnimu
 // uzivateli; nikdo jiny nez on (a admin) ho nevidi.
+/// ÚKOL Z POZNÁMKY V KALENDÁŘI (zadani 23. 9. 2026: „v kalendari do poznamky
+/// melo jit nejak vytvorit ukol stejne jako v chatu. Navaze se to na daneho
+/// zvukare, ktery bude u te udalosti. A pokud nebude, tak si na nej kalendar
+/// pocka, az se priradi zvukar, nebo kdyz se zmeni, tak se ten ukol priradi
+/// tomu, kdo tam aktualne je").
+///
+/// Radek drzi vazbu UDALOST -> UKOL. Bez neho by se po vymene zvukare
+/// nedalo poznat, ktery ukol k udalosti patri a ma se prestehovat.
+model KalendarUkol {
+  id      String  @id @default(cuid())
+  /// Termin z nabidky (RecordingSlot.id) NEBO rucne zapsana udalost
+  /// (StudioBlock.id) - vzdy prave jedno z nich.
+  slotId  String? @unique
+  blockId String? @unique
+
+  /// Co je potreba udelat (poznamka bez znacky @ukol).
+  text       String
+  zadalId    String?
+  zadalJmeno String?
+
+  /// Zalozeny ukol v to-do listu; prazdne = ceka se na zvukare.
+  taskId String?
+  /// Komu je ukol prave prirazeny (podle nej se pozna vymena zvukare).
+  userId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Task {
   id        String    @id @default(cuid())
   userId    String

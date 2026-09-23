@@ -98,6 +98,8 @@ V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a
 1. **Druh práce s ikonou** nahoře v barevném kolečku jako u typů projektů (modrý mikrofon = natáčení, zelená rozstřižená zvuková vlna = střih, růžový herec s hvězdičkou = casting, šedý klíč = údržba, oranžové slunce = svátek/dovolená) a pod ním celý text — název, herec a řádek ZVUKAŘ, nic se neořezává. Pod tím den, čas a studio, případně poznámka.
 2. **Odkazy** dole — **Projekt** a u frekvence **Nabídka termínů**.
 
+**Úkol z poznámky.** Do poznámky u události se dá napsat **@úkol** a za to, co je potřeba udělat — stejně jako v chatu. Úkol se propíše do to-do listu **zvukaři, který je u té události**. Když u ní zvukař zatím není, kalendář počká, až ho někdo přiřadí; když se zvukař vymění, úkol se přestěhuje na toho, kdo tam je teď. Smazáním značky @úkol z poznámky (nebo smazáním události) nesplněný úkol zmizí; **splněný zůstává**.
+
 **Upravit a smazat** se dá jen v úpravě — **dvojklikem** na událost. Tlačítko **Smazat událost** je dole v okně úpravy.
 
 Ikona druhu je i přímo v bublině v kalendáři, zvukař taky — v týdnu na druhém řádku, v měsíci za tečkou.

@@ -56,6 +56,8 @@ Názvy projektů portál drží **velkými písmeny** — ať už je někdo zad�
 
 **Kalendář** je studio a natáčení: kdo kdy natáčí, kdy je studio blokované a nabídky termínů pro herce. Události zapisuje a upravuje produkce a vedoucí pobočky ve svých studiích (zaškrtává se na kartě uživatele – Tomáš Ilavský Brno, Ondřej Černý ml. Praha); ostatní si zapisují Mimo studio. Tlačítko „+ Přidat“ vedle přepínače Den/Týden/Měsíc otevře zápis i bez dvojkliku.
 
+**Ranní přehled od Bruna.** V Můj účet se dá zapnout **ranní přehled**: každý den v sedm ráno napíše Bruno do soukromého chatu, co vás ten den čeká — natáčení a střihy, kde jste zvukař nebo herec, porady, na které jste pozvaní — a otevřené úkoly.
+
 Kromě toho je v liště ještě **chat**, **zvoneček** s upozorněními, **otazník** (tahle Nápověda) a vlevo panel s rychlými volbami.
 
 **Úkoly z chatu.** Zpráva začínající **@úkol** založí úkol tomu, komu píšete (ve skupině tomu, koho označíte @jménem). Co jste takhle zadali ostatním, najdete v panelu **Úkoly** (i v záložce Úkoly v chatu) dole v části **Zadal jsem**: pro koho, do kdy a jestli už je hotovo. Když ho příjemce odškrtne, přijde vám zpráva pod **zvoneček**; stejně tak, když nesplněný úkol smaže. Kliknutím na úkol se otevře konverzace, ze které vznikl. Tužkou ✎ vedle úkolu ho můžete **upravit** — název, datum i čas — nebo **zrušit**; tomu, komu patří, o tom přijde zpráva. Odškrtnout ho za něj nejde.

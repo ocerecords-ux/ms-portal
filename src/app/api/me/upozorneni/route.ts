@@ -17,7 +17,9 @@ import { prisma } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  dostavaDotocenoKlient: z.boolean(),
+  dostavaDotocenoKlient: z.boolean().optional(),
+  /** Ranní přehled od Bruna v 7:00 (23. 9. 2026) - jen pro tým. */
+  ranniPrehled: z.boolean().optional(),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -30,10 +32,16 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
     }
 
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { dostavaDotocenoKlient: parsed.data.dostavaDotocenoKlient },
-    });
+    const data: Record<string, unknown> = {};
+    if (parsed.data.dostavaDotocenoKlient !== undefined) {
+      data.dostavaDotocenoKlient = parsed.data.dostavaDotocenoKlient;
+    }
+    if (parsed.data.ranniPrehled !== undefined) data.ranniPrehled = parsed.data.ranniPrehled;
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+    }
+
+    await prisma.user.update({ where: { id: session.user.id }, data });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

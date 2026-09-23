@@ -6,6 +6,7 @@ import { ROLE_LABELS, isInternalRole } from '@/lib/roles';
 import { MyAccountForm } from './MyAccountForm';
 import { FakturaceKarta } from './FakturaceKarta';
 import { UpozorneniKarta } from './UpozorneniKarta';
+import { RanniPrehledKarta } from './RanniPrehledKarta';
 import { PripominkyKarta } from './PripominkyKarta';
 import { PodpisKarta } from './PodpisKarta';
 import { mojePripominky, vsechnyPripominky } from '@/lib/pripominkyServer';
@@ -115,6 +116,10 @@ export default async function MyAccountPage() {
       {user.role === 'CLIENT' && (
         <UpozorneniKarta initial={{ dotoceno: user.dostavaDotocenoKlient }} />
       )}
+
+      {/* Ranní přehled od Bruna (23. 9. 2026) - jen pro tým; klient ani herec
+          v kalendáři nic svého nemá. */}
+      {internal && <RanniPrehledKarta initial={user.ranniPrehled} />}
 
       {/* Tabule ve studiu - jen komu ji admin povolil (23. 9. 2026). */}
       {tabuli > 0 && (

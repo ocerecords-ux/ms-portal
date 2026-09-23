@@ -7,6 +7,7 @@ import { smiStudio, spravovanaStudia } from '@/lib/spravaKalendare';
 import { checkSlot, loadOccupancy, recordEvent } from '@/lib/calendarServer';
 import { popisUdalosti, zabiraStudio } from '@/lib/calendar';
 import { notify } from '@/lib/notifications';
+import { synchronizujUkolUdalosti, zrusUkolUdalosti } from '@/lib/kalendarUkolyServer';
 
 /**
  * ÚPRAVA POTVRZENÉ FREKVENCE PŘÍMO V KALENDÁŘI (zadání 19. 9. 2026: „když
@@ -121,6 +122,26 @@ export async function PATCH(req: NextRequest) {
           ...(d.rezieOnline === undefined ? {} : { rezieOnline: d.rezieOnline }),
         },
       });
+
+      /**
+       * Úkol z poznámky (23. 9. 2026) - patří zvukaři u téhle frekvence.
+       * Když se zvukař vymění, úkol se přestěhuje; když u ní zatím žádný
+       * není, počká se. Viz lib/kalendarUkolyServer.ts.
+       */
+      const studio = await prisma.studio
+        .findUnique({ where: { id: d.studioId }, select: { timezone: true } })
+        .catch(() => null);
+      await synchronizujUkolUdalosti({
+        typ: 'SLOT',
+        id: slot.id,
+        poznamka: d.note || null,
+        zvukarUserId: d.zvukarUserId || null,
+        zvukarName: d.zvukarName || null,
+        nazevUdalosti: `${slot.request.projectName} · ${slot.request.actorName}`,
+        zacatek: start,
+        pasmo: studio?.timezone ?? 'Europe/Prague',
+        kdo: { id: session.user.id, jmeno: kdo },
+      });
       await recordEvent({
         requestId: slot.request.id,
         slotId: slot.id,
@@ -174,7 +195,10 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Vyplňte, čeho se událost týká.' }, { status: 400 });
     }
 
-    await prisma.$transaction([
+    // Frekvence se ruší - úkol, který na ní visel, jde s ní (23. 9. 2026).
+    // Na nové události se založí znovu z její poznámky, viz níž.
+    await zrusUkolUdalosti('SLOT', slot.id);
+    const [, novaUdalost] = await prisma.$transaction([
       prisma.recordingSlot.update({ where: { id: slot.id }, data: { state: 'CANCELLED' } }),
       prisma.studioBlock.create({
         data: {
@@ -189,6 +213,22 @@ export async function PATCH(req: NextRequest) {
         },
       }),
     ]);
+    {
+      const studio = await prisma.studio
+        .findUnique({ where: { id: d.studioId }, select: { timezone: true } })
+        .catch(() => null);
+      await synchronizujUkolUdalosti({
+        typ: 'BLOCK',
+        id: novaUdalost.id,
+        poznamka: novaUdalost.note,
+        zvukarUserId: novaUdalost.zvukarUserId,
+        zvukarName: novaUdalost.zvukarName,
+        nazevUdalosti: novaUdalost.title || null,
+        zacatek: novaUdalost.start,
+        pasmo: studio?.timezone ?? 'Europe/Prague',
+        kdo: { id: session.user.id, jmeno: kdo },
+      });
+    }
     await recordEvent({
       requestId: slot.request.id,
       slotId: slot.id,
@@ -221,6 +261,8 @@ export async function DELETE(req: NextRequest) {
     if ('chyba' in k) return k.chyba;
     const { session, slot } = k;
 
+    // Úkol, který na frekvenci visel, jde pryč s ní (23. 9. 2026).
+    await zrusUkolUdalosti('SLOT', slot.id);
     await prisma.recordingSlot.update({ where: { id: slot.id }, data: { state: 'CANCELLED' } });
     await recordEvent({
       requestId: slot.request.id,

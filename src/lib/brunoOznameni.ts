@@ -13,6 +13,44 @@ import { spocitejPostup } from '@/lib/preposlechPostup';
  * jsou - podle jejich nastavení upozornění, stejně jako zpráva od člověka.
  * Kanál, který ještě neexistuje, se založí. Nikdy nevyhazuje.
  */
+/**
+ * BRUNO PÍŠE SOUKROMĚ (zadání 23. 9. 2026 - ranní přehled). Stejná cesta jako
+ * zpráva do kanálu projektu, jen do soukromé konverzace s tím člověkem;
+ * když spolu ještě nemluví, konverzace se založí. Nikdy nevyhazuje.
+ */
+export async function brunoNapisSoukrome(userId: string, text: string): Promise<boolean> {
+  try {
+    const bruno = await prisma.user.findUnique({ where: { email: BRUNO_EMAIL }, select: { id: true } });
+    if (!bruno || bruno.id === userId) return false;
+
+    let kanal = await prisma.conversation.findFirst({
+      where: {
+        kind: 'SOUKROMA',
+        AND: [{ members: { some: { userId: bruno.id } } }, { members: { some: { userId } } }],
+      },
+      select: { id: true },
+    });
+    if (!kanal) {
+      kanal = await prisma.conversation.create({
+        data: {
+          kind: 'SOUKROMA',
+          createdById: bruno.id,
+          members: { create: [{ userId: bruno.id }, { userId }] },
+        },
+        select: { id: true },
+      });
+    }
+
+    const ted = new Date();
+    await prisma.message.create({ data: { conversationId: kanal.id, userId: bruno.id, body: text, createdAt: ted } });
+    await prisma.conversation.update({ where: { id: kanal.id }, data: { lastMessageAt: ted } });
+    return true;
+  } catch (err) {
+    console.error('Brunova soukroma zprava selhala:', err);
+    return false;
+  }
+}
+
 export async function brunoNapisDoKanalu(caflouProjectId: string, text: string): Promise<boolean> {
   try {
     const bruno = await prisma.user.findUnique({ where: { email: BRUNO_EMAIL }, select: { id: true } });

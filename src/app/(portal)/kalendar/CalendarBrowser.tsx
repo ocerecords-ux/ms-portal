@@ -2261,6 +2261,14 @@ function UdalostForm({
           placeholder="Vzkaz pro tým - třeba co se bude točit, co připravit…"
           className={inputClass}
         />
+        {/* Úkol z poznámky (23. 9. 2026) - značka je stejná jako v chatu. */}
+        <span className="text-xs font-body text-muted">
+          Napište <strong className="font-heading">@úkol</strong> a za to, co je potřeba udělat — z poznámky se stane
+          úkol pro <strong className="font-heading">zvukaře u téhle události</strong>.{' '}
+          {jeNataceni || jePrace
+            ? 'Když u ní zvukař zatím není, kalendář počká; když se vymění, úkol se přestěhuje.'
+            : ''}
+        </span>
       </label>
 
       {jeFrekvence && !jeNataceni && (

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { smiStudio, spravovanaStudia, spravujeNeco } from '@/lib/spravaKalendare';
 import { loadOccupancy } from '@/lib/calendarServer';
 import { BLOCK_KIND_LABELS, jePraceVeStudiu, maHerce, popisUdalosti, zabiraStudio } from '@/lib/calendar';
+import { synchronizujUkolUdalosti, zrusUkolUdalosti } from '@/lib/kalendarUkolyServer';
 
 /**
  * Blokace založená přímo z kalendáře dvojklikem (zprava uzivatele 9. 9. 2026:
@@ -103,6 +104,14 @@ async function zvukarNepatriKeStudiu(zvukarUserId: string | undefined, studioId:
   return `${zvukar.name || zvukar.email} točí jen ve studiu ${kde} - do tohohle studia ho zapsat nejde. Studia se zaškrtávají na kartě uživatele.`;
 }
 
+/** Pásmo studia - termín úkolu má sedět na to, kdy se ve studiu točí. */
+async function pasmoStudia(studioId: string): Promise<string> {
+  const studio = await prisma.studio
+    .findUnique({ where: { id: studioId }, select: { timezone: true } })
+    .catch(() => null);
+  return studio?.timezone ?? 'Europe/Prague';
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -167,6 +176,19 @@ export async function POST(req: NextRequest) {
         ...(jePrace ? poliUdalosti(kind, d) : {}),
         createdById: session.user.id,
       },
+    });
+
+    // Úkol z poznámky (23. 9. 2026) - viz lib/kalendarUkolyServer.ts.
+    await synchronizujUkolUdalosti({
+      typ: 'BLOCK',
+      id: block.id,
+      poznamka: block.note,
+      zvukarUserId: block.zvukarUserId,
+      zvukarName: block.zvukarName,
+      nazevUdalosti: block.title || null,
+      zacatek: block.start,
+      pasmo: await pasmoStudia(block.studioId),
+      kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
     });
 
     return NextResponse.json(block, { status: 201 });
@@ -266,6 +288,18 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
+    await synchronizujUkolUdalosti({
+      typ: 'BLOCK',
+      id: upravena.id,
+      poznamka: upravena.note,
+      zvukarUserId: upravena.zvukarUserId,
+      zvukarName: upravena.zvukarName,
+      nazevUdalosti: upravena.title || null,
+      zacatek: upravena.start,
+      pasmo: await pasmoStudia(upravena.studioId),
+      kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
+    });
+
     return NextResponse.json(upravena);
   } catch (err) {
     console.error('PATCH /api/kalendar/blokace selhalo:', err);
@@ -301,6 +335,8 @@ export async function DELETE(req: NextRequest) {
         create: { importKlic: blok.importKlic },
       });
     }
+    // Úkol, který na události visel, jde pryč s ní (23. 9. 2026).
+    await zrusUkolUdalosti('BLOCK', id);
     await prisma.studioBlock.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (err) {
