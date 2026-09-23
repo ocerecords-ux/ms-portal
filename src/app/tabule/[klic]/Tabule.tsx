@@ -92,7 +92,14 @@ export function Tabule({ klic, pocatecni }: { klic: string; pocatecni: DataTabul
 
   const tedMs = ted.getTime();
   const udalosti = data.udalosti.map((u) => ({ ...u, odMs: Date.parse(u.od), doMs: Date.parse(u.do) }));
-  const probiha = udalosti.find((u) => u.odMs <= tedMs && u.doMs > tedMs) ?? null;
+  /**
+   * PRÁVĚ PROBÍHÁ (23. 9. 2026: „na těch tabulích ve studiích by se měl
+   * zobrazit i střih, ne jen natáčení"). Když běží víc věcí naráz - třeba
+   * natáčení v jedné místnosti a střih ve druhé - ukážou se všechny;
+   * první velká, ostatní pod ní menší.
+   */
+  const probihajici = udalosti.filter((u) => u.odMs <= tedMs && u.doMs > tedMs);
+  const probiha = probihajici[0] ?? null;
   const dalsi = udalosti.find((u) => u.odMs > tedMs) ?? null;
 
   // Rozpis dne s volnými okny mezi událostmi (aspoň 15 minut).
@@ -198,6 +205,25 @@ export function Tabule({ klic, pocatecni }: { klic: string; pocatecni: DataTabul
                   </div>
                   <span style={{ fontSize: 24, color: BARVY.text3, whiteSpace: 'nowrap' }}>zbývá {zbyva(probiha.doMs)}</span>
                 </div>
+                {/* Další běžící událost (typicky střih vedle natáčení). */}
+                {probihajici.slice(1).map((u) => (
+                  <div
+                    key={u.id}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      paddingTop: 16,
+                      borderTop: `1px solid ${BARVY.linka}`,
+                    }}
+                  >
+                    <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.12em', color: BARVY.sedy }}>
+                      ZÁROVEŇ{u.mistnost ? ` · ${u.mistnost.toUpperCase()}` : ''} · ZBÝVÁ {zbyva(u.doMs).toUpperCase()}
+                    </span>
+                    <span style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 600, lineHeight: 1.1 }}>{u.nazev}</span>
+                    <Lide u={u} cas={`${cas(u.od)} – ${cas(u.do)}`} />
+                  </div>
+                ))}
               </div>
             ) : (
               <div
