@@ -4,10 +4,18 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canUseChat, loadConversations, loadTeam } from '@/lib/chatServer';
+import { INTERNAL_ROLES, ROBOT_ROLES } from '@/lib/roles';
 import { zkusDatabazi } from '@/lib/dbZnovu';
 
 // Seznam konverzaci + zalozeni nove (zadani 8. 9. 2026).
 export const dynamic = 'force-dynamic';
+
+/**
+ * Koho jde do konverzace pridat: tym Mediaspace a roboti (Bruno). Klient ani
+ * herec chat nemaji. Stejny seznam vraci chatServer.loadTeam - musi sedet,
+ * jinak je nekdo v nabidce, ale zalozeni konverzace s nim spadne.
+ */
+const CLENOVE_CHATU = [...INTERNAL_ROLES, ...ROBOT_ROLES];
 
 const schema = z.discriminatedUnion('kind', [
   // Kanal k projektu z Caflou - zaklada se az ve chvili, kdy do nej nekdo
@@ -97,8 +105,12 @@ export async function POST(req: NextRequest) {
       }
       // Druhy clovek musi byt z tymu - jinak by sla zalozit konverzace s
       // klientem nebo hercem, kteri chat vubec nemaji.
+      //
+      // ROBOT SEM PATRI TAKY (oprava 23. 9. 2026: „nemůžu psát Brunovi přímo
+      // do chatu"). Bruno v seznamu lidi byl, ale zalozeni konverzace ho
+      // odmitalo - seznam roli tady zustal bez robotu. Viz chatServer.loadTeam.
       const druhy = await prisma.user.findFirst({
-        where: { id: data.userId, active: true, role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] } },
+        where: { id: data.userId, active: true, role: { in: CLENOVE_CHATU } },
         select: { id: true },
       });
       if (!druhy) return NextResponse.json({ error: 'Takového člena týmu nemáme.' }, { status: 400 });
@@ -124,7 +136,7 @@ export async function POST(req: NextRequest) {
     }
 
     const clenove = await prisma.user.findMany({
-      where: { id: { in: data.userIds }, active: true, role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE'] } },
+      where: { id: { in: data.userIds }, active: true, role: { in: CLENOVE_CHATU } },
       select: { id: true },
     });
     const ids = Array.from(new Set([me, ...clenove.map((u) => u.id)]));

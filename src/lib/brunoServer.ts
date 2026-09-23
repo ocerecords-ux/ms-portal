@@ -350,7 +350,14 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
         parentId: true,
         userId: true,
         conversationId: true,
-        conversation: { select: { kind: true, caflouProjectId: true, name: true } },
+        conversation: {
+          select: {
+            kind: true,
+            caflouProjectId: true,
+            name: true,
+            members: { select: { userId: true } },
+          },
+        },
       },
     });
     if (!zprava?.conversation) return { stav: 'preskoceno', duvod: 'zpráva se nenašla' };
@@ -369,7 +376,17 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
      * nemá co říct. Nebo ho někdo oslovil jménem; pak odpovídá kdekoliv,
      * i v soukromé zprávě, kde žádný projekt není.
      */
-    const oslovenPrimo = jeZminen(zprava.body, 'Bruno', BRUNO_EMAIL);
+    /**
+     * V SOUKROMÉ KONVERZACI S BRUNEM se oslovovat nemusí (oprava 23. 9. 2026:
+     * „nemůžu psát Brunovi přímo do chatu"). Píše-li mu člověk mezi čtyřma
+     * očima, mluví zjevně s ním - psát tam pokaždé „Bruno," je zbytečné.
+     * Jinde platí dál, že se musí ozvat jménem.
+     */
+    const soukromeSBrunem =
+      zprava.conversation.kind === 'SOUKROMA' &&
+      zprava.conversation.members.some((m) => m.userId === bruno.id);
+
+    const oslovenPrimo = soukromeSBrunem || jeZminen(zprava.body, 'Bruno', BRUNO_EMAIL);
 
     /**
      * „CO MÁM DNESKA?" (zadání 23. 9. 2026: „když se ho zeptám v chatu na daný
