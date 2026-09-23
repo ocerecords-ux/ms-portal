@@ -1886,6 +1886,12 @@ model Studio {
   sortOrder      Int     @default(0)
   active         Boolean @default(true)
 
+  /// ODKAZ NA VIDEOHOVOR STUDIA (zadani 23. 9. 2026: „posilam odkazy na
+  /// videohovory. Mohly by se ulozit nekam ke studiim. I by mohl byt proklik
+  /// rovnou z toho kalendare"). V kalendari z nej je ikona rezie na dalku,
+  /// cely odkaz nikde nesviti.
+  hovorOdkaz     String?
+
   parentStudioId String?
   parentStudio   Studio?  @relation("StudioRooms", fields: [parentStudioId], references: [id])
   rooms          Studio[] @relation("StudioRooms")

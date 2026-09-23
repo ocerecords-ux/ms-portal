@@ -62,6 +62,7 @@ export default async function StudiaPage({ searchParams }: { searchParams?: { in
         color: s.color,
         timezone: s.timezone,
         active: s.active,
+        hovorOdkaz: s.hovorOdkaz ?? null,
         hours: s.hours.map((h) => ({
           weekday: h.weekday,
           startMinutes: h.startMinutes,

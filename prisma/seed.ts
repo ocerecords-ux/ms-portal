@@ -191,6 +191,7 @@ async function main() {
   await tabuleDoListy();
   await klientAlbatrosu();
   await dotocenoStrabag();
+  await odkazyNaHovory();
   await albatrosCenuUrcujeSam();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
@@ -1173,6 +1174,38 @@ async function dotocenoStrabag() {
     console.log(`  STRABAG: dotoceno doplneno u ${pridano} hercu`);
   } catch (err) {
     console.warn('  STRABAG: dotoceno se nepodarilo doplnit:', err);
+  }
+}
+
+/**
+ * ODKAZY NA VIDEOHOVORY STUDIÍ (zadání 23. 9. 2026: „posílám odkazy na
+ * videohovory. Mohly by se uložit někam ke studiím"). Vyplní se jednou;
+ * později se mění na kartě studia v Administraci → Studia.
+ */
+async function odkazyNaHovory() {
+  const ZNAMKA = 'odkazy-na-hovory-studii';
+  const ODKAZY: { kde: string; odkaz: string }[] = [
+    { kde: 'Praha', odkaz: 'https://meet.google.com/efv-xhzi-mam' },
+    { kde: 'Brno I', odkaz: 'https://meet.google.com/pyq-mesb-jtw' },
+    { kde: 'Brno II', odkaz: 'https://meet.google.com/qrr-duhj-zio' },
+    { kde: 'London', odkaz: 'https://meet.google.com/sbr-spum-sso' },
+  ];
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    let doplneno = 0;
+    for (const o of ODKAZY) {
+      // endsWith, ne contains: „Brno I" by jinak sedelo i na „Brno II".
+      const vysledek = await prisma.studio.updateMany({
+        where: { name: { endsWith: o.kde }, hovorOdkaz: null },
+        data: { hovorOdkaz: o.odkaz },
+      });
+      doplneno += vysledek.count;
+    }
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  odkazy na videohovory doplneny u ${doplneno} studii`);
+  } catch (err) {
+    console.warn('  odkazy na videohovory se nepodarilo doplnit:', err);
   }
 }
 

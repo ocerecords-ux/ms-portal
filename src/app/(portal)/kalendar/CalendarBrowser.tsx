@@ -133,6 +133,8 @@ export type CalendarEvent = {
   rezie?: boolean;
   /** Ruční výjimka uložená u události: null = počítá se samo. */
   rezieRucne?: boolean | null;
+  /** Odkaz na videohovor studia (23. 9. 2026) - ikona režie je proklik. */
+  hovorOdkaz?: string | null;
 };
 
 /**
@@ -1573,7 +1575,7 @@ function MrizkaPohled({
                               }`}
                             >
                               <IkonaDruhu druh={druhPrace(e)} velikost={14} />
-                              {e.rezie && <IkonaRezie velikost={14} />}
+                              {e.rezie && <IkonaRezie velikost={14} odkaz={e.hovorOdkaz ?? null} />}
                               {radek}
                               {strihBezProjektu(e) && (
                                 <span className="font-normal italic opacity-70"> · bez projektu</span>
@@ -1691,7 +1693,7 @@ function MesicniPohled({
                     {/* V měsíci je na řádek místo jen na to podstatné - název
                         a zvukař (20. 9. 2026: „nejsou tam vidět zvukaři"). */}
                     <IkonaDruhu druh={druhPrace(e)} velikost={14} />
-                    {e.rezie && <IkonaRezie velikost={14} />}
+                    {e.rezie && <IkonaRezie velikost={14} odkaz={e.hovorOdkaz ?? null} />}
                     {e.title.split('\n')[0]}
                     {strihBezProjektu(e) && <span className="italic opacity-70"> · bez projektu</span>}
                     {(() => {
@@ -2363,15 +2365,51 @@ function IkonaDruhu({ druh, velikost = 16 }: { druh: ReturnType<typeof druhPrace
  * připojená na dálku - svítí u první frekvence každého herce na projektu.
  * V úpravě události se dá odškrtnout.
  */
-function IkonaRezie({ velikost = 14 }: { velikost?: number }) {
+function IkonaRezie({ velikost = 14, odkaz = null }: { velikost?: number; odkaz?: string | null }) {
+  const trida = `shrink-0 inline-grid place-items-center rounded-pill align-middle mr-1 ${tridaBarvyIkony(
+    'rezie-na-dalku',
+  )}`;
+  const kresba = <KresbaIkony klic="rezie-na-dalku" velikost={Math.round(velikost * 0.62)} />;
+  const popis = odkaz ? `${POPIS_REZIE} — připojit se k hovoru` : POPIS_REZIE;
+
+  // S odkazem na videohovor studia je ikona proklik (23. 9. 2026: „i by mohl
+  // být proklik rovnou z toho kalendáře. Ale nemusí tam svítit celý dlouhý
+  // odkaz, jen ikona"). Klik nesmí propadnout do bubliny pod ní.
+  if (odkaz) {
+    /**
+     * Bublina události je <button>, takže odkaz uvnitř ní být nemůže (v HTML
+     * se tlačítka a odkazy do sebe nevnořují) - hovor se proto otevírá
+     * z kliknutí na ikonu a klik se zastaví, ať pod ním neskočí detail.
+     */
+    return (
+      <span
+        role="link"
+        tabIndex={0}
+        title={popis}
+        aria-label={popis}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          window.open(odkaz, '_blank', 'noopener');
+        }}
+        onDoubleClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.stopPropagation();
+          e.preventDefault();
+          window.open(odkaz, '_blank', 'noopener');
+        }}
+        className={`${trida} cursor-pointer`}
+        style={{ width: velikost, height: velikost }}
+      >
+        {kresba}
+      </span>
+    );
+  }
+
   return (
-    <span
-      title={POPIS_REZIE}
-      aria-label={POPIS_REZIE}
-      className={`shrink-0 inline-grid place-items-center rounded-pill align-middle mr-1 ${tridaBarvyIkony('rezie-na-dalku')}`}
-      style={{ width: velikost, height: velikost }}
-    >
-      <KresbaIkony klic="rezie-na-dalku" velikost={Math.round(velikost * 0.62)} />
+    <span title={popis} aria-label={popis} className={trida} style={{ width: velikost, height: velikost }}>
+      {kresba}
     </span>
   );
 }
@@ -2489,7 +2527,7 @@ function DetailUdalosti({
           <div className="flex items-start justify-between gap-2">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-heading font-semibold uppercase tracking-wide opacity-80">
               <IkonaDruhu druh={druhPrace(event)} velikost={22} />
-              {event.rezie && <IkonaRezie velikost={22} />}
+              {event.rezie && <IkonaRezie velikost={22} odkaz={event.hovorOdkaz ?? null} />}
               {stav}
             </span>
           </div>

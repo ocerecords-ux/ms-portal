@@ -102,7 +102,7 @@ V kalendáři jsou jen termíny, které **platí** — držené (herec vybral) a
 
 Ikona druhu je i přímo v bublině v kalendáři, zvukař taky — v týdnu na druhém řádku, v měsíci za tečkou.
 
-**Režie na dálku (telefon, červený rámeček).** U **první frekvence každého herce na projektu** a **u každého castingu** je událost v **červeném rámečku** a vedle druhu práce svítí modrá ikonka telefonu s vlnami — tam se režie připojuje na online hovor. Kalendář si to spočítá sám z toho, co v něm je (termín z nabídky i ručně zapsané natáčení). Když to tentokrát neplatí, v úpravě události (dvojklik) se zaškrtávátko **Režie na dálku** odškrtne — a naopak se dá zaškrtnout i u jiné frekvence.
+**Režie na dálku (telefon, červený rámeček).** U **první frekvence každého herce na projektu** a **u každého castingu** je událost v **červeném rámečku** a vedle druhu práce svítí modrá ikonka telefonu s vlnami — tam se režie připojuje na online hovor. Kalendář si to spočítá sám z toho, co v něm je (termín z nabídky i ručně zapsané natáčení). Když to tentokrát neplatí, v úpravě události (dvojklik) se zaškrtávátko **Režie na dálku** odškrtne — a naopak se dá zaškrtnout i u jiné frekvence. Když má studio v Administraci → Studia vyplněný **odkaz na videohovor**, je ta ikonka rovnou **proklik do hovoru** (celý odkaz nikde nesvítí).
 
 **Porady (žlutý kalendář).** Porady, schůzky a hovory týmu. **Každý vidí jen porady, na které je pozvaný** — když založíte poradu jen pro sebe a Karolínu, nikdo jiný ji v kalendáři neuvidí (ani ten, kdo kalendář spravuje).
 

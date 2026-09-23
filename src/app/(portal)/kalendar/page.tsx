@@ -304,6 +304,11 @@ export default async function KalendarPage({
   }));
 
   const barvaStudia = new Map(studios.map((s) => [s.id, s.color]));
+  /**
+   * Odkaz na videohovor studia (23. 9. 2026) - u události s režií na dálku
+   * se z něj v kalendáři stane ikonka, na kterou se dá kliknout.
+   */
+  const odkazHovoru = new Map(studios.map((s) => [s.id, s.hovorOdkaz ?? null]));
   const nazevStudia = new Map(studios.map((s) => [s.id, s.shortName]));
 
   const jeMoje = (u: { zvukarUserId: string | null; actorUserId: string | null }) =>
@@ -352,6 +357,7 @@ export default async function KalendarPage({
       poznamka: s.note,
       rezie: sRezii.has(s.id),
       rezieRucne: s.rezieOnline,
+      hovorOdkaz: odkazHovoru.get(s.studioId) ?? null,
       udalost: {
         caflouProjectId: s.caflouProjectId,
         projectName: s.projectName,
@@ -384,6 +390,7 @@ export default async function KalendarPage({
       poznamka: b.note,
       rezie: sRezii.has(b.id),
       rezieRucne: b.rezieOnline,
+      hovorOdkaz: odkazHovoru.get(b.studioId) ?? null,
       // Rozepsané údaje pro úpravu události (zadání 14. 9. 2026).
       udalost: {
         caflouProjectId: b.caflouProjectId,

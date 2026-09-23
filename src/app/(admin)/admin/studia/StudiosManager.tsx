@@ -16,6 +16,8 @@ type Studio = {
   color: string;
   timezone: string;
   active: boolean;
+  /** Odkaz na videohovor studia (23. 9. 2026) - v kalendáři z něj je ikona. */
+  hovorOdkaz: string | null;
   hours: Hodiny[];
   presets: { label: string; startMinutes: number; endMinutes: number }[];
 };
@@ -141,6 +143,20 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
                 <input
                   defaultValue={otevrene.location ?? ''}
                   onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { location: e.target.value })}
+                  className={inputClass}
+                />
+              </label>
+              {/* Odkaz na videohovor studia (23. 9. 2026) - v kalendáři z něj
+                  je jen ikonka u události s režií na dálku. */}
+              <label className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-4">
+                <span className="text-sm font-body text-ink">
+                  Odkaz na videohovor
+                  <span className="text-muted font-normal"> · v kalendáři se z něj stane ikonka u režie na dálku</span>
+                </span>
+                <input
+                  defaultValue={otevrene.hovorOdkaz ?? ''}
+                  placeholder="https://meet.google.com/…"
+                  onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { hovorOdkaz: e.target.value })}
                   className={inputClass}
                 />
               </label>
