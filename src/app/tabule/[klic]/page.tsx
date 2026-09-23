@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { nactiTabuli, studioPodleKlice } from '@/lib/tabuleServer';
 import { Tabule } from './Tabule';
 
@@ -16,5 +18,12 @@ export default async function TabulePage({ params }: { params: { klic: string } 
   const studio = await studioPodleKlice(params.klic);
   if (!studio) notFound();
   const data = await nactiTabuli(studio);
-  return <Tabule klic={params.klic} pocatecni={data} />;
+  /**
+   * Zpátky do portálu (zadání 23. 9. 2026) - jen pro přihlášeného člověka
+   * z týmu. Účet tabule ve studiu (role TABULE) ani nepřihlášený displej
+   * tlačítko nedostane, ten má na tabuli zůstat.
+   */
+  const session = await getServerSession(authOptions);
+  const zpetOdkaz = session && session.user.role !== 'TABULE' ? '/projekty' : null;
+  return <Tabule klic={params.klic} pocatecni={data} zpetOdkaz={zpetOdkaz} />;
 }

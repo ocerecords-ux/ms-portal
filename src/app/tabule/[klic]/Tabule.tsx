@@ -35,7 +35,21 @@ const BARVY = {
 
 const DISPLAY = 'var(--font-jost), system-ui, sans-serif';
 
-export function Tabule({ klic, pocatecni }: { klic: string; pocatecni: DataTabule }) {
+export function Tabule({
+  klic,
+  pocatecni,
+  zpetOdkaz = null,
+}: {
+  klic: string;
+  pocatecni: DataTabule;
+  /**
+   * Cesta zpátky do portálu (zadání 23. 9. 2026: „když se dostanu do sekce
+   * Tabule, tak nemám možnost se pak dostat zpět"). Vyplní se jen
+   * přihlášenému člověku z týmu - displej ve studiu žádné tlačítko nemá,
+   * ten má být pořád na tabuli.
+   */
+  zpetOdkaz?: string | null;
+}) {
   const [data, setData] = useState(pocatecni);
   const [ted, setTed] = useState(() => new Date());
   const [meritko, setMeritko] = useState(1);
@@ -136,6 +150,34 @@ export function Tabule({ klic, pocatecni }: { klic: string; pocatecni: DataTabul
         touchAction: 'manipulation',
       }}
     >
+      {/* Zpátky do portálu - mimo zmenšované plátno, ať je vždycky čitelné
+          a v rohu nepřekáží. */}
+      {zpetOdkaz && (
+        <a
+          href={zpetOdkaz}
+          style={{
+            position: 'absolute',
+            left: 16,
+            top: 16,
+            zIndex: 10,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 16px',
+            borderRadius: 12,
+            border: `1px solid ${BARVY.linka}`,
+            background: BARVY.karta,
+            color: BARVY.text2,
+            fontFamily: DISPLAY,
+            fontSize: 16,
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          ← Zpět do portálu
+        </a>
+      )}
+
       <div
         style={{
           width: SIRKA,

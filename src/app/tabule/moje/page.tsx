@@ -62,6 +62,11 @@ export default async function MojeTabule() {
           <div>
             <h1 style={{ fontSize: 32, margin: 0 }}>Tabule vám zatím nikdo nepovolil</h1>
             <p style={{ opacity: 0.7, fontSize: 18 }}>Napište Mediaspace, které studio chcete vidět - přístup se zapíná na kartě uživatele.</p>
+            <p>
+              <a href="/projekty" style={{ color: '#b9b2cc', fontSize: 16, textDecoration: 'underline' }}>
+                ← Zpět do portálu
+              </a>
+            </p>
           </div>
         </main>
       );
@@ -74,6 +79,11 @@ export default async function MojeTabule() {
       <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0f0c17', color: '#f3f0fb', fontFamily: 'system-ui', padding: 24 }}>
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ fontSize: 32, margin: 0 }}>Kterou tabuli otevřít?</h1>
+          <p style={{ marginTop: 12 }}>
+            <a href="/projekty" style={{ color: '#b9b2cc', fontSize: 16, textDecoration: 'underline' }}>
+              ← Zpět do portálu
+            </a>
+          </p>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', marginTop: 24 }}>
             {odkazy.map((o) => (
               <a
