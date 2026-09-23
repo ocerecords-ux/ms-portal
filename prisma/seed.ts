@@ -190,6 +190,7 @@ async function main() {
   await pristupNaTabule();
   await tabuleDoListy();
   await klientAlbatrosu();
+  await dotocenoStrabag();
   await albatrosCenuUrcujeSam();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
@@ -1127,6 +1128,51 @@ async function albatrosCenuUrcujeSam() {
     console.log(`  Albatros: cenu urcuje klient (${vysledek.count} firem)`);
   } catch (err) {
     console.warn('  priznak "cenu urcuje klient" se u Albatrosu nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * STRABAG: HERCI DOTOČENÍ ZPĚTNĚ (zadání 23. 9. 2026: „u Strabagu mají všichni
+ * herci dotočeno, ale ještě to nebylo v novém kalendáři. Můžeme je označit?").
+ *
+ * Natáčení proběhlo dřív, než se jezdilo podle portálového kalendáře, takže
+ * automat po natáčení (lib/reklamaDotocenoServer.ts) nemá z čeho vyjít.
+ * Fajfky se proto zapíšou přímo do databáze - je to čistý zápis, takže
+ * neodejde žádná zpráva a do chatu se nic nepíše. Stav projektu zůstává.
+ */
+async function dotocenoStrabag() {
+  const ZNAMKA = 'dotoceno-strabag';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const projekt = await prisma.projectMeta.findFirst({
+      where: { name: { startsWith: 'STRABAG' } },
+      select: { caflouProjectId: true, herci: { select: { id: true } } },
+    });
+    if (!projekt || projekt.herci.length === 0) {
+      console.warn('  STRABAG: projekt nebo herci nenalezeni, dotoceno se nedoplnuje');
+      return;
+    }
+    let pridano = 0;
+    for (const herec of projekt.herci) {
+      const uzMa = await prisma.herecDotocen.findUnique({
+        where: { caflouProjectId_userId: { caflouProjectId: projekt.caflouProjectId, userId: herec.id } },
+        select: { id: true },
+      });
+      if (uzMa) continue;
+      await prisma.herecDotocen.create({
+        data: {
+          caflouProjectId: projekt.caflouProjectId,
+          userId: herec.id,
+          potvrdilJmeno: 'Bruno (doplněno zpětně)',
+        },
+      });
+      pridano += 1;
+    }
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  STRABAG: dotoceno doplneno u ${pridano} hercu`);
+  } catch (err) {
+    console.warn('  STRABAG: dotoceno se nepodarilo doplnit:', err);
   }
 }
 
