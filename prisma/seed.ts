@@ -827,6 +827,9 @@ async function zalozVychoziNavody() {
         poradi: n.poradi,
         obsah: n.obsah,
         hledaci,
+        // Pro koho navod je (23. 9. 2026). Prazdne = cely tym; navod pro
+        // klienta se bez tohohle k nemu vubec nedostane (viz vidiNavod).
+        proRole: n.proRole ?? [],
       };
 
       if (uz) {

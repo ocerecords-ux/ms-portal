@@ -6,6 +6,9 @@ import { REKLAMY_PRIPOMINKY } from './navodReklamyPripominky';
 import { NAHLEDOVY_UCET } from './navodNahledovyUcet';
 import { NATACECI_TERMINY } from './navodNataceciTerminy';
 import { ODBER_KALENDARE } from './navodOdberKalendare';
+import { KLIENT_PORTAL } from './navodProKlientyPortal';
+import { KLIENT_OBJEDNAVKA } from './navodProKlientyObjednavka';
+import { KLIENT_PREPOSLECH } from './navodProKlientyPreposlech';
 
 /**
  * NÁVODY, KTERÉ PORTÁL ZALOŽÍ SÁM (zadání 16. 9. 2026: „udělejme nějakou
@@ -22,6 +25,15 @@ export type VychoziNavod = {
   kategorie: string;
   poradi: number;
   obsah: string;
+  /**
+   * PRO KOHO NÁVOD JE (zadání 23. 9. 2026: „klienti by měli vidět nápovědu
+   * ve svém přístupu na věci, ke kterým mají přístup").
+   *
+   * Prázdné (a chybějící) znamená CELÝ TÝM - Žůžo-labůžo, produkce a zvukař;
+   * klient ani herec takový návod nevidí. Návod psaný klientovi musí mít
+   * ['CLIENT'], jinak se k němu nedostane. Viz vidiNavod v lib/navody.ts.
+   */
+  proRole?: string[];
 };
 
 export const VYCHOZI_NAVODY: VychoziNavod[] = [
@@ -38,4 +50,9 @@ export const VYCHOZI_NAVODY: VychoziNavod[] = [
   NATACECI_TERMINY,
   // MS kalendar v Google/Apple kalendari (zadani 20. 9. 2026).
   ODBER_KALENDARE,
+  // Navody PRO KLIENTY (zadani 23. 9. 2026) - jen k tomu, kam klient sam
+  // dosahne: portal, objednavka, preposlech a schvaleni.
+  KLIENT_PORTAL,
+  KLIENT_OBJEDNAVKA,
+  KLIENT_PREPOSLECH,
 ];

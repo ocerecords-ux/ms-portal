@@ -32,10 +32,11 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // a meni Zuzo-labuzo s Produkci, tem to taky patri.
   '/backlog': ['ADMIN', 'PRODUKCE'],
   '/muj-ucet': ALL_ROLES,
-  // Navody k portalu (zadani 16. 9. 2026). Do listy si je muze dat jen tym -
-  // herci a klienti nase interni navody nevidi (19. 9. 2026); navod psany
-  // primo pro ne najdou pod otaznikem v liste.
-  '/napoveda': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
+  // Navody k portalu (zadani 16. 9. 2026). Od 23. 9. 2026 i pro klienty
+  // a herce (zadani: „klienti by meli videt napovedu ve svem pristupu na
+  // veci, ke kterym maji pristup") - stranka jim ukaze JEN navody psane pro
+  // jejich roli, nase interni v ni nemaji (viz vidiNavod v lib/navody.ts).
+  '/napoveda': ALL_ROLES,
   // Objednavka a Nahravky jsou klientska agenda.
   '/objednavka': ['CLIENT'],
   '/nahravky': ['CLIENT'],
