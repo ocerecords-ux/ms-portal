@@ -193,6 +193,7 @@ async function main() {
   await dotocenoStrabag();
   await odkazyNaHovory();
   await ranniPrehledOndrejovi();
+  await schvaleniReklamZvonek();
   await albatrosCenuUrcujeSam();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
@@ -1246,6 +1247,63 @@ async function ranniPrehledOndrejovi() {
     console.log(`  ranni prehled zapnut jen u ${ondrej.email}`);
   } catch (err) {
     console.warn('  ranni prehled se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * ZVONEK O SCHVÁLENÍ REKLAMY A ZNAČKA NABÍDKY (zadání 23. 9. 2026: „u reklam
+ * má jít notifikace zvonečkem na mě a Petera Dratvu" + „chtěl bych někde
+ * vidět (jen já) ... že je nabídka schválena").
+ *
+ * Zvonek dostávají dva, značku nabídky zatím jen Ondřej. Dál se to překlikává
+ * na kartě uživatele - tohle je jen první nastavení.
+ */
+async function schvaleniReklamZvonek() {
+  const ZNAMKA = 'schvaleni-reklam-zvonek';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const ondrej = await prisma.user.findFirst({
+      where: {
+        role: 'ADMIN',
+        active: true,
+        name: { contains: 'Ondřej Černý', mode: 'insensitive' },
+        NOT: { name: { contains: 'ml.', mode: 'insensitive' } },
+      },
+      select: { id: true, email: true },
+    });
+    const peter = await prisma.user.findFirst({
+      where: {
+        active: true,
+        OR: [
+          { email: { contains: 'dratva', mode: 'insensitive' } },
+          { name: { contains: 'Dratva', mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, email: true },
+    });
+
+    if (ondrej) {
+      await prisma.user.update({
+        where: { id: ondrej.id },
+        data: { schvaleniReklam: true, nabidkyReklam: true },
+      });
+    } else {
+      console.warn('  schvaleni reklam: Ondrejuv ucet nenalezen');
+    }
+    if (peter) {
+      await prisma.user.update({ where: { id: peter.id }, data: { schvaleniReklam: true } });
+    } else {
+      console.warn('  schvaleni reklam: ucet Petera Dratvy nenalezen');
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(
+      `  zvonek o schvaleni reklam: ${[ondrej?.email, peter?.email].filter(Boolean).join(', ') || 'nikdo'}`,
+    );
+  } catch (err) {
+    console.warn('  zvonek o schvaleni reklam se nepodarilo nastavit:', err);
   }
 }
 

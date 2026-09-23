@@ -26,6 +26,7 @@ import { odkazNaFotku } from '@/lib/fotky';
 import { posledniStrany } from '@/lib/brunoServer';
 import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
 import { bezTitulu } from '@/lib/jmena';
+import { stavNabidky } from '@/lib/nabidkaReklamy';
 
 // DULEZITE: stránka čte projekty při každém zobrazení - nesmí ji Next.js
 // pri buildu "zamrazit" jako statickou stránku (to by klientovi natvrdo
@@ -311,6 +312,16 @@ async function InternalProjektySection({
     listRodnyListProjectTypes(),
   ]);
 
+  /**
+   * STAV NABÍDKY U REKLAM (zadání 23. 9. 2026: „chtěl bych někde vidět (jen
+   * já) v přehledu i v detailu projektu, že je nabídka schválena"). Značka se
+   * vykreslí jen tomu, kdo to má zaškrtnuté na kartě - zatím jen Ondřej.
+   */
+  const vidiNabidky = Boolean(
+    (await prisma.user.findUnique({ where: { id: userId }, select: { nabidkyReklam: true } }))
+      ?.nabidkyReklam,
+  );
+
   // Nase vlastni atributy k projektum (priorita, typ, manazer) - jednim
   // dotazem pro vsechny nactene projekty najednou.
   const metas = projects.length
@@ -385,6 +396,13 @@ async function InternalProjektySection({
         })),
         herciJmenaText: m.herci.map((h) => bezTitulu(h.name) || h.email).join(' '),
         licence: m.licence.map((l) => ({ nazev: l.nazev, ikona: l.ikona })),
+        // Nabídka - jen u reklam a jen tomu, kdo ji vidí.
+        nabidka:
+          vidiNabidky &&
+          (Boolean(m.company?.dealsAds && !m.company?.dealsAudiobooks) ||
+            Boolean(m.projectType && typyReklamy.includes(m.projectType)))
+            ? stavNabidky(m.nabidkaStav)
+            : null,
       },
     ]),
   );

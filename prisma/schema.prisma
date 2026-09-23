@@ -285,6 +285,15 @@ model User {
   /// rezie online a porady a schuzky"). Kdo to ma, vidi v prehledu i cizi
   /// natáčení, u kterych v kalendari sviti telefon.
   rezieNaDalku   Boolean   @default(false)
+
+  /// ZVONEK, KDYZ KLIENT SCHVALI REKLAMU (zadani 23. 9. 2026: „u reklam ma
+  /// jit notifikace zvonečkem na mě a Petera Dratvu"). Zaskrtava se na karte
+  /// uzivatele; mail se u toho neposila, je to nase interni vedomi.
+  schvaleniReklam Boolean  @default(false)
+
+  /// VIDI ZNACKU STAVU NABIDKY U REKLAM (zadani 23. 9. 2026: „chtel bych
+  /// nekde videt (jen ja) ... ze je nabidka schvalena"). Zatim jen Ondrej.
+  nabidkyReklam   Boolean  @default(false)
   /// Kdy odesel posledni ranni prehled - aby nesel dvakrat za den.
   ranniPrehledAt DateTime?
 
@@ -667,6 +676,14 @@ model ProjectMeta {
   /// „klient to odklepl tehdy a tehdy" ma zustat. Zaroven je to pojistka
   /// proti druhemu kliknuti - schvaleni se nedeje dvakrat.
   schvalenoKlientemAt DateTime?
+
+  /// STAV NABIDKY U REKLAM (zadani 23. 9. 2026: „chtel bych nekde videt
+  /// (jen ja) v prehledu i v detailu projektu, ze je nabidka schvalena. Jen
+  /// u reklam. Staci nejaky symbol"). CEKA / SCHVALENA / NESCHVALENA;
+  /// prazdno = jeste nikdo neklikl, bere se jako CEKA. Viz lib/nabidkaReklamy.
+  nabidkaStav     String?
+  /// Kdy se stav nabidky naposledy prehodil - do bublinky u znacky.
+  nabidkaStavAt   DateTime?
 
   zdroj           ProjectSource    @default(CAFLOU)
   /// Kdy projekt prisel jednorazovym prenosem z Caflou.

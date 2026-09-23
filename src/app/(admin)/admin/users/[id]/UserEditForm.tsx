@@ -40,6 +40,10 @@ type EditableUser = {
   /** Účet jen na prohlížení portálu z různých rolí (zadání 18. 9. 2026). */
   jenNahled: boolean;
   dostavaDotoceno: boolean;
+  /** Zvonek, kdyz klient schvali reklamu (23. 9. 2026). */
+  schvaleniReklam: boolean;
+  /** Vidi znacku stavu nabidky u reklam (23. 9. 2026). */
+  nabidkyReklam: boolean;
   /** Klient chce vědět o dotočeném herci na svém projektu (zadání 16. 9. 2026). */
   dostavaDotocenoKlient: boolean;
   dostavaObjednavky: boolean;
@@ -92,6 +96,8 @@ export function UserEditForm({
   const [sledujeZmeny, setSledujeZmeny] = useState(user.sledujeZmenyProjektu);
   const [jenNahled, setJenNahled] = useState(user.jenNahled);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
+  const [schvaleniReklam, setSchvaleniReklam] = useState(user.schvaleniReklam);
+  const [nabidkyReklam, setNabidkyReklam] = useState(user.nabidkyReklam);
   const [dostavaDotocenoKlient, setDostavaDotocenoKlient] = useState(user.dostavaDotocenoKlient);
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
   const [takyZvukar, setTakyZvukar] = useState(user.takyZvukar);
@@ -199,6 +205,8 @@ export function UserEditForm({
         if (isMediaspace) fd.set('vidiBanku', vidiBanku ? '1' : '0');
         if (isMediaspace) fd.set('sledujeZmenyProjektu', sledujeZmeny ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
+        if (isMediaspace) fd.set('schvaleniReklam', schvaleniReklam ? '1' : '0');
+        if (isMediaspace) fd.set('nabidkyReklam', nabidkyReklam ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
         if (isMediaspace && role !== 'ZVUKAR') fd.set('takyZvukar', takyZvukar ? '1' : '0');
         // Přístup na tabule (23. 9. 2026) - prázdný seznam se musí poslat taky.
@@ -552,6 +560,48 @@ export function UserEditForm({
                 Dostává zprávy o dotočení
                 <span className="block text-xs text-muted">
                   mail pokaždé, když se u projektu odškrtne dotočený herec
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Schvalovani reklam klientem (zadani 23. 9. 2026: „u reklam ma jit
+            notifikace zvoneckem na me a Petera Dratvu"). Zvonek, ne mail. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={schvaleniReklam}
+                onChange={(e) => setSchvaleniReklam(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Zvonek: klient schválil reklamu
+                <span className="block text-xs text-muted">
+                  notifikace pokaždé, když klient odklepne spot k fakturaci
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Znacka stavu nabidky u reklam (zadani 23. 9. 2026: „chtel bych
+            nekde videt (jen ja) ... ze je nabidka schvalena"). */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={nabidkyReklam}
+                onChange={(e) => setNabidkyReklam(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Vidí stav nabídky u reklam
+                <span className="block text-xs text-muted">
+                  značka čeká / schválena / neschválena v přehledu i v detailu
                 </span>
               </span>
             </label>

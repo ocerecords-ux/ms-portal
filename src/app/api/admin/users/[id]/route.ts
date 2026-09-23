@@ -36,6 +36,8 @@ const schema = z.object({
   /** "1" / "0" - ucet jen na prohlizeni portalu (zadani 18. 9. 2026). */
   jenNahled: z.string().trim().optional(),
   dostavaDotoceno: z.string().trim().optional(),
+  schvaleniReklam: z.string().trim().optional(),
+  nabidkyReklam: z.string().trim().optional(),
   dostavaDotocenoKlient: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
   takyZvukar: z.string().trim().optional(),
@@ -77,6 +79,8 @@ function readFormData(formData: FormData) {
     sledujeZmenyProjektu: has('sledujeZmenyProjektu') ? formData.get('sledujeZmenyProjektu') : undefined,
     jenNahled: has('jenNahled') ? formData.get('jenNahled') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
+    schvaleniReklam: has('schvaleniReklam') ? formData.get('schvaleniReklam') : undefined,
+    nabidkyReklam: has('nabidkyReklam') ? formData.get('nabidkyReklam') : undefined,
     dostavaDotocenoKlient: has('dostavaDotocenoKlient')
       ? formData.get('dostavaDotocenoKlient')
       : undefined,
@@ -184,6 +188,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // Hodinova sazba dava smysl jen u zvukare (zadani 6. 9. 2026).
       ...(data.manazerProjektu !== undefined ? { manazerProjektu: data.manazerProjektu === '1' } : {}),
       ...(data.smlouvyPodepisuje !== undefined ? { smlouvyPodepisuje: data.smlouvyPodepisuje === '1' } : {}),
+      ...(data.schvaleniReklam !== undefined
+        ? { schvaleniReklam: data.schvaleniReklam === '1' }
+        : {}),
+      ...(data.nabidkyReklam !== undefined ? { nabidkyReklam: data.nabidkyReklam === '1' } : {}),
       ...(data.dostavaDotoceno !== undefined
         ? { dostavaDotoceno: data.dostavaDotoceno === '1' }
         : {}),

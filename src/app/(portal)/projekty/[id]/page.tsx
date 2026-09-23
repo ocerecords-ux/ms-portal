@@ -24,6 +24,7 @@ import { ProjectBudget } from './ProjectBudget';
 import { ProjectBudgetZakazka } from './ProjectBudgetZakazka';
 import { StatusPill } from '../shared';
 import { ProjectMetaForm } from './ProjectMetaForm';
+import { NabidkaStav } from './NabidkaStav';
 import { ProjectDocuments, invoiceStatus, offerStatus, type ProjectDocRow } from './ProjectDocuments';
 import { ZnackaZWebu } from '@/components/ZnackaZWebu';
 import { navrhNabidkyZObjednavky, objednavkaProjektu } from '@/lib/nabidkaZObjednavky';
@@ -764,6 +765,23 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const jeReklama = druhNotifikaceFirmy(company) === 'REKLAMA';
 
   /**
+   * STAV NABÍDKY (zadání 23. 9. 2026: „chtěl bych někde vidět (jen já)
+   * v přehledu i v detailu projektu, že je nabídka schválena. Jen u reklam").
+   * Kdo ji vidí, se zaškrtává na kartě uživatele - zatím jen Ondřej.
+   */
+  const vidiNabidku =
+    isInternalRole(session.user.role) && jeReklama
+      ? Boolean(
+          (
+            await prisma.user.findUnique({
+              where: { id: session.user.id },
+              select: { nabidkyReklam: true },
+            })
+          )?.nabidkyReklam,
+        )
+      : false;
+
+  /**
    * LICENČNÍ LIST (zadání 22. 9. 2026: „u reklam budeme klientovi vystavovat
    * licenční listy, netýká se to rádiových spotů"). Záložka u projektů firem,
    * které dělají reklamy, kromě rádiového spotu (ten má Rodný list).
@@ -947,6 +965,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           )}
           {/* Zakazka z objednavky na webu (zadani 18. 9. 2026). */}
           {objednavkaZWebu && <ZnackaZWebu objednanoAt={objednavkaZWebu.createdAt} />}
+          {/* Nabídka u reklamy - značka jen pro toho, kdo ji má zapnutou. */}
+          {vidiNabidku && (
+            <NabidkaStav
+              caflouProjectId={caflouProjectId}
+              stav={metaPoSync?.nabidkaStav ?? null}
+              muzeMenit={canEdit}
+            />
+          )}
         </div>
         {company && <p className="text-muted text-sm font-body mt-1">{company.name}</p>}
         {/* Text z objednávky - odkaz a stav kopie na Disku (22. 9. 2026). */}

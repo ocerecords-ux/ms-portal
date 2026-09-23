@@ -52,7 +52,7 @@ Tlačítko **Schválit** je na třech místech a všechna dělají totéž:
 2. **ve složce s nahrávkami**, v **taggeru spotu** i v **AudioTaggeru** — všude, kam se klient z odkazu dostane,
 3. **v klientském portálu** v přehledu projektů, ve sloupci Schválení — jen u reklamních firem.
 
-**Odkaz pro klienta** v záložce Připomínky vede u reklamy rovnou do taggeru spotu (`/pripominkovat/…`) — tam klient píše připomínky k času a má tlačítko Schválit.
+**Odkaz pro klienta** v záložce Připomínky vede u reklamy rovnou do taggeru spotu (adresa /pripominkovat/…) — tam klient píše připomínky k času a má tlačítko Schválit.
 
 **Schvaluje se celý projekt, ne jednotlivá nahrávka.** Ať klient klikne kdekoliv, schvaluje tutéž zakázku.
 
@@ -60,10 +60,22 @@ Co se stane po kliknutí:
 
 - projekt se překlopí do stavu **Schváleno - k fakturaci**,
 - do **historie projektu** se zapíše řádek s původcem „Klient (odkazem)", takže je na první pohled vidět, že stav nepřehodil nikdo od nás,
-- **cinkne zvoneček** těm, kdo hlídají změny u projektů,
+- **cinkne zvoneček** těm, kdo hlídají změny u projektů, a navíc každému, kdo má na kartě zaškrtnuté **Zvonek: klient schválil reklamu** (zatím Ondřej a Peter Dratva) — mail se u toho neposílá, je to naše interní vědomí, že zakázka může na fakturu,
 - u zakázky zůstane uložený okamžik schválení — i kdyby se stav později ručně přehodil, zůstane dohledatelné, kdy to klient odklepl.
 
 Tlačítko se ptá podruhé („Opravdu schválit? Klepněte znovu"). Odkaz z mailu sám o sobě nic nepřeklápí — schvaluje se až kliknutím na stránce. Kdyby stav měnilo otevření odkazu, odklepl by spot první antivir, který si ho ze zvědavosti stáhne.
+
+# Stav nabídky
+
+U reklam se dá u projektu držet, jak je na tom **nabídka**. Jsou tři stavy a symbol je vidět v **přehledu projektů** (vedle názvu) i v **detailu projektu** (v hlavičce vedle stavu):
+
+- **hodiny (oranžové)** — nabídka čeká na schválení; tak je na tom každá reklama, dokud někdo neklikne jinam,
+- **fajfka (zelená)** — nabídka schválena,
+- **křížek (červený)** — nabídka neschválena.
+
+Přehazuje se kliknutím na značku v detailu projektu. Je to **ruční značka** — nabídku posíláme mimo portál, takže se nemá odkud dozvědět sama. Se **Schválením zakázky** výše nemá nic společného: to je odklepnutí hotového spotu klientem, tohle je nabídka před natáčením.
+
+Značku vidí jen ten, kdo má na kartě uživatele zaškrtnuté **Vidí stav nabídky u reklam** — zatím jen Ondřej.
 
 # Když se klient splete
 

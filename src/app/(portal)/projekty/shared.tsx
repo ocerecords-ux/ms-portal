@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ZnackaNabidky, type StavNabidky } from '@/lib/nabidkaReklamy';
 import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
@@ -456,6 +457,11 @@ export type InternalProjectMeta = {
    */
   licence: { nazev: string; ikona: string | null }[];
   /**
+   * STAV NABÍDKY (zadání 23. 9. 2026). Jen u reklam a jen tomu, kdo to má
+   * zapnuté na kartě uživatele; jinak `null` a v řádku nic nepřibývá.
+   */
+  nabidka?: StavNabidky | null;
+  /**
    * Reklamní firma - u ní se nabízí kratší cesta projektu (zadání
    * 18. 9. 2026). Rozhoduje Druh zakázek na kartě firmy.
    */
@@ -647,6 +653,8 @@ function bunkaSloupce(
           >
             {p.name}
           </Link>
+          {/* Nabídka u reklamy - hodiny / fajfka / křížek (23. 9. 2026). */}
+          {p.meta?.nabidka ? <ZnackaNabidky stav={p.meta.nabidka} velikost={15} /> : null}
         </span>
       );
     case 'companyName':

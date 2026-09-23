@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import { projektPodleTokenu } from '@/lib/preposlechOdkaz';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
 import { stavJeDokonceny } from '@/lib/stavyProjektu';
+import { notifyMany } from '@/lib/notifications';
+import { INTERNAL_ROLES } from '@/lib/roles';
 
 /**
  * KLIENT SPOT SCHVÁLÍ JEDNÍM TLAČÍTKEM (zadání 18. 9. 2026: „mohl by tam mít
@@ -100,10 +102,11 @@ async function schvalProjekt(caflouProjectId: string): Promise<VysledekSchvaleni
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId },
     select: {
+      name: true,
       statusName: true,
       finished: true,
       schvalenoKlientemAt: true,
-      company: { select: { dealsAds: true } },
+      company: { select: { dealsAds: true, name: true } },
     },
   });
   if (!meta) return { chyba: 'Projekt se nenašel.', status: 404 };
@@ -152,9 +155,38 @@ async function schvalProjekt(caflouProjectId: string): Promise<VysledekSchvaleni
       puvodce: { id: null, jmeno: 'Klient (odkazem)' },
     }).catch(() => undefined);
 
+    // Zvonek nám (zadání 23. 9. 2026: „u reklam má jít notifikace zvonečkem
+    // na mě a Petera Dratvu"). Komu se ozve, se zaškrtává na kartě uživatele.
+    await zvonekOSchvaleni(caflouProjectId, meta.name, meta.company?.name ?? null).catch(() => undefined);
+
     return { ok: true, schvalenoAt: ted.toISOString(), stav: STAV_PO_SCHVALENI, jizDrive: false };
   } catch (err) {
     console.error('Schvaleni spotu klientem selhalo:', err);
     return { chyba: 'Schválení se nepodařilo uložit.', status: 500 };
   }
+}
+
+/**
+ * Zvonek o schválení reklamy klientem. Mail se neposílá - je to naše interní
+ * vědomí, že zakázka může jít na fakturu. Nikdy nevyhazuje.
+ */
+async function zvonekOSchvaleni(
+  caflouProjectId: string,
+  nazevProjektu: string | null,
+  nazevFirmy: string | null,
+): Promise<void> {
+  const prijemci = await prisma.user
+    .findMany({
+      where: { active: true, schvaleniReklam: true, role: { in: INTERNAL_ROLES as never } },
+      select: { id: true },
+    })
+    .catch(() => []);
+  if (prijemci.length === 0) return;
+
+  await notifyMany(prijemci.map((u) => u.id), {
+    kind: 'reklama-schvalena',
+    title: `${nazevProjektu || `Projekt ${caflouProjectId}`}: klient schválil`,
+    body: `${nazevFirmy ? `${nazevFirmy} — ` : ''}zakázka jde k fakturaci.`,
+    url: `/projekty/${encodeURIComponent(caflouProjectId)}`,
+  });
 }
