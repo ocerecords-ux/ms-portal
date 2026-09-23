@@ -593,7 +593,9 @@ export function ProjectMetaForm({
                 />
               </dd>
             </div>
-            {values.licenceIds.length > 0 && (
+            {/* V náhledu platí totéž - u audioknihy se licence neukazují
+                (23. 9. 2026). */}
+            {jeReklama && values.licenceIds.length > 0 && (
               <div>
                 <dt className="text-xs font-heading text-muted uppercase tracking-wide">Licence</dt>
                 <dd className="m-0 mt-1 flex flex-wrap gap-1.5">
@@ -937,8 +939,13 @@ export function ProjectMetaForm({
 
           {/* DRUHY LICENCE (zadání 18. 9. 2026). Zaškrtávátka, ne výběr:
               spot běží klidně v TV i online a číselník je krátký, takže se
-              všechny druhy vejdou na obrazovku najednou. */}
-          {druhyLicence.length > 0 && (
+              všechny druhy vejdou na obrazovku najednou.
+
+              JEN U REKLAMY (zadání 23. 9. 2026: „licence by se měly zobrazit
+              jen u reklam, ne u audioknih") - u audioknihy se licence řeší
+              jinak a zaškrtávátka by tam jen překážela, stejně jako pole
+              Účel a území užití licence nad tím. */}
+          {jeReklama && druhyLicence.length > 0 && (
             <div className="flex flex-col gap-1.5 sm:col-span-2">
               <span className="text-sm font-body text-ink">Licence</span>
               <div className="flex flex-wrap gap-2">
