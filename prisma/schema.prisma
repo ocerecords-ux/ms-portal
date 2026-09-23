@@ -2011,6 +2011,8 @@ model StudioBlock {
   /// Herec - jen u natáčení, u střihu zustava prazdny.
   actorUserId     String?
   actorName       String?
+  /// REŽIE ONLINE (zadani 23. 9. 2026) - stejne jako u RecordingSlot.
+  rezieOnline     Boolean?
   zvukarUserId    String?
   zvukarName      String?
 
@@ -2147,6 +2149,11 @@ model RecordingSlot {
   /// Poznamka / vzkaz k frekvenci. V nabidce taky znacka mista
   /// ("Víkend – po domluvě", "Návrh herce").
   note       String?
+
+  /// REŽIE ONLINE (zadani 23. 9. 2026). null = pocita se samo (prvni
+  /// frekvence daneho herce na danem projektu ji ma), true / false = rucni
+  /// vyjimka zaskrtnuta v kalendari. Viz lib/rezieOnline.ts.
+  rezieOnline Boolean?
 
   /// Zvukar potvrzene frekvence - doplnuje se v kalendari dvojklikem
   /// (zadani 19. 9. 2026: „aby pak šly dvojklikem editovat a šlo by přidat

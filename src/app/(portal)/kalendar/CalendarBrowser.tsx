@@ -13,6 +13,7 @@ import {
 } from '@/lib/porady';
 import { OdberKalendare } from './OdberKalendare';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
+import { POPIS_REZIE } from '@/lib/rezieOnline';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -121,6 +122,14 @@ export type CalendarEvent = {
   porada?: PoradaVKalendari;
   /** Poznámka / vzkaz k události (19. 9. 2026). */
   poznamka?: string | null;
+  /**
+   * REŽIE ONLINE (zadání 23. 9. 2026: „na každou první frekvenci s každým
+   * hercem se připojuju na online hovor jako režie"). Spočítané: první
+   * natáčení daného herce na daném projektu. Ikona se kreslí podle tohohle.
+   */
+  rezie?: boolean;
+  /** Ruční výjimka uložená u události: null = počítá se samo. */
+  rezieRucne?: boolean | null;
 };
 
 /**
@@ -1559,6 +1568,7 @@ function MrizkaPohled({
                               }`}
                             >
                               <IkonaDruhu druh={druhPrace(e)} velikost={14} />
+                              {e.rezie && <IkonaRezie velikost={14} />}
                               {radek}
                               {strihBezProjektu(e) && (
                                 <span className="font-normal italic opacity-70"> · bez projektu</span>
@@ -1676,6 +1686,7 @@ function MesicniPohled({
                     {/* V měsíci je na řádek místo jen na to podstatné - název
                         a zvukař (20. 9. 2026: „nejsou tam vidět zvukaři"). */}
                     <IkonaDruhu druh={druhPrace(e)} velikost={14} />
+                    {e.rezie && <IkonaRezie velikost={14} />}
                     {e.title.split('\n')[0]}
                     {strihBezProjektu(e) && <span className="italic opacity-70"> · bez projektu</span>}
                     {(() => {
@@ -1783,6 +1794,12 @@ function UdalostForm({
   const [zvukarId, setZvukarId] = useState(
     upravovana?.udalost?.zvukarUserId ?? podleJmena(zvukari, upravovana?.udalost?.zvukarName),
   );
+  /**
+   * REŽIE ONLINE (zadání 23. 9. 2026). Předvyplní se tím, co kalendář sám
+   * spočítal (první frekvence herce na projektu); odškrtnutím nebo
+   * zaškrtnutím se u téhle jedné události uloží výjimka.
+   */
+  const [rezie, setRezie] = useState(upravovana?.rezie ?? false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1991,6 +2008,8 @@ function UdalostForm({
                 actorName: sHercem ? herecJmeno : '',
                 zvukarUserId: zvukar?.id ?? '',
                 zvukarName: zvukar?.label ?? '',
+                // Režie online (23. 9. 2026) - ukládá se jen u natáčení.
+                ...(jeNataceni ? { rezieOnline: rezie } : {}),
               }
             : { title: nazev }),
         }),
@@ -2206,6 +2225,25 @@ function UdalostForm({
         </label>
       )}
 
+      {/* REŽIE ONLINE (23. 9. 2026) - u natáčení. Zaškrtnutí drží kalendář
+          sám u první frekvence herce na projektu, tady se dá přebít. */}
+      {jeNataceni && (
+        <label className="flex items-start gap-2.5 rounded-lg border border-line bg-field px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={rezie}
+            onChange={(e) => setRezie(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span className="text-sm font-body text-ink">
+            Režie online
+            <span className="block text-xs text-muted">
+              Sluchátka v kalendáři. Samo se to zaškrtne u první frekvence herce na projektu — tady jde odškrtnout.
+            </span>
+          </span>
+        </label>
+      )}
+
       {/* Poznamka / vzkaz (19. 9. 2026) - u frekvence i u rucni udalosti. */}
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-body text-ink">Poznámka</span>
@@ -2311,6 +2349,24 @@ function IkonaDruhu({ druh, velikost = 16 }: { druh: ReturnType<typeof druhPrace
       style={{ width: velikost, height: velikost }}
     >
       <KresbaIkony klic={klic} velikost={Math.round(velikost * 0.62)} />
+    </span>
+  );
+}
+
+/**
+ * IKONA REŽIE ONLINE (zadání 23. 9. 2026). Sluchátka se svítí u první
+ * frekvence každého herce na projektu - tam se Ondřej připojuje na hovor
+ * jako režie. V úpravě události se dá odškrtnout.
+ */
+function IkonaRezie({ velikost = 14 }: { velikost?: number }) {
+  return (
+    <span
+      title={POPIS_REZIE}
+      aria-label={POPIS_REZIE}
+      className={`shrink-0 inline-grid place-items-center rounded-pill align-middle mr-1 ${tridaBarvyIkony('sluchatka')}`}
+      style={{ width: velikost, height: velikost }}
+    >
+      <KresbaIkony klic="sluchatka" velikost={Math.round(velikost * 0.62)} />
     </span>
   );
 }
@@ -2428,6 +2484,7 @@ function DetailUdalosti({
           <div className="flex items-start justify-between gap-2">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-heading font-semibold uppercase tracking-wide opacity-80">
               <IkonaDruhu druh={druhPrace(event)} velikost={22} />
+              {event.rezie && <IkonaRezie velikost={22} />}
               {stav}
             </span>
           </div>

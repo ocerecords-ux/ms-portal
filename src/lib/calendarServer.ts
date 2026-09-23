@@ -135,6 +135,8 @@ export type Occupancy = {
     zvukarUserId: string | null;
     zvukarName: string | null;
     note: string | null;
+    /** Ruční výjimka pro ikonu režie (23. 9. 2026) - null = počítá se samo. */
+    rezieOnline: boolean | null;
   }[];
   blocks: {
     id: string;
@@ -154,6 +156,8 @@ export type Occupancy = {
     zvukarUserId: string | null;
     zvukarName: string | null;
     note: string | null;
+    /** Ruční výjimka pro ikonu režie (23. 9. 2026). */
+    rezieOnline: boolean | null;
   }[];
 };
 
@@ -207,6 +211,7 @@ export async function loadOccupancy(
       zvukarUserId: s.zvukarUserId,
       zvukarName: s.zvukarName,
       note: s.note,
+      rezieOnline: s.rezieOnline,
     })),
     blocks: blocks.map((b) => ({
       id: b.id,
@@ -222,6 +227,7 @@ export async function loadOccupancy(
       zvukarUserId: b.zvukarUserId,
       zvukarName: b.zvukarName,
       note: b.note,
+      rezieOnline: b.rezieOnline,
     })),
   };
 }

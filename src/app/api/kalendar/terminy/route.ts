@@ -36,6 +36,8 @@ const schema = z.object({
   projectName: z.string().trim().max(300).optional(),
   zvukarUserId: z.string().trim().max(100).optional(),
   zvukarName: z.string().trim().max(200).optional(),
+  /** Režie online (23. 9. 2026) - ruční výjimka proti automatu. */
+  rezieOnline: z.boolean().optional(),
 });
 
 async function nactiFrekvenci(id: string | null) {
@@ -116,6 +118,7 @@ export async function PATCH(req: NextRequest) {
           note: d.note || null,
           zvukarUserId: d.zvukarUserId || null,
           zvukarName: d.zvukarName || null,
+          ...(d.rezieOnline === undefined ? {} : { rezieOnline: d.rezieOnline }),
         },
       });
       await recordEvent({

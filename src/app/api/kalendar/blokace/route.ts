@@ -31,6 +31,8 @@ const schema = z.object({
   actorName: z.string().trim().max(200).optional(),
   zvukarUserId: z.string().trim().max(100).optional(),
   zvukarName: z.string().trim().max(200).optional(),
+  /** Režie online (23. 9. 2026) - ruční výjimka proti automatu. */
+  rezieOnline: z.boolean().optional(),
 });
 
 type Vstup = z.infer<typeof schema>;
@@ -71,6 +73,8 @@ function poliUdalosti(kind: string, d: Vstup) {
     actorName: maHerce(kind) ? d.actorName || null : null,
     zvukarUserId: d.zvukarUserId || null,
     zvukarName: d.zvukarName || null,
+    // Režie online (23. 9. 2026) - jen u natáčení, jinde nedává smysl.
+    rezieOnline: kind === 'NATACENI' ? (d.rezieOnline ?? null) : null,
   };
 }
 
@@ -256,6 +260,7 @@ export async function PATCH(req: NextRequest) {
               actorName: null,
               zvukarUserId: null,
               zvukarName: null,
+              rezieOnline: null,
             }),
       },
     });

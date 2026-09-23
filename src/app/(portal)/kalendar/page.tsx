@@ -24,6 +24,7 @@ import type { NepritomnostVKalendari } from '@/lib/nepritomnost';
 import { SOLO_PORADY } from '@/lib/porady';
 import { SOLO_MOJE } from '@/lib/calendar';
 import { nactiPorady } from '@/lib/poradyServer';
+import { oznacRezii } from '@/lib/rezieOnlineServer';
 
 /**
  * Kalendář studií (zadani 8. 9. 2026, upraveno 9. 9. 2026). Den / týden /
@@ -310,6 +311,29 @@ export default async function KalendarPage({
   const sloty = soloMoje ? occupancy.slots.filter(jeMoje) : occupancy.slots;
   const bloky = soloMoje ? occupancy.blocks.filter(jeMoje) : occupancy.blocks;
 
+  /**
+   * REŽIE ONLINE (zadání 23. 9. 2026) - ikona u první frekvence každého herce
+   * na projektu. Počítá se z kalendáře, ruční výjimka u události má přednost.
+   */
+  const sRezii = await oznacRezii([
+    ...sloty.map((s) => ({
+      id: s.id,
+      caflouProjectId: s.caflouProjectId,
+      actorUserId: s.actorUserId,
+      actorName: s.actorName,
+      rezieOnline: s.rezieOnline,
+    })),
+    ...bloky
+      .filter((b) => b.kind === 'NATACENI')
+      .map((b) => ({
+        id: b.id,
+        caflouProjectId: b.caflouProjectId,
+        actorUserId: b.actorUserId,
+        actorName: b.actorName,
+        rezieOnline: b.rezieOnline,
+      })),
+  ]);
+
   const events: CalendarEvent[] = [
     ...sloty.map((s) => ({
       id: s.id,
@@ -324,6 +348,8 @@ export default async function KalendarPage({
       title: s.zvukarName ? `${s.label}\nZVUKAŘ: ${s.zvukarName}` : s.label,
       href: `/kalendar/nabidka/${s.requestId}`,
       poznamka: s.note,
+      rezie: sRezii.has(s.id),
+      rezieRucne: s.rezieOnline,
       udalost: {
         caflouProjectId: s.caflouProjectId,
         projectName: s.projectName,
@@ -354,6 +380,8 @@ export default async function KalendarPage({
         .join('\n'),
       subtitle: BLOCK_KIND_LABELS[b.kind] ?? 'Blokace',
       poznamka: b.note,
+      rezie: sRezii.has(b.id),
+      rezieRucne: b.rezieOnline,
       // Rozepsané údaje pro úpravu události (zadání 14. 9. 2026).
       udalost: {
         caflouProjectId: b.caflouProjectId,
