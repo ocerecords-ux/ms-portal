@@ -15,6 +15,17 @@ import { utcParts, zonedToUtc } from '@/lib/calendar';
 const PASMO = 'Europe/Prague';
 
 /**
+ * KONEC SLOVA BEZ `\b` (oprava 23. 9. 2026: „Tak co mě čeká zítra?" Bruno
+ * pořád nepoznal).
+ *
+ * `\b` v JavaScriptu počítá za písmeno jen a-z; za „čeká" nebo „pozítří"
+ * tedy žádnou hranici nevidí a celý vzor propadne. Proto se konec slova hlídá
+ * pohledem dopředu na písmeno v UNICODE smyslu - s diakritikou.
+ */
+const KONEC = '(?![\\p{L}])';
+const ZACATEK = '(?<![\\p{L}])';
+
+/**
  * Ptá se ta věta na program dne?
  *
  * Mezi „co" a sloveso se vejde pár slov (oprava 23. 9. 2026: „Co mě zítra
@@ -23,13 +34,16 @@ const PASMO = 'Europe/Prague';
  * „co mě zítra čeká", „co tam dneska máme".
  */
 const PTA_SE = [
-  /\bco\s+(?:\S+\s+){0,3}?(m[áa]m|m[áa]me|[čc]ek[áa]|[čc]ek[áa]me)\b/iu,
-  /\b(m[áa]m|m[áa]me)\s+(?:\S+\s+){0,3}?(n[ěe]co|n[áa]hodou)\b/iu,
-  /\b(m[ůu]j|moje|m[áa]m|m[áa]me)\s+(?:\S+\s+){0,2}?(program|rozvrh|harmonogram)\b/iu,
-  /\bp[řr]ehled\s+na\b/iu,
+  new RegExp(`${ZACATEK}co\\s+(?:\\S+\\s+){0,3}?(m[áa]m|m[áa]me|[čc]ek[áa]|[čc]ek[áa]me)${KONEC}`, 'iu'),
+  new RegExp(`${ZACATEK}(m[áa]m|m[áa]me)\\s+(?:\\S+\\s+){0,3}?(n[ěe]co|n[áa]hodou)${KONEC}`, 'iu'),
+  new RegExp(
+    `${ZACATEK}(m[ůu]j|moje|m[áa]m|m[áa]me)\\s+(?:\\S+\\s+){0,2}?(program|rozvrh|harmonogram)${KONEC}`,
+    'iu',
+  ),
+  new RegExp(`${ZACATEK}p[řr]ehled\\s+na${KONEC}`, 'iu'),
   // „Co je dneska?" - tady uz slovo „dnes" musi stat hned u slovesa, jinak by
   // se chytlo i „co je s tím projektem".
-  /\bco\s+(je|bude)\s+(dnes|dneska|z[íi]tra|poz[íi]t[řr][íi])\b/iu,
+  new RegExp(`${ZACATEK}co\\s+(je|bude)\\s+(dnes|dneska|z[íi]tra|poz[íi]t[řr][íi])${KONEC}`, 'iu'),
 ];
 
 const DNY_V_TYDNU = [
@@ -71,10 +85,12 @@ export function denZDotazu(text: string, ted: Date = new Date()): Date | null {
   const jeOtazka = PTA_SE.some((r) => r.test(veta));
   if (!jeOtazka) return null;
 
-  if (/\bpoz[íi]t[řr][íi]\b/iu.test(veta)) return posunDne(2);
-  if (/\bz[íi]tra\b/iu.test(veta)) return posunDne(1);
-  if (/\bv[čc]era\b/iu.test(veta)) return posunDne(-1);
-  if (/\b(dnes|dneska|dnešek|dnesek)\b/iu.test(veta)) return posunDne(0);
+  const slovo = (vzor: string) => new RegExp(`${ZACATEK}${vzor}${KONEC}`, 'iu').test(veta);
+
+  if (slovo('poz[íi]t[řr][íi]')) return posunDne(2);
+  if (slovo('z[íi]tra')) return posunDne(1);
+  if (slovo('v[čc]era')) return posunDne(-1);
+  if (slovo('(dnes|dneska|dne[šs]ek)')) return posunDne(0);
 
   for (const den of DNY_V_TYDNU) {
     if (!den.slova.some((s) => new RegExp(s, 'iu').test(veta))) continue;
