@@ -12,7 +12,7 @@ import { ChatDock } from './components/ChatDock';
 import { PoutkoDoku } from './components/PoutkoDoku';
 import { NeprecteneVedleDoku } from './components/NeprecteneVedleDoku';
 import { DotazyDock } from './components/DotazyDock';
-import { loadMenuEntries, pageOptionsFor, visibleFor } from '@/lib/menuServer';
+import { loadMenuEntries, pageOptionsFor, sTabuli, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { countUnread } from '@/lib/notifications';
 import { loadQuickActions } from '@/lib/quickActionsServer';
@@ -58,7 +58,8 @@ export default async function PortalLayout({ children }: { children: React.React
   let entriesMobil: Awaited<ReturnType<typeof loadMenuEntries>> = [];
   let tasks: Awaited<ReturnType<typeof loadMyTasks>> = [];
   let unread = 0;
-  let ucet: { maFotku: boolean; udajeDoplneny: boolean } | null = null;
+  // Stub Prismy vrací celý User; zajímají nás jen tyhle tři věci.
+  let ucet: { maFotku: boolean; udajeDoplneny: boolean; tabulePristup?: { id: string }[] } | null = null;
   let quickActions: Awaited<ReturnType<typeof loadQuickActions>> = [];
   let nouzovyRezim = false;
   try {
@@ -74,8 +75,9 @@ export default async function PortalLayout({ children }: { children: React.React
           where: { id: session.user.id },
           // `udajeDoplneny` je brana nize - herec, ktery prisel pozvankou,
           // ma napred vyplnit sve udaje (zadani 16. 9. 2026).
-          select: { maFotku: true, udajeDoplneny: true },
-        }),
+          // Tabule v liště (23. 9. 2026) - stačí vědět, jestli nějakou má.
+          select: { maFotku: true, udajeDoplneny: true, tabulePristup: { select: { id: true } } },
+        }) as Promise<{ maFotku: boolean; udajeDoplneny: boolean; tabulePristup?: { id: string }[] } | null>,
         // Rychle volby v levem panelu (zadani 9. 9. 2026).
         loadQuickActions(session.user.id, role),
         // Lista pro mobil (zadani 19. 9. 2026) - kdo si ji neupravil, ma
@@ -87,6 +89,9 @@ export default async function PortalLayout({ children }: { children: React.React
     console.error('Layout portálu: databáze neodpovídá, jedu v nouzovém režimu.', err);
     nouzovyRezim = true;
   }
+
+  /** Tabule v liště (23. 9. 2026) - jen komu ji admin na kartě povolil. */
+  const maTabuli = ((ucet?.tabulePristup ?? []) as { id: string }[]).length > 0;
 
   /**
    * NOVÝ HEREC NEJDŘÍV DOPLNÍ ÚDAJE (zadání 16. 9. 2026: „po tom, co si herec
@@ -126,9 +131,9 @@ export default async function PortalLayout({ children }: { children: React.React
       <Topbar
         userLabel={session.user.name || session.user.email}
         userPhotoUrl={odkazNaFotku(session.user.id, ucet?.maFotku)}
-        items={visibleFor(entries, role)}
-        itemsMobil={visibleFor(entriesMobil, role)}
-        pageOptions={pageOptionsFor(role)}
+        items={sTabuli(visibleFor(entries, role), maTabuli, vychoziLista(entries))}
+        itemsMobil={sTabuli(visibleFor(entriesMobil, role), maTabuli, vychoziLista(entriesMobil))}
+        pageOptions={pageOptionsFor(role, maTabuli)}
         unreadNotifications={unread}
         odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
         pripominky={pripominkyKVyrizeni}
@@ -198,4 +203,9 @@ export default async function PortalLayout({ children }: { children: React.React
     </div>
     </JazykProvider>
   );
+}
+
+/** Lišta, kterou si uživatel nikdy neupravoval - položky mají výchozí id. */
+function vychoziLista(entries: { id: string }[]): boolean {
+  return entries.every((e) => e.id.startsWith('default-'));
 }

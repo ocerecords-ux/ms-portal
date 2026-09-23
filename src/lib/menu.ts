@@ -72,6 +72,10 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/navody': ['ADMIN'],
   // Zadosti o udaje hercu a firem odkazem (zadani 16. 9. 2026).
   '/admin/udaje': ['ADMIN'],
+  // Tabule ve studiu v liště (zadání 23. 9. 2026: „dej jim ty tabule na horní
+  // lištu přímo"). Odkaz se do lišty přidá jen tomu, kdo má na kartě
+  // zaškrtnutý přístup - viz layout portálu; tohle je jen kontrola role.
+  '/tabule/moje': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
 };
 
 /** Uvidi uzivatel s touhle roli tenhle odkaz? Vlastni odkaz vidi kazdy. */
@@ -136,6 +140,9 @@ export function defaultNavFor(role: Role): NavItem[] {
 }
 
 /** Odkaz mimo portal (vlastni URL) se otevira jako obycejny <a>. */
+/** Odkaz na tabuli v liště - přidává se jen komu ji admin povolil. */
+export const TABULE_ITEM: NavItem = { href: '/tabule/moje', label: 'Tabule' };
+
 export function isExternalHref(href: string): boolean {
   return /^https?:\/\//i.test(href);
 }

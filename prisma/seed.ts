@@ -188,6 +188,7 @@ async function main() {
   await doplnZadavateleUkolu();
   await peterTakyZvukar();
   await pristupNaTabule();
+  await tabuleDoListy();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -1008,6 +1009,37 @@ async function pristupNaTabule() {
     console.log('  pristup na tabule nastaven');
   } catch (err) {
     console.warn('  pristup na tabule se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * TABULE DO LIŠTY (23. 9. 2026: „dej jim ty tabule na horní lištu přímo").
+ * Kdo si lištu skládal sám, dostane položku do svých; komu sedí výchozí
+ * lišta, tomu ji portál přidává sám. Běží jednou.
+ */
+async function tabuleDoListy() {
+  const ZNAMKA = 'tabule-do-listy';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const sPristupem = await prisma.user.findMany({
+      where: { tabulePristup: { some: {} } },
+      select: { id: true },
+    });
+    for (const u of sPristupem) {
+      for (const zarizeni of ['POCITAC', 'MOBIL'] as const) {
+        const polozky = await prisma.userMenuItem.findMany({ where: { userId: u.id, zarizeni } });
+        if (polozky.length === 0) continue;
+        if (polozky.some((p: { href: string }) => p.href === '/tabule/moje')) continue;
+        await prisma.userMenuItem.create({
+          data: { userId: u.id, zarizeni, label: 'Tabule', href: '/tabule/moje', sortOrder: 90 },
+        });
+      }
+    }
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  tabule do listy: ${sPristupem.length} uctu`);
+  } catch (err) {
+    console.warn('  tabuli do listy se nepodarilo pridat:', err);
   }
 }
 
