@@ -3400,6 +3400,20 @@ model WikiClanek {
   updatedAt        DateTime  @updatedAt
 }
 
+/// Chat nad clankem (zadani 22. 9. 2026: „vytvoril bych tam nejaky chat,
+/// se kterym budu vzpominat na minulost a veci, ktere by tam na wiki mohly
+/// byt a on to bude formulovat a vkladat"). Historie rozhovoru u konceptu.
+model WikiZprava {
+  id        String   @id @default(cuid())
+  clanekId  String
+  /// „ja" = uzivatel, „bot" = pomocnik.
+  role      String
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([clanekId, createdAt])
+}
+
 /// Ulozene verze konceptu - at jde vratit starsi text.
 model WikiVerze {
   id        String   @id @default(cuid())

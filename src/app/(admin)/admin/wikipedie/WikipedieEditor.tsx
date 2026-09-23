@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { sestavWikitext, type UdajeOsoby } from '@/lib/wikipedieUdaje';
 import { UdajeForm } from './UdajeForm';
+import { WikiChat } from './WikiChat';
 import {
   ADRESA_OAUTH,
   JAZYKY_WIKI,
@@ -213,6 +214,14 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
     }
     setWikitext(data.wikitext);
     setHlaska('Starší verze je v editoru - uložte ji, pokud ji chcete ponechat.');
+  }
+
+  /** Vloží návrh z chatu do konceptu - přidá na konec, nebo celý nahradí. */
+  function vlozZChatu(navrh: string, nahradit: boolean) {
+    if (nahradit && !window.confirm('Nahradit celý koncept tímhle textem?')) return;
+    setWikitext((s) => (nahradit ? `${navrh}\n` : `${s.replace(/\s+$/, '')}\n\n${navrh}\n`));
+    setZalozka('text');
+    setHlaska(nahradit ? 'Koncept je nahrazený - projděte ho a uložte.' : 'Text je přidaný na konec konceptu - projděte ho a uložte.');
   }
 
   async function ulozToken() {
@@ -491,6 +500,9 @@ export function WikipedieEditor({ pocatecni, verze: verzePocatecni }: { pocatecn
           </table>
         )}
       </div>
+
+      {/* Vzpomínání - chat, který z vyprávění píše wikitext (22. 9. 2026). */}
+      <WikiChat pripraveno={Boolean(ulozeno)} onVlozit={vlozZChatu} />
 
       {/* Odesílání na Wikipedii */}
       <div className={karta}>

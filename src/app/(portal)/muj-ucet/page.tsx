@@ -9,6 +9,7 @@ import { UpozorneniKarta } from './UpozorneniKarta';
 import { PripominkyKarta } from './PripominkyKarta';
 import { PodpisKarta } from './PodpisKarta';
 import { mojePripominky, vsechnyPripominky } from '@/lib/pripominkyServer';
+import Link from 'next/link';
 
 // "Můj účet" - kazdy prihlaseny uzivatel si tu upravi svoje udaje (zadani
 // 5. 9. 2026). Role, kod uctu a firma jsou tu jen k precteni; menit je smi
@@ -34,6 +35,16 @@ export default async function MyAccountPage() {
   // Zpetna vazba k portalu (zadani 15. 9. 2026): vsechny pripominky vidi jen
   // Zuzo-labuzo ve svem profilu, kazdy jiny tu ma jen svoje.
   const jsemSpravce = user.role === 'ADMIN';
+
+  /**
+   * ZKRATKA NA WIKIPEDII (zadání 22. 9. 2026: „dej mi tu zkratku na wikipedii
+   * někde, když kliknu na upravit svůj profil ... a uvidím to jen já").
+   * Ukazuje se jen tomu, kdo si v modulu koncept opravdu založil - ostatním
+   * v účtu nepřibude nic.
+   */
+  const maWiki = Boolean(
+    await prisma.wikiClanek.findUnique({ where: { userId: user.id }, select: { id: true } }).catch(() => null),
+  );
   const pripominky = jsemSpravce
     ? await vsechnyPripominky()
     : { otevrene: await mojePripominky(user.id), hotove: [] };
@@ -97,6 +108,23 @@ export default async function MyAccountPage() {
           i herci mame upozorneni jinde a jinak. */}
       {user.role === 'CLIENT' && (
         <UpozorneniKarta initial={{ dotoceno: user.dostavaDotocenoKlient }} />
+      )}
+
+      {/* Zkratka do modulu Wikipedie - jen pro toho, kdo tam koncept ma
+          (zadani 22. 9. 2026). */}
+      {maWiki && (
+        <Link
+          href="/admin/wikipedie"
+          className="bg-surface rounded-card border border-line shadow-sm p-5 no-underline hover:border-brand-purple transition-colors flex items-center justify-between gap-4"
+        >
+          <span className="min-w-0">
+            <span className="block font-heading font-semibold text-base text-ink">Wikipedie</span>
+            <span className="block text-sm font-body text-muted mt-1">
+              Váš koncept článku, náhled a odeslání na Wikipedii.
+            </span>
+          </span>
+          <span className="text-brand-purple font-heading text-sm whitespace-nowrap">Otevřít →</span>
+        </Link>
       )}
 
       {/* Podpis na smlouvy - jen interni ucty, klient ani herec za Mediaspace
