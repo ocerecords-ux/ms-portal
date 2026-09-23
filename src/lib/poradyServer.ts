@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db';
-import { vyskytyPorady, type Opakovani, type PoradaVKalendari } from '@/lib/porady';
+import { vyskytyPorady, type DruhPorady, type Opakovani, type PoradaVKalendari } from '@/lib/porady';
+import { canManageCalendar } from '@/lib/roles';
+import type { Role } from '@prisma/client';
 
 /**
  * Porady, na které je přihlášený pozvaný, rozepsané na výskyty v rozsahu
@@ -7,17 +9,44 @@ import { vyskytyPorady, type Opakovani, type PoradaVKalendari } from '@/lib/pora
  * účastníka, ne podle role. Ani správce kalendáře nevidí poradu, na kterou
  * není pozvaný („vidíme to pak jen my").
  */
-export async function nactiPorady(userId: string, od: Date, doKdy: Date): Promise<PoradaVKalendari[]> {
+export async function nactiPorady(
+  userId: string,
+  od: Date,
+  doKdy: Date,
+  role?: Role | string,
+): Promise<PoradaVKalendari[]> {
   try {
+    /**
+     * DALŠÍ SCHŮZKY VIDÍ CELÁ PRODUKCE (zadání 23. 9. 2026: „vidí ho
+     * Žůžo-labůžo a produkce"). U Porad zůstává původní pravidlo - jen
+     * pozvaní, ani správce kalendáře do cizí porady nevidí.
+     *
+     * Bez role (ranní přehled od Bruna) platí to přísnější: co se mě týká.
+     */
+    const spravce = role ? canManageCalendar(role as Role) : false;
+    const komu = spravce
+      ? [{ ucastnici: { some: { userId } } }, { druh: 'SCHUZKA' as const }]
+      : [{ ucastnici: { some: { userId } } }];
+
     const porady = await prisma.porada.findMany({
       where: {
-        ucastnici: { some: { userId } },
         start: { lt: doKdy },
-        // Neopakovaná musí do rozsahu zasahovat; opakovaná smí začít dávno,
-        // stačí, že neskončila před ním.
-        OR: [
-          { opakovani: 'NE', end: { gt: od } },
-          { opakovani: { not: 'NE' }, OR: [{ opakovatDo: null }, { opakovatDo: { gte: new Date(od.getTime() - 24 * 3600 * 1000) } }] },
+        AND: [
+          { OR: komu },
+          {
+            // Neopakovaná musí do rozsahu zasahovat; opakovaná smí začít dávno,
+            // stačí, že neskončila před ním.
+            OR: [
+              { opakovani: 'NE', end: { gt: od } },
+              {
+                opakovani: { not: 'NE' },
+                OR: [
+                  { opakovatDo: null },
+                  { opakovatDo: { gte: new Date(od.getTime() - 24 * 3600 * 1000) } },
+                ],
+              },
+            ],
+          },
         ],
       },
       include: { ucastnici: { include: { user: { select: { id: true, name: true, email: true } } } } },
@@ -38,6 +67,7 @@ export async function nactiPorady(userId: string, od: Date, doKdy: Date): Promis
         vysledek.push({
           id: `${p.id}:${v.den}`,
           poradaId: p.id,
+          druh: (p.druh as DruhPorady) ?? 'PORADA',
           den: v.den,
           nazev: p.nazev,
           start: v.start.toISOString(),

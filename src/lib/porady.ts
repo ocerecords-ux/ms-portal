@@ -15,6 +15,41 @@ import { zonedToUtc } from '@/lib/calendar';
 export const NAZEV_KALENDARE_PORADY = 'Porady';
 
 /**
+ * DALŠÍ SCHŮZKY (zadání 23. 9. 2026: „udělej mi rovnou kalendář další
+ * schůzky. Měl by to být stejný typ kalendáře, jako porady. Vidí ho
+ * Žůžo-labůžo a produkce").
+ *
+ * Je to tentýž kalendář jako Porady, jen s jiným štítkem, barvou a jiným
+ * pravidlem, kdo ho vidí: poradu vidí POZVANÍ, schůzku CELÁ PRODUKCE. Proto
+ * to není druhý model, ale `druh` u téhož záznamu - opakování, videohovor
+ * i rušení jednoho výskytu se tím nemusí psát dvakrát.
+ */
+export type DruhPorady = 'PORADA' | 'SCHUZKA';
+
+export const NAZEV_KALENDARE_SCHUZKY = 'Další schůzky';
+
+/** Tyrkysová - vedle žluté Porady na první pohled jiný kalendář. */
+export const BARVA_SCHUZEK = '#14B8A6';
+
+/** Značka v adrese kalendáře pro sólo Dalších schůzek. */
+export const SOLO_SCHUZKY = 'schuzky';
+
+/** Štítek kalendáře podle druhu - ať se to nikde nepíše natvrdo. */
+export function nazevKalendare(druh: DruhPorady): string {
+  return druh === 'SCHUZKA' ? NAZEV_KALENDARE_SCHUZKY : NAZEV_KALENDARE_PORADY;
+}
+
+/** Barva kalendáře podle druhu. */
+export function barvaKalendare(druh: DruhPorady): string {
+  return druh === 'SCHUZKA' ? BARVA_SCHUZEK : BARVA_PORAD;
+}
+
+/** „porada" / „schůzka" do vět v okně a hlášek. */
+export function slovoProDruh(druh: DruhPorady): string {
+  return druh === 'SCHUZKA' ? 'schůzka' : 'porada';
+}
+
+/**
  * Žlutá jako „Schůzky" v Google kalendáři, na který je tým zvyklý. Šestimístný
  * hex - průhlednost se k ní přidává příponou (`${BARVA}33`).
  */
@@ -45,6 +80,8 @@ export type PoradaVKalendari = {
   /** Id výskytu: `<id porady>:<YYYY-MM-DD>` - u neopakované taky. */
   id: string;
   poradaId: string;
+  /** Do kterého z obou kalendářů patří (23. 9. 2026). */
+  druh: DruhPorady;
   /** Den výskytu v Praze, YYYY-MM-DD. */
   den: string;
   nazev: string;

@@ -24,6 +24,7 @@ import type { NepritomnostVKalendari } from '@/lib/nepritomnost';
 import { SOLO_PORADY } from '@/lib/porady';
 import { SOLO_MOJE } from '@/lib/calendar';
 import { nactiPorady } from '@/lib/poradyServer';
+import { SOLO_SCHUZKY } from '@/lib/porady';
 import { oznacRezii } from '@/lib/rezieOnlineServer';
 
 /**
@@ -66,6 +67,8 @@ export default async function KalendarPage({
     solo?: string;
     /** „0" = kalendář Porady je vypnutý (zadání 21. 9. 2026). */
     porady?: string;
+    /** „0" = kalendář Další schůzky je vypnutý (zadání 23. 9. 2026). */
+    schuzky?: string;
   };
 }) {
   const session = await getServerSession(authOptions);
@@ -109,6 +112,7 @@ export default async function KalendarPage({
   const soloStudio = studios.find((s) => s.id === soloZAdresy) ?? null;
   const soloMimo = soloZAdresy === SOLO_MIMO;
   const soloPorady = soloZAdresy === SOLO_PORADY;
+  const soloSchuzky = soloZAdresy === SOLO_SCHUZKY;
   // JEN MOJE (zadání 22. 9. 2026: „ikona, na kterou když kliknou, tak se jim
   // zobrazí jen jejich události v kalendáři. Fungovat by to mělo jako sólo").
   // Svítí všechna studia, Mimo studio i Porady, ale jen to, kde je přihlášený
@@ -120,10 +124,13 @@ export default async function KalendarPage({
       ? SOLO_MIMO
       : soloPorady
         ? SOLO_PORADY
-        : soloMoje
-          ? SOLO_MOJE
-          : '';
+        : soloSchuzky
+          ? SOLO_SCHUZKY
+          : soloMoje
+            ? SOLO_MOJE
+            : '';
   const puvodniPorady = searchParams?.porady !== '0';
+  const puvodniSchuzky = searchParams?.schuzky !== '0';
 
   const aktivni = soloMoje ? studios : solo ? (soloStudio ? [soloStudio] : []) : puvodni;
   // Mřížka (pásmo a otevírací doba) se musí o něco opřít i bez studií.
@@ -270,8 +277,21 @@ export default async function KalendarPage({
   const ukazNepritomnost = solo ? soloMimo || soloMoje : puvodniNepritomnost;
   // PORADY (21. 9. 2026) - jen ty, na které je přihlášený pozvaný.
   const ukazPorady = solo ? soloPorady || soloMoje : puvodniPorady;
-  const porady = ukazPorady ? await nactiPorady(session.user.id, from, to) : [];
+  /**
+   * DALŠÍ SCHŮZKY (zadání 23. 9. 2026: „udělej mi rovnou kalendář další
+   * schůzky … vidí ho Žůžo-labůžo a produkce"). Kdo kalendář nevidí, pro toho
+   * neexistuje - nenačítá se a štítek se mu ani nenabídne.
+   */
   const spravceKalendare = canManageCalendar(session.user.role);
+  const ukazSchuzky = spravceKalendare && (solo ? soloSchuzky || soloMoje : puvodniSchuzky);
+
+  // Oba kalendáře čte jeden dotaz - rozdělí se až tady podle druhu.
+  const vsechnyPorady =
+    ukazPorady || ukazSchuzky
+      ? await nactiPorady(session.user.id, from, to, session.user.role)
+      : [];
+  const porady = ukazPorady ? vsechnyPorady.filter((p) => p.druh !== 'SCHUZKA') : [];
+  const schuzky = ukazSchuzky ? vsechnyPorady.filter((p) => p.druh === 'SCHUZKA') : [];
   const [radkyNepritomnosti, lidiTymu] = await Promise.all([
     ukazNepritomnost
       ? prisma.nepritomnost
@@ -432,6 +452,10 @@ export default async function KalendarPage({
       porady={porady}
       ukazPorady={ukazPorady}
       puvodniPorady={puvodniPorady}
+      schuzky={schuzky}
+      ukazSchuzky={ukazSchuzky}
+      puvodniSchuzky={puvodniSchuzky}
+      muzeSchuzky={spravceKalendare}
       ja={{ id: session.user.id, label: session.user.name || session.user.email }}
       lidiTymu={lidiTymu.map((u) => ({ id: u.id, label: u.name || u.email }))}
     />

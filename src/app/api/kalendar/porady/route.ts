@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { isInternalRole } from '@/lib/roles';
+import { canManageCalendar, isInternalRole } from '@/lib/roles';
 import { zonedToUtc } from '@/lib/calendar';
 import { notifyMany } from '@/lib/notifications';
 import { userLabel } from '@/lib/chatServer';
@@ -23,6 +23,12 @@ import { PASMO_PORAD, platnyOdkaz, popisOpakovani, type Opakovani } from '@/lib/
 const OPAKOVANI = ['NE', 'DENNE', 'PRACOVNI_DNY', 'TYDNE', 'KAZDE_DVA_TYDNY', 'MESICNE'] as const;
 
 const schema = z.object({
+  /**
+   * Do kterého kalendáře to patří (23. 9. 2026). SCHUZKA = Další schůzky,
+   * ty zakládá a mění jen Žůžo-labůžo a produkce - vidí je celá produkce,
+   * tak ať je nezaloží někdo, komu se pak neukážou.
+   */
+  druh: z.enum(['PORADA', 'SCHUZKA']).default('PORADA'),
   nazev: z.string().trim().min(1, 'Napište, o čem porada je.').max(200),
   /** YYYY-MM-DD - den (prvního) výskytu */
   den: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -38,6 +44,7 @@ const schema = z.object({
 
 /** Ručně, ne přes z.infer - ať je vidět, s čím výpočet pracuje. */
 type Vstup = {
+  druh: 'PORADA' | 'SCHUZKA';
   nazev: string;
   den: string;
   casOd: string;
@@ -83,6 +90,7 @@ async function priprav(d: Vstup, ja: string) {
 
   return {
     data: {
+      druh: d.druh,
       nazev: d.nazev,
       start,
       end,
@@ -111,6 +119,10 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
+    if (parsed.data.druh === 'SCHUZKA' && !canManageCalendar(ja.role)) {
+      return NextResponse.json({ error: 'Další schůzky zakládá produkce.' }, { status: 403 });
+    }
+
     const p = await priprav(parsed.data, ja.id);
     if ('chyba' in p) return NextResponse.json({ error: p.chyba }, { status: 400 });
 
@@ -129,7 +141,7 @@ export async function POST(req: NextRequest) {
       p.ucastnici.filter((id) => id !== ja.id),
       {
         kind: 'porada-pozvanka',
-        title: `${jmeno} vás pozval(a) na poradu`,
+        title: `${jmeno} vás pozval(a) na ${parsed.data.druh === 'SCHUZKA' ? 'schůzku' : 'poradu'}`,
         body: `${parsed.data.nazev} — ${popisTerminu(parsed.data)}`,
         url: `/kalendar?datum=${parsed.data.den}`,
       },
@@ -148,8 +160,10 @@ export async function PATCH(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Chybí porada.' }, { status: 400 });
   try {
+    // Poradu smí měnit jen její účastník; Další schůzku kdokoliv z produkce -
+    // je to společný kalendář, ne soukromá skupina.
     const puvodni = await prisma.porada.findFirst({
-      where: { id, ucastnici: { some: { userId: ja.id } } },
+      where: { id, ...(canManageCalendar(ja.role) ? {} : { ucastnici: { some: { userId: ja.id } } }) },
       include: { ucastnici: { select: { userId: true } } },
     });
     if (!puvodni) return NextResponse.json({ error: 'Porada nenalezena.' }, { status: 404 });
@@ -158,6 +172,13 @@ export async function PATCH(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
     }
+    if (
+      (parsed.data.druh === 'SCHUZKA' || puvodni.druh === 'SCHUZKA') &&
+      !canManageCalendar(ja.role)
+    ) {
+      return NextResponse.json({ error: 'Další schůzky mění produkce.' }, { status: 403 });
+    }
+
     const p = await priprav(parsed.data, ja.id);
     if ('chyba' in p) return NextResponse.json({ error: p.chyba }, { status: 400 });
 
@@ -207,10 +228,13 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'Chybí porada.' }, { status: 400 });
   try {
     const porada = await prisma.porada.findFirst({
-      where: { id, ucastnici: { some: { userId: ja.id } } },
+      where: { id, ...(canManageCalendar(ja.role) ? {} : { ucastnici: { some: { userId: ja.id } } }) },
       include: { ucastnici: { select: { userId: true } } },
     });
     if (!porada) return NextResponse.json({ error: 'Porada nenalezena.' }, { status: 404 });
+    if (porada.druh === 'SCHUZKA' && !canManageCalendar(ja.role)) {
+      return NextResponse.json({ error: 'Další schůzky ruší produkce.' }, { status: 403 });
+    }
 
     const jmeno = userLabel({ name: ja.name ?? null, email: ja.email ?? '' });
     const ostatni = porada.ucastnici.map((u) => u.userId).filter((u) => u !== ja.id);

@@ -9,7 +9,11 @@ import {
   BARVA_PORAD,
   MOZNOSTI_OPAKOVANI,
   NAZEV_KALENDARE_PORADY,
+  NAZEV_KALENDARE_SCHUZKY,
+  barvaKalendare,
+  slovoProDruh,
   vPraze,
+  type DruhPorady,
   type Opakovani,
   type PoradaVKalendari,
 } from '@/lib/porady';
@@ -35,6 +39,8 @@ export function PoradaForm({
   vychoziDen,
   vychoziCasOd,
   vychoziCasDo,
+  druh: vychoziDruh = 'PORADA',
+  muzeSchuzky = false,
   ja,
   lidiTymu,
   onClose,
@@ -43,6 +49,10 @@ export function PoradaForm({
   vychoziDen: string;
   vychoziCasOd?: string;
   vychoziCasDo?: string;
+  /** Do kterého kalendáře to patří (23. 9. 2026) - Porady, nebo Další schůzky. */
+  druh?: DruhPorady;
+  /** Smí přihlášený zakládat Další schůzky? Jinak se přepínač nenabízí. */
+  muzeSchuzky?: boolean;
   ja: Osoba;
   lidiTymu: Osoba[];
   onClose: () => void;
@@ -56,6 +66,7 @@ export function PoradaForm({
   const prvni = upravovana ? vPraze(new Date(upravovana.start)) : null;
   const konecPrvni = upravovana ? vPraze(new Date(upravovana.end)) : null;
 
+  const [druh, setDruh] = useState<DruhPorady>(upravovana?.druh ?? vychoziDruh);
   const [nazev, setNazev] = useState(upravovana?.nazev ?? '');
   const [den, setDen] = useState(upravovana ? upravovana.den : vychoziDen);
   const [casOd, setCasOd] = useState(prvni ? casZMinut(prvni.minuty) : vychoziCasOd ?? '10:00');
@@ -90,6 +101,7 @@ export function PoradaForm({
           method: upravovana ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            druh,
             nazev: nazev.trim(),
             // U úpravy opakované porady se posílá začátek řady, ne klepnutý výskyt.
             den: upravovana && opakovana && prvni ? prvni.den : den,
@@ -138,16 +150,42 @@ export function PoradaForm({
     'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full';
 
   return (
-    <div className="bg-surface rounded-card border-2 shadow-sm p-5 flex flex-col gap-4" style={{ borderColor: BARVA_PORAD }}>
+    <div
+      className="bg-surface rounded-card border-2 shadow-sm p-5 flex flex-col gap-4"
+      style={{ borderColor: barvaKalendare(druh) }}
+    >
       <div className="flex items-start justify-between gap-4">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0 inline-flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: BARVA_PORAD }} aria-hidden />
-          {upravovana ? 'Úprava porady' : `Nová porada`}
+          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: barvaKalendare(druh) }} aria-hidden />
+          {upravovana ? `Úprava — ${slovoProDruh(druh)}` : `Nová ${slovoProDruh(druh)}`}
         </h2>
         <button type="button" onClick={onClose} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
           ×
         </button>
       </div>
+
+      {/* Do kterého kalendáře to patří (23. 9. 2026). Nabízí se jen tomu, kdo
+          Další schůzky vidí; u úpravy se dá událost přehodit z jednoho
+          kalendáře do druhého. */}
+      {muzeSchuzky && (
+        <div className="flex flex-wrap gap-2">
+          {(['PORADA', 'SCHUZKA'] as DruhPorady[]).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDruh(d)}
+              className={`inline-flex items-center gap-2 rounded-pill border px-3 py-1.5 text-sm font-heading transition-colors ${
+                druh === d ? 'text-ink' : 'border-line text-muted hover:text-ink'
+              }`}
+              style={druh === d ? { backgroundColor: `${barvaKalendare(d)}26`, borderColor: barvaKalendare(d) } : undefined}
+              aria-pressed={druh === d}
+            >
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: barvaKalendare(d) }} aria-hidden />
+              {d === 'SCHUZKA' ? NAZEV_KALENDARE_SCHUZKY : NAZEV_KALENDARE_PORADY}
+            </button>
+          ))}
+        </div>
+      )}
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-body text-ink">Název</span>

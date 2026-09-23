@@ -6,7 +6,11 @@ import { PoradaForm } from './Porady';
 import {
   BARVA_PORAD,
   NAZEV_KALENDARE_PORADY,
+  NAZEV_KALENDARE_SCHUZKY,
+  type DruhPorady,
+  BARVA_SCHUZEK,
   SOLO_PORADY,
+  SOLO_SCHUZKY,
   platnyOdkaz,
   popisOpakovani,
   type PoradaVKalendari,
@@ -181,6 +185,10 @@ export function CalendarBrowser({
   porady,
   ukazPorady,
   puvodniPorady,
+  schuzky,
+  ukazSchuzky,
+  puvodniSchuzky,
+  muzeSchuzky,
   puvodniStudioIds,
   puvodniNepritomnost,
   solo,
@@ -219,6 +227,16 @@ export function CalendarBrowser({
   porady: PoradaVKalendari[];
   ukazPorady: boolean;
   puvodniPorady: boolean;
+  /**
+   * DALŠÍ SCHŮZKY (zadání 23. 9. 2026) - stejný kalendář jako Porady, jen
+   * tyrkysový a společný: vidí ho Žůžo-labůžo a produkce, ne jen pozvaní.
+   * `muzeSchuzky` = má na něj přihlášený vůbec právo; když ne, štítek se
+   * mu nevykreslí.
+   */
+  schuzky: PoradaVKalendari[];
+  ukazSchuzky: boolean;
+  puvodniSchuzky: boolean;
+  muzeSchuzky: boolean;
   /**
    * SOLO REŽIM (zadání 20. 9. 2026: „ať to funguje jako prozatímní sólo
    * funkce. Když kliknu znova, tak se vrátí původní zaškrtnutí kalendářů,
@@ -310,6 +328,8 @@ export function CalendarBrowser({
     den: string;
     casOd?: string;
     casDo?: string;
+    /** Do kterého kalendáře nová událost patří (23. 9. 2026). */
+    druh?: DruhPorady;
   } | null>(null);
   const [hledani, setHledani] = useState('');
   /** Seznam výskytů v celém kalendáři (20. 9. 2026) - dá se zavřít křížkem. */
@@ -447,13 +467,33 @@ export function CalendarBrowser({
     [porady],
   );
 
+  /** Výskyty Dalších schůzek - tentýž typ události, jiná barva a štítek. */
+  const udalostiSchuzek = useMemo<CalendarEvent[]>(
+    () =>
+      schuzky.map((p) => ({
+        id: `schuzka-${p.id}`,
+        kind: 'PORADA' as const,
+        studioId: '',
+        studioName: NAZEV_KALENDARE_SCHUZKY,
+        color: BARVA_SCHUZEK,
+        start: p.start,
+        end: p.end,
+        state: 'PORADA',
+        title: `${p.nazev}\n${p.ucastnici.map((u) => u.label).join(', ')}`,
+        subtitle: NAZEV_KALENDARE_SCHUZKY,
+        poznamka: p.poznamka,
+        porada: p,
+      })),
+    [schuzky],
+  );
+
   const viditelne = useMemo(() => {
     const dotaz = hledani.trim().toLowerCase();
-    return [...events, ...udalostiMimo, ...udalostiPorad].filter((e) => {
+    return [...events, ...udalostiMimo, ...udalostiPorad, ...udalostiSchuzek].filter((e) => {
       if (dotaz && !e.title.toLowerCase().includes(dotaz)) return false;
       return true;
     });
-  }, [events, udalostiMimo, udalostiPorad, hledani]);
+  }, [events, udalostiMimo, udalostiPorad, udalostiSchuzek, hledani]);
 
   /**
    * Otevřené okno zavře Escape a stránka pod ním se nesmí rolovat - jinak
@@ -527,9 +567,15 @@ export function CalendarBrowser({
     const od = Math.floor(minuty / 60) * 60;
     const start = zonedToUtc(y, m, d, od, timezone).toISOString();
     const end = zonedToUtc(y, m, d, Math.min(24 * 60, od + 60), timezone).toISOString();
-    // Svítí jen Porady - dvojklik zakládá rovnou poradu (21. 9. 2026).
-    if (solo === SOLO_PORADY) {
-      setOknoPorady({ upravovana: null, den: denKey, casOd: casVPraze(start), casDo: casVPraze(end) });
+    // Svítí jen Porady (nebo Další schůzky) - dvojklik zakládá rovnou tam.
+    if (solo === SOLO_PORADY || solo === SOLO_SCHUZKY) {
+      setOknoPorady({
+        upravovana: null,
+        den: denKey,
+        casOd: casVPraze(start),
+        casDo: casVPraze(end),
+        druh: solo === SOLO_SCHUZKY ? 'SCHUZKA' : 'PORADA',
+      });
       return;
     }
     if (canManage && mojeStudia.length > 0) {
@@ -571,6 +617,7 @@ export function CalendarBrowser({
       datum: anchorIso,
       nepritomnost: puvodniNepritomnost ? '1' : '0',
       porady: puvodniPorady ? '1' : '0',
+      schuzky: puvodniSchuzky ? '1' : '0',
       solo,
       ...zmeny,
     });
@@ -612,8 +659,13 @@ export function CalendarBrowser({
 
   /** Kulička u Porad (21. 9. 2026) - stejné pravidlo jako u ostatních. */
   function prepniPorady() {
-    if (puvodniPorady && puvodniStudioIds.length === 0 && !puvodniNepritomnost) return;
+    if (puvodniPorady && puvodniStudioIds.length === 0 && !puvodniNepritomnost && !puvodniSchuzky) return;
     prejdi({ porady: puvodniPorady ? '0' : '1', solo: '' });
+  }
+
+  function prepniSchuzky() {
+    if (puvodniSchuzky && puvodniStudioIds.length === 0 && !puvodniNepritomnost && !puvodniPorady) return;
+    prejdi({ schuzky: puvodniSchuzky ? '0' : '1', solo: '' });
   }
 
   /**
@@ -629,7 +681,9 @@ export function CalendarBrowser({
   const nazevSola = solo
     ? solo === SOLO_MIMO
       ? NAZEV_KALENDARE_MIMO
-      : solo === SOLO_PORADY
+      : solo === SOLO_SCHUZKY
+        ? NAZEV_KALENDARE_SCHUZKY
+        : solo === SOLO_PORADY
         ? NAZEV_KALENDARE_PORADY
         : solo === SOLO_MOJE
           ? 'Jen moje události'
@@ -679,7 +733,7 @@ export function CalendarBrowser({
     prepisujeme.current = false;
     return () => cancelAnimationFrame(snimek);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniStudioIds.join(',')]);
+  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniSchuzky, puvodniStudioIds.join(',')]);
 
   // Když se okno zvětší nebo zmenší, prostřední období musí zůstat prostřední.
   useEffect(() => {
@@ -731,7 +785,7 @@ export function CalendarBrowser({
     // Závislosti musí obsahovat všechno, z čeho se skládá adresa - jinak by
     // posluchač držel starý výběr studií a švihnutí by ho vrátilo zpátky.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniStudioIds.join(',')]);
+  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniSchuzky, puvodniStudioIds.join(',')]);
 
   /** Šipky: stejný pohyb, jen ho rozjede prohlížeč sám a plynule. */
   function posun(smer: -1 | 1) {
@@ -746,7 +800,7 @@ export function CalendarBrowser({
     router.prefetch(adresa({ datum: datumPosunu(-1) }));
     router.prefetch(adresa({ datum: datumPosunu(1) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniStudioIds.join(',')]);
+  }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniSchuzky, puvodniStudioIds.join(',')]);
 
   const nadpis = useMemo(() => {
     const prvni = new Date(days[0].startIso);
@@ -1011,6 +1065,39 @@ export function CalendarBrowser({
             {NAZEV_KALENDARE_PORADY}
           </button>
         </span>
+        {/* DALŠÍ SCHŮZKY (zadání 23. 9. 2026) - tentýž kalendář jako Porady,
+            jen tyrkysový a společný pro Žůžo-labůžo a produkci. Kdo na něj
+            nemá právo, nevidí ani štítek. */}
+        {muzeSchuzky && (
+          <span
+            className={`shrink-0 whitespace-nowrap inline-flex items-center rounded-pill border text-xs sm:text-sm font-heading font-semibold transition-colors ${
+              ukazSchuzky ? 'text-ink' : 'border-line text-muted'
+            } ${solo === SOLO_SCHUZKY ? 'ring-2 ring-brand-purple ring-offset-2 ring-offset-paper' : ''}`}
+            style={ukazSchuzky ? { backgroundColor: `${BARVA_SCHUZEK}26`, borderColor: BARVA_SCHUZEK } : undefined}
+          >
+            <button
+              type="button"
+              onClick={prepniSchuzky}
+              aria-pressed={ukazSchuzky}
+              title={ukazSchuzky ? 'Vypnout Další schůzky' : 'Zapnout Další schůzky'}
+              aria-label={ukazSchuzky ? 'Vypnout Další schůzky' : 'Zapnout Další schůzky'}
+              className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
+            >
+              <span
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{ backgroundColor: ukazSchuzky ? BARVA_SCHUZEK : '#C9C3DC' }}
+              />
+            </button>
+            <button
+              type="button"
+              onClick={() => jenTentoKalendar(SOLO_SCHUZKY)}
+              title={solo === SOLO_SCHUZKY ? 'Zpět na původní výběr kalendářů' : 'Dočasně jen Další schůzky (sólo)'}
+              className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${ukazSchuzky ? '' : 'hover:text-ink'}`}
+            >
+              {NAZEV_KALENDARE_SCHUZKY}
+            </button>
+          </span>
+        )}
         {/* Že je kalendář v sólu, musí být vidět i bez porovnávání štítků
             (zadání 20. 9. 2026: „ještě by se mohl v tomhle módu nějak
             orámovat, aby to bylo jasné, že je to v sólo režimu"). */}
@@ -1231,6 +1318,8 @@ export function CalendarBrowser({
               vychoziDen={oknoPorady.den}
               vychoziCasOd={oknoPorady.casOd}
               vychoziCasDo={oknoPorady.casDo}
+              druh={oknoPorady.upravovana?.druh ?? oknoPorady.druh ?? 'PORADA'}
+              muzeSchuzky={muzeSchuzky}
               ja={ja}
               lidiTymu={lidiTymu}
               onClose={() => setOknoPorady(null)}

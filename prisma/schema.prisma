@@ -3375,8 +3375,19 @@ enum OpakovaniPorady {
   MESICNE
 }
 
+/// Dva kalendare stejneho druhu: Porady (kdo je pozvany) a Dalsi schuzky
+/// (zadani 23. 9. 2026: „udelej mi rovnou kalendar dalsi schuzky. Mel by to
+/// byt stejny typ kalendare, jako porady. Vidi ho Zuzo-labuzo a produkce").
+enum DruhPorady {
+  PORADA
+  SCHUZKA
+}
+
 model Porada {
   id          String          @id @default(cuid())
+  /// PORADA = zluty kalendar jen pro pozvane; SCHUZKA = kalendar Dalsi
+  /// schuzky, ktery vidi cela produkce a Zuzo-labuzo.
+  druh        DruhPorady      @default(PORADA)
   nazev       String
   /// Prvni vyskyt - zacatek a konec. Delka se u opakovani drzi stejna.
   start       DateTime
