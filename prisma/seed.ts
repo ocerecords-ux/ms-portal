@@ -194,6 +194,7 @@ async function main() {
   await odkazyNaHovory();
   await ranniPrehledOndrejovi();
   await schvaleniReklamZvonek();
+  await brunoviFotku();
   await albatrosCenuUrcujeSam();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
@@ -1304,6 +1305,42 @@ async function schvaleniReklamZvonek() {
     );
   } catch (err) {
     console.warn('  zvonek o schvaleni reklam se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * FOTKA BRUNOVI (23. 9. 2026: „neodpovídá a nemá fotku"). V chatu i v seznamu
+ * lidí svítily jen iniciály - robot je tam mezi lidmi a vypadal nedodělaně.
+ *
+ * Obrázek leží v repozitáři (prisma/bruno-avatar.png) a ukládá se stejně jako
+ * fotky lidí, tedy jako data: URL na účtu. Nepřepisuje se: kdyby si někdo
+ * nahrál vlastní, zůstane jeho.
+ */
+async function brunoviFotku() {
+  const ZNAMKA = 'bruno-fotka';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const bruno = await prisma.user.findUnique({
+      where: { email: 'bruno@mediaspace.cz' },
+      select: { id: true, photoUrl: true },
+    });
+    if (!bruno) {
+      console.warn('  fotka Bruna: ucet bruno@mediaspace.cz nenalezen');
+      return;
+    }
+    if (!bruno.photoUrl) {
+      const data = readFileSync(join(process.cwd(), 'prisma/bruno-avatar.png')).toString('base64');
+      await prisma.user.update({
+        where: { id: bruno.id },
+        data: { photoUrl: `data:image/png;base64,${data}`, maFotku: true },
+      });
+      console.log('  Bruno ma fotku');
+    }
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+  } catch (err) {
+    console.warn('  fotku Brunovi se nepodarilo nastavit:', err);
   }
 }
 
