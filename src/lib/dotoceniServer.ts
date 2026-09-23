@@ -45,6 +45,15 @@ export async function oznacHerceDotoceno(
   caflouProjectId: string,
   userId: string,
   kdo: KdoPotvrdil,
+  volby: {
+    /**
+     * NESAHAT NA STAV PROJEKTU (zadání 23. 9. 2026 - reklamy). Reklama má
+     * vlastní řadu stavů („V přípravě → Natáčíme → Dokončeno - ke schválení")
+     * a „Dotočeno" v ní není; automatická fajfka po natáčení tam tedy jen
+     * zvýrazní herce a stav nechá, jak je.
+     */
+    bezZmenyStavu?: boolean;
+  } = {},
 ): Promise<VysledekDotoceni | null> {
   const [projekt, herec, uzJe] = await Promise.all([
     prisma.projectMeta.findUnique({
@@ -102,7 +111,7 @@ export async function oznacHerceDotoceno(
 
   // Stav se prehodi PRED odeslanim zpravy o hercovi - kdyby to bylo naopak,
   // Helca by dostala mail driv, nez by se stav v portalu zmenil.
-  const stav = await prehodStavPodleDotoceni(caflouProjectId, kdo, jeReklama);
+  const stav = volby.bezZmenyStavu ? null : await prehodStavPodleDotoceni(caflouProjectId, kdo, jeReklama);
 
   if (!jeReklama) {
     // Zprava je best effort - fajfka uz je v databazi a nesmi na ni cekat.

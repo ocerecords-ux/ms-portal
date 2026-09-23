@@ -78,6 +78,10 @@ Po přehození stavu portál chvíli počká (výchozí **10 sekund**) a teprve 
 
 Když někdo napíše do kanálu projektu **„dotočeno"**, Bruno udělá přesně to samé co ten klik — zapíše fajfku, přehodí stav, když mají dotočeno všichni, a pošle zprávu. U záznamu je pak vidět, jestli fajfku kliknul člověk, nebo ji vyčetl Bruno z chatu. Napsat „dotočeno" dvakrát nevadí: kdo fajfku už má, tomu se nic nepřepíše a nikomu znovu nic nechodí.
 
+## U reklam to Bruno doplní sám
+
+**Reklamy (projekty s Rodným listem) fajfku nikdo neklikne** — u nich se točí a odevzdává hned a klik by byl jen zdržení. Den po natáčení (bere se z kalendáře — termín z nabídky i ručně zapsané natáčení) hercům dotočeno doplní **Bruno**, aby byli v seznamu projektů zvýraznění. Nechodí u toho žádná zpráva, nic se nepíše do chatu a **stav reklamy zůstává, kde je** (v její řadě stavů „Dotočeno" ani není). U fajfky je vidět, že ji dal Bruno; odškrtnout se dá normálně ručně.
+
 # Zprávy o změně stavu
 
 Jestli se klientovi o stavu píše, **rozhoduje nastavení u firmy** — karta firmy, záložka Notifikace. Co tam není zapnuté, se neposílá, takže zpráva nemůže odejít klientovi, se kterým to není domluvené. **Nová firma má všechno vypnuté.**
