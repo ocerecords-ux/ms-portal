@@ -51,6 +51,7 @@ type EditableUser = {
   zvukarStudia: string[];
   /** Vedoucí pobočky - smí upravovat kalendář těchto studií (22. 9. 2026). */
   vedeStudia: string[];
+  tabulePristup: string[];
   birthNumber: string | null;
   ic: string | null;
   dic: string | null;
@@ -109,6 +110,7 @@ export function UserEditForm({
   // Zvukař - ve kterých studiích točí (zadání 20. 9. 2026)
   const [zvukarStudia, setZvukarStudia] = useState<string[]>(user.zvukarStudia);
   const [vedeStudia, setVedeStudia] = useState<string[]>(user.vedeStudia);
+  const [tabulePristup, setTabulePristup] = useState<string[]>(user.tabulePristup);
 
   // Herec
   const [studioLocations, setStudioLocations] = useState<string[]>(user.studioLocations);
@@ -199,6 +201,9 @@ export function UserEditForm({
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
         if (isMediaspace && role !== 'ZVUKAR') fd.set('takyZvukar', takyZvukar ? '1' : '0');
+        // Přístup na tabule (23. 9. 2026) - prázdný seznam se musí poslat taky.
+        fd.set('tabulePristupPrazdne', '1');
+        tabulePristup.forEach((id) => fd.append('tabulePristup', id));
         if (isMediaspace) fd.set('dostavaVyplneneUdaje', dostavaVyplneneUdaje ? '1' : '0');
         if (isMediaspace) {
           fd.set('vychoziManazerAudioknih', vychoziManazerAudioknih ? '1' : '0');
@@ -369,6 +374,39 @@ export function UserEditForm({
             </div>
           </div>
         )}
+        {/* PŘÍSTUP NA TABULE (zadání 23. 9. 2026: „dej přístup na brněnské
+            tabule Tomáši Ilavskému a celému Žůžo-labůžo. A pak v Praze Ondřej
+            Černý ml."). Kdo má studio zaškrtnuté, otevře si jeho tabuli pod
+            svým účtem - adresu ani účet tabule k tomu nepotřebuje. */}
+        {isMediaspace && (
+          <div className="w-full">
+            <AdminField label="Přístup na tabule" hint="tyhle tabule si otevře pod svým účtem v Můj účet → Tabule ve studiu">
+              <div className="flex flex-wrap gap-2">
+                {studia.map((studio) => (
+                  <Volba
+                    key={studio.id}
+                    vybrano={tabulePristup.includes(studio.id)}
+                    onZmena={() =>
+                      setTabulePristup((p) =>
+                        p.includes(studio.id) ? p.filter((x) => x !== studio.id) : [...p, studio.id],
+                      )
+                    }
+                    title={studio.name}
+                  >
+                    <span className="inline-flex items-center gap-1.5 text-sm font-body text-ink">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: studio.color }} aria-hidden />
+                      {studio.shortName}
+                    </span>
+                  </Volba>
+                ))}
+                {studia.length === 0 && (
+                  <span className="text-sm font-body text-muted">Zatím tu není žádné studio.</span>
+                )}
+              </div>
+            </AdminField>
+          </div>
+        )}
+
         {/* Kdo se nabizi jako manazer projektu (zadani 10. 9. 2026). */}
         {isMediaspace && (
           <div className="flex-1 min-w-[240px] flex items-end">

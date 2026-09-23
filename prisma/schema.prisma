@@ -335,6 +335,11 @@ model User {
   /// Účet tabule (role TABULE) - které studio ukazuje (22. 9. 2026).
   tabuleStudioId String?
   tabuleStudio   Studio? @relation("TabuleUcet", fields: [tabuleStudioId], references: [id], onDelete: SetNull)
+  /// PRISTUP NA TABULE (zadani 23. 9. 2026: „dej pristup na brnenske tabule
+  /// Tomasi Ilavskemu a celemu zuzo-labuzo. A pak v Praze Ondrej Cerny ml").
+  /// Clovek z tymu si tabuli otevre pod svym uctem - nemusi se prihlasovat
+  /// uctem tabule ani znat jeji adresu.
+  tabulePristup  Studio[] @relation("TabulePristup")
   birthNumber     String?   // RC, nebo datum narozeni jako text, pokud herec RC nema (cizinec apod.)
   ic              String?
   dic             String?
@@ -1886,6 +1891,8 @@ model Studio {
   zvukari  User[] @relation("ZvukarStudia")
   /// Vedouci pobocky - smi upravovat kalendar tohoto studia (22. 9. 2026).
   vedouci  User[] @relation("VedouciStudia")
+  /// Lide z tymu, kteri si smi otevrit tabuli tohoto studia (23. 9. 2026).
+  tabuleLide User[] @relation("TabulePristup")
   /// Účty počítačů u obrazovky (role TABULE), viz User.tabuleStudioId.
   tabuleUcty User[] @relation("TabuleUcet")
 

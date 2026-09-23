@@ -42,6 +42,12 @@ export default async function MyAccountPage() {
    * Ukazuje se jen tomu, kdo si v modulu koncept opravdu založil - ostatním
    * v účtu nepřibude nic.
    */
+  /** Tabule, které si smí otevřít pod svým účtem (23. 9. 2026). */
+  const tabuli = await prisma.user
+    .findUnique({ where: { id: user.id }, select: { tabulePristup: { select: { id: true } } } })
+    .then((u) => ((u?.tabulePristup ?? []) as { id: string }[]).length)
+    .catch(() => 0);
+
   const maWiki = Boolean(
     await prisma.wikiClanek.findUnique({ where: { userId: user.id }, select: { id: true } }).catch(() => null),
   );
@@ -108,6 +114,22 @@ export default async function MyAccountPage() {
           i herci mame upozorneni jinde a jinak. */}
       {user.role === 'CLIENT' && (
         <UpozorneniKarta initial={{ dotoceno: user.dostavaDotocenoKlient }} />
+      )}
+
+      {/* Tabule ve studiu - jen komu ji admin povolil (23. 9. 2026). */}
+      {tabuli > 0 && (
+        <Link
+          href="/tabule/moje"
+          className="bg-surface rounded-card border border-line shadow-sm p-5 no-underline hover:border-brand-purple transition-colors flex items-center justify-between gap-4"
+        >
+          <span className="min-w-0">
+            <span className="block font-heading font-semibold text-base text-ink">Tabule ve studiu</span>
+            <span className="block text-sm font-body text-muted mt-1">
+              {tabuli === 1 ? 'Dnešní program studia na displeji.' : `Dnešní program studií (${tabuli}).`}
+            </span>
+          </span>
+          <span className="text-brand-purple font-heading text-sm whitespace-nowrap">Otevřít →</span>
+        </Link>
       )}
 
       {/* Zkratka do modulu Wikipedie - jen pro toho, kdo tam koncept ma

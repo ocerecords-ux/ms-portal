@@ -187,6 +187,7 @@ async function main() {
   await doplnStudiaZvukaru();
   await doplnZadavateleUkolu();
   await peterTakyZvukar();
+  await pristupNaTabule();
   await nazvyProjektuVelkymi();
   await vycistiBrnoII();
   await prevezmiGoogleKalendar();
@@ -973,6 +974,40 @@ async function peterTakyZvukar() {
     await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
   } catch (err) {
     console.warn('  Petera jako zvukare se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * PŘÍSTUP NA TABULE (23. 9. 2026: „dej přístup na brněnské tabule Tomáši
+ * Ilavskému a celému Žůžo-labůžo. A pak v Praze Ondřej Černý ml.").
+ * Jednou nastaví; kdo se pak přidá nebo ubere na kartě uživatele, zůstane
+ * tak, jak to člověk nechal.
+ */
+async function pristupNaTabule() {
+  const ZNAMKA = 'pristup-na-tabule-23-9';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const studia = await prisma.studio.findMany({ select: { id: true, shortName: true, name: true } });
+    const brno = studia.filter((s) => /brno/i.test(`${s.shortName} ${s.name}`)).map((s) => ({ id: s.id }));
+    const praha = studia.filter((s) => /praha/i.test(`${s.shortName} ${s.name}`)).map((s) => ({ id: s.id }));
+
+    const adminove = await prisma.user.findMany({ where: { role: 'ADMIN', active: true }, select: { id: true } });
+    const ilavsky = await prisma.user.findFirst({ where: { email: 'tomas.ilavsky@mediaspace.cz' }, select: { id: true } });
+    const cernyMl = await prisma.user.findFirst({ where: { email: 'ondrej.cernyml@mediaspace.cz' }, select: { id: true } });
+
+    if (brno.length) {
+      for (const a of [...adminove, ...(ilavsky ? [ilavsky] : [])]) {
+        await prisma.user.update({ where: { id: a.id }, data: { tabulePristup: { set: brno } } });
+      }
+    }
+    if (praha.length && cernyMl) {
+      await prisma.user.update({ where: { id: cernyMl.id }, data: { tabulePristup: { set: praha } } });
+    }
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log('  pristup na tabule nastaven');
+  } catch (err) {
+    console.warn('  pristup na tabule se nepodarilo nastavit:', err);
   }
 }
 

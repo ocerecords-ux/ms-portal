@@ -16,15 +16,67 @@ import { novyKlicTabule } from '@/lib/tabuleServer';
  */
 export const dynamic = 'force-dynamic';
 
+/** Studio bez klíče ho dostane při prvním otevření tabule. */
+async function klicStudia(studio: { id: string; tabuleKlic: string | null }): Promise<string> {
+  if (studio.tabuleKlic) return studio.tabuleKlic;
+  const klic = novyKlicTabule();
+  await prisma.studio.update({ where: { id: studio.id }, data: { tabuleKlic: klic } });
+  return klic;
+}
+
 export default async function MojeTabule() {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login?callbackUrl=/tabule/moje');
-  if (session.user.role !== 'TABULE') redirect('/projekty');
 
   const ucet = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { tabuleStudio: { select: { id: true, name: true, tabuleKlic: true } } },
+    select: {
+      tabuleStudio: { select: { id: true, name: true, tabuleKlic: true } },
+      // Lidé z týmu, kteří mají tabuli povolenou (23. 9. 2026).
+      tabulePristup: { select: { id: true, name: true, shortName: true, tabuleKlic: true } },
+    },
   });
+
+  /**
+   * ČLOVĚK Z TÝMU (23. 9. 2026: „dej přístup na brněnské tabule Tomáši
+   * Ilavskému a celému Žůžo-labůžo. A pak v Praze Ondřej Černý ml.").
+   * Jedna tabule se otevře rovnou, u víc se nabídne, která.
+   */
+  if (session.user.role !== 'TABULE') {
+    const povolene = (ucet?.tabulePristup ?? []) as { id: string; name: string; tabuleKlic: string | null }[];
+    if (povolene.length === 0) redirect('/projekty');
+    if (povolene.length === 1) redirect(`/tabule/${await klicStudia(povolene[0])}`);
+    const odkazy = await Promise.all(
+      povolene.map(async (s) => ({ nazev: s.name, klic: await klicStudia(s) })),
+    );
+    return (
+      <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0f0c17', color: '#f3f0fb', fontFamily: 'system-ui', padding: 24 }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: 32, margin: 0 }}>Kterou tabuli otevřít?</h1>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', marginTop: 24 }}>
+            {odkazy.map((o) => (
+              <a
+                key={o.klic}
+                href={`/tabule/${o.klic}`}
+                style={{
+                  padding: '18px 28px',
+                  borderRadius: 18,
+                  border: '1px solid #3a3252',
+                  background: '#191429',
+                  color: '#f3f0fb',
+                  textDecoration: 'none',
+                  fontSize: 22,
+                }}
+              >
+                {o.nazev}
+              </a>
+            ))}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   const studio = ucet?.tabuleStudio;
   if (!studio) {
     return (
