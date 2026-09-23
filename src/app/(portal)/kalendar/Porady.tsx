@@ -6,10 +6,7 @@ import { DatumPole } from '@/components/DatumPole';
 import { Volba } from '@/components/Volba';
 import { VyberPole } from '@/components/VyberPole';
 import {
-  BARVA_PORAD,
   MOZNOSTI_OPAKOVANI,
-  NAZEV_KALENDARE_PORADY,
-  NAZEV_KALENDARE_SCHUZKY,
   barvaKalendare,
   slovoProDruh,
   vPraze,
@@ -49,9 +46,9 @@ export function PoradaForm({
   vychoziDen: string;
   vychoziCasOd?: string;
   vychoziCasDo?: string;
-  /** Do kterého kalendáře to patří (23. 9. 2026) - Porady, nebo Další schůzky. */
+  /** Do kterého kalendáře to patří (23. 9. 2026) - Porady, nebo Schůzky. */
   druh?: DruhPorady;
-  /** Smí přihlášený zakládat Další schůzky? Jinak se přepínač nenabízí. */
+  /** Nepoužívá se, zůstává kvůli volajícím. */
   muzeSchuzky?: boolean;
   ja: Osoba;
   lidiTymu: Osoba[];
@@ -66,7 +63,13 @@ export function PoradaForm({
   const prvni = upravovana ? vPraze(new Date(upravovana.start)) : null;
   const konecPrvni = upravovana ? vPraze(new Date(upravovana.end)) : null;
 
-  const [druh, setDruh] = useState<DruhPorady>(upravovana?.druh ?? vychoziDruh);
+  /**
+   * Do kterého kalendáře událost patří. Nepřepíná se: Schůzky jsou
+   * samostatný kalendář, ne odnož Porad (upřesnění 23. 9. 2026: „ten kalendář
+   * schůzky nemá nic společného s poradama"). Který to je, se pozná z toho,
+   * odkud se okno otevřelo.
+   */
+  const druh: DruhPorady = upravovana?.druh ?? vychoziDruh;
   const [nazev, setNazev] = useState(upravovana?.nazev ?? '');
   const [den, setDen] = useState(upravovana ? upravovana.den : vychoziDen);
   const [casOd, setCasOd] = useState(prvni ? casZMinut(prvni.minuty) : vychoziCasOd ?? '10:00');
@@ -163,29 +166,6 @@ export function PoradaForm({
           ×
         </button>
       </div>
-
-      {/* Do kterého kalendáře to patří (23. 9. 2026). Nabízí se jen tomu, kdo
-          Další schůzky vidí; u úpravy se dá událost přehodit z jednoho
-          kalendáře do druhého. */}
-      {muzeSchuzky && (
-        <div className="flex flex-wrap gap-2">
-          {(['PORADA', 'SCHUZKA'] as DruhPorady[]).map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDruh(d)}
-              className={`inline-flex items-center gap-2 rounded-pill border px-3 py-1.5 text-sm font-heading transition-colors ${
-                druh === d ? 'text-ink' : 'border-line text-muted hover:text-ink'
-              }`}
-              style={druh === d ? { backgroundColor: `${barvaKalendare(d)}26`, borderColor: barvaKalendare(d) } : undefined}
-              aria-pressed={druh === d}
-            >
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: barvaKalendare(d) }} aria-hidden />
-              {d === 'SCHUZKA' ? NAZEV_KALENDARE_SCHUZKY : NAZEV_KALENDARE_PORADY}
-            </button>
-          ))}
-        </div>
-      )}
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-body text-ink">Název</span>
@@ -319,13 +299,15 @@ export function PoradaForm({
                   : 'Opravdu zrušit?'
                 : opakovana
                   ? 'Zrušit celou řadu'
-                  : 'Zrušit poradu'}
+                  : `Zrušit ${slovoProDruh(druh)}`}
             </button>
           </span>
         )}
       </div>
       <span className="text-xs font-body text-muted -mt-2">
-        {NAZEV_KALENDARE_PORADY} vidí jen pozvaní. O pozvání, změně i zrušení jim přijde zpráva pod zvonek.
+        {druh === 'SCHUZKA'
+          ? 'Schůzky vidí celá produkce, ne jen pozvaní. Komu ji tu zaškrtnete, tomu o ní přijde zpráva pod zvonek.'
+          : 'Poradu vidí jen pozvaní. O pozvání, změně i zrušení jim přijde zpráva pod zvonek.'}
       </span>
     </div>
   );

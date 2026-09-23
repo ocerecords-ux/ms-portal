@@ -1,12 +1,12 @@
 import { prisma } from '@/lib/db';
-import { brunoNapisSoukrome } from '@/lib/brunoOznameni';
+import { posliPush } from '@/lib/pushServer';
 import { nactiPorady } from '@/lib/poradyServer';
 import { minutesInZone, minutesToTime, utcParts, zonedToUtc } from '@/lib/calendar';
 import { INTERNAL_ROLES } from '@/lib/roles';
 import { oznacRezii } from '@/lib/rezieOnlineServer';
 
 /**
- * RANNÍ PŘEHLED OD BRUNA (zadání 23. 9. 2026: „chtěl bych, aby mi Bruno
+ * PŘEHLED DNE (zadání 23. 9. 2026: „chtěl bych, aby mi Bruno
  * sesumíroval události na daný den. Vždycky ať mi to pošle v sedm ráno na
  * daný den události, které se mě týkají. Případně i úkoly, co mám.").
  *
@@ -19,8 +19,14 @@ import { oznacRezii } from '@/lib/rezieOnlineServer';
  *  - porady, na které jsem pozvaný,
  *  - otevřené úkoly na dnešek a všechno, co je po termínu.
  *
- * Posílá se do SOUKROMÉHO CHATU S BRUNEM - je to zpráva, ne mail, takže se
- * dá rovnou odpovědět a nezahltí to schránku. Zapíná se v Můj účet.
+ * KAM SE DORUČUJE (upřesnění 23. 9. 2026: „ne tak, že mi to napíše Bruno do
+ * chatu, ale že se mi v portálu otevře průhledné vyskakovací okno a tam to
+ * bude. A do aplikace na mobilu mi přijde notifikace").
+ *
+ * Ráno v sedm odejde jen UPOZORNĚNÍ DO TELEFONU. Samotný přehled čeká
+ * v portálu: jakmile ho člověk otevře, vyskočí okno (viz komponenta
+ * PrehledDne a /api/prehled-dne) a po zavření se do večera neukáže znovu.
+ * Do chatu se nepíše nic - zpráva tam zapadla mezi ostatní.
  *
  * ČAS: cron běží v UTC, tohle si hlídá, že je v Praze zrovna sedmá - jinak
  * by se přehled v zimě a v létě rozešel o hodinu. Odeslání se poznamená
@@ -67,13 +73,22 @@ export async function posliRanniPrehledy(options: { vynutit?: boolean } = {}): P
       continue;
     }
     try {
-      const text = await slozPrehled(clovek.id, zacatekDne, konecDne);
-      const ok = await brunoNapisSoukrome(clovek.id, text);
-      if (!ok) {
-        preskoceno += 1;
-        continue;
-      }
-      await prisma.user.update({ where: { id: clovek.id }, data: { ranniPrehledAt: new Date() } });
+      const udalosti = await udalostiCloveka(clovek.id, zacatekDne, konecDne);
+      const prvni = udalosti[0];
+      await posliPush([clovek.id], {
+        titulek: 'Dnešní program',
+        text: prvni
+          ? `${udalosti.length === 1 ? '' : `${udalosti.length} události, první `}${prvni.cas} — ${prvni.popis}`
+          : 'V kalendáři dnes nic vašeho nemám.',
+        odkaz: '/kalendar',
+        znacka: 'prehled-dne',
+      });
+      // Razítko je zároveň značka „na dnešek už je hotovo" - i pro okno
+      // v portálu, které se otevře, až se člověk přihlásí.
+      await prisma.user.update({
+        where: { id: clovek.id },
+        data: { ranniPrehledAt: new Date() },
+      });
       odeslano += 1;
     } catch (err) {
       console.error(`Ranni prehled pro ${clovek.email} selhal:`, err);
@@ -96,18 +111,28 @@ export async function prehledNaDen(userId: string, kdy: Date): Promise<string> {
   return slozPrehled(userId, od, doKdy, { pozdrav: false });
 }
 
-/** Text přehledu. Když není nic, řekne se to - prázdná zpráva mate. */
-async function slozPrehled(
-  userId: string,
-  od: Date,
-  doKdy: Date,
-  volby: { pozdrav?: boolean } = {},
-): Promise<string> {
+/** Jedna položka programu - z ní se skládá text i připomínka 15 minut předem. */
+export type UdalostCloveka = {
+  /** Klíč pro připomínku, ať nechodí dvakrát: `<typ>:<id>`. */
+  klic: string;
+  start: Date;
+  end: Date;
+  /** „9:00–13:00" */
+  cas: string;
+  popis: string;
+};
+
+/**
+ * CO MÁ ČLOVĚK V ROZSAHU - společný základ přehledu i připomínek
+ * (23. 9. 2026). Text se z toho skládá níž; připomínka 15 minut předem si
+ * bere tytéž položky, aby se obojí nemohlo rozejít.
+ */
+export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Promise<UdalostCloveka[]> {
   const clovek = await prisma.user
     .findUnique({ where: { id: userId }, select: { rezieNaDalku: true } })
     .catch(() => null);
 
-  const [sloty, bloky, porady, ukoly] = await Promise.all([
+  const [sloty, bloky, porady] = await Promise.all([
     prisma.recordingSlot
       .findMany({
         where: {
@@ -137,13 +162,6 @@ async function slozPrehled(
       })
       .catch(() => []),
     nactiPorady(userId, od, doKdy).catch(() => []),
-    prisma.task
-      .findMany({
-        where: { userId, done: false, OR: [{ dueDate: { lt: doKdy } }, { dueDate: null }] },
-        orderBy: [{ dueDate: 'asc' }, { sortOrder: 'asc' }],
-        take: 20,
-      })
-      .catch(() => []),
   ]);
 
   /**
@@ -180,6 +198,53 @@ async function slozPrehled(
     (b) => !clovek?.rezieNaDalku || sRezii.has(b.id) || b.zvukarUserId === userId || b.actorUserId === userId,
   );
 
+  const znacka = (id: string) => (sRezii.has(id) ? ' · režie na dálku' : '');
+
+  const udalosti: UdalostCloveka[] = [
+    ...mojeSloty.map((s) => ({
+      klic: `slot:${s.id}`,
+      start: s.start,
+      end: s.end,
+      cas: `${cas(s.start)}–${cas(s.end)}`,
+      popis: `${s.request.projectName} · ${s.request.actorName} (${s.studio.shortName})${znacka(s.id)}`,
+    })),
+    ...mojeBloky.map((b) => ({
+      klic: `blok:${b.id}`,
+      start: b.start,
+      end: b.end,
+      cas: `${cas(b.start)}–${cas(b.end)}`,
+      popis: `${b.title} (${b.studio.shortName})${znacka(b.id)}`,
+    })),
+    ...porady.map((p) => ({
+      klic: `porada:${p.poradaId}:${p.den}`,
+      start: new Date(p.start),
+      end: new Date(p.end),
+      cas: `${cas(new Date(p.start))}–${cas(new Date(p.end))}`,
+      popis: `${p.nazev} (${p.druh === 'SCHUZKA' ? 'schůzka' : 'porada'})`,
+    })),
+  ].sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  return udalosti;
+}
+
+/** Text přehledu. Když není nic, řekne se to - prázdná zpráva mate. */
+async function slozPrehled(
+  userId: string,
+  od: Date,
+  doKdy: Date,
+  volby: { pozdrav?: boolean } = {},
+): Promise<string> {
+  const [udalosti, ukoly] = await Promise.all([
+    udalostiCloveka(userId, od, doKdy),
+    prisma.task
+      .findMany({
+        where: { userId, done: false, OR: [{ dueDate: { lt: doKdy } }, { dueDate: null }] },
+        orderBy: [{ dueDate: 'asc' }, { sortOrder: 'asc' }],
+        take: 20,
+      })
+      .catch(() => []),
+  ]);
+
   const radky: string[] = [];
   const datum = new Intl.DateTimeFormat('cs-CZ', {
     timeZone: PASMO,
@@ -188,23 +253,6 @@ async function slozPrehled(
     month: 'numeric',
   }).format(od);
   radky.push(volby.pozdrav === false ? `${datum[0].toLocaleUpperCase('cs')}${datum.slice(1)}:` : `Dobré ráno, tady je ${datum}.`);
-
-  const znacka = (id: string) => (sRezii.has(id) ? ' · režie na dálku' : '');
-
-  const udalosti: { cas: string; popis: string }[] = [
-    ...mojeSloty.map((s) => ({
-      cas: `${cas(s.start)}–${cas(s.end)}`,
-      popis: `${s.request.projectName} · ${s.request.actorName} (${s.studio.shortName})${znacka(s.id)}`,
-    })),
-    ...mojeBloky.map((b) => ({
-      cas: `${cas(b.start)}–${cas(b.end)}`,
-      popis: `${b.title} (${b.studio.shortName})${znacka(b.id)}`,
-    })),
-    ...porady.map((p) => ({
-      cas: `${cas(new Date(p.start))}–${cas(new Date(p.end))}`,
-      popis: `${p.nazev} (porada)`,
-    })),
-  ].sort((a, b) => a.cas.localeCompare(b.cas));
 
   radky.push('');
   if (udalosti.length === 0) {

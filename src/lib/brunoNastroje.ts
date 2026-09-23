@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
 import { prehledNaDen } from '@/lib/ranniPrehledServer';
 import { vidiNavod } from '@/lib/navody';
+import { canViewCalendar, canManageCalendar } from '@/lib/roles';
+import { nactiPorady } from '@/lib/poradyServer';
 import { utcParts, zonedToUtc } from '@/lib/calendar';
 import { bezTitulu } from '@/lib/jmena';
 import type { Role } from '@prisma/client';
@@ -48,6 +50,18 @@ export const NASTROJE = [
     },
   },
   {
+    name: 'provoz_dne',
+    description:
+      'CELÝ provoz daného dne ve všech studiích - kdo co natáčí, kde, s kým a kdo je u toho zvukař, plus blokace a porady či schůzky, na které má ten, kdo se ptá, právo. Tohle použij vždycky, když se někdo ptá, co se ten den natáčí nebo co se ve studiích děje - ne jen na to svoje.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        den: { type: 'string', description: 'Datum ve tvaru RRRR-MM-DD.' },
+      },
+      required: ['den'],
+    },
+  },
+  {
     name: 'hledej_projekt',
     description:
       'Najde projekty podle názvu nebo firmy. Vrátí stav, typ, herce, termíny a odkaz do portálu. Hodí se na „jak je na tom X" i na „kde najdu X".',
@@ -88,6 +102,8 @@ export async function spustNastroj(
     switch (jmeno) {
       case 'program_dne':
         return await programDne(String(vstup.den ?? ''), kdo);
+      case 'provoz_dne':
+        return await provozDne(String(vstup.den ?? ''), kdo);
       case 'hledej_projekt':
         return await hledejProjekt(String(vstup.dotaz ?? ''));
       case 'moje_ukoly':
@@ -108,6 +124,91 @@ async function programDne(den: string, kdo: KdoSePta): Promise<string> {
   if (!shoda) return 'Datum musí být ve tvaru RRRR-MM-DD.';
   const kdy = zonedToUtc(Number(shoda[1]), Number(shoda[2]), Number(shoda[3]), 12, PASMO);
   return await prehledNaDen(kdo.userId, kdy);
+}
+
+/**
+ * CO SE TEN DEN DĚJE VE VŠECH STUDIÍCH (zadání 23. 9. 2026: „já potřebuju,
+ * ať ví všechno!").
+ *
+ * `program_dne` je osobní - moje natáčení, moje porady, moje úkoly. Tohle je
+ * dispečink: celý den napříč studii, jak ho člověk vidí v Kalendáři. Právo je
+ * stejné jako na stránku /kalendar, takže Bruno neukáže nic, co by si ten
+ * člověk sám neotevřel. Porady zůstávají soukromé (jen ty, na kterých je),
+ * Schůzky vidí produkce celé - viz lib/poradyServer.ts.
+ */
+async function provozDne(den: string, kdo: KdoSePta): Promise<string> {
+  const shoda = /^(\d{4})-(\d{2})-(\d{2})$/.exec(den.trim());
+  if (!shoda) return 'Datum musí být ve tvaru RRRR-MM-DD.';
+  if (!canViewCalendar(kdo.role as Role)) return 'Na kalendář studií tenhle člověk nemá právo.';
+
+  const od = zonedToUtc(Number(shoda[1]), Number(shoda[2]), Number(shoda[3]), 0, PASMO);
+  const doKdy = new Date(od.getTime() + 24 * 3600_000);
+  const cas = (d: Date) =>
+    new Intl.DateTimeFormat('cs-CZ', { timeZone: PASMO, hour: '2-digit', minute: '2-digit' }).format(d);
+
+  const [sloty, bloky, porady] = await Promise.all([
+    prisma.recordingSlot
+      .findMany({
+        where: { state: { in: ['SELECTED', 'CONFIRMED'] as never }, start: { lt: doKdy }, end: { gt: od } },
+        include: {
+          studio: { select: { shortName: true } },
+          request: { select: { projectName: true, actorName: true, caflouProjectId: true } },
+        },
+        orderBy: { start: 'asc' },
+      })
+      .catch(() => []),
+    prisma.studioBlock
+      .findMany({
+        where: { start: { lt: doKdy }, end: { gt: od } },
+        include: { studio: { select: { shortName: true } } },
+        orderBy: { start: 'asc' },
+      })
+      .catch(() => []),
+    nactiPorady(kdo.userId, od, doKdy, kdo.role).catch(() => []),
+  ]);
+
+  // Jména zvukařů jedním dotazem - v kalendáři jsou uložená jen jako id.
+  const zvukariIds = [
+    ...sloty.map((s) => s.zvukarUserId),
+    ...bloky.map((b) => b.zvukarUserId),
+  ].filter((x): x is string => Boolean(x));
+  const zvukari = zvukariIds.length
+    ? await prisma.user
+        .findMany({ where: { id: { in: [...new Set(zvukariIds)] } }, select: { id: true, name: true, email: true } })
+        .catch(() => [])
+    : [];
+  const jmenoZvukare = (id: string | null) => {
+    if (!id) return null;
+    const u = zvukari.find((z) => z.id === id);
+    return u ? bezTitulu(u.name) || u.email : null;
+  };
+
+  const radky: string[] = [];
+
+  for (const s of sloty) {
+    const zvukar = jmenoZvukare(s.zvukarUserId);
+    radky.push(
+      `${cas(s.start)}–${cas(s.end)} · ${s.studio.shortName} · NATÁČENÍ: ${s.request.projectName} — ${s.request.actorName}${zvukar ? ` (zvukař ${zvukar})` : ' (zvukař nepřiřazen)'} · /projekty/${s.request.caflouProjectId}`,
+    );
+  }
+  for (const b of bloky) {
+    const zvukar = jmenoZvukare(b.zvukarUserId) ?? b.zvukarName;
+    radky.push(
+      `${cas(b.start)}–${cas(b.end)} · ${b.studio.shortName} · ${b.kind}: ${b.title}${b.actorName ? ` — ${b.actorName}` : ''}${zvukar ? ` (zvukař ${zvukar})` : ''}${b.caflouProjectId ? ` · /projekty/${b.caflouProjectId}` : ''}`,
+    );
+  }
+  for (const p of porady) {
+    radky.push(
+      `${cas(new Date(p.start))}–${cas(new Date(p.end))} · ${p.druh === 'SCHUZKA' ? 'SCHŮZKA' : 'PORADA'}: ${p.nazev} — ${p.ucastnici.map((u) => u.label).join(', ')}`,
+    );
+  }
+
+  if (radky.length === 0) return `${den}: v kalendáři toho dne není nic.`;
+
+  const uvod = canManageCalendar(kdo.role as Role)
+    ? `${den} — celý provoz:`
+    : `${den} — provoz studií (porady jen ty vlastní):`;
+  return [uvod, ...radky.sort()].join('\n');
 }
 
 async function hledejProjekt(dotaz: string): Promise<string> {

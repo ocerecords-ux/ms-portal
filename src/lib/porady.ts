@@ -26,7 +26,7 @@ export const NAZEV_KALENDARE_PORADY = 'Porady';
  */
 export type DruhPorady = 'PORADA' | 'SCHUZKA';
 
-export const NAZEV_KALENDARE_SCHUZKY = 'Další schůzky';
+export const NAZEV_KALENDARE_SCHUZKY = 'Schůzky';
 
 /** Tyrkysová - vedle žluté Porady na první pohled jiný kalendář. */
 export const BARVA_SCHUZEK = '#14B8A6';

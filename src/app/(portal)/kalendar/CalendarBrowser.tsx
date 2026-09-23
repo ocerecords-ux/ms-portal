@@ -567,7 +567,7 @@ export function CalendarBrowser({
     const od = Math.floor(minuty / 60) * 60;
     const start = zonedToUtc(y, m, d, od, timezone).toISOString();
     const end = zonedToUtc(y, m, d, Math.min(24 * 60, od + 60), timezone).toISOString();
-    // Svítí jen Porady (nebo Další schůzky) - dvojklik zakládá rovnou tam.
+    // Svítí jen Porady (nebo Schůzky) - dvojklik zakládá rovnou tam.
     if (solo === SOLO_PORADY || solo === SOLO_SCHUZKY) {
       setOknoPorady({
         upravovana: null,
@@ -1079,8 +1079,8 @@ export function CalendarBrowser({
               type="button"
               onClick={prepniSchuzky}
               aria-pressed={ukazSchuzky}
-              title={ukazSchuzky ? 'Vypnout Další schůzky' : 'Zapnout Další schůzky'}
-              aria-label={ukazSchuzky ? 'Vypnout Další schůzky' : 'Zapnout Další schůzky'}
+              title={ukazSchuzky ? 'Vypnout Schůzky' : 'Zapnout Schůzky'}
+              aria-label={ukazSchuzky ? 'Vypnout Schůzky' : 'Zapnout Schůzky'}
               className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
             >
               <span
@@ -1091,7 +1091,7 @@ export function CalendarBrowser({
             <button
               type="button"
               onClick={() => jenTentoKalendar(SOLO_SCHUZKY)}
-              title={solo === SOLO_SCHUZKY ? 'Zpět na původní výběr kalendářů' : 'Dočasně jen Další schůzky (sólo)'}
+              title={solo === SOLO_SCHUZKY ? 'Zpět na původní výběr kalendářů' : 'Dočasně jen Schůzky (sólo)'}
               className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${ukazSchuzky ? '' : 'hover:text-ink'}`}
             >
               {NAZEV_KALENDARE_SCHUZKY}
@@ -1238,7 +1238,15 @@ export function CalendarBrowser({
               ? undefined
               : (den, casOd, casDo) => {
                   setNovaBlokace(null);
-                  setOknoPorady({ upravovana: null, den, casOd, casDo });
+                  setOknoPorady({ upravovana: null, den, casOd, casDo, druh: 'PORADA' });
+                }
+          }
+          onSchuzka={
+            upravovana || !muzeSchuzky
+              ? undefined
+              : (den, casOd, casDo) => {
+                  setNovaBlokace(null);
+                  setOknoPorady({ upravovana: null, den, casOd, casDo, druh: 'SCHUZKA' });
                 }
           }
           // Jen u NOVE udalosti - existujici natáčení se na Mimo studio
@@ -1828,12 +1836,15 @@ function UdalostForm({
   zvukari,
   onMimoStudio,
   onPorada,
+  onSchuzka,
   onClose,
   onHotovo,
 }: {
   studios: Studio[];
   /** Přepnutí nové události na poradu (21. 9. 2026). */
   onPorada?: (den: string, casOd: string, casDo: string) => void;
+  /** Schůzky jsou samostatný kalendář, ne odnož porad (23. 9. 2026). */
+  onSchuzka?: (den: string, casOd: string, casDo: string) => void;
   vychozi: { studioId: string; start: string; end: string };
   /**
    * Vybrání kalendáře Mimo studio (19. 9. 2026) - okno se vymění za jeho
@@ -2184,6 +2195,10 @@ function UdalostForm({
                 onPorada?.(datum, od, doKdy);
                 return;
               }
+              if (e.target.value === '__schuzka__') {
+                onSchuzka?.(datum, od, doKdy);
+                return;
+              }
               setStudioId(e.target.value);
             }}
             className={inputClass}
@@ -2195,6 +2210,7 @@ function UdalostForm({
             ))}
             {onMimoStudio && <option value="__mimo__">{NAZEV_KALENDARE_MIMO}</option>}
             {onPorada && <option value="__porada__">{NAZEV_KALENDARE_PORADY}</option>}
+            {onSchuzka && <option value="__schuzka__">{NAZEV_KALENDARE_SCHUZKY}</option>}
           </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">

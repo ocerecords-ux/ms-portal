@@ -281,6 +281,9 @@ model User {
   /// na dany den udalosti, ktere se me tykaji. Pripadne i ukoly co mam").
   /// Zapina se v Muj ucet; posila se do soukromeho chatu s Brunem.
   ranniPrehled   Boolean   @default(false)
+  /// Kdy clovek naposledy videl okno s prehledem dne (23. 9. 2026: „at se mi
+  /// v portalu otevre pruhledne vyskakovaci okno"). Jednou za den.
+  prehledZobrazenAt DateTime?
   /// CHODIM NA REZII NA DALKU (zadani 23. 9. 2026: „me se tykaji jen ty
   /// rezie online a porady a schuzky"). Kdo to ma, vidi v prehledu i cizi
   /// natáčení, u kterych v kalendari sviti telefon.
@@ -3406,6 +3409,18 @@ model Porada {
   updatedAt   DateTime        @updatedAt
 
   @@index([start])
+}
+
+/// PRIPOMENUTA UDALOST (zadani 23. 9. 2026: „bruno mi to pripomene zpravou
+/// 15 min. pred udalosti"). Jeden radek = jedna pripominka, ktera uz odesla -
+/// uloha bezi kazdych pet minut a bez tohohle by chodila porad dokola.
+model PripomenutaUdalost {
+  id        String   @id @default(cuid())
+  /// `<userId>:<typ>:<id udalosti>` - viz lib/pripominkyServer.ts.
+  klic      String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model PoradaUcastnik {

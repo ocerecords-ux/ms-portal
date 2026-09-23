@@ -9,6 +9,7 @@ import { RozdeleneOkno } from './components/RozdeleneOkno';
 import { TaskDock } from './components/TaskDock';
 import { QuickDock } from './components/QuickDock';
 import { ChatDock } from './components/ChatDock';
+import { PrehledDne } from './components/PrehledDne';
 import { PoutkoDoku } from './components/PoutkoDoku';
 import { NeprecteneVedleDoku } from './components/NeprecteneVedleDoku';
 import { DotazyDock } from './components/DotazyDock';
@@ -189,6 +190,10 @@ export default async function PortalLayout({ children }: { children: React.React
           `hidden md:block` je kvůli tomu, že panely samy jsou `position:
           fixed` — schovat se musí přes rodiče, jinak by dál visely nad
           stránkou. */}
+      {/* Okno s přehledem dne (23. 9. 2026) - otevře se samo jednou za den
+          tomu, kdo si ho zapnul v Můj účet. Na mobilu taky, proto je mimo
+          obal doků. */}
+      {internal && <PrehledDne />}
       <div data-doky className="hidden md:block">
         {internal && <QuickDock actions={quickActions} available={quickActionsFor(role)} />}
         {internal && <TaskDock tasks={tasks} />}

@@ -117,7 +117,13 @@ Ikona druhu je i přímo v bublině v kalendáři, zvukař taky — v týdnu na 
 
 Upravit poradu smí každý účastník. U opakované se upravuje celá řada; jeden termín jde **zrušit samostatně** (když pondělní porada jednou odpadne). O pozvání, změně i zrušení přijde účastníkům zpráva pod **zvoneček**.
 
-**Další schůzky (tyrkysový kalendář).** Stejný kalendář jako Porady, ale **společný**: vidí ho Žůžo-labůžo a produkce, a to celý — ne jen ty schůzky, na které je člověk pozvaný. Hodí se na schůzky s klienty, návštěvy ve studiu a všechno, o čem má produkce vědět. Zakládá se stejně (v okně se nahoře přepne **Porady / Další schůzky**, nebo dvojklikem, když svítí jen tenhle kalendář sólo); opakování, videohovor i rušení jednoho termínu fungují úplně stejně. Zvukaři ho nevidí a nenabízí se jim; komu ho zaškrtnete jako účastníka, tomu přijde zvoneček jako u porady.
+**Schůzky (tyrkysový kalendář).** Samostatný kalendář, s Poradami nemá nic společného. Je **společný**: vidí ho Žůžo-labůžo a produkce celý, ne jen to, na co je kdo pozvaný. Patří sem schůzky s klienty, návštěvy ve studiu a všechno, o čem má produkce vědět.
+
+1. **Dvojklik** do mřížky → v okně události přepněte **Kalendář** na **Schůzky**. Když svítí jen Schůzky (sólo), dvojklik je otevře rovnou.
+2. Název, den a čas; koho zaškrtnete, tomu o schůzce přijde zpráva pod **zvoneček** — ostatní z produkce ji v kalendáři vidí tak jako tak.
+3. **Opakování** a **odkaz na videohovor** fungují stejně jako u porad, jeden termín z řady jde zrušit samostatně.
+
+Zvukaři Schůzky nevidí a v liště se jim ani nenabídnou.
 
 **Kalendář se obnovuje sám.** Když někdo jiný zapíše, přesune nebo smaže událost, uvidíte to do pár vteřin bez obnovování stránky — v prohlížeči i v aplikaci v telefonu. Rozepsaný formulář se tím nezavře.
 
