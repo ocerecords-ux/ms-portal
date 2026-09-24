@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { KLIC_JAZYKA, PLATNOST_JAZYKA_S, prelozit, type Jazyk } from '@/lib/jazyk';
+import { KLIC_JAZYKA, PLATNOST_JAZYKA_S, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Jazyk pro komponenty v prohlížeči (zadání 13. 9. 2026).
@@ -21,10 +21,17 @@ export function useJazyk(): Jazyk {
   return useContext(Kontext);
 }
 
-/** t('klic') pro texty v komponentě. */
-export function usePreklad(): (klic: string) => string {
+/**
+ * t('klic') pro texty v komponentě. Druhým parametrem se dosazují zástupné
+ * značky - t('projekty.dalsi', { pocet: 12 }) doplní {pocet} do věty.
+ */
+export function usePreklad(): (klic: string, hodnoty?: Record<string, string | number>) => string {
   const jazyk = useJazyk();
-  return useCallback((klic: string) => prelozit(jazyk, klic), [jazyk]);
+  return useCallback(
+    (klic: string, hodnoty?: Record<string, string | number>) =>
+      hodnoty ? prelozitS(jazyk, klic, hodnoty) : prelozit(jazyk, klic),
+    [jazyk],
+  );
 }
 
 /** Přepnutí jazyka - zapíše cookie a překreslí stránku. */

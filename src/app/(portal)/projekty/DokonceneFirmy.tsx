@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { DisplayProject } from '@/lib/projektyTypy';
 import { ProjectsTable } from './shared';
+import { useJazyk, usePreklad } from '../components/JazykProvider';
 
 const PO_KOLIKA = 20;
 
@@ -27,12 +28,14 @@ export function DokonceneFirmy({
 }) {
   const [rozbaleno, setRozbaleno] = useState(false);
   const [kolik, setKolik] = useState(PO_KOLIKA);
+  const jazyk = useJazyk();
+  const t = usePreklad();
 
   return (
     <div>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Dokončené projekty
+          {t('projekty.dokoncene')}
         </h2>
         <button
           type="button"
@@ -42,7 +45,9 @@ export function DokonceneFirmy({
           }}
           className="bg-surface border border-line text-ink font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-field transition-colors"
         >
-          {rozbaleno ? 'Skrýt dokončené projekty' : `Zobrazit dokončené projekty (${projects.length})`}
+          {rozbaleno
+            ? t('projekty.skrytDokoncene')
+            : t('projekty.zobrazitDokoncene', { pocet: projects.length })}
         </button>
       </div>
 
@@ -50,9 +55,10 @@ export function DokonceneFirmy({
         <>
           <ProjectsTable
             projects={projects.slice(0, kolik)}
-            emptyText="Vaše firma u nás zatím nemá žádnou dokončenou zakázku."
+            emptyText={t('projekty.zadneFiremniDokoncene')}
             rodneListy={rodneListy}
             kontakty={kontakty}
+            jazyk={jazyk}
           />
           {kolik < projects.length && (
             <div className="flex justify-center mt-4">
@@ -61,7 +67,7 @@ export function DokonceneFirmy({
                 onClick={() => setKolik((c) => c + PO_KOLIKA)}
                 className="bg-bar text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDark transition-colors"
               >
-                Další projekty
+                {t('projekty.dalsi')}
               </button>
             </div>
           )}

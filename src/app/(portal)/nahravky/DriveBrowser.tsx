@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useJazyk, usePreklad } from '../components/JazykProvider';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import { WaveformPlayer } from '../components/WaveformPlayer';
 
 type DriveItem = {
@@ -27,8 +29,12 @@ function formatBytes(size: string | null): string {
   return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' });
+function formatDate(iso: string, jazyk: Jazyk): string {
+  return new Date(iso).toLocaleDateString(kodJazyka(jazyk), {
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  });
 }
 
 function isAudioFile(item: DriveItem): boolean {
@@ -179,6 +185,8 @@ export function DriveBrowser({
    */
   odkazPripominek?: string | null;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   // Klic se lepi na KAZDOU adresu k Disku - vypis, stahovani i ZIP.
   const klic = token ? `&k=${encodeURIComponent(token)}` : '';
   // Sloupec akci je uzky; s tlacitkem „Pripominkovat" potrebuje vic mista.
@@ -242,11 +250,11 @@ export function DriveBrowser({
         cache: 'no-store',
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Obsah složky se nepodařilo načíst.');
+      if (!res.ok) throw new Error(body.error || t('disk.chybaObsah'));
       setItems(body.items ?? []);
       setFolderLink(body.folder?.webViewLink ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Obsah složky se nepodařilo načíst.');
+      setError(err instanceof Error ? err.message : t('disk.chybaObsah'));
     } finally {
       setLoading(false);
     }
@@ -342,12 +350,12 @@ export function DriveBrowser({
       const res = await fetch(`${url}&probe=1`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Stažení složky se nezdařilo.');
+        setError(data?.error || t('disk.chybaZip'));
         return;
       }
       window.location.href = url;
     } catch {
-      setError('Stažení složky se nezdařilo.');
+      setError(t('disk.chybaZip'));
     } finally {
       setZipBusy(false);
     }
@@ -423,13 +431,13 @@ export function DriveBrowser({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Přejmenování se nezdařilo.');
+        setError(data?.error || t('disk.chybaPrejmenovani'));
         return;
       }
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: data.name ?? name } : i)));
       setRenamingId(null);
     } catch {
-      setError('Přejmenování se nezdařilo.');
+      setError(t('disk.chybaPrejmenovani'));
     } finally {
       setRenameBusy(false);
     }
@@ -461,7 +469,7 @@ export function DriveBrowser({
           type="button"
           onClick={goBack}
           disabled={stack.length === 1}
-          title="Zpět o složku výš"
+          title={t('disk.oSlozkuVys')}
           className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-colors shrink-0 ${
             stack.length === 1
               ? 'border-white/20 text-white/30 cursor-default'
@@ -503,8 +511,8 @@ export function DriveBrowser({
             type="button"
             onClick={() => void load(currentFolder.id)}
             disabled={loading}
-            title="Načíst obsah složky znovu"
-            aria-label="Načíst znovu"
+            title={t('disk.nacistZnovu')}
+            aria-label={t('disk.nacistZnovuKratce')}
             className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-white/40 text-white hover:bg-white hover:text-brand-purple transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-white"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}>
@@ -516,13 +524,13 @@ export function DriveBrowser({
             type="button"
             onClick={downloadAll}
             disabled={loading || zipBusy || sorted.every((i) => i.isFolder)}
-            title="Stáhnout všechny soubory v této složce jako ZIP"
+            title={t('disk.stahnoutVseNapoveda')}
             className="inline-flex items-center gap-1.5 rounded-lg border border-white/40 text-white text-xs font-heading font-semibold px-3 py-2 hover:bg-white hover:text-brand-purple transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-white"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
               <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" />
             </svg>
-            {zipBusy ? 'Připravuji ZIP…' : 'Stáhnout vše'}
+            {zipBusy ? t('disk.pripravujiZip') : t('disk.stahnoutVse')}
           </button>
           {/* Tymu se kopiruje odkaz na Google Disk, klientovi z mailu adresa
               teto stranky - na Disk se nedostane on ani ten, komu by ji
@@ -535,8 +543,8 @@ export function DriveBrowser({
             disabled={!jenCteni && !folderLink}
             title={
               jenCteni
-                ? 'Kopírovat odkaz na tyhle nahrávky — můžete ho komukoliv přeposlat'
-                : 'Kopírovat odkaz na celou složku'
+                ? t('disk.kopirovatOdkazNahravky')
+                : t('disk.kopirovatOdkazSlozky')
             }
             className="inline-flex items-center gap-1.5 rounded-lg border border-white/40 text-white text-xs font-heading font-semibold px-3 py-2 hover:bg-white hover:text-brand-purple transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-white"
           >
@@ -549,7 +557,7 @@ export function DriveBrowser({
                 <path d="M9 3h9a1 1 0 0 1 1 1v9m-4-4H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9" />
               </svg>
             )}
-            {folderLinkCopied ? 'Zkopírováno' : 'Odkaz na složku'}
+            {folderLinkCopied ? t('disk.zkopirovano') : t('disk.odkazNaSlozku')}
           </button>
         </div>
       </div>
@@ -574,8 +582,8 @@ export function DriveBrowser({
           <input
             value={hledani}
             onChange={(e) => setHledani(e.target.value)}
-            placeholder="Hledat v této složce…"
-            aria-label="Hledat v této složce"
+            placeholder={t('disk.hledat')}
+            aria-label={t('disk.hledatPopis')}
             className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm font-body text-ink placeholder:text-muted"
           />
           {dotaz && (
@@ -586,8 +594,8 @@ export function DriveBrowser({
               <button
                 type="button"
                 onClick={() => setHledani('')}
-                title="Zrušit hledání"
-                aria-label="Zrušit hledání"
+                title={t('disk.zrusitHledani')}
+                aria-label={t('disk.zrusitHledani')}
                 className="shrink-0 w-6 h-6 grid place-items-center rounded-full text-muted hover:text-ink hover:bg-field transition-colors"
               >
                 ×
@@ -605,7 +613,7 @@ export function DriveBrowser({
             onClick={() => toggleSort('name')}
             className="flex-1 min-w-0 flex items-center gap-1 text-left uppercase tracking-wide hover:text-ink transition-colors"
           >
-            Název
+            {t('disk.nazev')}
             {sortBy === 'name' && <SortIcon dir={sortDir} />}
           </button>
           <button
@@ -614,20 +622,20 @@ export function DriveBrowser({
             className="w-24 shrink-0 hidden sm:flex items-center justify-end gap-1 uppercase tracking-wide hover:text-ink transition-colors"
           >
             {sortBy === 'date' && <SortIcon dir={sortDir} />}
-            Upraveno
+            {t('disk.upraveno')}
           </button>
-          <span className="w-20 shrink-0 text-right hidden sm:block">Velikost</span>
+          <span className="w-20 shrink-0 text-right hidden sm:block">{t('disk.velikost')}</span>
           <span className={`${sirkaAkci} shrink-0`} />
         </div>
       )}
 
       {loading ? (
-        <div className="px-6 py-10 text-center text-sm text-muted font-body">Načítám…</div>
+        <div className="px-6 py-10 text-center text-sm text-muted font-body">{t('obecne.nacitam')}</div>
       ) : error ? (
         <div className="px-6 py-10 text-center text-sm text-danger font-body">{error}</div>
       ) : sorted.length === 0 ? (
         <div className="px-6 py-10 text-center text-sm text-muted font-body">
-          {dotaz ? `Nic, co by odpovídalo „${hledani.trim()}".` : 'Tato složka je prázdná.'}
+          {dotaz ? t('disk.nicNenalezeno', { dotaz: hledani.trim() }) : t('disk.prazdnaSlozka')}
         </div>
       ) : (
         <div className="divide-y divide-line">
@@ -684,10 +692,10 @@ export function DriveBrowser({
                       onClick={(e) => klikNaNazev(e, item)}
                       title={
                         item.isFolder
-                          ? 'Dvojklikem otevřete složku'
+                          ? t('disk.dvojklikSlozka')
                           : audio || video
-                            ? 'Dvojklikem přehrajete'
-                            : 'Dvojklikem otevřete'
+                            ? t('disk.dvojklikPrehrat')
+                            : t('disk.dvojklikOtevrit')
                       }
                       className={`flex-1 min-w-0 flex items-center gap-2 text-left text-sm font-body text-ink select-none ${
                         item.isFolder ? 'font-semibold' : ''
@@ -702,7 +710,7 @@ export function DriveBrowser({
                     </span>
                   )}
                   <span className="text-xs text-muted font-body tabular-nums w-24 text-right shrink-0 hidden sm:block">
-                    {formatDate(item.modifiedTime)}
+                    {formatDate(item.modifiedTime, jazyk)}
                   </span>
                   <span className="text-xs text-muted font-body tabular-nums w-20 text-right shrink-0 hidden sm:block">
                     {item.isFolder ? '—' : formatBytes(item.size)}
@@ -718,7 +726,7 @@ export function DriveBrowser({
                     {(video || audio) && odkazPripominek && (
                       <a
                         href={`${odkazPripominek}?soubor=${encodeURIComponent(item.id)}`}
-                        title="Otevřít spot a zapsat k němu připomínky"
+                        title={t('disk.pripominkovatNapoveda')}
                         className="inline-flex items-center gap-1.5 h-8 rounded-lg border border-brand-purple px-2 text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
@@ -726,7 +734,7 @@ export function DriveBrowser({
                           <path d="M9 9h6M9 12.5h4" />
                         </svg>
                         <span className="hidden sm:inline text-xs font-heading font-semibold whitespace-nowrap">
-                          Připomínkovat
+                          {t('disk.pripominkovat')}
                         </span>
                       </a>
                     )}
@@ -734,7 +742,7 @@ export function DriveBrowser({
                       <button
                         type="button"
                         onClick={() => togglePlay(item)}
-                        title={isPlaying ? 'Zavřít přehrávač' : 'Přehrát'}
+                        title={isPlaying ? t('disk.zavritPrehravac') : t('disk.prehrat')}
                         className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${
                           isPlaying
                             ? 'bg-brand-green border-brand-green text-onAccent'
@@ -748,7 +756,7 @@ export function DriveBrowser({
                       <a
                         href={`/api/drive/download?fileId=${encodeURIComponent(item.id)}${klic}`}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
-                        title="Stáhnout"
+                        title={t('obecne.stahnout')}
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                           <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" />
@@ -762,7 +770,7 @@ export function DriveBrowser({
                         href={item.webViewLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="Otevřít složku na Google Disku (odtud jde stáhnout celá)"
+                        title={t('disk.otevritNaDisku')}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -777,7 +785,11 @@ export function DriveBrowser({
                       <button
                         type="button"
                         onClick={() => copyLink(item)}
-                        title={jenCteni ? 'Kopírovat odkaz na tuhle nahrávku' : 'Kopírovat odkaz ke sdílení'}
+                        title={
+                          jenCteni
+                            ? t('disk.kopirovatOdkazNahravky1')
+                            : t('disk.kopirovatOdkazSdileni')
+                        }
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-brand-purple hover:bg-brand-purple hover:text-white transition-colors"
                       >
                         {copiedId === item.id ? (
@@ -814,7 +826,7 @@ export function DriveBrowser({
                       className="w-full max-h-[70vh] rounded-card bg-black"
                       src={`/api/drive/download?fileId=${encodeURIComponent(item.id)}&disposition=inline${klic}`}
                     >
-                      Přehrávání videa tenhle prohlížeč neumí — soubor jde stáhnout tlačítkem vedle.
+                      {t('disk.videoNeumi')}
                     </video>
                   </div>
                 )}
@@ -826,8 +838,8 @@ export function DriveBrowser({
 
       {!loading && !error && sorted.length > 0 && (
         <p className="px-6 py-2.5 border-t border-line bg-field text-[11px] font-body text-muted m-0">
-          Jeden klik položku označí, dvojklik otevře složku, přehraje nahrávku nebo otevře soubor.
-          {!jenCteni && ' Přejmenovat: klikněte znovu na název označené položky, nebo stiskněte Enter.'}
+          {t('disk.napovedaKliky')}
+          {!jenCteni && t('disk.napovedaPrejmenovat')}
         </p>
       )}
     </div>

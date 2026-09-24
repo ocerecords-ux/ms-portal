@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/db';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 import { posledniStrany } from '@/lib/brunoServer';
 import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
 import { ValecProgresu } from '@/components/ValecProgresu';
@@ -62,29 +64,31 @@ export async function HerecProjekty({ userId }: { userId: string }) {
     hotovo: p.finished,
     konec: p.endDate?.getTime() ?? Infinity,
   }));
+  const jazyk = nactiJazyk();
   const aktivni = radky.filter((r) => !r.hotovo).sort((a, b) => a.konec - b.konec);
   const dokoncene = radky.filter((r) => r.hotovo);
 
   return (
     <section className="flex flex-col gap-8">
-      <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
+      <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">{prelozit(jazyk, 'projekty.nadpis')}</h1>
 
       <div>
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
-          Aktivní projekty
+          {prelozit(jazyk, 'projekty.aktivni')}
         </h2>
         <TabulkaHerce
           radky={aktivni}
-          prazdne="Zatím tu nemáte žádný rozpracovaný projekt. Jakmile vás k nějakému přiřadíme, objeví se tady."
+          prazdne={prelozit(jazyk, 'projektyHerec.zadne')}
+          jazyk={jazyk}
         />
       </div>
 
       {dokoncene.length > 0 && (
         <details>
           <summary className="cursor-pointer font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
-            Dokončené projekty ({dokoncene.length})
+            {prelozitS(jazyk, 'projektyHerec.dokoncene', { pocet: dokoncene.length })}
           </summary>
-          <TabulkaHerce radky={dokoncene} prazdne="" />
+          <TabulkaHerce radky={dokoncene} prazdne="" jazyk={jazyk} />
         </details>
       )}
     </section>
@@ -93,20 +97,37 @@ export async function HerecProjekty({ userId }: { userId: string }) {
 
 type Radek = { id: string; nazev: string; ns: number | null; strana: number | null; progres: ProgresNataceni };
 
-function TabulkaHerce({ radky, prazdne }: { radky: Radek[]; prazdne: string }) {
+function TabulkaHerce({
+  radky,
+  prazdne,
+  jazyk,
+}: {
+  radky: Radek[];
+  prazdne: string;
+  jazyk: Jazyk;
+}) {
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
-              <th className="text-left px-4 py-3.5">Projekt</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap w-56">Progres natáčení</th>
-              <th className="text-right px-4 py-3.5 whitespace-nowrap w-20" title="Normostrany">
-                NS
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.projekt')}</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap w-56">
+                {prelozit(jazyk, 'projekty.sl.progresNataceni')}
               </th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap w-48">Skončili jsme na straně</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap w-48">Text</th>
+              <th
+                className="text-right px-4 py-3.5 whitespace-nowrap w-20"
+                title={prelozit(jazyk, 'projekty.sl.normostrany')}
+              >
+                {jazyk === 'en' ? 'SP' : 'NS'}
+              </th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap w-48">
+                {prelozit(jazyk, 'projektyHerec.skonciliNaStrane')}
+              </th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap w-48">
+                {prelozit(jazyk, 'projektyHerec.text')}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -130,7 +151,7 @@ function TabulkaHerce({ radky, prazdne }: { radky: Radek[]; prazdne: string }) {
                       str. {r.strana}
                     </span>
                   ) : (
-                    <span className="text-muted">ještě se netočilo</span>
+                    <span className="text-muted">{prelozit(jazyk, 'projektyHerec.jesteSeNetocilo')}</span>
                   )}
                 </td>
                 <td className="px-4 py-2 text-sm">
@@ -142,18 +163,18 @@ function TabulkaHerce({ radky, prazdne }: { radky: Radek[]; prazdne: string }) {
                       rel="noopener noreferrer"
                       className="font-heading font-semibold text-brand-purpleDeep dark:text-brand-purpleLight no-underline hover:underline"
                     >
-                      Otevřít ↗
+                      {prelozit(jazyk, 'projektyHerec.otevrit')}
                     </a>
                     <a
                       href={`/api/projekty/${encodeURIComponent(r.id)}/text?stahnout=1`}
                       download
-                      title="Stáhnout text jako PDF"
+                      title={prelozit(jazyk, 'projektyHerec.stahnoutText')}
                       className="inline-flex items-center gap-1 font-heading font-semibold text-brand-purpleDeep dark:text-brand-purpleLight no-underline hover:underline"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
                         <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />
                       </svg>
-                      Stáhnout
+                      {prelozit(jazyk, 'obecne.stahnout')}
                     </a>
                   </span>
                 </td>

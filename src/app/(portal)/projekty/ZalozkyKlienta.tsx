@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePreklad } from '../components/JazykProvider';
 
 /**
  * MOJE PROJEKTY vs. CELÁ FIRMA (zadání 24. 9. 2026: „nastav u klientů, aby
@@ -26,6 +27,7 @@ export function ZalozkyKlienta({
   pocetFirmy: number;
 }) {
   const [zalozka, setZalozka] = useState<'moje' | 'firma'>('moje');
+  const t = usePreklad();
 
   const stitek = (klic: 'moje' | 'firma', popisek: string, pocet?: number) => (
     <button
@@ -46,8 +48,8 @@ export function ZalozkyKlienta({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-2 flex-wrap">
-        {stitek('moje', 'Moje projekty')}
-        {stitek('firma', 'Celá firma', pocetFirmy)}
+        {stitek('moje', t('projekty.zalozkaMoje'))}
+        {stitek('firma', t('projekty.zalozkaFirma'), pocetFirmy)}
       </div>
 
       {zalozka === 'moje' ? moje : firma}

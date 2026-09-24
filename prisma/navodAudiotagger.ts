@@ -78,7 +78,7 @@ Každá stopa zůstává **probarvená fialově až tam, kam jste ji doposloucha
 
 # Pauza se záložkou
 
-Tlačítko **🔖 Pauza** zamkne přeposlech a založí místo, kde jste skončili — přes obrazovku sjede fialová záložka s číslem stopy a časem. Tlačítkem **Pokračovat odtud** (nebo Enterem či Escapem) se vytáhne a nahrávka se rovnou nastaví na to místo. Je to na odskočení od počítače, ne na krátkou pauzu uprostřed věty.
+Tlačítko **🔖 Pauza** zamkne přeposlech a založí místo, kde jste skončili — přes obrazovku sjede fialová záložka s číslem stopy, časem a stranou textu. Tlačítkem **Pokračovat odtud** (nebo Enterem či Escapem) se vytáhne, nahrávka se nastaví na to místo a text se posune na stranu, kde jste četli. Je to na odskočení od počítače, ne na krátkou pauzu uprostřed věty.
 
 # Stopy
 

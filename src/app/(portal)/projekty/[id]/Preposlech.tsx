@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useJazyk, usePreklad } from '../../components/JazykProvider';
+import { kodJazyka } from '@/lib/jazyk';
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 import { souborMarkeru } from '@/lib/cubaseMarkery';
 // Krivka se od 18. 9. 2026 pocita sdilenou funkci - kresli ji i tagger
@@ -146,6 +148,10 @@ export function Preposlech({
   jenPoslech?: boolean;
   token?: string | null;
 }) {
+  // Jazyk portalu (zadani 13. 9. 2026). Tagger bezi i mimo skupinu (portal),
+  // na klientove odkazu - jazyk mu tam rozdava JazykProvider ve stránce.
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [stav, setStav] = useState<Stav>(pocatecniStav);
   // Znacky do PDF kresli funkce mimo React render, potrebuje proto posledni
   // stav i mimo zavislosti efektu.
@@ -263,9 +269,20 @@ export function Preposlech({
    * pauzu dal, klikne a je tam; kdo přišel poslouchat od začátku, proužek
    * zavře. Samovolný skok doprostřed nahrávky by mátl víc, než pomohl.
    */
-  const [zalozka, setZalozka] = useState<{ trackIndex: number; localTime: number } | null>(null);
+  /**
+   * KE STOPĚ A ČASU PATŘÍ I STRANA TEXTU (24. 9. 2026: „nefunguje záložka
+   * tak, že si pamatuje i stránku, na které se skončilo"). Server stranu
+   * ukládal už od 21. 9. kvůli procentům, ale zpátky ji neposílal a nikdo
+   * se na ni neptal — záložka tak vracela jen zvuk a text zůstal na první
+   * straně knihy.
+   */
+  const [zalozka, setZalozka] = useState<{
+    trackIndex: number;
+    localTime: number;
+    strana?: number | null;
+  } | null>(null);
   // Kresli se do canvasu mimo React render, proto i ref.
-  const zalozkaRef = useRef<{ trackIndex: number; localTime: number } | null>(null);
+  const zalozkaRef = useRef<{ trackIndex: number; localTime: number; strana?: number | null } | null>(null);
   zalozkaRef.current = zalozka;
   /**
    * Vysunutá záložka (zadání 11. 9. 2026: „vysouvací panel, který vysune
@@ -799,7 +816,7 @@ export function Preposlech({
   function prehrajNeboPauzni() {
     const audio = audioRef.current;
     if (!audio || aktivni === null) return;
-    if (audio.paused) void audio.play().catch(() => setChybaHlaska('Nahrávku se nepodařilo přehrát.'));
+    if (audio.paused) void audio.play().catch(() => setChybaHlaska(t('preposlech.chybaPrehrani')));
     else audio.pause();
   }
 
@@ -821,7 +838,7 @@ export function Preposlech({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setZDisku('nejde');
-        setPoznamka(data?.error || 'Složku projektu se nepodařilo načíst.');
+        setPoznamka(data?.error || t('preposlech.chybaSlozka'));
         return;
       }
 
@@ -849,9 +866,9 @@ export function Preposlech({
       if (pdfUrl) void nactiPdfZUrl(pdfUrl, data.text.name);
     } catch {
       setZDisku('nejde');
-      setPoznamka('Složku projektu se nepodařilo načíst.');
+      setPoznamka(t('preposlech.chybaSlozka'));
     }
-  }, [zaklad, sKlicem, vyberStopu]);
+  }, [zaklad, sKlicem, vyberStopu, t]);
 
   useEffect(() => {
     void nactiZDisku();
@@ -1095,7 +1112,7 @@ export function Preposlech({
       setPdfStrana(1);
       await vykresliPdf(doc);
     } catch {
-      setPoznamka(`Text „${nazev}" se nepodařilo otevřít.`);
+      setPoznamka(t('preposlech.chybaText', { nazev }));
     }
   }
 
@@ -1104,6 +1121,34 @@ export function Preposlech({
     vytvoreneUrl.current.push(url);
     await nactiPdfZUrl(url, file.name);
   }
+
+  /**
+   * SKOK NA STRANU ZE ZÁLOŽKY (24. 9. 2026).
+   *
+   * Nejde skočit rovnou: text se stahuje a vykresluje déle, než doletí
+   * záložka ze serveru, a `nactiPdfZUrl` navíc po otevření sám přepne na
+   * první stranu. Číslo si proto počká tady a skočí se, teprve až je ta
+   * strana opravdu v DOM.
+   */
+  const [cekajiciStrana, setCekajiciStrana] = useState<number | null>(null);
+  useEffect(() => {
+    if (!cekajiciStrana || !pdfDoc) return;
+    let pokusu = 0;
+    const tik = window.setInterval(() => {
+      const el = pdfObalRef.current?.querySelector<HTMLElement>(`[data-strana="${cekajiciStrana}"]`);
+      if (el) {
+        window.clearInterval(tik);
+        setPdfStrana(cekajiciStrana);
+        el.scrollIntoView({ block: 'start' });
+        setCekajiciStrana(null);
+      } else if (++pokusu > 40) {
+        // Deset vteřin a dost — ten text se nejspíš neotevřel vůbec.
+        window.clearInterval(tik);
+        setCekajiciStrana(null);
+      }
+    }, 250);
+    return () => window.clearInterval(tik);
+  }, [cekajiciStrana, pdfDoc]);
 
   function naStranu(n: number) {
     if (!pdfDocRef.current) return;
@@ -1193,7 +1238,7 @@ export function Preposlech({
       if (!res.ok) {
         // Offline stranka ze service workeru odpovi 503 - taky fronta.
         if (res.status === 503 && offline && !navigator.onLine) throw new TypeError('offline');
-        setChybaHlaska(data?.error || 'Nepodařilo se uložit.');
+        setChybaHlaska(data?.error || t('preposlech.chybaUlozit'));
         return false;
       }
       setStav(data as Stav);
@@ -1209,7 +1254,7 @@ export function Preposlech({
         setStav((s) => offline.lokalne(s));
         return true;
       }
-      setChybaHlaska('Nepodařilo se uložit.');
+      setChybaHlaska(t('preposlech.chybaUlozit'));
       return false;
     }
   }
@@ -1226,8 +1271,16 @@ export function Preposlech({
    * Záznamy v portálu zůstávají; tohle je kopie stranou, ne přesun.
    */
   function stahniTabulku() {
-    const hlavicka = ['Stopa', 'Název stopy', 'Čas ve stopě', 'Strana textu', 'Popis chyby', 'Zapsal', 'Kdy'];
-    if (!jenPoslech) hlavicka.splice(3, 0, 'Čas v Cubase');
+    const hlavicka = [
+      t('preposlech.csv.stopa'),
+      t('preposlech.csv.nazevStopy'),
+      t('preposlech.csv.casVeStope'),
+      t('preposlech.csv.stranaTextu'),
+      t('preposlech.csv.popisChyby'),
+      t('preposlech.csv.zapsal'),
+      t('preposlech.csv.kdy'),
+    ];
+    if (!jenPoslech) hlavicka.splice(3, 0, t('preposlech.csv.casVCubase'));
 
     const radky = stav.chyby.map((ch) => {
       const bunky = [
@@ -1237,7 +1290,7 @@ export function Preposlech({
         ch.pdfPage != null ? String(ch.pdfPage) : '',
         ch.description,
         ch.createdByName ?? '',
-        new Date(ch.createdAt).toLocaleString('cs-CZ'),
+        new Date(ch.createdAt).toLocaleString(kodJazyka(jazyk)),
       ];
       if (!jenPoslech) {
         bunky.splice(3, 0, hms((ch.trackIndex - 1) * DELKA_STOPY_V_CUBASE + ch.localTime));
@@ -1351,7 +1404,7 @@ export function Preposlech({
       id: docasneId,
       ...zachyt,
       description: popis.trim(),
-      createdByName: 'čeká na signál',
+      createdByName: t('preposlech.cekaNaSignal'),
       createdAt: new Date().toISOString(),
       muzuUpravit: true,
     };
@@ -1452,7 +1505,7 @@ export function Preposlech({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChybaHlaska(data?.error || 'Krok se nepodařilo vrátit.');
+        setChybaHlaska(data?.error || t('preposlech.chybaVratit'));
         return;
       }
       // Vraceni meni i seznam poznamek, takze se stav nacte cely znovu.
@@ -1460,7 +1513,7 @@ export function Preposlech({
       const novy = await znovu.json().catch(() => null);
       if (znovu.ok && novy) setStav(novy as Stav);
     } catch {
-      setChybaHlaska('Krok se nepodařilo vrátit.');
+      setChybaHlaska(t('preposlech.chybaVratit'));
     }
   }
 
@@ -1478,7 +1531,7 @@ export function Preposlech({
           ...st,
           reviewed,
           reviewedAt: reviewed ? new Date().toISOString() : null,
-          reviewedByName: reviewed ? 'odejde se signálem' : null,
+          reviewedByName: reviewed ? t('preposlech.odejdeSeSignalem') : null,
         }),
       },
     );
@@ -1595,7 +1648,13 @@ export function Preposlech({
     const index = aktivniRef.current;
     audio?.pause();
     if (audio && index !== null && Number.isFinite(audio.currentTime)) {
-      const misto = { trackIndex: index + 1, localTime: audio.currentTime };
+      // Se stopou a časem se zapisuje i STRANA TEXTU (24. 9. 2026) — jinak
+      // se člověk vrátí do správné vteřiny, ale na první stranu knihy.
+      const misto = {
+        trackIndex: index + 1,
+        localTime: audio.currentTime,
+        ...(pdfStranRef.current > 0 ? { strana: pdfStranaRef.current } : {}),
+      };
       setZalozka(misto);
       void odesliNeboZarad(sKlicem(`${zaklad}/pozice`), 'PUT', misto, `pozice:${misto.trackIndex}`);
     }
@@ -1617,6 +1676,8 @@ export function Preposlech({
     if (misto && stopyRef.current[misto.trackIndex - 1]) {
       vyberStopu(misto.trackIndex - 1, misto.localTime);
     }
+    // A text zpátky tam, kde se četlo (24. 9. 2026).
+    if (misto?.strana) setCekajiciStrana(misto.strana);
   }
 
   function prepniCelouObrazovku() {
@@ -1775,11 +1836,11 @@ export function Preposlech({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/mediaspace-logo-still.png" alt="Mediaspace" className="h-8 w-auto opacity-90" />
-            <span className="mt-5 text-[10px] font-heading uppercase tracking-[0.28em] text-white/60">Záložka</span>
+            <span className="mt-5 text-[10px] font-heading uppercase tracking-[0.28em] text-white/60">{t('preposlech.zalozka')}</span>
             <p className="mt-1 text-sm font-body text-white/80 text-center m-0 truncate max-w-full">{projectName}</p>
 
             <div className="mt-7 text-center">
-              <span className="block text-[10px] font-heading uppercase tracking-[0.22em] text-white/50">Stopa</span>
+              <span className="block text-[10px] font-heading uppercase tracking-[0.22em] text-white/50">{t('preposlech.stopa')}</span>
               <span className="block font-heading font-bold text-4xl leading-none tabular-nums mt-1">
                 {zalozka ? pad2(zalozka.trackIndex) : '—'}
                 <span className="text-base text-white/50">/{pad2(stopy.length)}</span>
@@ -1787,6 +1848,11 @@ export function Preposlech({
               <span className="block font-heading font-bold text-3xl leading-none tabular-nums mt-4">
                 {zalozka ? cas(zalozka.localTime) : '—'}
               </span>
+              {zalozka?.strana ? (
+                <span className="block text-[11px] font-heading uppercase tracking-[0.22em] text-white/60 mt-3">
+                  {t('preposlech.strana')} <b className="text-white tabular-nums">{zalozka.strana}</b>
+                </span>
+              ) : null}
               {zalozka && stopy[zalozka.trackIndex - 1] && (
                 <span className="block text-[11px] font-body text-white/60 mt-3 truncate max-w-[240px]">
                   {stopy[zalozka.trackIndex - 1].name}
@@ -1799,9 +1865,11 @@ export function Preposlech({
               onClick={pokracuj}
               className="mt-8 bg-brand-green text-onAccent font-heading font-bold text-sm rounded-lg px-5 py-2.5"
             >
-              Pokračovat odtud
+              {t('preposlech.pokracovatOdtud')}
             </button>
-            <span className="mt-2 text-[11px] font-body text-white/50">nebo Enter · Esc</span>
+            <span className="mt-2 text-[11px] font-body text-white/50">
+              {t('preposlech.neboEnterEsc')}
+            </span>
           </div>
         </div>
       )}
@@ -1838,7 +1906,7 @@ export function Preposlech({
             );
           }
         }}
-        onError={() => setChybaHlaska('Stopu se nepodařilo načíst z Disku.')}
+        onError={() => setChybaHlaska(t('preposlech.chybaStopa'))}
         className="hidden"
       />
 
@@ -1869,9 +1937,9 @@ export function Preposlech({
         </div>
         <div className="flex items-center gap-4 flex-wrap">
           <span className="text-[11px] font-heading text-white/80">
-            Stop: <b className="text-white">{stopy.length}</b> · Chyb:{' '}
-            <b className="text-white">{stav.chyby.length}</b> · Text:{' '}
-            <b className="text-white">{pdfNazev || '—'}</b>
+            {t('preposlech.popisekStop')} <b className="text-white">{stopy.length}</b> ·{' '}
+            {t('preposlech.popisekChyb')} <b className="text-white">{stav.chyby.length}</b> ·{' '}
+            {t('preposlech.popisekText')} <b className="text-white">{pdfNazev || '—'}</b>
           </span>
           {/* PROCENTO PŘEPOSLECHU (zadání 21. 9. 2026: „potřeboval bych, aby
               se mu ukazovala procenta, kolik má přeposlechnuto ... celkový
@@ -1882,26 +1950,40 @@ export function Preposlech({
               className="flex items-center gap-2 text-[11px] font-heading text-white/80"
               title={
                 postup
-                  ? `${jenPoslech ? 'Přeposlechnuto' : 'Klient přeposlechl'} ${postup.slyseno} z ${postup.stran} stran textu. Strana se počítá, když na ní při přehrávání máte text.`
-                  : 'Procento přeposlechu se počítá podle stran textu, na kterých při přehrávání jste.'
+                  ? t(jenPoslech ? 'preposlech.postupJa' : 'preposlech.postupKlient', {
+                      slyseno: postup.slyseno,
+                      stran: postup.stran,
+                    })
+                  : t('preposlech.postupBezDat')
               }
             >
               <span className="w-16 h-1.5 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">
                 <span className="block h-full bg-brand-green" style={{ width: `${postup?.procent ?? 0}%` }} />
               </span>
               <span>
-                {jenPoslech ? 'Přeposlechnuto' : 'Klient'} <b className="text-white tabular-nums">{postup?.procent ?? 0} %</b>
-                {' · '}strana <b className="text-white tabular-nums">{pdfStrana}</b> z {pdfStran}
+                {jenPoslech ? t('preposlech.stitekPreposlechnuto') : t('preposlech.stitekKlient')}{' '}
+                <b className="text-white tabular-nums">{postup?.procent ?? 0} %</b>
+                {' · '}
+                {t('preposlech.strana')} <b className="text-white tabular-nums">{pdfStrana}</b>{' '}
+                {t('obecne.z')} {pdfStran}
               </span>
             </span>
           )}
           <span className="text-[11px] font-heading text-white/60 hidden xl:inline">
-            Mezerník · ←/→ ±5 s · E = chyba · označ text myší
+            {t('preposlech.klavesy')}
           </span>
           {/* Kontrolka „nekdo posloucha" - jen pro nas, klient ji nevidi. */}
           {posluchaci.length > 0 && (
             <span
-              title={posluchaci.map((p) => `${p.jmeno} — stopa ${pad2(p.trackIndex)}, ${cas(p.localTime)}`).join('\n')}
+              title={posluchaci
+                .map((p) =>
+                  t('preposlech.posluchacNapoveda', {
+                    jmeno: p.jmeno,
+                    stopa: pad2(p.trackIndex),
+                    cas: cas(p.localTime),
+                  }),
+                )
+                .join('\n')}
               className="flex items-center gap-1.5 text-[11px] font-heading font-semibold bg-brand-green/20 text-white rounded-pill px-2.5 py-1"
             >
               <span className="relative flex w-2 h-2">
@@ -1909,8 +1991,11 @@ export function Preposlech({
                 <span className="relative inline-flex w-2 h-2 rounded-full bg-brand-green" />
               </span>
               {posluchaci.length === 1
-                ? `${posluchaci[0].jmeno} poslouchá · ${pad2(posluchaci[0].trackIndex)}`
-                : `Poslouchá ${posluchaci.length} lidí`}
+                ? t('preposlech.jedenPoslouchaJmeno', {
+                    jmeno: posluchaci[0].jmeno,
+                    stopa: pad2(posluchaci[0].trackIndex),
+                  })
+                : t('preposlech.viceLidi', { pocet: posluchaci.length })}
             </span>
           )}
 
@@ -1923,7 +2008,7 @@ export function Preposlech({
               ...stopy
                 .filter((st) => !st.url.startsWith('blob:'))
                 .map((st) => ({ url: st.url, velikost: st.velikost, nazev: st.name })),
-              ...(textUrl ? [{ url: textUrl, velikost: null, nazev: pdfNazev || 'Text (PDF)' }] : []),
+              ...(textUrl ? [{ url: textUrl, velikost: null, nazev: pdfNazev || t('preposlech.textPdf') }] : []),
             ]}
             stazene={stazene}
             onStazene={(nove) => {
@@ -1953,10 +2038,14 @@ export function Preposlech({
           <button
             type="button"
             onClick={prepniCelouObrazovku}
-            title={celaObrazovka ? 'Zpět do okna (Esc)' : 'Na celou obrazovku'}
+            title={
+              celaObrazovka
+                ? t('preposlech.zpetDoOknaNapoveda')
+                : t('preposlech.naCelouObrazovkuNapoveda')
+            }
             className="font-heading font-semibold text-[11px] rounded-lg border border-white/40 px-2.5 py-1 hover:border-white transition-colors"
           >
-            {celaObrazovka ? '⤡ Zpět do okna' : '⤢ Na celou obrazovku'}
+            {celaObrazovka ? t('preposlech.zpetDoOkna') : t('preposlech.naCelouObrazovku')}
           </button>
           {/* PŘEPOSLECHNUTO je velká akce - tímhle se za nahrávku někdo
               postaví (zadání 11. 9. 2026: „to tlačítko přeposlechnuto by
@@ -1971,14 +2060,14 @@ export function Preposlech({
               <span className="flex items-center gap-2">
                 <span className="flex items-center gap-2 bg-brand-green text-onAccent font-heading font-bold text-sm rounded-lg px-4 py-2.5">
                   <span className="grid place-items-center w-5 h-5 rounded-full bg-onAccent/15">✓</span>
-                  Přeposlechnuto
+                  {t('preposlech.stitekPreposlechnuto')}
                 </span>
                 <span className="text-[11px] font-body text-white/70 leading-tight">
                   {stav.reviewedByName ?? 'Mediaspace'}
                   {stav.reviewedAt && (
                     <>
                       <br />
-                      {new Date(stav.reviewedAt).toLocaleDateString('cs-CZ')}
+                      {new Date(stav.reviewedAt).toLocaleDateString(kodJazyka(jazyk))}
                     </>
                   )}
                 </span>
@@ -1992,30 +2081,32 @@ export function Preposlech({
                       }}
                       className="font-heading font-semibold text-xs rounded-lg bg-white text-brand-purpleDeep px-3 py-1.5"
                     >
-                      Opravdu zrušit
+                      {t('preposlech.opravduZrusit')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setRusiPreposlech(false)}
                       className="font-heading text-xs text-white/70 hover:text-white"
                     >
-                      Ne
+                      {t('obecne.ne')}
                     </button>
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setRusiPreposlech(true)}
-                    title="Zrušit označení"
+                    title={t('preposlech.zrusitOznaceni')}
                     className="font-heading text-xs text-white/60 hover:text-white underline"
                   >
-                    zrušit
+                    {t('preposlech.zrusitMale')}
                   </button>
                 )}
               </span>
             ) : potvrzujePreposlech ? (
               <span className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-body text-white/85">Opravdu označit jako přeposlechnuté?</span>
+                <span className="text-xs font-body text-white/85">
+                  {t('preposlech.opravduOznacit')}
+                </span>
                 <button
                   type="button"
                   onClick={() => {
@@ -2024,14 +2115,14 @@ export function Preposlech({
                   }}
                   className="flex items-center gap-2 bg-brand-green text-onAccent font-heading font-bold text-sm rounded-lg px-4 py-2 shadow-sm"
                 >
-                  Ano, přeposlechnuto
+                  {t('preposlech.anoPreposlechnuto')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setPotvrzujePreposlech(false)}
                   className="font-heading text-xs text-white/70 hover:text-white"
                 >
-                  Ne
+                  {t('obecne.ne')}
                 </button>
               </span>
             ) : (
@@ -2041,7 +2132,7 @@ export function Preposlech({
                 className="flex items-center gap-2 bg-white text-brand-purpleDeep font-heading font-bold text-sm rounded-lg px-5 py-2.5 shadow-sm hover:bg-brand-green hover:text-onAccent transition-colors"
               >
                 <span className="grid place-items-center w-5 h-5 rounded border-2 border-current" aria-hidden="true" />
-                Označit jako přeposlechnuté
+                {t('preposlech.oznacitPreposlechnute')}
               </button>
             ))}
         </div>
@@ -2063,10 +2154,12 @@ export function Preposlech({
       >
         <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden flex flex-col">
           <div className="flex items-center gap-3 flex-wrap px-4 py-2.5 border-b border-line">
-            <span className="text-sm font-heading text-ink truncate">{pdfNazev || 'Text nahrávky'}</span>
+            <span className="text-sm font-heading text-ink truncate">
+              {pdfNazev || t('preposlech.textNahravky')}
+            </span>
             {!jenPoslech && (
               <label className="text-xs font-heading text-muted border border-dashed border-line rounded-lg px-3 py-1 cursor-pointer hover:border-brand-purple hover:text-brand-purple transition-colors">
-                Načíst jiné PDF
+                {t('preposlech.nacistJinePdf')}
                 <input
                   type="file"
                   accept="application/pdf"
@@ -2090,7 +2183,7 @@ export function Preposlech({
                 <input
                   type="text"
                   inputMode="numeric"
-                  aria-label="Číslo strany"
+                  aria-label={t('preposlech.cisloStrany')}
                   value={psanaStrana ?? String(pdfStrana)}
                   onFocus={(e) => {
                     setPsanaStrana(String(pdfStrana));
@@ -2128,9 +2221,7 @@ export function Preposlech({
           >
             {pdfStran === 0 && (
               <p className="text-sm font-body text-muted m-auto text-center max-w-[300px]">
-                {zDisku === 'nacitam'
-                  ? 'Načítám text ze složky projektu…'
-                  : 'Ve složce projektu zatím není text. Hledá se PDF, jehož název končí _RE.'}
+                {zDisku === 'nacitam' ? t('preposlech.nacitamText') : t('preposlech.bezTextu')}
               </p>
             )}
             {/* Stranky PDF kresli pdf.js primo do DOM, ne React. Musi proto mit
@@ -2162,7 +2253,7 @@ export function Preposlech({
                 type="button"
                 onClick={prehrajNeboPauzni}
                 disabled={aktivni === null}
-                title="Přehrát / pozastavit (mezerník)"
+                title={t('preposlech.prehratPauza')}
                 className="shrink-0 w-9 h-9 rounded-full bg-brand-green text-onAccent font-heading font-bold disabled:opacity-40"
               >
                 {hraje ? '❚❚' : '▶'}
@@ -2175,7 +2266,10 @@ export function Preposlech({
 
               <span className="font-heading font-bold text-xl leading-none tabular-nums">
                 {cas(pozice)}
-                <span className="text-xs font-semibold text-white/60"> z {cas(delka)}</span>
+                <span className="text-xs font-semibold text-white/60">
+                  {' '}
+                  {t('obecne.z')} {cas(delka)}
+                </span>
               </span>
 
               {aktivni !== null && stopy[aktivni] && (
@@ -2190,7 +2284,7 @@ export function Preposlech({
                     key={r}
                     type="button"
                     onClick={() => setRychlost(r)}
-                    title={`Přehrávat ${r}× rychle`}
+                    title={t('preposlech.rychlost', { r })}
                     className={`font-heading font-semibold text-[11px] tabular-nums rounded px-1.5 py-0.5 transition-colors ${
                       r === rychlost ? 'bg-brand-green text-onAccent' : 'bg-white/10 text-white/70 hover:bg-white/20'
                     }`}
@@ -2205,10 +2299,10 @@ export function Preposlech({
                   type="button"
                   onClick={zaloz}
                   disabled={aktivni === null}
-                  title="Dát si pauzu — přeposlech se zamkne a založí se místo"
+                  title={t('preposlech.pauzaNapoveda')}
                   className="font-heading font-semibold text-xs rounded-lg border border-white/40 px-2.5 py-1.5 hover:border-white transition-colors disabled:opacity-40"
                 >
-                  🔖 Pauza
+                  {t('preposlech.pauza')}
                 </button>
                 <button
                   type="button"
@@ -2216,26 +2310,31 @@ export function Preposlech({
                   disabled={aktivni === null || formOtevreny}
                   className="bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-40"
                 >
-                  + Přidat chybu
+                  {t('preposlech.pridatChybu')}
                 </button>
               </span>
             </div>
             {aktivni !== null && !jenPoslech && (
               <p className="text-[11px] font-heading text-muted m-0 tabular-nums">
-                Offset této stopy v Cubase: +{hms(aktivni * DELKA_STOPY_V_CUBASE)}
+                {t('preposlech.offsetCubase', { cas: hms(aktivni * DELKA_STOPY_V_CUBASE) })}
               </p>
             )}
 
             {formOtevreny && zachyt && (
               <div className="border border-brand-purple bg-tint rounded-lg p-3 flex flex-col gap-2">
                 <p className="text-xs font-heading text-muted m-0">
-                  Stopa <b className="text-ink">{pad2(zachyt.trackIndex)}</b> · čas{' '}
-                  <b className="text-ink tabular-nums">{cas(zachyt.localTime)}</b> · strana{' '}
-                  <b className="text-ink">{zachyt.pdfPage ?? '— (text nenačtený)'}</b>
+                  {t('preposlech.stopa')} <b className="text-ink">{pad2(zachyt.trackIndex)}</b> ·{' '}
+                  {t('preposlech.f.cas')}{' '}
+                  <b className="text-ink tabular-nums">{cas(zachyt.localTime)}</b> ·{' '}
+                  {t('preposlech.strana')}{' '}
+                  <b className="text-ink">{zachyt.pdfPage ?? t('preposlech.textNenacteny')}</b>
                   {zachyt.zvyrazneni && (
                     <>
                       {' '}
-                      · <span className="bg-warnTint text-ink rounded px-1">zvýrazněno v textu</span>
+                      ·{' '}
+                      <span className="bg-warnTint text-ink rounded px-1">
+                        {t('preposlech.zvyraznenoVTextu')}
+                      </span>
                     </>
                   )}
                 </p>
@@ -2253,12 +2352,12 @@ export function Preposlech({
                     }
                   }}
                   rows={2}
-                  placeholder="Co je špatně — přeřek, chybějící věta, jiné znění než v textu…"
+                  placeholder={t('preposlech.popisPlaceholder')}
                   className={`${inputClass} w-full resize-none`}
                 />
                 <div className="flex justify-end gap-2">
                   <button type="button" onClick={() => setFormOtevreny(false)} className="text-sm font-heading text-muted hover:text-ink">
-                    Zrušit
+                    {t('obecne.zrusit')}
                   </button>
                   <button
                     type="button"
@@ -2266,7 +2365,7 @@ export function Preposlech({
                     disabled={uklada || !popis.trim()}
                     className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2 disabled:opacity-50"
                   >
-                    {uklada ? 'Ukládám…' : 'Uložit chybu'}
+                    {uklada ? t('obecne.ukladam') : t('preposlech.ulozitChybu')}
                   </button>
                 </div>
               </div>
@@ -2275,12 +2374,12 @@ export function Preposlech({
 
           <div className={`bg-surface rounded-card border border-line shadow-sm overflow-hidden ${vyskaSekce ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
             <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3 flex-wrap shrink-0">
-              <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Zvukové stopy</h3>
+              <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('preposlech.zvukoveStopy')}</h3>
               {!jenPoslech && (
                 <span className="flex items-center gap-3">
                   {slozkaUrl && (
                     <a href={slozkaUrl} target="_blank" rel="noreferrer" className="text-xs font-heading text-brand-purple no-underline hover:underline">
-                      Složka na Disku ↗
+                      {t('preposlech.slozkaNaDisku')}
                     </a>
                   )}
                   <button
@@ -2289,10 +2388,10 @@ export function Preposlech({
                     disabled={zDisku === 'nacitam'}
                     className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-50"
                   >
-                    {zDisku === 'nacitam' ? 'Načítám…' : 'Načíst z Disku znovu'}
+                    {zDisku === 'nacitam' ? t('obecne.nacitam') : t('preposlech.nacistZDiskuZnovu')}
                   </button>
                   <label className="text-xs font-heading text-muted border border-dashed border-line rounded-lg px-3 py-1 cursor-pointer hover:border-brand-purple hover:text-brand-purple transition-colors">
-                    + Ze souborů
+                    {t('preposlech.zeSouboru')}
                     <input
                       type="file"
                       accept="audio/*"
@@ -2313,9 +2412,7 @@ export function Preposlech({
             >
               {stopy.length === 0 ? (
                 <p className="text-sm font-body text-muted m-0 px-1 py-5 text-center">
-                  {zDisku === 'nacitam'
-                    ? 'Načítám stopy ze složky projektu…'
-                    : 'Ve složce projektu zatím nejsou žádné nahrávky. Stopy se řadí podle čísla na začátku názvu — 01_, 02_, 03_.'}
+                  {zDisku === 'nacitam' ? t('preposlech.nacitamStopy') : t('preposlech.bezStop')}
                 </p>
               ) : (
                 stopy.map((stopa, index) => {
@@ -2348,8 +2445,12 @@ export function Preposlech({
                         type="checkbox"
                         checked={jeHotova}
                         onChange={() => prepniHotovo(index)}
-                        title={jeHotova ? 'Stopa je hotová — odškrtnutím ji vrátíte zpět' : 'Označit stopu jako hotovou'}
-                        aria-label={`Stopa ${pad2(index + 1)} hotová`}
+                        title={
+                          jeHotova
+                            ? t('preposlech.stopaHotovaNapoveda')
+                            : t('preposlech.oznacitHotovou')
+                        }
+                        aria-label={t('preposlech.stopaHotovaPopis', { cislo: pad2(index + 1) })}
                         className="w-3.5 h-3.5 shrink-0 accent-status-done cursor-pointer"
                       />
                     <button
@@ -2377,7 +2478,7 @@ export function Preposlech({
                        */}
                       {zalozka?.trackIndex === index + 1 && (
                         <span
-                          title={`Tady jste skončili (${cas(zalozka.localTime)}) — kliknutím pokračujete`}
+                          title={t('preposlech.zalozkaNapoveda', { cas: cas(zalozka.localTime) })}
                           className="shrink-0 inline-flex items-center gap-1 text-[10px] font-heading font-semibold text-status-progress"
                         >
                           <span aria-hidden="true">🔖</span>
@@ -2386,15 +2487,15 @@ export function Preposlech({
                       )}
                       {/* Kolik ze stopy uz slysel (21. 9. 2026). */}
                       {(dosazeno[index + 1] ?? 0) >= 0.995 ? (
-                        <span className="shrink-0 text-[10px] font-heading font-semibold text-status-done" title="Stopa je poslechnutá do konce">
-                          ✓ poslechnuto
+                        <span className="shrink-0 text-[10px] font-heading font-semibold text-status-done" title={t('preposlech.poslechnutaCela')}>
+                          {t('preposlech.poslechnutoStitek')}
                         </span>
                       ) : (dosazeno[index + 1] ?? 0) > 0.01 ? (
-                        <span className="shrink-0 text-[10px] font-heading text-muted tabular-nums" title="Kolik ze stopy jste už poslechli">
+                        <span className="shrink-0 text-[10px] font-heading text-muted tabular-nums" title={t('preposlech.kolikPoslechnuto')}>
                           {Math.floor((dosazeno[index + 1] ?? 0) * 100)} %
                         </span>
                       ) : null}
-                      {stopa.krivkaStav === 'pocita' && <span className="text-[10px] font-heading text-muted">kreslím křivku…</span>}
+                      {stopa.krivkaStav === 'pocita' && <span className="text-[10px] font-heading text-muted">{t('preposlech.kreslimKrivku')}</span>}
                       {!jenPoslech && (
                         <span className="text-[10px] font-heading text-muted tabular-nums">+{hms(index * DELKA_STOPY_V_CUBASE)}</span>
                       )}
@@ -2445,8 +2546,8 @@ export function Preposlech({
           <button
             type="button"
             onClick={() => setZaznamyOtevrene(true)}
-            title="Zobrazit záznamy chyb a historii"
-            aria-label="Zobrazit záznamy chyb a historii"
+            title={t('preposlech.zobrazitZaznamy')}
+            aria-label={t('preposlech.zobrazitZaznamy')}
             className="absolute top-6 right-0 z-30 flex flex-col items-center gap-2.5 rounded-l-card bg-brand-purple hover:bg-brand-purpleDeep text-brand-green shadow-lg px-2.5 py-3 transition-colors"
           >
             <SipkaDoku smer="left" />
@@ -2456,7 +2557,7 @@ export function Preposlech({
               </span>
             )}
             <span className="text-[10px] font-heading font-bold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
-              Záznamy
+              {t('preposlech.zaznamy')}
             </span>
           </button>
         ) : (
@@ -2465,13 +2566,13 @@ export function Preposlech({
             <button
               type="button"
               onClick={() => setZaznamyOtevrene(false)}
-              title="Skrýt záznamy"
-              aria-label="Skrýt záznamy"
+              title={t('preposlech.skrytZaznamy')}
+              aria-label={t('preposlech.skrytZaznamy')}
               className="w-8 shrink-0 rounded-l-card border border-r-0 border-line bg-field text-muted hover:bg-brand-purple hover:text-white transition-colors flex flex-col items-center justify-center gap-2"
             >
               <SipkaDoku smer="right" />
               <span className="text-[10px] font-heading font-semibold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
-                Skrýt
+                {t('obecne.skryt')}
               </span>
               <SipkaDoku smer="right" />
             </button>
@@ -2481,8 +2582,11 @@ export function Preposlech({
                     zbyde vic. */}
                 <div className="px-2 pt-2 border-b border-line flex items-end gap-1">
                   {([
-                    { klic: 'chyby' as const, popisek: `Chyby (${stav.chyby.length})` },
-                    { klic: 'historie' as const, popisek: 'Historie' },
+                    {
+                      klic: 'chyby' as const,
+                      popisek: t('preposlech.zalozkaChyby', { pocet: stav.chyby.length }),
+                    },
+                    { klic: 'historie' as const, popisek: t('preposlech.zalozkaHistorie') },
                   ]).map((z) => (
                     <button
                       key={z.klic}
@@ -2501,7 +2605,7 @@ export function Preposlech({
                   <span className="ml-auto flex items-center gap-3 pb-1.5 pr-2">
                     {panel === 'chyby' && chybejiciStopy && (
                       <span className="text-[11px] font-body text-status-progress">
-                        Některé záznamy patří stopám, které tu teď nejsou.
+                        {t('preposlech.chybejiciStopy')}
                       </span>
                     )}
                     {panel === 'chyby' && !jenPoslech && (
@@ -2509,10 +2613,10 @@ export function Preposlech({
                         type="button"
                         onClick={stahniMarkery}
                         disabled={stav.chyby.length === 0}
-                        title="Stáhnout všechny záznamy jako markery pro Cubase (.mid). V Cubase zapněte Předvolby ▸ MIDI ▸ MIDI soubor ▸ Importovat markery."
+                        title={t('preposlech.markeryNapoveda')}
                         className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-40 disabled:no-underline"
                       >
-                        Markery do Cubase
+                        {t('preposlech.markery')}
                       </button>
                     )}
                     {panel === 'chyby' && (
@@ -2520,10 +2624,10 @@ export function Preposlech({
                         type="button"
                         onClick={stahniTabulku}
                         disabled={stav.chyby.length === 0}
-                        title="Stáhnout všechny záznamy jako tabulku (CSV pro Excel)"
+                        title={t('preposlech.tabulkaNapoveda')}
                         className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-40 disabled:no-underline"
                       >
-                        Stáhnout tabulku
+                        {t('preposlech.stahnoutTabulku')}
                       </button>
                     )}
                   </span>
@@ -2533,7 +2637,7 @@ export function Preposlech({
                     <Historie zaznamy={stav.historie ?? []} onVratit={(id) => void vratKrok(id)} />
                   ) : stav.chyby.length === 0 ? (
                     <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
-                      Zatím žádné chyby. Pusťte stopu a v místě problému dejte „Přidat chybu".
+                      {t('preposlech.zadneChyby')}
                     </p>
                   ) : (
                     <ul className="list-none m-0 p-0 divide-y divide-line">
@@ -2555,29 +2659,33 @@ export function Preposlech({
                                   disabled={!upravaText.trim()}
                                   className="rounded-lg bg-brand-purple text-white text-xs font-heading font-semibold px-3 py-1.5 disabled:opacity-40"
                                 >
-                                  Uložit
+                                  {t('obecne.ulozit')}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setUpravovana(null)}
                                   className="text-xs font-heading text-muted hover:text-ink"
                                 >
-                                  Zrušit
+                                  {t('obecne.zrusit')}
                                 </button>
                               </span>
                             </div>
                           ) : (
                           <div className="flex items-start gap-3">
-                          <button type="button" onClick={() => skocNaChybu(ch)} className="flex-1 min-w-0 text-left" title="Skočit na místo v nahrávce">
+                          <button type="button" onClick={() => skocNaChybu(ch)} className="flex-1 min-w-0 text-left" title={t('preposlech.skocit')}>
                             <span className="flex items-center gap-2 flex-wrap">
                               <span className="text-[11px] font-heading font-semibold tabular-nums bg-field border border-line rounded px-1.5">
                                 {pad2(ch.trackIndex)}
                               </span>
                               <span className="text-xs font-heading text-muted tabular-nums">{cas(ch.localTime)}</span>
-                              {ch.pdfPage && <span className="text-xs font-heading text-muted tabular-nums">s. {ch.pdfPage}</span>}
+                              {ch.pdfPage && (
+                                <span className="text-xs font-heading text-muted tabular-nums">
+                                  {t('preposlech.stranaZkratka', { strana: ch.pdfPage })}
+                                </span>
+                              )}
                               {ch.zvyrazneni && (
                                 <span className="text-[11px] font-heading bg-warnTint text-ink rounded px-1.5" title={ch.zvyrazneni.text}>
-                                  ✎ v textu
+                                  {t('preposlech.vTextu')}
                                 </span>
                               )}
                               {!jenPoslech && (
@@ -2601,8 +2709,8 @@ export function Preposlech({
                                   setUpravovana(ch.id);
                                   setUpravaText(ch.description);
                                 }}
-                                title="Upravit znění"
-                                aria-label="Upravit znění"
+                                title={t('preposlech.upravitZneni')}
+                                aria-label={t('preposlech.upravitZneni')}
                                 className="text-muted hover:text-brand-purple text-sm"
                               >
                                 ✎
@@ -2610,8 +2718,8 @@ export function Preposlech({
                               <button
                                 type="button"
                                 onClick={() => void smazChybu(ch.id)}
-                                title="Smazat záznam"
-                                aria-label="Smazat záznam"
+                                title={t('preposlech.smazatZaznam')}
+                                aria-label={t('preposlech.smazatZaznam')}
                                 className="text-muted hover:text-danger text-sm"
                               >
                                 ✕
@@ -2660,10 +2768,12 @@ function SipkaDoku({ smer }: { smer: 'left' | 'right' }) {
  * poznámka mezitím smaže; právě proto to není spočítané ze záznamů chyb.
  */
 function Historie({ zaznamy, onVratit }: { zaznamy: Udalost[]; onVratit: (id: string) => void }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   if (zaznamy.length === 0) {
     return (
       <p className="text-sm font-body text-muted m-0 px-4 py-6 text-center">
-        Zatím se nic nestalo. Jakmile někdo otevře odkaz nebo napíše poznámku, objeví se to tady.
+        {t('preposlech.historiePrazdna')}
       </p>
     );
   }
@@ -2692,15 +2802,15 @@ function Historie({ zaznamy, onVratit }: { zaznamy: Udalost[]; onVratit: (id: st
               <button
                 type="button"
                 onClick={() => onVratit(u.id)}
-                title="Vrátit tenhle krok"
+                title={t('preposlech.vratitKrokNapoveda')}
                 className="mt-1 text-[11px] font-heading font-semibold text-brand-purple hover:underline"
               >
-                ↩ Vrátit do tohoto bodu
+                {t('preposlech.vratitDoBodu')}
               </button>
             )}
             <span className="block text-[11px] font-body text-muted mt-0.5">
               {u.kdo ? `${u.kdo} · ` : ''}
-              {new Date(u.kdy).toLocaleString('cs-CZ', {
+              {new Date(u.kdy).toLocaleString(kodJazyka(jazyk), {
                 day: 'numeric',
                 month: 'numeric',
                 hour: '2-digit',

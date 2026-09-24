@@ -59,7 +59,7 @@ Nejrychlejší je ale **označit chybu rovnou myší v textu**: úsek se podbarv
 
 # Kde jste skončili
 
-Každá stopa zůstává **probarvená až tam, kam jste ji doposlouchali** — i když poslech přerušíte a vrátíte se k němu jindy. Tlačítko **🔖 Pauza** si navíc zapamatuje přesné místo a **Pokračovat odtud** vás tam vrátí.
+Každá stopa zůstává **probarvená až tam, kam jste ji doposlouchali** — i když poslech přerušíte a vrátíte se k němu jindy. Tlačítko **🔖 Pauza** si navíc zapamatuje přesné místo i stranu textu a **Pokračovat odtud** vás tam vrátí — do nahrávky i do knihy.
 
 Nahoře vidíte, kolik procent už máte za sebou. Až budete hotoví, dejte **Označit jako přeposlechnuté** — to je pro nás signál, že můžeme dál.
 

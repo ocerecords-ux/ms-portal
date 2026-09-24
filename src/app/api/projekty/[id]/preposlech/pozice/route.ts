@@ -49,7 +49,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const pozice = await prisma.preposlechPozice.findUnique({
     where: { caflouProjectId_posluchac: { caflouProjectId: params.id, posluchac: kdoJe.posluchac } },
-    select: { trackIndex: true, localTime: true, updatedAt: true, stopyDoKam: true },
+    // `strana` tu do 24. 9. 2026 chybela - zalozka se ukladala i se stranou
+    // textu, ale zpatky se posilala jen stopa a cas, takze se kniha vzdycky
+    // otevrela na zacatku.
+    select: { trackIndex: true, localTime: true, updatedAt: true, stopyDoKam: true, strana: true },
   });
 
   /**

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { DisplayProject } from '@/lib/projektyTypy';
 import { ProjectsTable } from './shared';
+import { useJazyk, usePreklad } from '../components/JazykProvider';
 
 const PAGE_SIZE = 20;
 
@@ -19,6 +20,8 @@ export function FinishedProjectsSection({
   /** Rodné listy k projektům - viz ProjectsTable (zadání 9. 9. 2026). */
   rodneListy?: Record<string, { id: string; fileName: string }>;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [expanded, setExpanded] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -26,7 +29,7 @@ export function FinishedProjectsSection({
     <div>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Dokončené projekty
+          {t('projekty.dokoncene')}
         </h2>
         <button
           type="button"
@@ -36,7 +39,9 @@ export function FinishedProjectsSection({
           }}
           className="bg-surface border border-line text-ink font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-field transition-colors"
         >
-          {expanded ? 'Skrýt dokončené projekty' : `Zobrazit dokončené projekty (${projects.length})`}
+          {expanded
+            ? t('projekty.skrytDokoncene')
+            : t('projekty.zobrazitDokoncene', { pocet: projects.length })}
         </button>
       </div>
 
@@ -44,8 +49,9 @@ export function FinishedProjectsSection({
         <>
           <ProjectsTable
             projects={projects.slice(0, visibleCount)}
-            emptyText="Zatím tu nemáte žádné dokončené projekty."
+            emptyText={t('projekty.zadneDokoncene')}
             rodneListy={rodneListy}
+            jazyk={jazyk}
           />
           {visibleCount < projects.length && (
             <div className="flex justify-center mt-4">
@@ -54,7 +60,7 @@ export function FinishedProjectsSection({
                 onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
                 className="bg-bar text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDark transition-colors"
               >
-                Další projekty
+                {t('projekty.dalsi')}
               </button>
             </div>
           )}

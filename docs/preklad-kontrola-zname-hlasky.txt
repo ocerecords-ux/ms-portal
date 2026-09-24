@@ -1,0 +1,24 @@
+src/app/(admin)/admin/AdminSearch.tsx: error TS2345: Argument of type '(string | string[])[]' is not assignable to parameter of type 'string | string[][] | Record<string, string> | URLSearchParams | undefined'.
+src/app/(portal)/components/ZpetnaVazba.tsx: error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'File[]'.
+src/app/api/admin/doplnit-dotoceno/route.ts: error TS2339: Property 'pridano' does not exist on type 'never'.
+src/app/api/admin/doplnit-dotoceno/route.ts: error TS2339: Property 'stav' does not exist on type 'never'.
+src/app/api/admin/doplnit-dotoceno/route.ts: error TS2345: Argument of type 'VysledekDoplneni' is not assignable to parameter of type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2322: Type 'Offer | null' is not assignable to type 'null'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'caflouProjectId' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'companyId' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'currency' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'id' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'issuerCompanyId' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'items' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'jazyk' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'note' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'slevaMinor' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'slevaPopis' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'slevaProcent' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'status' does not exist on type 'never'.
+src/app/api/admin/invoices/route.ts: error TS2339: Property 'subject' does not exist on type 'never'.
+src/app/api/chat/zpravy/[id]/reakce/route.ts: error TS2345: Argument of type 'MessageReaction[]' is not assignable to parameter of type '{ code: string; userId: string; createdAt: Date; user: { name: string | null; email: string; }; }[]'.
+src/lib/caflou.ts: error TS2871: This expression is always nullish.
+src/lib/email.ts: error TS2503: Cannot find namespace 'nodemailer'.
+src/lib/pripominkyServer.ts: error TS2739: Type 'PripominkaPortalu' is missing the following properties from type '{ id: string; text: string; odkud: string | null; stav: string; createdAt: Date; hotovoAt: Date | null; hotovoJmeno: string | null; poznamka: string | null; userId: string; user: { ...; } | null; prilohy: { ...; }[]; _count?: { ...; } | undefined; pridalSe?: number | undefined; }': user, prilohy
+src/lib/pripominkyServer.ts: error TS2739: Type '{ id: string; userId: string; text: string; odkud: string | null; stav: StavPripominky; hotovoAt: Date | null; hotovoById: string | null; hotovoJmeno: string | null; poznamka: string | null; podobnaId: string | null; createdAt: Date; pridalSe: number; }' is missing the following properties from type '{ id: string; text: string; odkud: string | null; stav: string; createdAt: Date; hotovoAt: Date | null; hotovoJmeno: string | null; poznamka: string | null; userId: string; user: { ...; } | null; prilohy: { ...; }[]; _count?: { ...; } | undefined; pridalSe?: number | undefined; }': user, prilohy

@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import { extractDriveFolderId } from '@/lib/googleDrive';
 import { isInternalRole } from '@/lib/roles';
 import { DriveBrowser } from './DriveBrowser';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, prelozitS } from '@/lib/jazyk';
 
 // Stejne jako u Projektu - stránka se skládá při každém zobrazení, takže
 // stránka nesmí být Next.js zamrazená jako statická (viz komentář v
@@ -16,6 +18,7 @@ export default async function NahravkyPage({
   searchParams?: { projekt?: string };
 }) {
   const session = await getServerSession(authOptions);
+  const jazyk = nactiJazyk();
   const companyId = session!.user.companyId;
   const company = companyId ? await prisma.company.findUnique({ where: { id: companyId } }) : null;
 
@@ -78,20 +81,21 @@ export default async function NahravkyPage({
    * nebo s projektem.
    */
   const duvodPrazdna = !searchParams?.projekt
-    ? 'Zatím vám nebyla přiřazena složka na Google Disku. Ozvěte se prosím Mediaspace.'
+    ? prelozit(jazyk, 'nahravky.bezSlozky')
     : !projekt
-      ? 'Tenhle projekt jsme nenašli. Zkuste prosím odkaz z e-mailu otevřít znovu, nebo se nám ozvěte.'
+      ? prelozit(jazyk, 'nahravky.projektNenalezen')
       : !projektJeJeho
-        ? 'K tomuhle projektu nemá váš účet přístup. Ozvěte se prosím Mediaspace, doplníme to.'
-        : 'U tohohle projektu zatím není vyplněná složka s nahrávkami. Ozvěte se prosím Mediaspace.';
+        ? prelozit(jazyk, 'nahravky.bezPristupu')
+        : prelozit(jazyk, 'nahravky.projektBezSlozky');
 
   return (
     <section>
       <div className="mb-6">
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Nahrávky</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">{prelozit(jazyk, 'nahravky.nadpis')}</h1>
         {projektovaSlozka && projekt?.name && (
           <p className="text-sm font-body text-muted m-0 mt-2">
-            Projekt <span className="text-ink font-heading font-semibold">{projekt.name}</span>
+            {prelozit(jazyk, 'nahravky.projekt')}{' '}
+            <span className="text-ink font-heading font-semibold">{projekt.name}</span>
           </p>
         )}
       </div>
@@ -105,8 +109,8 @@ export default async function NahravkyPage({
         <div className="bg-surface rounded-card border border-line p-8 flex flex-col items-start gap-4 max-w-xl mx-auto shadow-sm">
           <p className="text-sm font-body text-muted m-0">
             {projektovaSlozka && projekt?.name
-              ? `Složka projektu ${projekt.name} na Google Disku. Otevře se v nové záložce.`
-              : `Složka firmy ${displayName} na Google Disku obsahuje všechny vaše nahrávky. Otevře se v nové záložce.`}
+              ? prelozitS(jazyk, 'nahravky.slozkaProjektu', { nazev: projekt.name })
+              : prelozitS(jazyk, 'nahravky.slozkaFirmy', { nazev: displayName })}
           </p>
           <a
             href={zdrojSlozky}
@@ -114,7 +118,7 @@ export default async function NahravkyPage({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-6 py-3 hover:bg-brand-purpleDeep transition-colors"
           >
-            Otevřít složku na Google Disku ↗
+            {prelozit(jazyk, 'nahravky.otevritNaDisku')}
           </a>
         </div>
       ) : (

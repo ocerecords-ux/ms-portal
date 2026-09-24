@@ -1,3 +1,6 @@
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
+
 /**
  * Kostra detailu projektu. Vlastní proto, že detail vypadá úplně jinak než
  * seznam - nadpis, štítek stavu, záložky a karty - a kostra ve tvaru tabulky
@@ -8,8 +11,9 @@
  * Viz komentář v ../loading.tsx.
  */
 export default function ProjectDetailLoading() {
+  const jazyk = nactiJazyk();
   return (
-    <section className="flex flex-col gap-6 animate-pulse" aria-busy="true" aria-label="Načítám projekt">
+    <section className="flex flex-col gap-6 animate-pulse" aria-busy="true" aria-label={prelozit(jazyk, 'projekt.nacitam')}>
       <div>
         <div className="h-4 w-32 bg-field rounded" />
         <div className="flex items-center gap-4 mt-3">
