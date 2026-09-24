@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { SeznamNavodu } from './SeznamNavodu';
-import { vidiNavod } from '@/lib/navody';
+import { sediDruh, vidiNavod } from '@/lib/navody';
+import { druhyKlienta } from '@/lib/navodyServer';
 
 /**
  * NÁPOVĚDA — přehled návodů (zadání 16. 9. 2026: „přemýšlím, že by tyhle
@@ -40,13 +41,19 @@ export default async function NapovedaPage() {
         obsah: true,
         zverejneno: true,
         proRole: true,
+        proDruhy: true,
         updatedAt: true,
       },
     })
     .catch(() => []);
 
-  // Interni navody herec ani klient nevidi (19. 9. 2026) - viz vidiNavod.
-  const moje = navody.filter((n) => vidiNavod(n.proRole, role));
+  /**
+   * Interni navody herec ani klient nevidi (19. 9. 2026) - viz vidiNavod.
+   * Klientovi se navic neukazuji navody psane pro druh zakazek, ktery u nas
+   * nema (24. 9. 2026) - kdo dela jen reklamy, nema co delat s AudioTaggerem.
+   */
+  const druhy = await druhyKlienta(role, (session.user as { companyId?: string | null }).companyId);
+  const moje = navody.filter((n) => vidiNavod(n.proRole, role) && sediDruh(n.proDruhy ?? [], druhy));
 
   /**
    * „Začínáme" patří nahoru (18. 9. 2026). Kategorie se jinak řadí abecedně,

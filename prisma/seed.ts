@@ -830,6 +830,9 @@ async function zalozVychoziNavody() {
         // Pro koho navod je (23. 9. 2026). Prazdne = cely tym; navod pro
         // klienta se bez tohohle k nemu vubec nedostane (viz vidiNavod).
         proRole: n.proRole ?? [],
+        // Pro jaky druh zakazek (24. 9. 2026). Prazdne = pro obojí; klient
+        // uvidi jen navod na druh, ktery ma jeho firma zaskrtnuty.
+        proDruhy: n.proDruhy ?? [],
       };
 
       if (uz) {

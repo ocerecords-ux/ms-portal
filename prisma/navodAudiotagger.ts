@@ -6,10 +6,14 @@
  *
  * OBRÁZKY (doplněno 24. 9. 2026: „u některých návodů nejsou obrázky, třeba
  * u AudioTaggeru je to důležité... ale obrázky mají být ilustrační") jsou
- * v public/navody/audiotagger-1..4.png. Nejsou to snímky obrazovky - kreslí
+ * v public/navody/audiotagger-1..5.png. Nejsou to snímky obrazovky - kreslí
  * se z repliky scripts/navody/audiotagger.html, ať v návodu není cizí
  * projekt ani skutečný text knihy:
  *   node scripts/navody/snimky.mjs audiotagger
+ *
+ * NÁVOD JE O AUDIOKNIHÁCH (24. 9. 2026). Reklamní spot se nepřeposlouchává
+ * v AudioTaggeru, ale v taggeru spotu - ten má vlastní návod
+ * (navodReklamyPripominky.ts). Proto proDruhy: ['AUDIOBOOK'].
  * Oranžová čísla v replice patří k číslovaným popiskům pod obrázkem. Když se
  * AudioTagger změní, upravit repliku, přegenerovat a srovnat text níž.
  */
@@ -19,9 +23,10 @@ export const AUDIOTAGGER = {
   perex: 'Přeposlech nahrávek v portálu: značení chyb v textu, stopy, tabulka a odkaz pro klienta.',
   kategorie: 'Projekty',
   poradi: 20,
+  proDruhy: ['AUDIOBOOK'],
   obsah: `AudioTagger je přeposlech přímo v portálu: vlevo text, vpravo nahrávka a záznamy chyb. Otevírá se **ze záložky v detailu projektu** a všechno, co se v něm zapíše, patří tomu projektu — ne prohlížeči, ve kterém to někdo psal.
 
-![Obrazovka AudioTaggeru: hlavička s počty a tlačítky, text nahrávky, seznam chyb a přehrávač](/navody/audiotagger-1.png)
+![Přeposlech u projektu: fialová hlavička s počty a tlačítky, PDF s textem, poutko Záznamy a přehrávač](/navody/audiotagger-1.png)
 
 # Než se dá poslouchat
 
@@ -59,7 +64,7 @@ Zvýraznění patří k záznamu chyby, takže ho vidí i klient ve svém odkazu
 
 Bez textu to jde taky: tlačítkem **+ Přidat chybu** nebo klávesou **E** se založí záznam na aktuálním čase.
 
-![Okno zápisu chyby: předvyplněná stopa, čas a strana, popis a tlačítko Uložit chybu](/navody/audiotagger-2.png)
+![Zápis chyby pod přehrávačem: předvyplněná stopa, čas a strana, popis a tlačítko Uložit chybu](/navody/audiotagger-2.png)
 
 V seznamu záznamů se dá na chybu **kliknout a skočit na to místo v nahrávce**, znění upravit a záznam smazat.
 
@@ -75,21 +80,23 @@ Každá stopa zůstává **probarvená fialově až tam, kam jste ji doposloucha
 
 Tlačítko **🔖 Pauza** zamkne přeposlech a založí místo, kde jste skončili — přes obrazovku sjede fialová záložka s číslem stopy a časem. Tlačítkem **Pokračovat odtud** (nebo Enterem či Escapem) se vytáhne a nahrávka se rovnou nastaví na to místo. Je to na odskočení od počítače, ne na krátkou pauzu uprostřed věty.
 
-![Záložka Stopa 07 s tlačítkem Pokračovat odtud a seznam stop: rozposlouchaná, doposlechnutá a zaškrtnutá jako hotová](/navody/audiotagger-4.png)
-
 # Stopy
 
 - **Doposlechnutá stopa se zapíše sama** — ve chvíli, kdy přehrávání dojede na konec. Odškrtávátko, které nikdo neudržuje, je horší než žádné, takže se počítá jen to, co se dá poznat samo.
 - **Hotová stopa** je něco jiného: tu si zaškrtnete sami, až si stopu pustíte celou, poznamenáte si k ní, co je potřeba, a vrátíte se k ní. Zaškrtnutá stopa změní barvu.
+![Seznam zvukových stop: zaškrtnutá hotová stopa, křivka probarvená až tam, kam je doposlechnuto, a offset do Cubase](/navody/audiotagger-4.png)
+
 - U stop nad 150 MB se nekreslí křivka — zůstane časová osa se značkami. Křivky se dopočítávají na pozadí u všech stop, ale vždycky jen jedna naráz, aby to neucpalo linku ani paměť.
 
-# Tabulka chyb
+# Záznamy a tabulka chyb
+
+![Panel Záznamy: záložky Chyby a Historie, Markery do Cubase, Stáhnout tabulku a jednotlivé zápisy](/navody/audiotagger-3.png)
 
 **Stáhnout tabulku** v hlavičce Záznamů chyb vyrobí CSV: stopa, název stopy, čas ve stopě, čas v Cubase, strana textu, popis, kdo a kdy. Je to středníkem oddělené a s BOM, takže to český Excel otevře rovnou do sloupců. **Sloupec s časem v Cubase je jen náš** — klient ho nikde nevidí.
 
 # PŘEPOSLECHNUTO
 
-Velké tlačítko, kterým se za nahrávku někdo postaví. Portál si pamatuje, kdo ho zmáčkl a kdy. Odškrtnutí se pro jistotu ptá. **Klient tohle tlačítko nemá.**
+Velké tlačítko, kterým se za nahrávku někdo postaví. Portál si pamatuje, kdo ho zmáčkl a kdy. Odškrtnutí se pro jistotu ptá. **Zmáčknout ho může i klient** (od 12. 9. 2026) — je to jeho slovo, že nahrávku poslechl, a u záznamu zůstane jméno, takže je vidět, kdo to odklepl.
 
 # Odkaz pro klienta
 
@@ -107,7 +114,7 @@ Co klient může a nemůže:
 
 Když klient otevře odkaz **u projektu poprvé** (u projektu ještě nikdo zapsaný není), vyskočí mu okno **Kdo bude poslouchat?**. E-mail je předvyplněný tím, na který šel odkaz; jméno je nepovinné. Rovnou tam může přeposlech **předat dalším lidem** — každý přidaný dostane e-mail s odkazem. Po uložení už okno nevyskakuje.
 
-![Okno Kdo bude poslouchat? s e-mailem, nepovinným jménem a tlačítkem Přidat e-mail](/navody/audiotagger-3.png)
+![Okno Posluchači: kdo dostává zprávy o nových stopách a pole pro přidání dalšího e-mailu](/navody/audiotagger-5.png)
 
 Seznam se dá kdykoli upravit tlačítkem **👤 Posluchači** v hlavičce AudioTaggeru — vidí ho klient i my:
 

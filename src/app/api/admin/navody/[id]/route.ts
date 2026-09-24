@@ -22,6 +22,8 @@ const schema = z.object({
   poradi: z.number().int().min(0).max(9999).optional().default(100),
   zverejneno: z.boolean().optional().default(false),
   proRole: z.array(z.string().max(20)).max(10).optional().default([]),
+  // Druh zakazek, pro ktery je navod psany (24. 9. 2026): AUDIOBOOK, AD.
+  proDruhy: z.array(z.enum(['AUDIOBOOK', 'AD'])).max(2).optional().default([]),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -52,6 +54,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         poradi: d.poradi,
         zverejneno: d.zverejneno,
         proRole: d.proRole,
+        proDruhy: d.proDruhy,
         autorId: session.user.id,
         ...(d.nazev !== stary.nazev ? { slug: await volnySlug(d.nazev, params.id) } : {}),
       },

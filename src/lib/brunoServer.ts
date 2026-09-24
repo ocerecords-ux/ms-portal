@@ -515,7 +515,9 @@ export async function brunoZpracujZpravu(messageId: string): Promise<VysledekBru
     const pisatel = await prisma.user
       .findUnique({ where: { id: zprava.userId }, select: { role: true } })
       .catch(() => null);
-    const napoveda = pisatel ? await napovedaProRoli(pisatel.role).catch(() => '') : '';
+    const napoveda = pisatel
+      ? await napovedaProRoli(pisatel.role, zprava.userId).catch(() => '')
+      : '';
 
     /** Udaje o projektu do zadani - prazdne se vynechavaji, at to neni seznam pomlcek. */
     const oProjektu: { popisek: string; hodnota: string }[] = [];

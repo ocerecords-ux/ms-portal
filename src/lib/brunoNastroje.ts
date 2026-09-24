@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { prehledNaDen } from '@/lib/ranniPrehledServer';
-import { vidiNavod } from '@/lib/navody';
+import { sediDruh, vidiNavod } from '@/lib/navody';
+import { druhyUzivatele } from '@/lib/navodyServer';
 import { canViewCalendar, canManageCalendar } from '@/lib/roles';
 import { nactiPorady } from '@/lib/poradyServer';
 import { utcParts, zonedToUtc } from '@/lib/calendar';
@@ -302,11 +303,22 @@ async function hledejNavod(dotaz: string, kdo: KdoSePta): Promise<string> {
       zverejneno: true,
       OR: slova.map((s) => ({ hledaci: { contains: s, mode: 'insensitive' as const } })),
     },
-    select: { slug: true, nazev: true, perex: true, obsah: true, proRole: true, hledaci: true },
+    select: {
+      slug: true,
+      nazev: true,
+      perex: true,
+      obsah: true,
+      proRole: true,
+      proDruhy: true,
+      hledaci: true,
+    },
     take: 12,
   });
 
-  const moje = navody.filter((n) => vidiNavod(n.proRole, String(kdo.role)));
+  const druhy = await druhyUzivatele(kdo.userId);
+  const moje = navody.filter(
+    (n) => vidiNavod(n.proRole, String(kdo.role)) && sediDruh(n.proDruhy ?? [], druhy),
+  );
   if (moje.length === 0) return `Na „${dotaz}" návod nemám.`;
 
   // Nejvic trefenych slov nahoru - kratky navod jinak vyhraje nad tim spravnym.

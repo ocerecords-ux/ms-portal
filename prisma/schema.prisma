@@ -3163,6 +3163,14 @@ model Navod {
   zverejneno Boolean @default(true)
   /// Komu se návod ukáže. Prázdné = všem přihlášeným.
   proRole    String[] @default([])
+  /// PRO KTERÝ DRUH ZAKÁZEK (zadání 24. 9. 2026: „je třeba rozlišit dva
+  /// druhy - pro audioknihy a pro reklamy, podle toho by se i návody měly
+  /// objevovat klientovi").
+  ///
+  /// Hodnoty jsou OrderKind: AUDIOBOOK, AD. Prázdné = pro obojí. Rozhoduje
+  /// to jen u KLIENTA a podle toho, co má jeho firma zaškrtnuté v Druhu
+  /// zakázek - náš tým, herec i náhledový účet vidí návod tak jako tak.
+  proDruhy   String[] @default([])
 
   autorId String?
   autor   User?   @relation("NavodAutor", fields: [autorId], references: [id], onDelete: SetNull)

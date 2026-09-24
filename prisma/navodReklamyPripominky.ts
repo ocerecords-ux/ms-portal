@@ -8,6 +8,14 @@
  *
  * Text tady je jen ZAČÁTEK. Jakmile ho někdo v portálu upraví, seed už do něj
  * nesahá - zakládá se jen tehdy, když návod s touhle adresou ještě není.
+ *
+ * OBRÁZKY (24. 9. 2026) jsou v public/navody/reklamy-1..3.png. Nejsou to
+ * snímky obrazovky - kreslí se z repliky scripts/navody/reklamy.html:
+ *   node scripts/navody/snimky.mjs reklamy
+ * Oranžová čísla v replice patří k číslovaným popiskům pod obrázkem.
+ *
+ * NÁVOD JE O REKLAMÁCH, proto proDruhy: ['AD'] - audioknihy mají vlastní
+ * (navodAudiotagger.ts) a klientovi se ukáže jen ten, který se ho týká.
  */
 export const REKLAMY_PRIPOMINKY = {
   slug: 'reklamy-pripominkovani-schvalovani',
@@ -16,6 +24,7 @@ export const REKLAMY_PRIPOMINKY = {
     'Jak klient spot poslechne, zapíše k němu připomínky přímo v čase nahrávky a jedním tlačítkem zakázku schválí — a co se tím u nás stane.',
   kategorie: 'Reklamy',
   poradi: 20,
+  proDruhy: ['AD'],
   obsah: `U reklam jde všechno jednou cestou: klientovi odejde odkaz, on si spot pustí, buď k němu napíše připomínky s časem, nebo zakázku rovnou schválí. Schválením se projekt překlopí do „Schváleno - k fakturaci" a my víme, že se může fakturovat. Tenhle návod říká, kde se to zapíná, co klient vidí a kde se to u nás objeví.
 
 # Co musí být nastavené
@@ -23,6 +32,8 @@ export const REKLAMY_PRIPOMINKY = {
 **Firma musí mít zaškrtnuté Reklamy** (Firmy → karta firmy → Druh zakázek). Podle toho se pozná reklamní klient — u audioknih se nic z toho nenabízí, tam vede cesta přes opravy a stavy přehazujeme my.
 
 **Projekt musí mít složku na Disku** (odkaz na KZ u projektu) a v ní spot — zvuk nebo video. Odkaz pro klienta se vyrábí u projektu tlačítkem **Vyrobit odkaz**; je to tentýž odkaz jako na nahrávky a přeposlech, takže se dá kdykoliv zneplatnit a vygenerovat nový.
+
+![Záložka Připomínky u reklamního projektu: pruh Zatím neschváleno, odkaz pro klienta, přepínač spotů, vlna s označenými místy a sloupec připomínek](/navody/reklamy-1.png)
 
 # Jak to vidí klient
 
@@ -35,6 +46,8 @@ export const REKLAMY_PRIPOMINKY = {
 Ťukne na **Označit místo**, čímž si zapíchne čas (přehrávání se zastaví, aby mu čas neutekl, než větu vymyslí), napíše, co drhne, a dá **Zapsat k času**. Zapsaná připomínka se hned uloží — když klient okno zavře, nic se neztratí. V křivce se ukáže jako červená čárka a kliknutím na ni se přehraje to místo.
 
 **Když je ve složce víc spotů**, je nad taggerem přepínač a připomínky patří vždycky k tomu, který je zrovna otevřený.
+
+![Co vidí klient z odkazu: hlavička Připomínkování spotu, pruh Je zakázka v pořádku? s tlačítkem Schválit a tagger s připomínkami](/navody/reklamy-3.png)
 
 # Odeslání připomínek
 

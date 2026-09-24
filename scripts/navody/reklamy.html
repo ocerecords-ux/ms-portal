@@ -1,0 +1,321 @@
+<!-- Replika obrazovek pro návod „Připomínky ke spotu" (reklamy) - snímky:
+     node scripts/navody/snimky.mjs reklamy
+
+     Kreslená ilustrace, ne snímek obrazovky: v návodu nesmí být cizí zakázka.
+     Rozložení i názvy tlačítek jsou opsané ze záložky Připomínky u reklamního
+     projektu a z odkazu pro klienta (24. 9. 2026). Když se tagger spotu
+     změní, upravit tady a snímky přegenerovat. -->
+<!doctype html>
+<html lang="cs"><head><meta charset="utf-8"><title>Připomínky ke spotu</title>
+<style>
+:root{--bg:#171227;--panel:#1e1836;--panel2:#241d42;--line:#332a57;--ink:#F4F1FF;--muted:#A79FC8;--purple:#7B55FF;--green:#1FDF67;--cislo:#FF7A1A;--vlna:#d9cfbe;--oranz:#E8A33D;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--ink)}
+.plocha{width:1100px;padding:26px 58px;position:relative}
+.karta{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.nadpisek{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:700}
+.muted{color:var(--muted)}
+.text{font-size:12.5px;line-height:1.5}
+
+.stav{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 18px;font-size:13px}
+.tecka{width:9px;height:9px;border-radius:50%;background:var(--oranz)}
+.stav b{font-weight:800}
+.stav span.pop{color:var(--muted);font-size:12px}
+
+.odkaz{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 18px;margin-top:12px}
+.odkaz .txt{min-width:0}
+.odkaz .txt p{margin:0}
+.odkaz .txt .l{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.odkaz .txt .u{font-size:12px;margin-top:3px;font-family:ui-monospace,Menlo,monospace;color:#cfc7ea}
+.odkaz .akce{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btnf{background:var(--purple);color:#fff;border-radius:9px;padding:8px 16px;font-size:12.5px;font-weight:800}
+.btno{border:1px solid var(--line);border-radius:9px;padding:8px 16px;font-size:12.5px;font-weight:800}
+.zavrit{color:#ff7d7d;font-size:12.5px;font-weight:800}
+
+.spoty{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:11px}
+.spoty .l{letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.chip{border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.chip.on{background:var(--purple);border-color:var(--purple);color:#fff}
+
+.telo{display:flex;gap:20px;margin-top:14px;align-items:flex-start}
+.vlevo{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.jmeno{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 12px}
+.plato{background:#15112a;border:1px solid var(--line);border-radius:10px;height:180px;position:relative;overflow:hidden}
+.vlnka{position:absolute;left:10px;right:10px;top:0;bottom:0;display:flex;align-items:center;gap:2px}
+.vlnka i{flex:1;background:var(--vlna);opacity:.85;border-radius:1px}
+.osa{position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(217,207,190,.5)}
+.znacka{position:absolute;top:0;bottom:0;width:2px;background:#ff5d5d}
+.kurzor{position:absolute;top:0;bottom:0;width:2px;background:var(--green)}
+.ovlad{display:flex;align-items:center;gap:10px;margin-top:14px}
+.play{width:36px;height:30px;border-radius:9px;background:var(--green);color:#10321d;display:grid;place-items:center;font-size:13px;font-weight:900}
+.zpet{border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:700}
+.oznac{background:var(--purple);color:#fff;border-radius:9px;padding:8px 18px;font-size:12.5px;font-weight:800}
+.casv{margin-left:auto;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.vpravo{width:330px;display:flex;flex-direction:column;gap:14px}
+.hlavicka{display:flex;align-items:baseline;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line)}
+.hlavicka h3{margin:0;font-size:13.5px;font-weight:800}
+.hlavicka .cas{color:var(--green);font-weight:800;font-size:13px;font-variant-numeric:tabular-nums}
+.hlavicka .pocet{font-size:11.5px;color:var(--muted)}
+.hlavicka .l{margin:0;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.obsah{padding:14px 16px}
+.pisatko{background:#15112a;border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:#8C84B0;font-size:12.5px;height:64px}
+.zapsat{margin-top:11px;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;font-size:12.5px;font-weight:800;color:#cbbcff}
+.pripominka{display:flex;gap:11px;padding:11px 16px;border-bottom:1px solid var(--line);font-size:12.5px}
+.pripominka .c{color:#a68cff;font-weight:800;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.pripominka .t{flex:1;min-width:0}
+.pripominka .neodeslano{display:block;color:var(--oranz);font-size:10.5px;margin-top:3px}
+.pripominka .smaz{color:var(--muted);font-size:10.5px;font-weight:700}
+.odeslat{margin:12px 16px 16px;background:var(--green);color:#10321d;border-radius:10px;padding:11px;text-align:center;font-size:13px;font-weight:800}
+
+
+/* klientsky pohled z odkazu */
+.hlava{background:var(--purple);border-radius:12px;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.hlava .logo{display:flex;gap:3px;align-items:flex-end;height:22px}
+.hlava .logo i{display:block;width:4px;background:#fff;border-radius:2px}
+.hlava .del{width:1px;height:24px;background:rgba(255,255,255,.35)}
+.hlava b{display:block;font-size:12.5px;font-weight:800;letter-spacing:.04em}
+.hlava span.p{display:block;font-size:11px;opacity:.8}
+.schval{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:16px;margin-top:12px}
+.schval .t b{display:block;font-size:13.5px;font-weight:800}
+.schval .t span{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;max-width:620px;line-height:1.45}
+.schval .btn{margin-left:auto;background:var(--green);color:#10321d;border-radius:10px;padding:11px 22px;font-size:13px;font-weight:800;white-space:nowrap}
+.bublina{position:absolute;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--cislo);color:#fff;font-weight:900;font-size:13px;box-shadow:0 0 0 3px rgba(23,18,39,.9);z-index:9}
+.popisky{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px 20px}
+.popisky.jeden{grid-template-columns:1fr}
+.popisky div{display:flex;gap:9px;font-size:12.5px;line-height:1.45}
+.popisky em{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:var(--cislo);color:#fff;font-style:normal;font-weight:900;font-size:11px;display:grid;place-items:center;margin-top:1px}
+.popisky b{color:#fff}
+</style></head><body>
+
+<!-- 1: cela obrazovka pripominkovani spotu -->
+<div class="plocha" id="s1">
+
+  <div class="stav"><span class="tecka"></span><b>Zatím neschváleno</b><span class="pop">Klient schvaluje tlačítkem Schválit v mailu, ve složce nebo ve svém portálu.</span></div>
+
+  <div class="odkaz">
+    <span class="txt">
+      <p class="l">Odkaz pro klienta</p>
+      <p class="u">https://www.msportal.cz/pripominkovat/2T84DmZacbPiecHYjOpdjJe565Nur_a2 · zatím neotevřený</p>
+    </span>
+    <span class="akce"><span class="btnf">Kopírovat</span><span class="btno">Vygenerovat nový</span><span class="zavrit">Zavřít</span></span>
+  </div>
+
+  <div class="spoty">
+    <span class="l">Spoty ve složce</span>
+    <span class="chip on">1. SPOT 30s_CZ.wav</span>
+    <span class="chip">2. SPOT 30s_SK.wav</span>
+  </div>
+
+  <div class="telo">
+    <div class="vlevo">
+      <p class="jmeno">SPOT 30s_CZ.wav</p>
+      <div class="plato">
+        <span class="osa"></span>
+        <span class="vlnka" data-vlna></span>
+        <span class="znacka" style="left:34%"></span>
+        <span class="znacka" style="left:58%"></span>
+        <span class="kurzor" style="left:34%"></span>
+      </div>
+      <div class="ovlad">
+        <span class="play">▶</span>
+        <span class="zpet">−5 s</span>
+        <span class="oznac">Označit místo (00:08.4)</span>
+        <span class="casv">00:08.4</span>
+      </div>
+    </div>
+
+    <div class="vpravo">
+      <div class="karta">
+        <div class="hlavicka"><h3>Nová připomínka</h3><span class="cas">00:08.4</span></div>
+        <div class="obsah">
+          <div class="pisatko">Co je potřeba upravit?</div>
+          <div class="zapsat">Zapsat k času</div>
+        </div>
+      </div>
+      <div class="karta">
+        <div class="hlavicka"><p class="l">Připomínky</p><span class="pocet">2 celkem</span></div>
+        <div class="pripominka">
+          <span class="c">00:03.2</span>
+          <span class="t">Jméno značky vyslovit důrazněji.<span class="neodeslano">zatím neodesláno</span></span>
+          <span class="smaz">Smazat</span>
+        </div>
+        <div class="pripominka" style="border-bottom:0">
+          <span class="c">00:18.0</span>
+          <span class="t">Hudba v závěru přehlušuje claim.<span class="neodeslano">zatím neodesláno</span></span>
+          <span class="smaz">Smazat</span>
+        </div>
+        <div class="odeslat">Odeslat připomínky (2)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bublina" style="left:16px;top:38px">1</div>
+  <div class="bublina" style="left:16px;top:100px">2</div>
+  <div class="bublina" style="left:16px;top:172px">3</div>
+  <div class="bublina" style="left:16px;top:300px">4</div>
+  <div class="bublina" style="left:16px;top:452px">5</div>
+  <div class="bublina" style="left:1058px;top:268px">6</div>
+  <div class="bublina" style="left:1058px;top:506px">7</div>
+
+  <div class="popisky">
+    <div><em>1</em><span>Dokud klient neklikne na <b>Schválit</b>, svítí tu <b>Zatím neschváleno</b>.</span></div>
+    <div><em>2</em><span>Odkaz pro klienta. Funguje <b>bez přihlašování</b> a jde zavřít nebo vyrobit nový.</span></div>
+    <div><em>3</em><span>Když je ve složce víc spotů, přepínají se tady — připomínky patří vždy k tomu otevřenému.</span></div>
+    <div><em>4</em><span>Vlna spotu. Červené čárky jsou místa připomínek, kliknutím do vlny se tam skočí.</span></div>
+    <div><em>5</em><span><b>Označit místo</b> zapíchne čas a zastaví přehrávání, ať neuteče.</span></div>
+    <div><em>6</em><span>Sem se napíše, co je potřeba upravit, a <b>Zapsat k času</b> to uloží.</span></div>
+    <div><em>7</em><span>Klient má dole <b>Odeslat připomínky</b> — teprve tím nám dají vědět.</span></div>
+  </div>
+
+</div>
+
+<!-- 2: sloupec pripominek zblizka -->
+<div class="plocha" id="s2" style="width:720px">
+
+  <p class="nadpisek">Zápis připomínky</p>
+
+  <div style="position:relative;display:flex;gap:22px;align-items:flex-start">
+    <div class="vpravo">
+      <div class="karta">
+        <div class="hlavicka"><h3>Nová připomínka</h3><span class="cas">00:08.4</span></div>
+        <div class="obsah">
+          <div class="pisatko">Co je potřeba upravit?</div>
+          <div class="zapsat">Zapsat k času</div>
+        </div>
+      </div>
+      <div class="karta">
+        <div class="hlavicka"><p class="l">Připomínky</p><span class="pocet">2 celkem</span></div>
+        <div class="pripominka">
+          <span class="c">00:03.2</span>
+          <span class="t">Jméno značky vyslovit důrazněji.<span class="neodeslano">zatím neodesláno</span></span>
+          <span class="smaz">Smazat</span>
+        </div>
+        <div class="pripominka" style="border-bottom:0">
+          <span class="c">00:18.0</span>
+          <span class="t">Hudba v závěru přehlušuje claim.<span class="neodeslano">zatím neodesláno</span></span>
+          <span class="smaz">Smazat</span>
+        </div>
+        <div class="odeslat">Odeslat připomínky (2)</div>
+      </div>
+    </div>
+
+    <div style="flex:1;padding-top:4px">
+      <p class="text muted" style="margin:0 0 10px">Čas se bere z místa, kde jste dali <b style="color:#fff">Označit místo</b> — ne z chvíle, kdy větu dopíšete.</p>
+      <p class="text muted" style="margin:0">Zapsaná připomínka se rovnou uloží, takže se zavřením okna nic neztratí. Poslat ji ale musíte sami.</p>
+    </div>
+
+    <div class="bublina" style="left:-12px;top:20px">1</div>
+    <div class="bublina" style="left:-12px;top:96px">2</div>
+    <div class="bublina" style="left:-12px;top:196px">3</div>
+    <div class="bublina" style="left:-12px;top:300px">4</div>
+  </div>
+
+  <div class="popisky jeden">
+    <div><em>1</em><span>Čas u nadpisu je místo, které jste si zapíchli.</span></div>
+    <div><em>2</em><span>Jedna věta stačí. <b>Zapsat k času</b> připomínku uloží k tomuhle spotu.</span></div>
+    <div><em>3</em><span>Kliknutím na čas se spot přehraje od toho místa. <b>Smazat</b> připomínku odstraní.</span></div>
+    <div><em>4</em><span><b>Odeslat připomínky</b> nám je pošle najednou; do té doby u nich svítí „zatím neodesláno".</span></div>
+  </div>
+
+</div>
+
+<!-- 3: co vidi klient z odkazu v mailu -->
+<div class="plocha" id="s3">
+
+  <p class="nadpisek">Co uvidí klient z odkazu</p>
+
+  <div class="hlava">
+    <span class="logo"><i style="height:9px"></i><i style="height:18px"></i><i style="height:13px"></i><i style="height:22px"></i><i style="height:11px"></i></span>
+    <span class="del"></span>
+    <span><b>PŘIPOMÍNKOVÁNÍ SPOTU</b><span class="p">JAECOO 8 CZ</span></span>
+  </div>
+
+  <div class="schval">
+    <span class="t">
+      <b>Je zakázka v pořádku?</b>
+      <span>Schválením nám dáte vědět, že je hotovo — celý projekt tím jde k fakturaci. Když je co upravit, napište to radši do připomínek.</span>
+    </span>
+    <span class="btn">Schválit</span>
+  </div>
+
+  <div class="spoty">
+    <span class="l">Spoty ve složce</span>
+    <span class="chip on">1. SPOT 30s_CZ.wav</span>
+    <span class="chip">2. SPOT 30s_SK.wav</span>
+  </div>
+
+  <div class="telo">
+    <div class="vlevo">
+      <p class="jmeno">SPOT 30s_CZ.wav</p>
+      <div class="plato">
+        <span class="osa"></span>
+        <span class="vlnka" data-vlna></span>
+        <span class="znacka" style="left:34%"></span>
+        <span class="znacka" style="left:58%"></span>
+        <span class="kurzor" style="left:34%"></span>
+      </div>
+      <div class="ovlad">
+        <span class="play">▶</span>
+        <span class="zpet">−5 s</span>
+        <span class="oznac">Označit místo (00:08.4)</span>
+        <span class="casv">00:08.4</span>
+      </div>
+    </div>
+
+    <div class="vpravo">
+      <div class="karta">
+        <div class="hlavicka"><h3>Nová připomínka</h3><span class="cas">00:08.4</span></div>
+        <div class="obsah">
+          <div class="pisatko">Co je potřeba upravit?</div>
+          <div class="zapsat">Zapsat k času</div>
+        </div>
+      </div>
+      <div class="karta">
+        <div class="hlavicka"><p class="l">Připomínky</p><span class="pocet">2 celkem</span></div>
+        <div class="pripominka">
+          <span class="c">00:03.2</span>
+          <span class="t">Jméno značky vyslovit důrazněji.<span class="neodeslano">zatím neodesláno</span></span>
+          <span class="smaz">Smazat</span>
+        </div>
+        <div class="pripominka" style="border-bottom:0">
+          <span class="c">00:18.0</span>
+          <span class="t">Hudba v závěru přehlušuje claim.<span class="neodeslano">zatím neodesláno</span></span>
+          <span class="smaz">Smazat</span>
+        </div>
+        <div class="odeslat">Odeslat připomínky (2)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bublina" style="left:16px;top:51px">1</div>
+  <div class="bublina" style="left:16px;top:119px">2</div>
+  <div class="bublina" style="left:16px;top:186px">3</div>
+  <div class="bublina" style="left:1058px;top:292px">4</div>
+  <div class="bublina" style="left:1058px;top:549px">5</div>
+
+  <div class="popisky">
+    <div><em>1</em><span>Odkaz funguje <b>bez přihlašování</b> — dá se poslat dál kolegovi.</span></div>
+    <div><em>2</em><span><b>Schválit</b> se ptá podruhé a zpátky to vzít nejde — zakázka jde k fakturaci.</span></div>
+    <div><em>3</em><span>Když je spotů víc, přepínají se tady.</span></div>
+    <div><em>4</em><span><b>Označit místo</b> zapíchne čas, text se napíše sem a uloží <b>Zapsat k času</b>.</span></div>
+    <div><em>5</em><span>Teprve <b>Odeslat připomínky</b> nám je pošle. Do té doby je má klient jen u sebe.</span></div>
+  </div>
+
+</div>
+
+<script>
+/* Náhodná, ale pokaždé stejná křivka - ať snímek po přegenerování nepoletuje. */
+let seed = 7;
+const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+document.querySelectorAll('[data-vlna]').forEach((v) => {
+  for (let i = 0; i < 110; i++) {
+    const b = document.createElement('i');
+    const obalka = Math.sin((i / 110) * Math.PI) ** 0.6;
+    const h = i < 14 ? 2 : Math.max(3, (10 + rnd() * 110) * obalka);
+    b.style.height = h.toFixed(0) + 'px';
+    v.appendChild(b);
+  }
+});
+</script>
+</body></html>

@@ -3,7 +3,8 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { navodNaHtml, vidiNavod } from '@/lib/navody';
+import { navodNaHtml, sediDruh, vidiNavod } from '@/lib/navody';
+import { druhyKlienta } from '@/lib/navodyServer';
 import { StahnoutPdf } from './StahnoutPdf';
 
 /**
@@ -28,6 +29,9 @@ export default async function NavodPage({ params }: { params: { slug: string } }
   // Rozepsaný návod a návod psaný pro jinou roli se tváří, jako by nebyl.
   if (!navod.zverejneno && !jeAdmin) notFound();
   if (!vidiNavod(navod.proRole, role)) notFound();
+  // Navod pro jiny druh zakazek se klientovi tvari, jako by nebyl (24. 9. 2026).
+  const druhy = await druhyKlienta(role, (session.user as { companyId?: string | null }).companyId);
+  if (!sediDruh(navod.proDruhy ?? [], druhy)) notFound();
 
   return (
     // `tisk` = co se má dostat do PDF (styly pro tisk jsou v globals.css).

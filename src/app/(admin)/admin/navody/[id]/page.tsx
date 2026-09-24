@@ -36,6 +36,7 @@ export default async function NavodEditPage({ params }: { params: { id: string }
           poradi: navod.poradi,
           zverejneno: navod.zverejneno,
           proRole: navod.proRole,
+          proDruhy: navod.proDruhy ?? [],
         }}
       />
     </section>

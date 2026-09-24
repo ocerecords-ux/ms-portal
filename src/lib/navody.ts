@@ -24,6 +24,38 @@ export function vidiNavod(proRole: string[], role: string): boolean {
   return proRole.includes(role);
 }
 
+/**
+ * DRUH ZAKÁZEK, PRO KTERÝ NÁVOD JE (zadání 24. 9. 2026: „je třeba rozlišit
+ * dva druhy - pro audioknihy a pro reklamy, podle toho by se i návody měly
+ * objevovat klientovi").
+ *
+ * Přeposlech audioknihy a připomínkování reklamního spotu jsou dvě různé
+ * obrazovky. Klientovi, který u nás dělá jen reklamy, je návod o AudioTaggeru
+ * k ničemu - a naopak. Rozhoduje to, co má jeho firma zaškrtnuté v Druhu
+ * zakázek (Firmy → karta firmy), protože podle toho už se mu řídí objednávka.
+ */
+export const DRUHY_ZAKAZEK = ['AUDIOBOOK', 'AD'] as const;
+export type DruhZakazky = (typeof DRUHY_ZAKAZEK)[number];
+export const DRUH_LABELS: Record<string, string> = {
+  AUDIOBOOK: 'Audioknihy',
+  AD: 'Reklamy',
+};
+
+/**
+ * Sedí návod na to, co firma poptává?
+ *
+ * - Prázdné `proDruhy` = návod platí pro obojí.
+ * - `klientDruhy` je null u všech, kdo nejsou klient (tým, herec, náhledový
+ *   účet) - těm se nefiltruje nic.
+ * - Firma bez zaškrtnutého druhu (což by být nemělo) dostane všechno, ať
+ *   nezůstane bez nápovědy.
+ */
+export function sediDruh(proDruhy: string[], klientDruhy: string[] | null): boolean {
+  if (proDruhy.length === 0) return true;
+  if (!klientDruhy || klientDruhy.length === 0) return true;
+  return proDruhy.some((d) => klientDruhy.includes(d));
+}
+
 /** Text bez diakritiky a malými písmeny — základ hledání i adresy návodu. */
 export function bezDiakritiky(text: string): string {
   return text

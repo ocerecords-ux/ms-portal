@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { useRouter } from 'next/navigation';
-import { KATEGORIE_NAVODU, navodNaHtml } from '@/lib/navody';
+import { DRUH_LABELS, DRUHY_ZAKAZEK, KATEGORIE_NAVODU, navodNaHtml } from '@/lib/navody';
 import { ROLE_LABELS } from '@/lib/roles';
 import { ALL_ROLES } from '@/lib/menu';
 
@@ -23,6 +23,8 @@ export type NavodKUprave = {
   poradi: number;
   zverejneno: boolean;
   proRole: string[];
+  /** Pro ktery druh zakazek je navod psany (24. 9. 2026). */
+  proDruhy: string[];
 };
 
 export function NavodForm({ navod }: { navod: NavodKUprave }) {
@@ -54,6 +56,7 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
           poradi: n.poradi,
           zverejneno: n.zverejneno,
           proRole: n.proRole,
+          proDruhy: n.proDruhy,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -182,6 +185,31 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
                 onZmena={(zapnout) => nastav('proRole', prepniVSeznamu(n.proRole, role, zapnout))}
               >
                 {ROLE_LABELS[role]}
+              </Volba>
+            ))}
+          </div>
+        </div>
+
+        {/* Druh zakazek (zadani 24. 9. 2026: „je treba rozlisit dva druhy -
+            pro audioknihy a pro reklamy, podle toho by se i navody mely
+            objevovat klientovi"). */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-body text-ink">
+            Pro jaké zakázky
+            <span className="block text-xs text-muted">
+              nic nezaškrtnuto = pro obojí. Klient uvidí návod jen tehdy, když jeho firma má
+              zaškrtnutý stejný Druh zakázek; našeho týmu se to netýká.
+            </span>
+          </span>
+          <div className="flex gap-2 flex-wrap">
+            {DRUHY_ZAKAZEK.map((druh) => (
+              <Volba
+                key={druh}
+                maly
+                vybrano={n.proDruhy.includes(druh)}
+                onZmena={(zapnout) => nastav('proDruhy', prepniVSeznamu(n.proDruhy, druh, zapnout))}
+              >
+                {DRUH_LABELS[druh]}
               </Volba>
             ))}
           </div>

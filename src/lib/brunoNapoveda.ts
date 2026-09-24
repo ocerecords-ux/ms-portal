@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { canSee } from '@/lib/menu';
-import { vidiNavod } from '@/lib/navody';
+import { sediDruh, vidiNavod } from '@/lib/navody';
+import { druhyUzivatele } from '@/lib/navodyServer';
 import type { Role } from '@prisma/client';
 
 /**
@@ -58,7 +59,7 @@ const STRANKY: { href: string; nazev: string; popis: string }[] = [
  * Mapa portálu a seznam návodů pro JEDNOHO člověka - jen to, kam se dostane.
  * Prázdný text (role bez přístupu kamkoliv) se do zadání nevkládá.
  */
-export async function napovedaProRoli(role: Role | string): Promise<string> {
+export async function napovedaProRoli(role: Role | string, userId?: string): Promise<string> {
   const jakoRole = role as Role;
 
   const stranky = STRANKY.filter((s) => canSee(s.href, jakoRole));
@@ -66,12 +67,16 @@ export async function napovedaProRoli(role: Role | string): Promise<string> {
   const navody = await prisma.navod
     .findMany({
       where: { zverejneno: true },
-      select: { slug: true, nazev: true, perex: true, kategorie: true, proRole: true },
+      select: { slug: true, nazev: true, perex: true, kategorie: true, proRole: true, proDruhy: true },
       orderBy: [{ kategorie: 'asc' }, { poradi: 'asc' }],
     })
     .catch(() => []);
 
-  const moje = navody.filter((n) => vidiNavod(n.proRole, String(role)));
+  // Klientovi jen navody na druh zakazek, ktery u nas ma (24. 9. 2026).
+  const druhy = userId ? await druhyUzivatele(userId) : null;
+  const moje = navody.filter(
+    (n) => vidiNavod(n.proRole, String(role)) && sediDruh(n.proDruhy ?? [], druhy),
+  );
 
   const casti: string[] = [];
 
