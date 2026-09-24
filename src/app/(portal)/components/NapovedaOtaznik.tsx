@@ -33,8 +33,16 @@ export function NapovedaOtaznik({
   const [navod, setNavod] = useState<Navod | null>(null);
   const [stav, setStav] = useState<'ceka' | 'nacitam' | 'hotovo' | 'nejde'>('ceka');
 
+  /**
+   * Načte se při prvním otevření a pak už se drží.
+   *
+   * POZOR NA ZÁVISLOSTI: kdyby v nich byl `stav`, shodilo by ho vlastní
+   * `setStav('nacitam')` - efekt by se pustil znovu, úklid by odpověď zahodil
+   * a okno by zůstalo viset na „Načítám návod…". (Přesně to se stalo při
+   * prvním nasazení 24. 9. 2026.)
+   */
   useEffect(() => {
-    if (!otevreno || stav !== 'ceka') return;
+    if (!otevreno || navod) return;
     let platne = true;
     setStav('nacitam');
     fetch(`/api/napoveda?tema=${encodeURIComponent(tema)}`)
@@ -48,7 +56,7 @@ export function NapovedaOtaznik({
     return () => {
       platne = false;
     };
-  }, [otevreno, stav, tema]);
+  }, [otevreno, navod, tema]);
 
   // Escape zavírá - okno je na čtení, ne na vyplňování.
   useEffect(() => {
