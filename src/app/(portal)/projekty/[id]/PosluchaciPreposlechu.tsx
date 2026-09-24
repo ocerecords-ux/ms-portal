@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { NapovedaOtaznik } from '../../components/NapovedaOtaznik';
 
 /**
  * KDO POSLOUCHÁ (zadání 21. 9. 2026: „aby vyskočilo po kliknutí na odkaz
@@ -106,6 +107,17 @@ export function PosluchaciPreposlechu({
 
   return (
     <>
+      {/* OTAZNÍK S NÁVODEM (zadání 24. 9. 2026: „ten návod na AudioTagger by
+          mohl být i přímo někde v něm pod nějakým otazníkem").
+
+          Sedí tady vedle Posluchačů, protože do hlavičky AudioTaggeru se
+          jinam nevejde - a hlavně proto, že Preposlech.tsx je zrovna
+          rozepsaný na překlady a nemá se do něj sahat.
+
+          Klientovi z odkazu se nekreslí: není přihlášený a Nápověda by ho
+          poslala na přihlášení. */}
+      {!jenPoslech && <NapovedaOtaznik tema="preposlech" />}
+
       <span className="relative">
         <button
           type="button"

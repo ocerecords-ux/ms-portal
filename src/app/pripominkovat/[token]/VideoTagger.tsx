@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { STROP_PRO_KRIVKU, spocitejKrivku, type Peaks } from '@/lib/krivkaZvuku';
+import { NapovedaOtaznik } from '@/app/(portal)/components/NapovedaOtaznik';
 import type { PripominkaKVideu, SpotVeSlozce } from '@/lib/reklamaPripominky';
 
 /**
@@ -409,6 +410,20 @@ export function SpotTagger({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* OTAZNÍK S NÁVODEM (zadání 24. 9. 2026: „ten návod by mohl být
+          i přímo někde v něm pod nějakým otazníkem").
+
+          Jen u nás v kartě projektu - na klientském odkazu z mailu není
+          nikdo přihlášený a Nápověda by ho poslala na přihlášení. */}
+      {vKarteProjektu && (
+        <div className="flex items-center gap-2">
+          <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.12em] text-muted">
+            Připomínky ke spotu
+          </span>
+          <NapovedaOtaznik tema="reklamy" tmavy />
+        </div>
+      )}
+
       {/* Přepínač spotů - jen když je z čeho vybírat. */}
       {spoty.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap">
