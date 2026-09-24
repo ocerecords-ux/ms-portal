@@ -12,6 +12,7 @@ import { jeVPriprave } from '@/lib/stavyProjektu';
 import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
+import { ZalozkyKlienta } from './ZalozkyKlienta';
 import { nactiPoradiStavu } from '@/lib/poradiStavuServer';
 import { NovyProjektForm } from './NovyProjektForm';
 import { HerecProjekty } from './HerecProjekty';
@@ -66,17 +67,28 @@ export default async function ProjektyPage() {
 
   // Projekty se ctou z NASI databaze (od 11. 9. 2026 - odpojeni Caflou).
   //
-  // KDO CO VIDI (oprava 11. 9. 2026): klient nevidi vsechny projekty sve
-  // firmy, ale jen ty, u kterych je napsany jako klient. U vetsich firem
-  // (Audioteka) na sebe lide z ruznych oddeleni videli navzajem.
+  // KDO CO VIDI (oprava 11. 9. 2026): v prehledu „Moje projekty" ma klient
+  // jen ty, u kterych je napsany jako klient - u vetsich firem (Audioteka)
+  // na sebe lide z ruznych oddeleni videli navzajem. Od 24. 9. 2026 je vedle
+  // toho zalozka „Cela firma": kdo potrebuje videt, co se u nas pro jeho
+  // firmu deje, si ji otevre sam.
   let active: DisplayProject[] = [];
   let finished: DisplayProject[] = [];
   const jaId = session!.user.id;
 
-  const zPortalu = company
+  /**
+   * CELÁ FIRMA NA DRUHÉ ZÁLOŽCE (zadání 24. 9. 2026: „nastav u klientů, aby
+   * měli možnost vidět i někde v záložce projekty celé firmy - ostatních
+   * kolegů"). Čte se jedním dotazem celá firma a teprve tady se rozdělí na
+   * „moje" (jsem u nich vedený jako kontakt) a zbytek. První záložka tím
+   * zůstává přesně taková, jaká byla.
+   */
+  const firemniMeta = company
     ? await prisma.projectMeta.findMany({
-        where: { companyId: company.id, klientUserId: jaId, name: { not: null } },
+        where: { companyId: company.id, name: { not: null } },
         select: {
+          klientUserId: true,
+          klient: { select: { name: true, email: true } },
           caflouProjectId: true,
           name: true,
           statusName: true,
@@ -96,63 +108,72 @@ export default async function ProjektyPage() {
       })
     : [];
 
+  const zPortalu = firemniMeta.filter((p) => p.klientUserId === jaId);
+  const vsechnyFirmy = firemniMeta;
+
   /**
    * Kdo uz ma dotoceno - jednim dotazem pro celou stranku, stejne jako
    * v internim prehledu. Klic je projekt + herec: na jednom projektu muze
    * mit tyz herec dotoceno a na druhem ne.
    */
   const dotoceniKlienta = new Set(
-    zPortalu.length
+    vsechnyFirmy.length
       ? (
           await prisma.herecDotocen.findMany({
-            where: { caflouProjectId: { in: zPortalu.map((p) => p.caflouProjectId) } },
+            where: { caflouProjectId: { in: vsechnyFirmy.map((p) => p.caflouProjectId) } },
             select: { caflouProjectId: true, userId: true },
           })
         ).map((d) => `${d.caflouProjectId}:${d.userId}`)
       : [],
   );
 
+  /** Z metadat projektu udělá řádek tabulky - stejně pro obě záložky. */
+  const naRadek = (p: (typeof firemniMeta)[number]): DisplayProject => ({
+    id: Number(p.caflouProjectId),
+    name: p.name ?? '',
+    finished: p.finished,
+    statusName: p.statusName ?? '',
+    priority: p.priority,
+    narrator: p.narrator,
+    pageCount: p.pageCount,
+    finishedAt: p.endDate,
+    releaseDate: p.releaseDate,
+    startDate: p.startDate,
+    endDate: p.endDate,
+    // Projekt uz je v portalu, takze stary stitek nema co resit.
+    clientTag: null,
+    herci: [
+      ...p.herci.filter((h) => h.id === p.actorUserId),
+      ...p.herci.filter((h) => h.id !== p.actorUserId),
+    ].map((h) => ({
+      jmeno: bezTitulu(h.name) || h.email,
+      // Zelena linka „dotoceno" uz i u klienta (zadani 14. 9. 2026).
+      dotoceno: dotoceniKlienta.has(`${p.caflouProjectId}:${h.id}`),
+    })),
+  });
+
+  const odNejblizsiho = (a: DisplayProject, b: DisplayProject) =>
+    (a.endDate?.getTime() ?? Infinity) - (b.endDate?.getTime() ?? Infinity);
+  const odNejnovejsiho = (a: DisplayProject, b: DisplayProject) =>
+    (b.endDate?.getTime() ?? b.finishedAt?.getTime() ?? 0) -
+    (a.endDate?.getTime() ?? a.finishedAt?.getTime() ?? 0);
+
   if (zPortalu.length > 0) {
-    const vsechny: DisplayProject[] = zPortalu.map((p) => ({
-      id: Number(p.caflouProjectId),
-      name: p.name ?? '',
-      finished: p.finished,
-      statusName: p.statusName ?? '',
-      priority: p.priority,
-      narrator: p.narrator,
-      pageCount: p.pageCount,
-      finishedAt: p.endDate,
-      releaseDate: p.releaseDate,
-      startDate: p.startDate,
-      endDate: p.endDate,
-      // Projekt uz je v portalu, takze stary stitek nema co resit.
-      clientTag: null,
-      herci: [
-        ...p.herci.filter((h) => h.id === p.actorUserId),
-        ...p.herci.filter((h) => h.id !== p.actorUserId),
-      ].map((h) => ({
-        jmeno: bezTitulu(h.name) || h.email,
-        // Zelena linka „dotoceno" uz i u klienta (zadani 14. 9. 2026).
-        dotoceno: dotoceniKlienta.has(`${p.caflouProjectId}:${h.id}`),
-      })),
-    }));
-    active = vsechny
-      .filter((p) => !p.finished)
-      .sort((a, b) => (a.endDate?.getTime() ?? Infinity) - (b.endDate?.getTime() ?? Infinity));
-    finished = vsechny
-      .filter((p) => p.finished)
-      .sort(
-        (a, b) =>
-          (b.endDate?.getTime() ?? b.finishedAt?.getTime() ?? 0) -
-          (a.endDate?.getTime() ?? a.finishedAt?.getTime() ?? 0),
-      );
+    const vsechny = zPortalu.map(naRadek);
+    active = vsechny.filter((p) => !p.finished).sort(odNejblizsiho);
+    finished = vsechny.filter((p) => p.finished).sort(odNejnovejsiho);
   }
+
+  /** Záložka „Celá firma" - všechno, co u nás firma má (24. 9. 2026). */
+  const firemniVse = vsechnyFirmy.map(naRadek);
+  const firemniActive = firemniVse.filter((p) => !p.finished).sort(odNejblizsiho);
+  const firemniFinished = firemniVse.filter((p) => p.finished).sort(odNejnovejsiho);
 
   // Rodne listy radiovych spotu (zadani 9. 9. 2026) - klient je vidi rovnou
   // u projektu. Sloupec se vykresli, jen kdyz nejaky RL opravdu existuje;
   // u klienta, ktery spoty nedela, tak zbytecne nepribyva prazdny sloupec.
   const rodneListyMapa = await loadNejnovejsiRodneListy(
-    [...active, ...finished].map((p) => String(p.id)),
+    firemniVse.map((p) => String(p.id)),
   );
   const rodneListy = rodneListyMapa.size > 0 ? Object.fromEntries(rodneListyMapa) : undefined;
 
@@ -191,6 +212,16 @@ export default async function ProjektyPage() {
   );
   const progres = Object.fromEntries(Array.from(progresMapa, ([id, v]) => [id, v.celkem]));
 
+  /** Progres i u zakázek kolegů - v záložce Celá firma (24. 9. 2026). */
+  const firemniProgresMapa = await nactiProgresNataceni(
+    vsechnyFirmy
+      .filter((p) => !p.finished)
+      .map((p) => ({ id: p.caflouProjectId, herciIds: p.herci.map((h) => h.id) })),
+  );
+  const firemniProgres = Object.fromEntries(
+    Array.from(firemniProgresMapa, ([id, v]) => [id, v.celkem]),
+  );
+
   // Stav preposlechu do dvou novych sloupcu (zadani 12. 9. 2026). Jen
   // u rozpracovanych projektu - u dokoncenych uz nema co ukazovat.
   const preposlechMapa = await nactiPreposlechPrehled(active.map((p) => String(p.id)));
@@ -210,25 +241,55 @@ export default async function ProjektyPage() {
         <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
       </div>
 
-      <div>
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
-          Aktivní projekty
-        </h2>
-        {/* Tlacitko "Zeptat se" jen u KLIENTU AUDIOKNIH a jen u rozpracovanych
-            projektu (zadani 11. 9. 2026). U dokoncenych se kanal uzavira, tak
-            se tam ani nenabizi. */}
-        <ProjectsTable
-          projects={active}
-          emptyText="Aktuálně tu nemáte žádný rozpracovaný projekt. Vidíte jen zakázky, u kterých jste vedení jako kontaktní osoba — kdyby vám nějaká chyběla, dejte nám vědět."
-          rodneListy={rodneListy}
-          preposlech={preposlech}
-          odkazyAudioTaggeru={odkazyAudioTaggeru}
-          schvaleni={schvaleni}
-          progres={progres}
-        />
-      </div>
+      {/* DVĚ ZÁLOŽKY (zadání 24. 9. 2026). Obě se vykreslí na serveru,
+          přepínač jen mění, co je vidět - viz ZalozkyKlienta.tsx. */}
+      <ZalozkyKlienta
+        pocetFirmy={firemniVse.length}
+        moje={
+          <div className="flex flex-col gap-8">
+            <div>
+              <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
+                Aktivní projekty
+              </h2>
+              {/* Tlacitko "Zeptat se" jen u KLIENTU AUDIOKNIH a jen u rozpracovanych
+                  projektu (zadani 11. 9. 2026). U dokoncenych se kanal uzavira, tak
+                  se tam ani nenabizi. */}
+              <ProjectsTable
+                projects={active}
+                emptyText="Aktuálně tu nemáte žádný rozpracovaný projekt. Vidíte jen zakázky, u kterých jste vedení jako kontaktní osoba — ostatní najdete na záložce Celá firma."
+                rodneListy={rodneListy}
+                preposlech={preposlech}
+                odkazyAudioTaggeru={odkazyAudioTaggeru}
+                schvaleni={schvaleni}
+                progres={progres}
+              />
+            </div>
 
-      <FinishedProjectsSection projects={finished} rodneListy={rodneListy} />
+            <FinishedProjectsSection projects={finished} rodneListy={rodneListy} />
+          </div>
+        }
+        firma={
+          <div className="flex flex-col gap-8">
+            <div>
+              <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
+                Aktivní projekty {company ? `— ${company.name}` : ''}
+              </h2>
+              <p className="text-xs font-body text-muted m-0 mb-3">
+                Všechno, co u nás vaše firma má — i zakázky kolegů. Poslech a připomínky zůstávají
+                u toho, kdo je na zakázce vedený jako kontakt.
+              </p>
+              <ProjectsTable
+                projects={firemniActive}
+                emptyText="Vaše firma u nás zatím nemá žádnou rozpracovanou zakázku."
+                rodneListy={rodneListy}
+                progres={firemniProgres}
+              />
+            </div>
+
+            <FinishedProjectsSection projects={firemniFinished} rodneListy={rodneListy} />
+          </div>
+        }
+      />
     </section>
   );
 }

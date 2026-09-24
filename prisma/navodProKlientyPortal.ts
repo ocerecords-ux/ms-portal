@@ -29,7 +29,7 @@ Vpravo nahoře je **zvoneček** (co je nového u vašich projektů) a **otazník
 
 # Projekty
 
-Vidíte zakázky, u kterých jste vedení jako kontaktní osoba. Když vám nějaká chybí, napište nám — přiřadíme vás k ní.
+Máte tu dvě záložky. **Moje projekty** jsou zakázky, u kterých jste vedení jako kontaktní osoba — ty, o které se staráte. **Celá firma** ukáže všechno, co u nás vaše firma má, tedy i zakázky kolegů; poslech a připomínky zůstávají u toho, kdo je na zakázce vedený jako kontakt. Když vám u nějaké zakázky chybí vaše jméno, napište nám a přiřadíme vás k ní.
 
 V tabulce je:
 
