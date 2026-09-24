@@ -42,6 +42,7 @@ type EditableUser = {
   dostavaDotoceno: boolean;
   /** Zvonek, kdyz klient schvali reklamu (23. 9. 2026). */
   schvaleniReklam: boolean;
+  planovaniTerminu: boolean;
   /** Striha externe - v kalendari letadlo, do obsazenosti studia se nepocita. */
   strihaExterne: boolean;
   /** Vidi znacku stavu nabidky u reklam (23. 9. 2026). */
@@ -99,6 +100,7 @@ export function UserEditForm({
   const [jenNahled, setJenNahled] = useState(user.jenNahled);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
   const [schvaleniReklam, setSchvaleniReklam] = useState(user.schvaleniReklam);
+  const [planovaniTerminu, setPlanovaniTerminu] = useState(user.planovaniTerminu);
   const [strihaExterne, setStrihaExterne] = useState(user.strihaExterne);
   const [nabidkyReklam, setNabidkyReklam] = useState(user.nabidkyReklam);
   const [dostavaDotocenoKlient, setDostavaDotocenoKlient] = useState(user.dostavaDotocenoKlient);
@@ -209,6 +211,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('sledujeZmenyProjektu', sledujeZmeny ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('schvaleniReklam', schvaleniReklam ? '1' : '0');
+        if (isMediaspace) fd.set('planovaniTerminu', planovaniTerminu ? '1' : '0');
         if (isMediaspace) fd.set('strihaExterne', strihaExterne ? '1' : '0');
         if (isMediaspace) fd.set('nabidkyReklam', nabidkyReklam ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
@@ -585,6 +588,27 @@ export function UserEditForm({
                 Zvonek: klient schválil reklamu
                 <span className="block text-xs text-muted">
                   notifikace pokaždé, když klient odklepne spot k fakturaci
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Zvonek „muzeme planovat" (zadani 24. 9. 2026: „v tomto stavu pujde
+            notifikace pres zvonecek jen Helci"). Zvonek, ne mail. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={planovaniTerminu}
+                onChange={(e) => setPlanovaniTerminu(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Zvonek: projekt jde plánovat
+                <span className="block text-xs text-muted">
+                  notifikace pokaždé, když projekt přejde do stavu Plánujeme
                 </span>
               </span>
             </label>

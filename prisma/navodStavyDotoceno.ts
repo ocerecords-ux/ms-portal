@@ -16,11 +16,12 @@ export const STAVY_A_DOTOCENO = {
 
 ![Cesta projektu stavy](/navody/cesta-projektu.png)
 
-# Devět stavů a co znamenají
+# Deset stavů a co znamenají
 
 Pořadí v nabídce není abecední — jde tak, jak projekt opravdu putuje, aby se hledal ten správný stav a nelovil se v seznamu.
 
 - **V přípravě** — objednávka přišla, projekt je založený, ještě se neplánuje.
+- **Plánujeme** — cena je odsouhlasená, můžou se domlouvat termíny s herci. Při přechodu do tohohle stavu cinkne **zvonek** těm, kdo mají na kartě uživatele zaškrtnuté „Zvonek: projekt jde plánovat" (mail neodchází, klientovi se nehlásí nic).
 - **Natáčíme** — s hercem je naplánováno.
 - **Natáčíme/stříháme** — ještě se natáčí a na disku už jsou první zpracované tracky k poslechu.
 - **Dotočeno** — s hercem dotočeno, na disku zatím není ani jeden track.
@@ -86,7 +87,7 @@ Když někdo napíše do kanálu projektu **„dotočeno"**, Bruno udělá přes
 
 Jestli se klientovi o stavu píše, **rozhoduje nastavení u firmy** — karta firmy, záložka Notifikace. Co tam není zapnuté, se neposílá, takže zpráva nemůže odejít klientovi, se kterým to není domluvené. **Nová firma má všechno vypnuté.**
 
-Nastavit jde: Natáčíme/stříháme, Dotočeno, Dotočeno/stříháme, Dokončeno - ke schválení, Čekáme na opravy, Schváleno - k fakturaci. U „V přípravě" a „Natáčíme" se ještě nic nestalo a zpráva o tom by byla jen šum.
+Nastavit jde: Natáčíme/stříháme, Dotočeno, Dotočeno/stříháme, Dokončeno - ke schválení, Čekáme na opravy, Schváleno - k fakturaci. U „V přípravě", „Plánujeme" a „Natáčíme" se ještě nic nestalo a zpráva o tom by byla jen šum.
 
 **„Natáčíme/stříháme" a „Dotočeno/stříháme" sdílejí jednu zprávu** — klientovi říkají totéž (na disku jsou první tracky), takže odejde jen ta dřívější z nich.
 

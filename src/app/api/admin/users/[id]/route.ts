@@ -37,6 +37,7 @@ const schema = z.object({
   jenNahled: z.string().trim().optional(),
   dostavaDotoceno: z.string().trim().optional(),
   schvaleniReklam: z.string().trim().optional(),
+  planovaniTerminu: z.string().trim().optional(),
   strihaExterne: z.string().trim().optional(),
   nabidkyReklam: z.string().trim().optional(),
   dostavaDotocenoKlient: z.string().trim().optional(),
@@ -81,6 +82,7 @@ function readFormData(formData: FormData) {
     jenNahled: has('jenNahled') ? formData.get('jenNahled') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
     schvaleniReklam: has('schvaleniReklam') ? formData.get('schvaleniReklam') : undefined,
+    planovaniTerminu: has('planovaniTerminu') ? formData.get('planovaniTerminu') : undefined,
     strihaExterne: has('strihaExterne') ? formData.get('strihaExterne') : undefined,
     nabidkyReklam: has('nabidkyReklam') ? formData.get('nabidkyReklam') : undefined,
     dostavaDotocenoKlient: has('dostavaDotocenoKlient')
@@ -192,6 +194,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.smlouvyPodepisuje !== undefined ? { smlouvyPodepisuje: data.smlouvyPodepisuje === '1' } : {}),
       ...(data.schvaleniReklam !== undefined
         ? { schvaleniReklam: data.schvaleniReklam === '1' }
+        : {}),
+      ...(data.planovaniTerminu !== undefined
+        ? { planovaniTerminu: data.planovaniTerminu === '1' }
         : {}),
       ...(data.strihaExterne !== undefined ? { strihaExterne: data.strihaExterne === '1' } : {}),
       ...(data.nabidkyReklam !== undefined ? { nabidkyReklam: data.nabidkyReklam === '1' } : {}),

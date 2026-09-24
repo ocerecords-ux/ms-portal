@@ -299,6 +299,13 @@ model User {
   /// uzivatele; mail se u toho neposila, je to nase interni vedomi.
   schvaleniReklam Boolean  @default(false)
 
+  /// ZVONEK, KDYZ PROJEKT PREJDE DO STAVU „Planujeme" (zadani 24. 9. 2026:
+  /// „ten bude slouzit pro to, aby Helca vedela, ze uz muze planovat s herci
+  /// terminy... v tomto stavu pujde notifikace pres zvonecek jen Helci").
+  /// Zaskrtava se na karte uzivatele, at to nesedi ve jmenu v kodu; mail se
+  /// u toho neposila.
+  planovaniTerminu Boolean @default(false)
+
   /// VIDI ZNACKU STAVU NABIDKY U REKLAM (zadani 23. 9. 2026: „chtel bych
   /// nekde videt (jen ja) ... ze je nabidka schvalena"). Zatim jen Ondrej.
   nabidkyReklam   Boolean  @default(false)

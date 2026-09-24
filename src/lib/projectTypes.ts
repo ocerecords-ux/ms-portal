@@ -70,6 +70,10 @@ function normalizeStatus(value: string): string {
 /** Stavy, ve kterych se na projektu jeste pracuje. */
 export const ACTIVE_PROJECT_STATUSES: string[] = [
   'V přípravě',
+  // Planujeme (24. 9. 2026) - projekt v nem teprve zacina, rozhodne neni
+  // hotovy; bez tohohle radku by se pri prechodu do nej zavrel kanal dotazu
+  // klienta (viz uzavriDotazyProjektu v meta route).
+  'Plánujeme',
   'Natáčíme',
   'Natáčíme/stříháme',
   'Čekáme na opravy',

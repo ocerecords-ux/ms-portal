@@ -34,6 +34,8 @@ export type StavProjektu = {
  *
  * Šest barev je zadaných napevno:
  *   V přípravě               šedá
+ *   Plánujeme                indigová (přibylo 24. 9. 2026 - mezi přípravou
+ *                            a natáčením; sousedí s modrou, ale je sytější)
  *   Natáčíme                 světle modrá
  *   Natáčíme/stříháme        žlutá
  *   Dokončeno - ke schválení zelená
@@ -63,6 +65,22 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
     rozpracovany: true,
     barva:
       'bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-500/20 dark:text-slate-200 dark:border-slate-400/40',
+  },
+  {
+    /**
+     * PLÁNUJEME (zadání 24. 9. 2026: „ten bude sloužit pro to, aby Helča
+     * věděla, že už může plánovat s herci termíny, že je odsouhlasena cena
+     * apod.").
+     *
+     * Je to předěl mezi obchodem a výrobou: do téhle chvíle se domlouvá cena
+     * a rozsah, od téhle chvíle se obsazuje studio. Proto o něm jako
+     * o jediném stavu cinkne zvonek - viz zvonekOPlanovani v lib/planovani.ts.
+     */
+    nazev: 'Plánujeme',
+    popis: 'Cena je odsouhlasená, můžou se domlouvat termíny s herci.',
+    rozpracovany: true,
+    barva:
+      'bg-indigo-100 text-indigo-800 border border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-400/40',
   },
   {
     nazev: 'Natáčíme',
@@ -138,6 +156,9 @@ const NAZVY = STAVY_PROJEKTU.map((s) => s.nazev);
  */
 const STAVY_REKLAMY = [
   'V přípravě',
+  // Plánujeme patří i k reklamě - termín s hercem se domlouvá stejně
+  // (24. 9. 2026).
+  'Plánujeme',
   'Natáčíme',
   'Dokončeno - ke schválení',
   'Schváleno - k fakturaci',
@@ -223,3 +244,9 @@ export function barvaStavu(nazev: string | null | undefined, dokonceny = false):
 export function jeVPriprave(statusName: string | null | undefined): boolean {
   return (statusName ?? '').trim() === STAVY_PROJEKTU[0].nazev;
 }
+
+/**
+ * Stav, ve kterém se domlouvají termíny (zadání 24. 9. 2026). Drží se jedním
+ * místem, ať se název nepíše po kódu podruhé.
+ */
+export const STAV_PLANUJEME = 'Plánujeme';

@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta } from '@/lib/roles';
-import { jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
+import { STAV_PLANUJEME, jeNasStav, stavJeDokonceny } from '@/lib/stavyProjektu';
+import { zvonekOPlanovani } from '@/lib/planovaniServer';
 import { syncRodneListy } from '@/lib/rodnyListServer';
 import { prejmenujSlozkuProjektu } from '@/lib/googleDrive';
 import { nazevProjektuVelky } from '@/lib/nazevProjektu';
@@ -396,6 +397,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       if (stavSeZmenil && !pred?.finished) {
         // Po prodlevě a jen když stav vydrží (zadání 22. 9. 2026).
         posliNotifikaciPoProdleve(params.id, data.statusName);
+      }
+
+      /**
+       * ZVONEK „MŮŽEME PLÁNOVAT" (zadání 24. 9. 2026: „v tomto stavu půjde
+       * notifikace přes zvoneček jen Helči").
+       *
+       * Jen při skutečném přechodu do stavu - formulář projektu posílá
+       * všechna pole najednou, takže uložení téhož stavu podruhé už nic
+       * nerozesílá. Bez čekání: zvonek nesmí zdržet uložení stavu.
+       */
+      if (stavSeZmenil && !pred?.finished && data.statusName === STAV_PLANUJEME) {
+        void zvonekOPlanovani(
+          params.id,
+          meta.name ?? null,
+          meta.company?.name ?? null,
+        ).catch(() => undefined);
       }
 
       /**
