@@ -54,6 +54,30 @@ body{margin:0;background:var(--bg);font-family:"Helvetica Neue",Helvetica,Arial,
 .poutko2 span{display:block;background:var(--green);color:#10321d;font-weight:800;font-size:10px;border-radius:999px;padding:1px 0;margin:0 5px 6px}
 .poutko2 b{writing-mode:vertical-rl;font-size:9.5px;letter-spacing:.14em;color:var(--muted);font-weight:700}
 
+
+/* dva sloupce: vlevo text, vpravo prehravac a stopy (oprava 24. 9. 2026) */
+.mrizka{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start;margin-top:12px;position:relative}
+.sloupecP{display:flex;flex-direction:column;gap:12px}
+.prehravacKarta{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.displej{background:#5B2FD0;border-radius:10px;padding:10px 12px}
+.displej .radaA{display:flex;align-items:center;gap:9px;white-space:nowrap}
+.displej .radaB{display:flex;align-items:center;gap:6px;margin-top:9px;padding-right:26px;white-space:nowrap}
+.displej .radaB .rychlosti span{font-size:9.5px;padding:3px 6px}
+.stopyKarta{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stopyKarta .hlava{padding:11px 14px 0}
+.stopyKarta .hlava b{font-size:11px;letter-spacing:.1em;color:var(--muted)}
+.stopyKarta .akceR{display:flex;align-items:center;gap:10px;padding:9px 14px 12px;font-size:10px;font-weight:700;color:#a68cff;white-space:nowrap}
+.radekStopy{margin:0 12px 8px;border:1px solid var(--line);border-radius:8px;background:#191330;padding:7px 9px}
+.radekStopy.akt{border-color:rgba(31,223,103,.55);background:rgba(31,223,103,.07)}
+.radekStopy .h2{display:flex;align-items:center;gap:8px;font-size:11px}
+.radekStopy .h2 .off2{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums;font-size:10.5px}
+.krivka2{height:32px;margin-top:6px;display:flex;align-items:center;gap:1px}
+.krivka2 i{flex:1;background:var(--vlna);opacity:.75;border-radius:1px}
+.poutko3{position:absolute;right:-17px;top:150px;background:linear-gradient(180deg,#7B55FF,#5B1FD6);border-radius:10px;width:30px;padding:7px 0 11px;text-align:center;z-index:5}
+.poutko3 em{display:block;font-style:normal;color:rgba(255,255,255,.8);font-size:10px;margin-bottom:4px}
+.poutko3 span{display:block;background:var(--green);color:#10321d;font-weight:800;font-size:10px;border-radius:999px;padding:1px 0;margin:0 4px 6px}
+.poutko3 b{writing-mode:vertical-rl;font-size:9.5px;letter-spacing:.14em;color:#fff;font-weight:700}
+
 /* hlavicka AudioTaggeru */
 .lista{background:linear-gradient(100deg,#7B55FF,#5B1FD6);border-radius:14px;padding:14px 18px}
 .lista .radek1{display:flex;align-items:center;gap:12px}
@@ -73,6 +97,10 @@ body{margin:0;background:var(--bg);font-family:"Helvetica Neue",Helvetica,Arial,
 
 /* PDF cast */
 .pdfl{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:12.5px}
+.pdfkarta .pdfl{gap:8px;padding:10px 12px;font-size:11px;flex-wrap:nowrap;white-space:nowrap}
+.pdfkarta .pdfl .tlacitko{padding:4px 8px;font-size:10.5px}
+.pdfkarta .pdfl .hledani{padding:5px 9px;font-size:10.5px}
+.pdfkarta .pdfl .strana .pole{padding:4px 10px}
 .hledani{display:flex;align-items:center;gap:6px;background:#15112a;border:1px solid var(--line);border-radius:9px;padding:7px 12px;color:var(--muted);min-width:230px}
 .tlacitko{border:1px solid var(--line);border-radius:9px;padding:6px 11px;font-size:12px;color:var(--ink)}
 .strana{display:flex;align-items:center;gap:8px;margin-left:auto;color:var(--muted);font-size:12.5px}
@@ -193,52 +221,70 @@ body{margin:0;background:var(--bg);font-family:"Helvetica Neue",Helvetica,Arial,
         <div class="presl"><span class="ctverec"></span>Označit jako přeposlechnuté</div>
       </div>
 
-      <div class="pdfkarta">
-        <div class="pdfl">
-          <b style="font-size:12px">kubanske-tango_RE.pdf</b>
-          <span class="tlacitko">Načíst jiné PDF</span>
-          <span class="hledani">🔍 Hledat v textu (Ctrl+F)</span>
-          <span class="muted">▲ ▼ ☰ Aa</span>
-          <span class="strana">◂ <span class="pole">1</span> / 110</span>
-        </div>
-        <div class="papirvelky">
-          <span class="rohcislo"></span>
-          <div class="sloupec">
-            Audiotéka uvádí audioknihu Kubánské tango v rytmu blues.<br>
-            Napsal Eduard Freisler, čte Luboš Ondráček.
-            <div class="vpravo3" style="margin-top:22px">
-              „Můžeš cítit nostalgii po tajemných a vzácných věcech, jsou ale tací, kteří se tím nechají unést.
-              <span style="background:#ffe27a;border-radius:2px;padding:0 2px">Řada lidí prožívá sladkobolný stesk</span>
-              po starých nesvobodných časech, protože v diktatuře přímo netrpěli."
+      <div class="mrizka">
+        <!-- VLEVO: text nahravky -->
+        <div class="pdfkarta" style="margin-top:0">
+          <div class="pdfl">
+            <b style="font-size:12px">kubanske-tango_RE.pdf</b>
+            <span class="tlacitko">Načíst jiné PDF</span>
+            <span class="hledani" style="min-width:150px">🔍 Hledat v textu</span>
+            <span class="muted">▲ ▼ ☰ Aa</span>
+            <span class="strana">◂ <span class="pole">1</span> / 110</span>
+          </div>
+          <div class="papirvelky" style="margin:14px 22px;height:330px;padding:26px 30px">
+            <span class="rohcislo"></span>
+            <div class="sloupec" style="top:120px;left:30px;right:30px">
+              Audiotéka uvádí audioknihu Kubánské tango v rytmu blues.<br>
+              Napsal Eduard Freisler, čte Luboš Ondráček.
+              <div class="vpravo3" style="margin-top:20px;margin-left:38%">
+                „Můžeš cítit nostalgii po tajemných a vzácných věcech, jsou ale tací, kteří se tím nechají unést.
+                <span style="background:#ffe27a;border-radius:2px;padding:0 2px">Řada lidí prožívá sladkobolný stesk</span>
+                po starých nesvobodných časech, protože v diktatuře přímo netrpěli a nedokázali se později přizpůsobit realitě."
+              </div>
             </div>
           </div>
         </div>
-        <div class="poutko2"><em>‹</em><span>3</span><b>ZÁZNAMY</b></div>
-      </div>
 
-      <div class="prehravac" style="margin-top:12px">
-        <span class="play">▶</span>
-        <span class="stopa">01<small>/24</small></span>
-        <span class="cas">00:00.0 <small>z 12:46.0</small></span>
-        <span class="nazevstopy">01 SEN O PROSLAPANÝCH BO…</span>
-        <span class="rychlosti"><span>0.75×</span><span class="on">1×</span><span>1.25×</span><span>1.5×</span><span>2×</span></span>
-        <span class="vpravo"><span class="btnb">🔖 Pauza</span><span class="btng">+ Přidat chybu</span></span>
-      </div>
-      <p class="offset">Offset této stopy v Cubase: +00:00:00</p>
+        <!-- VPRAVO: prehravac a zvukove stopy -->
+        <div class="sloupecP">
+          <div class="prehravacKarta">
+            <div class="displej">
+              <div class="radaA">
+                <span class="play" style="width:28px;height:28px;font-size:11px">▶</span>
+                <span class="stopa" style="font-size:15px">01<small>/24</small></span>
+                <span class="cas" style="font-size:15px">00:00.0 <small>z 12:46.0</small></span>
+                <span class="nazevstopy" style="max-width:110px;font-size:10px">01 SEN O PROSLAPANÝCH BO…</span>
+              </div>
+              <div class="radaB">
+                <span class="rychlosti"><span>0.75×</span><span class="on">1×</span><span>1.25×</span><span>1.5×</span><span>2×</span></span>
+                <span class="vpravo"><span class="btnb" style="padding:5px 8px;font-size:10px">🔖 Pauza</span><span class="btng" style="padding:5px 8px;font-size:10px">+ Přidat chybu</span></span>
+              </div>
+            </div>
+            <p class="offset" style="margin:9px 0 0 2px">Offset této stopy v Cubase: +00:00:00</p>
+          </div>
 
-      <div class="karta" style="margin-top:12px">
-        <div class="hlavastop">
-          <b style="font-size:11px;letter-spacing:.1em;color:var(--muted)">ZVUKOVÉ STOPY</b>
-          <span class="akce"><span>Složka na Disku ↗</span><span>Načíst z Disku znovu</span><span class="tlacitko" style="color:var(--ink)">+ Ze souborů</span></span>
+          <div class="stopyKarta">
+            <div class="hlava"><b>ZVUKOVÉ STOPY</b></div>
+            <div class="akceR">
+              <span>Složka na Disku ↗</span><span>Načíst z Disku znovu</span>
+              <span class="tlacitko" style="color:var(--ink);font-size:10.5px;padding:5px 9px">+ Ze souborů</span>
+            </div>
+            <div class="radekStopy akt">
+              <div class="h2"><span class="ctverec on" style="width:14px;height:14px"></span><b>01</b><span>01 SEN O PROSLAPANÝCH BOTÁCH.mp3</span><span class="off2">+00:00:00</span></div>
+              <div class="krivka2" data-vlna data-hrano="55"></div>
+            </div>
+            <div class="radekStopy">
+              <div class="h2"><span class="ctverec on" style="width:14px;height:14px"></span><b>02</b><span>02 DOUTNÍKY, ŠPEHOVÉ A ROLL…</span><span class="off2">+01:00:00</span></div>
+              <div class="krivka2" data-vlna></div>
+            </div>
+            <div class="radekStopy" style="margin-bottom:12px">
+              <div class="h2"><span class="ctverec" style="width:14px;height:14px"></span><b>03</b><span>03 DOUTNÍKY, ŠPEHOVÉ A ROLL…</span><span class="off2">+02:00:00</span></div>
+              <div class="krivka2" data-vlna></div>
+            </div>
+          </div>
         </div>
-        <div class="stopaR">
-          <div class="h"><span class="ctverec on"></span><b>01</b><span>01 SEN O PROSLAPANÝCH BOTÁCH.mp3</span><span class="off">+00:00:00</span></div>
-          <div class="krivka hraje" data-vlna data-hrano="55"></div>
-        </div>
-        <div class="stopaR" style="border-bottom:0">
-          <div class="h"><span class="ctverec on"></span><b>02</b><span>02 DOUTNÍKY, ŠPEHOVÉ A ROLLING STONES, část 1.mp3</span><span class="off">+01:00:00</span></div>
-          <div class="krivka" data-vlna></div>
-        </div>
+
+        <div class="poutko3"><em>‹</em><span>3</span><b>ZÁZNAMY</b></div>
       </div>
     </div>
   </div>
@@ -247,20 +293,18 @@ body{margin:0;background:var(--bg);font-family:"Helvetica Neue",Helvetica,Arial,
   <div class="bublina" style="left:1058px;top:311px">2</div>
   <div class="bublina" style="left:16px;top:356px">3</div>
   <div class="bublina" style="left:16px;top:430px">4</div>
-  <div class="bublina" style="left:1058px;top:526px">5</div>
-  <div class="bublina" style="left:16px;top:836px">6</div>
-  <div class="bublina" style="left:1058px;top:836px">7</div>
-  <div class="bublina" style="left:16px;top:925px">8</div>
+  <div class="bublina" style="left:1058px;top:454px">5</div>
+  <div class="bublina" style="left:1058px;top:525px">6</div>
+  <div class="bublina" style="left:1058px;top:687px">7</div>
 
   <div class="popisky">
     <div><em>1</em><span>Kolik je stop, kolik chyb, z jakého PDF se čte a kolik už má klient poslechnuté.</span></div>
     <div><em>2</em><span><b>Poslouchat offline</b> · <b>Posluchači</b> · <b>Na celou obrazovku</b>.</span></div>
     <div><em>3</em><span>Až je hotovo, odškrtnete <b>Označit jako přeposlechnuté</b>.</span></div>
-    <div><em>4</em><span>Text nahrávky zabírá většinu obrazovky — je to rovnou PDF režijního editu, listuje se v něm a <b>Hledat v textu</b> v něm najde místo.</span></div>
-    <div><em>5</em><span>Poutko <b>ZÁZNAMY</b> na pravém okraji vytáhne seznam chyb; číslo říká, kolik jich je.</span></div>
-    <div><em>6</em><span>Přehrávač je <b>pod textem</b>: mezerník hraje a zastaví, šipky ←/→ posouvají o pět vteřin.</span></div>
-    <div><em>7</em><span><b>+ Přidat chybu</b> (nebo klávesa E) zapíše chybu tam, kde právě jste.</span></div>
-    <div><em>8</em><span>Úplně dole jsou <b>zvukové stopy</b> s křivkami — kliknutím se přepíná stopa.</span></div>
+    <div><em>4</em><span><b>Vlevo text nahrávky</b> — rovnou PDF režijního editu. Listuje se v něm a <b>Hledat v textu</b> v něm najde místo.</span></div>
+    <div><em>5</em><span><b>Vpravo nahoře přehrávač</b>: mezerník hraje a zastaví, šipky ←/→ o pět vteřin, rychlost chipy. <b>+ Přidat chybu</b> (klávesa E) zapíše chybu tam, kde právě jste.</span></div>
+    <div><em>6</em><span>Poutko <b>ZÁZNAMY</b> na pravém okraji vytáhne seznam zapsaných chyb.</span></div>
+    <div><em>7</em><span><b>Pod přehrávačem zvukové stopy</b> — kliknutím se přepíná stopa, křivka je probarvená až tam, kam jste doposlechli.</span></div>
   </div>
 
 </div>

@@ -37,9 +37,9 @@ export const KLIENT_PREPOSLECH = {
 
 # Jak to vypadá
 
-![Celá obrazovka přeposlechu: hlavička s počty a tlačítky, text nahrávky v PDF přes celou šířku, poutko Záznamy vpravo, pod textem přehrávač a dole zvukové stopy](/navody/audiotagger-1.png)
+![Celá obrazovka přeposlechu: hlavička s počty a tlačítky, vlevo text nahrávky v PDF, vpravo přehrávač a zvukové stopy, na pravém okraji poutko Záznamy](/navody/audiotagger-1.png)
 
-Shora dolů: hlavička s počty a tlačítky, pod ní **text nahrávky** (PDF) přes celou šířku, pod textem **přehrávač** a úplně dole **zvukové stopy**. Na pravém okraji textu je poutko **Záznamy** — vytáhne seznam chyb, které už jsou zapsané.
+Nahoře je hlavička s počty a tlačítky. Pod ní **vlevo text nahrávky** (PDF) a **vpravo přehrávač**, pod kterým jsou **zvukové stopy**. Na pravém okraji je poutko **Záznamy** — vytáhne seznam chyb, které už jsou zapsané. Na užším okně se oba sloupce srovnají pod sebe.
 
 Ovládání z klávesnice:
 

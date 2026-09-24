@@ -24,9 +24,9 @@ export const AUDIOTAGGER = {
   kategorie: 'Projekty',
   poradi: 20,
   proDruhy: ['AUDIOBOOK'],
-  obsah: `AudioTagger je přeposlech přímo v portálu. Shora dolů: fialová hlavička s počty a tlačítky, pod ní **text nahrávky přes celou šířku** (rovnou PDF režijního editu), pod textem **přehrávač** a úplně dole **zvukové stopy** s křivkami. Záznamy chyb se vytahují poutkem na pravém okraji. Otevírá se **ze záložky v detailu projektu** a všechno, co se v něm zapíše, patří tomu projektu — ne prohlížeči, ve kterém to někdo psal.
+  obsah: `AudioTagger je přeposlech přímo v portálu: nahoře fialová hlavička s počty a tlačítky, pod ní **vlevo text nahrávky** (rovnou PDF režijního editu) a **vpravo přehrávač a pod ním zvukové stopy**. Záznamy chyb se vytahují poutkem na pravém okraji. Na užším okně se oba sloupce srovnají pod sebe. Otevírá se **ze záložky v detailu projektu** a všechno, co se v něm zapíše, patří tomu projektu — ne prohlížeči, ve kterém to někdo psal.
 
-![Celá obrazovka přeposlechu: hlavička projektu se záložkami, odkaz pro klienta, hlavička AudioTaggeru, text v PDF přes celou šířku, poutko Záznamy vpravo, pod textem přehrávač a dole zvukové stopy](/navody/audiotagger-1.png)
+![Celá obrazovka přeposlechu: hlavička projektu se záložkami, odkaz pro klienta, hlavička AudioTaggeru, vlevo text v PDF, vpravo přehrávač a zvukové stopy, na pravém okraji poutko Záznamy](/navody/audiotagger-1.png)
 
 # Než se dá poslouchat
 
