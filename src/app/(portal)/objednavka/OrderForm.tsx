@@ -71,6 +71,26 @@ export function OrderForm({
   };
   const [dragOver, setDragOver] = useState(false);
   /**
+   * ODEBRÁNÍ PŘÍLOHY (zadání 24. 9. 2026: „když klient nahraje v objednávce
+   * omylem nějaké PDF do přílohy, mělo by jít z toho formuláře i smazat").
+   *
+   * Vstup se musí vynulovat i uvnitř prohlížeče - jinak by se tentýž soubor
+   * nedal vybrat znovu (onChange se při stejné hodnotě nespustí). A počet
+   * normostran, který se doplnil z odebraného souboru, jde pryč s ním; ručně
+   * napsané číslo zůstává.
+   */
+  const vstupSouboru = useRef<HTMLInputElement | null>(null);
+  const pocetZeSouboru = useRef(false);
+
+  function odeberSoubor() {
+    vyberSoubor(null);
+    if (vstupSouboru.current) vstupSouboru.current.value = '';
+    if (pocetZeSouboru.current) {
+      setPageCount('');
+      pocetZeSouboru.current = false;
+    }
+  }
+  /**
    * Normostrany z přiloženého textu (zadání 12. 9. 2026: „když tam načteš
    * přílohu s textem, tak ti to rovnou přepočítá normostrany").
    */
@@ -180,6 +200,7 @@ export function OrderForm({
       setRozbor(vysledek);
       if (doplnitVzdy || !pocetRef.current.trim()) {
         setPageCount(String(zaokrouhliNormostrany(vysledek.normostran)));
+        pocetZeSouboru.current = true;
       }
     } catch (err) {
       // Do okna jde srozumitelna veta, do konzole cela chyba - jinak se
@@ -411,10 +432,28 @@ export function OrderForm({
           <span className="truncate">
             {file ? file.name : dragOver ? 'Pusťte soubor sem…' : 'Přetáhněte soubor sem, nebo ho vyberte'}
           </span>
-          <label className="ml-auto shrink-0 bg-white text-brand-purpleDeep rounded-md px-3 py-1.5 text-xs font-heading font-semibold cursor-pointer">
-            Vybrat soubor
-            <input type="file" className="hidden" onChange={(e) => vyberSoubor(e.target.files?.[0] ?? null)} />
-          </label>
+          <span className="inline-flex items-center gap-2">
+            <label className="shrink-0 bg-white text-brand-purpleDeep rounded-md px-3 py-1.5 text-xs font-heading font-semibold cursor-pointer">
+              {file ? 'Vybrat jiný' : 'Vybrat soubor'}
+              <input
+                ref={vstupSouboru}
+                type="file"
+                className="hidden"
+                onChange={(e) => vyberSoubor(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            {/* Odebrat přílohu (24. 9. 2026) - ať se špatně vybraný soubor
+                nemusí odesílat a řešit až mailem. */}
+            {file && (
+              <button
+                type="button"
+                onClick={odeberSoubor}
+                className="shrink-0 border border-white/60 text-white rounded-md px-3 py-1.5 text-xs font-heading font-semibold hover:bg-white/15 transition-colors"
+              >
+                Odebrat
+              </button>
+            )}
+          </span>
         </div>
 
         {/* Náhled a úprava PDF - mazání a otáčení stránek (22. 9. 2026). */}

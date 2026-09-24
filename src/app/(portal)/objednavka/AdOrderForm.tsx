@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DatumPole } from '@/components/DatumPole';
 
@@ -18,6 +18,17 @@ export function AdOrderForm() {
   const [note, setNote] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  /**
+   * Odebrání přílohy (24. 9. 2026). Vstup se přitom musí vynulovat, jinak by
+   * se tentýž soubor nedal vybrat znovu - onChange se při stejné hodnotě
+   * nespustí.
+   */
+  const vstupSouboru = useRef<HTMLInputElement | null>(null);
+
+  function odeberSoubor() {
+    setFile(null);
+    if (vstupSouboru.current) vstupSouboru.current.value = '';
+  }
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [varovani, setVarovani] = useState<string | null>(null);
@@ -149,10 +160,28 @@ export function AdOrderForm() {
           <span className="truncate">
             {file ? file.name : dragOver ? 'Pusťte soubor sem…' : 'Přetáhněte soubor sem, nebo ho vyberte'}
           </span>
-          <label className="ml-auto shrink-0 bg-white text-brand-purpleDeep rounded-md px-3 py-1.5 text-xs font-heading font-semibold cursor-pointer">
-            Vybrat soubor
-            <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          </label>
+          <span className="inline-flex items-center gap-2">
+            <label className="shrink-0 bg-white text-brand-purpleDeep rounded-md px-3 py-1.5 text-xs font-heading font-semibold cursor-pointer">
+              {file ? 'Vybrat jiný' : 'Vybrat soubor'}
+              <input
+                ref={vstupSouboru}
+                type="file"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            {/* Odebrat přílohu (zadání 24. 9. 2026: „když klient nahraje
+                omylem nějaké PDF, mělo by jít z formuláře i smazat"). */}
+            {file && (
+              <button
+                type="button"
+                onClick={odeberSoubor}
+                className="shrink-0 border border-white/60 text-white rounded-md px-3 py-1.5 text-xs font-heading font-semibold hover:bg-white/15 transition-colors"
+              >
+                Odebrat
+              </button>
+            )}
+          </span>
         </div>
       </Field>
 
