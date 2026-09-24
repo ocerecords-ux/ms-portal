@@ -13,6 +13,7 @@ import { ProjectsTable, type InternalProject, type InternalProjectMeta } from '.
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { ZalozkyKlienta } from './ZalozkyKlienta';
+import { DokonceneFirmy } from './DokonceneFirmy';
 import { nactiPoradiStavu } from '@/lib/poradiStavuServer';
 import { NovyProjektForm } from './NovyProjektForm';
 import { HerecProjekty } from './HerecProjekty';
@@ -164,6 +165,24 @@ export default async function ProjektyPage() {
     finished = vsechny.filter((p) => p.finished).sort(odNejnovejsiho);
   }
 
+  /**
+   * ČÍ ZAKÁZKA TO JE (zadání 24. 9. 2026: „u těch projektů firmy by mohly být
+   * ještě identifikované kolegyně, ať je jasné, čí projekt to je").
+   *
+   * U svých zakázek se místo jména píše „vy" - jméno sebe sama v každém
+   * druhém řádku by bylo k ničemu. Zakázka bez kontaktu se pozná taky, ať je
+   * vidět, že u ní někdo chybí.
+   */
+  const firemniKontakty = Object.fromEntries(
+    vsechnyFirmy
+      .map((p) => {
+        if (p.klientUserId === jaId) return [p.caflouProjectId, 'vy'] as const;
+        const jmeno = p.klient ? bezTitulu(p.klient.name) || p.klient.email : null;
+        return jmeno ? ([p.caflouProjectId, jmeno] as const) : null;
+      })
+      .filter((x): x is readonly [string, string] => x !== null),
+  );
+
   /** Záložka „Celá firma" - všechno, co u nás firma má (24. 9. 2026). */
   const firemniVse = vsechnyFirmy.map(naRadek);
   const firemniActive = firemniVse.filter((p) => !p.finished).sort(odNejblizsiho);
@@ -283,10 +302,15 @@ export default async function ProjektyPage() {
                 emptyText="Vaše firma u nás zatím nemá žádnou rozpracovanou zakázku."
                 rodneListy={rodneListy}
                 progres={firemniProgres}
+                kontakty={firemniKontakty}
               />
             </div>
 
-            <FinishedProjectsSection projects={firemniFinished} rodneListy={rodneListy} />
+            <DokonceneFirmy
+              projects={firemniFinished}
+              rodneListy={rodneListy}
+              kontakty={firemniKontakty}
+            />
           </div>
         }
       />

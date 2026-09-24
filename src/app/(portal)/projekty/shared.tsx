@@ -145,6 +145,7 @@ export function ProjectsTable({
   odkazyAudioTaggeru,
   schvaleni,
   progres,
+  kontakty,
 }: {
   projects: DisplayProject[];
   emptyText: string;
@@ -181,7 +182,17 @@ export function ProjectsTable({
    * nemá co dělat.
    */
   schvaleni?: Record<string, string | null>;
+  /**
+   * ČÍ ZAKÁZKA TO JE (zadání 24. 9. 2026: „u těch projektů firmy by mohly být
+   * ještě identifikované kolegyně, ať je jasné, čí projekt to je").
+   *
+   * Klíč je ID projektu, hodnota jméno kolegy z klientovy firmy, který je
+   * u zakázky vedený jako kontakt. Bez tohohle propu se sloupec nevykreslí -
+   * ve „svých" projektech by bylo dokola jedno a totéž jméno.
+   */
+  kontakty?: Record<string, string>;
 }) {
+  const showKontakt = kontakty !== undefined;
   const showRodnyList = rodneListy !== undefined;
   const showPreposlech = preposlech !== undefined;
   const showSchvaleni = schvaleni !== undefined;
@@ -195,6 +206,7 @@ export function ProjectsTable({
           <colgroup>
             {sirkySloupcu([
               'name',
+              ...(showKontakt ? ['kontakt'] : []),
               'statusName',
               'narrator',
               ...(showProgres ? ['progres'] : []),
@@ -211,6 +223,8 @@ export function ProjectsTable({
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
               <th className="text-left px-4 py-3.5">Projekt</th>
+              {/* Kdo zakázku u klienta vede (24. 9. 2026). */}
+              {showKontakt && <th className="text-left px-4 py-3.5">Vede</th>}
               <th className="text-left px-4 py-3.5">Stav</th>
               <th className="text-left px-4 py-3.5">Herec</th>
               {showProgres && <th className="text-left px-4 py-3.5 whitespace-nowrap">Progres natáčení</th>}
@@ -231,7 +245,14 @@ export function ProjectsTable({
             {projects.length === 0 && (
               <tr>
                 <td
-                  colSpan={6 + (showProgres ? 1 : 0) + (showPreposlech ? 2 : 0) + (showRodnyList ? 1 : 0) + (showSchvaleni ? 1 : 0)}
+                  colSpan={
+                    6 +
+                    (showKontakt ? 1 : 0) +
+                    (showProgres ? 1 : 0) +
+                    (showPreposlech ? 2 : 0) +
+                    (showRodnyList ? 1 : 0) +
+                    (showSchvaleni ? 1 : 0)
+                  }
                   className="px-4 py-8 text-center text-muted text-sm font-body"
                 >
                   {emptyText}
@@ -246,6 +267,17 @@ export function ProjectsTable({
                 <td className="px-4 py-2 font-heading font-semibold text-sm text-ink align-middle">
                   <span className="block leading-tight break-words">{p.name}</span>
                 </td>
+                {showKontakt && (
+                  <td className="px-4 py-2 align-middle">
+                    {kontakty?.[String(p.id)] ? (
+                      <span className="inline-block max-w-full truncate rounded-pill bg-tint border border-brand-purple/30 px-2.5 py-1 text-xs font-heading font-semibold text-brand-purpleDark">
+                        {kontakty[String(p.id)]}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-body text-muted">— bez kontaktu</span>
+                    )}
+                  </td>
+                )}
                 <td className="px-4 py-0 overflow-hidden">
                   <StatusPill finished={p.finished} statusName={p.statusName} />
                 </td>
@@ -862,6 +894,9 @@ const VAHA_SLOUPCE: Record<string, number> = {
   pageCount: 6,
   // Progres natáčení - válec s procenty (19. 9. 2026).
   progres: 13,
+  // Kdo ze zakaznikovy firmy zakazku vede (24. 9. 2026) - vejde se jmeno
+  // i prijmeni, jinak by z „Radka Kopecká" zbylo „Radka K…".
+  kontakt: 14,
   driveUrl: 4,
   /**
    * Klientsky prehled ma sloupec navic, ktery nese TLACITKO, ne text - kdyz
