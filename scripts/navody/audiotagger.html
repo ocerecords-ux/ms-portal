@@ -1,0 +1,215 @@
+<!-- Replika obrazovek pro návod „AudioTagger" - snímky: node scripts/navody/snimky.mjs audiotagger
+     Kreslená ilustrace, ne snímek obrazovky: klient na obrázku nesmí vidět cizí projekt
+     ani skutečný text knihy. Když se AudioTagger změní, upravit tady a snímky přegenerovat. -->
+<!doctype html>
+<html lang="cs"><head><meta charset="utf-8"><title>AudioTagger</title>
+<style>
+:root{--bg:#171227;--panel:#221a3d;--panel2:#2b2150;--line:#3b2f66;--ink:#F4F1FF;--muted:#A79FC8;--purple:#7B55FF;--green:#1FDF67;--cislo:#FF7A1A;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--ink)}
+.plocha{width:1000px;padding:26px;position:relative}
+.lista{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#7B55FF,#5B1FD6);border-radius:12px 12px 0 0;padding:12px 16px}
+.logo{display:flex;gap:3px;align-items:flex-end;height:26px}
+.logo i{display:block;width:4px;background:var(--green);border-radius:2px}
+.tag{font-size:13px;font-weight:800;letter-spacing:.06em}
+.tag small{display:block;font-weight:600;opacity:.85;letter-spacing:0;font-size:11px}
+.pocty{font-size:12px;opacity:.9;margin-left:6px}
+.btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700}
+.btn.zeleny{background:var(--green);color:#10321d;border-color:var(--green)}
+.btn.duty{background:transparent}
+.right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.telo{background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;padding:16px;display:flex;gap:16px}
+.sloupec{flex:1;min-width:0}
+.karta{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px}
+.nadpisek{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:700}
+.text{font-size:12.5px;line-height:1.55;color:#E6E1FA}
+.text b{color:#fff}
+.prehravac{display:flex;align-items:center;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-top:12px}
+.play{width:34px;height:34px;border-radius:50%;background:var(--green);color:#10321d;display:grid;place-items:center;font-size:14px;font-weight:900}
+.stopa{font-size:15px;font-weight:800}
+.stopa small{font-size:11px;color:var(--muted);font-weight:600}
+.cas{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.rychlosti{display:flex;gap:4px;margin-left:6px}
+.rychlosti span{font-size:11px;padding:3px 7px;border-radius:6px;background:#392c6b;color:#CFC6F5}
+.rychlosti span.on{background:var(--green);color:#10321d;font-weight:800}
+.vlna{height:44px;border-radius:8px;background:repeating-linear-gradient(90deg,#4a3a86 0 3px,transparent 3px 6px);margin-top:10px;position:relative;opacity:.9}
+.vlna b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--green)}
+.znacka{position:absolute;top:-6px;width:10px;height:10px;border-radius:50%;background:var(--cislo)}
+.radek{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.pole{background:#191330;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--muted);flex:1}
+.zaznam{background:#191330;border:1px solid var(--line);border-left:3px solid var(--cislo);border-radius:8px;padding:8px 10px;margin-bottom:6px}
+.zaznam .hlava{display:flex;gap:8px;align-items:center;font-size:11.5px;color:var(--muted)}
+.zaznam .hlava b{color:var(--green);font-variant-numeric:tabular-nums}
+.zaznam p{margin:3px 0 0;font-size:12.5px}
+.bublina{position:absolute;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--cislo);color:#fff;font-weight:900;font-size:13px;box-shadow:0 0 0 3px rgba(23,18,39,.9)}
+.popisky{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
+.popisky div{display:flex;gap:9px;font-size:12.5px;line-height:1.45}
+.popisky em{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:var(--cislo);color:#fff;font-style:normal;font-weight:900;font-size:11px;display:grid;place-items:center;margin-top:1px}
+.zalozka{background:linear-gradient(90deg,#7B55FF,#5B1FD6);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px}
+.zalozka .velke{font-size:19px;font-weight:800}
+.zalozka .pod{font-size:12px;opacity:.88}
+.stopy{display:flex;flex-direction:column;gap:6px}
+.stopy .polozka{display:flex;align-items:center;gap:10px;background:#191330;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.stopy .polozka{position:relative;overflow:hidden}
+.stopy .polozka.zelena{background:rgba(31,223,103,.16);border-color:rgba(31,223,103,.5)}
+.stopy .pruh{position:absolute;left:0;top:0;bottom:0;background:rgba(123,85,255,.32);border-right:2px solid var(--purple)}
+.stopy .polozka>*:not(.pruh){position:relative}
+.stopy .polozka .cisilko{font-weight:800;color:var(--muted);width:22px}
+.stopy .polozka .stav{margin-left:auto;font-size:11px;color:var(--muted)}
+.ctverec{width:16px;height:16px;border-radius:4px;border:1px solid var(--line);background:#221a3d}
+.ctverec.on{background:var(--green);border-color:var(--green)}
+</style></head><body>
+
+<!-- 1: celý AudioTagger -->
+<div class="plocha" id="s1">
+
+  <div class="lista">
+    <span class="logo"><i style="height:10px"></i><i style="height:20px"></i><i style="height:14px"></i><i style="height:24px"></i><i style="height:12px"></i></span>
+    <span class="tag">AUDIOTAGGER<small>Kubánské tango</small></span>
+    <span class="pocty">Stop: 24 · Chyb: 3 · Text: rukopis.pdf</span>
+    <span class="right">
+      <span class="btn duty">Poslouchat offline</span>
+      <span class="btn duty">Posluchači</span>
+      <span class="btn duty">Na celou obrazovku</span>
+      <span class="btn">☐ Označit jako přeposlechnuté</span>
+    </span>
+  </div>
+
+  <div class="telo">
+    <div class="sloupec">
+      <p class="nadpisek">Text nahrávky</p>
+      <div class="karta" style="height:196px">
+        <p class="text" style="opacity:.92">Audiotéka uvádí audioknihu Kubánské tango v rytmu blues.<br>Napsal Eduard Freisler, čte Luboš Ondráček.</p>
+        <p class="text" style="margin-top:14px;opacity:.75">„Můžeš cítit nostalgii po tajemných a vzácných věcech, jsou ale tací, kteří se tím nechají unést. <span style="background:#5b4a9e;color:#fff;padding:1px 3px;border-radius:3px">Řada lidí prožívá sladkobolný stesk</span> po starých nesvobodných časech…"</p>
+        <p class="text" style="margin-top:12px;color:#A79FC8">strana 7 z 110</p>
+      </div>
+    </div>
+
+    <div class="sloupec" style="flex:0 0 300px">
+      <p class="nadpisek">Záznamy · Chyby (3)</p>
+      <div class="zaznam"><div class="hlava"><b>02:14</b> · stopa 01 · str. 7</div><p>Přeřek: „sladkobolný" → „sladkobolní"</p></div>
+      <div class="zaznam"><div class="hlava"><b>05:41</b> · stopa 01 · str. 9</div><p>Chybí celá věta na konci odstavce.</p></div>
+      <div class="zaznam"><div class="hlava"><b>11:03</b> · stopa 02 · str. 14</div><p>Jiné znění než v textu.</p></div>
+      <div class="radek"><span class="btn duty" style="border-color:var(--line)">Stáhnout tabulku</span></div>
+    </div>
+  </div>
+
+  <div class="prehravac">
+    <span class="play">▶</span>
+    <span class="stopa">01<small>/24</small></span>
+    <span class="cas">02:14,0 <small style="font-size:11px;color:#A79FC8">z 12:46,0</small></span>
+    <span class="rychlosti"><span>0,75×</span><span class="on">1×</span><span>1,25×</span><span>1,5×</span><span>2×</span></span>
+    <span class="right"><span class="btn duty" style="border-color:var(--line)">🔖 Pauza</span><span class="btn zeleny">+ Přidat chybu</span></span>
+  </div>
+  <div class="vlna"><span class="znacka" style="left:18%"></span><span class="znacka" style="left:44%"></span><span class="znacka" style="left:71%"></span><b style="left:18%"></b></div>
+
+  <div class="bublina" style="left:352px;top:20px">1</div>
+  <div class="bublina" style="left:916px;top:18px">2</div>
+  <div class="bublina" style="left:40px;top:120px">3</div>
+  <div class="bublina" style="left:626px;top:102px">4</div>
+  <div class="bublina" style="left:40px;top:392px">5</div>
+  <div class="bublina" style="left:906px;top:392px">6</div>
+
+  <div class="popisky">
+    <div><em>1</em><span>Kolik je stop, kolik chyb a jaký text je nahraný.</span></div>
+    <div><em>2</em><span>Až budete hotoví, odškrtnete <b>Označit jako přeposlechnuté</b>.</span></div>
+    <div><em>3</em><span>Text knihy. Označením slova myší zapíšete chybu přesně k němu.</span></div>
+    <div><em>4</em><span>Seznam chyb; <b>Stáhnout tabulku</b> ho vyexportuje.</span></div>
+    <div><em>5</em><span>Přehrávač: mezerník hraje a zastaví, šipky ←/→ posouvají o pět vteřin.</span></div>
+    <div><em>6</em><span><b>+ Přidat chybu</b> (nebo klávesa E) zapíše chybu v místě, kde právě jste.</span></div>
+  </div>
+
+</div>
+
+<!-- 2: okno zapisu chyby -->
+<div class="plocha" id="s2" style="width:820px">
+
+  <p class="nadpisek" style="margin-bottom:12px">Zápis chyby</p>
+
+  <div class="karta" style="position:relative">
+    <div class="radek" style="margin-top:0">
+      <span class="pole" style="flex:0 0 150px">Stopa <b style="color:#F4F1FF">01 SEN O PROSLAPANÝCH…</b></span>
+      <span class="pole" style="flex:0 0 110px">Čas <b style="color:#1FDF67">02:14</b></span>
+      <span class="pole" style="flex:0 0 110px">Strana <b style="color:#F4F1FF">7</b></span>
+    </div>
+    <div class="pole" style="margin-top:10px;height:78px;color:#8C84B0">Co je špatně — přeřek, chybějící věta, jiné znění než v textu…</div>
+    <div class="radek">
+      <span class="btn zeleny">Uložit chybu</span>
+      <span class="btn duty" style="border-color:var(--line)">Zrušit</span>
+      <span class="text" style="color:var(--muted);margin-left:6px">Enter uloží · Esc zavře</span>
+    </div>
+
+    <div class="bublina" style="left:-10px;top:8px">1</div>
+    <div class="bublina" style="left:-10px;top:96px">2</div>
+    <div class="bublina" style="left:-10px;top:170px">3</div>
+  </div>
+
+  <div class="popisky" style="grid-template-columns:1fr">
+    <div><em>1</em><span>Stopu, čas i stranu vyplní portál sám — podle místa, kde jste zrovna zastavili.</span></div>
+    <div><em>2</em><span>Sem napíšete, co je špatně. Jedna věta stačí; zvukař podle času a strany místo najde hned.</span></div>
+    <div><em>3</em><span>Uložit můžete i klávesou Enter, zavřít Escapem. Své záznamy jde pak upravit i smazat.</span></div>
+  </div>
+
+</div>
+
+<!-- 3: kdo bude poslouchat -->
+<div class="plocha" id="s3" style="width:760px">
+
+  <p class="nadpisek" style="margin-bottom:12px">Když odkaz otevřete poprvé</p>
+
+  <div class="karta" style="position:relative">
+    <p class="text" style="margin:0 0 4px;font-size:15px;font-weight:800">Kdo bude poslouchat?</p>
+    <p class="text" style="margin:0 0 12px;color:var(--muted)">Zadejte svůj e-mail. Podepíšou se jím vaše poznámky a dáme vám vědět, až k přeposlechu přibudou nové stopy.</p>
+    <div class="radek" style="margin-top:0">
+      <span class="pole">jan.redaktor@vydavatelstvi.cz</span>
+      <span class="pole" style="flex:0 0 200px;color:#8C84B0">Jméno · nepovinné</span>
+    </div>
+    <div class="radek">
+      <span class="btn duty" style="border-color:var(--line)">+ Přidat e-mail</span>
+      <span class="btn zeleny" style="margin-left:auto">Pokračovat k nahrávce</span>
+    </div>
+    <div class="bublina" style="left:-10px;top:74px">1</div>
+    <div class="bublina" style="left:-10px;top:132px">2</div>
+  </div>
+
+  <div class="popisky" style="grid-template-columns:1fr">
+    <div><em>1</em><span>Poslouchat může víc lidí najednou — každý se podepíše sám za sebe a poznámky se nepletou.</span></div>
+    <div><em>2</em><span>Odkaz z e-mailu funguje bez přihlašování, takže ho můžete poslat dál korektorovi.</span></div>
+  </div>
+
+</div>
+
+<!-- 4: pauza se zalozkou a probarvene stopy -->
+<div class="plocha" id="s4" style="width:820px">
+
+  <p class="nadpisek" style="margin-bottom:12px">Kde jste skončili</p>
+
+  <div class="zalozka" style="position:relative;margin-left:32px">
+    <span style="font-size:26px">🔖</span>
+    <span>
+      <span class="velke">Stopa 07 · 04:38</span>
+      <span class="pod" style="display:block">Tady jste přestali poslouchat.</span>
+    </span>
+    <span class="right"><span class="btn">Pokračovat odtud</span></span>
+    <div class="bublina" style="left:-36px;top:16px">1</div>
+  </div>
+
+  <div class="stopy" style="margin-top:14px;position:relative;margin-left:32px">
+    <div class="polozka"><span class="pruh" style="width:62%"></span><span class="cisilko">06</span><span class="ctverec"></span><span>Sen o proslapaných botách</span><span class="stav">62 %</span></div>
+    <div class="polozka zelena"><span class="cisilko">07</span><span class="ctverec"></span><span>Tango v rytmu blues</span><span class="stav">✓ poslechnuto</span></div>
+    <div class="polozka"><span class="cisilko">08</span><span class="ctverec on"></span><span>Vítr od moře</span><span class="stav">hotová stopa</span></div>
+    <div class="bublina" style="left:-36px;top:6px">2</div>
+    <div class="bublina" style="left:-36px;top:44px">3</div>
+    <div class="bublina" style="left:-36px;top:84px">4</div>
+  </div>
+
+  <div class="popisky" style="grid-template-columns:1fr">
+    <div><em>1</em><span><b>🔖 Pauza</b> zamkne přeposlech a založí místo, kde jste skončili. <b>Pokračovat odtud</b> vás tam vrátí.</span></div>
+    <div><em>2</em><span>Fialově je probarvené to, co už máte doposlechnuté — počítá se jen skutečné přehrávání.</span></div>
+    <div><em>3</em><span>Celá zelená stopa dohrála do konce. To si portál zapíše sám.</span></div>
+    <div><em>4</em><span><b>Hotovou stopu</b> zaškrtnete vy sami, až ji máte odbytou i s poznámkami.</span></div>
+  </div>
+
+</div>
+
+</body></html>
