@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { CompanyForm } from './CompanyForm';
 import { NotifikaceFirmyPanel } from './NotifikaceFirmyPanel';
+import { PriraditKlientaPanel } from './PriraditKlientaPanel';
 import { ROLE_LABELS } from '@/lib/roles';
 
 // Uzivatele se od 5. 9. 2026 zakladaji a edituji centralne na /admin/users
@@ -94,7 +95,17 @@ export default async function CompanyDetailPage({
       {/* Dodavatel nema pod sebou zadne uzivatelske ucty - to maji jen
           klientske firmy (viz COMPANY_ROLES v lib/roles.ts). */}
       {jeKlient && zvolena === 'ucty' && (
-        <div>
+        <div className="flex flex-col gap-6">
+          {/* Kontakt ke vsem zakazkam firmy (24. 9. 2026) - potichu, bez
+              notifikaci a bez zapisu do historie projektu. */}
+          <PriraditKlientaPanel
+            companyId={company.id}
+            ucty={company.users
+              .filter((u) => u.role === 'CLIENT')
+              .map((u) => ({ id: u.id, label: u.name ? `${u.name} (${u.email})` : u.email }))}
+          />
+
+          <div>
           <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Přihlašovací účty</h2>
             <Link href={`/admin/users?companyId=${company.id}`} className="text-brand-purple text-sm font-heading font-semibold">
@@ -139,6 +150,7 @@ export default async function CompanyDetailPage({
                 </tbody>
               </table>
             </div>
+          </div>
           </div>
         </div>
       )}
