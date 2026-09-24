@@ -3,7 +3,7 @@ import { posliPush } from '@/lib/pushServer';
 import { nactiPorady } from '@/lib/poradyServer';
 import { minutesInZone, minutesToTime, utcParts, zonedToUtc } from '@/lib/calendar';
 import { INTERNAL_ROLES } from '@/lib/roles';
-import { oznacRezii } from '@/lib/rezieOnlineServer';
+import { najdiPrvniFrekvence, oznacRezii } from '@/lib/rezieOnlineServer';
 
 /**
  * PŘEHLED DNE (zadání 23. 9. 2026: „chtěl bych, aby mi Bruno
@@ -114,6 +114,10 @@ export type PrehledDneData = {
     detail: string | null;
     studio: string | null;
     rezie: boolean;
+    /** Projekt události - okno si k němu umí doptat pár vět o knize. */
+    projektId: string | null;
+    /** První frekvence s hercem (24. 9. 2026) - jen u ní se briefing nabízí. */
+    prvniFrekvence: boolean;
   }[];
   ukoly: { text: string; cas: string | null }[];
   /**
@@ -169,6 +173,8 @@ export async function prehledDneData(userId: string, kdy: Date): Promise<Prehled
       detail: u.detail,
       studio: u.studio,
       rezie: u.rezie,
+      projektId: u.druh === 'NATACENI' ? u.projektId : null,
+      prvniFrekvence: u.druh === 'NATACENI' && u.prvniFrekvence,
     })),
     ukoly: ukoly.map((u) => ({ text: u.title, cas: u.dueTime || null })),
     vseZaSebou: jeste.length === 0 && udalosti.length > 0,
@@ -209,6 +215,15 @@ export type UdalostCloveka = {
   studio: string | null;
   /** Červený rámeček a telefon - první frekvence s hercem a castingy. */
   rezie: boolean;
+  /** ID projektu, kterého se událost týká (natáčení a střihy). */
+  projektId: string | null;
+  /**
+   * PRVNÍ FREKVENCE dvojice projekt + herec (24. 9. 2026). Podle toho okno
+   * „Co mě dnes čeká" nabídne pár vět o tom, o čem ta kniha je - viz
+   * lib/oCemJeServer.ts. Není to totéž co `rezie`: tam rozhodují i ruční
+   * výjimky a castingy.
+   */
+  prvniFrekvence: boolean;
 };
 
 /**
@@ -282,6 +297,27 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
       ]).catch(() => new Set<string>())
     : new Set<string>();
 
+  /**
+   * PRVNÍ FREKVENCE (24. 9. 2026) se počítá vždycky, ne jen u režie na dálku -
+   * shrnutí knihy chce před první frekvencí i zvukař, který na režii nechodí.
+   */
+  const prvniIds = await najdiPrvniFrekvence([
+    ...sloty.map((s) => ({
+      id: s.id,
+      caflouProjectId: s.request.caflouProjectId,
+      actorUserId: s.request.actorUserId,
+      actorName: s.request.actorName,
+    })),
+    ...bloky
+      .filter((b) => b.kind === 'NATACENI')
+      .map((b) => ({
+        id: b.id,
+        caflouProjectId: b.caflouProjectId,
+        actorUserId: b.actorUserId,
+        actorName: b.actorName,
+      })),
+  ]).catch(() => new Set<string>());
+
   const mojeSloty = sloty.filter(
     (s) => !clovek?.rezieNaDalku || sRezii.has(s.id) || s.zvukarUserId === userId || s.request.actorUserId === userId,
   );
@@ -306,6 +342,8 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
       detail: s.request.actorName,
       studio: s.studio.shortName,
       rezie: sRezii.has(s.id),
+      projektId: s.request.caflouProjectId ?? null,
+      prvniFrekvence: prvniIds.has(s.id),
     })),
     ...mojeBloky.map((b) => ({
       klic: `blok:${b.id}`,
@@ -318,6 +356,8 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
       detail: b.actorName ?? null,
       studio: b.studio.shortName,
       rezie: sRezii.has(b.id),
+      projektId: b.caflouProjectId ?? null,
+      prvniFrekvence: prvniIds.has(b.id),
     })),
     ...porady.map((p) => ({
       klic: `porada:${p.poradaId}:${p.den}`,
@@ -330,6 +370,8 @@ export async function udalostiCloveka(userId: string, od: Date, doKdy: Date): Pr
       detail: p.ucastnici.map((u) => u.label).join(', ') || null,
       studio: null,
       rezie: false,
+      projektId: null,
+      prvniFrekvence: false,
     })),
   ].sort((a, b) => a.start.getTime() - b.start.getTime());
 

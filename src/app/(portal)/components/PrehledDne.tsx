@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { KresbaIkony } from '@/lib/ikonyTypu';
+import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 import { UDALOST_PREHLED_DNE } from '@/lib/quickActions';
 
 /**
@@ -35,6 +36,10 @@ type Udalost = {
   detail: string | null;
   studio: string | null;
   rezie: boolean;
+  /** Projekt události - u první frekvence se k němu doptáme na obsah knihy. */
+  projektId?: string | null;
+  /** První frekvence s hercem (24. 9. 2026). */
+  prvniFrekvence?: boolean;
 };
 
 type Data = {
@@ -56,6 +61,133 @@ const PODLE_DRUHU: Record<Druh, { ikona: string; barva: string; popis: string }>
 };
 
 const BARVA_REZIE = '#ef4444';
+
+
+/**
+ * O ČEM TA KNIHA JE (zadání 24. 9. 2026: „když se ta má událost v přehledu na
+ * dnešek bude týkat první frekvence natáčení audioknihy, tak by mohl Bruno
+ * projít text a dát mi alespoň základní info v pár větách, o čem ten příběh
+ * je").
+ *
+ * Ukazuje se jen u PRVNÍ frekvence s hercem - tam člověk jde do studia
+ * k látce, kterou nečetl. U druhé a další už ji zná a řádek navíc by jen
+ * zabíral místo.
+ *
+ * TEXT SE ČTE TADY V PROHLÍŽEČI. Režijní edit je PDF na Disku a portál umí
+ * PDF číst jen přes pdf.js (lib/pdfJs.ts). Vytáhne se z něj ukázka - začátek
+ * a dva kusy z dalších míst - a ta se pošle Brunovi. Hotové shrnutí si server
+ * uloží k projektu, takže tohle celé proběhne jednou za knihu; podruhé se
+ * rovnou vrátí uložený text.
+ */
+function OCemJe({ projekt }: { projekt: string }) {
+  const [text, setText] = useState<string | null>(null);
+  const [stav, setStav] = useState<'nacitam' | 'ctu' | 'hotovo' | 'nic'>('nacitam');
+
+  useEffect(() => {
+    let platne = true;
+
+    /** Ukázka z PDF: začátek knihy a dva kusy dál, ať je vidět i děj. */
+    async function ukazkaZPdf(souborId: string): Promise<string | null> {
+      try {
+        const pdfjs = await nactiPdfJs();
+        await nastavPdfWorker(pdfjs);
+        const adresa = `/api/projekty/${encodeURIComponent(projekt)}/preposlech/soubor?soubor=${encodeURIComponent(souborId)}`;
+        const doc = await pdfjs.getDocument({ url: adresa }).promise;
+        const stran: number = doc.numPages;
+
+        const chci = new Set<number>();
+        for (let i = 1; i <= Math.min(14, stran); i++) chci.add(i);
+        for (const podil of [0.4, 0.7]) {
+          const od = Math.max(1, Math.round(stran * podil));
+          for (let i = od; i < od + 6 && i <= stran; i++) chci.add(i);
+        }
+
+        const kusy: string[] = [];
+        for (const cislo of [...chci].sort((a, b) => a - b)) {
+          const strana = await doc.getPage(cislo);
+          const obsah = await strana.getTextContent();
+          kusy.push(
+            (obsah.items as { str?: string }[])
+              .map((i) => i.str ?? '')
+              .join(' ')
+              .replace(/\s+/g, ' ')
+              .trim(),
+          );
+          if (kusy.join(' ').length > 60_000) break;
+        }
+        await doc.destroy?.();
+        const text = kusy.filter(Boolean).join('\n\n').slice(0, 60_000);
+        return text.length > 500 ? text : null;
+      } catch {
+        return null;
+      }
+    }
+
+    (async () => {
+      try {
+        const odpoved = await fetch(`/api/projekty/${encodeURIComponent(projekt)}/o-cem-je`);
+        if (!odpoved.ok) throw new Error('nejde');
+        const data = (await odpoved.json()) as { text?: string | null; textId?: string | null; nazev?: string | null };
+        if (!platne) return;
+
+        if (data.text) {
+          setText(data.text);
+          setStav('hotovo');
+        }
+        // Uložené shrnutí sedí na ten text, co je ve složce - nic dalšího.
+        if (!data.textId) {
+          if (!data.text) setStav('nic');
+          return;
+        }
+
+        if (!data.text) setStav('ctu');
+        const ukazka = await ukazkaZPdf(data.textId);
+        if (!platne) return;
+        if (!ukazka) {
+          if (!data.text) setStav('nic');
+          return;
+        }
+
+        const napsano = await fetch(`/api/projekty/${encodeURIComponent(projekt)}/o-cem-je`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ukazka, zdroj: data.nazev ?? '' }),
+        });
+        const vysledek = (await napsano.json().catch(() => ({}))) as { text?: string | null };
+        if (!platne) return;
+        if (vysledek.text) {
+          setText(vysledek.text);
+          setStav('hotovo');
+        } else if (!data.text) {
+          setStav('nic');
+        }
+      } catch {
+        if (platne) setStav((p) => (p === 'hotovo' ? p : 'nic'));
+      }
+    })();
+
+    return () => {
+      platne = false;
+    };
+  }, [projekt]);
+
+  if (stav === 'nic') return null;
+
+  return (
+    <div className="mt-1.5 rounded-lg border border-line bg-surface/70 px-3 py-2.5">
+      <p className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted m-0 mb-1">
+        První frekvence · o čem to je
+      </p>
+      {text ? (
+        <p className="text-xs font-body text-ink m-0 whitespace-pre-line leading-relaxed">{text}</p>
+      ) : (
+        <p className="text-xs font-body text-muted m-0">
+          {stav === 'ctu' ? 'Bruno čte rukopis…' : 'Dívám se, jestli je text k dispozici…'}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function PrehledDne() {
   const [data, setData] = useState<Data | null>(null);
@@ -170,8 +302,8 @@ export function PrehledDne() {
                 const vzhled = PODLE_DRUHU[u.druh] ?? PODLE_DRUHU.JINE;
                 const barva = u.rezie ? BARVA_REZIE : vzhled.barva;
                 return (
+                  <div key={`${u.cas}-${i}`}>
                   <div
-                    key={`${u.cas}-${i}`}
                     className="flex items-center gap-3 rounded-lg border px-3 py-2.5"
                     style={{ borderColor: `${barva}55`, backgroundColor: `${barva}14` }}
                   >
@@ -202,6 +334,10 @@ export function PrehledDne() {
                         {u.studio}
                       </span>
                     )}
+                  </div>
+
+                  {/* Briefing před první frekvencí (24. 9. 2026). */}
+                  {u.prvniFrekvence && u.projektId && <OCemJe projekt={u.projektId} />}
                   </div>
                 );
               })}

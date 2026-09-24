@@ -32,15 +32,36 @@ export type UdalostProRezii = {
 export async function oznacRezii(udalosti: UdalostProRezii[]): Promise<Set<string>> {
   const vysledek = new Set<string>();
 
-  const projekty = new Set<string>();
   for (const u of udalosti) {
     if (u.rezieOnline === true) vysledek.add(u.id);
     if (u.rezieOnline === null && u.vzdy) vysledek.add(u.id);
+  }
+
+  const prvniIds = await najdiPrvniFrekvence(udalosti);
+  for (const u of udalosti) {
+    if (u.rezieOnline !== null) continue; // ruční výjimka rozhodla výš
+    if (prvniIds.has(u.id)) vysledek.add(u.id);
+  }
+  return vysledek;
+}
+
+/**
+ * KTERÁ Z PŘEDANÝCH UDÁLOSTÍ JE PRVNÍ FREKVENCE dvojice projekt + herec.
+ *
+ * Bez ohledu na ruční výjimky u režie na dálku - tohle je holý fakt o pořadí,
+ * a ptá se na něj i přehled dne (24. 9. 2026: shrnutí knihy před první
+ * frekvencí). Hledá se přes celou historii, ne jen přes předaný rozsah.
+ */
+export async function najdiPrvniFrekvence(
+  udalosti: { id: string; caflouProjectId: string | null; actorUserId: string | null; actorName: string | null }[],
+): Promise<Set<string>> {
+  const projekty = new Set<string>();
+  for (const u of udalosti) {
     if (klicRezie(u.caflouProjectId, u.actorUserId, u.actorName)) {
       projekty.add((u.caflouProjectId ?? '').trim());
     }
   }
-  if (projekty.size === 0) return vysledek;
+  if (projekty.size === 0) return new Set<string>();
 
   const seznam = [...projekty];
   const [sloty, bloky] = await Promise.all([
@@ -80,10 +101,5 @@ export async function oznacRezii(udalosti: UdalostProRezii[]): Promise<Set<strin
     zvaz(b.id, b.start, klicRezie(b.caflouProjectId, b.actorUserId, b.actorName));
   }
 
-  const prvniIds = new Set([...prvni.values()].map((p) => p.id));
-  for (const u of udalosti) {
-    if (u.rezieOnline !== null) continue; // ruční výjimka rozhodla výš
-    if (prvniIds.has(u.id)) vysledek.add(u.id);
-  }
-  return vysledek;
+  return new Set([...prvni.values()].map((p) => p.id));
 }

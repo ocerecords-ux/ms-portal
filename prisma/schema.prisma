@@ -610,6 +610,20 @@ model ProjectMeta {
   klient          User?            @relation("ProjektKlient", fields: [klientUserId], references: [id])
   klientName      String?
 
+  /// O ČEM TA KNIHA JE (zadání 24. 9. 2026: „když se ta má událost v přehledu
+  /// na dnešek bude týkat první frekvence natáčení audioknihy, tak by mohl
+  /// Bruno projít text a dát mi alespoň základní info v pár větách, o čem ten
+  /// příběh je").
+  ///
+  /// Pár vět, které Bruno napsal z ukázky režijního editu. Drží se u projektu,
+  /// protože se to počítá jednou a pak to čte kdokoliv z týmu - z knihy o třech
+  /// stech stranách se shrnutí nedělá při každém otevření okna.
+  oCemJe       String?   @db.Text
+  /// Název PDF, ze kterého se shrnutí psalo - podle něj se pozná, že přišel
+  /// nový režijní edit a shrnutí se má udělat znovu.
+  oCemJeZdroj  String?
+  oCemJeAt     DateTime?
+
   /// Rodný list reklamního spotu (zadání 9. 9. 2026) - údaje, ze kterých se
   /// PDF vyrábí. Vedou se u projektu, do kódu se nic nepíše natvrdo.
   /// Název spotu je nepovinný; když chybí, použije se název projektu z Caflou.
