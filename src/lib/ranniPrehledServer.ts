@@ -116,8 +116,25 @@ export type PrehledDneData = {
     rezie: boolean;
   }[];
   ukoly: { text: string; cas: string | null }[];
+  /**
+   * Dnes něco bylo, ale všechno už to skončilo (24. 9. 2026). Okno podle toho
+   * napíše „dnešek máte za sebou" místo „nic vašeho nemám" - to druhé by po
+   * odpoledni v kalendáři plném natáčení znělo jako chyba.
+   */
+  vseZaSebou?: boolean;
 };
 
+/**
+ * CO UŽ PROBĚHLO, SE NEUKAZUJE (zadání 24. 9. 2026: „v tom mém přehledu
+ * událostí na dnešek by neměly už být události, které už proběhly").
+ *
+ * Přehled se otevírá i uprostřed dne z levého panelu a má odpovídat na
+ * „co mě ještě čeká", ne vypisovat ráno. Událost zmizí, až doopravdy skončí -
+ * rozjeté natáčení v seznamu zůstává, dokud se z něj nevyjde.
+ *
+ * Ranního přehledu (e-mail i vyskakovací okno v sedm) se to prakticky
+ * netýká - v tu hodinu ještě nic neskončilo.
+ */
 export async function prehledDneData(userId: string, kdy: Date): Promise<PrehledDneData> {
   const p = utcParts(kdy, PASMO);
   const od = zonedToUtc(p.year, p.month, p.day, 0, PASMO);
@@ -141,9 +158,11 @@ export async function prehledDneData(userId: string, kdy: Date): Promise<Prehled
     month: 'numeric',
   }).format(od);
 
+  const jeste = udalosti.filter((u) => u.end > kdy);
+
   return {
     den: `${datum[0].toLocaleUpperCase('cs')}${datum.slice(1)}`,
-    udalosti: udalosti.map((u) => ({
+    udalosti: jeste.map((u) => ({
       cas: u.cas,
       druh: u.druh,
       nazev: u.nazev,
@@ -152,6 +171,7 @@ export async function prehledDneData(userId: string, kdy: Date): Promise<Prehled
       rezie: u.rezie,
     })),
     ukoly: ukoly.map((u) => ({ text: u.title, cas: u.dueTime || null })),
+    vseZaSebou: jeste.length === 0 && udalosti.length > 0,
   };
 }
 

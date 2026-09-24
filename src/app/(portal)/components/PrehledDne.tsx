@@ -37,7 +37,13 @@ type Udalost = {
   rezie: boolean;
 };
 
-type Data = { den: string; udalosti: Udalost[]; ukoly: { text: string; cas: string | null }[] };
+type Data = {
+  den: string;
+  udalosti: Udalost[];
+  ukoly: { text: string; cas: string | null }[];
+  /** Dnes něco bylo, ale je to všechno za námi (24. 9. 2026). */
+  vseZaSebou?: boolean;
+};
 
 /** Ikona a barva podle druhu - ikony jsou tytéž jako v kalendáři. */
 const PODLE_DRUHU: Record<Druh, { ikona: string; barva: string; popis: string }> = {
@@ -65,7 +71,7 @@ export function PrehledDne() {
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (platne && d?.ukazat && typeof d.den === 'string') {
-            setData({ den: d.den, udalosti: d.udalosti ?? [], ukoly: d.ukoly ?? [] });
+            setData({ den: d.den, udalosti: d.udalosti ?? [], ukoly: d.ukoly ?? [], vseZaSebou: d.vseZaSebou === true });
           }
         })
         .catch(() => undefined);
@@ -86,7 +92,7 @@ export function PrehledDne() {
           if (!platne || !d?.ukazat || typeof d.den !== 'string') return;
           setRucne(true);
           setZavirame(false);
-          setData({ den: d.den, udalosti: d.udalosti ?? [], ukoly: d.ukoly ?? [] });
+          setData({ den: d.den, udalosti: d.udalosti ?? [], ukoly: d.ukoly ?? [], vseZaSebou: d.vseZaSebou === true });
         })
         .catch(() => undefined);
     };
@@ -153,7 +159,11 @@ export function PrehledDne() {
 
         <div className="px-5 sm:px-6 py-4 flex flex-col gap-4">
           {data.udalosti.length === 0 ? (
-            <p className="text-sm font-body text-muted m-0">V kalendáři dnes nic vašeho nemám.</p>
+            <p className="text-sm font-body text-muted m-0">
+              {data.vseZaSebou
+                ? 'Dnešek už máte za sebou — v kalendáři vás dnes nic dalšího nečeká.'
+                : 'V kalendáři dnes nic vašeho nemám.'}
+            </p>
           ) : (
             <div className="flex flex-col gap-2">
               {data.udalosti.map((u, i) => {
