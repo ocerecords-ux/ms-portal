@@ -82,6 +82,15 @@ const BARVA_REZIE = '#ef4444';
 function OCemJe({ projekt }: { projekt: string }) {
   const [text, setText] = useState<string | null>(null);
   const [stav, setStav] = useState<'nacitam' | 'ctu' | 'hotovo' | 'nic'>('nacitam');
+  /**
+   * ZAVŘENÉ, DOKUD SI O TO ČLOVĚK NEŘEKNE (upřesnění 24. 9. 2026: „bylo by
+   * dobré tam mít nějaké tlačítko, kterým ten dlouhý text zavřu a otevřu.
+   * Primárně by to mělo být zavřené").
+   *
+   * Přehled dne má být na jedno kouknutí; pět vět o knize je příprava na
+   * natáčení, ne to, co člověk potřebuje vidět hned po ránu.
+   */
+  const [otevreno, setOtevreno] = useState(false);
 
   useEffect(() => {
     let platne = true;
@@ -174,15 +183,34 @@ function OCemJe({ projekt }: { projekt: string }) {
   if (stav === 'nic') return null;
 
   return (
-    <div className="mt-1.5 rounded-lg border border-line bg-surface/70 px-3 py-2.5">
-      <p className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted m-0 mb-1">
-        První frekvence · o čem to je
-      </p>
-      {text ? (
-        <p className="text-xs font-body text-ink m-0 whitespace-pre-line leading-relaxed">{text}</p>
-      ) : (
-        <p className="text-xs font-body text-muted m-0">
-          {stav === 'ctu' ? 'Bruno čte rukopis…' : 'Dívám se, jestli je text k dispozici…'}
+    <div className="mt-1.5 rounded-lg border border-line bg-surface/70">
+      <button
+        type="button"
+        onClick={() => setOtevreno((v) => !v)}
+        disabled={!text}
+        aria-expanded={otevreno && Boolean(text)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left disabled:cursor-default"
+      >
+        <span className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted">
+          První frekvence · o čem to je
+        </span>
+        {text ? (
+          <span className="ml-auto flex items-center gap-1.5 text-[11px] font-heading font-semibold text-brand-purple">
+            {otevreno ? 'Skrýt' : 'Přečíst'}
+            <span aria-hidden="true" className={`transition-transform ${otevreno ? 'rotate-180' : ''}`}>
+              ⌄
+            </span>
+          </span>
+        ) : (
+          <span className="ml-auto text-[11px] font-body text-muted">
+            {stav === 'ctu' ? 'Bruno čte rukopis…' : 'hledám text…'}
+          </span>
+        )}
+      </button>
+
+      {otevreno && text && (
+        <p className="text-xs font-body text-ink m-0 px-3 pb-2.5 whitespace-pre-line leading-relaxed">
+          {text}
         </p>
       )}
     </div>
