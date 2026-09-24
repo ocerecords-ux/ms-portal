@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminGuard';
+import { smiSpustitUlohu } from '@/lib/cronGuard';
 import { posliRanniPrehledy } from '@/lib/ranniPrehledServer';
 
 /**
@@ -14,14 +15,8 @@ import { posliRanniPrehledy } from '@/lib/ranniPrehledServer';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-async function smiSem(req: NextRequest): Promise<boolean> {
-  const tajemstvi = process.env.CRON_SECRET;
-  if (tajemstvi && req.headers.get('authorization') === `Bearer ${tajemstvi}`) return true;
-  return Boolean(await requireAdmin());
-}
-
 async function spust(req: NextRequest) {
-  if (!(await smiSem(req))) {
+  if (!(await smiSpustitUlohu(req))) {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   }
   try {

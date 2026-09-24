@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { minutesInZone, minutesToTime } from '@/lib/calendar';
 import { udalostiCloveka } from '@/lib/ranniPrehledServer';
 import { canViewCalendar } from '@/lib/roles';
+import { DNU_KONFLIKTU } from '@/lib/konflikty';
 import { bezTitulu } from '@/lib/jmena';
 import type { Role } from '@prisma/client';
 
@@ -371,7 +372,11 @@ export async function najdiKonflikty(
  * ať to není pokaždé měsíc kalendáře. Delší dohled ukáže štítek v kalendáři,
  * který počítá zobrazený rozsah.
  */
-export async function pocetKonfliktu(userId: string, role: Role | string, dnu = 14): Promise<number> {
+export async function pocetKonfliktu(
+  userId: string,
+  role: Role | string,
+  dnu = DNU_KONFLIKTU,
+): Promise<number> {
   try {
     const ted = new Date();
     const doKdy = new Date(ted.getTime() + dnu * 24 * 3600_000);

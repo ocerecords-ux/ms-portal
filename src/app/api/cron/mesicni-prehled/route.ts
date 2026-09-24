@@ -14,10 +14,9 @@ import {
  * kdy jim to chodí"). Od toho dne dál se zkouší každý den - kdyby úloha jeden
  * den neproběhla, přehled odejde další den; co už odešlo, se neopakuje.
  *
- * KDO SEM SMÍ: úloha z Vercelu (nese `Authorization: Bearer CRON_SECRET`),
- * nebo přihlášené Žůžo-labůžo, když chce rozeslání spustit ručně. Když
- * CRON_SECRET nastavený není, pustí se jen ruční spuštění — otevřená adresa,
- * která rozesílá maily, je zbytečná díra.
+ * KDO SEM SMÍ: úloha z Vercelu (nese `Authorization: Bearer CRON_SECRET`,
+ * a když tajemství v prostředí není, pozná se podle hlavičky `x-vercel-cron`
+ * — viz lib/cronGuard.ts), nebo přihlášené Žůžo-labůžo ručně.
  *
  * `?mesic=2026-08` dovolí doslat přehled za starší měsíc; bez něj se bere
  * měsíc minulý. Co už jednou odešlo, se neopakuje.
@@ -28,7 +27,12 @@ export const maxDuration = 60;
 /** 'cron' = úloha z Vercelu, 'admin' = ruční spuštění, null = nikdo. */
 async function kdoVola(req: NextRequest): Promise<'cron' | 'admin' | null> {
   const tajemstvi = process.env.CRON_SECRET;
-  if (tajemstvi && req.headers.get('authorization') === `Bearer ${tajemstvi}`) return 'cron';
+  if (tajemstvi) {
+    if (req.headers.get('authorization') === `Bearer ${tajemstvi}`) return 'cron';
+  } else if (req.headers.get('x-vercel-cron')) {
+    // Zachranna brzda, kdyz tajemstvi v prostredi neni - viz lib/cronGuard.ts.
+    return 'cron';
+  }
   return (await requireAdmin()) ? 'admin' : null;
 }
 

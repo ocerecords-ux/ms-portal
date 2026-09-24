@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/adminGuard';
+import { smiSpustitUlohu } from '@/lib/cronGuard';
 import { zkontrolujClanky } from '@/lib/wikipedieServer';
 
 /**
@@ -9,14 +9,8 @@ import { zkontrolujClanky } from '@/lib/wikipedieServer';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-async function smiSem(req: NextRequest): Promise<boolean> {
-  const tajemstvi = process.env.CRON_SECRET;
-  if (tajemstvi && req.headers.get('authorization') === `Bearer ${tajemstvi}`) return true;
-  return Boolean(await requireAdmin());
-}
-
 async function spust(req: NextRequest) {
-  if (!(await smiSem(req))) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+  if (!(await smiSpustitUlohu(req))) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   try {
     return NextResponse.json({ ok: true, ...(await zkontrolujClanky()) });
   } catch (err) {

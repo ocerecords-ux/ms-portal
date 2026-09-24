@@ -851,11 +851,9 @@ export function CalendarBrowser({
               nástroje nad nimi. */}
           <div className="flex items-center gap-2">
             <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
-            <Konflikty
-              od={days[0]?.startIso ?? anchorIso}
-              doKdy={days[days.length - 1]?.endIso ?? days[0]?.startIso ?? anchorIso}
-              naDen={(den) => prejdi({ datum: den, pohled: 'den' })}
-            />
+            {/* Panel se ptá na stejný úsek jako kolečko v liště (14 dní),
+                ne na to, co je zrovna vidět - viz Konflikty.tsx. */}
+            <Konflikty naDen={(den) => prejdi({ datum: den, pohled: 'den' })} />
             <HistorieKalendare naDen={(den) => prejdi({ datum: den, pohled: 'den' })} />
           </div>
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">{nadpis}</p>

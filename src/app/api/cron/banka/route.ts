@@ -14,7 +14,13 @@ export const maxDuration = 300;
 
 async function smiSem(req: NextRequest): Promise<boolean> {
   const tajemstvi = process.env.CRON_SECRET;
-  if (tajemstvi && req.headers.get('authorization') === `Bearer ${tajemstvi}`) return true;
+  if (tajemstvi) {
+    if (req.headers.get('authorization') === `Bearer ${tajemstvi}`) return true;
+  } else if (req.headers.get('x-vercel-cron')) {
+    // Zachranna brzda, kdyz tajemstvi v prostredi neni - viz lib/cronGuard.ts
+    // (oprava 24. 9. 2026: vsechny ulohy vracely 403 a nikdo o tom nevedel).
+    return true;
+  }
   // Rucne to smi pustit jen ten, kdo na banku vubec vidi (17. 9. 2026).
   return smiDoBanky();
 }

@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DNU_KONFLIKTU, rozsahKonfliktu } from '@/lib/konflikty';
 
 /**
  * ZNAK KONFLIKTŮ V KALENDÁŘI (zadání 23. 9. 2026: „měl by se objevit nějaký
@@ -40,16 +41,24 @@ type Skryty = { klic: string; druh: string; popis: string; kdo: string; kdy: str
 const BARVA = '#f97316';
 
 export function Konflikty({
-  od,
-  doKdy,
   naDen,
 }: {
-  /** Rozsah, který je zrovna v kalendáři vidět (ISO). */
-  od: string;
-  doKdy: string;
   /** Skok na den konfliktu. */
   naDen: (den: string) => void;
 }) {
+  /**
+   * STEJNÝ ÚSEK JAKO KOLEČKO V LIŠTĚ (oprava 24. 9. 2026: „proč mu tam svítí
+   * ta tečka u kalendáře, když tam nic není").
+   *
+   * Do teď se panel ptal na to, co bylo zrovna v kalendáři vidět - kdo měl
+   * otevřený dnešek a konflikt až za týden, viděl svítit tečku a po
+   * rozkliknutí prázdno. Teď se obojí ptá na čtrnáct dní dopředu, takže co
+   * svítí, je i v seznamu; na den konfliktu se skočí klepnutím na řádek.
+   */
+  const { od, doKdy } = useMemo(() => {
+    const r = rozsahKonfliktu();
+    return { od: r.od.toISOString(), doKdy: r.doKdy.toISOString() };
+  }, []);
   const [moje, setMoje] = useState<Konflikt[]>([]);
   const [provoz, setProvoz] = useState<Konflikt[]>([]);
   const [skryte, setSkryte] = useState<Skryty[]>([]);
@@ -199,6 +208,9 @@ export function Konflikty({
 
       {otevreno && (
         <span className="absolute left-0 top-full mt-2 z-40 w-[min(92vw,420px)] max-h-[60vh] overflow-y-auto rounded-card border border-line bg-surface shadow-lg p-3 flex flex-col gap-3">
+          <span className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted">
+            Nejbližších {DNU_KONFLIKTU} dní
+          </span>
           {moje.length > 0 && (
             <span className="flex flex-col gap-1.5">
               <span className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted">
