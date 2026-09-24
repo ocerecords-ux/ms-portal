@@ -496,9 +496,33 @@ export type ProjectSort = { key: ProjectSortKey; dir: 'asc' | 'desc' };
 
 const PRIORITY_RANK: Record<ProjectPriority, number> = { LOW: 1, MEDIUM: 2, HIGH: 3 };
 
-/** Porovnani dvou projektu podle zvoleneho sloupce. Prazdne hodnoty konci vzdy dole. */
-export function compareProjects(a: InternalProject, b: InternalProject, sort: ProjectSort): number {
+/**
+ * Porovnani dvou projektu podle zvoleneho sloupce. Prazdne hodnoty konci vzdy dole.
+ *
+ * STAV SE NERADI ABECEDNE (zadání 24. 9. 2026: „potřebuju, abych si mohl
+ * uspořádat projekty v přehledu podle stavu, ale abychom mohli ovlivnit
+ * pořadí, jaký stav bude na jakém místě"). Řadí se podle `poradiStavu` -
+ * seznamu názvů v pořadí, které si tým nastavil (viz lib/poradiStavuServer.ts).
+ * Stav, který v seznamu není (starý z Caflou), jde na konec a mezi sebou se
+ * takové řadí abecedně.
+ */
+export function compareProjects(
+  a: InternalProject,
+  b: InternalProject,
+  sort: ProjectSort,
+  poradiStavu?: Map<string, number>,
+): number {
   const dir = sort.dir === 'asc' ? 1 : -1;
+
+  if (sort.key === 'statusName' && poradiStavu && poradiStavu.size > 0) {
+    const stav = (p: InternalProject) => (p.statusName ?? '').trim();
+    const index = (nazev: string) => poradiStavu.get(nazev) ?? Number.MAX_SAFE_INTEGER;
+    const ai = index(stav(a));
+    const bi = index(stav(b));
+    if (ai !== bi) return dir * (ai - bi);
+    // Dva neznámé stavy (nebo prázdné) srovná aspoň abeceda.
+    return dir * stav(a).localeCompare(stav(b), 'cs');
+  }
 
   const numeric = (p: InternalProject): number | null => {
     if (sort.key === 'pageCount') return p.pageCount;

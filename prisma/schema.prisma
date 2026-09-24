@@ -3487,6 +3487,23 @@ model SkrytyKonflikt {
   @@index([createdAt])
 }
 
+/// POŘADÍ STAVŮ V PŘEHLEDU PROJEKTŮ (zadání 24. 9. 2026: „potřebuju, abych si
+/// mohl uspořádat projekty v přehledu podle stavu, ale abychom mohli ovlivnit
+/// pořadí, jaký stav bude na jakém místě").
+///
+/// Týká se JEN ŘAZENÍ V TABULCE. Cesta projektu (pořadí stavů v nabídce a to,
+/// co znamená „odevzdáno") zůstává v kódu - viz lib/stavyProjektu.ts; kdyby
+/// se řídila tímhle, znamenalo by přetažení stavu v přehledu i změnu logiky.
+///
+/// Platí pro celý tým, ne pro jednoho člověka: přehled je společná tabulka
+/// a dva lidi u jednoho monitoru mají vidět totéž.
+model PoradiStavu {
+  id        String   @id @default(cuid())
+  nazev     String   @unique
+  poradi    Int
+  updatedAt DateTime @updatedAt
+}
+
 model KalendarZmena {
   id        String   @id @default(cuid())
   /// SLOT (frekvence z nabidky) | BLOK | PORADA | SCHUZKA | MIMO

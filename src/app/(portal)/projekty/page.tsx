@@ -12,6 +12,7 @@ import { jeVPriprave } from '@/lib/stavyProjektu';
 import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
+import { nactiPoradiStavu } from '@/lib/poradiStavuServer';
 import { NovyProjektForm } from './NovyProjektForm';
 import { HerecProjekty } from './HerecProjekty';
 import { listProjectTypeOptions, listRodnyListProjectTypes, mapaIkonTypu, nazevTypuAudioknihy } from '@/lib/priceList';
@@ -280,6 +281,7 @@ async function InternalProjektySection({
     ikonyTypu,
     typAudioknihy,
     typyReklamy,
+    poradiStavu,
   ] = await Promise.all([
     prisma.company.findMany({
       where: { type: 'KLIENT' },
@@ -310,6 +312,8 @@ async function InternalProjektySection({
     // Typy projektu = reklama (Rodný list) - u nich se nenabízí „Čekáme na
     // opravy“ (zadání 22. 9. 2026).
     listRodnyListProjectTypes(),
+    // V jakém pořadí se v tabulce řadí stavy (zadání 24. 9. 2026).
+    nactiPoradiStavu(),
   ]);
 
   /**
@@ -468,6 +472,7 @@ async function InternalProjektySection({
       </div>
 
       <InternalProjectsBrowser
+        poradiStavu={poradiStavu}
         novyProjekt={
           muzeMenitStav ? (
             <NovyProjektForm

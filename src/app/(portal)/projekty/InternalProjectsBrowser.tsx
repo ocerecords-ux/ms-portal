@@ -13,6 +13,7 @@ import { projectTypeLabel } from '@/lib/projectTypes';
 import { PROJECTS_TABLE_KEY, visibleColumns, type ColumnSetting } from '@/lib/columnLabels';
 import { useZarizeni } from '@/lib/useZarizeni';
 import { NAZEV_ZARIZENI } from '@/lib/zarizeni';
+import { PoradiStavu } from './PoradiStavu';
 
 // Zadani 5. 9. 2026: "Na stránce bude max. padesát aktivních projektů. Nahoře
 // budou dvě záložky, kde se bude přepínat mezi projekty Aktivní a Dokončené.
@@ -68,6 +69,7 @@ const UZKA_TABULKA_NEJVYS = 4;
 export function InternalProjectsBrowser({
   active,
   finished,
+  poradiStavu,
   finishedNote,
   columns,
   columnsMobil,
@@ -79,6 +81,11 @@ export function InternalProjectsBrowser({
 }: {
   active: InternalProject[];
   finished: InternalProject[];
+  /**
+   * V jakém pořadí se řadí stavy, když se klikne na sloupec Stav (zadání
+   * 24. 9. 2026). Společné pro celý tým - viz lib/poradiStavuServer.ts.
+   */
+  poradiStavu?: string[];
   /** Vysvetleni pro zalozku Dokoncene, kdyz se dokoncene projekty netahaji. */
   finishedNote?: string;
   /**
@@ -312,6 +319,16 @@ export function InternalProjectsBrowser({
   };
   const [sort, setSort] = useState<ProjectSort>(VYCHOZI_RAZENI.active);
   const razenoRucne = useRef(false);
+  // Pořadí stavů drží stránka, ale po uložení se má tabulka přeřadit hned -
+  // proto vlastní stav, ne jen prop (24. 9. 2026).
+  const [stavyPoradi, setStavyPoradi] = useState<string[]>(poradiStavu ?? []);
+  useEffect(() => {
+    setStavyPoradi(poradiStavu ?? []);
+  }, [poradiStavu]);
+  const mapaStavu = useMemo(
+    () => new Map(stavyPoradi.map((nazev, i) => [nazev, i])),
+    [stavyPoradi],
+  );
 
   function handleSort(key: ProjectSortKey) {
     razenoRucne.current = true;
@@ -331,8 +348,8 @@ export function InternalProjectsBrowser({
   const source = tab === 'active' ? active : finished;
   const filtered = useMemo(() => {
     const rows = source.filter((p) => matches(p, hledanyText));
-    return rows.sort((a, b) => compareProjects(a, b, sort));
-  }, [source, hledanyText, sort]);
+    return rows.sort((a, b) => compareProjects(a, b, sort, mapaStavu));
+  }, [source, hledanyText, sort, mapaStavu]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
@@ -408,6 +425,20 @@ export function InternalProjectsBrowser({
           </svg>
         </div>
 
+        {/* Pořadí stavů v tabulce (24. 9. 2026) - vedle hledání, ať je po ruce
+            tam, kde se s přehledem pracuje. */}
+        {stavyPoradi.length > 0 && (
+          <PoradiStavu
+            poradi={stavyPoradi}
+            onZmena={(nove) => {
+              setStavyPoradi(nove);
+              razenoRucne.current = true;
+              setSort({ key: 'statusName', dir: 'asc' });
+              setPage(0);
+            }}
+            muzeMenit={Boolean(canEditStatus)}
+          />
+        )}
       </div>
 
       {editing && (

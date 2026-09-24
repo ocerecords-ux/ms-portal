@@ -36,7 +36,7 @@ Tři věci, které z obrázku stojí za zdůraznění:
 
 # Šest sekcí v horní liště
 
-**Projekty** jsou srdce portálu. Každá zakázka má svou kartu: stav, termíny, herce, rozpočet, nahrávky, doklady. Většina práce se odehraje tady.
+**Projekty** jsou srdce portálu. Každá zakázka má svou kartu: stav, termíny, herce, rozpočet, nahrávky, doklady. Většina práce se odehraje tady. V přehledu se řadí kliknutím na hlavičku sloupce; **stav se neřadí abecedně**, ale v pořadí, které si tým nastaví tlačítkem **Pořadí stavů** vedle hledání (přetažením nebo šipkami, mění ho Žůžo-labůžo a produkce, platí pro všechny). Nabídky stavů u projektu se to netýká — cesta projektu zůstává, jak je.
 
 **Firmy** jsou klienti a dodavatelé. U klienta se kromě adresy a fakturačních údajů nastavuje i to, **které zprávy mu portál posílá** — na kartě firmy je záložka Notifikace a co tam není zapnuté, se neodešle. Nová firma má vypnuté všechno.
 
