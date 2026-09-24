@@ -43,6 +43,7 @@ import {
   utcParts,
   zonedToUtc,
   jePraceVeStudiu,
+  bezPredponyZvukar,
   maHerce,
   ZADNE_STUDIO,
   SOLO_MIMO,
@@ -1699,7 +1700,10 @@ function MrizkaPohled({
                           ) : (
                             pozice.height > (uzky ? 44 : 30) && (
                               <span key={i} className="block text-[9px] font-heading opacity-90 leading-tight truncate">
-                                {radek}
+                                {/* Na papírku jen jméno zvukaře, slovo „ZVUKAŘ:"
+                                    se u každé události jen opakuje (24. 9. 2026).
+                                    V bublině s detailem zůstává. */}
+                                {bezPredponyZvukar(radek)}
                               </span>
                             )
                           ),

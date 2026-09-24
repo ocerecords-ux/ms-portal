@@ -174,6 +174,20 @@ export function jePraceVeStudiu(kind: string): boolean {
  * U střihu není herec, takže na jeho místě stojí druh práce - jinak by první
  * řádek končil pomlčkou a nebylo by poznat, jestli se točí nebo stříhá.
  */
+/**
+ * Řádek popisku BEZ „ZVUKAŘ:" (zadání 24. 9. 2026: „v kalendáři u události,
+ * když je vidím takto v celku, ať zmizí ZVUKAŘ:. Zůstane tam jen jméno
+ * zvukaře. V tom detailním náhledu události to pak může zůstat i s tím
+ * ZVUKAŘ:").
+ *
+ * V mřížce je na papírku místa málo a slovo se opakuje u každé události -
+ * jméno samo o sobě říká totéž. V bublině s detailem, kde je řádků víc
+ * a čte se to pomalu, popisek zůstává.
+ */
+export function bezPredponyZvukar(radek: string): string {
+  return radek.replace(/^ZVUKAŘ:\s*/u, '');
+}
+
 export function popisUdalosti(casti: {
   projectName?: string | null;
   actorName?: string | null;
