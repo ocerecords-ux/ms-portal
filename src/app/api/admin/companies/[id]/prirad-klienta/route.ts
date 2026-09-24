@@ -35,27 +35,51 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   // Klient musí patřit k té firmě - jinak by se cizí člověk dostal k zakázkám,
   // které nejsou jeho.
-  const klient = await prisma.user.findFirst({
-    where: { id: parsed.data.klientUserId, companyId: params.id, role: 'CLIENT' },
-    select: { id: true, name: true, email: true },
-  });
-  if (!klient) {
+  const [klient, firma] = await Promise.all([
+    prisma.user.findFirst({
+      where: { id: parsed.data.klientUserId, companyId: params.id, role: 'CLIENT' },
+      select: { id: true, name: true, email: true },
+    }),
+    prisma.company.findUnique({ where: { id: params.id }, select: { name: true } }),
+  ]);
+  if (!klient || !firma) {
     return NextResponse.json({ error: 'Tenhle účet k firmě nepatří.' }, { status: 400 });
   }
 
+  /**
+   * KTERÉ ZAKÁZKY JSOU FIRMY (oprava hned po nasazení 24. 9. 2026).
+   *
+   * Starší projekty přenesené z Caflou mají u sebe jen NÁZEV firmy, navázanou
+   * firmu ne - a právě ty jsou u nakladatelství skoro všechny. Kdyby se hledalo
+   * jen podle vazby, neudělalo by se nic a vypadalo by to, že je hotovo.
+   * Bere se proto i shoda názvu, a projektu se při té příležitosti firma
+   * doplní - aby ji klient viděl i v záložce „Celá firma".
+   */
+  const kde = {
+    OR: [
+      { companyId: params.id },
+      { companyId: null, companyName: { equals: firma.name, mode: 'insensitive' as const } },
+    ],
+  };
+
   try {
-    const vysledek = await prisma.projectMeta.updateMany({
-      where: {
-        companyId: params.id,
-        ...(parsed.data.prepsat ? {} : { klientUserId: null }),
-      },
-      data: {
-        klientUserId: klient.id,
-        // Jméno textem drží projekt čitelný i tam, kde se účty přeskupí.
-        klientName: klient.name || klient.email,
-      },
+    const [celkem, vysledek] = await Promise.all([
+      prisma.projectMeta.count({ where: kde }),
+      prisma.projectMeta.updateMany({
+        where: { ...kde, ...(parsed.data.prepsat ? {} : { klientUserId: null }) },
+        data: {
+          klientUserId: klient.id,
+          // Jméno textem drží projekt čitelný i tam, kde se účty přeskupí.
+          klientName: klient.name || klient.email,
+          companyId: params.id,
+        },
+      }),
+    ]);
+    return NextResponse.json({
+      pocet: vysledek.count,
+      celkem,
+      jmeno: klient.name || klient.email,
     });
-    return NextResponse.json({ pocet: vysledek.count, jmeno: klient.name || klient.email });
   } catch (err) {
     console.error('Hromadne prirazeni klienta selhalo:', err);
     return NextResponse.json({ error: 'Přiřazení se nepodařilo.' }, { status: 500 });

@@ -51,10 +51,14 @@ export function PriraditKlientaPanel({
         return;
       }
       const pocet = Number(data?.pocet ?? 0);
+      const celkem = Number(data?.celkem ?? 0);
+      const zakazek = (n: number) => `${n} ${n === 1 ? 'zakázka' : n < 5 ? 'zakázky' : 'zakázek'}`;
       setHlaska(
-        pocet === 0
-          ? 'Nebylo co měnit — všechny zakázky už kontakt mají.'
-          : `Hotovo: ${pocet} ${pocet === 1 ? 'zakázka' : pocet < 5 ? 'zakázky' : 'zakázek'} teď vede ${data?.jmeno ?? 'vybraný kontakt'}.`,
+        celkem === 0
+          ? 'U téhle firmy zatím žádná zakázka není.'
+          : pocet === 0
+            ? `Nebylo co měnit — ${zakazek(celkem)} už kontakt má.`
+            : `Hotovo: ${zakazek(pocet)} z ${celkem} teď vede ${data?.jmeno ?? 'vybraný kontakt'}.`,
       );
       setPtaSe(false);
       router.refresh();
@@ -72,6 +76,8 @@ export function PriraditKlientaPanel({
         <p className="text-xs font-body text-muted m-0 mt-1">
           Vybraný člověk uvidí zakázky firmy ve svých Projektech včetně dokončených. Proběhne to
           potichu — nikomu nechodí zpráva ani zvonek a do historie projektu se nic nepíše.
+          Počítají se i starší zakázky, které mají firmu jen názvem (přenesené z Caflou) — těm se
+          firma při té příležitosti naváže.
         </p>
       </div>
 
