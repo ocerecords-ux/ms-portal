@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
+
 /**
  * Rozbalovací nabídka, která vypadá jako barevný odznak (zadání 10. 9. 2026:
  * „ať to vypadá jak v přehledu projektu — ten typ projektu s ikonou, stav
@@ -14,6 +16,17 @@
  * a obarvit se pořádně nedá. Odznak je proto obyčejný <span> s vybranou
  * hodnotou a <select> na něm leží průhledně přes celou plochu — klikání
  * i klávesnice fungují dál, ale o vzhledu i šířce rozhoduje odznak.
+ *
+ * BEZ KLÁVES (zadání 23. 9. 2026: „když mám rozbalenou u projektu nabídku
+ * změny stavu, tak tam tu chvíli fungujou klávesové zkratky a to je špatně,
+ * protože se člověk občas uklikne a změní stav").
+ *
+ * Systémová nabídka <select> sama reaguje na klávesy: šipka, písmeno i kolečko
+ * myši hodnotu přehodí - a protože se stav ukládá hned, je změna hotová dřív,
+ * než si toho někdo všimne. S `bezKlaves` se proto nevykreslí <select>, ale
+ * vlastní nabídka, kde se VYBÍRÁ JEN MYŠÍ. Klávesnice v ní nedělá nic než
+ * Esc (zavřít) - nabídku nejde zavřít omylem s jinou hodnotou, než na kterou
+ * člověk klikl.
  */
 export type MoznostOdznaku = {
   hodnota: string;
@@ -30,6 +43,7 @@ export function OdznakSelect({
   prazdnyPopisek = '— nevybráno —',
   disabled,
   titulek,
+  bezKlaves = false,
 }: {
   hodnota: string;
   moznosti: MoznostOdznaku[];
@@ -39,8 +53,26 @@ export function OdznakSelect({
   prazdnyPopisek?: string;
   disabled?: boolean;
   titulek?: string;
+  /** Vybírá se jen myší - klávesy ani kolečko hodnotu nezmění. */
+  bezKlaves?: boolean;
 }) {
   const vybrana = moznosti.find((m) => m.hodnota === hodnota);
+  const obsahOdznaku = vybrana?.obsah ?? vybrana?.popisek ?? prazdnyPopisek;
+
+  if (bezKlaves) {
+    return (
+      <NabidkaJenMysi
+        hodnota={hodnota}
+        moznosti={moznosti}
+        onZmena={onZmena}
+        trida={trida}
+        prazdnyPopisek={prazdnyPopisek}
+        disabled={disabled}
+        titulek={titulek}
+        obsahOdznaku={obsahOdznaku}
+      />
+    );
+  }
 
   return (
     <span
@@ -52,9 +84,7 @@ export function OdznakSelect({
       {/* V uzkem sloupci se dlouhy stav orizne TREMI TECKAMI primo uvnitr
           odznaku (zadani 12. 9. 2026). Kdyby se oriznul az bunkou, useklo by
           to odznak v pulce i s pozadim a vypadalo by to jako chyba. */}
-      <span className="min-w-0 truncate inline-flex items-center gap-1.5">
-        {vybrana?.obsah ?? vybrana?.popisek ?? prazdnyPopisek}
-      </span>
+      <span className="min-w-0 truncate inline-flex items-center gap-1.5">{obsahOdznaku}</span>
       <Sipka />
       <select
         value={hodnota}
@@ -69,6 +99,102 @@ export function OdznakSelect({
           </option>
         ))}
       </select>
+    </span>
+  );
+}
+
+/**
+ * Tatáž nabídka, ale vlastní - bez systémového <select>, takže ji žádná
+ * klávesa ani kolečko myši nepřehodí. Vybírá se klepnutím na položku.
+ */
+function NabidkaJenMysi({
+  hodnota,
+  moznosti,
+  onZmena,
+  trida,
+  prazdnyPopisek,
+  disabled,
+  titulek,
+  obsahOdznaku,
+}: {
+  hodnota: string;
+  moznosti: MoznostOdznaku[];
+  onZmena: (hodnota: string) => void;
+  trida: string;
+  prazdnyPopisek: string;
+  disabled?: boolean;
+  titulek?: string;
+  obsahOdznaku: React.ReactNode;
+}) {
+  const [otevreno, setOtevreno] = useState(false);
+  const obal = useRef<HTMLSpanElement | null>(null);
+
+  // Zavřít klepnutím vedle a klávesou Esc. Esc je jediná klávesa, která tu
+  // něco dělá - a hodnotu nemění.
+  useEffect(() => {
+    if (!otevreno) return;
+    const vedle = (e: MouseEvent) => {
+      if (obal.current && !obal.current.contains(e.target as Node)) setOtevreno(false);
+    };
+    const klavesa = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOtevreno(false);
+    };
+    document.addEventListener('mousedown', vedle);
+    document.addEventListener('keydown', klavesa);
+    return () => {
+      document.removeEventListener('mousedown', vedle);
+      document.removeEventListener('keydown', klavesa);
+    };
+  }, [otevreno]);
+
+  const vyber = (v: string) => {
+    setOtevreno(false);
+    if (v !== hodnota) onZmena(v);
+  };
+
+  const polozky = [{ hodnota: '', popisek: prazdnyPopisek }, ...moznosti];
+
+  return (
+    <span ref={obal} className="relative inline-flex self-start max-w-full">
+      <span
+        role="button"
+        tabIndex={-1}
+        title={titulek}
+        aria-haspopup="listbox"
+        aria-expanded={otevreno}
+        onClick={() => {
+          if (!disabled) setOtevreno((o) => !o);
+        }}
+        className={`inline-flex items-center gap-1.5 max-w-full rounded-pill pl-3 pr-2.5 py-1.5 text-xs font-heading font-semibold ${
+          disabled ? 'opacity-60 cursor-default' : 'cursor-pointer'
+        } ${trida}`}
+      >
+        <span className="min-w-0 truncate inline-flex items-center gap-1.5">{obsahOdznaku}</span>
+        <Sipka />
+      </span>
+
+      {otevreno && !disabled && (
+        <span
+          role="listbox"
+          className="absolute left-0 top-full mt-1.5 z-40 min-w-[220px] max-w-[min(90vw,320px)] max-h-[60vh] overflow-y-auto rounded-card border border-line bg-surface shadow-lg p-1 flex flex-col"
+        >
+          {polozky.map((m) => (
+            <span
+              key={m.hodnota || 'prazdno'}
+              role="option"
+              aria-selected={m.hodnota === hodnota}
+              onClick={() => vyber(m.hodnota)}
+              className={`text-left rounded-lg px-3 py-2 text-sm font-body cursor-pointer transition-colors ${
+                m.hodnota === hodnota
+                  ? 'bg-tint text-ink font-heading font-semibold'
+                  : 'text-ink hover:bg-tint'
+              }`}
+            >
+              {m.popisek}
+            </span>
+          ))}
+        </span>
+      )}
     </span>
   );
 }

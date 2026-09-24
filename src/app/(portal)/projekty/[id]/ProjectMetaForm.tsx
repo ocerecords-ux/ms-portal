@@ -716,6 +716,10 @@ export function ProjectMetaForm({
               onZmena={(v) => set('statusName', v)}
               trida={barvaStavu(values.statusName)}
               titulek="Přehodit stav projektu"
+              /* Stav se vybírá JEN MYŠÍ (zadání 23. 9. 2026: „když mám
+                 rozbalenou nabídku změny stavu, fungujou tam klávesové
+                 zkratky a člověk se uklikne a změní stav"). */
+              bezKlaves
               moznosti={[
                 // Stav prenesen z Caflou, ktery v nasi ceste projektu neni - at
                 // se pri ulozeni nezmeni na "nevybráno".

@@ -78,6 +78,9 @@ export function StavProjektuSelect({
         trida={barvaStavu(hodnota, dokonceny)}
         titulek="Přehodit stav projektu"
         prazdnyPopisek="Bez stavu"
+        /* Jen myší - v seznamu se stav ukládá hned po výběru a klávesa by
+           ho přehodila dřív, než si toho kdo všimne (23. 9. 2026). */
+        bezKlaves
         moznosti={[
           // Stav prenesený z Caflou, ktery v nasi ceste projektu neni - at se
           // pri rozbaleni nabidky nezmeni na neco jineho.
