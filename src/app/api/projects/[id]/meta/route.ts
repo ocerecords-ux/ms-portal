@@ -408,10 +408,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
        * nerozesílá. Bez čekání: zvonek nesmí zdržet uložení stavu.
        */
       if (stavSeZmenil && !pred?.finished && data.statusName === STAV_PLANUJEME) {
+        // Nazev firmy bereme z `pred` (tam se company nacita i se jmenem) nebo
+        // z textoveho pole na projektu - `meta` z upsertu nese u firmy jen
+        // caflouCompanyId.
         void zvonekOPlanovani(
           params.id,
           meta.name ?? null,
-          meta.company?.name ?? null,
+          pred?.company?.name ?? meta.companyName ?? null,
         ).catch(() => undefined);
       }
 
