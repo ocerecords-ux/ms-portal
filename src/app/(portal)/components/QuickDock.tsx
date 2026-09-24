@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { UDALOST_PREHLED_DNE, jeOtevriVPortalu } from '@/lib/quickActions';
 import type { QuickAction, QuickActionKey } from '@/lib/quickActions';
 
 /**
@@ -101,6 +102,15 @@ function Ikona({ akce }: { akce: QuickActionKey }) {
           <path d="M4 20c0-3.3 2.7-5.4 6-5.4 1.2 0 2.3.3 3.2.8M18 14v6M15 17h6" />
         </svg>
       );
+    case 'prehled-dne':
+      // Kalendar s fajfkou - „co me dnes ceka" (24. 9. 2026).
+      return (
+        <svg {...spolecne}>
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M3 10h18M8 3v4M16 3v4" />
+          <path d="M9 15.5l2 2 4-4" />
+        </svg>
+      );
     case 'firma':
       return (
         <svg {...spolecne}>
@@ -149,6 +159,18 @@ export function QuickDock({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [taheny, setTaheny] = useState<number | null>(null);
+
+  /**
+   * Volba, která se neotevírá odkazem (zadání 24. 9. 2026: „to okno, co mě
+   * dnes čeká, bych dal do toho levého panelu s rychlýma volbama").
+   *
+   * Panel o okně nic neví - jen zavolá do portálu událostí; kdo ji poslouchá
+   * (komponenta PrehledDne), se otevře. Na telefonu se u toho panel zatáhne,
+   * aby okno nestálo za ním.
+   */
+  function otevriVPortalu(key: QuickActionKey) {
+    if (key === 'prehled-dne') window.dispatchEvent(new Event(UDALOST_PREHLED_DNE));
+  }
 
   useEffect(() => {
     try {
@@ -236,17 +258,31 @@ export function QuickDock({
   if (!expanded) {
     return (
       <aside className="fixed left-0 top-28 z-40 flex flex-col items-stretch bg-brand-purple rounded-r-card shadow-lg overflow-hidden">
-        {actions.map((akce) => (
-          <Link
-            key={akce.key}
-            href={akce.href}
-            title={akce.label}
-            aria-label={akce.label}
-            className="px-2.5 py-2.5 text-brand-green hover:bg-brand-purpleDeep transition-colors flex items-center justify-center no-underline"
-          >
-            <Ikona akce={akce.key} />
-          </Link>
-        ))}
+        {actions.map((akce) =>
+          // Volba, ktera nikam nevede (Co me dnes ceka) - tlacitko, ne odkaz.
+          jeOtevriVPortalu(akce) ? (
+            <button
+              key={akce.key}
+              type="button"
+              onClick={() => otevriVPortalu(akce.key)}
+              title={akce.label}
+              aria-label={akce.label}
+              className="px-2.5 py-2.5 text-brand-green hover:bg-brand-purpleDeep transition-colors flex items-center justify-center"
+            >
+              <Ikona akce={akce.key} />
+            </button>
+          ) : (
+            <Link
+              key={akce.key}
+              href={akce.href}
+              title={akce.label}
+              aria-label={akce.label}
+              className="px-2.5 py-2.5 text-brand-green hover:bg-brand-purpleDeep transition-colors flex items-center justify-center no-underline"
+            >
+              <Ikona akce={akce.key} />
+            </Link>
+          ),
+        )}
         <button
           type="button"
           onClick={toggle}
@@ -356,6 +392,18 @@ export function QuickDock({
                   ×
                 </button>
               </div>
+            ) : jeOtevriVPortalu(akce) ? (
+              <button
+                key={akce.key}
+                type="button"
+                onClick={() => otevriVPortalu(akce.key)}
+                className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-heading text-ink hover:bg-field transition-colors text-left w-full"
+              >
+                <span className="text-brand-purple">
+                  <Ikona akce={akce.key} />
+                </span>
+                <span className="truncate">{akce.label}</span>
+              </button>
             ) : (
               <Link
                 key={akce.key}

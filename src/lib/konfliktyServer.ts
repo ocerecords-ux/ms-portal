@@ -33,6 +33,14 @@ export type DruhKonfliktu = 'MOJE' | 'PROVOZ';
 
 export type Konflikt = {
   id: string;
+  /**
+   * KLÍČ PRO SKRYTÍ (zadání 24. 9. 2026: „měl bych mít možnost někdy zrušit
+   * daný konflikt v kalendáři, někdy to může být záměr").
+   *
+   * Je v něm i čas překryvu, takže jakmile se některá z událostí posune,
+   * klíč se změní a upozornění se vrátí - schvaluje se konkrétní překryv.
+   */
+  klic: string;
   druh: DruhKonfliktu;
   /** Den v Praze, YYYY-MM-DD - klik na konflikt na něj skočí. */
   den: string;
@@ -201,8 +209,10 @@ async function provozniKonflikty(
       if (!mojeUdalost(a) && !mojeUdalost(b)) continue;
 
       const p = prunik(a, b);
+      const id = `${a.klic}|${b.klic}`;
       konflikty.push({
-        id: `${a.klic}|${b.klic}`,
+        id,
+        klic: `${id}@${denVPraze(p.od)} ${p.popis}`,
         druh: 'PROVOZ',
         den: denVPraze(p.od),
         cas: p.popis,
@@ -231,11 +241,14 @@ async function mojeKonflikty(userId: string, od: Date, doKdy: Date): Promise<Kon
 
       const zacatek = new Date(Math.max(a.start.getTime(), b.start.getTime()));
       const konec = new Date(Math.min(a.end.getTime(), b.end.getTime()));
+      const id = `moje:${a.klic}|${b.klic}`;
+      const kdy = `${cas(zacatek)}–${cas(konec)}`;
       konflikty.push({
-        id: `moje:${a.klic}|${b.klic}`,
+        id,
+        klic: `${id}@${denVPraze(zacatek)} ${kdy}`,
         druh: 'MOJE',
         den: denVPraze(zacatek),
-        cas: `${cas(zacatek)}–${cas(konec)}`,
+        cas: kdy,
         duvod: 'Máte dvě věci naráz',
         udalosti: [
           { cas: a.cas, popis: a.studio ? `${a.nazev} (${a.studio})` : a.nazev },
@@ -248,7 +261,68 @@ async function mojeKonflikty(userId: string, od: Date, doKdy: Date): Promise<Kon
   return konflikty;
 }
 
-export type Konflikty = { moje: Konflikt[]; provoz: Konflikt[] };
+export type SkrytyKonflikt = {
+  klic: string;
+  druh: string;
+  popis: string;
+  kdo: string;
+  kdy: string;
+};
+
+export type Konflikty = { moje: Konflikt[]; provoz: Konflikt[]; skryte: SkrytyKonflikt[] };
+
+/**
+ * ZÁMĚRNÉ KONFLIKTY (zadání 24. 9. 2026). Klíče toho, co si někdo odklepl -
+ * viz model SkrytyKonflikt.
+ *
+ * Skrývá se pro všechny, ne jen pro toho, kdo klikl: konflikt „moje" stejně
+ * vidí jen jeden člověk a u provozních platí, že když je překryv schválený,
+ * je schválený i pro druhého označeného.
+ */
+async function skryteKonflikty(): Promise<Map<string, SkrytyKonflikt>> {
+  try {
+    const radky = await prisma.skrytyKonflikt.findMany({ orderBy: { createdAt: 'desc' } });
+    return new Map(
+      radky.map((r) => [
+        r.klic,
+        {
+          klic: r.klic,
+          druh: r.druh,
+          popis: r.popis,
+          kdo: r.kdoJmeno,
+          kdy: r.createdAt.toISOString(),
+        },
+      ]),
+    );
+  } catch (err) {
+    console.error('Cteni skrytych konfliktu selhalo:', err);
+    return new Map();
+  }
+}
+
+/** Odklepnout konflikt jako záměr. */
+export async function skryjKonflikt(
+  k: { klic: string; druh: string; popis: string; duvod?: string | null },
+  kdo: { id: string | null; jmeno: string },
+): Promise<void> {
+  await prisma.skrytyKonflikt.upsert({
+    where: { klic: k.klic },
+    create: {
+      klic: k.klic,
+      druh: k.druh,
+      popis: k.popis.slice(0, 300),
+      duvod: k.duvod?.slice(0, 300) ?? null,
+      kdoId: kdo.id,
+      kdoJmeno: kdo.jmeno.slice(0, 120),
+    },
+    update: { kdoId: kdo.id, kdoJmeno: kdo.jmeno.slice(0, 120) },
+  });
+}
+
+/** Vrátit upozornění zpátky. */
+export async function vratKonflikt(klic: string): Promise<void> {
+  await prisma.skrytyKonflikt.deleteMany({ where: { klic } });
+}
 
 /**
  * Konflikty v rozsahu. `moje` dostane jen ten, koho se týkají (jsou jeho),
@@ -272,8 +346,21 @@ export async function najdiKonflikty(
       : Promise.resolve([]),
   ]);
 
+  // Co si někdo odklepl jako záměr, se do seznamu nevrací - jen se ukáže dole
+  // v panelu, aby se to dalo vrátit (24. 9. 2026).
+  const skryte = await skryteKonflikty();
+  const vlastniKlice = new Set(moje.map((k) => k.klic));
+  const viditelne = (k: Konflikt) => !skryte.has(k.klic);
+  // Cizí „moje" konflikt nikomu nic neříká - v seznamu skrytých je jen to,
+  // co by ten člověk jinak viděl.
+  const vidimSkryty = (s: SkrytyKonflikt) => s.druh === 'PROVOZ' || vlastniKlice.has(s.klic);
+
   const podleCasu = (a: Konflikt, b: Konflikt) => (a.den + a.cas).localeCompare(b.den + b.cas);
-  return { moje: moje.sort(podleCasu), provoz: provoz.sort(podleCasu) };
+  return {
+    moje: moje.filter(viditelne).sort(podleCasu),
+    provoz: provoz.filter(viditelne).sort(podleCasu),
+    skryte: [...skryte.values()].filter(vidimSkryty),
+  };
 }
 
 /**

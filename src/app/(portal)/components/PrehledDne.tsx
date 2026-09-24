@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { KresbaIkony } from '@/lib/ikonyTypu';
+import { UDALOST_PREHLED_DNE } from '@/lib/quickActions';
 
 /**
  * OKNO S PŘEHLEDEM DNE (zadání 23. 9. 2026: „ať se mi v portálu otevře
@@ -17,6 +18,12 @@ import { KresbaIkony } from '@/lib/ikonyTypu';
  * PRŮHLEDNÉ, NE ŠEDIVÉ. Pozadí zůstává vidět a rozostřené: je to zpráva na
  * dobré ráno, ne dialog, který něco blokuje. Zavře ho křížek, Escape, klik
  * mimo i tlačítko - a do dalšího rána se neukáže.
+ *
+ * KDYKOLIV BĚHEM DNE (zadání 24. 9. 2026: „to okno, co mě dnes čeká, bych dal
+ * do toho levého panelu s rychlýma volbama, ať se tam můžu během dne jedním
+ * klikem kouknout"). Rychlá volba v levém panelu pošle do portálu událost,
+ * tady se na ni čeká. Takhle otevřené okno se NEPOČÍTÁ jako ranní: po zavření
+ * se nikam nezapisuje, takže ráno vyskočí tak jako tak.
  */
 
 type Druh = 'NATACENI' | 'STRIH' | 'CASTING' | 'PORADA' | 'SCHUZKA' | 'JINE';
@@ -47,6 +54,8 @@ const BARVA_REZIE = '#ef4444';
 export function PrehledDne() {
   const [data, setData] = useState<Data | null>(null);
   const [zavirame, setZavirame] = useState(false);
+  /** Otevřel si ho člověk sám z panelu? Pak se zavření nezapisuje. */
+  const [rucne, setRucne] = useState(false);
 
   useEffect(() => {
     let platne = true;
@@ -67,6 +76,27 @@ export function PrehledDne() {
     };
   }, []);
 
+  // Rychlá volba „Co mě dnes čeká" z levého panelu (24. 9. 2026).
+  useEffect(() => {
+    let platne = true;
+    const naVyzadani = () => {
+      fetch('/api/prehled-dne?kdykoliv=1')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!platne || !d?.ukazat || typeof d.den !== 'string') return;
+          setRucne(true);
+          setZavirame(false);
+          setData({ den: d.den, udalosti: d.udalosti ?? [], ukoly: d.ukoly ?? [] });
+        })
+        .catch(() => undefined);
+    };
+    window.addEventListener(UDALOST_PREHLED_DNE, naVyzadani);
+    return () => {
+      platne = false;
+      window.removeEventListener(UDALOST_PREHLED_DNE, naVyzadani);
+    };
+  }, []);
+
   useEffect(() => {
     if (!data) return;
     const naKlavesu = (e: KeyboardEvent) => {
@@ -81,6 +111,12 @@ export function PrehledDne() {
     if (zavirame) return;
     setZavirame(true);
     setData(null);
+    // Okno otevřené z panelu se nezapisuje - ranní má vyskočit tak jako tak.
+    if (rucne) {
+      setRucne(false);
+      setZavirame(false);
+      return;
+    }
     // Poznámka na server, ať se dneska neotevře znovu. Když se to nepovede,
     // nic se neděje - nanejvýš okno vyskočí na jiné záložce ještě jednou.
     fetch('/api/prehled-dne', { method: 'POST' }).catch(() => undefined);

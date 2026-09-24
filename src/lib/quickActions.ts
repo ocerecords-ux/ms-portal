@@ -25,11 +25,17 @@ export type QuickActionKey =
   | 'termin'
   | 'vykaz'
   | 'uzivatel'
-  | 'firma';
+  | 'firma'
+  | 'prehled-dne';
 
 export type QuickAction = {
   key: QuickActionKey;
   label: string;
+  /**
+   * Kam volba vede. Adresa začínající „#" NIKAM NEVEDE - otevře něco rovnou
+   * v portálu (viz `prehled-dne` níž). Panel to pozná a vykreslí místo
+   * odkazu tlačítko.
+   */
   href: string;
   /** Kdo tuhle akci smí vidět - musí odpovídat právům k cílové stránce. */
   roles: Role[];
@@ -57,7 +63,30 @@ const QUICK_ACTIONS: QuickAction[] = [
   { key: 'vykaz', label: 'Nový výkaz', href: '/vykazy', roles: ['ADMIN', 'ZVUKAR'] },
   { key: 'uzivatel', label: 'Nový uživatel', href: '/admin/users#nove', roles: ADMIN },
   { key: 'firma', label: 'Nová firma', href: '/admin#nove', roles: ADMIN },
+  /**
+   * CO MĚ DNES ČEKÁ (zadání 24. 9. 2026: „to okno, co mě dnes čeká, bych dal
+   * do toho levého panelu s rychlýma volbama, ať se tam můžu během dne
+   * jedním klikem kouknout").
+   *
+   * Jediná volba, která nikam nevede - otevře tytéž karty, co vyskočí ráno
+   * (komponenta PrehledDne). Proto adresa „#prehled-dne": panel na ní pozná,
+   * že má vykreslit tlačítko, ne odkaz.
+   */
+  {
+    key: 'prehled-dne',
+    label: 'Co mě dnes čeká',
+    href: '#prehled-dne',
+    roles: ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
+  },
 ];
+
+/** Volba, která se neotevírá odkazem, ale rovnou v portálu. */
+export function jeOtevriVPortalu(akce: { href: string }): boolean {
+  return akce.href.startsWith('#');
+}
+
+/** Událost, kterou si panel řekne o okno s přehledem dne. */
+export const UDALOST_PREHLED_DNE = 'ms:prehled-dne';
 
 /** Co si smí do panelu dát uživatel s touhle rolí. */
 export function quickActionsFor(role: Role): QuickAction[] {
@@ -80,10 +109,10 @@ export function defaultQuickActionKeys(role: Role): QuickActionKey[] {
     case 'HEREC':
       return [];
     case 'ZVUKAR':
-      return ['vykaz', 'termin'];
+      return ['prehled-dne', 'vykaz', 'termin'];
     case 'PRODUKCE':
-      return ['projekt', 'termin'];
+      return ['prehled-dne', 'projekt', 'termin'];
     default:
-      return ['projekt', 'nabidka', 'faktura', 'smlouva', 'vydaj', 'termin'];
+      return ['prehled-dne', 'projekt', 'nabidka', 'faktura', 'smlouva', 'vydaj', 'termin'];
   }
 }

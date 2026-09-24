@@ -3462,6 +3462,31 @@ model PoznamkaProjektu {
   @@index([caflouProjectId, createdAt])
 }
 
+/// ZÁMĚRNÝ KONFLIKT V KALENDÁŘI (zadání 24. 9. 2026: „měl bych mít možnost
+/// někdy zrušit daný konflikt v kalendáři, někdy to může být záměr").
+///
+/// Portál nic nezakazuje - jen upozorňuje. Když je překryv schválně (dva lidi
+/// v jedné kabině, herec, který stihne obojí), skryje se tímhle záznamem
+/// a přestane se počítat i do kolečka v liště.
+///
+/// KLÍČ V SOBĚ NESE ČAS PŘEKRYVU. Jakmile se některá z těch dvou událostí
+/// posune, klíč se změní a upozornění se vrátí - schválený je konkrétní
+/// překryv, ne dvojice událostí navždy.
+model SkrytyKonflikt {
+  id        String   @id @default(cuid())
+  klic      String   @unique
+  /// MOJE | PROVOZ - jen pro přehled, vrací se do stejného seznamu.
+  druh      String
+  /// Jak konflikt vypadal, když ho někdo skryl („Pá 26. 9. 10:00-11:30 · …").
+  popis     String
+  duvod     String?
+  kdoId     String?
+  kdoJmeno  String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model KalendarZmena {
   id        String   @id @default(cuid())
   /// SLOT (frekvence z nabidky) | BLOK | PORADA | SCHUZKA | MIMO

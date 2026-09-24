@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { prehledDneData } from '@/lib/ranniPrehledServer';
 import { utcParts } from '@/lib/calendar';
+import type { NextRequest } from 'next/server';
 
 /**
  * PŘEHLED DNE DO OKNA V PORTÁLU (zadání 23. 9. 2026: „ať se mi v portálu
@@ -15,6 +16,13 @@ import { utcParts } from '@/lib/calendar';
  * KDY SE UKAZUJE: komu je přehled zapnutý (Můj účet), po sedmé hodině ranní
  * a jen jednou za den. Ráno před sedmou nic - to ještě není „dnešek",
  * kterému by se dalo věřit, protože se do něj ještě zapisuje.
+ *
+ * NA VYŽÁDÁNÍ KDYKOLIV (zadání 24. 9. 2026: „to okno, co mě dnes čeká, bych
+ * dal do toho levého panelu s rychlýma volbama, ať se tam můžu během dne
+ * jedním klikem kouknout"). S `?kdykoliv=1` neplatí ani jedno z pravidel
+ * výše - člověk si o přehled řekl sám, takže ho dostane, i když ho má ranní
+ * vyskakování vypnuté a i když ho dnes už jednou viděl. Zobrazení se v tomhle
+ * případě NEZAPISUJE: ranní okno má vyskočit zítra tak jako tak.
  */
 export const dynamic = 'force-dynamic';
 
@@ -25,22 +33,27 @@ function den(d: Date): string {
   return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ ukazat: false });
 
-  try {
-    const ja = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { ranniPrehled: true, prehledZobrazenAt: true },
-    });
-    if (!ja?.ranniPrehled) return NextResponse.json({ ukazat: false });
+  const kdykoliv = new URL(req.url).searchParams.get('kdykoliv') === '1';
 
+  try {
     const ted = new Date();
-    const dnes = den(ted);
-    if (utcParts(ted, PASMO).hour < 7) return NextResponse.json({ ukazat: false });
-    if (ja.prehledZobrazenAt && den(ja.prehledZobrazenAt) === dnes) {
-      return NextResponse.json({ ukazat: false });
+
+    if (!kdykoliv) {
+      const ja = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { ranniPrehled: true, prehledZobrazenAt: true },
+      });
+      if (!ja?.ranniPrehled) return NextResponse.json({ ukazat: false });
+
+      const dnes = den(ted);
+      if (utcParts(ted, PASMO).hour < 7) return NextResponse.json({ ukazat: false });
+      if (ja.prehledZobrazenAt && den(ja.prehledZobrazenAt) === dnes) {
+        return NextResponse.json({ ukazat: false });
+      }
     }
 
     const data = await prehledDneData(session.user.id, ted);

@@ -30,6 +30,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(konflikty);
   } catch (err) {
     console.error('GET /api/kalendar/konflikty selhalo:', err);
-    return NextResponse.json({ moje: [], provoz: [] });
+    return NextResponse.json({ moje: [], provoz: [], skryte: [] });
   }
 }
