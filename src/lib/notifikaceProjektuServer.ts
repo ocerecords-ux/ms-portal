@@ -1,5 +1,10 @@
 import { prisma } from '@/lib/db';
-import { druhNotifikaceFirmy, stavySNotifikaci, interniPrijemciFirmy } from '@/lib/notifikaceFirmy';
+import {
+  druhNotifikaceFirmy,
+  stavySNotifikaci,
+  interniPrijemciFirmy,
+  STAV_PREPOSLECH_HOTOVO,
+} from '@/lib/notifikaceFirmy';
 import { dosadPromenne } from '@/lib/vzoryZprav';
 import { pozdrav } from '@/lib/osloveni';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
@@ -92,10 +97,18 @@ export async function posliNotifikaciKeStavu(
     const druh = druhNotifikaceFirmy(projekt.company);
     if (!stavySNotifikaci(druh).includes(stav)) return { stav: 'vypnuto' };
 
-    const nastaveni = await prisma.notifikaceFirmy.findUnique({
+    const ulozene = await prisma.notifikaceFirmy.findUnique({
       where: { companyId_stav: { companyId: projekt.companyId, stav } },
       select: { komu: true },
     });
+    /**
+     * „Přeposlech dokončen" chodí klientovi i bez nastavení (25. 9. 2026) -
+     * je to potvrzení toho, co klient sám právě udělal, a firmy uložené
+     * nastavení pro tenhle řádek zatím nemají. Vypnout se dá jako cokoliv
+     * jiného: na kartě firmy na „Neposílat".
+     */
+    const nastaveni =
+      ulozene ?? (stav === STAV_PREPOSLECH_HOTOVO ? { komu: 'KLIENT' as const } : null);
     if (!nastaveni || nastaveni.komu === 'NIKAM') return { stav: 'vypnuto' };
 
     // Uz odeslano? Pomaha to i pri prehazovani stavu tam a zpatky.

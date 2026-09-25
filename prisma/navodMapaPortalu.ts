@@ -118,7 +118,7 @@ Klient, který účet má, vidí v portálu navíc své projekty, nahrávky a m�
 
 - **Páruje platby** z banky s fakturami (třikrát denně).
 - **Hlídá opravy** — sedm dní po odevzdání, když klient nic neposlal, přehodí projekt na „Čekáme na opravy" a napíše mu.
-- **Píše klientovi** zprávy o stavu projektu podle toho, co má jeho firma zapnuté; text se bere ze Vzorů zpráv.
+- **Píše klientovi** zprávy o stavu projektu podle toho, co má jeho firma zapnuté; text se bere ze Vzorů zpráv. Navíc mu u audioknihy odejde zpráva **„Přeposlech dokončen"** ve chvíli, kdy v AudioTaggeru klepne na PŘEPOSLECHNUTO — že přeposlech máme kompletní a pouštíme se do finálních oprav. Tahle jediná chodí i bez zapnutí na kartě firmy (vypnout jde tamtéž, přepnutím na Neposílat); u reklamní firmy neodejde vůbec.
 - **Čte účtárenskou schránku** a z příloh zakládá nezařazené výdaje — z účtenky si navíc přečte částku, datum i dodavatele.
 - **Vyrobí rodný list** spotu, jakmile je reklama hotová.
 - **Navrhne bonus** zvukaři, který odvedl většinu střihu.

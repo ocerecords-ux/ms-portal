@@ -35,6 +35,11 @@ export const STAVY_S_NOTIFIKACI: string[] = [
   'Dotočeno',
   'Dotočeno/stříháme',
   'Dokončeno - ke schválení',
+  // Klient dal v AudioTaggeru PREPOSLECHNUTO (zadani 25. 9. 2026: „klientum
+  // u audioknih by mela prijit notifikace, ze je dokonceny preposlech a ze se
+  // poustime do finalnich oprav"). Neni to stav projektu, ale okamzik - viz
+  // STAV_PREPOSLECH_HOTOVO niz.
+  'Přeposlech dokončen',
   'Čekáme na opravy',
   'Schváleno - k fakturaci',
 ];
@@ -47,6 +52,20 @@ export const STAVY_S_NOTIFIKACI: string[] = [
  * se nedá měnit") - do té doby oslovení i titul projektu stály natvrdo v mailu
  * a nešly přepsat. „**takhle**" se v mailu vysází tučně.
  */
+/**
+ * PŘEPOSLECH DOKONČEN (zadání 25. 9. 2026) - jediná „notifikace", která
+ * nevisí na stavu projektu, ale na tom, že klient v AudioTaggeru klepl na
+ * PŘEPOSLECHNUTO. Do seznamu výš patří proto, že se nastavuje i posílá
+ * úplně stejně jako ostatní zprávy: karta firmy rozhoduje komu, Vzory zpráv
+ * o znění.
+ *
+ * ROZDÍL JE V PŘEDVOLBĚ: firma, která k tomuhle řádku nic uloženého nemá
+ * (a to je při nasazení každá), dostane zprávu klientovi. U ostatních stavů
+ * je to naopak - ty se musí zapnout ručně. Tahle zpráva je potvrzení toho,
+ * co klient sám právě udělal, takže mlčet by bylo divné.
+ */
+export const STAV_PREPOSLECH_HOTOVO = 'Přeposlech dokončen';
+
 export const CO_SE_POSILA: Record<string, string> = {
   'Natáčíme/stříháme':
     '{osloveni}\n\n**{projekt}**\n\nNa disk jsme přidali první tracky, můžete poslouchat.',
@@ -55,6 +74,8 @@ export const CO_SE_POSILA: Record<string, string> = {
     '{osloveni}\n\n**{projekt}**\n\nNa disk jsme přidali první tracky k poslechu.',
   'Dokončeno - ke schválení':
     '{osloveni}\n\n**{projekt}**\n\nNa disku jsou všechny tracky, čekáme na finální opravy.',
+  [STAV_PREPOSLECH_HOTOVO]:
+    '{osloveni}\n\n**{projekt}**\n\npřeposlech máme kompletní — díky. Pouštíme se do finálních oprav a ozveme se, jakmile budou hotové.',
   'Čekáme na opravy':
     '{osloveni}\n\n**{projekt}**\n\nSedm dní po odevzdání jsme nedostali opravy — připomínka.',
   'Schváleno - k fakturaci':
@@ -117,6 +138,9 @@ export const CO_SE_POSILA_REKLAMA: Record<string, string> = {
 };
 
 export function popisStavuProNotifikaci(stav: string): string {
+  if (stav === STAV_PREPOSLECH_HOTOVO) {
+    return 'Klient označil nahrávku v AudioTaggeru jako přeposlechnutou.';
+  }
   return STAVY_PROJEKTU.find((s) => s.nazev === stav)?.popis ?? '';
 }
 

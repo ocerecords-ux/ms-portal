@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
+import { STAV_PREPOSLECH_HOTOVO } from '@/lib/notifikaceFirmy';
+import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
 import { oznamDokoncenyPreposlech } from '@/lib/brunoOznameni';
 
 /**
@@ -236,6 +238,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
    */
   if (reviewed && !predtim?.reviewed) {
     await oznamDokoncenyPreposlech(params.id, pristup.jmeno, !pristup.interni);
+    /**
+     * A KLIENTOVI ODEJDE ZPRÁVA (zadání 25. 9. 2026: „klientům u audioknih by
+     * měla přijít notifikace, že je dokončen přeposlech a že se pouštíme do
+     * finálních oprav"). Posílá se stejnou cestou jako zprávy ke stavům -
+     * znění se bere ze Vzorů zpráv a u reklamní firmy neodejde vůbec.
+     * Nesmí to shodit samotné označení, proto bez čekání na chybu.
+     */
+    await posliNotifikaciKeStavu(params.id, STAV_PREPOSLECH_HOTOVO).catch((err) =>
+      console.error('Zprava klientovi o dokoncenem preposlechu selhala:', err),
+    );
   }
 
   return NextResponse.json(await stav(params.id, pristup));
