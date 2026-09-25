@@ -31,14 +31,33 @@ function konecDne(kdy: Date): Date {
  * když jich běží víc, vyhrává ta, která končí dřív - o ní má smysl říct
  * „do kdy".
  */
-async function zKalendare(userId: string, ted: Date): Promise<StatusVChatu | null> {
+async function zKalendare(
+  userId: string,
+  ted: Date,
+  volby: { schuzky: boolean; studio: boolean },
+): Promise<StatusVChatu | null> {
   const udalosti = await udalostiCloveka(userId, zacatekDne(ted), konecDne(ted)).catch(() => []);
 
-  type Kandidat = { konec: Date; text: string; emoji: string };
+  type Kandidat = { konec: Date; text: string; emoji: string | null; ikona?: string };
   const kandidati: Kandidat[] = [];
 
   for (const u of udalosti) {
     if (u.end <= ted) continue;
+
+    /**
+     * ZVUKAŘ UKAZUJE, NA ČEM DĚLÁ (zadání 25. 9. 2026: „u zvukařů přidej jako
+     * status ikony střih nebo natáčení těma ikonama, co už máme, a u toho
+     * název projektu"). Ikona je tatáž kresba jako v kalendáři a v přehledu
+     * dne - viz lib/ikonyTypu.
+     */
+    if (volby.studio && u.start <= ted && (u.druh === 'NATACENI' || u.druh === 'STRIH' || u.druh === 'CASTING')) {
+      const ikona =
+        u.druh === 'NATACENI' ? 'mikrofon-studio' : u.druh === 'STRIH' ? 'strih' : 'casting';
+      kandidati.push({ konec: u.end, text: `${u.nazev} do ${casStatusu(u.end)}`, emoji: null, ikona });
+      continue;
+    }
+
+    if (!volby.schuzky) continue;
 
     /**
      * REŽIE NA DÁLKU jen prvních třicet minut (zadání 25. 9. 2026: „u těch
@@ -68,7 +87,13 @@ async function zKalendare(userId: string, ted: Date): Promise<StatusVChatu | nul
 
   if (kandidati.length === 0) return null;
   const vyhra = kandidati.sort((a, b) => a.konec.getTime() - b.konec.getTime())[0];
-  return { text: vyhra.text, emoji: vyhra.emoji, doKdy: vyhra.konec.toISOString(), rucni: false };
+  return {
+    text: vyhra.text,
+    emoji: vyhra.emoji,
+    ikona: vyhra.ikona ?? null,
+    doKdy: vyhra.konec.toISOString(),
+    rucni: false,
+  };
 }
 
 /**
@@ -92,6 +117,7 @@ export async function nactiStatusy(userIds: string[]): Promise<Record<string, St
           statusEmoji: true,
           statusDo: true,
           statusZKalendare: true,
+          role: true,
         },
       }),
       /**
@@ -134,9 +160,17 @@ export async function nactiStatusy(userIds: string[]): Promise<Record<string, St
         continue;
       }
 
-      // 3. Kalendář - jen komu je to zapnuté.
-      if (!clovek.statusZKalendare) continue;
-      const zKal = await zKalendare(clovek.id, ted).catch(() => null);
+      /**
+       * 3. Kalendář. Schůzky, castingy a režii skládáme jen tomu, kdo to má
+       * zaškrtnuté („Tohle nastav jen mi"); natáčení a střih vidí u zvukaře
+       * každý - je to jeho práce, ne jeho program.
+       */
+      const studio = clovek.role === 'ZVUKAR';
+      if (!clovek.statusZKalendare && !studio) continue;
+      const zKal = await zKalendare(clovek.id, ted, {
+        schuzky: clovek.statusZKalendare,
+        studio,
+      }).catch(() => null);
       if (zKal) vysledek[clovek.id] = zKal;
     }
   } catch (err) {

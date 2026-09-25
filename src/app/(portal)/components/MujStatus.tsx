@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { KresbaIkony } from '@/lib/ikonyTypu';
 import {
   DOKDY_NABIDKA,
   HOTOVE_STATUSY,
@@ -95,7 +96,9 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
         title="Nastavit status"
         className="w-full text-left rounded-lg border border-line bg-field/60 hover:bg-field px-2.5 py-1.5 flex items-center gap-2"
       >
-        <span className="text-base leading-none">{status?.emoji ?? '💬'}</span>
+        <span className="text-base leading-none flex items-center">
+          {status?.ikona ? <KresbaIkony klic={status.ikona} velikost={15} /> : (status?.emoji ?? '💬')}
+        </span>
         <span className={`flex-1 min-w-0 truncate text-xs font-body ${status ? 'text-ink' : 'text-muted'}`}>
           {status ? popisStatusu(status) : 'Nastavit status…'}
         </span>
@@ -203,9 +206,16 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
 export function RadekStatusu({ status }: { status: StatusVChatu | null | undefined }) {
   if (!status) return null;
   return (
-    <span className="block text-[11px] font-body text-muted truncate">
-      {status.emoji ? `${status.emoji} ` : ''}
-      {popisStatusu(status)}
+    <span className="flex items-center gap-1 text-[11px] font-body text-muted min-w-0">
+      {/* Zvukařova práce má vlastní kresbu (25. 9. 2026), ostatní status emoji. */}
+      {status.ikona ? (
+        <span className="shrink-0 flex items-center">
+          <KresbaIkony klic={status.ikona} velikost={12} />
+        </span>
+      ) : status.emoji ? (
+        <span className="shrink-0">{status.emoji}</span>
+      ) : null}
+      <span className="truncate">{popisStatusu(status)}</span>
     </span>
   );
 }

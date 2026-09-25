@@ -22,6 +22,12 @@ export type StatusVChatu = {
   /** Celá věta, jak se ukáže: „Mám schůzku do 14:30". */
   text: string;
   emoji: string | null;
+  /**
+   * Klíč kresby z lib/ikonyTypu (25. 9. 2026: „u zvukařů přidej jako status
+   * ikony střih nebo natáčení těma ikonama, co už máme"). Když je vyplněný,
+   * kreslí se místo emoji.
+   */
+  ikona?: string | null;
   /** ISO čas, do kdy status platí; null = dokud ho člověk nesmaže. */
   doKdy: string | null;
   /** Napsal si ho člověk sám? Jinak je z kalendáře. */
