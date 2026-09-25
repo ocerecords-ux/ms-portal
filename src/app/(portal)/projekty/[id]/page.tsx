@@ -1033,7 +1033,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           {objednavkaZWebu && <ZnackaZWebu objednanoAt={objednavkaZWebu.createdAt} />}
           {/* Nabídka u reklamy - značka jen pro toho, kdo ji má zapnutou. */}
           {/* Nabídka / faktura u zakázky (25. 9. 2026) - jen pro ty dva. */}
-          <ZnackyDokladu doklady={dokladyZakazky} velikost={17} />
+          <ZnackyDokladu doklady={dokladyZakazky} velikost={17} dvojklik />
           {vidiNabidku && (
             <NabidkaStav
               caflouProjectId={caflouProjectId}

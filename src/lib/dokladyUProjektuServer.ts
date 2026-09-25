@@ -35,13 +35,13 @@ export async function dokladyUProjektu(
     prisma.offer
       .findMany({
         where: { caflouProjectId: { in: ids } },
-        select: { caflouProjectId: true, number: true, status: true },
+        select: { id: true, caflouProjectId: true, number: true, status: true },
       })
       .catch(() => []),
     prisma.invoice
       .findMany({
         where: { caflouProjectId: { in: ids }, status: { not: 'CANCELLED' } },
-        select: { caflouProjectId: true, number: true, status: true },
+        select: { id: true, caflouProjectId: true, number: true, status: true },
       })
       .catch(() => []),
   ]);
@@ -65,6 +65,10 @@ export async function dokladyUProjektu(
           : n.status === 'SENT'
             ? 'CEKA'
             : 'ROZEPSANA';
+    // Doklad, který o značce rozhodl - na něj vede dvojklik (25. 9. 2026).
+    if (lepsiNabidka(zaznam.nabidka, stav) !== zaznam.nabidka || !zaznam.nabidkaId) {
+      zaznam.nabidkaId = n.id;
+    }
     zaznam.nabidka = lepsiNabidka(zaznam.nabidka, stav);
     zaznam.nabidkaCisla.push(n.number);
   }
@@ -74,6 +78,9 @@ export async function dokladyUProjektu(
     const zaznam = dej(f.caflouProjectId);
     const stav: StavFakturyDokladu =
       f.status === 'PAID' ? 'UHRAZENA' : f.status === 'SENT' ? 'VYSTAVENA' : 'ROZEPSANA';
+    if (lepsiFaktura(zaznam.faktura, stav) !== zaznam.faktura || !zaznam.fakturaId) {
+      zaznam.fakturaId = f.id;
+    }
     zaznam.faktura = lepsiFaktura(zaznam.faktura, stav);
     zaznam.fakturaCisla.push(f.number);
   }

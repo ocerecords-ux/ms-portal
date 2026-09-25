@@ -9,6 +9,7 @@ import { ValecProgresu } from '@/components/ValecProgresu';
 import type { ProgresNataceni } from '@/lib/progresNataceni';
 import { IkonaPriority } from '@/components/IkonaPriority';
 import { OdznakPreposlechu, type StavPreposlechu } from '@/components/OdznakPreposlechu';
+import { DvojklikOtevri } from '@/components/DvojklikOtevri';
 import { initials } from '@/lib/chat';
 import { barvaStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
 import { IkonaTypu, KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
@@ -779,7 +780,15 @@ function bunkaSloupce(
             {/* Jak daleko je přeposlech (upřesnění 25. 9. 2026: „jako malou
                 ikonu u typu projektu, co je před názvem") - oranžová, když
                 se zapisují chyby, zelená, když je přeposlechnuto. */}
-            <OdznakPreposlechu stav={p.meta?.preposlech} />
+            {/* Dvojklik otevře přeposlech projektu (25. 9. 2026). */}
+            {p.meta?.preposlech ? (
+              <DvojklikOtevri
+                odkaz={`/projekty/${p.id}?zalozka=preposlech`}
+                popis="Dvojklik otevře přeposlech"
+              >
+                <OdznakPreposlechu stav={p.meta?.preposlech} />
+              </DvojklikOtevri>
+            ) : null}
             {(p.meta?.licence ?? []).length > 0 && (
               <span className="flex items-center justify-center gap-[2px] flex-wrap leading-none">
                 {(p.meta?.licence ?? []).map((l) => (
@@ -805,7 +814,7 @@ function bunkaSloupce(
           {/* Nabídka u reklamy - hodiny / fajfka / křížek (23. 9. 2026). */}
           {p.meta?.nabidka ? <ZnackaNabidky stav={p.meta.nabidka} velikost={15} /> : null}
           {/* Nabídka / faktura u zakázky (25. 9. 2026) - jen pro ty dva. */}
-          <ZnackyDokladu doklady={p.meta?.doklady} velikost={15} />
+          <ZnackyDokladu doklady={p.meta?.doklady} velikost={15} dvojklik />
         </span>
       );
     case 'companyName':

@@ -1,3 +1,5 @@
+import { DvojklikOtevri } from '@/components/DvojklikOtevri';
+
 /**
  * IKONY DOKLADŮ U NÁZVU PROJEKTU (zadání 25. 9. 2026: „potřebuji ještě vedle
  * názvu projektu dostat ikony s tím, jaký doklad je u projektu vystaven.
@@ -23,6 +25,25 @@
  * na obou místech stejně; čtení z databáze je v lib/dokladyUProjektuServer.ts.
  */
 
+function SDvojklikem({
+  zapnuto,
+  odkaz,
+  popis,
+  children,
+}: {
+  zapnuto: boolean;
+  odkaz: string;
+  popis: string;
+  children: React.ReactNode;
+}) {
+  if (!zapnuto) return <>{children}</>;
+  return (
+    <DvojklikOtevri odkaz={odkaz} popis={popis}>
+      {children}
+    </DvojklikOtevri>
+  );
+}
+
 export type StavNabidkyDokladu = 'ZADNA' | 'ROZEPSANA' | 'CEKA' | 'SCHVALENA' | 'ODMITNUTA';
 export type StavFakturyDokladu = 'ZADNA' | 'ROZEPSANA' | 'VYSTAVENA' | 'UHRAZENA';
 
@@ -32,6 +53,12 @@ export type DokladyProjektu = {
   /** Čísla dokladů do bublinky - ať se nemusí otevírat záložka Doklady. */
   nabidkaCisla: string[];
   fakturaCisla: string[];
+  /**
+   * Doklad, který značku rozsvítil - dvojklik na ikonu ho otevře
+   * (zadání 25. 9. 2026). Prázdné u projektu, kde doklad není.
+   */
+  nabidkaId?: string | null;
+  fakturaId?: string | null;
 };
 
 export const PRAZDNE_DOKLADY: DokladyProjektu = {
@@ -39,6 +66,8 @@ export const PRAZDNE_DOKLADY: DokladyProjektu = {
   faktura: 'ZADNA',
   nabidkaCisla: [],
   fakturaCisla: [],
+  nabidkaId: null,
+  fakturaId: null,
 };
 
 const POPIS_NABIDKY: Record<StavNabidkyDokladu, string> = {
@@ -120,9 +149,12 @@ function Znacka({
 export function ZnackyDokladu({
   doklady,
   velikost = 15,
+  /** Dvojklik otevře doklad (25. 9. 2026). Bez toho je značka jen obrázek. */
+  dvojklik = false,
 }: {
   doklady: DokladyProjektu | null | undefined;
   velikost?: number;
+  dvojklik?: boolean;
 }) {
   if (!doklady) return null;
   const { nabidka, faktura } = doklady;
@@ -133,30 +165,42 @@ export function ZnackyDokladu({
   return (
     <span className="inline-flex items-center gap-1 shrink-0">
       {nabidka !== 'ZADNA' && (
-        <Znacka
-          barva={BARVA_NABIDKY[nabidka]}
-          popis={POPIS_NABIDKY[nabidka] + dodatek(doklady.nabidkaCisla)}
-          velikost={velikost}
-          kresba={
-            <>
-              <path d="M6.6 1.4H10v3.4L5 9.8 1.9 6.6z" />
-              <circle cx="8.2" cy="3.2" r="0.7" />
-            </>
-          }
-        />
+        <SDvojklikem
+          zapnuto={dvojklik && Boolean(doklady.nabidkaId)}
+          odkaz={`/admin/doklady/nabidky/${doklady.nabidkaId ?? ''}`}
+          popis={`${POPIS_NABIDKY[nabidka]}${dodatek(doklady.nabidkaCisla)} — dvojklik otevře nabídku`}
+        >
+          <Znacka
+            barva={BARVA_NABIDKY[nabidka]}
+            popis={POPIS_NABIDKY[nabidka] + dodatek(doklady.nabidkaCisla)}
+            velikost={velikost}
+            kresba={
+              <>
+                <path d="M6.6 1.4H10v3.4L5 9.8 1.9 6.6z" />
+                <circle cx="8.2" cy="3.2" r="0.7" />
+              </>
+            }
+          />
+        </SDvojklikem>
       )}
       {faktura !== 'ZADNA' && (
-        <Znacka
-          barva={BARVA_FAKTURY[faktura]}
-          popis={POPIS_FAKTURY[faktura] + dodatek(doklady.fakturaCisla)}
-          velikost={velikost}
-          kresba={
-            <>
-              <path d="M2.6 1.3h6.8v9.4l-1.7-1.1-1.7 1.1-1.7-1.1-1.7 1.1z" />
-              <path d="M4.3 4h3.4M4.3 6.1h3.4" />
-            </>
-          }
-        />
+        <SDvojklikem
+          zapnuto={dvojklik && Boolean(doklady.fakturaId)}
+          odkaz={`/admin/doklady/faktury/${doklady.fakturaId ?? ''}`}
+          popis={`${POPIS_FAKTURY[faktura]}${dodatek(doklady.fakturaCisla)} — dvojklik otevře fakturu`}
+        >
+          <Znacka
+            barva={BARVA_FAKTURY[faktura]}
+            popis={POPIS_FAKTURY[faktura] + dodatek(doklady.fakturaCisla)}
+            velikost={velikost}
+            kresba={
+              <>
+                <path d="M2.6 1.3h6.8v9.4l-1.7-1.1-1.7 1.1-1.7-1.1-1.7 1.1z" />
+                <path d="M4.3 4h3.4M4.3 6.1h3.4" />
+              </>
+            }
+          />
+        </SDvojklikem>
       )}
     </span>
   );
