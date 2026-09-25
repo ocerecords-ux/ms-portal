@@ -263,6 +263,14 @@ export default async function ProjektyPage() {
    */
   const ukazNormostrany = !(company?.dealsAds && !company?.dealsAudiobooks);
 
+  /**
+   * Kolik lidí z klientovy firmy má v portálu účet - podle toho se ukazuje
+   * (nebo neukazuje) přepínač Moje / Celá firma.
+   */
+  const pocetKlientuFirmy = companyId
+    ? await prisma.user.count({ where: { companyId, role: 'CLIENT' } })
+    : 0;
+
   const jazyk = nactiJazyk();
 
   return (
@@ -279,6 +287,9 @@ export default async function ProjektyPage() {
           přepínač jen mění, co je vidět - viz ZalozkyKlienta.tsx. */}
       <ZalozkyKlienta
         pocetFirmy={firemniVse.length}
+        /* Jediný klient firmy nemá co přepínat - „moje" a „firemní" je totéž
+           (25. 9. 2026). */
+        samotny={pocetKlientuFirmy <= 1}
         moje={
           <div className="flex flex-col gap-8">
             <div>

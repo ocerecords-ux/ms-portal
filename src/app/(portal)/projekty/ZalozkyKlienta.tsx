@@ -20,14 +20,24 @@ export function ZalozkyKlienta({
   moje,
   firma,
   pocetFirmy,
+  samotny = false,
 }: {
   moje: React.ReactNode;
   firma: React.ReactNode;
   /** Kolik zakázek má firma celkem - ať je vidět, jestli se vůbec vyplatí klikat. */
   pocetFirmy: number;
+  /**
+   * Je klient u firmy sám? (oprava 25. 9. 2026: „vypni ten přepínač Celá
+   * firma u klienta v přehledu projektů, když má firma pod sebou jen jednoho
+   * klienta. To je nesmysl.") Přepínat mezi „mými" a „firemními" zakázkami
+   * nemá u jednoho člověka co ukazovat - obě záložky jsou totéž.
+   */
+  samotny?: boolean;
 }) {
   const [zalozka, setZalozka] = useState<'moje' | 'firma'>('moje');
   const t = usePreklad();
+
+  if (samotny) return <>{moje}</>;
 
   const stitek = (klic: 'moje' | 'firma', popisek: string, pocet?: number) => (
     <button
