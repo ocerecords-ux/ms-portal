@@ -6,6 +6,8 @@ import { listProjectOptions } from '@/lib/projectOptions';
 import { expenseTotalMinor, uhrazenoMinor, zbyvaMinor } from '@/lib/expenses';
 import { QrPlatba } from '@/components/QrPlatba';
 import { NahledPrilohy } from './NahledPrilohy';
+import { FakturaKeSmlouve, type KandidatFaktury } from './FakturaKeSmlouve';
+import { formatMoney } from '@/lib/doklady';
 
 // Detail prijateho dokladu.
 export const dynamic = 'force-dynamic';
@@ -29,6 +31,64 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
   if (!expense) notFound();
 
   const projects = await listProjectOptions();
+
+  /**
+   * DODATEČNÁ FAKTURA KE SMLOUVĚ (zadání 25. 9. 2026: „my vytvoříme herci
+   * smlouvu a na základě té smlouvy je platíme. Akorát někteří ještě pošlou
+   * dodatečně fakturu… potřebuji, ať se počítá jeden a ať vím, že mám zaplatit
+   * ten s DPH"). Karta se ukazuje jen u dokladu, který vznikl ze smlouvy.
+   */
+  const zeSmlouvy = expense.zdroj === 'SMLOUVA' || Boolean(expense.fakturaCislo);
+  const smlouva = zeSmlouvy
+    ? await prisma.contract.findUnique({ where: { vydajId: expense.id }, select: { number: true } })
+    : null;
+
+  /**
+   * Co by mohla být ta faktura: neuhrazený doklad, který nevznikl ze smlouvy -
+   * buď od stejného dodavatele nebo na stejném projektu, a k tomu všechno, co
+   * leží nezařazené ze schránky účtárny.
+   */
+  const kandidati: KandidatFaktury[] =
+    zeSmlouvy && !expense.fakturaCislo
+      ? (
+          await prisma.expense.findMany({
+            where: {
+              id: { not: expense.id },
+              paid: false,
+              zdroj: { not: 'SMLOUVA' },
+              OR: [
+                ...(expense.supplierCompanyId ? [{ supplierCompanyId: expense.supplierCompanyId }] : []),
+                ...(expense.caflouProjectId ? [{ caflouProjectId: expense.caflouProjectId }] : []),
+                { stav: 'NEZARAZENY' as const },
+              ],
+            },
+            orderBy: { issueDate: 'desc' },
+            take: 30,
+            select: {
+              id: true,
+              number: true,
+              supplierName: true,
+              supplier: { select: { name: true } },
+              amountExVatMinor: true,
+              vatRate: true,
+              currency: true,
+              issueDate: true,
+              projectName: true,
+            },
+          })
+        ).map((d) => ({
+          id: d.id,
+          popis: [
+            d.number || 'bez čísla',
+            d.supplier?.name || d.supplierName || '—',
+            formatMoney(expenseTotalMinor(d.amountExVatMinor, d.vatRate), d.currency),
+            new Intl.DateTimeFormat('cs-CZ').format(d.issueDate),
+            d.projectName,
+          ]
+            .filter(Boolean)
+            .join(' · '),
+        }))
+      : [];
 
   // Ucet je bud primo na dokladu (dorazil ze smlouvy s hercem), nebo u firmy
   // dodavatele. Kdyz neni ani jeden, QR se nekresli.
@@ -124,6 +184,23 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
           kdoJmeno: u.kdoJmeno,
         }))}
       />
+
+      {zeSmlouvy && (
+        <FakturaKeSmlouve
+          expenseId={expense.id}
+          smlouvaCislo={smlouva?.number ?? null}
+          faktura={
+            expense.fakturaAt
+              ? { cislo: expense.fakturaCislo, at: expense.fakturaAt.toISOString() }
+              : null
+          }
+          celkemMinor={celkemMinor}
+          bezDphMinor={expense.amountExVatMinor}
+          sazba={expense.vatRate}
+          mena={expense.currency}
+          kandidati={kandidati}
+        />
+      )}
         </div>
 
         {/* Náhled drží na místě i při rolování formuláře - jinak by u delšího

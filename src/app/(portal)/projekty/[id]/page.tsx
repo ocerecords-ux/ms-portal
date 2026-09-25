@@ -28,6 +28,7 @@ import { NabidkaStav } from './NabidkaStav';
 import { ProjectDocuments, invoiceStatus, offerStatus, type ProjectDocRow } from './ProjectDocuments';
 import { ZnackaZWebu } from '@/components/ZnackaZWebu';
 import { navrhNabidkyZObjednavky, objednavkaProjektu } from '@/lib/nabidkaZObjednavky';
+import { stavyNabidekZDokladu } from '@/lib/nabidkaStavServer';
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
 import { computeTotals } from '@/lib/doklady';
 import { expenseTotalMinor } from '@/lib/expenses';
@@ -785,6 +786,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       : false;
 
   /**
+   * Schválená nabídka v Dokladech přebíjí ruční značku (25. 9. 2026: „když dám
+   * schválit nabídku ručně, tak je taky prostě schválená").
+   */
+  const nabidkaZDokladu = vidiNabidku
+    ? (await stavyNabidekZDokladu([caflouProjectId])).get(caflouProjectId) ?? null
+    : null;
+
+  /**
    * LICENČNÍ LIST (zadání 22. 9. 2026: „u reklam budeme klientovi vystavovat
    * licenční listy, netýká se to rádiových spotů"). Záložka u projektů firem,
    * které dělají reklamy, kromě rádiového spotu (ten má Rodný list).
@@ -1013,6 +1022,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               caflouProjectId={caflouProjectId}
               stav={metaPoSync?.nabidkaStav ?? null}
               muzeMenit={canEdit}
+              zDokladu={nabidkaZDokladu}
             />
           )}
         </div>

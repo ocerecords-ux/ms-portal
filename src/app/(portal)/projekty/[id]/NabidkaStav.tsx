@@ -20,10 +20,18 @@ export function NabidkaStav({
   caflouProjectId,
   stav,
   muzeMenit,
+  zDokladu = null,
 }: {
   caflouProjectId: string;
   stav: string | null;
   muzeMenit: boolean;
+  /**
+   * Stav podle nabídky v Dokladech (25. 9. 2026: „když dám schválit nabídku
+   * ručně, tak je taky prostě schválená"). Když nabídka v portálu je, ví
+   * o jejím osudu víc než ruční značka - tak se značka jen ukazuje a
+   * nepřeklápí.
+   */
+  zDokladu?: StavNabidky | null;
 }) {
   const [ulozeny, setUlozeny] = useState<StavNabidky>(stavNabidky(stav));
   const [otevreno, setOtevreno] = useState(false);
@@ -45,6 +53,18 @@ export function NabidkaStav({
       setUlozeny(predtim);
       setChyba('Neuložilo se');
     }
+  }
+
+  if (zDokladu) {
+    return (
+      <span
+        title="Podle nabídky v Dokladech — ručně se to nepřeklápí."
+        className="inline-flex items-center gap-1.5 text-xs font-heading text-muted"
+      >
+        <ZnackaNabidky stav={zDokladu} />
+        {popisNabidky(zDokladu)}
+      </span>
+    );
   }
 
   if (!muzeMenit) {

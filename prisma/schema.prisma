@@ -1755,6 +1755,17 @@ model Expense {
   /// Prazdne = plati se postaru podle `paid`.
   uhrady UhradaVydaje[]
 
+  /// DODATECNA FAKTURA KE SMLOUVE (zadani 25. 9. 2026: „my vytvorime herci
+  /// smlouvu a na zaklade te smlouvy je platime. Akorat nekteri jeste poslou
+  /// dodatecne fakturu. Hlavne platci dph... potrebuji, at se pocita jeden
+  /// a at vim, ze mam zaplatit ten s dph").
+  ///
+  /// Naklad zustava JEDEN doklad: smlouva i faktura u nej visi jako prilohy
+  /// a castka se prepise na tu z faktury (tedy s DPH). Tady je jen cislo
+  /// faktury a kdy se pripojila - at je v detailu videt, ze uz dorazila.
+  fakturaCislo String?
+  fakturaAt    DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

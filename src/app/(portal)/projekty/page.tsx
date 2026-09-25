@@ -31,7 +31,7 @@ import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit, prelozitS } from '@/lib/jazyk';
 import { bezTitulu } from '@/lib/jmena';
-import { stavNabidky } from '@/lib/nabidkaReklamy';
+import { slozStavNabidky, stavyNabidekZDokladu } from '@/lib/nabidkaStavServer';
 
 // DULEZITE: stránka čte projekty při každém zobrazení - nesmí ji Next.js
 // pri buildu "zamrazit" jako statickou stránku (to by klientovi natvrdo
@@ -467,6 +467,14 @@ async function InternalProjektySection({
    */
   const preposlechMapa = await nactiPreposlechPrehled(projects.map((p) => String(p.id)));
 
+  /**
+   * Schválená nabídka v Dokladech přebíjí ruční značku (25. 9. 2026: „když dám
+   * schválit nabídku ručně, tak je taky prostě schválená").
+   */
+  const nabidkyZDokladu = vidiNabidky
+    ? await stavyNabidekZDokladu(projects.map((p) => String(p.id)))
+    : new Map();
+
   const metaById = new Map(
     metas.map((m): [string, InternalProjectMeta] => [
       m.caflouProjectId,
@@ -508,7 +516,7 @@ async function InternalProjektySection({
           vidiNabidky &&
           (Boolean(m.company?.dealsAds && !m.company?.dealsAudiobooks) ||
             Boolean(m.projectType && typyReklamy.includes(m.projectType)))
-            ? stavNabidky(m.nabidkaStav)
+            ? slozStavNabidky(m.nabidkaStav, nabidkyZDokladu.get(m.caflouProjectId))
             : null,
       },
     ]),
