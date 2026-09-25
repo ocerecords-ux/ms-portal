@@ -7,6 +7,7 @@ import { smiStudio, spravovanaStudia, spravujeNeco } from '@/lib/spravaKalendare
 import { loadOccupancy } from '@/lib/calendarServer';
 import { BLOCK_KIND_LABELS, jePraceVeStudiu, maHerce, popisUdalosti, zabiraStudio } from '@/lib/calendar';
 import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
+import { kdyAnglicky, oznamKlientovi } from '@/lib/bookingServer';
 import { synchronizujUkolUdalosti, zrusUkolUdalosti } from '@/lib/kalendarUkolyServer';
 
 /**
@@ -359,6 +360,19 @@ export async function PATCH(req: NextRequest) {
       kdo: { id: session.user.id, jmeno: session.user.name || session.user.email },
     });
 
+    /**
+     * REZERVACE KLIENTA STUDIA (25. 9. 2026): když s ní hneme my, klient se to
+     * musí dozvědět - je to jeho termín. Posílá se jen při změně času nebo
+     * studia; přejmenování poznámky nikoho budit nemá.
+     */
+    if (zmenaCasu) {
+      await oznamKlientovi(
+        { ...upravena, kind: upravena.kind as string },
+        'ZMENA',
+        kdyAnglicky(puvodni.start, puvodni.end, await pasmoStudia(puvodni.studioId)),
+      );
+    }
+
     return NextResponse.json(upravena);
   } catch (err) {
     console.error('PATCH /api/kalendar/blokace selhalo:', err);
@@ -397,6 +411,8 @@ export async function DELETE(req: NextRequest) {
     // Úkol, který na události visel, jde pryč s ní (23. 9. 2026).
     await zrusUkolUdalosti('BLOCK', id);
     await prisma.studioBlock.delete({ where: { id } });
+    // Zrušenou rezervaci oznámíme klientovi studia (25. 9. 2026).
+    if (blok) await oznamKlientovi({ ...blok, kind: blok.kind as string }, 'ZRUSENI');
 
     if (blok) {
       await zapisZmenuKalendare({

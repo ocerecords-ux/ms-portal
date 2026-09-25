@@ -10,6 +10,7 @@ import {
 import { smiStudio, spravovanaStudia, spravujeNeco } from '@/lib/spravaKalendare';
 import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
 import { notifyMany } from '@/lib/notifications';
+import { sendStudioBookingEmail, type DruhZpravyStudia } from '@/lib/email';
 import {
   DRUH_REZERVACE,
   hodinyDne,
@@ -292,6 +293,20 @@ export async function zalozRezervaci(input: {
     select: { id: true, title: true },
   });
 
+  // Potvrzení klientovi (25. 9. 2026) - ať má termín černé na bílém.
+  await oznamKlientovi(
+    {
+      kind: DRUH_REZERVACE,
+      bookingUserId: input.user.id,
+      bookingEmail: input.user.email,
+      title: blok.title,
+      note: input.poznamka ?? null,
+      start,
+      end,
+      studioId: studio.id,
+    },
+    'POTVRZENI',
+  );
   await oznamTymu(studio, {
     nadpis: `Nová rezervace studia ${studio.kratce}`,
     telo: `${jmeno}: ${blok.title}`,
@@ -387,6 +402,145 @@ async function oznamTymu(
     body: `${kdy} — ${z.telo}`,
     url: '/kalendar',
   });
+}
+
+/**
+ * Kdy to je, jednou větou v pásmu studia: „Wed 14 Oct, 10:00–14:00".
+ * Do e-mailů klientovi, takže anglicky - viz lib/email.ts.
+ */
+export function kdyAnglicky(start: Date, end: Date, pasmo: string): string {
+  const den = new Intl.DateTimeFormat('en-GB', {
+    timeZone: pasmo,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).format(start);
+  const cas = (d: Date) =>
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: pasmo,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(d);
+  return `${den}, ${cas(start)}–${cas(end)}`;
+}
+
+/**
+ * ZPRÁVA KLIENTOVI STUDIA (zadání 25. 9. 2026). Rozhoduje jeho vlastní
+ * přepínač na účtu - kdo si upozornění vypnul, nedostane nic.
+ *
+ * NIKDY NEVYHAZUJE: neodeslaný e-mail nesmí shodit ani rezervaci, ani úpravu
+ * v kalendáři. Ta už je hotová, tohle je jen doprovod.
+ */
+export async function oznamKlientovi(
+  blok: {
+    kind: string;
+    bookingUserId?: string | null;
+    bookingEmail?: string | null;
+    title: string;
+    note?: string | null;
+    start: Date;
+    end: Date;
+    studioId: string;
+  },
+  druh: DruhZpravyStudia,
+  puvodne?: string | null,
+): Promise<void> {
+  try {
+    if (blok.kind !== DRUH_REZERVACE || !blok.bookingUserId) return;
+    const [klient, studio] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: blok.bookingUserId },
+        select: {
+          name: true,
+          email: true,
+          active: true,
+          bookingMailPotvrzeni: true,
+          bookingMailZmena: true,
+          bookingMailPripominka: true,
+        },
+      }) as Promise<{
+        name: string | null;
+        email: string;
+        active: boolean;
+        bookingMailPotvrzeni: boolean;
+        bookingMailZmena: boolean;
+        bookingMailPripominka: boolean;
+      } | null>,
+      prisma.studio.findUnique({
+        where: { id: blok.studioId },
+        select: { name: true, timezone: true },
+      }),
+    ]);
+    if (!klient?.active || !studio) return;
+
+    const chce =
+      druh === 'POTVRZENI'
+        ? klient.bookingMailPotvrzeni
+        : druh === 'PRIPOMINKA'
+          ? klient.bookingMailPripominka
+          : klient.bookingMailZmena;
+    if (!chce) return;
+
+    await sendStudioBookingEmail({
+      to: blok.bookingEmail || klient.email,
+      name: klient.name,
+      druh,
+      studio: studio.name,
+      kdy: kdyAnglicky(blok.start, blok.end, studio.timezone),
+      nazev: blok.title,
+      poznamka: blok.note ?? null,
+      puvodne: puvodne ?? null,
+    });
+  } catch (err) {
+    console.error('Zprávu klientovi studia se nepodařilo odeslat:', err);
+  }
+}
+
+/**
+ * ZÍTŘEJŠÍ REZERVACE A PŘIPOMÍNKA K NIM (zadání 25. 9. 2026). Pouští to
+ * denní úloha - viz api/cron/studio-pripominky.
+ *
+ * ZÍTŘEK SE POČÍTÁ V PÁSMU STUDIA, ne v našem: londýnskému klientovi má
+ * přijít připomínka na jeho zítřek.
+ */
+export async function posliPripominkyRezervaci(): Promise<{ posláno: number }> {
+  const studia = await prisma.studio.findMany({
+    where: { active: true, bookingZapnuto: true },
+    select: { id: true, timezone: true },
+  });
+
+  let posláno = 0;
+  for (const studio of studia) {
+    const ted = utcParts(new Date(), studio.timezone);
+    const od = zonedToUtc(ted.year, ted.month, ted.day + 1, 0, studio.timezone);
+    const doKdy = zonedToUtc(ted.year, ted.month, ted.day + 2, 0, studio.timezone);
+
+    const rezervace = await prisma.studioBlock.findMany({
+      where: {
+        studioId: studio.id,
+        kind: DRUH_REZERVACE as never,
+        start: { gte: od, lt: doKdy },
+        bookingUserId: { not: null },
+      },
+      select: {
+        kind: true,
+        bookingUserId: true,
+        bookingEmail: true,
+        title: true,
+        note: true,
+        start: true,
+        end: true,
+        studioId: true,
+      },
+    });
+
+    for (const r of rezervace) {
+      await oznamKlientovi({ ...r, kind: r.kind as string }, 'PRIPOMINKA');
+      posláno += 1;
+    }
+  }
+  return { posláno };
 }
 
 /** Dnešek v pásmu studia - odtud se počítá „tenhle týden". */

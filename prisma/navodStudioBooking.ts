@@ -87,6 +87,16 @@ Easiest of all — point your phone camera at this code:
 
 There is also a [one-page card to print or forward](/navody/studio-booking-install.pdf) with the same code and both sets of steps.
 
+# Your account and what we email you
+
+Your name sits in the top right corner — tap it and you can change your name and phone number, and choose what lands in your inbox:
+
+- **Booking confirmation** — the details in writing the moment you book.
+- **Changed or cancelled booking** — if we ever have to move or cancel your time, you hear it from us straight away.
+- **Reminder the day before** — the afternoon before your session.
+
+All three are on to begin with; turn off whatever you do not want. Your email address is also your username, so if that needs changing, write to us.
+
 # A few things worth knowing
 
 - **Your names are private.** Other clients never see what you called a booking, or that it is yours at all. The same holds the other way round — that is why their time shows only as *Busy*.

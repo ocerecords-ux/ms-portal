@@ -3,7 +3,11 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { odkazNaFotku } from '@/lib/fotky';
+import { initials } from '@/lib/chat';
 import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 import { JazykProvider } from '@/app/(portal)/components/JazykProvider';
 import { PrepinacJazyka } from '@/app/(portal)/components/PrepinacJazyka';
 import { ThemeToggle } from '@/app/(portal)/components/ThemeToggle';
@@ -50,13 +54,34 @@ export default async function StudioLayout({ children }: { children: React.React
   const klientStudia = session.user.role === 'BOOKING';
   const jazyk = klientStudia ? 'en' : nactiJazyk();
 
+  /**
+   * KDO JE PŘIHLÁŠENÝ (zadání 25. 9. 2026: „pak by tam měl být vidět uživatel,
+   * který je přihlášený zrovna jako je to na portálu"). Stejný chip jako
+   * v liště portálu - fotka nebo iniciály a jméno, klepnutí vede na účet.
+   */
+  const ucet = await prisma.user
+    .findUnique({
+      where: { id: session.user.id },
+      select: { name: true, email: true, maFotku: true },
+    })
+    .catch(() => null);
+  const jmeno = ucet?.name?.trim() || ucet?.email || session.user.email || '';
+  const fotka = odkazNaFotku(session.user.id, ucet?.maFotku);
+
   return (
     <JazykProvider jazyk={jazyk}>
       <div className="min-h-screen bg-paper flex flex-col">
         <header className="bg-gradient-to-r from-brand-purple to-brand-purpleDeep text-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
             <span className="flex items-center gap-2.5 min-w-0">
-              <span className="font-body text-brand-green font-semibold text-lg sm:text-xl">MS</span>
+              {/* Pohyblivé logo Mediaspace (25. 9. 2026) - stejné jako na
+                  přihlášení, ne zkratka MS. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/mediaspace-logo.gif"
+                alt="Mediaspace"
+                className="h-9 sm:h-10 w-auto shrink-0"
+              />
               <span className="w-px h-6 bg-white/40 shrink-0" aria-hidden="true" />
               <span className="font-heading font-semibold text-sm sm:text-base truncate">
                 Studio booking
@@ -71,6 +96,22 @@ export default async function StudioLayout({ children }: { children: React.React
               </Link>
               {!klientStudia && <PrepinacJazyka />}
               <ThemeToggle />
+              {/* Přihlášený člověk - klepnutí vede na jeho účet a upozornění. */}
+              <Link
+                href="/studio/ucet"
+                title={prelozit(jazyk, 'booking.mujUcet')}
+                className="flex items-center gap-2 text-sm font-heading text-brand-green bg-white/10 border border-white/20 rounded-pill p-1 sm:pl-1 sm:pr-3 no-underline hover:bg-white/20 transition-colors"
+              >
+                {fotka ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={fotka} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 bg-white/20" />
+                ) : (
+                  <span className="w-7 h-7 rounded-full bg-white/20 text-white text-[11px] font-semibold grid place-items-center shrink-0">
+                    {initials(jmeno)}
+                  </span>
+                )}
+                <span className="hidden sm:inline max-w-[160px] truncate">{jmeno}</span>
+              </Link>
               <OdhlasitSe />
             </span>
           </div>

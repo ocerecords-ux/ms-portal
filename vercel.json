@@ -51,6 +51,10 @@
     {
       "path": "/api/cron/upominky",
       "schedule": "30 6 * * 1-5"
+    },
+    {
+      "path": "/api/cron/studio-pripominky",
+      "schedule": "0 15 * * *"
     }
   ]
 }

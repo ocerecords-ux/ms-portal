@@ -409,6 +409,13 @@ model User {
   bookingStudio   Studio? @relation("BookingStudio", fields: [bookingStudioId], references: [id], onDelete: SetNull)
   /// Rezervace, ktere si ten clovek zalozil (StudioBlock druhu BOOKING).
   bookingRezervace StudioBlock[] @relation("BookingRezervace")
+  /// UPOZORNENI KLIENTA STUDIA (zadani 25. 9. 2026: „pod kliknutim na jmeno
+  /// by mel jit nastavit osobni profil a ruzne notifikace, zmeny terminu
+  /// a pod"). Vychozi ZAPNUTO - kdo si rezervuje studio, chce vedet, ze to
+  /// plati, a hlavne kdyz se termin zmeni.
+  bookingMailPotvrzeni  Boolean @default(true)
+  bookingMailZmena      Boolean @default(true)
+  bookingMailPripominka Boolean @default(true)
   /// Účet tabule (role TABULE) - které studio ukazuje (22. 9. 2026).
   tabuleStudioId String?
   tabuleStudio   Studio? @relation("TabuleUcet", fields: [tabuleStudioId], references: [id], onDelete: SetNull)

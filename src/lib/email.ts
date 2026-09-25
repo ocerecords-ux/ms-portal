@@ -2535,3 +2535,120 @@ export async function sendUpominkaEmail(input: UpominkaInput) {
   });
   return { sent: true as const, reason: undefined };
 }
+
+// ---------------------------------------------------------------------------
+// Rezervace studia - zpravy klientovi (zadani 25. 9. 2026: „pod kliknutim na
+// jmeno by mel jit nastavit osobni profil a ruzne notifikace, zmeny terminu
+// a pod")
+// ---------------------------------------------------------------------------
+//
+// ANGLICKY, jako cely kalendar rezervaci: cte to muzikant z Londyna.
+// Kdy ktera zprava chodi, rozhoduji tri prepinace na jeho uctu
+// (User.bookingMail*) - tady se jen sklada text.
+
+export type DruhZpravyStudia = 'POTVRZENI' | 'ZMENA' | 'ZRUSENI' | 'PRIPOMINKA';
+
+export type StudioBookingEmailInput = {
+  to: string;
+  name: string | null;
+  druh: DruhZpravyStudia;
+  /** Nazev studia, napr. „MS Studio - London". */
+  studio: string;
+  /** Kdy to zacina a konci - uz slozene v pasmu studia. */
+  kdy: string;
+  nazev: string;
+  poznamka?: string | null;
+  /** Puvodni termin u presunu. */
+  puvodne?: string | null;
+};
+
+const ZPRAVY_STUDIA: Record<
+  DruhZpravyStudia,
+  { tag: string; badge: string; heading: string; intro: string; subject: string }
+> = {
+  POTVRZENI: {
+    tag: 'Studio booking',
+    badge: 'Booked',
+    heading: 'Your studio time is booked',
+    intro: 'the studio is yours — here is what we have in the diary.',
+    subject: 'Studio booked',
+  },
+  ZMENA: {
+    tag: 'Studio booking',
+    badge: 'Changed',
+    heading: 'Your booking has moved',
+    intro: 'we had to move your booking. Here is where it sits now — if it does not work, tell us and we will sort something out.',
+    subject: 'Your studio booking has moved',
+  },
+  ZRUSENI: {
+    tag: 'Studio booking',
+    badge: 'Cancelled',
+    heading: 'Your booking has been cancelled',
+    intro: 'we have had to cancel this booking. Sorry about that — write to us and we will find you another slot.',
+    subject: 'Your studio booking has been cancelled',
+  },
+  PRIPOMINKA: {
+    tag: 'Studio booking',
+    badge: 'Tomorrow',
+    heading: 'See you in the studio tomorrow',
+    intro: 'just a reminder of your session tomorrow.',
+    subject: 'Your studio session tomorrow',
+  },
+};
+
+function buildStudioBookingHtml(input: StudioBookingEmailInput): string {
+  const copy = ZPRAVY_STUDIA[input.druh];
+  const greeting = escapeHtml(input.name ? `Hello ${input.name},` : 'Hello,');
+  const zaklad = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
+
+  return emailShell({
+    tag: copy.tag,
+    preheader: `${copy.heading} - ${input.kdy}`,
+    body: `
+    <span class="badge">${copy.badge}</span>
+    <h2>${copy.heading}</h2>
+    <p>${greeting}</p>
+    <p>${copy.intro}</p>
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Booking</td><td class="value">${escapeHtml(input.nazev)}</td></tr>
+      <tr><td class="label">When</td><td class="value">${escapeHtml(input.kdy)}</td></tr>
+      ${input.puvodne ? `<tr><td class="label">Previously</td><td class="value regular">${escapeHtml(input.puvodne)}</td></tr>` : ''}
+      <tr><td class="label">Studio</td><td class="value regular">${escapeHtml(input.studio)}</td></tr>
+      ${input.poznamka ? `<tr><td class="label">Your note</td><td class="value regular">${escapeHtml(input.poznamka)}</td></tr>` : ''}
+    </table>
+
+    <div class="cta-row">
+      <a href="${zaklad}/studio" class="cta">Open the calendar</a>
+    </div>
+    <p class="small">You can turn these emails off under your name in the booking calendar.</p>
+  `,
+  });
+}
+
+export async function sendStudioBookingEmail(input: StudioBookingEmailInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+
+  const copy = ZPRAVY_STUDIA[input.druh];
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: `${copy.subject} - ${input.kdy}`,
+    text: [
+      input.name ? `Hello ${input.name},` : 'Hello,',
+      '',
+      copy.intro,
+      '',
+      `Booking: ${input.nazev}`,
+      `When: ${input.kdy}`,
+      ...(input.puvodne ? [`Previously: ${input.puvodne}`] : []),
+      `Studio: ${input.studio}`,
+      '',
+      `${(process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '')}/studio`,
+    ].join('\n'),
+    html: buildStudioBookingHtml(input),
+  });
+  return { sent: true as const, reason: undefined };
+}
