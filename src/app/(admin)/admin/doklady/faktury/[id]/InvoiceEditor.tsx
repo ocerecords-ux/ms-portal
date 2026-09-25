@@ -189,6 +189,11 @@ export function InvoiceEditor({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  /**
+   * Projekt, na který se portál po odeslání faktury ptá, jestli ho ukončit
+   * (25. 9. 2026). Prázdné = neptá se.
+   */
+  const [ukonceni, setUkonceni] = useState<{ id: string; nazev: string | null } | null>(null);
 
   const totals = useMemo(
     () => computeTotals(items, { slevaProcent: form.slevaProcent, slevaMinor: form.slevaMinor, slevaPopis: form.slevaPopis }),
@@ -322,9 +327,43 @@ export function InvoiceEditor({
       setInfo(
         `Faktura odeslána na ${data.to}${kopie.length ? ` (v kopii ${kopie.join(', ')})` : ''}.`,
       );
+      /**
+       * MEZIKROK MÍSTO AUTOMATU (zadání 25. 9. 2026). Projekt se po odeslání
+       * faktury sám nezavírá - portál se zeptá a zavře ho, teprve když to
+       * někdo odklepne.
+       */
+      if (data?.nabidnoutUkonceni && data?.caflouProjectId) {
+        setUkonceni({ id: String(data.caflouProjectId), nazev: data.projectName || null });
+      }
       router.refresh();
     } catch {
       setError('Odeslání se nezdařilo.');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  /** „Ukončit projekt?" po odeslání faktury - zavře ho stejná cesta jako ručně. */
+  async function ukonciProjekt() {
+    if (!ukonceni) return;
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/projekty/${encodeURIComponent(ukonceni.id)}/ukonceni`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ukoncit: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || 'Projekt se nepodařilo ukončit.');
+        return;
+      }
+      setUkonceni(null);
+      setInfo('Projekt je ukončený.');
+      router.refresh();
+    } catch {
+      setError('Projekt se nepodařilo ukončit.');
     } finally {
       setSending(false);
     }
@@ -537,6 +576,37 @@ export function InvoiceEditor({
       )}
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
       {info && <p className="text-sm text-ink bg-tint border border-line rounded-lg px-4 py-3 m-0">{info}</p>}
+
+      {/* POJISTKA PO ODESLÁNÍ FAKTURY (zadání 25. 9. 2026: „jakmile se odešle
+          faktura, dejme ještě mezikrok, že se systém zeptá Ukončit projekt?").
+          Projekt se sám nezavírá; tohle je ta otázka. */}
+      {ukonceni && (
+        <div className="bg-warnTint border border-line rounded-card px-4 py-3 flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-body text-ink">
+            Faktura odešla. Ukončit projekt{ukonceni.nazev ? ` „${ukonceni.nazev}"` : ''}?
+            <span className="block text-xs text-muted">
+              Přehodí se na „Vyfakturováno" a přesune mezi dokončené. Vrátit jde v detailu projektu.
+            </span>
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={ukonciProjekt}
+              disabled={sending}
+              className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
+            >
+              Ukončit projekt
+            </button>
+            <button
+              type="button"
+              onClick={() => setUkonceni(null)}
+              className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors"
+            >
+              Nechat běžet
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-line">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * SMLOUVY OD KLIENTA (zadání 21. 9. 2026: „potřebuju někam do dokladů projektu
@@ -263,7 +264,7 @@ export function SmlouvyKlienta({ caflouProjectId }: { caflouProjectId: string })
               <span className="text-xs font-body text-ink">
                 Podepsaná dne <span className="text-muted">· nepovinné</span>
               </span>
-              <input type="date" value={podepsano} onChange={(e) => setPodepsano(e.target.value)} className={pole} />
+              <DatumPole value={podepsano} onChange={(e) => setPodepsano(e.target.value)} className={pole} />
             </label>
           </div>
           <div className="flex items-center gap-3">

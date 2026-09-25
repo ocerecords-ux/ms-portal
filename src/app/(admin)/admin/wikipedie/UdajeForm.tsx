@@ -1,6 +1,7 @@
 'use client';
 
 import type { DiloUdaju, MilnikUdaju, UdajeOsoby, ZdrojUdaju } from '@/lib/wikipedieUdaje';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * Formulář „Údaje o sobě" (zadání 22. 9. 2026: „napíšu o sobě nějaká data
@@ -173,8 +174,7 @@ export function UdajeForm({ udaje, zmena }: { udaje: UdajeOsoby; zmena: (u: Udaj
             </label>
             <label className="flex flex-col gap-1 w-[150px]">
               <span className={popisek}>Datum vydání</span>
-              <input
-                type="date"
+              <DatumPole
                 value={z.datum}
                 onChange={(e) => set('zdroje', udaje.zdroje.map((x, j) => (j === i ? { ...x, datum: e.target.value } : x)))}
                 className={pole}

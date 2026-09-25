@@ -211,35 +211,26 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
      * „Schváleno - k fakturaci“ (STAV_PRED_FAKTUROU). Záloha odchází dřív,
      * v jiném stavu, takže projekt neukončí.
      */
-    let projektUkoncen = false;
-    if (
+    /**
+     * POJISTKA MÍSTO AUTOMATU (zadání 25. 9. 2026: „nastavme ještě jednu
+     * pojistku u automatického ukončování faktur. Jakmile se odešle faktura,
+     * dejme ještě mezikrok, že se systém zeptá Ukončit projekt?").
+     *
+     * Projekt se tedy po odeslání faktury sám NEZAVÍRÁ. Portál jen řekne, že
+     * by se zavřít mohl, a člověk to odklepne (nebo ne) - zavírá se pak
+     * stejnou cestou jako ruční ukončení, /api/projekty/[id]/ukonceni.
+     *
+     * Ptá se jen tam, kde by se dřív ukončovalo samo: projekt ještě neběží
+     * jako hotový a stojí ve stavu „Schváleno - k fakturaci". Záloha odchází
+     * v jiném stavu a ta se nikdy ptát nemá.
+     */
+    const nabidnoutUkonceni = Boolean(
       UKONCIT_PROJEKT_PO_FAKTURE &&
-      invoice.caflouProjectId &&
-      meta &&
-      !meta.finished &&
-      (meta.statusName ?? '').trim() === STAV_PRED_FAKTUROU
-    ) {
-      try {
-        await prisma.projectMeta.update({
-          where: { caflouProjectId: invoice.caflouProjectId },
-          data: { statusName: STAV_PO_FAKTURE, finished: true },
-        });
-        await zapisZmenyProjektu({
-          caflouProjectId: invoice.caflouProjectId,
-          pred: { statusName: meta.statusName, finished: meta.finished },
-          ulozeno: { statusName: STAV_PO_FAKTURE, finished: true },
-          // Ukončuje Bruno (22. 9. 2026) - v historii je vidět, že to udělal
-          // automat po odeslání faktury, ne člověk rukou.
-          puvodce: { id: null, jmeno: 'Bruno (po odeslání faktury)' },
-        });
-        projektUkoncen = true;
-        // Do kanálu projektu se o tom NEPÍŠE (zadání 23. 9. 2026: „ať Bruno
-        // tohle nepíše do chatu"). Že projekt ukončil automat po odeslání
-        // faktury, je vidět v historii projektu - do chatu to nepatří.
-      } catch (err) {
-        console.error(`Projekt ${invoice.caflouProjectId} se po odeslani faktury nepodarilo uzavrit:`, err);
-      }
-    }
+        invoice.caflouProjectId &&
+        meta &&
+        !meta.finished &&
+        (meta.statusName ?? '').trim() === STAV_PRED_FAKTUROU,
+    );
 
     return NextResponse.json({
       ok: true,
@@ -247,7 +238,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       kopie,
       sPrilohou: dokument.ok,
       sRodnymListem: rodnyList.potreba && rodnyList.ok,
-      projektUkoncen,
+      // Zůstává kvůli starším voláním; projekt se po faktuře sám neukončuje.
+      projektUkoncen: false,
+      nabidnoutUkonceni,
+      caflouProjectId: nabidnoutUkonceni ? invoice.caflouProjectId : null,
+      projectName: nabidnoutUkonceni ? (invoice.projectName ?? null) : null,
     });
   } catch (err) {
     console.error('POST /api/admin/invoices/[id]/send selhalo:', err);

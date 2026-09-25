@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { DatumPole } from '@/components/DatumPole';
 import { useState } from 'react';
 import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
 
@@ -191,7 +192,7 @@ function UpravaUkolu({ ukol, onKonec }: { ukol: ZadanyUkolVSeznamu; onKonec: (zm
         aria-label="Název úkolu"
       />
       <div className="flex items-center gap-1.5">
-        <input type="date" value={den} onChange={(e) => setDen(e.target.value)} className={`${pole} flex-1 min-w-0`} aria-label="Termín" />
+        <DatumPole value={den} onChange={(e) => setDen(e.target.value)} className={`${pole} flex-1 min-w-0`} aria-label="Termín" />
         <input
           type="time"
           value={cas}

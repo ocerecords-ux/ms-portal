@@ -1,6 +1,7 @@
 'use client';
 
 import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
+import { DatumPole } from '@/components/DatumPole';
 import { UpravaMehoUkolu } from './UpravaMehoUkolu';
 import { MujStatus, RadekStatusu } from './MujStatus';
 import type { StatusVChatu } from '@/lib/statusyChatu';
@@ -1783,7 +1784,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     }
   }
   // Naseptavac zminek: kdyz se v rozepsanem textu objevi "@", nabidne lidi.
-  const [zminkyPro, setZminkyPro] = useState<'hlavni' | 'vlakno' | null>(null);
+  // 'uprava' pribyla 25. 9. 2026: „kdyz chci upravit zpravu v chatu, tak uz
+  // nejde oznacit projekt pres #".
+  const [zminkyPro, setZminkyPro] = useState<'hlavni' | 'vlakno' | 'uprava' | null>(null);
   /** Co se zrovna nabizi - clovek po @, nebo projekt po # (zadani 11. 9. 2026). */
   const [druhZminky, setDruhZminky] = useState<'clovek' | 'projekt'>('clovek');
   const [zminkaHledani, setZminkaHledani] = useState('');
@@ -2942,7 +2945,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * zadna mezera), otevre nabidku lidi. Vybrany clovek se do textu doplni
    * i s mezerou, at se da rovnou psat dal.
    */
-  function sledujZminku(text: string, kde: 'hlavni' | 'vlakno') {
+  function sledujZminku(text: string, kde: 'hlavni' | 'vlakno' | 'uprava') {
     // Zminka se pozna jen na zacatku slova a jen dokud za znakem neni mezera -
     // jinak by nabidka vyskakovala i uprostred bezne vety a v e-mailovych
     // adresach. Cely nazev vc. mezer doplni az vyber ze seznamu.
@@ -2972,7 +2975,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         : text.replace(/@[\p{L}]{0,20}$/u, `@${polozka.label} `);
     // Nova zprava zacina ukolem? Pak se lista s terminem ukaze sama.
     if (polozka.id === KLIC_UKOLU) setUkolHlaska(null);
-    if (zminkyPro === 'vlakno') setVlaknoDraft((t) => uprav(t));
+    // Upravovaná zpráva má vlastní text - jinak by se doplnění psalo do
+    // rozepsané nové zprávy pod ní (25. 9. 2026).
+    if (zminkyPro === 'uprava') setUpravaText((t) => uprav(t));
+    else if (zminkyPro === 'vlakno') setVlaknoDraft((t) => uprav(t));
     else setDraft((t) => uprav(t));
     setZminkyPro(null);
   }
@@ -3658,12 +3664,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                             <div className="mt-1 rounded-card border border-brand-purple overflow-hidden bg-surface">
                               <Psatko
                                 hodnota={upravaText}
-                                zmena={setUpravaText}
+                                zmena={(v) => {
+                                  setUpravaText(v);
+                                  sledujZminku(v, 'uprava');
+                                }}
                                 odeslat={ulozUpravu}
                                 sending={sending}
                                 placeholder="Upravit zprávu…"
-                                nabidka={[]}
-                                vyber={() => {}}
+                                nabidka={zminkyPro === 'uprava' ? nabidkaZminek : []}
+                                vyber={doplnZminku}
                                 popisek="Uložit"
                                 onZrusit={zrusUpravu}
                                 autoFocus
@@ -3840,12 +3849,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               <div className="mt-1 rounded-card border border-brand-purple overflow-hidden bg-surface">
                                 <Psatko
                                   hodnota={upravaText}
-                                  zmena={setUpravaText}
+                                  zmena={(v) => {
+                                    setUpravaText(v);
+                                    sledujZminku(v, 'uprava');
+                                  }}
                                   odeslat={ulozUpravu}
                                   sending={sending}
                                   placeholder="Upravit zprávu…"
-                                  nabidka={[]}
-                                  vyber={() => {}}
+                                  nabidka={zminkyPro === 'uprava' ? nabidkaZminek : []}
+                                  vyber={doplnZminku}
                                   popisek="Uložit"
                                   onZrusit={zrusUpravu}
                                   autoFocus
@@ -4122,8 +4134,7 @@ function ListaUkolu({
       </span>
       <label className="flex items-center gap-1.5 text-[11px] font-body text-muted">
         do
-        <input
-          type="date"
+        <DatumPole
           value={termin}
           onChange={(e) => onTermin(e.target.value)}
           className="rounded-md border border-line bg-field px-1.5 py-1 text-[11px] font-body text-ink"
@@ -4237,8 +4248,7 @@ function UkolyVChatu() {
           className="rounded-lg border border-line bg-field px-2.5 py-1.5 text-sm font-body text-ink placeholder:text-muted"
         />
         <div className="flex items-center gap-1.5">
-          <input
-            type="date"
+          <DatumPole
             value={termin}
             onChange={(e) => setTermin(e.target.value)}
             className="flex-1 min-w-0 rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink"

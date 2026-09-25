@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { DatumPole } from '@/components/DatumPole';
 import { useRouter } from 'next/navigation';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 import { formatCzk, formatDuration, durationMinutes, parseTime } from '@/lib/timesheets';
@@ -260,8 +261,7 @@ export function NavrhyZKalendare({
                 )}
                 {upravuje && (
                   <div className="flex items-center gap-2 flex-wrap">
-                    <input
-                      type="date"
+                    <DatumPole
                       value={pole.date}
                       onChange={(e) => setPole({ ...pole, date: e.target.value })}
                       className="rounded-lg border border-line bg-field px-2.5 py-1.5 text-sm font-body text-ink tabular-nums"

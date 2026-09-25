@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { DatumPole } from '@/components/DatumPole';
 
 /**
  * ÚPRAVA VLASTNÍHO ÚKOLU (zadání 25. 9. 2026: „nemůžu upravovat své úkoly,
@@ -94,8 +95,7 @@ export function UpravaMehoUkolu({
         aria-label="Název úkolu"
       />
       <div className="flex items-center gap-1.5">
-        <input
-          type="date"
+        <DatumPole
           value={den}
           onChange={(e) => setDen(e.target.value)}
           className={`${pole} flex-1 min-w-0`}
