@@ -23,6 +23,7 @@ export type ZakazkaRadek = {
   nazev: string;
   herecId: string | null;
   herecJmeno: string | null;
+  typ: string | null;
   nabidka: { id: string; popis: string } | null;
   faktura: { id: string; popis: string } | null;
 };
@@ -33,18 +34,22 @@ export function ZakazkyFirmyPanel({
   companyId,
   zakazky,
   herci,
+  typy,
   volneNabidky,
   volneFaktury,
 }: {
   companyId: string;
   zakazky: ZakazkaRadek[];
   herci: { id: string; label: string }[];
+  /** Typy projektu = položky ceníku (viz lib/projectTypes.ts). */
+  typy: string[];
   volneNabidky: DokladVolba[];
   volneFaktury: DokladVolba[];
 }) {
   const router = useRouter();
-  const [vyber, setVyber] = useState<Record<string, { herec: string; nabidka: string; faktura: string }>>(
-    Object.fromEntries(zakazky.map((z) => [z.caflouProjectId, { herec: '', nabidka: '', faktura: '' }])),
+  const prazdno = { herec: '', typ: '', nabidka: '', faktura: '' };
+  const [vyber, setVyber] = useState<Record<string, typeof prazdno>>(
+    Object.fromEntries(zakazky.map((z) => [z.caflouProjectId, { ...prazdno }])),
   );
   const [bezi, setBezi] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
@@ -56,7 +61,7 @@ export function ZakazkyFirmyPanel({
     );
   }
 
-  function zmen(id: string, pole: 'herec' | 'nabidka' | 'faktura', hodnota: string) {
+  function zmen(id: string, pole: 'herec' | 'typ' | 'nabidka' | 'faktura', hodnota: string) {
     setVyber((v) => ({ ...v, [id]: { ...v[id], [pole]: hodnota } }));
     setHlaska(null);
   }
@@ -66,10 +71,11 @@ export function ZakazkyFirmyPanel({
       .map((z) => ({
         caflouProjectId: z.caflouProjectId,
         actorUserId: vyber[z.caflouProjectId]?.herec || undefined,
+        projectType: vyber[z.caflouProjectId]?.typ || undefined,
         offerId: vyber[z.caflouProjectId]?.nabidka || undefined,
         invoiceId: vyber[z.caflouProjectId]?.faktura || undefined,
       }))
-      .filter((r) => r.actorUserId || r.offerId || r.invoiceId);
+      .filter((r) => r.actorUserId || r.projectType || r.offerId || r.invoiceId);
 
     if (radky.length === 0) {
       setChyba('Nejdřív něco vyberte.');
@@ -91,11 +97,9 @@ export function ZakazkyFirmyPanel({
         return;
       }
       setHlaska(
-        `Hotovo — herec u ${data.herci ?? 0}, nabídka u ${data.nabidky ?? 0} a faktura u ${data.faktury ?? 0} zakázek. Nikomu nic neodešlo.`,
+        `Hotovo — herec u ${data.herci ?? 0}, typ u ${data.typy ?? 0}, nabídka u ${data.nabidky ?? 0} a faktura u ${data.faktury ?? 0} zakázek. Nikomu nic neodešlo.`,
       );
-      setVyber(
-        Object.fromEntries(zakazky.map((z) => [z.caflouProjectId, { herec: '', nabidka: '', faktura: '' }])),
-      );
+      setVyber(Object.fromEntries(zakazky.map((z) => [z.caflouProjectId, { ...prazdno }])));
       router.refresh();
     } catch {
       setChyba('Uložení se nepodařilo.');
@@ -111,7 +115,7 @@ export function ZakazkyFirmyPanel({
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <div>
         <h3 className="font-heading font-semibold text-sm text-ink m-0">
-          Doplnit k zakázkám herce a doklady
+          Doplnit k zakázkám herce, typ a doklady
         </h3>
         <p className="text-xs font-body text-muted m-0 mt-1">
           Uloží se potichu — žádná notifikace, žádný zápis do historie projektu. V nabídce dokladů
@@ -128,6 +132,7 @@ export function ZakazkyFirmyPanel({
             <tr className="text-left text-xs font-heading text-muted">
               <th className="py-2 pr-3 font-semibold">Zakázka</th>
               <th className="py-2 pr-3 font-semibold">Herec</th>
+              <th className="py-2 pr-3 font-semibold">Typ projektu</th>
               <th className="py-2 pr-3 font-semibold">Nabídka</th>
               <th className="py-2 font-semibold">Faktura</th>
             </tr>
@@ -150,9 +155,27 @@ export function ZakazkyFirmyPanel({
                     className={pole}
                   >
                     <option value="">— nechat —</option>
+                    <option value="__zadny__">— žádný herec —</option>
                     {herci.map((h) => (
                       <option key={h.id} value={h.id}>
                         {h.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="py-2 pr-3 min-w-[200px]">
+                  {z.typ && (
+                    <span className="block text-[11px] font-body text-muted mb-1">teď: {z.typ}</span>
+                  )}
+                  <select
+                    value={vyber[z.caflouProjectId]?.typ ?? ''}
+                    onChange={(e) => zmen(z.caflouProjectId, 'typ', e.target.value)}
+                    className={pole}
+                  >
+                    <option value="">— nechat —</option>
+                    {typy.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
                       </option>
                     ))}
                   </select>

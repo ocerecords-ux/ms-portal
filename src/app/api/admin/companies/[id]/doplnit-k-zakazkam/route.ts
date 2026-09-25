@@ -27,8 +27,10 @@ const schema = z.object({
     .array(
       z.object({
         caflouProjectId: z.string().trim().min(1),
-        /** '' = nechat, jak je. Herce se schválně nedá takhle odebrat. */
+        /** '' = nechat, jak je; '__zadny__' = herce z projektu sundat. */
         actorUserId: z.string().trim().optional(),
+        /** Název položky ceníku - typ projektu se z ní bere (lib/projectTypes.ts). */
+        projectType: z.string().trim().max(120).optional(),
         offerId: z.string().trim().optional(),
         invoiceId: z.string().trim().optional(),
       }),
@@ -64,6 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const nazvy = new Map(projekty.map((p) => [p.caflouProjectId, p.name]));
 
     let herci = 0;
+    let typy = 0;
     let nabidky = 0;
     let faktury = 0;
 
@@ -71,7 +74,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       if (!nazvy.has(radek.caflouProjectId)) continue;
       const nazev = nazvy.get(radek.caflouProjectId) ?? null;
 
-      if (radek.actorUserId) {
+      // Projekt bez herce (25. 9. 2026: „FITMIN - žádný herec"): zvuková
+      // postprodukce se nenatáčí, tak u ní herec nemá co dělat.
+      if (radek.actorUserId === '__zadny__') {
+        await prisma.projectMeta.update({
+          where: { caflouProjectId: radek.caflouProjectId },
+          data: { actorUserId: null, herci: { set: [] } },
+        });
+        herci += 1;
+      } else if (radek.actorUserId) {
         const herec = await prisma.user.findFirst({
           where: { id: radek.actorUserId, role: 'HEREC' },
           select: { id: true },
@@ -85,6 +96,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           });
           herci += 1;
         }
+      }
+
+      if (radek.projectType) {
+        await prisma.projectMeta.update({
+          where: { caflouProjectId: radek.caflouProjectId },
+          data: { projectType: radek.projectType },
+        });
+        typy += 1;
       }
 
       if (radek.offerId) {
@@ -104,7 +123,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       }
     }
 
-    return NextResponse.json({ ok: true, herci, nabidky, faktury });
+    return NextResponse.json({ ok: true, herci, typy, nabidky, faktury });
   } catch (err) {
     console.error('Doplneni k zakazkam firmy selhalo:', err);
     return NextResponse.json({ error: 'Uložení se nepodařilo.' }, { status: 500 });

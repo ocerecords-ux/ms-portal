@@ -63,7 +63,7 @@ export default async function CompanyDetailPage({
       { companyId: null, companyName: { equals: company.name, mode: 'insensitive' as const } },
     ],
   };
-  const [projektyFirmy, herci, nabidkyFirmy, fakturyFirmy] =
+  const [projektyFirmy, herci, nabidkyFirmy, fakturyFirmy, typyProjektu] =
     jeKlient && zvolena === 'zakazky'
       ? await Promise.all([
           prisma.projectMeta.findMany({
@@ -73,6 +73,7 @@ export default async function CompanyDetailPage({
               caflouProjectId: true,
               name: true,
               actorUserId: true,
+              projectType: true,
               actor: { select: { name: true, email: true } },
             },
           }),
@@ -91,8 +92,14 @@ export default async function CompanyDetailPage({
             orderBy: { issueDate: 'desc' },
             select: { id: true, number: true, subject: true, caflouProjectId: true },
           }),
+          // Typ projektu = položka ceníku (viz lib/projectTypes.ts).
+          prisma.priceListItem.findMany({
+            where: { active: true },
+            orderBy: { name: 'asc' },
+            select: { name: true },
+          }),
         ])
-      : [[], [], [], []];
+      : [[], [], [], [], []];
 
   const popisDokladu = (d: { number: string; subject: string | null }) =>
     [d.number, d.subject].filter(Boolean).join(' · ');
@@ -105,6 +112,7 @@ export default async function CompanyDetailPage({
       nazev: p.name ?? p.caflouProjectId,
       herecId: p.actorUserId ?? null,
       herecJmeno: p.actor ? p.actor.name || p.actor.email : null,
+      typ: p.projectType ?? null,
       nabidka: nabidka ? { id: nabidka.id, popis: popisDokladu(nabidka) } : null,
       faktura: faktura ? { id: faktura.id, popis: popisDokladu(faktura) } : null,
     };
@@ -161,6 +169,7 @@ export default async function CompanyDetailPage({
           companyId={company.id}
           zakazky={zakazky}
           herci={herci.map((h) => ({ id: h.id, label: h.name ? `${h.name} (${h.email})` : h.email }))}
+          typy={typyProjektu.map((t) => t.name)}
           volneNabidky={nabidkyFirmy
             .filter((n) => !n.caflouProjectId)
             .map((n) => ({ id: n.id, popis: popisDokladu(n) }))}
