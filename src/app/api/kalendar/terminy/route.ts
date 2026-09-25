@@ -31,7 +31,7 @@ const schema = z.object({
   studioId: z.string().trim().min(1),
   start: z.string().trim().min(8),
   end: z.string().trim().min(8),
-  kind: z.enum(['NATACENI', 'STRIH', 'CASTING', 'HOLIDAY', 'VACATION', 'MAINTENANCE', 'INTERNAL', 'OTHER']),
+  kind: z.enum(['NATACENI', 'STRIH', 'CASTING', 'HOLIDAY', 'VACATION', 'MAINTENANCE', 'INTERNAL', 'OTHER', 'BOOKING']),
   note: z.string().trim().max(1000).optional(),
   title: z.string().trim().max(160).optional(),
   caflouProjectId: z.string().trim().max(100).optional(),

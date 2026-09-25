@@ -36,6 +36,9 @@ export default async function PortalLayout({ children }: { children: React.React
   if (!session) redirect('/login');
   // Účet obrazovky ve studiu do portálu nesmí - jen na svou tabuli (22. 9. 2026).
   if (session.user.role === 'TABULE') redirect('/tabule/moje');
+  // Klient studia (muzikant, producent) má z celého portálu jen svůj
+  // kalendář rezervací - zadání 25. 9. 2026.
+  if (session.user.role === 'BOOKING') redirect('/studio');
 
   const role = session.user.role;
   const internal = isInternalRole(role);

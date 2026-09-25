@@ -20,6 +20,9 @@ export const dynamic = 'force-dynamic';
 export default async function DoplnitUdajePage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
+  // Klient studia tu nemá co vyplňovat - jde rovnou do svého kalendáře
+  // (25. 9. 2026). Bez tohohle by se protáhl přes celý přehled projektů.
+  if (session.user.role === 'BOOKING') redirect('/studio');
 
   const ucet = await prisma.user.findUnique({
     where: { id: session.user.id },

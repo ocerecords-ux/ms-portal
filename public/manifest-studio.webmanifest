@@ -1,0 +1,17 @@
+{
+  "name": "MS Studio booking",
+  "short_name": "MS Studio",
+  "description": "Book studio time with Mediaspace.",
+  "start_url": "/studio?app=studio",
+  "scope": "/studio",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FBFAFF",
+  "theme_color": "#6B2AF0",
+  "lang": "en",
+  "icons": [
+    { "src": "/ikony/portal-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/ikony/portal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/ikony/portal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

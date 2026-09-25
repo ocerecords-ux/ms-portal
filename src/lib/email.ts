@@ -410,7 +410,16 @@ export async function sendOrderNotificationEmail(input: OrderEmailInput) {
  * ten seznam, co v portálu najdete."). Odvozuje se z role uzivatele - viz
  * /api/admin/users/[id]/invite.
  */
-export type InviteAudience = 'CLIENT' | 'INTERNAL' | 'HEREC';
+export type InviteAudience = 'CLIENT' | 'INTERNAL' | 'HEREC' | 'BOOKING';
+
+/**
+ * Pozvánka do kalendáře studia chodí ANGLICKY (zadání 25. 9. 2026 - klienti
+ * MS Studio London jsou Britové). Je to jediná pozvánka, která z portálu
+ * odchází v jiném jazyce, proto ten příznak místo dalšího parametru.
+ */
+export function anglickaPozvanka(audience: InviteAudience): boolean {
+  return audience === 'BOOKING';
+}
 
 type InviteEmailInput = {
   to: string;
@@ -460,6 +469,20 @@ const INVITE_COPY: Record<
     // co uzivatel po prihlaseni nenajde.
     listTitle: null,
     list: [],
+  },
+  // Muzikanti a producenti, kteří si u nás bookují studio (25. 9. 2026).
+  BOOKING: {
+    tag: 'Studio booking',
+    badge: 'New access',
+    heading: 'Your studio calendar is ready',
+    intro:
+      'we have set up your access to the Mediaspace studio booking calendar. Choose your own password — it takes one click.',
+    listTitle: 'What you can do there',
+    list: [
+      'See when the studio is free and book it straight away',
+      'Book by the hour or take whole days for a longer project',
+      'Add the calendar to your phone as an app and manage bookings on the move',
+    ],
   },
 };
 
@@ -565,8 +588,13 @@ function emailShell(options: { tag: string; preheader: string; body: string }): 
 }
 
 export function buildInviteHtml(input: InviteEmailInput): string {
-  const greeting = escapeHtml(pozdrav(input.name));
-  const expiresText = input.expiresAt.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' });
+  const anglicky = anglickaPozvanka(input.audience);
+  const greeting = anglicky
+    ? escapeHtml(input.name ? `Hello ${input.name},` : 'Hello,')
+    : escapeHtml(pozdrav(input.name));
+  const expiresText = input.expiresAt.toLocaleDateString(anglicky ? 'en-GB' : 'cs-CZ', {
+    timeZone: anglicky ? 'Europe/London' : 'Europe/Prague',
+  });
 
   const copy = INVITE_COPY[input.audience];
   const listHtml = copy.listTitle
@@ -579,14 +607,17 @@ export function buildInviteHtml(input: InviteEmailInput): string {
     </table>
 `
     : '';
-  const closing =
-    input.audience === 'INTERNAL'
+  const closing = anglicky
+    ? 'If the link expires, write to us and we will send a new one. You have received this invitation because Mediaspace set up an account for you — if it looks unfamiliar, please let us know.'
+    : input.audience === 'INTERNAL'
       ? 'Pokud odkaz vyprší, řekni si o nový. Kdyby něco nefungovalo, dej vědět.'
       : 'Pokud odkaz vyprší, napište nám a pošleme vám nový. Tuto pozvánku jste dostali, protože pro vás Mediaspace založila účet - pokud si ji neumíte vysvětlit, dejte nám prosím vědět.';
 
   return emailShell({
     tag: copy.tag,
-    preheader: 'Váš přístup do MS Portalu je připravený - stačí si nastavit heslo.',
+    preheader: anglicky
+      ? 'Your studio booking calendar is ready — just choose a password.'
+      : 'Váš přístup do MS Portalu je připravený - stačí si nastavit heslo.',
     body: `
     <span class="badge">${copy.badge}</span>
     <h2>${copy.heading}</h2>
@@ -594,12 +625,12 @@ export function buildInviteHtml(input: InviteEmailInput): string {
     <p>${copy.intro}</p>
 
     <table role="presentation" class="field-table">
-      <tr><td class="label">Přihlašovací jméno</td><td class="value">${escapeHtml(input.to)}</td></tr>
-      <tr><td class="label">Odkaz platí do</td><td class="value regular">${expiresText}</td></tr>
+      <tr><td class="label">${anglicky ? 'Username' : 'Přihlašovací jméno'}</td><td class="value">${escapeHtml(input.to)}</td></tr>
+      <tr><td class="label">${anglicky ? 'Link valid until' : 'Odkaz platí do'}</td><td class="value regular">${expiresText}</td></tr>
     </table>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.inviteUrl)}" class="cta">Nastavit heslo</a>
+      <a href="${escapeHtml(input.inviteUrl)}" class="cta">${anglicky ? 'Choose a password' : 'Nastavit heslo'}</a>
     </div>
 ${listHtml}
     <p class="small">${closing}</p>
@@ -616,18 +647,34 @@ export async function sendInviteEmail(input: InviteEmailInput) {
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: input.audience === 'INTERNAL' ? 'Přístup do MS Portalu' : 'Pozvánka do MS Portalu',
-    text: [
-      pozdrav(input.name),
-      '',
-      'pripravili jsme vam pristup do portalu Mediaspace (MS Portal).',
-      `Prihlasovaci jmeno: ${input.to}`,
-      '',
-      'Heslo si nastavite zde:',
-      input.inviteUrl,
-      '',
-      `Odkaz plati do ${input.expiresAt.toLocaleDateString('cs-CZ')}.`,
-    ].join('\n'),
+    subject: anglickaPozvanka(input.audience)
+      ? 'Your Mediaspace studio booking calendar'
+      : input.audience === 'INTERNAL'
+        ? 'Přístup do MS Portalu'
+        : 'Pozvánka do MS Portalu',
+    text: anglickaPozvanka(input.audience)
+      ? [
+          input.name ? `Hello ${input.name},` : 'Hello,',
+          '',
+          'your access to the Mediaspace studio booking calendar is ready.',
+          `Username: ${input.to}`,
+          '',
+          'Choose your password here:',
+          input.inviteUrl,
+          '',
+          `The link is valid until ${input.expiresAt.toLocaleDateString('en-GB')}.`,
+        ].join('\n')
+      : [
+          pozdrav(input.name),
+          '',
+          'pripravili jsme vam pristup do portalu Mediaspace (MS Portal).',
+          `Prihlasovaci jmeno: ${input.to}`,
+          '',
+          'Heslo si nastavite zde:',
+          input.inviteUrl,
+          '',
+          `Odkaz plati do ${input.expiresAt.toLocaleDateString('cs-CZ')}.`,
+        ].join('\n'),
     html: buildInviteHtml(input),
   });
 

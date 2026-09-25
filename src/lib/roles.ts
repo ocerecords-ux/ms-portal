@@ -21,6 +21,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   PRODUKCE: 'Produkce',
   ROBOT: 'Robot',
   TABULE: 'Tabule ve studiu',
+  BOOKING: 'Klient studia (rezervace)',
 };
 
 /**
@@ -49,6 +50,8 @@ export const ROLE_GROUPS: { label: string; roles: Role[] }[] = [
   { label: 'Interní (Mediaspace)', roles: INTERNAL_ROLES },
   { label: 'Robot (účet bez člověka)', roles: ROBOT_ROLES },
   { label: 'Obrazovka ve studiu', roles: ['TABULE'] },
+  // Muzikanti a producenti, kteří si u nás bookují studio (25. 9. 2026).
+  { label: 'Klienti studia (rezervace)', roles: ['BOOKING'] },
 ];
 
 /**
@@ -82,6 +85,9 @@ export const USER_TABS: { key: string; label: string; roles: Role[] }[] = [
   // Účty obrazovek ve studiích (22. 9. 2026: „na ty uživatele Tabule vytvoř
   // zvlášť záložku").
   { key: 'tabule', label: 'Tabule', roles: ['TABULE'] },
+  // Klienti studia mají vlastní záložku - s klienty zakázek nemají nic
+  // společného a v jejich seznamu by jen překáželi (25. 9. 2026).
+  { key: 'studio', label: 'Studio', roles: ['BOOKING'] },
 ];
 
 /** Ctyri fyzicka studia, ve kterych je herec schopen natacet - zadani 5. 9. 2026. */

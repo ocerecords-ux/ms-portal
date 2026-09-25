@@ -83,6 +83,8 @@ export const config = {
     '/prehledy/:path*',
     '/moje-terminy/:path*',
     '/pozvanky/:path*',
+    // Kalendář rezervací studia (25. 9. 2026) - vlastní sekce mimo portál.
+    '/studio/:path*',
     '/doplnit-udaje/:path*',
     '/admin/:path*',
     // API je tu JEN kvuli zamku nahledoveho uctu (zadani 18. 9. 2026) -

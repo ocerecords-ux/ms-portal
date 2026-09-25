@@ -107,6 +107,10 @@ export const BLOCK_KIND_LABELS: Record<string, string> = {
   MAINTENANCE: 'Údržba',
   INTERNAL: 'Interní blokace',
   OTHER: 'Jiné',
+  // Rezervace muzikanta nebo producenta zvenčí (25. 9. 2026). V našem
+  // kalendáři je vidět i se jménem - „bez jmen" platí jen pro klienty
+  // navzájem, ne pro nás.
+  BOOKING: 'Rezervace studia',
 };
 
 /**

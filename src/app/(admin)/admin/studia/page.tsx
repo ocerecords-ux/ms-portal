@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { StudiosManager } from './StudiosManager';
 import { TabuleStudii } from './TabuleStudii';
+import { RezervaceStudii } from './RezervaceStudii';
 import { nazevPolozky } from '@/lib/tabule';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
 import { instagramNastaven, stavInstagramu } from '@/lib/instagramServer';
@@ -39,6 +40,39 @@ export default async function StudiaPage({ searchParams }: { searchParams?: { in
       })
       .catch(() => [] as never[]),
   ]);
+
+  // Rezervace studia klienty (25. 9. 2026) - vlastní dotaz, ať se kvůli němu
+  // nerozbije zbytek stránky, kdyby databáze zlobila.
+  const proRezervace = (await prisma.studio
+    .findMany({
+      where: { active: true, parentStudioId: null },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        bookingZapnuto: true,
+        bookingMinMinut: true,
+        bookingDniDopredu: true,
+        hours: { select: { weekday: true } },
+        bookingUcty: {
+          where: { active: true },
+          orderBy: { email: 'asc' },
+          select: { id: true, name: true, email: true, active: true, passwordSetAt: true },
+        },
+      },
+    })
+    .catch(() => [])) as unknown as {
+    id: string;
+    name: string;
+    color: string;
+    bookingZapnuto: boolean;
+    bookingMinMinut: number;
+    bookingDniDopredu: number;
+    hours: { weekday: number }[];
+    bookingUcty: { id: string; name: string | null; email: string; active: boolean; passwordSetAt: Date | null }[];
+  }[];
+
   type Tabule = {
     id: string;
     name: string;
@@ -82,6 +116,25 @@ export default async function StudiaPage({ searchParams }: { searchParams?: { in
         end: b.end.toISOString(),
         kind: b.kind,
         title: b.title,
+      }))}
+    />
+    <RezervaceStudii
+      zaklad={zakladPortalu()}
+      studia={proRezervace.map((s) => ({
+        id: s.id,
+        nazev: s.name,
+        barva: s.color,
+        zapnuto: s.bookingZapnuto,
+        minMinut: s.bookingMinMinut,
+        dniDopredu: s.bookingDniDopredu,
+        maDobu: s.hours.length > 0,
+        klienti: s.bookingUcty.map((u) => ({
+          id: u.id,
+          jmeno: u.name,
+          email: u.email,
+          aktivni: u.active,
+          hesloNastaveno: Boolean(u.passwordSetAt),
+        })),
       }))}
     />
     <TabuleStudii

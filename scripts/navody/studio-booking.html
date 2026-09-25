@@ -1,0 +1,230 @@
+<!-- Replika obrazovek pro návod „Booking the studio" - snímky: node scripts/navody/snimky.mjs studio-booking -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Studio booking</title>
+<style>
+:root{--p:#7b55ff;--pd:#6b2af0;--ink:#201a33;--paper:#fbfaff;--s:#fff;--field:#f6f6f6;--line:#e4dffb;--muted:#6e6580;--tint:#f1ecff;--green:#1fdf67;--busy:#d7d2e6;--err:#d64545;}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e7f2;font-family:'Poppins',sans-serif;color:var(--ink);font-size:14px}
+.snimek{width:900px;background:var(--paper);padding:24px;margin:0 0 40px;position:relative}
+.karta{background:var(--s);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(32,26,51,.05);overflow:hidden}
+.lista{background:linear-gradient(90deg,var(--p),var(--pd));color:#fff;border-radius:12px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.znacka{color:var(--green);font-weight:600;font-size:18px}
+.btn{display:inline-block;background:var(--p);color:#fff;font-weight:600;border-radius:999px;padding:9px 20px;font-size:13px}
+.btn.cerv{background:var(--err)}
+.btn.obrys{background:var(--s);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:12px}
+.btn.aktiv{background:var(--p);color:#fff;border:1px solid var(--pd);border-radius:8px;padding:6px 12px;font-size:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;border:1px solid rgba(255,255,255,.3);padding:3px 10px;font-size:11px;font-weight:600;color:rgba(255,255,255,.85)}
+.muted{color:var(--muted)}
+.h1{font-size:30px;font-weight:500;margin:0}
+.h2{font-weight:600;font-size:13px;margin:0}
+.legenda{display:flex;gap:14px;align-items:center;font-size:11px;color:var(--muted);font-weight:600}
+.ctverec{width:12px;height:12px;border-radius:3px;display:inline-block}
+/* mřížka */
+.hlav{display:flex;border-bottom:1px solid var(--line);background:var(--field)}
+.hlav .rohy{width:48px;flex:none}
+.hlav .den{flex:1;border-left:1px solid var(--line);text-align:center;padding:7px 4px}
+.hlav .den b{display:block;font-size:12px;font-weight:600}
+.hlav .den span{display:block;font-size:10px;color:var(--muted)}
+.telo{display:flex;height:322px;position:relative}
+.osa{width:48px;flex:none;position:relative}
+.osa span{position:absolute;right:6px;transform:translateY(-50%);font-size:10px;color:var(--muted);font-weight:600}
+.sloupec{flex:1;border-left:1px solid var(--line);position:relative}
+.linka{position:absolute;left:0;right:0;border-top:1px solid rgba(228,223,251,.7)}
+.volno{position:absolute;left:0;right:0;background:rgba(241,236,255,.65)}
+.ud{position:absolute;left:2px;right:2px;border-radius:5px;padding:3px 5px;font-size:10px;line-height:1.25;overflow:hidden}
+.ud b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ud i{font-style:normal;opacity:.8;font-size:9px}
+.moje{background:var(--p);border:1px solid var(--pd);color:#fff}
+.busy{background:var(--busy);border:1px solid var(--line);color:var(--muted)}
+/* okno */
+.okno{background:var(--s);border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 50px rgba(32,26,51,.25);width:430px;overflow:hidden}
+.okno .hlavicka{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);font-weight:600;font-size:13px}
+.okno .obsah{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.pole{display:flex;flex-direction:column;gap:5px}
+.pole>span{font-size:11px;color:var(--muted);font-weight:600}
+.vstup{border:1px solid var(--line);background:var(--field);border-radius:8px;padding:8px 12px;font-weight:500;font-size:13px}
+.vstup.sedy{color:var(--muted);font-weight:400}
+.hint{font-size:11px;color:var(--muted)}
+.dvojice{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.num{position:absolute;width:28px;height:28px;border-radius:50%;background:#ff3d7f;color:#fff;font-weight:700;display:grid;place-items:center;font-size:14px;box-shadow:0 0 0 4px rgba(255,61,127,.25);z-index:5}
+.seznam{border-top:1px solid var(--line);padding:10px 16px;display:flex;justify-content:space-between;align-items:center}
+/* telefon */
+.telefon{width:300px;border:10px solid #2b2540;border-radius:34px;overflow:hidden;background:var(--paper);box-shadow:0 12px 30px rgba(32,26,51,.25)}
+</style></head><body>
+
+<!-- 1: cely kalendar (tyden) -->
+<div class="snimek" id="s1">
+ <div class="lista">
+  <span style="display:flex;align-items:center;gap:10px"><span class="znacka">MS</span><span style="opacity:.4">|</span><b style="font-size:14px">Studio booking</b></span>
+  <span style="display:flex;align-items:center;gap:8px"><span class="pill">?</span><span class="pill">CZ&nbsp;&nbsp;<b style="color:#1fdf67">EN</b></span><span class="pill">Sign out</span></span>
+ </div>
+ <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+  <div><p class="h1">MS Studio - London</p><p class="muted" style="margin:4px 0 0;font-size:12px">All times are shown in studio local time (London).</p></div>
+  <div style="display:flex;gap:6px;align-items:center">
+   <span class="btn obrys">‹</span><span class="btn obrys">Today</span><span class="btn obrys">›</span>
+   <span style="width:1px;height:20px;background:var(--line)"></span><span class="btn obrys">Day</span>
+  </div>
+ </div>
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+  <b style="font-size:13px">Mon 12/10 – Sun 18/10</b>
+  <span class="legenda">
+   <span><span class="ctverec" style="background:var(--p)"></span> Your booking</span>
+   <span><span class="ctverec" style="background:var(--busy)"></span> Busy</span>
+  </span>
+ </div>
+ <div class="karta">
+  <div class="hlav">
+   <div class="rohy"></div>
+   <div class="den"><b>Mon 12/10</b><span>9:00–21:00</span></div>
+   <div class="den"><b>Tue 13/10</b><span>9:00–21:00</span></div>
+   <div class="den"><b>Wed 14/10</b><span>9:00–21:00</span></div>
+   <div class="den"><b>Thu 15/10</b><span>9:00–21:00</span></div>
+   <div class="den"><b>Fri 16/10</b><span>9:00–21:00</span></div>
+   <div class="den"><b>Sat 17/10</b><span>10:00–16:00</span></div>
+   <div class="den" style="opacity:.5"><b>Sun 18/10</b><span>Closed</span></div>
+  </div>
+  <div class="telo">
+   <div class="osa">
+    <span style="top:0">8:00</span><span style="top:46px">9:00</span><span style="top:92px">10:00</span><span style="top:138px">11:00</span>
+    <span style="top:184px">12:00</span><span style="top:230px">13:00</span><span style="top:276px">14:00</span>
+   </div>
+   <!-- pondeli -->
+   <div class="sloupec">
+    <div class="linka" style="top:0"></div><div class="linka" style="top:46px"></div><div class="linka" style="top:92px"></div><div class="linka" style="top:138px"></div><div class="linka" style="top:184px"></div><div class="linka" style="top:230px"></div><div class="linka" style="top:276px"></div>
+    <div class="volno" style="top:46px;height:276px"></div>
+    <div class="ud moje" style="top:46px;height:136px"><b>Band tracking</b><i>9:00–12:00</i></div>
+   </div>
+   <!-- utery -->
+   <div class="sloupec">
+    <div class="linka" style="top:0"></div><div class="linka" style="top:46px"></div><div class="linka" style="top:92px"></div><div class="linka" style="top:138px"></div><div class="linka" style="top:184px"></div><div class="linka" style="top:230px"></div><div class="linka" style="top:276px"></div>
+    <div class="volno" style="top:46px;height:276px"></div>
+    <div class="ud busy" style="top:92px;height:182px"><b>Busy</b><i>10:00–14:00</i></div>
+   </div>
+   <!-- streda -->
+   <div class="sloupec">
+    <div class="linka" style="top:0"></div><div class="linka" style="top:46px"></div><div class="linka" style="top:92px"></div><div class="linka" style="top:138px"></div><div class="linka" style="top:184px"></div><div class="linka" style="top:230px"></div><div class="linka" style="top:276px"></div>
+    <div class="volno" style="top:46px;height:276px"></div>
+   </div>
+   <!-- ctvrtek -->
+   <div class="sloupec">
+    <div class="linka" style="top:0"></div><div class="linka" style="top:46px"></div><div class="linka" style="top:92px"></div><div class="linka" style="top:138px"></div><div class="linka" style="top:184px"></div><div class="linka" style="top:230px"></div><div class="linka" style="top:276px"></div>
+    <div class="volno" style="top:46px;height:276px"></div>
+    <div class="ud moje" style="top:46px;height:276px"><b>Album mixing</b><i>9:00–21:00</i></div>
+   </div>
+   <!-- patek -->
+   <div class="sloupec">
+    <div class="linka" style="top:0"></div><div class="linka" style="top:46px"></div><div class="linka" style="top:92px"></div><div class="linka" style="top:138px"></div><div class="linka" style="top:184px"></div><div class="linka" style="top:230px"></div><div class="linka" style="top:276px"></div>
+    <div class="volno" style="top:46px;height:276px"></div>
+    <div class="ud moje" style="top:46px;height:276px"><b>Album mixing</b><i>9:00–21:00</i></div>
+   </div>
+   <!-- sobota -->
+   <div class="sloupec">
+    <div class="linka" style="top:0"></div><div class="linka" style="top:46px"></div><div class="linka" style="top:92px"></div><div class="linka" style="top:138px"></div><div class="linka" style="top:184px"></div><div class="linka" style="top:230px"></div><div class="linka" style="top:276px"></div>
+    <div class="volno" style="top:92px;height:230px"></div>
+    <div class="ud busy" style="top:138px;height:90px"><b>Busy</b><i>11:00–13:00</i></div>
+   </div>
+   <!-- nedele -->
+   <div class="sloupec" style="background:repeating-linear-gradient(45deg,#f4f2fa,#f4f2fa 6px,#fbfaff 6px,#fbfaff 12px)">
+    <div class="linka" style="top:0"></div><div class="linka" style="top:46px"></div><div class="linka" style="top:92px"></div><div class="linka" style="top:138px"></div><div class="linka" style="top:184px"></div><div class="linka" style="top:230px"></div><div class="linka" style="top:276px"></div>
+   </div>
+  </div>
+ </div>
+ <p class="muted" style="font-size:11px;margin:10px 0 0">Tap any free slot to book it. The shortest booking is 60 minutes.</p>
+ <div class="num" style="left:60px;top:250px">1</div>
+ <div class="num" style="left:352px;top:292px">2</div>
+ <div class="num" style="left:700px;top:252px">3</div>
+ <div class="num" style="left:836px;top:92px">4</div>
+</div>
+
+<!-- 2: okno nove rezervace (hodiny) -->
+<div class="snimek" id="s2" style="display:flex;justify-content:center;padding:36px 24px">
+ <div class="okno">
+  <div class="hlavicka"><span>New booking</span><span class="muted" style="font-size:18px">×</span></div>
+  <div class="obsah">
+   <div style="display:flex;gap:6px"><span class="btn aktiv">By the hour</span><span class="btn obrys">Whole days</span></div>
+   <div class="pole"><span>Date</span><div class="vstup">14/10/2026</div></div>
+   <div class="dvojice">
+    <div class="pole"><span>From</span><div class="vstup">10:00 ▾</div></div>
+    <div class="pole"><span>To</span><div class="vstup">14:00 ▾</div></div>
+   </div>
+   <div class="pole"><span>Booking name</span><div class="vstup sedy">Band tracking session</div>
+    <span class="hint">Only you and our team can see this. Everyone else sees busy time only.</span></div>
+   <div class="pole"><span>Note for the studio</span><div class="vstup sedy" style="height:46px">Drums first, we bring our own snare.</div></div>
+   <div style="display:flex;gap:12px;align-items:center;justify-content:flex-end"><span class="muted" style="font-size:13px">Cancel</span><span class="btn">Book it</span></div>
+  </div>
+ </div>
+ <div class="num" style="left:206px;top:100px">1</div>
+ <div class="num" style="left:206px;top:172px">2</div>
+ <div class="num" style="left:206px;top:240px">3</div>
+ <div class="num" style="left:206px;top:318px">4</div>
+ <div class="num" style="left:206px;top:430px">5</div>
+</div>
+
+<!-- 3: cele dny -->
+<div class="snimek" id="s3" style="display:flex;justify-content:center;padding:36px 24px">
+ <div class="okno">
+  <div class="hlavicka"><span>New booking</span><span class="muted" style="font-size:18px">×</span></div>
+  <div class="obsah">
+   <div style="display:flex;gap:6px"><span class="btn obrys">By the hour</span><span class="btn aktiv">Whole days</span></div>
+   <div class="pole"><span>Date</span><div class="vstup">15/10/2026</div></div>
+   <div class="pole"><span>Until</span><div class="vstup">23/10/2026</div>
+    <span class="hint">Every open day in the range is booked for the full opening hours. Days when the studio is closed are skipped.</span></div>
+   <div class="pole"><span>Booking name</span><div class="vstup sedy">Album mixing</div></div>
+   <div style="display:flex;gap:12px;align-items:center;justify-content:flex-end"><span class="muted" style="font-size:13px">Cancel</span><span class="btn">Book it</span></div>
+  </div>
+ </div>
+ <div class="num" style="left:206px;top:100px">1</div>
+ <div class="num" style="left:206px;top:196px">2</div>
+</div>
+
+<!-- 4: moje rezervace a zruseni -->
+<div class="snimek" id="s4">
+ <div style="display:flex;gap:24px;align-items:flex-start">
+  <div class="karta" style="flex:1">
+   <div style="padding:12px 16px;border-bottom:1px solid var(--line)"><p class="h2">Your upcoming bookings</p></div>
+   <div class="seznam"><span><b style="font-size:13px;display:block">Band tracking</b><span class="muted" style="font-size:12px">12/10, 09:00</span></span><span class="btn obrys">Open</span></div>
+   <div class="seznam"><span><b style="font-size:13px;display:block">Album mixing</b><span class="muted" style="font-size:12px">15/10, 09:00</span></span><span class="btn obrys">Open</span></div>
+   <div class="seznam"><span><b style="font-size:13px;display:block">Album mixing</b><span class="muted" style="font-size:12px">16/10, 09:00</span></span><span class="btn obrys">Open</span></div>
+  </div>
+  <div class="okno" style="width:360px">
+   <div class="hlavicka"><span>Band tracking</span><span class="muted" style="font-size:18px">×</span></div>
+   <div class="obsah">
+    <p style="margin:0;font-size:13px">12/10, 09:00</p>
+    <p class="muted" style="margin:0;font-size:13px">Drums first, we bring our own snare.</p>
+    <div style="display:flex;gap:12px;align-items:center;justify-content:flex-end"><span class="muted" style="font-size:13px">Close</span><span class="btn cerv">Cancel booking</span></div>
+   </div>
+  </div>
+ </div>
+ <div class="num" style="left:12px;top:96px">1</div>
+ <div class="num" style="left:520px;top:150px">2</div>
+</div>
+
+<!-- 5: telefon -->
+<div class="snimek" id="s5" style="display:flex;justify-content:center;padding:32px 24px">
+ <div class="telefon">
+  <div style="background:linear-gradient(90deg,var(--p),var(--pd));color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+   <span style="display:flex;align-items:center;gap:6px"><span class="znacka" style="font-size:14px">MS</span><b style="font-size:12px">Studio booking</b></span>
+   <span class="pill" style="font-size:9px">EN</span>
+  </div>
+  <div style="padding:12px">
+   <p style="margin:0;font-size:18px;font-weight:500">MS Studio - London</p>
+   <p class="muted" style="margin:2px 0 10px;font-size:10px">All times are shown in studio local time (London).</p>
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:12px">Wed 14/10</b><span class="legenda" style="font-size:9px"><span><span class="ctverec" style="background:var(--p);width:9px;height:9px"></span> Yours</span><span><span class="ctverec" style="background:var(--busy);width:9px;height:9px"></span> Busy</span></span></div>
+   <div class="karta">
+    <div class="hlav"><div class="rohy" style="width:34px"></div><div class="den"><b style="font-size:11px">Wed 14/10</b><span style="font-size:9px">9:00–21:00</span></div></div>
+    <div class="telo" style="height:230px">
+     <div class="osa" style="width:34px">
+      <span style="top:0">9:00</span><span style="top:46px">10:00</span><span style="top:92px">11:00</span><span style="top:138px">12:00</span><span style="top:184px">13:00</span><span style="top:230px">14:00</span>
+     </div>
+     <div class="sloupec">
+      <div class="linka" style="top:0"></div><div class="linka" style="top:46px"></div><div class="linka" style="top:92px"></div><div class="linka" style="top:138px"></div><div class="linka" style="top:184px"></div>
+      <div class="volno" style="top:0;height:230px"></div>
+      <div class="ud moje" style="top:46px;height:180px"><b>Band tracking</b><i>10:00–14:00</i></div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+</body></html>

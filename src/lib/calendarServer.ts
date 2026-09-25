@@ -218,7 +218,9 @@ export async function loadOccupancy(
       studioId: b.studioId,
       start: b.start,
       end: b.end,
-      title: b.title,
+      // U rezervace studia se ke jménu akce připojí ten, kdo si ji vzal
+      // (25. 9. 2026) - v našem kalendáři potřebujeme vědět, kdo přijde.
+      title: b.kind === 'BOOKING' && b.bookingName ? `${b.title} · ${b.bookingName}` : b.title,
       kind: b.kind,
       caflouProjectId: b.caflouProjectId,
       projectName: b.projectName,

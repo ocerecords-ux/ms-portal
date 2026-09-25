@@ -177,7 +177,10 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
             <span className="block text-xs text-muted">nic nezaškrtnuto = jen náš tým (Žůžo-labůžo, Produkce, Zvukař). Herci a klienti uvidí jen návod, kde je jejich role zaškrtnutá.</span>
           </span>
           <div className="flex gap-2 flex-wrap">
-            {ALL_ROLES.map((role) => (
+            {/* Klient studia (25. 9. 2026) sem patří taky - má vlastní
+                nápovědu na /studio/napoveda. V ALL_ROLES schválně není:
+                ten seznam řídí přístup ke stránkám portálu. */}
+            {[...ALL_ROLES, 'BOOKING' as const].map((role) => (
               <Volba
                 key={role}
                 maly

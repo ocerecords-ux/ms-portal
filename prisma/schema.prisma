@@ -35,6 +35,12 @@ enum Role {
   // každé studio účet, kterým se přihlásím v Chromu na počítači, který bude
   // napojený na ten monitor"). Po přihlášení vidí jen tabuli svého studia.
   TABULE
+  // Muzikant nebo producent, ktery si u nas bookuje studio (zadani
+  // 25. 9. 2026: „v ramci londynskeho studia potrebuji udelat planovaci
+  // kalendar, ktery budou mit k dispozici muzikanti a producenti, kteri si
+  // u nas bookujou terminy"). Po prihlaseni vidi JEN kalendar sveho studia -
+  // zadne projekty, doklady ani cokoliv dalsiho z portalu.
+  BOOKING
 }
 
 // Typ firmy na strance /admin (zadani 5. 9. 2026): Firmy uz nejsou jen
@@ -395,6 +401,14 @@ model User {
   /// Ondrej Cerny ml. v Praze"). V techto studiich smi upravovat kalendar
   /// jako produkce - zapsat, posunout a smazat udalost.
   vedeStudia   Studio[] @relation("VedouciStudia")
+  /// STUDIO, KTERE SI TENHLE CLOVEK SMI BOOKOVAT (zadani 25. 9. 2026:
+  /// „poslali bychom tomu cloveku pozvanku a on by se dostal jen do toho
+  /// kalendare"). Jedno studio, ne seznam: pozvanka se posila do konkretniho
+  /// studia a pristup nikam jinam nevede.
+  bookingStudioId String?
+  bookingStudio   Studio? @relation("BookingStudio", fields: [bookingStudioId], references: [id], onDelete: SetNull)
+  /// Rezervace, ktere si ten clovek zalozil (StudioBlock druhu BOOKING).
+  bookingRezervace StudioBlock[] @relation("BookingRezervace")
   /// Účet tabule (role TABULE) - které studio ukazuje (22. 9. 2026).
   tabuleStudioId String?
   tabuleStudio   Studio? @relation("TabuleUcet", fields: [tabuleStudioId], references: [id], onDelete: SetNull)
@@ -2091,6 +2105,17 @@ model Studio {
   tabulePoznamky  StudioPoznamka[]
   tabuleChybi     StudioChybi[]
 
+  /// REZERVACE STUDIA MUZIKANTY (zadani 25. 9. 2026). Dokud to neni
+  /// zaskrtnute, studio se nikomu zvenci nenabizi - zapina se u kazdeho
+  /// studia zvlast, dnes jen London.
+  bookingZapnuto Boolean @default(false)
+  /// Nejkratsi rezervace v minutach - pod to se okno vytahnout neda.
+  bookingMinMinut Int    @default(60)
+  /// Kolik dni dopredu se da bookovat. Nula = bez omezeni.
+  bookingDniDopredu Int  @default(180)
+  /// Ucty muzikantu a producentu (role BOOKING), viz User.bookingStudioId.
+  bookingUcty    User[]  @relation("BookingStudio")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -2163,6 +2188,12 @@ enum StudioBlockKind {
   NATACENI    // natáčení s hercem
   STRIH       // střih
   CASTING     // casting (zadani 20. 9. 2026 - treti druh prace)
+  // Rezervace muzikanta nebo producenta zvenci (zadani 25. 9. 2026).
+  // Schvalne TADY a ne ve vlastni tabulce: kalendar uz jednou rozhoduje o
+  // tom, kdy je studio obsazene, a druha evidence rezervaci by se s nim
+  // drive nebo pozdeji rozesla. Takhle rezervace rovnou sviti v nasem
+  // kalendari, pocita se do konfliktu a chodi do odberu ICS.
+  BOOKING
 }
 
 /// Cas, kdy se ve studiu netoci. Do obsazenosti se pocita stejne jako
@@ -2193,6 +2224,16 @@ model StudioBlock {
   rezieOnline     Boolean?
   zvukarUserId    String?
   zvukarName      String?
+
+  // --- Rezervace muzikanta (kind BOOKING, zadani 25. 9. 2026) ---
+  // Jmeno a e-mail se ukladaji jako OTISK vedle id, stejne jako u nabidek
+  // terminu: ucet muze zaniknout a zaznam v kalendari ma zustat citelny.
+  bookingUserId String?
+  bookingUser   User?   @relation("BookingRezervace", fields: [bookingUserId], references: [id], onDelete: SetNull)
+  bookingName   String?
+  bookingEmail  String?
+  /// Celodenni rezervace - v mrizce se kresli pres celou oteviraci dobu.
+  celyDen       Boolean @default(false)
 
   createdById String?
   createdBy   User?   @relation("StudioBlockCreatedBy", fields: [createdById], references: [id])

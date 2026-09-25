@@ -543,6 +543,80 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'This proof-listening link has been closed or replaced with a new one. Write to us and we will send you the current one.',
   },
   'preposlechOdkaz.zalohaNazvu': { cs: 'Nahrávka', en: 'Recording' },
+
+  // --- rezervace studia (zadání 25. 9. 2026) -------------------------------
+  // Klienti londýnského studia jsou Britové, takže angličtina je tu ta
+  // podstatnější polovina - čeština slouží hlavně nám, když se do kalendáře
+  // díváme přes svůj účet.
+  'booking.pasmo': {
+    cs: 'Všechny časy jsou v místním čase studia ({mesto}).',
+    en: 'All times are shown in studio local time ({mesto}).',
+  },
+  'booking.dnes': { cs: 'Dnes', en: 'Today' },
+  'booking.tyden': { cs: 'Týden', en: 'Week' },
+  'booking.den': { cs: 'Den', en: 'Day' },
+  'booking.predchozi': { cs: 'Předchozí', en: 'Previous' },
+  'booking.dalsi': { cs: 'Další', en: 'Next' },
+  'booking.mojeRezervace': { cs: 'Moje rezervace', en: 'Your booking' },
+  'booking.obsazeno': { cs: 'Obsazeno', en: 'Busy' },
+  'booking.zavreno': { cs: 'Zavřeno', en: 'Closed' },
+  'booking.jenNahled': {
+    cs: 'Díváte se na kalendář očima klienta studia — rezervovat odtud nejde.',
+    en: 'You are viewing the calendar as a studio client — booking is disabled here.',
+  },
+  'booking.napoveda': {
+    cs: 'Klepnutím na volné místo si zabookujete termín. Nejkratší rezervace je {minut} minut.',
+    en: 'Tap any free slot to book it. The shortest booking is {minut} minutes.',
+  },
+  'booking.nadchazejici': { cs: 'Moje nadcházející rezervace', en: 'Your upcoming bookings' },
+  'booking.zadneRezervace': {
+    cs: 'Zatím tu žádnou rezervaci nemáte.',
+    en: 'You have no bookings yet.',
+  },
+  'booking.novaRezervace': { cs: 'Nová rezervace', en: 'New booking' },
+  'booking.hodiny': { cs: 'Na hodiny', en: 'By the hour' },
+  'booking.celeDny': { cs: 'Celé dny', en: 'Whole days' },
+  'booking.datum': { cs: 'Datum', en: 'Date' },
+  'booking.od': { cs: 'Od', en: 'From' },
+  'booking.do': { cs: 'Do', en: 'To' },
+  'booking.doData': { cs: 'Do data', en: 'Until' },
+  'booking.nazev': { cs: 'Název rezervace', en: 'Booking name' },
+  'booking.nazevPriklad': { cs: 'Nahrávání kapely', en: 'Band tracking session' },
+  'booking.nazevNapoveda': {
+    cs: 'Vidíte ho jen vy a my. Ostatním se ukáže pouze obsazený čas.',
+    en: 'Only you and our team can see this. Everyone else sees busy time only.',
+  },
+  'booking.poznamka': { cs: 'Poznámka pro studio', en: 'Note for the studio' },
+  'booking.rezervovat': { cs: 'Rezervovat', en: 'Book it' },
+  'booking.zrusitRezervaci': { cs: 'Zrušit rezervaci', en: 'Cancel booking' },
+  'booking.castNeulozena': {
+    cs: 'Část dnů se uložit nepodařilo — zbytek už v kalendáři je.',
+    en: 'Some of the days could not be booked — the rest is already in the calendar.',
+  },
+  'booking.chybaZavreno': { cs: 'Studio má tenhle den zavřeno.', en: 'The studio is closed that day.' },
+  'booking.chybaMimoDobu': {
+    cs: 'Termín je mimo otevírací dobu studia.',
+    en: 'That time is outside the studio opening hours.',
+  },
+  'booking.chybaKratke': {
+    cs: 'Rezervace je kratší, než studio dovoluje.',
+    en: 'The booking is shorter than the studio allows.',
+  },
+  'booking.chybaMinulost': { cs: 'Zpětně rezervovat nejde.', en: 'You cannot book a time in the past.' },
+  'booking.chybaDaleko': {
+    cs: 'Takhle daleko dopředu se zatím rezervovat nedá — napište nám.',
+    en: 'That is further ahead than we currently take bookings — just write to us.',
+  },
+  'booking.chybaObsazeno': { cs: 'Tenhle čas je už obsazený.', en: 'That time is already taken.' },
+  'booking.chybaUlozeni': {
+    cs: 'Rezervaci se nepodařilo uložit.',
+    en: 'The booking could not be saved.',
+  },
+  'booking.bezPristupuNadpis': { cs: 'Kalendář zatím není přístupný', en: 'Calendar not available' },
+  'booking.bezPristupuText': {
+    cs: 'K tomuhle účtu zatím není přiřazené žádné studio. Napište nám a přístup doplníme.',
+    en: 'No studio is linked to this account yet. Write to us and we will set it up.',
+  },
 };
 
 /**
