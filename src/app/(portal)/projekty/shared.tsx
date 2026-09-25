@@ -577,9 +577,7 @@ export type ProjectSortKey =
   | 'narrator'
   | 'pageCount'
   | 'endDate'
-  | 'releaseDate'
-  // Jak daleko je preposlech (25. 9. 2026): nic → nachystano → bezi → hotovo.
-  | 'preposlech';
+  | 'releaseDate';
 
 export type ProjectSort = { key: ProjectSortKey; dir: 'asc' | 'desc' };
 
@@ -618,15 +616,6 @@ export function compareProjects(
     // "Datum dokonceni" je Konec z Caflou; finished_at je jen zaloha.
     if (sort.key === 'endDate') return p.endDate?.getTime() ?? p.finishedAt?.getTime() ?? null;
     if (sort.key === 'releaseDate') return p.releaseDate?.getTime() ?? null;
-    // Preposlech se radi podle toho, jak daleko je: nic → nachystano →
-    // bezi → hotovo (25. 9. 2026).
-    if (sort.key === 'preposlech') {
-      const s = p.meta?.preposlech;
-      if (!s) return 0;
-      if (s.hotovo) return 3;
-      if (s.chyb > 0 || s.poslechnuto > 0 || (s.procent ?? 0) > 0) return 2;
-      return s.stop > 0 ? 1 : 0;
-    }
     if (sort.key === 'priority') {
       const value = p.priority ?? p.meta?.priority ?? null;
       return value ? PRIORITY_RANK[value] : null;
@@ -638,8 +627,7 @@ export function compareProjects(
     sort.key === 'pageCount' ||
     sort.key === 'endDate' ||
     sort.key === 'releaseDate' ||
-    sort.key === 'priority' ||
-    sort.key === 'preposlech'
+    sort.key === 'priority'
   ) {
     const av = numeric(a);
     const bv = numeric(b);
@@ -754,6 +742,10 @@ function bunkaSloupce(
               kde licence nejsou. */}
           <span className="shrink-0 w-[34px] flex flex-col items-center gap-[3px]">
             <IkonaTypu klic={p.meta?.ikonaTypu} typProjektu={p.meta?.projectType} mezeraKdyzNeni />
+            {/* Jak daleko je přeposlech (upřesnění 25. 9. 2026: „jako malou
+                ikonu u typu projektu, co je před názvem") - oranžová, když
+                se zapisují chyby, zelená, když je přeposlechnuto. */}
+            <OdznakPreposlechu stav={p.meta?.preposlech} />
             {(p.meta?.licence ?? []).length > 0 && (
               <span className="flex items-center justify-center gap-[2px] flex-wrap leading-none">
                 {(p.meta?.licence ?? []).map((l) => (
@@ -903,14 +895,6 @@ function bunkaSloupce(
       ) : (
         formatDate(p.releaseDate)
       );
-    case 'preposlech':
-      // Sluchatka: sede nachystano, oranzova s cislem zapsanych chyb = bezi,
-      // zelena fajfka = preposlechnuto komplet (zadani 25. 9. 2026).
-      return p.meta?.preposlech ? (
-        <OdznakPreposlechu stav={p.meta.preposlech} />
-      ) : (
-        <span className="text-muted">—</span>
-      );
     case 'driveUrl':
       // Jen tlacitko, adresa se neukazuje - v tabulce by rozhodila sirku
       // sloupcu (zadani 10. 9. 2026).
@@ -993,8 +977,6 @@ const VAHA_SLOUPCE: Record<string, number> = {
   pageCountSirsi: 7,
   /** Tlacitko „Schvalit" nebo datum schvaleni (zadani 18. 9. 2026). */
   schvaleni: 10,
-  /** Sluchatka s cislem nebo fajfkou (zadani 25. 9. 2026) - uzky sloupec. */
-  preposlech: 8,
 };
 
 /**

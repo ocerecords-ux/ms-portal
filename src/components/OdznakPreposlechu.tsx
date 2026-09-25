@@ -1,19 +1,18 @@
 /**
  * JAK DALEKO JE PŘEPOSLECH (zadání 25. 9. 2026: „chtělo by to nějakou ikonu,
  * že se částečně zapisují chyby v AudioTaggeru u projektu a pak když už je
- * přeposlechnuto komplet. Mělo by to být v detailu projektu i v přehledu").
+ * přeposlechnuto komplet").
  *
- * Tři stavy, jedna sluchátka:
- *   – zelená s fajfkou   … klient dal PŘEPOSLECHNUTO, hotovo
- *   – oranžová s číslem  … běží to: někdo zapisuje chyby nebo poslouchá
- *   – šedá               … stopy nachystané, zatím se nikdo neozval
- * Projekt, kde není ani stopa ani záznam, nemá co ukazovat a odznak se
- * nekreslí vůbec — v přehledu by z toho byl sloupec samých pomlček.
+ * UPŘESNĚNÍ TÉHOŽ DNE: „nedávej to jako další atribut (sloupec) v přehledu,
+ * ale jako malou ikonu u typu projektu, co je před názvem. A chci jen dva
+ * stavy. Oranžová ve chvíli, kdy tam bude v AudioTaggeru aspoň jeden záznam,
+ * a zelená, když se dokončí přeposlech."
  *
- * ČÍSLO V ODZNAKU JSOU ZAPSANÉ CHYBY, ne procenta: procenta se počítají jen
- * z poslechu klienta s otevřeným textem, takže u naší vlastní kontroly
- * zůstávají prázdná — a přitom je to ta chvíle, kdy se chyby sypou nejvíc.
- * Procenta jsou v bublinkové nápovědě spolu se zbytkem.
+ * Takže dva stavy a nic mezi tím:
+ *   – oranžová … někdo zapisuje chyby (aspoň jeden záznam), hotovo ještě není
+ *   – zelená   … přeposlechnuto komplet
+ * Projekt, kde se ještě nikdo neozval, nemá odznak vůbec - nachystané stopy
+ * samy o sobě nejsou zpráva a v seznamu by z toho byl les šedých sluchátek.
  */
 export type StavPreposlechu = {
   /** Kolik stop je v AudioTaggeru nachystaných. */
@@ -28,19 +27,20 @@ export type StavPreposlechu = {
   procent?: number | null;
 };
 
-function Sluchatka({ trida }: { trida: string }) {
+function Sluchatka({ velikost }: { velikost: number }) {
   return (
     <svg
       viewBox="0 0 24 24"
+      width={velikost}
+      height={velikost}
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={trida}
       aria-hidden="true"
     >
-      {/* Oblouk přes hlavu a dvě mušle - poznatelné i ve 14 pixelech. */}
+      {/* Oblouk přes hlavu a dvě mušle - poznatelné i ve dvanácti pixelech. */}
       <path d="M4 14v-2a8 8 0 0 1 16 0v2" />
       <rect x="2.5" y="13.5" width="4" height="6.5" rx="1.6" />
       <rect x="17.5" y="13.5" width="4" height="6.5" rx="1.6" />
@@ -48,61 +48,56 @@ function Sluchatka({ trida }: { trida: string }) {
   );
 }
 
-function popis(stav: StavPreposlechu): string {
+function popis(stav: StavPreposlechu, hotovo: boolean): string {
   const casti: string[] = [];
-  if (stav.stop > 0) casti.push(`${stav.poslechnuto} z ${stav.stop} stop doposlechnuto`);
   if (stav.chyb > 0) casti.push(`${stav.chyb} zapsaných chyb`);
+  if (stav.stop > 0) casti.push(`${stav.poslechnuto} z ${stav.stop} stop doposlechnuto`);
   if (typeof stav.procent === 'number') casti.push(`${stav.procent} % textu`);
   const detail = casti.length ? ` — ${casti.join(' · ')}` : '';
-  if (stav.hotovo) return `Přeposlechnuto komplet${detail}`;
-  if (stav.chyb > 0 || stav.poslechnuto > 0 || (stav.procent ?? 0) > 0)
-    return `Přeposlech běží${detail}`;
-  return `Nachystáno k přeposlechu${detail}`;
+  return `${hotovo ? 'Přeposlechnuto komplet' : 'Přeposlech běží'}${detail}`;
 }
 
 export function OdznakPreposlechu({
   stav,
-  /** `ikona` do tabulky, `odznak` s textem do hlavičky detailu. */
-  varianta = 'ikona',
+  /** `tecka` je kolečko k ikoně typu v přehledu, `odznak` je pruh s textem do detailu. */
+  varianta = 'tecka',
 }: {
   stav: StavPreposlechu | null | undefined;
-  varianta?: 'ikona' | 'odznak';
+  varianta?: 'tecka' | 'odznak';
 }) {
   if (!stav) return null;
-  const bezi = !stav.hotovo && (stav.chyb > 0 || stav.poslechnuto > 0 || (stav.procent ?? 0) > 0);
-  // Nic nachystaného a nic zapsaného - není o čem informovat.
-  if (!stav.hotovo && !bezi && stav.stop === 0) return null;
+  const hotovo = stav.hotovo;
+  const bezi = !hotovo && stav.chyb > 0;
+  if (!hotovo && !bezi) return null;
 
-  const barva = stav.hotovo
-    ? 'bg-okTint text-status-done border-status-done/30'
-    : bezi
-      ? 'bg-warnTint text-status-progress border-status-progress/30'
-      : 'bg-field text-muted border-line';
+  const titulek = popis(stav, hotovo);
 
-  const titulek = popis(stav);
-  const cislo = stav.hotovo ? null : stav.chyb > 0 ? stav.chyb : null;
+  if (varianta === 'tecka') {
+    return (
+      <span
+        title={titulek}
+        aria-label={titulek}
+        className={`grid place-items-center w-[15px] h-[15px] rounded-full ${
+          hotovo ? 'bg-okTint text-status-done' : 'bg-warnTint text-status-progress'
+        }`}
+      >
+        <Sluchatka velikost={10} />
+      </span>
+    );
+  }
 
   return (
     <span
       title={titulek}
       aria-label={titulek}
-      className={`inline-flex items-center gap-1.5 rounded-pill border px-2 py-0.5 font-heading text-xs font-semibold whitespace-nowrap ${barva}`}
+      className={`inline-flex items-center gap-1.5 rounded-pill border px-2 py-0.5 font-heading text-xs font-semibold whitespace-nowrap ${
+        hotovo
+          ? 'bg-okTint text-status-done border-status-done/30'
+          : 'bg-warnTint text-status-progress border-status-progress/30'
+      }`}
     >
-      <Sluchatka trida="w-3.5 h-3.5 shrink-0" />
-      {stav.hotovo ? (
-        <span aria-hidden="true">✓</span>
-      ) : cislo !== null ? (
-        <span className="tabular-nums">{cislo}</span>
-      ) : null}
-      {varianta === 'odznak' && (
-        <span>
-          {stav.hotovo
-            ? 'Přeposlechnuto'
-            : bezi
-              ? 'Přeposlech běží'
-              : 'Nachystáno k přeposlechu'}
-        </span>
-      )}
+      <Sluchatka velikost={13} />
+      {hotovo ? 'Přeposlechnuto' : `Přeposlech běží · ${stav.chyb}`}
     </span>
   );
 }

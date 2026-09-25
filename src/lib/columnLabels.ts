@@ -55,8 +55,9 @@ export const DEFAULT_COLUMN_LABELS: Record<string, { key: string; label: string 
     // (zadani 8. 9. 2026).
     { key: 'endDate', label: 'Datum dokončení' },
     { key: 'releaseDate', label: 'Datum vydání' },
-    // Jak daleko je preposlech (zadani 25. 9. 2026) - sluchatka se stavem.
-    { key: 'preposlech', label: 'Přeposlech' },
+    // PREPOSLECH TU NENI SCHVALNE (upresneni 25. 9. 2026: „nedavej to jako
+    // dalsi atribut (sloupec) v prehledu, ale jako malou ikonu u typu
+    // projektu"). Sluchatka se kresli v bunce nazvu - viz shared.tsx.
     // Slozka projektu na Disku - v prehledu jako tlacitko (zadani 10. 9. 2026).
     { key: 'driveUrl', label: 'Odkaz na KZ' },
   ],
