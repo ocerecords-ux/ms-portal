@@ -41,6 +41,11 @@ export type VydajRadek = {
   celkemMinor: number;
   dph: string;
   uhrazeno: boolean;
+  /** Něco už zaplaceno, ale ne všechno (25. 9. 2026). */
+  castecne: boolean;
+  /** Kolik ještě zbývá doplatit - naformátované i jako číslo na řazení. */
+  zbyva: string;
+  zbyvaMinor: number;
 };
 
 export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
@@ -111,22 +116,31 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
         <>
           {r.celkem}
           <span className="block text-[11px] font-body text-muted">{r.dph}</span>
+          {/* U dokladu placeneho na vicekrat je zbytek to podstatne cislo. */}
+          {r.castecne && (
+            <span className="block text-[11px] font-heading font-semibold text-danger">zbývá {r.zbyva}</span>
+          )}
         </>
       ),
     },
     {
       key: 'stav',
       label: 'Stav',
-      // Neuhrazené napřed při vzestupném řazení - to je to, co člověk hledá.
-      hodnota: (r) => (r.uhrazeno ? 1 : 0),
+      // Neuhrazené napřed při vzestupném řazení - to je to, co člověk hledá;
+      // rozdělané platby hned za nimi.
+      hodnota: (r) => (r.uhrazeno ? 2 : r.castecne ? 1 : 0),
       trida: 'whitespace-nowrap',
       bunka: (r) => (
         <span
           className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
-            r.uhrazeno ? 'bg-okTint text-status-done' : 'bg-tint text-brand-purpleDark'
+            r.uhrazeno
+              ? 'bg-okTint text-status-done'
+              : r.castecne
+                ? 'bg-warnTint text-status-progress'
+                : 'bg-tint text-brand-purpleDark'
           }`}
         >
-          {r.uhrazeno ? 'Uhrazeno' : 'Neuhrazeno'}
+          {r.uhrazeno ? 'Uhrazeno' : r.castecne ? 'Částečně' : 'Neuhrazeno'}
         </span>
       ),
     },
@@ -174,6 +188,7 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
           moznosti: [
             { hodnota: 'uhrazene', popisek: 'Uhrazené' },
             { hodnota: 'neuhrazene', popisek: 'Neuhrazené' },
+            { hodnota: 'castecne', popisek: 'Částečně uhrazené' },
             { hodnota: 'po-splatnosti', popisek: 'Po splatnosti' },
             { hodnota: 's-prilohou', popisek: 'S přílohou' },
             { hodnota: 'bez-prilohy', popisek: 'Bez přílohy' },
@@ -181,6 +196,7 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
           vyhovuje: (r, h) => {
             if (h === 'uhrazene') return r.uhrazeno;
             if (h === 'neuhrazene') return !r.uhrazeno;
+            if (h === 'castecne') return r.castecne;
             if (h === 'po-splatnosti') return r.poSplatnosti;
             if (h === 's-prilohou') return r.maPrilohu;
             return !r.maPrilohu;

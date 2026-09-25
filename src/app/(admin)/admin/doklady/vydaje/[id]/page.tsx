@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { ExpenseEditor } from './ExpenseEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
-import { expenseTotalMinor } from '@/lib/expenses';
+import { expenseTotalMinor, uhrazenoMinor, zbyvaMinor } from '@/lib/expenses';
 import { QrPlatba } from '@/components/QrPlatba';
 import { NahledPrilohy } from './NahledPrilohy';
 
@@ -19,6 +19,8 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
         supplier: { select: { name: true, bankAccount: true } },
         issuer: { select: { name: true } },
         prilohy: { orderBy: { createdAt: 'asc' }, select: { id: true, nazev: true } },
+        // Castecne uhrady (25. 9. 2026) - od nejstarsi, jak se plativalo.
+        uhrady: { orderBy: { datum: 'asc' } },
       },
     }),
     prisma.expenseCategory.findMany({ where: { active: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
@@ -31,7 +33,13 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
   // Ucet je bud primo na dokladu (dorazil ze smlouvy s hercem), nebo u firmy
   // dodavatele. Kdyz neni ani jeden, QR se nekresli.
   const ucetPrijemce = expense.supplierAccount?.trim() || expense.supplier?.bankAccount?.trim() || null;
-  const kUhrade = expenseTotalMinor(expense.amountExVatMinor, expense.vatRate);
+  const celkemMinor = expenseTotalMinor(expense.amountExVatMinor, expense.vatRate);
+  /**
+   * QR SE KRESLÍ NA TO, CO ZBÝVÁ (25. 9. 2026). U dokladu placeného na
+   * vícekrát by kód na celou částku poslal podruhé všechno znovu.
+   */
+  const jizUhrazeno = uhrazenoMinor(expense.uhrady, celkemMinor, expense.paid);
+  const kUhrade = zbyvaMinor(celkemMinor, jizUhrazeno);
   const prijemce = expense.supplier?.name ?? expense.supplierName ?? null;
 
   /**
@@ -107,6 +115,14 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
         companies={companies}
         projects={projects.map((p) => ({ id: p.id, label: p.label, finished: p.finished }))}
         dalsiPrilohy={expense.prilohy}
+        uhrady={expense.uhrady.map((u) => ({
+          id: u.id,
+          castkaMinor: u.castkaMinor,
+          datum: u.datum.toISOString(),
+          zpusob: u.zpusob,
+          poznamka: u.poznamka,
+          kdoJmeno: u.kdoJmeno,
+        }))}
       />
         </div>
 

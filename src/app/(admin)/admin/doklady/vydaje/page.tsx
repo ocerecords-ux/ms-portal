@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { formatMoney } from '@/lib/doklady';
-import { ensureExpenseCategories, expenseTotalMinor } from '@/lib/expenses';
+import { ensureExpenseCategories, expenseTotalMinor, stavUhrady, uhrazenoMinor, zbyvaMinor } from '@/lib/expenses';
 import { ibanZTuzemskehoUctu, jeIbanPlatny, spdRetezec } from '@/lib/pdf/qrPlatba';
 import { NewExpenseForm } from './NewExpenseForm';
 import { StahnoutPrilohy } from '../StahnoutPrilohy';
@@ -49,7 +49,12 @@ export default async function ExpensesPage({
       },
       orderBy: [{ issueDate: 'desc' }, { createdAt: 'desc' }],
       take: 300,
-      include: { category: true, supplier: { select: { name: true, bankAccount: true } } },
+      include: {
+        category: true,
+        supplier: { select: { name: true, bankAccount: true } },
+        // Castecne uhrady (25. 9. 2026) - z nich se pocita, kolik zbyva.
+        uhrady: { select: { castkaMinor: true } },
+      },
     }),
     prisma.expenseCategory.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -74,11 +79,15 @@ export default async function ExpensesPage({
     key === 'nezarazene' ? pocty[0] : key === 'neuhrazene' ? pocty[1] : pocty[2];
 
   // Soucty za to, co je zrovna videt - po menach, at se nescitaji jablka s hruskami.
-  const totals = new Map<string, { exVat: number; incVat: number }>();
+  // Od 25. 9. 2026 i "zbyva doplatit": u dokladu placenych na vicekrat neni
+  // soucet celkovych castek to, co je jeste potreba poslat.
+  const totals = new Map<string, { exVat: number; incVat: number; zbyva: number }>();
   for (const e of expenses) {
-    const current = totals.get(e.currency) ?? { exVat: 0, incVat: 0 };
+    const current = totals.get(e.currency) ?? { exVat: 0, incVat: 0, zbyva: 0 };
+    const celkem = expenseTotalMinor(e.amountExVatMinor, e.vatRate);
     current.exVat += e.amountExVatMinor;
-    current.incVat += expenseTotalMinor(e.amountExVatMinor, e.vatRate);
+    current.incVat += celkem;
+    current.zbyva += zbyvaMinor(celkem, uhrazenoMinor(e.uhrady, celkem, e.paid));
     totals.set(e.currency, current);
   }
 
@@ -108,7 +117,12 @@ export default async function ExpensesPage({
      */
     const ucet = e.supplierAccount?.trim() || e.supplier?.bankAccount?.trim() || null;
     const iban = ucet ? (jeIbanPlatny(ucet) ? ucet.replace(/\s/g, '').toUpperCase() : ibanZTuzemskehoUctu(ucet)) : null;
-    const kUhrade = expenseTotalMinor(e.amountExVatMinor, e.vatRate);
+    const celkemMinor = expenseTotalMinor(e.amountExVatMinor, e.vatRate);
+    // U dokladu placeneho na vicekrat se plati zbytek, ne cela castka znovu.
+    const uhrazeno = uhrazenoMinor(e.uhrady, celkemMinor, e.paid);
+    const zbyva = zbyvaMinor(celkemMinor, uhrazeno);
+    const castecne = stavUhrady(celkemMinor, uhrazeno) === 'CAST';
+    const kUhrade = zbyva;
     const qrText =
       iban && !e.paid
         ? spdRetezec({
@@ -138,10 +152,13 @@ export default async function ExpensesPage({
       poSplatnosti,
       bezDph: formatMoney(e.amountExVatMinor, e.currency),
       bezDphMinor: e.amountExVatMinor,
-      celkem: formatMoney(expenseTotalMinor(e.amountExVatMinor, e.vatRate), e.currency),
-      celkemMinor: expenseTotalMinor(e.amountExVatMinor, e.vatRate),
+      celkem: formatMoney(celkemMinor, e.currency),
+      celkemMinor,
       dph: e.vatRate === 0 ? 'bez DPH' : `DPH ${e.vatRate} %`,
       uhrazeno: e.paid,
+      castecne,
+      zbyva: formatMoney(zbyva, e.currency),
+      zbyvaMinor: zbyva,
     };
   });
 
@@ -199,6 +216,13 @@ export default async function ExpensesPage({
               <span className="text-xs font-body text-muted tabular-nums">
                 bez DPH {formatMoney(sum.exVat, currency as never)}
               </span>
+              {/* Kolik z toho je jeste potreba poslat (25. 9. 2026) - u dokladu
+                  placenych na vicekrat to neni cela castka. */}
+              {sum.zbyva > 0 && sum.zbyva !== sum.incVat && (
+                <span className="text-xs font-heading font-semibold text-danger tabular-nums">
+                  zbývá {formatMoney(sum.zbyva, currency as never)}
+                </span>
+              )}
             </span>
           ))}
         </div>

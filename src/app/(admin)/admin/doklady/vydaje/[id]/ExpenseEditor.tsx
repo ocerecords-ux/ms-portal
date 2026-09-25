@@ -8,7 +8,8 @@ import { formatMoney, minorToInput, parseMoneyToMinor } from '@/lib/doklady';
 import { nazevZpusobuUhrady, ZPUSOBY_UHRADY } from '@/lib/uctenka';
 import { CURRENCIES, CURRENCY_NAMES } from '@/lib/doklady';
 import { PrilohyVydaje, type DalsiPriloha } from './PrilohyVydaje';
-import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
+import { UhradyVydaje, type UhradaRadek } from './UhradyVydaje';
+import { EXPENSE_VAT_RATES, expenseTotalMinor, stavUhrady, uhrazenoMinor, zbyvaMinor } from '@/lib/expenses';
 import { formatRate, toCzkMinor } from '@/lib/cnb';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 import { VyberPole } from '@/components/VyberPole';
@@ -118,12 +119,15 @@ export function ExpenseEditor({
   companies,
   projects,
   dalsiPrilohy,
+  uhrady,
 }: {
   expense: Expense;
   categories: { id: string; name: string }[];
   companies: { id: string; name: string }[];
   projects: ProjectChoice[];
   dalsiPrilohy: DalsiPriloha[];
+  /** Jednotlivé úhrady, když se doklad platí na vícekrát (25. 9. 2026). */
+  uhrady: UhradaRadek[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -154,6 +158,18 @@ export function ExpenseEditor({
 
   const amountMinor = parseMoneyToMinor(form.amount);
   const total = expenseTotalMinor(amountMinor, form.vatRate);
+
+  /**
+   * Stav úhrady se počítá z ULOŽENÝCH čísel, ne z rozepsaného formuláře -
+   * jinak by „zbývá" skákalo při každém ťuknutí do částky.
+   */
+  const celkemUlozene = expenseTotalMinor(expense.amountExVatMinor, expense.vatRate);
+  const jizUhrazeno = uhrazenoMinor(uhrady, celkemUlozene, expense.paid);
+  const zbyva = zbyvaMinor(celkemUlozene, jizUhrazeno);
+  const stavPlatby = stavUhrady(celkemUlozene, jizUhrazeno);
+  // Jakmile je zapsaná první úhrada, platí součet úhrad - přepínač
+  // uhrazeno/neuhrazeno by proti němu jen lhal.
+  const podleUhrad = uhrady.length > 0;
 
   async function save() {
     setSaving(true);
@@ -295,10 +311,20 @@ export function ExpenseEditor({
           <span className="font-display text-2xl text-ink">{expense.supplierLabel}</span>
           <span
             className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${
-              expense.paid ? 'bg-okTint text-status-done' : 'bg-tint text-brand-purpleDark'
+              expense.paid
+                ? 'bg-okTint text-status-done'
+                : stavPlatby === 'CAST'
+                  ? 'bg-warnTint text-status-progress'
+                  : 'bg-tint text-brand-purpleDark'
             }`}
           >
-            {nezarazeny ? 'Nezařazeno' : expense.paid ? 'Uhrazeno' : 'Neuhrazeno'}
+            {nezarazeny
+              ? 'Nezařazeno'
+              : expense.paid
+                ? 'Uhrazeno'
+                : stavPlatby === 'CAST'
+                  ? `Zbývá ${formatMoney(zbyva, expense.currency)}`
+                  : 'Neuhrazeno'}
           </span>
           {/* Cim se platilo (zadani 10. 9. 2026) - u uctenky z benzinky je to
               to hlavni, proc uz je oznacena jako uhrazena. */}
@@ -321,18 +347,22 @@ export function ExpenseEditor({
               Zařadit mezi výdaje
             </button>
           )}
-          <button
-            type="button"
-            onClick={togglePaid}
-            disabled={saving}
-            className={`font-heading font-semibold text-sm rounded-lg px-4 py-2 transition-colors disabled:opacity-60 ${
-              expense.paid
-                ? 'border border-line text-ink hover:bg-field'
-                : 'bg-brand-green text-onAccent hover:brightness-95'
-            }`}
-          >
-            {expense.paid ? 'Zrušit úhradu' : 'Označit jako uhrazený'}
-          </button>
+          {/* Doklad placený na vícekrát se přepíná zápisem úhrad dole, ne tímhle
+              tlačítkem (25. 9. 2026). */}
+          {!podleUhrad && (
+            <button
+              type="button"
+              onClick={togglePaid}
+              disabled={saving}
+              className={`font-heading font-semibold text-sm rounded-lg px-4 py-2 transition-colors disabled:opacity-60 ${
+                expense.paid
+                  ? 'border border-line text-ink hover:bg-field'
+                  : 'bg-brand-green text-onAccent hover:brightness-95'
+              }`}
+            >
+              {expense.paid ? 'Zrušit úhradu' : 'Označit jako uhrazený'}
+            </button>
+          )}
           <button
             type="button"
             onClick={save}
@@ -484,6 +514,19 @@ export function ExpenseEditor({
           </div>
         </div>
       </div>
+
+      {/* Úhrady na vícekrát (25. 9. 2026). U nezařazeného dokladu ze schránky
+          nemá smysl platit dřív, než ho účetní překontroluje a zařadí. */}
+      {!nezarazeny && (
+        <UhradyVydaje
+          expenseId={expense.id}
+          mena={expense.currency}
+          celkemMinor={celkemUlozene}
+          uhrady={uhrady}
+          paid={expense.paid}
+          vychoziZpusob={expense.paymentMethod}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">

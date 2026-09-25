@@ -1722,6 +1722,10 @@ model Expense {
   /// z ni a ukazuje se v nahledu; tady je vsechno ostatni.
   prilohy PrilohaVydaje[]
 
+  /// Jednotlive uhrady, kdyz se doklad plati na vicekrat (25. 9. 2026).
+  /// Prazdne = plati se postaru podle `paid`.
+  uhrady UhradaVydaje[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1729,6 +1733,40 @@ model Expense {
   @@index([categoryId])
   @@index([caflouProjectId])
   @@index([stav])
+}
+
+/// ČÁSTEČNÁ ÚHRADA VÝDAJE (zadání 25. 9. 2026: „potřebuji u výdajů přidávat
+/// částečnou úhradu, když budu třeba smlouvu nebo fakturu proplácet na
+/// vícekrát, abych tam měl záznam, kolik ještě zbývá doplatit").
+///
+/// Jeden řádek = jedny odeslané peníze. Součet řádků říká, kolik je zaplaceno,
+/// a rozdíl proti částce dokladu, kolik zbývá - nic se nikde nedopočítává
+/// ručně a nejde to rozhodit opravou částky dokladu.
+///
+/// PŘÍZNAK `paid` ZŮSTÁVÁ a dopočítává se z úhrad: doklad je uhrazený, teprve
+/// když součet dosáhne částky s DPH. Doklady bez jediné úhrady (a jsou jich
+/// tisíce ze starších měsíců) se tím nemění - u nich pořád platí `paid` tak,
+/// jak ho někdo přepnul.
+model UhradaVydaje {
+  id        String  @id @default(cuid())
+  expenseId String
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  /// Kolik odešlo, v haléřích a v MĚNĚ DOKLADU - přepočet na koruny se dělá
+  /// až v přehledech, stejným kurzem jako u dokladu samotného.
+  castkaMinor Int
+  /// Kdy peníze odešly (ne kdy se to zapsalo do portálu).
+  datum       DateTime
+  zpusob      PaymentMethod @default(TRANSFER)
+  poznamka    String?
+
+  /// Kdo úhradu zapsal - v penězích se hodí vědět, koho se doptat.
+  kdoId    String?
+  kdoJmeno String?
+
+  createdAt DateTime @default(now())
+
+  @@index([expenseId, datum])
 }
 
 /// Dalsi priloha vydaje (21. 9. 2026). url je adresa v ulozisti nebo data URL.
