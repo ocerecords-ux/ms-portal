@@ -96,6 +96,12 @@ export function BookingKalendar({
    */
   const [pohled, setPohled] = useState<'DEN' | 'TYDEN' | 'MESIC'>('TYDEN');
   const [zacatekMs, setZacatekMs] = useState(() => Date.parse(zacatek));
+  /**
+   * JEN MOJE UDÁLOSTI (zadání 25. 9. 2026: „a možnost si pak zobrazit
+   * panáčkem jen mé události"). Stejné tlačítko i stejná ikona jako
+   * v kalendáři portálu, ať to nikdo nehledá dvakrát.
+   */
+  const [jenMoje, setJenMoje] = useState(false);
   const [udalosti, setUdalosti] = useState<BookingUdalost[]>(prvniUdalosti);
   const [nacitam, setNacitam] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -119,6 +125,11 @@ export function BookingKalendar({
   const dny = useMemo(
     () => sestavDny(zacatekMs, studio.casovePasmo, pocetDnu),
     [zacatekMs, studio.casovePasmo, pocetDnu],
+  );
+  /** Co se kreslí do mřížky - buď všechno, nebo jen moje rezervace. */
+  const zobrazene = useMemo(
+    () => (jenMoje ? udalosti.filter((u) => u.moje) : udalosti),
+    [udalosti, jenMoje],
   );
   const mrizka = useMemo(() => rozsahMrizky(studio.hodiny), [studio.hodiny]);
   const hodin = mrizka.do - mrizka.od;
@@ -356,6 +367,18 @@ export function BookingKalendar({
             ›
           </button>
           <span className="w-px h-6 bg-line mx-1" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={() => setJenMoje((v) => !v)}
+            aria-pressed={jenMoje}
+            aria-label={t('booking.jenMoje')}
+            title={t('booking.jenMoje')}
+            className={`${jenMoje ? tlacitkoAktivni : tlacitko} inline-grid place-items-center`}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+              <path d="M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0 1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" />
+            </svg>
+          </button>
           {(['DEN', 'TYDEN', 'MESIC'] as const).map((v) => (
             <button
               key={v}
@@ -399,7 +422,7 @@ export function BookingKalendar({
       {pohled === 'MESIC' && (
         <MesicniPrehled
           dny={dny}
-          udalosti={udalosti}
+          udalosti={zobrazene}
           studio={studio}
           jazyk={jazyk}
           popisObsazeno={t('booking.obsazeno')}
@@ -450,7 +473,7 @@ export function BookingKalendar({
 
               {dny.map((d) => {
                 const pravidlo = hodinyDne(studio.hodiny, d.denVTydnu);
-                const vyrezy = udalosti
+                const vyrezy = zobrazene
                   .map((u) => ({ u, v: vyrez(u, d) }))
                   .filter((x): x is { u: BookingUdalost; v: { od: number; do: number } } => Boolean(x.v));
                 return (

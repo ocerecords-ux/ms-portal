@@ -556,6 +556,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'booking.tyden': { cs: 'Týden', en: 'Week' },
   'booking.den': { cs: 'Den', en: 'Day' },
   'booking.mesic': { cs: 'Měsíc', en: 'Month' },
+  'booking.jenMoje': { cs: 'Jen moje rezervace', en: 'Only my bookings' },
   'booking.napovedaMesic': {
     cs: 'Klepnutím na den se do něj podíváte a můžete rezervovat.',
     en: 'Tap a day to open it and book.',
