@@ -1,11 +1,14 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { utcParts, zonedToUtc } from '@/lib/calendar';
 import { nactiBookingPristup, nactiBookingUdalosti } from '@/lib/bookingServer';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
 import { BookingKalendar } from './BookingKalendar';
+import { SpravaStudia } from './SpravaStudia';
 
 /**
  * KALENDÁŘ STUDIA PRO MUZIKANTY A PRODUCENTY (zadání 25. 9. 2026).
@@ -60,12 +63,61 @@ export default async function StudioPage({
     session.user.id,
   );
 
+  // Klienti studia - jen pro toho, kdo studio spravuje (25. 9. 2026).
+  const klienti = pristup.spravuje
+    ? await prisma.user
+        .findMany({
+          where: { role: 'BOOKING', bookingStudioId: pristup.studio.id, active: true },
+          orderBy: { email: 'asc' },
+          select: { id: true, name: true, email: true, passwordSetAt: true },
+        })
+        .catch(() => [])
+    : [];
+
   return (
-    <BookingKalendar
-      studio={pristup.studio}
-      jenNahled={pristup.jenNahled}
-      zacatek={zacatek.toISOString()}
-      prvniUdalosti={udalosti}
-    />
+    <div className="flex flex-col gap-4">
+      {/* Kdo spravuje víc studií, přepíná je tady - klient studia žádný
+          přepínač nevidí, má jen to svoje (25. 9. 2026). */}
+      {pristup.mojeStudia.length > 1 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {pristup.mojeStudia.map((s) => (
+            <Link
+              key={s.id}
+              href={`/studio?studio=${s.id}`}
+              className={`rounded-pill border px-3 py-1 text-xs font-heading font-semibold no-underline transition-colors ${
+                s.id === pristup.studio.id
+                  ? 'bg-brand-purple border-brand-purpleDeep text-white'
+                  : 'bg-surface border-line text-ink hover:bg-field'
+              }`}
+            >
+              {s.nazev}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <BookingKalendar
+        studio={pristup.studio}
+        jenNahled={pristup.jenNahled}
+        zacatek={zacatek.toISOString()}
+        prvniUdalosti={udalosti}
+      />
+
+      {pristup.spravuje && (
+        <SpravaStudia
+          studioId={pristup.studio.id}
+          minMinut={pristup.studio.minMinut}
+          dniDopredu={pristup.studio.dniDopredu}
+          klienti={(klienti as { id: string; name: string | null; email: string; passwordSetAt: Date | null }[]).map(
+            (k) => ({
+              id: k.id,
+              jmeno: k.name,
+              email: k.email,
+              hesloNastaveno: Boolean(k.passwordSetAt),
+            }),
+          )}
+        />
+      )}
+    </div>
   );
 }

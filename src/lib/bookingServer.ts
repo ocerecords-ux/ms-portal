@@ -7,6 +7,7 @@ import {
   zabiraStudio,
   zonedToUtc,
 } from '@/lib/calendar';
+import { smiStudio, spravovanaStudia, spravujeNeco } from '@/lib/spravaKalendare';
 import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
 import { notifyMany } from '@/lib/notifications';
 import {
@@ -33,6 +34,14 @@ export type BookingPristup = {
   studio: BookingStudio;
   /** Jen kouká (náš tým si kalendář otevírá na zkoušku). */
   jenNahled: boolean;
+  /**
+   * Smí u tohohle studia měnit nastavení rezervací a zvát klienty
+   * (25. 9. 2026: „k té editaci by měl mít přístup i Matěj Černý").
+   * Žůžo-labůžo a produkce všude, vedoucí pobočky ve svých studiích.
+   */
+  spravuje: boolean;
+  /** Studia s rezervacemi, na která ten člověk dosáhne - do přepínače. */
+  mojeStudia: { id: string; nazev: string }[];
 };
 
 /** Studio, do kterého ten člověk patří - i s otevírací dobou. */
@@ -66,31 +75,53 @@ export async function nactiBookingPristup(
   user: { id: string; role: string },
   studioId?: string | null,
 ): Promise<BookingPristup | null> {
-  const tym = user.role === 'ADMIN' || user.role === 'PRODUKCE';
-
-  if (!tym) {
+  // Klient studia: jen svoje studio, zato v něm smí rezervovat.
+  if (user.role === 'BOOKING') {
     const ucet = await prisma.user.findUnique({
       where: { id: user.id },
       select: { bookingStudioId: true, active: true },
     });
     if (!ucet?.active || !ucet.bookingStudioId) return null;
     const studio = await nactiBookingStudio(ucet.bookingStudioId);
-    return studio ? { studio, jenNahled: false } : null;
+    return studio ? { studio, jenNahled: false, spravuje: false, mojeStudia: [] } : null;
   }
 
-  if (studioId) {
-    const studio = await nactiBookingStudio(studioId);
-    return studio ? { studio, jenNahled: true } : null;
-  }
-  // Bez upřesnění první zapnuté studio - dnes London, zítra klidně další.
-  const prvni = await prisma.studio.findFirst({
+  // Náš tým: Žůžo-labůžo a produkce všude, vedoucí pobočky ve svých studiích
+  // (stejné pravidlo jako u kalendáře - viz lib/spravaKalendare.ts).
+  const sprava = await spravovanaStudia(user.id, user.role as never);
+  if (!spravujeNeco(sprava)) return null;
+
+  const zapnuta = await prisma.studio.findMany({
     where: { active: true, bookingZapnuto: true },
-    orderBy: { sortOrder: 'asc' },
-    select: { id: true },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    select: { id: true, name: true },
   });
-  if (!prvni) return null;
-  const studio = await nactiBookingStudio(prvni.id);
-  return studio ? { studio, jenNahled: true } : null;
+  const moje = zapnuta.filter((s) => smiStudio(sprava, s.id));
+  if (moje.length === 0) return null;
+
+  const cil = studioId && moje.some((s) => s.id === studioId) ? studioId : moje[0].id;
+  const studio = await nactiBookingStudio(cil);
+  if (!studio) return null;
+  return {
+    studio,
+    jenNahled: true,
+    spravuje: true,
+    mojeStudia: moje.map((s) => ({ id: s.id, nazev: s.name })),
+  };
+}
+
+/**
+ * Smí tenhle člověk u studia měnit nastavení rezervací a zvát klienty?
+ * Odpovídá právům na kalendář studia - kdo smí zapisovat do kalendáře
+ * pobočky, ten smí i rozhodovat o jejích rezervacích.
+ */
+export async function smiSpravovatBooking(
+  user: { id: string; role: string },
+  studioId: string,
+): Promise<boolean> {
+  if (user.role === 'BOOKING') return false;
+  const sprava = await spravovanaStudia(user.id, user.role as never);
+  return smiStudio(sprava, studioId);
 }
 
 /**

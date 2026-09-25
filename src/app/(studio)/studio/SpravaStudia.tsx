@@ -4,64 +4,48 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 /**
- * REZERVACE STUDIA KLIENTY (zadání 25. 9. 2026: „v rámci londýnského studia
- * potřebuji udělat plánovací kalendář, který budou mít k dispozici muzikanti
- * a producenti, kteří si u nás bookujou termíny").
+ * SPRÁVA REZERVACÍ PŘÍMO U KALENDÁŘE (zadání 25. 9. 2026: „k té editaci by
+ * měl mít přístup i Matěj Černý").
  *
- * Panel sedí u studií schválně: kdo si smí vzít naši kabinu, je věc studia,
- * ne seznamu uživatelů. Na jednom místě je tedy zapnutí, pravidla i lidé.
+ * PROČ TADY A NE JEN V ADMINISTRACI: administrace je vyhrazená Žůžo-labůžo,
+ * ale o rezervacích pobočky rozhoduje i její vedoucí. Tenhle panel proto sedí
+ * pod kalendářem studia, kam vedoucí dosáhne - a ukáže se jen tomu, kdo dané
+ * studio spravuje. V administraci zůstává tentýž panel pro přehled všech
+ * studií najednou; obojí volá stejné API.
  *
- * ZAPÍNÁ SE U KAŽDÉHO STUDIA ZVLÁŠŤ. Dnes London; až se to osvědčí, stačí
- * zaškrtnout Brno a nic dalšího se nepřepisuje.
+ * SAMOTNÉ REZERVACE SE TU NEUPRAVUJÍ. Jsou to události kalendáře studia,
+ * takže se posouvají, ruší a doplňují v Kalendáři jako všechno ostatní -
+ * druhá cesta k témuž záznamu by jen kalila vodu.
  */
 
-export type StudioRezervace = {
+export type KlientStudia = {
   id: string;
-  nazev: string;
-  barva: string;
-  zapnuto: boolean;
-  minMinut: number;
-  dniDopredu: number;
-  /** Má studio vyplněnou otevírací dobu? Bez ní není co nabídnout. */
-  maDobu: boolean;
-  klienti: { id: string; jmeno: string | null; email: string; aktivni: boolean; hesloNastaveno: boolean }[];
+  jmeno: string | null;
+  email: string;
+  hesloNastaveno: boolean;
 };
 
-export function RezervaceStudii({ studia, zaklad }: { studia: StudioRezervace[]; zaklad: string }) {
-  return (
-    <section className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-line">
-        <h2 className="font-heading font-semibold text-ink m-0">Rezervace studia klienty</h2>
-        <p className="text-xs font-body text-muted m-0 mt-1">
-          Muzikanti a producenti si po pozvánce otevřou kalendář studia na adrese{' '}
-          <span className="font-heading text-ink">{zaklad}/studio</span> a berou si volné termíny
-          sami. Svoje rezervace vidí pojmenované, cizí jen jako obsazený čas — bez názvů.
-        </p>
-      </div>
-
-      {studia.length === 0 ? (
-        <p className="text-sm font-body text-muted m-0 px-5 py-6">Žádné studio tu zatím není.</p>
-      ) : (
-        <ul className="m-0 p-0 list-none">
-          {studia.map((s) => (
-            <Studio key={s.id} studio={s} />
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function Studio({ studio }: { studio: StudioRezervace }) {
+export function SpravaStudia({
+  studioId,
+  minMinut,
+  dniDopredu,
+  klienti,
+}: {
+  studioId: string;
+  minMinut: number;
+  dniDopredu: number;
+  klienti: KlientStudia[];
+}) {
   const router = useRouter();
+  const [otevreno, setOtevreno] = useState(false);
   const [bezi, setBezi] = useState(false);
   const [email, setEmail] = useState('');
   const [jmeno, setJmeno] = useState('');
   const [zprava, setZprava] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
   const [odkaz, setOdkaz] = useState<string | null>(null);
-  const [min, setMin] = useState(studio.minMinut);
-  const [dni, setDni] = useState(studio.dniDopredu);
+  const [min, setMin] = useState(minMinut);
+  const [dni, setDni] = useState(dniDopredu);
 
   async function uloz(data: Record<string, unknown>) {
     setBezi(true);
@@ -70,7 +54,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
       const res = await fetch('/api/studio/sprava', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studioId: studio.id, ...data }),
+        body: JSON.stringify({ studioId, ...data }),
       });
       if (!res.ok) {
         const o = await res.json().catch(() => ({}));
@@ -94,7 +78,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
       const res = await fetch('/api/studio/sprava', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studioId: studio.id, email, jmeno: jmeno || undefined }),
+        body: JSON.stringify({ studioId, email, jmeno: jmeno || undefined }),
       });
       const o = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -122,48 +106,27 @@ function Studio({ studio }: { studio: StudioRezervace }) {
   }
 
   return (
-    <li className="border-t border-line first:border-t-0 px-5 py-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <span className="flex items-center gap-2 min-w-0 flex-wrap">
-          <span
-            className="w-3 h-3 rounded-[3px] shrink-0"
-            style={{ background: studio.barva }}
-            aria-hidden="true"
-          />
-          <span className="font-heading font-semibold text-sm text-ink truncate">{studio.nazev}</span>
-          {/* Klik na studio má něco dělat (25. 9. 2026: „neukáže se mi Londýn,
-              když kliknu") - otevře kalendář rezervací toho studia. */}
-          {studio.zapnuto && (
-            <a
-              href={`/studio?studio=${studio.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 text-brand-purple font-heading text-xs no-underline hover:underline"
-            >
-              Otevřít kalendář ↗
-            </a>
-          )}
+    <section className="bg-surface border border-line rounded-card shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOtevreno((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-transparent border-0 cursor-pointer text-left"
+      >
+        <span>
+          <span className="block font-heading font-semibold text-sm text-ink">
+            Správa rezervací
+          </span>
+          <span className="block text-xs font-body text-muted">
+            {klienti.length === 0
+              ? 'Zatím sem nemá přístup nikdo — pozvěte prvního klienta.'
+              : `${klienti.length} ${klienti.length === 1 ? 'pozvaný klient' : 'pozvaných klientů'}`}
+          </span>
         </span>
-        <label className="flex items-center gap-2 text-xs font-heading text-muted cursor-pointer">
-          <input
-            type="checkbox"
-            checked={studio.zapnuto}
-            disabled={bezi}
-            onChange={(e) => uloz({ zapnuto: e.target.checked })}
-          />
-          Rezervace zapnuté
-        </label>
-      </div>
+        <span className="text-muted text-sm shrink-0">{otevreno ? '▾' : '▸'}</span>
+      </button>
 
-      {studio.zapnuto && !studio.maDobu && (
-        <p className="m-0 text-xs font-body text-status-error">
-          Studio nemá vyplněnou pracovní dobu — dokud ji nedoplníte výš, nebude si klient mít co
-          vybrat.
-        </p>
-      )}
-
-      {studio.zapnuto && (
-        <>
+      {otevreno && (
+        <div className="px-4 pb-4 flex flex-col gap-3 border-t border-line pt-3">
           <div className="flex items-end gap-3 flex-wrap">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-heading text-muted">Nejkratší rezervace (min)</span>
@@ -173,7 +136,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
                 step={15}
                 value={min}
                 onChange={(e) => setMin(Number(e.target.value))}
-                onBlur={() => min !== studio.minMinut && uloz({ minMinut: min })}
+                onBlur={() => min !== minMinut && uloz({ minMinut: min })}
                 className="w-28 bg-field border border-line rounded-lg px-3 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
               />
             </label>
@@ -184,7 +147,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
                 min={0}
                 value={dni}
                 onChange={(e) => setDni(Number(e.target.value))}
-                onBlur={() => dni !== studio.dniDopredu && uloz({ dniDopredu: dni })}
+                onBlur={() => dni !== dniDopredu && uloz({ dniDopredu: dni })}
                 className="w-28 bg-field border border-line rounded-lg px-3 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
               />
             </label>
@@ -199,7 +162,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="jméno@kapela.co.uk"
-                className="w-64 bg-field border border-line rounded-lg px-3 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
+                className="w-60 bg-field border border-line rounded-lg px-3 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -207,7 +170,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
               <input
                 value={jmeno}
                 onChange={(e) => setJmeno(e.target.value)}
-                className="w-48 bg-field border border-line rounded-lg px-3 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
+                className="w-44 bg-field border border-line rounded-lg px-3 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
               />
             </label>
             <button
@@ -227,9 +190,9 @@ function Studio({ studio }: { studio: StudioRezervace }) {
             </p>
           )}
 
-          {studio.klienti.length > 0 && (
+          {klienti.length > 0 && (
             <ul className="m-0 p-0 list-none flex flex-col gap-1.5">
-              {studio.klienti.map((k) => (
+              {klienti.map((k) => (
                 <li
                   key={k.id}
                   className="flex items-center justify-between gap-3 border border-line rounded-lg px-3 py-1.5"
@@ -255,8 +218,12 @@ function Studio({ studio }: { studio: StudioRezervace }) {
               ))}
             </ul>
           )}
-        </>
+
+          <p className="m-0 text-[11px] font-body text-muted">
+            Samotné rezervace se posouvají a ruší v Kalendáři — jsou to běžné události studia.
+          </p>
+        </div>
       )}
-    </li>
+    </section>
   );
 }
