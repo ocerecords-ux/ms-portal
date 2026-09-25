@@ -90,8 +90,22 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      {/* Plus vedle nadpisu zakládá studio (25. 9. 2026: „nebo dej jen +
+          vedle nadpisu Studia"). Nové studio přibývá jednou za rok, takže
+          si nezaslouží víc místa než jedno kolečko. */}
+      <div className="flex items-center gap-3">
         <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Studia</h1>
+        {!zakladam && (
+          <button
+            type="button"
+            onClick={() => setZakladam(true)}
+            title="Nové studio"
+            aria-label="Nové studio"
+            className="w-8 h-8 shrink-0 grid place-items-center rounded-full border border-line text-muted text-xl leading-none bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer"
+          >
+            +
+          </button>
+        )}
       </div>
 
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
@@ -230,17 +244,11 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
         )}
       </div>
 
-      {/* NOVÉ STUDIO POD TLAČÍTKEM (zadání 25. 9. 2026: „to přidat nové studio
-          dej jen na tlačítko a někam pod seznam studií"). Studio se zakládá
-          jednou za rok - tři pole natrvalo otevřená pod seznamem jen odváděla
+      {/* FORMULÁŘ NOVÉHO STUDIA (25. 9. 2026). Otevírá se tlačítkem v hlavičce;
+          pole zůstávají dole, ať se nadpis nerozlézá přes celou šířku. Studio
+          se zakládá jednou za rok - tři pole natrvalo otevřená jen odváděla
           pozornost od toho, co se opravdu spravuje. */}
-      {!zakladam ? (
-        <div>
-          <AddButton type="button" onClick={() => setZakladam(true)}>
-            Nové studio
-          </AddButton>
-        </div>
-      ) : (
+      {zakladam && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex items-end gap-3 flex-wrap">
           <label className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
             <span className="text-sm font-body text-ink">Nové studio</span>
