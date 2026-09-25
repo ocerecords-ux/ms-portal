@@ -17,6 +17,7 @@ import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelnaPriorita, UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
 import { SchvalitSpot } from '@/components/SchvalitSpot';
 import { dnuDoTerminu, odznakTerminu, stavTerminu, type StavTerminu } from '@/lib/terminProjektu';
+import { formatDatum, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 // Caflou pouziva interni nazvy stavu (napr. "Schváleno - k fakturaci"), ktere
 // chceme klientovi v portalu zobrazovat srozumitelneji. Dalsi preklady stavu
@@ -32,9 +33,9 @@ function displayStatusName(statusName: string): string {
   return STATUS_LABEL_OVERRIDES[statusName] ?? statusName;
 }
 
-export function formatDate(d: Date | null) {
+export function formatDate(d: Date | null, jazyk: Jazyk = 'cs') {
   if (!d) return '—';
-  return new Intl.DateTimeFormat('cs-CZ').format(d);
+  return formatDatum(jazyk, d);
 }
 
 /**
@@ -60,14 +61,17 @@ export function TerminDokonceni({
   statusName,
   /** Co se ukáže místo data - u upravitelné buňky je to celé tlačítko. */
   obsah,
+  jazyk = 'cs',
 }: {
   datum: Date | null;
   hotovo: boolean;
   /** Stav projektu - od „Dokončeno - ke schválení" se termín přestane hlídat. */
   statusName?: string | null;
   obsah?: React.ReactNode;
+  /** Jazyk portálu - propem, komponenta běží na serveru i v prohlížeči. */
+  jazyk?: Jazyk;
 }) {
-  const telo = obsah ?? formatDate(datum);
+  const telo = obsah ?? formatDate(datum, jazyk);
 
   /**
    * ODEVZDÁNO = KLID (upřesnění 18. 9. 2026: „když bude stav na Dokončeno -
@@ -104,10 +108,10 @@ export function TerminDokonceni({
           className="ml-0.5 text-[9px] font-bold tabular-nums text-ink"
           title={
             stav === 'po'
-              ? 'Dní po termínu dokončení'
+              ? prelozit(jazyk, 'projekty.termin.po')
               : stav === 'dnes'
-                ? 'Termín dokončení je dnes'
-                : 'Dní do termínu dokončení'
+                ? prelozit(jazyk, 'projekty.termin.dnes')
+                : prelozit(jazyk, 'projekty.termin.do')
           }
         >
           {odznak}
@@ -147,9 +151,16 @@ export function ProjectsTable({
   schvaleni,
   progres,
   kontakty,
+  jazyk,
 }: {
   projects: DisplayProject[];
   emptyText: string;
+  /**
+   * Jazyk portálu. Tabulku vykresluje i serverová stránka i klientské
+   * komponenty, takže si ho nebere hookem, ale dostane ho propem
+   * (pravidlo 8 v docs/preklad-portalu.md).
+   */
+  jazyk: Jazyk;
   /**
    * PROGRES NATÁČENÍ podle ID projektu (zadání 19. 9. 2026: „měl by ho vidět
    * i klient"). Když se prop nepředá, sloupec se nevykreslí - u dokončených
@@ -223,23 +234,50 @@ export function ProjectsTable({
           </colgroup>
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
-              <th className="text-left px-4 py-3.5">Projekt</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.projekt')}</th>
               {/* Kdo zakázku u klienta vede (24. 9. 2026). */}
-              {showKontakt && <th className="text-left px-4 py-3.5">Vede</th>}
-              <th className="text-left px-4 py-3.5">Stav</th>
-              <th className="text-left px-4 py-3.5">Herec</th>
-              {showProgres && <th className="text-left px-4 py-3.5 whitespace-nowrap">Progres natáčení</th>}
+              {showKontakt && <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.vede')}</th>}
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.stav')}</th>
+              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.herec')}</th>
+              {showProgres && (
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">
+                  {prelozit(jazyk, 'projekty.sl.progresNataceni')}
+                </th>
+              )}
               {/* „NS" misto „Normostrany" - usetrena sirka se hodi nazvum
                   a hercum (zadani 12. 9. 2026). */}
-              <th className="text-right px-4 py-3.5 whitespace-nowrap" title="Normostrany">NS</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Dokončení</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Vydání</th>
+              <th
+                className="text-right px-4 py-3.5 whitespace-nowrap"
+                title={prelozit(jazyk, 'projekty.sl.normostrany')}
+              >
+                {prelozit(jazyk, 'projekty.sl.normostranyZkratka')}
+              </th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">
+                {prelozit(jazyk, 'projekty.sl.dokonceni')}
+              </th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">
+                {prelozit(jazyk, 'projekty.sl.vydani')}
+              </th>
               {/* Dva sloupce k přeposlechu (zadání 12. 9. 2026): jestli už je
                   co poslouchat, a jak daleko poslech došel. */}
-              {showPreposlech && <th className="text-left px-4 py-3.5 whitespace-nowrap">K přeposlechu</th>}
-              {showPreposlech && <th className="text-left px-4 py-3.5 whitespace-nowrap">Přeposlechnuto</th>}
-              {showRodnyList && <th className="text-left px-4 py-3.5">Rodný list</th>}
-              {showSchvaleni && <th className="text-left px-4 py-3.5 whitespace-nowrap">Schválení</th>}
+              {showPreposlech && (
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">
+                  {prelozit(jazyk, 'projekty.sl.kPreposlechu')}
+                </th>
+              )}
+              {showPreposlech && (
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">
+                  {prelozit(jazyk, 'projekty.sl.preposlechnuto')}
+                </th>
+              )}
+              {showRodnyList && (
+                <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.rodnyList')}</th>
+              )}
+              {showSchvaleni && (
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">
+                  {prelozit(jazyk, 'projekty.sl.schvaleni')}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -275,7 +313,9 @@ export function ProjectsTable({
                         {kontakty[String(p.id)]}
                       </span>
                     ) : (
-                      <span className="text-xs font-body text-muted">— bez kontaktu</span>
+                      <span className="text-xs font-body text-muted">
+                        {prelozit(jazyk, 'projekty.bezKontaktu')}
+                      </span>
                     )}
                   </td>
                 )}
@@ -317,18 +357,26 @@ export function ProjectsTable({
                   {p.pageCount ?? '—'}
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  <TerminDokonceni datum={p.endDate} hotovo={p.finished} statusName={p.statusName} />
+                  <TerminDokonceni
+                    datum={p.endDate}
+                    hotovo={p.finished}
+                    statusName={p.statusName}
+                    jazyk={jazyk}
+                  />
                 </td>
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
-                  {formatDate(p.releaseDate)}
+                  {formatDate(p.releaseDate, jazyk)}
                 </td>
                 {showPreposlech && (
                   <BunkaKPreposlechu
                     stav={preposlech?.[String(p.id)]}
                     odkaz={odkazyAudioTaggeru?.[String(p.id)]}
+                    jazyk={jazyk}
                   />
                 )}
-                {showPreposlech && <BunkaPreposlechnuto stav={preposlech?.[String(p.id)]} />}
+                {showPreposlech && (
+                  <BunkaPreposlechnuto stav={preposlech?.[String(p.id)]} jazyk={jazyk} />
+                )}
                 {showSchvaleni && (
                   <td className="px-4 py-2 text-sm font-heading whitespace-nowrap align-middle">
                     {/* Schvaluje se CELÝ PROJEKT, ne jednotlivá nahrávka
@@ -356,7 +404,7 @@ export function ProjectsTable({
                         rel="noreferrer"
                         className="text-brand-purple no-underline"
                       >
-                        Rodný list ↗
+                        {prelozit(jazyk, 'projekty.rodnyListOtevrit')}
                       </a>
                     ) : (
                       <span className="text-muted">—</span>
@@ -570,10 +618,6 @@ export function compareProjects(
     // "Datum dokonceni" je Konec z Caflou; finished_at je jen zaloha.
     if (sort.key === 'endDate') return p.endDate?.getTime() ?? p.finishedAt?.getTime() ?? null;
     if (sort.key === 'releaseDate') return p.releaseDate?.getTime() ?? null;
-    if (sort.key === 'priority') {
-      const value = p.priority ?? p.meta?.priority ?? null;
-      return value ? PRIORITY_RANK[value] : null;
-    }
     // Preposlech se radi podle toho, jak daleko je: nic → nachystano →
     // bezi → hotovo (25. 9. 2026).
     if (sort.key === 'preposlech') {
@@ -582,6 +626,10 @@ export function compareProjects(
       if (s.hotovo) return 3;
       if (s.chyb > 0 || s.poslechnuto > 0 || (s.procent ?? 0) > 0) return 2;
       return s.stop > 0 ? 1 : 0;
+    }
+    if (sort.key === 'priority') {
+      const value = p.priority ?? p.meta?.priority ?? null;
+      return value ? PRIORITY_RANK[value] : null;
     }
     return null;
   };
@@ -1186,7 +1234,15 @@ function SortableHeader({
  * projektů by jinak znamenalo padesát dotazů do Google API při každém
  * otevření přehledu.
  */
-function BunkaKPreposlechu({ stav, odkaz }: { stav?: { stop: number }; odkaz?: string }) {
+function BunkaKPreposlechu({
+  stav,
+  odkaz,
+  jazyk,
+}: {
+  stav?: { stop: number };
+  odkaz?: string;
+  jazyk: Jazyk;
+}) {
   const pripraveno = (stav?.stop ?? 0) > 0;
 
   /**
@@ -1207,7 +1263,7 @@ function BunkaKPreposlechu({ stav, odkaz }: { stav?: { stop: number }; odkaz?: s
           href={odkaz}
           target="_blank"
           rel="noreferrer"
-          title={`Otevřít AudioTagger — nachystáno ${stav?.stop} stop`}
+          title={prelozitS(jazyk, 'projekty.otevritTagger', { stop: stav?.stop ?? 0 })}
           className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-2.5 py-1 rounded-pill border border-brand-purple/40 bg-brand-purple/10 text-brand-purple no-underline hover:bg-brand-purple/20 transition-colors"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden="true">
@@ -1215,7 +1271,7 @@ function BunkaKPreposlechu({ stav, odkaz }: { stav?: { stop: number }; odkaz?: s
             <rect x="2.5" y="12" width="5" height="7" rx="2" />
             <rect x="16.5" y="12" width="5" height="7" rx="2" />
           </svg>
-          Poslechnout
+          {prelozit(jazyk, 'projekty.poslechnout')}
         </a>
       </td>
     );
@@ -1224,7 +1280,11 @@ function BunkaKPreposlechu({ stav, odkaz }: { stav?: { stop: number }; odkaz?: s
   return (
     <td className="px-4 py-0 whitespace-nowrap">
       <span
-        title={pripraveno ? `Nahrávky jsou nachystané (${stav?.stop})` : 'Nahrávky zatím nejsou'}
+        title={
+          pripraveno
+            ? prelozitS(jazyk, 'projekty.nahravkyNachystane', { stop: stav?.stop ?? 0 })
+            : prelozit(jazyk, 'projekty.nahravkyNejsou')
+        }
         className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${
           pripraveno ? 'bg-brand-green/15 text-status-done' : 'bg-dangerTint text-danger'
         }`}
@@ -1238,7 +1298,11 @@ function BunkaKPreposlechu({ stav, odkaz }: { stav?: { stop: number }; odkaz?: s
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         )}
-        <span className="sr-only">{pripraveno ? 'Připraveno k přeposlechu' : 'Zatím není co poslouchat'}</span>
+        <span className="sr-only">
+          {pripraveno
+            ? prelozit(jazyk, 'projekty.pripravenoKPreposlechu')
+            : prelozit(jazyk, 'projekty.neniCoPoslouchat')}
+        </span>
       </span>
     </td>
   );
@@ -1254,14 +1318,16 @@ function BunkaKPreposlechu({ stav, odkaz }: { stav?: { stop: number }; odkaz?: s
  */
 function BunkaPreposlechnuto({
   stav,
+  jazyk,
 }: {
   stav?: { stop: number; poslechnuto: number; hotovo: boolean; procent?: number | null };
+  jazyk: Jazyk;
 }) {
   if (stav?.hotovo) {
     return (
       <td className="px-4 py-0 whitespace-nowrap">
         <span className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-3 py-1 rounded-pill bg-brand-green text-onAccent">
-          Dokončeno
+          {prelozit(jazyk, 'projekty.hotovo')}
         </span>
       </td>
     );
@@ -1276,7 +1342,10 @@ function BunkaPreposlechnuto({
     return (
       <td
         className="px-4 py-0 text-sm font-heading text-muted whitespace-nowrap"
-        title={`Doposlechnuté stopy: ${stav.poslechnuto} z ${stav.stop}`}
+        title={prelozitS(jazyk, 'projekty.doposlechnuteStopy', {
+          hotovo: stav.poslechnuto,
+          celkem: stav.stop,
+        })}
       >
         <span className="inline-flex items-center gap-2">
           <span className="w-12 h-1.5 rounded-full bg-field border border-line overflow-hidden" aria-hidden="true">
@@ -1290,8 +1359,8 @@ function BunkaPreposlechnuto({
   return (
     <td className="px-4 py-0 text-sm font-heading text-muted whitespace-nowrap">
       <span className="tabular-nums">
-        <span className={stav.poslechnuto > 0 ? 'text-ink font-semibold' : ''}>{stav.poslechnuto}</span> z{' '}
-        {stav.stop}
+        <span className={stav.poslechnuto > 0 ? 'text-ink font-semibold' : ''}>{stav.poslechnuto}</span>{' '}
+        {prelozit(jazyk, 'obecne.z')} {stav.stop}
       </span>
     </td>
   );

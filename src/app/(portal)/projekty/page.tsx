@@ -28,6 +28,8 @@ import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 import { odkazNaFotku } from '@/lib/fotky';
 import { posledniStrany } from '@/lib/brunoServer';
 import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, prelozitS } from '@/lib/jazyk';
 import { bezTitulu } from '@/lib/jmena';
 import { stavNabidky } from '@/lib/nabidkaReklamy';
 
@@ -252,12 +254,16 @@ export default async function ProjektyPage() {
     await odkazyPreposlechu(active.map((p) => String(p.id))),
   );
 
+  const jazyk = nactiJazyk();
+
   return (
     <section className="flex flex-col gap-8">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         {/* Na telefonu bez nadpisu (21. 9. 2026: „nápis Projekty taky. Stačí,
             když to svítí zaškrtlé nahoře v nabídce na panelu"). */}
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">
+          {prelozit(jazyk, 'projekty.nadpis')}
+        </h1>
       </div>
 
       {/* DVĚ ZÁLOŽKY (zadání 24. 9. 2026). Obě se vykreslí na serveru,
@@ -268,19 +274,20 @@ export default async function ProjektyPage() {
           <div className="flex flex-col gap-8">
             <div>
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
-                Aktivní projekty
+                {prelozit(jazyk, 'projekty.aktivni')}
               </h2>
               {/* Tlacitko "Zeptat se" jen u KLIENTU AUDIOKNIH a jen u rozpracovanych
                   projektu (zadani 11. 9. 2026). U dokoncenych se kanal uzavira, tak
                   se tam ani nenabizi. */}
               <ProjectsTable
                 projects={active}
-                emptyText="Aktuálně tu nemáte žádný rozpracovaný projekt. Vidíte jen zakázky, u kterých jste vedení jako kontaktní osoba — ostatní najdete na záložce Celá firma."
+                emptyText={prelozit(jazyk, 'projekty.zadneAktivni')}
                 rodneListy={rodneListy}
                 preposlech={preposlech}
                 odkazyAudioTaggeru={odkazyAudioTaggeru}
                 schvaleni={schvaleni}
                 progres={progres}
+                jazyk={jazyk}
               />
             </div>
 
@@ -291,18 +298,20 @@ export default async function ProjektyPage() {
           <div className="flex flex-col gap-8">
             <div>
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
-                Aktivní projekty {company ? `— ${company.name}` : ''}
+                {prelozitS(jazyk, 'projekty.aktivniFirmy', {
+                  firma: company ? `— ${company.name}` : '',
+                }).trim()}
               </h2>
               <p className="text-xs font-body text-muted m-0 mb-3">
-                Všechno, co u nás vaše firma má — i zakázky kolegů. Poslech a připomínky zůstávají
-                u toho, kdo je na zakázce vedený jako kontakt.
+                {prelozit(jazyk, 'projekty.firmaPopis')}
               </p>
               <ProjectsTable
                 projects={firemniActive}
-                emptyText="Vaše firma u nás zatím nemá žádnou rozpracovanou zakázku."
+                emptyText={prelozit(jazyk, 'projekty.zadneFiremniAktivni')}
                 rodneListy={rodneListy}
                 progres={firemniProgres}
                 kontakty={firemniKontakty}
+                jazyk={jazyk}
               />
             </div>
 
