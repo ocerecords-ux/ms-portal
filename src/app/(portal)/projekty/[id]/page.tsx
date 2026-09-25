@@ -29,6 +29,8 @@ import { ProjectDocuments, invoiceStatus, offerStatus, type ProjectDocRow } from
 import { ZnackaZWebu } from '@/components/ZnackaZWebu';
 import { navrhNabidkyZObjednavky, objednavkaProjektu } from '@/lib/nabidkaZObjednavky';
 import { stavyNabidekZDokladu } from '@/lib/nabidkaStavServer';
+import { dokladyUProjektu } from '@/lib/dokladyUProjektuServer';
+import { ZnackyDokladu } from '@/lib/dokladyUProjektu';
 import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
 import { computeTotals } from '@/lib/doklady';
 import { expenseTotalMinor } from '@/lib/expenses';
@@ -794,6 +796,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     : null;
 
   /**
+   * IKONY DOKLADŮ U NÁZVU (zadání 25. 9. 2026: „ať mi to tam svítí a vím
+   * rovnou, co je vyfakturováno a co ne. Uvidím to jen já a Barbora Šíblová").
+   * Rozhoduje „Vidí Banku" na kartě uživatele - tatáž dvojice, tytéž peníze.
+   */
+  const dokladyZakazky = isInternalRole(session.user.role)
+    ? (
+        await prisma.user.findUnique({ where: { id: session.user.id }, select: { vidiBanku: true } })
+      )?.vidiBanku
+      ? (await dokladyUProjektu([caflouProjectId])).get(caflouProjectId) ?? null
+      : null
+    : null;
+
+  /**
    * LICENČNÍ LIST (zadání 22. 9. 2026: „u reklam budeme klientovi vystavovat
    * licenční listy, netýká se to rádiových spotů"). Záložka u projektů firem,
    * které dělají reklamy, kromě rádiového spotu (ten má Rodný list).
@@ -1017,6 +1032,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           {/* Zakazka z objednavky na webu (zadani 18. 9. 2026). */}
           {objednavkaZWebu && <ZnackaZWebu objednanoAt={objednavkaZWebu.createdAt} />}
           {/* Nabídka u reklamy - značka jen pro toho, kdo ji má zapnutou. */}
+          {/* Nabídka / faktura u zakázky (25. 9. 2026) - jen pro ty dva. */}
+          <ZnackyDokladu doklady={dokladyZakazky} velikost={17} />
           {vidiNabidku && (
             <NabidkaStav
               caflouProjectId={caflouProjectId}

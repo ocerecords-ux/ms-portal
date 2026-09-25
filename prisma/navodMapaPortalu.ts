@@ -38,6 +38,8 @@ Tři věci, které z obrázku stojí za zdůraznění:
 
 **Projekty** jsou srdce portálu. Každá zakázka má svou kartu: stav, termíny, herce, rozpočet, nahrávky, doklady. Většina práce se odehraje tady. V přehledu se řadí kliknutím na hlavičku sloupce; **stav se neřadí abecedně**, ale v pořadí, které si tým nastaví tlačítkem **Pořadí stavů** vedle hledání (přetažením nebo šipkami, mění ho Žůžo-labůžo a produkce, platí pro všechny). Nabídky stavů u projektu se to netýká — cesta projektu zůstává, jak je.
 
+Vedle názvu zakázky svítí dvě malé značky s tím, **jaké doklady u ní visí**: cenovka je nabídka (šedá rozepsaná, oranžová odeslaná, zelená schválená, červená odmítnutá), lístek je faktura (oranžová vystavená a nezaplacená, zelená uhrazená). Co u zakázky není, nesvítí; čísla dokladů jsou v bublince. Vidí to jen ten, kdo má na kartě zaškrtnuté **Vidí Banku** — stejná dvojice, co vidí peníze.
+
 **Firmy** jsou klienti a dodavatelé. U klienta se kromě adresy a fakturačních údajů nastavuje i to, **které zprávy mu portál posílá** — na kartě firmy je záložka Notifikace a co tam není zapnuté, se neodešle. Nová firma má vypnuté všechno.
 
 **Uživatelé** jsou lidé. Kromě role se u účtu zaškrtává, co ten člověk smí a co mu chodí: jestli může být manažerem projektu, jestli podepisuje smlouvy za Mediaspace, jestli vidí sekci Banka, komu chodí objednávky. Je to schválně **u účtu, ne v kódu** — lidi se mění a portál o tom jinak neví.

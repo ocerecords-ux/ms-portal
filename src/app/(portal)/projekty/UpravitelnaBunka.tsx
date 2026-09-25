@@ -273,8 +273,12 @@ export function UpravitelneDatum({
         title="Vyberte datum z kalendáře"
         /* Pevná šířka na celé „dd.mm.rrrr" - v úzkém sloupci se políčko jinak
            zmáčkne a ukousne rok (16. 9. 2026). Radši ať přeteče přes buňku,
-           než aby člověk psal do něčeho, co nevidí celé. */
-        className="w-[9.5rem] rounded-lg border border-brand-purple bg-field px-2 py-1 text-sm font-heading text-ink outline-none"
+           než aby člověk psal do něčeho, co nevidí celé.
+           Rámeček je od 25. 9. 2026 těsnější a hlavně VYSTUPUJE nad tabulku:
+           stín a neprůhledné, mírně rozmlžené pozadí („ten rámeček je zbytečně
+           velký a ulítává někam, mohlo by to naopak trošku vystoupit a pozadí
+           v tom rámečku dat zamlžit") - přes sousední datum se tak nekouká. */
+        className="relative z-20 w-[8.25rem] rounded-lg border border-brand-purple bg-surface/95 backdrop-blur-sm shadow-lg px-2 py-0.5 text-sm font-heading tabular-nums text-ink outline-none"
       />
     </span>
   );

@@ -32,6 +32,7 @@ import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit, prelozitS } from '@/lib/jazyk';
 import { bezTitulu } from '@/lib/jmena';
 import { slozStavNabidky, stavyNabidekZDokladu } from '@/lib/nabidkaStavServer';
+import { dokladyUProjektu } from '@/lib/dokladyUProjektuServer';
 
 // DULEZITE: stránka čte projekty při každém zobrazení - nesmí ji Next.js
 // pri buildu "zamrazit" jako statickou stránku (to by klientovi natvrdo
@@ -415,10 +416,18 @@ async function InternalProjektySection({
    * já) v přehledu i v detailu projektu, že je nabídka schválena"). Značka se
    * vykreslí jen tomu, kdo to má zaškrtnuté na kartě - zatím jen Ondřej.
    */
-  const vidiNabidky = Boolean(
-    (await prisma.user.findUnique({ where: { id: userId }, select: { nabidkyReklam: true } }))
-      ?.nabidkyReklam,
-  );
+  const ja = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { nabidkyReklam: true, vidiBanku: true },
+  });
+  const vidiNabidky = Boolean(ja?.nabidkyReklam);
+
+  /**
+   * IKONY DOKLADŮ U NÁZVU (zadání 25. 9. 2026: „ať mi to tam svítí a vím
+   * rovnou, co je vyfakturováno a co ne. Uvidím to jen já a Barbora Šíblová").
+   * Rozhoduje „Vidí Banku" na kartě - je to tatáž dvojice a tytéž peníze.
+   */
+  const vidiDoklady = Boolean(ja?.vidiBanku);
 
   // Nase vlastni atributy k projektum (priorita, typ, manazer) - jednim
   // dotazem pro vsechny nactene projekty najednou.
@@ -475,6 +484,10 @@ async function InternalProjektySection({
     ? await stavyNabidekZDokladu(projects.map((p) => String(p.id)))
     : new Map();
 
+  const dokladyMapa = vidiDoklady
+    ? await dokladyUProjektu(projects.map((p) => String(p.id)))
+    : new Map();
+
   const metaById = new Map(
     metas.map((m): [string, InternalProjectMeta] => [
       m.caflouProjectId,
@@ -518,6 +531,8 @@ async function InternalProjektySection({
             Boolean(m.projectType && typyReklamy.includes(m.projectType)))
             ? slozStavNabidky(m.nabidkaStav, nabidkyZDokladu.get(m.caflouProjectId))
             : null,
+        // Jaké doklady u zakázky visí - nabídka, faktura nebo obojí (25. 9. 2026).
+        doklady: dokladyMapa.get(m.caflouProjectId) ?? null,
       },
     ]),
   );

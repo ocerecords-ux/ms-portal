@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ZnackaNabidky, type StavNabidky } from '@/lib/nabidkaReklamy';
+import { ZnackyDokladu, type DokladyProjektu } from '@/lib/dokladyUProjektu';
 import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
@@ -543,6 +544,13 @@ export type InternalProjectMeta = {
    */
   nabidka?: StavNabidky | null;
   /**
+   * JAKÉ DOKLADY U ZAKÁZKY VISÍ (zadání 25. 9. 2026: „potřebuji ještě vedle
+   * názvu projektu ikony s tím, jaký doklad je u projektu vystaven. Nabídka,
+   * faktura nebo obojí… uvidím to jen já a Barbora Šíblová"). Kdo na to nemá
+   * zaškrtnuté „Vidí Banku", dostane `null` a v řádku nic nepřibývá.
+   */
+  doklady?: DokladyProjektu | null;
+  /**
    * Reklamní firma - u ní se nabízí kratší cesta projektu (zadání
    * 18. 9. 2026). Rozhoduje Druh zakázek na kartě firmy.
    */
@@ -770,6 +778,8 @@ function bunkaSloupce(
           </Link>
           {/* Nabídka u reklamy - hodiny / fajfka / křížek (23. 9. 2026). */}
           {p.meta?.nabidka ? <ZnackaNabidky stav={p.meta.nabidka} velikost={15} /> : null}
+          {/* Nabídka / faktura u zakázky (25. 9. 2026) - jen pro ty dva. */}
+          <ZnackyDokladu doklady={p.meta?.doklady} velikost={15} />
         </span>
       );
     case 'companyName':
