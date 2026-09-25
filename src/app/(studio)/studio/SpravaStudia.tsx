@@ -220,7 +220,15 @@ export function SpravaStudia({
           )}
 
           <p className="m-0 text-[11px] font-body text-muted">
-            Samotné rezervace se posouvají a ruší v Kalendáři — jsou to běžné události studia.
+            Samotné rezervace se posouvají a ruší v Kalendáři — jsou to běžné události studia.{' '}
+            <a
+              href="/navody/studio-booking-install.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-purple no-underline hover:underline"
+            >
+              Kartička s QR kódem k vytištění ↗
+            </a>
           </p>
         </div>
       )}

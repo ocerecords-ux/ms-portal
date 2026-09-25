@@ -1,0 +1,94 @@
+<!-- Kartička k vytištění: jak si dát kalendář rezervací do telefonu.
+     PDF i QR: python3 scripts/navody/install-pdf.py
+     QR vede na https://www.msportal.cz/studio (generátor je scripts/navody/qr.py). -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Studio booking - install</title>
+<style>
+@page { size: A4; margin: 0; }
+:root{--p:#6B2AF0;--p2:#7B55FF;--green:#1FDF67;--ink:#201A33;--muted:#6E6580;--line:#E4DFFB;--paper:#FBFAFF;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{width:210mm;height:296mm;overflow:hidden;background:#fff;color:var(--ink);font-family:'Poppins','Jost',system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.list{height:296mm;display:flex;flex-direction:column}
+header{background:linear-gradient(100deg,var(--p2),var(--p));color:#fff;padding:10mm 16mm 8mm}
+header .znacka{display:flex;align-items:center;gap:4mm;font-size:13pt;font-weight:600}
+header .znacka b{color:var(--green);font-size:16pt}
+header h1{margin:4mm 0 0;font-size:23pt;line-height:1.1;font-weight:600;letter-spacing:-.01em}
+header p{margin:3mm 0 0;font-size:11pt;opacity:.9;max-width:130mm}
+main{flex:1;padding:8mm 16mm 0;display:flex;flex-direction:column;gap:6mm}
+.qr{display:flex;gap:9mm;align-items:center;border:1.2pt solid var(--line);border-radius:5mm;padding:6mm 7mm;background:var(--paper)}
+.qr img{width:42mm;height:42mm;display:block}
+.qr .text h2{margin:0;font-size:15pt;font-weight:600}
+.qr .text p{margin:2.5mm 0 0;font-size:10.5pt;color:var(--muted);line-height:1.45;max-width:95mm}
+.qr .adresa{display:inline-block;margin-top:4mm;font-size:12pt;font-weight:600;color:var(--p);border-bottom:1pt solid var(--line);padding-bottom:1mm}
+.dvojice{display:flex;gap:8mm}
+.karta{flex:1;border:1.2pt solid var(--line);border-radius:5mm;padding:5mm 6mm}
+.karta h3{margin:0 0 4mm;font-size:12.5pt;font-weight:600;display:flex;align-items:center;gap:3mm}
+.karta h3 span{display:inline-grid;place-items:center;width:7mm;height:7mm;border-radius:2mm;background:var(--p);color:#fff;font-size:9pt}
+ol{margin:0;padding-left:5.5mm;font-size:10.5pt;line-height:1.6}
+ol li{margin-bottom:1.5mm}
+ol b{font-weight:600}
+.pruh{border:1.2pt solid var(--line);border-radius:5mm;padding:5mm 6mm}
+.pruh h3{margin:0 0 3mm;font-size:12.5pt;font-weight:600}
+.pruh ul{margin:0;padding-left:5mm;font-size:10.5pt;line-height:1.6;color:var(--ink)}
+.pruh li{margin-bottom:1mm}
+footer{margin-top:auto;padding:6mm 16mm 9mm;font-size:9.5pt;color:var(--muted);line-height:1.5}
+footer b{color:var(--ink)}
+.cara{height:1.2pt;background:var(--line);margin:0 16mm}
+</style></head>
+<body><div class="list">
+
+<header>
+  <span class="znacka"><b>MS</b> <span style="opacity:.5">|</span> Mediaspace Studio</span>
+  <h1>Book the studio<br>from your phone</h1>
+  <p>Your booking calendar lives on the web, so it goes onto your home screen like any other app — no app store, no updates to chase.</p>
+</header>
+
+<main>
+  <div class="qr">
+    <img src="../../public/navody/studio-booking-qr.png" alt="QR code to the studio booking calendar">
+    <div class="text">
+      <h2>Scan this with your phone camera</h2>
+      <p>Point the camera at the code and open the link it offers. Sign in with the e-mail address we sent your invitation to.</p>
+      <span class="adresa">msportal.cz/studio</span>
+    </div>
+  </div>
+
+  <div class="dvojice">
+    <div class="karta">
+      <h3><span>i</span> iPhone &amp; iPad</h3>
+      <ol>
+        <li>Open the link in <b>Safari</b> (the camera opens it there by itself).</li>
+        <li>Sign in, so the app opens on your calendar next time.</li>
+        <li>Tap <b>Share</b> — the square with the arrow.</li>
+        <li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+      </ol>
+    </div>
+    <div class="karta">
+      <h3><span>A</span> Android</h3>
+      <ol>
+        <li>Open the link in <b>Chrome</b>.</li>
+        <li>Sign in, so the app opens on your calendar next time.</li>
+        <li>Tap the <b>⋮</b> menu in the top right.</li>
+        <li>Choose <b>Install app</b> or <b>Add to home screen</b>.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="pruh">
+    <h3>What you can do there</h3>
+    <ul>
+      <li><b>See what is free</b> — your own bookings by name, everyone else's time simply as busy.</li>
+      <li><b>Book by the hour</b> — pick a free slot, name it, done. It is yours straight away.</li>
+      <li><b>Take whole days</b> — give it a date range and every open day in it is booked for a longer project.</li>
+      <li><b>Cancel what you no longer need</b> — one tap, and the time is free for everyone again.</li>
+    </ul>
+  </div>
+</main>
+
+<div class="cara"></div>
+<footer>
+  <b>You need an invitation from us to sign in.</b> If the link has expired, write to us and we will send a new one. Bookings reach our studio diary the moment you make them — nothing else to confirm.
+</footer>
+
+</div></body></html>

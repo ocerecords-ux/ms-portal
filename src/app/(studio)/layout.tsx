@@ -38,7 +38,17 @@ export default async function StudioLayout({ children }: { children: React.React
   if (!session) redirect('/login');
   if (!SMI.includes(session.user.role)) redirect('/projekty');
 
-  const jazyk = nactiJazyk();
+  /**
+   * KLIENT STUDIA VIDÍ VŽDYCKY ANGLIČTINU (upřesnění 25. 9. 2026: „na straně
+   * klienta nech jen zaplou angličtinu. Myslel jsem podle nastavení portálu
+   * jen tu administraci z naší strany").
+   *
+   * Muzikant z Londýna nemá co řešit, že portál někde uvnitř umí i česky -
+   * a přepínač, který mu celý kalendář přehodí do jazyka, kterému nerozumí,
+   * je past, ne funkce. Náš tým si kalendář otevírá v jazyce portálu.
+   */
+  const klientStudia = session.user.role === 'BOOKING';
+  const jazyk = klientStudia ? 'en' : nactiJazyk();
 
   return (
     <JazykProvider jazyk={jazyk}>
@@ -59,7 +69,7 @@ export default async function StudioLayout({ children }: { children: React.React
               >
                 ?
               </Link>
-              <PrepinacJazyka />
+              {!klientStudia && <PrepinacJazyka />}
               <ThemeToggle />
               <OdhlasitSe />
             </span>

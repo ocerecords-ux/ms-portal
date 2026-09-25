@@ -37,6 +37,16 @@ export function RezervaceStudii({ studia, zaklad }: { studia: StudioRezervace[];
           <span className="font-heading text-ink">{zaklad}/studio</span> a berou si volné termíny
           sami. Svoje rezervace vidí pojmenované, cizí jen jako obsazený čas — bez názvů.
         </p>
+        {/* Kartička s QR kódem k vytištění (25. 9. 2026) - anglicky, na jednu
+            A4. Dá se pověsit ve studiu i poslat mailem. */}
+        <a
+          href="/navody/studio-booking-install.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 mt-2 text-brand-purple font-heading text-xs no-underline hover:underline"
+        >
+          Kartička s QR kódem k vytištění (anglicky) ↗
+        </a>
       </div>
 
       {studia.length === 0 ? (

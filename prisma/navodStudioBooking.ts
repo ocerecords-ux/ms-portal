@@ -81,6 +81,12 @@ The calendar is a web app, so it goes on your home screen like any other app and
 
 Stay signed in and it opens straight on this week.
 
+Easiest of all — point your phone camera at this code:
+
+![QR code that opens the studio booking calendar](/navody/studio-booking-qr.png)
+
+There is also a [one-page card to print or forward](/navody/studio-booking-install.pdf) with the same code and both sets of steps.
+
 # A few things worth knowing
 
 - **Your names are private.** Other clients never see what you called a booking, or that it is yours at all. The same holds the other way round — that is why their time shows only as *Busy*.
