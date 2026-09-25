@@ -77,6 +77,10 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // lištu přímo"). Odkaz se do lišty přidá jen tomu, kdo má na kartě
   // zaškrtnutý přístup - viz layout portálu; tohle je jen kontrola role.
   '/tabule/moje': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
+  // Kalendář rezervací studia (25. 9. 2026). Odkaz dostane jen ten, kdo
+  // nějaké studio s rezervacemi spravuje - viz seStudiem v menuServer.ts;
+  // tohle je jen kontrola role, jako u Tabule.
+  '/studio': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
 };
 
 /** Uvidi uzivatel s touhle roli tenhle odkaz? Vlastni odkaz vidi kazdy. */
@@ -143,6 +147,13 @@ export function defaultNavFor(role: Role): NavItem[] {
 /** Odkaz mimo portal (vlastni URL) se otevira jako obycejny <a>. */
 /** Odkaz na tabuli v liště - přidává se jen komu ji admin povolil. */
 export const TABULE_ITEM: NavItem = { href: '/tabule/moje', label: 'Tabule' };
+
+/**
+ * Kalendář rezervací studia v liště (zadání 25. 9. 2026: „měl by mít
+ * nastavený i odkaz Studia na hlavním panelu"). Jednotné číslo schválně -
+ * „Studia" v administraci jsou nastavení poboček, tohle je jejich kalendář.
+ */
+export const STUDIO_ITEM: NavItem = { href: '/studio', label: 'Studio' };
 
 export function isExternalHref(href: string): boolean {
   return /^https?:\/\//i.test(href);

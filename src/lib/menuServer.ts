@@ -1,6 +1,14 @@
 import type { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
-import { DEFAULT_MENU_ITEMS, PORTAL_PAGES, TABULE_ITEM, canSee, type MenuEntry, type NavItem } from '@/lib/menu';
+import {
+  DEFAULT_MENU_ITEMS,
+  PORTAL_PAGES,
+  STUDIO_ITEM,
+  TABULE_ITEM,
+  canSee,
+  type MenuEntry,
+  type NavItem,
+} from '@/lib/menu';
 import type { Zarizeni } from '@/lib/zarizeni';
 
 // Serverova cast listy (zadani 6. 9. 2026, prepracovano 8. 9. 2026) -
@@ -60,9 +68,10 @@ export function visibleFor(entries: MenuEntry[], role: Role): NavItem[] {
  * ma pravo. Co uz v liste je, si odfiltruje Topbar sam - jinak by se
  * odebrana polozka nedala hned vratit zpatky.
  */
-export function pageOptionsFor(role: Role, maTabuli = false): NavItem[] {
+export function pageOptionsFor(role: Role, maTabuli = false, maStudio = false): NavItem[] {
   const strany = PORTAL_PAGES.filter((p) => canSee(p.href, role));
-  return maTabuli ? [...strany, TABULE_ITEM] : strany;
+  const sTabuli = maTabuli ? [...strany, TABULE_ITEM] : strany;
+  return maStudio ? [...sTabuli, STUDIO_ITEM] : sTabuli;
 }
 
 /**
@@ -75,4 +84,14 @@ export function sTabuli(items: NavItem[], maTabuli: boolean, vychoziListou: bool
   // Kdo si lištu poskládal sám, dostal Tabuli jednorázově do svých položek
   // (seed) - a když si ji odtud smaže, nevrací se mu tam.
   return vychoziListou ? [...items, TABULE_ITEM] : items;
+}
+
+/**
+ * KALENDÁŘ REZERVACÍ STUDIA V LIŠTĚ (zadání 25. 9. 2026). Stejné pravidlo
+ * jako u Tabule: dostane ho ten, kdo nějaké studio s rezervacemi spravuje,
+ * a kdo si ho z lišty smaže, ten ho tam nemá.
+ */
+export function seStudiem(items: NavItem[], maStudio: boolean, vychoziListou: boolean): NavItem[] {
+  if (!maStudio || items.some((i) => i.href === STUDIO_ITEM.href)) return items;
+  return vychoziListou ? [...items, STUDIO_ITEM] : items;
 }

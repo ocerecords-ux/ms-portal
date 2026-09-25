@@ -112,6 +112,28 @@ export async function nactiBookingPristup(
 }
 
 /**
+ * Spravuje ten člověk aspoň jedno studio se zapnutými rezervacemi?
+ * Podle toho se mu v liště portálu objeví odkaz Studio (25. 9. 2026).
+ *
+ * NIKDY NEVYHAZUJE: lišta se kvůli jednomu odkazu nesmí rozbít.
+ */
+export async function maStudioSRezervacemi(user: { id: string; role: string }): Promise<boolean> {
+  try {
+    if (user.role === 'BOOKING') return false;
+    const sprava = await spravovanaStudia(user.id, user.role as never);
+    if (!spravujeNeco(sprava)) return false;
+    const zapnuta = await prisma.studio.findMany({
+      where: { active: true, bookingZapnuto: true },
+      select: { id: true },
+    });
+    return zapnuta.some((s) => smiStudio(sprava, s.id));
+  } catch (err) {
+    console.error('Nepodařilo se zjistit, jestli má člověk studio s rezervacemi:', err);
+    return false;
+  }
+}
+
+/**
  * Smí tenhle člověk u studia měnit nastavení rezervací a zvát klienty?
  * Odpovídá právům na kalendář studia - kdo smí zapisovat do kalendáře
  * pobočky, ten smí i rozhodovat o jejích rezervacích.

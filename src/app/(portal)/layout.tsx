@@ -14,7 +14,7 @@ import { PrehledDne } from './components/PrehledDne';
 import { PoutkoDoku } from './components/PoutkoDoku';
 import { NeprecteneVedleDoku } from './components/NeprecteneVedleDoku';
 import { DotazyDock } from './components/DotazyDock';
-import { loadMenuEntries, pageOptionsFor, sTabuli, visibleFor } from '@/lib/menuServer';
+import { loadMenuEntries, pageOptionsFor, sTabuli, seStudiem, visibleFor } from '@/lib/menuServer';
 import { loadMyTasks } from '@/lib/tasksServer';
 import { countUnread } from '@/lib/notifications';
 import { loadQuickActions } from '@/lib/quickActionsServer';
@@ -26,6 +26,7 @@ import { nactiJazyk } from '@/lib/jazykServer';
 import { JazykProvider } from './components/JazykProvider';
 import { PrepinacNahledu } from './components/PrepinacNahledu';
 import { nahledZHodnoty } from '@/lib/nahledRole';
+import { maStudioSRezervacemi } from '@/lib/bookingServer';
 
 // Jediné místo, které chrání celou klientskou sekci portálu. Session je
 // zdroj pravdy o tom, kdo je přihlášen a pod jakou firmu (companyId) patří
@@ -104,6 +105,13 @@ export default async function PortalLayout({ children }: { children: React.React
   const maTabuli = role === 'ADMIN' || ((ucet?.tabulePristup ?? []) as { id: string }[]).length > 0;
 
   /**
+   * ODKAZ STUDIO V LIŠTĚ (zadání 25. 9. 2026: „měl by mít nastavený i odkaz
+   * Studia na hlavním panelu"). Dostane ho ten, kdo spravuje studio se
+   * zapnutými rezervacemi - tedy produkce, Žůžo-labůžo a vedoucí pobočky.
+   */
+  const maStudio = await maStudioSRezervacemi({ id: session.user.id, role });
+
+  /**
    * NOVÝ HEREC NEJDŘÍV DOPLNÍ ÚDAJE (zadání 16. 9. 2026: „po tom, co si herec
    * nastaví heslo, ho to vyzve, ať doplní údaje").
    *
@@ -151,9 +159,17 @@ export default async function PortalLayout({ children }: { children: React.React
       <Topbar
         userLabel={session.user.name || session.user.email}
         userPhotoUrl={odkazNaFotku(session.user.id, ucet?.maFotku)}
-        items={sTabuli(visibleFor(entries, role), maTabuli, vychoziLista(entries))}
-        itemsMobil={sTabuli(visibleFor(entriesMobil, role), maTabuli, vychoziLista(entriesMobil))}
-        pageOptions={pageOptionsFor(role, maTabuli)}
+        items={seStudiem(
+          sTabuli(visibleFor(entries, role), maTabuli, vychoziLista(entries)),
+          maStudio,
+          vychoziLista(entries),
+        )}
+        itemsMobil={seStudiem(
+          sTabuli(visibleFor(entriesMobil, role), maTabuli, vychoziLista(entriesMobil)),
+          maStudio,
+          vychoziLista(entriesMobil),
+        )}
+        pageOptions={pageOptionsFor(role, maTabuli, maStudio)}
         unreadNotifications={unread}
         odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
         tecky={konflikty > 0 ? ['/kalendar'] : undefined}
