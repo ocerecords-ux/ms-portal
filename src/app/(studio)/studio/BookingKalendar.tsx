@@ -88,7 +88,13 @@ export function BookingKalendar({
   const t = usePreklad();
   const jazyk = useJazyk();
 
-  const [pocetDnu, setPocetDnu] = useState(7);
+  /**
+   * DEN / TÝDEN / MĚSÍC (zadání 25. 9. 2026: „ten bookovací kalendář by měl
+   * jít přepínat i na týden a měsíc"). Měsíc je přehled, ne mřížka: v buňce
+   * dne se vejde jen to, co je zabrané a co je vaše - kdo chce rezervovat,
+   * klepne na den a je v denním pohledu.
+   */
+  const [pohled, setPohled] = useState<'DEN' | 'TYDEN' | 'MESIC'>('TYDEN');
   const [zacatekMs, setZacatekMs] = useState(() => Date.parse(zacatek));
   const [udalosti, setUdalosti] = useState<BookingUdalost[]>(prvniUdalosti);
   const [nacitam, setNacitam] = useState(false);
@@ -97,8 +103,18 @@ export function BookingKalendar({
 
   // Na telefonu jeden den - sedm sloupců na čtyřech palcích nepřečte nikdo.
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 700) setPocetDnu(1);
+    if (typeof window !== 'undefined' && window.innerWidth < 700) setPohled('DEN');
   }, []);
+
+  /** Kolik dní pohled ukazuje; u měsíce jeho skutečná délka. */
+  const pocetDnu = useMemo(() => {
+    if (pohled === 'DEN') return 1;
+    if (pohled === 'TYDEN') return 7;
+    const p = utcParts(new Date(zacatekMs), studio.casovePasmo);
+    const prvniDalsiho = zonedToUtc(p.year, p.month + 1, 1, 12 * 60, studio.casovePasmo);
+    const prvni = zonedToUtc(p.year, p.month, 1, 12 * 60, studio.casovePasmo);
+    return Math.round((prvniDalsiho.getTime() - prvni.getTime()) / 86400000);
+  }, [pohled, zacatekMs, studio.casovePasmo]);
 
   const dny = useMemo(
     () => sestavDny(zacatekMs, studio.casovePasmo, pocetDnu),
@@ -139,17 +155,40 @@ export function BookingKalendar({
 
   function posun(o: number) {
     const p = utcParts(new Date(zacatekMs), studio.casovePasmo);
+    if (pohled === 'MESIC') {
+      setZacatekMs(zonedToUtc(p.year, p.month + o, 1, 0, studio.casovePasmo).getTime());
+      return;
+    }
     setZacatekMs(
       zonedToUtc(p.year, p.month, p.day + o * pocetDnu, 0, studio.casovePasmo).getTime(),
     );
   }
 
+  /** Začátek pohledu pro daný den - týden se srovná na pondělí, měsíc na prvního. */
+  function zacatekPohledu(
+    novy: 'DEN' | 'TYDEN' | 'MESIC',
+    p: { year: number; month: number; day: number; weekday: number },
+  ): number {
+    if (novy === 'MESIC') return zonedToUtc(p.year, p.month, 1, 0, studio.casovePasmo).getTime();
+    const posunNaPondeli = novy === 'TYDEN' ? (p.weekday + 6) % 7 : 0;
+    return zonedToUtc(p.year, p.month, p.day - posunNaPondeli, 0, studio.casovePasmo).getTime();
+  }
+
   function naDnesek() {
-    const p = utcParts(new Date(), studio.casovePasmo);
-    const posunNaPondeli = pocetDnu === 7 ? (p.weekday + 6) % 7 : 0;
-    setZacatekMs(
-      zonedToUtc(p.year, p.month, p.day - posunNaPondeli, 0, studio.casovePasmo).getTime(),
-    );
+    setZacatekMs(zacatekPohledu(pohled, utcParts(new Date(), studio.casovePasmo)));
+  }
+
+  /** Přepnutí pohledu drží den, na který se člověk zrovna dívá. */
+  function prepniPohled(novy: 'DEN' | 'TYDEN' | 'MESIC') {
+    const p = utcParts(new Date(zacatekMs), studio.casovePasmo);
+    setPohled(novy);
+    setZacatekMs(zacatekPohledu(novy, p));
+  }
+
+  /** Klepnutí na den v měsíci otevře jeho denní mřížku - tam se rezervuje. */
+  function otevriDen(d: Den) {
+    setPohled('DEN');
+    setZacatekMs(d.zacatekMs);
   }
 
   const nazevDne = (d: Den) =>
@@ -160,7 +199,14 @@ export function BookingKalendar({
       month: 'numeric',
     }).format(new Date(d.zacatekMs + 12 * 60 * 60 * 1000));
 
-  const rozsahPopis = `${nazevDne(dny[0])}${dny.length > 1 ? ` – ${nazevDne(dny[dny.length - 1])}` : ''}`;
+  const rozsahPopis =
+    pohled === 'MESIC'
+      ? new Intl.DateTimeFormat(kodJazyka(jazyk), {
+          timeZone: studio.casovePasmo,
+          month: 'long',
+          year: 'numeric',
+        }).format(new Date(dny[0].zacatekMs + 12 * 60 * 60 * 1000))
+      : `${nazevDne(dny[0])}${dny.length > 1 ? ` – ${nazevDne(dny[dny.length - 1])}` : ''}`;
 
   // --- formulář -------------------------------------------------------------
   const [formular, setFormular] = useState<
@@ -310,13 +356,16 @@ export function BookingKalendar({
             ›
           </button>
           <span className="w-px h-6 bg-line mx-1" aria-hidden="true" />
-          <button
-            type="button"
-            onClick={() => setPocetDnu(pocetDnu === 7 ? 1 : 7)}
-            className={tlacitko}
-          >
-            {pocetDnu === 7 ? t('booking.den') : t('booking.tyden')}
-          </button>
+          {(['DEN', 'TYDEN', 'MESIC'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => prepniPohled(v)}
+              className={pohled === v ? tlacitkoAktivni : tlacitko}
+            >
+              {t(v === 'DEN' ? 'booking.den' : v === 'TYDEN' ? 'booking.tyden' : 'booking.mesic')}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -346,7 +395,21 @@ export function BookingKalendar({
         </p>
       )}
 
+      {/* --- měsíc: přehled, ne mřížka ------------------------------------- */}
+      {pohled === 'MESIC' && (
+        <MesicniPrehled
+          dny={dny}
+          udalosti={udalosti}
+          studio={studio}
+          jazyk={jazyk}
+          popisObsazeno={t('booking.obsazeno')}
+          popisZavreno={t('booking.zavreno')}
+          naDen={otevriDen}
+        />
+      )}
+
       {/* --- mřížka -------------------------------------------------------- */}
+      {pohled !== 'MESIC' && (
       <div className="bg-surface border border-line rounded-card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <div style={{ minWidth: pocetDnu === 7 ? 700 : 280 }}>
@@ -450,10 +513,13 @@ export function BookingKalendar({
           </div>
         </div>
       </div>
+      )}
 
       {!jenNahled && (
         <p className="m-0 text-xs font-body text-muted">
-          {t('booking.napoveda', { minut: studio.minMinut })}
+          {pohled === 'MESIC'
+            ? t('booking.napovedaMesic')
+            : t('booking.napoveda', { minut: studio.minMinut })}
         </p>
       )}
 
@@ -681,6 +747,108 @@ export function BookingKalendar({
           </div>
         </Okno>
       )}
+    </div>
+  );
+}
+
+/**
+ * MĚSÍČNÍ PŘEHLED (zadání 25. 9. 2026). Schválně NE hodinová mřížka: třicet
+ * dní po dvanácti hodinách vedle sebe je na obrazovce nečitelná změť. V buňce
+ * dne je proto jen to podstatné - kdy je zabráno a co z toho je vaše -
+ * a klepnutí otevře ten den, kde se rezervuje.
+ */
+function MesicniPrehled({
+  dny,
+  udalosti,
+  studio,
+  jazyk,
+  popisObsazeno,
+  popisZavreno,
+  naDen,
+}: {
+  dny: Den[];
+  udalosti: BookingUdalost[];
+  studio: BookingStudio;
+  jazyk: ReturnType<typeof useJazyk>;
+  popisObsazeno: string;
+  popisZavreno: string;
+  naDen: (d: Den) => void;
+}) {
+  // Týden začíná pondělím, takže první den měsíce se odsadí.
+  const odsazeni = (dny[0].denVTydnu + 6) % 7;
+  const dnesKlic = (() => {
+    const p = utcParts(new Date(), studio.casovePasmo);
+    return `${p.year}-${dvojcifra(p.month)}-${dvojcifra(p.day)}`;
+  })();
+
+  const nazvyDnu = Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(kodJazyka(jazyk), { weekday: 'short', timeZone: 'UTC' }).format(
+      // 5. 1. 1970 bylo pondělí.
+      new Date(Date.UTC(1970, 0, 5 + i, 12)),
+    ),
+  );
+
+  return (
+    <div className="bg-surface border border-line rounded-card shadow-sm overflow-hidden">
+      <div className="grid grid-cols-7 bg-field border-b border-line">
+        {nazvyDnu.map((n) => (
+          <span
+            key={n}
+            className="px-2 py-2 text-center font-heading font-semibold text-[11px] text-muted"
+          >
+            {n}
+          </span>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {Array.from({ length: odsazeni }, (_, i) => (
+          <span key={`prazdno-${i}`} className="border-t border-l border-line first:border-l-0" />
+        ))}
+        {dny.map((d) => {
+          const otevreno = Boolean(hodinyDne(studio.hodiny, d.denVTydnu));
+          const vyrezy = udalosti
+            .map((u) => ({ u, v: vyrez(u, d) }))
+            .filter((x): x is { u: BookingUdalost; v: { od: number; do: number } } => Boolean(x.v))
+            .sort((a, b) => a.v.od - b.v.od);
+          const dnes = d.klic === dnesKlic;
+          return (
+            <button
+              key={d.klic}
+              type="button"
+              onClick={() => naDen(d)}
+              className={`text-left border-t border-l border-line p-1.5 min-h-[86px] flex flex-col gap-1 cursor-pointer transition-colors ${
+                otevreno ? 'bg-transparent hover:bg-field' : 'bg-field/60'
+              }`}
+            >
+              <span
+                className={`font-heading text-[11px] ${
+                  dnes
+                    ? 'inline-grid place-items-center w-5 h-5 rounded-full bg-brand-purple text-white'
+                    : 'text-ink'
+                } ${otevreno ? '' : 'opacity-50'}`}
+              >
+                {d.den}
+              </span>
+              {!otevreno && <span className="text-[10px] font-body text-muted">{popisZavreno}</span>}
+              {vyrezy.slice(0, 3).map(({ u, v }) => (
+                <span
+                  key={`${u.id}-${d.klic}`}
+                  className={`block rounded-[4px] px-1 py-0.5 text-[9px] font-heading truncate ${
+                    u.moje
+                      ? 'bg-brand-purple text-white'
+                      : 'bg-line/70 text-muted'
+                  }`}
+                >
+                  {casZMinut(Math.round(v.od))} {u.moje ? u.nazev : popisObsazeno}
+                </span>
+              ))}
+              {vyrezy.length > 3 && (
+                <span className="text-[9px] font-heading text-muted">+{vyrezy.length - 3}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

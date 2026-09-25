@@ -13,6 +13,7 @@ body{width:210mm;height:296mm;overflow:hidden;background:#fff;color:var(--ink);f
 header{background:linear-gradient(100deg,var(--p2),var(--p));color:#fff;padding:10mm 16mm 8mm}
 header .znacka{display:flex;align-items:center;gap:4mm;font-size:13pt;font-weight:600}
 header .znacka b{color:var(--green);font-size:16pt}
+header .misto{border:1pt solid rgba(255,255,255,.45);border-radius:999px;padding:1mm 4mm;font-size:10.5pt;font-weight:600}
 header h1{margin:4mm 0 0;font-size:23pt;line-height:1.1;font-weight:600;letter-spacing:-.01em}
 header p{margin:3mm 0 0;font-size:11pt;opacity:.9;max-width:130mm}
 main{flex:1;padding:8mm 16mm 0;display:flex;flex-direction:column;gap:6mm}
@@ -20,6 +21,7 @@ main{flex:1;padding:8mm 16mm 0;display:flex;flex-direction:column;gap:6mm}
 .qr img{width:42mm;height:42mm;display:block}
 .qr .text h2{margin:0;font-size:15pt;font-weight:600}
 .qr .text p{margin:2.5mm 0 0;font-size:10.5pt;color:var(--muted);line-height:1.45;max-width:95mm}
+.qr .text p b{color:var(--ink)}
 .qr .adresa{display:inline-block;margin-top:4mm;font-size:12pt;font-weight:600;color:var(--p);border-bottom:1pt solid var(--line);padding-bottom:1mm}
 .dvojice{display:flex;gap:8mm}
 .karta{flex:1;border:1.2pt solid var(--line);border-radius:5mm;padding:5mm 6mm}
@@ -39,7 +41,7 @@ footer b{color:var(--ink)}
 <body><div class="list">
 
 <header>
-  <span class="znacka"><b>MS</b> <span style="opacity:.5">|</span> Mediaspace Studio</span>
+  <span class="znacka"><b>MS</b> <span style="opacity:.5">|</span> Mediaspace <span class="misto">{{STUDIO}}</span></span>
   <h1>Book the studio<br>from your phone</h1>
   <p>Your booking calendar lives on the web, so it goes onto your home screen like any other app — no app store, no updates to chase.</p>
 </header>
@@ -49,7 +51,7 @@ footer b{color:var(--ink)}
     <img src="../../public/navody/studio-booking-qr.png" alt="QR code to the studio booking calendar">
     <div class="text">
       <h2>Scan this with your phone camera</h2>
-      <p>Point the camera at the code and open the link it offers. Sign in with the e-mail address we sent your invitation to.</p>
+      <p>It opens the booking calendar for <b>{{STUDIO}}</b>. Sign in with the e-mail address we sent your invitation to.</p>
       <span class="adresa">msportal.cz/studio</span>
     </div>
   </div>
