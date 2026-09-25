@@ -44,6 +44,13 @@ export type PreposlechPrehled = {
   /** Klient klepl na PŘEPOSLECHNUTO. */
   hotovo: boolean;
   /**
+   * Kolik záznamů chyb už u projektu je (zadání 25. 9. 2026: „chtělo by to
+   * nějakou ikonu, že se částečně zapisují chyby v AudioTaggeru"). Podle toho
+   * se pozná rozdělaný přeposlech i tam, kde poslech běží bez otevřeného
+   * textu a procenta zůstávají prázdná.
+   */
+  chyb: number;
+  /**
    * Kolik procent textu klient přeposlechl - podle stran PDF (21. 9. 2026).
    * null = text ještě nikdo neotevřel, stran nevíme.
    */
@@ -57,7 +64,7 @@ export async function nactiPreposlechPrehled(
   if (caflouProjectIds.length === 0) return prehled;
 
   try {
-    const [stavy, poslechnute] = await Promise.all([
+    const [stavy, poslechnute, zaznamy] = await Promise.all([
       prisma.preposlechStav.findMany({
         where: { caflouProjectId: { in: caflouProjectIds } },
         select: {
@@ -74,15 +81,39 @@ export async function nactiPreposlechPrehled(
         where: { caflouProjectId: { in: caflouProjectIds } },
         _count: { _all: true },
       }),
+      // Zapsane chyby (25. 9. 2026) - jeden dotaz na cely seznam.
+      prisma.preposlechChyba.groupBy({
+        by: ['caflouProjectId'],
+        where: { caflouProjectId: { in: caflouProjectIds } },
+        _count: { _all: true },
+      }),
     ]);
 
     const pocty = new Map(poslechnute.map((p): [string, number] => [p.caflouProjectId, p._count._all]));
+    const poctyChyb = new Map(zaznamy.map((z): [string, number] => [z.caflouProjectId, z._count._all]));
     for (const stav of stavy) {
       prehled.set(stav.caflouProjectId, {
         stop: stav.pocetStop,
         poslechnuto: pocty.get(stav.caflouProjectId) ?? 0,
         hotovo: stav.reviewed,
+        chyb: poctyChyb.get(stav.caflouProjectId) ?? 0,
         procent: spocitejPostup(stav.slyseneStrany ?? [], stav.slyseneStranyZ ?? stav.textStran)?.procent ?? null,
+      });
+    }
+
+    /**
+     * Projekt, kde uz nekdo chyby zapisuje, ale PreposlechStav jeste nevznikl
+     * (stopy se cetly drive, nez se stav zalozil), by jinak vypadl uplne -
+     * a prave o nem ta ikona ma mluvit.
+     */
+    for (const z of zaznamy) {
+      if (prehled.has(z.caflouProjectId)) continue;
+      prehled.set(z.caflouProjectId, {
+        stop: 0,
+        poslechnuto: pocty.get(z.caflouProjectId) ?? 0,
+        hotovo: false,
+        chyb: z._count._all,
+        procent: null,
       });
     }
   } catch (err) {

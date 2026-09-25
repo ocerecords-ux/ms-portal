@@ -45,7 +45,8 @@ import { nactiLicencniListy, vychoziLicencniList } from '@/lib/licencniListServe
 import { HistorieProjektu } from './HistorieProjektu';
 import { Preposlech } from './Preposlech';
 import { OdkazProKlienta } from './OdkazProKlienta';
-import { nactiPreposlech } from '@/lib/preposlechServer';
+import { nactiPreposlech, nactiPreposlechPrehled } from '@/lib/preposlechServer';
+import { OdznakPreposlechu } from '@/components/OdznakPreposlechu';
 import { stavOdkazu, zajistiOdkaz } from '@/lib/preposlechOdkaz';
 import { nactiPripominky, seznamSpotu } from '@/lib/reklamaPripominky';
 import { stavSchvaleni } from '@/lib/schvaleniKlientem';
@@ -970,6 +971,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     });
   }
 
+  /**
+   * STAV PŘEPOSLECHU DO HLAVIČKY (zadání 25. 9. 2026). Čte se stejnou funkcí
+   * jako přehled projektů, takže sluchátka na obou místech říkají totéž -
+   * a nemusí se kvůli tomu otevírat záložka Přeposlech.
+   */
+  const stavPreposlechu = isInternalRole(session.user.role)
+    ? (await nactiPreposlechPrehled([caflouProjectId])).get(caflouProjectId) ?? null
+    : null;
+
   // Detail je citaci a formularova stranka, ne tabulka - proto je omezeny
   // sirkou a vycentrovany (zadani 10. 9. 2026: "zbytecne dlouhe radky, kdyz
   // tam nic neni"). Seznam projektu zustava na celou obrazovku.
@@ -989,6 +999,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               finished={meta?.statusName ? meta.finished : project.finished}
               statusName={meta?.statusName ?? project.statusName}
             />
+          )}
+          {/* Jak daleko je přeposlech (25. 9. 2026) - sluchátka rovnou
+              v hlavičce, ať se kvůli tomu nemusí otevírat záložka. */}
+          {isInternalRole(session.user.role) && (
+            <OdznakPreposlechu stav={stavPreposlechu} varianta="odznak" />
           )}
           {/* Zakazka z objednavky na webu (zadani 18. 9. 2026). */}
           {objednavkaZWebu && <ZnackaZWebu objednanoAt={objednavkaZWebu.createdAt} />}

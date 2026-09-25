@@ -28,8 +28,6 @@ import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 import { odkazNaFotku } from '@/lib/fotky';
 import { posledniStrany } from '@/lib/brunoServer';
 import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
-import { nactiJazyk } from '@/lib/jazykServer';
-import { prelozit, prelozitS } from '@/lib/jazyk';
 import { bezTitulu } from '@/lib/jmena';
 import { stavNabidky } from '@/lib/nabidkaReklamy';
 
@@ -254,16 +252,12 @@ export default async function ProjektyPage() {
     await odkazyPreposlechu(active.map((p) => String(p.id))),
   );
 
-  const jazyk = nactiJazyk();
-
   return (
     <section className="flex flex-col gap-8">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         {/* Na telefonu bez nadpisu (21. 9. 2026: „nápis Projekty taky. Stačí,
             když to svítí zaškrtlé nahoře v nabídce na panelu"). */}
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">
-          {prelozit(jazyk, 'projekty.nadpis')}
-        </h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
       </div>
 
       {/* DVĚ ZÁLOŽKY (zadání 24. 9. 2026). Obě se vykreslí na serveru,
@@ -274,20 +268,19 @@ export default async function ProjektyPage() {
           <div className="flex flex-col gap-8">
             <div>
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
-                {prelozit(jazyk, 'projekty.aktivni')}
+                Aktivní projekty
               </h2>
               {/* Tlacitko "Zeptat se" jen u KLIENTU AUDIOKNIH a jen u rozpracovanych
                   projektu (zadani 11. 9. 2026). U dokoncenych se kanal uzavira, tak
                   se tam ani nenabizi. */}
               <ProjectsTable
                 projects={active}
-                emptyText={prelozit(jazyk, 'projekty.zadneAktivni')}
+                emptyText="Aktuálně tu nemáte žádný rozpracovaný projekt. Vidíte jen zakázky, u kterých jste vedení jako kontaktní osoba — ostatní najdete na záložce Celá firma."
                 rodneListy={rodneListy}
                 preposlech={preposlech}
                 odkazyAudioTaggeru={odkazyAudioTaggeru}
                 schvaleni={schvaleni}
                 progres={progres}
-                jazyk={jazyk}
               />
             </div>
 
@@ -298,20 +291,18 @@ export default async function ProjektyPage() {
           <div className="flex flex-col gap-8">
             <div>
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
-                {prelozitS(jazyk, 'projekty.aktivniFirmy', {
-                  firma: company ? `— ${company.name}` : '',
-                }).trim()}
+                Aktivní projekty {company ? `— ${company.name}` : ''}
               </h2>
               <p className="text-xs font-body text-muted m-0 mb-3">
-                {prelozit(jazyk, 'projekty.firmaPopis')}
+                Všechno, co u nás vaše firma má — i zakázky kolegů. Poslech a připomínky zůstávají
+                u toho, kdo je na zakázce vedený jako kontakt.
               </p>
               <ProjectsTable
                 projects={firemniActive}
-                emptyText={prelozit(jazyk, 'projekty.zadneFiremniAktivni')}
+                emptyText="Vaše firma u nás zatím nemá žádnou rozpracovanou zakázku."
                 rodneListy={rodneListy}
                 progres={firemniProgres}
                 kontakty={firemniKontakty}
-                jazyk={jazyk}
               />
             </div>
 
@@ -460,6 +451,13 @@ async function InternalProjektySection({
   // 13. 9. 2026) - odznak s cislem u jmena herce.
   const strany = await posledniStrany(projects.map((p) => String(p.id)));
 
+  /**
+   * JAK DALEKO JE PŘEPOSLECH (zadání 25. 9. 2026: „chtělo by to nějakou ikonu,
+   * že se částečně zapisují chyby v AudioTaggeru… v detailu projektu
+   * i v přehledu"). Jedním dotazem pro celý seznam, bez sahání na Disk.
+   */
+  const preposlechMapa = await nactiPreposlechPrehled(projects.map((p) => String(p.id)));
+
   const metaById = new Map(
     metas.map((m): [string, InternalProjectMeta] => [
       m.caflouProjectId,
@@ -471,6 +469,8 @@ async function InternalProjektySection({
         driveUrl: m.driveUrl,
         managerUserId: m.managerUserId,
         ikonaTypu: m.projectType ? ikonyTypu[m.projectType] ?? null : null,
+        // Sluchatka se stavem preposlechu (25. 9. 2026).
+        preposlech: preposlechMapa.get(m.caflouProjectId) ?? null,
         // „Reklamni firma" = dela reklamy a ne audioknihy; stejne pravidlo
         // jako u zprav klientovi (lib/notifikaceFirmy.ts).
         // Od 22. 9. 2026 i projekt, který je SÁM reklama (typ s Rodným

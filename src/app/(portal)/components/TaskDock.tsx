@@ -7,6 +7,7 @@ import { oznamPocetDoku, usePoctyDoku, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
 import { DatumPole } from '@/components/DatumPole';
 import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
+import { UpravaMehoUkolu } from './UpravaMehoUkolu';
 import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
 
 /**
@@ -71,6 +72,8 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
+  /** Který úkol se zrovna upravuje (25. 9. 2026) - vždycky nejvýš jeden. */
+  const [upravovany, setUpravovany] = useState<string | null>(null);
   // „Zadal jsem" (21. 9. 2026) - načítá se, až když je panel otevřený; layout
   // tak nemusí na každé stránce tahat úkoly ostatních.
   const [zadane, setZadane] = useState<ZadanyUkolVSeznamu[]>([]);
@@ -218,7 +221,22 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
 
       <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
         {open.length === 0 && <li className="text-sm text-muted font-body py-2">Žádné otevřené úkoly. 👌</li>}
-        {open.map((task) => (
+        {open.map((task) =>
+          upravovany === task.id ? (
+            // Úprava vlastního úkolu (25. 9. 2026) - název, termín i čas.
+            <li key={task.id} className="py-1.5">
+              <UpravaMehoUkolu
+                ukol={task}
+                onKonec={(zmeneno) => {
+                  setUpravovany(null);
+                  if (zmeneno) {
+                    router.refresh();
+                    void nactiZadane();
+                  }
+                }}
+              />
+            </li>
+          ) : (
           <li key={task.id} className="flex items-start gap-2.5 py-2.5 group">
             <input
               type="checkbox"
@@ -246,6 +264,16 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
                 );
               })()}
             </span>
+            {/* Tužka - úprava názvu a termínu (25. 9. 2026). */}
+            <button
+              type="button"
+              onClick={() => setUpravovany(task.id)}
+              title="Upravit úkol"
+              aria-label="Upravit úkol"
+              className="mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-xs text-muted hover:text-brand-purple hover:bg-field opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              ✎
+            </button>
             {/* Pojistka (18. 9. 2026) - úkol nezmizí na jedno ťuknutí. */}
             <TlacitkoSmazat
               onSmazat={() => send(`/api/tasks/${task.id}`, 'DELETE')}
@@ -255,7 +283,8 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
               trida="text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
             />
           </li>
-        ))}
+          ),
+        )}
       </ul>
 
       {done.length > 0 && (

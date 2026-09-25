@@ -62,6 +62,8 @@ Kromě toho je v liště ještě **chat**, **zvoneček** s upozorněními, **ota
 
 **Úkoly z chatu.** Zpráva začínající **@úkol** založí úkol tomu, komu píšete (ve skupině tomu, koho označíte @jménem). Co jste takhle zadali ostatním, najdete v panelu **Úkoly** (i v záložce Úkoly v chatu) dole v části **Zadal jsem**: pro koho, do kdy a jestli už je hotovo. Když ho příjemce odškrtne, přijde vám zpráva pod **zvoneček**; stejně tak, když nesplněný úkol smaže. Kliknutím na úkol se otevře konverzace, ze které vznikl. Tužkou ✎ vedle úkolu ho můžete **upravit** — název, datum i čas — nebo **zrušit**; tomu, komu patří, o tom přijde zpráva. Odškrtnout ho za něj nejde.
 
+**Upravit jde i vlastní úkol.** Tužka ✎ u úkolu v panelu i v záložce Úkoly v chatu otevře název, datum i čas k přepsání — překlep ani posunutý termín se nemusí psát znovu. Ve stejném okénku je i mazání (na dvě klepnutí).
+
 **Termín s časem.** U každého úkolu (vlastního, zadaného v chatu i v panelu) jde vedle data vyplnit i **čas, do kdy** má být hotový. Je dobrovolný — bez času platí úkol do konce dne. Po termínu se úkol obarví červeně hned, jak čas uplyne.
 
 # Uvnitř projektu
@@ -78,7 +80,7 @@ Karta projektu má záložky a ukazují se jen ty, které dávají smysl:
 - **Rodný list** — jen u rádiového spotu; PDF se vyrobí samo, když je spot hotový.
 - **Tabule ve studiích** — obrazovka ve studiu s dnešním programem, poznámkami a tím, co chybí. Nahoře svítí, co právě běží — natáčení i střih; když jede víc věcí naráz, ostatní jsou pod tou hlavní jako „Zároveň“. Tabuli si může otevřít i člověk z týmu pod svým účtem: na kartě uživatele se zaškrtne **Přístup na tabule** a pak ji má rovnou v horní liště pod odkazem **Tabule** (a taky v Můj účet → Tabule ve studiu). Admin má odkaz Tabule vždycky a vybere si v něm, kterou pobočku otevřít. Z tabule se člověk z týmu vrátí tlačítkem **Zpět do portálu** v levém horním rohu (displej ve studiu ho nemá). Každé studio má **účet tabule** (jméno jako „brno1“ a heslo, bez e-mailu, spravuje se v Administraci → Studia); počítač u obrazovky se jím přihlásí v Chromu a portál rovnou ukáže tabuli toho studia. Do zbytku portálu se tímhle účtem nedostane. V okně vedle programu běží **příběhy z Instagramu** (když žádný není, poslední příspěvky) - účet se připojuje v Administraci → Studia a u každého studia jde okno vypnout.
 - **Licenční list** — u ostatních reklam (ne u rádiového spotu). Vymezení licence pro jednoho herce: území, média, délka a typ licence. Formulář je předvyplněný z projektu, PDF se uloží i do složky projektu na Disku.
-- **Přeposlech** — AudioTagger: poslech nahrávky a zápis chyb s časem a stranou scénáře.
+- **Přeposlech** — AudioTagger: poslech nahrávky a zápis chyb s časem a stranou scénáře. Jak daleko to je, hlásí **sluchátka** v hlavičce projektu a ve sloupci **Přeposlech** v přehledu: šedá = nachystané stopy, oranžová s číslem = běží to a tolik chyb je zapsaných, zelená s fajfkou = přeposlechnuto komplet. Najetím myší se ukáže i kolik stop je doposlechnutých a kolik procent textu.
 - **Natáčecí protokol** — co se při natáčení stalo.
 - **Poznámky** — vnitřní blok pod projektem: co je k zakázce potřeba vědět a nepatří do žádné kolonky. Kdokoliv z nás sem napíše poznámku, dole je vždycky **poznámka klienta z objednávky** (ta se nemaže, čte se rovnou z objednávky). Vidí je jen Žůžo-labůžo a produkce, zvukař ne.
 - **Historie** — co se u projektu měnilo a jaké zprávy odešly klientovi.

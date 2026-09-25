@@ -1,6 +1,7 @@
 'use client';
 
 import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
+import { UpravaMehoUkolu } from './UpravaMehoUkolu';
 import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Volba, prepniVSeznamu } from '@/components/Volba';
@@ -4154,6 +4155,8 @@ function UkolyVChatu() {
   const [casTerminu, setCasTerminu] = useState('');
   const [busy, setBusy] = useState(false);
   const [hotove, setHotove] = useState(false);
+  // Který vlastní úkol se zrovna upravuje (25. 9. 2026).
+  const [upravovany, setUpravovany] = useState<string | null>(null);
   // Úkoly, které jsem zadal ostatním (21. 9. 2026).
   const [zadane, setZadane] = useState<ZadanyUkolVSeznamu[]>([]);
 
@@ -4247,9 +4250,25 @@ function UkolyVChatu() {
       {ukoly !== null && otevrene.length === 0 && (
         <p className="text-sm font-body text-muted m-0 px-1">Nic nečeká. 🎉</p>
       )}
-      {otevrene.map((u) => (
-        <RadekUkolu key={u.id} ukol={u} onOdskrtni={() => void odskrtni(u)} />
-      ))}
+      {otevrene.map((u) =>
+        upravovany === u.id ? (
+          <UpravaMehoUkolu
+            key={u.id}
+            ukol={u}
+            onKonec={(zmeneno) => {
+              setUpravovany(null);
+              if (zmeneno) void nacti();
+            }}
+          />
+        ) : (
+          <RadekUkolu
+            key={u.id}
+            ukol={u}
+            onOdskrtni={() => void odskrtni(u)}
+            onUpravit={() => setUpravovany(u.id)}
+          />
+        ),
+      )}
 
       {splnene.length > 0 && (
         <button
@@ -4272,13 +4291,16 @@ function UkolyVChatu() {
 function RadekUkolu({
   ukol,
   onOdskrtni,
+  onUpravit,
 }: {
   ukol: { id: string; title: string; done: boolean; dueDate: string | null; dueTime?: string | null; zadalJmeno: string | null };
   onOdskrtni: () => void;
+  /** Tužka vedle úkolu (25. 9. 2026); u hotových se nenabízí. */
+  onUpravit?: () => void;
 }) {
   const poTerminu = !ukol.done && jePoTerminu(ukol.dueDate, ukol.dueTime ?? null);
   return (
-    <label className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-field cursor-pointer">
+    <label className="group flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-field cursor-pointer">
       <input
         type="checkbox"
         checked={ukol.done}
@@ -4297,6 +4319,22 @@ function RadekUkolu({
           </span>
         )}
       </span>
+      {onUpravit && (
+        <button
+          type="button"
+          // V <label> by klepnutí propadlo na zaškrtávátko a úkol by se odškrtl.
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onUpravit();
+          }}
+          title="Upravit úkol"
+          aria-label="Upravit úkol"
+          className="ml-auto mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-xs text-muted hover:text-brand-purple opacity-60 group-hover:opacity-100"
+        >
+          ✎
+        </button>
+      )}
     </label>
   );
 }
