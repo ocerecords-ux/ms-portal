@@ -8,6 +8,8 @@ import { usePathname } from 'next/navigation';
 const TABS = [
   { href: '/admin/doklady/nabidky', label: 'Nabídky' },
   { href: '/admin/doklady/faktury', label: 'Faktury' },
+  // Upominky na faktury po splatnosti (zadani 25. 9. 2026).
+  { href: '/admin/doklady/upominky', label: 'Upomínky' },
   { href: '/admin/doklady/vydaje', label: 'Výdaje' },
   // Smlouvy s elektronickym podpisem (zadani 8. 9. 2026).
   { href: '/admin/doklady/smlouvy', label: 'Smlouvy' },
@@ -22,7 +24,7 @@ const TABS = [
 export function DokladyTabs({ banka = false }: { banka?: boolean }) {
   const pathname = usePathname();
   const zalozky = banka
-    ? [...TABS.slice(0, 3), { href: '/admin/doklady/banka', label: 'Banka' }, ...TABS.slice(3)]
+    ? [...TABS.slice(0, 4), { href: '/admin/doklady/banka', label: 'Banka' }, ...TABS.slice(4)]
     : TABS;
   return (
     // Na telefonu jeden posuvny radek (21. 9. 2026), od tabletu se lamou.

@@ -1585,6 +1585,9 @@ model Invoice {
   /// Pohyby na uctu, ktere k teto fakture portal priradil (17. 9. 2026).
   bankTransactions BankTransaction[]
 
+  /// Odeslane upominky po splatnosti (25. 9. 2026).
+  upominky UpominkaOdeslana[]
+
   // Vazba na projekt v Caflou (zadani 8. 9. 2026: "chtel bych mit Doklady
   // navazane na projekty"). Nazev drzime i textove, aby doklad zustal
   // citelny, kdyz projekt v Caflou zmizi nebo se prejmenuje.
@@ -2411,6 +2414,49 @@ model CalendarFeed {
   revokedAt  DateTime?
   lastReadAt DateTime?
   createdAt  DateTime  @default(now())
+}
+
+/// UPOMINKY K FAKTURAM PO SPLATNOSTI (zadani 25. 9. 2026: „potrebuji nastavit
+/// upominky na faktury po splatnosti. Chci je nekde editovat, vcetne nahledu
+/// emailu").
+///
+/// Jediny radek (id "upominky"), stejne jako PostaStav - nastaveni je spolecne
+/// pro celou firmu, ne pro kazdeho zvlast.
+model NastaveniUpominek {
+  id      String  @id @default("upominky")
+  zapnuto Boolean @default(false)
+
+  /// Po kolika dnech po splatnosti jde ktera upominka: [3, 10, 21] znamena
+  /// prvni tri dny po splatnosti, druha desaty den, treti dvacaty prvni.
+  /// Kolik cisel, tolik upominek - dal uz se nepripomina.
+  dny Int[] @default([3, 10, 21])
+
+  /// Zneni; prazdne = vychozi z kodu (lib/upominkyFaktur.ts).
+  predmet String?
+  text    String? @db.Text
+
+  /// Komu od nas chodi kopie (skryta) - napr. ucetni.
+  kopie String[] @default([])
+
+  upravilJmeno String?
+  updatedAt    DateTime @updatedAt
+}
+
+/// Jedna odeslana upominka. Drzi se kvuli tomu, aby druha nesla dvakrat
+/// a aby bylo videt, co uz klientovi odeslo.
+model UpominkaOdeslana {
+  id         String   @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  /// 1. 2. 3. upominka - poradi podle `dny` v nastaveni.
+  poradi     Int
+  komu       String
+  odeslanoAt DateTime @default(now())
+  /// Rucne poslana upominka nese jmeno toho, kdo ji poslal; automat prazdno.
+  poslalJmeno String?
+
+  @@unique([invoiceId, poradi])
+  @@index([invoiceId])
 }
 
 /// Vygenerovaný Rodný list (RL) reklamního spotu - zadání 9. 9. 2026.

@@ -2427,3 +2427,64 @@ export async function sendNovaOdpovedKlientoviEmail(input: NovaOdpovedKlientoviI
   });
   return { sent: true as const, reason: undefined };
 }
+
+/* ==========================================================================
+   UPOMÍNKA K FAKTURĚ PO SPLATNOSTI (zadání 25. 9. 2026)
+   ========================================================================== */
+
+export type UpominkaInput = {
+  to: string;
+  kopie?: string[];
+  /** Hotový předmět i text - proměnné dosazuje lib/upominkyServer.ts. */
+  predmet: string;
+  text: string;
+  cisloFaktury: string;
+  castka: string;
+  splatnost: string | null;
+  /** Kolikátá upomínka; do hlavičky mailu se nepíše, je jen pro nás. */
+  poradi: number;
+  /** Odkaz na PDF/portál, když ho máme. */
+  odkaz?: string | null;
+};
+
+export function buildUpominkaHtml(input: UpominkaInput): string {
+  // Text píše produkce ve Vzoru upomínky - escapuje se a teprve pak se z
+  // povolených značek udělá HTML, stejně jako u zpráv o stavu projektu.
+  const odstavce = input.text
+    .split(/\n{2,}/)
+    .map((o) => `<p>${znackyNaHtml(escapeHtml(o).replace(/\n/g, '<br />'))}</p>`)
+    .join('');
+
+  return emailShell({
+    tag: 'Upomínka',
+    preheader: `Faktura ${input.cisloFaktury} je po splatnosti.`,
+    body: `
+    <span class="badge">Faktura ${escapeHtml(input.cisloFaktury)}</span>
+    ${odstavce}
+
+    <table role="presentation" class="field-table">
+      <tr><td class="label">Číslo faktury</td><td class="value">${escapeHtml(input.cisloFaktury)}</td></tr>
+      <tr><td class="label">K úhradě</td><td class="value">${escapeHtml(input.castka)}</td></tr>
+      ${input.splatnost ? `<tr><td class="label">Splatnost</td><td class="value">${escapeHtml(input.splatnost)}</td></tr>` : ''}
+    </table>
+
+    ${input.odkaz ? `<div class="cta-row"><a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít fakturu</a></div>` : ''}
+`,
+  });
+}
+
+export async function sendUpominkaEmail(input: UpominkaInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    // Kopie chodí skrytě - klient nemá vidět, kdo u nás na platbu čeká.
+    ...(input.kopie && input.kopie.length > 0 ? { bcc: input.kopie } : {}),
+    subject: input.predmet,
+    text: `${bezZnacek(input.text)}\n\n${input.odkaz ?? ''}`.trim(),
+    html: buildUpominkaHtml(input),
+  });
+  return { sent: true as const, reason: undefined };
+}
