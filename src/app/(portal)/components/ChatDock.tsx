@@ -3356,9 +3356,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         uprostred druheho jmena, takze z nej nic nebylo - kdo
                         do skupiny vidi, rekne hlavicka otevreneho rozhovoru. */}
                     <span className="min-w-0 flex-1">
+                      {/* Status tu schválně NENÍ (upřesnění 25. 9. 2026: „asi je
+                          zbytečné, aby se ten status objevoval vlevo na výběru
+                          a seznamu lidí. Stačí, když rozkliknu konverzaci").
+                          Seznam má být jen jména. */}
                       <span className="block font-heading text-sm text-ink truncate">{c.label}</span>
-                      {/* Co ten člověk zrovna dělá (25. 9. 2026). */}
-                      <RadekStatusu status={c.status} />
                     </span>
                     {c.unread > 0 && (
                       <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
@@ -3379,10 +3381,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       className="text-left rounded-lg px-2.5 py-1.5 text-sm font-body text-ink hover:bg-field flex items-center gap-2"
                     >
                       <Avatar label={u.label} photoUrl={u.photoUrl} size={24} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate">{u.label}</span>
-                        <RadekStatusu status={u.status} />
-                      </span>
+                      <span className="truncate">{u.label}</span>
                     </button>
                   ))}
                 </div>

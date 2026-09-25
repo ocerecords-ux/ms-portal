@@ -11,6 +11,18 @@ import { casStatusu, REZIE_MINUT, type StatusVChatu } from '@/lib/statusyChatu';
  * úklidovou úlohu. V databázi je jen to, co si člověk napsal sám.
  */
 
+/**
+ * Z názvu události nechá jen PROJEKT: blokace v kalendáři se jmenují
+ * „POD TLAKEM KRÁSY - střih ZVUKAŘ: Matěj Suk" a ve statusu z toho stačí
+ * název knihy - že jde o střih, říká ikona, a komu status patří, je jasné
+ * z toho, u čího jména visí.
+ */
+function nazevProjektu(nazev: string): string {
+  const bezRoli = nazev.split(/\s(?:ZVUKAŘ|HEREC|REŽIE|KLIENT)\s*:/i)[0];
+  const bezDruhu = bezRoli.replace(/\s*[-–—]\s*(střih|natáčení|nataceni|casting|mix|mastering)\s*$/i, '');
+  return bezDruhu.trim() || nazev;
+}
+
 /** Kolik minut dopředu se ještě nekouká - status je o TEĎ. */
 const TED = () => new Date();
 
@@ -53,7 +65,12 @@ async function zKalendare(
     if (volby.studio && u.start <= ted && (u.druh === 'NATACENI' || u.druh === 'STRIH' || u.druh === 'CASTING')) {
       const ikona =
         u.druh === 'NATACENI' ? 'mikrofon-studio' : u.druh === 'STRIH' ? 'strih' : 'casting';
-      kandidati.push({ konec: u.end, text: `${u.nazev} do ${casStatusu(u.end)}`, emoji: null, ikona });
+      kandidati.push({
+        konec: u.end,
+        text: `${nazevProjektu(u.nazev)} do ${casStatusu(u.end)}`,
+        emoji: null,
+        ikona,
+      });
       continue;
     }
 

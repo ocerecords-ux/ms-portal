@@ -100,6 +100,24 @@ export function DotazyDock() {
     }
   }, []);
 
+  /**
+   * ODKAZ Z MAILU (25. 9. 2026): `/projekty?dotaz=<projekt>` otevře dok
+   * rovnou u toho projektu. Bez toho by klient přišel z mailu na přehled
+   * a musel si dok hledat sám.
+   */
+  useEffect(() => {
+    try {
+      const id = new URLSearchParams(window.location.search).get('dotaz');
+      if (!id) return;
+      setOtevreno(true);
+      window.localStorage.setItem(KLIC, '1');
+      setVybrany(id);
+      void nactiZpravy(id);
+    } catch {
+      // Bez parametru se nic nedeje.
+    }
+  }, [nactiZpravy]);
+
   useEffect(() => {
     void nactiProjekty();
     const timer = window.setInterval(() => {

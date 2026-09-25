@@ -2370,3 +2370,60 @@ export async function sendNoveStopyEmail(input: NoveStopyInput) {
   });
   return { sent: true as const, reason: undefined };
 }
+
+/**
+ * ODPOVĚĎ NA DOTAZ KLIENTA (zadání 25. 9. 2026: „kdyby klient dostal
+ * notifikace, když mu v jeho profilu odpoví někdo v chatu, že tam má
+ * nepřečtenou zprávu").
+ *
+ * Mail říká, že odpověď přišla, a nic víc: ukázka je krátká a celý rozhovor
+ * je za odkazem v portálu. Kdo o odpovědi ví a přijde si ji přečíst, další
+ * mail nedostane - o to se stará lib/dotazyOznameniServer.ts.
+ */
+export type NovaOdpovedKlientoviInput = {
+  to: string;
+  jmeno: string | null;
+  nazevProjektu: string;
+  odKoho: string;
+  /** Pár slov ze zprávy; prázdné u samotné přílohy. */
+  nahled: string | null;
+  odkaz: string;
+};
+
+function vetaOdpovedi(input: NovaOdpovedKlientoviInput): string {
+  return `${input.odKoho} vám odpověděl(a) u projektu „${input.nazevProjektu}".`;
+}
+
+export function buildNovaOdpovedKlientoviHtml(input: NovaOdpovedKlientoviInput): string {
+  return emailShell({
+    tag: 'Nová zpráva',
+    preheader: vetaOdpovedi(input),
+    body: `
+    <p>${escapeHtml(pozdrav(input.jmeno))}</p>
+    <p>${escapeHtml(vetaOdpovedi(input))}</p>
+    ${input.nahled ? `<blockquote>${escapeHtml(input.nahled)}</blockquote>` : ''}
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít zprávu v portálu</a>
+    </div>
+
+    <p class="small">Další upozornění pošleme, teprve až si zprávy přečtete — psaní tam a zpátky vám schránku nezahltí.</p>
+`,
+  });
+}
+
+export async function sendNovaOdpovedKlientoviEmail(input: NovaOdpovedKlientoviInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: `Nova zprava k projektu: ${input.nazevProjektu}`,
+    text: [pozdrav(input.jmeno), '', vetaOdpovedi(input), input.nahled ?? '', '', input.odkaz]
+      .filter((r) => r !== null)
+      .join('\n'),
+    html: buildNovaOdpovedKlientoviHtml(input),
+  });
+  return { sent: true as const, reason: undefined };
+}

@@ -7,6 +7,7 @@ import { MAX_MESSAGE_LENGTH } from '@/lib/chat';
 import { MAX_PRILOH, MAX_PRILOHA_BYTES } from '@/lib/chatPrilohy';
 import { overPrilohu } from '@/lib/storage';
 import { posliPush } from '@/lib/pushServer';
+import { oznamKlientoviOdpoved } from '@/lib/dotazyOznameniServer';
 import { canUseChat, shrnReakce, userLabel } from '@/lib/chatServer';
 import { odkazNaFotku } from '@/lib/fotky';
 import { komuPoslatUpozorneni, zminenyTym } from '@/lib/chatUpozorneniServer';
@@ -413,6 +414,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
        * Staré řádky, které takhle vznikly, se pod zvonkem neukazují - viz
        * lib/notifications.ts.
        */
+    }
+
+    /**
+     * MAIL KLIENTOVI, KDYŽ MU ODPOVÍME (zadání 25. 9. 2026). Jen u dotazů
+     * a jen když klient zrovna není v portálu - pravidla jsou
+     * v lib/dotazyOznameniServer.ts. Bez čekání: zpráva je uložená a mail ji
+     * nesmí zdržet ani shodit.
+     */
+    if (conversation.kind === 'DOTAZ') {
+      void oznamKlientoviOdpoved(conversation.id, me, parsed.data.body ?? null);
     }
 
     /**

@@ -1157,6 +1157,16 @@ model ConversationMember {
   skryto         Boolean      @default(false)
   skrytoAt       DateTime?
 
+  /// KDY KLIENTOVI NAPOSLED ODESEL MAIL O NEPRECTENE ZPRAVE (zadani
+  /// 25. 9. 2026: „kdyby klient dostal notifikace, kdyz mu v jeho profilu
+  /// odpovi nekdo v chatu, ze tam ma neprectenou zpravu. Ale pak jak uz se
+  /// prihlasi na portal, tak by mu nemela chodit kazda nova zprava").
+  ///
+  /// Dalsi mail odejde, teprve az si zpravy precte: posila se jen tehdy,
+  /// kdyz je `oznamenoAt` prazdne nebo starsi nez `lastReadAt`. Jedna
+  /// odpoved = jeden mail, at jich tym napise kolik chce.
+  oznamenoAt     DateTime?
+
   @@unique([conversationId, userId])
   @@index([userId])
 }
