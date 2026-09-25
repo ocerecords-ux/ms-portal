@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { CompanyForm } from './CompanyForm';
 import { NotifikaceFirmyPanel } from './NotifikaceFirmyPanel';
 import { PriraditKlientaPanel } from './PriraditKlientaPanel';
+import { ZakazkyFirmyPanel, type ZakazkaRadek } from './ZakazkyFirmyPanel';
 import { ROLE_LABELS } from '@/lib/roles';
 
 // Uzivatele se od 5. 9. 2026 zakladaji a edituji centralne na /admin/users
@@ -17,7 +18,7 @@ import { ROLE_LABELS } from '@/lib/roles';
  * stranka tak zustava serverova, da se na konkretni zalozku poslat odkaz
  * a po ulozeni se clovek vrati tam, kde byl.
  */
-type Zalozka = 'udaje' | 'notifikace' | 'ucty';
+type Zalozka = 'udaje' | 'notifikace' | 'ucty' | 'zakazky';
 
 export default async function CompanyDetailPage({
   params,
@@ -40,12 +41,74 @@ export default async function CompanyDetailPage({
         { klic: 'udaje', label: 'Údaje firmy' },
         { klic: 'notifikace', label: 'Notifikace' },
         { klic: 'ucty', label: 'Přihlašovací účty' },
+        // Doplneni herce a dokladu k zakazkam firmy potichu (25. 9. 2026).
+        { klic: 'zakazky', label: 'Zakázky' },
       ]
     : [{ klic: 'udaje', label: 'Údaje firmy' }];
 
   const zvolena: Zalozka = zalozky.some((z) => z.klic === searchParams?.zalozka)
     ? (searchParams?.zalozka as Zalozka)
     : 'udaje';
+
+  /**
+   * ZAKÁZKY FIRMY (zadání 25. 9. 2026) - herec, nabídka a faktura k doplnění
+   * potichu. Načítá se jen pro tu jednu záložku, ať karta firmy nezdržuje.
+   *
+   * Starší projekty mívají u sebe jen NÁZEV firmy (přenos z Caflou), proto se
+   * berou i podle názvu - stejné pravidlo jako u hromadného přiřazení klienta.
+   */
+  const patriFirme = {
+    OR: [
+      { companyId: company.id },
+      { companyId: null, companyName: { equals: company.name, mode: 'insensitive' as const } },
+    ],
+  };
+  const [projektyFirmy, herci, nabidkyFirmy, fakturyFirmy] =
+    jeKlient && zvolena === 'zakazky'
+      ? await Promise.all([
+          prisma.projectMeta.findMany({
+            where: patriFirme,
+            orderBy: { name: 'asc' },
+            select: {
+              caflouProjectId: true,
+              name: true,
+              actorUserId: true,
+              actor: { select: { name: true, email: true } },
+            },
+          }),
+          prisma.user.findMany({
+            where: { role: 'HEREC' },
+            orderBy: { name: 'asc' },
+            select: { id: true, name: true, email: true },
+          }),
+          prisma.offer.findMany({
+            where: { companyId: company.id },
+            orderBy: { issueDate: 'desc' },
+            select: { id: true, number: true, subject: true, caflouProjectId: true },
+          }),
+          prisma.invoice.findMany({
+            where: { companyId: company.id },
+            orderBy: { issueDate: 'desc' },
+            select: { id: true, number: true, subject: true, caflouProjectId: true },
+          }),
+        ])
+      : [[], [], [], []];
+
+  const popisDokladu = (d: { number: string; subject: string | null }) =>
+    [d.number, d.subject].filter(Boolean).join(' · ');
+
+  const zakazky: ZakazkaRadek[] = projektyFirmy.map((p) => {
+    const nabidka = nabidkyFirmy.find((n) => n.caflouProjectId === p.caflouProjectId) ?? null;
+    const faktura = fakturyFirmy.find((f) => f.caflouProjectId === p.caflouProjectId) ?? null;
+    return {
+      caflouProjectId: p.caflouProjectId,
+      nazev: p.name ?? p.caflouProjectId,
+      herecId: p.actorUserId ?? null,
+      herecJmeno: p.actor ? p.actor.name || p.actor.email : null,
+      nabidka: nabidka ? { id: nabidka.id, popis: popisDokladu(nabidka) } : null,
+      faktura: faktura ? { id: faktura.id, popis: popisDokladu(faktura) } : null,
+    };
+  });
 
   return (
     <section className="flex flex-col gap-8">
@@ -91,6 +154,21 @@ export default async function CompanyDetailPage({
       {/* Notifikace klientovi podle stavu projektu (zadani 10. 9. 2026).
           U dodavatele nedava smysl - zadne projekty pod sebou nema. */}
       {jeKlient && zvolena === 'notifikace' && <NotifikaceFirmyPanel companyId={company.id} />}
+
+      {/* Herec, nabidka a faktura k zakazkam firmy - potichu (25. 9. 2026). */}
+      {jeKlient && zvolena === 'zakazky' && (
+        <ZakazkyFirmyPanel
+          companyId={company.id}
+          zakazky={zakazky}
+          herci={herci.map((h) => ({ id: h.id, label: h.name ? `${h.name} (${h.email})` : h.email }))}
+          volneNabidky={nabidkyFirmy
+            .filter((n) => !n.caflouProjectId)
+            .map((n) => ({ id: n.id, popis: popisDokladu(n) }))}
+          volneFaktury={fakturyFirmy
+            .filter((f) => !f.caflouProjectId)
+            .map((f) => ({ id: f.id, popis: popisDokladu(f) }))}
+        />
+      )}
 
       {/* Dodavatel nema pod sebou zadne uzivatelske ucty - to maji jen
           klientske firmy (viz COMPANY_ROLES v lib/roles.ts). */}

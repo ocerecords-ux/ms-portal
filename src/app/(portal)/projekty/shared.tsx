@@ -153,6 +153,7 @@ export function ProjectsTable({
   progres,
   kontakty,
   jazyk,
+  normostrany = true,
 }: {
   projects: DisplayProject[];
   emptyText: string;
@@ -204,6 +205,13 @@ export function ProjectsTable({
    * ve „svých" projektech by bylo dokola jedno a totéž jméno.
    */
   kontakty?: Record<string, string>;
+  /**
+   * NORMOSTRANY U REKLAMY NEJSOU (zadání 25. 9. 2026: „u firem a klientů,
+   * kteří mají zaškrtnutou reklamu, dát pryč atribut NS - normostrany").
+   * U reklamního klienta je ten sloupec dokola prázdný, tak se nevykreslí
+   * vůbec. Firma, která dělá i audioknihy, ho má dál.
+   */
+  normostrany?: boolean;
 }) {
   const showKontakt = kontakty !== undefined;
   const showRodnyList = rodneListy !== undefined;
@@ -223,7 +231,7 @@ export function ProjectsTable({
               'statusName',
               'narrator',
               ...(showProgres ? ['progres'] : []),
-              'pageCountSirsi',
+              ...(normostrany ? ['pageCountSirsi'] : []),
               'endDate',
               'releaseDate',
               ...(showPreposlech ? ['kPreposlechu', 'preposlechnuto'] : []),
@@ -246,13 +254,16 @@ export function ProjectsTable({
                 </th>
               )}
               {/* „NS" misto „Normostrany" - usetrena sirka se hodi nazvum
-                  a hercum (zadani 12. 9. 2026). */}
-              <th
-                className="text-right px-4 py-3.5 whitespace-nowrap"
-                title={prelozit(jazyk, 'projekty.sl.normostrany')}
-              >
-                {prelozit(jazyk, 'projekty.sl.normostranyZkratka')}
-              </th>
+                  a hercum (zadani 12. 9. 2026). U reklamy sloupec neni
+                  (25. 9. 2026). */}
+              {normostrany && (
+                <th
+                  className="text-right px-4 py-3.5 whitespace-nowrap"
+                  title={prelozit(jazyk, 'projekty.sl.normostrany')}
+                >
+                  {prelozit(jazyk, 'projekty.sl.normostranyZkratka')}
+                </th>
+              )}
               <th className="text-left px-4 py-3.5 whitespace-nowrap">
                 {prelozit(jazyk, 'projekty.sl.dokonceni')}
               </th>
@@ -354,9 +365,11 @@ export function ProjectsTable({
                     <ValecProgresu progres={progres?.[String(p.id)] ?? null} prazdne="—" kompaktni />
                   </td>
                 )}
-                <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
-                  {p.pageCount ?? '—'}
-                </td>
+                {normostrany && (
+                  <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums text-right whitespace-nowrap">
+                    {p.pageCount ?? '—'}
+                  </td>
+                )}
                 <td className="px-4 py-0 text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                   <TerminDokonceni
                     datum={p.endDate}

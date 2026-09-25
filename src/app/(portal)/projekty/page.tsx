@@ -255,6 +255,14 @@ export default async function ProjektyPage() {
     await odkazyPreposlechu(active.map((p) => String(p.id))),
   );
 
+  /**
+   * NORMOSTRANY U REKLAMY NEJSOU (zadání 25. 9. 2026: „u firem a klientů,
+   * kteří mají zaškrtnutou reklamu, dát pryč atribut NS - normostrany").
+   * Firma, která u nás dělá i audioknihy, sloupec dál má - tam normostrany
+   * pořád něco znamenají.
+   */
+  const ukazNormostrany = !(company?.dealsAds && !company?.dealsAudiobooks);
+
   const jazyk = nactiJazyk();
 
   return (
@@ -289,10 +297,15 @@ export default async function ProjektyPage() {
                 schvaleni={schvaleni}
                 progres={progres}
                 jazyk={jazyk}
+                normostrany={ukazNormostrany}
               />
             </div>
 
-            <FinishedProjectsSection projects={finished} rodneListy={rodneListy} />
+            <FinishedProjectsSection
+              projects={finished}
+              rodneListy={rodneListy}
+              normostrany={ukazNormostrany}
+            />
           </div>
         }
         firma={
@@ -313,6 +326,7 @@ export default async function ProjektyPage() {
                 progres={firemniProgres}
                 kontakty={firemniKontakty}
                 jazyk={jazyk}
+                normostrany={ukazNormostrany}
               />
             </div>
 
@@ -320,6 +334,7 @@ export default async function ProjektyPage() {
               projects={firemniFinished}
               rodneListy={rodneListy}
               kontakty={firemniKontakty}
+              normostrany={ukazNormostrany}
             />
           </div>
         }

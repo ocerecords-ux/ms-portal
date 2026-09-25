@@ -15,10 +15,13 @@ const PAGE_SIZE = 20;
 export function FinishedProjectsSection({
   projects,
   rodneListy,
+  normostrany = true,
 }: {
   projects: DisplayProject[];
   /** Rodné listy k projektům - viz ProjectsTable (zadání 9. 9. 2026). */
   rodneListy?: Record<string, { id: string; fileName: string }>;
+  /** U reklamního klienta se sloupec NS nevykresluje (25. 9. 2026). */
+  normostrany?: boolean;
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
@@ -52,6 +55,7 @@ export function FinishedProjectsSection({
             emptyText={t('projekty.zadneDokoncene')}
             rodneListy={rodneListy}
             jazyk={jazyk}
+            normostrany={normostrany}
           />
           {visibleCount < projects.length && (
             <div className="flex justify-center mt-4">

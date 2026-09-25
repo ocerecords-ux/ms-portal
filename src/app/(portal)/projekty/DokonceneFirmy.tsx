@@ -20,11 +20,14 @@ export function DokonceneFirmy({
   projects,
   rodneListy,
   kontakty,
+  normostrany = true,
 }: {
   projects: DisplayProject[];
   rodneListy?: Record<string, { id: string; fileName: string }>;
   /** Kdo zakázku u klienta vede - viz ProjectsTable. */
   kontakty?: Record<string, string>;
+  /** U reklamního klienta se sloupec NS nevykresluje (25. 9. 2026). */
+  normostrany?: boolean;
 }) {
   const [rozbaleno, setRozbaleno] = useState(false);
   const [kolik, setKolik] = useState(PO_KOLIKA);
@@ -58,6 +61,7 @@ export function DokonceneFirmy({
             emptyText={t('projekty.zadneFiremniDokoncene')}
             rodneListy={rodneListy}
             kontakty={kontakty}
+            normostrany={normostrany}
             jazyk={jazyk}
           />
           {kolik < projects.length && (
