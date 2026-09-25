@@ -177,3 +177,29 @@ export async function vystavLicencniList(
   });
   return { ok: true, id: ll.id };
 }
+
+/**
+ * Nejnovější licenční list k několika projektům naráz - pro přehled projektů
+ * u klienta reklam, kde se dokumenty stahují rovnou z řádku (25. 9. 2026).
+ */
+export async function loadNejnovejsiLicencniListy(
+  caflouProjectIds: string[],
+): Promise<Map<string, { id: string; fileName: string }>> {
+  const vysledek = new Map<string, { id: string; fileName: string }>();
+  if (caflouProjectIds.length === 0) return vysledek;
+  try {
+    const vsechny = await prisma.licencniList.findMany({
+      where: { caflouProjectId: { in: caflouProjectIds } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, fileName: true, caflouProjectId: true },
+    });
+    for (const ll of vsechny) {
+      if (!vysledek.has(ll.caflouProjectId)) {
+        vysledek.set(ll.caflouProjectId, { id: ll.id, fileName: ll.fileName });
+      }
+    }
+  } catch (err) {
+    console.error('Načtení licenčních listů pro přehled selhalo:', err);
+  }
+  return vysledek;
+}

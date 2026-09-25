@@ -13,6 +13,8 @@ import { ProjectsTable, type InternalProject, type InternalProjectMeta } from '.
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { ZalozkyKlienta } from './ZalozkyKlienta';
+import { ReklamaPrehled, type DokumentProjektu } from './ReklamaPrehled';
+import { loadNejnovejsiLicencniListy } from '@/lib/licencniListServer';
 import { DokonceneFirmy } from './DokonceneFirmy';
 import { nactiPoradiStavu } from '@/lib/poradiStavuServer';
 import { NovyProjektForm } from './NovyProjektForm';
@@ -23,7 +25,7 @@ import { loadMojeSloupce } from '@/lib/columnLabelsServer';
 import { loadInternalProjects } from '@/lib/projektySeznamServer';
 import { loadNejnovejsiRodneListy, syncRodneListy } from '@/lib/rodnyListServer';
 import { nactiPreposlechPrehled } from '@/lib/preposlechServer';
-import { odkazyPreposlechu } from '@/lib/preposlechOdkaz';
+import { odkazyPreposlechu, urlPripominek } from '@/lib/preposlechOdkaz';
 import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 import { odkazNaFotku } from '@/lib/fotky';
 import { posledniStrany } from '@/lib/brunoServer';
@@ -89,7 +91,20 @@ export default async function ProjektyPage() {
    */
   const firemniMeta = company
     ? await prisma.projectMeta.findMany({
-        where: { companyId: company.id, name: { not: null } },
+        /**
+         * I ZAKÁZKY, KTERÉ MAJÍ FIRMU JEN NÁZVEM (oprava 25. 9. 2026: „Jan
+         * Minol pořád nevidí projekty minulé"). Starší projekty přenesené
+         * z Caflou vazbu na firmu nemají, jen její jméno textem - klient jich
+         * tím pádem většinu neviděl. Stejné pravidlo jako u hromadného
+         * přiřazení kontaktu na kartě firmy.
+         */
+        where: {
+          name: { not: null },
+          OR: [
+            { companyId: company.id },
+            { companyId: null, companyName: { equals: company.name, mode: 'insensitive' } },
+          ],
+        },
         select: {
           klientUserId: true,
           klient: { select: { name: true, email: true } },
@@ -107,6 +122,10 @@ export default async function ProjektyPage() {
           // to vypada stejne jako v internim prehledu.
           actorUserId: true,
           herci: { select: { id: true, name: true, email: true } },
+          // Pro přehled u klienta reklam (25. 9. 2026): typ, složka, licence.
+          projectType: true,
+          driveUrl: true,
+          licence: { select: { nazev: true, ikona: true }, orderBy: { poradi: 'asc' } },
         },
         orderBy: { name: 'asc' },
       })
@@ -271,6 +290,54 @@ export default async function ProjektyPage() {
     ? await prisma.user.count({ where: { companyId, role: 'CLIENT' } })
     : 0;
 
+  /**
+   * PŘEHLED U KLIENTA REKLAM (zadání 25. 9. 2026: „u klientů reklam bude jinak
+   * poskládaný přehled projektů: Název projektu, Stav, Herec, Typ projektu,
+   * Licence… Datum dokončení, Odkaz na složku, Připomínkovat").
+   *
+   * Vlastní tabulka - normostrany, přeposlech ani progres natáčení u spotu nic
+   * neznamenají, zato licence, složka a odkaz na připomínky ano. Rozhoduje
+   * stejný příznak jako u schvalování: firma dělá reklamy a ne audioknihy.
+   */
+  const jeKlientReklam = Boolean(company?.dealsAds && !company?.dealsAudiobooks);
+
+  const reklamaTypy: Record<string, string | null> = {};
+  const reklamaLicence: Record<string, { nazev: string; ikona: string | null }[]> = {};
+  const reklamaSlozky: Record<string, string | null> = {};
+  const reklamaDokumenty: Record<string, DokumentProjektu[]> = {};
+  let reklamaOdkazy: Record<string, string | null> = {};
+
+  if (jeKlientReklam) {
+    for (const m of firemniMeta) {
+      reklamaTypy[m.caflouProjectId] = m.projectType ?? null;
+      reklamaLicence[m.caflouProjectId] = m.licence.map((l) => ({ nazev: l.nazev, ikona: l.ikona }));
+      reklamaSlozky[m.caflouProjectId] = m.driveUrl ?? null;
+    }
+
+    // Dokumenty ke stažení: rodný list u rádiového spotu, licenční list
+    // u ostatních reklam (zadání 22. a 25. 9. 2026).
+    const vsechnyIds = firemniMeta.map((m) => m.caflouProjectId);
+    const licencniListy = await loadNejnovejsiLicencniListy(vsechnyIds);
+    for (const id of vsechnyIds) {
+      const dokumenty: DokumentProjektu[] = [];
+      const rl = rodneListyMapa.get(id);
+      if (rl) dokumenty.push({ id: rl.id, nazev: rl.fileName, druh: 'RL' });
+      const ll = licencniListy.get(id);
+      if (ll) dokumenty.push({ id: ll.id, nazev: ll.fileName, druh: 'LL' });
+      reklamaDokumenty[id] = dokumenty;
+    }
+
+    // Odkaz do AudioTaggeru - u reklamy vede na tagger spotu (Připomínkovat).
+    reklamaOdkazy = Object.fromEntries(
+      (
+        await prisma.preposlechOdkaz.findMany({
+          where: { caflouProjectId: { in: vsechnyIds }, zneplatnenoAt: null },
+          select: { caflouProjectId: true, token: true },
+        })
+      ).map((o) => [o.caflouProjectId, urlPripominek(o.token)]),
+    );
+  }
+
   const jazyk = nactiJazyk();
 
   return (
@@ -291,6 +358,17 @@ export default async function ProjektyPage() {
            (25. 9. 2026). */
         samotny={pocetKlientuFirmy <= 1}
         moje={
+          jeKlientReklam ? (
+            <ReklamaPrehled
+              aktivni={active}
+              dokoncene={finished}
+              typy={reklamaTypy}
+              licence={reklamaLicence}
+              slozky={reklamaSlozky}
+              dokumenty={reklamaDokumenty}
+              odkazyPripominek={reklamaOdkazy}
+            />
+          ) : (
           <div className="flex flex-col gap-8">
             <div>
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
@@ -318,8 +396,20 @@ export default async function ProjektyPage() {
               normostrany={ukazNormostrany}
             />
           </div>
+          )
         }
         firma={
+          jeKlientReklam ? (
+            <ReklamaPrehled
+              aktivni={firemniActive}
+              dokoncene={firemniFinished}
+              typy={reklamaTypy}
+              licence={reklamaLicence}
+              slozky={reklamaSlozky}
+              dokumenty={reklamaDokumenty}
+              odkazyPripominek={reklamaOdkazy}
+            />
+          ) : (
           <div className="flex flex-col gap-8">
             <div>
               <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide mb-3">
@@ -348,6 +438,7 @@ export default async function ProjektyPage() {
               normostrany={ukazNormostrany}
             />
           </div>
+          )
         }
       />
     </section>

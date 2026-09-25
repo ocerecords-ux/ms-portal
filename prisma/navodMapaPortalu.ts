@@ -40,7 +40,7 @@ Tři věci, které z obrázku stojí za zdůraznění:
 
 Na kartě klientské firmy je kromě Údajů, Notifikací a Účtů i záložka **Zakázky**: tabulka všech zakázek té firmy, kde jde ke každé doplnit **herce, nabídku a fakturu** a uložit to jedním tlačítkem — **potichu**, bez notifikací a bez zápisu do historie projektu. V nabídce dokladů jsou jen nabídky a faktury té firmy, které ještě žádnou zakázku nemají. Kontakt (klienta) ke všem zakázkám firmy najednou přiřadí tlačítko na záložce Přihlašovací účty, taky potichu.
 
-Klient, který u nás dělá **jen reklamy**, nevidí ve svém přehledu sloupec **NS** (normostrany) — u reklamy nedávají smysl. Firma, která dělá i audioknihy, ho má dál.
+Klient, který u nás dělá **jen reklamy**, má v Projektech **vlastní přehled**: název, stav, herec, typ projektu, licence, datum dokončení, odkaz do složky na Disku a tlačítko **Připomínkovat** (vede do taggeru spotu, kde píše připomínky a spot schvaluje). Klepnutím na licenci se otevře okno s **dokumenty ke stažení** — rodný list u rádiového spotu, licenční list u ostatních reklam. Normostrany se mu neukazují, u reklamy nedávají smysl; firma, která dělá i audioknihy, má přehled jako dosud.
 
 Vedle názvu zakázky svítí dvě malé značky s tím, **jaké doklady u ní visí**: cenovka je nabídka (šedá rozepsaná, oranžová odeslaná, zelená schválená, červená odmítnutá), lístek je faktura (oranžová vystavená a nezaplacená, zelená uhrazená). Co u zakázky není, nesvítí; čísla dokladů jsou v bublince. Vidí to jen ten, kdo má na kartě zaškrtnuté **Vidí Banku** — stejná dvojice, co vidí peníze.
 
