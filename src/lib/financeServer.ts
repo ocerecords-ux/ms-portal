@@ -107,18 +107,31 @@ export async function nactiFinance(f: FinanceFiltr): Promise<FinancePrehled> {
       },
     }),
     prisma.expense.findMany({
+      /**
+       * ČÁSTEČNÉ ÚHRADY SE POČÍTAJÍ PO ČÁSTECH (zadání 25. 9. 2026: „ano,
+       * počítej jednotlivé úhrady"). V režimu „Uhrazeno" tedy hledáme doklady,
+       * u kterých v období odešly peníze - buď zapsanou úhradou, nebo (u
+       * starších dokladů bez jediné úhrady) překlopením na zaplaceno.
+       */
       where:
         f.zaklad === 'uhrazeno'
-          ? { ...firma, stav: 'ZARAZENY', paid: true, paidAt: rozsah }
+          ? {
+              ...firma,
+              stav: 'ZARAZENY',
+              OR: [{ paid: true, paidAt: rozsah }, { uhrady: { some: { datum: rozsah } } }],
+            }
           : { ...firma, stav: 'ZARAZENY', issueDate: rozsah },
       select: {
         issueDate: true,
         paidAt: true,
+        paid: true,
         amountExVatMinor: true,
+        vatRate: true,
         exchangeRate: true,
         caflouProjectId: true,
         projectName: true,
         category: { select: { name: true } },
+        uhrady: { select: { castkaMinor: true, datum: true } },
       },
     }),
   ]);
@@ -164,21 +177,51 @@ export async function nactiFinance(f: FinanceFiltr): Promise<FinancePrehled> {
   }
 
   for (const v of vydaje) {
-    const datum = f.zaklad === 'uhrazeno' ? v.paidAt : v.issueDate;
-    if (!datum) continue;
-    const castka = Math.round(v.amountExVatMinor * (v.exchangeRate || 1));
-    if (!vObdobi(datum)) {
-      predchozi.naklady += castka;
-      continue;
+    /**
+     * JEDEN DOKLAD = JEDNA NEBO VÍC ČÁSTEK (25. 9. 2026). Ve „Vystaveno" je
+     * to celý doklad ke dni dokladu; v „Uhrazeno" každá zapsaná úhrada ke dni,
+     * kdy peníze odešly. Doklad bez jediné zapsané úhrady se čte postaru -
+     * celá částka ke dni, kdy ho někdo označil jako uhrazený.
+     *
+     * ÚHRADA JE S DPH, náklady se počítají BEZ DPH, takže se každá částka
+     * přepočítá poměrem základu k celku - půlka faktury je půlka nákladu.
+     */
+    const kurz = v.exchangeRate || 1;
+    const celkemSDph = v.amountExVatMinor + Math.round((v.amountExVatMinor * v.vatRate) / 100);
+    const podilBezDph = celkemSDph > 0 ? v.amountExVatMinor / celkemSDph : 1;
+
+    const castiky: { datum: Date; castka: number }[] =
+      f.zaklad !== 'uhrazeno'
+        ? [{ datum: v.issueDate, castka: Math.round(v.amountExVatMinor * kurz) }]
+        : v.uhrady.length > 0
+          ? v.uhrady.map((u) => ({
+              datum: u.datum,
+              castka: Math.round(u.castkaMinor * podilBezDph * kurz),
+            }))
+          : v.paid && v.paidAt
+            ? [{ datum: v.paidAt, castka: Math.round(v.amountExVatMinor * kurz) }]
+            : [];
+
+    let zapocten = false;
+    for (const cast of castiky) {
+      if (!cast.datum || cast.castka === 0) continue;
+      if (!vObdobi(cast.datum)) {
+        predchozi.naklady += cast.castka;
+        continue;
+      }
+      souhrn.naklady += cast.castka;
+      if (!zapocten) {
+        // Doklad se do počtu započítá jednou, i když se platil třikrát.
+        souhrn.vydaju += 1;
+        zapocten = true;
+      }
+      const u = podleKlice.get(klicUseku(cast.datum, f.krok));
+      if (u) u.naklady += cast.castka;
+      const k = v.category?.name || 'Bez kategorie';
+      kategorie.set(k, (kategorie.get(k) ?? 0) + cast.castka);
+      const p = projekt(v.caflouProjectId, v.projectName);
+      if (p) p.naklady += cast.castka;
     }
-    souhrn.naklady += castka;
-    souhrn.vydaju += 1;
-    const u = podleKlice.get(klicUseku(datum, f.krok));
-    if (u) u.naklady += castka;
-    const k = v.category?.name || 'Bez kategorie';
-    kategorie.set(k, (kategorie.get(k) ?? 0) + castka);
-    const p = projekt(v.caflouProjectId, v.projectName);
-    if (p) p.naklady += castka;
   }
 
   for (const u of useky) u.zisk = u.obrat - u.naklady;

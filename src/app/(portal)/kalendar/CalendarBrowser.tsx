@@ -340,6 +340,23 @@ export function CalendarBrowser({
     druh?: DruhPorady;
   } | null>(null);
   const [hledani, setHledani] = useState('');
+  /**
+   * CELÁ OBRAZOVKA (zadání 25. 9. 2026: „udělej v kalendáři v prohlížeči
+   * nějakou ikonku pro full screen mód").
+   *
+   * Roztáhne se jen kalendář, ne celé okno prohlížeče: horní lišta portálu
+   * ani panely po stranách u plánování nepomáhají a týden se pak vejde celý.
+   * Escape (prohlížeč) i druhé klepnutí režim ukončí.
+   */
+  const sekceRef = useRef<HTMLElement | null>(null);
+  const [naCeleObrazovce, setNaCeleObrazovce] = useState(false);
+  useEffect(() => {
+    // Z celé obrazovky se dá odejít i Escapem nebo lištou prohlížeče -
+    // ikona to musí poznat, ne jen svoje vlastní klepnutí.
+    const zmena = () => setNaCeleObrazovce(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', zmena);
+    return () => document.removeEventListener('fullscreenchange', zmena);
+  }, []);
   /** Seznam výskytů v celém kalendáři (20. 9. 2026) - dá se zavřít křížkem. */
   const [seznamVyskytu, setSeznamVyskytu] = useState(true);
   const [detail, setDetail] = useState<CalendarEvent | null>(null);
@@ -836,8 +853,24 @@ export function CalendarBrowser({
     return `${od} – ${doo}`;
   }, [days, view, timezone, anchorIso]);
 
+  /** Prohlížeč umí celou obrazovku sám - jen mu řekneme, co roztáhnout. */
+  function prepniCelouObrazovku() {
+    const obal = sekceRef.current;
+    if (!obal) return;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    else void obal.requestFullscreen?.().catch(() => {});
+  }
+
   return (
-    <section data-kal-sekce className="flex flex-col gap-3 sm:gap-5">
+    <section
+      ref={sekceRef}
+      data-kal-sekce
+      className={`flex flex-col gap-3 sm:gap-5 ${
+        // Prvek na celé obrazovce nemá vlastní podklad - bez tohohle by
+        // prosvítala černá a kalendář by na ní plaval.
+        naCeleObrazovce ? 'bg-paper p-4 sm:p-6 overflow-y-auto' : ''
+      }`}
+    >
       {/* Hlavicka: pohled a posun v case.
 
           NA TELEFONU DVA ŘÁDKY MÍSTO ŠESTI (zadání 21. 9. 2026: „zredukujme
@@ -880,6 +913,37 @@ export function CalendarBrowser({
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
               <path d="M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0 1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" />
+            </svg>
+          </button>
+          {/* CELÁ OBRAZOVKA (25. 9. 2026) - vedle sóla, ať je po ruce
+              a nepřekáží. */}
+          <button
+            type="button"
+            onClick={prepniCelouObrazovku}
+            aria-pressed={naCeleObrazovce}
+            aria-label={naCeleObrazovce ? 'Zpět z celé obrazovky' : 'Celá obrazovka'}
+            title={naCeleObrazovce ? 'Zpět z celé obrazovky (Esc)' : 'Celá obrazovka'}
+            className={`inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border transition-colors ${
+              naCeleObrazovce
+                ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
+                : 'border-line text-muted hover:text-brand-purple hover:border-brand-purple'
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4"
+              aria-hidden="true"
+            >
+              {naCeleObrazovce ? (
+                <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+              ) : (
+                <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+              )}
             </svg>
           </button>
           <button

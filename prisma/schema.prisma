@@ -2389,6 +2389,10 @@ enum FeedScope {
   ALL    // vsechna studia
   MIMO   // jen Mimo studio (20. 9. 2026 - kazdy kalendar zvlast)
   PORADY // jen porady, na kterych je vlastnik odkazu (21. 9. 2026)
+  /// Jen kalendar Dalsi schuzky (25. 9. 2026: nesel pridat do Apple
+  /// kalendare, protoze pro nej odber vubec neexistoval). Vidi ho
+  /// Zuzo-labuzo a produkce, stejne jako v portalu.
+  SCHUZKY
 }
 
 /// Osobni ICS odkaz. Nahodny, odvolatelny, filtruje se podle prav vlastnika -

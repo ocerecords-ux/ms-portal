@@ -4,7 +4,7 @@ import { buildIcs, type IcsEvent } from '@/lib/ics';
 import { canViewCalendar } from '@/lib/roles';
 import { BLOCK_KIND_LABELS } from '@/lib/calendar';
 import { popisDruhu } from '@/lib/nepritomnost';
-import { BARVA_PORAD, platnyOdkaz } from '@/lib/porady';
+import { BARVA_PORAD, BARVA_SCHUZEK, platnyOdkaz } from '@/lib/porady';
 import { nactiPorady } from '@/lib/poradyServer';
 
 /**
@@ -83,8 +83,37 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   // PORADY (21. 9. 2026) - vlastní kalendář, jen porady, na kterých je
   // vlastník odkazu. Odkaz na videohovor jde do místa: v Apple kalendáři na
   // něj jde rovnou klepnout. V popisu jsou účastníci, nic víc.
+  /**
+   * SCHŮZKY (25. 9. 2026: „nemůžu si přidat kalendář schůzky do svého Apple
+   * kalendáře"). Nešlo to proto, že odběr pro ně vůbec neexistoval - kalendář
+   * Další schůzky přibyl 23. 9. a ICS o něm nevědělo.
+   *
+   * Role se sem schválně posílá: schůzky vidí celá produkce, ne jen pozvaní
+   * (stejné pravidlo jako v portálu, viz lib/poradyServer.ts).
+   */
+  if (feed.scope === 'SCHUZKY') {
+    const vse = tym ? await nactiPorady(kdo.id, od, doo, kdo.role) : [];
+    const schuzky = vse.filter((p) => p.druh === 'SCHUZKA');
+    return odpoved(
+      'MS kalendář — Schůzky',
+      schuzky.map((p) => ({
+        uid: `schuzka-${p.id.replace(':', '-')}@msportal.cz`,
+        start: new Date(p.start),
+        end: new Date(p.end),
+        summary: p.nazev,
+        location: platnyOdkaz(p.odkazVideo),
+        description: [p.ucastnici.map((u) => u.label).join(', '), p.poznamka].filter(Boolean).join('\n'),
+        updatedAt: new Date(p.upraveno),
+      })),
+      feed.id,
+      BARVA_SCHUZEK,
+    );
+  }
+
   if (feed.scope === 'PORADY') {
-    const porady = tym ? await nactiPorady(kdo.id, od, doo) : [];
+    // Bez role: porada je jen pro pozvané, ani správce kalendáře do cizí
+    // nevidí. Schůzky mají vlastní odběr výš.
+    const porady = (tym ? await nactiPorady(kdo.id, od, doo) : []).filter((p) => p.druh !== 'SCHUZKA');
     return odpoved(
       'MS kalendář — Porady',
       porady.map((p) => ({

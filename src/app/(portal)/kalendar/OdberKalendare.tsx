@@ -1,5 +1,5 @@
 'use client';
-import { BARVA_PORAD } from '@/lib/porady';
+import { BARVA_PORAD, BARVA_SCHUZEK } from '@/lib/porady';
 
 import { useEffect, useState } from 'react';
 
@@ -27,7 +27,7 @@ import { useEffect, useState } from 'react';
 type Rozsah = 'ZVLAST' | 'ALL' | 'MINE';
 type Odber = {
   id: string;
-  scope: 'ALL' | 'STUDIO' | 'MINE' | 'MIMO' | 'PORADY';
+  scope: 'ALL' | 'STUDIO' | 'MINE' | 'MIMO' | 'PORADY' | 'SCHUZKY';
   studioId: string | null;
   url: string;
   naposledy: string | null;
@@ -58,6 +58,8 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
           ? 'Mimo studio'
           : o.scope === 'PORADY'
             ? 'Porady'
+            : o.scope === 'SCHUZKY'
+              ? 'Schůzky'
           : `Studio ${kratce(studios.find((s) => s.id === o.studioId)?.name ?? '')}`;
 
   async function nactiOdbery() {
@@ -107,6 +109,14 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
           { klic: 'mimo', nazev: 'Mimo studio', barva: BARVA_MIMO, telo: { scope: 'MIMO' } },
           // Porady (21. 9. 2026) - jen ty, na kterých je ten, kdo odebírá.
           { klic: 'porady', nazev: 'Porady', barva: BARVA_PORAD, telo: { scope: 'PORADY' } },
+          /**
+           * Schůzky (25. 9. 2026: „nemůžu si přidat kalendář schůzky do svého
+           * Apple kalendáře"). Kalendář Další schůzky přibyl později než
+           * odběry a tenhle řádek do nich nikdo nedopsal - odkaz pro něj
+           * tedy vůbec nešel vyrobit. Komu schůzky nepatří, dostane prázdný
+           * kalendář; o tom, co v něm je, rozhoduje server.
+           */
+          { klic: 'schuzky', nazev: 'Schůzky', barva: BARVA_SCHUZEK, telo: { scope: 'SCHUZKY' } },
         ];
         const hotove = await Promise.all(
           polozky.map(async (p) => ({ klic: p.klic, nazev: p.nazev, barva: p.barva, ...(await pozadej(p.telo)) })),
