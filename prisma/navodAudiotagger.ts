@@ -70,7 +70,7 @@ V seznamu záznamů se dá na chybu **kliknout a skočit na to místo v nahrávc
 
 # Kde jste skončili (probarvené stopy)
 
-Každá stopa zůstává **probarvená fialově až tam, kam jste ji doposlouchali** — i když ji zastavíte, přepnete na jinou nebo AudioTagger zavřete a otevřete znovu. Vedle názvu stopy je vidět, kolik procent z ní máte za sebou. Stopa poslechnutá do konce je **celá zelená** s nápisem „✓ poslechnuto".
+U každé stopy je vedle názvu i její **celková délka** a v hlavičce Zvukové stopy svítí, **kolik zbývá doposlechnout** — součet stop, které ještě nemáte odškrtnuté, zmenšený o to, co už z rozposlouchané stopy zaznělo. Dokud portál délky všech stop nezjistí, je za číslem tři tečky. Každá stopa zůstává **probarvená fialově až tam, kam jste ji doposlouchali** — i když ji zastavíte, přepnete na jinou nebo AudioTagger zavřete a otevřete znovu. Vedle názvu stopy je vidět, kolik procent z ní máte za sebou. Stopa poslechnutá do konce je **celá zelená** s nápisem „✓ poslechnuto".
 
 - Počítá se jen skutečné přehrávání — kliknutí dopředu do křivky samo o sobě nic neprobarví.
 - Drží se nejdál dosažené místo; když se vrátíte o kus zpátky, probarvení nezmizí.

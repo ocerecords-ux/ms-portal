@@ -420,6 +420,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'How much of the track you have listened to',
   },
   'preposlech.kreslimKrivku': { cs: 'kreslím křivku…', en: 'drawing the waveform…' },
+  /* Délky stop a kolik zbývá doposlechnout (25. 9. 2026). */
+  'preposlech.delkaStopy': { cs: 'Délka stopy', en: 'Track length' },
+  'preposlech.zbyvaDoposlechnout': { cs: 'Zbývá doposlechnout', en: 'Left to listen' },
+  'preposlech.zbyvaVse': { cs: 'Doposlechnuto vše', en: 'All listened' },
+  'preposlech.zbyvaPocitam': {
+    cs: 'Zjišťuji délky stop…',
+    en: 'Reading track lengths…',
+  },
   'preposlech.zobrazitZaznamy': {
     cs: 'Zobrazit záznamy chyb a historii',
     en: 'Show the tags and the history',

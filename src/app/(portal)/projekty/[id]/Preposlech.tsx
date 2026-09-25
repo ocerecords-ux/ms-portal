@@ -128,6 +128,38 @@ function cas(sec: number): string {
   return `${pad2(m)}:${s.toFixed(1).padStart(4, '0')}`;
 }
 
+/**
+ * DÉLKA STOPY BEZ STAHOVÁNÍ CELÉHO SOUBORU (zadání 25. 9. 2026: „potřebuji,
+ * ať se u jednotlivých tracků v AudioTaggeru zobrazují celkové časy těch
+ * tracků").
+ *
+ * `preload = 'metadata'` si z audia vezme jen hlavičku, ne celou stopu -
+ * u dvanácti hodinové knihy by jinak prohlížeč stáhl gigabajty jen proto,
+ * aby ukázal čísla. Když se délku zjistit nepodaří (formát, výpadek Disku),
+ * vrátí se null a u stopy se prostě nic neukáže.
+ */
+function delkaZvuku(url: string): Promise<number | null> {
+  return new Promise((hotovo) => {
+    const zvuk = new Audio();
+    zvuk.preload = 'metadata';
+    const uklid = () => {
+      zvuk.onloadedmetadata = null;
+      zvuk.onerror = null;
+      zvuk.removeAttribute('src');
+    };
+    zvuk.onloadedmetadata = () => {
+      const d = zvuk.duration;
+      uklid();
+      hotovo(Number.isFinite(d) && d > 0 ? d : null);
+    };
+    zvuk.onerror = () => {
+      uklid();
+      hotovo(null);
+    };
+    zvuk.src = url;
+  });
+}
+
 function hms(sec: number): string {
   const cele = Math.max(0, Math.round(sec));
   return `${pad2(Math.floor(cele / 3600))}:${pad2(Math.floor((cele % 3600) / 60))}:${pad2(cele % 60)}`;
@@ -516,6 +548,55 @@ export function Preposlech({
   const [hotoveStopy, setHotoveStopy] = useState<Set<number>>(
     () => new Set(pocatecniStav.hotoveStopy ?? []),
   );
+
+  /**
+   * DÉLKY JEDNOTLIVÝCH STOP (25. 9. 2026), klíč je pořadí stopy od 1.
+   * Zjišťují se jedna po druhé z hlavičky souboru - najednou by dvanáct
+   * požadavků na Disk zbytečně ucpalo přehrávání.
+   */
+  const [delkyStop, setDelkyStop] = useState<Record<number, number>>({});
+  const zjistujiDelky = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    let zrusit = false;
+    const nactiPostupne = async () => {
+      for (let i = 0; i < stopy.length; i += 1) {
+        if (zrusit) return;
+        const stopa = stopy[i];
+        const klic = `${i + 1}:${stopa.url}`;
+        if (zjistujiDelky.current.has(klic)) continue;
+        zjistujiDelky.current.add(klic);
+        const delkaStopy = await delkaZvuku(stopa.url);
+        if (zrusit) return;
+        if (delkaStopy) setDelkyStop((p) => ({ ...p, [i + 1]: delkaStopy }));
+      }
+    };
+    void nactiPostupne();
+    return () => {
+      zrusit = true;
+    };
+  }, [stopy]);
+
+  /**
+   * KOLIK ZBÝVÁ DOPOSLECHNOUT (zadání 25. 9. 2026: „a pak někam nahoru dát
+   * celkový čas toho, kolik toho chybí doposlechnout").
+   *
+   * Odškrtnutá stopa se nepočítá vůbec; u rozposlouchané se bere jen ten
+   * kus, který ještě nezazněl. Dokud nejsou známé délky všech stop, je číslo
+   * neúplné - a je to u něj napsané, ať nikoho nepřekvapí, že povyskočí.
+   */
+  const zbyva = useMemo(() => {
+    let sekundy = 0;
+    let zname = 0;
+    for (let i = 0; i < stopy.length; i += 1) {
+      const delkaStopy = delkyStop[i + 1];
+      if (!delkaStopy) continue;
+      zname += 1;
+      if (hotoveStopy.has(i + 1)) continue;
+      sekundy += delkaStopy * (1 - Math.min(1, Math.max(0, dosazeno[i + 1] ?? 0)));
+    }
+    return { sekundy, uplne: stopy.length > 0 && zname === stopy.length };
+  }, [stopy, delkyStop, hotoveStopy, dosazeno]);
 
   const prepniHotovo = useCallback(
     (index: number) => {
@@ -1878,7 +1959,13 @@ export function Preposlech({
       <audio
         ref={audioRef}
         preload="metadata"
-        onLoadedMetadata={(e) => setDelka(e.currentTarget.duration || 0)}
+        onLoadedMetadata={(e) => {
+          const d = e.currentTarget.duration || 0;
+          setDelka(d);
+          // Délku hrané stopy máme z první ruky - ať se nezjišťuje podruhé
+          // (25. 9. 2026).
+          if (aktivni !== null && d > 0) setDelkyStop((p) => ({ ...p, [aktivni + 1]: d }));
+        }}
         onTimeUpdate={(e) => setPozice(e.currentTarget.currentTime)}
         onPlay={() => setHraje(true)}
         onPause={() => setHraje(false)}
@@ -2374,7 +2461,34 @@ export function Preposlech({
 
           <div className={`bg-surface rounded-card border border-line shadow-sm overflow-hidden ${vyskaSekce ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
             <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-3 flex-wrap shrink-0">
-              <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('preposlech.zvukoveStopy')}</h3>
+              <span className="flex items-center gap-2.5 flex-wrap min-w-0">
+                <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('preposlech.zvukoveStopy')}</h3>
+                {/* Kolik toho zbývá doposlechnout (25. 9. 2026). */}
+                {stopy.length > 0 && (
+                  <span
+                    title={
+                      zbyva.uplne
+                        ? t('preposlech.zbyvaDoposlechnout')
+                        : t('preposlech.zbyvaPocitam')
+                    }
+                    className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[11px] font-heading font-semibold ${
+                      zbyva.sekundy < 1 && zbyva.uplne
+                        ? 'bg-okTint text-status-done'
+                        : 'bg-tint text-brand-purple'
+                    }`}
+                  >
+                    {zbyva.sekundy < 1 && zbyva.uplne ? (
+                      t('preposlech.zbyvaVse')
+                    ) : (
+                      <>
+                        <span className="font-normal text-muted">{t('preposlech.zbyvaDoposlechnout')}</span>
+                        <span className="tabular-nums">{hms(zbyva.sekundy)}</span>
+                        {!zbyva.uplne && <span className="text-muted">…</span>}
+                      </>
+                    )}
+                  </span>
+                )}
+              </span>
               {!jenPoslech && (
                 <span className="flex items-center gap-3">
                   {slozkaUrl && (
@@ -2465,6 +2579,15 @@ export function Preposlech({
                     >
                       <span className="text-[11px] font-heading font-bold tabular-nums bg-field rounded px-1.5 py-0.5">{pad2(index + 1)}</span>
                       <span className="flex-1 min-w-0 text-xs font-body text-ink truncate">{stopa.name}</span>
+                      {/* Celkový čas stopy (25. 9. 2026). */}
+                      {delkyStop[index + 1] ? (
+                        <span
+                          title={t('preposlech.delkaStopy')}
+                          className="shrink-0 text-[10px] font-heading text-muted tabular-nums"
+                        >
+                          {hms(delkyStop[index + 1])}
+                        </span>
+                      ) : null}
                       {/**
                        * Záložka jako v knize (zadání 11. 9. 2026: „pracoval
                        * bych s tím jako s fyzickou záložkou v knize").
