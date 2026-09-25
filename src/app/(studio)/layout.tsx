@@ -6,10 +6,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { odkazNaFotku } from '@/lib/fotky';
 import { initials } from '@/lib/chat';
-import { nactiJazyk } from '@/lib/jazykServer';
-import { prelozit } from '@/lib/jazyk';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 import { JazykProvider } from '@/app/(portal)/components/JazykProvider';
-import { PrepinacJazyka } from '@/app/(portal)/components/PrepinacJazyka';
 import { ThemeToggle } from '@/app/(portal)/components/ThemeToggle';
 import { OdhlasitSe } from './studio/OdhlasitSe';
 
@@ -19,11 +17,10 @@ import { OdhlasitSe } from './studio/OdhlasitSe';
  *
  * VLASTNÍ SKUPINA, NE ZÁLOŽKA V PORTÁLU. Portálový layout tahá lištu, úkoly,
  * chat, zvonek a rychlé volby - tedy přesně to, co člověk zvenčí vidět nemá.
- * Tady je jen hlavička s názvem studia, přepínačem jazyka a odhlášením.
+ * Tady je jen hlavička s logem, nápovědou, přihlášeným člověkem a odhlášením.
  *
- * JAZYK SE ŘÍDÍ PŘEPÍNAČEM PORTÁLU (upřesnění 25. 9. 2026: „tam to může být
- * primárně podle jazyka, který je zrovna zaplý v portálu"). Londýnští klienti
- * si přepnou EN a mají celý kalendář anglicky; my ho vidíme česky.
+ * CELÁ SEKCE JE ANGLICKY, a to britsky (upřesnění 25. 9. 2026). Jazyk se
+ * tu nepřepíná - viz poznámka u proměnné `jazyk` níž.
  */
 export const metadata: Metadata = {
   title: 'Studio booking',
@@ -43,16 +40,15 @@ export default async function StudioLayout({ children }: { children: React.React
   if (!SMI.includes(session.user.role)) redirect('/projekty');
 
   /**
-   * KLIENT STUDIA VIDÍ VŽDYCKY ANGLIČTINU (upřesnění 25. 9. 2026: „na straně
-   * klienta nech jen zaplou angličtinu. Myslel jsem podle nastavení portálu
-   * jen tu administraci z naší strany").
+   * CELÁ SEKCE JE VÝHRADNĚ ANGLICKY (upřesnění 25. 9. 2026: „žádné přepínání
+   * jazyka taky v tom rezervačním systému. Musí to být výhradně v angličtině.
+   * Britské.").
    *
-   * Muzikant z Londýna nemá co řešit, že portál někde uvnitř umí i česky -
-   * a přepínač, který mu celý kalendář přehodí do jazyka, kterému nerozumí,
-   * je past, ne funkce. Náš tým si kalendář otevírá v jazyce portálu.
+   * Platí to i pro nás: kdo se sem podívá, má vidět přesně to, co uvidí
+   * klient studia - jinak se nepozná, že někde zůstal český text. Přepínač
+   * jazyka tu proto není vůbec; jazyk portálu se sem nepromítá.
    */
-  const klientStudia = session.user.role === 'BOOKING';
-  const jazyk = klientStudia ? 'en' : nactiJazyk();
+  const jazyk: Jazyk = 'en';
 
   /**
    * KDO JE PŘIHLÁŠENÝ (zadání 25. 9. 2026: „pak by tam měl být vidět uživatel,
@@ -90,12 +86,13 @@ export default async function StudioLayout({ children }: { children: React.React
             <span className="flex items-center gap-2 shrink-0">
               <Link
                 href="/studio/napoveda"
+                title="Help"
+                aria-label="Help"
                 className="rounded-pill border border-white/25 px-3 py-1 text-[11px] font-heading font-semibold text-white/85 hover:text-white hover:border-white/50 transition-colors no-underline"
               >
                 ?
               </Link>
-              {!klientStudia && <PrepinacJazyka />}
-              <ThemeToggle />
+              <ThemeToggle anglicky />
               {/* Přihlášený člověk - klepnutí vede na jeho účet a upozornění. */}
               <Link
                 href="/studio/ucet"

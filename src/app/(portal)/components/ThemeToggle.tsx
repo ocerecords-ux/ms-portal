@@ -15,7 +15,15 @@ import { KLIC_MOTIVU, type Motiv, systemovyMotiv, ulozMotiv, nactiMotiv } from '
  * Vlastní přepnutí třídy .dark na <html> dělá už skript v layout.tsx, který
  * běží před vykreslením stránky. Tady se jen mění hodnota a ukládá volba.
  */
-export function ThemeToggle() {
+export function ThemeToggle({
+  /**
+   * Popisky anglicky (25. 9. 2026) - v sekci rezervací studia nesmí být ani
+   * bublina česky („musí to být výhradně v angličtině. Britské").
+   */
+  anglicky = false,
+}: {
+  anglicky?: boolean;
+} = {}) {
   // Na serveru žádný motiv neznáme - a kdybychom hádali, blikla by po načtení
   // špatná ikona. Proto se ikona dokreslí až v prohlížeči.
   const [motiv, setMotiv] = useState<Motiv | null>(null);
@@ -47,7 +55,13 @@ export function ThemeToggle() {
   }
 
   const tmavy = motiv === 'tmavy';
-  const popis = tmavy ? 'Přepnout na světlý režim' : 'Přepnout na tmavý režim';
+  const popis = anglicky
+    ? tmavy
+      ? 'Switch to light mode'
+      : 'Switch to dark mode'
+    : tmavy
+      ? 'Přepnout na světlý režim'
+      : 'Přepnout na tmavý režim';
 
   return (
     <button

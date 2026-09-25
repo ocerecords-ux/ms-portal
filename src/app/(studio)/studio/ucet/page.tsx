@@ -3,8 +3,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { prelozit } from '@/lib/jazyk';
-import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 import { UcetForm } from './UcetForm';
 
 /**
@@ -21,7 +20,8 @@ export default async function UcetStudia() {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const jazyk = session.user.role === 'BOOKING' ? 'en' : nactiJazyk();
+  // Rezervační sekce je výhradně anglicky (25. 9. 2026) - viz layout.
+  const jazyk: Jazyk = 'en';
   const ucet = (await prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
