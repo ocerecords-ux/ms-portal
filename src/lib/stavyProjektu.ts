@@ -165,6 +165,35 @@ const STAVY_REKLAMY = [
 ];
 
 /**
+ * JAK SE STAV JMENUJE SMĚREM KE KLIENTOVI REKLAMY (zadání 25. 9. 2026:
+ * „klienti reklam by měli vidět jen tyto stavy: V přípravě, Plánujeme,
+ * Natáčíme, Dokončeno - ke schválení (tady bude svítit klientovi Ke
+ * schválení), Schváleno - k fakturaci (tenhle a všechny následující stavy
+ * budou pro klienta jen Dokončeno)").
+ *
+ * Naše kuchyně - fakturace, opravy, střih - do klientova přehledu nepatří.
+ * Zajímá ho, jestli se připravuje, plánuje, točí, jestli má něco schválit,
+ * a jestli je hotovo.
+ *
+ * Počítá se to podle POŘADÍ v cestě projektu, ne výčtem: až mezi stavy něco
+ * přibude za „Schváleno - k fakturaci", spadne to pod „Dokončeno" samo.
+ */
+const STAV_HOTOVO_OD = 'Schváleno - k fakturaci';
+
+export function stavProKlientaReklamy(nazev: string | null | undefined): string {
+  const stav = (nazev ?? '').trim();
+  if (!stav) return '';
+  if (stav === 'Dokončeno - ke schválení') return 'Ke schválení';
+
+  const odkud = NAZVY.indexOf(STAV_HOTOVO_OD);
+  const kde = NAZVY.indexOf(stav);
+  // Stav, který v naší cestě není (starý přenos z Caflou), se nepřekřtívá -
+  // vymyslet si u něj „Dokončeno" by mohlo lhát.
+  if (odkud >= 0 && kde >= odkud) return 'Dokončeno';
+  return stav;
+}
+
+/**
  * Které stavy nabídnout. U reklamní firmy užší výběr, jinak všechny.
  *
  * Stav, který projekt UŽ MÁ, se nabízí vždycky - i kdyby do výběru nepatřil.

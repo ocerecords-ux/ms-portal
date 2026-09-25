@@ -491,6 +491,11 @@ model Order {
   deadline             DateTime?
   note                 String?
   preferredNarrator    String?          // "Preferovany herec" - preni klienta, Mediaspace ho pak potvrdi nebo zmeni
+
+  /// CO SI KLIENT U REKLAMY OBJEDNAL (zadani 25. 9. 2026) - klice sluzeb
+  /// z lib/sluzbyReklamy.ts (natáčení voiceoveru, zvuková postprodukce,
+  /// sound design). Muze jich byt vic naraz; u audioknihy zustava prazdne.
+  sluzby               String[]         @default([])
   attachmentUrl        String?
   attachmentName       String?
 

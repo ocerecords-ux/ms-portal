@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { nazvySluzeb, sluzbaPodleKlice } from '@/lib/sluzbyReklamy';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
@@ -39,6 +40,8 @@ const orderSchema = z.object({
   deadline: z.string().optional(),
   note: z.string().optional(),
   preferredNarrator: z.string().optional(),
+  /** Klíče služeb u reklamy - viz lib/sluzbyReklamy.ts. */
+  sluzby: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
   // Úvod a závěr audioknihy (zadání 22. 9. 2026, Audiotéka).
   autorKnihy: z.string().trim().max(300).optional(),
   prekladatelKnihy: z.string().trim().max(300).optional(),
@@ -70,11 +73,18 @@ export async function POST(req: NextRequest) {
     nakladatelstviKnihy: formData.get('nakladatelstviKnihy') ?? undefined,
     uvodKnihy: formData.get('uvodKnihy') ?? undefined,
     zaverKnihy: formData.get('zaverKnihy') ?? undefined,
+    // Co si klient u reklamy objednal (25. 9. 2026) - může jich být víc.
+    sluzby: formData.getAll('sluzby').map((s) => String(s)),
   });
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
   }
   const { kind, note } = parsed.data;
+  /**
+   * SLUŽBY U REKLAMY (zadání 25. 9. 2026). Bere se jen to, co číselník zná -
+   * co přijde odjinud, se zahodí, ať se do projektu nedostane nesmysl.
+   */
+  const sluzbyKlice = (parsed.data.sluzby ?? []).filter((k) => Boolean(sluzbaPodleKlice(k)));
   // Název projektu i objednávky držíme velkými (zadání 22. 9. 2026).
   const title = nazevProjektuVelky(parsed.data.title);
   const isAudiobook = kind === 'AUDIOBOOK';
@@ -177,6 +187,7 @@ export async function POST(req: NextRequest) {
       deadline,
       note: note || null,
       preferredNarrator,
+      sluzby: sluzbyKlice,
       attachmentUrl: attachment?.url ?? null,
       attachmentName: attachment?.name ?? null,
       ...knihaUdaje,
@@ -429,6 +440,8 @@ export async function POST(req: NextRequest) {
       // Úvod a závěr audioknihy jdou týmu do mailu k poznámce (22. 9. 2026).
       note:
         [
+          // Co si klient u reklamy objednal - do mailu hned nahoru (25. 9. 2026).
+          sluzbyKlice.length > 0 ? `Objednané služby: ${nazvySluzeb(sluzbyKlice).join(', ')}` : null,
           note || null,
           knihaUdaje.uvodKnihy ? `Úvod: ${knihaUdaje.uvodKnihy}` : null,
           knihaUdaje.zaverKnihy ? `Závěr: ${knihaUdaje.zaverKnihy}` : null,

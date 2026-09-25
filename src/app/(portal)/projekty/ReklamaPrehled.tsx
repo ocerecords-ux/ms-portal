@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { DisplayProject } from '@/lib/projektyTypy';
 import { StatusPill, formatDate } from './shared';
+import { stavProKlientaReklamy } from '@/lib/stavyProjektu';
 import { KresbaIkony } from '@/lib/ikonyTypu';
 import { useJazyk, usePreklad } from '../components/JazykProvider';
 
@@ -214,7 +215,12 @@ function Tabulka({
                     </Link>
                   </td>
                   <td className="px-4 py-2.5 align-middle">
-                    <StatusPill finished={p.finished} statusName={p.statusName} />
+                    {/* Klient reklamy vidí jen svých pět stavů (25. 9. 2026). */}
+                    <StatusPill
+                      finished={p.finished}
+                      statusName={p.statusName}
+                      popisek={stavProKlientaReklamy(p.statusName)}
+                    />
                   </td>
                   <td className="px-4 py-2.5 align-middle text-sm font-body text-muted">
                     {p.herci && p.herci.length > 0

@@ -4,39 +4,72 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DatumPole } from '@/components/DatumPole';
+import { KresbaIkony } from '@/lib/ikonyTypu';
+import { SLUZBY_REKLAMY, nazvySluzeb } from '@/lib/sluzbyReklamy';
 
 /**
- * Objednavka reklamy (zadani 12. 9. 2026) - klienti, kteri poptavaji jen
- * reklamy, nepotrebuji normostrany/cenu/herce jako u audioknihy. Zatim jen
- * zakladni pole (nazev, termin, poznamka, priloha) - zbytek si Mediaspace
- * s temito klienty vyspecifikuje pozdeji, viz OrderKind ve schema.prisma.
+ * OBJEDNÁVKA REKLAMY JAKO PRŮVODCE (zadání 25. 9. 2026: „pojďme hromadně
+ * předělat objednávky u klientů reklam. Tam to bude hodně jiné než u klientů
+ * audioknih… možná bych ty položky, co má klient vyplnit, mohly skákat jako
+ * průvodce, krok za krokem").
+ *
+ * Jedna otázka na obrazovku: název, co od nás klient chce, herec, termín.
+ * Dlouhý formulář, ve kterém je půlka polí pro někoho jiného, odradí; takhle
+ * je pokaždé vidět jen to, na co se zrovna odpovídá, a nahoře kolik toho
+ * zbývá.
+ *
+ * CO SE PTÁ POVINNĚ: jenom název a aspoň jedna služba. Herce ani termín klient
+ * vědět nemusí - od toho jsme my; oba kroky se dají přeskočit.
+ *
+ * Ceny tu zatím nejsou (zadání tentýž den: „uděláme tam nějaké výpočty ceny
+ * apod." - až se doladí). Číselník služeb v lib/sluzbyReklamy.ts už na ceník
+ * odkazuje, takže se cena doplní tam, ne tady ve formuláři.
  */
+const KROKY = ['nazev', 'sluzby', 'herec', 'termin', 'shrnuti'] as const;
+type Krok = (typeof KROKY)[number];
+
+const NADPISY: Record<Krok, { nadpis: string; podnadpis: string }> = {
+  nazev: { nadpis: 'Jak se zakázka jmenuje?', podnadpis: 'Stačí pracovní název, ať ji oba poznáme.' },
+  sluzby: { nadpis: 'Co pro vás máme udělat?', podnadpis: 'Vyberte všechno, co k zakázce patří.' },
+  herec: { nadpis: 'Máte představu o hlasu?', podnadpis: 'Když ne, nevadí — vybereme a pošleme ukázky.' },
+  termin: { nadpis: 'Do kdy to potřebujete?', podnadpis: 'Termín odevzdání hotového zvuku.' },
+  shrnuti: { nadpis: 'Sedí to?', podnadpis: 'Ještě můžete přidat poznámku nebo podklady.' },
+};
+
 export function AdOrderForm() {
   const router = useRouter();
+  const [krok, setKrok] = useState<Krok>('nazev');
   const [title, setTitle] = useState('');
+  const [sluzby, setSluzby] = useState<string[]>([]);
+  const [herec, setHerec] = useState('');
   const [deadline, setDeadline] = useState('');
   const [note, setNote] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  /**
-   * Odebrání přílohy (24. 9. 2026). Vstup se přitom musí vynulovat, jinak by
-   * se tentýž soubor nedal vybrat znovu - onChange se při stejné hodnotě
-   * nespustí.
-   */
   const vstupSouboru = useRef<HTMLInputElement | null>(null);
-
-  function odeberSoubor() {
-    setFile(null);
-    if (vstupSouboru.current) vstupSouboru.current.value = '';
-  }
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [varovani, setVarovani] = useState<string | null>(null);
   const [lastTitle, setLastTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const index = KROKY.indexOf(krok);
+  const muzeDal =
+    (krok === 'nazev' && title.trim().length > 0) ||
+    (krok === 'sluzby' && sluzby.length > 0) ||
+    krok === 'herec' ||
+    krok === 'termin';
+
+  function odeberSoubor() {
+    setFile(null);
+    if (vstupSouboru.current) vstupSouboru.current.value = '';
+  }
+
+  function prepniSluzbu(klic: string) {
+    setSluzby((s) => (s.includes(klic) ? s.filter((k) => k !== klic) : [...s, klic]));
+  }
+
+  async function odesli() {
     setError(null);
     setSubmitting(true);
     try {
@@ -45,7 +78,8 @@ export function AdOrderForm() {
       formData.set('title', title);
       formData.set('deadline', deadline);
       formData.set('note', note);
-      // Priloha jde do uloziste zvlast - viz nahrajPrilohu nize.
+      formData.set('preferredNarrator', herec);
+      for (const k of sluzby) formData.append('sluzby', k);
       if (file) {
         const klic = await nahrajPrilohu(file);
         formData.set('attachmentKey', klic);
@@ -54,31 +88,24 @@ export function AdOrderForm() {
 
       const res = await fetch('/api/orders', { method: 'POST', body: formData });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(body.error || 'Objednávku se nepodařilo odeslat.');
-      }
+      if (!res.ok) throw new Error(body.error || 'Objednávku se nepodařilo odeslat.');
+
       setLastTitle(title);
-      // Objednavka projde i tehdy, kdyz se prilohu nepodari ulozit - ale
-      // odesilatel se to musi dozvedet (oprava 9. 9. 2026).
       setVarovani(body?.varovani ?? null);
       setDone(true);
       setTitle('');
+      setSluzby([]);
+      setHerec('');
       setDeadline('');
       setNote('');
       setFile(null);
+      setKrok('nazev');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Objednávku se nepodařilo odeslat.');
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function handleFileDrop(e: React.DragEvent<HTMLDivElement>) {
-    e.preventDefault();
-    setDragOver(false);
-    const dropped = e.dataTransfer.files?.[0];
-    if (dropped) setFile(dropped);
   }
 
   if (done) {
@@ -117,130 +144,231 @@ export function AdOrderForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-brand-purple rounded-card p-6 sm:p-10 text-white max-w-2xl mx-auto flex flex-col gap-5">
-      <div>
-        <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka</h2>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (krok === 'shrnuti') void odesli();
+        else if (muzeDal) setKrok(KROKY[index + 1]);
+      }}
+      className="bg-brand-purple rounded-card p-6 sm:p-10 text-white max-w-2xl mx-auto flex flex-col gap-6"
+    >
+      {/* Kolik toho zbývá - proužek a krok X ze Y. */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs font-heading text-brand-green uppercase tracking-wide">
+            Krok {index + 1} z {KROKY.length}
+          </span>
+          <span className="text-xs font-body text-white/70">Objednávka</span>
+        </div>
+        <div className="h-1.5 rounded-pill bg-white/15 overflow-hidden">
+          <div
+            className="h-full bg-brand-green transition-all duration-300"
+            style={{ width: `${((index + 1) / KROKY.length) * 100}%` }}
+          />
+        </div>
       </div>
 
-      <Field label="Název" required>
+      <div>
+        <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">{NADPISY[krok].nadpis}</h2>
+        <p className="text-white/85 text-sm font-body mt-1.5 mb-0">{NADPISY[krok].podnadpis}</p>
+      </div>
+
+      {krok === 'nazev' && (
         <input
-          required
+          autoFocus
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="např. Vánoční kampaň 2026"
           className="input"
         />
-      </Field>
+      )}
 
-      <Field label="Datum odevzdání">
-        <DatumPole value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
-      </Field>
-
-      <Field label="Poznámka">
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Cokoliv, co bychom měli vědět k objednávce…"
-          className="input min-h-[90px] font-body resize-y"
-        />
-      </Field>
-
-      <Field label="Příloha">
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleFileDrop}
-          className={`flex flex-col items-center justify-center gap-2 border-[1.5px] border-dashed rounded-lg px-4 py-8 text-sm text-white/85 text-center transition-colors ${
-            dragOver ? 'border-white bg-white/15' : 'border-brand-green bg-white/5'
-          }`}
-        >
-          <span className="truncate">
-            {file ? file.name : dragOver ? 'Pusťte soubor sem…' : 'Přetáhněte soubor sem, nebo ho vyberte'}
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <label className="shrink-0 bg-white text-brand-purpleDeep rounded-md px-3 py-1.5 text-xs font-heading font-semibold cursor-pointer">
-              {file ? 'Vybrat jiný' : 'Vybrat soubor'}
-              <input
-                ref={vstupSouboru}
-                type="file"
-                className="hidden"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
-            {/* Odebrat přílohu (zadání 24. 9. 2026: „když klient nahraje
-                omylem nějaké PDF, mělo by jít z formuláře i smazat"). */}
-            {file && (
+      {krok === 'sluzby' && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {SLUZBY_REKLAMY.map((s) => {
+            const vybrano = sluzby.includes(s.klic);
+            return (
               <button
+                key={s.klic}
                 type="button"
-                onClick={odeberSoubor}
-                className="shrink-0 border border-white/60 text-white rounded-md px-3 py-1.5 text-xs font-heading font-semibold hover:bg-white/15 transition-colors"
+                onClick={() => prepniSluzbu(s.klic)}
+                aria-pressed={vybrano}
+                className={`text-left rounded-card border-2 p-4 flex flex-col gap-2 transition-colors ${
+                  vybrano
+                    ? 'border-brand-green bg-brand-green/15'
+                    : 'border-white/25 bg-white/5 hover:border-white/60'
+                }`}
               >
-                Odebrat
+                <span
+                  className={`grid place-items-center w-10 h-10 rounded-pill ${
+                    vybrano ? 'bg-brand-green text-brand-purpleDark' : 'bg-white/10 text-white'
+                  }`}
+                >
+                  <KresbaIkony klic={s.ikona} velikost={20} />
+                </span>
+                <span className="font-heading font-semibold text-sm text-white">{s.nazev}</span>
+                <span className="text-xs font-body text-white/70 leading-snug">{s.popis}</span>
               </button>
-            )}
+            );
+          })}
+        </div>
+      )}
+
+      {krok === 'herec' && (
+        <div className="flex flex-col gap-2">
+          <input
+            autoFocus
+            value={herec}
+            onChange={(e) => setHerec(e.target.value)}
+            placeholder="např. mužský hlas, 40+, klidný — nebo konkrétní jméno"
+            className="input"
+          />
+          <span className="text-xs font-body text-white/70">
+            Klidně nechte prázdné. Podle zakázky vybereme hlasy a pošleme vám ukázky.
           </span>
         </div>
-      </Field>
+      )}
 
-      {error && <p className="bg-red-500/30 rounded-lg px-3.5 py-2.5 text-sm">{error}</p>}
+      {krok === 'termin' && (
+        <div className="flex flex-col gap-2">
+          <DatumPole value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
+          <span className="text-xs font-body text-white/70">
+            Když termín ještě neznáte, přeskočte to — domluvíme se.
+          </span>
+        </div>
+      )}
 
-      <div className="flex items-center gap-4 flex-wrap mt-1">
+      {krok === 'shrnuti' && (
+        <div className="flex flex-col gap-5">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 m-0 rounded-card bg-white/10 p-4">
+            <Polozka popisek="Název" hodnota={title || '—'} naKrok={() => setKrok('nazev')} />
+            <Polozka
+              popisek="Co pro vás uděláme"
+              hodnota={nazvySluzeb(sluzby).join(', ') || '—'}
+              naKrok={() => setKrok('sluzby')}
+            />
+            <Polozka popisek="Hlas" hodnota={herec || 'necháváme na vás'} naKrok={() => setKrok('herec')} />
+            <Polozka
+              popisek="Termín"
+              hodnota={deadline ? new Intl.DateTimeFormat('cs-CZ').format(new Date(deadline)) : 'domluvíme se'}
+              naKrok={() => setKrok('termin')}
+            />
+          </dl>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-heading text-white">Poznámka</span>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+              placeholder="Cokoliv, co bychom měli vědět — tonalita, stopáž, kde se spot bude hrát…"
+              className="input"
+            />
+          </label>
+
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const dropped = e.dataTransfer.files?.[0];
+              if (dropped) setFile(dropped);
+            }}
+            className={`rounded-card border-2 border-dashed px-4 py-5 text-center transition-colors ${
+              dragOver ? 'border-brand-green bg-brand-green/10' : 'border-white/30'
+            }`}
+          >
+            <input
+              ref={vstupSouboru}
+              type="file"
+              id="priloha-reklama"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="hidden"
+            />
+            {file ? (
+              <span className="inline-flex items-center gap-3 flex-wrap justify-center">
+                <span className="text-sm font-body text-white">{file.name}</span>
+                <button
+                  type="button"
+                  onClick={odeberSoubor}
+                  className="text-xs font-heading text-brand-green underline bg-transparent border-0 cursor-pointer"
+                >
+                  Odebrat
+                </button>
+              </span>
+            ) : (
+              <label htmlFor="priloha-reklama" className="text-sm font-body text-white/80 cursor-pointer">
+                Podklady (scénář, storyboard, hudba) — přetáhněte sem nebo klikněte
+              </label>
+            )}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <p className="m-0 rounded-lg bg-white/15 border border-brand-green px-3 py-2 text-sm font-body text-white">
+          {error}
+        </p>
+      )}
+
+      <div className="flex items-center gap-3 flex-wrap">
+        {index > 0 && (
+          <button
+            type="button"
+            onClick={() => setKrok(KROKY[index - 1])}
+            className="text-white/85 text-sm font-heading underline bg-transparent border-0 cursor-pointer px-1"
+          >
+            Zpět
+          </button>
+        )}
+        <span className="flex-1" />
+        {(krok === 'herec' || krok === 'termin') && (
+          <button
+            type="button"
+            onClick={() => setKrok(KROKY[index + 1])}
+            className="text-white/85 text-sm font-heading underline bg-transparent border-0 cursor-pointer px-1"
+          >
+            Přeskočit
+          </button>
+        )}
         <button
           type="submit"
-          disabled={submitting}
-          className="border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-brand-purpleDark transition-colors disabled:opacity-60"
+          disabled={(krok !== 'shrnuti' && !muzeDal) || submitting}
+          className="bg-brand-green text-brand-purpleDark font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          {submitting ? 'Odesílám…' : 'Objednat'}
+          {krok === 'shrnuti' ? (submitting ? 'Odesílám…' : 'Odeslat objednávku') : 'Pokračovat'}
         </button>
       </div>
-
-      <style jsx>{`
-        /* :global - políčko s datem (DatumPole) je samostatná komponenta a
-           scoped třída styled-jsx se na něj nedostane; bez tohohle mělo bílé
-           písmo na bílém poli a klient neviděl, co píše (oprava 22. 9. 2026). */
-        :global(.input) {
-          font-family: 'Acid Grotesk', var(--font-inter);
-          font-size: 14.5px;
-          border-radius: 8px;
-          border: 1.5px solid #1fdf67;
-          padding: 11px 13px;
-          background: #fff;
-          color: #201a33;
-          width: 100%;
-          color-scheme: light;
-        }
-        :global(.input)::placeholder {
-          color: #a9a2c2;
-        }
-        :global(.input):focus {
-          outline: none;
-          border-color: #fff;
-          box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
-        }
-      `}</style>
     </form>
   );
 }
 
-function Field({
-  label,
-  required,
-  children,
+function Polozka({
+  popisek,
+  hodnota,
+  naKrok,
 }: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
+  popisek: string;
+  hodnota: string;
+  naKrok: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[13.5px] font-body text-white inline-flex items-center gap-1.5">
-        {label}
-        {required && <span className="text-brand-green ml-0.5">*</span>}
-      </label>
-      {children}
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <dt className="text-xs font-heading text-white/60 uppercase tracking-wide">{popisek}</dt>
+      <dd className="m-0 text-sm font-body text-white flex items-center gap-2 min-w-0">
+        <span className="min-w-0 break-words">{hodnota}</span>
+        <button
+          type="button"
+          onClick={naKrok}
+          className="shrink-0 text-xs font-heading text-brand-green underline bg-transparent border-0 cursor-pointer"
+        >
+          upravit
+        </button>
+      </dd>
     </div>
   );
 }

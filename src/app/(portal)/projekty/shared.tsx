@@ -122,7 +122,20 @@ export function TerminDokonceni({
   );
 }
 
-export function StatusPill({ finished, statusName }: { finished: boolean; statusName: string }) {
+export function StatusPill({
+  finished,
+  statusName,
+  popisek,
+}: {
+  finished: boolean;
+  statusName: string;
+  /**
+   * Jiný text, než je název stavu - barva se pořád bere podle skutečného
+   * stavu (25. 9. 2026: klient reklamy vidí „Ke schválení" a „Dokončeno",
+   * ale odznak má svítit stejnou barvou jako u nás).
+   */
+  popisek?: string;
+}) {
   // Barva podle konkretniho stavu (lib/stavyProjektu.ts), ne jen podle toho,
   // jestli je projekt hotovy - stavu je osm a dva odstiny by je slily.
   //
@@ -132,13 +145,13 @@ export function StatusPill({ finished, statusName }: { finished: boolean; status
   // orizne text uvnitr a cely stav zustane v bublinkove napovede.
   return (
     <span
-      title={displayStatusName(statusName)}
+      title={popisek ?? displayStatusName(statusName)}
       className={`inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-3 py-1 rounded-pill whitespace-nowrap max-w-full truncate ${barvaStavu(
         statusName,
         finished,
       )}`}
     >
-      {displayStatusName(statusName)}
+      {popisek ?? displayStatusName(statusName)}
     </span>
   );
 }
