@@ -6,21 +6,16 @@ import { nazevPolozky } from '@/lib/tabule';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
 import { instagramNastaven, stavInstagramu } from '@/lib/instagramServer';
 
-// Studia, jejich pracovni doba a blokace (zadani 8. 9. 2026).
+// Studia a jejich pracovni doba (zadani 8. 9. 2026). Blokace se od
+// 25. 9. 2026 zapisuji primo v kalendari, tady uz nejsou.
 export const dynamic = 'force-dynamic';
 
 export default async function StudiaPage({ searchParams }: { searchParams?: { instagram?: string } }) {
   const igStav = await stavInstagramu();
-  const [studios, blocks, tabule] = await Promise.all([
+  const [studios, tabule] = await Promise.all([
     prisma.studio.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: { hours: { orderBy: { weekday: 'asc' } }, presets: { orderBy: { sortOrder: 'asc' } } },
-    }),
-    prisma.studioBlock.findMany({
-      where: { end: { gte: new Date() } },
-      orderBy: { start: 'asc' },
-      take: 100,
-      include: { studio: { select: { name: true } } },
     }),
     // Tabule ve studiích (21. 9. 2026) - jen hlavní studia, ne místnosti.
     prisma.studio
@@ -108,14 +103,6 @@ export default async function StudiaPage({ searchParams }: { searchParams?: { in
           startMinutes: p.startMinutes,
           endMinutes: p.endMinutes,
         })),
-      }))}
-      blocks={blocks.map((b) => ({
-        id: b.id,
-        studioName: b.studio.name,
-        start: b.start.toISOString(),
-        end: b.end.toISOString(),
-        kind: b.kind,
-        title: b.title,
       }))}
     />
     <RezervaceStudii

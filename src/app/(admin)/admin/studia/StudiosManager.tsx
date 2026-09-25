@@ -1,11 +1,9 @@
 'use client';
 
-import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
-import { BLOCK_KIND_LABELS, WEEKDAY_LABELS, formatDateTime, minutesToTime } from '@/lib/calendar';
-import { VyberPole } from '@/components/VyberPole';
+import { WEEKDAY_LABELS, minutesToTime } from '@/lib/calendar';
 
 type Hodiny = { weekday: number; startMinutes: number; endMinutes: number; byArrangement: boolean };
 type Studio = {
@@ -21,28 +19,25 @@ type Studio = {
   hours: Hodiny[];
   presets: { label: string; startMinutes: number; endMinutes: number }[];
 };
-type Blokace = { id: string; studioName: string; start: string; end: string; kind: string; title: string };
 
 /** Dny v tydnu tak, jak je cte clovek - pondeli prvni, nedele posledni. */
 const PORADI_DNU = [1, 2, 3, 4, 5, 6, 0];
 
 /**
  * Správa studií (zadani 8. 9. 2026). Studia jsou kalendářové zdroje: každé
- * má pracovní dobu po dnech, nejčastější frekvence jako zkratky a blokace
- * (svátky, dovolené, údržba).
+ * má pracovní dobu po dnech a nejčastější frekvence jako zkratky.
+ *
+ * BLOKACE TU UŽ NEJSOU (25. 9. 2026: „blokace dejme pryč"). Svátky, dovolené
+ * a údržba se zapisují přímo v kalendáři jako každá jiná událost - dvě místa
+ * na totéž znamenala, že se jedno z nich neaktualizovalo.
  */
-export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks: Blokace[] }) {
+export function StudiosManager({ studios }: { studios: Studio[] }) {
   const router = useRouter();
   const [openId, setOpenId] = useState<string | null>(studios[0]?.id ?? null);
   const [hodiny, setHodiny] = useState<Record<string, Hodiny[]>>({});
   const [nove, setNove] = useState({ name: '', shortName: '', location: '' });
-  const [blokace, setBlokace] = useState({
-    studioId: studios[0]?.id ?? '',
-    start: '',
-    end: '',
-    kind: 'INTERNAL',
-    title: '',
-  });
+  /** Formulář nového studia je schovaný pod tlačítkem (25. 9. 2026). */
+  const [zakladam, setZakladam] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -235,145 +230,68 @@ export function StudiosManager({ studios, blocks }: { studios: Studio[]; blocks:
         )}
       </div>
 
-      {/* Nove studio */}
-      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex items-end gap-3 flex-wrap">
-        <label className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-          <span className="text-sm font-body text-ink">Nové studio</span>
-          <input
-            value={nove.name}
-            onChange={(e) => setNove((n) => ({ ...n, name: e.target.value }))}
-            placeholder="MS Studio - Ostrava"
-            className={inputClass}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 w-40">
-          <span className="text-sm font-body text-ink">Zkratka</span>
-          <input
-            value={nove.shortName}
-            onChange={(e) => setNove((n) => ({ ...n, shortName: e.target.value }))}
-            placeholder="Ostrava"
-            className={inputClass}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 w-40">
-          <span className="text-sm font-body text-ink">Město</span>
-          <input
-            value={nove.location}
-            onChange={(e) => setNove((n) => ({ ...n, location: e.target.value }))}
-            className={inputClass}
-          />
-        </label>
-        <AddButton
-          type="button"
-          disabled={busy || !nove.name.trim() || !nove.shortName.trim()}
-          onClick={async () => {
-            const ok = await posli('/api/admin/studia', 'POST', nove);
-            if (ok) setNove({ name: '', shortName: '', location: '' });
-          }}
-        >
-          Založit
-        </AddButton>
-      </div>
-
-      {/* Blokace */}
-      <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Blokace — svátky, dovolené, údržba
-        </h2>
-
-        <div className="flex items-end gap-3 flex-wrap">
-          <label className="flex flex-col gap-1.5 w-44">
-            <span className="text-sm font-body text-ink">Studio</span>
-            <VyberPole
-              value={blokace.studioId}
-              onChange={(e) => setBlokace((b) => ({ ...b, studioId: e.target.value }))}
-              className={inputClass}
-            >
-              {studios.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.shortName}
-                </option>
-              ))}
-            </VyberPole>
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Od</span>
+      {/* NOVÉ STUDIO POD TLAČÍTKEM (zadání 25. 9. 2026: „to přidat nové studio
+          dej jen na tlačítko a někam pod seznam studií"). Studio se zakládá
+          jednou za rok - tři pole natrvalo otevřená pod seznamem jen odváděla
+          pozornost od toho, co se opravdu spravuje. */}
+      {!zakladam ? (
+        <div>
+          <AddButton type="button" onClick={() => setZakladam(true)}>
+            Nové studio
+          </AddButton>
+        </div>
+      ) : (
+        <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex items-end gap-3 flex-wrap">
+          <label className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+            <span className="text-sm font-body text-ink">Nové studio</span>
             <input
-              type="datetime-local"
-              value={blokace.start}
-              onChange={(e) => setBlokace((b) => ({ ...b, start: e.target.value }))}
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Do</span>
-            <input
-              type="datetime-local"
-              value={blokace.end}
-              onChange={(e) => setBlokace((b) => ({ ...b, end: e.target.value }))}
+              value={nove.name}
+              onChange={(e) => setNove((n) => ({ ...n, name: e.target.value }))}
+              placeholder="MS Studio - Ostrava"
+              autoFocus
               className={inputClass}
             />
           </label>
           <label className="flex flex-col gap-1.5 w-40">
-            <span className="text-sm font-body text-ink">Druh</span>
-            <VyberPole
-              value={blokace.kind}
-              onChange={(e) => setBlokace((b) => ({ ...b, kind: e.target.value }))}
-              className={inputClass}
-            >
-              {Object.entries(BLOCK_KIND_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </VyberPole>
-          </label>
-          <label className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
-            <span className="text-sm font-body text-ink">Popis</span>
+            <span className="text-sm font-body text-ink">Zkratka</span>
             <input
-              value={blokace.title}
-              onChange={(e) => setBlokace((b) => ({ ...b, title: e.target.value }))}
-              placeholder="Servis techniky"
+              value={nove.shortName}
+              onChange={(e) => setNove((n) => ({ ...n, shortName: e.target.value }))}
+              placeholder="Ostrava"
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 w-40">
+            <span className="text-sm font-body text-ink">Město</span>
+            <input
+              value={nove.location}
+              onChange={(e) => setNove((n) => ({ ...n, location: e.target.value }))}
               className={inputClass}
             />
           </label>
           <AddButton
             type="button"
-            disabled={busy || !blokace.title.trim() || !blokace.start || !blokace.end}
+            disabled={busy || !nove.name.trim() || !nove.shortName.trim()}
             onClick={async () => {
-              const ok = await posli('/api/admin/studia/blokace', 'POST', {
-                ...blokace,
-                start: new Date(blokace.start).toISOString(),
-                end: new Date(blokace.end).toISOString(),
-              });
-              if (ok) setBlokace((b) => ({ ...b, start: '', end: '', title: '' }));
+              const ok = await posli('/api/admin/studia', 'POST', nove);
+              if (ok) {
+                setNove({ name: '', shortName: '', location: '' });
+                setZakladam(false);
+              }
             }}
           >
-            Přidat blokaci
+            Založit
           </AddButton>
+          <button
+            type="button"
+            onClick={() => setZakladam(false)}
+            className="text-sm font-heading text-muted hover:text-ink bg-transparent border-0 cursor-pointer py-2"
+          >
+            Zrušit
+          </button>
         </div>
+      )}
 
-        <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
-          {blocks.length === 0 && <li className="text-sm font-body text-muted py-2">Žádné nadcházející blokace.</li>}
-          {blocks.map((b) => (
-            <li key={b.id} className="flex items-center justify-between gap-4 py-2.5">
-              <span>
-                <span className="block text-sm font-heading font-semibold text-ink">{b.title}</span>
-                <span className="block text-xs font-body text-muted">
-                  {b.studioName} · {BLOCK_KIND_LABELS[b.kind] ?? b.kind} · {formatDateTime(b.start)} –{' '}
-                  {formatDateTime(b.end)}
-                </span>
-              </span>
-              <TlacitkoSmazat
-                onSmazat={() => posli(`/api/admin/studia/blokace?id=${b.id}`, 'DELETE')}
-                disabled={busy}
-                otazka="Opravdu smazat blokaci?"
-                trida="text-xs font-semibold"
-              />
-            </li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 }
