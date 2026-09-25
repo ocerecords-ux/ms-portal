@@ -310,6 +310,20 @@ export async function POST(req: NextRequest) {
       });
 
       /**
+       * NABÍDKA ROVNOU Z OBJEDNÁVKY (zadání 25. 9. 2026: „potřebuji, aby se
+       * rovnou z objednávek audioknih z portálu, co přijdou od klienta,
+       * vygenerovala nabídka"). Jedna položka „Natáčení a postprodukce
+       * audioknihy" a cena z objednávky; doklad je rozpracovaný, takže
+       * klientovi nic neodejde, dokud ho někdo neodešle.
+       */
+      try {
+        const { zalozNabidkuZObjednavky } = await import('@/lib/nabidkaZObjednavky');
+        await zalozNabidkuZObjednavky(caflouProjectId, title);
+      } catch (err) {
+        console.error('Nabidku z objednavky se nepodarilo zalozit:', err);
+      }
+
+      /**
        * PŘÍLOHA DO SLOŽKY PROJEKTU (zadání 22. 9. 2026). Až teď, když projekt
        * i složka existují; výsledek (nebo důvod selhání) se zapíše
        * k objednávce a je vidět v detailu projektu.

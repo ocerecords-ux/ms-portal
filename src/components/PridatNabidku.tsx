@@ -83,7 +83,8 @@ export function PridatNabidku({
             Nabídka je připravená
           </span>
           <span className="block text-xs font-body text-muted mt-0.5">
-            Z objednávky z webu ({objednano}). Zatím nikde není — vznikne až tímhle tlačítkem
+            Z objednávky z webu ({objednano}). U audioknih se nabídka zakládá sama, hned jak
+            objednávka přijde — tahle se z nějakého důvodu nezaložila. Vznikne tímhle tlačítkem
             a bude rozpracovaná, takže ji ještě stihnete upravit.
           </span>
         </div>

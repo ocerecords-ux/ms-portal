@@ -125,3 +125,86 @@ export async function navrhNabidkyZObjednavky(
     return null;
   }
 }
+
+/**
+ * NABÍDKA SE ZALOŽÍ ROVNOU (zadání 25. 9. 2026: „potřebuji, aby se rovnou
+ * z objednávek audioknih z portálu, co přijdou od klienta, vygenerovala
+ * nabídka. Bude tam jedna položka: Natáčení a postprodukce audioknihy. A cena
+ * se propíše z objednávky").
+ *
+ * Dělá to, co dřív dělalo tlačítko „Přidat nabídku" - jen bez klepnutí, hned
+ * jak z objednávky vznikne projekt. Nabídka je ROZPRACOVANÁ: klientovi
+ * neodejde, dokud ji někdo neodešle, takže cena i položka jdou ještě upravit.
+ *
+ * Tlačítko zůstává: když se tohle nepovede (Disk, souběh, chybějící vlastní
+ * firma), nabídne se návrh v kartě projektu jako dřív.
+ *
+ * Nic nevyhazuje - objednávka klienta je důležitější než doklad, který jde
+ * dodělat ručně.
+ */
+export async function zalozNabidkuZObjednavky(
+  caflouProjectId: string,
+  projectName?: string | null,
+): Promise<{ id: string; number: string } | null> {
+  try {
+    const navrh = await navrhNabidkyZObjednavky(caflouProjectId);
+    if (!navrh) return null;
+
+    const { randomBytes } = await import('crypto');
+    const { expandNumberFormat } = await import('@/lib/doklady');
+
+    const issuer = await prisma.issuerCompany.findUnique({
+      where: { id: navrh.issuerCompanyId },
+      select: { id: true, offerNextNumber: true, offerNumberFormat: true },
+    });
+    if (!issuer) return null;
+
+    // Číslo z číselné řady, stejně jako u ručně založené nabídky: kdyby už
+    // existovalo (ručně posunutá řada, souběh), zkusí se další.
+    let sequence = issuer.offerNextNumber;
+    for (let pokus = 0; pokus < 20; pokus++) {
+      const number = expandNumberFormat(issuer.offerNumberFormat, sequence);
+      const obsazeno = await prisma.offer.findUnique({ where: { number }, select: { id: true } });
+      if (obsazeno) {
+        sequence += 1;
+        continue;
+      }
+      return await prisma.$transaction(async (tx) => {
+        const offer = await tx.offer.create({
+          data: {
+            number,
+            issuerCompanyId: navrh.issuerCompanyId,
+            companyId: navrh.companyId,
+            currency: navrh.currency,
+            subject: navrh.predmet,
+            caflouProjectId,
+            projectName: projectName ?? null,
+            approvalToken: randomBytes(24).toString('base64url'),
+            items: {
+              create: [
+                {
+                  description: navrh.predmet,
+                  quantity: 1,
+                  unit: 'ks',
+                  unitPriceMinor: navrh.castkaMinor,
+                  vatRate: 21,
+                  sortOrder: 0,
+                },
+              ],
+            },
+          },
+          select: { id: true, number: true },
+        });
+        await tx.issuerCompany.update({
+          where: { id: issuer.id },
+          data: { offerNextNumber: sequence + 1 },
+        });
+        return offer;
+      });
+    }
+    return null;
+  } catch (err) {
+    console.error('Zalozeni nabidky z objednavky selhalo:', err);
+    return null;
+  }
+}
