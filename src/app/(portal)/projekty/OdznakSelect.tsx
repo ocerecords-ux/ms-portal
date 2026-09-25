@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * Rozbalovací nabídka, která vypadá jako barevný odznak (zadání 10. 9. 2026:
@@ -106,6 +107,14 @@ export function OdznakSelect({
 /**
  * Tatáž nabídka, ale vlastní - bez systémového <select>, takže ji žádná
  * klávesa ani kolečko myši nepřehodí. Vybírá se klepnutím na položku.
+ *
+ * NABÍDKA SE KRESLÍ AŽ NA KONCI STRÁNKY (oprava 25. 9. 2026: „když chci změnit
+ * stav projektu v přehledu, tak se rozbalí nabídka někde na pozadí a nevidím
+ * ji"). Uvnitř tabulky se totiž schovala za následující řádky - každý řádek si
+ * dělá vlastní vrstvení a `z-index` uvnitř buňky proti tomu nic nezmůže.
+ * Nabídka proto visí přímo v <body> (portál) a pozici si spočítá z odznaku;
+ * když se pod ním nevejde, vyklopí se nahoru. Při rolování se zavře, ať
+ * nezůstane viset vedle řádku, ke kterému už nepatří.
  */
 function NabidkaJenMysi({
   hodnota,
@@ -127,23 +136,48 @@ function NabidkaJenMysi({
   obsahOdznaku: React.ReactNode;
 }) {
   const [otevreno, setOtevreno] = useState(false);
+  const [pozice, setPozice] = useState<{ left: number; top?: number; bottom?: number } | null>(null);
   const obal = useRef<HTMLSpanElement | null>(null);
+  const nabidka = useRef<HTMLSpanElement | null>(null);
+
+  /** Kam nabídku posadit: pod odznak, a když se tam nevejde, nad něj. */
+  const spoctiPozici = useCallback(() => {
+    const el = obal.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const podNim = window.innerHeight - r.bottom;
+    // 240 px je zhruba pět položek - pod tím už se nabídka vyplatí vyklopit nahoru.
+    const nahoru = podNim < 240 && r.top > podNim;
+    setPozice({
+      left: Math.max(8, Math.min(r.left, window.innerWidth - 240)),
+      ...(nahoru ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }),
+    });
+  }, []);
 
   // Zavřít klepnutím vedle a klávesou Esc. Esc je jediná klávesa, která tu
-  // něco dělá - a hodnotu nemění.
+  // něco dělá - a hodnotu nemění. Nabídka visí v <body>, takže se klepnutí
+  // hlídá i proti ní - jinak by se zavřela dřív, než klepnutí dojde na položku.
   useEffect(() => {
     if (!otevreno) return;
     const vedle = (e: MouseEvent) => {
-      if (obal.current && !obal.current.contains(e.target as Node)) setOtevreno(false);
+      const cil = e.target as Node;
+      if (obal.current?.contains(cil) || nabidka.current?.contains(cil)) return;
+      setOtevreno(false);
     };
     const klavesa = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOtevreno(false);
     };
+    const pryc = () => setOtevreno(false);
     document.addEventListener('mousedown', vedle);
     document.addEventListener('keydown', klavesa);
+    // true = i rolování uvnitř tabulky, ne jen oknem.
+    window.addEventListener('scroll', pryc, true);
+    window.addEventListener('resize', pryc);
     return () => {
       document.removeEventListener('mousedown', vedle);
       document.removeEventListener('keydown', klavesa);
+      window.removeEventListener('scroll', pryc, true);
+      window.removeEventListener('resize', pryc);
     };
   }, [otevreno]);
 
@@ -163,7 +197,9 @@ function NabidkaJenMysi({
         aria-haspopup="listbox"
         aria-expanded={otevreno}
         onClick={() => {
-          if (!disabled) setOtevreno((o) => !o);
+          if (disabled) return;
+          spoctiPozici();
+          setOtevreno((o) => !o);
         }}
         className={`inline-flex items-center gap-1.5 max-w-full rounded-pill pl-3 pr-2.5 py-1.5 text-xs font-heading font-semibold ${
           disabled ? 'opacity-60 cursor-default' : 'cursor-pointer'
@@ -173,28 +209,35 @@ function NabidkaJenMysi({
         <Sipka />
       </span>
 
-      {otevreno && !disabled && (
-        <span
-          role="listbox"
-          className="absolute left-0 top-full mt-1.5 z-40 min-w-[220px] max-w-[min(90vw,320px)] max-h-[60vh] overflow-y-auto rounded-card border border-line bg-surface shadow-lg p-1 flex flex-col"
-        >
-          {polozky.map((m) => (
-            <span
-              key={m.hodnota || 'prazdno'}
-              role="option"
-              aria-selected={m.hodnota === hodnota}
-              onClick={() => vyber(m.hodnota)}
-              className={`text-left rounded-lg px-3 py-2 text-sm font-body cursor-pointer transition-colors ${
-                m.hodnota === hodnota
-                  ? 'bg-tint text-ink font-heading font-semibold'
-                  : 'text-ink hover:bg-tint'
-              }`}
-            >
-              {m.popisek}
-            </span>
-          ))}
-        </span>
-      )}
+      {otevreno &&
+        !disabled &&
+        pozice &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <span
+            ref={nabidka}
+            role="listbox"
+            style={{ position: 'fixed', left: pozice.left, top: pozice.top, bottom: pozice.bottom }}
+            className="z-[120] min-w-[220px] max-w-[min(90vw,320px)] max-h-[60vh] overflow-y-auto rounded-card border border-line bg-surface shadow-2xl p-1 flex flex-col"
+          >
+            {polozky.map((m) => (
+              <span
+                key={m.hodnota || 'prazdno'}
+                role="option"
+                aria-selected={m.hodnota === hodnota}
+                onClick={() => vyber(m.hodnota)}
+                className={`text-left rounded-lg px-3 py-2 text-sm font-body cursor-pointer transition-colors ${
+                  m.hodnota === hodnota
+                    ? 'bg-tint text-ink font-heading font-semibold'
+                    : 'text-ink hover:bg-tint'
+                }`}
+              >
+                {m.popisek}
+              </span>
+            ))}
+          </span>,
+          document.body,
+        )}
     </span>
   );
 }
