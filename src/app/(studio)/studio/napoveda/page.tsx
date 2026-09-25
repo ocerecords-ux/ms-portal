@@ -69,7 +69,7 @@ export default async function NapovedaStudia() {
 
             <div>
               <h3 className="font-heading font-semibold text-sm text-ink m-0">iPhone &amp; iPad</h3>
-              <ol className="text-sm font-body text-muted m-0 mt-1.5 pl-5 flex flex-col gap-1">
+              <ol className="text-sm font-body text-muted m-0 mt-1.5 pl-5 list-decimal flex flex-col gap-1">
                 <li>Open the calendar in Safari and sign in.</li>
                 <li>
                   Tap <b className="text-ink">Share</b> — the square with the arrow.
@@ -83,7 +83,7 @@ export default async function NapovedaStudia() {
 
             <div>
               <h3 className="font-heading font-semibold text-sm text-ink m-0">Android</h3>
-              <ol className="text-sm font-body text-muted m-0 mt-1.5 pl-5 flex flex-col gap-1">
+              <ol className="text-sm font-body text-muted m-0 mt-1.5 pl-5 list-decimal flex flex-col gap-1">
                 <li>Open the calendar in Chrome and sign in.</li>
                 <li>
                   Tap the <b className="text-ink">⋮</b> menu in the top right.
