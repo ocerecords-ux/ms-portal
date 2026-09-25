@@ -2,6 +2,8 @@
 
 import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
 import { UpravaMehoUkolu } from './UpravaMehoUkolu';
+import { MujStatus, RadekStatusu } from './MujStatus';
+import type { StatusVChatu } from '@/lib/statusyChatu';
 import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Volba, prepniVSeznamu } from '@/components/Volba';
@@ -1634,6 +1636,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   /** Kdy jsme naposledy ohlasili, ze pisu - at se to nehlasi na kazdy znak. */
   const ohlasenoRef = useRef(0);
   const [team, setTeam] = useState<ChatTeamMember[]>([]);
+  // Muj status v chatu (25. 9. 2026) - rucni i ten z kalendare.
+  const [mujStatus, setMujStatus] = useState<StatusVChatu | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [zpravyNacitam, setZpravyNacitam] = useState(false);
@@ -1896,6 +1900,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       setError(null);
       setConversations(sCerstvymi(Array.isArray(data?.konverzace) ? data.konverzace : []));
       setTeam(Array.isArray(data?.tym) ? data.tym : []);
+      setMujStatus(data?.mujStatus ?? null);
     } catch {
       // vypadek site - zkusi se zas za chvili
     }
@@ -3250,6 +3255,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               </span>
             </div>
 
+            {/* Můj status (25. 9. 2026) - co o mně teď svítí ostatním. */}
+            <div className="px-3 pb-2">
+              <MujStatus status={mujStatus} onZmena={() => void nactiKonverzace()} />
+            </div>
+
             <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 flex flex-col gap-0.5">
               {/* ÚKOLY MÍSTO DOTAZŮ (zadání 18. 9. 2026). Není to konverzace,
                   ale vlastní to-do list - proto vlastní komponenta a ne
@@ -3347,6 +3357,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         do skupiny vidi, rekne hlavicka otevreneho rozhovoru. */}
                     <span className="min-w-0 flex-1">
                       <span className="block font-heading text-sm text-ink truncate">{c.label}</span>
+                      {/* Co ten člověk zrovna dělá (25. 9. 2026). */}
+                      <RadekStatusu status={c.status} />
                     </span>
                     {c.unread > 0 && (
                       <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-green text-onAccent text-[10px] font-heading font-bold leading-[18px] text-center">
@@ -3367,7 +3379,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       className="text-left rounded-lg px-2.5 py-1.5 text-sm font-body text-ink hover:bg-field flex items-center gap-2"
                     >
                       <Avatar label={u.label} photoUrl={u.photoUrl} size={24} />
-                      <span className="truncate">{u.label}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate">{u.label}</span>
+                        <RadekStatusu status={u.status} />
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -3485,6 +3500,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                           {otevrena.kind === 'PROJEKT' ? `# ${otevrena.label}` : otevrena.label}
                         </span>
                       )}
+                      {/* Status protějšku (25. 9. 2026) - hned pod jménem. */}
+                      {otevrena.kind === 'SOUKROMA' && <RadekStatusu status={otevrena.status} />}
                       {otevrena.kind === 'SKUPINA' && (
                         <button
                           type="button"

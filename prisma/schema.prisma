@@ -309,6 +309,22 @@ model User {
   /// VIDI ZNACKU STAVU NABIDKY U REKLAM (zadani 23. 9. 2026: „chtel bych
   /// nekde videt (jen ja) ... ze je nabidka schvalena"). Zatim jen Ondrej.
   nabidkyReklam   Boolean  @default(false)
+
+  /// STATUS V CHATU (zadani 25. 9. 2026: „potreboval bych nastavit jeste
+  /// nejake statusy v chatu. Kdyz treba budu mit schuzku, tak by se tam
+  /// objevilo: Mam schuzku do 14:30").
+  ///
+  /// Tohle je RUCNE napsany status; z kalendare se sklada sam a nikam se
+  /// neuklada - viz lib/statusyServer.ts. Rucni ma prednost, dokud plati.
+  statusText  String?
+  statusEmoji String?
+  /// Do kdy rucni status plati. Prazdne = dokud si ho clovek nesmaze.
+  statusDo    DateTime?
+  /// SKLADAT STATUS Z KALENDARE (zadani 25. 9. 2026: „Tohle nastav jen mi").
+  /// Porady a schuzky na celou dobu, casting na celou dobu, rezie na dalku
+  /// jen prvni pulhodinu. „Mimo studio" plati vsem a na tuhle znacku se
+  /// neptame - to je informace, ktera se tyka kazdeho.
+  statusZKalendare Boolean @default(false)
   /// Kdy odesel posledni ranni prehled - aby nesel dvakrat za den.
   ranniPrehledAt DateTime?
 

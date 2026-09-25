@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { canUseChat, loadConversations, loadTeam } from '@/lib/chatServer';
 import { INTERNAL_ROLES, ROBOT_ROLES } from '@/lib/roles';
 import { zkusDatabazi } from '@/lib/dbZnovu';
+import { nactiStatusy } from '@/lib/statusyServer';
 
 // Seznam konverzaci + zalozeni nove (zadani 8. 9. 2026).
 export const dynamic = 'force-dynamic';
@@ -49,7 +50,25 @@ export async function GET() {
         loadTeam(session.user.id),
       ]),
     );
-    return NextResponse.json({ konverzace, tym });
+    /**
+     * STATUSY (zadání 25. 9. 2026). Počítají se tady, ne v loadConversations:
+     * potřebují jeden seznam účtů za všechny rozhovory i celý tým, aby se
+     * kalendář nečetl dokola pro každý řádek zvlášť.
+     */
+    const statusy = await nactiStatusy([
+      session.user.id,
+      ...tym.map((t) => t.id),
+      ...konverzace.map((k) => k.protejsekId).filter((id): id is string => Boolean(id)),
+    ]);
+
+    return NextResponse.json({
+      konverzace: konverzace.map((k) => ({
+        ...k,
+        status: k.protejsekId ? (statusy[k.protejsekId] ?? null) : null,
+      })),
+      tym: tym.map((t) => ({ ...t, status: statusy[t.id] ?? null })),
+      mujStatus: statusy[session.user.id] ?? null,
+    });
   } catch (err) {
     // Databaze bez tabulek chatu (jeste nedobehl `prisma db push`) nesmi
     // shodit stranku - panel se proste ukaze prazdny.

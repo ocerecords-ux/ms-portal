@@ -45,6 +45,8 @@ type EditableUser = {
   planovaniTerminu: boolean;
   /** Striha externe - v kalendari letadlo, do obsazenosti studia se nepocita. */
   strihaExterne: boolean;
+  /** Status v chatu se sklada z kalendare (25. 9. 2026). */
+  statusZKalendare: boolean;
   /** Vidi znacku stavu nabidky u reklam (23. 9. 2026). */
   nabidkyReklam: boolean;
   /** Klient chce vědět o dotočeném herci na svém projektu (zadání 16. 9. 2026). */
@@ -102,6 +104,7 @@ export function UserEditForm({
   const [schvaleniReklam, setSchvaleniReklam] = useState(user.schvaleniReklam);
   const [planovaniTerminu, setPlanovaniTerminu] = useState(user.planovaniTerminu);
   const [strihaExterne, setStrihaExterne] = useState(user.strihaExterne);
+  const [statusZKalendare, setStatusZKalendare] = useState(user.statusZKalendare);
   const [nabidkyReklam, setNabidkyReklam] = useState(user.nabidkyReklam);
   const [dostavaDotocenoKlient, setDostavaDotocenoKlient] = useState(user.dostavaDotocenoKlient);
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
@@ -213,6 +216,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('schvaleniReklam', schvaleniReklam ? '1' : '0');
         if (isMediaspace) fd.set('planovaniTerminu', planovaniTerminu ? '1' : '0');
         if (isMediaspace) fd.set('strihaExterne', strihaExterne ? '1' : '0');
+        if (isMediaspace) fd.set('statusZKalendare', statusZKalendare ? '1' : '0');
         if (isMediaspace) fd.set('nabidkyReklam', nabidkyReklam ? '1' : '0');
         if (isMediaspace) fd.set('dostavaObjednavky', dostavaObjednavky ? '1' : '0');
         if (isMediaspace && role !== 'ZVUKAR') fd.set('takyZvukar', takyZvukar ? '1' : '0');
@@ -631,6 +635,28 @@ export function UserEditForm({
                 Stříhá externě
                 <span className="block text-xs text-muted">
                   v kalendáři svítí letadlo a jeho práce nedrží místo ve studiu
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Status v chatu z kalendare (zadani 25. 9. 2026: „Tohle nastav jen
+            mi"). Bez zaskrtnuti si clovek status pise jen sam; „Mimo studio"
+            se ukazuje vsem tak jako tak. */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={statusZKalendare}
+                onChange={(e) => setStatusZKalendare(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Status v chatu z kalendáře
+                <span className="block text-xs text-muted">
+                  schůzky a castingy na celou dobu, režie na dálku prvních 30 minut
                 </span>
               </span>
             </label>

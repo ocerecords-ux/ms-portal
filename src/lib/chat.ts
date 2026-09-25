@@ -1,6 +1,7 @@
 import type { ConversationKind } from '@prisma/client';
 import { MS_SMAJLICI, MS_SMAJLIK_REGEX, najdiSmajlika } from '@/lib/msSmajlici';
 import type { ChatPriloha } from '@/lib/chatPrilohy';
+import type { StatusVChatu } from '@/lib/statusyChatu';
 
 /**
  * Chat pro tym Mediaspace (zadani 8. 9. 2026). Bez pristupu do databaze, aby
@@ -94,7 +95,13 @@ export type ChatMessage = {
   stav?: 'posilam' | 'chyba';
 };
 
-export type ChatTeamMember = { id: string; label: string; photoUrl: string | null };
+export type ChatTeamMember = {
+  id: string;
+  label: string;
+  photoUrl: string | null;
+  /** Co ten člověk zrovna dělá (25. 9. 2026) - viz lib/statusyChatu.ts. */
+  status?: StatusVChatu | null;
+};
 
 export type ChatConversation = {
   id: string;
@@ -111,6 +118,10 @@ export type ChatConversation = {
   memberIds: string[];
   /** Fotka do seznamu - u soukrome zpravy fotka druheho cloveka. */
   avatarUrl: string | null;
+  /** U soukrome zpravy ucet toho druheho - podle nej se bere jeho status. */
+  protejsekId?: string | null;
+  /** Co ten druhy zrovna dela (25. 9. 2026); jen u soukromych zprav. */
+  status?: StatusVChatu | null;
   /**
    * Ztlumeny rozhovor (zadani 12. 9. 2026). Zpravy chodi dal a pocitaji se
    * jako neprectene - jen z nej necinka upozorneni.

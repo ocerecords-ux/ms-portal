@@ -39,6 +39,8 @@ const schema = z.object({
   schvaleniReklam: z.string().trim().optional(),
   planovaniTerminu: z.string().trim().optional(),
   strihaExterne: z.string().trim().optional(),
+  // Skladat status v chatu z kalendare (25. 9. 2026).
+  statusZKalendare: z.string().trim().optional(),
   nabidkyReklam: z.string().trim().optional(),
   dostavaDotocenoKlient: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
@@ -84,6 +86,7 @@ function readFormData(formData: FormData) {
     schvaleniReklam: has('schvaleniReklam') ? formData.get('schvaleniReklam') : undefined,
     planovaniTerminu: has('planovaniTerminu') ? formData.get('planovaniTerminu') : undefined,
     strihaExterne: has('strihaExterne') ? formData.get('strihaExterne') : undefined,
+    statusZKalendare: has('statusZKalendare') ? formData.get('statusZKalendare') : undefined,
     nabidkyReklam: has('nabidkyReklam') ? formData.get('nabidkyReklam') : undefined,
     dostavaDotocenoKlient: has('dostavaDotocenoKlient')
       ? formData.get('dostavaDotocenoKlient')
@@ -199,6 +202,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ? { planovaniTerminu: data.planovaniTerminu === '1' }
         : {}),
       ...(data.strihaExterne !== undefined ? { strihaExterne: data.strihaExterne === '1' } : {}),
+      ...(data.statusZKalendare !== undefined ? { statusZKalendare: data.statusZKalendare === '1' } : {}),
       ...(data.nabidkyReklam !== undefined ? { nabidkyReklam: data.nabidkyReklam === '1' } : {}),
       ...(data.dostavaDotoceno !== undefined
         ? { dostavaDotoceno: data.dostavaDotoceno === '1' }

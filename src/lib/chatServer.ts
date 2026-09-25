@@ -156,6 +156,9 @@ export async function loadConversations(
           : null,
       memberLabels: ostatni,
       memberIds: c.members.map((m) => m.userId),
+      // Kdo je na druhe strane soukrome zpravy (25. 9. 2026) - podle nej se
+      // k rozhovoru pripoji jeho status.
+      protejsekId: c.kind === 'SOUKROMA' ? (ostatniClenove[0]?.userId ?? null) : null,
       // Ztlumeny rozhovor (zadani 12. 9. 2026) - zpravy chodi dal a pocitaji
       // se jako neprectene, jen z nej necinka upozorneni.
       ztlumeno: c.members.find((m) => m.userId === userId)?.ztlumeno ?? false,
