@@ -792,15 +792,15 @@ export function ProjectMetaForm({
               <span className="text-xs font-body text-brand-greenDeep">{zpravaKlientovi}</span>
             )}
             <span className="text-xs text-muted font-body">
-              Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění
-              šipkou.
+              Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence. Klepnutí na
+              jméno otevře, co se s hercem dá udělat — dotočeno, zpráva klientovi, pořadí, odebrání.
               {bezNormostran ? (
                 ' Kdo v kterém spotu mluví, se vybírá v záložce Výstupy.'
               ) : (
                 <>
-                  {' '}U dvou a víc herců se vedle každého vyplňují jeho{' '}
-                  <strong className="font-heading font-semibold">normostrany</strong> — podle nich se
-                  pak plánují jeho frekvence.
+                  {' '}U dvou a víc herců je v tom okně i jeho{' '}
+                  <strong className="font-heading font-semibold">počet normostran</strong> — podle
+                  nich se pak plánují jeho frekvence.
                 </>
               )}
             </span>

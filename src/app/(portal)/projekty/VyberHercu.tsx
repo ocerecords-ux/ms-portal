@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BublinaHerce, type Herec } from './VyberHerce';
 import { TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 
@@ -130,6 +130,68 @@ export function VyberHercu({
     onZmena(nove);
   }
 
+  /**
+   * OKNO S AKCEMI U HERCE (zadání 26. 9. 2026: „pojďme všechna ta funkční
+   * tlačítka přesunout až do vyskakovacího okna po kliknutí").
+   *
+   * V seznamu tak zůstanou jen jména - a o to jde: z detailu projektu se
+   * nejčastěji potřebuje vědět, KDO na zakázce je. Dotočeno, zpráva klientovi,
+   * pořadí, normostrany i odebrání jsou úkony, které se dělají výjimečně,
+   * takže patří o klepnutí dál.
+   *
+   * Okno se kotví k bublině (fixed podle getBoundingClientRect), nic
+   * nezamlžuje a zavírá se klepnutím mimo, Escapem nebo posunem stránky -
+   * stejně jako náhledy u ikon v přehledu projektů.
+   */
+  const [akce, setAkce] = useState<{ id: string; left: number; top: number } | null>(null);
+  const oknoRef = useRef<HTMLDivElement>(null);
+
+  function otevriAkce(id: string, prvek: HTMLElement) {
+    const r = prvek.getBoundingClientRect();
+    setAkce({
+      id,
+      left: Math.min(r.left, window.innerWidth - SIRKA_OKNA - 8),
+      top: r.bottom + 6,
+    });
+  }
+
+  /** Okno se nesmí schovat pod spodní hranou - když se nevejde, jde nad bublinu. */
+  useLayoutEffect(() => {
+    if (!akce || !oknoRef.current) return;
+    const r = oknoRef.current.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 8) {
+      const novyVrsek = Math.max(8, window.innerHeight - r.height - 8);
+      if (Math.abs(novyVrsek - akce.top) > 1) setAkce({ ...akce, top: novyVrsek });
+    }
+  }, [akce]);
+
+  useEffect(() => {
+    if (!akce) return;
+    const zavri = () => setAkce(null);
+    const klavesa = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAkce(null);
+    };
+    const mimo = (e: MouseEvent) => {
+      if (oknoRef.current && !oknoRef.current.contains(e.target as Node)) setAkce(null);
+    };
+    window.addEventListener('keydown', klavesa);
+    window.addEventListener('scroll', zavri, true);
+    window.addEventListener('resize', zavri);
+    // Až v dalším cyklu, ať otevírací klik okno rovnou nezavře.
+    const t = window.setTimeout(() => document.addEventListener('mousedown', mimo), 0);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('keydown', klavesa);
+      window.removeEventListener('scroll', zavri, true);
+      window.removeEventListener('resize', zavri);
+      document.removeEventListener('mousedown', mimo);
+    };
+  }, [akce]);
+
+  const otevrenyIndex = akce ? hodnoty.indexOf(akce.id) : -1;
+  const otevrenyHerec = akce ? vybrani.find((h) => h.id === akce.id) ?? null : null;
+  const otevrenyDotoceno = akce ? dotoceni?.[akce.id] : undefined;
+
   return (
     <div ref={obal} className="flex flex-col gap-2">
       {vybrani.length > 0 && (
@@ -142,101 +204,109 @@ export function VyberHercu({
                 disabled={disabled}
                 dotoceno={dotoceni?.[h.id]}
                 strana={strany?.[h.id]}
-                // Klik na jmeno tady nic nemeni - herec se pridava a odebira,
-                // ne prepisuje. Sipka ho posune o misto vys.
-                onZmenit={() => nahoru(h.id)}
-                onOdebrat={() => odeber(h.id)}
+                popisek="Klepnutím otevřete, co se s hercem dá udělat"
+                // Klepnutí na jméno otevře okno s akcemi (26. 9. 2026);
+                // křížek u bubliny není, odebrání je taky v okně.
+                onZmenit={(prvek) => otevriAkce(h.id, prvek)}
               />
-              {/* Dotoceno u konkretniho herce (zadani 11. 9. 2026) - na
-                  audioknize byva hercu vic a kazdy konci jindy.
-
-                  IKONY MISTO TLACITEK S TEXTEM (zadani 26. 9. 2026: „ať je to
-                  přehlednější, tak bych nějak minimalizoval ta tlačítka
-                  Odeslat klientovi a Zrušit dotočeno. Jde primárně o to vědět,
-                  co jsou tam za herce"). Dvě tlačítka s textem u každého
-                  jména delala z peti hercu stenu textu a jmena v ni zanikla;
-                  ikona zabere stejne mista jako sipka vedle a co dela, rekne
-                  bublinka po najeti. Ze je dotoceno, je dal videt na zelene
-                  lince kolem jmena - to se nezmenilo. */}
-              {onPrepnoutDotoceno &&
-                (dotoceni?.[h.id] ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={disabled || dotoceniBezi === h.id}
-                      onClick={() => onPrepnoutDotoceno(h.id, false)}
-                      title={`Dotočeno ${new Date(dotoceni[h.id]).toLocaleDateString('cs-CZ')} — klepnutím zrušíte`}
-                      aria-label="Zrušit dotočeno"
-                      className="shrink-0 grid place-items-center w-7 h-7 rounded-full border border-brand-green text-brand-greenDeep hover:bg-okTint transition-colors disabled:opacity-50"
-                    >
-                      <IkonaVratit />
-                    </button>
-                    {/* POSLAT KLIENTOVI ZNOVU (zadani 16. 9. 2026). Klientovi
-                        se fajfka oznamuje jen jednou, v okamziku, kdy vznikne
-                        - kdyz si upozorneni zapnul az potom, jde zprava poslat
-                        odsud. Nic se tim neprepisuje, jen odejde mail
-                        a zvonecek; proto to NENI odskrtnout a zaskrtnout. */}
-                    {onPoslatKlientovi && (
-                      <button
-                        type="button"
-                        disabled={disabled || dotoceniBezi === h.id}
-                        onClick={() => onPoslatKlientovi(h.id)}
-                        title="Poslat klientovi mail a zvoneček o tomhle dotočení znovu"
-                        aria-label="Poslat klientovi"
-                        className="shrink-0 grid place-items-center w-7 h-7 rounded-full border border-line text-muted hover:border-brand-purple hover:text-brand-purple transition-colors disabled:opacity-50"
-                      >
-                        <IkonaObalka />
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={disabled || dotoceniBezi === h.id}
-                    onClick={() => onPrepnoutDotoceno(h.id, true)}
-                    title="Označit, že tenhle herec má dotočeno"
-                    aria-label="Označit dotočeno"
-                    className="shrink-0 grid place-items-center w-7 h-7 rounded-full border border-dashed border-line text-muted hover:border-brand-green hover:text-brand-greenDeep transition-colors disabled:opacity-50"
-                  >
-                    {dotoceniBezi === h.id ? <IkonaCekani /> : <IkonaFajfka />}
-                  </button>
-                ))}
-              {/* Normostrany herce (23. 9. 2026) - jen u víc herců naráz. */}
-              {onZmenitNormostrany && vybrani.length > 1 && (
-                <label className="inline-flex items-center gap-1 text-[11px] font-heading text-muted">
-                  <input
-                    type="number"
-                    min={0}
-                    disabled={disabled}
-                    defaultValue={normostrany?.[h.id] ?? ''}
-                    onBlur={(e) => {
-                      const hodnota = e.target.value.trim();
-                      const cislo = hodnota === '' ? null : Number(hodnota);
-                      if (cislo !== null && (!Number.isFinite(cislo) || cislo < 0)) return;
-                      const puvodni = normostrany?.[h.id] ?? null;
-                      if ((cislo ?? null) === puvodni) return;
-                      onZmenitNormostrany(h.id, cislo);
-                    }}
-                    placeholder="0"
-                    title="Normostrany tohoto herce - podle nich se plánují jeho frekvence"
-                    className="w-16 rounded-lg border border-line bg-field px-2 py-1 text-ink font-heading text-xs tabular-nums outline-none focus:border-brand-purple disabled:opacity-50"
-                  />
-                  NS
-                </label>
-              )}
-              {i > 0 && (
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => nahoru(h.id)}
-                  title="Posunout výš"
-                  className="text-xs text-muted hover:text-brand-purple disabled:opacity-50"
-                >
-                  ↑
-                </button>
-              )}
+              {/* Že je dotočeno, říká zelená linka kolem jména - žádné
+                  tlačítko vedle. Všechno ostatní je v okně. */}
             </span>
           ))}
+        </div>
+      )}
+
+      {/* OKNO S AKCEMI. Nic nezamlžuje, zavírá se klikem mimo nebo Escapem. */}
+      {akce && otevrenyHerec && (
+        <div
+          ref={oknoRef}
+          style={{ position: 'fixed', left: akce.left, top: akce.top, width: SIRKA_OKNA }}
+          className="z-[90] flex flex-col gap-1 rounded-card border border-line bg-surface shadow-2xl p-2 text-left"
+        >
+          <span className="px-2 pt-1 pb-1.5 border-b border-line flex flex-col gap-0.5">
+            <span className="font-heading font-semibold text-sm text-ink truncate">
+              {otevrenyHerec.label}
+            </span>
+            <span className="text-[11px] font-body text-muted">
+              {otevrenyDotoceno
+                ? `Dotočeno ${new Date(otevrenyDotoceno).toLocaleDateString('cs-CZ')}`
+                : `Herec ${otevrenyIndex + 1}`}
+            </span>
+          </span>
+
+          {onPrepnoutDotoceno && (
+            <PolozkaOkna
+              disabled={disabled || dotoceniBezi === akce.id}
+              onClick={() => onPrepnoutDotoceno(akce.id, !otevrenyDotoceno)}
+            >
+              {dotoceniBezi === akce.id
+                ? 'Ukládám…'
+                : otevrenyDotoceno
+                  ? 'Zrušit dotočeno'
+                  : 'Označit dotočeno'}
+            </PolozkaOkna>
+          )}
+
+          {/* POSLAT KLIENTOVI ZNOVU (zadání 16. 9. 2026). Klientovi se
+              dotočení oznamuje jen jednou, v okamžiku, kdy vznikne - když si
+              upozornění zapnul až potom, jde zpráva poslat odsud. Nic se tím
+              nepřepisuje, jen odejde mail a zvoneček. */}
+          {onPoslatKlientovi && otevrenyDotoceno && (
+            <PolozkaOkna
+              disabled={disabled || dotoceniBezi === akce.id}
+              onClick={() => onPoslatKlientovi(akce.id)}
+            >
+              Poslat klientovi znovu
+            </PolozkaOkna>
+          )}
+
+          {/* Normostrany herce (23. 9. 2026) - jen u víc herců naráz; u reklamy
+              je volající vůbec nepředá. */}
+          {onZmenitNormostrany && vybrani.length > 1 && (
+            <label className="flex items-center justify-between gap-2 px-2 py-1.5 text-sm font-body text-ink">
+              Normostrany
+              <input
+                type="number"
+                min={0}
+                disabled={disabled}
+                defaultValue={normostrany?.[akce.id] ?? ''}
+                onBlur={(e) => {
+                  const hodnota = e.target.value.trim();
+                  const cislo = hodnota === '' ? null : Number(hodnota);
+                  if (cislo !== null && (!Number.isFinite(cislo) || cislo < 0)) return;
+                  const puvodni = normostrany?.[akce.id] ?? null;
+                  if ((cislo ?? null) === puvodni) return;
+                  onZmenitNormostrany(akce.id, cislo);
+                }}
+                placeholder="0"
+                title="Normostrany tohoto herce - podle nich se plánují jeho frekvence"
+                className="w-20 rounded-lg border border-line bg-field px-2 py-1 text-ink font-heading text-xs tabular-nums outline-none focus:border-brand-purple disabled:opacity-50"
+              />
+            </label>
+          )}
+
+          {otevrenyIndex > 0 && (
+            <PolozkaOkna
+              disabled={disabled}
+              onClick={() => {
+                nahoru(akce.id);
+                setAkce(null);
+              }}
+            >
+              Posunout výš (na Herce {otevrenyIndex})
+            </PolozkaOkna>
+          )}
+
+          <PolozkaOkna
+            disabled={disabled}
+            nebezpecna
+            onClick={() => {
+              odeber(akce.id);
+              setAkce(null);
+            }}
+          >
+            Odebrat z projektu
+          </PolozkaOkna>
         </div>
       )}
 
@@ -289,42 +359,32 @@ export function VyberHercu({
   );
 }
 
-/** Fajfka - „označit dotočeno". */
-function IkonaFajfka() {
-  return (
-    <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 12.5l4.5 4.5L19 7" />
-    </svg>
-  );
-}
+/** Šířka okna s akcemi; drží se i při počítání, aby nevylezlo z obrazovky. */
+const SIRKA_OKNA = 230;
 
-/** Šipka zpátky - „zrušit dotočeno". */
-function IkonaVratit() {
+/** Řádek v okně s akcemi - ať vypadají všechny stejně. */
+function PolozkaOkna({
+  children,
+  onClick,
+  disabled,
+  nebezpecna,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  /** Odebrání se odliší barvou, ať se neklepne omylem. */
+  nebezpecna?: boolean;
+}) {
   return (
-    <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 10h10a5 5 0 0 1 0 10h-6" />
-      <path d="M8 6l-4 4 4 4" />
-    </svg>
-  );
-}
-
-/** Obálka - „poslat klientovi znovu". */
-function IkonaObalka() {
-  return (
-    <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="5.5" width="18" height="13" rx="2" />
-      <path d="M3.5 7l8.5 6 8.5-6" />
-    </svg>
-  );
-}
-
-/** Tečky - ukládá se. */
-function IkonaCekani() {
-  return (
-    <svg viewBox="0 0 24 24" width={13} height={13} fill="currentColor" aria-hidden="true">
-      <circle cx="5" cy="12" r="2" />
-      <circle cx="12" cy="12" r="2" />
-      <circle cx="19" cy="12" r="2" />
-    </svg>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`w-full text-left px-2 py-1.5 rounded-lg text-sm font-heading bg-transparent border-0 cursor-pointer transition-colors disabled:opacity-50 ${
+        nebezpecna ? 'text-muted hover:text-status-error hover:bg-field' : 'text-ink hover:bg-field'
+      }`}
+    >
+      {children}
+    </button>
   );
 }

@@ -144,9 +144,11 @@ export function BublinaHerce({
   disabled,
   dotoceno,
   strana,
+  popisek,
 }: {
   jmeno: string;
-  onZmenit: () => void;
+  /** Dostane svůj vlastní prvek - okno s akcemi se podle něj kotví. */
+  onZmenit: (prvek: HTMLElement) => void;
   onOdebrat?: () => void;
   disabled?: boolean;
   /** Datum dotočení - pozná se zelenou linkou kolem bubliny. */
@@ -156,6 +158,8 @@ export function BublinaHerce({
    * 13. 9. 2026). Po dotočení se neukazuje: tam už strana nic neříká.
    */
   strana?: number | null;
+  /** Co klepnutí na jméno udělá - bublinka nad bublinou. */
+  popisek?: string;
 }) {
   return (
     <span
@@ -168,8 +172,8 @@ export function BublinaHerce({
       <button
         type="button"
         disabled={disabled}
-        onClick={onZmenit}
-        title="Vybrat jiného herce"
+        onClick={(e) => onZmenit(e.currentTarget)}
+        title={popisek ?? 'Vybrat jiného herce'}
         className="text-sm font-heading font-semibold truncate disabled:opacity-60"
       >
         {jmeno}
