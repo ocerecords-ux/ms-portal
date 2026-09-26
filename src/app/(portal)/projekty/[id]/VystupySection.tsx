@@ -262,65 +262,77 @@ export function VystupySection({
         </p>
       )}
 
-      <p className="text-sm font-body text-muted m-0">
-        Jeden výstup = jedna odevzdaná věc: spot, voiceover, zkrácená verze. Na řádku je název,
-        kdo v něm mluví, délka a licence; režii, hudbu a datum výroby má projekt jednou v záložce
-        Rodný list. Délka se píše v sekundách, od minuty výš v minutách — <span className="font-heading text-ink">30s</span>, <span className="font-heading text-ink">2min.</span>, <span className="font-heading text-ink">1min.30s</span>.
-      </p>
+      {/* VLEVO SE VYPLŇUJE, VPRAVO JE VIDĚT VÝSLEDEK (zadání 26. 9. 2026:
+          „ať se to bude doplňovat do polí vlevo a ten náhled celého dokumentu
+          bude vpravo"). Náhled drží krok s řádky, takže je při zadávání
+          rovnou vidět, jak list vypadá. Na užší obrazovce jdou pod sebe. */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,440px)] gap-5 items-start">
+        <div className="flex flex-col gap-3 min-w-0">
+          <p className="text-sm font-body text-muted m-0">
+            Jeden výstup = jedna odevzdaná věc: spot, voiceover, zkrácená verze. Na řádku je
+            název, kdo v něm mluví, délka a licence; režii, hudbu a datum výroby má projekt
+            jednou v záložce Rodný list. Délka se píše v sekundách, od minuty výš v minutách —{' '}
+            <span className="font-heading text-ink">30s</span>,{' '}
+            <span className="font-heading text-ink">2min.</span>,{' '}
+            <span className="font-heading text-ink">1min.30s</span>.
+          </p>
 
-      {chyba && (
-        <p className="text-sm font-body text-status-error m-0" role="alert">
-          {chyba}
-        </p>
-      )}
+          {chyba && (
+            <p className="text-sm font-body text-status-error m-0" role="alert">
+              {chyba}
+            </p>
+          )}
 
-      {razene.length === 0 ? (
-        <p className="text-sm font-body text-muted m-0">
-          Zatím tu není žádný výstup{canEdit ? ' — přidejte ho tlačítkem +.' : '.'}
-        </p>
-      ) : (
-        <ul className="list-none p-0 m-0 flex flex-col gap-2">
-          {razene.map((v) => (
-            <VystupRadek
-              key={v.id}
-              vystup={v}
-              rodic={v.odvozenoZId ? podleId.get(v.odvozenoZId) ?? null : null}
-              canEdit={canEdit}
-              herci={herci}
-              druhyLicence={druhyLicence}
-              typy={typy}
-              rodneListy={rlPodleVystupu.get(v.id) ?? []}
-              pracuje={pracuje}
-              nazevProjektu={nazevProjektu}
-              onUloz={(zmena) => uloz(v.id, zmena)}
-              onSmaz={() => smaz(v.id)}
-              onRodnyList={() => vyrobRL(v.id)}
-              onDowncut={(delka) => pridej({ odvozenoZId: v.id, delkaSekund: delka })}
-            />
-          ))}
-        </ul>
-      )}
-
-      {/* NÁHLED NATÁČECÍHO TEXTU (26. 9. 2026: „pod tím seznamem výstupů mít
-          ten dokument obrandovaný v náhledu, jako u nabídek a faktur").
-          Ukazuje přesně to, co se uloží na Disk - stejné HTML, jen v rámečku.
-          Bílý podklad schválně: je to dokument, ne další karta portálu. */}
-      {razene.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-heading font-semibold text-ink">Náhled natáčecího textu</span>
-          <iframe
-            key={verzeNahledu}
-            src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
-            title="Náhled natáčecího textu"
-            className="w-full h-[700px] rounded-card border border-line bg-white"
-          />
-          <span className="text-xs font-body text-muted">
-            Takhle bude vypadat dokument ve složce projektu na Disku — v náhledu na A4, ať je
-            vidět, co se na stránku vejde. Text spotů se píše až v něm; podobu listu má na
-            starost Administrace → Vzory natáčecích textů.
-          </span>
+          {razene.length === 0 ? (
+            <p className="text-sm font-body text-muted m-0">
+              Zatím tu není žádný výstup{canEdit ? ' — přidejte ho tlačítkem +.' : '.'}
+            </p>
+          ) : (
+            <ul className="list-none p-0 m-0 flex flex-col gap-2">
+              {razene.map((v) => (
+                <VystupRadek
+                  key={v.id}
+                  vystup={v}
+                  rodic={v.odvozenoZId ? podleId.get(v.odvozenoZId) ?? null : null}
+                  canEdit={canEdit}
+                  herci={herci}
+                  druhyLicence={druhyLicence}
+                  typy={typy}
+                  rodneListy={rlPodleVystupu.get(v.id) ?? []}
+                  pracuje={pracuje}
+                  nazevProjektu={nazevProjektu}
+                  onUloz={(zmena) => uloz(v.id, zmena)}
+                  onSmaz={() => smaz(v.id)}
+                  onRodnyList={() => vyrobRL(v.id)}
+                  onDowncut={(delka) => pridej({ odvozenoZId: v.id, delkaSekund: delka })}
+                />
+              ))}
+            </ul>
+          )}
         </div>
-      )}
+
+        {/* NÁHLED NATÁČECÍHO TEXTU. Ukazuje přesně to, co se uloží na Disk -
+            stejné HTML, jen v rámečku, a na A4. Bílý podklad schválně: je to
+            dokument, ne další karta portálu. */}
+        {razene.length > 0 && (
+          <div className="flex flex-col gap-2 min-w-0 xl:sticky xl:top-4">
+            <span className="text-sm font-heading font-semibold text-ink">
+              Náhled natáčecího textu
+            </span>
+            <iframe
+              key={verzeNahledu}
+              src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
+              title="Náhled natáčecího textu"
+              className="w-full h-[640px] rounded-card border border-line bg-white"
+            />
+            <span className="text-xs font-body text-muted">
+              Takhle bude vypadat dokument ve složce projektu na Disku — na A4, ať je vidět, co
+              se na stránku vejde. Text spotů se píše až v něm; podobu listu má na starost
+              Administrace → Vzory natáčecích textů.
+            </span>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -417,6 +429,13 @@ function VystupRadek({
           disabled={!canEdit}
           placeholder={nazevProjektu}
           onChange={(e) => setNazev(e.target.value)}
+          /**
+           * Po dopsání se název srovná na tvar STRABAG - 2min._online (26. 9.
+           * 2026: „takhle chci, abys přepisoval ten název"). Až při opuštění
+           * políčka, ne při každém písmenu - jinak by příponu přepisoval
+           * pod rukama a kurzor skákal na konec.
+           */
+          onBlur={() => prepoctiNazev(delkaSekund, licenceIds)}
           aria-label="Název výstupu"
           className="flex-1 min-w-[160px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm outline-none hover:border-line focus:border-brand-purple focus:bg-field disabled:opacity-60"
         />
