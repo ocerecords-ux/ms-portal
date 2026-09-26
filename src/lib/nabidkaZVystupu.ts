@@ -103,6 +103,23 @@ export async function zalozNabidkuZVystupu(
       };
     }
 
+    /**
+     * DRUHÁ NABÍDKA NA TUTÉŽ ZAKÁZKU JE CHYBA - stejné pravidlo jako u návrhu
+     * z objednávky. Tlačítko se dá zmáčknout dvakrát a nikdo by si dvou
+     * očíslovaných dokladů nemusel všimnout; kdo opravdu chce druhou, založí
+     * ji v Dokladech ručně.
+     */
+    const uz = await prisma.offer.findFirst({
+      where: { caflouProjectId },
+      select: { number: true },
+    });
+    if (uz) {
+      return {
+        ok: false,
+        duvod: `U projektu už nabídka je (${uz.number}) — další založte v Dokladech.`,
+      };
+    }
+
     const meta = await prisma.projectMeta.findUnique({
       where: { caflouProjectId },
       select: { companyId: true },
