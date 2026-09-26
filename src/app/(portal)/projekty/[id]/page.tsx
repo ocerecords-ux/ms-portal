@@ -765,7 +765,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         driveUrl: rl.driveUrl,
       }))}
       nazevProjektu={metaPoSync?.name || project?.name || ''}
-      nazevFirmy={firmaProjektu?.name ?? company?.name ?? ''}
     />
   );
 

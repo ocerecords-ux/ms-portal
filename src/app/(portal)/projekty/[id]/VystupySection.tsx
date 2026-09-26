@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DatumPole } from '@/components/DatumPole';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
-import { SLUZBY_REKLAMY } from '@/lib/sluzbyReklamy';
 import {
   NABIZENE_DOWNCUTY,
   popisDelky,
@@ -53,7 +52,6 @@ export function VystupySection({
   rodneListy,
   muzeNabidku,
   nazevProjektu,
-  nazevFirmy,
 }: {
   caflouProjectId: string;
   canEdit: boolean;
@@ -68,7 +66,6 @@ export function VystupySection({
   /** Typy z ceníku; `rodnyList` říká, ke kterému výstupu se dělá RL. */
   typy: TypVolba[];
   nazevProjektu: string;
-  nazevFirmy: string;
 }) {
   const router = useRouter();
   const [vystupy, setVystupy] = useState<VystupData[]>(vychozi);
@@ -216,9 +213,11 @@ export function VystupySection({
       )}
 
       <p className="text-sm font-body text-muted m-0">
-        Jeden výstup = jedna odevzdaná věc: spot, voiceover, zkrácená verze. Zkrácené verze se
-        zakládají tlačítkem <span className="font-heading text-ink">Downcut</span> u hlavního spotu
-        a dědí po něm herce, hudbu i licenci.
+        Jeden výstup = jedna odevzdaná věc: spot, voiceover, zkrácená verze. U každého stačí
+        název, délka a licence; režii, hudbu a datum výroby má projekt jednou v záložce Rodný
+        list. Zkrácené verze se zakládají tlačítkem{' '}
+        <span className="font-heading text-ink">Downcut</span> u hlavního spotu a dědí po něm
+        herce i licenci.
       </p>
 
       {chyba && (
@@ -258,19 +257,6 @@ export function VystupySection({
                       {popisDelky(plny.delkaSekund)}
                     </span>
                   ) : null}
-                  {plny.sluzby.map((klic) => {
-                    const s = SLUZBY_REKLAMY.find((x) => x.klic === klic);
-                    if (!s) return null;
-                    return (
-                      <span
-                        key={klic}
-                        title={s.nazev}
-                        className={`grid place-items-center w-6 h-6 rounded-full ${tridaBarvyIkony(s.ikona)}`}
-                      >
-                        <KresbaIkony klic={s.ikona} velikost={12} />
-                      </span>
-                    );
-                  })}
                   {jmena.length > 0 && (
                     <span className="text-xs font-body text-muted truncate max-w-[220px]">
                       {jmena.join(', ')}
@@ -315,9 +301,7 @@ export function VystupySection({
                     canEdit={canEdit}
                     herci={herci}
                     druhyLicence={druhyLicence}
-                    typy={typy}
                     nazevProjektu={nazevProjektu}
-                    nazevFirmy={nazevFirmy}
                     rodneListy={rlPodleVystupu.get(v.id) ?? []}
                     delaSeRL={
                       (typy.find((t) => t.nazev === plny.typKlic) ?? null)?.rodnyList ?? false
@@ -373,16 +357,28 @@ export function VystupySection({
   );
 }
 
-/** Formulář jednoho výstupu. Ukládá se tlačítkem, ne při každém písmenu. */
+/**
+ * Formulář jednoho výstupu. Ukládá se tlačítkem, ne při každém písmenu.
+ *
+ * JEN NÁZEV, DÉLKA A LICENCE (zadání 26. 9. 2026: „pojďme zjednodušit ty
+ * výstupy u projektů. Jednoduše ho pojmenujeme vždy názvem a u toho zadáme
+ * licence a délku").
+ *
+ * Režie, hudba, datum výroby i klient na dokumentu se vyplňují jednou za
+ * projekt v záložce Rodný list - u čtyř délek téhož spotu jsou stejně stejné
+ * a čtyřikrát opsané by se jen rozcházely. Rodný list si je odtamtud vezme.
+ *
+ * Herci zůstávají (upřesnění téhož dne: „nechat, ale nenápadně") - u Strabagu
+ * je v každé délce někdo jiný a jinde se to nevede. Proto jsou pod hlavním
+ * řádkem, ne v něm.
+ */
 function VystupForm({
   vystup,
   rodic,
   canEdit,
   herci,
   druhyLicence,
-  typy,
   nazevProjektu,
-  nazevFirmy,
   rodneListy,
   delaSeRL,
   onRodnyList,
@@ -395,9 +391,7 @@ function VystupForm({
   canEdit: boolean;
   herci: HerecVolba[];
   druhyLicence: LicenceVolba[];
-  typy: TypVolba[];
   nazevProjektu: string;
-  nazevFirmy: string;
   rodneListy: RodnyListRadek[];
   /** Dělá se k tomuhle typu výstupu rodný list? (příznak u položky ceníku) */
   delaSeRL: boolean;
@@ -413,10 +407,8 @@ function VystupForm({
     setV((s) => ({ ...s, [key]: value }));
   }
 
-  /** Co by se na řádku použilo, kdyby se pole nechalo prázdné (jen u downcutu). */
-  const zdedeno = rodic ? sDedenim({ ...v, ...prazdno(v) }, rodic) : null;
-  const naznak = (hodnota: string | null | undefined, vychozi: string) =>
-    rodic ? `${hodnota || ''} (dědí)`.trim() : vychozi;
+  /** U downcutu prázdné pole znamená „stejné jako u hlavního spotu". */
+  const dedi = (prazdne: boolean) => Boolean(rodic) && prazdne;
 
   return (
     <form
@@ -425,28 +417,16 @@ function VystupForm({
         e.preventDefault();
         onUloz({
           nazev: v.nazev,
-          typKlic: v.typKlic,
           delkaSekund: v.delkaSekund,
-          sluzby: v.sluzby,
-          herciIds: v.herciIds,
-          rezie: v.rezie,
-          hudbaNazev: v.hudbaNazev,
-          hudbaAutor: v.hudbaAutor,
-          bezHudby: v.bezHudby,
-          datumVyroby: v.datumVyroby,
-          klientNaRL: v.klientNaRL,
           licenceIds: v.licenceIds,
-          licenceUziti: v.licenceUziti,
-          licenceOd: v.licenceOd,
-          licenceMesicu: v.licenceMesicu,
-          hotovo: v.hotovo,
+          herciIds: v.herciIds,
           potvrzeno: true,
         });
       }}
     >
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Název výstupu</span>
+          <span className="text-sm font-body text-ink">Název</span>
           <input
             className={inputClass}
             value={v.nazev}
@@ -457,178 +437,27 @@ function VystupForm({
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Délka (sekundy)</span>
+          <span className="text-sm font-body text-ink">Délka (s)</span>
           <input
-            className={inputClass}
+            className={`${inputClass} w-28 tabular-nums`}
             type="number"
             min={1}
             inputMode="numeric"
             value={v.delkaSekund ?? ''}
             disabled={!canEdit}
+            placeholder={rodic?.delkaSekund ? String(rodic.delkaSekund) : ''}
             onChange={(e) => set('delkaSekund', e.target.value ? Number(e.target.value) : null)}
           />
         </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Typ výstupu</span>
-          <select
-            className={inputClass}
-            value={v.typKlic ?? ''}
-            disabled={!canEdit}
-            onChange={(e) => set('typKlic', e.target.value || null)}
-          >
-            <option value="">
-              {rodic ? `stejný jako u hlavního (${zdedeno?.typKlic || '—'})` : '— nevybráno —'}
-            </option>
-            {typy.map((t) => (
-              <option key={t.nazev} value={t.nazev}>
-                {t.nazev}
-                {t.rodnyList ? ' · rodný list' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Režie</span>
-          <input
-            className={inputClass}
-            value={v.rezie ?? ''}
-            disabled={!canEdit}
-            placeholder={naznak(zdedeno?.rezie, 'Ondřej Černý')}
-            onChange={(e) => set('rezie', e.target.value || null)}
-          />
-        </label>
       </div>
 
-      {/* Služby - co se na tomhle výstupu dělá. Zaškrtávátka, protože
-          postprodukce se dělá u něčeho a u něčeho ne (zadání 26. 9. 2026). */}
-      <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Co se na výstupu dělá</span>
-        <div className="flex flex-wrap gap-2">
-          {SLUZBY_REKLAMY.map((s) => {
-            const zaskrtnuto = v.sluzby.includes(s.klic);
-            return (
-              <button
-                key={s.klic}
-                type="button"
-                role="checkbox"
-                aria-checked={zaskrtnuto}
-                disabled={!canEdit}
-                title={s.popis}
-                onClick={() =>
-                  set(
-                    'sluzby',
-                    zaskrtnuto ? v.sluzby.filter((x) => x !== s.klic) : [...v.sluzby, s.klic],
-                  )
-                }
-                className={`inline-flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-pill border text-sm font-heading font-semibold transition-colors ${
-                  zaskrtnuto
-                    ? 'border-brand-purple bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
-                    : 'border-dashed border-line bg-transparent text-muted opacity-70 hover:opacity-100 hover:text-ink'
-                }`}
-              >
-                <span
-                  className={`grid place-items-center w-6 h-6 rounded-full ${
-                    zaskrtnuto ? tridaBarvyIkony(s.ikona) : 'bg-field text-muted'
-                  }`}
-                >
-                  <KresbaIkony klic={s.ikona} velikost={13} />
-                </span>
-                {s.nazev}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Herci - vybírá se z herců projektu, nezadávají se znovu. */}
-      <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">
-          Kdo v něm mluví
-          {rodic && v.herciIds.length === 0 ? ' — zatím dědí po hlavním spotu' : ''}
-        </span>
-        {herci.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0">
-            Projekt zatím nemá herce — doplňte je v Interních údajích.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {herci.map((h) => {
-              const zaskrtnuto = v.herciIds.includes(h.id);
-              return (
-                <button
-                  key={h.id}
-                  type="button"
-                  role="checkbox"
-                  aria-checked={zaskrtnuto}
-                  disabled={!canEdit}
-                  onClick={() =>
-                    set(
-                      'herciIds',
-                      zaskrtnuto ? v.herciIds.filter((x) => x !== h.id) : [...v.herciIds, h.id],
-                    )
-                  }
-                  className={`rounded-pill border px-3 py-1.5 text-sm font-heading transition-colors ${
-                    zaskrtnuto
-                      ? 'border-brand-purple bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
-                      : 'border-dashed border-line bg-transparent text-muted opacity-70 hover:opacity-100 hover:text-ink'
-                  }`}
-                >
-                  {h.name}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Hudba a datum výroby - údaje, ze kterých se tiskne rodný list. */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Název skladby</span>
-          <input
-            className={inputClass}
-            value={v.hudbaNazev ?? ''}
-            disabled={!canEdit || v.bezHudby}
-            placeholder={naznak(zdedeno?.hudbaNazev, '')}
-            onChange={(e) => set('hudbaNazev', e.target.value || null)}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Autor hudby</span>
-          <input
-            className={inputClass}
-            value={v.hudbaAutor ?? ''}
-            disabled={!canEdit || v.bezHudby}
-            placeholder={naznak(zdedeno?.hudbaAutor, '')}
-            onChange={(e) => set('hudbaAutor', e.target.value || null)}
-          />
-        </label>
-        <label className="flex items-center gap-2 text-sm font-body text-ink">
-          <input
-            type="checkbox"
-            checked={v.bezHudby}
-            disabled={!canEdit}
-            onChange={(e) => set('bezHudby', e.target.checked)}
-          />
-          Spot nemá hudbu
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Datum výroby</span>
-          <DatumPole
-            value={v.datumVyroby ?? ''}
-            disabled={!canEdit}
-            onChange={(e) => set('datumVyroby', e.target.value || null)}
-            className={inputClass}
-          />
-        </label>
-      </div>
-
-      {/* Licence u konkrétního výstupu - spot běží v rádiu, voiceover online. */}
+      {/* Licence konkrétního výstupu - spot běží v rádiu, voiceover online. */}
       {druhyLicence.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Licence</span>
+          <span className="text-sm font-body text-ink">
+            Licence
+            {dedi(v.licenceIds.length === 0) ? ' — zatím stejná jako u hlavního spotu' : ''}
+          </span>
           <div className="flex flex-wrap gap-2">
             {druhyLicence.map((d) => {
               const zaskrtnuto = v.licenceIds.includes(d.id);
@@ -666,59 +495,55 @@ function VystupForm({
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1.5 sm:col-span-2">
-          <span className="text-sm font-body text-ink">Účel a území užití</span>
-          <input
-            className={inputClass}
-            value={v.licenceUziti ?? ''}
-            disabled={!canEdit}
-            placeholder={naznak(zdedeno?.licenceUziti, 'audio reklama na Spotify, CZ+SK')}
-            onChange={(e) => set('licenceUziti', e.target.value || null)}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Licence od</span>
-          <DatumPole
-            value={v.licenceOd ?? ''}
-            disabled={!canEdit}
-            onChange={(e) => set('licenceOd', e.target.value || null)}
-            className={inputClass}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Na kolik měsíců</span>
-          <input
-            className={inputClass}
-            type="number"
-            min={1}
-            inputMode="numeric"
-            value={v.licenceMesicu ?? ''}
-            disabled={!canEdit}
-            onChange={(e) => set('licenceMesicu', e.target.value ? Number(e.target.value) : null)}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 sm:col-span-2">
-          <span className="text-sm font-body text-ink">Klient na rodném listu</span>
-          <input
-            className={inputClass}
-            value={v.klientNaRL ?? ''}
-            disabled={!canEdit}
-            placeholder={naznak(zdedeno?.klientNaRL, nazevFirmy)}
-            onChange={(e) => set('klientNaRL', e.target.value || null)}
-          />
-        </label>
-      </div>
+      {/* Herci - nenápadně pod licencí. Vybírá se z herců projektu, jméno se
+          nikde nezadává znovu. */}
+      {herci.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-heading text-muted">
+            Kdo v něm mluví
+            {dedi(v.herciIds.length === 0) ? ' — zatím stejně jako u hlavního spotu' : ''}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {herci.map((h) => {
+              const zaskrtnuto = v.herciIds.includes(h.id);
+              return (
+                <button
+                  key={h.id}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={zaskrtnuto}
+                  disabled={!canEdit}
+                  onClick={() =>
+                    set(
+                      'herciIds',
+                      zaskrtnuto ? v.herciIds.filter((x) => x !== h.id) : [...v.herciIds, h.id],
+                    )
+                  }
+                  className={`rounded-pill border px-2.5 py-1 text-xs font-heading transition-colors ${
+                    zaskrtnuto
+                      ? 'border-brand-purple bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
+                      : 'border-dashed border-line bg-transparent text-muted opacity-70 hover:opacity-100 hover:text-ink'
+                  }`}
+                >
+                  {h.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* RODNÝ LIST K VÝSTUPU (26. 9. 2026). Dělá se jen u typů, které ho
           mají v ceníku zapnutý - online voiceover pod stejným projektem ho
-          nedostane a nikdo to nemusí hlídat. */}
+          nedostane a nikdo to nemusí hlídat. Údaje o režii, hudbě a datu si
+          bere ze záložky Rodný list, tady se zadává jen délka. */}
       {delaSeRL && (
         <div className="flex flex-col gap-2 rounded-card border border-line bg-field/40 p-3">
           <span className="text-sm font-heading font-semibold text-ink">Rodný list</span>
           {rodneListy.length === 0 ? (
             <p className="text-sm font-body text-muted m-0">
-              Zatím není vyrobený. Vznikne z údajů výše — délka, režie, hudba a datum výroby.
+              Zatím není vyrobený. Vznikne z názvu a délky výše; režii, hudbu a datum výroby si
+              vezme ze záložky Rodný list.
             </p>
           ) : (
             <ul className="list-none p-0 m-0 flex flex-col gap-1">
@@ -763,76 +588,45 @@ function VystupForm({
         </div>
       )}
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <label className="flex items-center gap-2 text-sm font-body text-ink">
-          <input
-            type="checkbox"
-            checked={v.hotovo}
-            disabled={!canEdit}
-            onChange={(e) => set('hotovo', e.target.checked)}
-          />
-          Hotovo — odevzdáno klientovi
-        </label>
-
-        {canEdit && (
-          <>
-            <button
-              type="submit"
-              disabled={pracuje}
-              className="ml-auto rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 border-0 cursor-pointer disabled:opacity-50"
-            >
-              Uložit výstup
-            </button>
-            {potvrzujiSmazani ? (
-              <span className="flex items-center gap-2 text-sm font-body text-ink">
-                Opravdu smazat?
-                <button
-                  type="button"
-                  onClick={onSmaz}
-                  disabled={pracuje}
-                  className="rounded-pill border border-status-error text-status-error font-heading text-sm px-3 py-1 bg-transparent cursor-pointer"
-                >
-                  Smazat
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPotvrzujiSmazani(false)}
-                  className="text-muted bg-transparent border-0 underline cursor-pointer text-sm"
-                >
-                  zpět
-                </button>
-              </span>
-            ) : (
+      {canEdit && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="submit"
+            disabled={pracuje}
+            className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 border-0 cursor-pointer disabled:opacity-50"
+          >
+            Uložit výstup
+          </button>
+          {potvrzujiSmazani ? (
+            <span className="flex items-center gap-2 text-sm font-body text-ink ml-auto">
+              Opravdu smazat?
               <button
                 type="button"
-                onClick={() => setPotvrzujiSmazani(true)}
-                className="text-sm font-heading text-muted bg-transparent border-0 underline cursor-pointer hover:text-status-error"
+                onClick={onSmaz}
+                disabled={pracuje}
+                className="rounded-pill border border-status-error text-status-error font-heading text-sm px-3 py-1 bg-transparent cursor-pointer"
               >
-                Smazat výstup
+                Smazat
               </button>
-            )}
-          </>
-        )}
-      </div>
+              <button
+                type="button"
+                onClick={() => setPotvrzujiSmazani(false)}
+                className="text-muted bg-transparent border-0 underline cursor-pointer text-sm"
+              >
+                zpět
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPotvrzujiSmazani(true)}
+              className="ml-auto text-sm font-heading text-muted bg-transparent border-0 underline cursor-pointer hover:text-status-error"
+            >
+              Smazat výstup
+            </button>
+          )}
+        </div>
+      )}
     </form>
   );
-}
-
-/** Prázdné hodnoty - pro spočítání toho, co by se zdědilo po hlavním spotu. */
-function prazdno(v: VystupData): Partial<VystupData> {
-  return {
-    typKlic: null,
-    sluzby: [],
-    herciIds: [],
-    rezie: null,
-    hudbaNazev: null,
-    hudbaAutor: null,
-    bezHudby: false,
-    datumVyroby: null,
-    klientNaRL: null,
-    licenceIds: [],
-    licenceUziti: null,
-    licenceOd: null,
-    licenceMesicu: null,
-  };
 }

@@ -1,11 +1,15 @@
 import { prisma } from '@/lib/db';
 import { nazevSpotuZVystupu, sDedenim, type VystupData } from '@/lib/vystupy';
 import { nactiVystupy } from '@/lib/vystupyServer';
-import { sluzbaPodleKlice } from '@/lib/sluzbyReklamy';
 
 /**
- * NABÍDKA Z VÝSTUPŮ (zadání 26. 9. 2026, etapa 5: „každý výstup × každá jeho
- * služba = jedna položka… klient pak na faktuře vidí přesně to, co dostal").
+ * NABÍDKA Z VÝSTUPŮ (zadání 26. 9. 2026, etapa 5) - klient na dokladu vidí
+ * přesně to, co se vyrobilo.
+ *
+ * JEDNA POLOŽKA ZA VÝSTUP (zjednodušení téhož dne: služby se u výstupu už
+ * nevedou, výstup je jen název, délka a licence). Dřív to byla položka za
+ * každou zaškrtnutou službu; teď je řádek nabídky tentýž seznam, jaký je
+ * v záložce Výstupy, a co v ceně je, se dopíše do popisu ručně.
  *
  * CENY SE NEHÁDAJÍ. Ceník na reklamy se teprve dodělává (26. 9. 2026: „ceníky
  * budu muset ještě domyslet"), takže se cena doplní jen tam, kde položka
@@ -28,8 +32,8 @@ export type PolozkaZVystupu = {
 };
 
 /**
- * Položky nabídky poskládané z výstupů projektu. Prázdné pole znamená, že
- * projekt výstupy nemá nebo u nich nikdo nezaškrtl žádnou službu.
+ * Položky nabídky poskládané z výstupů projektu - jedna za výstup. Prázdné
+ * pole znamená, že projekt žádné výstupy nemá.
  */
 export async function polozkyZVystupu(
   caflouProjectId: string,
@@ -44,37 +48,23 @@ export async function polozkyZVystupu(
     .catch(() => [])) as { name: string; priceExVat: number | null }[];
   const ceny = new Map<string, number | null>(cenik.map((c) => [c.name, c.priceExVat]));
 
-  const polozky: PolozkaZVystupu[] = [];
-  let poradi = 0;
-
-  for (const syrovy of vsechny) {
+  return vsechny.map((syrovy, i) => {
     const v: VystupData = sDedenim(
       syrovy,
       syrovy.odvozenoZId ? podleId.get(syrovy.odvozenoZId) ?? null : null,
     );
-    // Co se na výstupu nedělá, se nefakturuje.
-    if (v.sluzby.length === 0) continue;
-
-    const popisVystupu = nazevSpotuZVystupu(v, nazevProjektu);
-
-    for (const klic of v.sluzby) {
-      const sluzba = sluzbaPodleKlice(klic);
-      if (!sluzba) continue;
-      // Cena jen z ceníku, a jen když tam opravdu je (viz poznámka výš).
-      const cena: number | null = sluzba.cenik ? ceny.get(sluzba.cenik) ?? null : null;
-      polozky.push({
-        description: `${sluzba.nazev} — ${popisVystupu}`,
-        quantity: 1,
-        unit: 'ks',
-        unitPriceMinor: cena && cena > 0 ? Math.round(cena * 100) : 0,
-        vatRate: 21,
-        sortOrder: poradi,
-      });
-      poradi += 1;
-    }
-  }
-
-  return polozky;
+    // Cena jen z ceníku, a jen když tam položka typu výstupu opravdu je
+    // (viz poznámka výš) - vymyšlená cena v dokladu je horší než nula.
+    const cena: number | null = v.typKlic ? ceny.get(v.typKlic) ?? null : null;
+    return {
+      description: nazevSpotuZVystupu(v, nazevProjektu),
+      quantity: 1,
+      unit: 'ks',
+      unitPriceMinor: cena && cena > 0 ? Math.round(cena * 100) : 0,
+      vatRate: 21,
+      sortOrder: i,
+    };
+  });
 }
 
 /** Krátké shrnutí do tlačítka - „4 výstupy, 7 položek". */
@@ -97,10 +87,7 @@ export async function zalozNabidkuZVystupu(
   try {
     const polozky = await polozkyZVystupu(caflouProjectId, nazevProjektu);
     if (polozky.length === 0) {
-      return {
-        ok: false,
-        duvod: 'Není z čeho nabídku složit — u výstupů není zaškrtnutá žádná služba.',
-      };
+      return { ok: false, duvod: 'Není z čeho nabídku složit — projekt nemá žádné výstupy.' };
     }
 
     /**

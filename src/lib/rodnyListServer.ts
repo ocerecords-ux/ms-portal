@@ -111,16 +111,32 @@ async function vystupySRodnymListem(
     .filter((v) => typy.includes((v.typKlic || typProjektu || '').trim()));
 }
 
-/** Hodnoty do dokumentu z výstupu - tatáž pole, jen po jednotlivých spotech. */
-function fieldsZVystupu(vystup: VystupData, nazevProjektu: string): RodnyListFields {
+/**
+ * Hodnoty do dokumentu z výstupu.
+ *
+ * VÝSTUP DÁVÁ JEN NÁZEV A DÉLKU (zjednodušení 26. 9. 2026: „jednoduše ho
+ * pojmenujeme vždy názvem a u toho zadáme licence a délku"). Režie, hudba,
+ * datum výroby i klient na dokumentu se vyplňují jednou za projekt v záložce
+ * Rodný list - u čtyř délek téhož spotu jsou stejně stejné a čtyřikrát
+ * opsané by se jen rozcházely. Když u výstupu přesto něco vyplněného je
+ * (starší záznam, převod), má to přednost.
+ */
+function fieldsZVystupu(
+  vystup: VystupData,
+  meta: Record<string, unknown> | null,
+  nazevProjektu: string,
+): RodnyListFields {
+  const zProjektu = fieldsFromMeta(meta, nazevProjektu);
   return {
     spotName: nazevSpotuZVystupu(vystup, nazevProjektu),
-    spotLengthSeconds: vystup.delkaSekund,
-    directorName: vystup.rezie || '',
-    musicTitle: vystup.hudbaNazev || '',
-    musicAuthor: vystup.hudbaAutor || '',
-    noMusic: vystup.bezHudby,
-    productionDate: vystup.datumVyroby ? new Date(`${vystup.datumVyroby}T00:00:00.000Z`) : null,
+    spotLengthSeconds: vystup.delkaSekund ?? zProjektu.spotLengthSeconds,
+    directorName: vystup.rezie || zProjektu.directorName,
+    musicTitle: vystup.hudbaNazev || zProjektu.musicTitle,
+    musicAuthor: vystup.hudbaAutor || zProjektu.musicAuthor,
+    noMusic: vystup.bezHudby || zProjektu.noMusic,
+    productionDate: vystup.datumVyroby
+      ? new Date(`${vystup.datumVyroby}T00:00:00.000Z`)
+      : zProjektu.productionDate,
   };
 }
 
@@ -358,7 +374,7 @@ async function vytvorRodnyList(
       return { ok: false, reason: 'NO_COMPANY', message: 'K projektu není v portálu napojená firma.' };
     }
     const fields = opts.vystup
-      ? fieldsZVystupu(opts.vystup, projectName)
+      ? fieldsZVystupu(opts.vystup, meta as Record<string, unknown> | null, projectName)
       : fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
     // Klient na dokumentu: co je vyplnene u vystupu, jinak u projektu, jinak
     // nazev firmy (zadani 10. 9. 2026). Na RL obcas patri neco jineho nez
@@ -790,7 +806,7 @@ export async function rodnyListKFakture(input: {
 
     for (const vystup of jednotky) {
       const fields = vystup
-        ? fieldsZVystupu(vystup, projectName)
+        ? fieldsZVystupu(vystup, meta as Record<string, unknown> | null, projectName)
         : fieldsFromMeta(meta as Record<string, unknown> | null, projectName);
       const klientNaRL =
         (vystup?.klientNaRL || '').trim() ||
