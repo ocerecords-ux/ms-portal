@@ -1,14 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { DatumPole } from '@/components/DatumPole';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import {
   NABIZENE_DOWNCUTY,
-  popisDelky,
-  sDedenim,
+  delkaNaText,
   serad,
+  textNaDelku,
   type VystupData,
 } from '@/lib/vystupy';
 
@@ -17,18 +16,20 @@ import {
  * výstupů… u Strabagu jsme teď dělali 4 různé délky a v každém spotu jiní
  * herci. Nebo děláme pod jedním projektem 5 různých rádiových spotů").
  *
- * Tabulka místo hromady formulářů: kdo se na zakázku podívá, potřebuje na
- * první pohled vidět, kolik věcí se v ní dělá, jak jsou dlouhé a kdo v nich
- * mluví. Řádek se rozklepne na formulář, teprve když se něco doplňuje.
+ * VŠECHNO NA JEDNOM ŘÁDKU (upřesnění téhož dne: „chtěl bych toto všechno mít
+ * na jednom řádku. Název, herce, délku… a licenci"). Výstup se nerozklepává
+ * do formuláře - řádek JE formulář: název, herci, délka, licence a vpravo
+ * tečky s tím, co se s výstupem dá udělat. Čtyři délky Strabagu jsou tak
+ * čtyři řádky pod sebou a je vidět, čím se od sebe liší.
+ *
+ * HERCI A LICENCE SE VYBÍRAJÍ V MALÉM OKNĚ. Čtrnáct jmen vedle sebe by na
+ * řádek nikdy nevešlo; tlačítko ukáže, kolik jich je, a okno se otevře, až
+ * když se mění. Stejné okno jako u herců v Interních údajích.
  *
  * DOWNCUT JE PODŘÁDEK, NE ROVNOCENNÁ POLOŽKA. Zadá se zaškrtnutím délky
  * a všechno ostatní dědí po hlavním spotu - proto u něj prázdné pole
- * neznamená „nevyplněno", ale „stejné jako u hlavního" a v políčku svítí
- * zděděná hodnota jako našeptaná (viz sDedenim v lib/vystupy.ts).
+ * neznamená „nevyplněno", ale „stejné jako u hlavního".
  */
-
-const inputClass =
-  'rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple disabled:opacity-60';
 
 export type HerecVolba = { id: string; name: string };
 export type LicenceVolba = { id: string; nazev: string; ikona: string | null };
@@ -41,6 +42,9 @@ export type RodnyListRadek = {
   fileName: string;
   driveUrl: string | null;
 };
+
+/** Šířka vyskakovacích oken; drží se i při počítání, ať nevylezou z obrazovky. */
+const SIRKA_OKNA = 240;
 
 export function VystupySection({
   caflouProjectId,
@@ -69,16 +73,12 @@ export function VystupySection({
 }) {
   const router = useRouter();
   const [vystupy, setVystupy] = useState<VystupData[]>(vychozi);
-  const [otevreny, setOtevreny] = useState<string | null>(null);
-  const [downcutU, setDowncutU] = useState<string | null>(null);
   const [pracuje, setPracuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [nabidka, setNabidka] = useState<{ id: string; number: string } | null>(null);
 
   const razene = useMemo(() => serad(vystupy), [vystupy]);
   const podleId = useMemo(() => new Map(vystupy.map((v) => [v.id, v])), [vystupy]);
-  const jmenaHercu = useMemo(() => new Map(herci.map((h) => [h.id, h.name])), [herci]);
-  const nazvyLicenci = useMemo(() => new Map(druhyLicence.map((l) => [l.id, l.nazev])), [druhyLicence]);
   /** Rodné listy po výstupech, nejnovější verze první. */
   const rlPodleVystupu = useMemo(() => {
     const m = new Map<string, RodnyListRadek[]>();
@@ -117,8 +117,6 @@ export function VystupySection({
     const novy = data?.vystup as VystupData | undefined;
     if (!novy) return;
     setVystupy((s) => [...s, novy]);
-    setOtevreny(novy.id);
-    setDowncutU(null);
     router.refresh();
   }
 
@@ -134,9 +132,8 @@ export function VystupySection({
   }
 
   /**
-   * NABÍDKA Z VÝSTUPŮ (26. 9. 2026). Každý výstup × každá jeho služba = jedna
-   * položka. Ceny se doplní jen tam, kde je zná ceník - ten se na reklamy
-   * teprve dodělává, takže zbytek čeká na doplnění v dokladu.
+   * NABÍDKA Z VÝSTUPŮ (26. 9. 2026) - jedna položka za výstup. Ceny se doplní
+   * jen tam, kde je zná ceník; ten se na reklamy teprve dodělává.
    */
   async function zalozNabidku() {
     const data = await zavolej(`/api/projects/${encodeURIComponent(caflouProjectId)}/vystupy/nabidka`, {
@@ -153,7 +150,6 @@ export function VystupySection({
       { method: 'POST' },
     );
     if (!data) return;
-    // Seznam verzí přijde ze serveru - stránka se překreslí.
     router.refresh();
   }
 
@@ -164,7 +160,6 @@ export function VystupySection({
     );
     if (!data) return;
     setVystupy((s) => s.filter((v) => v.id !== id));
-    if (otevreny === id) setOtevreny(null);
     router.refresh();
   }
 
@@ -175,7 +170,7 @@ export function VystupySection({
         {canEdit && (
           <button
             type="button"
-            onClick={() => pridej({ nazev: 'Výstup' })}
+            onClick={() => pridej({ nazev: nazevProjektu || 'Výstup' })}
             disabled={pracuje}
             title="Přidat výstup"
             aria-label="Přidat výstup"
@@ -189,7 +184,7 @@ export function VystupySection({
             type="button"
             onClick={zalozNabidku}
             disabled={pracuje}
-            title="Založí rozpracovanou nabídku — položka za každou službu u každého výstupu"
+            title="Založí rozpracovanou nabídku — jedna položka za výstup"
             className="ml-auto rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
           >
             Nabídka z výstupů
@@ -213,11 +208,9 @@ export function VystupySection({
       )}
 
       <p className="text-sm font-body text-muted m-0">
-        Jeden výstup = jedna odevzdaná věc: spot, voiceover, zkrácená verze. U každého stačí
-        název, délka a licence; režii, hudbu a datum výroby má projekt jednou v záložce Rodný
-        list. Zkrácené verze se zakládají tlačítkem{' '}
-        <span className="font-heading text-ink">Downcut</span> u hlavního spotu a dědí po něm
-        herce i licenci.
+        Jeden výstup = jedna odevzdaná věc: spot, voiceover, zkrácená verze. Na řádku je název,
+        kdo v něm mluví, délka a licence; režii, hudbu a datum výroby má projekt jednou v záložce
+        Rodný list. Délka se píše v sekundách, delší jako <span className="font-heading text-ink">1:30</span>.
       </p>
 
       {chyba && (
@@ -232,401 +225,513 @@ export function VystupySection({
         </p>
       ) : (
         <ul className="list-none p-0 m-0 flex flex-col gap-2">
-          {razene.map((v) => {
-            const rodic = v.odvozenoZId ? podleId.get(v.odvozenoZId) ?? null : null;
-            const plny = sDedenim(v, rodic);
-            const typ = typy.find((t) => t.nazev === plny.typKlic) ?? null;
-            const jmena = plny.herciIds.map((id) => jmenaHercu.get(id) || '—').filter(Boolean);
-
-            return (
-              <li
-                key={v.id}
-                className={`rounded-card border border-line bg-surface ${rodic ? 'ml-6' : ''}`}
-              >
-                <button
-                  type="button"
-                  onClick={() => setOtevreny(otevreny === v.id ? null : v.id)}
-                  className="w-full flex items-center gap-3 flex-wrap px-4 py-3 text-left bg-transparent border-0 cursor-pointer"
-                >
-                  <span className="font-heading font-semibold text-sm text-ink">
-                    {rodic ? '↳ ' : ''}
-                    {v.nazev}
-                  </span>
-                  {plny.delkaSekund ? (
-                    <span className="rounded-pill bg-field border border-line px-2 py-0.5 text-xs font-heading text-muted tabular-nums">
-                      {popisDelky(plny.delkaSekund)}
-                    </span>
-                  ) : null}
-                  {jmena.length > 0 && (
-                    <span className="text-xs font-body text-muted truncate max-w-[220px]">
-                      {jmena.join(', ')}
-                      {rodic && v.herciIds.length === 0 ? ' (dědí)' : ''}
-                    </span>
-                  )}
-                  {plny.licenceIds.length > 0 && (
-                    <span className="text-xs font-body text-muted">
-                      {plny.licenceIds.map((id) => nazvyLicenci.get(id) || '').filter(Boolean).join(' · ')}
-                    </span>
-                  )}
-                  {typ?.rodnyList && (
-                    <span className="rounded-pill border border-line px-2 py-0.5 text-[11px] font-heading text-muted">
-                      rodný list
-                    </span>
-                  )}
-                  {(rlPodleVystupu.get(v.id) ?? []).length > 0 && (
-                    <span className="rounded-pill bg-okTint text-status-done px-2 py-0.5 text-[11px] font-heading font-semibold">
-                      RL v{(rlPodleVystupu.get(v.id) ?? [])[0].version}
-                    </span>
-                  )}
-                  {v.hotovo && (
-                    <span className="rounded-pill bg-okTint text-status-done px-2 py-0.5 text-[11px] font-heading font-semibold">
-                      hotovo
-                    </span>
-                  )}
-                  {!v.potvrzeno && (
-                    <span
-                      title="Návrh z objednávky — ještě ho nikdo z nás nepotvrdil."
-                      className="rounded-pill bg-warnTint text-status-progress px-2 py-0.5 text-[11px] font-heading font-semibold"
-                    >
-                      návrh klienta
-                    </span>
-                  )}
-                  <span className="ml-auto text-muted text-sm">{otevreny === v.id ? '▾' : '▸'}</span>
-                </button>
-
-                {otevreny === v.id && (
-                  <VystupForm
-                    vystup={v}
-                    rodic={rodic}
-                    canEdit={canEdit}
-                    herci={herci}
-                    druhyLicence={druhyLicence}
-                    nazevProjektu={nazevProjektu}
-                    rodneListy={rlPodleVystupu.get(v.id) ?? []}
-                    delaSeRL={
-                      (typy.find((t) => t.nazev === plny.typKlic) ?? null)?.rodnyList ?? false
-                    }
-                    onRodnyList={() => vyrobRL(v.id)}
-                    pracuje={pracuje}
-                    onUloz={(zmena) => uloz(v.id, zmena)}
-                    onSmaz={() => smaz(v.id)}
-                  />
-                )}
-
-                {canEdit && !rodic && otevreny !== v.id && (
-                  <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
-                    {downcutU === v.id ? (
-                      <>
-                        <span className="text-xs font-heading text-muted">Délka zkrácené verze:</span>
-                        {NABIZENE_DOWNCUTY.map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            disabled={pracuje}
-                            onClick={() => pridej({ odvozenoZId: v.id, delkaSekund: s })}
-                            className="rounded-pill border border-line px-3 py-1 text-xs font-heading text-ink bg-field hover:border-brand-purple hover:text-brand-purple transition-colors cursor-pointer tabular-nums"
-                          >
-                            {s}s
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => setDowncutU(null)}
-                          className="text-xs font-heading text-muted bg-transparent border-0 cursor-pointer underline"
-                        >
-                          zrušit
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setDowncutU(v.id)}
-                        className="rounded-pill border border-dashed border-line px-3 py-1 text-xs font-heading text-muted hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer bg-transparent"
-                      >
-                        + Downcut
-                      </button>
-                    )}
-                  </div>
-                )}
-              </li>
-            );
-          })}
+          {razene.map((v) => (
+            <VystupRadek
+              key={v.id}
+              vystup={v}
+              rodic={v.odvozenoZId ? podleId.get(v.odvozenoZId) ?? null : null}
+              canEdit={canEdit}
+              herci={herci}
+              druhyLicence={druhyLicence}
+              typy={typy}
+              rodneListy={rlPodleVystupu.get(v.id) ?? []}
+              pracuje={pracuje}
+              nazevProjektu={nazevProjektu}
+              onUloz={(zmena) => uloz(v.id, zmena)}
+              onSmaz={() => smaz(v.id)}
+              onRodnyList={() => vyrobRL(v.id)}
+              onDowncut={(delka) => pridej({ odvozenoZId: v.id, delkaSekund: delka })}
+            />
+          ))}
         </ul>
       )}
     </section>
   );
 }
 
-/**
- * Formulář jednoho výstupu. Ukládá se tlačítkem, ne při každém písmenu.
- *
- * JEN NÁZEV, DÉLKA A LICENCE (zadání 26. 9. 2026: „pojďme zjednodušit ty
- * výstupy u projektů. Jednoduše ho pojmenujeme vždy názvem a u toho zadáme
- * licence a délku").
- *
- * Režie, hudba, datum výroby i klient na dokumentu se vyplňují jednou za
- * projekt v záložce Rodný list - u čtyř délek téhož spotu jsou stejně stejné
- * a čtyřikrát opsané by se jen rozcházely. Rodný list si je odtamtud vezme.
- *
- * Herci zůstávají (upřesnění téhož dne: „nechat, ale nenápadně") - u Strabagu
- * je v každé délce někdo jiný a jinde se to nevede. Proto jsou pod hlavním
- * řádkem, ne v něm.
- */
-function VystupForm({
+/** Jeden výstup: celý na jednom řádku, ukládá se tlačítkem u řádku. */
+function VystupRadek({
   vystup,
   rodic,
   canEdit,
   herci,
   druhyLicence,
-  nazevProjektu,
+  typy,
   rodneListy,
-  delaSeRL,
-  onRodnyList,
   pracuje,
+  nazevProjektu,
   onUloz,
   onSmaz,
+  onRodnyList,
+  onDowncut,
 }: {
   vystup: VystupData;
   rodic: VystupData | null;
   canEdit: boolean;
   herci: HerecVolba[];
   druhyLicence: LicenceVolba[];
-  nazevProjektu: string;
+  typy: TypVolba[];
   rodneListy: RodnyListRadek[];
-  /** Dělá se k tomuhle typu výstupu rodný list? (příznak u položky ceníku) */
-  delaSeRL: boolean;
-  onRodnyList: () => void;
   pracuje: boolean;
+  nazevProjektu: string;
   onUloz: (zmena: Record<string, unknown>) => void;
   onSmaz: () => void;
+  onRodnyList: () => void;
+  onDowncut: (delkaSekund: number) => void;
 }) {
-  const [v, setV] = useState<VystupData>(vystup);
-  const [potvrzujiSmazani, setPotvrzujiSmazani] = useState(false);
+  const [nazev, setNazev] = useState(vystup.nazev);
+  const [delka, setDelka] = useState(delkaNaText(vystup.delkaSekund));
+  const [licenceIds, setLicenceIds] = useState<string[]>(vystup.licenceIds);
+  const [herciIds, setHerciIds] = useState<string[]>(vystup.herciIds);
 
-  function set<K extends keyof VystupData>(key: K, value: VystupData[K]) {
-    setV((s) => ({ ...s, [key]: value }));
+  // Co přijde ze serveru po uložení, přebije rozepsané - jinak by v políčku
+  // zůstala stará hodnota, když ji server upraví (třeba ořízne mezery).
+  useEffect(() => {
+    setNazev(vystup.nazev);
+    setDelka(delkaNaText(vystup.delkaSekund));
+    setLicenceIds(vystup.licenceIds);
+    setHerciIds(vystup.herciIds);
+  }, [vystup]);
+
+  const delkaSekund = textNaDelku(delka);
+  const zmeneno =
+    nazev !== vystup.nazev ||
+    (delkaSekund ?? null) !== (vystup.delkaSekund ?? null) ||
+    licenceIds.join(',') !== vystup.licenceIds.join(',') ||
+    herciIds.join(',') !== vystup.herciIds.join(',');
+  /** Napsaná délka, které nerozumíme - řádek to řekne místo tichého zahození. */
+  const delkaSpatne = delka.trim().length > 0 && delkaSekund === null;
+
+  const typ = typy.find((t) => t.nazev === (vystup.typKlic || rodic?.typKlic)) ?? null;
+  const delaSeRL = typ?.rodnyList ?? false;
+  const posledniRL = rodneListy[0] ?? null;
+
+  function ulozRadek() {
+    onUloz({
+      nazev,
+      delkaSekund,
+      licenceIds,
+      herciIds,
+      potvrzeno: true,
+    });
   }
 
-  /** U downcutu prázdné pole znamená „stejné jako u hlavního spotu". */
-  const dedi = (prazdne: boolean) => Boolean(rodic) && prazdne;
-
   return (
-    <form
-      className="px-4 pb-4 pt-1 flex flex-col gap-4 border-t border-line"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onUloz({
-          nazev: v.nazev,
-          delkaSekund: v.delkaSekund,
-          licenceIds: v.licenceIds,
-          herciIds: v.herciIds,
-          potvrzeno: true,
-        });
-      }}
-    >
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Název</span>
-          <input
-            className={inputClass}
-            value={v.nazev}
-            disabled={!canEdit}
-            placeholder={nazevProjektu}
-            onChange={(e) => set('nazev', e.target.value)}
-          />
-        </label>
+    <li className={rodic ? 'ml-6' : ''}>
+      <div className="flex items-center gap-2 flex-wrap rounded-card border border-line bg-surface px-3 py-2">
+        {rodic && <span className="text-muted text-sm shrink-0">↳</span>}
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Délka (s)</span>
-          <input
-            className={`${inputClass} w-28 tabular-nums`}
-            type="number"
-            min={1}
-            inputMode="numeric"
-            value={v.delkaSekund ?? ''}
-            disabled={!canEdit}
-            placeholder={rodic?.delkaSekund ? String(rodic.delkaSekund) : ''}
-            onChange={(e) => set('delkaSekund', e.target.value ? Number(e.target.value) : null)}
+        <input
+          value={nazev}
+          disabled={!canEdit}
+          placeholder={nazevProjektu}
+          onChange={(e) => setNazev(e.target.value)}
+          aria-label="Název výstupu"
+          className="flex-1 min-w-[160px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm outline-none hover:border-line focus:border-brand-purple focus:bg-field disabled:opacity-60"
+        />
+
+        {/* Kdo v něm mluví - u Strabagu je v každé délce někdo jiný. */}
+        <VyberVOkne
+          popisek="Herci"
+          prazdne="herci"
+          disabled={!canEdit}
+          polozky={herci.map((h) => ({ id: h.id, nazev: h.name, ikona: null }))}
+          vybrane={herciIds}
+          zdedene={rodic ? rodic.herciIds : []}
+          onZmena={setHerciIds}
+        />
+
+        <input
+          value={delka}
+          disabled={!canEdit}
+          placeholder={rodic ? delkaNaText(rodic.delkaSekund) || 'délka' : 'délka'}
+          onChange={(e) => setDelka(e.target.value)}
+          aria-label="Délka"
+          title="Sekundy, nebo delší jako 1:30"
+          className={`w-[88px] shrink-0 rounded-lg border bg-field px-2 py-1.5 text-ink font-heading text-sm text-center tabular-nums outline-none focus:border-brand-purple disabled:opacity-60 ${
+            delkaSpatne ? 'border-status-error' : 'border-line'
+          }`}
+        />
+
+        <VyberVOkne
+          popisek="Licence"
+          prazdne="licence"
+          disabled={!canEdit}
+          polozky={druhyLicence.map((d) => ({ id: d.id, nazev: d.nazev, ikona: d.ikona }))}
+          vybrane={licenceIds}
+          zdedene={rodic ? rodic.licenceIds : []}
+          onZmena={setLicenceIds}
+        />
+
+        {posledniRL && (
+          <a
+            href={`/api/rodny-list/${posledniRL.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`${posledniRL.fileName} (verze ${posledniRL.version})`}
+            className="shrink-0 rounded-pill bg-okTint text-status-done px-2 py-0.5 text-[11px] font-heading font-semibold no-underline"
+          >
+            RL v{posledniRL.version}
+          </a>
+        )}
+
+        {!vystup.potvrzeno && (
+          <span
+            title="Návrh z objednávky — uložením řádku ho potvrdíte."
+            className="shrink-0 rounded-pill bg-warnTint text-status-progress px-2 py-0.5 text-[11px] font-heading font-semibold"
+          >
+            návrh
+          </span>
+        )}
+
+        {canEdit && zmeneno && (
+          <button
+            type="button"
+            onClick={ulozRadek}
+            disabled={pracuje || delkaSpatne}
+            title="Uložit výstup"
+            className="shrink-0 rounded-pill bg-brand-purple text-white font-heading font-semibold text-xs px-3 py-1.5 border-0 cursor-pointer disabled:opacity-50"
+          >
+            Uložit
+          </button>
+        )}
+
+        {canEdit && (
+          <MenuVystupu
+            pracuje={pracuje}
+            delaSeRL={delaSeRL}
+            rodneListy={rodneListy}
+            jeDowncut={Boolean(rodic)}
+            onRodnyList={onRodnyList}
+            onDowncut={onDowncut}
+            onSmaz={onSmaz}
           />
-        </label>
+        )}
       </div>
 
-      {/* Licence konkrétního výstupu - spot běží v rádiu, voiceover online. */}
-      {druhyLicence.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">
-            Licence
-            {dedi(v.licenceIds.length === 0) ? ' — zatím stejná jako u hlavního spotu' : ''}
+      {delkaSpatne && (
+        <p className="text-xs font-body text-status-error m-0 mt-1 ml-3">
+          Délce „{delka}" nerozumím — napište sekundy (30), nebo delší jako 1:30.
+        </p>
+      )}
+    </li>
+  );
+}
+
+/**
+ * Výběr z krátkého seznamu ve vyskakovacím okně. Na řádek se vejde jen
+ * tlačítko s počtem; jména se ukážou, až když je potřeba měnit.
+ */
+function VyberVOkne({
+  popisek,
+  prazdne,
+  polozky,
+  vybrane,
+  zdedene,
+  onZmena,
+  disabled,
+}: {
+  popisek: string;
+  /** Co je na tlačítku, když není vybráno nic - „herci", „licence". */
+  prazdne: string;
+  polozky: { id: string; nazev: string; ikona: string | null }[];
+  vybrane: string[];
+  /** Co by se použilo, kdyby zůstalo prázdno (downcut dědí po hlavním spotu). */
+  zdedene: string[];
+  onZmena: (ids: string[]) => void;
+  disabled?: boolean;
+}) {
+  const [kotva, setKotva] = useState<{ left: number; top: number } | null>(null);
+  const oknoRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!kotva || !oknoRef.current) return;
+    const r = oknoRef.current.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 8) {
+      const novyVrsek = Math.max(8, window.innerHeight - r.height - 8);
+      if (Math.abs(novyVrsek - kotva.top) > 1) setKotva({ ...kotva, top: novyVrsek });
+    }
+  }, [kotva]);
+
+  useEffect(() => {
+    if (!kotva) return;
+    const zavri = () => setKotva(null);
+    const klavesa = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setKotva(null);
+    };
+    const mimo = (e: MouseEvent) => {
+      if (oknoRef.current && !oknoRef.current.contains(e.target as Node)) setKotva(null);
+    };
+    window.addEventListener('keydown', klavesa);
+    window.addEventListener('scroll', zavri, true);
+    window.addEventListener('resize', zavri);
+    const t = window.setTimeout(() => document.addEventListener('mousedown', mimo), 0);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('keydown', klavesa);
+      window.removeEventListener('scroll', zavri, true);
+      window.removeEventListener('resize', zavri);
+      document.removeEventListener('mousedown', mimo);
+    };
+  }, [kotva]);
+
+  const jmena = polozky.filter((p) => vybrane.includes(p.id));
+  const dedi = vybrane.length === 0 && zdedene.length > 0;
+  const zdedenaJmena = polozky.filter((p) => zdedene.includes(p.id));
+  const napis = jmena.length > 0
+    ? jmena.map((j) => j.nazev).join(', ')
+    : dedi
+      ? `${zdedenaJmena.map((j) => j.nazev).join(', ')} (dědí)`
+      : prazdne;
+
+  return (
+    <>
+      <button
+        type="button"
+        disabled={disabled}
+        title={`${popisek}: ${napis}`}
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setKotva({
+            left: Math.min(r.left, window.innerWidth - SIRKA_OKNA - 8),
+            top: r.bottom + 6,
+          });
+        }}
+        className={`shrink-0 max-w-[190px] truncate rounded-pill border px-3 py-1.5 text-xs font-heading transition-colors disabled:opacity-60 ${
+          jmena.length > 0
+            ? 'border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
+            : 'border-dashed border-line bg-transparent text-muted hover:text-ink'
+        }`}
+      >
+        {jmena.length > 1 ? `${popisek} · ${jmena.length}` : napis}
+      </button>
+
+      {kotva && (
+        <div
+          ref={oknoRef}
+          style={{ position: 'fixed', left: kotva.left, top: kotva.top, width: SIRKA_OKNA }}
+          className="z-[90] flex flex-col gap-0.5 rounded-card border border-line bg-surface shadow-2xl p-2 max-h-72 overflow-y-auto"
+        >
+          <span className="px-2 py-1 text-[11px] font-heading text-muted uppercase tracking-wide">
+            {popisek}
           </span>
-          <div className="flex flex-wrap gap-2">
-            {druhyLicence.map((d) => {
-              const zaskrtnuto = v.licenceIds.includes(d.id);
+          {polozky.length === 0 ? (
+            <span className="px-2 py-1.5 text-sm font-body text-muted">Není z čeho vybrat.</span>
+          ) : (
+            polozky.map((p) => {
+              const zaskrtnuto = vybrane.includes(p.id);
               return (
                 <button
-                  key={d.id}
+                  key={p.id}
                   type="button"
                   role="checkbox"
                   aria-checked={zaskrtnuto}
-                  disabled={!canEdit}
                   onClick={() =>
-                    set(
-                      'licenceIds',
-                      zaskrtnuto ? v.licenceIds.filter((x) => x !== d.id) : [...v.licenceIds, d.id],
-                    )
+                    onZmena(zaskrtnuto ? vybrane.filter((x) => x !== p.id) : [...vybrane, p.id])
                   }
-                  className={`inline-flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-pill border text-sm font-heading font-semibold transition-colors ${
-                    zaskrtnuto
-                      ? 'border-brand-purple bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
-                      : 'border-dashed border-line bg-transparent text-muted opacity-70 hover:opacity-100 hover:text-ink'
-                  }`}
+                  className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-lg text-sm font-heading text-ink bg-transparent border-0 cursor-pointer hover:bg-field transition-colors"
                 >
                   <span
-                    className={`grid place-items-center w-6 h-6 rounded-full ${
-                      zaskrtnuto ? tridaBarvyIkony(d.ikona) : 'bg-field text-muted'
+                    className={`grid place-items-center w-4 h-4 rounded-[5px] border shrink-0 ${
+                      zaskrtnuto ? 'bg-brand-purple border-brand-purple text-white' : 'border-line bg-field'
                     }`}
                   >
-                    {d.ikona ? <KresbaIkony klic={d.ikona} velikost={13} /> : null}
+                    {zaskrtnuto && (
+                      <svg viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12.5l4.5 4.5L19 7" />
+                      </svg>
+                    )}
                   </span>
-                  {d.nazev}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Herci - nenápadně pod licencí. Vybírá se z herců projektu, jméno se
-          nikde nezadává znovu. */}
-      {herci.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-heading text-muted">
-            Kdo v něm mluví
-            {dedi(v.herciIds.length === 0) ? ' — zatím stejně jako u hlavního spotu' : ''}
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {herci.map((h) => {
-              const zaskrtnuto = v.herciIds.includes(h.id);
-              return (
-                <button
-                  key={h.id}
-                  type="button"
-                  role="checkbox"
-                  aria-checked={zaskrtnuto}
-                  disabled={!canEdit}
-                  onClick={() =>
-                    set(
-                      'herciIds',
-                      zaskrtnuto ? v.herciIds.filter((x) => x !== h.id) : [...v.herciIds, h.id],
-                    )
-                  }
-                  className={`rounded-pill border px-2.5 py-1 text-xs font-heading transition-colors ${
-                    zaskrtnuto
-                      ? 'border-brand-purple bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
-                      : 'border-dashed border-line bg-transparent text-muted opacity-70 hover:opacity-100 hover:text-ink'
-                  }`}
-                >
-                  {h.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* RODNÝ LIST K VÝSTUPU (26. 9. 2026). Dělá se jen u typů, které ho
-          mají v ceníku zapnutý - online voiceover pod stejným projektem ho
-          nedostane a nikdo to nemusí hlídat. Údaje o režii, hudbě a datu si
-          bere ze záložky Rodný list, tady se zadává jen délka. */}
-      {delaSeRL && (
-        <div className="flex flex-col gap-2 rounded-card border border-line bg-field/40 p-3">
-          <span className="text-sm font-heading font-semibold text-ink">Rodný list</span>
-          {rodneListy.length === 0 ? (
-            <p className="text-sm font-body text-muted m-0">
-              Zatím není vyrobený. Vznikne z názvu a délky výše; režii, hudbu a datum výroby si
-              vezme ze záložky Rodný list.
-            </p>
-          ) : (
-            <ul className="list-none p-0 m-0 flex flex-col gap-1">
-              {rodneListy.map((rl) => (
-                <li key={rl.id} className="flex items-center gap-3 flex-wrap text-sm font-body">
-                  <a
-                    href={`/api/rodny-list/${rl.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-heading text-brand-purple no-underline hover:underline"
-                  >
-                    {rl.fileName}
-                  </a>
-                  <span className="text-muted tabular-nums">verze {rl.version}</span>
-                  {rl.driveUrl && (
-                    <a
-                      href={rl.driveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted no-underline hover:underline text-xs"
-                    >
-                      na Disku ↗
-                    </a>
+                  {p.ikona && (
+                    <span className={`grid place-items-center w-5 h-5 rounded-full shrink-0 ${tridaBarvyIkony(p.ikona)}`}>
+                      <KresbaIkony klic={p.ikona} velikost={11} />
+                    </span>
                   )}
-                </li>
-              ))}
-            </ul>
+                  <span className="truncate">{p.nazev}</span>
+                </button>
+              );
+            })
           )}
-          {canEdit && (
-            <button
-              type="button"
-              onClick={onRodnyList}
-              disabled={pracuje}
-              className="self-start rounded-pill border border-brand-purple text-brand-purple font-heading font-semibold text-sm px-4 py-1.5 bg-transparent cursor-pointer disabled:opacity-50"
-            >
-              {rodneListy.length === 0 ? 'Vyrobit rodný list' : 'Vyrobit novou verzi'}
-            </button>
-          )}
-          <p className="text-xs font-body text-muted m-0">
-            Nejdřív uložte výstup — dokument se tiskne z uložených údajů.
-          </p>
         </div>
       )}
+    </>
+  );
+}
 
-      {canEdit && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <button
-            type="submit"
-            disabled={pracuje}
-            className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 border-0 cursor-pointer disabled:opacity-50"
-          >
-            Uložit výstup
-          </button>
-          {potvrzujiSmazani ? (
-            <span className="flex items-center gap-2 text-sm font-body text-ink ml-auto">
-              Opravdu smazat?
-              <button
-                type="button"
-                onClick={onSmaz}
+/** Tečky na konci řádku: rodný list, zkrácená verze, smazání. */
+function MenuVystupu({
+  pracuje,
+  delaSeRL,
+  rodneListy,
+  jeDowncut,
+  onRodnyList,
+  onDowncut,
+  onSmaz,
+}: {
+  pracuje: boolean;
+  delaSeRL: boolean;
+  rodneListy: RodnyListRadek[];
+  jeDowncut: boolean;
+  onRodnyList: () => void;
+  onDowncut: (delkaSekund: number) => void;
+  onSmaz: () => void;
+}) {
+  const [kotva, setKotva] = useState<{ left: number; top: number } | null>(null);
+  const [potvrzujiSmazani, setPotvrzujiSmazani] = useState(false);
+  const oknoRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!kotva || !oknoRef.current) return;
+    const r = oknoRef.current.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 8) {
+      const novyVrsek = Math.max(8, window.innerHeight - r.height - 8);
+      if (Math.abs(novyVrsek - kotva.top) > 1) setKotva({ ...kotva, top: novyVrsek });
+    }
+  }, [kotva]);
+
+  useEffect(() => {
+    if (!kotva) return;
+    const zavri = () => setKotva(null);
+    const klavesa = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setKotva(null);
+    };
+    const mimo = (e: MouseEvent) => {
+      if (oknoRef.current && !oknoRef.current.contains(e.target as Node)) setKotva(null);
+    };
+    window.addEventListener('keydown', klavesa);
+    window.addEventListener('scroll', zavri, true);
+    window.addEventListener('resize', zavri);
+    const t = window.setTimeout(() => document.addEventListener('mousedown', mimo), 0);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('keydown', klavesa);
+      window.removeEventListener('scroll', zavri, true);
+      window.removeEventListener('resize', zavri);
+      document.removeEventListener('mousedown', mimo);
+    };
+  }, [kotva]);
+
+  return (
+    <>
+      <button
+        type="button"
+        disabled={pracuje}
+        title="Co se s výstupem dá udělat"
+        aria-label="Co se s výstupem dá udělat"
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setPotvrzujiSmazani(false);
+          setKotva({
+            left: Math.min(r.left - SIRKA_OKNA + r.width, window.innerWidth - SIRKA_OKNA - 8),
+            top: r.bottom + 6,
+          });
+        }}
+        className="shrink-0 grid place-items-center w-7 h-7 rounded-full border border-line text-muted hover:text-brand-purple hover:border-brand-purple transition-colors disabled:opacity-50"
+      >
+        ⋯
+      </button>
+
+      {kotva && (
+        <div
+          ref={oknoRef}
+          style={{ position: 'fixed', left: kotva.left, top: kotva.top, width: SIRKA_OKNA }}
+          className="z-[90] flex flex-col gap-0.5 rounded-card border border-line bg-surface shadow-2xl p-2"
+        >
+          {delaSeRL && (
+            <>
+              {rodneListy.map((rl) => (
+                <a
+                  key={rl.id}
+                  href={`/api/rodny-list/${rl.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1.5 rounded-lg text-sm font-heading text-ink no-underline hover:bg-field transition-colors"
+                >
+                  Otevřít rodný list (v{rl.version})
+                </a>
+              ))}
+              <PolozkaMenu
                 disabled={pracuje}
-                className="rounded-pill border border-status-error text-status-error font-heading text-sm px-3 py-1 bg-transparent cursor-pointer"
+                onClick={() => {
+                  onRodnyList();
+                  setKotva(null);
+                }}
               >
-                Smazat
-              </button>
-              <button
-                type="button"
-                onClick={() => setPotvrzujiSmazani(false)}
-                className="text-muted bg-transparent border-0 underline cursor-pointer text-sm"
-              >
-                zpět
-              </button>
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setPotvrzujiSmazani(true)}
-              className="ml-auto text-sm font-heading text-muted bg-transparent border-0 underline cursor-pointer hover:text-status-error"
+                {rodneListy.length === 0 ? 'Vyrobit rodný list' : 'Vyrobit novou verzi'}
+              </PolozkaMenu>
+            </>
+          )}
+
+          {/* Zkrácené verze se zakládají jen u hlavního spotu - downcut
+              z downcutu by už nikdo nerozpletl. */}
+          {!jeDowncut && (
+            <div className="px-2 py-1.5 flex flex-col gap-1.5">
+              <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
+                Zkrácená verze
+              </span>
+              <span className="flex flex-wrap gap-1">
+                {NABIZENE_DOWNCUTY.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={pracuje}
+                    onClick={() => {
+                      onDowncut(s);
+                      setKotva(null);
+                    }}
+                    className="rounded-pill border border-line px-2.5 py-1 text-xs font-heading text-ink bg-field hover:border-brand-purple hover:text-brand-purple transition-colors cursor-pointer tabular-nums disabled:opacity-50"
+                  >
+                    {s}s
+                  </button>
+                ))}
+              </span>
+            </div>
+          )}
+
+          {potvrzujiSmazani ? (
+            <PolozkaMenu
+              disabled={pracuje}
+              nebezpecna
+              onClick={() => {
+                onSmaz();
+                setKotva(null);
+              }}
             >
+              Opravdu smazat?
+            </PolozkaMenu>
+          ) : (
+            <PolozkaMenu disabled={pracuje} nebezpecna onClick={() => setPotvrzujiSmazani(true)}>
               Smazat výstup
-            </button>
+            </PolozkaMenu>
           )}
         </div>
       )}
-    </form>
+    </>
+  );
+}
+
+/** Řádek v menu - ať vypadají všechny stejně. */
+function PolozkaMenu({
+  children,
+  onClick,
+  disabled,
+  nebezpecna,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  nebezpecna?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`w-full text-left px-2 py-1.5 rounded-lg text-sm font-heading bg-transparent border-0 cursor-pointer transition-colors disabled:opacity-50 ${
+        nebezpecna ? 'text-muted hover:text-status-error hover:bg-field' : 'text-ink hover:bg-field'
+      }`}
+    >
+      {children}
+    </button>
   );
 }

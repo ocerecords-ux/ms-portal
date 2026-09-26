@@ -146,10 +146,16 @@ export function missingFieldsMessage(missing: string[]): string {
 // Formátování hodnot do dokumentu
 // ---------------------------------------------------------------------------
 
-/** Délka spotu tak, jak je ve vzoru: „20s". */
+/**
+ * Délka spotu tak, jak je ve vzoru: „20s". Od minuty výš jako „1:30"
+ * (zadání 26. 9. 2026: „potřeboval bych mít i minuty - když to přesáhne
+ * 60 s") - devadesát sekund nikdo nečte jako devadesát.
+ */
 export function formatSpotLength(seconds: number | null | undefined): string {
   if (seconds == null || seconds <= 0) return '';
-  return `${Math.round(seconds)}s`;
+  const cele = Math.round(seconds);
+  if (cele < 60) return `${cele}s`;
+  return `${Math.floor(cele / 60)}:${String(cele % 60).padStart(2, '0')}`;
 }
 
 /** Datum výroby ve tvaru „24.08.2026" (stejně jako ve vzorovém PDF). */

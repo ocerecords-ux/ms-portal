@@ -52,10 +52,56 @@ export const NABIZENE_DOWNCUTY = [30, 20, 15, 10, 6, 5] as const;
 /** Výchozí název hlavního výstupu u nového projektu. */
 export const VYCHOZI_NAZEV_VYSTUPU = 'Hlavní spot';
 
-/** „60s", prázdno když délku neznáme. */
+/**
+ * Délka do textu - „30s", od minuty výš „1:30" (26. 9. 2026). Jeden tvar
+ * všude: v řádku výstupu, v názvu downcutu, v nabídce i v názvu rodného
+ * listu, ať se nestane, že jinde stojí 90s a jinde 1:30.
+ */
 export function popisDelky(sekundy: number | null | undefined): string {
+  return delkaNaText(sekundy);
+}
+
+/**
+ * DÉLKA PRO ČLOVĚKA (zadání 26. 9. 2026: „u délky bych potřeboval mít
+ * i minuty - když to přesáhne 60 s").
+ *
+ * Do minuty se píše v sekundách („30s"), od minuty výš jako „1:30" - spot
+ * o délce 90 s nikdo nečte jako devadesát, ale jako minutu a půl.
+ */
+export function delkaNaText(sekundy: number | null | undefined): string {
   if (sekundy == null || sekundy <= 0) return '';
-  return `${Math.round(sekundy)}s`;
+  if (sekundy < 60) return `${Math.round(sekundy)}s`;
+  const minuty = Math.floor(sekundy / 60);
+  const zbytek = Math.round(sekundy % 60);
+  return `${minuty}:${String(zbytek).padStart(2, '0')}`;
+}
+
+/**
+ * Zpátky na sekundy. Bere, co kdo napíše: „30", „30s", „1:30", „1.30",
+ * „2 min", „1 min 30 s". Co nedává smysl, vrátí jako null - políčko pak
+ * zůstane, jak bylo, místo aby se uložila nula.
+ */
+export function textNaDelku(text: string): number | null {
+  const t = text.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!t) return null;
+
+  // 1:30 nebo 1.30 - minuty a sekundy
+  const dvojtecka = t.match(/^(\d+)\s*[:.]\s*(\d{1,2})$/);
+  if (dvojtecka) {
+    const sekundy = Number(dvojtecka[1]) * 60 + Number(dvojtecka[2]);
+    return sekundy > 0 ? sekundy : null;
+  }
+
+  // 1 min 30 s / 2 min / 90 s / 90
+  const slovy = t.match(/^(?:(\d+)\s*(?:m|min|minut[ay]?|minuta)\b)?\s*(?:(\d+)\s*(?:s|sec|sek|sekund[y]?)?)?$/);
+  if (slovy && (slovy[1] || slovy[2])) {
+    const minuty = slovy[1] ? Number(slovy[1]) : 0;
+    const sekundy = slovy[2] ? Number(slovy[2]) : 0;
+    const celkem = minuty * 60 + sekundy;
+    return celkem > 0 ? celkem : null;
+  }
+
+  return null;
 }
 
 /** Název downcutu podle délky - „Downcut 30s". */
