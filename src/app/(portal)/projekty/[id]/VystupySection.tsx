@@ -6,8 +6,10 @@ import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import {
   NABIZENE_DOWNCUTY,
   delkaNaText,
+  priponaNazvu,
   serad,
   textNaDelku,
+  zakladNazvu,
   type VystupData,
 } from '@/lib/vystupy';
 
@@ -80,6 +82,11 @@ export function VystupySection({
   const [chyba, setChyba] = useState<string | null>(null);
   const [nabidka, setNabidka] = useState<{ id: string; number: string } | null>(null);
   const [nataceni, setNataceni] = useState<string | null>(vychoziNataceni);
+  /**
+   * Počítadlo do adresy náhledu. Rámeček má pro prohlížeč pořád tutéž adresu,
+   * takže by po uložení výstupu ukazoval starý list z paměti.
+   */
+  const [verzeNahledu, setVerzeNahledu] = useState(0);
 
   const razene = useMemo(() => serad(vystupy), [vystupy]);
   const podleId = useMemo(() => new Map(vystupy.map((v) => [v.id, v])), [vystupy]);
@@ -121,6 +128,7 @@ export function VystupySection({
     const novy = data?.vystup as VystupData | undefined;
     if (!novy) return;
     setVystupy((s) => [...s, novy]);
+    setVerzeNahledu((n) => n + 1);
     router.refresh();
   }
 
@@ -132,6 +140,7 @@ export function VystupySection({
     const upraveny = data?.vystup as VystupData | undefined;
     if (!upraveny) return;
     setVystupy((s) => s.map((v) => (v.id === id ? upraveny : v)));
+    setVerzeNahledu((n) => n + 1);
     router.refresh();
   }
 
@@ -184,6 +193,7 @@ export function VystupySection({
     );
     if (!data) return;
     setVystupy((s) => s.filter((v) => v.id !== id));
+    setVerzeNahledu((n) => n + 1);
     router.refresh();
   }
 
@@ -290,6 +300,26 @@ export function VystupySection({
           ))}
         </ul>
       )}
+
+      {/* NÁHLED NATÁČECÍHO TEXTU (26. 9. 2026: „pod tím seznamem výstupů mít
+          ten dokument obrandovaný v náhledu, jako u nabídek a faktur").
+          Ukazuje přesně to, co se uloží na Disk - stejné HTML, jen v rámečku.
+          Bílý podklad schválně: je to dokument, ne další karta portálu. */}
+      {razene.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-heading font-semibold text-ink">Náhled natáčecího textu</span>
+          <iframe
+            key={verzeNahledu}
+            src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
+            title="Náhled natáčecího textu"
+            className="w-full h-[460px] rounded-card border border-line bg-white"
+          />
+          <span className="text-xs font-body text-muted">
+            Takhle bude vypadat dokument ve složce projektu na Disku. Text spotů se píše až
+            v něm — podobu listu má na starost Administrace → Vzory natáčecích textů.
+          </span>
+        </div>
+      )}
     </section>
   );
 }
@@ -339,6 +369,21 @@ function VystupRadek({
   }, [vystup]);
 
   const delkaSekund = textNaDelku(delka);
+
+  /**
+   * NÁZEV SE ŘÍDÍ STOPÁŽÍ A LICENCÍ (26. 9. 2026: „bylo by dobré, kdyby se
+   * podle té stopáže výstupu změnil i rovnou název - např. když napíšu stopáž
+   * 2 min., tak to bude STRABAG - 2min._online").
+   *
+   * Přepočítá se, jen když se mění délka nebo licence - do ručně psaného
+   * názvu portál nesahá. Základ je název bez přípony, kterou si přidal sám.
+   */
+  function prepoctiNazev(sekundy: number | null, licence: string[]) {
+    const jmena = licence
+      .map((id) => druhyLicence.find((d) => d.id === id)?.nazev || '')
+      .filter(Boolean);
+    setNazev((stary) => `${zakladNazvu(stary)}${priponaNazvu(sekundy, jmena)}`);
+  }
   const zmeneno =
     nazev !== vystup.nazev ||
     (delkaSekund ?? null) !== (vystup.delkaSekund ?? null) ||
@@ -390,7 +435,10 @@ function VystupRadek({
           value={delka}
           disabled={!canEdit}
           placeholder={rodic ? delkaNaText(rodic.delkaSekund) || 'délka' : 'délka'}
-          onChange={(e) => setDelka(e.target.value)}
+          onChange={(e) => {
+            setDelka(e.target.value);
+            prepoctiNazev(textNaDelku(e.target.value), licenceIds);
+          }}
           aria-label="Délka"
           title="Sekundy, nebo delší jako 1:30"
           className={`w-[88px] shrink-0 rounded-lg border bg-field px-2 py-1.5 text-ink font-heading text-sm text-center tabular-nums outline-none focus:border-brand-purple disabled:opacity-60 ${
@@ -405,7 +453,10 @@ function VystupRadek({
           polozky={druhyLicence.map((d) => ({ id: d.id, nazev: d.nazev, ikona: d.ikona }))}
           vybrane={licenceIds}
           zdedene={rodic ? rodic.licenceIds : []}
-          onZmena={setLicenceIds}
+          onZmena={(ids) => {
+            setLicenceIds(ids);
+            prepoctiNazev(delkaSekund, ids);
+          }}
         />
 
         {posledniRL && (

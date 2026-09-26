@@ -104,6 +104,47 @@ export function textNaDelku(text: string): number | null {
   return null;
 }
 
+/**
+ * NÁZEV VÝSTUPU SE ŘÍDÍ STOPÁŽÍ A LICENCÍ (zadání 26. 9. 2026: „bylo by dobré,
+ * kdyby se podle té stopáže výstupu změnil i rovnou název - např. když napíšu
+ * stopáž 2 min., tak to bude STRABAG - 2min._online").
+ *
+ * Takhle se soubory i řádky pojmenovávají samy stejně a nikdo nepíše
+ * „STRABAG 2 min online" jednou takhle a podruhé jinak.
+ */
+export function delkaDoNazvu(sekundy: number | null | undefined): string {
+  if (sekundy == null || sekundy <= 0) return '';
+  const cele = Math.round(sekundy);
+  const minuty = Math.floor(cele / 60);
+  const zbytek = cele % 60;
+  if (minuty === 0) return `${zbytek}s`;
+  if (zbytek === 0) return `${minuty}min.`;
+  return `${minuty}min.${zbytek}s`;
+}
+
+/** Přípona názvu - „ - 2min._online". Prázdná, dokud není vyplněná délka. */
+export function priponaNazvu(
+  sekundy: number | null | undefined,
+  nazvyLicenci: string[],
+): string {
+  const delka = delkaDoNazvu(sekundy);
+  if (!delka) return '';
+  const licence = nazvyLicenci
+    .map((l) => l.trim().toLowerCase().replace(/\s+/g, '-'))
+    .filter(Boolean)
+    .join('_');
+  return ` - ${[delka, licence].filter(Boolean).join('_')}`;
+}
+
+/**
+ * Název bez přípony, kterou jsme si přidali sami. Sundá se JEN tvar, který
+ * portál vyrábí (délka, případně licence za podtržítkem) - „STRABAG - nábor"
+ * tím projde beze změny, protože délku neobsahuje.
+ */
+export function zakladNazvu(nazev: string): string {
+  return nazev.replace(/\s*-\s*(?:\d+min\.(?:\d+s)?|\d+s)(?:_[^\s]+)?\s*$/u, '').trim();
+}
+
 /** Název downcutu podle délky - „Downcut 30s". */
 export function nazevDowncutu(sekundy: number): string {
   return `Downcut ${popisDelky(sekundy)}`;

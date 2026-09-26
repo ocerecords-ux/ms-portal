@@ -44,6 +44,8 @@ export type PodkladyTextu = {
   projekt: string;
   klient: string;
   datum: string;
+  /** Absolutní adresa loga - v dokumentu na Disku i v náhledu v portálu. */
+  logoUrl?: string | null;
 };
 
 /**
@@ -98,15 +100,26 @@ export function sestavHtmlNataceni(
     casti.push(`<div class="spot">${odstavce(text)}</div>`);
   });
 
+  /**
+   * HLAVIČKA S LOGEM (zadání 26. 9. 2026: „bylo by dobré mít ten dokument
+   * obrandovaný v náhledu, jako u nabídek a faktur"). Logo se tahá z portálu
+   * absolutní adresou - Disk si ho při převodu na dokument stáhne k sobě,
+   * takže list vypadá stejně i po odeslání dál.
+   */
+  const hlavicka = podklady.logoUrl
+    ? `<p class="logo"><img src="${escapeHtml(podklady.logoUrl)}" alt="Mediaspace" height="34"></p>`
+    : '';
+
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${escapeHtml(podklady.projekt)}</title>
 <style>
-  body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; }
-  .uvod { font-weight: bold; margin-bottom: 24pt; }
-  .spot { margin-bottom: 28pt; padding-top: 8pt; border-top: 1px solid #999; }
+  body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #201a33; }
+  .logo { margin: 0 0 14pt 0; }
+  .uvod { font-weight: bold; margin-bottom: 20pt; padding-bottom: 10pt; border-bottom: 2pt solid #9900FF; }
+  .spot { margin-bottom: 28pt; padding-top: 8pt; border-top: 1px solid #bbb; }
   .spot p:first-child { font-weight: bold; }
 </style>
-</head><body>${casti.join('\n')}</body></html>`;
+</head><body>${hlavicka}${casti.join('\n')}</body></html>`;
 }
 
 /** Prázdný řádek dělá odstavec, jednoduchý zalomení. */
