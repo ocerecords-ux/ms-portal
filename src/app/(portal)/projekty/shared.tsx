@@ -8,7 +8,11 @@ import { projectTypeLabel } from '@/lib/projectTypes';
 import { ValecProgresu } from '@/components/ValecProgresu';
 import type { ProgresNataceni } from '@/lib/progresNataceni';
 import { IkonaPriority } from '@/components/IkonaPriority';
-import { OdznakPreposlechu, type StavPreposlechu } from '@/components/OdznakPreposlechu';
+import {
+  OdznakPreposlechu,
+  maOdznakPreposlechu,
+  type StavPreposlechu,
+} from '@/components/OdznakPreposlechu';
 import { NahledIkony } from '@/components/NahledIkony';
 import { initials } from '@/lib/chat';
 import { barvaStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
@@ -781,7 +785,9 @@ function bunkaSloupce(
                 ikonu u typu projektu, co je před názvem") - oranžová, když
                 se zapisují chyby, zelená, když je přeposlechnuto. */}
             {/* Klik ukáže náhled přeposlechu (25. 9. 2026, upraveno 26. 9.). */}
-            {p.meta?.preposlech ? (
+            {/* Obal jen tam, kde odznak opravdu je - jinak by na řádku
+                zůstal prázdný klikatelný kousek plochy (26. 9. 2026). */}
+            {maOdznakPreposlechu(p.meta?.preposlech) ? (
               <NahledIkony
                 odkaz={`/projekty/${p.id}?zalozka=preposlech`}
                 druh="PREPOSLECH"

@@ -27,6 +27,16 @@ export type StavPreposlechu = {
   procent?: number | null;
 };
 
+/**
+ * Ukáže se odznak vůbec? Kdo ho někam obaluje (v přehledu projektů do okna
+ * s náhledem), musí to vědět předem - jinak by na řádku zůstal prázdný, ale
+ * klikatelný kousek plochy.
+ */
+export function maOdznakPreposlechu(stav: StavPreposlechu | null | undefined): boolean {
+  if (!stav) return false;
+  return stav.hotovo || stav.chyb > 0;
+}
+
 function Sluchatka({ velikost }: { velikost: number }) {
   return (
     <svg
@@ -65,10 +75,8 @@ export function OdznakPreposlechu({
   stav: StavPreposlechu | null | undefined;
   varianta?: 'tecka' | 'odznak';
 }) {
-  if (!stav) return null;
+  if (!maOdznakPreposlechu(stav) || !stav) return null;
   const hotovo = stav.hotovo;
-  const bezi = !hotovo && stav.chyb > 0;
-  if (!hotovo && !bezi) return null;
 
   const titulek = popis(stav, hotovo);
 
