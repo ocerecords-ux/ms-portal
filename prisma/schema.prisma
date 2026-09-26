@@ -519,6 +519,14 @@ model Order {
   /// z lib/sluzbyReklamy.ts (natáčení voiceoveru, zvuková postprodukce,
   /// sound design). Muze jich byt vic naraz; u audioknihy zustava prazdne.
   sluzby               String[]         @default([])
+
+  /// CO SI KLIENT U REKLAMY OBJEDNAL PO VÝSTUPECH (zadání 26. 9. 2026: „pod
+  /// jedním projektem se dělá jeden rádiový spot, jeden online voiceover…
+  /// hlavní spot a pak downcuty 30, 20 a 6 s"). Snímek řádků tak, jak je
+  /// klient odeslal - objednávka musí zůstat čitelná, i když se výstupy
+  /// u projektu později upraví. Živá data jsou v modelu Vystup.
+  /// Tvar: [{ nazev, delkaSekund, sluzby: [klíče], downcuty: [sekundy] }]
+  vystupy              Json?
   attachmentUrl        String?
   attachmentName       String?
 

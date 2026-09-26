@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { serad, type VystupData } from '@/lib/vystupy';
+import { nazevDowncutu, serad, type VystupData, type VystupObjednavky } from '@/lib/vystupy';
 
 /**
  * VÝSTUPY PROJEKTU - databázová část (zadání 26. 9. 2026).
@@ -236,6 +236,63 @@ export async function smazVystup(id: string): Promise<{ ok: true } | { ok: false
     console.error(`Smazání výstupu ${id} selhalo:`, err);
     return { ok: false, duvod: 'Výstup se nepodařilo smazat.' };
   }
+}
+
+/**
+ * VÝSTUPY Z OBJEDNÁVKY KLIENTA (zadání 26. 9. 2026, rozhodnutí téhož dne:
+ * „klient navrhne, produkce potvrdí").
+ *
+ * Co přijde z objednávky, se založí jako NÁVRH - `potvrzenoAt` zůstává
+ * prázdné a v záložce Výstupy to má odznak „návrh klienta". Produkce řádek
+ * upraví a uložením ho potvrdí; klient tak nezaloží nesmysl, ale zároveň se
+ * nic nepřepisuje ručně.
+ *
+ * Downcut se zakládá jako potomek svého hlavního výstupu, takže po něm
+ * podědí herce, hudbu i licenci.
+ */
+export async function zalozVystupyZObjednavky(
+  caflouProjectId: string,
+  radky: VystupObjednavky[],
+  typKlic: string | null,
+): Promise<number> {
+  let zalozeno = 0;
+  try {
+    let poradi = 10;
+    for (const radek of radky) {
+      const hlavni = await prisma.vystup.create({
+        data: {
+          caflouProjectId,
+          poradi,
+          nazev: radek.nazev.trim() || 'Výstup',
+          typKlic,
+          delkaSekund: radek.delkaSekund ?? null,
+          sluzby: radek.sluzby,
+          potvrzenoAt: null,
+        },
+        select: { id: true },
+      });
+      zalozeno += 1;
+      poradi += 10;
+
+      for (const delka of radek.downcuty) {
+        await prisma.vystup.create({
+          data: {
+            caflouProjectId,
+            poradi,
+            nazev: nazevDowncutu(delka),
+            delkaSekund: delka,
+            odvozenoZId: hlavni.id,
+            potvrzenoAt: null,
+          },
+        });
+        zalozeno += 1;
+        poradi += 10;
+      }
+    }
+  } catch (err) {
+    console.error(`Výstupy z objednávky u projektu ${caflouProjectId} se nepodařilo založit:`, err);
+  }
+  return zalozeno;
 }
 
 /**

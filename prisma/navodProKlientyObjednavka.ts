@@ -40,7 +40,11 @@ Některým vydavatelům se úvod a závěr skládají samy z autora, překladate
 
 # Objednávka reklamy
 
-Kratší formulář: **Název** (povinný), **Datum odevzdání**, **Poznámka** a **Příloha**. Normostrany ani cena tu nejsou — spot se počítá jinak.
+Průvodce po krocích: **Název** (povinný), **co pro vás máme vyrobit**, hlas, termín a nakonec poznámka s přílohou. Normostrany ani cena tu nejsou — spot se počítá jinak.
+
+Krok **Co pro vás máme vyrobit** je seznam: u každého spotu nebo voiceoveru se vyplní název, délka v sekundách a zaškrtne, co k němu patří (natáčení voiceoveru, zvuková postprodukce, sound design). Když se pod jednou zakázkou dělá víc věcí — rádiový spot a k tomu online voiceover, nebo pět různých spotů — přidejte je tlačítkem **+ Přidat další výstup**; postprodukci tak můžete chtít jen u některých.
+
+**Zkrácené verze** (downcuty) se u spotu jen zaškrtnou podle délky — 30, 20, 6 s. Hlas i hudba v nich zůstávají stejné jako v hlavní verzi, takže je nemusíte popisovat znovu.
 
 # Co se stane po odeslání
 

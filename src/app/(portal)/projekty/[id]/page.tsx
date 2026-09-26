@@ -756,6 +756,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         nazev,
         rodnyList: rodnyListTypy.includes(nazev),
       }))}
+      muzeNabidku={showDocuments}
       rodneListy={rodneListyProjektu.map((rl) => ({
         id: rl.id,
         vystupId: rl.vystupId ?? null,

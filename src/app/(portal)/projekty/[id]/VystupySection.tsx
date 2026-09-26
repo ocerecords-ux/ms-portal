@@ -51,6 +51,7 @@ export function VystupySection({
   druhyLicence,
   typy,
   rodneListy,
+  muzeNabidku,
   nazevProjektu,
   nazevFirmy,
 }: {
@@ -59,6 +60,8 @@ export function VystupySection({
   vystupy: VystupData[];
   /** Vyrobené rodné listy - u každého výstupu vlastní řada verzí. */
   rodneListy: RodnyListRadek[];
+  /** Smí ten, kdo se dívá, založit z výstupů nabídku? (vidí doklady) */
+  muzeNabidku: boolean;
   /** Herci projektu - ve výstupu se z nich jen vybírá, nezadávají se znovu. */
   herci: HerecVolba[];
   druhyLicence: LicenceVolba[];
@@ -73,6 +76,7 @@ export function VystupySection({
   const [downcutU, setDowncutU] = useState<string | null>(null);
   const [pracuje, setPracuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
+  const [nabidka, setNabidka] = useState<{ id: string; number: string } | null>(null);
 
   const razene = useMemo(() => serad(vystupy), [vystupy]);
   const podleId = useMemo(() => new Map(vystupy.map((v) => [v.id, v])), [vystupy]);
@@ -132,6 +136,20 @@ export function VystupySection({
     router.refresh();
   }
 
+  /**
+   * NABÍDKA Z VÝSTUPŮ (26. 9. 2026). Každý výstup × každá jeho služba = jedna
+   * položka. Ceny se doplní jen tam, kde je zná ceník - ten se na reklamy
+   * teprve dodělává, takže zbytek čeká na doplnění v dokladu.
+   */
+  async function zalozNabidku() {
+    const data = await zavolej(`/api/projects/${encodeURIComponent(caflouProjectId)}/vystupy/nabidka`, {
+      method: 'POST',
+    });
+    if (!data) return;
+    setNabidka({ id: String(data.id), number: String(data.number) });
+    router.refresh();
+  }
+
   async function vyrobRL(vystupId: string) {
     const data = await zavolej(
       `/api/projects/${encodeURIComponent(caflouProjectId)}/vystupy/${encodeURIComponent(vystupId)}/rodny-list`,
@@ -169,7 +187,33 @@ export function VystupySection({
             +
           </button>
         )}
+        {muzeNabidku && razene.length > 0 && (
+          <button
+            type="button"
+            onClick={zalozNabidku}
+            disabled={pracuje}
+            title="Založí rozpracovanou nabídku — položka za každou službu u každého výstupu"
+            className="ml-auto rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
+          >
+            Nabídka z výstupů
+          </button>
+        )}
       </div>
+
+      {nabidka && (
+        <p className="text-sm font-body text-ink m-0 rounded-card border border-line bg-field/40 px-4 py-3">
+          Nabídka <strong>{nabidka.number}</strong> je založená jako rozpracovaná — ceny v ní
+          zkontrolujte a doplňte.{' '}
+          <a
+            href={`/admin/doklady/nabidky/${nabidka.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-heading text-brand-purple no-underline hover:underline"
+          >
+            Otevřít nabídku
+          </a>
+        </p>
+      )}
 
       <p className="text-sm font-body text-muted m-0">
         Jeden výstup = jedna odevzdaná věc: spot, voiceover, zkrácená verze. Zkrácené verze se

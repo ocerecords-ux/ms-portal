@@ -6,6 +6,12 @@ import { useRouter } from 'next/navigation';
 import { DatumPole } from '@/components/DatumPole';
 import { KresbaIkony } from '@/lib/ikonyTypu';
 import { SLUZBY_REKLAMY, nazvySluzeb } from '@/lib/sluzbyReklamy';
+import {
+  NABIZENE_DOWNCUTY,
+  popisVystupuObjednavky,
+  prazdnyVystupObjednavky,
+  type VystupObjednavky,
+} from '@/lib/vystupy';
 
 /**
  * OBJEDNÁVKA REKLAMY JAKO PRŮVODCE (zadání 25. 9. 2026: „pojďme hromadně
@@ -22,15 +28,27 @@ import { SLUZBY_REKLAMY, nazvySluzeb } from '@/lib/sluzbyReklamy';
  * vědět nemusí - od toho jsme my; oba kroky se dají přeskočit.
  *
  * Ceny tu zatím nejsou (zadání tentýž den: „uděláme tam nějaké výpočty ceny
- * apod." - až se doladí). Číselník služeb v lib/sluzbyReklamy.ts už na ceník
- * odkazuje, takže se cena doplní tam, ne tady ve formuláři.
+ * apod." - až se doladí; 26. 9. 2026: „ceníky budu muset ještě domyslet").
+ * Číselník služeb v lib/sluzbyReklamy.ts už na ceník odkazuje, takže se cena
+ * doplní tam, ne tady ve formuláři.
+ *
+ * VÍC VÝSTUPŮ POD JEDNOU ZAKÁZKOU (zadání 26. 9. 2026: „pod jedním projektem
+ * se dělá jeden rádiový spot, jeden online voiceover. Jeden hlavní spot
+ * a pak třeba downcuty 30, 20 a 6 s. U něčeho se dělá postprodukce a u něčeho
+ * ne"). Krok „Co pro vás máme udělat" proto není jedno zaškrtávání služeb na
+ * celou objednávku, ale SEZNAM VÝSTUPŮ - u každého vlastní délka a vlastní
+ * služby. Otevře se s jedním řádkem, takže kdo objednává jeden spot, nepozná
+ * rozdíl proti dřívějšku.
  */
 const KROKY = ['nazev', 'sluzby', 'herec', 'termin', 'shrnuti'] as const;
 type Krok = (typeof KROKY)[number];
 
 const NADPISY: Record<Krok, { nadpis: string; podnadpis: string }> = {
   nazev: { nadpis: 'Jak se zakázka jmenuje?', podnadpis: 'Stačí pracovní název, ať ji oba poznáme.' },
-  sluzby: { nadpis: 'Co pro vás máme udělat?', podnadpis: 'Vyberte všechno, co k zakázce patří.' },
+  sluzby: {
+    nadpis: 'Co pro vás máme vyrobit?',
+    podnadpis: 'Každý spot nebo voiceover zvlášť — u každého vyberte, co k němu patří.',
+  },
   herec: { nadpis: 'Máte představu o hlasu?', podnadpis: 'Když ne, nevadí — vybereme a pošleme ukázky.' },
   termin: { nadpis: 'Do kdy to potřebujete?', podnadpis: 'Termín odevzdání hotového zvuku.' },
   shrnuti: { nadpis: 'Sedí to?', podnadpis: 'Ještě můžete přidat poznámku nebo podklady.' },
@@ -40,7 +58,7 @@ export function AdOrderForm() {
   const router = useRouter();
   const [krok, setKrok] = useState<Krok>('nazev');
   const [title, setTitle] = useState('');
-  const [sluzby, setSluzby] = useState<string[]>([]);
+  const [vystupy, setVystupy] = useState<VystupObjednavky[]>([prazdnyVystupObjednavky(0)]);
   const [herec, setHerec] = useState('');
   const [deadline, setDeadline] = useState('');
   const [note, setNote] = useState('');
@@ -56,7 +74,7 @@ export function AdOrderForm() {
   const index = KROKY.indexOf(krok);
   const muzeDal =
     (krok === 'nazev' && title.trim().length > 0) ||
-    (krok === 'sluzby' && sluzby.length > 0) ||
+    (krok === 'sluzby' && vystupy.some((v) => v.sluzby.length > 0)) ||
     krok === 'herec' ||
     krok === 'termin';
 
@@ -65,8 +83,24 @@ export function AdOrderForm() {
     if (vstupSouboru.current) vstupSouboru.current.value = '';
   }
 
-  function prepniSluzbu(klic: string) {
-    setSluzby((s) => (s.includes(klic) ? s.filter((k) => k !== klic) : [...s, klic]));
+  function upravVystup(i: number, zmena: Partial<VystupObjednavky>) {
+    setVystupy((s) => s.map((v, idx) => (idx === i ? { ...v, ...zmena } : v)));
+  }
+
+  function prepniSluzbu(i: number, klic: string) {
+    const v = vystupy[i];
+    upravVystup(i, {
+      sluzby: v.sluzby.includes(klic) ? v.sluzby.filter((k) => k !== klic) : [...v.sluzby, klic],
+    });
+  }
+
+  function prepniDowncut(i: number, sekundy: number) {
+    const v = vystupy[i];
+    upravVystup(i, {
+      downcuty: v.downcuty.includes(sekundy)
+        ? v.downcuty.filter((d) => d !== sekundy)
+        : [...v.downcuty, sekundy].sort((a, b) => b - a),
+    });
   }
 
   async function odesli() {
@@ -79,7 +113,10 @@ export function AdOrderForm() {
       formData.set('deadline', deadline);
       formData.set('note', note);
       formData.set('preferredNarrator', herec);
-      for (const k of sluzby) formData.append('sluzby', k);
+      // Výstupy jako celek; `sluzby` zůstávají jako souhrn za celou
+      // objednávku, ať starší místa (mail, přehled) fungují beze změny.
+      formData.set('vystupy', JSON.stringify(vystupy));
+      for (const k of [...new Set(vystupy.flatMap((v) => v.sluzby))]) formData.append('sluzby', k);
       if (file) {
         const klic = await nahrajPrilohu(file);
         formData.set('attachmentKey', klic);
@@ -94,7 +131,7 @@ export function AdOrderForm() {
       setVarovani(body?.varovani ?? null);
       setDone(true);
       setTitle('');
-      setSluzby([]);
+      setVystupy([prazdnyVystupObjednavky(0)]);
       setHerec('');
       setDeadline('');
       setNote('');
@@ -184,33 +221,113 @@ export function AdOrderForm() {
       )}
 
       {krok === 'sluzby' && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {SLUZBY_REKLAMY.map((s) => {
-            const vybrano = sluzby.includes(s.klic);
-            return (
-              <button
-                key={s.klic}
-                type="button"
-                onClick={() => prepniSluzbu(s.klic)}
-                aria-pressed={vybrano}
-                className={`text-left rounded-card border-2 p-4 flex flex-col gap-2 transition-colors ${
-                  vybrano
-                    ? 'border-brand-green bg-brand-green/15'
-                    : 'border-white/25 bg-white/5 hover:border-white/60'
-                }`}
-              >
-                <span
-                  className={`grid place-items-center w-10 h-10 rounded-pill ${
-                    vybrano ? 'bg-brand-green text-brand-purpleDark' : 'bg-white/10 text-white'
-                  }`}
-                >
-                  <KresbaIkony klic={s.ikona} velikost={20} />
+        <div className="flex flex-col gap-4">
+          {vystupy.map((v, i) => (
+            <div key={i} className="rounded-card border-2 border-white/25 bg-white/5 p-4 flex flex-col gap-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <input
+                  value={v.nazev}
+                  onChange={(e) => upravVystup(i, { nazev: e.target.value })}
+                  placeholder={`Spot ${i + 1}`}
+                  className="input flex-1 min-w-[180px]"
+                  aria-label="Název výstupu"
+                />
+                <label className="flex items-center gap-2 text-sm font-body text-white/85">
+                  <span className="whitespace-nowrap">Délka</span>
+                  <input
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    value={v.delkaSekund ?? ''}
+                    onChange={(e) =>
+                      upravVystup(i, { delkaSekund: e.target.value ? Number(e.target.value) : null })
+                    }
+                    placeholder="30"
+                    className="input w-24"
+                    aria-label="Délka v sekundách"
+                  />
+                  <span>s</span>
+                </label>
+                {vystupy.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setVystupy((s) => s.filter((_, idx) => idx !== i))}
+                    className="text-xs font-heading text-white/70 underline bg-transparent border-0 cursor-pointer"
+                  >
+                    Odebrat
+                  </button>
+                )}
+              </div>
+
+              {/* Služby u KAŽDÉHO výstupu zvlášť - postprodukce se dělá
+                  u něčeho a u něčeho ne (zadání 26. 9. 2026). */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {SLUZBY_REKLAMY.map((sl) => {
+                  const vybrano = v.sluzby.includes(sl.klic);
+                  return (
+                    <button
+                      key={sl.klic}
+                      type="button"
+                      onClick={() => prepniSluzbu(i, sl.klic)}
+                      aria-pressed={vybrano}
+                      className={`text-left rounded-card border-2 p-3 flex flex-col gap-2 transition-colors ${
+                        vybrano
+                          ? 'border-brand-green bg-brand-green/15'
+                          : 'border-white/25 bg-white/5 hover:border-white/60'
+                      }`}
+                    >
+                      <span
+                        className={`grid place-items-center w-9 h-9 rounded-pill ${
+                          vybrano ? 'bg-brand-green text-brand-purpleDark' : 'bg-white/10 text-white'
+                        }`}
+                      >
+                        <KresbaIkony klic={sl.ikona} velikost={18} />
+                      </span>
+                      <span className="font-heading font-semibold text-sm text-white">{sl.nazev}</span>
+                      <span className="text-xs font-body text-white/70 leading-snug">{sl.popis}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Zkrácené verze: stačí zaškrtnout délky, zbytek je stejný
+                  jako u hlavního spotu. */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-heading text-white/70 uppercase tracking-wide">
+                  Zkrácené verze
                 </span>
-                <span className="font-heading font-semibold text-sm text-white">{s.nazev}</span>
-                <span className="text-xs font-body text-white/70 leading-snug">{s.popis}</span>
-              </button>
-            );
-          })}
+                {NABIZENE_DOWNCUTY.map((d) => {
+                  const vybrano = v.downcuty.includes(d);
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => prepniDowncut(i, d)}
+                      aria-pressed={vybrano}
+                      className={`rounded-pill border px-3 py-1 text-xs font-heading tabular-nums transition-colors ${
+                        vybrano
+                          ? 'border-brand-green bg-brand-green text-brand-purpleDark'
+                          : 'border-white/30 text-white/80 hover:border-white/70'
+                      }`}
+                    >
+                      {d}s
+                    </button>
+                  );
+                })}
+                <span className="text-xs font-body text-white/60 w-full sm:w-auto">
+                  stejný hlas i hudba jako hlavní verze
+                </span>
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setVystupy((s) => [...s, prazdnyVystupObjednavky(s.length)])}
+            className="self-start rounded-lg border-2 border-white/30 text-white font-heading font-semibold text-sm px-5 py-2.5 bg-transparent cursor-pointer hover:border-brand-green hover:text-brand-green transition-colors"
+          >
+            + Přidat další výstup
+          </button>
         </div>
       )}
 
@@ -243,8 +360,12 @@ export function AdOrderForm() {
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 m-0 rounded-card bg-white/10 p-4">
             <Polozka popisek="Název" hodnota={title || '—'} naKrok={() => setKrok('nazev')} />
             <Polozka
-              popisek="Co pro vás uděláme"
-              hodnota={nazvySluzeb(sluzby).join(', ') || '—'}
+              popisek="Co pro vás vyrobíme"
+              hodnota={
+                vystupy
+                  .map((v) => popisVystupuObjednavky(v, nazvySluzeb(v.sluzby)))
+                  .join(' | ') || '—'
+              }
               naKrok={() => setKrok('sluzby')}
             />
             <Polozka popisek="Hlas" hodnota={herec || 'necháváme na vás'} naKrok={() => setKrok('herec')} />

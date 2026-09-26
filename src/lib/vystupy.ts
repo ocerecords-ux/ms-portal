@@ -132,6 +132,45 @@ export function nazevSpotuZVystupu(vystup: {
   return zaklad.toLowerCase().includes(delka.toLowerCase()) ? zaklad : `${zaklad} ${delka}`;
 }
 
+// ---------------------------------------------------------------------------
+// VÝSTUPY V OBJEDNÁVCE (zadání 26. 9. 2026, etapa 3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Řádek, který klient vyplní v objednávce. Zkrácené verze jsou jen seznam
+ * délek - všechno ostatní po hlavním výstupu podědí, takže je klient nemusí
+ * popisovat znovu.
+ */
+export type VystupObjednavky = {
+  nazev: string;
+  delkaSekund: number | null;
+  sluzby: string[];
+  downcuty: number[];
+};
+
+export function prazdnyVystupObjednavky(poradi: number): VystupObjednavky {
+  return {
+    nazev: poradi === 0 ? VYCHOZI_NAZEV_VYSTUPU : `Spot ${poradi + 1}`,
+    delkaSekund: null,
+    sluzby: [],
+    downcuty: [],
+  };
+}
+
+/**
+ * Jeden řádek objednávky slovy - do mailu týmu i do shrnutí ve formuláři.
+ * `nazvySluzeb` si volající dodá sám, aby tenhle soubor nezávisel na číselníku.
+ */
+export function popisVystupuObjednavky(
+  vystup: VystupObjednavky,
+  nazvySluzeb: string[],
+): string {
+  const casti = [popisDelky(vystup.delkaSekund), ...nazvySluzeb].filter(Boolean);
+  const zaklad = `${vystup.nazev}${casti.length ? ` — ${casti.join(' · ')}` : ''}`;
+  if (vystup.downcuty.length === 0) return zaklad;
+  return `${zaklad}; zkrácené verze ${vystup.downcuty.map((s) => popisDelky(s)).join(', ')}`;
+}
+
 /** Shrnutí do řádku tabulky - „60s · voiceover, postprodukce". */
 export function souhrnVystupu(vystup: VystupData, nazvySluzeb: string[]): string {
   const casti = [popisDelky(vystup.delkaSekund), ...nazvySluzeb].filter(Boolean);

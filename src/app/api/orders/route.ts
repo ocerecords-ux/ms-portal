@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nazvySluzeb, sluzbaPodleKlice } from '@/lib/sluzbyReklamy';
+import {
+  popisVystupuObjednavky,
+  VYCHOZI_NAZEV_VYSTUPU,
+  type VystupObjednavky,
+} from '@/lib/vystupy';
+import { zalozVystupyZObjednavky } from '@/lib/vystupyServer';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
@@ -40,8 +46,23 @@ const orderSchema = z.object({
   deadline: z.string().optional(),
   note: z.string().optional(),
   preferredNarrator: z.string().optional(),
-  /** Klíče služeb u reklamy - viz lib/sluzbyReklamy.ts. */
+  /** Klíče služeb u reklamy - viz lib/sluzbyReklamy.ts. Souhrn za celou objednávku. */
   sluzby: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
+  /**
+   * VÝSTUPY OBJEDNÁVKY (zadání 26. 9. 2026) - co se má vyrobit, po kusech.
+   * Přijde jako JSON z formuláře; u audioknihy se neposílá.
+   */
+  vystupy: z
+    .array(
+      z.object({
+        nazev: z.string().trim().max(200).default(''),
+        delkaSekund: z.number().int().positive().max(36000).nullable().default(null),
+        sluzby: z.array(z.string().trim().min(1).max(40)).max(10).default([]),
+        downcuty: z.array(z.number().int().positive().max(36000)).max(12).default([]),
+      }),
+    )
+    .max(20)
+    .optional(),
   // Úvod a závěr audioknihy (zadání 22. 9. 2026, Audiotéka).
   autorKnihy: z.string().trim().max(300).optional(),
   prekladatelKnihy: z.string().trim().max(300).optional(),
@@ -75,6 +96,17 @@ export async function POST(req: NextRequest) {
     zaverKnihy: formData.get('zaverKnihy') ?? undefined,
     // Co si klient u reklamy objednal (25. 9. 2026) - může jich být víc.
     sluzby: formData.getAll('sluzby').map((s) => String(s)),
+    // Výstupy objednávky (26. 9. 2026) - formulář je posílá jako JSON.
+    vystupy: (() => {
+      const syrove = formData.get('vystupy');
+      if (!syrove) return undefined;
+      try {
+        const data = JSON.parse(String(syrove));
+        return Array.isArray(data) ? data : undefined;
+      } catch {
+        return undefined;
+      }
+    })(),
   });
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Neplatná data.' }, { status: 400 });
@@ -85,6 +117,17 @@ export async function POST(req: NextRequest) {
    * co přijde odjinud, se zahodí, ať se do projektu nedostane nesmysl.
    */
   const sluzbyKlice = (parsed.data.sluzby ?? []).filter((k) => Boolean(sluzbaPodleKlice(k)));
+  /**
+   * VÝSTUPY OBJEDNÁVKY (26. 9. 2026). Stejné síto jako u služeb - projde jen
+   * to, co číselník zná. Řádek bez názvu dostane pořadové číslo, ať se v
+   * projektu pozná; prázdný seznam znamená, že objednávka přišla postaru.
+   */
+  const vystupyObjednavky: VystupObjednavky[] = (parsed.data.vystupy ?? []).map((v, i) => ({
+    nazev: v.nazev.trim() || (i === 0 ? VYCHOZI_NAZEV_VYSTUPU : `Spot ${i + 1}`),
+    delkaSekund: v.delkaSekund,
+    sluzby: v.sluzby.filter((k) => Boolean(sluzbaPodleKlice(k))),
+    downcuty: Array.from(new Set<number>(v.downcuty)).sort((a, b) => b - a),
+  }));
   // Název projektu i objednávky držíme velkými (zadání 22. 9. 2026).
   const title = nazevProjektuVelky(parsed.data.title);
   const isAudiobook = kind === 'AUDIOBOOK';
@@ -188,6 +231,7 @@ export async function POST(req: NextRequest) {
       note: note || null,
       preferredNarrator,
       sluzby: sluzbyKlice,
+      vystupy: vystupyObjednavky.length > 0 ? vystupyObjednavky : undefined,
       attachmentUrl: attachment?.url ?? null,
       attachmentName: attachment?.name ?? null,
       ...knihaUdaje,
@@ -321,6 +365,17 @@ export async function POST(req: NextRequest) {
       });
 
       /**
+       * VÝSTUPY Z OBJEDNÁVKY (zadání 26. 9. 2026). Zakládají se jako NÁVRH -
+       * produkce je v záložce Výstupy potvrdí nebo upraví (rozhodnutí téhož
+       * dne: „klient navrhne, produkce potvrdí"). Typ se bere z typu
+       * projektu; podle něj se pak pozná, ke kterému výstupu se dělá rodný
+       * list.
+       */
+      if (vystupyObjednavky.length > 0) {
+        await zalozVystupyZObjednavky(caflouProjectId, vystupyObjednavky, typProjektu?.name ?? null);
+      }
+
+      /**
        * NABÍDKA ROVNOU Z OBJEDNÁVKY (zadání 25. 9. 2026: „potřebuji, aby se
        * rovnou z objednávek audioknih z portálu, co přijdou od klienta,
        * vygenerovala nabídka"). Jedna položka „Natáčení a postprodukce
@@ -441,7 +496,15 @@ export async function POST(req: NextRequest) {
       note:
         [
           // Co si klient u reklamy objednal - do mailu hned nahoru (25. 9. 2026).
-          sluzbyKlice.length > 0 ? `Objednané služby: ${nazvySluzeb(sluzbyKlice).join(', ')}` : null,
+          // Co se má vyrobit - po výstupech, když je klient vyplnil
+          // (26. 9. 2026); jinak souhrn služeb jako dřív.
+          vystupyObjednavky.length > 0
+            ? `Co vyrobit:\n${vystupyObjednavky
+                .map((v) => `• ${popisVystupuObjednavky(v, nazvySluzeb(v.sluzby))}`)
+                .join('\n')}`
+            : sluzbyKlice.length > 0
+              ? `Objednané služby: ${nazvySluzeb(sluzbyKlice).join(', ')}`
+              : null,
           note || null,
           knihaUdaje.uvodKnihy ? `Úvod: ${knihaUdaje.uvodKnihy}` : null,
           knihaUdaje.zaverKnihy ? `Závěr: ${knihaUdaje.zaverKnihy}` : null,
