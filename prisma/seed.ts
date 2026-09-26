@@ -5,7 +5,7 @@ import { VYCHOZI_NAVODY } from './vychoziNavody';
 import { GOOGLE_KALENDAR } from './importKalendare/googleKalendar';
 import { prahaNaUtc, rozeberUdalost, srovnej } from '../src/lib/importGoogleKalendar';
 import { bezTitulu } from '../src/lib/jmena';
-import { VYCHOZI_VZOR_NATACENI } from '../src/lib/nataceniText';
+import { STARY_VZOR_NATACENI, VYCHOZI_VZOR_NATACENI } from '../src/lib/nataceniText';
 import { PODPIS_ONDREJ } from './podpisOndrej';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -178,6 +178,7 @@ async function main() {
   await doplnKalendarDoListy();
   await zapniRodnyListURadiovehoSpotu();
   await zalozVzorNataceni();
+  await srovnejVzorNataceni();
 
   await backfillCodes();
   await prenesHerceDoSeznamu();
@@ -351,6 +352,33 @@ async function zalozVzorNataceni() {
     },
   });
   console.log('  vzory: zalozen vychozi natacecí text');
+}
+
+/**
+ * Srovnani vzoru na novou podobu (zadani 26. 9. 2026: „dej pryc tu poradovou
+ * cislovku u nadpisu spotu" a datum v uvodu). Prepise se JEN vzor, ktery ma
+ * pritom puvodni text slovo od slova - do rucne upraveneho seed nesaha.
+ */
+async function srovnejVzorNataceni() {
+  const vzory = (await prisma.vzorNataceni.findMany({
+    select: { id: true, uvod: true, blok: true },
+  })) as { id: string; uvod: string | null; blok: string }[];
+
+  let zmeneno = 0;
+  for (const v of vzory) {
+    const data: { uvod?: string; blok?: string } = {};
+    if ((v.uvod ?? '').trim() === STARY_VZOR_NATACENI.uvod.trim()) {
+      data.uvod = VYCHOZI_VZOR_NATACENI.uvod;
+    }
+    if (v.blok.trim() === STARY_VZOR_NATACENI.blok.trim()) {
+      data.blok = VYCHOZI_VZOR_NATACENI.blok;
+    }
+    if (Object.keys(data).length === 0) continue;
+    await prisma.vzorNataceni.update({ where: { id: v.id }, data });
+    zmeneno += 1;
+  }
+
+  if (zmeneno > 0) console.log(`  vzory: srovnan natacecí text (${zmeneno})`);
 }
 
 async function zapniRodnyListURadiovehoSpotu() {

@@ -24,7 +24,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id } = await params;
   const vzorId = req.nextUrl.searchParams.get('vzor');
-  const podklad = await htmlNataceciTextu(id, vzorId);
+  // true = obalit list bílou A4; náhled má držet formát stránky (26. 9. 2026).
+  const podklad = await htmlNataceciTextu(id, vzorId, true);
 
   if (!podklad.ok) {
     // I chyba je HTML - rámeček s náhledem ji rovnou ukáže místo prázdna.

@@ -8,24 +8,53 @@
  * den je otevřený jeden list a jede se spot po spotu; každý má vlastní hlavičku
  * s názvem, délkou a licencí a pod ní místo na text.
  *
+ * PODOBA LISTU (zadání 26. 9. 2026: „formát náhledu držme vždy jako A4, datum
+ * pryč - dejme tam spíš poslední datum úpravy, pod zelené logo fialové pozadí
+ * a udělejme to graficky hezčí"). List má stejnou hlavičku jako smlouva
+ * a nabídka: fialový pruh, zelené logo v něm a zelená linka pod ním.
+ *
  * TENHLE SOUBOR JE BEZ PRISMY - skládá jen text. Vyrobení dokumentu a jeho
  * uložení na Disk řeší nataceniTextServer.ts.
  */
+
+/** Barvy značky - tytéž hodnoty jako v tailwind.config (brand.*). */
+const FIALOVA = '#6B2AF0';
+const FIALOVA_SVETLA = '#D9CCFF';
+const ZELENA = '#1FDF67';
+const INKOUST = '#201a33';
+const SEDA = '#6b6880';
+const LINKA = '#E3E0EC';
 
 /** Co se dá do vzoru napsat jako proměnná. */
 export const PROMENNE_NATACENI = [
   { klic: 'projekt', popis: 'Název projektu' },
   { klic: 'klient', popis: 'Název firmy klienta' },
-  { klic: 'datum', popis: 'Dnešní datum' },
+  { klic: 'upraveno', popis: 'Datum poslední úpravy listu' },
   { klic: 'spot', popis: 'Název výstupu (jen v bloku spotu)' },
-  { klic: 'delka', popis: 'Délka spotu - 30s, 1:30 (jen v bloku spotu)' },
+  { klic: 'delka', popis: 'Délka spotu - 30s, 2min. (jen v bloku spotu)' },
   { klic: 'licence', popis: 'Licence výstupu - Rádio, Online (jen v bloku spotu)' },
   { klic: 'poradi', popis: 'Pořadové číslo spotu v dokumentu' },
 ] as const;
 
-/** Výchozí podoba vzoru - ta, kterou seed založí, když žádný není. */
+/**
+ * VÝCHOZÍ PODOBA VZORU. Úvod je schválně prázdný - název projektu, klienta
+ * i datum úpravy nese hlavička listu, takže v textu by stály podruhé.
+ */
 export const VYCHOZI_VZOR_NATACENI = {
   nazev: 'Natáčecí list',
+  uvod: '',
+  blok: `{{spot}}
+{{delka}} · {{licence}}
+
+[text spotu]`,
+};
+
+/**
+ * Podoba vzoru, kterou portál rozesílal do 26. 9. 2026 (číslovaný spot
+ * a datum v úvodu). Seed podle ní pozná vzor, do kterého nikdo nesáhl,
+ * a srovná ho na novou podobu - ručně upravený vzor nechá být.
+ */
+export const STARY_VZOR_NATACENI = {
   uvod: `NATÁČECÍ LIST
 {{projekt}} — {{klient}}
 Datum: {{datum}}`,
@@ -43,7 +72,8 @@ export type VystupProText = {
 export type PodkladyTextu = {
   projekt: string;
   klient: string;
-  datum: string;
+  /** Kdy se naposledy měnily výstupy - místo dnešního data (26. 9. 2026). */
+  upraveno: string;
   /** Absolutní adresa loga - v dokumentu na Disku i v náhledu v portálu. */
   logoUrl?: string | null;
 };
@@ -64,29 +94,78 @@ const escapeHtml = (text: string): string =>
     .replace(/"/g, '&quot;');
 
 /**
+ * Odstavce z prostého textu. Prázdný řádek = nový odstavec, jednoduchý řádek
+ * zůstane řádkem. Styl se píše rovnou do atributu: Disk si při převodu na
+ * dokument bere inline styly, na <style> v hlavičce se spolehnout nedá.
+ */
+function odstavce(text: string, styl: string, stylPrvniho?: string): string {
+  return text
+    .split(/\n{2,}/)
+    .map((odstavec, i) => {
+      const pouzity = i === 0 && stylPrvniho ? stylPrvniho : styl;
+      return `<p style="${pouzity}">${escapeHtml(odstavec).replace(/\n/g, '<br>')}</p>`;
+    })
+    .join('');
+}
+
+/**
+ * HLAVIČKA LISTU. Tabulka, ne <div> - barevný podklad přežije převod na
+ * dokument Google jen v buňce tabulky. Logo je zelené, takže sedí na fialové
+ * (zadání 26. 9. 2026: „pro dokumenty na bílém papíře použijme pod zelené
+ * logo fialové pozadí").
+ */
+function hlavicka(podklady: PodkladyTextu): string {
+  const logo = podklady.logoUrl
+    ? `<img src="${escapeHtml(podklady.logoUrl)}" alt="Mediaspace" height="30" style="height:23pt">`
+    : '';
+
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">
+<tr><td bgcolor="${FIALOVA}" style="background-color:${FIALOVA};padding:16pt 18pt">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">
+<tr>
+<td style="vertical-align:top">
+<p style="margin:0;font-family:Arial,sans-serif;font-size:8pt;letter-spacing:1.6pt;color:${ZELENA};text-transform:uppercase"><b>Natáčecí list</b></p>
+<p style="margin:5pt 0 0;font-family:Arial,sans-serif;font-size:19pt;line-height:1.15;color:#ffffff"><b>${escapeHtml(podklady.projekt)}</b></p>
+${podklady.klient ? `<p style="margin:3pt 0 0;font-family:Arial,sans-serif;font-size:10pt;color:${FIALOVA_SVETLA}">${escapeHtml(podklady.klient)}</p>` : ''}
+</td>
+<td align="right" width="150" style="vertical-align:top;text-align:right;width:112pt">${logo}</td>
+</tr>
+</table>
+</td></tr>
+<tr><td bgcolor="${ZELENA}" style="background-color:${ZELENA};font-size:1pt;line-height:3pt;height:3pt">&nbsp;</td></tr>
+</table>
+<p style="margin:7pt 0 0;font-family:Arial,sans-serif;font-size:8.5pt;color:${SEDA};text-align:right">Poslední úprava: ${escapeHtml(podklady.upraveno)}</p>`;
+}
+
+/**
  * Celý dokument jako HTML. Google Disk si z HTML udělá běžný dokument, do
  * kterého jde rovnou psát - proto ne PDF: rodný list se čte, natáčecí text se
  * píše.
  *
- * Prázdný řádek ve vzoru = nový odstavec, jednoduchý řádek zůstane řádkem.
- * Hlavička spotu se tiskne tučně a odděluje čarou, ať je při čtení z obrazovky
- * poznat, kde jeden spot končí.
+ * `ramecekA4` je jen pro náhled v portálu - obalí týž obsah bílým listem
+ * o rozměrech A4, aby bylo předem vidět, co se na stránku vejde (zadání
+ * 26. 9. 2026). Do dokumentu na Disku jde obsah bez rámečku, stránkování
+ * si tam řeší Disk sám.
  */
 export function sestavHtmlNataceni(
   vzor: { uvod?: string | null; blok: string },
   podklady: PodkladyTextu,
   vystupy: VystupProText[],
+  ramecekA4 = false,
 ): string {
   const spolecne = {
     projekt: podklady.projekt,
     klient: podklady.klient,
-    datum: podklady.datum,
+    upraveno: podklady.upraveno,
   };
 
-  const casti: string[] = [];
+  const stylTextu = `margin:0 0 8pt;font-family:Arial,sans-serif;font-size:11pt;line-height:1.55;color:${INKOUST}`;
+  const casti: string[] = [hlavicka(podklady)];
 
   if (vzor.uvod?.trim()) {
-    casti.push(`<div class="uvod">${odstavce(dosad(vzor.uvod, spolecne))}</div>`);
+    casti.push(
+      `<div style="margin-top:14pt">${odstavce(dosad(vzor.uvod, spolecne), stylTextu)}</div>`,
+    );
   }
 
   vystupy.forEach((v, i) => {
@@ -97,37 +176,73 @@ export function sestavHtmlNataceni(
       licence: v.licence,
       poradi: String(i + 1),
     });
-    casti.push(`<div class="spot">${odstavce(text)}</div>`);
+
+    /**
+     * První odstavec bloku je hlavička spotu (název), druhý bývá řádek se
+     * stopáží a licencí - ten se sází fialově a menším písmem, ať je na
+     * první pohled poznat, kde jeden spot začíná. Zbytek je místo na text.
+     */
+    const radky = text.split(/\n{2,}/);
+    const nazev = radky.shift() ?? '';
+    const [prvniRadek, ...dalsiRadky] = nazev.split('\n');
+    const popis = dalsiRadky.join(' ').trim();
+
+    casti.push(
+      `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;margin-top:20pt">` +
+        `<tr><td style="border-top:1pt solid ${LINKA};padding-top:9pt">` +
+        `<p style="margin:0;font-family:Arial,sans-serif;font-size:13pt;color:${INKOUST}"><b>${escapeHtml(prvniRadek)}</b></p>` +
+        (popis
+          ? `<p style="margin:3pt 0 0;font-family:Arial,sans-serif;font-size:9pt;letter-spacing:0.4pt;color:${FIALOVA}"><b>${escapeHtml(popis)}</b></p>`
+          : '') +
+        `</td></tr></table>` +
+        `<div style="margin:10pt 0 16pt">${odstavce(radky.join('\n\n'), stylTextu)}</div>`,
+    );
   });
 
-  /**
-   * HLAVIČKA S LOGEM (zadání 26. 9. 2026: „bylo by dobré mít ten dokument
-   * obrandovaný v náhledu, jako u nabídek a faktur"). Logo se tahá z portálu
-   * absolutní adresou - Disk si ho při převodu na dokument stáhne k sobě,
-   * takže list vypadá stejně i po odeslání dál.
-   */
-  const hlavicka = podklady.logoUrl
-    ? `<p class="logo"><img src="${escapeHtml(podklady.logoUrl)}" alt="Mediaspace" height="34"></p>`
-    : '';
+  // Patička jako na smlouvě a nabídce - ať je na vytištěném listu poznat,
+  // odkud je, i když se z něj utrhne jedna stránka.
+  casti.push(
+    `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;margin-top:22pt">` +
+      `<tr>` +
+      `<td style="border-top:1pt solid ${LINKA};padding-top:6pt">` +
+      `<p style="margin:0;font-family:Arial,sans-serif;font-size:9pt;color:${FIALOVA}"><b>Mediaspace</b></p>` +
+      `</td>` +
+      `<td align="right" style="border-top:1pt solid ${LINKA};padding-top:6pt;text-align:right">` +
+      `<p style="margin:0;font-family:Arial,sans-serif;font-size:8pt;color:${SEDA}">${escapeHtml(podklady.projekt)}</p>` +
+      `</td></tr></table>`,
+  );
 
+  const obsah = casti.join('\n');
+
+  if (!ramecekA4) {
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${escapeHtml(podklady.projekt)}</title></head>
+<body style="margin:0;font-family:Arial,sans-serif">${obsah}</body></html>`;
+  }
+
+  // NÁHLED: bílý list A4 (794 × 1123 px při 96 dpi) zmenšený tak, aby se
+  // vešel na šířku rámečku. Text se tím zmenší i zvětší přesně v poměru
+  // stránky, takže je vidět, co se na jednu A4 opravdu vejde.
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${escapeHtml(podklady.projekt)}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #201a33; }
-  .logo { margin: 0 0 14pt 0; }
-  .uvod { font-weight: bold; margin-bottom: 20pt; padding-bottom: 10pt; border-bottom: 2pt solid #9900FF; }
-  .spot { margin-bottom: 28pt; padding-top: 8pt; border-top: 1px solid #bbb; }
-  .spot p:first-child { font-weight: bold; }
-</style>
-</head><body>${hlavicka}${casti.join('\n')}</body></html>`;
-}
-
-/** Prázdný řádek dělá odstavec, jednoduchý zalomení. */
-function odstavce(text: string): string {
-  return text
-    .split(/\n{2,}/)
-    .map((odstavec) => `<p>${escapeHtml(odstavec).replace(/\n/g, '<br>')}</p>`)
-    .join('');
+<html><head><meta charset="utf-8"><title>${escapeHtml(podklady.projekt)}</title></head>
+<body style="margin:0;padding:14px 0;background:#e9e7f1;font-family:Arial,sans-serif">
+<div id="obal" style="width:794px;margin:0 auto;transform-origin:top center">
+<div id="list" style="width:794px;min-height:1123px;box-sizing:border-box;background:#ffffff;padding:60px 64px;box-shadow:0 2px 16px rgba(32,26,51,0.22)">${obsah}</div>
+</div>
+<script>
+(function(){
+  var obal = document.getElementById('obal'), list = document.getElementById('list');
+  function srovnej(){
+    var s = Math.min(1, (document.documentElement.clientWidth - 28) / 794);
+    obal.style.transform = 'scale(' + s + ')';
+    obal.style.height = (list.offsetHeight * s) + 'px';
+  }
+  window.addEventListener('resize', srovnej);
+  window.addEventListener('load', srovnej);
+  srovnej();
+})();
+</script>
+</body></html>`;
 }
 
 /** Název souboru na Disku - „Natáčecí text — Strabag jaro". */

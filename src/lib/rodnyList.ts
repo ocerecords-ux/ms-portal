@@ -153,9 +153,14 @@ export function missingFieldsMessage(missing: string[]): string {
  */
 export function formatSpotLength(seconds: number | null | undefined): string {
   if (seconds == null || seconds <= 0) return '';
+  // Stejný tvar jako u výstupů (26. 9. 2026: „min., když to bude nad 60 s,
+  // a s, když to bude do 60 s") - v RL nesmí stát jiná stopáž než v listu.
   const cele = Math.round(seconds);
-  if (cele < 60) return `${cele}s`;
-  return `${Math.floor(cele / 60)}:${String(cele % 60).padStart(2, '0')}`;
+  const minuty = Math.floor(cele / 60);
+  const zbytek = cele % 60;
+  if (minuty === 0) return `${zbytek}s`;
+  if (zbytek === 0) return `${minuty}min.`;
+  return `${minuty}min.${zbytek}s`;
 }
 
 /** Datum výroby ve tvaru „24.08.2026" (stejně jako ve vzorovém PDF). */

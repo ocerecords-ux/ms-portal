@@ -49,6 +49,7 @@ function zakladPortalu(): string {
 export async function htmlNataceciTextu(
   caflouProjectId: string,
   vzorId?: string | null,
+  ramecekA4 = false,
 ): Promise<{ ok: true; html: string; nazevProjektu: string } | { ok: false; duvod: string }> {
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId },
@@ -90,16 +91,33 @@ export async function htmlNataceciTextu(
     };
   });
 
+  /**
+   * DATUM POSLEDNÍ ÚPRAVY, NE DNEŠEK (zadání 26. 9. 2026: „dejme pryč datum
+   * na tom dokumentu, to je zavádějící - dejme tam spíš poslední datum úpravy
+   * toho dokumentu"). Dnešní datum na natáčecím listu se čte jako den
+   * natáčení; tohle říká, jak je list starý.
+   */
+  const posledni = (await prisma.vystup
+    .findFirst({
+      where: { caflouProjectId },
+      orderBy: { updatedAt: 'desc' },
+      select: { updatedAt: true },
+    })
+    .catch(() => null)) as { updatedAt: Date } | null;
+
   const nazevProjektu = meta.name || `Projekt ${caflouProjectId}`;
   const html = sestavHtmlNataceni(
     vzor,
     {
       projekt: nazevProjektu,
       klient: meta.company?.name || meta.companyName || '',
-      datum: new Date().toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' }),
+      upraveno: (posledni?.updatedAt ?? new Date()).toLocaleDateString('cs-CZ', {
+        timeZone: 'Europe/Prague',
+      }),
       logoUrl: `${zakladPortalu()}/mediaspace-logo-still.png`,
     },
     vystupy,
+    ramecekA4,
   );
 
   return { ok: true, html, nazevProjektu };

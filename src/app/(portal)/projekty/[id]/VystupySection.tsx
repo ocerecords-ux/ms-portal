@@ -312,11 +312,12 @@ export function VystupySection({
             key={verzeNahledu}
             src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
             title="Náhled natáčecího textu"
-            className="w-full h-[460px] rounded-card border border-line bg-white"
+            className="w-full h-[700px] rounded-card border border-line bg-white"
           />
           <span className="text-xs font-body text-muted">
-            Takhle bude vypadat dokument ve složce projektu na Disku. Text spotů se píše až
-            v něm — podobu listu má na starost Administrace → Vzory natáčecích textů.
+            Takhle bude vypadat dokument ve složce projektu na Disku — v náhledu na A4, ať je
+            vidět, co se na stránku vejde. Text spotů se píše až v něm; podobu listu má na
+            starost Administrace → Vzory natáčecích textů.
           </span>
         </div>
       )}
