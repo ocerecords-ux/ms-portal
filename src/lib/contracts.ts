@@ -14,6 +14,8 @@
  * podpis: pro herecké a klientské smlouvy běžná praxe.
  */
 
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+
 export const CONTRACT_STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Rozpracovaná',
   SENT: 'Čeká na podpis',
@@ -225,11 +227,11 @@ export function popisekDruheStrany(body: string): string {
 /** Kolik podpisů smlouva potřebuje: obě strany. */
 export const REQUIRED_SIGNERS = ['MEDIASPACE', 'PROTISTRANA'] as const;
 
-export function formatSignedAt(iso: string | Date | null): string {
+export function formatSignedAt(iso: string | Date | null, jazyk: Jazyk = 'cs'): string {
   if (!iso) return '';
   const date = typeof iso === 'string' ? new Date(iso) : iso;
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('cs-CZ', {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), {
     day: 'numeric',
     month: 'numeric',
     year: 'numeric',

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '../components/JazykProvider';
 
 /**
  * PŘEHLED DNE A PŘIPOMÍNKY (zadání 23. 9. 2026: „chtěl bych, aby mi Bruno
@@ -13,6 +14,7 @@ import { useRouter } from 'next/navigation';
  * natáčením. Ukládá se hned, bez tlačítka.
  */
 export function RanniPrehledKarta({ initial }: { initial: boolean }) {
+  const t = usePreklad();
   const router = useRouter();
   const [zapnuto, setZapnuto] = useState(initial);
   const [saving, setSaving] = useState(false);
@@ -30,13 +32,13 @@ export function RanniPrehledKarta({ initial }: { initial: boolean }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('mujUcet.chybaUlozeni'));
         setZapnuto(!hodnota);
         return;
       }
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('mujUcet.chybaUlozeni'));
       setZapnuto(!hodnota);
     } finally {
       setSaving(false);
@@ -46,8 +48,8 @@ export function RanniPrehledKarta({ initial }: { initial: boolean }) {
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <div>
-        <h2 className="font-heading font-semibold text-ink m-0">Přehled dne a připomínky</h2>
-        <p className="text-sm font-body text-muted m-0 mt-1">Co vás ten den čeká — a štouchnutí před každou událostí.</p>
+        <h2 className="font-heading font-semibold text-ink m-0">{t('mujUcet.prehledDne')}</h2>
+        <p className="text-sm font-body text-muted m-0 mt-1">{t('mujUcet.prehledDnePopis')}</p>
       </div>
 
       <label className="flex items-start gap-2 text-sm font-heading text-ink">
@@ -59,13 +61,9 @@ export function RanniPrehledKarta({ initial }: { initial: boolean }) {
           className="mt-0.5"
         />
         <span>
-          Hlídat mi den
+          {t('mujUcet.hlidatDen')}
           <br />
-          <span className="text-xs font-body text-muted">
-            Ráno v sedm přijde do telefonu upozornění a při prvním otevření portálu vyskočí okno s programem dne —
-            natáčení a střihy, kde jste zvukař nebo herec, porady a schůzky, na které jste pozvaní, a otevřené
-            úkoly. Patnáct minut před každou událostí navíc Bruno pošle připomínku do chatu i do telefonu.
-          </span>
+          <span className="text-xs font-body text-muted">{t('mujUcet.hlidatDenPopis')}</span>
         </span>
       </label>
 

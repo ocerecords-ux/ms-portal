@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { OrderForm } from './OrderForm';
 import { AdOrderForm } from './AdOrderForm';
 import type { NarratorOption } from './NarratorMultiSelect';
+import { usePreklad } from '../components/JazykProvider';
 
 /**
  * Klient, ktery poptava OBOJI (audioknihy i reklamy - zadani 12. 9. 2026),
@@ -22,6 +23,7 @@ export function OrderTypeSwitcher({
   herci: NarratorOption[];
   uvodZaver?: boolean;
 }) {
+  const t = usePreklad();
   const [tab, setTab] = useState<'audiokniha' | 'reklama'>('audiokniha');
 
   return (
@@ -34,7 +36,7 @@ export function OrderTypeSwitcher({
             tab === 'audiokniha' ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
           }`}
         >
-          Audiokniha
+          {t('objednavka.typAudiokniha')}
         </button>
         <button
           type="button"
@@ -43,7 +45,7 @@ export function OrderTypeSwitcher({
             tab === 'reklama' ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
           }`}
         >
-          Reklama
+          {t('objednavka.typReklama')}
         </button>
       </div>
 

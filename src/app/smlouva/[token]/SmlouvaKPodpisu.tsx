@@ -2,6 +2,7 @@
 
 import { ContractPaper, type PaperSignature } from '@/app/(admin)/admin/doklady/smlouvy/ContractPaper';
 import { ContractSigning } from './ContractSigning';
+import type { Jazyk } from '@/lib/jazyk';
 
 /**
  * Smlouva k podpisu: celý dokument a pod ním jeden podpis.
@@ -26,6 +27,7 @@ export function SmlouvaKPodpisu({
   completedAt,
   rejectedAt,
   issuerName,
+  jazyk,
 }: {
   token: string;
   title: string;
@@ -39,6 +41,8 @@ export function SmlouvaKPodpisu({
   completedAt: string | null;
   rejectedAt: string | null;
   issuerName: string;
+  /** Stránka stojí mimo JazykProvider, jazyk proto chodí propem (pravidlo 8). */
+  jazyk: Jazyk;
 }) {
   return (
     <>
@@ -59,6 +63,7 @@ export function SmlouvaKPodpisu({
         completedAt={completedAt}
         rejectedAt={rejectedAt}
         issuerName={issuerName}
+        jazyk={jazyk}
       />
     </>
   );

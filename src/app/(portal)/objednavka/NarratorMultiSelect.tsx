@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
+import { usePreklad } from '../components/JazykProvider';
 
 export type NarratorOption = { id: string; label: string };
 
@@ -20,6 +21,7 @@ export function NarratorMultiSelect({
   value: string[];
   onChange: (next: string[]) => void;
 }) {
+  const t = usePreklad();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,7 +88,7 @@ export function NarratorMultiSelect({
                 removeValue(label);
               }}
               className="text-brand-purpleDeep/60 hover:text-brand-purpleDeep leading-none px-0.5"
-              aria-label={`Odebrat ${label}`}
+              aria-label={t('herci.odebrat', { jmeno: label })}
             >
               ×
             </button>
@@ -102,7 +104,7 @@ export function NarratorMultiSelect({
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           onKeyDown={handleKeyDown}
-          placeholder={value.length ? '' : 'Hledat herce, nebo napsat vlastní jméno…'}
+          placeholder={value.length ? '' : t('herci.hledat')}
           className="flex-1 min-w-[140px] border-0 outline-none bg-transparent text-[14.5px] font-body text-[#201a33] placeholder:text-[#a9a2c2] py-1"
         />
       </div>
@@ -127,7 +129,7 @@ export function NarratorMultiSelect({
               onClick={() => addValue(query)}
               className="w-full text-left px-3 py-2 text-sm font-body text-brand-purpleDeep hover:bg-[#f7f5ff]"
             >
-              + Přidat „{query.trim()}“
+              {t('herci.pridat', { jmeno: query.trim() })}
             </button>
           )}
         </div>

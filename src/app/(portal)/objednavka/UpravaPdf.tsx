@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 import { slozUpravenePdf, type StrankaUpravy } from '@/lib/pdfUpravy';
+import { usePreklad } from '../components/JazykProvider';
 
 /**
  * NÁHLED A ÚPRAVA PDF V OBJEDNÁVCE (zadání 22. 9. 2026: „když klient vloží
@@ -18,6 +19,7 @@ import { slozUpravenePdf, type StrankaUpravy } from '@/lib/pdfUpravy';
 type Stav = { index: number; otoceni: number; vyrazena: boolean };
 
 export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraveny: File) => void }) {
+  const t = usePreklad();
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const [doc, setDoc] = useState<any>(null);
   const [stranky, setStranky] = useState<Stav[]>([]);
@@ -44,13 +46,13 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
         setStranky(Array.from({ length: d.numPages }, (_, i) => ({ index: i, otoceni: 0, vyrazena: false })));
       } catch (err) {
         console.error('Náhled PDF se nepodařilo načíst:', err);
-        if (!zruseno) setChyba('Náhled PDF se nepodařilo načíst. Soubor se odešle tak, jak je.');
+        if (!zruseno) setChyba(t('upravaPdf.chybaNahled'));
       }
     })();
     return () => {
       zruseno = true;
     };
-  }, [soubor]);
+  }, [soubor, t]);
 
   // Po každé změně se složí nové PDF (s malou prodlevou, ať se neskládá při každém ťuknutí).
   useEffect(() => {
@@ -69,7 +71,7 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
         onZmena(bezZmen ? soubor : await slozUpravenePdf(soubor, zbyle));
       } catch (err) {
         console.error('Upravené PDF se nepodařilo složit:', err);
-        setChyba('Úpravy se nepodařilo použít. Soubor se odešle celý.');
+        setChyba(t('upravaPdf.chybaUpravy'));
         onZmena(soubor);
       } finally {
         setSkladam(false);
@@ -106,18 +108,22 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
   }, [velka, stranky.length]);
 
   if (chyba && !doc) return <p className="m-0 mt-2 text-xs font-body text-white/70">{chyba}</p>;
-  if (!doc) return <p className="m-0 mt-2 text-xs font-body text-white/70">Připravuji náhled stránek…</p>;
+  if (!doc) return <p className="m-0 mt-2 text-xs font-body text-white/70">{t('upravaPdf.pripravuji')}</p>;
 
   const vyrazenych = stranky.filter((s) => s.vyrazena).length;
 
   return (
     <div className="mt-3 rounded-lg border border-white/25 bg-white/5 p-3">
       <div className="flex items-center gap-2 flex-wrap mb-2">
-        <p className="m-0 font-heading font-semibold text-sm text-white">Náhled stránek</p>
+        <p className="m-0 font-heading font-semibold text-sm text-white">{t('upravaPdf.nadpis')}</p>
         <span className="text-[11px] font-body text-white/65">
-          {stranky.length - vyrazenych} z {doc.numPages} stran
-          {vyrazenych > 0 ? ` · ${vyrazenych} vyřazeno` : ''}
-          {skladam ? ' · ukládám úpravy…' : ''}
+          {[
+            t('upravaPdf.pocet', { zbylo: stranky.length - vyrazenych, celkem: doc.numPages }),
+            vyrazenych > 0 ? t('upravaPdf.vyrazeno', { pocet: vyrazenych }) : null,
+            skladam ? t('upravaPdf.ukladam') : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </span>
         {vyrazenych > 0 && (
           <button
@@ -125,14 +131,11 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
             onClick={() => setStranky((p) => p.map((s) => ({ ...s, vyrazena: false })))}
             className="ml-auto text-[11px] font-heading font-semibold text-brand-green underline"
           >
-            Vrátit všechny stránky
+            {t('upravaPdf.vratitVse')}
           </button>
         )}
       </div>
-      <p className="m-0 mb-2 text-[11px] font-body text-white/60">
-        Kliknutím stránku zvětšíte. Křížkem ji vyřadíte z objednávky (třeba obálku, obsah nebo tiráž), šipkou otočíte.
-        Normostrany se přepočítají z toho, co zůstane.
-      </p>
+      <p className="m-0 mb-2 text-[11px] font-body text-white/60">{t('upravaPdf.napoveda')}</p>
       {chyba && <p className="m-0 mb-2 text-xs font-body text-white/80">{chyba}</p>}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-2 max-h-[420px] overflow-y-auto pr-1">
         {stranky.map((s, i) => (
@@ -140,7 +143,7 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
             key={s.index}
             className={`relative rounded-md border ${s.vyrazena ? 'border-white/10 opacity-35' : 'border-white/25'} bg-white/10`}
           >
-            <button type="button" onClick={() => setVelka(i)} className="block w-full p-1" title={`Strana ${s.index + 1}`}>
+            <button type="button" onClick={() => setVelka(i)} className="block w-full p-1" title={t('upravaPdf.strana', { cislo: s.index + 1 })}>
               <NahledStranky doc={doc} cislo={s.index + 1} sirka={160} otoceni={s.otoceni} />
             </button>
             <span className="absolute left-1 bottom-1 rounded bg-black/60 px-1 text-[10px] font-heading text-white">
@@ -150,8 +153,8 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
               <button
                 type="button"
                 onClick={() => otoc(i)}
-                title="Otočit o 90°"
-                aria-label={`Otočit stranu ${s.index + 1}`}
+                title={t('upravaPdf.otocit90')}
+                aria-label={t('upravaPdf.otocitStranu', { cislo: s.index + 1 })}
                 className="w-6 h-6 rounded-full bg-black/60 text-white text-xs leading-none hover:bg-black/80"
               >
                 ↻
@@ -159,8 +162,12 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
               <button
                 type="button"
                 onClick={() => prepni(i)}
-                title={s.vyrazena ? 'Vrátit stránku' : 'Vyřadit stránku'}
-                aria-label={s.vyrazena ? `Vrátit stranu ${s.index + 1}` : `Vyřadit stranu ${s.index + 1}`}
+                title={s.vyrazena ? t('upravaPdf.vratitStranku') : t('upravaPdf.vyraditStranku')}
+                aria-label={
+                  s.vyrazena
+                    ? t('upravaPdf.vratitStranu', { cislo: s.index + 1 })
+                    : t('upravaPdf.vyraditStranu', { cislo: s.index + 1 })
+                }
                 className={`w-6 h-6 rounded-full text-xs leading-none ${
                   s.vyrazena ? 'bg-brand-green text-brand-purpleDark' : 'bg-black/60 text-white hover:bg-red-600'
                 }`}
@@ -185,8 +192,8 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
           >
             <div className="flex items-center gap-2 px-4 py-2.5 text-white">
               <span className="font-heading font-semibold text-sm">
-                Strana {stranky[velka].index + 1} / {doc.numPages}
-                {stranky[velka].vyrazena ? ' · vyřazena' : ''}
+                {t('upravaPdf.velkaStrana', { cislo: stranky[velka].index + 1, celkem: doc.numPages })}
+                {stranky[velka].vyrazena ? ` · ${t('upravaPdf.vyrazenaStitek')}` : ''}
               </span>
               <span className="flex-1" />
               <button
@@ -194,7 +201,7 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
                 onClick={() => setVelka((v) => (v === null ? v : Math.max(0, v - 1)))}
                 disabled={velka === 0}
                 className="w-9 h-9 rounded-lg border border-white/30 disabled:opacity-40"
-                aria-label="Předchozí strana"
+                aria-label={t('upravaPdf.predchoziStrana')}
               >
                 ‹
               </button>
@@ -203,12 +210,12 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
                 onClick={() => setVelka((v) => (v === null ? v : Math.min(stranky.length - 1, v + 1)))}
                 disabled={velka === stranky.length - 1}
                 className="w-9 h-9 rounded-lg border border-white/30 disabled:opacity-40"
-                aria-label="Další strana"
+                aria-label={t('upravaPdf.dalsiStrana')}
               >
                 ›
               </button>
               <button type="button" onClick={() => otoc(velka)} className="h-9 px-3 rounded-lg border border-white/30 text-sm">
-                ↻ Otočit
+                {t('upravaPdf.otocit')}
               </button>
               <button
                 type="button"
@@ -217,13 +224,13 @@ export function UpravaPdf({ soubor, onZmena }: { soubor: File; onZmena: (upraven
                   stranky[velka].vyrazena ? 'bg-brand-green text-brand-purpleDark' : 'bg-red-600 text-white'
                 }`}
               >
-                {stranky[velka].vyrazena ? 'Vrátit stránku' : 'Vyřadit stránku'}
+                {stranky[velka].vyrazena ? t('upravaPdf.vratitStranku') : t('upravaPdf.vyraditStranku')}
               </button>
               <button
                 type="button"
                 onClick={() => setVelka(null)}
                 className="w-9 h-9 rounded-lg border border-white/40 text-xl leading-none"
-                aria-label="Zavřít"
+                aria-label={t('obecne.zavrit')}
               >
                 ×
               </button>

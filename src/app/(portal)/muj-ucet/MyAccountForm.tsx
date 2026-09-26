@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { PhotoDropzone } from '@/app/(admin)/admin/users/PhotoDropzone';
 import { DatumPole } from '@/components/DatumPole';
+import { usePreklad } from '../components/JazykProvider';
 
 type Values = {
   name: string;
@@ -31,6 +32,7 @@ export function MyAccountForm({
   initial: Values;
   photoUrl: string | null;
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [values, setValues] = useState<Values>(initial);
   const [photo, setPhoto] = useState<File | null>(null);
@@ -63,7 +65,7 @@ export function MyAccountForm({
       const res = await fetch('/api/me', { method: 'PATCH', body: formData });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('mujUcet.chybaUlozeni'));
         return;
       }
       setSaved(true);
@@ -72,7 +74,7 @@ export function MyAccountForm({
       setRemovePhoto(false);
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('mujUcet.chybaUlozeni'));
     } finally {
       setSaving(false);
     }
@@ -83,11 +85,11 @@ export function MyAccountForm({
 
   return (
     <form onSubmit={handleSubmit} className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
-      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Kontaktní údaje</h2>
+      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('mujUcet.kontaktniUdaje')}</h2>
 
       {internal && (
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Fotka</span>
+          <span className="text-sm font-body text-ink">{t('mujUcet.fotka')}</span>
           <PhotoDropzone
             file={photo}
             onChange={(f) => {
@@ -100,20 +102,18 @@ export function MyAccountForm({
               setSaved(false);
             }}
           />
-          <span className="text-xs text-muted font-body">
-            Ukazuje se u vašich zpráv v MS chatu.
-          </span>
+          <span className="text-xs text-muted font-body">{t('mujUcet.fotkaNapoveda')}</span>
         </label>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Jméno</span>
+          <span className="text-sm font-body text-ink">{t('mujUcet.jmeno')}</span>
           <input value={values.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Telefon</span>
+          <span className="text-sm font-body text-ink">{t('mujUcet.telefon')}</span>
           <input
             type="tel"
             value={values.phone}
@@ -123,7 +123,7 @@ export function MyAccountForm({
         </label>
 
         <label className="flex flex-col gap-1.5 sm:col-span-2">
-          <span className="text-sm font-body text-ink">E-mail</span>
+          <span className="text-sm font-body text-ink">{t('mujUcet.email')}</span>
           <input
             type="email"
             required
@@ -131,12 +131,12 @@ export function MyAccountForm({
             onChange={(e) => set('email', e.target.value)}
             className={inputClass}
           />
-          <span className="text-xs text-muted font-body">Tímto e-mailem se do portálu přihlašujete.</span>
+          <span className="text-xs text-muted font-body">{t('mujUcet.emailNapoveda')}</span>
         </label>
 
         {internal && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Datum narození</span>
+            <span className="text-sm font-body text-ink">{t('mujUcet.datumNarozeni')}</span>
             <DatumPole
               value={values.birthDate}
               onChange={(e) => set('birthDate', e.target.value)}
@@ -154,22 +154,20 @@ export function MyAccountForm({
           disabled={saving}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {saving ? 'Ukládám…' : 'Uložit'}
+          {saving ? t('obecne.ukladam') : t('obecne.ulozit')}
         </button>
-        {saved && !emailChanged && <span className="text-sm font-heading text-brand-greenDeep">Uloženo.</span>}
+        {saved && !emailChanged && <span className="text-sm font-heading text-brand-greenDeep">{t('mujUcet.ulozeno')}</span>}
       </div>
 
       {saved && emailChanged && (
         <div className="bg-tint border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
-          <p className="text-sm font-body text-ink m-0">
-            E-mail je změněný. Příště se přihlaste novou adresou — kvůli tomu je potřeba se teď odhlásit.
-          </p>
+          <p className="text-sm font-body text-ink m-0">{t('mujUcet.emailZmenen')}</p>
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: '/login' })}
             className="bg-bar text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDark transition-colors"
           >
-            Odhlásit se
+            {t('listou.odhlasit')}
           </button>
         </div>
       )}

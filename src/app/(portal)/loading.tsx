@@ -1,3 +1,6 @@
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
+
 /**
  * Kostra stránky, která se ukáže OKAMŽITĚ po kliknutí v liště, než server
  * dopočítá skutečný obsah (zpráva 9. 9. 2026: "web se mi zdá zpomalený,
@@ -18,7 +21,7 @@
  */
 export default function PortalLoading() {
   return (
-    <section className="flex flex-col gap-6 animate-pulse" aria-busy="true" aria-label="Načítám">
+    <section className="flex flex-col gap-6 animate-pulse" aria-busy="true" aria-label={prelozit(nactiJazyk(), 'nacitani.popis')}>
       <div className="h-9 w-64 bg-line/70 rounded-lg" />
 
       <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">

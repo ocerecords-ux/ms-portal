@@ -15,6 +15,8 @@
  * zalomený na šířku stránky.
  */
 
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 
 export const ZNAKU_NA_NORMOSTRANU = 1800;
@@ -278,12 +280,12 @@ export function zaokrouhliNormostrany(n: number): number {
 }
 
 /** „71,3" — na hlášku pod přílohou. */
-export function formatujNormostrany(n: number): string {
-  return new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 1 }).format(n);
+export function formatujNormostrany(n: number, jazyk: Jazyk = 'cs'): string {
+  return new Intl.NumberFormat(kodJazyka(jazyk), { maximumFractionDigits: 1 }).format(n);
 }
 
-export function formatujCislo(n: number): string {
-  return new Intl.NumberFormat('cs-CZ').format(n);
+export function formatujCislo(n: number, jazyk: Jazyk = 'cs'): string {
+  return new Intl.NumberFormat(kodJazyka(jazyk)).format(n);
 }
 
 /**

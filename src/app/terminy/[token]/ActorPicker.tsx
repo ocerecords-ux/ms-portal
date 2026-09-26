@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { formatDateTime, minutesInZone, minutesToTime, pickingLabel, remainingToPick } from '@/lib/calendar';
+import { formatDateTime, minutesInZone, minutesToTime, remainingToPick } from '@/lib/calendar';
 import { oslovit } from '@/lib/osloveni';
 import { zonedToUtc } from '@/lib/calendar';
 import { POZNAMKA_NAVRH_HERCE } from '@/lib/volnaMista';
 import { PridatDoKalendare } from '@/components/PridatDoKalendare';
+import { kodJazyka, prelozit, prelozitS, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 
 type Slot = { id: string; start: string; end: string; studio: string; studioId?: string; poznamka?: string | null };
 
@@ -15,6 +16,7 @@ type Slot = { id: string; start: string; end: string; studio: string; studioId?:
  * počtu termínů (zadani 8. 9. 2026) — herec tedy nemůže poslat míň ani víc.
  */
 export function ActorPicker({
+  jazyk,
   token,
   status,
   actorName,
@@ -27,6 +29,8 @@ export function ActorPicker({
   chosen,
   kalendarUrl,
 }: {
+  /** Veřejná stránka stojí mimo JazykProvider - jazyk chodí propem. */
+  jazyk: Jazyk;
   token: string;
   status: string;
   actorName: string;
@@ -44,6 +48,9 @@ export function ActorPicker({
   /** Potvrzené termíny ve formátu kalendáře (19. 9. 2026). */
   kalendarUrl?: string;
 }) {
+  const t = (klic: string, hodnoty?: Record<string, string | number>) =>
+    hodnoty ? prelozitS(jazyk, klic, hodnoty) : prelozit(jazyk, klic);
+  const kod = kodJazyka(jazyk);
   const router = useRouter();
   const [vybrano, setVybrano] = useState<string[]>([]);
   const [poznamka, setPoznamka] = useState(note ?? '');
@@ -63,7 +70,7 @@ export function ActorPicker({
   const [vlastniChyba, setVlastniChyba] = useState<string | null>(null);
 
   const hhmm = (iso: string) =>
-    new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
+    new Intl.DateTimeFormat(kod, { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
       new Date(iso),
     );
 
@@ -75,7 +82,7 @@ export function ActorPicker({
       return h * 60 + mm;
     };
     if (!vlastni.od || !vlastni.doo || naMin(vlastni.doo) <= naMin(vlastni.od)) {
-      setVlastniChyba('Konec musí být po začátku.');
+      setVlastniChyba(t('terminyVyber.chybaKonec'));
       return;
     }
     const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: timezone })
@@ -96,7 +103,7 @@ export function ActorPicker({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setVlastniChyba(data?.error || 'Vlastní čas se nepodařilo uložit.');
+        setVlastniChyba(data?.error || t('terminyVyber.chybaVlastni'));
         return;
       }
       // Vlastni cas nahradi termin, u ktereho ho herec zadal.
@@ -109,7 +116,7 @@ export function ActorPicker({
       setVlastni(null);
       router.refresh();
     } catch {
-      setVlastniChyba('Vlastní čas se nepodařilo uložit.');
+      setVlastniChyba(t('terminyVyber.chybaVlastni'));
     } finally {
       setBusy(false);
     }
@@ -155,21 +162,21 @@ export function ActorPicker({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Výběr se nepodařilo odeslat.');
+        setError(data?.error || t('terminyVyber.chybaOdeslani'));
         // Kdyz mezitim nekdo termin obsadil, at herec vidi aktualni nabidku.
         if (res.status === 409) router.refresh();
         return;
       }
       router.refresh();
     } catch {
-      setError('Výběr se nepodařilo odeslat.');
+      setError(t('terminyVyber.chybaOdeslani'));
     } finally {
       setBusy(false);
     }
   }
 
   function popisDne(iso: string): string {
-    return new Intl.DateTimeFormat('cs-CZ', {
+    return new Intl.DateTimeFormat(kod, {
       timeZone: timezone,
       weekday: 'long',
       day: 'numeric',
@@ -188,7 +195,7 @@ export function ActorPicker({
   if (status === 'CANCELLED') {
     return (
       <Hlaska barva="red">
-        <strong>Nabídka byla zrušena.</strong> Produkce se vám ozve s novými termíny.
+        <strong>{t('terminyVyber.zrusenaTuk')}</strong> {t('terminyVyber.zrusenaText')}
       </Hlaska>
     );
   }
@@ -196,8 +203,8 @@ export function ActorPicker({
   if (status === 'REJECTED') {
     return (
       <Hlaska barva="red">
-        <strong>Tenhle výběr produkce zamítla.</strong>
-        {decisionNote ? ` Důvod: ${decisionNote}` : ' Ozve se vám s dalším postupem.'}
+        <strong>{t('terminyVyber.zamitnutTuk')}</strong>{' '}
+        {decisionNote ? t('terminyVyber.duvod', { duvod: decisionNote }) : t('terminyVyber.zamitnutJinak')}
       </Hlaska>
     );
   }
@@ -205,7 +212,7 @@ export function ActorPicker({
   if (status === 'CONFIRMED' || status === 'COMPLETED') {
     return (
       <div className="bg-okTint border border-line rounded-card p-6 flex flex-col gap-3">
-        <p className="font-display text-2xl text-ink m-0">Termíny jsou potvrzené</p>
+        <p className="font-display text-2xl text-ink m-0">{t('terminyVyber.potvrzeneNadpis')}</p>
         <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
           {chosen.map((s) => (
             <li key={s.id} className="text-sm font-heading text-ink">
@@ -218,7 +225,7 @@ export function ActorPicker({
           ))}
         </ul>
         {kalendarUrl && <PridatDoKalendare url={kalendarUrl} />}
-        <p className="text-sm font-body text-muted m-0">Těšíme se na vás ve studiu.</p>
+        <p className="text-sm font-body text-muted m-0">{t('terminyVyber.tesimeSe')}</p>
       </div>
     );
   }
@@ -226,7 +233,7 @@ export function ActorPicker({
   if (status === 'SUBMITTED') {
     return (
       <div className="bg-surface border border-line rounded-card p-6 flex flex-col gap-3 shadow-sm">
-        <p className="font-display text-2xl text-ink m-0">Výběr odeslán ke schválení</p>
+        <p className="font-display text-2xl text-ink m-0">{t('terminyVyber.odeslanoNadpis')}</p>
         <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
           {chosen.map((s) => (
             <li key={s.id} className="text-sm font-heading text-ink">
@@ -239,9 +246,9 @@ export function ActorPicker({
           ))}
         </ul>
         <p className="text-sm font-body text-muted m-0">
-          Děkujeme. Termíny jsou pro vás držené
-          {holdUntil ? ` do ${formatDateTime(holdUntil, timezone)}` : ''} a produkce je potvrdí —
-          dáme vám vědět e-mailem.
+          {holdUntil
+            ? t('terminyVyber.drzenoDo', { kdy: formatDateTime(holdUntil, timezone, jazyk) })
+            : t('terminyVyber.drzeno')}
         </p>
       </div>
     );
@@ -255,23 +262,33 @@ export function ActorPicker({
     if (!podleDnu.has(den)) podleDnu.set(den, []);
     podleDnu.get(den)!.push(slot);
   }
-  const slovo = (n: number) => (n === 1 ? 'termín' : n >= 2 && n <= 4 ? 'termíny' : 'termínů');
+  /**
+   * Skloňování termínů (1 / 2-4 / 5+); anglicky z klíčů vyjde jednotné nebo
+   * množné číslo. Celá věta je jeden klíč a počet v ní stojí tlustě, proto se
+   * dělí přes prelozitKolem - viz pravidlo 7 v docs/preklad-portalu.md.
+   */
+  const klicTerminu = (n: number) =>
+    n === 1 ? 'terminyVyber.termin1' : n >= 2 && n <= 4 ? 'terminyVyber.termin234' : 'terminyVyber.termin5';
+  const pocetTerminu = t(klicTerminu(requiredSessions), { pocet: requiredSessions });
+  const [uvodPred, uvodPo] = prelozitKolem(jazyk, 'terminyVyber.uvod', 'pocet', {
+    // Česky se jméno skloňuje do 5. pádu („Dobrý den, Radko"), anglicky se
+    // oslovuje jménem, jak je - viz lib/osloveni.ts.
+    jmeno: jazyk === 'en' ? actorName : oslovit(actorName) || actorName,
+  });
 
   return (
     <div className="flex flex-col gap-5">
       {status === 'RETURNED' && (
         <Hlaska barva="oranzova">
-          <strong>Produkce vás prosí o nový výběr.</strong>
+          <strong>{t('terminyVyber.novyVyberTuk')}</strong>
           {decisionNote ? ` ${decisionNote}` : ''}
         </Hlaska>
       )}
 
       <p className="text-sm font-body text-ink m-0">
-        Dobrý den, {oslovit(actorName) || actorName}. Vyberte si prosím{' '}
-        <strong>
-          {requiredSessions} {slovo(requiredSessions)}
-        </strong>{' '}
-        z nabídnutých. Když vám čas nesedí, u každého termínu si můžete zvolit vlastní.
+        {uvodPred}
+        <strong>{pocetTerminu}</strong>
+        {uvodPo}
       </p>
 
       {/* ODESLAT JE NAHOŘE A POŘÁD NA OČÍCH (zadání 19. 9. 2026: „tlačítko
@@ -281,16 +298,18 @@ export function ActorPicker({
       <div className="sticky top-2 z-10 bg-brand-purple text-white rounded-card px-4 sm:px-5 py-3 flex items-center justify-between gap-3 shadow-lg">
         <span className="flex items-center gap-3 min-w-0">
           {hotovo ? (
-            <span className="font-heading font-semibold">Vybráno všech {requiredSessions} ✓</span>
+            <span className="font-heading font-semibold">
+              {t('terminyVyber.vybranoVse', { pocet: requiredSessions })}
+            </span>
           ) : (
             <>
               <span className="grid place-items-center min-w-[2.75rem] h-11 px-2 rounded-full bg-white text-brand-purpleDeep font-display text-2xl tabular-nums leading-none">
                 {zbyva}
               </span>
               <span className="font-heading font-semibold leading-tight">
-                {zbyva === requiredSessions ? 'zbývá vybrat' : 'ještě zbývá vybrat'}
+                {t(zbyva === requiredSessions ? 'terminyVyber.zbyvaVybrat' : 'terminyVyber.jesteZbyva')}
                 <span className="block text-xs font-body text-white/80">
-                  {pickingLabel(requiredSessions, vybrano.length)}
+                  {t('terminyVyber.vybranoZ', { vybrano: vybrano.length, celkem: requiredSessions })}
                 </span>
               </span>
             </>
@@ -306,7 +325,7 @@ export function ActorPicker({
               : 'bg-white/15 text-white/60 cursor-not-allowed'
           }`}
         >
-          {busy ? 'Odesílám…' : 'Odeslat ke schválení'}
+          {t(busy ? 'terminyVyber.odesilam' : 'terminyVyber.odeslatKeSchvaleni')}
         </button>
       </div>
 
@@ -315,9 +334,7 @@ export function ActorPicker({
       )}
 
       {offered.length === 0 && (
-        <p className="text-sm font-body text-muted m-0">
-          Zatím tu žádné volné termíny nejsou. Produkce vám pošle nové.
-        </p>
+        <p className="text-sm font-body text-muted m-0">{t('terminyVyber.zadneVolne')}</p>
       )}
 
       <div className="flex flex-col gap-4">
@@ -364,10 +381,12 @@ export function ActorPicker({
                         {viceStudii && <span className="text-sm font-body text-muted">{mestoZ(slot.studio)}</span>}
                         {jeNavrh && (
                           <span className="text-xs font-heading font-semibold rounded-pill px-2 py-0.5 bg-tint text-brand-purple">
-                            Váš čas
+                            {t('terminyVyber.vasCas')}
                           </span>
                         )}
-                        {soubeh && <span className="text-xs font-body text-muted">ve stejný čas už máte vybráno</span>}
+                        {soubeh && (
+                          <span className="text-xs font-body text-muted">{t('terminyVyber.jizVybrano')}</span>
+                        )}
                       </button>
                       {!upravuje && !soubeh && (
                         <button
@@ -379,14 +398,14 @@ export function ActorPicker({
                           disabled={busy}
                           className="shrink-0 text-xs font-heading font-semibold text-brand-purple hover:underline"
                         >
-                          Vybrat vlastní čas
+                          {t('terminyVyber.vybratVlastni')}
                         </button>
                       )}
                     </div>
                     {upravuje && vlastni && (
                       <div className="border-t border-line px-4 py-3 flex items-end gap-3 flex-wrap">
                         <label className="flex flex-col gap-1">
-                          <span className="text-xs font-heading text-muted">Od</span>
+                          <span className="text-xs font-heading text-muted">{t('terminyVyber.od')}</span>
                           <input
                             type="time"
                             step={1800}
@@ -396,7 +415,7 @@ export function ActorPicker({
                           />
                         </label>
                         <label className="flex flex-col gap-1">
-                          <span className="text-xs font-heading text-muted">Do</span>
+                          <span className="text-xs font-heading text-muted">{t('terminyVyber.do')}</span>
                           <input
                             type="time"
                             step={1800}
@@ -411,14 +430,14 @@ export function ActorPicker({
                           disabled={busy}
                           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
                         >
-                          Použít tento čas
+                          {t('terminyVyber.pouzitCas')}
                         </button>
                         <button
                           type="button"
                           onClick={() => setVlastni(null)}
                           className="text-sm font-heading text-muted"
                         >
-                          Zrušit
+                          {t('terminyVyber.zrusit')}
                         </button>
                         {vlastniChyba && (
                           <p className="w-full text-sm text-danger m-0">{vlastniChyba}</p>
@@ -435,7 +454,7 @@ export function ActorPicker({
 
       {offered.length > 0 && (
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Poznámka pro produkci (nepovinné)</span>
+          <span className="text-sm font-body text-ink">{t('terminyVyber.poznamkaProProdukci')}</span>
           <textarea
             value={poznamka}
             onChange={(e) => setPoznamka(e.target.value)}

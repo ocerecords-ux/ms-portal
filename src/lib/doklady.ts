@@ -1,3 +1,4 @@
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import type { Currency } from '@prisma/client';
 
 /**
@@ -29,9 +30,9 @@ export const CURRENCY_NAMES: Record<Currency, string> = {
 };
 
 /** Vykreslení částky v nejmenší jednotce, např. 123450 CZK → "1 234,50 Kč". */
-export function formatMoney(minor: number, currency: Currency): string {
+export function formatMoney(minor: number, currency: Currency, jazyk: Jazyk = 'cs'): string {
   const value = minor / 100;
-  return `${new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} ${CURRENCY_LABELS[currency]}`;
+  return `${new Intl.NumberFormat(kodJazyka(jazyk), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} ${CURRENCY_LABELS[currency]}`;
 }
 
 /** "1234,50" nebo "1234.50" → 123450. Nesmyslný vstup dá 0. */

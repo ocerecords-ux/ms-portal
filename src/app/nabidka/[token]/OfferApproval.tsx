@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatDatumCas, prelozit, prelozitS, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Schválení nabídky klientem (zadani 6. 9. 2026: "tlačítko na schválení pro
@@ -16,6 +17,7 @@ export function OfferApproval({
   rejectedAt,
   issuerName,
   issuerEmail,
+  jazyk,
 }: {
   token: string;
   status: string;
@@ -24,20 +26,17 @@ export function OfferApproval({
   rejectedAt: string | null;
   issuerName: string;
   issuerEmail: string | null;
+  /** Veřejná stránka stojí mimo JazykProvider - jazyk chodí propem. */
+  jazyk: Jazyk;
 }) {
+  const t = (klic: string, hodnoty?: Record<string, string | number>) =>
+    hodnoty ? prelozitS(jazyk, klic, hodnoty) : prelozit(jazyk, klic);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function formatDateTime(iso: string | null): string {
-    if (!iso) return '';
-    return new Date(iso).toLocaleString('cs-CZ', {
-      day: 'numeric',
-      month: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return iso ? formatDatumCas(jazyk, new Date(iso), '') : '';
   }
 
   /**
@@ -56,12 +55,12 @@ export function OfferApproval({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Akci se nepodařilo uložit.');
+        setError(data?.error || t('nabidkaVerejna.chyba'));
         return;
       }
       router.refresh();
     } catch {
-      setError('Akci se nepodařilo uložit.');
+      setError(t('nabidkaVerejna.chyba'));
     } finally {
       setBusy(false);
     }
@@ -70,10 +69,11 @@ export function OfferApproval({
   if (status === 'APPROVED') {
     return (
       <div className="bg-okTint border border-line rounded-card p-6 text-center">
-        <p className="font-display text-2xl text-ink m-0">Nabídka schválena</p>
+        <p className="font-display text-2xl text-ink m-0">{t('nabidkaVerejna.schvalena')}</p>
         <p className="text-sm font-body text-muted m-0 mt-2">
-          {approvedByName ? `Schválil(a) ${approvedByName}` : 'Schváleno'} {formatDateTime(approvedAt)}.
-          {' '}Ozveme se vám s dalšími kroky.
+          {approvedByName
+            ? t('nabidkaVerejna.schvalilKdo', { jmeno: approvedByName, kdy: formatDateTime(approvedAt) })
+            : t('nabidkaVerejna.schvalenoKdy', { kdy: formatDateTime(approvedAt) })}
         </p>
       </div>
     );
@@ -83,18 +83,27 @@ export function OfferApproval({
     return (
       <div className="bg-surface border border-line rounded-card p-6 text-center flex flex-col gap-3">
         <div>
-          <p className="font-display text-2xl text-ink m-0">Nabídka odmítnuta</p>
+          <p className="font-display text-2xl text-ink m-0">{t('nabidkaVerejna.odmitnuta')}</p>
           <p className="text-sm font-body text-muted m-0 mt-2">
-            Zaznamenáno {formatDateTime(rejectedAt)}. Pokud jste se překlikli nebo chcete něco doladit, ozvěte se
             {issuerEmail ? (
-              <>
-                {' '}
-                na <a href={`mailto:${issuerEmail}`} className="text-brand-purple">{issuerEmail}</a>
-              </>
+              /* Adresa uvnitř věty je odkaz, proto se věta dělí kolem značky. */
+              (() => {
+                const [pred, po] = prelozitKolem(jazyk, 'nabidkaVerejna.odmitnutaMail', 'email', {
+                  kdy: formatDateTime(rejectedAt),
+                });
+                return (
+                  <>
+                    {pred}
+                    <a href={`mailto:${issuerEmail}`} className="text-brand-purple">
+                      {issuerEmail}
+                    </a>
+                    {po}
+                  </>
+                );
+              })()
             ) : (
-              <> firmě {issuerName}</>
+              t('nabidkaVerejna.odmitnutaFirma', { kdy: formatDateTime(rejectedAt), firma: issuerName })
             )}
-            .
           </p>
         </div>
         <div>
@@ -104,7 +113,7 @@ export function OfferApproval({
             disabled={busy}
             className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-5 py-2.5 disabled:opacity-60"
           >
-            Přece jen schválit
+            {t('nabidkaVerejna.preceJenSchvalit')}
           </button>
         </div>
         {error && <p className="text-sm text-danger m-0">{error}</p>}
@@ -123,7 +132,7 @@ export function OfferApproval({
           disabled={busy}
           className="bg-brand-green text-onAccent font-heading font-semibold text-base rounded-lg px-6 py-3 hover:brightness-95 transition-[filter] disabled:opacity-60"
         >
-          {busy ? 'Ukládám…' : 'Schvaluji nabídku'}
+          {t(busy ? 'nabidkaVerejna.ukladam' : 'nabidkaVerejna.schvaluji')}
         </button>
       </div>
     </div>

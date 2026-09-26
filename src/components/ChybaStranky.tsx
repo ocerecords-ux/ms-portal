@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * NOUZOVÁ STRÁNKA (zadání 12. 9. 2026: „nedokážem tam zobrazit v tyto případy
@@ -18,10 +19,17 @@ import { useEffect, useState } from 'react';
 export function ChybaStranky({
   error,
   reset,
-  nadpis = 'Portál teď nenaběhl',
+  jazyk,
+  nadpis,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
+  /**
+   * Chybová stránka se vykresluje i mimo JazykProvider (src/app/error.tsx),
+   * takže jazyk chodí propem - viz pravidlo 8 v docs/preklad-portalu.md.
+   */
+  jazyk: Jazyk;
+  /** Klíč nadpisu; bez něj se vypíše „Portál teď nenaběhl". */
   nadpis?: string;
 }) {
   const [odpocet, setOdpocet] = useState(5);
@@ -48,11 +56,10 @@ export function ChybaStranky({
       <div className="w-full max-w-[520px] bg-surface border border-line rounded-card shadow-sm p-7 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/mediaspace-logo-still.png" alt="Mediaspace" className="h-8 w-auto mx-auto opacity-90" />
-        <h1 className="font-heading font-bold text-xl text-ink mt-6 mb-2">{nadpis}</h1>
-        <p className="text-sm font-body text-muted m-0">
-          Nejčastěji to znamená, že databáze má zrovna plno a za chvíli bude zase volná. Data jsou v pořádku, nic se
-          neztratilo.
-        </p>
+        <h1 className="font-heading font-bold text-xl text-ink mt-6 mb-2">
+          {prelozit(jazyk, nadpis ?? 'chyba.nadpisPortal')}
+        </h1>
+        <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'chyba.text')}</p>
 
         <button
           type="button"
@@ -62,13 +69,13 @@ export function ChybaStranky({
           }}
           className="mt-6 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors"
         >
-          {zkousim ? 'Zkouším…' : `Zkusit znovu (${odpocet} s)`}
+          {zkousim ? prelozit(jazyk, 'chyba.zkousim') : prelozitS(jazyk, 'chyba.zkusitZnovu', { s: odpocet })}
         </button>
 
-        <p className="text-xs font-body text-muted mt-5 mb-0">
-          Pokud to nepomůže ani po pár minutách, dejte vědět — s tímhle číslem se chyba najde v logu:
+        <p className="text-xs font-body text-muted mt-5 mb-0">{prelozit(jazyk, 'chyba.cislo')}</p>
+        <p className="text-xs font-heading text-muted tabular-nums mt-1 mb-0">
+          {error.digest ?? prelozit(jazyk, 'chyba.bezCisla')}
         </p>
-        <p className="text-xs font-heading text-muted tabular-nums mt-1 mb-0">{error.digest ?? 'bez čísla'}</p>
       </div>
     </div>
   );

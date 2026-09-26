@@ -1,3 +1,6 @@
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
+
 /**
  * Kostra administrace - stejný důvod jako u portálu (viz
  * src/app/(portal)/loading.tsx): stránky jsou dynamické a bez tohohle souboru
@@ -5,7 +8,7 @@
  */
 export default function AdminLoading() {
   return (
-    <div className="flex flex-col gap-6 animate-pulse" aria-busy="true" aria-label="Načítám">
+    <div className="flex flex-col gap-6 animate-pulse" aria-busy="true" aria-label={prelozit(nactiJazyk(), 'nacitani.popis')}>
       <div className="h-8 w-56 bg-line/70 rounded-lg" />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -10,6 +10,8 @@ import {
 import { PridatDoKalendare } from '@/components/PridatDoKalendare';
 import { MojeNataceni, type Nataceni } from './MojeNataceni';
 import { ProbehlaNataceni, type ProbehleNataceni } from './ProbehlaNataceni';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, prelozitS } from '@/lib/jazyk';
 
 /**
  * Moje termíny — pohled herce uvnitř portálu (zadani 8. 9. 2026). Přes
@@ -24,6 +26,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function MojeTerminyPage() {
   const session = await getServerSession(authOptions);
+  const jazyk = nactiJazyk();
   if (!session?.user?.id) redirect('/login');
   if (session.user.role !== 'HEREC') redirect('/projekty');
 
@@ -98,7 +101,9 @@ export default async function MojeTerminyPage() {
   return (
     <section className="flex flex-col gap-6">
       <div>
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Moje termíny</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">
+          {prelozit(jazyk, 'mojeTerminy.nadpis')}
+        </h1>
       </div>
 
       {/* Nahore to, co herce zajima nejvic - kdy a kam jde tocit. */}
@@ -106,19 +111,19 @@ export default async function MojeTerminyPage() {
 
       {sPotvrzenym && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
-          <p className="text-sm font-body text-ink m-0">Potvrzené natáčení si přidejte do svého kalendáře.</p>
+          <p className="text-sm font-body text-ink m-0">{prelozit(jazyk, 'mojeTerminy.pridatDoKalendare')}</p>
           <PridatDoKalendare url={`${baseUrl}/api/terminy/${sPotvrzenym.accessToken}/kalendar`} />
         </div>
       )}
 
       {requests.length === 0 && (
-        <p className="text-sm font-body text-muted m-0">Zatím pro vás žádné termíny nejsou.</p>
+        <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'mojeTerminy.zadne')}</p>
       )}
 
       {kVyberu.length > 0 && (
         <div className="flex flex-col gap-3">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Čeká na váš výběr
+            {prelozit(jazyk, 'mojeTerminy.cekaNaVyber')}
           </h2>
           {kVyberu.map((r) => (
             <Link
@@ -129,17 +134,22 @@ export default async function MojeTerminyPage() {
               <span>
                 <span className="block font-heading font-semibold text-ink">{r.projectName}</span>
                 <span className="block text-sm font-body text-muted mt-0.5">
-                  {r.studio.name} · vyberte {r.requiredSessions} z{' '}
-                  {r.slots.filter((s) => s.state === 'OFFERED').length} nabídnutých
+                  {prelozitS(jazyk, 'mojeTerminy.vyberteZ', {
+                    studio: r.studio.name,
+                    pocet: r.requiredSessions,
+                    nabidnuto: r.slots.filter((s) => s.state === 'OFFERED').length,
+                  })}
                 </span>
               </span>
-              <span className="text-sm font-heading font-semibold text-brand-purple">Vybrat termíny →</span>
+              <span className="text-sm font-heading font-semibold text-brand-purple">
+                {prelozit(jazyk, 'mojeTerminy.vybratTerminy')}
+              </span>
             </Link>
           ))}
         </div>
       )}
 
-      <ProbehlaNataceni terminy={probehle} />
+      <ProbehlaNataceni terminy={probehle} jazyk={jazyk} />
 
       {/* Sekce Ostatní zrušena (19. 9. 2026: „tu tabulku dole ostatní bych dal
           pryč") - termíny jsou nahoře v Moje natáčení. */}

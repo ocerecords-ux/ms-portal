@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PodpisVyber } from '@/app/(admin)/admin/doklady/smlouvy/PodpisVyber';
+import { usePreklad } from '../components/JazykProvider';
 
 /**
  * Vlastní podpis na smlouvy (zadání 15. 9. 2026: „ve chvíli, kdy posíláme
@@ -23,6 +24,7 @@ export function PodpisKarta({
   /** Má tenhle člověk zaškrtnuté „podepisuje smlouvy za Mediaspace"? */
   podepisujeSmlouvy: boolean;
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [upravuje, setUpravuje] = useState(false);
   const [podpis, setPodpis] = useState<string | null>(null);
@@ -40,14 +42,14 @@ export function PodpisKarta({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Podpis se nepodařilo uložit.');
+        setChyba(data?.error || t('mujUcet.podpisChyba'));
         return;
       }
       setUpravuje(false);
       setPodpis(null);
       router.refresh();
     } catch {
-      setChyba('Podpis se nepodařilo uložit.');
+      setChyba(t('mujUcet.podpisChyba'));
     } finally {
       setBusy(false);
     }
@@ -57,12 +59,10 @@ export function PodpisKarta({
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <div>
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Můj podpis na smlouvy
+          {t('mujUcet.podpisNadpis')}
         </h2>
         <p className="text-xs font-body text-muted m-0 mt-1">
-          {podepisujeSmlouvy
-            ? 'Smlouvy za Mediaspace podepisujete vy — tímhle podpisem odcházejí klientům.'
-            : 'Uloží se k účtu. Použije se, až budete podepisovat smlouvy za Mediaspace.'}
+          {t(podepisujeSmlouvy ? 'mujUcet.podpisPodepisujete' : 'mujUcet.podpisUlozi')}
         </p>
       </div>
 
@@ -72,7 +72,7 @@ export function PodpisKarta({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={ulozeny}
-              alt="Uložený podpis"
+              alt={t('mujUcet.podpisUlozeny')}
               className="max-h-[80px] w-auto bg-white rounded px-2 border border-line"
             />
           ) : (
@@ -84,7 +84,7 @@ export function PodpisKarta({
               onClick={() => setUpravuje(true)}
               className="text-sm font-heading text-brand-purpleDark hover:underline"
             >
-              {ulozeny ? 'Změnit podpis' : 'Uložit podpis'}
+              {t(ulozeny ? 'mujUcet.zmenitPodpis' : 'mujUcet.ulozitPodpis')}
             </button>
             {ulozeny && (
               <button
@@ -93,7 +93,7 @@ export function PodpisKarta({
                 disabled={busy}
                 className="text-sm font-heading text-muted hover:text-danger"
               >
-                Smazat
+                {t('obecne.smazat')}
               </button>
             )}
           </div>
@@ -101,9 +101,7 @@ export function PodpisKarta({
       )}
 
       {!upravuje && !ulozeny && (
-        <p className="text-xs font-body text-muted m-0">
-          Dokud tu žádný není, podepisuje se jménem psaným písmem — jako výše.
-        </p>
+        <p className="text-xs font-body text-muted m-0">{t('mujUcet.podpisBez')}</p>
       )}
 
       {upravuje && (
@@ -119,7 +117,7 @@ export function PodpisKarta({
               disabled={busy || !podpis}
               className="bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-pill px-4 py-2 disabled:opacity-60"
             >
-              {busy ? 'Ukládám…' : 'Uložit podpis'}
+              {busy ? t('obecne.ukladam') : t('mujUcet.ulozitPodpis')}
             </button>
             <button
               type="button"
@@ -130,7 +128,7 @@ export function PodpisKarta({
               }}
               className="text-muted text-sm font-heading"
             >
-              Zrušit
+              {t('obecne.zrusit')}
             </button>
           </div>
         </>

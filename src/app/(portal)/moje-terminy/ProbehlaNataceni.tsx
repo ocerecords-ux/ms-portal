@@ -7,6 +7,8 @@
  * nahoře, dokud neskončí. Nejnovější nahoře, po měsících; starší měsíce jsou
  * sbalené, ať seznam neroste do nekonečna.
  */
+import { kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+
 export type ProbehleNataceni = {
   id: string;
   projekt: string;
@@ -16,17 +18,25 @@ export type ProbehleNataceni = {
   timezone: string;
 };
 
-export function ProbehlaNataceni({ terminy }: { terminy: ProbehleNataceni[] }) {
+/**
+ * Komponenta se vykresluje na serveru (stránku skládá serverová komponenta),
+ * takže jazyk dostává propem - usePreklad() by tu spadl. Viz pravidlo 8
+ * v docs/preklad-portalu.md.
+ */
+export function ProbehlaNataceni({ terminy, jazyk }: { terminy: ProbehleNataceni[]; jazyk: Jazyk }) {
   if (terminy.length === 0) return null;
 
+  const kod = kodJazyka(jazyk);
   const cas = (iso: string, tz: string) =>
-    new Intl.DateTimeFormat('cs-CZ', { timeZone: tz, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+    new Intl.DateTimeFormat(kod, { timeZone: tz, hour: 'numeric', minute: '2-digit', hourCycle: 'h23' }).format(
+      new Date(iso),
+    );
   const den = (iso: string, tz: string) =>
-    new Intl.DateTimeFormat('cs-CZ', { timeZone: tz, weekday: 'short', day: 'numeric', month: 'numeric' }).format(
+    new Intl.DateTimeFormat(kod, { timeZone: tz, weekday: 'short', day: 'numeric', month: 'numeric' }).format(
       new Date(iso),
     );
   const mesic = (iso: string, tz: string) =>
-    new Intl.DateTimeFormat('cs-CZ', { timeZone: tz, month: 'long', year: 'numeric' }).format(new Date(iso));
+    new Intl.DateTimeFormat(kod, { timeZone: tz, month: 'long', year: 'numeric' }).format(new Date(iso));
 
   const poMesicich = new Map<string, ProbehleNataceni[]>();
   for (const t of terminy) {
@@ -41,7 +51,8 @@ export function ProbehlaNataceni({ terminy }: { terminy: ProbehleNataceni[] }) {
   return (
     <div className="flex flex-col gap-3">
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-        Proběhlá natáčení <span className="normal-case tracking-normal font-body">({terminy.length})</span>
+        {prelozit(jazyk, 'mojeTerminy.probehla')}{' '}
+        <span className="normal-case tracking-normal font-body">({terminy.length})</span>
       </h2>
       {mesice.map(([klic, vMesici], i) => (
         <details
@@ -57,7 +68,7 @@ export function ProbehlaNataceni({ terminy }: { terminy: ProbehleNataceni[] }) {
               {mesic(vMesici[0].start, vMesici[0].timezone)}
             </span>
             <span className="text-xs font-body text-muted tabular-nums">
-              {vMesici.length} {vMesici.length === 1 ? 'frekvence' : vMesici.length < 5 ? 'frekvence' : 'frekvencí'}
+              {prelozitS(jazyk, klicFrekvenci(vMesici.length), { pocet: vMesici.length })}
             </span>
           </summary>
           <ul className="list-none p-0 m-0 divide-y divide-line border-t border-line">
@@ -85,7 +96,7 @@ export function ProbehlaNataceni({ terminy }: { terminy: ProbehleNataceni[] }) {
                 </span>
                 <span className="row-start-1 col-start-2 sm:row-auto sm:col-auto justify-self-end">
                   <span className="inline-flex items-center rounded-pill bg-field border border-line text-muted px-2.5 py-0.5 text-xs font-heading font-semibold whitespace-nowrap">
-                    Proběhlo
+                    {prelozit(jazyk, 'mojeTerminy.probehlo')}
                   </span>
                 </span>
               </li>
@@ -95,4 +106,14 @@ export function ProbehlaNataceni({ terminy }: { terminy: ProbehleNataceni[] }) {
       ))}
     </div>
   );
+}
+
+/**
+ * Skloňování frekvencí (1 / 2-4 / 5+). Anglicky z klíčů vyjde jednotné nebo
+ * množné číslo, viz slovník v lib/jazyk.ts.
+ */
+export function klicFrekvenci(pocet: number): string {
+  if (pocet === 1) return 'mojeTerminy.frekvence1';
+  if (pocet < 5) return 'mojeTerminy.frekvence234';
+  return 'mojeTerminy.frekvence5';
 }

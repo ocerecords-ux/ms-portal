@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '../components/JazykProvider';
 
 /**
  * Co má klientovi z portálu chodit — v jeho profilu (zadání 16. 9. 2026:
@@ -15,6 +16,7 @@ import { useRouter } from 'next/navigation';
  * na „Uložit" by u něj byl jen krok navíc.
  */
 export function UpozorneniKarta({ initial }: { initial: { dotoceno: boolean } }) {
+  const t = usePreklad();
   const router = useRouter();
   const [dotoceno, setDotoceno] = useState(initial.dotoceno);
   const [saving, setSaving] = useState(false);
@@ -34,13 +36,13 @@ export function UpozorneniKarta({ initial }: { initial: { dotoceno: boolean } })
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('mujUcet.chybaUlozeni'));
         setDotoceno(!hodnota);
         return;
       }
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('mujUcet.chybaUlozeni'));
       setDotoceno(!hodnota);
     } finally {
       setSaving(false);
@@ -50,8 +52,8 @@ export function UpozorneniKarta({ initial }: { initial: { dotoceno: boolean } })
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <div>
-        <h2 className="font-heading font-semibold text-ink m-0">Upozornění</h2>
-        <p className="text-sm font-body text-muted m-0 mt-1">Co vám má portál hlásit.</p>
+        <h2 className="font-heading font-semibold text-ink m-0">{t('mujUcet.upozorneni')}</h2>
+        <p className="text-sm font-body text-muted m-0 mt-1">{t('mujUcet.upozorneniPopis')}</p>
       </div>
 
       <label className="flex items-start gap-2 text-sm font-heading text-ink">
@@ -63,12 +65,9 @@ export function UpozorneniKarta({ initial }: { initial: { dotoceno: boolean } })
           className="mt-0.5"
         />
         <span>
-          Chci vědět, když dotočíme s hercem
+          {t('mujUcet.dotoceno')}
           <br />
-          <span className="text-xs font-body text-muted">
-            Mail a zvoneček v portálu pokaždé, když ve studiu skončíme s hercem na některém
-            z vašich projektů.
-          </span>
+          <span className="text-xs font-body text-muted">{t('mujUcet.dotocenoPopis')}</span>
         </span>
       </label>
 

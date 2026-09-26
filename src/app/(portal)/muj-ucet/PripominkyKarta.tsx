@@ -4,6 +4,8 @@ import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PripominkaRadek } from '@/lib/pripominkyServer';
+import { usePreklad, useJazyk } from '../components/JazykProvider';
+import { formatDatum } from '@/lib/jazyk';
 
 /**
  * Seznam připomínek k portálu v „Mém účtu" (zadání 15. 9. 2026: „mě by se
@@ -24,6 +26,7 @@ export function PripominkyKarta({
   hotove: PripominkaRadek[];
   jsemSpravce: boolean;
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [zalozka, setZalozka] = useState<'otevrene' | 'hotove'>('otevrene');
   const [pracuje, setPracuje] = useState<string | null>(null);
@@ -71,12 +74,10 @@ export function PripominkyKarta({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Připomínky k portálu
+            {t('mujUcet.pripominky')}
           </h2>
           <p className="text-xs font-body text-muted m-0 mt-1">
-            {jsemSpravce
-              ? 'Co lidem v portálu vadí. Odškrtnutá položka jim zmizí ze seznamu.'
-              : 'Co jste poslali. Až to bude hotové, položka zmizí.'}
+            {t(jsemSpravce ? 'mujUcet.pripominkySpravce' : 'mujUcet.pripominkyMoje')}
           </p>
         </div>
         {jsemSpravce && (
@@ -90,7 +91,9 @@ export function PripominkyKarta({
                   zalozka === z ? 'bg-surface text-ink shadow-sm' : 'text-muted'
                 }`}
               >
-                {z === 'otevrene' ? `Čeká (${otevrene.length})` : `Hotové (${hotove.length})`}
+                {z === 'otevrene'
+                  ? t('mujUcet.pripominkyCeka', { pocet: otevrene.length })
+                  : t('mujUcet.pripominkyHotove', { pocet: hotove.length })}
               </button>
             ))}
           </div>
@@ -99,11 +102,13 @@ export function PripominkyKarta({
 
       {seznam.length === 0 ? (
         <p className="text-sm font-body text-muted m-0">
-          {jsemSpravce
-            ? zalozka === 'otevrene'
-              ? 'Nic nečeká. Lidem se portál zatím líbí.'
-              : 'Zatím nic odškrtnutého.'
-            : 'Zatím jste nic neposlali. Bublina v horní liště je na to.'}
+          {t(
+            jsemSpravce
+              ? zalozka === 'otevrene'
+                ? 'mujUcet.pripominkyNicNeceka'
+                : 'mujUcet.pripominkyNicHotove'
+              : 'mujUcet.pripominkyNicJste',
+          )}
         </p>
       ) : jsemSpravce ? (
         <div className="flex flex-col gap-5">
@@ -147,7 +152,11 @@ export function PripominkyKarta({
           className="fixed inset-0 z-50 bg-black/70 grid place-items-center p-6 cursor-zoom-out"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={nahled} alt="Printscreen" className="max-w-full max-h-full rounded-card shadow-lg" />
+          <img
+            src={nahled}
+            alt={t('mujUcet.printscreen')}
+            className="max-w-full max-h-full rounded-card shadow-lg"
+          />
         </div>
       )}
     </div>
@@ -169,7 +178,9 @@ function Polozka({
   onSmazat: () => void;
   onNahled: (url: string) => void;
 }) {
-  const datum = new Date(p.createdAt).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' });
+  const t = usePreklad();
+  const jazyk = useJazyk();
+  const datum = formatDatum(jazyk, new Date(p.createdAt));
 
   return (
     <div className={`rounded-lg border border-line bg-field/60 px-3 py-2.5 flex gap-3 ${pracuje ? 'opacity-60' : ''}`}>
@@ -179,7 +190,7 @@ function Polozka({
           checked={p.stav === 'HOTOVA'}
           onChange={onOdskrtnout}
           disabled={pracuje}
-          title={p.stav === 'HOTOVA' ? 'Vrátit mezi čekající' : 'Odškrtnout'}
+          title={t(p.stav === 'HOTOVA' ? 'mujUcet.pripominkaVratit' : 'mujUcet.pripominkaOdskrtnout')}
           className="mt-1 w-4 h-4 shrink-0 accent-brand-green cursor-pointer"
         />
       )}
@@ -190,13 +201,24 @@ function Polozka({
         <p className="text-[11px] font-body text-muted m-0 flex flex-wrap gap-x-3">
           <span>{datum}</span>
           {p.odkud && <span>{p.odkud}</span>}
-          {p.pridalSe > 0 && <span className="text-brand-purpleDark">+{p.pridalSe} další hlásí totéž</span>}
-          {p.stav === 'HOTOVA' && p.hotovoJmeno && <span>odškrtl {p.hotovoJmeno}</span>}
+          {p.pridalSe > 0 && (
+            <span className="text-brand-purpleDark">
+              {t('mujUcet.pripominkaDalsi', { pocet: p.pridalSe })}
+            </span>
+          )}
+          {p.stav === 'HOTOVA' && p.hotovoJmeno && (
+            <span>{t('mujUcet.pripominkaOdskrtl', { jmeno: p.hotovoJmeno })}</span>
+          )}
         </p>
         {p.prilohy.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {p.prilohy.map((o) => (
-              <button key={o.id} type="button" onClick={() => onNahled(o.url)} title="Zvětšit">
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => onNahled(o.url)}
+                title={t('mujUcet.pripominkaZvetsit')}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={o.url} alt={o.nazev} className="w-14 h-14 object-cover rounded border border-line" />
               </button>
@@ -209,7 +231,7 @@ function Polozka({
         onSmazat={onSmazat}
         disabled={pracuje}
         popisek="×"
-        otazka="Opravdu smazat?"
+        otazka={t('mujUcet.pripominkaSmazat')}
         trida="self-start leading-none"
       />
     </div>

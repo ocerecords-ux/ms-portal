@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { documentHash } from '@/lib/contractsServer';
 import { SmlouvaKPodpisu } from './SmlouvaKPodpisu';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, prelozitS } from '@/lib/jazyk';
 
 /**
  * Podpis smlouvy protistranou (zadani 8. 9. 2026). Veřejná stránka — člověk
@@ -11,6 +13,7 @@ import { SmlouvaKPodpisu } from './SmlouvaKPodpisu';
 export const dynamic = 'force-dynamic';
 
 export default async function PublicContractPage({ params }: { params: { token: string } }) {
+  const jazyk = nactiJazyk();
   const contract = await prisma.contract.findUnique({
     where: { accessToken: params.token },
     include: {
@@ -34,13 +37,10 @@ export default async function PublicContractPage({ params }: { params: { token: 
       <div className="max-w-3xl mx-auto px-6 sm:px-10 py-8 sm:py-12 flex flex-col gap-6">
         <div>
           <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">
-            Smlouva k podpisu · {contract.issuer.name}
+            {prelozitS(jazyk, 'smlouvaVerejna.kPodpisu', { firma: contract.issuer.name })}
           </p>
           <h1 className="font-display text-3xl sm:text-4xl text-ink m-0 mt-1">{contract.title}</h1>
-          <p className="text-muted text-sm mt-2 font-body m-0">
-            Přečtěte si smlouvu a podepište se dole — myší, nebo prstem na mobilu. Přihlašovat se
-            nemusíte a žádný kód nikam neopisujete.
-          </p>
+          <p className="text-muted text-sm mt-2 font-body m-0">{prelozit(jazyk, 'smlouvaVerejna.uvod')}</p>
         </div>
 
         {/* Dokument i podpis drzi jedna klientska komponenta - potrebuji spolu
@@ -66,6 +66,7 @@ export default async function PublicContractPage({ params }: { params: { token: 
           completedAt={contract.completedAt ? contract.completedAt.toISOString() : null}
           rejectedAt={contract.rejectedAt ? contract.rejectedAt.toISOString() : null}
           issuerName={contract.issuer.name}
+          jazyk={jazyk}
         />
       </div>
     </main>

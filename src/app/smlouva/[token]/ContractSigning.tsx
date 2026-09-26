@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatSignedAt } from '@/lib/contracts';
 import { PodpisVyber } from '@/app/(admin)/admin/doklady/smlouvy/PodpisVyber';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Podpisová část veřejné stránky. Bez ověřovacích kódů — identitu nese
@@ -17,6 +18,7 @@ export function ContractSigning({
   completedAt,
   rejectedAt,
   issuerName,
+  jazyk,
 }: {
   token: string;
   status: string;
@@ -25,7 +27,11 @@ export function ContractSigning({
   completedAt: string | null;
   rejectedAt: string | null;
   issuerName: string;
+  /** Veřejná stránka stojí mimo JazykProvider - jazyk chodí propem. */
+  jazyk: Jazyk;
 }) {
+  const t = (klic: string, hodnoty?: Record<string, string | number>) =>
+    hodnoty ? prelozitS(jazyk, klic, hodnoty) : prelozit(jazyk, klic);
   const router = useRouter();
   const [jmeno, setJmeno] = useState(signerName);
   const [podpis, setPodpis] = useState<string | null>(null);
@@ -46,12 +52,12 @@ export function ContractSigning({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Akci se nepodařilo uložit.');
+        setError(data?.error || t('smlouvaVerejna.chyba'));
         return;
       }
       router.refresh();
     } catch {
-      setError('Akci se nepodařilo uložit.');
+      setError(t('smlouvaVerejna.chyba'));
     } finally {
       setBusy(false);
     }
@@ -60,9 +66,9 @@ export function ContractSigning({
   if (status === 'CANCELLED') {
     return (
       <div className="bg-dangerTint border border-line rounded-card p-6 text-center">
-        <p className="font-display text-2xl text-ink m-0">Smlouva byla zrušena</p>
+        <p className="font-display text-2xl text-ink m-0">{t('smlouvaVerejna.zrusena')}</p>
         <p className="text-sm font-body text-muted m-0 mt-2">
-          {issuerName} tuhle smlouvu stáhl. Ozvěte se prosím produkci.
+          {t('smlouvaVerejna.zrusenaText', { firma: issuerName })}
         </p>
       </div>
     );
@@ -71,9 +77,9 @@ export function ContractSigning({
   if (status === 'REJECTED') {
     return (
       <div className="bg-dangerTint border border-line rounded-card p-6 text-center">
-        <p className="font-display text-2xl text-ink m-0">Podpis odmítnut</p>
+        <p className="font-display text-2xl text-ink m-0">{t('smlouvaVerejna.odmitnut')}</p>
         <p className="text-sm font-body text-muted m-0 mt-2">
-          Odmítnuto {formatSignedAt(rejectedAt)}. {issuerName} o tom ví a ozve se vám.
+          {t('smlouvaVerejna.odmitnutText', { kdy: formatSignedAt(rejectedAt, jazyk), firma: issuerName })}
         </p>
       </div>
     );
@@ -83,12 +89,12 @@ export function ContractSigning({
     return (
       <div className="bg-okTint border border-line rounded-card p-6 text-center">
         <p className="font-display text-2xl text-ink m-0">
-          {status === 'SIGNED' ? 'Smlouva je podepsaná' : 'Váš podpis je uložený'}
+          {t(status === 'SIGNED' ? 'smlouvaVerejna.podepsana' : 'smlouvaVerejna.podpisUlozeny')}
         </p>
         <p className="text-sm font-body text-muted m-0 mt-2">
           {status === 'SIGNED'
-            ? `Uzavřeno ${formatSignedAt(completedAt)}. Podepsanou smlouvu máte výše i s doložkou — stránku si můžete uložit jako PDF přes tisk prohlížeče.`
-            : `Děkujeme. Jakmile smlouvu podepíše i ${issuerName}, dáme vám vědět e-mailem.`}
+            ? t('smlouvaVerejna.uzavreno', { kdy: formatSignedAt(completedAt, jazyk) })
+            : t('smlouvaVerejna.cekaNaNas', { firma: issuerName })}
         </p>
       </div>
     );
@@ -98,10 +104,10 @@ export function ContractSigning({
     return (
       <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Odmítnutí podpisu
+          {t('smlouvaVerejna.odmitnutiNadpis')}
         </h2>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Co ve smlouvě nesedí? (nepovinné)</span>
+          <span className="text-sm font-body text-ink">{t('smlouvaVerejna.coNesedi')}</span>
           <textarea
             value={duvod}
             onChange={(e) => setDuvod(e.target.value)}
@@ -117,10 +123,10 @@ export function ContractSigning({
             disabled={busy}
             className="bg-red-600 text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 disabled:opacity-60"
           >
-            {busy ? 'Odesílám…' : 'Odmítnout podpis'}
+            {t(busy ? 'smlouvaVerejna.odesilam' : 'smlouvaVerejna.odmitnoutPodpis')}
           </button>
           <button type="button" onClick={() => setOdmitam(false)} className="text-muted text-sm font-heading">
-            Zpět
+            {t('smlouvaVerejna.zpet')}
           </button>
         </div>
       </div>
@@ -129,10 +135,10 @@ export function ContractSigning({
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
-      <h2 className="font-heading font-semibold text-sm text-brand-purple uppercase tracking-wide m-0">Váš podpis</h2>
+      <h2 className="font-heading font-semibold text-sm text-brand-purple uppercase tracking-wide m-0">{t('smlouvaVerejna.vasPodpis')}</h2>
 
       <label className="flex flex-col gap-1.5 max-w-sm">
-        <span className="text-sm font-body text-ink">Jméno a příjmení</span>
+        <span className="text-sm font-body text-ink">{t('smlouvaVerejna.jmeno')}</span>
         <input
           value={jmeno}
           onChange={(e) => setJmeno(e.target.value)}
@@ -149,10 +155,7 @@ export function ContractSigning({
           onChange={(e) => setSouhlas(e.target.checked)}
           className="mt-1"
         />
-        <span>
-          Smlouvu jsem si přečetl(a), souhlasím s jejím zněním a podepisuji ji elektronicky. Beru na
-          vědomí, že se k podpisu uloží datum a čas, IP adresa a otisk podepsaného textu.
-        </span>
+        <span>{t('smlouvaVerejna.souhlas')}</span>
       </label>
 
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
@@ -168,10 +171,10 @@ export function ContractSigning({
              vsude stejnou barvu (zadani 13. 9. 2026: „v nasem brandu"). */
           className="bg-brand-green text-onAccent font-heading font-semibold text-base rounded-lg px-6 py-3 hover:brightness-95 transition-[filter] disabled:opacity-50"
         >
-          {busy ? 'Podepisuji…' : 'Podepsat smlouvu'}
+          {t(busy ? 'smlouvaVerejna.podepisuji' : 'smlouvaVerejna.podepsat')}
         </button>
         <button type="button" onClick={() => setOdmitam(true)} className="text-muted text-sm font-heading">
-          Nesouhlasím, odmítnout
+          {t('smlouvaVerejna.nesouhlasim')}
         </button>
       </div>
     </div>

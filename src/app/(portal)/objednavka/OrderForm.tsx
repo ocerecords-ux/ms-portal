@@ -7,7 +7,6 @@ import { NarratorMultiSelect, type NarratorOption } from './NarratorMultiSelect'
 import {
   formatujCislo,
   formatujNormostrany,
-  sklonujNormostrany,
   spoctiNormostrany,
   umimeSpocitat,
   zaokrouhliNormostrany,
@@ -17,6 +16,8 @@ import {
 import { DatumPole } from '@/components/DatumPole';
 import { UpravaPdf } from './UpravaPdf';
 import { vygenerujUvod, vygenerujZaver, REZISER_UVODU } from '@/lib/uvodZaver';
+import { usePreklad, useJazyk } from '../components/JazykProvider';
+import { kodJazyka, prelozit, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 
 export function OrderForm({
   ratePerPage,
@@ -38,6 +39,8 @@ export function OrderForm({
   /** Úvod a závěr audioknihy (22. 9. 2026) - zatím jen Audiotéka. */
   uvodZaver?: boolean;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [pageCount, setPageCount] = useState('');
@@ -137,7 +140,7 @@ export function OrderForm({
       }
       // Priloha jde do uloziste zvlast, objednavka pak nese jen klic.
       if (file) {
-        const klic = await nahrajPrilohu(file);
+        const klic = await nahrajPrilohu(file, jazyk);
         formData.set('attachmentKey', klic);
         formData.set('attachmentName', file.name);
       }
@@ -145,7 +148,7 @@ export function OrderForm({
       const res = await fetch('/api/orders', { method: 'POST', body: formData });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(body.error || 'Objednávku se nepodařilo odeslat.');
+        throw new Error(body.error || t('objednavka.chybaOdeslani'));
       }
       // Objednavka projde i tehdy, kdyz se prilohu nepodari ulozit - ale
       // odesilatel se to musi dozvedet, jinak si mysli, ze podklady dorazily
@@ -169,7 +172,7 @@ export function OrderForm({
       setDetailChyby(null);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Objednávku se nepodařilo odeslat.');
+      setError(err instanceof Error ? err.message : t('objednavka.chybaOdeslani'));
     } finally {
       setSubmitting(false);
     }
@@ -209,19 +212,19 @@ export function OrderForm({
       setRozbor(null);
       const hlaska = err instanceof Error ? err.message : String(err ?? '');
       setDetailChyby(
-        `${soubor.name} · ${hlaska || 'bez hlášky'}${
+        `${soubor.name} · ${hlaska || t('objednavka.bezHlasky')}${
           typeof navigator !== 'undefined' ? ` · ${navigator.userAgent}` : ''
         }`,
       );
       setChybaRozboru(
         hlaska && hlaska.length < 120 && /[ěščřžýáíéúůťďň ]/i.test(hlaska)
           ? hlaska
-          : 'Text z tohohle souboru se nepodařilo přečíst. Zkuste ho prosím poslat jako Word (.docx) nebo TXT.',
+          : t('objednavka.chybaCteni'),
       );
     } finally {
       setPocitam(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     setRozbor(null);
@@ -232,6 +235,13 @@ export function OrderForm({
     void prepocitej(file, false);
   }, [file, prepocitej]);
 
+  /**
+   * Sazba stojí ve větě tlustě, proto se věta rozdělí kolem značky {sazba}
+   * (viz prelozitKolem v lib/jazyk.ts) - v angličtině stojí jinde než
+   * v češtině.
+   */
+  const [sazbaPred, sazbaPo] = prelozitKolem(jazyk, 'objednavka.sazba', 'sazba');
+
   if (done && lastOrder) {
     return (
       <div className="bg-brand-purple rounded-card p-6 sm:p-10 text-white max-w-2xl mx-auto flex flex-col items-start gap-5">
@@ -241,11 +251,12 @@ export function OrderForm({
           </svg>
         </div>
         <div>
-          <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka byla odeslána</h2>
+          <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">{t('objednavka.odeslana')}</h2>
           <p className="text-white/85 text-sm font-body mt-2">
-            „{lastOrder.title}" — předběžná cena{' '}
-            <strong className="text-brand-green">{new Intl.NumberFormat('cs-CZ').format(lastOrder.price)} Kč</strong>.
-            Objednávku jsme uložili k vašemu účtu a Mediaspace se vám brzy ozve.
+            {t('objednavka.odeslanaText', {
+              nazev: lastOrder.title,
+              cena: `${new Intl.NumberFormat(kodJazyka(jazyk)).format(lastOrder.price)} Kč`,
+            })}
           </p>
           {lastOrder.varovani && (
             <p className="mt-3 mb-0 rounded-lg bg-white/15 border border-brand-green px-3 py-2 text-sm font-body text-white">
@@ -259,10 +270,10 @@ export function OrderForm({
             onClick={() => setDone(false)}
             className="border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-brand-purpleDark transition-colors"
           >
-            + Vytvořit další objednávku
+            {t('objednavka.dalsiObjednavka')}
           </button>
           <Link href="/projekty" className="text-white/85 text-sm font-heading underline">
-            Zobrazit Projekty
+            {t('objednavka.zobrazitProjekty')}
           </Link>
         </div>
       </div>
@@ -283,7 +294,7 @@ export function OrderForm({
         <div className="absolute inset-0 z-10 rounded-card bg-brand-purpleDeep/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/mediaspace-logo.gif" alt="" aria-hidden="true" className="h-16 w-auto" />
-          <p className="m-0 font-heading font-semibold text-sm text-brand-green">Odesíláme objednávku…</p>
+          <p className="m-0 font-heading font-semibold text-sm text-brand-green">{t('objednavka.odesilameObjednavku')}</p>
           <span className="block w-40 h-[3px] rounded-full bg-white/20 overflow-hidden">
             <span className="block h-full w-1/3 rounded-full bg-brand-green animate-[objednavka-pruh_1.1s_ease-in-out_infinite]" />
           </span>
@@ -291,27 +302,29 @@ export function OrderForm({
       )}
 
       <div>
-        <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka audioknihy</h2>
+        <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">{t('objednavka.nadpis')}</h2>
         {cenuUrcujeKlient ? (
-          <p className="text-white/75 text-xs font-heading mt-1.5">Cenu bez DPH vyplňte podle vaší nabídky.</p>
+          <p className="text-white/75 text-xs font-heading mt-1.5">{t('objednavka.cenaVyplnte')}</p>
         ) : (
           <p className="text-white/75 text-xs font-heading mt-1.5">
-            Vaše sazba: <strong className="text-brand-green font-semibold">{ratePerPage} Kč</strong> / normostrana, bez DPH
+            {sazbaPred}
+            <strong className="text-brand-green font-semibold">{ratePerPage} Kč</strong>
+            {sazbaPo}
           </p>
         )}
       </div>
 
       <div className="flex gap-4 flex-wrap">
-        <Field label="Název" required className="flex-[2_1_200px]">
+        <Field label={t('objednavka.nazev')} required className="flex-[2_1_200px]">
           <input
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="např. Stín nad Vltavou"
+            placeholder={t('objednavka.nazevPriklad')}
             className="input"
           />
         </Field>
-        <Field label="Počet normostran" className="flex-1 min-w-[140px]">
+        <Field label={t('objednavka.pocetNs')} className="flex-1 min-w-[140px]">
           <input
             type="number"
             min={0}
@@ -323,13 +336,9 @@ export function OrderForm({
           />
         </Field>
         <Field
-          label="Cena bez DPH"
+          label={t('objednavka.cenaBezDph')}
           className="flex-1 min-w-[140px]"
-          tooltip={
-            cenuUrcujeKlient
-              ? 'Cenu navrhujete sami. Uvedená částka je bez DPH.'
-              : 'Cena se vypočítává dle dohodnuté ceny za normostranu. Uvedená částka je bez DPH.'
-          }
+          tooltip={cenuUrcujeKlient ? t('objednavka.cenaNavrhujete') : t('objednavka.cenaZeSazby')}
         >
           {cenuUrcujeKlient ? (
             <input
@@ -339,67 +348,66 @@ export function OrderForm({
               value={cenaVlastni}
               onChange={(e) => setCenaVlastni(e.target.value)}
               placeholder="0"
-              title="Cenu navrhujete sami. Uvedená částka je bez DPH."
+              title={t('objednavka.cenaNavrhujete')}
               className="input"
             />
           ) : (
             <input
               readOnly
-              value={`${new Intl.NumberFormat('cs-CZ').format(price)} Kč`}
-              title="Cena se vypočítává dle dohodnuté ceny za normostranu. Uvedená částka je bez DPH."
+              value={`${new Intl.NumberFormat(kodJazyka(jazyk)).format(price)} Kč`}
+              title={t('objednavka.cenaZeSazby')}
               className="input input-readonly"
             />
           )}
         </Field>
       </div>
 
-      <Field label="Datum odevzdání">
+      <Field label={t('objednavka.datumOdevzdani')}>
         <DatumPole value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
       </Field>
 
-      <Field label="Preferovaný herec" tooltip="Vyberte jednoho nebo víc herců z databáze, nebo napište vlastní jméno.">
+      <Field label={t('objednavka.preferovanyHerec')} tooltip={t('objednavka.preferovanyHerecNapoveda')}>
         <NarratorMultiSelect options={herci} value={narrators} onChange={setNarrators} />
       </Field>
 
       {uvodZaver && (
         <div className="flex flex-col gap-3 rounded-lg border border-white/20 bg-white/5 p-4">
           <div>
-            <p className="m-0 font-heading font-semibold text-sm text-brand-green">Úvod a závěr audioknihy</p>
+            <p className="m-0 font-heading font-semibold text-sm text-brand-green">{t('objednavka.uvodZaverNadpis')}</p>
             <p className="m-0 mt-1 text-[11px] font-body text-white/75">
-              Text se složí sám z údajů níže. Můžete ho upravit, nebo celý přepsat vlastním. Režie je vždy{' '}
-              {REZISER_UVODU}.
+              {t('objednavka.uvodZaverPopis', { reziser: REZISER_UVODU })}
             </p>
           </div>
           <div className="flex gap-4 flex-wrap">
-            <Field label="Autor" className="flex-1 min-w-[180px]">
-              <input value={autor} onChange={(e) => setAutor(e.target.value)} placeholder="např. Emil Hruška" className="input" />
+            <Field label={t('objednavka.autor')} className="flex-1 min-w-[180px]">
+              <input value={autor} onChange={(e) => setAutor(e.target.value)} placeholder={t('objednavka.autorPriklad')} className="input" />
             </Field>
-            <Field label="Překladatel" className="flex-1 min-w-[180px]">
+            <Field label={t('objednavka.prekladatel')} className="flex-1 min-w-[180px]">
               <input
                 value={prekladatel}
                 onChange={(e) => setPrekladatel(e.target.value)}
-                placeholder="u původně české knihy nechte prázdné"
+                placeholder={t('objednavka.prekladatelPriklad')}
                 className="input"
               />
             </Field>
-            <Field label="Nakladatelství" className="flex-1 min-w-[180px]">
+            <Field label={t('objednavka.nakladatelstvi')} className="flex-1 min-w-[180px]">
               <input
                 value={nakladatelstvi}
                 onChange={(e) => setNakladatelstvi(e.target.value)}
-                placeholder="např. Epocha"
+                placeholder={t('objednavka.nakladatelstviPriklad')}
                 className="input"
               />
             </Field>
           </div>
           <TextUvodu
-            nadpis="Úvod"
+            nadpis={t('objednavka.uvod')}
             hodnota={uvodText}
             vlastni={uvodVlastni !== null}
             onZmena={setUvodVlastni}
             onVratit={() => setUvodVlastni(null)}
           />
           <TextUvodu
-            nadpis="Závěr"
+            nadpis={t('objednavka.zaver')}
             hodnota={zaverText}
             vlastni={zaverVlastni !== null}
             onZmena={setZaverVlastni}
@@ -408,16 +416,16 @@ export function OrderForm({
         </div>
       )}
 
-      <Field label="Poznámka">
+      <Field label={t('objednavka.poznamka')}>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Cokoliv, co bychom měli vědět k objednávce…"
+          placeholder={t('objednavka.poznamkaPlaceholder')}
           className="input min-h-[90px] font-body resize-y"
         />
       </Field>
 
-      <Field label="Příloha">
+      <Field label={t('objednavka.priloha')}>
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -430,11 +438,11 @@ export function OrderForm({
           }`}
         >
           <span className="truncate">
-            {file ? file.name : dragOver ? 'Pusťte soubor sem…' : 'Přetáhněte soubor sem, nebo ho vyberte'}
+            {file ? file.name : dragOver ? t('objednavka.pustteSoubor') : t('objednavka.pretahnete')}
           </span>
           <span className="inline-flex items-center gap-2">
             <label className="shrink-0 bg-white text-brand-purpleDeep rounded-md px-3 py-1.5 text-xs font-heading font-semibold cursor-pointer">
-              {file ? 'Vybrat jiný' : 'Vybrat soubor'}
+              {file ? t('objednavka.vybratJiny') : t('objednavka.vybratSoubor')}
               <input
                 ref={vstupSouboru}
                 type="file"
@@ -450,7 +458,7 @@ export function OrderForm({
                 onClick={odeberSoubor}
                 className="shrink-0 border border-white/60 text-white rounded-md px-3 py-1.5 text-xs font-heading font-semibold hover:bg-white/15 transition-colors"
               >
-                Odebrat
+                {t('objednavka.odebrat')}
               </button>
             )}
           </span>
@@ -463,22 +471,24 @@ export function OrderForm({
         {file && (
           <div className="mt-2">
             {pocitam && (
-              <p className="m-0 text-xs font-body text-white/80">Počítám normostrany z textu…</p>
+              <p className="m-0 text-xs font-body text-white/80">{t('objednavka.pocitamNs')}</p>
             )}
 
             {!pocitam && rozbor && (
               <div className="rounded-lg border border-brand-green bg-white/10 px-3.5 py-3">
                 <p className="m-0 font-heading font-semibold text-sm text-brand-green">
-                  Text má {formatujNormostrany(rozbor.normostran)} {sklonujNormostrany(rozbor.normostran)}
+                  {t(klicRozboru(rozbor.normostran), { ns: formatujNormostrany(rozbor.normostran, jazyk) })}
                 </p>
                 <p className="m-0 mt-1 text-[11px] font-body text-white/75">
-                  {formatujCislo(rozbor.znaku)} znaků včetně mezer · {formatujCislo(rozbor.slov)} slov ·{' '}
-                  {rozbor.zdroj}
-                  {rozbor.stran ? ` · ${rozbor.stran} stran v souboru` : ''}
+                  {t(rozbor.stran ? 'objednavka.rozborDetailStran' : 'objednavka.rozborDetail', {
+                    znaku: formatujCislo(rozbor.znaku, jazyk),
+                    slov: formatujCislo(rozbor.slov, jazyk),
+                    zdroj: rozbor.zdroj,
+                    stran: rozbor.stran ?? 0,
+                  })}
                 </p>
                 <p className="m-0 mt-1 text-[11px] font-body text-white/55">
-                  Normostrana = {formatujCislo(ZNAKU_NA_NORMOSTRANU)} znaků včetně mezer, započatá strana se
-                  počítá celá. Počet v objednávce můžete kdykoliv přepsat.
+                  {t('objednavka.rozborVysvetleni', { znaku: formatujCislo(ZNAKU_NA_NORMOSTRANU, jazyk) })}
                 </p>
                 {pageCount !== String(zaokrouhliNormostrany(rozbor.normostran)) && (
                   <button
@@ -486,7 +496,7 @@ export function OrderForm({
                     onClick={() => setPageCount(String(zaokrouhliNormostrany(rozbor.normostran)))}
                     className="mt-2 bg-brand-green text-brand-purpleDark rounded-md px-3 py-1.5 text-xs font-heading font-semibold"
                   >
-                    Doplnit {zaokrouhliNormostrany(rozbor.normostran)} do objednávky
+                    {t('objednavka.doplnitDoObjednavky', { pocet: zaokrouhliNormostrany(rozbor.normostran) })}
                   </button>
                 )}
               </div>
@@ -500,14 +510,14 @@ export function OrderForm({
                   onClick={() => void prepocitej(file, true)}
                   className="text-xs font-heading font-semibold text-brand-green underline"
                 >
-                  Zkusit znovu
+                  {t('objednavka.zkusitZnovu')}
                 </button>
                 {/* Puvodni hlaska na jedno kliknuti - at ji jde poslat dal,
                     aniz by clovek otviral konzoli prohlizece. */}
                 {detailChyby && (
                   <details className="w-full">
                     <summary className="cursor-pointer text-[11px] font-heading text-white/60">
-                      Podrobnosti
+                      {t('objednavka.podrobnosti')}
                     </summary>
                     <p className="m-0 mt-1 text-[11px] font-mono text-white/70 break-words">{detailChyby}</p>
                   </details>
@@ -516,9 +526,7 @@ export function OrderForm({
             )}
 
             {!pocitam && !rozbor && !chybaRozboru && !umimeSpocitat(file.name) && (
-              <p className="m-0 text-xs font-body text-white/60">
-                Z tohohle souboru normostrany spočítat neumím. Umím Word (.docx), PDF, RTF, ODT, EPUB a TXT.
-              </p>
+              <p className="m-0 text-xs font-body text-white/60">{t('objednavka.neumimSpocitat')}</p>
             )}
 
             {!pocitam && umimeSpocitat(file.name) && (rozbor || chybaRozboru) && (
@@ -527,7 +535,7 @@ export function OrderForm({
                 onClick={() => void prepocitej(file, true)}
                 className="mt-2 text-[11px] font-heading font-semibold text-white/70 underline"
               >
-                Spočítat z textu znovu
+                {t('objednavka.spocitatZnovu')}
               </button>
             )}
           </div>
@@ -551,7 +559,7 @@ export function OrderForm({
             // eslint-disable-next-line @next/next/no-img-element
             <img src="/mediaspace-logo.gif" alt="" aria-hidden="true" className="h-5 w-auto" />
           )}
-          {submitting ? 'Odesílám…' : 'Odeslat'}
+          {submitting ? t('objednavka.odesilam') : t('objednavka.odeslat')}
         </button>
       </div>
 
@@ -588,6 +596,19 @@ export function OrderForm({
       `}</style>
     </form>
   );
+}
+
+/**
+ * Která podoba věty „Text má X normostran" se použije. Stejné pravidlo jako
+ * sklonujNormostrany v lib/normostrany.ts - anglicky z toho vyjde jednotné
+ * nebo množné číslo.
+ */
+function klicRozboru(n: number): string {
+  const zaokrouhlene = Math.round(n * 10) / 10;
+  if (!Number.isInteger(zaokrouhlene)) return 'objednavka.rozborNs234';
+  if (zaokrouhlene === 1) return 'objednavka.rozborNs1';
+  if (zaokrouhlene <= 4) return 'objednavka.rozborNs234';
+  return 'objednavka.rozborNs5';
 }
 
 function Field({
@@ -632,7 +653,7 @@ function Field({
  * pak spadla na chybu 413 a formulář uměl říct jen „nepodařilo se odeslat".
  * Stejnou cestou posílá soubory chat.
  */
-async function nahrajPrilohu(soubor: File): Promise<string> {
+async function nahrajPrilohu(soubor: File, jazyk: Jazyk): Promise<string> {
   const podpis = await fetch('/api/orders/priloha/podpis', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -640,7 +661,7 @@ async function nahrajPrilohu(soubor: File): Promise<string> {
   });
   const data = await podpis.json().catch(() => ({}));
   if (!podpis.ok || !data?.uploadUrl) {
-    throw new Error(data?.error || 'Přílohu se nepodařilo připravit k odeslání.');
+    throw new Error(data?.error || prelozit(jazyk, 'objednavka.chybaPrilohaPripravit'));
   }
 
   const nahrano = await fetch(data.uploadUrl, {
@@ -649,7 +670,7 @@ async function nahrajPrilohu(soubor: File): Promise<string> {
     body: soubor,
   });
   if (!nahrano.ok) {
-    throw new Error('Přílohu se nepodařilo nahrát. Zkuste to prosím znovu.');
+    throw new Error(prelozit(jazyk, 'objednavka.chybaPrilohaNahrat'));
   }
   return data.key as string;
 }
@@ -668,18 +689,21 @@ function TextUvodu({
   onZmena: (text: string) => void;
   onVratit: () => void;
 }) {
+  const t = usePreklad();
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
         <span className="text-[13.5px] font-body text-white">{nadpis}</span>
-        <span className="text-[11px] font-body text-white/60">{vlastni ? 'upraveno ručně' : 'skládá se automaticky'}</span>
+        <span className="text-[11px] font-body text-white/60">
+          {vlastni ? t('objednavka.textUpraveno') : t('objednavka.textAutomaticky')}
+        </span>
         {vlastni && (
           <button
             type="button"
             onClick={onVratit}
             className="ml-auto text-[11px] font-heading font-semibold text-brand-green hover:underline"
           >
-            Vrátit automatický text
+            {t('objednavka.vratitAutomaticky')}
           </button>
         )}
       </div>

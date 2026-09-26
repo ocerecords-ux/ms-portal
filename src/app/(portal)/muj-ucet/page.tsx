@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { ROLE_LABELS, isInternalRole } from '@/lib/roles';
+import { isInternalRole } from '@/lib/roles';
 import { MyAccountForm } from './MyAccountForm';
 import { FakturaceKarta } from './FakturaceKarta';
 import { UpozorneniKarta } from './UpozorneniKarta';
@@ -11,6 +11,8 @@ import { PripominkyKarta } from './PripominkyKarta';
 import { PodpisKarta } from './PodpisKarta';
 import { mojePripominky, vsechnyPripominky } from '@/lib/pripominkyServer';
 import Link from 'next/link';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit, prelozitS } from '@/lib/jazyk';
 
 // "Můj účet" - kazdy prihlaseny uzivatel si tu upravi svoje udaje (zadani
 // 5. 9. 2026). Role, kod uctu a firma jsou tu jen k precteni; menit je smi
@@ -23,6 +25,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function MyAccountPage() {
   const session = await getServerSession(authOptions);
+  const jazyk = nactiJazyk();
   if (!session?.user?.id) redirect('/login');
 
   const user = await prisma.user.findUnique({
@@ -59,25 +62,28 @@ export default async function MyAccountPage() {
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
       <div>
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Můj účet</h1>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">{prelozit(jazyk, 'mujUcet.nadpis')}</h1>
       </div>
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-5">
         <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-4 m-0">
           <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Kód účtu</dt>
+            <dt className="text-xs font-heading text-muted uppercase tracking-wide">{prelozit(jazyk, 'mujUcet.kodUctu')}</dt>
             <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">{user.code || '—'}</dd>
           </div>
           <div>
-            <dt className="text-xs font-heading text-muted uppercase tracking-wide">Typ přístupu</dt>
-            <dd className="text-sm font-heading text-ink m-0 mt-1">{ROLE_LABELS[user.role]}</dd>
+            <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+              {prelozit(jazyk, 'mujUcet.typPristupu')}
+            </dt>
+            {/* Název role je ve slovníku pod klíčem role.* - viz lib/jazyk.ts. */}
+            <dd className="text-sm font-heading text-ink m-0 mt-1">{prelozit(jazyk, `role.${user.role}`)}</dd>
           </div>
           {/* Firma se ukazuje jen u klientu - interni ucty Mediaspace ani herci
               pod zadnou firmu nepatri (zadani 5. 9. 2026), takze by tu bylo
               natvrdo jen prazdne pole. */}
           {user.company && (
             <div>
-              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Firma</dt>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">{prelozit(jazyk, 'mujUcet.firma')}</dt>
               <dd className="text-sm font-heading text-ink m-0 mt-1">{user.company.name}</dd>
             </div>
           )}
@@ -128,12 +134,18 @@ export default async function MyAccountPage() {
           className="bg-surface rounded-card border border-line shadow-sm p-5 no-underline hover:border-brand-purple transition-colors flex items-center justify-between gap-4"
         >
           <span className="min-w-0">
-            <span className="block font-heading font-semibold text-base text-ink">Tabule ve studiu</span>
+            <span className="block font-heading font-semibold text-base text-ink">
+              {prelozit(jazyk, 'mujUcet.tabule')}
+            </span>
             <span className="block text-sm font-body text-muted mt-1">
-              {tabuli === 1 ? 'Dnešní program studia na displeji.' : `Dnešní program studií (${tabuli}).`}
+              {tabuli === 1
+                ? prelozit(jazyk, 'mujUcet.tabuleJedna')
+                : prelozitS(jazyk, 'mujUcet.tabuleVic', { pocet: tabuli })}
             </span>
           </span>
-          <span className="text-brand-purple font-heading text-sm whitespace-nowrap">Otevřít →</span>
+          <span className="text-brand-purple font-heading text-sm whitespace-nowrap">
+            {prelozit(jazyk, 'mujUcet.otevrit')}
+          </span>
         </Link>
       )}
 
@@ -145,12 +157,16 @@ export default async function MyAccountPage() {
           className="bg-surface rounded-card border border-line shadow-sm p-5 no-underline hover:border-brand-purple transition-colors flex items-center justify-between gap-4"
         >
           <span className="min-w-0">
-            <span className="block font-heading font-semibold text-base text-ink">Wikipedie</span>
+            <span className="block font-heading font-semibold text-base text-ink">
+              {prelozit(jazyk, 'mujUcet.wikipedie')}
+            </span>
             <span className="block text-sm font-body text-muted mt-1">
-              Váš koncept článku, náhled a odeslání na Wikipedii.
+              {prelozit(jazyk, 'mujUcet.wikipediePopis')}
             </span>
           </span>
-          <span className="text-brand-purple font-heading text-sm whitespace-nowrap">Otevřít →</span>
+          <span className="text-brand-purple font-heading text-sm whitespace-nowrap">
+            {prelozit(jazyk, 'mujUcet.otevrit')}
+          </span>
         </Link>
       )}
 

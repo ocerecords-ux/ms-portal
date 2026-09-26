@@ -12,6 +12,8 @@
  * posunem, ten by v den změny času lhal o hodinu.
  */
 
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+
 export type CalendarView = 'den' | 'tyden' | 'mesic';
 
 export const CALENDAR_VIEWS: { key: CalendarView; label: string }[] = [
@@ -474,11 +476,16 @@ export function formatDayShort(date: Date, timeZone = 'Europe/Prague'): string {
   }).format(date);
 }
 
-export function formatDateTime(date: Date | string | null, timeZone = 'Europe/Prague'): string {
+export function formatDateTime(
+  date: Date | string | null,
+  timeZone = 'Europe/Prague',
+  /** Jazyk kvůli britskému formátu data (13/09/2026) - výchozí je čeština. */
+  jazyk: Jazyk = 'cs',
+): string {
   if (!date) return '';
   const d = typeof date === 'string' ? new Date(date) : date;
   if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('cs-CZ', {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), {
     timeZone,
     day: 'numeric',
     month: 'numeric',

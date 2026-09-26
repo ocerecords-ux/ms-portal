@@ -6,17 +6,18 @@ import { AdOrderForm } from './AdOrderForm';
 import { OrderTypeSwitcher } from './OrderTypeSwitcher';
 import { bezTitulu } from '@/lib/jmena';
 import { firmaChceUvodZaver } from '@/lib/uvodZaver';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 export default async function ObjednavkaPage() {
   const session = await getServerSession(authOptions);
+  const jazyk = nactiJazyk();
   const companyId = session!.user.companyId;
   const company = companyId ? await prisma.company.findUnique({ where: { id: companyId } }) : null;
 
   if (!company) {
     return (
-      <p className="text-muted font-body">
-        Váš účet zatím není přiřazen k žádné firmě. Kontaktujte prosím Mediaspace.
-      </p>
+      <p className="text-muted font-body">{prelozit(jazyk, 'objednavka.bezFirmy')}</p>
     );
   }
 
@@ -25,9 +26,7 @@ export default async function ObjednavkaPage() {
   // vidi: jen audiokniha, jen reklama, oboje (prepinac), nebo zatim nic.
   if (!company.dealsAudiobooks && !company.dealsAds) {
     return (
-      <p className="text-muted font-body">
-        Vaší firmě zatím není nastavený žádný druh zakázek. Kontaktujte prosím Mediaspace.
-      </p>
+      <p className="text-muted font-body">{prelozit(jazyk, 'objednavka.bezDruhu')}</p>
     );
   }
 
@@ -39,9 +38,7 @@ export default async function ObjednavkaPage() {
   // sazbu nepotrebuje: cena se nepocita, klient ji do objednavky napise.
   if (company.dealsAudiobooks && company.ratePerPage == null && !company.cenuUrcujeKlient) {
     return (
-      <p className="text-muted font-body">
-        Vaší firmě zatím není nastavená sazba za normostranu. Kontaktujte prosím Mediaspace.
-      </p>
+      <p className="text-muted font-body">{prelozit(jazyk, 'objednavka.bezSazby')}</p>
     );
   }
 

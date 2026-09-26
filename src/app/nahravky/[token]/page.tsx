@@ -6,6 +6,8 @@ import { jeReklamniKlient } from '@/lib/reklamaPripominky';
 import { stavSchvaleni } from '@/lib/schvaleniKlientem';
 import { SchvalitSpot } from '@/components/SchvalitSpot';
 import { DriveBrowser } from '@/app/(portal)/nahravky/DriveBrowser';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * Nahrávky projektu bez přihlašování (zadání 11. 9. 2026: „potřebuju, ať se
@@ -23,11 +25,15 @@ import { DriveBrowser } from '@/app/(portal)/nahravky/DriveBrowser';
  */
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Nahrávky',
-  // Odkaz je sice neuhodnutelny, ale ve vyhledavaci nema co delat.
-  robots: { index: false, follow: false },
-};
+// Titulek záložky podle jazyka - stránka je `force-dynamic`, takže cookie
+// s jazykem je tu k dispozici (viz lib/jazykServer.ts).
+export function generateMetadata(): Metadata {
+  return {
+    title: prelozit(nactiJazyk(), 'nahravkyOdkaz.nadpis'),
+    // Odkaz je sice neuhodnutelny, ale ve vyhledavaci nema co delat.
+    robots: { index: false, follow: false },
+  };
+}
 
 function Hlaska({ nadpis, text }: { nadpis: string; text: string }) {
   return (
@@ -48,13 +54,14 @@ export default async function NahravkyOdkazemPage({
   /** `?schvalit=1` z mailu - karta schválení se zvýrazní. */
   searchParams?: { schvalit?: string };
 }) {
+  const jazyk = nactiJazyk();
   const caflouProjectId = await projektPodleTokenu(params.token);
 
   if (!caflouProjectId) {
     return (
       <Hlaska
-        nadpis="Odkaz už neplatí"
-        text="Tenhle odkaz na nahrávky byl uzavřený nebo nahrazený novým. Napište nám a pošleme vám aktuální."
+        nadpis={prelozit(jazyk, 'nahravkyOdkaz.neplatnyNadpis')}
+        text={prelozit(jazyk, 'nahravkyOdkaz.neplatnyText')}
       />
     );
   }
@@ -82,8 +89,8 @@ export default async function NahravkyOdkazemPage({
   if (!folderId || !driveConfigured) {
     return (
       <Hlaska
-        nadpis="Nahrávky tu zatím nejsou"
-        text="U tohohle projektu ještě není složka s nahrávkami. Ozvěte se nám, prosím."
+        nadpis={prelozit(jazyk, 'nahravkyOdkaz.bezNahravekNadpis')}
+        text={prelozit(jazyk, 'nahravkyOdkaz.bezNahravekText')}
       />
     );
   }
@@ -99,8 +106,12 @@ export default async function NahravkyOdkazemPage({
           <img src="/mediaspace-logo-still.png" alt="Mediaspace" className="h-7 w-auto shrink-0" />
           <span className="w-px h-6 bg-white/30 shrink-0" aria-hidden="true" />
           <div className="min-w-0">
-            <h1 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">Nahrávky</h1>
-            <p className="text-[11px] font-body text-white/70 m-0 truncate">{meta?.name || 'Projekt'}</p>
+            <h1 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">
+              {prelozit(jazyk, 'nahravkyOdkaz.nadpis')}
+            </h1>
+            <p className="text-[11px] font-body text-white/70 m-0 truncate">
+              {meta?.name || prelozit(jazyk, 'nahravkyOdkaz.projekt')}
+            </p>
           </div>
         </div>
 
@@ -114,7 +125,7 @@ export default async function NahravkyOdkazemPage({
 
         <DriveBrowser
           initialFolderId={folderId}
-          rootName={meta?.name || 'Nahrávky'}
+          rootName={meta?.name || prelozit(jazyk, 'nahravkyOdkaz.nadpis')}
           token={params.token}
           jenCteni
           odkazPripominek={reklama ? `/pripominkovat/${encodeURIComponent(params.token)}` : null}

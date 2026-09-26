@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { recordEvent } from '@/lib/calendarServer';
 import { obnovVolnaMista } from '@/lib/volnaMistaServer';
 import { ActorPicker } from './ActorPicker';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * Výběr natáčecích termínů hercem (zadani 8. 9. 2026). Veřejná stránka —
@@ -16,6 +18,7 @@ import { ActorPicker } from './ActorPicker';
 export const dynamic = 'force-dynamic';
 
 export default async function ActorOfferPage({ params }: { params: { token: string } }) {
+  const jazyk = nactiJazyk();
   // Herec vidi vzdy aktualni volna mista - od odeslani e-mailu se kalendar
   // mohl zmenit (zadani 19. 9. 2026: vybira „vsude tam, kde je misto").
   const zaklad = await prisma.recordingRequest.findUnique({
@@ -64,7 +67,9 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
 
       <div className="max-w-2xl mx-auto px-6 sm:px-10 py-8 sm:py-12 flex flex-col gap-6">
         <div>
-          <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">Natáčecí termíny</p>
+          <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">
+            {prelozit(jazyk, 'terminyVyber.nadpis')}
+          </p>
           <h1 className="font-display text-3xl sm:text-4xl text-ink m-0 mt-1">{request.projectName}</h1>
           <p className="text-muted text-sm mt-2 font-body m-0">
             {/* Herci jen mesto, ne mistnost (19. 9. 2026: „terminy za Brno"). */}
@@ -74,11 +79,12 @@ export default async function ActorOfferPage({ params }: { params: { token: stri
 
         {request.note && (
           <p className="text-sm font-body text-ink bg-surface border border-line rounded-card px-4 py-3 m-0">
-            <strong>Poznámka produkce:</strong> {request.note}
+            <strong>{prelozit(jazyk, 'terminyVyber.poznamkaProdukce')}</strong> {request.note}
           </p>
         )}
 
         <ActorPicker
+          jazyk={jazyk}
           token={params.token}
           status={request.status}
           actorName={request.actorName}
