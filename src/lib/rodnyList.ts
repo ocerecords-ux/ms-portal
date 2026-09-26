@@ -147,7 +147,7 @@ export function missingFieldsMessage(missing: string[]): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Délka spotu tak, jak je ve vzoru: „20s". Od minuty výš jako „1:30"
+ * Délka spotu tak, jak je ve vzoru: „20s". Od minuty výš jako „2min."
  * (zadání 26. 9. 2026: „potřeboval bych mít i minuty - když to přesáhne
  * 60 s") - devadesát sekund nikdo nečte jako devadesát.
  */

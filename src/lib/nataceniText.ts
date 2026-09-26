@@ -83,7 +83,27 @@ export type PodkladyTextu = {
  * i se svou značkou - v listu má zůstat prázdné místo, ne „{{delka}}".
  */
 export function dosad(sablona: string, hodnoty: Record<string, string>): string {
-  return sablona.replace(/\{\{\s*([a-zA-Z_]+)\s*\}\}/g, (_, klic: string) => hodnoty[klic] ?? '');
+  const dosazeno = sablona.replace(
+    /\{\{\s*([a-zA-Z_]+)\s*\}\}/g,
+    (_, klic: string) => hodnoty[klic] ?? '',
+  );
+
+  /**
+   * Po prázdné proměnné zbyde v řádku osiřelý oddělovač - u výstupu bez délky
+   * by stálo „· Online, TV". Tohle ho sebere, ať vzor nemusí počítat s tím,
+   * co je zrovna vyplněné.
+   */
+  return dosazeno
+    .split('\n')
+    .map((radek) =>
+      radek
+        .replace(/(?:\s*·\s*){2,}/g, ' · ')
+        .replace(/^\s*·\s*/, '')
+        .replace(/\s*·\s*$/, '')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trimEnd(),
+    )
+    .join('\n');
 }
 
 const escapeHtml = (text: string): string =>

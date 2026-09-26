@@ -265,7 +265,7 @@ export function VystupySection({
       <p className="text-sm font-body text-muted m-0">
         Jeden výstup = jedna odevzdaná věc: spot, voiceover, zkrácená verze. Na řádku je název,
         kdo v něm mluví, délka a licence; režii, hudbu a datum výroby má projekt jednou v záložce
-        Rodný list. Délka se píše v sekundách, delší jako <span className="font-heading text-ink">1:30</span>.
+        Rodný list. Délka se píše v sekundách, od minuty výš v minutách — <span className="font-heading text-ink">30s</span>, <span className="font-heading text-ink">2min.</span>, <span className="font-heading text-ink">1min.30s</span>.
       </p>
 
       {chyba && (
@@ -441,7 +441,7 @@ function VystupRadek({
             prepoctiNazev(textNaDelku(e.target.value), licenceIds);
           }}
           aria-label="Délka"
-          title="Sekundy, nebo delší jako 1:30"
+          title="Sekundy (30), minuty (2 min), nebo 1:30"
           className={`w-[88px] shrink-0 rounded-lg border bg-field px-2 py-1.5 text-ink font-heading text-sm text-center tabular-nums outline-none focus:border-brand-purple disabled:opacity-60 ${
             delkaSpatne ? 'border-status-error' : 'border-line'
           }`}
@@ -508,7 +508,7 @@ function VystupRadek({
 
       {delkaSpatne && (
         <p className="text-xs font-body text-status-error m-0 mt-1 ml-3">
-          Délce „{delka}" nerozumím — napište sekundy (30), nebo delší jako 1:30.
+          Délce „{delka}" nerozumím — napište sekundy (30), minuty (2 min) nebo 1:30.
         </p>
       )}
     </li>
