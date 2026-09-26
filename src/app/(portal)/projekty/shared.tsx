@@ -9,7 +9,7 @@ import { ValecProgresu } from '@/components/ValecProgresu';
 import type { ProgresNataceni } from '@/lib/progresNataceni';
 import { IkonaPriority } from '@/components/IkonaPriority';
 import { OdznakPreposlechu, type StavPreposlechu } from '@/components/OdznakPreposlechu';
-import { DvojklikOtevri } from '@/components/DvojklikOtevri';
+import { NahledIkony } from '@/components/NahledIkony';
 import { initials } from '@/lib/chat';
 import { barvaStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
 import { IkonaTypu, KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
@@ -780,16 +780,16 @@ function bunkaSloupce(
             {/* Jak daleko je přeposlech (upřesnění 25. 9. 2026: „jako malou
                 ikonu u typu projektu, co je před názvem") - oranžová, když
                 se zapisují chyby, zelená, když je přeposlechnuto. */}
-            {/* Dvojklik otevře přeposlech projektu (25. 9. 2026). */}
+            {/* Klik ukáže náhled přeposlechu (25. 9. 2026, upraveno 26. 9.). */}
             {p.meta?.preposlech ? (
-              <DvojklikOtevri
+              <NahledIkony
                 odkaz={`/projekty/${p.id}?zalozka=preposlech`}
                 druh="PREPOSLECH"
                 id={String(p.id)}
-                popis="Dvojklik ukáže náhled přeposlechu"
+                popis="Klik ukáže náhled přeposlechu"
               >
                 <OdznakPreposlechu stav={p.meta?.preposlech} />
-              </DvojklikOtevri>
+              </NahledIkony>
             ) : null}
             {(p.meta?.licence ?? []).length > 0 && (
               <span className="flex items-center justify-center gap-[2px] flex-wrap leading-none">

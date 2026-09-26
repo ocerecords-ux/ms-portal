@@ -1,4 +1,4 @@
-import { DvojklikOtevri, type DruhNahledu } from '@/components/DvojklikOtevri';
+import { NahledIkony, type DruhNahledu } from '@/components/NahledIkony';
 
 /**
  * IKONY DOKLADŮ U NÁZVU PROJEKTU (zadání 25. 9. 2026: „potřebuji ještě vedle
@@ -25,7 +25,7 @@ import { DvojklikOtevri, type DruhNahledu } from '@/components/DvojklikOtevri';
  * na obou místech stejně; čtení z databáze je v lib/dokladyUProjektuServer.ts.
  */
 
-function SDvojklikem({
+function SNahledem({
   zapnuto,
   odkaz,
   popis,
@@ -43,9 +43,9 @@ function SDvojklikem({
 }) {
   if (!zapnuto) return <>{children}</>;
   return (
-    <DvojklikOtevri odkaz={odkaz} popis={popis} druh={druh} id={id}>
+    <NahledIkony odkaz={odkaz} popis={popis} druh={druh} id={id}>
       {children}
-    </DvojklikOtevri>
+    </NahledIkony>
   );
 }
 
@@ -59,8 +59,8 @@ export type DokladyProjektu = {
   nabidkaCisla: string[];
   fakturaCisla: string[];
   /**
-   * Doklad, který značku rozsvítil - dvojklik na ikonu ho otevře
-   * (zadání 25. 9. 2026). Prázdné u projektu, kde doklad není.
+   * Doklad, který značku rozsvítil - klik na ikonu ukáže jeho náhled
+   * (25. 9. 2026, upraveno 26. 9. 2026). Prázdné u projektu, kde doklad není.
    */
   nabidkaId?: string | null;
   fakturaId?: string | null;
@@ -154,7 +154,7 @@ function Znacka({
 export function ZnackyDokladu({
   doklady,
   velikost = 15,
-  /** Dvojklik otevře doklad (25. 9. 2026). Bez toho je značka jen obrázek. */
+  /** Klik ukáže náhled dokladu (25. 9. 2026). Bez toho je značka jen obrázek. */
   dvojklik = false,
 }: {
   doklady: DokladyProjektu | null | undefined;
@@ -170,12 +170,12 @@ export function ZnackyDokladu({
   return (
     <span className="inline-flex items-center gap-1 shrink-0">
       {nabidka !== 'ZADNA' && (
-        <SDvojklikem
+        <SNahledem
           zapnuto={dvojklik && Boolean(doklady.nabidkaId)}
           odkaz={`/admin/doklady/nabidky/${doklady.nabidkaId ?? ''}`}
           druh="NABIDKA"
           id={doklady.nabidkaId}
-          popis={`${POPIS_NABIDKY[nabidka]}${dodatek(doklady.nabidkaCisla)} — dvojklik ukáže náhled`}
+          popis={`${POPIS_NABIDKY[nabidka]}${dodatek(doklady.nabidkaCisla)} — klik ukáže náhled`}
         >
           <Znacka
             barva={BARVA_NABIDKY[nabidka]}
@@ -188,15 +188,15 @@ export function ZnackyDokladu({
               </>
             }
           />
-        </SDvojklikem>
+        </SNahledem>
       )}
       {faktura !== 'ZADNA' && (
-        <SDvojklikem
+        <SNahledem
           zapnuto={dvojklik && Boolean(doklady.fakturaId)}
           odkaz={`/admin/doklady/faktury/${doklady.fakturaId ?? ''}`}
           druh="FAKTURA"
           id={doklady.fakturaId}
-          popis={`${POPIS_FAKTURY[faktura]}${dodatek(doklady.fakturaCisla)} — dvojklik ukáže náhled`}
+          popis={`${POPIS_FAKTURY[faktura]}${dodatek(doklady.fakturaCisla)} — klik ukáže náhled`}
         >
           <Znacka
             barva={BARVA_FAKTURY[faktura]}
@@ -209,7 +209,7 @@ export function ZnackyDokladu({
               </>
             }
           />
-        </SDvojklikem>
+        </SNahledem>
       )}
     </span>
   );
