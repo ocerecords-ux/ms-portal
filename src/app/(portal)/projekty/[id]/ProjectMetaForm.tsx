@@ -473,6 +473,14 @@ export function ProjectMetaForm({
     Boolean(firmaDelaReklamy && typAudioknihy && values.projectType && values.projectType !== typAudioknihy);
   const vidiDatumVydani = vidiKlienta && !bezDataVydani;
 
+  /**
+   * NORMOSTRANY U HERCŮ JEN U AUDIOKNIHY (zadání 26. 9. 2026: „tady u reklam
+   * nemají být vůbec. NS"). Reklama se nepočítá na strany textu - políčko
+   * u každého jména jen zabíralo místo. Stejná podmínka jako u data vydání:
+   * nejde jen o rádiový spot, ale o reklamu vůbec.
+   */
+  const bezNormostran = bezDataVydani;
+
   if (!canEdit) {
     return (
       // Stejne rozdeleni do karet jako editacni podoba (zadani 13. 9. 2026),
@@ -772,16 +780,29 @@ export function ProjectMetaForm({
               dotoceniBezi={dotoceniBezi}
               strany={strany}
               normostrany={normostrany}
-              onZmenitNormostrany={(id, ns) => void ulozNormostrany(id, ns)}
+              /* NORMOSTRANY JEN U AUDIOKNIH (zadání 26. 9. 2026: „tady
+                 u reklam nemají být vůbec. NS"). Reklama se nepočítá na
+                 strany textu, takže políčko u každého herce jen zabíralo
+                 místo a rozbíjelo řádek. Bez funkce se vůbec nevykreslí. */
+              onZmenitNormostrany={
+                bezNormostran ? undefined : (id, ns) => void ulozNormostrany(id, ns)
+              }
             />
             {zpravaKlientovi && (
               <span className="text-xs font-body text-brand-greenDeep">{zpravaKlientovi}</span>
             )}
             <span className="text-xs text-muted font-body">
               Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence, pořadí se mění
-              šipkou. U dvou a víc herců se vedle každého vyplňují jeho{' '}
-              <strong className="font-heading font-semibold">normostrany</strong> — podle nich se pak
-              plánují jeho frekvence.
+              šipkou.
+              {bezNormostran ? (
+                ' Kdo v kterém spotu mluví, se vybírá v záložce Výstupy.'
+              ) : (
+                <>
+                  {' '}U dvou a víc herců se vedle každého vyplňují jeho{' '}
+                  <strong className="font-heading font-semibold">normostrany</strong> — podle nich se
+                  pak plánují jeho frekvence.
+                </>
+              )}
             </span>
           </div>
 

@@ -148,7 +148,16 @@ export function VyberHercu({
                 onOdebrat={() => odeber(h.id)}
               />
               {/* Dotoceno u konkretniho herce (zadani 11. 9. 2026) - na
-                  audioknize byva hercu vic a kazdy konci jindy. */}
+                  audioknize byva hercu vic a kazdy konci jindy.
+
+                  IKONY MISTO TLACITEK S TEXTEM (zadani 26. 9. 2026: „ať je to
+                  přehlednější, tak bych nějak minimalizoval ta tlačítka
+                  Odeslat klientovi a Zrušit dotočeno. Jde primárně o to vědět,
+                  co jsou tam za herce"). Dvě tlačítka s textem u každého
+                  jména delala z peti hercu stenu textu a jmena v ni zanikla;
+                  ikona zabere stejne mista jako sipka vedle a co dela, rekne
+                  bublinka po najeti. Ze je dotoceno, je dal videt na zelene
+                  lince kolem jmena - to se nezmenilo. */}
               {onPrepnoutDotoceno &&
                 (dotoceni?.[h.id] ? (
                   <>
@@ -157,9 +166,10 @@ export function VyberHercu({
                       disabled={disabled || dotoceniBezi === h.id}
                       onClick={() => onPrepnoutDotoceno(h.id, false)}
                       title={`Dotočeno ${new Date(dotoceni[h.id]).toLocaleDateString('cs-CZ')} — klepnutím zrušíte`}
-                      className="text-xs font-heading font-semibold rounded-pill border border-brand-green px-2.5 py-1 text-brand-greenDeep disabled:opacity-50"
+                      aria-label="Zrušit dotočeno"
+                      className="shrink-0 grid place-items-center w-7 h-7 rounded-full border border-brand-green text-brand-greenDeep hover:bg-okTint transition-colors disabled:opacity-50"
                     >
-                      Zrušit dotočeno
+                      <IkonaVratit />
                     </button>
                     {/* POSLAT KLIENTOVI ZNOVU (zadani 16. 9. 2026). Klientovi
                         se fajfka oznamuje jen jednou, v okamziku, kdy vznikne
@@ -172,9 +182,10 @@ export function VyberHercu({
                         disabled={disabled || dotoceniBezi === h.id}
                         onClick={() => onPoslatKlientovi(h.id)}
                         title="Poslat klientovi mail a zvoneček o tomhle dotočení znovu"
-                        className="text-xs font-heading rounded-pill border border-line px-2.5 py-1 text-muted hover:border-brand-purple hover:text-brand-purple transition-colors disabled:opacity-50"
+                        aria-label="Poslat klientovi"
+                        className="shrink-0 grid place-items-center w-7 h-7 rounded-full border border-line text-muted hover:border-brand-purple hover:text-brand-purple transition-colors disabled:opacity-50"
                       >
-                        Poslat klientovi
+                        <IkonaObalka />
                       </button>
                     )}
                   </>
@@ -184,9 +195,10 @@ export function VyberHercu({
                     disabled={disabled || dotoceniBezi === h.id}
                     onClick={() => onPrepnoutDotoceno(h.id, true)}
                     title="Označit, že tenhle herec má dotočeno"
-                    className="text-xs font-heading font-semibold rounded-pill border border-line px-2.5 py-1 text-muted hover:border-brand-green hover:text-brand-greenDeep transition-colors disabled:opacity-50"
+                    aria-label="Označit dotočeno"
+                    className="shrink-0 grid place-items-center w-7 h-7 rounded-full border border-dashed border-line text-muted hover:border-brand-green hover:text-brand-greenDeep transition-colors disabled:opacity-50"
                   >
-                    {dotoceniBezi === h.id ? 'Ukládám…' : 'Dotočeno'}
+                    {dotoceniBezi === h.id ? <IkonaCekani /> : <IkonaFajfka />}
                   </button>
                 ))}
               {/* Normostrany herce (23. 9. 2026) - jen u víc herců naráz. */}
@@ -274,5 +286,45 @@ export function VyberHercu({
         )}
       </div>
     </div>
+  );
+}
+
+/** Fajfka - „označit dotočeno". */
+function IkonaFajfka() {
+  return (
+    <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12.5l4.5 4.5L19 7" />
+    </svg>
+  );
+}
+
+/** Šipka zpátky - „zrušit dotočeno". */
+function IkonaVratit() {
+  return (
+    <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 10h10a5 5 0 0 1 0 10h-6" />
+      <path d="M8 6l-4 4 4 4" />
+    </svg>
+  );
+}
+
+/** Obálka - „poslat klientovi znovu". */
+function IkonaObalka() {
+  return (
+    <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5.5" width="18" height="13" rx="2" />
+      <path d="M3.5 7l8.5 6 8.5-6" />
+    </svg>
+  );
+}
+
+/** Tečky - ukládá se. */
+function IkonaCekani() {
+  return (
+    <svg viewBox="0 0 24 24" width={13} height={13} fill="currentColor" aria-hidden="true">
+      <circle cx="5" cy="12" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="19" cy="12" r="2" />
+    </svg>
   );
 }
