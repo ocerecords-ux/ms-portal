@@ -42,6 +42,7 @@ import { ProtokolNataceni } from './ProtokolNataceni';
 import { VykazyProjektu, type BonusRadek, type VykazRadek } from './VykazyProjektu';
 import { CerpaniPoDruzich } from './CerpaniPoDruzich';
 import { RodnyListSection } from './RodnyListSection';
+import { VystupySection } from './VystupySection';
 import { LicencniListSection } from './LicencniListSection';
 import { PrilohaObjednavky } from '@/components/PrilohaObjednavky';
 import { nactiLicencniListy, vychoziLicencniList } from '@/lib/licencniListServer';
@@ -58,6 +59,7 @@ import { nactiHistoriiProjektu } from '@/lib/projektLogServer';
 import { findInternalProject } from '@/lib/projektySeznamServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadRodneListy } from '@/lib/rodnyListServer';
+import { vystupyProProjekt } from '@/lib/vystupyServer';
 import { bezStarePredpony, dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
 import { nactiPenizeProjektu } from '@/lib/projektPenizeServer';
 import { natoceniProjektu } from '@/lib/brunoServer';
@@ -724,7 +726,57 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     />
   );
 
+  /**
+   * VÝSTUPY PROJEKTU (zadání 26. 9. 2026: „u jednoho projektu máme více
+   * výstupů… u Strabagu jsme teď dělali 4 různé délky a v každém spotu jiní
+   * herci").
+   *
+   * Záložka je u reklam - tedy tam, kde se dělají spoty a voiceovery. Projekt,
+   * který vznikl ještě před výstupy, si při prvním otevření založí jeden
+   * výstup ze svých dosavadních polí (viz vystupyProProjekt).
+   */
+  const jeReklamniProjekt = jeRadiovySpot || druhNotifikaceFirmy(company) === 'REKLAMA';
+  const vystupy = jeReklamniProjekt
+    ? await vystupyProProjekt(caflouProjectId, metaPoSync?.name || project?.name || '')
+    : [];
+  // Rodné listy: u rádiového spotu jsou načtené výš, u ostatních reklam se
+  // dotáhnou až tady - bez nich by u výstupu nebylo vidět, co už je hotové.
+  const rodneListyProjektu =
+    rodneListy.length > 0 || !jeReklamniProjekt ? rodneListy : await loadRodneListy(caflouProjectId);
+
+  const vystupySekce = (
+    <VystupySection
+      caflouProjectId={caflouProjectId}
+      canEdit={canEdit}
+      vystupy={vystupy}
+      // Vybírá se z herců projektu - ve výstupu se jméno nezadává znovu.
+      herci={herciProjektu.map((id) => ({ id, name: jmenoHerce.get(id) || '—' }))}
+      druhyLicence={druhyLicence}
+      typy={projectTypeOptions.map((nazev) => ({
+        nazev,
+        rodnyList: rodnyListTypy.includes(nazev),
+      }))}
+      rodneListy={rodneListyProjektu.map((rl) => ({
+        id: rl.id,
+        vystupId: rl.vystupId ?? null,
+        version: rl.version,
+        fileName: rl.fileName,
+        driveUrl: rl.driveUrl,
+      }))}
+      nazevProjektu={metaPoSync?.name || project?.name || ''}
+      nazevFirmy={firmaProjektu?.name ?? company?.name ?? ''}
+    />
+  );
+
   const tabs: ProjectTab[] = [{ key: 'prehled', label: 'Přehled', content: prehled }];
+  if (jeReklamniProjekt && isInternalRole(session.user.role)) {
+    tabs.push({
+      key: 'vystupy',
+      label: 'Výstupy',
+      count: vystupy.length,
+      content: vystupySekce,
+    });
+  }
   // Zalozka je u kazdeho projektu, ale jen pro toho, kdo na cisla ma pravo
   // (canViewProjectBudget) - Zuzo-labuzo a produkce ano, zvukar ne.
   if (rozpocet) {

@@ -385,6 +385,8 @@ model User {
   // --- Herec - zadani 5. 9. 2026: samostatna fyzicka osoba, bez firmy ---
   /// Projekty, ve kterych herec hraje (zadani 10. 9. 2026, vic hercu na projekt).
   projektyJakoHerec ProjectMeta[] @relation("ProjektHerci")
+  /// V kterých výstupech (spotech) herec mluví - 26. 9. 2026, viz model Vystup.
+  vystupyJakoHerec  Vystup[]      @relation("VystupHerci")
 
   studioLocations String[] @default([]) // lokace, ve kterych je herec schopen fyzicky natacet - viz lib/roles.ts HEREC_STUDIOS
 
@@ -2536,6 +2538,16 @@ model RodnyList {
   companyId       String?
   company         Company? @relation(fields: [companyId], references: [id])
 
+  /// VÝSTUP, KE KTERÉMU DOKUMENT PATŘÍ (zadání 26. 9. 2026: „u jednoho projektu
+  /// máme více výstupů… u Strabagu jsme dělali 4 různé délky"). Každá délka má
+  /// vlastní rodný list - délka je v dokumentu povinná, takže jeden RL na sadu
+  /// by lhal. Prázdno u starších záznamů, které vznikly ještě před výstupy.
+  vystupId    String?
+  vystup      Vystup? @relation(fields: [vystupId], references: [id])
+  /// Název výstupu tak, jak se jmenoval při vyrobení - dokument musí zůstat
+  /// doložitelný i po přejmenování, stejně jako ostatní textové kopie níž.
+  vystupNazev String?
+
   /// Pořadí verze. Automatika další verzi nikdy nedělá - vzniká jen řízeně
   /// tlačítkem "Vygenerovat RL znovu", aby refresh stránky nedělal duplicity.
   version  Int
@@ -2567,9 +2579,93 @@ model RodnyList {
   createdByUserId String?
   createdAt       DateTime @default(now())
 
-  @@unique([caflouProjectId, version])
+  /// Verze se počítají v rámci VÝSTUPU, ne projektu - pod jedním projektem
+  /// vzniká rodných listů víc a každý má vlastní řadu. Starší záznamy mají
+  /// vystupId prázdné a Postgres je bere jako různé, takže je unikát nesváže.
+  @@unique([caflouProjectId, vystupId, version])
   @@index([caflouProjectId])
   @@index([companyId])
+  @@index([vystupId])
+}
+
+/// VÝSTUP PROJEKTU (zadání 26. 9. 2026: „u jednoho projektu máme více výstupů…
+/// Např. pod jedním projektem se dělá jeden rádiový spot, jeden online
+/// voiceover. Jeden hlavní spot voiceover 1 min. a pak třeba downcuty 30, 20
+/// a 6 s. U něčeho se dělá postprodukce a u něčeho ne. U Strabagu jsme teď
+/// dělali 4 různé délky a v každém spotu jiní herci").
+///
+/// PROJEKT ZŮSTÁVÁ ZAKÁZKOU - jedna složka na Disku, jedna faktura, jeden chat,
+/// jeden rozpočet. Výstup je konkrétní odevzdaná věc: jeden spot, jeden
+/// voiceover, jeden downcut. Do 26. 9. 2026 měl portál všude zadrátováno
+/// projekt = jeden spot (spotName, spotLengthSeconds, režie a hudba seděly
+/// jednou na ProjectMeta), takže se Strabag dal udělat jedině čtyřmi projekty.
+///
+/// Návrh celé změny: claude/ms-portal-vystupy-projektu-navrh.md.
+model Vystup {
+  id              String @id @default(cuid())
+  /// Stejná vazba jako u dokladů a rodných listů - textové ID projektu.
+  caflouProjectId String
+  /// Pořadí v seznamu; downcuty se řadí hned za svůj hlavní výstup.
+  poradi          Int    @default(0)
+
+  /// „Hlavní spot", „Downcut 30s", „Nábor" - jak tomu říkáme mezi sebou
+  /// i v rodném listu.
+  nazev           String
+  /// Typ výstupu = název položky ceníku (stejný číselník jako typ projektu).
+  /// Podle jeho příznaku `rodnyList` se pozná, jestli se k výstupu dělá RL -
+  /// pod jedním projektem tak může být rádiový spot (RL ano) i online
+  /// voiceover (RL ne).
+  typKlic         String?
+  delkaSekund     Int?
+
+  /// DOWNCUT: zkrácená verze hlavního výstupu. Herce, hudbu, režii i licenci
+  /// dědí po rodiči, dokud se u něj nevyplní vlastní - proto se zadává jen
+  /// zaškrtnutím délky, ne celým formulářem znovu.
+  odvozenoZId String?
+  odvozenoZ   Vystup?  @relation("Downcuty", fields: [odvozenoZId], references: [id])
+  downcuty    Vystup[] @relation("Downcuty")
+
+  /// Co se na tomhle výstupu dělá - klíče z lib/sluzbyReklamy.ts. Je to na
+  /// výstupu, ne na objednávce: postprodukce se dělá u něčeho a u něčeho ne.
+  sluzby String[] @default([])
+
+  /// Kdo v tomhle spotu mluví. Vybírá se z herců projektu; díky tomu je
+  /// u Strabagu vidět, že v každé délce je někdo jiný.
+  herci User[] @relation("VystupHerci")
+
+  /// Údaje do rodného listu. Stejná pole jako dosud na ProjectMetě, jen
+  /// u každého výstupu vlastní.
+  rezie       String?
+  hudbaNazev  String?
+  hudbaAutor  String?
+  bezHudby    Boolean   @default(false)
+  datumVyroby DateTime?
+  /// Klient na dokumentu, když to není firma projektu (agentura, koncový
+  /// zadavatel) - jako ProjectMeta.rlClientName, jen po výstupech.
+  klientNaRL  String?
+
+  /// Licence konkrétního výstupu - spot běží v rádiu, voiceover online.
+  licence       DruhLicence[] @relation("VystupLicence")
+  licenceUziti  String?
+  licenceOd     DateTime?
+  licenceMesicu Int?
+
+  /// Hotovo = odevzdáno klientovi. Stav si dál vede projekt, tohle je jen
+  /// datum u řádku, ať se v sadě pozná, co už je z krku.
+  hotovoAt DateTime?
+
+  /// NÁVRH Z OBJEDNÁVKY (rozhodnutí 26. 9. 2026: „klient navrhne, produkce
+  /// potvrdí"). Co přijde z objednávky, čeká na potvrzení produkcí; co
+  /// založíme sami, je potvrzené rovnou.
+  potvrzenoAt DateTime?
+
+  rodneListy RodnyList[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caflouProjectId, poradi])
+  @@index([odvozenoZId])
 }
 
 /// Sdílená cache seznamu projektů z Caflou - oprava 9. 9. 2026.
@@ -3475,6 +3571,8 @@ model DruhLicence {
   active Boolean @default(true)
 
   projekty ProjectMeta[] @relation("ProjektLicence")
+  /// Licence u konkrétního výstupu (26. 9. 2026) - viz model Vystup.
+  vystupy  Vystup[]      @relation("VystupLicence")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

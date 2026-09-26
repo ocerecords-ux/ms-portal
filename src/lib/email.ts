@@ -1192,7 +1192,8 @@ type InvoiceEmailInput = {
    * tak automaticky s tím odeslal i rodný list"). Jen u rádiových spotů —
    * u ostatních projektů žádný rodný list neexistuje.
    */
-  rodnyList?: { nazev: string; obsah: Buffer } | null;
+  /** Od 26. 9. 2026 jich může být víc - jeden na každý výstup projektu. */
+  rodneListy?: { nazev: string; obsah: Buffer }[] | null;
 };
 
 export function buildInvoiceHtml(input: InvoiceEmailInput): string {
@@ -1219,7 +1220,11 @@ export function buildInvoiceHtml(input: InvoiceEmailInput): string {
     </table>
 
     ${input.pdf ? '<p class="small">Fakturu posíláme i v příloze — je na ní QR kód, kterým se platba v bankovní aplikaci vyplní sama.</p>' : ''}
-    ${input.rodnyList ? '<p class="small">V příloze je i rodný list.</p>' : ''}
+    ${
+      input.rodneListy?.length
+        ? `<p class="small">V příloze ${input.rodneListy.length > 1 ? `jsou i rodné listy (${input.rodneListy.length})` : 'je i rodný list'}.</p>`
+        : ''
+    }
 
     <p class="small">Kdyby cokoliv nesedělo, stačí na tento e-mail odpovědět.</p>
     <p class="small">${escapeHtml(input.issuerName)}</p>
@@ -1251,7 +1256,11 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
       `Bankovni ucet: ${[input.accountNumber, input.iban].filter(Boolean).join(' / ') || input.accountLabel}`,
       `Variabilni symbol: ${input.variableSymbol}`,
       input.pdf ? 'Fakturu posilame i v priloze, je na ni QR kod k platbe.' : '',
-      input.rodnyList ? 'V priloze je i rodny list.' : '',
+      input.rodneListy?.length
+        ? input.rodneListy.length > 1
+          ? `V priloze jsou i rodne listy (${input.rodneListy.length}).`
+          : 'V priloze je i rodny list.'
+        : '',
       '',
       input.issuerName,
     ]
@@ -1261,7 +1270,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
     ...(() => {
       const prilohy = [
         input.pdf ? { filename: input.pdf.nazev, content: input.pdf.obsah } : null,
-        input.rodnyList ? { filename: input.rodnyList.nazev, content: input.rodnyList.obsah } : null,
+        ...(input.rodneListy ?? []).map((r) => ({ filename: r.nazev, content: r.obsah })),
       ].filter((p): p is { filename: string; content: Buffer } => p !== null);
       return prilohy.length ? { attachments: prilohy } : {};
     })(),

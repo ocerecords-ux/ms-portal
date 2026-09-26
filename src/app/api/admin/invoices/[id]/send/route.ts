@@ -155,7 +155,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       accountNumber: cisloUctuSKodem(invoice.bankAccount.accountNumber, invoice.bankAccount.bankName),
       iban: invoice.bankAccount.iban,
       pdf: dokument.ok ? { nazev: dokument.nazev, obsah: dokument.pdf } : null,
-      rodnyList: rodnyList.potreba && rodnyList.ok ? { nazev: rodnyList.nazev, obsah: rodnyList.pdf } : null,
+      // Rodných listů může být víc - pod jedním projektem je výstupů několik
+      // a každý má svůj (26. 9. 2026).
+      rodneListy:
+        rodnyList.potreba && rodnyList.ok
+          ? rodnyList.dokumenty.map((d) => ({ nazev: d.nazev, obsah: d.pdf }))
+          : null,
     });
 
     if (!result.sent) {
