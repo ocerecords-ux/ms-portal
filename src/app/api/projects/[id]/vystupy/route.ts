@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { canEditProjectMeta } from '@/lib/roles';
 import { nazevDowncutu } from '@/lib/vystupy';
-import { vystupyProProjekt, zalozVystup } from '@/lib/vystupyServer';
+import { nactiVystupy, zalozVystup } from '@/lib/vystupyServer';
 
 /**
  * VÝSTUPY PROJEKTU (zadání 26. 9. 2026) - seznam a zakládání.
@@ -25,13 +25,15 @@ const schema = z.object({
   herciIds: z.array(z.string().trim().min(1)).max(20).optional(),
 });
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
 
+  // ZÁMĚRNĚ JEN ČTENÍ. Převod staršího projektu na výstupy dělá stránka
+  // projektu, která zná jeho skutečný název - kdyby ho zakládala tahle cesta,
+  // jmenoval by se výstup podle toho, co kdo pošle v adrese.
   const { id } = await params;
-  const nazev = req.nextUrl.searchParams.get('nazev') ?? '';
-  return NextResponse.json({ vystupy: await vystupyProProjekt(id, nazev) });
+  return NextResponse.json({ vystupy: await nactiVystupy(id) });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
