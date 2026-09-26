@@ -425,6 +425,81 @@ export async function uploadPdfToDriveFolder(
   }
 }
 
+/**
+ * DOKUMENT, DO KTERÉHO SE DÁ PSÁT (zadání 26. 9. 2026: „ukládalo by se to do
+ * editovatelného dokumentu na disku ve složce projektu").
+ *
+ * HTML se na Disk pošle s cílovým typem `application/vnd.google-apps.document`,
+ * takže z něj Google udělá běžný dokument - otevře se v prohlížeči a rovnou se
+ * do něj píše. Proto ne PDF: rodný list se čte, natáčecí text se píše.
+ *
+ * Portál do dokumentu po vyrobení nesahá. Kdo potřebuje nový, vyrobí si ho
+ * znovu a vznikne DALŠÍ soubor - přepsat rozepsaný text by byla škoda.
+ */
+export async function vytvorDokumentZHtml(
+  folderUrl: string,
+  nazev: string,
+  html: string,
+): Promise<NahraniNaDisk> {
+  const folderId = extractDriveFolderId(folderUrl);
+  if (!folderId) {
+    return { ok: false, duvod: 'Odkaz na složku není odkaz na Google Disk.' };
+  }
+
+  const token = await getAccessToken(DRIVE_WRITE_SCOPE);
+  if (!token) {
+    return { ok: false, duvod: 'Portál se nepřihlásil ke Google Disku (chybí nebo neplatí servisní účet).' };
+  }
+
+  try {
+    const boundary = `mediaspace-${Date.now()}`;
+    const metadata = JSON.stringify({
+      name: nazev,
+      parents: [folderId],
+      mimeType: 'application/vnd.google-apps.document',
+    });
+    const body = Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
+          `--${boundary}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n`,
+        'utf-8',
+      ),
+      Buffer.from(html, 'utf-8'),
+      Buffer.from(`\r\n--${boundary}--\r\n`, 'utf-8'),
+    ]);
+
+    const res = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,webViewLink',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`,
+        },
+        body: new Uint8Array(body),
+        cache: 'no-store',
+      },
+    );
+
+    if (!res.ok) {
+      const telo = await res.text().catch(() => '');
+      console.error('Google Drive: vytvoreni dokumentu selhalo', res.status, telo);
+      return { ok: false, duvod: popisChybyDisku(res.status, telo) };
+    }
+
+    const data = (await res.json()) as { id?: string; webViewLink?: string };
+    if (!data.id) return { ok: false, duvod: 'Disk dokument přijal, ale nevrátil jeho ID.' };
+    return {
+      ok: true,
+      id: data.id,
+      webViewLink: data.webViewLink ?? `https://docs.google.com/document/d/${data.id}/edit`,
+    };
+  } catch (err) {
+    console.error('Google Drive: vytvoreni dokumentu spadlo:', err);
+    return { ok: false, duvod: 'Disk neodpověděl.' };
+  }
+}
+
 /** Srozumitelný důvod místo holého čísla stavu. */
 function popisChybyDisku(status: number, telo: string): string {
   if (status === 403) {

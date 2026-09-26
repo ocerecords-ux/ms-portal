@@ -56,6 +56,7 @@ export function VystupySection({
   rodneListy,
   muzeNabidku,
   nazevProjektu,
+  nataceniUrl: vychoziNataceni,
 }: {
   caflouProjectId: string;
   canEdit: boolean;
@@ -70,12 +71,15 @@ export function VystupySection({
   /** Typy z ceníku; `rodnyList` říká, ke kterému výstupu se dělá RL. */
   typy: TypVolba[];
   nazevProjektu: string;
+  /** Odkaz na poslední natáčecí text na Disku, když už nějaký vznikl. */
+  nataceniUrl: string | null;
 }) {
   const router = useRouter();
   const [vystupy, setVystupy] = useState<VystupData[]>(vychozi);
   const [pracuje, setPracuje] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [nabidka, setNabidka] = useState<{ id: string; number: string } | null>(null);
+  const [nataceni, setNataceni] = useState<string | null>(vychoziNataceni);
 
   const razene = useMemo(() => serad(vystupy), [vystupy]);
   const podleId = useMemo(() => new Map(vystupy.map((v) => [v.id, v])), [vystupy]);
@@ -144,6 +148,26 @@ export function VystupySection({
     router.refresh();
   }
 
+  /**
+   * NATÁČECÍ TEXT (26. 9. 2026: „měli bychom nějaké vzory pro natáčení, kde by
+   * bylo jasně označené, jak se spot jmenuje a jakou má délku a pro jakou
+   * licenci. Ukládalo by se to do editovatelného dokumentu na disku ve složce
+   * projektu").
+   *
+   * Vzniká VŽDYCKY NOVÝ dokument - do rozepsaného textu portál nesahá.
+   */
+  async function vyrobNataceciText() {
+    const data = await zavolej(
+      `/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text`,
+      { method: 'POST', body: JSON.stringify({}) },
+    );
+    if (!data) return;
+    const url = String(data.url);
+    setNataceni(url);
+    window.open(url, '_blank', 'noopener,noreferrer');
+    router.refresh();
+  }
+
   async function vyrobRL(vystupId: string) {
     const data = await zavolej(
       `/api/projects/${encodeURIComponent(caflouProjectId)}/vystupy/${encodeURIComponent(vystupId)}/rodny-list`,
@@ -179,13 +203,34 @@ export function VystupySection({
             +
           </button>
         )}
+        {canEdit && razene.length > 0 && (
+          <button
+            type="button"
+            onClick={vyrobNataceciText}
+            disabled={pracuje}
+            title="Vyrobí na Disku dokument se spoty, jejich délkami a licencemi — text se píše přímo v něm"
+            className="ml-auto rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
+          >
+            Natáčecí text na Disk
+          </button>
+        )}
+        {nataceni && (
+          <a
+            href={nataceni}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-pill border border-line text-brand-purple font-heading font-semibold text-sm px-4 py-1.5 bg-surface no-underline hover:border-brand-purple transition-colors"
+          >
+            Otevřít natáčecí text ↗
+          </a>
+        )}
         {muzeNabidku && razene.length > 0 && (
           <button
             type="button"
             onClick={zalozNabidku}
             disabled={pracuje}
             title="Založí rozpracovanou nabídku — jedna položka za výstup"
-            className="ml-auto rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
+            className="rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
           >
             Nabídka z výstupů
           </button>

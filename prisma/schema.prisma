@@ -766,6 +766,14 @@ model ProjectMeta {
   /// Kdy se stav nabidky naposledy prehodil - do bublinky u znacky.
   nabidkaStavAt   DateTime?
 
+  /// NATÁČECÍ TEXT NA DISKU (zadání 26. 9. 2026). Dokument se spoty, jejich
+  /// délkami a licencemi, do kterého se pak píše samotný text spotu. Portál
+  /// si drží odkaz, aby se z projektu dal otevřít; obsah žije na Disku a
+  /// portál do něj po vyrobení nesahá - psát se do něj bude tam.
+  nataceniDocId  String?
+  nataceniDocUrl String?
+  nataceniDocAt  DateTime?
+
   zdroj           ProjectSource    @default(CAFLOU)
   /// Kdy projekt prisel jednorazovym prenosem z Caflou.
   prenesenoAt     DateTime?
@@ -2959,6 +2967,38 @@ model HerecDotocen {
 /// Radek existuje jen pro stav, ktery nekdo upravil. Co ulozene neni, se bere
 /// z vychozich textu v lib/vzoryZprav.ts, takze "Obnovit vychozi" znamena
 /// proste radek smazat.
+/// VZOR NATÁČECÍHO TEXTU (zadání 26. 9. 2026: „v rámci těch výstupů bych
+/// pracoval i s textem. Že bychom měli nějaké vzory pro natáčení, kde by bylo
+/// jasně označené, jak se spot jmenuje a jakou má délku a pro jakou licenci.
+/// Ukládalo by se to do editovatelného dokumentu na disku ve složce projektu").
+///
+/// ŠABLONA, NE KÓD - stejně jako vzory zpráv klientovi nebo smlouvy. Podoba
+/// listu se ladí za provozu a napevno v kódu by se měnila commitem.
+///
+/// Z čeho se dokument skládá: `uvod` se do něj napíše jednou nahoře a `blok`
+/// se zopakuje u každého výstupu. V obou se dosazují proměnné - viz
+/// lib/nataceniText.ts.
+model VzorNataceni {
+  id    String @id @default(cuid())
+  nazev String @unique
+
+  /// Hlavička celého dokumentu; prázdné = dokument začne rovnou prvním spotem.
+  uvod String? @db.Text
+  /// Co se zopakuje u každého výstupu - hlavička spotu a místo na text.
+  blok String  @db.Text
+
+  /// Vyřazený vzor se už nenabízí, ale zůstává u toho, co se z něj vyrobilo.
+  active  Boolean @default(true)
+  /// Ten, který se nabídne jako první. Zaškrtnutý smí být jen jeden.
+  vychozi Boolean @default(false)
+  poradi  Int     @default(100)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active, poradi])
+}
+
 model VzorZpravy {
   /// DRUH ZPRAVY (zadani 14. 9. 2026: „musime jeste vymyslet dva druhy
   /// notifikaci. Jeden druh je pro Audioknihy a druhy pro reklamy. U reklam

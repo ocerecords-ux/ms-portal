@@ -765,6 +765,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         driveUrl: rl.driveUrl,
       }))}
       nazevProjektu={metaPoSync?.name || project?.name || ''}
+      nataceniUrl={(metaPoSync as { nataceniDocUrl?: string | null } | null)?.nataceniDocUrl ?? null}
     />
   );
 

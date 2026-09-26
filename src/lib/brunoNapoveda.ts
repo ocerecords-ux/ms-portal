@@ -52,6 +52,11 @@ const STRANKY: { href: string; nazev: string; popis: string }[] = [
   { href: '/admin/bruno', nazev: 'Bruno', popis: 'příručka „jak to u nás chodí", ze které čtu' },
   { href: '/admin/udaje', nazev: 'Údaje odkazem', popis: 'žádosti o údaje herců a firem přes odkaz' },
   { href: '/admin/vzory-zprav', nazev: 'Vzory zpráv', popis: 'předlohy mailů, které portál posílá' },
+  {
+    href: '/admin/vzory-nataceni',
+    nazev: 'Vzory natáčecích textů',
+    popis: 'předloha listu se spoty, délkami a licencemi pro natáčení',
+  },
   { href: '/admin/zpravy-portalu', nazev: 'Zprávy portálu', popis: 'co portál rozeslal - kontrola odchozích zpráv' },
 ];
 

@@ -5,6 +5,7 @@ import { VYCHOZI_NAVODY } from './vychoziNavody';
 import { GOOGLE_KALENDAR } from './importKalendare/googleKalendar';
 import { prahaNaUtc, rozeberUdalost, srovnej } from '../src/lib/importGoogleKalendar';
 import { bezTitulu } from '../src/lib/jmena';
+import { VYCHOZI_VZOR_NATACENI } from '../src/lib/nataceniText';
 import { PODPIS_ONDREJ } from './podpisOndrej';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -176,6 +177,7 @@ async function main() {
   await nastavBarvyStudii();
   await doplnKalendarDoListy();
   await zapniRodnyListURadiovehoSpotu();
+  await zalozVzorNataceni();
 
   await backfillCodes();
   await prenesHerceDoSeznamu();
@@ -330,6 +332,27 @@ async function seedStudios() {
  * polozky; dal si to tym prepina v administraci a seed uz do toho nesaha -
  * proto ta znamka v Counteru, stejne jako u doplneni kalendare do listy.
  */
+/**
+ * Výchozí vzor natáčecího textu (zadání 26. 9. 2026). Zakládá se jen tehdy,
+ * když žádný není - dál si ho tým upravuje v administraci a seed do něj
+ * nesahá.
+ */
+async function zalozVzorNataceni() {
+  const uz = await prisma.vzorNataceni.count();
+  if (uz > 0) return;
+
+  await prisma.vzorNataceni.create({
+    data: {
+      nazev: VYCHOZI_VZOR_NATACENI.nazev,
+      uvod: VYCHOZI_VZOR_NATACENI.uvod,
+      blok: VYCHOZI_VZOR_NATACENI.blok,
+      vychozi: true,
+      poradi: 10,
+    },
+  });
+  console.log('  vzory: zalozen vychozi natacecí text');
+}
+
 async function zapniRodnyListURadiovehoSpotu() {
   const ZNAMKA = 'cenik-backfill-rodny-list';
   const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
