@@ -266,7 +266,7 @@ export function VystupySection({
           „ať se to bude doplňovat do polí vlevo a ten náhled celého dokumentu
           bude vpravo"). Náhled drží krok s řádky, takže je při zadávání
           rovnou vidět, jak list vypadá. Na užší obrazovce jdou pod sebe. */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,440px)] gap-5 items-start">
+      <div className="grid grid-cols-1 min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,380px)] gap-5 items-start">
         <div className="flex flex-col gap-3 min-w-0">
           <p className="text-sm font-body text-muted m-0">
             Jeden výstup = jedna odevzdaná věc: spot, voiceover, zkrácená verze. Na řádku je
@@ -315,7 +315,7 @@ export function VystupySection({
             stejné HTML, jen v rámečku, a na A4. Bílý podklad schválně: je to
             dokument, ne další karta portálu. */}
         {razene.length > 0 && (
-          <div className="flex flex-col gap-2 min-w-0 xl:sticky xl:top-4">
+          <div className="flex flex-col gap-2 min-w-0 min-[1100px]:sticky min-[1100px]:top-4">
             <span className="text-sm font-heading font-semibold text-ink">
               Náhled natáčecího textu
             </span>
@@ -323,7 +323,7 @@ export function VystupySection({
               key={verzeNahledu}
               src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
               title="Náhled natáčecího textu"
-              className="w-full h-[640px] rounded-card border border-line bg-white"
+              className="w-full h-[560px] min-[1100px]:h-[600px] rounded-card border border-line bg-white"
             />
             <span className="text-xs font-body text-muted">
               Takhle bude vypadat dokument ve složce projektu na Disku — na A4, ať je vidět, co
