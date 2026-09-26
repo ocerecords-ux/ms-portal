@@ -784,7 +784,9 @@ function bunkaSloupce(
             {p.meta?.preposlech ? (
               <DvojklikOtevri
                 odkaz={`/projekty/${p.id}?zalozka=preposlech`}
-                popis="Dvojklik otevře přeposlech"
+                druh="PREPOSLECH"
+                id={String(p.id)}
+                popis="Dvojklik ukáže náhled přeposlechu"
               >
                 <OdznakPreposlechu stav={p.meta?.preposlech} />
               </DvojklikOtevri>

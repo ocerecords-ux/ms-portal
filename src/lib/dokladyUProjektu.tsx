@@ -1,4 +1,4 @@
-import { DvojklikOtevri } from '@/components/DvojklikOtevri';
+import { DvojklikOtevri, type DruhNahledu } from '@/components/DvojklikOtevri';
 
 /**
  * IKONY DOKLADŮ U NÁZVU PROJEKTU (zadání 25. 9. 2026: „potřebuji ještě vedle
@@ -29,16 +29,21 @@ function SDvojklikem({
   zapnuto,
   odkaz,
   popis,
+  druh,
+  id,
   children,
 }: {
   zapnuto: boolean;
   odkaz: string;
   popis: string;
+  /** Co se ukáže v náhledu (26. 9. 2026). */
+  druh: DruhNahledu;
+  id: string | null | undefined;
   children: React.ReactNode;
 }) {
   if (!zapnuto) return <>{children}</>;
   return (
-    <DvojklikOtevri odkaz={odkaz} popis={popis}>
+    <DvojklikOtevri odkaz={odkaz} popis={popis} druh={druh} id={id}>
       {children}
     </DvojklikOtevri>
   );
@@ -168,7 +173,9 @@ export function ZnackyDokladu({
         <SDvojklikem
           zapnuto={dvojklik && Boolean(doklady.nabidkaId)}
           odkaz={`/admin/doklady/nabidky/${doklady.nabidkaId ?? ''}`}
-          popis={`${POPIS_NABIDKY[nabidka]}${dodatek(doklady.nabidkaCisla)} — dvojklik otevře nabídku`}
+          druh="NABIDKA"
+          id={doklady.nabidkaId}
+          popis={`${POPIS_NABIDKY[nabidka]}${dodatek(doklady.nabidkaCisla)} — dvojklik ukáže náhled`}
         >
           <Znacka
             barva={BARVA_NABIDKY[nabidka]}
@@ -187,7 +194,9 @@ export function ZnackyDokladu({
         <SDvojklikem
           zapnuto={dvojklik && Boolean(doklady.fakturaId)}
           odkaz={`/admin/doklady/faktury/${doklady.fakturaId ?? ''}`}
-          popis={`${POPIS_FAKTURY[faktura]}${dodatek(doklady.fakturaCisla)} — dvojklik otevře fakturu`}
+          druh="FAKTURA"
+          id={doklady.fakturaId}
+          popis={`${POPIS_FAKTURY[faktura]}${dodatek(doklady.fakturaCisla)} — dvojklik ukáže náhled`}
         >
           <Znacka
             barva={BARVA_FAKTURY[faktura]}
