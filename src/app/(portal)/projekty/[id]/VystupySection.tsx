@@ -87,6 +87,18 @@ export function VystupySection({
    * takže by po uložení výstupu ukazoval starý list z paměti.
    */
   const [verzeNahledu, setVerzeNahledu] = useState(0);
+  /** Náhled přes celou obrazovku (26. 9. 2026: „po kliknutí na ten dokument
+   *  bych chtěl získat větší náhled"). */
+  const [velkyNahled, setVelkyNahled] = useState(false);
+
+  useEffect(() => {
+    if (!velkyNahled) return;
+    const zavri = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setVelkyNahled(false);
+    };
+    window.addEventListener('keydown', zavri);
+    return () => window.removeEventListener('keydown', zavri);
+  }, [velkyNahled]);
 
   const razene = useMemo(() => serad(vystupy), [vystupy]);
   const podleId = useMemo(() => new Map(vystupy.map((v) => [v.id, v])), [vystupy]);
@@ -266,7 +278,7 @@ export function VystupySection({
           „ať se to bude doplňovat do polí vlevo a ten náhled celého dokumentu
           bude vpravo"). Náhled drží krok s řádky, takže je při zadávání
           rovnou vidět, jak list vypadá. Na užší obrazovce jdou pod sebe. */}
-      <div className="grid grid-cols-1 min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,380px)] gap-5 items-start">
+      <div className="grid grid-cols-1 min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,480px)] gap-5 items-start">
         {/* Vysvětlivka tu nebyla potřeba (26. 9. 2026: „dej pryč ten popis
             s vysvětlivkou") - co který sloupec znamená, je v Nápovědě. */}
         <div className="flex flex-col gap-3 min-w-0">
@@ -314,17 +326,58 @@ export function VystupySection({
             </span>
             {/* Rámeček má tvar A4 a list se do něj vejde celý - žádný
                 posuvník (26. 9. 2026: „u toho náhledu dokumentu nemůže být
-                nikdy ten posuvník, chci celou A4 hned vždy vidět"). */}
-            <iframe
-              key={verzeNahledu}
-              src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
-              title="Náhled natáčecího textu"
-              scrolling="no"
-              className="w-full aspect-[210/297] rounded-card border border-line bg-white overflow-hidden"
-            />
+                nikdy ten posuvník, chci celou A4 hned vždy vidět").
+                Klepnutím se otevře přes celou obrazovku; rámeček sám na
+                klepnutí nereaguje, proto je přes něj průhledné tlačítko. */}
+            <div className="relative w-full">
+              <iframe
+                key={verzeNahledu}
+                src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
+                title="Náhled natáčecího textu"
+                scrolling="no"
+                className="w-full aspect-[210/297] rounded-card border border-line bg-white overflow-hidden"
+              />
+              <button
+                type="button"
+                onClick={() => setVelkyNahled(true)}
+                title="Zvětšit náhled"
+                aria-label="Zvětšit náhled natáčecího textu"
+                className="absolute inset-0 rounded-card border-0 bg-transparent cursor-zoom-in hover:bg-brand-purple/5 transition-colors"
+              />
+            </div>
           </div>
         )}
       </div>
+
+      {/* VELKÝ NÁHLED. Tentýž list, jen přes celou obrazovku - zavře se
+          klepnutím mimo, křížkem nebo Escapem. */}
+      {velkyNahled && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Náhled natáčecího textu"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setVelkyNahled(false);
+          }}
+          className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <iframe
+            key={`velky-${verzeNahledu}`}
+            src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
+            title="Náhled natáčecího textu"
+            scrolling="no"
+            className="h-[94vh] max-w-[96vw] aspect-[210/297] rounded-card border-0 bg-white shadow-2xl"
+          />
+          <button
+            type="button"
+            onClick={() => setVelkyNahled(false)}
+            aria-label="Zavřít náhled"
+            className="absolute top-4 right-4 rounded-pill bg-surface border border-line text-ink font-heading text-sm px-4 py-1.5 cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors"
+          >
+            Zavřít
+          </button>
+        </div>
+      )}
     </section>
   );
 }
@@ -429,7 +482,7 @@ function VystupRadek({
            */
           onBlur={() => prepoctiNazev(delkaSekund, licenceIds)}
           aria-label="Název výstupu"
-          className="flex-1 min-w-[160px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm outline-none hover:border-line focus:border-brand-purple focus:bg-field disabled:opacity-60"
+          className="flex-1 min-w-[140px] max-w-[280px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm outline-none hover:border-line focus:border-brand-purple focus:bg-field disabled:opacity-60"
         />
 
         {/* Kdo v něm mluví - u Strabagu je v každé délce někdo jiný. */}
