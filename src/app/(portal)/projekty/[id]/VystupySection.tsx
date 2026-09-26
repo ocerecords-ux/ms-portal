@@ -267,16 +267,9 @@ export function VystupySection({
           bude vpravo"). Náhled drží krok s řádky, takže je při zadávání
           rovnou vidět, jak list vypadá. Na užší obrazovce jdou pod sebe. */}
       <div className="grid grid-cols-1 min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,380px)] gap-5 items-start">
+        {/* Vysvětlivka tu nebyla potřeba (26. 9. 2026: „dej pryč ten popis
+            s vysvětlivkou") - co který sloupec znamená, je v Nápovědě. */}
         <div className="flex flex-col gap-3 min-w-0">
-          <p className="text-sm font-body text-muted m-0">
-            Jeden výstup = jedna odevzdaná věc: spot, voiceover, zkrácená verze. Na řádku je
-            název, kdo v něm mluví, délka a licence; režii, hudbu a datum výroby má projekt
-            jednou v záložce Rodný list. Délka se píše v sekundách, od minuty výš v minutách —{' '}
-            <span className="font-heading text-ink">30s</span>,{' '}
-            <span className="font-heading text-ink">2min.</span>,{' '}
-            <span className="font-heading text-ink">1min.30s</span>.
-          </p>
-
           {chyba && (
             <p className="text-sm font-body text-status-error m-0" role="alert">
               {chyba}
@@ -319,17 +312,16 @@ export function VystupySection({
             <span className="text-sm font-heading font-semibold text-ink">
               Náhled natáčecího textu
             </span>
+            {/* Rámeček má tvar A4 a list se do něj vejde celý - žádný
+                posuvník (26. 9. 2026: „u toho náhledu dokumentu nemůže být
+                nikdy ten posuvník, chci celou A4 hned vždy vidět"). */}
             <iframe
               key={verzeNahledu}
               src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
               title="Náhled natáčecího textu"
-              className="w-full h-[560px] min-[1100px]:h-[600px] rounded-card border border-line bg-white"
+              scrolling="no"
+              className="w-full aspect-[210/297] rounded-card border border-line bg-white overflow-hidden"
             />
-            <span className="text-xs font-body text-muted">
-              Takhle bude vypadat dokument ve složce projektu na Disku — na A4, ať je vidět, co
-              se na stránku vejde. Text spotů se píše až v něm; podobu listu má na starost
-              Administrace → Vzory natáčecích textů.
-            </span>
           </div>
         )}
       </div>

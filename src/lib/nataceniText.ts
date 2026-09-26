@@ -241,21 +241,27 @@ export function sestavHtmlNataceni(
   }
 
   // NÁHLED: bílý list A4 (794 × 1123 px při 96 dpi) zmenšený tak, aby se
-  // vešel na šířku rámečku. Text se tím zmenší i zvětší přesně v poměru
-  // stránky, takže je vidět, co se na jednu A4 opravdu vejde.
+  // vešel CELÝ - na šířku i na výšku rámečku (26. 9. 2026: „u toho náhledu
+  // dokumentu nemůže být nikdy ten posuvník, chci celou A4 hned vždy vidět").
+  // Když je textu na víc stránek, list se zmenší dál; posuvník tu nikdy není.
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${escapeHtml(podklady.projekt)}</title></head>
-<body style="margin:0;padding:14px 0;background:#e9e7f1;font-family:Arial,sans-serif">
-<div id="obal" style="width:794px;margin:0 auto;transform-origin:top center">
+<body style="margin:0;padding:0;background:#e9e7f1;font-family:Arial,sans-serif;overflow:hidden">
+<div id="obal" style="width:794px;transform-origin:top left;position:absolute;top:0;left:0">
 <div id="list" style="width:794px;min-height:1123px;box-sizing:border-box;background:#ffffff;padding:60px 64px;box-shadow:0 2px 16px rgba(32,26,51,0.22)">${obsah}</div>
 </div>
 <script>
 (function(){
   var obal = document.getElementById('obal'), list = document.getElementById('list');
   function srovnej(){
-    var s = Math.min(1, (document.documentElement.clientWidth - 28) / 794);
-    obal.style.transform = 'scale(' + s + ')';
-    obal.style.height = (list.offsetHeight * s) + 'px';
+    var okraj = 12;
+    var w = document.documentElement.clientWidth - okraj * 2;
+    var h = document.documentElement.clientHeight - okraj * 2;
+    var vyska = Math.max(list.offsetHeight, 1123);
+    var s = Math.min(w / 794, h / vyska);
+    if (!(s > 0)) return;
+    obal.style.transform = 'translate(' + ((document.documentElement.clientWidth - 794 * s) / 2) +
+      'px, ' + okraj + 'px) scale(' + s + ')';
   }
   window.addEventListener('resize', srovnej);
   window.addEventListener('load', srovnej);
