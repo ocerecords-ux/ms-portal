@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta, isInternalRole } from '@/lib/roles';
 import { presunDoKoseNaDisku } from '@/lib/googleDrive';
+import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
 
 /**
  * Výdej a mazání licenčního listu (zadání 22. 9. 2026) - stejná pravidla jako
@@ -23,7 +24,16 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: 'K tomuto dokumentu nemáte přístup.' }, { status: 403 });
   }
 
-  if (!ll.url.startsWith('data:')) return NextResponse.redirect(ll.url);
+  /**
+   * PDF v úložišti se dává PODEPSANÝM odkazem - holá adresa kbelíku vrátí
+   * chybu (27. 9. 2026: prázdný archiv u „Stáhnout vše"). Když se podepsat
+   * nedá, zkusí se adresa tak, jak je.
+   */
+  if (!ll.url.startsWith('data:')) {
+    const klic = klicZAdresyUloziste(ll.url);
+    const odkaz = klic ? await podepsanyOdkazNaPrilohu(klic, ll.fileName) : null;
+    return NextResponse.redirect(odkaz || ll.url);
+  }
   const bytes = Buffer.from(ll.url.slice(ll.url.indexOf(',') + 1), 'base64');
   return new NextResponse(new Uint8Array(bytes), {
     status: 200,

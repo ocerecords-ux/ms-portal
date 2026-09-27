@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
+import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
 import { hlavickyZipu, zipStream, type PolozkaZipu } from '@/lib/zip';
 
 /**
@@ -94,22 +95,41 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const polozky: PolozkaZipu[] = dokumenty.map((d) => ({
     nazev: d.nazev,
     datum: d.vytvoreno,
-    nacti: async () => {
-      // PDF je buď rovnou v záznamu (data URL), nebo v úložišti.
-      if (d.url.startsWith('data:')) {
-        return new Uint8Array(Buffer.from(d.url.slice(d.url.indexOf(',') + 1), 'base64'));
-      }
-      try {
-        const res = await fetch(d.url);
-        if (!res.ok || !res.body) return null;
-        return res.body;
-      } catch {
-        // Jeden nedostupný soubor archiv neshodí - ostatní se stáhnou.
-        return null;
-      }
-    },
+    nacti: async () => nactiDokument(d.url, d.nazev),
   }));
 
   const nazevArchivu = `Dokumenty - ${bezpecny(meta?.name || params.id)}.zip`;
   return new NextResponse(zipStream(polozky), { headers: hlavickyZipu(nazevArchivu) });
+}
+
+/**
+ * Obsah jednoho dokumentu. Starší záznamy mají PDF jako data URL rovnou
+ * v databázi, novější leží v S3/R2 - a na ten se musí sáhnout PODEPSANÝM
+ * odkazem. Bez podpisu úložiště odpoví chybou a v archivu by nebylo nic
+ * (27. 9. 2026: „archiv je prázdný nebo neobsahuje žádné čitelné položky").
+ */
+async function nactiDokument(
+  adresa: string,
+  nazev: string,
+): Promise<Uint8Array | ReadableStream<Uint8Array> | null> {
+  if (adresa.startsWith('data:')) {
+    return new Uint8Array(Buffer.from(adresa.slice(adresa.indexOf(',') + 1), 'base64'));
+  }
+
+  const klic = klicZAdresyUloziste(adresa);
+  const odkaz = klic ? await podepsanyOdkazNaPrilohu(klic, nazev) : adresa;
+  if (!odkaz) return null;
+
+  try {
+    const res = await fetch(odkaz, { cache: 'no-store' });
+    if (!res.ok || !res.body) {
+      console.error(`ZIP dokumentů: „${nazev}" se nepodařilo stáhnout (${res.status}).`);
+      return null;
+    }
+    return res.body;
+  } catch (err) {
+    // Jeden nedostupný soubor archiv neshodí - ostatní se stáhnou.
+    console.error(`ZIP dokumentů: „${nazev}" se nepodařilo stáhnout:`, err);
+    return null;
+  }
 }

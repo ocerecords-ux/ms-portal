@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canEditProjectMeta, isInternalRole } from '@/lib/roles';
 import { presunDoKoseNaDisku } from '@/lib/googleDrive';
+import { klicZAdresyUloziste, podepsanyOdkazNaPrilohu } from '@/lib/storage';
 
 /**
  * Výdej hotového Rodného listu (PDF) - zadání 9. 9. 2026.
@@ -36,7 +37,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // klíčem - jen na něj přesměrujeme. Bez úložiště je dokument uložený rovnou
   // v databázi jako data URL a posíláme ho odsud.
   if (!rl.url.startsWith('data:')) {
-    return NextResponse.redirect(rl.url);
+    // Holá adresa kbelíku vrátí chybu - posílá se podepsaný odkaz
+    // (27. 9. 2026, stejně jako u licenčního listu).
+    const klic = klicZAdresyUloziste(rl.url);
+    const odkaz = klic ? await podepsanyOdkazNaPrilohu(klic, rl.fileName) : null;
+    return NextResponse.redirect(odkaz || rl.url);
   }
 
   const base64 = rl.url.slice(rl.url.indexOf(',') + 1);
