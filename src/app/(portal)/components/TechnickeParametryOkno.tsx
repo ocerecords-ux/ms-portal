@@ -100,17 +100,22 @@ export function TechnickeParametryOkno({ caflouProjectId }: { caflouProjectId: s
 
   return (
     <>
+      {/* POPSANÉ TLAČÍTKO, NE JEN IKONA (27. 9. 2026: „v tom chatu to taky
+          není" - samotný šedý symbol mezi připínáčkem a zvonkem nikdo
+          nenajde). Text je krátký, takže se vejde i do úzkého doku. */}
       <button
         type="button"
         onClick={(e) => void otevri(e)}
-        title="Technické parametry výroby"
-        aria-label="Technické parametry výroby"
+        title="Technické parametry výroby — v čem se to odevzdává"
         aria-expanded={Boolean(kotva)}
-        className={`shrink-0 leading-none p-1 -m-1 transition-colors ${
-          kotva ? 'text-brand-purple' : 'text-muted hover:text-brand-purple'
+        className={`shrink-0 inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[11px] font-heading font-semibold transition-colors ${
+          kotva
+            ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
+            : 'border-line text-muted hover:text-brand-purple hover:border-brand-purple'
         }`}
       >
         <IkonaParametru />
+        Parametry
       </button>
 
       {kotva && (
@@ -171,9 +176,9 @@ function IkonaParametru() {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
       strokeLinecap="round"
-      className="w-[22px] h-[22px]"
+      className="w-3.5 h-3.5"
       aria-hidden="true"
     >
       <path d="M5 21V14M5 10V3M12 21v-9M12 8V3M19 21v-5M19 12V3" />
