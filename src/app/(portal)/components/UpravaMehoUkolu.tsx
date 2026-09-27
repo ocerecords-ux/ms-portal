@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { DatumPole } from '@/components/DatumPole';
+import { usePreklad } from './JazykProvider';
 
 /**
  * ÚPRAVA VLASTNÍHO ÚKOLU (zadání 25. 9. 2026: „nemůžu upravovat své úkoly,
@@ -35,6 +36,7 @@ export function UpravaMehoUkolu({
   /** `zmeneno` = seznam je potřeba načíst znovu. */
   onKonec: (zmeneno: boolean) => void;
 }) {
+  const t = usePreklad();
   const [nazev, setNazev] = useState(ukol.title);
   const [den, setDen] = useState(ukol.dueDate ?? '');
   const [cas, setCas] = useState(ukol.dueTime ?? '');
@@ -61,12 +63,12 @@ export function UpravaMehoUkolu({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setChyba(data?.error || 'Nepodařilo se uložit.');
+        setChyba(data?.error || t('ukoly.chybaUlozit'));
         return;
       }
       onKonec(true);
     } catch {
-      setChyba('Nepodařilo se uložit.');
+      setChyba(t('ukoly.chybaUlozit'));
     } finally {
       setBusy(false);
     }
@@ -92,23 +94,23 @@ export function UpravaMehoUkolu({
         value={nazev}
         onChange={(e) => setNazev(e.target.value)}
         className={`${pole} text-sm`}
-        aria-label="Název úkolu"
+        aria-label={t('ukoly.nazevUkolu')}
       />
       <div className="flex items-center gap-1.5">
         <DatumPole
           value={den}
           onChange={(e) => setDen(e.target.value)}
           className={`${pole} flex-1 min-w-0`}
-          aria-label="Termín"
+          aria-label={t('ukoly.termin')}
         />
         <input
           type="time"
           value={cas}
           onChange={(e) => setCas(e.target.value)}
           disabled={!den}
-          title={den ? 'Do kolika hodin (nepovinné)' : 'Nejdřív vyberte datum'}
+          title={den ? t('ukoly.doKolikaHodin') : t('ukoly.nejdrivDatum')}
           className={`${pole} w-[92px] disabled:opacity-40`}
-          aria-label="Čas"
+          aria-label={t('ukoly.cas')}
         />
       </div>
       {chyba && <span className="text-[11px] font-body text-danger">{chyba}</span>}
@@ -118,14 +120,14 @@ export function UpravaMehoUkolu({
           disabled={busy || !nazev.trim()}
           className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-50"
         >
-          Uložit
+          {t('obecne.ulozit')}
         </button>
         <button
           type="button"
           onClick={() => onKonec(false)}
           className="text-xs font-heading text-muted hover:text-ink px-1"
         >
-          Zpět
+          {t('obecne.zpet')}
         </button>
         <span className="flex-1" />
         {/* Mazání až na druhé klepnutí - úkol se vrátit nedá. */}
@@ -136,7 +138,7 @@ export function UpravaMehoUkolu({
           onBlur={() => setPotvrditSmazani(false)}
           className="text-xs font-heading font-semibold text-danger hover:underline px-1"
         >
-          {potvrditSmazani ? 'Opravdu smazat?' : 'Smazat úkol'}
+          {potvrditSmazani ? t('ukoly.opravduSmazat') : t('ukoly.smazatUkol')}
         </button>
       </div>
     </form>

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { DatumPole } from '@/components/DatumPole';
 import { useState } from 'react';
 import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from './JazykProvider';
 
 /**
  * „ZADAL JSEM" (zadání 21. 9. 2026: „když vytvořím někomu dalšímu úkol
@@ -28,13 +30,15 @@ export type ZadanyUkolVSeznamu = {
   zdrojKonverzaceId: string | null;
 };
 
-const datum = (iso: string) =>
-  new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(new Date(iso));
+const datum = (jazyk: Jazyk, iso: string) =>
+  new Intl.DateTimeFormat(kodJazyka(jazyk), { day: 'numeric', month: 'numeric' }).format(new Date(iso));
 
 const pole =
   'rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink outline-none focus:border-brand-purple';
 
 export function ZadaneUkoly({ ukoly, onZmena }: { ukoly: ZadanyUkolVSeznamu[]; onZmena: () => void }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [splneneVidet, setSplneneVidet] = useState(false);
   const [upravovany, setUpravovany] = useState<string | null>(null);
   if (ukoly.length === 0) return null;
@@ -71,15 +75,22 @@ export function ZadaneUkoly({ ukoly, onZmena }: { ukoly: ZadanyUkolVSeznamu[]; o
         <span className="min-w-0 flex-1">
           <span className={`block text-sm font-body break-words ${u.done ? 'text-muted' : 'text-ink'}`}>{u.title}</span>
           <span className="block text-[11px] font-heading mt-0.5">
-            <span className="text-brand-purple">pro {u.komu}</span>
+            <span className="text-brand-purple">{t('ukoly.zadane.pro', { komu: u.komu })}</span>
             {u.done ? (
               <span className="text-brand-greenDeep dark:text-brand-green">
-                {' · '}splněno{u.splnenoAt ? ` ${datum(u.splnenoAt)}` : ''}
+                {' · '}
+                {u.splnenoAt
+                  ? t('ukoly.zadane.splnenoDne', { datum: datum(jazyk, u.splnenoAt) })
+                  : t('ukoly.zadane.splneno')}
               </span>
             ) : (
               <span className={poTerminu ? 'text-danger' : 'text-muted'}>
                 {' · '}
-                {u.dueDate ? `${poTerminu ? 'po termínu, ' : ''}do ${popisTerminu(u.dueDate, u.dueTime)}` : 'čeká'}
+                {u.dueDate
+                  ? t(poTerminu ? 'ukoly.zadane.poTerminuDo' : 'ukoly.zadane.doTerminu', {
+                      termin: popisTerminu(u.dueDate, u.dueTime),
+                    })
+                  : t('ukoly.zadane.ceka')}
               </span>
             )}
           </span>
@@ -91,7 +102,7 @@ export function ZadaneUkoly({ ukoly, onZmena }: { ukoly: ZadanyUkolVSeznamu[]; o
         {u.zdrojKonverzaceId ? (
           <Link
             href={`/chat?konverzace=${u.zdrojKonverzaceId}`}
-            title="Otevřít konverzaci, ze které úkol vznikl"
+            title={t('ukoly.zadane.otevritKonverzaci')}
             className="flex-1 min-w-0 flex items-start gap-2.5 py-2 px-1 rounded-lg no-underline hover:bg-field"
           >
             {obsah}
@@ -103,8 +114,8 @@ export function ZadaneUkoly({ ukoly, onZmena }: { ukoly: ZadanyUkolVSeznamu[]; o
           <button
             type="button"
             onClick={() => setUpravovany(u.id)}
-            title="Upravit úkol"
-            aria-label="Upravit úkol"
+            title={t('ukoly.upravitUkol')}
+            aria-label={t('ukoly.upravitUkol')}
             className="mt-1.5 shrink-0 rounded-md px-1.5 py-1 text-xs text-muted hover:text-brand-purple hover:bg-field opacity-60 group-hover:opacity-100"
           >
             ✎
@@ -117,12 +128,14 @@ export function ZadaneUkoly({ ukoly, onZmena }: { ukoly: ZadanyUkolVSeznamu[]; o
   return (
     <section className="flex flex-col gap-1 pt-3 border-t border-line">
       <h3 className="m-0 px-1 text-[11px] font-heading font-semibold uppercase tracking-[0.12em] text-muted">
-        Zadal jsem{cekaji.length > 0 ? ` · čeká ${cekaji.length}` : ''}
+        {cekaji.length > 0
+          ? t('ukoly.zadane.nadpisCeka', { pocet: cekaji.length })
+          : t('ukoly.zadane.nadpis')}
       </h3>
       <ul className="list-none p-0 m-0 flex flex-col">
         {cekaji.map(radek)}
         {cekaji.length === 0 && (
-          <li className="text-sm font-body text-muted px-1 py-1">Všechno, co jste zadali, je hotové.</li>
+          <li className="text-sm font-body text-muted px-1 py-1">{t('ukoly.zadane.vsechnoHotove')}</li>
         )}
       </ul>
       {splnene.length > 0 && (
@@ -132,7 +145,9 @@ export function ZadaneUkoly({ ukoly, onZmena }: { ukoly: ZadanyUkolVSeznamu[]; o
             onClick={() => setSplneneVidet((v) => !v)}
             className="self-start text-[11px] font-heading font-semibold text-muted hover:text-brand-purple px-1"
           >
-            {splneneVidet ? 'Skrýt splněné' : `Splněné (${splnene.length})`}
+            {splneneVidet
+              ? t('ukoly.zadane.skrytSplnene')
+              : t('ukoly.zadane.splnenePocet', { pocet: splnene.length })}
           </button>
           {splneneVidet && <ul className="list-none p-0 m-0 flex flex-col">{splnene.map(radek)}</ul>}
         </>
@@ -143,6 +158,7 @@ export function ZadaneUkoly({ ukoly, onZmena }: { ukoly: ZadanyUkolVSeznamu[]; o
 
 /** Úprava zadaného úkolu přímo v seznamu - název, datum, čas, nebo zrušení. */
 function UpravaUkolu({ ukol, onKonec }: { ukol: ZadanyUkolVSeznamu; onKonec: (zmeneno: boolean) => void }) {
+  const t = usePreklad();
   const [nazev, setNazev] = useState(ukol.title);
   const [den, setDen] = useState(ukol.dueDate ?? '');
   const [cas, setCas] = useState(ukol.dueTime ?? '');
@@ -164,12 +180,12 @@ function UpravaUkolu({ ukol, onKonec }: { ukol: ZadanyUkolVSeznamu; onKonec: (zm
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setChyba(data?.error || 'Nepodařilo se uložit.');
+        setChyba(data?.error || t('ukoly.chybaUlozit'));
         return;
       }
       onKonec(true);
     } catch {
-      setChyba('Nepodařilo se uložit.');
+      setChyba(t('ukoly.chybaUlozit'));
     } finally {
       setBusy(false);
     }
@@ -183,24 +199,26 @@ function UpravaUkolu({ ukol, onKonec }: { ukol: ZadanyUkolVSeznamu; onKonec: (zm
       }}
       className="flex flex-col gap-1.5 rounded-lg border border-brand-purple/40 bg-tint/40 p-2 my-1"
     >
-      <span className="text-[11px] font-heading text-brand-purple">Úkol pro {ukol.komu}</span>
+      <span className="text-[11px] font-heading text-brand-purple">
+        {t('ukoly.zadane.ukolPro', { komu: ukol.komu })}
+      </span>
       <input
         autoFocus
         value={nazev}
         onChange={(e) => setNazev(e.target.value)}
         className={`${pole} text-sm`}
-        aria-label="Název úkolu"
+        aria-label={t('ukoly.nazevUkolu')}
       />
       <div className="flex items-center gap-1.5">
-        <DatumPole value={den} onChange={(e) => setDen(e.target.value)} className={`${pole} flex-1 min-w-0`} aria-label="Termín" />
+        <DatumPole value={den} onChange={(e) => setDen(e.target.value)} className={`${pole} flex-1 min-w-0`} aria-label={t('ukoly.termin')} />
         <input
           type="time"
           value={cas}
           onChange={(e) => setCas(e.target.value)}
           disabled={!den}
-          title={den ? 'Do kolika hodin (nepovinné)' : 'Nejdřív vyberte datum'}
+          title={den ? t('ukoly.doKolikaHodin') : t('ukoly.nejdrivDatum')}
           className={`${pole} w-[92px] disabled:opacity-40`}
-          aria-label="Čas"
+          aria-label={t('ukoly.cas')}
         />
       </div>
       {chyba && <span className="text-[11px] font-body text-danger">{chyba}</span>}
@@ -210,14 +228,14 @@ function UpravaUkolu({ ukol, onKonec }: { ukol: ZadanyUkolVSeznamu; onKonec: (zm
           disabled={busy || !nazev.trim()}
           className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-50"
         >
-          Uložit
+          {t('obecne.ulozit')}
         </button>
         <button
           type="button"
           onClick={() => onKonec(false)}
           className="text-xs font-heading text-muted hover:text-ink px-1"
         >
-          Zpět
+          {t('obecne.zpet')}
         </button>
         <span className="flex-1" />
         {/* Zrušení až na druhé klepnutí - úkol zmizí i tomu, komu patří. */}
@@ -227,7 +245,7 @@ function UpravaUkolu({ ukol, onKonec }: { ukol: ZadanyUkolVSeznamu; onKonec: (zm
           onClick={() => (potvrditZruseni ? void posli('DELETE') : setPotvrditZruseni(true))}
           className="text-xs font-heading font-semibold text-danger hover:underline px-1"
         >
-          {potvrditZruseni ? 'Opravdu zrušit?' : 'Zrušit úkol'}
+          {potvrditZruseni ? t('ukoly.zadane.opravduZrusit') : t('ukoly.zadane.zrusitUkol')}
         </button>
       </div>
     </form>

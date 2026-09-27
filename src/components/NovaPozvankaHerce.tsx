@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Tlačítko „Nová pozvánka" (zadání 16. 9. 2026: „po stisknutí se zadá do pole
@@ -14,6 +15,7 @@ import { useRouter } from 'next/navigation';
  * Pozvánky, kam se dostane i Produkce.
  */
 export function NovaPozvankaHerce({ hotovo }: { hotovo?: () => void }) {
+  const t = usePreklad();
   const router = useRouter();
   const [otevreno, setOtevreno] = useState(false);
   const [email, setEmail] = useState('');
@@ -37,16 +39,16 @@ export function NovaPozvankaHerce({ hotovo }: { hotovo?: () => void }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Pozvánku se nepodařilo odeslat.');
+        setChyba(data?.error || t('pozvanka.neodeslana'));
         if (data?.odkaz) setOdkaz(data.odkaz);
         return;
       }
-      setZprava(`Pozvánka odešla na ${data.email}.`);
+      setZprava(t('pozvanka.odeslanaNa', { email: data.email }));
       setEmail('');
       router.refresh();
       hotovo?.();
     } catch {
-      setChyba('Pozvánku se nepodařilo odeslat.');
+      setChyba(t('pozvanka.neodeslana'));
     } finally {
       setBezi(false);
     }
@@ -59,7 +61,7 @@ export function NovaPozvankaHerce({ hotovo }: { hotovo?: () => void }) {
         onClick={() => setOtevreno(true)}
         className="text-sm font-heading font-semibold rounded-pill bg-brand-purple text-white px-5 py-2.5"
       >
-        + Nová pozvánka
+        + {t('pozvanka.nova')}
       </button>
     );
   }
@@ -67,19 +69,18 @@ export function NovaPozvankaHerce({ hotovo }: { hotovo?: () => void }) {
   return (
     <form onSubmit={posli} className="bg-surface border border-line rounded-card shadow-sm p-4 flex flex-col gap-3 min-w-[280px]">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="font-heading font-semibold text-ink">Nová pozvánka herci</span>
+        <span className="font-heading font-semibold text-ink">{t('pozvanka.novaHerci')}</span>
         <button
           type="button"
           onClick={() => setOtevreno(false)}
           className="text-xs font-heading text-muted bg-transparent border-0 p-0 cursor-pointer"
         >
-          Zavřít
+          {t('obecne.zavrit')}
         </button>
       </div>
 
       <p className="text-xs font-body text-muted m-0">
-        Stačí e-mail. Herci přijde pozvánka do portálu a po nastavení hesla ho portál sám vyzve,
-        ať doplní jméno, adresu, číslo účtu a kde může natáčet.
+        {t('pozvanka.vysvetleni')}
       </p>
 
       <div className="flex gap-2 flex-wrap">
@@ -89,7 +90,7 @@ export function NovaPozvankaHerce({ hotovo }: { hotovo?: () => void }) {
           type="email"
           autoFocus
           required
-          placeholder="e-mail herce"
+          placeholder={t('pozvanka.emailHerce')}
           className="admin-input flex-1 min-w-[200px]"
         />
         <button
@@ -97,7 +98,7 @@ export function NovaPozvankaHerce({ hotovo }: { hotovo?: () => void }) {
           disabled={bezi}
           className="text-sm font-heading font-semibold rounded-lg bg-brand-purple text-white px-4 py-2 disabled:opacity-60"
         >
-          {bezi ? 'Odesílám…' : 'Poslat'}
+          {bezi ? t('pozvanka.odesilam') : t('pozvanka.poslat')}
         </button>
       </div>
 

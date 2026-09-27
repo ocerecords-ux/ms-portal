@@ -15,7 +15,6 @@ import { useJazyk, usePreklad } from './JazykProvider';
 import { nazevOdkazu } from '@/lib/jazyk';
 import { IkonaListy } from '@/lib/ikonyListy';
 import { useZarizeni } from '@/lib/useZarizeni';
-import { NAZEV_ZARIZENI } from '@/lib/zarizeni';
 
 /**
  * Horní fialová lišta. Odkazy si upravuje přímo tady každý sám - tři tečky
@@ -151,13 +150,13 @@ export function Topbar({
     try {
       const res = await fetch(`/api/menu?zarizeni=${zarizeni}`, { method: 'DELETE' });
       if (!res.ok) {
-        setError('Obnovení se nezdařilo.');
+        setError(t('listou.chybaObnoveni'));
         return;
       }
       setEditing(false);
       router.refresh();
     } catch {
-      setError('Obnovení se nezdařilo.');
+      setError(t('listou.chybaObnoveni'));
     } finally {
       setSaving(false);
     }
@@ -174,13 +173,13 @@ export function Topbar({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('listou.chybaUlozeni'));
         return;
       }
       setEditing(false);
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('listou.chybaUlozeni'));
     } finally {
       setSaving(false);
     }
@@ -218,16 +217,16 @@ export function Topbar({
                 }}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => onDrop(index)}
-                title="Přetažením změníte pořadí"
+                title={t('listou.pretazenim')}
                 className="relative flex flex-col items-center gap-1 pb-2 border-b-2 border-dashed border-white/40 text-white/90 select-none cursor-grab active:cursor-grabbing"
               >
                 <IkonaListy href={item.href} className={tridaIkony} />
-                {item.label}
+                {nazevOdkazu(jazyk, item.href, item.label)}
                 <button
                   type="button"
                   onClick={() => removeAt(index)}
-                  title={`Odebrat ${item.label}`}
-                  aria-label={`Odebrat ${item.label}`}
+                  title={t('listou.odebratOdkaz', { nazev: nazevOdkazu(jazyk, item.href, item.label) })}
+                  aria-label={t('listou.odebratOdkaz', { nazev: nazevOdkazu(jazyk, item.href, item.label) })}
                   className="absolute -top-2.5 -left-3 w-5 h-5 rounded-full bg-white text-brand-purpleDeep text-xs font-bold leading-none flex items-center justify-center shadow"
                 >
                   ×
@@ -269,8 +268,8 @@ export function Topbar({
                 )}
                 {tecka && odznak === 0 && (
                   <span
-                    title="Něco se tu pere — podrobnosti uvnitř"
-                    aria-label="Upozornění"
+                    title={t('listou.tecka')}
+                    aria-label={t('listou.upozorneni')}
                     className="ml-1.5 inline-block w-2 h-2 rounded-full align-middle"
                     style={{ backgroundColor: '#f97316' }}
                   />
@@ -346,8 +345,8 @@ export function Topbar({
           <button
             type="button"
             onClick={startEditing}
-            title="Upravit lištu"
-            aria-label="Upravit lištu"
+            title={t('listou.upravitListu')}
+            aria-label={t('listou.upravitListu')}
             className="w-7 h-7 rounded-full text-brand-green hover:bg-white/15 flex flex-col items-center justify-center gap-[3px] transition-colors"
           >
             <span className="w-[3px] h-[3px] rounded-full bg-current" />
@@ -381,8 +380,8 @@ export function Topbar({
         {napoveda && (
         <Link
           href="/napoveda"
-          title="Nápověda"
-          aria-label="Nápověda"
+          title={t('napoveda.nadpis')}
+          aria-label={t('napoveda.nadpis')}
           className="flex items-center justify-center w-9 h-9 rounded-pill text-white/80 hover:text-white hover:bg-white/10 transition-colors no-underline"
         >
           <svg
@@ -463,7 +462,7 @@ export function Topbar({
       {editing && (
         <div className="absolute left-0 right-0 top-full bg-brand-purpleDeep border-t border-white/15 shadow-md px-3 sm:px-10 py-2.5 flex items-center gap-3 flex-wrap">
           <span className="text-white/80 text-xs font-heading whitespace-nowrap">
-            Upravujete lištu pro {NAZEV_ZARIZENI[zarizeni]} · křížkem odebrat, tažením přesunout
+            {t('listou.upravujeteListu', { zarizeni: t(`listou.zarizeni.${zarizeni}`) })}
           </span>
           <span className="relative">
             <button
@@ -473,7 +472,7 @@ export function Topbar({
               title={t('listou.pridat')}
               className="inline-flex items-center gap-1.5 rounded-pill border border-dashed border-white/60 text-white text-xs font-heading font-semibold px-3 py-1.5 hover:bg-white/10 disabled:opacity-40"
             >
-              <span className="text-base leading-none">+</span> Přidat stránku
+              <span className="text-base leading-none">+</span> {t('listou.pridatStranku')}
             </button>
             {addOpen && missingPages.length > 0 && (
               <div className="absolute left-0 top-full mt-2 bg-surface rounded-lg shadow-lg border border-line py-1 min-w-[200px] max-h-[60vh] overflow-y-auto z-[60]">
@@ -497,19 +496,19 @@ export function Topbar({
               disabled={saving}
               className="bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-pill px-4 py-1.5 disabled:opacity-60"
             >
-              {saving ? 'Ukládám…' : 'Hotovo'}
+              {saving ? t('obecne.ukladam') : t('listou.hotovo')}
             </button>
             <button type="button" onClick={cancel} className="text-white/70 hover:text-white text-xs font-heading">
-              Zrušit
+              {t('obecne.zrusit')}
             </button>
             <button
               type="button"
               onClick={resetToDefault}
               disabled={saving}
-              title="Vrátit lištu do původní podoby"
+              title={t('listou.vychoziPopis')}
               className="text-white/70 hover:text-white text-xs font-heading underline disabled:opacity-50"
             >
-              Výchozí
+              {t('listou.vychozi')}
             </button>
           </span>
         </div>
@@ -527,6 +526,7 @@ export function Topbar({
  * otevírají vlastní okno, které by se jinak hned zase zavřelo.
  */
 function DalsiVolby({ odznak, children }: { odznak: number; children: React.ReactNode }) {
+  const t = usePreklad();
   const [otevreno, setOtevreno] = useState(false);
   const obal = useRef<HTMLDivElement | null>(null);
 
@@ -549,8 +549,8 @@ function DalsiVolby({ odznak, children }: { odznak: number; children: React.Reac
       <button
         type="button"
         onClick={() => setOtevreno((v) => !v)}
-        title="Jazyk, připomínky, režim"
-        aria-label="Jazyk, připomínky, režim"
+        title={t('listou.dalsiVolby')}
+        aria-label={t('listou.dalsiVolby')}
         aria-expanded={otevreno}
         className="sm:hidden relative w-8 h-8 rounded-full text-white/85 hover:text-white hover:bg-white/15 inline-flex items-center justify-center"
       >

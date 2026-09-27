@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * LIŠTA HROMADNÉHO MAZÁNÍ NAD TABULKOU (zadání 17. 9. 2026 - smlouvy, pak
@@ -35,6 +36,7 @@ export function HromadneMazani({
   /** Věta pod tlačítkem - co přesně se stane a co portál nedovolí. */
   poznamka: string;
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [bezi, setBezi] = useState(false);
   const [potvrzeni, setPotvrzeni] = useState(false);
@@ -66,7 +68,7 @@ export function HromadneMazani({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba((data as { error?: string })?.error || 'Smazání se nezdařilo.');
+        setChyba((data as { error?: string })?.error || t('mazani.nezdarilo'));
         return;
       }
       onZmena(new Set());
@@ -74,7 +76,7 @@ export function HromadneMazani({
       // Seznam se skládá na serveru - bez tohohle by smazané řádky zůstaly.
       router.refresh();
     } catch {
-      setChyba('Smazání se nezdařilo.');
+      setChyba(t('mazani.nezdarilo'));
     } finally {
       setBezi(false);
     }
@@ -91,12 +93,14 @@ export function HromadneMazani({
           className="w-4 h-4 accent-brand-purple"
         />
         <span className="text-sm font-body text-ink">
-          Vybrat vše{viditelneIds.length ? ` (${viditelneIds.length})` : ''}
+          {viditelneIds.length
+            ? t('mazani.vybratVsePocet', { pocet: viditelneIds.length })
+            : t('mazani.vybratVse')}
         </span>
       </label>
 
       <span className="text-sm font-body text-muted tabular-nums">
-        {vybrane.size > 0 ? `Vybráno: ${vybrane.size}` : 'Nic nevybráno'}
+        {vybrane.size > 0 ? t('mazani.vybrano', { pocet: vybrane.size }) : t('mazani.nicNevybrano')}
       </span>
 
       {vybrane.size > 0 && (
@@ -108,7 +112,7 @@ export function HromadneMazani({
           }}
           className="text-sm font-heading text-brand-purple hover:underline"
         >
-          Zrušit výběr
+          {t('obecne.zrusitVyber')}
         </button>
       )}
 
@@ -123,10 +127,12 @@ export function HromadneMazani({
         }`}
       >
         {bezi
-          ? 'Mažu…'
+          ? t('mazani.mazu')
           : potvrzeni
-            ? `Opravdu smazat ${vybrane.size}? Klepněte znovu`
-            : `Smazat vybrané${vybrane.size ? ` (${vybrane.size})` : ''}`}
+            ? t('mazani.opravduSmazatPocet', { pocet: vybrane.size })
+            : vybrane.size
+              ? t('mazani.smazatVybranePocet', { pocet: vybrane.size })
+              : t('mazani.smazatVybrane')}
       </button>
 
       {chyba && <p className="text-sm font-body text-danger m-0 w-full">{chyba}</p>}

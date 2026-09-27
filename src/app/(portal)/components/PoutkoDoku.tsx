@@ -2,6 +2,7 @@
 
 import { ChecklistIcon, ClockIcon } from './TaskDock';
 import { usePoctyDoku, usePravyDok } from './pravyDok';
+import { usePreklad } from './JazykProvider';
 
 /**
  * Jedno poutko na pravé hraně, kterým se otevírá panel Úkolů a MS chatu
@@ -13,6 +14,7 @@ import { usePoctyDoku, usePravyDok } from './pravyDok';
  * dostat ani k úkolům. Samostatná komponenta na cizích pravidlech nezávisí.
  */
 export function PoutkoDoku() {
+  const t = usePreklad();
   const [dok, otevri] = usePravyDok();
   const pocty = usePoctyDoku();
 
@@ -27,8 +29,8 @@ export function PoutkoDoku() {
     <button
       type="button"
       onClick={() => otevri('chat')}
-      title="Zobrazit MS chat a úkoly"
-      aria-label="Zobrazit MS chat a úkoly"
+      title={t('dok.zobrazitChatAUkoly')}
+      aria-label={t('dok.zobrazitChatAUkoly')}
       className="fixed right-0 top-28 z-40 flex flex-col items-center gap-2.5 bg-brand-purple hover:bg-brand-purpleDeep rounded-l-card shadow-lg px-2.5 py-3 text-brand-green transition-colors"
     >
       <Sipka />
@@ -41,7 +43,7 @@ export function PoutkoDoku() {
         {ukoly > 0 && <Bublina>{ukoly}</Bublina>}
       </span>
       {poTerminu > 0 && (
-        <span className="relative text-white" title={`${poTerminu} po termínu`}>
+        <span className="relative text-white" title={t('dok.poTerminu', { pocet: poTerminu })}>
           <ClockIcon />
           <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-heading font-bold leading-4 text-center">
             {poTerminu}

@@ -1,6 +1,7 @@
 'use client';
 
 import { Volba } from '@/components/Volba';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Výběr studií, do kterých se nabízí termíny (zadání 19. 9. 2026: „asi by to
@@ -21,6 +22,8 @@ export function VyberStudii({
   onZmena: (ids: string[]) => void;
   disabled?: boolean;
 }) {
+  const t = usePreklad();
+
   return (
     <div className="flex flex-wrap gap-2 py-0.5">
       {studia.map((s) => {
@@ -32,7 +35,7 @@ export function VyberStudii({
             vybrano={zapnute}
             barva={s.color || '#7B55FF'}
             disabled={disabled}
-            title={posledni ? 'Aspoň jedno studio musí zůstat vybrané' : s.name}
+            title={posledni ? t('vyber.asponJednoStudio') : s.name}
             onZmena={(zapnout) => {
               if (!zapnout) {
                 if (posledni) return;

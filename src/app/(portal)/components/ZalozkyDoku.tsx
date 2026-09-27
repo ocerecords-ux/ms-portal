@@ -1,6 +1,7 @@
 'use client';
 
 import type { OtevrenyDok } from './pravyDok';
+import { usePreklad } from './JazykProvider';
 
 /**
  * Záložky v hlavičce pravého panelu — Úkoly / MS chat. Otevřený je vždycky
@@ -22,6 +23,7 @@ export function ZalozkyDoku({
   /** Ovládání, které patří jen jednomu z panelů (u chatu upozornění). */
   vpravo?: React.ReactNode;
 }) {
+  const t = usePreklad();
   return (
     <div className="shrink-0 bg-brand-purple text-brand-green flex items-stretch justify-between gap-2 pl-2 pr-1.5 pt-1.5">
       <div className="flex items-end gap-1 shrink-0">
@@ -34,7 +36,7 @@ export function ZalozkyDoku({
         <Zalozka
           aktivni={aktivni === 'ukoly'}
           onClick={() => otevri('ukoly')}
-          label="Úkoly"
+          label={t('dok.zalozkaUkoly')}
           pocet={pocetUkolu}
         />
       </div>
@@ -43,8 +45,8 @@ export function ZalozkyDoku({
         <button
         type="button"
         onClick={() => otevri(null)}
-        title="Skrýt panel"
-        aria-label="Skrýt panel"
+        title={t('dok.skrytPanel')}
+        aria-label={t('dok.skrytPanel')}
         className="self-center rounded-lg px-2 py-1 text-brand-green/80 hover:text-white hover:bg-white/10 transition-colors font-heading font-bold text-sm leading-none"
       >
         ✕

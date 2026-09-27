@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * MAZÁNÍ SE VŽDYCKY PTÁ PODRUHÉ (zadání 18. 9. 2026: „když chci smazat výkaz.
@@ -21,8 +22,8 @@ import { useEffect, useState } from 'react';
  */
 export function TlacitkoSmazat({
   onSmazat,
-  popisek = 'Smazat',
-  otazka = 'Opravdu smazat?',
+  popisek,
+  otazka,
   disabled = false,
   bezi = false,
   /**
@@ -43,7 +44,10 @@ export function TlacitkoSmazat({
   varianta?: 'odkaz' | 'tlacitko';
   trida?: string;
 }) {
+  const t = usePreklad();
   const [ptaSe, setPtaSe] = useState(false);
+  const popis = popisek ?? t('obecne.smazat');
+  const dotaz = otazka ?? t('mazani.opravduSmazat');
 
   useEffect(() => {
     if (!ptaSe) return;
@@ -67,7 +71,7 @@ export function TlacitkoSmazat({
     <button
       type="button"
       disabled={disabled || bezi}
-      aria-label={ptaSe ? `${otazka} Klepněte znovu.` : popisek}
+      aria-label={ptaSe ? t('mazani.otazkaKlepnetePopis', { otazka: dotaz }) : popis}
       onClick={() => {
         if (!ptaSe) {
           setPtaSe(true);
@@ -78,7 +82,7 @@ export function TlacitkoSmazat({
       }}
       className={`${zaklad} ${barva} ${trida}`}
     >
-      {bezi ? 'Mažu…' : ptaSe ? `${otazka} Klepněte znovu` : popisek}
+      {bezi ? t('mazani.mazu') : ptaSe ? t('mazani.otazkaKlepnete', { otazka: dotaz }) : popis}
     </button>
   );
 }

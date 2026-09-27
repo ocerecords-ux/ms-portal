@@ -54,6 +54,8 @@ import { UpozorneniChatu } from './UpozorneniChatu';
 import { Avatar } from './Avatar';
 import { oznamNeprectene, oznamPocetDoku, usePoctyDoku, usePosluchacOtevreni, usePravyDok } from './pravyDok';
 import { ZalozkyDoku } from './ZalozkyDoku';
+import { useJazyk, usePreklad } from './JazykProvider';
+import { kodJazyka, prelozitKolem } from '@/lib/jazyk';
 
 /**
  * Chat týmu (zadani 8. 9. 2026: "vytvor komunikacni kanal jako Slack pro tym...
@@ -291,20 +293,26 @@ function RadekKonverzace({
 }
 
 function Zobrazeno({ seenBy, stav }: { seenBy: string[]; stav?: 'posilam' | 'chyba' }) {
+  const t = usePreklad();
   // Dokud server nepotvrdi, rikame to narovinu - „Odeslano" u zpravy, ktera
   // je jeste na ceste, by byla lez (12. 9. 2026).
   if (stav === 'posilam') {
-    return <span className="text-[11px] font-body text-muted">Odesílám…</span>;
+    return <span className="text-[11px] font-body text-muted">{t('chat.odesilam')}</span>;
   }
   if (stav === 'chyba') {
-    return <span className="text-[11px] font-body text-danger">Neodešlo — text máte zpátky v psátku</span>;
+    return <span className="text-[11px] font-body text-danger">{t('chat.neodeslo')}</span>;
   }
   if (seenBy.length === 0) {
-    return <span className="text-[11px] font-body text-muted">Odesláno</span>;
+    return <span className="text-[11px] font-body text-muted">{t('chat.odeslano')}</span>;
   }
   return (
-    <span className="text-[11px] font-body text-muted" title={`Zobrazeno: ${seenBy.join(', ')}`}>
-      Zobrazeno {seenBy.length <= 2 ? `· ${seenBy.join(', ')}` : `· ${seenBy.length} lidem`}
+    <span
+      className="text-[11px] font-body text-muted"
+      title={t('chat.zobrazenoKomu', { jmena: seenBy.join(', ') })}
+    >
+      {seenBy.length <= 2
+        ? t('chat.zobrazenoJmena', { jmena: seenBy.join(', ') })
+        : t('chat.zobrazenoPocet', { pocet: seenBy.length })}
     </span>
   );
 }
@@ -328,6 +336,7 @@ function DenOddelovac({ iso }: { iso: string }) {
 
 /** Autor a cas nad zpravou. Cas je videt vzdy, cely datum je v napovede. */
 function Hlavicka({ jmeno, iso, editedAt }: { jmeno: string; iso: string; editedAt?: string | null }) {
+  const t = usePreklad();
   return (
     <span className="flex items-baseline gap-1.5">
       <span className="text-[12px] font-heading font-semibold text-ink">{jmeno}</span>
@@ -341,8 +350,11 @@ function Hlavicka({ jmeno, iso, editedAt }: { jmeno: string; iso: string; edited
       {editedAt && (
         // Upravena zprava to musi priznat, jinak by slo nenapadne prepsat, co
         // uz nekdo cetl (zadani 9. 9. 2026).
-        <span className="text-[11px] font-body text-muted italic" title={`Upraveno ${formatFullTime(editedAt)}`}>
-          upraveno
+        <span
+          className="text-[11px] font-body text-muted italic"
+          title={t('chat.upravenoKdy', { kdy: formatFullTime(editedAt) })}
+        >
+          {t('chat.upraveno')}
         </span>
       )}
     </span>
@@ -441,7 +453,7 @@ function Psatko({
   placeholder,
   nabidka,
   vyber,
-  popisek = 'Poslat',
+  popisek,
   onZrusit,
   autoFocus = false,
   prilohy,
@@ -466,6 +478,8 @@ function Psatko({
   onPridejPrilohy?: (soubory: File[]) => void;
   onOdeberPrilohu?: (index: number) => void;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [smajlici, setSmajlici] = useState(false);
   const poleRef = useRef<HTMLDivElement | null>(null);
   /** Text, který jsme naposledy poslali ven - podle něj se pozná cizí změna. */
@@ -780,7 +794,7 @@ function Psatko({
           </div>
 
           <p className="text-[10px] font-heading font-semibold text-muted uppercase tracking-wide m-0 mt-3 mb-1.5 px-0.5">
-            Běžné
+            {t('chat.bezneSmajliky')}
           </p>
           <div className="grid grid-cols-8 gap-1">
             {EMOJI.map((e) => (
@@ -841,7 +855,7 @@ function Psatko({
           autoCapitalize="sentences"
           autoCorrect="on"
           spellCheck
-          lang="cs"
+          lang={kodJazyka(jazyk)}
           role="textbox"
           aria-multiline="true"
           aria-label={placeholder}
@@ -899,8 +913,8 @@ function Psatko({
               <button
                 type="button"
                 onClick={() => onOdeberPrilohu?.(index)}
-                title={`Odebrat ${soubor.name}`}
-                aria-label={`Odebrat ${soubor.name}`}
+                title={t('chat.odebratPrilohu', { nazev: soubor.name })}
+                aria-label={t('chat.odebratPrilohu', { nazev: soubor.name })}
                 className="shrink-0 w-4 h-4 leading-none text-muted hover:text-danger"
               >
                 ×
@@ -913,7 +927,7 @@ function Psatko({
       <div className="flex items-center gap-2">
         {onPridejPrilohy && (
           <label
-            title="Připojit soubor"
+            title={t('chat.pripojitSoubor')}
             className="shrink-0 w-9 h-9 rounded-lg border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center cursor-pointer"
           >
             {/* Sponka. Zamerne obycejny vyber souboru - nahravani hlasu
@@ -938,8 +952,8 @@ function Psatko({
         <button
           type="button"
           onClick={() => setSmajlici((v) => !v)}
-          title="Smajlíci"
-          aria-label="Smajlíci"
+          title={t('chat.smajlici')}
+          aria-label={t('chat.smajlici')}
           className="shrink-0 w-9 h-9 rounded-lg border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-5 h-5">
@@ -948,7 +962,7 @@ function Psatko({
           </svg>
         </button>
         <span className="text-[11px] font-body text-muted select-none hidden sm:inline">
-          Enter odešle, Shift+Enter zalomí řádek
+          {t('chat.enterOdesle')}
         </span>
         {onZrusit && (
           <button
@@ -956,7 +970,7 @@ function Psatko({
             onClick={onZrusit}
             className="ml-auto shrink-0 text-sm font-heading font-semibold text-muted hover:text-ink"
           >
-            Zrušit
+            {t('obecne.zrusit')}
           </button>
         )}
         <button
@@ -966,7 +980,7 @@ function Psatko({
             onZrusit ? '' : 'ml-auto'
           }`}
         >
-          {popisek}
+          {popisek ?? t('chat.poslat')}
         </button>
       </div>
     </form>
@@ -1003,6 +1017,7 @@ function Reakce({
   reactions: ChatReaction[];
   onToggle: (code: string) => void;
 }) {
+  const t = usePreklad();
   if (reactions.length === 0) return null;
 
   return (
@@ -1016,7 +1031,7 @@ function Reakce({
           <button
             type="button"
             onClick={() => onToggle(r.code)}
-            aria-label={`${r.count}× reakce: ${r.kdo.join(', ')}`}
+            aria-label={t('chat.reakceKdo', { pocet: r.count, jmena: r.kdo.join(', ') })}
             aria-pressed={r.mine}
             className={`inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 leading-none transition-colors ${
               r.mine
@@ -1052,6 +1067,7 @@ function NabidkaReakci({
   /** Kopírování textu - systémová nabídka je na bublině vypnutá (23. 9. 2026). */
   onKopirovat?: () => void;
 }) {
+  const t = usePreklad();
   useEffect(() => {
     function naKlavesu(e: KeyboardEvent) {
       if (e.key === 'Escape') onZavri();
@@ -1086,7 +1102,7 @@ function NabidkaReakci({
             onClick={onKopirovat}
             className="ml-0.5 rounded px-2 py-1.5 text-xs font-heading text-muted hover:bg-field whitespace-nowrap"
           >
-            Kopírovat
+            {t('chat.kopirovat')}
           </button>
         )}
       </span>
@@ -1222,11 +1238,12 @@ function BublinaZpravy({
  * stazeni jen otevrel.
  */
 function TlacitkoStahnout({ odkaz, nazev, tmave }: { odkaz: string; nazev: string; tmave?: boolean }) {
+  const t = usePreklad();
   return (
     <a
       href={`${odkaz}?stahnout=1`}
-      title={`Stáhnout ${nazev}`}
-      aria-label={`Stáhnout ${nazev}`}
+      title={t('chat.stahnoutPrilohu', { nazev })}
+      aria-label={t('chat.stahnoutPrilohu', { nazev })}
       onClick={(e) => e.stopPropagation()}
       className={`inline-flex items-center justify-center w-7 h-7 shrink-0 rounded-lg border transition-colors no-underline ${
         tmave
@@ -1244,6 +1261,7 @@ function TlacitkoStahnout({ odkaz, nazev, tmave }: { odkaz: string; nazev: strin
 }
 
 function ZvukovaPriloha({ priloha, odkaz }: { priloha: ChatPriloha; odkaz: string }) {
+  const t = usePreklad();
   const [spustit, setSpustit] = useState(false);
 
   return (
@@ -1253,8 +1271,8 @@ function ZvukovaPriloha({ priloha, odkaz }: { priloha: ChatPriloha; odkaz: strin
           <button
             type="button"
             onClick={() => setSpustit(true)}
-            title={`Přehrát ${priloha.name}`}
-            aria-label={`Přehrát ${priloha.name}`}
+            title={t('chat.prehratPrilohu', { nazev: priloha.name })}
+            aria-label={t('chat.prehratPrilohu', { nazev: priloha.name })}
             className="inline-flex items-center justify-center w-9 h-9 shrink-0 rounded-full bg-brand-green text-onAccent hover:brightness-95 transition-[filter]"
           >
             <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -1293,6 +1311,7 @@ function Svetlo({
   index: number;
   zavri: () => void;
 }) {
+  const t = usePreklad();
   const [kde, setKde] = useState(index);
 
   useEffect(() => setKde(index), [index]);
@@ -1411,8 +1430,8 @@ function Svetlo({
           <button
             type="button"
             onClick={() => priblizit(zoom / 1.25)}
-            title="Zmenšit (−)"
-            aria-label="Zmenšit"
+            title={t('chat.zmensitKlavesa')}
+            aria-label={t('chat.zmensit')}
             className="w-8 h-9 text-lg leading-none hover:bg-white/20 rounded-l-lg"
           >
             −
@@ -1420,7 +1439,7 @@ function Svetlo({
           <button
             type="button"
             onClick={() => priblizit(1)}
-            title="Celý obrázek (0)"
+            title={t('chat.celyObrazek')}
             className="min-w-[52px] h-9 px-1 text-xs font-heading font-semibold tabular-nums hover:bg-white/20"
           >
             {Math.round(zoom * 100)} %
@@ -1428,8 +1447,8 @@ function Svetlo({
           <button
             type="button"
             onClick={() => priblizit(zoom * 1.25)}
-            title="Zvětšit (+)"
-            aria-label="Zvětšit"
+            title={t('chat.zvetsitKlavesa')}
+            aria-label={t('chat.zvetsit')}
             className="w-8 h-9 text-lg leading-none hover:bg-white/20 rounded-r-lg"
           >
             +
@@ -1439,8 +1458,8 @@ function Svetlo({
         <button
           type="button"
           onClick={zavri}
-          title="Zavřít"
-          aria-label="Zavřít"
+          title={t('obecne.zavrit')}
+          aria-label={t('obecne.zavrit')}
           className="inline-flex items-center justify-center w-9 h-9 shrink-0 rounded-lg border border-white/40 text-white hover:bg-white/20 transition-colors text-xl leading-none"
         >
           ×
@@ -1455,8 +1474,8 @@ function Svetlo({
               e.stopPropagation();
               setKde((i) => (i - 1 + obrazky.length) % obrazky.length);
             }}
-            title="Předchozí"
-            aria-label="Předchozí obrázek"
+            title={t('chat.predchozi')}
+            aria-label={t('chat.predchoziObrazek')}
             className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors"
           >
             <Chevron direction="left" />
@@ -1478,9 +1497,9 @@ function Svetlo({
             tah.current = { x: e.clientX, y: e.clientY, px: posun.x, py: posun.y };
           }}
           onPointerMove={(e) => {
-            const t = tah.current;
-            if (!t) return;
-            setPosun({ x: t.px + e.clientX - t.x, y: t.py + e.clientY - t.y });
+            const tazeni = tah.current;
+            if (!tazeni) return;
+            setPosun({ x: tazeni.px + e.clientX - tazeni.x, y: tazeni.py + e.clientY - tazeni.y });
           }}
           onPointerUp={() => {
             tah.current = null;
@@ -1508,8 +1527,8 @@ function Svetlo({
               e.stopPropagation();
               setKde((i) => (i + 1) % obrazky.length);
             }}
-            title="Další"
-            aria-label="Další obrázek"
+            title={t('chat.dalsi')}
+            aria-label={t('chat.dalsiObrazek')}
             className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors"
           >
             <Chevron direction="right" />
@@ -1620,6 +1639,7 @@ const KLIC_POSLEDNI_KONVERZACE = 'msportal_chat_posledni';
 
 export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   // Na samostatne strance je chat rovnou otevreny, neni co rozbalovat.
+  const t = usePreklad();
   const [dok, otevriDok] = usePravyDok();
   const pocty = usePoctyDoku();
   const expanded = naStrance || dok === 'chat';
@@ -1703,7 +1723,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       const res = await fetch(`/api/chat/zpravy/${id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setUpravaChyba((data as { error?: string })?.error || 'Zprávu se nepodařilo smazat.');
+        setUpravaChyba((data as { error?: string })?.error || t('chat.smazatNepodarilo'));
         return;
       }
       const bez = (seznam: ChatMessage[]) => seznam.filter((z) => z.id !== id);
@@ -1713,7 +1733,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       // Seznam konverzaci drzi cas posledni zpravy - po smazani muze byt jiny.
       void nactiKonverzace();
     } catch {
-      setUpravaChyba('Zprávu se nepodařilo smazat.');
+      setUpravaChyba(t('chat.smazatNepodarilo'));
     } finally {
       setMazani(false);
     }
@@ -1741,7 +1761,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setUpravaChyba(data?.error || 'Zprávu se nepodařilo upravit.');
+        setUpravaChyba(data?.error || t('chat.upravitNepodarilo'));
         return;
       }
       const uprav = (seznam: ChatMessage[]) =>
@@ -1751,7 +1771,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       zrusUpravu();
     } catch (err) {
       console.error('Úprava zprávy selhala:', err);
-      setUpravaChyba('Zprávu se nepodařilo upravit.');
+      setUpravaChyba(t('chat.upravitNepodarilo'));
     } finally {
       setSending(false);
     }
@@ -2263,25 +2283,25 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    */
   const listaDruhu = (
     <span className={`${naStrance ? 'hidden sm:flex' : 'flex'} items-center gap-0.5`}>
-      {CHAT_ZALOZKY.map((t) => {
-        const jeTu = tab === t.klic;
-        const nove = t.klic === ZALOZKA_UKOLY ? 0 : neprectenePodleDruhu[t.klic] ?? 0;
+      {CHAT_ZALOZKY.map((z) => {
+        const jeTu = tab === z.klic;
+        const nove = z.klic === ZALOZKA_UKOLY ? 0 : neprectenePodleDruhu[z.klic] ?? 0;
         return (
           <button
-            key={t.klic}
+            key={z.klic}
             type="button"
             onClick={() => {
-              setTab(t.klic);
+              setTab(z.klic);
               setNovy(false);
             }}
-            title={nove > 0 ? `${t.label} — ${nove} nepřečtených` : t.label}
-            aria-label={t.label}
+            title={nove > 0 ? t('chat.zalozkaNeprectene', { nazev: z.label, pocet: nove }) : z.label}
+            aria-label={z.label}
             aria-current={jeTu ? 'page' : undefined}
             className={`relative grid place-items-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg transition-colors ${
               jeTu ? 'bg-white/20 text-white' : 'text-brand-green/75 hover:text-white hover:bg-white/10'
             }`}
           >
-            <IkonaZalozky kind={t.klic} />
+            <IkonaZalozky kind={z.klic} />
             {nove > 0 && (
               <span
                 aria-hidden="true"
@@ -2335,6 +2355,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    */
   const dotazy = conversations.filter((c) => c.kind === 'DOTAZ');
   const otevrena = conversations.find((c) => c.id === openId) ?? null;
+  /**
+   * Výčet ostatních lidí ve skupině pro věty o tom, kdo do ní vidí. Jména
+   * jsou data, takže se do věty jen dosadí - celá věta je jeden klíč.
+   */
+  const ostatniVeSkupine =
+    otevrena && otevrena.memberLabels.length > 0 ? `, ${otevrena.memberLabels.join(', ')}` : '';
 
   /**
    * Pripnute rozhovory - rychle volby nahore (zadani 12. 9. 2026). Poradi je
@@ -2422,13 +2448,13 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       });
       const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('chat.ulozeniNezdarilo'));
         return;
       }
       setSpravaOtevrena(false);
       await nactiKonverzace();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('chat.ulozeniNezdarilo'));
     } finally {
       setSpravaUklada(false);
     }
@@ -2444,14 +2470,14 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       });
       const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Odchod se nezdařil.');
+        setError(data?.error || t('chat.odchodNezdaril'));
         return;
       }
       setSpravaOtevrena(false);
       setOpenId(null);
       await nactiKonverzace();
     } catch {
-      setError('Odchod se nezdařil.');
+      setError(t('chat.odchodNezdaril'));
     } finally {
       setSpravaUklada(false);
     }
@@ -2467,7 +2493,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       });
       const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Nepodařilo se to otevřít.');
+        setError(data?.error || t('chat.otevritNepodarilo'));
         return;
       }
       setNovy(false);
@@ -2476,7 +2502,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       await nactiKonverzace();
       if (data?.id) setOpenId(String(data.id));
     } catch {
-      setError('Nepodařilo se to otevřít.');
+      setError(t('chat.otevritNepodarilo'));
     }
   }
 
@@ -2501,7 +2527,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       if (data?.chyba) setProjektyChyba(String(data.chyba));
     } catch {
       if (projekty === null) setProjekty([]);
-      setProjektyChyba('Projekty se nepodařilo načíst.');
+      setProjektyChyba(t('projekty.nepodariloNacist'));
     }
   }
 
@@ -2518,7 +2544,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     const hotove: { key: string; name: string; mime: string }[] = [];
     for (const soubor of soubory) {
       if (soubor.size > MAX_PRILOHA_BYTES) {
-        setError(`Příloha ${soubor.name} je moc velká (nejvýš ${formatVelikost(MAX_PRILOHA_BYTES)}).`);
+        setError(
+          t('chat.prilohaVelka', { nazev: soubor.name, limit: formatVelikost(MAX_PRILOHA_BYTES) }),
+        );
         return null;
       }
       const mime = soubor.type || 'application/octet-stream';
@@ -2529,7 +2557,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       });
       const data = await podpis.json().catch(() => ({}));
       if (!podpis.ok) {
-        setError(data?.error || 'Přílohu se nepodařilo připravit.');
+        setError(data?.error || t('chat.prilohaNepripravena'));
         return null;
       }
       // Prohlizec posila soubor primo do uloziste, tedy na cizi adresu.
@@ -2548,14 +2576,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         // Hláška dřív tvrdila „nejspíš CORS" - jenže stejně vypadá i odmítnutý
         // podpis (21. 9. 2026 to byl právě podpis). Který z nich to je, řekne
         // /api/admin/uloziste-test.
-        setError(
-          `Přílohu ${soubor.name} se nepodařilo nahrát - úložiště odmítlo požadavek z portálu. ` +
-            'Zkuste to prosím znovu; když to nepůjde, dejte vědět správci portálu.',
-        );
+        setError(t('chat.prilohaOdmitnuta', { nazev: soubor.name }));
         return null;
       }
       if (!nahrani.ok) {
-        setError(`Přílohu ${soubor.name} se nepodařilo nahrát (${nahrani.status}).`);
+        setError(t('chat.prilohaNahraniSelhalo', { nazev: soubor.name, stav: nahrani.status }));
         return null;
       }
       hotove.push({ key: data.key, name: soubor.name, mime });
@@ -2609,7 +2634,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       body: text,
       createdAt: new Date().toISOString(),
       authorId: '',
-      authorLabel: 'Já',
+      authorLabel: t('chat.ja'),
       authorPhotoUrl: null,
       mine: true,
       replyCount: 0,
@@ -2639,7 +2664,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         ),
       });
       const data: any = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Zprávu se nepodařilo odeslat.');
+      if (!res.ok) throw new Error(data?.error || t('chat.zpravaNeodeslana'));
 
       /**
        * ÚKOL (zadání 18. 9. 2026). Server vrací, komu ho založil - nebo proč
@@ -2647,7 +2672,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
        * hláška pod psátkem, ne chyba odeslání.
        */
       if (data?.ukol?.komu) {
-        setUkolHlaska(`Úkol je v to-do listu — ${data.ukol.komu}.`);
+        setUkolHlaska(t('chat.ukolVListu', { komu: data.ukol.komu }));
         setUkolTermin('');
         setUkolCas('');
       } else if (data?.ukol?.chyba) {
@@ -2671,7 +2696,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       // Text zpatky do psatka, at ho clovek nemusi psat znovu.
       if (doVlakna) setVlaknoDraft((d) => (d ? d : text));
       else setDraft((d) => (d ? d : text));
-      setError(err instanceof Error ? err.message : 'Zprávu se nepodařilo odeslat.');
+      setError(err instanceof Error ? err.message : t('chat.zpravaNeodeslana'));
     } finally {
       setSending(false);
     }
@@ -2758,7 +2783,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       if (!res.ok) throw new Error(`Server odmítl pořadí (${res.status}).`);
     } catch (err) {
       ids.forEach((id) => cerstvaPrepnuti.current.delete(id));
-      setError('Nové pořadí se nepodařilo uložit.');
+      setError(t('chat.poradiNeulozeno'));
       console.error('Pořadí zkratek selhalo:', err);
       void nactiKonverzace();
     }
@@ -2831,7 +2856,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     } catch (err) {
       // Neulozilo se - evidenci zahodime, at plati databaze, a rekneme to.
       cerstvaPrepnuti.current.delete(conversationId);
-      setError(pripnuto ? 'Připnutí se nepodařilo uložit.' : 'Odepnutí se nepodařilo uložit.');
+      setError(pripnuto ? t('chat.pripnutiNeulozeno') : t('chat.odepnutiNeulozeno'));
       console.error('Připnutí selhalo:', err);
       void nactiKonverzace();
     }
@@ -2863,7 +2888,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       if (!res.ok) throw new Error(`Server odmítl nastavení (${res.status}).`);
     } catch (err) {
       cerstvaPrepnuti.current.delete(conversationId);
-      setError('Nastavení upozornění se nepodařilo uložit.');
+      setError(t('chat.upozorneniNeulozeno'));
       console.error('Upozornění rozhovoru selhalo:', err);
       void nactiKonverzace();
     }
@@ -2877,7 +2902,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   async function odklidKonverzaci(c: ChatConversation) {
     setOdsunutaId(null);
     const jeSkupina = c.kind === 'SKUPINA';
-    if (jeSkupina && !window.confirm(`Opustit skupinu „${c.label}"? Zprávy v ní vám zmizí.`)) return;
+    if (jeSkupina && !window.confirm(t('chat.opustitSkupinuOtazka', { nazev: c.label }))) return;
 
     // Zmizi hned, at gesto neceka na server.
     setConversations((current) => current.filter((x) => x.id !== c.id));
@@ -2892,10 +2917,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
           });
       if (!res.ok) {
         const data: any = await res.json().catch(() => ({}));
-        throw new Error(data?.error || `Server odmítl (${res.status}).`);
+        throw new Error(data?.error || t('chat.serverOdmitl', { stav: res.status }));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nepodařilo se to odklidit.');
+      setError(err instanceof Error ? err.message : t('chat.odklizeniNepodarilo'));
       console.error('Odklizení konverzace selhalo:', err);
       void nactiKonverzace();
     }
@@ -2915,7 +2940,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       if (!res.ok) throw new Error(`Server odmítl ztlumení (${res.status}).`);
     } catch (err) {
       cerstvaPrepnuti.current.delete(conversationId);
-      setError('Ztlumení se nepodařilo uložit.');
+      setError(t('chat.ztlumeniNeulozeno'));
       console.error('Ztlumení selhalo:', err);
       void nactiKonverzace();
     }
@@ -2978,9 +3003,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
     if (polozka.id === KLIC_UKOLU) setUkolHlaska(null);
     // Upravovaná zpráva má vlastní text - jinak by se doplnění psalo do
     // rozepsané nové zprávy pod ní (25. 9. 2026).
-    if (zminkyPro === 'uprava') setUpravaText((t) => uprav(t));
-    else if (zminkyPro === 'vlakno') setVlaknoDraft((t) => uprav(t));
-    else setDraft((t) => uprav(t));
+    if (zminkyPro === 'uprava') setUpravaText((puvodni) => uprav(puvodni));
+    else if (zminkyPro === 'vlakno') setVlaknoDraft((puvodni) => uprav(puvodni));
+    else setDraft((puvodni) => uprav(puvodni));
     setZminkyPro(null);
   }
 
@@ -3051,13 +3076,13 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
       <button
         type="button"
         onClick={toggle}
-        title="Skrýt MS chat"
-        aria-label="Skrýt MS chat"
+        title={t('chat.skrytChat')}
+        aria-label={t('chat.skrytChat')}
         className="w-8 shrink-0 rounded-l-card border border-r-0 border-line bg-field text-muted hover:bg-brand-purple hover:text-white transition-colors flex flex-col items-center justify-center gap-2"
       >
         <Chevron direction="right" />
         <span className="text-[10px] font-heading font-semibold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
-          Skrýt
+          {t('obecne.skryt')}
         </span>
         <Chevron direction="right" />
       </button>
@@ -3099,7 +3124,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
         {tahnouSoubory > 0 && (
           <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-brand-purple/15 backdrop-blur-[1px]">
             <span className="rounded-card border-2 border-dashed border-brand-purple bg-surface px-6 py-4 font-heading font-semibold text-sm text-brand-purple shadow-lg">
-              Pusťte soubor sem
+              {t('chat.pustteSouborSem')}
             </span>
           </div>
         )}
@@ -3258,7 +3283,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 spodni listou. */}
             <div className="px-3 pt-2.5 pb-1">
               <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.14em] text-muted">
-                {CHAT_ZALOZKY.find((t) => t.klic === tab)?.label}
+                {CHAT_ZALOZKY.find((z) => z.klic === tab)?.label}
               </span>
             </div>
 
@@ -3273,7 +3298,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   seznam níž. */}
               {tab === ZALOZKA_UKOLY && <UkolyVChatu />}
               {tab === 'PROJEKT' && projekty === null && (
-                <p className="text-sm font-body text-muted m-0 px-1">Načítám projekty…</p>
+                <p className="text-sm font-body text-muted m-0 px-1">{t('chat.nacitamProjekty')}</p>
               )}
               {tab === 'PROJEKT' && projektyChyba && (
                 <p className="text-xs text-danger m-0 px-1">{projektyChyba}</p>
@@ -3306,7 +3331,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   );
                 })}
               {tab === 'PROJEKT' && projekty !== null && kanaly.length === 0 && (
-                <p className="text-sm font-body text-muted m-0 px-1">Žádné rozpracované projekty.</p>
+                <p className="text-sm font-body text-muted m-0 px-1">{t('chat.zadneProjekty')}</p>
               )}
 
               {/* DOTAZY KLIENTŮ (zadání 18. 9. 2026). Vlastní záložku už nemají
@@ -3315,7 +3340,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               {tab === 'PROJEKT' && dotazy.length > 0 && (
                 <>
                   <span className="mt-3 mb-1 px-1 font-heading font-semibold text-[11px] uppercase tracking-[0.14em] text-muted">
-                    Dotazy klientů
+                    {t('chat.dotazyKlientu')}
                   </span>
                   {dotazy.map((c) => (
                     <button
@@ -3339,7 +3364,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
               {tab !== 'PROJEKT' && tab !== ZALOZKA_UKOLY && vZalozce.length === 0 && !novy && (
                 <p className="text-sm font-body text-muted m-0 px-1">
-                  {tab === 'SOUKROMA' ? 'Zatím si s nikým nepíšete.' : 'Zatím tu není žádná skupina.'}
+                  {tab === 'SOUKROMA' ? t('chat.zadneSoukrome') : t('chat.zadneSkupiny')}
                 </p>
               )}
               {tab !== 'PROJEKT' &&
@@ -3350,7 +3375,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     konverzace={c}
                     aktivni={c.id === openId}
                     onOtevri={() => setOpenId(c.id)}
-                    popisekAkce={c.kind === 'SKUPINA' ? 'Opustit' : 'Uklidit'}
+                    popisekAkce={c.kind === 'SKUPINA' ? t('chat.opustit') : t('chat.uklidit')}
                     onAkce={() => void odklidKonverzaci(c)}
                     odsunuto={odsunutaId === c.id}
                     onOdsun={(odsunuto) => setOdsunutaId(odsunuto ? c.id : null)}
@@ -3379,7 +3404,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
               {novy && tab === 'SOUKROMA' && (
                 <div className="mt-2 flex flex-col gap-0.5 border-t border-line pt-2">
-                  {team.length === 0 && <p className="text-xs text-muted m-0 px-1">Nikdo další tu zatím není.</p>}
+                  {team.length === 0 && (
+                    <p className="text-xs text-muted m-0 px-1">{t('chat.nikdoDalsi')}</p>
+                  )}
                   {team.map((u) => (
                     <button
                       key={u.id}
@@ -3399,7 +3426,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   <input
                     value={nazevSkupiny}
                     onChange={(e) => setNazevSkupiny(e.target.value)}
-                    placeholder="Název skupiny"
+                    placeholder={t('chat.nazevSkupiny')}
                     className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
                   />
                   <div className="flex flex-wrap gap-1.5">
@@ -3423,7 +3450,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     onClick={() => otevriNovou({ kind: 'SKUPINA', name: nazevSkupiny.trim(), userIds: vybraniLide })}
                     className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 disabled:opacity-50"
                   >
-                    Založit skupinu
+                    {t('chat.zalozitSkupinu')}
                   </button>
                 </div>
               )}
@@ -3438,7 +3465,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   onClick={() => setNovy((v) => !v)}
                   className="w-full font-heading font-semibold text-xs rounded-lg border border-line px-3 py-2 text-brand-purple hover:border-brand-purple transition-colors"
                 >
-                  {novy ? 'Zrušit' : tab === 'SOUKROMA' ? '+ Napsat někomu' : '+ Nová skupina'}
+                  {novy ? t('obecne.zrusit') : tab === 'SOUKROMA' ? t('chat.napsatNekomu') : t('chat.novaSkupina')}
                 </button>
               </div>
             )}
@@ -3452,7 +3479,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
           <div className={`flex-1 min-w-0 ${otevrena ? 'flex' : 'hidden sm:flex'}`}>
             {!otevrena ? (
               <p className="m-auto text-sm font-body text-muted px-6 text-center">
-                Vyberte vlevo projekt nebo člověka.
+                {t('chat.vyberteVlevo')}
               </p>
             ) : (
               <>
@@ -3470,7 +3497,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     <button
                       type="button"
                       onClick={() => setOpenId(null)}
-                      title="Zpět na seznam"
+                      title={t('chat.zpetNaSeznam')}
                       className="sm:hidden text-muted hover:text-brand-purple"
                     >
                       <Chevron direction="left" />
@@ -3496,7 +3523,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       {otevrena.kind === 'PROJEKT' && otevrena.caflouProjectId ? (
                         <Link
                           href={`/projekty/${encodeURIComponent(otevrena.caflouProjectId)}`}
-                          title="Otevřít projekt"
+                          title={t('chat.otevritProjekt')}
                           className="font-heading font-semibold text-sm text-ink leading-tight break-words no-underline hover:text-brand-purple hover:underline"
                         >
                           # {otevrena.label} <span aria-hidden="true" className="text-muted text-xs">↗</span>
@@ -3512,11 +3539,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         <button
                           type="button"
                           onClick={() => (spravaOtevrena ? setSpravaOtevrena(false) : otevriSpravu())}
-                          title={`Vidí jen: já${otevrena.memberLabels.length > 0 ? `, ${otevrena.memberLabels.join(', ')}` : ''}`}
+                          title={t('chat.vidiJen', { ostatni: ostatniVeSkupine })}
                           className="hidden sm:block text-[11px] font-body text-muted truncate hover:text-brand-purple text-left"
                         >
-                          Vidí jen: já
-                          {otevrena.memberLabels.length > 0 ? `, ${otevrena.memberLabels.join(', ')}` : ''}
+                          {t('chat.vidiJen', { ostatni: ostatniVeSkupine })}
                         </button>
                       )}
                     </span>
@@ -3524,8 +3550,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       <button
                         type="button"
                         onClick={() => (spravaOtevrena ? setSpravaOtevrena(false) : otevriSpravu())}
-                        title="Kdo do skupiny vidí — a úprava"
-                        aria-label={`Kdo do skupiny vidí (${otevrena.memberLabels.length + 1})`}
+                        title={t('chat.kdoVidiUprava')}
+                        aria-label={t('chat.kdoVidiPocet', { pocet: otevrena.memberLabels.length + 1 })}
                         className="sm:hidden shrink-0 inline-flex items-center gap-1 rounded-pill border border-line px-2 py-0.5 text-[11px] font-heading font-semibold text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
                       >
                         <IkonaLidi />
@@ -3547,10 +3573,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       onClick={() => void prepniPripnuti(otevrena.id, !otevrena.pripnuto)}
                       title={
                         otevrena.pripnuto
-                          ? 'Připnuto nahoře — klepnutím odepnete'
-                          : 'Připnout nahoru jako rychlou volbu'
+                          ? t('chat.pripnutoOdepnete')
+                          : t('chat.pripnoutRychlaVolba')
                       }
-                      aria-label={otevrena.pripnuto ? 'Odepnout' : 'Připnout nahoru'}
+                      aria-label={otevrena.pripnuto ? t('chat.odepnout') : t('chat.pripnoutNahoru')}
                       aria-pressed={Boolean(otevrena.pripnuto)}
                       className={`shrink-0 leading-none p-1 -m-1 transition-colors ${
                         otevrena.kind === 'SKUPINA' ? '' : 'ml-auto'
@@ -3563,10 +3589,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       onClick={() => void prepniZtlumeni(otevrena.id, !otevrena.ztlumeno)}
                       title={
                         otevrena.ztlumeno
-                          ? 'Ztlumeno — upozornění odsud nechodí. Klepnutím zrušíte.'
-                          : 'Ztlumit — zprávy chodí dál, jen nezazvoní'
+                          ? t('chat.ztlumenoZrusite')
+                          : t('chat.ztlumitPopis')
                       }
-                      aria-label={otevrena.ztlumeno ? 'Zrušit ztlumení' : 'Ztlumit rozhovor'}
+                      aria-label={otevrena.ztlumeno ? t('chat.zrusitZtlumeni') : t('chat.ztlumitRozhovor')}
                       aria-pressed={Boolean(otevrena.ztlumeno)}
                       className={`shrink-0 leading-none p-1 -m-1 transition-colors ${
                         otevrena.ztlumeno ? 'text-brand-purple' : 'text-muted hover:text-brand-purple'
@@ -3581,11 +3607,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       <input
                         value={spravaNazev}
                         onChange={(e) => setSpravaNazev(e.target.value)}
-                        placeholder="Název skupiny"
+                        placeholder={t('chat.nazevSkupiny')}
                         className="rounded-lg border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
                       />
                       <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">
-                        Kdo do skupiny vidí
+                        {t('chat.kdoDoSkupinyVidi')}
                       </p>
                       <div className="flex flex-wrap gap-1.5 max-h-[180px] overflow-y-auto">
                         {team.map((u) => (
@@ -3603,7 +3629,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         ))}
                       </div>
                       <p className="text-[11px] font-body text-muted m-0">
-                        Kdo se do skupiny dostane, uvidí i to, co se v ní psalo dřív.
+                        {t('chat.novyClenUvidiHistorii')}
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
@@ -3612,20 +3638,20 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                           disabled={spravaUklada || !spravaNazev.trim()}
                           className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-50"
                         >
-                          {spravaUklada ? 'Ukládám…' : 'Uložit'}
+                          {spravaUklada ? t('obecne.ukladam') : t('obecne.ulozit')}
                         </button>
                         <button
                           type="button"
                           onClick={() => setSpravaOtevrena(false)}
                           className="font-heading text-xs text-muted hover:text-ink"
                         >
-                          Zrušit
+                          {t('obecne.zrusit')}
                         </button>
                         <TlacitkoSmazat
                           onSmazat={() => opustSkupinu()}
                           disabled={spravaUklada}
-                          popisek="Odejít ze skupiny"
-                          otazka="Opravdu odejít?"
+                          popisek={t('chat.odejitZeSkupiny')}
+                          otazka={t('chat.opravduOdejit')}
                           trida="ml-auto text-xs"
                         />
                       </div>
@@ -3642,7 +3668,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                   >
                     {messages.length === 0 && (
                       <p className="text-sm font-body text-muted m-0">
-                        {zpravyNacitam ? 'Načítám zprávy…' : 'Zatím tu nikdo nic nenapsal.'}
+                        {zpravyNacitam ? t('chat.nacitamZpravy') : t('chat.nikdoNicNenapsal')}
                       </p>
                     )}
                     {messages.map((m, index) => {
@@ -3666,7 +3692,11 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       <div className={`flex items-start gap-2 ${m.stav === 'posilam' ? 'opacity-60' : ''}`}>
                         <Avatar label={m.authorLabel} photoUrl={m.authorPhotoUrl} size={28} />
                         <div className="min-w-0">
-                          <Hlavicka jmeno={m.mine ? 'Já' : m.authorLabel} iso={m.createdAt} editedAt={m.editedAt} />
+                          <Hlavicka
+                            jmeno={m.mine ? t('chat.ja') : m.authorLabel}
+                            iso={m.createdAt}
+                            editedAt={m.editedAt}
+                          />
                           {upravovanaId === m.id ? (
                             <div className="mt-1 rounded-card border border-brand-purple overflow-hidden bg-surface">
                               <Psatko
@@ -3677,10 +3707,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                 }}
                                 odeslat={ulozUpravu}
                                 sending={sending}
-                                placeholder="Upravit zprávu…"
+                                placeholder={t('chat.upravitZpravu')}
                                 nabidka={zminkyPro === 'uprava' ? nabidkaZminek : []}
                                 vyber={doplnZminku}
-                                popisek="Uložit"
+                                popisek={t('obecne.ulozit')}
                                 onZrusit={zrusUpravu}
                                 autoFocus
                               />
@@ -3715,9 +3745,13 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                 vlaknoId === m.id ? 'text-brand-purpleDark underline' : 'text-brand-purple'
                               }`}
                             >
-                              {m.replyCount > 0
-                                ? `${m.replyCount} ${m.replyCount === 1 ? 'odpověď' : m.replyCount < 5 ? 'odpovědi' : 'odpovědí'} ›`
-                                : 'Odpovědět'}
+                              {m.replyCount === 0
+                                ? t('chat.odpovedet')
+                                : m.replyCount === 1
+                                  ? t('chat.odpovediJedna')
+                                  : m.replyCount < 5
+                                    ? t('chat.odpovediMalo', { pocet: m.replyCount })
+                                    : t('chat.odpovediMnoho', { pocet: m.replyCount })}
                             </button>
                             )}
                             {/* Upravit smi jen autor - i na serveru (zadani
@@ -3731,7 +3765,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                   onClick={() => zacniUpravu(m)}
                                   className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
                                 >
-                                  Upravit
+                                  {t('obecne.upravit')}
                                 </button>
                                 <span className="text-[11px] text-muted/40">·</span>
                                 <SmazatZpravu
@@ -3779,7 +3813,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     }}
                     odeslat={(e) => odesli(e, false)}
                     sending={sending}
-                    placeholder="Napište zprávu… (@ zmíní kolegu nebo zadá úkol, # odkáže na projekt)"
+                    placeholder={t('chat.napsatZpravu')}
                     nabidka={zminkyPro === 'hlavni' ? nabidkaZminek : []}
                     vyber={doplnZminku}
                     prilohy={prilohyHlavni}
@@ -3796,12 +3830,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 {vlaknoId && (
                   <div className="w-full md:w-[340px] shrink-0 border-l border-line flex flex-col min-h-0">
                     <div className="px-3 py-2.5 border-b border-line flex items-center justify-between gap-2 bg-field">
-                      <span className="font-heading font-semibold text-sm text-ink">Vlákno</span>
+                      <span className="font-heading font-semibold text-sm text-ink">{t('chat.vlakno')}</span>
                       <button
                         type="button"
                         onClick={() => setVlaknoId(null)}
-                        title="Zavřít vlákno"
-                        aria-label="Zavřít vlákno"
+                        title={t('chat.zavritVlakno')}
+                        aria-label={t('chat.zavritVlakno')}
                         className="text-muted hover:text-brand-purple text-lg leading-none px-1"
                       >
                         ×
@@ -3815,7 +3849,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                           <div className="min-w-0">
                             <span className="flex items-baseline gap-1.5">
                               <span className="text-[12px] font-heading font-semibold text-ink">
-                                {m.mine ? 'Já' : m.authorLabel}
+                                {m.mine ? t('chat.ja') : m.authorLabel}
                               </span>
                               <time
                                 dateTime={m.createdAt}
@@ -3827,9 +3861,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               {m.editedAt && (
                                 <span
                                   className="text-[11px] font-body text-muted italic"
-                                  title={`Upraveno ${formatFullTime(m.editedAt)}`}
+                                  title={t('chat.upravenoKdy', { kdy: formatFullTime(m.editedAt) })}
                                 >
-                                  upraveno
+                                  {t('chat.upraveno')}
                                 </span>
                               )}
                               {m.mine && upravovanaId !== m.id && (
@@ -3839,7 +3873,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                     onClick={() => zacniUpravu(m)}
                                     className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
                                   >
-                                    Upravit
+                                    {t('obecne.upravit')}
                                   </button>
                                   <SmazatZpravu
                                     id={m.id}
@@ -3862,10 +3896,10 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                                   }}
                                   odeslat={ulozUpravu}
                                   sending={sending}
-                                  placeholder="Upravit zprávu…"
+                                  placeholder={t('chat.upravitZpravu')}
                                   nabidka={zminkyPro === 'uprava' ? nabidkaZminek : []}
                                   vyber={doplnZminku}
-                                  popisek="Uložit"
+                                  popisek={t('obecne.ulozit')}
                                   onZrusit={zrusUpravu}
                                   autoFocus
                                 />
@@ -3894,7 +3928,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         </div>
                       ))}
                       {vlakno.length <= 1 && (
-                        <p className="text-sm font-body text-muted m-0 pl-3">Zatím bez odpovědí.</p>
+                        <p className="text-sm font-body text-muted m-0 pl-3">{t('chat.bezOdpovedi')}</p>
                       )}
                     </div>
 
@@ -3906,7 +3940,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                       }}
                       odeslat={(e) => odesli(e, true)}
                       sending={sending}
-                      placeholder="Odpovědět…"
+                      placeholder={t('chat.odpovedetPlaceholder')}
                       nabidka={zminkyPro === 'vlakno' ? nabidkaZminek : []}
                       vyber={doplnZminku}
                       prilohy={prilohyVlakno}
@@ -3932,7 +3966,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
             nestalo. */}
         {naStrance && (
           <nav className="sm:hidden shrink-0 border-t border-line bg-paper flex items-stretch">
-            {CHAT_ZALOZKY.map((t) => {
+            {CHAT_ZALOZKY.map((z) => {
               /**
                * NEPŘEČTENÉ VIDÍ I SPODNÍ LIŠTA (zadání 18. 9. 2026: „na spodní
                * liště v mobilu, kde jsou zkratky na druhy konverzací, by mělo
@@ -3942,39 +3976,39 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                * Číslo, ne tečka: na telefonu je lišta jediná navigace a člověk
                * chce vědět, jestli přišla jedna zpráva, nebo dvacet.
                */
-              const nove = t.klic === ZALOZKA_UKOLY ? 0 : neprectenePodleDruhu[t.klic] ?? 0;
+              const nove = z.klic === ZALOZKA_UKOLY ? 0 : neprectenePodleDruhu[z.klic] ?? 0;
               /**
                * Ťuknutí na druh s nepřečteným rovnou otevře tu konverzaci,
                * kde něco přibylo - to je ten „proklik". Když jich je víc,
                * zůstane seznam; skákat do jedné z nich by bylo hádání.
                */
               const kOtevreni = nove > 0
-                ? conversations.filter((c) => c.kind === t.klic && c.unread > 0)
+                ? conversations.filter((c) => c.kind === z.klic && c.unread > 0)
                 : [];
               return (
                 <button
-                  key={t.klic}
+                  key={z.klic}
                   type="button"
                   onClick={() => {
-                    setTab(t.klic);
+                    setTab(z.klic);
                     setNovy(false);
                     setVlaknoId(null);
                     setOpenId(kOtevreni.length === 1 ? kOtevreni[0].id : null);
                   }}
-                  title={nove > 0 ? `${t.label} — ${nove} nepřečtených` : t.label}
+                  title={nove > 0 ? t('chat.zalozkaNeprectene', { nazev: z.label, pocet: nove }) : z.label}
                   className={`relative flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-heading font-semibold transition-colors ${
-                    tab === t.klic && !novy ? 'text-brand-purple' : nove > 0 ? 'text-ink' : 'text-muted'
+                    tab === z.klic && !novy ? 'text-brand-purple' : nove > 0 ? 'text-ink' : 'text-muted'
                   }`}
                 >
                   <span className="relative">
-                    <IkonaZalozky kind={t.klic} />
+                    <IkonaZalozky kind={z.klic} />
                     {nove > 0 && (
                       <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-pill bg-brand-purple text-white text-[10px] font-heading font-bold leading-[16px] text-center ring-2 ring-paper">
                         {nove > 99 ? '99+' : nove}
                       </span>
                     )}
                   </span>
-                  {t.label}
+                  {z.label}
                 </button>
               );
             })}
@@ -3992,7 +4026,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-5 h-5">
                 <path d="M12 5v14M5 12h14" />
               </svg>
-              Nová
+              {t('chat.nova')}
             </button>
           </nav>
         )}
@@ -4059,6 +4093,7 @@ function SmazatZpravu({
   onZrus: () => void;
   onSmaz: () => void;
 }) {
+  const t = usePreklad();
   if (!ptaSe) {
     return (
       <button
@@ -4066,7 +4101,7 @@ function SmazatZpravu({
         onClick={onZeptejSe}
         className="text-[11px] font-heading font-semibold text-muted hover:text-danger"
       >
-        Smazat
+        {t('obecne.smazat')}
       </button>
     );
   }
@@ -4078,7 +4113,7 @@ function SmazatZpravu({
         disabled={bezi}
         className="text-[11px] font-heading font-semibold text-danger hover:underline disabled:opacity-50"
       >
-        {bezi ? 'Mažu…' : 'Opravdu smazat?'}
+        {bezi ? t('chat.mazu') : t('chat.opravduSmazat')}
       </button>
       <span className="text-[11px] text-muted/40">·</span>
       <button
@@ -4086,7 +4121,7 @@ function SmazatZpravu({
         onClick={onZrus}
         className="text-[11px] font-heading font-semibold text-muted hover:text-ink"
       >
-        Zrušit
+        {t('obecne.zrusit')}
       </button>
     </span>
   );
@@ -4124,23 +4159,38 @@ function ListaUkolu({
   onCas: (v: string) => void;
   hlaska: string | null;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   return (
     <div className="mx-3 mb-1.5 rounded-lg border border-brand-purple/40 bg-tint/60 px-2.5 py-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
       <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.12em] text-brand-purple">
-        Úkol
+        {t('chat.ukol')}
       </span>
       <span className="text-xs font-body text-ink min-w-0 flex-1">
         {prijemce ? (
-          <>
-            pro <strong className="font-heading">{prijemce}</strong>
-            {nazev ? `: ${nazev}` : ' — napište, co je potřeba udělat'}
-          </>
+          /* Jméno stojí ve větě tlustě, proto se věta vykresluje přes
+             prelozitKolem - v angličtině může značka stát jinde. */
+          (() => {
+            const [pred, po] = prelozitKolem(
+              jazyk,
+              nazev ? 'chat.ukolProSNazvem' : 'chat.ukolProBezNazvu',
+              'prijemce',
+              { nazev },
+            );
+            return (
+              <>
+                {pred}
+                <strong className="font-heading">{prijemce}</strong>
+                {po}
+              </>
+            );
+          })()
         ) : (
           CHYBI_PRIJEMCE
         )}
       </span>
       <label className="flex items-center gap-1.5 text-[11px] font-body text-muted">
-        do
+        {t('chat.ukolDo')}
         <DatumPole
           value={termin}
           onChange={(e) => onTermin(e.target.value)}
@@ -4152,8 +4202,8 @@ function ListaUkolu({
           type="time"
           value={cas}
           onChange={(e) => onCas(e.target.value)}
-          title="Do kolika hodin (nepovinné)"
-          aria-label="Čas"
+          title={t('chat.doKolikaHodin')}
+          aria-label={t('chat.cas')}
           className="rounded-md border border-line bg-field px-1.5 py-1 text-[11px] font-body text-ink"
         />
       )}
@@ -4166,7 +4216,7 @@ function ListaUkolu({
           }}
           className="text-[11px] font-heading font-semibold text-muted hover:text-brand-purple"
         >
-          bez termínu
+          {t('chat.bezTerminu')}
         </button>
       )}
       {hlaska && <span className="w-full text-[11px] font-body text-brand-purple">{hlaska}</span>}
@@ -4175,6 +4225,7 @@ function ListaUkolu({
 }
 
 function UkolyVChatu() {
+  const t = usePreklad();
   type Ukol = {
     id: string;
     title: string;
@@ -4210,7 +4261,7 @@ function UkolyVChatu() {
   }, [nacti]);
 
   async function odskrtni(u: Ukol) {
-    setUkoly((c) => (c ?? []).map((t) => (t.id === u.id ? { ...t, done: !t.done } : t)));
+    setUkoly((c) => (c ?? []).map((x) => (x.id === u.id ? { ...x, done: !x.done } : x)));
     try {
       await fetch(`/api/tasks/${u.id}`, {
         method: 'PATCH',
@@ -4251,7 +4302,7 @@ function UkolyVChatu() {
         <input
           value={novy}
           onChange={(e) => setNovy(e.target.value)}
-          placeholder="Co je potřeba udělat?"
+          placeholder={t('chat.coJePotreba')}
           className="rounded-lg border border-line bg-field px-2.5 py-1.5 text-sm font-body text-ink placeholder:text-muted"
         />
         <div className="flex items-center gap-1.5">
@@ -4265,8 +4316,8 @@ function UkolyVChatu() {
             value={casTerminu}
             onChange={(e) => setCasTerminu(e.target.value)}
             disabled={!termin}
-            title={termin ? 'Do kolika hodin (nepovinné)' : 'Nejdřív vyberte datum'}
-            aria-label="Čas"
+            title={termin ? t('chat.doKolikaHodin') : t('chat.nejdrivDatum')}
+            aria-label={t('chat.cas')}
             className="w-[84px] shrink-0 rounded-lg border border-line bg-field px-2 py-1.5 text-xs font-body text-ink disabled:opacity-40"
           />
           <button
@@ -4274,14 +4325,14 @@ function UkolyVChatu() {
             disabled={busy || !novy.trim()}
             className="shrink-0 bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-50"
           >
-            Přidat
+            {t('chat.pridat')}
           </button>
         </div>
       </form>
 
-      {ukoly === null && <p className="text-sm font-body text-muted m-0 px-1">Načítám úkoly…</p>}
+      {ukoly === null && <p className="text-sm font-body text-muted m-0 px-1">{t('chat.nacitamUkoly')}</p>}
       {ukoly !== null && otevrene.length === 0 && (
-        <p className="text-sm font-body text-muted m-0 px-1">Nic nečeká. 🎉</p>
+        <p className="text-sm font-body text-muted m-0 px-1">{t('chat.nicNeceka')}</p>
       )}
       {otevrene.map((u) =>
         upravovany === u.id ? (
@@ -4309,7 +4360,7 @@ function UkolyVChatu() {
           onClick={() => setHotove((v) => !v)}
           className="self-start text-[11px] font-heading font-semibold text-muted hover:text-brand-purple px-1"
         >
-          {hotove ? 'Skrýt hotové' : `Hotové (${splnene.length})`}
+          {hotove ? t('chat.skrytHotove') : t('chat.hotovePocet', { pocet: splnene.length })}
         </button>
       )}
       {hotove && splnene.map((u) => (
@@ -4331,6 +4382,7 @@ function RadekUkolu({
   /** Tužka vedle úkolu (25. 9. 2026); u hotových se nenabízí. */
   onUpravit?: () => void;
 }) {
+  const t = usePreklad();
   const poTerminu = !ukol.done && jePoTerminu(ukol.dueDate, ukol.dueTime ?? null);
   return (
     <label className="group flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-field cursor-pointer">
@@ -4348,7 +4400,7 @@ function RadekUkolu({
           <span className={`block text-[11px] font-body ${poTerminu ? 'text-status-danger' : 'text-muted'}`}>
             {ukol.dueDate && popisTerminu(ukol.dueDate, ukol.dueTime ?? null)}
             {ukol.dueDate && ukol.zadalJmeno ? ' · ' : ''}
-            {ukol.zadalJmeno && `od ${ukol.zadalJmeno}`}
+            {ukol.zadalJmeno && t('chat.odZadal', { jmeno: ukol.zadalJmeno })}
           </span>
         )}
       </span>
@@ -4361,8 +4413,8 @@ function RadekUkolu({
             e.stopPropagation();
             onUpravit();
           }}
-          title="Upravit úkol"
-          aria-label="Upravit úkol"
+          title={t('chat.upravitUkol')}
+          aria-label={t('chat.upravitUkol')}
           className="ml-auto mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-xs text-muted hover:text-brand-purple opacity-60 group-hover:opacity-100"
         >
           ✎
@@ -4460,14 +4512,15 @@ function ZvonekSkrtnuty() {
  * globals.css) — pořád je vidět, že někdo píše, jen to neposkakuje.
  */
 function PisouIndikator({ jmena }: { jmena: string[] }) {
+  const t = usePreklad();
   if (jmena.length === 0) return null;
 
   const text =
     jmena.length === 1
-      ? `${jmena[0]} píše…`
+      ? t('chat.pisouJeden', { jmeno: jmena[0] })
       : jmena.length === 2
-        ? `${jmena[0]} a ${jmena[1]} píšou…`
-        : `${jmena.length} lidí píše…`;
+        ? t('chat.pisouDva', { jmeno: jmena[0], druhy: jmena[1] })
+        : t('chat.pisouVic', { pocet: jmena.length });
 
   return (
     <div className="px-4 pb-1.5 -mt-1 flex items-center gap-2" aria-live="polite">

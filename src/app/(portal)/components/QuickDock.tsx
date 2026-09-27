@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UDALOST_PREHLED_DNE, jeOtevriVPortalu } from '@/lib/quickActions';
 import type { QuickAction, QuickActionKey } from '@/lib/quickActions';
+import { usePreklad } from './JazykProvider';
 
 /**
  * Levý panel rychlých voleb (zadání 9. 9. 2026: „vlevo bych chtěl skrývací
@@ -152,6 +153,7 @@ export function QuickDock({
   /** Co si smí přidat - podle role, řeší server (lib/quickActionsServer.ts). */
   available: QuickAction[];
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -242,13 +244,13 @@ export function QuickDock({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('rychleVolby.chybaUlozit'));
         return;
       }
       setEditing(false);
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('rychleVolby.chybaUlozit'));
     } finally {
       setSaving(false);
     }
@@ -286,8 +288,8 @@ export function QuickDock({
         <button
           type="button"
           onClick={toggle}
-          title="Zobrazit rychlé volby"
-          aria-label="Zobrazit rychlé volby"
+          title={t('rychleVolby.zobrazit')}
+          aria-label={t('rychleVolby.zobrazit')}
           className="px-2.5 py-2 text-brand-green hover:bg-brand-purpleDeep transition-colors flex items-center justify-center border-t border-white/15"
         >
           <Chevron direction="right" />
@@ -301,7 +303,7 @@ export function QuickDock({
     <aside className="fixed left-0 top-28 z-40 flex items-stretch">
       <div className="w-60 max-w-[70vw] bg-surface border border-l-0 border-line rounded-r-card shadow-lg flex flex-col">
         <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-brand-purple text-white rounded-tr-card">
-          <span className="font-heading font-semibold text-xs uppercase tracking-wide">Rychlé volby</span>
+          <span className="font-heading font-semibold text-xs uppercase tracking-wide">{t('rychleVolby.nadpis')}</span>
           {editing ? (
             <span className="inline-flex items-center gap-2">
               <button
@@ -310,7 +312,7 @@ export function QuickDock({
                 disabled={saving}
                 className="bg-white text-brand-purpleDeep font-heading font-semibold text-xs rounded-lg px-2.5 py-1 disabled:opacity-60"
               >
-                {saving ? 'Ukládám…' : 'Hotovo'}
+                {saving ? t('obecne.ukladam') : t('rychleVolby.hotovo')}
               </button>
               <button
                 type="button"
@@ -321,7 +323,7 @@ export function QuickDock({
                 }}
                 className="text-white/80 hover:text-white text-xs font-heading"
               >
-                Zrušit
+                {t('obecne.zrusit')}
               </button>
             </span>
           ) : (
@@ -333,8 +335,8 @@ export function QuickDock({
                   setEditing(true);
                   setError(null);
                 }}
-                title="Upravit rychlé volby"
-                aria-label="Upravit rychlé volby"
+                title={t('rychleVolby.upravit')}
+                aria-label={t('rychleVolby.upravit')}
                 className="w-6 h-6 rounded-full text-white/80 hover:text-white hover:bg-white/15 inline-flex flex-col items-center justify-center gap-[3px]"
               >
                 <span className="w-[3px] h-[3px] rounded-full bg-current" />
@@ -344,8 +346,8 @@ export function QuickDock({
               <button
                 type="button"
                 onClick={toggle}
-                title="Skrýt rychlé volby"
-                aria-label="Skrýt rychlé volby"
+                title={t('rychleVolby.skryt')}
+                aria-label={t('rychleVolby.skryt')}
                 className="w-6 h-6 rounded-full text-white/80 hover:text-white hover:bg-white/15 inline-flex items-center justify-center"
               >
                 <Chevron direction="left" />
@@ -356,9 +358,7 @@ export function QuickDock({
 
         <div className="flex flex-col p-2 gap-1">
           {zobrazene.length === 0 && (
-            <p className="text-xs font-body text-muted m-0 px-2 py-3">
-              Zatím tu nic není. Přidejte si zkratku přes tři tečky.
-            </p>
+            <p className="text-xs font-body text-muted m-0 px-2 py-3">{t('rychleVolby.nicTuNeni')}</p>
           )}
 
           {zobrazene.map((akce, index) =>
@@ -373,7 +373,7 @@ export function QuickDock({
                   draggable
                   onDragStart={() => setTaheny(index)}
                   onDragEnd={() => setTaheny(null)}
-                  title="Přetažením změníte pořadí"
+                  title={t('rychleVolby.pretazenim')}
                   className="cursor-grab active:cursor-grabbing text-muted"
                 >
                   <Uchyt />
@@ -385,8 +385,8 @@ export function QuickDock({
                 <button
                   type="button"
                   onClick={() => odeber(akce.key)}
-                  title={`Odebrat ${akce.label}`}
-                  aria-label={`Odebrat ${akce.label}`}
+                  title={t('rychleVolby.odebrat', { nazev: akce.label })}
+                  aria-label={t('rychleVolby.odebrat', { nazev: akce.label })}
                   className="w-5 h-5 rounded-full bg-field text-muted hover:bg-dangerTint hover:text-danger text-xs font-bold leading-none flex items-center justify-center"
                 >
                   ×
@@ -421,10 +421,10 @@ export function QuickDock({
           {editing && (
             <div className="border-t border-line mt-1 pt-2 flex flex-col gap-1">
               {lzePridat.length === 0 ? (
-                <p className="text-[11px] font-body text-muted m-0 px-2">Máte tu všechno, co jde přidat.</p>
+                <p className="text-[11px] font-body text-muted m-0 px-2">{t('rychleVolby.vsechnoPridano')}</p>
               ) : (
                 <>
-                  <span className="text-[10px] font-heading text-muted uppercase tracking-wide px-2">Přidat</span>
+                  <span className="text-[10px] font-heading text-muted uppercase tracking-wide px-2">{t('rychleVolby.pridat')}</span>
                   {lzePridat.map((akce) => (
                     <button
                       key={akce.key}

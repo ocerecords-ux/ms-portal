@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Text z objednávky v hlavičce projektu (22. 9. 2026): odkaz na přílohu a když
@@ -20,6 +21,7 @@ export function PrilohaObjednavky({
   chyba: string | null;
   muzeZkusit: boolean;
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [bezi, setBezi] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
@@ -31,19 +33,19 @@ export function PrilohaObjednavky({
     const telo = res ? await res.json().catch(() => ({})) : {};
     setBezi(false);
     if (res?.ok) {
-      setHlaska('Nahráno do složky projektu.');
+      setHlaska(t('priloha.nahrano'));
       router.refresh();
-    } else setHlaska(telo.error || 'Nepodařilo se.');
+    } else setHlaska(telo.error || t('priloha.nepodariloSe'));
   }
 
   return (
     <span className="inline-flex items-center gap-2 flex-wrap text-sm font-body">
       <a href={`/api/orders/${orderId}/priloha`} target="_blank" rel="noopener" className="text-brand-purple hover:underline">
-        Text z objednávky: {nazev}
+        {t('priloha.textZObjednavky', { nazev })}
       </a>
-      {naDisku && <span className="text-xs text-muted">· je ve složce na Disku</span>}
+      {naDisku && <span className="text-xs text-muted">· {t('priloha.naDisku')}</span>}
       {!naDisku && chyba && (
-        <span className="text-xs text-status-progress">· na Disk se nedostal: {chyba}</span>
+        <span className="text-xs text-status-progress">· {t('priloha.nedostalSe', { chyba })}</span>
       )}
       {!naDisku && muzeZkusit && (
         <button
@@ -52,7 +54,7 @@ export function PrilohaObjednavky({
           disabled={bezi}
           className="text-xs font-heading font-semibold text-brand-purple bg-transparent border-0 cursor-pointer disabled:opacity-60"
         >
-          {bezi ? 'Nahrávám…' : 'Nahrát do složky na Disku'}
+          {bezi ? t('priloha.nahravam') : t('priloha.nahratNaDisk')}
         </button>
       )}
       {hlaska && <span className="text-xs text-muted">{hlaska}</span>}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * QR PLATBA ROVNOU V PŘEHLEDU (zadání 15. 9. 2026: „nemůžem to udělat spíš už
@@ -28,6 +29,7 @@ export function QrTlacitko({
   variabilniSymbol?: string | null;
   splatnost?: string | null;
 }) {
+  const t = usePreklad();
   const [otevreno, setOtevreno] = useState(false);
 
   return (
@@ -35,8 +37,8 @@ export function QrTlacitko({
       <button
         type="button"
         onClick={() => setOtevreno(true)}
-        title={`QR platba: ${castka}`}
-        aria-label="Zobrazit QR platbu"
+        title={t('qr.platbaCastka', { castka })}
+        aria-label={t('qr.zobrazit')}
         className="text-muted hover:text-brand-purple transition-colors"
       >
         <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
@@ -83,6 +85,7 @@ function QrOkno({
   splatnost?: string | null;
   zavri: () => void;
 }) {
+  const t = usePreklad();
   const [mrizka, setMrizka] = useState<{ velikost: number; body: boolean[] } | null>(null);
 
   useEffect(() => {
@@ -129,7 +132,7 @@ function QrOkno({
           <svg
             viewBox={`0 0 ${strana} ${strana}`}
             role="img"
-            aria-label="QR kód pro platbu"
+            aria-label={t('qr.kodProPlatbu')}
             className="w-[220px] h-[220px] rounded-lg bg-white p-2"
           >
             {mrizka.body.map((plny, i) =>
@@ -154,9 +157,13 @@ function QrOkno({
           <span className="text-sm font-heading text-ink">{prijemce}</span>
           <span className="text-xs font-body text-muted tabular-nums break-all">{ucet}</span>
           {variabilniSymbol && (
-            <span className="text-xs font-body text-muted tabular-nums">VS {variabilniSymbol}</span>
+            <span className="text-xs font-body text-muted tabular-nums">
+              {t('qr.vs', { vs: variabilniSymbol })}
+            </span>
           )}
-          {splatnost && <span className="text-xs font-body text-muted">Splatnost {splatnost}</span>}
+          {splatnost && (
+            <span className="text-xs font-body text-muted">{t('qr.splatnost', { datum: splatnost })}</span>
+          )}
         </div>
 
         <button
@@ -164,7 +171,7 @@ function QrOkno({
           onClick={zavri}
           className="text-sm font-heading text-muted hover:text-ink"
         >
-          Zavřít
+          {t('obecne.zavrit')}
         </button>
       </div>
     </div>

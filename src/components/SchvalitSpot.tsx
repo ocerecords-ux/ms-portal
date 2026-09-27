@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { formatDatum, formatDatumCas } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * TLAČÍTKO „SCHVÁLIT" (zadání 18. 9. 2026, popisek sjednocen tentýž den).
@@ -34,6 +36,8 @@ export function SchvalitSpot({
   /** `karta` je pruh s vysvětlením, `radek` je samotné tlačítko do tabulky. */
   varianta?: 'karta' | 'radek';
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [hotovoAt, setHotovoAt] = useState<string | null>(schvalenoAt);
   const [ptaSe, setPtaSe] = useState(false);
   const [bezi, setBezi] = useState(false);
@@ -51,13 +55,13 @@ export function SchvalitSpot({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Schválení se nepodařilo uložit.');
+        setChyba(data?.error || t('spot.schvaleniNeulozeno'));
         return;
       }
       setHotovoAt(data?.schvalenoAt ?? new Date().toISOString());
       setPtaSe(false);
     } catch {
-      setChyba('Schválení se nepodařilo uložit.');
+      setChyba(t('spot.schvaleniNeulozeno'));
     } finally {
       setBezi(false);
     }
@@ -69,7 +73,7 @@ export function SchvalitSpot({
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 shrink-0">
           <path d="M4 12l6 6L20 6" />
         </svg>
-        {new Intl.DateTimeFormat('cs-CZ').format(new Date(hotovoAt))}
+        {formatDatum(jazyk, new Date(hotovoAt))}
       </span>
     );
   }
@@ -87,12 +91,12 @@ export function SchvalitSpot({
             }
             void schval();
           }}
-          title="Schválením jde celý projekt k fakturaci"
+          title={t('spot.bublinaFakturace')}
           className={`font-heading font-semibold text-xs rounded-lg px-3 py-1.5 transition-colors disabled:opacity-60 whitespace-nowrap ${
             ptaSe ? 'bg-brand-purple text-white' : 'bg-brand-green text-onAccent'
           }`}
         >
-          {bezi ? 'Ukládám…' : ptaSe ? 'Opravdu? Klepněte znovu' : 'Schválit'}
+          {bezi ? t('obecne.ukladam') : ptaSe ? t('spot.opravduKlepnete') : t('spot.schvalit')}
         </button>
         {chyba && <span className="text-[11px] font-body text-danger">{chyba}</span>}
       </span>
@@ -105,15 +109,9 @@ export function SchvalitSpot({
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-status-done shrink-0">
           <path d="M4 12l6 6L20 6" />
         </svg>
-        <span className="font-heading font-semibold text-sm text-ink">Zakázka je schválená</span>
+        <span className="font-heading font-semibold text-sm text-ink">{t('spot.jeSchvalena')}</span>
         <span className="text-xs font-body text-muted">
-          {new Intl.DateTimeFormat('cs-CZ', {
-            day: 'numeric',
-            month: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          }).format(new Date(hotovoAt))}
+          {formatDatumCas(jazyk, new Date(hotovoAt))}
         </span>
       </div>
     );
@@ -127,11 +125,10 @@ export function SchvalitSpot({
     >
       <div className="min-w-0 flex-1">
         <span className="block font-heading font-semibold text-sm text-ink">
-          Je zakázka v pořádku?
+          {t('spot.vPoradku')}
         </span>
         <span className="block text-xs font-body text-muted">
-          Schválením nám dáte vědět, že je hotovo — celý projekt tím jde k fakturaci. Když je co
-          upravit, napište to radši do připomínek.
+          {t('spot.vysvetleni')}
         </span>
       </div>
       {chyba && <span className="w-full text-xs font-body text-danger">{chyba}</span>}
@@ -151,7 +148,7 @@ export function SchvalitSpot({
             : 'bg-brand-green text-onAccent'
         }`}
       >
-        {bezi ? 'Ukládám…' : ptaSe ? 'Opravdu schválit? Klepněte znovu' : 'Schválit'}
+        {bezi ? t('obecne.ukladam') : ptaSe ? t('spot.opravduSchvalitKlepnete') : t('spot.schvalit')}
       </button>
     </div>
   );

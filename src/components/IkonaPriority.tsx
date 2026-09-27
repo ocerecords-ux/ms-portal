@@ -1,7 +1,7 @@
 'use client';
 
 import type { ProjectPriority } from '@prisma/client';
-import { PRIORITY_LABELS } from '@/lib/projectTypes';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * PRIORITA GRAFICKY (zadání 18. 9. 2026: „ještě bych předělal nějak pole
@@ -37,6 +37,12 @@ import { PRIORITY_LABELS } from '@/lib/projectTypes';
  */
 
 const STUPEN: Record<ProjectPriority, number> = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+/** Název stupně se bere ze slovníku portálu, ne z číselníku v lib - ten je jen česky. */
+const KLIC_NAZVU: Record<ProjectPriority, string> = {
+  LOW: 'priorita.nizka',
+  MEDIUM: 'priorita.stredni',
+  HIGH: 'priorita.vysoka',
+};
 /** Pořadí odpovídá stupňům 1-3 výše. */
 const PODLE_STUPNE: ProjectPriority[] = ['LOW', 'MEDIUM', 'HIGH'];
 
@@ -69,15 +75,16 @@ export function IkonaPriority({
   priorita: ProjectPriority | null | undefined;
   velikost?: number;
 }) {
+  const t = usePreklad();
   if (!priorita || !STUPEN[priorita]) return <span className="text-muted">—</span>;
 
   const stupen = STUPEN[priorita];
-  const popisek = PRIORITY_LABELS[priorita];
+  const popisek = t(KLIC_NAZVU[priorita]);
 
   return (
     <span
-      title={`Priorita: ${popisek}`}
-      aria-label={`Priorita: ${popisek}`}
+      title={t('priorita.bublina', { stupen: popisek })}
+      aria-label={t('priorita.bublina', { stupen: popisek })}
       role="img"
       className={`inline-flex items-end gap-[2px] align-middle ${BARVA[priorita]}`}
       style={{ height: velikost }}
@@ -111,19 +118,21 @@ export function VyberPriority({
   /** Ukládá se - ať je vidět, že se něco děje, a neklepe se dvakrát. */
   uklada?: boolean;
 }) {
+  const t = usePreklad();
   const stupen = priorita && STUPEN[priorita] ? STUPEN[priorita] : 0;
   // Dokola: 1 -> 2 -> 3 -> 1. Z prazdneho se zacina jednou carkou.
   const dalsi = PODLE_STUPNE[stupen >= 3 ? 0 : stupen];
   const barva = stupen > 0 ? BARVA[PODLE_STUPNE[stupen - 1]] : 'text-muted';
-  const popisek = stupen > 0 ? PRIORITY_LABELS[PODLE_STUPNE[stupen - 1]] : 'bez priority';
+  const popisek = stupen > 0 ? t(KLIC_NAZVU[PODLE_STUPNE[stupen - 1]]) : t('priorita.bez');
+  const nazevDalsi = t(KLIC_NAZVU[dalsi]);
 
   return (
     <button
       type="button"
       disabled={uklada}
       onClick={() => onZmena(dalsi)}
-      title={`Priorita: ${popisek} — klepnutím ${PRIORITY_LABELS[dalsi].toLowerCase()}`}
-      aria-label={`Priorita: ${popisek}. Klepnutím nastavíte: ${PRIORITY_LABELS[dalsi]}`}
+      title={t('priorita.bublinaKlepnuti', { stupen: popisek, dalsi: nazevDalsi.toLowerCase() })}
+      aria-label={t('priorita.bublinaKlepnutiPopis', { stupen: popisek, dalsi: nazevDalsi })}
       className={`inline-flex items-end gap-[2px] align-middle px-1.5 py-1 -mx-1.5 -my-1 rounded ${barva} ${
         uklada ? 'opacity-60' : 'hover:bg-field'
       }`}

@@ -2,6 +2,7 @@
 
 import { Avatar } from './Avatar';
 import { otevriRozhovor, useNeprectene, usePravyDok } from './pravyDok';
+import { usePreklad } from './JazykProvider';
 
 /**
  * Tváře nepřečtených rozhovorů u pravé hrany (zadání 12. 9. 2026: „chtěl bych
@@ -19,6 +20,7 @@ import { otevriRozhovor, useNeprectene, usePravyDok } from './pravyDok';
  * téhož seznamu.
  */
 export function NeprecteneVedleDoku() {
+  const t = usePreklad();
   const [dok] = usePravyDok();
   const neprectene = useNeprectene();
 
@@ -36,8 +38,11 @@ export function NeprecteneVedleDoku() {
           key={c.id}
           type="button"
           onClick={() => otevriRozhovor(c.id)}
-          title={`${c.kind === 'PROJEKT' ? `# ${c.label}` : c.label} — ${c.unread} nepřečtených`}
-          aria-label={`${c.label}: ${c.unread} nepřečtených zpráv`}
+          title={t('dok.neprectenePocet', {
+            nazev: c.kind === 'PROJEKT' ? `# ${c.label}` : c.label,
+            pocet: c.unread,
+          })}
+          aria-label={t('dok.neprecteneAria', { nazev: c.label, pocet: c.unread })}
           className="relative rounded-full shadow-lg ring-2 ring-brand-purple transition-transform hover:scale-105"
         >
           <Avatar label={c.kind === 'PROJEKT' ? `# ${c.label}` : c.label} photoUrl={c.avatarUrl} size={34} />
@@ -48,7 +53,7 @@ export function NeprecteneVedleDoku() {
       ))}
       {zbyva > 0 && (
         <span
-          title={`a další ${zbyva}`}
+          title={t('dok.aDalsi', { pocet: zbyva })}
           className="text-[10px] font-heading font-semibold text-muted bg-surface border border-line rounded-full px-1.5 py-0.5 shadow"
         >
           +{zbyva}

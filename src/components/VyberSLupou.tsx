@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Rozbalovací pole, které se dá HLEDAT PSANÍM (zadání 15. 9. 2026: „všechna
@@ -55,8 +56,8 @@ export function VyberSLupou({
   hodnota,
   onZmena,
   prazdnyPopisek,
-  placeholder = 'Začněte psát…',
-  prazdnyText = 'Nic takového jsme nenašli.',
+  placeholder,
+  prazdnyText,
   disabled,
   className,
   required,
@@ -74,12 +75,16 @@ export function VyberSLupou({
   required?: boolean;
   id?: string;
 }) {
+  const t = usePreklad();
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
   const [zvyrazneny, setZvyrazneny] = useState(0);
   const obal = useRef<HTMLDivElement>(null);
   const poleRef = useRef<HTMLInputElement>(null);
   const praveVybrano = useRef(false);
+
+  const napoveda = placeholder ?? t('vyber.zacnetePsat');
+  const kdyzNic = prazdnyText ?? t('vyber.nicNenalezeno');
 
   const vybrana = moznosti.find((m) => m.hodnota === hodnota) ?? null;
 
@@ -151,7 +156,7 @@ export function VyberSLupou({
         aria-autocomplete="list"
         disabled={disabled}
         value={otevreno ? hledani : (vybrana?.popisek ?? '')}
-        placeholder={vybrana ? vybrana.popisek : placeholder}
+        placeholder={vybrana ? vybrana.popisek : napoveda}
         onFocus={() => {
           if (praveVybrano.current) return;
           setHledani('');
@@ -201,8 +206,8 @@ export function VyberSLupou({
         <button
           type="button"
           onClick={() => onZmena('')}
-          title="Zrušit výběr"
-          aria-label="Zrušit výběr"
+          title={t('obecne.zrusitVyber')}
+          aria-label={t('obecne.zrusitVyber')}
           className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 grid place-items-center rounded-full text-muted hover:text-danger hover:bg-surface"
         >
           ×
@@ -212,7 +217,7 @@ export function VyberSLupou({
       {otevreno && (
         <div className="absolute z-30 left-0 right-0 mt-1 max-h-[280px] overflow-y-auto rounded-lg border border-line bg-surface shadow-lg">
           {viditelne.length === 0 ? (
-            <p className="text-sm font-body text-muted m-0 px-3 py-3">{prazdnyText}</p>
+            <p className="text-sm font-body text-muted m-0 px-3 py-3">{kdyzNic}</p>
           ) : (
             <ul className="list-none m-0 p-1 flex flex-col">
               {prazdnyPopisek !== undefined && !hledani.trim() && (
@@ -247,7 +252,7 @@ export function VyberSLupou({
           )}
           {nalezene.length > viditelne.length && (
             <p className="text-xs font-body text-muted m-0 px-3 py-2 border-t border-line">
-              Ukazujeme prvních {STROP} — pište dál, ať se seznam zúží.
+              {t('vyber.ukazujemePrvnich', { pocet: STROP })}
             </p>
           )}
         </div>

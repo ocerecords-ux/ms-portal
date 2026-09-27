@@ -2,6 +2,7 @@
 
 import { Children, Fragment, isValidElement, type ReactNode } from 'react';
 import { VyberSLupou, PRAH_LUPY, type MoznostVyberu } from './VyberSLupou';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Náhrada za obyčejný <select> (zadání 15. 9. 2026: „všechna pole prosím
@@ -78,6 +79,7 @@ export function VyberPole({
   placeholder?: string;
   'aria-label'?: string;
 }) {
+  const t = usePreklad();
   const hodnota = value === null || value === undefined ? '' : String(value);
   const volby = sesbirej(children);
   // Prázdná volba („— bez projektu —") se nepočítá mezi položky a v poli
@@ -109,7 +111,7 @@ export function VyberPole({
       hodnota={hodnota}
       onZmena={(v) => onChange({ target: { value: v } })}
       prazdnyPopisek={prazdna?.popisek}
-      placeholder={placeholder ?? 'Hledejte psaním…'}
+      placeholder={placeholder ?? t('vyber.hledejtePsanim')}
       disabled={disabled}
       required={required}
       className={className}

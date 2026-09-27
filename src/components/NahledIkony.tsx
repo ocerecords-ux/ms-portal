@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * NÁHLED POD IKONOU V PŘEHLEDU PROJEKTŮ (zadání 25. 9. 2026: „když kliknu na
@@ -55,6 +56,7 @@ export function NahledIkony({
   id?: string | null;
   children: React.ReactNode;
 }) {
+  const t = usePreklad();
   const [kotva, setKotva] = useState<{ left: number; top: number } | null>(null);
   const [data, setData] = useState<Nahled | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -78,16 +80,16 @@ export function NahledIkony({
           const res = await fetch(adresaNahledu(druh, id));
           const o = await res.json().catch(() => ({}));
           if (!res.ok) {
-            setChyba(o?.error || 'Náhled se nepodařilo načíst.');
+            setChyba(o?.error || t('ikony.nahledNenacten'));
             return;
           }
           setData(o as Nahled);
         } catch {
-          setChyba('Náhled se nepodařilo načíst.');
+          setChyba(t('ikony.nahledNenacten'));
         }
       })();
     },
-    [druh, id, odkaz, data],
+    [druh, id, odkaz, data, t],
   );
 
   /** Okno se nesmí schovat pod spodní hranou - když se nevejde, jde nad ikonu. */
@@ -155,12 +157,14 @@ export function NahledIkony({
           className="z-[90] block bg-surface border border-line rounded-card shadow-2xl overflow-hidden text-left cursor-pointer"
         >
           <span className="block px-4 py-2.5 border-b border-line font-heading font-semibold text-sm text-ink truncate">
-            {data?.nadpis ?? 'Náhled'}
+            {data?.nadpis ?? t('ikony.nahled')}
           </span>
 
           <span className="block p-4">
             {chyba && <span className="block text-sm font-body text-status-error">{chyba}</span>}
-            {!chyba && !data && <span className="block text-sm font-body text-muted">Načítám…</span>}
+            {!chyba && !data && (
+              <span className="block text-sm font-body text-muted">{t('obecne.nacitam')}</span>
+            )}
             {data && (
               <span className="flex flex-col gap-1.5">
                 {data.radky.map((r) => (
@@ -195,7 +199,7 @@ export function NahledIkony({
                 }}
                 className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 no-underline"
               >
-                {data?.tlacitko ?? 'Otevřít'}
+                {data?.tlacitko ?? t('obecne.otevrit')}
               </a>
             </span>
           </span>

@@ -9,6 +9,7 @@ import { DatumPole } from '@/components/DatumPole';
 import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
 import { UpravaMehoUkolu } from './UpravaMehoUkolu';
 import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
+import { usePreklad } from './JazykProvider';
 
 /**
  * Úkoly pořád po ruce (zadani 8. 9. 2026: "aby byl ten to do list pořád po
@@ -62,6 +63,7 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
 }
 
 export function TaskDock({ tasks }: { tasks: Task[] }) {
+  const t = usePreklad();
   const router = useRouter();
   const [dok, otevriDok] = usePravyDok();
   const pocty = usePoctyDoku();
@@ -117,14 +119,14 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Nepodařilo se uložit.');
+        setError(data?.error || t('ukoly.chybaUlozit'));
         return false;
       }
       router.refresh();
       void nactiZadane();
       return true;
     } catch {
-      setError('Nepodařilo se uložit.');
+      setError(t('ukoly.chybaUlozit'));
       return false;
     } finally {
       setBusy(false);
@@ -165,13 +167,13 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
       <button
         type="button"
         onClick={() => otevriDok(null)}
-        title="Skrýt úkoly"
-        aria-label="Skrýt úkoly"
+        title={t('ukoly.skrytUkoly')}
+        aria-label={t('ukoly.skrytUkoly')}
         className="w-8 shrink-0 rounded-l-card border border-r-0 border-line bg-field text-muted hover:bg-brand-purple hover:text-white transition-colors flex flex-col items-center justify-center gap-2"
       >
         <Chevron direction="right" />
         <span className="text-[10px] font-heading font-semibold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
-          Skrýt
+          {t('obecne.skryt')}
         </span>
         <Chevron direction="right" />
       </button>
@@ -188,14 +190,14 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Nový úkol…"
+          placeholder={t('ukoly.novyUkol')}
           className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full"
         />
         <div className="flex items-center gap-2">
           <DatumPole
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            title="Termín (nepovinné)"
+            title={t('ukoly.terminNepovinne')}
             className="flex-1 min-w-0 rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-xs outline-none focus:border-brand-purple"
           />
           {/* Do kolika hodin (21. 9. 2026) - dobrovolné, jen s datem. */}
@@ -204,7 +206,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
             value={dueTime}
             onChange={(e) => setDueTime(e.target.value)}
             disabled={!dueDate}
-            title={dueDate ? 'Do kolika hodin (nepovinné)' : 'Nejdřív vyberte datum'}
+            title={dueDate ? t('ukoly.doKolikaHodin') : t('ukoly.nejdrivDatum')}
             className="w-[84px] shrink-0 rounded-lg border border-line bg-field px-2 py-2 text-ink font-heading text-xs outline-none focus:border-brand-purple disabled:opacity-40"
           />
           <button
@@ -212,7 +214,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
             disabled={busy || !title.trim()}
             className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50 shrink-0"
           >
-            Přidat
+            {t('ukoly.pridat')}
           </button>
         </div>
       </form>
@@ -220,7 +222,9 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
       {error && <p className="text-xs text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
 
       <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
-        {open.length === 0 && <li className="text-sm text-muted font-body py-2">Žádné otevřené úkoly. 👌</li>}
+        {open.length === 0 && (
+          <li className="text-sm text-muted font-body py-2">{t('ukoly.zadneOtevrene')}</li>
+        )}
         {open.map((task) =>
           upravovany === task.id ? (
             // Úprava vlastního úkolu (25. 9. 2026) - název, termín i čas.
@@ -251,15 +255,16 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
                 // Zadano z chatu pres @ukol - at je videt, ze si to clovek
                 // nenapsal sam a od koho to prislo.
                 <span className="block text-xs font-heading mt-0.5 text-brand-purple">
-                  od {task.zadalJmeno}
+                  {t('ukoly.odKoho', { jmeno: task.zadalJmeno })}
                 </span>
               )}
               {task.dueDate && (() => {
                 const po = jePoTerminu(task.dueDate, task.dueTime ?? null);
                 return (
                   <span className={`block text-xs font-heading mt-0.5 ${po ? 'text-danger' : 'text-muted'}`}>
-                    {po ? 'Po termínu — ' : 'Do '}
-                    {popisTerminu(task.dueDate, task.dueTime ?? null)}
+                    {t(po ? 'ukoly.poTerminuTermin' : 'ukoly.doTerminu', {
+                      termin: popisTerminu(task.dueDate, task.dueTime ?? null),
+                    })}
                   </span>
                 );
               })()}
@@ -268,8 +273,8 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
             <button
               type="button"
               onClick={() => setUpravovany(task.id)}
-              title="Upravit úkol"
-              aria-label="Upravit úkol"
+              title={t('ukoly.upravitUkol')}
+              aria-label={t('ukoly.upravitUkol')}
               className="mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-xs text-muted hover:text-brand-purple hover:bg-field opacity-0 group-hover:opacity-100 transition-opacity"
             >
               ✎
@@ -279,7 +284,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
               onSmazat={() => send(`/api/tasks/${task.id}`, 'DELETE')}
               disabled={busy}
               popisek="✕"
-              otazka="Opravdu smazat?"
+              otazka={t('ukoly.opravduSmazat')}
               trida="text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
             />
           </li>
@@ -294,7 +299,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
             onClick={() => setShowDone((v) => !v)}
             className="text-xs font-heading text-muted hover:text-ink text-left"
           >
-            {showDone ? 'Skrýt hotové' : `Hotové (${done.length})`}
+            {showDone ? t('ukoly.skrytHotove') : t('ukoly.hotovePocet', { pocet: done.length })}
           </button>
           {showDone && (
             <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
@@ -312,7 +317,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
                     onSmazat={() => send(`/api/tasks/${task.id}`, 'DELETE')}
                     disabled={busy}
                     popisek="✕"
-                    otazka="Opravdu smazat?"
+                    otazka={t('ukoly.opravduSmazat')}
                     trida="text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                   />
                 </li>

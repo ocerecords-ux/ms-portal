@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar } from './Avatar';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from './JazykProvider';
 
 /**
  * DOK DOTAZŮ PRO KLIENTA (zadání 12. 9. 2026: „dal bych pryč celé ty rychlé
@@ -45,11 +47,11 @@ export function otevriDotazy(projektId: string) {
   window.dispatchEvent(new CustomEvent<string>(UDALOST_OTEVRI, { detail: projektId }));
 }
 
-function cas(iso: string): string {
+function cas(jazyk: Jazyk, iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? ''
-    : new Intl.DateTimeFormat('cs-CZ', {
+    : new Intl.DateTimeFormat(kodJazyka(jazyk), {
         day: 'numeric',
         month: 'numeric',
         hour: '2-digit',
@@ -58,6 +60,8 @@ function cas(iso: string): string {
 }
 
 export function DotazyDock() {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [otevreno, setOtevreno] = useState(false);
   const [projekty, setProjekty] = useState<Projekt[]>([]);
   const [vybrany, setVybrany] = useState<string | null>(null);
@@ -177,7 +181,7 @@ export function DotazyDock() {
       id: `docasna-${Date.now()}`,
       body: telo,
       createdAt: new Date().toISOString(),
-      authorLabel: 'Já',
+      authorLabel: t('dotazy.ja'),
       authorPhotoUrl: null,
       mine: true,
     };
@@ -193,14 +197,14 @@ export function DotazyDock() {
       const data: { zpravy?: Zprava[]; uzavreno?: boolean; error?: string } = await res
         .json()
         .catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Dotaz se nepodařilo odeslat.');
+      if (!res.ok) throw new Error(data.error || t('dotazy.chybaOdeslat'));
       setZpravy(Array.isArray(data.zpravy) ? data.zpravy : []);
       setUzavreno(Boolean(data.uzavreno));
       void nactiProjekty();
     } catch (err) {
       setZpravy((soucasne) => soucasne.filter((z) => z.id !== docasna.id));
       setText((t) => (t ? t : telo));
-      setChyba(err instanceof Error ? err.message : 'Dotaz se nepodařilo odeslat.');
+      setChyba(err instanceof Error ? err.message : t('dotazy.chybaOdeslat'));
     } finally {
       setOdesilam(false);
     }
@@ -215,8 +219,8 @@ export function DotazyDock() {
       <button
         type="button"
         onClick={() => prepni(true)}
-        title="Dotazy k projektům"
-        aria-label="Dotazy k projektům"
+        title={t('dotazy.nadpis')}
+        aria-label={t('dotazy.nadpis')}
         className="fixed right-0 top-28 z-40 flex flex-col items-center gap-2.5 bg-brand-purple hover:bg-brand-purpleDeep rounded-l-card shadow-lg px-2.5 py-3 text-brand-green transition-colors"
       >
         <Sipka />
@@ -229,7 +233,7 @@ export function DotazyDock() {
           )}
         </span>
         <span className="text-[10px] font-heading font-bold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
-          Dotazy
+          {t('dotazy.poutko')}
         </span>
       </button>
     );
@@ -243,21 +247,21 @@ export function DotazyDock() {
       <button
         type="button"
         onClick={() => prepni(false)}
-        title="Skrýt dotazy"
-        aria-label="Skrýt dotazy"
+        title={t('dotazy.skrytDotazy')}
+        aria-label={t('dotazy.skrytDotazy')}
         className="w-8 shrink-0 rounded-l-card border border-r-0 border-line bg-field text-muted hover:bg-brand-purple hover:text-white transition-colors flex flex-col items-center justify-center gap-2"
       >
         <SipkaVpravo />
         <span className="text-[10px] font-heading font-semibold uppercase tracking-wide [writing-mode:vertical-rl] rotate-180">
-          Skrýt
+          {t('obecne.skryt')}
         </span>
         <SipkaVpravo />
       </button>
 
       <div className="w-[720px] max-w-[96vw] h-full bg-surface border border-r-0 border-line shadow-xl flex flex-col overflow-hidden">
         <div className="bg-brand-purple text-brand-green px-4 py-2.5 flex items-center justify-between gap-3 shrink-0">
-          <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">Dotazy k projektům</h2>
-          <span className="text-[11px] font-body text-white/70">Odpovídáme v pracovní době</span>
+          <h2 className="font-heading font-semibold text-sm uppercase tracking-wide m-0">{t('dotazy.nadpis')}</h2>
+          <span className="text-[11px] font-body text-white/70">{t('dotazy.pracovniDoba')}</span>
         </div>
 
         {chyba && <p className="text-xs text-danger bg-dangerTint px-4 py-2 m-0">{chyba}</p>}
@@ -271,12 +275,12 @@ export function DotazyDock() {
           >
             <div className="px-3 pt-2.5 pb-1">
               <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.14em] text-muted">
-                Vaše projekty
+                {t('dotazy.vaseProjekty')}
               </span>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 flex flex-col gap-0.5">
               {projekty.length === 0 && (
-                <p className="text-sm font-body text-muted m-0 px-1">Zatím tu nemáte žádný rozpracovaný projekt.</p>
+                <p className="text-sm font-body text-muted m-0 px-1">{t('dotazy.zadnyProjekt')}</p>
               )}
               {projekty.map((p) => (
                 <button
@@ -291,12 +295,12 @@ export function DotazyDock() {
                     <span className="block font-heading text-sm text-ink">{p.nazev}</span>
                     <span className="block text-[11px] font-body text-muted">
                       {p.uzavreno
-                        ? 'Uzavřeno'
+                        ? t('dotazy.uzavreno')
                         : p.zalozeno
                           ? p.posledniAt
-                            ? `Naposledy ${cas(p.posledniAt)}`
-                            : 'Rozepsáno'
-                          : 'Zatím bez dotazu'}
+                            ? t('dotazy.naposledy', { kdy: cas(jazyk, p.posledniAt) })
+                            : t('dotazy.rozepsano')
+                          : t('dotazy.bezDotazu')}
                     </span>
                   </span>
                   {p.neprectene > 0 && (
@@ -313,7 +317,7 @@ export function DotazyDock() {
           <div className={`flex-1 min-w-0 flex-col ${vybrany ? 'flex' : 'hidden sm:flex'}`}>
             {!vybranyProjekt ? (
               <p className="m-auto text-sm font-body text-muted px-6 text-center">
-                Vyberte vlevo projekt. Co sem napíšete, dorazí rovnou lidem, kteří na něm dělají.
+                {t('dotazy.vyberteProjekt')}
               </p>
             ) : (
               <>
@@ -321,7 +325,7 @@ export function DotazyDock() {
                   <button
                     type="button"
                     onClick={() => setVybrany(null)}
-                    title="Zpět na seznam"
+                    title={t('dotazy.zpetNaSeznam')}
                     className="sm:hidden text-muted hover:text-brand-purple"
                   >
                     <SipkaVlevo />
@@ -335,20 +339,17 @@ export function DotazyDock() {
 
                 <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
                   {zpravy.length === 0 && (
-                    <p className="text-sm font-body text-muted m-0">
-                      Na co se potřebujete zeptat? Napište to sem — držíme to u projektu, takže se to
-                      neztratí v mailu.
-                    </p>
+                    <p className="text-sm font-body text-muted m-0">{t('dotazy.prazdnyRozhovor')}</p>
                   )}
                   {zpravy.map((z) => (
                     <div key={z.id} className="flex items-start gap-2">
-                      <Avatar label={z.mine ? 'Já' : z.authorLabel} photoUrl={z.authorPhotoUrl} size={28} />
+                      <Avatar label={z.mine ? t('dotazy.ja') : z.authorLabel} photoUrl={z.authorPhotoUrl} size={28} />
                       <div className="min-w-0">
                         <span className="flex items-baseline gap-2">
                           <span className="font-heading font-semibold text-xs text-ink">
-                            {z.mine ? 'Já' : z.authorLabel}
+                            {z.mine ? t('dotazy.ja') : z.authorLabel}
                           </span>
-                          <span className="text-[11px] font-body text-muted tabular-nums">{cas(z.createdAt)}</span>
+                          <span className="text-[11px] font-body text-muted tabular-nums">{cas(jazyk, z.createdAt)}</span>
                         </span>
                         <p
                           className={`mt-0.5 m-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
@@ -365,7 +366,7 @@ export function DotazyDock() {
 
                 {uzavreno ? (
                   <p className="text-xs font-body text-muted border-t border-line px-4 py-3 m-0">
-                    Projekt je uzavřený, takže sem už psát nejde. Historie zůstává.
+                    {t('dotazy.projektUzavren')}
                   </p>
                 ) : (
                   <form onSubmit={odesli} className="border-t border-line p-3 flex items-end gap-2 shrink-0">
@@ -379,7 +380,7 @@ export function DotazyDock() {
                         }
                       }}
                       rows={2}
-                      placeholder="Napište dotaz… (Enter odešle, Shift+Enter nový řádek)"
+                      placeholder={t('dotazy.napisteDotaz')}
                       className="flex-1 min-w-0 resize-none rounded-card border border-line bg-field px-3 py-2 text-sm font-body text-ink outline-none focus:border-brand-purple"
                     />
                     <button
@@ -387,7 +388,7 @@ export function DotazyDock() {
                       disabled={odesilam || !text.trim()}
                       className="shrink-0 rounded-lg bg-brand-purple text-white font-heading font-semibold text-sm px-4 py-2.5 disabled:opacity-40"
                     >
-                      {odesilam ? 'Odesílám…' : 'Poslat'}
+                      {odesilam ? t('dotazy.odesilam') : t('dotazy.poslat')}
                     </button>
                   </form>
                 )}

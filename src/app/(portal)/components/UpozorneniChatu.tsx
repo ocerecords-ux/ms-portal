@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { VyberPole } from '@/components/VyberPole';
+import { usePreklad } from './JazykProvider';
 
 /**
  * Upozornění na nové zprávy (zadání 9. 9. 2026, rozšířeno 12. 9. 2026:
@@ -43,10 +44,10 @@ type Nastaveni = {
  */
 export type SkupinaProUpozorneni = { id: string; label: string; upozorneni: Rezim | null };
 
-const REZIMY: { hodnota: Rezim; popisek: string }[] = [
-  { hodnota: 'VSE', popisek: 'Vše' },
-  { hodnota: 'ZMINKY', popisek: 'Jen zmínky' },
-  { hodnota: 'NIC', popisek: 'Nic' },
+const REZIMY: { hodnota: Rezim; klic: string }[] = [
+  { hodnota: 'VSE', klic: 'upozorneniChatu.rezim.vse' },
+  { hodnota: 'ZMINKY', klic: 'upozorneniChatu.rezim.zminky' },
+  { hodnota: 'NIC', klic: 'upozorneniChatu.rezim.nic' },
 ];
 
 /**
@@ -84,6 +85,7 @@ export function UpozorneniChatu({
   skupiny?: SkupinaProUpozorneni[];
   onZmenaSkupiny?: (id: string, rezim: Rezim | null) => void;
 } = {}) {
+  const t = usePreklad();
   const [stav, setStav] = useState<Stav>('nezname');
   const [pracuje, setPracuje] = useState(false);
   const [otevreno, setOtevreno] = useState(false);
@@ -220,8 +222,8 @@ export function UpozorneniChatu({
       <button
         type="button"
         onClick={() => setOtevreno((o) => !o)}
-        title="Nastavení upozornění"
-        aria-label="Nastavení upozornění"
+        title={t('upozorneniChatu.nastaveni')}
+        aria-label={t('upozorneniChatu.nastaveni')}
         aria-expanded={otevreno}
         className={`leading-none transition-colors ${
           zapnuto ? 'text-brand-green' : 'text-brand-green/60 hover:text-brand-green'
@@ -234,18 +236,13 @@ export function UpozorneniChatu({
         <div className="absolute right-0 top-full mt-2 z-40 w-[290px] rounded-card border border-line bg-surface shadow-xl p-4 flex flex-col gap-4 text-ink normal-case tracking-normal">
           <div>
             <p className="m-0 font-heading font-semibold text-xs uppercase tracking-wide text-muted">
-              V tomhle prohlížeči
+              {t('upozorneniChatu.vTomhleProhlizeci')}
             </p>
             {stav === 'nepodporovano' ? (
-              <p className="m-0 mt-1.5 text-xs font-body text-muted">
-                Tenhle prohlížeč upozornění neumí. Nastavení níž platí i tak — projeví se tam, kde
-                upozornění zapnutá máte.
-              </p>
+              <p className="m-0 mt-1.5 text-xs font-body text-muted">{t('upozorneniChatu.neumi')}</p>
             ) : nefunkcni ? (
               <p className="m-0 mt-1.5 text-xs font-body text-muted">
-                {stav === 'zakazano'
-                  ? 'Upozornění máte zakázaná v nastavení prohlížeče — povolit se dají jen tam.'
-                  : 'Na iPhonu chodí upozornění jen aplikaci přidané na plochu. Přidejte si MS Chat na plochu a zapněte je tam.'}
+                {t(stav === 'zakazano' ? 'upozorneniChatu.zakazano' : 'upozorneniChatu.jenVAplikaci')}
               </p>
             ) : (
               <button
@@ -258,32 +255,36 @@ export function UpozorneniChatu({
                     : 'border-brand-purple text-brand-purple hover:bg-tint'
                 }`}
               >
-                {pracuje ? 'Moment…' : zapnuto ? 'Vypnout upozornění' : 'Zapnout upozornění'}
+                {pracuje
+                  ? t('upozorneniChatu.moment')
+                  : zapnuto
+                    ? t('upozorneniChatu.vypnout')
+                    : t('upozorneniChatu.zapnout')}
               </button>
             )}
           </div>
 
           <div className="border-t border-line pt-3.5 flex flex-col gap-3.5">
             <p className="m-0 font-heading font-semibold text-xs uppercase tracking-wide text-muted">
-              Kdy upozorňovat
+              {t('upozorneniChatu.kdyUpozornovat')}
             </p>
 
             {!nastaveni ? (
-              <p className="m-0 text-xs font-body text-muted">Načítám…</p>
+              <p className="m-0 text-xs font-body text-muted">{t('obecne.nacitam')}</p>
             ) : (
               <>
                 <Prepinac
-                  popisek="Soukromé zprávy"
+                  popisek={t('upozorneniChatu.soukromeZpravy')}
                   hodnota={nastaveni.zpravy}
                   onZmena={(v) => void uloz({ zpravy: v })}
                 />
                 <Prepinac
-                  popisek="Skupiny"
+                  popisek={t('upozorneniChatu.skupiny')}
                   hodnota={nastaveni.skupiny}
                   onZmena={(v) => void uloz({ skupiny: v })}
                 />
                 <Prepinac
-                  popisek="Kanály projektů"
+                  popisek={t('upozorneniChatu.kanalyProjektu')}
                   hodnota={nastaveni.kanaly}
                   onZmena={(v) => void uloz({ kanaly: v })}
                 />
@@ -295,7 +296,7 @@ export function UpozorneniChatu({
                 {skupiny.length > 0 && onZmenaSkupiny && (
                   <div className="border-t border-line pt-3">
                     <p className="m-0 mb-2 font-heading font-semibold text-[11px] uppercase tracking-wide text-muted">
-                      Jednotlivé skupiny
+                      {t('upozorneniChatu.jednotliveSkupiny')}
                     </p>
                     <div className="flex flex-col gap-2.5 max-h-[210px] overflow-y-auto pr-1">
                       {skupiny.map((s) => (
@@ -304,9 +305,9 @@ export function UpozorneniChatu({
                             {s.label}
                           </span>
                           <div className="mt-1 flex rounded-lg border border-line overflow-hidden">
-                            {([{ hodnota: null, popisek: 'Podle skupin' }, ...REZIMY] as {
+                            {([{ hodnota: null, klic: 'upozorneniChatu.podleSkupin' }, ...REZIMY] as {
                               hodnota: Rezim | null;
-                              popisek: string;
+                              klic: string;
                             }[]).map((r) => (
                               <button
                                 key={r.hodnota ?? 'vychozi'}
@@ -319,7 +320,7 @@ export function UpozorneniChatu({
                                     : 'bg-surface text-muted hover:text-ink hover:bg-field'
                                 }`}
                               >
-                                {r.popisek}
+                                {t(r.klic)}
                               </button>
                             ))}
                           </div>
@@ -331,7 +332,7 @@ export function UpozorneniChatu({
 
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-heading text-ink">Noční klid</span>
+                    <span className="text-xs font-heading text-ink">{t('upozorneniChatu.nocniKlid')}</span>
                     <button
                       type="button"
                       onClick={() =>
@@ -343,7 +344,9 @@ export function UpozorneniChatu({
                       }
                       className="text-[11px] font-heading font-semibold text-brand-purple hover:underline"
                     >
-                      {nastaveni.tichoOd === null ? 'Zapnout' : 'Vypnout'}
+                      {nastaveni.tichoOd === null
+                        ? t('upozorneniChatu.zapnoutKlid')
+                        : t('upozorneniChatu.vypnoutKlid')}
                     </button>
                   </div>
                   {nastaveni.tichoOd !== null && (
@@ -357,7 +360,7 @@ export function UpozorneniChatu({
                         hodnota={nastaveni.tichoDo ?? 8}
                         onZmena={(v) => void uloz({ tichoDo: v })}
                       />
-                      <span className="text-[11px] font-body text-muted">nechodí nic</span>
+                      <span className="text-[11px] font-body text-muted">{t('upozorneniChatu.nechodiNic')}</span>
                     </div>
                   )}
                 </div>
@@ -365,8 +368,7 @@ export function UpozorneniChatu({
             )}
 
             <p className="m-0 text-[11px] font-body text-muted leading-snug">
-              Platí pro všechna vaše zařízení. Zprávy chodí dál a počítají se jako nepřečtené — jen
-              nezazvoní. Jednotlivý kanál projektu se dá ztlumit u něj samotného.
+              {t('upozorneniChatu.platiVsude')}
             </p>
           </div>
         </div>
@@ -384,6 +386,7 @@ function Prepinac({
   hodnota: Rezim;
   onZmena: (v: Rezim) => void;
 }) {
+  const t = usePreklad();
   return (
     <div>
       <span className="text-xs font-heading text-ink">{popisek}</span>
@@ -400,7 +403,7 @@ function Prepinac({
                 : 'bg-surface text-muted hover:text-ink hover:bg-field'
             }`}
           >
-            {r.popisek}
+            {t(r.klic)}
           </button>
         ))}
       </div>

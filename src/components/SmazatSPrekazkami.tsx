@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Prekazka } from '@/lib/mazani';
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Smazání firmy / uživatele / projektu, na kterém něco visí (zadání
@@ -25,13 +26,14 @@ export function SmazatSPrekazkami({
   co,
   /** Co se stane po smazání - obvykle přesměrování. */
   onSmazano,
-  popisek = 'Smazat',
+  popisek,
 }: {
   url: string;
   co: string;
   onSmazano: () => void;
   popisek?: string;
 }) {
+  const t = usePreklad();
   const [prekazky, setPrekazky] = useState<Prekazka[] | null>(null);
   const [ptaSe, setPtaSe] = useState(false);
   const [pracuje, setPracuje] = useState(false);
@@ -50,13 +52,13 @@ export function SmazatSPrekazkami({
         return;
       }
       if (!res.ok) {
-        setChyba(data?.error || 'Smazání se nezdařilo.');
+        setChyba(data?.error || t('mazani.nezdarilo'));
         setPtaSe(false);
         return;
       }
       onSmazano();
     } catch {
-      setChyba('Smazání se nezdařilo.');
+      setChyba(t('mazani.nezdarilo'));
     } finally {
       setPracuje(false);
     }
@@ -75,8 +77,8 @@ export function SmazatSPrekazkami({
         <TlacitkoSmazat
           onSmazat={() => zkus()}
           bezi={pracuje}
-          popisek={popisek}
-          otazka={`Opravdu smazat: ${co}?`}
+          popisek={popisek ?? t('obecne.smazat')}
+          otazka={t('mazani.opravduSmazatCo', { co })}
           trida="self-start font-semibold"
         />
         {chyba && <p className="text-sm text-danger m-0">{chyba}</p>}
@@ -87,8 +89,10 @@ export function SmazatSPrekazkami({
   return (
     <div className="border border-danger/40 bg-dangerTint rounded-card p-4 flex flex-col gap-3">
       <div>
-        <p className="font-heading font-semibold text-sm text-ink m-0">{co} nejde rovnou smazat.</p>
-        <p className="text-sm font-body text-muted m-0 mt-1">Visí na něm:</p>
+        <p className="font-heading font-semibold text-sm text-ink m-0">
+          {t('mazani.nejdeRovnouSmazat', { co })}
+        </p>
+        <p className="text-sm font-body text-muted m-0 mt-1">{t('mazani.visiNaNem')}</p>
         <ul className="text-sm font-body text-ink mt-1 mb-0 pl-5">
           {prekazky?.map((p) => (
             <li key={p.co}>
@@ -99,9 +103,7 @@ export function SmazatSPrekazkami({
       </div>
 
       <p className="text-sm font-body text-muted m-0">
-        Archiv uloží všechno navázané stranou (jde stáhnout ze sekce Archiv) a teprve pak to
-        z portálu odstraní. Doklady se u projektu neruší, jen se odpojí — název projektu si nesou
-        textem, takže v účetnictví zůstanou čitelné.
+        {t('mazani.archivVysvetleni')}
       </p>
 
       {chyba && <p className="text-sm text-danger m-0">{chyba}</p>}
@@ -113,7 +115,7 @@ export function SmazatSPrekazkami({
           disabled={pracuje}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {pracuje ? 'Pracuji…' : 'Archivovat a smazat'}
+          {pracuje ? t('mazani.pracuji') : t('mazani.archivovatASmazat')}
         </button>
         <button
           type="button"
@@ -121,7 +123,7 @@ export function SmazatSPrekazkami({
           disabled={pracuje}
           className="font-heading font-semibold text-sm text-danger hover:underline disabled:opacity-60"
         >
-          Smazat bez archivu
+          {t('mazani.smazatBezArchivu')}
         </button>
         <button
           type="button"
@@ -131,7 +133,7 @@ export function SmazatSPrekazkami({
           }}
           className="font-heading font-semibold text-sm text-muted hover:text-ink ml-auto"
         >
-          Nechat být
+          {t('mazani.nechatByt')}
         </button>
       </div>
     </div>

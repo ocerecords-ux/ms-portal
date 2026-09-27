@@ -53,7 +53,17 @@ export function Palubovka({
   const mesicuVPalivu = mesicniCil && mesicniCil > 0 ? data.palivoCelkem / mesicniCil : 0;
   const paliv = palivomer(mesicuVPalivu, cile.mesicuKryti);
 
-  const zmenaLoni = zmenaProcent(tentoMesic.vyfakturovano, data.stejnyMesicLoni);
+  /**
+   * SROVNÁNÍ S LOŇSKEM JEN TEHDY, KDYŽ JE S ČÍM. Faktury jsou v portálu teprve
+   * od jara 2026 (jednorázový přenos z Caflou), takže loňský měsíc bývá
+   * pahýl - a „+2463 %" pak není informace, ale šum. Bereme ho, až když
+   * vypadá jako skutečný měsíc: aspoň čtvrtina dnešního průměru.
+   */
+  const loniJeDuveryhodne =
+    data.stejnyMesicLoni !== null && prumer3 !== null && data.stejnyMesicLoni >= prumer3 * 0.25;
+  const zmenaLoni = loniJeDuveryhodne
+    ? zmenaProcent(tentoMesic.vyfakturovano, data.stejnyMesicLoni)
+    : null;
   const zmenaPrumer = zmenaProcent(tentoMesic.vyfakturovano, prumer3);
 
   async function uloz(nove: Cile) {
@@ -222,7 +232,7 @@ export function Palubovka({
           hodnota={koruny(data.palivoCelkem)}
           budik={paliv}
           znacka={cile.mesicuKryti / (cile.mesicuKryti * 2)}
-          spodniPopisek={`${data.projektuVPalivu} projektů · vydrží na ${popisMesicu(mesicuVPalivu)}`}
+          spodniPopisek={`${data.projektuVPalivu} rozjednaných projektů`}
         />
       </div>
 

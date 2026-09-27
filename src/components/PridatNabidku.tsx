@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { NavrhNabidky } from '@/lib/nabidkaZObjednavky';
 import { formatMoney } from '@/lib/doklady';
+import { formatDatum } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * PŘEDVYPLNĚNÁ NABÍDKA Z OBJEDNÁVKY (zadání 18. 9. 2026: „aby tam zůstala
@@ -29,6 +31,8 @@ export function PridatNabidku({
   navrh: NavrhNabidky;
   caflouProjectId: string;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [bezi, setBezi] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -60,7 +64,7 @@ export function PridatNabidku({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Nabídku se nepodařilo založit.');
+        setChyba(data?.error || t('nabidka.nezalozena'));
         setBezi(false);
         return;
       }
@@ -68,24 +72,22 @@ export function PridatNabidku({
       router.push(`/admin/doklady/nabidky/${data.id}`);
       router.refresh();
     } catch {
-      setChyba('Nabídku se nepodařilo založit.');
+      setChyba(t('nabidka.nezalozena'));
       setBezi(false);
     }
   }
 
-  const objednano = new Intl.DateTimeFormat('cs-CZ').format(new Date(navrh.objednanoAt));
+  const objednano = formatDatum(jazyk, new Date(navrh.objednanoAt));
 
   return (
     <div className="rounded-card border border-brand-purple/40 bg-tint px-4 py-3.5 flex flex-col gap-3">
       <div className="flex items-start gap-3 flex-wrap">
         <div className="min-w-0 flex-1">
           <span className="block font-heading font-semibold text-sm text-ink">
-            Nabídka je připravená
+            {t('nabidka.pripravena')}
           </span>
           <span className="block text-xs font-body text-muted mt-0.5">
-            Z objednávky z webu ({objednano}). U audioknih se nabídka zakládá sama, hned jak
-            objednávka přijde — tahle se z nějakého důvodu nezaložila. Vznikne tímhle tlačítkem
-            a bude rozpracovaná, takže ji ještě stihnete upravit.
+            {t('nabidka.zObjednavky', { datum: objednano })}
           </span>
         </div>
         <button
@@ -94,30 +96,33 @@ export function PridatNabidku({
           disabled={bezi}
           className="shrink-0 font-heading font-semibold text-sm rounded-lg px-4 py-2 bg-brand-purple text-white hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {bezi ? 'Zakládám…' : 'Přidat nabídku'}
+          {bezi ? t('nabidka.zakladam') : t('nabidka.pridat')}
         </button>
       </div>
 
       {/* Co v ni bude - at se neklika naslepo. */}
       <dl className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2 m-0 text-xs font-body">
         <div className="flex gap-2 min-w-0">
-          <dt className="text-muted shrink-0">Předmět</dt>
+          <dt className="text-muted shrink-0">{t('nabidka.predmet')}</dt>
           <dd className="m-0 text-ink truncate">{navrh.predmet}</dd>
         </div>
         <div className="flex gap-2 min-w-0">
-          <dt className="text-muted shrink-0">Odběratel</dt>
+          <dt className="text-muted shrink-0">{t('nabidka.odberatel')}</dt>
           <dd className="m-0 text-ink truncate">{navrh.companyName || '—'}</dd>
         </div>
         <div className="flex gap-2 min-w-0">
-          <dt className="text-muted shrink-0">Vystaví</dt>
+          <dt className="text-muted shrink-0">{t('nabidka.vystavi')}</dt>
           <dd className="m-0 text-ink truncate">{navrh.issuerName}</dd>
         </div>
         <div className="flex gap-2 min-w-0">
-          <dt className="text-muted shrink-0">Cena bez DPH</dt>
+          <dt className="text-muted shrink-0">{t('nabidka.cenaBezDph')}</dt>
           <dd className="m-0 text-ink font-heading font-semibold">
             {formatMoney(navrh.castkaMinor, navrh.currency)}
             {navrh.pageCount ? (
-              <span className="font-body font-normal text-muted"> · {navrh.pageCount} NS</span>
+              <span className="font-body font-normal text-muted">
+                {' '}
+                {t('nabidka.normostrany', { pocet: navrh.pageCount })}
+              </span>
             ) : null}
           </dd>
         </div>
