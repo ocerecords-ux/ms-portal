@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * SEZNAM VÝSKYTŮ (zadání 20. 9. 2026: „ještě bychom mohli udělat v tom
@@ -33,8 +35,8 @@ export type Vyskyt = {
 
 const PRAHA = 'Europe/Prague';
 
-function denText(iso: string): string {
-  return new Intl.DateTimeFormat('cs-CZ', {
+function denText(jazyk: Jazyk, iso: string): string {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), {
     timeZone: PRAHA,
     weekday: 'short',
     day: 'numeric',
@@ -43,8 +45,8 @@ function denText(iso: string): string {
   }).format(new Date(iso));
 }
 
-function cas(iso: string): string {
-  return new Intl.DateTimeFormat('cs-CZ', {
+function cas(jazyk: Jazyk, iso: string): string {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), {
     timeZone: PRAHA,
     hour: '2-digit',
     minute: '2-digit',
@@ -62,6 +64,8 @@ export function VyskytyHledani({
   onSkoc: (den: string, studioId: string) => void;
   onZavri: () => void;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [vyskyty, setVyskyty] = useState<Vyskyt[] | null>(null);
   const [celkem, setCelkem] = useState(0);
   const [bezi, setBezi] = useState(false);
@@ -124,16 +128,18 @@ export function VyskytyHledani({
       <div className="flex items-center gap-3 flex-wrap">
         <p className="font-heading font-semibold text-ink m-0">
           {bezi && !vyskyty
-            ? 'Hledám v celém kalendáři…'
-            : `Výskyty v kalendáři: ${celkem}${celkem > (vyskyty?.length ?? 0) ? ` (ukazuju ${vyskyty?.length})` : ''}`}
+            ? t('vyskyty.hledam')
+            : celkem > (vyskyty?.length ?? 0)
+              ? t('vyskyty.pocetZobrazeno', { pocet: celkem, zobrazeno: vyskyty?.length ?? 0 })
+              : t('vyskyty.pocet', { pocet: celkem })}
         </p>
-        <span className="text-sm font-body text-muted">„{dotaz.trim()}"</span>
+        <span className="text-sm font-body text-muted">{t('vyskyty.dotaz', { dotaz: dotaz.trim() })}</span>
         <button
           type="button"
           onClick={onZavri}
           className="ml-auto text-xs font-heading text-muted underline hover:text-ink"
         >
-          Zavřít seznam
+          {t('vyskyty.zavritSeznam')}
         </button>
       </div>
 
@@ -145,7 +151,7 @@ export function VyskytyHledani({
               className="inline-flex items-center gap-2 rounded-pill border border-line px-3 py-1 text-xs font-heading text-ink"
             >
               {s.popis}
-              <span className="tabular-nums text-muted">{s.pocet}×</span>
+              <span className="tabular-nums text-muted">{t('vyskyty.kolikrat', { pocet: s.pocet })}</span>
             </span>
           ))}
         </div>
@@ -153,7 +159,7 @@ export function VyskytyHledani({
 
       {vyskyty && vyskyty.length === 0 && !bezi && (
         <p className="text-sm font-body text-muted m-0">
-          Nic takového v kalendáři není. Zkuste jen příjmení nebo část názvu projektu.
+          {t('vyskyty.nicNenalezeno')}
         </p>
       )}
 
@@ -164,22 +170,28 @@ export function VyskytyHledani({
               <button
                 type="button"
                 onClick={() => onSkoc(v.den, v.studioId)}
-                title="Otevřít ten den v kalendáři"
+                title={t('vyskyty.otevritDen')}
                 className="w-full text-left rounded-lg border border-line hover:border-brand-purple px-3 py-2 flex items-center gap-3 flex-wrap"
               >
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: v.color }} />
                 <span className="font-heading font-semibold text-ink text-sm min-w-[150px] tabular-nums">
-                  {denText(v.start)}
+                  {denText(jazyk, v.start)}
                 </span>
                 <span className="font-body text-sm text-muted tabular-nums min-w-[100px]">
-                  {cas(v.start)}–{cas(v.end)}
+                  {cas(jazyk, v.start)}–{cas(jazyk, v.end)}
                 </span>
                 <span className="font-heading text-sm text-ink mr-auto">
                   {v.projectName ?? v.druh}
                   {v.actorName ? ` — ${v.actorName}` : ''}
                 </span>
                 <span className="text-xs font-body text-muted">
-                  {[v.druh, v.studioName, v.zvukarName ? `zvukař ${v.zvukarName}` : null].filter(Boolean).join(' · ')}
+                  {[
+                    v.druh,
+                    v.studioName,
+                    v.zvukarName ? t('vyskyty.zvukarJmeno', { jmeno: v.zvukarName }) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </span>
               </button>
             </li>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { RaditelnaTabulka, type SloupecTabulky } from '@/app/(portal)/components/RaditelnaTabulka';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Přehled firem v administraci, řaditelný kliknutím na název sloupce (zadání
@@ -35,9 +36,12 @@ export function FirmyTabulka({
   druh: 'klienti' | 'dodavatele';
   prazdno: string;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
+
   const nazevSloupce: SloupecTabulky<FirmaRadek> = {
     key: 'nazev',
-    label: 'Firma',
+    label: t('firmy.sl.firma'),
     hodnota: (r) => r.nazev,
     trida: 'font-semibold whitespace-nowrap',
     bunka: (r) => (
@@ -49,7 +53,7 @@ export function FirmyTabulka({
 
   const kodSloupce: SloupecTabulky<FirmaRadek> = {
     key: 'kod',
-    label: 'Kód',
+    label: t('firmy.sl.kod'),
     hodnota: (r) => r.kod,
     trida: 'text-muted tabular-nums',
     bunka: (r) => r.kod || '—',
@@ -62,21 +66,21 @@ export function FirmyTabulka({
           nazevSloupce,
           {
             key: 'sazba',
-            label: 'Sazba / normostrana',
+            label: t('firmy.sl.sazba'),
             hodnota: (r) => r.sazba,
             trida: 'tabular-nums',
             bunka: (r) => `${r.sazba ?? '—'} Kč`,
           },
           {
             key: 'uzivatele',
-            label: 'Uživatelé',
+            label: t('firmy.sl.uzivatele'),
             hodnota: (r) => r.uzivatelu,
             trida: 'tabular-nums',
             bunka: (r) => r.uzivatelu,
           },
           {
             key: 'objednavky',
-            label: 'Objednávky',
+            label: t('firmy.sl.objednavky'),
             hodnota: (r) => r.objednavek,
             trida: 'tabular-nums',
             bunka: (r) => r.objednavek,
@@ -87,20 +91,20 @@ export function FirmyTabulka({
           nazevSloupce,
           {
             key: 'kontakt',
-            label: 'Kontaktní osoba',
+            label: t('firmy.sl.kontaktniOsoba'),
             hodnota: (r) => r.kontaktniOsoba,
             bunka: (r) => r.kontaktniOsoba || '—',
           },
           {
             key: 'spojeni',
-            label: 'Telefon / e-mail',
+            label: t('firmy.sl.spojeni'),
             hodnota: (r) => r.telefonEmail,
             trida: 'text-muted',
             bunka: (r) => r.telefonEmail || '—',
           },
           {
             key: 'ic',
-            label: 'IČ',
+            label: t('firmy.sl.ic'),
             hodnota: (r) => r.ic,
             trida: 'tabular-nums',
             bunka: (r) => r.ic || '—',
@@ -115,6 +119,7 @@ export function FirmyTabulka({
       vychoziSloupec="nazev"
       prazdno={prazdno}
       minSirka={720}
+      jazyk={jazyk}
     />
   );
 }

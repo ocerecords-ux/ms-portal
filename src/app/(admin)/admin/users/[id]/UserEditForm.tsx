@@ -10,12 +10,27 @@ import { AdminField } from '../../NewCompanyForm';
 import { CountrySelect } from '../../CountrySelect';
 import { kodZeme } from '@/lib/countries';
 import { PhotoDropzone } from '../PhotoDropzone';
-import { ROLE_GROUPS, ROLE_LABELS, USER_TABS, roleRequiresCompany } from '@/lib/roles';
+import { ROLE_GROUPS, USER_TABS, roleRequiresCompany } from '@/lib/roles';
 import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
+
+/**
+ * Nazev skupiny v nabidce rolí. Klic se bere podle PRVNI ROLE ve skupine, ne
+ * podle ceskeho popisku z lib/roles.ts - popisek tam zustava cesky pro zbytek
+ * aplikace a porovnavat text by se rozbilo pri prvni jeho zmene.
+ */
+const SKUPINY_KLICE: Record<string, string> = {
+  CLIENT: 'uzivatel.skupinaKlientske',
+  HEREC: 'uzivatel.skupinaHerec',
+  ADMIN: 'uzivatel.skupinaInterni',
+  ROBOT: 'uzivatel.skupinaRobot',
+  TABULE: 'uzivatel.skupinaTabule',
+  BOOKING: 'uzivatel.skupinaStudio',
+};
 
 type EditableUser = {
   id: string;
@@ -90,6 +105,7 @@ export function UserEditForm({
   /** Studia z administrace - z nich jsou zaškrtávátka u zvukaře. */
   studia: { id: string; shortName: string; name: string; color: string }[];
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [email, setEmail] = useState(user.email);
   const [name, setName] = useState(user.name ?? '');
@@ -163,13 +179,13 @@ export function UserEditForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError((data as { error?: string })?.error || 'Přenos do dodavatelů se nezdařil.');
+        setError((data as { error?: string })?.error || t('uzivatel.prenosNezdaril'));
         return;
       }
       setDodavatel((data as { firma?: typeof dodavatel })?.firma ?? null);
       router.refresh();
     } catch {
-      setError('Přenos do dodavatelů se nezdařil.');
+      setError(t('uzivatel.prenosNezdaril'));
     } finally {
       setPrenaseni(false);
     }
@@ -259,7 +275,7 @@ export function UserEditForm({
       const res = await fetch(`/api/admin/users/${user.id}`, { method: 'PATCH', body: fd });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'Uložení se nezdařilo.');
+        throw new Error(body.error || t('uzivatel.ulozeniNezdarilo'));
       }
       setSaved(true);
       setNewPassword('');
@@ -272,7 +288,7 @@ export function UserEditForm({
       router.refresh();
       router.push(`/admin/users?tab=${zalozkaProRoli(role)}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Uložení se nezdařilo.');
+      setError(err instanceof Error ? err.message : t('uzivatel.ulozeniNezdarilo'));
     } finally {
       setSaving(false);
     }
@@ -284,13 +300,13 @@ export function UserEditForm({
           pak Role (+ Firma), az pak E-mail + Telefon. */}
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[160px]">
-          <AdminField label="Jméno">
+          <AdminField label={t('uzivatel.poleJmeno')}>
             <input value={name} onChange={(e) => setName(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         {isMediaspace && (
           <div className="flex-[2] min-w-[240px]">
-            <AdminField label="Fotka">
+            <AdminField label={t('uzivatel.poleFotka')}>
               <PhotoDropzone
                 file={photo}
                 onChange={(f) => {
@@ -307,13 +323,16 @@ export function UserEditForm({
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[200px]">
-          <AdminField label="Typ přístupu" required>
+          <AdminField label={t('uzivatel.poleTypPristupu')} required>
             <VyberPole required value={role} onChange={(e) => setRole(e.target.value as Role)} className="admin-input">
               {ROLE_GROUPS.map((group) => (
-                <optgroup key={group.label} label={group.label}>
+                <optgroup
+                  key={group.label}
+                  label={SKUPINY_KLICE[group.roles[0]] ? t(SKUPINY_KLICE[group.roles[0]]) : group.label}
+                >
                   {group.roles.map((r) => (
                     <option key={r} value={r}>
-                      {ROLE_LABELS[r]}
+                      {t(`role.${r}`)}
                     </option>
                   ))}
                 </optgroup>
@@ -325,7 +344,7 @@ export function UserEditForm({
             (zadani 6. 9. 2026). */}
         {role === 'ZVUKAR' && (
           <div className="flex-1 min-w-[180px]">
-            <AdminField label="Hodinová sazba (Kč)" hint="z ní se počítají výkazy práce">
+            <AdminField label={t('uzivatel.poleHodinovaSazba')} hint={t('uzivatel.hodinovaSazbaHint')}>
               <input
                 type="number"
                 min={0}
@@ -344,7 +363,7 @@ export function UserEditForm({
             místnosti - kdo točí v obou, má zaškrtnuté obě. */}
         {isZvukar && (
           <div className="w-full">
-            <AdminField label="Studia" hint="ve kterých studiích zvukař točí">
+            <AdminField label={t('uzivatel.poleStudia')} hint={t('uzivatel.studiaHint')}>
               <div className="flex flex-wrap gap-2">
                 {studia.map((studio) => (
                   <Volba
@@ -364,9 +383,7 @@ export function UserEditForm({
                   </Volba>
                 ))}
                 {studia.length === 0 && (
-                  <span className="text-sm font-body text-muted">
-                    Zatím tu není žádné studio - založte ho v Administraci → Studia.
-                  </span>
+                  <span className="text-sm font-body text-muted">{t('uzivatel.zadneStudioZalozte')}</span>
                 )}
               </div>
             </AdminField>
@@ -375,7 +392,7 @@ export function UserEditForm({
                 pobočky"). V zaškrtnutých studiích upravuje kalendář jako
                 produkce. */}
             <div className="mt-3">
-              <AdminField label="Vedoucí pobočky" hint="v těchto studiích smí zapisovat, posouvat a mazat události v kalendáři">
+              <AdminField label={t('uzivatel.poleVedouciPobocky')} hint={t('uzivatel.vedouciPobockyHint')}>
                 <div className="flex flex-wrap gap-2">
                   {studia.map((studio) => (
                     <Volba
@@ -403,7 +420,7 @@ export function UserEditForm({
             svým účtem - adresu ani účet tabule k tomu nepotřebuje. */}
         {isMediaspace && (
           <div className="w-full">
-            <AdminField label="Přístup na tabule" hint="tyhle tabule si otevře pod svým účtem v Můj účet → Tabule ve studiu">
+            <AdminField label={t('uzivatel.polePristupTabule')} hint={t('uzivatel.pristupTabuleHint')}>
               <div className="flex flex-wrap gap-2">
                 {studia.map((studio) => (
                   <Volba
@@ -423,7 +440,7 @@ export function UserEditForm({
                   </Volba>
                 ))}
                 {studia.length === 0 && (
-                  <span className="text-sm font-body text-muted">Zatím tu není žádné studio.</span>
+                  <span className="text-sm font-body text-muted">{t('uzivatel.zadneStudio')}</span>
                 )}
               </div>
             </AdminField>
@@ -441,8 +458,8 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Může být manažer projektu
-                <span className="block text-xs text-muted">nabízí se u projektů ve výběru manažera</span>
+                {t('uzivatel.pravoManazerProjektu')}
+                <span className="block text-xs text-muted">{t('uzivatel.pravoManazerProjektuPopis')}</span>
               </span>
             </label>
           </div>
@@ -459,9 +476,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Podepisuje smlouvy za Mediaspace
+                {t('uzivatel.pravoSmlouvyPodepisuje')}
                 <span className="block text-xs text-muted">
-                  odeslaná smlouva je od nás rovnou podepsaná jeho jménem
+                  {t('uzivatel.pravoSmlouvyPodepisujePopis')}
                 </span>
               </span>
             </label>
@@ -479,9 +496,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Dostává dotazy klientů
+                {t('uzivatel.pravoDotazyKlientu')}
                 <span className="block text-xs text-muted">
-                  je v každém kanálu, který klient otevře tlačítkem Zeptat se
+                  {t('uzivatel.pravoDotazyKlientuPopis')}
                 </span>
               </span>
             </label>
@@ -501,10 +518,8 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Vidí sekci Banka
-                <span className="block text-xs text-muted">
-                  pohyby na účtu, párování plateb a napojení účtu v Dokladech
-                </span>
+                {t('uzivatel.pravoVidiBanku')}
+                <span className="block text-xs text-muted">{t('uzivatel.pravoVidiBankuPopis')}</span>
               </span>
             </label>
           </div>
@@ -523,10 +538,8 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Spravuje technické parametry
-                <span className="block text-xs text-muted">
-                  mění sady formátů u nakladatelství — ostatní je mají jen ke čtení
-                </span>
+                {t('uzivatel.pravoTechParametry')}
+                <span className="block text-xs text-muted">{t('uzivatel.pravoTechParametryPopis')}</span>
               </span>
             </label>
           </div>
@@ -546,9 +559,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Hlídá změny u projektů
+                {t('uzivatel.pravoSledujeZmeny')}
                 <span className="block text-xs text-muted">
-                  zvoneček se ozve, když se u projektu změní stav nebo termín
+                  {t('uzivatel.pravoSledujeZmenyPopis')}
                 </span>
               </span>
             </label>
@@ -572,9 +585,9 @@ export function UserEditForm({
               className="w-4 h-4 accent-brand-purple"
             />
             <span className="text-sm font-body text-ink">
-              Náhledový účet (nic nemění)
+              {t('uzivatel.pravoJenNahled')}
               <span className="block text-xs text-muted">
-                v liště si přepíná Tým / Klient / Herec a nic z portálu neuloží
+                {t('uzivatel.pravoJenNahledPopis')}
               </span>
             </span>
           </label>
@@ -594,9 +607,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Dostává zprávy o dotočení
+                {t('uzivatel.pravoDostavaDotoceno')}
                 <span className="block text-xs text-muted">
-                  mail pokaždé, když se u projektu odškrtne dotočený herec
+                  {t('uzivatel.pravoDostavaDotocenoPopis')}
                 </span>
               </span>
             </label>
@@ -615,9 +628,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Zvonek: klient schválil reklamu
+                {t('uzivatel.pravoSchvaleniReklam')}
                 <span className="block text-xs text-muted">
-                  notifikace pokaždé, když klient odklepne spot k fakturaci
+                  {t('uzivatel.pravoSchvaleniReklamPopis')}
                 </span>
               </span>
             </label>
@@ -636,9 +649,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Zvonek: projekt jde plánovat
+                {t('uzivatel.pravoPlanovaniTerminu')}
                 <span className="block text-xs text-muted">
-                  notifikace pokaždé, když projekt přejde do stavu Plánujeme
+                  {t('uzivatel.pravoPlanovaniTerminuPopis')}
                 </span>
               </span>
             </label>
@@ -658,9 +671,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Stříhá externě
+                {t('uzivatel.pravoStrihaExterne')}
                 <span className="block text-xs text-muted">
-                  v kalendáři svítí letadlo a jeho práce nedrží místo ve studiu
+                  {t('uzivatel.pravoStrihaExternePopis')}
                 </span>
               </span>
             </label>
@@ -680,9 +693,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Status v chatu z kalendáře
+                {t('uzivatel.pravoStatusZKalendare')}
                 <span className="block text-xs text-muted">
-                  schůzky a castingy na celou dobu, režie na dálku prvních 30 minut
+                  {t('uzivatel.pravoStatusZKalendarePopis')}
                 </span>
               </span>
             </label>
@@ -701,9 +714,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Vidí stav nabídky u reklam
+                {t('uzivatel.pravoNabidkyReklam')}
                 <span className="block text-xs text-muted">
-                  značka čeká / schválena / neschválena v přehledu i v detailu
+                  {t('uzivatel.pravoNabidkyReklamPopis')}
                 </span>
               </span>
             </label>
@@ -722,9 +735,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Může být i zvukař
+                {t('uzivatel.pravoTakyZvukar')}
                 <span className="block text-xs text-muted">
-                  nabízí se mezi zvukaři u natáčení a střihu v kalendáři
+                  {t('uzivatel.pravoTakyZvukarPopis')}
                 </span>
               </span>
             </label>
@@ -745,9 +758,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Dostává objednávky
+                {t('uzivatel.pravoDostavaObjednavky')}
                 <span className="block text-xs text-muted">
-                  mail i zvoneček pokaždé, když klient odešle objednávku; klient tuhle adresu nevidí
+                  {t('uzivatel.pravoDostavaObjednavkyPopis')}
                 </span>
               </span>
             </label>
@@ -767,9 +780,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Dostává vyplněné údaje herců
+                {t('uzivatel.pravoVyplneneUdaje')}
                 <span className="block text-xs text-muted">
-                  mail i zvoneček pokaždé, když herec vyplní údaje po pozvánce
+                  {t('uzivatel.pravoVyplneneUdajePopis')}
                 </span>
               </span>
             </label>
@@ -789,9 +802,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Vede objednané audioknihy
+                {t('uzivatel.pravoManazerAudioknih')}
                 <span className="block text-xs text-muted">
-                  projekt z objednávky audioknihy se rovnou přiřadí jemu jako manažerovi
+                  {t('uzivatel.pravoManazerAudioknihPopis')}
                 </span>
               </span>
             </label>
@@ -814,9 +827,9 @@ export function UserEditForm({
                 className="w-4 h-4 accent-brand-purple"
               />
               <span className="text-sm font-body text-ink">
-                Upozornit na dotočeného herce
+                {t('uzivatel.pravoDotocenoKlient')}
                 <span className="block text-xs text-muted">
-                  mail i zvoneček, když u jeho projektu dotočíme s hercem
+                  {t('uzivatel.pravoDotocenoKlientPopis')}
                 </span>
               </span>
             </label>
@@ -825,9 +838,9 @@ export function UserEditForm({
 
         {needsCompany && (
           <div className="flex-1 min-w-[200px]">
-            <AdminField label="Firma" required>
+            <AdminField label={t('uzivatel.poleFirma')} required>
               <VyberPole required value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="admin-input">
-                <option value="">— vyberte firmu —</option>
+                <option value="">{t('uzivatel.vyberteFirmu')}</option>
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -841,12 +854,12 @@ export function UserEditForm({
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[200px]">
-          <AdminField label="E-mail" required>
+          <AdminField label={t('uzivatel.poleEmail')} required>
             <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[160px]">
-          <AdminField label="Telefon">
+          <AdminField label={t('uzivatel.poleTelefon')}>
             <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -855,7 +868,7 @@ export function UserEditForm({
       {isMediaspace && (
         <div className="flex gap-4 flex-wrap">
           <div className="flex-1 min-w-[160px]">
-            <AdminField label="Datum narození">
+            <AdminField label={t('uzivatel.poleDatumNarozeni')}>
               <DatumPole value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="admin-input" />
             </AdminField>
           </div>
@@ -864,7 +877,7 @@ export function UserEditForm({
 
       {isHerec && (
         <>
-          <AdminField label="Lokace" hint="studia, ve kterých je herec schopen fyzicky natáčet">
+          <AdminField label={t('uzivatel.poleLokace')} hint={t('uzivatel.lokaceHint')}>
             {/* Barva u kazde lokace je stejna jako v seznamu hercu (zadani
                 10. 9. 2026) - kdo si ji zapamatuje tady, precte pak seznam
                 bez cteni textu. Brno I a Brno II sdileji barvu: jsou to dve
@@ -889,17 +902,17 @@ export function UserEditForm({
 
           <div className="flex gap-4 flex-wrap">
             <div className="flex-1 min-w-[180px]">
-              <AdminField label="RČ / datum narození">
+              <AdminField label={t('uzivatel.poleRcNeboDatum')}>
                 <input value={birthNumber} onChange={(e) => setBirthNumber(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
             <div className="flex-1 min-w-[140px]">
-              <AdminField label="IČ">
+              <AdminField label={t('uzivatel.poleIc')}>
                 <input value={ic} onChange={(e) => setIc(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
             <div className="flex-1 min-w-[140px]">
-              <AdminField label="DIČ">
+              <AdminField label={t('uzivatel.poleDic')}>
                 <input value={dic} onChange={(e) => setDic(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
@@ -907,12 +920,12 @@ export function UserEditForm({
 
           <label className="flex items-center gap-2 text-sm font-heading text-ink">
             <input type="checkbox" checked={vatPayer} onChange={(e) => setVatPayer(e.target.checked)} />
-            Plátce DPH
+            {t('uzivatel.platceDph')}
           </label>
 
           <div className="flex gap-4 flex-wrap">
             <div className="flex-1 min-w-[180px]">
-              <AdminField label="Číslo účtu">
+              <AdminField label={t('uzivatel.poleCisloUctu')}>
                 <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
@@ -920,22 +933,22 @@ export function UserEditForm({
 
           <div className="flex gap-4 flex-wrap">
             <div className="flex-[2] min-w-[220px]">
-              <AdminField label="Ulice č.p.">
+              <AdminField label={t('uzivatel.poleUlice')}>
                 <input value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
             <div className="flex-1 min-w-[160px]">
-              <AdminField label="Město">
+              <AdminField label={t('uzivatel.poleMesto')}>
                 <input value={addressCity} onChange={(e) => setAddressCity(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
             <div className="flex-1 min-w-[120px]">
-              <AdminField label="PSČ">
+              <AdminField label={t('uzivatel.polePsc')}>
                 <input value={addressZip} onChange={(e) => setAddressZip(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
             <div className="flex-1 min-w-[140px]">
-              <AdminField label="Země">
+              <AdminField label={t('uzivatel.poleZeme')}>
                 <CountrySelect value={addressCountry} onChange={setAddressCountry} />
               </AdminField>
             </div>
@@ -952,11 +965,11 @@ export function UserEditForm({
               až pod nimi - kdo doplní IČ a adresu, má je rovnou i ve firmě. */}
           <div className="border-t border-line pt-4 flex items-start gap-4 flex-wrap">
             <div className="flex-1 min-w-[260px]">
-              <p className="font-heading font-semibold text-sm text-ink m-0">Také dodavatel</p>
+              <p className="font-heading font-semibold text-sm text-ink m-0">{t('uzivatel.takeDodavatel')}</p>
               <p className="text-xs font-body text-muted m-0 mt-1">
                 {dodavatel
-                  ? 'Herec je zároveň veden jako firma mezi dodavateli. Smlouvu o dílo s ním uzavřete přes ni.'
-                  : 'Založí z téhle karty firmu mezi dodavateli. Hercem zůstává — jen s ním půjde uzavřít i smlouvu o dílo. Nejdřív uložte IČ a adresu, převezmou se do firmy.'}
+                  ? t('uzivatel.takeDodavatelJe')
+                  : t('uzivatel.takeDodavatelNeni')}
               </p>
             </div>
             {dodavatel ? (
@@ -964,7 +977,9 @@ export function UserEditForm({
                 href={`/admin/companies/${dodavatel.id}`}
                 className="text-sm font-heading font-semibold text-brand-purple no-underline rounded-pill border border-brand-purple px-3 py-1.5"
               >
-                Otevřít {dodavatel.code ? `${dodavatel.name} (${dodavatel.code})` : dodavatel.name}
+                {t('uzivatel.otevritDodavatele', {
+                  firma: dodavatel.code ? `${dodavatel.name} (${dodavatel.code})` : dodavatel.name,
+                })}
               </Link>
             ) : (
               <button
@@ -973,7 +988,7 @@ export function UserEditForm({
                 onClick={() => void prenesDoDodavatelu()}
                 className="text-sm font-heading font-semibold rounded-pill border border-line px-3 py-1.5 text-ink hover:border-brand-purple hover:text-brand-purple transition-colors disabled:opacity-60"
               >
-                {prenaseni ? 'Zakládám…' : 'Přenést do dodavatelů'}
+                {prenaseni ? t('uzivatel.zakladam') : t('uzivatel.prenestDoDodavatelu')}
               </button>
             )}
           </div>
@@ -982,7 +997,7 @@ export function UserEditForm({
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[160px]">
-          <AdminField label="Nové heslo" hint="nechte prázdné, pokud nechcete měnit">
+          <AdminField label={t('uzivatel.poleNoveHeslo')} hint={t('uzivatel.noveHesloHint')}>
             <input
               type="text"
               minLength={8}
@@ -1001,12 +1016,12 @@ export function UserEditForm({
       <div className="border-t border-line pt-4 flex items-start gap-4 flex-wrap">
         <div className="flex-1 min-w-[260px]">
           <p className="font-heading font-semibold text-sm text-ink m-0">
-            {active ? 'Vyřadit uživatele' : 'Uživatel je vyřazený'}
+            {active ? t('uzivatel.vyraditNadpis') : t('uzivatel.vyrazenyNadpis')}
           </p>
           <p className="text-xs font-body text-muted m-0 mt-1">
             {active
-              ? 'Nepřihlásí se a zmizí z nabídek. Smlouvy, výkazy a projekty, které na něj odkazují, zůstanou beze změny — proto se nemaže. Změna se uloží tlačítkem níž.'
-              : 'Nemůže se přihlásit a nenabízí se u projektů. Vrátit ho jde kdykoliv. Změna se uloží tlačítkem níž.'}
+              ? t('uzivatel.vyraditPopis')
+              : t('uzivatel.vrazenyPopis')}
           </p>
         </div>
         <button
@@ -1018,7 +1033,7 @@ export function UserEditForm({
               : 'bg-brand-green text-onAccent hover:brightness-95'
           }`}
         >
-          {active ? 'Vyřadit uživatele' : 'Vrátit mezi aktivní'}
+          {active ? t('uzivatel.vyraditUzivatele') : t('uzivatel.vratitMeziAktivni')}
         </button>
       </div>
 
@@ -1026,16 +1041,15 @@ export function UserEditForm({
           nabidne archivaci - viz SmazatSPrekazkami. */}
       <div className="flex flex-col gap-3">
         <div>
-          <p className="font-heading font-semibold text-sm text-ink m-0">Smazat účet úplně</p>
+          <p className="font-heading font-semibold text-sm text-ink m-0">{t('uzivatel.smazatUplneNadpis')}</p>
           <p className="text-xs font-body text-muted m-0 mt-1">
-            Když na účtu nic nevisí, smaže se rovnou. Když něco visí, portál nejdřív ukáže co
-            a nabídne archivaci. Projekty tím nezanikají — účet u nich jen přestane být vyplněný.
+            {t('uzivatel.smazatUplnePopis')}
           </p>
         </div>
         <SmazatSPrekazkami
           url={`/api/admin/users/${user.id}`}
-          co={`Účet ${user.name || user.email}`}
-          popisek="Smazat účet"
+          co={t('uzivatel.ucetCo', { kdo: user.name || user.email })}
+          popisek={t('uzivatel.smazatUcet')}
           onSmazano={() => {
             router.push('/admin/users');
             router.refresh();
@@ -1051,9 +1065,9 @@ export function UserEditForm({
           disabled={saving}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {saving ? 'Ukládám…' : 'Uložit změny'}
+          {saving ? t('obecne.ukladam') : t('uzivatel.ulozitZmeny')}
         </button>
-        {saved && <span className="text-status-done text-sm font-heading">✓ Uloženo</span>}
+        {saved && <span className="text-status-done text-sm font-heading">{t('uzivatel.ulozeno')}</span>}
       </div>
     </form>
   );

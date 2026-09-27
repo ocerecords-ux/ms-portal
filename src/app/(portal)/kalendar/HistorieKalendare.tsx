@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { kodJazyka } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * HISTORIE KALENDÁŘE (zadání 23. 9. 2026: „ještě by to chtělo někam dát
@@ -26,21 +28,26 @@ type Radek = {
   kdyZmena: string;
 };
 
-const POPIS_AKCE: Record<string, { text: string; barva: string }> = {
-  VZNIK: { text: 'zapsal(a)', barva: '#22c55e' },
-  UPRAVA: { text: 'upravil(a)', barva: '#f2cb35' },
-  ZRUSENI: { text: 'zrušil(a)', barva: '#ef4444' },
+// Co se stalo - klíč do slovníku a barva tečky. Text se překládá až
+// v komponentě, ať se sem nedostane natvrdo česká věta.
+const POPIS_AKCE: Record<string, { klic: string; barva: string }> = {
+  VZNIK: { klic: 'historieKalendare.akceVznik', barva: '#22c55e' },
+  UPRAVA: { klic: 'historieKalendare.akceUprava', barva: '#f2cb35' },
+  ZRUSENI: { klic: 'historieKalendare.akceZruseni', barva: '#ef4444' },
 };
 
+/** Čeho se změna týkala - opět jen klíče do slovníku. */
 const POPIS_TYPU: Record<string, string> = {
-  SLOT: 'Natáčení',
-  BLOK: 'Událost',
-  PORADA: 'Porada',
-  SCHUZKA: 'Schůzka',
-  MIMO: 'Mimo studio',
+  SLOT: 'historieKalendare.typSlot',
+  BLOK: 'historieKalendare.typBlok',
+  PORADA: 'historieKalendare.typPorada',
+  SCHUZKA: 'historieKalendare.typSchuzka',
+  MIMO: 'historieKalendare.typMimo',
 };
 
 export function HistorieKalendare({ naDen }: { naDen: (den: string) => void }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [otevreno, setOtevreno] = useState(false);
   const [radky, setRadky] = useState<Radek[] | null>(null);
 
@@ -62,7 +69,7 @@ export function HistorieKalendare({ naDen }: { naDen: (den: string) => void }) {
     const d = new Date(iso);
     const dnes = new Date();
     const stejnyDen = d.toDateString() === dnes.toDateString();
-    return new Intl.DateTimeFormat('cs-CZ', {
+    return new Intl.DateTimeFormat(kodJazyka(jazyk), {
       timeZone: 'Europe/Prague',
       ...(stejnyDen ? {} : { day: 'numeric', month: 'numeric' }),
       hour: '2-digit',
@@ -78,8 +85,8 @@ export function HistorieKalendare({ naDen }: { naDen: (den: string) => void }) {
         type="button"
         onClick={() => setOtevreno((o) => !o)}
         aria-expanded={otevreno}
-        aria-label="Historie kalendáře"
-        title="Kdo kdy co v kalendáři změnil"
+        aria-label={t('historieKalendare.nazev')}
+        title={t('historieKalendare.bublina')}
         className={`inline-flex items-center justify-center w-9 h-9 rounded-lg border border-line transition-colors ${
           otevreno ? 'text-ink border-brand-purple' : 'text-muted hover:text-ink hover:border-brand-purple'
         }`}
@@ -93,12 +100,14 @@ export function HistorieKalendare({ naDen }: { naDen: (den: string) => void }) {
 
       {otevreno && (
         <span className="absolute left-0 top-full mt-2 z-40 w-[min(92vw,460px)] max-h-[60vh] overflow-y-auto rounded-card border border-line bg-surface shadow-lg p-3 flex flex-col gap-1.5">
-          {radky === null && <span className="text-xs font-body text-muted px-1 py-2">Načítám…</span>}
+          {radky === null && <span className="text-xs font-body text-muted px-1 py-2">{t('obecne.nacitam')}</span>}
           {radky !== null && radky.length === 0 && (
-            <span className="text-xs font-body text-muted px-1 py-2">Zatím tu nic není.</span>
+            <span className="text-xs font-body text-muted px-1 py-2">{t('obecne.nicTuNeni')}</span>
           )}
           {(radky ?? []).map((r) => {
-            const akce = POPIS_AKCE[r.akce] ?? { text: r.akce, barva: '#A49FC0' };
+            const akce = POPIS_AKCE[r.akce];
+            const akceText = akce ? t(akce.klic) : r.akce;
+            const akceBarva = akce?.barva ?? '#A49FC0';
             return (
               <button
                 key={r.id}
@@ -112,12 +121,14 @@ export function HistorieKalendare({ naDen }: { naDen: (den: string) => void }) {
                 <span className="flex items-center gap-2 flex-wrap">
                   <span
                     className="inline-block w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: akce.barva }}
+                    style={{ backgroundColor: akceBarva }}
                     aria-hidden
                   />
                   <span className="font-heading font-semibold text-xs text-ink">{r.kdo}</span>
-                  <span className="text-xs font-body text-muted">{akce.text}</span>
-                  <span className="text-xs font-body text-muted">{POPIS_TYPU[r.typ] ?? r.typ}</span>
+                  <span className="text-xs font-body text-muted">{akceText}</span>
+                  <span className="text-xs font-body text-muted">
+                    {POPIS_TYPU[r.typ] ? t(POPIS_TYPU[r.typ]) : r.typ}
+                  </span>
                   <span className="text-[11px] font-heading text-muted ml-auto tabular-nums">{kdyText(r.kdyZmena)}</span>
                 </span>
                 <span className="text-sm font-body text-ink truncate">{r.nazev}</span>

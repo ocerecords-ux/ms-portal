@@ -4,8 +4,11 @@ import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
 import { UserEditForm } from './UserEditForm';
 import { InviteButton } from '../InviteButton';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 
 export default async function UserEditPage({ params }: { params: { id: string } }) {
+  const jazyk = nactiJazyk();
   const [user, companies, studia] = await Promise.all([
     prisma.user.findUnique({
       where: { id: params.id },
@@ -32,7 +35,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
     <section className="flex flex-col gap-6 max-w-2xl">
       <div>
         <Link href="/admin/users" className="text-muted text-sm font-heading">
-          ← Zpět na seznam uživatelů
+          ← {prelozit(jazyk, 'uzivatel.zpetNaSeznam')}
         </Link>
         <div className="flex items-center gap-4 mt-2">
           {/* Fotku vedou jen interni ucty Mediaspace - u ostatnich se misto ni
@@ -67,17 +70,19 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           odkazem, kde si sam nastavi heslo. */}
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="font-heading font-semibold text-sm text-ink m-0">Pozvánka do portálu</p>
+          <p className="font-heading font-semibold text-sm text-ink m-0">
+            {prelozit(jazyk, 'uzivatel.pozvankaNadpis')}
+          </p>
           <p className="text-muted text-xs font-body m-0 mt-1">
             {user.invitedAt
-              ? `Naposledy odeslána ${new Intl.DateTimeFormat('cs-CZ').format(user.invitedAt)}.`
-              : 'Zatím neodeslána.'}
-            {user.passwordSetAt && ' Uživatel si už heslo nastavil.'}
+              ? prelozitS(jazyk, 'uzivatel.pozvankaNaposledy', { datum: formatDatum(jazyk, user.invitedAt) })
+              : prelozit(jazyk, 'uzivatel.pozvankaNeodeslana')}
+            {user.passwordSetAt && ` ${prelozit(jazyk, 'uzivatel.hesloNastaveno')}`}
           </p>
         </div>
         <InviteButton
           userId={user.id}
-          invitedAtLabel={user.invitedAt ? new Intl.DateTimeFormat('cs-CZ').format(user.invitedAt) : null}
+          invitedAtLabel={user.invitedAt ? formatDatum(jazyk, user.invitedAt) : null}
           variant="button"
         />
       </div>

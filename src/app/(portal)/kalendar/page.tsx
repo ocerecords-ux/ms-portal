@@ -26,6 +26,8 @@ import { SOLO_MOJE } from '@/lib/calendar';
 import { nactiPorady } from '@/lib/poradyServer';
 import { SOLO_SCHUZKY } from '@/lib/porady';
 import { oznacRezii } from '@/lib/rezieOnlineServer';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * Kalendář studií (zadani 8. 9. 2026, upraveno 9. 9. 2026). Den / týden /
@@ -74,6 +76,8 @@ export default async function KalendarPage({
   const session = await getServerSession(authOptions);
   if (!session || !canViewCalendar(session.user.role)) redirect('/projekty');
 
+  const jazyk = nactiJazyk();
+
   // Termíny, které herec vybral a produkce je včas nepotvrdila, se vrací do
   // nabídky. Vercel nemá nic, co by běželo samo, tak se to dělá tady.
   //
@@ -84,10 +88,10 @@ export default async function KalendarPage({
   if (studios.length === 0) {
     return (
       <section className="flex flex-col gap-4">
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
-        <p className="text-sm font-body text-muted m-0">
-          Zatím tu není žádné studio. Studia se zakládají v administraci.
-        </p>
+        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">
+          {prelozit(jazyk, 'kalendarStranka.nadpis')}
+        </h1>
+        <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'kalendarStranka.zadneStudio')}</p>
       </section>
     );
   }
@@ -387,6 +391,10 @@ export default async function KalendarPage({
       end: s.end.toISOString(),
       state: s.state,
       // Zvukar primo v nadpisu, stejne jako u rucne zapsane udalosti.
+      // „ZVUKAŘ:" tu ZŮSTÁVÁ ČESKY schválně (dávka 5): není to jen popisek,
+      // ale značka, podle které se řádek pozná jinde v kódu
+      // (bezPredponyZvukar v lib/calendar.ts, CalendarBrowser). Přeložit se dá
+      // teprve tehdy, až jméno zvukaře půjde do kalendáře vlastním polem.
       title: s.zvukarName ? `${s.label}\nZVUKAŘ: ${s.zvukarName}` : s.label,
       href: `/kalendar/nabidka/${s.requestId}`,
       poznamka: s.note,

@@ -6,6 +6,8 @@ import { useRazeni, ThRadit } from '@/app/(portal)/components/RaditelnaTabulka';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import { VyberIkony } from './VyberIkony';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 
 type Item = {
   id: string;
@@ -21,11 +23,15 @@ type Item = {
   ikona: string | null;
 };
 
-function formatPrice(value: number | null): string {
-  return value == null ? '—' : `${value.toLocaleString('cs-CZ')} Kč`;
+// Cisla se formatuji podle jazyka listy (1 234 vs. 1,234), mena zustava Kc -
+// cenik je vedeny v korunach.
+function formatPrice(jazyk: Jazyk, value: number | null): string {
+  return value == null ? '—' : `${value.toLocaleString(kodJazyka(jazyk))} Kč`;
 }
 
 export function PriceListEditor({ items }: { items: Item[] }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -66,13 +72,13 @@ export function PriceListEditor({ items }: { items: Item[] }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('cenik.ulozeniSelhalo'));
         return null;
       }
       router.refresh();
       return data;
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('cenik.ulozeniSelhalo'));
       return null;
     } finally {
       setBusy(false);
@@ -110,16 +116,19 @@ export function PriceListEditor({ items }: { items: Item[] }) {
        */
       const projekty: { id: string; name: string }[] = result.projekty ?? [];
       const jmena = projekty.slice(0, 3).map((p) => p.name).join(', ');
-      const dalsi = projekty.length > 3 ? ` a další ${projekty.length - 3}` : '';
       const kdo =
         projekty.length === 0
-          ? `Používá ji ${result.usedByProjects} projektů.`
+          ? t('cenik.drziJiPocet', { pocet: result.usedByProjects })
           : projekty.length === 1
-            ? `Má ji projekt ${jmena}.`
+            ? t('cenik.drziJiJeden', { jmena })
             : projekty.length <= 4
-              ? `Mají ji projekty ${jmena}.`
-              : `Má ji ${projekty.length} projektů: ${jmena}${dalsi}.`;
-      setNote(`Položku „${item.name}" jsme jen vyřadili z nabídky — u projektů zůstane. ${kdo}`);
+              ? t('cenik.drziJiVic', { jmena })
+              : t('cenik.drziJiVicNezVypis', {
+                  pocet: projekty.length,
+                  jmena,
+                  dalsi: projekty.length - 3,
+                });
+      setNote(t('cenik.jenVyrazeno', { nazev: item.name, kdo }));
     }
   }
 
@@ -132,7 +141,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
           nespočítá rozpočet - typ určuje frekvence, střih i bonus. */}
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
         <span className="font-heading font-semibold text-sm text-ink">
-          Objednávka audioknihy zakládá projekt typu
+          {t('cenik.typZObjednavky')}
         </span>
         <select
           value={proAudioknihy}
@@ -144,7 +153,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
           }}
           className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple max-w-md"
         >
-          <option value="">— zatím nevybráno —</option>
+          <option value="">{t('cenik.zatimNevybrano')}</option>
           {items
             .filter((i) => i.active)
             .map((i) => (
@@ -153,10 +162,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
               </option>
             ))}
         </select>
-        <span className="text-xs font-body text-muted">
-          Podle typu se projektu počítá rozpočet. Když tu nic nevyberete, projekt z objednávky přijde
-          bez typu a rozpočet zůstane prázdný.
-        </span>
+        <span className="text-xs font-body text-muted">{t('cenik.typZObjednavkyPopis')}</span>
       </div>
 
       <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
@@ -166,19 +172,20 @@ export function PriceListEditor({ items }: { items: Item[] }) {
               <tr className="bg-bar text-white font-heading text-xs">
                 {/* Ikona typu projektu (zadani 10. 9. 2026) - bez razeni,
                     radit seznam podle obrazku nedava smysl. */}
-                <th className="text-left px-4 py-3 font-heading" title="Svítí před názvem projektu v přehledu">
-                  Ikona
+                <th className="text-left px-4 py-3 font-heading" title={t('cenik.sl.ikonaTitle')}>
+                  {t('cenik.sl.ikona')}
                 </th>
-                <ThRadit label="Položka" sloupec="polozka" razeni={razeni} prepni={prepni} />
-                <ThRadit label="Cena bez DPH" sloupec="bezDph" razeni={razeni} prepni={prepni} vpravo />
-                <ThRadit label="Cena s DPH" sloupec="sDph" razeni={razeni} prepni={prepni} vpravo />
-                <ThRadit label="V nabídce" sloupec="vNabidce" razeni={razeni} prepni={prepni} />
+                <ThRadit label={t('cenik.sl.polozka')} sloupec="polozka" razeni={razeni} prepni={prepni} jazyk={jazyk} />
+                <ThRadit label={t('cenik.sl.bezDph')} sloupec="bezDph" razeni={razeni} prepni={prepni} vpravo jazyk={jazyk} />
+                <ThRadit label={t('cenik.sl.sDph')} sloupec="sDph" razeni={razeni} prepni={prepni} vpravo jazyk={jazyk} />
+                <ThRadit label={t('cenik.sl.vNabidce')} sloupec="vNabidce" razeni={razeni} prepni={prepni} jazyk={jazyk} />
                 <ThRadit
-                  label="Rodný list"
+                  label={t('cenik.sl.rodnyList')}
                   sloupec="rodnyList"
                   razeni={razeni}
                   prepni={prepni}
-                  title="U projektů s tímhle typem se při dokončení vyrobí Rodný list"
+                  title={t('cenik.sl.rodnyListTitle')}
+                  jazyk={jazyk}
                 />
                 <th></th>
               </tr>
@@ -187,7 +194,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
               {items.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm font-body">
-                    Ceník je zatím prázdný. Přidejte první položku formulářem níže.
+                    {t('cenik.prazdnyCenik')}
                   </td>
                 </tr>
               )}
@@ -224,8 +231,12 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                         className={`${inputClass} text-right`}
                       />
                     </td>
-                    <td className="px-4 py-3 text-sm font-heading text-muted">{item.active ? 'Ano' : 'Ne'}</td>
-                    <td className="px-4 py-3 text-sm font-heading text-muted">{item.rodnyList ? 'Ano' : 'Ne'}</td>
+                    <td className="px-4 py-3 text-sm font-heading text-muted">
+                      {t(item.active ? 'obecne.ano' : 'obecne.ne')}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-heading text-muted">
+                      {t(item.rodnyList ? 'obecne.ano' : 'obecne.ne')}
+                    </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <span className="inline-flex items-center gap-3">
                         <button
@@ -234,14 +245,14 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                           disabled={busy}
                           className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-60"
                         >
-                          Uložit
+                          {t('obecne.ulozit')}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
                           className="text-muted text-xs font-heading"
                         >
-                          Zrušit
+                          {t('obecne.zrusit')}
                         </button>
                       </span>
                     </td>
@@ -259,7 +270,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                       <button
                         type="button"
                         onClick={() => startEdit(item)}
-                        title="Upravit položku"
+                        title={t('cenik.upravitPolozku')}
                         className={`text-left hover:text-brand-purple hover:underline ${
                           item.active ? 'text-ink' : 'text-muted line-through'
                         }`}
@@ -268,10 +279,10 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                       </button>
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading tabular-nums text-right whitespace-nowrap">
-                      {formatPrice(item.priceExVat)}
+                      {formatPrice(jazyk, item.priceExVat)}
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading tabular-nums text-right whitespace-nowrap">
-                      {formatPrice(item.priceIncVat)}
+                      {formatPrice(jazyk, item.priceIncVat)}
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading">
                       <button
@@ -280,7 +291,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                         disabled={busy}
                         className={item.active ? 'text-brand-greenDeep' : 'text-muted'}
                       >
-                        {item.active ? 'Ano' : 'Ne'}
+                        {t(item.active ? 'obecne.ano' : 'obecne.ne')}
                       </button>
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading">
@@ -288,10 +299,10 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                         type="button"
                         onClick={() => send(`/api/admin/pricelist/${item.id}`, 'PATCH', { rodnyList: !item.rodnyList })}
                         disabled={busy}
-                        title="U projektů s tímhle typem se při přechodu na „Dokončeno - ke schválení“ vyrobí Rodný list"
+                        title={t('cenik.rodnyListPrepinacTitle')}
                         className={item.rodnyList ? 'text-brand-greenDeep' : 'text-muted'}
                       >
-                        {item.rodnyList ? 'Ano' : 'Ne'}
+                        {t(item.rodnyList ? 'obecne.ano' : 'obecne.ne')}
                       </button>
                     </td>
                     {/* Tlacitko Upravit tu bylo zbytecne (zadani 9. 9. 2026) -
@@ -301,7 +312,7 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                       <TlacitkoSmazat
                         onSmazat={() => removeItem(item)}
                         disabled={busy}
-                        otazka="Opravdu smazat položku?"
+                        otazka={t('cenik.opravduSmazatPolozku')}
                       />
                     </td>
                   </tr>
@@ -316,10 +327,12 @@ export function PriceListEditor({ items }: { items: Item[] }) {
       {note && <p className="text-sm text-ink bg-tint border border-line rounded-lg px-3 py-2 m-0">{note}</p>}
 
       <form onSubmit={addItem} className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4 max-w-3xl">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Přidat položku</h2>
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+          {t('cenik.pridatPolozku')}
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr] gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Položka</span>
+            <span className="text-sm font-body text-ink">{t('cenik.sl.polozka')}</span>
             <span className="flex items-center gap-2">
               <VyberIkony
                 hodnota={newItem.ikona || null}
@@ -329,13 +342,13 @@ export function PriceListEditor({ items }: { items: Item[] }) {
                 required
                 value={newItem.name}
                 onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                placeholder="např. Natáčení voiceoveru"
+                placeholder={t('cenik.polozkaPriklad')}
                 className={inputClass}
               />
             </span>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Cena bez DPH</span>
+            <span className="text-sm font-body text-ink">{t('cenik.sl.bezDph')}</span>
             <input
               inputMode="numeric"
               value={newItem.priceExVat}
@@ -344,12 +357,12 @@ export function PriceListEditor({ items }: { items: Item[] }) {
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Cena s DPH</span>
+            <span className="text-sm font-body text-ink">{t('cenik.sl.sDph')}</span>
             <input
               inputMode="numeric"
               value={newItem.priceIncVat}
               onChange={(e) => setNewItem({ ...newItem, priceIncVat: e.target.value })}
-              placeholder="dopočítáme"
+              placeholder={t('cenik.dopocitame')}
               className={`${inputClass} text-right`}
             />
           </label>
@@ -360,11 +373,11 @@ export function PriceListEditor({ items }: { items: Item[] }) {
             checked={newItem.rodnyList}
             onChange={(e) => setNewItem({ ...newItem, rodnyList: e.target.checked })}
           />
-          Rádiový spot — u projektů s tímhle typem se při dokončení vyrobí Rodný list
+          {t('cenik.radiovySpot')}
         </label>
         <div>
           <AddButton type="submit" disabled={busy}>
-            Přidat do ceníku
+            {t('cenik.pridatDoCeniku')}
           </AddButton>
         </div>
       </form>

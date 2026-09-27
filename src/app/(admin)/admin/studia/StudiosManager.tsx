@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
-import { WEEKDAY_LABELS, minutesToTime } from '@/lib/calendar';
+import { minutesToTime } from '@/lib/calendar';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 type Hodiny = { weekday: number; startMinutes: number; endMinutes: number; byArrangement: boolean };
 type Studio = {
@@ -24,6 +26,16 @@ type Studio = {
 const PORADI_DNU = [1, 2, 3, 4, 5, 6, 0];
 
 /**
+ * Název dne podle jazyka. Čísla dnů jdou z databáze (0 = neděle), takže se
+ * jméno dopočítá od neděle 7. 1. 2024 - žádné pole českých názvů natvrdo.
+ */
+function nazevDne(jazyk: Jazyk, weekday: number): string {
+  const den = new Date(Date.UTC(2024, 0, 7 + weekday));
+  const text = new Intl.DateTimeFormat(kodJazyka(jazyk), { weekday: 'long', timeZone: 'UTC' }).format(den);
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
  * Správa studií (zadani 8. 9. 2026). Studia jsou kalendářové zdroje: každé
  * má pracovní dobu po dnech a nejčastější frekvence jako zkratky.
  *
@@ -32,6 +44,8 @@ const PORADI_DNU = [1, 2, 3, 4, 5, 6, 0];
  * na totéž znamenala, že se jedno z nich neaktualizovalo.
  */
 export function StudiosManager({ studios }: { studios: Studio[] }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [openId, setOpenId] = useState<string | null>(studios[0]?.id ?? null);
   const [hodiny, setHodiny] = useState<Record<string, Hodiny[]>>({});
@@ -57,13 +71,13 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('studia.ulozeniSelhalo'));
         return null;
       }
       router.refresh();
       return data;
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('studia.ulozeniSelhalo'));
       return null;
     } finally {
       setBusy(false);
@@ -94,13 +108,13 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
           vedle nadpisu Studia"). Nové studio přibývá jednou za rok, takže
           si nezaslouží víc místa než jedno kolečko. */}
       <div className="flex items-center gap-3">
-        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Studia</h1>
+        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">{t('studia.nadpis')}</h1>
         {!zakladam && (
           <button
             type="button"
             onClick={() => setZakladam(true)}
-            title="Nové studio"
-            aria-label="Nové studio"
+            title={t('studia.noveStudio')}
+            aria-label={t('studia.noveStudio')}
             className="w-8 h-8 shrink-0 grid place-items-center rounded-full border border-line text-muted text-xl leading-none bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer"
           >
             +
@@ -132,7 +146,7 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
           <div className="flex-1 min-w-0 bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <label className="flex flex-col gap-1.5 sm:col-span-2">
-                <span className="text-sm font-body text-ink">Název</span>
+                <span className="text-sm font-body text-ink">{t('studia.nazev')}</span>
                 <input
                   defaultValue={otevrene.name}
                   onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { name: e.target.value })}
@@ -140,7 +154,7 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
                 />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-body text-ink">Zkratka</span>
+                <span className="text-sm font-body text-ink">{t('studia.zkratka')}</span>
                 <input
                   defaultValue={otevrene.shortName}
                   onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { shortName: e.target.value })}
@@ -148,7 +162,7 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
                 />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-body text-ink">Město</span>
+                <span className="text-sm font-body text-ink">{t('studia.mesto')}</span>
                 <input
                   defaultValue={otevrene.location ?? ''}
                   onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { location: e.target.value })}
@@ -159,8 +173,8 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
                   je jen ikonka u události s režií na dálku. */}
               <label className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-4">
                 <span className="text-sm font-body text-ink">
-                  Odkaz na videohovor
-                  <span className="text-muted font-normal"> · v kalendáři se z něj stane ikonka u režie na dálku</span>
+                  {t('studia.odkazNaHovor')}
+                  <span className="text-muted font-normal"> · {t('studia.odkazNaHovorPopis')}</span>
                 </span>
                 <input
                   defaultValue={otevrene.hovorOdkaz ?? ''}
@@ -172,13 +186,13 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-heading text-muted uppercase tracking-wide">Pracovní doba</span>
+              <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('studia.pracovniDoba')}</span>
               {PORADI_DNU.map((weekday) => {
                 const h = hodinyStudia(otevrene).find((x) => x.weekday === weekday);
                 if (!h) return null;
                 return (
                   <div key={weekday} className="flex items-center gap-3 flex-wrap">
-                    <span className="w-20 text-sm font-heading text-ink">{WEEKDAY_LABELS[weekday]}</span>
+                    <span className="w-20 text-sm font-heading text-ink">{nazevDne(jazyk, weekday)}</span>
                     <input
                       defaultValue={minutesToTime(h.startMinutes)}
                       onBlur={(e) => {
@@ -202,7 +216,7 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
                         checked={h.byArrangement}
                         onChange={(e) => upravHodinu(otevrene, weekday, { byArrangement: e.target.checked })}
                       />
-                      jen po domluvě
+                      {t('studia.jenPoDomluve')}
                     </label>
                   </div>
                 );
@@ -215,11 +229,11 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
                     const ok = await posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', {
                       hours: hodinyStudia(otevrene),
                     });
-                    if (ok) setInfo('Pracovní doba uložena.');
+                    if (ok) setInfo(t('studia.pracovniDobaUlozena'));
                   }}
                   className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
                 >
-                  Uložit pracovní dobu
+                  {t('studia.ulozitPracovniDobu')}
                 </button>
                 <button
                   type="button"
@@ -227,13 +241,13 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
                   onClick={() => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { active: !otevrene.active })}
                   className="text-muted text-sm font-heading"
                 >
-                  {otevrene.active ? 'Vyřadit studio' : 'Vrátit do provozu'}
+                  {otevrene.active ? t('studia.vyraditStudio') : t('studia.vratitDoProvozu')}
                 </button>
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5 border-t border-line pt-4">
-              <span className="text-xs font-heading text-muted uppercase tracking-wide">Zkratky frekvencí</span>
+              <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('studia.zkratkyFrekvenci')}</span>
               <span className="text-sm font-body text-muted">
                 {otevrene.presets
                   .map((p) => `${p.label} ${minutesToTime(p.startMinutes)}–${minutesToTime(p.endMinutes)}`)
@@ -251,7 +265,7 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
       {zakladam && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex items-end gap-3 flex-wrap">
           <label className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-            <span className="text-sm font-body text-ink">Nové studio</span>
+            <span className="text-sm font-body text-ink">{t('studia.noveStudio')}</span>
             <input
               value={nove.name}
               onChange={(e) => setNove((n) => ({ ...n, name: e.target.value }))}
@@ -261,7 +275,7 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
             />
           </label>
           <label className="flex flex-col gap-1.5 w-40">
-            <span className="text-sm font-body text-ink">Zkratka</span>
+            <span className="text-sm font-body text-ink">{t('studia.zkratka')}</span>
             <input
               value={nove.shortName}
               onChange={(e) => setNove((n) => ({ ...n, shortName: e.target.value }))}
@@ -270,7 +284,7 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
             />
           </label>
           <label className="flex flex-col gap-1.5 w-40">
-            <span className="text-sm font-body text-ink">Město</span>
+            <span className="text-sm font-body text-ink">{t('studia.mesto')}</span>
             <input
               value={nove.location}
               onChange={(e) => setNove((n) => ({ ...n, location: e.target.value }))}
@@ -288,14 +302,14 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
               }
             }}
           >
-            Založit
+            {t('studia.zalozit')}
           </AddButton>
           <button
             type="button"
             onClick={() => setZakladam(false)}
             className="text-sm font-heading text-muted hover:text-ink bg-transparent border-0 cursor-pointer py-2"
           >
-            Zrušit
+            {t('obecne.zrusit')}
           </button>
         </div>
       )}

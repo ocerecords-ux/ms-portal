@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import type { WorkType } from '@prisma/client';
 import {
-  WORK_TYPE_LABELS,
   WORK_TYPE_OPTIONS,
   durationMinutes,
   entryAmount,
@@ -18,6 +17,8 @@ import {
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { formatDatum, kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 import Link from 'next/link';
 
 /**
@@ -83,27 +84,38 @@ function currentMonthKey(): string {
   return todayIso().slice(0, 7);
 }
 
-/** "2026-01" -> "Leden 2026" */
-function monthLabel(key: string): string {
+/** "2026-01" -> "Leden 2026" / "January 2026". Nazev mesice zna Intl. */
+function monthLabel(jazyk: Jazyk, key: string): string {
   const [year, month] = key.split('-');
   const date = new Date(Number(year), Number(month) - 1, 1);
-  const name = new Intl.DateTimeFormat('cs-CZ', { month: 'long' }).format(date);
+  const name = new Intl.DateTimeFormat(kodJazyka(jazyk), { month: 'long' }).format(date);
   return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${year}`;
 }
 
 /** „1. 9. 2026 – 30. 9. 2026", „od 1. 9. 2026", „do 30. 9. 2026". */
-function popisObdobi(od: string, doData: string): string {
-  if (od && doData) return `${formatDate(od)} – ${formatDate(doData)}`;
-  if (od) return `od ${formatDate(od)}`;
-  return `do ${formatDate(doData)}`;
+function popisObdobi(jazyk: Jazyk, od: string, doData: string): string {
+  if (od && doData) {
+    return prelozitS(jazyk, 'vykaz.obdobiOdDo', { od: formatDate(jazyk, od), do: formatDate(jazyk, doData) });
+  }
+  if (od) return prelozitS(jazyk, 'vykaz.obdobiOd', { od: formatDate(jazyk, od) });
+  return prelozitS(jazyk, 'vykaz.obdobiDo', { do: formatDate(jazyk, doData) });
 }
 
 type SortKey = 'date' | 'user' | 'duration' | 'workType' | 'project' | 'amount';
 type Sort = { key: SortKey; dir: 'asc' | 'desc' };
 
-function formatDate(iso: string): string {
+// Pomocne funkce mimo komponentu - jazyk si berou parametrem, hook by tu nefungoval.
+function formatDate(jazyk: Jazyk, iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? iso : new Intl.DateTimeFormat('cs-CZ').format(d);
+  return Number.isNaN(d.getTime()) ? iso : formatDatum(jazyk, d, iso);
+}
+
+/**
+ * Popisek druhu prace. Drzi se KODU (RECORDING / EDITING / OTHER), ne textu -
+ * porovnavat prelozeny popisek by se rozpadlo pri prvnim prepnuti jazyka.
+ */
+function druhPracePopisek(jazyk: Jazyk, druh: WorkType): string {
+  return prelozit(jazyk, `vykaz.druh.${druh}`);
 }
 
 /**
@@ -133,6 +145,8 @@ export function TimesheetEditor({
   projectOptions: ProjectOption[];
   entries: Entry[];
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   // Cas, druh prace i projekt jsou povinne (zadani 6. 9. 2026) - druh prace
   // proto zacina prazdny, aby si ho zvukar musel vybrat vedome.
@@ -223,7 +237,13 @@ export function TimesheetEditor({
       if (druhPrace !== 'all' && e.workType !== druhPrace) return false;
       if (userFilter !== 'all' && e.userId !== userFilter) return false;
       if (!needle) return true;
-      const haystack = [e.projectName ?? '', e.note ?? '', e.userLabel, WORK_TYPE_LABELS[e.workType], formatDate(e.date)]
+      const haystack = [
+        e.projectName ?? '',
+        e.note ?? '',
+        e.userLabel,
+        druhPracePopisek(jazyk, e.workType),
+        formatDate(jazyk, e.date),
+      ]
         .join(' ')
         .toLowerCase();
       return needle.split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
@@ -243,18 +263,21 @@ export function TimesheetEditor({
               entryAmount(b.startMinutes, b.endMinutes, b.hourlyRateSnapshot))
           );
         case 'user':
-          return dir * a.userLabel.localeCompare(b.userLabel, 'cs');
+          return dir * a.userLabel.localeCompare(b.userLabel, kodJazyka(jazyk));
         case 'workType':
-          return dir * WORK_TYPE_LABELS[a.workType].localeCompare(WORK_TYPE_LABELS[b.workType], 'cs');
+          return (
+            dir *
+            druhPracePopisek(jazyk, a.workType).localeCompare(druhPracePopisek(jazyk, b.workType), kodJazyka(jazyk))
+          );
         case 'project':
-          return dir * (a.projectName ?? '').localeCompare(b.projectName ?? '', 'cs');
+          return dir * (a.projectName ?? '').localeCompare(b.projectName ?? '', kodJazyka(jazyk));
         default: {
           const byDate = a.date.localeCompare(b.date);
           return dir * (byDate !== 0 ? byDate : a.startMinutes - b.startMinutes);
         }
       }
     });
-  }, [entries, month, userFilter, query, sort, vlastniObdobi, odDatum, doDatum, druhPrace]);
+  }, [entries, month, userFilter, query, sort, vlastniObdobi, odDatum, doDatum, druhPrace, jazyk]);
 
   // Živý náhled: kolik hodin to je a kolik to dělá peněz.
   const preview = useMemo(() => {
@@ -303,6 +326,7 @@ export function TimesheetEditor({
         }
         if (userFilter !== 'all' && b.userId !== userFilter) return false;
         if (!needle) return true;
+        // Slovo „bonus" je v cestine i v anglictine stejne, proto tu stoji natvrdo.
         const seno = [b.projectName ?? '', b.poznamka ?? '', b.userLabel, 'bonus'].join(' ').toLowerCase();
         return needle.split(/\s+/).filter(Boolean).every((slovo) => seno.includes(slovo));
       })
@@ -351,11 +375,7 @@ export function TimesheetEditor({
   async function addEntry(e: React.FormEvent) {
     e.preventDefault();
     if (missing) {
-      setError(
-        needsProject
-          ? 'Vyplňte datum, čas od–do, druh práce a projekt.'
-          : 'Vyplňte datum, čas od–do a druh práce.',
-      );
+      setError(t(needsProject ? 'vykaz.chybiPoleSProjektem' : 'vykaz.chybiPole'));
       return;
     }
     setSaving(true);
@@ -377,7 +397,7 @@ export function TimesheetEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('vykaz.ulozeniSelhalo'));
         return;
       }
       if (editId) {
@@ -387,7 +407,7 @@ export function TimesheetEditor({
       }
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('vykaz.ulozeniSelhalo'));
     } finally {
       setSaving(false);
     }
@@ -403,12 +423,12 @@ export function TimesheetEditor({
       const res = await fetch(`/api/timesheets/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Smazání se nezdařilo.');
+        setError(data?.error || t('mazani.nezdarilo'));
         return;
       }
       router.refresh();
     } catch {
-      setError('Smazání se nezdařilo.');
+      setError(t('mazani.nezdarilo'));
     } finally {
       setBusyId(null);
     }
@@ -421,12 +441,12 @@ export function TimesheetEditor({
     <section className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         <div>
-          <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Výkazy</h1>
+          <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">{t('vykaz.nadpis')}</h1>
           {canWrite && (
             // Navod pryc (zadani 9. 9. 2026), sazba zustava - to je udaj,
             // ne vysvetlivka.
             <p className="text-muted text-sm mt-1 font-body">
-              Vaše hodinová sazba: {formatCzk(hourlyRate)}
+              {t('vykaz.vaseSazba', { sazba: formatCzk(hourlyRate) })}
             </p>
           )}
         </div>
@@ -435,13 +455,25 @@ export function TimesheetEditor({
               tyka - jinak by „Celkem · Září" lhalo, kdyz je zapnuty strih
               nebo vlastni obdobi (zadani 15. 9. 2026). */}
           <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">
-            Celkem · {vlastniObdobi ? popisObdobi(odDatum, doDatum) : month === 'all' ? 'vše' : monthLabel(month)}
-            {druhPrace !== 'all' ? ` · ${WORK_TYPE_LABELS[druhPrace]}` : ''}
+            {(() => {
+              const obdobi = vlastniObdobi
+                ? popisObdobi(jazyk, odDatum, doDatum)
+                : month === 'all'
+                  ? t('vykaz.vse')
+                  : monthLabel(jazyk, month);
+              return druhPrace !== 'all'
+                ? t('vykaz.celkemZaDruh', { obdobi, druh: druhPracePopisek(jazyk, druhPrace) })
+                : t('vykaz.celkemZa', { obdobi });
+            })()}
           </p>
           <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatCzk(totals.celkem)}</p>
           <p className="text-xs font-body text-muted m-0">
-            {formatDuration(totals.minutes)}
-            {totals.bonus > 0 && ` · z toho bonusy ${formatCzk(totals.bonus)}`}
+            {totals.bonus > 0
+              ? t('vykaz.hodinyABonusy', {
+                  hodiny: formatDuration(totals.minutes),
+                  castka: formatCzk(totals.bonus),
+                })
+              : formatDuration(totals.minutes)}
           </p>
         </div>
       </div>
@@ -452,13 +484,13 @@ export function TimesheetEditor({
       {(canWrite || editId) && (
         <form ref={formRef} onSubmit={addEntry} className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            {editId ? 'Úprava výkazu' : 'Nový výkaz'}
+            {t(editId ? 'vykaz.upravaVykazu' : 'vykaz.novyVykaz')}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Datum <span className="text-danger">*</span>
+                {t('vykaz.datum')} <span className="text-danger">*</span>
               </span>
               <DatumPole
                 required
@@ -469,7 +501,7 @@ export function TimesheetEditor({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Od <span className="text-danger">*</span>
+                {t('vykaz.od')} <span className="text-danger">*</span>
               </span>
               <input
                 type="time"
@@ -485,7 +517,7 @@ export function TimesheetEditor({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Do <span className="text-danger">*</span>
+                {t('vykaz.do')} <span className="text-danger">*</span>
               </span>
               <input
                 type="time"
@@ -501,7 +533,7 @@ export function TimesheetEditor({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Druh práce <span className="text-danger">*</span>
+                {t('vykaz.druhPrace')} <span className="text-danger">*</span>
               </span>
               <VyberPole
                 required
@@ -514,10 +546,10 @@ export function TimesheetEditor({
                 }}
                 className={inputClass}
               >
-                <option value="">— vyberte druh práce —</option>
-                {WORK_TYPE_OPTIONS.map((t) => (
-                  <option key={t} value={t}>
-                    {WORK_TYPE_LABELS[t]}
+                <option value="">{t('vykaz.vyberteDruhPrace')}</option>
+                {WORK_TYPE_OPTIONS.map((druh) => (
+                  <option key={druh} value={druh}>
+                    {druhPracePopisek(jazyk, druh)}
                   </option>
                 ))}
               </VyberPole>
@@ -526,7 +558,7 @@ export function TimesheetEditor({
             {needsProject && (
             <label className="flex flex-col gap-1.5 sm:col-span-2">
               <span className="text-sm font-body text-ink">
-                Projekt <span className="text-danger">*</span>
+                {t('vykaz.projekt')} <span className="text-danger">*</span>
               </span>
               {/* Misto rolovaciho seznamu se sedmi sty polozkami se projekt
                   HLEDA PSANIM (zadani 11. 9. 2026) - viz VyberProjektu.tsx. */}
@@ -536,19 +568,17 @@ export function TimesheetEditor({
                 onZmena={(id) => setForm({ ...form, project: id })}
               />
               <span className="text-xs text-muted font-body">
-                {nabidkaProjektu.length === 0
-                  ? 'Zatím se nenačetly žádné projekty.'
-                  : 'Pište název projektu, firmu nebo číslo. V nabídce jsou i dokončené projekty.'}
+                {t(nabidkaProjektu.length === 0 ? 'vykaz.zadneProjekty' : 'vykaz.napovedaProjekt')}
               </span>
             </label>
             )}
 
             <label className="flex flex-col gap-1.5 sm:col-span-2">
-              <span className="text-sm font-body text-ink">Poznámka</span>
+              <span className="text-sm font-body text-ink">{t('vykaz.poznamka')}</span>
               <input
                 value={form.note}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
-                placeholder="nepovinné"
+                placeholder={t('vykaz.nepovinne')}
                 className={inputClass}
               />
             </label>
@@ -564,7 +594,7 @@ export function TimesheetEditor({
               disabled={saving || missing}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              {saving ? 'Ukládám…' : editId ? 'Uložit změny' : 'Přidat výkaz'}
+              {saving ? t('obecne.ukladam') : t(editId ? 'vykaz.ulozitZmeny' : 'vykaz.pridatVykaz')}
             </button>
             {editId && (
               <button
@@ -573,7 +603,7 @@ export function TimesheetEditor({
                 disabled={saving}
                 className="font-heading font-semibold text-sm text-muted hover:text-ink transition-colors disabled:opacity-60"
               >
-                Zrušit úpravu
+                {t('vykaz.zrusitUpravu')}
               </button>
             )}
             {preview ? (
@@ -584,8 +614,8 @@ export function TimesheetEditor({
             ) : (
               <span className="text-sm font-body text-muted">
                 {needsProject
-                  ? 'Vyplňte čas od–do, druh práce a projekt — bez nich výkaz uložit nejde.'
-                  : 'Vyplňte čas od–do a druh práce — u „Ostatní" se projekt nevybírá.'}
+                  ? t('vykaz.napovedaSProjektem')
+                  : t('vykaz.napovedaBezProjektu', { ostatni: druhPracePopisek(jazyk, 'OTHER') })}
               </span>
             )}
           </div>
@@ -604,7 +634,7 @@ export function TimesheetEditor({
                 setOdDatum('');
                 setDoDatum('');
               }}
-              label="Vše"
+              label={t('vykaz.zalozkaVse')}
             />
             {months.map((m) => (
               <MonthTab
@@ -615,7 +645,7 @@ export function TimesheetEditor({
                   setOdDatum('');
                   setDoDatum('');
                 }}
-                label={monthLabel(m)}
+                label={monthLabel(jazyk, m)}
               />
             ))}
           </div>
@@ -623,18 +653,18 @@ export function TimesheetEditor({
             {/* Vlastni obdobi od-do (zadani 15. 9. 2026). Prazdna strana
                 znamena „bez omezeni" - da se tak napsat i „od 1. 9. dal". */}
             <span className="flex items-center gap-1.5">
-              <span className="text-xs font-heading text-muted uppercase tracking-wide">Období</span>
+              <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('vykaz.obdobi')}</span>
               <DatumPole
                 value={odDatum}
                 onChange={(e) => setOdDatum(e.target.value)}
-                title="Od data"
+                title={t('vykaz.odData')}
                 className="rounded-lg border border-line bg-surface px-2.5 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
               />
               <span className="text-muted text-sm">–</span>
               <DatumPole
                 value={doDatum}
                 onChange={(e) => setDoDatum(e.target.value)}
-                title="Do data"
+                title={t('vykaz.doData')}
                 className="rounded-lg border border-line bg-surface px-2.5 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
               />
               {vlastniObdobi && (
@@ -644,7 +674,7 @@ export function TimesheetEditor({
                     setOdDatum('');
                     setDoDatum('');
                   }}
-                  title="Zrušit období a vrátit se k měsícům"
+                  title={t('vykaz.zrusitObdobi')}
                   className="text-xs font-heading text-muted hover:text-danger px-1"
                 >
                   ✕
@@ -658,10 +688,10 @@ export function TimesheetEditor({
               onChange={(e) => setDruhPrace(e.target.value as 'all' | WorkType)}
               className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
             >
-              <option value="all">Všechny druhy práce</option>
-              {WORK_TYPE_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {WORK_TYPE_LABELS[t]}
+              <option value="all">{t('vykaz.vsechnyDruhy')}</option>
+              {WORK_TYPE_OPTIONS.map((druh) => (
+                <option key={druh} value={druh}>
+                  {druhPracePopisek(jazyk, druh)}
                 </option>
               ))}
             </VyberPole>
@@ -676,7 +706,7 @@ export function TimesheetEditor({
                 onChange={(e) => setUserFilter(e.target.value)}
                 className="rounded-lg border border-line bg-surface px-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
               >
-                <option value="all">Všichni zvukaři</option>
+                <option value="all">{t('vykaz.vsichniZvukari')}</option>
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.label}
@@ -689,7 +719,7 @@ export function TimesheetEditor({
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Hledat projekt, poznámku…"
+                placeholder={t('vykaz.hledat')}
                 className="w-64 max-w-full rounded-lg border border-line bg-surface pl-9 pr-3 py-2 text-sm font-heading text-ink outline-none focus:border-brand-purple"
               />
               <svg
@@ -718,13 +748,21 @@ export function TimesheetEditor({
           <table className="w-full min-w-[840px] border-collapse">
             <thead>
               <tr className="bg-brand-purple text-white font-heading text-xs">
-                <SortHeader label="Datum" sortKey="date" sort={sort} onSort={toggleSort} />
-                {isAdmin && <SortHeader label="Zvukař" sortKey="user" sort={sort} onSort={toggleSort} />}
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">Od–do</th>
-                <SortHeader label="Hodiny" sortKey="duration" sort={sort} onSort={toggleSort} />
-                <SortHeader label="Druh práce" sortKey="workType" sort={sort} onSort={toggleSort} />
-                <SortHeader label="Projekt" sortKey="project" sort={sort} onSort={toggleSort} />
-                <SortHeader label="Částka" sortKey="amount" sort={sort} onSort={toggleSort} align="right" />
+                <SortHeader label={t('vykaz.sl.datum')} sortKey="date" sort={sort} onSort={toggleSort} />
+                {isAdmin && (
+                  <SortHeader label={t('role.ZVUKAR')} sortKey="user" sort={sort} onSort={toggleSort} />
+                )}
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">{t('vykaz.sl.odDo')}</th>
+                <SortHeader label={t('vykaz.sl.hodiny')} sortKey="duration" sort={sort} onSort={toggleSort} />
+                <SortHeader label={t('vykaz.sl.druhPrace')} sortKey="workType" sort={sort} onSort={toggleSort} />
+                <SortHeader label={t('vykaz.sl.projekt')} sortKey="project" sort={sort} onSort={toggleSort} />
+                <SortHeader
+                  label={t('vykaz.sl.castka')}
+                  sortKey="amount"
+                  sort={sort}
+                  onSort={toggleSort}
+                  align="right"
+                />
                 <th></th>
               </tr>
             </thead>
@@ -732,7 +770,7 @@ export function TimesheetEditor({
               {visibleEntries.length === 0 && (
                 <tr>
                   <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-muted text-sm font-body">
-                    {entries.length === 0 ? 'Zatím tu není žádný výkaz.' : 'Nic neodpovídá filtru.'}
+                    {t(entries.length === 0 ? 'vykaz.prazdno' : 'vykaz.prazdnoFiltr')}
                   </td>
                 </tr>
               )}
@@ -741,7 +779,7 @@ export function TimesheetEditor({
                 return (
                   <tr key={e.id} className="border-t border-line hover:bg-surfaceSoft">
                     <td className="px-4 py-3.5 text-sm font-heading text-ink tabular-nums whitespace-nowrap">
-                      {formatDate(e.date)}
+                      {formatDate(jazyk, e.date)}
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-3.5 text-sm font-heading text-muted whitespace-nowrap">{e.userLabel}</td>
@@ -762,7 +800,7 @@ export function TimesheetEditor({
                               : 'bg-field text-muted'
                         }`}
                       >
-                        {WORK_TYPE_LABELS[e.workType]}
+                        {druhPracePopisek(jazyk, e.workType)}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading text-muted">
@@ -786,7 +824,7 @@ export function TimesheetEditor({
                               editId === e.id ? 'text-brand-purpleDark font-semibold' : 'text-brand-purple'
                             }`}
                           >
-                            {editId === e.id ? 'Upravuje se' : 'Upravit'}
+                            {t(editId === e.id ? 'vykaz.upravujeSe' : 'obecne.upravit')}
                           </button>
                           {/* POJISTKA (zadání 18. 9. 2026: „když chci smazat
                               výkaz, měla by tam být všude pojistka"). První
@@ -794,7 +832,7 @@ export function TimesheetEditor({
                           <TlacitkoSmazat
                             onSmazat={() => removeEntry(e.id)}
                             bezi={busyId === e.id}
-                            otazka="Opravdu smazat výkaz?"
+                            otazka={t('vykaz.opravduSmazat')}
                           />
                         </span>
                       )}
@@ -813,7 +851,7 @@ export function TimesheetEditor({
         <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-line flex items-baseline justify-between gap-3 flex-wrap">
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Schválené bonusy
+              {t('vykaz.schvaleneBonusy')}
             </h2>
             <span className="text-sm font-heading text-ink tabular-nums">{formatCzk(totals.bonus)}</span>
           </div>
@@ -823,7 +861,7 @@ export function TimesheetEditor({
                 {visibleBonusy.map((b) => (
                   <tr key={b.id} className="border-t border-line first:border-t-0">
                     <td className="px-4 py-3 text-sm font-heading text-ink tabular-nums whitespace-nowrap">
-                      {formatDate(b.den)}
+                      {formatDate(jazyk, b.den)}
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-3 text-sm font-heading text-muted whitespace-nowrap">{b.userLabel}</td>
@@ -874,13 +912,14 @@ function SortHeader({
   onSort: (key: SortKey) => void;
   align?: 'left' | 'right';
 }) {
+  const t = usePreklad();
   const active = sort.key === sortKey;
   return (
     <th className={`px-4 py-3.5 whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}>
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        title={`Seřadit podle: ${label}`}
+        title={t('vykaz.seraditPodle', { sloupec: label })}
         className={`inline-flex items-center gap-1.5 font-heading text-xs transition-colors hover:text-brand-green ${
           active ? 'text-brand-green' : 'text-white/85'
         } ${align === 'right' ? 'flex-row-reverse' : ''}`}

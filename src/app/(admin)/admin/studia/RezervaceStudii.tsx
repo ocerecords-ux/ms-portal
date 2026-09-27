@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { prelozitKolem } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * REZERVACE STUDIA KLIENTY (zadání 25. 9. 2026: „v rámci londýnského studia
@@ -28,14 +30,20 @@ export type StudioRezervace = {
 };
 
 export function RezervaceStudii({ studia, zaklad }: { studia: StudioRezervace[]; zaklad: string }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
+  // Adresa stojí ve větě jinou barvou, proto se věta dělí přes prelozitKolem
+  // (pravidlo 7 v docs/preklad-portalu.md) - v angličtině stojí jinde.
+  const [predAdresou, zaAdresou] = prelozitKolem(jazyk, 'studia.rezervacePopis', 'adresa');
+
   return (
     <section className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-line">
-        <h2 className="font-heading font-semibold text-ink m-0">Rezervace studia klienty</h2>
+        <h2 className="font-heading font-semibold text-ink m-0">{t('studia.rezervaceNadpis')}</h2>
         <p className="text-xs font-body text-muted m-0 mt-1">
-          Muzikanti a producenti si po pozvánce otevřou kalendář studia na adrese{' '}
-          <span className="font-heading text-ink">{zaklad}/studio</span> a berou si volné termíny
-          sami. Svoje rezervace vidí pojmenované, cizí jen jako obsazený čas — bez názvů.
+          {predAdresou}
+          <span className="font-heading text-ink">{zaklad}/studio</span>
+          {zaAdresou}
         </p>
         {/* Kartička s QR kódem k vytištění (25. 9. 2026) - anglicky, na jednu
             A4. Dá se pověsit ve studiu i poslat mailem. */}
@@ -45,12 +53,12 @@ export function RezervaceStudii({ studia, zaklad }: { studia: StudioRezervace[];
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 mt-2 text-brand-purple font-heading text-xs no-underline hover:underline"
         >
-          Kartička s QR kódem k vytištění (anglicky) ↗
+          {t('studia.qrKarticka')}
         </a>
       </div>
 
       {studia.length === 0 ? (
-        <p className="text-sm font-body text-muted m-0 px-5 py-6">Žádné studio tu zatím není.</p>
+        <p className="text-sm font-body text-muted m-0 px-5 py-6">{t('studia.zadneStudio')}</p>
       ) : (
         <ul className="m-0 p-0 list-none">
           {studia.map((s) => (
@@ -63,6 +71,7 @@ export function RezervaceStudii({ studia, zaklad }: { studia: StudioRezervace[];
 }
 
 function Studio({ studio }: { studio: StudioRezervace }) {
+  const t = usePreklad();
   const router = useRouter();
   const [bezi, setBezi] = useState(false);
   const [email, setEmail] = useState('');
@@ -84,7 +93,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
       });
       if (!res.ok) {
         const o = await res.json().catch(() => ({}));
-        setChyba(o?.error || 'Nastavení se nepodařilo uložit.');
+        setChyba(o?.error || t('studia.nastaveniSelhalo'));
         return;
       }
       router.refresh();
@@ -108,11 +117,11 @@ function Studio({ studio }: { studio: StudioRezervace }) {
       });
       const o = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(o?.error || 'Pozvánku se nepodařilo odeslat.');
+        setChyba(o?.error || t('studia.pozvankaSelhala'));
         if (o?.odkaz) setOdkaz(o.odkaz);
         return;
       }
-      setZprava(`Pozvánka odešla na ${o.email}.`);
+      setZprava(t('studia.pozvankaOdeslana', { email: o.email }));
       setEmail('');
       setJmeno('');
       router.refresh();
@@ -150,7 +159,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
               rel="noopener noreferrer"
               className="shrink-0 text-brand-purple font-heading text-xs no-underline hover:underline"
             >
-              Otevřít kalendář ↗
+              {t('studia.otevritKalendar')}
             </a>
           )}
         </span>
@@ -161,22 +170,19 @@ function Studio({ studio }: { studio: StudioRezervace }) {
             disabled={bezi}
             onChange={(e) => uloz({ zapnuto: e.target.checked })}
           />
-          Rezervace zapnuté
+          {t('studia.rezervaceZapnute')}
         </label>
       </div>
 
       {studio.zapnuto && !studio.maDobu && (
-        <p className="m-0 text-xs font-body text-status-error">
-          Studio nemá vyplněnou pracovní dobu — dokud ji nedoplníte výš, nebude si klient mít co
-          vybrat.
-        </p>
+        <p className="m-0 text-xs font-body text-status-error">{t('studia.bezPracovniDoby')}</p>
       )}
 
       {studio.zapnuto && (
         <>
           <div className="flex items-end gap-3 flex-wrap">
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-heading text-muted">Nejkratší rezervace (min)</span>
+              <span className="text-[11px] font-heading text-muted">{t('studia.nejkratsiRezervace')}</span>
               <input
                 type="number"
                 min={15}
@@ -188,7 +194,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-heading text-muted">Dní dopředu (0 = bez limitu)</span>
+              <span className="text-[11px] font-heading text-muted">{t('studia.dniDopredu')}</span>
               <input
                 type="number"
                 min={0}
@@ -202,18 +208,18 @@ function Studio({ studio }: { studio: StudioRezervace }) {
 
           <form onSubmit={pozvi} className="flex items-end gap-2 flex-wrap">
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-heading text-muted">E-mail</span>
+              <span className="text-[11px] font-heading text-muted">{t('studia.email')}</span>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="jméno@kapela.co.uk"
+                placeholder={t('studia.emailPlaceholder')}
                 className="w-64 bg-field border border-line rounded-lg px-3 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-heading text-muted">Jméno (nepovinné)</span>
+              <span className="text-[11px] font-heading text-muted">{t('studia.jmenoNepovinne')}</span>
               <input
                 value={jmeno}
                 onChange={(e) => setJmeno(e.target.value)}
@@ -225,17 +231,13 @@ function Studio({ studio }: { studio: StudioRezervace }) {
               disabled={bezi}
               className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-xs px-4 py-2 disabled:opacity-50 border-0 cursor-pointer"
             >
-              Poslat pozvánku
+              {t('studia.poslatPozvanku')}
             </button>
           </form>
 
           {zprava && <p className="m-0 text-xs font-body text-status-done">{zprava}</p>}
           {chyba && <p className="m-0 text-xs font-body text-status-error">{chyba}</p>}
-          {odkaz && (
-            <p className="m-0 text-xs font-body text-muted break-all">
-              Odkaz k předání ručně: <span className="text-ink">{odkaz}</span>
-            </p>
-          )}
+          {odkaz && <OdkazRucne odkaz={odkaz} />}
 
           {studio.klienti.length > 0 && (
             <ul className="m-0 p-0 list-none flex flex-col gap-1.5">
@@ -250,7 +252,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
                     </span>
                     <span className="block text-[11px] font-body text-muted truncate">
                       {k.jmeno ? `${k.email} · ` : ''}
-                      {k.hesloNastaveno ? 'aktivní' : 'čeká na nastavení hesla'}
+                      {k.hesloNastaveno ? t('studia.klientAktivni') : t('studia.klientCekaNaHeslo')}
                     </span>
                   </span>
                   <button
@@ -259,7 +261,7 @@ function Studio({ studio }: { studio: StudioRezervace }) {
                     disabled={bezi}
                     className="shrink-0 bg-surface border border-line text-muted hover:text-status-error font-heading text-[11px] rounded-lg px-2.5 py-1 cursor-pointer"
                   >
-                    Odebrat přístup
+                    {t('studia.odebratPristup')}
                   </button>
                 </li>
               ))}
@@ -268,5 +270,22 @@ function Studio({ studio }: { studio: StudioRezervace }) {
         </>
       )}
     </li>
+  );
+}
+
+/**
+ * Odkaz k předání ručně. Adresa stojí ve větě jinou barvou, takže se věta dělí
+ * až při vykreslení přes prelozitKolem - celá zůstává jedním klíčem
+ * (pravidlo 7 v docs/preklad-portalu.md).
+ */
+function OdkazRucne({ odkaz }: { odkaz: string }) {
+  const jazyk = useJazyk();
+  const [pred, za] = prelozitKolem(jazyk, 'studia.odkazRucne', 'odkaz');
+  return (
+    <p className="m-0 text-xs font-body text-muted break-all">
+      {pred}
+      <span className="text-ink">{odkaz}</span>
+      {za}
+    </p>
   );
 }

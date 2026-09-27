@@ -9,13 +9,28 @@ import { AdminField } from '../NewCompanyForm';
 import { CountrySelect } from '../CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { PhotoDropzone } from './PhotoDropzone';
-import { ROLE_GROUPS, ROLE_LABELS, roleRequiresCompany } from '@/lib/roles';
+import { ROLE_GROUPS, roleRequiresCompany } from '@/lib/roles';
 import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 const INTERNAL_ROLES: Role[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
+
+/**
+ * Nazev skupiny v nabidce rolí. Klic se bere podle PRVNI ROLE ve skupine, ne
+ * podle ceskeho popisku z lib/roles.ts - popisek tam zustava cesky pro zbytek
+ * aplikace a porovnavat text by se rozbilo pri prvni jeho zmene.
+ */
+const SKUPINY_KLICE: Record<string, string> = {
+  CLIENT: 'uzivatel.skupinaKlientske',
+  HEREC: 'uzivatel.skupinaHerec',
+  ADMIN: 'uzivatel.skupinaInterni',
+  ROBOT: 'uzivatel.skupinaRobot',
+  TABULE: 'uzivatel.skupinaTabule',
+  BOOKING: 'uzivatel.skupinaStudio',
+};
 
 // Uzivatele se zakladaji tady, na urovni celeho admin panelu, a paruji se s
 // firmou vyberem ze seznamu (misto zakladani primo z detailu jedne firmy) -
@@ -32,6 +47,7 @@ export function NewUserForm({
   defaultCompanyId?: string;
   defaultRole?: Role;
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -107,9 +123,9 @@ export function NewUserForm({
       const res = await fetch('/api/admin/users', { method: 'POST', body: fd });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'Účet se nepodařilo založit.');
+        throw new Error(body.error || t('uzivatel.zalozeniNezdarilo'));
       }
-      setCreated(`Účet ${email} je založen. Přihlašovací heslo mu prosím předejte bezpečnou cestou.`);
+      setCreated(t('uzivatel.uctZalozen', { email }));
       setEmail('');
       setName('');
       setPhone('');
@@ -130,7 +146,7 @@ export function NewUserForm({
       setCompanyId(defaultCompanyId || '');
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Účet se nepodařilo založit.');
+      setError(err instanceof Error ? err.message : t('uzivatel.zalozeniNezdarilo'));
     } finally {
       setSaving(false);
     }
@@ -140,7 +156,7 @@ export function NewUserForm({
     return (
       <span id={KOTVA_NOVE}>
         <AddButton onClick={() => setOpen(true)} className="self-start">
-        Přidat uživatele
+        {t('uzivatel.pridatUzivatele')}
         </AddButton>
       </span>
     );
@@ -148,19 +164,19 @@ export function NewUserForm({
 
   return (
     <form id={KOTVA_NOVE} onSubmit={handleSubmit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
-      <h2 className="font-display text-xl text-ink m-0">Nový uživatel</h2>
+      <h2 className="font-display text-xl text-ink m-0">{t('uzivatel.novyUzivatel')}</h2>
 
       {/* Poradi poli (zadani 12. 9. 2026): Jmeno + Fotka (drag & drop) prvni,
           pak Role (s Heslem a Firmou), az pak E-mail + Telefon. */}
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[160px]">
-          <AdminField label="Jméno">
+          <AdminField label={t('uzivatel.poleJmeno')}>
             <input value={name} onChange={(e) => setName(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         {isMediaspace && (
           <div className="flex-[2] min-w-[240px]">
-            <AdminField label="Fotka">
+            <AdminField label={t('uzivatel.poleFotka')}>
               <PhotoDropzone file={photo} onChange={setPhoto} />
             </AdminField>
           </div>
@@ -169,7 +185,7 @@ export function NewUserForm({
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[160px]">
-          <AdminField label="Počáteční heslo" required hint="uživatel si ho může později změnit">
+          <AdminField label={t('uzivatel.polePocatecniHeslo')} required hint={t('uzivatel.pocatecniHesloHint')}>
             <input
               required
               type="text"
@@ -181,13 +197,16 @@ export function NewUserForm({
           </AdminField>
         </div>
         <div className="flex-1 min-w-[200px]">
-          <AdminField label="Typ přístupu" required>
+          <AdminField label={t('uzivatel.poleTypPristupu')} required>
             <VyberPole required value={role} onChange={(e) => setRole(e.target.value as Role)} className="admin-input">
               {ROLE_GROUPS.map((group) => (
-                <optgroup key={group.label} label={group.label}>
+                <optgroup
+                  key={group.label}
+                  label={SKUPINY_KLICE[group.roles[0]] ? t(SKUPINY_KLICE[group.roles[0]]) : group.label}
+                >
                   {group.roles.map((r) => (
                     <option key={r} value={r}>
-                      {ROLE_LABELS[r]}
+                      {t(`role.${r}`)}
                     </option>
                   ))}
                 </optgroup>
@@ -197,9 +216,9 @@ export function NewUserForm({
         </div>
         {needsCompany && (
           <div className="flex-1 min-w-[200px]">
-            <AdminField label="Firma" required>
+            <AdminField label={t('uzivatel.poleFirma')} required>
               <VyberPole required value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="admin-input">
-                <option value="">— vyberte firmu —</option>
+                <option value="">{t('uzivatel.vyberteFirmu')}</option>
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -213,12 +232,12 @@ export function NewUserForm({
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[200px]">
-          <AdminField label="E-mail" required>
+          <AdminField label={t('uzivatel.poleEmail')} required>
             <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[160px]">
-          <AdminField label="Telefon">
+          <AdminField label={t('uzivatel.poleTelefon')}>
             <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -227,7 +246,7 @@ export function NewUserForm({
       {isMediaspace && (
         <div className="flex gap-4 flex-wrap">
           <div className="flex-1 min-w-[160px]">
-            <AdminField label="Datum narození">
+            <AdminField label={t('uzivatel.poleDatumNarozeni')}>
               <DatumPole value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="admin-input" />
             </AdminField>
           </div>
@@ -236,7 +255,7 @@ export function NewUserForm({
 
       {isHerec && (
         <>
-          <AdminField label="Lokace" hint="studia, ve kterých je herec schopen fyzicky natáčet">
+          <AdminField label={t('uzivatel.poleLokace')} hint={t('uzivatel.lokaceHint')}>
             {/* Barva u kazde lokace je stejna jako v seznamu hercu (zadani
                 10. 9. 2026) - kdo si ji zapamatuje tady, precte pak seznam
                 bez cteni textu. Brno I a Brno II sdileji barvu: jsou to dve
@@ -261,17 +280,17 @@ export function NewUserForm({
 
           <div className="flex gap-4 flex-wrap">
             <div className="flex-1 min-w-[180px]">
-              <AdminField label="RČ / datum narození">
+              <AdminField label={t('uzivatel.poleRcNeboDatum')}>
                 <input value={birthNumber} onChange={(e) => setBirthNumber(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
             <div className="flex-1 min-w-[140px]">
-              <AdminField label="IČ">
+              <AdminField label={t('uzivatel.poleIc')}>
                 <input value={ic} onChange={(e) => setIc(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
             <div className="flex-1 min-w-[140px]">
-              <AdminField label="DIČ">
+              <AdminField label={t('uzivatel.poleDic')}>
                 <input value={dic} onChange={(e) => setDic(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
@@ -279,12 +298,12 @@ export function NewUserForm({
 
           <label className="flex items-center gap-2 text-sm font-heading text-ink">
             <input type="checkbox" checked={vatPayer} onChange={(e) => setVatPayer(e.target.checked)} />
-            Plátce DPH
+            {t('uzivatel.platceDph')}
           </label>
 
           <div className="flex gap-4 flex-wrap">
             <div className="flex-1 min-w-[180px]">
-              <AdminField label="Číslo účtu">
+              <AdminField label={t('uzivatel.poleCisloUctu')}>
                 <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
@@ -292,22 +311,22 @@ export function NewUserForm({
 
           <div className="flex gap-4 flex-wrap">
             <div className="flex-[2] min-w-[220px]">
-              <AdminField label="Ulice č.p.">
+              <AdminField label={t('uzivatel.poleUlice')}>
                 <input value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
             <div className="flex-1 min-w-[160px]">
-              <AdminField label="Město">
+              <AdminField label={t('uzivatel.poleMesto')}>
                 <input value={addressCity} onChange={(e) => setAddressCity(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
             <div className="flex-1 min-w-[120px]">
-              <AdminField label="PSČ">
+              <AdminField label={t('uzivatel.polePsc')}>
                 <input value={addressZip} onChange={(e) => setAddressZip(e.target.value)} className="admin-input" />
               </AdminField>
             </div>
             <div className="flex-1 min-w-[140px]">
-              <AdminField label="Země">
+              <AdminField label={t('uzivatel.poleZeme')}>
                 <CountrySelect value={addressCountry} onChange={setAddressCountry} />
               </AdminField>
             </div>
@@ -324,10 +343,10 @@ export function NewUserForm({
           disabled={saving}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {saving ? 'Zakládám…' : 'Uložit uživatele'}
+          {saving ? t('uzivatel.zakladam') : t('uzivatel.ulozitUzivatele')}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="text-muted text-sm font-heading">
-          Zrušit
+          {t('obecne.zrusit')}
         </button>
       </div>
     </form>

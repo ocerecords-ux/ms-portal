@@ -5,6 +5,8 @@ import { DatumPole } from '@/components/DatumPole';
 import { useRouter } from 'next/navigation';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 import { formatCzk, formatDuration, durationMinutes, parseTime } from '@/lib/timesheets';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 
 /**
  * NABÍDKA VÝKAZU Z KALENDÁŘE (zadání 20. 9. 2026: „nastavit to nabídnutí
@@ -34,8 +36,9 @@ type Projekt = { id: string; label: string; dokonceny?: boolean };
 
 const PRAHA = 'Europe/Prague';
 
-function den(iso: string): string {
-  return new Intl.DateTimeFormat('cs-CZ', {
+// Pomocne funkce mimo komponentu - jazyk si berou parametrem, hook by tu nefungoval.
+function den(jazyk: Jazyk, iso: string): string {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), {
     timeZone: PRAHA,
     weekday: 'short',
     day: 'numeric',
@@ -43,8 +46,13 @@ function den(iso: string): string {
   }).format(new Date(iso));
 }
 
+/**
+ * Cas jako „HH:MM". Zamerne se NERIDI jazykem: tenhle retezec se nejen ukazuje,
+ * ale taky plni <input type="time"> a jde do parseTime, kde musi zustat strojove
+ * citelny. Dvacetictyrhodinovy tvar je spravny v cestine i v britske anglictine.
+ */
 function cas(iso: string): string {
-  return new Intl.DateTimeFormat('cs-CZ', {
+  return new Intl.DateTimeFormat('en-GB', {
     timeZone: PRAHA,
     hour: '2-digit',
     minute: '2-digit',
@@ -103,6 +111,8 @@ export function NavrhyZKalendare({
   projekty: Projekt[];
   hourlyRate: number;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [upravovany, setUpravovany] = useState<string | null>(null);
   const [pole, setPole] = useState<{ date: string; from: string; to: string; projektId: string }>({
@@ -154,7 +164,7 @@ export function NavrhyZKalendare({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Nepodařilo se to uložit.');
+        setChyba(data?.error || t('vykaz.navrh.ulozeniSelhalo'));
         return;
       }
       setUpravovany(null);
@@ -178,7 +188,7 @@ export function NavrhyZKalendare({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          setChyba(data?.error || 'Některé nabídky se nepodařilo přidat.');
+          setChyba(data?.error || t('vykaz.navrh.hromadneSelhalo'));
         }
       } finally {
         setBezi(null);
@@ -206,11 +216,11 @@ export function NavrhyZKalendare({
           </svg>
         </span>
         <div className="mr-auto">
-          <p className="font-heading font-semibold text-ink m-0 text-base">Z kalendáře čeká na zapsání</p>
+          <p className="font-heading font-semibold text-ink m-0 text-base">{t('vykaz.navrh.nadpis')}</p>
           <p className="text-sm font-body text-muted m-0 mt-0.5">
             {navrhy.length === 1
-              ? 'Jedna práce, u které jste byl zvukař, už skončila. Zkontrolujte čas a přidejte výkaz.'
-              : `${navrhy.length} prací, u kterých jste byl zvukař, už skončilo. Zkontrolujte čas a přidejte výkaz.`}
+              ? t('vykaz.navrh.popisJedna')
+              : t('vykaz.navrh.popisVic', { pocet: navrhy.length })}
           </p>
         </div>
         {sProjektem > 1 && (
@@ -220,7 +230,7 @@ export function NavrhyZKalendare({
             disabled={Boolean(bezi)}
             className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep disabled:opacity-60"
           >
-            Přidat všechny ({sProjektem})
+            {t('vykaz.navrh.pridatVsechny', { pocet: sProjektem })}
           </button>
         )}
       </div>
@@ -242,17 +252,27 @@ export function NavrhyZKalendare({
                 <Ikona druh={n.workType} />
                 <div className="min-w-[200px] mr-auto">
                   <p className="m-0 font-heading font-semibold text-ink">
-                    {n.projectName ?? (n.workType === 'EDITING' ? 'Střih' : n.actorName ? 'Casting' : 'Natáčení')}
+                    {/* Nazev projektu je udaj uzivatele - neprekladá se. Zaloha ano. */}
+                    {n.projectName ??
+                      t(
+                        n.workType === 'EDITING'
+                          ? 'vykaz.druh.EDITING'
+                          : n.actorName
+                            ? 'vykaz.navrh.casting'
+                            : 'vykaz.druh.RECORDING',
+                      )}
                     {n.actorName ? ` — ${n.actorName}` : ''}
                   </p>
                   <p className="m-0 text-xs font-body text-muted">
-                    {[n.studioName, n.workType === 'EDITING' ? 'střih' : 'natáčení'].filter(Boolean).join(' · ')}
+                    {[n.studioName, t(n.workType === 'EDITING' ? 'vykaz.navrh.strih' : 'vykaz.navrh.nataceni')]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </p>
                 </div>
                 {!upravuje && (
                   <div className="min-w-[170px]">
                     <p className="m-0 font-heading font-semibold text-ink tabular-nums">
-                      {den(n.start)} · {cas(n.start)}–{cas(n.end)}
+                      {den(jazyk, n.start)} · {cas(n.start)}–{cas(n.end)}
                     </p>
                     <p className="m-0 text-xs font-body text-muted tabular-nums">
                       {formatDuration(minut)} · {formatCzk(kolik)}
@@ -291,14 +311,14 @@ export function NavrhyZKalendare({
                         disabled={bezi === n.id || (chybiProjekt && !pole.projektId)}
                         className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-3.5 py-1.5 disabled:opacity-60"
                       >
-                        {bezi === n.id ? 'Ukládám…' : 'Přidat výkaz'}
+                        {t(bezi === n.id ? 'obecne.ukladam' : 'vykaz.pridatVykaz')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setUpravovany(null)}
                         className="text-xs font-heading text-muted underline"
                       >
-                        Zrušit
+                        {t('obecne.zrusit')}
                       </button>
                     </>
                   ) : (
@@ -309,23 +329,23 @@ export function NavrhyZKalendare({
                         disabled={bezi === n.id}
                         className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-3.5 py-1.5 disabled:opacity-60"
                       >
-                        {bezi === n.id ? 'Ukládám…' : 'Přidat výkaz'}
+                        {t(bezi === n.id ? 'obecne.ukladam' : 'vykaz.pridatVykaz')}
                       </button>
                       <button
                         type="button"
                         onClick={() => otevriUpravu(n)}
                         className="rounded-lg border border-line text-ink font-heading font-semibold text-sm px-3 py-1.5 hover:border-brand-purple"
                       >
-                        Upravit čas
+                        {t('vykaz.navrh.upravitCas')}
                       </button>
                       <button
                         type="button"
                         onClick={() => void posli(n, 'odmitnout')}
                         disabled={bezi === n.id}
-                        title="Nabídka zmizí a už se nevrátí"
+                        title={t('vykaz.navrh.nevykazovatPopis')}
                         className="text-xs font-heading text-muted underline hover:text-danger"
                       >
-                        Nevykazovat
+                        {t('vykaz.navrh.nevykazovat')}
                       </button>
                     </>
                   )}
@@ -337,14 +357,14 @@ export function NavrhyZKalendare({
               {(upravuje || chybiProjekt) && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-body text-muted">
-                    {chybiProjekt ? 'V kalendáři nebyl projekt — vyberte ho:' : 'Projekt:'}
+                    {t(chybiProjekt ? 'vykaz.navrh.chybiProjekt' : 'vykaz.navrh.projekt')}
                   </span>
                   <div className="min-w-[260px]">
                     <VyberProjektu
                       projekty={projekty}
                       hodnota={pole.projektId || n.caflouProjectId || ''}
                       onZmena={(id) => setPole({ ...pole, projektId: id })}
-                      placeholder="Začněte psát název projektu…"
+                      placeholder={t('vykaz.navrh.hledejProjekt')}
                     />
                   </div>
                 </div>

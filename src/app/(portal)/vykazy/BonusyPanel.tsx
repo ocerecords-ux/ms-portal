@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { formatCzk, formatDuration } from '@/lib/timesheets';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
 import { VyberPole } from '@/components/VyberPole';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { formatDatum, type Jazyk } from '@/lib/jazyk';
 
 /**
  * BONUSY ZVUKAŘŮ (zadání 15. 9. 2026: „na tyto bonusy bych udělal zvlášť
@@ -43,10 +45,14 @@ export type Bonus = {
 export type VolbaProjektu = { id: string; label: string };
 export type VolbaZvukare = { id: string; label: string };
 
-const STAV_POPISKY: Record<Bonus['stav'], string> = {
-  NAVRZENO: 'Čeká na schválení',
-  SCHVALENO: 'Schváleno',
-  ZAMITNUTO: 'Zamítnuto',
+/**
+ * Popisek stavu se hleda podle KODU stavu, ne podle textu - porovnavat
+ * prelozeny popisek by se rozpadlo pri prvnim prepnuti jazyka.
+ */
+const STAV_KLICE: Record<Bonus['stav'], string> = {
+  NAVRZENO: 'vykaz.bonus.stav.NAVRZENO',
+  SCHVALENO: 'vykaz.bonus.stav.SCHVALENO',
+  ZAMITNUTO: 'vykaz.bonus.stav.ZAMITNUTO',
 };
 
 const STAV_TRIDY: Record<Bonus['stav'], string> = {
@@ -55,10 +61,11 @@ const STAV_TRIDY: Record<Bonus['stav'], string> = {
   ZAMITNUTO: 'bg-dangerTint text-danger',
 };
 
-function formatDatum(iso: string | null): string {
+// Pomocna funkce mimo komponentu - jazyk si bere parametrem, hook by tu nefungoval.
+function datum(jazyk: Jazyk, iso: string | null): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : new Intl.DateTimeFormat('cs-CZ').format(d);
+  return Number.isNaN(d.getTime()) ? '—' : formatDatum(jazyk, d);
 }
 
 export function BonusyPanel({
@@ -72,6 +79,7 @@ export function BonusyPanel({
   projekty: VolbaProjektu[];
   zvukari: VolbaZvukare[];
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -91,7 +99,7 @@ export function BonusyPanel({
   async function pridej() {
     const cislo = Number(castka.replace(/\s/g, '').replace(',', '.'));
     if (!projekt || !zvukar || !Number.isFinite(cislo) || cislo <= 0) {
-      setChyba('Vyberte projekt, zvukaře a vyplňte částku.');
+      setChyba(t('vykaz.bonus.chybiPole'));
       return;
     }
     setPridavam(true);
@@ -109,7 +117,7 @@ export function BonusyPanel({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setChyba(data?.error || 'Bonus se nepodařilo přidat.');
+        setChyba(data?.error || t('vykaz.bonus.pridaniSelhalo'));
         return;
       }
       setOtevreno(false);
@@ -119,7 +127,7 @@ export function BonusyPanel({
       setPoznamka('');
       router.refresh();
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('vykaz.bonus.spojeniSelhalo'));
     } finally {
       setPridavam(false);
     }
@@ -142,12 +150,12 @@ export function BonusyPanel({
             });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba((data as { error?: string })?.error || 'Nepodařilo se to uložit.');
+        setChyba((data as { error?: string })?.error || t('vykaz.bonus.ulozeniSelhalo'));
         return;
       }
       router.refresh();
     } catch {
-      setChyba('Nepodařilo se spojit se serverem.');
+      setChyba(t('vykaz.bonus.spojeniSelhalo'));
     } finally {
       setBusyId(null);
     }
@@ -156,9 +164,7 @@ export function BonusyPanel({
   return (
     <div className="flex flex-col gap-5">
       <p className="text-sm font-body text-muted m-0 max-w-[80ch]">
-        {muzeSchvalovat
-          ? 'Portál navrhne bonus sám, když projekt poprvé přejde do stavu „Dokončeno - ke schválení" a zvukař na něm udělal aspoň 90 % střihu. Přiznat ho musí člověk — dokud tady nikdo neklepne na Schválit, je to jen návrh.'
-          : 'Bonus za audioknihu navrhuje portál sám, když na ní uděláte aspoň 90 % střihu. Přiznává ho Žůžo-labůžo.'}
+        {t(muzeSchvalovat ? 'vykaz.bonus.popisAdmin' : 'vykaz.bonus.popisZvukar')}
       </p>
 
       {muzeSchvalovat && (
@@ -172,30 +178,28 @@ export function BonusyPanel({
               }}
               className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:border-brand-purple transition-colors"
             >
-              {otevreno ? 'Zavřít' : 'Přidat bonus ručně'}
+              {t(otevreno ? 'obecne.zavrit' : 'vykaz.bonus.pridatRucne')}
             </button>
           </div>
 
           {otevreno && (
             <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
               <p className="text-sm font-body text-muted m-0">
-                Pro případy, na které portál nedosáhne — kniha navíc, zachráněný termín, práce, která se
-                do výkazů nevešla. Přidaný bonus je rovnou schválený; podíl na střihu se dopočítá z výkazů,
-                pokud nějaké jsou.
+                {t('vykaz.bonus.rucneVysvetleni')}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-body text-ink">Projekt</span>
+                  <span className="text-sm font-body text-ink">{t('vykaz.projekt')}</span>
                   <VyberProjektu projekty={projekty} hodnota={projekt} onZmena={setProjekt} />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-body text-ink">Zvukař</span>
+                  <span className="text-sm font-body text-ink">{t('role.ZVUKAR')}</span>
                   <VyberPole
                     value={zvukar}
                     onChange={(e) => setZvukar(e.target.value)}
                     className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
                   >
-                    <option value="">— vyberte —</option>
+                    <option value="">{t('vykaz.bonus.vyberte')}</option>
                     {zvukari.map((z) => (
                       <option key={z.id} value={z.id}>
                         {z.label}
@@ -204,23 +208,23 @@ export function BonusyPanel({
                   </VyberPole>
                 </label>
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-body text-ink">Částka (Kč)</span>
+                  <span className="text-sm font-body text-ink">{t('vykaz.bonus.castkaKc')}</span>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={castka}
                     onChange={(e) => setCastka(e.target.value)}
-                    placeholder="např. 1200"
+                    placeholder={t('vykaz.bonus.castkaPriklad')}
                     className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple tabular-nums"
                   />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-body text-ink">Za co (nepovinné)</span>
+                  <span className="text-sm font-body text-ink">{t('vykaz.bonus.zaCo')}</span>
                   <input
                     type="text"
                     value={poznamka}
                     onChange={(e) => setPoznamka(e.target.value)}
-                    placeholder="např. převzal knihu po kolegovi"
+                    placeholder={t('vykaz.bonus.zaCoPriklad')}
                     className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
                   />
                 </label>
@@ -232,7 +236,7 @@ export function BonusyPanel({
                   disabled={pridavam}
                   className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
                 >
-                  {pridavam ? 'Přidávám…' : 'Přidat bonus'}
+                  {t(pridavam ? 'vykaz.bonus.pridavam' : 'vykaz.bonus.pridat')}
                 </button>
               </div>
             </div>
@@ -245,9 +249,9 @@ export function BonusyPanel({
       )}
 
       <Tabulka
-        nadpis="Čeká na schválení"
+        nadpis={t('vykaz.bonus.stav.NAVRZENO')}
         bonusy={cekaji}
-        prazdno="Teď není co schvalovat."
+        prazdno={t('vykaz.bonus.prazdnoCekaji')}
         muzeSchvalovat={muzeSchvalovat}
         busyId={busyId}
         rozhodni={rozhodni}
@@ -255,7 +259,7 @@ export function BonusyPanel({
 
       {rozhodnute.length > 0 && (
         <Tabulka
-          nadpis="Rozhodnuté"
+          nadpis={t('vykaz.bonus.rozhodnute')}
           bonusy={rozhodnute}
           prazdno=""
           muzeSchvalovat={muzeSchvalovat}
@@ -282,6 +286,8 @@ function Tabulka({
   busyId: string | null;
   rozhodni: (id: string, akce: 'schvalit' | 'zamitnout' | 'zpet' | 'smazat') => void;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   return (
     <div className="flex flex-col gap-2">
       <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{nadpis}</h2>
@@ -290,11 +296,11 @@ function Tabulka({
           <table className="w-full min-w-[760px] border-collapse">
             <thead>
               <tr className="bg-brand-purple text-white font-heading text-xs">
-                <th className="text-left px-4 py-3">Projekt</th>
-                {muzeSchvalovat && <th className="text-left px-4 py-3">Zvukař</th>}
-                <th className="text-left px-4 py-3">Podíl na střihu</th>
-                <th className="text-right px-4 py-3">Bonus</th>
-                <th className="text-left px-4 py-3">Stav</th>
+                <th className="text-left px-4 py-3">{t('vykaz.projekt')}</th>
+                {muzeSchvalovat && <th className="text-left px-4 py-3">{t('role.ZVUKAR')}</th>}
+                <th className="text-left px-4 py-3">{t('vykaz.bonus.sl.podil')}</th>
+                <th className="text-right px-4 py-3">{t('vykaz.bonus.sl.bonus')}</th>
+                <th className="text-left px-4 py-3">{t('vykaz.bonus.sl.stav')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -310,10 +316,11 @@ function Tabulka({
                 <tr key={b.id} className="border-t border-line align-top">
                   <td className="px-4 py-3">
                     <span className="block text-sm font-heading text-ink">
-                      {b.projectName || `Projekt ${b.projectId}`}
+                      {/* Nazev projektu je udaj uzivatele - neprekladá se. Zaloha ano. */}
+                      {b.projectName || t('projekt.zaloha.nazev', { id: b.projectId })}
                     </span>
                     <span className="block text-xs font-body text-muted">
-                      Navrženo {formatDatum(b.navrzenoAt)}
+                      {t('vykaz.bonus.navrzeno', { kdy: datum(jazyk, b.navrzenoAt) })}
                     </span>
                     {b.poznamka && (
                       <span className="block text-xs font-body text-muted italic">{b.poznamka}</span>
@@ -324,17 +331,22 @@ function Tabulka({
                   )}
                   <td className="px-4 py-3">
                     {b.rucne && b.minutCelkem === 0 ? (
-                      <span className="block text-sm font-body text-muted">Přidáno ručně</span>
+                      <span className="block text-sm font-body text-muted">{t('vykaz.bonus.pridanoRucne')}</span>
                     ) : (
                       <>
-                        <span className="block text-sm font-heading text-ink tabular-nums">{b.podilProcent} %</span>
+                        <span className="block text-sm font-heading text-ink tabular-nums">
+                          {t('vykaz.bonus.procent', { procent: b.podilProcent })}
+                        </span>
                         <span className="block text-xs font-body text-muted tabular-nums">
-                          {formatDuration(b.minutZvukare)} z {formatDuration(b.minutCelkem)}
+                          {t('vykaz.bonus.podilMinut', {
+                            moje: formatDuration(b.minutZvukare),
+                            celkem: formatDuration(b.minutCelkem),
+                          })}
                         </span>
                       </>
                     )}
                     {b.rucne && b.minutCelkem > 0 && (
-                      <span className="block text-xs font-body text-muted">Přidáno ručně</span>
+                      <span className="block text-xs font-body text-muted">{t('vykaz.bonus.pridanoRucne')}</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm font-heading text-ink tabular-nums text-right">
@@ -344,11 +356,11 @@ function Tabulka({
                     <span
                       className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${STAV_TRIDY[b.stav]}`}
                     >
-                      {STAV_POPISKY[b.stav]}
+                      {t(STAV_KLICE[b.stav])}
                     </span>
                     {b.rozhodnutoAt && (
                       <span className="block text-xs font-body text-muted mt-1">
-                        {formatDatum(b.rozhodnutoAt)}
+                        {datum(jazyk, b.rozhodnutoAt)}
                         {b.rozhodlJmeno ? ` — ${b.rozhodlJmeno}` : ''}
                       </span>
                     )}
@@ -362,7 +374,7 @@ function Tabulka({
                           disabled={busyId === b.id}
                           className="bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-lg px-3 py-1.5 hover:brightness-95 disabled:opacity-60"
                         >
-                          Schválit
+                          {t('vykaz.bonus.schvalit')}
                         </button>
                         <button
                           type="button"
@@ -370,20 +382,20 @@ function Tabulka({
                           disabled={busyId === b.id}
                           className="text-danger text-xs font-heading disabled:opacity-60"
                         >
-                          Zamítnout
+                          {t('vykaz.bonus.zamitnout')}
                         </button>
                         {/* Smazat = „tenhle navrh sem vubec nepatri".
                             Zamitnuty bonus zustava v historii, smazany ne. */}
                         <TlacitkoSmazat
                           onSmazat={() => rozhodni(b.id, 'smazat')}
                           bezi={busyId === b.id}
-                          otazka="Opravdu zahodit návrh?"
+                          otazka={t('vykaz.bonus.opravduZahodit')}
                           trida="text-xs"
                         />
                       </span>
                     )}
                     {muzeSchvalovat && b.vlastni && b.stav === 'NAVRZENO' && (
-                      <span className="text-xs font-body text-muted">Vlastní bonus schvaluje kolega.</span>
+                      <span className="text-xs font-body text-muted">{t('vykaz.bonus.vlastniSchvalujeKolega')}</span>
                     )}
                     {muzeSchvalovat && b.stav !== 'NAVRZENO' && (
                       <button
@@ -392,7 +404,7 @@ function Tabulka({
                         disabled={busyId === b.id}
                         className="text-muted text-xs font-heading hover:text-brand-purple disabled:opacity-60"
                       >
-                        Vrátit k rozhodnutí
+                        {t('vykaz.bonus.vratitKRozhodnuti')}
                       </button>
                     )}
                   </td>

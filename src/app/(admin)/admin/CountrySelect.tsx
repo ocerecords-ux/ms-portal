@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { bezDiakritiky, COUNTRIES, countryFlag, countryName } from '@/lib/countries';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Výběr země s vlaječkami a hledáním (zadání 6. 9. 2026). Ukládá ISO kód.
@@ -14,7 +15,11 @@ import { bezDiakritiky, COUNTRIES, countryFlag, countryName } from '@/lib/countr
  * Enter vybere první zemi v seznamu - psaní „slov" a Enter je rychlejší než
  * hledat myší.
  */
+// POZOR: samotné NÁZVY ZEMÍ jsou pořád české - seznam COUNTRIES v
+// src/lib/countries.ts anglické znění nemá. Přeložený je jen obal (tlačítko,
+// hledání, prázdný stav). Viz docs/preklad-portalu.md, dávka 5.
 export function CountrySelect({ value, onChange }: { value: string; onChange: (code: string) => void }) {
+  const t = usePreklad();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -50,7 +55,7 @@ export function CountrySelect({ value, onChange }: { value: string; onChange: (c
         className="admin-input text-left flex items-center gap-2"
       >
         <span aria-hidden="true">{countryFlag(value)}</span>
-        <span className="flex-1 truncate">{countryName(value) || 'Vyberte zemi'}</span>
+        <span className="flex-1 truncate">{countryName(value) || t('firmy.vyberteZemi')}</span>
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5 shrink-0 text-muted">
           <path d="M5 8l5 5 5-5" />
         </svg>
@@ -88,13 +93,13 @@ export function CountrySelect({ value, onChange }: { value: string; onChange: (c
                   setOpen(false);
                 }
               }}
-              placeholder="Hledat zemi…"
+              placeholder={t('firmy.hledatZemi')}
               className="w-full pl-9 pr-3 py-2 text-sm font-heading text-ink bg-transparent outline-none"
             />
           </div>
           <div className="max-h-60 overflow-y-auto">
             {filtered.length === 0 && (
-              <p className="px-3 py-3 text-sm text-muted font-body m-0">Nic neodpovídá.</p>
+              <p className="px-3 py-3 text-sm text-muted font-body m-0">{t('firmy.zadnaZemeNeodpovida')}</p>
             )}
             {filtered.map((c) => (
               <button

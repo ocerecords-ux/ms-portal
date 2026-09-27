@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatDatumCas, prelozitKolem } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 type StudioTabule = {
   id: string;
@@ -38,6 +40,8 @@ export function TabuleStudii({
   zaklad: string;
   instagram: StavInstagramu;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [pracuji, setPracuji] = useState<string | null>(null);
   const [zkopirovano, setZkopirovano] = useState<string | null>(null);
@@ -46,7 +50,7 @@ export function TabuleStudii({
   const [chybaUctu, setChybaUctu] = useState<string | null>(null);
 
   async function vytvorUcet(studioId: string, noveHeslo: boolean) {
-    if (noveHeslo && !window.confirm('Nastavit heslo zpátky na 1111?')) return;
+    if (noveHeslo && !window.confirm(t('studia.potvrditHeslo'))) return;
     setPracuji(studioId);
     setChybaUctu(null);
     const res = await fetch(`/api/admin/studia/${studioId}/tabule/ucet`, {
@@ -57,7 +61,7 @@ export function TabuleStudii({
     const telo = res ? await res.json().catch(() => ({})) : {};
     setPracuji(null);
     if (!res?.ok) {
-      setChybaUctu(telo.error || 'Účet se nepodařilo založit.');
+      setChybaUctu(telo.error || t('studia.ucetSelhal'));
       return;
     }
     setUdaje({ studioId, login: telo.login, heslo: telo.heslo });
@@ -65,7 +69,7 @@ export function TabuleStudii({
   }
 
   async function odpojInstagram() {
-    if (!window.confirm('Odpojit Instagram? Z tabulí zmizí okno s příběhy.')) return;
+    if (!window.confirm(t('studia.potvrditOdpojitInstagram'))) return;
     await fetch('/api/admin/instagram', { method: 'DELETE' }).catch(() => null);
     router.refresh();
   }
@@ -80,14 +84,14 @@ export function TabuleStudii({
   }
 
   async function zrusUcet(studioId: string, ucetId: string) {
-    if (!window.confirm('Zrušit účet tabule? Počítač u obrazovky se už nepřihlásí (běžící tabule poběží dál, dokud nevyměníte adresu).')) return;
+    if (!window.confirm(t('studia.potvrditZrusitUcet'))) return;
     await fetch(`/api/admin/studia/${studioId}/tabule/ucet?ucet=${encodeURIComponent(ucetId)}`, { method: 'DELETE' }).catch(() => null);
     router.refresh();
   }
 
   async function akce(id: string, co: 'zapnout' | 'novy' | 'vypnout') {
-    if (co === 'novy' && !window.confirm('Vyměnit adresu? Displej se starou adresou přestane fungovat a bude potřeba otevřít novou.')) return;
-    if (co === 'vypnout' && !window.confirm('Vypnout tabuli? Displej ve studiu přestane fungovat.')) return;
+    if (co === 'novy' && !window.confirm(t('studia.potvrditNovaAdresa'))) return;
+    if (co === 'vypnout' && !window.confirm(t('studia.potvrditVypnoutTabuli'))) return;
     setPracuji(id);
     await fetch(`/api/admin/studia/${id}/tabule`, {
       method: 'POST',
@@ -116,18 +120,13 @@ export function TabuleStudii({
     router.refresh();
   }
 
-  const datum = (iso: string) =>
-    new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+  const datum = (iso: string) => formatDatumCas(jazyk, new Date(iso));
 
   return (
     <section className="bg-surface border border-line rounded-card shadow-sm p-6 flex flex-col gap-4">
       <div>
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Tabule ve studiích</h2>
-        <p className="text-sm text-muted m-0 mt-1 max-w-[80ch]">
-          Dotykový displej ve studiu: dnešní program z kalendáře, poznámky a co ve studiu chybí. Adresu otevřete na
-          displeji v prohlížeči přes celou obrazovku, nebo se na počítači u displeje přihlaste účtem tabule. Když někdo ťukne, že něco chybí, Bruno napíše
-          Báře Šiblové.
-        </p>
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('studia.tabuleNadpis')}</h2>
+        <p className="text-sm text-muted m-0 mt-1 max-w-[80ch]">{t('studia.tabulePopis')}</p>
       </div>
 
       {/* INSTAGRAM (22. 9. 2026): příběhy z účtu studia v okně na tabuli. */}
@@ -137,17 +136,17 @@ export function TabuleStudii({
           {instagram.ucet ? (
             <>
               <span className="text-sm font-heading font-semibold text-ink">@{instagram.ucet}</span>
-              <span className="text-xs text-muted">příběhy se ukazují na tabulích, které to mají zapnuté</span>
+              <span className="text-xs text-muted">{t('studia.igPribehy')}</span>
               <span className="ml-auto flex gap-3">
                 <a href="/api/admin/instagram/pripojit" className="text-xs font-heading text-muted hover:text-ink no-underline">
-                  Připojit znovu
+                  {t('studia.igPripojitZnovu')}
                 </a>
                 <button
                   type="button"
                   onClick={() => void odpojInstagram()}
                   className="text-xs font-heading text-muted hover:text-danger bg-transparent border-0 cursor-pointer"
                 >
-                  Odpojit
+                  {t('studia.igOdpojit')}
                 </button>
               </span>
             </>
@@ -156,20 +155,22 @@ export function TabuleStudii({
               href="/api/admin/instagram/pripojit"
               className="text-sm font-heading font-semibold rounded-lg px-4 py-2 bg-brand-purple text-white no-underline"
             >
-              Připojit Instagram
+              {t('studia.igPripojit')}
             </a>
           ) : (
-            <span className="text-sm text-muted">
-              Čeká na aplikaci v Meta for Developers - na Vercelu chybí INSTAGRAM_APP_ID a INSTAGRAM_APP_SECRET.
-            </span>
+            <span className="text-sm text-muted">{t('studia.igCekaNaAplikaci')}</span>
           )}
         </div>
         {instagram.hlaska && (
           <span className={`text-sm ${instagram.hlaska === 'ok' ? 'text-status-done' : 'text-danger'}`}>
-            {instagram.hlaska === 'ok' ? 'Instagram je připojený.' : `Připojení se nepovedlo: ${instagram.hlaska}`}
+            {instagram.hlaska === 'ok'
+              ? t('studia.igPripojeno')
+              : t('studia.igPripojeniSelhalo', { duvod: instagram.hlaska })}
           </span>
         )}
-        {instagram.chyba && <span className="text-sm text-danger">Poslední načtení: {instagram.chyba}</span>}
+        {instagram.chyba && (
+          <span className="text-sm text-danger">{t('studia.igPosledniNacteni', { chyba: instagram.chyba })}</span>
+        )}
       </div>
 
       <div className="flex flex-col divide-y divide-line">
@@ -183,7 +184,7 @@ export function TabuleStudii({
                 {adresa ? (
                   <>
                     <a href={adresa} target="_blank" rel="noreferrer" className="text-sm font-heading text-brand-purple truncate max-w-full">
-                      Otevřít tabuli ↗
+                      {t('studia.otevritTabuli')}
                     </a>
                     <button
                       type="button"
@@ -194,7 +195,7 @@ export function TabuleStudii({
                       }}
                       className="text-sm font-heading text-muted hover:text-ink bg-transparent border-0 cursor-pointer"
                     >
-                      {zkopirovano === s.id ? '✓ Zkopírováno' : 'Kopírovat adresu'}
+                      {zkopirovano === s.id ? `✓ ${t('obecne.zkopirovano')}` : t('studia.kopirovatAdresu')}
                     </button>
                     <span className="ml-auto flex gap-3">
                       <button
@@ -203,7 +204,7 @@ export function TabuleStudii({
                         onClick={() => akce(s.id, 'novy')}
                         className="text-xs font-heading text-muted hover:text-ink bg-transparent border-0 cursor-pointer"
                       >
-                        Nová adresa
+                        {t('studia.novaAdresa')}
                       </button>
                       <button
                         type="button"
@@ -211,7 +212,7 @@ export function TabuleStudii({
                         onClick={() => akce(s.id, 'vypnout')}
                         className="text-xs font-heading text-muted hover:text-danger bg-transparent border-0 cursor-pointer"
                       >
-                        Vypnout
+                        {t('studia.vypnout')}
                       </button>
                     </span>
                   </>
@@ -222,7 +223,7 @@ export function TabuleStudii({
                     onClick={() => akce(s.id, 'zapnout')}
                     className="ml-auto text-sm font-heading font-semibold rounded-lg px-4 py-2 border border-line text-ink hover:border-brand-purple disabled:opacity-60"
                   >
-                    Zapnout tabuli
+                    {t('studia.zapnoutTabuli')}
                   </button>
                 )}
               </div>
@@ -234,7 +235,7 @@ export function TabuleStudii({
                     checked={s.instagram}
                     onChange={(e) => void instagramStudia(s.id, e.target.checked)}
                   />
-                  Ukazovat na tabuli příběhy z Instagramu
+                  {t('studia.igUkazovat')}
                 </label>
               )}
 
@@ -243,10 +244,10 @@ export function TabuleStudii({
                   tabuli tohohle studia. */}
               <div className="pl-6 flex flex-col gap-2">
                 <div className="flex items-center gap-3 flex-wrap text-sm">
-                  <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">Účet tabule</span>
+                  <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">{t('studia.ucetTabule')}</span>
                   {s.ucty.filter((u) => u.aktivni).map((u) => (
                     <span key={u.id} className="inline-flex items-center gap-2">
-                      <span className="text-muted">jméno</span>
+                      <span className="text-muted">{t('studia.jmenoPopisek')}</span>
                       <span className="font-heading font-semibold text-ink">{u.email}</span>
                       <button
                         type="button"
@@ -254,14 +255,14 @@ export function TabuleStudii({
                         onClick={() => void vytvorUcet(s.id, true)}
                         className="text-xs font-heading text-muted hover:text-ink bg-transparent border-0 cursor-pointer"
                       >
-                        Heslo na 1111
+                        {t('studia.hesloNa1111')}
                       </button>
                       <button
                         type="button"
                         onClick={() => zrusUcet(s.id, u.id)}
                         className="text-xs font-heading text-muted hover:text-danger bg-transparent border-0 cursor-pointer"
                       >
-                        Zrušit
+                        {t('obecne.zrusit')}
                       </button>
                     </span>
                   ))}
@@ -272,14 +273,13 @@ export function TabuleStudii({
                       onClick={() => void vytvorUcet(s.id, false)}
                       className="text-sm font-heading font-semibold text-brand-purple bg-transparent border-0 cursor-pointer"
                     >
-                      + Vytvořit účet pro obrazovku
+                      + {t('studia.vytvoritUcet')}
                     </button>
                   )}
                 </div>
                 {udaje?.studioId === s.id && (
                   <div className="rounded-lg border border-brand-purple/40 bg-brand-purple/5 px-3 py-2 text-sm">
-                    Přihlášení na počítači u obrazovky: jméno <strong className="font-heading">{udaje.login}</strong>, heslo{' '}
-                    <strong className="font-heading tracking-wide">{udaje.heslo}</strong>.
+                    <UdajeTabule login={udaje.login} heslo={udaje.heslo} />
                   </div>
                 )}
                 {chybaUctu && pracuji === null && <span className="text-sm text-danger">{chybaUctu}</span>}
@@ -288,9 +288,9 @@ export function TabuleStudii({
               {s.klic && (s.chybi.length > 0 || s.poznamky.length > 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">Chybí</span>
+                    <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">{t('studia.chybi')}</span>
                     {s.chybi.length === 0 ? (
-                      <span className="text-sm text-muted">Nic.</span>
+                      <span className="text-sm text-muted">{t('studia.nicNechybi')}</span>
                     ) : (
                       s.chybi.map((c) => (
                         <span key={c.polozka} className="flex items-center gap-3 text-sm">
@@ -301,16 +301,16 @@ export function TabuleStudii({
                             onClick={() => doplneno(s.klic!, c.polozka)}
                             className="ml-auto text-xs font-heading font-semibold text-brand-purple bg-transparent border-0 cursor-pointer"
                           >
-                            Doplněno
+                            {t('studia.doplneno')}
                           </button>
                         </span>
                       ))
                     )}
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">Poznámky</span>
+                    <span className="text-xs font-heading font-semibold uppercase tracking-wide text-muted">{t('studia.poznamky')}</span>
                     {s.poznamky.length === 0 ? (
-                      <span className="text-sm text-muted">Žádné.</span>
+                      <span className="text-sm text-muted">{t('studia.zadnePoznamky')}</span>
                     ) : (
                       s.poznamky.map((p) => (
                         <span key={p.id} className="flex items-start gap-3 text-sm">
@@ -323,7 +323,7 @@ export function TabuleStudii({
                             onClick={() => odskrtni(s.klic!, p.id)}
                             className="text-xs font-heading font-semibold text-brand-purple bg-transparent border-0 cursor-pointer"
                           >
-                            Odškrtnout
+                            {t('studia.odskrtnout')}
                           </button>
                         </span>
                       ))
@@ -336,5 +336,25 @@ export function TabuleStudii({
         })}
       </div>
     </section>
+  );
+}
+
+/**
+ * Věta s přihlašovacími údaji. Jméno i heslo v ní stojí tlustě, takže se věta
+ * dělí až při vykreslení - celá zůstává jedním klíčem (pravidlo 7
+ * v docs/preklad-portalu.md) a v angličtině můžou značky stát jinde.
+ */
+function UdajeTabule({ login, heslo }: { login: string; heslo: string }) {
+  const jazyk = useJazyk();
+  const [pred, zbytek] = prelozitKolem(jazyk, 'studia.udajeTabule', 'login');
+  const [mezi, za] = zbytek.split('{heslo}');
+  return (
+    <>
+      {pred}
+      <strong className="font-heading">{login}</strong>
+      {mezi}
+      <strong className="font-heading tracking-wide">{heslo}</strong>
+      {za ?? ''}
+    </>
   );
 }

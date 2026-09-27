@@ -7,8 +7,6 @@ import { Konflikty } from './Konflikty';
 import { HistorieKalendare } from './HistorieKalendare';
 import {
   BARVA_PORAD,
-  NAZEV_KALENDARE_PORADY,
-  NAZEV_KALENDARE_SCHUZKY,
   type DruhPorady,
   BARVA_SCHUZEK,
   SOLO_PORADY,
@@ -19,7 +17,6 @@ import {
 } from '@/lib/porady';
 import { OdberKalendare } from './OdberKalendare';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
-import { POPIS_REZIE } from '@/lib/rezieOnline';
 
 /** Červený rámeček události, kde je režie na dálku (zadání 23. 9. 2026). */
 const BARVA_REZIE = '#ef4444';
@@ -33,7 +30,6 @@ import {
   GRID_START_HOUR,
   HOUR_PX,
   SLOT_STATE_LABELS,
-  WEEKDAY_SHORT,
   eventColors,
   formatDateTime,
   gridPosition,
@@ -55,7 +51,6 @@ import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import {
   BARVA_NEPRITOMNOSTI,
-  NAZEV_KALENDARE_MIMO,
   PASMO_NEPRITOMNOSTI,
   type NepritomnostVKalendari,
 } from '@/lib/nepritomnost';
@@ -66,6 +61,63 @@ import {
   rozdelPoDnech,
   type Osoba,
 } from './Nepritomnost';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+
+/** Překladač z `usePreklad()` - do pomocných funkcí mimo komponentu. */
+type Prekladac = (klic: string, hodnoty?: Record<string, string | number>) => string;
+
+/**
+ * Popisky druhů blokace a stavů termínů jsou v `lib/calendar` česky (berou si
+ * je i e-maily a server). V rozhraní se překládají přes slovník; co v něm
+ * ještě není, projde česky z původního seznamu.
+ */
+function podleKodu(t: Prekladac, predpona: string, kod: string, zaloha: string): string {
+  const klic = `${predpona}${kod}`;
+  const text = t(klic);
+  return text === klic ? zaloha : text;
+}
+
+function nazevDruhu(t: Prekladac, kod: string): string {
+  return podleKodu(t, 'kalendar.druh.', kod, BLOCK_KIND_LABELS[kod] ?? kod);
+}
+
+function nazevStavu(t: Prekladac, kod: string): string {
+  return podleKodu(t, 'kalendar.stav.', kod, SLOT_STATE_LABELS[kod] ?? kod);
+}
+
+/** Názvy kalendářů, které nejsou studio - v lib jsou česky. */
+function nazevMimo(t: Prekladac): string {
+  return t('kalendar.kalendarMimo');
+}
+function nazevPorad(t: Prekladac): string {
+  return t('kalendar.kalendarPorady');
+}
+function nazevSchuzek(t: Prekladac): string {
+  return t('kalendar.kalendarSchuzky');
+}
+
+/**
+ * Zkratka dne v týdnu (Po, Út… / Mon, Tue…). Natvrdo psaná pole názvů by se
+ * musela překládat ručně - prohlížeč je zná sám.
+ */
+function zkratkaDne(jazyk: Jazyk, denVTydnu: number): string {
+  // 2026-11-01 je neděle, takže index 0-6 sedí na getUTCDay().
+  const d = new Date(Date.UTC(2026, 10, 1 + denVTydnu, 12));
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), { weekday: 'short', timeZone: 'UTC' }).format(d);
+}
+
+/**
+ * Věta, ve které je pár slov tučně (pravidlo „věta je jeden klíč"): ve
+ * slovníku je celá i se značkami, tady se jen rozseká a značky se vysází.
+ */
+function vetaSeZnackami(veta: string, znacky: Record<string, React.ReactNode>): React.ReactNode[] {
+  return veta.split(/(\{[a-zA-Z]+\})/g).map((cast, i) => {
+    const shoda = /^\{([a-zA-Z]+)\}$/.exec(cast);
+    if (shoda && znacky[shoda[1]] !== undefined) return <span key={i}>{znacky[shoda[1]]}</span>;
+    return <span key={i}>{cast}</span>;
+  });
+}
 
 /** Položka rozbalovacího seznamu lidí a projektů. */
 /**
@@ -262,6 +314,8 @@ export function CalendarBrowser({
   lidiTymu: Osoba[];
 }) {
   const router = useRouter();
+  const t = usePreklad();
+  const jazyk = useJazyk();
 
   /**
    * TELEFON NA ŠÍŘKU = JEN MŘÍŽKA (zadání 21. 9. 2026: „když jsem na stránce
@@ -459,16 +513,16 @@ export function CalendarBrowser({
           id: `mimo-${n.id}`,
           kind: 'MIMO' as const,
           studioId: '',
-          studioName: NAZEV_KALENDARE_MIMO,
+          studioName: nazevMimo(t),
           color: BARVA_NEPRITOMNOSTI,
           start: n.start,
           end: n.end,
           state: 'MIMO',
           title: n.poznamka ? `${n.jmeno}\n${n.poznamka}` : n.jmeno,
-          subtitle: NAZEV_KALENDARE_MIMO,
+          subtitle: nazevMimo(t),
           mimo: n,
         })),
-    [nepritomnosti],
+    [nepritomnosti, t],
   );
 
   /** Výskyty porad jako události mřížky (21. 9. 2026). */
@@ -478,18 +532,18 @@ export function CalendarBrowser({
         id: `porada-${p.id}`,
         kind: 'PORADA' as const,
         studioId: '',
-        studioName: NAZEV_KALENDARE_PORADY,
+        studioName: nazevPorad(t),
         color: BARVA_PORAD,
         start: p.start,
         end: p.end,
         state: 'PORADA',
         // Druhý řádek jsou účastníci - u porady to je to „kdo s kým".
         title: `${p.nazev}\n${p.ucastnici.map((u) => u.label).join(', ')}`,
-        subtitle: NAZEV_KALENDARE_PORADY,
+        subtitle: nazevPorad(t),
         poznamka: p.poznamka,
         porada: p,
       })),
-    [porady],
+    [porady, t],
   );
 
   /** Výskyty Dalších schůzek - tentýž typ události, jiná barva a štítek. */
@@ -499,17 +553,17 @@ export function CalendarBrowser({
         id: `schuzka-${p.id}`,
         kind: 'PORADA' as const,
         studioId: '',
-        studioName: NAZEV_KALENDARE_SCHUZKY,
+        studioName: nazevSchuzek(t),
         color: BARVA_SCHUZEK,
         start: p.start,
         end: p.end,
         state: 'PORADA',
         title: `${p.nazev}\n${p.ucastnici.map((u) => u.label).join(', ')}`,
-        subtitle: NAZEV_KALENDARE_SCHUZKY,
+        subtitle: nazevSchuzek(t),
         poznamka: p.poznamka,
         porada: p,
       })),
-    [schuzky],
+    [schuzky, t],
   );
 
   const viditelne = useMemo(() => {
@@ -705,13 +759,13 @@ export function CalendarBrowser({
   /** Jméno sólujícího kalendáře do popisku nad mřížkou. */
   const nazevSola = solo
     ? solo === SOLO_MIMO
-      ? NAZEV_KALENDARE_MIMO
+      ? nazevMimo(t)
       : solo === SOLO_SCHUZKY
-        ? NAZEV_KALENDARE_SCHUZKY
+        ? nazevSchuzek(t)
         : solo === SOLO_PORADY
-        ? NAZEV_KALENDARE_PORADY
+        ? nazevPorad(t)
         : solo === SOLO_MOJE
-          ? 'Jen moje události'
+          ? t('kalendar.jenMoje')
           : (studios.find((s) => s.id === solo)?.shortName ?? '')
     : '';
 
@@ -830,8 +884,9 @@ export function CalendarBrowser({
   const nadpis = useMemo(() => {
     const prvni = new Date(days[0].startIso);
     const posledni = new Date(days[days.length - 1].startIso);
+    // Názvy dnů a měsíců zná prohlížeč - jen se mu řekne jazyk portálu.
     if (view === 'den') {
-      return new Intl.DateTimeFormat('cs-CZ', {
+      return new Intl.DateTimeFormat(kodJazyka(jazyk), {
         timeZone: timezone,
         weekday: 'long',
         day: 'numeric',
@@ -841,17 +896,23 @@ export function CalendarBrowser({
     }
     if (view === 'mesic') {
       const stred = new Date(`${anchorIso}T12:00:00.000Z`);
-      return new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, month: 'long', year: 'numeric' }).format(stred);
+      return new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: timezone, month: 'long', year: 'numeric' }).format(
+        stred,
+      );
     }
-    const od = new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, day: 'numeric', month: 'numeric' }).format(prvni);
-    const doo = new Intl.DateTimeFormat('cs-CZ', {
+    const od = new Intl.DateTimeFormat(kodJazyka(jazyk), {
+      timeZone: timezone,
+      day: 'numeric',
+      month: 'numeric',
+    }).format(prvni);
+    const doo = new Intl.DateTimeFormat(kodJazyka(jazyk), {
       timeZone: timezone,
       day: 'numeric',
       month: 'numeric',
       year: 'numeric',
     }).format(posledni);
     return `${od} – ${doo}`;
-  }, [days, view, timezone, anchorIso]);
+  }, [days, view, timezone, anchorIso, jazyk]);
 
   /** Prohlížeč umí celou obrazovku sám - jen mu řekneme, co roztáhnout. */
   function prepniCelouObrazovku() {
@@ -884,7 +945,7 @@ export function CalendarBrowser({
               Mezi štítky kalendářů překážely - nejsou to kalendáře, jsou to
               nástroje nad nimi. */}
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">Kalendář</h1>
+            <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">{t('kalendar.nadpis')}</h1>
             {/* Panel se ptá na stejný úsek jako kolečko v liště (14 dní),
                 ne na to, co je zrovna vidět - viz Konflikty.tsx. */}
             <Konflikty naDen={(den) => prejdi({ datum: den, pohled: 'den' })} />
@@ -903,8 +964,8 @@ export function CalendarBrowser({
             type="button"
             onClick={() => jenTentoKalendar(SOLO_MOJE)}
             aria-pressed={solo === SOLO_MOJE}
-            aria-label="Jen moje události"
-            title={solo === SOLO_MOJE ? 'Zpět na původní výběr kalendářů' : 'Jen moje události (sólo)'}
+            aria-label={t('kalendar.jenMoje')}
+            title={solo === SOLO_MOJE ? t('kalendar.zpetNaVyber') : t('kalendar.jenMojeSolo')}
             className={`inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border transition-colors ${
               solo === SOLO_MOJE
                 ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
@@ -921,8 +982,8 @@ export function CalendarBrowser({
             type="button"
             onClick={prepniCelouObrazovku}
             aria-pressed={naCeleObrazovce}
-            aria-label={naCeleObrazovce ? 'Zpět z celé obrazovky' : 'Celá obrazovka'}
-            title={naCeleObrazovce ? 'Zpět z celé obrazovky (Esc)' : 'Celá obrazovka'}
+            aria-label={naCeleObrazovce ? t('kalendar.zpetZCeleObrazovky') : t('kalendar.celaObrazovka')}
+            title={naCeleObrazovce ? t('kalendar.zpetZCeleObrazovkyEsc') : t('kalendar.celaObrazovka')}
             className={`inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border transition-colors ${
               naCeleObrazovce
                 ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
@@ -949,7 +1010,7 @@ export function CalendarBrowser({
           <button
             type="button"
             onClick={() => posun(-1)}
-            aria-label="Předchozí"
+            aria-label={t('kalendar.predchozi')}
             className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-line text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
           >
             ‹
@@ -959,12 +1020,12 @@ export function CalendarBrowser({
             onClick={() => prejdi({ datum: new Date().toISOString().slice(0, 10) })}
             className="rounded-lg border border-line px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors"
           >
-            Dnes
+            {t('kalendar.dnes')}
           </button>
           <button
             type="button"
             onClick={() => posun(1)}
-            aria-label="Další"
+            aria-label={t('kalendar.dalsi')}
             className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-line text-muted hover:text-brand-purple hover:border-brand-purple transition-colors"
           >
             ›
@@ -981,7 +1042,7 @@ export function CalendarBrowser({
                   v.key === view ? 'bg-brand-purple text-white' : 'bg-surface text-muted hover:text-ink'
                 }`}
               >
-                {v.label}
+                {podleKodu(t, 'kalendar.pohled.', v.key, v.label)}
               </button>
             ))}
           </span>
@@ -1000,11 +1061,11 @@ export function CalendarBrowser({
               novaVMrizce(den, 9 * 60);
             }}
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand-purple text-white px-3 py-1.5 sm:py-2 text-sm font-heading font-semibold hover:bg-brand-purpleDeep transition-colors shrink-0"
-            aria-label="Přidat událost"
-            title="Přidat událost"
+            aria-label={t('kalendar.pridatUdalost')}
+            title={t('kalendar.pridatUdalost')}
           >
             <span aria-hidden="true">+</span>
-            <span className="hidden sm:inline">Přidat</span>
+            <span className="hidden sm:inline">{t('kalendar.pridat')}</span>
           </button>
           {/* Hledání na telefonu na řádku s Den/Týden/Měsíc (21. 9. 2026:
               „pole hledat by mohlo být na řádku, kde se přepínají den,
@@ -1016,8 +1077,8 @@ export function CalendarBrowser({
               setHledani(e.target.value);
               setSeznamVyskytu(true);
             }}
-            placeholder="Hledat…"
-            aria-label="Hledat projekt, herce nebo zvukaře"
+            placeholder={t('kalendar.hledatKratce')}
+            aria-label={t('kalendar.hledatPopis')}
             className="sm:hidden flex-1 min-w-0 rounded-pill border border-line bg-field px-3 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
           />
         </div>
@@ -1047,8 +1108,16 @@ export function CalendarBrowser({
               <button
                 type="button"
                 onClick={() => prepniStudio(s.id)}
-                title={zapnute ? `Vypnout ${s.name}` : `Zapnout ${s.name}`}
-                aria-label={zapnute ? `Vypnout ${s.name}` : `Zapnout ${s.name}`}
+                title={
+                  zapnute
+                    ? t('kalendar.vypnoutKalendar', { nazev: s.name })
+                    : t('kalendar.zapnoutKalendar', { nazev: s.name })
+                }
+                aria-label={
+                  zapnute
+                    ? t('kalendar.vypnoutKalendar', { nazev: s.name })
+                    : t('kalendar.zapnoutKalendar', { nazev: s.name })
+                }
                 aria-pressed={zapnute}
                 className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
               >
@@ -1060,7 +1129,7 @@ export function CalendarBrowser({
               <button
                 type="button"
                 onClick={() => jenTentoKalendar(s.id)}
-                title={soluje ? 'Zpět na původní výběr kalendářů' : `Dočasně jen ${s.name} (sólo)`}
+                title={soluje ? t('kalendar.zpetNaVyber') : t('kalendar.docasneJen', { nazev: s.name })}
                 className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${
                   zapnute ? '' : 'hover:text-ink'
                 }`}
@@ -1087,8 +1156,16 @@ export function CalendarBrowser({
             type="button"
             onClick={prepniMimoStudio}
             aria-pressed={ukazNepritomnost}
-            title={ukazNepritomnost ? 'Vypnout Mimo studio' : 'Zapnout Mimo studio'}
-            aria-label={ukazNepritomnost ? 'Vypnout Mimo studio' : 'Zapnout Mimo studio'}
+            title={
+              ukazNepritomnost
+                ? t('kalendar.vypnoutKalendar', { nazev: nazevMimo(t) })
+                : t('kalendar.zapnoutKalendar', { nazev: nazevMimo(t) })
+            }
+            aria-label={
+              ukazNepritomnost
+                ? t('kalendar.vypnoutKalendar', { nazev: nazevMimo(t) })
+                : t('kalendar.zapnoutKalendar', { nazev: nazevMimo(t) })
+            }
             className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
           >
             <span
@@ -1107,13 +1184,13 @@ export function CalendarBrowser({
             type="button"
             onClick={() => jenTentoKalendar(SOLO_MIMO)}
             title={
-              solo === SOLO_MIMO ? 'Zpět na původní výběr kalendářů' : 'Dočasně jen Mimo studio (sólo)'
+              solo === SOLO_MIMO ? t('kalendar.zpetNaVyber') : t('kalendar.docasneJen', { nazev: nazevMimo(t) })
             }
             className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${
               ukazNepritomnost ? '' : 'hover:text-ink'
             }`}
           >
-            {NAZEV_KALENDARE_MIMO}
+            {nazevMimo(t)}
           </button>
         </span>
         {/* PORADY (zadání 21. 9. 2026) - žlutý kalendář schůzek. Každý v něm
@@ -1129,8 +1206,16 @@ export function CalendarBrowser({
             type="button"
             onClick={prepniPorady}
             aria-pressed={ukazPorady}
-            title={ukazPorady ? 'Vypnout Porady' : 'Zapnout Porady'}
-            aria-label={ukazPorady ? 'Vypnout Porady' : 'Zapnout Porady'}
+            title={
+              ukazPorady
+                ? t('kalendar.vypnoutKalendar', { nazev: nazevPorad(t) })
+                : t('kalendar.zapnoutKalendar', { nazev: nazevPorad(t) })
+            }
+            aria-label={
+              ukazPorady
+                ? t('kalendar.vypnoutKalendar', { nazev: nazevPorad(t) })
+                : t('kalendar.zapnoutKalendar', { nazev: nazevPorad(t) })
+            }
             className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
           >
             <span
@@ -1141,10 +1226,10 @@ export function CalendarBrowser({
           <button
             type="button"
             onClick={() => jenTentoKalendar(SOLO_PORADY)}
-            title={solo === SOLO_PORADY ? 'Zpět na původní výběr kalendářů' : 'Dočasně jen Porady (sólo)'}
+            title={solo === SOLO_PORADY ? t('kalendar.zpetNaVyber') : t('kalendar.docasneJen', { nazev: nazevPorad(t) })}
             className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${ukazPorady ? '' : 'hover:text-ink'}`}
           >
-            {NAZEV_KALENDARE_PORADY}
+            {nazevPorad(t)}
           </button>
         </span>
         {/* DALŠÍ SCHŮZKY (zadání 23. 9. 2026) - tentýž kalendář jako Porady,
@@ -1161,8 +1246,16 @@ export function CalendarBrowser({
               type="button"
               onClick={prepniSchuzky}
               aria-pressed={ukazSchuzky}
-              title={ukazSchuzky ? 'Vypnout Schůzky' : 'Zapnout Schůzky'}
-              aria-label={ukazSchuzky ? 'Vypnout Schůzky' : 'Zapnout Schůzky'}
+              title={
+                ukazSchuzky
+                  ? t('kalendar.vypnoutKalendar', { nazev: nazevSchuzek(t) })
+                  : t('kalendar.zapnoutKalendar', { nazev: nazevSchuzek(t) })
+              }
+              aria-label={
+                ukazSchuzky
+                  ? t('kalendar.vypnoutKalendar', { nazev: nazevSchuzek(t) })
+                  : t('kalendar.zapnoutKalendar', { nazev: nazevSchuzek(t) })
+              }
               className="flex items-center rounded-l-pill pl-2.5 sm:pl-3 pr-1.5 py-1 sm:py-1.5"
             >
               <span
@@ -1173,10 +1266,12 @@ export function CalendarBrowser({
             <button
               type="button"
               onClick={() => jenTentoKalendar(SOLO_SCHUZKY)}
-              title={solo === SOLO_SCHUZKY ? 'Zpět na původní výběr kalendářů' : 'Dočasně jen Schůzky (sólo)'}
+              title={
+                solo === SOLO_SCHUZKY ? t('kalendar.zpetNaVyber') : t('kalendar.docasneJen', { nazev: nazevSchuzek(t) })
+              }
               className={`rounded-r-pill pl-0.5 pr-3 sm:pr-3.5 py-1 sm:py-1.5 transition-colors ${ukazSchuzky ? '' : 'hover:text-ink'}`}
             >
-              {NAZEV_KALENDARE_SCHUZKY}
+              {nazevSchuzek(t)}
             </button>
           </span>
         )}
@@ -1187,11 +1282,11 @@ export function CalendarBrowser({
           <button
             type="button"
             onClick={() => prejdi({ solo: '' })}
-            title="Vrátit zaškrtnutí kalendářů, jaké bylo před sólem"
+            title={t('kalendar.vratitZaskrtnuti')}
             className="shrink-0 whitespace-nowrap inline-flex items-center gap-2 rounded-pill border border-brand-purple bg-brand-purple/10 pl-3 pr-3.5 py-1.5 text-xs sm:text-sm font-heading font-semibold text-brand-purple"
           >
-            SÓLO: {nazevSola}
-            <span className="font-body font-normal text-muted">zpět na výběr</span>
+            {t('kalendar.soloStitek', { nazev: nazevSola })}
+            <span className="font-body font-normal text-muted">{t('kalendar.soloZpet')}</span>
           </button>
         )}
         {/* Hledani na stejnem radku jako kalendare (zadani 20. 9. 2026:
@@ -1204,8 +1299,8 @@ export function CalendarBrowser({
             setHledani(e.target.value);
             setSeznamVyskytu(true);
           }}
-          placeholder="Hledat projekt, herce nebo zvukaře…"
-          aria-label="Hledat projekt, herce nebo zvukaře"
+          placeholder={t('kalendar.hledatPlaceholder')}
+          aria-label={t('kalendar.hledatPopis')}
           className="hidden sm:block ml-auto rounded-pill border border-line bg-field px-4 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple w-72"
         />
       </div>
@@ -1486,6 +1581,8 @@ function MrizkaPohled({
   onNovaNepritomnost: (denKey: string) => void;
   onNovaBlokace?: (denKey: string, minuty: number) => void;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const celkovaVyska = (GRID_END_HOUR - GRID_START_HOUR) * HOUR_PX;
   const hodiny = Array.from({ length: GRID_END_HOUR - GRID_START_HOUR }, (_, i) => GRID_START_HOUR + i);
   const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
@@ -1565,7 +1662,7 @@ function MrizkaPohled({
             <div />
             {days.map((den) => {
               const d = new Date(den.startIso);
-              const cislo = new Intl.DateTimeFormat('cs-CZ', {
+              const cislo = new Intl.DateTimeFormat(kodJazyka(jazyk), {
                 timeZone: timezone,
                 day: 'numeric',
                 month: 'numeric',
@@ -1586,8 +1683,10 @@ function MrizkaPohled({
                       den.key === dnesKey ? 'text-brand-greenDeep dark:text-brand-green font-semibold' : 'text-muted'
                     }`}
                   >
-                    {den.key === dnesKey ? `Dnes · ${WEEKDAY_SHORT[dow]}` : WEEKDAY_SHORT[dow]}
-                    {den.byArrangement && <span title="Jen po domluvě se zvukařem"> ·</span>}
+                    {den.key === dnesKey
+                      ? t('kalendar.dnesADen', { den: zkratkaDne(jazyk, dow) })
+                      : zkratkaDne(jazyk, dow)}
+                    {den.byArrangement && <span title={t('kalendar.jenPoDomluve')}> ·</span>}
                   </span>
                   {den.key === dnesKey ? (
                     <span className="inline-block mt-0.5 rounded-pill bg-brand-green text-onAccent px-2.5 text-base font-heading font-bold tabular-nums">
@@ -1758,7 +1857,7 @@ function MrizkaPohled({
                               {e.externi && <IkonaExterni velikost={13} />}
                               {radek}
                               {strihBezProjektu(e) && (
-                                <span className="font-normal italic opacity-70"> · bez projektu</span>
+                                <span className="font-normal italic opacity-70"> {t('kalendar.bezProjektu')}</span>
                               )}
                             </span>
                           ) : (
@@ -1813,13 +1912,17 @@ function MesicniPohled({
   /** Dvojklik do dne (19. 9. 2026) - přidává se i v měsíci. */
   onNovaVeDni: (denKey: string) => void;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+  // Týden začíná pondělkem (1) a končí nedělí (0) - stejně jako mřížka.
+  const dnyVTydnu = [1, 2, 3, 4, 5, 6, 0];
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
       <div className="grid grid-cols-7 border-b border-line">
-        {['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].map((d) => (
+        {dnyVTydnu.map((d) => (
           <div key={d} className="px-2 py-2 text-center text-[11px] font-heading text-muted uppercase tracking-wide">
-            {d}
+            {zkratkaDne(jazyk, d)}
           </div>
         ))}
       </div>
@@ -1828,7 +1931,7 @@ function MesicniPohled({
           // Mimo studio je v mesici celé ve štítcích nahoře (i to na čas),
           // tak se tu nesmí ukázat podruhé.
           const udalosti = (podleDnu.get(den.key) ?? []).filter((e) => e.kind !== 'MIMO');
-          const cislo = new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, day: 'numeric' }).format(
+          const cislo = new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: timezone, day: 'numeric' }).format(
             new Date(den.startIso),
           );
           return (
@@ -1841,7 +1944,7 @@ function MesicniPohled({
             >
               {den.key === dnesKey ? (
                 <span className="self-start rounded-pill bg-brand-green text-onAccent px-2 text-sm font-heading font-bold tabular-nums">
-                  {cislo} · dnes
+                  {t('kalendar.cisloDneADnes', { cislo })}
                 </span>
               ) : (
                 <span className={`text-xs font-heading tabular-nums ${den.inMonth ? 'text-ink' : 'text-muted'}`}>
@@ -1879,16 +1982,21 @@ function MesicniPohled({
                     {e.rezie && <IkonaRezie velikost={14} odkaz={e.hovorOdkaz ?? null} />}
                     {e.externi && <IkonaExterni velikost={13} />}
                     {e.title.split('\n')[0]}
-                    {strihBezProjektu(e) && <span className="italic opacity-70"> · bez projektu</span>}
+                    {strihBezProjektu(e) && <span className="italic opacity-70"> {t('kalendar.bezProjektu')}</span>}
                     {(() => {
+                      // „ZVUKAŘ:" není popisek, ale značka řádku v nadpisu
+                      // události (viz page.tsx a bezPredponyZvukar) - zůstává
+                      // česky v obou jazycích, jinak by se řádek nenašel.
                       const zv = e.title.split('\n').find((r) => r.startsWith('ZVUKAŘ:'));
-                      return zv ? <span className="opacity-80"> · {zv.replace('ZVUKAŘ:', '').trim()}</span> : null;
+                      return zv ? <span className="opacity-80"> · {bezPredponyZvukar(zv)}</span> : null;
                     })()}
                   </button>
                 );
               })}
               {udalosti.length > 3 && (
-                <span className="text-[10px] font-body text-muted">+{udalosti.length - 3} další</span>
+                <span className="text-[10px] font-body text-muted">
+                  {t('kalendar.dalsiUdalosti', { pocet: udalosti.length - 3 })}
+                </span>
               )}
             </div>
           );
@@ -1947,6 +2055,8 @@ function UdalostForm({
   onClose: () => void;
   onHotovo: () => void;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   /** Upravuje se frekvence z nabídky, ne ručně zapsaná událost (19. 9. 2026). */
   const jeFrekvence = upravovana?.kind === 'SLOT';
   const [studioId, setStudioId] = useState(upravovana?.studioId ?? vychozi.studioId);
@@ -2087,7 +2197,7 @@ function UdalostForm({
    *      záznamu nemá ticho smazat jméno, které v něm je.
    */
   /** Jméno studia, ke kterému se událost píše - do popisku u pole Zvukař. */
-  const nazevStudiaVOkne = studios.find((s) => s.id === studioId)?.shortName ?? 'tohoto studia';
+  const nazevStudiaVOkne = studios.find((s) => s.id === studioId)?.shortName ?? t('kalendar.tohotoStudia');
 
   const zvukariProStudio = useMemo(() => {
     const vlastni = zvukari.filter((z) => z.studia && z.studia.includes(studioId));
@@ -2136,19 +2246,19 @@ function UdalostForm({
 
   /** Zrušení frekvence z kalendáře (19. 9. 2026). */
   async function zrusFrekvenci() {
-    if (!upravovana || !window.confirm('Zrušit tuhle frekvenci? Herec dostane oznámení.')) return;
+    if (!upravovana || !window.confirm(t('kalendar.opravduZrusitFrekvenci'))) return;
     setBusy(true);
     setError(null);
     try {
       const res = await fetch(`/api/kalendar/terminy?id=${encodeURIComponent(upravovana.id)}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Frekvenci se nepodařilo zrušit.');
+        setError(data?.error || t('kalendar.zruseniSelhalo'));
         return;
       }
       onHotovo();
     } catch {
-      setError('Frekvenci se nepodařilo zrušit.');
+      setError(t('kalendar.zruseniSelhalo'));
     } finally {
       setBusy(false);
     }
@@ -2159,19 +2269,19 @@ function UdalostForm({
    * smazat se bude řešit v tom editu, když poklepeš dvakrát").
    */
   async function smazUdalost() {
-    if (!upravovana || !window.confirm('Opravdu smazat tuhle událost z kalendáře?')) return;
+    if (!upravovana || !window.confirm(t('kalendar.opravduSmazatUdalost'))) return;
     setBusy(true);
     setError(null);
     try {
       const res = await fetch(`/api/kalendar/blokace?id=${encodeURIComponent(upravovana.id)}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Událost se nepodařilo smazat.');
+        setError(data?.error || t('kalendar.smazaniSelhalo'));
         return;
       }
       onHotovo();
     } catch {
-      setError('Událost se nepodařilo smazat.');
+      setError(t('kalendar.smazaniSelhalo'));
     } finally {
       setBusy(false);
     }
@@ -2219,13 +2329,13 @@ function UdalostForm({
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Událost se nepodařilo uložit.');
+        setError(data?.error || t('kalendar.ulozeniSelhalo'));
         setKolize(Boolean(data?.kolize));
         return;
       }
       onHotovo();
     } catch {
-      setError('Událost se nepodařilo uložit.');
+      setError(t('kalendar.ulozeniSelhalo'));
     } finally {
       setBusy(false);
     }
@@ -2239,10 +2349,14 @@ function UdalostForm({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            {jeFrekvence ? 'Úprava frekvence' : upravovana ? 'Úprava události' : 'Nová událost'}
+            {jeFrekvence
+              ? t('kalendar.upravaFrekvence')
+              : upravovana
+                ? t('kalendar.upravaUdalosti')
+                : t('kalendar.novaUdalost')}
           </h2>
           <p className="text-sm font-body text-muted m-0 mt-1 capitalize">
-            {new Intl.DateTimeFormat('cs-CZ', {
+            {new Intl.DateTimeFormat(kodJazyka(jazyk), {
               timeZone: pasmoStudia,
               weekday: 'long',
               day: 'numeric',
@@ -2253,24 +2367,24 @@ function UdalostForm({
             </span>
           </p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
+        <button type="button" onClick={onClose} aria-label={t('obecne.zavrit')} className="text-muted hover:text-ink text-lg leading-none">
           ×
         </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Druh</span>
+          <span className="text-sm font-body text-ink">{t('kalendar.poleDruh')}</span>
           <VyberPole value={druh} onChange={(e) => setDruh(e.target.value)} className={inputClass}>
-            {Object.entries(BLOCK_KIND_LABELS).map(([key, label]) => (
+            {Object.keys(BLOCK_KIND_LABELS).map((key) => (
               <option key={key} value={key}>
-                {label}
+                {nazevDruhu(t, key)}
               </option>
             ))}
           </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Kalendář</span>
+          <span className="text-sm font-body text-ink">{t('kalendar.poleKalendar')}</span>
           <VyberPole
             value={studioId}
             onChange={(e) => {
@@ -2295,13 +2409,13 @@ function UdalostForm({
                 {s.shortName}
               </option>
             ))}
-            {onMimoStudio && <option value="__mimo__">{NAZEV_KALENDARE_MIMO}</option>}
-            {onPorada && <option value="__porada__">{NAZEV_KALENDARE_PORADY}</option>}
-            {onSchuzka && <option value="__schuzka__">{NAZEV_KALENDARE_SCHUZKY}</option>}
+            {onMimoStudio && <option value="__mimo__">{nazevMimo(t)}</option>}
+            {onPorada && <option value="__porada__">{nazevPorad(t)}</option>}
+            {onSchuzka && <option value="__schuzka__">{nazevSchuzek(t)}</option>}
           </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Datum</span>
+          <span className="text-sm font-body text-ink">{t('kalendar.poleDatum')}</span>
           <DatumPole
             value={datum}
             onChange={(e) => setDatum(e.target.value)}
@@ -2315,7 +2429,7 @@ function UdalostForm({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">
-            Od <span className="text-danger">*</span>
+            {t('kalendar.poleOd')} <span className="text-danger">*</span>
           </span>
           <input
             type="time"
@@ -2327,7 +2441,7 @@ function UdalostForm({
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">
-            Do <span className="text-danger">*</span>
+            {t('kalendar.poleDo')} <span className="text-danger">*</span>
           </span>
           <input
             type="time"
@@ -2340,11 +2454,17 @@ function UdalostForm({
         <div className="flex flex-col gap-1.5 justify-end pb-2.5">
           {casSedi ? (
             <span className="text-xs font-body text-muted tabular-nums">
-              {(((minutyDo ?? 0) - (minutyOd ?? 0)) / 60).toLocaleString('cs-CZ', { maximumFractionDigits: 1 })} h
-              {pasmoStudia !== timezone ? ` · místní čas studia` : ''}
+              {(() => {
+                const hodin = (((minutyDo ?? 0) - (minutyOd ?? 0)) / 60).toLocaleString(kodJazyka(jazyk), {
+                  maximumFractionDigits: 1,
+                });
+                return pasmoStudia !== timezone
+                  ? t('kalendar.delkaHodinMistni', { hodin })
+                  : t('kalendar.delkaHodin', { hodin });
+              })()}
             </span>
           ) : (
-            <span className="text-xs font-body text-danger">Konec musí být po začátku.</span>
+            <span className="text-xs font-body text-danger">{t('kalendar.konecPoZacatku')}</span>
           )}
         </div>
       </div>
@@ -2354,7 +2474,7 @@ function UdalostForm({
           {sProjektem && (
             <label className="flex flex-col gap-1.5 sm:col-span-1">
               <span className="text-sm font-body text-ink">
-                Projekt
+                {t('kalendar.poleProjekt')}
               </span>
               {/* Stejné hledání psaním jako u výkazů - projektů jsou stovky. */}
               <VyberProjektu projekty={projekty} hodnota={projektId} onZmena={setProjektId} />
@@ -2365,7 +2485,7 @@ function UdalostForm({
               jen strašilo (zadání 14. 9. 2026). */}
           {sHercem && jeFrekvence && (
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Herec</span>
+              <span className="text-sm font-body text-ink">{t('kalendar.poleHerec')}</span>
               {/* Herec patri k nabidce - jiny herec = jina nabidka. */}
               <span className="rounded-lg border border-line bg-field px-3 py-2 text-muted font-heading text-sm">
                 {upravovana?.udalost?.actorName ?? '—'}
@@ -2375,12 +2495,12 @@ function UdalostForm({
           {sHercem && !jeFrekvence && herecPsany && (
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Herec
+                {t('kalendar.poleHerec')}
               </span>
               <input
                 value={herecText}
                 onChange={(e) => setHerecText(e.target.value)}
-                placeholder="Napište jméno herce…"
+                placeholder={t('kalendar.napisteJmenoHerce')}
                 className={inputClass}
               />
             </label>
@@ -2388,15 +2508,15 @@ function UdalostForm({
           {sHercem && !jeFrekvence && !herecPsany && (
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-body text-ink">
-                Herec
+                {t('kalendar.poleHerec')}
               </span>
               <VyberProjektu
                 projekty={herci}
                 hodnota={herecId}
                 onZmena={setHerecId}
-                placeholder="Začněte psát jméno herce…"
-                prazdnyText="Takového herce jsme nenašli. Zkuste jen příjmení."
-                popisZruseni="Zrušit výběr herce"
+                placeholder={t('kalendar.zacnetePsatHerce')}
+                prazdnyText={t('kalendar.herceNenasli')}
+                popisZruseni={t('kalendar.zrusitVyberHerce')}
               />
             </label>
           )}
@@ -2406,28 +2526,28 @@ function UdalostForm({
               {/* Povinný jen u frekvence předělávané na střih - ta bez
                   zvukaře nedává smysl. Ručně zapsaná událost ho mít nemusí
                   (21. 9. 2026). */}
-              Zvukař {jeFrekvence && !jeNataceni && <span className="text-danger">*</span>}
+              {t('kalendar.poleZvukar')} {jeFrekvence && !jeNataceni && <span className="text-danger">*</span>}
               {/* Ať je jasné, proč v nabídce nejsou všichni (20. 9. 2026). */}
-              <span className="text-muted font-normal"> · jen {nazevStudiaVOkne}</span>
+              <span className="text-muted font-normal"> {t('kalendar.jenZeStudia', { nazev: nazevStudiaVOkne })}</span>
             </span>
             <VyberProjektu
               projekty={zvukariProStudio}
               hodnota={zvukarId}
               onZmena={setZvukarId}
-              placeholder="Začněte psát jméno zvukaře…"
-              prazdnyText={`V tomhle studiu takového zvukaře nemáme. Studia se zaškrtávají na kartě uživatele.`}
-              popisZruseni="Zrušit výběr zvukaře"
+              placeholder={t('kalendar.zacnetePsatZvukare')}
+              prazdnyText={t('kalendar.zvukareNemame')}
+              popisZruseni={t('kalendar.zrusitVyberZvukare')}
             />
           </label>
         </div>
       ) : (
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Popis</span>
+          <span className="text-sm font-body text-ink">{t('kalendar.polePopis')}</span>
           <input
             autoFocus
             value={nazev}
             onChange={(e) => setNazev(e.target.value)}
-            placeholder="Servis techniky"
+            placeholder={t('kalendar.popisPlaceholder')}
             className={inputClass}
           />
         </label>
@@ -2444,38 +2564,43 @@ function UdalostForm({
             className="mt-0.5"
           />
           <span className="text-sm font-body text-ink">
-            Režie na dálku
-            <span className="block text-xs text-muted">
-              Červený rámeček a telefon v kalendáři. Samo se to zaškrtne u první frekvence herce na projektu a u každého castingu — tady jde odškrtnout.
-            </span>
+            {t('kalendar.rezieNaDalku')}
+            <span className="block text-xs text-muted">{t('kalendar.rezieNaDalkuPopis')}</span>
           </span>
         </label>
       )}
 
       {/* Poznamka / vzkaz (19. 9. 2026) - u frekvence i u rucni udalosti. */}
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Poznámka</span>
+        <span className="text-sm font-body text-ink">{t('kalendar.polePoznamka')}</span>
         <textarea
           value={poznamka}
           onChange={(e) => setPoznamka(e.target.value)}
           rows={2}
-          placeholder="Vzkaz pro tým - třeba co se bude točit, co připravit…"
+          placeholder={t('kalendar.poznamkaPlaceholder')}
           className={inputClass}
         />
-        {/* Úkol z poznámky (23. 9. 2026) - značka je stejná jako v chatu. */}
+        {/* Úkol z poznámky (23. 9. 2026) - značka je stejná jako v chatu.
+            Celá věta je jeden klíč; tučné kousky jsou v ní jako značky. */}
         <span className="text-xs font-body text-muted">
-          Napište <strong className="font-heading">@úkol</strong> a za to, co je potřeba udělat — z poznámky se stane
-          úkol pro <strong className="font-heading">zvukaře u téhle události</strong>.{' '}
-          {jeNataceni || jePrace
-            ? 'Když u ní zvukař zatím není, kalendář počká; když se vymění, úkol se přestěhuje.'
-            : ''}
+          {vetaSeZnackami(t('kalendar.ukolZPoznamky'), {
+            // „@úkol" je značka, kterou hledá chat - v obou jazycích stejná.
+            znacka: <strong className="font-heading">{t('kalendar.znackaUkol')}</strong>,
+            kdo: <strong className="font-heading">{t('kalendar.ukolProZvukare')}</strong>,
+          })}{' '}
+          {jeNataceni || jePrace ? t('kalendar.ukolBezZvukare') : ''}
         </span>
       </label>
 
       {jeFrekvence && !jeNataceni && (
         <p className="text-xs font-body text-ink bg-warnTint border border-line rounded-lg px-3 py-2 m-0">
-          Frekvence se zruší a na jejím místě vznikne {jePrace ? (druh === 'CASTING' ? 'casting' : 'střih') : 'událost'} v kalendáři. Herec dostane
-          oznámení.
+          {/* Každá varianta je celá věta - v angličtině by se z kousků
+              neposkládala. */}
+          {jePrace
+            ? druh === 'CASTING'
+              ? t('kalendar.frekvenceNaCasting')
+              : t('kalendar.frekvenceNaStrih')
+            : t('kalendar.frekvenceNaUdalost')}
         </p>
       )}
 
@@ -2490,7 +2615,7 @@ function UdalostForm({
               onClick={() => void uloz(true)}
               className="self-start rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-heading font-semibold text-ink hover:border-brand-purple disabled:opacity-60"
             >
-              Uložit i tak
+              {t('kalendar.ulozitITak')}
             </button>
           )}
         </div>
@@ -2503,10 +2628,10 @@ function UdalostForm({
           disabled={busy || chybi}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {busy ? 'Ukládám…' : upravovana ? 'Uložit změny' : 'Přidat do kalendáře'}
+          {busy ? t('obecne.ukladam') : upravovana ? t('kalendar.ulozitZmeny') : t('kalendar.pridatDoKalendare')}
         </button>
         <button type="button" onClick={onClose} className="text-muted text-sm font-heading">
-          Zrušit
+          {t('obecne.zrusit')}
         </button>
         {upravovana && upravovana.kind === 'BLOCK' && (
           <button
@@ -2515,7 +2640,7 @@ function UdalostForm({
             disabled={busy}
             className="ml-auto text-sm font-heading font-semibold text-danger disabled:opacity-60"
           >
-            Smazat událost
+            {t('kalendar.smazatUdalost')}
           </button>
         )}
         {jeFrekvence && (
@@ -2525,13 +2650,11 @@ function UdalostForm({
             disabled={busy}
             className="text-sm font-heading font-semibold text-danger disabled:opacity-60"
           >
-            Zrušit frekvenci
+            {t('kalendar.zrusitFrekvenci')}
           </button>
         )}
         {jePrace && !jeFrekvence && (
-          <span className="text-xs font-body text-muted">
-            Zápis do kalendáře. Nabídku termínů herci zakládáte tlačítkem v detailu projektu.
-          </span>
+          <span className="text-xs font-body text-muted">{t('kalendar.zapisDoKalendare')}</span>
         )}
       </div>
     </div>
@@ -2594,7 +2717,8 @@ function IkonaDruhu({ druh, velikost = 16 }: { druh: ReturnType<typeof druhPrace
  * uživatele, ne tady.
  */
 function IkonaExterni({ velikost = 13 }: { velikost?: number }) {
-  const popis = 'Stříhá externě, ve studiu nesedí';
+  const t = usePreklad();
+  const popis = t('kalendar.strihaExterne');
   return (
     <span
       title={popis}
@@ -2613,11 +2737,13 @@ function IkonaExterni({ velikost = 13 }: { velikost?: number }) {
  * V úpravě události se dá odškrtnout.
  */
 function IkonaRezie({ velikost = 14, odkaz = null }: { velikost?: number; odkaz?: string | null }) {
+  const t = usePreklad();
   const trida = `shrink-0 inline-grid place-items-center rounded-pill align-middle mr-1 ${tridaBarvyIkony(
     'rezie-na-dalku',
   )}`;
   const kresba = <KresbaIkony klic="rezie-na-dalku" velikost={Math.round(velikost * 0.62)} />;
-  const popis = odkaz ? `${POPIS_REZIE} — připojit se k hovoru` : POPIS_REZIE;
+  // POPIS_REZIE z lib je česky (bere si ho i server) - v rozhraní ze slovníku.
+  const popis = odkaz ? t('kalendar.rezieIkonaHovor') : t('kalendar.rezieIkona');
 
   // S odkazem na videohovor studia je ikona proklik (23. 9. 2026: „i by mohl
   // být proklik rovnou z toho kalendáře. Ale nemusí tam svítit celý dlouhý
@@ -2688,7 +2814,29 @@ function DetailUdalosti({
   onClose: () => void;
   onSmazano: () => void;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const stav =
+    event.kind === 'PORADA'
+      ? event.porada && event.porada.opakovani !== 'NE'
+        ? t('kalendar.poradaSOpakovanim', {
+            opakovani: podleKodu(
+              t,
+              'kalendar.opakovani.',
+              event.porada.opakovani,
+              popisOpakovani(event.porada.opakovani),
+            ).toLocaleLowerCase(kodJazyka(jazyk)),
+          })
+        : t('kalendar.porada')
+      : event.kind === 'BLOCK'
+        ? podleKodu(t, 'kalendar.druh.', event.state, BLOCK_KIND_LABELS[event.state] ?? t('kalendar.blokace'))
+        : podleKodu(t, 'kalendar.stav.', event.state, SLOT_STATE_LABELS[event.state] ?? event.state);
+  /**
+   * Týž popisek česky - řádek nadpisu, který ho jen opakuje, se v detailu
+   * nevypisuje podruhé (níž). Nadpisy událostí chodí ze serveru česky, takže
+   * porovnávat se s nimi dá jen česky.
+   */
+  const stavCesky =
     event.kind === 'PORADA'
       ? event.porada && event.porada.opakovani !== 'NE'
         ? `Porada · ${popisOpakovani(event.porada.opakovani).toLowerCase()}`
@@ -2724,10 +2872,18 @@ function DetailUdalosti({
     .trim();
   const barvy = eventColors(event.color, event.state);
   const cas = (iso: string) =>
-    new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
-  const den = new Intl.DateTimeFormat('cs-CZ', { timeZone: timezone, weekday: 'short', day: 'numeric', month: 'numeric' }).format(
-    new Date(event.start),
-  );
+    new Intl.DateTimeFormat(kodJazyka(jazyk), {
+      timeZone: timezone,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(iso));
+  const den = new Intl.DateTimeFormat(kodJazyka(jazyk), {
+    timeZone: timezone,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'numeric',
+  }).format(new Date(event.start));
 
   /**
    * BUBLINA „VYSTOUPÍ" (zadání 20. 9. 2026, upřesnění: „náhled je moc velký
@@ -2759,7 +2915,7 @@ function DetailUdalosti({
         role="dialog"
         aria-label={radky[0]}
         className="fixed z-[70] ms-vystoupeni rounded-lg bg-surface shadow-2xl overflow-y-auto cursor-pointer"
-        title="Klikni pro zavření"
+        title={t('kalendar.kliknutimZavrit')}
         // Zadny krizek (20. 9. 2026): dalsi klik na bublinu ji zavre. Odkazy funguji dal.
         onClick={(e) => {
           if ((e.target as HTMLElement).closest('a,button')) return;
@@ -2781,7 +2937,18 @@ function DetailUdalosti({
           {/* Stejne radky jako v bubline, jen vetsi a cele. */}
           {/* Radek, ktery jen opakuje druh prace z hlavicky (napr. „Střih"),
               se v detailu nevypisuje podruhe (20. 9. 2026). */}
-          {radky.filter((radek) => radek.trim().toLocaleLowerCase('cs') !== String(stav).trim().toLocaleLowerCase('cs')).map((radek, i) => (
+          {radky
+            .filter((radek) => {
+              // Nadpis chodí ze serveru česky, hlavička je přeložená - porovnat
+              // se proto musí s oběma podobami, jinak by se v angličtině řádek
+              // objevil dvakrát.
+              const r = radek.trim().toLocaleLowerCase('cs');
+              return (
+                r !== String(stav).trim().toLocaleLowerCase('cs') &&
+                r !== String(stavCesky).trim().toLocaleLowerCase('cs')
+              );
+            })
+            .map((radek, i) => (
             <p
               key={i}
               className={
@@ -2797,13 +2964,13 @@ function DetailUdalosti({
             {den} · {cas(event.start)}–{cas(event.end)} · {event.studioName}
           </p>
           {u?.actorName && !event.title.includes(u.actorName) && (
-            <p className="m-0 text-sm font-heading">Herec: {u.actorName}</p>
+            <p className="m-0 text-sm font-heading">{t('kalendar.herecJmeno', { jmeno: u.actorName })}</p>
           )}
           {/* Střih převzatý z Googlu projekt nemá - ať je jasné proč a co s tím
               (21. 9. 2026). */}
           {strihBezProjektu(event) && (
             <p className="m-0 text-xs font-body italic opacity-80">
-              Projekt není vyplněný{canManage ? ' — doplníte ho dvojklikem na událost.' : '.'}
+              {canManage ? t('kalendar.projektNeniSDvojklikem') : t('kalendar.projektNeni')}
             </p>
           )}
           {/* Druh prace je jen nahore (20. 9. 2026) - subtitle ho opakoval.
@@ -2825,11 +2992,11 @@ function DetailUdalosti({
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-pill bg-brand-purple text-white px-3 py-1.5 no-underline hover:bg-brand-purpleDeep"
                 >
-                  ▶ Připojit se k hovoru
+                  {t('kalendar.pripojitSeKHovoru')}
                 </a>
               )}
               <button type="button" onClick={onUpravit} className="underline underline-offset-2" style={{ color: 'inherit' }}>
-                Upravit
+                {t('obecne.upravit')}
               </button>
             </div>
           )}
@@ -2838,12 +3005,12 @@ function DetailUdalosti({
             <div className="flex items-center gap-3 flex-wrap mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/15 text-xs font-heading font-semibold">
               {u?.caflouProjectId && (
                 <Link href={`/projekty/${u.caflouProjectId}`} className="underline underline-offset-2" style={{ color: 'inherit' }}>
-                  Projekt
+                  {t('kalendar.odkazProjekt')}
                 </Link>
               )}
               {canManage && event.href && (
                 <Link href={event.href} className="underline underline-offset-2" style={{ color: 'inherit' }}>
-                  Nabídka termínů
+                  {t('kalendar.odkazNabidkaTerminu')}
                 </Link>
               )}
             </div>

@@ -3570,6 +3570,1693 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Na obrázku není vidět žádný podpis.',
     en: 'No signature can be seen in the image.',
   },
+
+  // ==========================================================================
+  // DAVKA 5 - ZBYTEK ADMINISTRACE (27. 9. 2026)
+  // Uzivatele, ceniky, archiv, firmy, studia, kalendar a vykazy.
+  // ==========================================================================
+
+  // ===========================================================================
+  // DÁVKA 5 — uživatelé (administrace: /admin/users a karta uživatele)
+  // Řádky k vložení do objektu SLOVNIK v src/lib/jazyk.ts.
+  // Merge dělá Ondřej, tenhle soubor se nikam neimportuje.
+  // ===========================================================================
+
+  // --- seznam uživatelů: hlavička a záložky ---
+  'uzivatel.nadpis': { cs: 'Uživatelé', en: 'Users' },
+  'uzivatel.filtrFirma': { cs: 'Filtr: {firma}', en: 'Filter: {firma}' },
+  'uzivatel.zrusitFiltr': { cs: '(zrušit filtr)', en: '(clear the filter)' },
+  'uzivatel.zalozkaMediaspace': { cs: 'Mediaspace', en: 'Mediaspace' },
+  'uzivatel.zalozkaKlienti': { cs: 'Klienti', en: 'Customers' },
+  'uzivatel.zalozkaHerci': { cs: 'Herci', en: 'Narrators' },
+  'uzivatel.zalozkaTabule': { cs: 'Tabule', en: 'Displays' },
+  'uzivatel.zalozkaStudio': { cs: 'Studio', en: 'Studio' },
+  'uzivatel.hledatPlaceholder': {
+    cs: 'Hledat jméno, e-mail, telefon…',
+    en: 'Search by name, email, phone…',
+  },
+  'uzivatel.hledaniPrazdne': { cs: 'Hledání nic nenašlo.', en: 'The search found nothing.' },
+  'uzivatel.zadnyUzivatel': {
+    cs: 'Žádný uživatel neodpovídá filtru.',
+    en: 'No user matches the filter.',
+  },
+
+  // --- seznam uživatelů: sloupce tabulky ---
+  'uzivatel.sl.jmeno': { cs: 'Jméno', en: 'Name' },
+  'uzivatel.sl.kod': { cs: 'Kód', en: 'Code' },
+  'uzivatel.sl.email': { cs: 'E-mail', en: 'Email' },
+  'uzivatel.sl.telefon': { cs: 'Telefon', en: 'Phone' },
+  'uzivatel.sl.role': { cs: 'Typ přístupu', en: 'Access type' },
+  'uzivatel.sl.narozeni': { cs: 'Datum narození', en: 'Date of birth' },
+  'uzivatel.sl.lokace': { cs: 'Lokace', en: 'Location' },
+  'uzivatel.sl.firma': { cs: 'Firma', en: 'Company' },
+  'uzivatel.sl.aktivni': { cs: 'Aktivní', en: 'Active' },
+  'uzivatel.seraditPodle': { cs: 'Seřadit podle: {sloupec}', en: 'Sort by: {sloupec}' },
+
+  // --- skupiny v nabídce „Typ přístupu" (zakládání i karta) ---
+  'uzivatel.skupinaKlientske': { cs: 'Klientské role', en: 'Customer roles' },
+  'uzivatel.skupinaHerec': { cs: 'Herec', en: 'Narrator' },
+  'uzivatel.skupinaInterni': { cs: 'Interní (Mediaspace)', en: 'Internal (Mediaspace)' },
+  'uzivatel.skupinaRobot': { cs: 'Robot (účet bez člověka)', en: 'Robot (account with no person)' },
+  'uzivatel.skupinaTabule': { cs: 'Obrazovka ve studiu', en: 'Studio display' },
+  'uzivatel.skupinaStudio': { cs: 'Klienti studia (rezervace)', en: 'Studio clients (bookings)' },
+
+  // --- založení uživatele ---
+  'uzivatel.pridatUzivatele': { cs: 'Přidat uživatele', en: 'Add a user' },
+  'uzivatel.novyUzivatel': { cs: 'Nový uživatel', en: 'New user' },
+  'uzivatel.zalozeniNezdarilo': {
+    cs: 'Účet se nepodařilo založit.',
+    en: 'The account could not be created.',
+  },
+  'uzivatel.uctZalozen': {
+    cs: 'Účet {email} je založen. Přihlašovací heslo mu prosím předejte bezpečnou cestou.',
+    en: 'The account {email} has been created. Please pass the sign-in password on securely.',
+  },
+  'uzivatel.zakladam': { cs: 'Zakládám…', en: 'Creating…' },
+  'uzivatel.ulozitUzivatele': { cs: 'Uložit uživatele', en: 'Save the user' },
+
+  // --- pole formuláře (sdílí zakládání i karta uživatele) ---
+  'uzivatel.poleJmeno': { cs: 'Jméno', en: 'Name' },
+  'uzivatel.poleFotka': { cs: 'Fotka', en: 'Photo' },
+  'uzivatel.polePocatecniHeslo': { cs: 'Počáteční heslo', en: 'Initial password' },
+  'uzivatel.pocatecniHesloHint': {
+    cs: 'uživatel si ho může později změnit',
+    en: 'the user can change it later',
+  },
+  'uzivatel.poleTypPristupu': { cs: 'Typ přístupu', en: 'Access type' },
+  'uzivatel.poleFirma': { cs: 'Firma', en: 'Company' },
+  'uzivatel.vyberteFirmu': { cs: '— vyberte firmu —', en: '— choose a company —' },
+  'uzivatel.poleEmail': { cs: 'E-mail', en: 'Email' },
+  'uzivatel.poleTelefon': { cs: 'Telefon', en: 'Phone' },
+  'uzivatel.poleDatumNarozeni': { cs: 'Datum narození', en: 'Date of birth' },
+  'uzivatel.poleLokace': { cs: 'Lokace', en: 'Locations' },
+  'uzivatel.lokaceHint': {
+    cs: 'studia, ve kterých je herec schopen fyzicky natáčet',
+    en: 'the studios where the narrator is able to record in person',
+  },
+  'uzivatel.poleRcNeboDatum': { cs: 'RČ / datum narození', en: 'Birth number / date of birth' },
+  'uzivatel.poleIc': { cs: 'IČ', en: 'Reg. no.' },
+  'uzivatel.poleDic': { cs: 'DIČ', en: 'VAT no.' },
+  'uzivatel.platceDph': { cs: 'Plátce DPH', en: 'VAT registered' },
+  'uzivatel.poleCisloUctu': { cs: 'Číslo účtu', en: 'Account number' },
+  'uzivatel.poleUlice': { cs: 'Ulice č.p.', en: 'Street and number' },
+  'uzivatel.poleMesto': { cs: 'Město', en: 'Town' },
+  'uzivatel.polePsc': { cs: 'PSČ', en: 'Postcode' },
+  'uzivatel.poleZeme': { cs: 'Země', en: 'Country' },
+
+  // --- fotka uživatele (přetažení souboru) ---
+  'uzivatel.pripravujiFotku': { cs: 'Připravuji fotku…', en: 'Preparing the photo…' },
+  'uzivatel.aktualniFotka': { cs: 'Aktuální fotka', en: 'Current photo' },
+  'uzivatel.pretahnouteFotku': {
+    cs: 'Přetáhněte sem soubor nebo klikněte pro výběr',
+    en: 'Drag a file here, or click to choose one',
+  },
+  'uzivatel.odebratFotku': { cs: 'Odebrat', en: 'Remove' },
+
+  // --- pozvánka do portálu ---
+  'uzivatel.pozvankaNadpis': { cs: 'Pozvánka do portálu', en: 'Invitation to the portal' },
+  'uzivatel.pozvankaNaposledy': {
+    cs: 'Naposledy odeslána {datum}.',
+    en: 'Last sent on {datum}.',
+  },
+  'uzivatel.pozvankaNeodeslana': { cs: 'Zatím neodeslána.', en: 'Not sent yet.' },
+  'uzivatel.hesloNastaveno': {
+    cs: 'Uživatel si už heslo nastavil.',
+    en: 'The user has already set a password.',
+  },
+  'uzivatel.odeslatPozvanku': { cs: 'Odeslat pozvánku', en: 'Send the invitation' },
+  'uzivatel.poslatZnovu': { cs: 'Poslat znovu', en: 'Send again' },
+  'uzivatel.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
+  'uzivatel.odeslano': { cs: 'Odesláno', en: 'Sent' },
+  'uzivatel.pozvankaOdeslana': {
+    cs: 'Pozvánka odeslána na {kam}.',
+    en: 'The invitation has been sent to {kam}.',
+  },
+  'uzivatel.emailUzivatele': { cs: 'e-mail uživatele', en: 'the user’s email' },
+  'uzivatel.pozvankaNezdarila': {
+    cs: 'Pozvánku se nepodařilo odeslat.',
+    en: 'The invitation could not be sent.',
+  },
+  'uzivatel.naposledyOdeslano': {
+    cs: 'Naposledy odesláno {datum}',
+    en: 'Last sent on {datum}',
+  },
+
+  // --- karta uživatele ---
+  'uzivatel.zpetNaSeznam': { cs: 'Zpět na seznam uživatelů', en: 'Back to the list of users' },
+  'uzivatel.ulozeniNezdarilo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+  'uzivatel.ulozitZmeny': { cs: 'Uložit změny', en: 'Save changes' },
+  'uzivatel.ulozeno': { cs: '✓ Uloženo', en: '✓ Saved' },
+  'uzivatel.poleNoveHeslo': { cs: 'Nové heslo', en: 'New password' },
+  'uzivatel.noveHesloHint': {
+    cs: 'nechte prázdné, pokud nechcete měnit',
+    en: 'leave it empty if you do not want to change it',
+  },
+  'uzivatel.poleHodinovaSazba': { cs: 'Hodinová sazba (Kč)', en: 'Hourly rate (CZK)' },
+  'uzivatel.hodinovaSazbaHint': {
+    cs: 'z ní se počítají výkazy práce',
+    en: 'timesheets are calculated from it',
+  },
+
+  // --- karta uživatele: studia zvukaře a tabule ---
+  'uzivatel.poleStudia': { cs: 'Studia', en: 'Studios' },
+  'uzivatel.studiaHint': {
+    cs: 've kterých studiích zvukař točí',
+    en: 'which studios the sound engineer records in',
+  },
+  'uzivatel.zadneStudioZalozte': {
+    cs: 'Zatím tu není žádné studio - založte ho v Administraci → Studia.',
+    en: 'There is no studio here yet — create one in Administration → Studios.',
+  },
+  'uzivatel.zadneStudio': { cs: 'Zatím tu není žádné studio.', en: 'There is no studio here yet.' },
+  'uzivatel.poleVedouciPobocky': { cs: 'Vedoucí pobočky', en: 'Branch manager' },
+  'uzivatel.vedouciPobockyHint': {
+    cs: 'v těchto studiích smí zapisovat, posouvat a mazat události v kalendáři',
+    en: 'in these studios they may add, move and delete events in the calendar',
+  },
+  'uzivatel.polePristupTabule': { cs: 'Přístup na tabule', en: 'Access to studio displays' },
+  'uzivatel.pristupTabuleHint': {
+    cs: 'tyhle tabule si otevře pod svým účtem v Můj účet → Tabule ve studiu',
+    en: 'they can open these displays under their own account in My account → Studio display',
+  },
+
+  // --- karta uživatele: práva a příznaky (zaškrtávátka) ---
+  // Překládá se jen POPISEK. Název pole i hodnota, která jde na server,
+  // zůstávají tak, jak jsou (manazerProjektu, vidiBanku, …).
+  'uzivatel.pravoManazerProjektu': { cs: 'Může být manažer projektu', en: 'Can be a project manager' },
+  'uzivatel.pravoManazerProjektuPopis': {
+    cs: 'nabízí se u projektů ve výběru manažera',
+    en: 'offered in the manager picker on projects',
+  },
+  'uzivatel.pravoSmlouvyPodepisuje': {
+    cs: 'Podepisuje smlouvy za Mediaspace',
+    en: 'Signs contracts on behalf of Mediaspace',
+  },
+  'uzivatel.pravoSmlouvyPodepisujePopis': {
+    cs: 'odeslaná smlouva je od nás rovnou podepsaná jeho jménem',
+    en: 'a contract we send out already carries their signature',
+  },
+  'uzivatel.pravoDotazyKlientu': { cs: 'Dostává dotazy klientů', en: 'Receives customer questions' },
+  'uzivatel.pravoDotazyKlientuPopis': {
+    cs: 'je v každém kanálu, který klient otevře tlačítkem Zeptat se',
+    en: 'they are in every channel a customer opens with the Ask a question button',
+  },
+  'uzivatel.pravoVidiBanku': { cs: 'Vidí sekci Banka', en: 'Can see the Bank section' },
+  'uzivatel.pravoVidiBankuPopis': {
+    cs: 'pohyby na účtu, párování plateb a napojení účtu v Dokladech',
+    en: 'account movements, payment matching and the account connection in Invoicing',
+  },
+  'uzivatel.pravoTechParametry': {
+    cs: 'Spravuje technické parametry',
+    en: 'Manages the technical parameters',
+  },
+  'uzivatel.pravoTechParametryPopis': {
+    cs: 'mění sady formátů u nakladatelství — ostatní je mají jen ke čtení',
+    en: 'changes the format sets at publishers — everyone else only reads them',
+  },
+  'uzivatel.pravoSledujeZmeny': { cs: 'Hlídá změny u projektů', en: 'Watches changes on projects' },
+  'uzivatel.pravoSledujeZmenyPopis': {
+    cs: 'zvoneček se ozve, když se u projektu změní stav nebo termín',
+    en: 'the bell rings when a project changes its status or its dates',
+  },
+  'uzivatel.pravoJenNahled': {
+    cs: 'Náhledový účet (nic nemění)',
+    en: 'Preview account (changes nothing)',
+  },
+  'uzivatel.pravoJenNahledPopis': {
+    cs: 'v liště si přepíná Tým / Klient / Herec a nic z portálu neuloží',
+    en: 'switches between Team / Customer / Narrator in the bar and saves nothing in the portal',
+  },
+  'uzivatel.pravoDostavaDotoceno': {
+    cs: 'Dostává zprávy o dotočení',
+    en: 'Receives messages about finished recordings',
+  },
+  'uzivatel.pravoDostavaDotocenoPopis': {
+    cs: 'mail pokaždé, když se u projektu odškrtne dotočený herec',
+    en: 'an email every time a narrator is ticked off as finished on a project',
+  },
+  'uzivatel.pravoSchvaleniReklam': {
+    cs: 'Zvonek: klient schválil reklamu',
+    en: 'Bell: the customer approved an advert',
+  },
+  'uzivatel.pravoSchvaleniReklamPopis': {
+    cs: 'notifikace pokaždé, když klient odklepne spot k fakturaci',
+    en: 'a notification every time a customer signs a spot off for invoicing',
+  },
+  'uzivatel.pravoPlanovaniTerminu': {
+    cs: 'Zvonek: projekt jde plánovat',
+    en: 'Bell: a project is ready to schedule',
+  },
+  'uzivatel.pravoPlanovaniTerminuPopis': {
+    cs: 'notifikace pokaždé, když projekt přejde do stavu Plánujeme',
+    en: 'a notification every time a project moves to the Scheduling status',
+  },
+  'uzivatel.pravoStrihaExterne': { cs: 'Stříhá externě', en: 'Edits off-site' },
+  'uzivatel.pravoStrihaExternePopis': {
+    cs: 'v kalendáři svítí letadlo a jeho práce nedrží místo ve studiu',
+    en: 'the calendar shows a plane and their work does not hold a studio',
+  },
+  'uzivatel.pravoStatusZKalendare': {
+    cs: 'Status v chatu z kalendáře',
+    en: 'Chat status from the calendar',
+  },
+  'uzivatel.pravoStatusZKalendarePopis': {
+    cs: 'schůzky a castingy na celou dobu, režie na dálku prvních 30 minut',
+    en: 'meetings and castings for their whole length, remote directing for the first 30 minutes',
+  },
+  'uzivatel.pravoNabidkyReklam': {
+    cs: 'Vidí stav nabídky u reklam',
+    en: 'Can see the quote status on adverts',
+  },
+  'uzivatel.pravoNabidkyReklamPopis': {
+    cs: 'značka čeká / schválena / neschválena v přehledu i v detailu',
+    en: 'the pending / approved / rejected tag in the list and in the detail',
+  },
+  'uzivatel.pravoTakyZvukar': { cs: 'Může být i zvukař', en: 'Can also be a sound engineer' },
+  'uzivatel.pravoTakyZvukarPopis': {
+    cs: 'nabízí se mezi zvukaři u natáčení a střihu v kalendáři',
+    en: 'offered among the sound engineers for recordings and editing in the calendar',
+  },
+  'uzivatel.pravoDostavaObjednavky': { cs: 'Dostává objednávky', en: 'Receives orders' },
+  'uzivatel.pravoDostavaObjednavkyPopis': {
+    cs: 'mail i zvoneček pokaždé, když klient odešle objednávku; klient tuhle adresu nevidí',
+    en: 'an email and a bell every time a customer sends an order; the customer never sees this address',
+  },
+  'uzivatel.pravoVyplneneUdaje': {
+    cs: 'Dostává vyplněné údaje herců',
+    en: 'Receives narrators’ completed details',
+  },
+  'uzivatel.pravoVyplneneUdajePopis': {
+    cs: 'mail i zvoneček pokaždé, když herec vyplní údaje po pozvánce',
+    en: 'an email and a bell every time a narrator fills in their details after an invitation',
+  },
+  'uzivatel.pravoManazerAudioknih': {
+    cs: 'Vede objednané audioknihy',
+    en: 'Runs the audiobooks that are ordered',
+  },
+  'uzivatel.pravoManazerAudioknihPopis': {
+    cs: 'projekt z objednávky audioknihy se rovnou přiřadí jemu jako manažerovi',
+    en: 'a project from an audiobook order is assigned to them as the manager straight away',
+  },
+  'uzivatel.pravoDotocenoKlient': {
+    cs: 'Upozornit na dotočeného herce',
+    en: 'Notify about a finished narrator',
+  },
+  'uzivatel.pravoDotocenoKlientPopis': {
+    cs: 'mail i zvoneček, když u jeho projektu dotočíme s hercem',
+    en: 'an email and a bell when we finish recording with a narrator on their project',
+  },
+
+  // --- karta uživatele: herec, který je zároveň dodavatel ---
+  'uzivatel.takeDodavatel': { cs: 'Také dodavatel', en: 'Also a supplier' },
+  'uzivatel.takeDodavatelJe': {
+    cs: 'Herec je zároveň veden jako firma mezi dodavateli. Smlouvu o dílo s ním uzavřete přes ni.',
+    en: 'The narrator is also kept as a company among the suppliers. A contract for work is made with them through it.',
+  },
+  'uzivatel.takeDodavatelNeni': {
+    cs: 'Založí z téhle karty firmu mezi dodavateli. Hercem zůstává — jen s ním půjde uzavřít i smlouvu o dílo. Nejdřív uložte IČ a adresu, převezmou se do firmy.',
+    en: 'Creates a supplier company from this card. They stay a narrator — it only makes a contract for work possible. Save the registration number and the address first, they are carried over to the company.',
+  },
+  'uzivatel.otevritDodavatele': { cs: 'Otevřít {firma}', en: 'Open {firma}' },
+  'uzivatel.prenestDoDodavatelu': { cs: 'Přenést do dodavatelů', en: 'Move into the suppliers' },
+  'uzivatel.prenosNezdaril': {
+    cs: 'Přenos do dodavatelů se nezdařil.',
+    en: 'Moving into the suppliers failed.',
+  },
+
+  // --- karta uživatele: vyřazení a smazání ---
+  'uzivatel.vyraditNadpis': { cs: 'Vyřadit uživatele', en: 'Retire the user' },
+  'uzivatel.vyrazenyNadpis': { cs: 'Uživatel je vyřazený', en: 'The user is retired' },
+  'uzivatel.vyraditPopis': {
+    cs: 'Nepřihlásí se a zmizí z nabídek. Smlouvy, výkazy a projekty, které na něj odkazují, zůstanou beze změny — proto se nemaže. Změna se uloží tlačítkem níž.',
+    en: 'They cannot sign in and disappear from the pickers. Contracts, timesheets and projects that refer to them stay unchanged — which is why nothing is deleted. The change is saved with the button below.',
+  },
+  'uzivatel.vrazenyPopis': {
+    cs: 'Nemůže se přihlásit a nenabízí se u projektů. Vrátit ho jde kdykoliv. Změna se uloží tlačítkem níž.',
+    en: 'They cannot sign in and are not offered on projects. They can be brought back at any time. The change is saved with the button below.',
+  },
+  'uzivatel.vyraditUzivatele': { cs: 'Vyřadit uživatele', en: 'Retire the user' },
+  'uzivatel.vratitMeziAktivni': { cs: 'Vrátit mezi aktivní', en: 'Bring back among the active' },
+  'uzivatel.smazatUplneNadpis': { cs: 'Smazat účet úplně', en: 'Delete the account entirely' },
+  'uzivatel.smazatUplnePopis': {
+    cs: 'Když na účtu nic nevisí, smaže se rovnou. Když něco visí, portál nejdřív ukáže co a nabídne archivaci. Projekty tím nezanikají — účet u nich jen přestane být vyplněný.',
+    en: 'If nothing hangs on the account, it is deleted straight away. If something does, the portal first shows what and offers to archive it. Projects do not disappear — the account is simply no longer filled in on them.',
+  },
+  'uzivatel.smazatUcet': { cs: 'Smazat účet', en: 'Delete the account' },
+  'uzivatel.ucetCo': { cs: 'Účet {kdo}', en: 'The account {kdo}' },
+
+  // Dávka 5 — ceníky, archiv, firmy (kořen administrace).
+  // Řádky k vložení do SLOVNIK v src/lib/jazyk.ts. Nic jiného tenhle soubor není.
+
+  // --- ceníky ---
+  'cenik.nadpis': { cs: 'Ceníky', en: 'Price lists' },
+  'cenik.ulozeniSelhalo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+
+  // typ projektu, který dostane objednávka audioknihy
+  'cenik.typZObjednavky': {
+    cs: 'Objednávka audioknihy zakládá projekt typu',
+    en: 'An audiobook order creates a project of this type',
+  },
+  'cenik.zatimNevybrano': { cs: '— zatím nevybráno —', en: '— not chosen yet —' },
+  'cenik.typZObjednavkyPopis': {
+    cs: 'Podle typu se projektu počítá rozpočet. Když tu nic nevyberete, projekt z objednávky přijde bez typu a rozpočet zůstane prázdný.',
+    en: 'The budget is worked out from the project type. If you choose nothing here, a project from an order arrives with no type and its budget stays empty.',
+  },
+
+  // sloupce tabulky ceníku
+  'cenik.sl.ikona': { cs: 'Ikona', en: 'Icon' },
+  'cenik.sl.ikonaTitle': {
+    cs: 'Svítí před názvem projektu v přehledu',
+    en: 'Shows in front of the project name in the overview',
+  },
+  'cenik.sl.polozka': { cs: 'Položka', en: 'Item' },
+  'cenik.sl.bezDph': { cs: 'Cena bez DPH', en: 'Price excl. VAT' },
+  'cenik.sl.sDph': { cs: 'Cena s DPH', en: 'Price incl. VAT' },
+  'cenik.sl.vNabidce': { cs: 'V nabídce', en: 'Offered' },
+  'cenik.sl.rodnyList': { cs: 'Rodný list', en: 'Advert record' },
+  'cenik.sl.rodnyListTitle': {
+    cs: 'U projektů s tímhle typem se při dokončení vyrobí Rodný list',
+    en: 'Projects of this type get an advert record when they are completed',
+  },
+  'cenik.rodnyListPrepinacTitle': {
+    cs: 'U projektů s tímhle typem se při přechodu na „Dokončeno - ke schválení“ vyrobí Rodný list',
+    en: 'Projects of this type get an advert record when they move to “Completed - for approval”',
+  },
+
+  'cenik.prazdnyCenik': {
+    cs: 'Ceník je zatím prázdný. Přidejte první položku formulářem níže.',
+    en: 'The price list is empty so far. Add the first item with the form below.',
+  },
+  'cenik.upravitPolozku': { cs: 'Upravit položku', en: 'Edit the item' },
+  'cenik.opravduSmazatPolozku': { cs: 'Opravdu smazat položku?', en: 'Really delete the item?' },
+
+  // hláška po pokusu o smazání položky, kterou drží projekty
+  'cenik.jenVyrazeno': {
+    cs: 'Položku „{nazev}" jsme jen vyřadili z nabídky — u projektů zůstane. {kdo}',
+    en: 'We have only withdrawn the item “{nazev}” from the list — it stays on the projects. {kdo}',
+  },
+  'cenik.drziJiPocet': { cs: 'Používá ji {pocet} projektů.', en: 'It is used by {pocet} projects.' },
+  'cenik.drziJiJeden': { cs: 'Má ji projekt {jmena}.', en: 'Project {jmena} has it.' },
+  'cenik.drziJiVic': { cs: 'Mají ji projekty {jmena}.', en: 'Projects {jmena} have it.' },
+  'cenik.drziJiVicNezVypis': {
+    cs: 'Má ji {pocet} projektů: {jmena} a další {dalsi}.',
+    en: '{pocet} projects have it: {jmena} and {dalsi} more.',
+  },
+
+  // formulář „přidat položku"
+  'cenik.pridatPolozku': { cs: 'Přidat položku', en: 'Add an item' },
+  'cenik.polozkaPriklad': { cs: 'např. Natáčení voiceoveru', en: 'e.g. Voiceover recording' },
+  'cenik.dopocitame': { cs: 'dopočítáme', en: 'we work it out' },
+  'cenik.radiovySpot': {
+    cs: 'Rádiový spot — u projektů s tímhle typem se při dokončení vyrobí Rodný list',
+    en: 'Radio spot — projects of this type get an advert record when they are completed',
+  },
+  'cenik.pridatDoCeniku': { cs: 'Přidat do ceníku', en: 'Add to the price list' },
+
+  // --- ceníky: druhy licence ---
+  'cenik.druhyLicence': { cs: 'Druhy licence', en: 'Licence types' },
+  'cenik.druhyLicencePopis': {
+    cs: 'Zaškrtávají se u projektu a může jich být víc naráz. Vyřazený druh zůstane u projektů, kde už je, jen se nenabídne u nových.',
+    en: 'They are ticked on a project and there can be several at once. A withdrawn type stays on the projects that already have it, it is just no longer offered on new ones.',
+  },
+  'cenik.licenceUlozeniSelhalo': { cs: 'Nepodařilo se to uložit.', en: 'It could not be saved.' },
+  'cenik.nabizet': { cs: 'Nabízet', en: 'Offer' },
+  'cenik.zadnyDruhLicence': {
+    cs: 'Zatím tu žádný druh licence není.',
+    en: 'There is no licence type here yet.',
+  },
+  'cenik.novyDruhLicence': {
+    cs: 'Nový druh licence (např. Kino)',
+    en: 'New licence type (e.g. Cinema)',
+  },
+  'cenik.pridat': { cs: 'Přidat', en: 'Add' },
+  'cenik.licenceJeUProjektu': {
+    cs: '„{nazev}" je zaškrtnutý u {pocet} projektů. Smazat nejde — vyřadí se, takže u nových projektů se už nenabídne. Pokračovat?',
+    en: '“{nazev}” is ticked on {pocet} projects. It cannot be deleted — it will be withdrawn, so it will no longer be offered on new projects. Continue?',
+  },
+  'cenik.opravduSmazatLicenci': {
+    cs: 'Opravdu smazat druh licence „{nazev}"?',
+    en: 'Really delete the licence type “{nazev}”?',
+  },
+
+  // --- ceníky: parametry rozpočtu audioknihy ---
+  'cenik.parametryRozpoctu': {
+    cs: 'Parametry rozpočtu audioknihy',
+    en: 'Audiobook budget parameters',
+  },
+  'cenik.parametryRozpoctuPopis': {
+    cs: 'Z těchto čísel se u projektů počítá rozpočet — natáčecí frekvence, střih a bonus.',
+    en: 'These numbers are what a project’s budget is worked out from — recording sessions, editing and the bonus.',
+  },
+  'cenik.nsNaFrekvenci': { cs: 'Normostran na frekvenci', en: 'Standard pages per session' },
+  'cenik.delkaFrekvence': { cs: 'Délka frekvence (hodiny)', en: 'Session length (hours)' },
+  'cenik.hodinovaSazba': {
+    cs: 'Hodinová sazba pro rozpočet (Kč)',
+    en: 'Hourly rate for the budget (CZK)',
+  },
+  'cenik.strihProcenta': {
+    cs: 'Střih (% z počtu frekvencí)',
+    en: 'Editing (% of the number of sessions)',
+  },
+  'cenik.strihProcentaPopis': {
+    cs: '120 = o 20 % víc než natáčení',
+    en: '120 = 20% more than recording',
+  },
+  'cenik.bonusZaNs': { cs: 'Bonus za normostranu (Kč)', en: 'Bonus per standard page (CZK)' },
+  'cenik.priklad': { cs: 'Příklad — audiokniha {pocet} NS', en: 'Example — a {pocet} SP audiobook' },
+  'cenik.nataceni': { cs: 'Natáčení', en: 'Recording' },
+  'cenik.strih': { cs: 'Střih', en: 'Editing' },
+  'cenik.bonus': { cs: 'Bonus', en: 'Bonus' },
+  'cenik.nakladyCelkem': { cs: 'Náklady celkem', en: 'Total cost' },
+  'cenik.ulozitParametry': { cs: 'Uložit parametry', en: 'Save the parameters' },
+  'cenik.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+
+  // --- ceníky: výběr ikony ---
+  'cenik.ikonaJmeno': { cs: 'Ikona: {nazev}', en: 'Icon: {nazev}' },
+  'cenik.vybratIkonu': { cs: 'Vybrat ikonu', en: 'Choose an icon' },
+  'cenik.zadnaIkona': { cs: 'Žádná ikona', en: 'No icon' },
+
+  // --- archiv ---
+  'archiv.nadpis': { cs: 'Archiv', en: 'Archive' },
+  'archiv.uvod': {
+    cs: 'Co se uložilo stranou, než se firma, účet nebo projekt smazal i s navázanými věcmi. Stažený soubor je JSON — kompletní data tak, jak byla v databázi. Portál je zpátky nenačte, ale dá se z nich vyčíst, co tam bylo.',
+    en: 'What was put aside before a company, account or project was deleted along with everything attached to it. The downloaded file is JSON — the complete data exactly as it was in the database. The portal will not load it back, but you can read from it what was there.',
+  },
+  'archiv.prazdno': {
+    cs: 'Archiv je prázdný — zatím se nic nemazalo s navázanými věcmi.',
+    en: 'The archive is empty — nothing has been deleted with attached items yet.',
+  },
+
+  // sloupce tabulky archivu
+  'archiv.sl.kdy': { cs: 'Kdy', en: 'When' },
+  'archiv.sl.co': { cs: 'Co', en: 'What' },
+  'archiv.sl.nazev': { cs: 'Název', en: 'Name' },
+  'archiv.sl.obsah': { cs: 'Obsah', en: 'Contents' },
+  'archiv.sl.kdo': { cs: 'Kdo', en: 'Who' },
+  'archiv.sl.soubor': { cs: 'Soubor', en: 'File' },
+
+  // druhy archivovaného záznamu - v rozhraní se berou odsud, ne z
+  // POPISKY_DRUHU_ARCHIVU (to je česky i pro e-maily a soubory)
+  'archiv.druh.firma': { cs: 'Firma', en: 'Company' },
+  'archiv.druh.uzivatel': { cs: 'Uživatel', en: 'User' },
+  'archiv.druh.projekt': { cs: 'Projekt', en: 'Project' },
+  'archiv.druh.kalendar': { cs: 'Kalendář studia', en: 'Studio calendar' },
+  'archiv.druh.jine': { cs: 'Jiné', en: 'Other' },
+
+  'archiv.pocetZaznamu': { cs: '{pocet} záznamů', en: '{pocet} records' },
+  'archiv.stahnout': { cs: 'Stáhnout ↓', en: 'Download ↓' },
+
+  // --- firmy (kořen administrace) ---
+  'firmy.nadpis': { cs: 'Firmy', en: 'Companies' },
+  'firmy.vzoryZprav': { cs: 'Vzory zpráv klientovi', en: 'Message templates for the client' },
+  'firmy.vzoryNataceni': { cs: 'Vzory natáčecích textů', en: 'Recording text templates' },
+  'firmy.technickeParametry': { cs: 'Technické parametry', en: 'Technical parameters' },
+  'firmy.wikipedie': { cs: 'Wikipedie', en: 'Wikipedia' },
+  'firmy.zpravyPortalu': { cs: 'Zprávy portálu', en: 'Portal messages' },
+  'firmy.caflouFirmy': { cs: 'Firmy z Caflou (archiv)', en: 'Companies from Caflou (archive)' },
+  'firmy.caflouTitle': {
+    cs: 'Caflou už portál nepoužívá. Zůstává jen na dohledání starých údajů.',
+    en: 'The portal no longer uses Caflou. It stays only for looking up old details.',
+  },
+  'firmy.zalozkaKlienti': { cs: 'Klienti', en: 'Clients' },
+  'firmy.zalozkaDodavatele': { cs: 'Dodavatelé', en: 'Suppliers' },
+  'firmy.hledatPlaceholder': {
+    cs: 'Hledat firmu, IČ, kontakt…',
+    en: 'Search a company, reg. no., contact…',
+  },
+  'firmy.hledaniPrazdne': { cs: 'Hledání nic nenašlo.', en: 'The search found nothing.' },
+  'firmy.zadnyKlient': {
+    cs: 'Zatím žádný klient. Založte prvního tlačítkem níže.',
+    en: 'No clients yet. Create the first one with the button below.',
+  },
+  'firmy.zadnyDodavatel': {
+    cs: 'Zatím žádný dodavatel. Založte prvního tlačítkem níže.',
+    en: 'No suppliers yet. Create the first one with the button below.',
+  },
+
+  // sloupce přehledu firem
+  'firmy.sl.firma': { cs: 'Firma', en: 'Company' },
+  'firmy.sl.kod': { cs: 'Kód', en: 'Code' },
+  'firmy.sl.sazba': { cs: 'Sazba / normostrana', en: 'Rate / standard page' },
+  'firmy.sl.uzivatele': { cs: 'Uživatelé', en: 'Users' },
+  'firmy.sl.objednavky': { cs: 'Objednávky', en: 'Orders' },
+  'firmy.sl.kontaktniOsoba': { cs: 'Kontaktní osoba', en: 'Contact person' },
+  'firmy.sl.spojeni': { cs: 'Telefon / e-mail', en: 'Phone / email' },
+  'firmy.sl.ic': { cs: 'IČ', en: 'Reg. no.' },
+
+  // --- firmy: formulář nové firmy ---
+  'firmy.novyKlient': { cs: 'Nový klient', en: 'New client' },
+  'firmy.novyDodavatel': { cs: 'Nový dodavatel', en: 'New supplier' },
+  'firmy.typFirmy': { cs: 'Typ firmy', en: 'Company type' },
+  'firmy.klient': { cs: 'Klient', en: 'Client' },
+  'firmy.dodavatel': { cs: 'Dodavatel', en: 'Supplier' },
+  'firmy.ic': { cs: 'IČ', en: 'Reg. no.' },
+  'firmy.icNapoveda': {
+    cs: 'vyplňte a načtěte zbytek z registru',
+    en: 'fill it in and load the rest from the register',
+  },
+  'firmy.dic': { cs: 'DIČ', en: 'VAT no.' },
+  'firmy.nacistZRegistru': { cs: 'Načíst z registru', en: 'Load from the register' },
+  'firmy.nacistZRegistruTitle': {
+    cs: 'Doplnit název, DIČ a adresu z veřejného registru podle IČ',
+    en: 'Fill in the name, VAT no. and address from the public register by the registration number',
+  },
+  'firmy.registrSelhal': {
+    cs: 'Načtení z registru se nezdařilo.',
+    en: 'Loading from the register failed.',
+  },
+  'firmy.registrDoplneno': {
+    cs: 'Údaje z registru doplněny — zkontrolujte a uložte.',
+    en: 'The details from the register have been filled in — check them and save.',
+  },
+  'firmy.zalozeniSelhalo': {
+    cs: 'Firmu se nepodařilo založit.',
+    en: 'The company could not be created.',
+  },
+  'firmy.nazevFirmy': { cs: 'Název firmy', en: 'Company name' },
+  'firmy.platceDph': { cs: 'Plátce DPH', en: 'VAT registered' },
+  'firmy.ulice': { cs: 'Ulice a číslo popisné', en: 'Street and number' },
+  'firmy.psc': { cs: 'PSČ', en: 'Postcode' },
+  'firmy.mesto': { cs: 'Město', en: 'Town' },
+  'firmy.zeme': { cs: 'Země', en: 'Country' },
+  'firmy.cisloUctu': { cs: 'Číslo účtu', en: 'Account number' },
+  'firmy.email': { cs: 'E-mail', en: 'Email' },
+  'firmy.telefon': { cs: 'Telefon', en: 'Phone' },
+  'firmy.druhZakazek': { cs: 'Druh zakázek', en: 'Kind of jobs' },
+  'firmy.druhZakazekNapoveda': {
+    cs: 'podle toho klient uvidí jen příslušný typ objednávky',
+    en: 'this decides which order type the client is shown',
+  },
+  'firmy.audioknihy': { cs: 'Audioknihy', en: 'Audiobooks' },
+  'firmy.reklamy': { cs: 'Reklamy', en: 'Adverts' },
+  'firmy.sazbaZaNs': {
+    cs: 'Sazba za normostranu (Kč bez DPH)',
+    en: 'Rate per standard page (CZK excl. VAT)',
+  },
+  'firmy.caflouId': { cs: 'ID firmy v Caflou', en: 'Company ID in Caflou' },
+  'firmy.caflouIdNapoveda': {
+    cs: 'podle tohoto ID se z Caflou tahají projekty této firmy - lze doplnit i později',
+    en: 'this ID is what the company’s projects are pulled from Caflou by - it can be filled in later too',
+  },
+  'firmy.caflouIdPriklad': { cs: 'např. 12345', en: 'e.g. 12345' },
+  'firmy.odkazNaDisk': { cs: 'Odkaz na složku Google Disk', en: 'Link to the Google Drive folder' },
+  'firmy.ulozitFirmu': { cs: 'Uložit firmu', en: 'Save the company' },
+
+  // --- firmy: výběr země (názvy zemí samotné zůstávají v lib/countries.ts česky) ---
+  'firmy.vyberteZemi': { cs: 'Vyberte zemi', en: 'Choose a country' },
+  'firmy.hledatZemi': { cs: 'Hledat zemi…', en: 'Search a country…' },
+  'firmy.zadnaZemeNeodpovida': { cs: 'Nic neodpovídá.', en: 'Nothing matches.' },
+
+  // Dávka 5 - administrace studií: src/app/(admin)/admin/studia/*.
+  // Řádky k vložení do SLOVNIK v src/lib/jazyk.ts (merge dělá Ondřej).
+
+  // --- správa studií ---
+  'studia.nadpis': { cs: 'Studia', en: 'Studios' },
+  'studia.noveStudio': { cs: 'Nové studio', en: 'New studio' },
+  'studia.nazev': { cs: 'Název', en: 'Name' },
+  'studia.zkratka': { cs: 'Zkratka', en: 'Short name' },
+  'studia.mesto': { cs: 'Město', en: 'City' },
+  'studia.odkazNaHovor': { cs: 'Odkaz na videohovor', en: 'Video call link' },
+  'studia.odkazNaHovorPopis': {
+    cs: 'v kalendáři se z něj stane ikonka u režie na dálku',
+    en: 'in the calendar it turns into an icon on remote directing sessions',
+  },
+  'studia.zalozit': { cs: 'Založit', en: 'Create' },
+  'studia.ulozeniSelhalo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+
+  // --- pracovní doba studia ---
+  'studia.pracovniDoba': { cs: 'Pracovní doba', en: 'Opening hours' },
+  'studia.jenPoDomluve': { cs: 'jen po domluvě', en: 'by arrangement only' },
+  'studia.ulozitPracovniDobu': { cs: 'Uložit pracovní dobu', en: 'Save the opening hours' },
+  'studia.pracovniDobaUlozena': { cs: 'Pracovní doba uložena.', en: 'Opening hours saved.' },
+  'studia.vyraditStudio': { cs: 'Vyřadit studio', en: 'Take the studio out of service' },
+  'studia.vratitDoProvozu': { cs: 'Vrátit do provozu', en: 'Put it back into service' },
+  'studia.zkratkyFrekvenci': { cs: 'Zkratky frekvencí', en: 'Recording session shortcuts' },
+
+  // --- rezervace studia klienty ---
+  'studia.rezervaceNadpis': { cs: 'Rezervace studia klienty', en: 'Client studio bookings' },
+  // Adresa stojí ve větě jinou barvou - vykresluje se přes prelozitKolem.
+  'studia.rezervacePopis': {
+    cs: 'Muzikanti a producenti si po pozvánce otevřou kalendář studia na adrese {adresa} a berou si volné termíny sami. Svoje rezervace vidí pojmenované, cizí jen jako obsazený čas — bez názvů.',
+    en: 'Once invited, musicians and producers open the studio calendar at {adresa} and take the free slots themselves. They see their own bookings by name, everyone else’s only as busy time — with no names.',
+  },
+  'studia.qrKarticka': {
+    cs: 'Kartička s QR kódem k vytištění (anglicky) ↗',
+    en: 'Printable card with a QR code ↗',
+  },
+  'studia.zadneStudio': { cs: 'Žádné studio tu zatím není.', en: 'There are no studios here yet.' },
+  'studia.otevritKalendar': { cs: 'Otevřít kalendář ↗', en: 'Open the calendar ↗' },
+  'studia.rezervaceZapnute': { cs: 'Rezervace zapnuté', en: 'Bookings enabled' },
+  'studia.bezPracovniDoby': {
+    cs: 'Studio nemá vyplněnou pracovní dobu — dokud ji nedoplníte výš, nebude si klient mít co vybrat.',
+    en: 'This studio has no opening hours — until you fill them in above, the client will have nothing to choose from.',
+  },
+  'studia.nejkratsiRezervace': { cs: 'Nejkratší rezervace (min)', en: 'Shortest booking (min)' },
+  'studia.dniDopredu': { cs: 'Dní dopředu (0 = bez limitu)', en: 'Days ahead (0 = no limit)' },
+  'studia.nastaveniSelhalo': {
+    cs: 'Nastavení se nepodařilo uložit.',
+    en: 'The settings could not be saved.',
+  },
+
+  // --- pozvánka klienta do rezervací ---
+  'studia.email': { cs: 'E-mail', en: 'Email' },
+  'studia.emailPlaceholder': { cs: 'jméno@kapela.co.uk', en: 'name@band.co.uk' },
+  'studia.jmenoNepovinne': { cs: 'Jméno (nepovinné)', en: 'Name (optional)' },
+  'studia.poslatPozvanku': { cs: 'Poslat pozvánku', en: 'Send the invitation' },
+  'studia.pozvankaOdeslana': {
+    cs: 'Pozvánka odešla na {email}.',
+    en: 'The invitation has been sent to {email}.',
+  },
+  'studia.pozvankaSelhala': {
+    cs: 'Pozvánku se nepodařilo odeslat.',
+    en: 'The invitation could not be sent.',
+  },
+  // Odkaz stojí ve větě jinou barvou - vykresluje se přes prelozitKolem.
+  'studia.odkazRucne': {
+    cs: 'Odkaz k předání ručně: {odkaz}',
+    en: 'Link to pass on by hand: {odkaz}',
+  },
+  'studia.klientAktivni': { cs: 'aktivní', en: 'active' },
+  'studia.klientCekaNaHeslo': {
+    cs: 'čeká na nastavení hesla',
+    en: 'waiting for a password to be set',
+  },
+  'studia.odebratPristup': { cs: 'Odebrat přístup', en: 'Remove access' },
+
+  // --- tabule ve studiích ---
+  'studia.tabuleNadpis': { cs: 'Tabule ve studiích', en: 'Studio boards' },
+  'studia.tabulePopis': {
+    cs: 'Dotykový displej ve studiu: dnešní program z kalendáře, poznámky a co ve studiu chybí. Adresu otevřete na displeji v prohlížeči přes celou obrazovku, nebo se na počítači u displeje přihlaste účtem tabule. Když někdo ťukne, že něco chybí, Bruno napíše Báře Šiblové.',
+    en: 'A touchscreen in the studio: today’s schedule from the calendar, notes and what the studio has run out of. Open the address on the display in a full-screen browser, or sign in on the computer by the display with the board account. When someone taps that something is missing, Bruno messages Bára Šiblová.',
+  },
+  'studia.otevritTabuli': { cs: 'Otevřít tabuli ↗', en: 'Open the board ↗' },
+  'studia.kopirovatAdresu': { cs: 'Kopírovat adresu', en: 'Copy the address' },
+  'studia.novaAdresa': { cs: 'Nová adresa', en: 'New address' },
+  'studia.vypnout': { cs: 'Vypnout', en: 'Switch off' },
+  'studia.zapnoutTabuli': { cs: 'Zapnout tabuli', en: 'Switch the board on' },
+  'studia.potvrditNovaAdresa': {
+    cs: 'Vyměnit adresu? Displej se starou adresou přestane fungovat a bude potřeba otevřít novou.',
+    en: 'Change the address? The display on the old address will stop working and the new one will have to be opened.',
+  },
+  'studia.potvrditVypnoutTabuli': {
+    cs: 'Vypnout tabuli? Displej ve studiu přestane fungovat.',
+    en: 'Switch the board off? The display in the studio will stop working.',
+  },
+
+  // --- účet počítače u obrazovky ---
+  'studia.ucetTabule': { cs: 'Účet tabule', en: 'Board account' },
+  'studia.jmenoPopisek': { cs: 'jméno', en: 'username' },
+  'studia.vytvoritUcet': {
+    cs: 'Vytvořit účet pro obrazovku',
+    en: 'Create an account for the display',
+  },
+  'studia.ucetSelhal': { cs: 'Účet se nepodařilo založit.', en: 'The account could not be created.' },
+  'studia.hesloNa1111': { cs: 'Heslo na 1111', en: 'Password back to 1111' },
+  'studia.potvrditHeslo': {
+    cs: 'Nastavit heslo zpátky na 1111?',
+    en: 'Set the password back to 1111?',
+  },
+  'studia.potvrditZrusitUcet': {
+    cs: 'Zrušit účet tabule? Počítač u obrazovky se už nepřihlásí (běžící tabule poběží dál, dokud nevyměníte adresu).',
+    en: 'Cancel the board account? The computer by the display will no longer sign in (a board already running keeps going until you change the address).',
+  },
+  // Jméno i heslo stojí ve větě tlustě - vykresluje se přes prelozitKolem.
+  'studia.udajeTabule': {
+    cs: 'Přihlášení na počítači u obrazovky: jméno {login}, heslo {heslo}.',
+    en: 'Sign-in on the computer by the display: username {login}, password {heslo}.',
+  },
+
+  // --- Instagram na tabuli ---
+  'studia.igPribehy': {
+    cs: 'příběhy se ukazují na tabulích, které to mají zapnuté',
+    en: 'stories show on the boards that have it switched on',
+  },
+  'studia.igPripojit': { cs: 'Připojit Instagram', en: 'Connect Instagram' },
+  'studia.igPripojitZnovu': { cs: 'Připojit znovu', en: 'Connect again' },
+  'studia.igOdpojit': { cs: 'Odpojit', en: 'Disconnect' },
+  'studia.potvrditOdpojitInstagram': {
+    cs: 'Odpojit Instagram? Z tabulí zmizí okno s příběhy.',
+    en: 'Disconnect Instagram? The stories panel will disappear from the boards.',
+  },
+  'studia.igCekaNaAplikaci': {
+    cs: 'Čeká na aplikaci v Meta for Developers - na Vercelu chybí INSTAGRAM_APP_ID a INSTAGRAM_APP_SECRET.',
+    en: 'Waiting for an app in Meta for Developers — INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET are missing on Vercel.',
+  },
+  'studia.igPripojeno': { cs: 'Instagram je připojený.', en: 'Instagram is connected.' },
+  'studia.igPripojeniSelhalo': {
+    cs: 'Připojení se nepovedlo: {duvod}',
+    en: 'Connecting failed: {duvod}',
+  },
+  'studia.igPosledniNacteni': { cs: 'Poslední načtení: {chyba}', en: 'Last refresh: {chyba}' },
+  'studia.igUkazovat': {
+    cs: 'Ukazovat na tabuli příběhy z Instagramu',
+    en: 'Show Instagram stories on the board',
+  },
+  'studia.igBezJmena': { cs: '(bez jména)', en: '(no name)' },
+
+  // --- co ve studiu chybí a poznámky z tabule ---
+  'studia.chybi': { cs: 'Chybí', en: 'Missing' },
+  'studia.nicNechybi': { cs: 'Nic.', en: 'Nothing.' },
+  'studia.doplneno': { cs: 'Doplněno', en: 'Restocked' },
+  'studia.poznamky': { cs: 'Poznámky', en: 'Notes' },
+  'studia.zadnePoznamky': { cs: 'Žádné.', en: 'None.' },
+  'studia.odskrtnout': { cs: 'Odškrtnout', en: 'Tick off' },
+
+  // =====================================================================
+  // DÁVKA 5 — (portal)/kalendar/CalendarBrowser.tsx
+  // Řádky k vložení do SLOVNIK v src/lib/jazyk.ts. Merge dělá Ondřej.
+  // =====================================================================
+
+  // --- kalendář: hlavička a posun v čase ---
+  'kalendar.nadpis': { cs: 'Kalendář', en: 'Calendar' },
+  'kalendar.dnes': { cs: 'Dnes', en: 'Today' },
+  'kalendar.predchozi': { cs: 'Předchozí', en: 'Previous' },
+  'kalendar.dalsi': { cs: 'Další', en: 'Next' },
+  'kalendar.pohled.den': { cs: 'Den', en: 'Day' },
+  'kalendar.pohled.tyden': { cs: 'Týden', en: 'Week' },
+  'kalendar.pohled.mesic': { cs: 'Měsíc', en: 'Month' },
+  'kalendar.celaObrazovka': { cs: 'Celá obrazovka', en: 'Full screen' },
+  'kalendar.zpetZCeleObrazovky': { cs: 'Zpět z celé obrazovky', en: 'Leave full screen' },
+  'kalendar.zpetZCeleObrazovkyEsc': { cs: 'Zpět z celé obrazovky (Esc)', en: 'Leave full screen (Esc)' },
+  'kalendar.pridat': { cs: 'Přidat', en: 'Add' },
+  'kalendar.pridatUdalost': { cs: 'Přidat událost', en: 'Add an event' },
+
+  // --- kalendář: hledání ---
+  'kalendar.hledatKratce': { cs: 'Hledat…', en: 'Search…' },
+  'kalendar.hledatPlaceholder': {
+    cs: 'Hledat projekt, herce nebo zvukaře…',
+    en: 'Search for a project, narrator or sound engineer…',
+  },
+  'kalendar.hledatPopis': {
+    cs: 'Hledat projekt, herce nebo zvukaře',
+    en: 'Search for a project, narrator or sound engineer',
+  },
+
+  // --- kalendář: štítky kalendářů a sólo ---
+  'kalendar.zapnoutKalendar': { cs: 'Zapnout {nazev}', en: 'Show {nazev}' },
+  'kalendar.vypnoutKalendar': { cs: 'Vypnout {nazev}', en: 'Hide {nazev}' },
+  'kalendar.docasneJen': { cs: 'Dočasně jen {nazev} (sólo)', en: 'Temporarily just {nazev} (solo)' },
+  'kalendar.zpetNaVyber': {
+    cs: 'Zpět na původní výběr kalendářů',
+    en: 'Back to the original choice of calendars',
+  },
+  'kalendar.jenMoje': { cs: 'Jen moje události', en: 'My events only' },
+  'kalendar.jenMojeSolo': { cs: 'Jen moje události (sólo)', en: 'My events only (solo)' },
+  'kalendar.soloStitek': { cs: 'SÓLO: {nazev}', en: 'SOLO: {nazev}' },
+  'kalendar.soloZpet': { cs: 'zpět na výběr', en: 'back to the selection' },
+  'kalendar.vratitZaskrtnuti': {
+    cs: 'Vrátit zaškrtnutí kalendářů, jaké bylo před sólem',
+    en: 'Restore the calendars ticked before solo',
+  },
+  // Názvy kalendářů, které nejsou studio (v lib/nepritomnost.ts a lib/porady.ts
+  // jsou česky - bere si je i server a e-maily).
+  'kalendar.kalendarMimo': { cs: 'Mimo studio', en: 'Out of the studio' },
+  'kalendar.kalendarPorady': { cs: 'Porady', en: 'Meetings' },
+  'kalendar.kalendarSchuzky': { cs: 'Schůzky', en: 'Appointments' },
+
+  // --- kalendář: mřížka dne a týdne ---
+  'kalendar.dnesADen': { cs: 'Dnes · {den}', en: 'Today · {den}' },
+  'kalendar.jenPoDomluve': {
+    cs: 'Jen po domluvě se zvukařem',
+    en: 'Only by arrangement with the sound engineer',
+  },
+  'kalendar.bezProjektu': { cs: '· bez projektu', en: '· no project' },
+
+  // --- kalendář: měsíční pohled ---
+  'kalendar.cisloDneADnes': { cs: '{cislo} · dnes', en: '{cislo} · today' },
+  'kalendar.dalsiUdalosti': { cs: '+{pocet} další', en: '+{pocet} more' },
+
+  // --- kalendář: druhy blokace (kódy z BLOCK_KIND_LABELS v lib/calendar.ts) ---
+  'kalendar.druh.NATACENI': { cs: 'Natáčení', en: 'Recording' },
+  'kalendar.druh.STRIH': { cs: 'Střih', en: 'Editing' },
+  'kalendar.druh.CASTING': { cs: 'Casting', en: 'Casting' },
+  'kalendar.druh.HOLIDAY': { cs: 'Svátek', en: 'Public holiday' },
+  'kalendar.druh.VACATION': { cs: 'Dovolená', en: 'Holiday' },
+  'kalendar.druh.MAINTENANCE': { cs: 'Údržba', en: 'Maintenance' },
+  'kalendar.druh.INTERNAL': { cs: 'Interní blokace', en: 'Internal block' },
+  'kalendar.druh.OTHER': { cs: 'Jiné', en: 'Other' },
+  'kalendar.druh.BOOKING': { cs: 'Rezervace studia', en: 'Studio booking' },
+  'kalendar.blokace': { cs: 'Blokace', en: 'Block' },
+
+  // --- kalendář: stavy termínu z nabídky (SLOT_STATE_LABELS) ---
+  'kalendar.stav.OFFERED': { cs: 'Nabídnuto', en: 'Offered' },
+  'kalendar.stav.SELECTED': { cs: 'Drženo', en: 'Held' },
+  'kalendar.stav.CONFIRMED': { cs: 'Potvrzeno', en: 'Confirmed' },
+  'kalendar.stav.RELEASED': { cs: 'Uvolněno', en: 'Released' },
+  'kalendar.stav.CANCELLED': { cs: 'Zrušeno', en: 'Cancelled' },
+
+  // --- kalendář: porada v detailu události ---
+  'kalendar.porada': { cs: 'Porada', en: 'Meeting' },
+  'kalendar.poradaSOpakovanim': { cs: 'Porada · {opakovani}', en: 'Meeting · {opakovani}' },
+  // Opakování porady (MOZNOSTI_OPAKOVANI v lib/porady.ts). Stejné popisky si
+  // nejspíš zavede i formulář porad - při merge zkontrolovat duplicitu.
+  'kalendar.opakovani.NE': { cs: 'Neopakovat', en: 'Do not repeat' },
+  'kalendar.opakovani.DENNE': { cs: 'Každý den', en: 'Every day' },
+  'kalendar.opakovani.PRACOVNI_DNY': { cs: 'Každý pracovní den (po–pá)', en: 'Every working day (Mon–Fri)' },
+  'kalendar.opakovani.TYDNE': { cs: 'Každý týden', en: 'Every week' },
+  'kalendar.opakovani.KAZDE_DVA_TYDNY': { cs: 'Každé dva týdny', en: 'Every two weeks' },
+  'kalendar.opakovani.MESICNE': { cs: 'Každý měsíc', en: 'Every month' },
+
+  // --- kalendář: okno události (nová i úprava) ---
+  'kalendar.upravaFrekvence': { cs: 'Úprava frekvence', en: 'Edit recording session' },
+  'kalendar.upravaUdalosti': { cs: 'Úprava události', en: 'Edit event' },
+  'kalendar.novaUdalost': { cs: 'Nová událost', en: 'New event' },
+  'kalendar.poleDruh': { cs: 'Druh', en: 'Kind' },
+  'kalendar.poleKalendar': { cs: 'Kalendář', en: 'Calendar' },
+  'kalendar.poleDatum': { cs: 'Datum', en: 'Date' },
+  'kalendar.poleOd': { cs: 'Od', en: 'From' },
+  'kalendar.poleDo': { cs: 'Do', en: 'To' },
+  'kalendar.delkaHodin': { cs: '{hodin} h', en: '{hodin} h' },
+  'kalendar.delkaHodinMistni': {
+    cs: '{hodin} h · místní čas studia',
+    en: '{hodin} h · studio local time',
+  },
+  'kalendar.konecPoZacatku': { cs: 'Konec musí být po začátku.', en: 'The end must be after the start.' },
+  'kalendar.poleProjekt': { cs: 'Projekt', en: 'Project' },
+  'kalendar.poleHerec': { cs: 'Herec', en: 'Narrator' },
+  'kalendar.napisteJmenoHerce': { cs: 'Napište jméno herce…', en: 'Type the narrator’s name…' },
+  'kalendar.zacnetePsatHerce': {
+    cs: 'Začněte psát jméno herce…',
+    en: 'Start typing the narrator’s name…',
+  },
+  'kalendar.herceNenasli': {
+    cs: 'Takového herce jsme nenašli. Zkuste jen příjmení.',
+    en: 'We could not find that narrator. Try the surname only.',
+  },
+  'kalendar.zrusitVyberHerce': { cs: 'Zrušit výběr herce', en: 'Clear the narrator' },
+  'kalendar.poleZvukar': { cs: 'Zvukař', en: 'Sound engineer' },
+  'kalendar.jenZeStudia': { cs: '· jen {nazev}', en: '· {nazev} only' },
+  'kalendar.tohotoStudia': { cs: 'tohoto studia', en: 'this studio' },
+  'kalendar.zacnetePsatZvukare': {
+    cs: 'Začněte psát jméno zvukaře…',
+    en: 'Start typing the sound engineer’s name…',
+  },
+  'kalendar.zvukareNemame': {
+    cs: 'V tomhle studiu takového zvukaře nemáme. Studia se zaškrtávají na kartě uživatele.',
+    en: 'We have no such sound engineer in this studio. Studios are ticked on the user’s card.',
+  },
+  'kalendar.zrusitVyberZvukare': { cs: 'Zrušit výběr zvukaře', en: 'Clear the sound engineer' },
+  'kalendar.polePopis': { cs: 'Popis', en: 'Description' },
+  'kalendar.popisPlaceholder': { cs: 'Servis techniky', en: 'Equipment servicing' },
+
+  // --- kalendář: režie na dálku ---
+  'kalendar.rezieNaDalku': { cs: 'Režie na dálku', en: 'Remote direction' },
+  'kalendar.rezieNaDalkuPopis': {
+    cs: 'Červený rámeček a telefon v kalendáři. Samo se to zaškrtne u první frekvence herce na projektu a u každého castingu — tady jde odškrtnout.',
+    en: 'A red border and a phone in the calendar. It ticks itself on a narrator’s first recording session on a project and on every casting — here you can untick it.',
+  },
+  'kalendar.rezieIkona': {
+    cs: 'Režie na dálku — první frekvence s hercem',
+    en: 'Remote direction — the first session with the narrator',
+  },
+  'kalendar.rezieIkonaHovor': {
+    cs: 'Režie na dálku — první frekvence s hercem — připojit se k hovoru',
+    en: 'Remote direction — the first session with the narrator — join the call',
+  },
+  'kalendar.strihaExterne': {
+    cs: 'Stříhá externě, ve studiu nesedí',
+    en: 'Editing externally, not sitting in the studio',
+  },
+
+  // --- kalendář: poznámka a úkol z ní ---
+  'kalendar.polePoznamka': { cs: 'Poznámka', en: 'Note' },
+  'kalendar.poznamkaPlaceholder': {
+    cs: 'Vzkaz pro tým - třeba co se bude točit, co připravit…',
+    en: 'A message for the team — what will be recorded, what to prepare…',
+  },
+  // {znacka} a {kdo} jsou tučné kousky věty - vysází je vetaSeZnackami.
+  'kalendar.ukolZPoznamky': {
+    cs: 'Napište {znacka} a za to, co je potřeba udělat — z poznámky se stane úkol pro {kdo}.',
+    en: 'Type {znacka} followed by what needs doing — the note becomes a task for {kdo}.',
+  },
+  // Značka, kterou hledá chat - v obou jazycích stejná, nepřekládat.
+  'kalendar.znackaUkol': { cs: '@úkol', en: '@úkol' },
+  'kalendar.ukolProZvukare': {
+    cs: 'zvukaře u téhle události',
+    en: 'the sound engineer on this event',
+  },
+  'kalendar.ukolBezZvukare': {
+    cs: 'Když u ní zvukař zatím není, kalendář počká; když se vymění, úkol se přestěhuje.',
+    en: 'If it has no sound engineer yet, the calendar waits; if they change, the task moves with them.',
+  },
+
+  // --- kalendář: předělání frekvence na jiný druh ---
+  'kalendar.frekvenceNaCasting': {
+    cs: 'Frekvence se zruší a na jejím místě vznikne casting v kalendáři. Herec dostane oznámení.',
+    en: 'The recording session will be cancelled and a casting will take its place in the calendar. The narrator will be notified.',
+  },
+  'kalendar.frekvenceNaStrih': {
+    cs: 'Frekvence se zruší a na jejím místě vznikne střih v kalendáři. Herec dostane oznámení.',
+    en: 'The recording session will be cancelled and an editing session will take its place in the calendar. The narrator will be notified.',
+  },
+  'kalendar.frekvenceNaUdalost': {
+    cs: 'Frekvence se zruší a na jejím místě vznikne událost v kalendáři. Herec dostane oznámení.',
+    en: 'The recording session will be cancelled and an event will take its place in the calendar. The narrator will be notified.',
+  },
+
+  // --- kalendář: ukládání, mazání a rušení ---
+  'kalendar.ulozeniSelhalo': { cs: 'Událost se nepodařilo uložit.', en: 'The event could not be saved.' },
+  'kalendar.ulozitITak': { cs: 'Uložit i tak', en: 'Save anyway' },
+  'kalendar.ulozitZmeny': { cs: 'Uložit změny', en: 'Save changes' },
+  'kalendar.pridatDoKalendare': { cs: 'Přidat do kalendáře', en: 'Add to the calendar' },
+  'kalendar.smazatUdalost': { cs: 'Smazat událost', en: 'Delete the event' },
+  'kalendar.opravduSmazatUdalost': {
+    cs: 'Opravdu smazat tuhle událost z kalendáře?',
+    en: 'Really delete this event from the calendar?',
+  },
+  'kalendar.smazaniSelhalo': { cs: 'Událost se nepodařilo smazat.', en: 'The event could not be deleted.' },
+  'kalendar.zrusitFrekvenci': { cs: 'Zrušit frekvenci', en: 'Cancel the recording session' },
+  'kalendar.opravduZrusitFrekvenci': {
+    cs: 'Zrušit tuhle frekvenci? Herec dostane oznámení.',
+    en: 'Cancel this recording session? The narrator will be notified.',
+  },
+  'kalendar.zruseniSelhalo': {
+    cs: 'Frekvenci se nepodařilo zrušit.',
+    en: 'The recording session could not be cancelled.',
+  },
+  'kalendar.zapisDoKalendare': {
+    cs: 'Zápis do kalendáře. Nabídku termínů herci zakládáte tlačítkem v detailu projektu.',
+    en: 'This only writes into the calendar. You offer sessions to the narrator with the button in the project detail.',
+  },
+
+  // --- kalendář: bublina s detailem události ---
+  'kalendar.kliknutimZavrit': { cs: 'Klikni pro zavření', en: 'Click to close' },
+  'kalendar.herecJmeno': { cs: 'Herec: {jmeno}', en: 'Narrator: {jmeno}' },
+  'kalendar.projektNeni': { cs: 'Projekt není vyplněný.', en: 'The project is not filled in.' },
+  'kalendar.projektNeniSDvojklikem': {
+    cs: 'Projekt není vyplněný — doplníte ho dvojklikem na událost.',
+    en: 'The project is not filled in — double-click the event to add it.',
+  },
+  'kalendar.pripojitSeKHovoru': { cs: '▶ Připojit se k hovoru', en: '▶ Join the call' },
+  'kalendar.odkazProjekt': { cs: 'Projekt', en: 'Project' },
+  'kalendar.odkazNabidkaTerminu': { cs: 'Nabídka termínů', en: 'Session offer' },
+
+  // ===========================================================================
+  // DÁVKA 5 - KALENDÁŘ (zbytek složky (portal)/kalendar)
+  // Řádky k vložení do SLOVNIK v src/lib/jazyk.ts. Čeština je zdroj pravdy,
+  // angličtina je britská. CalendarBrowser.tsx si nese vlastní klíče.
+  // ===========================================================================
+
+  // --- stránka Kalendář (server) ---
+  'kalendarStranka.nadpis': { cs: 'Kalendář', en: 'Calendar' },
+  'kalendarStranka.zadneStudio': {
+    cs: 'Zatím tu není žádné studio. Studia se zakládají v administraci.',
+    en: 'There are no studios yet. Studios are set up in the administration.',
+  },
+
+  // --- nepřítomnost (kalendář Mimo studio) ---
+  'nepritomnost.mimoStudio': { cs: 'Mimo studio', en: 'Out of the studio' },
+  'nepritomnost.cipPopis': {
+    cs: 'Mimo studio: {jmeno} · {rozsah}',
+    en: 'Out of the studio: {jmeno} · {rozsah}',
+  },
+  'nepritomnost.klepnutimUpravite': { cs: 'Klepnutím upravíte.', en: 'Tap to edit.' },
+  'nepritomnost.pruhBublina': {
+    cs: 'Celodenní události v kalendáři Mimo studio',
+    en: 'All-day entries in the Out of the studio calendar',
+  },
+  'nepritomnost.dvojklikCelyDen': {
+    cs: 'Dvojklikem zapíšete celý den mimo studio',
+    en: 'Double-click to log a whole day out of studio',
+  },
+  'nepritomnost.nadpisUprava': { cs: 'Úprava — mimo studio', en: 'Editing — out of studio' },
+  'nepritomnost.mistoTohoPorada': { cs: 'Místo toho porada →', en: 'A meeting instead →' },
+  'nepritomnost.osoba': { cs: 'Osoba', en: 'Person' },
+  'nepritomnost.zacnetePsatJmeno': { cs: 'Začněte psát jméno…', en: 'Start typing a name…' },
+  'nepritomnost.nikdoTakovy': {
+    cs: 'Takového člověka v týmu nemáme.',
+    en: 'There is nobody like that on the team.',
+  },
+  'nepritomnost.zpatkyNaMe': { cs: 'Zpátky na mě', en: 'Back to me' },
+  'nepritomnost.celyDen': { cs: 'Celý den', en: 'All day' },
+  'nepritomnost.den': { cs: 'Den', en: 'Day' },
+  'nepritomnost.od': { cs: 'Od', en: 'From' },
+  'nepritomnost.doVcetne': { cs: 'Do (včetně)', en: 'To (inclusive)' },
+  'nepritomnost.pocetDni': { cs: 'Počet dní', en: 'Number of days' },
+  'nepritomnost.casOd': { cs: 'Čas od', en: 'Time from' },
+  'nepritomnost.casDo': { cs: 'Čas do', en: 'Time to' },
+  'nepritomnost.zapiseSe': {
+    cs: 'Zapíše se {pocet}× — v každém dni {od}–{do}.',
+    en: 'It will be logged {pocet} times — {od}–{do} on each day.',
+  },
+  'nepritomnost.chybaPoradiDnu': {
+    cs: 'Poslední den nesmí být před prvním.',
+    en: 'The last day cannot be before the first.',
+  },
+  'nepritomnost.chybaNejvicDni': {
+    cs: 'Najednou jde zapsat nejvýš {pocet} dní.',
+    en: 'You can log at most {pocet} days at once.',
+  },
+  'nepritomnost.chybaKonecPoZacatku': {
+    cs: 'Konec musí být po začátku.',
+    en: 'The end must be after the start.',
+  },
+  'nepritomnost.chybaUlozeni': { cs: 'Uložit se nepodařilo.', en: 'It could not be saved.' },
+  'nepritomnost.ulozitZmeny': { cs: 'Uložit změny', en: 'Save changes' },
+  'nepritomnost.zapsat': { cs: 'Zapsat', en: 'Log it' },
+
+  // --- porady a další schůzky ---
+  'porady.nadpisUpravaPorada': { cs: 'Úprava — porada', en: 'Editing — meeting' },
+  'porady.nadpisUpravaSchuzka': { cs: 'Úprava — schůzka', en: 'Editing — appointment' },
+  'porady.nadpisNovaPorada': { cs: 'Nová porada', en: 'New meeting' },
+  'porady.nadpisNovaSchuzka': { cs: 'Nová schůzka', en: 'New appointment' },
+  'porady.nazev': { cs: 'Název', en: 'Name' },
+  'porady.nazevPlaceholder': { cs: 'Porada produkce', en: 'Production meeting' },
+  'porady.zacatekRady': { cs: 'Začátek řady', en: 'Start of the series' },
+  'porady.den': { cs: 'Den', en: 'Day' },
+  'porady.od': { cs: 'Od', en: 'From' },
+  'porady.do': { cs: 'Do', en: 'To' },
+  'porady.chybaKonecPoZacatku': {
+    cs: 'Konec musí být po začátku.',
+    en: 'The end must be after the start.',
+  },
+  // Druhá část věty je šedá - značka {tise} říká, kde se věta rozdělí.
+  'porady.kdoJeNaPorade': {
+    cs: 'Kdo je na poradě {tise}· uvidí ji jen oni',
+    en: 'Who is in the meeting {tise}· only they can see it',
+  },
+  'porady.zakladatelVzdy': {
+    cs: 'Na poradě, kterou zakládáte, jste vždycky',
+    en: 'You are always in a meeting you set up yourself',
+  },
+  'porady.jaZavorka': { cs: '{jmeno} (já)', en: '{jmeno} (me)' },
+  'porady.opakovani': { cs: 'Opakování', en: 'Repeat' },
+  'porady.opakovaniNe': { cs: 'Neopakovat', en: 'Do not repeat' },
+  'porady.opakovaniDenne': { cs: 'Každý den', en: 'Every day' },
+  'porady.opakovaniPracovniDny': {
+    cs: 'Každý pracovní den (po–pá)',
+    en: 'Every working day (Mon–Fri)',
+  },
+  'porady.opakovaniTydne': { cs: 'Každý týden', en: 'Every week' },
+  'porady.opakovaniDvaTydny': { cs: 'Každé dva týdny', en: 'Every two weeks' },
+  'porady.opakovaniMesicne': { cs: 'Každý měsíc', en: 'Every month' },
+  'porady.opakovatDo': {
+    cs: 'Opakovat do {tise}· nepovinné',
+    en: 'Repeat until {tise}· optional',
+  },
+  'porady.odkazVideo': {
+    cs: 'Odkaz na videohovor {tise}· Meet, Zoom, Teams…',
+    en: 'Video call link {tise}· Meet, Zoom, Teams…',
+  },
+  'porady.poznamka': { cs: 'Poznámka {tise}· nepovinné', en: 'Note {tise}· optional' },
+  'porady.chybaUlozeni': { cs: 'Uložit se nepodařilo.', en: 'It could not be saved.' },
+  'porady.chybaZruseni': { cs: 'Zrušit se nepodařilo.', en: 'It could not be cancelled.' },
+  'porady.ulozitCelouRadu': { cs: 'Uložit celou řadu', en: 'Save the whole series' },
+  'porady.ulozitZmeny': { cs: 'Uložit změny', en: 'Save changes' },
+  'porady.zalozitPoradu': { cs: 'Založit poradu', en: 'Set up the meeting' },
+  'porady.opravduZrusitVyskyt': {
+    cs: 'Opravdu zrušit tento termín?',
+    en: 'Really cancel this occurrence?',
+  },
+  'porady.zrusitJenTento': { cs: 'Zrušit jen tento termín', en: 'Cancel just this occurrence' },
+  'porady.opravduZrusitRadu': {
+    cs: 'Opravdu zrušit celou řadu?',
+    en: 'Really cancel the whole series?',
+  },
+  'porady.opravduZrusit': { cs: 'Opravdu zrušit?', en: 'Really cancel?' },
+  'porady.zrusitCelouRadu': { cs: 'Zrušit celou řadu', en: 'Cancel the whole series' },
+  'porady.zrusitPoradu': { cs: 'Zrušit poradu', en: 'Cancel the meeting' },
+  'porady.zrusitSchuzku': { cs: 'Zrušit schůzku', en: 'Cancel the appointment' },
+  'porady.vysvetleniPorada': {
+    cs: 'Poradu vidí jen pozvaní. O pozvání, změně i zrušení jim přijde zpráva pod zvonek.',
+    en: 'Only the people invited can see the meeting. They get a message under the bell when they are invited and when it changes or is cancelled.',
+  },
+  'porady.vysvetleniSchuzka': {
+    cs: 'Schůzky vidí celá produkce, ne jen pozvaní. Komu ji tu zaškrtnete, tomu o ní přijde zpráva pod zvonek.',
+    en: 'Appointments are visible to the whole production team, not only to the people invited. Everyone you tick here gets a message about it under the bell.',
+  },
+
+  // --- konflikty v kalendáři ---
+  'konflikty.popisekPocet': {
+    cs: 'Konflikty v kalendáři: {pocet}',
+    en: 'Clashes in the calendar: {pocet}',
+  },
+  'konflikty.popisekZadne': {
+    cs: 'Konflikty v kalendáři: žádné, {pocet} odklepnutých jako záměr',
+    en: 'Clashes in the calendar: none, {pocet} signed off as intended',
+  },
+  'konflikty.bublinaPocet': {
+    cs: 'Kde se dvě věci perou ({pocet})',
+    en: 'Where two things clash ({pocet})',
+  },
+  'konflikty.bublinaZadne': {
+    cs: 'Žádný konflikt - {pocet} odklepnutých jako záměr',
+    en: 'No clashes — {pocet} signed off as intended',
+  },
+  'konflikty.nejblizsichDni': { cs: 'Nejbližších {pocet} dní', en: 'Next {pocet} days' },
+  'konflikty.nadpisMoje': {
+    cs: 'Moje ({pocet}) — vidíte je jen vy',
+    en: 'Mine ({pocet}) — only you can see them',
+  },
+  'konflikty.nadpisProvoz': {
+    cs: 'Natáčení ({pocet}) — kde jste označený',
+    en: 'Recording ({pocet}) — where you are named',
+  },
+  'konflikty.nadpisOdklepnute': {
+    cs: 'Odklepnuté jako záměr ({pocet})',
+    en: 'Signed off as intended ({pocet})',
+  },
+  'konflikty.jeToZamer': { cs: 'Je to záměr', en: 'It is intended' },
+  'konflikty.jeToZamerBublina': {
+    cs: 'Tenhle překryv je schválně - přestaň na něj upozorňovat',
+    en: 'This overlap is deliberate — stop flagging it',
+  },
+  'konflikty.vracim': { cs: 'Vracím…', en: 'Bringing it back…' },
+  'konflikty.vratit': { cs: 'Vrátit', en: 'Bring it back' },
+  'konflikty.vysvetleni': {
+    cs: 'Portál nic nezakazuje — jen ukazuje, kde se to pere. Co je schválně, odklepněte tlačítkem „Je to záměr".',
+    en: 'The portal forbids nothing — it only shows where things clash. Sign off anything deliberate with the “It is intended” button.',
+  },
+
+  // --- historie kalendáře ---
+  'historieKalendare.nazev': { cs: 'Historie kalendáře', en: 'Calendar history' },
+  'historieKalendare.bublina': {
+    cs: 'Kdo kdy co v kalendáři změnil',
+    en: 'Who changed what in the calendar, and when',
+  },
+  'historieKalendare.akceVznik': { cs: 'zapsal(a)', en: 'logged' },
+  'historieKalendare.akceUprava': { cs: 'upravil(a)', en: 'edited' },
+  'historieKalendare.akceZruseni': { cs: 'zrušil(a)', en: 'cancelled' },
+  'historieKalendare.typSlot': { cs: 'Natáčení', en: 'Recording' },
+  'historieKalendare.typBlok': { cs: 'Událost', en: 'Entry' },
+  'historieKalendare.typPorada': { cs: 'Porada', en: 'Meeting' },
+  'historieKalendare.typSchuzka': { cs: 'Schůzka', en: 'Appointment' },
+  'historieKalendare.typMimo': { cs: 'Mimo studio', en: 'Out of the studio' },
+
+  // --- seznam výskytů (hledání v celém kalendáři) ---
+  'vyskyty.hledam': { cs: 'Hledám v celém kalendáři…', en: 'Searching the whole calendar…' },
+  'vyskyty.pocet': {
+    cs: 'Výskyty v kalendáři: {pocet}',
+    en: 'Occurrences in the calendar: {pocet}',
+  },
+  'vyskyty.pocetZobrazeno': {
+    cs: 'Výskyty v kalendáři: {pocet} (ukazuju {zobrazeno})',
+    en: 'Occurrences in the calendar: {pocet} (showing {zobrazeno})',
+  },
+  'vyskyty.dotaz': { cs: '„{dotaz}"', en: '“{dotaz}”' },
+  'vyskyty.zavritSeznam': { cs: 'Zavřít seznam', en: 'Close the list' },
+  'vyskyty.kolikrat': { cs: '{pocet}×', en: '{pocet}×' },
+  'vyskyty.nicNenalezeno': {
+    cs: 'Nic takového v kalendáři není. Zkuste jen příjmení nebo část názvu projektu.',
+    en: 'There is nothing like that in the calendar. Try just the surname or part of the project name.',
+  },
+  'vyskyty.otevritDen': { cs: 'Otevřít ten den v kalendáři', en: 'Open that day in the calendar' },
+  'vyskyty.zvukarJmeno': { cs: 'zvukař {jmeno}', en: 'sound engineer {jmeno}' },
+
+  // --- odběr kalendáře (MS kalendář do telefonu) ---
+  'odberKalendare.tlacitko': {
+    cs: 'Přidat MS kalendář do svého kalendáře (Google, Apple, Outlook)',
+    en: 'Add the MS calendar to your own calendar (Google, Apple, Outlook)',
+  },
+  'odberKalendare.nadpis': {
+    cs: 'MS kalendář do mého kalendáře',
+    en: 'The MS calendar in my calendar',
+  },
+  'odberKalendare.podnadpis': {
+    cs: 'Uvidíte ho v Google, Apple nebo Outlook kalendáři vedle svých událostí. Jen pro čtení - měnit se dá dál jen tady v portálu.',
+    en: 'You will see it in Google, Apple or Outlook Calendar next to your own entries. Read-only — changes are still made here in the portal.',
+  },
+  'odberKalendare.krok1': { cs: '1. Co chcete vidět', en: '1. What you want to see' },
+  'odberKalendare.krok2': { cs: '2. Kam ho přidat', en: '2. Where to add it' },
+  'odberKalendare.rozsahZvlast': { cs: 'Každé studio zvlášť', en: 'Each studio separately' },
+  'odberKalendare.rozsahZvlastPopis': {
+    cs: 'Samostatné kalendáře, zapnete a vypnete je jednotlivě',
+    en: 'Separate calendars you can switch on and off one by one',
+  },
+  'odberKalendare.rozsahVse': { cs: 'Celý kalendář', en: 'The whole calendar' },
+  'odberKalendare.rozsahVsePopis': {
+    cs: 'Všechna studia a Mimo studio v jednom',
+    en: 'All studios and Out of the studio in one',
+  },
+  'odberKalendare.rozsahMoje': { cs: 'Jen moje', en: 'Only mine' },
+  'odberKalendare.rozsahMojePopis': {
+    cs: 'Kde jsem zvukař a moje Mimo studio',
+    en: 'Where I am the sound engineer, plus my own Out of the studio',
+  },
+  'odberKalendare.rozsahStudio': { cs: 'Studio {nazev}', en: 'Studio {nazev}' },
+  'odberKalendare.mimoStudio': { cs: 'Mimo studio', en: 'Out of the studio' },
+  'odberKalendare.porady': { cs: 'Porady', en: 'Meetings' },
+  'odberKalendare.schuzky': { cs: 'Schůzky', en: 'Appointments' },
+  'odberKalendare.chybaOdkaz': {
+    cs: 'Odkaz se nepodařilo vytvořit.',
+    en: 'The link could not be created.',
+  },
+  'odberKalendare.zvlastPopis': {
+    cs: 'Každý kalendář přidejte jeho vlastním tlačítkem. V Apple i Google kalendáři pak budou vedle sebe a zapnete nebo vypnete je jednotlivě.',
+    en: 'Add each calendar with its own button. In Apple and Google Calendar they then sit side by side and you can switch them on and off one by one.',
+  },
+  'odberKalendare.kopirovatOdkaz': { cs: 'Kopírovat odkaz', en: 'Copy the link' },
+  'odberKalendare.kopirovat': { cs: 'Kopírovat', en: 'Copy' },
+  'odberKalendare.qrPopisekNazev': {
+    cs: 'QR kód odběru – {nazev}',
+    en: 'Subscription QR code – {nazev}',
+  },
+  'odberKalendare.qrPopisek': {
+    cs: 'QR kód odběru kalendáře',
+    en: 'Calendar subscription QR code',
+  },
+  // Tučné slovo uprostřed věty - značka {odebirat} říká, kam patří.
+  'odberKalendare.qrPostup': {
+    cs: 'Naskenujte iPhonem fotoaparátem a potvrďte {odebirat}. Pak otevřete QR dalšího kalendáře.',
+    en: 'Scan it with the iPhone camera and confirm {odebirat}. Then open the QR code of the next calendar.',
+  },
+  'odberKalendare.slovoOdebirat': { cs: 'Odebírat', en: 'Subscribe' },
+  'odberKalendare.zvlastObnova': {
+    cs: 'Nechcete některý? Prostě ho nepřidávejte - nebo ho v telefonu jen vypněte. Kalendáře se obnovují samy. V Apple Kalendáři si u každého nastavte {aktualizovat} (iPhone: Nastavení → Aplikace → Kalendář → Účty → Odebírané kalendáře; Mac: klik pravým na kalendář → Informace). Google si interval určuje sám, bývá to i půl dne. Odkazy jsou vaše osobní.',
+    en: 'Do not want one of them? Simply do not add it — or just switch it off on your phone. The calendars refresh themselves. In Apple Calendar set {aktualizovat} for each one (iPhone: Settings → Apps → Calendar → Accounts → Subscribed Calendars; Mac: right-click the calendar → Get Info). Google decides the interval itself, sometimes half a day. The links are personal to you.',
+  },
+  'odberKalendare.slovoAktualizovatPet': {
+    cs: 'Aktualizovat: každých 5 minut',
+    en: 'Refresh: every 5 minutes',
+  },
+  'odberKalendare.pripravuji': { cs: 'Připravuji…', en: 'Getting it ready…' },
+  'odberKalendare.pripravitKalendare': { cs: 'Připravit kalendáře', en: 'Prepare the calendars' },
+  'odberKalendare.pripravitOdkaz': { cs: 'Připravit odkaz', en: 'Prepare the link' },
+  'odberKalendare.apple': { cs: 'Apple Kalendář', en: 'Apple Calendar' },
+  'odberKalendare.applePopis': {
+    cs: 'iPhone, iPad, Mac - otevře se a potvrdíte Odebírat',
+    en: 'iPhone, iPad, Mac — it opens and you confirm Subscribe',
+  },
+  'odberKalendare.googlePopis': {
+    cs: 'Otevře se Google, potvrdíte Přidat',
+    en: 'Google opens and you confirm Add',
+  },
+  'odberKalendare.naskenujte': { cs: 'Naskenujte iPhonem', en: 'Scan it with an iPhone' },
+  'odberKalendare.qrPostupDlouhy': {
+    cs: 'Otevřete fotoaparát, namiřte na kód a klepněte na nabídku nahoře. Kalendář se zeptá, jestli ho chcete odebírat - potvrďte {odebirat}.',
+    en: 'Open the camera, point it at the code and tap the prompt at the top. The calendar asks whether you want to subscribe — confirm {odebirat}.',
+  },
+  'odberKalendare.android': {
+    cs: 'Android: Google Kalendář v telefonu odběr přidat neumí - použijte tlačítko Google Kalendář na počítači, v telefonu se pak objeví sám.',
+    en: 'Android: Google Calendar on the phone cannot add a subscription — use the Google Calendar button on a computer and it will show up on the phone by itself.',
+  },
+  'odberKalendare.outlook': {
+    cs: 'Outlook a ostatní: zkopírujte odkaz a v kalendáři zvolte „Přidat kalendář z internetu / podle URL".',
+    en: 'Outlook and the rest: copy the link and in your calendar choose “Add calendar from internet / from URL”.',
+  },
+  'odberKalendare.obnova': {
+    cs: 'Kalendář se obnovuje sám. Posíláme mu interval 5 minut - Outlook a většina klientů ho poslechne, v Apple Kalendáři si {aktualizovat} přepněte na 5 minut u daného kalendáře, Google si interval určuje sám (bývá to i půl dne). Odkaz je váš osobní, neposílejte ho mimo tým.',
+    en: 'The calendar refreshes itself. We send it an interval of 5 minutes — Outlook and most clients obey it; in Apple Calendar switch {aktualizovat} to 5 minutes for that calendar; Google decides the interval itself (sometimes half a day). The link is personal to you, do not send it outside the team.',
+  },
+  'odberKalendare.slovoAktualizovat': { cs: 'Aktualizovat', en: 'Refresh' },
+  'odberKalendare.mojeOdbery': { cs: 'Moje odběry', en: 'My subscriptions' },
+  'odberKalendare.naposledyStazeno': {
+    cs: 'naposledy staženo {datum}',
+    en: 'last downloaded {datum}',
+  },
+  'odberKalendare.nestazeno': { cs: 'zatím nestaženo', en: 'not downloaded yet' },
+  'odberKalendare.zneplatnit': { cs: 'Zneplatnit', en: 'Revoke' },
+  'odberKalendare.zneplatnitBublina': {
+    cs: 'Odkaz přestane fungovat - v kalendáři se události přestanou objevovat',
+    en: 'The link stops working — entries will no longer appear in that calendar',
+  },
+
+  // --- nabídka termínů (vnitřní stránka produkce) ---
+  'nabidkaTerminu.zpetNaKalendar': { cs: '← Zpět na kalendář', en: '← Back to the calendar' },
+  'nabidkaTerminu.nadpis': { cs: 'Nabídka termínů', en: 'Session offer' },
+  // Stav nabídky - překládá se podle kódu, ne podle českého popisku
+  // (RECORDING_STATUS_LABELS v lib/calendar.ts zůstává český).
+  'nabidkaTerminu.stavDraft': { cs: 'Koncept', en: 'Draft' },
+  'nabidkaTerminu.stavPreparing': {
+    cs: 'Nabídka se připravuje',
+    en: 'The offer is being prepared',
+  },
+  'nabidkaTerminu.stavSent': { cs: 'Nabídka odeslána herci', en: 'Offer sent to the narrator' },
+  'nabidkaTerminu.stavPicking': {
+    cs: 'Herec vybírá termíny',
+    en: 'The narrator is choosing sessions',
+  },
+  'nabidkaTerminu.stavSubmitted': {
+    cs: 'Výběr čeká na schválení',
+    en: 'The selection is awaiting approval',
+  },
+  'nabidkaTerminu.stavReturned': { cs: 'Vráceno k přepracování', en: 'Returned for changes' },
+  'nabidkaTerminu.stavRejected': { cs: 'Zamítnuto', en: 'Rejected' },
+  'nabidkaTerminu.stavConfirmed': { cs: 'Potvrzeno', en: 'Confirmed' },
+  'nabidkaTerminu.stavCancelled': { cs: 'Zrušeno', en: 'Cancelled' },
+  'nabidkaTerminu.stavCompleted': { cs: 'Dokončeno', en: 'Completed' },
+  // Stav jednoho termínu v seznamu (SLOT_STATE_LABELS).
+  'nabidkaTerminu.terminNabidnuto': { cs: 'Nabídnuto', en: 'Offered' },
+  'nabidkaTerminu.terminDrzeno': { cs: 'Drženo', en: 'On hold' },
+  'nabidkaTerminu.terminPotvrzeno': { cs: 'Potvrzeno', en: 'Confirmed' },
+  'nabidkaTerminu.terminUvolneno': { cs: 'Uvolněno', en: 'Released' },
+  'nabidkaTerminu.terminZruseno': { cs: 'Zrušeno', en: 'Cancelled' },
+  // Kolik volných míst chybí - tři celé věty kvůli českým tvarům.
+  'nabidkaTerminu.chybiJedno': {
+    cs: 'V období chybí {pocet} volné místo - prodlužte období.',
+    en: '{pocet} free slot is missing in the period — extend the period.',
+  },
+  'nabidkaTerminu.chybiMalo': {
+    cs: 'V období chybí {pocet} volná místa - prodlužte období.',
+    en: '{pocet} free slots are missing in the period — extend the period.',
+  },
+  'nabidkaTerminu.chybiVic': {
+    cs: 'V období chybí {pocet} volných míst - prodlužte období.',
+    en: '{pocet} free slots are missing in the period — extend the period.',
+  },
+  'nabidkaTerminu.poslatZnovu': { cs: 'Poslat znovu', en: 'Send again' },
+  'nabidkaTerminu.odeslatHerci': { cs: 'Odeslat herci', en: 'Send to the narrator' },
+  'nabidkaTerminu.zrusitNabidku': { cs: 'Zrušit nabídku', en: 'Cancel the offer' },
+  'nabidkaTerminu.potrebaFrekvenci': { cs: 'Potřeba frekvencí', en: 'Recording sessions needed' },
+  'nabidkaTerminu.nabidnuto': { cs: 'Nabídnuto', en: 'Offered' },
+  'nabidkaTerminu.herecVybral': { cs: 'Herec vybral', en: 'Narrator chose' },
+  'nabidkaTerminu.drzenoDo': { cs: 'Termíny drženy do {datum}', en: 'Sessions held until {datum}' },
+  'nabidkaTerminu.drzenoDoKratce': { cs: 'drženo do {datum}', en: 'held until {datum}' },
+  'nabidkaTerminu.maloMist': {
+    cs: 'V zadaném období je volných jen {volnych} míst, herec jich potřebuje {potreba}. Posuňte v Parametrech začátek nebo konec období.',
+    en: 'Only {volnych} slots are free in the period you set and the narrator needs {potreba}. Move the start or the end of the period in Parameters.',
+  },
+  // Tučný je seznam studií - značka {studia}.
+  'nabidkaTerminu.dostaneVsechna': {
+    cs: 'Herec dostane všechna volná místa ({pocet}) ve studiích {studia} do {datum} a vybere si z nich {potreba}. Obsazené časy v kalendáři se vynechávají samy.',
+    en: 'The narrator gets every free slot ({pocet}) in the studios {studia} up to {datum} and picks {potreba} of them. Times already taken in the calendar are left out by themselves.',
+  },
+  'nabidkaTerminu.poznamkaHerce': { cs: 'Poznámka herce:', en: 'Narrator’s note:' },
+  'nabidkaTerminu.odkazProHerce': { cs: 'Odkaz pro herce', en: 'Link for the narrator' },
+  'nabidkaTerminu.kopirovat': { cs: 'Kopírovat', en: 'Copy' },
+  'nabidkaTerminu.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+  'nabidkaTerminu.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+  'nabidkaTerminu.chybaOdeslani': { cs: 'Odeslání se nezdařilo.', en: 'Sending failed.' },
+  'nabidkaTerminu.odeslanoNa': {
+    cs: 'Nabídka odešla na {email}.',
+    en: 'The offer has gone to {email}.',
+  },
+  'nabidkaTerminu.opravduZamitnout': {
+    cs: 'Opravdu zamítnout? Termíny se uvolní.',
+    en: 'Really reject it? The sessions will be released.',
+  },
+  'nabidkaTerminu.chybaRozhodnuti': {
+    cs: 'Rozhodnutí se nepodařilo uložit.',
+    en: 'The decision could not be saved.',
+  },
+  'nabidkaTerminu.hotovoPotvrzeno': {
+    cs: 'Termíny potvrzeny, herci odešel e-mail.',
+    en: 'Sessions confirmed, an email has gone to the narrator.',
+  },
+  'nabidkaTerminu.hotovoVraceno': {
+    cs: 'Vráceno herci k novému výběru.',
+    en: 'Returned to the narrator to choose again.',
+  },
+  'nabidkaTerminu.hotovoZamitnuto': { cs: 'Výběr zamítnut.', en: 'The selection was rejected.' },
+  'nabidkaTerminu.hotovoDokonceno': {
+    cs: 'Označeno jako dokončené.',
+    en: 'Marked as completed.',
+  },
+  'nabidkaTerminu.presunPotvrzen': {
+    cs: 'Přesun potvrzen, herci přišlo oznámení.',
+    en: 'The move is confirmed, the narrator has been notified.',
+  },
+  'nabidkaTerminu.presunZamitnut': {
+    cs: 'Přesun zamítnut, termín zůstává.',
+    en: 'The move was rejected, the session stays as it is.',
+  },
+  'nabidkaTerminu.opravduZrusitNabidku': {
+    cs: 'Opravdu zrušit celou nabídku? Termíny se uvolní.',
+    en: 'Really cancel the whole offer? The sessions will be released.',
+  },
+  'nabidkaTerminu.chybaZruseni': { cs: 'Zrušení se nezdařilo.', en: 'Cancelling failed.' },
+  'nabidkaTerminu.herecVybralNadpis': {
+    cs: 'Herec vybral termíny',
+    en: 'The narrator has chosen sessions',
+  },
+  'nabidkaTerminu.vybranoZ': {
+    cs: 'Vybráno {vybrano} z {potreba}',
+    en: '{vybrano} of {potreba} chosen',
+  },
+  'nabidkaTerminu.vybral': { cs: 'Vybral', en: 'Chosen' },
+  'nabidkaTerminu.nevybral': { cs: 'Nevybral', en: 'Not chosen' },
+  'nabidkaTerminu.vzalVsechny': {
+    cs: '— všechny nabídnuté termíny si vzal —',
+    en: '— they took every session offered —',
+  },
+  'nabidkaTerminu.vzkazHerci': {
+    cs: 'Vzkaz herci (u vrácení a zamítnutí se hodí důvod)',
+    en: 'Message for the narrator (a reason helps when returning or rejecting)',
+  },
+  'nabidkaTerminu.vzkazPlaceholder': {
+    cs: 'např. Středu bohužel nestihneme, vyberte prosím jiný den.',
+    en: 'e.g. We cannot make Wednesday, please choose another day.',
+  },
+  'nabidkaTerminu.potvrditTerminy': { cs: 'Potvrdit termíny', en: 'Confirm the sessions' },
+  'nabidkaTerminu.vratitKPrepracovani': {
+    cs: 'Vrátit k přepracování',
+    en: 'Return for changes',
+  },
+  'nabidkaTerminu.zamitnout': { cs: 'Zamítnout', en: 'Reject' },
+  'nabidkaTerminu.potvrzenoPopis': {
+    cs: 'Termíny jsou potvrzené a v kalendáři studia. Až se odtočí, můžete nabídku uzavřít.',
+    en: 'The sessions are confirmed and in the studio calendar. Once they have been recorded, you can close the offer.',
+  },
+  'nabidkaTerminu.oznacitDokoncene': { cs: 'Označit jako dokončené', en: 'Mark as completed' },
+  'nabidkaTerminu.zadostPresunNadpis': {
+    cs: 'Herec žádá přesun za termín odevzdání',
+    en: 'The narrator is asking to move a session past the delivery date',
+  },
+  'nabidkaTerminu.zadostPresunPopis': {
+    cs: 'Potvrzením se termín přesune - a tím i odevzdání. Datum dokončení projektu případně upravte v jeho detailu.',
+    en: 'Confirming moves the session — and with it the delivery. Change the project completion date in the project itself if you need to.',
+  },
+  'nabidkaTerminu.potvrditPresun': { cs: 'Potvrdit přesun', en: 'Confirm the move' },
+  'nabidkaTerminu.parametry': { cs: 'Parametry', en: 'Parameters' },
+  'nabidkaTerminu.studia': { cs: 'Studia', en: 'Studios' },
+  'nabidkaTerminu.obdobiOd': { cs: 'Období od', en: 'Period from' },
+  'nabidkaTerminu.posledniFrekvence': {
+    cs: 'Poslední frekvence nejpozději',
+    en: 'Last recording session no later than',
+  },
+  'nabidkaTerminu.pocetFrekvenci': {
+    cs: 'Počet frekvencí',
+    en: 'Number of recording sessions',
+  },
+  'nabidkaTerminu.delka': { cs: 'Délka (minuty)', en: 'Length (minutes)' },
+  'nabidkaTerminu.poznamkaProHerce': {
+    cs: 'Poznámka pro herce',
+    en: 'Note for the narrator',
+  },
+  'nabidkaTerminu.ulozitParametry': { cs: 'Uložit parametry', en: 'Save the parameters' },
+  'nabidkaTerminu.poUlozeni': {
+    cs: 'Po uložení se volná místa spočítají znovu - nabízí se ve všech zaškrtnutých studiích.',
+    en: 'Once saved, the free slots are worked out again — they are offered in every studio ticked.',
+  },
+  'nabidkaTerminu.seznamNadpis': { cs: 'Termíny v nabídce', en: 'Sessions in the offer' },
+  'nabidkaTerminu.zadneVolneMisto': {
+    cs: 'V zadaném období není v kalendáři žádné volné místo. Upravte období v Parametrech.',
+    en: 'There is no free slot in the calendar in the period you set. Change the period in Parameters.',
+  },
+  'nabidkaTerminu.historie': { cs: 'Historie', en: 'History' },
+
+  // ŘÁDKY K VLOŽENÍ DO SLOVNIK v src/lib/jazyk.ts (dávka 5 — Výkazy).
+  // Merge dělá Ondřej; tenhle soubor se nikam neimportuje.
+
+  // --- výkazy: záložky nad stránkou ---
+  'vykaz.nadpis': { cs: 'Výkazy', en: 'Timesheets' },
+  'vykaz.zalozkaBonusyKeSchvaleni': { cs: 'Bonusy ke schválení', en: 'Bonuses awaiting approval' },
+  'vykaz.zalozkaMojeBonusy': { cs: 'Moje bonusy', en: 'My bonuses' },
+
+  // --- výkazy: hlavička a součet nad tabulkou ---
+  'vykaz.vaseSazba': { cs: 'Vaše hodinová sazba: {sazba}', en: 'Your hourly rate: {sazba}' },
+  'vykaz.celkemZa': { cs: 'Celkem · {obdobi}', en: 'Total · {obdobi}' },
+  'vykaz.celkemZaDruh': { cs: 'Celkem · {obdobi} · {druh}', en: 'Total · {obdobi} · {druh}' },
+  'vykaz.hodinyABonusy': {
+    cs: '{hodiny} · z toho bonusy {castka}',
+    en: '{hodiny} · of which bonuses {castka}',
+  },
+
+  // --- výkazy: období a měsíční záložky ---
+  'vykaz.zalozkaVse': { cs: 'Vše', en: 'All' },
+  'vykaz.vse': { cs: 'vše', en: 'all' },
+  'vykaz.obdobi': { cs: 'Období', en: 'Period' },
+  'vykaz.obdobiOdDo': { cs: '{od} – {do}', en: '{od} – {do}' },
+  'vykaz.obdobiOd': { cs: 'od {od}', en: 'from {od}' },
+  'vykaz.obdobiDo': { cs: 'do {do}', en: 'until {do}' },
+  'vykaz.odData': { cs: 'Od data', en: 'From date' },
+  'vykaz.doData': { cs: 'Do data', en: 'To date' },
+  'vykaz.zrusitObdobi': {
+    cs: 'Zrušit období a vrátit se k měsícům',
+    en: 'Clear the period and go back to months',
+  },
+
+  // --- výkazy: druh práce (klíč je KÓD, ne text) ---
+  'vykaz.druh.RECORDING': { cs: 'Natáčení', en: 'Recording' },
+  'vykaz.druh.EDITING': { cs: 'Střih', en: 'Editing' },
+  'vykaz.druh.OTHER': { cs: 'Ostatní', en: 'Other' },
+
+  // --- editor výkazu ---
+  'vykaz.novyVykaz': { cs: 'Nový výkaz', en: 'New timesheet entry' },
+  'vykaz.upravaVykazu': { cs: 'Úprava výkazu', en: 'Editing the timesheet entry' },
+  'vykaz.datum': { cs: 'Datum', en: 'Date' },
+  'vykaz.od': { cs: 'Od', en: 'From' },
+  'vykaz.do': { cs: 'Do', en: 'To' },
+  'vykaz.druhPrace': { cs: 'Druh práce', en: 'Type of work' },
+  'vykaz.projekt': { cs: 'Projekt', en: 'Project' },
+  'vykaz.poznamka': { cs: 'Poznámka', en: 'Note' },
+  'vykaz.nepovinne': { cs: 'nepovinné', en: 'optional' },
+  'vykaz.vyberteDruhPrace': { cs: '— vyberte druh práce —', en: '— choose the type of work —' },
+  'vykaz.zadneProjekty': {
+    cs: 'Zatím se nenačetly žádné projekty.',
+    en: 'No projects have loaded yet.',
+  },
+  'vykaz.napovedaProjekt': {
+    cs: 'Pište název projektu, firmu nebo číslo. V nabídce jsou i dokončené projekty.',
+    en: 'Type the project name, the company or the number. Completed projects are in the list too.',
+  },
+  'vykaz.ulozitZmeny': { cs: 'Uložit změny', en: 'Save changes' },
+  'vykaz.pridatVykaz': { cs: 'Přidat výkaz', en: 'Add a timesheet entry' },
+  'vykaz.zrusitUpravu': { cs: 'Zrušit úpravu', en: 'Cancel the edit' },
+  'vykaz.chybiPole': {
+    cs: 'Vyplňte datum, čas od–do a druh práce.',
+    en: 'Fill in the date, the time from–to and the type of work.',
+  },
+  'vykaz.chybiPoleSProjektem': {
+    cs: 'Vyplňte datum, čas od–do, druh práce a projekt.',
+    en: 'Fill in the date, the time from–to, the type of work and the project.',
+  },
+  'vykaz.napovedaSProjektem': {
+    cs: 'Vyplňte čas od–do, druh práce a projekt — bez nich výkaz uložit nejde.',
+    en: 'Fill in the time from–to, the type of work and the project — the entry cannot be saved without them.',
+  },
+  // Do věty vstupuje popisek druhu práce „Ostatní" - proto značka, ne text.
+  'vykaz.napovedaBezProjektu': {
+    cs: 'Vyplňte čas od–do a druh práce — u „{ostatni}" se projekt nevybírá.',
+    en: 'Fill in the time from–to and the type of work — with ‘{ostatni}’ no project is chosen.',
+  },
+  'vykaz.ulozeniSelhalo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+
+  // --- výkazy: filtry nad seznamem ---
+  'vykaz.vsechnyDruhy': { cs: 'Všechny druhy práce', en: 'All types of work' },
+  'vykaz.vsichniZvukari': { cs: 'Všichni zvukaři', en: 'All sound engineers' },
+  'vykaz.hledat': { cs: 'Hledat projekt, poznámku…', en: 'Search a project, a note…' },
+
+  // --- výkazy: sloupce tabulky ---
+  'vykaz.sl.datum': { cs: 'Datum', en: 'Date' },
+  'vykaz.sl.odDo': { cs: 'Od–do', en: 'From–to' },
+  'vykaz.sl.hodiny': { cs: 'Hodiny', en: 'Hours' },
+  'vykaz.sl.druhPrace': { cs: 'Druh práce', en: 'Type of work' },
+  'vykaz.sl.projekt': { cs: 'Projekt', en: 'Project' },
+  'vykaz.sl.castka': { cs: 'Částka', en: 'Amount' },
+  'vykaz.seraditPodle': { cs: 'Seřadit podle: {sloupec}', en: 'Sort by: {sloupec}' },
+
+  // --- výkazy: řádky tabulky a prázdné stavy ---
+  'vykaz.prazdno': { cs: 'Zatím tu není žádný výkaz.', en: 'There is no timesheet entry here yet.' },
+  'vykaz.prazdnoFiltr': { cs: 'Nic neodpovídá filtru.', en: 'Nothing matches the filter.' },
+  'vykaz.upravujeSe': { cs: 'Upravuje se', en: 'Being edited' },
+  'vykaz.opravduSmazat': { cs: 'Opravdu smazat výkaz?', en: 'Really delete this timesheet entry?' },
+  'vykaz.schvaleneBonusy': { cs: 'Schválené bonusy', en: 'Approved bonuses' },
+
+  // --- návrh výkazu z kalendáře ---
+  'vykaz.navrh.nadpis': {
+    cs: 'Z kalendáře čeká na zapsání',
+    en: 'Waiting to be written up from the calendar',
+  },
+  'vykaz.navrh.popisJedna': {
+    cs: 'Jedna práce, u které jste byl zvukař, už skončila. Zkontrolujte čas a přidejte výkaz.',
+    en: 'One job where you were the sound engineer has finished. Check the time and add a timesheet entry.',
+  },
+  'vykaz.navrh.popisVic': {
+    cs: '{pocet} prací, u kterých jste byl zvukař, už skončilo. Zkontrolujte čas a přidejte výkaz.',
+    en: '{pocet} jobs where you were the sound engineer have finished. Check the times and add timesheet entries.',
+  },
+  'vykaz.navrh.pridatVsechny': { cs: 'Přidat všechny ({pocet})', en: 'Add all ({pocet})' },
+  'vykaz.navrh.upravitCas': { cs: 'Upravit čas', en: 'Edit the time' },
+  'vykaz.navrh.nevykazovat': { cs: 'Nevykazovat', en: 'Leave it out' },
+  'vykaz.navrh.nevykazovatPopis': {
+    cs: 'Nabídka zmizí a už se nevrátí',
+    en: 'The suggestion disappears and will not come back',
+  },
+  'vykaz.navrh.chybiProjekt': {
+    cs: 'V kalendáři nebyl projekt — vyberte ho:',
+    en: 'There was no project in the calendar — choose one:',
+  },
+  'vykaz.navrh.projekt': { cs: 'Projekt:', en: 'Project:' },
+  'vykaz.navrh.hledejProjekt': {
+    cs: 'Začněte psát název projektu…',
+    en: 'Start typing the project name…',
+  },
+  'vykaz.navrh.ulozeniSelhalo': { cs: 'Nepodařilo se to uložit.', en: 'It could not be saved.' },
+  'vykaz.navrh.hromadneSelhalo': {
+    cs: 'Některé nabídky se nepodařilo přidat.',
+    en: 'Some suggestions could not be added.',
+  },
+  // Záloha názvu, když frekvence v kalendáři projekt nemá.
+  'vykaz.navrh.casting': { cs: 'Casting', en: 'Casting' },
+  'vykaz.navrh.strih': { cs: 'střih', en: 'editing' },
+  'vykaz.navrh.nataceni': { cs: 'natáčení', en: 'recording' },
+
+  // --- bonusy zvukařů: stav (klíč je KÓD, ne text) ---
+  'vykaz.bonus.stav.NAVRZENO': { cs: 'Čeká na schválení', en: 'Awaiting approval' },
+  'vykaz.bonus.stav.SCHVALENO': { cs: 'Schváleno', en: 'Approved' },
+  'vykaz.bonus.stav.ZAMITNUTO': { cs: 'Zamítnuto', en: 'Rejected' },
+
+  // --- bonusy zvukařů: úvodní vysvětlení ---
+  // Název stavu projektu zůstává český i v angličtině - STAVY_PROJEKTU se
+  // ukládají do databáze česky a portál je česky i ukazuje.
+  'vykaz.bonus.popisAdmin': {
+    cs: 'Portál navrhne bonus sám, když projekt poprvé přejde do stavu „Dokončeno - ke schválení" a zvukař na něm udělal aspoň 90 % střihu. Přiznat ho musí člověk — dokud tady nikdo neklepne na Schválit, je to jen návrh.',
+    en: 'The portal suggests a bonus by itself when a project first moves to the ‘Dokončeno - ke schválení’ status and the sound engineer has done at least 90% of the editing. A person has to award it — until someone taps Approve here, it is only a suggestion.',
+  },
+  'vykaz.bonus.popisZvukar': {
+    cs: 'Bonus za audioknihu navrhuje portál sám, když na ní uděláte aspoň 90 % střihu. Přiznává ho Žůžo-labůžo.',
+    en: 'The portal suggests an audiobook bonus by itself when you do at least 90% of the editing on it. Admin awards it.',
+  },
+
+  // --- bonusy zvukařů: ruční přidání ---
+  'vykaz.bonus.pridatRucne': { cs: 'Přidat bonus ručně', en: 'Add a bonus manually' },
+  'vykaz.bonus.rucneVysvetleni': {
+    cs: 'Pro případy, na které portál nedosáhne — kniha navíc, zachráněný termín, práce, která se do výkazů nevešla. Přidaný bonus je rovnou schválený; podíl na střihu se dopočítá z výkazů, pokud nějaké jsou.',
+    en: 'For the cases the portal cannot reach — an extra book, a rescued session, work that did not fit into the timesheets. A bonus added here is approved straight away; the share of the editing is worked out from the timesheets, if there are any.',
+  },
+  'vykaz.bonus.vyberte': { cs: '— vyberte —', en: '— choose —' },
+  'vykaz.bonus.castkaKc': { cs: 'Částka (Kč)', en: 'Amount (CZK)' },
+  'vykaz.bonus.castkaPriklad': { cs: 'např. 1200', en: 'e.g. 1200' },
+  'vykaz.bonus.zaCo': { cs: 'Za co (nepovinné)', en: 'What for (optional)' },
+  'vykaz.bonus.zaCoPriklad': {
+    cs: 'např. převzal knihu po kolegovi',
+    en: 'e.g. took over a book from a colleague',
+  },
+  'vykaz.bonus.pridavam': { cs: 'Přidávám…', en: 'Adding…' },
+  'vykaz.bonus.pridat': { cs: 'Přidat bonus', en: 'Add the bonus' },
+  'vykaz.bonus.chybiPole': {
+    cs: 'Vyberte projekt, zvukaře a vyplňte částku.',
+    en: 'Choose the project and the sound engineer, and fill in the amount.',
+  },
+  'vykaz.bonus.pridaniSelhalo': {
+    cs: 'Bonus se nepodařilo přidat.',
+    en: 'The bonus could not be added.',
+  },
+  'vykaz.bonus.spojeniSelhalo': {
+    cs: 'Nepodařilo se spojit se serverem.',
+    en: 'The server could not be reached.',
+  },
+  'vykaz.bonus.ulozeniSelhalo': { cs: 'Nepodařilo se to uložit.', en: 'It could not be saved.' },
+
+  // --- bonusy zvukařů: tabulka ---
+  'vykaz.bonus.prazdnoCekaji': {
+    cs: 'Teď není co schvalovat.',
+    en: 'There is nothing to approve right now.',
+  },
+  'vykaz.bonus.rozhodnute': { cs: 'Rozhodnuté', en: 'Decided' },
+  'vykaz.bonus.sl.podil': { cs: 'Podíl na střihu', en: 'Share of the editing' },
+  'vykaz.bonus.sl.bonus': { cs: 'Bonus', en: 'Bonus' },
+  'vykaz.bonus.sl.stav': { cs: 'Stav', en: 'Status' },
+  'vykaz.bonus.navrzeno': { cs: 'Navrženo {kdy}', en: 'Suggested {kdy}' },
+  'vykaz.bonus.pridanoRucne': { cs: 'Přidáno ručně', en: 'Added manually' },
+  // Anglicky se procenta píšou bez mezery, česky s mezerou.
+  'vykaz.bonus.procent': { cs: '{procent} %', en: '{procent}%' },
+  'vykaz.bonus.podilMinut': { cs: '{moje} z {celkem}', en: '{moje} of {celkem}' },
+  'vykaz.bonus.schvalit': { cs: 'Schválit', en: 'Approve' },
+  'vykaz.bonus.zamitnout': { cs: 'Zamítnout', en: 'Reject' },
+  'vykaz.bonus.opravduZahodit': {
+    cs: 'Opravdu zahodit návrh?',
+    en: 'Really discard this suggestion?',
+  },
+  'vykaz.bonus.vlastniSchvalujeKolega': {
+    cs: 'Vlastní bonus schvaluje kolega.',
+    en: 'Your own bonus is approved by a colleague.',
+  },
+  'vykaz.bonus.vratitKRozhodnuti': {
+    cs: 'Vrátit k rozhodnutí',
+    en: 'Send back for a decision',
+  },
 };
 
 /**

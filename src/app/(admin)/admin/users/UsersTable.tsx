@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { barvaLokace, popisekLokace } from '@/lib/lokaceHercu';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Tabulka uživatelů v administraci (zadání 9. 9. 2026: „aby byl nejdřív
@@ -39,16 +41,17 @@ export type UserRow = {
   companyId: string | null;
 };
 
+/** Klic nadpisu sloupce ve slovniku - vlastni text uz dosadi t(). */
 const NADPISY: Record<UsersColumn, string> = {
-  jmeno: 'Jméno',
-  kod: 'Kód',
-  email: 'E-mail',
-  telefon: 'Telefon',
-  role: 'Typ přístupu',
-  narozeni: 'Datum narození',
-  lokace: 'Lokace',
-  firma: 'Firma',
-  aktivni: 'Aktivní',
+  jmeno: 'uzivatel.sl.jmeno',
+  kod: 'uzivatel.sl.kod',
+  email: 'uzivatel.sl.email',
+  telefon: 'uzivatel.sl.telefon',
+  role: 'uzivatel.sl.role',
+  narozeni: 'uzivatel.sl.narozeni',
+  lokace: 'uzivatel.sl.lokace',
+  firma: 'uzivatel.sl.firma',
+  aktivni: 'uzivatel.sl.aktivni',
 };
 
 /** Hodnota, podle které se sloupec řadí. null = prázdno, patří vždy dozadu. */
@@ -76,7 +79,10 @@ function hodnota(row: UserRow, sloupec: UsersColumn): string | number | null {
   }
 }
 
-function porovnej(a: UserRow, b: UserRow, sloupec: UsersColumn, dir: 'asc' | 'desc'): number {
+// Jazyk chodi parametrem - funkce stoji mimo komponentu, hook by tu nefungoval.
+// Podle nej se radi i text: v anglictine uz jsou popisky rolí anglicky, takze
+// ceske razeni by u nich davalo jine poradi.
+function porovnej(jazyk: Jazyk, a: UserRow, b: UserRow, sloupec: UsersColumn, dir: 'asc' | 'desc'): number {
   const x = hodnota(a, sloupec);
   const y = hodnota(b, sloupec);
 
@@ -90,7 +96,7 @@ function porovnej(a: UserRow, b: UserRow, sloupec: UsersColumn, dir: 'asc' | 'de
 
   const smer = dir === 'asc' ? 1 : -1;
   if (typeof x === 'number' && typeof y === 'number') return (x - y) * smer;
-  return String(x).localeCompare(String(y), 'cs', { numeric: true }) * smer;
+  return String(x).localeCompare(String(y), kodJazyka(jazyk), { numeric: true }) * smer;
 }
 
 function Sipka({ dir }: { dir: 'asc' | 'desc' | null }) {
@@ -117,11 +123,13 @@ export function UsersTable({
   columns: UsersColumn[];
   emptyText: string;
 }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [sort, setSort] = useState<{ key: UsersColumn; dir: 'asc' | 'desc' }>({ key: 'jmeno', dir: 'asc' });
 
   const serazene = useMemo(
-    () => [...rows].sort((a, b) => porovnej(a, b, sort.key, sort.dir)),
-    [rows, sort],
+    () => [...rows].sort((a, b) => porovnej(jazyk, a, b, sort.key, sort.dir)),
+    [jazyk, rows, sort],
   );
 
   function prepni(sloupec: UsersColumn) {
@@ -144,12 +152,12 @@ export function UsersTable({
                       type="button"
                       onClick={() => prepni(sloupec)}
                       aria-sort={aktivni ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                      title={`Seřadit podle: ${NADPISY[sloupec]}`}
+                      title={t('uzivatel.seraditPodle', { sloupec: t(NADPISY[sloupec]) })}
                       className={`font-heading text-xs hover:text-brand-purpleLight transition-colors ${
                         aktivni ? 'text-brand-purpleLight' : 'text-white'
                       }`}
                     >
-                      {NADPISY[sloupec]}
+                      {t(NADPISY[sloupec])}
                       <Sipka dir={aktivni ? sort.dir : null} />
                     </button>
                   </th>
@@ -253,7 +261,7 @@ export function UsersTable({
                     case 'aktivni':
                       return (
                         <td key={sloupec} className={bunka}>
-                          {u.active ? 'Ano' : <span className="text-danger">Ne</span>}
+                          {u.active ? t('obecne.ano') : <span className="text-danger">{t('obecne.ne')}</span>}
                         </td>
                       );
                   }

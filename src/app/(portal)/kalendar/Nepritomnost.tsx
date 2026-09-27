@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import type { DruhNepritomnosti } from '@prisma/client';
 import {
   BARVA_NEPRITOMNOSTI,
-  NAZEV_KALENDARE_MIMO,
   PASMO_NEPRITOMNOSTI,
   denVPraze,
   posledniDen,
@@ -15,6 +14,8 @@ import {
 import { DatumPole } from '@/components/DatumPole';
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
+import { kodJazyka } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * KALENDÁŘ MIMO STUDIO - kousky, které se kreslí do kalendáře studií (zadání
@@ -36,7 +37,12 @@ export function CipNepritomnosti({
   n: NepritomnostVKalendari;
   onOtevri: (n: NepritomnostVKalendari) => void;
 }) {
-  const popis = `${NAZEV_KALENDARE_MIMO}: ${n.jmeno} · ${rozsahSlovy(n)}${n.poznamka ? ` · ${n.poznamka}` : ''}`;
+  const t = usePreklad();
+  const jazyk = useJazyk();
+  // Jméno i poznámka jsou data uživatele - do věty vstupují, nepřekládají se.
+  const popis = `${t('nepritomnost.cipPopis', { jmeno: n.jmeno, rozsah: rozsahSlovy(n) })}${
+    n.poznamka ? ` · ${n.poznamka}` : ''
+  }`;
   return (
     <button
       type="button"
@@ -45,7 +51,7 @@ export function CipNepritomnosti({
         if (n.muzeUpravit) onOtevri(n);
       }}
       onDoubleClick={(e) => e.stopPropagation()}
-      title={n.muzeUpravit ? `${popis}\nKlepnutím upravíte.` : popis}
+      title={n.muzeUpravit ? `${popis}\n${t('nepritomnost.klepnutimUpravite')}` : popis}
       className={`w-full rounded px-1.5 py-0.5 text-[10px] font-heading text-left truncate border text-ink ${
         n.muzeUpravit ? 'cursor-pointer hover:brightness-110' : 'cursor-default'
       }`}
@@ -57,10 +63,11 @@ export function CipNepritomnosti({
     >
       {!n.celyDen && (
         <span className="tabular-nums text-muted">
-          {new Intl.DateTimeFormat('cs-CZ', {
+          {new Intl.DateTimeFormat(kodJazyka(jazyk), {
             timeZone: PASMO_NEPRITOMNOSTI,
             hour: '2-digit',
             minute: '2-digit',
+            hourCycle: 'h23',
           }).format(new Date(n.start))}{' '}
         </span>
       )}
@@ -86,6 +93,7 @@ export function PruhNepritomnosti({
   onOtevri: (n: NepritomnostVKalendari) => void;
   onNova: (denKey: string) => void;
 }) {
+  const t = usePreklad();
   return (
     <div
       className="grid border-b border-line bg-paper/40"
@@ -93,9 +101,9 @@ export function PruhNepritomnosti({
     >
       <div
         className="px-1 py-1.5 text-[9px] font-heading text-muted uppercase tracking-wide text-right leading-tight self-center"
-        title="Celodenní události v kalendáři Mimo studio"
+        title={t('nepritomnost.pruhBublina')}
       >
-        Mimo studio
+        {t('nepritomnost.mimoStudio')}
       </div>
       {dny.map((den) => {
         const vDni = podleDnu.get(den.key) ?? [];
@@ -104,7 +112,7 @@ export function PruhNepritomnosti({
             key={den.key}
             className="border-l border-line p-1 flex flex-col gap-0.5 min-h-[28px]"
             onDoubleClick={() => onNova(den.key)}
-            title={vDni.length === 0 ? 'Dvojklikem zapíšete celý den mimo studio' : undefined}
+            title={vDni.length === 0 ? t('nepritomnost.dvojklikCelyDen') : undefined}
           >
             {vDni.map((n) => (
               <CipNepritomnosti key={n.id} n={n} onOtevri={onOtevri} />
@@ -158,6 +166,10 @@ function pocetDni(od: string, doo: string): number {
 /** Nejvíc dní, které jde zapsat jedním zadáním. */
 const NEJVIC_DNI = 366;
 
+/**
+ * HH:MM do políčka `<input type="time">`. Není to text pro čtení, ale hodnota
+ * pro prohlížeč, takže se nepřekládá - formát musí zůstat 24hodinový.
+ */
 function minutyNaCas(d: Date): string {
   return new Intl.DateTimeFormat('cs-CZ', {
     timeZone: PASMO_NEPRITOMNOSTI,
@@ -204,6 +216,7 @@ export function NepritomnostForm({
   lidiTymu: Osoba[];
   onClose: () => void;
 }) {
+  const t = usePreklad();
   const router = useRouter();
   // Prihlaseny v seznamu byt musi, i kdyby se nenacetl - jinak by ho nesel vybrat.
   const lide = lidiTymu.some((l) => l.id === ja.id) ? lidiTymu : [ja, ...lidiTymu];
@@ -277,14 +290,14 @@ export function NepritomnostForm({
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Uložit se nepodařilo.');
+        setChyba(data?.error || t('nepritomnost.chybaUlozeni'));
         setBezi(false);
         return;
       }
       onClose();
       router.refresh();
     } catch {
-      setChyba('Uložit se nepodařilo.');
+      setChyba(t('nepritomnost.chybaUlozeni'));
       setBezi(false);
     }
   }
@@ -294,7 +307,7 @@ export function NepritomnostForm({
     const res = await fetch(`/api/kalendar/nepritomnost?id=${upravovana.id}`, { method: 'DELETE' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setChyba(data?.error || 'Smazat se nepodařilo.');
+      setChyba(data?.error || t('mazani.nezdarilo'));
       return;
     }
     onClose();
@@ -311,7 +324,7 @@ export function NepritomnostForm({
     >
       <div className="flex items-start justify-between gap-4">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          {upravovana ? `Úprava — ${NAZEV_KALENDARE_MIMO.toLowerCase()}` : NAZEV_KALENDARE_MIMO}
+          {upravovana ? t('nepritomnost.nadpisUprava') : t('nepritomnost.mimoStudio')}
         </h2>
         {onPorada && (
           <button
@@ -319,23 +332,23 @@ export function NepritomnostForm({
             onClick={() => onPorada(od, casOd, casDo)}
             className="ml-auto text-xs font-heading font-semibold text-brand-purple hover:underline"
           >
-            Místo toho porada →
+            {t('nepritomnost.mistoTohoPorada')}
           </button>
         )}
-        <button type="button" onClick={onClose} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
+        <button type="button" onClick={onClose} aria-label={t('obecne.zavrit')} className="text-muted hover:text-ink text-lg leading-none">
           ×
         </button>
       </div>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Osoba</span>
+        <span className="text-sm font-body text-ink">{t('nepritomnost.osoba')}</span>
         <VyberProjektu
           projekty={lide}
           hodnota={kdo}
           onZmena={(v) => setKdo(v || ja.id)}
-          placeholder="Začněte psát jméno…"
-          prazdnyText="Takového člověka v týmu nemáme."
-          popisZruseni="Zpátky na mě"
+          placeholder={t('nepritomnost.zacnetePsatJmeno')}
+          prazdnyText={t('nepritomnost.nikdoTakovy')}
+          popisZruseni={t('nepritomnost.zpatkyNaMe')}
         />
       </label>
 
@@ -346,18 +359,18 @@ export function NepritomnostForm({
           onChange={(e) => setCelyDen(e.target.checked)}
           className="w-4 h-4 accent-brand-purple"
         />
-        <span className="text-sm font-body text-ink">Celý den</span>
+        <span className="text-sm font-body text-ink">{t('nepritomnost.celyDen')}</span>
       </label>
 
       <div className={`grid grid-cols-1 gap-3 ${jedenDen ? '' : 'sm:grid-cols-[1fr_1fr_110px]'}`}>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">{jedenDen ? 'Den' : 'Od'}</span>
+          <span className="text-sm font-body text-ink">{jedenDen ? t('nepritomnost.den') : t('nepritomnost.od')}</span>
           <DatumPole value={od} onChange={(e) => zmenOd(e.target.value)} className={`${inputClass} tabular-nums`} />
         </label>
         {!jedenDen && (
           <>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Do (včetně)</span>
+              <span className="text-sm font-body text-ink">{t('nepritomnost.doVcetne')}</span>
               <DatumPole
                 value={doDen}
                 onChange={(e) => e.target.value && setDoDen(e.target.value)}
@@ -365,7 +378,7 @@ export function NepritomnostForm({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Počet dní</span>
+              <span className="text-sm font-body text-ink">{t('nepritomnost.pocetDni')}</span>
               <input
                 type="number"
                 min={1}
@@ -382,7 +395,7 @@ export function NepritomnostForm({
       {!celyDen && (
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Čas od</span>
+            <span className="text-sm font-body text-ink">{t('nepritomnost.casOd')}</span>
             <input
               type="time"
               step={1800}
@@ -392,7 +405,7 @@ export function NepritomnostForm({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Čas do</span>
+            <span className="text-sm font-body text-ink">{t('nepritomnost.casDo')}</span>
             <input
               type="time"
               step={1800}
@@ -405,16 +418,16 @@ export function NepritomnostForm({
       )}
       {!celyDen && !jedenDen && dni > 1 && !spatnyRozsah && (
         <span className="text-xs font-body text-muted -mt-2">
-          Zapíše se {dni}× — v každém dni {casOd}–{casDo}.
+          {t('nepritomnost.zapiseSe', { pocet: dni, od: casOd, do: casDo })}
         </span>
       )}
       {spatnyRozsah && (
         <span className="text-xs font-body text-danger -mt-2">
           {doDen < od
-            ? 'Poslední den nesmí být před prvním.'
+            ? t('nepritomnost.chybaPoradiDnu')
             : dni > NEJVIC_DNI
-              ? `Najednou jde zapsat nejvýš ${NEJVIC_DNI} dní.`
-              : 'Konec musí být po začátku.'}
+              ? t('nepritomnost.chybaNejvicDni', { pocet: NEJVIC_DNI })
+              : t('nepritomnost.chybaKonecPoZacatku')}
         </span>
       )}
 
@@ -427,10 +440,10 @@ export function NepritomnostForm({
           disabled={bezi || spatnyRozsah}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {bezi ? 'Ukládám…' : upravovana ? 'Uložit změny' : 'Zapsat'}
+          {bezi ? t('obecne.ukladam') : upravovana ? t('nepritomnost.ulozitZmeny') : t('nepritomnost.zapsat')}
         </button>
         <button type="button" onClick={onClose} className="text-muted text-sm font-heading">
-          Zrušit
+          {t('obecne.zrusit')}
         </button>
         {upravovana && (
           <span className="ml-auto">

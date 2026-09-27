@@ -4,6 +4,8 @@ import { NewCompanyForm } from './NewCompanyForm';
 import { COMPANY_TYPE_TABS } from '@/lib/roles';
 import { AdminSearch } from './AdminSearch';
 import { FirmyTabulka, type FirmaRadek } from './FirmyTabulka';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 // Firmy se od 5. 9. 2026 deli na zalozky Klienti / Dodavatele (zadani:
 // "sekci Firmy bych rozdělil na Klienti a Dodavatele") - stejny vzor jako
@@ -13,6 +15,7 @@ export default async function AdminHomePage({
 }: {
   searchParams: { tab?: string; q?: string };
 }) {
+  const jazyk = nactiJazyk();
   const activeTab = COMPANY_TYPE_TABS.find((t) => t.key === searchParams?.tab) ?? COMPANY_TYPE_TABS[0];
   // Hledani napric nazvem, IC, kodem i kontaktem (zadani 6. 9. 2026).
   const q = searchParams?.q?.trim() || '';
@@ -41,6 +44,11 @@ export default async function AdminHomePage({
 
   const countFor = (type: string) => typeCounts.find((t) => t.type === type)?._count.type ?? 0;
 
+  // Popisky zalozek jsou v lib/roles.ts cesky (bere si je i /admin/users),
+  // proto se prekladaji tady podle klice zalozky, ne podle textu.
+  const popisekZalozky = (key: string) =>
+    prelozit(jazyk, key === 'dodavatele' ? 'firmy.zalozkaDodavatele' : 'firmy.zalozkaKlienti');
+
   const radkyFirem: FirmaRadek[] = companies.map((c) => ({
     id: c.id,
     kod: c.code || null,
@@ -57,35 +65,35 @@ export default async function AdminHomePage({
     <section className="flex flex-col gap-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Firmy</h1>
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">{prelozit(jazyk, 'firmy.nadpis')}</h1>
         </div>
         {/* Zneni zprav klientovi (zadani 11. 9. 2026). */}
         <Link
           href="/admin/vzory-zprav"
           className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
         >
-          Vzory zpráv klientovi
+          {prelozit(jazyk, 'firmy.vzoryZprav')}
         </Link>
         {/* Vzory natacecich textu (zadani 26. 9. 2026). */}
         <Link
           href="/admin/vzory-nataceni"
           className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
         >
-          Vzory natáčecích textů
+          {prelozit(jazyk, 'firmy.vzoryNataceni')}
         </Link>
         {/* Technicke parametry vyroby (zadani 27. 9. 2026). */}
         <Link
           href="/admin/technicke-parametry"
           className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
         >
-          Technické parametry
+          {prelozit(jazyk, 'firmy.technickeParametry')}
         </Link>
         {/* Koncept a hlidani clanku na Wikipedii (zadani 22. 9. 2026). */}
         <Link
           href="/admin/wikipedie"
           className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
         >
-          Wikipedie
+          {prelozit(jazyk, 'firmy.wikipedie')}
         </Link>
         {/* Zpravy, ktere portal posila nam - bonusy a mesicni prehled
             (zadani 15. 9. 2026). */}
@@ -93,17 +101,17 @@ export default async function AdminHomePage({
           href="/admin/zpravy-portalu"
           className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
         >
-          Zprávy portálu
+          {prelozit(jazyk, 'firmy.zpravyPortalu')}
         </Link>
         {/* Surovy seznam firem z Caflou (zadani 8. 9. 2026). Od odpojeni
             11. 9. 2026 uz to neni bezna cesta, jen posledni moznost, jak
             neco z Caflou dohledat - proto v barve poznamky, ne akce. */}
         <Link
           href="/admin/caflou-firmy"
-          title="Caflou už portál nepoužívá. Zůstává jen na dohledání starých údajů."
+          title={prelozit(jazyk, 'firmy.caflouTitle')}
           className="font-heading text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-muted no-underline hover:border-brand-purple hover:text-brand-purple transition-colors whitespace-nowrap"
         >
-          Firmy z Caflou (archiv)
+          {prelozit(jazyk, 'firmy.caflouFirmy')}
         </Link>
       </div>
 
@@ -119,13 +127,13 @@ export default async function AdminHomePage({
                 active ? 'bg-surface border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
               }`}
             >
-              {tab.label} <span className="tabular-nums">({countFor(tab.type)})</span>
+              {popisekZalozky(tab.key)} <span className="tabular-nums">({countFor(tab.type)})</span>
             </Link>
           );
         })}
         </div>
         <div className="mb-2">
-          <AdminSearch placeholder="Hledat firmu, IČ, kontakt…" />
+          <AdminSearch placeholder={prelozit(jazyk, 'firmy.hledatPlaceholder')} />
         </div>
       </div>
 
@@ -134,13 +142,14 @@ export default async function AdminHomePage({
         key={activeTab.key}
         radky={radkyFirem}
         druh={activeTab.type === 'KLIENT' ? 'klienti' : 'dodavatele'}
-        prazdno={
+        prazdno={prelozit(
+          jazyk,
           q
-            ? 'Hledání nic nenašlo.'
+            ? 'firmy.hledaniPrazdne'
             : activeTab.type === 'KLIENT'
-              ? 'Zatím žádný klient. Založte prvního tlačítkem níže.'
-              : 'Zatím žádný dodavatel. Založte prvního tlačítkem níže.'
-        }
+              ? 'firmy.zadnyKlient'
+              : 'firmy.zadnyDodavatel',
+        )}
       />
 
       {/* key vynuti remount pri prepnuti zalozky Klienti/Dodavatele - stejny

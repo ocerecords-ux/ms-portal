@@ -11,6 +11,8 @@ import { BonusyPanel, type Bonus } from './BonusyPanel';
 import { NavrhyZKalendare } from './NavrhyZKalendare';
 import { nactiNavrhy, pripravNavrhy } from '@/lib/vykazNavrhyServer';
 import type { BonusRadek } from './TimesheetEditor';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { kodJazyka, prelozit } from '@/lib/jazyk';
 
 // Výkazy zvukařů (zadani 6. 9. 2026). Vidi je zvukar (VYHRADNE svoje) a
 // Zuzo-labuzo (vsechny, jen ke cteni - vykazy si nedela) - produkce ani
@@ -22,6 +24,7 @@ export default async function TimesheetsPage({
 }: {
   searchParams?: { zalozka?: string };
 }) {
+  const jazyk = nactiJazyk();
   const session = await getServerSession(authOptions);
   const role = session?.user?.role;
   if (!session?.user?.id || (role !== 'ZVUKAR' && role !== 'ADMIN')) redirect('/projekty');
@@ -73,7 +76,7 @@ export default async function TimesheetsPage({
             label: p.companyName ? `${p.name} — ${p.companyName}` : p.name,
             dokonceny: p.finished,
           }))
-          .sort((a, b) => a.label.localeCompare(b.label, 'cs'));
+          .sort((a, b) => a.label.localeCompare(b.label, kodJazyka(jazyk)));
       })()
     : [];
 
@@ -170,10 +173,10 @@ export default async function TimesheetsPage({
           v liste na ni tak muze rovnou odkazat. */}
       <div className="flex items-center gap-1 flex-wrap border-b border-line">
         <Link href="/vykazy" className={zalozkaClass(!naBonusech)}>
-          Výkazy
+          {prelozit(jazyk, 'vykaz.nadpis')}
         </Link>
         <Link href="/vykazy?zalozka=bonusy" className={zalozkaClass(naBonusech)}>
-          {isAdmin ? 'Bonusy ke schválení' : 'Moje bonusy'}
+          {prelozit(jazyk, isAdmin ? 'vykaz.zalozkaBonusyKeSchvaleni' : 'vykaz.zalozkaMojeBonusy')}
           {keSchvaleni > 0 && (
             <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-pill bg-danger text-white text-[11px] tabular-nums">
               {keSchvaleni}

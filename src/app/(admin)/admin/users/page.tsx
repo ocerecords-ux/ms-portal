@@ -2,9 +2,21 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { NewUserForm } from './NewUserForm';
 import { UsersTable, type UsersColumn, type UserRow } from './UsersTable';
-import { ROLE_LABELS, USER_TABS } from '@/lib/roles';
+import { USER_TABS } from '@/lib/roles';
 import { AdminSearch } from '../AdminSearch';
 import { NovaPozvankaHerce } from '@/components/NovaPozvankaHerce';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit, prelozitKolem } from '@/lib/jazyk';
+
+// Nazev zalozky se bere podle KODU zalozky, ne podle ceskeho popisku z
+// lib/roles.ts - ten zustava cesky pro zbytek aplikace.
+const ZALOZKY_KLICE: Record<string, string> = {
+  mediaspace: 'uzivatel.zalozkaMediaspace',
+  klienti: 'uzivatel.zalozkaKlienti',
+  herci: 'uzivatel.zalozkaHerci',
+  tabule: 'uzivatel.zalozkaTabule',
+  studio: 'uzivatel.zalozkaStudio',
+};
 
 // Bez companyId (default pohled) se uzivatele tridi do 3 zalozek podle
 // zadani 5. 9. 2026 (upresneni) - Mediaspace / Klienti / Herci. Dodavatele uz
@@ -16,6 +28,7 @@ export default async function UsersAdminPage({
 }: {
   searchParams: { companyId?: string; tab?: string; q?: string };
 }) {
+  const jazyk = nactiJazyk();
   const companyId = searchParams?.companyId;
   // Hledani napric jmenem, e-mailem, telefonem a kodem uctu (zadani 6. 9. 2026).
   const q = searchParams?.q?.trim() || '';
@@ -47,8 +60,6 @@ export default async function UsersAdminPage({
   const countFor = (roles: string[]) =>
     roleCounts.filter((r) => roles.includes(r.role)).reduce((sum, r) => sum + r._count.role, 0);
 
-  const dateFmt = new Intl.DateTimeFormat('cs-CZ');
-
   // Jedna tabulka pro vsechny zalozky (zadani 9. 9. 2026) - lisi se uz jen
   // tim, ktere sloupce si zalozka vyzada. Jmeno je vzdycky prvni.
   const rows: UserRow[] = users.map((u) => ({
@@ -57,10 +68,10 @@ export default async function UsersAdminPage({
     name: u.name ?? '',
     email: u.email,
     phone: u.phone,
-    roleLabel: ROLE_LABELS[u.role],
+    roleLabel: prelozit(jazyk, `role.${u.role}`),
     active: u.active,
     photoUrl: u.photoUrl ?? null,
-    birthDate: u.birthDate ? dateFmt.format(u.birthDate) : null,
+    birthDate: u.birthDate ? formatDatum(jazyk, u.birthDate) : null,
     birthDateMs: u.birthDate ? u.birthDate.getTime() : null,
     // U zvukare jsou to jeho studia, u herce mesta, ve kterych toci.
     ...(() => {
@@ -98,15 +109,24 @@ export default async function UsersAdminPage({
           tabulkou, kde ho pri delsim seznamu nebylo videt. */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Uživatelé</h1>
-          {filteredCompany && (
-            <p className="text-sm font-heading mt-2">
-              Filtr: <strong>{filteredCompany.name}</strong>{' '}
-              <Link href="/admin/users" className="text-brand-purple">
-                (zrušit filtr)
-              </Link>
-            </p>
-          )}
+          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">
+            {prelozit(jazyk, 'uzivatel.nadpis')}
+          </h1>
+          {filteredCompany &&
+            (() => {
+              // Veta je jeden klic, tucny nazev firmy se z ni vykroji az tady.
+              const [pred, po] = prelozitKolem(jazyk, 'uzivatel.filtrFirma', 'firma');
+              return (
+                <p className="text-sm font-heading mt-2">
+                  {pred}
+                  <strong>{filteredCompany.name}</strong>
+                  {po}{' '}
+                  <Link href="/admin/users" className="text-brand-purple">
+                    {prelozit(jazyk, 'uzivatel.zrusitFiltr')}
+                  </Link>
+                </p>
+              );
+            })()}
         </div>
         <div className="flex items-start gap-3 flex-wrap max-w-3xl w-full sm:w-auto justify-end">
           {/* Novy herec se nezaklada rucne, ale pozvankou (zadani 16. 9. 2026:
@@ -132,13 +152,14 @@ export default async function UsersAdminPage({
                     : 'border-transparent text-muted hover:text-ink'
                 }`}
               >
-                {tab.label} <span className="tabular-nums">({countFor(tab.roles)})</span>
+                {ZALOZKY_KLICE[tab.key] ? prelozit(jazyk, ZALOZKY_KLICE[tab.key]) : tab.label}{' '}
+                <span className="tabular-nums">({countFor(tab.roles)})</span>
               </Link>
             );
           })}
           </div>
           <div className="mb-2">
-            <AdminSearch placeholder="Hledat jméno, e-mail, telefon…" />
+            <AdminSearch placeholder={prelozit(jazyk, 'uzivatel.hledatPlaceholder')} />
           </div>
         </div>
       )}
@@ -146,7 +167,7 @@ export default async function UsersAdminPage({
       <UsersTable
         rows={rows}
         columns={sloupce}
-        emptyText={q ? 'Hledání nic nenašlo.' : 'Žádný uživatel neodpovídá filtru.'}
+        emptyText={prelozit(jazyk, q ? 'uzivatel.hledaniPrazdne' : 'uzivatel.zadnyUzivatel')}
       />
     </section>
   );

@@ -5,12 +5,15 @@ import { RezervaceStudii } from './RezervaceStudii';
 import { nazevPolozky } from '@/lib/tabule';
 import { zakladPortalu } from '@/lib/preposlechOdkaz';
 import { instagramNastaven, stavInstagramu } from '@/lib/instagramServer';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 // Studia a jejich pracovni doba (zadani 8. 9. 2026). Blokace se od
 // 25. 9. 2026 zapisuji primo v kalendari, tady uz nejsou.
 export const dynamic = 'force-dynamic';
 
 export default async function StudiaPage({ searchParams }: { searchParams?: { instagram?: string } }) {
+  const jazyk = nactiJazyk();
   const igStav = await stavInstagramu();
   const [studios, tabule] = await Promise.all([
     prisma.studio.findMany({
@@ -128,7 +131,7 @@ export default async function StudiaPage({ searchParams }: { searchParams?: { in
       zaklad={zakladPortalu()}
       instagram={{
         nastaven: instagramNastaven(),
-        ucet: igStav ? igStav.username ?? '(bez jména)' : null,
+        ucet: igStav ? igStav.username ?? prelozit(jazyk, 'studia.igBezJmena') : null,
         platiDo: igStav ? igStav.tokenDo.toISOString() : null,
         chyba: igStav?.chyba ?? null,
         hlaska: searchParams?.instagram ?? null,

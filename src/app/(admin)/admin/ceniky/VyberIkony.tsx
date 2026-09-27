@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { IKONY_TYPU, KresbaIkony, popisekIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Výběr ikony u položky ceníku (zadání 10. 9. 2026: „chtěl bych to měnit
@@ -23,6 +24,7 @@ export function VyberIkony({
   onZmena: (klic: string) => void;
   disabled?: boolean;
 }) {
+  const t = usePreklad();
   const [otevreno, setOtevreno] = useState(false);
   const obal = useRef<HTMLDivElement>(null);
 
@@ -42,7 +44,13 @@ export function VyberIkony({
         type="button"
         disabled={disabled}
         onClick={() => setOtevreno((o) => !o)}
-        title={hodnota ? `Ikona: ${popisekIkony(hodnota)}` : 'Vybrat ikonu'}
+        // popisekIkony vrací null u klíče, který v nabídce není (stará data) -
+        // pak se ukáže obecná bublina, ne „Ikona: null".
+        title={
+          popisekIkony(hodnota)
+            ? t('cenik.ikonaJmeno', { nazev: popisekIkony(hodnota) as string })
+            : t('cenik.vybratIkonu')
+        }
         className={`inline-grid place-items-center w-[34px] h-[34px] rounded-pill border transition-colors disabled:opacity-60 ${
           hodnota
             ? `${tridaBarvyIkony(hodnota)} border-transparent`
@@ -83,7 +91,7 @@ export function VyberIkony({
             }}
             className="mt-3 w-full text-center text-xs font-heading font-semibold text-muted hover:text-danger py-1.5"
           >
-            Žádná ikona
+            {t('cenik.zadnaIkona')}
           </button>
         </div>
       )}

@@ -3,12 +3,15 @@ import { PriceListEditor } from './PriceListEditor';
 import { BudgetSettingsForm } from './BudgetSettingsForm';
 import { LicenceEditor } from './LicenceEditor';
 import { DEFAULT_BUDGET_SETTINGS } from '@/lib/budget';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 // Ceníky (zadani 5. 9. 2026). Polozky ceniku slouzi zaroven jako ciselnik
 // typu projektu - viz lib/priceList.ts.
 export const dynamic = 'force-dynamic';
 
 export default async function PriceListPage() {
+  const jazyk = nactiJazyk();
   const [items, budget, licence] = await Promise.all([
     prisma.priceListItem.findMany({ orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }),
     prisma.budgetSettings.findUnique({ where: { id: 'default' } }),
@@ -24,7 +27,7 @@ export default async function PriceListPage() {
   return (
     <section className="flex flex-col gap-8">
       <div>
-        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">Ceníky</h1>
+        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">{prelozit(jazyk, 'cenik.nadpis')}</h1>
       </div>
 
       <PriceListEditor

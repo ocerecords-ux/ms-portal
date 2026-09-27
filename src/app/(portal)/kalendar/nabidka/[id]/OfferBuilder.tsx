@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   RECORDING_STATUS_CLASSES,
-  RECORDING_STATUS_LABELS,
-  SLOT_STATE_LABELS,
   formatDateTime,
   minutesInZone,
   minutesToTime,
 } from '@/lib/calendar';
+import { POZNAMKA_VIKEND } from '@/lib/volnaMista';
+import { formatDatum, kodJazyka, prelozitKolem } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { DatumPole } from '@/components/DatumPole';
 import { VyberPole } from '@/components/VyberPole';
 import { VyberStudii } from '@/components/VyberStudii';
@@ -62,12 +63,41 @@ type Slot = {
  * Produkce tu jen upraví parametry (období, počet frekvencí), odešle herci
  * a potvrdí jeho výběr.
  */
-/** „1 termín", „2 termíny", „5 termínů" - nebo totéž s „místo". */
-function slovoTermin(n: number, misto = false): string {
-  if (n === 1) return misto ? 'volné místo' : 'termín';
-  if (n >= 2 && n <= 4) return misto ? 'volná místa' : 'termíny';
-  return misto ? 'volných míst' : 'termínů';
+/**
+ * Kolik volných míst chybí. Čeština má tři tvary, takže jsou ve slovníku tři
+ * CELÉ VĚTY (pravidlo 7 v docs/preklad-portalu.md) - ne slovo skládané do věty.
+ */
+function klicChybiMist(n: number): string {
+  if (n === 1) return 'nabidkaTerminu.chybiJedno';
+  if (n >= 2 && n <= 4) return 'nabidkaTerminu.chybiMalo';
+  return 'nabidkaTerminu.chybiVic';
 }
+
+/**
+ * Stav nabídky a stav termínu ve slovníku. RECORDING_STATUS_LABELS
+ * a SLOT_STATE_LABELS v lib/calendar.ts jsou jen česky - tady se překládá
+ * podle KÓDU stavu, ne podle jeho popisku.
+ */
+const KLICE_STAVU: Record<string, string> = {
+  DRAFT: 'nabidkaTerminu.stavDraft',
+  PREPARING: 'nabidkaTerminu.stavPreparing',
+  SENT: 'nabidkaTerminu.stavSent',
+  PICKING: 'nabidkaTerminu.stavPicking',
+  SUBMITTED: 'nabidkaTerminu.stavSubmitted',
+  RETURNED: 'nabidkaTerminu.stavReturned',
+  REJECTED: 'nabidkaTerminu.stavRejected',
+  CONFIRMED: 'nabidkaTerminu.stavConfirmed',
+  CANCELLED: 'nabidkaTerminu.stavCancelled',
+  COMPLETED: 'nabidkaTerminu.stavCompleted',
+};
+
+const KLICE_STAVU_TERMINU: Record<string, string> = {
+  OFFERED: 'nabidkaTerminu.terminNabidnuto',
+  SELECTED: 'nabidkaTerminu.terminDrzeno',
+  CONFIRMED: 'nabidkaTerminu.terminPotvrzeno',
+  RELEASED: 'nabidkaTerminu.terminUvolneno',
+  CANCELLED: 'nabidkaTerminu.terminZruseno',
+};
 
 export function OfferBuilder({
   request,
@@ -83,6 +113,8 @@ export function OfferBuilder({
   studios: { id: string; name: string; color?: string | null }[];
   historie: { id: string; type: string; actorLabel: string; note: string | null; createdAt: string }[];
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const locked = ['CONFIRMED', 'COMPLETED', 'CANCELLED', 'REJECTED'].includes(request.status);
 
@@ -125,13 +157,13 @@ export function OfferBuilder({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('nabidkaTerminu.chybaUlozeni'));
         return;
       }
-      setInfo('Uloženo.');
+      setInfo(t('nabidkaTerminu.ulozeno'));
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('nabidkaTerminu.chybaUlozeni'));
     } finally {
       setBusy(false);
     }
@@ -144,13 +176,13 @@ export function OfferBuilder({
       const res = await fetch(`/api/kalendar/nabidky/${request.id}/odeslat`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Odeslání se nezdařilo.');
+        setError(data?.error || t('nabidkaTerminu.chybaOdeslani'));
         return;
       }
-      setInfo(`Nabídka odešla na ${request.actorEmail}.`);
+      setInfo(t('nabidkaTerminu.odeslanoNa', { email: request.actorEmail }));
       router.refresh();
     } catch {
-      setError('Odeslání se nezdařilo.');
+      setError(t('nabidkaTerminu.chybaOdeslani'));
     } finally {
       setBusy(false);
     }
@@ -161,7 +193,7 @@ export function OfferBuilder({
    * jsme vypustili (rozhodnuto 8. 9. 2026).
    */
   async function rozhodni(action: 'confirm' | 'return' | 'reject' | 'complete') {
-    if (action === 'reject' && !window.confirm('Opravdu zamítnout? Termíny se uvolní.')) return;
+    if (action === 'reject' && !window.confirm(t('nabidkaTerminu.opravduZamitnout'))) return;
     setBusy(true);
     setError(null);
     setInfo(null);
@@ -173,22 +205,22 @@ export function OfferBuilder({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Rozhodnutí se nepodařilo uložit.');
+        setError(data?.error || t('nabidkaTerminu.chybaRozhodnuti'));
         return;
       }
       setVzkaz('');
       setInfo(
         action === 'confirm'
-          ? 'Termíny potvrzeny, herci odešel e-mail.'
+          ? t('nabidkaTerminu.hotovoPotvrzeno')
           : action === 'return'
-            ? 'Vráceno herci k novému výběru.'
+            ? t('nabidkaTerminu.hotovoVraceno')
             : action === 'reject'
-              ? 'Výběr zamítnut.'
-              : 'Označeno jako dokončené.',
+              ? t('nabidkaTerminu.hotovoZamitnuto')
+              : t('nabidkaTerminu.hotovoDokonceno'),
       );
       router.refresh();
     } catch {
-      setError('Rozhodnutí se nepodařilo uložit.');
+      setError(t('nabidkaTerminu.chybaRozhodnuti'));
     } finally {
       setBusy(false);
     }
@@ -206,10 +238,14 @@ export function OfferBuilder({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Rozhodnutí se nepodařilo uložit.');
+        setError(data?.error || t('nabidkaTerminu.chybaRozhodnuti'));
         return;
       }
-      setInfo(action === 'approve' ? 'Přesun potvrzen, herci přišlo oznámení.' : 'Přesun zamítnut, termín zůstává.');
+      setInfo(
+        action === 'approve'
+          ? t('nabidkaTerminu.presunPotvrzen')
+          : t('nabidkaTerminu.presunZamitnut'),
+      );
       router.refresh();
     } finally {
       setBusy(false);
@@ -217,17 +253,18 @@ export function OfferBuilder({
   }
   const zadostiOPresun = slots.filter((s) => s.zadost);
   const kdy = (iso: string) =>
-    new Intl.DateTimeFormat('cs-CZ', {
+    new Intl.DateTimeFormat(kodJazyka(jazyk), {
       timeZone: request.timezone,
       weekday: 'short',
       day: 'numeric',
       month: 'numeric',
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
     }).format(new Date(iso));
 
   async function zrus() {
-    if (!window.confirm('Opravdu zrušit celou nabídku? Termíny se uvolní.')) return;
+    if (!window.confirm(t('nabidkaTerminu.opravduZrusitNabidku'))) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/kalendar/nabidky/${request.id}`, {
@@ -237,7 +274,7 @@ export function OfferBuilder({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Zrušení se nezdařilo.');
+        setError(data?.error || t('nabidkaTerminu.chybaZruseni'));
         return;
       }
       router.refresh();
@@ -255,7 +292,9 @@ export function OfferBuilder({
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">Nabídka termínů</p>
+            <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">
+              {t('nabidkaTerminu.nadpis')}
+            </p>
             <h1 className="font-display text-2xl sm:text-3xl text-ink m-0 mt-0.5">{request.projectName}</h1>
             <p className="text-sm font-body text-muted m-0 mt-1">
               {request.actorName} · {request.studioName}
@@ -268,26 +307,22 @@ export function OfferBuilder({
                 RECORDING_STATUS_CLASSES[request.status] ?? 'bg-field text-muted'
               }`}
             >
-              {RECORDING_STATUS_LABELS[request.status] ?? request.status}
+              {KLICE_STAVU[request.status] ? t(KLICE_STAVU[request.status]) : request.status}
             </span>
             {!locked && (
               <button
                 type="button"
                 onClick={odesli}
                 disabled={busy || chybiTerminu > 0}
-                title={
-                  chybiTerminu > 0
-                    ? `V období chybí ${chybiTerminu} ${slovoTermin(chybiTerminu, true)} - prodlužte období.`
-                    : undefined
-                }
+                title={chybiTerminu > 0 ? t(klicChybiMist(chybiTerminu), { pocet: chybiTerminu }) : undefined}
                 className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
               >
-                {request.sentAt ? 'Poslat znovu' : 'Odeslat herci'}
+                {request.sentAt ? t('nabidkaTerminu.poslatZnovu') : t('nabidkaTerminu.odeslatHerci')}
               </button>
             )}
             {!locked && (
               <button type="button" onClick={zrus} disabled={busy} className="text-muted text-sm font-heading px-2">
-                Zrušit nabídku
+                {t('nabidkaTerminu.zrusitNabidku')}
               </button>
             )}
           </div>
@@ -296,11 +331,15 @@ export function OfferBuilder({
         {/* Pocitadlo */}
         <div className="flex items-center gap-6 flex-wrap border-t border-line pt-4">
           <span className="flex items-baseline gap-2">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Potřeba frekvencí</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">
+              {t('nabidkaTerminu.potrebaFrekvenci')}
+            </span>
             <span className="font-display text-2xl text-ink tabular-nums">{form.requiredSessions}</span>
           </span>
           <span className="flex items-baseline gap-2">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Nabídnuto</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">
+              {t('nabidkaTerminu.nabidnuto')}
+            </span>
             <span
               className={`font-display text-2xl tabular-nums ${
                 nabidnute.length >= form.requiredSessions ? 'text-status-done' : 'text-status-progress'
@@ -311,13 +350,17 @@ export function OfferBuilder({
           </span>
           {vybrane.length > 0 && (
             <span className="flex items-baseline gap-2">
-              <span className="text-xs font-heading text-muted uppercase tracking-wide">Herec vybral</span>
+              <span className="text-xs font-heading text-muted uppercase tracking-wide">
+                {t('nabidkaTerminu.herecVybral')}
+              </span>
               <span className="font-display text-2xl text-ink tabular-nums">{vybrane.length}</span>
             </span>
           )}
           {request.holdUntil && (
             <span className="text-xs font-body text-status-progress">
-              Termíny drženy do {formatDateTime(request.holdUntil, request.timezone)}
+              {t('nabidkaTerminu.drzenoDo', {
+                datum: formatDateTime(request.holdUntil, request.timezone, jazyk),
+              })}
             </span>
           )}
         </div>
@@ -328,29 +371,32 @@ export function OfferBuilder({
               chybiTerminu > 0 ? 'bg-warnTint' : 'bg-field'
             }`}
           >
-            {chybiTerminu > 0 ? (
-              <>
-                V zadaném období je volných jen{' '}
-                <strong className="tabular-nums">{nabidnute.length}</strong> míst, herec jich potřebuje{' '}
-                <strong className="tabular-nums">{form.requiredSessions}</strong>. Posuňte v Parametrech začátek nebo
-                konec období.
-              </>
-            ) : (
-              <>
-                Herec dostane všechna volná místa ({nabidnute.length}) ve studiích{' '}
-                <strong>{studiaNabidky.join(', ')}</strong> do{' '}
-                {new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' }).format(
-                  new Date(`${request.periodTo}T12:00:00.000Z`),
-                )}{' '}
-                a vybere si z nich {form.requiredSessions}. Obsazené časy v kalendáři se vynechávají samy.
-              </>
-            )}
+            {chybiTerminu > 0
+              ? t('nabidkaTerminu.maloMist', {
+                  volnych: nabidnute.length,
+                  potreba: form.requiredSessions,
+                })
+              : (() => {
+                  // Tučný je jen seznam studií, věta zůstává jeden klíč.
+                  const [pred, za] = prelozitKolem(jazyk, 'nabidkaTerminu.dostaneVsechna', 'studia', {
+                    pocet: nabidnute.length,
+                    datum: formatDatum(jazyk, new Date(`${request.periodTo}T12:00:00.000Z`)),
+                    potreba: form.requiredSessions,
+                  });
+                  return (
+                    <>
+                      {pred}
+                      <strong>{studiaNabidky.join(', ')}</strong>
+                      {za}
+                    </>
+                  );
+                })()}
           </p>
         )}
 
         {request.actorNote && (
           <p className="text-sm font-body text-ink bg-field border border-line rounded-lg px-3 py-2 m-0">
-            <strong>Poznámka herce:</strong> {request.actorNote}
+            <strong>{t('nabidkaTerminu.poznamkaHerce')}</strong> {request.actorNote}
           </p>
         )}
         {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
@@ -358,7 +404,9 @@ export function OfferBuilder({
 
         {/* Odkaz pro herce */}
         <div className="flex items-center gap-3 flex-wrap border-t border-line pt-4">
-          <span className="text-xs font-heading text-muted uppercase tracking-wide">Odkaz pro herce</span>
+          <span className="text-xs font-heading text-muted uppercase tracking-wide">
+            {t('nabidkaTerminu.odkazProHerce')}
+          </span>
           <code className="text-xs font-body text-muted bg-field rounded-lg px-3 py-1.5 break-all flex-1 min-w-[240px]">
             {request.offerUrl}
           </code>
@@ -371,7 +419,7 @@ export function OfferBuilder({
             }}
             className="text-xs font-heading font-semibold text-brand-purple"
           >
-            {zkopirovano ? 'Zkopírováno' : 'Kopírovat'}
+            {zkopirovano ? t('obecne.zkopirovano') : t('nabidkaTerminu.kopirovat')}
           </button>
         </div>
       </div>
@@ -381,22 +429,28 @@ export function OfferBuilder({
         <div className="bg-surface rounded-card border-2 border-status-progress shadow-sm p-5 flex flex-col gap-4">
           <div>
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Herec vybral termíny
+              {t('nabidkaTerminu.herecVybralNadpis')}
             </h2>
             <p className="text-sm font-body text-muted m-0 mt-1">
-              Vybráno {vybrane.length} z {request.requiredSessions}
-              {request.holdUntil ? ` · drženo do ${formatDateTime(request.holdUntil, request.timezone)}` : ''}
+              {t('nabidkaTerminu.vybranoZ', { vybrano: vybrane.length, potreba: request.requiredSessions })}
+              {request.holdUntil
+                ? ` · ${t('nabidkaTerminu.drzenoDoKratce', {
+                    datum: formatDateTime(request.holdUntil, request.timezone, jazyk),
+                  })}`
+                : ''}
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <span className="text-xs font-heading text-status-done uppercase tracking-wide">Vybral</span>
+              <span className="text-xs font-heading text-status-done uppercase tracking-wide">
+                {t('nabidkaTerminu.vybral')}
+              </span>
               <ul className="list-none p-0 m-0 mt-2 flex flex-col gap-1.5">
                 {vybrane.map((s) => (
                   <li key={s.id} className="text-sm font-heading text-ink">
                     <span className="capitalize">
-                      {new Intl.DateTimeFormat('cs-CZ', {
+                      {new Intl.DateTimeFormat(kodJazyka(jazyk), {
                         timeZone: request.timezone,
                         weekday: 'long',
                         day: 'numeric',
@@ -413,15 +467,17 @@ export function OfferBuilder({
               </ul>
             </div>
             <div>
-              <span className="text-xs font-heading text-muted uppercase tracking-wide">Nevybral</span>
+              <span className="text-xs font-heading text-muted uppercase tracking-wide">
+                {t('nabidkaTerminu.nevybral')}
+              </span>
               <ul className="list-none p-0 m-0 mt-2 flex flex-col gap-1.5">
                 {nabidnute.length === 0 && (
-                  <li className="text-sm font-body text-muted">— všechny nabídnuté termíny si vzal —</li>
+                  <li className="text-sm font-body text-muted">{t('nabidkaTerminu.vzalVsechny')}</li>
                 )}
                 {nabidnute.map((s) => (
                   <li key={s.id} className="text-sm font-body text-muted">
                     <span className="capitalize">
-                      {new Intl.DateTimeFormat('cs-CZ', {
+                      {new Intl.DateTimeFormat(kodJazyka(jazyk), {
                         timeZone: request.timezone,
                         weekday: 'short',
                         day: 'numeric',
@@ -440,12 +496,12 @@ export function OfferBuilder({
           </div>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Vzkaz herci (u vrácení a zamítnutí se hodí důvod)</span>
+            <span className="text-sm font-body text-ink">{t('nabidkaTerminu.vzkazHerci')}</span>
             <input
               value={vzkaz}
               onChange={(e) => setVzkaz(e.target.value)}
               className={inputClass}
-              placeholder="např. Středu bohužel nestihneme, vyberte prosím jiný den."
+              placeholder={t('nabidkaTerminu.vzkazPlaceholder')}
             />
           </label>
 
@@ -456,7 +512,7 @@ export function OfferBuilder({
               disabled={busy}
               className="bg-solidDone text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:opacity-90 transition-opacity disabled:opacity-60"
             >
-              Potvrdit termíny
+              {t('nabidkaTerminu.potvrditTerminy')}
             </button>
             <button
               type="button"
@@ -464,7 +520,7 @@ export function OfferBuilder({
               disabled={busy}
               className="rounded-lg border border-status-progress px-5 py-2.5 text-sm font-heading font-semibold text-status-progress hover:bg-warnTint transition-colors disabled:opacity-60"
             >
-              Vrátit k přepracování
+              {t('nabidkaTerminu.vratitKPrepracovani')}
             </button>
             <button
               type="button"
@@ -472,7 +528,7 @@ export function OfferBuilder({
               disabled={busy}
               className="text-danger text-sm font-heading px-2 disabled:opacity-60"
             >
-              Zamítnout
+              {t('nabidkaTerminu.zamitnout')}
             </button>
           </div>
         </div>
@@ -481,16 +537,14 @@ export function OfferBuilder({
       {/* Potvrzeno - zbyva uz jen odtocit */}
       {request.status === 'CONFIRMED' && (
         <div className="bg-okTint border border-line rounded-card p-5 flex items-center justify-between gap-4 flex-wrap">
-          <span className="text-sm font-body text-ink m-0">
-            Termíny jsou potvrzené a v kalendáři studia. Až se odtočí, můžete nabídku uzavřít.
-          </span>
+          <span className="text-sm font-body text-ink m-0">{t('nabidkaTerminu.potvrzenoPopis')}</span>
           <button
             type="button"
             onClick={() => rozhodni('complete')}
             disabled={busy}
             className="rounded-lg border border-line bg-surface px-5 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors disabled:opacity-60"
           >
-            Označit jako dokončené
+            {t('nabidkaTerminu.oznacitDokoncene')}
           </button>
         </div>
       )}
@@ -499,11 +553,9 @@ export function OfferBuilder({
       {zadostiOPresun.length > 0 && (
         <div className="bg-warnTint rounded-card border border-status-progress p-5 flex flex-col gap-3">
           <h2 className="font-heading font-semibold text-sm text-status-progress uppercase tracking-wide m-0">
-            Herec žádá přesun za termín odevzdání
+            {t('nabidkaTerminu.zadostPresunNadpis')}
           </h2>
-          <p className="text-sm font-body text-ink m-0">
-            Potvrzením se termín přesune - a tím i odevzdání. Datum dokončení projektu případně upravte v jeho detailu.
-          </p>
+          <p className="text-sm font-body text-ink m-0">{t('nabidkaTerminu.zadostPresunPopis')}</p>
           {zadostiOPresun.map((s) => (
             <div key={s.id} className="flex items-center justify-between gap-3 flex-wrap bg-surface rounded-lg border border-line px-4 py-3">
               <span className="text-sm font-heading text-ink tabular-nums">
@@ -516,7 +568,7 @@ export function OfferBuilder({
                   onClick={() => rozhodniPresun(s.id, 'approve')}
                   className="bg-solidDone text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 disabled:opacity-60"
                 >
-                  Potvrdit přesun
+                  {t('nabidkaTerminu.potvrditPresun')}
                 </button>
                 <button
                   type="button"
@@ -524,7 +576,7 @@ export function OfferBuilder({
                   onClick={() => rozhodniPresun(s.id, 'reject')}
                   className="text-danger text-sm font-heading font-semibold disabled:opacity-60"
                 >
-                  Zamítnout
+                  {t('nabidkaTerminu.zamitnout')}
                 </button>
               </span>
             </div>
@@ -535,22 +587,24 @@ export function OfferBuilder({
       {/* Parametry */}
       {!locked && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Parametry</h2>
+          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+            {t('nabidkaTerminu.parametry')}
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-5">
-              <span className="text-sm font-body text-ink">Studia</span>
+              <span className="text-sm font-body text-ink">{t('nabidkaTerminu.studia')}</span>
               <VyberStudii studia={studios} vybrana={form.studioIds} onZmena={(ids) => set('studioIds', ids)} />
             </div>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Období od</span>
+              <span className="text-sm font-body text-ink">{t('nabidkaTerminu.obdobiOd')}</span>
               <DatumPole value={form.periodFrom} onChange={(e) => set('periodFrom', e.target.value)} className={inputClass} />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Poslední frekvence nejpozději</span>
+              <span className="text-sm font-body text-ink">{t('nabidkaTerminu.posledniFrekvence')}</span>
               <DatumPole value={form.periodTo} onChange={(e) => set('periodTo', e.target.value)} className={inputClass} />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Počet frekvencí</span>
+              <span className="text-sm font-body text-ink">{t('nabidkaTerminu.pocetFrekvenci')}</span>
               <input
                 type="number"
                 min={1}
@@ -560,7 +614,7 @@ export function OfferBuilder({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Délka (minuty)</span>
+              <span className="text-sm font-body text-ink">{t('nabidkaTerminu.delka')}</span>
               <input
                 type="number"
                 min={30}
@@ -572,7 +626,7 @@ export function OfferBuilder({
             </label>
           </div>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Poznámka pro herce</span>
+            <span className="text-sm font-body text-ink">{t('nabidkaTerminu.poznamkaProHerce')}</span>
             <input value={form.note} onChange={(e) => set('note', e.target.value)} className={inputClass} />
           </label>
           <div>
@@ -582,11 +636,9 @@ export function OfferBuilder({
               disabled={busy}
               className="rounded-lg border border-line px-5 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple transition-colors disabled:opacity-60"
             >
-              Uložit parametry
+              {t('nabidkaTerminu.ulozitParametry')}
             </button>
-            <span className="text-xs font-body text-muted ml-3">
-              Po uložení se volná místa spočítají znovu - nabízí se ve všech zaškrtnutých studiích.
-            </span>
+            <span className="text-xs font-body text-muted ml-3">{t('nabidkaTerminu.poUlozeni')}</span>
           </div>
         </div>
       )}
@@ -594,12 +646,10 @@ export function OfferBuilder({
       {/* Seznam terminu */}
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Termíny v nabídce <span className="tabular-nums">({slots.length})</span>
+          {t('nabidkaTerminu.seznamNadpis')} <span className="tabular-nums">({slots.length})</span>
         </h2>
         {slots.length === 0 && (
-          <p className="text-sm font-body text-muted m-0">
-            V zadaném období není v kalendáři žádné volné místo. Upravte období v Parametrech.
-          </p>
+          <p className="text-sm font-body text-muted m-0">{t('nabidkaTerminu.zadneVolneMisto')}</p>
         )}
         <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line max-h-[28rem] overflow-y-auto">
           {slots.map((s) => {
@@ -609,7 +659,7 @@ export function OfferBuilder({
               <li key={s.id} className="flex items-center justify-between gap-4 py-2.5">
                 <span className="min-w-0">
                   <span className="block text-sm font-heading font-semibold text-ink">
-                    {new Intl.DateTimeFormat('cs-CZ', {
+                    {new Intl.DateTimeFormat(kodJazyka(jazyk), {
                       timeZone: request.timezone,
                       weekday: 'long',
                       day: 'numeric',
@@ -620,12 +670,14 @@ export function OfferBuilder({
                     {minutesToTime(minutesInZone(start, request.timezone))}–
                     {minutesToTime(minutesInZone(end, request.timezone))}
                     {studiaNabidky.length > 1 ? ` · ${s.studioName}` : ''}
-                    {s.note && s.note !== 'Víkend – po domluvě' ? ` · ${s.note}` : ''}
+                    {/* Porovnává se s konstantou z lib/volnaMista.ts, ne s napsanou
+                        větou - dřív tu byl text natvrdo (dávka 5). */}
+                    {s.note && s.note !== POZNAMKA_VIKEND ? ` · ${s.note}` : ''}
                   </span>
                 </span>
                 <span className="flex items-center gap-3 shrink-0">
                   <span className="text-xs font-heading font-semibold text-muted">
-                    {SLOT_STATE_LABELS[s.state] ?? s.state}
+                    {KLICE_STAVU_TERMINU[s.state] ? t(KLICE_STAVU_TERMINU[s.state]) : s.state}
                   </span>
                 </span>
               </li>
@@ -636,11 +688,13 @@ export function OfferBuilder({
 
       {/* Historie */}
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Historie</h2>
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+          {t('nabidkaTerminu.historie')}
+        </h2>
         <ul className="list-none p-0 m-0 flex flex-col gap-2">
           {historie.map((e) => (
             <li key={e.id} className="text-xs font-body text-muted">
-              <span className="tabular-nums">{formatDateTime(e.createdAt, request.timezone)}</span>
+              <span className="tabular-nums">{formatDateTime(e.createdAt, request.timezone, jazyk)}</span>
               {' · '}
               <span className="font-heading text-ink">{e.actorLabel}</span>
               {' · '}

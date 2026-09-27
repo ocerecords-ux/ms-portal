@@ -2,6 +2,8 @@
 import { BARVA_PORAD, BARVA_SCHUZEK } from '@/lib/porady';
 
 import { useEffect, useState } from 'react';
+import { formatDatumCas, prelozitKolem } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * MS KALENDÁŘ DO TELEFONU (zadání 20. 9. 2026: „potřebuju, aby si můj tým
@@ -36,6 +38,8 @@ type Pripraveny = { klic: string; nazev: string; barva: string; url: string; qr:
 const BARVA_MIMO = '#A7A4B0';
 
 export function OdberKalendare({ studios }: { studios: { id: string; name: string; color: string | null }[] }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [otevreno, setOtevreno] = useState(false);
   const [rozsah, setRozsah] = useState<Rozsah>('ZVLAST');
   const [odkaz, setOdkaz] = useState<string | null>(null);
@@ -51,16 +55,18 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
   const kratce = (nazev: string) => (nazev.split(' - ').pop() ?? nazev).trim();
   const popisRozsahu = (o: Pick<Odber, 'scope' | 'studioId'>) =>
     o.scope === 'ALL'
-      ? 'Celý kalendář'
+      ? t('odberKalendare.rozsahVse')
       : o.scope === 'MINE'
-        ? 'Jen moje'
+        ? t('odberKalendare.rozsahMoje')
         : o.scope === 'MIMO'
-          ? 'Mimo studio'
+          ? t('odberKalendare.mimoStudio')
           : o.scope === 'PORADY'
-            ? 'Porady'
+            ? t('odberKalendare.porady')
             : o.scope === 'SCHUZKY'
-              ? 'Schůzky'
-          : `Studio ${kratce(studios.find((s) => s.id === o.studioId)?.name ?? '')}`;
+              ? t('odberKalendare.schuzky')
+          : t('odberKalendare.rozsahStudio', {
+              nazev: kratce(studios.find((s) => s.id === o.studioId)?.name ?? ''),
+            });
 
   async function nactiOdbery() {
     const res = await fetch('/api/kalendar/odber');
@@ -88,7 +94,7 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
       body: JSON.stringify(telo),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error || 'Odkaz se nepodařilo vytvořit.');
+    if (!res.ok) throw new Error(data?.error || t('odberKalendare.chybaOdkaz'));
     return { url: data.url, qr: data.qr ?? null };
   }
 
@@ -106,9 +112,9 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
             barva: s.color ?? '#7B55FF',
             telo: { scope: 'STUDIO', studioId: s.id },
           })),
-          { klic: 'mimo', nazev: 'Mimo studio', barva: BARVA_MIMO, telo: { scope: 'MIMO' } },
+          { klic: 'mimo', nazev: t('odberKalendare.mimoStudio'), barva: BARVA_MIMO, telo: { scope: 'MIMO' } },
           // Porady (21. 9. 2026) - jen ty, na kterých je ten, kdo odebírá.
-          { klic: 'porady', nazev: 'Porady', barva: BARVA_PORAD, telo: { scope: 'PORADY' } },
+          { klic: 'porady', nazev: t('odberKalendare.porady'), barva: BARVA_PORAD, telo: { scope: 'PORADY' } },
           /**
            * Schůzky (25. 9. 2026: „nemůžu si přidat kalendář schůzky do svého
            * Apple kalendáře"). Kalendář Další schůzky přibyl později než
@@ -116,7 +122,7 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
            * tedy vůbec nešel vyrobit. Komu schůzky nepatří, dostane prázdný
            * kalendář; o tom, co v něm je, rozhoduje server.
            */
-          { klic: 'schuzky', nazev: 'Schůzky', barva: BARVA_SCHUZEK, telo: { scope: 'SCHUZKY' } },
+          { klic: 'schuzky', nazev: t('odberKalendare.schuzky'), barva: BARVA_SCHUZEK, telo: { scope: 'SCHUZKY' } },
         ];
         const hotove = await Promise.all(
           polozky.map(async (p) => ({ klic: p.klic, nazev: p.nazev, barva: p.barva, ...(await pozadej(p.telo)) })),
@@ -129,7 +135,7 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
       }
       void nactiOdbery();
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Odkaz se nepodařilo vytvořit.');
+      setChyba(err instanceof Error ? err.message : t('odberKalendare.chybaOdkaz'));
     } finally {
       setBezi(false);
     }
@@ -158,7 +164,7 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
       setZkopirovano(true);
       setTimeout(() => setZkopirovano(false), 2500);
     } catch {
-      window.prompt('Zkopírujte odkaz:', text);
+      window.prompt(t('obecne.zkopirujteOdkaz'), text);
     }
   }
 
@@ -169,10 +175,23 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
   const naGoogle = (url: string) => `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(naWebcal(url))}`;
 
   const VOLBY: { klic: Rozsah; nazev: string; popis: string }[] = [
-    { klic: 'ZVLAST', nazev: 'Každé studio zvlášť', popis: 'Samostatné kalendáře, zapnete a vypnete je jednotlivě' },
-    { klic: 'ALL', nazev: 'Celý kalendář', popis: 'Všechna studia a Mimo studio v jednom' },
-    { klic: 'MINE', nazev: 'Jen moje', popis: 'Kde jsem zvukař a moje Mimo studio' },
+    {
+      klic: 'ZVLAST',
+      nazev: t('odberKalendare.rozsahZvlast'),
+      popis: t('odberKalendare.rozsahZvlastPopis'),
+    },
+    { klic: 'ALL', nazev: t('odberKalendare.rozsahVse'), popis: t('odberKalendare.rozsahVsePopis') },
+    { klic: 'MINE', nazev: t('odberKalendare.rozsahMoje'), popis: t('odberKalendare.rozsahMojePopis') },
   ];
+
+  /**
+   * Věty s tučným slovem uprostřed - celá věta je jeden klíč a rozdělí se až
+   * při vykreslení (pravidlo 7 v docs/preklad-portalu.md).
+   */
+  const qrVeta = prelozitKolem(jazyk, 'odberKalendare.qrPostup', 'odebirat');
+  const zvlastVeta = prelozitKolem(jazyk, 'odberKalendare.zvlastObnova', 'aktualizovat');
+  const iphoneVeta = prelozitKolem(jazyk, 'odberKalendare.qrPostupDlouhy', 'odebirat');
+  const obnovaVeta = prelozitKolem(jazyk, 'odberKalendare.obnova', 'aktualizovat');
 
   return (
     <>
@@ -182,8 +201,8 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
       <button
         type="button"
         onClick={() => setOtevreno(true)}
-        aria-label="Přidat MS kalendář do svého kalendáře (Google, Apple, Outlook)"
-        title="Přidat MS kalendář do svého kalendáře (Google, Apple, Outlook)"
+        aria-label={t('odberKalendare.tlacitko')}
+        title={t('odberKalendare.tlacitko')}
         className="w-9 h-9 grid place-items-center rounded-lg text-muted hover:text-brand-purple hover:bg-field transition-colors"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]" aria-hidden>
@@ -197,7 +216,7 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
           className="fixed inset-0 z-[70] bg-black/55 flex items-start sm:items-center justify-center p-4 overflow-y-auto"
           role="dialog"
           aria-modal="true"
-          aria-label="MS kalendář do mého kalendáře"
+          aria-label={t('odberKalendare.nadpis')}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setOtevreno(false);
           }}
@@ -205,16 +224,13 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
           <div className="w-full max-w-xl bg-surface rounded-card border border-line shadow-lg p-5 sm:p-6 flex flex-col gap-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-display text-2xl text-ink m-0">MS kalendář do mého kalendáře</p>
-                <p className="text-sm font-body text-muted m-0 mt-1">
-                  Uvidíte ho v Google, Apple nebo Outlook kalendáři vedle svých událostí. Jen pro čtení - měnit se
-                  dá dál jen tady v portálu.
-                </p>
+                <p className="font-display text-2xl text-ink m-0">{t('odberKalendare.nadpis')}</p>
+                <p className="text-sm font-body text-muted m-0 mt-1">{t('odberKalendare.podnadpis')}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setOtevreno(false)}
-                aria-label="Zavřít"
+                aria-label={t('obecne.zavrit')}
                 className="text-muted hover:text-ink text-xl leading-none"
               >
                 ×
@@ -223,7 +239,9 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
 
             {/* 1. Co */}
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0">1. Co chcete vidět</p>
+              <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0">
+                {t('odberKalendare.krok1')}
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {VOLBY.map((v) => (
                   <button
@@ -246,13 +264,12 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
 
             {/* 2. Kam */}
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0">2. Kam ho přidat</p>
+              <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0">
+                {t('odberKalendare.krok2')}
+              </p>
               {rozsah === 'ZVLAST' && zvlast ? (
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs font-body text-muted m-0">
-                    Každý kalendář přidejte jeho vlastním tlačítkem. V Apple i Google kalendáři pak budou vedle sebe
-                    a zapnete nebo vypnete je jednotlivě.
-                  </p>
+                  <p className="text-xs font-body text-muted m-0">{t('odberKalendare.zvlastPopis')}</p>
                   <ul className="list-none m-0 p-0 flex flex-col gap-1.5">
                     {zvlast.map((z) => (
                       <li key={z.klic} className="rounded-lg border border-line px-3 py-2 flex flex-col gap-2">
@@ -290,7 +307,9 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                             onClick={() => void kopiruj(z.url, z.klic)}
                             className="rounded-lg border border-line px-3 py-1.5 text-xs font-heading font-semibold text-ink hover:border-brand-purple whitespace-nowrap"
                           >
-                            {zkopirovanyKlic === z.klic ? '✓ Zkopírováno' : 'Kopírovat odkaz'}
+                            {zkopirovanyKlic === z.klic
+                              ? `✓ ${t('obecne.zkopirovano')}`
+                              : t('odberKalendare.kopirovatOdkaz')}
                           </button>
                         </div>
                         {qrOtevreny === z.klic && z.qr && (
@@ -298,12 +317,13 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                             <div
                               className="w-28 h-28 shrink-0 bg-white rounded-md p-1 [&>svg]:w-full [&>svg]:h-full"
                               dangerouslySetInnerHTML={{ __html: z.qr }}
-                              aria-label={`QR kód odběru – ${z.nazev}`}
+                              aria-label={t('odberKalendare.qrPopisekNazev', { nazev: z.nazev })}
                               role="img"
                             />
                             <p className="text-xs font-body text-muted m-0">
-                              Naskenujte iPhonem fotoaparátem a potvrďte <b>Odebírat</b>. Pak otevřete QR dalšího
-                              kalendáře.
+                              {qrVeta[0]}
+                              <b>{t('odberKalendare.slovoOdebirat')}</b>
+                              {qrVeta[1]}
                             </p>
                           </div>
                         )}
@@ -311,10 +331,9 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                     ))}
                   </ul>
                   <p className="text-xs font-body text-muted m-0 bg-field rounded-lg px-3 py-2">
-                    Nechcete některý? Prostě ho nepřidávejte - nebo ho v telefonu jen vypněte. Kalendáře se
-                    obnovují samy. V Apple Kalendáři si u každého nastavte <b>Aktualizovat: každých 5 minut</b>
-                    (iPhone: Nastavení → Aplikace → Kalendář → Účty → Odebírané kalendáře; Mac: klik pravým na
-                    kalendář → Informace). Google si interval určuje sám, bývá to i půl dne. Odkazy jsou vaše osobní.
+                    {zvlastVeta[0]}
+                    <b>{t('odberKalendare.slovoAktualizovatPet')}</b>
+                    {zvlastVeta[1]}
                   </p>
                 </div>
               ) : !odkaz ? (
@@ -325,7 +344,11 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                     disabled={bezi}
                     className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep disabled:opacity-60"
                   >
-                    {bezi ? 'Připravuji…' : rozsah === 'ZVLAST' ? 'Připravit kalendáře' : 'Připravit odkaz'}
+                    {bezi
+                      ? t('odberKalendare.pripravuji')
+                      : rozsah === 'ZVLAST'
+                        ? t('odberKalendare.pripravitKalendare')
+                        : t('odberKalendare.pripravitOdkaz')}
                   </button>
                   {chyba && <p className="text-sm text-danger m-0 mt-2">{chyba}</p>}
                 </div>
@@ -336,8 +359,8 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                       href={webcal}
                       className="rounded-lg bg-brand-purple text-white px-4 py-3 no-underline hover:bg-brand-purpleDeep transition-colors"
                     >
-                      <span className="block font-heading font-semibold text-sm">Apple Kalendář</span>
-                      <span className="block text-xs opacity-80">iPhone, iPad, Mac - otevře se a potvrdíte Odebírat</span>
+                      <span className="block font-heading font-semibold text-sm">{t('odberKalendare.apple')}</span>
+                      <span className="block text-xs opacity-80">{t('odberKalendare.applePopis')}</span>
                     </a>
                     <a
                       href={google}
@@ -345,8 +368,8 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                       rel="noreferrer"
                       className="rounded-lg bg-brand-purple text-white px-4 py-3 no-underline hover:bg-brand-purpleDeep transition-colors"
                     >
-                      <span className="block font-heading font-semibold text-sm">Google Kalendář</span>
-                      <span className="block text-xs opacity-80">Otevře se Google, potvrdíte Přidat</span>
+                      <span className="block font-heading font-semibold text-sm">{t('kalendarOdber.google')}</span>
+                      <span className="block text-xs opacity-80">{t('odberKalendare.googlePopis')}</span>
                     </a>
                   </div>
                   {/* QR (20. 9. 2026) - pocitac ukaze kod, iPhone ho nacte
@@ -356,26 +379,22 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                       <div
                         className="w-32 h-32 shrink-0 bg-white rounded-md p-1 [&>svg]:w-full [&>svg]:h-full"
                         dangerouslySetInnerHTML={{ __html: qr }}
-                        aria-label="QR kód odběru kalendáře"
+                        aria-label={t('odberKalendare.qrPopisek')}
                         role="img"
                       />
                       <div className="text-sm font-body text-ink">
-                        <p className="font-heading font-semibold m-0">Naskenujte iPhonem</p>
+                        <p className="font-heading font-semibold m-0">{t('odberKalendare.naskenujte')}</p>
                         <p className="text-xs text-muted m-0 mt-1">
-                          Otevřete fotoaparát, namiřte na kód a klepněte na nabídku nahoře. Kalendář se zeptá, jestli ho
-                          chcete odebírat - potvrďte <b>Odebírat</b>.
+                          {iphoneVeta[0]}
+                          <b>{t('odberKalendare.slovoOdebirat')}</b>
+                          {iphoneVeta[1]}
                         </p>
-                        <p className="text-xs text-muted m-0 mt-1">
-                          Android: Google Kalendář v telefonu odběr přidat neumí - použijte tlačítko Google Kalendář na
-                          počítači, v telefonu se pak objeví sám.
-                        </p>
+                        <p className="text-xs text-muted m-0 mt-1">{t('odberKalendare.android')}</p>
                       </div>
                     </div>
                   )}
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-body text-muted">
-                      Outlook a ostatní: zkopírujte odkaz a v kalendáři zvolte „Přidat kalendář z internetu / podle URL".
-                    </span>
+                    <span className="text-xs font-body text-muted">{t('odberKalendare.outlook')}</span>
                     <div className="flex gap-2">
                       <input
                         readOnly
@@ -388,14 +407,14 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                         onClick={() => void kopiruj(odkaz)}
                         className="rounded-lg border border-line px-3 py-2 text-sm font-heading font-semibold text-ink hover:border-brand-purple whitespace-nowrap"
                       >
-                        {zkopirovano ? '✓ Zkopírováno' : 'Kopírovat'}
+                        {zkopirovano ? `✓ ${t('obecne.zkopirovano')}` : t('odberKalendare.kopirovat')}
                       </button>
                     </div>
                   </div>
                   <p className="text-xs font-body text-muted m-0 bg-field rounded-lg px-3 py-2">
-                    Kalendář se obnovuje sám. Posíláme mu interval 5 minut - Outlook a většina klientů ho poslechne,
-                    v Apple Kalendáři si <b>Aktualizovat</b> přepněte na 5 minut u daného kalendáře, Google si
-                    interval určuje sám (bývá to i půl dne). Odkaz je váš osobní, neposílejte ho mimo tým.
+                    {obnovaVeta[0]}
+                    <b>{t('odberKalendare.slovoAktualizovat')}</b>
+                    {obnovaVeta[1]}
                   </p>
                 </div>
               )}
@@ -404,7 +423,9 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
             {/* Moje odbery */}
             {odbery.length > 0 && (
               <div className="flex flex-col gap-2 border-t border-line pt-4">
-                <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0">Moje odběry</p>
+                <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0">
+                  {t('odberKalendare.mojeOdbery')}
+                </p>
                 <ul className="list-none m-0 p-0 flex flex-col gap-1.5">
                   {odbery.map((o) => (
                     <li key={o.id} className="flex items-center justify-between gap-3 flex-wrap">
@@ -412,17 +433,19 @@ export function OdberKalendare({ studios }: { studios: { id: string; name: strin
                         {popisRozsahu(o)}
                         <span className="text-xs font-body text-muted ml-2">
                           {o.naposledy
-                            ? `naposledy staženo ${new Date(o.naposledy).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                            : 'zatím nestaženo'}
+                            ? t('odberKalendare.naposledyStazeno', {
+                                datum: formatDatumCas(jazyk, new Date(o.naposledy)),
+                              })
+                            : t('odberKalendare.nestazeno')}
                         </span>
                       </span>
                       <button
                         type="button"
                         onClick={() => void zneplatni(o.id)}
                         className="text-xs font-heading text-muted hover:text-danger underline"
-                        title="Odkaz přestane fungovat - v kalendáři se události přestanou objevovat"
+                        title={t('odberKalendare.zneplatnitBublina')}
                       >
-                        Zneplatnit
+                        {t('odberKalendare.zneplatnit')}
                       </button>
                     </li>
                   ))}

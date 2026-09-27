@@ -7,6 +7,8 @@ import { canManageCalendar } from '@/lib/roles';
 import { loadStudios, releaseExpiredHolds } from '@/lib/calendarServer';
 import { obnovVolnaMista } from '@/lib/volnaMistaServer';
 import { OfferBuilder } from './OfferBuilder';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 // Nabidka terminu (zadani 8. 9. 2026). Od 19. 9. 2026 se termíny nenabízí
 // ručně - nabídka obsahuje všechna volná místa ve studiích herce až do
@@ -17,6 +19,14 @@ export const dynamic = 'force-dynamic';
 export default async function OfferPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session || !canManageCalendar(session.user.role)) redirect('/projekty');
+
+  /**
+   * JAZYK Z COOKIE, ne z herce (dávka 5). Tahle stránka je vnitřní - skládá
+   * a schvaluje ji produkce (canManageCalendar). Herec vidí nabídku na
+   * veřejné adrese /terminy/{token}, a tam se jazyk řídí příjemcem
+   * (pravidlo 5 v docs/preklad-portalu.md).
+   */
+  const jazyk = nactiJazyk();
 
   await releaseExpiredHolds();
   // Srovnat nabidku s aktualnim kalendarem, nez se ukaze.
@@ -39,7 +49,7 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
   return (
     <div className="flex flex-col gap-6">
       <Link href="/kalendar" className="text-muted text-sm font-heading no-underline">
-        ← Zpět na kalendář
+        {prelozit(jazyk, 'nabidkaTerminu.zpetNaKalendar')}
       </Link>
 
       <OfferBuilder

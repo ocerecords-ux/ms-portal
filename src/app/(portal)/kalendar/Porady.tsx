@@ -8,14 +8,28 @@ import { VyberPole } from '@/components/VyberPole';
 import {
   MOZNOSTI_OPAKOVANI,
   barvaKalendare,
-  slovoProDruh,
   vPraze,
   type DruhPorady,
   type Opakovani,
   type PoradaVKalendari,
 } from '@/lib/porady';
+import { prelozitKolem } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 type Osoba = { id: string; label: string };
+
+/**
+ * Jak často se porada opakuje - kód z lib/porady.ts a k němu klíč do
+ * slovníku. `popisek` v MOZNOSTI_OPAKOVANI je jen česky.
+ */
+const KLICE_OPAKOVANI: Record<Opakovani, string> = {
+  NE: 'porady.opakovaniNe',
+  DENNE: 'porady.opakovaniDenne',
+  PRACOVNI_DNY: 'porady.opakovaniPracovniDny',
+  TYDNE: 'porady.opakovaniTydne',
+  KAZDE_DVA_TYDNY: 'porady.opakovaniDvaTydny',
+  MESICNE: 'porady.opakovaniMesicne',
+};
 
 const casZMinut = (min: number) =>
   `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
@@ -54,6 +68,8 @@ export function PoradaForm({
   lidiTymu: Osoba[];
   onClose: () => void;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const lide = (lidiTymu.some((l) => l.id === ja.id) ? lidiTymu : [ja, ...lidiTymu])
     .slice()
@@ -88,6 +104,16 @@ export function PoradaForm({
   const spatnyCas = casDo <= casOd;
   const opakovana = upravovana ? upravovana.opakovani !== 'NE' : false;
 
+  /**
+   * Popisky polí, kde je druhá část tišší (šedá). Věta zůstává JEDEN KLÍČ
+   * a rozdělí se až tady - v angličtině může značka stát ve větě jinde
+   * (pravidlo 7 v docs/preklad-portalu.md).
+   */
+  const kdoJeNaPorade = prelozitKolem(jazyk, 'porady.kdoJeNaPorade', 'tise');
+  const opakovatDoPopisek = prelozitKolem(jazyk, 'porady.opakovatDo', 'tise');
+  const odkazPopisek = prelozitKolem(jazyk, 'porady.odkazVideo', 'tise');
+  const poznamkaPopisek = prelozitKolem(jazyk, 'porady.poznamka', 'tise');
+
   function prepni(id: string) {
     if (id === ja.id) return; // zakladatel je na poradě vždycky
     setUcastnici((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
@@ -120,14 +146,14 @@ export function PoradaForm({
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Uložit se nepodařilo.');
+        setChyba(data?.error || t('porady.chybaUlozeni'));
         setBezi(false);
         return;
       }
       onClose();
       router.refresh();
     } catch {
-      setChyba('Uložit se nepodařilo.');
+      setChyba(t('porady.chybaUlozeni'));
       setBezi(false);
     }
   }
@@ -141,7 +167,7 @@ export function PoradaForm({
     );
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setChyba(data?.error || 'Zrušit se nepodařilo.');
+      setChyba(data?.error || t('porady.chybaZruseni'));
       setBezi(false);
       return;
     }
@@ -160,27 +186,31 @@ export function PoradaForm({
       <div className="flex items-start justify-between gap-4">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0 inline-flex items-center gap-2">
           <span className="w-3 h-3 rounded-full" style={{ backgroundColor: barvaKalendare(druh) }} aria-hidden />
-          {upravovana ? `Úprava — ${slovoProDruh(druh)}` : `Nová ${slovoProDruh(druh)}`}
+          {upravovana
+            ? t(druh === 'SCHUZKA' ? 'porady.nadpisUpravaSchuzka' : 'porady.nadpisUpravaPorada')
+            : t(druh === 'SCHUZKA' ? 'porady.nadpisNovaSchuzka' : 'porady.nadpisNovaPorada')}
         </h2>
-        <button type="button" onClick={onClose} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
+        <button type="button" onClick={onClose} aria-label={t('obecne.zavrit')} className="text-muted hover:text-ink text-lg leading-none">
           ×
         </button>
       </div>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Název</span>
+        <span className="text-sm font-body text-ink">{t('porady.nazev')}</span>
         <input
           autoFocus={!upravovana}
           value={nazev}
           onChange={(e) => setNazev(e.target.value)}
-          placeholder="Porada produkce"
+          placeholder={t('porady.nazevPlaceholder')}
           className={inputClass}
         />
       </label>
 
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px_120px] gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">{opakovana ? 'Začátek řady' : 'Den'}</span>
+          <span className="text-sm font-body text-ink">
+            {opakovana ? t('porady.zacatekRady') : t('porady.den')}
+          </span>
           <DatumPole
             value={upravovana && opakovana && prvni ? prvni.den : den}
             onChange={(e) => e.target.value && setDen(e.target.value)}
@@ -189,19 +219,22 @@ export function PoradaForm({
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Od</span>
+          <span className="text-sm font-body text-ink">{t('porady.od')}</span>
           <input type="time" step={900} value={casOd} onChange={(e) => setCasOd(e.target.value)} className={`${inputClass} tabular-nums`} />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Do</span>
+          <span className="text-sm font-body text-ink">{t('porady.do')}</span>
           <input type="time" step={900} value={casDo} onChange={(e) => setCasDo(e.target.value)} className={`${inputClass} tabular-nums`} />
         </label>
       </div>
-      {spatnyCas && <span className="text-xs font-body text-danger -mt-2">Konec musí být po začátku.</span>}
+      {spatnyCas && (
+        <span className="text-xs font-body text-danger -mt-2">{t('porady.chybaKonecPoZacatku')}</span>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-body text-ink">
-          Kdo je na poradě <span className="text-muted">· uvidí ji jen oni</span>
+          {kdoJeNaPorade[0]}
+          <span className="text-muted">{kdoJeNaPorade[1]}</span>
         </span>
         <div className="flex flex-wrap gap-1.5">
           {lide.map((l) => (
@@ -211,9 +244,9 @@ export function PoradaForm({
               vybrano={ucastnici.includes(l.id)}
               onZmena={() => prepni(l.id)}
               disabled={l.id === ja.id}
-              title={l.id === ja.id ? 'Na poradě, kterou zakládáte, jste vždycky' : undefined}
+              title={l.id === ja.id ? t('porady.zakladatelVzdy') : undefined}
             >
-              {l.id === ja.id ? `${l.label} (já)` : l.label}
+              {l.id === ja.id ? t('porady.jaZavorka', { jmeno: l.label }) : l.label}
             </Volba>
           ))}
         </div>
@@ -221,11 +254,11 @@ export function PoradaForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Opakování</span>
+          <span className="text-sm font-body text-ink">{t('porady.opakovani')}</span>
           <VyberPole value={opakovani} onChange={(e) => setOpakovani(e.target.value as Opakovani)} className={inputClass}>
             {MOZNOSTI_OPAKOVANI.map((m) => (
               <option key={m.hodnota} value={m.hodnota}>
-                {m.popisek}
+                {t(KLICE_OPAKOVANI[m.hodnota])}
               </option>
             ))}
           </VyberPole>
@@ -233,7 +266,8 @@ export function PoradaForm({
         {opakovani !== 'NE' && (
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-body text-ink">
-              Opakovat do <span className="text-muted">· nepovinné</span>
+              {opakovatDoPopisek[0]}
+              <span className="text-muted">{opakovatDoPopisek[1]}</span>
             </span>
             <DatumPole value={opakovatDo} onChange={(e) => setOpakovatDo(e.target.value)} className={`${inputClass} tabular-nums`} />
           </label>
@@ -242,7 +276,8 @@ export function PoradaForm({
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-body text-ink">
-          Odkaz na videohovor <span className="text-muted">· Meet, Zoom, Teams…</span>
+          {odkazPopisek[0]}
+          <span className="text-muted">{odkazPopisek[1]}</span>
         </span>
         <input
           value={odkaz}
@@ -255,7 +290,8 @@ export function PoradaForm({
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-body text-ink">
-          Poznámka <span className="text-muted">· nepovinné</span>
+          {poznamkaPopisek[0]}
+          <span className="text-muted">{poznamkaPopisek[1]}</span>
         </span>
         <textarea value={poznamka} onChange={(e) => setPoznamka(e.target.value)} rows={2} className={inputClass} />
       </label>
@@ -269,10 +305,16 @@ export function PoradaForm({
           disabled={bezi || spatnyCas || !nazev.trim()}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {bezi ? 'Ukládám…' : upravovana ? (opakovana ? 'Uložit celou řadu' : 'Uložit změny') : 'Založit poradu'}
+          {bezi
+            ? t('obecne.ukladam')
+            : upravovana
+              ? opakovana
+                ? t('porady.ulozitCelouRadu')
+                : t('porady.ulozitZmeny')
+              : t('porady.zalozitPoradu')}
         </button>
         <button type="button" onClick={onClose} className="text-muted text-sm font-heading">
-          Zpět
+          {t('obecne.zpet')}
         </button>
         {upravovana && (
           <span className="ml-auto flex items-center gap-3 flex-wrap text-sm font-heading font-semibold">
@@ -284,7 +326,7 @@ export function PoradaForm({
                 onClick={() => (potvrdit === 'vyskyt' ? void zrus(true) : setPotvrdit('vyskyt'))}
                 className="text-danger hover:underline"
               >
-                {potvrdit === 'vyskyt' ? 'Opravdu zrušit tento termín?' : 'Zrušit jen tento termín'}
+                {potvrdit === 'vyskyt' ? t('porady.opravduZrusitVyskyt') : t('porady.zrusitJenTento')}
               </button>
             )}
             <button
@@ -295,19 +337,17 @@ export function PoradaForm({
             >
               {potvrdit === 'cela'
                 ? opakovana
-                  ? 'Opravdu zrušit celou řadu?'
-                  : 'Opravdu zrušit?'
+                  ? t('porady.opravduZrusitRadu')
+                  : t('porady.opravduZrusit')
                 : opakovana
-                  ? 'Zrušit celou řadu'
-                  : `Zrušit ${slovoProDruh(druh)}`}
+                  ? t('porady.zrusitCelouRadu')
+                  : t(druh === 'SCHUZKA' ? 'porady.zrusitSchuzku' : 'porady.zrusitPoradu')}
             </button>
           </span>
         )}
       </div>
       <span className="text-xs font-body text-muted -mt-2">
-        {druh === 'SCHUZKA'
-          ? 'Schůzky vidí celá produkce, ne jen pozvaní. Komu ji tu zaškrtnete, tomu o ní přijde zpráva pod zvonek.'
-          : 'Poradu vidí jen pozvaní. O pozvání, změně i zrušení jim přijde zpráva pod zvonek.'}
+        {druh === 'SCHUZKA' ? t('porady.vysvetleniSchuzka') : t('porady.vysvetleniPorada')}
       </span>
     </div>
   );

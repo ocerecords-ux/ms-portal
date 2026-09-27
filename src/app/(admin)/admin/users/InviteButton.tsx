@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Odeslani pozvanky uzivateli (zadani 5. 9. 2026) - uzivateli prijde e-mail
@@ -17,6 +18,7 @@ export function InviteButton({
   invitedAtLabel?: string | null;
   variant?: 'link' | 'button';
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
@@ -31,21 +33,27 @@ export function InviteButton({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setState('error');
-        setMessage(data?.error || 'Pozvánku se nepodařilo odeslat.');
+        setMessage(data?.error || t('uzivatel.pozvankaNezdarila'));
         if (data?.inviteUrl) setFallbackUrl(data.inviteUrl);
         return;
       }
       setState('sent');
-      setMessage(`Pozvánka odeslána na ${data?.sentTo ?? 'e-mail uživatele'}.`);
+      setMessage(t('uzivatel.pozvankaOdeslana', { kam: data?.sentTo ?? t('uzivatel.emailUzivatele') }));
       router.refresh();
     } catch {
       setState('error');
-      setMessage('Pozvánku se nepodařilo odeslat.');
+      setMessage(t('uzivatel.pozvankaNezdarila'));
     }
   }
 
   const label =
-    state === 'sending' ? 'Odesílám…' : state === 'sent' ? 'Odesláno' : invitedAtLabel ? 'Poslat znovu' : 'Odeslat pozvánku';
+    state === 'sending'
+      ? t('uzivatel.odesilam')
+      : state === 'sent'
+        ? t('uzivatel.odeslano')
+        : invitedAtLabel
+          ? t('uzivatel.poslatZnovu')
+          : t('uzivatel.odeslatPozvanku');
 
   const className =
     variant === 'button'
@@ -54,7 +62,7 @@ export function InviteButton({
 
   return (
     <span className={variant === 'button' ? 'flex flex-col gap-2 items-start' : 'inline-flex flex-col items-end gap-1'}>
-      <button type="button" onClick={send} disabled={state === 'sending'} className={className} title={invitedAtLabel ? `Naposledy odesláno ${invitedAtLabel}` : undefined}>
+      <button type="button" onClick={send} disabled={state === 'sending'} className={className} title={invitedAtLabel ? t('uzivatel.naposledyOdeslano', { datum: invitedAtLabel }) : undefined}>
         {label}
       </button>
       {message && (

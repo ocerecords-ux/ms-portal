@@ -73,7 +73,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 2 | 15. 9. | Klientská cesta II — `objednavka`, `muj-ucet`, `moje-terminy`, veřejné stránky `nabidka`, `smlouva`, `terminy`, `nahravky`, chybové a načítací stránky | [x] |
 | 3 | 16. 9. | Společné komponenty — `(portal)/components` (chat, úkoly, rychlé volby, oznámení, doky) a `src/components` | [x] |
 | 4 | 17. 9. | Doklady — `(admin)/admin/doklady` (nabídky, faktury, výdaje, moje firmy) a číselníky v `src/lib` (stavy, měny, způsoby úhrady) | [x] |
-| 5 | 18. 9. | Zbytek administrace — uživatelé, ceníky, studia, archiv, firmy, `(portal)/kalendar`, `(portal)/vykazy` | [ ] |
+| 5 | 18. 9. | Zbytek administrace — uživatelé, ceníky, studia, archiv, firmy, `(portal)/kalendar`, `(portal)/vykazy` | [x] |
 | 6 | 19. 9. | E-maily a upozornění — `src/lib/email.ts` podle jazyka příjemce, push a oznámení | [ ] |
 | 7 | 20. 9. | Kontrolní průchod — proklikat portál v EN, dohledat zapomenuté české texty, sjednotit termíny podle slovníčku | [ ] |
 
@@ -130,6 +130,70 @@ Doklady jsou přeložené celé (726 klíčů), ale při práci vylezlo tohle:
 s českým slovem `'Stornovaná'`. Po přeložení popisku by filtr přestal platit a
 stornované faktury by se počítaly do ceny projektu. Teď se porovnává kód
 (`i.status !== 'CANCELLED'`).
+
+### Co dávka 5 nechala dalším dávkám
+
+Administrace, kalendář a výkazy jsou přeložené (761 klíčů, celkem 2533).
+Co z toho vypadlo a kam to patří:
+
+**Nejdřív to nebezpečné — porovnávání textu místo kódu.** Tenhle vzor je
+v portálu na víc místech a pokaždé je to tikající bomba: jakmile se popisek
+přeloží, podmínka tiše přestane platit.
+
+- `jeVPriprave()` v `src/lib/stavyProjektu.ts` porovnává uložený stav projektu
+  s českým textem `'V přípravě'`. **Drží to jen proto, že se stavy projektů
+  ukládají do databáze česky a nikdo je nepřeložil.** Kdyby je někdo přeložil,
+  zvukaři začnou ve Výkazech vidět projekty v přípravě, které vidět nemají
+  (zadání 15. 9. 2026). Správně: stav má mít kód, ne název. **Do dávky 7, a je
+  to důvod, proč `STAVY_PROJEKTU` zatím NEPŘEKLÁDAT.**
+- `sjednotLokaci()` v `src/lib/lokaceHercu.ts` ukládá do `user.studioLocations`
+  česká jména měst (`'Brno'`, `'Londýn'`) a `mestaZeStudii()` je pak porovnává
+  jako text. Přeložit odznak lokace bez přidání kódu města = rozbité párování
+  herec ↔ studio.
+- Značka `ZVUKAŘ:` v nadpisu události drží kalendář pohromadě
+  (`kalendar/page.tsx`, `CalendarBrowser.tsx`, `bezPredponyZvukar()`
+  v `lib/calendar.ts`). Schválně zůstává česky - patří na vlastní pole, ne do
+  textu nadpisu.
+- `'Z Google kalendáře:'` v `CalendarBrowser.tsx` a `POZNAMKA_VIKEND`
+  v `lib/volnaMista.ts` - totéž, jen méně akutní.
+
+**Formátování částek a dat na jedno místo (dávka 7).** Kromě `formatMoney`
+z dávky 4 přibylo: `formatCzk` v `src/lib/timesheets.ts` (natvrdo `'cs-CZ'`
+a `' Kč'`, jdou přes ni všechny částky ve Výkazech a Bonusech), `formatujCas`
+v `src/lib/projektLog.ts` a `rozsahSlovy()` v `src/lib/nepritomnost.ts`.
+
+**Číselníky v `src/lib`, které ještě mluví jen česky.** Obrazovky dávky 5 si je
+obcházejí překladem podle kódu, ale zbylí volající je berou dál:
+`ROLE_LABELS` a `COMPANY_TYPE_LABELS` (`lib/roles.ts` - používá `admin/navody`
+a `admin/companies`), `WEEKDAY_LABELS`/`WEEKDAY_SHORT`, `BLOCK_KIND_LABELS`,
+`SLOT_STATE_LABELS`, `RECORDING_STATUS_LABELS` (`lib/calendar.ts`),
+`WORK_TYPE_LABELS` (`lib/timesheets.ts` - zbývá `projekty/[id]/VykazyProjektu.tsx`),
+`POLOZKY_TABULE` (`lib/tabule.ts`), `MOZNOSTI_OPAKOVANI` a `slovoProDruh`
+(`lib/porady.ts`), `DRUHY_NEPRITOMNOSTI` (`lib/nepritomnost.ts`).
+Vzor, jak na to, je `nazevMeny()` a `nazevStavuNabidky()` z dávky 4: jazyk jako
+NEPOVINNÝ parametr, česká varianta zůstává pro PDF a e-maily.
+
+**Texty, které tečou z API už naformátované** a komponenta je nemá jak
+přeložit: `/api/kalendar/konflikty`, `/api/kalendar/historie`,
+`/api/kalendar/hledani`, `/api/admin/studia*`, `/api/admin/upominky`.
+Formátování patří do těch rout. **Do dávky 6, spolu s e-maily.**
+
+**Názvy zemí** (`COUNTRIES` v `src/lib/countries.ts`, ~100 českých názvů) jsou
+vlastní úkol, ne vedlejší efekt dávky: s dvojjazyčným seznamem se musí přepsat
+i řazení a hledání bez diakritiky, které dnes počítá s češtinou.
+
+**Drobnosti k rozhodnutí:**
+- `prelozitKolem` umí jen JEDNU značku. Věty se dvěma tučnými kusy se obcházejí
+  ručně (`UdajeTabule` ve studiích, `vetaSeZnackami` v `CalendarBrowser`).
+  Do `lib/jazyk.ts` by se hodila obecná varianta.
+- `formatDatumCas` přidává rok, což na tabuli studia dřív nebylo - hodila by se
+  varianta `formatDatumCasKratce`.
+- České nepřesnosti, které jsme NEOPRAVILI (čeština je zdroj pravdy):
+  `FakturaKeSmlouve` píše `({castka} bez DPH · bez DPH)`; tlačítko „Založit
+  poradu" svítí i na formuláři schůzky; bublina detailu píše „Porada" i u
+  schůzky. **Opravené bylo jen** „Zrušit porada" → „Zrušit poradu".
+- `POPISKY_DRUHU_ARCHIVU` a `POPISKY_ZPUSOBU` v `src/lib/archiv.ts` jsou po
+  dávce 5 nepoužité. Nemazali jsme je.
 
 ### Jak najít, co v dávce zbývá
 

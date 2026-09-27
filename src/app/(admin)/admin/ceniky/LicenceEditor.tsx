@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { VyberIkony } from './VyberIkony';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * DRUHY LICENCE (zadání 18. 9. 2026: „ty druhy licencí bych potřeboval taky
@@ -28,6 +29,7 @@ export type DruhLicenceRadek = {
 };
 
 export function LicenceEditor({ druhy }: { druhy: DruhLicenceRadek[] }) {
+  const t = usePreklad();
   const router = useRouter();
   const [novy, setNovy] = useState({ nazev: '', ikona: '' });
   const [busy, setBusy] = useState(false);
@@ -44,7 +46,7 @@ export function LicenceEditor({ druhy }: { druhy: DruhLicenceRadek[] }) {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setChyba(data?.error || 'Nepodařilo se to uložit.');
+        setChyba(data?.error || t('cenik.licenceUlozeniSelhalo'));
         return false;
       }
       router.refresh();
@@ -64,8 +66,8 @@ export function LicenceEditor({ druhy }: { druhy: DruhLicenceRadek[] }) {
   async function smazat(d: DruhLicenceRadek) {
     const otazka =
       d.projektu > 0
-        ? `„${d.nazev}" je zaškrtnutý u ${d.projektu} projektů. Smazat nejde — vyřadí se, takže u nových projektů se už nenabídne. Pokračovat?`
-        : `Opravdu smazat druh licence „${d.nazev}"?`;
+        ? t('cenik.licenceJeUProjektu', { nazev: d.nazev, pocet: d.projektu })
+        : t('cenik.opravduSmazatLicenci', { nazev: d.nazev });
     if (!window.confirm(otazka)) return;
     await poslat(`/api/admin/licence/${d.id}`, 'DELETE');
   }
@@ -76,11 +78,8 @@ export function LicenceEditor({ druhy }: { druhy: DruhLicenceRadek[] }) {
   return (
     <section className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
       <div>
-        <h2 className="font-display text-2xl text-ink m-0">Druhy licence</h2>
-        <p className="text-sm font-body text-muted m-0 mt-1">
-          Zaškrtávají se u projektu a může jich být víc naráz. Vyřazený druh zůstane u projektů, kde už je,
-          jen se nenabídne u nových.
-        </p>
+        <h2 className="font-display text-2xl text-ink m-0">{t('cenik.druhyLicence')}</h2>
+        <p className="text-sm font-body text-muted m-0 mt-1">{t('cenik.druhyLicencePopis')}</p>
       </div>
 
       {chyba && <p className="text-sm font-body text-status-danger m-0">{chyba}</p>}
@@ -123,7 +122,7 @@ export function LicenceEditor({ druhy }: { druhy: DruhLicenceRadek[] }) {
                 onChange={(e) => void poslat(`/api/admin/licence/${d.id}`, 'PATCH', { active: e.target.checked })}
                 className="w-4 h-4 accent-brand-purple"
               />
-              Nabízet
+              {t('cenik.nabizet')}
             </label>
 
             <button
@@ -132,12 +131,12 @@ export function LicenceEditor({ druhy }: { druhy: DruhLicenceRadek[] }) {
               onClick={() => void smazat(d)}
               className="text-xs font-heading text-muted hover:text-status-danger"
             >
-              Smazat
+              {t('obecne.smazat')}
             </button>
           </li>
         ))}
         {druhy.length === 0 && (
-          <li className="text-sm font-body text-muted">Zatím tu žádný druh licence není.</li>
+          <li className="text-sm font-body text-muted">{t('cenik.zadnyDruhLicence')}</li>
         )}
       </ul>
 
@@ -152,7 +151,7 @@ export function LicenceEditor({ druhy }: { druhy: DruhLicenceRadek[] }) {
               void pridat();
             }
           }}
-          placeholder="Nový druh licence (např. Kino)"
+          placeholder={t('cenik.novyDruhLicence')}
           className={`${vstup} flex-1 min-w-[200px]`}
         />
         <VyberIkony
@@ -166,7 +165,7 @@ export function LicenceEditor({ druhy }: { druhy: DruhLicenceRadek[] }) {
           onClick={() => void pridat()}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          Přidat
+          {t('cenik.pridat')}
         </button>
       </div>
     </section>

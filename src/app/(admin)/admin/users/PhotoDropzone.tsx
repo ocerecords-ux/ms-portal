@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Vyber fotky uzivatele - kliknutim (vybere se soubor z disku) NEBO
@@ -57,6 +58,7 @@ export function PhotoDropzone({
   /** U editace existujiciho uctu - oznaceni aktualni fotky ke smazani. */
   onRemoveExisting?: () => void;
 }) {
+  const t = usePreklad();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -110,12 +112,12 @@ export function PhotoDropzone({
       )}
       <span className="text-xs text-muted flex-1 truncate">
         {busy
-          ? 'Připravuji fotku…'
+          ? t('uzivatel.pripravujiFotku')
           : file
             ? file.name
             : showingExisting
-              ? 'Aktuální fotka'
-              : 'Přetáhněte sem soubor nebo klikněte pro výběr'}
+              ? t('uzivatel.aktualniFotka')
+              : t('uzivatel.pretahnouteFotku')}
       </span>
       {(file || showingExisting) && (
         <button
@@ -127,7 +129,7 @@ export function PhotoDropzone({
           }}
           className="text-xs text-danger font-heading shrink-0"
         >
-          Odebrat
+          {t('uzivatel.odebratFotku')}
         </button>
       )}
       <input

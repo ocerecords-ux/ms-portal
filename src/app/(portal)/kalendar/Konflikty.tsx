@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DNU_KONFLIKTU, rozsahKonfliktu } from '@/lib/konflikty';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * ZNAK KONFLIKTŮ V KALENDÁŘI (zadání 23. 9. 2026: „měl by se objevit nějaký
@@ -40,12 +42,24 @@ type Skryty = { klic: string; druh: string; popis: string; kdo: string; kdy: str
 
 const BARVA = '#f97316';
 
+/** Den konfliktu slovy („po 28. 9."). Jazyk se podává parametrem. */
+function datumDne(jazyk: Jazyk, den: string): string {
+  const [y, m, d] = den.split('-').map(Number);
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'numeric',
+  }).format(new Date(Date.UTC(y, m - 1, d, 12)));
+}
+
 export function Konflikty({
   naDen,
 }: {
   /** Skok na den konfliktu. */
   naDen: (den: string) => void;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   /**
    * STEJNÝ ÚSEK JAKO KOLEČKO V LIŠTĚ (oprava 24. 9. 2026: „proč mu tam svítí
    * ta tečka u kalendáře, když tam nic není").
@@ -92,7 +106,9 @@ export function Konflikty({
         body: JSON.stringify({
           klic: k.klic,
           druh: k.druh,
-          popis: `${datum(k.den)} ${k.cas} · ${k.duvod}`,
+          // Popis se ukládá na server a čte ho pak i někdo jiný, proto se
+          // datum píše česky - důvod (`duvod`) chodí z API taky česky.
+          popis: `${datumDne('cs', k.den)} ${k.cas} · ${k.duvod}`,
           duvod: k.duvod,
         }),
       });
@@ -122,12 +138,7 @@ export function Konflikty({
   if (celkem === 0 && skryte.length === 0) return null;
   const vseOdklepnute = celkem === 0;
 
-  function datum(den: string) {
-    const [y, m, d] = den.split('-').map(Number);
-    return new Intl.DateTimeFormat('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric' }).format(
-      new Date(Date.UTC(y, m - 1, d, 12)),
-    );
-  }
+  const datum = (den: string) => datumDne(jazyk, den);
 
   const radky = (seznam: Konflikt[]) =>
     seznam.map((k) => (
@@ -158,10 +169,10 @@ export function Konflikty({
           type="button"
           onClick={() => void skryj(k)}
           disabled={pracuje === k.klic}
-          title="Tenhle překryv je schválně - přestaň na něj upozorňovat"
+          title={t('konflikty.jeToZamerBublina')}
           className="self-end text-[11px] font-heading text-muted hover:text-ink px-3 pb-1.5 disabled:opacity-50"
         >
-          {pracuje === k.klic ? 'Ukládám…' : 'Je to záměr'}
+          {pracuje === k.klic ? t('obecne.ukladam') : t('konflikty.jeToZamer')}
         </button>
       </span>
     ));
@@ -177,13 +188,13 @@ export function Konflikty({
         aria-expanded={otevreno}
         aria-label={
           vseOdklepnute
-            ? `Konflikty v kalendáři: žádné, ${skryte.length} odklepnutých jako záměr`
-            : `Konflikty v kalendáři: ${celkem}`
+            ? t('konflikty.popisekZadne', { pocet: skryte.length })
+            : t('konflikty.popisekPocet', { pocet: celkem })
         }
         title={
           vseOdklepnute
-            ? `Žádný konflikt - ${skryte.length} odklepnutých jako záměr`
-            : `Kde se dvě věci perou (${celkem})`
+            ? t('konflikty.bublinaZadne', { pocet: skryte.length })
+            : t('konflikty.bublinaPocet', { pocet: celkem })
         }
         className={`relative inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-colors ${
           vseOdklepnute ? 'border-line text-muted hover:text-ink' : ''
@@ -209,12 +220,12 @@ export function Konflikty({
       {otevreno && (
         <span className="absolute left-0 top-full mt-2 z-40 w-[min(92vw,420px)] max-h-[60vh] overflow-y-auto rounded-card border border-line bg-surface shadow-lg p-3 flex flex-col gap-3">
           <span className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted">
-            Nejbližších {DNU_KONFLIKTU} dní
+            {t('konflikty.nejblizsichDni', { pocet: DNU_KONFLIKTU })}
           </span>
           {moje.length > 0 && (
             <span className="flex flex-col gap-1.5">
               <span className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted">
-                Moje ({moje.length}) — vidíte je jen vy
+                {t('konflikty.nadpisMoje', { pocet: moje.length })}
               </span>
               {radky(moje)}
             </span>
@@ -222,7 +233,7 @@ export function Konflikty({
           {provoz.length > 0 && (
             <span className="flex flex-col gap-1.5">
               <span className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted">
-                Natáčení ({provoz.length}) — kde jste označený
+                {t('konflikty.nadpisProvoz', { pocet: provoz.length })}
               </span>
               {radky(provoz)}
             </span>
@@ -230,7 +241,7 @@ export function Konflikty({
           {skryte.length > 0 && (
             <span className="flex flex-col gap-1.5 border-t border-line pt-2.5">
               <span className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted">
-                Odklepnuté jako záměr ({skryte.length})
+                {t('konflikty.nadpisOdklepnute', { pocet: skryte.length })}
               </span>
               {skryte.map((z) => (
                 <span
@@ -247,16 +258,13 @@ export function Konflikty({
                     disabled={pracuje === z.klic}
                     className="text-[11px] font-heading text-brand-purple hover:underline disabled:opacity-50"
                   >
-                    {pracuje === z.klic ? 'Vracím…' : 'Vrátit'}
+                    {pracuje === z.klic ? t('konflikty.vracim') : t('konflikty.vratit')}
                   </button>
                 </span>
               ))}
             </span>
           )}
-          <span className="text-[11px] font-body text-muted">
-            Portál nic nezakazuje — jen ukazuje, kde se to pere. Co je schválně, odklepněte
-            tlačítkem „Je to záměr".
-          </span>
+          <span className="text-[11px] font-body text-muted">{t('konflikty.vysvetleni')}</span>
         </span>
       )}
     </span>
