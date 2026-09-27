@@ -64,12 +64,16 @@ export function capHeight(font: EmbeddedFont, size: number): number {
 /**
  * Rozlomi hodnotu na radky tak, aby se vesla do sirky sloupce. Kdyz se
  * nevejde ani na dva radky, zmensi se pismo (dlouhe nazvy firem).
+ *
+ * `maxLines` povoli vic radku tam, kde je vycet normalni - u licencniho
+ * listu je v jednom radku klidne patnact jmen interpretu (27. 9. 2026).
  */
 export function fitValue(
   font: EmbeddedFont,
   text: string,
   maxWidth: number,
   size: number,
+  maxLines = 2,
 ): { lines: string[]; size: number } {
   if (!text) return { lines: [''], size };
   if (textWidth(font, text, size) <= maxWidth) return { lines: [text], size };
@@ -88,7 +92,7 @@ export function fitValue(
       }
     }
     if (line) lines.push(line);
-    if (lines.length <= 2 && lines.every((l) => textWidth(font, l, s) <= maxWidth)) {
+    if (lines.length <= maxLines && lines.every((l) => textWidth(font, l, s) <= maxWidth)) {
       return { lines, size: s };
     }
   }

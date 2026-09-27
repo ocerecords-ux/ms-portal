@@ -150,8 +150,10 @@ export function renderLicencniListPdf(data: LicencniListData): Buffer {
   let y = heroBottom + 20;
 
   /** Tabulka popisek → hodnota; vrací spodní hranu. */
-  const tabulka = (top: number, radky: { label: string; value: string }[]): number => {
-    const hodnoty = radky.map((r) => fitValue(FONT_BOLD, r.value || '—', VALUE_MAX_W, VALUE_SIZE));
+  const tabulka = (top: number, radky: { label: string; value: string; radku?: number }[]): number => {
+    const hodnoty = radky.map((r) =>
+      fitValue(FONT_BOLD, r.value || '—', VALUE_MAX_W, VALUE_SIZE, r.radku ?? 2),
+    );
     const vysky = hodnoty.map((h) => (h.lines.length > 1 ? ROW_H + (h.lines.length - 1) * h.size * 1.25 : ROW_H));
     const celkem = vysky.reduce((a, b) => a + b, 0);
     c.clipRound(LEFT, top, INNER_W, celkem, 10, 10);
@@ -200,7 +202,17 @@ export function renderLicencniListPdf(data: LicencniListData): Buffer {
     { label: 'KLIENT', value: data.klient },
     { label: 'OBJEDNATEL', value: data.objednatel },
     { label: 'DODAVATEL', value: data.dodavatel },
-    { label: 'INTERPRET', value: data.interpret },
+    /**
+     * VŠICHNI HERCI VÝSTUPU NA JEDNOM LISTU (zadání 27. 9. 2026: „chci mít
+     * tolik licenčních listů, kolik je výstupů, a zobrazit na každém všechny
+     * herce z výstupu"). U dvouminutového spotu jich je klidně patnáct, tak
+     * se jim tu nechá víc řádků.
+     */
+    {
+      label: data.interpret.includes(',') ? 'INTERPRETI' : 'INTERPRET',
+      value: data.interpret,
+      radku: 8,
+    },
     { label: 'TYP DÍLA', value: data.typDila },
   ]);
 
