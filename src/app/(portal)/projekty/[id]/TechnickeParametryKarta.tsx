@@ -37,7 +37,7 @@ export function TechnickeParametryKarta({
       {parametry.profil.perex && (
         <p className="text-xs font-body text-muted m-0">{parametry.profil.perex}</p>
       )}
-      <VypisParametru sekce={parametry.sekce} />
+      <VypisParametru sekce={parametry.sekce} sloupce />
     </section>
   );
 }

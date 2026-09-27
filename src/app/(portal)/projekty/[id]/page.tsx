@@ -435,6 +435,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           herci={herciProjektu.map((id) => ({ id, jmeno: jmenoHerce.get(id) ?? 'Herec' }))}
         />
       )}
+      {/* TECHNICKE PARAMETRY hned nahore (zadani 27. 9. 2026: „at je to
+          prehledne"). Pod formularem je clovek nenajde - je to prvni vec,
+          kterou zvukar pri otevreni projektu potrebuje vedet. */}
+      {technickeParametry && (
+        <TechnickeParametryKarta parametry={technickeParametry} smiMenit={smiMenitParametry} />
+      )}
       {/* Karta "Z Caflou" je od 10. 9. 2026 pryc (zadani). Ukazovala tytez
           udaje, ktere jsou hned pod ni ve formulari - jen ve verzi, kterou uz
           portal needituje. Dokud projekt zil v Caflou, mela smysl jako
@@ -502,9 +508,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           zaverKnihy: meta?.zaverKnihy ?? '',
         }}
       />
-      {technickeParametry && (
-        <TechnickeParametryKarta parametry={technickeParametry} smiMenit={smiMenitParametry} />
-      )}
     </>
   );
 
