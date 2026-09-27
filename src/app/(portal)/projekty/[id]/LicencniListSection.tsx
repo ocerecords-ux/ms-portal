@@ -170,6 +170,10 @@ export function LicencniListSection({
   const [nahledUrl, setNahledUrl] = useState<string | null>(null);
   const [nahledSeDela, setNahledSeDela] = useState(false);
   const posledniUrl = useRef<string | null>(null);
+  /** Řádky a jejich políčka s názvem - kvůli překlikávání šipkami. */
+  const radkyRef = useRef<(HTMLDivElement | null)[]>([]);
+  const nazvyRef = useRef<(HTMLInputElement | null)[]>([]);
+  const nazevPredUpravou = useRef<string>('');
 
   const nastavSpolecne = <K extends keyof typeof spolecne>(k: K, hodnota: (typeof spolecne)[K]) =>
     setSpolecne((p) => ({ ...p, [k]: hodnota }));
@@ -196,6 +200,48 @@ export function LicencniListSection({
   }, [vychozi.herci, vychozi.vsichniHerci, vystupy, dopsani]);
 
   const klicHerce = (h: { id: string | null; jmeno: string }) => h.id ?? `${KLIC_JMENA}${h.jmeno}`;
+
+  /**
+   * PŘEKLIKÁVÁNÍ JAKO VE FINDERU (zadání 27. 9. 2026: „chci se překlikávat
+   * v seznamu listů, upravoval bych tam pole, jako když pracuji se soubory
+   * ve Finderu na macu"). Šipky nahoru a dolů chodí po řádcích, Enter začne
+   * přepisovat název, Escape změnu vezme zpět a vrátí se na řádek.
+   */
+  function skoc(i: number) {
+    const cil = radkyRef.current[i];
+    if (!cil) return;
+    setVybrany(i);
+    cil.focus();
+  }
+
+  function klavesaRadku(e: React.KeyboardEvent<HTMLDivElement>, i: number) {
+    // Když se zrovna píše do políčka, řádek do toho nemluví.
+    if (e.target !== e.currentTarget) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      skoc(Math.min(i + 1, chystane.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      skoc(Math.max(i - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      nazevPredUpravou.current = chystane[i]?.nazevSpotu ?? '';
+      const vstup = nazvyRef.current[i];
+      vstup?.focus();
+      vstup?.select();
+    }
+  }
+
+  function klavesaNazvu(e: React.KeyboardEvent<HTMLInputElement>, i: number) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      skoc(i);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      nastavRadek(i, { nazevSpotu: nazevPredUpravou.current });
+      skoc(i);
+    }
+  }
 
   /** Údaje jednoho listu tak, jak jdou do PDF. */
   const doListu = (r: ChystanyList) => ({
@@ -396,6 +442,15 @@ export function LicencniListSection({
             >
               Společné údaje
             </button>
+            {listy.length > 0 && (
+              <a
+                href={`/api/projects/${encodeURIComponent(caflouProjectId)}/licencni-list/zip`}
+                title="Stáhne všechny vystavené listy zakázky v jednom archivu"
+                className="rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface no-underline hover:text-brand-purple hover:border-brand-purple transition-colors"
+              >
+                Stáhnout všechny ({listy.length})
+              </a>
+            )}
             <button
               type="button"
               onClick={() => void vystav()}
@@ -461,15 +516,30 @@ export function LicencniListSection({
               {chystane.map((r, i) => (
                 <li key={r.klic}>
                   <div
+                    ref={(el) => {
+                      radkyRef.current[i] = el;
+                    }}
+                    tabIndex={0}
+                    role="group"
+                    aria-label={r.nazevSpotu || 'Licenční list'}
                     onMouseDown={() => setVybrany(i)}
-                    className={`flex items-center gap-2 flex-wrap rounded-card border bg-surface px-3 py-2 transition-colors ${
-                      i === vybrany ? 'border-brand-purple' : 'border-line'
+                    onFocus={() => setVybrany(i)}
+                    onKeyDown={(e) => klavesaRadku(e, i)}
+                    className={`flex items-center gap-2 flex-wrap rounded-card border bg-surface px-3 py-2 transition-colors outline-none ${
+                      i === vybrany ? 'border-brand-purple ring-1 ring-brand-purple/40' : 'border-line'
                     }`}
                   >
                     <input
+                      ref={(el) => {
+                        nazvyRef.current[i] = el;
+                      }}
                       value={r.nazevSpotu}
                       onChange={(e) => nastavRadek(i, { nazevSpotu: e.target.value })}
-                      onFocus={() => setVybrany(i)}
+                      onFocus={() => {
+                        setVybrany(i);
+                        nazevPredUpravou.current = r.nazevSpotu;
+                      }}
+                      onKeyDown={(e) => klavesaNazvu(e, i)}
                       placeholder="Název spotu"
                       aria-label="Název spotu"
                       className="flex-1 min-w-[140px] max-w-[260px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm outline-none hover:border-line focus:border-brand-purple focus:bg-field"
