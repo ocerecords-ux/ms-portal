@@ -10,6 +10,7 @@ import { KLIENT_PORTAL } from './navodProKlientyPortal';
 import { KLIENT_OBJEDNAVKA } from './navodProKlientyObjednavka';
 import { KLIENT_PREPOSLECH } from './navodProKlientyPreposlech';
 import { KLIENT_REKLAMA } from './navodProKlientyReklama';
+import { KLIENT_MOBIL } from './navodProKlientyMobil';
 import { STUDIO_BOOKING } from './navodStudioBooking';
 
 /**
@@ -70,6 +71,7 @@ export const VYCHOZI_NAVODY: VychoziNavod[] = [
   // na Druh zakazek jeho firmy - viz proDruhy a sediDruh v lib/navody.ts.
   KLIENT_PREPOSLECH,
   KLIENT_REKLAMA,
+  KLIENT_MOBIL,
   // Navod pro muzikanty, kteri si bookuji studio (25. 9. 2026). Jediny
   // anglicky navod v portalu - cte ho klient MS Studio London.
   STUDIO_BOOKING,
