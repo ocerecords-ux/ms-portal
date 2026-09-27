@@ -1,6 +1,10 @@
 import nodemailer from 'nodemailer';
 import { pozdrav, sedmyPad } from '@/lib/osloveni';
 import { bezZnacek, znackyNaHtml } from '@/lib/formatovaniZpravy';
+// Jazyk PŘÍJEMCE a slovník pošty (dávka 6 překladu, 27. 9. 2026) - viz
+// lib/jazykEmailu.ts a lib/jazykPrijemce.ts.
+import { formatDatum, kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { prelozitEmail, prelozitEmailS } from '@/lib/jazykEmailu';
 
 /**
  * SPOJENÍ SE SMTP SE DRŽÍ (oprava 15. 9. 2026: „smlouvy chodí na mail se
@@ -180,6 +184,50 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/*
+ * JAZYK POŠTY SE BERE OD PŘÍJEMCE, ne z přepínače v liště (pravidlo 5
+ * v docs/preklad-portalu.md). Volající ho podá v `input.jazyk` - kde ho
+ * vezme, řeší lib/jazykPrijemce.ts. Kdo ho nepodá, dostane češtinu jako dřív;
+ * proto je pole všude NEPOVINNÉ a žádnému starému volajícímu se nic nerozbije.
+ */
+
+/**
+ * Datum v poště. ČASOVÉ PÁSMO ZŮSTÁVÁ PRAŽSKÉ i v anglické verzi - splatnosti
+ * a termíny se počítají od naší kanceláře a nesmí se posunout jen proto, že
+ * server běží v UTC. Právě kvůli pásmu se tu nevolá `formatDatum`
+ * z lib/jazyk.ts, které pásmo neumí; jediná výjimka je pozvánka do studia
+ * (viz buildInviteHtml), kde se pásmo mění schválně.
+ */
+function datumPosty(jazyk: Jazyk, d: Date): string {
+  return d.toLocaleDateString(kodJazyka(jazyk), { timeZone: 'Europe/Prague' });
+}
+
+/** Datum i s časem (24 h) - „přijato", „odkaz platí do", čas podpisu. */
+function datumCasPosty(jazyk: Jazyk, d: Date): string {
+  return d.toLocaleString(kodJazyka(jazyk), {
+    timeZone: 'Europe/Prague',
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+/**
+ * Oslovení v e-mailu. Česky se křestní jméno skloňuje do 5. pádu (pozdrav()
+ * v lib/osloveni.ts, zadání 11. 9. 2026) - anglicky se neskloňuje nic, takže
+ * jméno jde do věty celé přes klíč `mail.pozdravSeJmenem`.
+ */
+function pozdravPosty(jazyk: Jazyk, jmeno: string | null | undefined): string {
+  if (jazyk !== 'en') return pozdrav(jmeno);
+  const cele = jmeno?.trim();
+  return cele
+    ? prelozitEmailS(jazyk, 'mail.pozdravSeJmenem', { jmeno: cele })
+    : prelozitEmail(jazyk, 'mail.pozdravBezJmena');
+}
+
 type OrderEmailInput = {
   /**
    * Komu zpráva jde - adresy členů týmu, kteří mají na kartě uživatele
@@ -219,37 +267,40 @@ type OrderEmailInput = {
    * v lib/roles.ts), ne e-mailová vrstva.
    */
   bezCeny?: boolean;
+  /** Jazyk příjemce (pravidlo 5). Bez něj čeština - viz pozdravPosty výš. */
+  jazyk?: Jazyk;
 };
 
 // HTML sablona interniho e-mailu (tym Mediaspace) - schvaleny design, viz
 // e-mailovy mockup z 4. 9. 2026 (fialovo-zelena identita msportal.cz,
 // rychle skenovatelny prehled objednavky s odkazem do adminu).
 function buildInternalNotificationHtml(input: OrderEmailInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  // Castka se ZAMERNE neprepocitava ani jinak neformatuje - cisla dokladu
+  // a ceny zustavaji tak, jak je portal pise dnes (pravidlo prekladu).
   const priceText = input.priceEstimate != null ? `${input.priceEstimate.toLocaleString('cs-CZ')} Kč` : '—';
   const pageCountText = input.pageCount != null ? String(input.pageCount) : '—';
   const deadlineText = input.deadline ?? '—';
   const narratorText = input.preferredNarrator ? escapeHtml(input.preferredNarrator) : '—';
   const noteText = input.note ? escapeHtml(input.note) : '—';
   const attachmentCell = input.attachmentUrl
-    ? `<a href="${escapeHtml(input.attachmentUrl)}">${escapeHtml(input.attachmentName || 'příloha')} ↗</a>`
+    ? `<a href="${escapeHtml(input.attachmentUrl)}">${escapeHtml(
+        input.attachmentName || prelozitEmail(jazyk, 'mail.objednavkaInterni.prilohaNazev'),
+      )} ↗</a>`
     : '—';
   const nameText = input.requestedByName ? escapeHtml(input.requestedByName) : '—';
-  const receivedAt = new Date().toLocaleString('cs-CZ', {
-    timeZone: 'Europe/Prague',
-    day: 'numeric',
-    month: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const receivedAt = datumCasPosty(jazyk, new Date());
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
   const companyAdminUrl = `${baseUrl}/admin/companies/${encodeURIComponent(input.companyId)}`;
   const projektUrl = input.projectId ? `${baseUrl}/projekty/${encodeURIComponent(input.projectId)}` : null;
   const ctaUrl = projektUrl ?? companyAdminUrl;
-  const ctaText = projektUrl ? 'Otevřít v projektech →' : 'Otevřít firmu v adminu →';
+  const ctaText = prelozitEmail(
+    jazyk,
+    projektUrl ? 'mail.objednavkaInterni.otevritProjekt' : 'mail.objednavkaInterni.otevritFirmu',
+  );
 
   return `<!doctype html>
-<html>
+<html lang="${jazyk}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -301,24 +352,24 @@ function buildInternalNotificationHtml(input: OrderEmailInput): string {
 <table role="presentation">
   <tr><td class="email-hero">
     <img class="word" src="${baseUrl}${LOGO_GIF_PATH}" width="150" height="150" alt="Mediaspace" />
-    <div class="tag">MS Portal - Objednávka audioknihy</div>
+    <div class="tag">${prelozitEmail(jazyk, 'mail.objednavkaInterni.stitek')}</div>
     <div class="bar"></div>
   </td></tr>
   <tr><td class="email-content">
-    <span class="badge">Nová objednávka</span>
+    <span class="badge">${prelozitEmail(jazyk, 'mail.objednavkaInterni.odznak')}</span>
     <h2>${escapeHtml(input.title)} — ${escapeHtml(input.companyName)}</h2>
 
     <table class="field-table" role="presentation">
-      <tr><td class="label">Firma</td><td class="value">${escapeHtml(input.companyName)}</td></tr>
-      <tr><td class="label">Počet normostran</td><td class="value">${pageCountText}</td></tr>
-      ${input.bezCeny ? '' : `<tr><td class="label">Předběžná cena</td><td class="value">${priceText}</td></tr>`}
-      <tr><td class="label">Termín odevzdání</td><td class="value">${deadlineText}</td></tr>
-      <tr><td class="label">Preferovaný herec</td><td class="value">${narratorText}</td></tr>
-      <tr><td class="label">Poznámka klienta</td><td class="value regular">${noteText}</td></tr>
-      <tr><td class="label">Příloha</td><td class="value">${attachmentCell}</td></tr>
-      <tr><td class="label">Jméno</td><td class="value regular">${nameText}</td></tr>
-      <tr><td class="label">E-mail</td><td class="value regular">${escapeHtml(input.requestedByEmail)}</td></tr>
-      <tr><td class="label">Přijato</td><td class="value regular">${receivedAt}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaInterni.firma')}</td><td class="value">${escapeHtml(input.companyName)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaInterni.normostrany')}</td><td class="value">${pageCountText}</td></tr>
+      ${input.bezCeny ? '' : `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaInterni.cena')}</td><td class="value">${priceText}</td></tr>`}
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaInterni.termin')}</td><td class="value">${deadlineText}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaInterni.herec')}</td><td class="value">${narratorText}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaInterni.poznamka')}</td><td class="value regular">${noteText}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaInterni.priloha')}</td><td class="value">${attachmentCell}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaInterni.jmeno')}</td><td class="value regular">${nameText}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaInterni.email')}</td><td class="value regular">${escapeHtml(input.requestedByEmail)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaInterni.prijato')}</td><td class="value regular">${receivedAt}</td></tr>
     </table>
 
     <div class="cta-row">
@@ -326,7 +377,7 @@ function buildInternalNotificationHtml(input: OrderEmailInput): string {
     </div>
   </td></tr>
   <tr><td class="email-footer">
-    <p><span class="brand">Mediaspace</span> · automatická notifikace z MS Portal, neodpovídat</p>
+    <p><span class="brand">Mediaspace</span> · ${prelozitEmail(jazyk, 'mail.objednavkaInterni.patka')}</p>
   </td></tr>
 </table>
 </body>
@@ -334,24 +385,33 @@ function buildInternalNotificationHtml(input: OrderEmailInput): string {
 }
 
 function buildInternalNotificationText(input: OrderEmailInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   return [
-    `Nova objednavka audioknihy - ${input.companyName}`,
+    prelozitEmailS(jazyk, 'mail.objednavkaInterni.textNadpis', { firma: input.companyName }),
     '',
-    `Nazev: ${input.title}`,
-    `Pocet normostran: ${input.pageCount ?? '-'}`,
+    prelozitEmailS(jazyk, 'mail.objednavkaInterni.textNazev', { hodnota: input.title }),
+    prelozitEmailS(jazyk, 'mail.objednavkaInterni.textNormostrany', { hodnota: input.pageCount ?? '-' }),
     ...(input.bezCeny
       ? []
-      : [`Predbezna cena: ${input.priceEstimate != null ? input.priceEstimate + ' Kc' : '-'}`]),
-    `Datum odevzdani: ${input.deadline ?? '-'}`,
-    `Preferovany herec: ${input.preferredNarrator ?? '-'}`,
-    `Poznamka: ${input.note ?? '-'}`,
-    `Priloha: ${input.attachmentUrl ?? 'zadna'}`,
-    `Jmeno: ${input.requestedByName ?? '-'}`,
-    `Objednal: ${input.requestedByEmail}`,
+      : [
+          prelozitEmailS(jazyk, 'mail.objednavkaInterni.textCena', {
+            hodnota: input.priceEstimate != null ? input.priceEstimate + ' Kc' : '-',
+          }),
+        ]),
+    prelozitEmailS(jazyk, 'mail.objednavkaInterni.textTermin', { hodnota: input.deadline ?? '-' }),
+    prelozitEmailS(jazyk, 'mail.objednavkaInterni.textHerec', { hodnota: input.preferredNarrator ?? '-' }),
+    prelozitEmailS(jazyk, 'mail.objednavkaInterni.textPoznamka', { hodnota: input.note ?? '-' }),
+    prelozitEmailS(jazyk, 'mail.objednavkaInterni.textPriloha', {
+      hodnota: input.attachmentUrl ?? prelozitEmail(jazyk, 'mail.objednavkaInterni.textBezPrilohy'),
+    }),
+    prelozitEmailS(jazyk, 'mail.objednavkaInterni.textJmeno', { hodnota: input.requestedByName ?? '-' }),
+    prelozitEmailS(jazyk, 'mail.objednavkaInterni.textObjednal', { hodnota: input.requestedByEmail }),
     ...(input.projectId
       ? [
           '',
-          `Projekt: ${(process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '')}/projekty/${input.projectId}`,
+          prelozitEmailS(jazyk, 'mail.objednavkaInterni.textProjekt', {
+            hodnota: `${(process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '')}/projekty/${input.projectId}`,
+          }),
         ]
       : []),
   ].join('\n');
@@ -388,7 +448,9 @@ export async function sendOrderNotificationEmail(input: OrderEmailInput) {
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to,
-    subject: `Objednávka audioknihy – ${input.title}`,
+    subject: prelozitEmailS(input.jazyk ?? 'cs', 'mail.objednavkaInterni.predmet', {
+      nazev: input.title,
+    }),
     text: buildInternalNotificationText(input),
     html: buildInternalNotificationHtml(input),
   });
@@ -427,44 +489,51 @@ type InviteEmailInput = {
   inviteUrl: string;
   expiresAt: Date;
   audience: InviteAudience;
+  /** Jazyk příjemce (pravidlo 5). U BOOKING se nebere v potaz - viz níž. */
+  jazyk?: Jazyk;
 };
 
-/** Uvodni odstavec a "co v portalu najdete" podle toho, komu pozvanka jde. */
+/**
+ * Jazyk pozvánky. BOOKING chodí ANGLICKY VŽDYCKY (zadání 25. 9. 2026 - klienti
+ * MS Studio London jsou Britové), i kdyby si člověk v portálu přepnul na
+ * češtinu. U ostatních rozhoduje jazyk příjemce jako u zbytku pošty.
+ */
+function jazykPozvanky(input: InviteEmailInput): Jazyk {
+  return anglickaPozvanka(input.audience) ? 'en' : (input.jazyk ?? 'cs');
+}
+
+/**
+ * Uvodni odstavec a "co v portalu najdete" podle toho, komu pozvanka jde.
+ *
+ * Hodnoty uz NEJSOU hotove texty, ale KLICE do slovniku posty
+ * (lib/jazykEmailu.ts) - anglicka pozvanka se od 27. 9. 2026 nesklada
+ * ternarnimi operatory v HTML, ale bere se ze slovniku jako zbytek portalu.
+ */
 const INVITE_COPY: Record<
   InviteAudience,
   { tag: string; badge: string; heading: string; intro: string; listTitle: string | null; list: string[] }
 > = {
   CLIENT: {
-    tag: 'Pozvánka do portálu',
-    badge: 'Nový přístup',
-    heading: 'Vítejte v MS Portalu',
-    intro:
-      'připravili jsme vám přístup do klientského portálu Mediaspace. Heslo si nastavíte sami - stačí jedno kliknutí.',
-    listTitle: 'Co v portálu najdete',
-    list: [
-      'Přehled vašich projektů a jejich stavu',
-      'Objednávkový formulář s předběžnou cenou',
-      'Hotové i rozpracované nahrávky ke stažení',
-    ],
+    tag: 'mail.pozvanka.stitek',
+    badge: 'mail.pozvanka.odznak',
+    heading: 'mail.pozvanka.nadpis',
+    intro: 'mail.pozvanka.uvodKlient',
+    listTitle: 'mail.pozvanka.seznamNadpis',
+    list: ['mail.pozvanka.klientBod1', 'mail.pozvanka.klientBod2', 'mail.pozvanka.klientBod3'],
   },
   INTERNAL: {
-    tag: 'Interní přístup',
-    badge: 'Interní účet',
-    heading: 'Váš přístup do MS Portalu',
-    intro: 'založili jsme ti interní účet do MS Portalu. Heslo si nastavíš sám - stačí jedno kliknutí.',
-    listTitle: 'Co v portálu najdeš',
-    list: [
-      'Přehled všech projektů z Caflou - aktivní i dokončené',
-      'Detail projektu: manažer, priorita, typ zakázky a odkaz na KZ',
-      'Správu firem a uživatelů (podle role)',
-    ],
+    tag: 'mail.pozvanka.stitekInterni',
+    badge: 'mail.pozvanka.odznakInterni',
+    heading: 'mail.pozvanka.nadpisInterni',
+    intro: 'mail.pozvanka.uvodInterni',
+    listTitle: 'mail.pozvanka.seznamNadpisInterni',
+    list: ['mail.pozvanka.interniBod1', 'mail.pozvanka.interniBod2', 'mail.pozvanka.interniBod3'],
   },
   HEREC: {
-    tag: 'Pozvánka do portálu',
-    badge: 'Nový přístup',
-    heading: 'Vítejte v MS Portalu',
-    intro:
-      'založili jsme vám účet do MS Portalu, kde vedeme spolupráci s herci. Heslo si nastavíte sami - stačí jedno kliknutí.',
+    tag: 'mail.pozvanka.stitek',
+    badge: 'mail.pozvanka.odznak',
+    heading: 'mail.pozvanka.nadpis',
+    intro: 'mail.pozvanka.uvodHerec',
     // Hercovska cast portalu se teprve stavi - schvalne tu neslibujeme nic,
     // co uzivatel po prihlaseni nenajde.
     listTitle: null,
@@ -472,17 +541,12 @@ const INVITE_COPY: Record<
   },
   // Muzikanti a producenti, kteří si u nás bookují studio (25. 9. 2026).
   BOOKING: {
-    tag: 'Studio booking',
-    badge: 'New access',
-    heading: 'Your studio calendar is ready',
-    intro:
-      'we have set up your access to the Mediaspace studio booking calendar. Choose your own password — it takes one click.',
-    listTitle: 'What you can do there',
-    list: [
-      'See when the studio is free and book it straight away',
-      'Book by the hour or take whole days for a longer project',
-      'Add the calendar to your phone as an app and manage bookings on the move',
-    ],
+    tag: 'mail.pozvanka.stitekBooking',
+    badge: 'mail.pozvanka.odznak',
+    heading: 'mail.pozvanka.nadpisBooking',
+    intro: 'mail.pozvanka.uvodBooking',
+    listTitle: 'mail.pozvanka.seznamNadpisBooking',
+    list: ['mail.pozvanka.bookingBod1', 'mail.pozvanka.bookingBod2', 'mail.pozvanka.bookingBod3'],
   },
 };
 
@@ -496,10 +560,13 @@ const INVITE_COPY: Record<
  * prefers-color-scheme: dark) je zamerny - bez toho si nektere klienty
  * (Apple Mail) barvy "opravi" samy a logo/text zesednou.
  */
-function emailShell(options: { tag: string; preheader: string; body: string }): string {
+function emailShell(options: { tag: string; preheader: string; body: string; jazyk?: Jazyk }): string {
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
+  // `lang` patri k jazyku PRIJEMCE, ne k jazyku kodu - bez nej nabizi Gmail
+  // Britovi preklad z cestiny na mailu, ktery uz anglicky je.
+  const jazyk = options.jazyk ?? 'cs';
   return `<!doctype html>
-<html lang="cs">
+<html lang="${jazyk}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -588,49 +655,50 @@ function emailShell(options: { tag: string; preheader: string; body: string }): 
 }
 
 export function buildInviteHtml(input: InviteEmailInput): string {
-  const anglicky = anglickaPozvanka(input.audience);
-  const greeting = anglicky
-    ? escapeHtml(input.name ? `Hello ${input.name},` : 'Hello,')
-    : escapeHtml(pozdrav(input.name));
-  const expiresText = input.expiresAt.toLocaleDateString(anglicky ? 'en-GB' : 'cs-CZ', {
-    timeZone: anglicky ? 'Europe/London' : 'Europe/Prague',
+  const jazyk = jazykPozvanky(input);
+  const greeting = escapeHtml(pozdravPosty(jazyk, input.name));
+  // ČASOVÉ PÁSMO PODLE JAZYKA ZŮSTÁVÁ (zadání 25. 9. 2026): Brit čte platnost
+  // odkazu v londýnském čase, Čech v pražském. Proto se tu nevolá datumPosty.
+  const expiresText = input.expiresAt.toLocaleDateString(kodJazyka(jazyk), {
+    timeZone: jazyk === 'en' ? 'Europe/London' : 'Europe/Prague',
   });
 
   const copy = INVITE_COPY[input.audience];
   const listHtml = copy.listTitle
     ? `
-    <p style="font-weight:600;margin-bottom:10px;">${copy.listTitle}</p>
+    <p style="font-weight:600;margin-bottom:10px;">${prelozitEmail(jazyk, copy.listTitle)}</p>
     <table role="presentation" class="steps" width="100%">
       ${copy.list
-        .map((item, i) => `<tr><td class="num">${i + 1}</td><td>${item}</td></tr>`)
+        .map((klic, i) => `<tr><td class="num">${i + 1}</td><td>${prelozitEmail(jazyk, klic)}</td></tr>`)
         .join('\n      ')}
     </table>
 `
     : '';
-  const closing = anglicky
-    ? 'If the link expires, write to us and we will send a new one. You have received this invitation because Mediaspace set up an account for you — if it looks unfamiliar, please let us know.'
-    : input.audience === 'INTERNAL'
-      ? 'Pokud odkaz vyprší, řekni si o nový. Kdyby něco nefungovalo, dej vědět.'
-      : 'Pokud odkaz vyprší, napište nám a pošleme vám nový. Tuto pozvánku jste dostali, protože pro vás Mediaspace založila účet - pokud si ji neumíte vysvětlit, dejte nám prosím vědět.';
+  const closing = prelozitEmail(
+    jazyk,
+    input.audience === 'INTERNAL' ? 'mail.pozvanka.zaverInterni' : 'mail.pozvanka.zaver',
+  );
 
   return emailShell({
-    tag: copy.tag,
-    preheader: anglicky
-      ? 'Your studio booking calendar is ready — just choose a password.'
-      : 'Váš přístup do MS Portalu je připravený - stačí si nastavit heslo.',
+    jazyk,
+    tag: prelozitEmail(jazyk, copy.tag),
+    preheader: prelozitEmail(
+      jazyk,
+      input.audience === 'BOOKING' ? 'mail.pozvanka.preheaderBooking' : 'mail.pozvanka.preheader',
+    ),
     body: `
-    <span class="badge">${copy.badge}</span>
-    <h2>${copy.heading}</h2>
+    <span class="badge">${prelozitEmail(jazyk, copy.badge)}</span>
+    <h2>${prelozitEmail(jazyk, copy.heading)}</h2>
     <p>${greeting}</p>
-    <p>${copy.intro}</p>
+    <p>${prelozitEmail(jazyk, copy.intro)}</p>
 
     <table role="presentation" class="field-table">
-      <tr><td class="label">${anglicky ? 'Username' : 'Přihlašovací jméno'}</td><td class="value">${escapeHtml(input.to)}</td></tr>
-      <tr><td class="label">${anglicky ? 'Link valid until' : 'Odkaz platí do'}</td><td class="value regular">${expiresText}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.pozvanka.prihlasovaciJmeno')}</td><td class="value">${escapeHtml(input.to)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.pozvanka.odkazPlatiDo')}</td><td class="value regular">${expiresText}</td></tr>
     </table>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.inviteUrl)}" class="cta">${anglicky ? 'Choose a password' : 'Nastavit heslo'}</a>
+      <a href="${escapeHtml(input.inviteUrl)}" class="cta">${prelozitEmail(jazyk, 'mail.pozvanka.nastavitHeslo')}</a>
     </div>
 ${listHtml}
     <p class="small">${closing}</p>
@@ -644,37 +712,36 @@ export async function sendInviteEmail(input: InviteEmailInput) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
+  const jazyk = jazykPozvanky(input);
+
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: anglickaPozvanka(input.audience)
-      ? 'Your Mediaspace studio booking calendar'
-      : input.audience === 'INTERNAL'
-        ? 'Přístup do MS Portalu'
-        : 'Pozvánka do MS Portalu',
-    text: anglickaPozvanka(input.audience)
-      ? [
-          input.name ? `Hello ${input.name},` : 'Hello,',
-          '',
-          'your access to the Mediaspace studio booking calendar is ready.',
-          `Username: ${input.to}`,
-          '',
-          'Choose your password here:',
-          input.inviteUrl,
-          '',
-          `The link is valid until ${input.expiresAt.toLocaleDateString('en-GB')}.`,
-        ].join('\n')
-      : [
-          pozdrav(input.name),
-          '',
-          'pripravili jsme vam pristup do portalu Mediaspace (MS Portal).',
-          `Prihlasovaci jmeno: ${input.to}`,
-          '',
-          'Heslo si nastavite zde:',
-          input.inviteUrl,
-          '',
-          `Odkaz plati do ${input.expiresAt.toLocaleDateString('cs-CZ')}.`,
-        ].join('\n'),
+    subject: prelozitEmail(
+      jazyk,
+      input.audience === 'BOOKING'
+        ? 'mail.pozvanka.predmetBooking'
+        : input.audience === 'INTERNAL'
+          ? 'mail.pozvanka.predmetInterni'
+          : 'mail.pozvanka.predmet',
+    ),
+    // Prosty text drzi stejny tvar v obou jazycich, jen jinymi klici.
+    text: [
+      pozdravPosty(jazyk, input.name),
+      '',
+      prelozitEmail(
+        jazyk,
+        input.audience === 'BOOKING' ? 'mail.pozvanka.textUvodBooking' : 'mail.pozvanka.textUvod',
+      ),
+      prelozitEmailS(jazyk, 'mail.pozvanka.textJmeno', { hodnota: input.to }),
+      '',
+      prelozitEmail(jazyk, 'mail.pozvanka.textHeslo'),
+      input.inviteUrl,
+      '',
+      prelozitEmailS(jazyk, 'mail.pozvanka.textPlatnost', {
+        datum: formatDatum(jazyk, input.expiresAt),
+      }),
+    ].join('\n'),
     html: buildInviteHtml(input),
   });
 
@@ -700,70 +767,82 @@ type OrderConfirmationInput = {
   preferredNarrator: string | null;
   note: string | null;
   attachmentName: string | null;
+  /** Jazyk příjemce (pravidlo 5). Bez něj čeština. */
+  jazyk?: Jazyk;
 };
 
 export function buildOrderConfirmationHtml(input: OrderConfirmationInput): string {
-  const greeting = escapeHtml(pozdrav(input.name));
+  const jazyk = input.jazyk ?? 'cs';
+  const greeting = escapeHtml(pozdravPosty(jazyk, input.name));
   const rows: string[] = [
-    `<tr><td class="label">Název</td><td class="value">${escapeHtml(input.title)}</td></tr>`,
+    `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.nazev')}</td><td class="value">${escapeHtml(input.title)}</td></tr>`,
   ];
   if (input.isAudiobook) {
     rows.push(
-      `<tr><td class="label">Počet normostran</td><td class="value regular">${input.pageCount ?? '—'}</td></tr>`,
+      `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.normostrany')}</td><td class="value regular">${input.pageCount ?? '—'}</td></tr>`,
     );
+    // Castka se nepreformatovava ani v anglickem mailu - viz pravidla prekladu.
     rows.push(
-      `<tr><td class="label">Předběžná cena</td><td class="value">${
+      `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.cena')}</td><td class="value">${
         input.priceEstimate != null ? `${input.priceEstimate.toLocaleString('cs-CZ')} Kč` : '—'
       }</td></tr>`,
     );
   }
   rows.push(
-    `<tr><td class="label">Termín odevzdání</td><td class="value regular">${input.deadline ?? '—'}</td></tr>`,
+    `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.termin')}</td><td class="value regular">${input.deadline ?? '—'}</td></tr>`,
   );
   if (input.preferredNarrator) {
     rows.push(
-      `<tr><td class="label">Preferovaný herec</td><td class="value regular">${escapeHtml(
+      `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.herec')}</td><td class="value regular">${escapeHtml(
         input.preferredNarrator,
       )}</td></tr>`,
     );
   }
   if (input.note) {
-    rows.push(`<tr><td class="label">Poznámka</td><td class="value regular">${escapeHtml(input.note)}</td></tr>`);
+    rows.push(
+      `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.poznamka')}</td><td class="value regular">${escapeHtml(input.note)}</td></tr>`,
+    );
   }
   if (input.attachmentName) {
     rows.push(
-      `<tr><td class="label">Příloha</td><td class="value regular">${escapeHtml(input.attachmentName)}</td></tr>`,
+      `<tr><td class="label">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.priloha')}</td><td class="value regular">${escapeHtml(input.attachmentName)}</td></tr>`,
     );
   }
 
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
 
   return emailShell({
-    tag: input.isAudiobook ? 'Objednávka audioknihy' : 'Objednávka',
-    preheader: `Objednávku ${input.title} jsme přijali.`,
+    jazyk,
+    tag: prelozitEmail(
+      jazyk,
+      input.isAudiobook ? 'mail.objednavkaPotvrzeni.stitek' : 'mail.objednavkaPotvrzeni.stitekJina',
+    ),
+    preheader: prelozitEmailS(jazyk, 'mail.objednavkaPotvrzeni.preheader', { nazev: input.title }),
     body: `
-    <span class="badge">Objednávka přijata</span>
-    <h2>Máme vaši objednávku</h2>
+    <span class="badge">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.odznak')}</span>
+    <h2>${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.nadpis')}</h2>
     <p>${greeting}</p>
-    <p>děkujeme za objednávku. Přijali jsme ji a ozveme se vám s potvrzením termínu${
-      input.isAudiobook ? ' a konečné ceny' : ''
-    }.</p>
+    <p>${prelozitEmail(
+      jazyk,
+      input.isAudiobook ? 'mail.objednavkaPotvrzeni.uvodAudiokniha' : 'mail.objednavkaPotvrzeni.uvod',
+    )}</p>
 
     <table role="presentation" class="field-table">
       ${rows.join('\n      ')}
     </table>
 
     <div class="cta-row">
-      <a href="${baseUrl}/projekty" class="cta-dark">Zobrazit v portálu →</a>
+      <a href="${baseUrl}/projekty" class="cta-dark">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.tlacitko')}</a>
     </div>
 
     ${
       input.isAudiobook
-        ? '<p class="small">Uvedená cena je předběžná - vychází z počtu normostran a vaší sjednané sazby. Konečnou cenu potvrdíme po kontrole podkladů.</p>'
+        ? `<p class="small">${prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.cenaPoznamka')}</p>`
         : ''
     }
-    <p class="small">Tento e-mail je automatické potvrzení z MS Portalu. Když něco nesedí, odpovězte nám nebo napište na
-       <a href="mailto:${ADRESA_ODESILATELE}" style="color:#6B2AF0;text-decoration:none;">${ADRESA_ODESILATELE}</a>.</p>
+    <p class="small">${prelozitEmailS(jazyk, 'mail.objednavkaPotvrzeni.automat', {
+      adresa: `<a href="mailto:${ADRESA_ODESILATELE}" style="color:#6B2AF0;text-decoration:none;">${ADRESA_ODESILATELE}</a>`,
+    })}</p>
   `,
   });
 }
@@ -774,6 +853,8 @@ export async function sendOrderConfirmationEmail(input: OrderConfirmationInput) 
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
+  const jazyk = input.jazyk ?? 'cs';
+
   await transport.sendMail({
     // ADRESY TYMU SEM NESMI (zadani 14. 9. 2026: „klient nevidi adresy tymu").
     // Do 14. 9. 2026 tu v Reply-To svitila interni schranka na objednavky;
@@ -781,24 +862,31 @@ export async function sendOrderConfirmationEmail(input: OrderConfirmationInput) 
     // zprava prisla. Kdo ji uvnitr cte, je nase vec, ne klientova.
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `Potvrzení objednávky – ${input.title}`,
+    subject: prelozitEmailS(jazyk, 'mail.objednavkaPotvrzeni.predmet', { nazev: input.title }),
     text: [
-      pozdrav(input.name),
+      pozdravPosty(jazyk, input.name),
       '',
-      'dekujeme za objednavku, prijali jsme ji.',
+      prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.textUvod'),
       '',
-      `Nazev: ${input.title}`,
+      prelozitEmailS(jazyk, 'mail.objednavkaPotvrzeni.textNazev', { hodnota: input.title }),
       ...(input.isAudiobook
         ? [
-            `Pocet normostran: ${input.pageCount ?? '-'}`,
-            `Predbezna cena: ${input.priceEstimate != null ? input.priceEstimate + ' Kc' : '-'}`,
+            prelozitEmailS(jazyk, 'mail.objednavkaPotvrzeni.textNormostrany', {
+              hodnota: input.pageCount ?? '-',
+            }),
+            prelozitEmailS(jazyk, 'mail.objednavkaPotvrzeni.textCena', {
+              hodnota: input.priceEstimate != null ? input.priceEstimate + ' Kc' : '-',
+            }),
           ]
         : []),
-      `Termin odevzdani: ${input.deadline ?? '-'}`,
-      `Preferovany herec: ${input.preferredNarrator ?? '-'}`,
-      `Poznamka: ${input.note ?? '-'}`,
+      prelozitEmailS(jazyk, 'mail.objednavkaPotvrzeni.textTermin', { hodnota: input.deadline ?? '-' }),
+      prelozitEmailS(jazyk, 'mail.objednavkaPotvrzeni.textHerec', {
+        hodnota: input.preferredNarrator ?? '-',
+      }),
+      prelozitEmailS(jazyk, 'mail.objednavkaPotvrzeni.textPoznamka', { hodnota: input.note ?? '-' }),
       '',
-      'Ozveme se vam s potvrzenim terminu.',
+      prelozitEmail(jazyk, 'mail.objednavkaPotvrzeni.textZaver'),
+      // Podpis je nazev znacky, ten se nepreklada do anglictiny.
       'Mediaspace / MS Portal',
     ].join('\n'),
     html: buildOrderConfirmationHtml(input),
@@ -816,35 +904,32 @@ type PasswordResetInput = {
   name: string | null;
   resetUrl: string;
   expiresAt: Date;
+  /** Jazyk příjemce (pravidlo 5). Bez něj čeština. */
+  jazyk?: Jazyk;
 };
 
 export function buildPasswordResetHtml(input: PasswordResetInput): string {
-  const greeting = escapeHtml(pozdrav(input.name));
-  const expiresText = input.expiresAt.toLocaleString('cs-CZ', {
-    timeZone: 'Europe/Prague',
-    day: 'numeric',
-    month: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const jazyk = input.jazyk ?? 'cs';
+  const greeting = escapeHtml(pozdravPosty(jazyk, input.name));
+  const expiresText = datumCasPosty(jazyk, input.expiresAt);
 
   return emailShell({
-    tag: 'Obnovení hesla',
-    preheader: 'Odkaz pro nastavení nového hesla do MS Portalu.',
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.heslo.stitek'),
+    preheader: prelozitEmail(jazyk, 'mail.heslo.preheader'),
     body: `
-    <span class="badge">Nové heslo</span>
-    <h2>Nastavení nového hesla</h2>
+    <span class="badge">${prelozitEmail(jazyk, 'mail.heslo.odznak')}</span>
+    <h2>${prelozitEmail(jazyk, 'mail.heslo.nadpis')}</h2>
     <p>${greeting}</p>
-    <p>někdo (snad vy) požádal o nové heslo k účtu <strong>${escapeHtml(input.to)}</strong> v MS Portalu.
-       Nastavíte si ho tímto odkazem:</p>
+    <p>${prelozitEmailS(jazyk, 'mail.heslo.veta', {
+      ucet: `<strong>${escapeHtml(input.to)}</strong>`,
+    })}</p>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.resetUrl)}" class="cta">Nastavit nové heslo</a>
+      <a href="${escapeHtml(input.resetUrl)}" class="cta">${prelozitEmail(jazyk, 'mail.heslo.tlacitko')}</a>
     </div>
 
-    <p class="small">Odkaz platí do ${expiresText}. Pokud jste o nové heslo nežádali, nemusíte nic dělat -
-       stávající heslo zůstává v platnosti a odkaz po uplynutí té doby přestane fungovat.</p>
+    <p class="small">${prelozitEmailS(jazyk, 'mail.heslo.platnost', { datum: expiresText })}</p>
   `,
   });
 }
@@ -861,25 +946,32 @@ type HerecDotocenInput = {
   /** Kdo to v portálu odškrtl. */
   potvrdil: string | null;
   odkazNaProjekt: string;
+  /** Jazyk příjemců (pravidlo 5). Bez něj čeština. */
+  jazyk?: Jazyk;
 };
 
 export function buildHerecDotocenHtml(input: HerecDotocenInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   return emailShell({
-    tag: 'Dotočeno',
-    preheader: `${input.jmenoHerce} dotočil ${input.nazevProjektu}.`,
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.dotoceno.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.dotoceno.preheader', {
+      herec: input.jmenoHerce,
+      projekt: input.nazevProjektu,
+    }),
     body: `
-    <span class="badge">Dotočeno</span>
-    <h2>${escapeHtml(input.jmenoHerce)} má dotočeno</h2>
+    <span class="badge">${prelozitEmail(jazyk, 'mail.dotoceno.odznak')}</span>
+    <h2>${prelozitEmailS(jazyk, 'mail.dotoceno.nadpis', { herec: escapeHtml(input.jmenoHerce) })}</h2>
     <table role="presentation" class="field-table">
-      <tr><td class="label">Projekt</td><td class="value">${escapeHtml(input.nazevProjektu)}</td></tr>
-      ${input.nazevFirmy ? `<tr><td class="label">Firma</td><td class="value regular">${escapeHtml(input.nazevFirmy)}</td></tr>` : ''}
-      <tr><td class="label">Herec</td><td class="value">${escapeHtml(input.jmenoHerce)}</td></tr>
-      ${input.potvrdil ? `<tr><td class="label">Odškrtl(a)</td><td class="value regular">${escapeHtml(input.potvrdil)}</td></tr>` : ''}
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.dotoceno.projekt')}</td><td class="value">${escapeHtml(input.nazevProjektu)}</td></tr>
+      ${input.nazevFirmy ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.dotoceno.firma')}</td><td class="value regular">${escapeHtml(input.nazevFirmy)}</td></tr>` : ''}
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.dotoceno.herec')}</td><td class="value">${escapeHtml(input.jmenoHerce)}</td></tr>
+      ${input.potvrdil ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.dotoceno.odskrtl')}</td><td class="value regular">${escapeHtml(input.potvrdil)}</td></tr>` : ''}
     </table>
     <div class="cta-row">
-      <a href="${escapeHtml(input.odkazNaProjekt)}" class="cta">Otevřít projekt</a>
+      <a href="${escapeHtml(input.odkazNaProjekt)}" class="cta">${prelozitEmail(jazyk, 'mail.dotoceno.tlacitko')}</a>
     </div>
-    <p class="small">Tahle zpráva chodí každému, kdo má na kartě uživatele zaškrtnuté „Dostává zprávy o dotočení".</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.dotoceno.komuChodi')}</p>
 `,
   });
 }
@@ -889,15 +981,25 @@ export async function sendHerecDotocenEmail(input: HerecDotocenInput) {
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
   if (input.prijemci.length === 0) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
 
+  const jazyk = input.jazyk ?? 'cs';
+
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.prijemci.join(', '),
-    subject: `Dotočeno - ${input.jmenoHerce} - ${input.nazevProjektu}`,
+    subject: prelozitEmailS(jazyk, 'mail.dotoceno.predmet', {
+      herec: input.jmenoHerce,
+      projekt: input.nazevProjektu,
+    }),
     text: [
-      `${input.jmenoHerce} ma dotoceno.`,
+      prelozitEmailS(jazyk, 'mail.dotoceno.textNadpis', { herec: input.jmenoHerce }),
       '',
-      `Projekt: ${input.nazevProjektu}${input.nazevFirmy ? ` (${input.nazevFirmy})` : ''}`,
-      input.potvrdil ? `Odskrtl(a): ${input.potvrdil}` : '',
+      input.nazevFirmy
+        ? prelozitEmailS(jazyk, 'mail.dotoceno.textProjektSFirmou', {
+            projekt: input.nazevProjektu,
+            firma: input.nazevFirmy,
+          })
+        : prelozitEmailS(jazyk, 'mail.dotoceno.textProjekt', { projekt: input.nazevProjektu }),
+      input.potvrdil ? prelozitEmailS(jazyk, 'mail.dotoceno.textOdskrtl', { kdo: input.potvrdil }) : '',
       '',
       input.odkazNaProjekt,
     ]
@@ -928,34 +1030,43 @@ type HerecDotocenKlientoviInput = {
   nazevProjektu: string;
   /** Kam v portálu klient kouká na svoje projekty. */
   odkazNaPortal: string;
+  /** Jazyk klienta (pravidlo 5). Bez něj čeština. */
+  jazyk?: Jazyk;
 };
 
 /**
- * Věta o dotočení. Jméno herce jde do 7. pádu — „s Lubošem Ondráčkem"
- * (zadání 16. 9. 2026). Když se jméno skloňovat nedá (přezdívka, závorka,
- * cizí tvar), věta se o něj zkrátí; první pád uprostřed věty by byl horší
- * než žádné jméno.
+ * Věta o dotočení. V ČEŠTINĚ jde jméno herce do 7. pádu — „s Lubošem
+ * Ondráčkem" (zadání 16. 9. 2026). Když se jméno skloňovat nedá (přezdívka,
+ * závorka, cizí tvar), věta se o něj zkrátí; první pád uprostřed věty by byl
+ * horší než žádné jméno.
+ *
+ * V ANGLIČTINĚ se neskloňuje, takže jméno jde do věty tak, jak je uložené.
  */
-function vetaODotoceni(jmenoHerce: string): string {
-  const sedmy = sedmyPad(jmenoHerce);
-  return sedmy
-    ? `právě jsme dokončili natáčení s ${sedmy}.`
-    : 'právě jsme dokončili natáčení.';
+function vetaODotoceni(jazyk: Jazyk, jmenoHerce: string): string {
+  const tvar = jazyk === 'en' ? jmenoHerce.trim() : sedmyPad(jmenoHerce);
+  return tvar
+    ? prelozitEmailS(jazyk, 'mail.dotocenoKlient.veta', { herec: tvar })
+    : prelozitEmail(jazyk, 'mail.dotocenoKlient.vetaBezJmena');
 }
 
 export function buildHerecDotocenKlientoviHtml(input: HerecDotocenKlientoviInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   return emailShell({
-    tag: 'Dotočeno',
-    preheader: `${input.nazevProjektu} — dotočeno, ${input.jmenoHerce}.`,
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.dotoceno.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.dotocenoKlient.preheader', {
+      projekt: input.nazevProjektu,
+      herec: input.jmenoHerce,
+    }),
     // KRATKÁ ZPRÁVA (zadání 16. 9. 2026: „zbytek pryč, jen nechat tlačítko
     // do portálu"). Pozdrav, jedna věta, tlačítko - nic víc. Název projektu
     // nese předmět mailu.
     body: `
-    <p>${escapeHtml(pozdrav(input.jmenoKlienta))}</p>
-    <p>${escapeHtml(vetaODotoceni(input.jmenoHerce))}</p>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoKlienta))}</p>
+    <p>${escapeHtml(vetaODotoceni(jazyk, input.jmenoHerce))}</p>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.odkazNaPortal)}" class="cta">Otevřít portál</a>
+      <a href="${escapeHtml(input.odkazNaPortal)}" class="cta">${prelozitEmail(jazyk, 'mail.otevritPortal')}</a>
     </div>
 `,
   });
@@ -966,14 +1077,19 @@ export async function sendHerecDotocenKlientoviEmail(input: HerecDotocenKlientov
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
   if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
 
+  const jazyk = input.jazyk ?? 'cs';
+
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `Dotoceno - ${input.jmenoHerce} - ${input.nazevProjektu}`,
+    subject: prelozitEmailS(jazyk, 'mail.dotocenoKlient.predmet', {
+      herec: input.jmenoHerce,
+      projekt: input.nazevProjektu,
+    }),
     text: [
-      pozdrav(input.jmenoKlienta),
+      pozdravPosty(jazyk, input.jmenoKlienta),
       '',
-      vetaODotoceni(input.jmenoHerce),
+      vetaODotoceni(jazyk, input.jmenoHerce),
       '',
       input.odkazNaPortal,
     ].join('\n'),
@@ -989,19 +1105,25 @@ export async function sendPasswordResetEmail(input: PasswordResetInput) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
+  const jazyk = input.jazyk ?? 'cs';
+
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: 'Nové heslo do MS Portalu',
+    subject: prelozitEmail(jazyk, 'mail.heslo.predmet'),
     text: [
-      pozdrav(input.name),
+      pozdravPosty(jazyk, input.name),
       '',
-      `nekdo pozadal o nove heslo k uctu ${input.to} v MS Portalu.`,
-      'Nastavite si ho zde:',
+      prelozitEmailS(jazyk, 'mail.heslo.textVeta', { ucet: input.to }),
+      prelozitEmail(jazyk, 'mail.heslo.textOdkaz'),
       input.resetUrl,
       '',
-      `Odkaz plati do ${input.expiresAt.toLocaleString('cs-CZ')}.`,
-      'Pokud jste o nove heslo nezadali, nemusite nic delat.',
+      // Prosty text tu odjakziva pise cas bez pevneho pasma (na rozdil od
+      // HTML varianty) - necham tak, jen se meni lokal podle prijemce.
+      prelozitEmailS(jazyk, 'mail.heslo.textPlatnost', {
+        datum: input.expiresAt.toLocaleString(kodJazyka(jazyk)),
+      }),
+      prelozitEmail(jazyk, 'mail.heslo.textKdyzNezadal'),
     ].join('\n'),
     html: buildPasswordResetHtml(input),
   });
@@ -1037,6 +1159,8 @@ type OfferEmailInput = {
   senderPhone?: string | null;
   /** Adresa fotky manazera (viz /api/nabidka/[token]/fotka). */
   senderPhotoUrl?: string | null;
+  /** Jazyk příjemce (pravidlo 5). Bez něj čeština. */
+  jazyk?: Jazyk;
 };
 
 const OFFER_CURRENCY_SYMBOL: Record<string, string> = { CZK: 'Kč', EUR: '€', USD: '$', GBP: '£' };
@@ -1104,17 +1228,21 @@ export function buildOfferHtml(input: OfferEmailInput): string {
    * v mailu mezitím mohla zestárnout. Teď je v mailu jedna věta a tlačítko;
    * závazné je to, co je na stránce.
    */
+  const jazyk = input.jazyk ?? 'cs';
   const nazev = input.projectName?.trim() || input.subject?.trim() || input.number;
 
   return emailShell({
-    tag: 'Nabídka',
-    preheader: `Nabídka pro projekt ${nazev}.`,
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.nabidka.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.nabidka.preheader', { nazev }),
     body: `
-    <p>Dobrý den,</p>
-    <p>posílám nabídku pro projekt <strong>${escapeHtml(nazev)}</strong>.</p>
+    <p>${prelozitEmail(jazyk, 'mail.pozdravBezJmena')}</p>
+    <p>${prelozitEmailS(jazyk, 'mail.nabidka.veta', {
+      nazev: `<strong>${escapeHtml(nazev)}</strong>`,
+    })}</p>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.offerUrl)}" class="cta">Zobrazit nabídku</a>
+      <a href="${escapeHtml(input.offerUrl)}" class="cta">${prelozitEmail(jazyk, 'mail.nabidka.tlacitko')}</a>
     </div>
 
     ${podpisCloveka(input)}
@@ -1133,15 +1261,16 @@ export async function sendOfferEmail(input: OfferEmailInput) {
   // navazana neni, zaskoci predmet nabidky a az nakonec jeji cislo.
   const nazevVPredmetu = input.projectName?.trim() || input.subject?.trim() || input.number;
   const obalka = odesilatelMediaspace(input.senderEmail);
+  const jazyk = input.jazyk ?? 'cs';
 
   const zprava = {
     ...obalka,
     to: input.to,
-    subject: `Cenová nabídka - ${nazevVPredmetu}`,
+    subject: prelozitEmailS(jazyk, 'mail.nabidka.predmet', { nazev: nazevVPredmetu }),
     text: [
-      'Dobry den,',
+      prelozitEmail(jazyk, 'mail.textPozdravBezJmena'),
       '',
-      `posilam nabidku pro projekt ${nazevVPredmetu}.`,
+      prelozitEmailS(jazyk, 'mail.nabidka.textVeta', { nazev: nazevVPredmetu }),
       '',
       input.offerUrl,
       '',
@@ -1194,39 +1323,54 @@ type InvoiceEmailInput = {
    */
   /** Od 26. 9. 2026 jich může být víc - jeden na každý výstup projektu. */
   rodneListy?: { nazev: string; obsah: Buffer }[] | null;
+  /** Jazyk odběratele (pravidlo 5). Bez něj čeština. */
+  jazyk?: Jazyk;
 };
 
 export function buildInvoiceHtml(input: InvoiceEmailInput): string {
-  const greeting = escapeHtml(pozdrav(input.contactName));
-  const dueText = input.dueDate ? input.dueDate.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' }) : null;
+  const jazyk = input.jazyk ?? 'cs';
+  const greeting = escapeHtml(pozdravPosty(jazyk, input.contactName));
+  const dueText = input.dueDate ? datumPosty(jazyk, input.dueDate) : null;
   const account = [input.accountNumber, input.iban].filter(Boolean).join(' · ');
 
   return emailShell({
-    tag: 'Faktura',
-    preheader: `Faktura ${input.number} od ${input.issuerName}.`,
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.faktura.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.faktura.preheader', {
+      cislo: input.number,
+      firma: input.issuerName,
+    }),
+    // CISLO FAKTURY, VARIABILNI SYMBOL ANI CASTKY SE NEPREKLADAJI ANI
+    // NEPREFORMATOVAVAJI - je to ucetni doklad, musi sedet s PDF i s bankou.
     body: `
-    <span class="badge">Faktura ${escapeHtml(input.number)}</span>
-    <h2>${input.subject ? escapeHtml(input.subject) : 'Faktura k úhradě'}</h2>
+    <span class="badge">${prelozitEmailS(jazyk, 'mail.faktura.odznak', { cislo: escapeHtml(input.number) })}</span>
+    <h2>${input.subject ? escapeHtml(input.subject) : prelozitEmail(jazyk, 'mail.faktura.nadpis')}</h2>
     <p>${greeting}</p>
-    <p>posíláme fakturu pro <strong>${escapeHtml(input.companyName)}</strong>.</p>
+    <p>${prelozitEmailS(jazyk, 'mail.faktura.veta', {
+      firma: `<strong>${escapeHtml(input.companyName)}</strong>`,
+    })}</p>
 
     <table role="presentation" class="field-table">
-      <tr><td class="label">Číslo faktury</td><td class="value">${escapeHtml(input.number)}</td></tr>
-      <tr><td class="label">Částka bez DPH</td><td class="value regular">${escapeHtml(formatOfferMoney(input.totalExVat, input.currency))}</td></tr>
-      <tr><td class="label">K úhradě</td><td class="value">${escapeHtml(formatOfferMoney(input.totalIncVat, input.currency))}</td></tr>
-      ${dueText ? `<tr><td class="label">Splatnost</td><td class="value">${escapeHtml(dueText)}</td></tr>` : ''}
-      <tr><td class="label">Bankovní účet</td><td class="value regular">${escapeHtml(account || input.accountLabel)}</td></tr>
-      <tr><td class="label">Variabilní symbol</td><td class="value">${escapeHtml(input.variableSymbol)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.faktura.cislo')}</td><td class="value">${escapeHtml(input.number)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.faktura.bezDph')}</td><td class="value regular">${escapeHtml(formatOfferMoney(input.totalExVat, input.currency))}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.faktura.kUhrade')}</td><td class="value">${escapeHtml(formatOfferMoney(input.totalIncVat, input.currency))}</td></tr>
+      ${dueText ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.faktura.splatnost')}</td><td class="value">${escapeHtml(dueText)}</td></tr>` : ''}
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.faktura.ucet')}</td><td class="value regular">${escapeHtml(account || input.accountLabel)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.faktura.variabilniSymbol')}</td><td class="value">${escapeHtml(input.variableSymbol)}</td></tr>
     </table>
 
-    ${input.pdf ? '<p class="small">Fakturu posíláme i v příloze — je na ní QR kód, kterým se platba v bankovní aplikaci vyplní sama.</p>' : ''}
+    ${input.pdf ? `<p class="small">${prelozitEmail(jazyk, 'mail.faktura.pdfVPriloze')}</p>` : ''}
     ${
       input.rodneListy?.length
-        ? `<p class="small">V příloze ${input.rodneListy.length > 1 ? `jsou i rodné listy (${input.rodneListy.length})` : 'je i rodný list'}.</p>`
+        ? `<p class="small">${
+            input.rodneListy.length > 1
+              ? prelozitEmailS(jazyk, 'mail.faktura.rodneListyVPriloze', { pocet: input.rodneListy.length })
+              : prelozitEmail(jazyk, 'mail.faktura.rodnyListVPriloze')
+          }</p>`
         : ''
     }
 
-    <p class="small">Kdyby cokoliv nesedělo, stačí na tento e-mail odpovědět.</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.faktura.kdybyNesedelo')}</p>
     <p class="small">${escapeHtml(input.issuerName)}</p>
   `,
   });
@@ -1240,26 +1384,46 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput) {
 
   // Fakturu posila FIRMA, ne clovek (zadani 13. 9. 2026: „fakturu pak uz za
   // Mediaspace") - je to ucetni doklad, ne domluva mezi dvema lidmi.
+  const jazyk = input.jazyk ?? 'cs';
+
   const zprava = {
     ...odesilatelMediaspace(ODPOVED_UCTARNA),
     to: input.to,
     // Kopie schvalne v Cc, ne skryta: ucetni i clovek od projektu maji o sobe
     // vedet, at si fakturu nepreposilaji dokola.
     ...(input.cc?.length ? { cc: input.cc } : {}),
-    subject: `Faktura ${input.number}${input.subject ? ` — ${input.subject}` : ''}`,
+    subject: input.subject
+      ? prelozitEmailS(jazyk, 'mail.faktura.predmetSPredmetem', {
+          cislo: input.number,
+          predmet: input.subject,
+        })
+      : prelozitEmailS(jazyk, 'mail.faktura.predmet', { cislo: input.number }),
     text: [
-      pozdrav(input.contactName),
+      pozdravPosty(jazyk, input.contactName),
       '',
-      `posilame fakturu ${input.number} pro ${input.companyName}.`,
-      `K uhrade: ${formatOfferMoney(input.totalIncVat, input.currency)}`,
-      input.dueDate ? `Splatnost: ${input.dueDate.toLocaleDateString('cs-CZ')}` : '',
-      `Bankovni ucet: ${[input.accountNumber, input.iban].filter(Boolean).join(' / ') || input.accountLabel}`,
-      `Variabilni symbol: ${input.variableSymbol}`,
-      input.pdf ? 'Fakturu posilame i v priloze, je na ni QR kod k platbe.' : '',
+      prelozitEmailS(jazyk, 'mail.faktura.textVeta', {
+        cislo: input.number,
+        firma: input.companyName,
+      }),
+      prelozitEmailS(jazyk, 'mail.faktura.textKUhrade', {
+        castka: formatOfferMoney(input.totalIncVat, input.currency),
+      }),
+      input.dueDate
+        ? prelozitEmailS(jazyk, 'mail.faktura.textSplatnost', {
+            datum: formatDatum(jazyk, input.dueDate),
+          })
+        : '',
+      prelozitEmailS(jazyk, 'mail.faktura.textUcet', {
+        ucet: [input.accountNumber, input.iban].filter(Boolean).join(' / ') || input.accountLabel,
+      }),
+      prelozitEmailS(jazyk, 'mail.faktura.textVariabilniSymbol', { vs: input.variableSymbol }),
+      input.pdf ? prelozitEmail(jazyk, 'mail.faktura.textPdfVPriloze') : '',
       input.rodneListy?.length
         ? input.rodneListy.length > 1
-          ? `V priloze jsou i rodne listy (${input.rodneListy.length}).`
-          : 'V priloze je i rodny list.'
+          ? prelozitEmailS(jazyk, 'mail.faktura.textRodneListyVPriloze', {
+              pocet: input.rodneListy.length,
+            })
+          : prelozitEmail(jazyk, 'mail.faktura.textRodnyListVPriloze')
         : '',
       '',
       input.issuerName,
@@ -1298,34 +1462,39 @@ type ContractEmailInput = {
   projectName: string | null;
   alreadySignedByUs: boolean;
   contractUrl: string;
+  /** Jazyk podepisujícího (pravidlo 5). Bez něj čeština. */
+  jazyk?: Jazyk;
 };
 
 export function buildContractHtml(input: ContractEmailInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   return emailShell({
-    tag: 'Smlouva k podpisu',
-    preheader: `Smlouva ${input.number} od ${input.issuerName} čeká na váš podpis.`,
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.smlouva.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.smlouva.preheader', {
+      cislo: input.number,
+      firma: input.issuerName,
+    }),
     body: `
-    <span class="badge">Smlouva ${escapeHtml(input.number)}</span>
+    <span class="badge">${prelozitEmailS(jazyk, 'mail.smlouva.odznak', { cislo: escapeHtml(input.number) })}</span>
     <h2>${escapeHtml(input.title)}</h2>
-    <p>${escapeHtml(pozdrav(input.signerName))}</p>
-    <p>posíláme vám k podpisu smlouvu se společností <strong>${escapeHtml(input.issuerName)}</strong>.
-       Otevřete ji odkazem níže, přečtěte si ji a podepište se rovnou v prohlížeči — myší nebo
-       prstem na mobilu. Nemusíte se nikam přihlašovat ani opisovat žádný kód.</p>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.signerName))}</p>
+    <p>${prelozitEmailS(jazyk, 'mail.smlouva.veta', {
+      firma: `<strong>${escapeHtml(input.issuerName)}</strong>`,
+    })}</p>
 
     <table role="presentation" class="field-table">
-      <tr><td class="label">Číslo smlouvy</td><td class="value">${escapeHtml(input.number)}</td></tr>
-      ${input.projectName ? `<tr><td class="label">Projekt</td><td class="value regular">${escapeHtml(input.projectName)}</td></tr>` : ''}
-      <tr><td class="label">Druhá strana</td><td class="value regular">${escapeHtml(input.issuerName)}</td></tr>
-      ${input.alreadySignedByUs ? '<tr><td class="label">Stav</td><td class="value regular">Za nás už je podepsaná</td></tr>' : ''}
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.smlouva.cislo')}</td><td class="value">${escapeHtml(input.number)}</td></tr>
+      ${input.projectName ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.smlouva.projekt')}</td><td class="value regular">${escapeHtml(input.projectName)}</td></tr>` : ''}
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.smlouva.druhaStrana')}</td><td class="value regular">${escapeHtml(input.issuerName)}</td></tr>
+      ${input.alreadySignedByUs ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.smlouva.stav')}</td><td class="value regular">${prelozitEmail(jazyk, 'mail.smlouva.podepsanaZaNas')}</td></tr>` : ''}
     </table>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.contractUrl)}" class="cta">Otevřít a podepsat smlouvu</a>
+      <a href="${escapeHtml(input.contractUrl)}" class="cta">${prelozitEmail(jazyk, 'mail.smlouva.tlacitko')}</a>
     </div>
 
-    <p class="small">Tenhle odkaz je váš podpisový klíč — nesdílejte ho prosím dál. K podpisu se
-       uloží čas, IP adresa a otisk textu, který jste měli před sebou. Kdyby vám ve smlouvě něco
-       nesedělo, stačí na tento e-mail odpovědět nebo podpis přímo na stránce odmítnout.</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.smlouva.klic')}</p>
   `,
   });
 }
@@ -1336,20 +1505,30 @@ export async function sendContractEmail(input: ContractEmailInput) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
+  const jazyk = input.jazyk ?? 'cs';
+
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `Smlouva ${input.number} k podpisu — ${input.title}`,
+    subject: prelozitEmailS(jazyk, 'mail.smlouva.predmet', {
+      cislo: input.number,
+      nazev: input.title,
+    }),
     text: [
-      pozdrav(input.signerName),
+      pozdravPosty(jazyk, input.signerName),
       '',
-      `posilame vam k podpisu smlouvu ${input.number} se spolecnosti ${input.issuerName}.`,
-      input.projectName ? `Projekt: ${input.projectName}` : '',
+      prelozitEmailS(jazyk, 'mail.smlouva.textVeta', {
+        cislo: input.number,
+        firma: input.issuerName,
+      }),
+      input.projectName
+        ? prelozitEmailS(jazyk, 'mail.smlouva.textProjekt', { projekt: input.projectName })
+        : '',
       '',
-      'Smlouvu si otevrete a podepisete zde:',
+      prelozitEmail(jazyk, 'mail.smlouva.textOtevrit'),
       input.contractUrl,
       '',
-      'Odkaz je urceny jen vam - nesdilejte ho dal.',
+      prelozitEmail(jazyk, 'mail.smlouva.textKlic'),
       '',
       input.issuerName,
     ]
@@ -1385,47 +1564,41 @@ type PodepsanaSmlouvaInput = {
   podepsali: { role: string; name: string; signedAt: Date }[];
   contractUrl: string;
   pdf: { nazev: string; obsah: Buffer } | null;
+  /** Jazyk příjemců (pravidlo 5). Bez něj čeština. */
+  jazyk?: Jazyk;
 };
 
-function podpisRadek(p: { role: string; name: string; signedAt: Date }): string {
-  const kdy = new Intl.DateTimeFormat('cs-CZ', {
-    day: 'numeric',
-    month: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Prague',
-  }).format(p.signedAt);
-  return `${p.name} (${kdy})`;
+function podpisRadek(jazyk: Jazyk, p: { role: string; name: string; signedAt: Date }): string {
+  return `${p.name} (${datumCasPosty(jazyk, p.signedAt)})`;
 }
 
 export function buildPodepsanaSmlouvaHtml(input: PodepsanaSmlouvaInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   const nase = input.podepsali.find((p) => p.role === 'MEDIASPACE') ?? null;
   const protistrana = input.podepsali.find((p) => p.role === 'PROTISTRANA') ?? null;
 
   return emailShell({
-    tag: `Podepsaná smlouva ${input.number}`,
-    preheader: `Smlouva ${input.number} je podepsaná oběma stranami.`,
+    jazyk,
+    tag: prelozitEmailS(jazyk, 'mail.smlouvaPodepsana.stitek', { cislo: input.number }),
+    preheader: prelozitEmailS(jazyk, 'mail.smlouvaPodepsana.preheader', { cislo: input.number }),
     body: `
-    <span class="badge">Smlouva ${escapeHtml(input.number)}</span>
+    <span class="badge">${prelozitEmailS(jazyk, 'mail.smlouva.odznak', { cislo: escapeHtml(input.number) })}</span>
     <h2>${escapeHtml(input.title)}</h2>
-    <p>${escapeHtml(pozdrav(input.jmenoPrijemce))}</p>
-    <p>smlouva je podepsaná oběma stranami. Kompletní znění i s podpisy máte
-       <strong>v příloze jako PDF</strong>; odkazem níž se k ní kdykoliv dostanete i online.</p>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoPrijemce))}</p>
+    <p>${prelozitEmail(jazyk, 'mail.smlouvaPodepsana.veta')}</p>
 
     <table role="presentation" class="field-table">
-      <tr><td class="label">Číslo smlouvy</td><td class="value">${escapeHtml(input.number)}</td></tr>
-      ${input.projectName ? `<tr><td class="label">Projekt</td><td class="value regular">${escapeHtml(input.projectName)}</td></tr>` : ''}
-      ${nase ? `<tr><td class="label">Za ${escapeHtml(input.issuerName)}</td><td class="value regular">${escapeHtml(podpisRadek(nase))}</td></tr>` : ''}
-      ${protistrana ? `<tr><td class="label">Za protistranu</td><td class="value regular">${escapeHtml(podpisRadek(protistrana))}</td></tr>` : ''}
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.smlouva.cislo')}</td><td class="value">${escapeHtml(input.number)}</td></tr>
+      ${input.projectName ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.smlouva.projekt')}</td><td class="value regular">${escapeHtml(input.projectName)}</td></tr>` : ''}
+      ${nase ? `<tr><td class="label">${prelozitEmailS(jazyk, 'mail.smlouvaPodepsana.zaNas', { firma: escapeHtml(input.issuerName) })}</td><td class="value regular">${escapeHtml(podpisRadek(jazyk, nase))}</td></tr>` : ''}
+      ${protistrana ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.smlouvaPodepsana.zaProtistranu')}</td><td class="value regular">${escapeHtml(podpisRadek(jazyk, protistrana))}</td></tr>` : ''}
     </table>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.contractUrl)}" class="cta">Otevřít podepsanou smlouvu</a>
+      <a href="${escapeHtml(input.contractUrl)}" class="cta">${prelozitEmail(jazyk, 'mail.smlouvaPodepsana.tlacitko')}</a>
     </div>
 
-    <p class="small">U každého podpisu je uložený čas, IP adresa a otisk textu, který měl
-       podepisující před sebou — podle něj je poznat, že se smlouva od podpisu nezměnila.</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.smlouvaPodepsana.otisk')}</p>
   `,
   });
 }
@@ -1436,20 +1609,30 @@ export async function sendPodepsanaSmlouvaEmail(input: PodepsanaSmlouvaInput) {
   if (input.prijemci.length === 0) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
 
   const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
+  const jazyk = input.jazyk ?? 'cs';
 
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.prijemci.join(', '),
     bcc: skryta.length > 0 ? skryta.join(', ') : undefined,
-    subject: `Podepsaná smlouva ${input.number} — ${input.title}`,
+    subject: prelozitEmailS(jazyk, 'mail.smlouvaPodepsana.predmet', {
+      cislo: input.number,
+      nazev: input.title,
+    }),
     text: [
-      pozdrav(input.jmenoPrijemce),
+      pozdravPosty(jazyk, input.jmenoPrijemce),
       '',
-      `smlouva ${input.number} je podepsana obema stranami.`,
-      input.projectName ? `Projekt: ${input.projectName}` : '',
-      ...input.podepsali.map((p) => `Podepsal: ${podpisRadek(p)}`),
+      prelozitEmailS(jazyk, 'mail.smlouvaPodepsana.textVeta', { cislo: input.number }),
+      input.projectName
+        ? prelozitEmailS(jazyk, 'mail.smlouva.textProjekt', { projekt: input.projectName })
+        : '',
+      ...input.podepsali.map((p) =>
+        prelozitEmailS(jazyk, 'mail.smlouvaPodepsana.textPodepsal', {
+          podpis: podpisRadek(jazyk, p),
+        }),
+      ),
       '',
-      'Kompletni zneni je v priloze jako PDF. Online ji najdete zde:',
+      prelozitEmail(jazyk, 'mail.smlouvaPodepsana.textPriloha'),
       input.contractUrl,
       '',
       input.issuerName,
@@ -1483,6 +1666,8 @@ type BonusEmailInput = {
   poznamka: string | null;
   schvalil: string | null;
   odkaz: string;
+  /** Jazyk zvukaře (pravidlo 5). Bez něj čeština. */
+  jazyk?: Jazyk;
 };
 
 export function buildBonusHtml(input: BonusEmailInput): string {
@@ -1494,25 +1679,31 @@ export function buildBonusHtml(input: BonusEmailInput): string {
    * pod ní: u návrhu podíl na střihu, u ručně přidaného bonusu to, co k němu
    * někdo napsal.
    */
+  const jazyk = input.jazyk ?? 'cs';
   const radky = [
-    `<tr><td class="label">Bonus</td><td class="value">${escapeHtml(input.castka)}</td></tr>`,
-    `<tr><td class="label">Kniha</td><td class="value regular">${escapeHtml(input.projekt)}</td></tr>`,
+    `<tr><td class="label">${prelozitEmail(jazyk, 'mail.bonus.bonus')}</td><td class="value">${escapeHtml(input.castka)}</td></tr>`,
+    `<tr><td class="label">${prelozitEmail(jazyk, 'mail.bonus.kniha')}</td><td class="value regular">${escapeHtml(input.projekt)}</td></tr>`,
     input.podilProcent > 0
-      ? `<tr><td class="label">Podíl na střihu</td><td class="value regular">${input.podilProcent} %</td></tr>`
+      ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.bonus.podilNaStrihu')}</td><td class="value regular">${input.podilProcent} %</td></tr>`
       : '',
     input.poznamka
-      ? `<tr><td class="label">Za co</td><td class="value regular">${escapeHtml(input.poznamka)}</td></tr>`
+      ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.bonus.zaCo')}</td><td class="value regular">${escapeHtml(input.poznamka)}</td></tr>`
       : '',
     input.schvalil
-      ? `<tr><td class="label">Schválil(a)</td><td class="value regular">${escapeHtml(input.schvalil)}</td></tr>`
+      ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.bonus.schvalil')}</td><td class="value regular">${escapeHtml(input.schvalil)}</td></tr>`
       : '',
   ].filter(Boolean);
 
   return emailShell({
-    tag: 'Schválený bonus',
-    preheader: `${input.projekt}: bonus ${input.castka} je schválený.`,
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.bonus.stitek'),
+    // Castka uz prichazi naformatovana od volajiciho - nesaha se na ni.
+    preheader: prelozitEmailS(jazyk, 'mail.bonus.preheader', {
+      projekt: input.projekt,
+      castka: input.castka,
+    }),
     body: `
-    <span class="badge">Bonus</span>
+    <span class="badge">${prelozitEmail(jazyk, 'mail.bonus.odznak')}</span>
     <h2>${escapeHtml(input.projekt)}</h2>
 
     <table role="presentation" class="field-table">
@@ -1520,11 +1711,10 @@ export function buildBonusHtml(input: BonusEmailInput): string {
     </table>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít ve Výkazech</a>
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.bonus.tlacitko')}</a>
     </div>
 
-    <p class="small">Bonus je jednorázová odměna nad rámec výkazu — do odpracovaných hodin se
-       nezapočítává a proti rozpočtu projektu nestojí.</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.bonus.vysvetleni')}</p>
   `,
   });
 }
@@ -1533,19 +1723,23 @@ export async function sendBonusEmail(input: BonusEmailInput) {
   const transport = getTransport();
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
 
+  const jazyk = input.jazyk ?? 'cs';
+
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `Schválený bonus — ${input.projekt}`,
+    subject: prelozitEmailS(jazyk, 'mail.bonus.predmet', { projekt: input.projekt }),
     // Prosty text drzi krok s HTML - taky bez osloveni, jen udaje.
     text: [
-      `Bonus: ${input.castka}`,
-      `Kniha: ${input.projekt}`,
-      input.podilProcent > 0 ? `Podil na strihu: ${input.podilProcent} %` : '',
-      input.poznamka ? `Za co: ${input.poznamka}` : '',
-      input.schvalil ? `Schvalil(a): ${input.schvalil}` : '',
+      prelozitEmailS(jazyk, 'mail.bonus.textBonus', { castka: input.castka }),
+      prelozitEmailS(jazyk, 'mail.bonus.textKniha', { projekt: input.projekt }),
+      input.podilProcent > 0
+        ? prelozitEmailS(jazyk, 'mail.bonus.textPodilNaStrihu', { procenta: input.podilProcent })
+        : '',
+      input.poznamka ? prelozitEmailS(jazyk, 'mail.bonus.textZaCo', { duvod: input.poznamka }) : '',
+      input.schvalil ? prelozitEmailS(jazyk, 'mail.bonus.textSchvalil', { kdo: input.schvalil }) : '',
       '',
-      'Ve Vykazech ho najdete tady:',
+      prelozitEmail(jazyk, 'mail.bonus.textOdkaz'),
       input.odkaz,
     ]
       .filter(Boolean)
@@ -1567,6 +1761,11 @@ export async function sendBonusEmail(input: BonusEmailInput) {
 
 export type MesicniPrehledInput = {
   to: string;
+  /**
+   * Jazyk PŘÍJEMCE (pravidlo 5), ne přepínač v liště. Nepovinně - kdo ho
+   * nepředá, dostane češtinu jako doteď.
+   */
+  jazyk?: Jazyk;
   /** „Srpen 2026". */
   mesic: string;
   hodiny: string;
@@ -1587,6 +1786,7 @@ export type MesicniPrehledInput = {
 };
 
 export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   const sCastkou = input.castkyViditelne !== false;
   const den = input.den ?? 6;
   const radekDruhu = (d: { nazev: string; hodiny: string; castka: string }) =>
@@ -1604,7 +1804,7 @@ export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
     : '';
 
   const bonusy = input.bonusCelkem && sCastkou
-    ? `<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">Bonusy</h3>
+    ? `<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">${prelozitEmail(jazyk, 'mail.prehled.bonusy')}</h3>
     <table role="presentation" class="field-table">
       ${input.bonusy
         .map(
@@ -1616,29 +1816,35 @@ export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
     : '';
 
   return emailShell({
-    tag: `Přehled výkazů · ${input.mesic}`,
-    preheader: sCastkou ? `${input.mesic}: ${input.hodiny}, ${input.celkem}.` : `${input.mesic}: ${input.hodiny}.`,
+    tag: prelozitEmailS(jazyk, 'mail.prehled.stitek', { mesic: input.mesic }),
+    preheader: sCastkou
+      ? prelozitEmailS(jazyk, 'mail.prehled.preheaderSCastkou', {
+          mesic: input.mesic,
+          hodiny: input.hodiny,
+          celkem: input.celkem,
+        })
+      : prelozitEmailS(jazyk, 'mail.prehled.preheader', { mesic: input.mesic, hodiny: input.hodiny }),
     body: `
     <span class="badge">${escapeHtml(input.mesic)}</span>
     <h2>${escapeHtml(input.hodiny)}${sCastkou ? ` · ${escapeHtml(input.celkem)}` : ''}</h2>
 
     <table role="presentation" class="field-table">
-      <tr><td class="label">Odpracováno</td><td class="value">${escapeHtml(input.hodiny)}</td></tr>
-      ${sCastkou ? `<tr><td class="label">Za práci</td><td class="value">${escapeHtml(input.castka)}</td></tr>` : ''}
-      ${sCastkou && input.bonusCelkem ? `<tr><td class="label">Bonusy</td><td class="value">${escapeHtml(input.bonusCelkem)}</td></tr>` : ''}
-      ${sCastkou ? `<tr><td class="label">Celkem</td><td class="value">${escapeHtml(input.celkem)}</td></tr>` : ''}
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.prehled.odpracovano')}</td><td class="value">${escapeHtml(input.hodiny)}</td></tr>
+      ${sCastkou ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.prehled.zaPraci')}</td><td class="value">${escapeHtml(input.castka)}</td></tr>` : ''}
+      ${sCastkou && input.bonusCelkem ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.prehled.bonusy')}</td><td class="value">${escapeHtml(input.bonusCelkem)}</td></tr>` : ''}
+      ${sCastkou ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.prehled.celkem')}</td><td class="value">${escapeHtml(input.celkem)}</td></tr>` : ''}
     </table>
 
     ${
       input.druhy.length
-        ? `<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">Podle druhu práce</h3>
+        ? `<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">${prelozitEmail(jazyk, 'mail.prehled.podleDruhu')}</h3>
     <table role="presentation" class="field-table">
       ${input.druhy.map(radekDruhu).join('\n      ')}
     </table>`
         : ''
     }
 
-    ${input.projekty.length ? '<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">Projekty</h3>' : ''}
+    ${input.projekty.length ? `<h3 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;margin:22px 0 8px;">${prelozitEmail(jazyk, 'mail.prehled.projekty')}</h3>` : ''}
     ${projekty}
 
     ${bonusy}
@@ -1646,11 +1852,10 @@ export function buildMesicniPrehledHtml(input: MesicniPrehledInput): string {
     ${input.poznamka ? `<p>${escapeHtml(input.poznamka).replace(/\n/g, '<br>')}</p>` : ''}
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít výkazy</a>
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.prehled.otevritVykazy')}</a>
     </div>
 
-    <p class="small">Přehled chodí vždycky ${den}. dne v měsíci za měsíc minulý. Když v něm něco nesedí, výkaz
-       se dá opravit ve Výkazech — a napište nám, ať to víme.</p>
+    <p class="small">${prelozitEmailS(jazyk, 'mail.prehled.patka', { den })}</p>
   `,
   });
 }
@@ -1659,30 +1864,37 @@ export async function sendMesicniPrehledEmail(input: MesicniPrehledInput) {
   const transport = getTransport();
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
 
+  const jazyk = input.jazyk ?? 'cs';
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `Přehled výkazů — ${input.mesic}`,
+    subject: prelozitEmailS(jazyk, 'mail.prehled.predmet', { mesic: input.mesic }),
     text: [
-      `Prehled vykazu za ${input.mesic}`,
+      prelozitEmailS(jazyk, 'mail.prehled.textNadpis', { mesic: input.mesic }),
       '',
-      `Odpracovano: ${input.hodiny}`,
-      input.castkyViditelne !== false ? `Za praci: ${input.castka}` : '',
-      input.castkyViditelne !== false && input.bonusCelkem ? `Bonusy: ${input.bonusCelkem}` : '',
-      input.castkyViditelne !== false ? `Celkem: ${input.celkem}` : '',
+      prelozitEmailS(jazyk, 'mail.prehled.textOdpracovano', { hodiny: input.hodiny }),
+      input.castkyViditelne !== false
+        ? prelozitEmailS(jazyk, 'mail.prehled.textZaPraci', { castka: input.castka })
+        : '',
+      input.castkyViditelne !== false && input.bonusCelkem
+        ? prelozitEmailS(jazyk, 'mail.prehled.textBonusy', { castka: input.bonusCelkem })
+        : '',
+      input.castkyViditelne !== false
+        ? prelozitEmailS(jazyk, 'mail.prehled.textCelkem', { celkem: input.celkem })
+        : '',
       '',
-      input.druhy.length ? 'Podle druhu prace:' : '',
+      input.druhy.length ? prelozitEmail(jazyk, 'mail.prehled.textPodleDruhu') : '',
       ...input.druhy.map((d) => `  ${d.nazev}: ${d.hodiny}${input.castkyViditelne !== false ? ` · ${d.castka}` : ''}`),
       input.projekty.length ? '' : '',
-      input.projekty.length ? 'Projekty:' : '',
+      input.projekty.length ? prelozitEmail(jazyk, 'mail.prehled.textProjekty') : '',
       ...input.projekty.map((p) => `  ${p.nazev}: ${p.hodiny}`),
       input.bonusy.length ? '' : '',
-      input.bonusy.length ? 'Bonusy:' : '',
+      input.bonusy.length ? prelozitEmail(jazyk, 'mail.prehled.textBonusySeznam') : '',
       ...input.bonusy.map((b) => `  ${b.nazev}: ${b.castka}`),
       input.poznamka ? '' : '',
       input.poznamka || '',
       '',
-      'Jednotlive dny najdete tady:',
+      prelozitEmail(jazyk, 'mail.prehled.textDny'),
       input.odkaz,
     ]
       .filter((r) => r !== '')
@@ -1704,6 +1916,8 @@ export async function sendMesicniPrehledEmail(input: MesicniPrehledInput) {
 
 type RecordingOfferEmailInput = {
   to: string;
+  /** Jazyk PŘÍJEMCE (pravidlo 5). Nepovinně - bez něj čeština jako doteď. */
+  jazyk?: Jazyk;
   actorName: string;
   projectName: string;
   studioName: string;
@@ -1715,40 +1929,42 @@ type RecordingOfferEmailInput = {
   offerUrl: string;
 };
 
-function pocetTerminu(n: number): string {
-  if (n === 1) return '1 termín';
-  if (n < 5) return `${n} termíny`;
-  return `${n} termínů`;
+function pocetTerminu(n: number, jazyk: Jazyk = 'cs'): string {
+  if (n === 1) return prelozitEmail(jazyk, 'mail.terminy.pocetJeden');
+  if (n < 5) return prelozitEmailS(jazyk, 'mail.terminy.pocetMalo', { pocet: n });
+  return prelozitEmailS(jazyk, 'mail.terminy.pocetMnoho', { pocet: n });
 }
 
 export function buildRecordingOfferHtml(input: RecordingOfferEmailInput): string {
-  const obdobi = `${input.periodFrom.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })} – ${input.periodTo.toLocaleDateString('cs-CZ', { timeZone: 'Europe/Prague' })}`;
+  const jazyk = input.jazyk ?? 'cs';
+  const pocet = pocetTerminu(input.requiredSessions, jazyk);
+  // Pasmo zustava prazske - je to termin v prazskem studiu, ne cas ctenare.
+  // Meni se jen jazyk, tedy i tvar data (britsky 13/09/2026).
+  const den = new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: 'Europe/Prague' });
+  const obdobi = `${den.format(input.periodFrom)} – ${den.format(input.periodTo)}`;
   return emailShell({
-    tag: 'Natáčecí termíny',
-    preheader: `Vyberte si ${pocetTerminu(input.requiredSessions)} pro projekt ${input.projectName}.`,
+    tag: prelozitEmail(jazyk, 'mail.terminy.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.terminy.preheader', { pocet, projekt: input.projectName }),
     body: `
-    <span class="badge">Výběr termínů</span>
+    <span class="badge">${prelozitEmail(jazyk, 'mail.terminy.odznak')}</span>
     <h2>${escapeHtml(input.projectName)}</h2>
-    <p>${escapeHtml(pozdrav(input.actorName))}</p>
-    <p>máme pro vás připravené termíny natáčení. Otevřete odkaz níže a vyberte si
-       <strong>${escapeHtml(pocetTerminu(input.requiredSessions))}</strong>, které vám sedí —
-       přihlašovat se nemusíte.</p>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.actorName))}</p>
+    <p>${prelozitEmailS(jazyk, 'mail.terminy.uvod', { pocet: `<strong>${escapeHtml(pocet)}</strong>` })}</p>
 
     <table role="presentation" class="field-table">
-      <tr><td class="label">Projekt</td><td class="value">${escapeHtml(input.projectName)}</td></tr>
-      <tr><td class="label">Studio</td><td class="value regular">${escapeHtml(input.studioName)}</td></tr>
-      <tr><td class="label">Období</td><td class="value regular">${escapeHtml(obdobi)}</td></tr>
-      <tr><td class="label">Vyberte</td><td class="value">${escapeHtml(pocetTerminu(input.requiredSessions))} z ${input.offeredCount} nabídnutých</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.terminy.projekt')}</td><td class="value">${escapeHtml(input.projectName)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.terminy.studio')}</td><td class="value regular">${escapeHtml(input.studioName)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.terminy.obdobi')}</td><td class="value regular">${escapeHtml(obdobi)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.terminy.vyberte')}</td><td class="value">${prelozitEmailS(jazyk, 'mail.terminy.vyberteHodnota', { pocet: escapeHtml(pocet), celkem: input.offeredCount })}</td></tr>
     </table>
 
-    ${input.note ? `<p class="small"><strong>Poznámka produkce:</strong> ${escapeHtml(input.note)}</p>` : ''}
+    ${input.note ? `<p class="small"><strong>${prelozitEmail(jazyk, 'mail.terminy.poznamkaProdukce')}</strong> ${escapeHtml(input.note)}</p>` : ''}
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.offerUrl)}" class="cta">Vybrat termíny</a>
+      <a href="${escapeHtml(input.offerUrl)}" class="cta">${prelozitEmail(jazyk, 'mail.terminy.tlacitko')}</a>
     </div>
 
-    <p class="small">Odkaz je určený jen vám — nesdílejte ho prosím dál. Kdyby vám žádný
-       z termínů nevyhovoval, stačí na tento e-mail odpovědět.</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.terminy.patka')}</p>
   `,
   });
 }
@@ -1759,22 +1975,26 @@ export async function sendRecordingOfferEmail(input: RecordingOfferEmailInput) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
+  const jazyk = input.jazyk ?? 'cs';
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `Výběr natáčecích termínů — ${input.projectName}`,
+    subject: prelozitEmailS(jazyk, 'mail.terminy.predmet', { projekt: input.projectName }),
     text: [
-      pozdrav(input.actorName),
+      pozdravPosty(jazyk, input.actorName),
       '',
-      `mame pro vas pripravene terminy nataceni projektu ${input.projectName}.`,
-      `Studio: ${input.studioName}`,
-      `Vyberte si ${input.requiredSessions} terminu z ${input.offeredCount} nabidnutych.`,
-      input.note ? `Poznamka produkce: ${input.note}` : '',
+      prelozitEmailS(jazyk, 'mail.terminy.textUvod', { projekt: input.projectName }),
+      prelozitEmailS(jazyk, 'mail.terminy.textStudio', { studio: input.studioName }),
+      prelozitEmailS(jazyk, 'mail.terminy.textVyberte', {
+        pocet: input.requiredSessions,
+        celkem: input.offeredCount,
+      }),
+      input.note ? prelozitEmailS(jazyk, 'mail.terminy.textPoznamka', { poznamka: input.note }) : '',
       '',
-      'Vyber terminu:',
+      prelozitEmail(jazyk, 'mail.terminy.textOdkaz'),
       input.offerUrl,
       '',
-      'Odkaz je urceny jen vam - nesdilejte ho dal.',
+      prelozitEmail(jazyk, 'mail.terminy.textPatka'),
     ]
       .filter(Boolean)
       .join('\n'),
@@ -1794,6 +2014,8 @@ export async function sendRecordingOfferEmail(input: RecordingOfferEmailInput) {
 
 type RecordingDecisionEmailInput = {
   to: string;
+  /** Jazyk PŘÍJEMCE (pravidlo 5). Nepovinně - bez něj čeština jako doteď. */
+  jazyk?: Jazyk;
   actorName: string;
   projectName: string;
   studioName: string;
@@ -1809,53 +2031,59 @@ type RecordingDecisionEmailInput = {
   calendarUrl?: string;
 };
 
+// Klice do slovniku posty, ne hotove vety - text se sklada az podle jazyka
+// prijemce (davka 6).
 const DECISION_TEXTS: Record<string, { tag: string; nadpis: string; uvod: string }> = {
   CONFIRMED: {
-    tag: 'Termíny potvrzeny',
-    nadpis: 'Termíny jsou potvrzené',
-    uvod: 'vaše termíny jsou potvrzené — těšíme se na vás ve studiu.',
+    tag: 'mail.rozhodnuti.potvrzeno.stitek',
+    nadpis: 'mail.rozhodnuti.potvrzeno.nadpis',
+    uvod: 'mail.rozhodnuti.potvrzeno.uvod',
   },
   RETURNED: {
-    tag: 'Prosíme o nový výběr',
-    nadpis: 'Prosíme o nový výběr termínů',
-    uvod: 'potřebovali bychom váš výběr ještě jednou upravit.',
+    tag: 'mail.rozhodnuti.vraceno.stitek',
+    nadpis: 'mail.rozhodnuti.vraceno.nadpis',
+    uvod: 'mail.rozhodnuti.vraceno.uvod',
   },
   REJECTED: {
-    tag: 'Výběr zamítnut',
-    nadpis: 'Výběr termínů zamítnut',
-    uvod: 'váš výběr termínů se bohužel nepodařilo potvrdit.',
+    tag: 'mail.rozhodnuti.zamitnuto.stitek',
+    nadpis: 'mail.rozhodnuti.zamitnuto.nadpis',
+    uvod: 'mail.rozhodnuti.zamitnuto.uvod',
   },
 };
 
 export function buildRecordingDecisionHtml(input: RecordingDecisionEmailInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   const t = DECISION_TEXTS[input.decision];
+  const nadpis = prelozitEmail(jazyk, t.nadpis);
   const seznam = input.slots.length
     ? `<table role="presentation" class="field-table">${input.slots
-        .map((s) => `<tr><td class="label">Termín</td><td class="value">${escapeHtml(s)}</td></tr>`)
+        .map(
+          (s) =>
+            `<tr><td class="label">${prelozitEmail(jazyk, 'mail.rozhodnuti.termin')}</td><td class="value">${escapeHtml(s)}</td></tr>`,
+        )
         .join('')}</table>`
     : '';
 
   return emailShell({
-    tag: t.tag,
-    preheader: `${t.nadpis} — ${input.projectName}.`,
+    tag: prelozitEmail(jazyk, t.tag),
+    preheader: prelozitEmailS(jazyk, 'mail.rozhodnuti.preheader', { nadpis, projekt: input.projectName }),
     body: `
     <span class="badge">${escapeHtml(input.projectName)}</span>
-    <h2>${escapeHtml(t.nadpis)}</h2>
-    <p>${escapeHtml(pozdrav(input.actorName))}</p>
-    <p>${escapeHtml(t.uvod)}</p>
+    <h2>${escapeHtml(nadpis)}</h2>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.actorName))}</p>
+    <p>${escapeHtml(prelozitEmail(jazyk, t.uvod))}</p>
     ${seznam}
-    ${input.note ? `<p class="small"><strong>Vzkaz produkce:</strong> ${escapeHtml(input.note)}</p>` : ''}
-    <p class="small">Studio: ${escapeHtml(input.studioName)}</p>
+    ${input.note ? `<p class="small"><strong>${prelozitEmail(jazyk, 'mail.rozhodnuti.vzkaz')}</strong> ${escapeHtml(input.note)}</p>` : ''}
+    <p class="small">${prelozitEmailS(jazyk, 'mail.rozhodnuti.studio', { studio: escapeHtml(input.studioName) })}</p>
     ${
       input.decision === 'RETURNED'
-        ? `<div class="cta-row"><a href="${escapeHtml(input.offerUrl)}" class="cta">Vybrat termíny znovu</a></div>`
-        : `<div class="cta-row"><a href="${escapeHtml(input.offerUrl)}" class="cta">Zobrazit termíny</a></div>`
+        ? `<div class="cta-row"><a href="${escapeHtml(input.offerUrl)}" class="cta">${prelozitEmail(jazyk, 'mail.rozhodnuti.vybratZnovu')}</a></div>`
+        : `<div class="cta-row"><a href="${escapeHtml(input.offerUrl)}" class="cta">${prelozitEmail(jazyk, 'mail.rozhodnuti.zobrazit')}</a></div>`
     }
     ${
       input.decision === 'CONFIRMED' && input.calendarUrl
-        ? `<div class="cta-row"><a href="${escapeHtml(input.calendarUrl)}" class="cta-dark">Přidat do kalendáře</a></div>
-    <p class="small">Termíny se přidají do kalendáře v telefonu nebo počítači. Na stránce termínů si je můžete
-       i odebírat - když se něco změní, kalendář se upraví sám.</p>`
+        ? `<div class="cta-row"><a href="${escapeHtml(input.calendarUrl)}" class="cta-dark">${prelozitEmail(jazyk, 'mail.rozhodnuti.doKalendare')}</a></div>
+    <p class="small">${prelozitEmail(jazyk, 'mail.rozhodnuti.oKalendari')}</p>`
         : ''
     }
   `,
@@ -1868,21 +2096,27 @@ export async function sendRecordingDecisionEmail(input: RecordingDecisionEmailIn
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
+  const jazyk = input.jazyk ?? 'cs';
   const t = DECISION_TEXTS[input.decision];
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `${t.nadpis} — ${input.projectName}`,
+    subject: prelozitEmailS(jazyk, 'mail.rozhodnuti.predmet', {
+      nadpis: prelozitEmail(jazyk, t.nadpis),
+      projekt: input.projectName,
+    }),
     text: [
-      pozdrav(input.actorName),
+      pozdravPosty(jazyk, input.actorName),
       '',
-      t.uvod,
+      prelozitEmail(jazyk, t.uvod),
       ...input.slots.map((s) => `- ${s}`),
-      input.note ? `Vzkaz produkce: ${input.note}` : '',
-      `Studio: ${input.studioName}`,
+      input.note ? `${prelozitEmail(jazyk, 'mail.rozhodnuti.vzkaz')} ${input.note}` : '',
+      prelozitEmailS(jazyk, 'mail.rozhodnuti.studio', { studio: input.studioName }),
       '',
       input.offerUrl,
-      input.decision === 'CONFIRMED' && input.calendarUrl ? `Přidat do kalendáře: ${input.calendarUrl}` : '',
+      input.decision === 'CONFIRMED' && input.calendarUrl
+        ? prelozitEmailS(jazyk, 'mail.rozhodnuti.textKalendar', { odkaz: input.calendarUrl })
+        : '',
     ]
       .filter(Boolean)
       .join('\n'),
@@ -1904,40 +2138,48 @@ export async function sendRecordingDecisionEmail(input: RecordingDecisionEmailIn
 
 type RodnyListEmailInput = {
   to: string;
+  /** Jazyk PŘÍJEMCE (pravidlo 5). Nepovinně - bez něj čeština jako doteď. */
+  jazyk?: Jazyk;
   recipientName: string;
   projectName: string;
+  /**
+   * Název stavu projektu z databáze - je ULOŽENÝ ČESKY a schválně se
+   * nepřekládá (viz STAVY_PROJEKTU v lib/stavyProjektu.ts a docs, „Co dávka 5
+   * nechala dalším dávkám").
+   */
   statusName: string;
   rodnyListUrl: string;
   recordingsUrl: string;
 };
 
 export function buildRodnyListHtml(input: RodnyListEmailInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   return emailShell({
-    tag: 'Projekt ke schválení',
-    preheader: `${input.projectName} je hotový — nahrávky i rodný list jsou připravené.`,
+    tag: prelozitEmail(jazyk, 'mail.rodnyList.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.rodnyList.preheader', { projekt: input.projectName }),
     body: `
     <span class="badge">${escapeHtml(input.statusName)}</span>
     <h2>${escapeHtml(input.projectName)}</h2>
-    <p>${escapeHtml(pozdrav(input.recipientName))}</p>
-    <p>nahrávku máme hotovou. Projekt je ve stavu <strong>${escapeHtml(input.statusName)}</strong> —
-       nahrávky jsou připravené a spolu s nimi posíláme i <strong>rodný list</strong>
-       s údaji o délce, režii a použité hudbě.</p>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.recipientName))}</p>
+    <p>${prelozitEmailS(jazyk, 'mail.rodnyList.uvod', {
+      stav: `<strong>${escapeHtml(input.statusName)}</strong>`,
+      rodnyList: `<strong>${prelozitEmail(jazyk, 'mail.rodnyList.termin')}</strong>`,
+    })}</p>
 
     <table role="presentation" class="field-table">
-      <tr><td class="label">Projekt</td><td class="value">${escapeHtml(input.projectName)}</td></tr>
-      <tr><td class="label">Stav</td><td class="value regular">${escapeHtml(input.statusName)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.rodnyList.projekt')}</td><td class="value">${escapeHtml(input.projectName)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.rodnyList.stav')}</td><td class="value regular">${escapeHtml(input.statusName)}</td></tr>
     </table>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.rodnyListUrl)}" class="cta">Otevřít rodný list (PDF)</a>
+      <a href="${escapeHtml(input.rodnyListUrl)}" class="cta">${prelozitEmail(jazyk, 'mail.rodnyList.otevrit')}</a>
     </div>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.recordingsUrl)}" class="cta-dark">Přejít na nahrávky →</a>
+      <a href="${escapeHtml(input.recordingsUrl)}" class="cta-dark">${prelozitEmail(jazyk, 'mail.rodnyList.naNahravky')}</a>
     </div>
 
-    <p class="small">Kdyby vám v rodném listu nebo v nahrávkách cokoliv nesedělo, stačí na tenhle
-       e-mail odpovědět — rádi to opravíme.</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.rodnyList.patka')}</p>
   `,
   });
 }
@@ -1948,19 +2190,23 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
     return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
   }
 
+  const jazyk = input.jazyk ?? 'cs';
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `${input.projectName} — hotovo, ke schválení`,
+    subject: prelozitEmailS(jazyk, 'mail.rodnyList.predmet', { projekt: input.projectName }),
     text: [
-      pozdrav(input.recipientName),
+      pozdravPosty(jazyk, input.recipientName),
       '',
-      `nahravku ${input.projectName} mame hotovou - projekt je ve stavu "${input.statusName}".`,
+      prelozitEmailS(jazyk, 'mail.rodnyList.textUvod', {
+        projekt: input.projectName,
+        stav: input.statusName,
+      }),
       '',
-      'Rodny list (PDF):',
+      prelozitEmail(jazyk, 'mail.rodnyList.textRodnyList'),
       input.rodnyListUrl,
       '',
-      'Pripravene nahravky:',
+      prelozitEmail(jazyk, 'mail.rodnyList.textNahravky'),
       input.recordingsUrl,
       '',
       'Mediaspace',
@@ -1981,6 +2227,14 @@ export async function sendRodnyListEmail(input: RodnyListEmailInput) {
 
 export type StavProjektuInput = {
   prijemci: string[];
+  /**
+   * Jazyk PŘÍJEMCE (pravidlo 5). Nepovinně - bez něj čeština jako doteď.
+   *
+   * Týká se JEN obalu (tlačítka, patička, shrnutí AudioTaggeru). Nadpis,
+   * předmět i tělo zprávy si píše produkce ve vzoru a jsou v databázi -
+   * ty jdou ven tak, jak jsou napsané.
+   */
+  jazyk?: Jazyk;
   /**
    * Naše adresy do SKRYTÉ kopie (zadání 11. 9. 2026: „je tam i u klienta
    * v mailu, že to jde na nás v kopii, nemůžeme tam být vidět, kdyžtak to
@@ -2053,23 +2307,25 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
    * `class="btn"`, které ve stylopisu nikdy nebylo, takže se tlačítko
    * posílalo jako obyčejný odkaz.)
    */
+  const jazyk = input.jazyk ?? 'cs';
   const tlacitka: string[] = [];
   if (input.odkazNaPreposlech) {
     tlacitka.push(
-      `<a href="${escapeHtml(input.odkazNaPreposlech)}" class="cta">Přeposlechnout v AudioTaggeru</a>`,
+      `<a href="${escapeHtml(input.odkazNaPreposlech)}" class="cta">${prelozitEmail(jazyk, 'mail.stav.preposlechnout')}</a>`,
     );
   }
   if (input.odkazNaDisk) {
+    // Popisek od produkce je jeji text - neprekladame ho, jen nahradni tvar.
     tlacitka.push(
       `<a href="${escapeHtml(input.odkazNaDisk)}" class="${
         input.odkazNaPreposlech ? 'cta-dark' : 'cta'
-      }">${escapeHtml(input.popisekOdkazu?.trim() || 'Stáhnout nahrávky ze složky')}</a>`,
+      }">${escapeHtml(input.popisekOdkazu?.trim() || prelozitEmail(jazyk, 'mail.stav.stahnoutZeSlozky'))}</a>`,
     );
   }
   if (input.odkazNaSchvaleni) {
     // Schvaleni je posledni - napred si to klient ma poslechnout.
     tlacitka.push(
-      `<a href="${escapeHtml(input.odkazNaSchvaleni)}" class="cta">Schválit</a>`,
+      `<a href="${escapeHtml(input.odkazNaSchvaleni)}" class="cta">${prelozitEmail(jazyk, 'mail.stav.schvalit')}</a>`,
     );
   }
   // Kazde tlacitko na svem radku - na telefonu by se vedle sebe nevesla.
@@ -2077,10 +2333,10 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     ? `<table role="presentation">${tlacitka
         .map((odkaz) => `<tr><td style="padding-bottom:10px;">${odkaz}</td></tr>`)
         .join('')}</table>`
-    : '<p style="color:#6C6580;">Odkaz na složku zatím u projektu není vyplněný.</p>';
+    : `<p style="color:#6C6580;">${prelozitEmail(jazyk, 'mail.stav.bezOdkazu')}</p>`;
 
   const interniPoznamka = input.jenInterne
-    ? '<p style="background:#F3EEFF;border-radius:10px;padding:10px 14px;font-size:13px;">Tohle je interní zpráva — klientovi nic nešlo.</p>'
+    ? `<p style="background:#F3EEFF;border-radius:10px;padding:10px 14px;font-size:13px;">${prelozitEmail(jazyk, 'mail.stav.interniZprava')}</p>`
     : '';
 
   /**
@@ -2117,11 +2373,11 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
     ? `
     <table role="presentation" class="tagger" width="100%" style="background:#F7F5FF;border-radius:12px;">
       <tr><td style="padding:16px 18px;background:#F7F5FF;">
-        <p class="t-title" style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;">AudioTagger — přeposlech v prohlížeči</p>
+        <p class="t-title" style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6B2AF0;">${prelozitEmail(jazyk, 'mail.stav.taggerNadpis')}</p>
         <table role="presentation" class="steps t-steps" width="100%">
-          <tr><td class="num" style="background:#F7F5FF;color:#6B2AF0;font-weight:700;width:24px;">1</td><td style="background:#F7F5FF;">Nahrávka se pustí hned, nic se nestahuje.</td></tr>
-          <tr><td class="num" style="background:#F7F5FF;color:#6B2AF0;font-weight:700;width:24px;">2</td><td style="background:#F7F5FF;">Text běží vedle — chybu v něm rovnou označíte a nám sedí na vteřinu.</td></tr>
-          <tr><td class="num" style="background:#F7F5FF;color:#6B2AF0;font-weight:700;width:24px;">3</td><td style="background:#F7F5FF;">Na konci kliknete na Přeposlechnuto a my se do oprav pustíme.</td></tr>
+          <tr><td class="num" style="background:#F7F5FF;color:#6B2AF0;font-weight:700;width:24px;">1</td><td style="background:#F7F5FF;">${prelozitEmail(jazyk, 'mail.stav.taggerKrok1')}</td></tr>
+          <tr><td class="num" style="background:#F7F5FF;color:#6B2AF0;font-weight:700;width:24px;">2</td><td style="background:#F7F5FF;">${prelozitEmail(jazyk, 'mail.stav.taggerKrok2')}</td></tr>
+          <tr><td class="num" style="background:#F7F5FF;color:#6B2AF0;font-weight:700;width:24px;">3</td><td style="background:#F7F5FF;">${prelozitEmail(jazyk, 'mail.stav.taggerKrok3')}</td></tr>
         </table>
       </td></tr>
     </table>`
@@ -2147,7 +2403,7 @@ export function buildStavProjektuHtml(input: StavProjektuInput): string {
    * emailShell si štítek escapuje sám - proto se sem posílá syrový text.
    */
   return emailShell({
-    tag: input.predmet?.trim() || `MS Portal - ${input.stav}`,
+    tag: input.predmet?.trim() || prelozitEmailS(jazyk, 'mail.stav.stitek', { stav: input.stav }),
     // Radek, ktery klient vidi v seznamu posty pod predmetem. Hvezdicky
     // tucneho textu by v nem byly videt jako hvezdicky.
     preheader: `${input.nazevProjektu}: ${bezZnacek(input.text).replace(/\s+/g, ' ').slice(0, 120)}`,
@@ -2179,6 +2435,7 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
     return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
   }
 
+  const jazyk = input.jazyk ?? 'cs';
   const skryta = (input.skrytaKopie ?? []).filter((e) => !input.prijemci.includes(e));
 
   await transport.sendMail({
@@ -2186,22 +2443,26 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
     to: input.prijemci.join(', '),
     // Nase adresy jen ve skryte kopii - viz skrytaKopie v typu vys.
     bcc: skryta.length > 0 ? skryta.join(', ') : undefined,
-    subject: input.predmet?.trim() || `${input.nazevProjektu} - ${input.stav}`,
+    subject:
+      input.predmet?.trim() ||
+      prelozitEmailS(jazyk, 'mail.stav.predmet', { projekt: input.nazevProjektu, stav: input.stav }),
     text: [
-      input.jenInterne ? 'INTERNI ZPRAVA - klientovi nic neslo.' : '',
+      input.jenInterne ? prelozitEmail(jazyk, 'mail.stav.textInterni') : '',
       input.uvod?.trim() || '',
       // Osloveni i nazev projektu uz jsou soucasti textu ze vzoru
       // (zadani 15. 9. 2026). Znacky formatovani v prostem textu nemaji smysl.
       bezZnacek(input.text),
       '',
-      input.odkazNaPreposlech ? `Preposlech v AudioTaggeru: ${input.odkazNaPreposlech}` : '',
       input.odkazNaPreposlech
-        ? 'Nahravka se pusti hned v prohlizeci, text bezi vedle, chybu v nem rovnou oznacite. Na konci kliknete na Preposlechnuto.'
+        ? prelozitEmailS(jazyk, 'mail.stav.textPreposlech', { odkaz: input.odkazNaPreposlech })
         : '',
+      input.odkazNaPreposlech ? prelozitEmail(jazyk, 'mail.stav.textTagger') : '',
       input.odkazNaDisk
-        ? `${input.popisekOdkazu?.trim() || 'Slozka s nahravkami'}: ${input.odkazNaDisk}`
-        : 'Odkaz na nahravky zatim neni vyplneny.',
-      input.odkazNaSchvaleni ? `Schválit: ${input.odkazNaSchvaleni}` : '',
+        ? `${input.popisekOdkazu?.trim() || prelozitEmail(jazyk, 'mail.stav.textSlozka')}: ${input.odkazNaDisk}`
+        : prelozitEmail(jazyk, 'mail.stav.textBezOdkazu'),
+      input.odkazNaSchvaleni
+        ? prelozitEmailS(jazyk, 'mail.stav.textSchvalit', { odkaz: input.odkazNaSchvaleni })
+        : '',
     ]
       .filter(Boolean)
       .join('\n'),
@@ -2217,6 +2478,8 @@ export async function sendStavProjektuEmail(input: StavProjektuInput) {
 
 export type PozvankaUdajuInput = {
   to: string;
+  /** Jazyk PŘÍJEMCE (pravidlo 5). Nepovinně - bez něj čeština jako doteď. */
+  jazyk?: Jazyk;
   /** Komu píšeme - herci jménem, firmě názvem. */
   jmeno: string | null;
   druh: 'HEREC' | 'FIRMA';
@@ -2227,26 +2490,25 @@ export type PozvankaUdajuInput = {
   poznamka?: string | null;
 };
 
-function vetaOZadosti(druh: 'HEREC' | 'FIRMA'): string {
-  return druh === 'HEREC'
-    ? 'potřebujeme od vás pár údajů do smlouvy a k výplatě honoráře. Vyplnění zabere dvě minuty a jde to i z telefonu.'
-    : 'potřebujeme od vás fakturační údaje. Stačí zadat IČ, zbytek se doplní z obchodního rejstříku sám.';
+function vetaOZadosti(druh: 'HEREC' | 'FIRMA', jazyk: Jazyk = 'cs'): string {
+  return prelozitEmail(jazyk, druh === 'HEREC' ? 'mail.udaje.zadostHerec' : 'mail.udaje.zadostFirma');
 }
 
 export function buildPozvankaUdajuHtml(input: PozvankaUdajuInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   return emailShell({
-    tag: 'Vaše údaje',
-    preheader: 'Formulář na vyplnění údajů pro Mediaspace.',
+    tag: prelozitEmail(jazyk, 'mail.udaje.stitek'),
+    preheader: prelozitEmail(jazyk, 'mail.udaje.preheader'),
     body: `
-    <p>${escapeHtml(pozdrav(input.jmeno))}</p>
-    <p>${escapeHtml(vetaOZadosti(input.druh))}</p>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmeno))}</p>
+    <p>${escapeHtml(vetaOZadosti(input.druh, jazyk))}</p>
     ${input.poznamka ? `<p>${escapeHtml(input.poznamka)}</p>` : ''}
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.odkaz)}" class="cta">Vyplnit údaje</a>
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.udaje.tlacitko')}</a>
     </div>
 
-    <p class="small">Odkaz je jen pro vás a platí do ${escapeHtml(input.platiDo)}. Nikam se nepřihlašujete.</p>
+    <p class="small">${prelozitEmailS(jazyk, 'mail.udaje.patka', { platiDo: escapeHtml(input.platiDo) })}</p>
 `,
   });
 }
@@ -2256,19 +2518,20 @@ export async function sendPozvankaUdajuEmail(input: PozvankaUdajuInput) {
   if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
   if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
 
+  const jazyk = input.jazyk ?? 'cs';
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: 'Vyplnte prosim sve udaje - Mediaspace',
+    subject: prelozitEmail(jazyk, 'mail.udaje.predmet'),
     text: [
-      pozdrav(input.jmeno),
+      pozdravPosty(jazyk, input.jmeno),
       '',
-      vetaOZadosti(input.druh),
+      vetaOZadosti(input.druh, jazyk),
       ...(input.poznamka ? ['', input.poznamka] : []),
       '',
       input.odkaz,
       '',
-      `Odkaz plati do ${input.platiDo}.`,
+      prelozitEmailS(jazyk, 'mail.udaje.textPlatiDo', { platiDo: input.platiDo }),
     ].join('\n'),
     html: buildPozvankaUdajuHtml(input),
   });
@@ -2278,6 +2541,8 @@ export async function sendPozvankaUdajuEmail(input: PozvankaUdajuInput) {
 
 export type VyplneneUdajeInput = {
   to: string;
+  /** Jazyk PŘÍJEMCE (pravidlo 5). Nepovinně - bez něj čeština jako doteď. */
+  jazyk?: Jazyk;
   jmenoPrijemce: string | null;
   /** Kdo údaje vyplnil. */
   kdo: string;
@@ -2288,22 +2553,24 @@ export type VyplneneUdajeInput = {
 };
 
 function vetaOVyplneni(input: VyplneneUdajeInput): string {
-  if (input.hotovo) return `${input.kdo} vyplnil(a) své údaje a portál je má zapsané.`;
-  return `${input.kdo} vyplnil(a) své údaje. ${
-    input.kolikCeka === 1 ? 'Jeden údaj mění' : `${input.kolikCeka} údajů mění`
-  } to, co už bylo vyplněné — proto to čeká na vaše odkliknutí.`;
+  const jazyk = input.jazyk ?? 'cs';
+  if (input.hotovo) return prelozitEmailS(jazyk, 'mail.udaje.vyplnenoHotovo', { kdo: input.kdo });
+  return input.kolikCeka === 1
+    ? prelozitEmailS(jazyk, 'mail.udaje.vyplnenoCekaJeden', { kdo: input.kdo })
+    : prelozitEmailS(jazyk, 'mail.udaje.vyplnenoCekaVice', { kdo: input.kdo, pocet: input.kolikCeka });
 }
 
 export function buildVyplneneUdajeHtml(input: VyplneneUdajeInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   return emailShell({
-    tag: input.hotovo ? 'Údaje vyplněny' : 'Údaje čekají',
-    preheader: `${input.kdo} vyplnil údaje.`,
+    tag: prelozitEmail(jazyk, input.hotovo ? 'mail.udaje.stitekHotovo' : 'mail.udaje.stitekCeka'),
+    preheader: prelozitEmailS(jazyk, 'mail.udaje.preheaderVyplnil', { kdo: input.kdo }),
     body: `
-    <p>${escapeHtml(pozdrav(input.jmenoPrijemce))}</p>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoPrijemce))}</p>
     <p>${escapeHtml(vetaOVyplneni(input))}</p>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.odkaz)}" class="cta">${input.hotovo ? 'Zobrazit údaje' : 'Odkliknout změny'}</a>
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, input.hotovo ? 'mail.udaje.zobrazit' : 'mail.udaje.odkliknout')}</a>
     </div>
 `,
   });
@@ -2317,10 +2584,18 @@ export async function sendVyplneneUdajeEmail(input: VyplneneUdajeInput) {
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: input.hotovo
-      ? `Udaje vyplneny - ${input.kdo}`
-      : `Udaje cekaji na odklepnuti - ${input.kdo}`,
-    text: [pozdrav(input.jmenoPrijemce), '', vetaOVyplneni(input), '', input.odkaz].join('\n'),
+    subject: prelozitEmailS(
+      input.jazyk ?? 'cs',
+      input.hotovo ? 'mail.udaje.predmetHotovo' : 'mail.udaje.predmetCeka',
+      { kdo: input.kdo },
+    ),
+    text: [
+      pozdravPosty(input.jazyk ?? 'cs', input.jmenoPrijemce),
+      '',
+      vetaOVyplneni(input),
+      '',
+      input.odkaz,
+    ].join('\n'),
     html: buildVyplneneUdajeHtml(input),
   });
 
@@ -2335,6 +2610,8 @@ export async function sendVyplneneUdajeEmail(input: VyplneneUdajeInput) {
 
 export type PreposlechPosluchaciInput = {
   to: string;
+  /** Jazyk PŘÍJEMCE (pravidlo 5). Nepovinně - bez něj čeština jako doteď. */
+  jazyk?: Jazyk;
   jmeno: string | null;
   nazevProjektu: string;
   odkaz: string;
@@ -2346,23 +2623,27 @@ export type PreposlechPredanInput = PreposlechPosluchaciInput & {
 };
 
 function vetaPredani(input: PreposlechPredanInput): string {
-  return `${input.kdo ? `${input.kdo} vám předal(a)` : 'Dostáváte'} přeposlech nahrávky „${input.nazevProjektu}".`;
+  const jazyk = input.jazyk ?? 'cs';
+  return input.kdo
+    ? prelozitEmailS(jazyk, 'mail.preposlech.predalVam', { kdo: input.kdo, projekt: input.nazevProjektu })
+    : prelozitEmailS(jazyk, 'mail.preposlech.dostavate', { projekt: input.nazevProjektu });
 }
 
 export function buildPreposlechPredanHtml(input: PreposlechPredanInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   return emailShell({
-    tag: 'Přeposlech',
-    preheader: `Přeposlech nahrávky ${input.nazevProjektu}`,
+    tag: prelozitEmail(jazyk, 'mail.preposlech.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.preposlech.preheader', { projekt: input.nazevProjektu }),
     body: `
-    <p>${escapeHtml(pozdrav(input.jmeno))}</p>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmeno))}</p>
     <p>${escapeHtml(vetaPredani(input))}</p>
-    <p>Nahrávka se pustí hned v prohlížeči, text běží vedle a chybu v něm rovnou označíte. Nikam se nepřihlašujete.</p>
+    <p>${prelozitEmail(jazyk, 'mail.preposlech.jakTo')}</p>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít přeposlech</a>
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.preposlech.tlacitko')}</a>
     </div>
 
-    <p class="small">Až u nahrávky přibudou nové stopy, dáme vám vědět na tenhle e-mail.</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.preposlech.patka')}</p>
 `,
   });
 }
@@ -2374,8 +2655,8 @@ export async function sendPreposlechPredanEmail(input: PreposlechPredanInput) {
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `Preposlech: ${input.nazevProjektu}`,
-    text: [pozdrav(input.jmeno), '', vetaPredani(input), '', input.odkaz].join('\n'),
+    subject: prelozitEmailS(input.jazyk ?? 'cs', 'mail.preposlech.predmet', { projekt: input.nazevProjektu }),
+    text: [pozdravPosty(input.jazyk ?? 'cs', input.jmeno), '', vetaPredani(input), '', input.odkaz].join('\n'),
     html: buildPreposlechPredanHtml(input),
   });
   return { sent: true as const, reason: undefined };
@@ -2387,28 +2668,34 @@ export type NoveStopyInput = PreposlechPosluchaciInput & {
 };
 
 function vetaNoveStopy(input: NoveStopyInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   const kolik =
     input.pribylo === 1
-      ? 'přibyla 1 nová stopa'
+      ? prelozitEmail(jazyk, 'mail.stopy.pocetJedna')
       : input.pribylo < 5
-        ? `přibyly ${input.pribylo} nové stopy`
-        : `přibylo ${input.pribylo} nových stop`;
-  return `u nahrávky „${input.nazevProjektu}" ${kolik} k přeposlechu (celkem ${input.celkem}).`;
+        ? prelozitEmailS(jazyk, 'mail.stopy.pocetMalo', { pocet: input.pribylo })
+        : prelozitEmailS(jazyk, 'mail.stopy.pocetMnoho', { pocet: input.pribylo });
+  return prelozitEmailS(jazyk, 'mail.stopy.veta', {
+    projekt: input.nazevProjektu,
+    kolik,
+    celkem: input.celkem,
+  });
 }
 
 export function buildNoveStopyHtml(input: NoveStopyInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   return emailShell({
-    tag: 'Nové stopy',
+    tag: prelozitEmail(jazyk, 'mail.stopy.stitek'),
     preheader: vetaNoveStopy(input),
     body: `
-    <p>${escapeHtml(pozdrav(input.jmeno))}</p>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmeno))}</p>
     <p>${escapeHtml(vetaNoveStopy(input))}</p>
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.odkaz)}" class="cta">Pokračovat v přeposlechu</a>
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.stopy.tlacitko')}</a>
     </div>
 
-    <p class="small">AudioTagger si pamatuje, kde jste skončili.</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.stopy.patka')}</p>
 `,
   });
 }
@@ -2420,8 +2707,8 @@ export async function sendNoveStopyEmail(input: NoveStopyInput) {
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `Nove stopy k preposlechu: ${input.nazevProjektu}`,
-    text: [pozdrav(input.jmeno), '', vetaNoveStopy(input), '', input.odkaz].join('\n'),
+    subject: prelozitEmailS(input.jazyk ?? 'cs', 'mail.stopy.predmet', { projekt: input.nazevProjektu }),
+    text: [pozdravPosty(input.jazyk ?? 'cs', input.jmeno), '', vetaNoveStopy(input), '', input.odkaz].join('\n'),
     html: buildNoveStopyHtml(input),
   });
   return { sent: true as const, reason: undefined };
@@ -2438,6 +2725,8 @@ export async function sendNoveStopyEmail(input: NoveStopyInput) {
  */
 export type NovaOdpovedKlientoviInput = {
   to: string;
+  /** Jazyk PŘÍJEMCE (pravidlo 5). Nepovinně - bez něj čeština jako doteď. */
+  jazyk?: Jazyk;
   jmeno: string | null;
   nazevProjektu: string;
   odKoho: string;
@@ -2447,23 +2736,27 @@ export type NovaOdpovedKlientoviInput = {
 };
 
 function vetaOdpovedi(input: NovaOdpovedKlientoviInput): string {
-  return `${input.odKoho} vám odpověděl(a) u projektu „${input.nazevProjektu}".`;
+  return prelozitEmailS(input.jazyk ?? 'cs', 'mail.odpoved.veta', {
+    odKoho: input.odKoho,
+    projekt: input.nazevProjektu,
+  });
 }
 
 export function buildNovaOdpovedKlientoviHtml(input: NovaOdpovedKlientoviInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   return emailShell({
-    tag: 'Nová zpráva',
+    tag: prelozitEmail(jazyk, 'mail.odpoved.stitek'),
     preheader: vetaOdpovedi(input),
     body: `
-    <p>${escapeHtml(pozdrav(input.jmeno))}</p>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmeno))}</p>
     <p>${escapeHtml(vetaOdpovedi(input))}</p>
     ${input.nahled ? `<blockquote>${escapeHtml(input.nahled)}</blockquote>` : ''}
 
     <div class="cta-row">
-      <a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít zprávu v portálu</a>
+      <a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.odpoved.tlacitko')}</a>
     </div>
 
-    <p class="small">Další upozornění pošleme, teprve až si zprávy přečtete — psaní tam a zpátky vám schránku nezahltí.</p>
+    <p class="small">${prelozitEmail(jazyk, 'mail.odpoved.patka')}</p>
 `,
   });
 }
@@ -2475,8 +2768,15 @@ export async function sendNovaOdpovedKlientoviEmail(input: NovaOdpovedKlientoviI
   await transport.sendMail({
     ...odesilatelMediaspace(),
     to: input.to,
-    subject: `Nova zprava k projektu: ${input.nazevProjektu}`,
-    text: [pozdrav(input.jmeno), '', vetaOdpovedi(input), input.nahled ?? '', '', input.odkaz]
+    subject: prelozitEmailS(input.jazyk ?? 'cs', 'mail.odpoved.predmet', { projekt: input.nazevProjektu }),
+    text: [
+      pozdravPosty(input.jazyk ?? 'cs', input.jmeno),
+      '',
+      vetaOdpovedi(input),
+      input.nahled ?? '',
+      '',
+      input.odkaz,
+    ]
       .filter((r) => r !== null)
       .join('\n'),
     html: buildNovaOdpovedKlientoviHtml(input),
@@ -2490,6 +2790,14 @@ export async function sendNovaOdpovedKlientoviEmail(input: NovaOdpovedKlientoviI
 
 export type UpominkaInput = {
   to: string;
+  /**
+   * Jazyk PŘÍJEMCE (pravidlo 5). Nepovinně - bez něj čeština jako doteď.
+   *
+   * Řídí JEN obal: štítek v hlavičce, popisky v tabulce a tlačítko. PŘEDMĚT
+   * ANI TĚLO SE NEPŘEKLÁDAJÍ - to si píše uživatel ve Vzoru upomínky
+   * v administraci a je to uložené v databázi tak, jak to napsal.
+   */
+  jazyk?: Jazyk;
   kopie?: string[];
   /** Hotový předmět i text - proměnné dosazuje lib/upominkyServer.ts. */
   predmet: string;
@@ -2504,27 +2812,29 @@ export type UpominkaInput = {
 };
 
 export function buildUpominkaHtml(input: UpominkaInput): string {
+  const jazyk = input.jazyk ?? 'cs';
   // Text píše produkce ve Vzoru upomínky - escapuje se a teprve pak se z
   // povolených značek udělá HTML, stejně jako u zpráv o stavu projektu.
+  // NEPŘEKLÁDÁ SE: je to text z databáze, ne z kódu.
   const odstavce = input.text
     .split(/\n{2,}/)
     .map((o) => `<p>${znackyNaHtml(escapeHtml(o).replace(/\n/g, '<br />'))}</p>`)
     .join('');
 
   return emailShell({
-    tag: 'Upomínka',
-    preheader: `Faktura ${input.cisloFaktury} je po splatnosti.`,
+    tag: prelozitEmail(jazyk, 'mail.upominka.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.upominka.preheader', { cislo: input.cisloFaktury }),
     body: `
-    <span class="badge">Faktura ${escapeHtml(input.cisloFaktury)}</span>
+    <span class="badge">${prelozitEmailS(jazyk, 'mail.upominka.odznak', { cislo: escapeHtml(input.cisloFaktury) })}</span>
     ${odstavce}
 
     <table role="presentation" class="field-table">
-      <tr><td class="label">Číslo faktury</td><td class="value">${escapeHtml(input.cisloFaktury)}</td></tr>
-      <tr><td class="label">K úhradě</td><td class="value">${escapeHtml(input.castka)}</td></tr>
-      ${input.splatnost ? `<tr><td class="label">Splatnost</td><td class="value">${escapeHtml(input.splatnost)}</td></tr>` : ''}
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.upominka.cisloFaktury')}</td><td class="value">${escapeHtml(input.cisloFaktury)}</td></tr>
+      <tr><td class="label">${prelozitEmail(jazyk, 'mail.upominka.kUhrade')}</td><td class="value">${escapeHtml(input.castka)}</td></tr>
+      ${input.splatnost ? `<tr><td class="label">${prelozitEmail(jazyk, 'mail.upominka.splatnost')}</td><td class="value">${escapeHtml(input.splatnost)}</td></tr>` : ''}
     </table>
 
-    ${input.odkaz ? `<div class="cta-row"><a href="${escapeHtml(input.odkaz)}" class="cta">Otevřít fakturu</a></div>` : ''}
+    ${input.odkaz ? `<div class="cta-row"><a href="${escapeHtml(input.odkaz)}" class="cta">${prelozitEmail(jazyk, 'mail.upominka.tlacitko')}</a></div>` : ''}
 `,
   });
 }
@@ -2538,6 +2848,8 @@ export async function sendUpominkaEmail(input: UpominkaInput) {
     to: input.to,
     // Kopie chodí skrytě - klient nemá vidět, kdo u nás na platbu čeká.
     ...(input.kopie && input.kopie.length > 0 ? { bcc: input.kopie } : {}),
+    // Předmět i prostý text jdou ze Vzoru upomínky v databázi - viz typ výš.
+    // Nepřekládají se, jazyk příjemce řídí jen obal v buildUpominkaHtml.
     subject: input.predmet,
     text: `${bezZnacek(input.text)}\n\n${input.odkaz ?? ''}`.trim(),
     html: buildUpominkaHtml(input),

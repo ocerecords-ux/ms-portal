@@ -183,6 +183,17 @@ model User {
   active       Boolean   @default(true)
   createdAt    DateTime  @default(now())
 
+  /// JAZYK UZIVATELE (davka 6 prekladu, 27. 9. 2026).
+  ///
+  /// Prepinac v liste zapisuje cookie, aby stranka prisla ze serveru rovnou
+  /// prelozena. Cookie ale zna jen prohlizec - e-mail odchazi z cronu nebo
+  /// z akce nekoho jineho a zadnou cookie u sebe nema. Proto se volba
+  /// prihlaseneho cloveka uklada i sem: podle toho se pak posila posta.
+  ///
+  /// Hodnoty 'cs' / 'en' jako v lib/jazyk.ts. Vychozi cestina - nikdo, kdo
+  /// si jazyk neprepnul, nedostane anglicky mail.
+  jazyk        String    @default("cs")
+
   // --- Mediaspace (interni role ADMIN/ZVUKAR/PRODUKCE) - zadani 5. 9. 2026 ---
   birthDate    DateTime? // datum narozeni
   photoUrl     String?   // fotka

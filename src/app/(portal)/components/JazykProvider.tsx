@@ -34,12 +34,25 @@ export function usePreklad(): (klic: string, hodnoty?: Record<string, string | n
   );
 }
 
-/** Přepnutí jazyka - zapíše cookie a překreslí stránku. */
+/**
+ * Přepnutí jazyka - zapíše cookie a překreslí stránku.
+ *
+ * VOLBA SE UKLÁDÁ I NA ÚČET (dávka 6, 27. 9. 2026). Cookie zná jen prohlížeč,
+ * jenže e-mail odchází z cronu nebo z akce někoho jiného a žádnou cookie
+ * u sebe nemá. Zápis na účet je proto to jediné, podle čeho se dá poslat
+ * pošta v jazyce příjemce. Nepovede-li se, jazyk stránky to neovlivní -
+ * cookie je zapsaná a překreslení běží dál.
+ */
 export function usePrepnoutJazyk(): (novy: Jazyk) => void {
   const router = useRouter();
   return useMemo(
     () => (novy: Jazyk) => {
       document.cookie = `${KLIC_JAZYKA}=${novy}; path=/; max-age=${PLATNOST_JAZYKA_S}; samesite=lax`;
+      void fetch('/api/muj-ucet/jazyk', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jazyk: novy }),
+      }).catch(() => {});
       router.refresh();
     },
     [router],

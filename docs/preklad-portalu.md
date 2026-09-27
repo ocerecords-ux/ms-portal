@@ -74,8 +74,10 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 3 | 16. 9. | Společné komponenty — `(portal)/components` (chat, úkoly, rychlé volby, oznámení, doky) a `src/components` | [x] |
 | 4 | 17. 9. | Doklady — `(admin)/admin/doklady` (nabídky, faktury, výdaje, moje firmy) a číselníky v `src/lib` (stavy, měny, způsoby úhrady) | [x] |
 | 5 | 18. 9. | Zbytek administrace — uživatelé, ceníky, studia, archiv, firmy, `(portal)/kalendar`, `(portal)/vykazy` | [x] |
-| 6 | 19. 9. | E-maily a upozornění — `src/lib/email.ts` podle jazyka příjemce, push a oznámení | [ ] |
+| 6 | 19. 9. | E-maily a upozornění — `src/lib/email.ts` podle jazyka příjemce, push a oznámení | [~] |
 | 7 | 20. 9. | Kontrolní průchod — proklikat portál v EN, dohledat zapomenuté české texty, sjednotit termíny podle slovníčku | [ ] |
+
+`[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
 
 ### Co dávka 3 nechala dalším dávkám
 
@@ -194,6 +196,68 @@ i řazení a hledání bez diakritiky, které dnes počítá s češtinou.
   schůzky. **Opravené bylo jen** „Zrušit porada" → „Zrušit poradu".
 - `POPISKY_DRUHU_ARCHIVU` a `POPISKY_ZPUSOBU` v `src/lib/archiv.ts` jsou po
   dávce 5 nepoužité. Nemazali jsme je.
+
+### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
+
+Šablony pošty jsou přeložené a ověřené, ale **zapojené nejsou**. To není
+nedodělek, je to rozhodnutí: zapojení je ta chvíle, kdy skutečnému klientovi
+poprvé odejde anglický e-mail, a to se nemá stát v noci bez dohledu.
+
+**Co hotové je:**
+- `src/lib/jazykEmailu.ts` - NOVÝ slovník pošty, 339 klíčů. Schválně stojí
+  mimo `lib/jazyk.ts`: ten si bere `JazykProvider`, takže se celý posílá do
+  prohlížeče s každou stránkou. Dlouhé odstavce e-mailů tam nemají co dělat.
+- Všech 22 šablon v `src/lib/email.ts` umí oba jazyky - HTML, prostý text
+  i PŘEDMĚT. Každý `XxxInput` má nepovinné `jazyk?: Jazyk`.
+- `User.jazyk` v databázi (výchozí `"cs"`) a `/api/muj-ucet/jazyk`, kam
+  přepínač v liště volbu ukládá. Bez toho se jazyk příjemce nedá zjistit:
+  cookie zná jen prohlížeč, ale mail odchází z cronu nebo z akce někoho
+  jiného.
+- `src/lib/jazykPrijemce.ts` - `jazykPodleEmailu()`, `jazykUzivatele()`,
+  `jazykFirmy()`. Všechny při chybě vracejí češtinu.
+
+**Ověřeno, ne odhadnuto:** všech 22 šablon se v testu vykreslí v obou
+jazycích. Kontroluje se, že HTML má párové značky, že v něm nezůstalo
+„undefined" ani nedosazená značka `{neco}` a že se anglická verze od české
+opravdu liší. Test je v /tmp, protože bez `node_modules` ho v repozitáři
+nespustíme - **stojí za to ho přepsat na skutečný test v `tests/`.**
+
+**Co zbývá (a je to vědomá pauza):** nikdo `jazyk` do `send*Email` nepředává,
+takže **všechna pošta dál chodí česky, přesně jako dosud**. Zapojit se to dá
+dvěma způsoby:
+1. jednořádkově uvnitř každé `send*Email`:
+   `const jazyk = input.jazyk ?? (await jazykPodleEmailu(input.to));`
+   Výhoda: žádný volající se nemění. Nevýhoda: `email.ts` začne sahat do
+   databáze.
+2. u volajících, kde je příjemce jistý. Seznam míst: `mesicniPrehledServer.ts`,
+   `nabidkaTerminuServer.ts`, `api/kalendar/nabidky/[id]/rozhodnuti`,
+   `rodnyListServer.ts`, `notifikaceProjektuServer.ts`,
+   `api/admin/pozvanky-udaju/[id]`, `api/doplnit-udaje`, `pozvankaUdaju.ts`,
+   `api/projekty/[id]/preposlech/posluchaci`, `preposlechPosluchaciServer.ts`,
+   `dotazyOznameniServer.ts`, `upominkyServer.ts`.
+
+**OZNÁMENÍ POD ZVONKEM SE TAKHLE PŘELOŽIT NEDAJÍ.** `notify()` v
+`lib/notifications.ts` dostává `title` a `body` jako HOTOVÝ TEXT a uloží ho do
+databáze. Co je jednou uložené, už jazyk nezmění - přeložit kód nestačí.
+Správné řešení: `notify()` zná `userId`, takže může dostávat KLÍČ a hodnoty
+a vykreslit text v jazyce příjemce až při zápisu. Je to vlastní úkol, ne
+vedlejší efekt překladu, a dotkne se všech volajících `notify()`.
+
+**Co v poště zůstává české i po zapojení** (formátování přitéká hotové
+odjinud, stejná třída problému jako `formatMoney` - dávka 7):
+- název měsíce v měsíčním přehledu (`nazevMesice()` v `mesicniPrehledServer.ts`
+  má natvrdo `'cs-CZ'`), hodiny a částky (`formatDuration`, `formatCzk`
+  v `lib/timesheets.ts`),
+- `platiDo` v žádosti o údaje, částky v upomínkách,
+- `formatOfferMoney` v `email.ts` (natvrdo `cs-CZ`),
+- název stavu projektu a text vzoru zprávy - ty jsou v databázi česky
+  a nepřekládají se schválně (viz dávka 5).
+
+**Nalezená starší chyba (neopraveno):** HTML varianty pošty počítají čas
+v `Europe/Prague`, ale textové varianty `sendInviteEmail`,
+`sendPasswordResetEmail` a `sendInvoiceEmail` formátují datum bez časového
+pásma, tedy podle serveru - a ten na Vercelu běží v UTC. Kolem půlnoci tak
+tentýž e-mail ukáže v HTML a v textu jiný den.
 
 ### Jak najít, co v dávce zbývá
 
