@@ -196,6 +196,7 @@ async function main() {
   await dotocenoStrabag();
   await odkazyNaHovory();
   await ranniPrehledOndrejovi();
+  await siteJenOndrejovi();
   await schvaleniReklamZvonek();
   await matejStrihaExterne();
   await albatrosCenuUrcujeSam();
@@ -379,6 +380,37 @@ async function srovnejVzorNataceni() {
   }
 
   if (zmeneno > 0) console.log(`  vzory: srovnan natacecí text (${zmeneno})`);
+}
+
+/**
+ * Modul Site vidi zatim jen Ondrej (zadani 27. 9. 2026: „zatim uvidim jen
+ * ja"). Stejny postup jako u ranniho prehledu - jednou nastavit a dal uz to
+ * ma v ruce Administrace.
+ */
+async function siteJenOndrejovi() {
+  const ZNAMKA = 'site-jen-ondrej';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const ondrej = await prisma.user.findFirst({
+      where: {
+        role: 'ADMIN',
+        active: true,
+        name: { contains: 'Ondřej Černý', mode: 'insensitive' },
+        NOT: { name: { contains: 'ml.', mode: 'insensitive' } },
+      },
+      select: { id: true, email: true },
+    });
+    if (!ondrej) {
+      console.warn('  site: Ondrejuv ucet nenalezen, modul se nikomu nezapina');
+      return;
+    }
+    await prisma.user.update({ where: { id: ondrej.id }, data: { vidiSite: true } });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  site: modul zapnut jen u ${ondrej.email}`);
+  } catch (err) {
+    console.warn('  site se nepodarilo zapnout:', err);
+  }
 }
 
 async function zapniRodnyListURadiovehoSpotu() {

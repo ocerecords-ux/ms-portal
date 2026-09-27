@@ -69,6 +69,10 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/studia': ['ADMIN'],
   '/admin/doklady': ['ADMIN'],
   '/admin/archiv': ['ADMIN'],
+  // Site - priprava prispevku na Instagram a LinkedIn (zadani 27. 9. 2026:
+  // „zatim uvidim jen ja"). Role je jen prvni zamek; druhy je priznak
+  // vidiSite na karte uzivatele, ktery kontroluje samotna stranka.
+  '/site': ['ADMIN'],
   // Co Bruno vi o nasi praci (zadani 16. 9. 2026).
   '/admin/bruno': ['ADMIN'],
   '/admin/navody': ['ADMIN'],
@@ -136,6 +140,9 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/napoveda', label: 'Nápověda' },
   { href: '/admin/navody', label: 'Návody' },
   { href: '/muj-ucet', label: 'Můj účet' },
+  // Site - priprava prispevku na Instagram a LinkedIn (27. 9. 2026). Neni ve
+  // vychozi liste; kdo ma modul zapnuty, prida si ho pres "+".
+  { href: '/site', label: 'Sítě' },
 ];
 
 /** Vychozi (napevno zadana) navigace pro danou roli. */

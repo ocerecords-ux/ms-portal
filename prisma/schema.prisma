@@ -287,6 +287,10 @@ model User {
   /// na dany den udalosti, ktere se me tykaji. Pripadne i ukoly co mam").
   /// Zapina se v Muj ucet; posila se do soukromeho chatu s Brunem.
   ranniPrehled   Boolean   @default(false)
+  /// Vidí modul Sítě - příprava příspěvků na Instagram a LinkedIn (zadání
+  /// 27. 9. 2026: „zatím uvidím jen já"). Zapíná se v Administraci; seed ho
+  /// jednou zapne Ondřejovi a nikomu jinému.
+  vidiSite       Boolean   @default(false)
   /// Kdy clovek naposledy videl okno s prehledem dne (23. 9. 2026: „at se mi
   /// v portalu otevre pruhledne vyskakovaci okno"). Jednou za den.
   prehledZobrazenAt DateTime?
@@ -495,6 +499,10 @@ model User {
   nepritomnosti Nepritomnost[] @relation("NepritomnostKdo")
   /// Porady, na které je pozvaný (zadání 21. 9. 2026).
   poradyUcast   PoradaUcastnik[]
+
+  /// Příspěvky na sítě a obrázky k nim (zadání 27. 9. 2026).
+  socialniPrispevky SocialniPrispevek[] @relation("SocialniAutor")
+  socialniObrazky   SocialniObrazek[]   @relation("SocialniObrazekAutor")
 }
 
 model Order {
@@ -4020,4 +4028,66 @@ model WikiVerze {
   createdAt DateTime @default(now())
 
   @@index([clanekId, createdAt])
+}
+
+/**
+ * PŘÍSPĚVKY NA SÍTĚ (zadání 27. 9. 2026: „chci udělat pro sebe modul pro
+ * sociální sítě Instagram a LinkedIn, zatím uvidím jen já, a aby tam bylo
+ * něco jako Canva").
+ *
+ * Příspěvek je plátno (vrstvy s textem, obrázky a tvary) plus popisek
+ * a hashtagy. Podoba plátna je JSON, protože se mění spolu s editorem -
+ * sloupec za každou vlastnost vrstvy by znamenal migraci po každé úpravě.
+ */
+model SocialniPrispevek {
+  id      String @id @default(cuid())
+  autorId String
+  autor   User   @relation("SocialniAutor", fields: [autorId], references: [id], onDelete: Cascade)
+
+  nazev String
+  /// „INSTAGRAM" nebo „LINKEDIN" - kam příspěvek míří.
+  sit   String
+  /// Klíč formátu z lib/socialni.ts (ig-9x16, li-1200x627, …).
+  format String
+  sirka  Int
+  vyska  Int
+
+  /// Vrstvy plátna - viz typ Platno v lib/socialni.ts.
+  platno Json
+
+  popisek  String @default("") @db.Text
+  hashtagy String @default("") @db.Text
+
+  /// KONCEPT → HOTOVO → PUBLIKOVANO.
+  stav          String    @default("KONCEPT")
+  planovanoNa   DateTime?
+  publikovanoAt DateTime?
+  /// Id příspěvku u sítě, až se bude publikovat přes jejich API.
+  externiId     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([autorId, updatedAt])
+}
+
+/**
+ * OBRÁZKY DO PŘÍSPĚVKŮ. Leží v úložišti pod náhodným klíčem stejně jako
+ * doklady; do plátna se dávají odkazem na portál (/api/site/obrazek/<id>),
+ * ne adresou úložiště - jednak je adresa podepsaná a propadá, jednak by se
+ * z cizí domény nedalo plátno vyexportovat do PNG.
+ */
+model SocialniObrazek {
+  id      String @id @default(cuid())
+  autorId String
+  autor   User   @relation("SocialniObrazekAutor", fields: [autorId], references: [id], onDelete: Cascade)
+
+  nazev String
+  url   String @db.Text
+  sirka Int?
+  vyska Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([autorId, createdAt])
 }

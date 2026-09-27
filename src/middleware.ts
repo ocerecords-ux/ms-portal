@@ -83,6 +83,8 @@ export const config = {
     '/prehledy/:path*',
     '/moje-terminy/:path*',
     '/pozvanky/:path*',
+    // Site - priprava prispevku na IG a LinkedIn (27. 9. 2026).
+    '/site/:path*',
     // Kalendář rezervací studia (25. 9. 2026) - vlastní sekce mimo portál.
     '/studio/:path*',
     '/doplnit-udaje/:path*',
