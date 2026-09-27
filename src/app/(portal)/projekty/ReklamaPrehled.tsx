@@ -99,7 +99,16 @@ export function ReklamaPrehled({
   // Escape, klik mimo a posun stránky okno zavřou - stejně jako u dokladů.
   useEffect(() => {
     if (!okno) return;
-    const zavri = () => setOkno(null);
+    /**
+     * Posun STRÁNKY okno zavře (jinak by zůstalo viset u jiného řádku), ale
+     * posun UVNITŘ okna ne - u zakázky s pěti listy se seznam roluje a musí
+     * v něm jít jezdit (27. 9. 2026: „nejde v tom otevřeném okně rolovat").
+     */
+    const zavri = (e?: Event) => {
+      const cil = e?.target;
+      if (cil instanceof Node && oknoRef.current?.contains(cil)) return;
+      setOkno(null);
+    };
     const klavesa = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOkno(null);
     };
