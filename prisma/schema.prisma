@@ -299,6 +299,12 @@ model User {
   /// ne seznam jmen v kódu - až to bude hlídat někdo další, překlikne se to
   /// v Administraci.
   spravujeTechParametry Boolean @default(false)
+  /// Vidí Palubovku - budíky, podle kterých se řídí firma (zadání 27. 9. 2026:
+  /// „potřeboval bych udělat takový přehled jen pro sebe, jako jsou budíky -
+  /// ukazatele v autě… vidím jen já a tím řídím celou firmu"). Obrat, cíle
+  /// a rozpracovaná zakázka nepatří nikomu jinému; příznak je u účtu, aby
+  /// se to dalo pustit dál bez zásahu do kódu.
+  vidiPalubovku Boolean @default(false)
   /// Kdy clovek naposledy videl okno s prehledem dne (23. 9. 2026: „at se mi
   /// v portalu otevre pruhledne vyskakovaci okno"). Jednou za den.
   prehledZobrazenAt DateTime?
@@ -4130,4 +4136,25 @@ model TechnickyProfil {
   updatedAt DateTime @updatedAt
 
   @@index([druh, poradi])
+}
+
+
+/// CÍLE, PROTI KTERÝM SE MĚŘÍ PALUBOVKA (zadání 27. 9. 2026: „zadám si vlastní
+/// cíle").
+///
+/// Jediný řádek - firma je jedna. Cíle se nedrží v kódu ani v proměnných
+/// prostředí: mění se každý rok a musí jít přepsat z prohlížeče.
+model CilePalubovky {
+  id String @id @default("hlavni")
+
+  /// Kolik chceme vyfakturovat za měsíc (Kč bez DPH). Prázdné = budík měří
+  /// proti průměru posledních tří měsíců.
+  mesicniObrat Int?
+  /// Kolik za celý rok (Kč bez DPH).
+  rocniObrat   Int?
+  /// Na kolik měsíců dopředu chceme mít rozpracovanou zakázku. Pod tuhle
+  /// hranici spadne palivoměr do červené.
+  mesicuKryti  Float @default(2)
+
+  updatedAt DateTime @updatedAt
 }

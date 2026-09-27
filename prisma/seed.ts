@@ -199,6 +199,7 @@ async function main() {
   await ranniPrehledOndrejovi();
   await siteJenOndrejovi();
   await zalozTechnickeParametry();
+  await palubovkaJenOndrejovi();
   await parametrySpravujiOndrejAPeter();
   await schvaleniReklamZvonek();
   await matejStrihaExterne();
@@ -1878,5 +1879,35 @@ async function parametrySpravujiOndrejAPeter() {
     console.log(`  technicke parametry: spravuji ${lide.map((u) => u.email).join(', ')}`);
   } catch (err) {
     console.warn('  technicke parametry: spravce se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * Palubovku vidi zatim jen Ondrej (zadani 27. 9. 2026: „vidim jen ja a tim
+ * ridim celou firmu"). Jednou nastavit, dal uz to ma v ruce Administrace.
+ */
+async function palubovkaJenOndrejovi() {
+  const ZNAMKA = 'palubovka-jen-ondrej';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const ondrej = await prisma.user.findFirst({
+      where: {
+        role: 'ADMIN',
+        active: true,
+        name: { contains: 'Ondřej Černý', mode: 'insensitive' },
+        NOT: { name: { contains: 'ml.', mode: 'insensitive' } },
+      },
+      select: { id: true, email: true },
+    });
+    if (!ondrej) {
+      console.warn('  palubovka: Ondrejuv ucet nenalezen, nikomu se nezapina');
+      return;
+    }
+    await prisma.user.update({ where: { id: ondrej.id }, data: { vidiPalubovku: true } });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  palubovka: zapnuta jen u ${ondrej.email}`);
+  } catch (err) {
+    console.warn('  palubovku se nepodarilo zapnout:', err);
   }
 }
