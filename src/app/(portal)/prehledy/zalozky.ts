@@ -7,7 +7,21 @@
  *
  * Další přehled = jeden řádek sem.
  */
-export const ZALOZKY_PREHLEDU: { href: string; label: string; role?: string[] }[] = [
+export const ZALOZKY_PREHLEDU: {
+  href: string;
+  label: string;
+  role?: string[];
+  /**
+   * Záložka navíc zamčená příznakem na kartě uživatele. Role sama nestačí -
+   * Palubovku vidí jen ten, kdo má `vidiPalubovku` (zadání 27. 9. 2026:
+   * „vidím jen já a tím řídím celou firmu").
+   */
+  jenSPriznakem?: 'palubovka';
+}[] = [
+  // Palubovka je PRVNÍ (zadání 27. 9. 2026: „ať je to první, co se mi ukáže,
+  // když otevřu přehledy"). Kdo ji nemá zapnutou, tomu se přeskočí a otevře
+  // se Kapacita studií - viz /prehledy/page.tsx.
+  { href: '/prehledy/palubovka', label: 'Palubovka', role: ['ADMIN'], jenSPriznakem: 'palubovka' },
   { href: '/prehledy/kapacita', label: 'Kapacita studií' },
   // Backlog - dřív samostatně v liště (přesun 21. 9. 2026).
   { href: '/prehledy/backlog', label: 'Backlog' },

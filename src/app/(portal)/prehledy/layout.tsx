@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { smiNaPalubovku } from '@/lib/palubovkaServer';
 import { ZalozkyPrehledu } from './ZalozkyPrehledu';
 
 /**
@@ -9,10 +10,11 @@ import { ZalozkyPrehledu } from './ZalozkyPrehledu';
  */
 export default async function PrehledyLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
+  const palubovka = await smiNaPalubovku(session?.user?.id);
   return (
     <div className="flex flex-col gap-5">
       <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Přehledy</h1>
-      <ZalozkyPrehledu role={session?.user?.role ?? null} />
+      <ZalozkyPrehledu role={session?.user?.role ?? null} palubovka={palubovka} />
       {children}
     </div>
   );

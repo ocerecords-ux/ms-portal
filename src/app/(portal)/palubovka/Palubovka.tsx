@@ -30,10 +30,17 @@ export function Palubovka({
   data,
   cile: cilePocatecni,
   dnesISO,
+  vZalozce = false,
 }: {
   data: PalubovkaData;
   cile: Cile;
   dnesISO: string;
+  /**
+   * Uvnitř Přehledů (zadání 27. 9. 2026: „dej mi to do přehledu na novou
+   * kartu"). Sekce už má svůj nadpis i záložku, takže se druhý nadpis
+   * „Palubovka" vypustí - jinak by nad budíky stály tři řádky titulků.
+   */
+  vZalozce?: boolean;
 }) {
   const [cile, setCile] = useState(cilePocatecni);
   const [otevreno, setOtevreno] = useState(false);
@@ -92,7 +99,7 @@ export function Palubovka({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-baseline gap-3 flex-wrap">
-        <h1 className="font-display text-3xl text-ink m-0">Palubovka</h1>
+        {!vZalozce && <h1 className="font-display text-3xl text-ink m-0">Palubovka</h1>}
         <span className="text-sm font-body text-muted">
           {MESICE[dnes.getMonth()]} {dnes.getFullYear()} · vidíš jen ty
         </span>

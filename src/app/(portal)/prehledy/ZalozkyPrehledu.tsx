@@ -11,11 +11,22 @@ import { ZALOZKY_PREHLEDU } from './zalozky';
  * mohl sáhnout i server.
  */
 
-export function ZalozkyPrehledu({ role }: { role?: string | null }) {
+export function ZalozkyPrehledu({
+  role,
+  palubovka = false,
+}: {
+  role?: string | null;
+  /** Vidí uživatel Palubovku? Role na ni nestačí - viz zalozky.ts. */
+  palubovka?: boolean;
+}) {
   const cesta = usePathname();
   return (
     <nav className="flex items-center gap-1 flex-wrap border-b border-line">
-      {ZALOZKY_PREHLEDU.filter((z) => !z.role || (role && z.role.includes(role))).map((z) => {
+      {ZALOZKY_PREHLEDU.filter(
+        (z) =>
+          (!z.role || (role && z.role.includes(role))) &&
+          (z.jenSPriznakem !== 'palubovka' || palubovka),
+      ).map((z) => {
         const aktivni = cesta === z.href || cesta.startsWith(`${z.href}/`);
         return (
           <Link

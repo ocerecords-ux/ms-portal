@@ -77,6 +77,7 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // „vidim jen ja"). Role je jen prvni zamek; druhy je priznak vidiPalubovku
   // na karte uzivatele, ktery kontroluje sama stranka.
   '/palubovka': ['ADMIN'],
+  '/prehledy/palubovka': ['ADMIN'],
   // Co Bruno vi o nasi praci (zadani 16. 9. 2026).
   '/admin/bruno': ['ADMIN'],
   '/admin/navody': ['ADMIN'],
@@ -156,8 +157,9 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   // Site - priprava prispevku na Instagram a LinkedIn (27. 9. 2026). Neni ve
   // vychozi liste; kdo ma modul zapnuty, prida si ho pres "+".
   { href: '/site', label: 'Sítě' },
-  // Palubovka (27. 9. 2026) - kdo ji ma zapnutou, prida si ji pres "+".
-  { href: '/palubovka', label: 'Palubovka' },
+  // Palubovka (27. 9. 2026) je prvni zalozka Prehledu - do listy se pridava
+  // rovnou ta adresa, at clovek nekonci na presmerovani.
+  { href: '/prehledy/palubovka', label: 'Palubovka' },
 ];
 
 /** Vychozi (napevno zadana) navigace pro danou roli. */
