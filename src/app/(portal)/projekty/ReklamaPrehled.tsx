@@ -295,49 +295,63 @@ function Tabulka({
                     {typy[id] || '—'}
                   </td>
                   <td className="px-4 py-2.5 align-middle">
+                    {/* LICENCE JE POPIS, DOKUMENTY JSOU IKONA (zadání 27. 9.
+                        2026: „u té licence by to chtělo nějakou jednoznačnou
+                        jednu ikonu, na kterou kliknu, je to zmatené klikat na
+                        dvě různé věci"). Pilulky licence se na klepnutí
+                        netváří; klikací je jen ikona dokumentů s počtem. */}
                     {druhy.length === 0 && listy.length === 0 ? (
                       <span className="text-sm text-muted">—</span>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          const r = e.currentTarget.getBoundingClientRect();
-                          setOkno({
-                            nazev: p.name,
-                            projektId: id,
-                            dokumenty: listy,
-                            left: Math.min(r.left, window.innerWidth - SIRKA_OKNA - MEZERA_OKNA),
-                            top: r.bottom + MEZERA_OKNA,
-                          });
-                        }}
-                        title={
-                          listy.length > 0
-                            ? 'Dokumenty k zakázce'
-                            : 'K téhle zakázce zatím žádný dokument není'
-                        }
-                        className="inline-flex items-center gap-1.5 flex-wrap bg-transparent border-0 cursor-pointer p-0 text-left"
-                      >
-                        {druhy.length > 0 ? (
-                          druhy.map((l) => (
-                            <span
-                              key={l.nazev}
-                              className="inline-flex items-center gap-1 rounded-pill border border-line px-2 py-0.5 text-xs font-heading text-ink hover:border-brand-purple"
-                            >
-                              {l.ikona ? <KresbaIkony klic={l.ikona} velikost={11} /> : null}
-                              {l.nazev}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="rounded-pill border border-line px-2 py-0.5 text-xs font-heading text-ink hover:border-brand-purple">
-                            Dokumenty
+                      <span className="inline-flex items-center gap-2 flex-wrap">
+                        {druhy.map((l) => (
+                          <span
+                            key={l.nazev}
+                            className="inline-flex items-center gap-1 rounded-pill border border-line px-2 py-0.5 text-xs font-heading text-ink"
+                          >
+                            {l.ikona ? <KresbaIkony klic={l.ikona} velikost={11} /> : null}
+                            {l.nazev}
                           </span>
-                        )}
+                        ))}
                         {listy.length > 0 && (
-                          <span className="text-[11px] font-heading text-brand-purple">
-                            {listy.length}×
-                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              const r = e.currentTarget.getBoundingClientRect();
+                              setOkno({
+                                nazev: p.name,
+                                projektId: id,
+                                dokumenty: listy,
+                                left: Math.min(r.left, window.innerWidth - SIRKA_OKNA - MEZERA_OKNA),
+                                top: r.bottom + MEZERA_OKNA,
+                              });
+                            }}
+                            title={`Dokumenty ke stažení (${listy.length})`}
+                            aria-label={`Dokumenty ke stažení (${listy.length})`}
+                            className="shrink-0 inline-flex items-center gap-1 rounded-pill border border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight px-2 py-1 cursor-pointer hover:border-brand-purple transition-colors"
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              width={13}
+                              height={13}
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 3 14 8 19 8" />
+                              <line x1="12" y1="11" x2="12" y2="16" />
+                              <polyline points="9.5 14 12 16.5 14.5 14" />
+                            </svg>
+                            <span className="text-[11px] font-heading font-semibold tabular-nums">
+                              {listy.length}
+                            </span>
+                          </button>
                         )}
-                      </button>
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-2.5 align-middle text-sm font-heading text-muted tabular-nums whitespace-nowrap">
