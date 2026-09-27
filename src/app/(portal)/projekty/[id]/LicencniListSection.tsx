@@ -161,6 +161,8 @@ export function LicencniListSection({
   const [bezi, setBezi] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [hotovo, setHotovo] = useState(0);
+  const [klientSeUklada, setKlientSeUklada] = useState(false);
+  const klientNaServeru = useRef(vychozi.klient);
   const [velkyNahled, setVelkyNahled] = useState(false);
   const [nahledUrl, setNahledUrl] = useState<string | null>(null);
   const [nahledSeDela, setNahledSeDela] = useState(false);
@@ -299,6 +301,33 @@ export function LicencniListSection({
     }
   }
 
+  /**
+   * KLIENT SE PAMATUJE U PROJEKTU (zadání 27. 9. 2026: „klienta u těch
+   * licenčních listů potřebuju ještě měnit, v tomto případě je to Strabag").
+   * U agenturní zakázky je objednatelem agentura, ale licence patří koncovému
+   * zadavateli - a ten se nemá přepisovat u každého listu znovu, tak se uloží
+   * k projektu (tamtéž ho bere i rodný list).
+   */
+  async function ulozKlienta() {
+    const jmeno = spolecne.klient.trim();
+    if (jmeno === klientNaServeru.current.trim()) return;
+    setKlientSeUklada(true);
+    try {
+      const res = await fetch(`/api/projects/${encodeURIComponent(caflouProjectId)}/meta`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rlClientName: jmeno }),
+      });
+      if (!res.ok) throw new Error();
+      klientNaServeru.current = jmeno;
+      router.refresh();
+    } catch {
+      setChyba('Klienta se nepodařilo uložit k projektu — na listech zůstane, ale po obnovení stránky se vrátí původní.');
+    } finally {
+      setKlientSeUklada(false);
+    }
+  }
+
   async function smaz(id: string) {
     if (!window.confirm('Smazat tenhle licenční list? Kopie na Disku půjde do koše.')) return;
     const res = await fetch(`/api/licencni-list/${id}`, { method: 'DELETE' });
@@ -308,7 +337,7 @@ export function LicencniListSection({
   // Obyčejná funkce, ne komponenta - vnořená komponenta by se při každém
   // písmenku vytvořila znovu a políčko by ztrácelo kurzor.
   const policko = (
-    k: 'klient' | 'objednatel' | 'dodavatel' | 'uzemi' | 'misto' | 'podepisuje',
+    k: 'objednatel' | 'dodavatel' | 'uzemi' | 'misto' | 'podepisuje',
     label: string,
     napoveda?: string,
   ) => (
@@ -367,7 +396,6 @@ export function LicencniListSection({
       {canEdit && dalsiUdaje && (
         <div className="rounded-card border border-line bg-surface p-4 flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {policko('klient', 'Klient', 'Pro koho spot je (koncový zadavatel).')}
             {policko('objednatel', 'Objednatel', 'Kdo si spot u nás objednal.')}
             {policko('dodavatel', 'Dodavatel')}
             {policko('uzemi', 'Území')}
@@ -389,6 +417,25 @@ export function LicencniListSection({
 
       <div className="grid grid-cols-1 min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,480px)] gap-5 items-start">
         <div className="flex flex-col gap-3 min-w-0">
+          {/* Klient je na očích - u agentur se mění skoro pokaždé. */}
+          {canEdit && (
+            <label className="flex items-center gap-2 flex-wrap rounded-card border border-line bg-surface px-3 py-2">
+              <span className="text-sm font-body text-muted shrink-0 px-1">Klient</span>
+              <input
+                value={spolecne.klient}
+                onChange={(e) => nastavSpolecne('klient', e.target.value)}
+                onBlur={() => void ulozKlienta()}
+                placeholder="Koncový zadavatel"
+                className="flex-1 min-w-[160px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm outline-none hover:border-line focus:border-brand-purple focus:bg-field"
+              />
+              <span className="text-xs font-body text-muted">
+                {klientSeUklada
+                  ? 'Ukládám…'
+                  : 'Komu licence patří — u agenturní zakázky koncový zadavatel, ne objednatel. Pamatuje si ho projekt.'}
+              </span>
+            </label>
+          )}
+
           {canEdit && (
             <ul className="list-none p-0 m-0 flex flex-col gap-2">
               {chystane.map((r, i) => (
