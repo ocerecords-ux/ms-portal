@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatDateTime } from '@/lib/calendar';
+import { useJazyk, usePreklad } from './JazykProvider';
 
 type Notifikace = {
   id: string;
@@ -20,6 +21,8 @@ type Notifikace = {
  * Počet nepřečtených přijde ze serveru s vykreslením stránky.
  */
 export function NotificationBell({ unread }: { unread: number }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notifikace[] | null>(null);
   const [pocet, setPocet] = useState(unread);
@@ -94,8 +97,8 @@ export function NotificationBell({ unread }: { unread: number }) {
       <button
         type="button"
         onClick={otevri}
-        title="Oznámení"
-        aria-label={pocet > 0 ? `Oznámení: ${pocet} nepřečtených` : 'Oznámení'}
+        title={t('oznameni.nadpis')}
+        aria-label={pocet > 0 ? t('oznameni.neprectene', { pocet }) : t('oznameni.nadpis')}
         className="relative flex items-center justify-center w-9 h-9 rounded-pill text-white/80 hover:text-white hover:bg-white/10 transition-colors"
       >
         <svg
@@ -125,9 +128,9 @@ export function NotificationBell({ unread }: { unread: number }) {
           }`}
           style={uzky ? { top: shora ?? 64 } : undefined}
         >
-          {items === null && <p className="text-sm font-body text-muted m-0 px-3 py-3">Načítám…</p>}
+          {items === null && <p className="text-sm font-body text-muted m-0 px-3 py-3">{t('obecne.nacitam')}</p>}
           {items !== null && items.length === 0 && (
-            <p className="text-sm font-body text-muted m-0 px-3 py-3">Zatím tu nic není.</p>
+            <p className="text-sm font-body text-muted m-0 px-3 py-3">{t('obecne.nicTuNeni')}</p>
           )}
           {items?.map((n) => {
             const obsah = (
@@ -138,7 +141,7 @@ export function NotificationBell({ unread }: { unread: number }) {
                   <span className="block text-xs font-body text-muted mt-0.5 break-words">{n.body}</span>
                 )}
                 <span className="block text-[11px] font-body text-muted mt-1 tabular-nums">
-                  {formatDateTime(n.createdAt)}
+                  {formatDateTime(n.createdAt, 'Europe/Prague', jazyk)}
                 </span>
               </>
             );

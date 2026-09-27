@@ -380,7 +380,7 @@ export function ProjectsTable({
                 </td>
                 {showProgres && (
                   <td className="px-4 py-2 align-middle">
-                    <ValecProgresu progres={progres?.[String(p.id)] ?? null} prazdne="—" kompaktni />
+                    <ValecProgresu progres={progres?.[String(p.id)] ?? null} prazdne="—" kompaktni jazyk={jazyk} />
                   </td>
                 )}
                 {normostrany && (
@@ -742,6 +742,9 @@ function bunkaSloupce(
   key: string,
   muzeMenit: boolean,
   manazeri: { id: string; label: string }[],
+  // Tabulka pro administraci - ta zatím jazyk nemá (layout v (admin) není
+  // obalený JazykProviderem, patří to do dávky 5), takže výchozí čeština.
+  jazyk: Jazyk = 'cs',
 ) {
   const id = String(p.id);
   switch (key) {
@@ -794,7 +797,7 @@ function bunkaSloupce(
                 id={String(p.id)}
                 popis="Klik ukáže náhled přeposlechu"
               >
-                <OdznakPreposlechu stav={p.meta?.preposlech} />
+                <OdznakPreposlechu stav={p.meta?.preposlech} jazyk={jazyk} />
               </NahledIkony>
             ) : null}
             {(p.meta?.licence ?? []).length > 0 && (

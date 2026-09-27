@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Tabulka, která se řadí kliknutím na název sloupce (zadání 9. 9. 2026:
@@ -16,6 +17,10 @@ import { DatumPole } from '@/components/DatumPole';
  * Stránky, které data načítají (server), zůstávají serverové - předají sem
  * jen hotové řádky. Definice sloupců i vykreslení buněk žijí tady, v klientu,
  * takže se smí použít i funkce a odkazy.
+ *
+ * JAZYK CHODÍ PROPEM, ne hookem (pravidlo 8 v docs/preklad-portalu.md):
+ * tabulku používá i administrace, která nestojí pod JazykProviderem. Kdo jazyk
+ * nepředá, dostane češtinu.
  */
 
 export type SmerRazeni = 'asc' | 'desc';
@@ -130,10 +135,11 @@ export function RaditelnaTabulka<T>({
   minSirka = 760,
   tridaRadku,
   hledat,
-  hledatPlaceholder = 'Hledat…',
+  hledatPlaceholder,
   filtry,
   rozsahDatumu,
   hromadneAkce,
+  jazyk = 'cs',
 }: {
   radky: T[];
   sloupce: SloupecTabulky<T>[];
@@ -155,6 +161,7 @@ export function RaditelnaTabulka<T>({
    * by „vybrat vše" sáhlo i na to, co má člověk odfiltrované pryč.
    */
   hromadneAkce?: (viditelne: T[]) => ReactNode;
+  jazyk?: Jazyk;
 }) {
   const [razeni, setRazeni] = useState<{ key: string; smer: SmerRazeni } | null>(
     vychoziSloupec ? { key: vychoziSloupec, smer: vychoziSmer } : null,
@@ -242,14 +249,14 @@ export function RaditelnaTabulka<T>({
               <input
                 value={dotaz}
                 onChange={(e) => setDotaz(e.target.value)}
-                placeholder={hledatPlaceholder}
+                placeholder={hledatPlaceholder ?? prelozit(jazyk, 'tabulka.hledat')}
                 className="bg-transparent outline-none border-0 py-2 w-full text-ink font-heading text-sm"
               />
               {dotaz && (
                 <button
                   type="button"
                   onClick={() => setDotaz('')}
-                  title="Vymazat hledání"
+                  title={prelozit(jazyk, 'tabulka.vymazatHledani')}
                   className="text-muted hover:text-ink text-sm leading-none px-1"
                 >
                   ×
@@ -267,7 +274,9 @@ export function RaditelnaTabulka<T>({
                 filtryOtevrene || aktivnichFiltru > 0 ? 'border-brand-purple text-brand-purple' : 'border-line text-muted'
               }`}
             >
-              Filtry{aktivnichFiltru > 0 ? ` (${aktivnichFiltru})` : ''}
+              {aktivnichFiltru > 0
+                ? prelozitS(jazyk, 'tabulka.filtryPocet', { pocet: aktivnichFiltru })
+                : prelozit(jazyk, 'tabulka.filtry')}
             </button>
           )}
 
@@ -279,7 +288,7 @@ export function RaditelnaTabulka<T>({
               onChange={(e) => setVolby((s) => ({ ...s, [filtr.key]: e.target.value }))}
               className={`${poleTridy} min-w-[170px]`}
             >
-              <option value="">{filtr.label}: vše</option>
+              <option value="">{prelozitS(jazyk, 'tabulka.filtrVse', { sloupec: filtr.label })}</option>
               {filtr.moznosti.map((m) => (
                 <option key={m.hodnota} value={m.hodnota}>
                   {m.popisek}
@@ -290,9 +299,11 @@ export function RaditelnaTabulka<T>({
 
           {rozsahDatumu && (
             <span className="flex items-center gap-1.5">
-              <span className="text-xs font-body text-muted whitespace-nowrap">{rozsahDatumu.label} od</span>
+              <span className="text-xs font-body text-muted whitespace-nowrap">
+                {prelozitS(jazyk, 'tabulka.rozsahOd', { co: rozsahDatumu.label })}
+              </span>
               <DatumPole value={od} onChange={(e) => setOd(e.target.value)} className={poleTridy} />
-              <span className="text-xs font-body text-muted">do</span>
+              <span className="text-xs font-body text-muted">{prelozit(jazyk, 'tabulka.rozsahDo')}</span>
               <DatumPole value={doKdy} onChange={(e) => setDoKdy(e.target.value)} className={poleTridy} />
             </span>
           )}
@@ -301,7 +312,7 @@ export function RaditelnaTabulka<T>({
           {neco && (
             <>
               <span className="text-xs font-body text-muted tabular-nums">
-                {serazene.length} z {radky.length}
+                {prelozitS(jazyk, 'tabulka.pocetZ', { zobrazeno: serazene.length, celkem: radky.length })}
               </span>
               <button
                 type="button"
@@ -313,7 +324,7 @@ export function RaditelnaTabulka<T>({
                 }}
                 className="text-sm font-heading text-brand-purple hover:underline"
               >
-                Zrušit filtry
+                {prelozit(jazyk, 'tabulka.zrusitFiltry')}
               </button>
             </>
           )}
@@ -348,7 +359,7 @@ export function RaditelnaTabulka<T>({
                     <button
                       type="button"
                       onClick={() => prepni(sloupec.key)}
-                      title={`Seřadit podle: ${sloupec.label}`}
+                      title={prelozitS(jazyk, 'tabulka.seraditPodle', { sloupec: sloupec.label })}
                       className={`font-heading text-xs hover:text-brand-purpleLight transition-colors ${
                         aktivni ? 'text-brand-purpleLight' : 'text-white'
                       }`}
@@ -443,6 +454,7 @@ export function ThRadit({
   trida = '',
   title,
   naFialovem = false,
+  jazyk = 'cs',
 }: {
   label: string;
   sloupec: string;
@@ -457,6 +469,8 @@ export function ThRadit({
    * (výchozí stav) se zvýrazňuje světle fialovou.
    */
   naFialovem?: boolean;
+  /** Jazyk propem, ne hookem - viz poznámka u RaditelnaTabulka. */
+  jazyk?: Jazyk;
 }) {
   const aktivni = razeni?.key === sloupec;
   // Třídy se schválně skládají z celých názvů, ne z kousků - Tailwind hledá
@@ -473,7 +487,7 @@ export function ThRadit({
       <button
         type="button"
         onClick={() => prepni(sloupec)}
-        title={`Seřadit podle: ${label}`}
+        title={prelozitS(jazyk, 'tabulka.seraditPodle', { sloupec: label })}
         className={`font-heading text-xs transition-colors ${barvy}`}
       >
         {label}

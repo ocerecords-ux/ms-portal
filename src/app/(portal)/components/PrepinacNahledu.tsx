@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { NAHLED_COOKIE, NAHLED_POHLEDY, pohledNahledu, type NahledVolba } from '@/lib/nahledRole';
+import { prelozitKolem } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from './JazykProvider';
 
 /**
  * PRUH NÁHLEDOVÉHO ÚČTU (zadání 18. 9. 2026: „profil pro uživatele, který
@@ -23,6 +25,8 @@ import { NAHLED_COOKIE, NAHLED_POHLEDY, pohledNahledu, type NahledVolba } from '
  * obrazovce, kam ho ta nová role nepustí.
  */
 export function PrepinacNahledu({ volba }: { volba: NahledVolba }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [prepinam, setPrepinam] = useState<NahledVolba | null>(null);
 
@@ -39,16 +43,20 @@ export function PrepinacNahledu({ volba }: { volba: NahledVolba }) {
   }
 
   const aktualni = pohledNahledu(volba);
+  // Celá věta je jeden klíč, jen se v ní tuční role (pravidlo 7).
+  const [predRoli, zaRoli] = prelozitKolem(jazyk, 'nahled.prohlizite', 'role');
 
   return (
     <div className="px-4 sm:px-6 py-2 bg-warnTint border-b border-line flex items-center gap-x-3 gap-y-1.5 flex-wrap">
       <span className="font-heading font-bold text-[11px] uppercase tracking-wider text-status-progress shrink-0">
-        Náhled
+        {t('nahled.stitek')}
       </span>
       <span className="text-xs font-body text-muted min-w-0">
-        Prohlížíte portál jako <strong className="text-ink font-semibold">{aktualni.popisek}</strong>{' '}
-        <span className="hidden sm:inline">— {aktualni.vysvetleni}.</span> Nic se z tohohle účtu
-        neuloží.
+        {predRoli}
+        <strong className="text-ink font-semibold">{aktualni.popisek}</strong>
+        {zaRoli}{' '}
+        <span className="hidden sm:inline">— {aktualni.vysvetleni}.</span>{' '}
+        {t('nahled.nicSeNeulozi')}
       </span>
       <div className="flex items-center gap-1.5 ml-auto shrink-0">
         {NAHLED_POHLEDY.map((p) => {
@@ -67,7 +75,7 @@ export function PrepinacNahledu({ volba }: { volba: NahledVolba }) {
                   : 'bg-surface border border-line text-ink hover:border-brand-purple'
               }`}
             >
-              {prepinam === p.volba ? 'Přepínám…' : p.popisek}
+              {prepinam === p.volba ? t('nahled.prepinam') : p.popisek}
             </button>
           );
         })}

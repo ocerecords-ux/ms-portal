@@ -4383,6 +4383,7 @@ function RadekUkolu({
   onUpravit?: () => void;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const poTerminu = !ukol.done && jePoTerminu(ukol.dueDate, ukol.dueTime ?? null);
   return (
     <label className="group flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-field cursor-pointer">
@@ -4398,7 +4399,7 @@ function RadekUkolu({
         </span>
         {(ukol.dueDate || ukol.zadalJmeno) && (
           <span className={`block text-[11px] font-body ${poTerminu ? 'text-status-danger' : 'text-muted'}`}>
-            {ukol.dueDate && popisTerminu(ukol.dueDate, ukol.dueTime ?? null)}
+            {ukol.dueDate && popisTerminu(ukol.dueDate, ukol.dueTime ?? null, jazyk)}
             {ukol.dueDate && ukol.zadalJmeno ? ' · ' : ''}
             {ukol.zadalJmeno && t('chat.odZadal', { jmeno: ukol.zadalJmeno })}
           </span>

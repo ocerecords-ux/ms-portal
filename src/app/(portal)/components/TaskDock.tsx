@@ -9,7 +9,7 @@ import { DatumPole } from '@/components/DatumPole';
 import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
 import { UpravaMehoUkolu } from './UpravaMehoUkolu';
 import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
-import { usePreklad } from './JazykProvider';
+import { useJazyk, usePreklad } from './JazykProvider';
 
 /**
  * Úkoly pořád po ruce (zadani 8. 9. 2026: "aby byl ten to do list pořád po
@@ -64,6 +64,7 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
 
 export function TaskDock({ tasks }: { tasks: Task[] }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [dok, otevriDok] = usePravyDok();
   const pocty = usePoctyDoku();
@@ -263,7 +264,7 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
                 return (
                   <span className={`block text-xs font-heading mt-0.5 ${po ? 'text-danger' : 'text-muted'}`}>
                     {t(po ? 'ukoly.poTerminuTermin' : 'ukoly.doTerminu', {
-                      termin: popisTerminu(task.dueDate, task.dueTime ?? null),
+                      termin: popisTerminu(task.dueDate, task.dueTime ?? null, jazyk),
                     })}
                   </span>
                 );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePreklad } from './JazykProvider';
 
 /**
  * Výběr projektu psaním (zadání 11. 9. 2026: „myslel jsem, že by šlo hledat
@@ -57,9 +58,9 @@ export function VyberProjektu({
   hodnota,
   onZmena,
   disabled,
-  placeholder = 'Začněte psát název projektu, firmu nebo číslo…',
-  prazdnyText = 'Nic takového jsme nenašli. Zkuste jen část názvu nebo jméno firmy.',
-  popisZruseni = 'Zrušit výběr projektu',
+  placeholder,
+  prazdnyText,
+  popisZruseni,
 }: {
   projekty: ProjektKVyberu[];
   /** ID vybraného projektu, nebo prázdno. */
@@ -76,6 +77,12 @@ export function VyberProjektu({
   prazdnyText?: string;
   popisZruseni?: string;
 }) {
+  const t = usePreklad();
+  // Vychozi texty jsou ve slovniku, ne v hodnotach parametru - volajici je
+  // porad muze prepsat (vyber herce, zvukare).
+  const vyzva = placeholder ?? t('vyberProjektu.placeholder');
+  const nicNenalezeno = prazdnyText ?? t('vyberProjektu.prazdno');
+  const popisZruseniText = popisZruseni ?? t('vyberProjektu.zrusitVyber');
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
   const [zvyrazneny, setZvyrazneny] = useState(0);
@@ -150,7 +157,7 @@ export function VyberProjektu({
         aria-autocomplete="list"
         disabled={disabled}
         value={otevreno ? hledani : (vybrany?.label ?? '')}
-        placeholder={vybrany ? vybrany.label : placeholder}
+        placeholder={vybrany ? vybrany.label : vyzva}
         onFocus={() => {
           if (praveVybrano.current) return;
           setHledani('');
@@ -204,8 +211,8 @@ export function VyberProjektu({
         <button
           type="button"
           onClick={() => onZmena('')}
-          title="Zrušit výběr"
-          aria-label={popisZruseni}
+          title={t('vyberProjektu.zrusitKratce')}
+          aria-label={popisZruseniText}
           className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 grid place-items-center rounded-full text-muted hover:text-danger hover:bg-surface"
         >
           ×
@@ -215,7 +222,7 @@ export function VyberProjektu({
       {otevreno && (
         <div className="absolute z-30 left-0 right-0 mt-1 max-h-[280px] overflow-y-auto rounded-lg border border-line bg-surface shadow-lg">
           {viditelne.length === 0 ? (
-            <p className="text-sm font-body text-muted m-0 px-3 py-3">{prazdnyText}</p>
+            <p className="text-sm font-body text-muted m-0 px-3 py-3">{nicNenalezeno}</p>
           ) : (
             <ul className="list-none m-0 p-1 flex flex-col">
               {viditelne.map((p, i) => (
@@ -235,7 +242,7 @@ export function VyberProjektu({
                     <span className="flex-1 min-w-0 truncate">{p.label}</span>
                     {p.dokonceny && (
                       <span className="shrink-0 text-[10px] font-heading font-semibold uppercase tracking-wide text-muted bg-field border border-line rounded-pill px-1.5 py-0.5">
-                        dokončeno
+                        {t('vyberProjektu.dokonceno')}
                       </span>
                     )}
                   </button>
@@ -245,7 +252,10 @@ export function VyberProjektu({
           )}
           {nalezene.length > viditelne.length && (
             <p className="text-[11px] font-body text-muted m-0 px-3 py-2 border-t border-line">
-              Zobrazeno prvních {viditelne.length} z {nalezene.length} — pište dál a seznam se zúží.
+              {t('vyberProjektu.zobrazenoPrvnich', {
+                pocet: viditelne.length,
+                celkem: nalezene.length,
+              })}
             </p>
           )}
         </div>

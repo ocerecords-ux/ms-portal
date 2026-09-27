@@ -112,7 +112,7 @@ export default async function MojeTerminyPage() {
       {sPotvrzenym && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
           <p className="text-sm font-body text-ink m-0">{prelozit(jazyk, 'mojeTerminy.pridatDoKalendare')}</p>
-          <PridatDoKalendare url={`${baseUrl}/api/terminy/${sPotvrzenym.accessToken}/kalendar`} />
+          <PridatDoKalendare url={`${baseUrl}/api/terminy/${sPotvrzenym.accessToken}/kalendar`} jazyk={jazyk} />
         </div>
       )}
 

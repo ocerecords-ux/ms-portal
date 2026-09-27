@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePreklad } from './JazykProvider';
 
 /**
  * Odkaz jako tlačítko, vedle něj zkopírování adresy (zadání 10. 9. 2026:
@@ -33,6 +34,7 @@ export function OdkazTlacitko({
    */
   varianta?: 'hlavni' | 'vedlejsi' | 'ikona' | 'radek';
 }) {
+  const t = usePreklad();
   const [zkopirovano, setZkopirovano] = useState(false);
 
   // Potvrzení "Zkopírováno" po chvíli zmizí samo. Bez úklidu časovače by
@@ -69,7 +71,7 @@ export function OdkazTlacitko({
     } catch {
       // Prohlížeč bez schránky (starší, nebo bez https) - ať to aspoň
       // neselže tiše a člověk si adresu označí sám.
-      window.prompt('Zkopírujte odkaz:', url as string);
+      window.prompt(t('obecne.zkopirujteOdkaz'), url as string);
     }
   }
 
@@ -99,8 +101,8 @@ export function OdkazTlacitko({
       <button
         type="button"
         onClick={() => void zkopiruj()}
-        title={zkopirovano ? 'Zkopírováno' : 'Zkopírovat odkaz'}
-        aria-label={zkopirovano ? 'Zkopírováno' : 'Zkopírovat odkaz'}
+        title={zkopirovano ? t('obecne.zkopirovano') : t('obecne.kopirovatOdkaz')}
+        aria-label={zkopirovano ? t('obecne.zkopirovano') : t('obecne.kopirovatOdkaz')}
         className="inline-flex items-center justify-center shrink-0 w-9 h-9 rounded-lg border border-line text-muted hover:text-ink transition-colors"
       >
         {zkopirovano ? (

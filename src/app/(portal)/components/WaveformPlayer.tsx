@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePreklad } from './JazykProvider';
 
 /**
  * Přehrávač s waveformou (zadani 5. 9. 2026: "chtělo by to spíše graficky
@@ -44,6 +45,7 @@ function PauseIcon() {
 }
 
 export function WaveformPlayer({ src, autoPlay }: { src: string; autoPlay?: boolean }) {
+  const t = usePreklad();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [waveformFailed, setWaveformFailed] = useState(false);
@@ -159,8 +161,8 @@ export function WaveformPlayer({ src, autoPlay }: { src: string; autoPlay?: bool
       <button
         type="button"
         onClick={toggle}
-        title={playing ? 'Pozastavit' : 'Přehrát'}
-        aria-label={playing ? 'Pozastavit' : 'Přehrát'}
+        title={playing ? t('prehravac.pozastavit') : t('prehravac.prehrat')}
+        aria-label={playing ? t('prehravac.pozastavit') : t('prehravac.prehrat')}
         className="inline-flex items-center justify-center w-9 h-9 shrink-0 rounded-full bg-brand-green text-onAccent hover:brightness-95 transition-[filter]"
       >
         {playing ? <PauseIcon /> : <PlayIcon />}
@@ -184,7 +186,7 @@ export function WaveformPlayer({ src, autoPlay }: { src: string; autoPlay?: bool
             <div ref={containerRef} className="w-full" />
             {loading && (
               <span className="absolute inset-0 flex items-center justify-center text-xs text-muted font-body">
-                Načítám průběh nahrávky…
+                {t('prehravac.nacitamPrubeh')}
               </span>
             )}
           </div>

@@ -142,7 +142,7 @@ function TabulkaHerce({
               <tr key={r.id} className="h-[56px] border-t border-line hover:bg-surfaceSoft">
                 <td className="px-4 py-2 font-heading font-semibold text-sm text-ink">{r.nazev}</td>
                 <td className="px-4 py-2">
-                  <ValecProgresu progres={r.progres} />
+                  <ValecProgresu progres={r.progres} jazyk={jazyk} />
                 </td>
                 <td className="px-4 py-2 text-right text-sm font-body text-ink tabular-nums">{r.ns ?? '–'}</td>
                 <td className="px-4 py-2 text-sm font-body">

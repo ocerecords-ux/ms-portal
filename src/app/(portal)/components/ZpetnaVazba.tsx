@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { MAX_DELKA_TEXTU, MAX_PRILOH, type PodobnaPripominka } from '@/lib/pripominky';
+import { usePreklad } from './JazykProvider';
 
 /** Co z připomínky ukazuje panel v liště. */
 type PripominkaVPanelu = {
@@ -53,6 +54,7 @@ export function ZpetnaVazba({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const t = usePreklad();
   const [otevreno, setOtevreno] = useState(false);
   const [text, setText] = useState('');
   const [obrazky, setObrazky] = useState<{ soubor: File; nahled: string }[]>([]);
@@ -135,7 +137,7 @@ export function ZpetnaVazba({
 
   async function odesli() {
     if (!text.trim()) {
-      setChyba('Napište prosím, co se má opravit.');
+      setChyba(t('zpetnaVazba.napisteCo'));
       return;
     }
     setOdesila(true);
@@ -150,7 +152,7 @@ export function ZpetnaVazba({
       const res = await fetch('/api/pripominky', { method: 'POST', body: data });
       const odpoved = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(odpoved?.error || 'Připomínku se nepodařilo uložit.');
+        setChyba(odpoved?.error || t('zpetnaVazba.chybaUlozeni'));
         return;
       }
       setHotovo(true);
@@ -160,7 +162,7 @@ export function ZpetnaVazba({
       setPripojitK(null);
       setTimeout(zavri, 1800);
     } catch {
-      setChyba('Připomínku se nepodařilo uložit.');
+      setChyba(t('zpetnaVazba.chybaUlozeni'));
     } finally {
       setOdesila(false);
     }
@@ -172,8 +174,8 @@ export function ZpetnaVazba({
         ref={tlacitkoRef}
         type="button"
         onClick={() => (otevreno ? zavri() : setOtevreno(true))}
-        title="Připomínka k portálu"
-        aria-label="Připomínka k portálu"
+        title={t('zpetnaVazba.nadpis')}
+        aria-label={t('zpetnaVazba.nadpis')}
         className="relative w-9 h-9 rounded-full grid place-items-center text-brand-green hover:bg-white/15 transition-colors"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" aria-hidden="true">
@@ -197,15 +199,15 @@ export function ZpetnaVazba({
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-heading font-semibold text-sm text-ink m-0">
-                {spravce && !pise ? 'Připomínky k portálu' : 'Připomínka k portálu'}
+                {spravce && !pise ? t('zpetnaVazba.nadpisSeznam') : t('zpetnaVazba.nadpis')}
               </h3>
               <p className="text-xs font-body text-muted m-0 mt-0.5">
                 {spravce && !pise
-                  ? 'Co lidem v portálu vadí. Odškrtnutá položka jim zmizí.'
-                  : `Co nefunguje, co chybí, co by šlo líp. Jde to rovnou ${interni ? 'Ondřejovi' : 'nám'}.`}
+                  ? t('zpetnaVazba.popisSeznam')
+                  : t(interni ? 'zpetnaVazba.popisOndrejovi' : 'zpetnaVazba.popisNam')}
               </p>
             </div>
-            <button type="button" onClick={zavri} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
+            <button type="button" onClick={zavri} aria-label={t('obecne.zavrit')} className="text-muted hover:text-ink text-lg leading-none">
               ×
             </button>
           </div>
@@ -214,10 +216,10 @@ export function ZpetnaVazba({
             <>
               <div className="max-h-[50vh] overflow-y-auto flex flex-col gap-2 -mx-1 px-1">
                 {seznam === null ? (
-                  <p className="text-sm font-body text-muted m-0 py-2">Načítám…</p>
+                  <p className="text-sm font-body text-muted m-0 py-2">{t('obecne.nacitam')}</p>
                 ) : seznam.length === 0 ? (
                   <p className="text-sm font-body text-muted m-0 py-2">
-                    Nic nečeká. Lidem se portál zatím líbí.
+                    {t('zpetnaVazba.nicNeceka')}
                   </p>
                 ) : (
                   seznam.map((p) => (
@@ -232,7 +234,7 @@ export function ZpetnaVazba({
                         checked={false}
                         onChange={() => odskrtni(p.id)}
                         disabled={pracuje === p.id}
-                        title="Odškrtnout"
+                        title={t('zpetnaVazba.odskrtnout')}
                         className="mt-0.5 w-4 h-4 shrink-0 accent-brand-green cursor-pointer"
                       />
                       <div className="min-w-0 flex-1">
@@ -241,7 +243,9 @@ export function ZpetnaVazba({
                           <span>{p.autor}</span>
                           {p.odkud && <span>{p.odkud}</span>}
                           {p.pridalSe > 0 && (
-                            <span className="text-brand-purpleDark">+{p.pridalSe} hlásí totéž</span>
+                            <span className="text-brand-purpleDark">
+                              {t('zpetnaVazba.hlasiToteze', { pocet: p.pridalSe })}
+                            </span>
                           )}
                         </p>
                         {p.prilohy.length > 0 && (
@@ -268,16 +272,16 @@ export function ZpetnaVazba({
                   onClick={() => setPise(true)}
                   className="text-xs font-heading text-brand-purpleDark hover:underline"
                 >
-                  + Napsat připomínku
+                  {t('zpetnaVazba.napsat')}
                 </button>
                 <a href="/muj-ucet" className="text-xs font-heading text-muted hover:text-ink">
-                  Celý seznam v Mém účtu
+                  {t('zpetnaVazba.celySeznam')}
                 </a>
               </div>
             </>
           ) : hotovo ? (
             <p className="text-sm font-body text-status-done bg-okTint border border-line rounded-lg px-3 py-3 m-0">
-              Díky! Připomínka je v seznamu.
+              {t('zpetnaVazba.diky')}
             </p>
           ) : (
             <>
@@ -294,13 +298,13 @@ export function ZpetnaVazba({
                   }
                 }}
                 rows={4}
-                placeholder={'Např. „Ve výkazech nejde vybrat projekt, když má dlouhý název.“ Printscreen můžete vložit rovnou přes Ctrl+V.'}
+                placeholder={t('zpetnaVazba.placeholder')}
                 className="w-full rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
               />
 
               {podobne.length > 0 && (
                 <div className="rounded-lg border border-line bg-tint px-3 py-2.5 flex flex-col gap-2">
-                  <p className="text-xs font-heading font-semibold text-ink m-0">Tohle už někdo hlásil:</p>
+                  <p className="text-xs font-heading font-semibold text-ink m-0">{t('zpetnaVazba.jizHlaseno')}</p>
                   {podobne.map((p) => (
                     <label key={p.id} className="flex items-start gap-2 text-xs font-body text-ink">
                       <input
@@ -312,7 +316,7 @@ export function ZpetnaVazba({
                       <span>
                         <span className="block">„{p.text.length > 120 ? `${p.text.slice(0, 120)}…` : p.text}"</span>
                         <span className="text-muted">
-                          {p.autor} · shoda {Math.round(p.shoda * 100)} % — zaškrtnutím se připojíte k téhle
+                          {t('zpetnaVazba.shoda', { autor: p.autor, shoda: Math.round(p.shoda * 100) })}
                         </span>
                       </span>
                     </label>
@@ -329,7 +333,7 @@ export function ZpetnaVazba({
                       <button
                         type="button"
                         onClick={() => setObrazky((s) => s.filter((_, j) => j !== i))}
-                        aria-label="Odebrat obrázek"
+                        aria-label={t('zpetnaVazba.odebratObrazek')}
                         className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-surface border border-line text-xs leading-none text-muted hover:text-danger"
                       >
                         ×
@@ -348,7 +352,7 @@ export function ZpetnaVazba({
                   disabled={obrazky.length >= MAX_PRILOH}
                   className="text-xs font-heading text-brand-purpleDark hover:underline disabled:opacity-50 disabled:no-underline"
                 >
-                  + Printscreen
+                  {t('zpetnaVazba.printscreen')}
                 </button>
                 <input
                   ref={souborRef}
@@ -367,7 +371,11 @@ export function ZpetnaVazba({
                   disabled={odesila || !text.trim()}
                   className="bg-brand-green text-onAccent font-heading font-semibold text-xs rounded-pill px-4 py-2 disabled:opacity-60"
                 >
-                  {odesila ? 'Odesílám…' : pripojitK ? 'Připojit se' : 'Odeslat'}
+                  {odesila
+                    ? t('zpetnaVazba.odesilam')
+                    : pripojitK
+                      ? t('zpetnaVazba.pripojitSe')
+                      : t('zpetnaVazba.odeslat')}
                 </button>
               </div>
             </>

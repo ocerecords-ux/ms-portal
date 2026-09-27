@@ -88,7 +88,7 @@ export function ZadaneUkoly({ ukoly, onZmena }: { ukoly: ZadanyUkolVSeznamu[]; o
                 {' · '}
                 {u.dueDate
                   ? t(poTerminu ? 'ukoly.zadane.poTerminuDo' : 'ukoly.zadane.doTerminu', {
-                      termin: popisTerminu(u.dueDate, u.dueTime),
+                      termin: popisTerminu(u.dueDate, u.dueTime, jazyk),
                     })
                   : t('ukoly.zadane.ceka')}
               </span>

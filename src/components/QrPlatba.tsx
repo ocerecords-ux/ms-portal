@@ -1,4 +1,5 @@
 import { formatMoney } from '@/lib/doklady';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 import { ibanZTuzemskehoUctu, jeIbanPlatny, qrModuly, spdRetezec } from '@/lib/pdf/qrPlatba';
 import type { Currency } from '@prisma/client';
 
@@ -22,6 +23,8 @@ export function QrPlatba({
   zprava,
   splatnost,
   prijemce,
+  // Doklad se vykresluje na serveru - jazyk chodí propem (pravidlo 8).
+  jazyk = 'cs',
 }: {
   ucet: string | null | undefined;
   castkaMinor: number;
@@ -30,6 +33,7 @@ export function QrPlatba({
   zprava?: string | null;
   splatnost?: Date | null;
   prijemce?: string | null;
+  jazyk?: Jazyk;
 }) {
   const ocisteny = (ucet ?? '').trim();
   if (!ocisteny || castkaMinor <= 0) return null;
@@ -58,7 +62,7 @@ export function QrPlatba({
       <svg
         viewBox={`0 0 ${strana} ${strana}`}
         role="img"
-        aria-label="QR kód pro platbu"
+        aria-label={prelozit(jazyk, 'qr.kodProPlatbu')}
         className="w-[150px] h-[150px] shrink-0 rounded-lg bg-white p-1"
       >
         {body.map((plny, i) =>
@@ -76,14 +80,14 @@ export function QrPlatba({
       </svg>
 
       <div className="flex flex-col gap-1 min-w-[180px]">
-        <span className="text-xs font-heading text-muted uppercase tracking-wide">QR platba</span>
+        <span className="text-xs font-heading text-muted uppercase tracking-wide">{prelozit(jazyk, 'qr.platba')}</span>
         <span className="font-display text-xl text-ink tabular-nums">{formatMoney(castkaMinor, mena)}</span>
         {prijemce && <span className="text-sm font-heading text-ink">{prijemce}</span>}
         <span className="text-xs font-body text-muted tabular-nums break-all">{ocisteny}</span>
         {variabilniSymbol && (
           <span className="text-xs font-body text-muted tabular-nums">VS {variabilniSymbol}</span>
         )}
-        <span className="text-xs font-body text-muted">Naskenujte v bankovní aplikaci.</span>
+        <span className="text-xs font-body text-muted">{prelozit(jazyk, 'qr.naskenujte')}</span>
       </div>
     </div>
   );

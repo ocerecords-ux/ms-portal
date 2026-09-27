@@ -12,18 +12,24 @@
  * Kreslí se glóbus, ne třeba šipka do systému: objednávka přišla z webu a
  * tahle kresba je pro web v celém portálu zavedená (viz licence Online).
  */
+import { formatDatum, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+
+// Značka stojí u názvu projektu v seznamech, které se vykreslují na serveru -
+// jazyk chodí propem (pravidlo 8 v docs/preklad-portalu.md).
 export function ZnackaZWebu({
   objednanoAt,
   velikost = 16,
+  jazyk = 'cs',
 }: {
   /** Kdy objednávka dorazila - do bublinové nápovědy. */
   objednanoAt?: string | Date | null;
   velikost?: number;
+  jazyk?: Jazyk;
 }) {
   const kdy = objednanoAt ? new Date(objednanoAt) : null;
   const popis = kdy
-    ? `Projekt vznikl z objednávky na webu (${new Intl.DateTimeFormat('cs-CZ').format(kdy)})`
-    : 'Projekt vznikl z objednávky na webu';
+    ? prelozitS(jazyk, 'zWebu.popisKdy', { datum: formatDatum(jazyk, kdy) })
+    : prelozit(jazyk, 'zWebu.popis');
 
   return (
     <span

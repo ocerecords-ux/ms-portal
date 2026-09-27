@@ -8,6 +8,8 @@ import {
   popisStatusu,
   type StatusVChatu,
 } from '@/lib/statusyChatu';
+import { prelozitKolem } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from './JazykProvider';
 
 /**
  * MŮJ STATUS V CHATU (zadání 25. 9. 2026: „a zbytku pak jen nějakou možnost
@@ -34,6 +36,8 @@ function doKdyZKlice(klic: string): string | null {
 }
 
 export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; onZmena: () => void }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [otevreno, setOtevreno] = useState(false);
   const [text, setText] = useState(status?.rucni ? status.text : '');
   const [emoji, setEmoji] = useState(status?.rucni ? (status.emoji ?? '') : '');
@@ -56,13 +60,13 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setChyba(data?.error || 'Status se nepodařilo uložit.');
+        setChyba(data?.error || t('status.chybaUlozeni'));
         return;
       }
       setOtevreno(false);
       onZmena();
     } catch {
-      setChyba('Status se nepodařilo uložit.');
+      setChyba(t('status.chybaUlozeni'));
     } finally {
       setBusy(false);
     }
@@ -74,7 +78,7 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
     try {
       const res = await fetch('/api/status', { method: 'DELETE' });
       if (!res.ok) {
-        setChyba('Status se nepodařilo zrušit.');
+        setChyba(t('status.chybaZruseni'));
         return;
       }
       setText('');
@@ -82,7 +86,7 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
       setOtevreno(false);
       onZmena();
     } catch {
-      setChyba('Status se nepodařilo zrušit.');
+      setChyba(t('status.chybaZruseni'));
     } finally {
       setBusy(false);
     }
@@ -93,29 +97,36 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
       <button
         type="button"
         onClick={() => setOtevreno(true)}
-        title="Nastavit status"
+        title={t('status.nastavit')}
         className="w-full text-left rounded-lg border border-line bg-field/60 hover:bg-field px-2.5 py-1.5 flex items-center gap-2"
       >
         <span className="text-base leading-none flex items-center">
           {status?.ikona ? <KresbaIkony klic={status.ikona} velikost={15} /> : (status?.emoji ?? '💬')}
         </span>
         <span className={`flex-1 min-w-0 truncate text-xs font-body ${status ? 'text-ink' : 'text-muted'}`}>
-          {status ? popisStatusu(status) : 'Nastavit status…'}
+          {status ? popisStatusu(status) : t('status.nastavitVyzva')}
         </span>
         {status && !status.rucni && (
           // Aby bylo jasné, proč to nejde jen tak smazat.
-          <span className="shrink-0 text-[10px] font-heading uppercase tracking-wide text-muted">z kalendáře</span>
+          <span className="shrink-0 text-[10px] font-heading uppercase tracking-wide text-muted">
+            {t('status.zKalendare')}
+          </span>
         )}
       </button>
     );
   }
 
+  // Cela veta je jeden klic, jen se v ni tucni status z kalendare (pravidlo 7
+  // v docs/preklad-portalu.md) - v anglictine stoji jinde nez v cestine.
+  const [predStatusem, zaStatusem] = prelozitKolem(jazyk, 'status.zKalendarePopis', 'status');
+
   return (
     <div className="rounded-lg border border-brand-purple/40 bg-tint/40 p-2 flex flex-col gap-2">
       {status && !status.rucni && (
         <p className="m-0 text-[11px] font-body text-muted">
-          Teď o vás svítí <b className="font-heading text-ink">{popisStatusu(status)}</b> z kalendáře. Vlastní status
-          ho přebije, dokud platí.
+          {predStatusem}
+          <b className="font-heading text-ink">{popisStatusu(status)}</b>
+          {zaStatusem}
         </p>
       )}
 
@@ -146,21 +157,21 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
             value={emoji}
             onChange={(e) => setEmoji(e.target.value)}
             placeholder="🙂"
-            aria-label="Emoji"
+            aria-label={t('status.emoji')}
             className={`${pole} w-12 text-center`}
           />
           <input
             autoFocus
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Co teď děláte?"
+            placeholder={t('status.coDelate')}
             maxLength={80}
-            aria-label="Status"
+            aria-label={t('status.stitek')}
             className={`${pole} flex-1 min-w-0`}
           />
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
-          <label className="text-[11px] font-heading text-muted">Platí</label>
+          <label className="text-[11px] font-heading text-muted">{t('status.plati')}</label>
           <select value={dokdy} onChange={(e) => setDokdy(e.target.value)} className={`${pole} flex-1 min-w-0`}>
             {DOKDY_NABIDKA.map((v) => (
               <option key={v.klic} value={v.klic}>
@@ -176,14 +187,14 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
             disabled={busy || !text.trim()}
             className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 disabled:opacity-50"
           >
-            Nastavit
+            {t('status.nastavitTlacitko')}
           </button>
           <button
             type="button"
             onClick={() => setOtevreno(false)}
             className="text-xs font-heading text-muted hover:text-ink px-1"
           >
-            Zpět
+            {t('obecne.zpet')}
           </button>
           <span className="flex-1" />
           {status?.rucni && (
@@ -193,7 +204,7 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
               onClick={() => void zrus()}
               className="text-xs font-heading font-semibold text-danger hover:underline px-1"
             >
-              Zrušit status
+              {t('status.zrusit')}
             </button>
           )}
         </div>

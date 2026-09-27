@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { KLIC_MOTIVU, type Motiv, systemovyMotiv, ulozMotiv, nactiMotiv } from '@/lib/motiv';
+import { prelozit } from '@/lib/jazyk';
+import { useJazyk } from './JazykProvider';
 
 /**
  * Přepínač světlého a tmavého režimu (zadání 9. 9. 2026: "dark mode celého
@@ -24,6 +26,7 @@ export function ThemeToggle({
 }: {
   anglicky?: boolean;
 } = {}) {
+  const jazyk = useJazyk();
   // Na serveru žádný motiv neznáme - a kdybychom hádali, blikla by po načtení
   // špatná ikona. Proto se ikona dokreslí až v prohlížeči.
   const [motiv, setMotiv] = useState<Motiv | null>(null);
@@ -55,13 +58,9 @@ export function ThemeToggle({
   }
 
   const tmavy = motiv === 'tmavy';
-  const popis = anglicky
-    ? tmavy
-      ? 'Switch to light mode'
-      : 'Switch to dark mode'
-    : tmavy
-      ? 'Přepnout na světlý režim'
-      : 'Přepnout na tmavý režim';
+  // V rezervacích studia je bublina vždycky anglicky (25. 9. 2026), jinde se
+  // řídí jazykem portálu.
+  const popis = prelozit(anglicky ? 'en' : jazyk, tmavy ? 'listou.rezimSvetly' : 'listou.rezimTmavy');
 
   return (
     <button

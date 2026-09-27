@@ -9,6 +9,8 @@
  * Bez Prismy a bez serveru - používá to i prohlížeč.
  */
 
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+
 export const CAS_UKOLU = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Teď v Praze jako „YYYY-MM-DDTHH:MM" - dá se porovnávat jako text. */
@@ -33,9 +35,13 @@ export function jePoTerminu(dueDate: string | null, dueTime: string | null, ted:
   return hranice < tedVPraze(ted);
 }
 
-/** „22. 9." nebo „22. 9. 14:30". */
-export function popisTerminu(dueDate: string, dueTime: string | null): string {
-  const den = new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(
+/**
+ * „22. 9." nebo „22. 9. 14:30"; anglicky „22/09" a „22/09 14:30" (britský
+ * formát, ne americký). Jazyk chodí parametrem - tohle běží i na serveru
+ * v oznámeních, kde se řídí jazykem příjemce, ne přepínačem v liště.
+ */
+export function popisTerminu(dueDate: string, dueTime: string | null, jazyk: Jazyk = 'cs'): string {
+  const den = new Intl.DateTimeFormat(kodJazyka(jazyk), { day: 'numeric', month: 'numeric' }).format(
     new Date(`${dueDate}T12:00:00`),
   );
   return dueTime ? `${den} ${dueTime}` : den;

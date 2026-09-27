@@ -71,11 +71,31 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 0 | 13. 9. | Mechanika: cookie, slovník, přepínač v liště i na přihlášení, názvy v liště | [x] |
 | 1 | 14. 9. | Klientská cesta I — `(portal)/projekty` (seznam i detail očima klienta), `(portal)/nahravky`, `app/preposlech` | [x] |
 | 2 | 15. 9. | Klientská cesta II — `objednavka`, `muj-ucet`, `moje-terminy`, veřejné stránky `nabidka`, `smlouva`, `terminy`, `nahravky`, chybové a načítací stránky | [x] |
-| 3 | 16. 9. | Společné komponenty — `(portal)/components` (chat, úkoly, rychlé volby, oznámení, doky) a `src/components` | [ ] |
+| 3 | 16. 9. | Společné komponenty — `(portal)/components` (chat, úkoly, rychlé volby, oznámení, doky) a `src/components` | [x] |
 | 4 | 17. 9. | Doklady — `(admin)/admin/doklady` (nabídky, faktury, výdaje, moje firmy) a číselníky v `src/lib` (stavy, měny, způsoby úhrady) | [ ] |
 | 5 | 18. 9. | Zbytek administrace — uživatelé, ceníky, studia, archiv, firmy, `(portal)/kalendar`, `(portal)/vykazy` | [ ] |
 | 6 | 19. 9. | E-maily a upozornění — `src/lib/email.ts` podle jazyka příjemce, push a oznámení | [ ] |
 | 7 | 20. 9. | Kontrolní průchod — proklikat portál v EN, dohledat zapomenuté české texty, sjednotit termíny podle slovníčku | [ ] |
+
+### Co dávka 3 nechala dalším dávkám
+
+Komponenty už překládají všechno své, ale některé texty do nich přitékají
+z `src/lib` a z administrace. Až se na ně dostane řada, je to tohle:
+
+- `src/lib/chat.ts` — `CHAT_TABS` / `CHAT_ZALOZKY` (`label`) a formátovače
+  `formatDayLabel` / `formatClock` / `formatFullTime` / `formatMessageTime`
+  mají `'cs-CZ'` natvrdo.
+- `src/lib/msSmajlici.ts` — `label` u smajlíků jde do `title` v nabídce.
+- `src/lib/statusyChatu.ts` — `popisStatusu()`, hotové statusy, `DOKDY_NABIDKA`.
+- `src/lib/nahledRole.ts` — `NAHLED_POHLEDY[].popisek` a `.vysvetleni`.
+- `src/lib/ukolyZChatu.ts` — `CHYBI_PRIJEMCE`.
+- `src/lib/quickActions.ts` — `label` rychlých voleb.
+- `src/lib/progresNataceni.ts` — `popis` („Dotočeno", „str. 3 z 12") a `stranText`.
+- `src/lib/projectTypes.ts` — `PRIORITY_LABELS` už `IkonaPriority` nepoužívá,
+  priority jsou ve slovníku jako `priorita.nizka/stredni/vysoka`.
+- **`(admin)/admin/layout.tsx` nemá `JazykProvider`** (jen Topbar). Dokud ho
+  nedostane, zůstane v administraci česky i `ChatDock` a `RaditelnaTabulka`
+  — obě mají prop `jazyk` nachystaný s výchozí češtinou. Patří to do dávky 5.
 
 ### Jak najít, co v dávce zbývá
 

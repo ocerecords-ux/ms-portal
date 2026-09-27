@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { KresbaIkony } from '@/lib/ikonyTypu';
 import { nactiPdfJs, nastavPdfWorker } from '@/lib/pdfJs';
 import { UDALOST_PREHLED_DNE } from '@/lib/quickActions';
+import { usePreklad } from './JazykProvider';
 
 /**
  * OKNO S PŘEHLEDEM DNE (zadání 23. 9. 2026: „ať se mi v portálu otevře
@@ -50,14 +51,20 @@ type Data = {
   vseZaSebou?: boolean;
 };
 
-/** Ikona a barva podle druhu - ikony jsou tytéž jako v kalendáři. */
+/**
+ * Ikona a barva podle druhu - ikony jsou tytéž jako v kalendáři.
+ *
+ * `popis` je KLÍČ do slovníku, ne hotová věta: okno se ukazuje i anglicky
+ * (viz docs/preklad-portalu.md), takže se název druhu překládá až při
+ * vykreslení.
+ */
 const PODLE_DRUHU: Record<Druh, { ikona: string; barva: string; popis: string }> = {
-  NATACENI: { ikona: 'mikrofon-studio', barva: '#7b55ff', popis: 'Natáčení' },
-  STRIH: { ikona: 'strih', barva: '#3B82F6', popis: 'Střih' },
-  CASTING: { ikona: 'casting', barva: '#EC4899', popis: 'Casting' },
-  PORADA: { ikona: 'lide', barva: '#F2CB35', popis: 'Porada' },
-  SCHUZKA: { ikona: 'hodiny', barva: '#14B8A6', popis: 'Schůzka' },
-  JINE: { ikona: 'stitek', barva: '#A49FC0', popis: 'Blokace' },
+  NATACENI: { ikona: 'mikrofon-studio', barva: '#7b55ff', popis: 'prehledDne.druh.NATACENI' },
+  STRIH: { ikona: 'strih', barva: '#3B82F6', popis: 'prehledDne.druh.STRIH' },
+  CASTING: { ikona: 'casting', barva: '#EC4899', popis: 'prehledDne.druh.CASTING' },
+  PORADA: { ikona: 'lide', barva: '#F2CB35', popis: 'prehledDne.druh.PORADA' },
+  SCHUZKA: { ikona: 'hodiny', barva: '#14B8A6', popis: 'prehledDne.druh.SCHUZKA' },
+  JINE: { ikona: 'stitek', barva: '#A49FC0', popis: 'prehledDne.druh.JINE' },
 };
 
 const BARVA_REZIE = '#ef4444';
@@ -80,6 +87,7 @@ const BARVA_REZIE = '#ef4444';
  * rovnou vrátí uložený text.
  */
 function OCemJe({ projekt }: { projekt: string }) {
+  const t = usePreklad();
   const [text, setText] = useState<string | null>(null);
   const [stav, setStav] = useState<'nacitam' | 'ctu' | 'hotovo' | 'nic'>('nacitam');
   /**
@@ -192,18 +200,18 @@ function OCemJe({ projekt }: { projekt: string }) {
         className="w-full flex items-center gap-2 px-3 py-2 text-left disabled:cursor-default"
       >
         <span className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted">
-          První frekvence · o čem to je
+          {t('prehledDne.prvniFrekvence')}
         </span>
         {text ? (
           <span className="ml-auto flex items-center gap-1.5 text-[11px] font-heading font-semibold text-brand-purple">
-            {otevreno ? 'Skrýt' : 'Přečíst'}
+            {otevreno ? t('obecne.skryt') : t('prehledDne.precist')}
             <span aria-hidden="true" className={`transition-transform ${otevreno ? 'rotate-180' : ''}`}>
               ⌄
             </span>
           </span>
         ) : (
           <span className="ml-auto text-[11px] font-body text-muted">
-            {stav === 'ctu' ? 'Bruno čte rukopis…' : 'hledám text…'}
+            {stav === 'ctu' ? t('prehledDne.brunoCte') : t('prehledDne.hledamText')}
           </span>
         )}
       </button>
@@ -218,6 +226,7 @@ function OCemJe({ projekt }: { projekt: string }) {
 }
 
 export function PrehledDne() {
+  const t = usePreklad();
   const [data, setData] = useState<Data | null>(null);
   const [zavirame, setZavirame] = useState(false);
   /** Otevřel si ho člověk sám z panelu? Pak se zavření nezapisuje. */
@@ -295,7 +304,7 @@ export function PrehledDne() {
       className="fixed inset-0 z-[80] flex items-start sm:items-center justify-center p-4 sm:p-6 bg-black/25 backdrop-blur-sm overflow-y-auto"
       role="dialog"
       aria-modal="true"
-      aria-label="Přehled dne"
+      aria-label={t('prehledDne.nadpis')}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) zavri();
       }}
@@ -304,13 +313,15 @@ export function PrehledDne() {
         {/* Hlavička - den a kolik toho je. */}
         <div className="flex items-start justify-between gap-4 px-5 sm:px-6 pt-5 pb-4 border-b border-line/70">
           <div>
-            <p className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted m-0">Přehled dne</p>
+            <p className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted m-0">
+              {t('prehledDne.nadpis')}
+            </p>
             <h2 className="font-display text-2xl sm:text-[28px] text-ink m-0 mt-0.5">{data.den}</h2>
           </div>
           <button
             type="button"
             onClick={zavri}
-            aria-label="Zavřít"
+            aria-label={t('obecne.zavrit')}
             className="text-muted hover:text-ink text-xl leading-none mt-1"
           >
             ×
@@ -320,9 +331,7 @@ export function PrehledDne() {
         <div className="px-5 sm:px-6 py-4 flex flex-col gap-4">
           {data.udalosti.length === 0 ? (
             <p className="text-sm font-body text-muted m-0">
-              {data.vseZaSebou
-                ? 'Dnešek už máte za sebou — v kalendáři vás dnes nic dalšího nečeká.'
-                : 'V kalendáři dnes nic vašeho nemám.'}
+              {data.vseZaSebou ? t('prehledDne.vseZaSebou') : t('prehledDne.nicVKalendari')}
             </p>
           ) : (
             <div className="flex flex-col gap-2">
@@ -338,7 +347,11 @@ export function PrehledDne() {
                     <span
                       className="shrink-0 grid place-items-center w-9 h-9 rounded-pill"
                       style={{ backgroundColor: `${barva}26`, color: barva }}
-                      title={u.rezie ? `${vzhled.popis} · režie na dálku` : vzhled.popis}
+                      title={
+                        u.rezie
+                          ? `${t(vzhled.popis)} · ${t('prehledDne.rezieNaDalku')}`
+                          : t(vzhled.popis)
+                      }
                     >
                       <KresbaIkony klic={u.rezie ? 'rezie-na-dalku' : vzhled.ikona} velikost={18} />
                     </span>
@@ -352,7 +365,7 @@ export function PrehledDne() {
                         <span className="block text-xs font-body text-muted truncate">
                           {u.detail}
                           {u.detail && u.rezie ? ' · ' : ''}
-                          {u.rezie ? 'režie na dálku' : ''}
+                          {u.rezie ? t('prehledDne.rezieNaDalku') : ''}
                         </span>
                       )}
                     </span>
@@ -375,7 +388,9 @@ export function PrehledDne() {
           {/* Úkoly jen na dnešek (23. 9. 2026) - dlouhodobé sem nepatří. */}
           {data.ukoly.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <p className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted m-0">Úkoly na dnešek</p>
+              <p className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted m-0">
+                {t('prehledDne.ukolyNaDnesek')}
+              </p>
               {data.ukoly.map((u, i) => (
                 <div key={`${u.text}-${i}`} className="flex items-center gap-2.5">
                   <span className="shrink-0 w-4 h-4 rounded-[5px] border border-line" aria-hidden />
@@ -393,7 +408,7 @@ export function PrehledDne() {
             onClick={zavri}
             className="rounded-pill bg-brand-purple text-white font-heading text-sm px-5 py-2"
           >
-            OK
+            {t('prehledDne.ok')}
           </button>
         </div>
       </div>

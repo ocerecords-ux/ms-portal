@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { VypisParametru } from './VypisParametru';
 import type { SekceTech } from '@/lib/technickeParametry';
+import { useJazyk, usePreklad } from './JazykProvider';
 
 /**
  * TECHNICKÉ PARAMETRY V KANÁLU PROJEKTU (zadání 27. 9. 2026: „v kanálu
@@ -29,6 +30,8 @@ type Nactene = {
 };
 
 export function TechnickeParametryOkno({ caflouProjectId }: { caflouProjectId: string }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [kotva, setKotva] = useState<{ left: number; top: number } | null>(null);
   const [data, setData] = useState<Nactene | null>(null);
   const [nacita, setNacita] = useState(false);
@@ -106,7 +109,7 @@ export function TechnickeParametryOkno({ caflouProjectId }: { caflouProjectId: s
       <button
         type="button"
         onClick={(e) => void otevri(e)}
-        title="Technické parametry výroby — v čem se to odevzdává"
+        title={t('parametry.tlacitkoPopis')}
         aria-expanded={Boolean(kotva)}
         className={`shrink-0 inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[11px] font-heading font-semibold transition-colors ${
           kotva
@@ -115,34 +118,34 @@ export function TechnickeParametryOkno({ caflouProjectId }: { caflouProjectId: s
         }`}
       >
         <IkonaParametru />
-        Parametry
+        {t('parametry.tlacitko')}
       </button>
 
       {kotva && (
         <div
           ref={oknoRef}
           role="dialog"
-          aria-label="Technické parametry"
+          aria-label={t('parametry.nadpis')}
           style={{ position: 'fixed', left: kotva.left, top: kotva.top, width: SIRKA }}
           className="z-[120] rounded-card border border-line bg-surface shadow-lg p-4 flex flex-col gap-3 max-h-[min(70vh,520px)] overflow-y-auto"
         >
           <div className="flex items-baseline gap-2">
-            <span className="font-heading font-semibold text-sm text-ink">Technické parametry</span>
+            <span className="font-heading font-semibold text-sm text-ink">{t('parametry.nadpis')}</span>
             <button
               type="button"
               onClick={() => setKotva(null)}
-              aria-label="Zavřít"
+              aria-label={t('obecne.zavrit')}
               className="ml-auto text-muted hover:text-ink bg-transparent border-0 cursor-pointer text-sm leading-none"
             >
               ✕
             </button>
           </div>
 
-          {nacita && <p className="text-sm font-body text-muted m-0">Načítám…</p>}
+          {nacita && <p className="text-sm font-body text-muted m-0">{t('obecne.nacitam')}</p>}
 
           {!nacita && (prazdne || !data) && (
             <p className="text-sm font-body text-muted m-0">
-              Pro tenhle projekt zatím žádná sada není.
+              {t('parametry.zadnaSada')}
             </p>
           )}
 
@@ -150,9 +153,9 @@ export function TechnickeParametryOkno({ caflouProjectId }: { caflouProjectId: s
             <>
               <span className="text-xs font-body text-muted -mt-1">
                 {data.profil.nazev}
-                {data.vychoziSada && ' — obecná sada'}
+                {data.vychoziSada && ` — ${t('parametry.obecnaSada')}`}
               </span>
-              <VypisParametru sekce={data.sekce} husty />
+              <VypisParametru sekce={data.sekce} husty jazyk={jazyk} />
             </>
           )}
 
@@ -161,7 +164,7 @@ export function TechnickeParametryOkno({ caflouProjectId }: { caflouProjectId: s
             onClick={() => setKotva(null)}
             className="text-xs font-heading text-brand-purple no-underline hover:underline mt-1"
           >
-            Otevřít detail projektu ↗
+            {t('parametry.otevritDetail')}
           </Link>
         </div>
       )}

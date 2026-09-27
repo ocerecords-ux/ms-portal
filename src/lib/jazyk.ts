@@ -1306,6 +1306,839 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'role.ROBOT': { cs: 'Robot', en: 'Robot' },
   'role.TABULE': { cs: 'Tabule ve studiu', en: 'Studio display' },
   'role.BOOKING': { cs: 'Klient studia (rezervace)', en: 'Studio client (bookings)' },
+
+  // --- chat (dávka 3) ---
+  'chat.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
+  'chat.neodeslo': {
+    cs: 'Neodešlo — text máte zpátky v psátku',
+    en: 'Not sent — your text is back in the message box',
+  },
+  'chat.odeslano': { cs: 'Odesláno', en: 'Sent' },
+  'chat.zobrazenoKomu': { cs: 'Zobrazeno: {jmena}', en: 'Seen by: {jmena}' },
+  'chat.zobrazenoJmena': { cs: 'Zobrazeno · {jmena}', en: 'Seen · {jmena}' },
+  'chat.zobrazenoPocet': { cs: 'Zobrazeno · {pocet} lidem', en: 'Seen · {pocet} people' },
+  'chat.upraveno': { cs: 'upraveno', en: 'edited' },
+  'chat.upravenoKdy': { cs: 'Upraveno {kdy}', en: 'Edited {kdy}' },
+
+  // psátko
+  'chat.poslat': { cs: 'Poslat', en: 'Send' },
+  'chat.bezneSmajliky': { cs: 'Běžné', en: 'Standard' },
+  'chat.odebratPrilohu': { cs: 'Odebrat {nazev}', en: 'Remove {nazev}' },
+  'chat.pripojitSoubor': { cs: 'Připojit soubor', en: 'Attach a file' },
+  'chat.smajlici': { cs: 'Smajlíci', en: 'Emoji' },
+  'chat.enterOdesle': {
+    cs: 'Enter odešle, Shift+Enter zalomí řádek',
+    en: 'Enter sends, Shift+Enter starts a new line',
+  },
+
+  // reakce
+  'chat.reakceKdo': { cs: '{pocet}× reakce: {jmena}', en: '{pocet}× reaction: {jmena}' },
+  'chat.kopirovat': { cs: 'Kopírovat', en: 'Copy' },
+
+  // přílohy
+  'chat.stahnoutPrilohu': { cs: 'Stáhnout {nazev}', en: 'Download {nazev}' },
+  'chat.prehratPrilohu': { cs: 'Přehrát {nazev}', en: 'Play {nazev}' },
+  'chat.zmensit': { cs: 'Zmenšit', en: 'Zoom out' },
+  'chat.zmensitKlavesa': { cs: 'Zmenšit (−)', en: 'Zoom out (−)' },
+  'chat.zvetsit': { cs: 'Zvětšit', en: 'Zoom in' },
+  'chat.zvetsitKlavesa': { cs: 'Zvětšit (+)', en: 'Zoom in (+)' },
+  'chat.celyObrazek': { cs: 'Celý obrázek (0)', en: 'Whole image (0)' },
+  'chat.predchozi': { cs: 'Předchozí', en: 'Previous' },
+  'chat.predchoziObrazek': { cs: 'Předchozí obrázek', en: 'Previous image' },
+  'chat.dalsi': { cs: 'Další', en: 'Next' },
+  'chat.dalsiObrazek': { cs: 'Další obrázek', en: 'Next image' },
+  'chat.pustteSouborSem': { cs: 'Pusťte soubor sem', en: 'Drop the file here' },
+
+  // chyby a hlášky
+  'chat.smazatNepodarilo': {
+    cs: 'Zprávu se nepodařilo smazat.',
+    en: 'The message could not be deleted.',
+  },
+  'chat.upravitNepodarilo': {
+    cs: 'Zprávu se nepodařilo upravit.',
+    en: 'The message could not be edited.',
+  },
+  'chat.zpravaNeodeslana': {
+    cs: 'Zprávu se nepodařilo odeslat.',
+    en: 'The message could not be sent.',
+  },
+  'chat.ulozeniNezdarilo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+  'chat.odchodNezdaril': { cs: 'Odchod se nezdařil.', en: 'Leaving the group failed.' },
+  'chat.otevritNepodarilo': { cs: 'Nepodařilo se to otevřít.', en: 'It could not be opened.' },
+  'chat.prilohaVelka': {
+    cs: 'Příloha {nazev} je moc velká (nejvýš {limit}).',
+    en: 'The attachment {nazev} is too large (at most {limit}).',
+  },
+  'chat.prilohaNepripravena': {
+    cs: 'Přílohu se nepodařilo připravit.',
+    en: 'The attachment could not be prepared.',
+  },
+  'chat.prilohaOdmitnuta': {
+    cs: 'Přílohu {nazev} se nepodařilo nahrát - úložiště odmítlo požadavek z portálu. Zkuste to prosím znovu; když to nepůjde, dejte vědět správci portálu.',
+    en: 'The attachment {nazev} could not be uploaded — the storage refused the request from the portal. Please try again; if it still will not go, let the portal administrator know.',
+  },
+  'chat.prilohaNahraniSelhalo': {
+    cs: 'Přílohu {nazev} se nepodařilo nahrát ({stav}).',
+    en: 'The attachment {nazev} could not be uploaded ({stav}).',
+  },
+  'chat.ukolVListu': {
+    cs: 'Úkol je v to-do listu — {komu}.',
+    en: 'The task is in the to-do list — {komu}.',
+  },
+  'chat.poradiNeulozeno': {
+    cs: 'Nové pořadí se nepodařilo uložit.',
+    en: 'The new order could not be saved.',
+  },
+  'chat.pripnutiNeulozeno': {
+    cs: 'Připnutí se nepodařilo uložit.',
+    en: 'The pin could not be saved.',
+  },
+  'chat.odepnutiNeulozeno': {
+    cs: 'Odepnutí se nepodařilo uložit.',
+    en: 'Unpinning could not be saved.',
+  },
+  'chat.upozorneniNeulozeno': {
+    cs: 'Nastavení upozornění se nepodařilo uložit.',
+    en: 'The notification setting could not be saved.',
+  },
+  'chat.ztlumeniNeulozeno': {
+    cs: 'Ztlumení se nepodařilo uložit.',
+    en: 'The mute could not be saved.',
+  },
+  'chat.serverOdmitl': { cs: 'Server odmítl ({stav}).', en: 'The server refused the request ({stav}).' },
+  'chat.odklizeniNepodarilo': {
+    cs: 'Nepodařilo se to odklidit.',
+    en: 'It could not be tidied away.',
+  },
+  'chat.opustitSkupinuOtazka': {
+    cs: 'Opustit skupinu „{nazev}"? Zprávy v ní vám zmizí.',
+    en: 'Leave the group “{nazev}”? Its messages will disappear for you.',
+  },
+
+  // seznam konverzací a záložky
+  'chat.zalozkaNeprectene': { cs: '{nazev} — {pocet} nepřečtených', en: '{nazev} — {pocet} unread' },
+  'chat.skrytChat': { cs: 'Skrýt MS chat', en: 'Hide MS chat' },
+  'chat.nacitamProjekty': { cs: 'Načítám projekty…', en: 'Loading the projects…' },
+  'chat.zadneProjekty': { cs: 'Žádné rozpracované projekty.', en: 'No projects in progress.' },
+  'chat.dotazyKlientu': { cs: 'Dotazy klientů', en: 'Client questions' },
+  'chat.zadneSoukrome': {
+    cs: 'Zatím si s nikým nepíšete.',
+    en: 'You are not messaging anyone yet.',
+  },
+  'chat.zadneSkupiny': { cs: 'Zatím tu není žádná skupina.', en: 'There are no groups yet.' },
+  'chat.opustit': { cs: 'Opustit', en: 'Leave' },
+  'chat.uklidit': { cs: 'Uklidit', en: 'Tidy away' },
+  'chat.nikdoDalsi': { cs: 'Nikdo další tu zatím není.', en: 'There is nobody else here yet.' },
+  'chat.nazevSkupiny': { cs: 'Název skupiny', en: 'Group name' },
+  'chat.zalozitSkupinu': { cs: 'Založit skupinu', en: 'Create the group' },
+  'chat.napsatNekomu': { cs: '+ Napsat někomu', en: '+ Message someone' },
+  'chat.novaSkupina': { cs: '+ Nová skupina', en: '+ New group' },
+  'chat.nova': { cs: 'Nová', en: 'New' },
+  'chat.vyberteVlevo': {
+    cs: 'Vyberte vlevo projekt nebo člověka.',
+    en: 'Choose a project or a person on the left.',
+  },
+
+  // hlavička rozhovoru
+  'chat.zpetNaSeznam': { cs: 'Zpět na seznam', en: 'Back to the list' },
+  'chat.otevritProjekt': { cs: 'Otevřít projekt', en: 'Open the project' },
+  'chat.vidiJen': { cs: 'Vidí jen: já{ostatni}', en: 'Visible only to: me{ostatni}' },
+  'chat.kdoVidiUprava': {
+    cs: 'Kdo do skupiny vidí — a úprava',
+    en: 'Who can see the group — and editing',
+  },
+  'chat.kdoVidiPocet': {
+    cs: 'Kdo do skupiny vidí ({pocet})',
+    en: 'Who can see the group ({pocet})',
+  },
+  'chat.pripnutoOdepnete': {
+    cs: 'Připnuto nahoře — klepnutím odepnete',
+    en: 'Pinned at the top — tap to unpin',
+  },
+  'chat.pripnoutRychlaVolba': {
+    cs: 'Připnout nahoru jako rychlou volbu',
+    en: 'Pin to the top as a quick choice',
+  },
+  'chat.odepnout': { cs: 'Odepnout', en: 'Unpin' },
+  'chat.pripnoutNahoru': { cs: 'Připnout nahoru', en: 'Pin to the top' },
+  'chat.ztlumenoZrusite': {
+    cs: 'Ztlumeno — upozornění odsud nechodí. Klepnutím zrušíte.',
+    en: 'Muted — no notifications come from here. Tap to unmute.',
+  },
+  'chat.ztlumitPopis': {
+    cs: 'Ztlumit — zprávy chodí dál, jen nezazvoní',
+    en: 'Mute — messages keep coming, they just will not ring',
+  },
+  'chat.zrusitZtlumeni': { cs: 'Zrušit ztlumení', en: 'Unmute' },
+  'chat.ztlumitRozhovor': { cs: 'Ztlumit rozhovor', en: 'Mute the conversation' },
+
+  // správa skupiny
+  'chat.kdoDoSkupinyVidi': { cs: 'Kdo do skupiny vidí', en: 'Who can see the group' },
+  'chat.novyClenUvidiHistorii': {
+    cs: 'Kdo se do skupiny dostane, uvidí i to, co se v ní psalo dřív.',
+    en: 'Anyone who joins the group will also see what was written in it earlier.',
+  },
+  'chat.odejitZeSkupiny': { cs: 'Odejít ze skupiny', en: 'Leave the group' },
+  'chat.opravduOdejit': { cs: 'Opravdu odejít?', en: 'Leave it?' },
+
+  // výpis zpráv a vlákno
+  'chat.nacitamZpravy': { cs: 'Načítám zprávy…', en: 'Loading the messages…' },
+  'chat.nikdoNicNenapsal': {
+    cs: 'Zatím tu nikdo nic nenapsal.',
+    en: 'Nobody has written anything here yet.',
+  },
+  'chat.ja': { cs: 'Já', en: 'Me' },
+  'chat.upravitZpravu': { cs: 'Upravit zprávu…', en: 'Edit the message…' },
+  'chat.odpovediJedna': { cs: '1 odpověď ›', en: '1 reply ›' },
+  'chat.odpovediMalo': { cs: '{pocet} odpovědi ›', en: '{pocet} replies ›' },
+  'chat.odpovediMnoho': { cs: '{pocet} odpovědí ›', en: '{pocet} replies ›' },
+  'chat.odpovedet': { cs: 'Odpovědět', en: 'Reply' },
+  'chat.napsatZpravu': {
+    cs: 'Napište zprávu… (@ zmíní kolegu nebo zadá úkol, # odkáže na projekt)',
+    en: 'Write a message… (@ mentions a colleague or sets a task, # links to a project)',
+  },
+  'chat.vlakno': { cs: 'Vlákno', en: 'Thread' },
+  'chat.zavritVlakno': { cs: 'Zavřít vlákno', en: 'Close the thread' },
+  'chat.bezOdpovedi': { cs: 'Zatím bez odpovědí.', en: 'No replies yet.' },
+  'chat.odpovedetPlaceholder': { cs: 'Odpovědět…', en: 'Reply…' },
+  'chat.mazu': { cs: 'Mažu…', en: 'Deleting…' },
+  'chat.opravduSmazat': { cs: 'Opravdu smazat?', en: 'Delete it?' },
+
+  // lišta úkolu nad psátkem
+  'chat.ukol': { cs: 'Úkol', en: 'Task' },
+  'chat.ukolProSNazvem': { cs: 'pro {prijemce}: {nazev}', en: 'for {prijemce}: {nazev}' },
+  'chat.ukolProBezNazvu': {
+    cs: 'pro {prijemce} — napište, co je potřeba udělat',
+    en: 'for {prijemce} — write what needs doing',
+  },
+  'chat.ukolDo': { cs: 'do', en: 'by' },
+  'chat.doKolikaHodin': { cs: 'Do kolika hodin (nepovinné)', en: 'By what time (optional)' },
+  'chat.cas': { cs: 'Čas', en: 'Time' },
+  'chat.bezTerminu': { cs: 'bez termínu', en: 'no deadline' },
+
+  // úkoly v záložce chatu
+  'chat.coJePotreba': { cs: 'Co je potřeba udělat?', en: 'What needs doing?' },
+  'chat.nejdrivDatum': { cs: 'Nejdřív vyberte datum', en: 'Choose a date first' },
+  'chat.pridat': { cs: 'Přidat', en: 'Add' },
+  'chat.nacitamUkoly': { cs: 'Načítám úkoly…', en: 'Loading the tasks…' },
+  'chat.nicNeceka': { cs: 'Nic nečeká. 🎉', en: 'Nothing waiting. 🎉' },
+  'chat.skrytHotove': { cs: 'Skrýt hotové', en: 'Hide the completed ones' },
+  'chat.hotovePocet': { cs: 'Hotové ({pocet})', en: 'Completed ({pocet})' },
+  'chat.upravitUkol': { cs: 'Upravit úkol', en: 'Edit the task' },
+  'chat.odZadal': { cs: 'od {jmeno}', en: 'from {jmeno}' },
+
+  // kdo právě píše
+  'chat.pisouJeden': { cs: '{jmeno} píše…', en: '{jmeno} is typing…' },
+  'chat.pisouDva': { cs: '{jmeno} a {druhy} píšou…', en: '{jmeno} and {druhy} are typing…' },
+  'chat.pisouVic': { cs: '{pocet} lidí píše…', en: '{pocet} people are typing…' },
+
+  // --- úkoly, dotazy a doky (dávka 3) ---
+  'ukoly.skrytUkoly': { cs: 'Skrýt úkoly', en: 'Hide tasks' },
+  'ukoly.chybaUlozit': { cs: 'Nepodařilo se uložit.', en: 'Saving failed.' },
+  'ukoly.novyUkol': { cs: 'Nový úkol…', en: 'New task…' },
+  'ukoly.terminNepovinne': { cs: 'Termín (nepovinné)', en: 'Due date (optional)' },
+  'ukoly.doKolikaHodin': { cs: 'Do kolika hodin (nepovinné)', en: 'Due time (optional)' },
+  'ukoly.nejdrivDatum': { cs: 'Nejdřív vyberte datum', en: 'Choose a date first' },
+  'ukoly.pridat': { cs: 'Přidat', en: 'Add' },
+  'ukoly.zadneOtevrene': { cs: 'Žádné otevřené úkoly. 👌', en: 'No open tasks. 👌' },
+  'ukoly.odKoho': { cs: 'od {jmeno}', en: 'from {jmeno}' },
+  'ukoly.poTerminuTermin': { cs: 'Po termínu — {termin}', en: 'Overdue — {termin}' },
+  'ukoly.doTerminu': { cs: 'Do {termin}', en: 'Due {termin}' },
+  'ukoly.upravitUkol': { cs: 'Upravit úkol', en: 'Edit the task' },
+  'ukoly.opravduSmazat': { cs: 'Opravdu smazat?', en: 'Delete it?' },
+  'ukoly.smazatUkol': { cs: 'Smazat úkol', en: 'Delete the task' },
+  'ukoly.skrytHotove': { cs: 'Skrýt hotové', en: 'Hide completed' },
+  'ukoly.hotovePocet': { cs: 'Hotové ({pocet})', en: 'Completed ({pocet})' },
+  'ukoly.nazevUkolu': { cs: 'Název úkolu', en: 'Task name' },
+  'ukoly.termin': { cs: 'Termín', en: 'Due date' },
+  'ukoly.cas': { cs: 'Čas', en: 'Time' },
+
+  // „Zadal jsem" - úkoly, které jsem z chatu dal někomu jinému
+  'ukoly.zadane.nadpis': { cs: 'Zadal jsem', en: 'Assigned by me' },
+  'ukoly.zadane.nadpisCeka': {
+    cs: 'Zadal jsem · čeká {pocet}',
+    en: 'Assigned by me · {pocet} pending',
+  },
+  'ukoly.zadane.pro': { cs: 'pro {komu}', en: 'for {komu}' },
+  'ukoly.zadane.splneno': { cs: 'splněno', en: 'completed' },
+  'ukoly.zadane.splnenoDne': { cs: 'splněno {datum}', en: 'completed {datum}' },
+  'ukoly.zadane.ceka': { cs: 'čeká', en: 'pending' },
+  'ukoly.zadane.doTerminu': { cs: 'do {termin}', en: 'due {termin}' },
+  'ukoly.zadane.poTerminuDo': { cs: 'po termínu, do {termin}', en: 'overdue, due {termin}' },
+  'ukoly.zadane.otevritKonverzaci': {
+    cs: 'Otevřít konverzaci, ze které úkol vznikl',
+    en: 'Open the conversation the task came from',
+  },
+  'ukoly.zadane.vsechnoHotove': {
+    cs: 'Všechno, co jste zadali, je hotové.',
+    en: 'Everything you have assigned is done.',
+  },
+  'ukoly.zadane.skrytSplnene': { cs: 'Skrýt splněné', en: 'Hide completed' },
+  'ukoly.zadane.splnenePocet': { cs: 'Splněné ({pocet})', en: 'Completed ({pocet})' },
+  'ukoly.zadane.ukolPro': { cs: 'Úkol pro {komu}', en: 'Task for {komu}' },
+  'ukoly.zadane.opravduZrusit': { cs: 'Opravdu zrušit?', en: 'Cancel it?' },
+  'ukoly.zadane.zrusitUkol': { cs: 'Zrušit úkol', en: 'Cancel the task' },
+
+  // --- dotazy klienta k projektům (dávka 3) ---
+  'dotazy.nadpis': { cs: 'Dotazy k projektům', en: 'Project questions' },
+  'dotazy.poutko': { cs: 'Dotazy', en: 'Questions' },
+  'dotazy.skrytDotazy': { cs: 'Skrýt dotazy', en: 'Hide the questions' },
+  'dotazy.pracovniDoba': {
+    cs: 'Odpovídáme v pracovní době',
+    en: 'We reply during business hours',
+  },
+  'dotazy.vaseProjekty': { cs: 'Vaše projekty', en: 'Your projects' },
+  'dotazy.zadnyProjekt': {
+    cs: 'Zatím tu nemáte žádný rozpracovaný projekt.',
+    en: 'You have no projects in progress yet.',
+  },
+  'dotazy.uzavreno': { cs: 'Uzavřeno', en: 'Closed' },
+  'dotazy.naposledy': { cs: 'Naposledy {kdy}', en: 'Last {kdy}' },
+  'dotazy.rozepsano': { cs: 'Rozepsáno', en: 'Started' },
+  'dotazy.bezDotazu': { cs: 'Zatím bez dotazu', en: 'No questions yet' },
+  'dotazy.vyberteProjekt': {
+    cs: 'Vyberte vlevo projekt. Co sem napíšete, dorazí rovnou lidem, kteří na něm dělají.',
+    en: 'Choose a project on the left. Whatever you write here goes straight to the people working on it.',
+  },
+  'dotazy.zpetNaSeznam': { cs: 'Zpět na seznam', en: 'Back to the list' },
+  'dotazy.prazdnyRozhovor': {
+    cs: 'Na co se potřebujete zeptat? Napište to sem — držíme to u projektu, takže se to neztratí v mailu.',
+    en: 'What do you need to ask? Write it here — we keep it with the project, so it will not get lost in email.',
+  },
+  'dotazy.ja': { cs: 'Já', en: 'Me' },
+  'dotazy.projektUzavren': {
+    cs: 'Projekt je uzavřený, takže sem už psát nejde. Historie zůstává.',
+    en: 'The project is closed, so you can no longer write here. The history stays.',
+  },
+  'dotazy.napisteDotaz': {
+    cs: 'Napište dotaz… (Enter odešle, Shift+Enter nový řádek)',
+    en: 'Write your question… (Enter sends, Shift+Enter for a new line)',
+  },
+  'dotazy.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
+  'dotazy.poslat': { cs: 'Poslat', en: 'Send' },
+  'dotazy.chybaOdeslat': {
+    cs: 'Dotaz se nepodařilo odeslat.',
+    en: 'The question could not be sent.',
+  },
+
+  // --- upozornění v chatu (dávka 3) ---
+  'upozorneniChatu.nastaveni': { cs: 'Nastavení upozornění', en: 'Notification settings' },
+  'upozorneniChatu.vTomhleProhlizeci': { cs: 'V tomhle prohlížeči', en: 'In this browser' },
+  'upozorneniChatu.neumi': {
+    cs: 'Tenhle prohlížeč upozornění neumí. Nastavení níž platí i tak — projeví se tam, kde upozornění zapnutá máte.',
+    en: 'This browser cannot do notifications. The settings below still apply — they take effect wherever you do have notifications switched on.',
+  },
+  'upozorneniChatu.zakazano': {
+    cs: 'Upozornění máte zakázaná v nastavení prohlížeče — povolit se dají jen tam.',
+    en: 'You have notifications blocked in your browser settings — they can only be allowed there.',
+  },
+  'upozorneniChatu.jenVAplikaci': {
+    cs: 'Na iPhonu chodí upozornění jen aplikaci přidané na plochu. Přidejte si MS Chat na plochu a zapněte je tam.',
+    en: 'On an iPhone, notifications only reach an app added to the home screen. Add MS Chat to your home screen and switch them on there.',
+  },
+  'upozorneniChatu.moment': { cs: 'Moment…', en: 'One moment…' },
+  'upozorneniChatu.vypnout': { cs: 'Vypnout upozornění', en: 'Switch notifications off' },
+  'upozorneniChatu.zapnout': { cs: 'Zapnout upozornění', en: 'Switch notifications on' },
+  'upozorneniChatu.kdyUpozornovat': { cs: 'Kdy upozorňovat', en: 'When to notify you' },
+  'upozorneniChatu.soukromeZpravy': { cs: 'Soukromé zprávy', en: 'Private messages' },
+  'upozorneniChatu.skupiny': { cs: 'Skupiny', en: 'Groups' },
+  'upozorneniChatu.kanalyProjektu': { cs: 'Kanály projektů', en: 'Project channels' },
+  'upozorneniChatu.jednotliveSkupiny': { cs: 'Jednotlivé skupiny', en: 'Individual groups' },
+  'upozorneniChatu.podleSkupin': { cs: 'Podle skupin', en: 'As for groups' },
+  'upozorneniChatu.rezim.vse': { cs: 'Vše', en: 'Everything' },
+  'upozorneniChatu.rezim.zminky': { cs: 'Jen zmínky', en: 'Mentions only' },
+  'upozorneniChatu.rezim.nic': { cs: 'Nic', en: 'Nothing' },
+  'upozorneniChatu.nocniKlid': { cs: 'Noční klid', en: 'Quiet hours' },
+  'upozorneniChatu.zapnoutKlid': { cs: 'Zapnout', en: 'Switch on' },
+  'upozorneniChatu.vypnoutKlid': { cs: 'Vypnout', en: 'Switch off' },
+  'upozorneniChatu.nechodiNic': { cs: 'nechodí nic', en: 'nothing comes through' },
+  'upozorneniChatu.platiVsude': {
+    cs: 'Platí pro všechna vaše zařízení. Zprávy chodí dál a počítají se jako nepřečtené — jen nezazvoní. Jednotlivý kanál projektu se dá ztlumit u něj samotného.',
+    en: 'Applies to all your devices. Messages still arrive and count as unread — they just do not ring. An individual project channel can be muted on the channel itself.',
+  },
+
+  // --- rychlé volby v levém panelu (dávka 3) ---
+  'rychleVolby.nadpis': { cs: 'Rychlé volby', en: 'Quick actions' },
+  'rychleVolby.zobrazit': { cs: 'Zobrazit rychlé volby', en: 'Show the quick actions' },
+  'rychleVolby.skryt': { cs: 'Skrýt rychlé volby', en: 'Hide the quick actions' },
+  'rychleVolby.upravit': { cs: 'Upravit rychlé volby', en: 'Edit the quick actions' },
+  'rychleVolby.hotovo': { cs: 'Hotovo', en: 'Done' },
+  'rychleVolby.nicTuNeni': {
+    cs: 'Zatím tu nic není. Přidejte si zkratku přes tři tečky.',
+    en: 'Nothing here yet. Add a shortcut with the three dots.',
+  },
+  'rychleVolby.pretazenim': { cs: 'Přetažením změníte pořadí', en: 'Drag to change the order' },
+  'rychleVolby.odebrat': { cs: 'Odebrat {nazev}', en: 'Remove {nazev}' },
+  'rychleVolby.vsechnoPridano': {
+    cs: 'Máte tu všechno, co jde přidat.',
+    en: 'You already have everything that can be added.',
+  },
+  'rychleVolby.pridat': { cs: 'Přidat', en: 'Add' },
+  'rychleVolby.chybaUlozit': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+
+  // --- pravý panel: záložky, poutko, nepřečtené (dávka 3) ---
+  'dok.zalozkaUkoly': { cs: 'Úkoly', en: 'Tasks' },
+  'dok.skrytPanel': { cs: 'Skrýt panel', en: 'Hide the panel' },
+  'dok.zobrazitChatAUkoly': {
+    cs: 'Zobrazit MS chat a úkoly',
+    en: 'Show MS chat and tasks',
+  },
+  'dok.poTerminu': { cs: '{pocet} po termínu', en: '{pocet} overdue' },
+  'dok.neprectenePocet': {
+    cs: '{nazev} — {pocet} nepřečtených',
+    en: '{nazev} — {pocet} unread',
+  },
+  'dok.neprecteneAria': {
+    cs: '{nazev}: {pocet} nepřečtených zpráv',
+    en: '{nazev}: {pocet} unread messages',
+  },
+  'dok.aDalsi': { cs: 'a další {pocet}', en: '{pocet} more' },
+
+  // --- lišta, panely a tabulky (dávka 3) ---
+  'listou.upravitListu': { cs: 'Upravit lištu', en: 'Edit the bar' },
+  'listou.pretazenim': { cs: 'Přetažením změníte pořadí', en: 'Drag to change the order' },
+  'listou.odebratOdkaz': { cs: 'Odebrat {nazev}', en: 'Remove {nazev}' },
+  'listou.tecka': {
+    cs: 'Něco se tu pere — podrobnosti uvnitř',
+    en: 'Something clashes here — the details are inside',
+  },
+  'listou.upozorneni': { cs: 'Upozornění', en: 'Alert' },
+  'listou.upravujeteListu': {
+    cs: 'Upravujete lištu pro {zarizeni} · křížkem odebrat, tažením přesunout',
+    en: 'You are editing the bar for {zarizeni} · the cross removes, dragging moves',
+  },
+  'listou.zarizeni.POCITAC': { cs: 'počítač', en: 'computer' },
+  'listou.zarizeni.MOBIL': { cs: 'mobil', en: 'mobile' },
+  'listou.pridatStranku': { cs: 'Přidat stránku', en: 'Add page' },
+  'listou.vychozi': { cs: 'Výchozí', en: 'Default' },
+  'listou.vychoziPopis': {
+    cs: 'Vrátit lištu do původní podoby',
+    en: 'Restore the bar to how it was',
+  },
+  'listou.chybaObnoveni': { cs: 'Obnovení se nezdařilo.', en: 'The restore failed.' },
+  'listou.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+  'listou.dalsiVolby': { cs: 'Jazyk, připomínky, režim', en: 'Language, feedback, mode' },
+  'listou.rezimSvetly': { cs: 'Přepnout na světlý režim', en: 'Switch to light mode' },
+  'listou.rezimTmavy': { cs: 'Přepnout na tmavý režim', en: 'Switch to dark mode' },
+
+  // rozdělené okno (22. 9. 2026) - tlačítko v liště a pruh nad pravou půlkou
+  'listou.rozdelitOkno': {
+    cs: 'Rozdělit okno - vpravo druhá stránka portálu',
+    en: 'Split the window — a second portal page on the right',
+  },
+  'listou.rozdelitOknoKratce': { cs: 'Rozdělit okno', en: 'Split the window' },
+  'listou.rozdeleniSirka': { cs: 'Táhnutím změníte šířku', en: 'Drag to change the width' },
+  'listou.rozdeleniOtevritVlevo': { cs: 'Otevřít vlevo', en: 'Open on the left' },
+  'listou.rozdeleniOtevritVlevoPopis': {
+    cs: 'Otevřít vlevo místo téhle stránky',
+    en: 'Open on the left instead of this page',
+  },
+  'listou.rozdeleniZavrit': { cs: 'Zavřít rozdělení', en: 'Close the split' },
+  'listou.rozdeleniRamec': { cs: 'Druhá půlka portálu', en: 'The second half of the portal' },
+  'listou.rozdeleni.projekty': { cs: 'Projekty', en: 'Projects' },
+  'listou.rozdeleni.nabidky': { cs: 'Nabídky', en: 'Quotes' },
+  'listou.rozdeleni.faktury': { cs: 'Faktury', en: 'Invoices' },
+  'listou.rozdeleni.kalendar': { cs: 'Kalendář', en: 'Calendar' },
+  'listou.rozdeleni.vykazy': { cs: 'Výkazy', en: 'Timesheets' },
+
+  // --- obecné, doplněno v dávce 3 ---
+  'obecne.zkopirovano': { cs: 'Zkopírováno', en: 'Copied' },
+  'obecne.kopirovatOdkaz': { cs: 'Zkopírovat odkaz', en: 'Copy the link' },
+  'obecne.zkopirujteOdkaz': { cs: 'Zkopírujte odkaz:', en: 'Copy the link:' },
+
+  // --- připomínka k portálu (dávka 3) ---
+  'zpetnaVazba.nadpis': { cs: 'Připomínka k portálu', en: 'Portal feedback' },
+  'zpetnaVazba.nadpisSeznam': { cs: 'Připomínky k portálu', en: 'Portal feedback' },
+  'zpetnaVazba.popisSeznam': {
+    cs: 'Co lidem v portálu vadí. Odškrtnutá položka jim zmizí.',
+    en: 'What people find wrong with the portal. An item ticked off disappears for them.',
+  },
+  'zpetnaVazba.popisOndrejovi': {
+    cs: 'Co nefunguje, co chybí, co by šlo líp. Jde to rovnou Ondřejovi.',
+    en: 'What does not work, what is missing, what could be better. It goes straight to Ondřej.',
+  },
+  'zpetnaVazba.popisNam': {
+    cs: 'Co nefunguje, co chybí, co by šlo líp. Jde to rovnou nám.',
+    en: 'What does not work, what is missing, what could be better. It comes straight to us.',
+  },
+  'zpetnaVazba.nicNeceka': {
+    cs: 'Nic nečeká. Lidem se portál zatím líbí.',
+    en: 'Nothing is waiting. People like the portal so far.',
+  },
+  'zpetnaVazba.odskrtnout': { cs: 'Odškrtnout', en: 'Tick off' },
+  'zpetnaVazba.hlasiToteze': { cs: '+{pocet} hlásí totéž', en: '+{pocet} report the same' },
+  'zpetnaVazba.napsat': { cs: '+ Napsat připomínku', en: '+ Write feedback' },
+  'zpetnaVazba.celySeznam': { cs: 'Celý seznam v Mém účtu', en: 'The full list in My account' },
+  'zpetnaVazba.diky': {
+    cs: 'Díky! Připomínka je v seznamu.',
+    en: 'Thank you. Your feedback is on the list.',
+  },
+  'zpetnaVazba.placeholder': {
+    cs: 'Např. „Ve výkazech nejde vybrat projekt, když má dlouhý název.“ Printscreen můžete vložit rovnou přes Ctrl+V.',
+    en: 'For example: „In Timesheets I cannot pick a project when its name is long.“ You can paste a screenshot straight in with Ctrl+V.',
+  },
+  'zpetnaVazba.jizHlaseno': { cs: 'Tohle už někdo hlásil:', en: 'Someone has reported this already:' },
+  'zpetnaVazba.shoda': {
+    cs: '{autor} · shoda {shoda} % — zaškrtnutím se připojíte k téhle',
+    en: '{autor} · {shoda} % match — tick it to join this one',
+  },
+  'zpetnaVazba.odebratObrazek': { cs: 'Odebrat obrázek', en: 'Remove image' },
+  'zpetnaVazba.printscreen': { cs: '+ Printscreen', en: '+ Screenshot' },
+  'zpetnaVazba.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
+  'zpetnaVazba.pripojitSe': { cs: 'Připojit se', en: 'Join' },
+  'zpetnaVazba.odeslat': { cs: 'Odeslat', en: 'Send' },
+  'zpetnaVazba.napisteCo': {
+    cs: 'Napište prosím, co se má opravit.',
+    en: 'Please write what needs fixing.',
+  },
+  'zpetnaVazba.chybaUlozeni': {
+    cs: 'Připomínku se nepodařilo uložit.',
+    en: 'Your feedback could not be saved.',
+  },
+
+  // --- přehled dne (dávka 3) ---
+  'prehledDne.nadpis': { cs: 'Přehled dne', en: 'The day at a glance' },
+  'prehledDne.druh.NATACENI': { cs: 'Natáčení', en: 'Recording' },
+  'prehledDne.druh.STRIH': { cs: 'Střih', en: 'Editing' },
+  'prehledDne.druh.CASTING': { cs: 'Casting', en: 'Casting' },
+  'prehledDne.druh.PORADA': { cs: 'Porada', en: 'Meeting' },
+  'prehledDne.druh.SCHUZKA': { cs: 'Schůzka', en: 'Appointment' },
+  'prehledDne.druh.JINE': { cs: 'Blokace', en: 'Block' },
+  'prehledDne.rezieNaDalku': { cs: 'režie na dálku', en: 'remote directing' },
+  'prehledDne.vseZaSebou': {
+    cs: 'Dnešek už máte za sebou — v kalendáři vás dnes nic dalšího nečeká.',
+    en: 'Your day is behind you — nothing else is waiting for you in the calendar today.',
+  },
+  'prehledDne.nicVKalendari': {
+    cs: 'V kalendáři dnes nic vašeho nemám.',
+    en: 'I have nothing of yours in the calendar today.',
+  },
+  'prehledDne.ukolyNaDnesek': { cs: 'Úkoly na dnešek', en: 'Tasks for today' },
+  'prehledDne.ok': { cs: 'OK', en: 'OK' },
+  'prehledDne.prvniFrekvence': {
+    cs: 'První frekvence · o čem to je',
+    en: 'First recording session · what it is about',
+  },
+  'prehledDne.precist': { cs: 'Přečíst', en: 'Read' },
+  'prehledDne.brunoCte': { cs: 'Bruno čte rukopis…', en: 'Bruno is reading the manuscript…' },
+  'prehledDne.hledamText': { cs: 'hledám text…', en: 'looking for the text…' },
+
+  // --- můj status v chatu (dávka 3) ---
+  'status.nastavit': { cs: 'Nastavit status', en: 'Set your status' },
+  'status.nastavitVyzva': { cs: 'Nastavit status…', en: 'Set your status…' },
+  'status.zKalendare': { cs: 'z kalendáře', en: 'from the calendar' },
+  'status.zKalendarePopis': {
+    cs: 'Teď o vás svítí {status} z kalendáře. Vlastní status ho přebije, dokud platí.',
+    en: 'Right now {status} from the calendar is showing about you. Your own status overrides it while it lasts.',
+  },
+  'status.emoji': { cs: 'Emoji', en: 'Emoji' },
+  'status.coDelate': { cs: 'Co teď děláte?', en: 'What are you doing now?' },
+  'status.stitek': { cs: 'Status', en: 'Status' },
+  'status.plati': { cs: 'Platí', en: 'Valid for' },
+  'status.nastavitTlacitko': { cs: 'Nastavit', en: 'Set' },
+  'status.zrusit': { cs: 'Zrušit status', en: 'Clear your status' },
+  'status.chybaUlozeni': {
+    cs: 'Status se nepodařilo uložit.',
+    en: 'Your status could not be saved.',
+  },
+  'status.chybaZruseni': {
+    cs: 'Status se nepodařilo zrušit.',
+    en: 'Your status could not be cleared.',
+  },
+
+  // --- technické parametry (dávka 3) ---
+  'parametry.tlacitko': { cs: 'Parametry', en: 'Parameters' },
+  'parametry.tlacitkoPopis': {
+    cs: 'Technické parametry výroby — v čem se to odevzdává',
+    en: 'Technical production parameters — the format it is delivered in',
+  },
+  'parametry.nadpis': { cs: 'Technické parametry', en: 'Technical parameters' },
+  'parametry.zadnaSada': {
+    cs: 'Pro tenhle projekt zatím žádná sada není.',
+    en: 'There is no set for this project yet.',
+  },
+  'parametry.obecnaSada': { cs: 'obecná sada', en: 'general set' },
+  'parametry.otevritDetail': {
+    cs: 'Otevřít detail projektu ↗',
+    en: 'Open the project detail ↗',
+  },
+  'parametry.nicTuNeni': {
+    cs: 'Pro tenhle projekt tu zatím nic není.',
+    en: 'There is nothing here for this project yet.',
+  },
+
+  // --- otazník s návodem (dávka 3) ---
+  'napoveda.nadpis': { cs: 'Nápověda', en: 'Help' },
+  'napoveda.navodKObrazovce': { cs: 'Návod k téhle obrazovce', en: 'The guide to this screen' },
+  'napoveda.navodNeni': {
+    cs: 'Návod k téhle obrazovce zatím není.',
+    en: 'There is no guide to this screen yet.',
+  },
+  'napoveda.nacitamNavod': { cs: 'Načítám návod…', en: 'Loading the guide…' },
+  'napoveda.otevritVNapovede': { cs: 'Otevřít v Nápovědě ↗', en: 'Open in Help ↗' },
+
+  // --- zvonek s oznámeními (dávka 3) ---
+  'oznameni.nadpis': { cs: 'Oznámení', en: 'Notifications' },
+  'oznameni.neprectene': {
+    cs: 'Oznámení: {pocet} nepřečtených',
+    en: 'Notifications: {pocet} unread',
+  },
+
+  // --- pruh náhledového účtu (dávka 3) ---
+  'nahled.stitek': { cs: 'Náhled', en: 'Preview' },
+  'nahled.prohlizite': {
+    cs: 'Prohlížíte portál jako {role}',
+    en: 'You are viewing the portal as {role}',
+  },
+  'nahled.nicSeNeulozi': {
+    cs: 'Nic se z tohohle účtu neuloží.',
+    en: 'Nothing is saved from this account.',
+  },
+  'nahled.prepinam': { cs: 'Přepínám…', en: 'Switching…' },
+
+  // --- řaditelná tabulka: hledání, filtry, řazení (dávka 3) ---
+  'tabulka.hledat': { cs: 'Hledat…', en: 'Search…' },
+  'tabulka.vymazatHledani': { cs: 'Vymazat hledání', en: 'Clear the search' },
+  'tabulka.filtry': { cs: 'Filtry', en: 'Filters' },
+  'tabulka.filtryPocet': { cs: 'Filtry ({pocet})', en: 'Filters ({pocet})' },
+  'tabulka.filtrVse': { cs: '{sloupec}: vše', en: '{sloupec}: all' },
+  'tabulka.rozsahOd': { cs: '{co} od', en: '{co} from' },
+  'tabulka.rozsahDo': { cs: 'do', en: 'to' },
+  'tabulka.pocetZ': { cs: '{zobrazeno} z {celkem}', en: '{zobrazeno} of {celkem}' },
+  'tabulka.zrusitFiltry': { cs: 'Zrušit filtry', en: 'Clear the filters' },
+  'tabulka.seraditPodle': { cs: 'Seřadit podle: {sloupec}', en: 'Sort by: {sloupec}' },
+
+  // --- přehrávač s waveformou (dávka 3) ---
+  'prehravac.prehrat': { cs: 'Přehrát', en: 'Play' },
+  'prehravac.pozastavit': { cs: 'Pozastavit', en: 'Pause' },
+  'prehravac.nacitamPrubeh': {
+    cs: 'Načítám průběh nahrávky…',
+    en: 'Loading the waveform of the recording…',
+  },
+
+  // --- výběr projektu psaním (dávka 3) ---
+  'vyberProjektu.placeholder': {
+    cs: 'Začněte psát název projektu, firmu nebo číslo…',
+    en: 'Start typing the project name, the company or the number…',
+  },
+  'vyberProjektu.prazdno': {
+    cs: 'Nic takového jsme nenašli. Zkuste jen část názvu nebo jméno firmy.',
+    en: 'We found nothing like that. Try just part of the name or the company name.',
+  },
+  'vyberProjektu.zrusitVyber': {
+    cs: 'Zrušit výběr projektu',
+    en: 'Clear the project selection',
+  },
+  'vyberProjektu.zrusitKratce': { cs: 'Zrušit výběr', en: 'Clear the selection' },
+  'vyberProjektu.dokonceno': { cs: 'dokončeno', en: 'completed' },
+  'vyberProjektu.zobrazenoPrvnich': {
+    cs: 'Zobrazeno prvních {pocet} z {celkem} — pište dál a seznam se zúží.',
+    en: 'Showing the first {pocet} of {celkem} — keep typing and the list will narrow.',
+  },
+
+  // --- sdílené komponenty src/components (dávka 3) ---
+
+  // sdílené napříč komponentami (lišta hromadného mazání i pole s lupou)
+  'obecne.zrusitVyber': { cs: 'Zrušit výběr', en: 'Clear selection' },
+
+  // mazání - lišta nad tabulkou, pojistka u tlačítka, překážky
+  'mazani.nezdarilo': { cs: 'Smazání se nezdařilo.', en: 'The deletion failed.' },
+  'mazani.vybratVse': { cs: 'Vybrat vše', en: 'Select all' },
+  'mazani.vybratVsePocet': { cs: 'Vybrat vše ({pocet})', en: 'Select all ({pocet})' },
+  'mazani.vybrano': { cs: 'Vybráno: {pocet}', en: 'Selected: {pocet}' },
+  'mazani.nicNevybrano': { cs: 'Nic nevybráno', en: 'Nothing selected' },
+  'mazani.mazu': { cs: 'Mažu…', en: 'Deleting…' },
+  'mazani.smazatVybrane': { cs: 'Smazat vybrané', en: 'Delete selected' },
+  'mazani.smazatVybranePocet': {
+    cs: 'Smazat vybrané ({pocet})',
+    en: 'Delete selected ({pocet})',
+  },
+  'mazani.opravduSmazatPocet': {
+    cs: 'Opravdu smazat {pocet}? Klepněte znovu',
+    en: 'Really delete {pocet}? Tap again',
+  },
+  'mazani.opravduSmazat': { cs: 'Opravdu smazat?', en: 'Really delete?' },
+  'mazani.opravduSmazatCo': { cs: 'Opravdu smazat: {co}?', en: 'Really delete: {co}?' },
+  // Otázku podává volající (co se maže), tlačítko k ní přidá pobídku.
+  'mazani.otazkaKlepnete': { cs: '{otazka} Klepněte znovu', en: '{otazka} Tap again' },
+  'mazani.otazkaKlepnetePopis': { cs: '{otazka} Klepněte znovu.', en: '{otazka} Tap again.' },
+  'mazani.nejdeRovnouSmazat': {
+    cs: '{co} nejde rovnou smazat.',
+    en: '{co} cannot be deleted straight away.',
+  },
+  'mazani.visiNaNem': { cs: 'Visí na něm:', en: 'It still has:' },
+  'mazani.archivVysvetleni': {
+    cs: 'Archiv uloží všechno navázané stranou (jde stáhnout ze sekce Archiv) a teprve pak to z portálu odstraní. Doklady se u projektu neruší, jen se odpojí — název projektu si nesou textem, takže v účetnictví zůstanou čitelné.',
+    en: 'The archive puts everything attached aside (you can download it from the Archive section) and only then removes it from the portal. Documents on a project are not cancelled, only detached — they carry the project name as text, so they stay readable in the accounts.',
+  },
+  'mazani.pracuji': { cs: 'Pracuji…', en: 'Working…' },
+  'mazani.archivovatASmazat': { cs: 'Archivovat a smazat', en: 'Archive and delete' },
+  'mazani.smazatBezArchivu': { cs: 'Smazat bez archivu', en: 'Delete without archiving' },
+  'mazani.nechatByt': { cs: 'Nechat být', en: 'Leave it' },
+
+  // schválení reklamy klientem
+  'spot.schvalit': { cs: 'Schválit', en: 'Approve' },
+  'spot.schvaleniNeulozeno': {
+    cs: 'Schválení se nepodařilo uložit.',
+    en: 'The approval could not be saved.',
+  },
+  'spot.bublinaFakturace': {
+    cs: 'Schválením jde celý projekt k fakturaci',
+    en: 'Approval sends the whole project for invoicing',
+  },
+  'spot.opravduKlepnete': { cs: 'Opravdu? Klepněte znovu', en: 'Are you sure? Tap again' },
+  'spot.opravduSchvalitKlepnete': {
+    cs: 'Opravdu schválit? Klepněte znovu',
+    en: 'Really approve? Tap again',
+  },
+  'spot.jeSchvalena': { cs: 'Zakázka je schválená', en: 'The job is approved' },
+  'spot.vPoradku': { cs: 'Je zakázka v pořádku?', en: 'Is the job all right?' },
+  'spot.vysvetleni': {
+    cs: 'Schválením nám dáte vědět, že je hotovo — celý projekt tím jde k fakturaci. Když je co upravit, napište to radši do připomínek.',
+    en: 'Approving tells us it is finished — the whole project then goes for invoicing. If anything needs changing, put it in the comments instead.',
+  },
+
+  // předvyplněná nabídka z objednávky
+  'nabidka.nezalozena': {
+    cs: 'Nabídku se nepodařilo založit.',
+    en: 'The quote could not be created.',
+  },
+  'nabidka.pripravena': { cs: 'Nabídka je připravená', en: 'The quote is ready' },
+  'nabidka.zObjednavky': {
+    cs: 'Z objednávky z webu ({datum}). U audioknih se nabídka zakládá sama, hned jak objednávka přijde — tahle se z nějakého důvodu nezaložila. Vznikne tímhle tlačítkem a bude rozpracovaná, takže ji ještě stihnete upravit.',
+    en: 'From a web order ({datum}). For audiobooks the quote is created on its own as soon as the order arrives — this one was not, for some reason. This button creates it as a draft, so you can still edit it.',
+  },
+  'nabidka.zakladam': { cs: 'Zakládám…', en: 'Creating…' },
+  'nabidka.pridat': { cs: 'Přidat nabídku', en: 'Add quote' },
+  'nabidka.predmet': { cs: 'Předmět', en: 'Subject' },
+  'nabidka.odberatel': { cs: 'Odběratel', en: 'Customer' },
+  'nabidka.vystavi': { cs: 'Vystaví', en: 'Issued by' },
+  'nabidka.cenaBezDph': { cs: 'Cena bez DPH', en: 'Price excluding VAT' },
+  // Zkratka normostran za cenou; anglicky SP (standard page).
+  'nabidka.normostrany': { cs: '· {pocet} NS', en: '· {pocet} SP' },
+
+  // pozvánka herci
+  'pozvanka.nova': { cs: 'Nová pozvánka', en: 'New invitation' },
+  'pozvanka.novaHerci': { cs: 'Nová pozvánka herci', en: 'New narrator invitation' },
+  'pozvanka.neodeslana': {
+    cs: 'Pozvánku se nepodařilo odeslat.',
+    en: 'The invitation could not be sent.',
+  },
+  'pozvanka.odeslanaNa': {
+    cs: 'Pozvánka odešla na {email}.',
+    en: 'The invitation has been sent to {email}.',
+  },
+  'pozvanka.vysvetleni': {
+    cs: 'Stačí e-mail. Herci přijde pozvánka do portálu a po nastavení hesla ho portál sám vyzve, ať doplní jméno, adresu, číslo účtu a kde může natáčet.',
+    en: 'An email address is enough. The narrator gets an invitation to the portal and, once they have set a password, the portal itself asks them for their name, address, account number and where they can record.',
+  },
+  'pozvanka.emailHerce': { cs: 'e-mail herce', en: 'narrator’s email' },
+  'pozvanka.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
+  'pozvanka.poslat': { cs: 'Poslat', en: 'Send' },
+
+  // text z objednávky v hlavičce projektu
+  'priloha.textZObjednavky': {
+    cs: 'Text z objednávky: {nazev}',
+    en: 'Text from the order: {nazev}',
+  },
+  'priloha.naDisku': { cs: 'je ve složce na Disku', en: 'it is in the Drive folder' },
+  'priloha.nedostalSe': {
+    cs: 'na Disk se nedostal: {chyba}',
+    en: 'it did not get to Drive: {chyba}',
+  },
+  'priloha.nahravam': { cs: 'Nahrávám…', en: 'Uploading…' },
+  'priloha.nahratNaDisk': {
+    cs: 'Nahrát do složky na Disku',
+    en: 'Upload to the Drive folder',
+  },
+  'priloha.nahrano': { cs: 'Nahráno do složky projektu.', en: 'Uploaded to the project folder.' },
+  'priloha.nepodariloSe': { cs: 'Nepodařilo se.', en: 'It did not work.' },
+
+  // náhled pod ikonou v přehledu projektů
+  'ikony.nahled': { cs: 'Náhled', en: 'Preview' },
+  'ikony.nahledNenacten': {
+    cs: 'Náhled se nepodařilo načíst.',
+    en: 'The preview could not be loaded.',
+  },
+
+  // pole s lupou a zaškrtávací výběr studií
+  'vyber.zacnetePsat': { cs: 'Začněte psát…', en: 'Start typing…' },
+  'vyber.hledejtePsanim': { cs: 'Hledejte psaním…', en: 'Search by typing…' },
+  'vyber.nicNenalezeno': { cs: 'Nic takového jsme nenašli.', en: 'We found nothing like that.' },
+  'vyber.ukazujemePrvnich': {
+    cs: 'Ukazujeme prvních {pocet} — pište dál, ať se seznam zúží.',
+    en: 'Showing the first {pocet} — keep typing to narrow the list.',
+  },
+  'vyber.asponJednoStudio': {
+    cs: 'Aspoň jedno studio musí zůstat vybrané',
+    en: 'At least one studio must stay selected',
+  },
+
+  // priorita projektu (ikona tří sloupečků)
+  'priorita.nizka': { cs: 'Nízká', en: 'Low' },
+  'priorita.stredni': { cs: 'Střední', en: 'Medium' },
+  'priorita.vysoka': { cs: 'Vysoká', en: 'High' },
+  'priorita.bez': { cs: 'bez priority', en: 'no priority' },
+  'priorita.bublina': { cs: 'Priorita: {stupen}', en: 'Priority: {stupen}' },
+  'priorita.bublinaKlepnuti': {
+    cs: 'Priorita: {stupen} — klepnutím {dalsi}',
+    en: 'Priority: {stupen} — tap for {dalsi}',
+  },
+  'priorita.bublinaKlepnutiPopis': {
+    cs: 'Priorita: {stupen}. Klepnutím nastavíte: {dalsi}',
+    en: 'Priority: {stupen}. Tap to set: {dalsi}',
+  },
+
+  // QR platba v řádku dokladu
+  'qr.platbaCastka': { cs: 'QR platba: {castka}', en: 'QR payment: {castka}' },
+  'qr.zobrazit': { cs: 'Zobrazit QR platbu', en: 'Show QR payment' },
+  'qr.kodProPlatbu': { cs: 'QR kód pro platbu', en: 'QR code for payment' },
+  // Variabilní symbol; britská banka mu říká payment reference.
+  'qr.vs': { cs: 'VS {vs}', en: 'Ref. {vs}' },
+  'qr.splatnost': { cs: 'Splatnost {datum}', en: 'Due {datum}' },
+
+  // --- sdílené komponenty, které běží i na serveru (dávka 3) ----------------
+  // Odznak přeposlechu u typu projektu. „Záznam chyby" je v AudioTaggeru tag
+  // (viz slovníček v docs/preklad-portalu.md).
+  'odznakPreposlechu.hotovo': { cs: 'Přeposlechnuto komplet', en: 'Proof-listening complete' },
+  'odznakPreposlechu.bezi': { cs: 'Přeposlech běží', en: 'Proof-listening under way' },
+  'odznakPreposlechu.chyb': { cs: '{pocet} zapsaných chyb', en: '{pocet} tags logged' },
+  'odznakPreposlechu.stopy': {
+    cs: '{hotovo} z {celkem} stop doposlechnuto',
+    en: '{hotovo} of {celkem} tracks listened through',
+  },
+  'odznakPreposlechu.procent': { cs: '{procent} % textu', en: '{procent}% of the text' },
+  'odznakPreposlechu.bezikratce': { cs: 'Přeposlech běží · {pocet}', en: 'Proof-listening · {pocet}' },
+
+  // Odběr kalendáře pro herce
+  'kalendarOdber.pridat': { cs: 'Přidat do kalendáře', en: 'Add to calendar' },
+  'kalendarOdber.odebirat': { cs: 'Odebírat (aktualizuje se samo)', en: 'Subscribe (updates itself)' },
+  'kalendarOdber.google': { cs: 'Google Kalendář', en: 'Google Calendar' },
+  'kalendarOdber.vysvetleni': {
+    cs: 'Při odběru se v kalendáři objeví i pozdější změny - přesun nebo zrušení termínu.',
+    en: 'With a subscription, later changes show up in your calendar too — a session moved or cancelled.',
+  },
+
+  // QR platba u dokladu
+  'qr.naskenujte': { cs: 'Naskenujte v bankovní aplikaci.', en: 'Scan it in your banking app.' },
+  'qr.platba': { cs: 'QR platba', en: 'QR payment' },
+
+  // Válec progresu natáčení. Množná čísla jsou tři celé věty, ne skládačka.
+  'progres.prazdne': { cs: 'text zatím nemáme', en: 'no text yet' },
+  'progres.popisek': { cs: 'Progres natáčení', en: 'Recording progress' },
+  'progres.zbyvaJedna': { cs: 'zbývá {pocet} strana', en: '{pocet} standard page to go' },
+  'progres.zbyvaMalo': { cs: 'zbývají {pocet} strany', en: '{pocet} standard pages to go' },
+  'progres.zbyvaVic': { cs: 'zbývá {pocet} stran', en: '{pocet} standard pages to go' },
+
+  // Značka „projekt přišel z webu"
+  'zWebu.popisKdy': {
+    cs: 'Projekt vznikl z objednávky na webu ({datum})',
+    en: 'This project came from an order on the website ({datum})',
+  },
+  'zWebu.popis': {
+    cs: 'Projekt vznikl z objednávky na webu',
+    en: 'This project came from an order on the website',
+  },
 };
 
 /**

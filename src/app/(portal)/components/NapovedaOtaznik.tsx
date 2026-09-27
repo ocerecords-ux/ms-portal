@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePreklad } from './JazykProvider';
 
 /**
  * OTAZNÍK S NÁVODEM PŘÍMO V OBRAZOVCE (zadání 24. 9. 2026: „ten návod na
@@ -29,6 +30,7 @@ export function NapovedaOtaznik({
   /** Otazník sedí ve fialové liště: potřebuje bílé obtažení, ne tmavé. */
   tmavy?: boolean;
 }) {
+  const t = usePreklad();
   const [otevreno, setOtevreno] = useState(false);
   const [navod, setNavod] = useState<Navod | null>(null);
   const [stav, setStav] = useState<'ceka' | 'nacitam' | 'hotovo' | 'nejde'>('ceka');
@@ -76,8 +78,8 @@ export function NapovedaOtaznik({
       <button
         type="button"
         onClick={() => setOtevreno(true)}
-        title="Návod k téhle obrazovce"
-        aria-label="Návod k téhle obrazovce"
+        title={t('napoveda.navodKObrazovce')}
+        aria-label={t('napoveda.navodKObrazovce')}
         className={`shrink-0 grid place-items-center w-7 h-7 rounded-full border font-heading font-bold text-sm transition-colors ${
           tmavy
             ? 'border-line text-muted hover:text-brand-purple hover:border-brand-purple'
@@ -98,16 +100,18 @@ export function NapovedaOtaznik({
           >
             <div className="flex items-start gap-3 px-5 sm:px-6 py-4 border-b border-line">
               <div className="min-w-0">
-                <p className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted m-0">Nápověda</p>
+                <p className="text-[11px] font-heading uppercase tracking-[0.12em] text-muted m-0">
+                  {t('napoveda.nadpis')}
+                </p>
                 <h2 className="font-display text-2xl text-ink m-0 mt-0.5">
-                  {navod?.nazev ?? 'Návod k téhle obrazovce'}
+                  {navod?.nazev ?? t('napoveda.navodKObrazovce')}
                 </h2>
                 {navod?.perex && <p className="text-sm font-body text-muted m-0 mt-1">{navod.perex}</p>}
               </div>
               <button
                 type="button"
                 onClick={() => setOtevreno(false)}
-                aria-label="Zavřít"
+                aria-label={t('obecne.zavrit')}
                 className="ml-auto text-muted hover:text-ink text-xl leading-none mt-1"
               >
                 ×
@@ -119,7 +123,7 @@ export function NapovedaOtaznik({
                 <div className="navod-text" dangerouslySetInnerHTML={{ __html: navod.html }} />
               ) : (
                 <p className="text-sm font-body text-muted m-0">
-                  {stav === 'nejde' ? 'Návod k téhle obrazovce zatím není.' : 'Načítám návod…'}
+                  {stav === 'nejde' ? t('napoveda.navodNeni') : t('napoveda.nacitamNavod')}
                 </p>
               )}
             </div>
@@ -131,14 +135,14 @@ export function NapovedaOtaznik({
                   target="_blank"
                   className="text-sm font-heading font-semibold text-brand-purple no-underline hover:underline"
                 >
-                  Otevřít v Nápovědě ↗
+                  {t('napoveda.otevritVNapovede')}
                 </Link>
                 <button
                   type="button"
                   onClick={() => setOtevreno(false)}
                   className="ml-auto bg-bar text-white font-heading font-semibold text-sm rounded-lg px-5 py-2"
                 >
-                  Zavřít
+                  {t('obecne.zavrit')}
                 </button>
               </div>
             )}

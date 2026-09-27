@@ -1,6 +1,7 @@
 'use client';
 
 import type { SekceTech } from '@/lib/technickeParametry';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * VÝPIS TECHNICKÝCH PARAMETRŮ (zadání 27. 9. 2026: „ať je to přehledné").
@@ -12,18 +13,24 @@ import type { SekceTech } from '@/lib/technickeParametry';
  * V kartě projektu jdou sekce VEDLE SEBE (`sloupce`): Albatros jich má pět
  * a pod sebou by z nich byla obrazovka textu, kterou nikdo nepřečte. V úzkém
  * okně chatu zůstávají pod sebou.
+ *
+ * JAZYK CHODÍ PROPEM, ne hookem: kartu v detailu projektu vykresluje serverová
+ * stránka a `usePreklad()` by na serveru spadl (pravidlo 8
+ * v docs/preklad-portalu.md). Kdo jazyk nemá, nechá výchozí češtinu.
  */
 export function VypisParametru({
   sekce,
   husty = false,
   sloupce = false,
+  jazyk = 'cs',
 }: {
   sekce: SekceTech[];
   husty?: boolean;
   sloupce?: boolean;
+  jazyk?: Jazyk;
 }) {
   if (sekce.length === 0) {
-    return <p className="text-sm font-body text-muted m-0">Pro tenhle projekt tu zatím nic není.</p>;
+    return <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'parametry.nicTuNeni')}</p>;
   }
   return (
     <div

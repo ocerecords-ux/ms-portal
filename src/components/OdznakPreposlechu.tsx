@@ -14,6 +14,8 @@
  * Projekt, kde se ještě nikdo neozval, nemá odznak vůbec - nachystané stopy
  * samy o sobě nejsou zpráva a v seznamu by z toho byl les šedých sluchátek.
  */
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+
 export type StavPreposlechu = {
   /** Kolik stop je v AudioTaggeru nachystaných. */
   stop: number;
@@ -58,27 +60,36 @@ function Sluchatka({ velikost }: { velikost: number }) {
   );
 }
 
-function popis(stav: StavPreposlechu, hotovo: boolean): string {
+function popis(jazyk: Jazyk, stav: StavPreposlechu, hotovo: boolean): string {
   const casti: string[] = [];
-  if (stav.chyb > 0) casti.push(`${stav.chyb} zapsaných chyb`);
-  if (stav.stop > 0) casti.push(`${stav.poslechnuto} z ${stav.stop} stop doposlechnuto`);
-  if (typeof stav.procent === 'number') casti.push(`${stav.procent} % textu`);
+  if (stav.chyb > 0) casti.push(prelozitS(jazyk, 'odznakPreposlechu.chyb', { pocet: stav.chyb }));
+  if (stav.stop > 0)
+    casti.push(
+      prelozitS(jazyk, 'odznakPreposlechu.stopy', { hotovo: stav.poslechnuto, celkem: stav.stop }),
+    );
+  if (typeof stav.procent === 'number')
+    casti.push(prelozitS(jazyk, 'odznakPreposlechu.procent', { procent: stav.procent }));
   const detail = casti.length ? ` — ${casti.join(' · ')}` : '';
-  return `${hotovo ? 'Přeposlechnuto komplet' : 'Přeposlech běží'}${detail}`;
+  const uvod = prelozit(jazyk, hotovo ? 'odznakPreposlechu.hotovo' : 'odznakPreposlechu.bezi');
+  return `${uvod}${detail}`;
 }
 
 export function OdznakPreposlechu({
   stav,
   /** `tecka` je kolečko k ikoně typu v přehledu, `odznak` je pruh s textem do detailu. */
   varianta = 'tecka',
+  // Odznak kreslí server i klientská komponenta, hook by na serveru spadl -
+  // jazyk proto chodí propem (pravidlo 8 v docs/preklad-portalu.md).
+  jazyk = 'cs',
 }: {
   stav: StavPreposlechu | null | undefined;
   varianta?: 'tecka' | 'odznak';
+  jazyk?: Jazyk;
 }) {
   if (!maOdznakPreposlechu(stav) || !stav) return null;
   const hotovo = stav.hotovo;
 
-  const titulek = popis(stav, hotovo);
+  const titulek = popis(jazyk, stav, hotovo);
 
   if (varianta === 'tecka') {
     return (
@@ -105,7 +116,9 @@ export function OdznakPreposlechu({
       }`}
     >
       <Sluchatka velikost={13} />
-      {hotovo ? 'Přeposlechnuto' : `Přeposlech běží · ${stav.chyb}`}
+      {hotovo
+        ? prelozit(jazyk, 'preposlech.stitekPreposlechnuto')
+        : prelozitS(jazyk, 'odznakPreposlechu.bezikratce', { pocet: stav.chyb })}
     </span>
   );
 }

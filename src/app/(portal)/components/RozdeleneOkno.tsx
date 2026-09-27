@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePreklad } from './JazykProvider';
 
 /**
  * ROZDĚLENÉ OKNO (zadání 22. 9. 2026: „dobrá možnost rozdělit okno portálu
@@ -18,12 +19,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  */
 
 const KLIC = 'ms-rozdeleni';
-const RYCHLE: { label: string; cesta: string }[] = [
-  { label: 'Projekty', cesta: '/projekty' },
-  { label: 'Nabídky', cesta: '/admin/doklady/nabidky' },
-  { label: 'Faktury', cesta: '/admin/doklady/faktury' },
-  { label: 'Kalendář', cesta: '/kalendar' },
-  { label: 'Výkazy', cesta: '/vykazy' },
+/** `klic` je klíč do slovníku - pruh nad pravou půlkou je i anglicky. */
+const RYCHLE: { klic: string; cesta: string }[] = [
+  { klic: 'listou.rozdeleni.projekty', cesta: '/projekty' },
+  { klic: 'listou.rozdeleni.nabidky', cesta: '/admin/doklady/nabidky' },
+  { klic: 'listou.rozdeleni.faktury', cesta: '/admin/doklady/faktury' },
+  { klic: 'listou.rozdeleni.kalendar', cesta: '/kalendar' },
+  { klic: 'listou.rozdeleni.vykazy', cesta: '/vykazy' },
 ];
 
 type Stav = { zapnuto: boolean; sirka: number; cesta: string };
@@ -40,6 +42,7 @@ function nacti(): Stav {
 }
 
 export function RozdeleneOkno({ children }: { children: React.ReactNode }) {
+  const t = usePreklad();
   const [stav, setStav] = useState<Stav>(VYCHOZI);
   const [vPanelu, setVPanelu] = useState(false);
   const [tahne, setTahne] = useState(false);
@@ -122,7 +125,7 @@ export function RozdeleneOkno({ children }: { children: React.ReactNode }) {
       <div
         role="separator"
         aria-orientation="vertical"
-        title="Táhnutím změníte šířku"
+        title={t('listou.rozdeleniSirka')}
         onPointerDown={(e) => {
           e.preventDefault();
           setTahne(true);
@@ -143,30 +146,30 @@ export function RozdeleneOkno({ children }: { children: React.ReactNode }) {
                 stav.cesta.startsWith(r.cesta) ? 'border-brand-purple text-brand-purple bg-brand-purple/10' : 'border-line text-muted hover:text-ink'
               }`}
             >
-              {r.label}
+              {t(r.klic)}
             </button>
           ))}
           <span className="flex-1" />
           <button
             type="button"
             onClick={() => ramec.current?.contentWindow?.history.back()}
-            title="Zpět"
+            title={t('obecne.zpet')}
             className="w-7 h-7 rounded-lg border border-line text-muted hover:text-ink"
           >
             ‹
           </button>
           <a
             href={stav.cesta}
-            title="Otevřít vlevo místo téhle stránky"
+            title={t('listou.rozdeleniOtevritVlevoPopis')}
             className="h-7 px-2 inline-flex items-center rounded-lg border border-line text-xs font-heading text-muted hover:text-ink no-underline"
           >
-            Otevřít vlevo
+            {t('listou.rozdeleniOtevritVlevo')}
           </a>
           <button
             type="button"
             onClick={() => uloz({ zapnuto: false })}
-            title="Zavřít rozdělení"
-            aria-label="Zavřít rozdělení"
+            title={t('listou.rozdeleniZavrit')}
+            aria-label={t('listou.rozdeleniZavrit')}
             className="w-7 h-7 rounded-lg border border-line text-muted hover:text-danger text-base leading-none"
           >
             ×
@@ -176,7 +179,7 @@ export function RozdeleneOkno({ children }: { children: React.ReactNode }) {
           ref={ramec}
           src={stav.cesta}
           onLoad={poNacteni}
-          title="Druhá půlka portálu"
+          title={t('listou.rozdeleniRamec')}
           className={`flex-1 w-full rounded-card border border-line bg-paper ${tahne ? 'pointer-events-none' : ''}`}
         />
       </div>
@@ -186,12 +189,13 @@ export function RozdeleneOkno({ children }: { children: React.ReactNode }) {
 
 /** Tlačítko do horní lišty. */
 export function TlacitkoRozdeleni() {
+  const t = usePreklad();
   return (
     <button
       type="button"
       onClick={() => window.dispatchEvent(new Event('portal-rozdeleni'))}
-      title="Rozdělit okno - vpravo druhá stránka portálu"
-      aria-label="Rozdělit okno"
+      title={t('listou.rozdelitOkno')}
+      aria-label={t('listou.rozdelitOknoKratce')}
       className="hidden md:flex items-center justify-center w-9 h-9 rounded-pill text-white/80 hover:text-white hover:bg-white/10 transition-colors"
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]" aria-hidden>

@@ -469,7 +469,7 @@ export function Topbar({
               type="button"
               onClick={() => setAddOpen((v) => !v)}
               disabled={missingPages.length === 0}
-              title={t('listou.pridat')}
+              title={t('listou.pridatStranku')}
               className="inline-flex items-center gap-1.5 rounded-pill border border-dashed border-white/60 text-white text-xs font-heading font-semibold px-3 py-1.5 hover:bg-white/10 disabled:opacity-40"
             >
               <span className="text-base leading-none">+</span> {t('listou.pridatStranku')}

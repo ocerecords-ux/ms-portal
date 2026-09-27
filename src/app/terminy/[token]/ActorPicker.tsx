@@ -224,7 +224,7 @@ export function ActorPicker({
             </li>
           ))}
         </ul>
-        {kalendarUrl && <PridatDoKalendare url={kalendarUrl} />}
+        {kalendarUrl && <PridatDoKalendare url={kalendarUrl} jazyk={jazyk} />}
         <p className="text-sm font-body text-muted m-0">{t('terminyVyber.tesimeSe')}</p>
       </div>
     );
