@@ -213,6 +213,17 @@ export function VystupySection({
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="font-display text-2xl text-ink m-0">Výstupy</h2>
+        {/* Kolik jich pod projektem je (27. 9. 2026: „ať mi ještě svítí
+            nějaké číslo nahoře, kolik těch výstupů přesně je"). Počítají se
+            i zkrácené verze - odevzdává se každá zvlášť. */}
+        {razene.length > 0 && (
+          <span
+            title={`${razene.length} ${razene.length === 1 ? 'výstup' : razene.length < 5 ? 'výstupy' : 'výstupů'} včetně zkrácených verzí`}
+            className="shrink-0 grid place-items-center min-w-[28px] h-7 px-2 rounded-pill bg-brand-purple/15 border border-brand-purple/40 text-brand-purpleDeep dark:text-brand-purpleLight font-heading font-semibold text-sm tabular-nums"
+          >
+            {razene.length}
+          </span>
+        )}
         {canEdit && (
           <button
             type="button"
@@ -616,7 +627,17 @@ function VyberVOkne({
 
   useEffect(() => {
     if (!kotva) return;
-    const zavri = () => setKotva(null);
+    /**
+     * Okno se zavírá při posouvání stránky (jinak by zůstalo viset mimo své
+     * tlačítko), ale NE při posouvání uvnitř sebe - čtrnáct herců se do něj
+     * nevejde a rolovat v nich musí jít (27. 9. 2026: „když rozkliknu seznam
+     * herců, tak v tom nemůžu rolovat").
+     */
+    const zavri = (e?: Event) => {
+      const cil = e?.target;
+      if (cil instanceof Node && oknoRef.current?.contains(cil)) return;
+      setKotva(null);
+    };
     const klavesa = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setKotva(null);
     };
@@ -752,7 +773,17 @@ function MenuVystupu({
 
   useEffect(() => {
     if (!kotva) return;
-    const zavri = () => setKotva(null);
+    /**
+     * Okno se zavírá při posouvání stránky (jinak by zůstalo viset mimo své
+     * tlačítko), ale NE při posouvání uvnitř sebe - čtrnáct herců se do něj
+     * nevejde a rolovat v nich musí jít (27. 9. 2026: „když rozkliknu seznam
+     * herců, tak v tom nemůžu rolovat").
+     */
+    const zavri = (e?: Event) => {
+      const cil = e?.target;
+      if (cil instanceof Node && oknoRef.current?.contains(cil)) return;
+      setKotva(null);
+    };
     const klavesa = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setKotva(null);
     };

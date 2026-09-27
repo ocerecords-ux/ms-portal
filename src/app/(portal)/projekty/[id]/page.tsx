@@ -60,6 +60,7 @@ import { findInternalProject } from '@/lib/projektySeznamServer';
 import { nabidkaManazeru } from '@/lib/manazeriServer';
 import { loadRodneListy } from '@/lib/rodnyListServer';
 import { vystupyProProjekt } from '@/lib/vystupyServer';
+import { sDedenim } from '@/lib/vystupy';
 import { bezStarePredpony, dnesniDatum, vychoziNazevSpotu, VYCHOZI_REZIE } from '@/lib/rodnyList';
 import { nactiPenizeProjektu } from '@/lib/projektPenizeServer';
 import { natoceniProjektu } from '@/lib/brunoServer';
@@ -881,6 +882,28 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           canEdit={canEdit}
           listy={listy.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() }))}
           vychozi={vychoziLL}
+          /**
+           * NÁVAZNOST NA VÝSTUPY (27. 9. 2026). Licence se sjednává ke
+           * konkrétnímu spotu - u zkrácené verze se bere, co zdědila po
+           * hlavním výstupu, ať v listu nechybí média ani herci.
+           */
+          vystupy={vystupy.map((vy) => {
+            const s = sDedenim(
+              vy,
+              vy.odvozenoZId ? vystupy.find((x) => x.id === vy.odvozenoZId) ?? null : null,
+            );
+            return {
+              id: vy.id,
+              nazev: s.nazev,
+              media: s.licenceIds
+                .map((id) => druhyLicence.find((d) => d.id === id)?.nazev || '')
+                .filter(Boolean)
+                .join(', '),
+              herci: s.herciIds.map((id) => ({ id, jmeno: jmenoHerce.get(id) || '' })).filter((h) => h.jmeno),
+              mesicu: s.licenceMesicu ?? null,
+              datumVyroby: s.datumVyroby ?? null,
+            };
+          })}
         />
       ),
     });

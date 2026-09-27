@@ -96,6 +96,23 @@ export async function vychoziLicencniList(caflouProjectId: string): Promise<Vych
   };
 }
 
+/**
+ * NÁHLED LISTU (zadání 27. 9. 2026: „a takhle s tím náhledem"). Vyrobí TOTÉŽ
+ * PDF jako vystavení, jen se nikam neukládá - žádný záznam, žádný Disk.
+ * Jedna cesta k dokumentu, takže se náhled a hotový list nemůžou rozejít.
+ */
+export function nahledLicencnihoListu(vstup: Omit<VstupLicencnihoListu, 'actorUserId'>): Buffer {
+  const datum = /^\d{4}-\d{2}-\d{2}$/.test(vstup.datumVyroby)
+    ? new Date(`${vstup.datumVyroby}T00:00:00.000Z`)
+    : new Date();
+  const dnes = new Date();
+  return renderLicencniListPdf({
+    ...vstup,
+    datumVyroby: datumCesky(datum),
+    datum: `${dnes.getDate()}. ${dnes.getMonth() + 1}. ${dnes.getFullYear()}`,
+  });
+}
+
 export async function nactiLicencniListy(caflouProjectId: string) {
   return prisma.licencniList.findMany({
     where: { caflouProjectId },
