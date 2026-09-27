@@ -3912,7 +3912,11 @@ model LicencniList {
   projectName     String
   companyId       String?
   /// Herec z projektu, pokud je to účet v portálu (jinak jen jméno níže).
+  /// U listu s víc interprety drží prvního z nich - ostatní jsou v textu.
   actorUserId     String?
+  /// Výstup, ke kterému list patří (27. 9. 2026: „tolik licenčních listů,
+  /// kolik je výstupů"). Starší listy ho nemají, tam se páruje podle názvu.
+  vystupId        String?
 
   fileName String
   /// PDF v úložišti (nebo data URL, když úložiště není) - jako u Rodného listu.
@@ -3940,6 +3944,7 @@ model LicencniList {
   createdAt       DateTime @default(now())
 
   @@index([caflouProjectId])
+  @@index([vystupId])
 }
 
 /// INSTAGRAM NA TABULÍCH (zadání 22. 9. 2026: „můžeme propojit tu tabuli ve

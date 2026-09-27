@@ -9,6 +9,8 @@ import { vystavLicencniList } from '@/lib/licencniListServer';
 const pole = (max = 300) => z.string().trim().max(max);
 const schema = z.object({
   actorUserId: z.string().trim().max(60).nullable().optional(),
+  /** Výstup, ke kterému list patří - jeden list na výstup (27. 9. 2026). */
+  vystupId: z.string().trim().max(60).nullable().optional(),
   nazevSpotu: pole().min(1, 'Vyplňte název spotu.'),
   klient: pole().min(1, 'Vyplňte klienta.'),
   objednatel: pole().min(1, 'Vyplňte objednatele.'),
@@ -37,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     const vysledek = await vystavLicencniList(
       params.id,
-      { ...parsed.data, actorUserId: parsed.data.actorUserId || null },
+      { ...parsed.data, actorUserId: parsed.data.actorUserId || null, vystupId: parsed.data.vystupId || null },
       session.user.id,
     );
     if (!vysledek.ok) return NextResponse.json({ error: vysledek.chyba }, { status: 400 });

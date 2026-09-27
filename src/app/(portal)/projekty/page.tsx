@@ -14,7 +14,7 @@ import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { ZalozkyKlienta } from './ZalozkyKlienta';
 import { ReklamaPrehled, type DokumentProjektu } from './ReklamaPrehled';
-import { loadNejnovejsiLicencniListy } from '@/lib/licencniListServer';
+import { loadLicencniListyProjektu } from '@/lib/licencniListServer';
 import { DokonceneFirmy } from './DokonceneFirmy';
 import { nactiPoradiStavu } from '@/lib/poradiStavuServer';
 import { NovyProjektForm } from './NovyProjektForm';
@@ -317,13 +317,20 @@ export default async function ProjektyPage() {
     // Dokumenty ke stažení: rodný list u rádiového spotu, licenční list
     // u ostatních reklam (zadání 22. a 25. 9. 2026).
     const vsechnyIds = firemniMeta.map((m) => m.caflouProjectId);
-    const licencniListy = await loadNejnovejsiLicencniListy(vsechnyIds);
+    const licencniListy = await loadLicencniListyProjektu(vsechnyIds);
     for (const id of vsechnyIds) {
       const dokumenty: DokumentProjektu[] = [];
       const rl = rodneListyMapa.get(id);
       if (rl) dokumenty.push({ id: rl.id, nazev: rl.fileName, druh: 'RL' });
-      const ll = licencniListy.get(id);
-      if (ll) dokumenty.push({ id: ll.id, nazev: ll.fileName, druh: 'LL' });
+      /**
+       * VŠECHNY licenční listy, ne jen poslední (27. 9. 2026: „když vystavím
+       * licenční listy, měl by je klient vidět v systému"). U zakázky s pěti
+       * výstupy je jich pět a klient potřebuje všechny; v seznamu se ukazují
+       * názvem spotu, ne názvem souboru.
+       */
+      for (const ll of licencniListy.get(id) ?? []) {
+        dokumenty.push({ id: ll.id, nazev: ll.nazevSpotu || ll.fileName, druh: 'LL' });
+      }
       reklamaDokumenty[id] = dokumenty;
     }
 

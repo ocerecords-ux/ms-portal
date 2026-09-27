@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/db';
 import { uploadGeneratedPdf } from '@/lib/storage';
-import { uploadPdfToDriveFolder } from '@/lib/googleDrive';
 import { bezTitulu } from '@/lib/jmena';
 import { licencniListFileName, renderLicencniListPdf, VYCHOZI_PODMINKY } from '@/lib/licencniListPdf';
 
@@ -18,6 +17,8 @@ export const PODEPISUJE_LICENCI = 'Ondřej Černý';
 
 export type VstupLicencnihoListu = {
   actorUserId: string | null;
+  /** Výstup, ke kterému list patří - jeden list na výstup (27. 9. 2026). */
+  vystupId?: string | null;
   nazevSpotu: string;
   klient: string;
   objednatel: string;
@@ -128,6 +129,8 @@ export async function nactiLicencniListy(caflouProjectId: string) {
       createdAt: true,
       driveUrl: true,
       driveError: true,
+      nazevSpotu: true,
+      vystupId: true,
     },
   });
 }
@@ -139,7 +142,7 @@ export async function vystavLicencniList(
 ): Promise<{ ok: true; id: string } | { ok: false; chyba: string }> {
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId },
-    select: { name: true, companyId: true, driveUrl: true, company: { select: { driveFolderUrl: true } } },
+    select: { name: true, companyId: true },
   });
   if (!meta) return { ok: false, chyba: 'Projekt nenalezen.' };
 
@@ -155,15 +158,12 @@ export async function vystavLicencniList(
   const ulozeno = await uploadGeneratedPdf(pdf, `licencni-listy/${caflouProjectId}`, fileName);
   if (!ulozeno) return { ok: false, chyba: 'PDF se nepodařilo uložit.' };
 
-  // Kopie do složky projektu na Disku - best effort, důvod selhání se ukáže u listu.
-  const slozka = meta.driveUrl || meta.company?.driveFolderUrl || null;
-  const drive = slozka ? await uploadPdfToDriveFolder(slozka, fileName, pdf) : null;
-  const driveError = !slozka
-    ? 'Projekt ani firma nemají vyplněnou složku na Disku.'
-    : drive && !drive.ok
-      ? drive.duvod
-      : null;
-
+  /**
+   * NA DISK SE LICENČNÍ LIST NEUKLÁDÁ (rozhodnutí 27. 9. 2026: „když vystavím
+   * licenční listy, měl by je klient vidět v systému, neukládal bych nakonec
+   * na disk"). Klient si je stáhne v portálu u zakázky; kopie na Disku by byla
+   * druhá pravda, kterou nikdo neudržuje.
+   */
   const ll = await prisma.licencniList.create({
     data: {
       caflouProjectId,
@@ -172,9 +172,10 @@ export async function vystavLicencniList(
       actorUserId: vstup.actorUserId,
       fileName,
       url: ulozeno.url,
-      driveFileId: drive?.ok ? drive.id : null,
-      driveUrl: drive?.ok ? drive.webViewLink : null,
-      driveError,
+      driveFileId: null,
+      driveUrl: null,
+      driveError: null,
+      vystupId: vstup.vystupId ?? null,
       nazevSpotu: vstup.nazevSpotu,
       klient: vstup.klient,
       objednatel: vstup.objednatel,
@@ -196,24 +197,26 @@ export async function vystavLicencniList(
 }
 
 /**
- * Nejnovější licenční list k několika projektům naráz - pro přehled projektů
- * u klienta reklam, kde se dokumenty stahují rovnou z řádku (25. 9. 2026).
+ * VŠECHNY licenční listy projektů - pro přehled u klienta reklam, kde se
+ * dokumenty stahují rovnou z řádku (25. 9. 2026). Od 27. 9. 2026 jich je
+ * u zakázky tolik, kolik je výstupů, takže klient musí vidět všechny, ne jen
+ * poslední; řadí se od nejnovějšího.
  */
-export async function loadNejnovejsiLicencniListy(
+export async function loadLicencniListyProjektu(
   caflouProjectIds: string[],
-): Promise<Map<string, { id: string; fileName: string }>> {
-  const vysledek = new Map<string, { id: string; fileName: string }>();
+): Promise<Map<string, { id: string; fileName: string; nazevSpotu: string }[]>> {
+  const vysledek = new Map<string, { id: string; fileName: string; nazevSpotu: string }[]>();
   if (caflouProjectIds.length === 0) return vysledek;
   try {
-    const vsechny = await prisma.licencniList.findMany({
+    const vsechny = (await prisma.licencniList.findMany({
       where: { caflouProjectId: { in: caflouProjectIds } },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, fileName: true, caflouProjectId: true },
-    });
+      select: { id: true, fileName: true, nazevSpotu: true, caflouProjectId: true },
+    })) as { id: string; fileName: string; nazevSpotu: string; caflouProjectId: string }[];
     for (const ll of vsechny) {
-      if (!vysledek.has(ll.caflouProjectId)) {
-        vysledek.set(ll.caflouProjectId, { id: ll.id, fileName: ll.fileName });
-      }
+      const dosud = vysledek.get(ll.caflouProjectId) ?? [];
+      dosud.push({ id: ll.id, fileName: ll.fileName, nazevSpotu: ll.nazevSpotu });
+      vysledek.set(ll.caflouProjectId, dosud);
     }
   } catch (err) {
     console.error('Načtení licenčních listů pro přehled selhalo:', err);

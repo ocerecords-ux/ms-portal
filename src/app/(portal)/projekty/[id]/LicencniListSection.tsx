@@ -26,6 +26,9 @@ import { VyberVOkne } from '../VyberVOkne';
 export type LicencniListRadek = {
   id: string;
   fileName: string;
+  /** Ke kterému výstupu list patří; starší listy ho nemají. */
+  vystupId: string | null;
+  nazevSpotu: string;
   interpret: string;
   uzemi: string;
   media: string;
@@ -209,6 +212,18 @@ export function LicencniListSection({
   const radekNahledu = chystane[Math.min(vybrany, chystane.length - 1)] ?? null;
 
   /**
+   * JEDEN SEZNAM (zadání 27. 9. 2026: „přijde mi zbytečné, aby se mi tam
+   * zobrazovaly dva seznamy, chci jen jeden, a aby tam zůstaly názvy").
+   * Vystavený list se ukáže rovnou na řádku svého výstupu - podle vazby,
+   * a u starších listů, které ji nemají, podle názvu spotu.
+   */
+  const vystavenyKRadku = (r: ChystanyList) =>
+    listy.find((l) => (l.vystupId ? l.vystupId === r.klic : l.nazevSpotu === r.nazevSpotu)) ?? null;
+
+  /** Listy, ke kterým už žádný výstup není - ať se ze seznamu neztratí. */
+  const osirele = listy.filter((l) => !chystane.some((r) => vystavenyKRadku(r)?.id === l.id));
+
+  /**
    * ŽIVÝ NÁHLED. Tentýž PDF list, jaký pak vznikne - jen se nikam neukládá.
    * Čeká se půl vteřiny po posledním ťuknutí, aby se dokument nevyráběl po
    * každém písmenu, a rozdělaný požadavek se ruší, ať pomalejší starší
@@ -284,7 +299,12 @@ export function LicencniListSection({
           headers: { 'Content-Type': 'application/json' },
           // actorUserId drží vazbu na herce; u několika jmen na jednom listu
           // se váže na prvního - ostatní jsou v textu interpretů.
-          body: JSON.stringify({ ...data, actorUserId: r.interpreti[0]?.id ?? null }),
+          body: JSON.stringify({
+            ...data,
+            actorUserId: r.interpreti[0]?.id ?? null,
+            // Klíč řádku je id výstupu; u projektu bez výstupů je to „projekt".
+            vystupId: r.klic === 'projekt' ? null : r.klic,
+          }),
         });
         const telo = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -329,7 +349,7 @@ export function LicencniListSection({
   }
 
   async function smaz(id: string) {
-    if (!window.confirm('Smazat tenhle licenční list? Kopie na Disku půjde do koše.')) return;
+    if (!window.confirm('Smazat tenhle licenční list? Klient ho přestane v portálu vidět.')) return;
     const res = await fetch(`/api/licencni-list/${id}`, { method: 'DELETE' });
     if (res.ok) router.refresh();
   }
@@ -503,10 +523,27 @@ export function LicencniListSection({
                       {r.typLicence}
                     </button>
 
+                    {/* Vystavený list visí rovnou u svého řádku. */}
+                    {(() => {
+                      const hotovyList = vystavenyKRadku(r);
+                      return hotovyList ? (
+                        <a
+                          href={`/api/licencni-list/${hotovyList.id}`}
+                          target="_blank"
+                          rel="noopener"
+                          title={`Vystaveno ${new Date(hotovyList.createdAt).toLocaleDateString('cs-CZ')} — ${hotovyList.interpret}`}
+                          className="shrink-0 rounded-pill bg-okTint text-status-done px-3 py-1.5 text-xs font-heading font-semibold no-underline"
+                        >
+                          Vystaveno ↗
+                        </a>
+                      ) : null;
+                    })()}
+
                     <MenuListu
                       bezi={bezi}
                       datumVyroby={r.datumVyroby}
                       media={r.media}
+                      vystaveny={vystavenyKRadku(r)?.id ?? null}
                       onDatum={(d) => nastavRadek(i, { datumVyroby: d })}
                       onMedia={(m) =>
                         nastavRadek(i, {
@@ -515,6 +552,7 @@ export function LicencniListSection({
                         })
                       }
                       onVystav={() => void vystav(i)}
+                      onSmazVystaveny={(id) => void smaz(id)}
                     />
                   </div>
                 </li>
@@ -533,12 +571,10 @@ export function LicencniListSection({
             </p>
           )}
 
-          {/* Vystavené listy - jeden řádek na list, jako výstupy. */}
-          {listy.length === 0 ? (
-            <p className="text-sm font-body text-muted m-0">Zatím žádný vystavený list.</p>
-          ) : (
+          {/* Listy bez výstupu (vystavené dřív, než výstupy vznikly). */}
+          {osirele.length > 0 && (
             <ul className="list-none p-0 m-0 flex flex-col gap-2">
-              {listy.map((l) => (
+              {osirele.map((l) => (
                 <li key={l.id}>
                   <div className="flex items-center gap-2 flex-wrap rounded-card border border-line bg-field/40 px-3 py-2">
                     <a
@@ -548,7 +584,7 @@ export function LicencniListSection({
                       title={l.interpret}
                       className="flex-1 min-w-[140px] px-2 text-sm font-heading font-semibold text-ink no-underline hover:text-brand-purple truncate"
                     >
-                      {l.interpret}
+                      {l.nazevSpotu || l.interpret}
                     </a>
                     <span className="shrink-0 rounded-pill border border-line text-muted px-3 py-1.5 text-xs font-heading">
                       {[l.delkaLicence, l.typLicence].filter(Boolean).join(' · ')}
@@ -556,23 +592,6 @@ export function LicencniListSection({
                     <span className="shrink-0 text-xs font-body text-muted">
                       {new Date(l.createdAt).toLocaleDateString('cs-CZ')}
                     </span>
-                    {l.driveUrl ? (
-                      <a
-                        href={l.driveUrl}
-                        target="_blank"
-                        rel="noopener"
-                        title="Kopie ve složce projektu na Disku"
-                        className="shrink-0 text-xs font-heading text-brand-purple no-underline hover:underline"
-                      >
-                        Disk ↗
-                      </a>
-                    ) : (
-                      l.driveError && (
-                        <span title={l.driveError} className="shrink-0 text-xs font-body text-status-progress">
-                          Disk ✕
-                        </span>
-                      )
-                    )}
                     {canEdit && (
                       <button
                         type="button"
@@ -666,16 +685,21 @@ function MenuListu({
   bezi,
   media,
   datumVyroby,
+  vystaveny,
   onMedia,
   onDatum,
   onVystav,
+  onSmazVystaveny,
 }: {
   bezi: boolean;
   media: string;
   datumVyroby: string;
+  /** Id už vystaveného listu k tomuhle výstupu, jinak null. */
+  vystaveny: string | null;
   onMedia: (media: string) => void;
   onDatum: (datum: string) => void;
   onVystav: () => void;
+  onSmazVystaveny: (id: string) => void;
 }) {
   const [otevreno, setOtevreno] = useState(false);
   const oknoRef = useRef<HTMLDivElement>(null);
@@ -741,8 +765,20 @@ function MenuListu({
             disabled={bezi}
             className="rounded-lg border border-line text-ink font-heading font-semibold text-sm px-3 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
           >
-            Vystavit jen tenhle list
+            {vystaveny ? 'Vystavit znovu' : 'Vystavit jen tenhle list'}
           </button>
+          {vystaveny && (
+            <button
+              type="button"
+              onClick={() => {
+                setOtevreno(false);
+                onSmazVystaveny(vystaveny);
+              }}
+              className="rounded-lg border border-line text-muted font-heading font-semibold text-sm px-3 py-1.5 bg-surface hover:text-danger hover:border-danger transition-colors cursor-pointer"
+            >
+              Smazat vystavený list
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -880,7 +880,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         <LicencniListSection
           caflouProjectId={caflouProjectId}
           canEdit={canEdit}
-          listy={listy.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() }))}
+          listy={listy.map((l) => ({
+            ...l,
+            createdAt: l.createdAt.toISOString(),
+            vystupId: (l as { vystupId?: string | null }).vystupId ?? null,
+            nazevSpotu: (l as { nazevSpotu?: string }).nazevSpotu ?? '',
+          }))}
           vychozi={vychoziLL}
           /**
            * NÁVAZNOST NA VÝSTUPY (27. 9. 2026). Licence se sjednává ke
