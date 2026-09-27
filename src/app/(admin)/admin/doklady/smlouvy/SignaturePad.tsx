@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useJazyk } from '@/app/(portal)/components/JazykProvider';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Plátno na podpis (zadani 8. 9. 2026: podepisování jako u Signi, bez
@@ -19,11 +21,17 @@ export function SignaturePad({
   onChange,
   disabled,
   height = 180,
+  jazyk: jazykProp,
 }: {
   onChange: (dataUrl: string | null) => void;
   disabled?: boolean;
   height?: number;
+  /** Mimo JazykProvider (veřejná stránka k podpisu) chodí jazyk propem. */
+  jazyk?: Jazyk;
 }) {
+  const jazykKontextu = useJazyk();
+  const jazyk = jazykProp ?? jazykKontextu;
+  const t = (klic: string) => prelozit(jazyk, klic);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const kresli = useRef(false);
   const prazdne = useRef(true);
@@ -133,13 +141,13 @@ export function SignaturePad({
         />
         {!maPodpis && (
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm font-body text-[#8A82A0]">
-            Podepište se sem myší nebo prstem
+            {t('smlouva.platnoVyzva')}
           </span>
         )}
       </div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs font-body text-muted">
-          Podpis se uloží k dokumentu spolu s časem, IP adresou a otiskem textu.
+          {t('smlouva.platnoDolozka')}
         </span>
         <button
           type="button"
@@ -147,7 +155,7 @@ export function SignaturePad({
           disabled={disabled || !maPodpis}
           className="text-xs font-heading font-semibold text-muted hover:text-ink disabled:opacity-50"
         >
-          Vymazat
+          {t('smlouva.platnoVymazat')}
         </button>
       </div>
     </div>

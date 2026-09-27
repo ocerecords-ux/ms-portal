@@ -72,7 +72,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 1 | 14. 9. | Klientská cesta I — `(portal)/projekty` (seznam i detail očima klienta), `(portal)/nahravky`, `app/preposlech` | [x] |
 | 2 | 15. 9. | Klientská cesta II — `objednavka`, `muj-ucet`, `moje-terminy`, veřejné stránky `nabidka`, `smlouva`, `terminy`, `nahravky`, chybové a načítací stránky | [x] |
 | 3 | 16. 9. | Společné komponenty — `(portal)/components` (chat, úkoly, rychlé volby, oznámení, doky) a `src/components` | [x] |
-| 4 | 17. 9. | Doklady — `(admin)/admin/doklady` (nabídky, faktury, výdaje, moje firmy) a číselníky v `src/lib` (stavy, měny, způsoby úhrady) | [ ] |
+| 4 | 17. 9. | Doklady — `(admin)/admin/doklady` (nabídky, faktury, výdaje, moje firmy) a číselníky v `src/lib` (stavy, měny, způsoby úhrady) | [x] |
 | 5 | 18. 9. | Zbytek administrace — uživatelé, ceníky, studia, archiv, firmy, `(portal)/kalendar`, `(portal)/vykazy` | [ ] |
 | 6 | 19. 9. | E-maily a upozornění — `src/lib/email.ts` podle jazyka příjemce, push a oznámení | [ ] |
 | 7 | 20. 9. | Kontrolní průchod — proklikat portál v EN, dohledat zapomenuté české texty, sjednotit termíny podle slovníčku | [ ] |
@@ -93,9 +93,43 @@ z `src/lib` a z administrace. Až se na ně dostane řada, je to tohle:
 - `src/lib/progresNataceni.ts` — `popis` („Dotočeno", „str. 3 z 12") a `stranText`.
 - `src/lib/projectTypes.ts` — `PRIORITY_LABELS` už `IkonaPriority` nepoužívá,
   priority jsou ve slovníku jako `priorita.nizka/stredni/vysoka`.
-- **`(admin)/admin/layout.tsx` nemá `JazykProvider`** (jen Topbar). Dokud ho
-  nedostane, zůstane v administraci česky i `ChatDock` a `RaditelnaTabulka`
-  — obě mají prop `jazyk` nachystaný s výchozí češtinou. Patří to do dávky 5.
+- ~~`(admin)/admin/layout.tsx` nemá `JazykProvider`~~ — **vyřešeno v dávce 4**
+  (27. 9. 2026). Administrace provider má, takže `ChatDock` i sdílené
+  komponenty v ní mluví jazykem z lišty.
+
+### Co dávka 4 nechala dalším dávkám
+
+Doklady jsou přeložené celé (726 klíčů), ale při práci vylezlo tohle:
+
+- **`formatMoney(minor, currency, jazyk?)` nikdo nevolá s jazykem.** Funkce
+  parametr má už od dávky 0, jenže všech ~200 volání ho vynechává, takže
+  v anglickém portálu jsou částky pořád v českém formátu (`1 234,50` místo
+  `1,234.50`). Je to jeden sjednocující průchod napříč repozitářem — patří do
+  dávky 7, ne doprostřed dávky na jednu složku.
+- **`/api/admin/upominky`** posílá `splatnost` a `castka` už naformátované
+  jako řetězec, takže je komponenta nemá jak přeložit. Formátování patří
+  o patro níž, do té routy.
+- **`PROMENNE_UPOMINKY`** v `src/lib/upominkyFaktur.ts` (`popis`, `ukazka`)
+  jde do `title` tlačítek se zástupnými značkami a je česky. Věta kolem už
+  přeložená je.
+- **`CONTRACT_STATUS_LABELS` a `CONTRACT_PLACEHOLDERS[].label`** v
+  `src/lib/contracts.ts` zůstávají české schválně - bere si je PDF a e-maily,
+  kde jazyk určuje dokument, ne přepínač. Rozhraní je nepoužívá. NEMAZAT.
+- **„Herec" u smluv na reklamu.** Držíme se slovníku (`Narrator`), i když
+  slovníček pro reklamy říká *voice actor*. Formulář smlouvu na audioknihu od
+  reklamy nerozlišuje - rozhodnout v dávce 7.
+- **Ztráta tučného zvýraznění** ve dvou větách (částky v přehledu „Z nabídky
+  je vyfakturováno…", kurz ČNB). Důsledek pravidla 7 - věta je jeden klíč.
+  Kdyby to vadilo, chce to rozseknout na víc vět.
+- **Duplicita v češtině:** `FakturaKeSmlouve` u nulové sazby píše
+  `({castka} bez DPH · bez DPH)`. Nechali jsme doslova, čeština je zdroj
+  pravdy - ale je to nejspíš překlep.
+
+**Opraveno mimochodem:** výpočet ceny projektu v
+`(portal)/projekty/[id]/page.tsx` filtroval stornované faktury porovnáním
+s českým slovem `'Stornovaná'`. Po přeložení popisku by filtr přestal platit a
+stornované faktury by se počítaly do ceny projektu. Teď se porovnává kód
+(`i.status !== 'CANCELLED'`).
 
 ### Jak najít, co v dávce zbývá
 

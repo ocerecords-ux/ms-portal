@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 export type DalsiPriloha = { id: string; nazev: string };
 
@@ -22,6 +23,7 @@ export function PrilohyVydaje({
   hlavni: { nazev: string | null } | null;
   dalsi: DalsiPriloha[];
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const vstup = useRef<HTMLInputElement | null>(null);
   const [pracuji, setPracuji] = useState(false);
@@ -37,10 +39,10 @@ export function PrilohyVydaje({
       for (const s of soubory) body.append('soubor', s);
       const res = await fetch(`${zaklad}/prilohy`, { method: 'POST', body });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Přílohu se nepodařilo nahrát.');
+      if (!res.ok) throw new Error(data?.error || t('vydaj.prilohaNahraniSelhalo'));
       router.refresh();
     } catch (e) {
-      setChyba(e instanceof Error ? e.message : 'Přílohu se nepodařilo nahrát.');
+      setChyba(e instanceof Error ? e.message : t('vydaj.prilohaNahraniSelhalo'));
     } finally {
       setPracuji(false);
       if (vstup.current) vstup.current.value = '';
@@ -48,23 +50,32 @@ export function PrilohyVydaje({
   }
 
   async function odeber(id: string) {
-    if (!window.confirm('Opravdu odebrat přílohu?')) return;
+    if (!window.confirm(t('vydaj.prilohaOdebratOtazka'))) return;
     setPracuji(true);
     setChyba(null);
     try {
       const res = await fetch(`${zaklad}/prilohy?priloha=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Přílohu se nepodařilo odebrat.');
+      if (!res.ok) throw new Error(data?.error || t('vydaj.prilohaOdebraniSelhalo'));
       router.refresh();
     } catch (e) {
-      setChyba(e instanceof Error ? e.message : 'Přílohu se nepodařilo odebrat.');
+      setChyba(e instanceof Error ? e.message : t('vydaj.prilohaOdebraniSelhalo'));
     } finally {
       setPracuji(false);
     }
   }
 
   const radky: { klic: string; nazev: string; odkaz: string; hlavni: boolean }[] = [
-    ...(hlavni ? [{ klic: 'hlavni', nazev: hlavni.nazev || 'Doklad', odkaz: `${zaklad}/priloha`, hlavni: true }] : []),
+    ...(hlavni
+      ? [
+          {
+            klic: 'hlavni',
+            nazev: hlavni.nazev || t('vydaj.souborDoklad'),
+            odkaz: `${zaklad}/priloha`,
+            hlavni: true,
+          },
+        ]
+      : []),
     ...dalsi.map((p) => ({
       klic: p.id,
       nazev: p.nazev,
@@ -75,10 +86,10 @@ export function PrilohyVydaje({
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
-      <span className="text-xs font-heading text-muted uppercase tracking-wide">Přílohy</span>
+      <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('vydaj.prilohyNadpis')}</span>
 
       {radky.length === 0 ? (
-        <p className="text-sm text-muted font-body m-0">Bez přílohy.</p>
+        <p className="text-sm text-muted font-body m-0">{t('vydaj.prilohyZadne')}</p>
       ) : (
         <ul className="list-none m-0 p-0 flex flex-col gap-1.5">
           {radky.map((r) => (
@@ -92,12 +103,14 @@ export function PrilohyVydaje({
               >
                 {r.nazev}
               </a>
-              {r.hlavni && radky.length > 1 && <span className="text-xs text-muted font-body">doklad</span>}
+              {r.hlavni && radky.length > 1 && (
+                <span className="text-xs text-muted font-body">{t('vydaj.prilohaJeDoklad')}</span>
+              )}
               <a
                 href={`${r.odkaz}${r.odkaz.includes('?') ? '&' : '?'}stahnout=1`}
                 className="text-xs font-heading text-muted hover:text-ink no-underline"
               >
-                Stáhnout
+                {t('obecne.stahnout')}
               </a>
               <button
                 type="button"
@@ -105,7 +118,7 @@ export function PrilohyVydaje({
                 onClick={() => odeber(r.klic)}
                 className="text-xs font-heading text-muted hover:text-danger bg-transparent border-0 cursor-pointer disabled:opacity-60"
               >
-                Odebrat
+                {t('vydaj.prilohaOdebrat')}
               </button>
             </li>
           ))}
@@ -126,7 +139,11 @@ export function PrilohyVydaje({
         onClick={() => vstup.current?.click()}
         className="self-start text-sm font-heading font-semibold text-brand-purple bg-transparent border border-line rounded-lg px-3 py-1.5 hover:border-brand-purple disabled:opacity-60"
       >
-        {pracuji ? 'Pracuji…' : radky.length === 0 ? '+ Nahrát doklad' : '+ Přidat přílohu'}
+        {pracuji
+          ? t('mazani.pracuji')
+          : radky.length === 0
+            ? t('vydaj.nahratDoklad')
+            : t('vydaj.pridatPrilohu')}
       </button>
       {chyba && <p className="text-danger text-sm m-0">{chyba}</p>}
     </div>

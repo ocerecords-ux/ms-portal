@@ -8,6 +8,7 @@ import {
   moznostiZ,
   type SloupecTabulky,
 } from '@/app/(portal)/components/RaditelnaTabulka';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Tabulka vydaných faktur, řaditelná kliknutím na název sloupce (zadání
@@ -47,6 +48,8 @@ export function FakturyTabulka({
    */
   lzeMazat?: boolean;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [vybrane, setVybrane] = useState<Set<string>>(new Set());
 
   const sloupce: SloupecTabulky<FakturaRadek>[] = [
@@ -67,7 +70,7 @@ export function FakturyTabulka({
                     return dalsi;
                   })
                 }
-                popisek={`Vybrat fakturu ${r.cislo}`}
+                popisek={t('faktura.vybratRadek', { cislo: r.cislo })}
               />
             ),
           } as SloupecTabulky<FakturaRadek>,
@@ -75,7 +78,7 @@ export function FakturyTabulka({
       : []),
     {
       key: 'nazev',
-      label: 'Název',
+      label: t('faktura.sloupecNazev'),
       hodnota: (r) => r.nazev,
       trida: 'font-semibold',
       bunka: (r) => (
@@ -95,33 +98,35 @@ export function FakturyTabulka({
     },
     {
       key: 'odberatel',
-      label: 'Odběratel',
+      label: t('faktura.sloupecOdberatel'),
       hodnota: (r) => r.odberatel,
       trida: 'text-muted',
       bunka: (r) => r.odberatel,
     },
     {
       key: 'vystaveno',
-      label: 'Vystaveno',
+      label: t('faktura.sloupecVystaveno'),
       hodnota: (r) => r.vystavenoMs,
       trida: 'text-muted tabular-nums whitespace-nowrap',
       bunka: (r) => r.vystaveno,
     },
     {
       key: 'splatnost',
-      label: 'Splatnost',
+      label: t('faktura.sloupecSplatnost'),
       hodnota: (r) => r.splatnostMs,
       trida: 'tabular-nums whitespace-nowrap',
       bunka: (r) => (
         <span className={r.poSplatnosti ? 'text-danger font-semibold' : 'text-muted'}>
           {r.splatnost}
-          {r.poSplatnosti && <span className="block text-[11px] font-body">po splatnosti</span>}
+          {r.poSplatnosti && (
+            <span className="block text-[11px] font-body">{t('faktura.poSplatnosti')}</span>
+          )}
         </span>
       ),
     },
     {
       key: 'stav',
-      label: 'Stav',
+      label: t('faktura.sloupecStav'),
       hodnota: (r) => r.stavPoradi,
       trida: 'whitespace-nowrap',
       bunka: (r) => (
@@ -134,7 +139,7 @@ export function FakturyTabulka({
     },
     {
       key: 'castka',
-      label: 'K úhradě',
+      label: t('faktura.sloupecKUhrade'),
       hodnota: (r) => r.castkaMinor,
       vpravo: true,
       trida: 'text-ink tabular-nums whitespace-nowrap',
@@ -149,36 +154,37 @@ export function FakturyTabulka({
       klicRadku={(r) => r.id}
       vychoziSloupec="vystaveno"
       vychoziSmer="desc"
-      prazdno="Tady zatím nic není."
+      prazdno={t('faktura.tabulkaPrazdna')}
       minSirka={860}
+      jazyk={jazyk}
       // Hledá se ve všem, co je na řádku vidět - včetně čísla faktury
       // a projektu (zadání 15. 9. 2026).
       hledat={(r) => `${r.nazev} ${r.cislo} ${r.projekt ?? ''} ${r.odberatel} ${r.stav}`}
-      hledatPlaceholder="Hledat fakturu, odběratele, projekt…"
+      hledatPlaceholder={t('faktura.hledatPlaceholder')}
       filtry={[
         {
           key: 'odberatel',
-          label: 'Odběratel',
+          label: t('faktura.filtrOdberatel'),
           moznosti: moznostiZ(radky, (r) => r.odberatel),
           vyhovuje: (r, h) => r.odberatel === h,
         },
         {
           key: 'projekt',
-          label: 'Projekt',
+          label: t('faktura.filtrProjekt'),
           moznosti: moznostiZ(radky, (r) => r.projekt),
           vyhovuje: (r, h) => r.projekt === h,
         },
         {
           key: 'stav',
-          label: 'Stav',
+          label: t('faktura.filtrStav'),
           moznosti: [
             ...moznostiZ(radky, (r) => r.stav),
-            { hodnota: 'po-splatnosti', popisek: 'Po splatnosti' },
+            { hodnota: 'po-splatnosti', popisek: t('faktura.filtrPoSplatnosti') },
           ],
           vyhovuje: (r, h) => (h === 'po-splatnosti' ? r.poSplatnosti : r.stav === h),
         },
       ]}
-      rozsahDatumu={{ label: 'Vystaveno', ms: (r) => r.vystavenoMs }}
+      rozsahDatumu={{ label: t('faktura.sloupecVystaveno'), ms: (r) => r.vystavenoMs }}
       hromadneAkce={
         lzeMazat
           ? (viditelne) => (
@@ -187,7 +193,7 @@ export function FakturyTabulka({
                 vybrane={vybrane}
                 onZmena={setVybrane}
                 endpoint="/api/admin/invoices/hromadne-smazani"
-                poznamka="Smazání je nevratné a v číselné řadě po dokladu zůstane díra. Portál smaže jen stornované faktury — ostatní se musí nejdřív stornovat."
+                poznamka={t('faktura.hromadneMazaniPoznamka')}
               />
             )
           : undefined

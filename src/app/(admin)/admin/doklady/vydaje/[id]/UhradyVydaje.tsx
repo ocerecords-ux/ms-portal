@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Currency, PaymentMethod } from '@prisma/client';
 import { formatMoney, minorToInput, parseMoneyToMinor } from '@/lib/doklady';
-import { nazevZpusobuUhrady, ZPUSOBY_UHRADY } from '@/lib/uctenka';
+import { nazevZpusobuUhrady, zpusobyUhrady } from '@/lib/uctenka';
 import { stavUhrady, uhrazenoMinor, zbyvaMinor } from '@/lib/expenses';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { formatDatum, type Jazyk } from '@/lib/jazyk';
 
 /**
  * ÚHRADY DOKLADU NA VÍCEKRÁT (zadání 25. 9. 2026: „potřebuji u výdajů přidávat
@@ -31,8 +33,9 @@ export type UhradaRadek = {
   kdoJmeno: string | null;
 };
 
-function den(iso: string): string {
-  return new Intl.DateTimeFormat('cs-CZ').format(new Date(iso));
+// Pomocna funkce mimo komponentu - jazyk si bere parametrem, hook by tu nefungoval.
+function den(jazyk: Jazyk, iso: string): string {
+  return formatDatum(jazyk, new Date(iso));
 }
 
 function dnesek(): string {
@@ -55,6 +58,8 @@ export function UhradyVydaje({
   /** Způsob z dokladu - u faktury převod, u účtenky karta. */
   vychoziZpusob: PaymentMethod;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const uhrazeno = uhrazenoMinor(uhrady, celkemMinor, paid);
   const zbyva = zbyvaMinor(celkemMinor, uhrazeno);
@@ -72,7 +77,7 @@ export function UhradyVydaje({
 
   async function zapis() {
     if (castkaMinor <= 0) {
-      setChyba('Zadejte částku, která odešla.');
+      setChyba(t('vydaj.uhradaChybiCastka'));
       return;
     }
     setPracuji(true);
@@ -85,14 +90,14 @@ export function UhradyVydaje({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Úhradu se nepodařilo zapsat.');
+        setChyba(data?.error || t('vydaj.uhradaZapisSelhal'));
         return;
       }
       setPoznamka('');
       setCastka(minorToInput(Math.max(0, data?.zbyvaMinor ?? 0)));
       router.refresh();
     } catch {
-      setChyba('Úhradu se nepodařilo zapsat.');
+      setChyba(t('vydaj.uhradaZapisSelhal'));
     } finally {
       setPracuji(false);
     }
@@ -105,13 +110,13 @@ export function UhradyVydaje({
       const res = await fetch(`/api/admin/expenses/${expenseId}/uhrady/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setChyba(data?.error || 'Smazání se nezdařilo.');
+        setChyba(data?.error || t('mazani.nezdarilo'));
         return;
       }
       setMazu(null);
       router.refresh();
     } catch {
-      setChyba('Smazání se nezdařilo.');
+      setChyba(t('mazani.nezdarilo'));
     } finally {
       setPracuji(false);
     }
@@ -123,10 +128,10 @@ export function UhradyVydaje({
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <span className="text-xs font-heading text-muted uppercase tracking-wide">Úhrady</span>
+        <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('vydaj.uhradyNadpis')}</span>
         {stav === 'CAST' && (
           <span className="inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill bg-warnTint text-status-progress">
-            Uhrazeno částečně
+            {t('vydaj.uhrazenoCastecne')}
           </span>
         )}
       </div>
@@ -134,15 +139,15 @@ export function UhradyVydaje({
       {/* Tři čísla vedle sebe - kvůli poslednímu z nich to celé vzniklo. */}
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">Celkem</p>
+          <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">{t('vydaj.celkem')}</p>
           <p className="font-heading text-lg text-ink m-0 tabular-nums">{formatMoney(celkemMinor, mena)}</p>
         </div>
         <div>
-          <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">Uhrazeno</p>
+          <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">{t('vydaj.uhrazeno')}</p>
           <p className="font-heading text-lg text-status-done m-0 tabular-nums">{formatMoney(uhrazeno, mena)}</p>
         </div>
         <div>
-          <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">Zbývá doplatit</p>
+          <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">{t('vydaj.zbyvaDoplatit')}</p>
           <p
             className={`font-display text-xl m-0 tabular-nums ${zbyva > 0 ? 'text-danger' : 'text-status-done'}`}
           >
@@ -158,10 +163,14 @@ export function UhradyVydaje({
               <span className="font-heading text-sm text-ink tabular-nums w-28 shrink-0 text-right">
                 {formatMoney(u.castkaMinor, mena)}
               </span>
-              <span className="text-sm font-body text-muted tabular-nums">{den(u.datum)}</span>
-              <span className="text-xs font-body text-muted">{nazevZpusobuUhrady(u.zpusob)}</span>
+              <span className="text-sm font-body text-muted tabular-nums">{den(jazyk, u.datum)}</span>
+              <span className="text-xs font-body text-muted">{nazevZpusobuUhrady(u.zpusob, jazyk)}</span>
               {u.poznamka && <span className="text-xs font-body text-ink">{u.poznamka}</span>}
-              {u.kdoJmeno && <span className="text-[11px] font-body text-muted">zapsal {u.kdoJmeno}</span>}
+              {u.kdoJmeno && (
+                <span className="text-[11px] font-body text-muted">
+                  {t('vydaj.uhraduZapsal', { kdo: u.kdoJmeno })}
+                </span>
+              )}
               {/* Dvě klepnutí - smazaná úhrada se nedá vzít zpátky. */}
               <button
                 type="button"
@@ -174,7 +183,7 @@ export function UhradyVydaje({
                     : 'border-transparent text-muted hover:text-danger hover:border-line'
                 }`}
               >
-                {mazu === u.id ? 'Opravdu smazat?' : 'Smazat'}
+                {mazu === u.id ? t('mazani.opravduSmazat') : t('obecne.smazat')}
               </button>
             </li>
           ))}
@@ -186,7 +195,7 @@ export function UhradyVydaje({
       <div className="border-t border-line pt-4 flex flex-col gap-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Kolik odešlo</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleKolikOdeslo')}</span>
             <input
               inputMode="decimal"
               value={castka}
@@ -195,17 +204,17 @@ export function UhradyVydaje({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Kdy</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleKdy')}</span>
             <DatumPole value={datum} onChange={(e) => setDatum(e.target.value)} className={inputClass} />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Hrazeno</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleHrazeno')}</span>
             <VyberPole
               value={zpusob}
               onChange={(e) => setZpusob(e.target.value as PaymentMethod)}
               className={inputClass}
             >
-              {ZPUSOBY_UHRADY.map((z) => (
+              {zpusobyUhrady(jazyk).map((z) => (
                 <option key={z.hodnota} value={z.hodnota}>
                   {z.nazev}
                 </option>
@@ -214,11 +223,11 @@ export function UhradyVydaje({
           </label>
         </div>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Poznámka</span>
+          <span className="text-sm font-body text-ink">{t('vydaj.polePoznamka')}</span>
           <input
             value={poznamka}
             onChange={(e) => setPoznamka(e.target.value)}
-            placeholder="např. první splátka, zbytek po dodání"
+            placeholder={t('vydaj.uhradaPoznamkaPlaceholder')}
             className={inputClass}
           />
         </label>
@@ -229,7 +238,7 @@ export function UhradyVydaje({
             disabled={pracuji}
             className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:brightness-95 transition-all disabled:opacity-60"
           >
-            {pracuji ? 'Ukládám…' : 'Zapsat úhradu'}
+            {pracuji ? t('obecne.ukladam') : t('vydaj.zapsatUhradu')}
           </button>
           {zbyva > 0 && (
             <button
@@ -238,7 +247,7 @@ export function UhradyVydaje({
               disabled={pracuji}
               className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
             >
-              Doplatit zbytek ({formatMoney(zbyva, mena)})
+              {t('vydaj.doplatitZbytek', { castka: formatMoney(zbyva, mena) })}
             </button>
           )}
         </div>

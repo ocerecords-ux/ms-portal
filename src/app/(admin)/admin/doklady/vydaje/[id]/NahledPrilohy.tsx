@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * NÁHLED PŘÍLOHY VEDLE DOKLADU (zadání 16. 9. 2026: „tady u výdajů bych
@@ -23,6 +24,7 @@ export function NahledPrilohy({
   /** Název souboru — podle přípony se pozná, čím se dá vykreslit. */
   nazev: string | null;
 }) {
+  const t = usePreklad();
   const [chyba, setChyba] = useState(false);
   const odkaz = `/api/admin/expenses/${encodeURIComponent(expenseId)}/priloha`;
   const druh = druhSouboru(nazev);
@@ -30,7 +32,7 @@ export function NahledPrilohy({
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden flex flex-col">
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line">
-        <span className="text-xs font-heading text-muted uppercase tracking-wide">Příloha</span>
+        <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('vydaj.nahledPriloha')}</span>
         <span className="flex items-center gap-3">
           <a
             href={odkaz}
@@ -38,13 +40,13 @@ export function NahledPrilohy({
             rel="noreferrer"
             className="text-xs font-heading text-brand-purple no-underline"
           >
-            Otevřít
+            {t('obecne.otevrit')}
           </a>
           <a
             href={`${odkaz}?stahnout=1`}
             className="text-xs font-heading text-muted hover:text-ink no-underline"
           >
-            Stáhnout
+            {t('obecne.stahnout')}
           </a>
         </span>
       </div>
@@ -54,19 +56,17 @@ export function NahledPrilohy({
       <div className="bg-white min-h-[420px] flex items-center justify-center">
         {chyba || druh === 'jine' ? (
           <p className="text-sm font-body text-muted m-0 px-6 py-10 text-center">
-            {chyba
-              ? 'Náhled se nepodařilo načíst.'
-              : 'Tenhle typ souboru se v prohlížeči nezobrazí.'}
+            {chyba ? t('vydaj.nahledSelhal') : t('vydaj.nahledNepodporovanyTyp')}
             <br />
             <a href={odkaz} target="_blank" rel="noreferrer" className="text-brand-purple">
-              Otevřít v novém okně
+              {t('vydaj.nahledOtevritVNovemOkne')}
             </a>
           </p>
         ) : druh === 'obrazek' ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={odkaz}
-            alt={nazev || 'Příloha dokladu'}
+            alt={nazev || t('vydaj.nahledPopisObrazku')}
             onError={() => setChyba(true)}
             className="max-w-full h-auto"
           />
@@ -75,7 +75,7 @@ export function NahledPrilohy({
              lištu — tlačítka Otevřít a Stáhnout jsou o kus výš. */
           <iframe
             src={`${odkaz}#toolbar=0&navpanes=0`}
-            title={nazev || 'Příloha dokladu'}
+            title={nazev || t('vydaj.nahledPopisObrazku')}
             className="w-full h-[70vh] min-h-[420px] border-0"
           />
         )}

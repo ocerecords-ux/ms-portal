@@ -4,6 +4,8 @@ import { computeTotals, formatMoney } from '@/lib/doklady';
 import { NewInvoiceForm } from './NewInvoiceForm';
 import { StahnoutPrilohy } from '../StahnoutPrilohy';
 import { FakturyTabulka, type FakturaRadek } from './FakturyTabulka';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit } from '@/lib/jazyk';
 
 // Prehled vydanych faktur (zadani 6. 9. 2026). Zalozky podle stavu - nejdulezitejsi
 // je videt, co je jeste neuhrazene a co je uz po splatnosti.
@@ -11,17 +13,17 @@ export const dynamic = 'force-dynamic';
 
 // Zalozka "Vse" tu byla navic (zadani 8. 9. 2026) - stavy pokryvaji vsechno.
 const TABS = [
-  { key: 'rozpracovane', label: 'Rozpracované', statuses: ['DRAFT'] },
-  { key: 'neuhrazene', label: 'Neuhrazené', statuses: ['SENT'] },
-  { key: 'uhrazene', label: 'Uhrazené', statuses: ['PAID'] },
-  { key: 'stornovane', label: 'Stornované', statuses: ['CANCELLED'] },
+  { key: 'rozpracovane', klic: 'faktura.zalozkaRozpracovane', statuses: ['DRAFT'] },
+  { key: 'neuhrazene', klic: 'faktura.zalozkaNeuhrazene', statuses: ['SENT'] },
+  { key: 'uhrazene', klic: 'faktura.zalozkaUhrazene', statuses: ['PAID'] },
+  { key: 'stornovane', klic: 'faktura.zalozkaStornovane', statuses: ['CANCELLED'] },
 ] as const;
 
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: 'Rozpracovaná',
-  SENT: 'Neuhrazená',
-  PAID: 'Uhrazená',
-  CANCELLED: 'Stornovaná',
+const STATUS_KLICE: Record<string, string> = {
+  DRAFT: 'faktura.stavRozpracovana',
+  SENT: 'faktura.stavNeuhrazena',
+  PAID: 'faktura.stavUhrazena',
+  CANCELLED: 'faktura.stavStornovana',
 };
 
 // Poradi pri razeni podle stavu: co ceka na akci, jde napred.
@@ -39,11 +41,9 @@ const STATUS_CLASSES: Record<string, string> = {
   CANCELLED: 'bg-dangerTint text-danger',
 };
 
-function formatDate(date: Date | null): string {
-  return date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '—';
-}
-
 export default async function InvoicesPage({ searchParams }: { searchParams: { tab?: string } }) {
+  const jazyk = nactiJazyk();
+
   // NEUHRAZENE JSOU PRVNI (zadani 15. 9. 2026: „kdyz se dostanu na zalozku
   // Faktury, chci videt nejdriv neuhrazene faktury"). Rozpracovane zustavaji
   // v zalozkach, jen uz nejsou to prvni, co clovek uvidi.
@@ -84,18 +84,18 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
     const totals = computeTotals(invoice.items, invoice);
     return {
       id: invoice.id,
-      nazev: invoice.subject || 'Bez názvu',
+      nazev: invoice.subject || prelozit(jazyk, 'faktura.bezNazvu'),
       cislo: invoice.number,
       projekt: invoice.projectName || null,
       odberatel: invoice.company.name,
-      vystaveno: formatDate(invoice.issueDate),
+      vystaveno: formatDatum(jazyk, invoice.issueDate),
       vystavenoMs: invoice.issueDate ? new Date(invoice.issueDate).getTime() : null,
-      splatnost: formatDate(invoice.dueDate),
+      splatnost: formatDatum(jazyk, invoice.dueDate),
       splatnostMs: invoice.dueDate ? new Date(invoice.dueDate).getTime() : null,
       poSplatnosti: Boolean(
         invoice.status === 'SENT' && invoice.dueDate && new Date(invoice.dueDate) < today,
       ),
-      stav: STATUS_LABELS[invoice.status] ?? invoice.status,
+      stav: STATUS_KLICE[invoice.status] ? prelozit(jazyk, STATUS_KLICE[invoice.status]) : invoice.status,
       stavTrida: STATUS_CLASSES[invoice.status] ?? 'bg-field text-muted',
       stavPoradi: STATUS_PORADI[invoice.status] ?? 9,
       castka: formatMoney(totals.incVat, invoice.currency),
@@ -107,15 +107,15 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
     <div className="flex flex-col gap-3 sm:gap-6">
       {issuers.length === 0 ? (
         <div className="bg-surface rounded-card border border-line shadow-sm px-6 py-10 text-center">
-          <p className="font-heading font-semibold text-ink m-0">Nejdřív si založte fakturační firmu</p>
+          <p className="font-heading font-semibold text-ink m-0">{prelozit(jazyk, 'faktura.zadnaFirmaNadpis')}</p>
           <p className="text-sm text-muted font-body m-0 mt-1 max-w-lg mx-auto">
-            Faktura se vystavuje za konkrétní firmu a bere si z ní číselnou řadu i bankovní účet.
+            {prelozit(jazyk, 'faktura.zadnaFirmaPopis')}
           </p>
           <Link
             href="/admin/doklady/moje-firmy"
             className="inline-block mt-4 bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 no-underline"
           >
-            Přejít na Moje firmy
+            {prelozit(jazyk, 'faktura.prejitNaMojeFirmy')}
           </Link>
         </div>
       ) : (
@@ -132,7 +132,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
                       active ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
                     }`}
                   >
-                    {tab.label} <span className="tabular-nums opacity-80">({countFor(tab.statuses)})</span>
+                    {prelozit(jazyk, tab.klic)}{' '}
+                    <span className="tabular-nums opacity-80">({countFor(tab.statuses)})</span>
                   </Link>
                 );
               })}
@@ -147,7 +148,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
 
           {unpaidByCurrency.size > 0 && (
             <div className="bg-surface rounded-card border border-line shadow-sm px-5 py-4 flex items-center gap-6 flex-wrap">
-              <span className="text-xs font-heading text-muted uppercase tracking-wide">Neuhrazeno celkem</span>
+              <span className="text-xs font-heading text-muted uppercase tracking-wide">
+                {prelozit(jazyk, 'faktura.neuhrazenoCelkem')}
+              </span>
               {Array.from(unpaidByCurrency.entries()).map(([currency, amount]) => (
                 <span key={currency} className="font-display text-xl text-ink tabular-nums">
                   {formatMoney(amount, currency as never)}

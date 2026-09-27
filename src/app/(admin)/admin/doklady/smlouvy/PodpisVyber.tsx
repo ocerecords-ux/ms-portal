@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SignaturePad } from './SignaturePad';
+import { useJazyk } from '@/app/(portal)/components/JazykProvider';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * DVA DRUHY PODPISU (zadání 13. 9. 2026: „dal bych na výběr dva druhy
@@ -29,12 +31,21 @@ export function PodpisVyber({
   onChange,
   jmeno,
   disabled,
+  jazyk: jazykProp,
 }: {
   onChange: (dataUrl: string | null) => void;
   /** Jméno podepisujícího - z něj se skládá psaný podpis. */
   jmeno: string;
   disabled?: boolean;
+  /**
+   * Veřejná stránka k podpisu stojí mimo JazykProvider, tam se jazyk podává
+   * propem. V administraci se nepředává a bere se z kontextu.
+   */
+  jazyk?: Jazyk;
 }) {
+  const jazykKontextu = useJazyk();
+  const jazyk = jazykProp ?? jazykKontextu;
+  const t = (klic: string) => prelozit(jazyk, klic);
   const [rezim, setRezim] = useState<'psany' | 'kresleny'>('psany');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mericiRef = useRef<HTMLSpanElement | null>(null);
@@ -117,10 +128,10 @@ export function PodpisVyber({
 
       <div className="flex items-center gap-1.5 flex-wrap">
         <Prepinac aktivni={rezim === 'psany'} onClick={() => prepni('psany')} disabled={disabled}>
-          Podepsat jménem
+          {t('smlouva.podpisJmenem')}
         </Prepinac>
         <Prepinac aktivni={rezim === 'kresleny'} onClick={() => prepni('kresleny')} disabled={disabled}>
-          Nakreslit podpis
+          {t('smlouva.podpisNakreslit')}
         </Prepinac>
       </div>
 
@@ -130,13 +141,11 @@ export function PodpisVyber({
             <canvas ref={canvasRef} className="block" />
           </div>
           <span className="text-xs font-body text-muted">
-            {jmeno.trim()
-              ? 'Podpis se vytvoří z vašeho jména výš. Když jméno upravíte, podpis se přepíše.'
-              : 'Vyplňte výš své jméno — podpis se z něj vytvoří sám.'}
+            {t(jmeno.trim() ? 'smlouva.podpisZeJmenaHotovy' : 'smlouva.podpisZeJmenaChybi')}
           </span>
         </div>
       ) : (
-        <SignaturePad onChange={onChange} disabled={disabled} />
+        <SignaturePad onChange={onChange} disabled={disabled} jazyk={jazyk} />
       )}
     </div>
   );

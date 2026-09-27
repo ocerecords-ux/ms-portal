@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from 'react';
 
+import { kodJazyka, prelozitS, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+
 /**
  * STÁHNOUT PŘÍLOHY DOKLADŮ ZA MĚSÍC (zadání 16. 9. 2026: „potřebuji ještě mít
  * u Výdajů a faktur tlačítko, kdy můžu stáhnout kompletní přílohy dokladů za
@@ -16,7 +19,9 @@ import { useMemo, useState } from 'react';
  * jinak ukázal jako holý JSON místo hlášky.
  */
 export function StahnoutPrilohy({ druh }: { druh: 'vydaje' | 'faktury' }) {
-  const mesice = useMemo(() => posledniMesice(6), []);
+  const jazyk = useJazyk();
+  const t = usePreklad();
+  const mesice = useMemo(() => posledniMesice(6, jazyk), [jazyk]);
   const [mesic, setMesic] = useState(mesice[0].hodnota);
   const [bezi, setBezi] = useState(false);
   const [zprava, setZprava] = useState<string | null>(null);
@@ -32,22 +37,22 @@ export function StahnoutPrilohy({ druh }: { druh: 'vydaje' | 'faktury' }) {
         setZprava(
           data?.error ||
             (druh === 'vydaje'
-              ? 'Za ten měsíc není u výdajů žádná příloha.'
-              : 'Za ten měsíc není vystavená žádná faktura.'),
+              ? t('doklady.zadnaPrilohaZaMesic')
+              : t('doklady.zadnaFakturaZaMesic')),
         );
         return;
       }
       // Kolik dokladů přílohu nemá, ať se po nich dá jít.
       if (data.bezPrilohy > 0) {
         setZprava(
-          `Stahuji ${data.pocet} souborů. ${data.bezPrilohy} ${sklonujDoklady(data.bezPrilohy)} přílohu nemá.`,
+          t(klicBezPrilohy(data.bezPrilohy), { pocet: data.pocet, bez: data.bezPrilohy }),
         );
       } else {
-        setZprava(`Stahuji ${data.pocet} souborů.`);
+        setZprava(t('doklady.stahujiSouboru', { pocet: data.pocet }));
       }
       window.location.href = adresa;
     } catch {
-      setZprava('Stažení se nepodařilo.');
+      setZprava(t('doklady.stazeniSelhalo'));
     } finally {
       setBezi(false);
     }
@@ -73,7 +78,11 @@ export function StahnoutPrilohy({ druh }: { druh: 'vydaje' | 'faktury' }) {
           disabled={bezi}
           className="text-sm font-heading font-semibold rounded-lg border border-line px-3 py-2 text-ink hover:border-brand-purple hover:text-brand-purple transition-colors disabled:opacity-60"
         >
-          {bezi ? 'Připravuji…' : druh === 'vydaje' ? 'Stáhnout přílohy' : 'Stáhnout faktury'}
+          {bezi
+            ? t('doklady.pripravuji')
+            : druh === 'vydaje'
+              ? t('doklady.stahnoutPrilohy')
+              : t('doklady.stahnoutFaktury')}
         </button>
       </span>
       {zprava && <span className="text-xs font-body text-muted">{zprava}</span>}
@@ -81,36 +90,41 @@ export function StahnoutPrilohy({ druh }: { druh: 'vydaje' | 'faktury' }) {
   );
 }
 
-const NAZVY_MESICU = [
-  'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
-  'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec',
-];
+/** Měsíc a rok v jazyce portálu - „září 2026" i „September 2026". */
+function nazevMesice(d: Date, jazyk: Jazyk): string {
+  const text = new Intl.DateTimeFormat(kodJazyka(jazyk), { month: 'long', year: 'numeric' }).format(d);
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 /**
  * Posledních pár měsíců, MINULÝM POČÍNAJE. Tenhle měsíc je až druhý v pořadí:
  * balík se dělá za uzavřený měsíc, a kdyby byl první v nabídce, stahoval by
  * se omylem rozdělaný.
  */
-function posledniMesice(kolik: number): { hodnota: string; popisek: string }[] {
+function posledniMesice(kolik: number, jazyk: Jazyk): { hodnota: string; popisek: string }[] {
   const dnes = new Date();
   const out: { hodnota: string; popisek: string }[] = [];
   for (let i = 1; i <= kolik; i++) {
     const d = new Date(dnes.getFullYear(), dnes.getMonth() - i, 1);
     out.push({
       hodnota: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-      popisek: `${NAZVY_MESICU[d.getMonth()]} ${d.getFullYear()}`,
+      popisek: nazevMesice(d, jazyk),
     });
   }
   // Tenhle měsíc na konec - občas se hodí, ale nemá být po ruce jako první.
   out.push({
     hodnota: `${dnes.getFullYear()}-${String(dnes.getMonth() + 1).padStart(2, '0')}`,
-    popisek: `${NAZVY_MESICU[dnes.getMonth()]} ${dnes.getFullYear()} (rozdělaný)`,
+    popisek: prelozitS(jazyk, 'doklady.mesicRozdelany', { mesic: nazevMesice(dnes, jazyk) }),
   });
   return out;
 }
 
-function sklonujDoklady(pocet: number): string {
-  if (pocet === 1) return 'doklad';
-  if (pocet >= 2 && pocet <= 4) return 'doklady';
-  return 'dokladů';
+/**
+ * Celá věta je jeden klíč (pravidlo 7 v docs/preklad-portalu.md) - tady se
+ * vybírá jen ten správný podle počtu, protože čeština skloňuje „doklad".
+ */
+function klicBezPrilohy(pocet: number): string {
+  if (pocet === 1) return 'doklady.stahujiBezPrilohyJeden';
+  if (pocet >= 2 && pocet <= 4) return 'doklady.stahujiBezPrilohyMalo';
+  return 'doklady.stahujiBezPrilohyVice';
 }

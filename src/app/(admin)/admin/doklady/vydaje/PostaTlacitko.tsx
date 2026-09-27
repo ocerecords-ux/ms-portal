@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { StavPosty, VysledekKontroly } from '@/lib/posta';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Kontrola schránky s doklady (zadání 12. 9. 2026: „potřeboval bych z toho
@@ -17,6 +18,7 @@ import type { StavPosty, VysledekKontroly } from '@/lib/posta';
  * minutu na odpověď. Když ve schránce něco zbylo, komponenta si řekne znovu.
  */
 export function PostaTlacitko({ stav }: { stav: StavPosty }) {
+  const t = usePreklad();
   const router = useRouter();
   const [bezi, setBezi] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export function PostaTlacitko({ stav }: { stav: StavPosty }) {
         const res = await fetch('/api/admin/posta', { method: 'POST', cache: 'no-store' });
         const data = (await res.json().catch(() => ({}))) as Partial<VysledekKontroly> & { error?: string };
         if (!res.ok) {
-          setChyba(data?.error || 'Do schránky se nepodařilo podívat.');
+          setChyba(data?.error || t('vydaj.postaChyba'));
           return;
         }
         zalozenoCelkem += data.zalozeno ?? 0;
@@ -50,15 +52,15 @@ export function PostaTlacitko({ stav }: { stav: StavPosty }) {
       if (zalozenoCelkem > 0 || prectenoCelkem > 0) {
         setHlaska(
           zalozenoCelkem > 0
-            ? `Nových dokladů: ${zalozenoCelkem}`
-            : `Přečteno dokladů: ${prectenoCelkem}`,
+            ? t('vydaj.postaNovychDokladu', { pocet: zalozenoCelkem })
+            : t('vydaj.postaPrectenoDokladu', { pocet: prectenoCelkem }),
         );
         router.refresh();
       } else if (!automaticky) {
-        setHlaska('Nic nového.');
+        setHlaska(t('vydaj.postaNicNoveho'));
       }
     } catch {
-      setChyba('Do schránky se nepodařilo podívat.');
+      setChyba(t('vydaj.postaChyba'));
     } finally {
       setBezi(false);
     }
@@ -75,8 +77,8 @@ export function PostaTlacitko({ stav }: { stav: StavPosty }) {
 
   if (!stav.nastaveno) {
     return (
-      <span className="text-xs font-body text-muted" title="Doplňte IMAP_HOST, IMAP_USER a IMAP_PASSWORD.">
-        Schránka s doklady není nastavená
+      <span className="text-xs font-body text-muted" title={t('vydaj.postaNenastavenaNapoveda')}>
+        {t('vydaj.postaNenastavena')}
       </span>
     );
   }
@@ -89,7 +91,7 @@ export function PostaTlacitko({ stav }: { stav: StavPosty }) {
         disabled={bezi}
         className="font-heading font-semibold text-sm rounded-lg px-4 py-2 border border-line text-ink hover:bg-field transition-colors disabled:opacity-60"
       >
-        {bezi ? 'Kontroluji poštu…' : 'Zkontrolovat poštu'}
+        {bezi ? t('vydaj.postaKontroluji') : t('vydaj.postaZkontrolovat')}
       </button>
       {chyba ? (
         <span className="text-xs font-body text-danger max-w-[320px]">{chyba}</span>

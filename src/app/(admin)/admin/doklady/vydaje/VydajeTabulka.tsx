@@ -8,6 +8,7 @@ import {
   moznostiZ,
   type SloupecTabulky,
 } from '@/app/(portal)/components/RaditelnaTabulka';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Tabulka výdajů, řaditelná kliknutím na název sloupce (zadání 9. 9. 2026).
@@ -49,10 +50,12 @@ export type VydajRadek = {
 };
 
 export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const sloupce: SloupecTabulky<VydajRadek>[] = [
     {
       key: 'nazev',
-      label: 'Název',
+      label: t('vydaj.sloupecNazev'),
       hodnota: (r) => r.nazev,
       trida: 'font-semibold',
       bunka: (r) => (
@@ -66,7 +69,7 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
           {r.podnadpis && <span className="block text-xs text-muted font-body">{r.podnadpis}</span>}
           {r.maPrilohu && (
             <span className="ml-2 text-[10px] font-heading font-bold text-brand-purpleDeep bg-line rounded px-1.5 py-0.5">
-              PŘÍLOHA
+              {t('vydaj.stitekPriloha')}
             </span>
           )}
         </>
@@ -74,33 +77,35 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
     },
     {
       key: 'datum',
-      label: 'Datum',
+      label: t('vydaj.sloupecDatum'),
       hodnota: (r) => r.datumMs,
       trida: 'text-muted tabular-nums whitespace-nowrap',
       bunka: (r) => r.datum,
     },
     {
       key: 'kategorie',
-      label: 'Kategorie',
+      label: t('vydaj.sloupecKategorie'),
       hodnota: (r) => r.kategorie,
       trida: 'text-muted whitespace-nowrap',
       bunka: (r) => r.kategorie,
     },
     {
       key: 'splatnost',
-      label: 'Splatnost',
+      label: t('vydaj.sloupecSplatnost'),
       hodnota: (r) => r.splatnostMs,
       trida: 'tabular-nums whitespace-nowrap',
       bunka: (r) => (
         <span className={r.poSplatnosti ? 'text-danger font-semibold' : 'text-muted'}>
           {r.splatnost}
-          {r.poSplatnosti && <span className="block text-[11px] font-body">po splatnosti</span>}
+          {r.poSplatnosti && (
+            <span className="block text-[11px] font-body">{t('vydaj.poSplatnosti')}</span>
+          )}
         </span>
       ),
     },
     {
       key: 'bezDph',
-      label: 'Bez DPH',
+      label: t('vydaj.sloupecBezDph'),
       hodnota: (r) => r.bezDphMinor,
       vpravo: true,
       trida: 'text-muted tabular-nums whitespace-nowrap',
@@ -108,7 +113,7 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
     },
     {
       key: 'celkem',
-      label: 'Celkem',
+      label: t('vydaj.sloupecCelkem'),
       hodnota: (r) => r.celkemMinor,
       vpravo: true,
       trida: 'text-ink tabular-nums whitespace-nowrap',
@@ -118,14 +123,16 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
           <span className="block text-[11px] font-body text-muted">{r.dph}</span>
           {/* U dokladu placeneho na vicekrat je zbytek to podstatne cislo. */}
           {r.castecne && (
-            <span className="block text-[11px] font-heading font-semibold text-danger">zbývá {r.zbyva}</span>
+            <span className="block text-[11px] font-heading font-semibold text-danger">
+              {t('vydaj.zbyvaCastka', { castka: r.zbyva })}
+            </span>
           )}
         </>
       ),
     },
     {
       key: 'stav',
-      label: 'Stav',
+      label: t('vydaj.sloupecStav'),
       // Neuhrazené napřed při vzestupném řazení - to je to, co člověk hledá;
       // rozdělané platby hned za nimi.
       hodnota: (r) => (r.uhrazeno ? 2 : r.castecne ? 1 : 0),
@@ -140,7 +147,11 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
                 : 'bg-tint text-brand-purpleDark'
           }`}
         >
-          {r.uhrazeno ? 'Uhrazeno' : r.castecne ? 'Částečně' : 'Neuhrazeno'}
+          {r.uhrazeno
+            ? t('vydaj.stavUhrazeno')
+            : r.castecne
+              ? t('vydaj.stavCastecne')
+              : t('vydaj.stavNeuhrazeno')}
         </span>
       ),
     },
@@ -149,7 +160,7 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
   // QR platba na konci radku - vedle castky, kterou se plati.
   sloupce.push({
     key: 'qr',
-    label: 'Platba',
+    label: t('vydaj.sloupecPlatba'),
     trida: 'whitespace-nowrap',
     bunka: (r) =>
       r.qrText && r.ucet ? (
@@ -171,27 +182,28 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
       klicRadku={(r) => r.id}
       vychoziSloupec="datum"
       vychoziSmer="desc"
-      prazdno="Tady zatím nic není."
+      prazdno={t('vydaj.tabulkaPrazdna')}
       minSirka={960}
+      jazyk={jazyk}
       hledat={(r) => `${r.nazev} ${r.podnadpis ?? ''} ${r.kategorie}`}
-      hledatPlaceholder="Hledat doklad, dodavatele, projekt…"
+      hledatPlaceholder={t('vydaj.hledatPlaceholder')}
       filtry={[
         {
           key: 'kategorie',
-          label: 'Kategorie',
+          label: t('vydaj.sloupecKategorie'),
           moznosti: moznostiZ(radky, (r) => r.kategorie),
           vyhovuje: (r, h) => r.kategorie === h,
         },
         {
           key: 'stav',
-          label: 'Stav',
+          label: t('vydaj.sloupecStav'),
           moznosti: [
-            { hodnota: 'uhrazene', popisek: 'Uhrazené' },
-            { hodnota: 'neuhrazene', popisek: 'Neuhrazené' },
-            { hodnota: 'castecne', popisek: 'Částečně uhrazené' },
-            { hodnota: 'po-splatnosti', popisek: 'Po splatnosti' },
-            { hodnota: 's-prilohou', popisek: 'S přílohou' },
-            { hodnota: 'bez-prilohy', popisek: 'Bez přílohy' },
+            { hodnota: 'uhrazene', popisek: t('vydaj.filtrUhrazene') },
+            { hodnota: 'neuhrazene', popisek: t('vydaj.filtrNeuhrazene') },
+            { hodnota: 'castecne', popisek: t('vydaj.filtrCastecne') },
+            { hodnota: 'po-splatnosti', popisek: t('vydaj.filtrPoSplatnosti') },
+            { hodnota: 's-prilohou', popisek: t('vydaj.filtrSPrilohou') },
+            { hodnota: 'bez-prilohy', popisek: t('vydaj.filtrBezPrilohy') },
           ],
           vyhovuje: (r, h) => {
             if (h === 'uhrazene') return r.uhrazeno;
@@ -203,7 +215,7 @@ export function VydajeTabulka({ radky }: { radky: VydajRadek[] }) {
           },
         },
       ]}
-      rozsahDatumu={{ label: 'Datum', ms: (r) => r.datumMs }}
+      rozsahDatumu={{ label: t('vydaj.sloupecDatum'), ms: (r) => r.datumMs }}
     />
   );
 }

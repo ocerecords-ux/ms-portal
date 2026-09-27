@@ -8,11 +8,15 @@ import { QrPlatba } from '@/components/QrPlatba';
 import { NahledPrilohy } from './NahledPrilohy';
 import { FakturaKeSmlouve, type KandidatFaktury } from './FakturaKeSmlouve';
 import { formatMoney } from '@/lib/doklady';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit } from '@/lib/jazyk';
 
 // Detail prijateho dokladu.
 export const dynamic = 'force-dynamic';
 
 export default async function ExpenseDetailPage({ params }: { params: { id: string } }) {
+  const jazyk = nactiJazyk();
+
   const [expense, categories, companies] = await Promise.all([
     prisma.expense.findUnique({
       where: { id: params.id },
@@ -79,10 +83,10 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
         ).map((d) => ({
           id: d.id,
           popis: [
-            d.number || 'bez čísla',
+            d.number || prelozit(jazyk, 'vydaj.bezCisla'),
             d.supplier?.name || d.supplierName || '—',
             formatMoney(expenseTotalMinor(d.amountExVatMinor, d.vatRate), d.currency),
-            new Intl.DateTimeFormat('cs-CZ').format(d.issueDate),
+            formatDatum(jazyk, d.issueDate),
             d.projectName,
           ]
             .filter(Boolean)
@@ -116,7 +120,7 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
   return (
     <div className={`flex flex-col gap-6 ${maPrilohu ? 'max-w-[1400px]' : 'max-w-3xl'}`}>
       <Link href="/admin/doklady/vydaje" className="text-muted text-sm font-heading no-underline">
-        ← Zpět na výdaje
+        {prelozit(jazyk, 'vydaj.zpetNaVydaje')}
       </Link>
 
       <div

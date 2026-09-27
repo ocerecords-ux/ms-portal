@@ -7,7 +7,7 @@ import { AddButton } from '@/components/AddButton';
 import type { Currency, InvoiceStatus } from '@prisma/client';
 import {
   CURRENCIES,
-  CURRENCY_NAMES,
+  nazevMeny,
   computeTotals,
   formatAddress,
   formatMoney,
@@ -21,6 +21,8 @@ import { NahledDokladu } from '../../NahledDokladu';
 import { SlevaPole } from '../../SlevaPole';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { formatDatum, formatDatumCas, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 
 type Item = {
   description: string;
@@ -83,11 +85,11 @@ type Invoice = {
 
 const VAT_RATES = [21, 12, 0];
 
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: 'Rozpracovaná',
-  SENT: 'Neuhrazená',
-  PAID: 'Uhrazená',
-  CANCELLED: 'Stornovaná',
+const STATUS_KLICE: Record<string, string> = {
+  DRAFT: 'faktura.stavRozpracovana',
+  SENT: 'faktura.stavNeuhrazena',
+  PAID: 'faktura.stavUhrazena',
+  CANCELLED: 'faktura.stavStornovana',
 };
 
 const STATUS_CLASSES: Record<string, string> = {
@@ -101,15 +103,10 @@ function emptyItem(): Item {
   return { description: '', quantity: 1, unit: 'ks', unitPriceMinor: 0, vatRate: 21 };
 }
 
-function formatDateTime(iso: string | null): string {
+// Jazyk chodi parametrem - funkce stoji mimo komponentu, hook by tu nefungoval.
+function formatDateTime(jazyk: Jazyk, iso: string | null): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleString('cs-CZ', {
-    day: 'numeric',
-    month: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatDatumCas(jazyk, new Date(iso), '');
 }
 
 /**
@@ -159,6 +156,8 @@ export function InvoiceEditor({
   } | null;
 }) {
   const router = useRouter();
+  const t = usePreklad();
+  const jazyk = useJazyk();
   // Neulozeny doklad: bud se chysta z nabidky, nebo se zaklada od nuly -
   // v obou pripadech jeste nema ani cislo, ani radek v databazi (zadani
   // 10. 9. 2026: cislo z rady se nesmi spotrebovat rozmyslenim).
@@ -254,7 +253,7 @@ export function InvoiceEditor({
     setInfo(null);
     try {
       if (!form.companyId) {
-        setError('Vyberte odběratele — bez něj nevíme, komu fakturu vystavit.');
+        setError(t('faktura.chybiOdberatel'));
         return false;
       }
       const telo = {
@@ -286,7 +285,7 @@ export function InvoiceEditor({
           });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('faktura.ulozeniSelhalo'));
         return false;
       }
       if (jesteNeulozena && data?.id) {
@@ -295,11 +294,11 @@ export function InvoiceEditor({
         router.refresh();
         return true;
       }
-      setInfo('Uloženo.');
+      setInfo(t('faktura.ulozeno'));
       router.refresh();
       return true;
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('faktura.ulozeniSelhalo'));
       return false;
     } finally {
       setSaving(false);
@@ -320,12 +319,14 @@ export function InvoiceEditor({
       const res = await fetch(`/api/admin/invoices/${invoice.id}/send`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Odeslání se nezdařilo.');
+        setError(data?.error || t('faktura.odeslaniSelhalo'));
         return;
       }
       const kopie: string[] = Array.isArray(data.kopie) ? data.kopie : [];
       setInfo(
-        `Faktura odeslána na ${data.to}${kopie.length ? ` (v kopii ${kopie.join(', ')})` : ''}.`,
+        kopie.length
+          ? t('faktura.odeslanoNaSKopii', { komu: data.to, kopie: kopie.join(', ') })
+          : t('faktura.odeslanoNa', { komu: data.to }),
       );
       /**
        * MEZIKROK MÍSTO AUTOMATU (zadání 25. 9. 2026). Projekt se po odeslání
@@ -337,7 +338,7 @@ export function InvoiceEditor({
       }
       router.refresh();
     } catch {
-      setError('Odeslání se nezdařilo.');
+      setError(t('faktura.odeslaniSelhalo'));
     } finally {
       setSending(false);
     }
@@ -356,14 +357,14 @@ export function InvoiceEditor({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Projekt se nepodařilo ukončit.');
+        setError(data?.error || t('faktura.ukonceniSelhalo'));
         return;
       }
       setUkonceni(null);
-      setInfo('Projekt je ukončený.');
+      setInfo(t('faktura.projektUkoncen'));
       router.refresh();
     } catch {
-      setError('Projekt se nepodařilo ukončit.');
+      setError(t('faktura.ukonceniSelhalo'));
     } finally {
       setSending(false);
     }
@@ -380,12 +381,12 @@ export function InvoiceEditor({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('faktura.ulozeniSelhalo'));
         return;
       }
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('faktura.ulozeniSelhalo'));
     } finally {
       setSaving(false);
     }
@@ -398,7 +399,7 @@ export function InvoiceEditor({
       const res = await fetch(`/api/admin/invoices/${invoice.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Smazání se nezdařilo.');
+        setError(data?.error || t('faktura.smazaniSelhalo'));
         return;
       }
       if (data.smazanoNatrvalo) {
@@ -407,14 +408,14 @@ export function InvoiceEditor({
         return;
       }
       if (data.cancelledInsteadOfDeleted) {
-        setInfo('Faktura byla stornována — v číselné řadě po ní zůstává stopa, jak to má být.');
+        setInfo(t('faktura.stornovanaInfo'));
         router.refresh();
         return;
       }
       router.push('/admin/doklady/faktury');
       router.refresh();
     } catch {
-      setError('Smazání se nezdařilo.');
+      setError(t('faktura.smazaniSelhalo'));
     } finally {
       setSaving(false);
     }
@@ -427,6 +428,11 @@ export function InvoiceEditor({
   /** Popisek nad malym polem v radku polozky - nahrazuje hlavicku tabulky. */
   const popiskaClass = 'text-[10px] font-heading text-muted uppercase tracking-wide';
 
+  // Kurz CNB je jedna veta i s datem - rozdeli se az kvuli tomu, ze datum je
+  // v ni sedive (pravidlo 7 v docs/preklad-portalu.md).
+  const kurzHodnoty = { mena: form.currency, kurz: formatRate(invoice.exchangeRate) };
+  const [kurzPred, kurzPo] = prelozitKolem(jazyk, 'faktura.kurzKeDni', 'datum', kurzHodnoty);
+
   // Editor je omezeny sirkou a vycentrovany (zadani 10. 9. 2026: "ta
   // vyberova pole jsou strasne roztahana na sirku"). Formularove radky
   // natazene pres celou obrazovku se spatne ctou a doklad vedle nich by
@@ -437,29 +443,35 @@ export function InvoiceEditor({
           jen u dokladu rozepsaneho z nabidky, ze ktere uz nejaka faktura vysla. */}
       {zNabidky && zNabidky.faktury.length > 0 && (
         <p className="text-sm font-body text-ink bg-tint border border-line rounded-card px-4 py-3 m-0">
-          Z nabídky <strong>{zNabidky.cislo}</strong> (celkem{' '}
-          {formatMoney(zNabidky.celkemMinor, zNabidky.mena)}) už je vyfakturováno{' '}
-          <strong>{formatMoney(zNabidky.vyfakturovanoMinor, zNabidky.mena)}</strong>
-          {' '}— {zNabidky.faktury.map((f) => f.number).join(', ')}. Zbývá{' '}
-          <strong>
-            {formatMoney(Math.max(0, zNabidky.celkemMinor - zNabidky.vyfakturovanoMinor), zNabidky.mena)}
-          </strong>
-          . Položky níž jsou z nabídky celé — upravte je na tu část, kterou fakturujete teď.
+          {t('faktura.zNabidkyVyfakturovano', {
+            cislo: zNabidky.cislo,
+            celkem: formatMoney(zNabidky.celkemMinor, zNabidky.mena),
+            vyfakturovano: formatMoney(zNabidky.vyfakturovanoMinor, zNabidky.mena),
+            faktury: zNabidky.faktury.map((f) => f.number).join(', '),
+            zbyva: formatMoney(
+              Math.max(0, zNabidky.celkemMinor - zNabidky.vyfakturovanoMinor),
+              zNabidky.mena,
+            ),
+          })}
         </p>
       )}
 
       {/* Komu a kdy faktura odesla - viz invoice.odeslani. */}
       {invoice.odeslani && invoice.odeslani.length > 0 && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-2">
-          <span className="text-xs font-heading text-muted uppercase tracking-wide">Odesláno</span>
+          <span className="text-xs font-heading text-muted uppercase tracking-wide">
+            {t('faktura.odeslanoNadpis')}
+          </span>
           <ul className="list-none m-0 p-0 flex flex-col gap-1.5">
             {invoice.odeslani.map((o) => (
               <li key={o.id} className="text-sm font-body text-ink">
-                <span className="font-heading">{formatDateTime(o.kdy)}</span>{' '}
+                <span className="font-heading">{formatDateTime(jazyk, o.kdy)}</span>{' '}
                 <span className="text-muted">→</span> {o.prijemci.join(', ')}
                 <span className="block text-[11px] font-body text-muted">
-                  {o.odeslalJmeno ? `odeslal ${o.odeslalJmeno}` : 'odesláno z portálu'}
-                  {o.sRodnymListem ? ' · s rodným listem' : ''}
+                  {o.odeslalJmeno
+                    ? t('faktura.odeslalKdo', { jmeno: o.odeslalJmeno })
+                    : t('faktura.odeslanoZPortalu')}
+                  {o.sRodnymListem ? ` · ${t('faktura.sRodnymListem')}` : ''}
                 </span>
               </li>
             ))}
@@ -469,22 +481,34 @@ export function InvoiceEditor({
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
+          {/* Cislo dokladu se nepreklada - dokud faktura neni ulozena, zadne
+              jeste nema a misto nej tu stoji popisek. */}
           <span className="font-display text-2xl text-ink">
-            {jesteNeulozena ? 'Nová faktura' : invoice.number}
+            {jesteNeulozena ? t('faktura.novaFaktura') : invoice.number}
           </span>
           <span
             className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${STATUS_CLASSES[invoice.status]}`}
           >
-            {jesteNeulozena ? 'Neuložená' : STATUS_LABELS[invoice.status]}
+            {jesteNeulozena
+              ? t('faktura.stavNeulozena')
+              : STATUS_KLICE[invoice.status]
+                ? t(STATUS_KLICE[invoice.status])
+                : invoice.status}
           </span>
           {invoice.offerNumber && (
-            <span className="text-xs font-body text-muted">z nabídky {invoice.offerNumber}</span>
+            <span className="text-xs font-body text-muted">
+              {t('faktura.zNabidkyCislo', { cislo: invoice.offerNumber })}
+            </span>
           )}
           {invoice.paidAt && (
-            <span className="text-xs font-body text-status-done">Uhrazeno {formatDateTime(invoice.paidAt)}</span>
+            <span className="text-xs font-body text-status-done">
+              {t('faktura.uhrazenoKdy', { kdy: formatDateTime(jazyk, invoice.paidAt) })}
+            </span>
           )}
           {invoice.sentAt && !invoice.paidAt && (
-            <span className="text-xs font-body text-muted">Odesláno {formatDateTime(invoice.sentAt)}</span>
+            <span className="text-xs font-body text-muted">
+              {t('faktura.odeslanoKdy', { kdy: formatDateTime(jazyk, invoice.sentAt) })}
+            </span>
           )}
         </div>
 
@@ -492,7 +516,7 @@ export function InvoiceEditor({
           {jesteNeulozena && (
             <>
               <span className="text-xs font-body text-muted max-w-[280px]">
-                Faktura se založí až tlačítkem Uložit — číslo z řady dostane teprve tehdy.
+                {t('faktura.vznikneAzUlozenim')}
               </span>
               <button
                 type="button"
@@ -500,7 +524,7 @@ export function InvoiceEditor({
                 disabled={saving}
                 className="border border-line text-muted font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
               >
-                Zrušit
+                {t('faktura.zrusit')}
               </button>
               <button
                 type="button"
@@ -508,7 +532,7 @@ export function InvoiceEditor({
                 disabled={saving}
                 className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
               >
-                {saving ? 'Zakládám…' : 'Uložit fakturu'}
+                {saving ? t('faktura.zakladam') : t('faktura.ulozitFakturu')}
               </button>
             </>
           )}
@@ -520,7 +544,7 @@ export function InvoiceEditor({
               disabled={saving}
               className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
             >
-              Zrušit úhradu
+              {t('faktura.zrusitUhradu')}
             </button>
           ) : (
               invoice.status !== 'CANCELLED' && (
@@ -530,7 +554,7 @@ export function InvoiceEditor({
                   disabled={saving}
                   className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60"
                 >
-                  Označit jako uhrazenou
+                  {t('faktura.oznacitZaplacenou')}
                 </button>
               )
             ))}
@@ -542,7 +566,7 @@ export function InvoiceEditor({
                 disabled={saving || sending}
                 className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-tint transition-colors disabled:opacity-60"
               >
-                {sending ? 'Odesílám…' : 'Odeslat odběrateli'}
+                {sending ? t('faktura.odesilam') : t('faktura.odeslatOdberateli')}
               </button>
               <button
                 type="button"
@@ -550,7 +574,7 @@ export function InvoiceEditor({
                 disabled={saving || sending}
                 className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
               >
-                {saving ? 'Ukládám…' : 'Uložit'}
+                {saving ? t('faktura.ukladam') : t('faktura.ulozit')}
               </button>
             </>
           )}
@@ -570,8 +594,8 @@ export function InvoiceEditor({
       {locked && (
         <p className="text-sm text-ink bg-field border border-line rounded-lg px-4 py-3 m-0">
           {invoice.status === 'PAID'
-            ? 'Faktura je uhrazená, takže se nedá měnit. Kdyby bylo potřeba, nejdřív zrušte úhradu.'
-            : 'Faktura je stornovaná.'}
+            ? t('faktura.zamcenaUhrazena')
+            : t('faktura.zamcenaStornovana')}
         </p>
       )}
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
@@ -583,10 +607,10 @@ export function InvoiceEditor({
       {ukonceni && (
         <div className="bg-warnTint border border-line rounded-card px-4 py-3 flex items-center gap-3 flex-wrap">
           <span className="text-sm font-body text-ink">
-            Faktura odešla. Ukončit projekt{ukonceni.nazev ? ` „${ukonceni.nazev}"` : ''}?
-            <span className="block text-xs text-muted">
-              Přehodí se na „Vyfakturováno" a přesune mezi dokončené. Vrátit jde v detailu projektu.
-            </span>
+            {ukonceni.nazev
+              ? t('faktura.ukoncitProjektNazev', { nazev: ukonceni.nazev })
+              : t('faktura.ukoncitProjektOtazka')}
+            <span className="block text-xs text-muted">{t('faktura.ukoncitProjektPopis')}</span>
           </span>
           <div className="ml-auto flex items-center gap-2">
             <button
@@ -595,14 +619,14 @@ export function InvoiceEditor({
               disabled={sending}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              Ukončit projekt
+              {t('faktura.ukoncitProjekt')}
             </button>
             <button
               type="button"
               onClick={() => setUkonceni(null)}
               className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors"
             >
-              Nechat běžet
+              {t('faktura.nechatBezet')}
             </button>
           </div>
         </div>
@@ -611,18 +635,23 @@ export function InvoiceEditor({
       <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-line">
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Dodavatel</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">
+              {t('faktura.dodavatel')}
+            </span>
             <p className="font-heading font-semibold text-ink m-0">{issuer.name}</p>
             <p className="text-sm font-body text-muted m-0">
               {formatAddress(issuer) || '—'}
               <br />
+              {/* IC a DIC jsou ceske kody, nechavaji se tak, jak stoji na dokladu. */}
               {issuer.ic ? `IČ ${issuer.ic}` : ''} {issuer.dic ? `· DIČ ${issuer.dic}` : ''}
-              {issuer.vatPayer === false ? ' · neplátce DPH' : ''}
+              {issuer.vatPayer === false ? ` · ${t('faktura.neplatceDph')}` : ''}
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Odběratel</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">
+              {t('faktura.odberatel')}
+            </span>
             {locked ? (
               <p className="font-heading font-semibold text-ink m-0">{company.name}</p>
             ) : (
@@ -639,9 +668,7 @@ export function InvoiceEditor({
             {/* Az kdyz je nekdo vybrany - u prazdneho vyberu je hlaska
                 matouci (13. 9. 2026). */}
             {form.companyId && !company.contactEmail && (
-              <p className="text-xs text-danger font-body m-0">
-                Firma nemá kontaktní e-mail — bez něj fakturu nepošlete.
-              </p>
+              <p className="text-xs text-danger font-body m-0">{t('faktura.firmaBezEmailu')}</p>
             )}
           </div>
         </div>
@@ -650,7 +677,7 @@ export function InvoiceEditor({
             ctyrech by byla policka na datum uzka na precteni. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 p-6 border-b border-line">
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Název</span>
+            <span className="text-sm font-body text-ink">{t('faktura.polePredmet')}</span>
             <input
               value={form.subject}
               disabled={locked}
@@ -661,7 +688,7 @@ export function InvoiceEditor({
           {/* Projekt (zadani 8. 9. 2026) - faktura je pak videt v detailu projektu.
               Z nabidky se predvyplni sama. */}
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Projekt</span>
+            <span className="text-sm font-body text-ink">{t('faktura.poleProjekt')}</span>
             <ProjectSelect
               value={form.caflouProjectId}
               onChange={(id) => set('caflouProjectId', id)}
@@ -672,7 +699,7 @@ export function InvoiceEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Variabilní symbol</span>
+            <span className="text-sm font-body text-ink">{t('faktura.poleVariabilniSymbol')}</span>
             <input
               value={form.variableSymbol}
               disabled={locked}
@@ -682,7 +709,7 @@ export function InvoiceEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Měna</span>
+            <span className="text-sm font-body text-ink">{t('faktura.poleMena')}</span>
             <VyberPole
               value={form.currency}
               disabled={locked}
@@ -691,7 +718,7 @@ export function InvoiceEditor({
             >
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
-                  {CURRENCY_NAMES[c]}
+                  {nazevMeny(c, jazyk)}
                 </option>
               ))}
             </VyberPole>
@@ -712,10 +739,8 @@ export function InvoiceEditor({
                 className="mt-1"
               />
               <span className="flex flex-col">
-                <span className="text-sm font-body text-ink">Přenesená daňová povinnost</span>
-                <span className="text-xs font-body text-muted">
-                  reverse charge — daň odvede odběratel, na faktuře nebude DPH
-                </span>
+                <span className="text-sm font-body text-ink">{t('faktura.prenesenaDan')}</span>
+                <span className="text-xs font-body text-muted">{t('faktura.prenesenaDanPopis')}</span>
               </span>
             </label>
             {/* Rezimy se vylucuji, proto zaskrtnuti jednoho odskrtne druhy -
@@ -729,28 +754,26 @@ export function InvoiceEditor({
                 className="mt-1"
               />
               <span className="flex flex-col">
-                <span className="text-sm font-body text-ink">Mimo předmět DPH v ČR</span>
-                <span className="text-xs font-body text-muted">
-                  místo plnění je ve státě příjemce — třeba prodej do zahraničí
-                </span>
+                <span className="text-sm font-body text-ink">{t('faktura.mimoPredmetDph')}</span>
+                <span className="text-xs font-body text-muted">{t('faktura.mimoPredmetDphPopis')}</span>
               </span>
             </label>
           </div>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Jazyk dokladu</span>
+            <span className="text-sm font-body text-ink">{t('faktura.poleJazykDokladu')}</span>
             <VyberPole
               value={form.jazyk}
               disabled={locked}
               onChange={(e) => set('jazyk', e.target.value as typeof form.jazyk)}
               className={inputClass}
             >
-              <option value="CS">Čeština</option>
-              <option value="EN">Angličtina</option>
+              <option value="CS">{t('faktura.jazykCestina')}</option>
+              <option value="EN">{t('faktura.jazykAnglictina')}</option>
             </VyberPole>
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Vystaveno</span>
+            <span className="text-sm font-body text-ink">{t('faktura.poleVystaveno')}</span>
             <DatumPole
               value={form.issueDate}
               disabled={locked}
@@ -759,7 +782,7 @@ export function InvoiceEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Datum zdanitelného plnění</span>
+            <span className="text-sm font-body text-ink">{t('faktura.poleDatumPlneni')}</span>
             <DatumPole
               value={form.taxDate}
               disabled={locked}
@@ -768,7 +791,7 @@ export function InvoiceEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Splatnost</span>
+            <span className="text-sm font-body text-ink">{t('faktura.poleSplatnost')}</span>
             <DatumPole
               value={form.dueDate}
               disabled={locked}
@@ -777,14 +800,14 @@ export function InvoiceEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Účet</span>
+            <span className="text-sm font-body text-ink">{t('faktura.poleUcet')}</span>
             <VyberPole
               value={form.bankAccountId}
               disabled={locked}
               onChange={(e) => set('bankAccountId', e.target.value)}
               className={inputClass}
             >
-              <option value="">— vyberte účet —</option>
+              <option value="">{t('faktura.vyberteUcet')}</option>
               {accountsForCurrency.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.label} · {[a.accountNumber, a.iban].filter(Boolean).join(' / ')}
@@ -798,14 +821,20 @@ export function InvoiceEditor({
         {form.currency !== 'CZK' && (
           <div className="px-6 py-4 border-b border-line bg-field flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <span className="text-xs font-heading text-muted uppercase tracking-wide">Kurz ČNB</span>
+              <span className="text-xs font-heading text-muted uppercase tracking-wide">
+                {t('faktura.kurzCnb')}
+              </span>
               <p className="text-sm font-heading text-ink m-0 mt-0.5 tabular-nums">
-                1 {form.currency} = {formatRate(invoice.exchangeRate)} Kč
-                {invoice.exchangeRateDate && (
-                  <span className="text-muted font-body">
-                    {' '}
-                    ke dni {new Intl.DateTimeFormat('cs-CZ').format(new Date(invoice.exchangeRateDate))}
-                  </span>
+                {invoice.exchangeRateDate ? (
+                  <>
+                    {kurzPred}
+                    <span className="text-muted font-body">
+                      {formatDatum(jazyk, new Date(invoice.exchangeRateDate))}
+                    </span>
+                    {kurzPo}
+                  </>
+                ) : (
+                  t('faktura.kurz', kurzHodnoty)
                 )}
               </p>
             </div>
@@ -816,7 +845,7 @@ export function InvoiceEditor({
                 disabled={saving}
                 className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-surface transition-colors disabled:opacity-60"
               >
-                Načíst kurz k datu vystavení
+                {t('faktura.nacistKurz')}
               </button>
             )}
           </div>
@@ -824,8 +853,10 @@ export function InvoiceEditor({
 
         <div className="p-6 flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Položky</h2>
-            <span className="text-xs font-body text-muted">Ceny se zadávají bez DPH.</span>
+            <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+              {t('faktura.polozky')}
+            </h2>
+            <span className="text-xs font-body text-muted">{t('faktura.cenyBezDph')}</span>
           </div>
 
           {/* POPIS MA CELOU SIRKU (zadani 13. 9. 2026: „pole, kam zadavam
@@ -842,7 +873,7 @@ export function InvoiceEditor({
                     value={item.description}
                     disabled={locked}
                     onChange={(e) => updateItem(index, { description: e.target.value })}
-                    placeholder="Popis položky"
+                    placeholder={t('faktura.popisPolozky')}
                     className={cellClass}
                   />
                   {!locked && (
@@ -853,8 +884,8 @@ export function InvoiceEditor({
                           current.length === 1 ? [emptyItem()] : current.filter((_, i) => i !== index),
                         )
                       }
-                      title="Odebrat položku"
-                      aria-label="Odebrat položku"
+                      title={t('faktura.odebratPolozku')}
+                      aria-label={t('faktura.odebratPolozku')}
                       className="shrink-0 text-muted hover:text-danger text-sm font-heading px-1"
                     >
                       ✕
@@ -864,7 +895,7 @@ export function InvoiceEditor({
 
                 <div className="flex items-end gap-2 flex-wrap">
                   <label className="flex flex-col gap-1 w-20">
-                    <span className={popiskaClass}>Množství</span>
+                    <span className={popiskaClass}>{t('faktura.mnozstvi')}</span>
                     <input
                       inputMode="decimal"
                       value={item.quantity}
@@ -876,7 +907,7 @@ export function InvoiceEditor({
                     />
                   </label>
                   <label className="flex flex-col gap-1 w-16">
-                    <span className={popiskaClass}>Jednotka</span>
+                    <span className={popiskaClass}>{t('faktura.jednotka')}</span>
                     <input
                       value={item.unit}
                       disabled={locked}
@@ -885,7 +916,7 @@ export function InvoiceEditor({
                     />
                   </label>
                   <label className="flex flex-col gap-1 w-28">
-                    <span className={popiskaClass}>Cena / j.</span>
+                    <span className={popiskaClass}>{t('faktura.cenaZaJednotku')}</span>
                     <input
                       inputMode="decimal"
                       defaultValue={item.unitPriceMinor ? minorToInput(item.unitPriceMinor) : ''}
@@ -896,7 +927,7 @@ export function InvoiceEditor({
                     />
                   </label>
                   <label className="flex flex-col gap-1 w-24">
-                    <span className={popiskaClass}>DPH</span>
+                    <span className={popiskaClass}>{t('faktura.dph')}</span>
                     <VyberPole
                       value={item.vatRate}
                       disabled={locked}
@@ -911,7 +942,7 @@ export function InvoiceEditor({
                     </VyberPole>
                   </label>
                   <span className="ml-auto flex flex-col gap-1 items-end">
-                    <span className={popiskaClass}>Celkem</span>
+                    <span className={popiskaClass}>{t('faktura.celkem')}</span>
                     <span className="text-sm font-heading text-ink tabular-nums py-1.5">
                       {formatMoney(Math.round(item.quantity * item.unitPriceMinor), form.currency)}
                     </span>
@@ -927,7 +958,7 @@ export function InvoiceEditor({
               onClick={() => setItems((current) => [...current, emptyItem()])}
               className="self-start"
             >
-              Přidat položku
+              {t('faktura.pridatPolozku')}
             </AddButton>
           )}
         </div>
@@ -937,7 +968,9 @@ export function InvoiceEditor({
             {/* Zaklad PRED slevou, at je videt, z ceho se slevovalo. Bez
                 slevy je to totez cislo jako doted. */}
             <div className="flex items-center justify-between text-sm font-heading">
-              <span className="text-muted">{totals.sleva > 0 ? 'Mezisoučet bez DPH' : 'Základ bez DPH'}</span>
+              <span className="text-muted">
+                {totals.sleva > 0 ? t('faktura.mezisoucetBezDph') : t('faktura.zakladBezDph')}
+              </span>
               <span className="text-ink tabular-nums">
                 {formatMoney(totals.exVatPredSlevou, form.currency)}
               </span>
@@ -957,25 +990,25 @@ export function InvoiceEditor({
 
             {totals.sleva > 0 && (
               <div className="flex items-center justify-between text-sm font-heading">
-                <span className="text-muted">Základ bez DPH po slevě</span>
+                <span className="text-muted">{t('faktura.zakladBezDphPoSleve')}</span>
                 <span className="text-ink tabular-nums">{formatMoney(totals.exVat, form.currency)}</span>
               </div>
             )}
             {totals.byRate.map((r) => (
               <div key={r.rate} className="flex items-center justify-between text-sm font-heading">
-                <span className="text-muted">DPH {r.rate} %</span>
+                <span className="text-muted">{t('faktura.dphSazba', { sazba: r.rate })}</span>
                 <span className="text-muted tabular-nums">{formatMoney(r.vat, form.currency)}</span>
               </div>
             ))}
             <div className="flex items-center justify-between border-t border-line pt-2 mt-1">
-              <span className="font-heading font-semibold text-ink">K úhradě</span>
+              <span className="font-heading font-semibold text-ink">{t('faktura.kUhrade')}</span>
               <span className="font-display text-xl text-ink tabular-nums">
                 {formatMoney(totals.incVat, form.currency)}
               </span>
             </div>
             {form.currency !== 'CZK' && (
               <div className="flex items-center justify-between text-xs font-body text-muted">
-                <span>v korunách kurzem ČNB</span>
+                <span>{t('faktura.vKorunachKurzem')}</span>
                 <span className="tabular-nums">
                   {formatMoney(toCzkMinor(totals.incVat, invoice.exchangeRate), 'CZK')}
                 </span>
@@ -986,7 +1019,9 @@ export function InvoiceEditor({
       </div>
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
-        <span className="text-xs font-heading text-muted uppercase tracking-wide">Poznámka na faktuře</span>
+        <span className="text-xs font-heading text-muted uppercase tracking-wide">
+          {t('faktura.poznamkaNaFakture')}
+        </span>
         <textarea
           value={form.note}
           disabled={locked}
@@ -998,7 +1033,7 @@ export function InvoiceEditor({
 
       </div>
 
-      <NahledDokladu telo={nahledTelo} titulek="Náhled faktury" />
+      <NahledDokladu telo={nahledTelo} titulek={t('faktura.nahledTitulek')} />
       </div>
 
       {!jesteNeulozena && (
@@ -1010,25 +1045,22 @@ export function InvoiceEditor({
             disabled={saving}
             popisek={
               invoice.status === 'DRAFT'
-                ? 'Smazat fakturu'
+                ? t('faktura.smazatFakturu')
                 : invoice.status === 'CANCELLED'
-                  ? 'Smazat natrvalo'
-                  : 'Stornovat fakturu'
+                  ? t('faktura.smazatNatrvalo')
+                  : t('faktura.stornovatFakturu')
             }
             otazka={
               invoice.status === 'DRAFT'
-                ? 'Opravdu smazat fakturu?'
+                ? t('faktura.opravduSmazat')
                 : invoice.status === 'CANCELLED'
-                  ? 'Opravdu smazat natrvalo?'
-                  : 'Opravdu stornovat fakturu?'
+                  ? t('faktura.opravduSmazatNatrvalo')
+                  : t('faktura.opravduStornovat')
             }
             trida="self-start"
           />
           {invoice.status === 'CANCELLED' && (
-            <span className="text-xs font-body text-muted">
-              Stornovaná faktura v číselné řadě normálně zůstává. Smazat natrvalo má smysl u dokladů,
-              které v účetnictví nikdy nebyly — třeba zkušebních.
-            </span>
+            <span className="text-xs font-body text-muted">{t('faktura.stornovanaZustavaVRade')}</span>
           )}
         </div>
       )}

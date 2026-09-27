@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Živý náhled dokladu vedle formuláře (zadání 10. 9. 2026: „vlevo tabulka na
@@ -15,12 +16,14 @@ import { useEffect, useRef, useState } from 'react';
  */
 export function NahledDokladu({
   telo,
-  titulek = 'Náhled',
+  titulek,
 }: {
   /** Co se má vysázet. Komponenta si hlídá, že se to opravdu změnilo. */
   telo: unknown;
   titulek?: string;
 }) {
+  const t = usePreklad();
+  const nadpis = titulek ?? t('doklady.nahled');
   const [url, setUrl] = useState<string | null>(null);
   const [dela, setDela] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -42,7 +45,7 @@ export function NahledDokladu({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          setChyba(data?.error || 'Náhled se nepodařilo vyrobit.');
+          setChyba(data?.error || t('doklady.nahledChyba'));
           return;
         }
         setChyba(null);
@@ -61,6 +64,7 @@ export function NahledDokladu({
     }, 500);
 
     return () => clearTimeout(casovac);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otisk]);
 
   useEffect(() => {
@@ -73,9 +77,9 @@ export function NahledDokladu({
     <div className="bg-surface rounded-card border border-line shadow-sm overflow-hidden lg:sticky lg:top-24 self-start">
       <div className="flex items-center justify-between flex-wrap gap-3 px-5 py-3.5 border-b border-line">
         <div>
-          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{titulek}</h2>
+          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{nadpis}</h2>
           <p className="text-xs font-body text-muted m-0 mt-1">
-            {dela ? 'Překresluji…' : 'Mění se s tím, co píšete. Nikam se neukládá.'}
+            {dela ? t('doklady.nahledPrekresluji') : t('doklady.nahledZive')}
           </p>
         </div>
       </div>
@@ -88,7 +92,7 @@ export function NahledDokladu({
             // Zdroj je PDF vyrobene z rozepsanych hodnot a drzene v pameti
             // prohlizece - proto blob:, ne adresa routy.
             src={url ? `${url}#view=Fit&toolbar=0&navpanes=0` : undefined}
-            title={titulek}
+            title={nadpis}
             className={`w-full aspect-[210/297] rounded-lg border border-line bg-white shadow-md transition-opacity ${
               dela ? 'opacity-60' : 'opacity-100'
             }`}

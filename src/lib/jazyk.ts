@@ -2139,6 +2139,1437 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Projekt vznikl z objednávky na webu',
     en: 'This project came from an order on the website',
   },
+
+  // ==========================================================================
+  // DAVKA 4 - DOKLADY (27. 9. 2026)
+  // Nabidky, faktury, vydaje, smlouvy, banka, upominky, moje firmy
+  // a ciselniky ze src/lib. Cesky text je zdroj pravdy.
+  // ==========================================================================
+
+  // --- číselníky z src/lib (dávka 4) ---------------------------------------
+  // Měny. Český název zůstává v CURRENCY_NAMES v lib/doklady.ts - bere si ho
+  // PDF dokladu, kde jazyk určuje doklad, ne přepínač v liště.
+  'mena.CZK': { cs: 'Koruna česká (CZK)', en: 'Czech koruna (CZK)' },
+  'mena.EUR': { cs: 'Euro (EUR)', en: 'Euro (EUR)' },
+  'mena.USD': { cs: 'Americký dolar (USD)', en: 'US dollar (USD)' },
+  'mena.GBP': { cs: 'Britská libra (GBP)', en: 'Pound sterling (GBP)' },
+
+  // Způsob úhrady (lib/uctenka.ts).
+  'uhrada.CARD': { cs: 'Kartou', en: 'By card' },
+  'uhrada.CASH': { cs: 'Hotově', en: 'In cash' },
+  'uhrada.TRANSFER': { cs: 'Převodem', en: 'By bank transfer' },
+
+  // ===================== NABÍDKY (dávka 4) =====================
+  // Administrace → Doklady → Nabídky: seznam, editor nabídky, nová nabídka.
+
+  // --- seznam nabídek: záložky podle stavu ---
+  'nabidka.zalozkaRozpracovane': { cs: 'Rozpracované', en: 'Drafts' },
+  'nabidka.zalozkaOdeslane': { cs: 'Odeslané', en: 'Sent' },
+  'nabidka.zalozkaSchvalene': { cs: 'Schválené', en: 'Approved' },
+  'nabidka.zalozkaOdmitnute': { cs: 'Odmítnuté', en: 'Rejected' },
+
+  // Stav nabídky na pilulce (česká podoba je stejná jako OFFER_STATUS_LABELS
+  // v lib/doklady.ts - ten zůstává jen pro místa, která ještě nepřekládají).
+  'nabidka.stav.rozpracovana': { cs: 'Rozpracovaná', en: 'Draft' },
+  'nabidka.stav.odeslana': { cs: 'Odeslaná', en: 'Sent' },
+  'nabidka.stav.schvalena': { cs: 'Schválená', en: 'Approved' },
+  'nabidka.stav.odmitnuta': { cs: 'Odmítnutá', en: 'Rejected' },
+
+  // --- seznam nabídek: prázdný stav bez fakturační firmy ---
+  'nabidka.nejdrivFirmaNadpis': {
+    cs: 'Nejdřív si založte fakturační firmu',
+    en: 'Set up an invoicing company first',
+  },
+  'nabidka.nejdrivFirmaPopis': {
+    cs: 'Nabídka se vystavuje za konkrétní firmu a bere si z ní číselnou řadu.',
+    en: 'A quote is issued in the name of a specific company and takes its number series from it.',
+  },
+  'nabidka.prejitNaMojeFirmy': { cs: 'Přejít na Moje firmy', en: 'Go to My companies' },
+
+  // --- tabulka nabídek ---
+  'nabidka.sl.nazev': { cs: 'Název', en: 'Name' },
+  'nabidka.sl.odberatel': { cs: 'Odběratel', en: 'Customer' },
+  'nabidka.sl.projekt': { cs: 'Projekt', en: 'Project' },
+  'nabidka.sl.vystaveno': { cs: 'Vystaveno', en: 'Issued' },
+  'nabidka.sl.stav': { cs: 'Stav', en: 'Status' },
+  'nabidka.sl.bezDph': { cs: 'Bez DPH', en: 'Excl. VAT' },
+  'nabidka.sl.sDph': { cs: 'S DPH', en: 'Incl. VAT' },
+  'nabidka.tabulkaPrazdna': { cs: 'Tady zatím nic není.', en: 'Nothing here yet.' },
+  'nabidka.hledatPlaceholder': {
+    cs: 'Hledat nabídku, odběratele, projekt…',
+    en: 'Search quotes, customers, projects…',
+  },
+  'nabidka.bezNazvu': { cs: 'Bez názvu', en: 'Untitled' },
+
+  // --- nová nabídka ---
+  // Slouží i jako popisek místo čísla v hlavičce ještě neuložené nabídky.
+  'nabidka.nova': { cs: 'Nová nabídka', en: 'New quote' },
+  'nabidka.zpetNaNabidky': { cs: '← Zpět na nabídky', en: '← Back to quotes' },
+
+  // --- editor: kolik z nabídky je vyfakturováno ---
+  'nabidka.vyfakturovano': { cs: 'Vyfakturováno z nabídky', en: 'Invoiced from this quote' },
+  'nabidka.vyfakturovanoZ': { cs: '{castka} z {celkem}', en: '{castka} of {celkem}' },
+  'nabidka.zbyva': { cs: 'zbývá {castka}', en: '{castka} remaining' },
+  'nabidka.vyfakturovanoCele': { cs: 'vyfakturováno celé', en: 'invoiced in full' },
+
+  // --- editor: lišta se stavem a akcemi ---
+  'nabidka.schvalenoKdy': { cs: 'Schváleno {datum}', en: 'Approved {datum}' },
+  'nabidka.schvalenoKdyKym': {
+    cs: 'Schváleno {datum} — {jmeno}',
+    en: 'Approved {datum} — {jmeno}',
+  },
+  'nabidka.odmitnutoKdy': { cs: 'Odmítnuto {datum}', en: 'Rejected {datum}' },
+  'nabidka.odeslanoKdy': { cs: 'Odesláno {datum}', en: 'Sent {datum}' },
+  'nabidka.odkazProKlienta': { cs: 'Odkaz pro klienta', en: 'Link for the customer' },
+  'nabidka.zkopirovano': { cs: 'Zkopírováno', en: 'Copied' },
+  'nabidka.vystavitFakturu': { cs: 'Vystavit fakturu', en: 'Issue an invoice' },
+  'nabidka.vystavitDalsiFakturu': { cs: 'Vystavit další fakturu', en: 'Issue another invoice' },
+  'nabidka.schvalitRucne': { cs: 'Schválit ručně', en: 'Approve manually' },
+  'nabidka.odeslatKlientovi': { cs: 'Odeslat klientovi', en: 'Send to customer' },
+  'nabidka.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
+
+  // --- editor: ruční schválení ---
+  'nabidka.schvaleniPopis': {
+    cs: 'Označit nabídku jako schválenou — pro případy, kdy ji klient odsouhlasil telefonem nebo mailem. Schválenou nabídku už nejde měnit.',
+    en: 'Mark the quote as approved — for when the customer agreed to it by phone or email. An approved quote can no longer be changed.',
+  },
+  'nabidka.kdoSchvalil': {
+    cs: 'Kdo na straně klienta schválil (nepovinné)',
+    en: 'Who approved it on the customer’s side (optional)',
+  },
+  'nabidka.kdoSchvalilPlaceholder': {
+    cs: 'např. Jan Novák — potvrzeno telefonicky',
+    en: 'e.g. Jan Novák — confirmed by phone',
+  },
+  'nabidka.schvalitNabidku': { cs: 'Schválit nabídku', en: 'Approve the quote' },
+
+  // --- editor: schválená nabídka je zamčená ---
+  'nabidka.zamcenaPopis': {
+    cs: 'Nabídka je schválená, takže už se nedá měnit — zůstává přesně v podobě, kterou klient odsouhlasil. Fakturu z ní vystavíte tlačítkem nahoře.',
+    en: 'The quote is approved, so it can no longer be changed — it stays exactly as the customer agreed it. Use the button above to issue an invoice from it.',
+  },
+  'nabidka.zrusitSchvaleni': { cs: 'Zrušit schválení', en: 'Cancel the approval' },
+  'nabidka.rusim': { cs: 'Ruším…', en: 'Cancelling…' },
+
+  // --- editor: hlášky po uložení, odeslání a schválení ---
+  'nabidka.chybaBezOdberatele': {
+    cs: 'Vyberte odběratele — bez něj nevíme, komu nabídku poslat.',
+    en: 'Select a customer — without one we do not know who to send the quote to.',
+  },
+  'nabidka.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+  'nabidka.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'The quote could not be saved.' },
+  'nabidka.odeslanoNa': {
+    cs: 'Nabídka odeslána na {email}.',
+    en: 'The quote has been sent to {email}.',
+  },
+  'nabidka.chybaOdeslani': { cs: 'Odeslání se nezdařilo.', en: 'The quote could not be sent.' },
+  'nabidka.oznacenaSchvalena': {
+    cs: 'Nabídka je označená jako schválená.',
+    en: 'The quote is marked as approved.',
+  },
+  'nabidka.chybaSchvaleni': {
+    cs: 'Schválení se nepodařilo uložit.',
+    en: 'The approval could not be saved.',
+  },
+  'nabidka.schvaleniZruseno': {
+    cs: 'Schválení zrušeno, nabídku jde zase upravit.',
+    en: 'The approval has been cancelled, the quote can be edited again.',
+  },
+  'nabidka.chybaZruseniSchvaleni': {
+    cs: 'Schválení se nepodařilo zrušit.',
+    en: 'The approval could not be cancelled.',
+  },
+  'nabidka.chybaKopirovani': {
+    cs: 'Odkaz se nepodařilo zkopírovat — schránka není dostupná.',
+    en: 'The link could not be copied — the clipboard is not available.',
+  },
+  'nabidka.chybaSmazani': { cs: 'Smazání se nezdařilo.', en: 'The quote could not be deleted.' },
+
+  // --- editor: hlavička dokladu ---
+  'nabidka.dodavatel': { cs: 'Dodavatel', en: 'Supplier' },
+  // 'nabidka.odberatel' už ve slovníku je (dávka 3, PridatNabidku) - editor
+  // používá ten stávající klíč, tady ho schválně nezakládám znovu.
+  'nabidka.neplatceDph': { cs: 'neplátce DPH', en: 'not VAT registered' },
+
+  // Komu nabídka poletí. Jméno příjemce je uprostřed věty tučně, proto se
+  // věta dělí přes prelozitKolem (pravidlo 7).
+  'nabidka.posleme': {
+    cs: 'Nabídku pošleme {prijemce}',
+    en: 'We will send the quote to {prijemce}',
+  },
+  'nabidka.prijemceZKlienta': {
+    cs: 'klient vyplněný u projektu',
+    en: 'the customer listed on the project',
+  },
+  'nabidka.prijemceZFirmy': {
+    cs: 'kontakt firmy — projekt nemá vyplněného klienta',
+    en: 'the company contact — the project has no customer listed',
+  },
+  'nabidka.neniKomuPoslatProjekt': {
+    cs: 'Nabídku není komu poslat — projekt nemá klienta s e-mailem a firma nemá kontaktní e-mail.',
+    en: 'There is nobody to send the quote to — the project has no customer with an email address and the company has no contact email.',
+  },
+  'nabidka.neniKomuPoslat': {
+    cs: 'Nabídku není komu poslat — vyberte níže projekt s klientem, nebo firmě doplňte kontaktní e-mail.',
+    en: 'There is nobody to send the quote to — choose a project with a customer below, or add a contact email to the company.',
+  },
+
+  // --- editor: předmět a data ---
+  'nabidka.nazev': { cs: 'Název', en: 'Name' },
+  'nabidka.nazevPlaceholder': {
+    cs: 'např. Výroba audioknihy Tři mušketýři',
+    en: 'e.g. Producing the audiobook The Three Musketeers',
+  },
+  'nabidka.nazevZProjektu': {
+    cs: 'Doplní se z názvu projektu. Přepsáním si ho zamknete — třeba pro variantu nabídky.',
+    en: 'It is filled in from the project name. Typing your own locks it — handy for a variant of the quote.',
+  },
+  'nabidka.projekt': { cs: 'Projekt', en: 'Project' },
+  'nabidka.vystaveno': { cs: 'Vystaveno', en: 'Issue date' },
+  'nabidka.platnostDo': { cs: 'Platnost do', en: 'Valid until' },
+  'nabidka.mena': { cs: 'Měna', en: 'Currency' },
+  'nabidka.jazykNabidky': { cs: 'Jazyk nabídky', en: 'Quote language' },
+
+  // --- editor: položky ---
+  'nabidka.polozky': { cs: 'Položky', en: 'Items' },
+  'nabidka.cenyBezDph': { cs: 'Ceny se zadávají bez DPH.', en: 'Prices are entered excluding VAT.' },
+  'nabidka.popisPolozky': { cs: 'Popis položky', en: 'Item description' },
+  'nabidka.odebratPolozku': { cs: 'Odebrat položku', en: 'Remove the item' },
+  'nabidka.mnozstvi': { cs: 'Množství', en: 'Quantity' },
+  'nabidka.jednotka': { cs: 'Jednotka', en: 'Unit' },
+  'nabidka.cenaZaJednotku': { cs: 'Cena / j.', en: 'Price / unit' },
+  'nabidka.dph': { cs: 'DPH', en: 'VAT' },
+  'nabidka.sazbaDph': { cs: '{sazba} %', en: '{sazba}%' },
+  'nabidka.celkemPolozka': { cs: 'Celkem', en: 'Total' },
+  'nabidka.pridatPolozku': { cs: 'Přidat položku', en: 'Add an item' },
+  'nabidka.herciZProjektu': {
+    cs: '+ Herci z projektu ({pocet})',
+    en: '+ Voice actors from the project ({pocet})',
+  },
+
+  // --- editor: součet ---
+  'nabidka.mezisoucetBezDph': { cs: 'Mezisoučet bez DPH', en: 'Subtotal excl. VAT' },
+  'nabidka.zakladBezDph': { cs: 'Základ bez DPH', en: 'Net amount excl. VAT' },
+  'nabidka.zakladBezDphPoSleve': {
+    cs: 'Základ bez DPH po slevě',
+    en: 'Net amount excl. VAT after discount',
+  },
+  'nabidka.dphSazba': { cs: 'DPH {sazba} %', en: 'VAT {sazba}%' },
+  'nabidka.celkem': { cs: 'Celkem', en: 'Total' },
+
+  // --- editor: poznámka, účet, náhled, smazání ---
+  'nabidka.poznamkaProKlienta': { cs: 'Poznámka pro klienta', en: 'Note for the customer' },
+  'nabidka.poznamkaPlaceholder': {
+    cs: 'Co je v ceně, termíny, podmínky…',
+    en: 'What the price includes, dates, terms…',
+  },
+  'nabidka.bankovniUcet': { cs: 'Bankovní účet ({mena})', en: 'Bank account ({mena})' },
+  'nabidka.zadnyUcet': {
+    cs: 'Pro tuhle měnu není u vaší firmy žádný účet. Doplňte ho v Moje firmy — na faktuře bude potřeba.',
+    en: 'Your company has no account in this currency. Add one in My companies — the invoice will need it.',
+  },
+  'nabidka.nahled': { cs: 'Náhled nabídky', en: 'Quote preview' },
+  'nabidka.smazatNabidku': { cs: 'Smazat nabídku', en: 'Delete the quote' },
+  'nabidka.opravduSmazat': { cs: 'Opravdu smazat nabídku?', en: 'Delete this quote?' },
+
+  // ===== DÁVKA 4 — FAKTURY (admin/doklady/faktury) =====
+  // Vložit do objektu SLOVNIK v src/lib/jazyk.ts. Nic jiného tento soubor neobsahuje.
+
+  // --- seznam faktur: záložky a stavy ---
+  'faktura.zalozkaRozpracovane': { cs: 'Rozpracované', en: 'Drafts' },
+  'faktura.zalozkaNeuhrazene': { cs: 'Neuhrazené', en: 'Unpaid' },
+  'faktura.zalozkaUhrazene': { cs: 'Uhrazené', en: 'Paid' },
+  'faktura.zalozkaStornovane': { cs: 'Stornované', en: 'Cancelled' },
+  'faktura.stavRozpracovana': { cs: 'Rozpracovaná', en: 'Draft' },
+  'faktura.stavNeuhrazena': { cs: 'Neuhrazená', en: 'Unpaid' },
+  'faktura.stavUhrazena': { cs: 'Uhrazená', en: 'Paid' },
+  'faktura.stavStornovana': { cs: 'Stornovaná', en: 'Cancelled' },
+  'faktura.stavNeulozena': { cs: 'Neuložená', en: 'Not saved' },
+
+  // --- seznam faktur: stránka ---
+  'faktura.bezNazvu': { cs: 'Bez názvu', en: 'Untitled' },
+  'faktura.neuhrazenoCelkem': { cs: 'Neuhrazeno celkem', en: 'Total outstanding' },
+  'faktura.novaFaktura': { cs: 'Nová faktura', en: 'New invoice' },
+  'faktura.zadnaFirmaNadpis': {
+    cs: 'Nejdřív si založte fakturační firmu',
+    en: 'Set up an invoicing company first',
+  },
+  'faktura.zadnaFirmaPopis': {
+    cs: 'Faktura se vystavuje za konkrétní firmu a bere si z ní číselnou řadu i bankovní účet.',
+    en: 'An invoice is issued on behalf of a particular company and takes its number series and bank account from it.',
+  },
+  'faktura.prejitNaMojeFirmy': { cs: 'Přejít na Moje firmy', en: 'Go to My companies' },
+
+  // --- tabulka faktur ---
+  'faktura.sloupecNazev': { cs: 'Název', en: 'Name' },
+  'faktura.sloupecOdberatel': { cs: 'Odběratel', en: 'Customer' },
+  'faktura.sloupecVystaveno': { cs: 'Vystaveno', en: 'Issued' },
+  'faktura.sloupecSplatnost': { cs: 'Splatnost', en: 'Due date' },
+  'faktura.sloupecStav': { cs: 'Stav', en: 'Status' },
+  'faktura.sloupecKUhrade': { cs: 'K úhradě', en: 'Amount due' },
+  'faktura.poSplatnosti': { cs: 'po splatnosti', en: 'overdue' },
+  'faktura.tabulkaPrazdna': { cs: 'Tady zatím nic není.', en: 'Nothing here yet.' },
+  'faktura.hledatPlaceholder': {
+    cs: 'Hledat fakturu, odběratele, projekt…',
+    en: 'Search invoices, customers, projects…',
+  },
+  'faktura.filtrOdberatel': { cs: 'Odběratel', en: 'Customer' },
+  'faktura.filtrProjekt': { cs: 'Projekt', en: 'Project' },
+  'faktura.filtrStav': { cs: 'Stav', en: 'Status' },
+  'faktura.filtrPoSplatnosti': { cs: 'Po splatnosti', en: 'Overdue' },
+  'faktura.vybratRadek': { cs: 'Vybrat fakturu {cislo}', en: 'Select invoice {cislo}' },
+  'faktura.hromadneMazaniPoznamka': {
+    cs: 'Smazání je nevratné a v číselné řadě po dokladu zůstane díra. Portál smaže jen stornované faktury — ostatní se musí nejdřív stornovat.',
+    en: 'Deleting cannot be undone and leaves a gap in the number series. The portal only deletes cancelled invoices — the rest have to be cancelled first.',
+  },
+
+  // --- detail faktury: hlavička dokladu ---
+  'faktura.zpetNaFaktury': { cs: '← Zpět na faktury', en: '← Back to invoices' },
+  'faktura.zNabidkyCislo': { cs: 'z nabídky {cislo}', en: 'from quote {cislo}' },
+  'faktura.uhrazenoKdy': { cs: 'Uhrazeno {kdy}', en: 'Paid {kdy}' },
+  'faktura.odeslanoKdy': { cs: 'Odesláno {kdy}', en: 'Sent {kdy}' },
+  'faktura.vznikneAzUlozenim': {
+    cs: 'Faktura se založí až tlačítkem Uložit — číslo z řady dostane teprve tehdy.',
+    en: 'The invoice is created only when you press Save — that is when it takes a number from the series.',
+  },
+  'faktura.zNabidkyVyfakturovano': {
+    cs: 'Z nabídky {cislo} (celkem {celkem}) už je vyfakturováno {vyfakturovano} — {faktury}. Zbývá {zbyva}. Položky níž jsou z nabídky celé — upravte je na tu část, kterou fakturujete teď.',
+    en: 'Of quote {cislo} (total {celkem}), {vyfakturovano} has already been invoiced — {faktury}. {zbyva} is left. The items below are the whole quote — trim them down to the part you are invoicing now.',
+  },
+
+  // --- detail faktury: záznam o odeslání ---
+  'faktura.odeslanoNadpis': { cs: 'Odesláno', en: 'Sent' },
+  'faktura.odeslalKdo': { cs: 'odeslal {jmeno}', en: 'sent by {jmeno}' },
+  'faktura.odeslanoZPortalu': { cs: 'odesláno z portálu', en: 'sent from the portal' },
+  'faktura.sRodnymListem': { cs: 's rodným listem', en: 'with the advert record' },
+
+  // --- detail faktury: tlačítka ---
+  'faktura.zrusit': { cs: 'Zrušit', en: 'Cancel' },
+  'faktura.ulozit': { cs: 'Uložit', en: 'Save' },
+  'faktura.ukladam': { cs: 'Ukládám…', en: 'Saving…' },
+  'faktura.ulozitFakturu': { cs: 'Uložit fakturu', en: 'Save the invoice' },
+  'faktura.zakladam': { cs: 'Zakládám…', en: 'Creating…' },
+  'faktura.oznacitZaplacenou': { cs: 'Označit jako uhrazenou', en: 'Mark as paid' },
+  'faktura.zrusitUhradu': { cs: 'Zrušit úhradu', en: 'Undo the payment' },
+  'faktura.odeslatOdberateli': { cs: 'Odeslat odběrateli', en: 'Send to the customer' },
+  'faktura.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
+  'faktura.smazatFakturu': { cs: 'Smazat fakturu', en: 'Delete the invoice' },
+  'faktura.smazatNatrvalo': { cs: 'Smazat natrvalo', en: 'Delete permanently' },
+  'faktura.stornovatFakturu': { cs: 'Stornovat fakturu', en: 'Cancel the invoice' },
+  'faktura.opravduSmazat': { cs: 'Opravdu smazat fakturu?', en: 'Really delete the invoice?' },
+  'faktura.opravduSmazatNatrvalo': { cs: 'Opravdu smazat natrvalo?', en: 'Really delete permanently?' },
+  'faktura.opravduStornovat': { cs: 'Opravdu stornovat fakturu?', en: 'Really cancel the invoice?' },
+
+  // --- detail faktury: hlášky ---
+  'faktura.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+  'faktura.ulozeniSelhalo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+  'faktura.odeslaniSelhalo': { cs: 'Odeslání se nezdařilo.', en: 'Sending failed.' },
+  'faktura.smazaniSelhalo': { cs: 'Smazání se nezdařilo.', en: 'Deleting failed.' },
+  'faktura.chybiOdberatel': {
+    cs: 'Vyberte odběratele — bez něj nevíme, komu fakturu vystavit.',
+    en: 'Choose a customer — without one we do not know who to invoice.',
+  },
+  'faktura.odeslanoNa': { cs: 'Faktura odeslána na {komu}.', en: 'The invoice has been sent to {komu}.' },
+  'faktura.odeslanoNaSKopii': {
+    cs: 'Faktura odeslána na {komu} (v kopii {kopie}).',
+    en: 'The invoice has been sent to {komu} (copy to {kopie}).',
+  },
+  'faktura.zamcenaUhrazena': {
+    cs: 'Faktura je uhrazená, takže se nedá měnit. Kdyby bylo potřeba, nejdřív zrušte úhradu.',
+    en: 'The invoice is paid, so it cannot be changed. If you need to, undo the payment first.',
+  },
+  'faktura.zamcenaStornovana': { cs: 'Faktura je stornovaná.', en: 'The invoice is cancelled.' },
+  'faktura.stornovanaInfo': {
+    cs: 'Faktura byla stornována — v číselné řadě po ní zůstává stopa, jak to má být.',
+    en: 'The invoice has been cancelled — it leaves its trace in the number series, as it should.',
+  },
+  'faktura.stornovanaZustavaVRade': {
+    cs: 'Stornovaná faktura v číselné řadě normálně zůstává. Smazat natrvalo má smysl u dokladů, které v účetnictví nikdy nebyly — třeba zkušebních.',
+    en: 'A cancelled invoice normally stays in the number series. Deleting permanently makes sense only for documents that were never in the books — test ones, for instance.',
+  },
+
+  // --- detail faktury: ukončení projektu po odeslání ---
+  'faktura.ukoncitProjektOtazka': {
+    cs: 'Faktura odešla. Ukončit projekt?',
+    en: 'The invoice has gone out. Close the project?',
+  },
+  'faktura.ukoncitProjektNazev': {
+    cs: 'Faktura odešla. Ukončit projekt „{nazev}"?',
+    en: 'The invoice has gone out. Close the project “{nazev}”?',
+  },
+  'faktura.ukoncitProjektPopis': {
+    cs: 'Přehodí se na „Vyfakturováno" a přesune mezi dokončené. Vrátit jde v detailu projektu.',
+    en: 'It switches to “Invoiced” and moves in among the finished ones. You can undo that in the project detail.',
+  },
+  'faktura.ukoncitProjekt': { cs: 'Ukončit projekt', en: 'Close the project' },
+  'faktura.projektUkoncen': { cs: 'Projekt je ukončený.', en: 'The project is closed.' },
+  'faktura.ukonceniSelhalo': {
+    cs: 'Projekt se nepodařilo ukončit.',
+    en: 'The project could not be closed.',
+  },
+  'faktura.nechatBezet': { cs: 'Nechat běžet', en: 'Leave it running' },
+
+  // --- detail faktury: strany dokladu ---
+  'faktura.dodavatel': { cs: 'Dodavatel', en: 'Supplier' },
+  'faktura.odberatel': { cs: 'Odběratel', en: 'Customer' },
+  'faktura.neplatceDph': { cs: 'neplátce DPH', en: 'not VAT registered' },
+  'faktura.firmaBezEmailu': {
+    cs: 'Firma nemá kontaktní e-mail — bez něj fakturu nepošlete.',
+    en: 'The company has no contact email — you cannot send the invoice without one.',
+  },
+
+  // --- detail faktury: formulář ---
+  'faktura.polePredmet': { cs: 'Název', en: 'Name' },
+  'faktura.poleProjekt': { cs: 'Projekt', en: 'Project' },
+  'faktura.poleVariabilniSymbol': { cs: 'Variabilní symbol', en: 'Variable symbol' },
+  'faktura.poleMena': { cs: 'Měna', en: 'Currency' },
+  'faktura.poleJazykDokladu': { cs: 'Jazyk dokladu', en: 'Document language' },
+  'faktura.jazykCestina': { cs: 'Čeština', en: 'Czech' },
+  'faktura.jazykAnglictina': { cs: 'Angličtina', en: 'English' },
+  'faktura.poleVystaveno': { cs: 'Vystaveno', en: 'Issued' },
+  'faktura.poleDatumPlneni': { cs: 'Datum zdanitelného plnění', en: 'Date of taxable supply' },
+  'faktura.poleSplatnost': { cs: 'Splatnost', en: 'Due date' },
+  'faktura.poleUcet': { cs: 'Účet', en: 'Bank account' },
+  'faktura.vyberteUcet': { cs: '— vyberte účet —', en: '— choose an account —' },
+  'faktura.prenesenaDan': { cs: 'Přenesená daňová povinnost', en: 'Reverse charge' },
+  'faktura.prenesenaDanPopis': {
+    cs: 'reverse charge — daň odvede odběratel, na faktuře nebude DPH',
+    en: 'reverse charge — the customer accounts for the tax, the invoice carries no VAT',
+  },
+  'faktura.mimoPredmetDph': { cs: 'Mimo předmět DPH v ČR', en: 'Outside the scope of Czech VAT' },
+  'faktura.mimoPredmetDphPopis': {
+    cs: 'místo plnění je ve státě příjemce — třeba prodej do zahraničí',
+    en: 'the place of supply is in the country of the recipient — a sale abroad, for instance',
+  },
+
+  // --- detail faktury: kurz ČNB ---
+  'faktura.kurzCnb': { cs: 'Kurz ČNB', en: 'CNB exchange rate' },
+  'faktura.kurz': { cs: '1 {mena} = {kurz} Kč', en: '1 {mena} = {kurz} CZK' },
+  'faktura.kurzKeDni': {
+    cs: '1 {mena} = {kurz} Kč ke dni {datum}',
+    en: '1 {mena} = {kurz} CZK as at {datum}',
+  },
+  'faktura.nacistKurz': {
+    cs: 'Načíst kurz k datu vystavení',
+    en: 'Fetch the rate for the issue date',
+  },
+
+  // --- detail faktury: položky a součty ---
+  'faktura.polozky': { cs: 'Položky', en: 'Items' },
+  'faktura.cenyBezDph': { cs: 'Ceny se zadávají bez DPH.', en: 'Prices are entered excluding VAT.' },
+  'faktura.popisPolozky': { cs: 'Popis položky', en: 'Item description' },
+  'faktura.odebratPolozku': { cs: 'Odebrat položku', en: 'Remove the item' },
+  'faktura.pridatPolozku': { cs: 'Přidat položku', en: 'Add an item' },
+  'faktura.mnozstvi': { cs: 'Množství', en: 'Quantity' },
+  'faktura.jednotka': { cs: 'Jednotka', en: 'Unit' },
+  'faktura.cenaZaJednotku': { cs: 'Cena / j.', en: 'Unit price' },
+  'faktura.dph': { cs: 'DPH', en: 'VAT' },
+  'faktura.celkem': { cs: 'Celkem', en: 'Total' },
+  'faktura.mezisoucetBezDph': { cs: 'Mezisoučet bez DPH', en: 'Subtotal excluding VAT' },
+  'faktura.zakladBezDph': { cs: 'Základ bez DPH', en: 'Net amount excluding VAT' },
+  'faktura.zakladBezDphPoSleve': {
+    cs: 'Základ bez DPH po slevě',
+    en: 'Net amount excluding VAT after the discount',
+  },
+  'faktura.dphSazba': { cs: 'DPH {sazba} %', en: 'VAT {sazba}%' },
+  'faktura.kUhrade': { cs: 'K úhradě', en: 'Amount due' },
+  'faktura.vKorunachKurzem': { cs: 'v korunách kurzem ČNB', en: 'in koruna at the CNB rate' },
+  'faktura.poznamkaNaFakture': { cs: 'Poznámka na faktuře', en: 'Note on the invoice' },
+  'faktura.nahledTitulek': { cs: 'Náhled faktury', en: 'Invoice preview' },
+
+  // --- výdaje: záložky a součty nad seznamem ---
+  'vydaj.zalozkaNezarazene': { cs: 'Nezařazené', en: 'Unfiled' },
+  'vydaj.zalozkaNeuhrazene': { cs: 'Neuhrazené', en: 'Unpaid' },
+  'vydaj.zalozkaUhrazene': { cs: 'Uhrazené', en: 'Paid' },
+  'vydaj.souctyNadpis': { cs: '{zalozka} celkem ({pocet})', en: '{zalozka} total ({pocet})' },
+  'vydaj.souctyBezDph': { cs: 'bez DPH {castka}', en: 'excl. VAT {castka}' },
+  'vydaj.zbyvaCastka': { cs: 'zbývá {castka}', en: '{castka} outstanding' },
+  'vydaj.vsechnyKategorie': { cs: 'Všechny kategorie', en: 'All categories' },
+
+  // --- výdaje: řádky seznamu (skládá je server) ---
+  'vydaj.bezNazvu': { cs: 'Bez názvu', en: 'Untitled' },
+  'vydaj.podnadpisCislo': { cs: 'č. {cislo}', en: 'no. {cislo}' },
+  'vydaj.podnadpisZMailu': { cs: 'z mailu · {odesilatel}', en: 'from email · {odesilatel}' },
+  'vydaj.dphZadna': { cs: 'bez DPH', en: 'no VAT' },
+  'vydaj.dphSazba': { cs: 'DPH {sazba} %', en: 'VAT {sazba}%' },
+
+  // --- výdaje: tabulka seznamu ---
+  'vydaj.sloupecNazev': { cs: 'Název', en: 'Name' },
+  'vydaj.sloupecDatum': { cs: 'Datum', en: 'Date' },
+  'vydaj.sloupecKategorie': { cs: 'Kategorie', en: 'Category' },
+  'vydaj.sloupecSplatnost': { cs: 'Splatnost', en: 'Due date' },
+  'vydaj.sloupecBezDph': { cs: 'Bez DPH', en: 'Excl. VAT' },
+  'vydaj.sloupecCelkem': { cs: 'Celkem', en: 'Total' },
+  'vydaj.sloupecStav': { cs: 'Stav', en: 'Status' },
+  'vydaj.sloupecPlatba': { cs: 'Platba', en: 'Payment' },
+  'vydaj.stitekPriloha': { cs: 'PŘÍLOHA', en: 'ATTACHMENT' },
+  'vydaj.poSplatnosti': { cs: 'po splatnosti', en: 'overdue' },
+  'vydaj.stavUhrazeno': { cs: 'Uhrazeno', en: 'Paid' },
+  'vydaj.stavCastecne': { cs: 'Částečně', en: 'Partly paid' },
+  'vydaj.stavNeuhrazeno': { cs: 'Neuhrazeno', en: 'Unpaid' },
+  'vydaj.stavNezarazeno': { cs: 'Nezařazeno', en: 'Unfiled' },
+  'vydaj.stavZbyva': { cs: 'Zbývá {castka}', en: '{castka} outstanding' },
+  'vydaj.tabulkaPrazdna': { cs: 'Tady zatím nic není.', en: 'Nothing here yet.' },
+  'vydaj.hledatPlaceholder': {
+    cs: 'Hledat doklad, dodavatele, projekt…',
+    en: 'Search documents, suppliers, projects…',
+  },
+  'vydaj.filtrUhrazene': { cs: 'Uhrazené', en: 'Paid' },
+  'vydaj.filtrNeuhrazene': { cs: 'Neuhrazené', en: 'Unpaid' },
+  'vydaj.filtrCastecne': { cs: 'Částečně uhrazené', en: 'Partly paid' },
+  'vydaj.filtrPoSplatnosti': { cs: 'Po splatnosti', en: 'Overdue' },
+  'vydaj.filtrSPrilohou': { cs: 'S přílohou', en: 'With an attachment' },
+  'vydaj.filtrBezPrilohy': { cs: 'Bez přílohy', en: 'Without an attachment' },
+
+  // --- výdaje: schránka s doklady (kontrola pošty) ---
+  'vydaj.postaZkontrolovat': { cs: 'Zkontrolovat poštu', en: 'Check the mailbox' },
+  'vydaj.postaKontroluji': { cs: 'Kontroluji poštu…', en: 'Checking the mailbox…' },
+  'vydaj.postaChyba': {
+    cs: 'Do schránky se nepodařilo podívat.',
+    en: 'The mailbox could not be checked.',
+  },
+  'vydaj.postaNovychDokladu': { cs: 'Nových dokladů: {pocet}', en: 'New documents: {pocet}' },
+  'vydaj.postaPrectenoDokladu': { cs: 'Přečteno dokladů: {pocet}', en: 'Documents read: {pocet}' },
+  'vydaj.postaNicNoveho': { cs: 'Nic nového.', en: 'Nothing new.' },
+  'vydaj.postaNenastavena': {
+    cs: 'Schránka s doklady není nastavená',
+    en: 'The document mailbox is not set up',
+  },
+  'vydaj.postaNenastavenaNapoveda': {
+    cs: 'Doplňte IMAP_HOST, IMAP_USER a IMAP_PASSWORD.',
+    en: 'Set IMAP_HOST, IMAP_USER and IMAP_PASSWORD.',
+  },
+
+  // --- výdaje: kategorie ---
+  'vydaj.spravovatKategorie': {
+    cs: 'Přidat / spravovat kategorie',
+    en: 'Add / manage categories',
+  },
+  'vydaj.kategorieNadpis': { cs: 'Kategorie výdajů', en: 'Expense categories' },
+  'vydaj.kategoriePocetDokladu': { cs: '{pocet} dokladů', en: '{pocet} documents' },
+  'vydaj.kategoriiVyradit': { cs: 'Vyřadit', en: 'Remove from the list' },
+  'vydaj.kategoriiVratit': { cs: 'Vrátit do nabídky', en: 'Put back in the list' },
+  'vydaj.kategoriiSmazatOtazka': {
+    cs: 'Opravdu smazat kategorii?',
+    en: 'Really delete this category?',
+  },
+  'vydaj.kategorieJenVyrazena': {
+    cs: 'Kategorii „{nazev}" už používá {pocet} dokladů, takže je jen vyřazená z nabídky — u těch dokladů zůstane.',
+    en: 'The category "{nazev}" is already used by {pocet} documents, so it has only been removed from the list — it stays on those documents.',
+  },
+  'vydaj.novaKategorie': { cs: 'Nová kategorie', en: 'New category' },
+  'vydaj.novaKategoriePlaceholder': { cs: 'např. Marketing', en: 'e.g. Marketing' },
+  'vydaj.pridatKategorii': { cs: '+ Nová kategorie', en: '+ New category' },
+  'vydaj.bezKategorie': { cs: '— bez kategorie —', en: '— no category —' },
+  'vydaj.kategoriiNelzePridat': {
+    cs: 'Kategorii se nepodařilo přidat.',
+    en: 'The category could not be added.',
+  },
+  'vydaj.pridat': { cs: 'Přidat', en: 'Add' },
+  'vydaj.ulozeniSelhalo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+
+  // --- výdaje: zadání nového dokladu ---
+  'vydaj.novyVydaj': { cs: 'Nový výdaj', en: 'New expense' },
+  'vydaj.ctuDoklad': { cs: 'Čtu doklad…', en: 'Reading the document…' },
+  'vydaj.pridatDalsiPrilohu': { cs: 'Přidat další přílohu', en: 'Add another attachment' },
+  'vydaj.vyfotitDoklad': { cs: 'Vyfotit doklad', en: 'Photograph the document' },
+  'vydaj.vybratDoklad': { cs: 'Vybrat doklad', en: 'Choose a document' },
+  'vydaj.neboVybratSoubor': { cs: 'nebo vybrat soubor / PDF', en: 'or choose a file / PDF' },
+  'vydaj.dalsiSouboryJenPrilohy': {
+    cs: 'Další soubory se jen přiloží.',
+    en: 'Any further files are just attached.',
+  },
+  'vydaj.vyberSouboruNapoveda': {
+    cs: 'Vyberte PDF, sken nebo fotku dokladu (klidně víc souborů) - částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.',
+    en: 'Choose a PDF, a scan or a photo of the document (several files are fine) — the amount, the date and the VAT will be filled in for you. Please check them before saving.',
+  },
+  'vydaj.souborDoklad': { cs: 'Doklad', en: 'Document' },
+  'vydaj.souborPriloha': { cs: 'Příloha', en: 'Attachment' },
+  'vydaj.odebratSoubor': { cs: 'Odebrat {nazev}', en: 'Remove {nazev}' },
+  'vydaj.cteniSouborVelky': {
+    cs: 'Soubor je moc velký na přečtení, údaje vyplňte ručně.',
+    en: 'The file is too large to read, please fill the details in manually.',
+  },
+  'vydaj.cteniSelhalo': {
+    cs: 'Doklad se nepodařilo přečíst, vyplňte údaje ručně.',
+    en: 'The document could not be read, please fill the details in manually.',
+  },
+  'vydaj.cteniNejiste': {
+    cs: 'Doklad šel číst špatně — překontrolujte prosím částku a datum.',
+    en: 'The document was hard to read — please check the amount and the date.',
+  },
+  'vydaj.cteniHotovo': {
+    cs: 'Údaje jsou z dokladu — zkontrolujte je a uložte.',
+    en: 'The details come from the document — check them and save.',
+  },
+  'vydaj.ulozitDoklad': { cs: 'Uložit doklad', en: 'Save the document' },
+  'vydaj.poUlozeniZpetNaPrehled': {
+    cs: 'Po uložení se vrátíte na přehled.',
+    en: 'After saving you go back to the list.',
+  },
+  'vydaj.ulozeniDokladuSelhalo': {
+    cs: 'Doklad se nepodařilo uložit.',
+    en: 'The document could not be saved.',
+  },
+
+  // --- výdaje: políčka formulářů (nový doklad i detail) ---
+  'vydaj.poleNazev': { cs: 'Název', en: 'Name' },
+  'vydaj.poleNazevPlaceholder': { cs: 'za co to bylo', en: 'what it was for' },
+  'vydaj.poleDatumDokladu': { cs: 'Datum dokladu', en: 'Document date' },
+  'vydaj.poleSplatnost': { cs: 'Splatnost', en: 'Due date' },
+  'vydaj.poleCisloDokladu': { cs: 'Číslo dokladu', en: 'Document number' },
+  'vydaj.poleKategorie': { cs: 'Kategorie', en: 'Category' },
+  'vydaj.poleProjekt': { cs: 'Projekt', en: 'Project' },
+  'vydaj.projektyNenacteny': {
+    cs: 'Projekty se z Caflou nenačetly.',
+    en: 'Projects could not be loaded from Caflou.',
+  },
+  'vydaj.poleCastkaBezDph': { cs: 'Částka bez DPH', en: 'Amount excl. VAT' },
+  'vydaj.poleCastkaSDph': { cs: 'Částka s DPH', en: 'Amount incl. VAT' },
+  'vydaj.prehoditNaBezDph': {
+    cs: 'Přepnout na zadávání částky bez DPH',
+    en: 'Switch to entering the amount excluding VAT',
+  },
+  'vydaj.prehoditNaSDph': {
+    cs: 'Přepnout na zadávání částky s DPH',
+    en: 'Switch to entering the amount including VAT',
+  },
+  'vydaj.protejsekBezDph': { cs: 'bez DPH {castka}', en: 'excl. VAT {castka}' },
+  'vydaj.protejsekSDph': { cs: 's DPH {castka}', en: 'incl. VAT {castka}' },
+  'vydaj.poleDph': { cs: 'DPH', en: 'VAT' },
+  'vydaj.poleMena': { cs: 'Měna', en: 'Currency' },
+  'vydaj.poleHrazeno': { cs: 'Hrazeno', en: 'Paid by' },
+  'vydaj.poleDodavatelZFirem': { cs: 'Dodavatel z Firem', en: 'Supplier from Companies' },
+  'vydaj.neniVeFirmach': { cs: '— není ve Firmách —', en: '— not in Companies —' },
+  'vydaj.poleJmenoDodavatele': { cs: 'Nebo jméno dodavatele', en: 'Or the supplier name' },
+  'vydaj.poleJmenoDodavatelePlaceholder': { cs: 'u drobného dokladu', en: 'for a small receipt' },
+  'vydaj.polePoznamka': { cs: 'Poznámka', en: 'Note' },
+  'vydaj.celkem': { cs: 'Celkem', en: 'Total' },
+
+  // --- výdaje: detail dokladu ---
+  'vydaj.zpetNaVydaje': { cs: '← Zpět na výdaje', en: '← Back to expenses' },
+  'vydaj.bezCisla': { cs: 'bez čísla', en: 'no number' },
+  'vydaj.zaFirmu': { cs: 'za {firma}', en: 'for {firma}' },
+  'vydaj.zaraditMeziVydaje': { cs: 'Zařadit mezi výdaje', en: 'File with the expenses' },
+  'vydaj.zrusitUhradu': { cs: 'Zrušit úhradu', en: 'Cancel the payment' },
+  'vydaj.oznacitUhrazeny': { cs: 'Označit jako uhrazený', en: 'Mark as paid' },
+  'vydaj.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+  'vydaj.zarazeniChybiKategorie': {
+    cs: 'Vyberte kategorii — podle ní se doklad zařadí do přehledů.',
+    en: 'Choose a category — it decides where the document is filed in the overviews.',
+  },
+  'vydaj.zarazeniSelhalo': { cs: 'Zařazení se nezdařilo.', en: 'Filing failed.' },
+  'vydaj.kurzCnb': {
+    cs: 'Kurz ČNB: 1 {mena} = {kurz} Kč ke dni {datum}',
+    en: 'CNB rate: 1 {mena} = {kurz} CZK as at {datum}',
+  },
+  'vydaj.smazatDoklad': { cs: 'Smazat doklad', en: 'Delete the document' },
+  'vydaj.smazatDokladOtazka': {
+    cs: 'Opravdu smazat doklad?',
+    en: 'Really delete this document?',
+  },
+
+  // --- výdaje: pás dokladu ze schránky ---
+  'vydaj.schrankaPas': {
+    cs: 'Doklad z e-mailu · čeká na zařazení',
+    en: 'Document from email · waiting to be filed',
+  },
+  'vydaj.schrankaOd': { cs: 'Od: {odesilatel}', en: 'From: {odesilatel}' },
+  'vydaj.schrankaPredmet': { cs: 'Předmět: {predmet}', en: 'Subject: {predmet}' },
+  'vydaj.schrankaPrislo': { cs: 'Přišlo {kdy}', en: 'Arrived {kdy}' },
+  'vydaj.schrankaCteniChyba': {
+    cs: 'Údaje se nepodařilo vyčíst ({chyba}) — vyplňte je prosím ručně.',
+    en: 'The details could not be read ({chyba}) — please fill them in manually.',
+  },
+  'vydaj.schrankaCteniJistota': {
+    cs: 'Údaje vyčetl portál z přílohy (jistota {jistota} %) — překontrolujte je.',
+    en: 'The portal read the details from the attachment (confidence {jistota}%) — please check them.',
+  },
+  'vydaj.schrankaCteniHotovo': {
+    cs: 'Údaje vyčetl portál z přílohy — překontrolujte je.',
+    en: 'The portal read the details from the attachment — please check them.',
+  },
+  'vydaj.schrankaCteniCeka': {
+    cs: 'Údaje se z přílohy ještě nečetly. Zkuste za chvíli obnovit stránku.',
+    en: 'The details have not been read from the attachment yet. Try refreshing the page in a moment.',
+  },
+
+  // --- výdaje: úhrady na vícekrát ---
+  'vydaj.uhradyNadpis': { cs: 'Úhrady', en: 'Payments' },
+  'vydaj.uhrazenoCastecne': { cs: 'Uhrazeno částečně', en: 'Partly paid' },
+  'vydaj.uhrazeno': { cs: 'Uhrazeno', en: 'Paid' },
+  'vydaj.zbyvaDoplatit': { cs: 'Zbývá doplatit', en: 'Outstanding' },
+  'vydaj.uhraduZapsal': { cs: 'zapsal {kdo}', en: 'recorded by {kdo}' },
+  'vydaj.poleKolikOdeslo': { cs: 'Kolik odešlo', en: 'Amount sent' },
+  'vydaj.poleKdy': { cs: 'Kdy', en: 'When' },
+  'vydaj.uhradaPoznamkaPlaceholder': {
+    cs: 'např. první splátka, zbytek po dodání',
+    en: 'e.g. first instalment, the rest on delivery',
+  },
+  'vydaj.zapsatUhradu': { cs: 'Zapsat úhradu', en: 'Record the payment' },
+  'vydaj.doplatitZbytek': { cs: 'Doplatit zbytek ({castka})', en: 'Pay the rest ({castka})' },
+  'vydaj.uhradaChybiCastka': {
+    cs: 'Zadejte částku, která odešla.',
+    en: 'Enter the amount that was sent.',
+  },
+  'vydaj.uhradaZapisSelhal': {
+    cs: 'Úhradu se nepodařilo zapsat.',
+    en: 'The payment could not be recorded.',
+  },
+
+  // --- výdaje: přílohy dokladu ---
+  'vydaj.prilohyNadpis': { cs: 'Přílohy', en: 'Attachments' },
+  'vydaj.prilohyZadne': { cs: 'Bez přílohy.', en: 'No attachment.' },
+  'vydaj.prilohaJeDoklad': { cs: 'doklad', en: 'document' },
+  'vydaj.prilohaOdebrat': { cs: 'Odebrat', en: 'Remove' },
+  'vydaj.prilohaOdebratOtazka': {
+    cs: 'Opravdu odebrat přílohu?',
+    en: 'Really remove this attachment?',
+  },
+  'vydaj.nahratDoklad': { cs: '+ Nahrát doklad', en: '+ Upload the document' },
+  'vydaj.pridatPrilohu': { cs: '+ Přidat přílohu', en: '+ Add an attachment' },
+  'vydaj.prilohaNahraniSelhalo': {
+    cs: 'Přílohu se nepodařilo nahrát.',
+    en: 'The attachment could not be uploaded.',
+  },
+  'vydaj.prilohaOdebraniSelhalo': {
+    cs: 'Přílohu se nepodařilo odebrat.',
+    en: 'The attachment could not be removed.',
+  },
+
+  // --- výdaje: náhled přílohy vedle formuláře ---
+  'vydaj.nahledPriloha': { cs: 'Příloha', en: 'Attachment' },
+  'vydaj.nahledSelhal': {
+    cs: 'Náhled se nepodařilo načíst.',
+    en: 'The preview could not be loaded.',
+  },
+  'vydaj.nahledNepodporovanyTyp': {
+    cs: 'Tenhle typ souboru se v prohlížeči nezobrazí.',
+    en: 'This file type cannot be shown in the browser.',
+  },
+  'vydaj.nahledOtevritVNovemOkne': { cs: 'Otevřít v novém okně', en: 'Open in a new window' },
+  'vydaj.nahledPopisObrazku': { cs: 'Příloha dokladu', en: 'Document attachment' },
+
+  // --- výdaje: dodatečná faktura ke smlouvě ---
+  'vydaj.fakturaKeSmlouveNadpis': { cs: 'Faktura ke smlouvě', en: 'Invoice for the contract' },
+  'vydaj.zeSmlouvy': { cs: 'ze smlouvy {cislo}', en: 'from contract {cislo}' },
+  'vydaj.fakturaCislo': { cs: 'Faktura {cislo}', en: 'Invoice {cislo}' },
+  'vydaj.fakturaPripojena': { cs: 'Faktura připojena', en: 'Invoice attached' },
+  'vydaj.platiSe': { cs: 'Platí se {castka}', en: '{castka} is payable' },
+  'vydaj.platiSeRozpis': {
+    cs: '({castka} bez DPH + {sazba} %)',
+    en: '({castka} excl. VAT + {sazba}%)',
+  },
+  'vydaj.platiSeRozpisBezDph': {
+    cs: '({castka} bez DPH · bez DPH)',
+    en: '({castka} excl. VAT · no VAT)',
+  },
+  'vydaj.odebratZnacku': { cs: 'Odebrat značku', en: 'Remove the marker' },
+  'vydaj.fakturaOdebratOtazka': {
+    cs: 'Odebrat značku faktury? Přílohy ani částka se nevrací.',
+    en: 'Remove the invoice marker? The attachments and the amount are not reverted.',
+  },
+  'vydaj.znackaZruseniSelhalo': {
+    cs: 'Značku se nepodařilo zrušit.',
+    en: 'The marker could not be removed.',
+  },
+  'vydaj.fakturaVysvetleni': {
+    cs: 'Plátce DPH pošle ke smlouvě ještě fakturu — na smlouvě je částka bez DPH, platí se ta z faktury. Připojte ji sem: náklad zůstane {jeden}, jen bude mít dvě přílohy a částku s DPH.',
+    en: 'A VAT-registered supplier sends an invoice on top of the contract — the contract carries the amount excluding VAT, but the invoice amount is what gets paid. Attach it here: there will still be {jeden} expense, it will just have two attachments and the amount including VAT.',
+  },
+  'vydaj.fakturaVysvetleniJeden': { cs: 'jeden', en: 'one' },
+  'vydaj.fakturaJizVPortalu': {
+    cs: 'Faktura už je v portálu',
+    en: 'The invoice is already in the portal',
+  },
+  'vydaj.vyberteDoklad': { cs: '— vyberte doklad —', en: '— choose a document —' },
+  'vydaj.spojitSeSmlouvou': { cs: 'Spojit se smlouvou', en: 'Link to the contract' },
+  'vydaj.spojeniSelhalo': {
+    cs: 'Doklady se nepodařilo spojit.',
+    en: 'The documents could not be linked.',
+  },
+  'vydaj.neboFakturuNahrajte': { cs: '…nebo fakturu nahrajte', en: '…or upload the invoice' },
+  'vydaj.poleCisloFaktury': { cs: 'Číslo faktury', en: 'Invoice number' },
+  'vydaj.poleSazbaDph': { cs: 'Sazba DPH', en: 'VAT rate' },
+  'vydaj.pripojitFakturu': { cs: 'Připojit fakturu', en: 'Attach the invoice' },
+  'vydaj.pripojuji': { cs: 'Připojuji…', en: 'Attaching…' },
+  'vydaj.fakturaChybiUdaje': {
+    cs: 'Vyberte fakturu nebo vyplňte částku.',
+    en: 'Choose an invoice or enter an amount.',
+  },
+  'vydaj.fakturaPripojeniSelhalo': {
+    cs: 'Fakturu se nepodařilo připojit.',
+    en: 'The invoice could not be attached.',
+  },
+
+  // --- smlouvy: přehled a záložky ---
+  'smlouva.zalozkaRozpracovane': { cs: 'Rozpracované', en: 'Drafts' },
+  'smlouva.zalozkaKPodpisu': { cs: 'Čekají na podpis', en: 'Awaiting signature' },
+  'smlouva.zalozkaPodepsane': { cs: 'Podepsané', en: 'Signed' },
+  'smlouva.zalozkaOstatni': { cs: 'Odmítnuté a zrušené', en: 'Declined and cancelled' },
+  'smlouva.sablonySmluv': { cs: 'Šablony smluv', en: 'Contract templates' },
+  'smlouva.zpetNaSmlouvy': { cs: 'Zpět na smlouvy', en: 'Back to contracts' },
+
+  // --- stavy smlouvy (pilulka v přehledu i v detailu) ---
+  'smlouva.stavRozpracovana': { cs: 'Rozpracovaná', en: 'Draft' },
+  'smlouva.stavCekaNaPodpis': { cs: 'Čeká na podpis', en: 'Awaiting signature' },
+  'smlouva.stavPodepsana': { cs: 'Podepsaná', en: 'Signed' },
+  'smlouva.stavOdmitnuta': { cs: 'Odmítnutá', en: 'Declined' },
+  'smlouva.stavZrusena': { cs: 'Zrušená', en: 'Cancelled' },
+
+  // --- tabulka smluv ---
+  'smlouva.sloupecNazev': { cs: 'Název', en: 'Name' },
+  'smlouva.sloupecPodepisujici': { cs: 'Podepisující', en: 'Signatory' },
+  'smlouva.sloupecVytvoreno': { cs: 'Vytvořeno', en: 'Created' },
+  'smlouva.sloupecPodpisy': { cs: 'Podpisy', en: 'Signatures' },
+  'smlouva.sloupecStav': { cs: 'Stav', en: 'Status' },
+  'smlouva.sloupecProjekt': { cs: 'Projekt', en: 'Project' },
+  'smlouva.protistranaKratce': { cs: 'protistrana', en: 'counterparty' },
+  'smlouva.tabulkaPrazdna': { cs: 'Tady zatím nic není.', en: 'Nothing here yet.' },
+  'smlouva.hledatPlaceholder': {
+    cs: 'Hledat smlouvu, herce, projekt…',
+    en: 'Search for a contract, a narrator or a project…',
+  },
+  'smlouva.vybratRadek': { cs: 'Vybrat smlouvu {nazev}', en: 'Select contract {nazev}' },
+  'smlouva.hromadneMazaniPoznamka': {
+    cs: 'Smazání je nevratné — smlouva zmizí i s podpisy. Podepsanou smlouvu portál smazat nedovolí.',
+    en: 'Deleting cannot be undone — the contract goes, signatures and all. The portal will not delete a signed contract.',
+  },
+
+  // --- nová smlouva: formulář ---
+  'smlouva.novaSmlouva': { cs: 'Nová smlouva', en: 'New contract' },
+  'smlouva.nazevSmlouvy': { cs: 'Název smlouvy', en: 'Contract name' },
+  'smlouva.nazevSeSloziSam': {
+    cs: 'Vyberte projekt a herce — název se složí sám',
+    en: 'Choose a project and a narrator — the name puts itself together',
+  },
+  'smlouva.herec': { cs: 'Herec', en: 'Narrator' },
+  'smlouva.herecZProjektu': { cs: 'Herec z projektu', en: 'Narrator on the project' },
+  'smlouva.projektBezHerce': { cs: '— projekt nemá herce —', en: '— the project has no narrator —' },
+  'smlouva.doplnteHerce': {
+    cs: 'Doplňte herce u projektu a smlouva si z jeho karty vezme jméno, adresu i RČ nebo IČ. Odměnu si pak vezme z položky rozpočtu, která na něj sedí.',
+    en: 'Add a narrator to the project and the contract will take their name, address and birth or company number from their record. The fee then comes from the budget line that matches them.',
+  },
+  'smlouva.nevybiratRucne': { cs: '— nevybírat, vyplním ručně —', en: '— do not choose, I will fill it in —' },
+  'smlouva.bezRcIc': { cs: 'bez RČ a IČ', en: 'no birth or company number' },
+  'smlouva.herecUdajeSAdresou': {
+    cs: 'Do smlouvy půjde {identifikace} a adresa z jeho karty.',
+    en: 'The contract will use {identifikace} and the address from their record.',
+  },
+  'smlouva.herecUdajeBezAdresy': {
+    cs: 'Do smlouvy půjde {identifikace}. Adresu na kartě nemá — doplní se „…".',
+    en: 'The contract will use {identifikace}. Their record has no address, so “…” goes in instead.',
+  },
+  'smlouva.herecBezUdajuSAdresou': {
+    cs: 'Na kartě nemá RČ ani IČ — ve smlouvě bude „…", adresa z jeho karty se doplní.',
+    en: 'Their record has no birth or company number — the contract will show “…”, but the address from their record goes in.',
+  },
+  'smlouva.herecBezUdaju': {
+    cs: 'Na kartě nemá RČ ani IČ — ve smlouvě bude „…" a dopíšete to v textu.',
+    en: 'Their record has no birth or company number — the contract will show “…” and you fill it in in the text.',
+  },
+  'smlouva.herecUdajeZKarty': {
+    cs: 'Adresu i RČ nebo IČ si portál vezme z karty herce.',
+    en: 'The portal takes the address and the birth or company number from the narrator’s record.',
+  },
+  'smlouva.odmenaZRozpoctu': { cs: 'Odměna je z rozpočtu projektu.', en: 'The fee comes from the project budget.' },
+  'smlouva.herecZRozpoctu': {
+    cs: 'U projektu navázaný není — portál ho poznal v rozpočtu.',
+    en: 'They are not linked to the project — the portal spotted them in the budget.',
+  },
+  'smlouva.sablona': { cs: 'Šablona', en: 'Template' },
+  'smlouva.prazdnaSmlouva': { cs: '— prázdná smlouva —', en: '— empty contract —' },
+  'smlouva.zaNasiFirmu': { cs: 'Za naši firmu', en: 'On behalf of our company' },
+  'smlouva.dodavatel': { cs: 'Dodavatel', en: 'Supplier' },
+  'smlouva.protistranaFirma': { cs: 'Protistrana (firma)', en: 'Counterparty (company)' },
+  'smlouva.vyberteDodavatele': { cs: '— vyberte dodavatele —', en: '— choose a supplier —' },
+  'smlouva.bezFirmy': { cs: '— bez firmy (herec) —', en: '— no company (narrator) —' },
+  'smlouva.zadnyDodavatel': {
+    cs: 'Mezi firmami zatím není žádný dodavatel. Herce, který dodává i jako firma, přenesete do dodavatelů tlačítkem na jeho kartě.',
+    en: 'There is no supplier among the companies yet. A narrator who also supplies as a company is moved into suppliers with the button on their record.',
+  },
+  'smlouva.udajeDodavatele': {
+    cs: 'IČ, DIČ i adresu si smlouva vezme z karty dodavatele. Herec, který dodává i jako firma, se sem dostane tlačítkem „Přenést do dodavatelů" na své kartě.',
+    en: 'The contract takes the company number, the VAT number and the address from the supplier’s record. A narrator who also supplies as a company gets here with the “Move to suppliers” button on their record.',
+  },
+  'smlouva.kdoPodepisuje': { cs: 'Kdo podepisuje', en: 'Who signs' },
+  'smlouva.vyberteHerce': { cs: '— vyberte herce —', en: '— choose a narrator —' },
+  'smlouva.napisuRucne': { cs: '— napíšu ručně —', en: '— I will type it in —' },
+  'smlouva.jmenoAPrijmeni': { cs: 'Jméno a příjmení', en: 'Full name' },
+  'smlouva.vybratZeSeznamu': { cs: 'Vybrat herce ze seznamu', en: 'Choose a narrator from the list' },
+  'smlouva.emailPodepisujiciho': { cs: 'E-mail podepisujícího', en: 'Signatory’s email' },
+  'smlouva.emailPlaceholder': {
+    cs: 'na tenhle e-mail půjde odkaz k podpisu',
+    en: 'the signing link goes to this email',
+  },
+  'smlouva.rucniPoleUvod': {
+    cs: 'Co portál neví — doplní se rovnou do textu smlouvy. Co necháte prázdné, se ve smlouvě buď vynechá (když stojí ve výčtu), nebo zůstane jako „…" a dopíšete to v editoru.',
+    en: 'What the portal does not know — it goes straight into the contract text. Anything you leave empty is either left out of the contract (where it sits in a list) or stays as “…” for you to fill in in the editor.',
+  },
+  'smlouva.vyberteZNakladu': { cs: '— vyberte z nákladů projektu —', en: '— choose from the project costs —' },
+  'smlouva.polozkaBezNazvu': { cs: 'Bez názvu', en: 'Untitled' },
+  'smlouva.odmenaBezDph': {
+    cs: 'Do smlouvy půjde {castka} bez DPH.',
+    en: '{castka} excluding VAT goes into the contract.',
+  },
+  'smlouva.terminZOdevzdani': {
+    cs: 'Předvyplněno z data odevzdání projektu.',
+    en: 'Pre-filled from the project delivery date.',
+  },
+  'smlouva.terminRucne': {
+    cs: 'Projekt nemá datum odevzdání — vyplňte termín ručně.',
+    en: 'The project has no delivery date — fill the date in yourself.',
+  },
+  'smlouva.terminAudiokniha': { cs: 'Termín dokončení natáčení', en: 'Recording completion date' },
+  'smlouva.terminReklama': { cs: 'Termín pořízení záznamu', en: 'Recording date' },
+  'smlouva.terminDilo': { cs: 'Termín odevzdání díla', en: 'Delivery date for the work' },
+  'smlouva.zakladam': { cs: 'Zakládám…', en: 'Creating…' },
+  'smlouva.zalozitAUpravit': { cs: 'Založit a upravit text', en: 'Create and edit the text' },
+  'smlouva.chybiProjektDodavatel': {
+    cs: 'Vyberte projekt a dodavatele — z nich se skládá název smlouvy.',
+    en: 'Choose a project and a supplier — the contract name is made from them.',
+  },
+  'smlouva.chybiProjektHerec': {
+    cs: 'Vyberte projekt a herce — z nich se skládá název smlouvy.',
+    en: 'Choose a project and a narrator — the contract name is made from them.',
+  },
+  'smlouva.zalozeniSelhalo': { cs: 'Smlouvu se nepodařilo založit.', en: 'The contract could not be created.' },
+
+  // --- nápověda k ručním polím ---
+  // Ukázky zůstávají české schválně: to, co se do pole napíše, jde do českého
+  // textu smlouvy, ne na obrazovku.
+  'smlouva.napovedaOdmena': { cs: 'např. 5 000 Kč', en: 'e.g. 5 000 Kč' },
+  'smlouva.napovedaTermin': { cs: 'např. 20. 9. 2026', en: 'e.g. 20. 9. 2026' },
+  'smlouva.napovedaSplatnost': { cs: 'např. 30', en: 'e.g. 30' },
+  'smlouva.napovedaRozsahDila': {
+    cs: 'co se dělá — překlad, úprava dialogů, dramaturgie…',
+    en: 'what is being done — translation, dialogue editing, script editing…',
+  },
+  'smlouva.napovedaUziti': {
+    cs: 'např. audio reklama na Spotify, CZ+SK',
+    en: 'e.g. audio advert on Spotify, CZ+SK',
+  },
+  'smlouva.napovedaDobaLicence': { cs: 'např. jednoho (1) roku', en: 'e.g. jednoho (1) roku' },
+
+  // --- pole šablony ({{…}}), popisky v editoru i v bublině ---
+  'smlouva.pole.cislo_smlouvy': { cs: 'Číslo smlouvy', en: 'Contract number' },
+  'smlouva.pole.nase_firma': { cs: 'Naše firma (název)', en: 'Our company (name)' },
+  'smlouva.pole.nase_ic': { cs: 'Naše IČ', en: 'Our company number' },
+  'smlouva.pole.nase_dic': { cs: 'Naše DIČ', en: 'Our VAT number' },
+  'smlouva.pole.nase_adresa': { cs: 'Naše adresa', en: 'Our address' },
+  'smlouva.pole.nas_email': { cs: 'Náš e-mail (účtárna)', en: 'Our email (accounts)' },
+  'smlouva.pole.protistrana': { cs: 'Protistrana (jméno nebo firma)', en: 'Counterparty (name or company)' },
+  'smlouva.pole.protistrana_ic': { cs: 'IČ protistrany', en: 'Counterparty’s company number' },
+  'smlouva.pole.protistrana_dic': { cs: 'DIČ protistrany', en: 'Counterparty’s VAT number' },
+  'smlouva.pole.protistrana_adresa': { cs: 'Adresa protistrany', en: 'Counterparty’s address' },
+  'smlouva.pole.protistrana_identifikace': {
+    cs: 'RČ nebo IČ protistrany',
+    en: 'Counterparty’s birth or company number',
+  },
+  'smlouva.pole.podepisujici': { cs: 'Jméno podepisujícího', en: 'Signatory’s name' },
+  'smlouva.pole.email': { cs: 'E-mail podepisujícího', en: 'Signatory’s email' },
+  'smlouva.pole.projekt': { cs: 'Název projektu', en: 'Project name' },
+  'smlouva.pole.misto': {
+    cs: 'Místo natáčení (z lokace herce)',
+    en: 'Recording location (from the narrator’s location)',
+  },
+  'smlouva.pole.nazev_dila': { cs: 'Název díla (z projektu)', en: 'Title of the work (from the project)' },
+  'smlouva.pole.datum': { cs: 'Dnešní datum', en: 'Today’s date' },
+  'smlouva.pole.odmena': { cs: 'Odměna / cena', en: 'Fee / price' },
+  'smlouva.pole.termin': { cs: 'Termín předání / natáčení', en: 'Delivery / recording date' },
+  'smlouva.pole.splatnost': { cs: 'Splatnost ve dnech', en: 'Payment terms in days' },
+  'smlouva.pole.rozsah_dila': { cs: 'Rozsah díla (co se dělá)', en: 'Scope of the work (what is being done)' },
+  'smlouva.pole.uziti': { cs: 'Účel a území užití (reklama)', en: 'Purpose and territory of use (advert)' },
+  'smlouva.pole.doba_licence': { cs: 'Doba licence (reklama)', en: 'Licence period (advert)' },
+
+  // --- detail smlouvy: hlavička a akce ---
+  'smlouva.odeslanoKdy': { cs: 'Odesláno {kdy}', en: 'Sent {kdy}' },
+  'smlouva.uzavrenoKdy': { cs: 'Uzavřeno {kdy}', en: 'Completed {kdy}' },
+  'smlouva.odmitnutoKdy': {
+    cs: 'Protistrana podpis odmítla {kdy}.',
+    en: 'The counterparty declined to sign on {kdy}.',
+  },
+  'smlouva.odmitnutoKdyDuvod': {
+    cs: 'Protistrana podpis odmítla {kdy} — „{duvod}"',
+    en: 'The counterparty declined to sign on {kdy} — “{duvod}”',
+  },
+  'smlouva.ulozit': { cs: 'Uložit', en: 'Save' },
+  'smlouva.zavritPodpis': { cs: 'Zavřít podpis', en: 'Close the signature' },
+  'smlouva.podepsatZaNas': { cs: 'Podepsat za Mediaspace', en: 'Sign for Mediaspace' },
+  'smlouva.poslatZnovu': { cs: 'Poslat znovu', en: 'Send again' },
+  'smlouva.poslatKPodpisu': { cs: 'Odeslat k podpisu', en: 'Send for signature' },
+  'smlouva.stahnoutPdf': { cs: 'Stáhnout PDF', en: 'Download the PDF' },
+  'smlouva.zrusitSmlouvu': { cs: 'Zrušit smlouvu', en: 'Withdraw the contract' },
+  'smlouva.opravduSmazat': { cs: 'Opravdu smazat smlouvu?', en: 'Delete this contract?' },
+  'smlouva.odkazKPodpisu': { cs: 'Odkaz k podpisu', en: 'Signing link' },
+  'smlouva.kopirovat': { cs: 'Kopírovat', en: 'Copy' },
+  'smlouva.zkopirovano': { cs: 'Zkopírováno', en: 'Copied' },
+  'smlouva.podpisZaNas': { cs: 'Podpis za Mediaspace', en: 'Signature for Mediaspace' },
+  'smlouva.ukladam': { cs: 'Ukládám…', en: 'Saving…' },
+  'smlouva.podepsat': { cs: 'Podepsat', en: 'Sign' },
+
+  // --- detail smlouvy: údaje a text ---
+  'smlouva.udaje': { cs: 'Údaje', en: 'Details' },
+  'smlouva.textSmlouvy': { cs: 'Text smlouvy', en: 'Contract text' },
+  'smlouva.textSmlouvyPlaceholder': { cs: 'Text smlouvy…', en: 'Contract text…' },
+  'smlouva.zmenaTextuZrusiPodpisy': {
+    cs: 'Uložení změněného textu zruší už pořízené podpisy — podepisovalo se jiné znění.',
+    en: 'Saving the changed text voids the signatures already collected — they were given on different wording.',
+  },
+  'smlouva.nahledProtistrany': {
+    cs: 'Takhle smlouvu uvidí protistrana',
+    en: 'This is how the counterparty sees the contract',
+  },
+  'smlouva.bezTextu': { cs: 'Smlouva zatím nemá žádný text.', en: 'The contract has no text yet.' },
+
+  // --- detail smlouvy: hlášky ---
+  'smlouva.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+  'smlouva.ulozeniSelhalo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+  'smlouva.nejdrivSePodepiste': { cs: 'Nejdřív se podepište do rámečku.', en: 'Sign in the box first.' },
+  'smlouva.podpisSelhal': { cs: 'Podpis se nepodařilo uložit.', en: 'The signature could not be saved.' },
+  'smlouva.podepsanoZaNas': { cs: 'Podepsáno za Mediaspace.', en: 'Signed for Mediaspace.' },
+  'smlouva.odeslaniSelhalo': { cs: 'Odeslání se nezdařilo.', en: 'Sending failed.' },
+  'smlouva.odkazOdeslan': {
+    cs: 'Odkaz k podpisu odešel na {email}.',
+    en: 'The signing link has gone to {email}.',
+  },
+  'smlouva.zruseniSelhalo': { cs: 'Zrušení se nezdařilo.', en: 'The contract could not be withdrawn.' },
+  'smlouva.smazaniSelhalo': { cs: 'Smazání se nezdařilo.', en: 'Deleting failed.' },
+
+  // --- list smlouvy (ContractPaper): obal dokumentu, ne jeho text ---
+  'smlouva.papirNadpis': { cs: 'Smlouva {cislo}', en: 'Contract {cislo}' },
+  'smlouva.papirPodpisAlt': { cs: 'Podpis: {jmeno}', en: 'Signature: {jmeno}' },
+  'smlouva.papirNepodepsano': { cs: 'zatím nepodepsáno', en: 'not signed yet' },
+  'smlouva.papirPodepsanoKdy': { cs: 'Podepsáno {kdy}', en: 'Signed {kdy}' },
+  'smlouva.papirIp': { cs: 'IP {ip}', en: 'IP {ip}' },
+  'smlouva.papirOtisk': { cs: 'Otisk dokumentu {otisk}', en: 'Document hash {otisk}' },
+  'smlouva.papirTextZmenen': {
+    cs: 'Pozor: text smlouvy se od tohoto podpisu změnil.',
+    en: 'Careful: the contract text has changed since this signature.',
+  },
+
+  // --- podpis: výběr způsobu a plátno ---
+  'smlouva.podpisJmenem': { cs: 'Podepsat jménem', en: 'Sign with your name' },
+  'smlouva.podpisNakreslit': { cs: 'Nakreslit podpis', en: 'Draw your signature' },
+  'smlouva.podpisZeJmenaHotovy': {
+    cs: 'Podpis se vytvoří z vašeho jména výš. Když jméno upravíte, podpis se přepíše.',
+    en: 'The signature is made from your name above. Change the name and the signature is redrawn.',
+  },
+  'smlouva.podpisZeJmenaChybi': {
+    cs: 'Vyplňte výš své jméno — podpis se z něj vytvoří sám.',
+    en: 'Fill in your name above — the signature is made from it.',
+  },
+  'smlouva.platnoVyzva': {
+    cs: 'Podepište se sem myší nebo prstem',
+    en: 'Sign here with your mouse or your finger',
+  },
+  'smlouva.platnoDolozka': {
+    cs: 'Podpis se uloží k dokumentu spolu s časem, IP adresou a otiskem textu.',
+    en: 'The signature is saved with the document, together with the time, the IP address and the hash of the text.',
+  },
+  'smlouva.platnoVymazat': { cs: 'Vymazat', en: 'Clear' },
+
+  // --- šablony smluv ---
+  'smlouva.novaSablona': { cs: 'Nová šablona', en: 'New template' },
+  'smlouva.nazev': { cs: 'Název', en: 'Name' },
+  'smlouva.pridat': { cs: 'Přidat', en: 'Add' },
+  'smlouva.poleDoplniSeSamo': { cs: 'Doplní se samo', en: 'Filled in automatically' },
+  'smlouva.poleDopiseSeVeSmlouve': {
+    cs: 'Dopíše se ve smlouvě (portál je nezná)',
+    en: 'Filled in on the contract (the portal does not know these)',
+  },
+  'smlouva.zadneSablony': { cs: 'Zatím žádné šablony.', en: 'No templates yet.' },
+  'smlouva.nazevSablony': { cs: 'Název šablony', en: 'Template name' },
+  'smlouva.ulozitSablonu': { cs: 'Uložit šablonu', en: 'Save the template' },
+  'smlouva.sablonaUlozena': { cs: 'Šablona uložena.', en: 'Template saved.' },
+  'smlouva.vyraditZNabidky': { cs: 'Vyřadit z nabídky', en: 'Remove from the list' },
+  'smlouva.vratitDoNabidky': { cs: 'Vrátit do nabídky', en: 'Put back in the list' },
+  'smlouva.opravduSmazatSablonu': { cs: 'Opravdu smazat šablonu?', en: 'Delete this template?' },
+
+  // --- doklady (sekce, záložky, sdílené komponenty) ---
+  'doklady.nadpis': { cs: 'Doklady', en: 'Documents' },
+  'doklady.zalozkaNabidky': { cs: 'Nabídky', en: 'Quotes' },
+  'doklady.zalozkaFaktury': { cs: 'Faktury', en: 'Invoices' },
+  'doklady.zalozkaUpominky': { cs: 'Upomínky', en: 'Reminders' },
+  'doklady.zalozkaVydaje': { cs: 'Výdaje', en: 'Expenses' },
+  'doklady.zalozkaSmlouvy': { cs: 'Smlouvy', en: 'Contracts' },
+  'doklady.zalozkaMojeFirmy': { cs: 'Moje firmy', en: 'My companies' },
+  'doklady.zalozkaBanka': { cs: 'Banka', en: 'Bank' },
+
+  // --- doklady: živý náhled dokladu ---
+  'doklady.nahled': { cs: 'Náhled', en: 'Preview' },
+  'doklady.nahledPrekresluji': { cs: 'Překresluji…', en: 'Redrawing…' },
+  'doklady.nahledZive': {
+    cs: 'Mění se s tím, co píšete. Nikam se neukládá.',
+    en: 'It changes as you type. Nothing is saved.',
+  },
+  'doklady.nahledChyba': { cs: 'Náhled se nepodařilo vyrobit.', en: 'The preview could not be produced.' },
+
+  // --- doklady: výběr projektu ---
+  'doklady.bezProjektu': { cs: '— bez projektu —', en: '— no project —' },
+  'doklady.projektCislo': { cs: 'Projekt {id}', en: 'Project {id}' },
+  'doklady.projektUkonceny': { cs: '{nazev} (ukončený)', en: '{nazev} (finished)' },
+  'doklady.zobrazitUkoncene': {
+    cs: '+ Zobrazit i ukončené projekty…',
+    en: '+ Show finished projects as well…',
+  },
+
+  // --- doklady: výběr odběratele ---
+  'doklady.najitOdberatele': {
+    cs: 'Najít odběratele — začněte psát',
+    en: 'Find a customer — start typing',
+  },
+  'doklady.vybratJinouFirmu': { cs: 'Vybrat jinou firmu', en: 'Choose a different company' },
+  'doklady.odebratOdberatele': { cs: 'Odebrat odběratele', en: 'Remove the customer' },
+  'doklady.zadnaFirma': { cs: 'Zatím tu není žádná firma.', en: 'There is no company here yet.' },
+  'doklady.zadnaFirmaNeodpovida': { cs: 'Žádná firma tomu neodpovídá.', en: 'No company matches that.' },
+  'doklady.icFirmy': { cs: 'IČ {ic}', en: 'Reg. no. {ic}' },
+
+  // --- doklady: sleva ---
+  'doklady.sleva': { cs: 'Sleva', en: 'Discount' },
+  'doklady.slevaPopis': { cs: 'Sleva · {popis}', en: 'Discount · {popis}' },
+  'doklady.slevaProcenta': { cs: 'Sleva ({procenta} %)', en: 'Discount ({procenta}%)' },
+  'doklady.slevaPopisProcenta': {
+    cs: 'Sleva · {popis} ({procenta} %)',
+    en: 'Discount · {popis} ({procenta}%)',
+  },
+  'doklady.bezSlevy': { cs: 'Bez slevy', en: 'No discount' },
+  'doklady.slevaVProcentech': { cs: 'Sleva v procentech', en: 'Percentage discount' },
+  'doklady.slevaPevnouCastkou': { cs: 'Sleva pevnou částkou', en: 'Fixed-amount discount' },
+  'doklady.slevaPopisPlaceholder': {
+    cs: 'Za co sleva je (nepovinné) — vytiskne se na dokladu',
+    en: 'What the discount is for (optional) — it is printed on the document',
+  },
+
+  // --- doklady: stažení příloh za měsíc ---
+  'doklady.stahnoutPrilohy': { cs: 'Stáhnout přílohy', en: 'Download attachments' },
+  'doklady.stahnoutFaktury': { cs: 'Stáhnout faktury', en: 'Download invoices' },
+  'doklady.pripravuji': { cs: 'Připravuji…', en: 'Preparing…' },
+  'doklady.mesicRozdelany': { cs: '{mesic} (rozdělaný)', en: '{mesic} (in progress)' },
+  'doklady.zadnaPrilohaZaMesic': {
+    cs: 'Za ten měsíc není u výdajů žádná příloha.',
+    en: 'There is no expense attachment for that month.',
+  },
+  'doklady.zadnaFakturaZaMesic': {
+    cs: 'Za ten měsíc není vystavená žádná faktura.',
+    en: 'No invoice was issued for that month.',
+  },
+  'doklady.stahujiSouboru': { cs: 'Stahuji {pocet} souborů.', en: 'Downloading {pocet} files.' },
+  'doklady.stahujiBezPrilohyJeden': {
+    cs: 'Stahuji {pocet} souborů. {bez} doklad přílohu nemá.',
+    en: 'Downloading {pocet} files. {bez} document has no attachment.',
+  },
+  'doklady.stahujiBezPrilohyMalo': {
+    cs: 'Stahuji {pocet} souborů. {bez} doklady přílohu nemají.',
+    en: 'Downloading {pocet} files. {bez} documents have no attachment.',
+  },
+  'doklady.stahujiBezPrilohyVice': {
+    cs: 'Stahuji {pocet} souborů. {bez} dokladů přílohu nemá.',
+    en: 'Downloading {pocet} files. {bez} documents have no attachment.',
+  },
+  'doklady.stazeniSelhalo': { cs: 'Stažení se nepodařilo.', en: 'The download failed.' },
+
+  // --- banka ---
+  'banka.napojeneUcty': { cs: 'Napojené účty', en: 'Connected accounts' },
+  'banka.stahnoutPohyby': { cs: 'Stáhnout pohyby', en: 'Download transactions' },
+  'banka.stahuju': { cs: 'Stahuju…', en: 'Downloading…' },
+  'banka.napojitUcet': { cs: 'Napojit účet', en: 'Connect an account' },
+  'banka.pripravuju': { cs: 'Připravuju…', en: 'Preparing…' },
+  'banka.odpojit': { cs: 'Odpojit', en: 'Disconnect' },
+  'banka.opravduOdpojit': { cs: 'Opravdu odpojit účet?', en: 'Really disconnect the account?' },
+  'banka.zadnyUcet': {
+    cs: 'Zatím tu žádný účet není. „Napojit účet" tě pošle do Air Banky, kde přihlášením potvrdíš souhlas — portál pak pohyby stahuje sám třikrát denně.',
+    en: 'There is no account here yet. "Connect an account" takes you to Air Bank, where signing in confirms your authorisation — the portal then downloads transactions by itself three times a day.',
+  },
+  'banka.souhlasPlatiDo': { cs: 'souhlas platí do {datum}', en: 'authorisation valid until {datum}' },
+  'banka.souhlasCeka': {
+    cs: 'souhlas ještě není potvrzený v bance',
+    en: 'authorisation not yet confirmed at the bank',
+  },
+  'banka.souhlasVyprsel': {
+    cs: 'souhlas vypršel — napoj účet znovu',
+    en: 'authorisation has expired — connect the account again',
+  },
+  'banka.naposledyStazeno': { cs: 'naposledy staženo {kdy}', en: 'last downloaded {kdy}' },
+  'banka.souhlasKonci': {
+    cs: 'Souhlas končí za {dnu} dnů. Klikni na „Napojit účet" a potvrď ho v bance znovu, jinak se pohyby přestanou stahovat.',
+    en: 'The authorisation ends in {dnu} days. Click "Connect an account" and confirm it at the bank again, otherwise transactions will stop downloading.',
+  },
+  'banka.posledniStazeni': { cs: 'Poslední stažení: {chyba}', en: 'Last download: {chyba}' },
+  'banka.vidiKazdyNadpis': {
+    cs: 'Tuhle sekci zatím vidí každé Žůžo-labůžo.',
+    en: 'Every Admin can see this section for now.',
+  },
+  'banka.vidiKazdyPopis': {
+    cs: 'V Adminu ▸ Uživatelé zaškrtni „Vidí sekci Banka" těm, kdo na pohyby mají vidět. Jakmile to bude mít aspoň jeden účet, ostatním záložka zmizí.',
+    en: 'In Admin ▸ Users, tick "Can see the Bank section" for the people who should see the transactions. As soon as at least one account has it, the tab disappears for everyone else.',
+  },
+  'banka.nenastavenoNadpis': {
+    cs: 'Napojení na banku ještě není nastavené.',
+    en: 'The bank connection is not set up yet.',
+  },
+  // {kod1} a {kod2} se vykreslí jako <code> s názvem proměnné - viz sKody() v BankaKlient.tsx.
+  'banka.nenastavenoPopis': {
+    cs: 'Portál chodí do banky přes GoCardless Bank Account Data. Stačí si tam založit účet (je to zdarma), vytvořit klíče a přidat je na Vercelu jako {kod1} a {kod2}. Pak se sem vrať a účet napoj.',
+    en: 'The portal reaches the bank through GoCardless Bank Account Data. Just set up an account there (it is free), create the keys and add them on Vercel as {kod1} and {kod2}. Then come back here and connect the account.',
+  },
+  'banka.napojenoStazeno': {
+    cs: 'Účet je napojený. Staženo {nove} pohybů, spárováno {sparovano}.',
+    en: 'The account is connected. {nove} transactions downloaded, {sparovano} matched.',
+  },
+  'banka.napojenoBezStazeni': {
+    cs: 'Účet je napojený, stažení pohybů ale zatím neproběhlo.',
+    en: 'The account is connected, but no transactions have been downloaded yet.',
+  },
+  'banka.napojeniSelhalo': { cs: 'Napojení se nepodařilo.', en: 'Connecting the account failed.' },
+  'banka.stazeniSelhalo': { cs: 'Stažení se nepodařilo.', en: 'The download failed.' },
+  'banka.stazenoHlaska': {
+    cs: 'Staženo {nove} nových pohybů, spárováno {sparovano}, ke schválení {navrhy}.',
+    en: '{nove} new transactions downloaded, {sparovano} matched, {navrhy} awaiting approval.',
+  },
+  'banka.ulozeniSelhalo': { cs: 'Nepodařilo se to uložit.', en: 'It could not be saved.' },
+  'banka.cekaNaTebe': { cs: 'Čeká na tebe', en: 'Waiting for you' },
+  'banka.nicNevisi': {
+    cs: 'Nic nevisí — všechno, co přišlo, portál rozhodl sám.',
+    en: 'Nothing is pending — the portal decided everything that came in by itself.',
+  },
+  'banka.bezNazvu': { cs: 'bez názvu', en: 'no name' },
+  'banka.vs': { cs: 'VS {vs}', en: 'VS {vs}' },
+  'banka.vyberteFakturu': { cs: '— vyberte fakturu —', en: '— select an invoice —' },
+  'banka.oznacitUhrazenou': { cs: 'Označit uhrazenou', en: 'Mark as paid' },
+  'banka.neniKFakture': { cs: 'Není k faktuře', en: 'Not for an invoice' },
+  'banka.posledniPohyby': { cs: 'Poslední pohyby', en: 'Recent transactions' },
+  'banka.nicStazeno': { cs: 'Zatím nic staženého.', en: 'Nothing downloaded yet.' },
+  'banka.fakturaPopis': { cs: 'Faktura {popis}', en: 'Invoice {popis}' },
+  'banka.odparovat': { cs: 'Odpárovat', en: 'Unmatch' },
+  'banka.stavAuto': { cs: 'Spárováno samo', en: 'Matched automatically' },
+  'banka.stavRucne': { cs: 'Spárováno ručně', en: 'Matched manually' },
+  'banka.stavNavrh': { cs: 'Návrh ke schválení', en: 'Suggestion to approve' },
+  'banka.stavNova': { cs: 'Nespárováno', en: 'Unmatched' },
+  'banka.stavIgnorovana': { cs: 'Odloženo', en: 'Set aside' },
+
+  // --- upomínky (jen rozhraní editoru; znění upomínky se řídí jazykem příjemce) ---
+  'upominky.nadpis': { cs: 'Upomínky', en: 'Reminders' },
+  'upominky.popis': {
+    cs: 'Připomenutí faktur, které jsou po splatnosti a nejsou zaplacené. Koncepty ani uhrazené faktury se neupomínají.',
+    en: 'Reminders for invoices that are overdue and unpaid. Drafts and paid invoices are never chased.',
+  },
+  'upominky.nastaveniNacist': {
+    cs: 'Nastavení se nepodařilo načíst.',
+    en: 'The settings could not be loaded.',
+  },
+  'upominky.zadejteDen': {
+    cs: 'Napište aspoň jeden den po splatnosti, kdy se má upomínat.',
+    en: 'Enter at least one day after the due date on which a reminder should go out.',
+  },
+  'upominky.ulozeniSelhalo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+  'upominky.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+  'upominky.nahledSelhal': {
+    cs: 'Náhled se nepodařilo připravit.',
+    en: 'The preview could not be prepared.',
+  },
+  'upominky.poslaniSelhalo': {
+    cs: 'Upomínku se nepodařilo poslat.',
+    en: 'The reminder could not be sent.',
+  },
+  'upominky.odeslanoNa': { cs: 'Upomínka odešla na {komu}.', en: 'The reminder was sent to {komu}.' },
+  'upominky.posilatAutomaticky': {
+    cs: 'Posílat upomínky automaticky',
+    en: 'Send reminders automatically',
+  },
+  'upominky.posilatAutomatickyPopis': {
+    cs: 'Úloha běží ve všední dny ráno. Dokud je tohle vypnuté, upomínky odcházejí jen ručně tlačítkem u faktury dole.',
+    en: 'The task runs on weekday mornings. While this is switched off, reminders go out only by hand with the button next to the invoice below.',
+  },
+  'upominky.kolikatyDen': { cs: 'Kolikátý den po splatnosti', en: 'Which day after the due date' },
+  'upominky.kolikatyDenPopis': {
+    cs: 'Čárkou oddělené dny — „{dny}" znamená tři upomínky: třetí, desátý a jednadvacátý den po splatnosti. Kolik čísel, tolik upomínek; dál se nepřipomíná.',
+    en: 'Comma-separated days — "{dny}" means three reminders: on the third, tenth and twenty-first day after the due date. As many numbers as reminders; after that nothing more is sent.',
+  },
+  'upominky.skrytaKopie': { cs: 'Skrytá kopie nám', en: 'Blind copy to us' },
+  'upominky.skrytaKopiePopis': {
+    cs: 'Klient adresy nevidí — chodí ve skryté kopii.',
+    en: 'The client cannot see the addresses — they go as a blind copy.',
+  },
+  'upominky.zneni': { cs: 'Znění upomínky', en: 'Wording of the reminder' },
+  'upominky.naposledyUpravil': { cs: 'naposledy upravil {kdo}', en: 'last edited by {kdo}' },
+  'upominky.predmet': { cs: 'Předmět', en: 'Subject' },
+  'upominky.text': { cs: 'Text', en: 'Body' },
+  'upominky.textNapoveda': {
+    cs: '**tučně** se vysází tučně. Prázdný řádek dělá nový odstavec.',
+    en: '**bold** is typeset in bold. An empty line starts a new paragraph.',
+  },
+  'upominky.promennaTitle': { cs: '{popis} — např. {ukazka}', en: '{popis} — e.g. {ukazka}' },
+  'upominky.nahledEmailu': { cs: 'Náhled e-mailu', en: 'Email preview' },
+  'upominky.obnovitVychozi': { cs: 'Obnovit výchozí znění', en: 'Restore the default wording' },
+  'upominky.nahledUpominky': { cs: 'Náhled upomínky', en: 'Reminder preview' },
+  'upominky.poSplatnosti': { cs: 'Po splatnosti', en: 'Overdue' },
+  'upominky.zadnaPoSplatnosti': {
+    cs: 'Žádná odeslaná faktura není po splatnosti. 👌',
+    en: 'No sent invoice is overdue. 👌',
+  },
+  'upominky.splatnost': { cs: 'splatnost {datum}', en: 'due {datum}' },
+  'upominky.dniPoSplatnosti': { cs: '{dnu} dní po splatnosti', en: '{dnu} days overdue' },
+  'upominky.upominekOdeslano': {
+    cs: 'upomínek odesláno {pocet}',
+    en: '{pocet} reminders sent',
+  },
+  'upominky.upominekOdeslanoNaposledy': {
+    cs: 'upomínek odesláno {pocet} (naposledy {kdy})',
+    en: '{pocet} reminders sent (last on {kdy})',
+  },
+  'upominky.neniKomuPoslat': { cs: 'není komu poslat', en: 'nobody to send it to' },
+  'upominky.poslatNa': { cs: 'Poslat na {komu}', en: 'Send to {komu}' },
+  'upominky.nemaKontakt': {
+    cs: 'Firma nemá kontaktní e-mail a projekt klienta',
+    en: 'The company has no contact email and no client project',
+  },
+  'upominky.posilam': { cs: 'Posílám…', en: 'Sending…' },
+  'upominky.poslatUpominku': { cs: 'Poslat upomínku', en: 'Send the reminder' },
+
+  // --- moje firmy ---
+  'mojeFirmy.uvod': {
+    cs: 'Vlastní fakturační údaje na jednom místě. U každé firmy si nastavíte číselné řady (aby šlo navázat na řadu z Caflou) a bankovní účty — klidně několik, každý ve své měně.',
+    en: 'Your own invoicing details in one place. For each company you set the number series (so you can carry on from the Caflou series) and bank accounts — several if you like, each in its own currency.',
+  },
+  'mojeFirmy.sloupecFirma': { cs: 'Firma', en: 'Company' },
+  'mojeFirmy.vychoziOdznak': { cs: 'VÝCHOZÍ', en: 'DEFAULT' },
+  'mojeFirmy.neaktivni': { cs: '(neaktivní)', en: '(inactive)' },
+  'mojeFirmy.dalsiFaktura': { cs: 'Další faktura', en: 'Next invoice' },
+  'mojeFirmy.dalsiNabidka': { cs: 'Další nabídka', en: 'Next quote' },
+  'mojeFirmy.ucty': { cs: 'Účty', en: 'Accounts' },
+  'mojeFirmy.prazdno': {
+    cs: 'Zatím tu není žádná firma. Založte první formulářem níže — bez ní nejde vystavit doklad.',
+    en: 'There is no company here yet. Create the first one with the form below — without one no document can be issued.',
+  },
+  'mojeFirmy.zpetNaFirmy': { cs: '← Zpět na moje firmy', en: '← Back to my companies' },
+
+  // --- moje firmy: údaje firmy ---
+  'mojeFirmy.novaFirma': { cs: 'Nová firma', en: 'New company' },
+  'mojeFirmy.novaFakturacniFirma': { cs: 'Nová fakturační firma', en: 'New invoicing company' },
+  'mojeFirmy.ic': { cs: 'IČ', en: 'Reg. no.' },
+  'mojeFirmy.icNapoveda': {
+    cs: 'vyplňte a načtěte zbytek z registru',
+    en: 'fill it in and load the rest from the register',
+  },
+  'mojeFirmy.dic': { cs: 'DIČ', en: 'VAT no.' },
+  'mojeFirmy.nacistZRegistru': { cs: 'Načíst z registru', en: 'Load from the register' },
+  'mojeFirmy.registrSelhal': {
+    cs: 'Načtení z registru se nezdařilo.',
+    en: 'Loading from the register failed.',
+  },
+  'mojeFirmy.registrDoplneno': {
+    cs: 'Údaje z registru doplněny — zkontrolujte a uložte.',
+    en: 'The details from the register have been filled in — check them and save.',
+  },
+  'mojeFirmy.nazevFirmy': { cs: 'Název firmy', en: 'Company name' },
+  'mojeFirmy.nazevFirmyNapoveda': {
+    cs: 've fakturačních údajích píšeme MEDIA SPACE s.r.o.',
+    en: 'in the invoicing details we write MEDIA SPACE s.r.o.',
+  },
+  'mojeFirmy.platceDph': { cs: 'Plátce DPH', en: 'VAT registered' },
+  'mojeFirmy.ulice': { cs: 'Ulice a číslo popisné', en: 'Street and number' },
+  'mojeFirmy.psc': { cs: 'PSČ', en: 'Postcode' },
+  'mojeFirmy.mesto': { cs: 'Město', en: 'Town' },
+  'mojeFirmy.zeme': { cs: 'Země', en: 'Country' },
+  'mojeFirmy.emailOdesilatele': { cs: 'E-mail odesílatele', en: 'Sender email' },
+  'mojeFirmy.emailOdesilateleNapoveda': {
+    cs: 'z něj chodí nabídky a faktury',
+    en: 'quotes and invoices are sent from it',
+  },
+  'mojeFirmy.telefon': { cs: 'Telefon', en: 'Phone' },
+  'mojeFirmy.zalozitFirmu': { cs: 'Založit firmu', en: 'Create the company' },
+  'mojeFirmy.zalozeniSelhalo': {
+    cs: 'Firmu se nepodařilo založit.',
+    en: 'The company could not be created.',
+  },
+  'mojeFirmy.ulozeniSelhalo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },
+  'mojeFirmy.ulozitZmeny': { cs: 'Uložit změny', en: 'Save changes' },
+  'mojeFirmy.ulozeno': { cs: '✓ Uloženo', en: '✓ Saved' },
+
+  // --- moje firmy: číselné řady ---
+  'mojeFirmy.ciselneRady': { cs: 'Číselné řady', en: 'Number series' },
+  // {kod1}…{kod4} se vykreslí jako <code> se zástupným znakem - viz sKody() v IssuerForm.tsx.
+  'mojeFirmy.ciselneRadyPopis': {
+    cs: 'Ve formátu se nahrazuje {kod1} rokem, {kod2} rokem dvojčíslím, {kod3} měsícem a {kod4} pořadovým číslem (počet písmen N = počet míst). Pořadovým číslem navážete na řadu z Caflou.',
+    en: 'In the format, {kod1} is replaced by the year, {kod2} by the two-digit year, {kod3} by the month and {kod4} by the sequence number (the number of N letters = the number of digits). The sequence number is how you carry on from the Caflou series.',
+  },
+  'mojeFirmy.formatFaktury': { cs: 'Formát faktury', en: 'Invoice format' },
+  'mojeFirmy.formatNabidky': { cs: 'Formát nabídky', en: 'Quote format' },
+  'mojeFirmy.formatSmlouvy': { cs: 'Formát smlouvy', en: 'Contract format' },
+  'mojeFirmy.dalsiCislo': { cs: 'Další číslo', en: 'Next number' },
+  'mojeFirmy.vyjde': { cs: 'Vyjde:', en: 'Comes out as:' },
+  'mojeFirmy.vychoziMena': { cs: 'Výchozí měna', en: 'Default currency' },
+  'mojeFirmy.vychoziFirma': {
+    cs: 'Výchozí firma u nových dokladů',
+    en: 'Default company for new documents',
+  },
+  'mojeFirmy.aktivni': {
+    cs: 'Aktivní (nabízí se u nových dokladů)',
+    en: 'Active (offered on new documents)',
+  },
+
+  // --- moje firmy: bankovní účty ---
+  'mojeFirmy.bankovniUcty': { cs: 'Bankovní účty', en: 'Bank accounts' },
+  'mojeFirmy.uctyPodleMeny': {
+    cs: 'Na dokladu se nabídne účet ve stejné měně.',
+    en: 'The account in the same currency is offered on the document.',
+  },
+  'mojeFirmy.zadnyUcet': { cs: 'Zatím tu není žádný účet.', en: 'There is no account here yet.' },
+  'mojeFirmy.vychozi': { cs: 'výchozí', en: 'default' },
+  'mojeFirmy.qrPlatba': { cs: 'QR platba ✓ {iban}', en: 'QR payment ✓ {iban}' },
+  'mojeFirmy.bezQrPlatby': {
+    cs: 'Bez QR platby — doplňte kód banky (například 3030) do pole Banka, nebo číslo účtu ve tvaru 3169021011/3030.',
+    en: 'No QR payment — add the bank code (3030, for example) to the Bank field, or the account number in the form 3169021011/3030.',
+  },
+  'mojeFirmy.nastavitVychozi': { cs: 'Nastavit výchozí', en: 'Set as default' },
+  'mojeFirmy.opravduSmazatUcet': { cs: 'Opravdu smazat účet?', en: 'Really delete the account?' },
+  'mojeFirmy.oznaceni': { cs: 'Označení', en: 'Label' },
+  'mojeFirmy.oznaceniPlaceholder': { cs: 'např. Air Bank CZK', en: 'e.g. Air Bank CZK' },
+  'mojeFirmy.mena': { cs: 'Měna', en: 'Currency' },
+  'mojeFirmy.cisloUctu': { cs: 'Číslo účtu', en: 'Account number' },
+  'mojeFirmy.cisloUctuNapoveda': {
+    cs: 'I s kódem banky — z toho se dopočítá IBAN a na faktuře přibude QR platba.',
+    en: 'Including the bank code — the IBAN is worked out from it and a QR payment is added to the invoice.',
+  },
+  'mojeFirmy.banka': { cs: 'Banka', en: 'Bank' },
+  'mojeFirmy.vychoziUcetProMenu': {
+    cs: 'Výchozí účet pro tuhle měnu',
+    en: 'Default account for this currency',
+  },
+  'mojeFirmy.pridatUcet': { cs: 'Přidat účet', en: 'Add an account' },
+
+  // --- moje firmy: podpis na faktury ---
+  'mojeFirmy.podpisNadpis': { cs: 'Podpis na faktury', en: 'Signature for invoices' },
+  'mojeFirmy.podpisPopis': {
+    cs: 'Tiskne se vpravo dole na každou fakturu této firmy. Nahrajte fotku nebo sken podpisu na bílém papíře - pozadí se samo zprůhlední.',
+    en: 'It is printed at the bottom right of every invoice from this company. Upload a photo or a scan of a signature on white paper — the background is made transparent by itself.',
+  },
+  'mojeFirmy.podpisAlt': { cs: 'Podpis', en: 'Signature' },
+  'mojeFirmy.podpisChybi': {
+    cs: 'Podpis zatím není nahraný - faktury vyjdou bez podpisu.',
+    en: 'No signature has been uploaded yet — invoices will come out without one.',
+  },
+  'mojeFirmy.nahratPodpis': { cs: 'Nahrát podpis', en: 'Upload a signature' },
+  'mojeFirmy.nahratJinyPodpis': { cs: 'Nahrát jiný podpis', en: 'Upload a different signature' },
+  'mojeFirmy.odebratPodpis': { cs: 'Odebrat podpis', en: 'Remove the signature' },
+  'mojeFirmy.podpisUlozeniSelhalo': {
+    cs: 'Podpis se nepodařilo uložit.',
+    en: 'The signature could not be saved.',
+  },
+  'mojeFirmy.obrazekNacist': {
+    cs: 'Obrázek se nepodařilo načíst.',
+    en: 'The image could not be loaded.',
+  },
+  'mojeFirmy.souborNeniObrazek': { cs: 'Soubor není obrázek.', en: 'The file is not an image.' },
+  'mojeFirmy.prohlizecNeumi': {
+    cs: 'Prohlížeč neumí upravit obrázek.',
+    en: 'The browser cannot edit the image.',
+  },
+  'mojeFirmy.zadnyPodpisVidet': {
+    cs: 'Na obrázku není vidět žádný podpis.',
+    en: 'No signature can be seen in the image.',
+  },
 };
 
 /**

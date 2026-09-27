@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import { AdminField } from '../../NewCompanyForm';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Založení vlastní fakturační firmy. Stejně jako u Firem stačí vyplnit IČ a
  * zbytek se natáhne z registru - ať se nic nepřepisuje ručně.
  */
 export function NewIssuerForm() {
+  const t = usePreklad();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -33,7 +35,7 @@ export function NewIssuerForm() {
       const res = await fetch(`/api/admin/ares?ico=${encodeURIComponent(ic)}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Načtení z registru se nezdařilo.');
+        setError(data?.error || t('mojeFirmy.registrSelhal'));
         return;
       }
       if (data.name) setName(data.name);
@@ -42,9 +44,9 @@ export function NewIssuerForm() {
       if (data.addressStreet) setAddressStreet(data.addressStreet);
       if (data.addressCity) setAddressCity(data.addressCity);
       if (data.addressZip) setAddressZip(data.addressZip);
-      setAresNote('Údaje z registru doplněny — zkontrolujte a uložte.');
+      setAresNote(t('mojeFirmy.registrDoplneno'));
     } catch {
-      setError('Načtení z registru se nezdařilo.');
+      setError(t('mojeFirmy.registrSelhal'));
     } finally {
       setAresBusy(false);
     }
@@ -62,14 +64,14 @@ export function NewIssuerForm() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Firmu se nepodařilo založit.');
+        setError(data?.error || t('mojeFirmy.zalozeniSelhalo'));
         return;
       }
       setOpen(false);
       router.push(`/admin/doklady/moje-firmy/${data.id}`);
       router.refresh();
     } catch {
-      setError('Firmu se nepodařilo založit.');
+      setError(t('mojeFirmy.zalozeniSelhalo'));
     } finally {
       setSaving(false);
     }
@@ -78,23 +80,23 @@ export function NewIssuerForm() {
   if (!open) {
     return (
       <AddButton onClick={() => setOpen(true)} className="self-start">
-        Nová firma
+        {t('mojeFirmy.novaFirma')}
       </AddButton>
     );
   }
 
   return (
     <form onSubmit={submit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 max-w-2xl">
-      <h2 className="font-display text-xl text-ink m-0">Nová fakturační firma</h2>
+      <h2 className="font-display text-xl text-ink m-0">{t('mojeFirmy.novaFakturacniFirma')}</h2>
 
       <div className="flex gap-4 flex-wrap items-end">
         <div className="flex-1 min-w-[140px]">
-          <AdminField label="IČ" hint="vyplňte a načtěte zbytek z registru">
+          <AdminField label={t('mojeFirmy.ic')} hint={t('mojeFirmy.icNapoveda')}>
             <input value={ic} onChange={(e) => setIc(e.target.value)} inputMode="numeric" className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[140px]">
-          <AdminField label="DIČ">
+          <AdminField label={t('mojeFirmy.dic')}>
             <input value={dic} onChange={(e) => setDic(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -104,29 +106,29 @@ export function NewIssuerForm() {
           disabled={aresBusy || ic.replace(/\D/g, '').length !== 8}
           className="bg-surface border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-field transition-colors disabled:opacity-40 mb-[26px]"
         >
-          {aresBusy ? 'Načítám…' : 'Načíst z registru'}
+          {aresBusy ? t('obecne.nacitam') : t('mojeFirmy.nacistZRegistru')}
         </button>
       </div>
 
       {aresNote && <p className="text-sm text-brand-greenDeep m-0">{aresNote}</p>}
 
-      <AdminField label="Název firmy" required hint="ve fakturačních údajích píšeme MEDIA SPACE s.r.o.">
+      <AdminField label={t('mojeFirmy.nazevFirmy')} required hint={t('mojeFirmy.nazevFirmyNapoveda')}>
         <input required value={name} onChange={(e) => setName(e.target.value)} className="admin-input" />
       </AdminField>
 
       <label className="flex items-center gap-2 text-sm font-heading text-ink">
         <input type="checkbox" checked={vatPayer} onChange={(e) => setVatPayer(e.target.checked)} />
-        Plátce DPH
+        {t('mojeFirmy.platceDph')}
       </label>
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-[2] min-w-[220px]">
-          <AdminField label="Ulice a číslo popisné">
+          <AdminField label={t('mojeFirmy.ulice')}>
             <input value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[120px]">
-          <AdminField label="PSČ">
+          <AdminField label={t('mojeFirmy.psc')}>
             <input value={addressZip} onChange={(e) => setAddressZip(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -134,12 +136,12 @@ export function NewIssuerForm() {
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[180px]">
-          <AdminField label="Město">
+          <AdminField label={t('mojeFirmy.mesto')}>
             <input value={addressCity} onChange={(e) => setAddressCity(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[180px]">
-          <AdminField label="E-mail odesílatele" hint="z něj chodí nabídky a faktury">
+          <AdminField label={t('mojeFirmy.emailOdesilatele')} hint={t('mojeFirmy.emailOdesilateleNapoveda')}>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -149,10 +151,10 @@ export function NewIssuerForm() {
 
       <div className="flex items-center gap-3">
         <AddButton type="submit" disabled={saving}>
-          {saving ? 'Ukládám…' : 'Založit firmu'}
+          {saving ? t('obecne.ukladam') : t('mojeFirmy.zalozitFirmu')}
         </AddButton>
         <button type="button" onClick={() => setOpen(false)} className="text-muted text-sm font-heading">
-          Zrušit
+          {t('obecne.zrusit')}
         </button>
       </div>
     </form>

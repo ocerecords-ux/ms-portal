@@ -6,6 +6,7 @@ import {
   moznostiZ,
   type SloupecTabulky,
 } from '@/app/(portal)/components/RaditelnaTabulka';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Tabulka nabídek, řaditelná kliknutím na název sloupce (zadání 9. 9. 2026).
@@ -30,10 +31,14 @@ export type NabidkaRadek = {
 };
 
 export function NabidkyTabulka({ radky }: { radky: NabidkaRadek[] }) {
+  const t = usePreklad();
+  // Tabulka si jazyk bere propem, ne hookem - viz poznámka u RaditelnaTabulka.
+  const jazyk = useJazyk();
+
   const sloupce: SloupecTabulky<NabidkaRadek>[] = [
     {
       key: 'nazev',
-      label: 'Název',
+      label: t('nabidka.sl.nazev'),
       hodnota: (r) => r.nazev,
       trida: 'font-semibold',
       bunka: (r) => (
@@ -53,21 +58,21 @@ export function NabidkyTabulka({ radky }: { radky: NabidkaRadek[] }) {
     },
     {
       key: 'odberatel',
-      label: 'Odběratel',
+      label: t('nabidka.sl.odberatel'),
       hodnota: (r) => r.odberatel,
       trida: 'text-muted',
       bunka: (r) => r.odberatel,
     },
     {
       key: 'vystaveno',
-      label: 'Vystaveno',
+      label: t('nabidka.sl.vystaveno'),
       hodnota: (r) => r.vystavenoMs,
       trida: 'text-muted tabular-nums whitespace-nowrap',
       bunka: (r) => r.vystaveno,
     },
     {
       key: 'stav',
-      label: 'Stav',
+      label: t('nabidka.sl.stav'),
       hodnota: (r) => r.stavPoradi,
       trida: 'whitespace-nowrap',
       bunka: (r) => (
@@ -80,7 +85,7 @@ export function NabidkyTabulka({ radky }: { radky: NabidkaRadek[] }) {
     },
     {
       key: 'bezDph',
-      label: 'Bez DPH',
+      label: t('nabidka.sl.bezDph'),
       hodnota: (r) => r.bezDphMinor,
       vpravo: true,
       trida: 'text-muted tabular-nums whitespace-nowrap',
@@ -88,7 +93,7 @@ export function NabidkyTabulka({ radky }: { radky: NabidkaRadek[] }) {
     },
     {
       key: 'sDph',
-      label: 'S DPH',
+      label: t('nabidka.sl.sDph'),
       hodnota: (r) => r.sDphMinor,
       vpravo: true,
       trida: 'text-ink tabular-nums whitespace-nowrap',
@@ -103,31 +108,32 @@ export function NabidkyTabulka({ radky }: { radky: NabidkaRadek[] }) {
       klicRadku={(r) => r.id}
       vychoziSloupec="vystaveno"
       vychoziSmer="desc"
-      prazdno="Tady zatím nic není."
+      jazyk={jazyk}
+      prazdno={t('nabidka.tabulkaPrazdna')}
       minSirka={860}
       hledat={(r) => `${r.nazev} ${r.cislo} ${r.projekt ?? ''} ${r.odberatel} ${r.stav}`}
-      hledatPlaceholder="Hledat nabídku, odběratele, projekt…"
+      hledatPlaceholder={t('nabidka.hledatPlaceholder')}
       filtry={[
         {
           key: 'odberatel',
-          label: 'Odběratel',
+          label: t('nabidka.sl.odberatel'),
           moznosti: moznostiZ(radky, (r) => r.odberatel),
           vyhovuje: (r, h) => r.odberatel === h,
         },
         {
           key: 'projekt',
-          label: 'Projekt',
+          label: t('nabidka.sl.projekt'),
           moznosti: moznostiZ(radky, (r) => r.projekt),
           vyhovuje: (r, h) => r.projekt === h,
         },
         {
           key: 'stav',
-          label: 'Stav',
+          label: t('nabidka.sl.stav'),
           moznosti: moznostiZ(radky, (r) => r.stav),
           vyhovuje: (r, h) => r.stav === h,
         },
       ]}
-      rozsahDatumu={{ label: 'Vystaveno', ms: (r) => r.vystavenoMs }}
+      rozsahDatumu={{ label: t('nabidka.sl.vystaveno'), ms: (r) => r.vystavenoMs }}
     />
   );
 }

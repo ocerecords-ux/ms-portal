@@ -3,11 +3,21 @@
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS, formatSignedAt } from '@/lib/contracts';
+import { CONTRACT_STATUS_CLASSES, formatSignedAt } from '@/lib/contracts';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 import { PodpisVyber } from '../PodpisVyber';
 import { ContractPaper, type PaperSignature } from '../ContractPaper';
 import { VyberPole } from '@/components/VyberPole';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+
+/** Stav smlouvy do pilulky - viz stejná tabulka v přehledu smluv. */
+const KLICE_STAVU: Record<string, string> = {
+  DRAFT: 'smlouva.stavRozpracovana',
+  SENT: 'smlouva.stavCekaNaPodpis',
+  SIGNED: 'smlouva.stavPodepsana',
+  REJECTED: 'smlouva.stavOdmitnuta',
+  CANCELLED: 'smlouva.stavZrusena',
+};
 
 type Contract = {
   id: string;
@@ -45,6 +55,8 @@ export function ContractEditor({
   projects: ProjectChoice[];
 }) {
   const router = useRouter();
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const locked = contract.status === 'SIGNED' || contract.status === 'CANCELLED';
   const podepsanoNami = contract.signatures.some((s) => s.role === 'MEDIASPACE');
   const podepsanoJimi = contract.signatures.some((s) => s.role === 'PROTISTRANA');
@@ -83,14 +95,14 @@ export function ContractEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('smlouva.ulozeniSelhalo'));
         return false;
       }
-      setInfo('Uloženo.');
+      setInfo(t('smlouva.ulozeno'));
       router.refresh();
       return true;
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('smlouva.ulozeniSelhalo'));
       return false;
     } finally {
       setBusy(false);
@@ -99,7 +111,7 @@ export function ContractEditor({
 
   async function podepsat() {
     if (!podpis) {
-      setError('Nejdřív se podepište do rámečku.');
+      setError(t('smlouva.nejdrivSePodepiste'));
       return;
     }
     if (textZmenen) {
@@ -116,15 +128,15 @@ export function ContractEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Podpis se nepodařilo uložit.');
+        setError(data?.error || t('smlouva.podpisSelhal'));
         return;
       }
       setPodpis(null);
       setPodpisOtevreny(false);
-      setInfo('Podepsáno za Mediaspace.');
+      setInfo(t('smlouva.podepsanoZaNas'));
       router.refresh();
     } catch {
-      setError('Podpis se nepodařilo uložit.');
+      setError(t('smlouva.podpisSelhal'));
     } finally {
       setBusy(false);
     }
@@ -141,13 +153,13 @@ export function ContractEditor({
       const res = await fetch(`/api/admin/contracts/${contract.id}/send`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Odeslání se nezdařilo.');
+        setError(data?.error || t('smlouva.odeslaniSelhalo'));
         return;
       }
-      setInfo(`Odkaz k podpisu odešel na ${form.signerEmail}.`);
+      setInfo(t('smlouva.odkazOdeslan', { email: form.signerEmail }));
       router.refresh();
     } catch {
-      setError('Odeslání se nezdařilo.');
+      setError(t('smlouva.odeslaniSelhalo'));
     } finally {
       setBusy(false);
     }
@@ -164,12 +176,12 @@ export function ContractEditor({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Zrušení se nezdařilo.');
+        setError(data?.error || t('smlouva.zruseniSelhalo'));
         return;
       }
       router.refresh();
     } catch {
-      setError('Zrušení se nezdařilo.');
+      setError(t('smlouva.zruseniSelhalo'));
     } finally {
       setBusy(false);
     }
@@ -182,12 +194,12 @@ export function ContractEditor({
       const res = await fetch(`/api/admin/contracts/${contract.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Smazání se nezdařilo.');
+        setError(data?.error || t('smlouva.smazaniSelhalo'));
         return;
       }
       router.push('/admin/doklady/smlouvy');
     } catch {
-      setError('Smazání se nezdařilo.');
+      setError(t('smlouva.smazaniSelhalo'));
     } finally {
       setBusy(false);
     }
@@ -208,14 +220,16 @@ export function ContractEditor({
                 CONTRACT_STATUS_CLASSES[contract.status] ?? 'bg-field text-muted'
               }`}
             >
-              {CONTRACT_STATUS_LABELS[contract.status] ?? contract.status}
+              {KLICE_STAVU[contract.status] ? t(KLICE_STAVU[contract.status]) : contract.status}
             </span>
             {contract.sentAt && (
-              <span className="text-xs font-body text-muted">Odesláno {formatSignedAt(contract.sentAt)}</span>
+              <span className="text-xs font-body text-muted">
+                {t('smlouva.odeslanoKdy', { kdy: formatSignedAt(contract.sentAt, jazyk) })}
+              </span>
             )}
             {contract.completedAt && (
               <span className="text-xs font-body text-status-done font-heading font-semibold">
-                Uzavřeno {formatSignedAt(contract.completedAt)}
+                {t('smlouva.uzavrenoKdy', { kdy: formatSignedAt(contract.completedAt, jazyk) })}
               </span>
             )}
           </div>
@@ -228,7 +242,7 @@ export function ContractEditor({
                 disabled={busy}
                 className="font-heading font-semibold text-sm rounded-lg border border-line px-4 py-2 text-ink hover:border-brand-purple disabled:opacity-60"
               >
-                Uložit
+                {t('smlouva.ulozit')}
               </button>
             )}
             {!locked && !podepsanoNami && (
@@ -238,7 +252,7 @@ export function ContractEditor({
                 disabled={busy}
                 className="font-heading font-semibold text-sm rounded-lg border border-brand-purple px-4 py-2 text-brand-purple hover:bg-tint disabled:opacity-60"
               >
-                {podpisOtevreny ? 'Zavřít podpis' : 'Podepsat za Mediaspace'}
+                {t(podpisOtevreny ? 'smlouva.zavritPodpis' : 'smlouva.podepsatZaNas')}
               </button>
             )}
             {!locked && (
@@ -248,7 +262,7 @@ export function ContractEditor({
                 disabled={busy}
                 className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
               >
-                {contract.status === 'SENT' ? 'Poslat znovu' : 'Odeslat k podpisu'}
+                {t(contract.status === 'SENT' ? 'smlouva.poslatZnovu' : 'smlouva.poslatKPodpisu')}
               </button>
             )}
             {/* Stejne PDF, jake po podpisu obou stran odejde v priloze mailu
@@ -260,18 +274,18 @@ export function ContractEditor({
               rel="noreferrer"
               className="font-heading font-semibold text-sm rounded-lg border border-line px-4 py-2 text-ink no-underline hover:border-brand-purple"
             >
-              Stáhnout PDF
+              {t('smlouva.stahnoutPdf')}
             </a>
             {contract.status !== 'SIGNED' && contract.status !== 'CANCELLED' && (
               <button type="button" onClick={zrusit} disabled={busy} className="text-muted text-sm font-heading px-2">
-                Zrušit smlouvu
+                {t('smlouva.zrusitSmlouvu')}
               </button>
             )}
             {contract.status === 'DRAFT' && (
               <TlacitkoSmazat
                 onSmazat={smazat}
                 disabled={busy}
-                otazka="Opravdu smazat smlouvu?"
+                otazka={t('smlouva.opravduSmazat')}
                 trida="px-2"
               />
             )}
@@ -280,8 +294,12 @@ export function ContractEditor({
 
         {contract.rejectedAt && (
           <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">
-            Protistrana podpis odmítla {formatSignedAt(contract.rejectedAt)}
-            {contract.rejectedReason ? ` — „${contract.rejectedReason}"` : '.'}
+            {contract.rejectedReason
+              ? t('smlouva.odmitnutoKdyDuvod', {
+                  kdy: formatSignedAt(contract.rejectedAt, jazyk),
+                  duvod: contract.rejectedReason,
+                })
+              : t('smlouva.odmitnutoKdy', { kdy: formatSignedAt(contract.rejectedAt, jazyk) })}
           </p>
         )}
         {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
@@ -289,7 +307,9 @@ export function ContractEditor({
 
         {/* Odkaz k podpisu - da se poslat i jinou cestou nez mailem */}
         <div className="flex items-center gap-3 flex-wrap border-t border-line pt-4">
-          <span className="text-xs font-heading text-muted uppercase tracking-wide">Odkaz k podpisu</span>
+          <span className="text-xs font-heading text-muted uppercase tracking-wide">
+            {t('smlouva.odkazKPodpisu')}
+          </span>
           <code className="text-xs font-body text-muted bg-field rounded-lg px-3 py-1.5 break-all flex-1 min-w-[240px]">
             {contract.signUrl}
           </code>
@@ -302,7 +322,7 @@ export function ContractEditor({
             }}
             className="text-xs font-heading font-semibold text-brand-purple"
           >
-            {zkopirovano ? 'Zkopírováno' : 'Kopírovat'}
+            {t(zkopirovano ? 'smlouva.zkopirovano' : 'smlouva.kopirovat')}
           </button>
         </div>
       </div>
@@ -310,7 +330,7 @@ export function ContractEditor({
       {podpisOtevreny && !podepsanoNami && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Podpis za Mediaspace
+            {t('smlouva.podpisZaNas')}
           </h2>
           {/* Jmeno pro psany podpis je to, ktere na nasi strane smlouvy
               stejne stoji vytistene - viz issuerName v ContractPaper. */}
@@ -322,7 +342,7 @@ export function ContractEditor({
               disabled={busy || !podpis}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              {busy ? 'Ukládám…' : 'Podepsat'}
+              {t(busy ? 'smlouva.ukladam' : 'smlouva.podepsat')}
             </button>
           </div>
         </div>
@@ -330,23 +350,23 @@ export function ContractEditor({
 
       {/* Udaje smlouvy */}
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Údaje</h2>
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('smlouva.udaje')}</h2>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Název smlouvy</span>
+          <span className="text-sm font-body text-ink">{t('smlouva.nazevSmlouvy')}</span>
           <input value={form.title} disabled={locked} onChange={(e) => set('title', e.target.value)} className={inputClass} />
         </label>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Protistrana (firma)</span>
+            <span className="text-sm font-body text-ink">{t('smlouva.protistranaFirma')}</span>
             <VyberPole
               value={form.companyId}
               disabled={locked}
               onChange={(e) => set('companyId', e.target.value)}
               className={inputClass}
             >
-              <option value="">— bez firmy (herec) —</option>
+              <option value="">{t('smlouva.bezFirmy')}</option>
               {companies.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -355,7 +375,7 @@ export function ContractEditor({
             </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Kdo podepisuje</span>
+            <span className="text-sm font-body text-ink">{t('smlouva.kdoPodepisuje')}</span>
             <input
               value={form.signerName}
               disabled={locked}
@@ -364,7 +384,7 @@ export function ContractEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">E-mail podepisujícího</span>
+            <span className="text-sm font-body text-ink">{t('smlouva.emailPodepisujiciho')}</span>
             <input
               type="email"
               value={form.signerEmail}
@@ -374,7 +394,7 @@ export function ContractEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Projekt</span>
+            <span className="text-sm font-body text-ink">{t('smlouva.sloupecProjekt')}</span>
             <ProjectSelect
               value={form.caflouProjectId}
               onChange={(id) => set('caflouProjectId', id)}
@@ -391,10 +411,10 @@ export function ContractEditor({
       {!locked && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Text smlouvy</h2>
+            <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('smlouva.textSmlouvy')}</h2>
             {(podepsanoNami || podepsanoJimi) && textZmenen && (
               <span className="text-xs font-heading font-semibold text-danger">
-                Uložení změněného textu zruší už pořízené podpisy — podepisovalo se jiné znění.
+                {t('smlouva.zmenaTextuZrusiPodpisy')}
               </span>
             )}
           </div>
@@ -402,7 +422,7 @@ export function ContractEditor({
             value={form.body}
             onChange={(e) => set('body', e.target.value)}
             rows={22}
-            placeholder="Text smlouvy…"
+            placeholder={t('smlouva.textSmlouvyPlaceholder')}
             className="rounded-lg border border-line bg-field px-4 py-3 text-ink font-body text-sm leading-relaxed outline-none focus:border-brand-purple w-full"
           />
         </div>
@@ -410,14 +430,17 @@ export function ContractEditor({
 
       {/* Jak to uvidi protistrana */}
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-heading text-muted uppercase tracking-wide">Takhle smlouvu uvidí protistrana</span>
+        <span className="text-xs font-heading text-muted uppercase tracking-wide">
+          {t('smlouva.nahledProtistrany')}
+        </span>
         <ContractPaper
           title={form.title}
           number={contract.number}
-          body={form.body || 'Smlouva zatím nemá žádný text.'}
+          body={form.body || t('smlouva.bezTextu')}
           signatures={contract.signatures}
           currentHash={contract.currentHash}
           issuerName={contract.issuerName}
+          jazyk={jazyk}
         />
       </div>
     </div>

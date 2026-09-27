@@ -5,12 +5,15 @@ import { OfferEditor } from './OfferEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
 import { mapaHercuProjektu, mapaKlientuProjektu } from '@/lib/prijemceNabidky';
 import { computeTotals } from '@/lib/doklady';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 // Detail nabidky - editor, ktery vypada jako samotny doklad (zadani 8. 9. 2026:
 // "hlavně, ať je vše přehledné a intuitivní").
 export const dynamic = 'force-dynamic';
 
 export default async function OfferDetailPage({ params }: { params: { id: string } }) {
+  const jazyk = nactiJazyk();
   const [offer, issuers, companies] = await Promise.all([
     prisma.offer.findUnique({
       where: { id: params.id },
@@ -50,7 +53,7 @@ export default async function OfferDetailPage({ params }: { params: { id: string
   return (
     <div className="flex flex-col gap-6">
       <Link href="/admin/doklady/nabidky" className="text-muted text-sm font-heading no-underline">
-        ← Zpět na nabídky
+        {prelozit(jazyk, 'nabidka.zpetNaNabidky')}
       </Link>
 
       <OfferEditor

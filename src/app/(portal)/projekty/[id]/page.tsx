@@ -71,6 +71,7 @@ import { PoznamkyProjektu } from './PoznamkyProjektu';
 import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
 import { ProgresNataceniKarta } from './ProgresNataceniKarta';
 import { bezTitulu } from '@/lib/jmena';
+import { nactiJazyk } from '@/lib/jazykServer';
 
 // Detail projektu (zadani 5. 9. 2026). Od 11. 9. 2026 projekt zije v portalu -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -86,6 +87,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   const caflouProjectId = params.id;
   const canEdit = canEditProjectMeta(session.user.role);
+  // Jazyk pro odznaky stavu u dokladů (dávka 4, 27. 9. 2026).
+  const jazyk = nactiJazyk();
 
   // Kdo co smi videt - musi se vedet driv, nez se pro to pojede do databaze.
   //
@@ -348,7 +351,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const dokladDatum = (date: Date | null) => (date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '');
 
   const offerRows: ProjectDocRow[] = offers.map((o) => {
-    const stav = offerStatus(o.status);
+    const stav = offerStatus(o.status, jazyk);
     return {
       id: o.id,
       href: `/admin/doklady/nabidky/${o.id}`,
@@ -363,7 +366,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   });
 
   const invoiceRows: ProjectDocRow[] = invoices.map((i) => {
-    const stav = invoiceStatus(i.status);
+    const stav = invoiceStatus(i.status, jazyk);
     return {
       id: i.id,
       href: `/admin/doklady/faktury/${i.id}`,
@@ -519,7 +522,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const vCzk = (mena: string) => mena === 'CZK';
   const korunyBezDph = (minor: number) => minor / 100;
   const cenaZFaktur = invoices
-    .filter((i) => vCzk(i.currency) && invoiceStatus(i.status).label !== 'Stornovaná')
+    // POROVNÁVÁ SE KÓD, NE POPISEK (dávka 4, 27. 9. 2026). Do teď se tu stav
+    // hledal podle českého slova „Stornovaná"; jakmile se popisek přeloží,
+    // přestal by filtr platit a stornované faktury by se počítaly do ceny.
+    .filter((i) => vCzk(i.currency) && i.status !== 'CANCELLED')
     .reduce((soucet, i) => soucet + korunyBezDph(computeTotals(i.items, i).exVat), 0);
   const cenaZNabidek = offers
     .filter((o) => vCzk(o.currency))

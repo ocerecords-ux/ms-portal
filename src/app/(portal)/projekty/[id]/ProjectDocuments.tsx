@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Currency } from '@prisma/client';
-import { formatMoney, OFFER_STATUS_CLASSES, OFFER_STATUS_LABELS } from '@/lib/doklady';
+import { formatMoney, nazevStavuNabidky, OFFER_STATUS_CLASSES } from '@/lib/doklady';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 import type { NavrhNabidky } from '@/lib/nabidkaZObjednavky';
 import { PridatNabidku } from '@/components/PridatNabidku';
 import { SmlouvyKlienta } from './SmlouvyKlienta';
@@ -40,16 +41,37 @@ const INVOICE_STATUS_CLASSES: Record<string, string> = {
   CANCELLED: 'bg-dangerTint text-danger',
 };
 
-export function invoiceStatus(status: string): { label: string; className: string } {
+/**
+ * Stav dokladu v barevném odznaku (dávka 4, 27. 9. 2026: jazyk parametrem).
+ *
+ * Nepovinná čeština schválně - tenhle popisek se vykresluje, nerozhoduje se
+ * podle něj. KDO SE PTÁ NA STAV, PTÁ SE NA KÓD, ne na text; porovnávat text
+ * by v angličtině přestalo platit.
+ */
+const KLICE_STAVU_FAKTURY: Record<string, string> = {
+  DRAFT: 'faktura.stavRozpracovana',
+  SENT: 'faktura.stavNeuhrazena',
+  PAID: 'faktura.stavUhrazena',
+  CANCELLED: 'faktura.stavStornovana',
+};
+
+export function invoiceStatus(
+  status: string,
+  jazyk: Jazyk = 'cs',
+): { label: string; className: string } {
+  const klic = KLICE_STAVU_FAKTURY[status];
   return {
-    label: INVOICE_STATUS_LABELS[status] ?? status,
+    label: klic ? prelozit(jazyk, klic) : (INVOICE_STATUS_LABELS[status] ?? status),
     className: INVOICE_STATUS_CLASSES[status] ?? 'bg-field text-muted',
   };
 }
 
-export function offerStatus(status: string): { label: string; className: string } {
+export function offerStatus(
+  status: string,
+  jazyk: Jazyk = 'cs',
+): { label: string; className: string } {
   return {
-    label: OFFER_STATUS_LABELS[status] ?? status,
+    label: nazevStavuNabidky(status, jazyk),
     className: OFFER_STATUS_CLASSES[status] ?? 'bg-field text-muted',
   };
 }

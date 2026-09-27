@@ -3,12 +3,15 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { documentHash } from '@/lib/contractsServer';
 import { listProjectOptions } from '@/lib/projectOptions';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 import { ContractEditor } from './ContractEditor';
 
 // Detail smlouvy - text, podpis za Mediaspace a odeslani protistrane.
 export const dynamic = 'force-dynamic';
 
 export default async function ContractDetailPage({ params }: { params: { id: string } }) {
+  const jazyk = nactiJazyk();
   const contract = await prisma.contract.findUnique({
     where: { id: params.id },
     include: {
@@ -28,7 +31,7 @@ export default async function ContractDetailPage({ params }: { params: { id: str
   return (
     <div className="flex flex-col gap-6">
       <Link href="/admin/doklady/smlouvy" className="text-muted text-sm font-heading no-underline">
-        ← Zpět na smlouvy
+        ← {prelozit(jazyk, 'smlouva.zpetNaSmlouvy')}
       </Link>
 
       <ContractEditor

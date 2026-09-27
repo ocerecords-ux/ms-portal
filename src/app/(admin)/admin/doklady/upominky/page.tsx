@@ -1,4 +1,6 @@
 import { UpominkyEditor } from './UpominkyEditor';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 /**
  * UPOMÍNKY K FAKTURÁM PO SPLATNOSTI (zadání 25. 9. 2026: „potřebuji nastavit
@@ -9,14 +11,12 @@ import { UpominkyEditor } from './UpominkyEditor';
 export const dynamic = 'force-dynamic';
 
 export default function UpominkyPage() {
+  const jazyk = nactiJazyk();
   return (
     <div className="flex flex-col gap-3 sm:gap-6">
       <div>
-        <h1 className="font-display text-2xl sm:text-3xl text-ink m-0">Upomínky</h1>
-        <p className="text-sm font-body text-muted m-0 mt-1">
-          Připomenutí faktur, které jsou po splatnosti a nejsou zaplacené. Koncepty ani uhrazené
-          faktury se neupomínají.
-        </p>
+        <h1 className="font-display text-2xl sm:text-3xl text-ink m-0">{prelozit(jazyk, 'upominky.nadpis')}</h1>
+        <p className="text-sm font-body text-muted m-0 mt-1">{prelozit(jazyk, 'upominky.popis')}</p>
       </div>
       <UpominkyEditor />
     </div>

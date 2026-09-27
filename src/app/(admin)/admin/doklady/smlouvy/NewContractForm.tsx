@@ -9,6 +9,7 @@ import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { VyberPole } from '@/components/VyberPole';
 import { najdiNakladHerce } from '@/lib/nakladHerce';
 import { DatumPole } from '@/components/DatumPole';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Založení smlouvy. Šablona se vybere, pole se předvyplní z databáze a text
@@ -67,6 +68,7 @@ export function NewContractForm({
   projects: ProjectChoice[];
 }) {
   const router = useRouter();
+  const t = usePreklad();
   const defaultIssuer = issuers.find((i) => i.isDefault) ?? issuers[0];
 
   const [open, setOpen] = useState(false);
@@ -348,11 +350,7 @@ export function NewContractForm({
     // Nazev se sklada z projektu a herce, takze prazdny znamena, ze ani jedno
     // neni vybrane - smlouva bez nazvu se v prehledu nedá najít.
     if (!form.title.trim()) {
-      setError(
-        jeDilo
-          ? 'Vyberte projekt a dodavatele — z nich se skládá název smlouvy.'
-          : 'Vyberte projekt a herce — z nich se skládá název smlouvy.',
-      );
+      setError(t(jeDilo ? 'smlouva.chybiProjektDodavatel' : 'smlouva.chybiProjektHerec'));
       return;
     }
     setBusy(true);
@@ -376,12 +374,12 @@ export function NewContractForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Smlouvu se nepodařilo založit.');
+        setError(data?.error || t('smlouva.zalozeniSelhalo'));
         return;
       }
       router.push(`/admin/doklady/smlouvy/${data.id}`);
     } catch {
-      setError('Smlouvu se nepodařilo založit.');
+      setError(t('smlouva.zalozeniSelhalo'));
     } finally {
       setBusy(false);
     }
@@ -396,12 +394,26 @@ export function NewContractForm({
    * šablony mělo ukázat"), a obecné „Termín předání / natáčení" člověku
    * neřekne, co má vyplnit.
    */
-  function popisekPole(key: string, vychozi: string): string {
-    if (key !== 'termin') return vychozi;
-    if (druhSmlouvy === 'audiokniha') return 'Termín dokončení natáčení';
-    if (druhSmlouvy === 'reklama') return 'Termín pořízení záznamu';
-    if (druhSmlouvy === 'dilo') return 'Termín odevzdání díla';
-    return vychozi;
+  function popisekPole(key: string): string {
+    if (key === 'termin') {
+      if (druhSmlouvy === 'audiokniha') return t('smlouva.terminAudiokniha');
+      if (druhSmlouvy === 'reklama') return t('smlouva.terminReklama');
+      if (druhSmlouvy === 'dilo') return t('smlouva.terminDilo');
+    }
+    return t(`smlouva.pole.${key}`);
+  }
+
+  /**
+   * Věta pod výběrem herce - co se z jeho karty do smlouvy opravdu dostane.
+   * Každá varianta je vlastní věta, ne slepenec (pravidlo 7 překladu).
+   */
+  function popisHerce(herec: Herec): string {
+    if (herec.identifikace) {
+      return t(herec.maAdresu ? 'smlouva.herecUdajeSAdresou' : 'smlouva.herecUdajeBezAdresy', {
+        identifikace: herec.identifikace,
+      });
+    }
+    return t(herec.maAdresu ? 'smlouva.herecBezUdajuSAdresou' : 'smlouva.herecBezUdaju');
   }
 
   const inputClass =
@@ -410,7 +422,7 @@ export function NewContractForm({
   if (!open) {
     return (
       <span id={KOTVA_NOVE}>
-        <AddButton onClick={() => setOpen(true)}>Nová smlouva</AddButton>
+        <AddButton onClick={() => setOpen(true)}>{t('smlouva.novaSmlouva')}</AddButton>
       </span>
     );
   }
@@ -420,20 +432,22 @@ export function NewContractForm({
       onSubmit={submit}
       className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4 w-full"
     >
-      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nová smlouva</h2>
+      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('smlouva.novaSmlouva')}</h2>
 
       {/* Název smlouvy se nezadává - svítí nahoře a skládá se z projektu
           a herce (zadání 15. 9. 2026). */}
       <div className="rounded-card border border-line bg-tint px-4 py-3">
-        <span className="block text-[11px] font-heading uppercase tracking-wide text-muted">Název smlouvy</span>
+        <span className="block text-[11px] font-heading uppercase tracking-wide text-muted">
+          {t('smlouva.nazevSmlouvy')}
+        </span>
         <p className={`m-0 font-heading font-semibold text-lg ${form.title ? 'text-ink' : 'text-muted'}`}>
-          {form.title || 'Vyberte projekt a herce — název se složí sám'}
+          {form.title || t('smlouva.nazevSeSloziSam')}
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Projekt</span>
+          <span className="text-sm font-body text-ink">{t('smlouva.sloupecProjekt')}</span>
           <ProjectSelect
             value={form.caflouProjectId}
             onChange={(id) => set('caflouProjectId', id)}
@@ -448,37 +462,30 @@ export function NewContractForm({
             to ta první věc, kterou je potřeba vědět. */}
         {sHercem && form.caflouProjectId && herci.length === 0 && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Herec</span>
-            <span className={`${inputClass} text-muted`}>— projekt nemá herce —</span>
-            <span className="text-xs font-body text-danger">
-              Doplňte herce u projektu a smlouva si z jeho karty vezme jméno, adresu i RČ nebo IČ.
-              Odměnu si pak vezme z položky rozpočtu, která na něj sedí.
-            </span>
+            <span className="text-sm font-body text-ink">{t('smlouva.herec')}</span>
+            <span className={`${inputClass} text-muted`}>{t('smlouva.projektBezHerce')}</span>
+            <span className="text-xs font-body text-danger">{t('smlouva.doplnteHerce')}</span>
           </label>
         )}
 
         {!sHercem && herci.length > 0 && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Herec z projektu</span>
+            <span className="text-sm font-body text-ink">{t('smlouva.herecZProjektu')}</span>
             <VyberPole
               value={form.actorUserId}
               onChange={(e) => vyberHerce(herci.find((h) => h.id === e.target.value) ?? null)}
               className={inputClass}
             >
-              <option value="">— nevybírat, vyplním ručně —</option>
+              <option value="">{t('smlouva.nevybiratRucne')}</option>
               {herci.map((h) => (
                 <option key={h.id} value={h.id}>
                   {h.jmeno}
-                  {h.identifikace ? ` · ${h.identifikace}` : ' · bez RČ a IČ'}
+                  {` · ${h.identifikace || t('smlouva.bezRcIc')}`}
                 </option>
               ))}
             </VyberPole>
             <span className="text-xs font-body text-muted">
-              {vybranyHerec
-                ? vybranyHerec.identifikace
-                  ? `Do smlouvy půjde ${vybranyHerec.identifikace}${vybranyHerec.maAdresu ? ' a adresa z jeho karty.' : '. Adresu na kartě nemá — doplní se „…".'}`
-                  : 'Na kartě nemá RČ ani IČ — ve smlouvě bude „…" a dopíšete to v textu.'
-                : 'Adresu i RČ nebo IČ si portál vezme z karty herce.'}
+              {vybranyHerec ? popisHerce(vybranyHerec) : t('smlouva.herecUdajeZKarty')}
             </span>
           </label>
         )}
@@ -486,9 +493,9 @@ export function NewContractForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Šablona</span>
+          <span className="text-sm font-body text-ink">{t('smlouva.sablona')}</span>
           <VyberPole value={form.templateId} onChange={(e) => set('templateId', e.target.value)} className={inputClass}>
-            <option value="">— prázdná smlouva —</option>
+            <option value="">{t('smlouva.prazdnaSmlouva')}</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -497,7 +504,7 @@ export function NewContractForm({
           </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Za naši firmu</span>
+          <span className="text-sm font-body text-ink">{t('smlouva.zaNasiFirmu')}</span>
           <VyberPole
             value={form.issuerCompanyId}
             onChange={(e) => set('issuerCompanyId', e.target.value)}
@@ -519,14 +526,16 @@ export function NewContractForm({
       <div className={`grid grid-cols-1 gap-3 ${sHercem ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
         {!sHercem && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">{jeDilo ? 'Dodavatel' : 'Protistrana (firma)'}</span>
+            <span className="text-sm font-body text-ink">
+              {t(jeDilo ? 'smlouva.dodavatel' : 'smlouva.protistranaFirma')}
+            </span>
             <VyberPole
               required={jeDilo}
               value={form.companyId}
               onChange={(e) => vyberFirmu(e.target.value)}
               className={inputClass}
             >
-              <option value="">{jeDilo ? '— vyberte dodavatele —' : '— bez firmy (herec) —'}</option>
+              <option value="">{t(jeDilo ? 'smlouva.vyberteDodavatele' : 'smlouva.bezFirmy')}</option>
               {nabidkaFirem.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -535,15 +544,13 @@ export function NewContractForm({
             </VyberPole>
             {jeDilo && (
               <span className="text-xs font-body text-muted">
-                {nabidkaFirem.length === 0
-                  ? 'Mezi firmami zatím není žádný dodavatel. Herce, který dodává i jako firma, přenesete do dodavatelů tlačítkem na jeho kartě.'
-                  : 'IČ, DIČ i adresu si smlouva vezme z karty dodavatele. Herec, který dodává i jako firma, se sem dostane tlačítkem „Přenést do dodavatelů" na své kartě.'}
+                {t(nabidkaFirem.length === 0 ? 'smlouva.zadnyDodavatel' : 'smlouva.udajeDodavatele')}
               </span>
             )}
           </label>
         )}
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Kdo podepisuje</span>
+          <span className="text-sm font-body text-ink">{t('smlouva.kdoPodepisuje')}</span>
           {/* U SMLOUVY S HERCEM SE PODEPISUJÍCÍ VYBÍRÁ, NEPÍŠE (zadání
               17. 9. 2026: „místo Kdo podepisuje chci přímo vybrat herce a aby
               se načetly jeho údaje i částka z rozpočtu"). V nabídce jsou herci
@@ -563,29 +570,22 @@ export function NewContractForm({
                 }}
                 className={inputClass}
               >
-                <option value="">— vyberte herce —</option>
+                <option value="">{t('smlouva.vyberteHerce')}</option>
                 {herci.map((h) => (
                   <option key={h.id} value={h.id}>
                     {h.jmeno}
                     {typeof h.castka === 'number' ? ` · ${korun(h.castka)}` : ''}
-                    {h.identifikace ? ` · ${h.identifikace}` : ' · bez RČ a IČ'}
+                    {` · ${h.identifikace || t('smlouva.bezRcIc')}`}
                   </option>
                 ))}
-                <option value="rucne">— napíšu ručně —</option>
+                <option value="rucne">{t('smlouva.napisuRucne')}</option>
               </VyberPole>
               <span className="text-xs font-body text-muted">
-                {vybranyHerec
-                  ? [
-                      vybranyHerec.identifikace
-                        ? `Do smlouvy půjde ${vybranyHerec.identifikace}`
-                        : 'Na kartě nemá RČ ani IČ — ve smlouvě bude „…"',
-                      vybranyHerec.maAdresu ? 'a adresa z jeho karty' : 'adresu na kartě nemá',
-                      typeof vybranyHerec.castka === 'number' ? 'odměna je z rozpočtu projektu' : null,
-                    ]
-                      .filter(Boolean)
-                      .join(', ') + '.'
-                  : 'Adresu i RČ nebo IČ si portál vezme z karty herce.'}
-                {vybranyHerec?.zRozpoctu ? ' U projektu navázaný není — portál ho poznal v rozpočtu.' : ''}
+                {vybranyHerec ? popisHerce(vybranyHerec) : t('smlouva.herecUdajeZKarty')}
+                {vybranyHerec && typeof vybranyHerec.castka === 'number'
+                  ? ` ${t('smlouva.odmenaZRozpoctu')}`
+                  : ''}
+                {vybranyHerec?.zRozpoctu ? ` ${t('smlouva.herecZRozpoctu')}` : ''}
               </span>
             </>
           ) : (
@@ -594,7 +594,7 @@ export function NewContractForm({
                 required
                 value={form.signerName}
                 onChange={(e) => set('signerName', e.target.value)}
-                placeholder="Jméno a příjmení"
+                placeholder={t('smlouva.jmenoAPrijmeni')}
                 className={inputClass}
               />
               {sHercem && herci.length > 0 && (
@@ -603,20 +603,20 @@ export function NewContractForm({
                   onClick={() => setRucniPodpis(false)}
                   className="text-xs font-heading text-brand-purple hover:underline self-start"
                 >
-                  Vybrat herce ze seznamu
+                  {t('smlouva.vybratZeSeznamu')}
                 </button>
               )}
             </>
           )}
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">E-mail podepisujícího</span>
+          <span className="text-sm font-body text-ink">{t('smlouva.emailPodepisujiciho')}</span>
           <input
             required
             type="email"
             value={form.signerEmail}
             onChange={(e) => set('signerEmail', e.target.value)}
-            placeholder="na tenhle e-mail půjde odkaz k podpisu"
+            placeholder={t('smlouva.emailPlaceholder')}
             className={inputClass}
           />
         </label>
@@ -624,10 +624,7 @@ export function NewContractForm({
 
       {rucniPole.length > 0 && (
         <div className="rounded-card border border-line bg-field/60 p-4 flex flex-col gap-3">
-          <p className="text-sm font-body text-muted m-0">
-            Co portál neví — doplní se rovnou do textu smlouvy. Co necháte prázdné, se ve smlouvě
-            buď vynechá (když stojí ve výčtu), nebo zůstane jako „…" a dopíšete to v editoru.
-          </p>
+          <p className="text-sm font-body text-muted m-0">{t('smlouva.rucniPoleUvod')}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {rucniPole.map((p) => {
               // Odmena se da vybrat z polozkovych nakladu projektu (zadani
@@ -638,7 +635,7 @@ export function NewContractForm({
                 const rucne = odmenaZdroj === 'rucne';
                 return (
                   <label key={p.key} className="flex flex-col gap-1.5">
-                    <span className="text-sm font-body text-ink">{popisekPole(p.key, p.label)}</span>
+                    <span className="text-sm font-body text-ink">{popisekPole(p.key)}</span>
                     <VyberPole
                       value={odmenaZdroj}
                       onChange={(e) => {
@@ -653,32 +650,34 @@ export function NewContractForm({
                       }}
                       className={inputClass}
                     >
-                      <option value="">— vyberte z nákladů projektu —</option>
+                      <option value="">{t('smlouva.vyberteZNakladu')}</option>
                       {naklady.map((n, i) => (
                         <option key={`${n.nazev}-${i}`} value={String(i)}>
-                          {n.nazev || 'Bez názvu'} · {korun(n.castka)}
+                          {n.nazev || t('smlouva.polozkaBezNazvu')} · {korun(n.castka)}
                         </option>
                       ))}
-                      <option value="rucne">— napíšu ručně —</option>
+                      <option value="rucne">{t('smlouva.napisuRucne')}</option>
                     </VyberPole>
                     {rucne && (
                       <input
                         autoFocus
                         value={pole.odmena ?? ''}
                         onChange={(e) => setPole((s) => ({ ...s, odmena: e.target.value }))}
-                        placeholder={NAPOVEDA.odmena}
+                        placeholder={t(NAPOVEDA_KLICE.odmena)}
                         className={inputClass}
                       />
                     )}
                     {!rucne && pole.odmena && (
-                      <span className="text-xs font-body text-muted">Do smlouvy půjde {pole.odmena} bez DPH.</span>
+                      <span className="text-xs font-body text-muted">
+                        {t('smlouva.odmenaBezDph', { castka: pole.odmena })}
+                      </span>
                     )}
                   </label>
                 );
               }
               return (
                 <label key={p.key} className="flex flex-col gap-1.5">
-                  <span className="text-sm font-body text-ink">{popisekPole(p.key, p.label)}</span>
+                  <span className="text-sm font-body text-ink">{popisekPole(p.key)}</span>
                   {p.datum ? (
                     <DatumPole
                       value={datumy[p.key] ?? ''}
@@ -693,7 +692,7 @@ export function NewContractForm({
                   <input
                     value={pole[p.key] ?? ''}
                     onChange={(e) => setPole((s) => ({ ...s, [p.key]: e.target.value }))}
-                    placeholder={NAPOVEDA[p.key] ?? ''}
+                    placeholder={NAPOVEDA_KLICE[p.key] ? t(NAPOVEDA_KLICE[p.key]) : ''}
                     className={inputClass}
                   />
                   )}
@@ -702,9 +701,7 @@ export function NewContractForm({
                     // policko prazdne - jinak clovek ceka, ze se doplni samo
                     // (zadani 15. 9. 2026).
                     <span className="text-xs font-body text-muted">
-                      {projektInfo?.odevzdani
-                        ? 'Předvyplněno z data odevzdání projektu.'
-                        : 'Projekt nemá datum odevzdání — vyplňte termín ručně.'}
+                      {t(projektInfo?.odevzdani ? 'smlouva.terminZOdevzdani' : 'smlouva.terminRucne')}
                     </span>
                   )}
                 </label>
@@ -718,10 +715,10 @@ export function NewContractForm({
 
       <div className="flex items-center gap-3">
         <AddButton type="submit" disabled={busy}>
-          {busy ? 'Zakládám…' : 'Založit a upravit text'}
+          {t(busy ? 'smlouva.zakladam' : 'smlouva.zalozitAUpravit')}
         </AddButton>
         <button type="button" onClick={() => setOpen(false)} className="text-muted text-sm font-heading">
-          Zavřít
+          {t('obecne.zavrit')}
         </button>
       </div>
     </form>
@@ -735,12 +732,18 @@ type Naklad = { nazev: string; castka: number };
  *
  * Mezery jsou OBYČEJNÉ, ne pevné - pevná mezera není v podmnožině písma, se
  * kterou se sází PDF smlouvy, a vyšel by z ní otazník.
+ *
+ * NEPŘEKLÁDÁ SE ani v anglickém rozhraní: tahle částka jde do českého textu
+ * smlouvy, ne na obrazovku.
  */
 function korun(castka: number): string {
   return `${Math.round(castka).toLocaleString('cs-CZ').replace(/\u00a0/g, ' ')} Kč`;
 }
 
-/** Datum ve tvaru, v jakém se píše do smlouvy: 20. 9. 2026. */
+/**
+ * Datum ve tvaru, v jakém se píše do smlouvy: 20. 9. 2026. Zůstává české
+ * i v anglickém rozhraní - jde do textu smlouvy, ne na obrazovku.
+ */
 function datumCesky(datum: Date): string {
   return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' }).format(datum);
 }
@@ -768,11 +771,11 @@ type Herec = {
 const VYCHOZI_DOBA_LICENCE = 'jednoho (1) roku';
 
 /** Nápověda k ručním polím — ať je vidět, v jakém tvaru to má být. */
-const NAPOVEDA: Record<string, string> = {
-  odmena: 'např. 5 000 Kč',
-  termin: 'např. 20. 9. 2026',
-  splatnost: 'např. 30',
-  rozsah_dila: 'co se dělá — překlad, úprava dialogů, dramaturgie…',
-  uziti: 'např. audio reklama na Spotify, CZ+SK',
-  doba_licence: 'např. jednoho (1) roku',
+const NAPOVEDA_KLICE: Record<string, string> = {
+  odmena: 'smlouva.napovedaOdmena',
+  termin: 'smlouva.napovedaTermin',
+  splatnost: 'smlouva.napovedaSplatnost',
+  rozsah_dila: 'smlouva.napovedaRozsahDila',
+  uziti: 'smlouva.napovedaUziti',
+  doba_licence: 'smlouva.napovedaDobaLicence',
 };

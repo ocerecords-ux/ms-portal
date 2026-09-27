@@ -3,11 +3,15 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { InvoiceEditor } from './InvoiceEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 // Detail faktury - stejny "vypada jako doklad" editor jako u nabidek.
 export const dynamic = 'force-dynamic';
 
 export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
+  const jazyk = nactiJazyk();
+
   const invoice = await prisma.invoice.findUnique({
     where: { id: params.id },
     include: {
@@ -32,7 +36,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
   return (
     <div className="flex flex-col gap-6">
       <Link href="/admin/doklady/faktury" className="text-muted text-sm font-heading no-underline">
-        ← Zpět na faktury
+        {prelozit(jazyk, 'faktura.zpetNaFaktury')}
       </Link>
 
       <InvoiceEditor

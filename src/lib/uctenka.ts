@@ -1,4 +1,5 @@
 import type { PaymentMethod } from '@prisma/client';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Sdílené věci k dokladům vyfoceným fotoaparátem (zadání 10. 9. 2026:
@@ -8,15 +9,25 @@ import type { PaymentMethod } from '@prisma/client';
  * Samotné čtení fotky sedí v uctenkaServer.ts.
  */
 
-/** Názvy způsobů úhrady pro formuláře a výpisy. */
-export const ZPUSOBY_UHRADY: { hodnota: PaymentMethod; nazev: string }[] = [
-  { hodnota: 'CARD', nazev: 'Kartou' },
-  { hodnota: 'CASH', nazev: 'Hotově' },
-  { hodnota: 'TRANSFER', nazev: 'Převodem' },
-];
+/**
+ * Názvy způsobů úhrady pro formuláře a výpisy.
+ *
+ * JAZYK JE NEPOVINNÝ PARAMETR (dávka 4, 27. 9. 2026), ne nová funkce vedle:
+ * volajících je dost a ti, kteří jazyk neřeší (PDF dokladu, e-maily), mají dál
+ * dostat češtinu, aniž by se jich kdokoliv musel dotýkat.
+ */
+export const ZPUSOBY_UHRADY: PaymentMethod[] = ['CARD', 'CASH', 'TRANSFER'];
 
-export function nazevZpusobuUhrady(zpusob: PaymentMethod): string {
-  return ZPUSOBY_UHRADY.find((z) => z.hodnota === zpusob)?.nazev ?? 'Převodem';
+export function nazevZpusobuUhrady(zpusob: PaymentMethod, jazyk: Jazyk = 'cs'): string {
+  const znamy = ZPUSOBY_UHRADY.includes(zpusob) ? zpusob : 'TRANSFER';
+  return prelozit(jazyk, `uhrada.${znamy}`);
+}
+
+/** Nabídka do <select> - hodnota a už přeložený název. */
+export function zpusobyUhrady(
+  jazyk: Jazyk = 'cs',
+): { hodnota: PaymentMethod; nazev: string }[] {
+  return ZPUSOBY_UHRADY.map((hodnota) => ({ hodnota, nazev: nazevZpusobuUhrady(hodnota, jazyk) }));
 }
 
 /**

@@ -12,15 +12,16 @@ import { SlevaPole } from '../../SlevaPole';
 import {
   CURRENCIES,
   CURRENCY_LABELS,
-  CURRENCY_NAMES,
+  nazevMeny,
   computeTotals,
   formatMoney,
   minorToInput,
   parseMoneyToMinor,
   OFFER_STATUS_CLASSES,
-  OFFER_STATUS_LABELS,
   formatAddress,
 } from '@/lib/doklady';
+import { formatDatumCas, prelozitKolem } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { DatumPole } from '@/components/DatumPole';
 import { VyberPole } from '@/components/VyberPole';
 
@@ -81,10 +82,16 @@ function emptyItem(): Item {
   return { description: '', quantity: 1, unit: 'ks', unitPriceMinor: 0, vatRate: 21 };
 }
 
-function formatDateTime(iso: string | null): string {
-  if (!iso) return '';
-  return new Date(iso).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
+/**
+ * Stav nabidky ve slovniku (davka 4). OFFER_STATUS_LABELS z lib/doklady je
+ * jen cesky - klice necha stav prelozit i v anglicke verzi portalu.
+ */
+const KLICE_STAVU: Record<string, string> = {
+  DRAFT: 'nabidka.stav.rozpracovana',
+  SENT: 'nabidka.stav.odeslana',
+  APPROVED: 'nabidka.stav.schvalena',
+  REJECTED: 'nabidka.stav.odmitnuta',
+};
 
 /**
  * Editor nabídky. Vypadá jako samotný doklad — hlavička s oběma firmami,
@@ -118,6 +125,8 @@ export function OfferEditor({
   herciProjektu?: Record<string, string[]>;
 }) {
   const router = useRouter();
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const locked = offer.status === 'APPROVED';
   /**
    * Neulozena nabidka - clovek klikl na "Nova nabidka" a rovnou vidi doklad
@@ -166,6 +175,11 @@ export function OfferEditor({
       : company.contactEmail
         ? { jmeno: null, email: company.contactEmail, zdroj: 'firma' }
         : null;
+  /**
+   * Jméno příjemce je uprostřed věty tučně, takže se věta dělí přes
+   * prelozitKolem - viz pravidlo 7 v docs/preklad-portalu.md.
+   */
+  const posleme = prelozitKolem(jazyk, 'nabidka.posleme', 'prijemce');
 
   /** Co se posílá do náhledu - jen to, co je na dokumentu vidět. */
   const nahledTelo = {
@@ -262,7 +276,7 @@ export function OfferEditor({
     setInfo(null);
     try {
       if (!form.companyId) {
-        setError('Vyberte odběratele — bez něj nevíme, komu nabídku poslat.');
+        setError(t('nabidka.chybaBezOdberatele'));
         return false;
       }
       const telo = {
@@ -291,7 +305,7 @@ export function OfferEditor({
           });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('nabidka.chybaUlozeni'));
         return false;
       }
       if (jesteNeulozena && data?.id) {
@@ -299,11 +313,11 @@ export function OfferEditor({
         router.refresh();
         return true;
       }
-      setInfo('Uloženo.');
+      setInfo(t('nabidka.ulozeno'));
       router.refresh();
       return true;
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('nabidka.chybaUlozeni'));
       return false;
     } finally {
       setSaving(false);
@@ -319,13 +333,13 @@ export function OfferEditor({
       const res = await fetch(`/api/admin/offers/${offer.id}/send`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Odeslání se nezdařilo.');
+        setError(data?.error || t('nabidka.chybaOdeslani'));
         return;
       }
-      setInfo(`Nabídka odeslána na ${data.to}.`);
+      setInfo(t('nabidka.odeslanoNa', { email: data.to }));
       router.refresh();
     } catch {
-      setError('Odeslání se nezdařilo.');
+      setError(t('nabidka.chybaOdeslani'));
     } finally {
       setSending(false);
     }
@@ -346,15 +360,15 @@ export function OfferEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Schválení se nepodařilo uložit.');
+        setError(data?.error || t('nabidka.chybaSchvaleni'));
         return;
       }
       setSchvalovani(false);
       setKdoSchvalil('');
-      setInfo('Nabídka je označená jako schválená.');
+      setInfo(t('nabidka.oznacenaSchvalena'));
       router.refresh();
     } catch {
-      setError('Schválení se nepodařilo uložit.');
+      setError(t('nabidka.chybaSchvaleni'));
     } finally {
       setSchvaluji(false);
     }
@@ -367,13 +381,13 @@ export function OfferEditor({
       const res = await fetch(`/api/admin/offers/${offer.id}/schvaleni`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Schválení se nepodařilo zrušit.');
+        setError(data?.error || t('nabidka.chybaZruseniSchvaleni'));
         return;
       }
-      setInfo('Schválení zrušeno, nabídku jde zase upravit.');
+      setInfo(t('nabidka.schvaleniZruseno'));
       router.refresh();
     } catch {
-      setError('Schválení se nepodařilo zrušit.');
+      setError(t('nabidka.chybaZruseniSchvaleni'));
     } finally {
       setSchvaluji(false);
     }
@@ -385,7 +399,7 @@ export function OfferEditor({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError('Odkaz se nepodařilo zkopírovat — schránka není dostupná.');
+      setError(t('nabidka.chybaKopirovani'));
     }
   }
 
@@ -406,13 +420,13 @@ export function OfferEditor({
       const res = await fetch(`/api/admin/offers/${offer.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Smazání se nezdařilo.');
+        setError(data?.error || t('nabidka.chybaSmazani'));
         return;
       }
       router.push('/admin/doklady/nabidky');
       router.refresh();
     } catch {
-      setError('Smazání se nezdařilo.');
+      setError(t('nabidka.chybaSmazani'));
     } finally {
       setSaving(false);
     }
@@ -438,13 +452,24 @@ export function OfferEditor({
       {offer.faktury.length > 0 && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-2">
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Vyfakturováno z nabídky</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">
+              {t('nabidka.vyfakturovano')}
+            </span>
             <span className="text-sm font-heading text-ink">
-              {formatMoney(vyfakturovano, form.currency)} z {formatMoney(totals.incVat, form.currency)}
+              {t('nabidka.vyfakturovanoZ', {
+                castka: formatMoney(vyfakturovano, form.currency),
+                celkem: formatMoney(totals.incVat, form.currency),
+              })}
               {zbyva > 0 ? (
-                <span className="text-muted"> · zbývá {formatMoney(zbyva, form.currency)}</span>
+                <span className="text-muted">
+                  {' · '}
+                  {t('nabidka.zbyva', { castka: formatMoney(zbyva, form.currency) })}
+                </span>
               ) : (
-                <span className="text-status-done"> · vyfakturováno celé</span>
+                <span className="text-status-done">
+                  {' · '}
+                  {t('nabidka.vyfakturovanoCele')}
+                </span>
               )}
             </span>
           </div>
@@ -470,19 +495,29 @@ export function OfferEditor({
           <span
             className={`inline-flex items-center text-xs font-heading font-semibold px-2.5 py-1 rounded-pill ${OFFER_STATUS_CLASSES[offer.status]}`}
           >
-            {OFFER_STATUS_LABELS[offer.status]}
+            {KLICE_STAVU[offer.status] ? t(KLICE_STAVU[offer.status]) : offer.status}
           </span>
           {offer.approvedAt && (
             <span className="text-xs font-body text-muted">
-              Schváleno {formatDateTime(offer.approvedAt)}
-              {offer.approvedByName ? ` — ${offer.approvedByName}` : ''}
+              {offer.approvedByName
+                ? t('nabidka.schvalenoKdyKym', {
+                    datum: formatDatumCas(jazyk, new Date(offer.approvedAt)),
+                    jmeno: offer.approvedByName,
+                  })
+                : t('nabidka.schvalenoKdy', {
+                    datum: formatDatumCas(jazyk, new Date(offer.approvedAt)),
+                  })}
             </span>
           )}
           {offer.rejectedAt && !offer.approvedAt && (
-            <span className="text-xs font-body text-danger">Odmítnuto {formatDateTime(offer.rejectedAt)}</span>
+            <span className="text-xs font-body text-danger">
+              {t('nabidka.odmitnutoKdy', { datum: formatDatumCas(jazyk, new Date(offer.rejectedAt)) })}
+            </span>
           )}
           {offer.sentAt && !offer.approvedAt && !offer.rejectedAt && (
-            <span className="text-xs font-body text-muted">Odesláno {formatDateTime(offer.sentAt)}</span>
+            <span className="text-xs font-body text-muted">
+              {t('nabidka.odeslanoKdy', { datum: formatDatumCas(jazyk, new Date(offer.sentAt)) })}
+            </span>
           )}
         </div>
 
@@ -493,7 +528,7 @@ export function OfferEditor({
             onClick={copyLink}
             className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors"
           >
-            {copied ? 'Zkopírováno' : 'Odkaz pro klienta'}
+            {copied ? t('nabidka.zkopirovano') : t('nabidka.odkazProKlienta')}
           </button>
           )}
           {/* Fakturu jde vystavit z kazde nabidky, kterou klient neodmitl
@@ -511,7 +546,7 @@ export function OfferEditor({
               disabled={saving || sending}
               className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60 whitespace-nowrap"
             >
-              {offer.faktury.length > 0 ? 'Vystavit další fakturu' : 'Vystavit fakturu'}
+              {offer.faktury.length > 0 ? t('nabidka.vystavitDalsiFakturu') : t('nabidka.vystavitFakturu')}
             </button>
           )}
           {!locked && (
@@ -529,7 +564,7 @@ export function OfferEditor({
                   disabled={saving || sending || schvaluji}
                   className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60 whitespace-nowrap"
                 >
-                  Schválit ručně
+                  {t('nabidka.schvalitRucne')}
                 </button>
               )}
               {!jesteNeulozena && (
@@ -539,7 +574,7 @@ export function OfferEditor({
                 disabled={saving || sending}
                 className="border border-brand-purple text-brand-purple font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-tint transition-colors disabled:opacity-60"
               >
-                {sending ? 'Odesílám…' : 'Odeslat klientovi'}
+                {sending ? t('nabidka.odesilam') : t('nabidka.odeslatKlientovi')}
               </button>
               )}
               <button
@@ -548,7 +583,7 @@ export function OfferEditor({
                 disabled={saving || sending}
                 className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
               >
-                {saving ? 'Ukládám…' : 'Uložit'}
+                {saving ? t('obecne.ukladam') : t('obecne.ulozit')}
               </button>
             </>
           )}
@@ -560,20 +595,17 @@ export function OfferEditor({
           odkazem, takze se pak tiskne a zobrazuje uplne stejne. */}
       {schvalovani && !locked && (
         <div className="bg-surface rounded-card border border-line shadow-sm p-4 flex flex-col gap-3">
-          <p className="text-sm text-ink m-0">
-            Označit nabídku jako schválenou — pro případy, kdy ji klient odsouhlasil telefonem nebo mailem.
-            Schválenou nabídku už nejde měnit.
-          </p>
+          <p className="text-sm text-ink m-0">{t('nabidka.schvaleniPopis')}</p>
           <div className="flex items-end gap-2 flex-wrap">
             <label className="flex flex-col gap-1 flex-1 min-w-[240px]">
               <span className="text-[10px] font-heading text-muted uppercase tracking-wide">
-                Kdo na straně klienta schválil (nepovinné)
+                {t('nabidka.kdoSchvalil')}
               </span>
               <input
                 type="text"
                 value={kdoSchvalil}
                 onChange={(e) => setKdoSchvalil(e.target.value)}
-                placeholder="např. Jan Novák — potvrzeno telefonicky"
+                placeholder={t('nabidka.kdoSchvalilPlaceholder')}
                 className={inputClass}
               />
             </label>
@@ -583,7 +615,7 @@ export function OfferEditor({
               disabled={saving || sending || schvaluji}
               className="bg-brand-green text-onAccent font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:brightness-95 transition-[filter] disabled:opacity-60 whitespace-nowrap"
             >
-              {schvaluji ? 'Ukládám…' : 'Schválit nabídku'}
+              {schvaluji ? t('obecne.ukladam') : t('nabidka.schvalitNabidku')}
             </button>
             <button
               type="button"
@@ -591,7 +623,7 @@ export function OfferEditor({
               disabled={schvaluji}
               className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
             >
-              Zpět
+              {t('obecne.zpet')}
             </button>
           </div>
         </div>
@@ -607,10 +639,7 @@ export function OfferEditor({
 
       {locked && (
         <div className="bg-okTint border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
-          <p className="text-sm text-ink m-0">
-            Nabídka je schválená, takže už se nedá měnit — zůstává přesně v podobě, kterou klient odsouhlasil.
-            Fakturu z ní vystavíte tlačítkem nahoře.
-          </p>
+          <p className="text-sm text-ink m-0">{t('nabidka.zamcenaPopis')}</p>
           {/* Zpetne zruseni schvaleni (zadani 14. 9. 2026) - rucne se da
               kliknout vedle a bez teto cesty by zamcenou nabidku uz nikdo
               neopravil. */}
@@ -620,7 +649,7 @@ export function OfferEditor({
             disabled={schvaluji}
             className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-surface transition-colors disabled:opacity-60 whitespace-nowrap"
           >
-            {schvaluji ? 'Ruším…' : 'Zrušit schválení'}
+            {schvaluji ? t('nabidka.rusim') : t('nabidka.zrusitSchvaleni')}
           </button>
         </div>
       )}
@@ -632,7 +661,9 @@ export function OfferEditor({
         {/* Hlavička: dodavatel vs. odběratel */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-line">
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Dodavatel</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">
+              {t('nabidka.dodavatel')}
+            </span>
             {locked ? (
               <p className="font-heading font-semibold text-ink m-0">{issuer.name}</p>
             ) : (
@@ -652,12 +683,14 @@ export function OfferEditor({
               {formatAddress(issuer) || '—'}
               <br />
               {issuer.ic ? `IČ ${issuer.ic}` : ''} {issuer.dic ? `· DIČ ${issuer.dic}` : ''}
-              {issuer.vatPayer === false ? ' · neplátce DPH' : ''}
+              {issuer.vatPayer === false ? ` · ${t('nabidka.neplatceDph')}` : ''}
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Odběratel</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">
+              {t('nabidka.odberatel')}
+            </span>
             {locked ? (
               <p className="font-heading font-semibold text-ink m-0">{company.name}</p>
             ) : (
@@ -680,19 +713,20 @@ export function OfferEditor({
               >
                 {prijemce ? (
                   <>
-                    Nabídku pošleme{' '}
+                    {posleme[0]}
                     <b className="text-ink font-heading">{prijemce.jmeno ?? prijemce.email}</b>
+                    {posleme[1]}
                     {prijemce.jmeno ? ` · ${prijemce.email}` : ''}
                     <span className="block">
                       {prijemce.zdroj === 'klient'
-                        ? 'klient vyplněný u projektu'
-                        : 'kontakt firmy — projekt nemá vyplněného klienta'}
+                        ? t('nabidka.prijemceZKlienta')
+                        : t('nabidka.prijemceZFirmy')}
                     </span>
                   </>
                 ) : form.caflouProjectId ? (
-                  'Nabídku není komu poslat — projekt nemá klienta s e-mailem a firma nemá kontaktní e-mail.'
+                  t('nabidka.neniKomuPoslatProjekt')
                 ) : (
-                  'Nabídku není komu poslat — vyberte níže projekt s klientem, nebo firmě doplňte kontaktní e-mail.'
+                  t('nabidka.neniKomuPoslat')
                 )}
               </p>
             )}
@@ -704,7 +738,7 @@ export function OfferEditor({
             ctyrech by byla policka na datum uzka na precteni. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 p-6 border-b border-line">
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Název</span>
+            <span className="text-sm font-body text-ink">{t('nabidka.nazev')}</span>
             <input
               value={form.subject}
               disabled={locked}
@@ -712,19 +746,17 @@ export function OfferEditor({
                 setNazevRucne(true);
                 set('subject', e.target.value);
               }}
-              placeholder="např. Výroba audioknihy Tři mušketýři"
+              placeholder={t('nabidka.nazevPlaceholder')}
               className={inputClass}
             />
             {!nazevRucne && (
-              <span className="text-xs font-body text-muted">
-                Doplní se z názvu projektu. Přepsáním si ho zamknete — třeba pro variantu nabídky.
-              </span>
+              <span className="text-xs font-body text-muted">{t('nabidka.nazevZProjektu')}</span>
             )}
           </label>
           {/* Projekt (zadani 8. 9. 2026) - nabidka se pak ukaze v detailu projektu
               a vazba se prenese i na fakturu z ni vystavenou. */}
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Projekt</span>
+            <span className="text-sm font-body text-ink">{t('nabidka.projekt')}</span>
             <ProjectSelect
               value={form.caflouProjectId}
               onChange={(id) => {
@@ -742,7 +774,7 @@ export function OfferEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Vystaveno</span>
+            <span className="text-sm font-body text-ink">{t('nabidka.vystaveno')}</span>
             <DatumPole
               value={form.issueDate}
               disabled={locked}
@@ -751,7 +783,7 @@ export function OfferEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Platnost do</span>
+            <span className="text-sm font-body text-ink">{t('nabidka.platnostDo')}</span>
             <DatumPole
               value={form.validUntil}
               disabled={locked}
@@ -760,7 +792,7 @@ export function OfferEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Měna</span>
+            <span className="text-sm font-body text-ink">{t('nabidka.mena')}</span>
             <VyberPole
               value={form.currency}
               disabled={locked}
@@ -769,21 +801,21 @@ export function OfferEditor({
             >
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
-                  {CURRENCY_NAMES[c]}
+                  {nazevMeny(c, jazyk)}
                 </option>
               ))}
             </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Jazyk nabídky</span>
+            <span className="text-sm font-body text-ink">{t('nabidka.jazykNabidky')}</span>
             <VyberPole
               value={form.jazyk}
               disabled={locked}
               onChange={(e) => set('jazyk', e.target.value as typeof form.jazyk)}
               className={inputClass}
             >
-              <option value="CS">Čeština</option>
-              <option value="EN">Angličtina</option>
+              <option value="CS">{t('listou.cestina')}</option>
+              <option value="EN">{t('listou.anglictina')}</option>
             </VyberPole>
           </label>
         </div>
@@ -791,8 +823,10 @@ export function OfferEditor({
         {/* Položky */}
         <div className="p-6 flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Položky</h2>
-            <span className="text-xs font-body text-muted">Ceny se zadávají bez DPH.</span>
+            <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+              {t('nabidka.polozky')}
+            </h2>
+            <span className="text-xs font-body text-muted">{t('nabidka.cenyBezDph')}</span>
           </div>
 
           {/* Popis ma cely radek, cisla pod nim - stejne jako u faktury
@@ -805,15 +839,15 @@ export function OfferEditor({
                     value={item.description}
                     disabled={locked}
                     onChange={(e) => updateItem(index, { description: e.target.value })}
-                    placeholder="Popis položky"
+                    placeholder={t('nabidka.popisPolozky')}
                     className={cellClass}
                   />
                   {!locked && (
                     <button
                       type="button"
                       onClick={() => removeItem(index)}
-                      title="Odebrat položku"
-                      aria-label="Odebrat položku"
+                      title={t('nabidka.odebratPolozku')}
+                      aria-label={t('nabidka.odebratPolozku')}
                       className="shrink-0 text-muted hover:text-danger text-sm font-heading px-1"
                     >
                       ✕
@@ -823,7 +857,7 @@ export function OfferEditor({
 
                 <div className="flex items-end gap-2 flex-wrap">
                   <label className="flex flex-col gap-1 w-20">
-                    <span className={popiskaClass}>Množství</span>
+                    <span className={popiskaClass}>{t('nabidka.mnozstvi')}</span>
                     <input
                       inputMode="decimal"
                       value={item.quantity}
@@ -835,7 +869,7 @@ export function OfferEditor({
                     />
                   </label>
                   <label className="flex flex-col gap-1 w-16">
-                    <span className={popiskaClass}>Jednotka</span>
+                    <span className={popiskaClass}>{t('nabidka.jednotka')}</span>
                     <input
                       value={item.unit}
                       disabled={locked}
@@ -845,7 +879,7 @@ export function OfferEditor({
                     />
                   </label>
                   <label className="flex flex-col gap-1 w-28">
-                    <span className={popiskaClass}>Cena / j.</span>
+                    <span className={popiskaClass}>{t('nabidka.cenaZaJednotku')}</span>
                     <input
                       inputMode="decimal"
                       defaultValue={item.unitPriceMinor ? minorToInput(item.unitPriceMinor) : ''}
@@ -856,7 +890,7 @@ export function OfferEditor({
                     />
                   </label>
                   <label className="flex flex-col gap-1 w-24">
-                    <span className={popiskaClass}>DPH</span>
+                    <span className={popiskaClass}>{t('nabidka.dph')}</span>
                     <VyberPole
                       value={item.vatRate}
                       disabled={locked}
@@ -865,13 +899,13 @@ export function OfferEditor({
                     >
                       {VAT_RATES.map((r) => (
                         <option key={r} value={r}>
-                          {r} %
+                          {t('nabidka.sazbaDph', { sazba: r })}
                         </option>
                       ))}
                     </VyberPole>
                   </label>
                   <span className="ml-auto flex flex-col gap-1 items-end">
-                    <span className={popiskaClass}>Celkem</span>
+                    <span className={popiskaClass}>{t('nabidka.celkemPolozka')}</span>
                     <span className="text-sm font-heading text-ink tabular-nums py-1.5">
                       {formatMoney(Math.round(item.quantity * item.unitPriceMinor), form.currency)}
                     </span>
@@ -884,7 +918,7 @@ export function OfferEditor({
           {!locked && (
             <div className="flex items-center gap-3 flex-wrap">
               <AddButton type="button" onClick={addItem} className="self-start">
-                Přidat položku
+                {t('nabidka.pridatPolozku')}
               </AddButton>
               {chybejiciHerci.length > 0 && (
                 <button
@@ -893,7 +927,7 @@ export function OfferEditor({
                   title={chybejiciHerci.join(', ')}
                   className="text-sm font-heading font-semibold rounded-lg px-3 py-2 border border-line text-ink hover:border-brand-purple"
                 >
-                  + Herci z projektu ({chybejiciHerci.length})
+                  {t('nabidka.herciZProjektu', { pocet: chybejiciHerci.length })}
                 </button>
               )}
             </div>
@@ -906,7 +940,9 @@ export function OfferEditor({
             {/* Zaklad PRED slevou, at je videt, z ceho se slevovalo. Bez
                 slevy je to totez cislo jako doted. */}
             <div className="flex items-center justify-between text-sm font-heading">
-              <span className="text-muted">{totals.sleva > 0 ? 'Mezisoučet bez DPH' : 'Základ bez DPH'}</span>
+              <span className="text-muted">
+                {totals.sleva > 0 ? t('nabidka.mezisoucetBezDph') : t('nabidka.zakladBezDph')}
+              </span>
               <span className="text-ink tabular-nums">
                 {formatMoney(totals.exVatPredSlevou, form.currency)}
               </span>
@@ -926,18 +962,18 @@ export function OfferEditor({
 
             {totals.sleva > 0 && (
               <div className="flex items-center justify-between text-sm font-heading">
-                <span className="text-muted">Základ bez DPH po slevě</span>
+                <span className="text-muted">{t('nabidka.zakladBezDphPoSleve')}</span>
                 <span className="text-ink tabular-nums">{formatMoney(totals.exVat, form.currency)}</span>
               </div>
             )}
             {totals.byRate.map((r) => (
               <div key={r.rate} className="flex items-center justify-between text-sm font-heading">
-                <span className="text-muted">DPH {r.rate} %</span>
+                <span className="text-muted">{t('nabidka.dphSazba', { sazba: r.rate })}</span>
                 <span className="text-muted tabular-nums">{formatMoney(r.vat, form.currency)}</span>
               </div>
             ))}
             <div className="flex items-center justify-between border-t border-line pt-2 mt-1">
-              <span className="font-heading font-semibold text-ink">Celkem</span>
+              <span className="font-heading font-semibold text-ink">{t('nabidka.celkem')}</span>
               <span className="font-display text-xl text-ink tabular-nums">
                 {formatMoney(totals.incVat, form.currency)}
               </span>
@@ -949,25 +985,25 @@ export function OfferEditor({
       {/* Poznámka a účet */}
       <div className="grid grid-cols-1 gap-5">
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
-          <span className="text-xs font-heading text-muted uppercase tracking-wide">Poznámka pro klienta</span>
+          <span className="text-xs font-heading text-muted uppercase tracking-wide">
+            {t('nabidka.poznamkaProKlienta')}
+          </span>
           <textarea
             value={form.note}
             disabled={locked}
             onChange={(e) => set('note', e.target.value)}
             rows={4}
-            placeholder="Co je v ceně, termíny, podmínky…"
+            placeholder={t('nabidka.poznamkaPlaceholder')}
             className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full disabled:opacity-70"
           />
         </div>
 
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">
-            Bankovní účet ({CURRENCY_LABELS[form.currency]})
+            {t('nabidka.bankovniUcet', { mena: CURRENCY_LABELS[form.currency] })}
           </span>
           {bankAccounts.length === 0 ? (
-            <p className="text-sm text-muted font-body m-0">
-              Pro tuhle měnu není u vaší firmy žádný účet. Doplňte ho v Moje firmy — na faktuře bude potřeba.
-            </p>
+            <p className="text-sm text-muted font-body m-0">{t('nabidka.zadnyUcet')}</p>
           ) : (
             <ul className="list-none p-0 m-0 flex flex-col gap-1">
               {bankAccounts.map((a, i) => (
@@ -985,7 +1021,7 @@ export function OfferEditor({
 
       </div>
 
-      <NahledDokladu telo={nahledTelo} titulek="Náhled nabídky" />
+      <NahledDokladu telo={nahledTelo} titulek={t('nabidka.nahled')} />
       </div>
 
       {!locked && !jesteNeulozena && (
@@ -993,8 +1029,8 @@ export function OfferEditor({
           <TlacitkoSmazat
             onSmazat={remove}
             disabled={saving}
-            popisek="Smazat nabídku"
-            otazka="Opravdu smazat nabídku?"
+            popisek={t('nabidka.smazatNabidku')}
+            otazka={t('nabidka.opravduSmazat')}
           />
         </div>
       )}

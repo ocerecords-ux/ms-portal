@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { VyberPole } from '@/components/VyberPole';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 export type ProjectChoice = { id: string; label: string; finished: boolean };
 
@@ -39,6 +40,7 @@ export function ProjectSelect({
   disabled?: boolean;
   className?: string;
 }) {
+  const t = usePreklad();
   const [iUkoncene, setIUkoncene] = useState(false);
   const rozpracovane = projects.filter((p) => !p.finished);
   const ukoncene = iUkoncene ? projects.filter((p) => p.finished && p.id !== value) : [];
@@ -61,9 +63,9 @@ export function ProjectSelect({
       disabled={disabled}
       className={className}
     >
-      <option value="">— bez projektu —</option>
+      <option value="">{t('doklady.bezProjektu')}</option>
       {mimoNabidku && (
-        <option value={value}>{ulozeny?.label || currentName || `Projekt ${value}`}</option>
+        <option value={value}>{ulozeny?.label || currentName || t('doklady.projektCislo', { id: value })}</option>
       )}
       {rozpracovane.map((p) => (
         <option key={p.id} value={p.id}>
@@ -72,11 +74,11 @@ export function ProjectSelect({
       ))}
       {ukoncene.map((p) => (
         <option key={p.id} value={p.id}>
-          {p.label} (ukončený)
+          {t('doklady.projektUkonceny', { nazev: p.label })}
         </option>
       ))}
       {!iUkoncene && projects.some((p) => p.finished) && (
-        <option value={UKAZ_UKONCENE}>+ Zobrazit i ukončené projekty…</option>
+        <option value={UKAZ_UKONCENE}>{t('doklady.zobrazitUkoncene')}</option>
       )}
     </VyberPole>
   );

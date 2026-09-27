@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Podpis, který se tiskne na faktury této firmy (zadání 21. 9. 2026: „na
@@ -10,6 +12,8 @@ import { useRouter } from 'next/navigation';
  * a zmenší, takže do databáze jde malé PNG.
  */
 export function PodpisFirmy({ issuerId, podpis }: { issuerId: string; podpis: string | null }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const router = useRouter();
   const vstup = useRef<HTMLInputElement | null>(null);
   const [aktualni, setAktualni] = useState<string | null>(podpis);
@@ -26,11 +30,11 @@ export function PodpisFirmy({ issuerId, podpis }: { issuerId: string; podpis: st
         body: JSON.stringify({ podpis: hodnota }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Podpis se nepodařilo uložit.');
+      if (!res.ok) throw new Error(data.error || t('mojeFirmy.podpisUlozeniSelhalo'));
       setAktualni(hodnota);
       router.refresh();
     } catch (e) {
-      setChyba(e instanceof Error ? e.message : 'Podpis se nepodařilo uložit.');
+      setChyba(e instanceof Error ? e.message : t('mojeFirmy.podpisUlozeniSelhalo'));
     } finally {
       setPracuji(false);
     }
@@ -40,10 +44,10 @@ export function PodpisFirmy({ issuerId, podpis }: { issuerId: string; podpis: st
     if (!soubor) return;
     setChyba(null);
     try {
-      const png = await pripravPodpis(soubor);
+      const png = await pripravPodpis(soubor, jazyk);
       await uloz(png);
     } catch (e) {
-      setChyba(e instanceof Error ? e.message : 'Obrázek se nepodařilo načíst.');
+      setChyba(e instanceof Error ? e.message : t('mojeFirmy.obrazekNacist'));
     } finally {
       if (vstup.current) vstup.current.value = '';
     }
@@ -52,20 +56,19 @@ export function PodpisFirmy({ issuerId, podpis }: { issuerId: string; podpis: st
   return (
     <section className="bg-surface border border-line rounded-card p-6 flex flex-col gap-3 shadow-sm">
       <div>
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Podpis na faktury</h2>
-        <p className="text-muted text-sm m-0 mt-1">
-          Tiskne se vpravo dole na každou fakturu této firmy. Nahrajte fotku nebo sken podpisu na bílém papíře - pozadí
-          se samo zprůhlední.
-        </p>
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+          {t('mojeFirmy.podpisNadpis')}
+        </h2>
+        <p className="text-muted text-sm m-0 mt-1">{t('mojeFirmy.podpisPopis')}</p>
       </div>
 
       {aktualni ? (
         <div className="bg-white border border-line rounded-xl p-3 self-start">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={aktualni} alt="Podpis" className="block max-h-20 max-w-[260px]" />
+          <img src={aktualni} alt={t('mojeFirmy.podpisAlt')} className="block max-h-20 max-w-[260px]" />
         </div>
       ) : (
-        <p className="text-sm text-muted m-0">Podpis zatím není nahraný - faktury vyjdou bez podpisu.</p>
+        <p className="text-sm text-muted m-0">{t('mojeFirmy.podpisChybi')}</p>
       )}
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -82,7 +85,11 @@ export function PodpisFirmy({ issuerId, podpis }: { issuerId: string; podpis: st
           onClick={() => vstup.current?.click()}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {pracuji ? 'Ukládám…' : aktualni ? 'Nahrát jiný podpis' : 'Nahrát podpis'}
+          {pracuji
+            ? t('obecne.ukladam')
+            : aktualni
+              ? t('mojeFirmy.nahratJinyPodpis')
+              : t('mojeFirmy.nahratPodpis')}
         </button>
         {aktualni && (
           <button
@@ -91,7 +98,7 @@ export function PodpisFirmy({ issuerId, podpis }: { issuerId: string; podpis: st
             onClick={() => uloz(null)}
             className="text-sm font-heading text-danger bg-transparent border-0 cursor-pointer disabled:opacity-60"
           >
-            Odebrat podpis
+            {t('mojeFirmy.odebratPodpis')}
           </button>
         )}
       </div>
@@ -100,14 +107,17 @@ export function PodpisFirmy({ issuerId, podpis }: { issuerId: string; podpis: st
   );
 }
 
-/** Načte obrázek, zprůhlední bílé pozadí, ořízne okraje a zmenší na max. 600 px. */
-async function pripravPodpis(soubor: File): Promise<string> {
+/**
+ * Načte obrázek, zprůhlední bílé pozadí, ořízne okraje a zmenší na max. 600 px.
+ * Jazyk dostává parametrem - pomocná funkce mimo komponentu, hook tu nefunguje.
+ */
+async function pripravPodpis(soubor: File, jazyk: Jazyk): Promise<string> {
   const url = URL.createObjectURL(soubor);
   try {
     const obr = await new Promise<HTMLImageElement>((ok, chyba) => {
       const i = new Image();
       i.onload = () => ok(i);
-      i.onerror = () => chyba(new Error('Soubor není obrázek.'));
+      i.onerror = () => chyba(new Error(prelozit(jazyk, 'mojeFirmy.souborNeniObrazek')));
       i.src = url;
     });
 
@@ -118,7 +128,7 @@ async function pripravPodpis(soubor: File): Promise<string> {
     platno.width = w;
     platno.height = h;
     const ctx = platno.getContext('2d');
-    if (!ctx) throw new Error('Prohlížeč neumí upravit obrázek.');
+    if (!ctx) throw new Error(prelozit(jazyk, 'mojeFirmy.prohlizecNeumi'));
     ctx.drawImage(obr, 0, 0, w, h);
     const px = ctx.getImageData(0, 0, w, h);
     const d = px.data;
@@ -145,7 +155,7 @@ async function pripravPodpis(soubor: File): Promise<string> {
         if (y > y1) y1 = y;
       }
     }
-    if (x1 < 0) throw new Error('Na obrázku není vidět žádný podpis.');
+    if (x1 < 0) throw new Error(prelozit(jazyk, 'mojeFirmy.zadnyPodpisVidet'));
     ctx.putImageData(px, 0, 0);
 
     const okraj = 4;
@@ -158,7 +168,7 @@ async function pripravPodpis(soubor: File): Promise<string> {
     vysledek.width = Math.max(1, Math.round(sw * k2));
     vysledek.height = Math.max(1, Math.round(sh * k2));
     const ctx2 = vysledek.getContext('2d');
-    if (!ctx2) throw new Error('Prohlížeč neumí upravit obrázek.');
+    if (!ctx2) throw new Error(prelozit(jazyk, 'mojeFirmy.prohlizecNeumi'));
     ctx2.drawImage(platno, sx, sy, sw, sh, 0, 0, vysledek.width, vysledek.height);
     return vysledek.toDataURL('image/png');
   } finally {

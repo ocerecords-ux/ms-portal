@@ -146,7 +146,7 @@ export function ContractSigning({
         />
       </label>
 
-      <PodpisVyber onChange={setPodpis} jmeno={jmeno} />
+      <PodpisVyber onChange={setPodpis} jmeno={jmeno} jazyk={jazyk} />
 
       <label className="flex items-start gap-2.5 text-sm font-body text-ink">
         <input

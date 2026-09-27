@@ -2,18 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 // Zalozky sekce Doklady. Vlastni klientska komponenta jen kvuli tomu, aby se
 // dala zvyraznit aktivni zalozka (usePathname).
 const TABS = [
-  { href: '/admin/doklady/nabidky', label: 'Nabídky' },
-  { href: '/admin/doklady/faktury', label: 'Faktury' },
+  { href: '/admin/doklady/nabidky', klic: 'doklady.zalozkaNabidky' },
+  { href: '/admin/doklady/faktury', klic: 'doklady.zalozkaFaktury' },
   // Upominky na faktury po splatnosti (zadani 25. 9. 2026).
-  { href: '/admin/doklady/upominky', label: 'Upomínky' },
-  { href: '/admin/doklady/vydaje', label: 'Výdaje' },
+  { href: '/admin/doklady/upominky', klic: 'doklady.zalozkaUpominky' },
+  { href: '/admin/doklady/vydaje', klic: 'doklady.zalozkaVydaje' },
   // Smlouvy s elektronickym podpisem (zadani 8. 9. 2026).
-  { href: '/admin/doklady/smlouvy', label: 'Smlouvy' },
-  { href: '/admin/doklady/moje-firmy', label: 'Moje firmy' },
+  { href: '/admin/doklady/smlouvy', klic: 'doklady.zalozkaSmlouvy' },
+  { href: '/admin/doklady/moje-firmy', klic: 'doklady.zalozkaMojeFirmy' },
 ];
 
 /**
@@ -22,9 +23,10 @@ const TABS = [
  * a párování banky bych měl vidět jen já a Bára Šiblová").
  */
 export function DokladyTabs({ banka = false }: { banka?: boolean }) {
+  const t = usePreklad();
   const pathname = usePathname();
   const zalozky = banka
-    ? [...TABS.slice(0, 4), { href: '/admin/doklady/banka', label: 'Banka' }, ...TABS.slice(4)]
+    ? [...TABS.slice(0, 4), { href: '/admin/doklady/banka', klic: 'doklady.zalozkaBanka' }, ...TABS.slice(4)]
     : TABS;
   return (
     // Na telefonu jeden posuvny radek (21. 9. 2026), od tabletu se lamou.
@@ -39,7 +41,7 @@ export function DokladyTabs({ banka = false }: { banka?: boolean }) {
               active ? 'bg-surface border-line text-brand-purple' : 'border-transparent text-muted hover:text-ink'
             }`}
           >
-            {tab.label}
+            {t(tab.klic)}
           </Link>
         );
       })}

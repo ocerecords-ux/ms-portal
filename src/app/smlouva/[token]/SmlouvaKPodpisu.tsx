@@ -53,6 +53,7 @@ export function SmlouvaKPodpisu({
         signatures={signatures}
         currentHash={currentHash}
         issuerName={issuerName}
+        jazyk={jazyk}
       />
 
       <ContractSigning

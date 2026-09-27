@@ -4,6 +4,7 @@ import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Kategorie výdajů. Sedí až pod seznamem, protože se do nich sahá jednou za
@@ -16,6 +17,7 @@ export function CategoryManager({
 }: {
   categories: { id: string; name: string; active: boolean; usedBy: number }[];
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -35,13 +37,13 @@ export function CategoryManager({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('vydaj.ulozeniSelhalo'));
         return null;
       }
       router.refresh();
       return data;
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('vydaj.ulozeniSelhalo'));
       return null;
     } finally {
       setBusy(false);
@@ -60,7 +62,10 @@ export function CategoryManager({
     const result = await send(`/api/admin/expense-categories/${category.id}`, 'DELETE');
     if (result?.deactivatedInsteadOfDeleted) {
       setNote(
-        `Kategorii „${category.name}" už používá ${result.usedByExpenses} dokladů, takže je jen vyřazená z nabídky — u těch dokladů zůstane.`,
+        t('vydaj.kategorieJenVyrazena', {
+          nazev: category.name,
+          pocet: result.usedByExpenses,
+        }),
       );
     }
   }
@@ -68,7 +73,7 @@ export function CategoryManager({
   if (!open) {
     return (
       <AddButton type="button" size="sm" onClick={() => setOpen(true)} className="self-start">
-        Přidat / spravovat kategorie
+        {t('vydaj.spravovatKategorie')}
         <span className="tabular-nums opacity-70 ml-1">({categories.filter((c) => c.active).length})</span>
       </AddButton>
     );
@@ -77,9 +82,11 @@ export function CategoryManager({
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Kategorie výdajů</h2>
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+          {t('vydaj.kategorieNadpis')}
+        </h2>
         <button type="button" onClick={() => setOpen(false)} className="text-muted hover:text-ink text-sm font-heading">
-          Skrýt
+          {t('obecne.skryt')}
         </button>
       </div>
 
@@ -88,7 +95,11 @@ export function CategoryManager({
           <li key={c.id} className="flex items-center justify-between gap-4 py-2.5">
             <span className={`text-sm font-heading ${c.active ? 'text-ink' : 'text-muted line-through'}`}>
               {c.name}
-              {c.usedBy > 0 && <span className="ml-2 text-xs text-muted font-body tabular-nums">{c.usedBy} dokladů</span>}
+              {c.usedBy > 0 && (
+                <span className="ml-2 text-xs text-muted font-body tabular-nums">
+                  {t('vydaj.kategoriePocetDokladu', { pocet: c.usedBy })}
+                </span>
+              )}
             </span>
             <div className="flex items-center gap-3 shrink-0">
               <button
@@ -97,12 +108,12 @@ export function CategoryManager({
                 disabled={busy}
                 className={`text-sm font-heading disabled:opacity-60 ${c.active ? 'text-muted hover:text-ink' : 'text-brand-purple'}`}
               >
-                {c.active ? 'Vyřadit' : 'Vrátit do nabídky'}
+                {c.active ? t('vydaj.kategoriiVyradit') : t('vydaj.kategoriiVratit')}
               </button>
               <TlacitkoSmazat
                 onSmazat={() => remove(c)}
                 disabled={busy}
-                otazka="Opravdu smazat kategorii?"
+                otazka={t('vydaj.kategoriiSmazatOtazka')}
               />
             </div>
           </li>
@@ -114,16 +125,16 @@ export function CategoryManager({
 
       <form onSubmit={add} className="flex items-end gap-3 flex-wrap">
         <label className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
-          <span className="text-sm font-body text-ink">Nová kategorie</span>
+          <span className="text-sm font-body text-ink">{t('vydaj.novaKategorie')}</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="např. Marketing"
+            placeholder={t('vydaj.novaKategoriePlaceholder')}
             className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full"
           />
         </label>
         <AddButton type="submit" disabled={busy || !name.trim()}>
-          Přidat
+          {t('vydaj.pridat')}
         </AddButton>
       </form>
     </div>

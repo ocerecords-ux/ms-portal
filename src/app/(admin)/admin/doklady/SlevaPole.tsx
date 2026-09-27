@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { formatMoney, minorToInput, parseMoneyToMinor, type Totals } from '@/lib/doklady';
 import type { Currency } from '@prisma/client';
 import { VyberPole } from '@/components/VyberPole';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Sleva na dokladu (zadání 14. 9. 2026: „potřebuju u nabídek a faktur mít
@@ -42,6 +43,7 @@ export function SlevaPole({
   totals: Totals;
   locked?: boolean;
 }) {
+  const t = usePreklad();
   // Zadani 14. 9. 2026: „do toho pole s castkou slevy nemuzu napsat libovolne
   // cislo. Je tam nejaky divny format." Puvodne bylo pole plne rizene z minor
   // jednotek - kazda klavesa se prepocitala pres minorToInput a vratila jako
@@ -65,8 +67,13 @@ export function SlevaPole({
     return (
       <div className="flex items-center justify-between text-sm font-heading">
         <span className="text-muted">
-          Sleva{hodnoty.slevaPopis ? ` · ${hodnoty.slevaPopis}` : ''}
-          {hodnoty.slevaProcent > 0 ? ` (${hodnoty.slevaProcent} %)` : ''}
+          {hodnoty.slevaPopis && hodnoty.slevaProcent > 0
+            ? t('doklady.slevaPopisProcenta', { popis: hodnoty.slevaPopis, procenta: hodnoty.slevaProcent })
+            : hodnoty.slevaPopis
+              ? t('doklady.slevaPopis', { popis: hodnoty.slevaPopis })
+              : hodnoty.slevaProcent > 0
+                ? t('doklady.slevaProcenta', { procenta: hodnoty.slevaProcent })
+                : t('doklady.sleva')}
         </span>
         <span className="text-danger tabular-nums">− {formatMoney(totals.sleva, currency)}</span>
       </div>
@@ -97,9 +104,9 @@ export function SlevaPole({
           }}
           className={`${inputClass} flex-1 min-w-0`}
         >
-          <option value="ZADNA">Bez slevy</option>
-          <option value="PROCENTA">Sleva v procentech</option>
-          <option value="CASTKA">Sleva pevnou částkou</option>
+          <option value="ZADNA">{t('doklady.bezSlevy')}</option>
+          <option value="PROCENTA">{t('doklady.slevaVProcentech')}</option>
+          <option value="CASTKA">{t('doklady.slevaPevnouCastkou')}</option>
         </VyberPole>
 
         {druh === 'PROCENTA' && (
@@ -142,11 +149,11 @@ export function SlevaPole({
             type="text"
             value={hodnoty.slevaPopis}
             onChange={(e) => onZmena({ slevaPopis: e.target.value })}
-            placeholder="Za co sleva je (nepovinné) — vytiskne se na dokladu"
+            placeholder={t('doklady.slevaPopisPlaceholder')}
             className={inputClass}
           />
           <div className="flex items-center justify-between text-sm font-heading">
-            <span className="text-muted">Sleva</span>
+            <span className="text-muted">{t('doklady.sleva')}</span>
             <span className="text-danger tabular-nums">− {formatMoney(totals.sleva, currency)}</span>
           </div>
         </>

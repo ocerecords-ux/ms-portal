@@ -10,6 +10,8 @@ import { VydajeTabulka, type VydajRadek } from './VydajeTabulka';
 import { listProjectOptions } from '@/lib/projectOptions';
 import { nactiStavPosty } from '@/lib/postaServer';
 import { PostaTlacitko } from './PostaTlacitko';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 
 // Prijate doklady (zadani 6. 9. 2026). Zalozky Uhrazeno / Neuhrazeno stejne
 // jako Aktivni / Dokoncene u projektu, nahore soucty.
@@ -21,14 +23,10 @@ export const dynamic = 'force-dynamic';
 // mailem, ceka tady na prekontrolovani a teprve zarazenim se dostane mezi
 // ostatni vydaje (a do souctu).
 const TABS = [
-  { key: 'nezarazene', label: 'Nezařazené', where: { stav: 'NEZARAZENY' as const } },
-  { key: 'neuhrazene', label: 'Neuhrazené', where: { stav: 'ZARAZENY' as const, paid: false } },
-  { key: 'uhrazene', label: 'Uhrazené', where: { stav: 'ZARAZENY' as const, paid: true } },
+  { key: 'nezarazene', klic: 'vydaj.zalozkaNezarazene', where: { stav: 'NEZARAZENY' as const } },
+  { key: 'neuhrazene', klic: 'vydaj.zalozkaNeuhrazene', where: { stav: 'ZARAZENY' as const, paid: false } },
+  { key: 'uhrazene', klic: 'vydaj.zalozkaUhrazene', where: { stav: 'ZARAZENY' as const, paid: true } },
 ] as const;
-
-function formatDate(date: Date | null): string {
-  return date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '—';
-}
 
 export default async function ExpensesPage({
   searchParams,
@@ -36,6 +34,8 @@ export default async function ExpensesPage({
   searchParams: { tab?: string; kategorie?: string; projekt?: string };
 }) {
   await ensureExpenseCategories();
+
+  const jazyk = nactiJazyk();
 
   // Vychozi zustavaji Neuhrazene - je to to, co ucetni resi nejcasteji.
   const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[1];
@@ -102,11 +102,13 @@ export default async function ExpensesPage({
     const poSplatnosti = Boolean(!e.paid && e.dueDate && new Date(e.dueDate) < today);
     const podnadpis = [
       e.supplier?.name || e.supplierName,
-      e.number ? `č. ${e.number}` : null,
+      e.number ? prelozitS(jazyk, 'vydaj.podnadpisCislo', { cislo: e.number }) : null,
       e.projectName,
       // U dokladu ze schranky je odesilatel to hlavni voditko, nez se doklad
       // precte - ucetni podle nej pozna, o co jde, i z nazvu "faktura.pdf".
-      e.stav === 'NEZARAZENY' && e.mailOd ? `z mailu · ${e.mailOd}` : null,
+      e.stav === 'NEZARAZENY' && e.mailOd
+        ? prelozitS(jazyk, 'vydaj.podnadpisZMailu', { odesilatel: e.mailOd })
+        : null,
     ]
       .filter(Boolean)
       .join(' · ');
@@ -137,24 +139,27 @@ export default async function ExpensesPage({
 
     return {
       id: e.id,
-      nazev: e.description || 'Bez názvu',
+      nazev: e.description || prelozit(jazyk, 'vydaj.bezNazvu'),
       qrText,
       ucet,
       prijemce: e.supplier?.name || e.supplierName || '—',
       cisloDokladu: e.number,
       podnadpis: podnadpis || null,
       maPrilohu: Boolean(e.attachmentUrl),
-      datum: formatDate(e.issueDate),
+      datum: formatDatum(jazyk, e.issueDate),
       datumMs: e.issueDate ? new Date(e.issueDate).getTime() : null,
       kategorie: e.category?.name || '—',
-      splatnost: formatDate(e.dueDate),
+      splatnost: formatDatum(jazyk, e.dueDate),
       splatnostMs: e.dueDate ? new Date(e.dueDate).getTime() : null,
       poSplatnosti,
       bezDph: formatMoney(e.amountExVatMinor, e.currency),
       bezDphMinor: e.amountExVatMinor,
       celkem: formatMoney(celkemMinor, e.currency),
       celkemMinor,
-      dph: e.vatRate === 0 ? 'bez DPH' : `DPH ${e.vatRate} %`,
+      dph:
+        e.vatRate === 0
+          ? prelozit(jazyk, 'vydaj.dphZadna')
+          : prelozitS(jazyk, 'vydaj.dphSazba', { sazba: e.vatRate }),
       uhrazeno: e.paid,
       castecne,
       zbyva: formatMoney(zbyva, e.currency),
@@ -177,7 +182,8 @@ export default async function ExpensesPage({
                   active ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
                 }`}
               >
-                {tab.label} <span className="tabular-nums opacity-80">({countFor(tab.key)})</span>
+                {prelozit(jazyk, tab.klic)}{' '}
+                <span className="tabular-nums opacity-80">({countFor(tab.key)})</span>
               </Link>
             );
           })}
@@ -206,7 +212,10 @@ export default async function ExpensesPage({
       {totals.size > 0 && (
         <div className="bg-surface rounded-card border border-line shadow-sm px-5 py-4 flex items-center gap-8 flex-wrap">
           <span className="text-xs font-heading text-muted uppercase tracking-wide">
-            {activeTab.label} celkem ({expenses.length})
+            {prelozitS(jazyk, 'vydaj.souctyNadpis', {
+              zalozka: prelozit(jazyk, activeTab.klic),
+              pocet: expenses.length,
+            })}
           </span>
           {Array.from(totals.entries()).map(([currency, sum]) => (
             <span key={currency} className="flex items-baseline gap-3">
@@ -214,13 +223,17 @@ export default async function ExpensesPage({
                 {formatMoney(sum.incVat, currency as never)}
               </span>
               <span className="text-xs font-body text-muted tabular-nums">
-                bez DPH {formatMoney(sum.exVat, currency as never)}
+                {prelozitS(jazyk, 'vydaj.souctyBezDph', {
+                  castka: formatMoney(sum.exVat, currency as never),
+                })}
               </span>
               {/* Kolik z toho je jeste potreba poslat (25. 9. 2026) - u dokladu
                   placenych na vicekrat to neni cela castka. */}
               {sum.zbyva > 0 && sum.zbyva !== sum.incVat && (
                 <span className="text-xs font-heading font-semibold text-danger tabular-nums">
-                  zbývá {formatMoney(sum.zbyva, currency as never)}
+                  {prelozitS(jazyk, 'vydaj.zbyvaCastka', {
+                    castka: formatMoney(sum.zbyva, currency as never),
+                  })}
                 </span>
               )}
             </span>
@@ -238,7 +251,7 @@ export default async function ExpensesPage({
             !categoryFilter ? 'bg-bar text-white' : 'bg-surface border border-line text-muted hover:text-ink'
           }`}
         >
-          Všechny kategorie
+          {prelozit(jazyk, 'vydaj.vsechnyKategorie')}
         </Link>
         {categories
           .filter((c) => c.active || c._count.expenses > 0)

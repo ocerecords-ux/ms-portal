@@ -17,6 +17,8 @@ import { quickActionsFor } from '@/lib/quickActions';
 import { prisma } from '@/lib/db';
 import { countUnread } from '@/lib/notifications';
 import { odkazNaFotku } from '@/lib/fotky';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { JazykProvider } from '@/app/(portal)/components/JazykProvider';
 
 // Administrace Mediaspace - pristupna jen uctum s roli ADMIN. Middleware
 // (src/middleware.ts) uz neprihlasene/neadminy blokuje na urovni routovani,
@@ -27,6 +29,11 @@ import { odkazNaFotku } from '@/lib/fotky';
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== 'ADMIN') redirect('/login');
+
+  // JAZYK I V ADMINISTRACI (davka 4, 27. 9. 2026). Do ted mela administrace
+  // vlastni layout bez JazykProvideru, takze i sdilene komponenty (ChatDock,
+  // RaditelnaTabulka) v ni zustavaly cesky, i kdyz uz prelozene byly.
+  const jazyk = nactiJazyk();
 
   const [entries, tasks, quickActions, bonusyKeSchvaleni, pripominkyKVyrizeni, entriesMobil, unread, ucet] = await Promise.all([
     loadMenuEntries(session.user.id),
@@ -47,6 +54,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ]);
 
   return (
+    <JazykProvider jazyk={jazyk}>
     <div className="min-h-screen bg-paper">
       <Topbar
         userLabel={session.user.name || session.user.email}
@@ -82,5 +90,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <NeprecteneVedleDoku />
       </div>
     </div>
+    </JazykProvider>
   );
 }

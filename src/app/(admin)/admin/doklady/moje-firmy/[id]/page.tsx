@@ -5,11 +5,14 @@ import { IssuerForm } from './IssuerForm';
 import { BankAccounts } from './BankAccounts';
 import { PodpisFirmy } from './PodpisFirmy';
 import { ibanZTuzemskehoUctu } from '@/lib/pdf/qrPlatba';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 
 // Detail vlastni fakturacni firmy - udaje, ciselne rady a bankovni ucty.
 export const dynamic = 'force-dynamic';
 
 export default async function IssuerDetailPage({ params }: { params: { id: string } }) {
+  const jazyk = nactiJazyk();
   const issuer = await prisma.issuerCompany.findUnique({
     where: { id: params.id },
     include: { bankAccounts: { orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }] } },
@@ -19,7 +22,7 @@ export default async function IssuerDetailPage({ params }: { params: { id: strin
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       <Link href="/admin/doklady/moje-firmy" className="text-muted text-sm font-heading no-underline">
-        ← Zpět na moje firmy
+        {prelozit(jazyk, 'mojeFirmy.zpetNaFirmy')}
       </Link>
 
       <IssuerForm

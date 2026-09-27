@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { ensureContractTemplates } from '@/lib/contractsServer';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 import { TemplateManager } from './TemplateManager';
 
 // Sablony smluv - text s poli {{jmeno}}, {{projekt}}... Pri zalozeni smlouvy
@@ -10,6 +12,7 @@ export const dynamic = 'force-dynamic';
 export default async function ContractTemplatesPage() {
   await ensureContractTemplates();
 
+  const jazyk = nactiJazyk();
   const templates = await prisma.contractTemplate.findMany({
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
   });
@@ -17,7 +20,7 @@ export default async function ContractTemplatesPage() {
   return (
     <div className="flex flex-col gap-6">
       <Link href="/admin/doklady/smlouvy" className="text-muted text-sm font-heading no-underline">
-        ← Zpět na smlouvy
+        ← {prelozit(jazyk, 'smlouva.zpetNaSmlouvy')}
       </Link>
 
       <TemplateManager

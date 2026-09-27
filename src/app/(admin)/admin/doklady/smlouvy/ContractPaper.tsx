@@ -5,6 +5,7 @@ import {
   popisekDruheStrany,
   popisekNaseStrany,
 } from '@/lib/contracts';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 export type PaperSignature = {
   role: 'MEDIASPACE' | 'PROTISTRANA';
@@ -33,6 +34,7 @@ export function ContractPaper({
   signatures,
   currentHash,
   issuerName,
+  jazyk = 'cs',
 }: {
   title: string;
   number: string;
@@ -42,6 +44,12 @@ export function ContractPaper({
   currentHash: string;
   /** Naše firma - píše se k podpisu („Za MEDIA SPACE s.r.o."). */
   issuerName?: string | null;
+  /**
+   * List se sází i na veřejné stránce k podpisu, která stojí mimo
+   * JazykProvider - jazyk proto chodí propem (pravidlo 8). Překládá se jen
+   * obal (hlavička, doložka pod podpisem), samotný text smlouvy nikdy.
+   */
+  jazyk?: Jazyk;
 }) {
   const nase = signatures.find((s) => s.role === 'MEDIASPACE') ?? null;
   const protistrana = signatures.find((s) => s.role === 'PROTISTRANA') ?? null;
@@ -52,7 +60,7 @@ export function ContractPaper({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs font-heading text-brand-green uppercase tracking-[0.14em] m-0">
-              Smlouva {number}
+              {prelozitS(jazyk, 'smlouva.papirNadpis', { cislo: number })}
             </p>
             <h1 className="font-display text-2xl sm:text-3xl text-white m-0 mt-1 break-words">{title}</h1>
           </div>
@@ -72,13 +80,27 @@ export function ContractPaper({
       </div>
 
       <div className="px-6 sm:px-10 pb-10 grid grid-cols-1 sm:grid-cols-2 gap-8">
-        <SignatureBox label={popisekNaseStrany(issuerName)} signature={nase} currentHash={currentHash} />
-        <SignatureBox label={popisekDruheStrany(body)} signature={protistrana} currentHash={currentHash} />
+        {/* Popisky stran jdou z lib/contracts.ts - jsou to popisky na
+            dokumentu podle jeho vlastního znění, ne text rozhraní. */}
+        <SignatureBox
+          label={popisekNaseStrany(issuerName)}
+          signature={nase}
+          currentHash={currentHash}
+          jazyk={jazyk}
+        />
+        <SignatureBox
+          label={popisekDruheStrany(body)}
+          signature={protistrana}
+          currentHash={currentHash}
+          jazyk={jazyk}
+        />
       </div>
 
       <footer className="border-t border-line px-6 sm:px-10 py-3 flex items-center justify-between gap-3">
         <span className="font-body font-semibold text-sm text-brand-purple">Mediaspace</span>
-        <span className="text-[11px] font-body text-muted">Smlouva {number}</span>
+        <span className="text-[11px] font-body text-muted">
+          {prelozitS(jazyk, 'smlouva.papirNadpis', { cislo: number })}
+        </span>
       </footer>
     </article>
   );
@@ -219,10 +241,12 @@ function SignatureBox({
   label,
   signature,
   currentHash,
+  jazyk,
 }: {
   label: string;
   signature: PaperSignature | null;
   currentHash: string;
+  jazyk: Jazyk;
 }) {
   const sedi = signature ? signature.documentHash === currentHash : true;
 
@@ -237,7 +261,7 @@ function SignatureBox({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={signature.imageData}
-              alt={`Podpis: ${signature.name}`}
+              alt={prelozitS(jazyk, 'smlouva.papirPodpisAlt', { jmeno: signature.name })}
               className="max-h-[104px] w-auto bg-white rounded px-1"
             />
           ) : (
@@ -247,19 +271,25 @@ function SignatureBox({
             <span className="font-podpis text-3xl text-ink pb-1">{signature.name}</span>
           )
         ) : (
-          <span className="text-sm font-body text-muted pb-2">zatím nepodepsáno</span>
+          <span className="text-sm font-body text-muted pb-2">{prelozit(jazyk, 'smlouva.papirNepodepsano')}</span>
         )}
       </div>
       {signature && (
         <div className="text-[11px] font-body text-muted leading-relaxed rounded-lg bg-tint px-3 py-2">
           <span className="block font-heading font-semibold text-ink text-xs">{signature.name}</span>
           {signature.email && <span className="block">{signature.email}</span>}
-          <span className="block">Podepsáno {formatSignedAt(signature.signedAt)}</span>
-          {signature.ip && <span className="block">IP {signature.ip}</span>}
-          <span className="block break-all">Otisk dokumentu {signature.documentHash.slice(0, 16).toUpperCase()}</span>
+          <span className="block">
+            {prelozitS(jazyk, 'smlouva.papirPodepsanoKdy', { kdy: formatSignedAt(signature.signedAt, jazyk) })}
+          </span>
+          {signature.ip && (
+            <span className="block">{prelozitS(jazyk, 'smlouva.papirIp', { ip: signature.ip })}</span>
+          )}
+          <span className="block break-all">
+            {prelozitS(jazyk, 'smlouva.papirOtisk', { otisk: signature.documentHash.slice(0, 16).toUpperCase() })}
+          </span>
           {!sedi && (
             <span className="block mt-1 text-danger font-heading font-semibold">
-              Pozor: text smlouvy se od tohoto podpisu změnil.
+              {prelozit(jazyk, 'smlouva.papirTextZmenen')}
             </span>
           )}
         </div>

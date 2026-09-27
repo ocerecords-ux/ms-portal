@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Currency, PaymentMethod } from '@prisma/client';
 import { formatMoney, minorToInput, parseMoneyToMinor } from '@/lib/doklady';
-import { nazevZpusobuUhrady, ZPUSOBY_UHRADY } from '@/lib/uctenka';
-import { CURRENCIES, CURRENCY_NAMES } from '@/lib/doklady';
+import { nazevZpusobuUhrady, zpusobyUhrady } from '@/lib/uctenka';
+import { CURRENCIES, nazevMeny } from '@/lib/doklady';
 import { PrilohyVydaje, type DalsiPriloha } from './PrilohyVydaje';
 import { UhradyVydaje, type UhradaRadek } from './UhradyVydaje';
 import { EXPENSE_VAT_RATES, expenseTotalMinor, stavUhrady, uhrazenoMinor, zbyvaMinor } from '@/lib/expenses';
@@ -14,6 +14,8 @@ import { formatRate, toCzkMinor } from '@/lib/cnb';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { formatDatum, formatDatumCas, prelozitKolem, type Jazyk } from '@/lib/jazyk';
 
 type Expense = {
   id: string;
@@ -71,45 +73,58 @@ function prectiNavrh(json: string | null): Navrh | null {
  * nadělalo víc škody než ruční přepsání.
  */
 function PasZeSchranky({ expense }: { expense: Expense }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const navrh = prectiNavrh(expense.navrhJson);
   const jistota = typeof navrh?.jistota === 'number' ? Math.round(navrh.jistota * 100) : null;
 
   const stavCteni = navrh?.chyba
-    ? `Údaje se nepodařilo vyčíst (${navrh.chyba}) — vyplňte je prosím ručně.`
+    ? t('vydaj.schrankaCteniChyba', { chyba: navrh.chyba })
     : navrh
-      ? `Údaje vyčetl portál z přílohy${jistota !== null ? ` (jistota ${jistota} %)` : ''} — překontrolujte je.`
-      : 'Údaje se z přílohy ještě nečetly. Zkuste za chvíli obnovit stránku.';
+      ? jistota !== null
+        ? t('vydaj.schrankaCteniJistota', { jistota })
+        : t('vydaj.schrankaCteniHotovo')
+      : t('vydaj.schrankaCteniCeka');
 
   return (
     <div className="bg-tint border border-brand-purple/40 rounded-card px-5 py-4 flex flex-col gap-1">
       <span className="text-xs font-heading font-semibold uppercase tracking-wide text-brand-purpleDark">
-        Doklad z e-mailu · čeká na zařazení
+        {t('vydaj.schrankaPas')}
       </span>
       {expense.mailOd && (
         <span className="text-sm font-body text-ink">
-          Od: <span className="font-heading">{expense.mailOd}</span>
+          {/* Odesilatel je tucne, veta zustava jeden klic - viz prelozitKolem. */}
+          {(() => {
+            const [pred, za] = prelozitKolem(jazyk, 'vydaj.schrankaOd', 'odesilatel');
+            return (
+              <>
+                {pred}
+                <span className="font-heading">{expense.mailOd}</span>
+                {za}
+              </>
+            );
+          })()}
         </span>
       )}
       {expense.mailPredmet && (
-        <span className="text-sm font-body text-muted">Předmět: {expense.mailPredmet}</span>
+        <span className="text-sm font-body text-muted">
+          {t('vydaj.schrankaPredmet', { predmet: expense.mailPredmet })}
+        </span>
       )}
       {expense.mailPrijatoAt && (
-        <span className="text-xs font-body text-muted">Přišlo {formatDateTime(expense.mailPrijatoAt)}</span>
+        <span className="text-xs font-body text-muted">
+          {t('vydaj.schrankaPrislo', { kdy: formatDateTime(jazyk, expense.mailPrijatoAt) })}
+        </span>
       )}
       <span className={`text-xs font-body mt-1 ${navrh?.chyba ? 'text-danger' : 'text-muted'}`}>{stavCteni}</span>
     </div>
   );
 }
 
-function formatDateTime(iso: string | null): string {
+// Pomocna funkce mimo komponentu - jazyk si bere parametrem, hook by tu nefungoval.
+function formatDateTime(jazyk: Jazyk, iso: string | null): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleString('cs-CZ', {
-    day: 'numeric',
-    month: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatDatumCas(jazyk, new Date(iso), '');
 }
 
 /** Detail přijatého dokladu - úprava, přepnutí úhrady a příloha. */
@@ -129,6 +144,8 @@ export function ExpenseEditor({
   /** Jednotlivé úhrady, když se doklad platí na vícekrát (25. 9. 2026). */
   uhrady: UhradaRadek[];
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [form, setForm] = useState({
     number: expense.number,
@@ -197,13 +214,13 @@ export function ExpenseEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('vydaj.ulozeniSelhalo'));
         return;
       }
       setSaved(true);
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('vydaj.ulozeniSelhalo'));
     } finally {
       setSaving(false);
     }
@@ -219,7 +236,7 @@ export function ExpenseEditor({
    */
   async function zarad() {
     if (!form.categoryId) {
-      setError('Vyberte kategorii — podle ní se doklad zařadí do přehledů.');
+      setError(t('vydaj.zarazeniChybiKategorie'));
       return;
     }
     setSaving(true);
@@ -247,13 +264,13 @@ export function ExpenseEditor({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Zařazení se nezdařilo.');
+        setError(data?.error || t('vydaj.zarazeniSelhalo'));
         return;
       }
       router.push('/admin/doklady/vydaje?tab=nezarazene');
       router.refresh();
     } catch {
-      setError('Zařazení se nezdařilo.');
+      setError(t('vydaj.zarazeniSelhalo'));
     } finally {
       setSaving(false);
     }
@@ -270,12 +287,12 @@ export function ExpenseEditor({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('vydaj.ulozeniSelhalo'));
         return;
       }
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('vydaj.ulozeniSelhalo'));
     } finally {
       setSaving(false);
     }
@@ -288,13 +305,13 @@ export function ExpenseEditor({
       const res = await fetch(`/api/admin/expenses/${expense.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Smazání se nezdařilo.');
+        setError(data?.error || t('mazani.nezdarilo'));
         return;
       }
       router.push('/admin/doklady/vydaje');
       router.refresh();
     } catch {
-      setError('Smazání se nezdařilo.');
+      setError(t('mazani.nezdarilo'));
     } finally {
       setSaving(false);
     }
@@ -319,21 +336,23 @@ export function ExpenseEditor({
             }`}
           >
             {nezarazeny
-              ? 'Nezařazeno'
+              ? t('vydaj.stavNezarazeno')
               : expense.paid
-                ? 'Uhrazeno'
+                ? t('vydaj.stavUhrazeno')
                 : stavPlatby === 'CAST'
-                  ? `Zbývá ${formatMoney(zbyva, expense.currency)}`
-                  : 'Neuhrazeno'}
+                  ? t('vydaj.stavZbyva', { castka: formatMoney(zbyva, expense.currency) })
+                  : t('vydaj.stavNeuhrazeno')}
           </span>
           {/* Cim se platilo (zadani 10. 9. 2026) - u uctenky z benzinky je to
               to hlavni, proc uz je oznacena jako uhrazena. */}
-          <span className="text-xs font-body text-muted">{nazevZpusobuUhrady(expense.paymentMethod)}</span>
+          <span className="text-xs font-body text-muted">{nazevZpusobuUhrady(expense.paymentMethod, jazyk)}</span>
           {expense.paidAt && (
-            <span className="text-xs font-body text-muted">{formatDateTime(expense.paidAt)}</span>
+            <span className="text-xs font-body text-muted">{formatDateTime(jazyk, expense.paidAt)}</span>
           )}
           {expense.issuerName && (
-            <span className="text-xs font-body text-muted">za {expense.issuerName}</span>
+            <span className="text-xs font-body text-muted">
+              {t('vydaj.zaFirmu', { firma: expense.issuerName })}
+            </span>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -344,7 +363,7 @@ export function ExpenseEditor({
               disabled={saving}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
             >
-              Zařadit mezi výdaje
+              {t('vydaj.zaraditMeziVydaje')}
             </button>
           )}
           {/* Doklad placený na vícekrát se přepíná zápisem úhrad dole, ne tímhle
@@ -360,7 +379,7 @@ export function ExpenseEditor({
                   : 'bg-brand-green text-onAccent hover:brightness-95'
               }`}
             >
-              {expense.paid ? 'Zrušit úhradu' : 'Označit jako uhrazený'}
+              {expense.paid ? t('vydaj.zrusitUhradu') : t('vydaj.oznacitUhrazeny')}
             </button>
           )}
           <button
@@ -369,24 +388,28 @@ export function ExpenseEditor({
             disabled={saving}
             className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
           >
-            {saving ? 'Ukládám…' : 'Uložit'}
+            {saving ? t('obecne.ukladam') : t('obecne.ulozit')}
           </button>
         </div>
       </div>
 
       {error && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">{error}</p>}
-      {saved && <p className="text-sm text-ink bg-tint border border-line rounded-lg px-4 py-3 m-0">Uloženo.</p>}
+      {saved && (
+        <p className="text-sm text-ink bg-tint border border-line rounded-lg px-4 py-3 m-0">
+          {t('vydaj.ulozeno')}
+        </p>
+      )}
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Dodavatel z Firem</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleDodavatelZFirem')}</span>
             <VyberPole
               value={form.supplierCompanyId}
               onChange={(e) => set('supplierCompanyId', e.target.value)}
               className={inputClass}
             >
-              <option value="">— není ve Firmách —</option>
+              <option value="">{t('vydaj.neniVeFirmach')}</option>
               {companies.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -395,22 +418,22 @@ export function ExpenseEditor({
             </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Nebo jméno dodavatele</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleJmenoDodavatele')}</span>
             <input
               value={form.supplierName}
               onChange={(e) => set('supplierName', e.target.value)}
-              placeholder="u drobného dokladu"
+              placeholder={t('vydaj.poleJmenoDodavatelePlaceholder')}
               className={inputClass}
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Číslo dokladu</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleCisloDokladu')}</span>
             <input value={form.number} onChange={(e) => set('number', e.target.value)} className={inputClass} />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Kategorie</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleKategorie')}</span>
             <VyberPole value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={inputClass}>
-              <option value="">— bez kategorie —</option>
+              <option value="">{t('vydaj.bezKategorie')}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -422,7 +445,7 @@ export function ExpenseEditor({
 
         {/* Projekt (zadani 8. 9. 2026) - doklad je pak videt v detailu projektu. */}
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Projekt</span>
+          <span className="text-sm font-body text-ink">{t('vydaj.poleProjekt')}</span>
           <ProjectSelect
             value={form.caflouProjectId}
             onChange={(id) => set('caflouProjectId', id)}
@@ -433,13 +456,13 @@ export function ExpenseEditor({
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Název</span>
+          <span className="text-sm font-body text-ink">{t('vydaj.poleNazev')}</span>
           <input value={form.description} onChange={(e) => set('description', e.target.value)} className={inputClass} />
         </label>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Částka bez DPH</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleCastkaBezDph')}</span>
             <input
               inputMode="decimal"
               value={form.amount}
@@ -448,44 +471,44 @@ export function ExpenseEditor({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">DPH</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleDph')}</span>
             <VyberPole value={form.vatRate} onChange={(e) => set('vatRate', Number(e.target.value))} className={inputClass}>
               {EXPENSE_VAT_RATES.map((r) => (
                 <option key={r} value={r}>
-                  {r === 0 ? 'bez DPH' : `${r} %`}
+                  {r === 0 ? t('vydaj.dphZadna') : `${r} %`}
                 </option>
               ))}
             </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Splatnost</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleSplatnost')}</span>
             <DatumPole value={form.dueDate} onChange={(e) => set('dueDate', e.target.value)} className={inputClass} />
           </label>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Datum dokladu</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleDatumDokladu')}</span>
             <DatumPole value={form.issueDate} onChange={(e) => set('issueDate', e.target.value)} className={inputClass} />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Měna</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleMena')}</span>
             <VyberPole value={form.currency} onChange={(e) => set('currency', e.target.value as Currency)} className={inputClass}>
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
-                  {CURRENCY_NAMES[c]}
+                  {nazevMeny(c, jazyk)}
                 </option>
               ))}
             </VyberPole>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Hrazeno</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleHrazeno')}</span>
             <VyberPole
               value={form.paymentMethod}
               onChange={(e) => set('paymentMethod', e.target.value as PaymentMethod)}
               className={inputClass}
             >
-              {ZPUSOBY_UHRADY.map((z) => (
+              {zpusobyUhrady(jazyk).map((z) => (
                 <option key={z.hodnota} value={z.hodnota}>
                   {z.nazev}
                 </option>
@@ -498,13 +521,16 @@ export function ExpenseEditor({
           <div className="text-sm font-heading text-muted">
             {expense.currency !== 'CZK' && expense.exchangeRateDate && (
               <span className="block text-xs font-body">
-                Kurz ČNB: 1 {expense.currency} = {formatRate(expense.exchangeRate)} Kč ke dni{' '}
-                {new Intl.DateTimeFormat('cs-CZ').format(new Date(expense.exchangeRateDate))}
+                {t('vydaj.kurzCnb', {
+                  mena: expense.currency,
+                  kurz: formatRate(expense.exchangeRate),
+                  datum: formatDatum(jazyk, new Date(expense.exchangeRateDate)),
+                })}
               </span>
             )}
           </div>
           <div className="text-right">
-            <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">Celkem</p>
+            <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">{t('vydaj.celkem')}</p>
             <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatMoney(total, form.currency)}</p>
             {expense.currency !== 'CZK' && (
               <p className="text-xs font-body text-muted m-0 tabular-nums">
@@ -530,7 +556,7 @@ export function ExpenseEditor({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-2">
-          <span className="text-xs font-heading text-muted uppercase tracking-wide">Poznámka</span>
+          <span className="text-xs font-heading text-muted uppercase tracking-wide">{t('vydaj.polePoznamka')}</span>
           <textarea
             value={form.note}
             onChange={(e) => set('note', e.target.value)}
@@ -550,8 +576,8 @@ export function ExpenseEditor({
         <TlacitkoSmazat
           onSmazat={remove}
           disabled={saving}
-          popisek="Smazat doklad"
-          otazka="Opravdu smazat doklad?"
+          popisek={t('vydaj.smazatDoklad')}
+          otazka={t('vydaj.smazatDokladOtazka')}
         />
       </div>
     </div>

@@ -5,6 +5,8 @@ import { computeTotals } from '@/lib/doklady';
 import { bankaNastavena } from '@/lib/gocardless';
 import { pristupKBance } from '@/lib/bankaPristup';
 import { BankaKlient, type NapojeniRadek, type PohybRadek, type FakturaVolba } from './BankaKlient';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, formatDatumCas } from '@/lib/jazyk';
 
 /**
  * BANKA (zadání 17. 9. 2026: „potřebuju, ať se ta banka páruje sama").
@@ -15,11 +17,9 @@ import { BankaKlient, type NapojeniRadek, type PohybRadek, type FakturaVolba } f
  */
 export const dynamic = 'force-dynamic';
 
-function den(date: Date | null): string {
-  return date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '—';
-}
-
 export default async function BankaPage() {
+  const jazyk = nactiJazyk();
+
   // Kdo na banku nemá povolení, ať se ani nedozví, že stránka existuje
   // (zadání 17. 9. 2026: „měl bych vidět jen já a Bára Šiblová").
   const pristup = await pristupKBance();
@@ -88,17 +88,17 @@ export default async function BankaPage() {
     firma: n.issuer?.name ?? null,
     iban: n.iban,
     stav: n.stav,
-    souhlasDo: den(n.consentExpiresAt),
+    souhlasDo: formatDatum(jazyk, n.consentExpiresAt),
     souhlasDnu: n.consentExpiresAt
       ? Math.ceil((n.consentExpiresAt.getTime() - Date.now()) / 86400000)
       : null,
-    posledni: n.lastSyncAt ? new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'short', timeStyle: 'short' }).format(n.lastSyncAt) : null,
+    posledni: n.lastSyncAt ? formatDatumCas(jazyk, n.lastSyncAt) : null,
     chyba: n.lastSyncError,
   }));
 
   const radkyPohybu: PohybRadek[] = pohyby.map((p) => ({
     id: p.id,
-    datum: den(p.bookedAt),
+    datum: formatDatum(jazyk, p.bookedAt),
     castka: formatMoney(p.amountMinor, p.currency),
     prichozi: p.amountMinor > 0,
     vs: p.variableSymbol,

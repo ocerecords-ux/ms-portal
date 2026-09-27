@@ -1,4 +1,4 @@
-import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
 import type { Currency } from '@prisma/client';
 
 /**
@@ -28,6 +28,14 @@ export const CURRENCY_NAMES: Record<Currency, string> = {
   USD: 'Americký dolar (USD)',
   GBP: 'Britská libra (GBP)',
 };
+
+/**
+ * Název měny do nabídky měn (dávka 4, 27. 9. 2026). Jazyk je nepovinný, ať
+ * volající, kteří ho neřeší (PDF dokladu), dál dostanou češtinu beze změny.
+ */
+export function nazevMeny(currency: Currency, jazyk: Jazyk = 'cs'): string {
+  return jazyk === 'cs' ? CURRENCY_NAMES[currency] : prelozit(jazyk, `mena.${currency}`);
+}
 
 /** Vykreslení částky v nejmenší jednotce, např. 123450 CZK → "1 234,50 Kč". */
 export function formatMoney(minor: number, currency: Currency, jazyk: Jazyk = 'cs'): string {
@@ -158,6 +166,25 @@ export const OFFER_STATUS_LABELS: Record<string, string> = {
   APPROVED: 'Schválená',
   REJECTED: 'Odmítnutá',
 };
+
+/**
+ * Stav nabídky pro obrazovku (dávka 4, 27. 9. 2026). Klíče jsou tytéž, které
+ * používá seznam nabídek i editor - ať stav nemá dvě různá znění.
+ *
+ * OFFER_STATUS_LABELS zůstává: bere si ho PDF a e-maily, kde se jazyk neřídí
+ * přepínačem v liště, ale dokladem.
+ */
+const KLICE_STAVU_NABIDKY: Record<string, string> = {
+  DRAFT: 'nabidka.stav.rozpracovana',
+  SENT: 'nabidka.stav.odeslana',
+  APPROVED: 'nabidka.stav.schvalena',
+  REJECTED: 'nabidka.stav.odmitnuta',
+};
+
+export function nazevStavuNabidky(status: string, jazyk: Jazyk = 'cs'): string {
+  const klic = KLICE_STAVU_NABIDKY[status];
+  return klic ? prelozit(jazyk, klic) : (OFFER_STATUS_LABELS[status] ?? status);
+}
 
 export const OFFER_STATUS_CLASSES: Record<string, string> = {
   DRAFT: 'bg-field text-muted',

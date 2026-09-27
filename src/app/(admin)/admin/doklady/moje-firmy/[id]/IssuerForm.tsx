@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import type { Currency } from '@prisma/client';
 import { AdminField } from '../../../NewCompanyForm';
 import { CountrySelect } from '../../../CountrySelect';
-import { CURRENCIES, CURRENCY_NAMES, previewNumbers } from '@/lib/doklady';
+import { CURRENCIES, nazevMeny, previewNumbers } from '@/lib/doklady';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
 import { VyberPole } from '@/components/VyberPole';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 type Issuer = {
   id: string;
@@ -33,11 +34,24 @@ type Issuer = {
 };
 
 /**
+ * Věta o zástupných znacích je JEDEN klíč (pravidlo 7 v docs/preklad-portalu.md);
+ * značky {kod1}…{kod4} se při vykreslení promění v <code> se zástupným znakem.
+ */
+function sKody(veta: string, kody: Record<string, string>) {
+  return veta.split(/(\{kod\d\})/).map((cast, i) => {
+    const znacka = cast.match(/^\{(kod\d)\}$/);
+    return znacka ? <code key={i}>{kody[znacka[1]]}</code> : <span key={i}>{cast}</span>;
+  });
+}
+
+/**
  * Údaje vlastní firmy a číselné řady. Řada se nastavuje formátem se zástupnými
  * znaky a pořadovým číslem - právě kvůli přechodu z Caflou, aby šlo navázat
  * tam, kde tamní řada skončila (zadani 8. 9. 2026).
  */
 export function IssuerForm({ issuer }: { issuer: Issuer }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [form, setForm] = useState({
     name: issuer.name,
@@ -82,13 +96,13 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('mojeFirmy.ulozeniSelhalo'));
         return;
       }
       setSaved(true);
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('mojeFirmy.ulozeniSelhalo'));
     } finally {
       setSaving(false);
     }
@@ -102,18 +116,18 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
     <form onSubmit={submit} className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 shadow-sm">
       <h2 className="font-display text-xl text-ink m-0">{issuer.name}</h2>
 
-      <AdminField label="Název firmy" required hint="ve fakturačních údajích píšeme MEDIA SPACE s.r.o.">
+      <AdminField label={t('mojeFirmy.nazevFirmy')} required hint={t('mojeFirmy.nazevFirmyNapoveda')}>
         <input required value={form.name} onChange={(e) => set('name', e.target.value)} className="admin-input" />
       </AdminField>
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[140px]">
-          <AdminField label="IČ">
+          <AdminField label={t('mojeFirmy.ic')}>
             <input value={form.ic} onChange={(e) => set('ic', e.target.value)} inputMode="numeric" className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[140px]">
-          <AdminField label="DIČ">
+          <AdminField label={t('mojeFirmy.dic')}>
             <input value={form.dic} onChange={(e) => set('dic', e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -121,17 +135,17 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
 
       <label className="flex items-center gap-2 text-sm font-heading text-ink">
         <input type="checkbox" checked={form.vatPayer} onChange={(e) => set('vatPayer', e.target.checked)} />
-        Plátce DPH
+        {t('mojeFirmy.platceDph')}
       </label>
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-[2] min-w-[220px]">
-          <AdminField label="Ulice a číslo popisné">
+          <AdminField label={t('mojeFirmy.ulice')}>
             <input value={form.addressStreet} onChange={(e) => set('addressStreet', e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[120px]">
-          <AdminField label="PSČ">
+          <AdminField label={t('mojeFirmy.psc')}>
             <input value={form.addressZip} onChange={(e) => set('addressZip', e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -139,12 +153,12 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[180px]">
-          <AdminField label="Město">
+          <AdminField label={t('mojeFirmy.mesto')}>
             <input value={form.addressCity} onChange={(e) => set('addressCity', e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[180px]">
-          <AdminField label="Země">
+          <AdminField label={t('mojeFirmy.zeme')}>
             <CountrySelect value={form.addressCountry} onChange={(v) => set('addressCountry', v)} />
           </AdminField>
         </div>
@@ -152,12 +166,12 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
 
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[180px]">
-          <AdminField label="E-mail odesílatele" hint="z něj chodí nabídky a faktury">
+          <AdminField label={t('mojeFirmy.emailOdesilatele')} hint={t('mojeFirmy.emailOdesilateleNapoveda')}>
             <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className="admin-input" />
           </AdminField>
         </div>
         <div className="flex-1 min-w-[180px]">
-          <AdminField label="Telefon">
+          <AdminField label={t('mojeFirmy.telefon')}>
             <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} className="admin-input" />
           </AdminField>
         </div>
@@ -166,22 +180,27 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
       {/* --- Číselné řady --------------------------------------------------- */}
       <div className="border-t border-line pt-4 mt-2 flex flex-col gap-4">
         <div>
-          <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Číselné řady</h3>
+          <h3 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+            {t('mojeFirmy.ciselneRady')}
+          </h3>
           <p className="text-xs text-muted font-body mt-1 m-0">
-            Ve formátu se nahrazuje <code>{'{YYYY}'}</code> rokem, <code>{'{YY}'}</code> rokem dvojčíslím,{' '}
-            <code>{'{MM}'}</code> měsícem a <code>{'{NNN}'}</code> pořadovým číslem (počet písmen N = počet míst).
-            Pořadovým číslem navážete na řadu z Caflou.
+            {sKody(t('mojeFirmy.ciselneRadyPopis'), {
+              kod1: '{YYYY}',
+              kod2: '{YY}',
+              kod3: '{MM}',
+              kod4: '{NNN}',
+            })}
           </p>
         </div>
 
         <div className="flex gap-4 flex-wrap items-start">
           <div className="flex-1 min-w-[200px]">
-            <AdminField label="Formát faktury">
+            <AdminField label={t('mojeFirmy.formatFaktury')}>
               <input value={form.invoiceNumberFormat} onChange={(e) => set('invoiceNumberFormat', e.target.value)} className="admin-input" />
             </AdminField>
           </div>
           <div className="flex-1 min-w-[140px]">
-            <AdminField label="Další číslo">
+            <AdminField label={t('mojeFirmy.dalsiCislo')}>
               <input
                 value={form.invoiceNextNumber}
                 onChange={(e) => set('invoiceNextNumber', e.target.value)}
@@ -191,19 +210,19 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
             </AdminField>
           </div>
           <div className="flex-1 min-w-[180px] pt-6">
-            <p className="text-xs font-heading text-muted m-0">Vyjde: </p>
+            <p className="text-xs font-heading text-muted m-0">{t('mojeFirmy.vyjde')} </p>
             <p className="text-sm font-heading text-ink tabular-nums m-0">{invoicePreview.join(', ')}…</p>
           </div>
         </div>
 
         <div className="flex gap-4 flex-wrap items-start">
           <div className="flex-1 min-w-[200px]">
-            <AdminField label="Formát nabídky">
+            <AdminField label={t('mojeFirmy.formatNabidky')}>
               <input value={form.offerNumberFormat} onChange={(e) => set('offerNumberFormat', e.target.value)} className="admin-input" />
             </AdminField>
           </div>
           <div className="flex-1 min-w-[140px]">
-            <AdminField label="Další číslo">
+            <AdminField label={t('mojeFirmy.dalsiCislo')}>
               <input
                 value={form.offerNextNumber}
                 onChange={(e) => set('offerNextNumber', e.target.value)}
@@ -213,14 +232,14 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
             </AdminField>
           </div>
           <div className="flex-1 min-w-[180px] pt-6">
-            <p className="text-xs font-heading text-muted m-0">Vyjde: </p>
+            <p className="text-xs font-heading text-muted m-0">{t('mojeFirmy.vyjde')} </p>
             <p className="text-sm font-heading text-ink tabular-nums m-0">{offerPreview.join(', ')}…</p>
           </div>
         </div>
 
         <div className="flex gap-4 flex-wrap items-start">
           <div className="flex-1 min-w-[200px]">
-            <AdminField label="Formát smlouvy">
+            <AdminField label={t('mojeFirmy.formatSmlouvy')}>
               <input
                 value={form.contractNumberFormat}
                 onChange={(e) => set('contractNumberFormat', e.target.value)}
@@ -229,7 +248,7 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
             </AdminField>
           </div>
           <div className="flex-1 min-w-[140px]">
-            <AdminField label="Další číslo">
+            <AdminField label={t('mojeFirmy.dalsiCislo')}>
               <input
                 value={form.contractNextNumber}
                 onChange={(e) => set('contractNextNumber', e.target.value)}
@@ -239,14 +258,14 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
             </AdminField>
           </div>
           <div className="flex-1 min-w-[180px] pt-6">
-            <p className="text-xs font-heading text-muted m-0">Vyjde: </p>
+            <p className="text-xs font-heading text-muted m-0">{t('mojeFirmy.vyjde')} </p>
             <p className="text-sm font-heading text-ink tabular-nums m-0">{contractPreview.join(', ')}…</p>
           </div>
         </div>
 
         <div className="flex gap-4 flex-wrap">
           <div className="flex-1 min-w-[200px]">
-            <AdminField label="Výchozí měna">
+            <AdminField label={t('mojeFirmy.vychoziMena')}>
               <VyberPole
                 value={form.defaultCurrency}
                 onChange={(e) => set('defaultCurrency', e.target.value as Currency)}
@@ -254,7 +273,7 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
               >
                 {CURRENCIES.map((c) => (
                   <option key={c} value={c}>
-                    {CURRENCY_NAMES[c]}
+                    {nazevMeny(c, jazyk)}
                   </option>
                 ))}
               </VyberPole>
@@ -266,11 +285,11 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
       <div className="flex flex-col gap-2 border-t border-line pt-4">
         <label className="flex items-center gap-2 text-sm font-heading text-ink">
           <input type="checkbox" checked={form.isDefault} onChange={(e) => set('isDefault', e.target.checked)} />
-          Výchozí firma u nových dokladů
+          {t('mojeFirmy.vychoziFirma')}
         </label>
         <label className="flex items-center gap-2 text-sm font-heading text-ink">
           <input type="checkbox" checked={form.active} onChange={(e) => set('active', e.target.checked)} />
-          Aktivní (nabízí se u nových dokladů)
+          {t('mojeFirmy.aktivni')}
         </label>
       </div>
 
@@ -282,9 +301,9 @@ export function IssuerForm({ issuer }: { issuer: Issuer }) {
           disabled={saving}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {saving ? 'Ukládám…' : 'Uložit změny'}
+          {saving ? t('obecne.ukladam') : t('mojeFirmy.ulozitZmeny')}
         </button>
-        {saved && <span className="text-status-done text-sm font-heading">✓ Uloženo</span>}
+        {saved && <span className="text-status-done text-sm font-heading">{t('mojeFirmy.ulozeno')}</span>}
       </div>
     </form>
   );

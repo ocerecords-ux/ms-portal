@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Založení faktury (zadání 10. 9. 2026: „dej pryč ten mezikrok při
@@ -17,6 +18,7 @@ import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
  */
 export function NewInvoiceForm() {
   const router = useRouter();
+  const t = usePreklad();
 
   // Prisel sem clovek pres rychlou volbu z leveho panelu? Pak rovnou do
   // editoru - zkratka ma vest do editacniho okna, ne jen na stranku
@@ -25,7 +27,9 @@ export function NewInvoiceForm() {
 
   return (
     <span id={KOTVA_NOVE}>
-      <AddButton onClick={() => router.push('/admin/doklady/faktury/nova')}>Nová faktura</AddButton>
+      <AddButton onClick={() => router.push('/admin/doklady/faktury/nova')}>
+        {t('faktura.novaFaktura')}
+      </AddButton>
     </span>
   );
 }

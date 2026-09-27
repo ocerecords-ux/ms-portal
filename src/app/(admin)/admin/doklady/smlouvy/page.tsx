@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
-import { CONTRACT_STATUS_CLASSES, CONTRACT_STATUS_LABELS } from '@/lib/contracts';
+import { CONTRACT_STATUS_CLASSES } from '@/lib/contracts';
 import { ensureContractTemplates } from '@/lib/contractsServer';
 import { listProjectOptions } from '@/lib/projectOptions';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, prelozit } from '@/lib/jazyk';
 import { NewContractForm } from './NewContractForm';
 import { SmlouvyTabulka, type SmlouvaRadek } from './SmlouvyTabulka';
 
@@ -12,15 +14,23 @@ import { SmlouvyTabulka, type SmlouvaRadek } from './SmlouvyTabulka';
 export const dynamic = 'force-dynamic';
 
 const TABS = [
-  { key: 'rozpracovane', label: 'Rozpracované', statuses: ['DRAFT'] },
-  { key: 'k-podpisu', label: 'Čekají na podpis', statuses: ['SENT'] },
-  { key: 'podepsane', label: 'Podepsané', statuses: ['SIGNED'] },
-  { key: 'ostatni', label: 'Odmítnuté a zrušené', statuses: ['REJECTED', 'CANCELLED'] },
+  { key: 'rozpracovane', klic: 'smlouva.zalozkaRozpracovane', statuses: ['DRAFT'] },
+  { key: 'k-podpisu', klic: 'smlouva.zalozkaKPodpisu', statuses: ['SENT'] },
+  { key: 'podepsane', klic: 'smlouva.zalozkaPodepsane', statuses: ['SIGNED'] },
+  { key: 'ostatni', klic: 'smlouva.zalozkaOstatni', statuses: ['REJECTED', 'CANCELLED'] },
 ] as const;
 
-function formatDate(date: Date | null): string {
-  return date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '—';
-}
+/**
+ * Stav smlouvy do pilulky. Bere se ze slovníku, ne z CONTRACT_STATUS_LABELS -
+ * ty jsou v lib/contracts.ts jen česky a používá je i PDF a e-maily.
+ */
+const KLICE_STAVU: Record<string, string> = {
+  DRAFT: 'smlouva.stavRozpracovana',
+  SENT: 'smlouva.stavCekaNaPodpis',
+  SIGNED: 'smlouva.stavPodepsana',
+  REJECTED: 'smlouva.stavOdmitnuta',
+  CANCELLED: 'smlouva.stavZrusena',
+};
 
 export default async function ContractsPage({
   searchParams,
@@ -29,6 +39,7 @@ export default async function ContractsPage({
 }) {
   await ensureContractTemplates();
 
+  const jazyk = nactiJazyk();
   const activeTab = TABS.find((t) => t.key === searchParams?.tab) ?? TABS[0];
 
   const [contracts, issuers, companies, templates, counts] = await Promise.all([
@@ -72,11 +83,11 @@ export default async function ContractsPage({
     projekt: c.projectName || null,
     podepisujici: c.signerName,
     podepisujiciDoplnek: c.company?.name ?? c.signerEmail,
-    vytvoreno: formatDate(c.createdAt),
+    vytvoreno: formatDatum(jazyk, c.createdAt),
     vytvorenoMs: c.createdAt ? new Date(c.createdAt).getTime() : null,
     podepsalaMediaspace: c.signatures.some((s) => s.role === 'MEDIASPACE'),
     podepsalaProtistrana: c.signatures.some((s) => s.role === 'PROTISTRANA'),
-    stav: CONTRACT_STATUS_LABELS[c.status] ?? c.status,
+    stav: KLICE_STAVU[c.status] ? prelozit(jazyk, KLICE_STAVU[c.status]) : c.status,
     stavTrida: CONTRACT_STATUS_CLASSES[c.status] ?? 'bg-field text-muted',
   }));
 
@@ -94,7 +105,8 @@ export default async function ContractsPage({
                   active ? 'bg-brand-purple text-white' : 'text-muted hover:text-ink'
                 }`}
               >
-                {tab.label} <span className="tabular-nums opacity-80">({countFor(tab.statuses)})</span>
+                {prelozit(jazyk, tab.klic)}{' '}
+                <span className="tabular-nums opacity-80">({countFor(tab.statuses)})</span>
               </Link>
             );
           })}
@@ -105,7 +117,7 @@ export default async function ContractsPage({
             href="/admin/doklady/smlouvy/sablony"
             className="text-xs font-heading font-semibold text-brand-purple no-underline border border-brand-purple rounded-pill px-4 py-1.5 hover:bg-tint transition-colors"
           >
-            Šablony smluv
+            {prelozit(jazyk, 'smlouva.sablonySmluv')}
           </Link>
           <NewContractForm
             /* Smlouva zakládaná z detailu projektu (zadání 18. 9. 2026):

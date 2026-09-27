@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Výběr odběratele na dokladu (zadání 13. 9. 2026: „tady v nabídkách by měla
@@ -31,7 +32,7 @@ export function VyberFirmy({
   hodnota,
   onZmena,
   disabled,
-  placeholder = 'Najít odběratele — začněte psát',
+  placeholder,
 }: {
   firmy: FirmaVolba[];
   /** ID vybrané firmy, nebo prázdno. */
@@ -40,6 +41,8 @@ export function VyberFirmy({
   disabled?: boolean;
   placeholder?: string;
 }) {
+  const t = usePreklad();
+  const napoveda = placeholder ?? t('doklady.najitOdberatele');
   const vybrana = firmy.find((f) => f.id === hodnota) ?? null;
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
@@ -81,7 +84,7 @@ export function VyberFirmy({
               // Pole se objevi az pri prekresleni, proto az potom.
               setTimeout(() => poleRef.current?.focus(), 0);
             }}
-            title="Vybrat jinou firmu"
+            title={t('doklady.vybratJinouFirmu')}
             className="flex-1 min-w-0 text-left font-heading font-semibold text-sm text-ink truncate disabled:opacity-70"
           >
             {vybrana.name}
@@ -90,8 +93,8 @@ export function VyberFirmy({
             <button
               type="button"
               onClick={() => onZmena('')}
-              title="Odebrat odběratele"
-              aria-label="Odebrat odběratele"
+              title={t('doklady.odebratOdberatele')}
+              aria-label={t('doklady.odebratOdberatele')}
               className="shrink-0 text-muted hover:text-danger text-sm font-heading px-1"
             >
               ✕
@@ -122,7 +125,7 @@ export function VyberFirmy({
                 setHledani('');
               }
             }}
-            placeholder={placeholder}
+            placeholder={napoveda}
             className={tridaPole}
           />
         </>
@@ -132,7 +135,7 @@ export function VyberFirmy({
         <div className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-line bg-surface shadow-lg">
           {nalezene.length === 0 ? (
             <p className="px-3 py-2.5 text-sm font-body text-muted m-0">
-              {firmy.length === 0 ? 'Zatím tu není žádná firma.' : 'Žádná firma tomu neodpovídá.'}
+              {firmy.length === 0 ? t('doklady.zadnaFirma') : t('doklady.zadnaFirmaNeodpovida')}
             </p>
           ) : (
             nalezene.map((f) => (
@@ -149,7 +152,11 @@ export function VyberFirmy({
                 }`}
               >
                 {f.name}
-                {f.ic && <span className="ml-2 text-xs font-body text-muted tabular-nums">IČ {f.ic}</span>}
+                {f.ic && (
+                  <span className="ml-2 text-xs font-body text-muted tabular-nums">
+                    {t('doklady.icFirmy', { ic: f.ic })}
+                  </span>
+                )}
               </button>
             ))
           )}

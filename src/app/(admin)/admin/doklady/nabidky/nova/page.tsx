@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { listProjectOptions } from '@/lib/projectOptions';
 import { mapaHercuProjektu, mapaKlientuProjektu } from '@/lib/prijemceNabidky';
 import { projektProDoklad } from '@/lib/projektProDoklad';
+import { nactiJazyk } from '@/lib/jazykServer';
+import { prelozit } from '@/lib/jazyk';
 import { OfferEditor } from '../[id]/OfferEditor';
 
 /**
@@ -25,6 +27,7 @@ export default async function NovaNabidkaPage({
 }: {
   searchParams: { firma?: string; vydavatel?: string; predmet?: string; projekt?: string };
 }) {
+  const jazyk = nactiJazyk();
   // Nabídka založená z detailu projektu (zadání 18. 9. 2026) - projekt,
   // klient i předmět se předvyplní, ať se nevybírá to, co portál ví.
   const projekt = await projektProDoklad(searchParams?.projekt);
@@ -61,7 +64,9 @@ export default async function NovaNabidkaPage({
     <OfferEditor
       offer={{
         id: 'nova',
-        number: 'Nová nabídka',
+        // Zatim bez cisla - to nabidka dostane z rady az pri ulozeni. V hlavicce
+        // editoru je misto nej popisek, takze se preklada (cisla se nemeni).
+        number: prelozit(jazyk, 'nabidka.nova'),
         status: 'DRAFT',
         issuerCompanyId: vydavatel.id,
         // Nikdo predvybrany, stejne jako u faktury (zadani 13. 9. 2026).

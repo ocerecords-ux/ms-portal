@@ -7,6 +7,8 @@ import {
   VYCHOZI_PREDMET,
   VYCHOZI_TEXT,
 } from '@/lib/upominkyFaktur';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * UPOMÍNKY K FAKTURÁM PO SPLATNOSTI (zadání 25. 9. 2026: „potřebuji nastavit
@@ -42,12 +44,15 @@ type Nastaveni = {
 const pole =
   'rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full';
 
-function den(iso: string | null): string {
+/** Den a měsíc v jazyce portálu - pomocná funkce mimo komponentu, hook tu nefunguje. */
+function den(iso: string | null, jazyk: Jazyk): string {
   if (!iso) return '';
-  return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(new Date(iso));
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), { day: 'numeric', month: 'numeric' }).format(new Date(iso));
 }
 
 export function UpominkyEditor() {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [nastaveni, setNastaveni] = useState<Nastaveni | null>(null);
   const [faktury, setFaktury] = useState<Faktura[]>([]);
   const [dnyText, setDnyText] = useState(VYCHOZI_DNY.join(', '));
@@ -63,7 +68,7 @@ export function UpominkyEditor() {
       const res = await fetch('/api/admin/upominky', { cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Nastavení se nepodařilo načíst.');
+        setChyba(data?.error || t('upominky.nastaveniNacist'));
         return;
       }
       setNastaveni(data.nastaveni);
@@ -71,7 +76,7 @@ export function UpominkyEditor() {
       setDnyText((data.nastaveni?.dny ?? VYCHOZI_DNY).join(', '));
       setKopieText((data.nastaveni?.kopie ?? []).join(', '));
     } catch {
-      setChyba('Nastavení se nepodařilo načíst.');
+      setChyba(t('upominky.nastaveniNacist'));
     }
   }
 
@@ -96,7 +101,7 @@ export function UpominkyEditor() {
     if (!nastaveni) return;
     const dny = dnyZTextu();
     if (dny.length === 0) {
-      setChyba('Napište aspoň jeden den po splatnosti, kdy se má upomínat.');
+      setChyba(t('upominky.zadejteDen'));
       return;
     }
     setBusy(true);
@@ -115,13 +120,13 @@ export function UpominkyEditor() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Uložení se nezdařilo.');
+        setChyba(data?.error || t('upominky.ulozeniSelhalo'));
         return;
       }
-      setHlaska('Uloženo.');
+      setHlaska(t('upominky.ulozeno'));
       void nacti();
     } catch {
-      setChyba('Uložení se nezdařilo.');
+      setChyba(t('upominky.ulozeniSelhalo'));
     } finally {
       setBusy(false);
     }
@@ -138,12 +143,12 @@ export function UpominkyEditor() {
         body: JSON.stringify({ predmet: nastaveni.predmet, text: nastaveni.text }),
       });
       if (!res.ok) {
-        setChyba('Náhled se nepodařilo připravit.');
+        setChyba(t('upominky.nahledSelhal'));
         return;
       }
       setNahled(await res.text());
     } catch {
-      setChyba('Náhled se nepodařilo připravit.');
+      setChyba(t('upominky.nahledSelhal'));
     } finally {
       setBusy(false);
     }
@@ -161,20 +166,20 @@ export function UpominkyEditor() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Upomínku se nepodařilo poslat.');
+        setChyba(data?.error || t('upominky.poslaniSelhalo'));
         return;
       }
-      setHlaska(`Upomínka odešla na ${data.komu}.`);
+      setHlaska(t('upominky.odeslanoNa', { komu: data.komu }));
       void nacti();
     } catch {
-      setChyba('Upomínku se nepodařilo poslat.');
+      setChyba(t('upominky.poslaniSelhalo'));
     } finally {
       setPosilam(null);
     }
   }
 
   if (!nastaveni) {
-    return <p className="text-sm font-body text-muted m-0">{chyba ?? 'Načítám…'}</p>;
+    return <p className="text-sm font-body text-muted m-0">{chyba ?? t('obecne.nacitam')}</p>;
   }
 
   return (
@@ -191,46 +196,44 @@ export function UpominkyEditor() {
             className="mt-1 w-4 h-4 accent-brand-purple"
           />
           <span className="text-sm font-body text-ink">
-            Posílat upomínky automaticky
-            <span className="block text-xs text-muted">
-              Úloha běží ve všední dny ráno. Dokud je tohle vypnuté, upomínky odcházejí jen ručně
-              tlačítkem u faktury dole.
-            </span>
+            {t('upominky.posilatAutomaticky')}
+            <span className="block text-xs text-muted">{t('upominky.posilatAutomatickyPopis')}</span>
           </span>
         </label>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Kolikátý den po splatnosti</span>
+            <span className="text-sm font-body text-ink">{t('upominky.kolikatyDen')}</span>
             <input value={dnyText} onChange={(e) => setDnyText(e.target.value)} className={pole} />
             <span className="text-xs text-muted">
-              Čárkou oddělené dny — „{VYCHOZI_DNY.join(', ')}" znamená tři upomínky: třetí, desátý
-              a jednadvacátý den po splatnosti. Kolik čísel, tolik upomínek; dál se nepřipomíná.
+              {t('upominky.kolikatyDenPopis', { dny: VYCHOZI_DNY.join(', ') })}
             </span>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Skrytá kopie nám</span>
+            <span className="text-sm font-body text-ink">{t('upominky.skrytaKopie')}</span>
             <input
               value={kopieText}
               onChange={(e) => setKopieText(e.target.value)}
               placeholder="ucetni@mediaspace.cz"
               className={pole}
             />
-            <span className="text-xs text-muted">Klient adresy nevidí — chodí ve skryté kopii.</span>
+            <span className="text-xs text-muted">{t('upominky.skrytaKopiePopis')}</span>
           </label>
         </div>
       </div>
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 sm:p-6 flex flex-col gap-4">
         <div className="flex items-baseline justify-between gap-3 flex-wrap">
-          <h2 className="font-display text-xl text-ink m-0">Znění upomínky</h2>
+          <h2 className="font-display text-xl text-ink m-0">{t('upominky.zneni')}</h2>
           {nastaveni.upravilJmeno && (
-            <span className="text-xs font-body text-muted">naposledy upravil {nastaveni.upravilJmeno}</span>
+            <span className="text-xs font-body text-muted">
+              {t('upominky.naposledyUpravil', { kdo: nastaveni.upravilJmeno })}
+            </span>
           )}
         </div>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Předmět</span>
+          <span className="text-sm font-body text-ink">{t('upominky.predmet')}</span>
           <input
             value={nastaveni.predmet}
             onChange={(e) => zmen('predmet', e.target.value)}
@@ -239,16 +242,14 @@ export function UpominkyEditor() {
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Text</span>
+          <span className="text-sm font-body text-ink">{t('upominky.text')}</span>
           <textarea
             value={nastaveni.text}
             onChange={(e) => zmen('text', e.target.value)}
             rows={8}
             className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-body text-sm outline-none focus:border-brand-purple w-full"
           />
-          <span className="text-xs text-muted">
-            **tučně** se vysází tučně. Prázdný řádek dělá nový odstavec.
-          </span>
+          <span className="text-xs text-muted">{t('upominky.textNapoveda')}</span>
         </label>
 
         <div className="flex flex-wrap gap-2">
@@ -256,7 +257,7 @@ export function UpominkyEditor() {
             <button
               key={p.klic}
               type="button"
-              title={`${p.popis} — např. ${p.ukazka}`}
+              title={t('upominky.promennaTitle', { popis: p.popis, ukazka: p.ukazka })}
               onClick={() => zmen('text', `${nastaveni.text}{${p.klic}}`)}
               className="rounded-pill border border-line bg-field px-2.5 py-1 text-xs font-heading text-ink hover:border-brand-purple"
             >
@@ -274,7 +275,7 @@ export function UpominkyEditor() {
             disabled={busy}
             className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
           >
-            {busy ? 'Ukládám…' : 'Uložit'}
+            {busy ? t('obecne.ukladam') : t('obecne.ulozit')}
           </button>
           <button
             type="button"
@@ -282,7 +283,7 @@ export function UpominkyEditor() {
             disabled={busy}
             className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
           >
-            Náhled e-mailu
+            {t('upominky.nahledEmailu')}
           </button>
           <button
             type="button"
@@ -293,7 +294,7 @@ export function UpominkyEditor() {
             }}
             className="text-sm font-heading text-muted hover:text-ink px-1"
           >
-            Obnovit výchozí znění
+            {t('upominky.obnovitVychozi')}
           </button>
         </div>
       </div>
@@ -309,22 +310,22 @@ export function UpominkyEditor() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line">
-              <span className="font-heading font-semibold text-sm text-ink">Náhled e-mailu</span>
+              <span className="font-heading font-semibold text-sm text-ink">{t('upominky.nahledEmailu')}</span>
               <button type="button" onClick={() => setNahled(null)} className="text-muted hover:text-ink text-xl leading-none">
                 ×
               </button>
             </div>
-            <iframe title="Náhled upomínky" srcDoc={nahled} className="w-full h-[70vh] bg-white" />
+            <iframe title={t('upominky.nahledUpominky')} srcDoc={nahled} className="w-full h-[70vh] bg-white" />
           </div>
         </div>
       )}
 
       <div className="bg-surface rounded-card border border-line shadow-sm p-5 sm:p-6 flex flex-col gap-3">
         <h2 className="font-display text-xl text-ink m-0">
-          Po splatnosti <span className="text-muted text-base">({faktury.length})</span>
+          {t('upominky.poSplatnosti')} <span className="text-muted text-base">({faktury.length})</span>
         </h2>
         {faktury.length === 0 && (
-          <p className="text-sm font-body text-muted m-0">Žádná odeslaná faktura není po splatnosti. 👌</p>
+          <p className="text-sm font-body text-muted m-0">{t('upominky.zadnaPoSplatnosti')}</p>
         )}
         {faktury.map((f) => (
           <div
@@ -337,20 +338,30 @@ export function UpominkyEditor() {
                 {f.projekt ? <span className="text-muted"> · {f.projekt}</span> : null}
               </span>
               <span className="block text-xs font-body text-muted">
-                {f.castka} · splatnost {f.splatnost ?? '—'} ·{' '}
-                <span className="text-danger font-heading">{f.dnuPoSplatnosti} dní po splatnosti</span>
-                {f.odeslano > 0 && ` · upomínek odesláno ${f.odeslano}${f.posledniAt ? ` (naposledy ${den(f.posledniAt)})` : ''}`}
-                {!f.komu && ' · není komu poslat'}
+                {f.castka} · {t('upominky.splatnost', { datum: f.splatnost ?? '—' })} ·{' '}
+                <span className="text-danger font-heading">
+                  {t('upominky.dniPoSplatnosti', { dnu: f.dnuPoSplatnosti })}
+                </span>
+                {f.odeslano > 0 &&
+                  ` · ${
+                    f.posledniAt
+                      ? t('upominky.upominekOdeslanoNaposledy', {
+                          pocet: f.odeslano,
+                          kdy: den(f.posledniAt, jazyk),
+                        })
+                      : t('upominky.upominekOdeslano', { pocet: f.odeslano })
+                  }`}
+                {!f.komu && ` · ${t('upominky.neniKomuPoslat')}`}
               </span>
             </span>
             <button
               type="button"
               onClick={() => posli(f.id)}
               disabled={!f.komu || posilam === f.id}
-              title={f.komu ? `Poslat na ${f.komu}` : 'Firma nemá kontaktní e-mail a projekt klienta'}
+              title={f.komu ? t('upominky.poslatNa', { komu: f.komu }) : t('upominky.nemaKontakt')}
               className="shrink-0 border border-line text-ink font-heading font-semibold text-sm rounded-lg px-3 py-1.5 hover:bg-field transition-colors disabled:opacity-40"
             >
-              {posilam === f.id ? 'Posílám…' : 'Poslat upomínku'}
+              {posilam === f.id ? t('upominky.posilam') : t('upominky.poslatUpominku')}
             </button>
           </div>
         ))}

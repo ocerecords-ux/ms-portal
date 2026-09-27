@@ -5,8 +5,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import type { Currency } from '@prisma/client';
-import { CURRENCIES, CURRENCY_LABELS, CURRENCY_NAMES } from '@/lib/doklady';
+import { CURRENCIES, CURRENCY_LABELS, nazevMeny } from '@/lib/doklady';
 import { VyberPole } from '@/components/VyberPole';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 type Account = {
   id: string;
@@ -32,6 +33,8 @@ function citelnyIban(iban: string): string {
  * Na dokladu se pak nabídne účet, který sedí na měnu dokladu.
  */
 export function BankAccounts({ issuerId, accounts }: { issuerId: string; accounts: Account[] }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,13 +60,13 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('mojeFirmy.ulozeniSelhalo'));
         return false;
       }
       router.refresh();
       return true;
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('mojeFirmy.ulozeniSelhalo'));
       return false;
     } finally {
       setBusy(false);
@@ -85,12 +88,14 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
   return (
     <div className="bg-surface border border-line rounded-card p-6 flex flex-col gap-4 shadow-sm">
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Bankovní účty</h2>
-        <span className="text-xs text-muted font-body">Na dokladu se nabídne účet ve stejné měně.</span>
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+          {t('mojeFirmy.bankovniUcty')}
+        </h2>
+        <span className="text-xs text-muted font-body">{t('mojeFirmy.uctyPodleMeny')}</span>
       </div>
 
       {accounts.length === 0 ? (
-        <p className="text-sm text-muted font-body m-0">Zatím tu není žádný účet.</p>
+        <p className="text-sm text-muted font-body m-0">{t('mojeFirmy.zadnyUcet')}</p>
       ) : (
         <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
           {accounts.map((a) => (
@@ -101,7 +106,9 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
                   <span className="ml-2 text-[10px] font-heading font-bold text-brand-purpleDeep bg-tint rounded px-1.5 py-0.5">
                     {CURRENCY_LABELS[a.currency]}
                   </span>
-                  {a.isDefault && <span className="ml-2 text-xs text-status-done font-heading">výchozí</span>}
+                  {a.isDefault && (
+                    <span className="ml-2 text-xs text-status-done font-heading">{t('mojeFirmy.vychozi')}</span>
+                  )}
                 </p>
                 <p className="text-xs text-muted font-body m-0 mt-0.5 tabular-nums">
                   {[a.accountNumber, a.iban, a.swift, a.bankName].filter(Boolean).join(' · ') || '—'}
@@ -110,13 +117,10 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
                     to poznat (zadání 13. 9. 2026). Tak ať to je vidět tady. */}
                 {a.qrIban ? (
                   <p className="text-xs font-body text-status-done m-0 mt-0.5 tabular-nums">
-                    QR platba ✓ {citelnyIban(a.qrIban)}
+                    {t('mojeFirmy.qrPlatba', { iban: citelnyIban(a.qrIban) })}
                   </p>
                 ) : (
-                  <p className="text-xs font-body text-danger m-0 mt-0.5">
-                    Bez QR platby — doplňte kód banky (například 3030) do pole Banka, nebo číslo účtu
-                    ve tvaru 3169021011/3030.
-                  </p>
+                  <p className="text-xs font-body text-danger m-0 mt-0.5">{t('mojeFirmy.bezQrPlatby')}</p>
                 )}
               </div>
               <div className="flex items-center gap-3 shrink-0">
@@ -127,13 +131,13 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
                     disabled={busy}
                     className="text-brand-purple text-sm font-heading disabled:opacity-60"
                   >
-                    Nastavit výchozí
+                    {t('mojeFirmy.nastavitVychozi')}
                   </button>
                 )}
                 <TlacitkoSmazat
                   onSmazat={() => send(`/api/admin/ucty/${a.id}`, 'DELETE')}
                   disabled={busy}
-                  otazka="Opravdu smazat účet?"
+                  otazka={t('mojeFirmy.opravduSmazatUcet')}
                 />
               </div>
             </li>
@@ -147,17 +151,17 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
         <form onSubmit={addAccount} className="flex flex-col gap-3 border-t border-line pt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Označení</span>
+              <span className="text-sm font-body text-ink">{t('mojeFirmy.oznaceni')}</span>
               <input
                 required
                 value={draft.label}
                 onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-                placeholder="např. Air Bank CZK"
+                placeholder={t('mojeFirmy.oznaceniPlaceholder')}
                 className={inputClass}
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Měna</span>
+              <span className="text-sm font-body text-ink">{t('mojeFirmy.mena')}</span>
               <VyberPole
                 value={draft.currency}
                 onChange={(e) => setDraft({ ...draft, currency: e.target.value as Currency })}
@@ -165,25 +169,23 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
               >
                 {CURRENCIES.map((c) => (
                   <option key={c} value={c}>
-                    {CURRENCY_NAMES[c]}
+                    {nazevMeny(c, jazyk)}
                   </option>
                 ))}
               </VyberPole>
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Číslo účtu</span>
+              <span className="text-sm font-body text-ink">{t('mojeFirmy.cisloUctu')}</span>
               <input
                 value={draft.accountNumber}
                 onChange={(e) => setDraft({ ...draft, accountNumber: e.target.value })}
                 placeholder="3169021011/3030"
                 className={inputClass}
               />
-              <span className="text-xs font-body text-muted">
-                I s kódem banky — z toho se dopočítá IBAN a na faktuře přibude QR platba.
-              </span>
+              <span className="text-xs font-body text-muted">{t('mojeFirmy.cisloUctuNapoveda')}</span>
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Banka</span>
+              <span className="text-sm font-body text-ink">{t('mojeFirmy.banka')}</span>
               <input value={draft.bankName} onChange={(e) => setDraft({ ...draft, bankName: e.target.value })} className={inputClass} />
             </label>
             <label className="flex flex-col gap-1.5">
@@ -201,20 +203,20 @@ export function BankAccounts({ issuerId, accounts }: { issuerId: string; account
               checked={draft.isDefault}
               onChange={(e) => setDraft({ ...draft, isDefault: e.target.checked })}
             />
-            Výchozí účet pro tuhle měnu
+            {t('mojeFirmy.vychoziUcetProMenu')}
           </label>
           <div className="flex items-center gap-3">
             <AddButton type="submit" disabled={busy}>
-              Přidat účet
+              {t('mojeFirmy.pridatUcet')}
             </AddButton>
             <button type="button" onClick={() => setAdding(false)} className="text-muted text-sm font-heading">
-              Zrušit
+              {t('obecne.zrusit')}
             </button>
           </div>
         </form>
       ) : (
         <AddButton type="button" onClick={() => setAdding(true)} className="self-start">
-          Přidat účet
+          {t('mojeFirmy.pridatUcet')}
         </AddButton>
       )}
     </div>

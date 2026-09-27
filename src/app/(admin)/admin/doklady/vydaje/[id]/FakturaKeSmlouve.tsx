@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import type { Currency } from '@prisma/client';
 import { formatMoney } from '@/lib/doklady';
 import { DatumPole } from '@/components/DatumPole';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { prelozitKolem } from '@/lib/jazyk';
 
 /**
  * DODATEČNÁ FAKTURA KE SMLOUVĚ (zadání 25. 9. 2026: „my vytvoříme herci
@@ -38,6 +40,8 @@ export function FakturaKeSmlouve({
   mena: Currency;
   kandidati: KandidatFaktury[];
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const vstup = useRef<HTMLInputElement | null>(null);
   const [zdrojId, setZdrojId] = useState('');
@@ -60,11 +64,11 @@ export function FakturaKeSmlouve({
         body: JSON.stringify({ zdrojId }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Doklady se nepodařilo spojit.');
+      if (!res.ok) throw new Error(data?.error || t('vydaj.spojeniSelhalo'));
       setZdrojId('');
       router.refresh();
     } catch (e) {
-      setChyba(e instanceof Error ? e.message : 'Doklady se nepodařilo spojit.');
+      setChyba(e instanceof Error ? e.message : t('vydaj.spojeniSelhalo'));
     } finally {
       setPracuji(false);
     }
@@ -73,7 +77,7 @@ export function FakturaKeSmlouve({
   async function nahraj() {
     const soubory = Array.from(vstup.current?.files ?? []);
     if (soubory.length === 0 && !cislo.trim() && !castka.trim()) {
-      setChyba('Vyberte fakturu nebo vyplňte částku.');
+      setChyba(t('vydaj.fakturaChybiUdaje'));
       return;
     }
     setPracuji(true);
@@ -87,29 +91,29 @@ export function FakturaKeSmlouve({
       body.append('splatnost', splatnost);
       const res = await fetch(zaklad, { method: 'POST', body });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Fakturu se nepodařilo připojit.');
+      if (!res.ok) throw new Error(data?.error || t('vydaj.fakturaPripojeniSelhalo'));
       setCislo('');
       setCastka('');
       setSplatnost('');
       if (vstup.current) vstup.current.value = '';
       router.refresh();
     } catch (e) {
-      setChyba(e instanceof Error ? e.message : 'Fakturu se nepodařilo připojit.');
+      setChyba(e instanceof Error ? e.message : t('vydaj.fakturaPripojeniSelhalo'));
     } finally {
       setPracuji(false);
     }
   }
 
   async function zrus() {
-    if (!window.confirm('Odebrat značku faktury? Přílohy ani částka se nevrací.')) return;
+    if (!window.confirm(t('vydaj.fakturaOdebratOtazka'))) return;
     setPracuji(true);
     setChyba(null);
     try {
       const res = await fetch(zaklad, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Značku se nepodařilo zrušit.');
+      if (!res.ok) throw new Error(t('vydaj.znackaZruseniSelhalo'));
       router.refresh();
     } catch (e) {
-      setChyba(e instanceof Error ? e.message : 'Značku se nepodařilo zrušit.');
+      setChyba(e instanceof Error ? e.message : t('vydaj.znackaZruseniSelhalo'));
     } finally {
       setPracuji(false);
     }
@@ -121,8 +125,12 @@ export function FakturaKeSmlouve({
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-5 sm:p-6 flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <h2 className="font-display text-xl text-ink m-0">Faktura ke smlouvě</h2>
-        {smlouvaCislo && <span className="text-xs font-body text-muted">ze smlouvy {smlouvaCislo}</span>}
+        <h2 className="font-display text-xl text-ink m-0">{t('vydaj.fakturaKeSmlouveNadpis')}</h2>
+        {smlouvaCislo && (
+          <span className="text-xs font-body text-muted">
+            {t('vydaj.zeSmlouvy', { cislo: smlouvaCislo })}
+          </span>
+        )}
       </div>
 
       {chyba && <p className="text-sm text-danger m-0">{chyba}</p>}
@@ -130,12 +138,29 @@ export function FakturaKeSmlouve({
       {faktura ? (
         <div className="flex items-center gap-3 flex-wrap">
           <span className="rounded-pill bg-tint text-brand-purple font-heading font-semibold text-xs px-3 py-1">
-            Faktura {faktura.cislo || 'připojena'}
+            {faktura.cislo
+              ? t('vydaj.fakturaCislo', { cislo: faktura.cislo })
+              : t('vydaj.fakturaPripojena')}
           </span>
           <span className="text-sm font-body text-ink">
-            Platí se <strong>{formatMoney(celkemMinor, mena)}</strong>{' '}
+            {/* Castka je tucne, veta zustava jeden klic - viz prelozitKolem. */}
+            {(() => {
+              const [pred, za] = prelozitKolem(jazyk, 'vydaj.platiSe', 'castka');
+              return (
+                <>
+                  {pred}
+                  <strong>{formatMoney(celkemMinor, mena)}</strong>
+                  {za}
+                </>
+              );
+            })()}{' '}
             <span className="text-muted">
-              ({formatMoney(bezDphMinor, mena)} bez DPH {sazba > 0 ? `+ ${sazba} %` : '· bez DPH'})
+              {sazba > 0
+                ? t('vydaj.platiSeRozpis', {
+                    castka: formatMoney(bezDphMinor, mena),
+                    sazba,
+                  })
+                : t('vydaj.platiSeRozpisBezDph', { castka: formatMoney(bezDphMinor, mena) })}
             </span>
           </span>
           <button
@@ -144,23 +169,31 @@ export function FakturaKeSmlouve({
             disabled={pracuji}
             className="text-xs font-heading text-muted hover:text-ink bg-transparent border-0 cursor-pointer px-1"
           >
-            Odebrat značku
+            {t('vydaj.odebratZnacku')}
           </button>
         </div>
       ) : (
         <>
           <p className="text-sm font-body text-muted m-0">
-            Plátce DPH pošle ke smlouvě ještě fakturu — na smlouvě je částka bez DPH, platí se ta
-            z faktury. Připojte ji sem: náklad zůstane <strong>jeden</strong>, jen bude mít dvě
-            přílohy a částku s DPH.
+            {/* „jeden" je tucne, veta zustava jeden klic - viz prelozitKolem. */}
+            {(() => {
+              const [pred, za] = prelozitKolem(jazyk, 'vydaj.fakturaVysvetleni', 'jeden');
+              return (
+                <>
+                  {pred}
+                  <strong>{t('vydaj.fakturaVysvetleniJeden')}</strong>
+                  {za}
+                </>
+              );
+            })()}
           </p>
 
           {kandidati.length > 0 && (
             <div className="flex items-end gap-2 flex-wrap">
               <label className="flex flex-col gap-1.5 min-w-[280px] flex-1">
-                <span className="text-sm font-body text-ink">Faktura už je v portálu</span>
+                <span className="text-sm font-body text-ink">{t('vydaj.fakturaJizVPortalu')}</span>
                 <select value={zdrojId} onChange={(e) => setZdrojId(e.target.value)} className={pole}>
-                  <option value="">— vyberte doklad —</option>
+                  <option value="">{t('vydaj.vyberteDoklad')}</option>
                   {kandidati.map((k) => (
                     <option key={k.id} value={k.id}>
                       {k.popis}
@@ -174,13 +207,13 @@ export function FakturaKeSmlouve({
                 disabled={pracuji || !zdrojId}
                 className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
               >
-                Spojit se smlouvou
+                {t('vydaj.spojitSeSmlouvou')}
               </button>
             </div>
           )}
 
           <div className="border-t border-line pt-4 flex flex-col gap-3">
-            <span className="text-sm font-body text-ink">…nebo fakturu nahrajte</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.neboFakturuNahrajte')}</span>
             <input
               ref={vstup}
               type="file"
@@ -190,11 +223,11 @@ export function FakturaKeSmlouve({
             />
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-body text-muted">Číslo faktury</span>
+                <span className="text-xs font-body text-muted">{t('vydaj.poleCisloFaktury')}</span>
                 <input value={cislo} onChange={(e) => setCislo(e.target.value)} className={pole} />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-body text-muted">Částka bez DPH</span>
+                <span className="text-xs font-body text-muted">{t('vydaj.poleCastkaBezDph')}</span>
                 <input
                   value={castka}
                   onChange={(e) => setCastka(e.target.value)}
@@ -203,15 +236,15 @@ export function FakturaKeSmlouve({
                 />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-body text-muted">Sazba DPH</span>
+                <span className="text-xs font-body text-muted">{t('vydaj.poleSazbaDph')}</span>
                 <select value={sazbaNova} onChange={(e) => setSazbaNova(e.target.value)} className={pole}>
                   <option value="21">21 %</option>
                   <option value="12">12 %</option>
-                  <option value="0">bez DPH</option>
+                  <option value="0">{t('vydaj.dphZadna')}</option>
                 </select>
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-body text-muted">Splatnost</span>
+                <span className="text-xs font-body text-muted">{t('vydaj.poleSplatnost')}</span>
                 <DatumPole
                   value={splatnost}
                   onChange={(e) => setSplatnost(e.target.value)}
@@ -226,7 +259,7 @@ export function FakturaKeSmlouve({
                 disabled={pracuji}
                 className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
               >
-                {pracuji ? 'Připojuji…' : 'Připojit fakturu'}
+                {pracuji ? t('vydaj.pripojuji') : t('vydaj.pripojitFakturu')}
               </button>
             </div>
           </div>

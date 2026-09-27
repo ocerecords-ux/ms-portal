@@ -4,6 +4,7 @@ import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { VyberPole } from '@/components/VyberPole';
+import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Obrazovka Banka (zadání 17. 9. 2026: „potřebuju, ať se ta banka páruje
@@ -46,13 +47,24 @@ const tlacitko =
 const hlavni = `${tlacitko} bg-brand-purple text-white hover:bg-brand-purpleDeep`;
 const vedlejsi = `${tlacitko} border border-line text-ink hover:bg-field`;
 
-const STAVY: Record<string, { text: string; trida: string }> = {
-  AUTO: { text: 'Spárováno samo', trida: 'text-brand-green' },
-  RUCNE: { text: 'Spárováno ručně', trida: 'text-brand-green' },
-  NAVRH: { text: 'Návrh ke schválení', trida: 'text-status-progress' },
-  NOVA: { text: 'Nespárováno', trida: 'text-muted' },
-  IGNOROVANA: { text: 'Odloženo', trida: 'text-muted' },
+const STAVY: Record<string, { klic: string; trida: string }> = {
+  AUTO: { klic: 'banka.stavAuto', trida: 'text-brand-green' },
+  RUCNE: { klic: 'banka.stavRucne', trida: 'text-brand-green' },
+  NAVRH: { klic: 'banka.stavNavrh', trida: 'text-status-progress' },
+  NOVA: { klic: 'banka.stavNova', trida: 'text-muted' },
+  IGNOROVANA: { klic: 'banka.stavIgnorovana', trida: 'text-muted' },
 };
+
+/**
+ * Věta o nenastavené bance je JEDEN klíč (pravidlo 7 v docs/preklad-portalu.md);
+ * značky {kod1} a {kod2} se při vykreslení promění v <code> s názvy proměnných.
+ */
+function sKody(veta: string, kody: Record<string, string>) {
+  return veta.split(/(\{kod\d\})/).map((cast, i) => {
+    const znacka = cast.match(/^\{(kod\d)\}$/);
+    return znacka ? <code key={i}>{kody[znacka[1]]}</code> : <span key={i}>{cast}</span>;
+  });
+}
 
 export function BankaKlient({
   otevrenaVsem,
@@ -68,6 +80,7 @@ export function BankaKlient({
   pohyby: PohybRadek[];
   faktury: FakturaVolba[];
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const params = useSearchParams();
   const [busy, setBusy] = useState<string | null>(null);
@@ -89,8 +102,8 @@ export function BankaKlient({
         if (!platne) return;
         setHlaska(
           res.ok
-            ? `Účet je napojený. Staženo ${data?.nove ?? 0} pohybů, spárováno ${data?.sparovano ?? 0}.`
-            : 'Účet je napojený, stažení pohybů ale zatím neproběhlo.',
+            ? t('banka.napojenoStazeno', { nove: data?.nove ?? 0, sparovano: data?.sparovano ?? 0 })
+            : t('banka.napojenoBezStazeni'),
         );
       } finally {
         if (platne) {
@@ -117,7 +130,7 @@ export function BankaKlient({
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.link) {
-        setChyba(data?.error || 'Napojení se nepodařilo.');
+        setChyba(data?.error || t('banka.napojeniSelhalo'));
         return;
       }
       // Odsud se jde do internetového bankovnictví; zpátky to pustí samo.
@@ -135,12 +148,16 @@ export function BankaKlient({
       const res = await fetch('/api/admin/banka/sync', { method: 'POST' });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setChyba(data?.error || 'Stažení se nepodařilo.');
+        setChyba(data?.error || t('banka.stazeniSelhalo'));
         return;
       }
       const chyby: string[] = data?.chyby ?? [];
       setHlaska(
-        `Staženo ${data?.nove ?? 0} nových pohybů, spárováno ${data?.sparovano ?? 0}, ke schválení ${data?.navrhy ?? 0}.`,
+        t('banka.stazenoHlaska', {
+          nove: data?.nove ?? 0,
+          sparovano: data?.sparovano ?? 0,
+          navrhy: data?.navrhy ?? 0,
+        }),
       );
       if (chyby.length > 0) setChyba(chyby.join(' '));
       router.refresh();
@@ -160,7 +177,7 @@ export function BankaKlient({
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setChyba(data?.error || 'Nepodařilo se to uložit.');
+        setChyba(data?.error || t('banka.ulozeniSelhalo'));
         return;
       }
       router.refresh();
@@ -186,21 +203,19 @@ export function BankaKlient({
     <div className="flex flex-col gap-6">
       {otevrenaVsem && (
         <div className="rounded-card border border-status-progress bg-status-progress/10 px-4 py-3 text-sm font-body text-ink">
-          <p className="m-0 font-semibold">Tuhle sekci zatím vidí každé Žůžo-labůžo.</p>
-          <p className="m-0 mt-1 text-muted">
-            V Adminu ▸ Uživatelé zaškrtni „Vidí sekci Banka" těm, kdo na pohyby mají vidět. Jakmile to bude mít
-            aspoň jeden účet, ostatním záložka zmizí.
-          </p>
+          <p className="m-0 font-semibold">{t('banka.vidiKazdyNadpis')}</p>
+          <p className="m-0 mt-1 text-muted">{t('banka.vidiKazdyPopis')}</p>
         </div>
       )}
 
       {!nastaveno && (
         <div className="rounded-card border border-line bg-tint px-4 py-3 text-sm font-body text-ink">
-          <p className="m-0 font-semibold">Napojení na banku ještě není nastavené.</p>
+          <p className="m-0 font-semibold">{t('banka.nenastavenoNadpis')}</p>
           <p className="m-0 mt-1 text-muted">
-            Portál chodí do banky přes GoCardless Bank Account Data. Stačí si tam založit účet (je to zdarma),
-            vytvořit klíče a přidat je na Vercelu jako <code>GOCARDLESS_SECRET_ID</code> a{' '}
-            <code>GOCARDLESS_SECRET_KEY</code>. Pak se sem vrať a účet napoj.
+            {sKody(t('banka.nenastavenoPopis'), {
+              kod1: 'GOCARDLESS_SECRET_ID',
+              kod2: 'GOCARDLESS_SECRET_KEY',
+            })}
           </p>
         </div>
       )}
@@ -216,22 +231,19 @@ export function BankaKlient({
 
       <section className="rounded-card border border-line bg-surface p-5 flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h2 className="font-display text-xl text-ink m-0">Napojené účty</h2>
+          <h2 className="font-display text-xl text-ink m-0">{t('banka.napojeneUcty')}</h2>
           <div className="flex items-center gap-2">
             <button type="button" onClick={stahni} disabled={!nastaveno || busy !== null} className={vedlejsi}>
-              {busy === 'sync' ? 'Stahuju…' : 'Stáhnout pohyby'}
+              {busy === 'sync' ? t('banka.stahuju') : t('banka.stahnoutPohyby')}
             </button>
             <button type="button" onClick={napoj} disabled={!nastaveno || busy !== null} className={hlavni}>
-              {busy === 'napojeni' ? 'Připravuju…' : 'Napojit účet'}
+              {busy === 'napojeni' ? t('banka.pripravuju') : t('banka.napojitUcet')}
             </button>
           </div>
         </div>
 
         {napojeni.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0">
-            Zatím tu žádný účet není. „Napojit účet" tě pošle do Air Banky, kde přihlášením potvrdíš souhlas —
-            portál pak pohyby stahuje sám třikrát denně.
-          </p>
+          <p className="text-sm font-body text-muted m-0">{t('banka.zadnyUcet')}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {napojeni.map((n) => (
@@ -247,25 +259,28 @@ export function BankaKlient({
                   <TlacitkoSmazat
                     onSmazat={() => odpoj(n.id)}
                     disabled={busy !== null}
-                    popisek="Odpojit"
-                    otazka="Opravdu odpojit účet?"
+                    popisek={t('banka.odpojit')}
+                    otazka={t('banka.opravduOdpojit')}
                     trida="text-xs"
                   />
                 </div>
                 <p className="text-xs font-body text-muted m-0">
                   {n.iban ? `${n.iban} · ` : ''}
-                  {n.stav === 'AKTIVNI' && `souhlas platí do ${n.souhlasDo}`}
-                  {n.stav === 'CEKA' && 'souhlas ještě není potvrzený v bance'}
-                  {n.stav === 'VYPRSELO' && 'souhlas vypršel — napoj účet znovu'}
-                  {n.posledni ? ` · naposledy staženo ${n.posledni}` : ''}
+                  {n.stav === 'AKTIVNI' && t('banka.souhlasPlatiDo', { datum: n.souhlasDo })}
+                  {n.stav === 'CEKA' && t('banka.souhlasCeka')}
+                  {n.stav === 'VYPRSELO' && t('banka.souhlasVyprsel')}
+                  {n.posledni ? ` · ${t('banka.naposledyStazeno', { kdy: n.posledni })}` : ''}
                 </p>
                 {typeof n.souhlasDnu === 'number' && n.souhlasDnu <= 14 && n.stav === 'AKTIVNI' && (
                   <p className="text-xs font-body text-status-progress m-0">
-                    Souhlas končí za {Math.max(0, n.souhlasDnu)} dnů. Klikni na „Napojit účet" a potvrď ho v bance
-                    znovu, jinak se pohyby přestanou stahovat.
+                    {t('banka.souhlasKonci', { dnu: Math.max(0, n.souhlasDnu) })}
                   </p>
                 )}
-                {n.chyba && <p className="text-xs font-body text-status-danger m-0">Poslední stažení: {n.chyba}</p>}
+                {n.chyba && (
+                  <p className="text-xs font-body text-status-danger m-0">
+                    {t('banka.posledniStazeni', { chyba: n.chyba })}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -273,20 +288,20 @@ export function BankaKlient({
       </section>
 
       <section className="rounded-card border border-line bg-surface p-5 flex flex-col gap-4">
-        <h2 className="font-display text-xl text-ink m-0">Čeká na tebe</h2>
+        <h2 className="font-display text-xl text-ink m-0">{t('banka.cekaNaTebe')}</h2>
         {cekajici.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0">Nic nevisí — všechno, co přišlo, portál rozhodl sám.</p>
+          <p className="text-sm font-body text-muted m-0">{t('banka.nicNevisi')}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {cekajici.map((p) => (
               <div key={p.id} className="rounded-card border border-line bg-field/60 px-4 py-3 flex flex-col gap-2">
                 <div className="flex items-baseline justify-between gap-3 flex-wrap">
                   <span className="font-heading font-semibold text-ink">
-                    {p.castka} · {p.protistrana || 'bez názvu'}
+                    {p.castka} · {p.protistrana || t('banka.bezNazvu')}
                   </span>
                   <span className="text-xs font-body text-muted">
                     {p.datum}
-                    {p.vs ? ` · VS ${p.vs}` : ''}
+                    {p.vs ? ` · ${t('banka.vs', { vs: p.vs })}` : ''}
                   </span>
                 </div>
                 {p.zprava && <p className="text-xs font-body text-muted m-0">{p.zprava}</p>}
@@ -297,7 +312,7 @@ export function BankaKlient({
                     onChange={(e) => setVyber((s) => ({ ...s, [p.id]: e.target.value }))}
                     className="flex-1 min-w-[240px] rounded-lg border border-line bg-surface px-3 py-2 text-sm font-body text-ink"
                   >
-                    <option value="">— vyberte fakturu —</option>
+                    <option value="">{t('banka.vyberteFakturu')}</option>
                     {faktury.map((f) => (
                       <option key={f.id} value={f.id}>
                         {f.popis}
@@ -310,7 +325,7 @@ export function BankaKlient({
                     onClick={() => rozhodni(p.id, 'sparovat', vyber[p.id] ?? p.navrhInvoiceId)}
                     className={hlavni}
                   >
-                    Označit uhrazenou
+                    {t('banka.oznacitUhrazenou')}
                   </button>
                   <button
                     type="button"
@@ -318,7 +333,7 @@ export function BankaKlient({
                     onClick={() => rozhodni(p.id, 'ignorovat')}
                     className={vedlejsi}
                   >
-                    Není k faktuře
+                    {t('banka.neniKFakture')}
                   </button>
                 </div>
               </div>
@@ -328,9 +343,9 @@ export function BankaKlient({
       </section>
 
       <section className="rounded-card border border-line bg-surface p-5 flex flex-col gap-3">
-        <h2 className="font-display text-xl text-ink m-0">Poslední pohyby</h2>
+        <h2 className="font-display text-xl text-ink m-0">{t('banka.posledniPohyby')}</h2>
         {zbytek.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0">Zatím nic staženého.</p>
+          <p className="text-sm font-body text-muted m-0">{t('banka.nicStazeno')}</p>
         ) : (
           <div className="divide-y divide-line">
             {zbytek.map((p) => {
@@ -342,11 +357,13 @@ export function BankaKlient({
                       {p.datum} · {p.castka} · {p.protistrana || '—'}
                     </span>
                     <span className="text-xs font-body text-muted">
-                      {p.fakturaPopis ? `Faktura ${p.fakturaPopis}` : p.zprava || (p.vs ? `VS ${p.vs}` : '')}
+                      {p.fakturaPopis
+                        ? t('banka.fakturaPopis', { popis: p.fakturaPopis })
+                        : p.zprava || (p.vs ? t('banka.vs', { vs: p.vs }) : '')}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`text-xs font-heading ${stav.trida}`}>{stav.text}</span>
+                    <span className={`text-xs font-heading ${stav.trida}`}>{t(stav.klic)}</span>
                     {(p.stav === 'AUTO' || p.stav === 'RUCNE') && (
                       <button
                         type="button"
@@ -354,7 +371,7 @@ export function BankaKlient({
                         onClick={() => rozhodni(p.id, 'odparovat')}
                         className="text-xs font-heading text-muted hover:text-status-danger"
                       >
-                        Odpárovat
+                        {t('banka.odparovat')}
                       </button>
                     )}
                   </div>

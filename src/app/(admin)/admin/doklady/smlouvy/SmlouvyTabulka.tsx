@@ -8,6 +8,7 @@ import {
   moznostiZ,
   type SloupecTabulky,
 } from '@/app/(portal)/components/RaditelnaTabulka';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Tabulka smluv, řaditelná kliknutím na název sloupce (zadání 9. 9. 2026).
@@ -41,6 +42,8 @@ export function SmlouvyTabulka({
    */
   lzeMazat?: boolean;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [vybrane, setVybrane] = useState<Set<string>>(new Set());
 
   const sloupce: SloupecTabulky<SmlouvaRadek>[] = [
@@ -61,7 +64,7 @@ export function SmlouvyTabulka({
                     return dalsi;
                   })
                 }
-                popisek={`Vybrat smlouvu ${r.nazev}`}
+                popisek={t('smlouva.vybratRadek', { nazev: r.nazev })}
               />
             ),
           } as SloupecTabulky<SmlouvaRadek>,
@@ -69,7 +72,7 @@ export function SmlouvyTabulka({
       : []),
     {
       key: 'nazev',
-      label: 'Název',
+      label: t('smlouva.sloupecNazev'),
       hodnota: (r) => r.nazev,
       trida: 'font-semibold',
       bunka: (r) => (
@@ -89,7 +92,7 @@ export function SmlouvyTabulka({
     },
     {
       key: 'podepisujici',
-      label: 'Podepisující',
+      label: t('smlouva.sloupecPodepisujici'),
       hodnota: (r) => r.podepisujici,
       trida: 'text-muted whitespace-nowrap',
       bunka: (r) => (
@@ -101,14 +104,14 @@ export function SmlouvyTabulka({
     },
     {
       key: 'vytvoreno',
-      label: 'Vytvořeno',
+      label: t('smlouva.sloupecVytvoreno'),
       hodnota: (r) => r.vytvorenoMs,
       trida: 'text-muted tabular-nums whitespace-nowrap',
       bunka: (r) => r.vytvoreno,
     },
     {
       key: 'podpisy',
-      label: 'Podpisy',
+      label: t('smlouva.sloupecPodpisy'),
       // Kolik podpisu chybi - nedopodepsane smlouvy jdou napred.
       hodnota: (r) => (r.podepsalaMediaspace ? 1 : 0) + (r.podepsalaProtistrana ? 1 : 0),
       trida: 'text-xs whitespace-nowrap',
@@ -118,14 +121,14 @@ export function SmlouvyTabulka({
             {r.podepsalaMediaspace ? '✓' : '○'} Mediaspace
           </span>
           <span className={`block ${r.podepsalaProtistrana ? 'text-status-done' : 'text-muted'}`}>
-            {r.podepsalaProtistrana ? '✓' : '○'} protistrana
+            {r.podepsalaProtistrana ? '✓' : '○'} {t('smlouva.protistranaKratce')}
           </span>
         </>
       ),
     },
     {
       key: 'stav',
-      label: 'Stav',
+      label: t('smlouva.sloupecStav'),
       hodnota: (r) => r.stav,
       trida: 'whitespace-nowrap',
       bunka: (r) => (
@@ -145,33 +148,34 @@ export function SmlouvyTabulka({
       klicRadku={(r) => r.id}
       vychoziSloupec="vytvoreno"
       vychoziSmer="desc"
-      prazdno="Tady zatím nic není."
+      jazyk={jazyk}
+      prazdno={t('smlouva.tabulkaPrazdna')}
       minSirka={860}
       hledat={(r) =>
         `${r.nazev} ${r.cislo} ${r.projekt ?? ''} ${r.podepisujici} ${r.podepisujiciDoplnek} ${r.stav}`
       }
-      hledatPlaceholder="Hledat smlouvu, herce, projekt…"
+      hledatPlaceholder={t('smlouva.hledatPlaceholder')}
       filtry={[
         {
           key: 'podepisujici',
-          label: 'Podepisující',
+          label: t('smlouva.sloupecPodepisujici'),
           moznosti: moznostiZ(radky, (r) => r.podepisujici),
           vyhovuje: (r, h) => r.podepisujici === h,
         },
         {
           key: 'projekt',
-          label: 'Projekt',
+          label: t('smlouva.sloupecProjekt'),
           moznosti: moznostiZ(radky, (r) => r.projekt),
           vyhovuje: (r, h) => r.projekt === h,
         },
         {
           key: 'stav',
-          label: 'Stav',
+          label: t('smlouva.sloupecStav'),
           moznosti: moznostiZ(radky, (r) => r.stav),
           vyhovuje: (r, h) => r.stav === h,
         },
       ]}
-      rozsahDatumu={{ label: 'Vytvořeno', ms: (r) => r.vytvorenoMs }}
+      rozsahDatumu={{ label: t('smlouva.sloupecVytvoreno'), ms: (r) => r.vytvorenoMs }}
       hromadneAkce={
         lzeMazat
           ? (viditelne) => (
@@ -180,7 +184,7 @@ export function SmlouvyTabulka({
                 vybrane={vybrane}
                 onZmena={setVybrane}
                 endpoint="/api/admin/contracts/hromadne-smazani"
-                poznamka="Smazání je nevratné — smlouva zmizí i s podpisy. Podepsanou smlouvu portál smazat nedovolí."
+                poznamka={t('smlouva.hromadneMazaniPoznamka')}
               />
             )
           : undefined

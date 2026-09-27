@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import type { Currency, PaymentMethod } from '@prisma/client';
-import { CURRENCIES, CURRENCY_NAMES, formatMoney, minorToInput, parseMoneyToMinor } from '@/lib/doklady';
+import { CURRENCIES, nazevMeny, formatMoney, minorToInput, parseMoneyToMinor } from '@/lib/doklady';
 import { EXPENSE_VAT_RATES, expenseTotalMinor } from '@/lib/expenses';
-import { MAX_FOTKA_BYTES, ZPUSOBY_UHRADY, zaplacenoRovnou, type PrectenaUctenka } from '@/lib/uctenka';
+import { MAX_FOTKA_BYTES, zpusobyUhrady, zaplacenoRovnou, type PrectenaUctenka } from '@/lib/uctenka';
 import { ProjectSelect, type ProjectChoice } from '../ProjectSelect';
 import { KOTVA_NOVE, useOtevriZeZkratky } from '@/lib/zkratky';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Zadání přijatého dokladu. Schválně jedna obrazovka bez překlikávání —
@@ -30,6 +31,8 @@ export function NewExpenseForm({
   /** Projekt z adresy (?projekt=) - výdaj založený z detailu projektu (21. 9. 2026). */
   vychoziProjekt?: string | null;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const defaultIssuer = issuers.find((i) => i.isDefault) ?? issuers[0];
   const fotoRef = useRef<HTMLInputElement>(null);
@@ -115,7 +118,7 @@ export function NewExpenseForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Kategorii se nepodařilo přidat.');
+        setError(data?.error || t('vydaj.kategoriiNelzePridat'));
         return;
       }
       setKategorie((list) => [...list, { id: data.id, name: data.name }]);
@@ -123,7 +126,7 @@ export function NewExpenseForm({
       setNovaKategorie(null);
       router.refresh();
     } catch {
-      setError('Kategorii se nepodařilo přidat.');
+      setError(t('vydaj.kategoriiNelzePridat'));
     } finally {
       setKategorieBusy(false);
     }
@@ -189,7 +192,7 @@ export function NewExpenseForm({
   async function nactiZFotky(soubor: File) {
     // PDF se čte stejně jako fotka (21. 9. 2026: „aby uměl číst údaje i z pdf").
     if (soubor.size > MAX_FOTKA_BYTES) {
-      setCteniZprava('Soubor je moc velký na přečtení, údaje vyplňte ručně.');
+      setCteniZprava(t('vydaj.cteniSouborVelky'));
       return;
     }
 
@@ -201,18 +204,18 @@ export function NewExpenseForm({
       const res = await fetch('/api/admin/expenses/precti', { method: 'POST', body });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setCteniZprava(data?.error || 'Doklad se nepodařilo přečíst, vyplňte údaje ručně.');
+        setCteniZprava(data?.error || t('vydaj.cteniSelhalo'));
         return;
       }
       predvyplnit(data as PrectenaUctenka);
       const jistota = typeof data?.jistota === 'number' ? data.jistota : null;
       setCteniZprava(
         jistota !== null && jistota < 0.7
-          ? 'Doklad šel číst špatně — překontrolujte prosím částku a datum.'
-          : 'Údaje jsou z dokladu — zkontrolujte je a uložte.',
+          ? t('vydaj.cteniNejiste')
+          : t('vydaj.cteniHotovo'),
       );
     } catch {
-      setCteniZprava('Doklad se nepodařilo přečíst, vyplňte údaje ručně.');
+      setCteniZprava(t('vydaj.cteniSelhalo'));
     } finally {
       setCteni(false);
     }
@@ -244,7 +247,7 @@ export function NewExpenseForm({
       const res = await fetch('/api/admin/expenses', { method: 'POST', body });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Doklad se nepodařilo uložit.');
+        setError(data?.error || t('vydaj.ulozeniDokladuSelhalo'));
         return;
       }
       // Po uložení zpátky na přehled (zadani 8. 9. 2026) - doklad je vidět
@@ -258,7 +261,7 @@ export function NewExpenseForm({
       setOpen(false);
       router.refresh();
     } catch {
-      setError('Doklad se nepodařilo uložit.');
+      setError(t('vydaj.ulozeniDokladuSelhalo'));
     } finally {
       setBusy(false);
     }
@@ -291,7 +294,7 @@ export function NewExpenseForm({
   if (!open) {
     return (
       <span id={KOTVA_NOVE}>
-        <AddButton onClick={() => setOpen(true)}>Nový výdaj</AddButton>
+        <AddButton onClick={() => setOpen(true)}>{t('vydaj.novyVydaj')}</AddButton>
       </span>
     );
   }
@@ -301,7 +304,9 @@ export function NewExpenseForm({
       onSubmit={submit}
       className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4 w-full"
     >
-      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nový výdaj</h2>
+      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+        {t('vydaj.novyVydaj')}
+      </h2>
 
       {/* Doklad se přečte sám (zadání 10. 9. 2026). NA TELEFONU foťákem, NA
           POČÍTAČI výběrem souboru (zadání 16. 9. 2026: „na počítači by měla
@@ -340,12 +345,12 @@ export function NewExpenseForm({
           >
             {jeDotykovy && soubory.length === 0 ? <IkonaFotak /> : <IkonaSoubor />}
             {cteni
-              ? 'Čtu doklad…'
+              ? t('vydaj.ctuDoklad')
               : soubory.length > 0
-                ? 'Přidat další přílohu'
+                ? t('vydaj.pridatDalsiPrilohu')
                 : jeDotykovy
-                  ? 'Vyfotit doklad'
-                  : 'Vybrat doklad'}
+                  ? t('vydaj.vyfotitDoklad')
+                  : t('vydaj.vybratDoklad')}
           </button>
           {jeDotykovy && soubory.length === 0 && (
             <button
@@ -353,26 +358,28 @@ export function NewExpenseForm({
               onClick={() => souborRef.current?.click()}
               className="text-sm font-heading font-semibold text-brand-purple bg-transparent border-0"
             >
-              nebo vybrat soubor / PDF
+              {t('vydaj.neboVybratSoubor')}
             </button>
           )}
           <span className="text-xs font-body text-muted flex-1 min-w-[200px]">
             {cteniZprava ??
               (soubory.length > 0
-                ? 'Další soubory se jen přiloží.'
-                : 'Vyberte PDF, sken nebo fotku dokladu (klidně víc souborů) - částku, datum i DPH doplním za vás. Před uložením to zkontrolujte.')}
+                ? t('vydaj.dalsiSouboryJenPrilohy')
+                : t('vydaj.vyberSouboruNapoveda'))}
           </span>
         </div>
         {soubory.length > 0 && (
           <ul className="list-none m-0 p-0 flex flex-col gap-1">
             {soubory.map((soubor, i) => (
               <li key={`${soubor.name}-${i}`} className="flex items-center gap-2 text-sm font-body text-ink min-w-0">
-                <span className="text-xs font-heading text-muted shrink-0">{i === 0 ? 'Doklad' : 'Příloha'}</span>
+                <span className="text-xs font-heading text-muted shrink-0">
+                  {i === 0 ? t('vydaj.souborDoklad') : t('vydaj.souborPriloha')}
+                </span>
                 <span className="truncate">{soubor.name}</span>
                 <button
                   type="button"
                   onClick={() => odeberSoubor(i)}
-                  aria-label={`Odebrat ${soubor.name}`}
+                  aria-label={t('vydaj.odebratSoubor', { nazev: soubor.name })}
                   className="text-muted hover:text-danger bg-transparent border-0 px-1 leading-none"
                 >
                   ×
@@ -386,20 +393,20 @@ export function NewExpenseForm({
       {/* Nazev je prvni - zadava se jako prvni (zadani 8. 9. 2026). Dodavatel
           se u vydaje uz nevyplnuje vubec, je to zbytecny udaj. */}
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Název</span>
+        <span className="text-sm font-body text-ink">{t('vydaj.poleNazev')}</span>
         <input
           required
           autoFocus
           value={form.description}
           onChange={(e) => set('description', e.target.value)}
-          placeholder="za co to bylo"
+          placeholder={t('vydaj.poleNazevPlaceholder')}
           className={inputClass}
         />
       </label>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Datum dokladu</span>
+          <span className="text-sm font-body text-ink">{t('vydaj.poleDatumDokladu')}</span>
           <DatumPole
             required
             value={form.issueDate}
@@ -408,27 +415,27 @@ export function NewExpenseForm({
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Splatnost</span>
+          <span className="text-sm font-body text-ink">{t('vydaj.poleSplatnost')}</span>
           <DatumPole value={form.dueDate} onChange={(e) => set('dueDate', e.target.value)} className={inputClass} />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Číslo dokladu</span>
+          <span className="text-sm font-body text-ink">{t('vydaj.poleCisloDokladu')}</span>
           <input value={form.number} onChange={(e) => set('number', e.target.value)} className={inputClass} />
         </label>
         <div className="flex flex-col gap-1.5">
           <span className="flex items-baseline justify-between gap-2">
-            <span className="text-sm font-body text-ink">Kategorie</span>
+            <span className="text-sm font-body text-ink">{t('vydaj.poleKategorie')}</span>
             <button
               type="button"
               onClick={() => setNovaKategorie(novaKategorie === null ? '' : null)}
               className="text-xs font-heading font-semibold text-brand-purple hover:text-brand-purpleDeep"
             >
-              {novaKategorie === null ? '+ Nová kategorie' : 'Zrušit'}
+              {novaKategorie === null ? t('vydaj.pridatKategorii') : t('obecne.zrusit')}
             </button>
           </span>
           {novaKategorie === null ? (
             <VyberPole value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={inputClass}>
-              <option value="">— bez kategorie —</option>
+              <option value="">{t('vydaj.bezKategorie')}</option>
               {kategorie.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -449,7 +456,7 @@ export function NewExpenseForm({
                   }
                   if (e.key === 'Escape') setNovaKategorie(null);
                 }}
-                placeholder="např. Marketing"
+                placeholder={t('vydaj.novaKategoriePlaceholder')}
                 className={inputClass}
               />
               <AddButton
@@ -459,7 +466,7 @@ export function NewExpenseForm({
                 disabled={kategorieBusy || !novaKategorie.trim()}
                 className="shrink-0"
               >
-                Přidat
+                {t('vydaj.pridat')}
               </AddButton>
             </span>
           )}
@@ -469,7 +476,7 @@ export function NewExpenseForm({
       {/* Vazba na projekt (zadani 8. 9. 2026) - podle ni se doklad ukaze v
           detailu projektu. Nepovinna, rezie se k zadnemu projektu nevaze. */}
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Projekt</span>
+        <span className="text-sm font-body text-ink">{t('vydaj.poleProjekt')}</span>
         <ProjectSelect
           value={form.caflouProjectId}
           onChange={(id) => set('caflouProjectId', id)}
@@ -477,7 +484,7 @@ export function NewExpenseForm({
           className={inputClass}
         />
         {projects.length === 0 && (
-          <span className="text-xs text-muted font-body">Projekty se z Caflou nenačetly.</span>
+          <span className="text-xs text-muted font-body">{t('vydaj.projektyNenacteny')}</span>
         )}
       </label>
 
@@ -488,20 +495,20 @@ export function NewExpenseForm({
               tam stojí. Uloží se pořád částka bez DPH. */}
           <span className="flex items-center gap-2">
             <span className="text-sm font-body text-ink">
-              {zadavamSDph ? 'Částka s DPH' : 'Částka bez DPH'}
+              {zadavamSDph ? t('vydaj.poleCastkaSDph') : t('vydaj.poleCastkaBezDph')}
             </span>
             <button
               type="button"
               onClick={prehodDph}
               title={
                 zadavamSDph
-                  ? 'Přepnout na zadávání částky bez DPH'
-                  : 'Přepnout na zadávání částky s DPH'
+                  ? t('vydaj.prehoditNaBezDph')
+                  : t('vydaj.prehoditNaSDph')
               }
               aria-label={
                 zadavamSDph
-                  ? 'Přepnout na zadávání částky bez DPH'
-                  : 'Přepnout na zadávání částky s DPH'
+                  ? t('vydaj.prehoditNaBezDph')
+                  : t('vydaj.prehoditNaSDph')
               }
               className="text-muted hover:text-brand-purple transition-colors leading-none"
             >
@@ -520,26 +527,24 @@ export function NewExpenseForm({
             {/* Druha castka je videt hned pri psani (zadani 8. 9. 2026) - at
                 se da zkontrolovat proti dokladu. */}
             <span className="text-xs font-body text-muted text-right tabular-nums">
-              {protejsek === null
-                ? zadavamSDph
-                  ? 'bez DPH —'
-                  : 's DPH —'
-                : `${zadavamSDph ? 'bez DPH' : 's DPH'} ${formatMoney(protejsek, form.currency)}`}
+              {t(zadavamSDph ? 'vydaj.protejsekBezDph' : 'vydaj.protejsekSDph', {
+                castka: protejsek === null ? '—' : formatMoney(protejsek, form.currency),
+              })}
             </span>
           </label>
         </div>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">DPH</span>
+          <span className="text-sm font-body text-ink">{t('vydaj.poleDph')}</span>
           <VyberPole value={form.vatRate} onChange={(e) => set('vatRate', Number(e.target.value))} className={inputClass}>
             {EXPENSE_VAT_RATES.map((r) => (
               <option key={r} value={r}>
-                {r === 0 ? 'bez DPH' : `${r} %`}
+                {r === 0 ? t('vydaj.dphZadna') : `${r} %`}
               </option>
             ))}
           </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Měna</span>
+          <span className="text-sm font-body text-ink">{t('vydaj.poleMena')}</span>
           <VyberPole
             value={form.currency}
             onChange={(e) => set('currency', e.target.value as Currency)}
@@ -547,7 +552,7 @@ export function NewExpenseForm({
           >
             {CURRENCIES.map((c) => (
               <option key={c} value={c}>
-                {CURRENCY_NAMES[c]}
+                {nazevMeny(c, jazyk)}
               </option>
             ))}
           </VyberPole>
@@ -555,7 +560,7 @@ export function NewExpenseForm({
         {/* Zpusob uhrady (zadani 10. 9. 2026). Kartou a hotove je zaplaceno uz
             v okamziku vzniku dokladu, tak se rovnou prepne i prepinac vpravo. */}
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Hrazeno</span>
+          <span className="text-sm font-body text-ink">{t('vydaj.poleHrazeno')}</span>
           <VyberPole
             value={form.paymentMethod}
             onChange={(e) => {
@@ -564,7 +569,7 @@ export function NewExpenseForm({
             }}
             className={inputClass}
           >
-            {ZPUSOBY_UHRADY.map((z) => (
+            {zpusobyUhrady(jazyk).map((z) => (
               <option key={z.hodnota} value={z.hodnota}>
                 {z.nazev}
               </option>
@@ -585,7 +590,7 @@ export function NewExpenseForm({
               !form.paid ? 'bg-solidProgress text-white' : 'bg-surface text-muted hover:text-ink'
             }`}
           >
-            Neuhrazeno
+            {t('vydaj.stavNeuhrazeno')}
           </button>
           <button
             type="button"
@@ -595,7 +600,7 @@ export function NewExpenseForm({
               form.paid ? 'bg-solidDone text-white' : 'bg-surface text-muted hover:text-ink'
             }`}
           >
-            Uhrazeno
+            {t('vydaj.stavUhrazeno')}
           </button>
         </span>
       </div>
@@ -608,12 +613,12 @@ export function NewExpenseForm({
           disabled={busy}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {busy ? 'Ukládám…' : 'Uložit doklad'}
+          {busy ? t('obecne.ukladam') : t('vydaj.ulozitDoklad')}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="text-muted text-sm font-heading">
-          Zavřít
+          {t('obecne.zavrit')}
         </button>
-        <span className="text-xs text-muted font-body">Po uložení se vrátíte na přehled.</span>
+        <span className="text-xs text-muted font-body">{t('vydaj.poUlozeniZpetNaPrehled')}</span>
       </div>
     </form>
   );
