@@ -125,6 +125,24 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
       'bg-violet-100 text-violet-800 border border-violet-300 dark:bg-violet-500/20 dark:text-violet-200 dark:border-violet-400/40',
   },
   {
+    /**
+     * OPRAVUJEME (zadání 27. 9. 2026: „když se označí v AudioTaggeru přeposlech
+     * jako dokončený, tak už by se neměly odesílat upomínky čekáme na opravy.
+     * Ale vytvořil bych pro to nový stav, do kterého by se to překlopilo:
+     * Opravujeme. V tomto stavu nejdou žádné notifikace").
+     *
+     * Míč je na naší straně: klient přeposlech dokončil, připomínky poslal
+     * a my je zapracováváme. Proto odsud NEODCHÁZÍ klientovi ani jedna zpráva
+     * - viz jeStavBezNotifikaci níž - a projekt přestane spadat pod denní
+     * překlápění na „Čekáme na opravy", protože v tom stavu už není.
+     */
+    nazev: 'Opravujeme',
+    popis: 'Klient dokončil přeposlech, zapracováváme jeho připomínky. Klientovi odsud nic nechodí.',
+    rozpracovany: true,
+    barva:
+      'bg-cyan-100 text-cyan-800 border border-cyan-300 dark:bg-cyan-500/20 dark:text-cyan-100 dark:border-cyan-400/40',
+  },
+  {
     nazev: 'Schváleno - k fakturaci',
     // Zadani 15. 9. 2026: „projekt by se nemel ukoncit prehozenim stavu na
     // Schvaleno - k fakturaci. Ukoncit by se mel az ve chvili, kdy odesleme
@@ -279,3 +297,17 @@ export function jeVPriprave(statusName: string | null | undefined): boolean {
  * místem, ať se název nepíše po kódu podruhé.
  */
 export const STAV_PLANUJEME = 'Plánujeme';
+
+/**
+ * OPRAVUJEME - stav, ze kterého klientovi nic nechodí (zadání 27. 9. 2026:
+ * „v tomto stavu nejdou žádné notifikace").
+ *
+ * Drží se tu jedním jménem, ať se po kódu nepíše podruhé. Kdo posílá klientovi
+ * zprávu ke stavu nebo upomínku, se musí zeptat právě téhle funkce - v tomhle
+ * stavu je práce na naší straně a klient už nemá co dodávat.
+ */
+export const STAV_OPRAVUJEME = 'Opravujeme';
+
+export function jeStavBezNotifikaci(nazev: string | null | undefined): boolean {
+  return (nazev ?? '').trim() === STAV_OPRAVUJEME;
+}

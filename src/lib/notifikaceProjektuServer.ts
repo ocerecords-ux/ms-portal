@@ -6,6 +6,7 @@ import {
   STAV_PREPOSLECH_HOTOVO,
 } from '@/lib/notifikaceFirmy';
 import { dosadPromenne } from '@/lib/vzoryZprav';
+import { jeStavBezNotifikaci } from '@/lib/stavyProjektu';
 import { pozdrav } from '@/lib/osloveni';
 import { vzorProStav } from '@/lib/vzoryZpravServer';
 import { sendStavProjektuEmail } from '@/lib/email';
@@ -72,6 +73,7 @@ export async function posliNotifikaciKeStavu(
         driveUrl: true,
         companyId: true,
         companyName: true,
+        statusName: true,
         company: {
           select: {
             name: true,
@@ -86,6 +88,16 @@ export async function posliNotifikaciKeStavu(
       },
     });
     if (!projekt?.companyId) return { stav: 'vypnuto' };
+
+    /**
+     * Z „Opravujeme" klientovi nic nechodí (zadání 27. 9. 2026: „v tomto stavu
+     * nejdou žádné notifikace"). Míč je na naší straně - zapracováváme jeho
+     * připomínky - a zpráva o tom, že na něco čekáme, by byla nepravda.
+     * Hlídá se to tady, u jediných dveří ven, ne u každého volajícího zvlášť.
+     */
+    if (jeStavBezNotifikaci(projekt.statusName) || jeStavBezNotifikaci(stav)) {
+      return { stav: 'vypnuto' };
+    }
 
     /**
      * DVA DRUHY ZPRAV (zadani 14. 9. 2026). Audiokniha vzniká po krocích a

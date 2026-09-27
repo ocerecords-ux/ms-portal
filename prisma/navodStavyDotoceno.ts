@@ -28,6 +28,7 @@ Pořadí v nabídce není abecední — jde tak, jak projekt opravdu putuje, aby
 - **Dotočeno/stříháme** — s hercem dotočeno a na disku už jsou první tracky.
 - **Dokončeno - ke schválení** — na disku jsou všechny tracky, čekáme na finální opravy od klienta.
 - **Čekáme na opravy** — sedm dní po odevzdání klient opravy nedodal.
+- **Opravujeme** — klient dokončil přeposlech, zapracováváme jeho připomínky. **Z tohohle stavu klientovi nechodí žádná zpráva** — míč je na naší straně.
 - **Schváleno - k fakturaci** — opravené nahrávky jsou na disku, čeká se na fakturu.
 - **Vyfakturováno** — faktura je u klienta, projekt je uzavřený.
 
@@ -101,6 +102,7 @@ Projekty přenesené z Caflou se dotočily ještě předtím, než tlačítko vz
 
 - **Dotočeno** se má překlopit samo, jakmile je s hercem dotočeno a na disku ještě není ani jeden track.
 - **Čekáme na opravy** se má překlopit samo sedm dní po „Dokončeno - ke schválení" a odejít o tom zpráva klientovi.
+- **Opravujeme** se překlopí samo ve chvíli, kdy klient v AudioTaggeru označí přeposlech za dokončený. Zpráva „přeposlech dokončen" mu ještě odejde, další už ne — a projekt tím zmizí z dosahu připomínání „čekáme na opravy", protože se od té chvíle čeká na nás. Platí to jen u audioknih.
 
 Do té doby jde obojí přehodit ručně, aby to nikoho neblokovalo.`,
 };

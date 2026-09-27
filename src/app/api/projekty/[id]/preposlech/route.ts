@@ -5,6 +5,7 @@ import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 import { STAV_PREPOSLECH_HOTOVO } from '@/lib/notifikaceFirmy';
 import { posliNotifikaciKeStavu } from '@/lib/notifikaceProjektuServer';
 import { oznamDokoncenyPreposlech } from '@/lib/brunoOznameni';
+import { preklopNaOpravujeme } from '@/lib/opravujemeServer';
 
 /**
  * Záznamy chyb z přeposlechu nahrávky (AudioTagger) — zadání 11. 9. 2026.
@@ -248,6 +249,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await posliNotifikaciKeStavu(params.id, STAV_PREPOSLECH_HOTOVO).catch((err) =>
       console.error('Zprava klientovi o dokoncenem preposlechu selhala:', err),
     );
+
+    /**
+     * A PROJEKT SE PŘEKLOPÍ NA „OPRAVUJEME" (zadání 27. 9. 2026). Až TEĎ,
+     * po odeslání zprávy o dokončeném přeposlechu: z „Opravujeme" už
+     * klientovi nic nechodí, takže obrácené pořadí by tu jednu zprávu
+     * spolklo. Od téhle chvíle projekt nespadá pod denní překlápění na
+     * „Čekáme na opravy" - čeká se na nás, ne na klienta.
+     */
+    await preklopNaOpravujeme(params.id, pristup.jmeno);
   }
 
   return NextResponse.json(await stav(params.id, pristup));

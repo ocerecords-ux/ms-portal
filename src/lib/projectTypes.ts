@@ -77,6 +77,9 @@ export const ACTIVE_PROJECT_STATUSES: string[] = [
   'Natáčíme',
   'Natáčíme/stříháme',
   'Čekáme na opravy',
+  // Opravujeme (27. 9. 2026) - klient přeposlech dokončil, my zapracováváme
+  // připomínky. Práce běží dál, takže projekt patří mezi aktivní.
+  'Opravujeme',
   'Zapracovány opravy',
   'V realizaci',
   // Prace skoncila, zakazka ne - projekt konci az odeslanou fakturou
