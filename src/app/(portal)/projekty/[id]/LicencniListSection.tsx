@@ -444,7 +444,7 @@ export function LicencniListSection({
             </button>
             {listy.length > 0 && (
               <a
-                href={`/api/projects/${encodeURIComponent(caflouProjectId)}/licencni-list/zip`}
+                href={`/api/projects/${encodeURIComponent(caflouProjectId)}/dokumenty/zip`}
                 title="Stáhne všechny vystavené listy zakázky v jednom archivu"
                 className="rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface no-underline hover:text-brand-purple hover:border-brand-purple transition-colors"
               >

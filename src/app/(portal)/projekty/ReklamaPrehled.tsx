@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { DisplayProject } from '@/lib/projektyTypy';
 import { StatusPill, formatDate } from './shared';
@@ -34,6 +34,24 @@ export type DokumentProjektu = {
 
 export type ReklamaProjekt = DisplayProject;
 
+/**
+ * Okno s dokumenty se kotví k pilulce licence, u které se klepne - stejně
+ * jako náhled dokladů v přehledu projektů (zadání 27. 9. 2026: „toto
+ * vyskakovací okno udělat tak, aby vyskočilo a zavíralo se jako doklady
+ * v přehledu projektu"). Žádné ztmavení pozadí: přehled má pod ním zůstat
+ * čitelný, ať je vidět, u kterého řádku člověk stojí.
+ */
+type OknoDokumentu = {
+  nazev: string;
+  projektId: string;
+  dokumenty: DokumentProjektu[];
+  left: number;
+  top: number;
+};
+
+const SIRKA_OKNA = 320;
+const MEZERA_OKNA = 8;
+
 export function ReklamaPrehled({
   aktivni,
   dokoncene,
@@ -58,8 +76,49 @@ export function ReklamaPrehled({
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
-  const [rozbaleno, setRozbaleno] = useState(false);
-  const [okno, setOkno] = useState<{ nazev: string; dokumenty: DokumentProjektu[] } | null>(null);
+  /**
+   * DOKONČENÉ JSOU VIDĚT ROVNOU (zadání 27. 9. 2026: „aby primárně byly ty
+   * dokončené projekty odkryté, klient si je když tak schová sám"). Klient
+   * reklam se k hotovým spotům vrací - stahuje si listy, otevírá složku -
+   * takže skrývat je za tlačítko znamenalo klik navíc pokaždé.
+   */
+  const [rozbaleno, setRozbaleno] = useState(true);
+  const [okno, setOkno] = useState<OknoDokumentu | null>(null);
+  const oknoRef = useRef<HTMLDivElement | null>(null);
+
+  /** Okno se nesmí schovat pod spodní hranou - když se nevejde, jde nahoru. */
+  useLayoutEffect(() => {
+    if (!okno || !oknoRef.current) return;
+    const r = oknoRef.current.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - MEZERA_OKNA) {
+      const novy = Math.max(MEZERA_OKNA, window.innerHeight - r.height - MEZERA_OKNA);
+      if (Math.abs(novy - okno.top) > 1) setOkno({ ...okno, top: novy });
+    }
+  }, [okno]);
+
+  // Escape, klik mimo a posun stránky okno zavřou - stejně jako u dokladů.
+  useEffect(() => {
+    if (!okno) return;
+    const zavri = () => setOkno(null);
+    const klavesa = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOkno(null);
+    };
+    const mimo = (e: MouseEvent) => {
+      if (oknoRef.current && !oknoRef.current.contains(e.target as Node)) setOkno(null);
+    };
+    window.addEventListener('keydown', klavesa);
+    window.addEventListener('scroll', zavri, true);
+    window.addEventListener('resize', zavri);
+    // Až v dalším cyklu, ať otevírací klik okno rovnou nezavře.
+    const t = window.setTimeout(() => document.addEventListener('mousedown', mimo), 0);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('keydown', klavesa);
+      window.removeEventListener('scroll', zavri, true);
+      window.removeEventListener('resize', zavri);
+      document.removeEventListener('mousedown', mimo);
+    };
+  }, [okno]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -98,53 +157,49 @@ export function ReklamaPrehled({
         )}
       </div>
 
-      {/* Dokumenty k zakázce - malé okno, ať se kvůli stažení nikam neproklikává. */}
+      {/* Dokumenty k zakázce - okno u pilulky, jako náhled dokladů. */}
       {okno && (
         <div
-          className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setOkno(null)}
-          role="presentation"
+          ref={oknoRef}
+          style={{ position: 'fixed', left: okno.left, top: okno.top, width: SIRKA_OKNA }}
+          className="z-[90] bg-surface border border-line rounded-card shadow-2xl overflow-hidden text-left"
         >
-          <div
-            className="bg-surface border border-line rounded-card shadow-2xl w-full max-w-md overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line">
-              <span className="font-heading font-semibold text-sm text-ink">{okno.nazev}</span>
-              <button
-                type="button"
-                onClick={() => setOkno(null)}
-                aria-label="Zavřít"
-                className="text-muted hover:text-ink text-xl leading-none bg-transparent border-0 cursor-pointer"
+          <div className="flex items-baseline justify-between gap-3 px-4 py-2.5 border-b border-line">
+            <span className="font-heading font-semibold text-sm text-ink truncate">{okno.nazev}</span>
+            {okno.dokumenty.length > 1 && (
+              <a
+                href={`/api/projects/${encodeURIComponent(okno.projektId)}/dokumenty/zip`}
+                title="Stáhne všechny dokumenty zakázky v jednom archivu"
+                className="shrink-0 text-xs font-heading font-semibold text-brand-purple no-underline hover:underline"
               >
-                ×
-              </button>
-            </div>
-            <div className="p-4 flex flex-col gap-2">
-              {okno.dokumenty.length === 0 && (
-                <p className="text-sm font-body text-muted m-0">Zatím tu žádný dokument není.</p>
-              )}
-              {okno.dokumenty.map((d) => (
-                <div
-                  key={d.id}
-                  className="flex items-center gap-3 justify-between border border-line rounded-lg px-3 py-2"
-                >
-                  <span className="min-w-0">
-                    <span className="block text-xs font-heading text-muted">
-                      {d.druh === 'RL' ? 'Rodný list' : 'Licenční list'}
-                    </span>
-                    <span className="block text-sm font-body text-ink truncate">{d.nazev}</span>
+                Stáhnout vše
+              </a>
+            )}
+          </div>
+          <div className="p-3 flex flex-col gap-2 max-h-72 overflow-y-auto">
+            {okno.dokumenty.length === 0 && (
+              <p className="text-sm font-body text-muted m-0">Zatím tu žádný dokument není.</p>
+            )}
+            {okno.dokumenty.map((d) => (
+              <div
+                key={d.id}
+                className="flex items-center gap-3 justify-between border border-line rounded-lg px-3 py-2"
+              >
+                <span className="min-w-0">
+                  <span className="block text-xs font-heading text-muted">
+                    {d.druh === 'RL' ? 'Rodný list' : 'Licenční list'}
                   </span>
-                  <a
-                    href={d.druh === 'RL' ? `/api/rodny-list/${d.id}` : `/api/licencni-list/${d.id}`}
-                    download
-                    className="shrink-0 bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 no-underline hover:bg-brand-purpleDeep transition-colors"
-                  >
-                    Stáhnout
-                  </a>
-                </div>
-              ))}
-            </div>
+                  <span className="block text-sm font-body text-ink truncate">{d.nazev}</span>
+                </span>
+                <a
+                  href={d.druh === 'RL' ? `/api/rodny-list/${d.id}` : `/api/licencni-list/${d.id}`}
+                  download
+                  className="shrink-0 bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-1.5 no-underline hover:bg-brand-purpleDeep transition-colors"
+                >
+                  Stáhnout
+                </a>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -171,7 +226,7 @@ function Tabulka({
   dokumenty: Record<string, DokumentProjektu[]>;
   odkazyPripominek: Record<string, string | null>;
   jazyk: ReturnType<typeof useJazyk>;
-  setOkno: (v: { nazev: string; dokumenty: DokumentProjektu[] } | null) => void;
+  setOkno: (v: OknoDokumentu | null) => void;
 }) {
   if (projekty.length === 0) {
     return (
@@ -236,7 +291,16 @@ function Tabulka({
                     ) : (
                       <button
                         type="button"
-                        onClick={() => setOkno({ nazev: p.name, dokumenty: listy })}
+                        onClick={(e) => {
+                          const r = e.currentTarget.getBoundingClientRect();
+                          setOkno({
+                            nazev: p.name,
+                            projektId: id,
+                            dokumenty: listy,
+                            left: Math.min(r.left, window.innerWidth - SIRKA_OKNA - MEZERA_OKNA),
+                            top: r.bottom + MEZERA_OKNA,
+                          });
+                        }}
                         title={
                           listy.length > 0
                             ? 'Dokumenty k zakázce'
@@ -271,21 +335,27 @@ function Tabulka({
                     {formatDate(p.endDate, jazyk)}
                   </td>
                   <td className="px-4 py-2.5 align-middle whitespace-nowrap">
+                    {/* OBRANDOVANÝ DISK, NE ODKAZ NA GOOGLE (zadání 27. 9.
+                        2026). V adrese je id projektu, ne složky - portál
+                        ověří, že projekt klientovi patří, a teprve pak jeho
+                        složku ukáže. */}
                     {slozka ? (
-                      <a
-                        href={slozka}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link
+                        href={`/nahravky?projekt=${encodeURIComponent(id)}`}
                         className="text-brand-purple font-heading text-xs no-underline hover:underline"
                       >
                         Otevřít složku
-                      </a>
+                      </Link>
                     ) : (
                       <span className="text-sm text-muted">—</span>
                     )}
                   </td>
                   <td className="px-4 py-2.5 align-middle whitespace-nowrap">
-                    {pripominky ? (
+                    {/* HOTOVÝ SPOT SE UŽ NEPŘIPOMÍNKUJE (zadání 27. 9. 2026).
+                        Dokončená zakázka je odevzdaná a schválená; odkaz do
+                        taggeru by sváděl psát připomínky k něčemu, co se už
+                        nemění. */}
+                    {pripominky && !p.finished ? (
                       <a
                         href={pripominky}
                         target="_blank"
