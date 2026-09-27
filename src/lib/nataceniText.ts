@@ -136,7 +136,7 @@ function odstavce(text: string, styl: string, stylPrvniho?: string): string {
  */
 function hlavicka(podklady: PodkladyTextu): string {
   const logo = podklady.logoUrl
-    ? `<img src="${escapeHtml(podklady.logoUrl)}" alt="Mediaspace" height="30" style="height:23pt">`
+    ? `<img src="${escapeHtml(podklady.logoUrl)}" alt="Mediaspace" height="56" style="height:42pt">`
     : '';
 
   return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">
@@ -148,7 +148,7 @@ function hlavicka(podklady: PodkladyTextu): string {
 <p style="margin:5pt 0 0;font-family:Arial,sans-serif;font-size:19pt;line-height:1.15;color:#ffffff"><b>${escapeHtml(podklady.projekt)}</b></p>
 ${podklady.klient ? `<p style="margin:3pt 0 0;font-family:Arial,sans-serif;font-size:10pt;color:${FIALOVA_SVETLA}">${escapeHtml(podklady.klient)}</p>` : ''}
 </td>
-<td align="right" width="150" style="vertical-align:top;text-align:right;width:112pt">${logo}</td>
+<td align="right" width="210" style="vertical-align:middle;text-align:right;width:158pt">${logo}</td>
 </tr>
 </table>
 </td></tr>
