@@ -376,6 +376,39 @@ export function Editor({
 
   const pomerPlatna = useMemo(() => `${f.sirka} / ${f.vyska}`, [f.sirka, f.vyska]);
 
+  /**
+   * PLÁTNO SE VŽDY VEJDE CELÉ NA OBRAZOVKU (stejné pravidlo jako u náhledů
+   * dokumentů: „nemůže tam být nikdy ten posuvník"). Poměr stran se mění
+   * s formátem - 9:16 je vysoké, LinkedIn na šířku je nízké - takže velikost
+   * počítáme z volné šířky sloupce i z výšky okna a bereme menší z obojího.
+   */
+  const ramecRef = useRef<HTMLDivElement | null>(null);
+  const [rozmer, setRozmer] = useState<{ sirka: number; vyska: number } | null>(null);
+
+  useEffect(() => {
+    const spocti = () => {
+      const ramec = ramecRef.current;
+      if (!ramec) return;
+      const pomer = f.sirka / f.vyska;
+      const volnaVyska = Math.max(280, window.innerHeight - 250);
+      let sirka = Math.min(ramec.clientWidth, 520);
+      let vyska = sirka / pomer;
+      if (vyska > volnaVyska) {
+        vyska = volnaVyska;
+        sirka = vyska * pomer;
+      }
+      setRozmer({ sirka: Math.round(sirka), vyska: Math.round(vyska) });
+    };
+    spocti();
+    window.addEventListener('resize', spocti);
+    const sledovac = new ResizeObserver(spocti);
+    if (ramecRef.current) sledovac.observe(ramecRef.current);
+    return () => {
+      window.removeEventListener('resize', spocti);
+      sledovac.disconnect();
+    };
+  }, [f.sirka, f.vyska]);
+
   return (
     <div className="flex flex-col gap-4">
       {/* Hlavička */}
@@ -458,9 +491,14 @@ export function Editor({
             </select>
           </div>
 
+          <div ref={ramecRef} className="w-full flex justify-center">
           <div
-            className="relative mx-auto w-full max-w-[520px] rounded-card overflow-hidden border border-line bg-field"
-            style={{ aspectRatio: pomerPlatna }}
+            className="relative rounded-card overflow-hidden border border-line bg-field"
+            style={
+              rozmer
+                ? { width: `${rozmer.sirka}px`, height: `${rozmer.vyska}px` }
+                : { width: '100%', maxWidth: '520px', aspectRatio: pomerPlatna }
+            }
             ref={plochaRef}
             onPointerMove={tahni}
             onPointerUp={pustTah}
@@ -495,6 +533,7 @@ export function Editor({
                 )}
               </div>
             ))}
+          </div>
           </div>
 
           <span className="text-xs font-body text-muted text-center">
