@@ -32,6 +32,7 @@ const schema = z.object({
   smlouvyPodepisuje: z.string().trim().optional(),
   prijimaDotazyKlientu: z.string().trim().optional(),
   vidiBanku: z.string().trim().optional(),
+  spravujeTechParametry: z.string().trim().optional(),
   sledujeZmenyProjektu: z.string().trim().optional(),
   /** "1" / "0" - ucet jen na prohlizeni portalu (zadani 18. 9. 2026). */
   jenNahled: z.string().trim().optional(),
@@ -80,6 +81,7 @@ function readFormData(formData: FormData) {
     smlouvyPodepisuje: has('smlouvyPodepisuje') ? formData.get('smlouvyPodepisuje') : undefined,
     prijimaDotazyKlientu: has('prijimaDotazyKlientu') ? formData.get('prijimaDotazyKlientu') : undefined,
     vidiBanku: has('vidiBanku') ? formData.get('vidiBanku') : undefined,
+    spravujeTechParametry: has('spravujeTechParametry') ? formData.get('spravujeTechParametry') : undefined,
     sledujeZmenyProjektu: has('sledujeZmenyProjektu') ? formData.get('sledujeZmenyProjektu') : undefined,
     jenNahled: has('jenNahled') ? formData.get('jenNahled') : undefined,
     dostavaDotoceno: has('dostavaDotoceno') ? formData.get('dostavaDotoceno') : undefined,
@@ -222,6 +224,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         : {}),
       ...(data.takyZvukar !== undefined ? { takyZvukar: data.takyZvukar === '1' } : {}),
       ...(data.vidiBanku !== undefined ? { vidiBanku: data.vidiBanku === '1' } : {}),
+      ...(data.spravujeTechParametry !== undefined
+        ? { spravujeTechParametry: data.spravujeTechParametry === '1' }
+        : {}),
       ...(data.sledujeZmenyProjektu !== undefined
         ? { sledujeZmenyProjektu: data.sledujeZmenyProjektu === '1' }
         : {}),

@@ -166,6 +166,8 @@ model Company {
   rodneListy RodnyList[]
   /// Zadosti o udaje, ktere se tykaji teto firmy.
   pozvankyUdaju PozvankaUdaju[] @relation("PozvankaUdajuFirma")
+  /// Technické parametry výroby, které se u této firmy dodržují (27. 9. 2026).
+  technickeProfily TechnickyProfil[] @relation("FirmaTechProfil")
 }
 
 model User {
@@ -291,6 +293,12 @@ model User {
   /// 27. 9. 2026: „zatím uvidím jen já"). Zapíná se v Administraci; seed ho
   /// jednou zapne Ondřejovi a nikomu jinému.
   vidiSite       Boolean   @default(false)
+  /// Spravuje technické parametry výroby (zadání 27. 9. 2026: „měnit to můžu
+  /// hromadně já nebo Peter. Ostatní zvukaři by to neměli mít možnost
+  /// upravovat"). Kdo to nemá, vidí parametry jen ke čtení. Příznak u účtu,
+  /// ne seznam jmen v kódu - až to bude hlídat někdo další, překlikne se to
+  /// v Administraci.
+  spravujeTechParametry Boolean @default(false)
   /// Kdy clovek naposledy videl okno s prehledem dne (23. 9. 2026: „at se mi
   /// v portalu otevre pruhledne vyskakovaci okno"). Jednou za den.
   prehledZobrazenAt DateTime?
@@ -4086,4 +4094,40 @@ model SocialniObrazek {
   createdAt DateTime @default(now())
 
   @@index([autorId, createdAt])
+}
+
+/// TECHNICKÉ PARAMETRY VÝROBY (zadání 27. 9. 2026: „chci nastavit u projektu
+/// ještě info o technických parametrech… měnit to můžu hromadně já nebo
+/// Peter. Ostatní zvukaři by to neměli mít možnost upravovat").
+///
+/// Každé nakladatelství to má jinak - Audiotéka chce mp3 128 a tracky po
+/// 30 minutách, Albatros k tomu ještě tagy a pojmenování souborů, Audiolibrix
+/// navíc hlídá hlasitost. Proto to NENÍ pole u projektu, ale ŠABLONA přiřazená
+/// firmě: projekt si ji vezme podle klienta a změna bitrate se přepíše jednou
+/// a platí všude.
+///
+/// `sekce` je JSON (viz typ SekceTech v lib/technickeParametry.ts) - nadpis,
+/// řádky a u reklam podmínka, kdy se sekce ukáže. Sloupec za každý parametr
+/// by znamenal migraci pokaždé, když si nakladatelství vzpomene na další.
+model TechnickyProfil {
+  id      String  @id @default(cuid())
+  nazev   String  @unique
+  /// AUDIOKNIHA nebo REKLAMA - podle toho, na jaké projekty profil sedí.
+  druh    String
+  /// Jedna věta do přehledu - odkud to víme, koho se to týká.
+  perex   String?
+  /// Sekce parametrů: [{ nadpis, radky[], sluzba?, jenRadio? }].
+  sekce   Json
+  /// Použije se u projektu, jehož firma vlastní profil nemá.
+  vychozi Boolean @default(false)
+  aktivni Boolean @default(true)
+  poradi  Int     @default(100)
+
+  /// Firmy, které tenhle profil dodržují.
+  firmy   Company[] @relation("FirmaTechProfil")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([druh, poradi])
 }

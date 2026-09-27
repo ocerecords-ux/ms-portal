@@ -7,6 +7,7 @@ import { prahaNaUtc, rozeberUdalost, srovnej } from '../src/lib/importGoogleKale
 import { bezTitulu } from '../src/lib/jmena';
 import { STARY_VZOR_NATACENI, VYCHOZI_VZOR_NATACENI } from '../src/lib/nataceniText';
 import { PODPIS_ONDREJ } from './podpisOndrej';
+import { VYCHOZI_SADY } from './technickeParametryVychozi';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -197,6 +198,8 @@ async function main() {
   await odkazyNaHovory();
   await ranniPrehledOndrejovi();
   await siteJenOndrejovi();
+  await zalozTechnickeParametry();
+  await parametrySpravujiOndrejAPeter();
   await schvaleniReklamZvonek();
   await matejStrihaExterne();
   await albatrosCenuUrcujeSam();
@@ -1782,5 +1785,98 @@ async function vedouciPobocek() {
     console.log(`  vedouci pobocek: Tomas ${tomas ? 'ano' : 'NENALEZEN'}, Ondrej ml. ${ondrej ? 'ano' : 'NENALEZEN'}`);
   } catch (e) {
     console.warn('  vedouci pobocek selhalo:', e);
+  }
+}
+
+/**
+ * TECHNICKÉ PARAMETRY VÝROBY (zadání 27. 9. 2026: „chci nastavit u projektu
+ * ještě info o technických parametrech… Každá firma to má jinak").
+ *
+ * Sady se zakládají JEN JEDNOU. Jakmile je někdo v Administraci upraví, seed
+ * do nich už nesahá - jinak by každé nasazení přepsalo, co člověk nastavil.
+ * Firmy se napojí podle názvu; co se nenajde, se přiřadí ručně.
+ */
+async function zalozTechnickeParametry() {
+  const ZNAMKA = 'technicke-parametry-vychozi';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const firmy = await prisma.company.findMany({ select: { id: true, name: true } });
+    const klic = (s: string) =>
+      s
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .trim();
+
+    for (const sada of VYCHOZI_SADY) {
+      const uzJe = await prisma.technickyProfil.findUnique({ where: { nazev: sada.nazev } });
+      if (uzJe) continue;
+
+      const hledane = (sada.firmy ?? []).map(klic);
+      const najite = firmy.filter((f) => hledane.some((h) => klic(f.name).includes(h)));
+
+      await prisma.technickyProfil.create({
+        data: {
+          nazev: sada.nazev,
+          druh: sada.druh,
+          perex: sada.perex ?? null,
+          sekce: sada.sekce as never,
+          vychozi: sada.vychozi ?? false,
+          poradi: sada.poradi ?? 100,
+          firmy: najite.length > 0 ? { connect: najite.map((f) => ({ id: f.id })) } : undefined,
+        },
+      });
+      console.log(
+        `  technicke parametry: zalozena sada "${sada.nazev}"` +
+          (najite.length > 0 ? ` (firmy: ${najite.map((f) => f.name).join(', ')})` : ''),
+      );
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+  } catch (err) {
+    console.warn('  technicke parametry se nepodarilo zalozit:', err);
+  }
+}
+
+/**
+ * Sady smí měnit Ondřej a Peter (zadání 27. 9. 2026: „měnit to můžu hromadně
+ * já nebo Peter. Ostatní zvukaři by to neměli mít možnost upravovat").
+ * Jednou nastavit, dál si to řídí Administrace.
+ */
+async function parametrySpravujiOndrejAPeter() {
+  const ZNAMKA = 'tech-parametry-spravci';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const lide = await prisma.user.findMany({
+      where: {
+        role: 'ADMIN',
+        active: true,
+        OR: [
+          {
+            name: { contains: 'Ondřej Černý', mode: 'insensitive' },
+            NOT: { name: { contains: 'ml.', mode: 'insensitive' } },
+          },
+          { name: { contains: 'Peter Dratva', mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, email: true },
+    });
+
+    if (lide.length === 0) {
+      console.warn('  technicke parametry: spravci nenalezeni, priznak se nikomu nezapina');
+      return;
+    }
+    await prisma.user.updateMany({
+      where: { id: { in: lide.map((u) => u.id) } },
+      data: { spravujeTechParametry: true },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  technicke parametry: spravuji ${lide.map((u) => u.email).join(', ')}`);
+  } catch (err) {
+    console.warn('  technicke parametry: spravce se nepodarilo nastavit:', err);
   }
 }

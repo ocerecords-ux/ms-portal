@@ -73,6 +73,13 @@ export default async function AdminHomePage({
         >
           Vzory natáčecích textů
         </Link>
+        {/* Technicke parametry vyroby (zadani 27. 9. 2026). */}
+        <Link
+          href="/admin/technicke-parametry"
+          className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
+        >
+          Technické parametry
+        </Link>
         {/* Koncept a hlidani clanku na Wikipedii (zadani 22. 9. 2026). */}
         <Link
           href="/admin/wikipedie"

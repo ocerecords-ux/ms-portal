@@ -14,6 +14,7 @@ import type { ConversationKind } from '@prisma/client';
 import { MS_SMAJLICI, najdiSmajlika } from '@/lib/msSmajlici';
 import { doplnVelkaPismena, naVelke, zacatekVety } from '@/lib/velkePismena';
 import { MsSmajlik } from './MsSmajlik';
+import { TechnickeParametryOkno } from './TechnickeParametryOkno';
 import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import {
   CHAT_TABS,
@@ -3530,6 +3531,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                         <IkonaLidi />
                         <span className="tabular-nums">{otevrena.memberLabels.length + 1}</span>
                       </button>
+                    )}
+                    {/* TECHNICKÉ PARAMETRY (zadání 27. 9. 2026) - v kanálu
+                        projektu hned po ruce, aby si zvukař nemusel otevírat
+                        detail jen kvůli tomu, v čem se to odevzdává. */}
+                    {otevrena.kind === 'PROJEKT' && otevrena.caflouProjectId && (
+                      <TechnickeParametryOkno caflouProjectId={otevrena.caflouProjectId} />
                     )}
                     {/* Ztlumeni jednoho rozhovoru (zadani 12. 9. 2026) - patri
                         k nemu, ne do obecneho nastaveni. Zpravy chodi dal

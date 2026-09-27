@@ -35,6 +35,8 @@ type EditableUser = {
   prijimaDotazyKlientu: boolean;
   /** Vidí sekci Banka (zadání 17. 9. 2026). */
   vidiBanku: boolean;
+  /** Spravuje technické parametry výroby (zadání 27. 9. 2026). */
+  spravujeTechParametry: boolean;
   /** Chce vědět o změně stavu a termínů u projektů (zadání 18. 9. 2026). */
   sledujeZmenyProjektu: boolean;
   /** Účet jen na prohlížení portálu z různých rolí (zadání 18. 9. 2026). */
@@ -98,6 +100,7 @@ export function UserEditForm({
   const [smlouvyPodepisuje, setSmlouvyPodepisuje] = useState(user.smlouvyPodepisuje);
   const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
   const [vidiBanku, setVidiBanku] = useState(user.vidiBanku);
+  const [spravujeTechParametry, setSpravujeTechParametry] = useState(user.spravujeTechParametry);
   const [sledujeZmeny, setSledujeZmeny] = useState(user.sledujeZmenyProjektu);
   const [jenNahled, setJenNahled] = useState(user.jenNahled);
   const [dostavaDotoceno, setDostavaDotoceno] = useState(user.dostavaDotoceno);
@@ -211,6 +214,7 @@ export function UserEditForm({
         if (isMediaspace) fd.set('smlouvyPodepisuje', smlouvyPodepisuje ? '1' : '0');
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
         if (isMediaspace) fd.set('vidiBanku', vidiBanku ? '1' : '0');
+        if (isMediaspace) fd.set('spravujeTechParametry', spravujeTechParametry ? '1' : '0');
         if (isMediaspace) fd.set('sledujeZmenyProjektu', sledujeZmeny ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('schvaleniReklam', schvaleniReklam ? '1' : '0');
@@ -500,6 +504,28 @@ export function UserEditForm({
                 Vidí sekci Banka
                 <span className="block text-xs text-muted">
                   pohyby na účtu, párování plateb a napojení účtu v Dokladech
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Kdo spravuje technicke parametry vyroby (zadani 27. 9. 2026:
+            „menit to muzu hromadne ja nebo Peter. Ostatni zvukari by to
+            nemeli mit moznost upravovat"). */}
+        {isMediaspace && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={spravujeTechParametry}
+                onChange={(e) => setSpravujeTechParametry(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                Spravuje technické parametry
+                <span className="block text-xs text-muted">
+                  mění sady formátů u nakladatelství — ostatní je mají jen ke čtení
                 </span>
               </span>
             </label>

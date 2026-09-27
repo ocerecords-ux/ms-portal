@@ -42,6 +42,8 @@ import { ProtokolNataceni } from './ProtokolNataceni';
 import { VykazyProjektu, type BonusRadek, type VykazRadek } from './VykazyProjektu';
 import { CerpaniPoDruzich } from './CerpaniPoDruzich';
 import { RodnyListSection } from './RodnyListSection';
+import { TechnickeParametryKarta } from './TechnickeParametryKarta';
+import { parametryProjektu, smiSpravovatParametry } from '@/lib/technickeParametryServer';
 import { VystupySection } from './VystupySection';
 import { LicencniListSection } from './LicencniListSection';
 import { PrilohaObjednavky } from '@/components/PrilohaObjednavky';
@@ -412,6 +414,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const invoicedByCurrency = soucet(invoiceRows, (r) => r.statusLabel === 'Stornovaná');
   const costsByCurrency = soucet(expenseRows);
 
+  /**
+   * TECHNICKÉ PARAMETRY VÝROBY (zadání 27. 9. 2026). Sada se bere podle
+   * klienta - viz lib/technickeParametryServer.ts. Zvukař ji má ke čtení,
+   * měnit ji smí jen ten, kdo na to má na kartě příznak.
+   */
+  const [technickeParametry, smiMenitParametry] = await Promise.all([
+    parametryProjektu(caflouProjectId),
+    smiSpravovatParametry(session.user.id),
+  ]);
+
   // Zalozky (zprava uzivatele 8. 9. 2026: "u projektu uz to zacina byt trochu
   // neprehledne... Natacecí frekvence a doklady by mohly byt nahore v
   // zalozce"). Obsah se vykresli na serveru a do zalozek prijde hotovy.
@@ -490,6 +502,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           zaverKnihy: meta?.zaverKnihy ?? '',
         }}
       />
+      {technickeParametry && (
+        <TechnickeParametryKarta parametry={technickeParametry} smiMenit={smiMenitParametry} />
+      )}
     </>
   );
 

@@ -76,6 +76,12 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // Co Bruno vi o nasi praci (zadani 16. 9. 2026).
   '/admin/bruno': ['ADMIN'],
   '/admin/navody': ['ADMIN'],
+  // Technicke parametry vyroby (zadani 27. 9. 2026: „menit to muzu hromadne
+  // ja nebo Peter. Ostatni zvukari by to nemeli mit moznost upravovat").
+  // Sprava je v administraci; zvukar parametry vidi v karte projektu a v chatu,
+  // kde na ne nesaha. Druhy zamek je priznak spravujeTechParametry na karte -
+  // bez nej je i tahle stranka jen ke cteni.
+  '/admin/technicke-parametry': ['ADMIN'],
   // Zadosti o udaje hercu a firem odkazem (zadani 16. 9. 2026).
   '/admin/udaje': ['ADMIN'],
   // Tabule ve studiu v liště (zadání 23. 9. 2026: „dej jim ty tabule na horní
@@ -139,6 +145,9 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   // Navody k portalu (zadani 16. 9. 2026).
   { href: '/napoveda', label: 'Nápověda' },
   { href: '/admin/navody', label: 'Návody' },
+  // Technicke parametry vyroby (27. 9. 2026) - clovek tam jde, kdyz
+  // nakladatelstvi zmeni format. Neni ve vychozi liste.
+  { href: '/admin/technicke-parametry', label: 'Technické parametry' },
   { href: '/muj-ucet', label: 'Můj účet' },
   // Site - priprava prispevku na Instagram a LinkedIn (27. 9. 2026). Neni ve
   // vychozi liste; kdo ma modul zapnuty, prida si ho pres "+".
