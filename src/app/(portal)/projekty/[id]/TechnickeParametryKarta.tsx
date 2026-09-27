@@ -3,12 +3,15 @@ import { VypisParametru } from '@/app/(portal)/components/VypisParametru';
 import type { ParametryProjektu } from '@/lib/technickeParametryServer';
 
 /**
- * TECHNICKÉ PARAMETRY V KARTĚ PROJEKTU (zadání 27. 9. 2026: „uvidí to v kartě
- * projektu").
+ * ZÁLOŽKA TECHNICKÉ PARAMETRY (zadání 27. 9. 2026: „dej mi to jako záložku
+ * v detailu projektu").
  *
  * Jen ke čtení - upravuje se to na jednom místě v Administraci, aby změna
  * platila pro všechny projekty té firmy. Kdo na to právo má, má tu rovnou
- * proklik; ostatní vidí jen, odkud parametry jsou.
+ * proklik; ostatní vidí aspoň, odkud parametry jsou.
+ *
+ * Nadpis je název sady, ne „Technické parametry" - to už stojí na záložce
+ * a dvakrát po sobě by to jen zabíralo řádek.
  */
 export function TechnickeParametryKarta({
   parametry,
@@ -20,10 +23,15 @@ export function TechnickeParametryKarta({
   return (
     <section className="rounded-card border border-line bg-surface p-5 flex flex-col gap-4">
       <div className="flex items-baseline gap-3 flex-wrap">
-        <h2 className="font-heading font-semibold text-base text-ink m-0">Technické parametry</h2>
-        <span className="text-xs font-body text-muted">
+        <h2 className="font-heading font-semibold text-base text-ink m-0">
           {parametry.profil.nazev}
-          {parametry.vychoziSada && ' — obecná sada, firma vlastní nemá'}
+        </h2>
+        <span className="text-xs font-body text-muted">
+          {parametry.vychoziSada
+            ? 'obecná sada — firma vlastní nemá'
+            : parametry.firmaName
+              ? `podle klienta ${parametry.firmaName}`
+              : 'podle klienta'}
         </span>
         {smiMenit && (
           <Link
@@ -38,6 +46,10 @@ export function TechnickeParametryKarta({
         <p className="text-xs font-body text-muted m-0">{parametry.profil.perex}</p>
       )}
       <VypisParametru sekce={parametry.sekce} sloupce />
+      <p className="text-xs font-body text-muted m-0 pt-2 border-t border-line">
+        Parametry se vedou jako sady u firem a mění se v Administraci — změna platí pro všechny
+        projekty té firmy naráz.
+      </p>
     </section>
   );
 }

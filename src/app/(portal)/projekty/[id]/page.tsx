@@ -435,12 +435,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           herci={herciProjektu.map((id) => ({ id, jmeno: jmenoHerce.get(id) ?? 'Herec' }))}
         />
       )}
-      {/* TECHNICKE PARAMETRY hned nahore (zadani 27. 9. 2026: „at je to
-          prehledne"). Pod formularem je clovek nenajde - je to prvni vec,
-          kterou zvukar pri otevreni projektu potrebuje vedet. */}
-      {technickeParametry && (
-        <TechnickeParametryKarta parametry={technickeParametry} smiMenit={smiMenitParametry} />
-      )}
       {/* Karta "Z Caflou" je od 10. 9. 2026 pryc (zadani). Ukazovala tytez
           udaje, ktere jsou hned pod ni ve formulari - jen ve verzi, kterou uz
           portal needituje. Dokud projekt zil v Caflou, mela smysl jako
@@ -789,6 +783,22 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   );
 
   const tabs: ProjectTab[] = [{ key: 'prehled', label: 'Přehled', content: prehled }];
+
+  /**
+   * TECHNICKÉ PARAMETRY MAJÍ VLASTNÍ ZÁLOŽKU (zadání 27. 9. 2026: „dej mi to
+   * jako záložku v detailu projektu"). Hned za Přehledem - je to první věc,
+   * kterou zvukař u projektu potřebuje vědět, a v Přehledu by se to mezi
+   * poli formuláře ztratilo.
+   */
+  if (technickeParametry) {
+    tabs.push({
+      key: 'technicke-parametry',
+      label: 'Technické parametry',
+      content: (
+        <TechnickeParametryKarta parametry={technickeParametry} smiMenit={smiMenitParametry} />
+      ),
+    });
+  }
   if (jeReklamniProjekt && isInternalRole(session.user.role)) {
     tabs.push({
       key: 'vystupy',
