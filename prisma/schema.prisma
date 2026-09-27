@@ -4030,15 +4030,13 @@ model WikiVerze {
   @@index([clanekId, createdAt])
 }
 
-/**
- * PŘÍSPĚVKY NA SÍTĚ (zadání 27. 9. 2026: „chci udělat pro sebe modul pro
- * sociální sítě Instagram a LinkedIn, zatím uvidím jen já, a aby tam bylo
- * něco jako Canva").
- *
- * Příspěvek je plátno (vrstvy s textem, obrázky a tvary) plus popisek
- * a hashtagy. Podoba plátna je JSON, protože se mění spolu s editorem -
- * sloupec za každou vlastnost vrstvy by znamenal migraci po každé úpravě.
- */
+/// PŘÍSPĚVKY NA SÍTĚ (zadání 27. 9. 2026: „chci udělat pro sebe modul pro
+/// sociální sítě Instagram a LinkedIn, zatím uvidím jen já, a aby tam bylo
+/// něco jako Canva").
+///
+/// Příspěvek je plátno (vrstvy s textem, obrázky a tvary) plus popisek
+/// a hashtagy. Podoba plátna je JSON, protože se mění spolu s editorem -
+/// sloupec za každou vlastnost vrstvy by znamenal migraci po každé úpravě.
 model SocialniPrispevek {
   id      String @id @default(cuid())
   autorId String
@@ -4071,12 +4069,10 @@ model SocialniPrispevek {
   @@index([autorId, updatedAt])
 }
 
-/**
- * OBRÁZKY DO PŘÍSPĚVKŮ. Leží v úložišti pod náhodným klíčem stejně jako
- * doklady; do plátna se dávají odkazem na portál (/api/site/obrazek/<id>),
- * ne adresou úložiště - jednak je adresa podepsaná a propadá, jednak by se
- * z cizí domény nedalo plátno vyexportovat do PNG.
- */
+/// OBRÁZKY DO PŘÍSPĚVKŮ. Leží v úložišti pod náhodným klíčem stejně jako
+/// doklady; do plátna se dávají odkazem na portál (/api/site/obrazek/<id>),
+/// ne adresou úložiště - jednak je adresa podepsaná a propadá, jednak by se
+/// z cizí domény nedalo plátno vyexportovat do PNG.
 model SocialniObrazek {
   id      String @id @default(cuid())
   autorId String
