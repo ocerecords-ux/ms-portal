@@ -6,6 +6,8 @@ import { AdminSearch } from './AdminSearch';
 import { FirmyTabulka, type FirmaRadek } from './FirmyTabulka';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit } from '@/lib/jazyk';
+import { OzubeneKolo } from '@/components/OzubeneKolo';
+import { nastaveniSekce } from '@/lib/nastaveniSekci';
 
 // Firmy se od 5. 9. 2026 deli na zalozky Klienti / Dodavatele (zadani:
 // "sekci Firmy bych rozdělil na Klienti a Dodavatele") - stejny vzor jako
@@ -63,56 +65,19 @@ export default async function AdminHomePage({
 
   return (
     <section className="flex flex-col gap-8">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="hidden sm:block font-display text-3xl text-ink m-0">{prelozit(jazyk, 'firmy.nadpis')}</h1>
-        </div>
-        {/* Zneni zprav klientovi (zadani 11. 9. 2026). */}
-        <Link
-          href="/admin/vzory-zprav"
-          className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
-        >
-          {prelozit(jazyk, 'firmy.vzoryZprav')}
-        </Link>
-        {/* Vzory natacecich textu (zadani 26. 9. 2026). */}
-        <Link
-          href="/admin/vzory-nataceni"
-          className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
-        >
-          {prelozit(jazyk, 'firmy.vzoryNataceni')}
-        </Link>
-        {/* Technicke parametry vyroby (zadani 27. 9. 2026). */}
-        <Link
-          href="/admin/technicke-parametry"
-          className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
-        >
-          {prelozit(jazyk, 'firmy.technickeParametry')}
-        </Link>
-        {/* Koncept a hlidani clanku na Wikipedii (zadani 22. 9. 2026). */}
-        <Link
-          href="/admin/wikipedie"
-          className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
-        >
-          {prelozit(jazyk, 'firmy.wikipedie')}
-        </Link>
-        {/* Zpravy, ktere portal posila nam - bonusy a mesicni prehled
-            (zadani 15. 9. 2026). */}
-        <Link
-          href="/admin/zpravy-portalu"
-          className="font-heading font-semibold text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-brand-purple no-underline hover:border-brand-purple transition-colors whitespace-nowrap"
-        >
-          {prelozit(jazyk, 'firmy.zpravyPortalu')}
-        </Link>
-        {/* Surovy seznam firem z Caflou (zadani 8. 9. 2026). Od odpojeni
-            11. 9. 2026 uz to neni bezna cesta, jen posledni moznost, jak
-            neco z Caflou dohledat - proto v barve poznamky, ne akce. */}
-        <Link
-          href="/admin/caflou-firmy"
-          title={prelozit(jazyk, 'firmy.caflouTitle')}
-          className="font-heading text-sm rounded-lg border border-line bg-surface px-4 py-2.5 text-muted no-underline hover:border-brand-purple hover:text-brand-purple transition-colors whitespace-nowrap"
-        >
-          {prelozit(jazyk, 'firmy.caflouFirmy')}
-        </Link>
+      {/* HLAVIČKA JE JEN NADPIS A KOLEČKO (zadání 28. 9. 2026: „a z těch firem
+          teď můžeme dát ty zprávy z portálu apod. co teď máme v tom
+          nastavení"). Do teď tu vedle sebe stálo šest tlačítek na věci, kam
+          člověk chodí jednou za čas - Vzory zpráv, Vzory natáčení, Technické
+          parametry, Wikipedie, Zprávy z portálu a Caflou. Sebraly půl řádku
+          nad seznamem firem, kvůli kterému sem člověk přišel. Teď jsou pod
+          ozubeným kolem, viz lib/nastaveniSekci.ts. */}
+      <div className="flex items-center gap-3">
+        <h1 className="hidden sm:block font-display text-3xl text-ink m-0">{prelozit(jazyk, 'firmy.nadpis')}</h1>
+        <OzubeneKolo
+          cesta={nastaveniSekce('FIRMY')?.cesta ?? '/admin/nastaveni/firmy'}
+          popis={prelozit(jazyk, 'firmy.nastaveniSekce')}
+        />
       </div>
 
       <div className="flex items-end justify-between gap-4 flex-wrap border-b border-line">

@@ -3597,6 +3597,14 @@ model PozvankaUdaju {
 /// rozšíření unaccent, které na Supabase zapínat nechceme kvůli jednomu poli.
 model Navod {
   id     String @id @default(cuid())
+  /// NÁVOD, NEBO PRACOVNÍ POSTUP? (zadání 28. 9. 2026: „udělejme novou sekci
+  /// Procesy, kde budeme postupně dávat pracovní postupy pro zvukaře").
+  ///
+  /// „NAVOD" = nápověda k portálu (sekce Nápověda), „PROCES" = náš pracovní
+  /// postup nebo technická specifikace (sekce Procesy). Jeden model schválně:
+  /// psaní, hledání, role i obrázky jsou u obojího stejné - liší se jen to,
+  /// kde se to čte.
+  druh   String @default("NAVOD")
   /// Adresa návodu: /napoveda/<slug>.
   slug   String @unique
   nazev  String

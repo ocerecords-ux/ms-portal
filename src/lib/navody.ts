@@ -9,6 +9,18 @@
 import { INTERNAL_ROLES } from '@/lib/roles';
 
 /**
+ * NÁVOD, NEBO PROCES (zadání 28. 9. 2026). Nápověda je o portálu, Procesy
+ * jsou o naší práci - pracovní postupy zvukařů a technické specifikace.
+ * Model je jeden, liší se jen tím, kde se článek čte.
+ */
+export const DRUH_CLANKU = ['NAVOD', 'PROCES'] as const;
+export type DruhClanku = (typeof DRUH_CLANKU)[number];
+
+export function jeDruhClanku(hodnota: unknown): hodnota is DruhClanku {
+  return typeof hodnota === 'string' && (DRUH_CLANKU as readonly string[]).includes(hodnota);
+}
+
+/**
  * KDO NÁVOD VIDÍ (zadání 19. 9. 2026: „herci a klienti by neměli vidět naše
  * interní nápovědy").
  *

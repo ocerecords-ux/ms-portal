@@ -42,6 +42,20 @@ export const NASTAVENI_SEKCI: NastaveniSekce[] = [
     popis:
       'E-maily, které z portálu odcházejí k dokladům - kdy se upomíná a co se v upomínce píše, a údaje firem, ze kterých vystavujeme.',
   },
+  {
+    klic: 'PROCESY',
+    cesta: '/admin/procesy',
+    nadpis: 'Správa procesů',
+    popis:
+      'Psaní pracovních postupů a technických specifikací. U každého článku se zaškrtne, kdo ho uvidí - bez zaškrtnutí ho má celý tým.',
+  },
+  {
+    klic: 'FIRMY',
+    cesta: '/admin/nastaveni/firmy',
+    nadpis: 'Nastavení firem',
+    popis:
+      'Co portál rozesílá kolem firem a zakázek - zprávy, které chodí nám, a ceníky, ze kterých se počítají sazby.',
+  },
 ];
 
 const PODLE_KLICE = new Map(NASTAVENI_SEKCI.map((n) => [n.klic, n]));

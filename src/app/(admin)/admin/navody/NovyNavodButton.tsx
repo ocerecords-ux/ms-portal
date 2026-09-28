@@ -3,8 +3,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-/** Založí prázdný návod a rovnou ho otevře k psaní (zadání 16. 9. 2026). */
-export function NovyNavodButton() {
+/**
+ * Založí prázdný článek a rovnou ho otevře k psaní (zadání 16. 9. 2026).
+ *
+ * Od 28. 9. 2026 slouží i Procesům - je to tentýž model, liší se jen druhem
+ * (viz lib/navody.ts), takže zakládání nemá smysl psát dvakrát.
+ */
+export function NovyClanekButton({
+  druh = 'NAVOD',
+  popisek = '+ Nový návod',
+}: {
+  druh?: 'NAVOD' | 'PROCES';
+  popisek?: string;
+} = {}) {
   const router = useRouter();
   const [nazev, setNazev] = useState('');
   const [otevreno, setOtevreno] = useState(false);
@@ -20,7 +31,7 @@ export function NovyNavodButton() {
       const res = await fetch('/api/admin/navody', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nazev }),
+        body: JSON.stringify({ nazev, druh }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -42,7 +53,7 @@ export function NovyNavodButton() {
         onClick={() => setOtevreno(true)}
         className="text-sm font-heading font-semibold rounded-pill bg-brand-purple text-white px-5 py-2.5"
       >
-        + Nový návod
+        {popisek}
       </button>
     );
   }
@@ -55,7 +66,7 @@ export function NovyNavodButton() {
           onChange={(e) => setNazev(e.target.value)}
           autoFocus
           required
-          placeholder="Název návodu"
+          placeholder={druh === 'PROCES' ? 'Název postupu' : 'Název návodu'}
           className="admin-input flex-1 min-w-[180px]"
         />
         <button
@@ -69,4 +80,9 @@ export function NovyNavodButton() {
       {chyba && <p className="text-sm font-body text-danger m-0">{chyba}</p>}
     </form>
   );
+}
+
+/** Původní název kvůli stránce Návodů - ať se nemusí měnit na dvou místech. */
+export function NovyNavodButton() {
+  return <NovyClanekButton />;
 }

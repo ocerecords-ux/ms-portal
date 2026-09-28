@@ -37,6 +37,7 @@ export type KlicSekce =
   | 'KALENDARE'
   | 'STUDIA'
   | 'FIRMY'
+  | 'PROCESY'
   | 'ZPRAVY_PORTALU'
   | 'HERCI'
   | 'KLIENTI';
@@ -279,6 +280,21 @@ export const SEKCE: Sekce[] = [
     ],
   },
   {
+    klic: 'PROCESY',
+    ikona: 'dokument',
+    nazev: 'Procesy',
+    popis: 'Pracovní postupy, technické specifikace a návody k programům.',
+    cesty: ['/procesy'],
+    prava: [
+      {
+        klic: 'PROCESY.PSANI',
+        nazev: 'Píše a upravuje postupy',
+        popis: 'Zakládá články, vkládá obrázky a určuje, kdo je uvidí.',
+        cesty: ['/admin/procesy'],
+      },
+    ],
+  },
+  {
     klic: 'FIRMY',
     ikona: 'stitek',
     nazev: 'Firmy',
@@ -396,6 +412,7 @@ export const VYCHOZI_PRISTUPY: Record<string, string[]> = {
     ...celaSekce('PREHLEDY'),
     ...celaSekce('KALENDARE'),
     ...celaSekce('STUDIA'),
+    ...celaSekce('PROCESY'),
     ...celaSekce('FIRMY'),
     ...celaSekce('ZPRAVY_PORTALU'),
     ...celaSekce('HERCI'),
@@ -422,8 +439,10 @@ export const VYCHOZI_PRISTUPY: Record<string, string[]> = {
     'HERCI',
     'HERCI.UPRAVY',
     'HERCI.POZVANKY',
+    'PROCESY',
   ],
   ZVUKAR: [
+    'PROCESY',
     'PROJEKTY',
     'KALENDARE',
     'KALENDARE.VSICHNI_LIDE',

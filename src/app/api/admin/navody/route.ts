@@ -21,6 +21,8 @@ const schema = z.object({
   poradi: z.number().int().min(0).max(9999).optional().default(100),
   zverejneno: z.boolean().optional().default(false),
   proRole: z.array(z.string().max(20)).max(10).optional().default([]),
+  // NÁVOD, NEBO PROCES (28. 9. 2026) - viz DRUH_CLANKU v lib/navody.ts.
+  druh: z.enum(['NAVOD', 'PROCES']).optional().default('NAVOD'),
 });
 
 export async function POST(req: NextRequest) {
@@ -48,6 +50,7 @@ export async function POST(req: NextRequest) {
         poradi: d.poradi,
         zverejneno: d.zverejneno,
         proRole: d.proRole,
+        druh: d.druh,
         autorId: session.user.id,
       },
       select: { id: true, slug: true },

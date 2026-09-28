@@ -36,6 +36,30 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
   const [mazani, setMazani] = useState(false);
 
   const nahled = useMemo(() => navodNaHtml(n.obsah), [n.obsah]);
+  const [nahravam, setNahravam] = useState(false);
+  const [chybaObrazku, setChybaObrazku] = useState<string | null>(null);
+
+  /** Nahraje printscreen a připíše ho na konec textu jako Markdown obrázek. */
+  async function vlozObrazek(soubor: File) {
+    setNahravam(true);
+    setChybaObrazku(null);
+    try {
+      const fd = new FormData();
+      fd.append('obrazek', soubor);
+      const res = await fetch('/api/admin/navody/obrazek', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.url) {
+        setChybaObrazku(data?.error || 'Obrázek se nepodařilo nahrát.');
+        return;
+      }
+      const popis = (soubor.name || 'obrázek').replace(/\.[^.]+$/, '');
+      setN((p) => ({ ...p, obsah: `${p.obsah}${p.obsah.endsWith('\n') || !p.obsah ? '' : '\n'}\n![${popis}](${data.url})\n` }));
+    } catch {
+      setChybaObrazku('Obrázek se nepodařilo nahrát.');
+    } finally {
+      setNahravam(false);
+    }
+  }
   const nastav = <K extends keyof NavodKUprave>(klic: K, hodnota: NavodKUprave[K]) =>
     setN((p) => ({ ...p, [klic]: hodnota }));
 
@@ -135,8 +159,33 @@ export function NavodForm({ navod }: { navod: NavodKUprave }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-heading font-semibold text-ink">
-            Text návodu <span className="font-normal text-muted">(Markdown)</span>
+          <span className="flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-sm font-heading font-semibold text-ink">
+              Text <span className="font-normal text-muted">(Markdown)</span>
+            </span>
+            {/* VLOŽENÍ OBRÁZKU (zadání 28. 9. 2026: „vkládat k textu obrázky -
+                printscreeny"). Soubor jde do úložiště a do textu se připíše
+                jen odkaz - printscreen v textu jako data: URL by článek
+                nafoukl o stovky kB a nesl by se při každém načtení. */}
+            <span className="flex items-center gap-2">
+              {chybaObrazku && (
+                <span className="text-xs font-body text-danger">{chybaObrazku}</span>
+              )}
+              <label className="text-xs font-heading font-semibold rounded-pill border border-line text-muted px-3 py-1.5 cursor-pointer hover:text-brand-purple hover:border-brand-purple">
+                {nahravam ? 'Nahrávám…' : '+ Obrázek'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={nahravam}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (f) void vlozObrazek(f);
+                  }}
+                />
+              </label>
+            </span>
           </span>
           <textarea
             value={n.obsah}

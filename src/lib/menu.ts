@@ -65,6 +65,10 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   '/admin/caflou-firmy': ['ADMIN'],
   '/admin/vzory-zprav': ['ADMIN'],
   // Nastaveni sekci pod ozubenym kolem (28. 9. 2026) - viz lib/nastaveniSekci.ts.
+  // Procesy - nase pracovni postupy (28. 9. 2026). Cte je cely tym, pise
+  // je Zuzo-labuzo; kdo co uvidi, rozhoduje clanek sam (proRole).
+  '/procesy': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
+  '/admin/procesy': ['ADMIN'],
   '/admin/nastaveni/projekty': ['ADMIN'],
   '/admin/nastaveni/doklady': ['ADMIN'],
   '/admin/vzory-nataceni': ['ADMIN'],
@@ -144,6 +148,20 @@ export const DEFAULT_MENU_ITEMS: { label: string; href: string; sortOrder: numbe
 
 /** Stranky, ktere jde pridat zpet do listy pres "+" v rezimu Upravit. */
 export const PORTAL_PAGES: { href: string; label: string }[] = [
+  /**
+   * CO SE DÁ PŘIDAT ZPÁTKY DO LIŠTY (zadání 28. 9. 2026: „tady z tohodle
+   * výběru nech jen Výkazy, ostatní věci je zbytečné mít možnost tam
+   * přidávat").
+   *
+   * Nabídka pod „+ Přidat stránku" se dřív rovnala seznamu všech stránek
+   * portálu - včetně Archivu, Bruna, Návodů nebo Technických parametrů, kam
+   * člověk jde jednou za půl roku z administrace. V liště, kde je místo na
+   * deset odkazů, nemá smysl je nabízet.
+   *
+   * ZŮSTÁVAJÍ JEN HLAVNÍ SEKCE, tedy to, co v liště normálně je a co si
+   * člověk může omylem odebrat, plus Výkazy a Procesy. Zbytek se otevírá
+   * odkazem z administrace nebo z Nápovědy.
+   */
   { href: '/projekty', label: 'Projekty' },
   { href: '/objednavka', label: 'Objednávka' },
   { href: '/nahravky', label: 'Nahrávky' },
@@ -152,35 +170,13 @@ export const PORTAL_PAGES: { href: string; label: string }[] = [
   { href: '/prehledy', label: 'Přehledy' },
   { href: '/moje-terminy', label: 'Moje termíny' },
   { href: '/honorare', label: 'Honoráře' },
+  // Procesy - nase pracovni postupy (28. 9. 2026).
+  { href: '/procesy', label: 'Procesy' },
   { href: '/admin', label: 'Firmy' },
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/ceniky', label: 'Ceníky' },
   { href: '/admin/studia', label: 'Studia' },
-  { href: '/admin/zpravy-portalu', label: 'Zprávy portálu' },
   { href: '/admin/doklady', label: 'Doklady' },
-  // Archiv smazanych zaznamu (zadani 10. 9. 2026). Neni ve vychozi liste -
-  // clovek tam chodi jednou za rok, kdyz neco smazal a chce to zpatky.
-  { href: '/admin/archiv', label: 'Archiv' },
-  // Prirucka pro Bruna (zadani 16. 9. 2026). Neni ve vychozi liste - clovek
-  // tam jde, kdyz se Bruno chova jinak, nez by mel.
-  { href: '/admin/bruno', label: 'Bruno' },
-  // Zadosti o udaje odkazem (zadani 16. 9. 2026).
-  { href: '/admin/udaje', label: 'Údaje' },
-  // Pozvanky hercu (zadani 16. 9. 2026) - pro Zuzo-labuzo i Produkci.
-  { href: '/pozvanky', label: 'Pozvánky' },
-  // Navody k portalu (zadani 16. 9. 2026).
-  { href: '/napoveda', label: 'Nápověda' },
-  { href: '/admin/navody', label: 'Návody' },
-  // Technicke parametry vyroby (27. 9. 2026) - clovek tam jde, kdyz
-  // nakladatelstvi zmeni format. Neni ve vychozi liste.
-  { href: '/admin/technicke-parametry', label: 'Technické parametry' },
-  { href: '/muj-ucet', label: 'Můj účet' },
-  // Site - priprava prispevku na Instagram a LinkedIn (27. 9. 2026). Neni ve
-  // vychozi liste; kdo ma modul zapnuty, prida si ho pres "+".
-  { href: '/site', label: 'Sítě' },
-  // Palubovka (27. 9. 2026) je prvni zalozka Prehledu - do listy se pridava
-  // rovnou ta adresa, at clovek nekonci na presmerovani.
-  { href: '/prehledy/palubovka', label: 'Palubovka' },
 ];
 
 /** Vychozi (napevno zadana) navigace pro danou roli. */
