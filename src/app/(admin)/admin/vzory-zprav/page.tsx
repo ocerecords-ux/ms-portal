@@ -1,41 +1,10 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { nactiVzory } from '@/lib/vzoryZpravServer';
-import { VzoryEditor } from './VzoryEditor';
-import { ProdlevaNotifikaci } from './ProdlevaNotifikaci';
-import { MAX_PRODLEVA_S, nactiProdlevu } from '@/lib/prodlevaNotifikaciServer';
 
 /**
- * Vzory zpráv klientovi (zadání 11. 9. 2026: „uděláme vzory a já si je pak
- * můžu textově ještě třeba upravit, pracoval bych i s proměnnými").
+ * Vzory zpráv klientovi se od 28. 9. 2026 nastavují ozubeným kolem
+ * v Projektech - viz lib/nastaveniSekci.ts. Adresa zůstává funkční kvůli
+ * odkazům v administraci, v liště a v návodech.
  */
-export const dynamic = 'force-dynamic';
-
-export default async function VzoryZpravPage() {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'ADMIN') redirect('/projekty');
-
-  return (
-    <div className="flex flex-col gap-6">
-      <Link href="/admin" className="text-muted text-sm font-heading no-underline">
-        ← Zpět do administrace
-      </Link>
-      <div>
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Vzory zpráv klientovi</h1>
-        <p className="text-sm font-body text-muted m-0 mt-2 max-w-[70ch]">
-          Co klientovi dorazí, když projekt přejde do daného stavu. Komu to jde a jestli vůbec,
-          se nastavuje zvlášť u každé firmy pod záložkou Notifikace — tady se píše jen znění.
-          Audioknihy mají zprávu ke každému kroku, reklamy jedinou, a to ve stavu
-          „Dokončeno - ke schválení". Které znění firma dostane, se řídí zaškrtnutím „Druh zakázek"
-          na její kartě — jen Reklamy znamená reklamní vzory.
-        </p>
-      </div>
-      <ProdlevaNotifikaci pocatecni={await nactiProdlevu()} max={MAX_PRODLEVA_S} />
-      {/* Oba druhy najednou (zadani 14. 9. 2026) - prepina se zalozkou
-          v editoru, at se kvuli tomu nemusi znovu nacitat stranka. */}
-      <VzoryEditor pocatecni={[...(await nactiVzory('AUDIOKNIHA')), ...(await nactiVzory('REKLAMA'))]} />
-    </div>
-  );
+export default function VzoryZpravPage() {
+  redirect('/admin/nastaveni/projekty');
 }

@@ -1,4 +1,6 @@
 import { getServerSession } from 'next-auth';
+import { OzubeneKolo } from '@/components/OzubeneKolo';
+import { nastaveniSekce } from '@/lib/nastaveniSekci';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import type { DisplayProject } from '@/lib/projektyTypy';
@@ -713,7 +715,18 @@ async function InternalProjektySection({
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         {/* Na telefonu bez nadpisu (21. 9. 2026: „nápis Projekty taky. Stačí,
             když to svítí zaškrtlé nahoře v nabídce na panelu"). */}
-        <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="hidden sm:block font-display text-3xl sm:text-4xl text-ink m-0">Projekty</h1>
+          {/* OZUBENÉ KOLO (zadání 28. 9. 2026) - texty zpráv, které z portálu
+              chodí klientovi při změně stavu. Vidí ho jen Žůžo-labůžo: na
+              stránce nastavení stejně nikdo jiný neskončí. */}
+          {isAdmin && (
+            <OzubeneKolo
+              cesta={nastaveniSekce('PROJEKTY')?.cesta ?? '/admin/nastaveni/projekty'}
+              popis="Nastavení projektů - zprávy klientovi"
+            />
+          )}
+        </div>
         {error && (
           <span className="text-xs font-heading text-danger bg-dangerTint border border-line rounded-lg px-3 py-2">
             Projekty se nepodařilo načíst. {error}

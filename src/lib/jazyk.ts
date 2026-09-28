@@ -3814,6 +3814,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Co je zaškrtnuté, to člověk uvidí v liště a otevře. Sekce je velký vypínač, pod ní se dají dávat jednotlivá práva - třeba vidět faktury bez možnosti je vystavovat. Role už o tom nerozhoduje, předvyplní se z ní jen nový účet.',
     en: 'What is ticked is what the person sees in the bar and can open. The section is the master switch; underneath it you grant individual rights - for example seeing invoices without being able to issue them. The role no longer decides this, it only pre-fills a new account.',
   },
+  'doklady.nastaveniSekce': {
+    cs: 'Nastavení dokladů - maily a upomínky',
+    en: 'Invoicing settings - emails and reminders',
+  },
   'uzivatel.superadmin': { cs: 'Superadmin', en: 'Superadmin' },
   'uzivatel.superadminPopis': {
     cs: 'Rozdává přístupy do sekcí a vidí všechno.',

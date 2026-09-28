@@ -71,7 +71,7 @@ export const SEKCE: Sekce[] = [
     ikona: 'klapka',
     nazev: 'Projekty',
     popis: 'Seznam projektů a jejich detail - stav, herci, termíny, výstupy.',
-    cesty: ['/projekty'],
+    cesty: ['/projekty', '/admin/nastaveni/projekty'],
     prava: [
       {
         klic: 'PROJEKTY.UPRAVY',
@@ -111,7 +111,7 @@ export const SEKCE: Sekce[] = [
     ikona: 'dokument',
     nazev: 'Doklady',
     popis: 'Nabídky, faktury, výdaje, smlouvy a moje firmy. Jsou tam peníze celé firmy.',
-    cesty: ['/admin/doklady'],
+    cesty: ['/admin/doklady', '/admin/nastaveni/doklady'],
     prava: [
       {
         klic: 'DOKLADY.NABIDKY_CIST',

@@ -64,6 +64,9 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // zustava - je to posledni cesta, jak neco z Caflou dohledat.
   '/admin/caflou-firmy': ['ADMIN'],
   '/admin/vzory-zprav': ['ADMIN'],
+  // Nastaveni sekci pod ozubenym kolem (28. 9. 2026) - viz lib/nastaveniSekci.ts.
+  '/admin/nastaveni/projekty': ['ADMIN'],
+  '/admin/nastaveni/doklady': ['ADMIN'],
   '/admin/vzory-nataceni': ['ADMIN'],
   '/admin/zpravy-portalu': ['ADMIN'],
   '/admin/users': ['ADMIN'],
