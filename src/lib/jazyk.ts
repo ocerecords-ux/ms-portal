@@ -2111,6 +2111,19 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'odznakPreposlechu.procent': { cs: '{procent} % textu', en: '{procent}% of the text' },
   'odznakPreposlechu.bezikratce': { cs: 'Přeposlech běží · {pocet}', en: 'Proof-listening · {pocet}' },
 
+  // --- svátky, pásmo a videohovor v kalendáři (28. 9. 2026) ---
+  'kalendar.svatekIkona': { cs: 'Státní svátek: {nazev}', en: 'Public holiday: {nazev}' },
+  'kalendar.svatekNadpis': { cs: 'Státní svátek', en: 'Public holiday' },
+  'kalendar.hovorIkona': { cs: 'Otevřít videohovor porady', en: 'Open the meeting video call' },
+  'kalendar.pasmoStejne': {
+    cs: 'Časy jsou v pásmu studia ({studio}).',
+    en: 'Times are shown in the studio’s time zone ({studio}).',
+  },
+  'kalendar.pasmoJine': {
+    cs: 'Časy jsou v pásmu studia ({studio}) — vy jste teď v {vase}.',
+    en: 'Times are shown in the studio’s time zone ({studio}) — you are currently in {vase}.',
+  },
+
   // Odběr kalendáře pro herce
   'kalendarOdber.pridat': { cs: 'Přidat do kalendáře', en: 'Add to calendar' },
   'kalendarOdber.odebirat': { cs: 'Odebírat (aktualizuje se samo)', en: 'Subscribe (updates itself)' },

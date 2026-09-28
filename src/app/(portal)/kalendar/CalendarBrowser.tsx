@@ -15,6 +15,7 @@ import {
   popisOpakovani,
   type PoradaVKalendari,
 } from '@/lib/porady';
+import { NAZVY_ZEMI, svatkyProDny, zemePodlePasma, type Svatek, type Zeme } from '@/lib/svatky';
 import { OdberKalendare } from './OdberKalendare';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 
@@ -624,6 +625,23 @@ export function CalendarBrowser({
     return mapa;
   }, [dnyPasu, viditelne, timezone]);
 
+  /**
+   * STÁTNÍ SVÁTKY U DNŮ (28. 9. 2026). Země se bere z pásma zobrazených studií
+   * - české kalendáře mají české svátky, londýnský britské. Když jsou vidět
+   * obě země naráz, ukážou se oba svátky a v bublině se u nich píše země.
+   */
+  const zemeVKalendari = useMemo(() => {
+    const vybrana = selectedStudioIds.length
+      ? studios.filter((s) => selectedStudioIds.includes(s.id))
+      : studios;
+    return Array.from(new Set((vybrana.length ? vybrana : studios).map((s) => zemePodlePasma(s.timezone))));
+  }, [studios, selectedStudioIds]);
+
+  const svatkyPodleDnu = useMemo(
+    () => svatkyProDny(dnyPasu.map((d) => d.key), zemeVKalendari),
+    [dnyPasu, zemeVKalendari],
+  );
+
   /** Dovolené rozdělené po dnech - vícedenní se ukáže v každém dni. */
   const nepritomnostPodleDnu = useMemo(() => rozdelPoDnech(dnyPasu, nepritomnosti), [dnyPasu, nepritomnosti]);
   /** Do pruhu nad mřížkou jen celodenní - ty na čas jsou v mřížce. */
@@ -1085,6 +1103,11 @@ export function CalendarBrowser({
         </div>
       </div>
 
+      {/* V JAKÉM PÁSMU ČASY JSOU (28. 9. 2026: „u těch kalendářů bych přidal
+          časové pásmo, v jakém já ty kalendáře vidím. Když třeba budu
+          v Londýně"). */}
+      <PasmoKalendare timezone={timezone} />
+
       {/* Studia - dají se prolnout, každé má svou barvu.
 
           Štítek má dvě poloviny (zadání 20. 9. 2026: „když kliknu na tu
@@ -1343,6 +1366,8 @@ export function CalendarBrowser({
                 <MesicniPohled
                   days={pole.days}
                   podleDnu={podleDnu}
+                  svatkyPodleDnu={svatkyPodleDnu}
+                  viceZemi={zemeVKalendari.length > 1}
                   timezone={timezone}
                   onDetail={klikNaUdalost}
                   onUpravit={dvojklikNaUdalost}
@@ -1354,6 +1379,8 @@ export function CalendarBrowser({
                 <MrizkaPohled
                   days={pole.days}
                   podleDnu={podleDnu}
+                  svatkyPodleDnu={svatkyPodleDnu}
+                  viceZemi={zemeVKalendari.length > 1}
                   timezone={timezone}
                   onDetail={klikNaUdalost}
                   onUpravit={dvojklikNaUdalost}
@@ -1559,6 +1586,8 @@ function srovnejJmeno(text: string): string {
 function MrizkaPohled({
   days,
   podleDnu,
+  svatkyPodleDnu,
+  viceZemi,
   timezone,
   onDetail,
   onUpravit,
@@ -1572,6 +1601,10 @@ function MrizkaPohled({
   smerPosunu?: -1 | 1;
   days: CalendarDay[];
   podleDnu: Map<string, CalendarEvent[]>;
+  /** Státní svátky podle dnů (28. 9. 2026) - značka u data. */
+  svatkyPodleDnu: Map<string, { zeme: Zeme; svatek: Svatek }[]>;
+  /** Jsou vidět studia z obou zemí? Pak se u svátku píše i země. */
+  viceZemi: boolean;
   timezone: string;
   onDetail: (e: CalendarEvent, kotva?: Kotva) => void;
   /** Dvojklik na událost - otevře úpravu (19. 9. 2026). */
@@ -1689,13 +1722,17 @@ function MrizkaPohled({
                       : zkratkaDne(jazyk, dow)}
                     {den.byArrangement && <span title={t('kalendar.jenPoDomluve')}> ·</span>}
                   </span>
-                  {den.key === dnesKey ? (
-                    <span className="inline-block mt-0.5 rounded-pill bg-brand-green text-onAccent px-2.5 text-base font-heading font-bold tabular-nums">
-                      {cislo}
-                    </span>
-                  ) : (
-                    <span className="block text-sm font-heading font-semibold text-ink tabular-nums">{cislo}</span>
-                  )}
+                  <span className="flex items-center justify-center gap-0.5">
+                    {den.key === dnesKey ? (
+                      <span className="inline-block mt-0.5 rounded-pill bg-brand-green text-onAccent px-2.5 text-base font-heading font-bold tabular-nums">
+                        {cislo}
+                      </span>
+                    ) : (
+                      <span className="text-sm font-heading font-semibold text-ink tabular-nums">{cislo}</span>
+                    )}
+                    {/* Státní svátek (28. 9. 2026) - vlaječka, popis po kliknutí. */}
+                    <ZnackaSvatku svatky={svatkyPodleDnu.get(den.key) ?? []} ukazZemi={viceZemi} />
+                  </span>
                 </div>
               );
             })}
@@ -1855,6 +1892,10 @@ function MrizkaPohled({
                             >
                               <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                               {e.rezie && <IkonaRezie velikost={14} odkaz={e.hovorOdkaz ?? null} />}
+                              {/* Videohovor porady rovnou z události (28. 9. 2026). */}
+                              {odkazHovoruPorady(e) && (
+                                <IkonaHovoru velikost={14} odkaz={odkazHovoruPorady(e) as string} />
+                              )}
                               {e.externi && <IkonaExterni velikost={13} />}
                               {radek}
                               {strihBezProjektu(e) && (
@@ -1895,6 +1936,8 @@ function MrizkaPohled({
 function MesicniPohled({
   days,
   podleDnu,
+  svatkyPodleDnu,
+  viceZemi,
   timezone,
   onDetail,
   onUpravit,
@@ -1904,6 +1947,10 @@ function MesicniPohled({
 }: {
   days: CalendarDay[];
   podleDnu: Map<string, CalendarEvent[]>;
+  /** Státní svátky podle dnů (28. 9. 2026) - značka u čísla dne. */
+  svatkyPodleDnu: Map<string, { zeme: Zeme; svatek: Svatek }[]>;
+  /** Jsou vidět studia z obou zemí? Pak se u svátku píše i země. */
+  viceZemi: boolean;
   timezone: string;
   onDetail: (e: CalendarEvent, kotva?: Kotva) => void;
   /** Dvojklik na událost - otevře úpravu (19. 9. 2026). */
@@ -1943,15 +1990,19 @@ function MesicniPohled({
                 den.inMonth ? '' : 'bg-paper'
               } ${den.key === dnesKey ? 'bg-brand-green/10 ring-2 ring-inset ring-brand-green' : ''}`}
             >
-              {den.key === dnesKey ? (
-                <span className="self-start rounded-pill bg-brand-green text-onAccent px-2 text-sm font-heading font-bold tabular-nums">
-                  {t('kalendar.cisloDneADnes', { cislo })}
-                </span>
-              ) : (
-                <span className={`text-xs font-heading tabular-nums ${den.inMonth ? 'text-ink' : 'text-muted'}`}>
-                  {cislo}
-                </span>
-              )}
+              <span className="flex items-center gap-0.5 self-start">
+                {den.key === dnesKey ? (
+                  <span className="rounded-pill bg-brand-green text-onAccent px-2 text-sm font-heading font-bold tabular-nums">
+                    {t('kalendar.cisloDneADnes', { cislo })}
+                  </span>
+                ) : (
+                  <span className={`text-xs font-heading tabular-nums ${den.inMonth ? 'text-ink' : 'text-muted'}`}>
+                    {cislo}
+                  </span>
+                )}
+                {/* Státní svátek (28. 9. 2026) - vlaječka, popis po kliknutí. */}
+                <ZnackaSvatku svatky={svatkyPodleDnu.get(den.key) ?? []} ukazZemi={viceZemi} />
+              </span>
               {/* Dovolené nahoře - stejně jako celodenní pruh v týdnu. */}
               {(nepritomnostPodleDnu?.get(den.key) ?? []).map((n) => (
                 <CipNepritomnosti key={n.id} n={n} onOtevri={onOtevriNepritomnost} />
@@ -1981,6 +2032,10 @@ function MesicniPohled({
                         a zvukař (20. 9. 2026: „nejsou tam vidět zvukaři"). */}
                     <IkonaDruhu druh={druhPrace(e)} velikost={14} />
                     {e.rezie && <IkonaRezie velikost={14} odkaz={e.hovorOdkaz ?? null} />}
+                    {/* Videohovor porady rovnou z události (28. 9. 2026). */}
+                    {odkazHovoruPorady(e) && (
+                      <IkonaHovoru velikost={14} odkaz={odkazHovoruPorady(e) as string} />
+                    )}
                     {e.externi && <IkonaExterni velikost={13} />}
                     {e.title.split('\n')[0]}
                     {strihBezProjektu(e) && <span className="italic opacity-70"> {t('kalendar.bezProjektu')}</span>}
@@ -2802,6 +2857,198 @@ function IkonaRezie({ velikost = 14, odkaz = null }: { velikost?: number; odkaz?
   return (
     <span title={popis} aria-label={popis} className={trida} style={{ width: velikost, height: velikost }}>
       {kresba}
+    </span>
+  );
+}
+
+/**
+ * PROKLIK NA VIDEOHOVOR PORADY (zadání 28. 9. 2026: „a u porad v kalendáři dej
+ * u události rovnou nějaký proklik na videohovor").
+ *
+ * Odkaz se u porady vedl už dřív (Porada.odkazVideo), ale klikalo se na něj až
+ * v detailu - tady je rovnou na řádku události. Mechanika je stejná jako
+ * u režie na dálku: bublina události je <button>, odkaz se do ní vnořit nedá,
+ * takže je z toho `role="link"` a klik se zastaví, ať pod ním neskočí detail.
+ */
+/**
+ * V JAKÉM ČASOVÉM PÁSMU JSOU ČASY V KALENDÁŘI (zadání 28. 9. 2026).
+ *
+ * Kalendář vždycky ukazuje ČAS STUDIA - devátá u brněnské frekvence je devátá
+ * v Brně, ať se na to člověk dívá odkudkoliv. To je pro plánování správně, ale
+ * z obrazovky to není poznat; kdo sedí v Londýně, přečte si devítku jako svůj
+ * místní čas a přijede o hodinu jinam.
+ *
+ * Proto se pásmo píše natvrdo, a když se liší od pásma prohlížeče, připíše se
+ * i rozdíl. Když je stejné, stojí tu jen nenápadná poznámka.
+ */
+function PasmoKalendare({ timezone }: { timezone: string }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
+  /** Pásmo prohlížeče se pozná až v něm - na serveru by vyšlo pásmo Vercelu. */
+  const [mistni, setMistni] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      setMistni(Intl.DateTimeFormat().resolvedOptions().timeZone || null);
+    } catch {
+      setMistni(null);
+    }
+  }, []);
+
+  /** „GMT+2" pro dané pásmo - krátce a bez počítání s letním časem ručně. */
+  const posunPasma = (p: string): string => {
+    try {
+      const casti = new Intl.DateTimeFormat(kodJazyka(jazyk), {
+        timeZone: p,
+        timeZoneName: 'shortOffset',
+      }).formatToParts(new Date());
+      return casti.find((c) => c.type === 'timeZoneName')?.value ?? '';
+    } catch {
+      return '';
+    }
+  };
+  /** Z „Europe/London" udělá „London" - celou cestu nikdo číst nechce. */
+  const jmenoPasma = (p: string): string => (p.split('/').pop() ?? p).replace(/_/g, ' ');
+
+  const jine = Boolean(mistni) && mistni !== timezone && posunPasma(mistni as string) !== posunPasma(timezone);
+
+  return (
+    <p className="text-[11px] font-body text-muted m-0 -mt-1">
+      {jine
+        ? t('kalendar.pasmoJine', {
+            studio: `${jmenoPasma(timezone)} ${posunPasma(timezone)}`.trim(),
+            vase: `${jmenoPasma(mistni as string)} ${posunPasma(mistni as string)}`.trim(),
+          })
+        : t('kalendar.pasmoStejne', { studio: `${jmenoPasma(timezone)} ${posunPasma(timezone)}`.trim() })}
+    </p>
+  );
+}
+
+/** Odkaz na videohovor porady, když je to opravdu webová adresa. */
+function odkazHovoruPorady(e: CalendarEvent): string | null {
+  return e.kind === 'PORADA' ? platnyOdkaz(e.porada?.odkazVideo) : null;
+}
+
+function IkonaHovoru({ velikost = 14, odkaz }: { velikost?: number; odkaz: string }) {
+  const t = usePreklad();
+  const popis = t('kalendar.hovorIkona');
+  const otevri = () => window.open(odkaz, '_blank', 'noopener');
+
+  return (
+    <span
+      role="link"
+      tabIndex={0}
+      title={popis}
+      aria-label={popis}
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        otevri();
+      }}
+      onDoubleClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.stopPropagation();
+        e.preventDefault();
+        otevri();
+      }}
+      className={`shrink-0 inline-grid place-items-center rounded-pill align-middle mr-1 cursor-pointer ${tridaBarvyIkony(
+        'obrazovka',
+      )}`}
+      style={{ width: velikost, height: velikost }}
+    >
+      <KresbaIkony klic="obrazovka" velikost={Math.round(velikost * 0.62)} />
+    </span>
+  );
+}
+
+/**
+ * ZNAČKA STÁTNÍHO SVÁTKU U DATA (zadání 28. 9. 2026: „u svátků v kalendáři dej
+ * u toho termínu nějakou nenápadnou ikonu, když bude v ten den svátek. Po
+ * kliknutí na ikonu se zobrazí i krátký popis toho svátku").
+ *
+ * Nenápadná schválně - je to informace pro plánování, ne událost. Vlaječka
+ * v barvě štítků, popis až po kliknutí.
+ *
+ * Když kalendář ukazuje studia z obou zemí naráz, sejde se u dne víc svátků;
+ * tehdy se u každého píše i země, jinak by nebylo poznat, koho se týká.
+ */
+function ZnackaSvatku({
+  svatky,
+  ukazZemi,
+}: {
+  svatky: { zeme: Zeme; svatek: Svatek }[];
+  ukazZemi: boolean;
+}) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
+  const [otevreno, setOtevreno] = useState(false);
+  const obal = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!otevreno) return;
+    const mimo = (e: MouseEvent) => {
+      if (!obal.current?.contains(e.target as Node)) setOtevreno(false);
+    };
+    const klavesa = (e: KeyboardEvent) => e.key === 'Escape' && setOtevreno(false);
+    document.addEventListener('mousedown', mimo);
+    document.addEventListener('keydown', klavesa);
+    return () => {
+      document.removeEventListener('mousedown', mimo);
+      document.removeEventListener('keydown', klavesa);
+    };
+  }, [otevreno]);
+
+  if (svatky.length === 0) return null;
+  const nazvy = svatky.map((s) => s.svatek.nazev[jazyk]).join(' · ');
+
+  return (
+    <span ref={obal} className="relative inline-block align-middle">
+      <span
+        role="button"
+        tabIndex={0}
+        title={nazvy}
+        aria-label={t('kalendar.svatekIkona', { nazev: nazvy })}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOtevreno((o) => !o);
+        }}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.stopPropagation();
+          e.preventDefault();
+          setOtevreno((o) => !o);
+        }}
+        className={`inline-grid place-items-center rounded-pill align-middle ml-1 cursor-pointer opacity-70 hover:opacity-100 transition-opacity ${tridaBarvyIkony(
+          'vlajka',
+        )}`}
+        style={{ width: 14, height: 14 }}
+      >
+        <KresbaIkony klic="vlajka" velikost={9} />
+      </span>
+      {otevreno && (
+        <span
+          role="dialog"
+          onClick={(e) => e.stopPropagation()}
+          className="absolute z-50 left-1/2 -translate-x-1/2 top-full mt-1.5 w-60 rounded-card border border-line bg-surface shadow-lg p-3 text-left normal-case tracking-normal"
+        >
+          <span className="block text-[10px] font-heading uppercase tracking-wide text-muted mb-1.5">
+            {t('kalendar.svatekNadpis')}
+          </span>
+          {svatky.map(({ zeme, svatek }) => (
+            <span key={`${zeme}:${svatek.klic}`} className="block mb-2 last:mb-0">
+              <span className="block text-xs font-heading font-semibold text-ink leading-snug">
+                {svatek.nazev[jazyk]}
+                {ukazZemi && (
+                  <span className="font-normal text-muted"> · {NAZVY_ZEMI[zeme][jazyk]}</span>
+                )}
+              </span>
+              <span className="block text-[11px] font-body text-muted leading-snug mt-0.5">
+                {svatek.popis[jazyk]}
+              </span>
+            </span>
+          ))}
+        </span>
+      )}
     </span>
   );
 }
