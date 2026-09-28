@@ -6,6 +6,7 @@ import { USER_TABS } from '@/lib/roles';
 import { AdminSearch } from '../AdminSearch';
 import { NovaPozvankaHerce } from '@/components/NovaPozvankaHerce';
 import { nactiJazyk } from '@/lib/jazykServer';
+import { odkazNaFotku } from '@/lib/fotky';
 import { formatDatum, prelozit, prelozitKolem } from '@/lib/jazyk';
 
 // Nazev zalozky se bere podle KODU zalozky, ne podle ceskeho popisku z
@@ -70,7 +71,18 @@ export default async function UsersAdminPage({
     phone: u.phone,
     roleLabel: prelozit(jazyk, `role.${u.role}`),
     active: u.active,
-    photoUrl: u.photoUrl ?? null,
+    /**
+     * FOTKA SE BERE PŘES /api/uzivatele/<id>/fotka (oprava 28. 9. 2026:
+     * „Tomáš Moravec a Tomáš Ilavský mají stejné fotky").
+     *
+     * Do teď se do tabulky posílala adresa z `photoUrl`, jenže ta u novějších
+     * účtů míří na ROZHRANÍ R2, které bez podpisu nic nevydá - prohlížeč
+     * dostal 401 a nakreslil svůj zástupný čtvereček. Ten vypadá u všech
+     * stejně, takže to působilo jako jedna fotka u dvou lidí. Endpoint adresu
+     * podepíše a u fotek uložených v databázi navíc ušetří stovky kB v HTML.
+     */
+    photoUrl: odkazNaFotku(u.id, u.photoUrl),
+    superadmin: Boolean((u as { superadmin?: boolean }).superadmin),
     birthDate: u.birthDate ? formatDatum(jazyk, u.birthDate) : null,
     birthDateMs: u.birthDate ? u.birthDate.getTime() : null,
     // U zvukare jsou to jeho studia, u herce mesta, ve kterych toci.

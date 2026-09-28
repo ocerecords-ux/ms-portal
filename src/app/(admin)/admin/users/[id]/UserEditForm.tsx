@@ -10,6 +10,7 @@ import { AdminField } from '../../NewCompanyForm';
 import { CountrySelect } from '../../CountrySelect';
 import { kodZeme } from '@/lib/countries';
 import { SEKCE, celaSekce, sekcePrava } from '@/lib/pristupy';
+import { IkonaTypu } from '@/lib/ikonyTypu';
 import { PhotoDropzone } from '../PhotoDropzone';
 import { ROLE_GROUPS, USER_TABS, roleRequiresCompany } from '@/lib/roles';
 import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
@@ -497,7 +498,7 @@ export function UserEditForm({
                           key={sekce.klic}
                           className="rounded-card border border-line bg-field/40 p-3.5"
                         >
-                          <label className="flex items-start gap-2.5 cursor-pointer">
+                          <label className="flex items-center gap-2.5 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={zapnuta}
@@ -512,6 +513,11 @@ export function UserEditForm({
                               }
                               className="w-4 h-4 accent-brand-purple mt-0.5"
                             />
+                            {/* Ikona z naší rodiny (lib/ikonyTypu.tsx, zadání
+                                28. 9. 2026: „dejme ty naše jednoduché ikony,
+                                ať je to hezké") - devět zaškrtávátek pod sebou
+                                se jinak čte jako seznam, ne jako sekce. */}
+                            <IkonaTypu klic={sekce.ikona} typProjektu={sekce.nazev} />
                             <span className="text-sm font-body text-ink font-semibold">
                               {sekce.nazev}
                               <span className="block text-xs text-muted font-normal">

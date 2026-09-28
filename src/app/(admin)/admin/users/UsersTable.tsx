@@ -30,6 +30,8 @@ export type UserRow = {
   roleLabel: string;
   active: boolean;
   photoUrl: string | null;
+  /** Superadmin - rozdává přístupy do sekcí (28. 9. 2026). */
+  superadmin?: boolean;
   /** Už naformatované datum + hodnota na řazení. */
   birthDate: string | null;
   birthDateMs: number | null;
@@ -191,6 +193,18 @@ export function UsersTable({
                             )}
                             {u.name || u.email}
                           </Link>
+                          {/* KDO JE SUPERADMIN (zadání 28. 9. 2026: „někde by
+                              v těch uživatelích mělo být jasně označené, kdo
+                              je super admin"). Jsou dva a rozdávají přístupy
+                              do sekcí - patří to k jménu, ne do sloupce. */}
+                          {u.superadmin && (
+                            <span
+                              title={t('uzivatel.superadminPopis')}
+                              className="ml-2 align-middle inline-block rounded-pill border border-brand-purple/60 bg-brand-purple/10 px-2 py-0.5 text-[10px] font-heading font-semibold uppercase tracking-wide text-brand-purple"
+                            >
+                              {t('uzivatel.superadmin')}
+                            </span>
+                          )}
                         </td>
                       );
                     case 'kod':

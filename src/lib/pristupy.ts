@@ -55,6 +55,8 @@ export type Sekce = {
   klic: KlicSekce;
   nazev: string;
   popis: string;
+  /** Klíč kresby z lib/ikonyTypu.tsx - stejná rodina jako ikony typů projektu. */
+  ikona: string;
   /**
    * Cesty, které sekce otevírá. Bere se i všechno pod nimi, takže
    * `/admin/doklady` pustí i `/admin/doklady/faktury/123`.
@@ -66,6 +68,7 @@ export type Sekce = {
 export const SEKCE: Sekce[] = [
   {
     klic: 'PROJEKTY',
+    ikona: 'klapka',
     nazev: 'Projekty',
     popis: 'Seznam projektů a jejich detail - stav, herci, termíny, výstupy.',
     cesty: ['/projekty'],
@@ -105,6 +108,7 @@ export const SEKCE: Sekce[] = [
   },
   {
     klic: 'DOKLADY',
+    ikona: 'dokument',
     nazev: 'Doklady',
     popis: 'Nabídky, faktury, výdaje, smlouvy a moje firmy. Jsou tam peníze celé firmy.',
     cesty: ['/admin/doklady'],
@@ -175,6 +179,7 @@ export const SEKCE: Sekce[] = [
   },
   {
     klic: 'PREHLEDY',
+    ikona: 'ekvalizer',
     nazev: 'Přehledy',
     popis: 'Kapacita studií, backlog, obrat a zisk, knihy a rozpočty.',
     cesty: ['/prehledy', '/backlog'],
@@ -219,6 +224,7 @@ export const SEKCE: Sekce[] = [
   },
   {
     klic: 'KALENDARE',
+    ikona: 'hodiny',
     nazev: 'Kalendáře',
     popis: 'Kalendáře studií - natáčení, střihy, blokace a nepřítomnosti.',
     cesty: ['/kalendar'],
@@ -247,6 +253,7 @@ export const SEKCE: Sekce[] = [
   },
   {
     klic: 'STUDIA',
+    ikona: 'mikrofon-studio',
     nazev: 'Studia',
     popis: 'Nastavení studií, rezervační kalendář a ceník studia.',
     cesty: ['/studio', '/admin/studia', '/cenik-studia'],
@@ -273,6 +280,7 @@ export const SEKCE: Sekce[] = [
   },
   {
     klic: 'FIRMY',
+    ikona: 'stitek',
     nazev: 'Firmy',
     popis: 'Klienti a dodavatelé - karty firem, sazby a kontakty.',
     cesty: ['/admin', '/admin/companies'],
@@ -292,6 +300,7 @@ export const SEKCE: Sekce[] = [
   },
   {
     klic: 'ZPRAVY_PORTALU',
+    ikona: 'zvonek',
     nazev: 'Zprávy z portálu',
     popis: 'Vzory zpráv, které portál posílá ven, a hlášky v rozhraní.',
     cesty: ['/admin/zpravy-portalu', '/admin/vzory-zprav'],
@@ -312,6 +321,7 @@ export const SEKCE: Sekce[] = [
   },
   {
     klic: 'HERCI',
+    ikona: 'lide',
     nazev: 'Herci',
     popis: 'Karty herců, pozvánky a jejich údaje.',
     cesty: ['/pozvanky'],
@@ -336,6 +346,7 @@ export const SEKCE: Sekce[] = [
   },
   {
     klic: 'KLIENTI',
+    ikona: 'klic',
     nazev: 'Klienti',
     popis: 'Karty klientských účtů a jejich nastavení.',
     cesty: [],
