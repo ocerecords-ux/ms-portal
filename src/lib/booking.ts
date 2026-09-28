@@ -108,7 +108,11 @@ export type ChybaRezervace =
   | 'booking.chybaKratke'
   | 'booking.chybaMinulost'
   | 'booking.chybaDaleko'
-  | 'booking.chybaObsazeno';
+  | 'booking.chybaObsazeno'
+  // Jen u úpravy už zabookovaného termínu (28. 9. 2026).
+  | 'booking.chybaNenalezena'
+  | 'booking.chybaCizi'
+  | 'booking.chybaProbehla';
 
 /**
  * Sedí okno v otevírací době a je dost dlouhé? Stejná funkce běží v prohlížeči

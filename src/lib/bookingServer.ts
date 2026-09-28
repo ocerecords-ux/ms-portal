@@ -245,10 +245,26 @@ export function celodenniOkno(
 }
 
 /** Kryje se okno s něčím, co už studio drží? */
-async function jeObsazeno(studioId: string, start: Date, end: Date): Promise<boolean> {
+/**
+ * `krome` je id bloku, který se do kolize nepočítá - při ÚPRAVĚ rezervace
+ * je to ona sama. Bez toho by se každá úprava srazila se svým vlastním
+ * původním časem a neprošla by ani změna o pět minut.
+ */
+async function jeObsazeno(
+  studioId: string,
+  start: Date,
+  end: Date,
+  krome?: string,
+): Promise<boolean> {
   const [blok, termin] = await Promise.all([
     prisma.studioBlock.findFirst({
-      where: { studioId, start: { lt: end }, end: { gt: start }, kind: { not: 'STRIH' } },
+      where: {
+        studioId,
+        start: { lt: end },
+        end: { gt: start },
+        kind: { not: 'STRIH' },
+        ...(krome ? { id: { not: krome } } : {}),
+      },
       select: { id: true },
     }),
     prisma.recordingSlot.findFirst({
@@ -354,6 +370,129 @@ export async function zalozRezervaci(input: {
  * Zrušení vlastní rezervace. Jen svoje a jen dopředu - co se odehrálo, se
  * z kalendáře nemaže; tým podle toho fakturuje.
  */
+/**
+ * ZMĚNA UŽ ZABOOKOVANÉHO TERMÍNU (zadání 28. 9. 2026: „potřebuju v plánovacím
+ * kalendáři Londýna, aby si uživatelé mohli měnit i termíny, které mají
+ * zabookované").
+ *
+ * Do teď šlo rezervaci jen založit a zrušit - kdo si chtěl posunout hodinu,
+ * musel ji zrušit a udělat znovu, a mezitím mu ji mohl někdo vzít.
+ *
+ * PRAVIDLA JSOU STEJNÁ JAKO PŘI ZAKLÁDÁNÍ, ne mírnější: otevírací doba,
+ * nejkratší rezervace, „dní dopředu", žádná kolize, nic do minulosti. Jediný
+ * rozdíl je, že sama sebe za kolizi nepovažuje.
+ *
+ * MĚNIT JDE JEN SVOJE A JEN DOPŘEDU. Proběhlá rezervace se nemění ze stejného
+ * důvodu, z jakého nejde zrušit - studio už bylo (nebo nebylo) obsazené a
+ * v kalendáři to má zůstat tak, jak to doopravdy bylo.
+ *
+ * E-mail typu ZMENA i příznak `bookingMailZmena` na kartě klienta v portálu
+ * existovaly už dřív; tohle je to místo, které je konečně používá, a posílá
+ * se v něm i PŮVODNÍ čas, ať člověk pozná, co se vlastně změnilo.
+ */
+export async function upravRezervaci(input: {
+  id: string;
+  studio: BookingStudio;
+  user: { id: string; name: string | null; email: string };
+  start: Date;
+  end: Date;
+  celyDen: boolean;
+  nazev: string;
+  poznamka?: string | null;
+}): Promise<VysledekRezervace> {
+  const { studio, start, end } = input;
+
+  const puvodni = await prisma.studioBlock.findUnique({
+    where: { id: input.id },
+    select: {
+      id: true,
+      kind: true,
+      bookingUserId: true,
+      start: true,
+      end: true,
+      title: true,
+      studioId: true,
+    },
+  });
+  if (!puvodni || puvodni.kind !== DRUH_REZERVACE) {
+    return { ok: false, chyba: 'booking.chybaNenalezena' };
+  }
+  if (puvodni.bookingUserId !== input.user.id) return { ok: false, chyba: 'booking.chybaCizi' };
+  if (puvodni.studioId !== studio.id) return { ok: false, chyba: 'booking.chybaCizi' };
+  if (puvodni.start.getTime() < Date.now()) return { ok: false, chyba: 'booking.chybaProbehla' };
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    return { ok: false, chyba: 'booking.chybaKratke' };
+  }
+  if (start.getTime() < Date.now()) return { ok: false, chyba: 'booking.chybaMinulost' };
+  if (studio.dniDopredu > 0) {
+    const mez = Date.now() + studio.dniDopredu * 24 * 60 * 60 * 1000;
+    if (start.getTime() > mez) return { ok: false, chyba: 'booking.chybaDaleko' };
+  }
+
+  // Den i minuty v pásmu studia - londýnský kalendář počítá londýnské hodiny.
+  const den = weekdayInZone(start, studio.casovePasmo);
+  const od = minutesInZone(start, studio.casovePasmo);
+  const konec =
+    minutesInZone(end, studio.casovePasmo) === 0 ? 24 * 60 : minutesInZone(end, studio.casovePasmo);
+  if (konec <= od) return { ok: false, chyba: 'booking.chybaMimoDobu' };
+  const chyba = zkontrolujOkno(studio, den, od, konec);
+  if (chyba) return { ok: false, chyba };
+
+  // Sama sebe za obsazení nepovažuje - viz `krome` v jeObsazeno.
+  if (await jeObsazeno(studio.id, start, end, puvodni.id)) {
+    return { ok: false, chyba: 'booking.chybaObsazeno' };
+  }
+
+  const jmeno = input.user.name?.trim() || input.user.email;
+  const blok = await prisma.studioBlock.update({
+    where: { id: puvodni.id },
+    data: {
+      start,
+      end,
+      celyDen: input.celyDen,
+      title: input.nazev.trim().slice(0, 160) || jmeno,
+      note: input.poznamka?.trim().slice(0, 1000) || null,
+    },
+    select: { id: true, title: true, note: true },
+  });
+
+  const puvodneKdy = kdyAnglicky(puvodni.start, puvodni.end, studio.casovePasmo);
+  await oznamKlientovi(
+    {
+      kind: DRUH_REZERVACE,
+      bookingUserId: input.user.id,
+      bookingEmail: input.user.email,
+      title: blok.title,
+      note: blok.note,
+      start,
+      end,
+      studioId: studio.id,
+    },
+    'ZMENA',
+    puvodneKdy,
+  );
+  await oznamTymu(studio, {
+    nadpis: `Změněná rezervace studia ${studio.kratce}`,
+    telo: `${jmeno}: ${blok.title}`,
+    start,
+    end,
+  });
+  await zapisZmenuKalendare({
+    typ: 'BLOK',
+    akce: 'UPRAVA',
+    zaznamId: blok.id,
+    nazev: `${blok.title} · ${jmeno}`,
+    start,
+    end,
+    kde: studio.kratce,
+    podrobnosti: `Rezervaci přesunul klient studia (původně ${puvodneKdy})`,
+    kdo: { id: input.user.id, jmeno },
+  });
+
+  return { ok: true, id: blok.id };
+}
+
 export async function zrusRezervaci(
   id: string,
   user: { id: string; name: string | null; email: string },

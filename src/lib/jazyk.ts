@@ -645,6 +645,19 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'That is further ahead than we currently take bookings — just write to us.',
   },
   'booking.chybaObsazeno': { cs: 'Tenhle čas je už obsazený.', en: 'That time is already taken.' },
+  // Úprava už zabookovaného termínu (28. 9. 2026).
+  'booking.chybaNenalezena': { cs: 'Rezervace se nenašla.', en: 'That booking could not be found.' },
+  'booking.chybaCizi': { cs: 'Tohle není vaše rezervace.', en: 'That booking is not yours.' },
+  'booking.chybaProbehla': {
+    cs: 'Proběhlou rezervaci už změnit nejde.',
+    en: 'A booking that has already happened can no longer be changed.',
+  },
+  'booking.zmenitTermin': { cs: 'Změnit termín', en: 'Change the booking' },
+  'booking.ulozitZmenu': { cs: 'Uložit změnu', en: 'Save the change' },
+  'booking.menimTermin': {
+    cs: 'Měníte termín, který už máte zabookovaný.',
+    en: 'You are changing a booking you have already made.',
+  },
   'booking.chybaUlozeni': {
     cs: 'Rezervaci se nepodařilo uložit.',
     en: 'The booking could not be saved.',

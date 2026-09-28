@@ -6,6 +6,7 @@ import {
   celodenniOkno,
   nactiBookingPristup,
   nactiBookingUdalosti,
+  upravRezervaci,
   zalozRezervaci,
   zrusRezervaci,
 } from '@/lib/bookingServer';
@@ -38,6 +39,9 @@ const zalozeni = z.object({
   nazev: z.string().trim().min(1).max(160),
   poznamka: z.string().trim().max(1000).optional(),
 });
+
+/** Úprava je totéž co založení, jen navíc s id měněné rezervace. */
+const uprava = zalozeni.extend({ id: z.string().trim().min(1) });
 
 export async function GET(req: NextRequest) {
   const ja = await kdoJe(req);
@@ -87,6 +91,64 @@ export async function POST(req: NextRequest) {
   }
 
   const vysledek = await zalozRezervaci({
+    studio: pristup.studio,
+    user: ucet,
+    start,
+    end,
+    celyDen: Boolean(d.den || d.celyDen),
+    nazev: d.nazev,
+    poznamka: d.poznamka,
+  });
+  if (!vysledek.ok) {
+    // Klíč do slovníku, ne hotová věta - kalendář mluví česky i anglicky.
+    return NextResponse.json({ error: vysledek.chyba, klic: true }, { status: 409 });
+  }
+  return NextResponse.json({ ok: true, id: vysledek.id });
+}
+
+/**
+ * ZMĚNA UŽ ZABOOKOVANÉHO TERMÍNU (zadání 28. 9. 2026: „potřebuju v plánovacím
+ * kalendáři Londýna, aby si uživatelé mohli měnit i termíny, které mají
+ * zabookované").
+ *
+ * Tvar těla je stejný jako u zakládání, jen navíc s `id`. Pravidla se
+ * nezjednodušují - kontroluje je `upravRezervaci` úplně stejně jako při
+ * zakládání, včetně toho, že rezervace musí být vaše a ještě neproběhlá.
+ */
+export async function PATCH(req: NextRequest) {
+  const ja = await kdoJe(req);
+  if (!ja) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
+
+  const parsed = uprava.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
+  const d = parsed.data;
+
+  const pristup = await nactiBookingPristup(ja, d.studioId ?? null);
+  if (!pristup) return NextResponse.json({ error: 'Nemáte přístup.' }, { status: 403 });
+  // Náhledový přístup našeho týmu do cizího studia nesmí nic měnit.
+  if (pristup.jenNahled) return NextResponse.json({ error: 'Nemáte přístup.' }, { status: 403 });
+
+  const ucet = await prisma.user.findUnique({
+    where: { id: ja.id },
+    select: { id: true, name: true, email: true },
+  });
+  if (!ucet) return NextResponse.json({ error: 'Účet nenalezen.' }, { status: 403 });
+
+  let start: Date;
+  let end: Date;
+  if (d.den) {
+    const [rok, mesic, den] = d.den.split('-').map(Number);
+    const okno = celodenniOkno(pristup.studio, { rok, mesic, den });
+    if (!okno) return NextResponse.json({ error: 'booking.chybaZavreno', klic: true }, { status: 409 });
+    start = okno.start;
+    end = okno.end;
+  } else {
+    start = new Date(d.start ?? '');
+    end = new Date(d.end ?? '');
+  }
+
+  const vysledek = await upravRezervaci({
+    id: d.id,
     studio: pristup.studio,
     user: ucet,
     start,

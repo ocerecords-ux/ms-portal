@@ -227,6 +227,13 @@ export function BookingKalendar({
   >(null);
   const [nazev, setNazev] = useState('');
   const [poznamka, setPoznamka] = useState('');
+  /**
+   * ÚPRAVA UŽ ZABOOKOVANÉHO TERMÍNU (zadání 28. 9. 2026). Když je vyplněná,
+   * formulář neZAKLÁDÁ, ale MĚNÍ tuhle rezervaci - jiný nadpis, jiné tlačítko
+   * a odesílá se PATCH místo POST. Dlouhodobý režim (DNY) se u úpravy
+   * nenabízí: rezervace je jeden záznam a z jednoho se víc dní neudělá.
+   */
+  const [upravovana, setUpravovana] = useState<BookingUdalost | null>(null);
   const [uklada, setUklada] = useState(false);
 
   function otevriFormular(den: Den, minuty: number) {
@@ -284,10 +291,11 @@ export function BookingKalendar({
       let neuspech: string | null = null;
       let ulozeno = 0;
       for (const data of telo) {
+        // Úprava mění JEDEN existující záznam - proto PATCH a id v těle.
         const res = await fetch('/api/studio/rezervace', {
-          method: 'POST',
+          method: upravovana ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
+          body: JSON.stringify(upravovana ? { ...data, id: upravovana.id } : data),
         });
         if (res.ok) ulozeno += 1;
         else {
@@ -303,11 +311,37 @@ export function BookingKalendar({
       }
       if (neuspech) setChyba(t('booking.castNeulozena'));
       setFormular(null);
+      setUpravovana(null);
     } catch {
       setChyba(t('booking.chybaUlozeni'));
     } finally {
       setUklada(false);
     }
+  }
+
+  /** Z rezervace udělá předvyplněný formulář - den a minuty v pásmu studia. */
+  function otevriUpravu(u: BookingUdalost) {
+    const zacatek = new Date(u.start);
+    const konec = new Date(u.end);
+    const p = utcParts(zacatek, studio.casovePasmo);
+    const k = utcParts(konec, studio.casovePasmo);
+    const den: Den = {
+      klic: `${p.year}-${dvojcifra(p.month)}-${dvojcifra(p.day)}`,
+      rok: p.year,
+      mesic: p.month,
+      den: p.day,
+      denVTydnu: p.weekday,
+      zacatekMs: zonedToUtc(p.year, p.month, p.day, 0, studio.casovePasmo).getTime(),
+      konecMs: zonedToUtc(p.year, p.month, p.day + 1, 0, studio.casovePasmo).getTime(),
+    };
+    // Konec o půlnoci patří předchozímu dni, ne nule dalšího.
+    const doMinut = k.hour * 60 + k.minute === 0 ? 24 * 60 : k.hour * 60 + k.minute;
+    setUpravovana(u);
+    setNazev(u.nazev ?? '');
+    setPoznamka(u.poznamka ?? '');
+    setDetail(null);
+    setChyba(null);
+    setFormular({ rezim: 'HODINY', den, od: p.hour * 60 + p.minute, do: doMinut });
   }
 
   async function zrus(u: BookingUdalost) {
@@ -575,9 +609,18 @@ export function BookingKalendar({
 
       {/* --- formulář nové rezervace --------------------------------------- */}
       {formular && (
-        <Okno onZavrit={() => setFormular(null)} nadpis={t('booking.novaRezervace')}>
+        <Okno
+          onZavrit={() => {
+            setFormular(null);
+            setUpravovana(null);
+          }}
+          nadpis={upravovana ? t('booking.zmenitTermin') : t('booking.novaRezervace')}
+        >
           <div className="flex flex-col gap-3">
-            <div className="flex gap-1.5">
+            {/* U ÚPRAVY SE REŽIM NENABÍZÍ (28. 9. 2026): rezervace je jeden
+                záznam a přepnutí na „celé dny" by z něj chtělo udělat řadu
+                záznamů. Kdo potřebuje víc dní, založí je jako novou rezervaci. */}
+            <div className={`flex gap-1.5 ${upravovana ? 'hidden' : ''}`}>
               <button
                 type="button"
                 onClick={() =>
@@ -728,7 +771,14 @@ export function BookingKalendar({
               )}
 
             <div className="flex items-center justify-end gap-2 pt-1">
-              <button type="button" onClick={() => setFormular(null)} className={tlacitko}>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormular(null);
+                  setUpravovana(null);
+                }}
+                className={tlacitko}
+              >
                 {t('obecne.zrusit')}
               </button>
               <button
@@ -737,7 +787,11 @@ export function BookingKalendar({
                 disabled={uklada || !nazev.trim()}
                 className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 disabled:opacity-50 border-0 cursor-pointer"
               >
-                {uklada ? t('obecne.ukladam') : t('booking.rezervovat')}
+                {uklada
+                  ? t('obecne.ukladam')
+                  : upravovana
+                    ? t('booking.ulozitZmenu')
+                    : t('booking.rezervovat')}
               </button>
             </div>
           </div>
@@ -757,14 +811,28 @@ export function BookingKalendar({
                 {t('obecne.zavrit')}
               </button>
               {Date.parse(detail.start) > Date.now() && (
-                <button
-                  type="button"
-                  onClick={() => zrus(detail)}
-                  disabled={uklada}
-                  className="rounded-pill bg-status-error text-white font-heading font-semibold text-sm px-5 py-2 disabled:opacity-50 border-0 cursor-pointer"
-                >
-                  {t('booking.zrusitRezervaci')}
-                </button>
+                <>
+                  {/* Změna termínu (28. 9. 2026) - dřív se musela rezervace
+                      zrušit a udělat znovu, a mezitím ji mohl někdo vzít. */}
+                  <button
+                    type="button"
+                    onClick={() => otevriUpravu(detail)}
+                    disabled={uklada}
+                    className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 disabled:opacity-50 border-0 cursor-pointer"
+                  >
+                    {t('booking.zmenitTermin')}
+                  </button>
+                  {/* bg-danger, ne bg-status-error - ten token v paletě není
+                      a tlačítko zůstávalo bez podkladu. */}
+                  <button
+                    type="button"
+                    onClick={() => zrus(detail)}
+                    disabled={uklada}
+                    className="rounded-pill bg-danger text-white font-heading font-semibold text-sm px-5 py-2 disabled:opacity-50 border-0 cursor-pointer"
+                  >
+                    {t('booking.zrusitRezervaci')}
+                  </button>
+                </>
               )}
             </div>
           </div>
