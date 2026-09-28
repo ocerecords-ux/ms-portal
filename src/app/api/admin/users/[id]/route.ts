@@ -7,6 +7,7 @@ import { uploadUserPhoto } from '@/lib/storage';
 import { popisPrekazek, prekazkyUzivatele } from '@/lib/mazani';
 import { jeZpusobSmazani } from '@/lib/archiv';
 import { odstranUzivatele } from '@/lib/archivServer';
+import { pouzeZnameSekce } from '@/lib/pristupy';
 
 const ROLE_VALUES = ['CLIENT', 'HEREC', 'ADMIN', 'ZVUKAR', 'PRODUKCE', 'ROBOT', 'TABULE'] as const;
 const COMPANY_REQUIRED_ROLES: string[] = ['CLIENT'];
@@ -33,6 +34,8 @@ const schema = z.object({
   prijimaDotazyKlientu: z.string().trim().optional(),
   vidiBanku: z.string().trim().optional(),
   spravujeTechParametry: z.string().trim().optional(),
+  /** Sekce, do kterých člověk smí (28. 9. 2026). Mění je jen superadmin. */
+  pristupy: z.array(z.string()).optional(),
   sledujeZmenyProjektu: z.string().trim().optional(),
   /** "1" / "0" - ucet jen na prohlizeni portalu (zadani 18. 9. 2026). */
   jenNahled: z.string().trim().optional(),
@@ -105,6 +108,9 @@ function readFormData(formData: FormData) {
     vedeStudia: has('vedeStudiaPrazdne') ? formData.getAll('vedeStudia').map(String) : undefined,
     // Přístup na tabule (23. 9. 2026) - u všech interních rolí.
     tabulePristup: has('tabulePristupPrazdne') ? formData.getAll('tabulePristup').map(String) : undefined,
+    // Stejný trik jako u studií: prázdné pole se pozná podle průvodce, ne
+    // podle chybějícího klíče - jinak by odškrtnutí všeho nic neuložilo.
+    pristupy: has('pristupyPrazdne') ? formData.getAll('pristupy').map(String) : undefined,
     zvukarStudia: has('zvukarStudiaPrazdne')
       ? formData.getAll('zvukarStudia').map(String)
       : undefined,
@@ -126,6 +132,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
  try {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
+
+  // Přístupy do sekcí rozdává jen superadmin - viz níž u `pristupy`.
+  const jsemSuperadmin = Boolean(
+    (
+      (await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { superadmin: true },
+      })) as { superadmin: boolean } | null
+    )?.superadmin,
+  );
 
   const formData = await req.formData();
   const parsed = schema.safeParse(readFormData(formData));
@@ -224,6 +240,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         : {}),
       ...(data.takyZvukar !== undefined ? { takyZvukar: data.takyZvukar === '1' } : {}),
       ...(data.vidiBanku !== undefined ? { vidiBanku: data.vidiBanku === '1' } : {}),
+      /**
+       * PŘÍSTUPY MĚNÍ JEN SUPERADMIN (zadání 28. 9. 2026). Kontrola je tady,
+       * ne jen ve formuláři: kdyby seděla jen v rozhraní, stačilo by poslat
+       * vlastní požadavek a rozdat si práva sám.
+       */
+      ...(data.pristupy !== undefined && jsemSuperadmin
+        ? { pristupy: pouzeZnameSekce(data.pristupy) }
+        : {}),
       ...(data.spravujeTechParametry !== undefined
         ? { spravujeTechParametry: data.spravujeTechParametry === '1' }
         : {}),

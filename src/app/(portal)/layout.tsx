@@ -65,7 +65,15 @@ export default async function PortalLayout({ children }: { children: React.React
   let tasks: Awaited<ReturnType<typeof loadMyTasks>> = [];
   let unread = 0;
   // Stub Prismy vrací celý User; zajímají nás jen tyhle tři věci.
-  let ucet: { maFotku: boolean; udajeDoplneny: boolean; tabulePristup?: { id: string }[] } | null = null;
+  let ucet:
+    | {
+        maFotku: boolean;
+        udajeDoplneny: boolean;
+        tabulePristup?: { id: string }[];
+        superadmin?: boolean;
+        pristupy?: string[];
+      }
+    | null = null;
   let quickActions: Awaited<ReturnType<typeof loadQuickActions>> = [];
   let nouzovyRezim = false;
   try {
@@ -82,8 +90,22 @@ export default async function PortalLayout({ children }: { children: React.React
           // `udajeDoplneny` je brana nize - herec, ktery prisel pozvankou,
           // ma napred vyplnit sve udaje (zadani 16. 9. 2026).
           // Tabule v liště (23. 9. 2026) - stačí vědět, jestli nějakou má.
-          select: { maFotku: true, udajeDoplneny: true, tabulePristup: { select: { id: true } } },
-        }) as Promise<{ maFotku: boolean; udajeDoplneny: boolean; tabulePristup?: { id: string }[] } | null>,
+          // Zaškrtávátka sekcí (28. 9. 2026) - podle nich se lišta skládá,
+          // viz lib/pristupy.ts. Role je od téhle chvíle jen výchozí sada.
+          select: {
+            maFotku: true,
+            udajeDoplneny: true,
+            tabulePristup: { select: { id: true } },
+            superadmin: true,
+            pristupy: true,
+          },
+        }) as Promise<{
+          maFotku: boolean;
+          udajeDoplneny: boolean;
+          tabulePristup?: { id: string }[];
+          superadmin?: boolean;
+          pristupy?: string[];
+        } | null>,
         // Rychle volby v levem panelu (zadani 9. 9. 2026).
         loadQuickActions(session.user.id, role),
         // Lista pro mobil (zadani 19. 9. 2026) - kdo si ji neupravil, ma
@@ -103,6 +125,15 @@ export default async function PortalLayout({ children }: { children: React.React
    * přesměruje na projekty").
    */
   const maTabuli = role === 'ADMIN' || ((ucet?.tabulePristup ?? []) as { id: string }[]).length > 0;
+
+  /**
+   * KDO CO VIDÍ V LIŠTĚ (zadání 28. 9. 2026). Zaškrtávátka z karty uživatele -
+   * viz lib/pristupy.ts. V nouzovém režimu (`ucet` chybí) se nepředává nic
+   * a rozhoduje dál role: nefunkční databáze nemá nikomu brát přístup.
+   */
+  const kdoPristupy = ucet
+    ? { role, superadmin: ucet.superadmin ?? false, pristupy: ucet.pristupy ?? [] }
+    : undefined;
 
   /**
    * ODKAZ STUDIO V LIŠTĚ (zadání 25. 9. 2026: „měl by mít nastavený i odkaz
@@ -160,16 +191,16 @@ export default async function PortalLayout({ children }: { children: React.React
         userLabel={session.user.name || session.user.email}
         userPhotoUrl={odkazNaFotku(session.user.id, ucet?.maFotku)}
         items={seStudiem(
-          sTabuli(visibleFor(entries, role), maTabuli, vychoziLista(entries)),
+          sTabuli(visibleFor(entries, role, kdoPristupy), maTabuli, vychoziLista(entries)),
           maStudio,
           vychoziLista(entries),
         )}
         itemsMobil={seStudiem(
-          sTabuli(visibleFor(entriesMobil, role), maTabuli, vychoziLista(entriesMobil)),
+          sTabuli(visibleFor(entriesMobil, role, kdoPristupy), maTabuli, vychoziLista(entriesMobil)),
           maStudio,
           vychoziLista(entriesMobil),
         )}
-        pageOptions={pageOptionsFor(role, maTabuli, maStudio)}
+        pageOptions={pageOptionsFor(role, maTabuli, maStudio, kdoPristupy)}
         unreadNotifications={unread}
         odznaky={bonusyKeSchvaleni > 0 ? { '/vykazy': bonusyKeSchvaleni } : undefined}
         tecky={konflikty > 0 ? ['/kalendar'] : undefined}

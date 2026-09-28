@@ -316,6 +316,25 @@ model User {
   /// a rozpracovaná zakázka nepatří nikomu jinému; příznak je u účtu, aby
   /// se to dalo pustit dál bez zásahu do kódu.
   vidiPalubovku Boolean @default(false)
+
+  /// SUPERADMIN (zadání 28. 9. 2026: „super admin jsem já a druhý bude Peter
+  /// Drátva"). Vidí všechny sekce bez ohledu na zaškrtávátka a jako jediný
+  /// je rozdává. Pojistka proti tomu, aby se někdo omylem zamknul ze správy
+  /// uživatelů a nedostal se zpátky.
+  superadmin Boolean @default(false)
+
+  /// DO KTERÝCH SEKCÍ ČLOVĚK SMÍ (zadání 28. 9. 2026: „tam mu pomocí
+  /// zaškrtávacích polí dávám přístup jednotlivým sekcím").
+  ///
+  /// Klíče sekcí - viz SEKCE v lib/pristupy.ts. Od téhle chvíle o přístupu
+  /// rozhoduje tenhle seznam, ne role; role zůstává jako VÝCHOZÍ SADA, která
+  /// se novému člověku předvyplní, a jako pravidlo pro všechno ostatní, co
+  /// v seznamu sekcí není (výkazy, honoráře, objednávka klienta…).
+  ///
+  /// Prázdno u interního účtu znamená „nic z devíti sekcí", ne „všechno" -
+  /// stávajícím účtům se seznam jednorázově doplnil podle toho, co viděly
+  /// dřív, takže se nikomu nic neztratilo.
+  pristupy String[]
   /// Kdy clovek naposledy videl okno s prehledem dne (23. 9. 2026: „at se mi
   /// v portalu otevre pruhledne vyskakovaci okno"). Jednou za den.
   prehledZobrazenAt DateTime?

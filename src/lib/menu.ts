@@ -15,6 +15,8 @@ import type { Role } from '@prisma/client';
  * komponenty (Topbar). Nacitani z databaze je v lib/menuServer.ts.
  */
 
+import { maPristup, podlehaPristupum, sekceCesty, type KdoPristupy } from '@/lib/pristupy';
+
 export type NavItem = { href: string; label: string };
 export type MenuEntry = { id: string; label: string; href: string };
 
@@ -106,7 +108,17 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
 };
 
 /** Uvidi uzivatel s touhle roli tenhle odkaz? Vlastni odkaz vidi kazdy. */
-export function canSee(href: string, role: Role): boolean {
+export function canSee(href: string, role: Role, kdo?: KdoPristupy): boolean {
+  /**
+   * ZAŠKRTÁVÁTKA MAJÍ PŘEDNOST (zadání 28. 9. 2026). U devíti sekcí
+   * z lib/pristupy.ts rozhoduje seznam na kartě uživatele, ne role - proto se
+   * ptáme nejdřív na ně. Volající, který `kdo` nepředá, se chová jako dřív;
+   * takových míst má v portálu postupně ubývat.
+   */
+  if (kdo && podlehaPristupum(role)) {
+    const sekce = sekceCesty(href);
+    if (sekce) return maPristup({ ...kdo, role }, sekce);
+  }
   const allowed = PAGE_ACCESS[href];
   return allowed ? allowed.includes(role) : true;
 }

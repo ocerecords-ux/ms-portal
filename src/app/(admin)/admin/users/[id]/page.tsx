@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { isInternalRole } from '@/lib/roles';
@@ -9,7 +11,8 @@ import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 
 export default async function UserEditPage({ params }: { params: { id: string } }) {
   const jazyk = nactiJazyk();
-  const [user, companies, studia] = await Promise.all([
+  const session = await getServerSession(authOptions);
+  const [user, companies, studia, ja] = await Promise.all([
     prisma.user.findUnique({
       where: { id: params.id },
       // Firma-dodavatel zalozena z herce (zadani 16. 9. 2026) - podle ni se
@@ -28,6 +31,18 @@ export default async function UserEditPage({ params }: { params: { id: string } 
       select: { id: true, shortName: true, name: true, color: true },
       orderBy: { sortOrder: 'asc' },
     }),
+    /**
+     * Přístupy do sekcí rozdává jen superadmin (zadání 28. 9. 2026: „super
+     * admin jsem já a druhý bude Peter Drátva"). Ostatním se zaškrtávátka
+     * vůbec nevykreslí - a i kdyby si je někdo dokreslil, API je od nikoho
+     * jiného nepřijme.
+     */
+    session?.user?.id
+      ? (prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { superadmin: true },
+        }) as Promise<{ superadmin: boolean } | null>)
+      : Promise.resolve(null),
   ]);
   if (!user) notFound();
 
@@ -138,6 +153,9 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           addressCity: user.addressCity,
           addressZip: user.addressZip,
           addressCountry: user.addressCountry,
+          // Do kterých sekcí smí (28. 9. 2026).
+          pristupy: (user.pristupy as string[]) ?? [],
+          superadmin: user.superadmin,
           // Firma-dodavatel zalozena z tohohle herce (zadani 16. 9. 2026).
           dodavatel: user.dodavatelCompany
             ? {
@@ -149,6 +167,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         }}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
         studia={studia}
+        jsemSuperadmin={Boolean(ja?.superadmin)}
       />
     </section>
   );

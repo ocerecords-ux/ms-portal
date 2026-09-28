@@ -3808,6 +3808,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'they are in every channel a customer opens with the Ask a question button',
   },
   'uzivatel.pravoVidiBanku': { cs: 'Vidí sekci Banka', en: 'Can see the Bank section' },
+  // Přístup do sekcí zaškrtávátky (28. 9. 2026). Vidí to jen superadmin.
+  'uzivatel.pristupySekce': { cs: 'Přístup do sekcí', en: 'Access to sections' },
+  'uzivatel.pristupyPopis': {
+    cs: 'Co je zaškrtnuté, to člověk uvidí v liště a otevře. Nezaškrtnutá sekce mu zmizí. Role už o tom nerozhoduje - předvyplní se z ní jen nový účet.',
+    en: 'What is ticked is what the person sees in the bar and can open. Anything unticked disappears for them. The role no longer decides this - it only pre-fills a new account.',
+  },
+  'uzivatel.pristupySuperadmin': {
+    cs: 'Superadmin vidí všechny sekce - zaškrtávátka se u něj neřeší.',
+    en: 'A superadmin sees every section - the tick boxes do not apply.',
+  },
   'uzivatel.pravoVidiBankuPopis': {
     cs: 'pohyby na účtu, párování plateb a napojení účtu v Dokladech',
     en: 'account movements, payment matching and the account connection in Invoicing',

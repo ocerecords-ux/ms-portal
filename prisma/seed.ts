@@ -212,6 +212,7 @@ async function main() {
   await backlogZListyDoPrehledu();
   await vedouciPobocek();
   await uzavriKanalyUkoncenychProjektu();
+  await pristupyPodleRoli();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
 
@@ -1920,6 +1921,77 @@ async function uzavriKanalyUkoncenychProjektu() {
     await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
   } catch (err) {
     console.warn('  chat: kanaly ukoncenych projektu se nepodarilo uzavrit:', err);
+  }
+}
+
+/**
+ * PŘÍSTUPY DO SEKCÍ PODLE ZAŠKRTÁVÁTEK (zadání 28. 9. 2026: „tam mu pomocí
+ * zaškrtávacích polí dávám přístup jednotlivým sekcím").
+ *
+ * Od téhle chvíle rozhoduje seznam na kartě uživatele, ne role. Aby se
+ * přepnutím nikomu nic neztratilo, doplní se stávajícím účtům jednorázově
+ * přesně to, co viděly doteď - výchozí sada podle role z lib/pristupy.ts.
+ *
+ * SUPERADMIN: Ondřej a Peter Drátva („super admin jsem já a druhý bude Peter
+ * Drátva"). Ti vidí všechno bez ohledu na zaškrtávátka a jako jediní je
+ * rozdávají. Dál se to nastavuje v Administraci, ne tady.
+ */
+async function pristupyPodleRoli() {
+  const ZNAMKA = 'pristupy-podle-roli';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const vychozi: Record<string, string[]> = {
+      ADMIN: [
+        'PROJEKTY',
+        'DOKLADY',
+        'PREHLEDY',
+        'KALENDARE',
+        'STUDIA',
+        'FIRMY',
+        'ZPRAVY_PORTALU',
+        'HERCI',
+        'KLIENTI',
+      ],
+      PRODUKCE: ['PROJEKTY', 'PREHLEDY', 'KALENDARE', 'STUDIA', 'HERCI'],
+      ZVUKAR: ['PROJEKTY', 'KALENDARE', 'STUDIA'],
+    };
+
+    for (const [role, sekce] of Object.entries(vychozi)) {
+      const { count } = await prisma.user.updateMany({
+        where: { role: role as never, pristupy: { isEmpty: true } },
+        data: { pristupy: sekce },
+      });
+      if (count > 0) console.log(`  pristupy: ${role} - doplneno ${count} uctum`);
+    }
+
+    // Superadmini. Hleda se podle jmena, protoze e-maily se lisi podle domeny;
+    // kdyz ucet jeste neexistuje, nic se nedeje a nastavi se rucne.
+    for (const jmeno of ['Ondřej Černý', 'Drátva']) {
+      const lide = await prisma.user.findMany({
+        where: {
+          role: 'ADMIN',
+          active: true,
+          name: { contains: jmeno, mode: 'insensitive' },
+          ...(jmeno === 'Ondřej Černý' ? { NOT: { name: { contains: 'ml.', mode: 'insensitive' } } } : {}),
+        },
+        select: { id: true, email: true },
+      });
+      if (lide.length === 0) {
+        console.warn(`  pristupy: superadmin ${jmeno} nenalezen`);
+        continue;
+      }
+      await prisma.user.updateMany({
+        where: { id: { in: lide.map((u) => u.id) } },
+        data: { superadmin: true },
+      });
+      console.log(`  pristupy: superadmin ${lide.map((u) => u.email).join(', ')}`);
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+  } catch (err) {
+    console.warn('  pristupy: doplneni podle role selhalo:', err);
   }
 }
 

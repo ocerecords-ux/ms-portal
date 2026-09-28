@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { VYCHOZI_PRISTUPY } from '@/lib/pristupy';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
@@ -127,6 +128,12 @@ export async function POST(req: NextRequest) {
         passwordHash,
         role: data.role,
         companyId: COMPANY_REQUIRED_ROLES.includes(data.role) ? data.companyId || null : null,
+        /**
+         * PŘÍSTUPY SE PŘEDVYPLNÍ PODLE ROLE (28. 9. 2026). Role o přístupu už
+         * nerozhoduje, ale zůstává jako rozumný start - nový zvukař ať vidí,
+         * co zvukaři, a superadmin mu to pak doladí na kartě.
+         */
+        ...(VYCHOZI_PRISTUPY[data.role] ? { pristupy: VYCHOZI_PRISTUPY[data.role] } : {}),
         ...(INTERNAL_ROLES.includes(data.role)
           ? {
               birthDate: data.birthDate ? new Date(data.birthDate) : null,

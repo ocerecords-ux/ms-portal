@@ -1,4 +1,5 @@
 import type { Role } from '@prisma/client';
+import type { KdoPristupy } from '@/lib/pristupy';
 import { prisma } from '@/lib/db';
 import {
   DEFAULT_MENU_ITEMS,
@@ -59,8 +60,10 @@ function defaultEntries(maTabuli = false): MenuEntry[] {
 }
 
 /** Co z listy uvidi konkretni role - ridi se pravy ke strance, ne nastavenim. */
-export function visibleFor(entries: MenuEntry[], role: Role): NavItem[] {
-  return entries.filter((e) => canSee(e.href, role)).map((e) => ({ href: e.href, label: e.label }));
+export function visibleFor(entries: MenuEntry[], role: Role, kdo?: KdoPristupy): NavItem[] {
+  return entries
+    .filter((e) => canSee(e.href, role, kdo))
+    .map((e) => ({ href: e.href, label: e.label }));
 }
 
 /**
@@ -68,8 +71,13 @@ export function visibleFor(entries: MenuEntry[], role: Role): NavItem[] {
  * ma pravo. Co uz v liste je, si odfiltruje Topbar sam - jinak by se
  * odebrana polozka nedala hned vratit zpatky.
  */
-export function pageOptionsFor(role: Role, maTabuli = false, maStudio = false): NavItem[] {
-  const strany = PORTAL_PAGES.filter((p) => canSee(p.href, role));
+export function pageOptionsFor(
+  role: Role,
+  maTabuli = false,
+  maStudio = false,
+  kdo?: KdoPristupy,
+): NavItem[] {
+  const strany = PORTAL_PAGES.filter((p) => canSee(p.href, role, kdo));
   const sTabuli = maTabuli ? [...strany, TABULE_ITEM] : strany;
   return maStudio ? [...sTabuli, STUDIO_ITEM] : sTabuli;
 }

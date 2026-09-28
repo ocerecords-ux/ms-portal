@@ -9,6 +9,7 @@ import type { Role } from '@prisma/client';
 import { AdminField } from '../../NewCompanyForm';
 import { CountrySelect } from '../../CountrySelect';
 import { kodZeme } from '@/lib/countries';
+import { SEKCE } from '@/lib/pristupy';
 import { PhotoDropzone } from '../PhotoDropzone';
 import { ROLE_GROUPS, USER_TABS, roleRequiresCompany } from '@/lib/roles';
 import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
@@ -52,6 +53,10 @@ type EditableUser = {
   vidiBanku: boolean;
   /** Spravuje technické parametry výroby (zadání 27. 9. 2026). */
   spravujeTechParametry: boolean;
+  /** Do kterých sekcí smí - klíče ze SEKCE v lib/pristupy.ts (28. 9. 2026). */
+  pristupy: string[];
+  /** Superadmin vidí všechno a zaškrtávátka se u něj neřeší. */
+  superadmin: boolean;
   /** Chce vědět o změně stavu a termínů u projektů (zadání 18. 9. 2026). */
   sledujeZmenyProjektu: boolean;
   /** Účet jen na prohlížení portálu z různých rolí (zadání 18. 9. 2026). */
@@ -99,11 +104,14 @@ export function UserEditForm({
   user,
   companies,
   studia,
+  jsemSuperadmin,
 }: {
   user: EditableUser;
   companies: { id: string; name: string }[];
   /** Studia z administrace - z nich jsou zaškrtávátka u zvukaře. */
   studia: { id: string; shortName: string; name: string; color: string }[];
+  /** Přístupy do sekcí rozdává jen superadmin (28. 9. 2026). */
+  jsemSuperadmin: boolean;
 }) {
   const t = usePreklad();
   const router = useRouter();
@@ -113,6 +121,8 @@ export function UserEditForm({
   const [role, setRole] = useState<Role>(user.role);
   const [hourlyRate, setHourlyRate] = useState(String(user.hourlyRate ?? ''));
   const [manazerProjektu, setManazerProjektu] = useState(user.manazerProjektu);
+  /** Do kterých sekcí ten člověk smí (28. 9. 2026). */
+  const [pristupy, setPristupy] = useState<string[]>(user.pristupy);
   const [smlouvyPodepisuje, setSmlouvyPodepisuje] = useState(user.smlouvyPodepisuje);
   const [prijimaDotazy, setPrijimaDotazy] = useState(user.prijimaDotazyKlientu);
   const [vidiBanku, setVidiBanku] = useState(user.vidiBanku);
@@ -231,6 +241,16 @@ export function UserEditForm({
         if (isMediaspace) fd.set('prijimaDotazyKlientu', prijimaDotazy ? '1' : '0');
         if (isMediaspace) fd.set('vidiBanku', vidiBanku ? '1' : '0');
         if (isMediaspace) fd.set('spravujeTechParametry', spravujeTechParametry ? '1' : '0');
+        /**
+         * Přístupy posílá jen superadmin - ostatním se zaškrtávátka
+         * nevykreslí a formulář je nemá odkud vzít. `pristupyPrazdne` je
+         * průvodce: podle něj server pozná odškrtnutí VŠECH sekcí od toho,
+         * že pole vůbec nepřišlo (stejný trik jako u studií).
+         */
+        if (isMediaspace && jsemSuperadmin) {
+          fd.set('pristupyPrazdne', '1');
+          for (const klic of pristupy) fd.append('pristupy', klic);
+        }
         if (isMediaspace) fd.set('sledujeZmenyProjektu', sledujeZmeny ? '1' : '0');
         if (isMediaspace) fd.set('dostavaDotoceno', dostavaDotoceno ? '1' : '0');
         if (isMediaspace) fd.set('schvaleniReklam', schvaleniReklam ? '1' : '0');
@@ -443,6 +463,56 @@ export function UserEditForm({
                   <span className="text-sm font-body text-muted">{t('uzivatel.zadneStudio')}</span>
                 )}
               </div>
+            </AdminField>
+          </div>
+        )}
+
+        {/* PŘÍSTUP DO SEKCÍ (zadání 28. 9. 2026: „tam mu pomocí zaškrtávacích
+            polí dávám přístup jednotlivým sekcím").
+
+            Vidí to jen superadmin a jen u našich lidí - klienti a herci mají
+            vlastní úzký portál, který se tímhle neřídí. U superadmina se
+            zaškrtávátka nenabízí vůbec: ten vidí všechno a je to pojistka
+            proti tomu, aby se poslední správce zamknul ze správy uživatelů. */}
+        {isMediaspace && jsemSuperadmin && (
+          <div className="w-full">
+            <AdminField label={t('uzivatel.pristupySekce')}>
+              {user.superadmin ? (
+                <p className="text-sm font-body text-muted m-0">
+                  {t('uzivatel.pristupySuperadmin')}
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-x-6 gap-y-2.5">
+                    {SEKCE.map((sekce) => (
+                      <label
+                        key={sekce.klic}
+                        className="flex items-start gap-2.5 cursor-pointer min-w-[220px] flex-1"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={pristupy.includes(sekce.klic)}
+                          onChange={(e) =>
+                            setPristupy((p) =>
+                              e.target.checked
+                                ? [...p, sekce.klic]
+                                : p.filter((k) => k !== sekce.klic),
+                            )
+                          }
+                          className="w-4 h-4 accent-brand-purple mt-0.5"
+                        />
+                        <span className="text-sm font-body text-ink">
+                          {sekce.nazev}
+                          <span className="block text-xs text-muted">{sekce.popis}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs font-body text-muted m-0 mt-2">
+                    {t('uzivatel.pristupyPopis')}
+                  </p>
+                </>
+              )}
             </AdminField>
           </div>
         )}
