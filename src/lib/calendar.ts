@@ -12,7 +12,7 @@
  * posunem, ten by v den změny času lhal o hodinu.
  */
 
-import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { kodJazyka, prelozit, type Jazyk } from '@/lib/jazyk';
 
 export type CalendarView = 'den' | 'tyden' | 'mesic';
 
@@ -112,7 +112,12 @@ export const BLOCK_KIND_LABELS: Record<string, string> = {
   // Rezervace muzikanta nebo producenta zvenčí (25. 9. 2026). V našem
   // kalendáři je vidět i se jménem - „bez jmen" platí jen pro klienty
   // navzájem, ne pro nás.
-  BOOKING: 'Rezervace studia',
+  //
+  // PŘEJMENOVÁNO NA „EXTERNÍ PRONÁJEM" (zadání 28. 9. 2026: „jen ať máme info
+  // o tom, co to je za událost… ať je jasné, že si to studio někdo pronajímá").
+  // Kód v databázi zůstal BOOKING, mění se jen popisek - starých rezervací
+  // jsou v kalendáři desítky a překlápět je by nic nepřineslo.
+  BOOKING: 'Externí pronájem',
 };
 
 /**
@@ -135,7 +140,24 @@ export const PRACOVNI_DRUHY = ['NATACENI', 'STRIH', 'CASTING'] as const;
  * druh podržet - viz UdalostForm, který k nabídce přidá i druh upravované
  * události, když v tomhle seznamu není.
  */
-export const DRUHY_K_ZALOZENI = ['NATACENI', 'STRIH', 'CASTING'] as const;
+export const DRUHY_K_ZALOZENI = ['NATACENI', 'STRIH', 'CASTING', 'BOOKING'] as const;
+
+/**
+ * NÁZEV DRUHU PRO SERVER (28. 9. 2026: „v odběrech by pak lidi měli vidět
+ * anglicky natáčení, střih a externí pronájem").
+ *
+ * V prohlížeči tohle dělá `nazevDruhu` v CalendarBrowseru přes `usePreklad`.
+ * Odběr ICS ale žádný prohlížeč nemá - jazyk se u něj bere z účtu vlastníka
+ * odkazu, takže si sem musí přijít s `jazyk` v ruce (pravidlo 8 z dávky 6).
+ *
+ * Když překlad chybí, vrátí se český popisek z BLOCK_KIND_LABELS - lepší než
+ * holý kód „MAINTENANCE" v telefonu.
+ */
+export function nazevDruhuBloku(kind: string, jazyk: Jazyk = 'cs'): string {
+  const klic = `kalendar.druh.${kind}`;
+  const text = prelozit(jazyk, klic);
+  return text === klic ? (BLOCK_KIND_LABELS[kind] ?? 'Blokace') : text;
+}
 
 /**
  * Značka v adrese kalendáře pro „žádné studio". Prázdný seznam studií v

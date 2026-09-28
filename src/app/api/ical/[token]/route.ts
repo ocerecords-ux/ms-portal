@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { buildIcs, type IcsEvent } from '@/lib/ics';
 import { canViewCalendar } from '@/lib/roles';
-import { BLOCK_KIND_LABELS } from '@/lib/calendar';
+import { nazevDruhuBloku } from '@/lib/calendar';
+import { jeJazyk, type Jazyk } from '@/lib/jazyk';
 import { popisDruhu } from '@/lib/nepritomnost';
 import { BARVA_PORAD, BARVA_SCHUZEK, platnyOdkaz } from '@/lib/porady';
 import { nactiPorady } from '@/lib/poradyServer';
@@ -35,7 +36,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   const feed = await prisma.calendarFeed.findUnique({
     where: { token },
     include: {
-      user: { select: { id: true, name: true, email: true, role: true, active: true } },
+      user: { select: { id: true, name: true, email: true, role: true, active: true, jazyk: true } },
       studio: { select: { id: true, name: true, location: true, color: true } },
     },
   });
@@ -47,6 +48,16 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   // Prava se ctou z VLASTNIKA odkazu, ne z odkazu samotneho - kdyz nekomu
   // mezitim skonci role, prestane odkaz vydavat i data.
   const kdo = feed.user;
+  /**
+   * JAZYK ODBĚRU SE BERE Z ÚČTU VLASTNÍKA (zadání 28. 9. 2026: „v odběrech by
+   * pak lidi měli vidět anglicky natáčení, střih a externí pronájem").
+   *
+   * Ne z cookie - ta sem nedorazí, odkaz si stahuje Apple/Google kalendář sám
+   * a s přihlášením nemá nic společného. Kdo si v liště přepne na angličtinu,
+   * má ji tím pádem i v telefonu; Londýn tak vidí Recording / Editing /
+   * External hire, Brno pořád česky.
+   */
+  const jazyk: Jazyk = jeJazyk(kdo.jazyk) ? kdo.jazyk : 'cs';
   const tym = canViewCalendar(kdo.role);
   const jenMoje = feed.scope === 'MINE' || !tym;
   const studioId = !jenMoje && feed.scope === 'STUDIO' ? feed.studioId : null;
@@ -211,7 +222,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       updatedAt: s.updatedAt,
     })),
     ...bloky.map((b) => {
-      const druh = BLOCK_KIND_LABELS[b.kind] ?? 'Blokace';
+      const druh = nazevDruhuBloku(b.kind, jazyk);
       const summary =
         b.kind === 'NATACENI'
           ? spoj([b.projectName || druh, b.actorName, b.zvukarName])
@@ -219,8 +230,13 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
             ? spoj([druh, b.projectName, b.zvukarName])
             : b.kind === 'CASTING'
               ? spoj([druh, b.actorName, b.zvukarName])
-              : // Údržba, svátek, porada… - stačí, co to je.
-                b.title || druh;
+              : b.kind === 'BOOKING'
+                ? // Externí pronájem VŽDYCKY s druhem vepředu (28. 9. 2026) -
+                  // samotné „Jan Novák" v telefonu nic neříká, takhle je hned
+                  // vidět, že si studio někdo pronajímá.
+                  spoj([druh, b.title])
+                : // Údržba, svátek, porada… - stačí, co to je.
+                  b.title || druh;
       return {
         uid: `blok-${b.id}@msportal.cz`,
         start: b.start,

@@ -2660,12 +2660,16 @@ function UdalostForm({
         </div>
       ) : (
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">{t('kalendar.polePopis')}</span>
+          {/* U externího pronájmu se ptáme rovnou na jméno (28. 9. 2026) -
+              „Popis" by svedl k tomu, že tam zůstane prázdno nebo „pronájem". */}
+          <span className="text-sm font-body text-ink">
+            {druh === 'BOOKING' ? t('kalendar.poleKdoPronajima') : t('kalendar.polePopis')}
+          </span>
           <input
             autoFocus
             value={nazev}
             onChange={(e) => setNazev(e.target.value)}
-            placeholder={t('kalendar.popisPlaceholder')}
+            placeholder={druh === 'BOOKING' ? t('kalendar.pronajemPlaceholder') : t('kalendar.popisPlaceholder')}
             className={inputClass}
           />
         </label>

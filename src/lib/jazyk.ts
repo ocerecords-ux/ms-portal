@@ -4426,7 +4426,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.druh.MAINTENANCE': { cs: 'Údržba', en: 'Maintenance' },
   'kalendar.druh.INTERNAL': { cs: 'Interní blokace', en: 'Internal block' },
   'kalendar.druh.OTHER': { cs: 'Jiné', en: 'Other' },
-  'kalendar.druh.BOOKING': { cs: 'Rezervace studia', en: 'Studio booking' },
+  // Kód zůstal BOOKING, popisek je od 28. 9. 2026 „Externí pronájem".
+  'kalendar.druh.BOOKING': { cs: 'Externí pronájem', en: 'External hire' },
   'kalendar.blokace': { cs: 'Blokace', en: 'Block' },
 
   // --- kalendář: stavy termínu z nabídky (SLOT_STATE_LABELS) ---
@@ -4489,6 +4490,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.zrusitVyberZvukare': { cs: 'Zrušit výběr zvukaře', en: 'Clear the sound engineer' },
   'kalendar.polePopis': { cs: 'Popis', en: 'Description' },
   'kalendar.popisPlaceholder': { cs: 'Servis techniky', en: 'Equipment servicing' },
+  // Externí pronájem studia (28. 9. 2026) - místo obecného „Popis".
+  'kalendar.poleKdoPronajima': { cs: 'Kdo si studio pronajímá', en: 'Who is hiring the studio' },
+  'kalendar.pronajemPlaceholder': { cs: 'Jméno nebo firma', en: 'Name or company' },
 
   // --- kalendář: režie na dálku ---
   'kalendar.rezieNaDalku': { cs: 'Režie na dálku', en: 'Remote direction' },
