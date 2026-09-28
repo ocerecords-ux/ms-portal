@@ -1,7 +1,11 @@
 import Link from 'next/link';
 
 /**
- * PŘEHLED NASTAVENÍ FIREM. Hlavička a záložky jsou v layoutu vedle - tady
+ * PŘEHLED NASTAVENÍ FIREM.
+ *
+ * CO SEM NEPATŘÍ (28. 9. 2026): Wikipedie - koncept článku si píše každý sám
+ * a má ho v Mém účtu, s firmami nemá nic společného. A Firmy z Caflou -
+ * Caflou už není napojené, takže párování nemá co párovat. Hlavička a záložky jsou v layoutu vedle - tady
  * zůstává jen rozcestník pro toho, kdo přišel poprvé a neví, co která
  * záložka skrývá.
  */
@@ -23,16 +27,6 @@ const POPISY: { nazev: string; popis: string; cesta: string }[] = [
     nazev: 'Vzory natáčení',
     popis: 'Předlohy natáčecích textů, ze kterých se skládá dokument k natáčení.',
     cesta: '/admin/nastaveni/firmy/vzory-nataceni',
-  },
-  {
-    nazev: 'Wikipedie',
-    popis: 'Koncept článku o nás a hlídání změn.',
-    cesta: '/admin/nastaveni/firmy/wikipedie',
-  },
-  {
-    nazev: 'Firmy z Caflou',
-    popis: 'Párování našich firem s tím, co je vedené v Caflou.',
-    cesta: '/admin/nastaveni/firmy/caflou-firmy',
   },
 ];
 

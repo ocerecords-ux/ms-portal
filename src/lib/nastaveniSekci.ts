@@ -54,7 +54,7 @@ export const NASTAVENI_SEKCI: NastaveniSekce[] = [
     cesta: '/admin/nastaveni/firmy',
     nadpis: 'Nastavení firem',
     popis:
-      'Co portál rozesílá kolem firem a zakázek - zprávy, které chodí nám, a ceníky, ze kterých se počítají sazby.',
+      'Co portál rozesílá kolem firem a zakázek - zprávy, které chodí nám, ceníky, ze kterých se počítají sazby, a vzory natáčecích textů.',
   },
 ];
 

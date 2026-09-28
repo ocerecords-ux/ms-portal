@@ -25,8 +25,6 @@ const ZALOZKY = [
   { href: '/admin/nastaveni/firmy/zpravy-portalu', nazev: 'Zprávy z portálu' },
   { href: '/admin/nastaveni/firmy/ceniky', nazev: 'Ceníky' },
   { href: '/admin/nastaveni/firmy/vzory-nataceni', nazev: 'Vzory natáčení' },
-  { href: '/admin/nastaveni/firmy/wikipedie', nazev: 'Wikipedie' },
-  { href: '/admin/nastaveni/firmy/caflou-firmy', nazev: 'Firmy z Caflou' },
 ];
 
 export default async function NastaveniFiremLayout({ children }: { children: React.ReactNode }) {
