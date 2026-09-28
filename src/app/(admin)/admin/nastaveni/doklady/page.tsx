@@ -16,7 +16,13 @@ import { ZalozkyNastaveni } from '@/components/ZalozkyNastaveni';
  */
 export const dynamic = 'force-dynamic';
 
-export const ZALOZKY_DOKLADU = [
+/**
+ * POZOR: stránka Next.js smí vyvážet jen svoje věci (default, `dynamic`,
+ * `metadata`…). Když tenhle seznam vyvezl `export const`, build spadl na
+ * „Page does not match the required types of a Next.js Page" - lokální
+ * typová kontrola to nechytí, protože to není chyba TypeScriptu.
+ */
+const ZALOZKY_DOKLADU = [
   { href: '/admin/nastaveni/doklady', nazev: 'Přehled' },
   { href: '/admin/doklady/upominky', nazev: 'Upomínky' },
   { href: '/admin/doklady/moje-firmy', nazev: 'Naše firmy' },
