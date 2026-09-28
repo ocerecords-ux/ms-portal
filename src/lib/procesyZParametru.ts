@@ -77,9 +77,18 @@ export async function ulozParametryDoProcesu(autorId?: string | null): Promise<V
     const slug = `${PREDPONA}-${bezDiakritiky(p.nazev).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
     const nazev = `Technické parametry — ${p.nazev}`;
     const obsah = naMarkdown(p);
+    /**
+     * Perex se řídí druhem sady, ne domněnkou (oprava hned po prvním načtení
+     * 28. 9. 2026: u sady „Reklamy" svítilo „pro audioknihy").
+     *
+     * Tečka na konci se přidává jen tam, kde ji název firmy sám nemá -
+     * „EUROMEDIA GROUP, a.s.." vypadalo jako překlep.
+     */
+    const seznamFirem = p.firmy.map((f) => f.name).join(', ') || p.nazev;
+    const tecka = /[.!?]$/.test(seznamFirem) ? '' : '.';
     const perex = p.vychozi
-      ? 'Obecná sada formátů pro audioknihy - platí, když firma nemá vlastní.'
-      : `Formáty a pravidla výroby pro ${p.firmy.map((f) => f.name).join(', ') || p.nazev}.`;
+      ? `Obecná sada formátů pro ${p.druh === 'REKLAMA' ? 'reklamy' : 'audioknihy'} - platí, když firma nemá vlastní.`
+      : `Formáty a pravidla výroby pro ${seznamFirem}${tecka}`;
 
     const uz = await prisma.navod.findUnique({ where: { slug }, select: { id: true } });
     if (uz) {
