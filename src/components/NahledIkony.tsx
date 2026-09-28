@@ -65,7 +65,8 @@ export function NahledIkony({
   const otevri = useCallback(
     (prvek: HTMLElement) => {
       if (!druh || !id) {
-        window.open(odkaz, '_blank', 'noopener,noreferrer');
+        // Stejné okno (28. 9. 2026) - viz komentář u tlačítka v okně níž.
+        window.location.href = odkaz;
         return;
       }
       const r = prvek.getBoundingClientRect();
@@ -189,10 +190,13 @@ export function NahledIkony({
             <span className="flex items-center justify-end pt-4">
               <a
                 href={data?.odkaz ?? odkaz}
-                target="_blank"
-                rel="noopener noreferrer"
-                // Tlačítko okno nezavírá tím, že je to klik do okna - otevře
-                // a zavře se samo až potom.
+                /* STEJNÉ OKNO, NE NOVÁ ZÁLOŽKA (zadání 28. 9. 2026:
+                   „potřebuju se dostat v tom samém okně a na kartu Přeposlech
+                   v detailu projektu"). Odkaz míří na
+                   /projekty/<id>?zalozka=preposlech, takže se rovnou otevře
+                   ta správná záložka - viz ProjectTabs. */
+                // Tlačítko okno nezavírá tím, že je to klik do okna - zavře
+                // se samo až při odchodu na odkaz.
                 onClick={(e) => {
                   e.stopPropagation();
                   setKotva(null);
