@@ -2152,8 +2152,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.pasmoStudiaZkratka': { cs: 'pásmo studia', en: 'the studio' },
   'kalendar.pasmoVaseZkratka': { cs: 'vaše pásmo', en: 'your zone' },
   'kalendar.pasmoJineVarovani': {
-    cs: 'Pozor: studio jede v {studio}',
-    en: 'Note: the studio runs on {studio}',
+    cs: 'Pozor: mřížka jede v {studio}',
+    en: 'Note: the grid runs on {studio}',
   },
 
   // Odběr kalendáře pro herce

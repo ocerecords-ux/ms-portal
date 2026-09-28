@@ -2993,6 +2993,21 @@ function PrepinacPasma({
   const popisPasma = (p: string) => `${jmenoPasma(p)} ${posunPasma(jazyk, p)}`.trim();
   const jineNezStudio = vybrane !== pasmoStudia;
 
+  /**
+   * KTERÁ STUDIA V TOM PÁSMU JEDOU (oprava 28. 9. 2026: „tohle nedává smysl -
+   * pásmo studia. Londýn je taky studio").
+   *
+   * Do teď stálo u pražského pásma „pásmo studia", jenže studio je i Londýn -
+   * z popisku tedy nešlo poznat, čí pásmo to vlastně je. Teď se u každé
+   * možnosti vypíšou studia, která v ní jedou: „Prague GMT+2 — Brno I,
+   * Brno II, Praha" a „London GMT+1 — London". Kdo si přepíná, ví proč.
+   */
+  const studiaVPasmu = (p: string) =>
+    studia
+      .filter((s) => s.timezone === p)
+      .map((s) => s.shortName || s.name)
+      .join(', ');
+
   return (
     <div className="flex items-center gap-2 flex-wrap -mt-1">
       <label className="flex items-center gap-1.5">
@@ -3005,8 +3020,8 @@ function PrepinacPasma({
           {nabidka.map((p) => (
             <option key={p} value={p}>
               {popisPasma(p)}
-              {p === pasmoStudia ? ` — ${t('kalendar.pasmoStudiaZkratka')}` : ''}
-              {p === mistni && p !== pasmoStudia ? ` — ${t('kalendar.pasmoVaseZkratka')}` : ''}
+              {studiaVPasmu(p) ? ` — ${studiaVPasmu(p)}` : ''}
+              {p === mistni && !studiaVPasmu(p) ? ` — ${t('kalendar.pasmoVaseZkratka')}` : ''}
             </option>
           ))}
         </VyberPole>
@@ -3015,7 +3030,11 @@ function PrepinacPasma({
         /* Když časy NEJSOU v pásmu studia, musí to být vidět na první pohled -
            jinak si někdo přečte devátou jako brněnskou a přijede o hodinu jinam. */
         <span className="text-[11px] font-heading font-semibold rounded-pill bg-brand-purple/10 text-brand-purple px-2 py-0.5">
-          {t('kalendar.pasmoJineVarovani', { studio: popisPasma(pasmoStudia) })}
+          {t('kalendar.pasmoJineVarovani', {
+            studio: studiaVPasmu(pasmoStudia)
+              ? `${popisPasma(pasmoStudia)} (${studiaVPasmu(pasmoStudia)})`
+              : popisPasma(pasmoStudia),
+          })}
         </span>
       )}
     </div>
