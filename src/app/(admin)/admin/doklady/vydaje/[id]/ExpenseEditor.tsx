@@ -340,7 +340,7 @@ export function ExpenseEditor({
               : expense.paid
                 ? t('vydaj.stavUhrazeno')
                 : stavPlatby === 'CAST'
-                  ? t('vydaj.stavZbyva', { castka: formatMoney(zbyva, expense.currency) })
+                  ? t('vydaj.stavZbyva', { castka: formatMoney(zbyva, expense.currency, jazyk) })
                   : t('vydaj.stavNeuhrazeno')}
           </span>
           {/* Cim se platilo (zadani 10. 9. 2026) - u uctenky z benzinky je to
@@ -531,10 +531,10 @@ export function ExpenseEditor({
           </div>
           <div className="text-right">
             <p className="text-xs font-heading text-muted uppercase tracking-wide m-0">{t('vydaj.celkem')}</p>
-            <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatMoney(total, form.currency)}</p>
+            <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatMoney(total, form.currency, jazyk)}</p>
             {expense.currency !== 'CZK' && (
               <p className="text-xs font-body text-muted m-0 tabular-nums">
-                {formatMoney(toCzkMinor(total, expense.exchangeRate), 'CZK')}
+                {formatMoney(toCzkMinor(total, expense.exchangeRate), 'CZK', jazyk)}
               </p>
             )}
           </div>

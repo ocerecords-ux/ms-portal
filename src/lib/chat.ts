@@ -2,6 +2,7 @@ import type { ConversationKind } from '@prisma/client';
 import { MS_SMAJLICI, MS_SMAJLIK_REGEX, najdiSmajlika } from '@/lib/msSmajlici';
 import type { ChatPriloha } from '@/lib/chatPrilohy';
 import type { StatusVChatu } from '@/lib/statusyChatu';
+import { kodJazyka, prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Chat pro tym Mediaspace (zadani 8. 9. 2026). Bez pristupu do databaze, aby
@@ -32,6 +33,16 @@ export const CHAT_ZALOZKY: { klic: ZalozkaChatu; label: string }[] = [
   ...CHAT_TABS.map((t) => ({ klic: t.kind as ZalozkaChatu, label: t.label })),
   { klic: ZALOZKA_UKOLY, label: 'Úkoly' },
 ];
+
+/**
+ * Název záložky podle jazyka (dávka 7, 28. 9. 2026). Klíč je KÓD záložky, ne
+ * její český text - jazyk je nepovinný, takže volající, kteří ho neřeší,
+ * dostanou dál češtinu.
+ */
+export function nazevZalozky(klic: ZalozkaChatu, jazyk: Jazyk = 'cs'): string {
+  const zaloha = CHAT_ZALOZKY.find((z) => z.klic === klic)?.label ?? klic;
+  return jazyk === 'cs' ? zaloha : prelozit(jazyk, `chat.zalozka.${klic}`);
+}
 
 export const MAX_MESSAGE_LENGTH = 4000;
 
@@ -333,52 +344,63 @@ export function stejnyDen(a: string, b: string): boolean {
 }
 
 /** "Dnes" / "Včera" / "pondělí 3. 9." - popisek oddelovace dnu ve vypisu. */
-export function formatDayLabel(iso: string): string {
+export function formatDayLabel(iso: string, jazyk: Jazyk = 'cs'): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
+  const kod = kodJazyka(jazyk);
   const den = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const rozdil = (den(new Date()) - den(date)) / (24 * 60 * 60 * 1000);
-  if (rozdil === 0) return 'Dnes';
-  if (rozdil === 1) return 'Včera';
+  if (rozdil === 0) return prelozit(jazyk, 'chat.den.dnes');
+  if (rozdil === 1) return prelozit(jazyk, 'chat.den.vcera');
   if (rozdil < 7) {
-    const dvt = new Intl.DateTimeFormat('cs-CZ', { weekday: 'long' }).format(date);
-    return `${dvt} ${new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(date)}`;
+    const dvt = new Intl.DateTimeFormat(kod, { weekday: 'long' }).format(date);
+    return `${dvt} ${new Intl.DateTimeFormat(kod, { day: 'numeric', month: 'numeric' }).format(date)}`;
   }
-  return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' }).format(date);
+  return new Intl.DateTimeFormat(kod, { day: 'numeric', month: 'numeric', year: 'numeric' }).format(date);
 }
 
 /** Jen hodina a minuta - cas u konkretni zpravy. */
-export function formatClock(iso: string): string {
+export function formatClock(iso: string, jazyk: Jazyk = 'cs'): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('cs-CZ', { hour: '2-digit', minute: '2-digit' }).format(date);
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
 }
 
 /** Cely datum a cas - do bublinove napovedy nad casem zpravy. */
-export function formatFullTime(iso: string): string {
+export function formatFullTime(iso: string, jazyk: Jazyk = 'cs'): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('cs-CZ', {
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), {
     day: 'numeric',
     month: 'numeric',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   }).format(date);
 }
 
 /** "dnes 14:32" / "včera 9:05" / "3. 9. 14:32" - kratky cas u zpravy. */
-export function formatMessageTime(iso: string): string {
+export function formatMessageTime(iso: string, jazyk: Jazyk = 'cs'): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  const cas = new Intl.DateTimeFormat('cs-CZ', { hour: '2-digit', minute: '2-digit' }).format(date);
+  const kod = kodJazyka(jazyk);
+  const cas = new Intl.DateTimeFormat(kod, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
 
   const den = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const dnes = den(new Date());
   const rozdil = (dnes - den(date)) / (24 * 60 * 60 * 1000);
-  if (rozdil === 0) return `dnes ${cas}`;
-  if (rozdil === 1) return `včera ${cas}`;
-  return `${new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(date)} ${cas}`;
+  if (rozdil === 0) return prelozitS(jazyk, 'chat.cas.dnes', { cas });
+  if (rozdil === 1) return prelozitS(jazyk, 'chat.cas.vcera', { cas });
+  return `${new Intl.DateTimeFormat(kod, { day: 'numeric', month: 'numeric' }).format(date)} ${cas}`;
 }
 
 

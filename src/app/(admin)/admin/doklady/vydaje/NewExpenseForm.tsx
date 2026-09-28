@@ -528,7 +528,7 @@ export function NewExpenseForm({
                 se da zkontrolovat proti dokladu. */}
             <span className="text-xs font-body text-muted text-right tabular-nums">
               {t(zadavamSDph ? 'vydaj.protejsekBezDph' : 'vydaj.protejsekSDph', {
-                castka: protejsek === null ? '—' : formatMoney(protejsek, form.currency),
+                castka: protejsek === null ? '—' : formatMoney(protejsek, form.currency, jazyk),
               })}
             </span>
           </label>

@@ -149,7 +149,7 @@ export function FakturaKeSmlouve({
               return (
                 <>
                   {pred}
-                  <strong>{formatMoney(celkemMinor, mena)}</strong>
+                  <strong>{formatMoney(celkemMinor, mena, jazyk)}</strong>
                   {za}
                 </>
               );
@@ -157,10 +157,10 @@ export function FakturaKeSmlouve({
             <span className="text-muted">
               {sazba > 0
                 ? t('vydaj.platiSeRozpis', {
-                    castka: formatMoney(bezDphMinor, mena),
+                    castka: formatMoney(bezDphMinor, mena, jazyk),
                     sazba,
                   })
-                : t('vydaj.platiSeRozpisBezDph', { castka: formatMoney(bezDphMinor, mena) })}
+                : t('vydaj.platiSeRozpisBezDph', { castka: formatMoney(bezDphMinor, mena, jazyk) })}
             </span>
           </span>
           <button

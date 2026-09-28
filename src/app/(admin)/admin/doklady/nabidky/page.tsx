@@ -65,9 +65,9 @@ export default async function OffersPage({ searchParams }: { searchParams: { tab
       stav: KLICE_STAVU[offer.status] ? prelozit(jazyk, KLICE_STAVU[offer.status]) : offer.status,
       stavTrida: OFFER_STATUS_CLASSES[offer.status] ?? 'bg-field text-muted',
       stavPoradi: stavPoradi[offer.status] ?? 9,
-      bezDph: formatMoney(totals.exVat, offer.currency),
+      bezDph: formatMoney(totals.exVat, offer.currency, jazyk),
       bezDphMinor: totals.exVat,
-      sDph: formatMoney(totals.incVat, offer.currency),
+      sDph: formatMoney(totals.incVat, offer.currency, jazyk),
       sDphMinor: totals.incVat,
     };
   });

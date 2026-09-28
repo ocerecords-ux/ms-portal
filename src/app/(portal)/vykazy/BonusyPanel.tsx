@@ -350,7 +350,7 @@ function Tabulka({
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm font-heading text-ink tabular-nums text-right">
-                    {formatCzk(b.castka)}
+                    {formatCzk(b.castka, jazyk)}
                   </td>
                   <td className="px-4 py-3">
                     <span

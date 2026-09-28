@@ -152,9 +152,9 @@ export default async function ExpensesPage({
       splatnost: formatDatum(jazyk, e.dueDate),
       splatnostMs: e.dueDate ? new Date(e.dueDate).getTime() : null,
       poSplatnosti,
-      bezDph: formatMoney(e.amountExVatMinor, e.currency),
+      bezDph: formatMoney(e.amountExVatMinor, e.currency, jazyk),
       bezDphMinor: e.amountExVatMinor,
-      celkem: formatMoney(celkemMinor, e.currency),
+      celkem: formatMoney(celkemMinor, e.currency, jazyk),
       celkemMinor,
       dph:
         e.vatRate === 0
@@ -162,7 +162,7 @@ export default async function ExpensesPage({
           : prelozitS(jazyk, 'vydaj.dphSazba', { sazba: e.vatRate }),
       uhrazeno: e.paid,
       castecne,
-      zbyva: formatMoney(zbyva, e.currency),
+      zbyva: formatMoney(zbyva, e.currency, jazyk),
       zbyvaMinor: zbyva,
     };
   });
@@ -220,11 +220,11 @@ export default async function ExpensesPage({
           {Array.from(totals.entries()).map(([currency, sum]) => (
             <span key={currency} className="flex items-baseline gap-3">
               <span className="font-display text-xl text-ink tabular-nums">
-                {formatMoney(sum.incVat, currency as never)}
+                {formatMoney(sum.incVat, currency as never, jazyk)}
               </span>
               <span className="text-xs font-body text-muted tabular-nums">
                 {prelozitS(jazyk, 'vydaj.souctyBezDph', {
-                  castka: formatMoney(sum.exVat, currency as never),
+                  castka: formatMoney(sum.exVat, currency as never, jazyk),
                 })}
               </span>
               {/* Kolik z toho je jeste potreba poslat (25. 9. 2026) - u dokladu
@@ -232,7 +232,7 @@ export default async function ExpensesPage({
               {sum.zbyva > 0 && sum.zbyva !== sum.incVat && (
                 <span className="text-xs font-heading font-semibold text-danger tabular-nums">
                   {prelozitS(jazyk, 'vydaj.zbyvaCastka', {
-                    castka: formatMoney(sum.zbyva, currency as never),
+                    castka: formatMoney(sum.zbyva, currency as never, jazyk),
                   })}
                 </span>
               )}

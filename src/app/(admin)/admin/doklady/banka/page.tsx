@@ -77,7 +77,7 @@ export default async function BankaPage() {
     const celkem = computeTotals(f.items, { slevaProcent: f.slevaProcent, slevaMinor: f.slevaMinor }).incVat;
     return {
       id: f.id,
-      popis: `${f.number} · ${f.company?.name ?? ''} · ${formatMoney(celkem, f.currency)}`,
+      popis: `${f.number} · ${f.company?.name ?? ''} · ${formatMoney(celkem, f.currency, jazyk)}`,
       variableSymbol: f.variableSymbol,
     };
   });
@@ -99,7 +99,7 @@ export default async function BankaPage() {
   const radkyPohybu: PohybRadek[] = pohyby.map((p) => ({
     id: p.id,
     datum: formatDatum(jazyk, p.bookedAt),
-    castka: formatMoney(p.amountMinor, p.currency),
+    castka: formatMoney(p.amountMinor, p.currency, jazyk),
     prichozi: p.amountMinor > 0,
     vs: p.variableSymbol,
     protistrana: p.counterpartyName,

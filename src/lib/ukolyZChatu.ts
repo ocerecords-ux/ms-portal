@@ -17,6 +17,8 @@
  * ten podle stejných pravidel ukazuje, komu úkol poletí, ještě před odesláním.
  */
 
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+
 /** Značka na začátku slova; „@ukol" i „@úkol", velikost písmen je jedno. */
 const ZNACKA = /(^|\s)@[uú]kol(?![\p{L}\p{N}])/iu;
 
@@ -65,4 +67,12 @@ export function nazevUkolu(text: string, jmenoPrijemce?: string | null): string 
 }
 
 export const CHYBI_PRIJEMCE = 'Označte @jménem, komu úkol patří.';
+
+/**
+ * Totéž podle jazyka (dávka 7, 28. 9. 2026). Konstanta výš zůstává česky:
+ * bere si ji API, které hlášku vrací jako hotový text do odpovědi.
+ */
+export function chybiPrijemce(jazyk: Jazyk = 'cs'): string {
+  return jazyk === 'cs' ? CHYBI_PRIJEMCE : prelozit(jazyk, 'ukol.chybiPrijemce');
+}
 export const CHYBI_NAZEV = 'Napište, co je potřeba udělat.';

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { formatMoney, minorToInput, parseMoneyToMinor, type Totals } from '@/lib/doklady';
 import type { Currency } from '@prisma/client';
 import { VyberPole } from '@/components/VyberPole';
-import { usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 
 /**
  * Sleva na dokladu (zadání 14. 9. 2026: „potřebuju u nabídek a faktur mít
@@ -44,6 +44,7 @@ export function SlevaPole({
   locked?: boolean;
 }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   // Zadani 14. 9. 2026: „do toho pole s castkou slevy nemuzu napsat libovolne
   // cislo. Je tam nejaky divny format." Puvodne bylo pole plne rizene z minor
   // jednotek - kazda klavesa se prepocitala pres minorToInput a vratila jako
@@ -75,7 +76,7 @@ export function SlevaPole({
                 ? t('doklady.slevaProcenta', { procenta: hodnoty.slevaProcent })
                 : t('doklady.sleva')}
         </span>
-        <span className="text-danger tabular-nums">− {formatMoney(totals.sleva, currency)}</span>
+        <span className="text-danger tabular-nums">− {formatMoney(totals.sleva, currency, jazyk)}</span>
       </div>
     );
   }
@@ -154,7 +155,7 @@ export function SlevaPole({
           />
           <div className="flex items-center justify-between text-sm font-heading">
             <span className="text-muted">{t('doklady.sleva')}</span>
-            <span className="text-danger tabular-nums">− {formatMoney(totals.sleva, currency)}</span>
+            <span className="text-danger tabular-nums">− {formatMoney(totals.sleva, currency, jazyk)}</span>
           </div>
         </>
       )}

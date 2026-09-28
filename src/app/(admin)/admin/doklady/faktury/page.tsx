@@ -98,7 +98,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
       stav: STATUS_KLICE[invoice.status] ? prelozit(jazyk, STATUS_KLICE[invoice.status]) : invoice.status,
       stavTrida: STATUS_CLASSES[invoice.status] ?? 'bg-field text-muted',
       stavPoradi: STATUS_PORADI[invoice.status] ?? 9,
-      castka: formatMoney(totals.incVat, invoice.currency),
+      castka: formatMoney(totals.incVat, invoice.currency, jazyk),
       castkaMinor: totals.incVat,
     };
   });
@@ -153,7 +153,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
               </span>
               {Array.from(unpaidByCurrency.entries()).map(([currency, amount]) => (
                 <span key={currency} className="font-display text-xl text-ink tabular-nums">
-                  {formatMoney(amount, currency as never)}
+                  {formatMoney(amount, currency as never, jazyk)}
                 </span>
               ))}
             </div>

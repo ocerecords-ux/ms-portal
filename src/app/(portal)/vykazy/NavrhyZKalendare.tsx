@@ -275,7 +275,7 @@ export function NavrhyZKalendare({
                       {den(jazyk, n.start)} · {cas(n.start)}–{cas(n.end)}
                     </p>
                     <p className="m-0 text-xs font-body text-muted tabular-nums">
-                      {formatDuration(minut)} · {formatCzk(kolik)}
+                      {formatDuration(minut)} · {formatCzk(kolik, jazyk)}
                     </p>
                   </div>
                 )}

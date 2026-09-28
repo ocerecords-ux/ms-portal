@@ -85,7 +85,7 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
           popis: [
             d.number || prelozit(jazyk, 'vydaj.bezCisla'),
             d.supplier?.name || d.supplierName || '—',
-            formatMoney(expenseTotalMinor(d.amountExVatMinor, d.vatRate), d.currency),
+            formatMoney(expenseTotalMinor(d.amountExVatMinor, d.vatRate), d.currency, jazyk),
             formatDatum(jazyk, d.issueDate),
             d.projectName,
           ]

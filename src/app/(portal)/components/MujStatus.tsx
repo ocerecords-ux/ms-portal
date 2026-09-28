@@ -5,6 +5,7 @@ import { KresbaIkony } from '@/lib/ikonyTypu';
 import {
   DOKDY_NABIDKA,
   HOTOVE_STATUSY,
+  popisekDokdy,
   popisStatusu,
   type StatusVChatu,
 } from '@/lib/statusyChatu';
@@ -104,7 +105,7 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
           {status?.ikona ? <KresbaIkony klic={status.ikona} velikost={15} /> : (status?.emoji ?? '💬')}
         </span>
         <span className={`flex-1 min-w-0 truncate text-xs font-body ${status ? 'text-ink' : 'text-muted'}`}>
-          {status ? popisStatusu(status) : t('status.nastavitVyzva')}
+          {status ? popisStatusu(status, jazyk) : t('status.nastavitVyzva')}
         </span>
         {status && !status.rucni && (
           // Aby bylo jasné, proč to nejde jen tak smazat.
@@ -125,7 +126,7 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
       {status && !status.rucni && (
         <p className="m-0 text-[11px] font-body text-muted">
           {predStatusem}
-          <b className="font-heading text-ink">{popisStatusu(status)}</b>
+          <b className="font-heading text-ink">{popisStatusu(status, jazyk)}</b>
           {zaStatusem}
         </p>
       )}
@@ -175,7 +176,7 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
           <select value={dokdy} onChange={(e) => setDokdy(e.target.value)} className={`${pole} flex-1 min-w-0`}>
             {DOKDY_NABIDKA.map((v) => (
               <option key={v.klic} value={v.klic}>
-                {v.popisek}
+                {popisekDokdy(v.klic, jazyk)}
               </option>
             ))}
           </select>
@@ -215,6 +216,7 @@ export function MujStatus({ status, onZmena }: { status: StatusVChatu | null; on
 
 /** Status vedle jména - jeden řádek, ať nerozhodí seznam rozhovorů. */
 export function RadekStatusu({ status }: { status: StatusVChatu | null | undefined }) {
+  const jazyk = useJazyk();
   if (!status) return null;
   return (
     <span className="flex items-center gap-1 text-[11px] font-body text-muted min-w-0">
@@ -226,7 +228,7 @@ export function RadekStatusu({ status }: { status: StatusVChatu | null | undefin
       ) : status.emoji ? (
         <span className="shrink-0">{status.emoji}</span>
       ) : null}
-      <span className="truncate">{popisStatusu(status)}</span>
+      <span className="truncate">{popisStatusu(status, jazyk)}</span>
     </span>
   );
 }

@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { NAHLED_COOKIE, NAHLED_POHLEDY, pohledNahledu, type NahledVolba } from '@/lib/nahledRole';
+import {
+  NAHLED_COOKIE,
+  NAHLED_POHLEDY,
+  pohledNahledu,
+  popisekPohledu,
+  vysvetleniPohledu,
+  type NahledVolba,
+} from '@/lib/nahledRole';
 import { prelozitKolem } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from './JazykProvider';
 
@@ -53,9 +60,9 @@ export function PrepinacNahledu({ volba }: { volba: NahledVolba }) {
       </span>
       <span className="text-xs font-body text-muted min-w-0">
         {predRoli}
-        <strong className="text-ink font-semibold">{aktualni.popisek}</strong>
+        <strong className="text-ink font-semibold">{popisekPohledu(aktualni.volba, jazyk)}</strong>
         {zaRoli}{' '}
-        <span className="hidden sm:inline">— {aktualni.vysvetleni}.</span>{' '}
+        <span className="hidden sm:inline">— {vysvetleniPohledu(aktualni.volba, jazyk)}.</span>{' '}
         {t('nahled.nicSeNeulozi')}
       </span>
       <div className="flex items-center gap-1.5 ml-auto shrink-0">
@@ -67,7 +74,7 @@ export function PrepinacNahledu({ volba }: { volba: NahledVolba }) {
               type="button"
               onClick={() => prepni(p.volba)}
               disabled={Boolean(prepinam)}
-              title={p.vysvetleni}
+              title={vysvetleniPohledu(p.volba, jazyk)}
               aria-pressed={vybrany}
               className={`font-heading font-semibold text-xs rounded-lg px-3 py-1 transition-colors disabled:opacity-60 ${
                 vybrany
@@ -75,7 +82,7 @@ export function PrepinacNahledu({ volba }: { volba: NahledVolba }) {
                   : 'bg-surface border border-line text-ink hover:border-brand-purple'
               }`}
             >
-              {prepinam === p.volba ? t('nahled.prepinam') : p.popisek}
+              {prepinam === p.volba ? t('nahled.prepinam') : popisekPohledu(p.volba, jazyk)}
             </button>
           );
         })}

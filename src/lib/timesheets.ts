@@ -1,4 +1,5 @@
 import type { WorkType } from '@prisma/client';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Vykazy zvukaru (zadani 6. 9. 2026). Cas drzime jako minuty od pulnoci -
@@ -69,6 +70,11 @@ export function entryAmount(startMinutes: number, endMinutes: number, hourlyRate
   return Math.round(toHours(durationMinutes(startMinutes, endMinutes)) * hourlyRate);
 }
 
-export function formatCzk(value: number): string {
-  return `${value.toLocaleString('cs-CZ')} Kč`;
+/**
+ * Částka v korunách. Jazyk je NEPOVINNÝ (dávka 7, 28. 9. 2026) - volající,
+ * kteří ho neřeší (pošta, oznámení pod zvonkem), dál dostanou češtinu beze
+ * změny. V angličtině se mění jen oddělovač tisíců: „1,234 Kč".
+ */
+export function formatCzk(value: number, jazyk: Jazyk = 'cs'): string {
+  return `${value.toLocaleString(kodJazyka(jazyk))} Kč`;
 }

@@ -140,18 +140,18 @@ export function UhradyVydaje({
       <div className="grid grid-cols-3 gap-3">
         <div>
           <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">{t('vydaj.celkem')}</p>
-          <p className="font-heading text-lg text-ink m-0 tabular-nums">{formatMoney(celkemMinor, mena)}</p>
+          <p className="font-heading text-lg text-ink m-0 tabular-nums">{formatMoney(celkemMinor, mena, jazyk)}</p>
         </div>
         <div>
           <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">{t('vydaj.uhrazeno')}</p>
-          <p className="font-heading text-lg text-status-done m-0 tabular-nums">{formatMoney(uhrazeno, mena)}</p>
+          <p className="font-heading text-lg text-status-done m-0 tabular-nums">{formatMoney(uhrazeno, mena, jazyk)}</p>
         </div>
         <div>
           <p className="text-[11px] font-heading text-muted uppercase tracking-wide m-0">{t('vydaj.zbyvaDoplatit')}</p>
           <p
             className={`font-display text-xl m-0 tabular-nums ${zbyva > 0 ? 'text-danger' : 'text-status-done'}`}
           >
-            {formatMoney(zbyva, mena)}
+            {formatMoney(zbyva, mena, jazyk)}
           </p>
         </div>
       </div>
@@ -161,7 +161,7 @@ export function UhradyVydaje({
           {uhrady.map((u) => (
             <li key={u.id} className="py-2 flex items-baseline gap-3 flex-wrap">
               <span className="font-heading text-sm text-ink tabular-nums w-28 shrink-0 text-right">
-                {formatMoney(u.castkaMinor, mena)}
+                {formatMoney(u.castkaMinor, mena, jazyk)}
               </span>
               <span className="text-sm font-body text-muted tabular-nums">{den(jazyk, u.datum)}</span>
               <span className="text-xs font-body text-muted">{nazevZpusobuUhrady(u.zpusob, jazyk)}</span>
@@ -247,7 +247,7 @@ export function UhradyVydaje({
               disabled={pracuji}
               className="border border-line text-ink font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-60"
             >
-              {t('vydaj.doplatitZbytek', { castka: formatMoney(zbyva, mena) })}
+              {t('vydaj.doplatitZbytek', { castka: formatMoney(zbyva, mena, jazyk) })}
             </button>
           )}
         </div>

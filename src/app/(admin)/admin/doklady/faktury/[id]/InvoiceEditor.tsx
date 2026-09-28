@@ -445,12 +445,13 @@ export function InvoiceEditor({
         <p className="text-sm font-body text-ink bg-tint border border-line rounded-card px-4 py-3 m-0">
           {t('faktura.zNabidkyVyfakturovano', {
             cislo: zNabidky.cislo,
-            celkem: formatMoney(zNabidky.celkemMinor, zNabidky.mena),
-            vyfakturovano: formatMoney(zNabidky.vyfakturovanoMinor, zNabidky.mena),
+            celkem: formatMoney(zNabidky.celkemMinor, zNabidky.mena, jazyk),
+            vyfakturovano: formatMoney(zNabidky.vyfakturovanoMinor, zNabidky.mena, jazyk),
             faktury: zNabidky.faktury.map((f) => f.number).join(', '),
             zbyva: formatMoney(
               Math.max(0, zNabidky.celkemMinor - zNabidky.vyfakturovanoMinor),
               zNabidky.mena,
+              jazyk,
             ),
           })}
         </p>
@@ -944,7 +945,7 @@ export function InvoiceEditor({
                   <span className="ml-auto flex flex-col gap-1 items-end">
                     <span className={popiskaClass}>{t('faktura.celkem')}</span>
                     <span className="text-sm font-heading text-ink tabular-nums py-1.5">
-                      {formatMoney(Math.round(item.quantity * item.unitPriceMinor), form.currency)}
+                      {formatMoney(Math.round(item.quantity * item.unitPriceMinor), form.currency, jazyk)}
                     </span>
                   </span>
                 </div>
@@ -972,7 +973,7 @@ export function InvoiceEditor({
                 {totals.sleva > 0 ? t('faktura.mezisoucetBezDph') : t('faktura.zakladBezDph')}
               </span>
               <span className="text-ink tabular-nums">
-                {formatMoney(totals.exVatPredSlevou, form.currency)}
+                {formatMoney(totals.exVatPredSlevou, form.currency, jazyk)}
               </span>
             </div>
 
@@ -991,26 +992,26 @@ export function InvoiceEditor({
             {totals.sleva > 0 && (
               <div className="flex items-center justify-between text-sm font-heading">
                 <span className="text-muted">{t('faktura.zakladBezDphPoSleve')}</span>
-                <span className="text-ink tabular-nums">{formatMoney(totals.exVat, form.currency)}</span>
+                <span className="text-ink tabular-nums">{formatMoney(totals.exVat, form.currency, jazyk)}</span>
               </div>
             )}
             {totals.byRate.map((r) => (
               <div key={r.rate} className="flex items-center justify-between text-sm font-heading">
                 <span className="text-muted">{t('faktura.dphSazba', { sazba: r.rate })}</span>
-                <span className="text-muted tabular-nums">{formatMoney(r.vat, form.currency)}</span>
+                <span className="text-muted tabular-nums">{formatMoney(r.vat, form.currency, jazyk)}</span>
               </div>
             ))}
             <div className="flex items-center justify-between border-t border-line pt-2 mt-1">
               <span className="font-heading font-semibold text-ink">{t('faktura.kUhrade')}</span>
               <span className="font-display text-xl text-ink tabular-nums">
-                {formatMoney(totals.incVat, form.currency)}
+                {formatMoney(totals.incVat, form.currency, jazyk)}
               </span>
             </div>
             {form.currency !== 'CZK' && (
               <div className="flex items-center justify-between text-xs font-body text-muted">
                 <span>{t('faktura.vKorunachKurzem')}</span>
                 <span className="tabular-nums">
-                  {formatMoney(toCzkMinor(totals.incVat, invoice.exchangeRate), 'CZK')}
+                  {formatMoney(toCzkMinor(totals.incVat, invoice.exchangeRate), 'CZK', jazyk)}
                 </span>
               </div>
             )}

@@ -11,7 +11,7 @@ import { Volba, prepniVSeznamu } from '@/components/Volba';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import type { ConversationKind } from '@prisma/client';
-import { MS_SMAJLICI, najdiSmajlika } from '@/lib/msSmajlici';
+import { MS_SMAJLICI, najdiSmajlika, popisekSmajlika } from '@/lib/msSmajlici';
 import { doplnVelkaPismena, naVelke, zacatekVety } from '@/lib/velkePismena';
 import { MsSmajlik } from './MsSmajlik';
 import { TechnickeParametryOkno } from './TechnickeParametryOkno';
@@ -19,6 +19,7 @@ import { TlacitkoSmazat } from '@/components/TlacitkoSmazat';
 import {
   CHAT_TABS,
   CHAT_ZALOZKY,
+  nazevZalozky,
   ZALOZKA_UKOLY,
   EMOJI,
   MAX_MESSAGE_LENGTH,
@@ -37,7 +38,7 @@ import {
   type ChatTeamMember,
   type ZalozkaChatu,
 } from '@/lib/chat';
-import { CHYBI_PRIJEMCE, ZNACKA_UKOLU, hledaUkol, jeUkol, nazevUkolu } from '@/lib/ukolyZChatu';
+import { chybiPrijemce, ZNACKA_UKOLU, hledaUkol, jeUkol, nazevUkolu } from '@/lib/ukolyZChatu';
 
 /** Řádek „úkol" v nabídce pod @ - není to člověk, proto vlastní klíč. */
 const KLIC_UKOLU = '__ukol__';
@@ -323,11 +324,12 @@ function Zobrazeno({ seenBy, stav }: { seenBy: string[]; stav?: 'posilam' | 'chy
  * staci hodiny a minuty.
  */
 function DenOddelovac({ iso }: { iso: string }) {
+  const jazyk = useJazyk();
   return (
     <div className="flex items-center gap-3 my-1">
       <span className="h-px flex-1 bg-line" />
       <span className="text-[11px] font-heading font-semibold text-muted uppercase tracking-wide bg-surface border border-line rounded-pill px-2.5 py-0.5">
-        {formatDayLabel(iso)}
+        {formatDayLabel(iso, jazyk)}
       </span>
       <span className="h-px flex-1 bg-line" />
     </div>
@@ -337,22 +339,23 @@ function DenOddelovac({ iso }: { iso: string }) {
 /** Autor a cas nad zpravou. Cas je videt vzdy, cely datum je v napovede. */
 function Hlavicka({ jmeno, iso, editedAt }: { jmeno: string; iso: string; editedAt?: string | null }) {
   const t = usePreklad();
+  const jazyk = useJazyk();
   return (
     <span className="flex items-baseline gap-1.5">
       <span className="text-[12px] font-heading font-semibold text-ink">{jmeno}</span>
       <time
         dateTime={iso}
-        title={formatFullTime(iso)}
+        title={formatFullTime(iso, jazyk)}
         className="text-[11px] font-body text-muted tabular-nums"
       >
-        {formatClock(iso)}
+        {formatClock(iso, jazyk)}
       </time>
       {editedAt && (
         // Upravena zprava to musi priznat, jinak by slo nenapadne prepsat, co
         // uz nekdo cetl (zadani 9. 9. 2026).
         <span
           className="text-[11px] font-body text-muted italic"
-          title={t('chat.upravenoKdy', { kdy: formatFullTime(editedAt) })}
+          title={t('chat.upravenoKdy', { kdy: formatFullTime(editedAt, jazyk) })}
         >
           {t('chat.upraveno')}
         </span>
@@ -783,8 +786,8 @@ function Psatko({
               <button
                 key={s.code}
                 type="button"
-                title={s.label}
-                aria-label={s.label}
+                title={popisekSmajlika(s.code, jazyk)}
+                aria-label={popisekSmajlika(s.code, jazyk)}
                 onClick={() => vlozSmajlika(s.code)}
                 className="rounded hover:bg-field py-1.5 flex items-center justify-center"
               >
@@ -1640,6 +1643,7 @@ const KLIC_POSLEDNI_KONVERZACE = 'msportal_chat_posledni';
 export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   // Na samostatne strance je chat rovnou otevreny, neni co rozbalovat.
   const t = usePreklad();
+  const jazyk = useJazyk();
   const [dok, otevriDok] = usePravyDok();
   const pocty = usePoctyDoku();
   const expanded = naStrance || dok === 'chat';
@@ -2294,8 +2298,12 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
               setTab(z.klic);
               setNovy(false);
             }}
-            title={nove > 0 ? t('chat.zalozkaNeprectene', { nazev: z.label, pocet: nove }) : z.label}
-            aria-label={z.label}
+            title={
+              nove > 0
+                ? t('chat.zalozkaNeprectene', { nazev: nazevZalozky(z.klic, jazyk), pocet: nove })
+                : nazevZalozky(z.klic, jazyk)
+            }
+            aria-label={nazevZalozky(z.klic, jazyk)}
             aria-current={jeTu ? 'page' : undefined}
             className={`relative grid place-items-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg transition-colors ${
               jeTu ? 'bg-white/20 text-white' : 'text-brand-green/75 hover:text-white hover:bg-white/10'
@@ -3283,7 +3291,7 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                 spodni listou. */}
             <div className="px-3 pt-2.5 pb-1">
               <span className="font-heading font-semibold text-[11px] uppercase tracking-[0.14em] text-muted">
-                {CHAT_ZALOZKY.find((z) => z.klic === tab)?.label}
+                {nazevZalozky(tab, jazyk)}
               </span>
             </div>
 
@@ -3856,15 +3864,15 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               </span>
                               <time
                                 dateTime={m.createdAt}
-                                title={formatFullTime(m.createdAt)}
+                                title={formatFullTime(m.createdAt, jazyk)}
                                 className="text-[11px] font-body text-muted tabular-nums"
                               >
-                                {formatMessageTime(m.createdAt)}
+                                {formatMessageTime(m.createdAt, jazyk)}
                               </time>
                               {m.editedAt && (
                                 <span
                                   className="text-[11px] font-body text-muted italic"
-                                  title={t('chat.upravenoKdy', { kdy: formatFullTime(m.editedAt) })}
+                                  title={t('chat.upravenoKdy', { kdy: formatFullTime(m.editedAt, jazyk) })}
                                 >
                                   {t('chat.upraveno')}
                                 </span>
@@ -4189,7 +4197,7 @@ function ListaUkolu({
             );
           })()
         ) : (
-          CHYBI_PRIJEMCE
+          chybiPrijemce(jazyk)
         )}
       </span>
       <label className="flex items-center gap-1.5 text-[11px] font-body text-muted">

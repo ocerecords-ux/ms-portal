@@ -446,7 +446,7 @@ export function TimesheetEditor({
             // Navod pryc (zadani 9. 9. 2026), sazba zustava - to je udaj,
             // ne vysvetlivka.
             <p className="text-muted text-sm mt-1 font-body">
-              {t('vykaz.vaseSazba', { sazba: formatCzk(hourlyRate) })}
+              {t('vykaz.vaseSazba', { sazba: formatCzk(hourlyRate, jazyk) })}
             </p>
           )}
         </div>
@@ -466,12 +466,12 @@ export function TimesheetEditor({
                 : t('vykaz.celkemZa', { obdobi });
             })()}
           </p>
-          <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatCzk(totals.celkem)}</p>
+          <p className="font-display text-2xl text-ink m-0 tabular-nums">{formatCzk(totals.celkem, jazyk)}</p>
           <p className="text-xs font-body text-muted m-0">
             {totals.bonus > 0
               ? t('vykaz.hodinyABonusy', {
                   hodiny: formatDuration(totals.minutes),
-                  castka: formatCzk(totals.bonus),
+                  castka: formatCzk(totals.bonus, jazyk),
                 })
               : formatDuration(totals.minutes)}
           </p>
@@ -609,7 +609,7 @@ export function TimesheetEditor({
             {preview ? (
               <span className="text-sm font-heading text-ink">
                 {formatDuration(preview.minutes)} ·{' '}
-                <strong className="text-brand-purpleDark">{formatCzk(preview.amount)}</strong>
+                <strong className="text-brand-purpleDark">{formatCzk(preview.amount, jazyk)}</strong>
               </span>
             ) : (
               <span className="text-sm font-body text-muted">
@@ -808,7 +808,7 @@ export function TimesheetEditor({
                       {e.note && <span className="block text-xs text-muted/80 font-body">{e.note}</span>}
                     </td>
                     <td className="px-4 py-3.5 text-sm font-heading text-ink tabular-nums text-right whitespace-nowrap">
-                      {formatCzk(entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot))}
+                      {formatCzk(entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot), jazyk)}
                     </td>
                     <td className="px-4 py-3.5 text-right whitespace-nowrap">
                       {/* Upravit i Smazat vidi ten, kdo na ne ma pravo:
@@ -853,7 +853,7 @@ export function TimesheetEditor({
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
               {t('vykaz.schvaleneBonusy')}
             </h2>
-            <span className="text-sm font-heading text-ink tabular-nums">{formatCzk(totals.bonus)}</span>
+            <span className="text-sm font-heading text-ink tabular-nums">{formatCzk(totals.bonus, jazyk)}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
@@ -871,7 +871,7 @@ export function TimesheetEditor({
                       {b.poznamka && <span className="block text-xs text-muted/80 font-body">{b.poznamka}</span>}
                     </td>
                     <td className="px-4 py-3 text-sm font-heading text-ink tabular-nums text-right whitespace-nowrap">
-                      {formatCzk(b.castka)}
+                      {formatCzk(b.castka, jazyk)}
                     </td>
                   </tr>
                 ))}

@@ -117,7 +117,7 @@ export function PridatNabidku({
         <div className="flex gap-2 min-w-0">
           <dt className="text-muted shrink-0">{t('nabidka.cenaBezDph')}</dt>
           <dd className="m-0 text-ink font-heading font-semibold">
-            {formatMoney(navrh.castkaMinor, navrh.currency)}
+            {formatMoney(navrh.castkaMinor, navrh.currency, jazyk)}
             {navrh.pageCount ? (
               <span className="font-body font-normal text-muted">
                 {' '}

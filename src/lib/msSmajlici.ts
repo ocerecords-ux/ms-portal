@@ -14,6 +14,18 @@
  * Soubor je záměrně bez Prismy a bez Reactu, aby šel použít i v prohlížeči.
  */
 
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+
+/**
+ * Popisek smajlíka podle jazyka (dávka 7, 28. 9. 2026). Jde do bubliny
+ * v nabídce; kód smajlíka (`:ms-usmev:`) se nepřekládá - je uložený ve zprávách.
+ */
+export function popisekSmajlika(code: string, jazyk: Jazyk = 'cs'): string {
+  const zaloha = MS_SMAJLICI.find((s) => s.code === code)?.label ?? code;
+  if (jazyk === 'cs') return zaloha;
+  return prelozit(jazyk, `smajlik.${code.replace(/:/g, '')}`);
+}
+
 export type MsSmajlik = {
   /** Zkratka, která se ukládá do textu zprávy. */
   code: string;

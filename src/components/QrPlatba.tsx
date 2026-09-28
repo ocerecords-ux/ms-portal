@@ -81,7 +81,7 @@ export function QrPlatba({
 
       <div className="flex flex-col gap-1 min-w-[180px]">
         <span className="text-xs font-heading text-muted uppercase tracking-wide">{prelozit(jazyk, 'qr.platba')}</span>
-        <span className="font-display text-xl text-ink tabular-nums">{formatMoney(castkaMinor, mena)}</span>
+        <span className="font-display text-xl text-ink tabular-nums">{formatMoney(castkaMinor, mena, jazyk)}</span>
         {prijemce && <span className="text-sm font-heading text-ink">{prijemce}</span>}
         <span className="text-xs font-body text-muted tabular-nums break-all">{ocisteny}</span>
         {variabilniSymbol && (

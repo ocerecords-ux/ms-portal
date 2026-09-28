@@ -457,13 +457,13 @@ export function OfferEditor({
             </span>
             <span className="text-sm font-heading text-ink">
               {t('nabidka.vyfakturovanoZ', {
-                castka: formatMoney(vyfakturovano, form.currency),
-                celkem: formatMoney(totals.incVat, form.currency),
+                castka: formatMoney(vyfakturovano, form.currency, jazyk),
+                celkem: formatMoney(totals.incVat, form.currency, jazyk),
               })}
               {zbyva > 0 ? (
                 <span className="text-muted">
                   {' · '}
-                  {t('nabidka.zbyva', { castka: formatMoney(zbyva, form.currency) })}
+                  {t('nabidka.zbyva', { castka: formatMoney(zbyva, form.currency, jazyk) })}
                 </span>
               ) : (
                 <span className="text-status-done">
@@ -481,7 +481,7 @@ export function OfferEditor({
                 className="inline-flex items-center gap-2 rounded-pill border border-line bg-field px-3 py-1 text-xs font-heading text-ink no-underline hover:border-brand-purple"
               >
                 {f.number}
-                <span className="text-muted">{formatMoney(f.celkemMinor, form.currency)}</span>
+                <span className="text-muted">{formatMoney(f.celkemMinor, form.currency, jazyk)}</span>
               </a>
             ))}
           </div>
@@ -907,7 +907,7 @@ export function OfferEditor({
                   <span className="ml-auto flex flex-col gap-1 items-end">
                     <span className={popiskaClass}>{t('nabidka.celkemPolozka')}</span>
                     <span className="text-sm font-heading text-ink tabular-nums py-1.5">
-                      {formatMoney(Math.round(item.quantity * item.unitPriceMinor), form.currency)}
+                      {formatMoney(Math.round(item.quantity * item.unitPriceMinor), form.currency, jazyk)}
                     </span>
                   </span>
                 </div>
@@ -944,7 +944,7 @@ export function OfferEditor({
                 {totals.sleva > 0 ? t('nabidka.mezisoucetBezDph') : t('nabidka.zakladBezDph')}
               </span>
               <span className="text-ink tabular-nums">
-                {formatMoney(totals.exVatPredSlevou, form.currency)}
+                {formatMoney(totals.exVatPredSlevou, form.currency, jazyk)}
               </span>
             </div>
 
@@ -963,19 +963,19 @@ export function OfferEditor({
             {totals.sleva > 0 && (
               <div className="flex items-center justify-between text-sm font-heading">
                 <span className="text-muted">{t('nabidka.zakladBezDphPoSleve')}</span>
-                <span className="text-ink tabular-nums">{formatMoney(totals.exVat, form.currency)}</span>
+                <span className="text-ink tabular-nums">{formatMoney(totals.exVat, form.currency, jazyk)}</span>
               </div>
             )}
             {totals.byRate.map((r) => (
               <div key={r.rate} className="flex items-center justify-between text-sm font-heading">
                 <span className="text-muted">{t('nabidka.dphSazba', { sazba: r.rate })}</span>
-                <span className="text-muted tabular-nums">{formatMoney(r.vat, form.currency)}</span>
+                <span className="text-muted tabular-nums">{formatMoney(r.vat, form.currency, jazyk)}</span>
               </div>
             ))}
             <div className="flex items-center justify-between border-t border-line pt-2 mt-1">
               <span className="font-heading font-semibold text-ink">{t('nabidka.celkem')}</span>
               <span className="font-display text-xl text-ink tabular-nums">
-                {formatMoney(totals.incVat, form.currency)}
+                {formatMoney(totals.incVat, form.currency, jazyk)}
               </span>
             </div>
           </div>

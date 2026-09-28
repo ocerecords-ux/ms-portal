@@ -75,9 +75,22 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 4 | 17. 9. | Doklady — `(admin)/admin/doklady` (nabídky, faktury, výdaje, moje firmy) a číselníky v `src/lib` (stavy, měny, způsoby úhrady) | [x] |
 | 5 | 18. 9. | Zbytek administrace — uživatelé, ceníky, studia, archiv, firmy, `(portal)/kalendar`, `(portal)/vykazy` | [x] |
 | 6 | 19. 9. | E-maily a upozornění — `src/lib/email.ts` podle jazyka příjemce, push a oznámení | [~] |
-| 7 | 20. 9. | Kontrolní průchod — proklikat portál v EN, dohledat zapomenuté české texty, sjednotit termíny podle slovníčku | [ ] |
+| 7a | 28. 9. | Formáty a číselníky napříč repozitářem — `formatMoney` a `formatCzk` s jazykem, formátovače času a záložky v `lib/chat.ts`, statusy v chatu, smajlíci, náhledové pohledy, úkol bez příjemce | [x] |
+| 7b | další večer | Zapomenuté obrazovky I — sekce na detailu projektu (rodný list, licenční list, výstupy, `ProjectMetaForm`, rozpočty, posluchači přeposlechu, `ProjectDocuments`), objednávka reklamy, `NovyProjektForm`, `InternalProjectsBrowser` | [ ] |
+| 7c | další večer | Zapomenuté obrazovky II — administrace: firmy a `CompanyForm`, caflou-firmy, údaje (žádosti), vzory zpráv i natáčení, wikipedie, technické parametry, návody, přenos projektu | [ ] |
+| 7d | další večer | Zapomenuté obrazovky III — Přehledy (knihy, kapacita, zvukaři, finance), palubovka, backlog, ceník studia, Web, tabule, správa studia, veřejné formuláře (`doplnit-udaje`, `udaje/[token]`, `pripominkovat`, `instalace`, nastavení hesla), nápověda, honoráře, pozvánky | [ ] |
+| 7e | další večer | Kódy místo textů a poslední průchod — stavy projektů a `jeVPriprave()`, města v `lokaceHercu`, `COUNTRIES`, zbylé číselníky v `src/lib` (role, dny, kalendář, druhy práce, tabule, porady, nepřítomnosti), sjednocení termínů podle slovníčku a proklikání portálu v EN | [ ] |
 
 `[~]` = hotová jen část, a schválně — viz „Dávka 6 je HOTOVÁ Z POLOVINY" níž.
+
+**Dávka 7 se 28. 9. 2026 rozpadla na 7a–7e.** Byla napsaná jako „kontrolní
+průchod", ale kontrola ukázala, že to není dojíždění posledních drobností:
+v portálu je ještě asi **1 900 řádků českého textu ve stovce souborů, které
+neobsahují jediné volání překladu** — celé sekce, které v původním plánu
+nikdy nebyly (Přehledy, palubovka, backlog, ceník studia, Web, wikipedie,
+tabule, veřejné formuláře). Datum „hotovo do 20. 9." tedy neplatí a jedna
+kontrolní dávka to nedožene; proto jsou z ní čtyři dávky obrazovek a jedna
+závěrečná. Soupis je v „Co našla dávka 7a" níž.
 
 ### Co dávka 3 nechala dalším dávkám
 
@@ -196,6 +209,99 @@ i řazení a hledání bez diakritiky, které dnes počítá s češtinou.
   schůzky. **Opravené bylo jen** „Zrušit porada" → „Zrušit poradu".
 - `POPISKY_DRUHU_ARCHIVU` a `POPISKY_ZPUSOBU` v `src/lib/archiv.ts` jsou po
   dávce 5 nepoužité. Nemazali jsme je.
+
+### Co našla a udělala dávka 7a (28. 9. 2026)
+
+Dávka 7a je průchod NAPŘÍČ repozitářem, ne po obrazovkách: sjednotila
+formátování a dotáhla číselníky, na které si dávky 3 a 4 napsaly lístek.
+
+**Formátování částek (dluh z dávky 4).** `formatMoney` má jazyk od dávky 0,
+ale nikdo mu ho nepředával. Doplněn na 46 místech (celkem ho tedy předává
+53 volání v 15 souborech), takže
+v anglickém portálu stojí částky britsky (`1,234.50 Kč`). `formatCzk`
+v `lib/timesheets.ts` dostal stejný nepovinný parametr a předává se ve
+Výkazech a Bonusech.
+
+Schválně BEZ jazyka zůstávají tři volající - a je to důvod, ne opomenutí:
+- `api/nahled/doklad/route.ts` - náhled dokladu se řídí jazykem DOKLADU
+  (pravidlo 5), ne přepínačem v liště.
+- `lib/upominkyServer.ts` a `lib/mesicniPrehledServer.ts` - pošta, jazyk
+  příjemce; čeká na zapojení dávky 6.
+- `lib/bankaServer.ts` a `lib/bonusyServer.ts` - text jde do `notify()`, tedy
+  do databáze jako hotová věta. Viz „OZNÁMENÍ POD ZVONKEM" v dávce 6.
+
+**Číselníky a formátovače, které přitékaly z `src/lib`** (lístek z dávky 3):
+- `lib/chat.ts` - `formatDayLabel`, `formatClock`, `formatFullTime`
+  a `formatMessageTime` mají nepovinný jazyk a „Dnes / Včera / dnes 14:32"
+  jdou ze slovníku. Nová `nazevZalozky(klic, jazyk)` - záložky chatu se
+  překládají podle KÓDU záložky, ne podle českého názvu.
+- `lib/statusyChatu.ts` - `popisStatusu(status, jazyk)` přeloží jen rámeček
+  „… do 14:30"; sám text statusu ne, ten je v databázi (pravidlo 4). Nová
+  `popisekDokdy()` pro nabídku „do kdy".
+- `lib/msSmajlici.ts` - `popisekSmajlika()`, 18 klíčů; kód `:ms-usmev:`
+  zůstává, je uložený ve zprávách.
+- `lib/nahledRole.ts` - `popisekPohledu()` a `vysvetleniPohledu()`.
+- `lib/ukolyZChatu.ts` - `chybiPrijemce(jazyk)`. Konstanta `CHYBI_PRIJEMCE`
+  zůstává česky: vrací ji API jako hotový text v odpovědi.
+
+Celkem 39 nových klíčů ve slovníku a 9 volání `formatCzk` s jazykem.
+
+**HOTOVE_STATUSY zůstávají česky schválně.** „Na obědě", „Ve studiu" se po
+klepnutí UKLÁDAJÍ jako text statusu a vidí je všichni ostatní. Přeložit
+tlačítko znamená uložit anglickou větu českému kolegovi. Patří to do stejné
+škatulky jako `notify()`: status má mít kód, ne text.
+
+**A teď to hlavní, co kontrola ukázala.** Dávka 7 měla být „dohledat
+zapomenuté české texty". Jenže zapomenuté nejsou jednotlivé texty, ale celé
+obrazovky: **asi 1 900 řádků českého textu ve stovce souborů, které nemají
+jediné volání překladu.** Hrubý soupis (řádky / soubory):
+
+| kde | řádků | souborů |
+|---|---|---|
+| `(portal)/projekty` - sekce detailu projektu | 621 | 30 |
+| `(admin)/admin` - firmy, údaje, vzory, wikipedie, parametry, návody | 556 | 33 |
+| `(portal)/prehledy` - knihy, kapacita, zvukaři, finance | 281 | 14 |
+| `(portal)/site` (Web) | 61 | 2 |
+| `preposlech` a `pripominkovat` (VideoTagger, režim pro nevidomé) | 94 | 4 |
+| `(portal)/objednavka` - reklama | 40 | 1 |
+| `doplnit-udaje`, `udaje/[token]` | 63 | 3 |
+| `(portal)/palubovka`, `backlog`, `cenik-studia` | 101 | 5 |
+| `tabule`, `(studio)`, `instalace`, `(auth)` | 88 | 6 |
+| `napoveda`, `honorare`, `pozvanky` | 32 | 4 |
+
+Proč to dávky 1-5 minuly: **v původním rozpisu ty sekce vůbec nejsou.**
+Plán psal „155 obrazovek" a pak vyjmenoval projekty, nahrávky, přeposlech,
+objednávku, můj účet, doklady, administraci, kalendář a výkazy. Přehledy,
+palubovka, backlog, ceník studia, Web, wikipedie, tabule ani veřejné
+formuláře v žádné dávce nebyly, takže je nikdo nepřeložil a kontrola na ně
+narazila teprve teď. Sekce na detailu projektu (rodný a licenční list,
+výstupy, `ProjectMetaForm`, `ProjectDocuments`) vypadly z dávky 1 proto, že
+ta mířila na „detail projektu očima klienta" - tyhle panely vidí produkce.
+
+Rozděleno na dávky 7b-7e v tabulce výš. Jak najít, co v dané oblasti chybí:
+
+```bash
+# soubory bez jediného volani prekladu, ale s ceskym textem
+for f in $(find src/app -name '*.tsx'); do
+  grep -q "usePreklad\|prelozit\|nactiJazyk" "$f" && continue
+  n=$(grep "[ěščřžýáíéúůňťďó]" "$f" | grep -vE "^\s*(//|\*)" | wc -l)
+  [ "${n:-0}" -ge 3 ] && echo "$n $f"
+done | sort -rn
+```
+
+**`stubs/prisma-client.d.ts` je v gitu, i když `stubs/` je v `.gitignore`.**
+Ignorování se na už sledovaný soubor nevztahuje, takže ho každé přegenerování
+ukazuje jako změnu a plete se do `git status`. Nebezpečné to není - hlavní
+`tsconfig.json` má `stubs` v `exclude`, takže do buildu na Vercelu nemluví -
+ale patří to z gitu vyndat (`git rm --cached stubs/prisma-client.d.ts`).
+Dávky ho do commitu nepřidávají.
+
+**Pozor na počítač (28. 9. 2026).** Večerní dávka narazila na to, že se
+některé soubory v repozitáři nedaly přes sdílenou složku přečíst ani zapsat
+(chyba „Resource deadlock avoided", mizí a vrací se). Padlo na tom
+`stubs/env.d.ts`, bez kterého typová kontrola vyhlásí 2 300 vymyšlených chyb
+o chybějícím Reactu. Kdyby se to opakovalo: zkontrolovat, že se `stubs/env.d.ts`
+dá přečíst, a teprve pak věřit výstupu `tsc`.
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

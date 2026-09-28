@@ -1,4 +1,5 @@
 import type { Role } from '@prisma/client';
+import { prelozit, type Jazyk } from '@/lib/jazyk';
 
 /**
  * NÁHLEDOVÝ ÚČET - PORTÁL NA ZKOUŠKU (zadání 18. 9. 2026: „vytvoř mi ještě
@@ -77,6 +78,18 @@ export function nahledZHodnoty(hodnota?: string | null): NahledVolba {
 
 export function pohledNahledu(volba: NahledVolba): NahledPohled {
   return NAHLED_POHLEDY.find((p) => p.volba === volba) ?? NAHLED_POHLEDY[0];
+}
+
+/** Popisek pohledu podle jazyka (dávka 7, 28. 9. 2026). */
+export function popisekPohledu(volba: NahledVolba, jazyk: Jazyk = 'cs'): string {
+  const zaloha = pohledNahledu(volba).popisek;
+  return jazyk === 'cs' ? zaloha : prelozit(jazyk, `nahled.pohled.${volba}`);
+}
+
+/** Věta pod popiskem - co v tom pohledu člověk uvidí. */
+export function vysvetleniPohledu(volba: NahledVolba, jazyk: Jazyk = 'cs'): string {
+  const zaloha = pohledNahledu(volba).vysvetleni;
+  return jazyk === 'cs' ? zaloha : prelozit(jazyk, `nahled.vysvetleni.${volba}`);
 }
 
 /**

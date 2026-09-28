@@ -5322,6 +5322,75 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Vrátit k rozhodnutí',
     en: 'Send back for a decision',
   },
+  // --- číselníky a formáty z src/lib (dávka 7, 28. 9. 2026) -----------------
+  // Sem patří texty, které do obrazovek přitékaly z knihoven v src/lib, takže
+  // je komponenta neměla jak přeložit. Číselníky si jazyk berou NEPOVINNÝM
+  // parametrem - PDF a pošta dál dostanou češtinu beze změny.
+
+  // Záložky chatu (lib/chat.ts).
+  'chat.zalozka.PROJEKT': { cs: 'Projekty', en: 'Projects' },
+  'chat.zalozka.SOUKROMA': { cs: 'Soukromé', en: 'Private' },
+  'chat.zalozka.SKUPINA': { cs: 'Skupiny', en: 'Groups' },
+  'chat.zalozka.UKOLY': { cs: 'Úkoly', en: 'Tasks' },
+
+  // Oddělovač dnů a čas u zprávy (lib/chat.ts).
+  'chat.den.dnes': { cs: 'Dnes', en: 'Today' },
+  'chat.den.vcera': { cs: 'Včera', en: 'Yesterday' },
+  'chat.cas.dnes': { cs: 'dnes {cas}', en: 'today {cas}' },
+  'chat.cas.vcera': { cs: 'včera {cas}', en: 'yesterday {cas}' },
+
+  // Úkol z chatu bez příjemce (lib/ukolyZChatu.ts).
+  'ukol.chybiPrijemce': {
+    cs: 'Označte @jménem, komu úkol patří.',
+    en: 'Tag the person the task belongs to with @name.',
+  },
+
+  // Můj status v chatu: do kdy platí (lib/statusyChatu.ts).
+  'status.textDoKdy': { cs: '{text} do {cas}', en: '{text} until {cas}' },
+  'status.dokdy.30': { cs: '30 minut', en: '30 minutes' },
+  'status.dokdy.60': { cs: '1 hodinu', en: '1 hour' },
+  'status.dokdy.240': { cs: '4 hodiny', en: '4 hours' },
+  'status.dokdy.dnes': { cs: 'do konce dne', en: 'until the end of the day' },
+  'status.dokdy.bez': { cs: 'dokud ho nezruším', en: 'until I clear it' },
+
+  // Náhledové pohledy v pruhu náhledu (lib/nahledRole.ts). Popisek pohledu
+  // drží stejná slova jako role.* výš, vysvětlení je věta pod ním.
+  'nahled.pohled.tym': { cs: 'Tým', en: 'Team' },
+  'nahled.pohled.klient': { cs: 'Klient', en: 'Client' },
+  'nahled.pohled.herec': { cs: 'Herec', en: 'Narrator' },
+  'nahled.vysvetleni.tym': {
+    cs: 'projekty napříč firmami, kalendář, pozvánky - jako produkce',
+    en: 'projects across all companies, calendar, invitations - as production',
+  },
+  'nahled.vysvetleni.klient': {
+    cs: 'jen zakázky své firmy, objednávka a nahrávky',
+    en: 'only your own company\'s jobs, ordering and recordings',
+  },
+  'nahled.vysvetleni.herec': {
+    cs: 'moje termíny a nabídky natáčení',
+    en: 'my sessions and recording offers',
+  },
+
+  // Vlastní smajlíci Mediaspace (lib/msSmajlici.ts) - popisek jde do bubliny
+  // v nabídce smajlíků.
+  'smajlik.ms-usmev': { cs: 'Úsměv', en: 'Smile' },
+  'smajlik.ms-smich': { cs: 'Smích', en: 'Laughing' },
+  'smajlik.ms-mrk': { cs: 'Mrknutí', en: 'Wink' },
+  'smajlik.ms-super': { cs: 'Paráda', en: 'Brilliant' },
+  'smajlik.ms-premyslim': { cs: 'Přemýšlím', en: 'Thinking' },
+  'smajlik.ms-prekvapeni': { cs: 'Překvapení', en: 'Surprised' },
+  'smajlik.ms-smutek': { cs: 'Smutek', en: 'Sad' },
+  'smajlik.ms-unaveny': { cs: 'Unavený', en: 'Tired' },
+  'smajlik.ms-palec': { cs: 'Palec nahoru', en: 'Thumbs up' },
+  'smajlik.ms-palec-dolu': { cs: 'Palec dolů', en: 'Thumbs down' },
+  'smajlik.ms-sluchatka': { cs: 'Poslouchám', en: 'Listening' },
+  'smajlik.ms-hotovo': { cs: 'Hotovo', en: 'Done' },
+  'smajlik.ms-pozor': { cs: 'Pozor', en: 'Watch out' },
+  'smajlik.ms-ohen': { cs: 'Frčí to', en: 'On fire' },
+  'smajlik.ms-mikrofon': { cs: 'Natáčíme', en: 'Recording' },
+  'smajlik.ms-srdce': { cs: 'Srdce', en: 'Heart' },
+  'smajlik.ms-slon': { cs: 'Slon', en: 'Elephant' },
+  'smajlik.ms-moucha': { cs: 'Moucha', en: 'Fly' },
 };
 
 /**

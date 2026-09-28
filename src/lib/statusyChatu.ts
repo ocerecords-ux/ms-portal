@@ -18,6 +18,8 @@
  * víc než kalendář.
  */
 
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+
 export type StatusVChatu = {
   /** Celá věta, jak se ukáže: „Mám schůzku do 14:30". */
   text: string;
@@ -51,6 +53,15 @@ export function casStatusu(kdy: Date | string): string {
   }).format(d);
 }
 
+/**
+ * Popisek volby „do kdy" podle jazyka (dávka 7, 28. 9. 2026). Klíč volby je
+ * kód, ne text, takže se dá přeložit bez sáhnutí do uložených statusů.
+ */
+export function popisekDokdy(klic: string, jazyk: Jazyk = 'cs'): string {
+  const zaloha = DOKDY_NABIDKA.find((v) => v.klic === klic)?.popisek ?? klic;
+  return jazyk === 'cs' ? zaloha : prelozit(jazyk, `status.dokdy.${klic}`);
+}
+
 /** Nabídka „do kdy" u ručního statusu. */
 export const DOKDY_NABIDKA: { klic: string; popisek: string; minut: number | null }[] = [
   { klic: '30', popisek: '30 minut', minut: 30 },
@@ -69,9 +80,19 @@ export const HOTOVE_STATUSY: { emoji: string; text: string; klicDokdy: string }[
   { emoji: '🏠', text: 'Pracuji z domu', klicDokdy: 'dnes' },
 ];
 
-/** Text statusu i s časem, když nějaký má. */
-export function popisStatusu(status: StatusVChatu): string {
+/**
+ * Text statusu i s časem, když nějaký má.
+ *
+ * SÁM TEXT STATUSU SE NEPŘEKLÁDÁ - je to věta, kterou si člověk napsal, nebo
+ * ji složil kalendář, a je uložená v databázi (pravidlo 4). Přeloží se jen
+ * rámeček „… do 14:30" kolem ní.
+ */
+export function popisStatusu(status: StatusVChatu, jazyk: Jazyk = 'cs'): string {
   if (!status.doKdy) return status.text;
   // „do" už ve větě je (kalendářní statusy si ho nesou samy).
-  return / do \d/.test(status.text) ? status.text : `${status.text} do ${casStatusu(status.doKdy)}`;
+  if (/ do \d/.test(status.text)) return status.text;
+  return prelozitS(jazyk, 'status.textDoKdy', {
+    text: status.text,
+    cas: casStatusu(status.doKdy),
+  });
 }
