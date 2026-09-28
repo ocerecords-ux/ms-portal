@@ -97,6 +97,12 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // nějaké studio s rezervacemi spravuje - viz seStudiem v menuServer.ts;
   // tohle je jen kontrola role, jako u Tabule.
   '/studio': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
+  // Ceník studia (28. 9. 2026). Role je jen hrubé síto - kdo na ceník
+  // opravdu smí, rozhoduje smiSpravovatCenik v lib/studioCenikServer.ts
+  // (Žůžo-labůžo všude, vedoucí pobočky ve svém studiu). Zvukař je v seznamu
+  // právě kvůli vedoucím poboček; komu žádné studio nepatří, toho stránka
+  // pošle zpátky na projekty a odkaz na ni nikde nevidí.
+  '/cenik-studia': ['ADMIN', 'PRODUKCE', 'ZVUKAR'],
 };
 
 /** Uvidi uzivatel s touhle roli tenhle odkaz? Vlastni odkaz vidi kazdy. */

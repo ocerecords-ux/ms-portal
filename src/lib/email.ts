@@ -2973,3 +2973,62 @@ export async function sendStudioBookingEmail(input: StudioBookingEmailInput) {
   });
   return { sent: true as const, reason: undefined };
 }
+
+
+// ===========================================================================
+// CENIK STUDIA (zadani 28. 9. 2026: „aby se pak dalo poslat nekomu PDF nebo
+// stahnout")
+//
+// TEXT PISE CLOVEK, NE PORTAL. Ostatni maily portalu maji znen napevno,
+// protoze jsou to doklady a notifikace - cenik je ale obchodni zprava a
+// pokazde jina („posilam, jak jsme se bavili"). Formular proto posila predmet
+// i telo jako text a sablona je jen obali do znacky Mediaspace; diky tomu tu
+// taky nejsou zadne prekladove klice a cenik muze odejit anglicky, cesky nebo
+// jakkoliv jinak, aniz by se kvuli tomu prekladal portal.
+// ===========================================================================
+
+type CenikEmailInput = {
+  to: string;
+  predmet: string;
+  /** Telo zpravy, odstavce oddelene prazdnym radkem. */
+  zprava: string;
+  /** Na koho ma prijemce odpovedet - clovek, ktery cenik posila. */
+  odpovedNa?: string | null;
+  pdf?: { nazev: string; obsah: Buffer } | null;
+};
+
+export function buildCenikHtml(input: CenikEmailInput): string {
+  const odstavce = input.zprava
+    .split(/\n\s*\n/)
+    .map((o) => o.trim())
+    .filter(Boolean)
+    .map((o) => `<p>${escapeHtml(o).replace(/\n/g, '<br />')}</p>`)
+    .join('\n');
+
+  return emailShell({
+    tag: 'Price list',
+    preheader: input.predmet,
+    body: `
+    ${odstavce}
+    ${input.pdf ? '<p class="small">The price list is attached as a PDF.</p>' : ''}
+  `,
+  });
+}
+
+export async function sendCenikEmail(input: CenikEmailInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  await transport.sendMail({
+    ...odesilatelMediaspace(input.odpovedNa ?? null),
+    to: input.to,
+    subject: input.predmet,
+    text: input.zprava,
+    html: buildCenikHtml(input),
+    ...(input.pdf ? { attachments: [{ filename: input.pdf.nazev, content: input.pdf.obsah }] } : {}),
+  });
+
+  return { sent: true as const, reason: undefined };
+}

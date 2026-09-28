@@ -2174,8 +2174,72 @@ model Studio {
   /// Ucty muzikantu a producentu (role BOOKING), viz User.bookingStudioId.
   bookingUcty    User[]  @relation("BookingStudio")
 
+  /// Cenik studia (zadani 28. 9. 2026) - jeden na studio, viz StudioCenik.
+  cenik     StudioCenik?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// CENIK STUDIA (zadani 28. 9. 2026: „potreboval bych nekde v ramci
+/// Londynskeho studia implementovat na portal tento cenik. Aby se daly
+/// upravovat ceny v systemu a aby se pak dalo poslat nekomu pdf nebo
+/// stahnout.").
+///
+/// Jeden cenik na studio - Londyn ho ma jako prvni, ale nic v modelu neni
+/// londynske; Brno si svuj zalozi tim, ze ho otevre. Zamerne NENI navazany na
+/// PriceListItem: ten je ciselnik typu projektu pro zakazky audioknih a
+/// reklam, kdezto tohle je pronajem studia po hodinach pro cizi lidi. Slit to
+/// dohromady by znamenalo, ze se v nabidce typu projektu objevi „Full day /
+/// 8 hours".
+model StudioCenik {
+  id        String @id @default(cuid())
+  studioId  String @unique
+  studio    Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  /// Nazev v zahlavi dokumentu - „MS STUDIO LONDON".
+  nadpis     String
+  /// Podnadpis - „Introductory Price List".
+  podnadpis  String?
+  /// „Valid until 31 December 2026". Prazdne = platnost se neuvadi.
+  platnostDo DateTime?
+  mena       Currency @default(GBP)
+
+  /// Zahlavi prvniho cenoveho sloupce a jeho popis pod nim.
+  sloupec1      String  @default("Without engineer")
+  sloupec1Popis String? @db.Text
+  /// Druhy sloupec je dobrovolny - cenik s jednou cenou ho necha prazdny.
+  sloupec2      String?
+  sloupec2Popis String? @db.Text
+
+  /// Poznamka pod tabulkou (DPH, storno podminky...).
+  poznamka   String? @db.Text
+
+  radky      StudioCenikRadek[]
+
+  updatedAt  DateTime @updatedAt
+  /// Kdo cenik naposledy ulozil - v zahlavi editoru.
+  upravilId   String?
+  upravilJmeno String?
+}
+
+/// Jeden radek ceniku - „Half day / 4 hours | £70 | £120".
+model StudioCenikRadek {
+  id      String      @id @default(cuid())
+  cenikId String
+  cenik   StudioCenik @relation(fields: [cenikId], references: [id], onDelete: Cascade)
+
+  popis   String
+  /// Ceny v nejmenzi jednotce meny (pence), stejne jako u dokladu. Prazdno =
+  /// v tabulce se vykresli pomlcka („Mix a mastering" bez technika neexistuje).
+  cena1Minor Int?
+  cena2Minor Int?
+  /// „from £100" - cena je orientacni, ne pevna.
+  od1     Boolean @default(false)
+  od2     Boolean @default(false)
+  poradi  Int     @default(0)
+
+  @@index([cenikId, poradi])
 }
 
 /// Poznamka na tabuli ve studiu (21. 9. 2026). Zustava, dokud ji nekdo

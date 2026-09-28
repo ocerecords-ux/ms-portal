@@ -127,6 +127,16 @@ export function SpravaStudia({
 
       {otevreno && (
         <div className="px-4 pb-4 flex flex-col gap-3 border-t border-line pt-3">
+          {/* Ceník studia (28. 9. 2026). Editor bydlí v portálu, protože je to
+              náš interní nástroj v češtině - sem patří jenom odkaz, aby ho
+              vedoucí pobočky našel tam, kde studio spravuje. */}
+          <a
+            href={`/cenik-studia?studio=${encodeURIComponent(studioId)}`}
+            className="self-start text-sm font-heading font-semibold text-brand-purple no-underline hover:underline"
+          >
+            Ceník studia →
+          </a>
+
           <div className="flex items-end gap-3 flex-wrap">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-heading text-muted">Nejkratší rezervace (min)</span>
