@@ -170,9 +170,17 @@ export async function ulozCenik(
 ): Promise<Cenik & { id: string }> {
   const cenik = await zajistiCenik(studioId);
 
-  const ulozeny = await prisma.$transaction(async (tx: typeof prisma) => {
-    await tx.studioCenikRadek.deleteMany({ where: { cenikId: cenik.id } });
-    return tx.studioCenik.update({
+  /**
+   * TRANSAKCE SEZNAMEM DOTAZŮ. Portál jinde používá i variantu s funkcí
+   * (`$transaction(async (tx) => …)`) a ta je v pořádku - dokud se klient
+   * transakce nechá bez typu. Tady byl napsaný jako `typeof prisma`, což náš
+   * stub Prismy spolkl a build na Vercelu spadl na „No overload matches this
+   * call" (28. 9. 2026). Seznam dělá totéž, jen se nemá kde splést: dotazy
+   * proběhnou v pořadí a v jedné transakci.
+   */
+  const [, ulozeny] = await prisma.$transaction([
+    prisma.studioCenikRadek.deleteMany({ where: { cenikId: cenik.id } }),
+    prisma.studioCenik.update({
       where: { id: cenik.id },
       data: {
         nadpis: data.nadpis,
@@ -189,8 +197,8 @@ export async function ulozCenik(
         radky: { create: data.radky.map((r, i) => ({ ...r, poradi: i })) },
       },
       include: { radky: { orderBy: { poradi: 'asc' } } },
-    });
-  });
+    }),
+  ]);
 
   return doTvaru(ulozeny);
 }

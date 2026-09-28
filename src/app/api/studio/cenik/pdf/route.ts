@@ -29,7 +29,9 @@ export async function GET(req: NextRequest) {
     const cenik = await zajistiCenik(studioId);
     const pdf = renderCenikPdf(cenik);
     const nahled = req.nextUrl.searchParams.get('nahled') === '1';
-    return new NextResponse(pdf as unknown as BodyInit, {
+    // Uint8Array, ne Buffer - NextResponse ho jinak nepřijme (stejně jako
+    // u ostatních PDF rout).
+    return new NextResponse(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `${nahled ? 'inline' : 'attachment'}; filename="${cenikFileName(cenik.nadpis)}"`,
