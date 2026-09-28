@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { VyberPole } from '@/components/VyberPole';
@@ -88,6 +88,28 @@ export function Ukazatele({
   const [uklada, setUklada] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
   const [rozbalena, setRozbalena] = useState<string | null>(null);
+
+  /**
+   * CELÁ OBRAZOVKA PRO PORADU (zadání 28. 9. 2026: „udělej u té porady možnost
+   * fullscreenu"). Stejně jako v kalendáři: prohlížeč to umí sám, my mu jen
+   * řekneme, co roztáhnout. Z režimu se dá odejít i Escapem nebo lištou
+   * prohlížeče, takže se stav čte z `fullscreenchange`, ne z vlastního
+   * klepnutí - jinak by ikona zůstala viset v „zapnuto".
+   */
+  const obalRef = useRef<HTMLDivElement | null>(null);
+  const [naCeleObrazovce, setNaCeleObrazovce] = useState(false);
+  useEffect(() => {
+    const zmena = () => setNaCeleObrazovce(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', zmena);
+    return () => document.removeEventListener('fullscreenchange', zmena);
+  }, []);
+
+  function prepniCelouObrazovku() {
+    const obal = obalRef.current;
+    if (!obal) return;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    else void obal.requestFullscreen?.().catch(() => {});
+  }
 
   const cilZisku = cile.mesicniZiskKnih ?? 400_000;
   const vseZaObdobi = obdobi === 'vse';
@@ -180,14 +202,14 @@ export function Ukazatele({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      {porada && (
-        <p className="bg-tint border border-line rounded-card px-4 py-3 text-sm font-body text-ink m-0">
-          <strong className="font-heading font-semibold">Režim porady.</strong> Ceny z nabídek,
-          zisk, náklady ani mzdy se nezobrazují - přehled ukazuje jen hodiny a čerpání rozpočtu.
-        </p>
-      )}
-
+    <div
+      ref={obalRef}
+      className={`flex flex-col gap-5 ${
+        // Prvek na celé obrazovce nemá vlastní podklad - bez tohohle by
+        // prosvítala černá a přehled by na ní plaval.
+        naCeleObrazovce ? 'bg-paper p-5 sm:p-8 overflow-y-auto' : ''
+      }`}
+    >
       <div className={`grid grid-cols-1 gap-4 ${porada ? '' : 'md:grid-cols-2'}`}>
         <Budik
           nadpis="Přetečení rozpočtů audioknih"
@@ -252,6 +274,38 @@ export function Ukazatele({
         >
           {porada ? 'Zpět k celému přehledu' : 'Pro poradu'}
         </button>
+
+        {porada && (
+          <button
+            type="button"
+            onClick={prepniCelouObrazovku}
+            aria-pressed={naCeleObrazovce}
+            aria-label={naCeleObrazovce ? 'Zpět z celé obrazovky' : 'Na celou obrazovku'}
+            title={naCeleObrazovce ? 'Zpět z celé obrazovky (Esc)' : 'Na celou obrazovku'}
+            className={`inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-colors ${
+              naCeleObrazovce
+                ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
+                : 'border-line text-muted hover:text-brand-purple hover:border-brand-purple'
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4"
+              aria-hidden="true"
+            >
+              {naCeleObrazovce ? (
+                <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+              ) : (
+                <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+              )}
+            </svg>
+          </button>
+        )}
 
         {!porada && (
           <>
