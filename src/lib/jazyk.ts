@@ -971,8 +971,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'mujUcet.hlidatDen': { cs: 'Hlídat mi den', en: 'Keep an eye on my day' },
   'mujUcet.hlidatDenPopis': {
-    cs: 'Ráno v sedm přijde do telefonu upozornění a při prvním otevření portálu vyskočí okno s programem dne — natáčení a střihy, kde jste zvukař nebo herec, porady a schůzky, na které jste pozvaní, a otevřené úkoly. Patnáct minut před každou událostí navíc Bruno pošle připomínku do chatu i do telefonu.',
-    en: 'At seven in the morning a notification arrives on your phone, and the first time you open the portal a window pops up with the day ahead — recordings and editing where you are the sound engineer or the narrator, meetings you are invited to, and open tasks. Fifteen minutes before each event Bruno also sends a reminder to the chat and to your phone.',
+    cs: 'Při prvním otevření portálu vyskočí okno s programem dne — natáčení a střihy, kde jste zvukař nebo herec, porady a schůzky, na které jste pozvaní, a otevřené úkoly. Do telefonu ráno nic nechodí; Bruno se ozve až patnáct minut před každou událostí, do chatu i do telefonu.',
+    en: 'The first time you open the portal a window pops up with the day ahead — recordings and editing where you are the sound engineer or the narrator, meetings you are invited to, and open tasks. Nothing reaches your phone in the morning; Bruno only gets in touch fifteen minutes before each event, in the chat and on your phone.',
   },
   'mujUcet.podpisNadpis': { cs: 'Můj podpis na smlouvy', en: 'My signature for contracts' },
   'mujUcet.podpisPodepisujete': {

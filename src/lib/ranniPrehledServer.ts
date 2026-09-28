@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/db';
-import { posliPush } from '@/lib/pushServer';
 import { nactiPorady } from '@/lib/poradyServer';
 import { minutesInZone, minutesToTime, utcParts, zonedToUtc } from '@/lib/calendar';
 import { INTERNAL_ROLES } from '@/lib/roles';
@@ -73,18 +72,16 @@ export async function posliRanniPrehledy(options: { vynutit?: boolean } = {}): P
       continue;
     }
     try {
-      const udalosti = await udalostiCloveka(clovek.id, zacatekDne, konecDne);
-      const prvni = udalosti[0];
-      await posliPush([clovek.id], {
-        titulek: 'Dnešní program',
-        text: prvni
-          ? `${udalosti.length === 1 ? '' : `${udalosti.length} události, první `}${prvni.cas} — ${prvni.popis}`
-          : 'V kalendáři dnes nic vašeho nemám.',
-        odkaz: '/kalendar',
-        znacka: 'prehled-dne',
-      });
-      // Razítko je zároveň značka „na dnešek už je hotovo" - i pro okno
-      // v portálu, které se otevře, až se člověk přihlásí.
+      /**
+       * RÁNO UŽ SE DO TELEFONU NECINKÁ (zadání 28. 9. 2026: „přehled dne ráno
+       * chci jen na obrazovku. Bruno mi to má připomenout až 15 min. před
+       * každou událostí").
+       *
+       * Okno s programem dne v portálu tím netrpí - to si jede podle vlastního
+       * pole `prehledZobrazenAt` (viz /api/prehled-dne) a s touhle úlohou nemá
+       * nic společného. Zůstává jen razítko, ať je po ruce, kdyby se ranní
+       * upozornění někdy vracelo.
+       */
       await prisma.user.update({
         where: { id: clovek.id },
         data: { ranniPrehledAt: new Date() },

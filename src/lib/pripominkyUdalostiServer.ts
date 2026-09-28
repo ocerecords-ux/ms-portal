@@ -24,10 +24,24 @@ import { INTERNAL_ROLES } from '@/lib/roles';
 const OD_MINUT = 10;
 const DO_MINUT = 20;
 
-export type VysledekPripominek = { odeslano: number; lidi: number };
+export type VysledekPripominek = {
+  odeslano: number;
+  lidi: number;
+  /** Jen v režimu nanečisto - co by se komu poslalo. */
+  nanecisto?: { komu: string; cas: string; popis: string; uzPoslano: boolean }[];
+  /** Jen v režimu nanečisto - okno, ve kterém se hledalo. */
+  okno?: { od: string; doKdy: string; ted: string };
+};
 
+/**
+ * NANEČISTO (28. 9. 2026): `posliPripominkyUdalosti({ nanecisto: true })` nic
+ * neodešle ani nezapíše, jen vrátí, co by komu poslalo a jestli už to poslané
+ * bylo. Bez toho se u téhle úlohy nedá poznat, jestli mlčí proto, že neběží,
+ * nebo proto, že nic nenašla - a hádat se to nedá, protože po sobě nic
+ * nenechává.
+ */
 export async function posliPripominkyUdalosti(
-  options: { odMinut?: number; doMinut?: number } = {},
+  options: { odMinut?: number; doMinut?: number; nanecisto?: boolean } = {},
 ): Promise<VysledekPripominek> {
   const ted = new Date();
   const od = new Date(ted.getTime() + (options.odMinut ?? OD_MINUT) * 60_000);
@@ -41,6 +55,7 @@ export async function posliPripominkyUdalosti(
     .catch(() => []);
 
   let odeslano = 0;
+  const nalezy: { komu: string; cas: string; popis: string; uzPoslano: boolean }[] = [];
 
   for (const clovek of lide) {
     try {
@@ -55,6 +70,13 @@ export async function posliPripominkyUdalosti(
 
       for (const u of udalosti.filter((x) => x.start >= od && x.start < doKdy)) {
         const klic = `${clovek.id}:${u.klic}:${u.start.toISOString()}`;
+        if (options.nanecisto) {
+          const uz = await prisma.pripomenutaUdalost
+            .findUnique({ where: { klic } })
+            .catch(() => null);
+          nalezy.push({ komu: clovek.email, cas: u.cas, popis: u.popis, uzPoslano: Boolean(uz) });
+          continue;
+        }
         // Unikátní klíč je pojistka i proti dvěma úlohám naráz: druhý zápis
         // spadne a připomínka se neodešle dvakrát.
         const zapsano = await prisma.pripomenutaUdalost
@@ -75,6 +97,15 @@ export async function posliPripominkyUdalosti(
     } catch (err) {
       console.error(`Pripominky pro ${clovek.email} selhaly:`, err);
     }
+  }
+
+  if (options.nanecisto) {
+    return {
+      odeslano: 0,
+      lidi: lide.length,
+      nanecisto: nalezy,
+      okno: { ted: ted.toISOString(), od: od.toISOString(), doKdy: doKdy.toISOString() },
+    };
   }
 
   // Úklid starých záznamů, ať tabulka neroste donekonečna. Týden zpátky
