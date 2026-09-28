@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { ROLE_LABELS } from '@/lib/roles';
 import type { Role } from '@prisma/client';
 import { NovyClanekButton } from '../navody/NovyNavodButton';
+import { NacistParametry } from './NacistParametry';
 
 /**
  * SPRÁVA PROCESŮ (zadání 28. 9. 2026: „pracovní postupy pro zvukaře…
@@ -48,7 +49,13 @@ export default async function ProcesyAdminPage() {
             zaškrtne, kdo ho uvidí — bez zaškrtnutí ho má celý tým. Čte se v portálu pod Procesy.
           </p>
         </div>
-        <NovyClanekButton druh="PROCES" popisek="+ Nový proces" />
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Technické parametry se sem přepisují z Administrace (28. 9. 2026:
+              „do těch procesů ulož technické parametry") - sada zůstává jedním
+              zdrojem pravdy, tohle je její otisk ke čtení. */}
+          <NacistParametry />
+          <NovyClanekButton druh="PROCES" popisek="+ Nový proces" />
+        </div>
       </div>
 
       {clanky.length === 0 && (
