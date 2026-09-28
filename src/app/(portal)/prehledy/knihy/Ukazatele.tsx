@@ -8,6 +8,7 @@ import { Budik } from '@/app/(portal)/palubovka/Budik';
 import type { Stav } from '@/lib/palubovka';
 import type { Cile } from '@/lib/palubovkaServer';
 import type { KnihaUkazatel, KnihyUkazatele, RozpadDruhu } from '@/lib/knihyPrehledServer';
+import type { TemaNaPlatno } from '@/lib/poradaServer';
 import { datum, hodiny, kc, pocetKnih } from './format';
 
 /**
@@ -56,6 +57,15 @@ function skala(pomer: number): { barva: string; trida: string; slovy: string } {
   return { barva: 'rgb(var(--c-status-done))', trida: 'text-status-done', slovy: 'V rozpočtu' };
 }
 
+/** „28. září 2026" - datum do záhlaví porady. */
+function dlouheDatum(iso: string): string {
+  return new Intl.DateTimeFormat('cs-CZ', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(iso));
+}
+
 /** „+12 %", „−34 %", „0 %" - nula se píše bez znaménka, „-0 %" nic neříká. */
 function procenta(hodnota: number | null): string {
   if (hodnota === null) return '—';
@@ -69,6 +79,8 @@ export function Ukazatele({
   cile: cilePocatecni,
   obdobi,
   porada,
+  program,
+  dnesISO,
 }: {
   data: KnihyUkazatele;
   cile: Cile;
@@ -78,6 +90,10 @@ export function Ukazatele({
    * poradu. Peníze v něm nejsou; stránka je sem ani neposílá, viz page.tsx.
    */
   porada: boolean;
+  /** Program porady - jen nadpisy, poznámky vedoucího sem nechodí. */
+  program: TemaNaPlatno[];
+  /** Dnešek ze serveru - datum v záhlaví porady. */
+  dnesISO: string;
 }) {
   const router = useRouter();
   const cesta = usePathname();
@@ -103,6 +119,32 @@ export function Ukazatele({
     document.addEventListener('fullscreenchange', zmena);
     return () => document.removeEventListener('fullscreenchange', zmena);
   }, []);
+
+  /**
+   * PLÁTNO SE SAMO OBNOVUJE (zadání 28. 9. 2026). Vedoucí odškrtává témata
+   * v režii na telefonu; kdyby se plátno neobnovovalo, musel by k počítači.
+   * Pět vteřin je dost na to, aby to vypadalo okamžitě, a málo na to, aby to
+   * bylo znát - stránka je stejně jen pro jednoho člověka v jedné místnosti.
+   */
+  useEffect(() => {
+    if (!porada) return;
+    const casovac = setInterval(() => router.refresh(), 5000);
+    return () => clearInterval(casovac);
+  }, [porada, router]);
+
+  /** Odškrtnutí rovnou z plátna - když poradu vede od počítače. */
+  async function prepniTema(id: string, hotovo: boolean) {
+    try {
+      await fetch('/api/porada/temata', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, hotovo }),
+      });
+      router.refresh();
+    } catch {
+      // Na plátně se chyba neřeší - vedoucí to odškrtne v režii.
+    }
+  }
 
   function prepniCelouObrazovku() {
     const obal = obalRef.current;
@@ -210,6 +252,60 @@ export function Ukazatele({
         naCeleObrazovce ? 'bg-paper p-5 sm:p-8 overflow-y-auto' : ''
       }`}
     >
+      {porada && (
+        <header className="flex items-baseline gap-4 flex-wrap border-b border-line pb-4">
+          <h1 className="font-display text-3xl sm:text-5xl text-ink m-0">
+            Technická porada <span className="text-brand-purple">·</span> Mediaspace
+          </h1>
+          <span className="font-heading text-lg sm:text-2xl text-muted tabular-nums">
+            {dlouheDatum(dnesISO)}
+          </span>
+        </header>
+      )}
+
+      {porada && program.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
+            Program porady · {program.filter((t) => t.hotovo).length} z {program.length} probráno
+          </h2>
+          {/* NA PLÁTNĚ JSOU JEN NADPISY. Podrobné poznámky má vedoucí v režii
+              (/prehledy/knihy/porada) a sem se vůbec neposílají. */}
+          <ol className="list-none m-0 p-0 grid grid-cols-1 lg:grid-cols-2 gap-2">
+            {program.map((t, i) => (
+              <li key={t.id}>
+                <button
+                  type="button"
+                  onClick={() => void prepniTema(t.id, !t.hotovo)}
+                  aria-pressed={t.hotovo}
+                  className={`w-full flex items-center gap-4 text-left rounded-card border px-4 py-3 transition-colors cursor-pointer ${
+                    t.hotovo
+                      ? 'border-line bg-field text-muted'
+                      : 'border-line bg-surface text-ink hover:border-brand-purple'
+                  }`}
+                >
+                  <span
+                    className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-heading font-semibold ${
+                      t.hotovo ? 'bg-status-done text-white' : 'bg-tint text-brand-purple'
+                    }`}
+                  >
+                    {t.hotovo ? '✓' : i + 1}
+                  </span>
+                  <span
+                    className={`font-heading font-semibold text-lg sm:text-2xl ${t.hotovo ? 'line-through' : ''}`}
+                  >
+                    {t.nadpis}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {porada && (
+        <h2 className="font-display text-2xl sm:text-3xl text-ink m-0 pt-2">Rozpočty projektů</h2>
+      )}
+
       <div className={`grid grid-cols-1 gap-4 ${porada ? '' : 'md:grid-cols-2'}`}>
         <Budik
           nadpis="Přetečení rozpočtů audioknih"
@@ -274,6 +370,17 @@ export function Ukazatele({
         >
           {porada ? 'Zpět k celému přehledu' : 'Pro poradu'}
         </button>
+
+        {porada && !naCeleObrazovce && (
+          <Link
+            href="/prehledy/knihy/porada"
+            target="_blank"
+            rel="noopener"
+            className="text-sm font-heading font-semibold text-brand-purple no-underline hover:underline"
+          >
+            Režie a poznámky →
+          </Link>
+        )}
 
         {porada && (
           <button

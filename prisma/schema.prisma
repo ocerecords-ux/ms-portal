@@ -4219,6 +4219,34 @@ model TechnickyProfil {
 ///
 /// Jediný řádek - firma je jedna. Cíle se nedrží v kódu ani v proměnných
 /// prostředí: mění se každý rok a musí jít přepsat z prohlížeče.
+/// TÉMA TECHNICKÉ PORADY (zadání 28. 9. 2026: „Peter vede poradu tak, že má
+/// napsané poznámky a jde postupně po tématech a probírá a odškrtává. Tohle
+/// bych nějak graficky ztvárnil, ale aby se tam zobrazily jen nadpisy toho
+/// tématu a Peter měl ještě někde u sebe podrobné poznámky, které nikdo
+/// nevidí.").
+///
+/// JEDEN SEZNAM, NE PORADA PO PORADĚ. Program se z porady na poradu opakuje
+/// a mění se spíš po kouscích; vést kopii témat ke každému datu by znamenalo
+/// přepisovat je pokaždé znovu. Tlačítko „Začít novou poradu" jen odškrtá
+/// hotová - seznam zůstává, jak si ho vedoucí připravil.
+///
+/// POZNÁMKA JE SOUKROMÁ. Na plátno jde jen `nadpis`; `poznamka` se posílá
+/// výhradně do režie (viz /prehledy/knihy/porada), kterou má vedoucí u sebe.
+model PoradaTema {
+  id        String    @id @default(cuid())
+  nadpis    String
+  /// Podrobné poznámky vedoucího. Na plátno se nikdy neposílají.
+  poznamka  String?   @db.Text
+  poradi    Int       @default(0)
+  hotovo    Boolean   @default(false)
+  hotovoAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([poradi])
+}
+
 model CilePalubovky {
   id String @id @default("hlavni")
 

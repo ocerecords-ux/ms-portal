@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nactiCile } from '@/lib/palubovkaServer';
 import { nactiKnihyUkazatele, type KnihyUkazatele } from '@/lib/knihyPrehledServer';
+import { nactiProgram } from '@/lib/poradaServer';
 import { Ukazatele } from './Ukazatele';
 
 /**
@@ -75,7 +76,12 @@ export default async function KnihyPage({
     zadano === 'minuly' || zadano === 'vse' || /^\d{4}-\d{2}$/.test(zadano) ? zadano : 'tento';
   const porada = searchParams?.porada === '1';
 
-  const [data, cile] = await Promise.all([nactiKnihyUkazatele(new Date(), obdobi), nactiCile()]);
+  const [data, cile, program] = await Promise.all([
+    nactiKnihyUkazatele(new Date(), obdobi),
+    nactiCile(),
+    // Program se tahá jen pro poradu - mimo ni nemá na stránce co dělat.
+    porada ? nactiProgram() : Promise.resolve([]),
+  ]);
 
   return (
     <Ukazatele
@@ -83,6 +89,8 @@ export default async function KnihyPage({
       cile={porada ? { ...cile, mesicniZiskKnih: null } : cile}
       obdobi={obdobi}
       porada={porada}
+      program={program}
+      dnesISO={new Date().toISOString()}
     />
   );
 }
