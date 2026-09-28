@@ -15,6 +15,8 @@ const schema = z.object({
   mesicniObrat: z.number().int().min(0).max(1_000_000_000).nullable().optional(),
   rocniObrat: z.number().int().min(0).max(10_000_000_000).nullable().optional(),
   mesicuKryti: z.number().min(0.5).max(12).optional(),
+  // Cíl čistého zisku z uzavřených audioknih za měsíc (28. 9. 2026).
+  mesicniZiskKnih: z.number().int().min(0).max(1_000_000_000).nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -29,6 +31,7 @@ export async function PATCH(req: NextRequest) {
     mesicniObrat: parsed.data.mesicniObrat ?? null,
     rocniObrat: parsed.data.rocniObrat ?? null,
     mesicuKryti: parsed.data.mesicuKryti ?? 2,
+    mesicniZiskKnih: parsed.data.mesicniZiskKnih ?? null,
   });
   return NextResponse.json({ cile });
 }

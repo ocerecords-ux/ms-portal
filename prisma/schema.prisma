@@ -4231,5 +4231,10 @@ model CilePalubovky {
   /// hranici spadne palivoměr do červené.
   mesicuKryti  Float @default(2)
 
+  /// ČISTÝ ZISK Z UZAVŘENÝCH AUDIOKNIH ZA MĚSÍC (zadání 28. 9. 2026: „kolik se
+  /// zvládlo uzavřít audioknih za měsíc, aby byl čistý zisk min. 400 000 Kč
+  /// bez DPH za ten daný měsíc"). Kč bez DPH. Prázdné = bere se 400 000.
+  mesicniZiskKnih Int?
+
   updatedAt DateTime @updatedAt
 }

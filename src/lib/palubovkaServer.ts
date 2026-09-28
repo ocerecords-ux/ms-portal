@@ -38,18 +38,29 @@ export type Cile = {
   mesicniObrat: number | null;
   rocniObrat: number | null;
   mesicuKryti: number;
+  /**
+   * Čistý zisk z uzavřených audioknih za měsíc (zadání 28. 9. 2026). Kč bez
+   * DPH. Bydlí to u cílů palubovky, protože je to totéž zvíře - číslo, proti
+   * kterému se měří budík - a druhá tabulka na jeden řádek by byla zbytečná.
+   */
+  mesicniZiskKnih: number | null;
 };
+
+/** Bez zadaného cíle se měří proti 400 000 Kč (zadání 28. 9. 2026). */
+export const VYCHOZI_ZISK_KNIH = 400_000;
 
 export async function nactiCile(): Promise<Cile> {
   const c = (await prisma.cilePalubovky.findUnique({ where: { id: 'hlavni' } })) as {
     mesicniObrat: number | null;
     rocniObrat: number | null;
     mesicuKryti: number;
+    mesicniZiskKnih: number | null;
   } | null;
   return {
     mesicniObrat: c?.mesicniObrat ?? null,
     rocniObrat: c?.rocniObrat ?? null,
     mesicuKryti: c?.mesicuKryti ?? 2,
+    mesicniZiskKnih: c?.mesicniZiskKnih ?? null,
   };
 }
 
@@ -58,6 +69,7 @@ export async function ulozCile(zmena: Partial<Cile>): Promise<Cile> {
     mesicniObrat: zmena.mesicniObrat ?? null,
     rocniObrat: zmena.rocniObrat ?? null,
     mesicuKryti: zmena.mesicuKryti ?? 2,
+    mesicniZiskKnih: zmena.mesicniZiskKnih ?? null,
   };
   await prisma.cilePalubovky.upsert({
     where: { id: 'hlavni' },
