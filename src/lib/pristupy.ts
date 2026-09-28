@@ -153,7 +153,20 @@ export type KdoPristupy = {
 export function maPristup(kdo: KdoPristupy, klic: KlicSekce): boolean {
   if (kdo.superadmin) return true;
   if (!podlehaPristupum(kdo.role)) return false;
-  return (kdo.pristupy ?? []).includes(klic);
+  const seznam = kdo.pristupy ?? [];
+  /**
+   * PRÁZDNÝ SEZNAM ZNAMENÁ „JEŠTĚ NENASTAVENO", NE „NIKAM NESMÍ".
+   *
+   * Pojistka z 28. 9. 2026: první doplnění stávajícím účtům neproběhlo
+   * (čerstvý sloupec má u starých řádků NULL, filtr na prázdné pole je
+   * nechytil) a lidem zmizely odkazy z lišty. Když je seznam prázdný,
+   * platí výchozí sada podle role - stejná, jakou má člověk dostat.
+   *
+   * Cenou je, že odškrtnutím úplně všeho se člověk nezamkne ven; na to je
+   * vypnutí účtu. To je lepší než tichý výpadek pro celý tým.
+   */
+  if (seznam.length === 0) return (VYCHOZI_PRISTUPY[String(kdo.role)] ?? []).includes(klic);
+  return seznam.includes(klic);
 }
 
 /**

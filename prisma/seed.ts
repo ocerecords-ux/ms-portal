@@ -1937,7 +1937,11 @@ async function uzavriKanalyUkoncenychProjektu() {
  * rozdávají. Dál se to nastavuje v Administraci, ne tady.
  */
 async function pristupyPodleRoli() {
-  const ZNAMKA = 'pristupy-podle-roli';
+  // Druhy pokus (28. 9. 2026 vecer): prvni bezel s filtrem `pristupy:
+  // { isEmpty: true }` a nedosahl na nikoho - cerstve pridany sloupec ma
+  // u starych radku NULL, ne prazdne pole, a takovy radek filtr nechytne.
+  // Proto se ted ctou ucty do pameti a rozhoduje se v JS.
+  const ZNAMKA = 'pristupy-podle-roli-2';
   try {
     const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
     if (uz) return;
@@ -1959,22 +1963,31 @@ async function pristupyPodleRoli() {
     };
 
     for (const [role, sekce] of Object.entries(vychozi)) {
-      const { count } = await prisma.user.updateMany({
-        where: { role: role as never, pristupy: { isEmpty: true } },
-        data: { pristupy: sekce },
-      });
-      if (count > 0) console.log(`  pristupy: ${role} - doplneno ${count} uctum`);
+      const lide = (await prisma.user.findMany({
+        where: { role: role as never },
+        select: { id: true, pristupy: true },
+      })) as { id: string; pristupy: string[] | null }[];
+      let doplneno = 0;
+      for (const u of lide) {
+        if ((u.pristupy ?? []).length > 0) continue;
+        await prisma.user.update({ where: { id: u.id }, data: { pristupy: sekce } });
+        doplneno += 1;
+      }
+      console.log(`  pristupy: ${role} - doplneno ${doplneno} z ${lide.length} uctu`);
     }
 
-    // Superadmini. Hleda se podle jmena, protoze e-maily se lisi podle domeny;
-    // kdyz ucet jeste neexistuje, nic se nedeje a nastavi se rucne.
-    for (const jmeno of ['Ondřej Černý', 'Drátva']) {
+    // Superadmini. Hleda se podle jmena, protoze e-maily se lisi podle domeny.
+    // „ratva" schvalne bez zacatku: v portalu je ucet psany „Peter Dratva"
+    // bez carky a hledani na „Dratva" ho minulo.
+    for (const jmeno of ['Ondřej Černý', 'ratva']) {
       const lide = await prisma.user.findMany({
         where: {
           role: 'ADMIN',
           active: true,
           name: { contains: jmeno, mode: 'insensitive' },
-          ...(jmeno === 'Ondřej Černý' ? { NOT: { name: { contains: 'ml.', mode: 'insensitive' } } } : {}),
+          ...(jmeno === 'Ondřej Černý'
+            ? { NOT: { name: { contains: 'ml.', mode: 'insensitive' } } }
+            : {}),
         },
         select: { id: true, email: true },
       });
