@@ -1848,9 +1848,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   // --- technické parametry (dávka 3) ---
   'parametry.tlacitko': { cs: 'Parametry', en: 'Parameters' },
+  // Bublina u tlačítka je jen popis, ne vysvětlování (28. 9. 2026).
   'parametry.tlacitkoPopis': {
-    cs: 'Technické parametry výroby — v čem se to odevzdává',
-    en: 'Technical production parameters — the format it is delivered in',
+    cs: 'Technické parametry projektu',
+    en: 'Technical parameters of the project',
   },
   'parametry.nadpis': { cs: 'Technické parametry', en: 'Technical parameters' },
   'parametry.zadnaSada': {

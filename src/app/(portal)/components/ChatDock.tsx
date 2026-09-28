@@ -3519,14 +3519,17 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     <span className="min-w-0 flex-1 flex flex-col">
                       {/* NÁZEV PROJEKTU JE ODKAZ (zadání 21. 9. 2026: „tady nahoře
                           v chatu ten název projektu by mohl vždycky být odkaz, abych
-                          se proklikl na projekt"). */}
+                          se proklikl na projekt").
+                          Bez šipky (28. 9. 2026: „dej pryč tu šipku u názvu
+                          projektu, stačí když se tam proklikneš") - že je to odkaz,
+                          je vidět z podtržení a barvy při najetí. */}
                       {otevrena.kind === 'PROJEKT' && otevrena.caflouProjectId ? (
                         <Link
                           href={`/projekty/${encodeURIComponent(otevrena.caflouProjectId)}`}
                           title={t('chat.otevritProjekt')}
                           className="font-heading font-semibold text-sm text-ink leading-tight break-words no-underline hover:text-brand-purple hover:underline"
                         >
-                          # {otevrena.label} <span aria-hidden="true" className="text-muted text-xs">↗</span>
+                          # {otevrena.label}
                         </Link>
                       ) : (
                         <span className="font-heading font-semibold text-sm text-ink leading-tight break-words">
