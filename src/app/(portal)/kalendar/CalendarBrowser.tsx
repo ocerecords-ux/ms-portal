@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   BLOCK_KIND_LABELS,
+  DRUHY_K_ZALOZENI,
   CALENDAR_VIEWS,
   GRID_END_HOUR,
   GRID_SCROLL_TO_HOUR,
@@ -2375,12 +2376,30 @@ function UdalostForm({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body text-ink">{t('kalendar.poleDruh')}</span>
-          <VyberPole value={druh} onChange={(e) => setDruh(e.target.value)} className={inputClass}>
-            {Object.keys(BLOCK_KIND_LABELS).map((key) => (
-              <option key={key} value={key}>
-                {nazevDruhu(t, key)}
-              </option>
-            ))}
+          {/* JEN ČTYŘI VOLBY (28. 9. 2026). Druh upravované události se přidá
+              navíc, aby se stará blokace („Údržba", „Jiné") při úpravě tiše
+              nepřeklopila na Natáčení. Mimo studio není blok ve studiu, takže
+              vymění celé okno za formulář nepřítomnosti - stejně jako když se
+              vybere v nabídce Kalendář. */}
+          <VyberPole
+            value={druh}
+            onChange={(e) => {
+              if (e.target.value === '__mimo__') {
+                onMimoStudio?.(datum, od, doKdy);
+                return;
+              }
+              setDruh(e.target.value);
+            }}
+            className={inputClass}
+          >
+            {[...DRUHY_K_ZALOZENI, ...(DRUHY_K_ZALOZENI.includes(druh as never) ? [] : [druh])].map(
+              (key) => (
+                <option key={key} value={key}>
+                  {nazevDruhu(t, key)}
+                </option>
+              ),
+            )}
+            {onMimoStudio && <option value="__mimo__">{nazevMimo(t)}</option>}
           </VyberPole>
         </label>
         <label className="flex flex-col gap-1.5">

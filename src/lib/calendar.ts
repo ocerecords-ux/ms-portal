@@ -122,6 +122,22 @@ export const BLOCK_KIND_LABELS: Record<string, string> = {
 export const PRACOVNI_DRUHY = ['NATACENI', 'STRIH', 'CASTING'] as const;
 
 /**
+ * CO JDE V KALENDÁŘI ZALOŽIT RUČNĚ (zadání 28. 9. 2026: „tady v tom výběru
+ * nech jen Natáčení, střih, casting, mimo studio").
+ *
+ * Nabídka Druh byla dlouhá devět položek, ale reálně se z ní vybírají tři -
+ * zbytek (Svátek, Dovolená, Údržba, Interní blokace, Jiné) se buď zakládá
+ * jinudy, nebo se nepoužívá. Mimo studio je čtvrtá volba a přepne okno na
+ * vlastní formulář nepřítomnosti, protože to není blok ve studiu.
+ *
+ * BLOCK_KIND_LABELS ZŮSTÁVÁ CELÉ. Tohle je jen nabídka pro zakládání; staré
+ * události ostatních druhů se musí dál správně vypisovat a při úpravě si svůj
+ * druh podržet - viz UdalostForm, který k nabídce přidá i druh upravované
+ * události, když v tomhle seznamu není.
+ */
+export const DRUHY_K_ZALOZENI = ['NATACENI', 'STRIH', 'CASTING'] as const;
+
+/**
  * Značka v adrese kalendáře pro „žádné studio". Prázdný seznam studií v
  * adrese znamená „všechna" (ať krátké odkazy fungují), takže stav, kdy jsou
  * všechna studia zhasnutá a svítí jen kalendář Mimo studio, potřebuje vlastní
