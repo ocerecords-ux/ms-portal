@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { hledaciText, bezDiakritiky } from '@/lib/navody';
+import { hledaciText } from '@/lib/navody';
 import { nactiProfily } from '@/lib/technickeParametryServer';
 
 /**
@@ -18,113 +18,126 @@ import { nactiProfily } from '@/lib/technickeParametryServer';
  * ji mají vidět jen zvukaři, nebo ji schováš, další načtení ti to nepřepíše.
  */
 
-/** Předpona adresy, ať se articles poznají a daly se přepsat na svém místě. */
-const PREDPONA = 'technicke-parametry';
-
 export const KATEGORIE_PARAMETRU = 'Technické parametry';
 
-type Vysledek = { zalozeno: number; aktualizovano: number; celkem: number };
+type Vysledek = {
+  zalozeno: number;
+  aktualizovano: number;
+  /** Kolik sad dokument nese. */
+  celkem: number;
+  /** Kolik článků po staré podobě (jeden na sadu) se cestou smazalo. */
+  uklizeno: number;
+};
 
-/** Markdown jedné sady - nadpis sekce a pod ním parametry po řádcích. */
-function naMarkdown(profil: {
-  nazev: string;
-  perex: string | null;
-  druh: string;
-  vychozi: boolean;
-  firmy: { name: string }[];
-  sekce: { nadpis: string; radky: string[] }[];
-}): string {
+/**
+ * JEDEN DOKUMENT, UVNITŘ ROZDĚLENÝ (upřesnění 28. 9. 2026: „technické
+ * parametry hoď do jeden dokument a v něm rozděl").
+ *
+ * Deset samostatných článků zaplnilo celý seznam Procesů a postup, kvůli
+ * kterému tam člověk šel, se v nich ztratil. Teď je to jeden článek: nahoře
+ * výčet sad, pod ním každá sada jako kapitola a v ní její sekce.
+ *
+ * Nadpisy: sada je `#` (v návodu se vykreslí jako h2), sekce uvnitř `##` -
+ * viz navodNaHtml v lib/navody.ts.
+ */
+function naMarkdown(
+  profily: {
+    nazev: string;
+    perex: string | null;
+    druh: string;
+    vychozi: boolean;
+    firmy: { name: string }[];
+    sekce: { nadpis: string; radky: string[] }[];
+  }[],
+): string {
   const radky: string[] = [];
 
-  const komu = profil.vychozi
-    ? 'Obecná sada - platí pro firmy, které vlastní nemají.'
-    : profil.firmy.length
-      ? `Platí pro: ${profil.firmy.map((f) => f.name).join(', ')}.`
-      : 'Zatím není přiřazená žádné firmě.';
-  const druhPopis = profil.druh === 'REKLAMA' ? 'Reklamy' : 'Audioknihy';
-  radky.push(`**${druhPopis}.** ${komu}`);
-  if (profil.perex?.trim()) radky.push('', profil.perex.trim());
+  radky.push(
+    'Formáty a pravidla výroby podle nakladatelství. Sada se k projektu vybírá podle klienta; komu vlastní sada chybí, platí pro něj obecná.',
+    '',
+    '**V dokumentu najdeš:** ' + profily.map((p) => p.nazev).join(' · '),
+  );
 
-  for (const s of profil.sekce) {
-    const platne = s.radky.filter((r) => r.trim());
-    if (!platne.length) continue;
-    radky.push('', `# ${s.nadpis}`, '');
-    for (const r of platne) radky.push(`- ${r.trim()}`);
+  for (const p of profily) {
+    const komu = p.vychozi
+      ? `obecná sada pro ${p.druh === 'REKLAMA' ? 'reklamy' : 'audioknihy'} - platí, když firma nemá vlastní`
+      : `platí pro: ${p.firmy.map((f) => f.name).join(', ') || '(zatím žádná firma)'}`;
+
+    radky.push('', '---', '', `# ${p.nazev}`, '', `*${komu}*`);
+    if (p.perex?.trim()) radky.push('', p.perex.trim());
+
+    for (const s of p.sekce) {
+      const platne = s.radky.filter((r) => r.trim());
+      if (!platne.length) continue;
+      radky.push('', `## ${s.nadpis}`, '');
+      for (const r of platne) radky.push(`- ${r.trim()}`);
+    }
   }
 
   radky.push(
     '',
     '---',
     '',
-    'Sada se udržuje v Administraci → Technické parametry a odtud se propisuje k projektům i do chatu. Tenhle článek je její přepis pro čtení; úpravy dělej u sady, ne tady.',
+    'Sady se udržují v Administraci → Technické parametry a odtud se propisují k projektům i do chatu. Tenhle dokument je jejich přepis pro čtení; úpravy dělej u sady, ne tady.',
   );
   return radky.join('\n');
 }
 
+const SLUG = 'technicke-parametry';
+
 /**
- * Přepíše (nebo založí) článek ke každé aktivní sadě parametrů.
+ * Přepíše (nebo založí) jeden dokument se všemi aktivními sadami.
  *
- * Vrací počty, ne text - volající je jen ukáže. Sady vyřazené z provozu se
- * nepřenášejí; jejich články zůstanou, dokud je někdo nesmaže ručně, aby se
- * omylem neztratil postup, na který někde vede odkaz.
+ * Vrací počty, ne text - volající je jen ukáže. Vyřazené sady se
+ * nepřenášejí. Starší podobu, kdy měla každá sada vlastní článek, to cestou
+ * uklidí - jde o články, které tahle funkce sama vyrobila.
  */
 export async function ulozParametryDoProcesu(autorId?: string | null): Promise<Vysledek> {
-  const profily = (await nactiProfily()).filter((p) => p.aktivni);
-  let zalozeno = 0;
-  let aktualizovano = 0;
+  const profily = (await nactiProfily())
+    .filter((p) => p.aktivni)
+    .sort((a, b) => Number(b.vychozi) - Number(a.vychozi) || a.nazev.localeCompare(b.nazev, 'cs'));
 
-  for (const p of profily) {
-    const slug = `${PREDPONA}-${bezDiakritiky(p.nazev).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
-    const nazev = `Technické parametry — ${p.nazev}`;
-    const obsah = naMarkdown(p);
-    /**
-     * Perex se řídí druhem sady, ne domněnkou (oprava hned po prvním načtení
-     * 28. 9. 2026: u sady „Reklamy" svítilo „pro audioknihy").
-     *
-     * Tečka na konci se přidává jen tam, kde ji název firmy sám nemá -
-     * „EUROMEDIA GROUP, a.s.." vypadalo jako překlep.
-     */
-    const seznamFirem = p.firmy.map((f) => f.name).join(', ') || p.nazev;
-    const tecka = /[.!?]$/.test(seznamFirem) ? '' : '.';
-    const perex = p.vychozi
-      ? `Obecná sada formátů pro ${p.druh === 'REKLAMA' ? 'reklamy' : 'audioknihy'} - platí, když firma nemá vlastní.`
-      : `Formáty a pravidla výroby pro ${seznamFirem}${tecka}`;
+  // Úklid po starším rozdělení na články po sadách (28. 9. 2026).
+  const stare = await prisma.navod.deleteMany({
+    where: { druh: 'PROCES', slug: { startsWith: `${SLUG}-` } },
+  });
 
-    const uz = await prisma.navod.findUnique({ where: { slug }, select: { id: true } });
-    if (uz) {
-      await prisma.navod.update({
-        where: { id: uz.id },
-        data: {
-          nazev,
-          perex,
-          obsah,
-          hledaci: hledaciText({ nazev, perex, obsah }),
-          kategorie: KATEGORIE_PARAMETRU,
-          druh: 'PROCES',
-        },
-      });
-      aktualizovano += 1;
-    } else {
-      await prisma.navod.create({
-        data: {
-          slug,
-          nazev,
-          perex,
-          obsah,
-          hledaci: hledaciText({ nazev, perex, obsah }),
-          kategorie: KATEGORIE_PARAMETRU,
-          druh: 'PROCES',
-          // Formáty potřebuje znát celý tým - kdo je má vidět úžeji, doladí
-          // se na kartě článku a další načtení to nepřepíše.
-          proRole: [],
-          zverejneno: true,
-          poradi: p.vychozi ? 10 : 50,
-          autorId: autorId ?? null,
-        },
-      });
-      zalozeno += 1;
-    }
+  const nazev = 'Technické parametry výroby';
+  const perex = 'Formáty a pravidla podle nakladatelství - jeden dokument, uvnitř po sadách.';
+  const obsah = naMarkdown(profily);
+
+  const uz = await prisma.navod.findUnique({ where: { slug: SLUG }, select: { id: true } });
+  if (uz) {
+    await prisma.navod.update({
+      where: { id: uz.id },
+      data: {
+        nazev,
+        perex,
+        obsah,
+        hledaci: hledaciText({ nazev, perex, obsah }),
+        kategorie: KATEGORIE_PARAMETRU,
+        druh: 'PROCES',
+      },
+    });
+    return { zalozeno: 0, aktualizovano: 1, celkem: profily.length, uklizeno: stare.count };
   }
 
-  return { zalozeno, aktualizovano, celkem: profily.length };
+  await prisma.navod.create({
+    data: {
+      slug: SLUG,
+      nazev,
+      perex,
+      obsah,
+      hledaci: hledaciText({ nazev, perex, obsah }),
+      kategorie: KATEGORIE_PARAMETRU,
+      druh: 'PROCES',
+      // Formáty potřebuje znát celý tým - kdo je má vidět úžeji, doladí se
+      // na kartě článku a další načtení to nepřepíše.
+      proRole: [],
+      zverejneno: true,
+      poradi: 10,
+      autorId: autorId ?? null,
+    },
+  });
+  return { zalozeno: 1, aktualizovano: 0, celkem: profily.length, uklizeno: stare.count };
 }

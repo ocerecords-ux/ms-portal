@@ -27,7 +27,9 @@ export function NacistParametry() {
         return;
       }
       setZprava(
-        `Hotovo — nových ${data.zalozeno}, přepsaných ${data.aktualizovano} z ${data.celkem} sad.`,
+        `Hotovo — dokument ${data.zalozeno ? 'založen' : 'přepsán'}, ${data.celkem} sad` +
+          (data.uklizeno ? `, uklizeno ${data.uklizeno} starých článků` : '') +
+          '.',
       );
       router.refresh();
     } catch {
@@ -44,7 +46,7 @@ export function NacistParametry() {
         type="button"
         onClick={() => void nacti()}
         disabled={bezi}
-        title="Z každé sady v Administraci udělá článek v kategorii Technické parametry. Existující články přepíše."
+        title="Ze sad v Administraci složí jeden dokument Technické parametry výroby, uvnitř rozdělený po nakladatelstvích. Existující dokument přepíše."
         className="text-sm font-heading font-semibold rounded-pill border border-line bg-surface px-4 py-2 text-brand-purple disabled:opacity-60 hover:border-brand-purple"
       >
         {bezi ? 'Načítám…' : 'Načíst technické parametry'}
