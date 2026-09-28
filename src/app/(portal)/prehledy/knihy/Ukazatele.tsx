@@ -68,10 +68,16 @@ export function Ukazatele({
   data,
   cile: cilePocatecni,
   obdobi,
+  porada,
 }: {
   data: KnihyUkazatele;
   cile: Cile;
   obdobi: string;
+  /**
+   * Režim porady (zadání 28. 9. 2026) - přehled na projektor pro zvukařskou
+   * poradu. Peníze v něm nejsou; stránka je sem ani neposílá, viz page.tsx.
+   */
+  porada: boolean;
 }) {
   const router = useRouter();
   const cesta = usePathname();
@@ -90,6 +96,14 @@ export function Ukazatele({
     const p = new URLSearchParams(parametry?.toString() ?? '');
     if (nove === 'tento') p.delete('obdobi');
     else p.set('obdobi', nove);
+    const q = p.toString();
+    router.push(q ? `${cesta}?${q}` : cesta);
+  }
+
+  function prepniPoradu() {
+    const p = new URLSearchParams(parametry?.toString() ?? '');
+    if (porada) p.delete('porada');
+    else p.set('porada', '1');
     const q = p.toString();
     router.push(q ? `${cesta}?${q}` : cesta);
   }
@@ -115,9 +129,13 @@ export function Ukazatele({
     popis:
       pretek === null
         ? 'Zatím není co měřit'
-        : pretek <= 0
-          ? `Vešli jsme se do rozpočtů, zbylo ${kc(Math.abs(data.celkem.vycerpano - data.celkem.rozpocet))}`
-          : `Přes rozpočty o ${kc(data.celkem.vycerpano - data.celkem.rozpocet)} celkem`,
+        : porada
+          ? pretek <= 0
+            ? `Vešli jsme se do rozpočtů, zbylo ${hodiny(Math.abs(data.celkem.preteceniHodin))}`
+            : `Přes rozpočty o ${hodiny(data.celkem.preteceniHodin)} celkem`
+          : pretek <= 0
+            ? `Vešli jsme se do rozpočtů, zbylo ${kc(Math.abs(data.celkem.vycerpano - data.celkem.rozpocet))}`
+            : `Přes rozpočty o ${kc(data.celkem.vycerpano - data.celkem.rozpocet)} celkem`,
   };
 
   /** BUDÍK ZISKU za vybrané období proti cíli. */
@@ -163,21 +181,34 @@ export function Ukazatele({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {porada && (
+        <p className="bg-tint border border-line rounded-card px-4 py-3 text-sm font-body text-ink m-0">
+          <strong className="font-heading font-semibold">Režim porady.</strong> Ceny z nabídek,
+          zisk, náklady ani mzdy se nezobrazují - přehled ukazuje jen hodiny a čerpání rozpočtu.
+        </p>
+      )}
+
+      <div className={`grid grid-cols-1 gap-4 ${porada ? '' : 'md:grid-cols-2'}`}>
         <Budik
           nadpis="Přetečení rozpočtů audioknih"
           hodnota={procenta(pretek)}
           budik={budikPretek}
-          spodniPopisek={`${data.celkem.prekrocenych} z ${data.celkem.knih} knih přes rozpočet · ${kc(data.celkem.vycerpano)} z ${kc(data.celkem.rozpocet)}`}
+          spodniPopisek={
+            porada
+              ? `${data.celkem.prekrocenych} z ${data.celkem.knih} knih přes rozpočet · ${hodiny(data.celkem.hodin)} z ${hodiny(data.celkem.rozpocetHodin)}`
+              : `${data.celkem.prekrocenych} z ${data.celkem.knih} knih přes rozpočet · ${kc(data.celkem.vycerpano)} z ${kc(data.celkem.rozpocet)}`
+          }
           znacka={0}
         />
-        <Budik
-          nadpis={`Čistý zisk z uzavřených knih · ${data.vybrany.popis}`}
-          hodnota={kc(data.vybrany.zisk)}
-          budik={budikZisk}
-          spodniPopisek={`${pocetKnih(data.vybrany.knih)} uzavřeno · cíl ${kc(cilZisku)} bez DPH`}
-          znacka={1}
-        />
+        {!porada && (
+          <Budik
+            nadpis={`Čistý zisk z uzavřených knih · ${data.vybrany.popis}`}
+            hodnota={kc(data.vybrany.zisk)}
+            budik={budikZisk}
+            spodniPopisek={`${pocetKnih(data.vybrany.knih)} uzavřeno · cíl ${kc(cilZisku)} bez DPH`}
+            znacka={1}
+          />
+        )}
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -198,28 +229,50 @@ export function Ukazatele({
         </VyberPole>
 
         <span className="text-sm font-body text-muted">
-          Minulý měsíc ({data.minuly.popis}): {pocetKnih(data.minuly.knih)}, čistý zisk{' '}
-          <span className={data.minuly.zisk < 0 ? 'text-danger' : 'text-ink'}>
-            {kc(data.minuly.zisk)}
-          </span>
+          Minulý měsíc ({data.minuly.popis}): {pocetKnih(data.minuly.knih)}
+          {!porada && (
+            <>
+              , čistý zisk{' '}
+              <span className={data.minuly.zisk < 0 ? 'text-danger' : 'text-ink'}>
+                {kc(data.minuly.zisk)}
+              </span>
+            </>
+          )}
         </span>
 
         <button
           type="button"
-          onClick={() => setUpravaCile((o) => !o)}
-          className="ml-auto text-sm font-heading font-semibold text-brand-purple bg-transparent border-0"
+          onClick={prepniPoradu}
+          title="Přehled pro zvukařskou poradu - bez cen a zisku"
+          className={`ml-auto rounded-pill border font-heading font-semibold text-sm px-4 py-1.5 transition-colors cursor-pointer ${
+            porada
+              ? 'bg-brand-purple text-white border-brand-purple'
+              : 'bg-surface text-muted border-line hover:text-brand-purple hover:border-brand-purple'
+          }`}
         >
-          {upravaCile ? 'Zavřít' : 'Změnit cíl zisku'}
+          {porada ? 'Zpět k celému přehledu' : 'Pro poradu'}
         </button>
-        <Link
-          href="/prehledy/knihy/rozpad"
-          className="text-sm font-heading font-semibold text-brand-purple no-underline hover:underline"
-        >
-          Podrobný rozpad →
-        </Link>
+
+        {!porada && (
+          <>
+            <button
+              type="button"
+              onClick={() => setUpravaCile((o) => !o)}
+              className="text-sm font-heading font-semibold text-brand-purple bg-transparent border-0"
+            >
+              {upravaCile ? 'Zavřít' : 'Změnit cíl zisku'}
+            </button>
+            <Link
+              href="/prehledy/knihy/rozpad"
+              className="text-sm font-heading font-semibold text-brand-purple no-underline hover:underline"
+            >
+              Podrobný rozpad →
+            </Link>
+          </>
+        )}
       </div>
 
-      {upravaCile && (
+      {upravaCile && !porada && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -264,6 +317,7 @@ export function Ukazatele({
               <RadekKnihy
                 key={k.id}
                 kniha={k}
+                porada={porada}
                 otevreno={rozbalena === k.id}
                 prepni={() => setRozbalena((r) => (r === k.id ? null : k.id))}
               />
@@ -272,7 +326,8 @@ export function Ukazatele({
         )}
         <p className="text-xs text-muted m-0">
           Pruh ukazuje, na kolika procentech rozpočtu kniha stojí. Kliknutím se vysune, na čem
-          přetekla a kdo na ní dělal.
+          přetekla a kdo na ní dělal.{' '}
+          {porada && 'V režimu porady jsou vidět jen hodiny - žádné ceny, mzdy ani zisk.'}
         </p>
       </section>
     </div>
@@ -281,16 +336,19 @@ export function Ukazatele({
 
 function RadekKnihy({
   kniha: k,
+  porada,
   otevreno,
   prepni,
 }: {
   kniha: KnihaUkazatel;
+  porada: boolean;
   otevreno: boolean;
   prepni: () => void;
 }) {
   // Kolik rozpočtu je snědeno. Pruh se plní k rozpočtu, přes něj už neroste -
-  // roste jen červené číslo vedle.
-  const pomer = k.rozpocet > 0 ? k.vycerpano / k.rozpocet : 0;
+  // roste jen červené číslo vedle. Poměr chodí ze serveru, aby pruh fungoval
+  // i v režimu porady, kde se částky vůbec neposílají.
+  const pomer = k.pomerCerpani;
   const s = skala(pomer);
   const prestrelil = pomer > 1;
 
@@ -341,34 +399,58 @@ function RadekKnihy({
           <span
             className={`block text-[11px] tabular-nums ${prestrelil ? 'text-danger' : 'text-muted'}`}
           >
-            {k.preteceniKc > 0 ? '+' : ''}
-            {kc(k.preteceniKc)}
+            {porada ? (
+              <>
+                {k.preteceniHodin > 0 ? '+' : ''}
+                {hodiny(k.preteceniHodin)}
+              </>
+            ) : (
+              <>
+                {k.preteceniKc > 0 ? '+' : ''}
+                {kc(k.preteceniKc)}
+              </>
+            )}
           </span>
         </span>
 
-        <span className="w-28 shrink-0 text-right">
-          <span
-            className={`block font-heading font-semibold text-sm tabular-nums ${k.zisk < 0 ? 'text-danger' : 'text-ink'}`}
-          >
-            {k.trzba > 0 ? kc(k.zisk) : '—'}
+        {!porada && (
+          <span className="w-28 shrink-0 text-right">
+            <span
+              className={`block font-heading font-semibold text-sm tabular-nums ${k.zisk < 0 ? 'text-danger' : 'text-ink'}`}
+            >
+              {k.trzba > 0 ? kc(k.zisk) : '—'}
+            </span>
+            <span className="block text-[11px] text-muted">zisk</span>
           </span>
-          <span className="block text-[11px] text-muted">zisk</span>
-        </span>
+        )}
 
         <span className="text-muted text-sm shrink-0">{otevreno ? '▾' : '▸'}</span>
       </button>
 
       {otevreno && (
         <div className="pb-4 flex flex-col gap-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Udaj nazev="Rozpočet" hodnota={kc(k.rozpocet)} pozn={hodiny(k.rozpocetHodin)} />
-            <Udaj nazev="Vyčerpáno" hodnota={kc(k.vycerpano)} pozn={hodiny(k.hodin)} />
-            <Udaj
-              nazev="Tržba"
-              hodnota={k.trzba > 0 ? `${k.trzbaOdhad ? '~' : ''}${kc(k.trzba)}` : '—'}
-              pozn={k.trzbaOdhad ? 'zatím neschválená nabídka' : 'ze schválené nabídky'}
-            />
-            <Udaj nazev="Náklady" hodnota={kc(k.naklady)} pozn="výkazy + výdaje" />
+          <div className={`grid gap-3 ${porada ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4'}`}>
+            {porada ? (
+              <>
+                <Udaj nazev="Rozpočet" hodnota={hodiny(k.rozpocetHodin)} pozn={`${k.normostran} NS`} />
+                <Udaj
+                  nazev="Odpracováno"
+                  hodnota={hodiny(k.hodin)}
+                  pozn={`${Math.round(k.pomerCerpani * 100)} % rozpočtu`}
+                />
+              </>
+            ) : (
+              <>
+                <Udaj nazev="Rozpočet" hodnota={kc(k.rozpocet)} pozn={hodiny(k.rozpocetHodin)} />
+                <Udaj nazev="Vyčerpáno" hodnota={kc(k.vycerpano)} pozn={hodiny(k.hodin)} />
+                <Udaj
+                  nazev="Tržba"
+                  hodnota={k.trzba > 0 ? `${k.trzbaOdhad ? '~' : ''}${kc(k.trzba)}` : '—'}
+                  pozn={k.trzbaOdhad ? 'zatím neschválená nabídka' : 'ze schválené nabídky'}
+                />
+                <Udaj nazev="Náklady" hodnota={kc(k.naklady)} pozn="výkazy + výdaje" />
+              </>
+            )}
           </div>
 
           {/* NA ČEM TO PŘETEKLO (zadání 28. 9. 2026). */}
@@ -383,15 +465,17 @@ function RadekKnihy({
                     <th className="text-left py-2 pr-3">Druh práce</th>
                     <th className="text-right py-2 px-3">Rozpočet</th>
                     <th className="text-right py-2 px-3">Odpracováno</th>
-                    <th className="text-right py-2 px-3">Rozdíl</th>
-                    <th className="text-right py-2 pl-3">Mzdy</th>
+                    <th className={porada ? 'text-right py-2 pl-3' : 'text-right py-2 px-3'}>
+                      Rozdíl
+                    </th>
+                    {!porada && <th className="text-right py-2 pl-3">Mzdy</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  <RadekDruhu nazev="Natáčení" d={k.nataceni} />
-                  <RadekDruhu nazev="Střih" d={k.strih} />
+                  <RadekDruhu nazev="Natáčení" d={k.nataceni} porada={porada} />
+                  <RadekDruhu nazev="Střih" d={k.strih} porada={porada} />
                   {k.ostatni.hodin > 0 && (
-                    <RadekDruhu nazev="Ostatní" d={k.ostatni} bezRozpoctu />
+                    <RadekDruhu nazev="Ostatní" d={k.ostatni} porada={porada} bezRozpoctu />
                   )}
                 </tbody>
               </table>
@@ -412,8 +496,10 @@ function RadekKnihy({
                       <th className="text-left py-2 pr-3">Kdo</th>
                       <th className="text-right py-2 px-3">Natáčení</th>
                       <th className="text-right py-2 px-3">Střih</th>
-                      <th className="text-right py-2 px-3">Ostatní</th>
-                      <th className="text-right py-2 pl-3">Celkem</th>
+                      <th className={porada ? 'text-right py-2 pl-3' : 'text-right py-2 px-3'}>
+                        Ostatní
+                      </th>
+                      {!porada && <th className="text-right py-2 pl-3">Mzda</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -426,12 +512,16 @@ function RadekKnihy({
                         <td className="text-right py-1.5 px-3 tabular-nums">
                           {c.strihHodin > 0 ? hodiny(c.strihHodin) : '—'}
                         </td>
-                        <td className="text-right py-1.5 px-3 tabular-nums">
+                        <td
+                          className={`text-right py-1.5 tabular-nums ${porada ? 'pl-3' : 'px-3'}`}
+                        >
                           {c.ostatniHodin > 0 ? hodiny(c.ostatniHodin) : '—'}
                         </td>
-                        <td className="text-right py-1.5 pl-3 tabular-nums font-heading font-semibold">
-                          {kc(c.castka)}
-                        </td>
+                        {!porada && (
+                          <td className="text-right py-1.5 pl-3 tabular-nums font-heading font-semibold">
+                            {kc(c.castka)}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -455,10 +545,12 @@ function RadekKnihy({
 function RadekDruhu({
   nazev,
   d,
+  porada,
   bezRozpoctu,
 }: {
   nazev: string;
   d: RozpadDruhu;
+  porada: boolean;
   /** Ostatní práce rozpočet nemá - místo nuly se píše pomlčka. */
   bezRozpoctu?: boolean;
 }) {
@@ -471,12 +563,12 @@ function RadekDruhu({
       </td>
       <td className="text-right py-1.5 px-3 tabular-nums">{hodiny(d.hodin)}</td>
       <td
-        className={`text-right py-1.5 px-3 tabular-nums font-heading font-semibold ${pres ? 'text-danger' : 'text-status-done'}`}
+        className={`text-right py-1.5 tabular-nums font-heading font-semibold ${porada ? 'pl-3' : 'px-3'} ${pres ? 'text-danger' : 'text-status-done'}`}
       >
         {pres ? '+' : ''}
         {hodiny(d.preteceniHodin)}
       </td>
-      <td className="text-right py-1.5 pl-3 tabular-nums">{kc(d.castka)}</td>
+      {!porada && <td className="text-right py-1.5 pl-3 tabular-nums">{kc(d.castka)}</td>}
     </tr>
   );
 }

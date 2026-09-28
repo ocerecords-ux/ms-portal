@@ -561,6 +561,12 @@ export type KnihaUkazatel = {
   vycerpano: number;
   /** Kladné číslo = přeteklo. Null, když rozpočet není z čeho spočítat. */
   preteceniProcent: number | null;
+  /**
+   * Na kolika procentech rozpočtu kniha stojí (1 = přesně na rozpočtu).
+   * Počítá se tady, ne v prohlížeči, aby pruh čerpání nepotřeboval znát
+   * částky - v režimu porady se posílají vynulované (viz stránka).
+   */
+  pomerCerpani: number;
   preteceniHodin: number;
   /** O kolik korun se přejel rozpočet. Záporné = zbylo. */
   preteceniKc: number;
@@ -828,6 +834,7 @@ export async function nactiKnihyUkazatele(
       rozpocet: rozpocet.total,
       vycerpano,
       preteceniProcent: rozpocet.total > 0 ? ((vycerpano - rozpocet.total) / rozpocet.total) * 100 : null,
+      pomerCerpani: rozpocet.total > 0 ? vycerpano / rozpocet.total : 0,
       preteceniHodin: hodin - rozpocetHodin,
       preteceniKc: vycerpano - rozpocet.total,
       trzba,
