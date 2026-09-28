@@ -27,6 +27,9 @@ export const ZALOZKY_PREHLEDU: {
   { href: '/prehledy/backlog', label: 'Backlog' },
   // Peníze firmy vidí jen admin (21. 9. 2026).
   { href: '/prehledy/finance', label: 'Obrat a zisk', role: ['ADMIN'] },
+  // Rozpočty, čerpání a zisk jednotlivých knih (28. 9. 2026, pro Petera).
+  // Mzdové údaje celého týmu a marže knih - taky jen admin.
+  { href: '/prehledy/knihy', label: 'Knihy a rozpočty', role: ['ADMIN'] },
   // Co chodí zvukařům a kdy (21. 9. 2026) - peníze lidí, jen admin.
   { href: '/prehledy/zvukari', label: 'Zvukaři', role: ['ADMIN'] },
 ];

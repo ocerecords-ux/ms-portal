@@ -254,7 +254,15 @@ export function stavyProFirmu(jeReklama: boolean, aktualni?: string | null): Sta
  * „Čekáme na opravy", „Schváleno - k fakturaci" a „Vyfakturováno" - a v žádném
  * z nich už termín dokončení nemá co hlídat.
  */
-const PRVNI_ODEVZDANY = NAZVY.indexOf('Dokončeno - ke schválení');
+/**
+ * Stav, kterým kniha poprvé odchází klientovi. Je to jméno na jednom místě,
+ * protože se podle něj hledá i v historii projektu (`ProjektUdalost.nova`) -
+ * viz lib/knihyPrehledServer.ts. Dva opisy téhož textu na dvou místech by se
+ * rozešly při prvním přejmenování stavu.
+ */
+export const STAV_ODEVZDANO = 'Dokončeno - ke schválení';
+
+const PRVNI_ODEVZDANY = NAZVY.indexOf(STAV_ODEVZDANO);
 
 export function stavJeOdevzdany(nazev: string | null | undefined): boolean {
   const index = NAZVY.indexOf((nazev ?? '') as string);

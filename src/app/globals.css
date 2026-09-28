@@ -49,6 +49,13 @@
      barvoslepé; tmavý režim má vlastní odstíny níž v .dark. */
   --viz-obrat: #7b55ff;
   --viz-naklady: #eb6834;
+  /* Druhy práce ve výkazech (28. 9. 2026, přehled Knihy a rozpočty). Natáčení
+     a střih si berou stejné dva odstíny jako obrat a náklady - portál má mít
+     jednu paletu, ne dvě. Třetí odstín je dopočítaný tak, aby byl odlišitelný
+     od oranžové i při protanopii a deuteranopii (zelená to nesplnila). */
+  --viz-nataceni: #7b55ff;
+  --viz-strih: #eb6834;
+  --viz-ostatni: #0891b2;
   --brand-purple: #7b55ff;
   --brand-purple-deep: #6b2af0;
   --brand-green: #1fdf67;
@@ -84,6 +91,9 @@
 .dark {
   --viz-obrat: #8f6fff;
   --viz-naklady: #d95926;
+  --viz-nataceni: #8f6fff;
+  --viz-strih: #d95926;
+  --viz-ostatni: #1a9fbf;
   --c-ink: 236 233 247; /* svetly text */
   --c-bar: 45 39 70; /* pruh zůstává tmavý, jen o odstín světlejší než karta */
   --c-paper: 20 17 28; /* podklad stranky */
