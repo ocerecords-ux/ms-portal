@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { SEKCE } from '../src/lib/pristupy';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { VYCHOZI_NAVODY } from './vychoziNavody';
@@ -213,6 +214,7 @@ async function main() {
   await vedouciPobocek();
   await uzavriKanalyUkoncenychProjektu();
   await pristupyPodleRoli();
+  await pristupyDetaily();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
 
@@ -2005,6 +2007,47 @@ async function pristupyPodleRoli() {
     await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
   } catch (err) {
     console.warn('  pristupy: doplneni podle role selhalo:', err);
+  }
+}
+
+/**
+ * ROZPAD SEKCÍ NA JEDNOTLIVÁ PRÁVA (28. 9. 2026 večer: „chci třeba u dokladů,
+ * projektů a kalendáře více jednotlivých parametrů").
+ *
+ * Kdo má celou sekci a žádné její právo, dostane všechna - tak se to i tak
+ * vyhodnocuje (viz maPristup v lib/pristupy.ts), tohle to jen zapíše naplno,
+ * aby zaškrtávátka na kartě ukazovala pravdu.
+ */
+async function pristupyDetaily() {
+  const ZNAMKA = 'pristupy-detaily-1';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const lide = (await prisma.user.findMany({
+      where: { role: { in: ['ADMIN', 'PRODUKCE', 'ZVUKAR'] as never } },
+      select: { id: true, pristupy: true },
+    })) as { id: string; pristupy: string[] | null }[];
+
+    let doplneno = 0;
+    for (const u of lide) {
+      const ma = u.pristupy ?? [];
+      if (ma.length === 0) continue;
+      const novy = [...ma];
+      for (const sekce of SEKCE) {
+        if (!ma.includes(sekce.klic)) continue;
+        const prava = sekce.prava.map((p) => p.klic);
+        if (prava.some((p) => ma.includes(p))) continue;
+        for (const p of prava) if (!novy.includes(p)) novy.push(p);
+      }
+      if (novy.length === ma.length) continue;
+      await prisma.user.update({ where: { id: u.id }, data: { pristupy: novy } });
+      doplneno += 1;
+    }
+    console.log(`  pristupy: prava doplnena u ${doplneno} z ${lide.length} uctu`);
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+  } catch (err) {
+    console.warn('  pristupy: rozpad na prava selhal:', err);
   }
 }
 

@@ -3811,8 +3811,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // Přístup do sekcí zaškrtávátky (28. 9. 2026). Vidí to jen superadmin.
   'uzivatel.pristupySekce': { cs: 'Přístup do sekcí', en: 'Access to sections' },
   'uzivatel.pristupyPopis': {
-    cs: 'Co je zaškrtnuté, to člověk uvidí v liště a otevře. Nezaškrtnutá sekce mu zmizí. Role už o tom nerozhoduje - předvyplní se z ní jen nový účet.',
-    en: 'What is ticked is what the person sees in the bar and can open. Anything unticked disappears for them. The role no longer decides this - it only pre-fills a new account.',
+    cs: 'Co je zaškrtnuté, to člověk uvidí v liště a otevře. Sekce je velký vypínač, pod ní se dají dávat jednotlivá práva - třeba vidět faktury bez možnosti je vystavovat. Role už o tom nerozhoduje, předvyplní se z ní jen nový účet.',
+    en: 'What is ticked is what the person sees in the bar and can open. The section is the master switch; underneath it you grant individual rights - for example seeing invoices without being able to issue them. The role no longer decides this, it only pre-fills a new account.',
   },
   'uzivatel.pristupySuperadmin': {
     cs: 'Superadmin vidí všechny sekce - zaškrtávátka se u něj neřeší.',

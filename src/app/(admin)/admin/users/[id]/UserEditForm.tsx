@@ -9,7 +9,7 @@ import type { Role } from '@prisma/client';
 import { AdminField } from '../../NewCompanyForm';
 import { CountrySelect } from '../../CountrySelect';
 import { kodZeme } from '@/lib/countries';
-import { SEKCE } from '@/lib/pristupy';
+import { SEKCE, celaSekce, sekcePrava } from '@/lib/pristupy';
 import { PhotoDropzone } from '../PhotoDropzone';
 import { ROLE_GROUPS, USER_TABS, roleRequiresCompany } from '@/lib/roles';
 import { LOKACE_S_BARVOU } from '@/lib/lokaceHercu';
@@ -483,30 +483,77 @@ export function UserEditForm({
                 </p>
               ) : (
                 <>
-                  <div className="flex flex-wrap gap-x-6 gap-y-2.5">
-                    {SEKCE.map((sekce) => (
-                      <label
-                        key={sekce.klic}
-                        className="flex items-start gap-2.5 cursor-pointer min-w-[220px] flex-1"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={pristupy.includes(sekce.klic)}
-                          onChange={(e) =>
-                            setPristupy((p) =>
-                              e.target.checked
-                                ? [...p, sekce.klic]
-                                : p.filter((k) => k !== sekce.klic),
-                            )
-                          }
-                          className="w-4 h-4 accent-brand-purple mt-0.5"
-                        />
-                        <span className="text-sm font-body text-ink">
-                          {sekce.nazev}
-                          <span className="block text-xs text-muted">{sekce.popis}</span>
-                        </span>
-                      </label>
-                    ))}
+                  {/* DVĚ ÚROVNĚ (upřesnění 28. 9. 2026: „chci třeba u dokladů,
+                      projektů a kalendáře více jednotlivých parametrů").
+                      Nahoře sekce, pod ní odsazená jednotlivá práva. Sekce se
+                      zaškrtne i sama, jakmile člověk klikne kterékoli právo -
+                      jinak by šlo dát „vystavuje faktury" někomu, kdo se do
+                      Dokladů vůbec nedostane. */}
+                  <div className="flex flex-col gap-4">
+                    {SEKCE.map((sekce) => {
+                      const zapnuta = pristupy.includes(sekce.klic);
+                      return (
+                        <div
+                          key={sekce.klic}
+                          className="rounded-card border border-line bg-field/40 p-3.5"
+                        >
+                          <label className="flex items-start gap-2.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={zapnuta}
+                              onChange={(e) =>
+                                setPristupy((p) =>
+                                  e.target.checked
+                                    ? [...p, ...celaSekce(sekce.klic).filter((k) => !p.includes(k))]
+                                    : p.filter(
+                                        (k) => k !== sekce.klic && sekcePrava(k) !== sekce.klic,
+                                      ),
+                                )
+                              }
+                              className="w-4 h-4 accent-brand-purple mt-0.5"
+                            />
+                            <span className="text-sm font-body text-ink font-semibold">
+                              {sekce.nazev}
+                              <span className="block text-xs text-muted font-normal">
+                                {sekce.popis}
+                              </span>
+                            </span>
+                          </label>
+
+                          {zapnuta && sekce.prava.length > 0 && (
+                            <div className="mt-2.5 ml-6 pl-3 border-l border-line flex flex-col gap-2">
+                              {sekce.prava.map((pravo) => (
+                                <label
+                                  key={pravo.klic}
+                                  className="flex items-start gap-2.5 cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={pristupy.includes(pravo.klic)}
+                                    onChange={(e) =>
+                                      setPristupy((p) =>
+                                        e.target.checked
+                                          ? [
+                                              ...p.filter((k) => k !== sekce.klic),
+                                              sekce.klic,
+                                              pravo.klic,
+                                            ]
+                                          : p.filter((k) => k !== pravo.klic),
+                                      )
+                                    }
+                                    className="w-4 h-4 accent-brand-purple mt-0.5"
+                                  />
+                                  <span className="text-sm font-body text-ink">
+                                    {pravo.nazev}
+                                    <span className="block text-xs text-muted">{pravo.popis}</span>
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                   <p className="text-xs font-body text-muted m-0 mt-2">
                     {t('uzivatel.pristupyPopis')}
