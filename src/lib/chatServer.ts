@@ -219,3 +219,41 @@ export function shrnReakce(
     .sort((a, b) => b.kdo.length - a.kdo.length || a.prvni - b.prvni)
     .map((z) => ({ code: z.code, count: z.kdo.length, mine: z.mine, kdo: z.kdo }));
 }
+
+
+/**
+ * KANÁL UKONČENÉHO PROJEKTU ZMIZÍ ZE SEZNAMU (zadání 28. 9. 2026: „zůstávají
+ * nám v chatu projekty, které už jsou ukončené").
+ *
+ * Kanály dotazů klienta se zavíraly už od 11. 9. 2026, ale náš vlastní kanál
+ * k projektu zůstával otevřený napořád - a po roce provozu je v seznamu půlka
+ * jmen, na kterých se dávno nedělá.
+ *
+ * ZAVÍRÁ SE, NEMAŽE. Konverzace dostane `uzavrenoAt` a tím vypadne ze
+ * seznamu (viz `loadConversations`); zprávy zůstávají v databázi, takže se
+ * historie dá dohledat. Když se projekt vrátí mezi aktivní, kanál se otevře
+ * zpátky - `otevriKanalProjektu` je zrcadlo k tomuhle.
+ */
+export async function uzavriKanalProjektu(caflouProjectId: string): Promise<void> {
+  try {
+    await prisma.conversation.updateMany({
+      where: { kind: 'PROJEKT', caflouProjectId, uzavrenoAt: null },
+      data: { uzavrenoAt: new Date() },
+    });
+  } catch (err) {
+    // Zavření kanálu nikdy nesmí shodit uložení stavu projektu.
+    console.error('Uzavření kanálu projektu selhalo:', err);
+  }
+}
+
+/** Projekt se vrátil mezi aktivní - kanál patří zpátky do seznamu. */
+export async function otevriKanalProjektu(caflouProjectId: string): Promise<void> {
+  try {
+    await prisma.conversation.updateMany({
+      where: { kind: 'PROJEKT', caflouProjectId, NOT: { uzavrenoAt: null } },
+      data: { uzavrenoAt: null },
+    });
+  } catch (err) {
+    console.error('Otevření kanálu projektu selhalo:', err);
+  }
+}

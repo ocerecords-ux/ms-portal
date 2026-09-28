@@ -7,6 +7,7 @@ import { canEditProjectMeta } from '@/lib/roles';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
 import { uzavriDotazyProjektu } from '@/lib/dotazyServer';
+import { otevriKanalProjektu, uzavriKanalProjektu } from '@/lib/chatServer';
 
 /**
  * UKONČIT PROJEKT RUČNĚ (zadání 16. 9. 2026: „dejme někde možnost ukončit
@@ -85,8 +86,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     // Dokoncenym projektem se uzavira i kanal dotazu klienta - stejne jako
-    // kdyz se stav prehodi ve formulari (zadani 11. 9. 2026).
-    if (ukoncit) void uzavriDotazyProjektu(params.id).catch(() => undefined);
+    // kdyz se stav prehodi ve formulari (zadani 11. 9. 2026) - a od
+    // 28. 9. 2026 i nas vlastni kanal k projektu, at seznam v chatu nezustava
+    // plny hotovych zakazek.
+    if (ukoncit) {
+      void uzavriDotazyProjektu(params.id).catch(() => undefined);
+      void uzavriKanalProjektu(params.id).catch(() => undefined);
+    } else {
+      void otevriKanalProjektu(params.id).catch(() => undefined);
+    }
 
     return NextResponse.json({ ok: true, finished: ukoncit, statusName: stav });
   } catch (err) {

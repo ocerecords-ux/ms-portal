@@ -19,6 +19,7 @@ import { navrhniBonusyZaProjekt } from '@/lib/bonusyServer';
  */
 const STAV_PRO_BONUS = 'Dokončeno - ke schválení';
 import { uzavriDotazyProjektu } from '@/lib/dotazyServer';
+import { otevriKanalProjektu, uzavriKanalProjektu } from '@/lib/chatServer';
 import { isActiveProjectStatus } from '@/lib/projectTypes';
 import { zapisZmenyProjektu, type CitelnaJmena } from '@/lib/projektLogServer';
 
@@ -435,8 +436,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
       // Dokoncenym projektem se uzavira i kanal dotazu klienta (zadani
       // 11. 9. 2026) - historie zustava, jen uz do nej neni kam psat.
+      // Od 28. 9. 2026 s nim mizi ze seznamu i NAS kanal k projektu
+      // („zustavaji nam v chatu projekty, ktere uz jsou ukoncene").
       if (!isActiveProjectStatus(data.statusName)) {
         void uzavriDotazyProjektu(params.id).catch(() => undefined);
+        void uzavriKanalProjektu(params.id).catch(() => undefined);
+      } else {
+        // Vraceny projekt patri zpatky do seznamu.
+        void otevriKanalProjektu(params.id).catch(() => undefined);
       }
     }
 

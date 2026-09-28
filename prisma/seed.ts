@@ -211,6 +211,7 @@ async function main() {
   await vlozPodpisNaFaktury();
   await backlogZListyDoPrehledu();
   await vedouciPobocek();
+  await uzavriKanalyUkoncenychProjektu();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
 
@@ -1879,6 +1880,46 @@ async function parametrySpravujiOndrejAPeter() {
     console.log(`  technicke parametry: spravuji ${lide.map((u) => u.email).join(', ')}`);
   } catch (err) {
     console.warn('  technicke parametry: spravce se nepodarilo nastavit:', err);
+  }
+}
+
+/**
+ * JEDNORAZOVY UKLID CHATU (zadani 28. 9. 2026: „zustavaji nam v chatu
+ * projekty, ktere uz jsou ukoncene").
+ *
+ * Kanal k projektu se od ted zavira sam, kdyz projekt skonci - viz
+ * uzavriKanalProjektu v lib/chatServer.ts. Tenhle krok doresi historii:
+ * projekty, ktere skoncily driv, nez se to zacalo hlidat.
+ *
+ * ZAVIRA, NEMAZE. Konverzace dostane uzavrenoAt a tim vypadne ze seznamu;
+ * zpravy zustavaji v databazi. Rozhoduje priznak `finished` - stitek stavu
+ * muze u davno uzavrene zakazky zustat na cemkoliv (viz poznamka
+ * v lib/projectTypes.ts).
+ */
+async function uzavriKanalyUkoncenychProjektu() {
+  const ZNAMKA = 'chat-uzavrit-ukoncene-projekty';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+
+    const ukoncene = await prisma.projectMeta.findMany({
+      where: { finished: true },
+      select: { caflouProjectId: true },
+    });
+    if (ukoncene.length > 0) {
+      const { count } = await prisma.conversation.updateMany({
+        where: {
+          kind: 'PROJEKT',
+          uzavrenoAt: null,
+          caflouProjectId: { in: ukoncene.map((p) => p.caflouProjectId) },
+        },
+        data: { uzavrenoAt: new Date() },
+      });
+      console.log(`  chat: uzavreno ${count} kanalu ukoncenych projektu`);
+    }
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+  } catch (err) {
+    console.warn('  chat: kanaly ukoncenych projektu se nepodarilo uzavrit:', err);
   }
 }
 
