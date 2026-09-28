@@ -28,6 +28,26 @@ function tedVPraze(ted: Date = new Date()): string {
   return `${d('year')}-${d('month')}-${d('day')}T${d('hour')}:${d('minute')}`;
 }
 
+/**
+ * Dnešek v Praze jako „YYYY-MM-DD" (zadání 28. 9. 2026: „to datum by se mělo
+ * primárně nastavit na dnes").
+ *
+ * Pásmo je napevno pražské - stejné jako v `jePoTerminu`, ať se „dnes"
+ * a „po termínu" nikdy nerozejdou. Vedlejší výhoda: vyjde to stejně na serveru
+ * (běží v UTC) i v prohlížeči, takže si React při hydrataci nestěžuje, že mu
+ * v políčku přistálo jiné datum, než jaké vykreslil server.
+ */
+export function dnesVPraze(ted: Date = new Date()): string {
+  return tedVPraze(ted).slice(0, 10);
+}
+
+/** Zítřek v Praze jako „YYYY-MM-DD" - jen pro popisek „zítra". */
+export function zitraVPraze(ted: Date = new Date()): string {
+  const den = new Date(`${dnesVPraze(ted)}T12:00:00Z`);
+  den.setUTCDate(den.getUTCDate() + 1);
+  return den.toISOString().slice(0, 10);
+}
+
 /** Je úkol po termínu? Bez času se počítá až od dalšího dne. */
 export function jePoTerminu(dueDate: string | null, dueTime: string | null, ted: Date = new Date()): boolean {
   if (!dueDate) return false;

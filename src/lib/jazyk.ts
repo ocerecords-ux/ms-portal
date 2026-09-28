@@ -1552,6 +1552,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'ukoly.terminNepovinne': { cs: 'Termín (nepovinné)', en: 'Due date (optional)' },
   'ukoly.doKolikaHodin': { cs: 'Do kolika hodin (nepovinné)', en: 'Due time (optional)' },
   'ukoly.nejdrivDatum': { cs: 'Nejdřív vyberte datum', en: 'Choose a date first' },
+  // Popisek pod políčkem s datem (28. 9. 2026) - datum je předvyplněné na dnešek.
+  'ukoly.terminDnes': { cs: 'Termín: dnes', en: 'Due: today' },
+  'ukoly.terminZitra': { cs: 'Termín: zítra', en: 'Due: tomorrow' },
+  'ukoly.terminDatum': { cs: 'Termín: {datum}', en: 'Due: {datum}' },
+  'ukoly.terminZadny': { cs: 'Bez termínu', en: 'No due date' },
   'ukoly.pridat': { cs: 'Přidat', en: 'Add' },
   'ukoly.zadneOtevrene': { cs: 'Žádné otevřené úkoly. 👌', en: 'No open tasks. 👌' },
   'ukoly.odKoho': { cs: 'od {jmeno}', en: 'from {jmeno}' },

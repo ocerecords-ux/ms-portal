@@ -8,8 +8,9 @@ import { ZalozkyDoku } from './ZalozkyDoku';
 import { DatumPole } from '@/components/DatumPole';
 import { ZadaneUkoly, type ZadanyUkolVSeznamu } from './ZadaneUkoly';
 import { UpravaMehoUkolu } from './UpravaMehoUkolu';
-import { jePoTerminu, popisTerminu } from '@/lib/terminUkolu';
+import { dnesVPraze, jePoTerminu, popisTerminu, zitraVPraze } from '@/lib/terminUkolu';
 import { useJazyk, usePreklad } from './JazykProvider';
+import type { Jazyk } from '@/lib/jazyk';
 
 /**
  * Úkoly pořád po ruce (zadani 8. 9. 2026: "aby byl ten to do list pořád po
@@ -62,6 +63,22 @@ function Chevron({ direction }: { direction: 'left' | 'right' }) {
   );
 }
 
+/**
+ * Popisek pod políčkem s datem (zadání 28. 9. 2026: „někde tam napsat, že je to
+ * dnes"). Samotné políčko ukazuje jen „28.09.2026" a z toho není na první
+ * pohled poznat, jestli je to dneska, nebo zbytek po minulém úkolu.
+ */
+function popisVybranehoDne(
+  dueDate: string,
+  t: (klic: string, hodnoty?: Record<string, string | number>) => string,
+  jazyk: Jazyk,
+): string {
+  if (!dueDate) return t('ukoly.terminZadny');
+  if (dueDate === dnesVPraze()) return t('ukoly.terminDnes');
+  if (dueDate === zitraVPraze()) return t('ukoly.terminZitra');
+  return t('ukoly.terminDatum', { datum: popisTerminu(dueDate, null, jazyk) });
+}
+
 export function TaskDock({ tasks }: { tasks: Task[] }) {
   const t = usePreklad();
   const jazyk = useJazyk();
@@ -70,7 +87,10 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
   const pocty = usePoctyDoku();
   const expanded = dok === 'ukoly';
   const [title, setTitle] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  // Datum je předvyplněné na dnešek (zadání 28. 9. 2026) - většina úkolů se
+  // zadává na dnešek a doklikávat se každý den do kalendáře bylo zbytečné.
+  // Kdo termín nechce, políčko vymaže a popisek pod ním ukáže „Bez termínu".
+  const [dueDate, setDueDate] = useState(dnesVPraze());
   const [dueTime, setDueTime] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +165,8 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
     });
     if (ok) {
       setTitle('');
-      setDueDate('');
+      // Zpátky na dnešek, ne na prázdno - další úkol je zase nejspíš na dnes.
+      setDueDate(dnesVPraze());
       setDueTime('');
     }
   }
@@ -218,6 +239,10 @@ export function TaskDock({ tasks }: { tasks: Task[] }) {
             {t('ukoly.pridat')}
           </button>
         </div>
+        {/* Slovy, na kdy to je - viz popisVybranehoDne nahoře. */}
+        <p className="m-0 text-[11px] font-heading text-muted">
+          {popisVybranehoDne(dueDate, t, jazyk)}
+        </p>
       </form>
 
       {error && <p className="text-xs text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{error}</p>}
