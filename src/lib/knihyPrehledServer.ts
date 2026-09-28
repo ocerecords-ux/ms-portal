@@ -1,6 +1,7 @@
-import type { WorkType } from '@prisma/client';
+import type { Currency, WorkType } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { computeTotals } from '@/lib/doklady';
+import { getCnbRates } from '@/lib/cnb';
 import { DEFAULT_BUDGET_SETTINGS, computeBudget, type BudgetSettingsValues } from '@/lib/budget';
 import { durationMinutes, entryAmount } from '@/lib/timesheets';
 import { STAV_ODEVZDANO, stavJeOdevzdany } from '@/lib/stavyProjektu';
@@ -21,10 +22,12 @@ import { STAV_ODEVZDANO, stavJeOdevzdany } from '@/lib/stavyProjektu';
  *     se proti němu počítají výkazy za celou dobu projektu. Kdyby se čerpání
  *     ořezalo obdobím, vycházelo by u každé knihy pokaždé jinak a nikdy by
  *     neodpovídalo pravdě.
- *  3. ZISK KNIHY - tržba mínus náklady. Tržba jsou vydané faktury na projekt;
- *     když ještě žádná není, dopočítá se odhad z normostran a sazby klienta
- *     a je označený jako odhad. Náklady jsou výkazy (celkem) plus zařazené
- *     výdaje navázané na projekt.
+ *  3. ZISK KNIHY - tržba mínus náklady. Tržba je částka ze SCHVÁLENÉ NABÍDKY
+ *     (zadání 28. 9. 2026), ne součet faktur: u větších zakázek se fakturuje
+ *     po částech a půlka vyfakturované zálohy neříká, za kolik je kniha
+ *     domluvená. Bez schválené nabídky se vezme odeslaná, a když není ani ta,
+ *     odhad z normostran a sazby klienta - obojí označené jako odhad. Náklady
+ *     jsou výkazy (celkem) plus zařazené výdaje navázané na projekt.
  *
  * MĚNY A JEDNOTKY. Výkazy a rozpočty se v portálu drží v CELÝCH KORUNÁCH,
  * doklady v nejmenší jednotce (haléře). Tady se všechno převádí na celé
@@ -244,7 +247,7 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
   const settings: BudgetSettingsValues = nastaveni ?? DEFAULT_BUDGET_SETTINGS;
   const idKnih = projekty.map((p) => p.caflouProjectId);
 
-  const [vykazyKnih, faktury, vydaje, udalosti] = await Promise.all([
+  const [vykazyKnih, nabidkyKnih, vydaje, udalosti] = await Promise.all([
     /** Čerpání rozpočtu se počítá za celou dobu projektu - viz poznámka nahoře. */
     idKnih.length
       ? prisma.timesheetEntry.findMany({
@@ -257,12 +260,14 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
           },
         })
       : Promise.resolve([]),
+    /** Tržba z NABÍDKY, ne z faktur - viz poznámka u nactiKnihyUkazatele. */
     idKnih.length
-      ? prisma.invoice.findMany({
-          where: { caflouProjectId: { in: idKnih }, status: { in: ['SENT', 'PAID'] } },
+      ? prisma.offer.findMany({
+          where: { caflouProjectId: { in: idKnih }, status: { in: ['APPROVED', 'SENT'] } },
           select: {
             caflouProjectId: true,
-            exchangeRate: true,
+            status: true,
+            currency: true,
             slevaProcent: true,
             slevaMinor: true,
             items: { select: { quantity: true, unitPriceMinor: true, vatRate: true } },
@@ -366,16 +371,20 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
     );
   }
 
-  const trzby = new Map<string, number>();
-  for (const fa of faktury) {
-    if (!fa.caflouProjectId) continue;
-    // Doklady jsou v haléřích, výkazy v korunách - tady se to srovná.
-    const castka = Math.round(
-      (computeTotals(fa.items, { slevaProcent: fa.slevaProcent, slevaMinor: fa.slevaMinor }).exVat *
-        (fa.exchangeRate || 1)) /
-        100,
-    );
-    trzby.set(fa.caflouProjectId, (trzby.get(fa.caflouProjectId) ?? 0) + castka);
+  // Doklady jsou v haléřích, výkazy v korunách - tady se to srovná.
+  const kurzyRozpadu = nabidkyKnih.some((n) => n.currency !== 'CZK') ? await getCnbRates() : null;
+  const trzbySchvalenePrehled = new Map<string, number>();
+  const trzbyOdeslanePrehled = new Map<string, number>();
+  for (const n of nabidkyKnih) {
+    if (!n.caflouProjectId) continue;
+    const bezDph = computeTotals(n.items, {
+      slevaProcent: n.slevaProcent,
+      slevaMinor: n.slevaMinor,
+    }).exVat;
+    const kurz = n.currency === 'CZK' ? 1 : (kurzyRozpadu?.rates[n.currency] ?? 1);
+    const castka = Math.round((bezDph * kurz) / 100);
+    const kam = n.status === 'APPROVED' ? trzbySchvalenePrehled : trzbyOdeslanePrehled;
+    kam.set(n.caflouProjectId, (kam.get(n.caflouProjectId) ?? 0) + castka);
   }
 
   const naklady = new Map<string, number>();
@@ -395,10 +404,12 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
     const rozpocet = computeBudget(p.pageCount ?? 0, settings);
     const vycerpano = vycerpanoCelkem.get(p.caflouProjectId) ?? 0;
     const vydajeKnihy = naklady.get(p.caflouProjectId) ?? 0;
-    const trzbaFaktur = trzby.get(p.caflouProjectId) ?? 0;
+    const schvalena = trzbySchvalenePrehled.get(p.caflouProjectId) ?? 0;
+    const odeslana = trzbyOdeslanePrehled.get(p.caflouProjectId) ?? 0;
     const sazba = p.company?.ratePerPage ?? null;
-    const trzbaOdhad = trzbaFaktur === 0 && sazba != null && sazba > 0;
-    const trzba = trzbaOdhad ? (p.pageCount ?? 0) * (sazba as number) : trzbaFaktur;
+    const zSazby = sazba != null && sazba > 0 ? (p.pageCount ?? 0) * sazba : 0;
+    const trzba = schvalena > 0 ? schvalena : odeslana > 0 ? odeslana : zSazby;
+    const trzbaOdhad = schvalena === 0 && trzba > 0;
     const nakladyKnihy = vycerpano + vydajeKnihy;
 
     const zHistorie = odevzdano.get(p.caflouProjectId) ?? null;
@@ -520,6 +531,22 @@ export type PodilCloveka = {
   castka: number;
 };
 
+/**
+ * Rozpad přetečení podle druhu práce (zadání 28. 9. 2026: „když to rozkliknu,
+ * tak chci vidět, kolik a na čem to přeteklo. Jestli na střihu, nebo natáčení").
+ *
+ * Rozpočet zná svoje dvě části zvlášť - natáčecí frekvence a střihové
+ * jednotky - takže se dá říct nejen ŽE se přeteklo, ale KDE. „Ostatní" rozpočet
+ * nemá; co se na knize vykáže mimo natáčení a střih, jde celé nad rámec.
+ */
+export type RozpadDruhu = {
+  rozpocetHodin: number;
+  hodin: number;
+  /** Kladné = přeteklo. */
+  preteceniHodin: number;
+  castka: number;
+};
+
 export type KnihaUkazatel = {
   id: string;
   nazev: string;
@@ -535,10 +562,15 @@ export type KnihaUkazatel = {
   /** Kladné číslo = přeteklo. Null, když rozpočet není z čeho spočítat. */
   preteceniProcent: number | null;
   preteceniHodin: number;
+  /** O kolik korun se přejel rozpočet. Záporné = zbylo. */
+  preteceniKc: number;
   trzba: number;
   trzbaOdhad: boolean;
   naklady: number;
   zisk: number;
+  nataceni: RozpadDruhu;
+  strih: RozpadDruhu;
+  ostatni: RozpadDruhu;
   lide: PodilCloveka[];
 };
 
@@ -551,7 +583,14 @@ export type MesicKnih = {
   prumernyZisk: number | null;
 };
 
+/** Volba období nad seznamem: tenhle měsíc, minulý, konkrétní, nebo všechno. */
+export type VolbaObdobi = 'tento' | 'minuly' | 'vse' | string;
+
 export type KnihyUkazatele = {
+  /** Které měsíce jdou vybrat - měsíce, ve kterých se něco uzavřelo. */
+  dostupneMesice: { klic: string; popis: string }[];
+  /** Souhrn za VYBRANÉ období - budík zisku se řídí jím, ne vždy dneškem. */
+  vybrany: MesicKnih;
   celkem: {
     knih: number;
     rozpocet: number;
@@ -569,7 +608,10 @@ export type KnihyUkazatele = {
   knihy: KnihaUkazatel[];
 };
 
-export async function nactiKnihyUkazatele(ted: Date = new Date()): Promise<KnihyUkazatele> {
+export async function nactiKnihyUkazatele(
+  ted: Date = new Date(),
+  obdobi: VolbaObdobi = 'tento',
+): Promise<KnihyUkazatele> {
   const rok = ted.getUTCFullYear();
   const mesic = ted.getUTCMonth();
   const zacatekTohoto = new Date(Date.UTC(rok, mesic, 1));
@@ -596,7 +638,7 @@ export async function nactiKnihyUkazatele(ted: Date = new Date()): Promise<Knihy
   const idKnih = projekty.map((p) => p.caflouProjectId);
   if (idKnih.length === 0) return prazdneUkazatele(zacatekTohoto, zacatekMinuleho);
 
-  const [vykazy, faktury, vydaje, udalosti] = await Promise.all([
+  const [vykazy, nabidky, vydaje, udalosti] = await Promise.all([
     prisma.timesheetEntry.findMany({
       where: { caflouProjectId: { in: idKnih } },
       select: {
@@ -609,11 +651,23 @@ export async function nactiKnihyUkazatele(ted: Date = new Date()): Promise<Knihy
         user: { select: { name: true, email: true } },
       },
     }),
-    prisma.invoice.findMany({
-      where: { caflouProjectId: { in: idKnih }, status: { in: ['SENT', 'PAID'] } },
+    /**
+     * TRŽBA SE BERE Z NABÍDKY, NE Z FAKTUR (zadání 28. 9. 2026: „počítej vždy
+     * z nabídky ten zisk celkový. Ne z faktury. Může se stát, že to nebude
+     * relevantní a je to jen částečná faktura se zálohou. Takže primárně platí
+     * částka z nabídky.").
+     *
+     * U větších zakázek se fakturuje po částech (záloha, doplatek), takže
+     * součet faktur v půlce projektu říká, kolik už přišlo peněz - ne za kolik
+     * je kniha domluvená. Zisk knihy se počítá z ceny, na které jsme se
+     * s klientem shodli, a ta je v nabídce.
+     */
+    prisma.offer.findMany({
+      where: { caflouProjectId: { in: idKnih }, status: { in: ['APPROVED', 'SENT'] } },
       select: {
         caflouProjectId: true,
-        exchangeRate: true,
+        status: true,
+        currency: true,
         slevaProcent: true,
         slevaMinor: true,
         items: { select: { quantity: true, unitPriceMinor: true, vatRate: true } },
@@ -630,22 +684,52 @@ export async function nactiKnihyUkazatele(ted: Date = new Date()): Promise<Knihy
     }),
   ]);
 
-  /** Výkazy po projektech - hodiny, koruny a rozpad po lidech. */
+  /** Výkazy po projektech - hodiny, koruny, rozpad po druhu práce i po lidech. */
   const prace = new Map<
     string,
-    { hodin: number; castka: number; lide: Map<string, PodilCloveka> }
+    {
+      hodin: number;
+      castka: number;
+      nataceniHodin: number;
+      nataceniCastka: number;
+      strihHodin: number;
+      strihCastka: number;
+      ostatniHodin: number;
+      ostatniCastka: number;
+      lide: Map<string, PodilCloveka>;
+    }
   >();
   for (const v of vykazy) {
     if (!v.caflouProjectId) continue;
     let p = prace.get(v.caflouProjectId);
     if (!p) {
-      p = { hodin: 0, castka: 0, lide: new Map() };
+      p = {
+        hodin: 0,
+        castka: 0,
+        nataceniHodin: 0,
+        nataceniCastka: 0,
+        strihHodin: 0,
+        strihCastka: 0,
+        ostatniHodin: 0,
+        ostatniCastka: 0,
+        lide: new Map(),
+      };
       prace.set(v.caflouProjectId, p);
     }
     const hodin = durationMinutes(v.startMinutes, v.endMinutes) / 60;
     const castka = entryAmount(v.startMinutes, v.endMinutes, v.hourlyRateSnapshot);
     p.hodin += hodin;
     p.castka += castka;
+    if (v.workType === 'RECORDING') {
+      p.nataceniHodin += hodin;
+      p.nataceniCastka += castka;
+    } else if (v.workType === 'EDITING') {
+      p.strihHodin += hodin;
+      p.strihCastka += castka;
+    } else {
+      p.ostatniHodin += hodin;
+      p.ostatniCastka += castka;
+    }
 
     let c = p.lide.get(v.userId);
     if (!c) {
@@ -665,15 +749,36 @@ export async function nactiKnihyUkazatele(ted: Date = new Date()): Promise<Knihy
     c.castka += castka;
   }
 
-  const trzby = new Map<string, number>();
-  for (const fa of faktury) {
-    if (!fa.caflouProjectId) continue;
-    const castka = Math.round(
-      (computeTotals(fa.items, { slevaProcent: fa.slevaProcent, slevaMinor: fa.slevaMinor }).exVat *
-        (fa.exchangeRate || 1)) /
-        100,
-    );
-    trzby.set(fa.caflouProjectId, (trzby.get(fa.caflouProjectId) ?? 0) + castka);
+  /**
+   * Nabídky v cizí měně se přepočítají dnešním kurzem ČNB - u nabídky se kurz
+   * neukládá (na rozdíl od faktury, která ho má od vystavení). Audioknihy se
+   * dělají v korunách, takže se to prakticky netýká ničeho; kdyby kurz nebyl
+   * k dispozici, počítá se částka tak, jak je, a je to poznat na tom, že měna
+   * není koruna.
+   */
+  const kurzy = nabidky.some((n) => n.currency !== 'CZK') ? await getCnbRates() : null;
+  const doKorun = (minor: number, mena: Currency) => {
+    if (mena === 'CZK') return Math.round(minor / 100);
+    const kurz = kurzy?.rates[mena];
+    return Math.round((minor * (kurz ?? 1)) / 100);
+  };
+
+  /**
+   * SCHVÁLENÁ NABÍDKA JE CENA. Když žádná schválená není, vezme se odeslaná -
+   * ta ještě není potvrzená, takže se tržba označí jako odhad. Víc schválených
+   * nabídek na jeden projekt se sečte: vícepráce se domlouvají dodatkem.
+   */
+  const trzbySchvalene = new Map<string, number>();
+  const trzbyOdeslane = new Map<string, number>();
+  for (const n of nabidky) {
+    if (!n.caflouProjectId) continue;
+    const bezDph = computeTotals(n.items, {
+      slevaProcent: n.slevaProcent,
+      slevaMinor: n.slevaMinor,
+    }).exVat;
+    const castka = doKorun(bezDph, n.currency);
+    const kam = n.status === 'APPROVED' ? trzbySchvalene : trzbyOdeslane;
+    kam.set(n.caflouProjectId, (kam.get(n.caflouProjectId) ?? 0) + castka);
   }
 
   const vydajeMap = new Map<string, number>();
@@ -690,15 +795,22 @@ export async function nactiKnihyUkazatele(ted: Date = new Date()): Promise<Knihy
 
   const vsechny: KnihaUkazatel[] = projekty.map((p) => {
     const rozpocet = computeBudget(p.pageCount ?? 0, settings);
-    const rozpocetHodin = (rozpocet.sessions + rozpocet.editingUnits) * settings.sessionHours;
+    const nataceniRozpocetHodin = rozpocet.sessions * settings.sessionHours;
+    const strihRozpocetHodin = rozpocet.editingUnits * settings.sessionHours;
+    const rozpocetHodin = nataceniRozpocetHodin + strihRozpocetHodin;
     const prac = prace.get(p.caflouProjectId);
     const hodin = prac?.hodin ?? 0;
     const vycerpano = prac?.castka ?? 0;
     const vydajeKnihy = vydajeMap.get(p.caflouProjectId) ?? 0;
-    const trzbaFaktur = trzby.get(p.caflouProjectId) ?? 0;
+
+    // Schválená nabídka > odeslaná nabídka > odhad z normostran a sazby klienta.
+    const schvalena = trzbySchvalene.get(p.caflouProjectId) ?? 0;
+    const odeslana = trzbyOdeslane.get(p.caflouProjectId) ?? 0;
     const sazba = p.company?.ratePerPage ?? null;
-    const trzbaOdhad = trzbaFaktur === 0 && sazba != null && sazba > 0;
-    const trzba = trzbaOdhad ? (p.pageCount ?? 0) * (sazba as number) : trzbaFaktur;
+    const zSazby = sazba != null && sazba > 0 ? (p.pageCount ?? 0) * sazba : 0;
+    const trzba = schvalena > 0 ? schvalena : odeslana > 0 ? odeslana : zSazby;
+    const trzbaOdhad = schvalena === 0 && trzba > 0;
+
     const naklady = vycerpano + vydajeKnihy;
 
     const zHistorie = odevzdano.get(p.caflouProjectId) ?? null;
@@ -717,10 +829,30 @@ export async function nactiKnihyUkazatele(ted: Date = new Date()): Promise<Knihy
       vycerpano,
       preteceniProcent: rozpocet.total > 0 ? ((vycerpano - rozpocet.total) / rozpocet.total) * 100 : null,
       preteceniHodin: hodin - rozpocetHodin,
+      preteceniKc: vycerpano - rozpocet.total,
       trzba,
       trzbaOdhad,
       naklady,
       zisk: trzba - naklady,
+      nataceni: {
+        rozpocetHodin: nataceniRozpocetHodin,
+        hodin: prac?.nataceniHodin ?? 0,
+        preteceniHodin: (prac?.nataceniHodin ?? 0) - nataceniRozpocetHodin,
+        castka: prac?.nataceniCastka ?? 0,
+      },
+      strih: {
+        rozpocetHodin: strihRozpocetHodin,
+        hodin: prac?.strihHodin ?? 0,
+        preteceniHodin: (prac?.strihHodin ?? 0) - strihRozpocetHodin,
+        castka: prac?.strihCastka ?? 0,
+      },
+      // Ostatní práce rozpočet nemá - co se na ni vykáže, jde celé nad rámec.
+      ostatni: {
+        rozpocetHodin: 0,
+        hodin: prac?.ostatniHodin ?? 0,
+        preteceniHodin: prac?.ostatniHodin ?? 0,
+        castka: prac?.ostatniCastka ?? 0,
+      },
       lide: Array.from(prac?.lide.values() ?? []).sort((a, b) => b.castka - a.castka),
     };
   });
@@ -742,18 +874,55 @@ export async function nactiKnihyUkazatele(ted: Date = new Date()): Promise<Knihy
   const tentoKnihy = vMesici(zacatekTohoto, konec);
   const minuleKnihy = vMesici(zacatekMinuleho, zacatekTohoto);
 
-  const doMesice = (klic: string, knihy: KnihaUkazatel[]): MesicKnih => {
+  const doMesice = (klic: string, popis: string, knihy: KnihaUkazatel[]): MesicKnih => {
     const zisk = knihy.reduce((s, k) => s + k.zisk, 0);
     return {
       klic,
-      popis: popisMesice(klic),
+      popis,
       knih: knihy.length,
       zisk,
       prumernyZisk: knihy.length > 0 ? Math.round(zisk / knihy.length) : null,
     };
   };
 
+  /**
+   * VÝBĚR OBDOBÍ (zadání 28. 9. 2026: „potřebuju, aby se tady v tom přehledu
+   * dal přepnout měsíc, na který se dívám. Tzn. tento měsíc, minulý
+   * a konkrétní měsíc nebo všechno. Aby se mi zobrazily jen projekty dokončené
+   * v tu dobu.").
+   *
+   * Uzavřené knihy jsou v paměti všechny, takže se filtruje až tady - druhý
+   * dotaz do databáze kvůli změně měsíce by nic nepřinesl.
+   */
+  const uzavrene = vsechny.filter((k) => k.odevzdanoAt);
+  const dostupneMesice = Array.from(
+    new Set(uzavrene.map((k) => klicMesice(k.odevzdanoAt as Date))),
+  )
+    .sort((a, b) => b.localeCompare(a))
+    .map((klic) => ({ klic, popis: popisMesice(klic) }));
+
+  let vybraneKnihy: KnihaUkazatel[];
+  let vybrany: MesicKnih;
+  if (obdobi === 'vse') {
+    vybraneKnihy = uzavrene;
+    vybrany = doMesice('vse', 'Všechna uzavřená', uzavrene);
+  } else if (obdobi === 'minuly') {
+    vybraneKnihy = minuleKnihy;
+    vybrany = doMesice(klicMesice(zacatekMinuleho), popisMesice(klicMesice(zacatekMinuleho)), minuleKnihy);
+  } else if (/^\d{4}-\d{2}$/.test(obdobi)) {
+    const [r, m] = obdobi.split('-').map(Number);
+    const od = new Date(Date.UTC(r, m - 1, 1));
+    const doKdy = new Date(Date.UTC(r, m, 1));
+    vybraneKnihy = vMesici(od, doKdy);
+    vybrany = doMesice(obdobi, popisMesice(obdobi), vybraneKnihy);
+  } else {
+    vybraneKnihy = tentoKnihy;
+    vybrany = doMesice(klicMesice(zacatekTohoto), popisMesice(klicMesice(zacatekTohoto)), tentoKnihy);
+  }
+
   return {
+    dostupneMesice,
+    vybrany,
     celkem: {
       knih: rozdelane.length,
       rozpocet: rozpocetCelkem,
@@ -765,9 +934,13 @@ export async function nactiKnihyUkazatele(ted: Date = new Date()): Promise<Knihy
       preteceniHodin: hodinCelkem - rozpocetHodinCelkem,
       prekrocenych: rozdelane.filter((k) => (k.preteceniProcent ?? 0) > 0).length,
     },
-    tento: doMesice(klicMesice(zacatekTohoto), tentoKnihy),
-    minuly: doMesice(klicMesice(zacatekMinuleho), minuleKnihy),
-    knihy: [...tentoKnihy, ...minuleKnihy].sort(
+    tento: doMesice(klicMesice(zacatekTohoto), popisMesice(klicMesice(zacatekTohoto)), tentoKnihy),
+    minuly: doMesice(
+      klicMesice(zacatekMinuleho),
+      popisMesice(klicMesice(zacatekMinuleho)),
+      minuleKnihy,
+    ),
+    knihy: [...vybraneKnihy].sort(
       (a, b) => (b.odevzdanoAt?.getTime() ?? 0) - (a.odevzdanoAt?.getTime() ?? 0),
     ),
   };
@@ -782,6 +955,8 @@ function prazdneUkazatele(tento: Date, minuly: Date): KnihyUkazatele {
     prumernyZisk: null,
   });
   return {
+    dostupneMesice: [],
+    vybrany: prazdny(tento),
     celkem: {
       knih: 0,
       rozpocet: 0,

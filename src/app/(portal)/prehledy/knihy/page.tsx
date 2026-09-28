@@ -13,16 +13,30 @@ import { Ukazatele } from './Ukazatele';
  * Co který znamená a proč se počítá právě takhle, je v lib/knihyPrehledServer.ts.
  * Původní podoba s filtry, grafy a výpisem výkazů žije dál na /prehledy/knihy/rozpad.
  *
+ * Vybrané období je v adrese, takže se dá přehled poslat odkazem a tlačítko
+ * Zpět vrací předchozí měsíc.
+ *
  * Jen pro admina - jsou to mzdové údaje celého týmu a marže knih.
  */
 export const dynamic = 'force-dynamic';
 
-export default async function KnihyPage() {
+export default async function KnihyPage({
+  searchParams,
+}: {
+  searchParams?: { obdobi?: string };
+}) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect('/login');
   if (session.user.role !== 'ADMIN') redirect('/prehledy');
 
-  const [data, cile] = await Promise.all([nactiKnihyUkazatele(new Date()), nactiCile()]);
+  const zadano = searchParams?.obdobi?.trim() ?? '';
+  const obdobi =
+    zadano === 'minuly' || zadano === 'vse' || /^\d{4}-\d{2}$/.test(zadano) ? zadano : 'tento';
 
-  return <Ukazatele data={data} cile={cile} />;
+  const [data, cile] = await Promise.all([
+    nactiKnihyUkazatele(new Date(), obdobi),
+    nactiCile(),
+  ]);
+
+  return <Ukazatele data={data} cile={cile} obdobi={obdobi} />;
 }
