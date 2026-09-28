@@ -2115,13 +2115,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.svatekIkona': { cs: 'Státní svátek: {nazev}', en: 'Public holiday: {nazev}' },
   'kalendar.svatekNadpis': { cs: 'Státní svátek', en: 'Public holiday' },
   'kalendar.hovorIkona': { cs: 'Otevřít videohovor porady', en: 'Open the meeting video call' },
-  'kalendar.pasmoStejne': {
-    cs: 'Časy jsou v pásmu studia ({studio}).',
-    en: 'Times are shown in the studio’s time zone ({studio}).',
-  },
-  'kalendar.pasmoJine': {
-    cs: 'Časy jsou v pásmu studia ({studio}) — vy jste teď v {vase}.',
-    en: 'Times are shown in the studio’s time zone ({studio}) — you are currently in {vase}.',
+  'kalendar.pasmoPopisek': { cs: 'Časy v pásmu', en: 'Times shown in' },
+  'kalendar.pasmoStudiaZkratka': { cs: 'pásmo studia', en: 'the studio' },
+  'kalendar.pasmoVaseZkratka': { cs: 'vaše pásmo', en: 'your zone' },
+  'kalendar.pasmoJineVarovani': {
+    cs: 'Pozor: studio jede v {studio}',
+    en: 'Note: the studio runs on {studio}',
   },
 
   // Odběr kalendáře pro herce

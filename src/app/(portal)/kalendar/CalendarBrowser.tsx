@@ -232,7 +232,7 @@ export function CalendarBrowser({
   panely,
   studios,
   selectedStudioIds,
-  timezone,
+  timezone: pasmoStudiaVychozi,
   view,
   anchorIso,
   days,
@@ -318,6 +318,45 @@ export function CalendarBrowser({
   const router = useRouter();
   const t = usePreklad();
   const jazyk = useJazyk();
+
+  /**
+   * V JAKÉM PÁSMU SE ČASY UKAZUJÍ (zadání 28. 9. 2026: „ještě udělej, ať se
+   * můžu přepínat mezi časovými pásmy").
+   *
+   * Výchozí je pásmo studia - devátá u brněnské frekvence je devátá v Brně,
+   * ať se na to člověk dívá odkudkoliv. Kdo sedí v Londýně, si ale může
+   * přepnout na svoje a číst kalendář v čase, ve kterém zrovna žije.
+   *
+   * MĚNÍ SE JEN ZOBRAZENÍ, NIC SE JINAK NEPŘEPOČÍTÁVÁ. Když se událost
+   * zakládá, bere si okno pásmo vybraného STUDIA (pasmoStudia v UdalostForm),
+   * takže se do databáze uloží pořád ten správný okamžik. Klik do mřížky
+   * spočítá okamžik z toho, co člověk vidí - klik na 9:00 v londýnském
+   * pohledu je devátá londýnská, a formulář ji pak ukáže jako desátou
+   * brněnskou. To je správně, ne chyba.
+   *
+   * Volba se pamatuje v prohlížeči; popisek vždycky říká, které pásmo to je,
+   * takže se nedá splést ani po týdnu.
+   */
+  const [pasmoZobrazeni, setPasmoZobrazeni] = useState(pasmoStudiaVychozi);
+  useEffect(() => {
+    try {
+      const ulozene = window.localStorage.getItem(KLIC_PASMA);
+      if (ulozene && jePlatnePasmo(ulozene)) setPasmoZobrazeni(ulozene);
+    } catch {
+      /* Soukromé okno nebo zakázané úložiště - jede se v pásmu studia. */
+    }
+  }, []);
+  const zmenPasmo = (nove: string) => {
+    setPasmoZobrazeni(nove);
+    try {
+      if (nove === pasmoStudiaVychozi) window.localStorage.removeItem(KLIC_PASMA);
+      else window.localStorage.setItem(KLIC_PASMA, nove);
+    } catch {
+      /* Nepodařilo se zapamatovat - na zobrazení to nic nemění. */
+    }
+  };
+  /** Odsud dál je `timezone` to, v čem se KRESLÍ. */
+  const timezone = pasmoZobrazeni;
 
   /**
    * TELEFON NA ŠÍŘKU = JEN MŘÍŽKA (zadání 21. 9. 2026: „když jsem na stránce
@@ -1106,7 +1145,12 @@ export function CalendarBrowser({
       {/* V JAKÉM PÁSMU ČASY JSOU (28. 9. 2026: „u těch kalendářů bych přidal
           časové pásmo, v jakém já ty kalendáře vidím. Když třeba budu
           v Londýně"). */}
-      <PasmoKalendare timezone={timezone} />
+      <PrepinacPasma
+        vybrane={pasmoZobrazeni}
+        pasmoStudia={pasmoStudiaVychozi}
+        studia={studios}
+        onZmena={zmenPasmo}
+      />
 
       {/* Studia - dají se prolnout, každé má svou barvu.
 
@@ -2870,18 +2914,62 @@ function IkonaRezie({ velikost = 14, odkaz = null }: { velikost?: number; odkaz?
  * u režie na dálku: bublina události je <button>, odkaz se do ní vnořit nedá,
  * takže je z toho `role="link"` a klik se zastaví, ať pod ním neskočí detail.
  */
+/** Klíč, pod kterým si prohlížeč pamatuje zvolené pásmo zobrazení. */
+const KLIC_PASMA = 'msportal_pasmo_kalendare';
+
+/** Je to vůbec pásmo, které prohlížeč zná? Uložená hodnota může být stará. */
+function jePlatnePasmo(pasmo: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: pasmo });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** „GMT+2" pro dané pásmo - letní čas si Intl pohlídá samo. */
+function posunPasma(jazyk: Jazyk, pasmo: string): string {
+  try {
+    const casti = new Intl.DateTimeFormat(kodJazyka(jazyk), {
+      timeZone: pasmo,
+      timeZoneName: 'shortOffset',
+    }).formatToParts(new Date());
+    return casti.find((c) => c.type === 'timeZoneName')?.value ?? '';
+  } catch {
+    return '';
+  }
+}
+
+/** Z „Europe/London" udělá „London" - celou cestu nikdo číst nechce. */
+function jmenoPasma(pasmo: string): string {
+  return (pasmo.split('/').pop() ?? pasmo).replace(/_/g, ' ');
+}
+
 /**
- * V JAKÉM ČASOVÉM PÁSMU JSOU ČASY V KALENDÁŘI (zadání 28. 9. 2026).
+ * PŘEPÍNAČ ČASOVÉHO PÁSMA (zadání 28. 9. 2026: „ještě udělej, ať se můžu
+ * přepínat mezi časovými pásmy"; navazuje na 28. 9.: „u těch kalendářů bych
+ * přidal časové pásmo, v jakém já ty kalendáře vidím").
  *
- * Kalendář vždycky ukazuje ČAS STUDIA - devátá u brněnské frekvence je devátá
- * v Brně, ať se na to člověk dívá odkudkoliv. To je pro plánování správně, ale
- * z obrazovky to není poznat; kdo sedí v Londýně, přečte si devítku jako svůj
- * místní čas a přijede o hodinu jinam.
+ * V nabídce je pásmo studia (výchozí), pásmo prohlížeče, když se od něj liší,
+ * a pásma ostatních studií - typicky Praha a Londýn. Nic víc: seznam všech
+ * pásem světa by tady byl na obtíž.
  *
- * Proto se pásmo píše natvrdo, a když se liší od pásma prohlížeče, připíše se
- * i rozdíl. Když je stejné, stojí tu jen nenápadná poznámka.
+ * POPISEK VŽDYCKY ŘÍKÁ, CO JE VIDĚT. I když je vybrané pásmo studia, stojí
+ * tu věta, které to je - jinak by se po přepnutí nedalo poznat, v čem ty časy
+ * vlastně jsou, a to je horší než o řádek víc.
  */
-function PasmoKalendare({ timezone }: { timezone: string }) {
+function PrepinacPasma({
+  vybrane,
+  pasmoStudia,
+  studia,
+  onZmena,
+}: {
+  vybrane: string;
+  /** Pásmo, ve kterém kalendář jede, když se nepřepíná - pásmo studia. */
+  pasmoStudia: string;
+  studia: Studio[];
+  onZmena: (pasmo: string) => void;
+}) {
   const t = usePreklad();
   const jazyk = useJazyk();
   /** Pásmo prohlížeče se pozná až v něm - na serveru by vyšlo pásmo Vercelu. */
@@ -2894,32 +2982,39 @@ function PasmoKalendare({ timezone }: { timezone: string }) {
     }
   }, []);
 
-  /** „GMT+2" pro dané pásmo - krátce a bez počítání s letním časem ručně. */
-  const posunPasma = (p: string): string => {
-    try {
-      const casti = new Intl.DateTimeFormat(kodJazyka(jazyk), {
-        timeZone: p,
-        timeZoneName: 'shortOffset',
-      }).formatToParts(new Date());
-      return casti.find((c) => c.type === 'timeZoneName')?.value ?? '';
-    } catch {
-      return '';
-    }
-  };
-  /** Z „Europe/London" udělá „London" - celou cestu nikdo číst nechce. */
-  const jmenoPasma = (p: string): string => (p.split('/').pop() ?? p).replace(/_/g, ' ');
+  const nabidka = Array.from(
+    new Set([pasmoStudia, ...studia.map((s) => s.timezone), ...(mistni ? [mistni] : [])]),
+  ).filter(jePlatnePasmo);
 
-  const jine = Boolean(mistni) && mistni !== timezone && posunPasma(mistni as string) !== posunPasma(timezone);
+  const popisPasma = (p: string) => `${jmenoPasma(p)} ${posunPasma(jazyk, p)}`.trim();
+  const jineNezStudio = vybrane !== pasmoStudia;
 
   return (
-    <p className="text-[11px] font-body text-muted m-0 -mt-1">
-      {jine
-        ? t('kalendar.pasmoJine', {
-            studio: `${jmenoPasma(timezone)} ${posunPasma(timezone)}`.trim(),
-            vase: `${jmenoPasma(mistni as string)} ${posunPasma(mistni as string)}`.trim(),
-          })
-        : t('kalendar.pasmoStejne', { studio: `${jmenoPasma(timezone)} ${posunPasma(timezone)}`.trim() })}
-    </p>
+    <div className="flex items-center gap-2 flex-wrap -mt-1">
+      <label className="flex items-center gap-1.5">
+        <span className="text-[11px] font-body text-muted">{t('kalendar.pasmoPopisek')}</span>
+        <VyberPole
+          value={vybrane}
+          onChange={(e) => onZmena(e.target.value)}
+          className="rounded-pill border border-line bg-field px-2.5 py-1 text-[11px] font-body text-ink outline-none focus:border-brand-purple"
+        >
+          {nabidka.map((p) => (
+            <option key={p} value={p}>
+              {popisPasma(p)}
+              {p === pasmoStudia ? ` — ${t('kalendar.pasmoStudiaZkratka')}` : ''}
+              {p === mistni && p !== pasmoStudia ? ` — ${t('kalendar.pasmoVaseZkratka')}` : ''}
+            </option>
+          ))}
+        </VyberPole>
+      </label>
+      {jineNezStudio && (
+        /* Když časy NEJSOU v pásmu studia, musí to být vidět na první pohled -
+           jinak si někdo přečte devátou jako brněnskou a přijede o hodinu jinam. */
+        <span className="text-[11px] font-heading font-semibold rounded-pill bg-brand-purple/10 text-brand-purple px-2 py-0.5">
+          {t('kalendar.pasmoJineVarovani', { studio: popisPasma(pasmoStudia) })}
+        </span>
+      )}
+    </div>
   );
 }
 
