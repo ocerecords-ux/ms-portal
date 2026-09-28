@@ -210,6 +210,7 @@ async function main() {
   await prevezmiGoogleKalendar();
   await brunoZpetneOznamPreposlech();
   await vlozPodpisNaFaktury();
+  await podpisNaSmlouvy();
   await backlogZListyDoPrehledu();
   await vedouciPobocek();
   await uzavriKanalyUkoncenychProjektu();
@@ -1600,6 +1601,39 @@ async function vlozPodpisNaFaktury() {
     console.log(`  podpis na faktury: vlozen k ${r.count} firmam`);
   } catch (e) {
     console.warn('  podpis na faktury selhal:', e);
+  }
+}
+
+/**
+ * TENTÝŽ PODPIS I NA SMLOUVY (zadání 28. 9. 2026: „v mém účtu je místo pro
+ * podpis, už jsem ho jednou dával kvůli fakturám, nastav ho i tam").
+ *
+ * Podpis na fakturách visí u fakturační firmy (IssuerCompany.podpis), kdežto
+ * smlouvy se podepisují za člověka (User.podpisSmluv) - jsou to dvě různá
+ * místa schválně: firma fakturuje, smlouvu podepisuje konkrétní člověk.
+ * Naskenovaný podpis je ale jeden a týž, takže se sem jednou zkopíruje.
+ *
+ * JEN KDE PODPIS CHYBÍ. Kdo si v Mém účtu nahrál vlastní, o něj nepřijde.
+ */
+async function podpisNaSmlouvy() {
+  const ZNAMKA = 'podpis-na-smlouvy-ondrej';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const r = await prisma.user.updateMany({
+      where: {
+        role: 'ADMIN',
+        active: true,
+        podpisSmluv: null,
+        name: { contains: 'Ondřej Černý', mode: 'insensitive' },
+        NOT: { name: { contains: 'ml.', mode: 'insensitive' } },
+      },
+      data: { podpisSmluv: PODPIS_ONDREJ },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  podpis na smlouvy: vlozen ${r.count} uctum`);
+  } catch (e) {
+    console.warn('  podpis na smlouvy selhal:', e);
   }
 }
 
