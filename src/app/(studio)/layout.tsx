@@ -8,6 +8,8 @@ import { odkazNaFotku } from '@/lib/fotky';
 import { initials } from '@/lib/chat';
 import { prelozit, type Jazyk } from '@/lib/jazyk';
 import { JazykProvider } from '@/app/(portal)/components/JazykProvider';
+import { canManageCalendar } from '@/lib/roles';
+import { maStudioSRezervacemi } from '@/lib/bookingServer';
 import { ThemeToggle } from '@/app/(portal)/components/ThemeToggle';
 import { OdhlasitSe } from './studio/OdhlasitSe';
 
@@ -31,13 +33,33 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: 'MS Studio', statusBarStyle: 'default' },
 };
 
-/** Kdo se sem dostane: klient studia a náš tým (na nahlédnutí). */
-const SMI = ['BOOKING', 'ADMIN', 'PRODUKCE'];
+/**
+ * KDO SE SEM DOSTANE (oprava 28. 9. 2026: „Matějovi Černému se děje, že když
+ * klikne na Studia na hlavním panelu, tak se tam nedostane, dostane se na
+ * projekty").
+ *
+ * Lišta a tahle stránka se neshodly. Odkaz do lišty přidává
+ * `maStudioSRezervacemi` - tedy KDO STUDIO S REZERVACEMI SPRAVUJE, což je
+ * i vedoucí pobočky. Sem se ale pouštělo podle ROLE, a v seznamu zvukař
+ * nebyl. Matěj Černý je zvukař a zároveň vedoucí londýnského studia: odkaz
+ * v liště viděl, a klik ho vyhodil na projekty.
+ *
+ * Teď o obojím rozhoduje tatáž funkce, takže se ta dvě místa nemůžou
+ * rozejít znovu. Role zůstávají jako zkratka pro ty, kdo sem chodí vždycky:
+ * BOOKING je klient studia zvenčí (ten žádné studio nespravuje) a produkce
+ * se Žůžo-labůžo sem musí dovnitř i ve chvíli, kdy zrovna žádné studio
+ * rezervace zapnuté nemá.
+ */
+async function smiDoStudia(user: { id: string; role: string }): Promise<boolean> {
+  if (user.role === 'BOOKING') return true;
+  if (canManageCalendar(user.role as never)) return true;
+  return maStudioSRezervacemi(user);
+}
 
 export default async function StudioLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
-  if (!SMI.includes(session.user.role)) redirect('/projekty');
+  if (!(await smiDoStudia({ id: session.user.id, role: session.user.role }))) redirect('/projekty');
 
   /**
    * CELÁ SEKCE JE VÝHRADNĚ ANGLICKY (upřesnění 25. 9. 2026: „žádné přepínání
