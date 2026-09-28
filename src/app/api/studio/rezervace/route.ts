@@ -7,8 +7,9 @@ import {
   nactiBookingPristup,
   nactiBookingUdalosti,
   upravRezervaci,
-  zalozRezervaci,
+  zalozRezervace,
   zrusRezervaci,
+  type PozadavekRezervace,
 } from '@/lib/bookingServer';
 
 /**
@@ -43,6 +44,16 @@ const zalozeni = z.object({
 /** Úprava je totéž co založení, jen navíc s id měněné rezervace. */
 const uprava = zalozeni.extend({ id: z.string().trim().min(1) });
 
+/**
+ * VÍC TERMINŮ NAJEDNOU (zadání 28. 9. 2026: „člověk si může naráz zabookovat
+ * víc termínů a až pak zmáčkne nějaké tlačítko"). Tělo pak místo jednoho okna
+ * nese seznam - a odejde jedno potvrzení, ne deset.
+ */
+const davka = z.object({
+  studioId: z.string().trim().min(1).optional(),
+  terminy: z.array(zalozeni).min(1).max(60),
+});
+
 export async function GET(req: NextRequest) {
   const ja = await kdoJe(req);
   if (!ja) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
@@ -64,12 +75,21 @@ export async function POST(req: NextRequest) {
   const ja = await kdoJe(req);
   if (!ja) return NextResponse.json({ error: 'Nepřihlášeno.' }, { status: 401 });
 
-  const parsed = zalozeni.safeParse(await req.json().catch(() => null));
+  const telo = await req.json().catch(() => null);
+  // Jedno okno i seznam chodí stejnou cestou - jedno okno je seznam o jednom.
+  const jeDavka = Array.isArray((telo as { terminy?: unknown } | null)?.terminy);
+  const parsed = jeDavka ? davka.safeParse(telo) : zalozeni.safeParse(telo);
   if (!parsed.success) return NextResponse.json({ error: 'Neplatná data.' }, { status: 400 });
-  const d = parsed.data;
+  const vstupy = jeDavka
+    ? (parsed.data as z.infer<typeof davka>).terminy
+    : [parsed.data as z.infer<typeof zalozeni>];
+  const studioId = jeDavka
+    ? (parsed.data as z.infer<typeof davka>).studioId
+    : (parsed.data as z.infer<typeof zalozeni>).studioId;
 
-  const pristup = await nactiBookingPristup(ja, d.studioId ?? null);
+  const pristup = await nactiBookingPristup(ja, studioId ?? null);
   if (!pristup) return NextResponse.json({ error: 'Nemáte přístup.' }, { status: 403 });
+  if (pristup.jenNahled) return NextResponse.json({ error: 'Nemáte přístup.' }, { status: 403 });
 
   const ucet = await prisma.user.findUnique({
     where: { id: ja.id },
@@ -77,33 +97,39 @@ export async function POST(req: NextRequest) {
   });
   if (!ucet) return NextResponse.json({ error: 'Účet nenalezen.' }, { status: 403 });
 
-  let start: Date;
-  let end: Date;
-  if (d.den) {
-    const [rok, mesic, den] = d.den.split('-').map(Number);
-    const okno = celodenniOkno(pristup.studio, { rok, mesic, den });
-    if (!okno) return NextResponse.json({ error: 'booking.chybaZavreno', klic: true }, { status: 409 });
-    start = okno.start;
-    end = okno.end;
-  } else {
-    start = new Date(d.start ?? '');
-    end = new Date(d.end ?? '');
+  const terminy: PozadavekRezervace[] = [];
+  for (const d of vstupy) {
+    let start: Date;
+    let end: Date;
+    if (d.den) {
+      const [rok, mesic, den] = d.den.split('-').map(Number);
+      const okno = celodenniOkno(pristup.studio, { rok, mesic, den });
+      if (!okno) return NextResponse.json({ error: 'booking.chybaZavreno', klic: true }, { status: 409 });
+      start = okno.start;
+      end = okno.end;
+    } else {
+      start = new Date(d.start ?? '');
+      end = new Date(d.end ?? '');
+    }
+    terminy.push({
+      start,
+      end,
+      celyDen: Boolean(d.den || d.celyDen),
+      nazev: d.nazev,
+      poznamka: d.poznamka,
+    });
   }
 
-  const vysledek = await zalozRezervaci({
-    studio: pristup.studio,
-    user: ucet,
-    start,
-    end,
-    celyDen: Boolean(d.den || d.celyDen),
-    nazev: d.nazev,
-    poznamka: d.poznamka,
-  });
+  const vysledek = await zalozRezervace({ studio: pristup.studio, user: ucet, terminy });
   if (!vysledek.ok) {
     // Klíč do slovníku, ne hotová věta - kalendář mluví česky i anglicky.
-    return NextResponse.json({ error: vysledek.chyba, klic: true }, { status: 409 });
+    // `index` říká, který termín ze seznamu neprošel.
+    return NextResponse.json(
+      { error: vysledek.chyba, klic: true, index: vysledek.index },
+      { status: 409 },
+    );
   }
-  return NextResponse.json({ ok: true, id: vysledek.id });
+  return NextResponse.json({ ok: true, ids: vysledek.ids, id: vysledek.ids[0] });
 }
 
 /**

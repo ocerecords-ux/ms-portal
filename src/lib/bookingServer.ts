@@ -280,6 +280,160 @@ async function jeObsazeno(
   return Boolean(blok || termin);
 }
 
+export type VysledekRezervaci =
+  | { ok: true; ids: string[] }
+  /** `index` říká, který termín ze seznamu neprošel - UI na něj umí ukázat. */
+  | { ok: false; chyba: ChybaRezervace; index: number };
+
+export type PozadavekRezervace = {
+  start: Date;
+  end: Date;
+  celyDen: boolean;
+  nazev: string;
+  poznamka?: string | null;
+};
+
+/**
+ * Kontroly jednoho termínu BEZ zápisu - čas, otevírací doba, minulost, jak
+ * daleko dopředu. Obsazenost se řeší zvlášť (sáhne si do databáze).
+ */
+function zkontrolujTermin(studio: BookingStudio, start: Date, end: Date): ChybaRezervace | null {
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    return 'booking.chybaKratke';
+  }
+  if (start.getTime() < Date.now()) return 'booking.chybaMinulost';
+  if (studio.dniDopredu > 0) {
+    const mez = Date.now() + studio.dniDopredu * 24 * 60 * 60 * 1000;
+    if (start.getTime() > mez) return 'booking.chybaDaleko';
+  }
+
+  // Den i minuty v pásmu studia - londýnský kalendář počítá londýnské hodiny.
+  const den = weekdayInZone(start, studio.casovePasmo);
+  const od = minutesInZone(start, studio.casovePasmo);
+  const konec = minutesInZone(end, studio.casovePasmo) === 0 ? 24 * 60 : minutesInZone(end, studio.casovePasmo);
+  // Rezervace přes půlnoc neřešíme: studio přes noc zavírá.
+  if (konec <= od) return 'booking.chybaMimoDobu';
+  return zkontrolujOkno(studio, den, od, konec);
+}
+
+/**
+ * ZALOŽENÍ NĚKOLIKA REZERVACÍ NAJEDNOU (zadání 28. 9. 2026: „člověk si může
+ * naráz zabookovat víc termínů a až pak zmáčkne nějaké tlačítko… aby mu
+ * nechodilo třeba deset mailů s notifikacema, když to bude klikat po jednom
+ * termínu").
+ *
+ * VŠECHNO, NEBO NIC. Nejdřív se zkontrolují všechny termíny - čas, otevírací
+ * doba, obsazenost - a teprve když projdou, začne se zapisovat. Kdyby se
+ * zapisovalo průběžně, skončil by člověk s polovinou rezervací a chybou
+ * u zbytku a nevěděl by, co vlastně má. Když něco neprojde, vrátí se index
+ * toho termínu, aby na něj kalendář uměl ukázat.
+ *
+ * JEDEN MAIL, NE DESET. Potvrzení klientovi i zpráva týmu odejdou jednou
+ * a nesou seznam termínů. Do historie kalendáře se zapisuje každý blok zvlášť
+ * - to je záznam o datech, ne zpráva pro člověka.
+ */
+export async function zalozRezervace(input: {
+  studio: BookingStudio;
+  user: { id: string; name: string | null; email: string };
+  terminy: PozadavekRezervace[];
+}): Promise<VysledekRezervaci> {
+  const { studio, terminy } = input;
+  if (terminy.length === 0) return { ok: false, chyba: 'booking.chybaKratke', index: 0 };
+
+  for (let i = 0; i < terminy.length; i += 1) {
+    const chyba = zkontrolujTermin(studio, terminy[i].start, terminy[i].end);
+    if (chyba) return { ok: false, chyba, index: i };
+  }
+
+  /**
+   * Překryv UVNITŘ seznamu. `jeObsazeno` kouká do databáze, kde ještě nic
+   * není - dvě okna, která si člověk vybral přes sebe, by tak prošla obě.
+   */
+  for (let i = 0; i < terminy.length; i += 1) {
+    for (let j = 0; j < i; j += 1) {
+      if (terminy[i].start < terminy[j].end && terminy[i].end > terminy[j].start) {
+        return { ok: false, chyba: 'booking.chybaObsazeno', index: i };
+      }
+    }
+  }
+
+  for (let i = 0; i < terminy.length; i += 1) {
+    if (await jeObsazeno(studio.id, terminy[i].start, terminy[i].end)) {
+      return { ok: false, chyba: 'booking.chybaObsazeno', index: i };
+    }
+  }
+
+  const jmeno = input.user.name?.trim() || input.user.email;
+  const zalozene: { id: string; title: string; start: Date; end: Date; note: string | null }[] = [];
+
+  for (const t of terminy) {
+    const blok = await prisma.studioBlock.create({
+      data: {
+        studioId: studio.id,
+        start: t.start,
+        end: t.end,
+        kind: DRUH_REZERVACE as never,
+        title: t.nazev.trim().slice(0, 160) || jmeno,
+        note: t.poznamka?.trim().slice(0, 1000) || null,
+        celyDen: t.celyDen,
+        bookingUserId: input.user.id,
+        bookingName: jmeno,
+        bookingEmail: input.user.email,
+        createdById: input.user.id,
+      },
+      select: { id: true, title: true },
+    });
+    zalozene.push({ id: blok.id, title: blok.title, start: t.start, end: t.end, note: t.poznamka ?? null });
+  }
+
+  const prvni = zalozene[0];
+  const vice = zalozene.length > 1;
+
+  // Potvrzení klientovi (25. 9. 2026) - ať má termín černé na bílém. Od
+  // 28. 9. 2026 jedno na celou dávku, se seznamem termínů.
+  await oznamKlientovi(
+    {
+      kind: DRUH_REZERVACE,
+      bookingUserId: input.user.id,
+      bookingEmail: input.user.email,
+      title: vice ? `${prvni.title} (${zalozene.length} sessions)` : prvni.title,
+      note: prvni.note,
+      start: prvni.start,
+      end: prvni.end,
+      studioId: studio.id,
+    },
+    'POTVRZENI',
+    null,
+    vice ? zalozene.map((z) => kdyAnglicky(z.start, z.end, studio.casovePasmo)) : null,
+  );
+
+  await oznamTymu(studio, {
+    nadpis: vice
+      ? `${zalozene.length} nových rezervací studia ${studio.kratce}`
+      : `Nová rezervace studia ${studio.kratce}`,
+    telo: vice ? `${jmeno}: ${prvni.title} a dalších ${zalozene.length - 1}` : `${jmeno}: ${prvni.title}`,
+    start: prvni.start,
+    end: prvni.end,
+  });
+
+  for (const z of zalozene) {
+    await zapisZmenuKalendare({
+      typ: 'BLOK',
+      akce: 'VZNIK',
+      zaznamId: z.id,
+      nazev: `${z.title} · ${jmeno}`,
+      start: z.start,
+      end: z.end,
+      kde: studio.kratce,
+      podrobnosti: 'Rezervace z kalendáře studia',
+      kdo: { id: input.user.id, jmeno },
+    });
+  }
+
+  return { ok: true, ids: zalozene.map((z) => z.id) };
+}
+
+/** Jedna rezervace - tenká slupka nad dávkou, ať je pravidlo jen na jednom místě. */
 export async function zalozRezervaci(input: {
   studio: BookingStudio;
   user: { id: string; name: string | null; email: string };
@@ -289,81 +443,20 @@ export async function zalozRezervaci(input: {
   nazev: string;
   poznamka?: string | null;
 }): Promise<VysledekRezervace> {
-  const { studio, start, end } = input;
-
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
-    return { ok: false, chyba: 'booking.chybaKratke' };
-  }
-  if (start.getTime() < Date.now()) return { ok: false, chyba: 'booking.chybaMinulost' };
-  if (studio.dniDopredu > 0) {
-    const mez = Date.now() + studio.dniDopredu * 24 * 60 * 60 * 1000;
-    if (start.getTime() > mez) return { ok: false, chyba: 'booking.chybaDaleko' };
-  }
-
-  // Den i minuty v pásmu studia - londýnský kalendář počítá londýnské hodiny.
-  const den = weekdayInZone(start, studio.casovePasmo);
-  const od = minutesInZone(start, studio.casovePasmo);
-  const konec = minutesInZone(end, studio.casovePasmo) === 0 ? 24 * 60 : minutesInZone(end, studio.casovePasmo);
-  // Rezervace přes půlnoc neřešíme: studio přes noc zavírá.
-  if (konec <= od) return { ok: false, chyba: 'booking.chybaMimoDobu' };
-  const chyba = zkontrolujOkno(studio, den, od, konec);
-  if (chyba) return { ok: false, chyba };
-
-  if (await jeObsazeno(studio.id, start, end)) {
-    return { ok: false, chyba: 'booking.chybaObsazeno' };
-  }
-
-  const jmeno = input.user.name?.trim() || input.user.email;
-  const blok = await prisma.studioBlock.create({
-    data: {
-      studioId: studio.id,
-      start,
-      end,
-      kind: DRUH_REZERVACE as never,
-      title: input.nazev.trim().slice(0, 160) || jmeno,
-      note: input.poznamka?.trim().slice(0, 1000) || null,
-      celyDen: input.celyDen,
-      bookingUserId: input.user.id,
-      bookingName: jmeno,
-      bookingEmail: input.user.email,
-      createdById: input.user.id,
-    },
-    select: { id: true, title: true },
+  const vysledek = await zalozRezervace({
+    studio: input.studio,
+    user: input.user,
+    terminy: [
+      {
+        start: input.start,
+        end: input.end,
+        celyDen: input.celyDen,
+        nazev: input.nazev,
+        poznamka: input.poznamka,
+      },
+    ],
   });
-
-  // Potvrzení klientovi (25. 9. 2026) - ať má termín černé na bílém.
-  await oznamKlientovi(
-    {
-      kind: DRUH_REZERVACE,
-      bookingUserId: input.user.id,
-      bookingEmail: input.user.email,
-      title: blok.title,
-      note: input.poznamka ?? null,
-      start,
-      end,
-      studioId: studio.id,
-    },
-    'POTVRZENI',
-  );
-  await oznamTymu(studio, {
-    nadpis: `Nová rezervace studia ${studio.kratce}`,
-    telo: `${jmeno}: ${blok.title}`,
-    start,
-    end,
-  });
-  await zapisZmenuKalendare({
-    typ: 'BLOK',
-    akce: 'VZNIK',
-    zaznamId: blok.id,
-    nazev: `${blok.title} · ${jmeno}`,
-    start,
-    end,
-    kde: studio.kratce,
-    podrobnosti: 'Rezervace z kalendáře studia',
-    kdo: { id: input.user.id, jmeno },
-  });
-
-  return { ok: true, id: blok.id };
+  return vysledek.ok ? { ok: true, id: vysledek.ids[0] } : { ok: false, chyba: vysledek.chyba };
 }
 
 /**
@@ -606,6 +699,8 @@ export async function oznamKlientovi(
   },
   druh: DruhZpravyStudia,
   puvodne?: string | null,
+  /** Seznam termínů, když jich v jedné zprávě odchází víc (28. 9. 2026). */
+  terminy?: string[] | null,
 ): Promise<void> {
   try {
     if (blok.kind !== DRUH_REZERVACE || !blok.bookingUserId) return;
@@ -648,10 +743,14 @@ export async function oznamKlientovi(
       name: klient.name,
       druh,
       studio: studio.name,
-      kdy: kdyAnglicky(blok.start, blok.end, studio.timezone),
+      kdy:
+        terminy && terminy.length > 1
+          ? `${terminy.length} sessions`
+          : kdyAnglicky(blok.start, blok.end, studio.timezone),
       nazev: blok.title,
       poznamka: blok.note ?? null,
       puvodne: puvodne ?? null,
+      terminy: terminy ?? null,
     });
   } catch (err) {
     console.error('Zprávu klientovi studia se nepodařilo odeslat:', err);

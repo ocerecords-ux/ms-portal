@@ -2881,6 +2881,15 @@ export type StudioBookingEmailInput = {
   poznamka?: string | null;
   /** Puvodni termin u presunu. */
   puvodne?: string | null;
+  /**
+   * VIC TERMINU V JEDNE ZPRAVE (zadani 28. 9. 2026: „aby mu nechodilo treba
+   * deset mailu s notifikacema, kdyz to bude klikat po jednom terminu").
+   *
+   * Kdyz si clovek zabookuje nekolik oken najednou, odejde jeden mail se
+   * seznamem. `kdy` v tom pripade nese souhrn do predmetu („4 sessions,
+   * 14-18 Oct"), podrobnosti jsou tady.
+   */
+  terminy?: string[] | null;
 };
 
 const ZPRAVY_STUDIA: Record<
@@ -2933,7 +2942,16 @@ function buildStudioBookingHtml(input: StudioBookingEmailInput): string {
 
     <table role="presentation" class="field-table">
       <tr><td class="label">Booking</td><td class="value">${escapeHtml(input.nazev)}</td></tr>
-      <tr><td class="label">When</td><td class="value">${escapeHtml(input.kdy)}</td></tr>
+      ${
+        input.terminy && input.terminy.length > 1
+          ? input.terminy
+              .map(
+                (t, i) =>
+                  `<tr><td class="label">${i === 0 ? 'When' : '&nbsp;'}</td><td class="value">${escapeHtml(t)}</td></tr>`,
+              )
+              .join('')
+          : `<tr><td class="label">When</td><td class="value">${escapeHtml(input.kdy)}</td></tr>`
+      }
       ${input.puvodne ? `<tr><td class="label">Previously</td><td class="value regular">${escapeHtml(input.puvodne)}</td></tr>` : ''}
       <tr><td class="label">Studio</td><td class="value regular">${escapeHtml(input.studio)}</td></tr>
       ${input.poznamka ? `<tr><td class="label">Your note</td><td class="value regular">${escapeHtml(input.poznamka)}</td></tr>` : ''}
@@ -2963,7 +2981,9 @@ export async function sendStudioBookingEmail(input: StudioBookingEmailInput) {
       copy.intro,
       '',
       `Booking: ${input.nazev}`,
-      `When: ${input.kdy}`,
+      ...(input.terminy && input.terminy.length > 1
+        ? [`When:`, ...input.terminy.map((t) => `  ${t}`)]
+        : [`When: ${input.kdy}`]),
       ...(input.puvodne ? [`Previously: ${input.puvodne}`] : []),
       `Studio: ${input.studio}`,
       '',

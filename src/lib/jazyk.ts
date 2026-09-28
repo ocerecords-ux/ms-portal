@@ -625,6 +625,21 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'booking.poznamka': { cs: 'Poznámka pro studio', en: 'Note for the studio' },
   'booking.rezervovat': { cs: 'Rezervovat', en: 'Book it' },
+  // Plánování víc termínů najednou (28. 9. 2026) - kalendář studia je
+  // výhradně anglicky, česká verze je jen pro náš náhled.
+  'booking.pridatDoPlanu': { cs: 'Přidat do plánu', en: 'Add to plan' },
+  'booking.pridatDoPlanuPopis': {
+    cs: 'Odloží termín stranou. Zabookuje se až tlačítkem dole - a přijde jeden e-mail.',
+    en: 'Sets the slot aside. It is booked by the button below - and you get a single email.',
+  },
+  'booking.planNadpis': { cs: 'Plán ({pocet})', en: 'Your plan ({pocet})' },
+  'booking.planOdeslat': { cs: 'Zabookovat ({pocet})', en: 'Book all ({pocet})' },
+  'booking.planOdebrat': { cs: 'Odebrat z plánu', en: 'Remove from plan' },
+  'booking.planVyprazdnit': { cs: 'Vyprázdnit', en: 'Clear' },
+  'booking.planVysvetleni': {
+    cs: 'Zatím nic nerezervováno - studio se drží až po odeslání.',
+    en: 'Nothing is booked yet - the studio is held only once you send this.',
+  },
   'booking.zrusitRezervaci': { cs: 'Zrušit rezervaci', en: 'Cancel booking' },
   'booking.castNeulozena': {
     cs: 'Část dnů se uložit nepodařilo — zbytek už v kalendáři je.',

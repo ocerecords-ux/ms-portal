@@ -15,6 +15,11 @@
  * Růžová čísla v replice patří k číslovaným popiskům pod obrázkem. Když se
  * kalendář změní, upravit repliku, přegenerovat a srovnat text níž.
  *
+ * DOPLNIT OBRÁZEK (28. 9. 2026): plánování víc termínů najednou zatím obrázek
+ * nemá - replika scripts/navody/studio-booking.html se k němu musí rozšířit
+ * a snímky přegenerovat. Text níž na obrázku nestojí, takže návod dává smysl
+ * i do té doby.
+ *
  * POZOR: text je šablonový literál - žádné zpětné apostrofy uvnitř, jinak
  * spadne seed při nasazení (stalo se 25. 9. 2026 u mapy portálu).
  */
@@ -50,6 +55,19 @@ Tap a free slot and the booking window opens with that time already filled in.
 
 Then **Book it**. The slot turns purple, the studio is yours, and our team gets the booking in the studio diary at the same moment.
 
+# Booking several sessions in one go
+
+Booking four afternoons one at a time works, but it sends you four separate confirmation emails. **Add to plan** does the same job in one.
+
+1. Tap a free slot, fill in the name and the times as usual, then press **Add to plan** instead of Book it.
+2. The slot moves into a **Plan** panel above the calendar. Nothing is booked yet — the studio is not held and anyone else can still take that time.
+3. Repeat for as many slots as you need. Any day, any week; they do not have to be next to each other.
+4. When the list is right, press **Book all**. Everything goes through in one go and **one confirmation email** arrives with all the sessions on it.
+
+You can drop a slot from the plan with the **×** next to it, or clear the whole list. Nothing you do in the plan touches the calendar until you press Book all.
+
+If one of the slots gets taken while you are still planning, **nothing is booked** and the calendar marks the slot that no longer works in red. Remove it, or pick another time, and press Book all again — you will not end up with half a booking and no idea which half.
+
 # Taking whole days for a longer project
 
 Mixing an album takes more than an afternoon. Switch the window to **Whole days** and give it a range.
@@ -59,16 +77,18 @@ Mixing an album takes more than an afternoon. Switch the window to **Whole days*
 1. **Whole days** books the **full opening hours** of each day, not midnight to midnight — the studio is closed overnight anyway.
 2. **Until** is the last day of the run. Every open day in between is booked; days when the studio is closed are quietly skipped, so a Sunday in the middle of your range costs you nothing.
 
-If one day in the middle happens to be taken by someone else, the rest is still booked and the calendar tells you that a day or two did not go through. Pick those up later, or write to us and we will sort it out.
+If one day in the middle is already taken by someone else, **none of the run is booked** and the calendar tells you which day is in the way. Shorten the range, or take the rest around it — better that than half a booking you have to check day by day. Either way it is one confirmation email, not one per day.
 
 # Changing your mind
 
 ![The list of your upcoming bookings and the detail window with the Cancel booking button](/navody/studio-booking-4.png)
 
 1. **Your upcoming bookings** sits under the calendar — the quickest way to check what you have coming without hunting through the weeks.
-2. **Open** any of them and you get the time, your note, and **Cancel booking**.
+2. **Open** any of them and you get the time, your note, **Change time** and **Cancel booking**.
 
-Cancelling frees the slot straight away for everyone. **A booking that has already started cannot be cancelled here** — write to us instead and we will work it out. There is no way to move a booking in one step: cancel it and take the new time.
+**Change time** opens the same window you booked with, so you can move the session to another day or another hour without giving up the slot first. The new time has to be free, inside the opening hours and not in the past — the same rules as a new booking.
+
+Cancelling frees the slot straight away for everyone. **A booking that has already started can be neither changed nor cancelled here** — write to us instead and we will work it out.
 
 # Put it on your phone
 

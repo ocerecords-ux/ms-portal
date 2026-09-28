@@ -236,6 +236,21 @@ export function BookingKalendar({
   const [upravovana, setUpravovana] = useState<BookingUdalost | null>(null);
   const [uklada, setUklada] = useState(false);
 
+  /**
+   * PLÁNOVÁNÍ VÍC TERMÍNŮ NAJEDNOU (zadání 28. 9. 2026: „člověk si může naráz
+   * zabookovat víc termínů a až pak zmáčkne nějaké tlačítko, ukáže se mu
+   * souhrn těch termínů a dá odeslat. Aby mu nechodilo třeba deset mailů
+   * s notifikacema, když to bude klikat po jednom termínu.").
+   *
+   * Termín se do plánu jen odloží - v databázi zatím není nic a studio se
+   * nedrží. Teprve tlačítko dole pošle celý seznam jedním dotazem a odejde
+   * jedno potvrzení. Proto se taky může stát, že mezitím někdo jedno z oken
+   * vezme; server pak řekne KTERÉ (vrací jeho pořadí) a kalendář ho v souhrnu
+   * označí červeně.
+   */
+  const [plan, setPlan] = useState<{ klic: string; popis: string; data: Record<string, unknown> }[]>([]);
+  const [chybnyVPlanu, setChybnyVPlanu] = useState<number | null>(null);
+
   function otevriFormular(den: Den, minuty: number) {
     if (jenNahled) return;
     const pravidlo = hodinyDne(studio.hodiny, den.denVTydnu);
@@ -251,65 +266,143 @@ export function BookingKalendar({
     setPoznamka('');
   }
 
+  /**
+   * Termíny z formuláře - jedno okno, nebo u dlouhodobé rezervace jeden
+   * záznam na každý otevřený den v rozsahu. Stejný seznam se buď rovnou
+   * odešle, nebo odloží do plánu.
+   */
+  function terminyZFormulare(): Record<string, unknown>[] {
+    if (!formular) return [];
+    const telo: Record<string, unknown>[] = [];
+    if (formular.rezim === 'HODINY') {
+      const d = formular.den;
+      telo.push({
+        start: zonedToUtc(d.rok, d.mesic, d.den, formular.od, studio.casovePasmo).toISOString(),
+        end: zonedToUtc(d.rok, d.mesic, d.den, formular.do, studio.casovePasmo).toISOString(),
+        nazev: nazev.trim(),
+        poznamka: poznamka.trim() || undefined,
+      });
+    } else {
+      // Dlouhodobá rezervace: jeden záznam na každý otevřený den v rozsahu.
+      const zacatekDne = new Date(formular.den.zacatekMs);
+      const konecDne = new Date(`${formular.doDne}T12:00:00Z`);
+      const p = utcParts(zacatekDne, studio.casovePasmo);
+      for (let i = 0; i < 120; i += 1) {
+        const poledne = zonedToUtc(p.year, p.month, p.day + i, 12 * 60, studio.casovePasmo);
+        if (poledne.getTime() > konecDne.getTime() + 12 * 60 * 60 * 1000) break;
+        const den = utcParts(poledne, studio.casovePasmo);
+        const klic = `${den.year}-${dvojcifra(den.month)}-${dvojcifra(den.day)}`;
+        if (klic > formular.doDne) break;
+        if (!hodinyDne(studio.hodiny, den.weekday)) continue;
+        telo.push({ den: klic, nazev: nazev.trim(), poznamka: poznamka.trim() || undefined });
+      }
+    }
+    return telo;
+  }
+
+  /** Řádek do souhrnu: „Wed 14 Oct · 10:00–14:00" nebo „Wed 14 Oct · all day". */
+  function popisTerminu(data: Record<string, unknown>): string {
+    const den = new Intl.DateTimeFormat('en-GB', {
+      timeZone: studio.casovePasmo,
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+    const cas = new Intl.DateTimeFormat('en-GB', {
+      timeZone: studio.casovePasmo,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    });
+    if (typeof data.den === 'string') {
+      return `${den.format(new Date(`${data.den}T12:00:00Z`))} · all day`;
+    }
+    const zacatek = new Date(String(data.start));
+    const konec = new Date(String(data.end));
+    return `${den.format(zacatek)} · ${cas.format(zacatek)}–${cas.format(konec)}`;
+  }
+
+  /** Odložit termín(y) do plánu - zatím se nikam nezapisuje. */
+  function pridejDoPlanu() {
+    if (!formular || !nazev.trim()) return;
+    const nove = terminyZFormulare().map((data, i) => ({
+      klic: `${Date.now()}-${i}`,
+      popis: `${popisTerminu(data)} · ${String(data.nazev)}`,
+      data,
+    }));
+    if (nove.length === 0) return;
+    setPlan((p) => [...p, ...nove]);
+    setChybnyVPlanu(null);
+    setChyba(null);
+    setFormular(null);
+    setNazev('');
+    setPoznamka('');
+  }
+
+  /**
+   * Odeslání celého plánu JEDNÍM dotazem - proto taky jedno potvrzení
+   * v e-mailu místo deseti.
+   */
+  async function odesliPlan() {
+    if (plan.length === 0 || uklada) return;
+    setUklada(true);
+    setChyba(null);
+    setChybnyVPlanu(null);
+    try {
+      const res = await fetch('/api/studio/rezervace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studioId: studio.id, terminy: plan.map((p) => p.data) }),
+      });
+      const odpoved = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setChyba(odpoved?.klic ? t(String(odpoved.error)) : odpoved?.error || t('booking.chybaUlozeni'));
+        if (typeof odpoved?.index === 'number') setChybnyVPlanu(odpoved.index);
+        return;
+      }
+      setPlan([]);
+      await nacti(dny);
+    } catch {
+      setChyba(t('booking.chybaUlozeni'));
+    } finally {
+      setUklada(false);
+    }
+  }
+
   async function uloz() {
     if (!formular || uklada) return;
     if (!nazev.trim()) return;
     setUklada(true);
     setChyba(null);
     try {
-      const telo: Record<string, unknown>[] = [];
-      if (formular.rezim === 'HODINY') {
-        const d = formular.den;
-        telo.push({
-          studioId: studio.id,
-          start: zonedToUtc(d.rok, d.mesic, d.den, formular.od, studio.casovePasmo).toISOString(),
-          end: zonedToUtc(d.rok, d.mesic, d.den, formular.do, studio.casovePasmo).toISOString(),
-          nazev: nazev.trim(),
-          poznamka: poznamka.trim() || undefined,
-        });
-      } else {
-        // Dlouhodobá rezervace: jeden záznam na každý otevřený den v rozsahu.
-        const zacatekDne = new Date(formular.den.zacatekMs);
-        const konecDne = new Date(`${formular.doDne}T12:00:00Z`);
-        const p = utcParts(zacatekDne, studio.casovePasmo);
-        for (let i = 0; i < 120; i += 1) {
-          const poledne = zonedToUtc(p.year, p.month, p.day + i, 12 * 60, studio.casovePasmo);
-          if (poledne.getTime() > konecDne.getTime() + 12 * 60 * 60 * 1000) break;
-          const den = utcParts(poledne, studio.casovePasmo);
-          const klic = `${den.year}-${dvojcifra(den.month)}-${dvojcifra(den.day)}`;
-          if (klic > formular.doDne) break;
-          if (!hodinyDne(studio.hodiny, den.weekday)) continue;
-          telo.push({
-            studioId: studio.id,
-            den: klic,
-            nazev: nazev.trim(),
-            poznamka: poznamka.trim() || undefined,
-          });
-        }
+      const telo = terminyZFormulare();
+      if (telo.length === 0) {
+        setChyba(t('booking.chybaUlozeni'));
+        return;
       }
 
-      let neuspech: string | null = null;
-      let ulozeno = 0;
-      for (const data of telo) {
-        // Úprava mění JEDEN existující záznam - proto PATCH a id v těle.
-        const res = await fetch('/api/studio/rezervace', {
-          method: upravovana ? 'PATCH' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(upravovana ? { ...data, id: upravovana.id } : data),
-        });
-        if (res.ok) ulozeno += 1;
-        else {
-          const odpoved = await res.json().catch(() => ({}));
-          neuspech = odpoved?.klic ? t(String(odpoved.error)) : odpoved?.error || t('booking.chybaUlozeni');
-        }
+      // Úprava mění JEDEN existující záznam - proto PATCH a id v těle.
+      // Založení jde vždycky jako dávka, i když je v ní jediné okno: server
+      // pak pošle jedno potvrzení, ne jedno za každý den.
+      const res = upravovana
+        ? await fetch('/api/studio/rezervace', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...telo[0], studioId: studio.id, id: upravovana.id }),
+          })
+        : await fetch('/api/studio/rezervace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studioId: studio.id, terminy: telo }),
+          });
+
+      if (!res.ok) {
+        const odpoved = await res.json().catch(() => ({}));
+        setChyba(odpoved?.klic ? t(String(odpoved.error)) : odpoved?.error || t('booking.chybaUlozeni'));
+        return;
       }
 
       await nacti(dny);
-      if (neuspech && ulozeno === 0) {
-        setChyba(neuspech);
-        return;
-      }
-      if (neuspech) setChyba(t('booking.castNeulozena'));
       setFormular(null);
       setUpravovana(null);
     } catch {
@@ -450,6 +543,73 @@ export function BookingKalendar({
         <p className="m-0 text-xs font-body text-muted bg-field border border-line rounded-lg px-3 py-2">
           {t('booking.jenNahled')}
         </p>
+      )}
+
+      {/* --- plán: co je vybrané, ale ještě neodeslané --------------------
+          Zatím se nikam nezapsalo; studio se drží až po odeslání. */}
+      {plan.length > 0 && (
+        <section className="bg-surface border-2 border-dashed border-brand-purple rounded-card p-4 flex flex-col gap-3">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <h2 className="font-heading font-semibold text-sm text-ink m-0">
+              {t('booking.planNadpis', { pocet: plan.length })}
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                setPlan([]);
+                setChybnyVPlanu(null);
+              }}
+              className="text-xs font-heading font-semibold text-muted bg-transparent border-0 cursor-pointer hover:text-ink"
+            >
+              {t('booking.planVyprazdnit')}
+            </button>
+          </div>
+
+          <ol className="list-none m-0 p-0 flex flex-col divide-y divide-line">
+            {plan.map((polozka, i) => (
+              <li key={polozka.klic} className="flex items-center gap-3 py-2">
+                <span
+                  className={`shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-heading font-semibold ${
+                    chybnyVPlanu === i ? 'bg-status-error text-white' : 'bg-tint text-brand-purple'
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                <span
+                  className={`flex-1 min-w-0 truncate text-sm font-body ${
+                    chybnyVPlanu === i ? 'text-status-error' : 'text-ink'
+                  }`}
+                >
+                  {polozka.popis}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlan((p) => p.filter((x) => x.klic !== polozka.klic));
+                    setChybnyVPlanu(null);
+                  }}
+                  aria-label={t('booking.planOdebrat')}
+                  title={t('booking.planOdebrat')}
+                  className="shrink-0 w-7 h-7 rounded-lg border border-line text-muted hover:text-status-error hover:border-status-error transition-colors bg-transparent cursor-pointer"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ol>
+
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-xs font-body text-muted">{t('booking.planVysvetleni')}</span>
+            <button
+              type="button"
+              onClick={odesliPlan}
+              disabled={uklada}
+              className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-5 py-2 disabled:opacity-50 border-0 cursor-pointer"
+            >
+              {uklada ? t('obecne.ukladam') : t('booking.planOdeslat', { pocet: plan.length })}
+            </button>
+          </div>
+        </section>
       )}
 
       {/* --- měsíc: přehled, ne mřížka ------------------------------------- */}
@@ -781,6 +941,18 @@ export function BookingKalendar({
               >
                 {t('obecne.zrusit')}
               </button>
+              {/* U úpravy se do plánu nepřidává - mění se jeden hotový záznam. */}
+              {!upravovana && (
+                <button
+                  type="button"
+                  onClick={pridejDoPlanu}
+                  disabled={uklada || !nazev.trim()}
+                  title={t('booking.pridatDoPlanuPopis')}
+                  className="rounded-pill border border-brand-purple text-brand-purple font-heading font-semibold text-sm px-5 py-2 disabled:opacity-50 bg-transparent cursor-pointer"
+                >
+                  {t('booking.pridatDoPlanu')}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={uloz}
