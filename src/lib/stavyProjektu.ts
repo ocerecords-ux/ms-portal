@@ -139,8 +139,24 @@ export const STAVY_PROJEKTU: StavProjektu[] = [
     nazev: 'Opravujeme',
     popis: 'Klient dokončil přeposlech, zapracováváme jeho připomínky. Klientovi odsud nic nechodí.',
     rozpracovany: true,
+    /**
+     * VÝRAZNÁ BARVA (zadání 28. 9. 2026: „změň barvu stavu Opravujeme na
+     * nějakou výraznější").
+     *
+     * Jako jediný stav má PLNOU výplň, ne bledou — a to schválně: mezi
+     * deseti světlými odznaky je plný fuchsiový vidět na první pohled, což
+     * u stavu, kde je míč na naší straně, dává smysl. Rozlišuje ho to
+     * i ve chvíli, kdy někdo barvy nerozezná.
+     *
+     * Původní cyan se navíc bila s „Dotočeno", které cyan má taky.
+     * Fuchsia je v paletě stavů volná; k sousednímu „Čekáme na opravy"
+     * (violet) je dost horká, aby se ty dva kroky nepletly.
+     *
+     * fuchsia-700 s bílým textem má kontrast 6,3:1, tedy i na drobné písmo
+     * s rezervou (WCAG AA chce 4,5:1).
+     */
     barva:
-      'bg-cyan-100 text-cyan-800 border border-cyan-300 dark:bg-cyan-500/20 dark:text-cyan-100 dark:border-cyan-400/40',
+      'bg-fuchsia-700 text-white border border-fuchsia-800 dark:bg-fuchsia-600 dark:text-white dark:border-fuchsia-400/60',
   },
   {
     nazev: 'Schváleno - k fakturaci',
