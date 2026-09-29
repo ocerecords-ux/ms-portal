@@ -5,6 +5,7 @@ import { Volba } from '@/components/Volba';
 import { useRouter } from 'next/navigation';
 import { AddButton } from '@/components/AddButton';
 import type { Role } from '@prisma/client';
+import { jeEmail } from '@/lib/prihlasovaciJmeno';
 import { AdminField } from '../NewCompanyForm';
 import { CountrySelect } from '../CountrySelect';
 import { DEFAULT_COUNTRY } from '@/lib/countries';
@@ -233,7 +234,27 @@ export function NewUserForm({
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[200px]">
           <AdminField label={t('uzivatel.poleEmail')} required>
-            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="admin-input" />
+            {/* Bez zavináče to jde taky - tabule ve studiu se přihlašuje jako
+                „brno2" a schránku nemá (29. 9. 2026). Proto `text`, ne `email`:
+                prohlížeč by na vlastní pěst hlídal zavináč. Co portál přijme,
+                řeší lib/prihlasovaciJmeno.ts. */}
+            <input
+              required
+              type="text"
+              inputMode="email"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="admin-input"
+            />
+            {email.trim() !== '' && !jeEmail(email) && (
+              <span className="block text-xs font-body text-muted mt-1">
+                Přihlašovací jméno bez e-mailu — pozvánka ani obnova hesla na něj neodejde, heslo mu
+                nastavte níž.
+              </span>
+            )}
           </AdminField>
         </div>
         <div className="flex-1 min-w-[160px]">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { CHYBA_PRIHLASOVACI_JMENO, jePrihlasovaciJmeno } from '@/lib/prihlasovaciJmeno';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
@@ -17,7 +18,13 @@ const INTERNAL_ROLES: string[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 // multipart/form-data kvuli volitelne fotce u Mediaspace uctu (viz
 // /api/admin/users POST pro stejny vzor).
 const schema = z.object({
-  email: z.string().trim().toLowerCase().email('Zadejte platný e-mail.').optional(),
+  // Bez zavinace to jde taky - viz lib/prihlasovaciJmeno.ts (29. 9. 2026).
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine(jePrihlasovaciJmeno, CHYBA_PRIHLASOVACI_JMENO)
+    .optional(),
   name: z.string().trim().optional(),
   phone: z.string().trim().optional(),
   password: z.string().min(8, 'Heslo musí mít alespoň 8 znaků.').optional(),

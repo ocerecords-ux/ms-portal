@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { VYCHOZI_PRISTUPY } from '@/lib/pristupy';
 import { z } from 'zod';
+import { CHYBA_PRIHLASOVACI_JMENO, jePrihlasovaciJmeno } from '@/lib/prihlasovaciJmeno';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
@@ -18,7 +19,12 @@ const INTERNAL_ROLES: string[] = ['ADMIN', 'ZVUKAR', 'PRODUKCE'];
 // /api/orders pro stejny vzor s prilohou objednavky).
 const schema = z
   .object({
-    email: z.string().trim().toLowerCase().email('Zadejte platný e-mail.'),
+    // Bez zavinace to jde taky - viz lib/prihlasovaciJmeno.ts (29. 9. 2026).
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .refine(jePrihlasovaciJmeno, CHYBA_PRIHLASOVACI_JMENO),
     name: z.string().trim().optional(),
     phone: z.string().trim().optional(),
     password: z.string().min(8, 'Heslo musí mít alespoň 8 znaků.'),

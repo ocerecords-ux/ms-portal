@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminGuard';
 import { sendInviteEmail, type InviteAudience } from '@/lib/email';
+import { jeEmail } from '@/lib/prihlasovaciJmeno';
 
 // Odeslani pozvanky uzivateli (zadani 5. 9. 2026): vygeneruje jednorazovy
 // token, ulozi ho k uzivateli a posle mu e-mail s odkazem, kde si sam
@@ -19,6 +20,17 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     if (!user) return NextResponse.json({ error: 'Uživatel nenalezen.' }, { status: 404 });
     if (!user.active) {
       return NextResponse.json({ error: 'Uživatel je neaktivní - nejdřív ho aktivujte.' }, { status: 400 });
+    }
+    /**
+     * Účet se od 29. 9. 2026 může přihlašovat i jménem bez zavináče (tabule
+     * ve studiu). Pozvánka pak nemá kam odejít - a je lepší to říct rovnou
+     * než vyrobit token, který nikdo nedostane.
+     */
+    if (!jeEmail(user.email)) {
+      return NextResponse.json(
+        { error: 'Tenhle účet nemá e-mailovou adresu — heslo mu nastavte přímo na jeho kartě.' },
+        { status: 400 },
+      );
     }
 
     const token = randomBytes(32).toString('hex');
