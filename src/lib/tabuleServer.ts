@@ -11,6 +11,12 @@ import { instagramProTabuli } from '@/lib/instagramServer';
  * Serverová strana tabule ve studiu (zadání 21. 9. 2026). Tabule se
  * nepřihlašuje - pozná se podle tajného klíče v adrese, který se nastavuje
  * v Administraci → Studia.
+ *
+ * POZNÁMKY Z TABULE ZMIZELY (29. 9. 2026: „dejme pryč z tabulí poznámky.
+ * Dostaneme tak víc místa a můžeme zvětšit i Instagram"). Zabíraly celý pravý
+ * sloupec a většinou na nich stálo „Žádné poznámky". Model StudioPoznamka
+ * v databázi zůstává i s tím, co kdo napsal - smazat tabulku by ta data
+ * zahodilo a získalo tím jen čistší schéma.
  */
 
 export function novyKlicTabule(): string {
@@ -151,13 +157,8 @@ export async function nactiTabuli(studio: NonNullable<Awaited<ReturnType<typeof 
   const mistnosti = new Map<string, string>(studio.rooms.map((r: { id: string; shortName: string }) => [r.id, r.shortName]));
   const idcka = [studio.id, ...studio.rooms.map((r: { id: string }) => r.id)];
 
-  const [obsazenost, poznamky, chybi, instagram, ostatni] = await Promise.all([
+  const [obsazenost, chybi, instagram, ostatni] = await Promise.all([
     loadOccupancy(idcka, dnes, pozitri),
-    prisma.studioPoznamka.findMany({
-      where: { studioId: studio.id, hotovoAt: null },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    }),
     prisma.studioChybi.findMany({
       where: { studioId: studio.id, doplnenoAt: null },
       orderBy: { nahlasenoAt: 'asc' },
@@ -206,7 +207,6 @@ export async function nactiTabuli(studio: NonNullable<Awaited<ReturnType<typeof 
       mistnost: u.studioId !== studio.id ? (mistnosti.get(u.studioId) ?? null) : null,
     })),
     zitra: prvniZitra ? { od: prvniZitra.start.toISOString(), nazev: prvniZitra.nazev, druh: prvniZitra.druh } : null,
-    poznamky: poznamky.map((p) => ({ id: p.id, text: p.text, autor: p.autor, kdy: p.createdAt.toISOString() })),
     chybi: chybi.map((c) => ({ polozka: c.polozka, kdy: c.nahlasenoAt.toISOString() })),
     ted: ted.toISOString(),
     ostatni,

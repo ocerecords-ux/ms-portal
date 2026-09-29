@@ -83,7 +83,6 @@ export type DataTabule = {
     mistnost: string | null;
   }[];
   zitra: { od: string; nazev: string; druh: string } | null;
-  poznamky: { id: string; text: string; autor: string | null; kdy: string }[];
   chybi: { polozka: string; kdy: string }[];
   ted: string;
   /**

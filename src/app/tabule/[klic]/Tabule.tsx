@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { POLOZKY_TABULE, nazevPolozky, type DataTabule } from '@/lib/tabule';
+import { useCallback, useEffect, useState } from 'react';
+import { POLOZKY_TABULE, type DataTabule } from '@/lib/tabule';
 
 /**
  * Tabule ve studiu na dotykovém displeji (zadání 21. 9. 2026). Kreslí se
@@ -156,7 +156,7 @@ export function Tabule({
   // Spodní hranice jsou tři řádky: pruh se studii je jednořádkový a program
   // je to, kvůli čemu se na tabuli lidi dívají. Co se nevejde, se ořízne
   // (viz obal s overflow: hidden) - dřív to přetékalo mimo plátno.
-  const kolikRadku = Math.max(3, (probiha || dalsi ? 5 : 7) - Math.min(3, ostatni.length));
+  const kolikRadku = Math.max(4, (probiha || dalsi ? 7 : 9) - Math.min(3, ostatni.length));
   const viditelne = radky.slice(zacatek, zacatek + kolikRadku);
 
   const zbyva = (doMs: number) => {
@@ -231,6 +231,9 @@ export function Tabule({
             {chybaSite && (
               <span style={{ fontSize: 20, color: BARVY.sedy, marginLeft: 16 }}>· bez spojení, zkouším znovu…</span>
             )}
+            {/* SERVIS se přestěhoval do hlavičky (29. 9. 2026), když z tabule
+                zmizely poznámky a s nimi celý pravý sloupec. */}
+            <TlacitkoServis chybi={data.chybi.length} otevri={() => setServis(true)} />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 28 }}>
             <span style={{ fontSize: 32, fontWeight: 500, color: BARVY.text3 }}>{datumText}</span>
@@ -455,15 +458,6 @@ export function Tabule({
           </div>
 
           {data.instagram && <InstagramOkno ig={data.instagram} />}
-
-          <Panel
-            klic={klic}
-            zaklad={zaklad}
-            data={data}
-            setData={setData}
-            obnov={nacti}
-            otevriServis={() => setServis(true)}
-          />
         </div>
 
         {servis && (
@@ -506,288 +500,57 @@ function Lide({ u, cas }: { u: { druh: string; herec: string | null; zvukar: str
 }
 
 /**
- * Pravý panel: poznámky. Změny se ukážou hned, server se dožene.
+ * SERVIS V HLAVIČCE (29. 9. 2026).
  *
- * Dlaždice „co chybí" tu od 29. 9. 2026 nejsou - přesunuly se do servisního
- * panelu, který se vyjede přes celou tabuli. Poznámky tím dostaly celou výšku
- * sloupce a formulář na novou poznámku se přestal schovávat pod dlaždice.
+ * Když něco chybí, je to vidět i bez otevření - jinak by se na to zapomnělo.
+ * Jinak je tlačítko záměrně nenápadné: na tabuli se lidi dívají kvůli
+ * programu, ne kvůli kávě.
  */
-function Panel({
-  zaklad,
-  data,
-  setData,
-  obnov,
-  otevriServis,
-}: {
-  klic: string;
-  zaklad: string;
-  data: DataTabule;
-  setData: (fn: (d: DataTabule) => DataTabule) => void;
-  obnov: () => Promise<void>;
-  otevriServis: () => void;
-}) {
-  const [pridavam, setPridavam] = useState(false);
-  const [text, setText] = useState('');
-  const [autor, setAutor] = useState('');
-  const pole = useRef<HTMLTextAreaElement | null>(null);
-
-  useEffect(() => {
-    if (pridavam) pole.current?.focus();
-  }, [pridavam]);
-
-  async function uloz() {
-    const t = text.trim();
-    if (!t) return;
-    setPridavam(false);
-    setText('');
-    setData((d) => ({
-      ...d,
-      poznamky: [{ id: `nova-${Date.now()}`, text: t, autor: autor.trim() || null, kdy: new Date().toISOString() }, ...d.poznamky],
-    }));
-    await fetch(`${zaklad}/poznamky`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: t, autor: autor.trim() || null }),
-    }).catch(() => null);
-    void obnov();
-  }
-
-  async function hotovo(id: string) {
-    setData((d) => ({ ...d, poznamky: d.poznamky.filter((p) => p.id !== id) }));
-    if (!id.startsWith('nova-')) {
-      await fetch(`${zaklad}/poznamky`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      }).catch(() => null);
-    }
-    void obnov();
-  }
-
-  const kdy = (iso: string) => {
-    const d = new Date(iso);
-    const dnes = new Date();
-    const stejnyDen = d.toDateString() === dnes.toDateString();
-    const cas = new Intl.DateTimeFormat('cs-CZ', { hour: 'numeric', minute: '2-digit' }).format(d);
-    return stejnyDen ? `dnes ${cas}` : `${new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(d)} ${cas}`;
-  };
-
-  const tlacitko: React.CSSProperties = {
-    minHeight: 64,
-    padding: '0 26px',
-    borderRadius: 16,
-    border: '2px solid #3a3252',
-    background: BARVY.karta2,
-    color: BARVY.text,
-    fontSize: 24,
-    fontWeight: 700,
-    fontFamily: 'inherit',
-    cursor: 'pointer',
-  };
-  const nazvyChybi = data.chybi.map((c) => nazevPolozky(c.polozka));
-
+function TlacitkoServis({ chybi, otevri }: { chybi: number; otevri: () => void }) {
   return (
-    /**
-     * SIRKA SLOUPCE (29. 9. 2026: „musíme to poskládat tak, ať jde všechno
-     * přečíst a je to tam nejlépe celé"). Zúženo z 640: poznámky jsou většinou
-     * krátké věty a pár desítek pixelů navíc jim nepomůže, kdežto programu
-     * vlevo chyběly na dlouhé názvy pořadů.
-     */
-    <div style={{ width: 470, flexShrink: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div
-        style={{
-          flexGrow: 1,
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 16,
-          padding: '28px 30px',
-          borderRadius: 28,
-          background: BARVY.karta,
-          // Formulář na novou poznámku se dřív vysypal z karty a schoval se
-          // pod dlaždice pod ní (29. 9. 2026: „když přidávám poznámku, tak je
-          // schované okno pro editaci"). Karta teď nic nepouští ven a roluje
-          // se uvnitř jen seznam poznámek.
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ fontSize: 24, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>POZNÁMKY</span>
-          {!pridavam && (
-            <button type="button" onClick={() => setPridavam(true)} style={tlacitko}>
-              + Přidat
-            </button>
-          )}
-        </div>
-
-        {pridavam && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
-            <textarea
-              ref={pole}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={3}
-              maxLength={500}
-              aria-label="Text poznámky"
-              placeholder="Co mají ostatní vědět…"
-              style={{
-                boxSizing: 'border-box',
-                width: '100%',
-                padding: '16px 18px',
-                borderRadius: 16,
-                border: '2px solid #5a4f7a',
-                background: BARVY.pozadi,
-                color: BARVY.text,
-                fontFamily: 'inherit',
-                fontSize: 26,
-                resize: 'none',
-              }}
-            />
-            <input
-              value={autor}
-              onChange={(e) => setAutor(e.target.value)}
-              maxLength={60}
-              aria-label="Kdo píše (nepovinné)"
-              placeholder="Kdo píše (nepovinné)"
-              style={{
-                boxSizing: 'border-box',
-                width: '100%',
-                minHeight: 60,
-                padding: '0 18px',
-                borderRadius: 16,
-                border: '2px solid #3a3252',
-                background: BARVY.pozadi,
-                color: BARVY.text,
-                fontFamily: 'inherit',
-                fontSize: 24,
-              }}
-            />
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button
-                type="button"
-                onClick={uloz}
-                style={{ ...tlacitko, flexGrow: 1, border: 0, background: BARVY.akcent, color: '#13101c', fontWeight: 800 }}
-              >
-                Uložit
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPridavam(false);
-                  setText('');
-                }}
-                style={{ ...tlacitko, background: 'transparent' }}
-              >
-                Zrušit
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', minHeight: 0, flexGrow: 1 }}>
-          {data.poznamky.length === 0 && !pridavam && (
-            <span style={{ fontSize: 24, color: BARVY.sedy }}>Žádné poznámky.</span>
-          )}
-          {data.poznamky.map((p) => (
-            <div
-              key={p.id}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '18px 20px', borderRadius: 18, background: BARVY.karta2 }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexGrow: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 26, fontWeight: 600, lineHeight: 1.3, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                  {p.text}
-                </span>
-                <span style={{ fontSize: 19, color: BARVY.sedy }}>
-                  {[p.autor, kdy(p.kdy)].filter(Boolean).join(' · ')}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => hotovo(p.id)}
-                aria-label="Odškrtnout poznámku"
-                style={{
-                  flexShrink: 0,
-                  width: 64,
-                  height: 64,
-                  borderRadius: 16,
-                  border: '2px solid #3a3252',
-                  background: 'transparent',
-                  color: BARVY.text3,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M5 12l4.5 4.5L19 7" />
-                </svg>
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* SERVIS: jedno tlačítko místo devíti dlaždic. Když něco chybí, je to
-          na něm vidět i zavřené - jinak by se na to zapomnělo. */}
-      <button
-        type="button"
-        onClick={otevriServis}
-        style={{
-          ...tlacitko,
-          minHeight: 88,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 20,
-          padding: '0 30px',
-          borderRadius: 24,
-          borderColor: nazvyChybi.length ? BARVY.chybiLinka : '#3a3252',
-          background: nazvyChybi.length ? BARVY.chybiPozadi : BARVY.karta,
-          color: nazvyChybi.length ? BARVY.chybiText : BARVY.text2,
-          textAlign: 'left',
-        }}
-      >
-        <span style={{ display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
-          <IkonaServis />
-          <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-            <span style={{ fontSize: 26, fontWeight: 700 }}>Servis studia</span>
-            <span
-              style={{
-                fontSize: 20,
-                fontWeight: 500,
-                color: nazvyChybi.length ? BARVY.chybiText : BARVY.sedy,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {nazvyChybi.length ? `Chybí: ${nazvyChybi.join(', ')}` : 'Nahlásit, co ve studiu došlo'}
-            </span>
-          </span>
+    <button
+      type="button"
+      onClick={otevri}
+      title="Nahlásit, co ve studiu došlo"
+      aria-label={chybi > 0 ? `Servis studia — chybí ${chybi}` : 'Servis studia'}
+      style={{
+        marginLeft: 12,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 20px',
+        borderRadius: 999,
+        border: `2px solid ${chybi > 0 ? BARVY.chybiLinka : '#3a3252'}`,
+        background: chybi > 0 ? BARVY.chybiPozadi : 'transparent',
+        color: chybi > 0 ? BARVY.chybiText : BARVY.text3,
+        fontFamily: 'inherit',
+        fontSize: 22,
+        fontWeight: 700,
+        cursor: 'pointer',
+      }}
+    >
+      <IkonaServis />
+      Servis
+      {chybi > 0 && (
+        <span
+          style={{
+            minWidth: 34,
+            height: 34,
+            padding: '0 10px',
+            borderRadius: 999,
+            background: BARVY.chybiLinka,
+            color: '#2a1c00',
+            fontSize: 20,
+            fontWeight: 800,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {chybi}
         </span>
-        {nazvyChybi.length > 0 && (
-          <span
-            style={{
-              flexShrink: 0,
-              minWidth: 48,
-              height: 48,
-              padding: '0 14px',
-              borderRadius: 999,
-              background: BARVY.chybiLinka,
-              color: '#2a1c00',
-              fontSize: 26,
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {nazvyChybi.length}
-          </span>
-        )}
-      </button>
-    </div>
+      )}
+    </button>
   );
 }
 
@@ -795,8 +558,8 @@ function Panel({
 function IkonaServis() {
   return (
     <svg
-      width="40"
-      height="40"
+      width="28"
+      height="28"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -1091,9 +854,13 @@ function InstagramOkno({ ig }: { ig: NonNullable<DataTabule['instagram']> }) {
   }, [kde, polozky.length]);
 
   if (!p) return null;
-  // Zúženo z 420 ze stejného důvodu jako panel vpravo - příběh je svislý,
-  // takže se na užším okně nic neztratí, jen zabere míň místa.
-  const SIRKA_OKNA = 360;
+  /**
+   * ŠIRŠÍ OKNO (29. 9. 2026: „dejme pryč z tabulí poznámky. Dostaneme tak víc
+   * místa a můžeme zvětšit i Instagram"). Šířku drží výška plátna: příběh je
+   * 9:16, takže na volných zhruba 856 bodech výšky vyjde 480 na šířku. Víc by
+   * okno přeteklo dolů.
+   */
+  const SIRKA_OKNA = 480;
   return (
     <div style={{ width: SIRKA_OKNA, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>
