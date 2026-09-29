@@ -69,6 +69,29 @@ export function nazevPolozky(klic: string): string {
   return POLOZKY_TABULE.find((p) => p.klic === klic)?.nazev ?? klic;
 }
 
+/**
+ * IKONA DRUHU PRÁCE (zadání 29. 9. 2026: „u těch ostatních studií není vidět,
+ * jaký druh práce tam je. Natáčení, střih. + použij naše ikony na střih
+ * a natáčení").
+ *
+ * Bere se z naší sady (lib/ikonyTypu.tsx), ne z nové kresby - ikony typů
+ * projektu už v portálu svítí u projektů a druhá sada na totéž by si jen
+ * konkurovala. Druh, který ikonu nemá, ji prostě nemá; hádat se nebude.
+ */
+export const IKONA_DRUHU: Record<string, string> = {
+  NATACENI: 'mikrofon-studio',
+  STRIH: 'strih',
+  CASTING: 'casting',
+  BOOKING: 'klic',
+  MAINTENANCE: 'ovladac',
+  INTERNAL: 'lide',
+  HOLIDAY: 'slunce',
+  VACATION: 'letadlo',
+};
+
+/** Natáčení nemá `kind` - je to rezervace studia, ne blokace. */
+export const IKONA_NATACENI = IKONA_DRUHU.NATACENI;
+
 /** Co tabule dostane ze serveru. Časy jako ISO text. */
 export type DataTabule = {
   studio: { nazev: string; kratce: string; barva: string; casovePasmo: string };
@@ -78,6 +101,8 @@ export type DataTabule = {
     do: string;
     nazev: string;
     druh: string;
+    /** Klíč ikony z naší sady; prázdné = druh ikonu nemá. */
+    ikona: string | null;
     herec: string | null;
     zvukar: string | null;
     mistnost: string | null;
@@ -99,8 +124,15 @@ export type DataTabule = {
     /** Pásmo studia - Londýn má jiné než Brno, čas se píše jeho místní. */
     casovePasmo: string;
     /** `herec` je u natáčení to hlavní - kdo v tom studiu zrovna stojí u mikrofonu. */
-    probiha: { nazev: string; do: string; mistnost: string | null; herec: string | null } | null;
-    dalsi: { od: string; nazev: string; herec: string | null } | null;
+    probiha: {
+      nazev: string;
+      do: string;
+      mistnost: string | null;
+      herec: string | null;
+      druh: string;
+      ikona: string | null;
+    } | null;
+    dalsi: { od: string; nazev: string; herec: string | null; druh: string; ikona: string | null } | null;
   }[];
   /** Příběhy z Instagramu (22. 9. 2026); null = okno se neukáže. */
   instagram?: {

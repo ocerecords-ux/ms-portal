@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { POLOZKY_TABULE, type DataTabule } from '@/lib/tabule';
+import { KresbaIkony } from '@/lib/ikonyTypu';
 
 /**
  * Tabule ve studiu na dotykovém displeji (zadání 21. 9. 2026). Kreslí se
@@ -419,14 +420,20 @@ export function Tabule({
                         fontSize: 22,
                         color: BARVY.text3,
                         lineHeight: 1.2,
-                        display: '-webkit-box',
-                        WebkitBoxOrient: 'vertical',
-                        WebkitLineClamp: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
                         overflow: 'hidden',
-                        overflowWrap: 'anywhere',
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis',
                       }}
                     >
-                      {[r.u.druh, r.u.mistnost, r.u.herec, r.u.zvukar].filter(Boolean).join(' · ')}
+                      <ZnackaDruhu druh={r.u.druh} ikona={r.u.ikona} velikost={20} />
+                      {[r.u.mistnost, r.u.herec, r.u.zvukar].filter(Boolean).length > 0 && (
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          · {[r.u.mistnost, r.u.herec, r.u.zvukar].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
                     </span>
                   </div>
                   {r.stav === 'ted' && (
@@ -479,11 +486,39 @@ function zitraText(z: { nazev: string; druh: string }): string {
   return z.nazev.toLowerCase() === z.druh.toLowerCase() ? z.nazev : `${z.nazev} · ${z.druh.toLowerCase()}`;
 }
 
-function Lide({ u, cas }: { u: { druh: string; herec: string | null; zvukar: string | null }; cas: string }) {
+/**
+ * DRUH PRÁCE IKONOU (zadání 29. 9. 2026: „použij naše ikony na střih
+ * a natáčení"). Ikona je z naší sady typů projektu - viz lib/ikonyTypu.tsx.
+ * Druh, který ikonu nemá, se vypíše jen slovem.
+ */
+function ZnackaDruhu({
+  druh,
+  ikona,
+  velikost = 26,
+}: {
+  druh: string;
+  ikona: string | null;
+  velikost?: number;
+}) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+      {ikona && <KresbaIkony klic={ikona} velikost={velikost} />}
+      {druh}
+    </span>
+  );
+}
+
+function Lide({
+  u,
+  cas,
+}: {
+  u: { druh: string; ikona: string | null; herec: string | null; zvukar: string | null };
+  cas: string;
+}) {
   return (
     <div style={{ display: 'flex', gap: 36, flexWrap: 'wrap', fontSize: 26, color: BARVY.text2 }}>
-      <span>
-        {u.druh} · {cas}
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <ZnackaDruhu druh={u.druh} ikona={u.ikona} /> · {cas}
       </span>
       {u.herec && (
         <span>
@@ -791,6 +826,26 @@ function OstatniStudia({
             >
               {s.kratce}
             </span>
+            {/* Jaký druh práce tam běží - bez toho se z názvu pořadu nepozná,
+                jestli se natáčí nebo stříhá (29. 9. 2026). */}
+            {(bezi || s.dalsi) && (
+              <span
+                style={{
+                  width: 180,
+                  flexShrink: 0,
+                  fontSize: 21,
+                  fontWeight: 600,
+                  color: BARVY.sedy,
+                  overflow: 'hidden',
+                }}
+              >
+                <ZnackaDruhu
+                  druh={bezi ? s.probiha!.druh : s.dalsi!.druh}
+                  ikona={bezi ? s.probiha!.ikona : s.dalsi!.ikona}
+                  velikost={22}
+                />
+              </span>
+            )}
             <span
               style={{
                 flexGrow: 1,

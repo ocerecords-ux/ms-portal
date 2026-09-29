@@ -4,7 +4,7 @@ import { loadOccupancy } from '@/lib/calendarServer';
 import { BLOCK_KIND_LABELS } from '@/lib/calendar';
 import { notify } from '@/lib/notifications';
 import { brunoNapisSoukrome, vychoziPrijemceSmlouvy } from '@/lib/smlouvyKlientaServer';
-import { nazevPolozky, type DataTabule } from '@/lib/tabule';
+import { IKONA_DRUHU, IKONA_NATACENI, nazevPolozky, type DataTabule } from '@/lib/tabule';
 import { instagramProTabuli } from '@/lib/instagramServer';
 
 /**
@@ -107,6 +107,8 @@ async function ostatniStudia(krometoho: string, ted: Date): Promise<DataTabule['
       start: s.start,
       end: s.end,
       nazev: s.projectName || 'Natáčení',
+      druh: 'Natáčení',
+      ikona: IKONA_NATACENI,
       herec: s.actorName || null,
       studioId: s.studioId,
     })),
@@ -114,6 +116,8 @@ async function ostatniStudia(krometoho: string, ted: Date): Promise<DataTabule['
       start: b.start,
       end: b.end,
       nazev: b.projectName || b.title || BLOCK_KIND_LABELS[b.kind] || 'Blokace',
+      druh: BLOCK_KIND_LABELS[b.kind] ?? 'Blokace',
+      ikona: IKONA_DRUHU[b.kind] ?? null,
       herec: b.actorName,
       studioId: b.studioId,
     })),
@@ -142,9 +146,19 @@ async function ostatniStudia(krometoho: string, ted: Date): Promise<DataTabule['
             do: bezi.end.toISOString(),
             mistnost: mistnosti.get(bezi.studioId) ?? null,
             herec: bezi.herec,
+            druh: bezi.druh,
+            ikona: bezi.ikona,
           }
         : null,
-      dalsi: dalsi ? { od: dalsi.start.toISOString(), nazev: dalsi.nazev, herec: dalsi.herec } : null,
+      dalsi: dalsi
+        ? {
+            od: dalsi.start.toISOString(),
+            nazev: dalsi.nazev,
+            herec: dalsi.herec,
+            druh: dalsi.druh,
+            ikona: dalsi.ikona,
+          }
+        : null,
     };
   });
 }
@@ -175,6 +189,7 @@ export async function nactiTabuli(studio: NonNullable<Awaited<ReturnType<typeof 
       end: s.end,
       nazev: s.projectName || 'Natáčení',
       druh: 'Natáčení',
+      ikona: IKONA_NATACENI as string | null,
       herec: s.actorName || null,
       zvukar: s.zvukarName,
       studioId: s.studioId,
@@ -185,6 +200,7 @@ export async function nactiTabuli(studio: NonNullable<Awaited<ReturnType<typeof 
       end: b.end,
       nazev: b.projectName || b.title || BLOCK_KIND_LABELS[b.kind] || 'Blokace',
       druh: BLOCK_KIND_LABELS[b.kind] ?? 'Blokace',
+      ikona: (IKONA_DRUHU[b.kind] ?? null) as string | null,
       herec: b.actorName,
       zvukar: b.zvukarName,
       studioId: b.studioId,
@@ -202,6 +218,7 @@ export async function nactiTabuli(studio: NonNullable<Awaited<ReturnType<typeof 
       do: u.end.toISOString(),
       nazev: u.nazev,
       druh: u.druh,
+      ikona: u.ikona,
       herec: u.herec,
       zvukar: u.zvukar,
       mistnost: u.studioId !== studio.id ? (mistnosti.get(u.studioId) ?? null) : null,
