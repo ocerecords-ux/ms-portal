@@ -220,6 +220,7 @@ async function main() {
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
   await projektGregorZCaflou();
   await oznacCastiZakazek();
+  await klientAudiolibrixu();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -1790,6 +1791,54 @@ async function importujFakturyZCaflou(soubor: string, ZNAMKA: string) {
  * z jedné nabídky se nedá poznat, co je co, a hádat se to nemá. Kdo to má
  * jinak, přepne si to na faktuře.
  */
+/**
+ * KLIENT AUDIOLIBRIXU (zadání 29. 9. 2026: „potřebuji, ať tiše označíš
+ * u všech projektů u Audiolibrix Libora Böhma").
+ *
+ * Audiolibrix má v portálu jediný klientský účet, takže se nic nerozhoduje -
+ * všechny jeho projekty bez klienta připadnou jemu. Projekty, kde už klient
+ * někdo je, se nepřepisují.
+ *
+ * TIŠE: sahá se jen na sloupec klientUserId. Zprávy o projektu chodí přes
+ * notifikace v routách portálu, tady se žádná neodesílá - Libor se nedozví,
+ * že ho někdo doplnil, jen mu projekty začnou chodit dál.
+ *
+ * Bere i dokončené projekty: klient u zakázky je údaj o tom, čí ta zakázka
+ * byla, ne jen komu se teď posílá.
+ */
+async function klientAudiolibrixu() {
+  const ZNAMKA = 'klient-audiolibrix-libor-bohm';
+  const EMAIL = 'libor.bohm@audiolibrix.com';
+  try {
+    const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+    if (uz) return;
+    const klient = await prisma.user.findFirst({
+      where: { email: EMAIL },
+      select: { id: true, companyId: true },
+    });
+    if (!klient?.companyId) {
+      console.warn(`  klient ${EMAIL} v portalu neni (nebo nema firmu), projekty Audiolibrixu zustavaji bez klienta`);
+      return;
+    }
+    const vysledek = await prisma.projectMeta.updateMany({
+      where: {
+        klientUserId: null,
+        // Starsi prenesene projekty mohou mit firmu jen textem - hledaji se
+        // i podle nej, jinak by cast zakazek zustala bez klienta.
+        OR: [
+          { companyId: klient.companyId },
+          { companyId: null, companyName: { contains: 'Audiolibrix', mode: 'insensitive' } },
+        ],
+      },
+      data: { klientUserId: klient.id },
+    });
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  klient Audiolibrixu doplnen: Libor Bohm u ${vysledek.count} projektu`);
+  } catch (err) {
+    console.warn('  klienta Audiolibrixu se nepodarilo doplnit:', err);
+  }
+}
+
 async function oznacCastiZakazek() {
   const ZNAMKA = 'faktury-casti-zakazky';
   try {
