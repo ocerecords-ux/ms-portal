@@ -2171,6 +2171,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
 
   // Válec progresu natáčení. Množná čísla jsou tři celé věty, ne skládačka.
   'progres.prazdne': { cs: 'text zatím nemáme', en: 'no text yet' },
+  'progres.bezCelku': {
+    cs: 'Natočeno do téhle strany. Procenta budou, až bude ve složce projektu text v PDF.',
+    en: 'Recorded up to this page. Percentages will appear once the project folder has the text as a PDF.',
+  },
   'progres.popisek': { cs: 'Progres natáčení', en: 'Recording progress' },
   'progres.zbyvaJedna': { cs: 'zbývá {pocet} strana', en: '{pocet} standard page to go' },
   'progres.zbyvaMalo': { cs: 'zbývají {pocet} strany', en: '{pocet} standard pages to go' },

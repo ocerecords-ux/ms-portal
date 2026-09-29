@@ -41,6 +41,22 @@ export function ValecProgresu({
     return (
       <span className="text-xs font-body text-muted">{prazdne ?? prelozit(jazyk, 'progres.prazdne')}</span>
     );
+
+  /**
+   * STRANA BEZ CELKU (29. 9. 2026). Víme, kde se skončilo, ale ne kolik má
+   * text stran - válec ani procenta nejdou nakreslit. Místo prázdné buňky se
+   * ukáže aspoň ta strana, stejně jako ji interně vidíme u herce v odznaku.
+   */
+  if (progres.neznamyCelek)
+    return (
+      <span
+        className={`font-heading font-semibold tabular-nums text-ink ${velky ? 'text-xl' : 'text-xs'}`}
+        title={prelozit(jazyk, 'progres.bezCelku')}
+      >
+        {progres.popis}
+      </span>
+    );
+
   const popis = `${progres.popis} · ${progres.procenta} %`;
   // Kolik zbyva dotocit (19. 9. 2026) - u dotoceneho a souhrnu vic hercu ne.
   const zbyva = !progres.dotoceno && progres.zbyva != null ? zbyvaText(jazyk, progres.zbyva) : null;
