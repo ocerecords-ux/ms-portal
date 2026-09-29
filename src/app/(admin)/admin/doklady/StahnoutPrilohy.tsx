@@ -59,19 +59,18 @@ export function StahnoutPrilohy({ druh }: { druh: 'vydaje' | 'faktury' }) {
   }
 
   return (
+    /**
+     * MĚSÍC STOJÍ AŽ ZA TLAČÍTKEM (oprava 29. 9. 2026: „u faktur bych chtěl
+     * vidět primárně všechno neuhrazené a až pak filtrovat podle data").
+     *
+     * Výběr měsíce patří jen ke stahování balíku, se seznamem faktur nemá nic
+     * společného - ten ukazuje všechno neuhrazené bez ohledu na měsíc. Když
+     * ale rozbalovátko stálo v hlavičce PŘED tlačítkem, četlo se jako filtr
+     * celé stránky. Teď je z pořadí vidět, co k čemu patří: „Stáhnout faktury
+     * za [měsíc]".
+     */
     <span className="inline-flex flex-col gap-1 items-start">
       <span className="inline-flex items-center gap-2">
-        <select
-          value={mesic}
-          onChange={(e) => setMesic(e.target.value)}
-          className="rounded-lg border border-line bg-field px-2.5 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple"
-        >
-          {mesice.map((m) => (
-            <option key={m.hodnota} value={m.hodnota}>
-              {m.popisek}
-            </option>
-          ))}
-        </select>
         <button
           type="button"
           onClick={() => void stahni()}
@@ -84,6 +83,20 @@ export function StahnoutPrilohy({ druh }: { druh: 'vydaje' | 'faktury' }) {
               ? t('doklady.stahnoutPrilohy')
               : t('doklady.stahnoutFaktury')}
         </button>
+        <span className="text-sm font-body text-muted">{t('doklady.zaMesic')}</span>
+        <select
+          value={mesic}
+          onChange={(e) => setMesic(e.target.value)}
+          aria-label={t('doklady.zaMesic')}
+          title={t('doklady.mesicJenProStazeni')}
+          className="rounded-lg border border-line bg-field px-2.5 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple"
+        >
+          {mesice.map((m) => (
+            <option key={m.hodnota} value={m.hodnota}>
+              {m.popisek}
+            </option>
+          ))}
+        </select>
       </span>
       {zprava && <span className="text-xs font-body text-muted">{zprava}</span>}
     </span>

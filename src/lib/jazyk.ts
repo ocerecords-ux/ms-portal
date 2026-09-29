@@ -3292,6 +3292,12 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'doklady.stahnoutFaktury': { cs: 'Stáhnout faktury', en: 'Download invoices' },
   'doklady.pripravuji': { cs: 'Připravuji…', en: 'Preparing…' },
   'doklady.mesicRozdelany': { cs: '{mesic} (rozdělaný)', en: '{mesic} (in progress)' },
+  // Měsíc patří ke stahování balíku, ne k seznamu dokladů (29. 9. 2026).
+  'doklady.zaMesic': { cs: 'za', en: 'for' },
+  'doklady.mesicJenProStazeni': {
+    cs: 'Měsíc platí jen pro stažení balíku — seznam níž se jím nefiltruje.',
+    en: 'The month applies to the download only — the list below is not filtered by it.',
+  },
   'doklady.zadnaPrilohaZaMesic': {
     cs: 'Za ten měsíc není u výdajů žádná příloha.',
     en: 'There is no expense attachment for that month.',
