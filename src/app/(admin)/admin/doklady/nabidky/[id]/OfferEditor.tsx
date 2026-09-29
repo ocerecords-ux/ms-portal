@@ -1021,7 +1021,11 @@ export function OfferEditor({
 
       </div>
 
-      <NahledDokladu telo={nahledTelo} titulek={t('nabidka.nahled')} />
+      <NahledDokladu
+        telo={nahledTelo}
+        titulek={t('nabidka.nahled')}
+        nazevSouboru={`nabidka-${(jesteNeulozena ? 'nova' : offer.number).replace(/[^\w.-]+/g, '-')}.pdf`}
+      />
       </div>
 
       {!locked && !jesteNeulozena && (

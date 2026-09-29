@@ -3245,6 +3245,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // --- doklady: živý náhled dokladu ---
   'doklady.nahled': { cs: 'Náhled', en: 'Preview' },
   'doklady.nahledPrekresluji': { cs: 'Překresluji…', en: 'Redrawing…' },
+  'doklady.stahnoutPdf': { cs: 'Stáhnout PDF', en: 'Download PDF' },
   'doklady.nahledZive': {
     cs: 'Mění se s tím, co píšete. Nikam se neukládá.',
     en: 'It changes as you type. Nothing is saved.',

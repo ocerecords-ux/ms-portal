@@ -17,10 +17,18 @@ import { usePreklad } from '@/app/(portal)/components/JazykProvider';
 export function NahledDokladu({
   telo,
   titulek,
+  nazevSouboru,
 }: {
   /** Co se má vysázet. Komponenta si hlídá, že se to opravdu změnilo. */
   telo: unknown;
   titulek?: string;
+  /**
+   * Pod jakým jménem se PDF stáhne (29. 9. 2026: „nemůžu nikde stáhnout
+   * vystavenou nabídku v PDF"). Rám náhledu má schválně schovanou lištu
+   * prohlížeče, aby nerušila, jenže s ní zmizelo i jediné tlačítko, kterým
+   * šel dokument dostat ven. Proto tlačítko vlastní.
+   */
+  nazevSouboru?: string;
 }) {
   const t = usePreklad();
   const nadpis = titulek ?? t('doklady.nahled');
@@ -82,6 +90,21 @@ export function NahledDokladu({
             {dela ? t('doklady.nahledPrekresluji') : t('doklady.nahledZive')}
           </p>
         </div>
+
+        {/* Stahuje se PDF, které je právě v rámu - žádný další požadavek na
+            server, takže se stáhne přesně to, co je vidět. */}
+        <a
+          href={url ?? undefined}
+          download={nazevSouboru || 'doklad.pdf'}
+          aria-disabled={!url || dela}
+          className={`text-sm font-heading font-semibold rounded-lg border px-3 py-2 no-underline transition-colors ${
+            url && !dela
+              ? 'border-line text-ink hover:border-brand-purple hover:text-brand-purple'
+              : 'border-line text-muted opacity-60 pointer-events-none'
+          }`}
+        >
+          {t('doklady.stahnoutPdf')}
+        </a>
       </div>
 
       <div className="bg-field px-4 py-5 sm:px-6 sm:py-6">

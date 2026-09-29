@@ -1038,7 +1038,11 @@ export function InvoiceEditor({
 
       </div>
 
-      <NahledDokladu telo={nahledTelo} titulek={t('faktura.nahledTitulek')} />
+      <NahledDokladu
+        telo={nahledTelo}
+        titulek={t('faktura.nahledTitulek')}
+        nazevSouboru={`faktura-${(jesteNeulozena ? 'nova' : invoice.number).replace(/[^\w.-]+/g, '-')}.pdf`}
+      />
       </div>
 
       {!jesteNeulozena && (
