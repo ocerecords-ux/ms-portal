@@ -456,6 +456,8 @@ function Psatko({
   placeholder,
   nabidka,
   vyber,
+  zavriNabidku,
+  kurzorNa = null,
   popisek,
   onZrusit,
   autoFocus = false,
@@ -464,12 +466,23 @@ function Psatko({
   onOdeberPrilohu,
 }: {
   hodnota: string;
-  zmena: (v: string) => void;
+  /**
+   * `kurzor` je pozice kurzoru v obyčejném textu. Podle ní se pozná rozepsaná
+   * zmínka - dřív se hledala na konci celého textu, takže při ÚPRAVĚ zprávy
+   * nabídka nevyskočila vůbec: kurzor stojí uprostřed věty, ne na konci
+   * (oprava 29. 9. 2026: „v chatu nejdou označovat lidi, když dám upravit
+   * zprávu").
+   */
+  zmena: (v: string, kurzor: number | null) => void;
   odeslat: (e: React.FormEvent) => void;
   sending: boolean;
   placeholder: string;
   nabidka: ChatTeamMember[];
   vyber: (clovek: ChatTeamMember) => void;
+  /** Zavřít nabídku zmínek (Esc). */
+  zavriNabidku?: () => void;
+  /** Kam po doplnění zmínky postavit kurzor; null = na konec. */
+  kurzorNa?: number | null;
   /** Popisek odesilaciho tlacitka - pri uprave zpravy je to "Uložit". */
   popisek?: string;
   /** Kdyz je zadane, vedle tlacitka pribude Zrušit (uprava zpravy). */
@@ -484,6 +497,13 @@ function Psatko({
   const t = usePreklad();
   const jazyk = useJazyk();
   const [smajlici, setSmajlici] = useState(false);
+  /**
+   * Která položka nabídky zmínek je zvýrazněná (zadání 29. 9. 2026: „chci je
+   * vybírat šipkou a entrem potvrdit osobu"). Při každé změně nabídky zpátky
+   * na první - jinak by po dopsání písmene zůstalo svítit číslo řádku, který
+   * už znamená někoho jiného.
+   */
+  const [aktivni, setAktivni] = useState(0);
   const poleRef = useRef<HTMLDivElement | null>(null);
   /** Text, který jsme naposledy poslali ven - podle něj se pozná cizí změna. */
   /**
@@ -540,6 +560,78 @@ function Psatko({
     return span;
   }, []);
 
+  /**
+   * Kolikátý znak obyčejného textu je pod kurzorem.
+   *
+   * Počítá se tak, že se vezme obsah od začátku pole po kurzor, naklonuje se
+   * a projde se toutéž funkcí jako celé pole - jinak by se počítání rozešlo
+   * u smajlíků, kteří jsou v poli obrázek, ale v textu zkratka o víc znacích.
+   */
+  const offsetKurzoru = useCallback(
+    (pole: HTMLElement): number | null => {
+      const vyberTextu = window.getSelection();
+      if (!vyberTextu || vyberTextu.rangeCount === 0) return null;
+      const rozsah = vyberTextu.getRangeAt(0);
+      if (!pole.contains(rozsah.endContainer)) return null;
+      const doKurzoru = document.createRange();
+      doKurzoru.selectNodeContents(pole);
+      doKurzoru.setEnd(rozsah.endContainer, rozsah.endOffset);
+      const obal = document.createElement('div');
+      obal.appendChild(doKurzoru.cloneContents());
+      return naText(obal).length;
+    },
+    [naText],
+  );
+
+  /** Postaví kurzor na daný znak obyčejného textu. Za konec = na konec. */
+  const nastavKurzor = useCallback((pole: HTMLElement, offset: number) => {
+    const rozsah = document.createRange();
+    let zbyva = offset;
+    let hotovo = false;
+
+    const projdi = (uzel: Node) => {
+      for (const n of Array.from(uzel.childNodes)) {
+        if (hotovo) return;
+        if (n.nodeType === Node.TEXT_NODE) {
+          const delka = (n.textContent ?? '').length;
+          if (zbyva <= delka) {
+            rozsah.setStart(n, zbyva);
+            hotovo = true;
+            return;
+          }
+          zbyva -= delka;
+          continue;
+        }
+        if (!(n instanceof HTMLElement)) continue;
+        // Smajlík je v textu zkratka, v poli jeden needitovatelný uzel.
+        const delka = n.dataset.code ? n.dataset.code.length : n.tagName === 'BR' ? 1 : null;
+        if (delka !== null) {
+          if (zbyva <= delka) {
+            rozsah.setStartAfter(n);
+            hotovo = true;
+            return;
+          }
+          zbyva -= delka;
+          continue;
+        }
+        projdi(n);
+      }
+    };
+    projdi(pole);
+
+    if (!hotovo) {
+      rozsah.selectNodeContents(pole);
+      rozsah.collapse(false);
+    } else {
+      rozsah.collapse(true);
+    }
+    const vyberTextu = window.getSelection();
+    vyberTextu?.removeAllRanges();
+    vyberTextu?.addRange(rozsah);
+  }, []);
+
+  useEffect(() => setAktivni(0), [nabidka.length, nabidka[0]?.id]);
+
   /** Naplní pole podle textu (jen při změně zvenčí - odeslání, výběr zmínky). */
   useEffect(() => {
     const pole = poleRef.current;
@@ -558,16 +650,21 @@ function Psatko({
     }
     posledni.current = hodnota;
 
-    // Kurzor na konec, ať se dá rovnou psát dál.
+    // Kurzor za doplněnou zmínku, jinak na konec - ať se dá rovnou psát dál.
+    // Bez toho by po výběru ze seznamu při úpravě zprávy kurzor skočil na
+    // konec věty, tedy jinam, než kde člověk psal (29. 9. 2026).
     if (document.activeElement === pole) {
-      const rozsah = document.createRange();
-      rozsah.selectNodeContents(pole);
-      rozsah.collapse(false);
-      const vyber = window.getSelection();
-      vyber?.removeAllRanges();
-      vyber?.addRange(rozsah);
+      if (kurzorNa !== null) nastavKurzor(pole, kurzorNa);
+      else {
+        const rozsah = document.createRange();
+        rozsah.selectNodeContents(pole);
+        rozsah.collapse(false);
+        const vyber = window.getSelection();
+        vyber?.removeAllRanges();
+        vyber?.addRange(rozsah);
+      }
     }
-  }, [hodnota, smajlikUzel]);
+  }, [hodnota, smajlikUzel, kurzorNa, nastavKurzor]);
 
   // Pri uprave zpravy chce clovek psat hned - kurzor rovnou na konec textu.
   useEffect(() => {
@@ -730,7 +827,7 @@ function Psatko({
     if (!pole) return;
     const text = naText(pole).slice(0, MAX_MESSAGE_LENGTH);
     posledni.current = text;
-    zmena(text);
+    zmena(text, offsetKurzoru(pole));
   }
 
   /** Vloží smajlíka tam, kde je kurzor (ne na konec - to by lidi štvalo). */
@@ -823,12 +920,21 @@ function Psatko({
       )}
       {nabidka.length > 0 && (
         <div className="absolute left-3 right-3 bottom-full mb-1 max-h-40 overflow-y-auto bg-surface border border-line rounded-lg shadow-lg py-1 z-10">
-          {nabidka.map((u) => (
+          {nabidka.map((u, i) => (
             <button
               key={u.id}
               type="button"
+              // Kurzor musí zůstat v psátku, jinak se rozbije vkládání.
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseEnter={() => setAktivni(i)}
               onClick={() => vyber(u)}
-              className="w-full text-left px-3 py-1.5 text-sm font-body text-ink hover:bg-field flex items-center gap-2"
+              ref={(el) => {
+                if (i === aktivni) el?.scrollIntoView({ block: 'nearest' });
+              }}
+              aria-selected={i === aktivni}
+              className={`w-full text-left px-3 py-1.5 text-sm font-body text-ink flex items-center gap-2 ${
+                i === aktivni ? 'bg-field' : 'hover:bg-field'
+              }`}
             >
               <Avatar label={u.label} photoUrl={u.photoUrl} size={22} />
               <span className="truncate">{u.label}</span>
@@ -871,6 +977,33 @@ function Psatko({
             posliVen();
           }}
           onKeyDown={(e) => {
+            /**
+             * NABÍDKA ZMÍNEK SE OVLÁDÁ Z KLÁVESNICE (zadání 29. 9. 2026).
+             * Dokud je otevřená, Enter potvrdí vybraného člověka a zprávu
+             * NEODEŠLE - jinak by jedno klepnutí navíc poslalo půlku věty.
+             */
+            if (nabidka.length > 0) {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setAktivni((i) => (i + 1) % nabidka.length);
+                return;
+              }
+              if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setAktivni((i) => (i - 1 + nabidka.length) % nabidka.length);
+                return;
+              }
+              if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                vyber(nabidka[Math.min(aktivni, nabidka.length - 1)]);
+                return;
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                zavriNabidku?.();
+                return;
+              }
+            }
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               odeslat(e as unknown as React.FormEvent);
@@ -1815,6 +1948,13 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   /** Co se zrovna nabizi - clovek po @, nebo projekt po # (zadani 11. 9. 2026). */
   const [druhZminky, setDruhZminky] = useState<'clovek' | 'projekt'>('clovek');
   const [zminkaHledani, setZminkaHledani] = useState('');
+  /**
+   * Kde v textu stojí kurzor (29. 9. 2026). Podle toho se pozná rozepsaná
+   * zmínka a nahradí se jen ona - ne konec věty za kurzorem.
+   */
+  const [kurzorVPoli, setKurzorVPoli] = useState<number | null>(null);
+  /** Kam kurzor postavit po doplnění jména; null = nechat na konci. */
+  const [kurzorPo, setKurzorPo] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -2979,20 +3119,29 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
    * zadna mezera), otevre nabidku lidi. Vybrany clovek se do textu doplni
    * i s mezerou, at se da rovnou psat dal.
    */
-  function sledujZminku(text: string, kde: 'hlavni' | 'vlakno' | 'uprava') {
+  function sledujZminku(text: string, kde: 'hlavni' | 'vlakno' | 'uprava', kurzor: number | null) {
     // Zminka se pozna jen na zacatku slova a jen dokud za znakem neni mezera -
     // jinak by nabidka vyskakovala i uprostred bezne vety a v e-mailovych
     // adresach. Cely nazev vc. mezer doplni az vyber ze seznamu.
     //
     // @ = clovek z tymu, # = projekt (zadani 11. 9. 2026).
-    const clovek = /(?:^|\s)@([\p{L}]{0,20})$/u.exec(text);
+    //
+    // HLEDA SE PRED KURZOREM, ne na konci celeho textu (oprava 29. 9. 2026:
+    // „v chatu nejdou oznacovat lidi, kdyz dam upravit zpravu"). U nove
+    // zpravy je to totez - clovek pise na konci -, ale pri uprave stoji
+    // kurzor uprostred vety a nabidka nevyskocila vubec.
+    const pred = kurzor === null ? text : text.slice(0, kurzor);
+    setKurzorVPoli(kurzor);
+    setKurzorPo(null);
+
+    const clovek = /(?:^|\s)@([\p{L}]{0,20})$/u.exec(pred);
     if (clovek) {
       setDruhZminky('clovek');
       setZminkyPro(kde);
       setZminkaHledani(clovek[1].toLowerCase());
       return;
     }
-    const projekt = /(?:^|\s)#([\p{L}\p{N} _-]{0,40})$/u.exec(text);
+    const projekt = /(?:^|\s)#([\p{L}\p{N} _-]{0,40})$/u.exec(pred);
     if (projekt) {
       setDruhZminky('projekt');
       setZminkyPro(kde);
@@ -3003,10 +3152,23 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
   }
 
   function doplnZminku(polozka: ChatTeamMember) {
-    const uprav = (text: string) =>
-      druhZminky === 'projekt'
-        ? text.replace(/#[\p{L}\p{N} _-]{0,40}$/u, `#${polozka.label} `)
-        : text.replace(/@[\p{L}]{0,20}$/u, `@${polozka.label} `);
+    /**
+     * Nahrazuje se jen rozepsaná zmínka PŘED KURZOREM; zbytek věty za ním
+     * zůstane, jak byl. Bez toho by úprava zprávy uprostřed textu ukousla
+     * všechno za kurzorem (29. 9. 2026).
+     */
+    const uprav = (text: string) => {
+      const kde = kurzorVPoli ?? text.length;
+      const pred = text.slice(0, kde);
+      const za = text.slice(kde);
+      const novy =
+        druhZminky === 'projekt'
+          ? pred.replace(/#[\p{L}\p{N} _-]{0,40}$/u, `#${polozka.label} `)
+          : pred.replace(/@[\p{L}]{0,20}$/u, `@${polozka.label} `);
+      // Kurzor patří za doplněné jméno, ne na konec zprávy.
+      setKurzorPo(novy.length);
+      return novy + za;
+    };
     // Nova zprava zacina ukolem? Pak se lista s terminem ukaze sama.
     if (polozka.id === KLIC_UKOLU) setUkolHlaska(null);
     // Upravovaná zpráva má vlastní text - jinak by se doplnění psalo do
@@ -3712,15 +3874,17 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                             <div className="mt-1 rounded-card border border-brand-purple overflow-hidden bg-surface">
                               <Psatko
                                 hodnota={upravaText}
-                                zmena={(v) => {
+                                zmena={(v, kurzor) => {
                                   setUpravaText(v);
-                                  sledujZminku(v, 'uprava');
+                                  sledujZminku(v, 'uprava', kurzor);
                                 }}
                                 odeslat={ulozUpravu}
                                 sending={sending}
                                 placeholder={t('chat.upravitZpravu')}
                                 nabidka={zminkyPro === 'uprava' ? nabidkaZminek : []}
                                 vyber={doplnZminku}
+                                zavriNabidku={() => setZminkyPro(null)}
+                                kurzorNa={kurzorPo}
                                 popisek={t('obecne.ulozit')}
                                 onZrusit={zrusUpravu}
                                 autoFocus
@@ -3817,9 +3981,9 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
                   <Psatko
                     hodnota={draft}
-                    zmena={(v) => {
+                    zmena={(v, kurzor) => {
                       setDraft(v);
-                      sledujZminku(v, 'hlavni');
+                      sledujZminku(v, 'hlavni', kurzor);
                       if (v.trim()) ohlasZePisu(otevrena.id);
                     }}
                     odeslat={(e) => odesli(e, false)}
@@ -3827,6 +3991,8 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                     placeholder={t('chat.napsatZpravu')}
                     nabidka={zminkyPro === 'hlavni' ? nabidkaZminek : []}
                     vyber={doplnZminku}
+                    zavriNabidku={() => setZminkyPro(null)}
+                    kurzorNa={kurzorPo}
                     prilohy={prilohyHlavni}
                     onPridejPrilohy={(soubory) =>
                       setPrilohyHlavni((c) => [...c, ...soubory].slice(0, MAX_PRILOH))
@@ -3901,15 +4067,17 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
                               <div className="mt-1 rounded-card border border-brand-purple overflow-hidden bg-surface">
                                 <Psatko
                                   hodnota={upravaText}
-                                  zmena={(v) => {
+                                  zmena={(v, kurzor) => {
                                     setUpravaText(v);
-                                    sledujZminku(v, 'uprava');
+                                    sledujZminku(v, 'uprava', kurzor);
                                   }}
                                   odeslat={ulozUpravu}
                                   sending={sending}
                                   placeholder={t('chat.upravitZpravu')}
                                   nabidka={zminkyPro === 'uprava' ? nabidkaZminek : []}
                                   vyber={doplnZminku}
+                                  zavriNabidku={() => setZminkyPro(null)}
+                                  kurzorNa={kurzorPo}
                                   popisek={t('obecne.ulozit')}
                                   onZrusit={zrusUpravu}
                                   autoFocus
@@ -3945,15 +4113,17 @@ export function ChatDock({ naStrance = false }: { naStrance?: boolean } = {}) {
 
                     <Psatko
                       hodnota={vlaknoDraft}
-                      zmena={(v) => {
+                      zmena={(v, kurzor) => {
                         setVlaknoDraft(v);
-                        sledujZminku(v, 'vlakno');
+                        sledujZminku(v, 'vlakno', kurzor);
                       }}
                       odeslat={(e) => odesli(e, true)}
                       sending={sending}
                       placeholder={t('chat.odpovedetPlaceholder')}
                       nabidka={zminkyPro === 'vlakno' ? nabidkaZminek : []}
                       vyber={doplnZminku}
+                      zavriNabidku={() => setZminkyPro(null)}
+                      kurzorNa={kurzorPo}
                       prilohy={prilohyVlakno}
                       onPridejPrilohy={(soubory) =>
                         setPrilohyVlakno((c) => [...c, ...soubory].slice(0, MAX_PRILOH))
