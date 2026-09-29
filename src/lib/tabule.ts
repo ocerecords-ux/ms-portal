@@ -86,6 +86,22 @@ export type DataTabule = {
   poznamky: { id: string; text: string; autor: string | null; kdy: string }[];
   chybi: { polozka: string; kdy: string }[];
   ted: string;
+  /**
+   * OSTATNÍ STUDIA (zadání 29. 9. 2026: „potřeboval bych na tu tabuli dostat
+   * přehled i o ostatních studiích, ale aby to, ve kterém tabule je, bylo vždy
+   * výraznější"). Jen to nejnutnější - kdo v nich právě točí a co je dál.
+   * Vlastní studio v seznamu není.
+   */
+  ostatni: {
+    id: string;
+    nazev: string;
+    kratce: string;
+    barva: string;
+    /** Pásmo studia - Londýn má jiné než Brno, čas se píše jeho místní. */
+    casovePasmo: string;
+    probiha: { nazev: string; do: string; mistnost: string | null } | null;
+    dalsi: { od: string; nazev: string } | null;
+  }[];
   /** Příběhy z Instagramu (22. 9. 2026); null = okno se neukáže. */
   instagram?: {
     ucet: string | null;

@@ -54,6 +54,13 @@ export function Tabule({
   const [ted, setTed] = useState(() => new Date());
   const [meritko, setMeritko] = useState(1);
   const [chybaSite, setChybaSite] = useState(false);
+  /**
+   * SERVISNÍ PANEL (zadání 29. 9. 2026: „napadlo mě dát pryč ten servisní
+   * panel s tím, co ve studiu chybí, a udělat ho vyjížděcí… tím ušetříme
+   * místo"). Dlaždice „co chybí" se otevřou přes celou tabuli a zase zmizí -
+   * na obrazovce tak zůstává jen to, kvůli čemu se na ni lidi dívají.
+   */
+  const [servis, setServis] = useState(false);
   const zaklad = `/api/tabule/${encodeURIComponent(klic)}`;
   const pasmo = data.studio.casovePasmo;
 
@@ -82,6 +89,16 @@ export function Tabule({
       document.removeEventListener('visibilitychange', viditelnost);
     };
   }, [nacti]);
+
+  /**
+   * Servisní panel se sám zavře. Kdyby ho někdo nechal otevřený, zůstala by
+   * tabule k ničemu do příchodu dalšího člověka.
+   */
+  useEffect(() => {
+    if (!servis) return;
+    const t = setTimeout(() => setServis(false), 60_000);
+    return () => clearTimeout(t);
+  }, [servis, data.chybi]);
 
   // Plátno přes celou obrazovku.
   useEffect(() => {
@@ -129,7 +146,13 @@ export function Tabule({
   // Vejde se kolem šesti řádků: jeden už proběhlý a zbytek dopředu.
   const prvniAktualni = radky.findIndex((r) => (r.typ === 'udalost' ? r.u.doMs > tedMs : r.do > tedMs));
   const zacatek = prvniAktualni <= 0 ? 0 : prvniAktualni - 1;
-  const viditelne = radky.slice(zacatek, zacatek + (probiha || dalsi ? 5 : 7));
+  // Pruh s ostatními studii sebere kus výšky - rozpis se o řádek zkrátí.
+  // Tabule může běžet proti starší odpovědi ze serveru (typicky vteřinu po
+  // nasazení), než doběhne obnova - pak pole s ostatními studii chybí.
+  const ostatni = data.ostatni ?? [];
+  const maOstatni = ostatni.length > 0;
+  const kolikRadku = (probiha || dalsi ? 5 : 7) - (maOstatni ? 1 : 0);
+  const viditelne = radky.slice(zacatek, zacatek + kolikRadku);
 
   const zbyva = (doMs: number) => {
     const min = Math.max(0, Math.round((doMs - tedMs) / 60_000));
@@ -388,16 +411,35 @@ export function Tabule({
               ),
             )}
             {(probiha || dalsi) && data.zitra && (
-              <span style={{ marginTop: 'auto', fontSize: 24, color: BARVY.sedy }}>
+              <span style={{ marginTop: maOstatni ? 12 : 'auto', fontSize: 24, color: BARVY.sedy }}>
                 Zítra {cas(data.zitra.od)}: {zitraText(data.zitra)}
               </span>
             )}
+
+            {maOstatni && <OstatniStudia ostatni={ostatni} ted={ted} domaciPasmo={pasmo} />}
           </div>
 
           {data.instagram && <InstagramOkno ig={data.instagram} />}
 
-          <Panel klic={klic} zaklad={zaklad} data={data} setData={setData} obnov={nacti} />
+          <Panel
+            klic={klic}
+            zaklad={zaklad}
+            data={data}
+            setData={setData}
+            obnov={nacti}
+            otevriServis={() => setServis(true)}
+          />
         </div>
+
+        {servis && (
+          <ServisniPanel
+            zaklad={zaklad}
+            data={data}
+            setData={setData}
+            obnov={nacti}
+            zavri={() => setServis(false)}
+          />
+        )}
       </div>
     </div>
   );
@@ -428,18 +470,26 @@ function Lide({ u, cas }: { u: { druh: string; herec: string | null; zvukar: str
   );
 }
 
-/** Pravý panel: poznámky a co chybí. Změny se ukážou hned, server se dožene. */
+/**
+ * Pravý panel: poznámky. Změny se ukážou hned, server se dožene.
+ *
+ * Dlaždice „co chybí" tu od 29. 9. 2026 nejsou - přesunuly se do servisního
+ * panelu, který se vyjede přes celou tabuli. Poznámky tím dostaly celou výšku
+ * sloupce a formulář na novou poznámku se přestal schovávat pod dlaždice.
+ */
 function Panel({
   zaklad,
   data,
   setData,
   obnov,
+  otevriServis,
 }: {
   klic: string;
   zaklad: string;
   data: DataTabule;
   setData: (fn: (d: DataTabule) => DataTabule) => void;
   obnov: () => Promise<void>;
+  otevriServis: () => void;
 }) {
   const [pridavam, setPridavam] = useState(false);
   const [text, setText] = useState('');
@@ -449,24 +499,6 @@ function Panel({
   useEffect(() => {
     if (pridavam) pole.current?.focus();
   }, [pridavam]);
-
-  const chybi = new Set(data.chybi.map((c) => c.polozka));
-
-  async function prepni(polozka: string) {
-    const nove = !chybi.has(polozka);
-    setData((d) => ({
-      ...d,
-      chybi: nove
-        ? [...d.chybi, { polozka, kdy: new Date().toISOString() }]
-        : d.chybi.filter((c) => c.polozka !== polozka),
-    }));
-    await fetch(`${zaklad}/chybi`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ polozka, chybi: nove }),
-    }).catch(() => null);
-    void obnov();
-  }
 
   async function uloz() {
     const t = text.trim();
@@ -531,6 +563,11 @@ function Panel({
           padding: '28px 30px',
           borderRadius: 28,
           background: BARVY.karta,
+          // Formulář na novou poznámku se dřív vysypal z karty a schoval se
+          // pod dlaždice pod ní (29. 9. 2026: „když přidávám poznámku, tak je
+          // schované okno pro editaci"). Karta teď nic nepouští ven a roluje
+          // se uvnitř jen seznam poznámek.
+          overflow: 'hidden',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
@@ -543,7 +580,7 @@ function Panel({
         </div>
 
         {pridavam && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
             <textarea
               ref={pole}
               value={text}
@@ -606,7 +643,7 @@ function Panel({
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', minHeight: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', minHeight: 0, flexGrow: 1 }}>
           {data.poznamky.length === 0 && !pridavam && (
             <span style={{ fontSize: 24, color: BARVY.sedy }}>Žádné poznámky.</span>
           )}
@@ -650,16 +687,190 @@ function Panel({
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '28px 30px', borderRadius: 28, background: BARVY.karta }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ fontSize: 24, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy, whiteSpace: 'nowrap' }}>
-            CO CHYBÍ VE STUDIU
+      {/* SERVIS: jedno tlačítko místo devíti dlaždic. Když něco chybí, je to
+          na něm vidět i zavřené - jinak by se na to zapomnělo. */}
+      <button
+        type="button"
+        onClick={otevriServis}
+        style={{
+          ...tlacitko,
+          minHeight: 88,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 20,
+          padding: '0 30px',
+          borderRadius: 24,
+          borderColor: nazvyChybi.length ? BARVY.chybiLinka : '#3a3252',
+          background: nazvyChybi.length ? BARVY.chybiPozadi : BARVY.karta,
+          color: nazvyChybi.length ? BARVY.chybiText : BARVY.text2,
+          textAlign: 'left',
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
+          <IkonaServis />
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 26, fontWeight: 700 }}>Servis studia</span>
+            <span
+              style={{
+                fontSize: 20,
+                fontWeight: 500,
+                color: nazvyChybi.length ? BARVY.chybiText : BARVY.sedy,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {nazvyChybi.length ? `Chybí: ${nazvyChybi.join(', ')}` : 'Nahlásit, co ve studiu došlo'}
+            </span>
           </span>
-          <span style={{ fontSize: 20, color: nazvyChybi.length ? BARVY.chybiText : BARVY.sedy, textAlign: 'right' }}>
-            {nazvyChybi.length ? `Chybí: ${nazvyChybi.join(', ')}` : 'Ťukněte, co došlo'}
+        </span>
+        {nazvyChybi.length > 0 && (
+          <span
+            style={{
+              flexShrink: 0,
+              minWidth: 48,
+              height: 48,
+              padding: '0 14px',
+              borderRadius: 999,
+              background: BARVY.chybiLinka,
+              color: '#2a1c00',
+              fontSize: 26,
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {nazvyChybi.length}
           </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/** Klíč a kolečko - „tady se něco doplňuje", ne „tady se něco nastavuje". */
+function IkonaServis() {
+  return (
+    <svg
+      width="40"
+      height="40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 9.1 19.4a1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-1H3a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 9.1a1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.32H9a1.6 1.6 0 0 0 1-1.47V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77V9a1.6 1.6 0 0 0 1.47 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z" />
+    </svg>
+  );
+}
+
+/**
+ * SERVISNÍ PANEL (zadání 29. 9. 2026: „schovat ho pod nějaké servisní
+ * tlačítko, tím ušetříme místo").
+ *
+ * Vyjede přes celou tabuli, takže dlaždice můžou být větší než dřív - a na
+ * dotykovém displeji se do nich trefí i člověk, který jde okolo. Zavírá se
+ * ťuknutím vedle, křížkem a sám po minutě, aby tabule nezůstala zaslepená.
+ */
+function ServisniPanel({
+  zaklad,
+  data,
+  setData,
+  obnov,
+  zavri,
+}: {
+  zaklad: string;
+  data: DataTabule;
+  setData: (fn: (d: DataTabule) => DataTabule) => void;
+  obnov: () => Promise<void>;
+  zavri: () => void;
+}) {
+  const chybi = new Set(data.chybi.map((c) => c.polozka));
+
+  async function prepni(polozka: string) {
+    const nove = !chybi.has(polozka);
+    setData((d) => ({
+      ...d,
+      chybi: nove
+        ? [...d.chybi, { polozka, kdy: new Date().toISOString() }]
+        : d.chybi.filter((c) => c.polozka !== polozka),
+    }));
+    await fetch(`${zaklad}/chybi`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ polozka, chybi: nove }),
+    }).catch(() => null);
+    void obnov();
+  }
+
+  return (
+    <div
+      onClick={zavri}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 20,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 72,
+        background: 'rgba(8, 6, 14, 0.82)',
+      }}
+    >
+      <div
+        // Ťuknutí do dlaždice nesmí panel zavřít.
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 1180,
+          maxWidth: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 28,
+          padding: '40px 44px',
+          borderRadius: 36,
+          background: BARVY.karta,
+          border: `2px solid ${BARVY.linka}`,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+            <span style={{ fontFamily: DISPLAY, fontSize: 46, fontWeight: 600 }}>Co ve studiu došlo?</span>
+            <span style={{ fontSize: 24, color: BARVY.sedy }}>
+              Ťukněte na to, co chybí. Bára se to dozví hned. Až se to doplní, ťukněte znovu.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={zavri}
+            aria-label="Zavřít servisní panel"
+            style={{
+              flexShrink: 0,
+              width: 72,
+              height: 72,
+              borderRadius: 20,
+              border: `2px solid ${BARVY.linka}`,
+              background: BARVY.karta2,
+              color: BARVY.text2,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 18 }}>
           {POLOZKY_TABULE.map((p) => {
             const je = chybi.has(p.klic);
             return (
@@ -669,14 +880,14 @@ function Panel({
                 onClick={() => prepni(p.klic)}
                 aria-pressed={je}
                 style={{
-                  minHeight: 128,
+                  minHeight: 172,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 8,
-                  padding: 12,
-                  borderRadius: 20,
+                  gap: 10,
+                  padding: 14,
+                  borderRadius: 24,
                   cursor: 'pointer',
                   textAlign: 'center',
                   fontFamily: 'inherit',
@@ -686,8 +897,8 @@ function Panel({
                 }}
               >
                 <svg
-                  width="52"
-                  height="52"
+                  width="64"
+                  height="64"
                   viewBox="0 0 40 40"
                   fill="none"
                   stroke="currentColor"
@@ -697,12 +908,112 @@ function Panel({
                   aria-hidden="true"
                   dangerouslySetInnerHTML={{ __html: p.svg }}
                 />
-                <span style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.15 }}>{p.nazev}</span>
-                {je && <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.1em', color: '#ffc861' }}>CHYBÍ</span>}
+                <span style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.15 }}>{p.nazev}</span>
+                {je && <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: '0.1em', color: '#ffc861' }}>CHYBÍ</span>}
               </button>
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * OSTATNÍ STUDIA (zadání 29. 9. 2026: „aby to, ve kterém tabule je, bylo vždy
+ * výraznější").
+ *
+ * Proto je to pruh malých karet dole, ne druhý sloupec: vlastní studio má
+ * nahoře půlmetrové písmo a tohle se k němu jen přidává. Čas se píše v pásmu
+ * toho kterého studia - v Londýně se točí v jinou hodinu než v Brně - a když
+ * se pásmo liší od domácího, je to u času napsané.
+ */
+function OstatniStudia({
+  ostatni,
+  ted,
+  domaciPasmo,
+}: {
+  ostatni: DataTabule['ostatni'];
+  ted: Date;
+  domaciPasmo: string;
+}) {
+  const tedMs = ted.getTime();
+  const hodina = (iso: string, pasmo: string) =>
+    new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+
+  return (
+    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0 }}>
+      <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>OSTATNÍ STUDIA</span>
+      <div style={{ display: 'flex', gap: 16 }}>
+        {ostatni.map((s) => {
+          const jinePasmo = s.casovePasmo !== domaciPasmo;
+          const bezi = s.probiha && Date.parse(s.probiha.do) > tedMs;
+          return (
+            <div
+              key={s.id}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                padding: '16px 20px',
+                borderRadius: 20,
+                background: BARVY.tlumena,
+                border: `1px solid ${BARVY.linka}`,
+                // Vlastní studio nahoře má 60px nadpis a plnou barvu rámečku;
+                // tohle je schválně tlumené, ať se to neperou o pozornost.
+                opacity: 0.92,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <span style={{ width: 12, height: 12, borderRadius: 4, background: s.barva, flexShrink: 0 }} />
+                <span
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 700,
+                    color: BARVY.text2,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {s.kratce}
+                </span>
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    flexShrink: 0,
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: bezi ? BARVY.akcent : '#4a4263',
+                  }}
+                />
+              </div>
+              <span
+                style={{
+                  fontSize: 22,
+                  fontWeight: 600,
+                  color: bezi ? BARVY.text : BARVY.sedy,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {bezi ? s.probiha!.nazev : s.dalsi ? s.dalsi.nazev : 'Dnes volno'}
+              </span>
+              <span style={{ fontSize: 19, color: BARVY.sedy, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {bezi
+                  ? `do ${hodina(s.probiha!.do, s.casovePasmo)}${s.probiha!.mistnost ? ` · ${s.probiha!.mistnost}` : ''}`
+                  : s.dalsi
+                    ? `od ${hodina(s.dalsi.od, s.casovePasmo)}`
+                    : '—'}
+                {jinePasmo && (bezi || s.dalsi) ? ' místního' : ''}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

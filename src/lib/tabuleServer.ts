@@ -61,6 +61,81 @@ function pulnoc(okamzik: Date, pasmo: string, dnu = 0): Date {
   return new Date(zaklad - posunPasma(new Date(zaklad), pasmo));
 }
 
+/**
+ * CO SE DĚJE V OSTATNÍCH STUDIÍCH (zadání 29. 9. 2026).
+ *
+ * Bere se jen dnešek a jen to, co člověk u tabule potřebuje vědět: jestli tam
+ * teď někdo točí a co je nejbližší další. Místnosti se počítají ke svému
+ * studiu, ale v seznamu nestojí samostatně - jinak by se přehled rozsypal na
+ * deset řádků.
+ *
+ * Vlastní studio se vynechává; to je na tabuli velké nahoře a tenhle pruh ho
+ * má jen doplňovat.
+ */
+async function ostatniStudia(krometoho: string, ted: Date): Promise<DataTabule['ostatni']> {
+  const studia = await prisma.studio.findMany({
+    where: { active: true, parentStudioId: null, id: { not: krometoho } },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    select: {
+      id: true,
+      name: true,
+      shortName: true,
+      color: true,
+      timezone: true,
+      rooms: { select: { id: true, shortName: true } },
+    },
+  });
+  if (studia.length === 0) return [];
+
+  /**
+   * Okno se schválně bere podle pásma každého studia zvlášť - v Londýně je
+   * jiný „dnešek" než v Brně a po půlnoci by se jinak ukazoval včerejšek.
+   */
+  const idcka = studia.flatMap((s) => [s.id, ...s.rooms.map((r) => r.id)]);
+  const odKdy = new Date(Math.min(...studia.map((s) => pulnoc(ted, s.timezone).getTime())));
+  const doKdy = new Date(Math.max(...studia.map((s) => pulnoc(ted, s.timezone, 1).getTime())));
+  const obsazenost = await loadOccupancy(idcka, odKdy, doKdy);
+
+  const vse = [
+    ...obsazenost.slots.map((s) => ({
+      start: s.start,
+      end: s.end,
+      nazev: s.projectName || 'Natáčení',
+      studioId: s.studioId,
+    })),
+    ...obsazenost.blocks.map((b) => ({
+      start: b.start,
+      end: b.end,
+      nazev: b.projectName || b.title || BLOCK_KIND_LABELS[b.kind] || 'Blokace',
+      studioId: b.studioId,
+    })),
+  ].sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  return studia.map((s) => {
+    const mistnosti = new Map<string, string>(
+      s.rooms.map((r: { id: string; shortName: string }) => [r.id, r.shortName]),
+    );
+    const patriSem = new Set([s.id, ...s.rooms.map((r) => r.id)]);
+    const zitra = pulnoc(ted, s.timezone, 1);
+    const moje = vse.filter((u) => patriSem.has(u.studioId) && u.start < zitra);
+
+    const bezi = moje.find((u) => u.start <= ted && u.end > ted) ?? null;
+    const dalsi = moje.find((u) => u.start > ted) ?? null;
+
+    return {
+      id: s.id,
+      nazev: s.name,
+      kratce: s.shortName,
+      barva: s.color,
+      casovePasmo: s.timezone,
+      probiha: bezi
+        ? { nazev: bezi.nazev, do: bezi.end.toISOString(), mistnost: mistnosti.get(bezi.studioId) ?? null }
+        : null,
+      dalsi: dalsi ? { od: dalsi.start.toISOString(), nazev: dalsi.nazev } : null,
+    };
+  });
+}
+
 export async function nactiTabuli(studio: NonNullable<Awaited<ReturnType<typeof studioPodleKlice>>>): Promise<DataTabule> {
   const ted = new Date();
   const dnes = pulnoc(ted, studio.timezone);
@@ -69,7 +144,7 @@ export async function nactiTabuli(studio: NonNullable<Awaited<ReturnType<typeof 
   const mistnosti = new Map<string, string>(studio.rooms.map((r: { id: string; shortName: string }) => [r.id, r.shortName]));
   const idcka = [studio.id, ...studio.rooms.map((r: { id: string }) => r.id)];
 
-  const [obsazenost, poznamky, chybi, instagram] = await Promise.all([
+  const [obsazenost, poznamky, chybi, instagram, ostatni] = await Promise.all([
     loadOccupancy(idcka, dnes, pozitri),
     prisma.studioPoznamka.findMany({
       where: { studioId: studio.id, hotovoAt: null },
@@ -82,6 +157,7 @@ export async function nactiTabuli(studio: NonNullable<Awaited<ReturnType<typeof 
     }),
     // Instagram (22. 9. 2026) - jen když ho studio nemá vypnutý.
     studio.tabuleInstagram ? instagramProTabuli() : Promise.resolve(null),
+    ostatniStudia(studio.id, ted),
   ]);
 
   const vse = [
@@ -126,6 +202,7 @@ export async function nactiTabuli(studio: NonNullable<Awaited<ReturnType<typeof 
     poznamky: poznamky.map((p) => ({ id: p.id, text: p.text, autor: p.autor, kdy: p.createdAt.toISOString() })),
     chybi: chybi.map((c) => ({ polozka: c.polozka, kdy: c.nahlasenoAt.toISOString() })),
     ted: ted.toISOString(),
+    ostatni,
     instagram: instagram && instagram.polozky.length > 0 ? instagram : null,
   };
 }
