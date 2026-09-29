@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { POLOZKY_TABULE, type DataTabule } from '@/lib/tabule';
 import { KresbaIkony } from '@/lib/ikonyTypu';
 
@@ -17,6 +17,10 @@ import { KresbaIkony } from '@/lib/ikonyTypu';
 const SIRKA = 1920;
 const VYSKA = 1080;
 const OBNOVA_MS = 30_000;
+/** Jak dlouho se snáší výpadek, než se stránka načte znovu. */
+const BEZ_SPOJENI_MS = 10 * 60_000;
+/** V kolik hodin místního času studia se tabule načte znovu sama od sebe. */
+const NOCNI_OBNOVA_HODINA = 4;
 
 const BARVY = {
   pozadi: '#0f0c17',
@@ -65,16 +69,57 @@ export function Tabule({
   const zaklad = `/api/tabule/${encodeURIComponent(klic)}`;
   const pasmo = data.studio.casovePasmo;
 
+  /**
+   * TABULE SE OBNOVUJE SAMA (zadání 29. 9. 2026: „potřeboval bych nějak
+   * udělat, aby se ty tabule samy obnovovaly. Máme stažené na Macu aplikace
+   * od Chromu, které tam jsou na fullscreen").
+   *
+   * Data se tahala každých 30 s už dřív, ale samotná STRÁNKA na displeji
+   * zůstala ta, co se načetla naposled - po nasazení nové verze portálu na ni
+   * tabule sama nepřešla a nikdo k ní nechodí mačkat obnovit. Proto tři
+   * pojistky:
+   *
+   *  1. NOVÁ VERZE PORTÁLU. Server posílá otisk nasazení; když se změní,
+   *     tabule se načte znovu.
+   *  2. BEZ SPOJENÍ DÉLE NEŽ DESET MINUT. Zaseknutou stránku spraví načtení
+   *     znovu spolehlivěji než cokoliv jiného.
+   *  3. JEDNOU ZA NOC. Čistý start proti pomalému zanášení paměti; ve čtyři
+   *     ráno se na tabuli stejně nikdo nedívá.
+   *
+   * Načtení se nikdy nedělá při otevřeném servisním panelu - to u tabule
+   * někdo stojí a klikal by do mizející obrazovky.
+   */
+  const puvodniVerze = useRef<string | null>(null);
+  const bezSpojeniOd = useRef<number | null>(null);
+  const servisRef = useRef(servis);
+  servisRef.current = servis;
+
+  const nactiZnovu = useCallback((duvod: string) => {
+    if (servisRef.current) return;
+    console.info(`Tabule se načítá znovu: ${duvod}`);
+    window.location.reload();
+  }, []);
+
   const nacti = useCallback(async () => {
     try {
       const res = await fetch(zaklad, { cache: 'no-store' });
       if (!res.ok) throw new Error(String(res.status));
-      setData((await res.json()) as DataTabule);
+      const nova = (await res.json()) as DataTabule;
+      setData(nova);
       setChybaSite(false);
+      bezSpojeniOd.current = null;
+
+      const verze = nova.verze ?? null;
+      if (verze && verze !== 'vyvoj') {
+        if (puvodniVerze.current === null) puvodniVerze.current = verze;
+        else if (puvodniVerze.current !== verze) nactiZnovu('portál má novou verzi');
+      }
     } catch {
       setChybaSite(true);
+      if (bezSpojeniOd.current === null) bezSpojeniOd.current = Date.now();
+      else if (Date.now() - bezSpojeniOd.current > BEZ_SPOJENI_MS) nactiZnovu('deset minut bez spojení');
     }
-  }, [zaklad]);
+  }, [zaklad, nactiZnovu]);
 
   useEffect(() => {
     const hodiny = setInterval(() => setTed(new Date()), 1000);
@@ -90,6 +135,23 @@ export function Tabule({
       document.removeEventListener('visibilitychange', viditelnost);
     };
   }, [nacti]);
+
+  /**
+   * NOČNÍ NAČTENÍ ZNOVU. Kontroluje se každou minutu, jestli je ve studiu
+   * čtyři ráno - podle jeho pásma, ne podle prohlížeče: v Londýně je čtyři
+   * ráno o hodinu jinak než v Brně. Okno je jedna minuta, takže se to za noc
+   * spustí právě jednou.
+   */
+  useEffect(() => {
+    const t = setInterval(() => {
+      const hodina = Number(
+        new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, hour: 'numeric', hourCycle: 'h23' }).format(new Date()),
+      );
+      const minuta = Number(new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, minute: 'numeric' }).format(new Date()));
+      if (hodina === NOCNI_OBNOVA_HODINA && minuta === 0) nactiZnovu('noční start načisto');
+    }, 60_000);
+    return () => clearInterval(t);
+  }, [pasmo, nactiZnovu]);
 
   /**
    * Servisní panel se sám zavře. Kdyby ho někdo nechal otevřený, zůstala by

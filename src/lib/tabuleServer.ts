@@ -226,6 +226,11 @@ export async function nactiTabuli(studio: NonNullable<Awaited<ReturnType<typeof 
     zitra: prvniZitra ? { od: prvniZitra.start.toISOString(), nazev: prvniZitra.nazev, druh: prvniZitra.druh } : null,
     chybi: chybi.map((c) => ({ polozka: c.polozka, kdy: c.nahlasenoAt.toISOString() })),
     ted: ted.toISOString(),
+    /**
+     * Otisk nasazení. Na Vercelu je to commit, ze kterého portál běží; při
+     * vývoji nic, takže se tabule sama nenačítá znovu při každé změně.
+     */
+    verze: process.env.VERCEL_GIT_COMMIT_SHA || 'vyvoj',
     ostatni,
     instagram: instagram && instagram.polozky.length > 0 ? instagram : null,
   };

@@ -111,6 +111,12 @@ export type DataTabule = {
   chybi: { polozka: string; kdy: string }[];
   ted: string;
   /**
+   * Verze portálu, ze které data přišla (29. 9. 2026). Tabule visí na
+   * displeji celé týdny a sama od sebe by na nové vydání portálu nepřešla -
+   * podle téhle značky pozná, že se má načíst znovu.
+   */
+  verze: string;
+  /**
    * OSTATNÍ STUDIA (zadání 29. 9. 2026: „potřeboval bych na tu tabuli dostat
    * přehled i o ostatních studiích, ale aby to, ve kterém tabule je, bylo vždy
    * výraznější"). Jen to nejnutnější - kdo v nich právě točí a co je dál.
