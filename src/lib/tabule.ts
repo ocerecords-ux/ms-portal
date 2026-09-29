@@ -84,6 +84,7 @@ export const IKONA_DRUHU: Record<string, string> = {
   CASTING: 'casting',
   BOOKING: 'klic',
   MAINTENANCE: 'ovladac',
+  UKLID: 'uklid',
   INTERNAL: 'lide',
   HOLIDAY: 'slunce',
   VACATION: 'letadlo',

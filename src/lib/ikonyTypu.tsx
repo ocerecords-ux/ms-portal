@@ -391,6 +391,24 @@ export const IKONY_TYPU: Ikona[] = [
    * studiový mikrofon výše.
    */
   {
+    /**
+     * ÚKLID STUDIA (zadání 29. 9. 2026: „samozřejmě k tomu vytvoř ikonu").
+     * Koště: násada z rohu, lichoběžníková hlava a tři štětiny. Stejná mřížka
+     * a tah jako zbytek sady, takže vedle mikrofonu a střihu sedí.
+     */
+    klic: 'uklid',
+    barva: 'modra',
+    popisek: 'Úklid',
+    kresba: (
+      <>
+        <path d="M20.5 3 13 10.5" />
+        <path d="M8.5 10.5h6.5l3.5 9.5H5z" />
+        <path d="M7 15h10" />
+        <path d="M9.5 15v5M12 15v5M14.5 15v5" strokeWidth="1.4" />
+      </>
+    ),
+  },
+  {
     klic: 'strih',
     barva: 'zelena',
     popisek: 'Střih',

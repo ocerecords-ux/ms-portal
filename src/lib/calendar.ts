@@ -107,6 +107,9 @@ export const BLOCK_KIND_LABELS: Record<string, string> = {
   HOLIDAY: 'Svátek',
   VACATION: 'Dovolená',
   MAINTENANCE: 'Údržba',
+  // Úklid studia (zadání 29. 9. 2026). Vlastní druh, ne „Údržba": údržba je
+  // oprava techniky, úklid je pravidelná věc, kterou zapisuje produkce.
+  UKLID: 'Úklid studia',
   INTERNAL: 'Interní blokace',
   OTHER: 'Jiné',
   // Rezervace muzikanta nebo producenta zvenčí (25. 9. 2026). V našem
@@ -140,7 +143,22 @@ export const PRACOVNI_DRUHY = ['NATACENI', 'STRIH', 'CASTING'] as const;
  * druh podržet - viz UdalostForm, který k nabídce přidá i druh upravované
  * události, když v tomhle seznamu není.
  */
-export const DRUHY_K_ZALOZENI = ['NATACENI', 'STRIH', 'CASTING', 'BOOKING'] as const;
+export const DRUHY_K_ZALOZENI = ['NATACENI', 'STRIH', 'CASTING', 'UKLID', 'BOOKING'] as const;
+
+/**
+ * DRUHY, KE KTERÝM SE NIC DALŠÍHO NEVYPLŇUJE (zadání 29. 9. 2026: „když
+ * zaškrtneme tento druh při přidání události, tak bude stačit jen ve kterém
+ * studiu a čas od kdy do kdy").
+ *
+ * U úklidu není co psát - kdo uklízí a co se uklízí se z kalendáře nikdo
+ * neptá. Prázdné pole „Popis" by se u něj jen přeskakovalo, takže se
+ * nevykresluje vůbec a název se doplní z popisku druhu.
+ */
+export const DRUHY_BEZ_UDAJU = ['UKLID'] as const;
+
+export function jeBezUdaju(kind: string): boolean {
+  return (DRUHY_BEZ_UDAJU as readonly string[]).includes(kind);
+}
 
 /**
  * NÁZEV DRUHU PRO SERVER (28. 9. 2026: „v odběrech by pak lidi měli vidět

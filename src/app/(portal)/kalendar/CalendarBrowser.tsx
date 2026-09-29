@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import {
   BLOCK_KIND_LABELS,
   DRUHY_K_ZALOZENI,
+  jeBezUdaju,
   CALENDAR_VIEWS,
   GRID_END_HOUR,
   GRID_SCROLL_TO_HOUR,
@@ -2342,7 +2343,10 @@ function UdalostForm({
           // novou událost") - často se ví jen, že studio je obsazené, a
           // zbytek se doplní později dvojklikem.
           false
-        : !nazev.trim());
+        : // Úklid nemá co vyplňovat (29. 9. 2026) - stačí studio a čas.
+          jeBezUdaju(druh)
+          ? false
+          : !nazev.trim());
 
   /** Zrušení frekvence z kalendáře (19. 9. 2026). */
   async function zrusFrekvenci() {
@@ -2423,7 +2427,9 @@ function UdalostForm({
                 // Režie online (23. 9. 2026) - ukládá se jen u natáčení.
                 ...(jeNataceni || druh === 'CASTING' ? { rezieOnline: rezie } : {}),
               }
-            : { title: nazev }),
+            : // U úklidu se název nepíše, doplní se z popisku druhu -
+              // v kalendáři pak stojí „Úklid studia", ne prázdno.
+              { title: jeBezUdaju(druh) ? nazevDruhu(t, druh) : nazev }),
         }),
       },
       );
@@ -2658,6 +2664,12 @@ function UdalostForm({
             />
           </label>
         </div>
+      ) : jeBezUdaju(druh) ? (
+        /* ÚKLID STUDIA (29. 9. 2026: „bude stačit jen ve kterém studiu a čas
+           od kdy do kdy"). Žádné pole navíc - kdo uklízí a co se uklízí se
+           z kalendáře nikdo neptá a prázdný „Popis" by se jen přeskakoval.
+           Název události doplní kalendář z popisku druhu. */
+        <p className="text-xs font-body text-muted m-0">{t('kalendar.uklidBezUdaju')}</p>
       ) : (
         <label className="flex flex-col gap-1.5">
           {/* U externího pronájmu se ptáme rovnou na jméno (28. 9. 2026) -
@@ -2791,12 +2803,13 @@ function UdalostForm({
  */
 export function druhPrace(
   e: Pick<CalendarEvent, 'kind' | 'state'>,
-): 'NATACENI' | 'STRIH' | 'CASTING' | 'UDRZBA' | 'VOLNO' | null {
+): 'NATACENI' | 'STRIH' | 'CASTING' | 'UKLID' | 'UDRZBA' | 'VOLNO' | null {
   if (e.kind === 'SLOT') return 'NATACENI';
   if (e.kind !== 'BLOCK') return null;
   if (e.state === 'NATACENI') return 'NATACENI';
   if (e.state === 'STRIH') return 'STRIH';
   if (e.state === 'CASTING') return 'CASTING';
+  if (e.state === 'UKLID') return 'UKLID';
   if (e.state === 'MAINTENANCE') return 'UDRZBA';
   if (e.state === 'HOLIDAY' || e.state === 'VACATION') return 'VOLNO';
   return null;
@@ -2807,6 +2820,7 @@ const IKONA_DRUHU: Record<NonNullable<ReturnType<typeof druhPrace>>, string> = {
   NATACENI: 'mikrofon-studio',
   STRIH: 'strih',
   CASTING: 'casting',
+  UKLID: 'uklid',
   UDRZBA: 'klic',
   VOLNO: 'slunce',
 };

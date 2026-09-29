@@ -10,7 +10,7 @@ const schema = z.object({
   studioId: z.string().trim().min(1),
   start: z.string().trim().min(8),
   end: z.string().trim().min(8),
-  kind: z.enum(['HOLIDAY', 'VACATION', 'MAINTENANCE', 'INTERNAL', 'OTHER']).optional(),
+  kind: z.enum(['HOLIDAY', 'VACATION', 'MAINTENANCE', 'UKLID', 'INTERNAL', 'OTHER']).optional(),
   title: z.string().trim().min(1, 'Vyplňte, čeho se blokace týká.').max(160),
   note: z.string().trim().max(1000).optional(),
 });

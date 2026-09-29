@@ -51,8 +51,12 @@ export const ZVUKARI_ZKRATKY: Record<string, string> = {
 };
 
 export type UdalostZGoogle = {
-  /** NATACENI/STRIH jako dřív; úklid = MAINTENANCE, porada = INTERNAL (Praha, 20. 9. 2026). */
-  druh: 'NATACENI' | 'STRIH' | 'CASTING' | 'MAINTENANCE' | 'INTERNAL';
+  /**
+   * NATACENI/STRIH jako dřív; porada = INTERNAL (Praha, 20. 9. 2026).
+   * Úklid má od 29. 9. 2026 vlastní druh UKLID - dřív padal do „Údržby",
+   * kam patří opravy techniky, ne pravidelný úklid.
+   */
+  druh: 'NATACENI' | 'STRIH' | 'CASTING' | 'UKLID' | 'INTERNAL';
   herec: string | null;
   projekt: string;
   zvukarZkratka: string | null;
@@ -91,7 +95,7 @@ export function rozeberUdalost(text: string): UdalostZGoogle {
   // ELEKTŘINY" nebo „Káblovánie P+T"). Bez tohohle by z nich bylo natáčení
   // a nafoukly by kapacitu studia.
   if (/^[úu]klid\b/i.test(t) || /(v[ýy]padek|k[áa]blov[áa]n|servis|odst[áa]vka|rekonstrukce)/i.test(t)) {
-    return { druh: 'MAINTENANCE', herec: null, projekt: t, zvukarZkratka, zvukar, znacky };
+    return { druh: 'UKLID', herec: null, projekt: t, zvukarZkratka, zvukar, znacky };
   }
   if (/\bporada\b/i.test(t)) {
     return { druh: 'INTERNAL', herec: null, projekt: t, zvukarZkratka, zvukar, znacky };

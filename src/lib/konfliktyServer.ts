@@ -134,7 +134,7 @@ async function provozniKonflikty(
   // BOOKING = rezervace klienta studia (25. 9. 2026): kabinu drží úplně
   // stejně jako naše natáčení, a hlavně o ni musíme zakopnout dřív, než do
   // ní někdo z nás napíše frekvenci.
-  const OBSAZUJE = ['NATACENI', 'CASTING', 'INTERNAL', 'MAINTENANCE', 'BOOKING'];
+  const OBSAZUJE = ['NATACENI', 'CASTING', 'INTERNAL', 'MAINTENANCE', 'UKLID', 'BOOKING'];
 
   const polozky: Polozka[] = [
     ...sloty.map((s) => ({

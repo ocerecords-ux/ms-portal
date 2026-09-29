@@ -4468,6 +4468,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'kalendar.druh.HOLIDAY': { cs: 'Svátek', en: 'Public holiday' },
   'kalendar.druh.VACATION': { cs: 'Dovolená', en: 'Holiday' },
   'kalendar.druh.MAINTENANCE': { cs: 'Údržba', en: 'Maintenance' },
+  'kalendar.druh.UKLID': { cs: 'Úklid studia', en: 'Studio cleaning' },
+  'kalendar.uklidBezUdaju': {
+    cs: 'U úklidu stačí studio a čas — nic dalšího se nevyplňuje.',
+    en: 'Cleaning needs only the studio and the time — nothing else to fill in.',
+  },
   'kalendar.druh.INTERNAL': { cs: 'Interní blokace', en: 'Internal block' },
   'kalendar.druh.OTHER': { cs: 'Jiné', en: 'Other' },
   // Kód zůstal BOOKING, popisek je od 28. 9. 2026 „Externí pronájem".
