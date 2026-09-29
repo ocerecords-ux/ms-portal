@@ -103,6 +103,12 @@ type Initial = {
   endDate: string;
   releaseDate: string;
   /**
+   * NORMOSTRANY PROJEKTU (zadání 29. 9. 2026: „potřeboval bych u projektů
+   * upravovat počty NS"). Text, ne číslo - do políčka se píše a prázdno musí
+   * jít odlišit od nuly.
+   */
+  pageCount: string;
+  /**
    * ÚČEL A ÚZEMÍ UŽITÍ LICENCE (zadání 17. 9. 2026: „užití licence bych ještě
    * dal jako atribut v detailu projektu a na smlouvu by se taky předvyplnil").
    * Je to údaj projektu - do každé smlouvy na ten spot se píše stejný.
@@ -511,6 +517,14 @@ export function ProjectMetaForm({
             ) : (
               <span aria-hidden />
             )}
+            {!bezNormostran && (
+              <div>
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide">Normostrany</dt>
+                <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">
+                  {values.pageCount || '—'}
+                </dd>
+              </div>
+            )}
             <div>
               <dt className="text-xs font-heading text-muted uppercase tracking-wide">Stav projektu</dt>
               <dd className="m-0 mt-1">
@@ -709,6 +723,38 @@ export function ProjectMetaForm({
             // U reklamy musi druhe misto v radku zustat prazdne - jinak by se
             // stav projektu vysunul nahoru vedle data a rozpadlo by se poradi.
             <span aria-hidden />
+          )}
+
+          {/* NORMOSTRANY (zadání 29. 9. 2026: „potřeboval bych u projektů
+              upravovat počty NS. Práva pro Žůžo-labůžo a produkci").
+              Přicházely z Caflou a z objednávky a jinak s nimi nešlo hnout -
+              když klient poslal jiný rozsah, nebylo ho kam zapsat. Právo je
+              totéž, co na zbytek téhle karty (canEditProjectMeta), takže
+              stačí, že je pole tady.
+
+              U REKLAMY NE - stejně jako normostrany u herců (26. 9. 2026:
+              „tady u reklam nemají být vůbec. NS"). */}
+          {!bezNormostran && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-body text-ink">Normostrany</span>
+              <input
+                type="number"
+                min={0}
+                max={100000}
+                step={1}
+                inputMode="numeric"
+                value={values.pageCount}
+                /* Delší prodleva jako u psaného pole - jinak by se každá
+                   číslice ukládala zvlášť a „338" by odešlo třikrát. */
+                onChange={(e) => set('pageCount', e.target.value, true)}
+                onBlur={ulozHned}
+                className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm tabular-nums outline-none focus:border-brand-purple"
+              />
+              <span className="text-xs text-muted font-body">
+                Rozsah celé knihy. Plánují se podle něj frekvence a počítá se z něj progres
+                natáčení, dokud ve složce projektu není PDF s textem.
+              </span>
+            </label>
           )}
 
           {/* Stav a herec se od 10. 9. 2026 prehazuji rucne (odchod z Caflou).

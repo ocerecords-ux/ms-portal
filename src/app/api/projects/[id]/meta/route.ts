@@ -59,6 +59,16 @@ const schema = z.object({
   licenceIds: z.array(z.string().trim().min(1)).max(20).optional(),
   releaseDate: z.string().trim().optional(),
   /**
+   * NORMOSTRANY PROJEKTU (zadání 29. 9. 2026: „potřeboval bych u projektů
+   * upravovat počty NS"). Rozsah textu celé knihy - podle něj se plánují
+   * frekvence, počítá progres natáčení a u části klientů i cena.
+   *
+   * Přicházelo to z Caflou a z objednávky a jinak s tím nešlo hnout; když
+   * klient poslal jiný rozsah, nebylo ho kam zapsat. Prázdný řetězec maže -
+   * nula by v plánování znamenala „nic se netočí".
+   */
+  pageCount: z.union([z.string().trim(), z.number()]).optional(),
+  /**
    * Ucty hercu v poradi - prvni je hlavni (zadani 10. 9. 2026: "chci jich tam
    * dat vice"). Prazdne pole = projekt herce nema.
    */
@@ -197,6 +207,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
+    // Normostrany: cele cislo, prazdno = nevyplneno.
+    let pageCount: number | null | undefined;
+    if (data.pageCount !== undefined) {
+      const raw = typeof data.pageCount === 'number' ? data.pageCount : data.pageCount.trim();
+      if (raw === '' || raw === null) {
+        pageCount = null;
+      } else {
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 0 || n > 100000) {
+          return NextResponse.json({ error: 'Normostrany musí být číslo od 0 do 100 000.' }, { status: 400 });
+        }
+        pageCount = Math.round(n) || null;
+      }
+    }
+
     // Datum vyroby drzime jako pulnoc UTC - v dokumentu se tiskne jen datum a
     // nesmi se posunout podle toho, v jakem pasmu se PDF vyrabi.
     let productionDate: Date | null | undefined;
@@ -290,6 +315,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     text('musicTitle', data.musicTitle);
     text('musicAuthor', data.musicAuthor);
     if (data.noMusic !== undefined) values.noMusic = data.noMusic;
+    if (pageCount !== undefined) values.pageCount = pageCount;
     if (spotLengthSeconds !== undefined) values.spotLengthSeconds = spotLengthSeconds;
     if (productionDate !== undefined) values.productionDate = productionDate;
 

@@ -498,6 +498,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           // lokalni formatovani.
           endDate: naDatumPole(meta?.endDate ?? null),
           releaseDate: naDatumPole(meta?.releaseDate ?? null),
+          // Normostrany jdou od 29. 9. 2026 přepsat rovnou tady.
+          pageCount: meta?.pageCount != null ? String(meta.pageCount) : '',
           // Ucel a uzemi uziti licence - predvyplni se do smlouvy (17. 9. 2026).
           licenceUziti: meta?.licenceUziti ?? '',
           licenceIds: (meta?.licence ?? []).map((l) => l.id),
