@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { smiNaPalubovku } from '@/lib/palubovkaServer';
 import { ZALOZKY_PREHLEDU } from './zalozky';
+import { poradiZalozek } from '@/lib/zalozkyServer';
+import { seradZalozky } from '@/lib/zalozky';
 
 /**
  * Přehledy nemají rozcestník - otevře se rovnou první záložka (zadání
@@ -12,16 +14,22 @@ import { ZALOZKY_PREHLEDU } from './zalozky';
  * co se mi ukáže, když otevřu přehledy"). Kdo má Palubovku, otevře se mu
  * rovnou; komu se nezobrazuje, ten by jinak skončil na prázdné stránce, takže
  * se přeskočí na první záložku, na kterou má právo.
+ *
+ * A od 29. 9. 2026 rozhoduje i vlastní pořadí záložek: kdo si lištu srovnal
+ * po svém, tomu se otevře to, co si dal první. Jinak by si člověk záložku
+ * přetáhl dopředu a /prehledy by ho dál posílalo jinam.
  */
 export default async function PrehledyPage() {
   const session = await getServerSession(authOptions);
   const role = session?.user?.role ?? null;
   const palubovka = await smiNaPalubovku(session?.user?.id);
 
-  const prvni = ZALOZKY_PREHLEDU.find(
+  const dostupne = ZALOZKY_PREHLEDU.filter(
     (z) =>
       (!z.role || (role && z.role.includes(role))) &&
       (z.jenSPriznakem !== 'palubovka' || palubovka),
-  );
+  ).map((z) => ({ ...z, klic: z.href }));
+
+  const prvni = seradZalozky(dostupne, await poradiZalozek('prehledy'))[0];
   redirect(prvni?.href ?? '/projekty');
 }

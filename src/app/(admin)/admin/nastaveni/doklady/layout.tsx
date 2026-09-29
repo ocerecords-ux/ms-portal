@@ -33,7 +33,7 @@ export default async function NastaveniDokladuLayout({ children }: { children: R
         <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">{nastaveni?.nadpis}</h1>
         <p className="text-sm font-body text-muted m-0 mt-2 max-w-[70ch]">{nastaveni?.popis}</p>
       </div>
-      <ZalozkyNastaveni zalozky={ZALOZKY} />
+      <ZalozkyNastaveni sekce="nastaveni-doklady" zalozky={ZALOZKY} />
       {children}
     </div>
   );

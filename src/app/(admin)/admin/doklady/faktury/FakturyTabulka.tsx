@@ -166,8 +166,15 @@ export function FakturyTabulka({
       radky={radky}
       sloupce={sloupce}
       klicRadku={(r) => r.id}
-      vychoziSloupec="vystaveno"
-      vychoziSmer="desc"
+      /**
+       * Řadí se podle SPLATNOSTI, ne podle vystavení (29. 9. 2026: „když
+       * najedu do faktur, tak mi je seřaď primárně dle data splatnosti").
+       * Vzestupně: nahoře je to, co je po splatnosti nebo se k ní blíží -
+       * tedy to, kvůli čemu se do faktur chodí. Kliknutím na hlavičku se to
+       * dá kdykoliv přehodit.
+       */
+      vychoziSloupec="splatnost"
+      vychoziSmer="asc"
       prazdno={t('faktura.tabulkaPrazdna')}
       minSirka={860}
       jazyk={jazyk}

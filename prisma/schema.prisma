@@ -513,6 +513,8 @@ model User {
   menuItems       UserMenuItem[]
   /// Vlastni sloupce v tabulkach, zvlast pro pocitac a mobil (zadani 19. 9. 2026).
   nastaveniSloupcu UserColumnSetting[]
+  /// Vlastni poradi zalozek v listach (29. 9. 2026).
+  poradiZalozek    UserZalozky[]
   quickActions    UserQuickAction[]
   conversationsCreated Conversation[]       @relation("ConversationCreatedBy")
   conversationMembers  ConversationMember[]
@@ -1115,6 +1117,34 @@ model UserColumnSetting {
 
   @@unique([userId, tableKey, zarizeni, columnKey])
   @@index([userId, tableKey, zarizeni])
+}
+
+
+/// PORADI ZALOZEK PODLE CLOVEKA (zadani 29. 9. 2026: „na ty zalozky karet
+/// bych dal taky moznost si zmenit individualne poradi, at si kazdy uzivatel
+/// udela, jak chce. Udelal bych to na vsech takovych propadech v portalu").
+///
+/// Jeden radek na cloveka a listu zalozek; `poradi` drzi klice zalozek
+/// v poradi, jak je chce videt. Zamerne to NENI radek na zalozku: lista ma
+/// pet az osm polozek a mensi zmena znamena prepsat cele poradi, takze jeden
+/// upsert je jednodussi nez mazani a zakladani radku.
+///
+/// Zalozka, kterou portal zna a v `poradi` neni (pribyla po ulozeni), se radi
+/// nakonec; klic v `poradi`, ktery uz neexistuje, se ignoruje. Diky tomu se
+/// lista nerozbije, kdyz se seznam zalozek v kodu zmeni.
+model UserZalozky {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Ktera lista - napr. „doklady", „prehledy", „nastaveni-doklady".
+  sekce  String
+  poradi String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, sekce])
+  @@index([userId])
 }
 
 
