@@ -52,6 +52,16 @@ export type VysledekKolaPosty = {
   navrhy: number;
   /** Zprávy, ve kterých nebyla rozpoznatelná částka - viz `posledniChyba`. */
   nerozpoznano: number;
+  /**
+   * ZPRÁVY OD NĚKOHO JINÉHO NEŽ Z BANKY (29. 9. 2026: „přeposlal jsem teď na
+   * ten mail notifikaci ze svého mailu, ať se to spáruje").
+   *
+   * Portál bere jen to, co opravdu přišlo z `airbank.cz` - je to pojistka,
+   * aby mu nešlo platbu podstrčit. Jenže přeposlaná zpráva má odesílatele
+   * toho, kdo ji přeposlal, takže tiše vypadla a úloha vrátila samé nuly:
+   * k nerozeznání od „nic nepřišlo". Proto se počítá i tohle.
+   */
+  preskoceno: number;
   zbyva: boolean;
   /**
    * Proč se kolo nepovedlo. Chyba schránky se nevyhazuje ven (jedna
@@ -263,6 +273,7 @@ export async function zkontrolujBankovniPostu(): Promise<VysledekKolaPosty> {
     sparovano: 0,
     navrhy: 0,
     nerozpoznano: 0,
+    preskoceno: 0,
     zbyva: false,
     chyba: null,
   };
@@ -289,6 +300,8 @@ export async function zkontrolujBankovniPostu(): Promise<VysledekKolaPosty> {
 
   const odesilatel = (process.env.BANKA_IMAP_ODESILATEL || 'airbank.cz').toLowerCase();
   const odBanky = precteno.zpravy.filter((z) => z.od.toLowerCase().includes(odesilatel));
+  const cizi = precteno.zpravy.filter((z) => !z.od.toLowerCase().includes(odesilatel));
+  const posledniCizi = cizi.length > 0 ? cizi[cizi.length - 1].od.slice(0, 120) : null;
 
   const podleUctu = new Map<string, { zprava: PrectenaZprava; pohyb: ZpravaOPohybu }[]>();
   let nerozpoznano = 0;
@@ -313,6 +326,7 @@ export async function zkontrolujBankovniPostu(): Promise<VysledekKolaPosty> {
     sparovano: 0,
     navrhy: 0,
     nerozpoznano,
+    preskoceno: cizi.length,
     zbyva: precteno.zbyva,
     chyba: null,
   };
@@ -340,9 +354,16 @@ export async function zkontrolujBankovniPostu(): Promise<VysledekKolaPosty> {
       posledniUid: Math.max(stav.posledniUid, precteno.nejvyssiUid),
       posledniKontrolaAt: new Date(),
       nactenoCelkem: { increment: vysledek.nove },
+      /**
+       * Na kartě účtu je vidět jen jedna věta, takže napřed to, co brání
+       * spárování: nerozeznaná zpráva. Až po ní přeskočený odesílatel - ten
+       * je spíš vysvětlení („proč se nic nestalo"), ne chyba.
+       */
       posledniChyba: posledniNerozpoznany
         ? `Zprávě „${posledniNerozpoznany}" portál nerozuměl — nenašel v ní částku.`
-        : null,
+        : posledniCizi
+          ? `Přeskočeno ${cizi.length} ${cizi.length === 1 ? 'zpráva' : cizi.length <= 4 ? 'zprávy' : 'zpráv'} — nepřišly z banky (naposledy od „${posledniCizi}"). Přeposlaná zpráva má odesílatele toho, kdo ji přeposlal; použijte přesměrování (Redirect), které původního odesílatele zachová.`
+          : null,
     },
   });
 
