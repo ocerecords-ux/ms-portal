@@ -7,7 +7,9 @@ import type { ProgresProjektu } from '@/lib/progresNataceniServer';
  * u knihy s víc herci je každý jinde.
  *
  * Počítá se: poslední zapsaná strana (Natáčecí protokol / Bruno) proti
- * počtu stran PDF s textem ve složce projektu. Dotočeno = 100 %.
+ * rozsahu textu. Rozsah je počet stran PDF ve složce projektu, a když tam
+ * PDF není, normostrany projektu (29. 9. 2026: „strany tam už jsou. Já tam
+ * ale chci progres!!! procentama"). Dotočeno = 100 %.
  */
 export function ProgresNataceniKarta({
   progres,
@@ -17,6 +19,8 @@ export function ProgresNataceniKarta({
   herci: { id: string; jmeno: string }[];
 }) {
   const stran = progres?.stranTextu ?? null;
+  const zNormostran = progres?.zdrojCelku === 'ns';
+  const tvar = (n: number) => (n === 1 ? 'stranu' : n <= 4 ? 'strany' : 'stran');
   return (
     <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
@@ -25,8 +29,10 @@ export function ProgresNataceniKarta({
         </h2>
         <span className="text-xs font-body text-muted">
           {stran
-            ? `Text má ${stran} ${stran === 1 ? 'stranu' : stran <= 4 ? 'strany' : 'stran'} (PDF ve složce projektu)`
-            : 'Ve složce projektu zatím není PDF s textem (název končí _RE)'}
+            ? zNormostran
+              ? `Počítáno z ${stran} normostran — ve složce projektu není PDF s textem (název končí _RE), tak se bere rozsah projektu`
+              : `Text má ${stran} ${tvar(stran)} (PDF ve složce projektu)`
+            : 'Ve složce projektu není PDF s textem ani zadané normostrany — není proti čemu počítat'}
         </span>
       </div>
 
