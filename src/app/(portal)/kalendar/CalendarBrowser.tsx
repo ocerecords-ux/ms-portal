@@ -50,6 +50,7 @@ import {
   type CalendarView,
 } from '@/lib/calendar';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
+import { CaraTed } from './CaraTed';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import {
@@ -1828,15 +1829,9 @@ function MrizkaPohled({
                       style={{ top: `${(h - GRID_START_HOUR) * HOUR_PX}px` }}
                     />
                   ))}
-                  {/* Zelena cara „ted" v dnesnim sloupci (20. 9. 2026). */}
-                  {den.key === dnesKey && (
-                    <div
-                      className="absolute left-0 right-0 z-[500] pointer-events-none border-t-2 border-brand-green"
-                      style={{ top: `${((minutesInZone(new Date(), timezone) - GRID_START_HOUR * 60) * HOUR_PX) / 60}px` }}
-                    >
-                      <span className="absolute -left-1 -top-[5px] w-2 h-2 rounded-full bg-brand-green" />
-                    </div>
-                  )}
+                  {/* Cara „ted" v dnesnim sloupci (20. 9. 2026); od 29. 9. 2026
+                      jako zvukova vlna - viz CaraTed.tsx. */}
+                  {den.key === dnesKey && <CaraTed timezone={timezone} />}
                   {/* Mimo pracovni dobu studia */}
                   {den.openFrom !== null && den.openTo !== null && (
                     <>
