@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { zkratkaCasti } from '@/lib/fakturaCast';
 import {
   PRAZDNE_DOKLADY,
   type DokladyProjektu,
@@ -41,7 +42,7 @@ export async function dokladyUProjektu(
     prisma.invoice
       .findMany({
         where: { caflouProjectId: { in: ids }, status: { not: 'CANCELLED' } },
-        select: { id: true, caflouProjectId: true, number: true, status: true },
+        select: { id: true, caflouProjectId: true, number: true, status: true, interniCast: true },
       })
       .catch(() => []),
   ]);
@@ -82,7 +83,10 @@ export async function dokladyUProjektu(
       zaznam.fakturaId = f.id;
     }
     zaznam.faktura = lepsiFaktura(zaznam.faktura, stav);
-    zaznam.fakturaCisla.push(f.number);
+    // U zakázky na dvě části je v bublince vidět, o kterou z nich jde
+    // (29. 9. 2026) - jinak jsou v přehledu dvě stejně vypadající faktury.
+    const cast = zkratkaCasti(f.interniCast);
+    zaznam.fakturaCisla.push(cast ? `${f.number} — ${cast}` : f.number);
   }
 
   return vysledek;

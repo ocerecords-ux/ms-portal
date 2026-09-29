@@ -100,6 +100,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
       stavPoradi: STATUS_PORADI[invoice.status] ?? 9,
       castka: formatMoney(totals.incVat, invoice.currency, jazyk),
       castkaMinor: totals.incVat,
+      cast: invoice.interniCast ?? null,
     };
   });
 

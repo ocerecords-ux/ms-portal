@@ -9,6 +9,7 @@ import {
   type SloupecTabulky,
 } from '@/app/(portal)/components/RaditelnaTabulka';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
+import { ZKRATKA_CASTI, jeCastFaktury } from '@/lib/fakturaCast';
 
 /**
  * Tabulka vydaných faktur, řaditelná kliknutím na název sloupce (zadání
@@ -33,6 +34,11 @@ export type FakturaRadek = {
   stavPoradi: number;
   castka: string;
   castkaMinor: number;
+  /**
+   * Interní značka „1. část / 2. část" (29. 9. 2026). Jen pro nás - na
+   * dokladu ani v mailu klientovi není. Prázdno = zakázka není na části.
+   */
+  cast: string | null;
 };
 
 export function FakturyTabulka({
@@ -93,6 +99,14 @@ export function FakturyTabulka({
             <span className="tabular-nums">{r.cislo}</span>
             {r.projekt ? ` · ${r.projekt}` : ''}
           </span>
+          {jeCastFaktury(r.cast) && (
+            <span
+              title="Interní označení — na faktuře se to nikde neobjeví."
+              className="inline-flex items-center mt-1 text-[11px] font-heading font-semibold px-2 py-0.5 rounded-pill bg-field text-muted border border-line"
+            >
+              {ZKRATKA_CASTI[r.cast]}
+            </span>
+          )}
         </>
       ),
     },
@@ -159,7 +173,11 @@ export function FakturyTabulka({
       jazyk={jazyk}
       // Hledá se ve všem, co je na řádku vidět - včetně čísla faktury
       // a projektu (zadání 15. 9. 2026).
-      hledat={(r) => `${r.nazev} ${r.cislo} ${r.projekt ?? ''} ${r.odberatel} ${r.stav}`}
+      hledat={(r) =>
+        `${r.nazev} ${r.cislo} ${r.projekt ?? ''} ${r.odberatel} ${r.stav} ${
+          jeCastFaktury(r.cast) ? ZKRATKA_CASTI[r.cast] : ''
+        }`
+      }
       hledatPlaceholder={t('faktura.hledatPlaceholder')}
       filtry={[
         {
@@ -173,6 +191,12 @@ export function FakturyTabulka({
           label: t('faktura.filtrProjekt'),
           moznosti: moznostiZ(radky, (r) => r.projekt),
           vyhovuje: (r, h) => r.projekt === h,
+        },
+        {
+          key: 'cast',
+          label: 'Část zakázky',
+          moznosti: moznostiZ(radky, (r) => (jeCastFaktury(r.cast) ? ZKRATKA_CASTI[r.cast] : null)),
+          vyhovuje: (r, h) => jeCastFaktury(r.cast) && ZKRATKA_CASTI[r.cast] === h,
         },
         {
           key: 'stav',

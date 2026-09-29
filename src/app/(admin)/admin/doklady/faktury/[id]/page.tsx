@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import { jeCastFaktury } from '@/lib/fakturaCast';
 import { InvoiceEditor } from './InvoiceEditor';
 import { listProjectOptions } from '@/lib/projectOptions';
 import { nactiJazyk } from '@/lib/jazykServer';
@@ -46,6 +47,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           number: invoice.number,
           variableSymbol: invoice.variableSymbol,
           status: invoice.status,
+          interniCast: jeCastFaktury(invoice.interniCast) ? invoice.interniCast : null,
           companyId: invoice.companyId,
           bankAccountId: invoice.bankAccountId,
           currency: invoice.currency,

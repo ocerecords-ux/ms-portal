@@ -106,6 +106,9 @@ export default async function NewInvoiceFromOfferPage({
         number: 'Nová faktura',
         variableSymbol: '',
         status: 'DRAFT',
+        // Značku části zakázky dostane faktura až při uložení (viz
+        // /api/admin/invoices) - rozhoduje o ní pořadí faktur z nabídky.
+        interniCast: null,
         companyId: offer.companyId,
         bankAccountId: ucet?.id ?? null,
         currency: offer.currency,
@@ -211,6 +214,9 @@ async function PrazdnaFaktura({
         number: 'Nová faktura',
         variableSymbol: '',
         status: 'DRAFT',
+        // Značku části zakázky dostane faktura až při uložení (viz
+        // /api/admin/invoices) - rozhoduje o ní pořadí faktur z nabídky.
+        interniCast: null,
         // Nikdo predvybrany (zadani 13. 9. 2026: „u nove faktury na zacatku
         // at neni vybrana zadna firma"). Prvni firma v abecede se dala snadno
         // prehlednout a faktura pak odesla na spatneho odberatele.

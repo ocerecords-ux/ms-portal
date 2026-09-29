@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/adminGuard';
 import { expandNumberFormat } from '@/lib/doklady';
 import { getRateForCurrency } from '@/lib/cnb';
 import { resolveProject } from '@/lib/projectOptions';
+import { castPodlePoradi } from '@/lib/fakturaCast';
 
 // Zalozeni faktury (zadani 6. 9. 2026). Cislo se bere z ciselne rady vlastni
 // firmy a rada se rovnou posune.
@@ -89,6 +90,18 @@ export async function POST(req: NextRequest) {
        * nabidka sama (viz OfferEditor).
        */
     }
+
+    /**
+     * PRVNI, NEBO DRUHA CAST (zadani 29. 9. 2026). Jen predvyplneni podle
+     * poctu faktur, ktere uz z te nabidky jsou - presne takhle bezi zakazka
+     * u Albatrosu: nabidka na celek, po podpisu smlouvy polovina, zbytek
+     * potom. Da se prepsat na fakture; nic se z toho netiskne.
+     */
+    const castZakazky = input.offerId
+      ? castPodlePoradi(
+          await prisma.invoice.count({ where: { offerId: input.offerId, status: { not: 'CANCELLED' } } }),
+        )
+      : null;
 
     const issuerCompanyId = offer?.issuerCompanyId ?? input.issuerCompanyId;
     const companyId = offer?.companyId ?? input.companyId;
@@ -180,6 +193,7 @@ export async function POST(req: NextRequest) {
             subject: input.subject ?? offer?.subject ?? null,
             note: input.note ?? offer?.note ?? null,
             offerId: offer?.id ?? null,
+            interniCast: castZakazky,
             caflouProjectId: projekt.caflouProjectId,
             projectName: projekt.projectName,
             rezimDph: input.rezimDph ?? 'STANDARD',

@@ -1702,6 +1702,16 @@ model Invoice {
   /// Co se na dokladu vytiskne vedle slevy, napr. „Sleva za objem".
   slevaPopis   String?
 
+  /// KOLIKATA CAST ZAKAZKY (zadani 29. 9. 2026: „u Albatrosu fakturujeme vzdy
+  /// dve faktury. Po podepsani smlouvy fakturujeme polovinu z celkove nabidky
+  /// + DPH. Potreboval bych nejak pro nas jen interne oznacit, abychom vedeli
+  /// i v tom prehledu, o jakou fakturu jde").
+  ///
+  /// PRVNI | DRUHA, prazdno = nerozdelena zakazka. Je to VYHRADNE nase
+  /// znacka: na vytistene fakture ani v mailu klientovi se neobjevi nikde,
+  /// proto to nesedi v `subject` ani v `note`, ktere se tisknou.
+  interniCast String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

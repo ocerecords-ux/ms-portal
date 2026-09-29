@@ -55,7 +55,11 @@ export type StavFakturyDokladu = 'ZADNA' | 'ROZEPSANA' | 'VYSTAVENA' | 'UHRAZENA
 export type DokladyProjektu = {
   nabidka: StavNabidkyDokladu;
   faktura: StavFakturyDokladu;
-  /** Čísla dokladů do bublinky - ať se nemusí otevírat záložka Doklady. */
+  /**
+   * Čísla dokladů do bublinky - ať se nemusí otevírat záložka Doklady.
+   * U faktury je za číslem i interní značka části zakázky, když ji má
+   * (29. 9. 2026: „abychom věděli i v tom přehledu, o jakou fakturu jde").
+   */
   nabidkaCisla: string[];
   fakturaCisla: string[];
   /**

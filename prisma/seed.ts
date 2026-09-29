@@ -219,6 +219,7 @@ async function main() {
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
   await projektGregorZCaflou();
+  await oznacCastiZakazek();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -1774,6 +1775,53 @@ async function importujFakturyZCaflou(soubor: string, ZNAMKA: string) {
     console.log(`  import faktur z Caflou: vlozeno ${vlozeno}, preskoceno (cislo uz je v portalu): ${preskoceno.join(', ') || '-'}`);
   } catch (e) {
     console.warn('  import faktur z Caflou selhal:', e);
+  }
+}
+
+/**
+ * ZPĚTNÉ OZNAČENÍ ČÁSTÍ ZAKÁZKY (29. 9. 2026).
+ *
+ * Nové faktury se označí samy při vystavení z nabídky, ale ty už vystavené by
+ * se musely proklikat ručně. Projdou se proto nabídky, ze kterých jsou PRÁVĚ
+ * DVĚ nestornované faktury - to je přesně ten Albatrosí případ „polovina po
+ * podpisu, zbytek potom" - a starší se označí jako první, novější jako druhá.
+ *
+ * Schválně jen dvojice a jen tam, kde značka ještě není: u tří a víc faktur
+ * z jedné nabídky se nedá poznat, co je co, a hádat se to nemá. Kdo to má
+ * jinak, přepne si to na faktuře.
+ */
+async function oznacCastiZakazek() {
+  const ZNAMKA = 'faktury-casti-zakazky';
+  try {
+    if (await prisma.counter.findUnique({ where: { name: ZNAMKA } })) return;
+
+    const faktury = await prisma.invoice.findMany({
+      where: { offerId: { not: null }, status: { not: 'CANCELLED' } },
+      orderBy: [{ issueDate: 'asc' }, { number: 'asc' }],
+      select: { id: true, offerId: true, interniCast: true },
+    });
+
+    const podleNabidky = new Map<string, { id: string; interniCast: string | null }[]>();
+    for (const f of faktury) {
+      if (!f.offerId) continue;
+      const seznam = podleNabidky.get(f.offerId) ?? [];
+      seznam.push({ id: f.id, interniCast: f.interniCast });
+      podleNabidky.set(f.offerId, seznam);
+    }
+
+    let oznaceno = 0;
+    for (const dvojice of podleNabidky.values()) {
+      if (dvojice.length !== 2) continue;
+      if (dvojice.some((f) => f.interniCast)) continue;
+      await prisma.invoice.update({ where: { id: dvojice[0].id }, data: { interniCast: 'PRVNI' } });
+      await prisma.invoice.update({ where: { id: dvojice[1].id }, data: { interniCast: 'DRUHA' } });
+      oznaceno += 2;
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: oznaceno } });
+    console.log(`  casti zakazek: oznaceno ${oznaceno} faktur`);
+  } catch (e) {
+    console.warn('  casti zakazek selhalo:', e);
   }
 }
 

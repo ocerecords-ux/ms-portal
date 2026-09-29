@@ -23,6 +23,7 @@ import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { formatDatum, formatDatumCas, prelozitKolem, type Jazyk } from '@/lib/jazyk';
+import { CASTI_FAKTURY, POPIS_CASTI, type CastFaktury } from '@/lib/fakturaCast';
 
 type Item = {
   description: string;
@@ -48,6 +49,8 @@ type Invoice = {
   number: string;
   variableSymbol: string;
   status: InvoiceStatus;
+  /** Interní značka „první / druhá část" - na dokladu není (29. 9. 2026). */
+  interniCast: CastFaktury | null;
   companyId: string;
   bankAccountId: string | null;
   currency: Currency;
@@ -496,6 +499,7 @@ export function InvoiceEditor({
                 ? t(STATUS_KLICE[invoice.status])
                 : invoice.status}
           </span>
+          {!jesteNeulozena && <CastZakazky id={invoice.id} vychozi={invoice.interniCast} />}
           {invoice.offerNumber && (
             <span className="text-xs font-body text-muted">
               {t('faktura.zNabidkyCislo', { cislo: invoice.offerNumber })}
@@ -1066,5 +1070,63 @@ export function InvoiceEditor({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * INTERNÍ ZNAČKA ČÁSTI ZAKÁZKY (zadání 29. 9. 2026).
+ *
+ * Ukládá se hned při přepnutí a vlastním endpointem, ne s celou fakturou:
+ * jde doplnit i k uhrazenému dokladu, kde je běžná úprava zamčená. Na
+ * vytištěné faktuře se neobjeví nic.
+ */
+function CastZakazky({ id, vychozi }: { id: string; vychozi: CastFaktury | null }) {
+  const [cast, setCast] = useState<CastFaktury | null>(vychozi);
+  const [uklada, setUklada] = useState(false);
+  const [chyba, setChyba] = useState(false);
+
+  async function zmen(hodnota: string) {
+    const nova = (hodnota || null) as CastFaktury | null;
+    const predtim = cast;
+    setCast(nova);
+    setUklada(true);
+    setChyba(false);
+    try {
+      const res = await fetch(`/api/admin/invoices/${id}/cast`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cast: nova }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      // Ať na obrazovce nezůstane hodnota, která se neuložila.
+      setCast(predtim);
+      setChyba(true);
+    } finally {
+      setUklada(false);
+    }
+  }
+
+  return (
+    <label className="inline-flex items-center gap-1.5 text-xs font-body text-muted">
+      <span className="sr-only">Část zakázky (interní)</span>
+      <select
+        value={cast ?? ''}
+        disabled={uklada}
+        onChange={(e) => void zmen(e.target.value)}
+        title="Jen pro nás — na faktuře se to nikde neobjeví."
+        className={`rounded-pill border px-2.5 py-1 text-xs font-heading font-semibold bg-field text-ink ${
+          chyba ? 'border-danger' : 'border-line'
+        }`}
+      >
+        <option value="">Celá zakázka</option>
+        {CASTI_FAKTURY.map((k) => (
+          <option key={k} value={k}>
+            {POPIS_CASTI[k]}
+          </option>
+        ))}
+      </select>
+      {chyba && <span className="text-danger">neuloženo</span>}
+    </label>
   );
 }
