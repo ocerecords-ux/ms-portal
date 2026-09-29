@@ -1,6 +1,11 @@
 import { prisma } from '@/lib/db';
 import { oznacPohyb, rozeberAbo, type AboPohyb } from '@/lib/abo';
-import { ulozAZparuj, type PohybKUlozeni, type VysledekSynchronizace } from '@/lib/bankaServer';
+import {
+  napojeniProUcet,
+  ulozAZparuj,
+  type PohybKUlozeni,
+  type VysledekSynchronizace,
+} from '@/lib/bankaServer';
 import type { Currency } from '@prisma/client';
 
 /**
@@ -15,8 +20,8 @@ import type { Currency } from '@prisma/client';
  * tvaru, kterému rozumí.
  */
 
-/** Účet z výpisu jako napojení. Bez něj by pohyby neměly kam patřit. */
-const ZDROJ = 'ABO_VYPIS';
+/** Odkud pohyb přišel - kvůli popisku na kartě účtu. */
+const ZDROJ = { institutionId: 'ABO_VYPIS', institutionName: 'Výpis z účtu' };
 
 export type VysledekImportu = VysledekSynchronizace & {
   ucet: string;
@@ -24,53 +29,6 @@ export type VysledekImportu = VysledekSynchronizace & {
   /** Kolik pohybů výpis nesl a portál je už znal z dřívějška. */
   uzZname: number;
 };
-
-/**
- * Najde (nebo založí) napojení pro účet z výpisu.
- *
- * Napojení je tu jen jako složka, do které pohyby patří - žádný souhlas ani
- * klíče se k němu neváží. `requisitionId` je v modelu jedinečné, takže se
- * jím dá bezpečně adresovat účet z výpisu.
- */
-async function napojeniProUcet(ucet: string, nazev: string | null) {
-  const klic = `abo:${ucet}`;
-  const uz = await prisma.bankConnection.findUnique({
-    where: { requisitionId: klic },
-    select: { id: true, issuerCompanyId: true },
-  });
-  if (uz) return uz;
-
-  /**
-   * KE KTERÉ NAŠÍ FIRMĚ ÚČET PATŘÍ. Zkusí se najít podle čísla účtu na
-   * fakturační firmě; když to nevyjde, zůstane prázdné a páruje se proti
-   * všem neuhrazeným fakturám. To je horší jen tím, že se hledá v širším
-   * poli - nic se tím nerozbije a dá se to dospravit na kartě účtu.
-   */
-  const firmy = await prisma.issuerCompany.findMany({
-    select: { id: true, bankAccounts: { select: { accountNumber: true, iban: true } } },
-  });
-  const cistyUcet = ucet.replace(/^0+/, '');
-  const firma = firmy.find((f) =>
-    (f.bankAccounts ?? []).some((u) => {
-      const cislo = (u.accountNumber ?? '').replace(/\D/g, '').replace(/^0+/, '');
-      const iban = (u.iban ?? '').replace(/\s/g, '');
-      return (cislo && cislo === cistyUcet) || (iban && iban.includes(cistyUcet));
-    }),
-  );
-
-  const nove = await prisma.bankConnection.create({
-    data: {
-      institutionId: ZDROJ,
-      institutionName: 'Výpis z účtu',
-      requisitionId: klic,
-      label: nazev ? `${nazev} (${ucet})` : `Účet ${ucet}`,
-      stav: 'AKTIVNI',
-      issuerCompanyId: firma?.id ?? null,
-    },
-    select: { id: true, issuerCompanyId: true },
-  });
-  return nove;
-}
 
 /** Z pohybu ve výpisu udělá záznam, kterému rozumí párování. */
 function naZaznam(ucet: string, p: AboPohyb): PohybKUlozeni {
@@ -112,7 +70,7 @@ export async function importujAboVypis(obsah: string): Promise<VysledekImportu> 
     );
   }
 
-  const napojeni = await napojeniProUcet(vypis.ucet, vypis.nazevUctu);
+  const napojeni = await napojeniProUcet(vypis.ucet, vypis.nazevUctu, ZDROJ);
   const zaznamy = vypis.pohyby.map((p) => naZaznam(vypis.ucet, p));
 
   const znameIds = new Set(

@@ -66,9 +66,17 @@ function sKody(veta: string, kody: Record<string, string>) {
   });
 }
 
+/** Stav schránky s upozorněními z banky - jen to, co se ukazuje na stránce. */
+export type StavPostyProKlienta = {
+  nastaveno: boolean;
+  posledniKontrolaAt: string | null;
+  posledniChyba: string | null;
+};
+
 export function BankaKlient({
   otevrenaVsem,
   nastaveno,
+  posta,
   napojeni,
   pohyby,
   faktury,
@@ -76,6 +84,7 @@ export function BankaKlient({
   /** Sekci zatím vidí všichni Žůžo-labůžo, protože příznak nemá nikdo. */
   otevrenaVsem: boolean;
   nastaveno: boolean;
+  posta: StavPostyProKlienta;
   napojeni: NapojeniRadek[];
   pohyby: PohybRadek[];
   faktury: FakturaVolba[];
@@ -254,6 +263,20 @@ export function BankaKlient({
         </div>
       )}
 
+      <div className="rounded-card border border-line bg-tint px-4 py-3 text-sm font-body text-ink">
+        <p className="m-0 font-semibold">
+          {posta.nastaveno ? 'Platby se páruji samy z upozornění banky' : 'Automatické párování zatím neběží'}
+        </p>
+        <p className="m-0 mt-1 text-muted">
+          {posta.nastaveno
+            ? `Portál se dívá do schránky každé dvě minuty.${
+                posta.posledniKontrolaAt ? ` Naposledy ${posta.posledniKontrolaAt}.` : ' Zatím se nedíval.'
+              }`
+            : 'V Air Bank zapněte u účtu „Info o dění na účtu" a nechte si posílat e-mail při každé změně zůstatku. Schránku pak portálu předáte proměnnými BANKA_IMAP_HOST, BANKA_IMAP_USER a BANKA_IMAP_PASSWORD.'}
+        </p>
+        {posta.posledniChyba && <p className="m-0 mt-1 text-status-danger">{posta.posledniChyba}</p>}
+      </div>
+
       {hlaska && (
         <p className="rounded-card border border-line bg-field px-4 py-3 text-sm font-body text-ink m-0">{hlaska}</p>
       )}
@@ -267,12 +290,12 @@ export function BankaKlient({
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="font-display text-xl text-ink m-0">{t('banka.napojeneUcty')}</h2>
           <div className="flex items-center gap-2 flex-wrap">
-            {/* NAHRÁT VÝPIS je teď hlavní cesta, jak se pohyby do portálu
-                dostanou - proto stojí první a není schované za nastavením
-                klíčů, které k němu nepatří. */}
+            {/* NAHRÁT VÝPIS je záloha, ne hlavní cesta: pohyby chodí samy
+                z upozornění banky e-mailem (viz proužek nahoře). Hodí se na
+                dotažení historie a na záchranu, kdyby výpadek spolkl e-mail. */}
             <label
               className={`${vedlejsi} cursor-pointer ${busy !== null ? 'opacity-60 pointer-events-none' : ''}`}
-              title="Výpis stáhněte v internetovém bankovnictví ve formátu ABO (GPC). Tentýž soubor jde nahrát vícekrát, nic se nezdvojí."
+              title="Na doplnění historie nebo když se něco ztratí. Výpis stáhněte v internetovém bankovnictví ve formátu ABO (GPC). Tentýž soubor jde nahrát vícekrát, nic se nezdvojí."
             >
               {busy === 'import' ? 'Načítám…' : 'Nahrát výpis'}
               <input

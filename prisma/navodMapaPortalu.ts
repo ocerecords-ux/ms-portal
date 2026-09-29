@@ -147,7 +147,7 @@ Klient, který účet má, vidí v portálu navíc své projekty, nahrávky a m�
 
 # Na čem to stojí
 
-Portál běží na Vercelu, data jsou v databázi. Nahrávky bydlí na **Google Disku** (portál je jen ukazuje a stahuje), ostatní přílohy v úložišti s dočasnými odkazy. Kurzy měn se berou z **ČNB** a ukládají se k dokladu, údaje firem z **ARESu**, banka jde přes **GoCardless**. E-maily chodí přes běžný SMTP, upozornění do mobilu přes push.
+Portál běží na Vercelu, data jsou v databázi. Nahrávky bydlí na **Google Disku** (portál je jen ukazuje a stahuje), ostatní přílohy v úložišti s dočasnými odkazy. Kurzy měn se berou z **ČNB** a ukládají se k dokladu, údaje firem z **ARESu**. Pohyby na účtu portál bere z **upozornění, která banka posílá e-mailem** — kouká do vyhrazené schránky každé dvě minuty a platby páruje sám; ručně nahraný výpis ve formátu ABO je jen záloha na dotažení historie. E-maily chodí přes běžný SMTP, upozornění do mobilu přes push.
 
 # Když něco hledáš
 
@@ -156,7 +156,7 @@ Portál běží na Vercelu, data jsou v databázi. Nahrávky bydlí na **Google 
 - **Chci kalendář v telefonu?** Kalendář → ikonka kalendáře s plusem vpravo nahoře (Google, Apple, Outlook; jen pro čtení).
 - **Co jsme klientovi poslali?** Historie u projektu.
 - **Kolik jsme fakturovali?** Doklady u projektu, nebo sekce Doklady.
-- **Přišly peníze?** Doklady → Banka (kdo na ni má právo).
+- **Přišly peníze?** Doklady → Banka (kdo na ni má právo). Uhrazené faktury se označují samy, obvykle do pár minut od připsání.
 - **Proč klientovi nic nepřišlo?** Firmy → karta firmy → Notifikace.
 - **Jak něco udělat?** Otazník v liště — tahle Nápověda.`,
 };

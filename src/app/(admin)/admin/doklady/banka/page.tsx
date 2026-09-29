@@ -4,7 +4,14 @@ import { formatMoney } from '@/lib/doklady';
 import { computeTotals } from '@/lib/doklady';
 import { bankaNastavena } from '@/lib/gocardless';
 import { pristupKBance } from '@/lib/bankaPristup';
-import { BankaKlient, type NapojeniRadek, type PohybRadek, type FakturaVolba } from './BankaKlient';
+import { nactiStavBankovniPosty } from '@/lib/bankaMailServer';
+import {
+  BankaKlient,
+  type NapojeniRadek,
+  type PohybRadek,
+  type FakturaVolba,
+  type StavPostyProKlienta,
+} from './BankaKlient';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, formatDatumCas } from '@/lib/jazyk';
 
@@ -25,7 +32,7 @@ export default async function BankaPage() {
   const pristup = await pristupKBance();
   if (!pristup.smi) notFound();
 
-  const [napojeni, pohyby, faktury] = await Promise.all([
+  const [napojeni, pohyby, faktury, stavPosty] = await Promise.all([
     prisma.bankConnection.findMany({
       orderBy: { createdAt: 'asc' },
       select: {
@@ -71,7 +78,16 @@ export default async function BankaPage() {
         items: { select: { quantity: true, unitPriceMinor: true, vatRate: true } },
       },
     }),
+    nactiStavBankovniPosty(),
   ]);
+
+  const posta: StavPostyProKlienta = {
+    nastaveno: stavPosty.nastaveno,
+    posledniKontrolaAt: stavPosty.posledniKontrolaAt
+      ? formatDatumCas(jazyk, new Date(stavPosty.posledniKontrolaAt))
+      : null,
+    posledniChyba: stavPosty.posledniChyba,
+  };
 
   const volbyFaktur: FakturaVolba[] = faktury.map((f) => {
     const celkem = computeTotals(f.items, { slevaProcent: f.slevaProcent, slevaMinor: f.slevaMinor }).incVat;
@@ -116,6 +132,7 @@ export default async function BankaPage() {
     <BankaKlient
       otevrenaVsem={pristup.otevrenaVsem}
       nastaveno={bankaNastavena()}
+      posta={posta}
       napojeni={radkyNapojeni}
       pohyby={radkyPohybu}
       faktury={volbyFaktur}

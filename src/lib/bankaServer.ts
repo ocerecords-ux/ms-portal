@@ -150,8 +150,9 @@ async function sesynchronizujNapojeni(napojeni: {
 /**
  * JEDEN POHYB TAK, JAK HO PORTÁL UKLÁDÁ - bez ohledu na to, odkud přišel.
  *
- * Dvě cesty do banky (stažení přes API a nahraný výpis ABO) se scházejí tady,
- * aby párování, zvoneček i označování faktur existovaly jen jednou.
+ * Tři cesty do banky (stažení přes API, upozornění e-mailem a nahraný výpis
+ * ABO) se scházejí tady, aby párování, zvoneček i označování faktur existovaly
+ * jen jednou.
  */
 export type PohybKUlozeni = {
   externalId: string;
@@ -163,6 +164,94 @@ export type PohybKUlozeni = {
   counterpartyAccount: string | null;
   reference: string | null;
 };
+
+/**
+ * NAJDE (nebo založí) NAPOJENÍ PRO ÚČET.
+ *
+ * Napojení je jen složka, do které pohyby patří - u e-mailu ani u výpisu se
+ * k němu neváže žádný souhlas ani klíče. Klíč je schválně podle účtu a ne
+ * podle zdroje: pohyby z upozornění e-mailem i ze staženého výpisu pak sedí
+ * v jedné složce a kontrola na dvojí zápis má co porovnávat.
+ *
+ * KE KTERÉ NAŠÍ FIRMĚ ÚČET PATŘÍ se hledá podle čísla účtu na fakturační
+ * firmě. Když se to netrefí, zůstane prázdné a páruje se proti všem
+ * neuhrazeným fakturám - to je horší jen tím, že se hledá v širším poli.
+ */
+export async function napojeniProUcet(
+  ucet: string,
+  nazev: string | null,
+  zdroj: { institutionId: string; institutionName: string },
+): Promise<{ id: string; issuerCompanyId: string | null }> {
+  const klic = `ucet:${ucet}`;
+  const uz = await prisma.bankConnection.findUnique({
+    where: { requisitionId: klic },
+    select: { id: true, issuerCompanyId: true },
+  });
+  if (uz) return uz;
+
+  const cistyUcet = ucet.replace(/\D/g, '').replace(/^0+/, '');
+  const firmy = await prisma.issuerCompany.findMany({
+    select: { id: true, bankAccounts: { select: { accountNumber: true, iban: true } } },
+  });
+  const firma = cistyUcet
+    ? firmy.find((f) =>
+        (f.bankAccounts ?? []).some((u) => {
+          const cislo = (u.accountNumber ?? '').replace(/\D/g, '').replace(/^0+/, '');
+          const iban = (u.iban ?? '').replace(/\s/g, '');
+          return (cislo && cislo === cistyUcet) || (iban && iban.includes(cistyUcet));
+        }),
+      )
+    : undefined;
+
+  return prisma.bankConnection.create({
+    data: {
+      institutionId: zdroj.institutionId,
+      institutionName: zdroj.institutionName,
+      requisitionId: klic,
+      label: nazev ? `${nazev} (${ucet})` : `Účet ${ucet}`,
+      stav: 'AKTIVNI',
+      issuerCompanyId: firma?.id ?? null,
+    },
+    select: { id: true, issuerCompanyId: true },
+  });
+}
+
+/**
+ * TENTÝŽ POHYB ZE DVOU ZDROJŮ. Upozornění e-mailem dorazí hned, výpis ABO
+ * s týmž pohybem může přijít o den později - a protože e-mail ani výpis
+ * nenesou společné číslo transakce, `externalId` se v takovém případě liší.
+ *
+ * Proto se kromě něj hlídá i trojice den + částka + variabilní symbol. Dva
+ * pohyby, které se shodují ve všech třech, jsou tatáž platba: stejný
+ * variabilní symbol znamená stejnou fakturu a nikdo neplatí jednu fakturu
+ * dvakrát týmž dnem a touž částkou.
+ */
+async function uzZnamy(connectionId: string, zaznam: PohybKUlozeni): Promise<boolean> {
+  const podleId = await prisma.bankTransaction.findUnique({
+    where: { connectionId_externalId: { connectionId, externalId: zaznam.externalId } },
+    select: { id: true },
+  });
+  if (podleId) return true;
+
+  // Bez variabilního symbolu se na shodu spolehnout nedá - dvě stejně vysoké
+  // platby v jednom dni jsou běžné a spojit je by znamenalo o jednu přijít.
+  if (!zaznam.variableSymbol) return false;
+
+  const den = new Date(zaznam.bookedAt);
+  const od = new Date(Date.UTC(den.getUTCFullYear(), den.getUTCMonth(), den.getUTCDate()));
+  const do_ = new Date(od.getTime() + 24 * 60 * 60 * 1000);
+
+  const podleUdaju = await prisma.bankTransaction.findFirst({
+    where: {
+      connectionId,
+      variableSymbol: zaznam.variableSymbol,
+      amountMinor: zaznam.amountMinor,
+      bookedAt: { gte: od, lt: do_ },
+    },
+    select: { id: true },
+  });
+  return Boolean(podleUdaju);
+}
 
 /** Uloží, co portál ještě nezná, a zkusí to přiřadit k neuhrazeným fakturám. */
 export async function ulozAZparuj(
@@ -177,11 +266,7 @@ export async function ulozAZparuj(
   const uhrazene: { invoiceId: string; amountMinor: number; currency: Currency; bookedAt: Date }[] = [];
 
   for (const zaznam of zaznamy) {
-    const uz = await prisma.bankTransaction.findUnique({
-      where: { connectionId_externalId: { connectionId, externalId: zaznam.externalId } },
-      select: { id: true },
-    });
-    if (uz) continue;
+    if (await uzZnamy(connectionId, zaznam)) continue;
 
     const data = { ...zaznam, connectionId };
     const nalez = najdiFakturuKPlatbe(
