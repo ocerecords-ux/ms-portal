@@ -153,7 +153,10 @@ export function Tabule({
   const maOstatni = ostatni.length > 0;
   // Každé studio v pruhu sebere zhruba jeden řádek rozpisu - pruh je teď
   // pod sebou, ne vedle sebe.
-  const kolikRadku = Math.max(2, (probiha || dalsi ? 5 : 7) - Math.min(3, ostatni.length));
+  // Spodní hranice jsou tři řádky: pruh se studii je jednořádkový a program
+  // je to, kvůli čemu se na tabuli lidi dívají. Co se nevejde, se ořízne
+  // (viz obal s overflow: hidden) - dřív to přetékalo mimo plátno.
+  const kolikRadku = Math.max(3, (probiha || dalsi ? 5 : 7) - Math.min(3, ostatni.length));
   const viditelne = radky.slice(zacatek, zacatek + kolikRadku);
 
   const zbyva = (doMs: number) => {
@@ -240,8 +243,21 @@ export function Tabule({
         </div>
 
         <div style={{ flexGrow: 1, minHeight: 0, display: 'flex', gap: 48 }}>
-          {/* Program studia */}
-          <div style={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Program studia nahoře, ostatní studia dole. Rozdělené schválně na
+              dvě části: horní se smí oříznout, když je den nabitý, dolní pruh
+              je vždycky celý - dřív se z něj poslední studio ukusovalo dolů
+              mimo plátno (29. 9. 2026). */}
+          <div style={{ flexGrow: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 20,
+              }}
+            >
             {probiha ? (
               <div
                 style={{
@@ -379,18 +395,34 @@ export function Tabule({
                     {cas(r.u.od)} – {cas(r.u.do)}
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flexGrow: 1 }}>
+                    {/* Dva řádky místo tří teček: název pořadu je to hlavní,
+                        co z řádku člověk čte (29. 9. 2026). */}
                     <span
                       style={{
                         fontSize: 30,
                         fontWeight: r.stav === 'ted' ? 700 : 600,
-                        whiteSpace: 'nowrap',
+                        lineHeight: 1.15,
+                        display: '-webkit-box',
+                        WebkitBoxOrient: 'vertical',
+                        WebkitLineClamp: 2,
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        overflowWrap: 'anywhere',
                       }}
                     >
                       {r.u.nazev}
                     </span>
-                    <span style={{ fontSize: 22, color: BARVY.text3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span
+                      style={{
+                        fontSize: 22,
+                        color: BARVY.text3,
+                        lineHeight: 1.2,
+                        display: '-webkit-box',
+                        WebkitBoxOrient: 'vertical',
+                        WebkitLineClamp: 2,
+                        overflow: 'hidden',
+                        overflowWrap: 'anywhere',
+                      }}
+                    >
                       {[r.u.druh, r.u.mistnost, r.u.herec, r.u.zvukar].filter(Boolean).join(' · ')}
                     </span>
                   </div>
@@ -412,11 +444,12 @@ export function Tabule({
                 </div>
               ),
             )}
-            {(probiha || dalsi) && data.zitra && (
-              <span style={{ marginTop: maOstatni ? 12 : 'auto', fontSize: 24, color: BARVY.sedy }}>
-                Zítra {cas(data.zitra.od)}: {zitraText(data.zitra)}
-              </span>
-            )}
+              {(probiha || dalsi) && data.zitra && (
+                <span style={{ marginTop: maOstatni ? 12 : 'auto', fontSize: 24, color: BARVY.sedy }}>
+                  Zítra {cas(data.zitra.od)}: {zitraText(data.zitra)}
+                </span>
+              )}
+            </div>
 
             {maOstatni && <OstatniStudia ostatni={ostatni} ted={ted} domaciPasmo={pasmo} />}
           </div>
@@ -554,7 +587,13 @@ function Panel({
   const nazvyChybi = data.chybi.map((c) => nazevPolozky(c.polozka));
 
   return (
-    <div style={{ width: 640, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    /**
+     * SIRKA SLOUPCE (29. 9. 2026: „musíme to poskládat tak, ať jde všechno
+     * přečíst a je to tam nejlépe celé"). Zúženo z 640: poznámky jsou většinou
+     * krátké věty a pár desítek pixelů navíc jim nepomůže, kdežto programu
+     * vlevo chyběly na dlouhé názvy pořadů.
+     */
+    <div style={{ width: 470, flexShrink: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div
         style={{
           flexGrow: 1,
@@ -951,7 +990,7 @@ function OstatniStudia({
     new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
 
   return (
-    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
       <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>OSTATNÍ STUDIA</span>
       {ostatni.map((s) => {
         const bezi = s.probiha && Date.parse(s.probiha.do) > tedMs;
@@ -995,10 +1034,13 @@ function OstatniStudia({
                 minWidth: 0,
                 fontSize: 22,
                 fontWeight: 600,
+                lineHeight: 1.2,
                 color: bezi ? BARVY.text2 : BARVY.sedy,
-                whiteSpace: 'nowrap',
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: 2,
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                overflowWrap: 'anywhere',
               }}
             >
               {/* Herec patří k natáčení stejně jako název - podle něj se pozná,
@@ -1049,7 +1091,9 @@ function InstagramOkno({ ig }: { ig: NonNullable<DataTabule['instagram']> }) {
   }, [kde, polozky.length]);
 
   if (!p) return null;
-  const SIRKA_OKNA = 420;
+  // Zúženo z 420 ze stejného důvodu jako panel vpravo - příběh je svislý,
+  // takže se na užším okně nic neztratí, jen zabere míň místa.
+  const SIRKA_OKNA = 360;
   return (
     <div style={{ width: SIRKA_OKNA, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>
