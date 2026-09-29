@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { kdoJe } from '@/lib/kdoJe';
 import { computeTotals, formatMoney } from '@/lib/doklady';
+import { stavyUpominek } from '@/lib/upominkyServer';
+import { kdyOdesla, kdyPujde, popisPoradi } from '@/lib/upominkaStav';
 
 /**
  * NÁHLED DOKLADU POD IKONOU V PŘEHLEDU (zadání 26. 9. 2026: „u dokladu se
@@ -89,6 +91,13 @@ export async function GET(req: NextRequest) {
   });
   if (!f) return NextResponse.json({ error: 'Faktura nenalezena.' }, { status: 404 });
   const soucty = computeTotals(f.items, f);
+  /**
+   * UPOMÍNKA DO BUBLINY (zadání 29. 9. 2026: „chci to vidět i v tom rychlém
+   * přehledu projektu, když kliknu na ikonu dokladu"). Řádky přibudou jen
+   * u faktury, které se to týká - u zaplacené ani u konceptu by to byl
+   * prázdný řádek navíc.
+   */
+  const upominka = (await stavyUpominek([f.id])).get(f.id) ?? null;
   const poSplatnosti =
     f.status === 'SENT' && f.dueDate && f.dueDate.getTime() < Date.now()
       ? Math.floor((Date.now() - f.dueDate.getTime()) / 86400000)
@@ -112,6 +121,28 @@ export async function GET(req: NextRequest) {
         popis: 'Stav',
         hodnota: (STAV_FAKTURY[f.status] ?? f.status) + (f.paidAt ? ` · ${den(f.paidAt)}` : ''),
       },
+      ...(upominka && upominka.odeslane.length > 0
+        ? [
+            {
+              popis: 'Odeslané upomínky',
+              hodnota: upominka.odeslane
+                .map((o) => `${o.poradi}. ${kdyOdesla(o.kdy)}`)
+                .reverse()
+                .join(' · '),
+            },
+          ]
+        : []),
+      ...(upominka?.dalsi
+        ? [
+            {
+              popis: 'Další upomínka',
+              hodnota: `${popisPoradi(upominka.dalsi.poradi)} ${kdyPujde(upominka.dalsi)}`,
+              // Svítí jen den dopředu - jinak by u faktury, která visí měsíc,
+              // svítilo pořád něco a člověk by to přestal vnímat.
+              varovani: upominka.dalsi.zaDnu <= 1,
+            },
+          ]
+        : []),
     ],
   });
 }

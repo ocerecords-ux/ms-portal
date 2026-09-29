@@ -11,6 +11,7 @@ import {
   popisDnu,
   type HodnotyUpominky,
 } from '@/lib/upominkyFaktur';
+import { PRAZDNY_STAV_UPOMINKY, stavUpominky, type StavUpominky } from '@/lib/upominkaStav';
 
 /**
  * UPOMÍNKY K FAKTURÁM PO SPLATNOSTI (zadání 25. 9. 2026) - čtení, odesílání
@@ -150,6 +151,64 @@ export async function fakturyPoSplatnosti(): Promise<FakturaPoSplatnosti[]> {
       posledniAt: f.upominky[0]?.odeslanoAt.toISOString() ?? null,
     };
   });
+}
+
+/**
+ * KDY PŮJDE UPOMÍNKA U KONKRÉTNÍCH FAKTUR (zadání 29. 9. 2026: „potřeboval
+ * bych vědět den dopředu, aby mi svítilo, že půjde upomínka za fakturu.
+ * A že šla a kdy").
+ *
+ * Dva dotazy pro celý seznam, ne faktura po faktuře - používá to tabulka
+ * faktur i bublina u ikony dokladu v přehledu projektů.
+ *
+ * Faktura, která upomínku dostat nemůže (koncept, stornovaná, zaplacená, bez
+ * splatnosti), vrátí prázdný stav; volající tak nemusí ty podmínky opisovat.
+ */
+export async function stavyUpominek(invoiceIds: string[]): Promise<Map<string, StavUpominky>> {
+  const vysledek = new Map<string, StavUpominky>();
+  if (invoiceIds.length === 0) return vysledek;
+
+  const [nastaveni, faktury] = await Promise.all([
+    nactiNastaveniUpominek(),
+    prisma.invoice
+      .findMany({
+        where: { id: { in: invoiceIds } },
+        select: {
+          id: true,
+          status: true,
+          paidAt: true,
+          dueDate: true,
+          upominky: { select: { poradi: true, odeslanoAt: true } },
+        },
+      })
+      .catch(
+        () =>
+          [] as {
+            id: string;
+            status: string;
+            paidAt: Date | null;
+            dueDate: Date | null;
+            upominky: { poradi: number; odeslanoAt: Date }[];
+          }[],
+      ),
+  ]);
+
+  const ted = new Date();
+  for (const f of faktury) {
+    vysledek.set(
+      f.id,
+      stavUpominky({
+        splatnost: f.dueDate,
+        posilaSe: f.status === 'SENT' && !f.paidAt,
+        dny: nastaveni.dny,
+        zapnuto: nastaveni.zapnuto,
+        odeslane: f.upominky.map((u) => ({ poradi: u.poradi, kdy: u.odeslanoAt })),
+        ted,
+      }),
+    );
+  }
+  for (const id of invoiceIds) if (!vysledek.has(id)) vysledek.set(id, PRAZDNY_STAV_UPOMINKY);
+  return vysledek;
 }
 
 function hodnotyProFakturu(f: FakturaPoSplatnosti, poradi: number): HodnotyUpominky {

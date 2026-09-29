@@ -10,6 +10,12 @@ import {
 } from '@/app/(portal)/components/RaditelnaTabulka';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
 import { ZKRATKA_CASTI, jeCastFaktury } from '@/lib/fakturaCast';
+import {
+  kdyOdesla,
+  kdyPujde,
+  upominkaNaSpadnuti,
+  type StavUpominky,
+} from '@/lib/upominkaStav';
 
 /**
  * Tabulka vydaných faktur, řaditelná kliknutím na název sloupce (zadání
@@ -39,6 +45,11 @@ export type FakturaRadek = {
    * dokladu ani v mailu klientovi není. Prázdno = zakázka není na části.
    */
   cast: string | null;
+  /**
+   * KDY PŮJDE UPOMÍNKA A KDY ŠLA (zadání 29. 9. 2026). Počítá se na serveru
+   * (lib/upominkaStav.ts), tabulka to jen kreslí.
+   */
+  upominka: StavUpominky;
 };
 
 export function FakturyTabulka({
@@ -137,6 +148,51 @@ export function FakturyTabulka({
           )}
         </span>
       ),
+    },
+    {
+      /**
+       * UPOMÍNKA (zadání 29. 9. 2026: „aby mi svítilo, že půjde upomínka za
+       * fakturu. A že šla a kdy").
+       *
+       * Svítí jen den dopředu a dneškem počínaje - u faktury, která visí
+       * měsíc, by trvale rozsvícený štítek nikdo nevnímal. Co už odešlo,
+       * stojí pod tím tiše, ať je vidět, že se něco děje.
+       */
+      key: 'upominka',
+      label: 'Upomínka',
+      // Řadí se podle toho, co je na spadnutí - a teprve pak podle toho,
+      // kolik už toho odešlo.
+      hodnota: (r) =>
+        r.upominka.dalsi ? r.upominka.dalsi.zaDnu : 9000 - r.upominka.odeslane.length,
+      trida: 'whitespace-nowrap',
+      bunka: (r) => {
+        const posledni = r.upominka.odeslane[0];
+        if (!r.upominka.dalsi && !posledni) return <span className="text-muted">—</span>;
+        const sviti = upominkaNaSpadnuti(r.upominka);
+        return (
+          <span className="flex flex-col gap-0.5">
+            {r.upominka.dalsi && (
+              <span
+                title={
+                  sviti
+                    ? 'Odejde klientovi automaticky. Když nemá, zastavte to v Doklady → Upomínky.'
+                    : 'Termín automatické upomínky.'
+                }
+                className={`inline-flex items-center self-start text-[11px] font-heading font-semibold px-2 py-0.5 rounded-pill ${
+                  sviti ? 'bg-dangerTint text-danger' : 'bg-field text-muted border border-line'
+                }`}
+              >
+                {r.upominka.dalsi.poradi}. {kdyPujde(r.upominka.dalsi)}
+              </span>
+            )}
+            {posledni && (
+              <span className="text-[11px] font-body text-muted tabular-nums">
+                {posledni.poradi}. šla {kdyOdesla(posledni.kdy)}
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     {
       key: 'stav',

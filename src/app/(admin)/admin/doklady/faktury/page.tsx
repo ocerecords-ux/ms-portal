@@ -6,6 +6,8 @@ import { StahnoutPrilohy } from '../StahnoutPrilohy';
 import { FakturyTabulka, type FakturaRadek } from './FakturyTabulka';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { formatDatum, prelozit } from '@/lib/jazyk';
+import { stavyUpominek } from '@/lib/upominkyServer';
+import { PRAZDNY_STAV_UPOMINKY } from '@/lib/upominkaStav';
 
 // Prehled vydanych faktur (zadani 6. 9. 2026). Zalozky podle stavu - nejdulezitejsi
 // je videt, co je jeste neuhrazene a co je uz po splatnosti.
@@ -80,6 +82,13 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
   // Radky pro tabulku. Formatuje se tady na serveru, do prohlizece jde hotovy
   // text a k nemu cislo pro razeni - podle vypsaneho textu by razeni datumu
   // ani castek nefungovalo.
+  /**
+   * UPOMÍNKY DO TABULKY (zadání 29. 9. 2026: „potřeboval bych vědět den
+   * dopředu, aby mi svítilo, že půjde upomínka za fakturu. A že šla a kdy").
+   * Jedním dotazem pro celou stránku - viz lib/upominkyServer.ts.
+   */
+  const upominky = await stavyUpominek(invoices.map((i) => i.id));
+
   const radkyTabulky: FakturaRadek[] = invoices.map((invoice) => {
     const totals = computeTotals(invoice.items, invoice);
     return {
@@ -101,6 +110,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { t
       castka: formatMoney(totals.incVat, invoice.currency, jazyk),
       castkaMinor: totals.incVat,
       cast: invoice.interniCast ?? null,
+      upominka: upominky.get(invoice.id) ?? PRAZDNY_STAV_UPOMINKY,
     };
   });
 
