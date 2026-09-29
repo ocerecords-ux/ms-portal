@@ -18,6 +18,11 @@ import { usePreklad } from './JazykProvider';
  * Dokončené projekty jsou v nabídce taky, ale až za rozdělanými a označené —
  * výkaz se k dokončenému projektu píše běžně (práce se dodělává i po
  * uzavření), jen se na něj nemá kliknout omylem.
+ *
+ * V kalendáři to ale neplatí (zadání 29. 9. 2026: „když přidávám do kalendáře
+ * projekt, tak by už neměl jít přidat projekt, který už je v dokončených, je
+ * to zbytečné") - natáčet se dokončená kniha nebude. Od toho je
+ * `bezDokoncenych`; volající si vybere, protože u výkazu je to naopak.
  */
 
 export type ProjektKVyberu = {
@@ -61,6 +66,7 @@ export function VyberProjektu({
   placeholder,
   prazdnyText,
   popisZruseni,
+  bezDokoncenych = false,
 }: {
   projekty: ProjektKVyberu[];
   /** ID vybraného projektu, nebo prázdno. */
@@ -76,6 +82,14 @@ export function VyberProjektu({
    */
   prazdnyText?: string;
   popisZruseni?: string;
+  /**
+   * Dokončené projekty se vůbec nenabízejí (29. 9. 2026) - pro kalendář.
+   *
+   * VYBRANÝ PROJEKT SE SKRÝVÁ NIKDY: u staré události, která na dokončeném
+   * projektu visí, by se jinak políčko tvářilo prázdně a uložení by projekt
+   * zahodilo. Skrývá se jen to, co se NABÍZÍ.
+   */
+  bezDokoncenych?: boolean;
 }) {
   const t = usePreklad();
   // Vychozi texty jsou ve slovniku, ne v hodnotach parametru - volajici je
@@ -92,11 +106,13 @@ export function VyberProjektu({
   const vybrany = projekty.find((p) => p.id === hodnota) ?? null;
 
   const nalezene = useMemo(() => {
-    const shody = projekty.filter((p) => sedi(p, hledani.trim()));
+    const shody = projekty.filter(
+      (p) => sedi(p, hledani.trim()) && (!bezDokoncenych || !p.dokonceny || p.id === hodnota),
+    );
     // Rozdelane driv nez dokoncene - to je to, co clovek hleda v devadesati
     // procentech pripadu.
     return [...shody].sort((a, b) => Number(a.dokonceny ?? false) - Number(b.dokonceny ?? false));
-  }, [projekty, hledani]);
+  }, [projekty, hledani, bezDokoncenych, hodnota]);
 
   const viditelne = nalezene.slice(0, STROP);
 

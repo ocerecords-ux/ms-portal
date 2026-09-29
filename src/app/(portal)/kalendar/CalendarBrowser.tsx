@@ -2600,8 +2600,17 @@ function UdalostForm({
               <span className="text-sm font-body text-ink">
                 {t('kalendar.poleProjekt')}
               </span>
-              {/* Stejné hledání psaním jako u výkazů - projektů jsou stovky. */}
-              <VyberProjektu projekty={projekty} hodnota={projektId} onZmena={setProjektId} />
+              {/* Stejné hledání psaním jako u výkazů - projektů jsou stovky.
+                  Dokončené se ale nenabízejí (29. 9. 2026: „už by neměl jít
+                  přidat projekt, který už je v dokončených, je to zbytečné") -
+                  natáčet se dokončená kniha nebude. Na výkazu to platí
+                  obráceně, proto je to přepínač, ne pravidlo v komponentě. */}
+              <VyberProjektu
+                projekty={projekty}
+                hodnota={projektId}
+                onZmena={setProjektId}
+                bezDokoncenych
+              />
             </label>
           )}
 
