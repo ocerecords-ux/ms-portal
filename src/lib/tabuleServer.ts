@@ -4,7 +4,7 @@ import { loadOccupancy } from '@/lib/calendarServer';
 import { BLOCK_KIND_LABELS } from '@/lib/calendar';
 import { notify } from '@/lib/notifications';
 import { brunoNapisSoukrome, vychoziPrijemceSmlouvy } from '@/lib/smlouvyKlientaServer';
-import { IKONA_DRUHU, IKONA_NATACENI, nazevPolozky, type DataTabule } from '@/lib/tabule';
+import { IKONA_DRUHU, IKONA_NATACENI, kratkyDruh, nazevPolozky, type DataTabule } from '@/lib/tabule';
 import { instagramProTabuli } from '@/lib/instagramServer';
 
 /**
@@ -116,7 +116,8 @@ async function ostatniStudia(krometoho: string, ted: Date): Promise<DataTabule['
       start: b.start,
       end: b.end,
       nazev: b.projectName || b.title || BLOCK_KIND_LABELS[b.kind] || 'Blokace',
-      druh: BLOCK_KIND_LABELS[b.kind] ?? 'Blokace',
+      // Krátký název jen tady, v úzkém pruhu ostatních studií.
+      druh: kratkyDruh(b.kind, BLOCK_KIND_LABELS[b.kind] ?? 'Blokace'),
       ikona: IKONA_DRUHU[b.kind] ?? null,
       herec: b.actorName,
       studioId: b.studioId,

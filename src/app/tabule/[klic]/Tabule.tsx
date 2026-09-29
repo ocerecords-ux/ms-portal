@@ -893,7 +893,7 @@ function OstatniStudia({
             {(bezi || s.dalsi) && (
               <span
                 style={{
-                  width: 180,
+                  width: 200,
                   flexShrink: 0,
                   fontSize: 21,
                   fontWeight: 600,

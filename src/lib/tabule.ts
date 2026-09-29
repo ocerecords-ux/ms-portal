@@ -82,8 +82,12 @@ export const IKONA_DRUHU: Record<string, string> = {
   NATACENI: 'mikrofon-studio',
   STRIH: 'strih',
   CASTING: 'casting',
-  BOOKING: 'klic',
-  MAINTENANCE: 'ovladac',
+  // Noty, ne klíč (oprava 29. 9. 2026: „u toho externího pronájmu je blbý ten
+  // klíč, vypadá to jako nějaký servis"). Klíč v naší sadě je francouzský klíč
+  // a patří k údržbě; pronájem si u nás bere muzikant nebo producent, takže
+  // noty sedí líp.
+  BOOKING: 'noty',
+  MAINTENANCE: 'klic',
   UKLID: 'uklid',
   INTERNAL: 'lide',
   HOLIDAY: 'slunce',
@@ -92,6 +96,21 @@ export const IKONA_DRUHU: Record<string, string> = {
 
 /** Natáčení nemá `kind` - je to rezervace studia, ne blokace. */
 export const IKONA_NATACENI = IKONA_DRUHU.NATACENI;
+
+/**
+ * KRÁTKÝ NÁZEV DRUHU NA TABULI (oprava 29. 9. 2026: „a není vidět celý ten
+ * popis"). V pruhu ostatních studií je na druh úzký sloupeček a „Externí
+ * pronájem" se do něj nevešel - uřízlo se to uprostřed slova, což je horší
+ * než kratší název. Co tady není, se píše celé.
+ */
+export const ZKRATKA_DRUHU: Record<string, string> = {
+  BOOKING: 'Pronájem',
+  INTERNAL: 'Blokace',
+};
+
+export function kratkyDruh(kind: string, celyNazev: string): string {
+  return ZKRATKA_DRUHU[kind] ?? celyNazev;
+}
 
 /** Co tabule dostane ze serveru. Časy jako ISO text. */
 export type DataTabule = {
