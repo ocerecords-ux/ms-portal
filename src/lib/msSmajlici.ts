@@ -68,3 +68,60 @@ export function najdiSmajlika(code: string): MsSmajlik | undefined {
  * ty se pak vypíšou jako obyčejný text, ať se nic neztratí.
  */
 export const MS_SMAJLIK_REGEX = /(:ms-[a-z-]+:)/g;
+
+/**
+ * PSANÍ SMAJLÍKŮ ZNAKY (zadání 29. 9. 2026: „když zapíšu znaky :-), tak se mi
+ * nepropisujou smajlíci graficky").
+ *
+ * Nabídka se smajlíky zůstává; tohle je pro toho, kdo píše naslepo a nechce
+ * pro každý úsměv sahat myší. Napsané znaky se vymění za naši značku
+ * (`:ms-usmev:`), takže ve zprávě je uložené totéž, co když se smajlík vybere
+ * z nabídky - jedna podoba v databázi, ne dvě.
+ *
+ * Co v sadě nemá protějšek (vyplazený jazyk), se nechává textem. Raději nic
+ * než smajlík, který říká něco jiného.
+ *
+ * DELŠÍ TVARY NAPŘED: `:-)` se musí zkusit dřív než `:)`, jinak by z prvního
+ * zůstala pomlčka. Pořadí v seznamu je proto významné.
+ */
+export const TEXTOVI_SMAJLICI: { znaky: string; code: string }[] = [
+  { znaky: ':-)', code: ':ms-usmev:' },
+  { znaky: ':)', code: ':ms-usmev:' },
+  { znaky: ':-D', code: ':ms-smich:' },
+  { znaky: ':D', code: ':ms-smich:' },
+  { znaky: ';-)', code: ':ms-mrk:' },
+  { znaky: ';)', code: ':ms-mrk:' },
+  { znaky: ':-(', code: ':ms-smutek:' },
+  { znaky: ':(', code: ':ms-smutek:' },
+  { znaky: ':-O', code: ':ms-prekvapeni:' },
+  { znaky: ':-o', code: ':ms-prekvapeni:' },
+  { znaky: ':O', code: ':ms-prekvapeni:' },
+  { znaky: ':-/', code: ':ms-premyslim:' },
+  { znaky: ':-|', code: ':ms-unaveny:' },
+  { znaky: '<3', code: ':ms-srdce:' },
+];
+
+function unikni(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Smajlík se pozná jen jako SAMOSTATNÉ SLOVO - před ním musí být začátek
+ * textu nebo mezera a za ním mezera nebo konec. Jinak by `:/` vyskočilo
+ * uprostřed `https://` a `:(` v každém zápisu času.
+ */
+const VZOR_TEXTOVYCH = new RegExp(
+  `(^|\\s)(${TEXTOVI_SMAJLICI.map((s) => unikni(s.znaky)).join('|')})(?=\\s|$)`,
+  'g',
+);
+
+const PODLE_ZNAKU = new Map(TEXTOVI_SMAJLICI.map((s) => [s.znaky, s.code]));
+
+/** „ahoj :-)" → „ahoj :ms-usmev:". Text bez smajlíků se vrací beze změny. */
+export function prepisTextoveSmajliky(text: string): string {
+  if (!text) return text;
+  return text.replace(VZOR_TEXTOVYCH, (cele, pred: string, znaky: string) => {
+    const code = PODLE_ZNAKU.get(znaky);
+    return code ? `${pred}${code}` : cele;
+  });
+}
