@@ -3324,8 +3324,8 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'banka.odpojit': { cs: 'Odpojit', en: 'Disconnect' },
   'banka.opravduOdpojit': { cs: 'Opravdu odpojit účet?', en: 'Really disconnect the account?' },
   'banka.zadnyUcet': {
-    cs: 'Zatím tu žádný účet není. „Napojit účet" tě pošle do Air Banky, kde přihlášením potvrdíš souhlas — portál pak pohyby stahuje sám třikrát denně.',
-    en: 'There is no account here yet. "Connect an account" takes you to Air Bank, where signing in confirms your authorisation — the portal then downloads transactions by itself three times a day.',
+    cs: 'Zatím tu žádný účet není. Stáhni si v internetovém bankovnictví výpis ve formátu ABO (GPC) a dej „Nahrát výpis" — účet se založí sám a pohyby se rovnou spárují s fakturami.',
+    en: 'There is no account here yet. Download a statement in ABO (GPC) format from your internet banking and use "Upload statement" — the account is created automatically and the transactions are matched against invoices right away.',
   },
   'banka.souhlasPlatiDo': { cs: 'souhlas platí do {datum}', en: 'authorisation valid until {datum}' },
   'banka.souhlasCeka': {
@@ -3351,13 +3351,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'In Admin ▸ Users, tick "Can see the Bank section" for the people who should see the transactions. As soon as at least one account has it, the tab disappears for everyone else.',
   },
   'banka.nenastavenoNadpis': {
-    cs: 'Napojení na banku ještě není nastavené.',
-    en: 'The bank connection is not set up yet.',
+    cs: 'Automatické stahování z banky není nastavené — nahrávání výpisu funguje i bez něj.',
+    en: 'Automatic downloads from the bank are not set up — uploading a statement works without them.',
   },
   // {kod1} a {kod2} se vykreslí jako <code> s názvem proměnné - viz sKody() v BankaKlient.tsx.
   'banka.nenastavenoPopis': {
-    cs: 'Portál chodí do banky přes GoCardless Bank Account Data. Stačí si tam založit účet (je to zdarma), vytvořit klíče a přidat je na Vercelu jako {kod1} a {kod2}. Pak se sem vrať a účet napoj.',
-    en: 'The portal reaches the bank through GoCardless Bank Account Data. Just set up an account there (it is free), create the keys and add them on Vercel as {kod1} and {kod2}. Then come back here and connect the account.',
+    cs: 'Stahování přes GoCardless Bank Account Data čeká na klíče {kod1} a {kod2} na Vercelu. GoCardless ale od roku 2026 nové zákazníky nebere, takže tohle zůstává jen pro případ, že bychom klíče někdy měli — běžná cesta je nahrát výpis.',
+    en: 'Downloading through GoCardless Bank Account Data is waiting for the {kod1} and {kod2} keys on Vercel. GoCardless stopped taking new customers in 2026, though, so this stays only in case we ever get the keys — the normal route is to upload a statement.',
   },
   'banka.napojenoStazeno': {
     cs: 'Účet je napojený. Staženo {nove} pohybů, spárováno {sparovano}.',

@@ -127,57 +127,98 @@ async function sesynchronizujNapojeni(napojeni: {
   vysledek.stazeno = pohyby.length;
   if (pohyby.length === 0) return vysledek;
 
-  const faktury = await neuhrazeneFaktury(napojeni.issuerCompanyId);
-  const uhrazene: { invoiceId: string; amountMinor: number; currency: Currency; bookedAt: Date }[] = [];
-
-  for (const pohyb of pohyby) {
-    const externalId = idPohybu(pohyb);
-    const uz = await prisma.bankTransaction.findUnique({
-      where: { connectionId_externalId: { connectionId: napojeni.id, externalId } },
-      select: { id: true },
-    });
-    if (uz) continue;
-
+  // Překlad z tvaru GoCardless do našeho; párování je dál společné s importem
+  // výpisu, ať se ta dvě místa nemůžou rozejít (29. 9. 2026).
+  const zaznamy: PohybKUlozeni[] = pohyby.map((pohyb) => {
     const text = textPlatby(pohyb);
-    const amountMinor = minorZCastky(pohyb.transactionAmount?.amount ?? '0');
-    const currency = (pohyb.transactionAmount?.currency ?? 'CZK') as Currency;
-    const zaznam = {
-      connectionId: napojeni.id,
-      externalId,
+    return {
+      externalId: idPohybu(pohyb),
       bookedAt: datumPohybu(pohyb),
-      amountMinor,
-      currency,
+      amountMinor: minorZCastky(pohyb.transactionAmount?.amount ?? '0'),
+      currency: (pohyb.transactionAmount?.currency ?? 'CZK') as Currency,
       variableSymbol: vyctiVariabilniSymbol(text),
       counterpartyName: pohyb.debtorName ?? pohyb.creditorName ?? null,
       counterpartyAccount: pohyb.debtorAccount?.iban ?? pohyb.debtorAccount?.bban ?? null,
       reference: text || null,
     };
+  });
 
+  const ulozeno = await ulozAZparuj(napojeni.id, napojeni.issuerCompanyId, zaznamy);
+  return { ...ulozeno, stazeno: pohyby.length };
+}
+
+/**
+ * JEDEN POHYB TAK, JAK HO PORTÁL UKLÁDÁ - bez ohledu na to, odkud přišel.
+ *
+ * Dvě cesty do banky (stažení přes API a nahraný výpis ABO) se scházejí tady,
+ * aby párování, zvoneček i označování faktur existovaly jen jednou.
+ */
+export type PohybKUlozeni = {
+  externalId: string;
+  bookedAt: Date;
+  amountMinor: number;
+  currency: Currency;
+  variableSymbol: string | null;
+  counterpartyName: string | null;
+  counterpartyAccount: string | null;
+  reference: string | null;
+};
+
+/** Uloží, co portál ještě nezná, a zkusí to přiřadit k neuhrazeným fakturám. */
+export async function ulozAZparuj(
+  connectionId: string,
+  issuerCompanyId: string | null,
+  zaznamy: PohybKUlozeni[],
+): Promise<VysledekSynchronizace> {
+  const vysledek: VysledekSynchronizace = { stazeno: zaznamy.length, nove: 0, sparovano: 0, navrhy: 0, chyby: [] };
+  if (zaznamy.length === 0) return vysledek;
+
+  const faktury = await neuhrazeneFaktury(issuerCompanyId);
+  const uhrazene: { invoiceId: string; amountMinor: number; currency: Currency; bookedAt: Date }[] = [];
+
+  for (const zaznam of zaznamy) {
+    const uz = await prisma.bankTransaction.findUnique({
+      where: { connectionId_externalId: { connectionId, externalId: zaznam.externalId } },
+      select: { id: true },
+    });
+    if (uz) continue;
+
+    const data = { ...zaznam, connectionId };
     const nalez = najdiFakturuKPlatbe(
-      { amountMinor, currency, variableSymbol: zaznam.variableSymbol, reference: text },
+      {
+        amountMinor: zaznam.amountMinor,
+        currency: zaznam.currency,
+        variableSymbol: zaznam.variableSymbol,
+        reference: zaznam.reference ?? '',
+      },
       faktury,
     );
 
     if (nalez.druh === 'presna') {
       await prisma.bankTransaction.create({
-        data: { ...zaznam, stav: 'AUTO', invoiceId: nalez.invoiceId, navrhDuvod: nalez.duvod },
+        data: { ...data, stav: 'AUTO', invoiceId: nalez.invoiceId, navrhDuvod: nalez.duvod },
       });
       await prisma.invoice.update({
         where: { id: nalez.invoiceId },
-        data: { status: 'PAID', paidAt: zaznam.bookedAt, paidAmountMinor: amountMinor },
+        data: { status: 'PAID', paidAt: zaznam.bookedAt, paidAmountMinor: zaznam.amountMinor },
       });
-      // Uhrazená faktura už není ve hře pro další pohyb ze stejného stažení.
+      // Uhrazená faktura už není ve hře pro další pohyb ze stejné dávky.
       const index = faktury.findIndex((f) => f.id === nalez.invoiceId);
       if (index >= 0) faktury.splice(index, 1);
-      uhrazene.push({ invoiceId: nalez.invoiceId, amountMinor, currency, bookedAt: zaznam.bookedAt });
+      uhrazene.push({
+        invoiceId: nalez.invoiceId,
+        amountMinor: zaznam.amountMinor,
+        currency: zaznam.currency,
+        bookedAt: zaznam.bookedAt,
+      });
       vysledek.sparovano++;
     } else if (nalez.druh === 'navrh') {
       await prisma.bankTransaction.create({
-        data: { ...zaznam, stav: 'NAVRH', navrhInvoiceId: nalez.invoiceId, navrhDuvod: nalez.duvod },
+        data: { ...data, stav: 'NAVRH', navrhInvoiceId: nalez.invoiceId, navrhDuvod: nalez.duvod },
       });
       vysledek.navrhy++;
     } else {
-      await prisma.bankTransaction.create({ data: { ...zaznam, stav: 'NOVA', navrhDuvod: nalez.duvod } });
+      await prisma.bankTransaction.create({ data: { ...data, stav: 'NOVA', navrhDuvod: nalez.duvod } });
     }
     vysledek.nove++;
   }

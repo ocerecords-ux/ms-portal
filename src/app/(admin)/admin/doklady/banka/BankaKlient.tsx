@@ -88,6 +88,40 @@ export function BankaKlient({
   const [chyba, setChyba] = useState<string | null>(null);
   const [vyber, setVyber] = useState<Record<string, string>>({});
 
+  /**
+   * NAHRÁNÍ VÝPISU (29. 9. 2026). Stahování přes API skončilo - GoCardless
+   * přestal brát nové zákazníky - a výpis ve formátu ABO je náhrada, která
+   * nestojí na nikom třetím. Tentýž soubor jde nahrát vícekrát, pohyby se
+   * nezdvojí.
+   */
+  async function nahrajVypis(soubor: File) {
+    setBusy('import');
+    setChyba(null);
+    setHlaska(null);
+    try {
+      const fd = new FormData();
+      fd.append('vypis', soubor);
+      const res = await fetch('/api/admin/banka/import', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setChyba(data?.error || 'Výpis se nepodařilo načíst.');
+        return;
+      }
+      const casti = [
+        `Výpis načten: ${data.stazeno} pohybů`,
+        data.nove ? `${data.nove} nových` : 'nic nového',
+        data.sparovano ? `${data.sparovano} spárováno` : null,
+        data.navrhy ? `${data.navrhy} čeká na potvrzení` : null,
+      ].filter(Boolean);
+      setHlaska(`${casti.join(' · ')}.`);
+      router.refresh();
+    } catch {
+      setChyba('Výpis se nepodařilo načíst.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // Návrat z banky: portál si doťukne, jestli je souhlas potvrzený, a rovnou
   // stáhne první pohyby - ať člověk nemusí klikat podruhé.
   useEffect(() => {
@@ -232,7 +266,27 @@ export function BankaKlient({
       <section className="rounded-card border border-line bg-surface p-5 flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="font-display text-xl text-ink m-0">{t('banka.napojeneUcty')}</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* NAHRÁT VÝPIS je teď hlavní cesta, jak se pohyby do portálu
+                dostanou - proto stojí první a není schované za nastavením
+                klíčů, které k němu nepatří. */}
+            <label
+              className={`${vedlejsi} cursor-pointer ${busy !== null ? 'opacity-60 pointer-events-none' : ''}`}
+              title="Výpis stáhněte v internetovém bankovnictví ve formátu ABO (GPC). Tentýž soubor jde nahrát vícekrát, nic se nezdvojí."
+            >
+              {busy === 'import' ? 'Načítám…' : 'Nahrát výpis'}
+              <input
+                type="file"
+                accept=".gpc,.abo,.txt,text/plain"
+                className="hidden"
+                disabled={busy !== null}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (f) void nahrajVypis(f);
+                }}
+              />
+            </label>
             <button type="button" onClick={stahni} disabled={!nastaveno || busy !== null} className={vedlejsi}>
               {busy === 'sync' ? t('banka.stahuju') : t('banka.stahnoutPohyby')}
             </button>

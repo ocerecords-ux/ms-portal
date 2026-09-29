@@ -5,9 +5,10 @@ import Link from 'next/link';
  *
  * CO SEM NEPATŘÍ (28. 9. 2026): Wikipedie - koncept článku si píše každý sám
  * a má ho v Mém účtu, s firmami nemá nic společného. A Firmy z Caflou -
- * Caflou už není napojené, takže párování nemá co párovat. Hlavička a záložky jsou v layoutu vedle - tady
- * zůstává jen rozcestník pro toho, kdo přišel poprvé a neví, co která
- * záložka skrývá.
+ * Caflou už není napojené, takže párování nemá co párovat.
+ *
+ * Hlavička a záložky jsou v layoutu vedle - tady zůstává jen rozcestník pro
+ * toho, kdo přišel poprvé a neví, co která záložka skrývá.
  */
 export const dynamic = 'force-dynamic';
 
