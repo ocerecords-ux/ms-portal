@@ -2375,6 +2375,10 @@ enum StudioBlockKind {
   // drive nebo pozdeji rozesla. Takhle rezervace rovnou sviti v nasem
   // kalendari, pocita se do konfliktu a chodi do odberu ICS.
   BOOKING
+  // Uklid studia (zadani 29. 9. 2026: „dej druh prace jeste do kalendare:
+  // Uklid studia"). Vlastni hodnota, ne MAINTENANCE: udrzba je oprava
+  // techniky, uklid je pravidelna vec, kterou zapisuje produkce.
+  UKLID
 }
 
 /// Cas, kdy se ve studiu netoci. Do obsazenosti se pocita stejne jako
