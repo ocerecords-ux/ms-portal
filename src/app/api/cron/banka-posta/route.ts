@@ -34,7 +34,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    return NextResponse.json({ ok: true, ...(await zkontrolujBankovniPostu()) });
+    const vysledek = await zkontrolujBankovniPostu();
+    // Chyba schránky nesmí projít jako „ok" - viz komentář u VysledekKolaPosty.
+    return NextResponse.json({ ok: !vysledek.chyba, ...vysledek }, { status: vysledek.chyba ? 502 : 200 });
   } catch (err) {
     console.error('Cron banka-posta selhal:', err);
     return NextResponse.json({ error: 'Kontrola schránky se nepodařila.' }, { status: 500 });

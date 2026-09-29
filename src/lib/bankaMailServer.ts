@@ -53,6 +53,13 @@ export type VysledekKolaPosty = {
   /** Zprávy, ve kterých nebyla rozpoznatelná částka - viz `posledniChyba`. */
   nerozpoznano: number;
   zbyva: boolean;
+  /**
+   * Proč se kolo nepovedlo. Chyba schránky se nevyhazuje ven (jedna
+   * nedostupná schránka nemá shodit úlohu), ale MUSÍ být vidět: do 29. 9. 2026
+   * vracela úloha při odmítnutém přihlášení `ok` a samé nuly, takže se tvářila,
+   * že jen nic nepřišlo.
+   */
+  chyba: string | null;
 };
 
 export function jeBankovniPostaNastavena(): boolean {
@@ -257,6 +264,7 @@ export async function zkontrolujBankovniPostu(): Promise<VysledekKolaPosty> {
     navrhy: 0,
     nerozpoznano: 0,
     zbyva: false,
+    chyba: null,
   };
   if (!jeBankovniPostaNastavena()) return prazdne;
 
@@ -270,11 +278,13 @@ export async function zkontrolujBankovniPostu(): Promise<VysledekKolaPosty> {
   try {
     precteno = await stahniZpravy(stav.posledniUid);
   } catch (err) {
+    const chyba = popisChyby(err);
     await prisma.postaStav.update({
       where: { id: STAV_ID },
-      data: { posledniKontrolaAt: new Date(), posledniChyba: popisChyby(err) },
+      data: { posledniKontrolaAt: new Date(), posledniChyba: chyba },
     });
-    return prazdne;
+    console.error('Schránka s upozorněními z banky:', chyba);
+    return { ...prazdne, chyba };
   }
 
   const odesilatel = (process.env.BANKA_IMAP_ODESILATEL || 'airbank.cz').toLowerCase();
@@ -304,6 +314,7 @@ export async function zkontrolujBankovniPostu(): Promise<VysledekKolaPosty> {
     navrhy: 0,
     nerozpoznano,
     zbyva: precteno.zbyva,
+    chyba: null,
   };
 
   for (const [ucet, polozky] of podleUctu) {

@@ -99,8 +99,9 @@ export type DataTabule = {
     barva: string;
     /** Pásmo studia - Londýn má jiné než Brno, čas se píše jeho místní. */
     casovePasmo: string;
-    probiha: { nazev: string; do: string; mistnost: string | null } | null;
-    dalsi: { od: string; nazev: string } | null;
+    /** `herec` je u natáčení to hlavní - kdo v tom studiu zrovna stojí u mikrofonu. */
+    probiha: { nazev: string; do: string; mistnost: string | null; herec: string | null } | null;
+    dalsi: { od: string; nazev: string; herec: string | null } | null;
   }[];
   /** Příběhy z Instagramu (22. 9. 2026); null = okno se neukáže. */
   instagram?: {

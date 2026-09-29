@@ -101,12 +101,14 @@ async function ostatniStudia(krometoho: string, ted: Date): Promise<DataTabule['
       start: s.start,
       end: s.end,
       nazev: s.projectName || 'Natáčení',
+      herec: s.actorName || null,
       studioId: s.studioId,
     })),
     ...obsazenost.blocks.map((b) => ({
       start: b.start,
       end: b.end,
       nazev: b.projectName || b.title || BLOCK_KIND_LABELS[b.kind] || 'Blokace',
+      herec: b.actorName,
       studioId: b.studioId,
     })),
   ].sort((a, b) => a.start.getTime() - b.start.getTime());
@@ -129,9 +131,14 @@ async function ostatniStudia(krometoho: string, ted: Date): Promise<DataTabule['
       barva: s.color,
       casovePasmo: s.timezone,
       probiha: bezi
-        ? { nazev: bezi.nazev, do: bezi.end.toISOString(), mistnost: mistnosti.get(bezi.studioId) ?? null }
+        ? {
+            nazev: bezi.nazev,
+            do: bezi.end.toISOString(),
+            mistnost: mistnosti.get(bezi.studioId) ?? null,
+            herec: bezi.herec,
+          }
         : null,
-      dalsi: dalsi ? { od: dalsi.start.toISOString(), nazev: dalsi.nazev } : null,
+      dalsi: dalsi ? { od: dalsi.start.toISOString(), nazev: dalsi.nazev, herec: dalsi.herec } : null,
     };
   });
 }

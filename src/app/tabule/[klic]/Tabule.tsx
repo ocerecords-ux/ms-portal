@@ -151,7 +151,9 @@ export function Tabule({
   // nasazení), než doběhne obnova - pak pole s ostatními studii chybí.
   const ostatni = data.ostatni ?? [];
   const maOstatni = ostatni.length > 0;
-  const kolikRadku = (probiha || dalsi ? 5 : 7) - (maOstatni ? 1 : 0);
+  // Každé studio v pruhu sebere zhruba jeden řádek rozpisu - pruh je teď
+  // pod sebou, ne vedle sebe.
+  const kolikRadku = Math.max(2, (probiha || dalsi ? 5 : 7) - Math.min(3, ostatni.length));
   const viditelne = radky.slice(zacatek, zacatek + kolikRadku);
 
   const zbyva = (doMs: number) => {
@@ -921,12 +923,19 @@ function ServisniPanel({
 
 /**
  * OSTATNÍ STUDIA (zadání 29. 9. 2026: „aby to, ve kterém tabule je, bylo vždy
- * výraznější").
+ * výraznější", pak „chci tam celé popisy těch událostí v jiných studiích,
+ * roztáhni je na šířku a dej po sobě").
  *
- * Proto je to pruh malých karet dole, ne druhý sloupec: vlastní studio má
- * nahoře půlmetrové písmo a tohle se k němu jen přidává. Čas se píše v pásmu
- * toho kterého studia - v Londýně se točí v jinou hodinu než v Brně - a když
- * se pásmo liší od domácího, je to u času napsané.
+ * Proto řádek přes celou šířku na studio, ne tři úzké sloupečky vedle sebe:
+ * do sloupečku se název pořadu nevešel a uřízl se po deseti znacích, což je
+ * k ničemu. Takhle je vidět celý.
+ *
+ * Výraznější zůstává domácí studio tím, co má nahoře - šedesátibodový nadpis,
+ * barevný rámeček a ukazatel času. Tenhle pruh je záměrně tlumený, jednořádkový
+ * a bez barev navíc.
+ *
+ * Čas se píše v pásmu toho kterého studia (v Londýně se točí v jinou hodinu
+ * než v Brně); když se pásmo liší od domácího, stojí u něj „místního".
  */
 function OstatniStudia({
   ostatni,
@@ -942,79 +951,76 @@ function OstatniStudia({
     new Intl.DateTimeFormat('cs-CZ', { timeZone: pasmo, hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
 
   return (
-    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0 }}>
+    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
       <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '0.12em', color: BARVY.sedy }}>OSTATNÍ STUDIA</span>
-      <div style={{ display: 'flex', gap: 16 }}>
-        {ostatni.map((s) => {
-          const jinePasmo = s.casovePasmo !== domaciPasmo;
-          const bezi = s.probiha && Date.parse(s.probiha.do) > tedMs;
-          return (
-            <div
-              key={s.id}
+      {ostatni.map((s) => {
+        const bezi = s.probiha && Date.parse(s.probiha.do) > tedMs;
+        const jinePasmo = s.casovePasmo !== domaciPasmo;
+        const cas = bezi
+          ? `do ${hodina(s.probiha!.do, s.casovePasmo)}`
+          : s.dalsi
+            ? `od ${hodina(s.dalsi.od, s.casovePasmo)}`
+            : '';
+        return (
+          <div
+            key={s.id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 18,
+              padding: '12px 22px',
+              borderRadius: 16,
+              background: BARVY.tlumena,
+              border: `1px solid ${BARVY.linka}`,
+            }}
+          >
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: s.barva, flexShrink: 0 }} />
+            <span
               style={{
-                flex: 1,
-                minWidth: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
-                padding: '16px 20px',
-                borderRadius: 20,
-                background: BARVY.tlumena,
-                border: `1px solid ${BARVY.linka}`,
-                // Vlastní studio nahoře má 60px nadpis a plnou barvu rámečku;
-                // tohle je schválně tlumené, ať se to neperou o pozornost.
-                opacity: 0.92,
+                width: 150,
+                flexShrink: 0,
+                fontSize: 22,
+                fontWeight: 700,
+                color: BARVY.text3,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                <span style={{ width: 12, height: 12, borderRadius: 4, background: s.barva, flexShrink: 0 }} />
-                <span
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 700,
-                    color: BARVY.text2,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {s.kratce}
-                </span>
-                <span
-                  style={{
-                    marginLeft: 'auto',
-                    flexShrink: 0,
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    background: bezi ? BARVY.akcent : '#4a4263',
-                  }}
-                />
-              </div>
-              <span
-                style={{
-                  fontSize: 22,
-                  fontWeight: 600,
-                  color: bezi ? BARVY.text : BARVY.sedy,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {bezi ? s.probiha!.nazev : s.dalsi ? s.dalsi.nazev : 'Dnes volno'}
+              {s.kratce}
+            </span>
+            <span
+              style={{
+                flexGrow: 1,
+                minWidth: 0,
+                fontSize: 22,
+                fontWeight: 600,
+                color: bezi ? BARVY.text2 : BARVY.sedy,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {/* Herec patří k natáčení stejně jako název - podle něj se pozná,
+                  koho tam mají (zadání 29. 9. 2026: „a u natáčení chci i herce"). */}
+              {bezi
+                ? [s.probiha!.nazev, s.probiha!.mistnost, s.probiha!.herec].filter(Boolean).join(' · ')
+                : s.dalsi
+                  ? [s.dalsi.nazev, s.dalsi.herec].filter(Boolean).join(' · ')
+                  : 'Dnes volno'}
+            </span>
+            {cas && (
+              <span style={{ flexShrink: 0, fontSize: 20, color: BARVY.sedy, whiteSpace: 'nowrap' }}>
+                {cas}
+                {jinePasmo ? ' místního' : ''}
               </span>
-              <span style={{ fontSize: 19, color: BARVY.sedy, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {bezi
-                  ? `do ${hodina(s.probiha!.do, s.casovePasmo)}${s.probiha!.mistnost ? ` · ${s.probiha!.mistnost}` : ''}`
-                  : s.dalsi
-                    ? `od ${hodina(s.dalsi.od, s.casovePasmo)}`
-                    : '—'}
-                {jinePasmo && (bezi || s.dalsi) ? ' místního' : ''}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+            )}
+            <span
+              style={{ flexShrink: 0, width: 10, height: 10, borderRadius: '50%', background: bezi ? BARVY.akcent : '#4a4263' }}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
