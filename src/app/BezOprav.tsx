@@ -17,6 +17,21 @@ import { useEffect } from 'react';
  *
  * Co se schválně NEVYPÍNÁ: `autocomplete`. Ten není oprava textu, ale
  * nabídka vlastních dřívějších hodnot a hesel ze správce — ta je užitečná.
+ *
+ * A POLE, KTERÁ SI O OPRAVY ŘEKNOU (oprava 29. 9. 2026: „ty opravy slov
+ * pořád nefungují").
+ *
+ * Tohle byl ten pravý důvod, proč v chatu opravy nešly: psátko si atributy
+ * nastavuje samo, jenže tenhle hlídač mu je po vykreslení zase přepsal na
+ * vypnuto. V DOMu pak stálo `spellcheck="false"` a `autocorrect="off"`,
+ * i když v kódu psátka stojí opak — takže se dvakrát opravovalo něco, co
+ * stejně nemohlo fungovat.
+ *
+ * Pravidlo z 10. 9. 2026 platí dál a je správné: v projektech, dokladech
+ * a kalendáři si iOS přepisuje jména herců, názvy knih a zkratky studií na
+ * „známější" slova a to je horší než pár překlepů. Ale chat je věta, ne
+ * údaj — tam opravy patří. Kdo je chce, napíše si na pole `data-opravy`
+ * a hlídač ho vynechá.
  */
 const ATRIBUTY: [string, string][] = [
   ['autocorrect', 'off'],
@@ -24,8 +39,12 @@ const ATRIBUTY: [string, string][] = [
   ['spellcheck', 'false'],
 ];
 
+/** Pole, kterých se hlídač nedotkne - viz `data-opravy` v komentáři výše. */
+const VYBER =
+  'input:not([data-opravy]), textarea:not([data-opravy]), [contenteditable="true"]:not([data-opravy])';
+
 function oznac(korenu: ParentNode) {
-  const pole = korenu.querySelectorAll<HTMLElement>('input, textarea, [contenteditable="true"]');
+  const pole = korenu.querySelectorAll<HTMLElement>(VYBER);
   for (const prvek of Array.from(pole)) {
     for (const [jmeno, hodnota] of ATRIBUTY) {
       if (prvek.getAttribute(jmeno) !== hodnota) prvek.setAttribute(jmeno, hodnota);
@@ -41,7 +60,7 @@ export function BezOprav() {
       for (const zmena of zmeny) {
         for (const uzel of Array.from(zmena.addedNodes)) {
           if (!(uzel instanceof HTMLElement)) continue;
-          if (uzel.matches('input, textarea, [contenteditable="true"]')) {
+          if (uzel.matches(VYBER)) {
             for (const [jmeno, hodnota] of ATRIBUTY) uzel.setAttribute(jmeno, hodnota);
           }
           oznac(uzel);

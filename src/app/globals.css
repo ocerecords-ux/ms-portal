@@ -223,6 +223,33 @@ body {
   }
 }
 
+/* Vlna u cary „ted" v kalendari (zadani 29. 9. 2026: „jeste by se mihl lehce
+   vlnit jako animace"). Schvalne JINA NEZ ms-ekvalizer: ten skace a hlasi, ze
+   nekdo pise. Tohle jen dycha - pomalu a v uzkem rozsahu, aby to v rohu oka
+   nerusilo cteni rozvrhu. Kazdy pruh dostane vlastni zpozdeni, takze se to
+   po care pomalu prelevá misto toho, aby vsechno poskakovalo naraz. */
+@keyframes ms-vlna-casu {
+  0%,
+  100% {
+    transform: scaleY(0.72);
+  }
+  50% {
+    transform: scaleY(1.18);
+  }
+}
+.ms-vlna-casu {
+  transform-origin: center;
+  animation-name: ms-vlna-casu;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+/* Kdo ma v systemu omezene animace, dostane vlnu bez pohybu. */
+@media (prefers-reduced-motion: reduce) {
+  .ms-vlna-casu {
+    animation: none;
+  }
+}
+
 /* Detail udalosti v kalendari „vystoupi dopredu" (zadani 20. 9. 2026:
    „kdyz na to kliknu, tak vystoupi jakoby dopredu pred vsechny a ukaze se
    zvetseny nahled"). */

@@ -952,6 +952,16 @@ function Psatko({
           autoCapitalize="sentences"
           autoCorrect="on"
           spellCheck
+          /**
+           * TOHLE POLE OPRAVY CHCE (29. 9. 2026: „ty opravy slov pořád
+           * nefungují").
+           *
+           * Portál je má vypnuté všude - hlídač BezOprav je po vykreslení
+           * přepíše na vypnuto, aby si iOS nepřepisoval jména herců a názvy
+           * knih. Bez téhle značky přepsal i psátko, takže atributy nad ní
+           * byly k ničemu. Chat je věta, ne údaj; tady opravy patří.
+           */
+          data-opravy="ano"
           lang={kodJazyka(jazyk)}
           role="textbox"
           aria-multiline="true"

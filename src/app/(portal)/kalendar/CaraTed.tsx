@@ -22,6 +22,13 @@ import { GRID_START_HOUR, HOUR_PX, minutesInZone } from '@/lib/calendar';
  * HLASITOST PODLE FÁZE DNE (druhá půlka zadání). Ráno a večer je vlna nízká,
  * kolem druhé odpoledne nejvyšší - ve studiu je to ta nejhlučnější část dne.
  * Není to měřidlo, je to nálada; přesné údaje jsou vlas a čas vpravo.
+ *
+ * A DÝCHÁ (doplnění 29. 9. 2026: „ještě by se mihl lehce vlnit jako
+ * animace"). Každý pruh se pomalu roztahuje a smršťuje, každý s jiným
+ * zpožděním, takže se vlna po čáře přelévá. Schválně pomalu a v úzkém
+ * rozsahu: čára stojí přes celý rozvrh a poskakující pruhy by u čtení
+ * překážely. Kdo má v systému omezené animace, dostane ji bez pohybu -
+ * viz `.ms-vlna-casu` v globals.css.
  */
 
 /** Kolik pruhů se nakreslí. Víc už na šířce sloupce splyne v šedý pruh. */
@@ -97,8 +104,16 @@ export function CaraTed({ timezone }: { timezone: string }) {
         {pruhy.map((v, i) => (
           <span
             key={i}
-            className="flex-1 rounded-full bg-brand-green"
-            style={{ height: `${v}px`, opacity: 0.85 - (i / POCET_PRUHU) * 0.45 }}
+            className="flex-1 rounded-full bg-brand-green ms-vlna-casu"
+            style={{
+              height: `${v}px`,
+              opacity: 0.85 - (i / POCET_PRUHU) * 0.45,
+              // Zpoždění roste doprava - vlna se po čáře přelévá, neposkakuje
+              // celá naráz. Doba je u každého pruhu trochu jiná, aby se rytmus
+              // po pár vteřinách neopakoval.
+              animationDelay: `${i * 70}ms`,
+              animationDuration: `${2600 + (i % 5) * 220}ms`,
+            }}
           />
         ))}
       </span>
