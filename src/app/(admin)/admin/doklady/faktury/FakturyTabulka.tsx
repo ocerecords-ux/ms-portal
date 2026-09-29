@@ -13,6 +13,7 @@ import { ZKRATKA_CASTI, jeCastFaktury } from '@/lib/fakturaCast';
 import {
   kdyOdesla,
   kdyPujde,
+  popisPoradi,
   upominkaNaSpadnuti,
   type StavUpominky,
 } from '@/lib/upominkaStav';
@@ -171,6 +172,8 @@ export function FakturyTabulka({
         const sviti = upominkaNaSpadnuti(r.upominka);
         return (
           <span className="flex flex-col gap-0.5">
+            {/* Ve štítku stojí KDY, ne kolikátá - „1. 5. 10." se četlo jako
+                jedno rozsypané datum. Pořadí je vedlejší údaj a patří pod to. */}
             {r.upominka.dalsi && (
               <span
                 title={
@@ -178,18 +181,20 @@ export function FakturyTabulka({
                     ? 'Odejde klientovi automaticky. Když nemá, zastavte to v Doklady → Upomínky.'
                     : 'Termín automatické upomínky.'
                 }
-                className={`inline-flex items-center self-start text-[11px] font-heading font-semibold px-2 py-0.5 rounded-pill ${
+                className={`inline-flex items-center self-start text-[11px] font-heading font-semibold px-2 py-0.5 rounded-pill whitespace-nowrap ${
                   sviti ? 'bg-dangerTint text-danger' : 'bg-field text-muted border border-line'
                 }`}
               >
-                {r.upominka.dalsi.poradi}. {kdyPujde(r.upominka.dalsi)}
+                {kdyPujde(r.upominka.dalsi)}
               </span>
             )}
-            {posledni && (
-              <span className="text-[11px] font-body text-muted tabular-nums">
-                {posledni.poradi}. šla {kdyOdesla(posledni.kdy)}
-              </span>
-            )}
+            <span className="text-[11px] font-body text-muted tabular-nums">
+              {posledni
+                ? `${posledni.poradi}. šla ${kdyOdesla(posledni.kdy)}`
+                : r.upominka.dalsi
+                  ? popisPoradi(r.upominka.dalsi.poradi)
+                  : ''}
+            </span>
           </span>
         );
       },
