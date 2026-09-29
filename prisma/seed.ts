@@ -218,6 +218,7 @@ async function main() {
   await pristupyDetaily();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
+  await projektGregorZCaflou();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -1773,6 +1774,159 @@ async function importujFakturyZCaflou(soubor: string, ZNAMKA: string) {
     console.log(`  import faktur z Caflou: vlozeno ${vlozeno}, preskoceno (cislo uz je v portalu): ${preskoceno.join(', ') || '-'}`);
   } catch (e) {
     console.warn('  import faktur z Caflou selhal:', e);
+  }
+}
+
+/**
+ * PROJEKT, KTERÝ SE NEPŘEPSAL Z CAFLOU (29. 9. 2026: „tady nám zmizel jeden
+ * projekt, který se nepřepsal z Caflou. Je tam i nabídka. Můžeš ho tam tiše
+ * dodat?").
+ *
+ * GREGOR A MĚSTO POD MĚSTEM (série Letopisy Podzemě 1), Caflou ID 625020,
+ * Audiotéka, klient Radka Kopecká. Údaje jsou opsané z karty projektu
+ * v Caflou a z nabídky 5260151 (PDF, vystaveno 8. 8. 2026).
+ *
+ * TIŠE znamená, že se nic nerozesílá: zapisuje se rovnou do databáze, takže
+ * klientovi ani týmu nechodí žádná zpráva - na rozdíl od založení projektu
+ * v portálu.
+ *
+ * Nabídka se zakládá jako ODESLANÁ, ne schválená. Že ji klient odklepl, z PDF
+ * poznat nejde a radši ať to Ondřej přepne sám, než aby portál tvrdil něco,
+ * co se nestalo. Číslo nabídky se bere z PDF a řadu nabídek v portálu
+ * neposune - generátor čísla obsazená čísla přeskakuje.
+ */
+async function projektGregorZCaflou() {
+  const ZNAMKA = 'projekt-gregor-625020';
+  const CAFLOU_ID = '625020';
+  const NAZEV = 'GREGOR A MĚSTO POD MĚSTEM (série Letopisy Podzemě 1)';
+  const DRIVE = 'https://drive.google.com/drive/folders/1SawZXphH8yxX5pDLeoJI-8Zpfg87poLY?usp=sharing';
+  const VYSTAVENO = new Date('2026-08-08T00:00:00.000Z');
+
+  try {
+    if (await prisma.counter.findUnique({ where: { name: ZNAMKA } })) return;
+
+    // Odběratel podle IČO; kdyby v portálu nebyl, založí se stejně jako při
+    // importu faktur - bez firmy by projekt neměl kam patřit.
+    let firma = await prisma.company.findFirst({ where: { ic: '28657144' }, select: { id: true, name: true } });
+    if (!firma) {
+      firma = await prisma.company.findFirst({
+        where: { name: { contains: 'AUDIOT', mode: 'insensitive' } },
+        select: { id: true, name: true },
+      });
+    }
+    if (!firma) {
+      const c = await prisma.counter.upsert({
+        where: { name: 'F' },
+        create: { name: 'F', value: 1 },
+        update: { value: { increment: 1 } },
+      });
+      firma = await prisma.company.create({
+        data: {
+          code: `MSF${String(c.value).padStart(4, '0')}`,
+          type: 'KLIENT',
+          name: 'AUDIOTÉKA.CZ s.r.o.',
+          ic: '28657144',
+          dic: 'CZ28657144',
+          addressStreet: 'Smetanovo náměstí 222/8',
+          addressCity: 'Ostrava',
+          addressZip: '70200',
+          addressCountry: 'CZ',
+        },
+        select: { id: true, name: true },
+      });
+    }
+
+    const manazer = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: 'karolina.zborilova@mediaspace.cz' },
+          { name: { contains: 'Zbořilová', mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    });
+    // Klient je konkrétní člověk u Audiotéky. Když účet nemá, zůstane aspoň
+    // jméno textem - tak to má ProjectMeta.klientName vymyšlené.
+    const klient = await prisma.user.findFirst({
+      where: { name: { contains: 'Kopeck', mode: 'insensitive' }, companyId: firma.id },
+      select: { id: true },
+    });
+
+    const uzJe = await prisma.projectMeta.findUnique({
+      where: { caflouProjectId: CAFLOU_ID },
+      select: { id: true },
+    });
+    if (!uzJe) {
+      await prisma.projectMeta.create({
+        data: {
+          caflouProjectId: CAFLOU_ID,
+          name: NAZEV,
+          companyId: firma.id,
+          companyName: firma.name,
+          statusName: 'V přípravě',
+          finished: false,
+          projectType: 'Natáčení a postprodukce audioknihy',
+          priority: 'MEDIUM',
+          managerUserId: manazer?.id ?? null,
+          klientUserId: klient?.id ?? null,
+          klientName: 'Radka Kopecká',
+          driveUrl: DRIVE,
+          popis: DRIVE,
+          zdroj: 'CAFLOU',
+          prenesenoAt: new Date(),
+          // Ať projekt sedí v přehledu tam, kde vznikl, a ne na dnešek.
+          createdAt: VYSTAVENO,
+        },
+      });
+    }
+
+    const vydavatel =
+      (await prisma.issuerCompany.findFirst({ where: { ic: '07459424' }, select: { id: true } })) ??
+      (await prisma.issuerCompany.findFirst({
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+        select: { id: true },
+      }));
+
+    const CISLO = '5260151';
+    const nabidkaJe = await prisma.offer.findUnique({ where: { number: CISLO }, select: { id: true } });
+    if (vydavatel && !nabidkaJe) {
+      await prisma.offer.create({
+        data: {
+          number: CISLO,
+          issuerCompanyId: vydavatel.id,
+          companyId: firma.id,
+          currency: 'CZK',
+          issueDate: VYSTAVENO,
+          subject: NAZEV,
+          jazyk: 'CS',
+          status: 'SENT',
+          sentAt: VYSTAVENO,
+          approvalToken: randomBytes(24).toString('base64url'),
+          caflouProjectId: CAFLOU_ID,
+          projectName: NAZEV,
+          note: 'Doplněno z PDF nabídky z Caflou.',
+          items: {
+            create: [
+              {
+                description: 'Natáčení a postprodukce audioknihy Gregor a město pod městem',
+                quantity: 1,
+                unit: 'ks',
+                unitPriceMinor: 1_710_000,
+                vatRate: 21,
+                sortOrder: 0,
+              },
+            ],
+          },
+        },
+      });
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(
+      `  projekt Gregor: projekt ${uzJe ? 'uz byl' : 'zalozen'}, nabidka ${nabidkaJe ? 'uz byla' : vydavatel ? 'zalozena' : 'PRESKOCENA (neni fakturacni firma)'}, manazer ${manazer ? 'ano' : 'NENALEZEN'}, klient ${klient ? 'ucet' : 'jen jmenem'}`,
+    );
+  } catch (e) {
+    console.warn('  projekt Gregor selhal:', e);
   }
 }
 
