@@ -37,8 +37,15 @@ import { requireAdmin } from '@/lib/adminGuard';
  * CRON_SECRET nastavit; pak tahle cesta nikam nevede.
  */
 
-/** Pozná úlohu Vercelu podle toho, čím se hlásí. */
-function jdeOdVercelu(req: NextRequest): boolean {
+/**
+ * Pozná úlohu Vercelu podle toho, čím se hlásí.
+ *
+ * JE TO EXPORT SCHVÁLNĚ: tři úlohy (banka, banka-posta, mesicni-prehled) si
+ * kontrolu píšou vlastní, protože ručně je smí pustit někdo jiný než Žůžo-
+ * labůžo. Kopie téhle podmínky v nich byla důvod, proč po opravě 29. 9. 2026
+ * dál vracely 403 - poznat úlohu z Vercelu se teď smí jen tady.
+ */
+export function jeUlohaZVercelu(req: NextRequest): boolean {
   if (req.headers.get('x-vercel-cron')) return true;
   return (req.headers.get('user-agent') ?? '').toLowerCase().startsWith('vercel-cron/');
 }
@@ -52,12 +59,12 @@ export async function smiSpustitUlohu(req: NextRequest): Promise<boolean> {
      * tichý stav, kvůli kterému úlohy dvakrát týdny mlčely, takže ať je o něm
      * v logu věta. Dovnitř se tudy nejde: špatné tajemství se neobchází.
      */
-    if (jdeOdVercelu(req)) {
+    if (jeUlohaZVercelu(req)) {
       console.error(
         'Uloha z Vercelu prisla se spatnym CRON_SECRET - zkontrolujte promennou v projektu a nasadte znovu (promenne se pecou pri nasazeni).',
       );
     }
-  } else if (jdeOdVercelu(req)) {
+  } else if (jeUlohaZVercelu(req)) {
     return true;
   }
   return Boolean(await requireAdmin());

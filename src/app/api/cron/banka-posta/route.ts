@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { smiDoBanky } from '@/lib/bankaPristup';
+import { jeUlohaZVercelu } from '@/lib/cronGuard';
 import { jeBankovniPostaNastavena, zkontrolujBankovniPostu } from '@/lib/bankaMailServer';
 
 /**
@@ -19,7 +20,8 @@ async function smiSem(req: NextRequest): Promise<boolean> {
   const tajemstvi = process.env.CRON_SECRET;
   if (tajemstvi) {
     if (req.headers.get('authorization') === `Bearer ${tajemstvi}`) return true;
-  } else if (req.headers.get('x-vercel-cron')) {
+  } else if (jeUlohaZVercelu(req)) {
+    // Jak se uloha z Vercelu pozna, vi jen lib/cronGuard.ts (29. 9. 2026).
     return true;
   }
   return smiDoBanky();

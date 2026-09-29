@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminGuard';
+import { jeUlohaZVercelu } from '@/lib/cronGuard';
 import {
   dnesniDenPraha,
   minulyMesic,
@@ -29,7 +30,7 @@ async function kdoVola(req: NextRequest): Promise<'cron' | 'admin' | null> {
   const tajemstvi = process.env.CRON_SECRET;
   if (tajemstvi) {
     if (req.headers.get('authorization') === `Bearer ${tajemstvi}`) return 'cron';
-  } else if (req.headers.get('x-vercel-cron')) {
+  } else if (jeUlohaZVercelu(req)) {
     // Zachranna brzda, kdyz tajemstvi v prostredi neni - viz lib/cronGuard.ts.
     return 'cron';
   }
