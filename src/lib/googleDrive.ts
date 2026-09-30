@@ -429,21 +429,37 @@ export async function uploadPdfToDriveFolder(
  * DOKUMENT, DO KTERÉHO SE DÁ PSÁT (zadání 26. 9. 2026: „ukládalo by se to do
  * editovatelného dokumentu na disku ve složce projektu").
  *
- * HTML se na Disk pošle s cílovým typem `application/vnd.google-apps.document`,
- * takže z něj Google udělá běžný dokument - otevře se v prohlížeči a rovnou se
- * do něj píše. Proto ne PDF: rodný list se čte, natáčecí text se píše.
- *
- * Portál do dokumentu po vyrobení nesahá. Kdo potřebuje nový, vyrobí si ho
+ * Z HTML se na Disku udělá běžný dokument Google - otevře se v prohlížeči
+ * a rovnou se do něj píše. Proto ne PDF: rodný list se čte, natáčecí text se
+ * píše. Portál do hotového dokumentu nesahá; kdo potřebuje nový, vyrobí si ho
  * znovu a vznikne DALŠÍ soubor - přepsat rozepsaný text by byla škoda.
  *
- * NÁZEV SE NASTAVUJE JEŠTĚ JEDNOU PO NAHRÁNÍ (30. 9. 2026: „na disk se
- * nepropisuje ten dokument z výstupů"). Dokumenty vyrobené tímhle tlačítkem
- * ležely na Disku jako „Dokument bez názvu", přestože se `name` posílá
- * v metadatech hned při nahrání: převod HTML → dokument Google si název
- * přebíjí názvem, který si z HTML odvodí sám. Jeden dotaz navíc
- * (renameDriveItem) je proti tomu jistota; kdyby selhal, dokument na Disku
- * zůstane, jen se špatným jménem, a je to vidět v logu.
+ * PROČ TO NENÍ JEDEN DOTAZ (30. 9. 2026: „na disk se nepropisuje ten dokument
+ * z výstupů... nic"). Dokumenty z tohohle tlačítka na Disku vznikaly PRÁZDNÉ
+ * a jmenovaly se „Dokument bez názvu". Nahrání přitom prošlo, Disk vrátil ID
+ * a soubor ležel ve správné složce - jen se nepřevedl obsah, a protože si
+ * převod pojmenovává dokument podle toho, co z HTML vyčte, zůstal i bez
+ * názvu. Navenek to vypadalo, že se všechno povedlo.
+ *
+ * Proto se to dělá takhle:
+ *   1. Nahraje se HTML rovnou s cílovým typem dokumentu Google (jako dosud,
+ *      jen bez `charset` u typu obsahu - s ním Disk převod umí přeskočit).
+ *   2. PORTÁL SI OVĚŘÍ, ŽE V DOKUMENTU OPRAVDU NĚCO JE - vytáhne si z něj
+ *      čistý text. Prázdný dokument se smaže, aby na Disku nezůstal zmetek.
+ *   3. Když převod neproběhl, zkusí se objížďka: HTML se uloží jako obyčejný
+ *      soubor a teprve jeho KOPIE se udělá dokumentem. Je to jiná cesta
+ *      v Disku než převod při nahrání a zabírá i tam, kde ta první ne.
+ *      Pomocný soubor se pak smaže.
+ *   4. Název se nastaví ještě jednou, protože převod si ho přepisuje.
+ *
+ * Když neprojde ani jedna cesta, vrátí se chyba - lepší než tiše uložit
+ * prázdný list a zjistit to až v natáčecí den.
  */
+const TYP_DOKUMENTU = 'application/vnd.google-apps.document';
+
+/** Kolik znaků v dokumentu už bereme jako „něco tam je". */
+const MIN_ZNAKU_DOKUMENTU = 20;
+
 export async function vytvorDokumentZHtml(
   folderUrl: string,
   nazev: string,
@@ -459,17 +475,73 @@ export async function vytvorDokumentZHtml(
     return { ok: false, duvod: 'Portál se nepřihlásil ke Google Disku (chybí nebo neplatí servisní účet).' };
   }
 
+  // 1. + 2. Převod při nahrání a kontrola, že z něj něco je.
+  const prvni = await nahrajHtml(token, folderId, nazev, html, TYP_DOKUMENTU);
+  if (!prvni.ok) return prvni;
+
+  if (await maObsah(prvni.id, token)) {
+    await renameDriveItem(prvni.id, nazev, token);
+    return { ok: true, id: prvni.id, webViewLink: odkazNaDokument(prvni.id, prvni.webViewLink) };
+  }
+
+  console.error(
+    `Google Drive: prevod HTML na dokument nechal ${prvni.id} prazdny, zkousim pres kopii.`,
+  );
+  await smazNaDisku(prvni.id, token);
+
+  // 3. Objížďka přes kopii.
+  const pomocny = await nahrajHtml(token, folderId, `${nazev} (podklad)`, html, null);
+  if (!pomocny.ok) return pomocny;
+
+  const kopie = await zkopirujJakoDokument(pomocny.id, nazev, folderId, token);
+  await smazNaDisku(pomocny.id, token);
+  if (!kopie) {
+    return { ok: false, duvod: 'Disk dokument z natáčecího textu nevyrobil. Zkuste to prosím znovu.' };
+  }
+
+  if (!(await maObsah(kopie.id, token))) {
+    console.error(`Google Drive: ani kopie ${kopie.id} nema obsah, mazu ji.`);
+    await smazNaDisku(kopie.id, token);
+    return {
+      ok: false,
+      duvod: 'Disk natáčecí text nepřevedl na dokument - zůstal by prázdný. Zkuste to prosím znovu.',
+    };
+  }
+
+  await renameDriveItem(kopie.id, nazev, token);
+  return { ok: true, id: kopie.id, webViewLink: odkazNaDokument(kopie.id, kopie.webViewLink) };
+}
+
+function odkazNaDokument(id: string, webViewLink: string | null): string {
+  return webViewLink ?? `https://docs.google.com/document/d/${id}/edit`;
+}
+
+/**
+ * Nahraje HTML do složky. `cilovyTyp` je typ, na který se má převést - když je
+ * `null`, uloží se HTML jako obyčejný soubor (podklad pro kopii).
+ *
+ * U typu obsahu SCHVÁLNĚ NENÍ `charset`: kódování si Disk vezme z `<meta>`
+ * v hlavičce HTML a typ s parametrem navíc mu při rozhodování, jestli umí
+ * převést, dělá potíže.
+ */
+async function nahrajHtml(
+  token: string,
+  folderId: string,
+  nazev: string,
+  html: string,
+  cilovyTyp: string | null,
+): Promise<{ ok: true; id: string; webViewLink: string | null } | { ok: false; duvod: string }> {
   try {
-    const boundary = `mediaspace-${Date.now()}`;
+    const boundary = `mediaspace-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const metadata = JSON.stringify({
       name: nazev,
       parents: [folderId],
-      mimeType: 'application/vnd.google-apps.document',
+      ...(cilovyTyp ? { mimeType: cilovyTyp } : {}),
     });
     const body = Buffer.concat([
       Buffer.from(
         `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
-          `--${boundary}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n`,
+          `--${boundary}\r\nContent-Type: text/html\r\n\r\n`,
         'utf-8',
       ),
       Buffer.from(html, 'utf-8'),
@@ -495,20 +567,78 @@ export async function vytvorDokumentZHtml(
       return { ok: false, duvod: popisChybyDisku(res.status, telo) };
     }
 
-    const data = (await res.json()) as { id?: string; name?: string; webViewLink?: string };
+    const data = (await res.json()) as { id?: string; webViewLink?: string };
     if (!data.id) return { ok: false, duvod: 'Disk dokument přijal, ale nevrátil jeho ID.' };
-
-    // Název po převodu nesedí? Dorovnat. Viz poznámka nad funkcí.
-    if (data.name !== nazev) await renameDriveItem(data.id, nazev, token);
-
-    return {
-      ok: true,
-      id: data.id,
-      webViewLink: data.webViewLink ?? `https://docs.google.com/document/d/${data.id}/edit`,
-    };
+    return { ok: true, id: data.id, webViewLink: data.webViewLink ?? null };
   } catch (err) {
     console.error('Google Drive: vytvoreni dokumentu spadlo:', err);
     return { ok: false, duvod: 'Disk neodpověděl.' };
+  }
+}
+
+/**
+ * Je v dokumentu opravdu text? Ptá se Disku na jeho podobu v čistém textu -
+ * je to nejlevnější způsob, jak poznat prázdný dokument. Když se export
+ * nepovede, bereme to jako „obsah je": radši nechat dokument stát než smazat
+ * hotovou práci kvůli výpadku jednoho dotazu.
+ */
+async function maObsah(fileId: string, token: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${DRIVE_API}/files/${encodeURIComponent(fileId)}/export?mimeType=text/plain&supportsAllDrives=true`,
+      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+    );
+    if (!res.ok) {
+      console.error('Google Drive: export dokumentu selhal', res.status);
+      return true;
+    }
+    const text = await res.text();
+    return text.replace(/[\s﻿ ]+/g, '').length >= MIN_ZNAKU_DOKUMENTU;
+  } catch (err) {
+    console.error('Google Drive: export dokumentu spadl:', err);
+    return true;
+  }
+}
+
+/** Kopie souboru rovnou jako dokument Google - druhá cesta, jak z HTML udělat dokument. */
+async function zkopirujJakoDokument(
+  fileId: string,
+  nazev: string,
+  folderId: string,
+  token: string,
+): Promise<{ id: string; webViewLink: string | null } | null> {
+  try {
+    const res = await fetch(
+      `${DRIVE_API}/files/${encodeURIComponent(fileId)}/copy?supportsAllDrives=true&fields=id,webViewLink`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: nazev, parents: [folderId], mimeType: TYP_DOKUMENTU }),
+        cache: 'no-store',
+      },
+    );
+    if (!res.ok) {
+      console.error('Google Drive: kopie na dokument selhala', res.status, await res.text().catch(() => ''));
+      return null;
+    }
+    const data = (await res.json()) as { id?: string; webViewLink?: string };
+    return data.id ? { id: data.id, webViewLink: data.webViewLink ?? null } : null;
+  } catch (err) {
+    console.error('Google Drive: kopie na dokument spadla:', err);
+    return null;
+  }
+}
+
+/** Smaže soubor, který portál sám před chvílí vyrobil. Chyba se jen zaloguje. */
+async function smazNaDisku(fileId: string, token: string): Promise<void> {
+  try {
+    const res = await fetch(
+      `${DRIVE_API}/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`,
+      { method: 'DELETE', headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+    );
+    if (!res.ok) console.error('Google Drive: uklid souboru selhal', fileId, res.status);
+  } catch (err) {
+    console.error('Google Drive: uklid souboru spadl:', err);
   }
 }
 
