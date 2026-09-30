@@ -871,3 +871,28 @@ export async function posledniStrany(caflouProjectIds: string[]): Promise<Map<st
   }
   return mapa;
 }
+
+/**
+ * NEJNIZSI ZAPSANA STRANA (30. 9. 2026) - podle ni se pozna, KDO CTE ZACATEK
+ * knihy a kdo az druhou pulku. Kdyz kniha ma dva herce, staci jeden zapis od
+ * kazdeho a poradi je jasne; bez zapisu se pouzije poradi rozsahu u projektu.
+ *
+ * Neni to zacatek jeho dilu - zvukar zapisuje, kde SKONCILI, takze skutecny
+ * zacatek je nekde pred tim. Na serazeni hercu to ale staci.
+ */
+export async function prvniStrany(caflouProjectIds: string[]): Promise<Map<string, number>> {
+  if (caflouProjectIds.length === 0) return new Map();
+
+  const radky = await prisma.brunoNatoceno.findMany({
+    where: { caflouProjectId: { in: caflouProjectIds } },
+    orderBy: { strana: 'asc' },
+    select: { caflouProjectId: true, userId: true, strana: true },
+  });
+
+  const mapa = new Map<string, number>();
+  for (const r of radky) {
+    const klic = `${r.caflouProjectId}:${r.userId ?? ''}`;
+    if (!mapa.has(klic)) mapa.set(klic, r.strana);
+  }
+  return mapa;
+}

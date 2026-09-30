@@ -15,11 +15,29 @@ import { prijemciUdaju } from '@/lib/pozvankaUdaju';
  *
  * Zapisuje se rovnou. Je to první vyplnění prázdné karty, takže není co
  * přepsat; hlídání přepisů řeší žádosti o údaje odkazem (lib/pozvankaUdaju).
+ *
+ * UKLÁDÁ SE PRŮBĚŽNĚ, NE AŽ NA KONCI (oprava 30. 9. 2026: „nějak se nám
+ * nepropisují údaje z formulářů, které na vyplnění posíláme hercům. V kolonce
+ * jméno by mělo být jméno. A nevím teď, jestli vyplňovala další údaje").
+ *
+ * Průvodce má sedm kroků a vyplňuje se z telefonu cestou ze studia. Do teď se
+ * odesílal až posledním tlačítkem - kdo ho zavřel v pátém kroku, poslal
+ * NIC a na kartě po něm nezůstala ani čárka. Produkce pak nemá jak zjistit,
+ * jestli se do toho vůbec pustil.
+ *
+ * `hotovo: false` proto uloží, co je vyplněné TEĎ, a nic víc: karta se plní
+ * krok po kroku, `udajeDoplneny` zůstává prázdné (průvodce se při dalším
+ * přihlášení otevře tam, kde skončil) a nikomu se nic nehlásí. Aby průběžné
+ * uložení nemohlo nic smazat, zapisují se u něj jen NEPRÁZDNÉ hodnoty.
  */
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  name: z.string().trim().min(1, 'Vyplňte prosím jméno.').max(200),
+  /**
+   * Povinné je jen při dokončení - průběžné uložení přijde i s prázdným
+   * jménem, protože se posílá hned po prvním kroku.
+   */
+  name: z.string().trim().max(200).optional().default(''),
   addressStreet: z.string().trim().max(200).optional().default(''),
   addressCity: z.string().trim().max(120).optional().default(''),
   addressZip: z.string().trim().max(20).optional().default(''),
@@ -30,6 +48,8 @@ const schema = z.object({
   dic: z.string().trim().max(30).optional().default(''),
   studioLocations: z.array(z.string().max(120)).max(20).optional().default([]),
   vatPayer: z.boolean().optional().default(false),
+  /** false = průběžné uložení rozdělaného průvodce (30. 9. 2026). */
+  hotovo: z.boolean().optional().default(true),
 });
 
 export async function POST(req: NextRequest) {
@@ -49,24 +69,49 @@ export async function POST(req: NextRequest) {
     );
   }
   const d = parsed.data;
+  if (d.hotovo && !d.name) {
+    return NextResponse.json({ error: 'Vyplňte prosím jméno.' }, { status: 400 });
+  }
+
+  /**
+   * Při dokončení se zapisuje všechno včetně prázdna - průvodce schválně
+   * posílá prázdné IČ, když herec přepnul na rodné číslo, a prázdné DIČ,
+   * když není plátce. Průběžně se naopak zapisuje jen to, co vyplněné je.
+   */
+  const vse = {
+    name: d.name,
+    addressStreet: d.addressStreet || null,
+    addressCity: d.addressCity || null,
+    addressZip: d.addressZip || null,
+    addressCountry: kodZeme(d.addressCountry) || null,
+    bankAccount: d.bankAccount || null,
+    birthNumber: d.birthNumber || null,
+    ic: d.ic || null,
+    dic: d.dic || null,
+    studioLocations: d.studioLocations,
+    vatPayer: d.vatPayer,
+  };
+  const data: Record<string, unknown> = d.hotovo
+    ? { ...vse, udajeDoplneny: true }
+    : Object.fromEntries(
+        Object.entries(vse).filter(([klic, hodnota]) => {
+          if (klic === 'vatPayer') return false; // ano/ne se pozná až v kroku 3
+          if (Array.isArray(hodnota)) return hodnota.length > 0;
+          return hodnota !== null && hodnota !== '';
+        }),
+      );
 
   try {
+    if (!d.hotovo) {
+      if (Object.keys(data).length > 0) {
+        await prisma.user.update({ where: { id: ja.id }, data });
+      }
+      return NextResponse.json({ ok: true, prubezne: true });
+    }
+
     const ucet = await prisma.user.update({
       where: { id: ja.id },
-      data: {
-        name: d.name,
-        addressStreet: d.addressStreet || null,
-        addressCity: d.addressCity || null,
-        addressZip: d.addressZip || null,
-        addressCountry: kodZeme(d.addressCountry) || null,
-        bankAccount: d.bankAccount || null,
-        birthNumber: d.birthNumber || null,
-        ic: d.ic || null,
-        dic: d.dic || null,
-        studioLocations: d.studioLocations,
-        vatPayer: d.vatPayer,
-        udajeDoplneny: true,
-      },
+      data,
       select: { id: true, name: true, email: true },
     });
 

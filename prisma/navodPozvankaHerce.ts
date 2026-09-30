@@ -26,7 +26,7 @@ V **Uživatelích** na záložce **Herci** je nahoře tlačítko **+ Nová pozv�
 
 # Co uvidí herec: průvodce o sedmi krocích
 
-Vždycky jedna otázka na obrazovku — vyplňuje se to většinou z telefonu cestou ze studia. Dokud průvodce nedokončí, portál ho k ničemu jinému nepustí; když ho zavře, vrátí ho k němu při dalším přihlášení.
+Vždycky jedna otázka na obrazovku — vyplňuje se to většinou z telefonu cestou ze studia. Dokud průvodce nedokončí, portál ho k ničemu jinému nepustí; když ho zavře, vrátí ho k němu při dalším přihlášení. **Každý krok se rovnou ukládá**, takže když průvodce zavře v půlce, nic se neztratí — po dalším přihlášení pokračuje s vyplněnými poli a v portálu je zatím vidět, co už poslal.
 
 ## 1. Vaše jméno a příjmení
 

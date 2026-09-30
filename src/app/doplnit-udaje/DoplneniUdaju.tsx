@@ -299,10 +299,58 @@ export function DoplneniUdaju({
       return;
     }
     if (!posledni) {
+      // Uloží se, co je vyplněné teď (30. 9. 2026) - viz `telo` níž.
+      void ulozPrubezne();
       setKrok((k) => k + 1);
       return;
     }
     void uloz();
+  }
+
+  /** Co se posílá na server. Stejný tvar pro průběžné i konečné uložení. */
+  function telo(hotovo: boolean) {
+    return {
+      name: u.name,
+      addressStreet: u.addressStreet,
+      addressCity: u.addressCity,
+      addressZip: u.addressZip,
+      addressCountry: u.addressCountry,
+      // Posílá se jen to číslo, které herec vybral - druhé by bylo jen
+      // zbytkem po přepnutí volby.
+      birthNumber: u.druhCisla === 'rc' ? u.birthNumber : '',
+      ic: u.druhCisla === 'ic' ? u.ic : '',
+      // DIČ má smysl jen u plátce - po přepnutí zpátky by zůstal viset.
+      dic: u.vatPayer ? u.dic : '',
+      vatPayer: u.vatPayer,
+      bankAccount: u.bankAccount,
+      // Z měst se na kartě stanou konkrétní studia (obě brněnská u Brna).
+      studioLocations: studiaZMest(u.mesta),
+      hotovo,
+    };
+  }
+
+  /**
+   * PRŮBĚŽNÉ ULOŽENÍ PO KAŽDÉM KROKU (oprava 30. 9. 2026: „nevím teď, jestli
+   * vyplňovala další údaje").
+   *
+   * Průvodce se vyplňuje z telefonu cestou ze studia a do teď se odesílal až
+   * posledním tlačítkem - kdo ho zavřel dřív, poslal nic. Tohle uloží, co už
+   * vyplněné je, aby se nic neztratilo a bylo v portálu vidět, kam se došlo.
+   *
+   * SCHVÁLNĚ POTICHU: herec kliknul na Další, ne na Uložit. Když se to
+   * nepovede, nic se mu nehlásí a zkusí se to zase v dalším kroku; jeho práci
+   * to nezdržuje a konečné uložení chybu ohlásí normálně.
+   */
+  async function ulozPrubezne() {
+    try {
+      await fetch('/api/doplnit-udaje', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(telo(false)),
+      });
+    } catch {
+      // Schválně nic - viz komentář výš.
+    }
   }
 
   async function uloz() {
@@ -313,23 +361,7 @@ export function DoplneniUdaju({
       const res = await fetch('/api/doplnit-udaje', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: u.name,
-          addressStreet: u.addressStreet,
-          addressCity: u.addressCity,
-          addressZip: u.addressZip,
-          addressCountry: u.addressCountry,
-          // Posílá se jen to číslo, které herec vybral - druhé by bylo jen
-          // zbytkem po přepnutí volby.
-          birthNumber: u.druhCisla === 'rc' ? u.birthNumber : '',
-          ic: u.druhCisla === 'ic' ? u.ic : '',
-          // DIČ má smysl jen u plátce - po přepnutí zpátky by zůstal viset.
-          dic: u.vatPayer ? u.dic : '',
-          vatPayer: u.vatPayer,
-          bankAccount: u.bankAccount,
-          // Z měst se na kartě stanou konkrétní studia (obě brněnská u Brna).
-          studioLocations: studiaZMest(u.mesta),
-        }),
+        body: JSON.stringify(telo(true)),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
