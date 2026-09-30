@@ -1,4 +1,4 @@
-import { zabalZip } from '@/lib/zipZapis';
+import { zabalZip, type SouborDoZipu } from '@/lib/zipZapis';
 import {
   rozeberList,
   type ListNataceni,
@@ -283,7 +283,7 @@ export function docxNataceciTextu(
       : ''
   }</Relationships>`;
 
-  const soubory = [
+  const soubory: SouborDoZipu[] = [
     { nazev: '[Content_Types].xml', data: Buffer.from(CONTENT_TYPES, 'utf-8') },
     { nazev: '_rels/.rels', data: Buffer.from(RELS, 'utf-8') },
     { nazev: 'word/document.xml', data: Buffer.from(document, 'utf-8') },
