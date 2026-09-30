@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { listRodnyListProjectTypes } from '@/lib/priceList';
+import { jeReklamaPodleMeta, nactiCiselnikReklam } from '@/lib/reklamniProjektServer';
 import { STAVY_PROJEKTU } from '@/lib/stavyProjektu';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
 import { posliNotifikaciPoProdleve } from '@/lib/prodlevaNotifikaciServer';
@@ -88,18 +88,26 @@ export async function preklopCekameNaOpravy(): Promise<VysledekPreklopeni> {
   // A ani u projektu, který je SÁM reklama (typ s Rodným listem), i když
   // firma dělá i audioknihy (zadání 22. 9. 2026: „u reklam se vůbec nemá
   // počítat stav Čekáme na opravy“).
-  const typyReklamy = await listRodnyListProjectTypes();
-  const projekty = await prisma.projectMeta.findMany({
-    where: {
-      statusName: STAV_ODEVZDANO,
-      finished: false,
-      company: { dealsAudiobooks: true },
-      ...(typyReklamy.length > 0
-        ? { OR: [{ projectType: null }, { projectType: { notIn: typyReklamy } }] }
-        : {}),
+  const ciselnik = await nactiCiselnikReklam();
+  const vsechny = await prisma.projectMeta.findMany({
+    where: { statusName: STAV_ODEVZDANO, finished: false },
+    select: {
+      caflouProjectId: true,
+      name: true,
+      statusName: true,
+      projectType: true,
+      company: { select: { dealsAds: true, dealsAudiobooks: true } },
     },
-    select: { caflouProjectId: true, name: true, statusName: true },
   });
+  /**
+   * Od 30. 9. 2026 o tom rozhoduje jediné pravidlo (lib/reklamniProjekt.ts).
+   * Do té doby se tu ptalo zvlášť firmy a zvlášť typu projektu, takže spot
+   * u klienta, který dělá reklamy i audioknihy, prošel oběma síty a překlopil
+   * se do stavu, který u něj nedává smysl.
+   */
+  const projekty = vsechny.filter(
+    (p) => p.company?.dealsAudiobooks === true && !jeReklamaPodleMeta(p, ciselnik),
+  );
 
   const preklopeno: VysledekPreklopeni['preklopeno'] = [];
   let preskoceno = 0;

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { listRodnyListProjectTypes } from '@/lib/priceList';
+import { jeReklamaPodleMeta, nactiCiselnikReklam } from '@/lib/reklamniProjektServer';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
 import { STAV_OPRAVUJEME, STAVY_PROJEKTU } from '@/lib/stavyProjektu';
 
@@ -36,14 +36,14 @@ export async function preklopNaOpravujeme(
         statusName: true,
         finished: true,
         projectType: true,
-        company: { select: { dealsAudiobooks: true } },
+        company: { select: { dealsAds: true, dealsAudiobooks: true } },
       },
     });
     if (!projekt || projekt.finished) return false;
     if (projekt.company && !projekt.company.dealsAudiobooks) return false;
 
-    const typyReklamy = await listRodnyListProjectTypes();
-    if (projekt.projectType && typyReklamy.includes(projekt.projectType)) return false;
+    // Jedno pravidlo pro všechna místa (30. 9. 2026) - viz lib/reklamniProjekt.ts.
+    if (jeReklamaPodleMeta(projekt, await nactiCiselnikReklam())) return false;
 
     const ted = PORADI.indexOf((projekt.statusName ?? '').trim());
     const cil = PORADI.indexOf(STAV_OPRAVUJEME);

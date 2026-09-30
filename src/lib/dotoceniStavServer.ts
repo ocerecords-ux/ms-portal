@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { jeReklamaPodleMeta, nactiCiselnikReklam } from '@/lib/reklamniProjektServer';
 import { stavJeDokonceny } from '@/lib/stavyProjektu';
 import { posliNotifikaciPoProdleve } from '@/lib/prodlevaNotifikaciServer';
 import { zapisZmenyProjektu } from '@/lib/projektLogServer';
@@ -61,13 +62,30 @@ export async function prehodStavPodleDotoceni(
 ): Promise<VysledekPreklopeni> {
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId },
-    select: { statusName: true, herci: { select: { id: true } } },
+    select: {
+      statusName: true,
+      projectType: true,
+      company: { select: { dealsAds: true, dealsAudiobooks: true } },
+      herci: { select: { id: true } },
+    },
   });
   const stav = meta?.statusName ?? '';
   if (!stav) return { zmeneno: false, duvod: 'bez-stavu' };
 
   const cil = PREKLOPENI[stav];
   if (!cil) return { zmeneno: false, duvod: 'jiny-stav' };
+
+  /**
+   * U REKLAMY SE STAV NEPŘEKLÁPÍ NIKDY (zadání 30. 9. 2026: „ani se to do něj
+   * nemá nikdy překlápět. Ani Natáčíme/stříháme, Dotočeno, Dotočeno-stříháme").
+   *
+   * Hlídá se to tady, ne u volajících: fajfku „dotočeno" umí kliknout portál
+   * i vyčíst Bruno z chatu, a kdyby si podmínku držel každý sám, dřív nebo
+   * později by ji jeden z nich neměl.
+   */
+  if (meta && jeReklamaPodleMeta(meta, await nactiCiselnikReklam())) {
+    return { zmeneno: false, duvod: 'jiny-stav' };
+  }
 
   const herci = meta?.herci.map((h) => h.id) ?? [];
   if (herci.length === 0) return { zmeneno: false, duvod: 'chybi-herci' };

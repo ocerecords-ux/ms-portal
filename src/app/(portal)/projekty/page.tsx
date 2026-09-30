@@ -11,6 +11,7 @@ import {
   vidiProjektyVPriprave,
 } from '@/lib/roles';
 import { jeVPriprave } from '@/lib/stavyProjektu';
+import { jeReklamniProjekt } from '@/lib/reklamniProjekt';
 import { ProjectsTable, type InternalProject, type InternalProjectMeta } from './shared';
 import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
@@ -640,13 +641,16 @@ async function InternalProjektySection({
         ikonaTypu: m.projectType ? ikonyTypu[m.projectType] ?? null : null,
         // Sluchatka se stavem preposlechu (25. 9. 2026).
         preposlech: preposlechMapa.get(m.caflouProjectId) ?? null,
-        // „Reklamni firma" = dela reklamy a ne audioknihy; stejne pravidlo
-        // jako u zprav klientovi (lib/notifikaceFirmy.ts).
-        // Od 22. 9. 2026 i projekt, který je SÁM reklama (typ s Rodným
-        // listem) - „u reklam se vůbec nemá počítat stav Čekáme na opravy“.
-        reklamniFirma:
-          Boolean(m.company?.dealsAds && !m.company?.dealsAudiobooks) ||
-          Boolean(m.projectType && typyReklamy.includes(m.projectType)),
+        // Je to reklama? Jedno pravidlo pro celý portál - viz
+        // lib/reklamniProjekt.ts. Rozhoduje o kratší nabídce stavů rovnou
+        // v seznamu, stejně jako v detailu projektu.
+        reklamniFirma: jeReklamniProjekt({
+          projectType: m.projectType,
+          typAudioknihy,
+          typyRodnehoListu: typyReklamy,
+          firmaDelaReklamy: m.company?.dealsAds === true,
+          firmaDelaAudioknihy: m.company?.dealsAudiobooks === true,
+        }),
         // Hlavni herec prvni, at prehled i detail ukazuji stejne poradi.
         herci: [
           ...m.herci.filter((h) => h.id === m.actorUserId),

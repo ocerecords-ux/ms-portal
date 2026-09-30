@@ -473,10 +473,22 @@ export function ProjectMetaForm({
    * reklama vůbec nemusí být"). Nejen rádiový spot - reklama je i projekt
    * reklamní firmy, a u firmy, která dělá obojí, každý typ kromě audioknihy.
    */
-  const bezDataVydani =
+  /**
+   * JE TENHLE PROJEKT REKLAMA? Jedna odpověď pro celý formulář (30. 9. 2026:
+   * „u reklam nemáme vůbec vidět stav Čekáme na opravy... Ani Natáčíme/
+   * stříháme, Dotočeno, Dotočeno-stříháme").
+   *
+   * Do teď se to počítalo zvlášť pro datum vydání a zvlášť pro nabídku stavů,
+   * a ta druhá znala jen užší pravidlo - u klienta, který dělá reklamy
+   * i audioknihy, se proto u spotu nabízely audioknižní stavy. Výpočet je
+   * schválně stejný jako na serveru (lib/reklamniProjekt.ts), jen ze zdrojů,
+   * které formulář má po ruce.
+   */
+  const jeReklamniProjekt =
     jeReklama ||
     jeReklamniFirma ||
     Boolean(firmaDelaReklamy && typAudioknihy && values.projectType && values.projectType !== typAudioknihy);
+  const bezDataVydani = jeReklamniProjekt;
   const vidiDatumVydani = vidiKlienta && !bezDataVydani;
 
   /**
@@ -780,10 +792,10 @@ export function ProjectMetaForm({
                 ...(values.statusName && !STAVY_PROJEKTU.some((st) => st.nazev === values.statusName)
                   ? [{ hodnota: values.statusName, popisek: `${values.statusName} (starý stav z Caflou)` }]
                   : []),
-                // U reklamní firmy kratší nabídka (zadání 18. 9. 2026), od
-                // 22. 9. 2026 i u projektu, který je sám reklama - „Čekáme
-                // na opravy“ se u reklam vůbec nemá objevit.
-                ...stavyProFirmu(jeReklamniFirma || jeReklama, values.statusName).map((st) => ({
+                // U reklamy kratší nabídka (zadání 18. 9. 2026, upřesněno
+                // 22. a 30. 9. 2026) - „Čekáme na opravy", „Natáčíme/stříháme",
+                // „Dotočeno" ani „Dotočeno/stříháme" se u ní nemají objevit.
+                ...stavyProFirmu(jeReklamniProjekt, values.statusName).map((st) => ({
                   hodnota: st.nazev,
                   popisek: st.nazev,
                 })),
@@ -795,7 +807,7 @@ export function ProjectMetaForm({
             {/* ODPOČET DO AUTOMATICKÉHO PŘEKLOPENÍ (zadání 16. 9. 2026).
                 Ukazuje se jen u uloženého stavu „Dokončeno - ke schválení" -
                 jakmile se v nabídce přepne jinam, číslo by už neplatilo. */}
-            {dnuDoOprav !== null && !jeReklama && values.statusName === initial.statusName && (
+            {dnuDoOprav !== null && !jeReklamniProjekt && values.statusName === initial.statusName && (
               <span className="text-xs font-body text-brand-purple">
                 {dnuDoOprav === 0
                   ? 'Dnes v noci se sám překlopí na „Čekáme na opravy".'
