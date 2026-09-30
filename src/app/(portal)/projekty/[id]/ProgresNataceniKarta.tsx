@@ -21,6 +21,18 @@ export function ProgresNataceniKarta({
   const stran = progres?.stranTextu ?? null;
   const zNormostran = progres?.zdrojCelku === 'ns';
   const tvar = (n: number) => (n === 1 ? 'stranu' : n <= 4 ? 'strany' : 'stran');
+
+  /**
+   * CO NESEDÍ (30. 9. 2026). Dřív se rozpory schovaly do nuly - herec se
+   * zapsanou stranou 222 a dílem 325-670 ukazoval 0 % a „zbývá 346 stran",
+   * takže to vypadalo jako pomalé natáčení, ne jako špatná data.
+   */
+  const jmeno = (id: string) => herci.find((h) => h.id === id)?.jmeno ?? 'herec';
+  const chybiNs = (progres?.bezNormostran ?? []).map(jmeno);
+  const nesoulad = progres?.nesoulad ?? null;
+  const rozpory = herci.filter((h) => progres?.herci[h.id]?.mimoDil);
+  const koef = progres?.koeficient ?? null;
+
   return (
     <section className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
@@ -36,6 +48,20 @@ export function ProgresNataceniKarta({
         </span>
       </div>
 
+      {/* KOEFICIENT TÉHLE KNIHY (30. 9. 2026: „u každé knihy spočítat
+          koeficient převodu z pdf na normostrany… každá kniha bude mít jiný,
+          musíme to vždycky přepočítat"). Je vidět, aby šel zkontrolovat -
+          podle něj se dělí text mezi herce. */}
+      {koef && !zNormostran && herci.length > 1 && (
+        <p className="text-xs font-body text-muted m-0 -mt-2">
+          Koeficient téhle knihy: {koef.stranPdf} stran PDF ÷ {koef.normostrany} normostran ={' '}
+          <strong className="font-heading font-semibold text-ink">
+            {koef.stranNaNs.toFixed(2)}
+          </strong>{' '}
+          strany PDF na normostranu. Podle něj vychází díl každého herce z jeho normostran.
+        </p>
+      )}
+
       <ValecProgresu velky progres={progres?.celkem ?? null} prazdne="Zatím se nedá spočítat - chybí text nebo zápis strany." />
 
       {herci.length > 1 && (
@@ -47,6 +73,32 @@ export function ProgresNataceniKarta({
             </li>
           ))}
         </ul>
+      )}
+
+      {(chybiNs.length > 0 || nesoulad || rozpory.length > 0) && (
+        <div className="border-t border-line pt-4 flex flex-col gap-2">
+          {chybiNs.length > 0 && (
+            <p className="text-xs font-body text-danger m-0">
+              Bez normostran: {chybiNs.join(', ')}. Dokud rozsah chybí, portál text mezi herce
+              nedělí a počítá každého proti celé knize — procenta jsou proto nižší, než jsou ve
+              skutečnosti. Doplňte rozsah u herce níž v Výrobě.
+            </p>
+          )}
+          {nesoulad && (
+            <p className="text-xs font-body text-danger m-0">
+              Normostrany herců dávají dohromady {nesoulad.soucetHercu}, ale kniha má{' '}
+              {nesoulad.kniha}. Jedno z těch čísel je špatně — díly se zatím dopočítají poměrem,
+              ať progres nelže úplně.
+            </p>
+          )}
+          {rozpory.map((h) => (
+            <p key={h.id} className="text-xs font-body text-danger m-0">
+              {h.jmeno}: zapsaná strana leží před začátkem dílu, který mu vyšel z normostran. Buď
+              má špatně zadaný rozsah, nebo se kniha nedělí po sobě (herci se střídají) — pak
+              tenhle výpočet na ni nesedí a číslo u něj neplatí.
+            </p>
+          ))}
+        </div>
       )}
     </section>
   );

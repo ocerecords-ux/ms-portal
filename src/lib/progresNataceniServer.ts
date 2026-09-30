@@ -4,7 +4,8 @@ import { pocetStranTextu } from '@/lib/textProjektuServer';
 import {
   progresProjektu,
   progresZeStran,
-  rozdelStrany,
+  rozdelPodleNormostran,
+  type KoeficientKnihy,
   type ProgresNataceni,
 } from '@/lib/progresNataceni';
 
@@ -34,6 +35,17 @@ export type ProgresProjektu = {
    * null   - nemáme ani jedno.
    */
   zdrojCelku: 'pdf' | 'ns' | null;
+  /**
+   * KOEFICIENT PŘEVODU U TÉHLE KNIHY (30. 9. 2026: „u každé knihy spočítat
+   * koeficient převodu z pdf na normostrany… každá kniha bude mít jiný,
+   * musíme to vždycky přepočítat"). Počítá se při každém zobrazení, nikde
+   * se neukládá. Null, když chybí PDF nebo rozsah v normostranách.
+   */
+  koeficient: KoeficientKnihy | null;
+  /** Herci bez vyplněného rozsahu - kvůli nim se díly nepočítají vůbec. */
+  bezNormostran: string[];
+  /** Součet normostran herců se rozchází s rozsahem knihy. */
+  nesoulad: { soucetHercu: number; kniha: number } | null;
 };
 
 type RozsahProjektu = { caflouProjectId: string; pageCount: number | null };
@@ -101,10 +113,12 @@ export async function nactiProgresNataceni(
       if (pa == null && pb != null) return 1;
       return (poradiNs.get(`${p.id}:${a}`) ?? 0) - (poradiNs.get(`${p.id}:${b}`) ?? 0);
     });
-    const dily = rozdelStrany(
+    const rozdeleni = rozdelPodleNormostran(
       serazeni.map((h) => ({ klic: h, normostrany: nsHerce.get(`${p.id}:${h}`) ?? 0 })),
       zPdf ?? zNs,
+      zNs,
     );
+    const dily = rozdeleni.dily;
 
     const herci: Record<string, ProgresNataceni> = {};
     for (const h of p.herciIds) {
@@ -118,7 +132,17 @@ export async function nactiProgresNataceni(
       p.herciIds.length > 0
         ? progresProjektu(p.herciIds.map((h) => herci[h]))
         : progresZeStran(strany.get(`${p.id}:`) ?? null, celkemStran, false);
-    vysledek.set(p.id, { celkem, herci, stranTextu: celkemStran, zdrojCelku });
+    vysledek.set(p.id, {
+      celkem,
+      herci,
+      stranTextu: celkemStran,
+      zdrojCelku,
+      koeficient: rozdeleni.koeficient,
+      // Hlásí se jen u projektů s víc herci - u jediného herce se stejně
+      // nedělí a upozornění by bylo jen šum.
+      bezNormostran: p.herciIds.length > 1 ? rozdeleni.bezNormostran : [],
+      nesoulad: p.herciIds.length > 1 ? rozdeleni.nesoulad : null,
+    });
   }
   return vysledek;
 }
