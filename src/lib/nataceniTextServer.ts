@@ -1,11 +1,13 @@
 import { prisma } from '@/lib/db';
-import { vytvorDokumentZHtml } from '@/lib/googleDrive';
+import { vytvorDokumentZDocx } from '@/lib/googleDrive';
+import { docxNataceciTextu, rozmeryPng, type ObrazekVDokumentu } from '@/lib/nataceniTextDocx';
 import { sDedenim, popisDelky, type VystupData } from '@/lib/vystupy';
 import { nactiVystupy } from '@/lib/vystupyServer';
 import {
   nazevDokumentu,
   sestavHtmlNataceni,
   VYCHOZI_VZOR_NATACENI,
+  type PodkladyTextu,
   type VystupProText,
 } from '@/lib/nataceniText';
 
@@ -41,16 +43,24 @@ function zakladPortalu(): string {
   return (process.env.NEXTAUTH_URL || 'https://www.msportal.cz').replace(/\/$/, '');
 }
 
+export type PodkladyListu = {
+  ok: true;
+  vzor: { uvod: string | null; blok: string };
+  podklady: PodkladyTextu;
+  vystupy: VystupProText[];
+  nazevProjektu: string;
+};
+
 /**
- * HTML natáčecího listu - stejné pro náhled v portálu i pro dokument na Disku.
- * Záměrně jedna cesta: kdyby měl náhled vlastní, dřív nebo později by ukazoval
- * něco jiného, než co se opravdu uloží.
+ * Data natáčecího listu - JEDEN zdroj pro náhled v portálu i pro dokument na
+ * Disku. Náhled se z nich vykreslí jako HTML (v prohlížeči), dokument jako
+ * .docx (ten Disk převádí spolehlivě). Kdyby si každá podoba tahala data
+ * po svém, dřív nebo později by ukazovaly něco jiného.
  */
-export async function htmlNataceciTextu(
+export async function podkladyNataceciTextu(
   caflouProjectId: string,
   vzorId?: string | null,
-  ramecekA4 = false,
-): Promise<{ ok: true; html: string; nazevProjektu: string } | { ok: false; duvod: string }> {
+): Promise<PodkladyListu | { ok: false; duvod: string }> {
   const meta = await prisma.projectMeta.findUnique({
     where: { caflouProjectId },
     select: {
@@ -113,9 +123,10 @@ export async function htmlNataceciTextu(
     .catch(() => null)) as { updatedAt: Date } | null;
 
   const nazevProjektu = meta.name || `Projekt ${caflouProjectId}`;
-  const html = sestavHtmlNataceni(
-    vzor,
-    {
+  return {
+    ok: true,
+    vzor: { uvod: vzor.uvod ?? null, blok: vzor.blok },
+    podklady: {
       projekt: nazevProjektu,
       klient: meta.company?.name || meta.companyName || '',
       upraveno: (posledni?.updatedAt ?? new Date()).toLocaleDateString('cs-CZ', {
@@ -124,10 +135,41 @@ export async function htmlNataceciTextu(
       logoUrl: `${zakladPortalu()}/mediaspace-logo-still.png`,
     },
     vystupy,
-    ramecekA4,
-  );
+    nazevProjektu,
+  };
+}
 
-  return { ok: true, html, nazevProjektu };
+/** Náhled listu v portálu. Dokument na Disku se skládá z týchž dat jako .docx. */
+export async function htmlNataceciTextu(
+  caflouProjectId: string,
+  vzorId?: string | null,
+  ramecekA4 = false,
+): Promise<{ ok: true; html: string; nazevProjektu: string } | { ok: false; duvod: string }> {
+  const podklad = await podkladyNataceciTextu(caflouProjectId, vzorId);
+  if (!podklad.ok) return podklad;
+  return {
+    ok: true,
+    html: sestavHtmlNataceni(podklad.vzor, podklad.podklady, podklad.vystupy, ramecekA4),
+    nazevProjektu: podklad.nazevProjektu,
+  };
+}
+
+/**
+ * Logo do hlavičky dokumentu. Když se nepodaří stáhnout, vrátí se `null`
+ * a list se vyrobí bez něj - prázdný dokument kvůli chybějícímu obrázku by
+ * byl horší než list bez loga.
+ */
+async function nactiLogo(): Promise<ObrazekVDokumentu | null> {
+  try {
+    const res = await fetch(`${zakladPortalu()}/mediaspace-logo-still.png`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = Buffer.from(await res.arrayBuffer());
+    const rozmery = rozmeryPng(data);
+    return rozmery ? { data, ...rozmery } : null;
+  } catch (err) {
+    console.error('Logo do natáčecího listu se nepodařilo načíst:', err);
+    return null;
+  }
 }
 
 export async function vyrobNataceciText(
@@ -153,7 +195,7 @@ export async function vyrobNataceciText(
       return { ok: false, duvod: 'Projekt ani firma nemají složku na Disku, kam dokument uložit.' };
     }
 
-    const podklad = await htmlNataceciTextu(caflouProjectId, vzorId);
+    const podklad = await podkladyNataceciTextu(caflouProjectId, vzorId);
     if (!podklad.ok) return { ok: false, duvod: podklad.duvod };
 
     // Další dokument u téhož projektu dostane do názvu datum a čas, ať se
@@ -171,7 +213,8 @@ export async function vyrobNataceciText(
         })})`
       : zakladNazvu;
 
-    const vysledek = await vytvorDokumentZHtml(slozka, nazev, podklad.html);
+    const docx = docxNataceciTextu(podklad.vzor, podklad.podklady, podklad.vystupy, await nactiLogo());
+    const vysledek = await vytvorDokumentZDocx(slozka, nazev, docx);
     if (!vysledek.ok) return { ok: false, duvod: vysledek.duvod };
 
     const url = vysledek.webViewLink || `https://docs.google.com/document/d/${vysledek.id}/edit`;

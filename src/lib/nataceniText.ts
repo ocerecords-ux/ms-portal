@@ -200,32 +200,38 @@ ${podklady.klient ? `<p style="margin:3pt 0 0;font-family:Arial,sans-serif;font-
  * 26. 9. 2026). Do dokumentu na Disku jde obsah bez rámečku, stránkování
  * si tam řeší Disk sám.
  */
-export function sestavHtmlNataceni(
+/**
+ * ROZEBRANÝ LIST - společný podklad pro náhled v portálu i pro dokument na
+ * Disku (30. 9. 2026). Vzor se dosadí jednou a obě podoby listu pak sázejí
+ * TATÁŽ data; dokud to každá skládala po svém, mohly se rozejít.
+ */
+export type SpotVListu = {
+  /** První řádek bloku - název spotu. */
+  nazev: string;
+  /** Druhý řádek hlavičky bloku - stopáž a licence. Prázdný, když ve vzoru není. */
+  popis: string;
+  /** Zbytek bloku: text spotu, nebo místo na něj. */
+  telo: string;
+};
+
+export type ListNataceni = {
+  /** Úvod dokumentu ze vzoru. `null`, když vzor žádný nemá. */
+  uvod: string | null;
+  spoty: SpotVListu[];
+};
+
+export function rozeberList(
   vzor: { uvod?: string | null; blok: string },
   podklady: PodkladyTextu,
   vystupy: VystupProText[],
-  ramecekA4 = false,
-): string {
+): ListNataceni {
   const spolecne = {
     projekt: podklady.projekt,
     klient: podklady.klient,
     upraveno: podklady.upraveno,
   };
 
-  /**
-   * `white-space:pre-wrap` kvůli textům spotů (30. 9. 2026): scénáře chodí
-   * odsazené a HTML by mezery na začátku řádku samo slepilo.
-   */
-  const stylTextu = `margin:0 0 8pt;font-family:Arial,sans-serif;font-size:11pt;line-height:1.55;white-space:pre-wrap;color:${INKOUST}`;
-  const casti: string[] = [hlavicka(podklady)];
-
-  if (vzor.uvod?.trim()) {
-    casti.push(
-      `<div style="margin-top:14pt">${odstavce(dosad(vzor.uvod, spolecne), stylTextu)}</div>`,
-    );
-  }
-
-  vystupy.forEach((v, i) => {
+  const spoty = vystupy.map((v, i) => {
     // Starší vzory mají místo na text napsané natvrdo; ať se chová jako {{text}}.
     const sablona = vzor.blok.split(MISTO_NA_TEXT).join('{{text}}');
     const text = dosad(sablona, {
@@ -235,7 +241,9 @@ export function sestavHtmlNataceni(
       licence: v.licence,
       poradi: String(i + 1),
       text: ZNACKA_TEXTU,
-    }).split(ZNACKA_TEXTU).join(v.text?.trim() ? v.text.trim() : MISTO_NA_TEXT);
+    })
+      .split(ZNACKA_TEXTU)
+      .join(v.text?.trim() ? v.text.trim() : MISTO_NA_TEXT);
 
     /**
      * První odstavec bloku je hlavička spotu (název), druhý bývá řádek se
@@ -245,17 +253,45 @@ export function sestavHtmlNataceni(
     const radky = text.split(/\n{2,}/);
     const nazev = radky.shift() ?? '';
     const [prvniRadek, ...dalsiRadky] = nazev.split('\n');
-    const popis = dalsiRadky.join(' ').trim();
+    return {
+      nazev: prvniRadek,
+      popis: dalsiRadky.join(' ').trim(),
+      telo: radky.join('\n\n'),
+    };
+  });
 
+  return { uvod: vzor.uvod?.trim() ? dosad(vzor.uvod, spolecne) : null, spoty };
+}
+
+export function sestavHtmlNataceni(
+  vzor: { uvod?: string | null; blok: string },
+  podklady: PodkladyTextu,
+  vystupy: VystupProText[],
+  ramecekA4 = false,
+): string {
+  const list = rozeberList(vzor, podklady, vystupy);
+
+  /**
+   * `white-space:pre-wrap` kvůli textům spotů (30. 9. 2026): scénáře chodí
+   * odsazené a HTML by mezery na začátku řádku samo slepilo.
+   */
+  const stylTextu = `margin:0 0 8pt;font-family:Arial,sans-serif;font-size:11pt;line-height:1.55;white-space:pre-wrap;color:${INKOUST}`;
+  const casti: string[] = [hlavicka(podklady)];
+
+  if (list.uvod) {
+    casti.push(`<div style="margin-top:14pt">${odstavce(list.uvod, stylTextu)}</div>`);
+  }
+
+  list.spoty.forEach((spot) => {
     casti.push(
       `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;margin-top:20pt">` +
         `<tr><td style="border-top:1pt solid ${LINKA};padding-top:9pt">` +
-        `<p style="margin:0;font-family:Arial,sans-serif;font-size:13pt;color:${INKOUST}"><b>${escapeHtml(prvniRadek)}</b></p>` +
-        (popis
-          ? `<p style="margin:3pt 0 0;font-family:Arial,sans-serif;font-size:9pt;letter-spacing:0.4pt;color:${FIALOVA}"><b>${escapeHtml(popis)}</b></p>`
+        `<p style="margin:0;font-family:Arial,sans-serif;font-size:13pt;color:${INKOUST}"><b>${escapeHtml(spot.nazev)}</b></p>` +
+        (spot.popis
+          ? `<p style="margin:3pt 0 0;font-family:Arial,sans-serif;font-size:9pt;letter-spacing:0.4pt;color:${FIALOVA}"><b>${escapeHtml(spot.popis)}</b></p>`
           : '') +
         `</td></tr></table>` +
-        `<div style="margin:10pt 0 16pt">${odstavce(radky.join('\n\n'), stylTextu)}</div>`,
+        `<div style="margin:10pt 0 16pt">${odstavce(spot.telo, stylTextu)}</div>`,
     );
   });
 

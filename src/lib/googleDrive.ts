@@ -429,28 +429,30 @@ export async function uploadPdfToDriveFolder(
  * DOKUMENT, DO KTERÉHO SE DÁ PSÁT (zadání 26. 9. 2026: „ukládalo by se to do
  * editovatelného dokumentu na disku ve složce projektu").
  *
- * Z HTML se na Disku udělá běžný dokument Google - otevře se v prohlížeči
- * a rovnou se do něj píše. Proto ne PDF: rodný list se čte, natáčecí text se
- * píše. Portál do hotového dokumentu nesahá; kdo potřebuje nový, vyrobí si ho
- * znovu a vznikne DALŠÍ soubor - přepsat rozepsaný text by byla škoda.
+ * Ze souboru Wordu se na Disku udělá běžný dokument Google - otevře se
+ * v prohlížeči a rovnou se do něj píše. Proto ne PDF: rodný list se čte,
+ * natáčecí text se píše. Portál do hotového dokumentu nesahá; kdo potřebuje
+ * nový, vyrobí si ho znovu a vznikne DALŠÍ soubor - přepsat rozepsaný text
+ * by byla škoda.
  *
- * PROČ TO NENÍ JEDEN DOTAZ (30. 9. 2026: „na disk se nepropisuje ten dokument
- * z výstupů... nic"). Dokumenty z tohohle tlačítka na Disku vznikaly PRÁZDNÉ
- * a jmenovaly se „Dokument bez názvu". Nahrání přitom prošlo, Disk vrátil ID
- * a soubor ležel ve správné složce - jen se nepřevedl obsah, a protože si
- * převod pojmenovává dokument podle toho, co z HTML vyčte, zůstal i bez
- * názvu. Navenek to vypadalo, že se všechno povedlo.
+ * PROČ .DOCX A NE HTML (30. 9. 2026: „na disk se nepropisuje ten dokument
+ * z výstupů... nic"). Do teď se nahrávalo totéž HTML, které se ukazuje
+ * v náhledu, a Disk si z něj měl dokument udělat sám. Dvakrát po sobě z toho
+ * vznikl PRÁZDNÝ dokument bez názvu: nahrání prošlo, Disk vrátil ID a soubor
+ * ležel ve správné složce - jen se nepřevedl obsah, a protože si převod
+ * pojmenovává dokument podle toho, co z podkladu vyčte, zůstal i bez názvu.
+ * Navenek to vypadalo, že se všechno povedlo. Převod z .docx je proti tomu
+ * cesta, kterou Disk umí nejlíp - je to formát Wordu, ne odhadování, co která
+ * značka v HTML znamená.
  *
- * Proto se to dělá takhle:
- *   1. Nahraje se HTML rovnou s cílovým typem dokumentu Google (jako dosud,
- *      jen bez `charset` u typu obsahu - s ním Disk převod umí přeskočit).
+ * I tak se to nespoléhá na jediný dotaz:
+ *   1. Soubor se nahraje rovnou s cílovým typem dokumentu Google.
  *   2. PORTÁL SI OVĚŘÍ, ŽE V DOKUMENTU OPRAVDU NĚCO JE - vytáhne si z něj
  *      čistý text. Prázdný dokument se smaže, aby na Disku nezůstal zmetek.
- *   3. Když převod neproběhl, zkusí se objížďka: HTML se uloží jako obyčejný
- *      soubor a teprve jeho KOPIE se udělá dokumentem. Je to jiná cesta
- *      v Disku než převod při nahrání a zabírá i tam, kde ta první ne.
- *      Pomocný soubor se pak smaže.
- *   4. Název se nastaví ještě jednou, protože převod si ho přepisuje.
+ *   3. Když převod neproběhl, zkusí se objížďka: soubor se uloží tak, jak je,
+ *      a teprve jeho KOPIE se udělá dokumentem. Je to jiná cesta v Disku než
+ *      převod při nahrání. Pomocný soubor se pak smaže.
+ *   4. Název se nastaví ještě jednou, protože si ho převod přepisuje.
  *
  * Když neprojde ani jedna cesta, vrátí se chyba - lepší než tiše uložit
  * prázdný list a zjistit to až v natáčecí den.
@@ -460,10 +462,12 @@ const TYP_DOKUMENTU = 'application/vnd.google-apps.document';
 /** Kolik znaků v dokumentu už bereme jako „něco tam je". */
 const MIN_ZNAKU_DOKUMENTU = 20;
 
-export async function vytvorDokumentZHtml(
+const TYP_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+export async function vytvorDokumentZDocx(
   folderUrl: string,
   nazev: string,
-  html: string,
+  docx: Buffer,
 ): Promise<NahraniNaDisk> {
   const folderId = extractDriveFolderId(folderUrl);
   if (!folderId) {
@@ -476,7 +480,7 @@ export async function vytvorDokumentZHtml(
   }
 
   // 1. + 2. Převod při nahrání a kontrola, že z něj něco je.
-  const prvni = await nahrajHtml(token, folderId, nazev, html, TYP_DOKUMENTU);
+  const prvni = await nahrajProDokument(token, folderId, nazev, docx, TYP_DOKUMENTU);
   if (!prvni.ok) return prvni;
 
   if (await maObsah(prvni.id, token)) {
@@ -485,12 +489,12 @@ export async function vytvorDokumentZHtml(
   }
 
   console.error(
-    `Google Drive: prevod HTML na dokument nechal ${prvni.id} prazdny, zkousim pres kopii.`,
+    `Google Drive: prevod na dokument nechal ${prvni.id} prazdny, zkousim pres kopii.`,
   );
   await smazNaDisku(prvni.id, token);
 
   // 3. Objížďka přes kopii.
-  const pomocny = await nahrajHtml(token, folderId, `${nazev} (podklad)`, html, null);
+  const pomocny = await nahrajProDokument(token, folderId, `${nazev} (podklad)`, docx, null);
   if (!pomocny.ok) return pomocny;
 
   const kopie = await zkopirujJakoDokument(pomocny.id, nazev, folderId, token);
@@ -517,18 +521,14 @@ function odkazNaDokument(id: string, webViewLink: string | null): string {
 }
 
 /**
- * Nahraje HTML do složky. `cilovyTyp` je typ, na který se má převést - když je
- * `null`, uloží se HTML jako obyčejný soubor (podklad pro kopii).
- *
- * U typu obsahu SCHVÁLNĚ NENÍ `charset`: kódování si Disk vezme z `<meta>`
- * v hlavičce HTML a typ s parametrem navíc mu při rozhodování, jestli umí
- * převést, dělá potíže.
+ * Nahraje soubor Wordu do složky. `cilovyTyp` je typ, na který se má převést -
+ * když je `null`, uloží se soubor tak, jak je (podklad pro kopii).
  */
-async function nahrajHtml(
+async function nahrajProDokument(
   token: string,
   folderId: string,
   nazev: string,
-  html: string,
+  data: Buffer,
   cilovyTyp: string | null,
 ): Promise<{ ok: true; id: string; webViewLink: string | null } | { ok: false; duvod: string }> {
   try {
@@ -541,10 +541,10 @@ async function nahrajHtml(
     const body = Buffer.concat([
       Buffer.from(
         `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
-          `--${boundary}\r\nContent-Type: text/html\r\n\r\n`,
+          `--${boundary}\r\nContent-Type: ${TYP_DOCX}\r\n\r\n`,
         'utf-8',
       ),
-      Buffer.from(html, 'utf-8'),
+      data,
       Buffer.from(`\r\n--${boundary}--\r\n`, 'utf-8'),
     ]);
 
@@ -567,9 +567,9 @@ async function nahrajHtml(
       return { ok: false, duvod: popisChybyDisku(res.status, telo) };
     }
 
-    const data = (await res.json()) as { id?: string; webViewLink?: string };
-    if (!data.id) return { ok: false, duvod: 'Disk dokument přijal, ale nevrátil jeho ID.' };
-    return { ok: true, id: data.id, webViewLink: data.webViewLink ?? null };
+    const odpoved = (await res.json()) as { id?: string; webViewLink?: string };
+    if (!odpoved.id) return { ok: false, duvod: 'Disk dokument přijal, ale nevrátil jeho ID.' };
+    return { ok: true, id: odpoved.id, webViewLink: odpoved.webViewLink ?? null };
   } catch (err) {
     console.error('Google Drive: vytvoreni dokumentu spadlo:', err);
     return { ok: false, duvod: 'Disk neodpověděl.' };
