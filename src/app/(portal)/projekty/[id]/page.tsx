@@ -579,8 +579,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       }))
     : [];
 
-  // Vykazane penize zvlast za nataceni a zvlast za strih (zadani 14. 9. 2026).
-  // „Ostatni" se nepocita - ten druh prace k projektu nepatri.
+  // Vykazane penize zvlast za nataceni a zvlast za strih (zadani 14. 9. 2026),
+  // od 30. 9. 2026 i za opravy. „Ostatni" se nepocita - ten druh prace
+  // k projektu nepatri.
   const castka = (e: (typeof timesheets)[number]) =>
     entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot);
   const vykazanoNataceni = timesheets
@@ -588,6 +589,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     .reduce((sum, e) => sum + castka(e), 0);
   const vykazanoStrih = timesheets
     .filter((e) => e.workType === 'EDITING')
+    .reduce((sum, e) => sum + castka(e), 0);
+  const vykazanoOpravy = timesheets
+    .filter((e) => e.workType === 'REPAIRS')
     .reduce((sum, e) => sum + castka(e), 0);
 
   const rozpocet = !showRozpocet ? null : budget ? (
@@ -603,6 +607,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       naKlic={company?.audioknihyNaKlic === true}
       cenaZDokladu={cenaZakazky}
       zdrojCeny={zdrojCeny}
+      vykazanoOpravy={vykazanoOpravy}
     />
   ) : (
     <ProjectBudgetZakazka
@@ -631,6 +636,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       rozpocetStrih={budget.editingCost}
       vykazanoNataceni={vykazanoNataceni}
       vykazanoStrih={vykazanoStrih}
+      vykazanoOpravy={vykazanoOpravy}
     />
   ) : null;
 

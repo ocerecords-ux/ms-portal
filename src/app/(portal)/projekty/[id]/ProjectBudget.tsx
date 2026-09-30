@@ -26,6 +26,13 @@ const czk = (v: number) => `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
  * aby bylo videt, co z nich odchazi, a neslily se s polozkami do jednoho
  * cisla.
  *
+ * OPRAVY (zadani 30. 9. 2026: "udelejme ve vykazech dalsi druh prace -
+ * Opravy ... bude se to pocitat do rozpoctu"). Rozpocet na vyrobu se kvuli nim
+ * NEZVEDA - pocita se z normostran a tech pretacenim neubyva ani nepribyva -
+ * ale cerpaji ho, takze se projevi na cerpani i na tom, ze kniha pretekla.
+ * V celkovem rozpoctu maji vlastni radek, protoze na rozdil od vsech ostatnich
+ * radku nejsou z planu, ale ze skutecnych vykazu.
+ *
  * ODKUD JE FAKTUROVANA CASTKA: z cenove nabidky u projektu (zadani
  * 14. 9. 2026: „castka, kterou pak fakturujeme, je znama z cenove nabidky
  * u projektu"). Kdyz nabidka neni, bere se z vystavene faktury, a teprve
@@ -44,6 +51,7 @@ export function ProjectBudget({
   naKlic,
   cenaZDokladu,
   zdrojCeny,
+  vykazanoOpravy = 0,
 }: {
   budget: Budget;
   /** Uz vykazane penize podle vykazu zvukaru. */
@@ -61,6 +69,12 @@ export function ProjectBudget({
   /** Cena z nabidky, nebo z faktury - viz zdrojCeny. */
   cenaZDokladu: number | null;
   zdrojCeny: 'nabidka' | 'faktura' | null;
+  /**
+   * Uz vykazane OPRAVY (zadani 30. 9. 2026). Do rozpoctu na vyrobu nevstupuji
+   * - ten se pocita z normostran a pretacenim se normostrany nemeni - ale
+   * cerpaji ho (jsou soucasti `spent`) a v celkovem rozpoctu ukrajuji ze zisku.
+   */
+  vykazanoOpravy?: number;
 }) {
   const [polozky, setPolozky] = useState(pocatecniPolozky.reduce((s, p) => s + p.castka, 0));
 
@@ -78,7 +92,8 @@ export function ProjectBudget({
         : revenue != null
           ? 'odhad z normostran'
           : '—';
-  const zisk = fakturujeme != null ? fakturujeme - budget.total - polozky : null;
+  // Opravy se odectou SKUTECNE vykazane, ne z rozpoctu - zadny nemaji.
+  const zisk = fakturujeme != null ? fakturujeme - budget.total - polozky - vykazanoOpravy : null;
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
@@ -142,6 +157,7 @@ export function ProjectBudget({
           {over
             ? `Rozpočet je překročený o ${czk(spent - budget.total)}.`
             : `Zbývá ${czk(remaining)}.`}
+          {vykazanoOpravy > 0 && ` Z toho ${czk(vykazanoOpravy)} za opravy — ty v rozpočtu vlastní řádek nemají.`}
         </p>
       </div>
 
@@ -211,6 +227,16 @@ export function ProjectBudget({
                   <td></td>
                   <td className="py-1 text-muted tabular-nums text-right">{czk(budget.bonus)}</td>
                 </tr>
+                {/* Opravy jsou jediny radek teto tabulky, ktery neni z rozpoctu,
+                    ale ze skutecnych vykazu - rozpoctovy radek pro ne neexistuje.
+                    Proto se ukazuje, jen kdyz se nejaka oprava opravdu vykazala. */}
+                {vykazanoOpravy > 0 && (
+                  <tr>
+                    <td className="py-1 text-muted">− Opravy</td>
+                    <td className="py-1 text-muted whitespace-nowrap">z výkazů</td>
+                    <td className="py-1 text-muted tabular-nums text-right">{czk(vykazanoOpravy)}</td>
+                  </tr>
+                )}
                 <tr>
                   <td className="py-1 text-muted">− Další položky</td>
                   <td></td>

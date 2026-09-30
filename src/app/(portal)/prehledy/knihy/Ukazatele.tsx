@@ -635,6 +635,11 @@ function RadekKnihy({
                 <tbody>
                   <RadekDruhu nazev="Natáčení" d={k.nataceni} porada={porada} />
                   <RadekDruhu nazev="Střih" d={k.strih} porada={porada} />
+                  {/* Opravy a Ostatní rozpočet nemají - ukazují se, jen když
+                      na nich něco je, ať tabulka nemá dva prázdné řádky. */}
+                  {k.opravy.hodin > 0 && (
+                    <RadekDruhu nazev="Opravy" d={k.opravy} porada={porada} bezRozpoctu />
+                  )}
                   {k.ostatni.hodin > 0 && (
                     <RadekDruhu nazev="Ostatní" d={k.ostatni} porada={porada} bezRozpoctu />
                   )}
@@ -657,6 +662,7 @@ function RadekKnihy({
                       <th className="text-left py-2 pr-3">Kdo</th>
                       <th className="text-right py-2 px-3">Natáčení</th>
                       <th className="text-right py-2 px-3">Střih</th>
+                      <th className="text-right py-2 px-3">Opravy</th>
                       <th className={porada ? 'text-right py-2 pl-3' : 'text-right py-2 px-3'}>
                         Ostatní
                       </th>
@@ -672,6 +678,9 @@ function RadekKnihy({
                         </td>
                         <td className="text-right py-1.5 px-3 tabular-nums">
                           {c.strihHodin > 0 ? hodiny(c.strihHodin) : '—'}
+                        </td>
+                        <td className="text-right py-1.5 px-3 tabular-nums">
+                          {c.opravyHodin > 0 ? hodiny(c.opravyHodin) : '—'}
                         </td>
                         <td
                           className={`text-right py-1.5 tabular-nums ${porada ? 'pl-3' : 'px-3'}`}

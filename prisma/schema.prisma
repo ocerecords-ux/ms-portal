@@ -1001,10 +1001,18 @@ model PriceListItem {
 
 
 // Druh prace ve vykazu zvukare (zadani 6. 9. 2026).
+//
+// REPAIRS je na konci schvalne, ne za EDITING, kam patri vyznamem. Hodnoty
+// vyctu se na Postgresu daji jen PRIDAVAT na konec (`prisma db push` posila
+// ALTER TYPE ... ADD VALUE); vlozeni doprostred by znamenalo vyct prepsat,
+// a to na zive databazi neprojde. Poradi ve formulari si urcuje
+// WORK_TYPE_OPTIONS v lib/timesheets.ts, takze na obrazovce jsou Opravy tam,
+// kde maji byt.
 enum WorkType {
   RECORDING // natáčení
   EDITING   // střih
   OTHER     // ostatní - práce, která nepatří ke konkrétnímu projektu (zadání 8. 9. 2026)
+  REPAIRS   // opravy - přetáčení a opravy už natočené knihy (zadání 30. 9. 2026)
 }
 
 // Vykaz prace zvukare (zadani 6. 9. 2026): den, cas od-do, druh prace,

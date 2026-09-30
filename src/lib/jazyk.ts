@@ -5280,6 +5280,7 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   // --- výkazy: druh práce (klíč je KÓD, ne text) ---
   'vykaz.druh.RECORDING': { cs: 'Natáčení', en: 'Recording' },
   'vykaz.druh.EDITING': { cs: 'Střih', en: 'Editing' },
+  'vykaz.druh.REPAIRS': { cs: 'Opravy', en: 'Repairs' },
   'vykaz.druh.OTHER': { cs: 'Ostatní', en: 'Other' },
 
   // --- editor výkazu ---

@@ -133,6 +133,7 @@ export type PrehledZvukare = {
 const NAZVY_DRUHU: Record<string, string> = {
   RECORDING: 'Natáčení',
   EDITING: 'Střih',
+  REPAIRS: 'Opravy',
   OTHER: 'Ostatní',
 };
 

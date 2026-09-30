@@ -56,6 +56,7 @@ function bezPenez(data: KnihyUkazatele): KnihyUkazatele {
       zisk: 0,
       nataceni: { ...k.nataceni, castka: 0 },
       strih: { ...k.strih, castka: 0 },
+      opravy: { ...k.opravy, castka: 0 },
       ostatni: { ...k.ostatni, castka: 0 },
       lide: k.lide.map((c) => ({ ...c, castka: 0 })),
     })),

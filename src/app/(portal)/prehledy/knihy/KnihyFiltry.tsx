@@ -109,6 +109,7 @@ export function KnihyFiltry({
         <option value="">Všechny druhy</option>
         <option value="RECORDING">Natáčení</option>
         <option value="EDITING">Střih</option>
+        <option value="REPAIRS">Opravy</option>
         <option value="OTHER">Ostatní</option>
       </VyberPole>
 

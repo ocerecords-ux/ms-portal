@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from 'react';
 import type { WorkType } from '@prisma/client';
-import { WORK_TYPE_LABELS, durationMinutes, entryAmount, formatDuration, formatTime, toHours } from '@/lib/timesheets';
+import {
+  WORK_TYPE_LABELS,
+  WORK_TYPE_OPTIONS,
+  durationMinutes,
+  entryAmount,
+  formatDuration,
+  formatTime,
+  toHours,
+} from '@/lib/timesheets';
 
 /**
  * VÝKAZY K PROJEKTU pod rozpočtem (zadání 13. 9. 2026: „u těch rozpočtů by
@@ -20,6 +28,7 @@ import { WORK_TYPE_LABELS, durationMinutes, entryAmount, formatDuration, formatT
  * Nabízejí se jen druhy práce, které u projektu opravdu jsou. Prázdný filtr,
  * po kterém zůstane prázdná tabulka, je jen past na klikání. „Ostatní" se tu
  * neobjeví nikdy: u toho druhu se projekt nevybírá (viz requiresProject).
+ * Od 30. 9. 2026 sem přibývají „Opravy" - přetáčení a opravy hotové knihy.
  */
 
 /**
@@ -56,10 +65,10 @@ const czk = (v: number) => `${v.toLocaleString('cs-CZ')} Kč`;
 export function VykazyProjektu({ vykazy, bonusy = [] }: { vykazy: VykazRadek[]; bonusy?: BonusRadek[] }) {
   const [filtr, setFiltr] = useState<WorkType | 'VSE'>('VSE');
 
-  /** Druhy práce, které u projektu skutečně jsou - v pořadí natáčení, střih. */
+  /** Druhy práce, které u projektu skutečně jsou - v pořadí natáčení, střih, opravy. */
   const druhy = useMemo(() => {
     const jsou = new Set(vykazy.map((v) => v.druh));
-    return (['RECORDING', 'EDITING', 'OTHER'] as WorkType[]).filter((d) => jsou.has(d));
+    return WORK_TYPE_OPTIONS.filter((d) => jsou.has(d));
   }, [vykazy]);
 
   const videt = useMemo(

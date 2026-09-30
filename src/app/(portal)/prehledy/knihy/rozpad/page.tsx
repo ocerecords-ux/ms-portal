@@ -203,6 +203,7 @@ export default async function RozpadPage({
                   <th className="text-right py-2 px-3">Hodin</th>
                   <th className="text-right py-2 px-3">Natáčení</th>
                   <th className="text-right py-2 px-3">Střih</th>
+                  <th className="text-right py-2 px-3">Opravy</th>
                   <th className="text-right py-2 px-3">Ostatní</th>
                   <th className="text-right py-2 px-3">Projektů</th>
                   <th className="text-right py-2 pl-3">Celkem</th>
@@ -228,6 +229,7 @@ export default async function RozpadPage({
                     <td className="text-right py-2 px-3 tabular-nums">{hodiny(c.hodiny)}</td>
                     <td className="text-right py-2 px-3 tabular-nums">{kc(c.nataceni)}</td>
                     <td className="text-right py-2 px-3 tabular-nums">{kc(c.strih)}</td>
+                    <td className="text-right py-2 px-3 tabular-nums">{kc(c.opravy)}</td>
                     <td className="text-right py-2 px-3 tabular-nums">{kc(c.ostatni)}</td>
                     <td className="text-right py-2 px-3 tabular-nums text-muted">{c.projektu}</td>
                     <td className="text-right py-2 pl-3 tabular-nums font-heading font-semibold">{kc(c.castka)}</td>
@@ -313,7 +315,9 @@ export default async function RozpadPage({
                                   ? BARVY.nataceni
                                   : v.druh === 'EDITING'
                                     ? BARVY.strih
-                                    : BARVY.ostatni,
+                                    : v.druh === 'REPAIRS'
+                                      ? BARVY.opravy
+                                      : BARVY.ostatni,
                             }}
                           />
                           {WORK_TYPE_LABELS[v.druh]}

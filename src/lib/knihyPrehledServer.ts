@@ -60,6 +60,8 @@ export type Mesic = {
   popis: string;
   nataceni: number;
   strih: number;
+  /** Opravy a přetáčky (zadání 30. 9. 2026) - patří k projektu, ale rozpočet nemají. */
+  opravy: number;
   ostatni: number;
   /** Kolik knih se v tom měsíci odevzdalo. */
   knih: number;
@@ -72,6 +74,7 @@ export type Clovek = {
   castka: number;
   nataceni: number;
   strih: number;
+  opravy: number;
   ostatni: number;
   /** Na kolika různých projektech v období pracoval. */
   projektu: number;
@@ -126,6 +129,7 @@ export type KnihyPrehled = {
     castka: number;
     nataceni: CastkaDruhu;
     strih: CastkaDruhu;
+    opravy: CastkaDruhu;
     ostatni: CastkaDruhu;
     knih: number;
     vykazu: number;
@@ -171,6 +175,7 @@ function prazdneMesice(od: Date, doData: Date, vicLet: boolean): Mesic[] {
         : MESICE_KRATCE[d.getUTCMonth()],
       nataceni: 0,
       strih: 0,
+      opravy: 0,
       ostatni: 0,
       knih: 0,
     });
@@ -303,6 +308,7 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
     castka: 0,
     nataceni: { hodiny: 0, castka: 0 },
     strih: { hodiny: 0, castka: 0 },
+    opravy: { hodiny: 0, castka: 0 },
     ostatni: { hodiny: 0, castka: 0 },
     knih: 0,
     vykazu: vykazyObdobi.length,
@@ -319,7 +325,13 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
     souhrn.hodiny += hodiny;
     souhrn.castka += castka;
     const kos =
-      v.workType === 'RECORDING' ? souhrn.nataceni : v.workType === 'EDITING' ? souhrn.strih : souhrn.ostatni;
+      v.workType === 'RECORDING'
+        ? souhrn.nataceni
+        : v.workType === 'EDITING'
+          ? souhrn.strih
+          : v.workType === 'REPAIRS'
+            ? souhrn.opravy
+            : souhrn.ostatni;
     kos.hodiny += hodiny;
     kos.castka += castka;
 
@@ -327,6 +339,7 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
     if (m) {
       if (v.workType === 'RECORDING') m.nataceni += castka;
       else if (v.workType === 'EDITING') m.strih += castka;
+      else if (v.workType === 'REPAIRS') m.opravy += castka;
       else m.ostatni += castka;
     }
 
@@ -339,6 +352,7 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
         castka: 0,
         nataceni: 0,
         strih: 0,
+        opravy: 0,
         ostatni: 0,
         projektu: 0,
         projekty: new Set<string>(),
@@ -349,6 +363,7 @@ export async function nactiKnihyPrehled(f: KnihyFiltr): Promise<KnihyPrehled> {
     c.castka += castka;
     if (v.workType === 'RECORDING') c.nataceni += castka;
     else if (v.workType === 'EDITING') c.strih += castka;
+    else if (v.workType === 'REPAIRS') c.opravy += castka;
     else c.ostatni += castka;
     if (v.caflouProjectId) {
       c.projekty.add(v.caflouProjectId);
@@ -527,6 +542,7 @@ export type PodilCloveka = {
   jmeno: string;
   nataceniHodin: number;
   strihHodin: number;
+  opravyHodin: number;
   ostatniHodin: number;
   castka: number;
 };
@@ -576,6 +592,8 @@ export type KnihaUkazatel = {
   zisk: number;
   nataceni: RozpadDruhu;
   strih: RozpadDruhu;
+  /** Opravy - vlastní rozpočet nemají, všechno na nich jde nad rámec. */
+  opravy: RozpadDruhu;
   ostatni: RozpadDruhu;
   lide: PodilCloveka[];
 };
@@ -700,6 +718,8 @@ export async function nactiKnihyUkazatele(
       nataceniCastka: number;
       strihHodin: number;
       strihCastka: number;
+      opravyHodin: number;
+      opravyCastka: number;
       ostatniHodin: number;
       ostatniCastka: number;
       lide: Map<string, PodilCloveka>;
@@ -716,6 +736,8 @@ export async function nactiKnihyUkazatele(
         nataceniCastka: 0,
         strihHodin: 0,
         strihCastka: 0,
+        opravyHodin: 0,
+        opravyCastka: 0,
         ostatniHodin: 0,
         ostatniCastka: 0,
         lide: new Map(),
@@ -732,6 +754,9 @@ export async function nactiKnihyUkazatele(
     } else if (v.workType === 'EDITING') {
       p.strihHodin += hodin;
       p.strihCastka += castka;
+    } else if (v.workType === 'REPAIRS') {
+      p.opravyHodin += hodin;
+      p.opravyCastka += castka;
     } else {
       p.ostatniHodin += hodin;
       p.ostatniCastka += castka;
@@ -744,6 +769,7 @@ export async function nactiKnihyUkazatele(
         jmeno: jmeno(v.user),
         nataceniHodin: 0,
         strihHodin: 0,
+        opravyHodin: 0,
         ostatniHodin: 0,
         castka: 0,
       };
@@ -751,6 +777,7 @@ export async function nactiKnihyUkazatele(
     }
     if (v.workType === 'RECORDING') c.nataceniHodin += hodin;
     else if (v.workType === 'EDITING') c.strihHodin += hodin;
+    else if (v.workType === 'REPAIRS') c.opravyHodin += hodin;
     else c.ostatniHodin += hodin;
     c.castka += castka;
   }
@@ -852,6 +879,16 @@ export async function nactiKnihyUkazatele(
         hodin: prac?.strihHodin ?? 0,
         preteceniHodin: (prac?.strihHodin ?? 0) - strihRozpocetHodin,
         castka: prac?.strihCastka ?? 0,
+      },
+      // Opravy rozpočet nemají - přetáčením normostran neubývá, takže se
+      // z čeho spočítat nedá. Všechno na nich jde nad rámec (zadání
+      // 30. 9. 2026). Právě proto je vidět zvlášť: kniha, která přetekla,
+      // hned ukáže, jestli za to můžou přetáčky.
+      opravy: {
+        rozpocetHodin: 0,
+        hodin: prac?.opravyHodin ?? 0,
+        preteceniHodin: prac?.opravyHodin ?? 0,
+        castka: prac?.opravyCastka ?? 0,
       },
       // Ostatní práce rozpočet nemá - co se na ni vykáže, jde celé nad rámec.
       ostatni: {

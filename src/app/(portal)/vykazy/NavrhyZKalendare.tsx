@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { WorkType } from '@prisma/client';
 import { DatumPole } from '@/components/DatumPole';
 import { useRouter } from 'next/navigation';
 import { VyberProjektu } from '@/app/(portal)/components/VyberProjektu';
@@ -25,7 +26,8 @@ export type Navrh = {
   id: string;
   start: string;
   end: string;
-  workType: 'RECORDING' | 'EDITING' | 'OTHER';
+  /** Celý výčet - sloupec v databázi zná od 30. 9. 2026 i „Opravy". */
+  workType: WorkType;
   caflouProjectId: string | null;
   projectName: string | null;
   studioName: string | null;

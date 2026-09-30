@@ -3,7 +3,16 @@
 import { useState } from 'react';
 import { BARVY, kc, kcKratce } from './format';
 
-type Mesic = { klic: string; popis: string; nataceni: number; strih: number; ostatni: number; knih: number };
+type Mesic = {
+  klic: string;
+  popis: string;
+  nataceni: number;
+  strih: number;
+  /** Opravy a přetáčky (30. 9. 2026) - vlastní rozpočet nemají, ale mzdy stojí. */
+  opravy: number;
+  ostatni: number;
+  knih: number;
+};
 
 /** Hezké dělení osy: 0, 50 tis., 100 tis.… Stejné jako u grafu obratu. */
 function osa(max: number): { nahore: number; znacky: number[] } {
@@ -32,7 +41,7 @@ export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
   const [aktivni, setAktivni] = useState<number | null>(null);
   const [tabulka, setTabulka] = useState(false);
 
-  const soucet = (m: Mesic) => m.nataceni + m.strih + m.ostatni;
+  const soucet = (m: Mesic) => m.nataceni + m.strih + m.opravy + m.ostatni;
   const { nahore, znacky } = osa(Math.max(...mesice.map(soucet), 0));
   const n = Math.max(mesice.length, 1);
   const kazdyDruhy = n > 12;
@@ -42,6 +51,7 @@ export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
       <div className="flex items-center gap-4 flex-wrap text-xs font-heading text-muted">
         <Legenda barva={BARVY.nataceni}>Natáčení</Legenda>
         <Legenda barva={BARVY.strih}>Střih</Legenda>
+        <Legenda barva={BARVY.opravy}>Opravy</Legenda>
         <Legenda barva={BARVY.ostatni}>Ostatní</Legenda>
         <button
           type="button"
@@ -60,6 +70,7 @@ export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
                 <th className="text-left py-2 pr-3">Měsíc</th>
                 <th className="text-right py-2 px-3">Natáčení</th>
                 <th className="text-right py-2 px-3">Střih</th>
+                <th className="text-right py-2 px-3">Opravy</th>
                 <th className="text-right py-2 px-3">Ostatní</th>
                 <th className="text-right py-2 pl-3">Celkem</th>
               </tr>
@@ -70,6 +81,7 @@ export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
                   <td className="py-1.5 pr-3 text-ink">{m.popis}</td>
                   <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.nataceni)}</td>
                   <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.strih)}</td>
+                  <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.opravy)}</td>
                   <td className="text-right py-1.5 px-3 tabular-nums">{kc(m.ostatni)}</td>
                   <td className="text-right py-1.5 pl-3 tabular-nums font-heading">{kc(soucet(m))}</td>
                 </tr>
@@ -110,12 +122,13 @@ export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
                     onClick={() => setAktivni(aktivni === i ? null : i)}
                   >
                     <div className="absolute inset-x-0 bottom-0 top-0 flex justify-center items-end px-[14%]">
-                      {/* Zdola nahoru: natáčení, střih, ostatní. Mezera mezi
-                          segmenty je v barvě karty, ne průhledná - přes mřížku
-                          by průhledná mezera nebyla vidět. */}
+                      {/* Zdola nahoru: natáčení, střih, opravy, ostatní. Mezera
+                          mezi segmenty je v barvě karty, ne průhledná - přes
+                          mřížku by průhledná mezera nebyla vidět. */}
                       <span className="w-full max-w-[26px] h-full flex flex-col-reverse justify-start gap-[2px]">
                         <Segment hodnota={m.nataceni} nahore={nahore} barva={BARVY.nataceni} />
                         <Segment hodnota={m.strih} nahore={nahore} barva={BARVY.strih} />
+                        <Segment hodnota={m.opravy} nahore={nahore} barva={BARVY.opravy} />
                         <Segment hodnota={m.ostatni} nahore={nahore} barva={BARVY.ostatni} posledni />
                       </span>
                     </div>
@@ -135,6 +148,7 @@ export function GrafPrace({ mesice }: { mesice: Mesic[] }) {
                   <p className="font-heading font-semibold text-ink m-0 mb-1">{mesice[aktivni].popis}</p>
                   <Radek barva={BARVY.nataceni} popis="Natáčení" hodnota={mesice[aktivni].nataceni} />
                   <Radek barva={BARVY.strih} popis="Střih" hodnota={mesice[aktivni].strih} />
+                  <Radek barva={BARVY.opravy} popis="Opravy" hodnota={mesice[aktivni].opravy} />
                   <Radek barva={BARVY.ostatni} popis="Ostatní" hodnota={mesice[aktivni].ostatni} />
                   <Radek popis="Celkem" hodnota={soucet(mesice[aktivni])} tucne />
                 </div>

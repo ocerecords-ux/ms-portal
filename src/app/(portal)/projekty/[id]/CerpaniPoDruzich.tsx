@@ -20,6 +20,13 @@ import { useState } from 'react';
  * BONUS TU NENÍ. Je to jednorázová odměna za dokončenou knihu, ne odpracované
  * hodiny — do srovnání „rozpočet proti výkazům" nepatří a zkreslil by ho.
  *
+ * OPRAVY JSOU TŘETÍ SLOUPEC, ale BEZ STROPU (zadání 30. 9. 2026). V rozpočtu
+ * na výrobu pro ně žádný řádek není — rozpočet se počítá z normostran a ty se
+ * přetáčením nemění. Čerpají tedy tentýž rozpočet jako natáčení a střih, jen
+ * proti nim nestojí vlastní kapsa. Přesně proto tu stojí zvlášť: kniha, která
+ * přetekla, na první pohled ukáže, jestli za to můžou přetáčky. Sloupec se
+ * objeví, až se nějaká oprava vykáže — dokud se nic nepřetáčí, není co kreslit.
+ *
  * BARVY JSOU OVĚŘENÉ, ne odhadnuté: dvojice prošla kontrolou odstupu pro
  * barvosleposti i kontrastu proti podkladu, zvlášť pro světlý a zvlášť pro
  * tmavý režim (proto dva různé odstíny téže značkové barvy, ne jedna sada
@@ -31,15 +38,21 @@ import { useState } from 'react';
 const BARVY = {
   nataceni: { svetla: '#7B55FF', tmava: '#9578FF' },
   strih: { svetla: '#149E4B', tmava: '#1AAE58' },
+  opravy: { svetla: '#0891B2', tmava: '#22D3EE' },
 };
 
 const czk = (v: number) => `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
 
+type KlicDruhu = 'nataceni' | 'strih' | 'opravy';
+
 type Druh = {
-  klic: 'nataceni' | 'strih';
+  klic: KlicDruhu;
   nazev: string;
+  /** Kolik je na tenhle druh práce v rozpočtu. U oprav 0 — vlastní kapsu nemají. */
   rozpocet: number;
   vykazano: number;
+  /** Druh bez vlastního stropu: kreslí se plný sloupec bez světlého obrysu. */
+  bezRozpoctu?: boolean;
 };
 
 export function CerpaniPoDruzich({
@@ -47,11 +60,14 @@ export function CerpaniPoDruzich({
   rozpocetStrih,
   vykazanoNataceni,
   vykazanoStrih,
+  vykazanoOpravy = 0,
 }: {
   rozpocetNataceni: number;
   rozpocetStrih: number;
   vykazanoNataceni: number;
   vykazanoStrih: number;
+  /** Opravy a přetáčky (zadání 30. 9. 2026). Vlastní rozpočet nemají. */
+  vykazanoOpravy?: number;
 }) {
   const [podoba, setPodoba] = useState<'sloupce' | 'kolac'>('sloupce');
 
@@ -69,8 +85,17 @@ export function CerpaniPoDruzich({
       vykazano: vykazanoStrih,
     },
   ];
+  if (vykazanoOpravy > 0) {
+    druhy.push({
+      klic: 'opravy',
+      nazev: 'Opravy',
+      rozpocet: 0,
+      vykazano: vykazanoOpravy,
+      bezRozpoctu: true,
+    });
+  }
 
-  const vykazanoCelkem = vykazanoNataceni + vykazanoStrih;
+  const vykazanoCelkem = vykazanoNataceni + vykazanoStrih + vykazanoOpravy;
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
@@ -114,6 +139,7 @@ export function CerpaniPoDruzich({
       <p className="text-xs font-body text-muted m-0 mt-auto">
         Proti rozpočtu stojí výkazy zvukařů. Bonus se nezapočítává — je to odměna za dokončenou
         knihu, ne odpracované hodiny.
+        {vykazanoOpravy > 0 && ' Opravy vlastní rozpočet nemají, ale čerpají ten společný.'}
       </p>
     </div>
   );
@@ -191,19 +217,27 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
 
           <div className="absolute inset-0 flex items-end justify-around gap-6 px-2">
             {druhy.map((d) => {
-              const pres = d.vykazano > d.rozpocet;
+              // Druh bez vlastniho stropu (opravy) nemuze "pretect" - neni co
+              // prekrocit. Kreslil by se cerveny sloupec u kazde hodiny prace.
+              const pres = !d.bezRozpoctu && d.vykazano > d.rozpocet;
               const procent = d.rozpocet > 0 ? Math.round((d.vykazano / d.rozpocet) * 100) : 0;
               return (
                 <div key={d.klic} className="relative flex-1 max-w-[96px] h-full flex items-end justify-center">
-                  {/* Rozpocet: svetly obrys na svou vysku. */}
-                  <span
-                    aria-hidden="true"
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full rounded-t-md border border-b-0 border-line bg-field/60"
-                    style={{ height: `${(d.rozpocet / strop) * 100}%` }}
-                  />
+                  {/* Rozpocet: svetly obrys na svou vysku. U oprav zadny neni. */}
+                  {!d.bezRozpoctu && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full rounded-t-md border border-b-0 border-line bg-field/60"
+                      style={{ height: `${(d.rozpocet / strop) * 100}%` }}
+                    />
+                  )}
                   {/* Vykazano: plny sloupec zdola. */}
                   <span
-                    title={`${d.nazev}: vykázáno ${czk(d.vykazano)} z rozpočtu ${czk(d.rozpocet)} (${procent} %)`}
+                    title={
+                      d.bezRozpoctu
+                        ? `${d.nazev}: vykázáno ${czk(d.vykazano)}, vlastní rozpočet nemají`
+                        : `${d.nazev}: vykázáno ${czk(d.vykazano)} z rozpočtu ${czk(d.rozpocet)} (${procent} %)`
+                    }
                     className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-full rounded-t-md ${pres ? 'bg-danger' : ''}`}
                     style={{
                       height: `${Math.min(100, (d.vykazano / strop) * 100)}%`,
@@ -211,14 +245,15 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
                     }}
                   />
                   {/* Hodnota nad sloupcem - primy popisek, aby se nic necetlo
-                      jen z barvy ani z vysky. */}
+                      jen z barvy ani z vysky. U oprav misto procent castka:
+                      procenta by se nemela k cemu vztahnout. */}
                   <span
                     className={`absolute left-1/2 -translate-x-1/2 text-[11px] font-heading font-semibold tabular-nums whitespace-nowrap ${
                       pres ? 'text-danger' : 'text-ink'
                     }`}
                     style={{ bottom: `calc(${Math.max((d.rozpocet / strop) * 100, (d.vykazano / strop) * 100)}% + 6px)` }}
                   >
-                    {procent} %
+                    {d.bezRozpoctu ? czk(d.vykazano) : `${procent} %`}
                   </span>
                 </div>
               );
@@ -239,7 +274,7 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
               </span>
               <span className="text-[11px] font-heading tabular-nums text-ink">{czk(d.vykazano)}</span>
               <span className="text-[10px] font-body text-muted tabular-nums">
-                z {czk(d.rozpocet)}
+                {d.bezRozpoctu ? 'bez rozpočtu' : `z ${czk(d.rozpocet)}`}
               </span>
             </div>
           ))}
@@ -250,6 +285,7 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
         Světlý obrys je rozpočet, barevná výplň vykázané peníze.
       </p>
 
+
     </div>
   );
 }
@@ -258,8 +294,8 @@ function Sloupce({ druhy }: { druhy: Druh[] }) {
  * Koláč: z čeho se skládají vykázané peníze. Je to prstenec, ne plný kruh —
  * doprostřed se vejde součet a oko pak neporovnává úhly, ale čte číslo.
  *
- * Dva výseče nepotřebují víc než dvě barvy a u obou stojí procento i částka
- * přímo v legendě, takže se nic nečte jen z barvy.
+ * Výsečí je nejvýš tolik co sloupců a u každé stojí procento i částka přímo
+ * v legendě, takže se nic nečte jen z barvy.
  */
 function Kolac({ druhy, celkem }: { druhy: Druh[]; celkem: number }) {
   if (celkem <= 0) {
@@ -276,7 +312,7 @@ function Kolac({ druhy, celkem }: { druhy: Druh[]; celkem: number }) {
 
   return (
     <div className="flex items-center justify-center gap-6 flex-wrap">
-      <svg viewBox="0 0 140 140" className="w-[140px] h-[140px] shrink-0" role="img" aria-label="Podíl natáčení a střihu na vykázaných penězích">
+      <svg viewBox="0 0 140 140" className="w-[140px] h-[140px] shrink-0" role="img" aria-label="Podíl jednotlivých druhů práce na vykázaných penězích">
         <g transform="translate(70,70) rotate(-90)">
           {druhy.map((d) => {
             const podil = d.vykazano / celkem;
@@ -321,7 +357,7 @@ function Kolac({ druhy, celkem }: { druhy: Druh[]; celkem: number }) {
 }
 
 /** Barevný puntík u popisku - identita druhu práce, ne dekorace. */
-function Puntik({ klic }: { klic: 'nataceni' | 'strih' }) {
+function Puntik({ klic }: { klic: KlicDruhu }) {
   return (
     <span
       aria-hidden="true"

@@ -1,3 +1,4 @@
+import type { WorkType } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { notify } from '@/lib/notifications';
 import { posliPush } from '@/lib/pushServer';
@@ -46,7 +47,13 @@ export type NavrhProZvukare = {
   id: string;
   start: string;
   end: string;
-  workType: 'RECORDING' | 'EDITING' | 'OTHER';
+  /**
+   * Cely vycet, ne jen tri hodnoty: v databazi je sloupec typu WorkType
+   * a od 30. 9. 2026 v nem muze byt i REPAIRS. Navrh z kalendare opravu
+   * nikdy nevyrobi (pretaceni se do kalendare nezapisuje), ale typ ma
+   * odpovidat tomu, co ze sloupce muze prijit.
+   */
+  workType: WorkType;
   caflouProjectId: string | null;
   projectName: string | null;
   studioName: string | null;

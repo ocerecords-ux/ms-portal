@@ -797,7 +797,9 @@ export function TimesheetEditor({
                             ? 'bg-tint text-brand-purpleDark'
                             : e.workType === 'EDITING'
                               ? 'bg-okTint text-status-done'
-                              : 'bg-field text-muted'
+                              : e.workType === 'REPAIRS'
+                                ? 'bg-warnTint text-status-progress'
+                                : 'bg-field text-muted'
                         }`}
                       >
                         {druhPracePopisek(jazyk, e.workType)}

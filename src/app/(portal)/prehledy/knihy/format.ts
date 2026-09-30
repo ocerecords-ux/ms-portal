@@ -40,5 +40,6 @@ export function datum(d: Date): string {
 export const BARVY = {
   nataceni: 'var(--viz-nataceni)',
   strih: 'var(--viz-strih)',
+  opravy: 'var(--viz-opravy)',
   ostatni: 'var(--viz-ostatni)',
 } as const;

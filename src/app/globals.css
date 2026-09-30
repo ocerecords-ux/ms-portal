@@ -56,6 +56,10 @@
   --viz-nataceni: #7b55ff;
   --viz-strih: #eb6834;
   --viz-ostatni: #0891b2;
+  /* Opravy (30. 9. 2026). Ctvrty odstin uz nejde vybrat od oka - tenhle
+     prosel simulaci protanopie i deuteranopie proti vsem trem nad sebou
+     (nejmensi odstup dE 32) a na bile ma kontrast 7,7:1. */
+  --viz-opravy: #065f46;
   --brand-purple: #7b55ff;
   --brand-purple-deep: #6b2af0;
   --brand-green: #1fdf67;
@@ -72,6 +76,9 @@
      jsou na bile citelne. */
   --barva-nataceni: #7B55FF;
   --barva-strih: #149E4B;
+  /* Opravy (30. 9. 2026) - treti sloupec v cerpani. Proti fialove a zelene
+     drzi odstup i pri obou castych barvoslepostech (dE 59). */
+  --barva-opravy: #0891B2;
   --c-surface-soft: 250 248 255; /* #FAF8FF */
   --c-field: 246 246 246; /* #F6F6F6 */
   --c-line: 228 223 251; /* #E4DFFB */
@@ -94,6 +101,7 @@
   --viz-nataceni: #8f6fff;
   --viz-strih: #d95926;
   --viz-ostatni: #1a9fbf;
+  --viz-opravy: #34d399;
   --c-ink: 236 233 247; /* svetly text */
   --c-bar: 45 39 70; /* pruh zůstává tmavý, jen o odstín světlejší než karta */
   --c-paper: 20 17 28; /* podklad stranky */
@@ -103,6 +111,7 @@
      splyvala - obe hodnoty jsou znovu overene proti tomuto podkladu. */
   --barva-nataceni: #9578FF;
   --barva-strih: #1AAE58;
+  --barva-opravy: #22D3EE;
   --c-surface-soft: 38 33 56; /* najeti mysi na radek */
   --c-field: 38 34 51; /* vstupni pole */
   --c-line: 52 46 74;

@@ -12,14 +12,15 @@ import { durationMinutes, parseTime, requiresProject } from '@/lib/timesheets';
  * Datum, cas od-do, druh prace a projekt jsou povinne (zadani 6. 9. 2026:
  * "čas, druh práce a projekt by měly být povinné údaje"). Projekt se
  * nevyzaduje u druhu prace "Ostatni" (zadani 8. 9. 2026) - tam se ve
- * formulari vubec nevybira.
+ * formulari vubec nevybira. U "Oprav" (zadani 30. 9. 2026) povinny JE:
+ * opravy se pocitaji do rozpoctu projektu, takze bez projektu nemaji smysl.
  */
 export const schemaVykazu = z
   .object({
     date: z.string().trim().min(8, 'Vyberte datum.'),
     from: z.string().trim().min(1, 'Vyplňte čas od.'),
     to: z.string().trim().min(1, 'Vyplňte čas do.'),
-    workType: z.enum(['RECORDING', 'EDITING', 'OTHER'], {
+    workType: z.enum(['RECORDING', 'EDITING', 'REPAIRS', 'OTHER'], {
       errorMap: () => ({ message: 'Vyberte druh práce.' }),
     }),
     caflouProjectId: z.string().trim().optional(),

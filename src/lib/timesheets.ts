@@ -10,18 +10,41 @@ import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 export const WORK_TYPE_LABELS: Record<WorkType, string> = {
   RECORDING: 'Natáčení',
   EDITING: 'Střih',
+  REPAIRS: 'Opravy',
   OTHER: 'Ostatní',
 };
 
-export const WORK_TYPE_OPTIONS: WorkType[] = ['RECORDING', 'EDITING', 'OTHER'];
+/**
+ * Poradi ve formulari i ve filtrech. Opravy stoji za strihem, protoze v case
+ * prichazeji az po nem; "Ostatni" zustava posledni - je to zbytkova kategorie.
+ */
+export const WORK_TYPE_OPTIONS: WorkType[] = ['RECORDING', 'EDITING', 'REPAIRS', 'OTHER'];
 
 /**
  * Vybira se u tohohle druhu prace projekt? U "Ostatni" ne (zadani 8. 9. 2026:
  * "kdyz tam bude Ostatni, tak zmizi vyber prirazeni k projektu") - je to
  * prace, ktera ke konkretni zakazce nepatri.
+ *
+ * OPRAVY projekt naopak MAJI MIT (zadani 30. 9. 2026: "Pujde to navazat na
+ * projekt. A bude se to pocitat do rozpoctu"). Bez projektu by nebylo do ceho
+ * je pocitat - cerpani rozpoctu jde vzdycky pres caflouProjectId.
  */
 export function requiresProject(workType: WorkType | ''): boolean {
   return workType !== 'OTHER';
+}
+
+/**
+ * Druhy prace, ktere cerpaji rozpocet projektu. Nataceni a strih maji
+ * v rozpoctu vlastni radek spocitany z normostran; OPRAVY zadny nemaji -
+ * cerpaji tentyz rozpocet na vyrobu, takze se na nich pozna, ze kniha
+ * pretekla kvuli pretacenim (zadani 30. 9. 2026). "Ostatni" k projektu
+ * nepatri vubec.
+ */
+export const DRUHY_DO_ROZPOCTU: WorkType[] = ['RECORDING', 'EDITING', 'REPAIRS'];
+
+/** Ma tenhle druh prace v rozpoctu svuj vlastni strop? */
+export function maVlastniRozpocet(workType: WorkType): boolean {
+  return workType === 'RECORDING' || workType === 'EDITING';
 }
 
 /** Vychozi hodinova sazba zvukare, kdyz ji nema u uctu vyplnenou. */
