@@ -221,6 +221,7 @@ async function main() {
   await projektGregorZCaflou();
   await oznacCastiZakazek();
   await klientAudiolibrixu();
+  await adresyStudii();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -1836,6 +1837,76 @@ async function klientAudiolibrixu() {
     console.log(`  klient Audiolibrixu doplnen: Libor Bohm u ${vysledek.count} projektu`);
   } catch (err) {
     console.warn('  klienta Audiolibrixu se nepodarilo doplnit:', err);
+  }
+}
+
+/**
+ * KAM SE MA HOST DOSTAVIT (zadani 30. 9. 2026: „nemuzu u studii v Brne
+ * napsat ke kazdemu svou adresu, jsou na ruznem miste" + „zkus ty informace
+ * doplnit z naseho webu, je to tam vsechno popsane").
+ *
+ * Adresa a parkovani jsou u studia od 30. 9. 2026 (kvuli pozvankam na
+ * nataceni) a doted byla prazdna. Texty jsou doslova z mediaspace.cz/cs/
+ * kontakt - at si je nikdo neopisuje rucne a at se shoduji s tim, co uz
+ * klientum rikame na webu.
+ *
+ * DOPLNUJE JEN PRAZDNE. Co si tym u studia napsal sam, ma prednost - seed
+ * do toho nesaha ani pri prvnim behu. Znamka v Counteru pak zaridi, ze se
+ * to nepokousi znovu pri kazdem nasazeni.
+ */
+async function adresyStudii() {
+  const ZNAMKA = 'adresy-studii-z-webu';
+  const STUDIA: { nazev: string; adresa: string; parkovani: string }[] = [
+    {
+      nazev: 'Brno I',
+      adresa: 'Pod kaštany 2307/30, 616 00 Brno-Žabovřesky',
+      parkovani:
+        'Parkovat můžete v okolí na modrých zónách, ve všední dny 6:00–17:00 bezplatně; o víkendu jsou modré zóny zdarma. Při příjezdu po 17:00 vám parkování rádi zařídíme přes parkovací systém. MHD: zastávka Klusáčkova nebo Tábor.',
+    },
+    {
+      nazev: 'Brno II',
+      adresa: 'Veveří 102, 616 00 Brno-Žabovřesky',
+      parkovani:
+        'Zaparkujete na soukromém parkovišti přímo před budovou Centrum Veveří nebo za ní, případně v okolí na modrých zónách (všední dny 6:00–17:00 bezplatně, o víkendu zdarma). Při příjezdu po 17:00 vám parkování rádi zařídíme přes parkovací systém; po domluvě je i místo pro hosty. MHD: zastávka Tábor.',
+    },
+    {
+      nazev: 'Praha',
+      adresa: 'Bohuslava ze Švamberka 8, 140 00 Praha 4',
+      parkovani:
+        'V okolí jsou placené zóny, zhruba 20 Kč za hodinu. MHD: asi 200 m od stanice metra Pražského povstání (C).',
+    },
+    {
+      nazev: 'London',
+      adresa: '99-103 Lomond Grove, London SE5 7HN, Spojené království',
+      parkovani: '',
+    },
+  ];
+
+  try {
+    if (await prisma.counter.findUnique({ where: { name: ZNAMKA } })) return;
+
+    let doplneno = 0;
+    for (const s of STUDIA) {
+      const studio = await prisma.studio.findFirst({
+        where: { name: { equals: s.nazev, mode: 'insensitive' } },
+        select: { id: true, adresa: true, parkovani: true },
+      });
+      if (!studio) {
+        console.warn(`  studio ${s.nazev} v portalu neni, adresu preskakuji`);
+        continue;
+      }
+      const data: { adresa?: string; parkovani?: string } = {};
+      if (!studio.adresa?.trim()) data.adresa = s.adresa;
+      if (s.parkovani && !studio.parkovani?.trim()) data.parkovani = s.parkovani;
+      if (Object.keys(data).length === 0) continue;
+      await prisma.studio.update({ where: { id: studio.id }, data });
+      doplneno += 1;
+    }
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+    console.log(`  adresy studii doplneny z webu: ${doplneno}`);
+  } catch (err) {
+    console.warn('  adresy studii se nepodarilo doplnit:', err);
   }
 }
 
