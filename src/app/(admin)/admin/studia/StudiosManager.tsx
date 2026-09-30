@@ -146,7 +146,24 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
         </div>
 
         {otevrene && (
-          <div className="flex-1 min-w-0 bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-5">
+          /**
+           * KLÍČ JE ID STUDIA (30. 9. 2026: „ta studia se pořád nechovají
+           * nezávisle! Když něco vyplním, změní se to u všech").
+           *
+           * Políčka jsou neřízená (`defaultValue` + uložení na `onBlur`), a to
+           * se s přepínáním studií v levém sloupci nesnese: React při přepnutí
+           * poznal tentýž `<input>` na tomtéž místě, nechal v něm napsaný text
+           * a `defaultValue` už se podruhé nepoužije. Vypadalo to, že mají
+           * všechna studia tutéž adresu - a kdo po přepnutí klepl mimo, uložil
+           * cizí text do dalšího studia.
+           *
+           * S klíčem React celý panel při přepnutí složí znovu, takže se
+           * všechna políčka - včetně pracovní doby - načtou z vybraného studia.
+           */
+          <div
+            key={otevrene.id}
+            className="flex-1 min-w-0 bg-surface rounded-card border border-line shadow-sm p-5 flex flex-col gap-5"
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <label className="flex flex-col gap-1.5 sm:col-span-2">
                 <span className="text-sm font-body text-ink">{t('studia.nazev')}</span>
