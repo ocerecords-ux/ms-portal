@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAccessToken } from '@/lib/googleDrive';
-import { nactiZDisku } from '@/lib/preposlechDriveServer';
+import { souborPreposlechu } from '@/lib/preposlechDriveServer';
 import { pristupKPreposlechu } from '@/lib/preposlechPristup';
 
 /**
@@ -10,7 +10,12 @@ import { pristupKPreposlechu } from '@/lib/preposlechPristup';
  * Posílá se PROUDEM a s podporou Range, aby přehrávač uměl skákat v nahrávce
  * a nemusel stahovat hodinovou stopu celou, než začne hrát. Soubor se vydá
  * jen tehdy, když je opravdu mezi stopami nebo textem toho projektu - ID
- * chodí z prohlížeče, takže se ověřuje proti čerstvému seznamu ze složky.
+ * chodí z prohlížeče, takže se ověřuje proti seznamu ze složky.
+ *
+ * Ten seznam se drží krátce v paměti (viz souborPreposlechu). Prohlížeč si
+ * o nahrávku říká po kouscích a jeden poslech jich pošle desítky; načítat
+ * kvůli každému z nich znovu celou složku na Disku byl hlavní důvod, proč se
+ * AudioTagger rozjížděl osm až deset vteřin (30. 9. 2026).
  */
 export const dynamic = 'force-dynamic';
 
@@ -21,14 +26,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const fileId = req.nextUrl.searchParams.get('soubor');
   if (!fileId) return NextResponse.json({ error: 'Chybí ID souboru.' }, { status: 400 });
 
-  const obsah = await nactiZDisku(params.id);
-  if (!obsah.ok) return NextResponse.json({ error: obsah.duvod }, { status: 409 });
-
-  const stopa = obsah.stopy.find((s) => s.id === fileId);
-  const jeText = obsah.text?.id === fileId;
-  if (!stopa && !jeText) {
-    return NextResponse.json({ error: 'Soubor k tomuto projektu nepatří.' }, { status: 403 });
-  }
+  const soubor = await souborPreposlechu(params.id, fileId);
+  if (!soubor.ok) return NextResponse.json({ error: soubor.duvod }, { status: soubor.status });
 
   const token = await getAccessToken();
   if (!token) return NextResponse.json({ error: 'Napojení na Disk není nastavené.' }, { status: 503 });
@@ -45,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 
   const hlavicky = new Headers();
-  hlavicky.set('Content-Type', odpoved.headers.get('content-type') || stopa?.mime || 'application/octet-stream');
+  hlavicky.set('Content-Type', odpoved.headers.get('content-type') || soubor.mime || 'application/octet-stream');
   for (const klic of ['content-length', 'content-range', 'accept-ranges']) {
     const hodnota = odpoved.headers.get(klic);
     if (hodnota) hlavicky.set(klic, hodnota);

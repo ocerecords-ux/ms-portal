@@ -365,6 +365,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Nahrávku se nepodařilo přehrát.',
     en: 'The recording could not be played.',
   },
+  'preposlech.nacitamZvuk': {
+    cs: 'Načítám nahrávku…',
+    en: 'Loading the recording…',
+  },
   'preposlech.chybaSlozka': {
     cs: 'Složku projektu se nepodařilo načíst.',
     en: 'The project folder could not be loaded.',

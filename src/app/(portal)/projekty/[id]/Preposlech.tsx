@@ -344,6 +344,29 @@ export function Preposlech({
   const celaObrazovkaRef = useRef<HTMLDivElement | null>(null);
   const [celaObrazovka, setCelaObrazovka] = useState(false);
   const [chybaHlaska, setChybaHlaska] = useState<string | null>(null);
+  /**
+   * PŘEHRÁVAČ PRÁVĚ NAČÍTÁ (30. 9. 2026: „občas si lidi stěžujou na
+   * AudioTagger, že někdy trvá, než začne reagovat").
+   *
+   * Nahrávka teče proudem z Disku, takže po přepnutí stopy nebo po přetočení
+   * chvíli trvá, než je z čeho hrát. Do teď to vypadalo, že se nic neděje -
+   * nebo rovnou vyskočila červená hláška. Tohle je stav mezi tím.
+   */
+  const [nacitamZvuk, setNacitamZvuk] = useState(false);
+  const zaneprazdnenRef = useRef(false);
+
+  /** Přehrávač je zaneprázdněný - načítá stopu nebo se přetáčí. */
+  const zaneprazdnen = useCallback((ano: boolean) => {
+    zaneprazdnenRef.current = ano;
+    setNacitamZvuk(ano);
+  }, []);
+
+  /** Smaže hlášku o přehrávání, jakmile se zvuk rozjede. Ostatních se nedotkne. */
+  const zapomenChybuZvuku = useCallback(() => {
+    setChybaHlaska((h) =>
+      h === t('preposlech.chybaPrehrani') || h === t('preposlech.chybaStopa') ? null : h,
+    );
+  }, [t]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const stopyRef = useRef<Stopa[]>([]);
@@ -553,15 +576,28 @@ export function Preposlech({
    * DÉLKY JEDNOTLIVÝCH STOP (25. 9. 2026), klíč je pořadí stopy od 1.
    * Zjišťují se jedna po druhé z hlavičky souboru - najednou by dvanáct
    * požadavků na Disk zbytečně ucpalo přehrávání.
+   *
+   * A USTUPUJÍ PŘEHRÁVÁNÍ (30. 9. 2026). Jedna po druhé nestačilo: u knihy
+   * o čtyřiceti stopách běželo zjišťování délek ještě dlouho po otevření
+   * a soupeřilo o linku s tím, co si člověk zrovna pustil - odtud ty vteřiny
+   * čekání, než se stopa rozjela. Dokud se přehrávač načítá nebo přetáčí,
+   * další délka se nezjišťuje.
    */
   const [delkyStop, setDelkyStop] = useState<Record<number, number>>({});
   const zjistujiDelky = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let zrusit = false;
+    const pockej = (ms: number) => new Promise((h) => setTimeout(h, ms));
     const nactiPostupne = async () => {
       for (let i = 0; i < stopy.length; i += 1) {
         if (zrusit) return;
+        // Dokud přehrávač načítá, počká se. Strop je kvůli tomu, aby délky
+        // nezůstaly nezjištěné navždycky, kdyby se stav načítání zasekl.
+        for (let cekani = 0; zaneprazdnenRef.current && cekani < 40; cekani += 1) {
+          await pockej(500);
+          if (zrusit) return;
+        }
         const stopa = stopy[i];
         const klic = `${i + 1}:${stopa.url}`;
         if (zjistujiDelky.current.has(klic)) continue;
@@ -868,6 +904,8 @@ export function Preposlech({
       return;
     }
     zdrojStopyRef.current = stopa.url;
+    zaneprazdnenRef.current = true;
+    setNacitamZvuk(true);
 
     /**
      * STAŽENÁ STOPA HRAJE Z POČÍTAČE (offline, 21. 9. 2026). Přes blob, ne
@@ -894,17 +932,41 @@ export function Preposlech({
     dokonci();
   }, []);
 
-  function prehrajNeboPauzni() {
+  /**
+   * JEDEN POKUS NAVÍC MÍSTO ČERVENÉ HLÁŠKY (30. 9. 2026). Stopa teče proudem
+   * z Disku; když se zrovna načítá nebo se právě přetočilo, prohlížeč `play()`
+   * odmítne - a do teď z toho byla hláška „Nahrávku se nepodařilo přehrát",
+   * přestože o vteřinu později by to šlo. Zkusí se to proto ještě jednou.
+   */
+  async function prehrajNeboPauzni() {
     const audio = audioRef.current;
     if (!audio || aktivni === null) return;
-    if (audio.paused) void audio.play().catch(() => setChybaHlaska(t('preposlech.chybaPrehrani')));
-    else audio.pause();
+    if (!audio.paused) {
+      audio.pause();
+      return;
+    }
+    zapomenChybuZvuku();
+    try {
+      await audio.play();
+    } catch {
+      await new Promise((h) => setTimeout(h, 700));
+      if (!audioRef.current || audioRef.current !== audio) return;
+      try {
+        await audio.play();
+      } catch {
+        setChybaHlaska(t('preposlech.chybaPrehrani'));
+      }
+    }
   }
 
   const skoc = useCallback((kam: number) => {
     const audio = audioRef.current;
     if (!audio || !Number.isFinite(audio.duration)) return;
     const cil = Math.max(0, Math.min(kam, audio.duration));
+    // Přetočení znamená nový kus souboru z Disku - dokud nedojde, je
+    // přehrávač zaneprázdněný a nic dalšího mu nemá lézt do cesty.
+    zaneprazdnenRef.current = true;
+    setNacitamZvuk(true);
     audio.currentTime = cil;
     setPozice(cil);
   }, []);
@@ -1955,10 +2017,26 @@ export function Preposlech({
         </div>
       )}
 
-      {/* Prehravac sam o sobe nic nekresli - zvuk tece proudem z Disku. */}
+      {/* Prehravac sam o sobe nic nekresli - zvuk tece proudem z Disku.
+          `preload="metadata"` zustava schvalne: stopy jsou WAVy o desitkach
+          megabajtu a predplnovani kazde, na kterou clovek jen kliknul, by
+          teklo pres portal zbytecne. Cekani na start resi to, ze server uz
+          nesaha pri kazdem kousku na Disk pro seznam slozky. */}
       <audio
         ref={audioRef}
         preload="metadata"
+        onWaiting={() => zaneprazdnen(true)}
+        onSeeking={() => zaneprazdnen(true)}
+        onSeeked={() => zaneprazdnen(false)}
+        onCanPlay={() => {
+          zaneprazdnen(false);
+          zapomenChybuZvuku();
+        }}
+        onPlaying={() => {
+          zaneprazdnen(false);
+          zapomenChybuZvuku();
+        }}
+        onStalled={() => zaneprazdnen(true)}
         onLoadedMetadata={(e) => {
           const d = e.currentTarget.duration || 0;
           setDelka(d);
@@ -1993,7 +2071,10 @@ export function Preposlech({
             );
           }
         }}
-        onError={() => setChybaHlaska(t('preposlech.chybaStopa'))}
+        onError={() => {
+          zaneprazdnen(false);
+          setChybaHlaska(t('preposlech.chybaStopa'));
+        }}
         className="hidden"
       />
 
@@ -2225,6 +2306,11 @@ export function Preposlech({
         </div>
       </div>
 
+      {!chybaHlaska && nacitamZvuk && (
+        <p className="text-sm text-muted bg-surfaceSoft border border-line rounded-lg px-4 py-3 m-0">
+          {t('preposlech.nacitamZvuk')}
+        </p>
+      )}
       {chybaHlaska && (
         <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-4 py-3 m-0">{chybaHlaska}</p>
       )}

@@ -79,6 +79,71 @@ export async function slozkaProjektu(
   return null;
 }
 
+/**
+ * KRÁTKÁ PAMĚŤ NA OBSAH SLOŽKY (30. 9. 2026: „občas si lidi stěžujou na
+ * AudioTagger, že někdy trvá, než začne reagovat").
+ *
+ * Nahrávka teče do prohlížeče přes portál a prohlížeč si o ni říká PO KOUSCÍCH
+ * (Range) - jedno přetočení v hodinové stopě je nový požadavek, a jich jsou
+ * při poslechu desítky. Každý z nich přitom sahal na Disk pro celý seznam
+ * složky, jen aby ověřil, že ten soubor k projektu patří. K tomu si stránka
+ * po otevření zjišťuje délky všech stop, jednu po druhé - u knihy o čtyřiceti
+ * stopách to bylo čtyřicet výpisů složky navíc. Odtud těch osm až deset vteřin,
+ * než se stopa rozjela.
+ *
+ * Seznam se proto na minutu drží v paměti běžící instance. Kdo v tu chvíli
+ * do složky přidá stopu, uvidí ji po minutě (a hned, když si obnoví seznam
+ * stop - ten paměť neobchází, aby zůstal čerstvý). Soubor odebraný ze složky
+ * může minutu ještě dohrát; je to soubor projektu, ke kterému ten člověk
+ * přístup má, takže tím nic neuniká.
+ */
+const PAMET_TTL_MS = 60_000;
+/** Kolik projektů si najednou pamatovat - ať paměť instance neroste bez konce. */
+const PAMET_STROP = 50;
+
+type PametSlozky = { soubory: Map<string, string | null>; kdy: number };
+const pametSlozek = new Map<string, PametSlozky>();
+
+function zapamatuj(caflouProjectId: string, obsah: PreposlechZDisku & { ok: true }): PametSlozky {
+  const soubory = new Map<string, string | null>();
+  for (const stopa of obsah.stopy) soubory.set(stopa.id, stopa.mime);
+  if (obsah.text) soubory.set(obsah.text.id, 'application/pdf');
+  const zaznam = { soubory, kdy: Date.now() };
+  pametSlozek.set(caflouProjectId, zaznam);
+  while (pametSlozek.size > PAMET_STROP) {
+    const nejstarsi = pametSlozek.keys().next().value;
+    if (nejstarsi === undefined) break;
+    pametSlozek.delete(nejstarsi);
+  }
+  return zaznam;
+}
+
+/**
+ * Patří tenhle soubor k přeposlechu tohohle projektu? Vrací i jeho typ, ať
+ * volající nemusí seznam procházet znovu.
+ *
+ * Když soubor v zapamatovaném seznamu NENÍ, seznam se načte znovu - jinak by
+ * stopa přidaná před chvílí celou minutu hlásila, že k projektu nepatří.
+ */
+export async function souborPreposlechu(
+  caflouProjectId: string,
+  fileId: string,
+): Promise<{ ok: true; mime: string | null } | { ok: false; status: 403 | 409; duvod: string }> {
+  const zaznam = pametSlozek.get(caflouProjectId);
+  if (zaznam && Date.now() - zaznam.kdy < PAMET_TTL_MS && zaznam.soubory.has(fileId)) {
+    return { ok: true, mime: zaznam.soubory.get(fileId) ?? null };
+  }
+
+  const obsah = await nactiZDisku(caflouProjectId);
+  if (!obsah.ok) return { ok: false, status: 409, duvod: obsah.duvod };
+
+  const cerstvy = zapamatuj(caflouProjectId, obsah);
+  if (!cerstvy.soubory.has(fileId)) {
+    return { ok: false, status: 403, duvod: 'Soubor k tomuto projektu nepatří.' };
+  }
+  return { ok: true, mime: cerstvy.soubory.get(fileId) ?? null };
+}
+
 export async function nactiZDisku(caflouProjectId: string): Promise<PreposlechZDisku> {
   const slozka = await slozkaProjektu(caflouProjectId);
   if (!slozka) {
