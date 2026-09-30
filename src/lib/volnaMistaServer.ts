@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/db';
 import { BLOCKING_SLOT_STATES } from '@/lib/calendar';
-import { POZNAMKA_NAVRH_HERCE, klicMista, mestoStudia, spocitejVolnaMista } from '@/lib/volnaMista';
+import {
+  POZNAMKA_NAVRH_HERCE,
+  klicMista,
+  mestoStudia,
+  prvniDenFrekvence,
+  spocitejVolnaMista,
+} from '@/lib/volnaMista';
 
 export { mestoStudia };
 
@@ -46,11 +52,16 @@ export async function studiaNabidky(studioId: string, actorUserId: string | null
   return vsechna.filter((s) => mesta.has(mestoStudia(s)));
 }
 
-/** Zítřek 0:00 v Praze - dnešek se už nenabízí, na to je pozdě. */
-function zitra(): Date {
-  const dnes = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(new Date());
-  const d = new Date(`${dnes}T00:00:00.000Z`);
-  d.setUTCDate(d.getUTCDate() + 1);
+/**
+ * Od kdy se vůbec smí nabízet - půlnoc dne, který je o `DNU_NA_PRIPRAVU` dál
+ * (zadání 30. 9. 2026: „nastavit defaultně první možný termín frekvence za
+ * 7 dní"). Do té doby to byl zítřek.
+ *
+ * Je to STROP ZE SERVERU, ne jen předvyplnění formuláře: i kdyby někdo do
+ * období napsal dřívější datum, dřívější místa se nenabídnou.
+ */
+function nejdriveMozne(): Date {
+  const d = new Date(`${prvniDenFrekvence()}T00:00:00.000Z`);
   // Pulnoc v Praze je nejpozdeji ve 23:00 UTC predchoziho dne - o dve hodiny
   // driv to je bezpecne pro letni i zimni cas a rano se stejne netoci.
   return new Date(d.getTime() - 2 * 3600 * 1000);
@@ -117,7 +128,7 @@ export async function volnaMistaProParametry(p: {
     delkaMinut: p.sessionMinutes,
     obsazeno: [...terminy, ...udalosti, ...drzene],
     hercovy: [...hercovy, ...drzene],
-    nejdrive: zitra(),
+    nejdrive: nejdriveMozne(),
   });
 
   /**

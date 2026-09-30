@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { RECORDING_STATUS_CLASSES, RECORDING_STATUS_LABELS, formatDateTime, sessionsForPages } from '@/lib/calendar';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
-import { mestoStudia, posledniDenFrekvence } from '@/lib/volnaMista';
+import { mestoStudia, posledniDenFrekvence, prvniDenFrekvence } from '@/lib/volnaMista';
 import { VyberStudii } from '@/components/VyberStudii';
 
 type Nabidka = {
@@ -71,8 +71,13 @@ export function RecordingSection({
   canManage: boolean;
 }) {
   const router = useRouter();
-  // Dnesek se uz nenabizi - obdobi zacina zitra.
-  const zitra = new Date(Date.now() + 24 * 3600 * 1000);
+  /**
+   * Období začíná za týden (zadání 30. 9. 2026: „nastavit defaultně první
+   * možný termín frekvence za 7 dní"). Herec musí nabídku dostat, otevřít ji
+   * a vybrat si, a produkce pak termín potvrdit - na zítřek se to nestihne.
+   * Stejné číslo hlídá i server, takže dřívější místa se stejně nenabídnou.
+   */
+  const prvniMozny = prvniDenFrekvence();
   const zaMesic = new Date();
   zaMesic.setMonth(zaMesic.getMonth() + 1);
 
@@ -82,7 +87,7 @@ export function RecordingSection({
     studioId: studios[0]?.id ?? '',
     requiredSessions: Math.max(1, sessionsFromPages),
     pageCount: pageCount ?? 0,
-    periodFrom: zitra.toISOString().slice(0, 10),
+    periodFrom: prvniMozny,
     // Posledni mozna frekvence = dva dny pred dokoncenim. Bez data
     // dokonceni mesic dopredu.
     periodTo: datumOdevzdani ? posledniDenFrekvence(datumOdevzdani) : zaMesic.toISOString().slice(0, 10),

@@ -22,9 +22,10 @@ import {
  * - den od zítřka do posledního dne období (poslední možná frekvence),
  * - okno podle zkratek studia (9–13, 13–17); studio bez zkratek se rozdělí
  *   na bloky o délce frekvence od začátku pracovní doby,
- * - v pracovní době studia, VČETNĚ víkendů „po domluvě" (upřesnění
- *   19. 9. 2026: „pak bych takto nabídnul i víkendy") - víkendové místo nese
- *   příznak `poDomluve` a herec u něj vidí, že se potvrzuje se zvukařem,
+ * - v pracovní době studia, ale JEN VE VŠEDNÍ DEN (zadání 30. 9. 2026:
+ *   „zkusme v plánovacím kalendáři vyhodit víkendy"). Do té doby se sobota
+ *   a neděle nabízely s příznakem „po domluvě" (upřesnění 19. 9. 2026) -
+ *   v praxi se na ně ale stejně netočí a v nabídce jen dělaly hluk,
  * - nic, co je v kalendáři obsazené: vybraný nebo potvrzený termín jiné
  *   nabídky, jakákoli událost ve studiu (natáčení, střih, svátek, údržba)
  *   a jiné natáčení téhož herce.
@@ -103,8 +104,13 @@ export function spocitejVolnaMista(vstup: {
     for (const den of dny) {
       const [y, m, d] = den.split('-').map(Number);
       const poledne = zonedToUtc(y, m, d, 12 * 60, studio.timezone);
-      const pravidlo = studio.hours.find((h) => h.weekday === weekdayInZone(poledne, studio.timezone));
-      // Zavreno - nic. Vikend "po domluve" se nabizi taky, jen s priznakem.
+      const denVTydnu = weekdayInZone(poledne, studio.timezone);
+      // Vikend se nenabizi vubec (30. 9. 2026). Otviraci doba studia na sobotu
+      // nebo nedeli tim zustava nedotcena - jen se z ni nedelaji nabidnuta
+      // mista; rucne zapsat nataceni na vikend jde dal.
+      if (jeVikend(denVTydnu)) continue;
+      const pravidlo = studio.hours.find((h) => h.weekday === denVTydnu);
+      // Zavreno - nic.
       if (!pravidlo) continue;
 
       for (const okno of oknaDne(studio, pravidlo, vstup.delkaMinut)) {
@@ -141,6 +147,32 @@ export function posledniDenFrekvence(datumOdevzdani: string): string {
   const d = new Date(`${datumOdevzdani}T12:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() - DNU_PRED_DOKONCENIM);
   return d.toISOString().slice(0, 10);
+}
+
+/**
+ * KOLIK DNÍ DOPŘEDU SE NABÍZÍ NEJBLIŽŠÍ FREKVENCE (zadání 30. 9. 2026:
+ * „nastavit defaultně první možný termín frekvence za 7 dní").
+ *
+ * Do té doby se nabízelo od zítřka. Herec ale musí nabídku dostat, otevřít ji
+ * a vybrat si - a produkce pak termín potvrdit; na zítřek se to nestihne.
+ * Týden je i lhůta, se kterou se herci běžně domlouvají.
+ */
+export const DNU_NA_PRIPRAVU = 7;
+
+/**
+ * První den, kdy může být frekvence - „YYYY-MM-DD" v zadaném pásmu.
+ * Používá to formulář v portálu i výpočet nabídky, ať se neliší.
+ */
+export function prvniDenFrekvence(ted: Date = new Date(), pasmo = 'Europe/Prague'): string {
+  const dnes = new Intl.DateTimeFormat('en-CA', { timeZone: pasmo }).format(ted);
+  const d = new Date(`${dnes}T12:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + DNU_NA_PRIPRAVU);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Sobota nebo neděle? Dny v týdnu jsou jako v JS: 0 = neděle. */
+export function jeVikend(denVTydnu: number): boolean {
+  return denVTydnu === 0 || denVTydnu === 6;
 }
 
 /** Klíč místa - podle něj se pozná, co v nabídce už je. */

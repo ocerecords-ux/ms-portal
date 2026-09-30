@@ -39,7 +39,8 @@ Tlačítkem **Odeslat herci** se nabídka založí a rovnou odejde e-mailem. Kdy
 
 # 2. Co se do nabídky počítá
 
-- Frekvence podle zkratek studia — **9:00–13:00** a **13:00–17:00** — v otevírací době studia, včetně víkendů.
+- Frekvence podle zkratek studia — **9:00–13:00** a **13:00–17:00** — v otevírací době studia, **jen ve všední dny**. Sobota a neděle se od 30. 9. 2026 nenabízejí vůbec; ručně zapsat víkendové natáčení do kalendáře jde dál.
+- **Nejdřív za týden.** Období se předvyplní od dne, který je o sedm dní dál, a dřívější místa se nenabídnou, ani kdyby někdo do období napsal bližší datum — herec musí nabídku dostat, otevřít ji a vybrat si, a produkce pak termín potvrdit.
 - **Vynechá se** všechno, co je v kalendáři obsazené: potvrzené a držené termíny jiných nabídek, jakákoli událost ve studiu (natáčení, střih, casting, svátek, údržba) a jiné natáčení téhož herce.
 - **Jedno místo za město.** Když je stejný čas volný v obou brněnských studiích, herec ho uvidí jen jednou a patří **Brnu I**. Brno II dostane jen tehdy, když je Brno I v tu dobu obsazené.
 - Nabídka se srovnává s kalendářem **pokaždé, když ji kdo otevře** — co se mezitím obsadí, zmizí; co se uvolní, přibude.
@@ -48,7 +49,7 @@ Tlačítkem **Odeslat herci** se nabídka založí a rovnou odejde e-mailem. Kdy
 
 Herec dostane e-mail s odkazem (přihlašovat se nemusí; kdo účet má, najde totéž v **Moje termíny**).
 
-Vidí jen **dny a časy za město** — ne studio, ne víkendy zvlášť. Kliknutím na termín ho zaškrtne; dva termíny ve stejný čas vybrat nejde.
+Vidí jen **dny a časy za město** — ne studio. Kliknutím na termín ho zaškrtne; dva termíny ve stejný čas vybrat nejde.
 
 ![Stránka, kde si herec vybírá termíny](/navody/terminy-2.png)
 
