@@ -19,7 +19,7 @@ import type { Puvodce } from '@/lib/projektLogServer';
  * tam stav zpátky by byl přesně ten nepořádek, kterému se chceme vyhnout.
  * Fajfka se uloží vždycky, i když stav zůstane.
  */
-const PREKLOPENI: Record<string, string> = {
+export const PREKLOPENI: Record<string, string> = {
   'Natáčíme': 'Dotočeno',
   'Natáčíme/stříháme': 'Dotočeno/stříháme',
 };

@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BublinaHerce, type Herec } from './VyberHerce';
 import { TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
+import { coSeStane, type NahledDotoceni } from '@/lib/dotoceni';
 
 /**
  * Výběr VÍCE herců k projektu (zadání 10. 9. 2026: „ještě nemám v detailu
@@ -42,6 +43,7 @@ export function VyberHercu({
   strany,
   normostrany,
   onZmenitNormostrany,
+  nacistNahledDotoceni,
 }: {
   herci: Herec[];
   /** ID vybraných účtů v pořadí - první je Herec 1. */
@@ -78,6 +80,16 @@ export function VyberHercu({
    */
   normostrany?: Record<string, number>;
   onZmenitNormostrany?: (userId: string, pageCount: number | null) => void;
+  /**
+   * POJISTKA PŘED DOTOČENO (zadání 30. 9. 2026: „dal bych tam pojistku, aby
+   * když kliknu na dotočeno s hercem, aby se to ještě zeptalo a ukázalo, co
+   * se stane — na koho jde notifikace").
+   *
+   * Vrací, co by se stalo; okno to vypíše a teprve pak se fajfka uloží. Když
+   * se náhled nepodaří načíst, potvrzení se ukáže i tak - jen bez výčtu; ptát
+   * se musíme tak jako tak.
+   */
+  nacistNahledDotoceni?: (userId: string) => Promise<NahledDotoceni | null>;
 }) {
   const [hledani, setHledani] = useState('');
   const [otevreno, setOtevreno] = useState(false);
@@ -188,6 +200,33 @@ export function VyberHercu({
     };
   }, [akce]);
 
+  /**
+   * Otevřené potvrzení „opravdu dotočeno?" - drží se v něm i načtený náhled.
+   * `nacitam` je jen kvůli tomu, aby okno neblikalo prázdné.
+   */
+  const [potvrzeni, setPotvrzeni] = useState<{
+    id: string;
+    nacitam: boolean;
+    nahled: NahledDotoceni | null;
+  } | null>(null);
+
+  // Zavření okna s akcemi zavře i rozepsané potvrzení - jinak by se otevřelo
+  // u dalšího herce s cizím výčtem.
+  useEffect(() => {
+    if (!akce) setPotvrzeni(null);
+  }, [akce]);
+
+  function zeptejSeNaDotoceno(id: string) {
+    if (!nacistNahledDotoceni) {
+      onPrepnoutDotoceno?.(id, true);
+      return;
+    }
+    setPotvrzeni({ id, nacitam: true, nahled: null });
+    void nacistNahledDotoceni(id)
+      .then((nahled) => setPotvrzeni((p) => (p?.id === id ? { id, nacitam: false, nahled } : p)))
+      .catch(() => setPotvrzeni((p) => (p?.id === id ? { id, nacitam: false, nahled: null } : p)));
+  }
+
   const otevrenyIndex = akce ? hodnoty.indexOf(akce.id) : -1;
   const otevrenyHerec = akce ? vybrani.find((h) => h.id === akce.id) ?? null : null;
   const otevrenyDotoceno = akce ? dotoceni?.[akce.id] : undefined;
@@ -234,10 +273,14 @@ export function VyberHercu({
             </span>
           </span>
 
-          {onPrepnoutDotoceno && (
+          {onPrepnoutDotoceno && potvrzeni?.id !== akce.id && (
             <PolozkaOkna
               disabled={disabled || dotoceniBezi === akce.id}
-              onClick={() => onPrepnoutDotoceno(akce.id, !otevrenyDotoceno)}
+              onClick={() => {
+                // Zrušení se neptá - nic se tím nikam neposílá.
+                if (otevrenyDotoceno) onPrepnoutDotoceno(akce.id, false);
+                else zeptejSeNaDotoceno(akce.id);
+              }}
             >
               {dotoceniBezi === akce.id
                 ? 'Ukládám…'
@@ -245,6 +288,38 @@ export function VyberHercu({
                   ? 'Zrušit dotočeno'
                   : 'Označit dotočeno'}
             </PolozkaOkna>
+          )}
+
+          {/* POTVRZENÍ S VÝČTEM, CO SE STANE (zadání 30. 9. 2026). */}
+          {onPrepnoutDotoceno && potvrzeni?.id === akce.id && (
+            <div className="flex flex-col gap-2 rounded-lg bg-field px-2.5 py-2">
+              <span className="font-heading font-semibold text-sm text-ink">Označit dotočeno?</span>
+              {potvrzeni.nacitam ? (
+                <span className="text-xs font-body text-muted">Zjišťuji, co se stane…</span>
+              ) : (
+                <VycetCoSeStane nahled={potvrzeni.nahled} />
+              )}
+              <div className="flex items-center gap-2 pt-0.5">
+                <button
+                  type="button"
+                  disabled={disabled || dotoceniBezi === akce.id}
+                  onClick={() => {
+                    onPrepnoutDotoceno(akce.id, true);
+                    setPotvrzeni(null);
+                  }}
+                  className="rounded-lg bg-brand-purple text-white font-heading font-semibold text-xs px-3 py-1.5 border-0 cursor-pointer hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
+                >
+                  {dotoceniBezi === akce.id ? 'Ukládám…' : 'Ano, dotočeno'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPotvrzeni(null)}
+                  className="rounded-lg bg-transparent text-muted font-heading text-xs px-2 py-1.5 border-0 cursor-pointer hover:text-ink transition-colors"
+                >
+                  Zpět
+                </button>
+              </div>
+            </div>
           )}
 
           {/* POSLAT KLIENTOVI ZNOVU (zadání 16. 9. 2026). Klientovi se
@@ -363,6 +438,42 @@ export function VyberHercu({
 const SIRKA_OKNA = 230;
 
 /** Řádek v okně s akcemi - ať vypadají všechny stejně. */
+/**
+ * Výčet toho, co kliknutí udělá. U reklamy i u herce, který fajfku už má, se
+ * neřekne „stane se tohle", ale rovnou to, že se nestane nic - je to častější
+ * důvod, proč se člověk ptá.
+ */
+function VycetCoSeStane({ nahled }: { nahled: NahledDotoceni | null }) {
+  if (!nahled) {
+    return (
+      <span className="text-xs font-body text-muted">
+        Co se stane, se teď nepodařilo zjistit. Fajfka se uloží a zpráva odejde tak jako vždycky.
+      </span>
+    );
+  }
+  if (nahled.jeReklama) {
+    return (
+      <span className="text-xs font-body text-muted">
+        U reklamy se uloží jen fajfka — stav projektu se nemění a nikomu nic nechodí.
+      </span>
+    );
+  }
+  if (nahled.uzMa) {
+    return (
+      <span className="text-xs font-body text-muted">
+        {nahled.jmenoHerce} fajfku už má — znovu se nic neuloží ani neodešle.
+      </span>
+    );
+  }
+  return (
+    <ul className="m-0 pl-4 flex flex-col gap-1 text-xs font-body text-ink">
+      {coSeStane(nahled).map((veta) => (
+        <li key={veta}>{veta}</li>
+      ))}
+    </ul>
+  );
+}
+
 function PolozkaOkna({
   children,
   onClick,

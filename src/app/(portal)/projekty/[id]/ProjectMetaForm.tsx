@@ -7,6 +7,7 @@ import type { ProjectPriority } from '@prisma/client';
 import { PRIORITY_LABELS, projectTypeLabel } from '@/lib/projectTypes';
 import { IkonaPriority, VyberPriority } from '@/components/IkonaPriority';
 import { STAVY_PROJEKTU, barvaStavu, popisStavu, stavyProFirmu } from '@/lib/stavyProjektu';
+import type { NahledDotoceni } from '@/lib/dotoceni';
 import { stavySNotifikaci } from '@/lib/notifikaceFirmy';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { type Herec } from '../VyberHerce';
@@ -292,6 +293,26 @@ export function ProjectMetaForm({
    */
   const strany = posledniStranyHercu(natoceniZaznamy);
   const [dotoceniBezi, setDotoceniBezi] = useState<string | null>(null);
+  /**
+   * CO SE STANE, NEŽ SE KLIKNE (zadání 30. 9. 2026: „dal bych tam pojistku,
+   * aby když kliknu na dotočeno s hercem, aby se to ještě zeptalo a ukázalo,
+   * co se stane — na koho jde notifikace").
+   *
+   * Jen se ptá; nic se tím nemění. Když se to nepodaří, vrátí se `null`
+   * a okno se zeptá i tak - jen bez výčtu.
+   */
+  async function nahledDotoceni(userId: string) {
+    try {
+      const res = await fetch(
+        `/api/projekty/${encodeURIComponent(caflouProjectId)}/herci-dotoceno/nahled?userId=${encodeURIComponent(userId)}`,
+      );
+      if (!res.ok) return null;
+      return (await res.json()) as NahledDotoceni;
+    } catch {
+      return null;
+    }
+  }
+
   /** Vysledek tlacitka „Poslat klientovi" - kratka hlaska pod vyberem hercu. */
   const [zpravaKlientovi, setZpravaKlientovi] = useState<string | null>(null);
 
@@ -835,6 +856,7 @@ export function ProjectMetaForm({
               dotoceni={dotoceni}
               onPrepnoutDotoceno={(id, stav) => void prepniDotoceno(id, stav)}
               onPoslatKlientovi={(id) => void poslatKlientovi(id)}
+              nacistNahledDotoceni={nahledDotoceni}
               dotoceniBezi={dotoceniBezi}
               strany={strany}
               normostrany={normostrany}

@@ -4,8 +4,9 @@ import { zakladPortalu } from '@/lib/preposlechOdkaz';
 import { notify } from '@/lib/notifications';
 import { zapisNotifikaci } from '@/lib/projektLogServer';
 import { INTERNAL_ROLES } from '@/lib/roles';
-import { prehodStavPodleDotoceni, vratStavPoOdskrtnuti } from '@/lib/dotoceniStavServer';
+import { PREKLOPENI, prehodStavPodleDotoceni, vratStavPoOdskrtnuti } from '@/lib/dotoceniStavServer';
 import { isRodnyListProjectType } from '@/lib/priceList';
+import type { NahledDotoceni } from '@/lib/dotoceni';
 
 /**
  * Dotočený herec na projektu — jedno místo pro tlačítko i pro Bruna
@@ -297,4 +298,93 @@ export async function poslatKlientoviZnovu(
   });
 
   return { poslano: true, jmenoKlienta: klient.name || klient.email };
+}
+
+/**
+ * CO SE STANE, KDYŽ SE HERCI OZNAČÍ DOTOČENO (zadání 30. 9. 2026: „dal bych
+ * tam pojistku, aby když kliknu na dotočeno s hercem, aby se to ještě zeptalo
+ * a ukázalo, co se stane — na koho jde notifikace").
+ *
+ * Tlačítko do té doby odbavilo všechno naráz: zapsalo fajfku, mohlo přehodit
+ * stav projektu a rozeslalo maily — a kdo ho klikl omylem, zjistil to, až když
+ * klientovi přišla zpráva. Tohle jen SPOČÍTÁ, co by se stalo, a nic nemění;
+ * portál to ukáže v potvrzení.
+ *
+ * Záměrně se to ptá týchž zdrojů jako `oznacHerceDotoceno` — kdyby si náhled
+ * počítal příjemce po svém, dřív nebo později by sliboval něco jiného, než co
+ * se pak stane.
+ */
+export async function nahledDotoceni(
+  caflouProjectId: string,
+  userId: string,
+): Promise<NahledDotoceni | null> {
+  const [projekt, herec, uzJe] = await Promise.all([
+    prisma.projectMeta.findUnique({
+      where: { caflouProjectId },
+      select: {
+        statusName: true,
+        projectType: true,
+        klientUserId: true,
+        herci: { select: { id: true } },
+      },
+    }),
+    prisma.user.findFirst({ where: { id: userId, role: 'HEREC' }, select: { name: true, email: true } }),
+    prisma.herecDotocen.findUnique({
+      where: { caflouProjectId_userId: { caflouProjectId, userId } },
+      select: { dotocenoAt: true },
+    }),
+  ]);
+  if (!projekt || !herec) return null;
+
+  const jmenoHerce = herec.name || herec.email;
+  const jeReklama = await isRodnyListProjectType(projekt.projectType);
+  if (jeReklama) {
+    return {
+      jmenoHerce,
+      jeReklama: true,
+      uzMa: Boolean(uzJe),
+      stav: null,
+      zbyvaHercu: 0,
+      nasi: [],
+      klient: null,
+      klientDuvod: null,
+    };
+  }
+
+  const idHercu = projekt.herci.map((h) => h.id);
+  const dotoceno = idHercu.length
+    ? await prisma.herecDotocen.count({ where: { caflouProjectId, userId: { in: idHercu } } })
+    : 0;
+  // Kolik jich po tomhle kliknutí ještě bude chybět.
+  const zbyvaHercu = Math.max(0, idHercu.length - dotoceno - (uzJe ? 0 : 1));
+
+  const stavTed = (projekt.statusName ?? '').trim();
+  const cil = PREKLOPENI[stavTed];
+  const stav = cil && zbyvaHercu === 0 && idHercu.length > 0 ? { z: stavTed, na: cil } : null;
+
+  const [nasi, klient] = await Promise.all([
+    prisma.user
+      .findMany({
+        where: { active: true, dostavaDotoceno: true, role: { in: INTERNAL_ROLES } },
+        select: { name: true, email: true },
+      })
+      .then((lide) => lide.map((u) => u.name || u.email)),
+    projekt.klientUserId
+      ? prisma.user.findFirst({
+          where: { id: projekt.klientUserId, active: true, role: 'CLIENT' },
+          select: { name: true, email: true, dostavaDotocenoKlient: true },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  return {
+    jmenoHerce,
+    jeReklama: false,
+    uzMa: Boolean(uzJe),
+    stav,
+    zbyvaHercu,
+    nasi,
+    klient: klient?.dostavaDotocenoKlient ? klient.name || klient.email : null,
+    klientDuvod: !klient ? 'bez-klienta' : klient.dostavaDotocenoKlient ? null : 'nema-zapnuto',
+  };
 }
