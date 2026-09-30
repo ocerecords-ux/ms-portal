@@ -435,6 +435,14 @@ export async function uploadPdfToDriveFolder(
  *
  * Portál do dokumentu po vyrobení nesahá. Kdo potřebuje nový, vyrobí si ho
  * znovu a vznikne DALŠÍ soubor - přepsat rozepsaný text by byla škoda.
+ *
+ * NÁZEV SE NASTAVUJE JEŠTĚ JEDNOU PO NAHRÁNÍ (30. 9. 2026: „na disk se
+ * nepropisuje ten dokument z výstupů"). Dokumenty vyrobené tímhle tlačítkem
+ * ležely na Disku jako „Dokument bez názvu", přestože se `name` posílá
+ * v metadatech hned při nahrání: převod HTML → dokument Google si název
+ * přebíjí názvem, který si z HTML odvodí sám. Jeden dotaz navíc
+ * (renameDriveItem) je proti tomu jistota; kdyby selhal, dokument na Disku
+ * zůstane, jen se špatným jménem, a je to vidět v logu.
  */
 export async function vytvorDokumentZHtml(
   folderUrl: string,
@@ -469,7 +477,7 @@ export async function vytvorDokumentZHtml(
     ]);
 
     const res = await fetch(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,webViewLink',
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink',
       {
         method: 'POST',
         headers: {
@@ -487,8 +495,12 @@ export async function vytvorDokumentZHtml(
       return { ok: false, duvod: popisChybyDisku(res.status, telo) };
     }
 
-    const data = (await res.json()) as { id?: string; webViewLink?: string };
+    const data = (await res.json()) as { id?: string; name?: string; webViewLink?: string };
     if (!data.id) return { ok: false, duvod: 'Disk dokument přijal, ale nevrátil jeho ID.' };
+
+    // Název po převodu nesedí? Dorovnat. Viz poznámka nad funkcí.
+    if (data.name !== nazev) await renameDriveItem(data.id, nazev, token);
+
     return {
       ok: true,
       id: data.id,

@@ -140,13 +140,22 @@ const escapeHtml = (text: string): string =>
  * Odstavce z prostého textu. Prázdný řádek = nový odstavec, jednoduchý řádek
  * zůstane řádkem. Styl se píše rovnou do atributu: Disk si při převodu na
  * dokument bere inline styly, na <style> v hlavičce se spolehnout nedá.
+ *
+ * ODSAZENÍ NA ZAČÁTKU ŘÁDKU SE DRŽÍ NEZLOMITELNÝMI MEZERAMI (30. 9. 2026:
+ * „chci ať to vypadá na disku, jako v tom náhledu"). V prohlížeči ho udrží
+ * `white-space:pre-wrap`, jenže tuhle vlastnost převod na dokument Google
+ * neumí - scénář, který chodí odsazený, by se na Disku slepil doleva.
  */
 function odstavce(text: string, styl: string, stylPrvniho?: string): string {
   return text
     .split(/\n{2,}/)
     .map((odstavec, i) => {
       const pouzity = i === 0 && stylPrvniho ? stylPrvniho : styl;
-      return `<p style="${pouzity}">${escapeHtml(odstavec).replace(/\n/g, '<br>')}</p>`;
+      const telo = escapeHtml(odstavec)
+        .split('\n')
+        .map((radek) => radek.replace(/^ +/, (mezery) => '&nbsp;'.repeat(mezery.length)))
+        .join('<br>');
+      return `<p style="${pouzity}">${telo}</p>`;
     })
     .join('');
 }
@@ -156,6 +165,11 @@ function odstavce(text: string, styl: string, stylPrvniho?: string): string {
  * dokument Google jen v buňce tabulky. Logo je zelené, takže sedí na fialové
  * (zadání 26. 9. 2026: „pro dokumenty na bílém papíře použijme pod zelené
  * logo fialové pozadí").
+ *
+ * JEDNA TABULKA, NE TABULKA V TABULCE (30. 9. 2026). V prohlížeči vypadaly
+ * obě stejně, jenže vnořenou tabulku převod na dokument Google rozhází -
+ * fialový pruh se rozpadl na dva bloky a logo skončilo pod textem. Text
+ * a logo jsou proto dvě buňky téhož řádku a fialová je na obou.
  */
 function hlavicka(podklady: PodkladyTextu): string {
   const logo = podklady.logoUrl
@@ -163,19 +177,15 @@ function hlavicka(podklady: PodkladyTextu): string {
     : '';
 
   return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">
-<tr><td bgcolor="${FIALOVA}" style="background-color:${FIALOVA};padding:16pt 18pt">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">
 <tr>
-<td style="vertical-align:top">
-<p style="margin:0;font-family:Arial,sans-serif;font-size:8pt;letter-spacing:1.6pt;color:${ZELENA};text-transform:uppercase"><b>Natáčecí list</b></p>
+<td bgcolor="${FIALOVA}" style="background-color:${FIALOVA};padding:16pt 6pt 16pt 18pt;vertical-align:middle">
+<p style="margin:0;font-family:Arial,sans-serif;font-size:8pt;letter-spacing:1.6pt;color:${ZELENA};text-transform:uppercase"><b>NATÁČECÍ LIST</b></p>
 <p style="margin:5pt 0 0;font-family:Arial,sans-serif;font-size:19pt;line-height:1.15;color:#ffffff"><b>${escapeHtml(podklady.projekt)}</b></p>
 ${podklady.klient ? `<p style="margin:3pt 0 0;font-family:Arial,sans-serif;font-size:10pt;color:${FIALOVA_SVETLA}">${escapeHtml(podklady.klient)}</p>` : ''}
 </td>
-<td align="right" width="210" style="vertical-align:middle;text-align:right;width:158pt">${logo}</td>
+<td bgcolor="${FIALOVA}" align="right" width="210" style="background-color:${FIALOVA};padding:16pt 18pt 16pt 6pt;vertical-align:middle;text-align:right;width:158pt">${logo}</td>
 </tr>
-</table>
-</td></tr>
-<tr><td bgcolor="${ZELENA}" style="background-color:${ZELENA};font-size:1pt;line-height:3pt;height:3pt">&nbsp;</td></tr>
+<tr><td bgcolor="${ZELENA}" colspan="2" style="background-color:${ZELENA};font-size:1pt;line-height:3pt;height:3pt">&nbsp;</td></tr>
 </table>
 <p style="margin:7pt 0 0;font-family:Arial,sans-serif;font-size:8.5pt;color:${SEDA};text-align:right">Poslední úprava: ${escapeHtml(podklady.upraveno)}</p>`;
 }
