@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
 import { userLabel } from '@/lib/chatServer';
 import { odkazNaFotku } from '@/lib/fotky';
+import { MAX_PRILOHA_KLIENTA_BYTES, smiKlientPriloha, type ChatPriloha } from '@/lib/chatPrilohy';
+import { overPrilohu } from '@/lib/storage';
 
 /**
  * Dotazy klienta k projektu (zadání 11. 9. 2026: „chtěl bych přidat
@@ -22,6 +24,8 @@ export type DotazZprava = {
   authorLabel: string;
   authorPhotoUrl: string | null;
   mine: boolean;
+  /** Přílohy zprávy (30. 9. 2026) - klient posílá PDF a obrázky. */
+  prilohy: ChatPriloha[];
 };
 
 /** Projekt patří firmě klienta? Bez toho se nic nečte ani nepíše. */
@@ -178,7 +182,10 @@ export async function nactiDotaz(
       where: { conversationId: kanal.id, parentId: null },
       orderBy: { createdAt: 'asc' },
       take: 200,
-      include: { user: { select: { id: true, name: true, email: true, maFotku: true } } },
+      include: {
+        user: { select: { id: true, name: true, email: true, maFotku: true } },
+        attachments: { select: { id: true, name: true, mime: true, size: true } },
+      },
     }),
     prisma.conversationMember.upsert({
       where: { conversationId_userId: { conversationId: kanal.id, userId } },
@@ -197,6 +204,12 @@ export async function nactiDotaz(
       authorLabel: userLabel(m.user),
       authorPhotoUrl: odkazNaFotku(m.userId, m.user.maFotku),
       mine: m.userId === userId,
+      prilohy: ((m as { attachments?: ChatPriloha[] }).attachments ?? []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        mime: p.mime,
+        size: p.size,
+      })),
     })),
   };
 }
@@ -208,10 +221,36 @@ export async function posliDotaz(
   companyId: string,
   userId: string,
   text: string,
+  /**
+   * Přílohy už leží v úložišti - prohlížeč je tam poslal podepsanou adresou
+   * (viz /api/dotazy/[id]/priloha). Tady se jen ověří, že tam opravdu jsou;
+   * velikost hlásí prohlížeč, takže se na jeho údaj nespoléháme.
+   */
+  prilohyZKlienta: { key: string; name: string; mime?: string }[] = [],
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const telo = text.trim();
-  if (!telo) return { ok: false, message: 'Napište prosím dotaz.' };
   if (telo.length > 4000) return { ok: false, message: 'Dotaz je příliš dlouhý.' };
+
+  const prilohy: { key: string; name: string; mime: string; size: number }[] = [];
+  for (const p of prilohyZKlienta.slice(0, 5)) {
+    if (!smiKlientPriloha(p.mime, p.name)) continue;
+    const overena = await overPrilohu(p.key).catch(() => null);
+    if (!overena || overena.size <= 0 || overena.size > MAX_PRILOHA_KLIENTA_BYTES) {
+      console.error('Priloha dotazu se neoverila, preskakuji:', p.key);
+      continue;
+    }
+    prilohy.push({
+      key: p.key,
+      name: p.name,
+      mime: p.mime || overena.mime,
+      size: overena.size,
+    });
+  }
+
+  // Samotná příloha je taky dotaz - klient pošle scénář a napíše až potom.
+  if (!telo && prilohy.length === 0) {
+    return { ok: false, message: 'Napište prosím dotaz, nebo přiložte soubor.' };
+  }
 
   let kanal = await najdiKanal(caflouProjectId, companyId);
   if (kanal?.uzavrenoAt) {
@@ -220,7 +259,14 @@ export async function posliDotaz(
   if (!kanal) kanal = await zalozKanal(caflouProjectId, projectName, companyId, userId);
 
   await prisma.$transaction([
-    prisma.message.create({ data: { conversationId: kanal.id, userId, body: telo } }),
+    prisma.message.create({
+      data: {
+        conversationId: kanal.id,
+        userId,
+        body: telo,
+        ...(prilohy.length > 0 ? { attachments: { create: prilohy } } : {}),
+      },
+    }),
     prisma.conversation.update({ where: { id: kanal.id }, data: { lastMessageAt: new Date() } }),
   ]);
 

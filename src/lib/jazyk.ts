@@ -307,6 +307,9 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'The agreed recording sessions for this job and who is reading',
   },
   'terminy.odtoceno': { cs: 'odtočeno', en: 'recorded' },
+  'terminy.souhrn': { cs: 'odtočeno {odtoceno} z {celkem}', en: '{odtoceno} of {celkem} recorded' },
+  'terminy.vseOdtoceno': { cs: 'všechno odtočeno', en: 'all recorded' },
+  'terminy.nejblizsi': { cs: 'nejbližší', en: 'next up' },
   'projekt.schvaleno': { cs: 'Klient zakázku schválil', en: 'The customer has approved the job' },
   'projekt.neschvaleno': { cs: 'Zatím neschváleno', en: 'Not approved yet' },
   'projekt.jakSeSchvaluje': {
@@ -1727,6 +1730,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   },
   'dotazy.odesilam': { cs: 'Odesílám…', en: 'Sending…' },
   'dotazy.poslat': { cs: 'Poslat', en: 'Send' },
+  // Přílohy v dotazech klienta (30. 9. 2026).
+  'dotazy.pripojitSoubor': { cs: 'Přiložit PDF nebo obrázek', en: 'Attach a PDF or an image' },
+  'dotazy.soubor': { cs: 'Soubor', en: 'File' },
+  'dotazy.odebratPrilohu': { cs: 'Odebrat přílohu', en: 'Remove the attachment' },
+  'dotazy.prilohaFormat': { cs: 'jde jen PDF a obrázky', en: 'PDFs and images only' },
+  'dotazy.prilohaVelka': { cs: 'nejvýš 15 MB', en: '15 MB at most' },
+  'dotazy.chybaPriloha': {
+    cs: 'Soubor se nepodařilo nahrát. Zkuste to prosím znovu.',
+    en: 'The file could not be uploaded. Please try again.',
+  },
   'dotazy.chybaOdeslat': {
     cs: 'Dotaz se nepodařilo odeslat.',
     en: 'The question could not be sent.',

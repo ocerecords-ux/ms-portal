@@ -4,6 +4,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar } from './Avatar';
 import { kodJazyka, type Jazyk } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from './JazykProvider';
+import {
+  MAX_PRILOHA_KLIENTA_BYTES,
+  formatVelikost,
+  jeObrazek,
+  jePdf,
+  smiKlientPriloha,
+  type ChatPriloha,
+} from '@/lib/chatPrilohy';
 
 /**
  * DOK DOTAZŮ PRO KLIENTA (zadání 12. 9. 2026: „dal bych pryč celé ty rychlé
@@ -36,7 +44,11 @@ type Zprava = {
   authorLabel: string;
   authorPhotoUrl: string | null;
   mine: boolean;
+  prilohy?: ChatPriloha[];
 };
+
+/** Vybraný soubor, dokud visí u psátka a ještě se neodeslal. */
+type Vybrany = { soubor: File; chyba?: string };
 
 const KLIC = 'ms-portal-dotazy-otevreno';
 const UDALOST_OTEVRI = 'ms-portal-otevri-dotaz';
@@ -70,6 +82,12 @@ export function DotazyDock() {
   const [text, setText] = useState('');
   const [odesilam, setOdesilam] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
+  /**
+   * PŘÍLOHY (zadání 30. 9. 2026: „potřebuju, ať klienti můžou vložit pdf do
+   * chatu"). Soubor se nahrává až při odeslání, ne při výběru - kdo si to
+   * rozmyslí, nenechá po sobě v úložišti nic.
+   */
+  const [prilohy, setPrilohy] = useState<Vybrany[]>([]);
   const konec = useRef<HTMLDivElement | null>(null);
 
   const nactiProjekty = useCallback(async () => {
@@ -168,11 +186,72 @@ export function DotazyDock() {
     );
   }
 
+  /**
+   * Nahraje jeden soubor do úložiště a vrátí, co se pak pošle ke zprávě.
+   * Dvě kolečka: portál podepíše adresu, prohlížeč tam soubor pošle sám -
+   * funkce na Vercelu mají strop kolem 4,5 MB a scénář v PDF bývá větší.
+   */
+  async function nahraj(
+    projektId: string,
+    soubor: File,
+  ): Promise<{ key: string; name: string; mime: string }> {
+    const res: Response = await fetch(
+      `/api/dotazy/${encodeURIComponent(projektId)}/priloha`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: soubor.name, mime: soubor.type, size: soubor.size }),
+      },
+    );
+    const data: { uploadUrl?: string; key?: string; error?: string } = await res
+      .json()
+      .catch(() => ({}));
+    if (!res.ok || !data.uploadUrl || !data.key) {
+      throw new Error(data.error || t('dotazy.chybaPriloha'));
+    }
+    /**
+     * Soubor jde na CIZÍ adresu (úložiště). Když u něj není povolené
+     * msportal.cz (nastavení CORS), spadne to rovnou tady na „Failed to
+     * fetch", což nikomu nic neřekne - proto vlastní hláška.
+     */
+    let nahrani: Response;
+    try {
+      nahrani = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': soubor.type || 'application/octet-stream' },
+        body: soubor,
+      });
+    } catch (err) {
+      console.error('Nahrání přílohy dotazu selhalo:', err);
+      throw new Error(t('dotazy.chybaPriloha'));
+    }
+    if (!nahrani.ok) throw new Error(t('dotazy.chybaPriloha'));
+    return { key: data.key, name: soubor.name, mime: soubor.type };
+  }
+
+  function pridejPrilohy(vybrane: File[]) {
+    setChyba(null);
+    setPrilohy((soucasne) =>
+      [
+        ...soucasne,
+        ...vybrane.map((soubor) => ({
+          soubor,
+          chyba: !smiKlientPriloha(soubor.type, soubor.name)
+            ? t('dotazy.prilohaFormat')
+            : soubor.size > MAX_PRILOHA_KLIENTA_BYTES
+              ? t('dotazy.prilohaVelka')
+              : undefined,
+        })),
+      ].slice(0, 5),
+    );
+  }
+
   async function odesli(e: React.FormEvent) {
     e.preventDefault();
     const telo = text.trim();
     const projekt = projekty.find((p) => p.projektId === vybrany);
-    if (!telo || !projekt || odesilam) return;
+    const kPoslani = prilohy.filter((p) => !p.chyba);
+    if ((!telo && kPoslani.length === 0) || !projekt || odesilam) return;
     setOdesilam(true);
     setChyba(null);
 
@@ -184,15 +263,27 @@ export function DotazyDock() {
       authorLabel: t('dotazy.ja'),
       authorPhotoUrl: null,
       mine: true,
+      prilohy: kPoslani.map((p, i) => ({
+        id: `docasna-p-${i}`,
+        name: p.soubor.name,
+        mime: p.soubor.type,
+        size: p.soubor.size,
+      })),
     };
     setText('');
+    setPrilohy([]);
     setZpravy((soucasne) => [...soucasne, docasna]);
 
     try {
+      // Soubory napřed do úložiště, teprve pak zpráva - zpráva bez souboru
+      // by v kanálu zůstala viset jako prázdná.
+      const nahrane: { key: string; name: string; mime: string }[] = [];
+      for (const p of kPoslani) nahrane.push(await nahraj(projekt.projektId, p.soubor));
+
       const res: Response = await fetch(`/api/dotazy/${encodeURIComponent(projekt.projektId)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: telo, projectName: projekt.nazev }),
+        body: JSON.stringify({ text: telo, projectName: projekt.nazev, prilohy: nahrane }),
       });
       const data: { zpravy?: Zprava[]; uzavreno?: boolean; error?: string } = await res
         .json()
@@ -204,6 +295,8 @@ export function DotazyDock() {
     } catch (err) {
       setZpravy((soucasne) => soucasne.filter((z) => z.id !== docasna.id));
       setText((t) => (t ? t : telo));
+      // Vybrané soubory se vrátí zpátky k psátku, ať se nemusí hledat znovu.
+      setPrilohy(kPoslani);
       setChyba(err instanceof Error ? err.message : t('dotazy.chybaOdeslat'));
     } finally {
       setOdesilam(false);
@@ -351,13 +444,22 @@ export function DotazyDock() {
                           </span>
                           <span className="text-[11px] font-body text-muted tabular-nums">{cas(jazyk, z.createdAt)}</span>
                         </span>
-                        <p
-                          className={`mt-0.5 m-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
-                            z.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
-                          }`}
-                        >
-                          {z.body}
-                        </p>
+                        {z.body && (
+                          <p
+                            className={`mt-0.5 m-0 rounded-card px-3 py-2 text-sm font-body whitespace-pre-wrap break-words ${
+                              z.mine ? 'bg-brand-purple text-white' : 'bg-field text-ink'
+                            }`}
+                          >
+                            {z.body}
+                          </p>
+                        )}
+                        {(z.prilohy ?? []).length > 0 && (
+                          <div className="mt-1 flex flex-col gap-1">
+                            {(z.prilohy ?? []).map((p) => (
+                              <PrilohaVZprave key={p.id} priloha={p} />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -369,7 +471,57 @@ export function DotazyDock() {
                     {t('dotazy.projektUzavren')}
                   </p>
                 ) : (
-                  <form onSubmit={odesli} className="border-t border-line p-3 flex items-end gap-2 shrink-0">
+                  <form onSubmit={odesli} className="border-t border-line p-3 flex flex-col gap-2 shrink-0">
+                    {prilohy.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {prilohy.map((p, i) => (
+                          <span
+                            key={`${p.soubor.name}-${i}`}
+                            title={p.chyba ?? formatVelikost(p.soubor.size)}
+                            className={`inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[11px] font-heading max-w-full ${
+                              p.chyba
+                                ? 'border-status-error text-status-error bg-surface'
+                                : 'border-line bg-field text-ink'
+                            }`}
+                          >
+                            <span className="truncate max-w-[160px]">{p.soubor.name}</span>
+                            <span className="text-muted tabular-nums shrink-0">
+                              {p.chyba ? p.chyba : formatVelikost(p.soubor.size)}
+                            </span>
+                            <button
+                              type="button"
+                              aria-label={t('dotazy.odebratPrilohu')}
+                              onClick={() => setPrilohy((s) => s.filter((_, j) => j !== i))}
+                              className="shrink-0 text-muted hover:text-status-error bg-transparent border-0 cursor-pointer leading-none"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-end gap-2">
+                    {/* Sponka: PDF a obrázky. Co jiného, řekne čip u psátka. */}
+                    <label
+                      title={t('dotazy.pripojitSoubor')}
+                      className="shrink-0 w-9 h-9 rounded-lg border border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple transition-colors flex items-center justify-center cursor-pointer"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                        <path d="M21.4 11.05 12.25 20.2a5.5 5.5 0 0 1-7.78-7.78l9.2-9.2a3.67 3.67 0 0 1 5.18 5.19l-9.2 9.19a1.83 1.83 0 0 1-2.6-2.59l8.5-8.49" />
+                      </svg>
+                      <input
+                        type="file"
+                        multiple
+                        accept="application/pdf,image/*,.pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const vybrane: File[] = e.target.files ? Array.from(e.target.files) : [];
+                          if (vybrane.length > 0) pridejPrilohy(vybrane);
+                          // Ať jde tentýž soubor vybrat znovu, když ho někdo odebere.
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
                     <textarea
                       value={text}
                       onChange={(e) => setText(e.target.value)}
@@ -385,11 +537,14 @@ export function DotazyDock() {
                     />
                     <button
                       type="submit"
-                      disabled={odesilam || !text.trim()}
+                      disabled={
+                        odesilam || (!text.trim() && prilohy.filter((p) => !p.chyba).length === 0)
+                      }
                       className="shrink-0 rounded-lg bg-brand-purple text-white font-heading font-semibold text-sm px-4 py-2.5 disabled:opacity-40"
                     >
                       {odesilam ? t('dotazy.odesilam') : t('dotazy.poslat')}
                     </button>
+                    </div>
                   </form>
                 )}
               </>
@@ -398,6 +553,62 @@ export function DotazyDock() {
         </div>
       </div>
     </aside>
+  );
+}
+
+/**
+ * Příloha v bublině. Obrázek se ukáže rovnou, PDF jako karta s názvem -
+ * náhled PDF v úzkém doku by stejně nebyl k přečtení a klepnutím se otevře
+ * v prohlížeči na celou obrazovku.
+ *
+ * Dočasná příloha (zpráva ještě letí na server) odkaz nemá, tak se jen ukáže.
+ */
+function PrilohaVZprave({ priloha }: { priloha: ChatPriloha }) {
+  const t = usePreklad();
+  const docasna = priloha.id.startsWith('docasna-');
+  const odkaz = `/api/chat/prilohy/${encodeURIComponent(priloha.id)}`;
+
+  if (jeObrazek(priloha.mime) && !docasna) {
+    return (
+      <a href={odkaz} target="_blank" rel="noopener noreferrer" className="block max-w-[220px]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={odkaz}
+          alt={priloha.name}
+          className="rounded-card border border-line max-h-48 w-auto"
+        />
+      </a>
+    );
+  }
+
+  const obsah = (
+    <>
+      <span
+        aria-hidden
+        className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-heading font-semibold ${
+          jePdf(priloha.mime, priloha.name)
+            ? 'bg-status-error/15 text-status-error'
+            : 'bg-brand-purple/15 text-brand-purple'
+        }`}
+      >
+        {jePdf(priloha.mime, priloha.name) ? 'PDF' : t('dotazy.soubor')}
+      </span>
+      <span className="truncate">{priloha.name}</span>
+      <span className="ml-auto shrink-0 text-[11px] text-muted tabular-nums">
+        {formatVelikost(priloha.size)}
+      </span>
+    </>
+  );
+
+  const trida =
+    'flex items-center gap-2 rounded-card border border-line bg-surface px-3 py-2 text-sm font-body text-ink max-w-[260px] no-underline';
+
+  return docasna ? (
+    <span className={`${trida} opacity-60`}>{obsah}</span>
+  ) : (
+    <a href={odkaz} target="_blank" rel="noopener noreferrer" className={`${trida} hover:border-brand-purple`}>
+      {obsah}
+    </a>
   );
 }
 

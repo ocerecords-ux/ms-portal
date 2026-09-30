@@ -15,15 +15,23 @@ import { podepsanyOdkazNaPrilohu } from '@/lib/storage';
  *
  * Pravidlo přístupu je stejné jako u čtení zpráv: kanál k projektu je pro
  * celý tým, soukromá a skupinová konverzace jen pro členy.
+ *
+ * KLIENT SEM TAKY PATŘÍ (30. 9. 2026: „potřebuju, ať klienti můžou vložit pdf
+ * do chatu"). Do MS chatu nesmí a nebude smět - ale v kanálu DOTAZ, jehož je
+ * členem, si musí umět otevřít i to, co sám poslal, a co mu pošleme my.
+ * Dál než na svůj kanál se tím nedostane: členství se ověřuje stejně jako
+ * u týmu a kanál projektu, který je pro celý tým bez členství, se mu
+ * neotevře.
  */
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || !canUseChat(session.user.role)) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: 'Nemáte oprávnění.' }, { status: 403 });
   }
   const me = session.user.id;
+  const jeTym = canUseChat(session.user.role);
 
   try {
     const priloha = await prisma.messageAttachment.findUnique({
@@ -40,11 +48,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     });
     // Chybějící i nepřístupná příloha odpovídají stejně, ať z odpovědi nejde
     // vyčíst, co v portálu existuje.
-    if (
-      !priloha ||
-      (priloha.message.conversation.kind !== 'PROJEKT' &&
-        !priloha.message.conversation.members.some((m) => m.userId === me))
-    ) {
+    const kanal = priloha?.message.conversation;
+    const jeClen = Boolean(kanal?.members.some((m) => m.userId === me));
+    const smi = kanal
+      ? jeTym
+        ? kanal.kind === 'PROJEKT' || jeClen
+        : kanal.kind === 'DOTAZ' && jeClen
+      : false;
+    if (!priloha || !smi) {
       return NextResponse.json({ error: 'Příloha nenalezena.' }, { status: 404 });
     }
 

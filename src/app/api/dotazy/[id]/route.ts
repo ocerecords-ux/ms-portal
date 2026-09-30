@@ -41,12 +41,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const pristup = await overPristup(params.id);
   if ('chyba' in pristup) return pristup.chyba;
 
-  let telo: { text?: string; projectName?: string };
+  let telo: {
+    text?: string;
+    projectName?: string;
+    /** Přílohy už nahrané do úložiště (30. 9. 2026) - viz ./priloha. */
+    prilohy?: { key?: string; name?: string; mime?: string }[];
+  };
   try {
-    telo = (await req.json()) as { text?: string; projectName?: string };
+    telo = (await req.json()) as typeof telo;
   } catch {
     return NextResponse.json({ error: 'Neplatný požadavek.' }, { status: 400 });
   }
+
+  const prilohy = (Array.isArray(telo.prilohy) ? telo.prilohy : [])
+    .filter((p) => typeof p?.key === 'string' && typeof p?.name === 'string')
+    .map((p) => ({ key: String(p.key), name: String(p.name), mime: p.mime }));
 
   const vysledek = await posliDotaz(
     params.id,
@@ -54,6 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     pristup.companyId,
     pristup.userId,
     telo.text ?? '',
+    prilohy,
   );
   if (!vysledek.ok) return NextResponse.json({ error: vysledek.message }, { status: 400 });
 

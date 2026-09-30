@@ -66,6 +66,13 @@ export function TerminyKlienta({ terminy }: { terminy: TerminKlienta[] }) {
   }
 
   const pristi = terminy.find((x) => !x.odtoceno) ?? null;
+  /**
+   * KOLIK UŽ SE USKUTEČNILO (30. 9. 2026: „u těch přehledů termínů
+   * v natáčecím plánu by bylo dobré nějak vidět, které frekvence se už
+   * uskutečnily"). V seznamu je to u každého řádku, tohle je ta odpověď
+   * na jeden pohled - i na tlačítku, aby se kvůli ní nemuselo rozbalovat.
+   */
+  const odtoceno = terminy.filter((x) => x.odtoceno).length;
 
   return (
     <>
@@ -87,7 +94,9 @@ export function TerminyKlienta({ terminy }: { terminy: TerminKlienta[] }) {
         className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-surface px-2.5 py-1 text-xs font-heading text-ink cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors whitespace-nowrap"
       >
         {t('terminy.zobrazit')}
-        <span className="tabular-nums text-muted">{terminy.length}</span>
+        <span className="tabular-nums text-muted">
+          {odtoceno > 0 ? `${odtoceno}/${terminy.length}` : terminy.length}
+        </span>
         <span aria-hidden className={`text-[9px] transition-transform ${kotva ? 'rotate-180' : ''}`}>
           ▼
         </span>
@@ -99,9 +108,16 @@ export function TerminyKlienta({ terminy }: { terminy: TerminKlienta[] }) {
           style={{ position: 'fixed', left: kotva.left, top: kotva.top, width: SIRKA }}
           className="z-[90] flex flex-col gap-2 rounded-card border border-line bg-surface shadow-2xl p-3"
         >
-          <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
-            {t('terminy.nadpis')}
-          </span>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
+              {t('terminy.nadpis')}
+            </span>
+            <span className="text-[11px] font-body text-muted">
+              {odtoceno === terminy.length
+                ? t('terminy.vseOdtoceno')
+                : t('terminy.souhrn', { odtoceno, celkem: terminy.length })}
+            </span>
+          </div>
 
           <ul className="list-none p-0 m-0 flex flex-col gap-1 max-h-[320px] overflow-y-auto">
             {terminy.map((x) => (
@@ -116,10 +132,20 @@ export function TerminyKlienta({ terminy }: { terminy: TerminKlienta[] }) {
                 </span>
                 {x.herec && <span className="text-xs font-body">{x.herec}</span>}
                 <span className="ml-auto text-[11px] font-body text-muted">{x.studio}</span>
-                {x.odtoceno && (
-                  <span className="text-[11px] font-heading text-status-done">
-                    {t('terminy.odtoceno')}
+                {x.odtoceno ? (
+                  <span
+                    title={t('terminy.odtoceno')}
+                    className="shrink-0 text-[11px] font-heading text-status-done"
+                  >
+                    ✓ {t('terminy.odtoceno')}
                   </span>
+                ) : (
+                  pristi &&
+                  x.id === pristi.id && (
+                    <span className="shrink-0 text-[11px] font-heading text-brand-purple">
+                      {t('terminy.nejblizsi')}
+                    </span>
+                  )
                 )}
               </li>
             ))}

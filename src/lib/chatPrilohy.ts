@@ -48,6 +48,41 @@ export function formatVelikost(bytes: number): string {
 }
 
 /**
+ * CO SMÍ POSLAT KLIENT (zadání 30. 9. 2026: „potřebuju, ať klienti můžou
+ * vložit pdf do chatu").
+ *
+ * V týmovém chatu jde poslat cokoliv - je to naše schránka. Do dotazů píše
+ * člověk zvenčí, takže se drží úzký seznam: PDF (kvůli tomu to celé je -
+ * scénáře, korektury, objednávky) a obrázky, protože fotka nebo snímek
+ * obrazovky je druhá věc, kterou klient posílá nejčastěji.
+ *
+ * Nejde o antivirus - soubor se nikde nespouští a vydává se jen podepsaným
+ * odkazem. Jde o to, aby si dotazy nezačaly žít vlastním životem jako
+ * úložiště na cokoliv.
+ */
+const PRIPONY_KLIENTA = ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.heic', '.heif'];
+
+export function smiKlientPriloha(mime: string | null | undefined, nazev: string): boolean {
+  const m = (mime ?? '').toLowerCase();
+  if (m === 'application/pdf') return true;
+  if (m.startsWith('image/')) return true;
+  /**
+   * Prohlížeč typ někdy nepošle (nebo pošle application/octet-stream) -
+   * u .pdf z telefonu se to stává běžně. Přípona je pak jediné, co máme.
+   */
+  const n = nazev.toLowerCase();
+  return PRIPONY_KLIENTA.some((p) => n.endsWith(p));
+}
+
+/** Přílohy v dotazech jsou menší - je to příloha k dotazu, ne archiv. */
+export const MAX_PRILOHA_KLIENTA_BYTES = 15 * 1024 * 1024;
+
+/** PDF se v bublině ukáže jako karta s ikonou, ne jako obrázek. */
+export function jePdf(mime: string, nazev: string): boolean {
+  return mime.toLowerCase() === 'application/pdf' || nazev.toLowerCase().endsWith('.pdf');
+}
+
+/**
  * Očištění názvu souboru pro cestu v úložišti. Název od uživatele se nikdy
  * nedává do klíče tak, jak přišel - lomítka a tečky by se daly zneužít
  * k vyskočení z adresáře a diakritika dělá v URL nepořádek.
