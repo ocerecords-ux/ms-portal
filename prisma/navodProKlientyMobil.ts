@@ -50,6 +50,7 @@ Na ploše máte fialovou ikonu **MS portal**. Otevře se na celou obrazovku a pa
 
 - **Volbu „Přidat na plochu" nevidím.** Na iPhonu to jde jen ze Safari, ne z Chromu ani z odkazu otevřeného v jiné aplikaci (třeba z e-mailu). Otevřete msportal.cz přímo v Safari.
 - **Přidal jsem to, ale chce to po mně heslo pokaždé.** Zkuste se v aplikaci na ploše přihlásit ještě jednou — od té chvíle už si vás bude pamatovat.
+- **Místo fialové ikony mám šedý čtvereček s písmenem M.** To dělá jiný prohlížeč než Safari — Firefox i Chrome si na iPhonu kreslí vlastní šedou dlaždici s prvním písmenem a skutečnou ikonu portálu si nevezmou. Šedou zkratku smažte, otevřete **msportal.cz v Safari** a přidejte ji na plochu znovu; ikona pak bude fialová.
 - **Ikona je tam dvakrát.** Přidání se dá zopakovat, takže vznikne druhá zkratka. Přebytečnou smažete jako kteroukoli jinou ikonu.
 
 Kdyby se to nedařilo, napište nám — pošleme vám odkaz nebo vám s tím pomůžeme.`,

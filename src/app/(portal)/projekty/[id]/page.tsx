@@ -37,6 +37,8 @@ import { expenseTotalMinor } from '@/lib/expenses';
 import { sessionsForPages } from '@/lib/calendar';
 import { loadCalendarSettings, loadStudios } from '@/lib/calendarServer';
 import { RecordingSection } from './RecordingSection';
+import { HosteNataceni } from './HosteNataceni';
+import { nactiNataceniProjektu } from '@/lib/hosteNataceniServer';
 import { ProjectTabs, type ProjectTab } from './ProjectTabs';
 import { ProtokolNataceni } from './ProtokolNataceni';
 import { VykazyProjektu, type BonusRadek, type VykazRadek } from './VykazyProjektu';
@@ -652,7 +654,29 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     </div>
   );
 
+  /**
+   * HOSTÉ NA NATÁČENÍ (zadání 30. 9. 2026). Termíny se berou z kalendáře
+   * studia, ne z vlastního seznamu - viz HosteNataceni.tsx.
+   */
+  const nataceniSHosty = await nactiNataceniProjektu(caflouProjectId);
+
   const frekvence = (
+    <div className="flex flex-col gap-6">
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="font-display text-2xl text-ink m-0">Hosté na natáčení</h2>
+          <p className="text-sm font-body text-muted m-0">
+            Klient, agentura nebo zadavatel, kteří u natáčení budou — ve studiu, nebo na dálku.
+            Pozvánka jim pošle čas, adresu s mapou, parkování i odkaz na připojení.
+          </p>
+        </div>
+        <HosteNataceni
+          caflouProjectId={caflouProjectId}
+          nataceni={nataceniSHosty}
+          canManage={canManageCalendar(session.user.role)}
+        />
+      </section>
+
     <RecordingSection
           caflouProjectId={caflouProjectId}
           projectName={project?.name ?? `Projekt ${caflouProjectId}`}
@@ -679,6 +703,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           }))}
       canManage={canManageCalendar(session.user.role)}
     />
+    </div>
   );
 
   /**

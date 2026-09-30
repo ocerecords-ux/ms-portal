@@ -21,6 +21,10 @@ const schema = z.object({
   active: z.boolean().optional(),
   /** Odkaz na videohovor studia (23. 9. 2026) - prázdný text ho smaže. */
   hovorOdkaz: z.string().trim().max(500).nullable().optional(),
+  // Kam se má host dostavit (30. 9. 2026) - jde to do pozvánky na natáčení.
+  adresa: z.string().trim().max(500).nullable().optional(),
+  mapaUrl: z.string().trim().max(1000).nullable().optional(),
+  parkovani: z.string().trim().max(1000).nullable().optional(),
   hours: z.array(hodinySchema).max(7).optional(),
 });
 
@@ -47,6 +51,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.timezone !== undefined) data.timezone = d.timezone;
     if (d.active !== undefined) data.active = d.active;
     if (d.hovorOdkaz !== undefined) data.hovorOdkaz = d.hovorOdkaz || null;
+    if (d.adresa !== undefined) data.adresa = d.adresa || null;
+    if (d.mapaUrl !== undefined) data.mapaUrl = d.mapaUrl || null;
+    if (d.parkovani !== undefined) data.parkovani = d.parkovani || null;
 
     await prisma.$transaction(async (tx) => {
       await tx.studio.update({ where: { id: params.id }, data });

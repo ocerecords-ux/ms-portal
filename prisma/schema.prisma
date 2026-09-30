@@ -2195,6 +2195,18 @@ model Studio {
   /// cely odkaz nikde nesviti.
   hovorOdkaz     String?
 
+  /// KAM SE MÁ HOST DOSTAVIT (zadání 30. 9. 2026: „pozvánka na natáčení, která
+  /// bude obsahovat link pro natáčení online a adresu studia s mapkou a infem
+  /// o parkování").
+  ///
+  /// `location` je jen město do kalendáře - na pozvánku je potřeba celá adresa,
+  /// odkaz do map a věta o parkování. Parkování je schválně volný text: u každé
+  /// pobočky platí něco jiného (dvůr, zóna, závora) a do kolonek se to nevejde.
+  adresa         String?
+  /// Odkaz do map. Prázdné = odkaz se složí z adresy.
+  mapaUrl        String?
+  parkovani      String?
+
   parentStudioId String?
   parentStudio   Studio?  @relation("StudioRooms", fields: [parentStudioId], references: [id])
   rooms          Studio[] @relation("StudioRooms")
@@ -2420,6 +2432,12 @@ model StudioBlock {
   /// Celodenni rezervace - v mrizce se kresli pres celou oteviraci dobu.
   celyDen       Boolean @default(false)
 
+  /// ODKAZ NA HOVOR JEN PRO TOHLE NATÁČENÍ (30. 9. 2026). Prázdné = použije se
+  /// odkaz studia. Přepisuje se tam, kde klient posílá vlastní místnost.
+  hovorOdkaz  String?
+  /// Kdo je na natáčení pozvaný - klient osobně nebo online (30. 9. 2026).
+  hoste       HostNataceni[]
+
   createdById String?
   createdBy   User?   @relation("StudioBlockCreatedBy", fields: [createdById], references: [id])
 
@@ -2438,6 +2456,43 @@ model StudioBlock {
   updatedAt DateTime @updatedAt
 
   @@index([studioId, start, end])
+}
+
+/// HOST NA NATÁČENÍ (zadání 30. 9. 2026: „u některých natáčení bývá klient.
+/// Buď osobně, nebo se propojuje přes link do daného studia. A potřebuju tam
+/// naházet i více lidí - maily, na které jim rovnou odejde pozvánka").
+///
+/// Host visí na KONKRÉTNÍM TERMÍNU, ne na projektu: zakázka má klidně tři dny
+/// natáčení a na každý přijde někdo jiný. Pozvánka pak nese přesný čas, studio
+/// i odkaz, a při přesunu termínu se dá poslat znovu.
+///
+/// ÚČET SE NEZAKLÁDÁ. Je to člověk zvenčí, který přijde na jedno natáčení -
+/// stačí jméno a e-mail. Stejný přístup jako u rezervací studia.
+model HostNataceni {
+  id      String      @id @default(cuid())
+  blockId String
+  block   StudioBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  jmeno String?
+  email String
+
+  /// Připojí se na dálku (jinak přijde do studia). Podle toho pozvánka
+  /// zdůrazní buď odkaz na hovor, nebo adresu a parkování.
+  online Boolean @default(false)
+
+  /// Kdy mu naposledy odešla pozvánka a NA JAKÝ ZAČÁTEK. Podle druhého se
+  /// pozná, že se termín od pozvánky posunul a má odejít nová - bez toho by
+  /// host přišel podle starého mailu.
+  pozvankaAt    DateTime?
+  pozvankaStart DateTime?
+  /// Poslední chyba odeslání, ať je u řádku vidět, proč pozvánka nedošla.
+  chybaOdeslani String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([blockId])
 }
 
 /// Převzatá událost z Google kalendáře, kterou tým v portálu SMAZAL

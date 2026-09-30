@@ -229,6 +229,74 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projekt.zalozka.protokol': { cs: 'Natáčecí protokol', en: 'Recording log' },
   'projekt.zalozka.historie': { cs: 'Historie', en: 'History' },
   'projekt.zalozka.doklady': { cs: 'Doklady', en: 'Documents' },
+
+  // Hosté na natáčení (30. 9. 2026) - viz projekty/[id]/HosteNataceni.tsx.
+  'hoste.nadpis': { cs: 'Hosté na natáčení', en: 'Guests at the recording' },
+  'hoste.popis': {
+    cs: 'Klient, agentura nebo zadavatel, kteří u natáčení budou — ve studiu, nebo na dálku. Pozvánka jim pošle čas, adresu s mapou, parkování i odkaz na připojení.',
+    en: 'The customer, agency or client attending the recording — at the studio or remotely. The invitation sends them the time, the address with a map, parking and the joining link.',
+  },
+  'hoste.zadneNataceni': {
+    cs: 'K projektu zatím není v kalendáři žádné natáčení. Jakmile termín vznikne, objeví se tady i s hosty.',
+    en: 'There is no recording in the calendar for this project yet. Once a session exists, it will appear here along with its guests.',
+  },
+  'hoste.pocet': { cs: '{pocet} hostů', en: '{pocet} guests' },
+  'hoste.ceka': { cs: '{pocet} čeká na pozvánku', en: '{pocet} awaiting an invitation' },
+  'hoste.cekaNapoveda': {
+    cs: 'Komu pozvánka ještě nešla — nebo komu se od ní posunul termín.',
+    en: 'Who has not been sent an invitation yet — or whose session has moved since.',
+  },
+  'hoste.mapa': { cs: 'mapa', en: 'map' },
+  'hoste.bezAdresy': { cs: 'Studio nemá vyplněnou adresu', en: 'The studio has no address filled in' },
+  'hoste.bezAdresyNapoveda': {
+    cs: 'Adresu, mapu a parkování se vyplňují u studia v Administraci → Studia. Bez nich pozvánka pošle jen název studia.',
+    en: 'The address, map and parking are filled in for the studio in Administration → Studios. Without them the invitation only carries the studio name.',
+  },
+  'hoste.pridatNadpis': { cs: 'Přidat hosty', en: 'Add guests' },
+  'hoste.pridatPrazdne': {
+    cs: 'Jan Novák <jan@firma.cz>, petra@agentura.cz — vložte klidně celý řádek z mailu',
+    en: 'Jan Novák <jan@firma.cz>, petra@agency.com — paste a whole line from an email if you like',
+  },
+  'hoste.nahled': { cs: 'Přidá se {pocet} adres.', en: '{pocet} addresses will be added.' },
+  'hoste.nahledSpatne': { cs: 'jako e-mail nevypadá: {zbytek}', en: 'does not look like an email: {zbytek}' },
+  'hoste.pridat': { cs: 'Přidat', en: 'Add' },
+  'hoste.pridano': { cs: 'Přidáno: {pocet}.', en: 'Added: {pocet}.' },
+  'hoste.pridanoSeZbytkem': {
+    cs: 'Přidáno: {pocet}. Nepřidáno (nevypadá jako e-mail): {zbytek}',
+    en: 'Added: {pocet}. Not added (does not look like an email): {zbytek}',
+  },
+  'hoste.online': { cs: 'online', en: 'remote' },
+  'hoste.osobne': { cs: 've studiu', en: 'at the studio' },
+  'hoste.prepnoutNapoveda': {
+    cs: 'Přijde do studia, nebo se připojí na dálku — podle toho pozvánka začne adresou, nebo odkazem.',
+    en: 'Coming to the studio, or joining remotely — the invitation leads with the address or the link accordingly.',
+  },
+  'hoste.odkazNadpis': { cs: 'Odkaz na připojení k tomuhle natáčení', en: 'Joining link for this session' },
+  'hoste.odkazZeStudia': {
+    cs: 'Prázdné = pošle se odkaz studia.',
+    en: 'Empty = the studio link is sent.',
+  },
+  'hoste.odkazVlastni': {
+    cs: 'Platí místo odkazu studia. Smazáním se vrátí ten studiový.',
+    en: 'Used instead of the studio link. Clear it to go back to the studio one.',
+  },
+  'hoste.poslat': { cs: 'Poslat pozvánky ({pocet})', en: 'Send invitations ({pocet})' },
+  'hoste.poslatNapoveda': {
+    cs: 'Odejde jen těm, komu pozvánka ještě nešla nebo komu se posunul termín.',
+    en: 'Goes only to those not yet invited or whose session has moved.',
+  },
+  'hoste.poslatVsem': { cs: 'Poslat znovu všem', en: 'Send again to everyone' },
+  'hoste.poslatVsemNapoveda': {
+    cs: 'Pošle pozvánku i těm, kteří ji už mají.',
+    en: 'Sends the invitation to everyone, including those who already have it.',
+  },
+  'hoste.odeslano': { cs: 'Odesláno: {pocet}.', en: 'Sent: {pocet}.' },
+  'hoste.pozvankaOdeslana': { cs: 'pozvánka {kdy}', en: 'invited {kdy}' },
+  'hoste.terminSePosunul': { cs: 'termín se posunul', en: 'the session has moved' },
+  'hoste.spatnaAdresa': { cs: 'adresa nevypadá správně', en: 'the address looks wrong' },
+  'hoste.smazat': { cs: 'Odebrat', en: 'Remove' },
+  'hoste.opravduSmazat': { cs: 'Opravdu odebrat?', en: 'Really remove?' },
+  'hoste.chyba': { cs: 'Nepovedlo se to.', en: 'It did not work.' },
   'projekt.schvaleno': { cs: 'Klient zakázku schválil', en: 'The customer has approved the job' },
   'projekt.neschvaleno': { cs: 'Zatím neschváleno', en: 'Not approved yet' },
   'projekt.jakSeSchvaluje': {
@@ -4265,6 +4333,22 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'studia.odkazNaHovorPopis': {
     cs: 'v kalendáři se z něj stane ikonka u režie na dálku',
     en: 'in the calendar it turns into an icon on remote directing sessions',
+  },
+  // Kam se má host dostavit (30. 9. 2026) - jde to do pozvánky na natáčení.
+  'studia.adresa': { cs: 'Adresa studia', en: 'Studio address' },
+  'studia.adresaPopis': {
+    cs: 'celá adresa do pozvánky na natáčení',
+    en: 'the full address for the recording invitation',
+  },
+  'studia.mapa': { cs: 'Odkaz do map', en: 'Map link' },
+  'studia.mapaPopis': {
+    cs: 'prázdné = odkaz se složí z adresy',
+    en: 'empty = the link is built from the address',
+  },
+  'studia.parkovani': { cs: 'Parkování', en: 'Parking' },
+  'studia.parkovaniPopis': {
+    cs: 'věta pro hosta — kde zaparkuje a co ho čeká',
+    en: 'a sentence for the guest — where to park and what to expect',
   },
   'studia.zalozit': { cs: 'Založit', en: 'Create' },
   'studia.ulozeniSelhalo': { cs: 'Uložení se nezdařilo.', en: 'Saving failed.' },

@@ -18,6 +18,9 @@ type Studio = {
   active: boolean;
   /** Odkaz na videohovor studia (23. 9. 2026) - v kalendáři z něj je ikona. */
   hovorOdkaz: string | null;
+  adresa: string | null;
+  mapaUrl: string | null;
+  parkovani: string | null;
   hours: Hodiny[];
   presets: { label: string; startMinutes: number; endMinutes: number }[];
 };
@@ -180,6 +183,46 @@ export function StudiosManager({ studios }: { studios: Studio[] }) {
                   defaultValue={otevrene.hovorOdkaz ?? ''}
                   placeholder="https://meet.google.com/…"
                   onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { hovorOdkaz: e.target.value })}
+                  className={inputClass}
+                />
+              </label>
+
+              {/* KAM SE MÁ HOST DOSTAVIT (30. 9. 2026). `Město` výš je jen
+                  popisek do kalendáře; tohle jde do pozvánky na natáčení, kde
+                  člověk zvenčí potřebuje celou adresu a větu o parkování. */}
+              <label className="flex flex-col gap-1.5 sm:col-span-2">
+                <span className="text-sm font-body text-ink">
+                  {t('studia.adresa')}
+                  <span className="text-muted font-normal"> · {t('studia.adresaPopis')}</span>
+                </span>
+                <input
+                  defaultValue={otevrene.adresa ?? ''}
+                  placeholder="Plzeňská 12, 150 00 Praha 5"
+                  onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { adresa: e.target.value })}
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 sm:col-span-2">
+                <span className="text-sm font-body text-ink">
+                  {t('studia.mapa')}
+                  <span className="text-muted font-normal"> · {t('studia.mapaPopis')}</span>
+                </span>
+                <input
+                  defaultValue={otevrene.mapaUrl ?? ''}
+                  placeholder="https://mapy.cz/…"
+                  onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { mapaUrl: e.target.value })}
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-4">
+                <span className="text-sm font-body text-ink">
+                  {t('studia.parkovani')}
+                  <span className="text-muted font-normal"> · {t('studia.parkovaniPopis')}</span>
+                </span>
+                <input
+                  defaultValue={otevrene.parkovani ?? ''}
+                  placeholder="Ve dvoře za závorou, kód 1234. Na ulici je modrá zóna."
+                  onBlur={(e) => posli(`/api/admin/studia/${otevrene.id}`, 'PATCH', { parkovani: e.target.value })}
                   className={inputClass}
                 />
               </label>

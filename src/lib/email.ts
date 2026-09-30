@@ -5,6 +5,7 @@ import { bezZnacek, znackyNaHtml } from '@/lib/formatovaniZpravy';
 // lib/jazykEmailu.ts a lib/jazykPrijemce.ts.
 import { formatDatum, kodJazyka, type Jazyk } from '@/lib/jazyk';
 import { prelozitEmail, prelozitEmailS } from '@/lib/jazykEmailu';
+import { odkazNaMapu } from '@/lib/hosteNataceni';
 
 /**
  * SPOJENÍ SE SMTP SE DRŽÍ (oprava 15. 9. 2026: „smlouvy chodí na mail se
@@ -3051,4 +3052,186 @@ export async function sendCenikEmail(input: CenikEmailInput) {
   });
 
   return { sent: true as const, reason: undefined };
+}
+
+
+// ===========================================================================
+// POZVÁNKA NA NATÁČENÍ PRO HOSTA (zadání 30. 9. 2026: „u některých natáčení
+// bývá klient. Buď osobně, nebo se propojuje přes link do daného studia.
+// A potřebuju tam naházet i více lidí - maily, na které jim rovnou odejde
+// pozvánka na natáčení, která bude obsahovat link pro natáčení online
+// a adresu studia s mapkou a infem o parkování").
+//
+// JEDEN MAIL, DVĚ PODOBY. Kdo přijde do studia, čte nejdřív adresu, mapu
+// a parkování; kdo se připojuje na dálku, čte nejdřív odkaz. Druhá půlka
+// zůstává jako doplněk - host si to rozmyslí a nemusí psát, kde to je.
+//
+// PŘESUN TERMÍNU se posílá TÝMŽ mailem, jen s jiným nadpisem a předmětem.
+// Vlastní šablona na změnu by se dřív nebo později rozešla s tou původní
+// a host by dostal dvě různě vypadající zprávy o jedné věci.
+// ===========================================================================
+
+export type PozvankaNataceniInput = {
+  to: string;
+  jazyk?: Jazyk;
+  hostName: string | null;
+  projectName: string;
+  /** „úterý 7. 10. 2026, 10:00–13:00" - skládá hosteNataceniServer. */
+  kdy: string;
+  studioName: string;
+  adresa: string | null;
+  mapaUrl: string | null;
+  parkovani: string | null;
+  hovorOdkaz: string | null;
+  /** Host se připojuje na dálku. */
+  online: boolean;
+  /** Termín se posunul - jiný nadpis a předmět, jinak tentýž mail. */
+  zmena: boolean;
+  /** Soubor pro kalendář. */
+  ics?: { nazev: string; obsah: string } | null;
+  /** Odpovědi mají chodit produkci, ne do prázdna. */
+  odpovedNa?: string | null;
+};
+
+function pozvankaKdeBlok(input: PozvankaNataceniInput, jazyk: Jazyk): string {
+  const radky = [
+    `<tr><td class="label">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kde')}</td><td class="value">${escapeHtml(
+      [input.studioName, input.adresa?.trim()].filter(Boolean).join(' · '),
+    )}</td></tr>`,
+  ];
+  if (input.parkovani?.trim()) {
+    radky.push(
+      `<tr><td class="label">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.parkovani')}</td><td class="value">${escapeHtml(
+        input.parkovani.trim(),
+      )}</td></tr>`,
+    );
+  }
+  return `<table role="presentation" class="field-table">${radky.join('')}</table>`;
+}
+
+export function buildPozvankaNataceniHtml(input: PozvankaNataceniInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  const mapa = odkazNaMapu(input.adresa, input.mapaUrl);
+
+  const kdyBlok = `<table role="presentation" class="field-table">
+    <tr><td class="label">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdy')}</td><td class="value">${escapeHtml(input.kdy)}</td></tr>
+    <tr><td class="label">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.projekt')}</td><td class="value">${escapeHtml(input.projectName)}</td></tr>
+  </table>`;
+
+  const online = input.hovorOdkaz
+    ? `<div class="cta-row"><a href="${escapeHtml(input.hovorOdkaz)}" class="cta">${prelozitEmail(
+        jazyk,
+        'mail.pozvankaNataceni.pripojitSe',
+      )}</a></div>
+    <p class="small">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.odkazPlati')}</p>`
+    : '';
+
+  const misto = `${pozvankaKdeBlok(input, jazyk)}${
+    mapa
+      ? `<div class="cta-row"><a href="${escapeHtml(mapa)}" class="cta-dark">${prelozitEmail(
+          jazyk,
+          'mail.pozvankaNataceni.otevritMapu',
+        )}</a></div>`
+      : ''
+  }`;
+
+  // Co host potřebuje první, je nahoře - viz komentář nad typem.
+  const telo = input.online ? `${online}${misto}` : `${misto}${online}`;
+
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.pozvankaNataceni.stitek'),
+    preheader: prelozitEmailS(jazyk, 'mail.pozvankaNataceni.preheader', {
+      kdy: input.kdy,
+      studio: input.studioName,
+    }),
+    body: `
+    <span class="badge">${escapeHtml(input.projectName)}</span>
+    <h2>${escapeHtml(
+      prelozitEmail(jazyk, input.zmena ? 'mail.pozvankaNataceni.nadpisZmena' : 'mail.pozvankaNataceni.nadpis'),
+    )}</h2>
+    <p>${escapeHtml(pozdravPosty(jazyk, input.hostName))}</p>
+    <p>${escapeHtml(
+      prelozitEmail(
+        jazyk,
+        input.zmena
+          ? 'mail.pozvankaNataceni.uvodZmena'
+          : input.online
+            ? 'mail.pozvankaNataceni.uvodOnline'
+            : 'mail.pozvankaNataceni.uvodOsobne',
+      ),
+    )}</p>
+    ${kdyBlok}
+    ${telo}
+    ${input.ics ? `<p class="small">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kalendar')}</p>` : ''}
+    <p class="small">${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdyzNeco')}</p>
+  `,
+  });
+}
+
+export async function sendPozvankaNataceniEmail(input: PozvankaNataceniInput) {
+  const transport = getTransport();
+  if (!transport) {
+    return { sent: false, reason: 'SMTP_NOT_CONFIGURED' as const };
+  }
+
+  const jazyk = input.jazyk ?? 'cs';
+  const mapa = odkazNaMapu(input.adresa, input.mapaUrl);
+
+  await transport.sendMail({
+    ...odesilatelMediaspace(input.odpovedNa ?? null),
+    to: input.to,
+    subject: prelozitEmailS(jazyk, input.zmena ? 'mail.pozvankaNataceni.predmetZmena' : 'mail.pozvankaNataceni.predmet', {
+      projekt: input.projectName,
+      kdy: input.kdy,
+    }),
+    text: [
+      pozdravPosty(jazyk, input.hostName),
+      '',
+      prelozitEmail(
+        jazyk,
+        input.zmena
+          ? 'mail.pozvankaNataceni.uvodZmena'
+          : input.online
+            ? 'mail.pozvankaNataceni.uvodOnline'
+            : 'mail.pozvankaNataceni.uvodOsobne',
+      ),
+      '',
+      `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdy')}: ${input.kdy}`,
+      `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.projekt')}: ${input.projectName}`,
+      `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.kde')}: ${[input.studioName, input.adresa?.trim()]
+        .filter(Boolean)
+        .join(' · ')}`,
+      input.parkovani?.trim() ? `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.parkovani')}: ${input.parkovani.trim()}` : '',
+      mapa ? `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.otevritMapu')}: ${mapa}` : '',
+      input.hovorOdkaz ? `${prelozitEmail(jazyk, 'mail.pozvankaNataceni.pripojitSe')}: ${input.hovorOdkaz}` : '',
+      '',
+      prelozitEmail(jazyk, 'mail.pozvankaNataceni.kdyzNeco'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    html: buildPozvankaNataceniHtml(input),
+    /**
+     * Příloha jde jako `text/calendar`, ne jako obyčejný soubor - jinak ji
+     * Outlook i Apple Mail ukážou jako přílohu ke stažení místo termínu,
+     * který jde uložit jedním klepnutím.
+     *
+     * METHOD:PUBLISH, ne REQUEST - portál se hosta neptá, jestli přijde
+     * (to není pozvánka k odsouhlasení, ale sdělení termínu), a REQUEST
+     * v hlavičce u kalendáře bez ORGANIZERa a ATTENDEE dělá zmatek.
+     */
+    ...(input.ics
+      ? {
+          attachments: [
+            {
+              filename: input.ics.nazev,
+              content: input.ics.obsah,
+              contentType: 'text/calendar; charset=utf-8; method=PUBLISH',
+            },
+          ],
+        }
+      : {}),
+  });
+
+  return { sent: true as const };
 }
