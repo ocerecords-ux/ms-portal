@@ -16,6 +16,19 @@ import { computeTotals } from '@/lib/doklady';
  *
  * Varianta „uhrazeno" počítá peníze, které opravdu přišly/odešly: fakturu
  * podle data úhrady, výdaj jen uhrazený a podle data úhrady.
+ *
+ * DPH SE POČÍTÁ VEDLE (zadání 30. 9. 2026: „ještě bych v těch přehledech
+ * potřeboval vidět, kolik máme odvádět DPH").
+ *
+ *  - na výstupu = DPH z vydaných faktur (co jsme naúčtovali),
+ *  - na vstupu  = DPH z výdajů (co si můžeme odečíst),
+ *  - k odvedení = výstup − vstup. Záporné číslo je nadměrný odpočet, tedy
+ *    peníze zpátky od státu.
+ *
+ * JE TO UKAZATEL, NE PŘIZNÁNÍ. Portál nezná přenesenou daňovou povinnost,
+ * OSS, krácený odpočet ani doklady, které do přiznání nepatří - a přiznání
+ * se podává podle DUZP, ne podle úhrad, takže při volbě „Uhrazeno" je tohle
+ * číslo jen orientační. Proto se u něj v přehledu píše, odkud se bere.
  */
 
 export type Zaklad = 'vystaveno' | 'uhrazeno';
@@ -29,11 +42,32 @@ export type FinanceFiltr = {
   krok: Krok;
 };
 
-export type Useky = { klic: string; popis: string; obrat: number; naklady: number; zisk: number }[];
+export type Useky = {
+  klic: string;
+  popis: string;
+  obrat: number;
+  naklady: number;
+  zisk: number;
+  /** DPH z vydaných faktur (30. 9. 2026). */
+  dphVystupni: number;
+  /** DPH z výdajů, kterou si odečítáme. */
+  dphVstupni: number;
+  /** Kolik za úsek odvést; záporné = nadměrný odpočet. */
+  dphOdvod: number;
+}[];
 
 export type FinancePrehled = {
   useky: Useky;
-  souhrn: { obrat: number; naklady: number; zisk: number; faktur: number; vydaju: number };
+  souhrn: {
+    obrat: number;
+    naklady: number;
+    zisk: number;
+    faktur: number;
+    vydaju: number;
+    dphVystupni: number;
+    dphVstupni: number;
+    dphOdvod: number;
+  };
   predchozi: { obrat: number; naklady: number; zisk: number };
   kategorie: { nazev: string; castka: number }[];
   klienti: { nazev: string; obrat: number }[];
@@ -63,7 +97,7 @@ function prazdneUseky(od: Date, doData: Date, krok: Krok): Useky {
         krok === 'mesic'
           ? `${MESICE_KRATCE[d.getUTCMonth()]}${vicLet ? ` ${String(rok).slice(2)}` : ''}`
           : `Q${Math.floor(d.getUTCMonth() / 3) + 1}${vicLet ? ` ${String(rok).slice(2)}` : ''}`;
-      useky.push({ klic, popis, obrat: 0, naklady: 0, zisk: 0 });
+      useky.push({ klic, popis, obrat: 0, naklady: 0, zisk: 0, dphVystupni: 0, dphVstupni: 0, dphOdvod: 0 });
     }
     d.setUTCMonth(d.getUTCMonth() + 1);
   }
@@ -138,7 +172,7 @@ export async function nactiFinance(f: FinanceFiltr): Promise<FinancePrehled> {
 
   const useky = prazdneUseky(f.od, f.do, f.krok);
   const podleKlice = new Map(useky.map((u) => [u.klic, u]));
-  const souhrn = { obrat: 0, naklady: 0, zisk: 0, faktur: 0, vydaju: 0 };
+  const souhrn = { obrat: 0, naklady: 0, zisk: 0, faktur: 0, vydaju: 0, dphVystupni: 0, dphVstupni: 0, dphOdvod: 0 };
   const predchozi = { obrat: 0, naklady: 0, zisk: 0 };
   const kategorie = new Map<string, number>();
   const klienti = new Map<string, number>();
@@ -158,18 +192,27 @@ export async function nactiFinance(f: FinanceFiltr): Promise<FinancePrehled> {
   for (const fa of faktury) {
     const datum = f.zaklad === 'uhrazeno' ? fa.paidAt : (fa.taxDate ?? fa.issueDate);
     if (!datum) continue;
-    const castka = Math.round(
-      computeTotals(fa.items, { slevaProcent: fa.slevaProcent, slevaMinor: fa.slevaMinor }).exVat *
-        (fa.exchangeRate || 1),
-    );
+    const soucty = computeTotals(fa.items, {
+      slevaProcent: fa.slevaProcent,
+      slevaMinor: fa.slevaMinor,
+    });
+    const kurzFa = fa.exchangeRate || 1;
+    const castka = Math.round(soucty.exVat * kurzFa);
+    // DPH z faktury je u nulové sazby (do zahraničí, přenesená povinnost) nula
+    // sama od sebe - žádná zvláštní větev tu být nemusí.
+    const dph = Math.round(soucty.vat * kurzFa);
     if (!vObdobi(datum)) {
       predchozi.obrat += castka;
       continue;
     }
     souhrn.obrat += castka;
+    souhrn.dphVystupni += dph;
     souhrn.faktur += 1;
     const u = podleKlice.get(klicUseku(datum, f.krok));
-    if (u) u.obrat += castka;
+    if (u) {
+      u.obrat += castka;
+      u.dphVystupni += dph;
+    }
     const klient = fa.company?.name || '—';
     klienti.set(klient, (klienti.get(klient) ?? 0) + castka);
     const p = projekt(fa.caflouProjectId, fa.projectName);
@@ -190,16 +233,39 @@ export async function nactiFinance(f: FinanceFiltr): Promise<FinancePrehled> {
     const celkemSDph = v.amountExVatMinor + Math.round((v.amountExVatMinor * v.vatRate) / 100);
     const podilBezDph = celkemSDph > 0 ? v.amountExVatMinor / celkemSDph : 1;
 
-    const castiky: { datum: Date; castka: number }[] =
+    /**
+     * DPH na vstupu jde s částkou ruku v ruce: u částečné úhrady se odečítá
+     * jen poměrná část, jinak by si portál u půlky zaplacené faktury nárokoval
+     * celou daň.
+     */
+    const dphZakladu = (zaklad: number) => Math.round((zaklad * v.vatRate) / 100);
+
+    const castiky: { datum: Date; castka: number; dph: number }[] =
       f.zaklad !== 'uhrazeno'
-        ? [{ datum: v.issueDate, castka: Math.round(v.amountExVatMinor * kurz) }]
+        ? [
+            {
+              datum: v.issueDate,
+              castka: Math.round(v.amountExVatMinor * kurz),
+              dph: Math.round(dphZakladu(v.amountExVatMinor) * kurz),
+            },
+          ]
         : v.uhrady.length > 0
-          ? v.uhrady.map((u) => ({
-              datum: u.datum,
-              castka: Math.round(u.castkaMinor * podilBezDph * kurz),
-            }))
+          ? v.uhrady.map((u) => {
+              const zaklad = u.castkaMinor * podilBezDph;
+              return {
+                datum: u.datum,
+                castka: Math.round(zaklad * kurz),
+                dph: Math.round(dphZakladu(zaklad) * kurz),
+              };
+            })
           : v.paid && v.paidAt
-            ? [{ datum: v.paidAt, castka: Math.round(v.amountExVatMinor * kurz) }]
+            ? [
+                {
+                  datum: v.paidAt,
+                  castka: Math.round(v.amountExVatMinor * kurz),
+                  dph: Math.round(dphZakladu(v.amountExVatMinor) * kurz),
+                },
+              ]
             : [];
 
     let zapocten = false;
@@ -210,13 +276,17 @@ export async function nactiFinance(f: FinanceFiltr): Promise<FinancePrehled> {
         continue;
       }
       souhrn.naklady += cast.castka;
+      souhrn.dphVstupni += cast.dph;
       if (!zapocten) {
         // Doklad se do počtu započítá jednou, i když se platil třikrát.
         souhrn.vydaju += 1;
         zapocten = true;
       }
       const u = podleKlice.get(klicUseku(cast.datum, f.krok));
-      if (u) u.naklady += cast.castka;
+      if (u) {
+        u.naklady += cast.castka;
+        u.dphVstupni += cast.dph;
+      }
       const k = v.category?.name || 'Bez kategorie';
       kategorie.set(k, (kategorie.get(k) ?? 0) + cast.castka);
       const p = projekt(v.caflouProjectId, v.projectName);
@@ -224,8 +294,12 @@ export async function nactiFinance(f: FinanceFiltr): Promise<FinancePrehled> {
     }
   }
 
-  for (const u of useky) u.zisk = u.obrat - u.naklady;
+  for (const u of useky) {
+    u.zisk = u.obrat - u.naklady;
+    u.dphOdvod = u.dphVystupni - u.dphVstupni;
+  }
   souhrn.zisk = souhrn.obrat - souhrn.naklady;
+  souhrn.dphOdvod = souhrn.dphVystupni - souhrn.dphVstupni;
   predchozi.zisk = predchozi.obrat - predchozi.naklady;
 
   const serad = (m: Map<string, number>) =>

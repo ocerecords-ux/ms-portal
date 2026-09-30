@@ -297,6 +297,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'hoste.smazat': { cs: 'Odebrat', en: 'Remove' },
   'hoste.opravduSmazat': { cs: 'Opravdu odebrat?', en: 'Really remove?' },
   'hoste.chyba': { cs: 'Nepovedlo se to.', en: 'It did not work.' },
+
+  // Natáčecí plán u klienta v přehledu zakázek (30. 9. 2026).
+  'projekty.sl.nataceciPlan': { cs: 'Natáčecí plán', en: 'Recording plan' },
+  'terminy.zobrazit': { cs: 'Zobrazit termíny', en: 'Show sessions' },
+  'terminy.nadpis': { cs: 'Natáčecí termíny', en: 'Recording sessions' },
+  'terminy.napoveda': {
+    cs: 'Domluvené natáčecí termíny téhle zakázky a kdo v nich čte',
+    en: 'The agreed recording sessions for this job and who is reading',
+  },
+  'terminy.odtoceno': { cs: 'odtočeno', en: 'recorded' },
   'projekt.schvaleno': { cs: 'Klient zakázku schválil', en: 'The customer has approved the job' },
   'projekt.neschvaleno': { cs: 'Zatím neschváleno', en: 'Not approved yet' },
   'projekt.jakSeSchvaluje': {

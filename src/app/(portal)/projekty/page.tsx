@@ -32,6 +32,7 @@ import { PROJECTS_TABLE_KEY } from '@/lib/columnLabels';
 import { odkazNaFotku } from '@/lib/fotky';
 import { posledniStrany } from '@/lib/brunoServer';
 import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
+import { nactiTerminyProjektu } from '@/lib/terminyKlientaServer';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit, prelozitS } from '@/lib/jazyk';
 import { bezTitulu } from '@/lib/jmena';
@@ -265,6 +266,16 @@ export default async function ProjektyPage() {
     Array.from(firemniProgresMapa, ([id, v]) => [id, v.celkem]),
   );
 
+  /**
+   * NATÁČECÍ PLÁN (zadání 30. 9. 2026: „potřebuji udělat, aby klienti viděli
+   * všechny natáčecí frekvence s hercem"). Čte se hromadně pro celý přehled -
+   * jeden dotaz na obě tabulky místo dotazu na řádek. U dokončených zakázek
+   * se sloupec nevykresluje, tak se pro ně termíny ani nenačítají.
+   */
+  const terminy = await nactiTerminyProjektu(
+    active.map((p) => String(p.id)).concat(firemniActive.map((p) => String(p.id))),
+  );
+
   // Stav preposlechu do dvou novych sloupcu (zadani 12. 9. 2026). Jen
   // u rozpracovanych projektu - u dokoncenych uz nema co ukazovat.
   const preposlechMapa = await nactiPreposlechPrehled(active.map((p) => String(p.id)));
@@ -389,6 +400,7 @@ export default async function ProjektyPage() {
               <ProjectsTable
                 projects={active}
                 emptyText={prelozit(jazyk, 'projekty.zadneAktivni')}
+                terminy={terminy}
                 rodneListy={rodneListy}
                 preposlech={preposlech}
                 odkazyAudioTaggeru={odkazyAudioTaggeru}
@@ -432,6 +444,7 @@ export default async function ProjektyPage() {
               <ProjectsTable
                 projects={firemniActive}
                 emptyText={prelozit(jazyk, 'projekty.zadneFiremniAktivni')}
+                terminy={terminy}
                 rodneListy={rodneListy}
                 progres={firemniProgres}
                 kontakty={firemniKontakty}

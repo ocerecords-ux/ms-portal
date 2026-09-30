@@ -18,6 +18,8 @@ import { initials } from '@/lib/chat';
 import { barvaStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
 import { IkonaTypu, KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { HerciBunka } from './HerciBunka';
+import { TerminyKlienta } from './TerminyKlienta';
+import type { TerminKlienta } from '@/lib/terminyKlientaServer';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
 import { UpravitelnaPriorita, UpravitelneDatum, UpravitelnyVyber } from './UpravitelnaBunka';
@@ -164,6 +166,7 @@ export function StatusPill({
 export function ProjectsTable({
   projects,
   emptyText,
+  terminy,
   rodneListy,
   preposlech,
   odkazyAudioTaggeru,
@@ -230,8 +233,17 @@ export function ProjectsTable({
    * vůbec. Firma, která dělá i audioknihy, ho má dál.
    */
   normostrany?: boolean;
+  /**
+   * NATÁČECÍ PLÁN (zadání 30. 9. 2026: „potřebuji udělat, aby klienti viděli
+   * všechny natáčecí frekvence s hercem").
+   *
+   * Klíč je ID projektu, hodnota jeho potvrzené termíny. Bez tohohle propu se
+   * sloupec nevykreslí - u dokončených zakázek už nemá co ukazovat.
+   */
+  terminy?: Record<string, TerminKlienta[]>;
 }) {
   const showKontakt = kontakty !== undefined;
+  const showTerminy = terminy !== undefined;
   const showRodnyList = rodneListy !== undefined;
   const showPreposlech = preposlech !== undefined;
   const showSchvaleni = schvaleni !== undefined;
@@ -248,6 +260,7 @@ export function ProjectsTable({
               ...(showKontakt ? ['kontakt'] : []),
               'statusName',
               'narrator',
+              ...(showTerminy ? ['terminy'] : []),
               ...(showProgres ? ['progres'] : []),
               ...(normostrany ? ['pageCountSirsi'] : []),
               'endDate',
@@ -266,6 +279,11 @@ export function ProjectsTable({
               {showKontakt && <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.vede')}</th>}
               <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.stav')}</th>
               <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.herec')}</th>
+              {showTerminy && (
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">
+                  {prelozit(jazyk, 'projekty.sl.nataceciPlan')}
+                </th>
+              )}
               {showProgres && (
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">
                   {prelozit(jazyk, 'projekty.sl.progresNataceni')}
@@ -317,6 +335,7 @@ export function ProjectsTable({
                   colSpan={
                     6 +
                     (showKontakt ? 1 : 0) +
+                    (showTerminy ? 1 : 0) +
                     (showProgres ? 1 : 0) +
                     (showPreposlech ? 2 : 0) +
                     (showRodnyList ? 1 : 0) +
@@ -378,6 +397,11 @@ export function ProjectsTable({
                     </span>
                   )}
                 </td>
+                {showTerminy && (
+                  <td className="px-4 py-2 align-middle">
+                    <TerminyKlienta terminy={terminy?.[String(p.id)] ?? []} />
+                  </td>
+                )}
                 {showProgres && (
                   <td className="px-4 py-2 align-middle">
                     <ValecProgresu progres={progres?.[String(p.id)] ?? null} prazdne="—" kompaktni jazyk={jazyk} />
@@ -1009,6 +1033,8 @@ const VAHA_SLOUPCE: Record<string, number> = {
   pageCount: 6,
   // Progres natáčení - válec s procenty (19. 9. 2026).
   progres: 13,
+  // Natáčecí plán u klienta (30. 9. 2026) - tlačítko s počtem termínů.
+  terminy: 11,
   // Kdo ze zakaznikovy firmy zakazku vede (24. 9. 2026) - vejde se jmeno
   // i prijmeni, jinak by z „Radka Kopecká" zbylo „Radka K…".
   kontakt: 14,
