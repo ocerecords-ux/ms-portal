@@ -47,6 +47,7 @@ type VystupZDb = {
   licenceMesicu: number | null;
   hotovoAt: Date | null;
   potvrzenoAt: Date | null;
+  text: string | null;
 };
 
 const VYBER = {
@@ -70,6 +71,7 @@ const VYBER = {
   licenceMesicu: true,
   hotovoAt: true,
   potvrzenoAt: true,
+  text: true,
 } as const;
 
 export function naData(v: VystupZDb): VystupData {
@@ -94,6 +96,7 @@ export function naData(v: VystupZDb): VystupData {
     licenceMesicu: v.licenceMesicu,
     hotovo: Boolean(v.hotovoAt),
     potvrzeno: Boolean(v.potvrzenoAt),
+    text: v.text ?? null,
   };
 }
 
@@ -146,6 +149,8 @@ export type ZmenaVystupu = {
   licenceMesicu?: number | null;
   hotovo?: boolean;
   potvrzeno?: boolean;
+  /** Text spotu (30. 9. 2026). Prázdný = smazat, `undefined` = nesahat. */
+  text?: string | null;
 };
 
 function naZapis(zmena: ZmenaVystupu): Record<string, unknown> {
@@ -163,6 +168,12 @@ function naZapis(zmena: ZmenaVystupu): Record<string, unknown> {
   if (zmena.licenceUziti !== undefined) data.licenceUziti = zmena.licenceUziti?.trim() || null;
   if (zmena.licenceOd !== undefined) data.licenceOd = vstupNaDen(zmena.licenceOd);
   if (zmena.licenceMesicu !== undefined) data.licenceMesicu = zmena.licenceMesicu;
+  /**
+   * Text se NEOŘEZÁVÁ zprostředka - je to scénář, odsazení a prázdné řádky
+   * v něm něco znamenají. Sundají se jen mezery na krajích; když po nich
+   * nezbude nic, uloží se prázdno, ať natáčecí list ukáže zase [text spotu].
+   */
+  if (zmena.text !== undefined) data.text = zmena.text?.trim() ? zmena.text : null;
   // Hotovo i potvrzeno se ukládají jako OKAMŽIK, ne jako zaškrtávátko: „kdo to
   // odbavil a kdy" je později k nezaplacení a z boolean se to nedá dopočítat.
   if (zmena.hotovo !== undefined) data.hotovoAt = zmena.hotovo ? new Date() : null;

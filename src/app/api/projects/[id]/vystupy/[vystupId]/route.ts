@@ -35,6 +35,12 @@ const schema = z.object({
   licenceMesicu: z.number().int().positive().max(1200).nullable().optional(),
   hotovo: z.boolean().optional(),
   potvrzeno: z.boolean().optional(),
+  /**
+   * Text spotu (30. 9. 2026). Schválně BEZ `.trim()` - je to scénář, odsazení
+   * a prázdné řádky v něm nesou význam; ořezat se smí jen kraje, což dělá až
+   * vystupyServer. Strop je na dvacet tisíc znaků, což je asi dvě hodiny čtení.
+   */
+  text: z.string().max(20000).nullable().optional(),
 });
 
 /** Výstup musí patřit projektu z adresy - ID z těla se nevěří. */

@@ -34,7 +34,28 @@ export const PROMENNE_NATACENI = [
   { klic: 'delka', popis: 'Délka spotu - 30s, 2min. (jen v bloku spotu)' },
   { klic: 'licence', popis: 'Licence výstupu - Rádio, Online (jen v bloku spotu)' },
   { klic: 'poradi', popis: 'Pořadové číslo spotu v dokumentu' },
+  { klic: 'text', popis: 'Text spotu zapsaný u výstupu (jen v bloku spotu)' },
 ] as const;
+
+/**
+ * MÍSTO NA TEXT (30. 9. 2026: „bylo by super, kdybych tady mohl k těm výstupům
+ * i nahrát a editovat text").
+ *
+ * Ve vzorech, které portál rozeslal do dneška, stojí tahle věta natvrdo jako
+ * výplň. Teď je z ní přihrádka: co je u výstupu napsané, se sem vloží, a kde
+ * text ještě není, zůstane stát ona sama - list se tím tiskne přesně jako dřív
+ * a je v něm místo na ruční doplnění. Ručně upravené vzory tak fungují dál
+ * a nikdo je nemusí přepisovat na {{text}}.
+ */
+export const MISTO_NA_TEXT = '[text spotu]';
+
+/**
+ * Značka, pod kterou text projde úklidem v `dosad`. Ten srovnává oddělovače
+ * a slepuje dvojité mezery, což je správně pro hlavičku spotu, ale ve scénáři
+ * by to sebralo odsazení. Text se proto dosadí až po úklidu - značka je
+ * schválně bez mezer a bez teček, aby na ni žádné z pravidel nesáhlo.
+ */
+const ZNACKA_TEXTU = '@@MSTEXT@@';
 
 /**
  * VÝCHOZÍ PODOBA VZORU. Úvod je schválně prázdný - název projektu, klienta
@@ -67,6 +88,8 @@ export type VystupProText = {
   nazev: string;
   delka: string;
   licence: string;
+  /** Co se bude natáčet. Prázdné = v listu zůstane volné místo (30. 9. 2026). */
+  text?: string | null;
 };
 
 export type PodkladyTextu = {
@@ -179,7 +202,11 @@ export function sestavHtmlNataceni(
     upraveno: podklady.upraveno,
   };
 
-  const stylTextu = `margin:0 0 8pt;font-family:Arial,sans-serif;font-size:11pt;line-height:1.55;color:${INKOUST}`;
+  /**
+   * `white-space:pre-wrap` kvůli textům spotů (30. 9. 2026): scénáře chodí
+   * odsazené a HTML by mezery na začátku řádku samo slepilo.
+   */
+  const stylTextu = `margin:0 0 8pt;font-family:Arial,sans-serif;font-size:11pt;line-height:1.55;white-space:pre-wrap;color:${INKOUST}`;
   const casti: string[] = [hlavicka(podklady)];
 
   if (vzor.uvod?.trim()) {
@@ -189,13 +216,16 @@ export function sestavHtmlNataceni(
   }
 
   vystupy.forEach((v, i) => {
-    const text = dosad(vzor.blok, {
+    // Starší vzory mají místo na text napsané natvrdo; ať se chová jako {{text}}.
+    const sablona = vzor.blok.split(MISTO_NA_TEXT).join('{{text}}');
+    const text = dosad(sablona, {
       ...spolecne,
       spot: v.nazev,
       delka: v.delka,
       licence: v.licence,
       poradi: String(i + 1),
-    });
+      text: ZNACKA_TEXTU,
+    }).split(ZNACKA_TEXTU).join(v.text?.trim() ? v.text.trim() : MISTO_NA_TEXT);
 
     /**
      * První odstavec bloku je hlavička spotu (název), druhý bývá řádek se

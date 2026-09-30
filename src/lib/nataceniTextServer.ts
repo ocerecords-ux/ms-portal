@@ -88,6 +88,13 @@ export async function htmlNataceciTextu(
         .map((id) => nazvyLicenci.get(id) || '')
         .filter(Boolean)
         .join(', '),
+      /**
+       * Text schválně ze SYROVÉHO výstupu, ne ze zděděného (30. 9. 2026):
+       * downcut si text po hlavním spotu nedědí, protože je kratší - a kdyby
+       * se tu vzal ze `sDedenim`, měly by všechny zkrácené verze v listu text
+       * minutové verze.
+       */
+      text: syrovy.text,
     };
   });
 

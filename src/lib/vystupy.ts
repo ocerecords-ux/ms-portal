@@ -39,6 +39,12 @@ export type VystupData = {
   hotovo: boolean;
   /** Návrh z objednávky, který produkce ještě nepotvrdila. */
   potvrzeno: boolean;
+  /**
+   * TEXT SPOTU (30. 9. 2026). Co se bude natáčet - propisuje se do natáčecího
+   * listu na místo `[text spotu]`. Downcut si ho NEDĚDÍ (viz `sDedenim`):
+   * zkrácená verze má vlastní text, zděděný by byl vždycky špatně.
+   */
+  text: string | null;
 };
 
 /**

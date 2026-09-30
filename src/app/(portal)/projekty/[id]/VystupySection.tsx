@@ -316,6 +316,7 @@ export function VystupySection({
                   druhyLicence={druhyLicence}
                   typy={typy}
                   rodneListy={rlPodleVystupu.get(v.id) ?? []}
+                  caflouProjectId={caflouProjectId}
                   pracuje={pracuje}
                   nazevProjektu={nazevProjektu}
                   onUloz={(zmena) => uloz(v.id, zmena)}
@@ -398,6 +399,7 @@ export function VystupySection({
 function VystupRadek({
   vystup,
   rodic,
+  caflouProjectId,
   canEdit,
   herci,
   druhyLicence,
@@ -412,6 +414,7 @@ function VystupRadek({
 }: {
   vystup: VystupData;
   rodic: VystupData | null;
+  caflouProjectId: string;
   canEdit: boolean;
   herci: HerecVolba[];
   druhyLicence: LicenceVolba[];
@@ -428,6 +431,22 @@ function VystupRadek({
   const [delka, setDelka] = useState(delkaNaText(vystup.delkaSekund));
   const [licenceIds, setLicenceIds] = useState<string[]>(vystup.licenceIds);
   const [herciIds, setHerciIds] = useState<string[]>(vystup.herciIds);
+  /**
+   * TEXT SPOTU (zadání 30. 9. 2026: „bylo by super, kdybych tady mohl k těm
+   * výstupům i nahrát a editovat text").
+   *
+   * Do teď se text psal až v dokumentu na Disku, takže portál o něm nevěděl
+   * a každý nově vyrobený list začínal prázdný. Teď je text u výstupu: píše
+   * se tady, vedle je hned vidět v náhledu listu a ukládá se týmž tlačítkem
+   * jako zbytek řádku - žádné druhé „uložit".
+   *
+   * ROZKLEPNE SE POD ŘÁDKEM, ne v okně: řádek zůstane řádkem a náhled listu
+   * vedle nic nepřekrývá, takže je při psaní vidět, jak se list plní.
+   */
+  const [text, setText] = useState(vystup.text ?? '');
+  const [otevrenText, setOtevrenText] = useState(false);
+  const [nacitam, setNacitam] = useState(false);
+  const [chybaTextu, setChybaTextu] = useState<string | null>(null);
 
   // Co přijde ze serveru po uložení, přebije rozepsané - jinak by v políčku
   // zůstala stará hodnota, když ji server upraví (třeba ořízne mezery).
@@ -436,7 +455,37 @@ function VystupRadek({
     setDelka(delkaNaText(vystup.delkaSekund));
     setLicenceIds(vystup.licenceIds);
     setHerciIds(vystup.herciIds);
+    setText(vystup.text ?? '');
   }, [vystup]);
+
+  /**
+   * NAHRÁNÍ SOUBORU TEXT JEN NAČTE, NEULOŽÍ. Objeví se v políčku, kde se dá
+   * ještě upravit, a teprve uložení řádku ho zapíše - tím nahrání nikdy tiše
+   * nepřepíše, co už u výstupu bylo napsané.
+   */
+  async function nahrajText(soubor: File) {
+    setNacitam(true);
+    setChybaTextu(null);
+    try {
+      const telo = new FormData();
+      telo.append('soubor', soubor);
+      const res = await fetch(
+        `/api/projects/${encodeURIComponent(caflouProjectId)}/vystupy/text`,
+        { method: 'POST', body: telo },
+      );
+      const data = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
+      if (!res.ok || !data.text) {
+        setChybaTextu(data.error || 'Soubor se nepodařilo přečíst.');
+        return;
+      }
+      setText(data.text);
+      setOtevrenText(true);
+    } catch {
+      setChybaTextu('Soubor se nepodařilo přečíst.');
+    } finally {
+      setNacitam(false);
+    }
+  }
 
   const delkaSekund = textNaDelku(delka);
 
@@ -458,7 +507,8 @@ function VystupRadek({
     nazev !== vystup.nazev ||
     (delkaSekund ?? null) !== (vystup.delkaSekund ?? null) ||
     licenceIds.join(',') !== vystup.licenceIds.join(',') ||
-    herciIds.join(',') !== vystup.herciIds.join(',');
+    herciIds.join(',') !== vystup.herciIds.join(',') ||
+    text !== (vystup.text ?? '');
   /** Napsaná délka, které nerozumíme - řádek to řekne místo tichého zahození. */
   const delkaSpatne = delka.trim().length > 0 && delkaSekund === null;
 
@@ -472,6 +522,7 @@ function VystupRadek({
       delkaSekund,
       licenceIds,
       herciIds,
+      text: text.trim() ? text : null,
       potvrzeno: true,
     });
   }
@@ -536,6 +587,24 @@ function VystupRadek({
           }}
         />
 
+        {/* Odznak svítí, když text u výstupu je - v sadě čtyř délek je tak
+            na první pohled vidět, ke kterému spotu text ještě chybí. */}
+        {(canEdit || vystup.text) && (
+          <button
+            type="button"
+            onClick={() => setOtevrenText((o) => !o)}
+            title="Text spotu — propíše se do natáčecího listu"
+            aria-expanded={otevrenText}
+            className={`shrink-0 rounded-pill border px-2.5 py-1 text-[11px] font-heading font-semibold transition-colors cursor-pointer ${
+              text.trim()
+                ? 'border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight'
+                : 'border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple'
+            }`}
+          >
+            Text
+          </button>
+        )}
+
         {posledniRL && (
           <a
             href={`/api/rodny-list/${posledniRL.id}`}
@@ -581,6 +650,53 @@ function VystupRadek({
           />
         )}
       </div>
+
+      {otevrenText && (
+        <div className="mt-1 ml-3 flex flex-col gap-2 rounded-card border border-line bg-field/40 px-3 py-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
+              Text spotu
+            </span>
+            {canEdit && (
+              <label className="ml-auto shrink-0 rounded-pill border border-line bg-surface px-3 py-1 text-xs font-heading text-muted cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors">
+                {nacitam ? 'Čtu soubor…' : 'Nahrát z Wordu'}
+                <input
+                  type="file"
+                  accept=".docx,.txt,.md"
+                  disabled={nacitam || pracuje}
+                  className="hidden"
+                  onChange={(e) => {
+                    const vybrany = e.target.files?.[0];
+                    // Vyprázdnit, ať jde tentýž soubor nahrát i podruhé.
+                    e.target.value = '';
+                    if (vybrany) nahrajText(vybrany);
+                  }}
+                />
+              </label>
+            )}
+          </div>
+
+          {chybaTextu && (
+            <p className="text-xs font-body text-status-error m-0" role="alert">
+              {chybaTextu}
+            </p>
+          )}
+
+          <textarea
+            value={text}
+            disabled={!canEdit}
+            rows={10}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Sem patří text, který se bude natáčet. Můžete ho napsat, vložit ze schránky, nebo nahrát z Wordu."
+            aria-label="Text spotu"
+            className="w-full min-h-[140px] resize-y rounded-card border border-line bg-surface px-3 py-2 text-ink font-body text-sm leading-relaxed outline-none focus:border-brand-purple disabled:opacity-60"
+          />
+
+          <p className="text-[11px] font-body text-muted m-0">
+            Nahrát jde .docx (Word), .txt a .md. Uloží se spolu s výstupem tlačítkem Uložit.
+          </p>
+        </div>
+      )}
 
       {delkaSpatne && (
         <p className="text-xs font-body text-status-error m-0 mt-1 ml-3">

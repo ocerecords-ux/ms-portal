@@ -2835,6 +2835,18 @@ model Vystup {
   /// založíme sami, je potvrzené rovnou.
   potvrzenoAt DateTime?
 
+  /// TEXT SPOTU (zadání 30. 9. 2026: „bylo by super, kdybych tady mohl k těm
+  /// výstupům i nahrát a editovat text").
+  ///
+  /// Do teď se text psal až v dokumentu na Disku - portál o něm nevěděl
+  /// a natáčecí list se pokaždé vyrobil s prázdným místem pod hlavičkou.
+  /// Teď je text u výstupu: vidí ho náhled i každý další vyrobený list
+  /// a nahrává se z Wordu (viz lib/docxText.ts).
+  ///
+  /// NEDĚDÍ SE DO ZKRÁCENÉ VERZE. Downcut má vlastní, kratší text - zděděný
+  /// text hlavního spotu by v něm byl vždycky špatně.
+  text String? @db.Text
+
   rodneListy RodnyList[]
 
   createdAt DateTime @default(now())
