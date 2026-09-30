@@ -89,6 +89,42 @@ export type Sleva = {
 };
 
 /**
+ * POLOŽKY, KTERÉ SE MAJÍ ULOŽIT (oprava 30. 9. 2026: „když Karolína dělá novou
+ * cenovou nabídku, tak tam dá cenu a uloží ji, ale pak tam má nulu").
+ *
+ * Editor si pod poslední položkou drží prázdný řádek, aby bylo kam psát, a ten
+ * se posílat nemá. Do teď se to řešilo tak, že se zahodil KAŽDÝ řádek bez
+ * popisu - jenže kdo vyplnil cenu a popis nechal na potom, přišel o celý
+ * řádek. Doklad se uložil bez položek, ukázal nulu a portál na to neřekl ani
+ * slovo. Přesně tak vznikla nabídka N2026026 na 0,00 Kč.
+ *
+ * Teď se rozlišuje:
+ *  - PRÁZDNÝ řádek (nic v popisu a nulová cena) = pomocný, tiše se zahodí,
+ *  - řádek s cenou, ale bez popisu = někdo do něj psal; uložení se zastaví
+ *    a řekne se které.
+ *
+ * Množství ani jednotka do rozhodování nevstupují: nový řádek je má
+ * předvyplněné (1 ks), takže by se prázdný řádek tvářil jako vyplněný.
+ */
+export type PolozkaKUlozeni = { description: string; unitPriceMinor: number };
+
+export function jePrazdnaPolozka(item: PolozkaKUlozeni): boolean {
+  return !item.description.trim() && !item.unitPriceMinor;
+}
+
+/**
+ * Vrátí položky k odeslání a číslo prvního řádku (od 1), kterému chybí popis.
+ * Když `chybiPopis` není null, nemá se ukládat vůbec nic.
+ */
+export function pripravPolozky<T extends PolozkaKUlozeni>(
+  items: T[],
+): { polozky: T[]; chybiPopis: number | null } {
+  const polozky = items.filter((i) => !jePrazdnaPolozka(i));
+  const index = polozky.findIndex((i) => !i.description.trim());
+  return { polozky, chybiPopis: index < 0 ? null : index + 1 };
+}
+
+/**
  * Součet položek. Zaokrouhluje se až DPH u každé sazby, ne u každé položky.
  *
  * SLEVA SE ROZPOČÍTÁ MEZI SAZBY podle jejich podílu na základu, ne až

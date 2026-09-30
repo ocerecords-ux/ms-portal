@@ -2307,6 +2307,11 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     en: 'Select a customer — without one we do not know who to send the quote to.',
   },
   'nabidka.ulozeno': { cs: 'Uloženo.', en: 'Saved.' },
+  // Oprava 30. 9. 2026 - viz pripravPolozky v lib/doklady.ts.
+  'doklad.chybaPolozkaBezPopisu': {
+    cs: 'Řádek {radek} má cenu, ale chybí mu popis. Doplňte ho — bez popisu by se celý řádek ztratil.',
+    en: 'Line {radek} has a price but no description. Fill it in — without it the whole line would be lost.',
+  },
   'nabidka.chybaUlozeni': { cs: 'Uložení se nezdařilo.', en: 'The quote could not be saved.' },
   'nabidka.odeslanoNa': {
     cs: 'Nabídka odeslána na {email}.',
@@ -5470,9 +5475,24 @@ export function jazykZCookie(): Jazyk {
  * Datum podle jazyka - česky „13. 9. 2026", anglicky „13/09/2026"
  * (britský formát, ne americký).
  */
+/**
+ * ČAS SE PÍŠE V NAŠEM PÁSMU (oprava 29. 9. 2026: na kartě banky stálo
+ * „Naposledy 18:32", zatímco hodiny ukazovaly 20:32).
+ *
+ * Stránky se vykreslují na serveru a ten běží v UTC, takže bez pásma se
+ * všechny časy „kdo co kdy udělal" ukazovaly o dvě hodiny zpátky - a vypadalo
+ * to, že se dvě hodiny nic nestalo. Pásmo je natvrdo pražské: firma je tady
+ * a jde o to, aby server i obrazovka říkaly totéž. Časy událostí v cizích
+ * studiích (Londýn) si pásmo vozí s sebou a formátují se jinde.
+ *
+ * U data bez času se tím nic neposune: data se drží jako půlnoc UTC, což je
+ * v Praze tentýž den ráno.
+ */
+const NASE_PASMO = 'Europe/Prague';
+
 export function formatDatum(jazyk: Jazyk, d: Date | null, zaloha = '—'): string {
   if (!d) return zaloha;
-  return new Intl.DateTimeFormat(kodJazyka(jazyk)).format(d);
+  return new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: NASE_PASMO }).format(d);
 }
 
 /** Datum i s časem (24 h) - do výpisů, kdo co kdy udělal. */
@@ -5485,6 +5505,7 @@ export function formatDatumCas(jazyk: Jazyk, d: Date | null, zaloha = '—'): st
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    timeZone: NASE_PASMO,
   }).format(d);
 }
 

@@ -19,6 +19,7 @@ import {
   parseMoneyToMinor,
   OFFER_STATUS_CLASSES,
   formatAddress,
+  pripravPolozky,
 } from '@/lib/doklady';
 import { formatDatumCas, prelozitKolem } from '@/lib/jazyk';
 import { useJazyk, usePreklad } from '@/app/(portal)/components/JazykProvider';
@@ -279,12 +280,21 @@ export function OfferEditor({
         setError(t('nabidka.chybaBezOdberatele'));
         return false;
       }
+      /**
+       * Řádek s cenou, ale bez popisu se DŘÍV tiše zahodil a doklad se uložil
+       * bez položek s nulou (oprava 30. 9. 2026). Teď se uložení zastaví a
+       * řekne se, o který řádek jde - viz pripravPolozky v lib/doklady.ts.
+       */
+      const pripravene = pripravPolozky(items);
+      if (pripravene.chybiPopis !== null) {
+        setError(t('doklad.chybaPolozkaBezPopisu', { radek: pripravene.chybiPopis }));
+        return false;
+      }
+
       const telo = {
         ...form,
         validUntil: form.validUntil || null,
-        items: items
-          .filter((i) => i.description.trim())
-          .map((i) => ({
+        items: pripravene.polozky.map((i) => ({
             description: i.description.trim(),
             quantity: Number(i.quantity) || 0,
             unit: i.unit || undefined,

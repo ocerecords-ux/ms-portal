@@ -13,6 +13,7 @@ import {
   formatMoney,
   minorToInput,
   parseMoneyToMinor,
+  pripravPolozky,
 } from '@/lib/doklady';
 import { formatRate, toCzkMinor } from '@/lib/cnb';
 import { ProjectSelect, type ProjectChoice } from '../../ProjectSelect';
@@ -259,15 +260,24 @@ export function InvoiceEditor({
         setError(t('faktura.chybiOdberatel'));
         return false;
       }
+      /**
+       * Řádek s cenou, ale bez popisu se DŘÍV tiše zahodil a doklad se uložil
+       * bez položek s nulou (oprava 30. 9. 2026). Teď se uložení zastaví a
+       * řekne se, o který řádek jde - viz pripravPolozky v lib/doklady.ts.
+       */
+      const pripravene = pripravPolozky(items);
+      if (pripravene.chybiPopis !== null) {
+        setError(t('doklad.chybaPolozkaBezPopisu', { radek: pripravene.chybiPopis }));
+        return false;
+      }
+
       const telo = {
         ...form,
         bankAccountId: form.bankAccountId || null,
         taxDate: form.taxDate || null,
         dueDate: form.dueDate || null,
         refreshRate: extra?.refreshRate,
-        items: items
-          .filter((i) => i.description.trim())
-          .map((i) => ({
+        items: pripravene.polozky.map((i) => ({
             description: i.description.trim(),
             quantity: Number(i.quantity) || 0,
             unit: i.unit || undefined,
