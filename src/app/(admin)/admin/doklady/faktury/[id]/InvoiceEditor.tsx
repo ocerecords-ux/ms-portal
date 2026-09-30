@@ -52,6 +52,8 @@ type Invoice = {
   status: InvoiceStatus;
   /** Interní značka „první / druhá část" - na dokladu není (29. 9. 2026). */
   interniCast: CastFaktury | null;
+  /** Nabídnout značku 1. / 2. část? Jen u firmy, která tak fakturuje. */
+  nabidnoutCast?: boolean;
   companyId: string;
   bankAccountId: string | null;
   currency: Currency;
@@ -509,7 +511,9 @@ export function InvoiceEditor({
                 ? t(STATUS_KLICE[invoice.status])
                 : invoice.status}
           </span>
-          {!jesteNeulozena && <CastZakazky id={invoice.id} vychozi={invoice.interniCast} />}
+          {!jesteNeulozena && invoice.nabidnoutCast && (
+            <CastZakazky id={invoice.id} vychozi={invoice.interniCast} />
+          )}
           {invoice.offerNumber && (
             <span className="text-xs font-body text-muted">
               {t('faktura.zNabidkyCislo', { cislo: invoice.offerNumber })}

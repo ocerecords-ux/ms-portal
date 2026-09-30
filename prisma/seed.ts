@@ -222,6 +222,7 @@ async function main() {
   await oznacCastiZakazek();
   await klientAudiolibrixu();
   await adresyStudii();
+  await castiJenTamKdeSeNaCastiFakturuje();
 
   // Datum dokončení z objednávky do projektu (oprava 22. 9. 2026: objednávka
   // chtěla 17. 11., v projektu bylo 22. 9.). Jednorázově dorovná projekty
@@ -1946,7 +1947,46 @@ async function oznacCastiZakazek() {
 }
 
 /**
- * PROJEKT, KTERÝ SE NEPŘEPSAL Z CAFLOU (29. 9. 2026: „tady nám zmizel jeden
+ * ZNAČKA „1. / 2. ČÁST" JEN TAM, KDE SE OPRAVDU FAKTURUJE NADVAKRÁT
+ * (zadání 30. 9. 2026: „ty části faktur mají být jen u Albatrosu").
+ *
+ * Značka vznikla 29. 9. 2026 pro Albatros, jenže se rozdávala KAŽDÉ faktuře
+ * vystavené z nabídky - takže se objevila i u klientů, kterým se fakturuje
+ * najednou (Audiotéka). Od teď o tom rozhoduje zaškrtávátko na kartě firmy
+ * (Company.fakturujeNaCasti); tenhle krok ho jednou zapne Albatrosu a u
+ * ostatních firem značku z faktur sundá.
+ *
+ * NEHÁDÁ SE PODLE NÁZVU NIC JINÉHO NEŽ TO PRVNÍ ZAPNUTÍ. Kdo si zaškrtávátko
+ * zapne nebo vypne sám, toho už se to netýká - krok proběhne jen jednou.
+ */
+async function castiJenTamKdeSeNaCastiFakturuje() {
+  const ZNAMKA = 'faktury-casti-jen-albatros';
+  try {
+    if (await prisma.counter.findUnique({ where: { name: ZNAMKA } })) return;
+
+    const albatros = await prisma.company.updateMany({
+      where: { name: { contains: 'Albatros', mode: 'insensitive' } },
+      data: { fakturujeNaCasti: true },
+    });
+
+    // Značku sundat u všech, jejichž odběratel na části nefakturuje. Faktura
+    // bez odběratele sem nespadá - tam není podle čeho rozhodnout.
+    const sundano = await prisma.invoice.updateMany({
+      where: { interniCast: { not: null }, company: { is: { fakturujeNaCasti: false } } },
+      data: { interniCast: null },
+    });
+
+    await prisma.counter.create({ data: { name: ZNAMKA, value: sundano.count } });
+    console.log(
+      `  casti faktur: zapnuto u ${albatros.count} firem, znacka sundana u ${sundano.count} faktur`,
+    );
+  } catch (e) {
+    console.warn('  omezeni casti faktur selhalo:', e);
+  }
+}
+
+/**
+ * PROJEKT, KTERÝ SE NEPŘEPSAL Z CAFLOU (29. 9. 2026: „tady nám zmizel jeden"
  * projekt, který se nepřepsal z Caflou. Je tam i nabídka. Můžeš ho tam tiše
  * dodat?").
  *

@@ -65,6 +65,12 @@ export function CompanyForm({ company }: { company: Company }) {
    * do ní napíše sám a sazba za normostranu není potřeba.
    */
   const [cenuUrcujeKlient, setCenuUrcujeKlient] = useState(company.cenuUrcujeKlient ?? false);
+  /**
+   * Fakturujeme téhle firmě na dvě části (zadání 30. 9. 2026: „ty části
+   * faktur mají být jen u Albatrosu"). Jen tehdy se u faktury z nabídky
+   * předvyplní a nabídne značka 1. / 2. část.
+   */
+  const [naCasti, setNaCasti] = useState(company.fakturujeNaCasti ?? false);
   // Vyrazeni misto mazani (zadani 10. 9. 2026): na firme visi doklady
   // a projekty, ktere musi zustat citelne.
   const [aktivni, setAktivni] = useState(company.active);
@@ -137,6 +143,7 @@ export function CompanyForm({ company }: { company: Company }) {
                 dealsAds,
                 audioknihyNaKlic: dealsAudiobooks ? naKlic : false,
                 cenuUrcujeKlient: dealsAudiobooks ? cenuUrcujeKlient : false,
+                fakturujeNaCasti: naCasti,
               }
             : {}),
         }),
@@ -366,6 +373,18 @@ export function CompanyForm({ company }: { company: Company }) {
               </label>
             </AdminField>
           )}
+
+          {/* Fakturace na dve casti (30. 9. 2026) - jen u firmy, ktera to tak
+              opravdu ma. Nesouvisi s druhem zakazek, proto bez podminky. */}
+          <AdminField
+            label="Fakturujeme na dvě části"
+            hint="po podpisu smlouvy polovina, zbytek potom — u faktury z nabídky se pak předvyplní naše interní značka 1. / 2. část; na dokladu se netiskne"
+          >
+            <label className="flex items-center gap-2 text-sm font-heading text-ink">
+              <input type="checkbox" checked={naCasti} onChange={(e) => setNaCasti(e.target.checked)} />
+              Zakázka se fakturuje nadvakrát
+            </label>
+          </AdminField>
 
           {/* Sazba za normostranu dava smysl jen u audioknih - u reklamnich
               klientu se cena bude pocitat kalkulackou nad Cenikem. A u firmy,

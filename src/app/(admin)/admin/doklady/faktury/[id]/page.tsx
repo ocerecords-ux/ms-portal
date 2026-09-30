@@ -48,6 +48,12 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           variableSymbol: invoice.variableSymbol,
           status: invoice.status,
           interniCast: jeCastFaktury(invoice.interniCast) ? invoice.interniCast : null,
+          /**
+           * Značka 1. / 2. část se nabízí jen u firmy, která na dvě části
+           * opravdu fakturuje (zadání 30. 9. 2026). Faktura, která značku
+           * z dřívějška má, ji ukáže i tak - ať se dá alespoň zrušit.
+           */
+          nabidnoutCast: invoice.company?.fakturujeNaCasti === true || jeCastFaktury(invoice.interniCast),
           companyId: invoice.companyId,
           bankAccountId: invoice.bankAccountId,
           currency: invoice.currency,

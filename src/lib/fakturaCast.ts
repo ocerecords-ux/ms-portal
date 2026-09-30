@@ -8,6 +8,13 @@
  * v mailu klientovi se neobjeví nikde - proto vlastní sloupec a ne `subject`
  * nebo `note`, které se tisknou („na dokladu samotném nic neměň").
  *
+ * JEN U FIRMY, KTERÁ TAK OPRAVDU FAKTURUJE (zadání 30. 9. 2026: „ty části
+ * faktur mají být jen u Albatrosu"). Do té doby značku dostala každá faktura
+ * vystavená z nabídky, takže se objevila i u klientů, kterým se fakturuje
+ * najednou. Rozhoduje o tom zaškrtávátko na kartě firmy
+ * (Company.fakturujeNaCasti) - ne název firmy: kdyby to zítra takhle chtěl
+ * někdo další, zaškrtne se mu to a nikdo nesahá do kódu.
+ *
  * Soubor je bez Prismy, ať ho vezme přehled, tabulka i editor.
  */
 
@@ -36,7 +43,8 @@ export function zkratkaCasti(hodnota: string | null | undefined): string | null 
 }
 
 /**
- * Čím předvyplnit fakturu vystavovanou z nabídky.
+ * Čím předvyplnit fakturu vystavovanou z nabídky. Volající se předtím ptá,
+ * jestli ta firma na části vůbec fakturuje.
  *
  * Nic se nehádá: bere se jen pořadí faktur z TÉŽE nabídky, protože přesně
  * takhle ta zakázka běží - nabídka na celek, po podpisu smlouvy polovina,

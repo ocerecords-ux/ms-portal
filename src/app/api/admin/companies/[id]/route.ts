@@ -37,6 +37,7 @@ const schema = z.object({
   dealsAudiobooks: z.boolean().optional(),
   audioknihyNaKlic: z.boolean().optional(),
   cenuUrcujeKlient: z.boolean().optional(),
+  fakturujeNaCasti: z.boolean().optional(),
   dealsAds: z.boolean().optional(),
   active: z.boolean().optional(),
 });
@@ -87,6 +88,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
               // Cenu navrhuje klient (23. 9. 2026) - objednavka pak cenu
               // nepocita ze sazby, klient ji vyplni sam.
               ...(data.cenuUrcujeKlient !== undefined ? { cenuUrcujeKlient: data.cenuUrcujeKlient } : {}),
+              ...(data.fakturujeNaCasti !== undefined ? { fakturujeNaCasti: data.fakturujeNaCasti } : {}),
               ...(data.dealsAds !== undefined ? { dealsAds: data.dealsAds } : {}),
             }
           : {}),

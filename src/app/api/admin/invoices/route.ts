@@ -91,18 +91,6 @@ export async function POST(req: NextRequest) {
        */
     }
 
-    /**
-     * PRVNI, NEBO DRUHA CAST (zadani 29. 9. 2026). Jen predvyplneni podle
-     * poctu faktur, ktere uz z te nabidky jsou - presne takhle bezi zakazka
-     * u Albatrosu: nabidka na celek, po podpisu smlouvy polovina, zbytek
-     * potom. Da se prepsat na fakture; nic se z toho netiskne.
-     */
-    const castZakazky = input.offerId
-      ? castPodlePoradi(
-          await prisma.invoice.count({ where: { offerId: input.offerId, status: { not: 'CANCELLED' } } }),
-        )
-      : null;
-
     const issuerCompanyId = offer?.issuerCompanyId ?? input.issuerCompanyId;
     const companyId = offer?.companyId ?? input.companyId;
     if (!issuerCompanyId || !companyId) {
@@ -114,6 +102,25 @@ export async function POST(req: NextRequest) {
 
     const company = await prisma.company.findUnique({ where: { id: companyId } });
     if (!company) return NextResponse.json({ error: 'Odběratel nenalezen.' }, { status: 404 });
+
+    /**
+     * PRVNÍ, NEBO DRUHÁ ČÁST (zadání 29. 9. 2026). Jen předvyplnění podle
+     * počtu faktur, které už z té nabídky jsou - přesně takhle běží zakázka
+     * u Albatrosu: nabídka na celek, po podpisu smlouvy polovina, zbytek
+     * potom. Dá se přepsat na faktuře; nic se z toho netiskne.
+     *
+     * JEN U FIRMY, KTERÁ TO TAK MÁ (zadání 30. 9. 2026: „ty části faktur mají
+     * být jen u Albatrosu"). Do teď značku dostala každá faktura z nabídky,
+     * takže se objevila i u klientů, kterým se fakturuje najednou.
+     */
+    const castZakazky =
+      input.offerId && company.fakturujeNaCasti
+        ? castPodlePoradi(
+            await prisma.invoice.count({
+              where: { offerId: input.offerId, status: { not: 'CANCELLED' } },
+            }),
+          )
+        : null;
 
     const currency = offer?.currency ?? issuer.defaultCurrency;
 
