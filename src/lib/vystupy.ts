@@ -14,6 +14,8 @@
  * Celý návrh: claude/ms-portal-vystupy-projektu-navrh.md.
  */
 
+import { prelozit, type Jazyk } from '@/lib/jazyk';
+
 /** Výstup tak, jak s ním pracuje formulář i server. */
 export type VystupData = {
   id: string;
@@ -257,11 +259,13 @@ export function prazdnyVystupObjednavky(poradi: number): VystupObjednavky {
 export function popisVystupuObjednavky(
   vystup: VystupObjednavky,
   nazvySluzeb: string[],
+  jazyk: Jazyk = 'cs',
 ): string {
   const casti = [popisDelky(vystup.delkaSekund), ...nazvySluzeb].filter(Boolean);
   const zaklad = `${vystup.nazev}${casti.length ? ` — ${casti.join(' · ')}` : ''}`;
   if (vystup.downcuty.length === 0) return zaklad;
-  return `${zaklad}; zkrácené verze ${vystup.downcuty.map((s) => popisDelky(s)).join(', ')}`;
+  const zkracene = prelozit(jazyk, 'vystup.zkraceneVerze');
+  return `${zaklad}; ${zkracene} ${vystup.downcuty.map((s) => popisDelky(s)).join(', ')}`;
 }
 
 /** Shrnutí do řádku tabulky - „60s · voiceover, postprodukce". */

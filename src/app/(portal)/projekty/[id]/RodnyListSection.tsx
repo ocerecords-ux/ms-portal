@@ -8,6 +8,8 @@ import {
   rodnyListVersionLabel,
 } from '@/lib/rodnyList';
 import { DatumPole } from '@/components/DatumPole';
+import { formatDatumCas } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '../../components/JazykProvider';
 
 /**
  * Záložka „Rodný list" na detailu projektu - zadání 9. 9. 2026.
@@ -75,6 +77,8 @@ export function RodnyListSection({
   rodneListy: RodnyListRow[];
   initial: RodnyListValues;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [values, setValues] = useState<RodnyListValues>(initial);
   const [saving, setSaving] = useState(false);
@@ -117,9 +121,9 @@ export function RodnyListSection({
             musicAuthor: values.musicAuthor,
             noMusic: values.noMusic,
             productionDate: values.productionDate ? new Date(values.productionDate) : null,
-          })
+          }, jazyk)
         : [],
-    [values, nazevFirmy, projectName, jeRadiovySpot],
+    [values, nazevFirmy, projectName, jeRadiovySpot, jazyk],
   );
 
   async function handleSubmit(e: React.FormEvent) {
@@ -154,14 +158,14 @@ export function RodnyListSection({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Uložení se nezdařilo.');
+        setError(data?.error || t('rodnyList.chybaUlozeni'));
         return;
       }
       setSaved(true);
       setVerzeNahledu((v) => v + 1);
       router.refresh();
     } catch {
-      setError('Uložení se nezdařilo.');
+      setError(t('rodnyList.chybaUlozeni'));
     } finally {
       setSaving(false);
     }
@@ -176,12 +180,12 @@ export function RodnyListSection({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Rodný list se nepodařilo vytvořit.');
+        setError(data?.error || t('rodnyList.chybaVytvoreni'));
         return;
       }
       router.refresh();
     } catch {
-      setError('Rodný list se nepodařilo vytvořit.');
+      setError(t('rodnyList.chybaVytvoreni'));
     } finally {
       setGenerating(false);
     }
@@ -255,8 +259,10 @@ export function RodnyListSection({
    */
   async function smazVerzi(rl: RodnyListRow) {
     const potvrzeno = window.confirm(
-      `Opravdu smazat ${rl.fileName} (${rodnyListVersionLabel(rl.version)})?` +
-        (rl.driveUrl ? '\n\nKopie na Disku se přesune do koše.' : ''),
+      t('rodnyList.opravduSmazat', {
+        soubor: rl.fileName,
+        verze: rodnyListVersionLabel(rl.version, jazyk),
+      }) + (rl.driveUrl ? `\n\n${t('rodnyList.kopieDoKose')}` : ''),
     );
     if (!potvrzeno) return;
 
@@ -266,15 +272,15 @@ export function RodnyListSection({
       const res = await fetch(`/api/rodny-list/${rl.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error || 'Rodný list se nepodařilo smazat.');
+        setError(data?.error || t('rodnyList.chybaSmazani'));
         return;
       }
       if (data?.disk === 'zustal') {
-        setError('Záznam je smazaný, ale soubor na Disku se nepodařilo přesunout do koše — smažte ho tam ručně.');
+        setError(t('rodnyList.diskZustal'));
       }
       router.refresh();
     } catch {
-      setError('Rodný list se nepodařilo smazat.');
+      setError(t('rodnyList.chybaSmazani'));
     } finally {
       setMazany(null);
     }
@@ -286,7 +292,7 @@ export function RodnyListSection({
   const hudba = (
     <div className={jeRadiovySpot ? 'border-t border-line pt-5 flex flex-col gap-4' : 'flex flex-col gap-4'}>
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h3 className="font-heading font-semibold text-sm text-ink m-0">Hudba ve spotu</h3>
+        <h3 className="font-heading font-semibold text-sm text-ink m-0">{t('rodnyList.hudbaNadpis')}</h3>
         <label className="flex items-center gap-2 text-sm font-heading text-ink">
           <input
             type="checkbox"
@@ -294,20 +300,18 @@ export function RodnyListSection({
             checked={values.noMusic}
             onChange={(e) => set('noMusic', e.target.checked)}
           />
-          Spot nemá hudbu
+          {t('rodnyList.bezHudby')}
         </label>
       </div>
 
       {values.noMusic ? (
         <p className="text-sm font-body text-muted m-0">
-          {jeRadiovySpot
-            ? 'V Rodném listu bude u hudby uvedeno „Spot bez hudby“ — žádný vymyšlený údaj se tam nedostane.'
-            : 'U projektu je poznamenané, že hudbu nemá.'}
+          {jeRadiovySpot ? t('rodnyList.bezHudbyVDokumentu') : t('rodnyList.bezHudbyPoznamka')}
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Název skladby</span>
+            <span className="text-sm font-body text-ink">{t('rodnyList.pole.nazevSkladby')}</span>
             <input
               type="text"
               disabled={!canEdit}
@@ -317,7 +321,7 @@ export function RodnyListSection({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Autor hudby</span>
+            <span className="text-sm font-body text-ink">{t('rodnyList.pole.autorHudby')}</span>
             <input
               type="text"
               disabled={!canEdit}
@@ -341,9 +345,11 @@ export function RodnyListSection({
             disabled={saving}
             className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
           >
-            {saving ? 'Ukládám…' : 'Uložit'}
+            {saving ? t('obecne.ukladam') : t('obecne.ulozit')}
           </button>
-          {saved && <span className="text-sm font-heading text-brand-greenDeep">Uloženo.</span>}
+          {saved && (
+            <span className="text-sm font-heading text-brand-greenDeep">{t('rodnyList.ulozeno')}</span>
+          )}
         </div>
       )}
     </>
@@ -359,11 +365,11 @@ export function RodnyListSection({
     <div className="flex flex-col gap-6">
       {rlError && (
         <div className="bg-dangerTint border border-danger/30 rounded-card px-4 py-3">
-          <p className="text-sm font-heading font-semibold text-danger m-0">Projekt vyžaduje kontrolu</p>
-          <p className="text-sm font-body text-danger m-0 mt-1">{rlError}</p>
-          <p className="text-xs font-body text-danger m-0 mt-1">
-            Klientovi se v tomhle případě nic neodeslalo. Doplňte údaje a vygenerujte Rodný list znovu.
+          <p className="text-sm font-heading font-semibold text-danger m-0">
+            {t('rodnyList.vyzadujeKontrolu')}
           </p>
+          <p className="text-sm font-body text-danger m-0 mt-1">{rlError}</p>
+          <p className="text-xs font-body text-danger m-0 mt-1">{t('rodnyList.nicNeodeslano')}</p>
         </div>
       )}
 
@@ -373,11 +379,10 @@ export function RodnyListSection({
       {chybi.length > 0 && (
         <div className="bg-warnTint border border-line rounded-card px-4 py-3">
           <p className="text-sm font-heading font-semibold text-status-progress m-0">
-            Chybí údaje pro Rodný list
+            {t('rodnyList.chybiUdaje')}
           </p>
           <p className="text-sm font-body text-ink m-0 mt-1">
-            {chybi.join(', ')}. Dokud tyhle údaje chybí, jsou tlačítka Náhled i Vygenerovat RL
-            zašedlá — doplňte je ve formuláři níž a uložte.
+            {t('rodnyList.chybiUdajeText', { chybi: chybi.join(', ') })}
           </p>
         </div>
       )}
@@ -395,17 +400,14 @@ export function RodnyListSection({
       >
         <div>
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Údaje pro Rodný list
+            {t('rodnyList.udajeNadpis')}
           </h2>
-          <p className="text-xs text-muted font-body m-0 mt-1">
-            Z nich se vyrobí PDF, až kliknete na „Vygenerovat RL" — sám nevzniká. Náhledem se na
-            něj můžete podívat dřív, než se kamkoliv uloží.
-          </p>
+          <p className="text-xs text-muted font-body m-0 mt-1">{t('rodnyList.udajeUvod')}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Název spotu</span>
+            <span className="text-sm font-body text-ink">{t('rodnyList.pole.nazevSpotu')}</span>
             <input
               type="text"
               disabled={!canEdit}
@@ -415,7 +417,7 @@ export function RodnyListSection({
               className={inputClass}
             />
             <span className="text-xs text-muted font-body">
-              Když zůstane prázdný, použije se název projektu. Soubor se uloží jako {nazevSouboru}.
+              {t('rodnyList.nazevSpotuNapoveda', { soubor: nazevSouboru })}
             </span>
           </label>
 
@@ -423,24 +425,24 @@ export function RodnyListSection({
               nazvem firmy projektu, ale prepsat ho jde - na RL obcas patri
               neco jineho nez firma, ktere se fakturuje. */}
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Klient</span>
+            <span className="text-sm font-body text-ink">{t('rodnyList.klient')}</span>
             <input
               type="text"
               disabled={!canEdit}
-              placeholder={nazevFirmy || 'název klienta na dokumentu'}
+              placeholder={nazevFirmy || t('rodnyList.klientPriklad')}
               value={values.clientName}
               onChange={(e) => set('clientName', e.target.value)}
               className={inputClass}
             />
             <span className="text-xs text-muted font-body">
               {nazevFirmy
-                ? `Předvyplněno podle firmy projektu (${nazevFirmy}). Přepsat jde kdykoliv.`
-                : 'Projekt zatím nemá vyplněnou firmu, tak klienta zadejte ručně.'}
+                ? t('rodnyList.klientPredvyplneno', { firma: nazevFirmy })
+                : t('rodnyList.klientBezFirmy')}
             </span>
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Délka spotu</span>
+            <span className="text-sm font-body text-ink">{t('rodnyList.pole.delkaSpotu')}</span>
             {/* Jednotka je primo v poli (zadani 10. 9. 2026), at je jasne, ze
                 se zadavaji sekundy - a at to sedi s tim, co bude v dokumentu. */}
             <span className="relative flex items-center">
@@ -455,11 +457,11 @@ export function RodnyListSection({
               />
               <span className="absolute right-3 text-sm font-body text-muted pointer-events-none">s</span>
             </span>
-            <span className="text-xs text-muted font-body">V dokumentu se zobrazí například jako „20s".</span>
+            <span className="text-xs text-muted font-body">{t('rodnyList.delkaNapoveda')}</span>
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Režie</span>
+            <span className="text-sm font-body text-ink">{t('rodnyList.pole.rezie')}</span>
             <input
               type="text"
               disabled={!canEdit}
@@ -470,7 +472,7 @@ export function RodnyListSection({
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Datum výroby</span>
+            <span className="text-sm font-body text-ink">{t('rodnyList.pole.datumVyroby')}</span>
             <DatumPole
               disabled={!canEdit}
               value={values.productionDate}
@@ -492,10 +494,10 @@ export function RodnyListSection({
         <div className="flex items-center justify-between flex-wrap gap-3 px-5 py-3.5 border-b border-line">
           <div>
             <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-              Náhled
+              {t('rodnyList.nahled')}
             </h2>
             <p className="text-xs font-body text-muted m-0 mt-1">
-              {nahledSeDela ? 'Překresluji…' : 'Mění se s tím, co píšete. Nikam se neukládá.'}
+              {nahledSeDela ? t('rodnyList.prekresluji') : t('rodnyList.nahledPopis')}
             </p>
           </div>
           <span className="flex items-center gap-3 flex-wrap">
@@ -506,7 +508,7 @@ export function RodnyListSection({
                   onClick={() => setVerzeNahledu((v) => v + 1)}
                   className="text-xs font-heading font-semibold text-brand-purple hover:underline"
                 >
-                  Obnovit
+                  {t('rodnyList.obnovit')}
                 </button>
                 <a
                   href={`/api/projects/${encodeURIComponent(caflouProjectId)}/rodny-list/nahled`}
@@ -514,7 +516,7 @@ export function RodnyListSection({
                   rel="noreferrer"
                   className="text-xs font-heading font-semibold text-brand-purple no-underline hover:underline"
                 >
-                  Otevřít samostatně ↗
+                  {t('rodnyList.otevritSamostatne')}
                 </a>
               </>
             )}
@@ -523,7 +525,7 @@ export function RodnyListSection({
               onClick={() => setNahledOtevreny((o) => !o)}
               className="border border-line font-heading font-semibold text-xs rounded-lg px-3 py-1.5 text-ink hover:border-brand-purple transition-colors"
             >
-              {nahledOtevreny ? 'Skrýt' : 'Zobrazit'}
+              {nahledOtevreny ? t('obecne.skryt') : t('rodnyList.zobrazit')}
             </button>
           </span>
         </div>
@@ -532,7 +534,7 @@ export function RodnyListSection({
           <div className="bg-field px-4 py-5 sm:px-6 sm:py-6">
             {chybi.length > 0 ? (
               <p className="text-sm font-body text-muted m-0 text-center py-10">
-                Náhled se ukáže, až budou doplněné chybějící údaje.
+                {t('rodnyList.nahledAzPoDoplneni')}
               </p>
             ) : (
               <iframe
@@ -541,7 +543,7 @@ export function RodnyListSection({
                 // #view=Fit rekne prohlizeci, at ukaze celou stranku, ne
                 // jen jeji sirku; pomer stran je A4, takze ram sedi na PDF.
                 src={nahledUrl ? `${nahledUrl}#view=Fit&toolbar=0&navpanes=0` : undefined}
-                title="Náhled Rodného listu"
+                title={t('rodnyList.nahledTitulek')}
                 className={`w-full aspect-[210/297] rounded-lg border border-line bg-white shadow-md transition-opacity ${
                   nahledSeDela ? 'opacity-60' : 'opacity-100'
                 }`}
@@ -555,26 +557,27 @@ export function RodnyListSection({
       <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-            Vygenerované Rodné listy
+            {t('rodnyList.vygenerovaneNadpis')}
           </h2>
           {canEdit && (
             <button
               type="button"
               onClick={vygenerovatZnovu}
               disabled={generating || chybi.length > 0}
-              title={chybi.length > 0 ? 'Nejdřív doplňte chybějící údaje.' : undefined}
+              title={chybi.length > 0 ? t('rodnyList.nejdrivDoplnte') : undefined}
               className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-4 py-2 hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
             >
-              {generating ? 'Generuji…' : rodneListy.length === 0 ? 'Vygenerovat RL' : 'Vygenerovat RL znovu'}
+              {generating
+                ? t('rodnyList.generuji')
+                : rodneListy.length === 0
+                  ? t('rodnyList.vygenerovat')
+                  : t('rodnyList.vygenerovatZnovu')}
             </button>
           )}
         </div>
 
         {rodneListy.length === 0 ? (
-          <p className="text-sm font-body text-muted m-0">
-            Zatím žádný. Vyrobíte ho tlačítkem — sám nevzniká (zadání 10. 9. 2026). Náhledem se
-            nejdřív podívejte, jestli sedí; teprve „Vygenerovat RL" ho uloží a nahraje na Disk.
-          </p>
+          <p className="text-sm font-body text-muted m-0">{t('rodnyList.zadny')}</p>
         ) : (
           <ul className="list-none p-0 m-0 flex flex-col gap-2">
             {rodneListy.map((rl) => (
@@ -592,16 +595,18 @@ export function RodnyListSection({
                     {rl.fileName} ↗
                   </a>
                   <p className="text-xs font-body text-muted m-0 mt-0.5">
-                    {rodnyListVersionLabel(rl.version)} · vytvořeno{' '}
-                    {new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'short', timeStyle: 'short' }).format(
-                      new Date(rl.createdAt),
-                    )}
+                    {t('rodnyList.vytvoreno', {
+                      verze: rodnyListVersionLabel(rl.version, jazyk),
+                      kdy: formatDatumCas(jazyk, new Date(rl.createdAt)),
+                    })}
                   </p>
                   {/* Proc dokument neni ve slozce projektu (oprava 10. 9.
                       2026). Driv o tom clovek nevedel - selhani skoncilo
                       v logu serveru a v portalu proste nebyl odkaz. */}
                   {rl.driveError && (
-                    <p className="text-xs font-body text-status-progress m-0 mt-1">Disk: {rl.driveError}</p>
+                    <p className="text-xs font-body text-status-progress m-0 mt-1">
+                      {t('rodnyList.disk', { chyba: rl.driveError })}
+                    </p>
                   )}
                 </div>
                 <span className="flex items-center gap-3">
@@ -612,7 +617,7 @@ export function RodnyListSection({
                       rel="noreferrer"
                       className="text-xs font-heading text-muted no-underline"
                     >
-                      Na Google Disku ↗
+                      {t('rodnyList.naDisku')}
                     </a>
                   )}
                   {canEdit && (
@@ -622,7 +627,7 @@ export function RodnyListSection({
                       disabled={mazany === rl.id}
                       className="text-xs font-heading font-semibold text-muted hover:text-danger transition-colors disabled:opacity-50"
                     >
-                      {mazany === rl.id ? 'Mažu…' : 'Smazat'}
+                      {mazany === rl.id ? t('rodnyList.mazu') : t('obecne.smazat')}
                     </button>
                   )}
                 </span>

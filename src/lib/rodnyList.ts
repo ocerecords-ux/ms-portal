@@ -11,6 +11,8 @@
  * rodnyListPdf.ts, celý běh (kdy, komu, kam) pak rodnyListServer.ts.
  */
 
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
+
 /** Stav v Caflou, který spouští vytvoření RL. */
 export const RL_TRIGGER_STATUS = 'Dokončeno - ke schválení';
 
@@ -102,6 +104,11 @@ export function dnesniDatum(): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Prague' }).format(new Date());
 }
 
+/**
+ * České názvy polí. Zůstávají tady jako zdroj pravdy pro dokument a pro
+ * hlášku, která se ukládá do ProjectMeta.rlError - ta je v databázi, takže
+ * česky (pravidlo 4).
+ */
 export const RODNY_LIST_LABELS = {
   clientName: 'Název klienta',
   spotName: 'Název spotu',
@@ -110,6 +117,17 @@ export const RODNY_LIST_LABELS = {
   musicTitle: 'Název skladby',
   musicAuthor: 'Autor hudby',
   productionDate: 'Datum výroby',
+} as const;
+
+/** Tytéž popisky ve slovníku - formulář si je bere podle jazyka (dávka 7b). */
+const KLICE_POLI = {
+  clientName: 'rodnyList.pole.klient',
+  spotName: 'rodnyList.pole.nazevSpotu',
+  spotLengthSeconds: 'rodnyList.pole.delkaSpotu',
+  directorName: 'rodnyList.pole.rezie',
+  musicTitle: 'rodnyList.pole.nazevSkladby',
+  musicAuthor: 'rodnyList.pole.autorHudby',
+  productionDate: 'rodnyList.pole.datumVyroby',
 } as const;
 
 /**
@@ -121,18 +139,20 @@ export const RODNY_LIST_LABELS = {
  */
 export function missingRodnyListFields(
   input: RodnyListFields & { clientName: string },
+  jazyk: Jazyk = 'cs',
 ): string[] {
+  const popisek = (pole: keyof typeof KLICE_POLI) => prelozit(jazyk, KLICE_POLI[pole]);
   const chybi: string[] = [];
-  if (!input.clientName.trim()) chybi.push(RODNY_LIST_LABELS.clientName);
-  if (!input.spotName.trim()) chybi.push(RODNY_LIST_LABELS.spotName);
+  if (!input.clientName.trim()) chybi.push(popisek('clientName'));
+  if (!input.spotName.trim()) chybi.push(popisek('spotName'));
   if (input.spotLengthSeconds == null || input.spotLengthSeconds <= 0) {
-    chybi.push(RODNY_LIST_LABELS.spotLengthSeconds);
+    chybi.push(popisek('spotLengthSeconds'));
   }
-  if (!input.directorName.trim()) chybi.push(RODNY_LIST_LABELS.directorName);
-  if (!input.productionDate) chybi.push(RODNY_LIST_LABELS.productionDate);
+  if (!input.directorName.trim()) chybi.push(popisek('directorName'));
+  if (!input.productionDate) chybi.push(popisek('productionDate'));
   if (!input.noMusic) {
-    if (!input.musicTitle.trim()) chybi.push(RODNY_LIST_LABELS.musicTitle);
-    if (!input.musicAuthor.trim()) chybi.push(RODNY_LIST_LABELS.musicAuthor);
+    if (!input.musicTitle.trim()) chybi.push(popisek('musicTitle'));
+    if (!input.musicAuthor.trim()) chybi.push(popisek('musicAuthor'));
   }
   return chybi;
 }
@@ -204,6 +224,6 @@ export function rodnyListFileName(spotName: string): string {
 }
 
 /** Popisek verze pro seznam v portálu. */
-export function rodnyListVersionLabel(version: number): string {
-  return version <= 1 ? 'verze 1' : `verze ${version}`;
+export function rodnyListVersionLabel(version: number, jazyk: Jazyk = 'cs'): string {
+  return prelozitS(jazyk, 'rodnyList.verze', { cislo: Math.max(1, version) });
 }

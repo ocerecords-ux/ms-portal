@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DatumPole } from '@/components/DatumPole';
+import { formatDatum, prelozitKolem } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '../../components/JazykProvider';
 import { VyberVOkne } from '../VyberVOkne';
 
 /**
@@ -85,7 +87,13 @@ type ChystanyList = {
   interpreti: { id: string | null; jmeno: string }[];
 };
 
-/** „1 rok", „18 měsíců" - jak se délka licence píše do listu. */
+/**
+ * „1 rok", „18 měsíců" - jak se délka licence píše do listu.
+ *
+ * ZŮSTÁVÁ ČESKY SCHVÁLNĚ (dávka 7b): je to hodnota, která jde do PDF, a jazyk
+ * dokumentu určuje doklad, ne přepínač v liště (pravidlo 5). Totéž platí pro
+ * typ licence („výhradní"), typ díla a média.
+ */
 function delkaZMesicu(mesicu: number): string {
   if (mesicu % 12 === 0) {
     const roky = mesicu / 12;
@@ -116,6 +124,8 @@ export function LicencniListSection({
   vychozi: LicencniListVychozi;
   vystupy?: VystupProLicenci[];
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
 
   /** Co je společné všem listům projektu - píše se jednou. */
@@ -256,6 +266,9 @@ export function LicencniListSection({
   });
 
   const radekNahledu = chystane[Math.min(vybrany, chystane.length - 1)] ?? null;
+  // Věta zůstává jeden klíč, dělí se až při vykreslení - název spotu je v ní
+  // tlustě (pravidlo 7 v docs/preklad-portalu.md).
+  const [predNazvem, zaNazvem] = prelozitKolem(jazyk, 'licencniList.vNahleduJe', 'nazev');
 
   /**
    * JEDEN SEZNAM (zadání 27. 9. 2026: „přijde mi zbytečné, aby se mi tam
@@ -330,7 +343,7 @@ export function LicencniListSection({
   async function vystav(jenIndex?: number) {
     const kVystaveni = jenIndex === undefined ? chystane : [chystane[jenIndex]];
     if (kVystaveni.some((r) => r.interpreti.length === 0)) {
-      setChyba('U každého listu musí být aspoň jeden interpret.');
+      setChyba(t('licencniList.chybiInterpret'));
       return;
     }
     setBezi(true);
@@ -354,14 +367,16 @@ export function LicencniListSection({
         });
         const telo = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(`${r.nazevSpotu}: ${telo.error || 'licenční list se nepodařilo vystavit.'}`);
+          throw new Error(
+            `${r.nazevSpotu}: ${telo.error || t('licencniList.chybaVystaveniRadku')}`,
+          );
         }
         kolik += 1;
       }
       setHotovo(kolik);
       router.refresh();
     } catch (err) {
-      setChyba(err instanceof Error ? err.message : 'Licenční list se nepodařilo vystavit.');
+      setChyba(err instanceof Error ? err.message : t('licencniList.chybaVystaveni'));
     } finally {
       setBezi(false);
     }
@@ -388,14 +403,14 @@ export function LicencniListSection({
       klientNaServeru.current = jmeno;
       router.refresh();
     } catch {
-      setChyba('Klienta se nepodařilo uložit k projektu — na listech zůstane, ale po obnovení stránky se vrátí původní.');
+      setChyba(t('licencniList.chybaKlienta'));
     } finally {
       setKlientSeUklada(false);
     }
   }
 
   async function smaz(id: string) {
-    if (!window.confirm('Smazat tenhle licenční list? Klient ho přestane v portálu vidět.')) return;
+    if (!window.confirm(t('licencniList.opravduSmazat'))) return;
     const res = await fetch(`/api/licencni-list/${id}`, { method: 'DELETE' });
     if (res.ok) router.refresh();
   }
@@ -422,10 +437,17 @@ export function LicencniListSection({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <h2 className="font-display text-2xl text-ink m-0">Licenční listy</h2>
+        <h2 className="font-display text-2xl text-ink m-0">{t('licencniList.nadpis')}</h2>
         {listy.length > 0 && (
           <span
-            title={`Vystaveno ${listy.length} ${listy.length === 1 ? 'list' : listy.length < 5 ? 'listy' : 'listů'}`}
+            title={t(
+              listy.length === 1
+                ? 'licencniList.pocet1'
+                : listy.length < 5
+                  ? 'licencniList.pocet234'
+                  : 'licencniList.pocet5',
+              { pocet: listy.length },
+            )}
             className="shrink-0 grid place-items-center min-w-[28px] h-7 px-2 rounded-pill bg-brand-purple/15 border border-brand-purple/40 text-brand-purpleDeep dark:text-brand-purpleLight font-heading font-semibold text-sm tabular-nums"
           >
             {listy.length}
@@ -436,33 +458,33 @@ export function LicencniListSection({
             <button
               type="button"
               onClick={() => setDalsiUdaje((o) => !o)}
-              title="Klient, objednatel, území, podmínky, podpis — společné všem listům"
+              title={t('licencniList.spolecneUdajeNapoveda')}
               aria-expanded={dalsiUdaje}
               className="ml-auto rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer"
             >
-              Společné údaje
+              {t('licencniList.spolecneUdaje')}
             </button>
             {listy.length > 0 && (
               <a
                 href={`/api/projects/${encodeURIComponent(caflouProjectId)}/dokumenty/zip`}
-                title="Stáhne všechny vystavené listy zakázky v jednom archivu"
+                title={t('licencniList.stahnoutVsechnyNapoveda')}
                 className="rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface no-underline hover:text-brand-purple hover:border-brand-purple transition-colors"
               >
-                Stáhnout všechny ({listy.length})
+                {t('licencniList.stahnoutVsechny', { pocet: listy.length })}
               </a>
             )}
             <button
               type="button"
               onClick={() => void vystav()}
               disabled={bezi || chystane.length === 0}
-              title="Vystaví jeden licenční list za každý výstup"
+              title={t('licencniList.vystavitNapoveda')}
               className="rounded-pill bg-brand-purple text-white font-heading font-semibold text-sm px-4 py-1.5 hover:bg-brand-purpleDeep transition-colors cursor-pointer disabled:opacity-50"
             >
               {bezi
-                ? 'Vystavuji…'
+                ? t('licencniList.vystavuji')
                 : chystane.length > 1
-                  ? `Vystavit ${chystane.length} listů`
-                  : 'Vystavit list'}
+                  ? t('licencniList.vystavitPocet', { pocet: chystane.length })
+                  : t('licencniList.vystavitList')}
             </button>
           </>
         )}
@@ -471,21 +493,25 @@ export function LicencniListSection({
       {canEdit && dalsiUdaje && (
         <div className="rounded-card border border-line bg-surface p-4 flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {policko('objednatel', 'Objednatel', 'Kdo si spot u nás objednal.')}
-            {policko('dodavatel', 'Dodavatel')}
-            {policko('uzemi', 'Území')}
-            {policko('misto', 'Místo (V …, dne)', 'Např. „Brně“.')}
-            {policko('podepisuje', 'Za MEDIA SPACE podepisuje')}
+            {policko(
+              'objednatel',
+              t('licencniList.objednatel'),
+              t('licencniList.objednatelNapoveda'),
+            )}
+            {policko('dodavatel', t('licencniList.dodavatel'))}
+            {policko('uzemi', t('licencniList.uzemi'))}
+            {policko('misto', t('licencniList.misto'), t('licencniList.mistoNapoveda'))}
+            {policko('podepisuje', t('licencniList.podepisuje'))}
           </div>
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Prodloužení licence a podmínky</span>
+            <span className="text-sm font-body text-ink">{t('licencniList.podminky')}</span>
             <textarea
               value={spolecne.podminky}
               onChange={(e) => nastavSpolecne('podminky', e.target.value)}
               rows={6}
               className={`${pole} font-body resize-y`}
             />
-            <span className="text-xs text-muted font-body">Odstavce oddělte prázdným řádkem.</span>
+            <span className="text-xs text-muted font-body">{t('licencniList.podminkyNapoveda')}</span>
           </label>
         </div>
       )}
@@ -495,18 +521,18 @@ export function LicencniListSection({
           {/* Klient je na očích - u agentur se mění skoro pokaždé. */}
           {canEdit && (
             <label className="flex items-center gap-2 flex-wrap rounded-card border border-line bg-surface px-3 py-2">
-              <span className="text-sm font-body text-muted shrink-0 px-1">Klient</span>
+              <span className="text-sm font-body text-muted shrink-0 px-1">
+                {t('licencniList.klient')}
+              </span>
               <input
                 value={spolecne.klient}
                 onChange={(e) => nastavSpolecne('klient', e.target.value)}
                 onBlur={() => void ulozKlienta()}
-                placeholder="Koncový zadavatel"
+                placeholder={t('licencniList.klientPriklad')}
                 className="flex-1 min-w-[160px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm outline-none hover:border-line focus:border-brand-purple focus:bg-field"
               />
               <span className="text-xs font-body text-muted">
-                {klientSeUklada
-                  ? 'Ukládám…'
-                  : 'Komu licence patří — u agenturní zakázky koncový zadavatel, ne objednatel. Pamatuje si ho projekt.'}
+                {klientSeUklada ? t('obecne.ukladam') : t('licencniList.klientNapoveda')}
               </span>
             </label>
           )}
@@ -521,7 +547,7 @@ export function LicencniListSection({
                     }}
                     tabIndex={0}
                     role="group"
-                    aria-label={r.nazevSpotu || 'Licenční list'}
+                    aria-label={r.nazevSpotu || t('licencniList.radek')}
                     onMouseDown={() => setVybrany(i)}
                     onFocus={() => setVybrany(i)}
                     onKeyDown={(e) => klavesaRadku(e, i)}
@@ -540,14 +566,14 @@ export function LicencniListSection({
                         nazevPredUpravou.current = r.nazevSpotu;
                       }}
                       onKeyDown={(e) => klavesaNazvu(e, i)}
-                      placeholder="Název spotu"
-                      aria-label="Název spotu"
+                      placeholder={t('licencniList.nazevSpotu')}
+                      aria-label={t('licencniList.nazevSpotu')}
                       className="flex-1 min-w-[140px] max-w-[260px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm outline-none hover:border-line focus:border-brand-purple focus:bg-field"
                     />
 
                     <VyberVOkne
-                      popisek="Interpreti"
-                      prazdne="interpreti"
+                      popisek={t('licencniList.interpreti')}
+                      prazdne={t('licencniList.interpretiPrazdne')}
                       polozky={nabidkaHercu}
                       vybrane={r.interpreti.map(klicHerce)}
                       onZmena={(klice) =>
@@ -573,9 +599,9 @@ export function LicencniListSection({
                       value={r.delkaLicence}
                       onChange={(e) => nastavRadek(i, { delkaLicence: e.target.value })}
                       onFocus={() => setVybrany(i)}
-                      placeholder="délka"
-                      aria-label="Délka licence"
-                      title="Na jak dlouho je licence sjednaná — „1 rok“, „18 měsíců“"
+                      placeholder={t('licencniList.delka')}
+                      aria-label={t('licencniList.delkaLicence')}
+                      title={t('licencniList.delkaLicenceNapoveda')}
                       className="w-[100px] shrink-0 rounded-lg border border-line bg-field px-2 py-1.5 text-ink font-heading text-sm text-center outline-none focus:border-brand-purple"
                     />
 
@@ -587,7 +613,7 @@ export function LicencniListSection({
                           typLicence: r.typLicence === 'výhradní' ? 'nevýhradní' : 'výhradní',
                         })
                       }
-                      title="Přepnout výhradní / nevýhradní"
+                      title={t('licencniList.prepnoutTyp')}
                       className="shrink-0 rounded-pill border border-brand-purple/50 bg-brand-purple/10 text-brand-purpleDeep dark:text-brand-purpleLight px-3 py-1.5 text-xs font-heading transition-colors hover:border-brand-purple"
                     >
                       {r.typLicence}
@@ -601,10 +627,13 @@ export function LicencniListSection({
                           href={`/api/licencni-list/${hotovyList.id}`}
                           target="_blank"
                           rel="noopener"
-                          title={`Vystaveno ${new Date(hotovyList.createdAt).toLocaleDateString('cs-CZ')} — ${hotovyList.interpret}`}
+                          title={t('licencniList.vystavenoKdy', {
+                            kdy: formatDatum(jazyk, new Date(hotovyList.createdAt)),
+                            interpret: hotovyList.interpret,
+                          })}
                           className="shrink-0 rounded-pill bg-okTint text-status-done px-3 py-1.5 text-xs font-heading font-semibold no-underline"
                         >
-                          Vystaveno ↗
+                          {t('licencniList.vystaveno')}
                         </a>
                       ) : null;
                     })()}
@@ -637,7 +666,9 @@ export function LicencniListSection({
           )}
           {hotovo > 0 && (
             <p className="text-sm font-heading text-brand-greenDeep m-0">
-              Hotovo — vystaveno {hotovo === 1 ? '1 list' : `${hotovo} listů`}.
+              {hotovo === 1
+                ? t('licencniList.hotovo1')
+                : t('licencniList.hotovoPocet', { pocet: hotovo })}
             </p>
           )}
 
@@ -660,14 +691,14 @@ export function LicencniListSection({
                       {[l.delkaLicence, l.typLicence].filter(Boolean).join(' · ')}
                     </span>
                     <span className="shrink-0 text-xs font-body text-muted">
-                      {new Date(l.createdAt).toLocaleDateString('cs-CZ')}
+                      {formatDatum(jazyk, new Date(l.createdAt))}
                     </span>
                     {canEdit && (
                       <button
                         type="button"
                         onClick={() => void smaz(l.id)}
-                        title="Smazat licenční list"
-                        aria-label="Smazat licenční list"
+                        title={t('licencniList.smazat')}
+                        aria-label={t('licencniList.smazat')}
                         className="shrink-0 w-7 h-7 grid place-items-center rounded-full border border-line text-muted bg-surface hover:text-danger hover:border-danger transition-colors cursor-pointer"
                       >
                         ×
@@ -685,15 +716,19 @@ export function LicencniListSection({
         {canEdit && (
           <div className="flex flex-col gap-2 min-w-0 min-[1100px]:sticky min-[1100px]:top-4">
             <span className="flex items-baseline gap-2">
-              <span className="text-sm font-heading font-semibold text-ink">Náhled licenčního listu</span>
-              {nahledSeDela && <span className="text-xs font-body text-muted">Překresluji…</span>}
+              <span className="text-sm font-heading font-semibold text-ink">
+                {t('licencniList.nahledNadpis')}
+              </span>
+              {nahledSeDela && (
+                <span className="text-xs font-body text-muted">{t('licencniList.prekresluji')}</span>
+              )}
             </span>
             <div className="relative w-full">
               <iframe
                 // #view=Fit ukáže celou stránku, ne jen její šířku; rámeček má
                 // poměr A4, takže na PDF sedí a posuvník nevznikne.
                 src={nahledUrl ? `${nahledUrl}#view=Fit&toolbar=0&navpanes=0` : undefined}
-                title="Náhled licenčního listu"
+                title={t('licencniList.nahledNadpis')}
                 className={`w-full aspect-[210/297] rounded-card border border-line bg-white transition-opacity ${
                   nahledSeDela ? 'opacity-60' : 'opacity-100'
                 }`}
@@ -702,16 +737,17 @@ export function LicencniListSection({
                 <button
                   type="button"
                   onClick={() => setVelkyNahled(true)}
-                  title="Zvětšit náhled"
-                  aria-label="Zvětšit náhled licenčního listu"
+                  title={t('licencniList.zvetsitNahled')}
+                  aria-label={t('licencniList.zvetsitNahledPopis')}
                   className="absolute inset-0 rounded-card border-0 bg-transparent cursor-zoom-in hover:bg-brand-purple/5 transition-colors"
                 />
               )}
             </div>
             {chystane.length > 1 && radekNahledu && (
               <span className="text-xs font-body text-muted">
-                V náhledu je <strong className="font-heading text-ink">{radekNahledu.nazevSpotu}</strong> —
-                klepnutím na jiný řádek se přepne.
+                {predNazvem}
+                <strong className="font-heading text-ink">{radekNahledu.nazevSpotu}</strong>
+                {zaNazvem}
               </span>
             )}
           </div>
@@ -722,7 +758,7 @@ export function LicencniListSection({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Náhled licenčního listu"
+          aria-label={t('licencniList.nahledNadpis')}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setVelkyNahled(false);
           }}
@@ -730,16 +766,16 @@ export function LicencniListSection({
         >
           <iframe
             src={`${nahledUrl}#view=Fit&toolbar=0&navpanes=0`}
-            title="Náhled licenčního listu"
+            title={t('licencniList.nahledNadpis')}
             className="h-[94vh] max-w-[96vw] aspect-[210/297] rounded-card border-0 bg-white shadow-2xl"
           />
           <button
             type="button"
             onClick={() => setVelkyNahled(false)}
-            aria-label="Zavřít náhled"
+            aria-label={t('licencniList.zavritNahled')}
             className="absolute top-4 right-4 rounded-pill bg-surface border border-line text-ink font-heading text-sm px-4 py-1.5 cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors"
           >
-            Zavřít
+            {t('obecne.zavrit')}
           </button>
         </div>
       )}
@@ -771,6 +807,7 @@ function MenuListu({
   onVystav: () => void;
   onSmazVystaveny: (id: string) => void;
 }) {
+  const t = usePreklad();
   const [otevreno, setOtevreno] = useState(false);
   const oknoRef = useRef<HTMLDivElement>(null);
 
@@ -796,8 +833,8 @@ function MenuListu({
       <button
         type="button"
         onClick={() => setOtevreno((o) => !o)}
-        title="Média, datum výroby, vystavit tenhle list"
-        aria-label="Další u tohoto listu"
+        title={t('licencniList.menuNapoveda')}
+        aria-label={t('licencniList.dalsiUTohotoListu')}
         aria-expanded={otevreno}
         className="w-8 h-8 grid place-items-center rounded-full border border-line text-muted bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer"
       >
@@ -810,7 +847,9 @@ function MenuListu({
           className="absolute right-0 top-9 z-[80] w-64 rounded-card border border-line bg-surface shadow-2xl p-3 flex flex-col gap-3"
         >
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-heading text-muted uppercase tracking-wide">Média</span>
+            <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
+              {t('licencniList.media')}
+            </span>
             <input
               value={media}
               onChange={(e) => onMedia(e.target.value)}
@@ -819,7 +858,9 @@ function MenuListu({
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-heading text-muted uppercase tracking-wide">Datum výroby</span>
+            <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
+              {t('licencniList.datumVyroby')}
+            </span>
             <DatumPole
               value={datumVyroby}
               onChange={(e) => onDatum(e.target.value)}
@@ -835,7 +876,7 @@ function MenuListu({
             disabled={bezi}
             className="rounded-lg border border-line text-ink font-heading font-semibold text-sm px-3 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
           >
-            {vystaveny ? 'Vystavit znovu' : 'Vystavit jen tenhle list'}
+            {vystaveny ? t('licencniList.vystavitZnovu') : t('licencniList.vystavitJenTenhle')}
           </button>
           {vystaveny && (
             <button
@@ -846,7 +887,7 @@ function MenuListu({
               }}
               className="rounded-lg border border-line text-muted font-heading font-semibold text-sm px-3 py-1.5 bg-surface hover:text-danger hover:border-danger transition-colors cursor-pointer"
             >
-              Smazat vystavený list
+              {t('licencniList.smazatVystaveny')}
             </button>
           )}
         </div>

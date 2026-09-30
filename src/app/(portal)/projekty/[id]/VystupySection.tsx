@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
+import { usePreklad } from '../../components/JazykProvider';
 import { VyberVOkne } from '../VyberVOkne';
 import {
   NABIZENE_DOWNCUTY,
@@ -77,6 +78,7 @@ export function VystupySection({
   /** Odkaz na poslední natáčecí text na Disku, když už nějaký vznikl. */
   nataceniUrl: string | null;
 }) {
+  const t = usePreklad();
   const router = useRouter();
   const [vystupy, setVystupy] = useState<VystupData[]>(vychozi);
   const [pracuje, setPracuje] = useState(false);
@@ -121,12 +123,12 @@ export function VystupySection({
       const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...init });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba((data as { error?: string })?.error || 'Nepovedlo se to uložit.');
+        setChyba((data as { error?: string })?.error || t('vystupy.chybaUlozeni'));
         return null;
       }
       return data as Record<string, unknown>;
     } catch {
-      setChyba('Nepovedlo se to uložit.');
+      setChyba(t('vystupy.chybaUlozeni'));
       return null;
     } finally {
       setPracuje(false);
@@ -213,13 +215,20 @@ export function VystupySection({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <h2 className="font-display text-2xl text-ink m-0">Výstupy</h2>
+        <h2 className="font-display text-2xl text-ink m-0">{t('vystupy.nadpis')}</h2>
         {/* Kolik jich pod projektem je (27. 9. 2026: „ať mi ještě svítí
             nějaké číslo nahoře, kolik těch výstupů přesně je"). Počítají se
             i zkrácené verze - odevzdává se každá zvlášť. */}
         {razene.length > 0 && (
           <span
-            title={`${razene.length} ${razene.length === 1 ? 'výstup' : razene.length < 5 ? 'výstupy' : 'výstupů'} včetně zkrácených verzí`}
+            title={t(
+              razene.length === 1
+                ? 'vystupy.pocet1'
+                : razene.length < 5
+                  ? 'vystupy.pocet234'
+                  : 'vystupy.pocet5',
+              { pocet: razene.length },
+            )}
             className="shrink-0 grid place-items-center min-w-[28px] h-7 px-2 rounded-pill bg-brand-purple/15 border border-brand-purple/40 text-brand-purpleDeep dark:text-brand-purpleLight font-heading font-semibold text-sm tabular-nums"
           >
             {razene.length}
@@ -230,8 +239,8 @@ export function VystupySection({
             type="button"
             onClick={() => pridej({ nazev: nazevProjektu || 'Výstup' })}
             disabled={pracuje}
-            title="Přidat výstup"
-            aria-label="Přidat výstup"
+            title={t('vystupy.pridatVystup')}
+            aria-label={t('vystupy.pridatVystup')}
             className="w-8 h-8 shrink-0 grid place-items-center rounded-full border border-line text-muted text-xl leading-none bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
           >
             +
@@ -242,10 +251,10 @@ export function VystupySection({
             type="button"
             onClick={vyrobNataceciText}
             disabled={pracuje}
-            title="Vyrobí na Disku dokument se spoty, jejich délkami a licencemi — text se píše přímo v něm"
+            title={t('vystupy.nataceciTextNapoveda')}
             className="ml-auto rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
           >
-            Natáčecí text na Disk
+            {t('vystupy.nataceciText')}
           </button>
         )}
         {nataceni && (
@@ -255,7 +264,7 @@ export function VystupySection({
             rel="noopener noreferrer"
             className="rounded-pill border border-line text-brand-purple font-heading font-semibold text-sm px-4 py-1.5 bg-surface no-underline hover:border-brand-purple transition-colors"
           >
-            Otevřít natáčecí text ↗
+            {t('vystupy.otevritNataceciText')}
           </a>
         )}
         {muzeNabidku && razene.length > 0 && (
@@ -263,25 +272,24 @@ export function VystupySection({
             type="button"
             onClick={zalozNabidku}
             disabled={pracuje}
-            title="Založí rozpracovanou nabídku — jedna položka za výstup"
+            title={t('vystupy.nabidkaNapoveda')}
             className="rounded-pill border border-line text-muted font-heading font-semibold text-sm px-4 py-1.5 bg-surface hover:text-brand-purple hover:border-brand-purple transition-colors cursor-pointer disabled:opacity-50"
           >
-            Nabídka z výstupů
+            {t('vystupy.nabidkaZVystupu')}
           </button>
         )}
       </div>
 
       {nabidka && (
         <p className="text-sm font-body text-ink m-0 rounded-card border border-line bg-field/40 px-4 py-3">
-          Nabídka <strong>{nabidka.number}</strong> je založená jako rozpracovaná — ceny v ní
-          zkontrolujte a doplňte.{' '}
+          {t('vystupy.nabidkaZalozena', { cislo: nabidka.number })}{' '}
           <a
             href={`/admin/doklady/nabidky/${nabidka.id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="font-heading text-brand-purple no-underline hover:underline"
           >
-            Otevřít nabídku
+            {t('vystupy.otevritNabidku')}
           </a>
         </p>
       )}
@@ -302,7 +310,7 @@ export function VystupySection({
 
           {razene.length === 0 ? (
             <p className="text-sm font-body text-muted m-0">
-              Zatím tu není žádný výstup{canEdit ? ' — přidejte ho tlačítkem +.' : '.'}
+              {t(canEdit ? 'vystupy.zadnyVystupPridejte' : 'vystupy.zadnyVystup')}
             </p>
           ) : (
             <ul className="list-none p-0 m-0 flex flex-col gap-2">
@@ -335,7 +343,7 @@ export function VystupySection({
         {razene.length > 0 && (
           <div className="flex flex-col gap-2 min-w-0 min-[1100px]:sticky min-[1100px]:top-4">
             <span className="text-sm font-heading font-semibold text-ink">
-              Náhled natáčecího textu
+              {t('vystupy.nahledNadpis')}
             </span>
             {/* Rámeček má tvar A4 a list se do něj vejde celý - žádný
                 posuvník (26. 9. 2026: „u toho náhledu dokumentu nemůže být
@@ -346,15 +354,15 @@ export function VystupySection({
               <iframe
                 key={verzeNahledu}
                 src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
-                title="Náhled natáčecího textu"
+                title={t('vystupy.nahledNadpis')}
                 scrolling="no"
                 className="w-full aspect-[210/297] rounded-card border border-line bg-white overflow-hidden"
               />
               <button
                 type="button"
                 onClick={() => setVelkyNahled(true)}
-                title="Zvětšit náhled"
-                aria-label="Zvětšit náhled natáčecího textu"
+                title={t('vystupy.zvetsitNahled')}
+                aria-label={t('vystupy.zvetsitNahledPopis')}
                 className="absolute inset-0 rounded-card border-0 bg-transparent cursor-zoom-in hover:bg-brand-purple/5 transition-colors"
               />
             </div>
@@ -368,7 +376,7 @@ export function VystupySection({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Náhled natáčecího textu"
+          aria-label={t('vystupy.nahledNadpis')}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setVelkyNahled(false);
           }}
@@ -377,17 +385,17 @@ export function VystupySection({
           <iframe
             key={`velky-${verzeNahledu}`}
             src={`/api/projects/${encodeURIComponent(caflouProjectId)}/nataceni-text/nahled?v=${verzeNahledu}`}
-            title="Náhled natáčecího textu"
+            title={t('vystupy.nahledNadpis')}
             scrolling="no"
             className="h-[94vh] max-w-[96vw] aspect-[210/297] rounded-card border-0 bg-white shadow-2xl"
           />
           <button
             type="button"
             onClick={() => setVelkyNahled(false)}
-            aria-label="Zavřít náhled"
+            aria-label={t('vystupy.zavritNahled')}
             className="absolute top-4 right-4 rounded-pill bg-surface border border-line text-ink font-heading text-sm px-4 py-1.5 cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors"
           >
-            Zavřít
+            {t('obecne.zavrit')}
           </button>
         </div>
       )}
@@ -427,6 +435,7 @@ function VystupRadek({
   onRodnyList: () => void;
   onDowncut: (delkaSekund: number) => void;
 }) {
+  const t = usePreklad();
   const [nazev, setNazev] = useState(vystup.nazev);
   const [delka, setDelka] = useState(delkaNaText(vystup.delkaSekund));
   const [licenceIds, setLicenceIds] = useState<string[]>(vystup.licenceIds);
@@ -437,8 +446,8 @@ function VystupRadek({
    *
    * Do teď se text psal až v dokumentu na Disku, takže portál o něm nevěděl
    * a každý nově vyrobený list začínal prázdný. Teď je text u výstupu: píše
-   * se tady, vedle je hned vidět v náhledu listu a ukládá se týmž tlačítkem
-   * jako zbytek řádku - žádné druhé „uložit".
+   * se tady, hned vedle je vidět v náhledu listu vpravo a ukládá se týmž
+   * tlačítkem jako zbytek řádku - žádné druhé „uložit".
    *
    * ROZKLEPNE SE POD ŘÁDKEM, ne v okně: řádek zůstane řádkem a náhled listu
    * vedle nic nepřekrývá, takže je při psaní vidět, jak se list plní.
@@ -475,13 +484,13 @@ function VystupRadek({
       );
       const data = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
       if (!res.ok || !data.text) {
-        setChybaTextu(data.error || 'Soubor se nepodařilo přečíst.');
+        setChybaTextu(data.error || t('vystupy.textChyba'));
         return;
       }
       setText(data.text);
       setOtevrenText(true);
     } catch {
-      setChybaTextu('Soubor se nepodařilo přečíst.');
+      setChybaTextu(t('vystupy.textChyba'));
     } finally {
       setNacitam(false);
     }
@@ -544,14 +553,14 @@ function VystupRadek({
            * pod rukama a kurzor skákal na konec.
            */
           onBlur={() => prepoctiNazev(delkaSekund, licenceIds)}
-          aria-label="Název výstupu"
+          aria-label={t('vystupy.nazevVystupu')}
           className="flex-1 min-w-[140px] max-w-[280px] rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-ink font-heading font-semibold text-sm outline-none hover:border-line focus:border-brand-purple focus:bg-field disabled:opacity-60"
         />
 
         {/* Kdo v něm mluví - u Strabagu je v každé délce někdo jiný. */}
         <VyberVOkne
-          popisek="Herci"
-          prazdne="herci"
+          popisek={t('vystupy.herci')}
+          prazdne={t('vystupy.herciPrazdne')}
           disabled={!canEdit}
           polozky={herci.map((h) => ({ id: h.id, nazev: h.name, ikona: null }))}
           vybrane={herciIds}
@@ -562,21 +571,25 @@ function VystupRadek({
         <input
           value={delka}
           disabled={!canEdit}
-          placeholder={rodic ? delkaNaText(rodic.delkaSekund) || 'délka' : 'délka'}
+          placeholder={
+            rodic
+              ? delkaNaText(rodic.delkaSekund) || t('vystupy.delkaPrazdne')
+              : t('vystupy.delkaPrazdne')
+          }
           onChange={(e) => {
             setDelka(e.target.value);
             prepoctiNazev(textNaDelku(e.target.value), licenceIds);
           }}
-          aria-label="Délka"
-          title="Sekundy (30), minuty (2 min), nebo 1:30"
+          aria-label={t('vystupy.delka')}
+          title={t('vystupy.delkaNapoveda')}
           className={`w-[88px] shrink-0 rounded-lg border bg-field px-2 py-1.5 text-ink font-heading text-sm text-center tabular-nums outline-none focus:border-brand-purple disabled:opacity-60 ${
             delkaSpatne ? 'border-status-error' : 'border-line'
           }`}
         />
 
         <VyberVOkne
-          popisek="Licence"
-          prazdne="licence"
+          popisek={t('vystupy.licence')}
+          prazdne={t('vystupy.licencePrazdne')}
           disabled={!canEdit}
           polozky={druhyLicence.map((d) => ({ id: d.id, nazev: d.nazev, ikona: d.ikona }))}
           vybrane={licenceIds}
@@ -593,7 +606,7 @@ function VystupRadek({
           <button
             type="button"
             onClick={() => setOtevrenText((o) => !o)}
-            title="Text spotu — propíše se do natáčecího listu"
+            title={t('vystupy.textNapoveda')}
             aria-expanded={otevrenText}
             className={`shrink-0 rounded-pill border px-2.5 py-1 text-[11px] font-heading font-semibold transition-colors cursor-pointer ${
               text.trim()
@@ -601,7 +614,7 @@ function VystupRadek({
                 : 'border-line bg-surface text-muted hover:text-brand-purple hover:border-brand-purple'
             }`}
           >
-            Text
+            {t('vystupy.text')}
           </button>
         )}
 
@@ -610,7 +623,10 @@ function VystupRadek({
             href={`/api/rodny-list/${posledniRL.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            title={`${posledniRL.fileName} (verze ${posledniRL.version})`}
+            title={t('vystupy.rlNapoveda', {
+              soubor: posledniRL.fileName,
+              cislo: posledniRL.version,
+            })}
             className="shrink-0 rounded-pill bg-okTint text-status-done px-2 py-0.5 text-[11px] font-heading font-semibold no-underline"
           >
             RL v{posledniRL.version}
@@ -619,10 +635,10 @@ function VystupRadek({
 
         {!vystup.potvrzeno && (
           <span
-            title="Návrh z objednávky — uložením řádku ho potvrdíte."
+            title={t('vystupy.navrhNapoveda')}
             className="shrink-0 rounded-pill bg-warnTint text-status-progress px-2 py-0.5 text-[11px] font-heading font-semibold"
           >
-            návrh
+            {t('vystupy.navrh')}
           </span>
         )}
 
@@ -631,10 +647,10 @@ function VystupRadek({
             type="button"
             onClick={ulozRadek}
             disabled={pracuje || delkaSpatne}
-            title="Uložit výstup"
+            title={t('vystupy.ulozitVystup')}
             className="shrink-0 rounded-pill bg-brand-purple text-white font-heading font-semibold text-xs px-3 py-1.5 border-0 cursor-pointer disabled:opacity-50"
           >
-            Uložit
+            {t('obecne.ulozit')}
           </button>
         )}
 
@@ -655,11 +671,11 @@ function VystupRadek({
         <div className="mt-1 ml-3 flex flex-col gap-2 rounded-card border border-line bg-field/40 px-3 py-3">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
-              Text spotu
+              {t('vystupy.textNadpis')}
             </span>
             {canEdit && (
               <label className="ml-auto shrink-0 rounded-pill border border-line bg-surface px-3 py-1 text-xs font-heading text-muted cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors">
-                {nacitam ? 'Čtu soubor…' : 'Nahrát z Wordu'}
+                {nacitam ? t('vystupy.textNacitam') : t('vystupy.textNahrat')}
                 <input
                   type="file"
                   accept=".docx,.txt,.md"
@@ -687,20 +703,18 @@ function VystupRadek({
             disabled={!canEdit}
             rows={10}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Sem patří text, který se bude natáčet. Můžete ho napsat, vložit ze schránky, nebo nahrát z Wordu."
-            aria-label="Text spotu"
+            placeholder={t('vystupy.textPrazdne')}
+            aria-label={t('vystupy.textNadpis')}
             className="w-full min-h-[140px] resize-y rounded-card border border-line bg-surface px-3 py-2 text-ink font-body text-sm leading-relaxed outline-none focus:border-brand-purple disabled:opacity-60"
           />
 
-          <p className="text-[11px] font-body text-muted m-0">
-            Nahrát jde .docx (Word), .txt a .md. Uloží se spolu s výstupem tlačítkem Uložit.
-          </p>
+          <p className="text-[11px] font-body text-muted m-0">{t('vystupy.textFormat')}</p>
         </div>
       )}
 
       {delkaSpatne && (
         <p className="text-xs font-body text-status-error m-0 mt-1 ml-3">
-          Délce „{delka}" nerozumím — napište sekundy (30), minuty (2 min) nebo 1:30.
+          {t('vystupy.delkaSpatne', { delka })}
         </p>
       )}
     </li>
@@ -725,6 +739,7 @@ function MenuVystupu({
   onDowncut: (delkaSekund: number) => void;
   onSmaz: () => void;
 }) {
+  const t = usePreklad();
   const [kotva, setKotva] = useState<{ left: number; top: number } | null>(null);
   const [potvrzujiSmazani, setPotvrzujiSmazani] = useState(false);
   const oknoRef = useRef<HTMLDivElement>(null);
@@ -775,8 +790,8 @@ function MenuVystupu({
       <button
         type="button"
         disabled={pracuje}
-        title="Co se s výstupem dá udělat"
-        aria-label="Co se s výstupem dá udělat"
+        title={t('vystupy.coSVystupem')}
+        aria-label={t('vystupy.coSVystupem')}
         onClick={(e) => {
           const r = e.currentTarget.getBoundingClientRect();
           setPotvrzujiSmazani(false);
@@ -806,7 +821,7 @@ function MenuVystupu({
                   rel="noopener noreferrer"
                   className="px-2 py-1.5 rounded-lg text-sm font-heading text-ink no-underline hover:bg-field transition-colors"
                 >
-                  Otevřít rodný list (v{rl.version})
+                  {t('vystupy.otevritRodnyList', { cislo: rl.version })}
                 </a>
               ))}
               <PolozkaMenu
@@ -816,7 +831,9 @@ function MenuVystupu({
                   setKotva(null);
                 }}
               >
-                {rodneListy.length === 0 ? 'Vyrobit rodný list' : 'Vyrobit novou verzi'}
+                {rodneListy.length === 0
+                  ? t('vystupy.vyrobitRodnyList')
+                  : t('vystupy.vyrobitNovouVerzi')}
               </PolozkaMenu>
             </>
           )}
@@ -826,7 +843,7 @@ function MenuVystupu({
           {!jeDowncut && (
             <div className="px-2 py-1.5 flex flex-col gap-1.5">
               <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
-                Zkrácená verze
+                {t('vystupy.zkracenaVerze')}
               </span>
               <span className="flex flex-wrap gap-1">
                 {NABIZENE_DOWNCUTY.map((s) => (
@@ -856,11 +873,11 @@ function MenuVystupu({
                 setKotva(null);
               }}
             >
-              Opravdu smazat?
+              {t('vystupy.opravduSmazat')}
             </PolozkaMenu>
           ) : (
             <PolozkaMenu disabled={pracuje} nebezpecna onClick={() => setPotvrzujiSmazani(true)}>
-              Smazat výstup
+              {t('vystupy.smazatVystup')}
             </PolozkaMenu>
           )}
         </div>

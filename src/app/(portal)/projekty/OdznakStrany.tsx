@@ -1,4 +1,5 @@
 import { TRIDA_ODZNAKU_STRANY } from '@/lib/bublinaHerce';
+import { prelozit, prelozitS, type Jazyk } from '@/lib/jazyk';
 
 /**
  * Strana, na které se s hercem naposledy skončilo — malý odznak posazený na
@@ -15,17 +16,19 @@ import { TRIDA_ODZNAKU_STRANY } from '@/lib/bublinaHerce';
  * ořízne buňka tabulky nebo zajede na bublinu nad sebou.
  *
  * Žádné hooky ani stav — jde použít v serverové i klientské komponentě.
+ * Proto si jazyk nebere hookem, ale PROPEM (pravidlo 8 v
+ * docs/preklad-portalu.md); bez něj mluví česky, jako doteď.
  */
-export function OdznakStrany({ strana }: { strana: number }) {
+export function OdznakStrany({ strana, jazyk = 'cs' }: { strana: number; jazyk?: Jazyk }) {
   return (
     <span
-      title={`Natočeno do strany ${strana} — zapsal Bruno z chatu`}
+      title={prelozitS(jazyk, 'odznakStrany.titulek', { strana })}
       // pointer-events-none: odznak leží na bublině, nesmí přebírat kliknutí,
       // které patří jí.
       className={`pointer-events-none absolute -top-2 -right-2 z-10 inline-flex items-center justify-center min-w-[20px] h-[18px] px-1 text-[10px] font-heading font-bold tabular-nums leading-none ${TRIDA_ODZNAKU_STRANY}`}
     >
       {strana}
-      <span className="sr-only"> — natočeno do strany</span>
+      <span className="sr-only">{prelozit(jazyk, 'odznakStrany.sr')}</span>
     </span>
   );
 }

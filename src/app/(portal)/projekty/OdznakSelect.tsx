@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { usePreklad } from '../components/JazykProvider';
 
 /**
  * Rozbalovací nabídka, která vypadá jako barevný odznak (zadání 10. 9. 2026:
@@ -41,7 +42,7 @@ export function OdznakSelect({
   moznosti,
   onZmena,
   trida,
-  prazdnyPopisek = '— nevybráno —',
+  prazdnyPopisek,
   disabled,
   titulek,
   bezKlaves = false,
@@ -57,8 +58,12 @@ export function OdznakSelect({
   /** Vybírá se jen myší - klávesy ani kolečko hodnotu nezmění. */
   bezKlaves?: boolean;
 }) {
+  const t = usePreklad();
+  /* Popisek pro "nic nevybrano" si komponenta doplni sama, aby ho nemusel
+     posilat kazdy volajici; kdo si ho posila, ma prednost. */
+  const prazdny = prazdnyPopisek ?? t('obecne.nevybrano');
   const vybrana = moznosti.find((m) => m.hodnota === hodnota);
-  const obsahOdznaku = vybrana?.obsah ?? vybrana?.popisek ?? prazdnyPopisek;
+  const obsahOdznaku = vybrana?.obsah ?? vybrana?.popisek ?? prazdny;
 
   if (bezKlaves) {
     return (
@@ -67,7 +72,7 @@ export function OdznakSelect({
         moznosti={moznosti}
         onZmena={onZmena}
         trida={trida}
-        prazdnyPopisek={prazdnyPopisek}
+        prazdnyPopisek={prazdny}
         disabled={disabled}
         titulek={titulek}
         obsahOdznaku={obsahOdznaku}
@@ -93,7 +98,7 @@ export function OdznakSelect({
         onChange={(e) => onZmena(e.target.value)}
         className="absolute inset-0 w-full h-full appearance-none opacity-0 cursor-pointer outline-none disabled:cursor-default"
       >
-        <option value="">{prazdnyPopisek}</option>
+        <option value="">{prazdny}</option>
         {moznosti.map((m) => (
           <option key={m.hodnota} value={m.hodnota}>
             {m.popisek}

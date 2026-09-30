@@ -12,7 +12,8 @@ import {
 import { projectTypeLabel } from '@/lib/projectTypes';
 import { PROJECTS_TABLE_KEY, visibleColumns, type ColumnSetting } from '@/lib/columnLabels';
 import { useZarizeni } from '@/lib/useZarizeni';
-import { NAZEV_ZARIZENI } from '@/lib/zarizeni';
+import { prelozitKolem } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '../components/JazykProvider';
 import { PoradiStavu } from './PoradiStavu';
 
 // Zadani 5. 9. 2026: "Na stránce bude max. padesát aktivních projektů. Nahoře
@@ -112,6 +113,8 @@ export function InternalProjectsBrowser({
   /** Manazeri do rozbalovaciho seznamu primo v prehledu (zadani 10. 9. 2026). */
   manazeri?: { id: string; label: string }[];
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('active');
   const [query, setQuery] = useState('');
@@ -151,7 +154,7 @@ export function InternalProjectsBrowser({
         disabled={saving}
         className="bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-4 py-1.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
       >
-        {saving ? 'Ukládám…' : 'Hotovo'}
+        {saving ? t('obecne.ukladam') : t('prehledProjektu.hotovo')}
       </button>
       <button
         type="button"
@@ -162,7 +165,7 @@ export function InternalProjectsBrowser({
         }}
         className="text-xs font-heading text-brand-purpleDark hover:underline"
       >
-        Zrušit
+        {t('obecne.zrusit')}
       </button>
       <button
         type="button"
@@ -170,7 +173,7 @@ export function InternalProjectsBrowser({
         disabled={saving}
         className="text-xs font-heading text-brand-purpleDark hover:underline disabled:opacity-60"
       >
-        Obnovit výchozí
+        {t('prehledProjektu.obnovitVychozi')}
       </button>
     </span>
   );
@@ -214,7 +217,7 @@ export function InternalProjectsBrowser({
     setDraft((cols) => {
       // Prazdna tabulka nedava smysl - posledni sloupec nejde odebrat.
       if (cols.filter((c) => !c.hidden).length <= 1) {
-        setLabelError('Aspoň jeden sloupec musí zůstat zobrazený.');
+        setLabelError(t('prehledProjektu.aspoJeden'));
         return cols;
       }
       return cols.map((c) => (c.key === key ? { ...c, hidden: true } : c));
@@ -246,7 +249,7 @@ export function InternalProjectsBrowser({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          setLabelError(data?.error || 'Uložení názvů se nezdařilo.');
+          setLabelError(data?.error || t('prehledProjektu.chybaNazvy'));
           return;
         }
       }
@@ -263,13 +266,13 @@ export function InternalProjectsBrowser({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setLabelError(data?.error || 'Uložení se nezdařilo.');
+        setLabelError(data?.error || t('listou.chybaUlozeni'));
         return;
       }
       setEditing(false);
       router.refresh();
     } catch {
-      setLabelError('Uložení se nezdařilo.');
+      setLabelError(t('listou.chybaUlozeni'));
     } finally {
       setSaving(false);
     }
@@ -285,13 +288,13 @@ export function InternalProjectsBrowser({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setLabelError(data?.error || 'Obnovení se nezdařilo.');
+        setLabelError(data?.error || t('listou.chybaObnoveni'));
         return;
       }
       setEditing(false);
       router.refresh();
     } catch {
-      setLabelError('Obnovení se nezdařilo.');
+      setLabelError(t('listou.chybaObnoveni'));
     } finally {
       setSaving(false);
     }
@@ -364,9 +367,16 @@ export function InternalProjectsBrowser({
   }
 
   const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: 'active', label: 'Aktivní', count: active.length },
-    { key: 'finished', label: 'Dokončené', count: finished.length },
+    { key: 'active', label: t('prehledProjektu.zalozkaAktivni'), count: active.length },
+    { key: 'finished', label: t('prehledProjektu.zalozkaDokoncene'), count: finished.length },
   ];
+
+  // Věta o počtu zůstává jeden klíč; dělí se až tady, ať číslo může být
+  // v tabular-nums (pravidlo 7 v docs/preklad-portalu.md).
+  const [predPoctem, zaPoctem] = prelozitKolem(jazyk, 'prehledProjektu.zobrazeno', 'celkem', {
+    od: currentPage * PAGE_SIZE + 1,
+    do: currentPage * PAGE_SIZE + visible.length,
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -408,8 +418,8 @@ export function InternalProjectsBrowser({
               setQuery(e.target.value);
               setPage(0);
             }}
-            placeholder="Hledat projekt, firmu, herce, manažera, číslo…"
-            aria-label="Hledat v projektech"
+            placeholder={t('prehledProjektu.hledatPole')}
+            aria-label={t('prehledProjektu.hledatPopis')}
             className="w-full rounded-lg border border-line bg-surface pl-10 pr-3 py-2.5 text-sm font-heading text-ink outline-none focus:border-brand-purple"
           />
           <svg
@@ -451,21 +461,27 @@ export function InternalProjectsBrowser({
               tabulkou je vidět vždycky, ať je tabulka jakkoliv široká. */}
           <div className="flex items-center gap-3 flex-wrap rounded-card border border-brand-purple bg-tint px-3 py-2">
             <p className="text-xs font-body text-brand-purpleDark m-0 flex-1 min-w-[220px]">
-              <strong>Sloupce pro {NAZEV_ZARIZENI[zarizeni]}.</strong> Pořadí změníte přetažením, křížkem
-              sloupec odeberete - platí jen pro vás a jen tady.
-              {canEditLabels ? ' Přejmenování v hlavičce platí pro všechny.' : ''}
+              <strong>
+                {t('prehledProjektu.sloupceProZarizeni', {
+                  zarizeni: t(`listou.zarizeni.${zarizeni}`),
+                })}
+              </strong>{' '}
+              {t('prehledProjektu.sloupceNapoveda')}
+              {canEditLabels ? ` ${t('prehledProjektu.prejmenovaniProVsechny')}` : ''}
             </p>
             {editAkce}
           </div>
           {skryte.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-body text-muted">Odebrané sloupce:</span>
+              <span className="text-xs font-body text-muted">
+                {t('prehledProjektu.odebraneSloupce')}
+              </span>
               {skryte.map((c) => (
                 <button
                   key={c.key}
                   type="button"
                   onClick={() => vrat(c.key)}
-                  title={`Vrátit ${c.label}`}
+                  title={t('prehledProjektu.vratitSloupec', { nazev: c.label })}
                   className="inline-flex items-center gap-1 rounded-pill border border-brand-purple bg-surface px-3 py-1 text-xs font-heading font-semibold text-brand-purple hover:bg-tint transition-colors"
                 >
                   + {c.label}
@@ -501,19 +517,20 @@ export function InternalProjectsBrowser({
         emptyText={
           hledanyText
             ? tab === 'active'
-              ? 'Hledání nic nenašlo. Dokončené projekty jsou na druhé záložce.'
-              : 'Hledání nic nenašlo.'
+              ? t('prehledProjektu.nenalezenoAktivni')
+              : t('prehledProjektu.nenalezeno')
             : tab === 'active'
-              ? 'Aktuálně nejsou žádné rozpracované projekty.'
-              : (finishedNote ?? 'Zatím tu nejsou žádné dokončené projekty.')
+              ? t('prehledProjektu.zadneRozpracovane')
+              : (finishedNote ?? t('prehledProjektu.zadneDokoncene'))
         }
       />
 
       {filtered.length > 0 && (
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <span className="text-xs font-body text-muted">
-            Zobrazeno {currentPage * PAGE_SIZE + 1}–{currentPage * PAGE_SIZE + visible.length} z{' '}
+            {predPoctem}
             <span className="tabular-nums">{filtered.length}</span>
+            {zaPoctem}
           </span>
           {pageCount > 1 && (
             <div className="flex items-center gap-2">
@@ -523,7 +540,7 @@ export function InternalProjectsBrowser({
                 disabled={currentPage === 0}
                 className="bg-surface border border-line text-ink font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-40"
               >
-                ← Předchozí
+                {t('prehledProjektu.predchozi')}
               </button>
               <span className="text-xs font-heading text-muted tabular-nums">
                 {currentPage + 1} / {pageCount}
@@ -534,7 +551,7 @@ export function InternalProjectsBrowser({
                 disabled={currentPage >= pageCount - 1}
                 className="bg-surface border border-line text-ink font-heading font-semibold text-xs rounded-lg px-4 py-2 hover:bg-field transition-colors disabled:opacity-40"
               >
-                Další →
+                {t('prehledProjektu.dalsi')}
               </button>
             </div>
           )}

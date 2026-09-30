@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePreklad } from '../../components/JazykProvider';
 
 /**
  * UKONČIT PROJEKT RUČNĚ (zadání 16. 9. 2026: „dejme někde možnost ukončit
@@ -23,6 +24,7 @@ export function UkonceniProjektu({
   ukonceny: boolean;
 }) {
   const router = useRouter();
+  const t = usePreklad();
   const [hotovo, setHotovo] = useState(ukonceny);
   const [bezi, setBezi] = useState(false);
   const [chyba, setChyba] = useState<string | null>(null);
@@ -41,14 +43,14 @@ export function UkonceniProjektu({
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba((data as { error?: string })?.error || 'Nepodařilo se to uložit.');
+        setChyba((data as { error?: string })?.error || t('ukonceni.chyba'));
         return;
       }
       setHotovo(naUkonceno);
       // Stav se mění i v hlavičce a v seznamu projektů - načíst znovu.
       router.refresh();
     } catch {
-      setChyba('Nepodařilo se to uložit.');
+      setChyba(t('ukonceni.chyba'));
     } finally {
       setBezi(false);
     }
@@ -58,12 +60,10 @@ export function UkonceniProjektu({
     <div className="border-t border-line pt-4 flex items-start gap-4 flex-wrap">
       <div className="flex-1 min-w-[260px]">
         <p className="font-heading font-semibold text-sm text-ink m-0">
-          {hotovo ? 'Projekt je ukončený' : 'Ukončit projekt'}
+          {hotovo ? t('ukonceni.jeUkonceny') : t('ukonceni.ukoncit')}
         </p>
         <p className="text-xs font-body text-muted m-0 mt-1">
-          {hotovo
-            ? 'Je mezi dokončenými a klient už se na něj nezeptá. Kdyby to bylo omylem, vrátí se mezi aktivní.'
-            : 'Když je projekt ve stavu „Schváleno - k fakturaci“ a fakturu klientovi pošlete z portálu, Bruno ho ukončí sám. Tohle je pro případ, že už odešla jinudy — přehodí stav na „Vyfakturováno" a projekt zmizí z aktivních. Klientovi odsud nic nechodí.'}
+          {hotovo ? t('ukonceni.popisUkonceny') : t('ukonceni.popisAktivni')}
         </p>
         {chyba && <p className="text-sm font-body text-danger m-0 mt-1">{chyba}</p>}
       </div>
@@ -77,7 +77,7 @@ export function UkonceniProjektu({
             : 'border-brand-green text-brand-greenDeep hover:bg-okTint'
         }`}
       >
-        {bezi ? 'Ukládám…' : hotovo ? 'Vrátit mezi aktivní' : 'Ukončit projekt'}
+        {bezi ? t('obecne.ukladam') : hotovo ? t('ukonceni.vratit') : t('ukonceni.ukoncit')}
       </button>
     </div>
   );

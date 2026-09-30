@@ -4,6 +4,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BublinaHerce, type Herec } from './VyberHerce';
 import { TRIDA_SLOUPCE_HERCU } from '@/lib/bublinaHerce';
 import { coSeStane, type NahledDotoceni } from '@/lib/dotoceni';
+import { formatDatum } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '../components/JazykProvider';
 
 /**
  * Výběr VÍCE herců k projektu (zadání 10. 9. 2026: „ještě nemám v detailu
@@ -227,6 +229,8 @@ export function VyberHercu({
       .catch(() => setPotvrzeni((p) => (p?.id === id ? { id, nacitam: false, nahled: null } : p)));
   }
 
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const otevrenyIndex = akce ? hodnoty.indexOf(akce.id) : -1;
   const otevrenyHerec = akce ? vybrani.find((h) => h.id === akce.id) ?? null : null;
   const otevrenyDotoceno = akce ? dotoceni?.[akce.id] : undefined;
@@ -237,13 +241,15 @@ export function VyberHercu({
         <div className={TRIDA_SLOUPCE_HERCU}>
           {vybrani.map((h, i) => (
             <span key={h.id} className="inline-flex items-center gap-2">
-              <span className="text-[11px] font-heading text-muted w-[52px] shrink-0">Herec {i + 1}</span>
+              <span className="text-[11px] font-heading text-muted w-[52px] shrink-0">
+                {t('vyberHercu.poradi', { poradi: i + 1 })}
+              </span>
               <BublinaHerce
                 jmeno={h.label}
                 disabled={disabled}
                 dotoceno={dotoceni?.[h.id]}
                 strana={strany?.[h.id]}
-                popisek="Klepnutím otevřete, co se s hercem dá udělat"
+                popisek={t('vyberHercu.bublinaPopisek')}
                 // Klepnutí na jméno otevře okno s akcemi (26. 9. 2026);
                 // křížek u bubliny není, odebrání je taky v okně.
                 onZmenit={(prvek) => otevriAkce(h.id, prvek)}
@@ -268,8 +274,10 @@ export function VyberHercu({
             </span>
             <span className="text-[11px] font-body text-muted">
               {otevrenyDotoceno
-                ? `Dotočeno ${new Date(otevrenyDotoceno).toLocaleDateString('cs-CZ')}`
-                : `Herec ${otevrenyIndex + 1}`}
+                ? t('vyberHercu.dotocenoKdy', {
+                    datum: formatDatum(jazyk, new Date(otevrenyDotoceno)),
+                  })
+                : t('vyberHercu.poradi', { poradi: otevrenyIndex + 1 })}
             </span>
           </span>
 
@@ -283,19 +291,21 @@ export function VyberHercu({
               }}
             >
               {dotoceniBezi === akce.id
-                ? 'Ukládám…'
+                ? t('obecne.ukladam')
                 : otevrenyDotoceno
-                  ? 'Zrušit dotočeno'
-                  : 'Označit dotočeno'}
+                  ? t('vyberHercu.zrusitDotoceno')
+                  : t('vyberHercu.oznacitDotoceno')}
             </PolozkaOkna>
           )}
 
           {/* POTVRZENÍ S VÝČTEM, CO SE STANE (zadání 30. 9. 2026). */}
           {onPrepnoutDotoceno && potvrzeni?.id === akce.id && (
             <div className="flex flex-col gap-2 rounded-lg bg-field px-2.5 py-2">
-              <span className="font-heading font-semibold text-sm text-ink">Označit dotočeno?</span>
+              <span className="font-heading font-semibold text-sm text-ink">
+                {t('vyberHercu.oznacitDotocenoOtazka')}
+              </span>
               {potvrzeni.nacitam ? (
-                <span className="text-xs font-body text-muted">Zjišťuji, co se stane…</span>
+                <span className="text-xs font-body text-muted">{t('vyberHercu.zjistuji')}</span>
               ) : (
                 <VycetCoSeStane nahled={potvrzeni.nahled} />
               )}
@@ -309,14 +319,14 @@ export function VyberHercu({
                   }}
                   className="rounded-lg bg-brand-purple text-white font-heading font-semibold text-xs px-3 py-1.5 border-0 cursor-pointer hover:bg-brand-purpleDeep transition-colors disabled:opacity-50"
                 >
-                  {dotoceniBezi === akce.id ? 'Ukládám…' : 'Ano, dotočeno'}
+                  {dotoceniBezi === akce.id ? t('obecne.ukladam') : t('vyberHercu.anoDotoceno')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setPotvrzeni(null)}
                   className="rounded-lg bg-transparent text-muted font-heading text-xs px-2 py-1.5 border-0 cursor-pointer hover:text-ink transition-colors"
                 >
-                  Zpět
+                  {t('vyberHercu.zpet')}
                 </button>
               </div>
             </div>
@@ -331,7 +341,7 @@ export function VyberHercu({
               disabled={disabled || dotoceniBezi === akce.id}
               onClick={() => onPoslatKlientovi(akce.id)}
             >
-              Poslat klientovi znovu
+              {t('vyberHercu.poslatKlientovi')}
             </PolozkaOkna>
           )}
 
@@ -339,7 +349,7 @@ export function VyberHercu({
               je volající vůbec nepředá. */}
           {onZmenitNormostrany && vybrani.length > 1 && (
             <label className="flex items-center justify-between gap-2 px-2 py-1.5 text-sm font-body text-ink">
-              Normostrany
+              {t('vyberHercu.normostrany')}
               <input
                 type="number"
                 min={0}
@@ -354,7 +364,7 @@ export function VyberHercu({
                   onZmenitNormostrany(akce.id, cislo);
                 }}
                 placeholder="0"
-                title="Normostrany tohoto herce - podle nich se plánují jeho frekvence"
+                title={t('vyberHercu.normostranyTitulek')}
                 className="w-20 rounded-lg border border-line bg-field px-2 py-1 text-ink font-heading text-xs tabular-nums outline-none focus:border-brand-purple disabled:opacity-50"
               />
             </label>
@@ -368,7 +378,7 @@ export function VyberHercu({
                 setAkce(null);
               }}
             >
-              Posunout výš (na Herce {otevrenyIndex})
+              {t('vyberHercu.posunoutVys', { poradi: otevrenyIndex })}
             </PolozkaOkna>
           )}
 
@@ -380,7 +390,7 @@ export function VyberHercu({
               setAkce(null);
             }}
           >
-            Odebrat z projektu
+            {t('vyberHercu.odebratZProjektu')}
           </PolozkaOkna>
         </div>
       )}
@@ -397,10 +407,10 @@ export function VyberHercu({
           onFocus={() => setOtevreno(true)}
           placeholder={
             vybrani.length > 0
-              ? 'přidat dalšího herce'
+              ? t('vyberHercu.pridatDalsiho')
               : puvodniText
-                ? `hledat herce (v Caflou: ${puvodniText})`
-                : 'začněte psát jméno herce'
+                ? t('vyberHercu.hledatCaflou', { jmeno: puvodniText })
+                : t('vyberHercu.zacnetePsat')
           }
           className="rounded-lg border border-line bg-field px-3 py-2 text-ink font-heading text-sm outline-none focus:border-brand-purple w-full"
         />
@@ -410,10 +420,10 @@ export function VyberHercu({
             {nalezeni.length === 0 ? (
               <p className="px-3 py-2.5 text-sm font-body text-muted m-0">
                 {herci.length === 0
-                  ? 'V portálu zatím není žádný herec — nejdřív ho založte mezi uživateli.'
+                  ? t('vyberHercu.zadnyHerec')
                   : hodnoty.length === herci.length
-                    ? 'Všichni herci už jsou u projektu.'
-                    : 'Nikdo takový tu není.'}
+                    ? t('vyberHercu.vsichniJsou')
+                    : t('vyberHercu.nikdoTakovy')}
               </p>
             ) : (
               nalezeni.map((h) => (
@@ -444,30 +454,28 @@ const SIRKA_OKNA = 230;
  * důvod, proč se člověk ptá.
  */
 function VycetCoSeStane({ nahled }: { nahled: NahledDotoceni | null }) {
+  const jazyk = useJazyk();
+  const t = usePreklad();
   if (!nahled) {
     return (
-      <span className="text-xs font-body text-muted">
-        Co se stane, se teď nepodařilo zjistit. Fajfka se uloží a zpráva odejde tak jako vždycky.
-      </span>
+      <span className="text-xs font-body text-muted">{t('vyberHercu.coSeStaneNezname')}</span>
     );
   }
   if (nahled.jeReklama) {
     return (
-      <span className="text-xs font-body text-muted">
-        U reklamy se uloží jen fajfka — stav projektu se nemění a nikomu nic nechodí.
-      </span>
+      <span className="text-xs font-body text-muted">{t('vyberHercu.coSeStaneReklama')}</span>
     );
   }
   if (nahled.uzMa) {
     return (
       <span className="text-xs font-body text-muted">
-        {nahled.jmenoHerce} fajfku už má — znovu se nic neuloží ani neodešle.
+        {t('vyberHercu.coSeStaneUzMa', { jmeno: nahled.jmenoHerce })}
       </span>
     );
   }
   return (
     <ul className="m-0 pl-4 flex flex-col gap-1 text-xs font-body text-ink">
-      {coSeStane(nahled).map((veta) => (
+      {coSeStane(nahled, jazyk).map((veta) => (
         <li key={veta}>{veta}</li>
       ))}
     </ul>

@@ -5,7 +5,9 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DatumPole } from '@/components/DatumPole';
 import { KresbaIkony } from '@/lib/ikonyTypu';
-import { SLUZBY_REKLAMY, nazvySluzeb } from '@/lib/sluzbyReklamy';
+import { SLUZBY_REKLAMY } from '@/lib/sluzbyReklamy';
+import { formatDatum, prelozit, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '../components/JazykProvider';
 import {
   NABIZENE_DOWNCUTY,
   popisVystupuObjednavky,
@@ -43,18 +45,18 @@ import {
 const KROKY = ['nazev', 'sluzby', 'herec', 'termin', 'shrnuti'] as const;
 type Krok = (typeof KROKY)[number];
 
+// Nadpisy kroků jsou KLÍČE, ne texty - vykreslují se až v komponentě.
 const NADPISY: Record<Krok, { nadpis: string; podnadpis: string }> = {
-  nazev: { nadpis: 'Jak se zakázka jmenuje?', podnadpis: 'Stačí pracovní název, ať ji oba poznáme.' },
-  sluzby: {
-    nadpis: 'Co pro vás máme vyrobit?',
-    podnadpis: 'Každý spot nebo voiceover zvlášť — u každého vyberte, co k němu patří.',
-  },
-  herec: { nadpis: 'Máte představu o hlasu?', podnadpis: 'Když ne, nevadí — vybereme a pošleme ukázky.' },
-  termin: { nadpis: 'Do kdy to potřebujete?', podnadpis: 'Termín odevzdání hotového zvuku.' },
-  shrnuti: { nadpis: 'Sedí to?', podnadpis: 'Ještě můžete přidat poznámku nebo podklady.' },
+  nazev: { nadpis: 'objednavkaReklama.krokNazev', podnadpis: 'objednavkaReklama.krokNazevPopis' },
+  sluzby: { nadpis: 'objednavkaReklama.krokSluzby', podnadpis: 'objednavkaReklama.krokSluzbyPopis' },
+  herec: { nadpis: 'objednavkaReklama.krokHerec', podnadpis: 'objednavkaReklama.krokHerecPopis' },
+  termin: { nadpis: 'objednavkaReklama.krokTermin', podnadpis: 'objednavkaReklama.krokTerminPopis' },
+  shrnuti: { nadpis: 'objednavkaReklama.krokShrnuti', podnadpis: 'objednavkaReklama.krokShrnutiPopis' },
 };
 
 export function AdOrderForm() {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [krok, setKrok] = useState<Krok>('nazev');
   const [title, setTitle] = useState('');
@@ -118,14 +120,14 @@ export function AdOrderForm() {
       formData.set('vystupy', JSON.stringify(vystupy));
       for (const k of [...new Set(vystupy.flatMap((v) => v.sluzby))]) formData.append('sluzby', k);
       if (file) {
-        const klic = await nahrajPrilohu(file);
+        const klic = await nahrajPrilohu(file, jazyk);
         formData.set('attachmentKey', klic);
         formData.set('attachmentName', file.name);
       }
 
       const res = await fetch('/api/orders', { method: 'POST', body: formData });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error || 'Objednávku se nepodařilo odeslat.');
+      if (!res.ok) throw new Error(body.error || t('objednavka.chybaOdeslani'));
 
       setLastTitle(title);
       setVarovani(body?.varovani ?? null);
@@ -139,7 +141,7 @@ export function AdOrderForm() {
       setKrok('nazev');
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Objednávku se nepodařilo odeslat.');
+      setError(err instanceof Error ? err.message : t('objednavka.chybaOdeslani'));
     } finally {
       setSubmitting(false);
     }
@@ -154,9 +156,11 @@ export function AdOrderForm() {
           </svg>
         </div>
         <div>
-          <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">Objednávka byla odeslána</h2>
+          <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">
+            {t('objednavka.odeslana')}
+          </h2>
           <p className="text-white/85 text-sm font-body mt-2">
-            „{lastTitle}" — objednávku jsme uložili k vašemu účtu a Mediaspace se vám brzy ozve.
+            {t('objednavkaReklama.odeslanaText', { nazev: lastTitle })}
           </p>
           {varovani && (
             <p className="mt-3 mb-0 rounded-lg bg-white/15 border border-brand-green px-3 py-2 text-sm font-body text-white">
@@ -170,10 +174,10 @@ export function AdOrderForm() {
             onClick={() => setDone(false)}
             className="border-2 border-brand-green text-brand-green font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:bg-brand-green hover:text-brand-purpleDark transition-colors"
           >
-            + Vytvořit další objednávku
+            {t('objednavka.dalsiObjednavka')}
           </button>
           <Link href="/projekty" className="text-white/85 text-sm font-heading underline">
-            Zobrazit Projekty
+            {t('objednavka.zobrazitProjekty')}
           </Link>
         </div>
       </div>
@@ -193,9 +197,9 @@ export function AdOrderForm() {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-heading text-brand-green uppercase tracking-wide">
-            Krok {index + 1} z {KROKY.length}
+            {t('objednavkaReklama.krok', { cislo: index + 1, celkem: KROKY.length })}
           </span>
-          <span className="text-xs font-body text-white/70">Objednávka</span>
+          <span className="text-xs font-body text-white/70">{t('objednavkaReklama.objednavka')}</span>
         </div>
         <div className="h-1.5 rounded-pill bg-white/15 overflow-hidden">
           <div
@@ -206,8 +210,10 @@ export function AdOrderForm() {
       </div>
 
       <div>
-        <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">{NADPISY[krok].nadpis}</h2>
-        <p className="text-white/85 text-sm font-body mt-1.5 mb-0">{NADPISY[krok].podnadpis}</p>
+        <h2 className="font-display text-2xl sm:text-3xl text-brand-green m-0">
+          {t(NADPISY[krok].nadpis)}
+        </h2>
+        <p className="text-white/85 text-sm font-body mt-1.5 mb-0">{t(NADPISY[krok].podnadpis)}</p>
       </div>
 
       {krok === 'nazev' && (
@@ -215,7 +221,7 @@ export function AdOrderForm() {
           autoFocus
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="např. Vánoční kampaň 2026"
+          placeholder={t('objednavkaReklama.nazevPriklad')}
           className="input"
         />
       )}
@@ -230,10 +236,10 @@ export function AdOrderForm() {
                   onChange={(e) => upravVystup(i, { nazev: e.target.value })}
                   placeholder={`Spot ${i + 1}`}
                   className="input flex-1 min-w-[180px]"
-                  aria-label="Název výstupu"
+                  aria-label={t('objednavkaReklama.nazevVystupu')}
                 />
                 <label className="flex items-center gap-2 text-sm font-body text-white/85">
-                  <span className="whitespace-nowrap">Délka</span>
+                  <span className="whitespace-nowrap">{t('objednavkaReklama.delka')}</span>
                   <input
                     type="number"
                     min={1}
@@ -244,7 +250,7 @@ export function AdOrderForm() {
                     }
                     placeholder="30"
                     className="input w-24"
-                    aria-label="Délka v sekundách"
+                    aria-label={t('objednavkaReklama.delkaVSekundach')}
                   />
                   <span>s</span>
                 </label>
@@ -254,7 +260,7 @@ export function AdOrderForm() {
                     onClick={() => setVystupy((s) => s.filter((_, idx) => idx !== i))}
                     className="text-xs font-heading text-white/70 underline bg-transparent border-0 cursor-pointer"
                   >
-                    Odebrat
+                    {t('objednavkaReklama.odebrat')}
                   </button>
                 )}
               </div>
@@ -283,8 +289,12 @@ export function AdOrderForm() {
                       >
                         <KresbaIkony klic={sl.ikona} velikost={18} />
                       </span>
-                      <span className="font-heading font-semibold text-sm text-white">{sl.nazev}</span>
-                      <span className="text-xs font-body text-white/70 leading-snug">{sl.popis}</span>
+                      <span className="font-heading font-semibold text-sm text-white">
+                        {t(`objednavkaReklama.sluzba.${sl.klic}`)}
+                      </span>
+                      <span className="text-xs font-body text-white/70 leading-snug">
+                        {t(`objednavkaReklama.sluzbaPopis.${sl.klic}`)}
+                      </span>
                     </button>
                   );
                 })}
@@ -294,7 +304,7 @@ export function AdOrderForm() {
                   jako u hlavního spotu. */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-heading text-white/70 uppercase tracking-wide">
-                  Zkrácené verze
+                  {t('objednavkaReklama.zkraceneVerze')}
                 </span>
                 {NABIZENE_DOWNCUTY.map((d) => {
                   const vybrano = v.downcuty.includes(d);
@@ -315,7 +325,7 @@ export function AdOrderForm() {
                   );
                 })}
                 <span className="text-xs font-body text-white/60 w-full sm:w-auto">
-                  stejný hlas i hudba jako hlavní verze
+                  {t('objednavkaReklama.zkraceneVerzeNapoveda')}
                 </span>
               </div>
             </div>
@@ -326,7 +336,7 @@ export function AdOrderForm() {
             onClick={() => setVystupy((s) => [...s, prazdnyVystupObjednavky(s.length)])}
             className="self-start rounded-lg border-2 border-white/30 text-white font-heading font-semibold text-sm px-5 py-2.5 bg-transparent cursor-pointer hover:border-brand-green hover:text-brand-green transition-colors"
           >
-            + Přidat další výstup
+            {t('objednavkaReklama.pridatVystup')}
           </button>
         </div>
       )}
@@ -337,12 +347,10 @@ export function AdOrderForm() {
             autoFocus
             value={herec}
             onChange={(e) => setHerec(e.target.value)}
-            placeholder="např. mužský hlas, 40+, klidný — nebo konkrétní jméno"
+            placeholder={t('objednavkaReklama.hlasPriklad')}
             className="input"
           />
-          <span className="text-xs font-body text-white/70">
-            Klidně nechte prázdné. Podle zakázky vybereme hlasy a pošleme vám ukázky.
-          </span>
+          <span className="text-xs font-body text-white/70">{t('objednavkaReklama.hlasNapoveda')}</span>
         </div>
       )}
 
@@ -350,7 +358,7 @@ export function AdOrderForm() {
         <div className="flex flex-col gap-2">
           <DatumPole value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
           <span className="text-xs font-body text-white/70">
-            Když termín ještě neznáte, přeskočte to — domluvíme se.
+            {t('objednavkaReklama.terminNapoveda')}
           </span>
         </div>
       )}
@@ -358,31 +366,53 @@ export function AdOrderForm() {
       {krok === 'shrnuti' && (
         <div className="flex flex-col gap-5">
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 m-0 rounded-card bg-white/10 p-4">
-            <Polozka popisek="Název" hodnota={title || '—'} naKrok={() => setKrok('nazev')} />
             <Polozka
-              popisek="Co pro vás vyrobíme"
+              popisek={t('objednavkaReklama.pNazev')}
+              hodnota={title || '—'}
+              naKrok={() => setKrok('nazev')}
+            />
+            <Polozka
+              popisek={t('objednavkaReklama.pSluzby')}
               hodnota={
                 vystupy
-                  .map((v) => popisVystupuObjednavky(v, nazvySluzeb(v.sluzby)))
+                  .map((v) =>
+                    popisVystupuObjednavky(
+                      v,
+                      // Názvy služeb ze slovníku podle KÓDU služby, ať shrnutí
+                      // mluví stejným jazykem jako tlačítka o krok výš.
+                      SLUZBY_REKLAMY.filter((s) => v.sluzby.includes(s.klic)).map((s) =>
+                        t(`objednavkaReklama.sluzba.${s.klic}`),
+                      ),
+                      jazyk,
+                    ),
+                  )
                   .join(' | ') || '—'
               }
               naKrok={() => setKrok('sluzby')}
             />
-            <Polozka popisek="Hlas" hodnota={herec || 'necháváme na vás'} naKrok={() => setKrok('herec')} />
             <Polozka
-              popisek="Termín"
-              hodnota={deadline ? new Intl.DateTimeFormat('cs-CZ').format(new Date(deadline)) : 'domluvíme se'}
+              popisek={t('objednavkaReklama.pHlas')}
+              hodnota={herec || t('objednavkaReklama.hlasNaVas')}
+              naKrok={() => setKrok('herec')}
+            />
+            <Polozka
+              popisek={t('objednavkaReklama.pTermin')}
+              hodnota={
+                deadline
+                  ? formatDatum(jazyk, new Date(deadline))
+                  : t('objednavkaReklama.terminDomluvime')
+              }
               naKrok={() => setKrok('termin')}
             />
           </dl>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-heading text-white">Poznámka</span>
+            <span className="text-sm font-heading text-white">{t('objednavkaReklama.poznamka')}</span>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
-              placeholder="Cokoliv, co bychom měli vědět — tonalita, stopáž, kde se spot bude hrát…"
+              placeholder={t('objednavkaReklama.poznamkaPlaceholder')}
               className="input"
             />
           </label>
@@ -418,12 +448,12 @@ export function AdOrderForm() {
                   onClick={odeberSoubor}
                   className="text-xs font-heading text-brand-green underline bg-transparent border-0 cursor-pointer"
                 >
-                  Odebrat
+                  {t('objednavkaReklama.odebrat')}
                 </button>
               </span>
             ) : (
               <label htmlFor="priloha-reklama" className="text-sm font-body text-white/80 cursor-pointer">
-                Podklady (scénář, storyboard, hudba) — přetáhněte sem nebo klikněte
+                {t('objednavkaReklama.podklady')}
               </label>
             )}
           </div>
@@ -443,7 +473,7 @@ export function AdOrderForm() {
             onClick={() => setKrok(KROKY[index - 1])}
             className="text-white/85 text-sm font-heading underline bg-transparent border-0 cursor-pointer px-1"
           >
-            Zpět
+            {t('objednavkaReklama.zpet')}
           </button>
         )}
         <span className="flex-1" />
@@ -453,7 +483,7 @@ export function AdOrderForm() {
             onClick={() => setKrok(KROKY[index + 1])}
             className="text-white/85 text-sm font-heading underline bg-transparent border-0 cursor-pointer px-1"
           >
-            Přeskočit
+            {t('objednavkaReklama.preskocit')}
           </button>
         )}
         <button
@@ -461,7 +491,11 @@ export function AdOrderForm() {
           disabled={(krok !== 'shrnuti' && !muzeDal) || submitting}
           className="bg-brand-green text-brand-purpleDark font-heading font-semibold text-sm rounded-lg px-8 py-3 hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          {krok === 'shrnuti' ? (submitting ? 'Odesílám…' : 'Odeslat objednávku') : 'Pokračovat'}
+          {krok === 'shrnuti'
+            ? submitting
+              ? t('objednavka.odesilam')
+              : t('objednavkaReklama.odeslatObjednavku')
+            : t('objednavkaReklama.pokracovat')}
         </button>
       </div>
     </form>
@@ -477,6 +511,7 @@ function Polozka({
   hodnota: string;
   naKrok: () => void;
 }) {
+  const popisekUpravit = usePreklad()('objednavkaReklama.upravit');
   return (
     <div className="flex flex-col gap-0.5 min-w-0">
       <dt className="text-xs font-heading text-white/60 uppercase tracking-wide">{popisek}</dt>
@@ -487,7 +522,7 @@ function Polozka({
           onClick={naKrok}
           className="shrink-0 text-xs font-heading text-brand-green underline bg-transparent border-0 cursor-pointer"
         >
-          upravit
+          {popisekUpravit}
         </button>
       </dd>
     </div>
@@ -503,7 +538,7 @@ function Polozka({
  * pak spadla na chybu 413 a formulář uměl říct jen „nepodařilo se odeslat".
  * Stejnou cestou posílá soubory chat.
  */
-async function nahrajPrilohu(soubor: File): Promise<string> {
+async function nahrajPrilohu(soubor: File, jazyk: Jazyk): Promise<string> {
   const podpis = await fetch('/api/orders/priloha/podpis', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -511,7 +546,7 @@ async function nahrajPrilohu(soubor: File): Promise<string> {
   });
   const data = await podpis.json().catch(() => ({}));
   if (!podpis.ok || !data?.uploadUrl) {
-    throw new Error(data?.error || 'Přílohu se nepodařilo připravit k odeslání.');
+    throw new Error(data?.error || prelozit(jazyk, 'objednavka.chybaPrilohaPripravit'));
   }
 
   const nahrano = await fetch(data.uploadUrl, {
@@ -520,7 +555,7 @@ async function nahrajPrilohu(soubor: File): Promise<string> {
     body: soubor,
   });
   if (!nahrano.ok) {
-    throw new Error('Přílohu se nepodařilo nahrát. Zkuste to prosím znovu.');
+    throw new Error(prelozit(jazyk, 'objednavka.chybaPrilohaNahrat'));
   }
   return data.key as string;
 }

@@ -19,6 +19,8 @@ import { OdznakSelect } from '../OdznakSelect';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
 import { UkonceniProjektu } from './UkonceniProjektu';
+import { formatDatum, prelozitKolem, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '../../components/JazykProvider';
 
 /**
  * Stav, priorita a typ projektu jako barevný odznak (zadání 10. 9. 2026:
@@ -127,10 +129,15 @@ type Initial = {
   zaverKnihy: string;
 };
 
-/** „2026-09-17" na „17. 9. 2026". Bez Date - datum je den, ne okamzik v pasmu. */
-function datumTextem(iso: string): string {
+/**
+ * „2026-09-17" na „17. 9. 2026", anglicky na „17/09/2026" (pravidlo 3
+ * v docs/preklad-portalu.md - britsky, ne americky). Bez Date - datum je den,
+ * ne okamzik v pasmu, takze se nesmi hnat pres casove pasmo.
+ */
+function datumTextem(iso: string, jazyk: Jazyk): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
   if (!m) return '—';
+  if (jazyk === 'en') return `${m[3]}/${m[2]}/${m[1]}`;
   return `${Number(m[3])}. ${Number(m[2])}. ${m[1]}`;
 }
 
@@ -241,6 +248,8 @@ export function ProjectMetaForm({
   natoceniZaznamy?: { id: string; strana: number; kdy: string; userId: string | null; jmeno: string | null }[];
 }) {
   const router = useRouter();
+  const jazyk = useJazyk();
+  const t = usePreklad();
   const [values, setValues] = useState<Initial>(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -270,7 +279,7 @@ export function ProjectMetaForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError((data as { error?: string })?.error || 'Normostrany se nepodařilo uložit.');
+        setError((data as { error?: string })?.error || t('projektMeta.chybaNormostrany'));
         return;
       }
       setNormostrany((soucasne) => {
@@ -282,7 +291,7 @@ export function ProjectMetaForm({
       // Podle nich se předvyplňuje nabídka termínů - ať tam sedí hned.
       router.refresh();
     } catch {
-      setError('Normostrany se nepodařilo uložit.');
+      setError(t('projektMeta.chybaNormostrany'));
     }
   }
 
@@ -327,7 +336,7 @@ export function ProjectMetaForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError((data as { error?: string })?.error || 'Nepodařilo se to uložit.');
+        setError((data as { error?: string })?.error || t('projektMeta.chybaUlozit'));
         return;
       }
       setDotoceni((soucasne) => {
@@ -339,7 +348,7 @@ export function ProjectMetaForm({
       // Fajfka se ukazuje i v prehledu projektu - at tam sedi hned.
       router.refresh();
     } catch {
-      setError('Nepodařilo se to uložit.');
+      setError(t('projektMeta.chybaUlozit'));
     } finally {
       setDotoceniBezi(null);
     }
@@ -367,12 +376,12 @@ export function ProjectMetaForm({
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError((data as { error?: string })?.error || 'Zprávu se nepodařilo poslat.');
+        setError((data as { error?: string })?.error || t('projektMeta.chybaZprava'));
         return;
       }
-      setZpravaKlientovi((data as { zprava?: string })?.zprava ?? 'Odesláno.');
+      setZpravaKlientovi((data as { zprava?: string })?.zprava ?? t('projektMeta.odeslano'));
     } catch {
-      setError('Zprávu se nepodařilo poslat.');
+      setError(t('projektMeta.chybaZprava'));
     } finally {
       setDotoceniBezi(null);
     }
@@ -420,7 +429,7 @@ export function ProjectMetaForm({
         // Mezitim prisla novejsi zmena - tahle odpoved uz nic neridi.
         if (moje !== poradiRef.current) return;
         if (!res.ok) {
-          setError((odpoved as { error?: string })?.error || 'Uložení se nezdařilo.');
+          setError((odpoved as { error?: string })?.error || t('projektMeta.chybaUlozeni'));
           setSaved(false);
           return;
         }
@@ -430,14 +439,14 @@ export function ProjectMetaForm({
         router.refresh();
       } catch {
         if (moje === poradiRef.current) {
-          setError('Uložení se nezdařilo.');
+          setError(t('projektMeta.chybaUlozeni'));
           setSaved(false);
         }
       } finally {
         if (moje === poradiRef.current) setSaving(false);
       }
     },
-    [caflouProjectId, router],
+    [caflouProjectId, router, t],
   );
 
   const naplanujUlozeni = useCallback(
@@ -520,31 +529,46 @@ export function ProjectMetaForm({
    */
   const bezNormostran = bezDataVydani;
 
+  /**
+   * Nápověda pod výběrem herců má uprostřed tučný „počet normostran".
+   * Rozdělí se až z přeložené věty (prelozitKolem), takže v angličtině může
+   * tučná část stát ve větě jinde než v češtině.
+   */
+  const [napovedaHerciPred, napovedaHerciPo] = prelozitKolem(
+    jazyk,
+    'projektMeta.herciNapovedaKniha',
+    'ns',
+  );
+
   if (!canEdit) {
     return (
       // Stejne rozdeleni do karet jako editacni podoba (zadani 13. 9. 2026),
       // at Prehled vypada stejne bez ohledu na to, kdo se diva. Zvukar tu
       // navic nevidi klienta - viz canViewProjectBusinessInfo.
       <div className="flex flex-col gap-6">
-        <Karta nadpis="Výroba">
+        <Karta nadpis={t('projektMeta.kartaVyroba')}>
           {/* Odznak „Jen ke cteni" stoji u prvni karty, ne u kazde -
               ctyrikrat pod sebou by z nej byla tapeta. */}
           <span className="text-xs font-heading text-muted bg-field border border-line rounded-pill px-3 py-1 self-start -mt-2">
-            Jen ke čtení
+            {t('projektMeta.jenKeCteni')}
           </span>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 m-0">
             {/* Data nahore, stejne jako v editacni podobe (zadani 17. 9. 2026). */}
             <div>
-              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Datum dokončení</dt>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                {t('projektMeta.datumDokonceni')}
+              </dt>
               <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">
-                {datumTextem(values.endDate)}
+                {datumTextem(values.endDate, jazyk)}
               </dd>
             </div>
             {vidiDatumVydani ? (
               <div>
-                <dt className="text-xs font-heading text-muted uppercase tracking-wide">Datum vydání</dt>
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                  {t('projektMeta.datumVydani')}
+                </dt>
                 <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">
-                  {datumTextem(values.releaseDate)}
+                  {datumTextem(values.releaseDate, jazyk)}
                 </dd>
               </div>
             ) : (
@@ -552,21 +576,25 @@ export function ProjectMetaForm({
             )}
             {!bezNormostran && (
               <div>
-                <dt className="text-xs font-heading text-muted uppercase tracking-wide">Normostrany</dt>
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                  {t('projektMeta.normostrany')}
+                </dt>
                 <dd className="text-sm font-heading text-ink m-0 mt-1 tabular-nums">
                   {values.pageCount || '—'}
                 </dd>
               </div>
             )}
             <div>
-              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Stav projektu</dt>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                {t('projektMeta.stavProjektu')}
+              </dt>
               <dd className="m-0 mt-1">
                 <OdznakStavu stav={values.statusName} />
               </dd>
             </div>
             <div>
               <dt className="text-xs font-heading text-muted uppercase tracking-wide">
-                {values.actorUserIds.length > 1 ? 'Herci' : 'Herec'}
+                {values.actorUserIds.length > 1 ? t('projektMeta.herci') : t('projektMeta.herec')}
               </dt>
               <dd className="text-sm font-heading text-ink m-0 mt-1">
                 {values.actorUserIds.length > 0 ? (
@@ -588,19 +616,27 @@ export function ProjectMetaForm({
                         // proto delaji MARGINY, ne padding.
                         <span key={id} className="relative inline-flex mt-2 mr-2">
                           <span
-                            title={kdy ? `Dotočeno ${new Date(kdy).toLocaleDateString('cs-CZ')}` : undefined}
+                            title={
+                              kdy
+                                ? t('projektMeta.dotocenoKdy', {
+                                    datum: formatDatum(jazyk, new Date(kdy)),
+                                  })
+                                : undefined
+                            }
                             className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-heading font-semibold ${
                               kdy ? `whitespace-nowrap ${TRIDA_BUBLINY_DOTOCENO}` : `whitespace-nowrap ${TRIDA_BUBLINY_HERCE}`
                             }`}
                           >
                             {jmeno}
-                            {kdy && <span className="sr-only"> — dotočeno</span>}
+                            {kdy && <span className="sr-only">{t('projektMeta.dotocenoSr')}</span>}
                           </span>
                           {/* Misto celeho protokolu jen posledni strana (zadani
                               13. 9. 2026: „nechme i v detailu u toho herce jen
                               odznak"). Po dotoceni mizi - tam uz strana nic
                               nerika. Cela cesta je v zalozce Natacecí protokol. */}
-                          {!kdy && typeof strana === 'number' && <OdznakStrany strana={strana} />}
+                          {!kdy && typeof strana === 'number' && (
+                            <OdznakStrany strana={strana} jazyk={jazyk} />
+                          )}
                         </span>
                       );
                     })}
@@ -613,34 +649,44 @@ export function ProjectMetaForm({
           </dl>
         </Karta>
 
-        <Karta nadpis="Zakázka">
+        <Karta nadpis={t('projektMeta.kartaZakazka')}>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 m-0">
             <div>
-              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Firma</dt>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                {t('projektMeta.firma')}
+              </dt>
               <dd className="text-sm font-heading text-ink m-0 mt-1">
                 {firmy.find((f) => f.id === values.companyId)?.label ?? '—'}
               </dd>
             </div>
             {vidiKlienta && (
               <div>
-                <dt className="text-xs font-heading text-muted uppercase tracking-wide">Klient</dt>
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                  {t('projektMeta.klient')}
+                </dt>
                 <dd className="text-sm font-heading text-ink m-0 mt-1">
                   {klienti.find((k) => k.id === values.klientUserId)?.label ?? klientNameZCaflou ?? '—'}
                 </dd>
               </div>
             )}
             <div>
-              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Manažer projektu</dt>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                {t('projektMeta.manazer')}
+              </dt>
               <dd className="text-sm font-heading text-ink m-0 mt-1">{managerLabel}</dd>
             </div>
             <div>
-              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Priorita</dt>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                {t('projektMeta.priorita')}
+              </dt>
               <dd className="m-0 mt-1">
                 <OdznakPriority priorita={values.priority} />
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Typ projektu</dt>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                {t('projektMeta.typProjektu')}
+              </dt>
               <dd className="m-0 mt-1">
                 <OdznakTypu
                   typ={projectTypeLabel(values.projectType)}
@@ -652,7 +698,9 @@ export function ProjectMetaForm({
                 (23. 9. 2026). */}
             {jeReklama && values.licenceIds.length > 0 && (
               <div>
-                <dt className="text-xs font-heading text-muted uppercase tracking-wide">Licence</dt>
+                <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                  {t('projektMeta.licence')}
+                </dt>
                 <dd className="m-0 mt-1 flex flex-wrap gap-1.5">
                   {druhyLicence
                     .filter((d) => values.licenceIds.includes(d.id))
@@ -675,7 +723,7 @@ export function ProjectMetaForm({
             {jeReklama && (
               <div>
                 <dt className="text-xs font-heading text-muted uppercase tracking-wide">
-                  Účel a území užití licence
+                  {t('projektMeta.licenceUziti')}
                 </dt>
                 <dd className="text-sm font-heading text-ink m-0 mt-1">
                   {values.licenceUziti || '—'}
@@ -685,11 +733,15 @@ export function ProjectMetaForm({
             {!jeReklama && (values.uvodKnihy || values.zaverKnihy) && (
               <>
                 <div>
-                  <dt className="text-xs font-heading text-muted uppercase tracking-wide">Úvod audioknihy</dt>
+                  <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                    {t('projektMeta.uvodKnihy')}
+                  </dt>
                   <dd className="text-sm font-body text-ink m-0 mt-1 whitespace-pre-wrap">{values.uvodKnihy || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-heading text-muted uppercase tracking-wide">Závěr audioknihy</dt>
+                  <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                    {t('projektMeta.zaverKnihy')}
+                  </dt>
                   <dd className="text-sm font-body text-ink m-0 mt-1 whitespace-pre-wrap">{values.zaverKnihy || '—'}</dd>
                 </div>
               </>
@@ -697,12 +749,18 @@ export function ProjectMetaForm({
           </dl>
         </Karta>
 
-        <Karta nadpis="Odkazy">
+        <Karta nadpis={t('projektMeta.kartaOdkazy')}>
           <dl className="m-0">
             <div>
-              <dt className="text-xs font-heading text-muted uppercase tracking-wide">Odkaz na KZ</dt>
+              <dt className="text-xs font-heading text-muted uppercase tracking-wide">
+                {t('projektMeta.odkazKz')}
+              </dt>
               <dd className="text-sm font-heading m-0 mt-1">
-                <OdkazTlacitko url={values.driveUrl} popisek="Otevřít složku" varianta="vedlejsi" />
+                <OdkazTlacitko
+                  url={values.driveUrl}
+                  popisek={t('projektMeta.odkazOtevritSlozku')}
+                  varianta="vedlejsi"
+                />
               </dd>
             </div>
           </dl>
@@ -722,7 +780,7 @@ export function ProjectMetaForm({
     // proc clovek do projektu leze; firma a klient se vyplni jednou; odkazy
     // na Disk jsou az potom. Mazani stoji uplne dole a zvlast.
     <div className="flex flex-col gap-6">
-      <Karta nadpis="Výroba">
+      <Karta nadpis={t('projektMeta.kartaVyroba')}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* DVĚ DATA ÚPLNĚ NAHOŘE (zadání 17. 9. 2026: „to datum by mohlo být
               v kartě spíše nahoře"). Termín je to první, na co se člověk
@@ -731,26 +789,30 @@ export function ProjectMetaForm({
               vydání je termín klienta. U reklamy je jen to první -
               viz vidiDatumVydani. */}
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Datum dokončení</span>
+            <span className="text-sm font-body text-ink">{t('projektMeta.datumDokonceni')}</span>
             <DatumPole
               value={values.endDate}
               onChange={(e) => set('endDate', e.target.value)}
               onBlur={ulozHned}
               className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
             />
-            <span className="text-xs text-muted font-body">Do kdy to máme odevzdat.</span>
+            <span className="text-xs text-muted font-body">
+              {t('projektMeta.datumDokonceniNapoveda')}
+            </span>
           </label>
 
           {vidiDatumVydani ? (
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Datum vydání</span>
+              <span className="text-sm font-body text-ink">{t('projektMeta.datumVydani')}</span>
               <DatumPole
                 value={values.releaseDate}
                 onChange={(e) => set('releaseDate', e.target.value)}
                 onBlur={ulozHned}
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
               />
-              <span className="text-xs text-muted font-body">Kdy to má klient vydat.</span>
+              <span className="text-xs text-muted font-body">
+                {t('projektMeta.datumVydaniNapoveda')}
+              </span>
             </label>
           ) : (
             // U reklamy musi druhe misto v radku zustat prazdne - jinak by se
@@ -769,7 +831,7 @@ export function ProjectMetaForm({
               „tady u reklam nemají být vůbec. NS"). */}
           {!bezNormostran && (
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Normostrany</span>
+              <span className="text-sm font-body text-ink">{t('projektMeta.normostrany')}</span>
               <input
                 type="number"
                 min={0}
@@ -784,8 +846,7 @@ export function ProjectMetaForm({
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm tabular-nums outline-none focus:border-brand-purple"
               />
               <span className="text-xs text-muted font-body">
-                Rozsah celé knihy. Plánují se podle něj frekvence a počítá se z něj progres
-                natáčení, dokud ve složce projektu není PDF s textem.
+                {t('projektMeta.normostranyNapoveda')}
               </span>
             </label>
           )}
@@ -794,7 +855,7 @@ export function ProjectMetaForm({
               Ze vsech ovladacu se s nimi pracuje nejcasteji - proto hned pod
               daty a pred kartou Zakazka. */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Stav projektu</span>
+            <span className="text-sm font-body text-ink">{t('projektMeta.stavProjektu')}</span>
             {/* Odznak v barve stavu je ZAROVEN ovladac - stejne jako v prehledu
                 projektu (zadani 10. 9. 2026). Puvodne tu byl <VyberPole> a pod nim
                 jeste odznak s touz hodnotou, coz byla tataz vec dvakrat. */}
@@ -802,7 +863,7 @@ export function ProjectMetaForm({
               hodnota={values.statusName}
               onZmena={(v) => set('statusName', v)}
               trida={barvaStavu(values.statusName)}
-              titulek="Přehodit stav projektu"
+              titulek={t('projektMeta.stavTitulek')}
               /* Stav se vybírá JEN MYŠÍ (zadání 23. 9. 2026: „když mám
                  rozbalenou nabídku změny stavu, fungujou tam klávesové
                  zkratky a člověk se uklikne a změní stav"). */
@@ -811,7 +872,12 @@ export function ProjectMetaForm({
                 // Stav prenesen z Caflou, ktery v nasi ceste projektu neni - at
                 // se pri ulozeni nezmeni na "nevybráno".
                 ...(values.statusName && !STAVY_PROJEKTU.some((st) => st.nazev === values.statusName)
-                  ? [{ hodnota: values.statusName, popisek: `${values.statusName} (starý stav z Caflou)` }]
+                  ? [
+                      {
+                        hodnota: values.statusName,
+                        popisek: t('projektMeta.staryStavCaflou', { stav: values.statusName }),
+                      },
+                    ]
                   : []),
                 // U reklamy kratší nabídka (zadání 18. 9. 2026, upřesněno
                 // 22. a 30. 9. 2026) - „Čekáme na opravy", „Natáčíme/stříháme",
@@ -823,7 +889,9 @@ export function ProjectMetaForm({
               ]}
             />
             <span className="text-xs text-muted font-body">
-              {popisStavu(values.statusName) ?? 'Stav přehazujete ručně podle toho, kde projekt je.'}
+              {/* Popis stavu je český (stavy se do databáze ukládají česky
+                  a nepřekládají se - viz dávka 5); věta pod ním ano. */}
+              {popisStavu(values.statusName) ?? t('projektMeta.stavRucne')}
             </span>
             {/* ODPOČET DO AUTOMATICKÉHO PŘEKLOPENÍ (zadání 16. 9. 2026).
                 Ukazuje se jen u uloženého stavu „Dokončeno - ke schválení" -
@@ -831,8 +899,11 @@ export function ProjectMetaForm({
             {dnuDoOprav !== null && !jeReklamniProjekt && values.statusName === initial.statusName && (
               <span className="text-xs font-body text-brand-purple">
                 {dnuDoOprav === 0
-                  ? 'Dnes v noci se sám překlopí na „Čekáme na opravy".'
-                  : `Za ${dnuDoOprav} ${dnySklonovane(dnuDoOprav)} se sám překlopí na „Čekáme na opravy".`}
+                  ? t('projektMeta.prekopiDnes', { stav: STAV_CEKAME_NA_OPRAVY })
+                  : t(klicOdpoctu(dnuDoOprav), {
+                      pocet: dnuDoOprav,
+                      stav: STAV_CEKAME_NA_OPRAVY,
+                    })}
               </span>
             )}
             {/* Zprava ke kazdemu stavu odejde z projektu jen jednou - jinak by ji
@@ -847,7 +918,7 @@ export function ProjectMetaForm({
 
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Herci</span>
+            <span className="text-sm font-body text-ink">{t('projektMeta.herci')}</span>
             <VyberHercu
               herci={herci}
               hodnoty={values.actorUserIds}
@@ -871,16 +942,19 @@ export function ProjectMetaForm({
             {zpravaKlientovi && (
               <span className="text-xs font-body text-brand-greenDeep">{zpravaKlientovi}</span>
             )}
+            {/* Věta je JEDEN KLÍČ (pravidlo 7): u reklamy jedna varianta,
+                u audioknihy druhá s tučným „počtem normostran" uprostřed -
+                ten se vyřízne z přeložené věty, ne přilepí k jejím kouskům. */}
             <span className="text-xs text-muted font-body">
-              Herců může být víc. Podle Herce 1 se předvyplňuje natáčecí frekvence. Klepnutí na
-              jméno otevře, co se s hercem dá udělat — dotočeno, zpráva klientovi, pořadí, odebrání.
               {bezNormostran ? (
-                ' Kdo v kterém spotu mluví, se vybírá v záložce Výstupy.'
+                t('projektMeta.herciNapovedaReklama')
               ) : (
                 <>
-                  {' '}U dvou a víc herců je v tom okně i jeho{' '}
-                  <strong className="font-heading font-semibold">počet normostran</strong> — podle
-                  nich se pak plánují jeho frekvence.
+                  {napovedaHerciPred}
+                  <strong className="font-heading font-semibold">
+                    {t('projektMeta.herciNapovedaNs')}
+                  </strong>
+                  {napovedaHerciPo}
                 </>
               )}
             </span>
@@ -889,23 +963,23 @@ export function ProjectMetaForm({
         </div>
       </Karta>
 
-      <Karta nadpis="Zakázka">
+      <Karta nadpis={t('projektMeta.kartaZakazka')}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Firma</span>
+            <span className="text-sm font-body text-ink">{t('projektMeta.firma')}</span>
             <VyberPole
               value={values.companyId}
               onChange={(e) => set('companyId', e.target.value)}
               className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
             >
-              <option value="">— nevybráno —</option>
+              <option value="">{t('obecne.nevybrano')}</option>
               {firmy.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.label}
                 </option>
               ))}
             </VyberPole>
-            <span className="text-xs text-muted font-body">Pro koho se projekt dělá.</span>
+            <span className="text-xs text-muted font-body">{t('projektMeta.firmaNapoveda')}</span>
           </label>
 
 
@@ -915,17 +989,17 @@ export function ProjectMetaForm({
               nezustane tu dira. */}
           {vidiKlienta && (
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-body text-ink">Klient</span>
+              <span className="text-sm font-body text-ink">{t('projektMeta.klient')}</span>
               <VyberPole
                 value={values.klientUserId}
                 onChange={(e) => set('klientUserId', e.target.value)}
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
               >
-                <option value="">— nevybráno —</option>
+                <option value="">{t('obecne.nevybrano')}</option>
                 {/* Nahore lide z vybrane firmy, pod nimi zbytek - u koprodukci
                     sedi u projektu clovek odjinud, takze se nabidka neomezuje. */}
                 {values.companyId && klienti.some((k) => k.companyId === values.companyId) && (
-                  <optgroup label="Z vybrané firmy">
+                  <optgroup label={t('projektMeta.klientZFirmy')}>
                     {klienti
                       .filter((k) => k.companyId === values.companyId)
                       .map((k) => (
@@ -935,7 +1009,7 @@ export function ProjectMetaForm({
                       ))}
                   </optgroup>
                 )}
-                <optgroup label="Ostatní">
+                <optgroup label={t('projektMeta.klientOstatni')}>
                   {klienti
                     .filter((k) => !values.companyId || k.companyId !== values.companyId)
                     .map((k) => (
@@ -947,21 +1021,21 @@ export function ProjectMetaForm({
               </VyberPole>
               <span className="text-xs text-muted font-body">
                 {klientNameZCaflou
-                  ? `Na tuhle osobu chodí zprávy o projektu. V Caflou tu byl štítek „${klientNameZCaflou}".`
-                  : 'Na tuhle osobu chodí zprávy o projektu.'}
+                  ? t('projektMeta.klientNapovedaCaflou', { stitek: klientNameZCaflou })
+                  : t('projektMeta.klientNapoveda')}
               </span>
             </label>
           )}
 
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Manažer projektu</span>
+            <span className="text-sm font-body text-ink">{t('projektMeta.manazer')}</span>
             <VyberPole
               value={values.managerUserId}
               onChange={(e) => set('managerUserId', e.target.value)}
               className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
             >
-              <option value="">— nevybráno —</option>
+              <option value="">{t('obecne.nevybrano')}</option>
               {managers.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label}
@@ -980,7 +1054,7 @@ export function ProjectMetaForm({
               nastaveny stupen prioritu zrusi. Rozbalovatko se slovy tu bylo
               jedine misto v portalu, kde se priorita psala textem. */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Priorita</span>
+            <span className="text-sm font-body text-ink">{t('projektMeta.priorita')}</span>
             <span className="flex items-center gap-3 h-[34px]">
               <VyberPriority
                 priorita={(values.priority || null) as ProjectPriority | null}
@@ -988,18 +1062,22 @@ export function ProjectMetaForm({
                 velikost={22}
               />
               <span className="text-xs font-body text-muted">
-                Každé klepnutí přidá čárku, po třetí se vrátí na jednu.
+                {t('projektMeta.prioritaNapoveda')}
               </span>
             </span>
           </div>
 
 
           {/* ÚVOD A ZÁVĚR AUDIOKNIHY (zadání 22. 9. 2026) - přijde z objednávky
-              Audiotéky, tady se dá doladit. Čte ho herec na začátku a na konci. */}
+              Audiotéky, tady se dá doladit. Čte ho herec na začátku a na konci.
+
+              UKÁZKY V POLÍČKU ZŮSTÁVAJÍ ČESKÉ SCHVÁLNĚ: je to text, který se
+              opravdu načte do knihy, a ten je český. Anglická ukázka by radila
+              napsat do audioknihy něco, co tam nemá být (pravidlo 4). */}
           {!jeReklama && (nabizetUvodZaver || values.uvodKnihy || values.zaverKnihy) && (
             <>
               <label className="flex flex-col gap-1.5 sm:col-span-2">
-                <span className="text-sm font-body text-ink">Úvod audioknihy</span>
+                <span className="text-sm font-body text-ink">{t('projektMeta.uvodKnihy')}</span>
                 <textarea
                   value={values.uvodKnihy}
                   onChange={(e) => set('uvodKnihy', e.target.value, true)}
@@ -1010,7 +1088,7 @@ export function ProjectMetaForm({
                 />
               </label>
               <label className="flex flex-col gap-1.5 sm:col-span-2">
-                <span className="text-sm font-body text-ink">Závěr audioknihy</span>
+                <span className="text-sm font-body text-ink">{t('projektMeta.zaverKnihy')}</span>
                 <textarea
                   value={values.zaverKnihy}
                   onChange={(e) => set('zaverKnihy', e.target.value, true)}
@@ -1019,7 +1097,9 @@ export function ProjectMetaForm({
                   placeholder="Autor: Název. Připravila Audiotéka … Režie Ondřej Černý. …"
                   className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-body text-sm outline-none focus:border-brand-purple resize-y"
                 />
-                <span className="text-xs text-muted font-body">Přijde z objednávky klienta, tady se dá upravit.</span>
+                <span className="text-xs text-muted font-body">
+                  {t('projektMeta.zaverNapoveda')}
+                </span>
               </label>
             </>
           )}
@@ -1028,16 +1108,16 @@ export function ProjectMetaForm({
               a prázdné pole navíc by v kartě jen překáželo (17. 9. 2026). */}
           {jeReklama && (
             <label className="flex flex-col gap-1.5 sm:col-span-2">
-              <span className="text-sm font-body text-ink">Účel a území užití licence</span>
+              <span className="text-sm font-body text-ink">{t('projektMeta.licenceUziti')}</span>
               <input
                 value={values.licenceUziti}
                 onChange={(e) => set('licenceUziti', e.target.value, true)}
                 onBlur={ulozHned}
-                placeholder="např. audio reklama na Spotify, CZ+SK"
+                placeholder={t('projektMeta.licenceUzitiPlaceholder')}
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
               />
               <span className="text-xs text-muted font-body">
-                Předvyplní se do smlouvy na tenhle spot.
+                {t('projektMeta.licenceUzitiNapoveda')}
               </span>
             </label>
           )}
@@ -1052,7 +1132,7 @@ export function ProjectMetaForm({
               Účel a území užití licence nad tím. */}
           {jeReklama && druhyLicence.length > 0 && (
             <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <span className="text-sm font-body text-ink">Licence</span>
+              <span className="text-sm font-body text-ink">{t('projektMeta.licence')}</span>
               <div className="flex flex-wrap gap-2">
                 {druhyLicence.map((d) => {
                   const zaskrtnuto = values.licenceIds.includes(d.id);
@@ -1109,13 +1189,13 @@ export function ProjectMetaForm({
                 })}
               </div>
               <span className="text-xs text-muted font-body">
-                Kde všude smí klient nahrávku použít. Druhy se spravují v Cenících.
+                {t('projektMeta.licenceNapoveda')}
               </span>
             </div>
           )}
 
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Typ projektu</span>
+            <span className="text-sm font-body text-ink">{t('projektMeta.typProjektu')}</span>
             {/* Typ nese svou ikonu z Ceniku - stejne jako pred nazvem projektu
                 v prehledu (zadani 10. 9. 2026). */}
             <OdznakSelect
@@ -1126,7 +1206,12 @@ export function ProjectMetaForm({
                 // Ulozeny typ, ktery uz v ceniku neni (vyrazena polozka), at se
                 // pri ulozeni nezmeni na "nevybráno".
                 ...(values.projectType && !projectTypeOptions.includes(values.projectType)
-                  ? [{ hodnota: values.projectType, popisek: `${values.projectType} (mimo ceník)` }]
+                  ? [
+                      {
+                        hodnota: values.projectType,
+                        popisek: t('projektMeta.typMimoCenik', { typ: values.projectType }),
+                      },
+                    ]
                   : []),
                 ...projectTypeOptions.map((t) => ({
                   hodnota: t,
@@ -1142,35 +1227,47 @@ export function ProjectMetaForm({
             />
             <span className="text-xs text-muted font-body">
               {projectTypeOptions.length > 0
-                ? 'Nabídka se bere z Ceníků v administraci.'
-                : 'Ceník je zatím prázdný — typy projektu se přidávají v administraci v sekci Ceníky.'}
+                ? t('projektMeta.typZCeniku')
+                : t('projektMeta.typCenikPrazdny')}
             </span>
           </label>
         </div>
       </Karta>
 
-      <Karta nadpis="Odkazy">
+      <Karta nadpis={t('projektMeta.kartaOdkazy')}>
           {/* Odkaz na KZ: jen tlacitka, samotna adresa se neukazuje (zadani
               10. 9. 2026 - "nechci, at je videt ten dlouhy odkaz"). Policko na
               rucni zadani se rozbali az na vyzadani; potreba je hlavne tehdy,
               kdyz se slozka nezalozila sama. */}
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-sm font-body text-ink">Odkaz na KZ</span>
+            <span className="text-sm font-body text-ink">{t('projektMeta.odkazKz')}</span>
             {/* Odkazy pod sebou, kopirovani jen jako ikona na konci radku
                 (zadani 10. 9. 2026). Vedle sebe stalo v rade ctvero popsanych
                 tlacitek - otevrit, kopirovat, otevrit, kopirovat - a nebylo
                 poznat, co k cemu patri. */}
             <span className="flex flex-col items-start gap-2">
-              <OdkazTlacitko url={values.driveUrl} popisek="Složka projektu" varianta="radek" />
+              <OdkazTlacitko
+                url={values.driveUrl}
+                popisek={t('projektMeta.odkazSlozkaProjektu')}
+                varianta="radek"
+              />
               {companyDriveFolderUrl && (
-                <OdkazTlacitko url={companyDriveFolderUrl} popisek="Složka firmy" varianta="radek" />
+                <OdkazTlacitko
+                  url={companyDriveFolderUrl}
+                  popisek={t('projektMeta.odkazSlozkaFirmy')}
+                  varianta="radek"
+                />
               )}
               <button
                 type="button"
                 onClick={() => setUpravitOdkaz((v) => !v)}
                 className="text-xs font-heading font-semibold text-brand-purple hover:underline mt-0.5"
               >
-                {upravitOdkaz ? 'Skrýt' : values.driveUrl ? 'Změnit odkaz' : 'Zadat odkaz'}
+                {upravitOdkaz
+                  ? t('obecne.skryt')
+                  : values.driveUrl
+                    ? t('projektMeta.odkazZmenit')
+                    : t('projektMeta.odkazZadat')}
               </button>
             </span>
             {upravitOdkaz && (
@@ -1184,7 +1281,7 @@ export function ProjectMetaForm({
                 className="rounded-lg border border-line bg-field px-3 py-2.5 text-ink font-heading text-sm outline-none focus:border-brand-purple"
               />
             )}
-            <span className="text-xs text-muted font-body">Složka projektu na Google Disku.</span>
+            <span className="text-xs text-muted font-body">{t('projektMeta.odkazNapoveda')}</span>
           </div>
 
       </Karta>
@@ -1195,11 +1292,11 @@ export function ProjectMetaForm({
           (zadani 11. 9. 2026). */}
       <div className="flex items-center gap-2 text-xs font-heading min-h-[20px]">
         {saving ? (
-          <span className="text-muted">Ukládám…</span>
+          <span className="text-muted">{t('obecne.ukladam')}</span>
         ) : saved ? (
-          <span className="text-brand-greenDeep">Uloženo</span>
+          <span className="text-brand-greenDeep">{t('projektMeta.ulozeno')}</span>
         ) : (
-          <span className="text-muted">Změny se ukládají samy.</span>
+          <span className="text-muted">{t('projektMeta.ukladaSeSamo')}</span>
         )}
       </div>
 
@@ -1220,17 +1317,17 @@ export function ProjectMetaForm({
           nabidne archivaci - viz SmazatSPrekazkami. */}
       <div className="flex flex-col gap-3">
         <div>
-          <p className="font-heading font-semibold text-sm text-ink m-0">Smazat projekt</p>
+          <p className="font-heading font-semibold text-sm text-ink m-0">
+            {t('projektMeta.smazatProjekt')}
+          </p>
           <p className="text-xs font-body text-muted m-0 mt-1">
-            Když na projektu nic nevisí, smaže se rovnou. Když visí doklady, portál ukáže co
-            a nabídne archivaci — doklady se přitom neruší, jen se od projektu odpojí. Složka na
-            Disku zůstane, tu si smažte sami, pokud ji nechcete.
+            {t('projektMeta.smazatNapoveda')}
           </p>
         </div>
         <SmazatSPrekazkami
           url={`/api/admin/projekty/${encodeURIComponent(caflouProjectId)}`}
-          co="Projekt"
-          popisek="Smazat projekt"
+          co={t('projektMeta.smazatCo')}
+          popisek={t('projektMeta.smazatProjekt')}
           onSmazano={() => {
             router.push('/projekty');
             router.refresh();
@@ -1285,6 +1382,7 @@ function PoslatZnovu({
   stav: string;
   jeReklama: boolean;
 }) {
+  const t = usePreklad();
   const [posila, setPosila] = useState(false);
   const [hlaska, setHlaska] = useState<string | null>(null);
   // Veta navic nad textem ze vzoru - typicky omluva, kdyz predchozi zprava
@@ -1306,9 +1404,13 @@ function PoslatZnovu({
         body: JSON.stringify({ uvod: uvod.trim() || null }),
       });
       const data = await res.json().catch(() => null);
-      setHlaska((data as { zprava?: string; error?: string })?.zprava || (data as { error?: string })?.error || 'Nepodařilo se to.');
+      setHlaska(
+        (data as { zprava?: string; error?: string })?.zprava ||
+          (data as { error?: string })?.error ||
+          t('projektMeta.nepovedloSe'),
+      );
     } catch {
-      setHlaska('Nepodařilo se spojit se serverem.');
+      setHlaska(t('projektMeta.spojeniSelhalo'));
     } finally {
       setPosila(false);
     }
@@ -1322,7 +1424,7 @@ function PoslatZnovu({
         rel="noreferrer"
         className="text-xs font-heading font-semibold text-brand-purple no-underline hover:underline"
       >
-        Ukázat, co klientovi dorazí
+        {t('projektMeta.ukazatKlientovi')}
       </a>
       <span className="text-muted text-xs">·</span>
       <button
@@ -1331,7 +1433,7 @@ function PoslatZnovu({
         disabled={posila}
         className="text-xs font-heading font-semibold text-brand-purple hover:underline disabled:opacity-50"
       >
-        {posila ? 'Posílám…' : 'Poslat zprávu ke stavu znovu'}
+        {posila ? t('projektMeta.posilam') : t('projektMeta.poslatZnovu')}
       </button>
       <span className="text-muted text-xs">·</span>
       <button
@@ -1339,7 +1441,7 @@ function PoslatZnovu({
         onClick={() => setPisu((p) => !p)}
         className="text-xs font-heading font-semibold text-brand-purple hover:underline"
       >
-        {pisu ? 'Zrušit větu navíc' : 'Přidat větu navíc'}
+        {pisu ? t('projektMeta.vetuZrusit') : t('projektMeta.vetuPridat')}
       </button>
       {hlaska && <span className="text-xs font-body text-muted">{hlaska}</span>}
       {pisu && (
@@ -1348,7 +1450,7 @@ function PoslatZnovu({
           onChange={(e) => setUvod(e.target.value)}
           rows={3}
           maxLength={600}
-          placeholder="Například omluva za to, že minulý odkaz nefungoval. Vzor zprávy se tím nemění — platí to jen pro tohle jedno odeslání."
+          placeholder={t('projektMeta.vetaPlaceholder')}
           className="w-full mt-1 rounded-lg border border-line bg-field text-ink text-xs font-body p-2.5 resize-y"
         />
       )}
@@ -1356,9 +1458,21 @@ function PoslatZnovu({
   );
 }
 
-/** „1 den", „3 dny", „7 dnů" - abychom v portálu nepsali „3 den". */
-function dnySklonovane(pocet: number): string {
-  if (pocet === 1) return 'den';
-  if (pocet >= 2 && pocet <= 4) return 'dny';
-  return 'dnů';
+/**
+ * Klíč celé věty o odpočtu podle počtu dní - „1 den", „3 dny", „7 dnů".
+ *
+ * Věta se neskládá z kousků (pravidlo 7 v docs/preklad-portalu.md): čeština
+ * má tři tvary, angličtina dva, takže každý tvar je vlastní klíč a vybírá se
+ * podle čísla. Skládáním „Za " + číslo + „ dny" by anglická věta stát nešla.
+ */
+function klicOdpoctu(pocet: number): string {
+  if (pocet === 1) return 'projektMeta.prekopiZaDen';
+  if (pocet >= 2 && pocet <= 4) return 'projektMeta.prekopiZaDny';
+  return 'projektMeta.prekopiZaDnu';
 }
+
+/**
+ * Stav, do kterého se projekt překlopí sám. Zůstává český: stavy se ukládají
+ * do databáze česky a zatím se nepřekládají (viz dávka 5 a 7e).
+ */
+const STAV_CEKAME_NA_OPRAVY = 'Čekáme na opravy';

@@ -11,6 +11,8 @@ import { type Herec } from './VyberHerce';
 import { VyberHercu } from './VyberHercu';
 import { VyberPole } from '@/components/VyberPole';
 import { DatumPole } from '@/components/DatumPole';
+import { kodJazyka } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '../components/JazykProvider';
 
 /**
  * Založení projektu (zadání 10. 9. 2026). Do teď projekty vznikaly v Caflou;
@@ -46,6 +48,8 @@ export function NovyProjektForm({
    */
   typAudioknihy: string | null;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const router = useRouter();
   const [otevreno, setOtevreno] = useState(false);
   useOtevriZeZkratky(() => setOtevreno(true));
@@ -117,12 +121,14 @@ export function NovyProjektForm({
       label:
         form.companyId && k.companyId === form.companyId
           ? k.jmeno
-          : `${k.jmeno} — ${k.firma ?? 'bez firmy'}`,
+          : k.firma
+            ? `${k.jmeno} — ${k.firma}`
+            : t('novyProjekt.klientBezFirmy', { jmeno: k.jmeno }),
       /** Lidé vybrané firmy první, teprve pak ti bez firmy. */
       poradi: form.companyId && k.companyId === form.companyId ? 0 : k.companyId ? 1 : 2,
       jmeno: k.jmeno,
     }))
-    .sort((a, b) => a.poradi - b.poradi || a.jmeno.localeCompare(b.jmeno, 'cs'));
+    .sort((a, b) => a.poradi - b.poradi || a.jmeno.localeCompare(b.jmeno, kodJazyka(jazyk)));
 
   async function odesli(e: React.FormEvent) {
     e.preventDefault();
@@ -137,7 +143,7 @@ export function NovyProjektForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setChyba(data?.error || 'Projekt se nepodařilo založit.');
+        setChyba(data?.error || t('novyProjekt.nepovedlo'));
         return;
       }
       if (data?.varovaniDisk) {
@@ -148,7 +154,7 @@ export function NovyProjektForm({
       }
       router.push(`/projekty/${data.id}`);
     } catch {
-      setChyba('Projekt se nepodařilo založit.');
+      setChyba(t('novyProjekt.nepovedlo'));
     } finally {
       setUklada(false);
     }
@@ -162,7 +168,7 @@ export function NovyProjektForm({
       // Na telefonu se projekt nezakládá (21. 9. 2026: „tlačítko Nový projekt
       // dej pryč. V mobilu to nepůjde").
       <span id={KOTVA_NOVE} className="hidden sm:inline">
-        <AddButton onClick={() => setOtevreno(true)}>Nový projekt</AddButton>
+        <AddButton onClick={() => setOtevreno(true)}>{t('novyProjekt.tlacitko')}</AddButton>
       </span>
     );
   }
@@ -173,25 +179,25 @@ export function NovyProjektForm({
       onSubmit={odesli}
       className="bg-surface border border-line rounded-card shadow-sm p-5 flex flex-col gap-4 w-full"
     >
-      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Nový projekt</h2>
+      <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('novyProjekt.nadpis')}</h2>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-body text-ink">Název projektu</span>
+        <span className="text-sm font-body text-ink">{t('novyProjekt.nazev')}</span>
         <input
           required
           autoFocus
           value={form.name}
           onChange={(e) => set('name', e.target.value)}
-          placeholder="např. Bezradná (série)"
+          placeholder={t('novyProjekt.nazevPriklad')}
           className={tridaPole}
         />
       </label>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Firma</span>
+          <span className="text-sm font-body text-ink">{t('novyProjekt.firma')}</span>
           <VyberPole value={form.companyId} onChange={(e) => zmenFirmu(e.target.value)} className={tridaPole}>
-            <option value="">— bez firmy —</option>
+            <option value="">{t('novyProjekt.bezFirmy')}</option>
             {firmy.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
@@ -201,13 +207,13 @@ export function NovyProjektForm({
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Klient</span>
+          <span className="text-sm font-body text-ink">{t('novyProjekt.klient')}</span>
           <VyberPole
             value={form.klientUserId}
             onChange={(e) => set('klientUserId', e.target.value)}
             className={tridaPole}
           >
-            <option value="">— bez klienta —</option>
+            <option value="">{t('novyProjekt.bezKlienta')}</option>
             {klientiKVyberu.map((k) => (
               <option key={k.id} value={k.id}>
                 {k.label}
@@ -216,19 +222,19 @@ export function NovyProjektForm({
           </VyberPole>
           {firma && (
             <span className="text-xs text-muted font-body">
-              Nabízíme lidi z firmy {firma.label} a ty, kdo firmu vyplněnou nemají.
+              {t('novyProjekt.nabizimeZFirmy', { firma: firma.label })}
             </span>
           )}
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Typ projektu</span>
+          <span className="text-sm font-body text-ink">{t('novyProjekt.typ')}</span>
           <VyberPole
             value={form.projectType}
             onChange={(e) => set('projectType', e.target.value)}
             className={tridaPole}
           >
-            <option value="">— bez typu —</option>
+            <option value="">{t('novyProjekt.bezTypu')}</option>
             {typyProjektu.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -238,13 +244,13 @@ export function NovyProjektForm({
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Manažer projektu</span>
+          <span className="text-sm font-body text-ink">{t('novyProjekt.manazer')}</span>
           <VyberPole
             value={form.managerUserId}
             onChange={(e) => set('managerUserId', e.target.value)}
             className={tridaPole}
           >
-            <option value="">— bez manažera —</option>
+            <option value="">{t('novyProjekt.bezManazera')}</option>
             {manazeri.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}
@@ -256,7 +262,7 @@ export function NovyProjektForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Herci</span>
+          <span className="text-sm font-body text-ink">{t('novyProjekt.herci')}</span>
           <VyberHercu
             herci={herci}
             hodnoty={form.actorUserIds}
@@ -270,7 +276,7 @@ export function NovyProjektForm({
             frekvence - takže je to políčko, do kterého nemá co přijít. */}
         {jeAudiokniha && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-body text-ink">Počet normostran</span>
+            <span className="text-sm font-body text-ink">{t('novyProjekt.pocetNs')}</span>
             <input
               inputMode="numeric"
               value={form.pageCount}
@@ -282,7 +288,7 @@ export function NovyProjektForm({
         )}
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Datum vydání</span>
+          <span className="text-sm font-body text-ink">{t('novyProjekt.datumVydani')}</span>
           <DatumPole
             value={form.releaseDate}
             onChange={(e) => set('releaseDate', e.target.value)}
@@ -293,22 +299,20 @@ export function NovyProjektForm({
         {/* Stejna ikona a stejne klikani jako v prehledu i v karte projektu
             (upresneni 18. 9. 2026) - priorita se nikde v portalu nepise slovem. */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-body text-ink">Priorita</span>
+          <span className="text-sm font-body text-ink">{t('novyProjekt.priorita')}</span>
           <span className="flex items-center gap-3 h-[34px]">
             <VyberPriority
               priorita={(form.priority || null) as ProjectPriority | null}
               onZmena={(v) => set('priority', v)}
               velikost={22}
             />
-            <span className="text-xs font-body text-muted">
-              Každé klepnutí přidá čárku, po třetí se vrátí na jednu.
-            </span>
+            <span className="text-xs font-body text-muted">{t('novyProjekt.prioritaNapoveda')}</span>
           </span>
         </div>
       </div>
 
       <label className="flex flex-col gap-1.5 sm:max-w-sm">
-        <span className="text-sm font-body text-ink">Stav</span>
+        <span className="text-sm font-body text-ink">{t('novyProjekt.stav')}</span>
         <VyberPole value={form.statusName} onChange={(e) => set('statusName', e.target.value)} className={tridaPole}>
           {STAVY_PROJEKTU.map((s) => (
             <option key={s.nazev} value={s.nazev}>
@@ -329,11 +333,11 @@ export function NovyProjektForm({
           className="mt-0.5 w-4 h-4 accent-brand-purple"
         />
         <span className="text-sm font-body text-ink">
-          Založit složku projektu na Google Disku
+          {t('novyProjekt.zalozitSlozku')}
           <span className="block text-xs text-muted">
             {firma && !firma.maSlozku
-              ? `${firma.label} nemá v portálu vyplněný odkaz na svou složku — složka projektu se nezaloží.`
-              : 'Vznikne ve složce vybrané firmy a odkaz se u projektu vyplní sám.'}
+              ? t('novyProjekt.firmaBezSlozky', { firma: firma.label })
+              : t('novyProjekt.slozkaVznikne')}
           </span>
         </span>
       </label>
@@ -341,8 +345,9 @@ export function NovyProjektForm({
       {chyba && <p className="text-sm text-danger bg-dangerTint border border-line rounded-lg px-3 py-2 m-0">{chyba}</p>}
       {varovani && (
         <p className="text-sm text-ink bg-warnTint border border-line rounded-lg px-3 py-2 m-0">
-          Projekt je založený, ale {varovani.charAt(0).toLowerCase() + varovani.slice(1)} Odkaz na složku doplňte
-          u projektu ručně.
+          {t('novyProjekt.varovaniDisk', {
+            chyba: varovani.charAt(0).toLowerCase() + varovani.slice(1),
+          })}
         </p>
       )}
 
@@ -352,10 +357,10 @@ export function NovyProjektForm({
           disabled={uklada}
           className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep transition-colors disabled:opacity-60"
         >
-          {uklada ? 'Zakládám…' : 'Založit projekt'}
+          {uklada ? t('novyProjekt.zakladam') : t('novyProjekt.zalozit')}
         </button>
         <button type="button" onClick={() => setOtevreno(false)} className="text-muted text-sm font-heading">
-          Zavřít
+          {t('obecne.zavrit')}
         </button>
       </div>
     </form>

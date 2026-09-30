@@ -76,7 +76,7 @@ kontrolou, nasadí a dávku tady odškrtne.
 | 5 | 18. 9. | Zbytek administrace — uživatelé, ceníky, studia, archiv, firmy, `(portal)/kalendar`, `(portal)/vykazy` | [x] |
 | 6 | 19. 9. | E-maily a upozornění — `src/lib/email.ts` podle jazyka příjemce, push a oznámení | [~] |
 | 7a | 28. 9. | Formáty a číselníky napříč repozitářem — `formatMoney` a `formatCzk` s jazykem, formátovače času a záložky v `lib/chat.ts`, statusy v chatu, smajlíci, náhledové pohledy, úkol bez příjemce | [x] |
-| 7b | další večer | Zapomenuté obrazovky I — sekce na detailu projektu (rodný list, licenční list, výstupy, `ProjectMetaForm`, rozpočty, posluchači přeposlechu, `ProjectDocuments`), objednávka reklamy, `NovyProjektForm`, `InternalProjectsBrowser` | [ ] |
+| 7b | další večer | Zapomenuté obrazovky I — sekce na detailu projektu (rodný list, licenční list, výstupy, `ProjectMetaForm`, rozpočty, posluchači přeposlechu, `ProjectDocuments`), objednávka reklamy, `NovyProjektForm`, `InternalProjectsBrowser` | [x] |
 | 7c | další večer | Zapomenuté obrazovky II — administrace: firmy a `CompanyForm`, caflou-firmy, údaje (žádosti), vzory zpráv i natáčení, wikipedie, technické parametry, návody, přenos projektu | [ ] |
 | 7d | další večer | Zapomenuté obrazovky III — Přehledy (knihy, kapacita, zvukaři, finance), palubovka, backlog, ceník studia, Web, tabule, správa studia, veřejné formuláře (`doplnit-udaje`, `udaje/[token]`, `pripominkovat`, `instalace`, nastavení hesla), nápověda, honoráře, pozvánky | [ ] |
 | 7e | další večer | Kódy místo textů a poslední průchod — stavy projektů a `jeVPriprave()`, města v `lokaceHercu`, `COUNTRIES`, zbylé číselníky v `src/lib` (role, dny, kalendář, druhy práce, tabule, porady, nepřítomnosti), sjednocení termínů podle slovníčku a proklikání portálu v EN | [ ] |
@@ -302,6 +302,91 @@ některé soubory v repozitáři nedaly přes sdílenou složku přečíst ani z
 `stubs/env.d.ts`, bez kterého typová kontrola vyhlásí 2 300 vymyšlených chyb
 o chybějícím Reactu. Kdyby se to opakovalo: zkontrolovat, že se `stubs/env.d.ts`
 dá přečíst, a teprve pak věřit výstupu `tsc`.
+
+### Dávka 7b je HOTOVÁ (30. 9. 2026)
+
+Dokončená a nasazená o večer později, než měla být: 29. 9. 2026 byla přeložená,
+ale git v repozitáři přestal číst objekty a commit by nad rozbitým object store
+mohl zapsat prázdné bloby. 30. 9. už `git status`, `git diff` i `git show`
+fungovaly, takže dávka odešla celá jedním commitem.
+
+**Co dávka 7b nakonec obsahuje:** slovník +439 klíčů (2 629 → 3 068) a k tomu:
+
+- rozpočet — `ProjectBudget`, `ProjectBudgetZakazka`, `NakladyProjektu`
+  (místní `czk()` bere jazyk, takže částky stojí britsky),
+- `ProjectDocuments` (jazyk propem, `formatMoney` s jazykem),
+- `projekty/[id]/page.tsx` — názvy záložek a texty, které **dávka 1 zapsala
+  do slovníku, ale nikdy nezapojila**: `projekt.zalozka.*`,
+  `projekt.schvaleno`, `projekt.zpetNaProjekty` a spol. nebyly v kódu použité
+  ani jednou,
+- posluchači přeposlechu, `NovyProjektForm`, `InternalProjectsBrowser`,
+  `VyberVOkne`,
+- objednávka reklamy (`AdOrderForm`) — klíče z dávky 2 taky nebyly zapojené
+  a krok „Co pro vás máme vyrobit?" se 26. 9. změnil; česká strana slovníku
+  je teď sjednocená s kódem,
+- rodný list — `RodnyListSection` a `lib/rodnyList.ts`:
+  `missingRodnyListFields()` i `rodnyListVersionLabel()` berou jazyk jako
+  NEPOVINNÝ parametr, server tedy dál mluví česky (hláška jde do
+  `ProjectMeta.rlError`, což je databáze),
+- výstupy — `VystupySection` a `popisVystupuObjednavky()` v `lib/vystupy.ts`
+  s nepovinným jazykem (mail týmu z `api/orders` dál česky),
+- licenční listy — `LicencniListSection`,
+- **`ProjectMetaForm.tsx`** (Interní údaje na detailu projektu) — poslední
+  soubor dávky, doplněný 30. 9.: obě podoby karet (ke čtení i k úpravám),
+  odpočet do překlopení stavu, mazání projektu a „Poslat zprávu ke stavu
+  znovu". Datum bez času si formátuje `datumTextem(iso, jazyk)` samo —
+  drží se jako „RRRR-MM-DD", takže se nesmí hnát přes `Date` a časové pásmo;
+  anglicky stojí `17/09/2026`.
+
+**S ním i to, co je na téže obrazovce vidět** (jinak by formulář mluvil
+anglicky a okno v něm česky):
+
+- `VyberHercu.tsx` — okno s akcemi u herce (dotočeno, zpráva klientovi,
+  normostrany, pořadí, odebrání) a hledání herce. Používá ho i
+  `NovyProjektForm`, takže se přeložilo i jeho okno.
+- `lib/dotoceni.ts` — `coSeStane(nahled, jazyk?)` a `vyjmenuj(jmena, jazyk?)`
+  s NEPOVINNÝM jazykem. Věty výčtu „co se stane" jsou ve slovníku, ale názvy
+  stavů projektu v nich zůstávají české: jsou to data z databáze (pravidlo 4).
+  Testy v `tests/dotoceni.test.ts` kontrolují českou stranu a platí dál.
+- `OdznakStrany.tsx` — jazyk PROPEM, ne hookem: odznak se kreslí i ze
+  serverových komponent (pravidlo 8). Bez propu mluví česky, takže
+  `HerciBunka` a `VyberHerce` v přehledu projektů se nezměnily.
+- `OdznakSelect.tsx` — popisek „— nevybráno —" si komponenta bere ze slovníku
+  sama, aby ho nemusel posílat každý volající.
+- `UkonceniProjektu.tsx` — karta „Ukončit projekt" pod formulářem.
+
+**Česky zůstávají schválně** hodnoty, které jdou do PDF licenčního listu (typ
+licence, typ díla, délka licence, média — pravidlo 5), výchozí názvy výstupů
+ukládané do databáze (`Hlavní spot`, `Spot 2`, `Výstup`), `STAVY_PROJEKTU`
+včetně jejich popisů z `popisStavu()` — a navíc:
+
+- **ukázky v polích „Úvod audioknihy" a „Závěr audioknihy"** („Audiotéka uvádí
+  audioknihu …"). Je to text, který se opravdu načte do knihy, a ten je český;
+  anglická ukázka by radila napsat do audioknihy něco, co tam nemá být.
+- **`Čekáme na opravy`** ve větě o automatickém překlopení. Věta je přeložená,
+  název stavu v ní ne — drží se v konstantě `STAV_CEKAME_NA_OPRAVY`, ať se po
+  kódu nepíše podruhé. Až dostanou stavy kódy (dávka 7e), dosadí se sem.
+- **bublinka „Dotočeno {datum}" u jména herce v přehledu projektů**
+  (`BublinaHerce` ve `VyberHerce.tsx`, natvrdo `'cs-CZ'`). Je to obrazovka
+  dávky 1, ne 7b; `VyberHercu` si tentýž text nad oknem už překládá.
+
+**Opravená tikající bomba.** `projekty/[id]/page.tsx` počítal fakturované
+částky přes `r.statusLabel === 'Stornovaná'`. Popisek stavu je od dávky 4
+přeložený, takže v anglickém portálu se stornované faktury počítaly do
+fakturovaného. Teď se porovnává kód (`kodStavu === 'CANCELLED'`) — stejná
+oprava jako u ceny projektu v dávce 4.
+
+**Věta se třemi tvary čísla.** Odpočet „Za 3 dny se sám překlopí…" má
+v češtině tři tvary a v angličtině dva, takže každý tvar je vlastní klíč
+a vybírá je `klicOdpoctu(pocet)`. Skládat věty z kousků by pravidlo 7
+nedovolilo a v angličtině by stály slova jinak.
+
+**Ke smazání, až na to někdo narazí:** ve `.git` zůstaly po padajících
+večerech přejmenované prázdné zámky (`index.lock.*`, `HEAD.lock.*`, přes
+třicet souborů, mezi nimi `index.lock.zaseklo-se-7b` z 29. 9.). Gitu
+nevadí — jsou to jiná jména než `index.lock` — ale sdílená složka je mazat
+nesmí, takže je potřeba je smazat z počítače. Stejně tak `git rm --cached
+stubs/prisma-client.d.ts` (viz dávka 7a).
 
 ### Dávka 6 je HOTOVÁ Z POLOVINY - a schválně
 

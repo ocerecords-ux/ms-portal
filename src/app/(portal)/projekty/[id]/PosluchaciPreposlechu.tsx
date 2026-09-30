@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { usePreklad } from '../../components/JazykProvider';
 import { NapovedaOtaznik } from '../../components/NapovedaOtaznik';
 
 /**
@@ -54,6 +55,7 @@ export function PosluchaciPreposlechu({
   /** Po změně - ať se obnoví historie. */
   onZmena?: () => void;
 }) {
+  const t = usePreklad();
   const [nacteno, setNacteno] = useState(false);
   const [lide, setLide] = useState<Posluchac[]>([]);
   const [ja, setJa] = useState<string | null>(null);
@@ -94,12 +96,12 @@ export function PosluchaciPreposlechu({
         body: telo ? JSON.stringify(telo) : undefined,
       });
       const d: Odpoved = await res.json().catch(() => ({}));
-      if (!res.ok) return d.error || 'Nepodařilo se uložit.';
+      if (!res.ok) return d.error || t('posluchaci.neulozilo');
       prevezmi(d);
       onZmena?.();
       return null;
     } catch {
-      return 'Nepodařilo se uložit.';
+      return t('posluchaci.neulozilo');
     }
   }
 
@@ -122,10 +124,10 @@ export function PosluchaciPreposlechu({
         <button
           type="button"
           onClick={() => setPanel((v) => !v)}
-          title="Kdo přeposlech poslouchá a komu chodí zprávy o nových stopách"
+          title={t('posluchaci.tlacitkoNapoveda')}
           className="font-heading font-semibold text-[11px] rounded-lg border border-white/40 px-2.5 py-1 hover:border-white transition-colors"
         >
-          👤 {jaZaznam ? jaZaznam.jmeno || jaZaznam.email : 'Posluchači'}
+          👤 {jaZaznam ? jaZaznam.jmeno || jaZaznam.email : t('posluchaci.tlacitko')}
           {lide.length > 0 && <span className="text-white/70"> · {lide.length}</span>}
         </button>
         {panel && nacteno && (
@@ -161,6 +163,7 @@ function OknoPredstaveni({
   volej: Volej;
   onHotovo: () => void;
 }) {
+  const t = usePreklad();
   const [email, setEmail] = useState(vychoziEmail);
   const [jmeno, setJmeno] = useState('');
   const [dalsi, setDalsi] = useState<{ email: string; jmeno: string }[]>([]);
@@ -193,34 +196,38 @@ function OknoPredstaveni({
         className="bg-surface text-ink rounded-card border border-line shadow-xl w-full max-w-[460px] p-6 flex flex-col gap-4"
       >
         <div>
-          <h2 className="font-heading font-semibold text-lg m-0">Kdo bude poslouchat?</h2>
-          <p className="text-sm font-body text-muted m-0 mt-1">
-            Zadejte svůj e-mail. Podepíšou se jím vaše poznámky a dáme vám vědět, až k přeposlechu přibudou nové stopy.
-          </p>
+          <h2 className="font-heading font-semibold text-lg m-0">{t('posluchaci.oknoNadpis')}</h2>
+          <p className="text-sm font-body text-muted m-0 mt-1">{t('posluchaci.oknoUvod')}</p>
         </div>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-body">E-mail</span>
+          <span className="text-sm font-body">{t('posluchaci.email')}</span>
           <input
             autoFocus
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="jmeno@firma.cz"
+            placeholder={t('posluchaci.emailPriklad')}
             className={pole}
           />
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-body">
-            Jméno <span className="text-muted">· nepovinné</span>
+            {t('posluchaci.jmeno')} <span className="text-muted">{t('posluchaci.nepovinne')}</span>
           </span>
-          <input value={jmeno} onChange={(e) => setJmeno(e.target.value)} placeholder="Jana Nováková" className={pole} />
+          <input
+            value={jmeno}
+            onChange={(e) => setJmeno(e.target.value)}
+            placeholder={t('posluchaci.jmenoPriklad')}
+            className={pole}
+          />
         </label>
 
         <div className="flex flex-col gap-2 border-t border-line pt-3">
           <span className="text-sm font-body">
-            Předat přeposlech někomu dalšímu <span className="text-muted">· nepovinné, pošleme mu odkaz</span>
+            {t('posluchaci.predatDalsimu')}{' '}
+            <span className="text-muted">{t('posluchaci.predatDalsimuNepovinne')}</span>
           </span>
           {dalsi.map((d, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -228,19 +235,19 @@ function OknoPredstaveni({
                 type="email"
                 value={d.email}
                 onChange={(e) => setDalsi((c) => c.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))}
-                placeholder="kolega@firma.cz"
+                placeholder={t('posluchaci.kolegaPriklad')}
                 className={pole}
               />
               <input
                 value={d.jmeno}
                 onChange={(e) => setDalsi((c) => c.map((x, j) => (j === i ? { ...x, jmeno: e.target.value } : x)))}
-                placeholder="Jméno"
+                placeholder={t('posluchaci.jmeno')}
                 className={`${pole} max-w-[140px]`}
               />
               <button
                 type="button"
                 onClick={() => setDalsi((c) => c.filter((_, j) => j !== i))}
-                aria-label="Odebrat"
+                aria-label={t('posluchaci.odebrat')}
                 className="text-muted hover:text-danger px-1"
               >
                 ×
@@ -252,7 +259,7 @@ function OknoPredstaveni({
             onClick={() => setDalsi((c) => [...c, { email: '', jmeno: '' }])}
             className="self-start text-sm font-heading font-semibold text-brand-purple hover:underline"
           >
-            + Přidat e-mail
+            {t('posluchaci.pridatEmail')}
           </button>
         </div>
 
@@ -264,10 +271,10 @@ function OknoPredstaveni({
             disabled={bezi || !email.trim()}
             className="bg-brand-purple text-white font-heading font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-brand-purpleDeep disabled:opacity-60"
           >
-            {bezi ? 'Ukládám…' : 'Pokračovat k nahrávce'}
+            {bezi ? t('obecne.ukladam') : t('posluchaci.pokracovat')}
           </button>
           <button type="button" onClick={onHotovo} className="text-sm font-heading text-muted hover:text-ink">
-            Teď ne
+            {t('posluchaci.tedNe')}
           </button>
         </div>
       </form>
@@ -289,6 +296,7 @@ function SeznamPosluchacu({
   volej: Volej;
   onZavrit: () => void;
 }) {
+  const t = usePreklad();
   const [email, setEmail] = useState('');
   const [jmeno, setJmeno] = useState('');
   const [bezi, setBezi] = useState(false);
@@ -308,18 +316,21 @@ function SeznamPosluchacu({
     <div className="absolute right-0 top-full mt-2 z-[70] w-[360px] max-w-[90vw] bg-surface text-ink rounded-card border border-line shadow-xl p-4 flex flex-col gap-3 text-left">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-heading font-semibold text-sm m-0">Posluchači</h3>
-          <p className="text-xs font-body text-muted m-0 mt-0.5">
-            Komu chodí zpráva, když přibudou nové stopy. Přidáním přeposlech předáte - pošleme odkaz.
-          </p>
+          <h3 className="font-heading font-semibold text-sm m-0">{t('posluchaci.tlacitko')}</h3>
+          <p className="text-xs font-body text-muted m-0 mt-0.5">{t('posluchaci.panelUvod')}</p>
         </div>
-        <button type="button" onClick={onZavrit} aria-label="Zavřít" className="text-muted hover:text-ink text-lg leading-none">
+        <button
+          type="button"
+          onClick={onZavrit}
+          aria-label={t('obecne.zavrit')}
+          className="text-muted hover:text-ink text-lg leading-none"
+        >
           ×
         </button>
       </div>
 
       {lide.length === 0 ? (
-        <p className="text-sm font-body text-muted m-0">Zatím nikdo.</p>
+        <p className="text-sm font-body text-muted m-0">{t('posluchaci.zatimNikdo')}</p>
       ) : (
         <ul className="list-none m-0 p-0 flex flex-col divide-y divide-line">
           {lide.map((l) => (
@@ -327,10 +338,19 @@ function SeznamPosluchacu({
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-body truncate">
                   {l.jmeno || l.email}
-                  {l.id === ja && <span className="text-brand-purple font-heading font-semibold"> · já</span>}
+                  {l.id === ja && (
+                    <span className="text-brand-purple font-heading font-semibold">
+                      {' '}
+                      {t('posluchaci.ja')}
+                    </span>
+                  )}
                 </span>
                 {l.jmeno && <span className="block text-[11px] font-body text-muted truncate">{l.email}</span>}
-                {l.pridal && <span className="block text-[11px] font-body text-muted truncate">přidal(a) {l.pridal}</span>}
+                {l.pridal && (
+                  <span className="block text-[11px] font-body text-muted truncate">
+                    {t('posluchaci.pridal', { jmeno: l.pridal })}
+                  </span>
+                )}
               </span>
               {jenPoslech && l.id !== ja && (
                 <button
@@ -339,14 +359,16 @@ function SeznamPosluchacu({
                   onClick={() => void akce(() => volej('PATCH', { id: l.id, ja: true }))}
                   className="text-[11px] font-heading font-semibold text-brand-purple hover:underline whitespace-nowrap"
                 >
-                  To jsem já
+                  {t('posluchaci.toJsemJa')}
                 </button>
               )}
               <button
                 type="button"
                 disabled={bezi}
                 onClick={() => void akce(() => volej('PATCH', { id: l.id, notifikace: !l.notifikace }))}
-                title={l.notifikace ? 'Chodí zprávy o nových stopách - klepnutím vypnete' : 'Zprávy o nových stopách vypnuté'}
+                title={
+                  l.notifikace ? t('posluchaci.zpravyZapnute') : t('posluchaci.zpravyVypnute')
+                }
                 className={`text-sm px-1 ${l.notifikace ? '' : 'opacity-40 grayscale'}`}
               >
                 🔔
@@ -361,7 +383,7 @@ function SeznamPosluchacu({
                 }
                 className="text-[11px] font-heading font-semibold text-danger hover:underline whitespace-nowrap"
               >
-                {mazany === l.id ? 'Opravdu?' : 'Odebrat'}
+                {mazany === l.id ? t('posluchaci.opravdu') : t('posluchaci.odebrat')}
               </button>
             </li>
           ))}
@@ -387,16 +409,29 @@ function SeznamPosluchacu({
         }}
         className="flex flex-col gap-2 border-t border-line pt-3"
       >
-        <span className="text-xs font-heading font-semibold text-muted uppercase tracking-wide">Přidat / předat přeposlech</span>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e-mail" className={pole} />
-        <input value={jmeno} onChange={(e) => setJmeno(e.target.value)} placeholder="jméno (nepovinné)" className={pole} />
+        <span className="text-xs font-heading font-semibold text-muted uppercase tracking-wide">
+          {t('posluchaci.pridatNadpis')}
+        </span>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder={t('posluchaci.emailPole')}
+          className={pole}
+        />
+        <input
+          value={jmeno}
+          onChange={(e) => setJmeno(e.target.value)}
+          placeholder={t('posluchaci.jmenoPole')}
+          className={pole}
+        />
         {chyba && <span className="text-xs text-danger">{chyba}</span>}
         <button
           type="submit"
           disabled={bezi || !email.trim()}
           className="self-start bg-brand-purple text-white font-heading font-semibold text-xs rounded-lg px-3 py-2 disabled:opacity-50"
         >
-          Přidat a poslat odkaz
+          {t('posluchaci.pridatAPoslat')}
         </button>
       </form>
     </div>

@@ -2,9 +2,13 @@
 
 import { useState } from 'react';
 import { budgetUsedPercent, type Budget } from '@/lib/budget';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '../../components/JazykProvider';
 import { NakladyProjektu, type NakladovaPolozka } from './NakladyProjektu';
 
-const czk = (v: number) => `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
+// Částky podle jazyka (dávka 7b) - britsky „1,234 Kč", česky „1 234 Kč".
+const czk = (v: number, jazyk: Jazyk) =>
+  `${Math.round(v).toLocaleString(kodJazyka(jazyk))} Kč`;
 
 /**
  * Rozpocet audioknihy (zadani 6. 9. 2026) - vidi ho jen Zuzo-labuzo.
@@ -76,6 +80,8 @@ export function ProjectBudget({
    */
   vykazanoOpravy?: number;
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
   const [polozky, setPolozky] = useState(pocatecniPolozky.reduce((s, p) => s + p.castka, 0));
 
   const percent = budgetUsedPercent(spent, budget.total);
@@ -86,11 +92,11 @@ export function ProjectBudget({
   const fakturujeme = cenaZDokladu ?? revenue;
   const popisCeny =
     zdrojCeny === 'nabidka'
-      ? 'z cenové nabídky'
+      ? t('rozpocet.zCenoveNabidky')
       : zdrojCeny === 'faktura'
-        ? 'z vystavené faktury'
+        ? t('rozpocet.zVystaveneFaktury')
         : revenue != null
-          ? 'odhad z normostran'
+          ? t('rozpocet.odhadZNormostran')
           : '—';
   // Opravy se odectou SKUTECNE vykazane, ne z rozpoctu - zadny nemaji.
   const zisk = fakturujeme != null ? fakturujeme - budget.total - polozky - vykazanoOpravy : null;
@@ -98,50 +104,66 @@ export function ProjectBudget({
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-5">
       <div className="flex items-baseline justify-between flex-wrap gap-3">
-        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">Rozpočet</h2>
+        <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">{t('rozpocet.nadpis')}</h2>
         <span className="text-xs font-body text-muted">
-          {budget.pageCount} normostran · frekvence {budget.sessions} × {czk(budget.unitPrice)}
+          {t('rozpocet.souhrnNormostrany', {
+            pocet: budget.pageCount,
+            frekvence: budget.sessions,
+            cena: czk(budget.unitPrice, jazyk),
+          })}
         </span>
       </div>
 
       <table className="w-full text-sm font-heading">
         <tbody>
           <tr>
-            <td className="py-1 text-ink">Natáčení</td>
+            <td className="py-1 text-ink">{t('rozpocet.nataceni')}</td>
             <td className="py-1 text-muted tabular-nums whitespace-nowrap">
-              {budget.sessions} × {czk(budget.unitPrice)}
+              {budget.sessions} × {czk(budget.unitPrice, jazyk)}
             </td>
-            <td className="py-1 text-ink tabular-nums text-right">{czk(budget.recordingCost)}</td>
+            <td className="py-1 text-ink tabular-nums text-right">
+              {czk(budget.recordingCost, jazyk)}
+            </td>
           </tr>
           <tr>
-            <td className="py-1 text-ink">Střih</td>
+            <td className="py-1 text-ink">{t('rozpocet.strih')}</td>
             <td className="py-1 text-muted tabular-nums whitespace-nowrap">
-              {budget.editingUnits} × {czk(budget.unitPrice)}
+              {budget.editingUnits} × {czk(budget.unitPrice, jazyk)}
             </td>
-            <td className="py-1 text-ink tabular-nums text-right">{czk(budget.editingCost)}</td>
+            <td className="py-1 text-ink tabular-nums text-right">
+              {czk(budget.editingCost, jazyk)}
+            </td>
           </tr>
           <tr>
-            <td className="py-1 text-ink">Bonus</td>
+            <td className="py-1 text-ink">{t('rozpocet.bonus')}</td>
             <td className="py-1 text-muted tabular-nums whitespace-nowrap">
-              {budget.pageCount} × {czk(budget.bonus / (budget.pageCount || 1))}
+              {budget.pageCount} × {czk(budget.bonus / (budget.pageCount || 1), jazyk)}
             </td>
-            <td className="py-1 text-ink tabular-nums text-right">{czk(budget.bonus)}</td>
+            <td className="py-1 text-ink tabular-nums text-right">{czk(budget.bonus, jazyk)}</td>
           </tr>
           <tr className="border-t border-line">
             {/* Drive "Naklady celkem". Prejmenovano 14. 9. 2026, at je na prvni
                 pohled jasne, ze dalsi polozky sem NEPATRI. */}
-            <td className="pt-2 text-ink font-semibold">Náklady na výrobu</td>
+            <td className="pt-2 text-ink font-semibold">{t('rozpocet.nakladyNaVyrobu')}</td>
             <td></td>
-            <td className="pt-2 text-ink tabular-nums text-right font-semibold">{czk(budget.total)}</td>
+            <td className="pt-2 text-ink tabular-nums text-right font-semibold">
+              {czk(budget.total, jazyk)}
+            </td>
           </tr>
         </tbody>
       </table>
 
       <div>
         <div className="flex items-baseline justify-between gap-3 mb-1.5">
-          <span className="text-xs font-heading text-muted uppercase tracking-wide">Čerpání</span>
+          <span className="text-xs font-heading text-muted uppercase tracking-wide">
+            {t('rozpocet.cerpani')}
+          </span>
           <span className={`text-sm font-heading font-semibold tabular-nums ${over ? 'text-danger' : 'text-ink'}`}>
-            {czk(spent)} z {czk(budget.total)} · {percent} %
+            {t('rozpocet.zCelkem', {
+              cast: czk(spent, jazyk),
+              celek: czk(budget.total, jazyk),
+              procent: percent,
+            })}
           </span>
         </div>
         <div className="h-2.5 w-full rounded-pill bg-line overflow-hidden">
@@ -152,12 +174,15 @@ export function ProjectBudget({
         </div>
         <p className="text-xs font-body text-muted mt-1.5 m-0">
           {hoursLogged > 0
-            ? `Vykázáno ${hoursLogged.toLocaleString('cs-CZ', { maximumFractionDigits: 1 })} h. `
-            : 'Zatím žádné výkazy. '}
+            ? t('rozpocet.vykazanoHodin', {
+                hodiny: hoursLogged.toLocaleString(kodJazyka(jazyk), { maximumFractionDigits: 1 }),
+              })
+            : t('rozpocet.zadneVykazy')}{' '}
           {over
-            ? `Rozpočet je překročený o ${czk(spent - budget.total)}.`
-            : `Zbývá ${czk(remaining)}.`}
-          {vykazanoOpravy > 0 && ` Z toho ${czk(vykazanoOpravy)} za opravy — ty v rozpočtu vlastní řádek nemají.`}
+            ? t('rozpocet.prekroceno', { castka: czk(spent - budget.total, jazyk) })
+            : t('rozpocet.zbyva', { castka: czk(remaining, jazyk) })}{' '}
+          {vykazanoOpravy > 0 &&
+            t('rozpocet.opravyVCerpani', { castka: czk(vykazanoOpravy, jazyk) })}
         </p>
       </div>
 
@@ -166,23 +191,26 @@ export function ProjectBudget({
       {!naKlic && (
         <div className="border-t border-line pt-4 mt-auto">
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Zisk</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">
+              {t('rozpocet.zisk')}
+            </span>
             {revenue == null ? (
-              <span className="text-sm font-body text-muted">
-                Firma nemá nastavenou sazbu za normostranu, cenu zakázky proto nespočítáme.
-              </span>
+              <span className="text-sm font-body text-muted">{t('rozpocet.bezSazby')}</span>
             ) : (
               <span className="text-sm font-heading text-ink tabular-nums">
-                {czk(revenue)} − {czk(budget.total)} ={' '}
+                {czk(revenue, jazyk)} − {czk(budget.total, jazyk)} ={' '}
                 <strong className={revenue - budget.total >= 0 ? 'text-brand-greenDeep' : 'text-danger'}>
-                  {czk(revenue - budget.total)}
+                  {czk(revenue - budget.total, jazyk)}
                 </strong>
               </span>
             )}
           </div>
           {revenue != null && ratePerPage != null && (
             <p className="text-xs font-body text-muted mt-1 m-0">
-              Cena zakázky = {budget.pageCount} normostran × {czk(ratePerPage)} (sazba firmy, bez DPH).
+              {t('rozpocet.cenaZakazkyVzorec', {
+                pocet: budget.pageCount,
+                sazba: czk(ratePerPage, jazyk),
+              })}
             </p>
           )}
         </div>
@@ -195,76 +223,85 @@ export function ProjectBudget({
             pocatecni={pocatecniPolozky}
             onZmena={setPolozky}
             jmena={jmenaHercu}
-            nadpis="Další položky"
-            napoveda="Bez DPH. Honorář herce, přeposlech, úprava textu. Do rozpočtu na výrobu se nepočítají — sčítají se až v celkovém rozpočtu."
+            nadpis={t('rozpocet.dalsiPolozky')}
+            napoveda={t('rozpocet.dalsiPolozkyNapoveda')}
           />
 
           <div className="border-t border-line pt-4 mt-auto">
-            <span className="text-xs font-heading text-muted uppercase tracking-wide">Celkový rozpočet</span>
+            <span className="text-xs font-heading text-muted uppercase tracking-wide">
+              {t('rozpocet.celkovyRozpocet')}
+            </span>
             <table className="w-full text-sm font-heading mt-2">
               <tbody>
                 <tr>
-                  <td className="py-1 text-ink">Fakturujeme</td>
+                  <td className="py-1 text-ink">{t('rozpocet.fakturujeme')}</td>
                   <td className="py-1 text-muted whitespace-nowrap">{popisCeny}</td>
                   <td className="py-1 text-ink tabular-nums text-right">
-                    {fakturujeme == null ? '—' : czk(fakturujeme)}
+                    {fakturujeme == null ? '—' : czk(fakturujeme, jazyk)}
                   </td>
                 </tr>
                 {/* Nataceni a strih zvlast (zadani 14. 9. 2026) - at je videt,
                     co z ceny ukrajuje vyroba a co az dalsi polozky. */}
                 <tr>
-                  <td className="py-1 text-muted">− Natáčení</td>
+                  <td className="py-1 text-muted">− {t('rozpocet.nataceni')}</td>
                   <td></td>
-                  <td className="py-1 text-muted tabular-nums text-right">{czk(budget.recordingCost)}</td>
+                  <td className="py-1 text-muted tabular-nums text-right">
+                    {czk(budget.recordingCost, jazyk)}
+                  </td>
                 </tr>
                 <tr>
-                  <td className="py-1 text-muted">− Střih</td>
+                  <td className="py-1 text-muted">− {t('rozpocet.strih')}</td>
                   <td></td>
-                  <td className="py-1 text-muted tabular-nums text-right">{czk(budget.editingCost)}</td>
+                  <td className="py-1 text-muted tabular-nums text-right">
+                    {czk(budget.editingCost, jazyk)}
+                  </td>
                 </tr>
                 <tr>
-                  <td className="py-1 text-muted">− Bonus</td>
+                  <td className="py-1 text-muted">− {t('rozpocet.bonus')}</td>
                   <td></td>
-                  <td className="py-1 text-muted tabular-nums text-right">{czk(budget.bonus)}</td>
+                  <td className="py-1 text-muted tabular-nums text-right">{czk(budget.bonus, jazyk)}</td>
                 </tr>
                 {/* Opravy jsou jediny radek teto tabulky, ktery neni z rozpoctu,
                     ale ze skutecnych vykazu - rozpoctovy radek pro ne neexistuje.
                     Proto se ukazuje, jen kdyz se nejaka oprava opravdu vykazala. */}
                 {vykazanoOpravy > 0 && (
                   <tr>
-                    <td className="py-1 text-muted">− Opravy</td>
-                    <td className="py-1 text-muted whitespace-nowrap">z výkazů</td>
-                    <td className="py-1 text-muted tabular-nums text-right">{czk(vykazanoOpravy)}</td>
+                    <td className="py-1 text-muted">− {t('rozpocet.opravy')}</td>
+                    <td className="py-1 text-muted whitespace-nowrap">{t('rozpocet.opravyZVykazu')}</td>
+                    <td className="py-1 text-muted tabular-nums text-right">
+                      {czk(vykazanoOpravy, jazyk)}
+                    </td>
                   </tr>
                 )}
                 <tr>
-                  <td className="py-1 text-muted">− Další položky</td>
+                  <td className="py-1 text-muted">− {t('rozpocet.dalsiPolozky')}</td>
                   <td></td>
-                  <td className="py-1 text-muted tabular-nums text-right">{czk(polozky)}</td>
+                  <td className="py-1 text-muted tabular-nums text-right">{czk(polozky, jazyk)}</td>
                 </tr>
                 <tr className="border-t border-line">
-                  <td className="pt-2 text-ink font-semibold">Zisk z knihy</td>
+                  <td className="pt-2 text-ink font-semibold">{t('rozpocet.ziskZKnihy')}</td>
                   <td></td>
                   <td className="pt-2 tabular-nums text-right font-semibold">
                     {zisk == null ? (
                       <span className="text-muted">—</span>
                     ) : (
-                      <span className={zisk >= 0 ? 'text-brand-greenDeep' : 'text-danger'}>{czk(zisk)}</span>
+                      <span className={zisk >= 0 ? 'text-brand-greenDeep' : 'text-danger'}>
+                        {czk(zisk, jazyk)}
+                      </span>
                     )}
                   </td>
                 </tr>
               </tbody>
             </table>
             {fakturujeme == null && (
-              <p className="text-xs font-body text-muted mt-1.5 m-0">
-                Dokud u projektu není nabídka ani faktura a firma nemá sazbu za normostranu, nemá portál co
-                fakturovat — zisk proto nespočítáme.
-              </p>
+              <p className="text-xs font-body text-muted mt-1.5 m-0">{t('rozpocet.bezCehoFakturovat')}</p>
             )}
             {fakturujeme != null && zdrojCeny == null && (
               <p className="text-xs font-body text-muted mt-1.5 m-0">
-                Zatím je to jen odhad: {budget.pageCount} normostran × {czk(ratePerPage ?? 0)}. Až u projektu
-                bude nabídka, vezme se částka z ní.
+                {t('rozpocet.zatimOdhad', {
+                  pocet: budget.pageCount,
+                  sazba: czk(ratePerPage ?? 0, jazyk),
+                })}
               </p>
             )}
           </div>

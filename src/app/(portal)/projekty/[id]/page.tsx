@@ -74,6 +74,7 @@ import { nactiProgresNataceni } from '@/lib/progresNataceniServer';
 import { ProgresNataceniKarta } from './ProgresNataceniKarta';
 import { bezTitulu } from '@/lib/jmena';
 import { nactiJazyk } from '@/lib/jazykServer';
+import { formatDatum, formatDatumCas, prelozit, prelozitS } from '@/lib/jazyk';
 
 // Detail projektu (zadani 5. 9. 2026). Od 11. 9. 2026 projekt zije v portalu -
 // tady se ctou jeho zakladni udaje a k nim se pripojuji NASE interni
@@ -350,14 +351,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const revenue =
     budget && company?.ratePerPage != null ? budget.pageCount * company.ratePerPage : null;
 
-  const dokladDatum = (date: Date | null) => (date ? new Intl.DateTimeFormat('cs-CZ').format(date) : '');
+  // Datum dokladu britsky 13/09/2026, česky 13. 9. 2026 (dávka 7b).
+  const dokladDatum = (date: Date | null) => formatDatum(jazyk, date, '');
 
   const offerRows: ProjectDocRow[] = offers.map((o) => {
     const stav = offerStatus(o.status, jazyk);
     return {
       id: o.id,
       href: `/admin/doklady/nabidky/${o.id}`,
-      title: o.subject || 'Bez názvu',
+      title: o.subject || prelozit(jazyk, 'projekt.bezNazvu'),
       number: o.number,
       date: dokladDatum(o.issueDate),
       amountMinor: computeTotals(o.items, o).incVat,
@@ -372,7 +374,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     return {
       id: i.id,
       href: `/admin/doklady/faktury/${i.id}`,
-      title: i.subject || 'Bez názvu',
+      kodStavu: i.status,
+      title: i.subject || prelozit(jazyk, 'projekt.bezNazvu'),
       number: i.number,
       date: dokladDatum(i.issueDate),
       amountMinor: computeTotals(i.items, i).incVat,
@@ -385,12 +388,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const expenseRows: ProjectDocRow[] = expenses.map((e) => ({
     id: e.id,
     href: `/admin/doklady/vydaje/${e.id}`,
-    title: e.description || 'Bez názvu',
+    title: e.description || prelozit(jazyk, 'projekt.bezNazvu'),
     number: e.number || '',
     date: dokladDatum(e.issueDate),
     amountMinor: expenseTotalMinor(e.amountExVatMinor, e.vatRate),
     currency: e.currency,
-    statusLabel: e.paid ? 'Uhrazeno' : 'Neuhrazeno',
+    statusLabel: prelozit(jazyk, e.paid ? 'vydaj.stavUhrazeno' : 'vydaj.stavNeuhrazeno'),
     statusClass: e.paid ? 'bg-okTint text-status-done' : 'bg-tint text-brand-purpleDark',
   }));
 
@@ -416,7 +419,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     }
     return Array.from(map.entries()).map(([currency, minor]) => ({ currency: currency as never, minor }));
   };
-  const invoicedByCurrency = soucet(invoiceRows, (r) => r.statusLabel === 'Stornovaná');
+  // STORNO SE POZNÁ PODLE KÓDU, ne podle popisku (dávka 7b). Popisek je od
+  // dávky 4 přeložený, takže porovnání s českým slovem by v anglickém portálu
+  // tiše přestalo platit a stornované faktury by se počítaly do fakturovaného.
+  const invoicedByCurrency = soucet(invoiceRows, (r) => r.kodStavu === 'CANCELLED');
   const costsByCurrency = soucet(expenseRows);
 
   /**
@@ -579,9 +585,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       }))
     : [];
 
-  // Vykazane penize zvlast za nataceni a zvlast za strih (zadani 14. 9. 2026),
-  // od 30. 9. 2026 i za opravy. „Ostatni" se nepocita - ten druh prace
-  // k projektu nepatri.
+  // Vykazane penize zvlast za nataceni a zvlast za strih (zadani 14. 9. 2026).
+  // „Ostatni" se nepocita - ten druh prace k projektu nepatri.
   const castka = (e: (typeof timesheets)[number]) =>
     entryAmount(e.startMinutes, e.endMinutes, e.hourlyRateSnapshot);
   const vykazanoNataceni = timesheets
@@ -670,11 +675,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h2 className="font-display text-2xl text-ink m-0">Hosté na natáčení</h2>
-          <p className="text-sm font-body text-muted m-0">
-            Klient, agentura nebo zadavatel, kteří u natáčení budou — ve studiu, nebo na dálku.
-            Pozvánka jim pošle čas, adresu s mapou, parkování i odkaz na připojení.
-          </p>
+          <h2 className="font-display text-2xl text-ink m-0">{prelozit(jazyk, 'hoste.nadpis')}</h2>
+          <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'hoste.popis')}</p>
         </div>
         <HosteNataceni
           caflouProjectId={caflouProjectId}
@@ -685,7 +687,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
     <RecordingSection
           caflouProjectId={caflouProjectId}
-          projectName={project?.name ?? `Projekt ${caflouProjectId}`}
+          projectName={
+            project?.name ?? prelozitS(jazyk, 'projekt.zaloha.nazev', { id: caflouProjectId })
+          }
           companyId={company?.id ?? null}
           pageCount={project?.pageCount ?? null}
           sessionsFromPages={sessionsForPages(project?.pageCount ?? 0, calendarSettings.pagesPerSession)}
@@ -733,6 +737,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       caflouProjectId={caflouProjectId}
       companyId={meta?.companyId ?? company?.id ?? null}
       navrhNabidky={navrhNabidky}
+      jazyk={jazyk}
     />
   );
 
@@ -745,7 +750,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       caflouProjectId={caflouProjectId}
       canEdit={canEdit}
       nazevFirmy={firmaProjektu?.name ?? company?.name ?? ''}
-      projectName={metaPoSync?.name || project?.name || `Projekt ${caflouProjectId}`}
+      projectName={
+        metaPoSync?.name ||
+        project?.name ||
+        prelozitS(jazyk, 'projekt.zaloha.nazev', { id: caflouProjectId })
+      }
       jeRadiovySpot={jeRadiovySpot}
       rlError={metaPoSync?.rlError ?? null}
       rodneListy={rodneListy.map((rl) => ({
@@ -821,7 +830,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     />
   );
 
-  const tabs: ProjectTab[] = [{ key: 'prehled', label: 'Přehled', content: prehled }];
+  const tabs: ProjectTab[] = [
+    { key: 'prehled', label: prelozit(jazyk, 'projekt.zalozka.prehled'), content: prehled },
+  ];
 
   /**
    * TECHNICKÉ PARAMETRY MAJÍ VLASTNÍ ZÁLOŽKU (zadání 27. 9. 2026: „dej mi to
@@ -832,7 +843,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   if (technickeParametry) {
     tabs.push({
       key: 'technicke-parametry',
-      label: 'Technické parametry',
+      label: prelozit(jazyk, 'projekt.zalozka.technickeParametry'),
       content: (
         <TechnickeParametryKarta parametry={technickeParametry} smiMenit={smiMenitParametry} />
       ),
@@ -841,7 +852,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   if (jeReklamniProjekt && isInternalRole(session.user.role)) {
     tabs.push({
       key: 'vystupy',
-      label: 'Výstupy',
+      label: prelozit(jazyk, 'projekt.zalozka.vystupy'),
       count: vystupy.length,
       content: vystupySekce,
     });
@@ -849,12 +860,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Zalozka je u kazdeho projektu, ale jen pro toho, kdo na cisla ma pravo
   // (canViewProjectBudget) - Zuzo-labuzo a produkce ano, zvukar ne.
   if (rozpocet) {
-    tabs.push({ key: 'rozpocet', label: 'Rozpočet', content: rozpocetSVykazy });
+    tabs.push({
+      key: 'rozpocet',
+      label: prelozit(jazyk, 'projekt.zalozka.rozpocet'),
+      content: rozpocetSVykazy,
+    });
   }
   if (isInternalRole(session.user.role)) {
     tabs.push({
       key: 'frekvence',
-      label: 'Natáčecí plán',
+      label: prelozit(jazyk, 'projekt.zalozka.frekvence'),
       count: recordingRequests.length,
       content: frekvence,
     });
@@ -871,7 +886,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   if (jeRadiovySpot) {
     tabs.push({
       key: 'rodny-list',
-      label: 'Rodný list',
+      label: prelozit(jazyk, 'projekt.zalozka.rodnyList'),
       count: rodneListy.length,
       content: rodnyList,
     });
@@ -941,7 +956,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     ]);
     tabs.push({
       key: 'licencni-list',
-      label: 'Licenční list',
+      label: prelozit(jazyk, 'projekt.zalozka.licencniList'),
       count: listy.length,
       content: (
         <LicencniListSection
@@ -999,18 +1014,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     const prvni = spoty[0]?.id ?? '';
     const pripominky = prvni ? await nactiPripominky(caflouProjectId, prvni) : [];
     const kdySchvaleno = schvaleni.schvalenoAt
-      ? new Intl.DateTimeFormat('cs-CZ', {
-          day: 'numeric',
-          month: 'numeric',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }).format(new Date(schvaleni.schvalenoAt))
+      ? formatDatumCas(jazyk, new Date(schvaleni.schvalenoAt), '')
       : null;
 
     tabs.push({
       key: 'pripominky',
-      label: 'Připomínky',
+      label: prelozit(jazyk, 'projekt.zalozka.pripominky'),
       count: pripominky.filter((p) => !p.vyrizeno).length,
       content: (
         <div className="flex flex-col gap-4">
@@ -1020,15 +1029,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-status-done shrink-0" aria-hidden="true">
                 <path d="M4 12l6 6L20 6" />
               </svg>
-              <span className="font-heading font-semibold text-sm text-ink">Klient zakázku schválil</span>
+              <span className="font-heading font-semibold text-sm text-ink">
+                {prelozit(jazyk, 'projekt.schvaleno')}
+              </span>
               <span className="text-xs font-body text-muted">{kdySchvaleno}</span>
             </div>
           ) : (
             <div className="rounded-card border border-line bg-surface px-4 py-3 flex items-center gap-2.5 flex-wrap">
               <span className="w-2.5 h-2.5 rounded-full bg-status-progress shrink-0" aria-hidden="true" />
-              <span className="font-heading font-semibold text-sm text-ink">Zatím neschváleno</span>
+              <span className="font-heading font-semibold text-sm text-ink">
+                {prelozit(jazyk, 'projekt.neschvaleno')}
+              </span>
               <span className="text-xs font-body text-muted">
-                Klient schvaluje tlačítkem Schválit v mailu, ve složce nebo ve svém portálu.
+                {prelozit(jazyk, 'projekt.jakSeSchvaluje')}
               </span>
             </div>
           )}
@@ -1037,13 +1050,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
           {!token ? (
             <p className="text-sm font-body text-muted m-0">
-              Odkaz pro klienta se nepodařilo připravit, a bez něj se nahrávky nenačtou. Zkuste
-              stránku načíst znovu.
+              {prelozit(jazyk, 'projekt.odkazSeNepovedl')}
             </p>
           ) : spoty.length === 0 ? (
             <p className="text-sm font-body text-muted m-0">
-              Ve složce projektu zatím není žádný zvuk ani video. Jakmile tam něco přibude, objeví
-              se tady i s připomínkami klienta.
+              {prelozit(jazyk, 'projekt.zadnyZvukAniVideo')}
             </p>
           ) : (
             <SpotTagger
@@ -1065,7 +1076,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     ]);
     tabs.push({
       key: 'preposlech',
-      label: 'Přeposlech',
+      label: prelozit(jazyk, 'projekt.zalozka.preposlech'),
       count: preposlech.chyby.length,
       content: (
         <div className="flex flex-col gap-4">
@@ -1073,7 +1084,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <OdkazProKlienta caflouProjectId={caflouProjectId} pocatecni={odkaz} />
           <Preposlech
             caflouProjectId={caflouProjectId}
-            projectName={metaPoSync?.name || project?.name || `Projekt ${caflouProjectId}`}
+            projectName={
+              metaPoSync?.name ||
+              project?.name ||
+              prelozitS(jazyk, 'projekt.zaloha.nazev', { id: caflouProjectId })
+            }
             pocatecniStav={preposlech}
           />
         </div>
@@ -1090,7 +1105,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   if (isInternalRole(session.user.role)) {
     tabs.push({
       key: 'protokol',
-      label: 'Natáčecí protokol',
+      label: prelozit(jazyk, 'projekt.zalozka.protokol'),
       count: zaznamyNatoceni.length,
       content: <ProtokolNataceni zaznamy={zaznamyNatoceni} />,
     });
@@ -1108,7 +1123,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     const poznamky = await nactiPoznamkyProjektu(caflouProjectId);
     tabs.push({
       key: 'poznamky',
-      label: 'Poznámky',
+      label: prelozit(jazyk, 'projekt.zalozka.poznamky'),
       count: poznamky.length,
       content: (
         <PoznamkyProjektu
@@ -1125,7 +1140,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   if (isInternalRole(session.user.role)) {
     tabs.push({
       key: 'historie',
-      label: 'Historie',
+      label: prelozit(jazyk, 'projekt.zalozka.historie'),
       count: historie.length,
       content: <HistorieProjektu udalosti={historie} />,
     });
@@ -1137,7 +1152,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   if (showDocuments) {
     tabs.push({
       key: 'doklady',
-      label: 'Doklady',
+      label: prelozit(jazyk, 'projekt.zalozka.doklady'),
       count: offerRows.length + invoiceRows.length + expenseRows.length + contractRows.length,
       content: doklady,
     });
@@ -1159,11 +1174,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     <section className="flex flex-col gap-6 w-full max-w-[1180px] mx-auto">
       <div>
         <Link href="/projekty" className="text-muted text-sm font-heading no-underline">
-          ← Zpět na projekty
+          {prelozit(jazyk, 'projekt.zpetNaProjekty')}
         </Link>
         <div className="flex items-center gap-4 flex-wrap mt-2">
           <h1 className="font-display text-3xl sm:text-4xl text-ink m-0">
-            {project?.name ?? `Projekt ${caflouProjectId}`}
+            {project?.name ?? prelozitS(jazyk, 'projekt.zaloha.nazev', { id: caflouProjectId })}
           </h1>
           {/* Stav z portalu ma prednost - od 10. 9. 2026 ho prehazuje clovek. */}
           {project && (
@@ -1197,7 +1212,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <div className="mt-1">
             <PrilohaObjednavky
               orderId={objednavkaZWebu.id}
-              nazev={objednavkaZWebu.attachmentName || 'příloha'}
+              nazev={objednavkaZWebu.attachmentName || prelozit(jazyk, 'projekt.priloha')}
               naDisku={Boolean(objednavkaZWebu.diskPrilohaId)}
               chyba={objednavkaZWebu.diskPrilohaChyba}
               muzeZkusit={canEdit}

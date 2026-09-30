@@ -18,6 +18,11 @@ import { SmlouvyKlienta } from './SmlouvyKlienta';
 export type ProjectDocRow = {
   id: string;
   href: string;
+  /**
+   * KÓD stavu dokladu, ne popisek (dávka 7b). Popisek se překládá, takže se
+   * podle něj nesmí nic rozhodovat - stornovaná faktura se pozná odsud.
+   */
+  kodStavu?: string;
   title: string;
   number: string;
   date: string;
@@ -86,6 +91,7 @@ export function ProjectDocuments({
   caflouProjectId,
   companyId,
   navrhNabidky,
+  jazyk,
 }: {
   offers: ProjectDocRow[];
   invoices: ProjectDocRow[];
@@ -103,6 +109,8 @@ export function ProjectDocuments({
    * `null` a panel se nevykreslí. Viz lib/nabidkaZObjednavky.ts.
    */
   navrhNabidky?: NavrhNabidky | null;
+  /** Jazyk z lišty - komponenta běží na serveru, hook by tu spadl (pravidlo 8). */
+  jazyk: Jazyk;
 }) {
   const celkem = offers.length + invoices.length + expenses.length + contracts.length;
 
@@ -118,24 +126,40 @@ export function ProjectDocuments({
   };
 
   const novy = [
-    { href: sProjektem('/admin/doklady/nabidky/nova'), label: 'Nová nabídka', druh: 'nabidka' as const },
-    { href: sProjektem('/admin/doklady/faktury/nova'), label: 'Nová faktura', druh: 'faktura' as const },
+    {
+      href: sProjektem('/admin/doklady/nabidky/nova'),
+      label: prelozit(jazyk, 'projektDoklady.novaNabidka'),
+      druh: 'nabidka' as const,
+    },
+    {
+      href: sProjektem('/admin/doklady/faktury/nova'),
+      label: prelozit(jazyk, 'projektDoklady.novaFaktura'),
+      druh: 'faktura' as const,
+    },
     // Smlouva se zaklada formularem primo na seznamu smluv, ne na vlastni
     // strance - proto adresa bez /nova.
-    { href: sProjektem('/admin/doklady/smlouvy'), label: 'Nová smlouva', druh: 'smlouva' as const },
+    {
+      href: sProjektem('/admin/doklady/smlouvy'),
+      label: prelozit(jazyk, 'projektDoklady.novaSmlouva'),
+      druh: 'smlouva' as const,
+    },
     // Vydaj i k ukoncenemu projektu (21. 9. 2026: „potrebuju pridat vydaje
     // i na ukonceny projekt") - formular se otevre s projektem predvyplnenym.
-    { href: `/admin/doklady/vydaje?projekt=${encodeURIComponent(caflouProjectId)}`, label: 'Nový výdaj', druh: 'vydaj' as const },
+    {
+      href: `/admin/doklady/vydaje?projekt=${encodeURIComponent(caflouProjectId)}`,
+      label: prelozit(jazyk, 'projektDoklady.novyVydaj'),
+      druh: 'vydaj' as const,
+    },
   ];
 
   return (
     <div className="bg-surface rounded-card border border-line shadow-sm p-6 flex flex-col gap-6">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h2 className="font-heading font-semibold text-sm text-muted uppercase tracking-wide m-0">
-          Doklady k projektu
+          {prelozit(jazyk, 'projektDoklady.nadpis')}
         </h2>
         <Link href="/admin/doklady" className="text-xs font-heading font-semibold text-brand-purple no-underline">
-          Přejít do Dokladů →
+          {prelozit(jazyk, 'projektDoklady.prejit')}
         </Link>
       </div>
 
@@ -162,10 +186,7 @@ export function ProjectDocuments({
       <SmlouvyKlienta caflouProjectId={caflouProjectId} />
 
       {celkem === 0 ? (
-        <p className="text-sm font-body text-muted m-0">
-          K tomuhle projektu zatím žádný doklad navázaný není. Založ ho tlačítkem nahoře — projekt
-          i klient se do něj předvyplní.
-        </p>
+        <p className="text-sm font-body text-muted m-0">{prelozit(jazyk, 'projektDoklady.nicNeni')}</p>
       ) : (
         // PORADI PODLE TOHO, JAK DOKLAD VZNIKA (zadani 13. 9. 2026:
         // „seradme primarne: Nabidky, faktury, smlouvy"). Nejdriv se nabidne,
@@ -181,14 +202,43 @@ export function ProjectDocuments({
         // by se ta slozena zavorka cetla jako objekt a build spadne
         // (tak spadl 81c3db5).
         <div className="flex flex-col divide-y divide-line">
-          <Block title="Nabídky" rows={offers} druh="nabidka" />
-          <Block title="Vydané faktury" rows={invoices} druh="faktura" />
-          <Block title="Smlouvy" rows={contracts} druh="smlouva" hideAmount />
-          <Block title="Přijaté doklady" rows={expenses} druh="vydaj" />
+          <Block
+            title={prelozit(jazyk, 'projektDoklady.nabidky')}
+            rows={offers}
+            druh="nabidka"
+            jazyk={jazyk}
+          />
+          <Block
+            title={prelozit(jazyk, 'projektDoklady.vydaneFaktury')}
+            rows={invoices}
+            druh="faktura"
+            jazyk={jazyk}
+          />
+          <Block
+            title={prelozit(jazyk, 'projektDoklady.smlouvy')}
+            rows={contracts}
+            druh="smlouva"
+            jazyk={jazyk}
+            hideAmount
+          />
+          <Block
+            title={prelozit(jazyk, 'projektDoklady.prijateDoklady')}
+            rows={expenses}
+            druh="vydaj"
+            jazyk={jazyk}
+          />
 
           <div className="flex items-center gap-8 flex-wrap pt-4">
-            <Sum label="Fakturováno" values={invoicedByCurrency} />
-            <Sum label="Náklady" values={costsByCurrency} />
+            <Sum
+              label={prelozit(jazyk, 'projektDoklady.fakturovano')}
+              values={invoicedByCurrency}
+              jazyk={jazyk}
+            />
+            <Sum
+              label={prelozit(jazyk, 'projektDoklady.naklady')}
+              values={costsByCurrency}
+              jazyk={jazyk}
+            />
           </div>
         </div>
       )}
@@ -286,11 +336,13 @@ function Block({
   rows,
   druh,
   hideAmount,
+  jazyk,
 }: {
   title: string;
   rows: ProjectDocRow[];
   druh: DruhDokladu;
   hideAmount?: boolean;
+  jazyk: Jazyk;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -320,7 +372,7 @@ function Block({
               </span>
               {!hideAmount && (
                 <span className="shrink-0 text-sm font-heading text-ink tabular-nums text-right">
-                  {formatMoney(row.amountMinor, row.currency)}
+                  {formatMoney(row.amountMinor, row.currency, jazyk)}
                 </span>
               )}
               {/* Pevna sirka stavu: bubliny pak stoji v jednom sloupci a oko
@@ -340,7 +392,15 @@ function Block({
   );
 }
 
-function Sum({ label, values }: { label: string; values: { currency: Currency; minor: number }[] }) {
+function Sum({
+  label,
+  values,
+  jazyk,
+}: {
+  label: string;
+  values: { currency: Currency; minor: number }[];
+  jazyk: Jazyk;
+}) {
   return (
     <span className="flex items-baseline gap-3">
       <span className="text-xs font-heading text-muted uppercase tracking-wide">{label}</span>
@@ -349,7 +409,7 @@ function Sum({ label, values }: { label: string; values: { currency: Currency; m
       ) : (
         values.map((v) => (
           <span key={v.currency} className="font-display text-xl text-ink tabular-nums">
-            {formatMoney(v.minor, v.currency)}
+            {formatMoney(v.minor, v.currency, jazyk)}
           </span>
         ))
       )}

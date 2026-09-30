@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
+import { usePreklad } from '../components/JazykProvider';
 
 /**
  * VÝBĚR V MALÉM OKNĚ (zadání 26. 9. 2026: „všechna ta funkční tlačítka
@@ -42,6 +43,7 @@ export function VyberVOkne({
   jedno?: boolean;
   disabled?: boolean;
 }) {
+  const t = usePreklad();
   const [kotva, setKotva] = useState<{ left: number; top: number } | null>(null);
   const [pridavane, setPridavane] = useState('');
   const oknoRef = useRef<HTMLDivElement>(null);
@@ -94,7 +96,7 @@ export function VyberVOkne({
     jmena.length > 0
       ? jmena.map((j) => j.nazev).join(', ')
       : dedi
-        ? `${zdedenaJmena.map((j) => j.nazev).join(', ')} (dědí)`
+        ? t('vyberVOkne.dedi', { jmena: zdedenaJmena.map((j) => j.nazev).join(', ') })
         : prazdne;
 
   return (
@@ -129,7 +131,9 @@ export function VyberVOkne({
             {popisek}
           </span>
           {polozky.length === 0 ? (
-            <span className="px-2 py-1.5 text-sm font-body text-muted">Není z čeho vybrat.</span>
+            <span className="px-2 py-1.5 text-sm font-body text-muted">
+              {t('vyberVOkne.neniZCehoVybrat')}
+            </span>
           ) : (
             polozky.map((p) => {
               const zaskrtnuto = vybrane.includes(p.id);
@@ -183,7 +187,7 @@ export function VyberVOkne({
                 onPridatJmeno(pridavane.trim());
                 setPridavane('');
               }}
-              placeholder="Dopsat jméno a Enter…"
+              placeholder={t('vyberVOkne.dopsatJmeno')}
               className="mt-1 w-full rounded-lg border border-line bg-field px-2 py-1.5 text-sm font-body text-ink outline-none focus:border-brand-purple"
             />
           )}

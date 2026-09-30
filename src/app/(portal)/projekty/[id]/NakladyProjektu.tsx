@@ -2,10 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { TRIDA_BUBLINY_HERCE } from '@/lib/bublinaHerce';
+import { kodJazyka, type Jazyk } from '@/lib/jazyk';
+import { useJazyk, usePreklad } from '../../components/JazykProvider';
 
 export type NakladovaPolozka = { nazev: string; castka: number };
 
-const czk = (v: number) => `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
+// Částky podle jazyka (dávka 7b) - britsky „1,234 Kč", česky „1 234 Kč".
+const czk = (v: number, jazyk: Jazyk) =>
+  `${Math.round(v).toLocaleString(kodJazyka(jazyk))} Kč`;
 
 /** Text z pole na koruny. Prázdno i nesmysl je nula. */
 function cislo(text: string): number {
@@ -25,15 +29,19 @@ export function NakladyProjektu({
   caflouProjectId,
   pocatecni,
   onZmena,
-  nadpis = 'Náklady po položkách',
-  napoveda = 'Bez DPH. Sem patří všechny náklady zakázky — honorář, studio, hudba. Zisk se počítá z nich.',
+  nadpis,
+  napoveda,
   jmena = [],
 }: {
   caflouProjectId: string;
   pocatecni: NakladovaPolozka[];
   /** Součet nahoru do rozpočtu, ať se čerpání přepočítá hned. */
   onZmena?: (soucet: number) => void;
-  /** U audioknihy na klíč se tomu říká jinak - viz ProjectBudget. */
+  /**
+   * U audioknihy na klíč se tomu říká jinak - viz ProjectBudget. Bez zadání
+   * se bere výchozí popisek ze slovníku (dávka 7b) - výchozí hodnota v hlavičce
+   * funkce by musela být česká natvrdo.
+   */
   nadpis?: string;
   napoveda?: string;
   /**
@@ -47,6 +55,11 @@ export function NakladyProjektu({
    */
   jmena?: string[];
 }) {
+  const t = usePreklad();
+  const jazyk = useJazyk();
+  const titulek = nadpis ?? t('naklady.nadpis');
+  const pomoc = napoveda ?? t('naklady.napoveda');
+
   /**
    * ČÁSTKA SE DRŽÍ JAKO TEXT, ne jako číslo (14. 9. 2026: „zase tam musím
    * nejdříve smazat nulu v tom poli"). Nový řádek měl v částce nulu, kterou
@@ -96,9 +109,15 @@ export function NakladyProjektu({
   return (
     <div className="border-t border-line pt-4">
       <div className="flex items-baseline justify-between gap-3 mb-2">
-        <span className="text-xs font-heading text-muted uppercase tracking-wide">{nadpis}</span>
+        <span className="text-xs font-heading text-muted uppercase tracking-wide">{titulek}</span>
         <span className="text-xs font-heading text-muted">
-          {stav === 'uklada' ? 'Ukládám…' : stav === 'ulozeno' ? '✓ Uloženo' : stav === 'chyba' ? 'Neuložilo se' : ''}
+          {stav === 'uklada'
+            ? t('obecne.ukladam')
+            : stav === 'ulozeno'
+              ? t('naklady.ulozeno')
+              : stav === 'chyba'
+                ? t('naklady.neulozilo')
+                : ''}
         </span>
       </div>
 
@@ -109,6 +128,8 @@ export function NakladyProjektu({
               hodnota={p.nazev}
               onZmena={(v) => uprav(i, { nazev: v })}
               jmena={jmena}
+              napovedaPole={t('naklady.napovedaPole')}
+              titulekUpravit={t('naklady.upravitPolozku')}
             />
             <input
               type="number"
@@ -121,7 +142,7 @@ export function NakladyProjektu({
             <button
               type="button"
               onClick={() => setPolozky((s) => s.filter((_, j) => j !== i))}
-              title="Smazat položku"
+              title={t('naklady.smazatPolozku')}
               className="text-muted hover:text-danger text-sm shrink-0 px-1"
             >
               ✕
@@ -136,15 +157,15 @@ export function NakladyProjektu({
           onClick={() => setPolozky((s) => [...s, { nazev: '', castka: '' }])}
           className="text-xs font-heading font-semibold text-brand-purple hover:underline"
         >
-          + Přidat položku
+          {t('naklady.pridatPolozku')}
         </button>
         {polozky.length > 0 && (
           <span className="text-sm font-heading text-ink tabular-nums">
-            Položky celkem <strong>{czk(soucet)}</strong>
+            {t('naklady.polozkyCelkem')} <strong>{czk(soucet, jazyk)}</strong>
           </span>
         )}
       </div>
-      <p className="text-xs font-body text-muted mt-1.5 m-0">{napoveda}</p>
+      <p className="text-xs font-body text-muted mt-1.5 m-0">{pomoc}</p>
     </div>
   );
 }
@@ -170,10 +191,15 @@ function PoleSNapovedou({
   hodnota,
   onZmena,
   jmena,
+  napovedaPole,
+  titulekUpravit,
 }: {
   hodnota: string;
   onZmena: (v: string) => void;
   jmena: string[];
+  /** Texty chodí propem - hook by se tu volal zbytečně podruhé. */
+  napovedaPole: string;
+  titulekUpravit: string;
 }) {
   const [otevreno, setOtevreno] = useState(false);
   // Rozepsaná položka: dokud se v ní píše, je to obyčejné pole. Jakmile
@@ -221,7 +247,7 @@ function PoleSNapovedou({
             setUpravuje(true);
             setTimeout(() => poleRef.current?.focus(), 0);
           }}
-          title="Upravit položku"
+          title={titulekUpravit}
           className="w-full rounded-lg border border-line bg-field px-2 py-1 text-left flex items-center min-h-[34px]"
         >
           <span
@@ -253,7 +279,7 @@ function PoleSNapovedou({
             setOtevreno(false);
           }
         }}
-        placeholder="Honorář herce, studio, hudba…"
+        placeholder={napovedaPole}
         className="w-full rounded-lg border border-line bg-field px-3 py-1.5 text-ink font-body text-sm outline-none focus:border-brand-purple"
       />
       {otevreno && nalezena.length > 0 && (
