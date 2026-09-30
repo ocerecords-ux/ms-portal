@@ -108,6 +108,7 @@ export function UserEditForm({
   user,
   companies,
   studia,
+  slozkyDisku,
   jsemSuperadmin,
 }: {
   user: EditableUser;
