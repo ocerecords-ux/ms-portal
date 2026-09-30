@@ -63,6 +63,8 @@ const schema = z.object({
   zvukarStudia: z.array(z.string()).optional(),
   vedeStudia: z.array(z.string()).optional(),
   tabulePristup: z.array(z.string()).optional(),
+  /** Složky na Disku, které tenhle člověk vidí (zadání 30. 9. 2026). */
+  slozkyDisku: z.array(z.string()).optional(),
   birthNumber: z.string().trim().optional(),
   ic: z.string().trim().optional(),
   dic: z.string().trim().optional(),
@@ -115,6 +117,9 @@ function readFormData(formData: FormData) {
     vedeStudia: has('vedeStudiaPrazdne') ? formData.getAll('vedeStudia').map(String) : undefined,
     // Přístup na tabule (23. 9. 2026) - u všech interních rolí.
     tabulePristup: has('tabulePristupPrazdne') ? formData.getAll('tabulePristup').map(String) : undefined,
+    // Složky na Disku (30. 9. 2026) - u všech rolí, klienty nevyjímaje:
+    // do Klientské zóny chodí i oni.
+    slozkyDisku: has('slozkyDiskuPrazdne') ? formData.getAll('slozkyDisku').map(String) : undefined,
     // Stejný trik jako u studií: prázdné pole se pozná podle průvodce, ne
     // podle chybějícího klíče - jinak by odškrtnutí všeho nic neuložilo.
     pristupy: has('pristupyPrazdne') ? formData.getAll('pristupy').map(String) : undefined,
@@ -277,6 +282,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // Vedouci pobocky (22. 9. 2026) - smi upravovat kalendar techto studii.
       ...(data.tabulePristup !== undefined
         ? { tabulePristup: { set: data.tabulePristup.map((id) => ({ id })) } }
+        : {}),
+      // Složky na Disku (30. 9. 2026). `set` přepíše celý seznam, takže
+      // odškrtnutá složka zmizí. Bez ohledu na roli - složka se přiděluje
+      // člověku, ne roli.
+      ...(data.slozkyDisku !== undefined
+        ? { slozkyDisku: { set: data.slozkyDisku.map((id) => ({ id })) } }
         : {}),
       ...(nextRole === 'ZVUKAR' && data.vedeStudia !== undefined
         ? { vedeStudia: { set: data.vedeStudia.map((id) => ({ id })) } }

@@ -36,7 +36,17 @@ const STRANKY: { href: string; nazev: string; popis: string }[] = [
   { href: '/backlog', nazev: 'Backlog', popis: 'co je po termínu nebo se blíží, je to i záložka v Přehledech' },
   { href: '/vykazy', nazev: 'Výkazy', popis: 'odpracované hodiny zvukařů - zápis i přehled za tým' },
   { href: '/honorare', nazev: 'Honoráře', popis: 'honoráře herce: navrženo, čeká na proplacení, zaplaceno' },
-  { href: '/nahravky', nazev: 'Nahrávky', popis: 'hotové nahrávky pro klienta ke stažení a schválení' },
+  {
+    href: '/nahravky',
+    nazev: 'Nahrávky',
+    popis:
+      'složky na Google Disku přes portál - hotové nahrávky pro klienta a od 30. 9. 2026 i naše vlastní složky (Klientská zóna, Dokumenty, Marketing), každý vidí jen ty přidělené',
+  },
+  {
+    href: '/admin/slozky',
+    nazev: 'Složky na Disku',
+    popis: 'zakládání složek, které portál nabízí v Nahrávkách; komu se která ukáže, se zaškrtává na kartě účtu',
+  },
   { href: '/objednavka', nazev: 'Objednávka', popis: 'objednávkový formulář pro klienta' },
   { href: '/pozvanky', nazev: 'Pozvánky', popis: 'pozvání herce do portálu a hlídání, kdo se ještě nepřihlásil' },
   { href: '/napoveda', nazev: 'Nápověda', popis: 'návody k portálu - celé znění, sem posílej, když je na téma návod' },

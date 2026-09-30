@@ -12,7 +12,7 @@ import { formatDatum, prelozit, prelozitS } from '@/lib/jazyk';
 export default async function UserEditPage({ params }: { params: { id: string } }) {
   const jazyk = nactiJazyk();
   const session = await getServerSession(authOptions);
-  const [user, companies, studia, ja] = await Promise.all([
+  const [user, companies, studia, ja, slozkyDisku] = await Promise.all([
     prisma.user.findUnique({
       where: { id: params.id },
       // Firma-dodavatel zalozena z herce (zadani 16. 9. 2026) - podle ni se
@@ -23,6 +23,8 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         zvukarStudia: { select: { id: true } },
         vedeStudia: { select: { id: true } },
         tabulePristup: { select: { id: true } },
+        // Složky na Disku, které ten člověk vidí (zadání 30. 9. 2026).
+        slozkyDisku: { select: { id: true } },
       },
     }),
     prisma.company.findMany({ where: { type: 'KLIENT' }, orderBy: { name: 'asc' } }),
@@ -43,6 +45,15 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           select: { superadmin: true },
         }) as Promise<{ superadmin: boolean } | null>)
       : Promise.resolve(null),
+    /**
+     * Složky na Disku k rozdávání (zadání 30. 9. 2026). Vypnuté se nenabízejí:
+     * zaškrtnout se dá jen složka, která se pak opravdu ukáže.
+     */
+    prisma.diskovaSlozka.findMany({
+      where: { aktivni: true },
+      select: { id: true, nazev: true, popis: true },
+      orderBy: [{ poradi: 'asc' }, { nazev: 'asc' }],
+    }),
   ]);
   if (!user) notFound();
 
@@ -144,6 +155,8 @@ export default async function UserEditPage({ params }: { params: { id: string } 
           zvukarStudia: user.zvukarStudia.map((s) => s.id),
           vedeStudia: (user.vedeStudia as { id: string }[]).map((s) => s.id),
           tabulePristup: (user.tabulePristup as { id: string }[]).map((s) => s.id),
+          // Složky na Disku (30. 9. 2026).
+          slozkyDisku: (user.slozkyDisku as { id: string }[]).map((s) => s.id),
           birthNumber: user.birthNumber,
           ic: user.ic,
           dic: user.dic,
@@ -167,6 +180,7 @@ export default async function UserEditPage({ params }: { params: { id: string } 
         }}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
         studia={studia}
+        slozkyDisku={slozkyDisku as { id: string; nazev: string; popis: string | null }[]}
         jsemSuperadmin={Boolean(ja?.superadmin)}
       />
     </section>

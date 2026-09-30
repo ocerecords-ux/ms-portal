@@ -164,5 +164,6 @@ Portál běží na Vercelu, data jsou v databázi. Nahrávky bydlí na **Google 
 - **Kolik jsme fakturovali?** Doklady u projektu, nebo sekce Doklady.
 - **Přišly peníze?** Doklady → Banka (kdo na ni má právo). Uhrazené faktury se označují samy, obvykle do pár minut od připsání.
 - **Proč klientovi nic nepřišlo?** Firmy → karta firmy → Notifikace.
+- **Kde jsou naše složky na Disku?** Nahrávky — vedle složky klienta se tam od 30. 9. 2026 nabízejí i naše vlastní složky (Klientská zóna, Dokumenty, Marketing). Každý vidí jen ty, které má na kartě účtu zaškrtnuté; kdo složku nemá, tomu se v přepínači vůbec neukáže. Zakládají se v Administraci → Složky na Disku. Pozor: rozhoduje to jen o tom, co ukáže portál — kdo si Disk otevře přímo v Googlu, uvidí všechno, co má jeho účet nasdílené.
 - **Jak něco udělat?** Otazník v liště — tahle Nápověda.`,
 };

@@ -484,6 +484,18 @@ model User {
   /// Clovek z tymu si tabuli otevre pod svym uctem - nemusi se prihlasovat
   /// uctem tabule ani znat jeji adresu.
   tabulePristup  Studio[] @relation("TabulePristup")
+
+  /// SLOZKY NA DISKU, KTERE TENHLE CLOVEK VIDI (zadani 30. 9. 2026:
+  /// „mame na disku slozky: Klientska zona, Dokumenty, Marketing. Potrebuju,
+  /// at nekteri uzivatele nevidi nektere slozky. Ted vidi vsechno").
+  ///
+  /// Zaskrtava se u kazdeho uctu zvlast, ne podle role: role uz rozhoduje
+  /// o sekcich portalu (pole `pristupy`) a slozky na Disku s nimi nesouvisi -
+  /// do Marketingu muze chtit jeden zvukar a druhy ne.
+  ///
+  /// Prazdno znamena ZADNA slozka navic, ne „vsechny". Slozku sve firmy vidi
+  /// klient dal (Company.driveFolderUrl) - tohle jsou slozky NAVIC.
+  slozkyDisku DiskovaSlozka[] @relation("PristupKeSlozce")
   birthNumber     String?   // RC, nebo datum narozeni jako text, pokud herec RC nema (cizinec apod.)
   ic              String?
   dic             String?
@@ -4421,4 +4433,40 @@ model CilePalubovky {
   mesicniZiskKnih Int?
 
   updatedAt DateTime @updatedAt
+}
+
+/// SLOZKA NA GOOGLE DISKU, KTEROU PORTAL NABIZI (zadani 30. 9. 2026:
+/// „mame na disku slozky: Klientska zona, Dokumenty, Marketing. Potrebuju,
+/// at nekteri uzivatele nevidi nektere slozky").
+///
+/// Zamerne samostatny model, ne dalsi promenna prostredi ani seznam v kodu:
+/// slozek bude pribyvat a kdo je vidi, se meni castěji nez kod. Zaklada se
+/// v Administraci -> Slozky na Disku.
+///
+/// POZOR: tohle rozhoduje jen o tom, co ukaze PORTAL. Kdyz se clovek prihlasi
+/// primo do Googlu pod uctem, ktery ma slozku nasdilenou, uvidi ji bez ohledu
+/// na tohle - prava na Disku se nastavuji v Googlu.
+model DiskovaSlozka {
+  id       String  @id @default(cuid())
+  /// Jak se slozka jmenuje v portalu. Nemusi se shodovat s nazvem na Disku -
+  /// portal ukazuje tenhle.
+  nazev    String
+  /// Odkaz na slozku (https://drive.google.com/drive/folders/ID). ID se z nej
+  /// vytahuje pri kazdem pouziti - viz extractDriveFolderId v lib/googleDrive.ts.
+  driveUrl String
+  /// Kratky popis pod nazvem, aby bylo jasne, co uvnitr je. Nepovinny.
+  popis    String?
+  /// Poradi v prepinaci. Mensi cislo je vys.
+  poradi   Int     @default(0)
+  /// Vypnuta slozka se uz nikomu nenabizi, ale zaskrtnuti u uctu zustavaji -
+  /// aby se daly zapnout zpatky, kdyz slo o docasne skryti.
+  aktivni  Boolean @default(true)
+
+  /// Kdo ji vidi. Prazdno = nevidi ji nikdo (krome superadmina).
+  uzivatele User[] @relation("PristupKeSlozce")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([poradi])
 }

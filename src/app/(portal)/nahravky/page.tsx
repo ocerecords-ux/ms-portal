@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { extractDriveFolderId } from '@/lib/googleDrive';
 import { isInternalRole } from '@/lib/roles';
 import { DriveBrowser } from './DriveBrowser';
+import { slozkyProUzivatele } from '@/lib/diskoveSlozkyServer';
 import { nactiJazyk } from '@/lib/jazykServer';
 import { prelozit, prelozitS } from '@/lib/jazyk';
 
@@ -15,12 +16,25 @@ export const dynamic = 'force-dynamic';
 export default async function NahravkyPage({
   searchParams,
 }: {
-  searchParams?: { projekt?: string };
+  searchParams?: { projekt?: string; slozka?: string };
 }) {
   const session = await getServerSession(authOptions);
   const jazyk = nactiJazyk();
   const companyId = session!.user.companyId;
   const company = companyId ? await prisma.company.findUnique({ where: { id: companyId } }) : null;
+
+  /**
+   * PŘIDĚLENÉ SLOŽKY (zadání 30. 9. 2026: „máme na disku složky: Klientská
+   * zóna, Dokumenty, Marketing. Potřebuju, ať někteří uživatelé nevidí
+   * některé složky. Teď vidí všechno").
+   *
+   * Nabídne se jen to, co má člověk zaškrtnuté na kartě účtu. Kdo složku
+   * nemá, o ní z portálu nezjistí ani to, že existuje - v přepínači není.
+   */
+  const slozky = await slozkyProUzivatele(session!.user.id);
+  const vybranaZAdresy = searchParams?.slozka
+    ? (slozky.find((s) => s.id === searchParams.slozka) ?? null)
+    : null;
 
   /**
    * Otevření rovnou na složce jednoho projektu (zadání 10. 9. 2026: „když
@@ -68,8 +82,26 @@ export default async function NahravkyPage({
 
   // Slozka projektu ma prednost pred slozkou firmy - klient prisel z mailu
   // o konkretnim projektu a nema se proklikavat celym archivem.
-  const zdrojSlozky = projektovaSlozka ?? company?.driveFolderUrl ?? null;
-  const folderId = zdrojSlozky ? extractDriveFolderId(zdrojSlozky) : null;
+  /**
+   * Na co se člověk dívá, když si nic nevybral. Tým Mediaspace u účtu žádnou
+   * firmu nemá, takže dřív viděl jen „zatím vám nebyla přiřazena složka" -
+   * teď se mu otevře první přidělená složka a přepínač nabídne zbytek.
+   * Klient se svou firemní složkou zůstává tam, kde byl.
+   */
+  const zvolenaSlozka =
+    vybranaZAdresy ??
+    (!projektovaSlozka && !company?.driveFolderUrl && slozky.length > 0 ? slozky[0] : null);
+
+  // Přidělená složka má přednost před vším: člověk si ji sám vybral
+  // v přepínači, takže se nemá po překreslení stránky vrátit jinam.
+  const zdrojSlozky = zvolenaSlozka
+    ? `https://drive.google.com/drive/folders/${zvolenaSlozka.rootId}`
+    : (projektovaSlozka ?? company?.driveFolderUrl ?? null);
+  const folderId = zvolenaSlozka
+    ? zvolenaSlozka.rootId
+    : zdrojSlozky
+      ? extractDriveFolderId(zdrojSlozky)
+      : null;
   const driveConfigured = Boolean(
     process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
   );
@@ -100,10 +132,62 @@ export default async function NahravkyPage({
         )}
       </div>
 
+      {/*
+        * PŘEPÍNAČ SLOŽEK (zadání 30. 9. 2026). Ukáže se, jen když je z čeho
+        * vybírat - u klienta s jednou složkou firmy by to byl jen řádek navíc.
+        * Jsou to obyčejné odkazy, ne tlačítka: složka se tak dá poslat
+        * a otevřít v nové záložce, a stránka zůstane serverová.
+        */}
+      {slozky.length > 0 && !projektovaSlozka && (
+        <nav className="flex flex-wrap gap-2 mb-6">
+          {company?.driveFolderUrl && (
+            <a
+              href="/nahravky"
+              className={`font-heading text-sm rounded-lg px-4 py-2 border transition-colors ${
+                zvolenaSlozka
+                  ? 'border-line text-muted hover:text-ink hover:border-ink'
+                  : 'border-brand-purple bg-brand-purple text-white'
+              }`}
+            >
+              {displayName || prelozit(jazyk, 'nahravky.nadpis')}
+            </a>
+          )}
+          {slozky.map((s) => (
+            <a
+              key={s.id}
+              href={`/nahravky?slozka=${encodeURIComponent(s.id)}`}
+              title={s.popis ?? undefined}
+              className={`font-heading text-sm rounded-lg px-4 py-2 border transition-colors ${
+                zvolenaSlozka?.id === s.id
+                  ? 'border-brand-purple bg-brand-purple text-white'
+                  : 'border-line text-muted hover:text-ink hover:border-ink'
+              }`}
+            >
+              {s.nazev}
+            </a>
+          ))}
+        </nav>
+      )}
+
       {zdrojSlozky && folderId && driveConfigured ? (
+        /*
+         * `key` je tu schválně (stejná chyba jako u studií v administraci
+         * 30. 9. 2026): DriveBrowser si cestu složkami drží ve vlastním
+         * stavu, který se ze vstupů počítá jen při prvním vykreslení. Bez
+         * `key` by React po přepnutí složky použil tutéž komponentu a člověk
+         * by koukal do nové složky se starou drobečkovou cestou.
+         */
         <DriveBrowser
+          key={zvolenaSlozka?.id ?? 'firma'}
           initialFolderId={folderId}
-          rootName={projektovaSlozka && projekt?.name ? projekt.name : displayName}
+          slozkaId={zvolenaSlozka?.id ?? null}
+          rootName={
+            zvolenaSlozka
+              ? zvolenaSlozka.nazev
+              : projektovaSlozka && projekt?.name
+                ? projekt.name
+                : displayName
+          }
         />
       ) : zdrojSlozky ? (
         <div className="bg-surface rounded-card border border-line p-8 flex flex-col items-start gap-4 max-w-xl mx-auto shadow-sm">

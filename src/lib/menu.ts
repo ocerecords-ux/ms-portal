@@ -39,9 +39,19 @@ export const PAGE_ACCESS: Record<string, Role[]> = {
   // veci, ke kterym maji pristup") - stranka jim ukaze JEN navody psane pro
   // jejich roli, nase interni v ni nemaji (viz vidiNavod v lib/navody.ts).
   '/napoveda': ALL_ROLES,
-  // Objednavka a Nahravky jsou klientska agenda.
+  // Objednavka je klientska agenda.
   '/objednavka': ['CLIENT'],
-  '/nahravky': ['CLIENT'],
+  /**
+   * NAHRAVKY UZ NEJSOU JEN PRO KLIENTA (zadani 30. 9. 2026: „mame na disku
+   * slozky: Klientska zona, Dokumenty, Marketing. Potrebuju, at nekteri
+   * uzivatele nevidi nektere slozky").
+   *
+   * Do tehle sekce se od tehle chvile chodi i pro nase vlastni slozky na
+   * Disku, takze uz to neni klientska agenda. Kdo zadnou slozku pridelenou
+   * nema, uvidi stejnou prazdnou hlasku jako driv - odkaz v liste si kazdy
+   * prida nebo odebere sam (tri tecky vpravo, „Upravit").
+   */
+  '/nahravky': ALL_ROLES,
   // Vykazy: zvukar svoje, Zuzo-labuzo prehled celeho tymu.
   '/vykazy': ['ADMIN', 'ZVUKAR'],
   // Kalendare studii (zadani 8. 9. 2026): Produkce a Zuzo-labuzo zapisuji,

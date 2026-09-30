@@ -85,6 +85,8 @@ type EditableUser = {
   /** Vedoucí pobočky - smí upravovat kalendář těchto studií (22. 9. 2026). */
   vedeStudia: string[];
   tabulePristup: string[];
+  /** Složky na Disku, které ten člověk vidí (zadání 30. 9. 2026). */
+  slozkyDisku: string[];
   birthNumber: string | null;
   ic: string | null;
   dic: string | null;
@@ -112,6 +114,11 @@ export function UserEditForm({
   companies: { id: string; name: string }[];
   /** Studia z administrace - z nich jsou zaškrtávátka u zvukaře. */
   studia: { id: string; shortName: string; name: string; color: string }[];
+  /**
+   * Zapnuté složky na Disku (zadání 30. 9. 2026). Zakládají se
+   * v Administraci ▸ Složky na Disku; tady se jen rozdávají.
+   */
+  slozkyDisku: { id: string; nazev: string; popis: string | null }[];
   /** Přístupy do sekcí rozdává jen superadmin (28. 9. 2026). */
   jsemSuperadmin: boolean;
 }) {
@@ -156,6 +163,8 @@ export function UserEditForm({
   const [zvukarStudia, setZvukarStudia] = useState<string[]>(user.zvukarStudia);
   const [vedeStudia, setVedeStudia] = useState<string[]>(user.vedeStudia);
   const [tabulePristup, setTabulePristup] = useState<string[]>(user.tabulePristup);
+  /** Složky na Disku - u každé role, klienty nevyjímaje (30. 9. 2026). */
+  const [slozky, setSlozky] = useState<string[]>(user.slozkyDisku);
 
   // Herec
   const [studioLocations, setStudioLocations] = useState<string[]>(user.studioLocations);
@@ -273,6 +282,15 @@ export function UserEditForm({
         else if (removePhoto) fd.set('removePhoto', 'true');
       }
       if (isKlient) fd.set('dostavaDotocenoKlient', dostavaDotocenoKlient ? '1' : '0');
+      /**
+       * Složky na Disku (30. 9. 2026) - schválně MIMO větve podle role: do
+       * Klientské zóny chodí klienti i tým. Průvodce `slozkyDiskuPrazdne` je
+       * tu ze stejného důvodu jako u studií - bez něj by odškrtnutí poslední
+       * složky server nepoznal od „tohle pole neposílám" a složka by člověku
+       * zůstala.
+       */
+      fd.set('slozkyDiskuPrazdne', '1');
+      slozky.forEach((id) => fd.append('slozkyDisku', id));
       if (isZvukar) {
         fd.set('vedeStudiaPrazdne', '1');
         vedeStudia.forEach((id) => fd.append('vedeStudia', id));
@@ -468,6 +486,48 @@ export function UserEditForm({
             </AdminField>
           </div>
         )}
+
+        {/* SLOŽKY NA DISKU (zadání 30. 9. 2026: „máme na disku složky:
+            Klientská zóna, Dokumenty, Marketing. Potřebuju, ať někteří
+            uživatelé nevidí některé složky. Teď vidí všechno").
+
+            Schválně u KAŽDÉ role, ne jen u našich lidí: do Klientské zóny
+            chodí i klienti. Kdo složku nemá zaškrtnutou, tomu se v Nahrávkách
+            ani nenabídne - o její existenci se z portálu nedozví.
+
+            Texty jsou zatím jen česky: slovník (lib/jazyk.ts) si právě bere
+            překladová dávka a psát do něj ze dvou stran by se nepotkalo.
+            Přidá se do nejbližší dávky. */}
+        <div className="w-full">
+          <AdminField
+            label="Složky na Disku"
+            hint="Které složky tenhle člověk uvidí v Nahrávkách. Prázdno znamená žádnou složku navíc - složku své firmy vidí klient dál. Práva na samotném Google Disku se tím nemění."
+          >
+            <div className="flex flex-wrap gap-2">
+              {slozkyDisku.map((slozka) => (
+                <Volba
+                  key={slozka.id}
+                  vybrano={slozky.includes(slozka.id)}
+                  onZmena={() =>
+                    setSlozky((p) => (p.includes(slozka.id) ? p.filter((x) => x !== slozka.id) : [...p, slozka.id]))
+                  }
+                  title={slozka.popis ?? slozka.nazev}
+                >
+                  <span className="text-sm font-body text-ink">{slozka.nazev}</span>
+                </Volba>
+              ))}
+              {slozkyDisku.length === 0 && (
+                <span className="text-sm font-body text-muted">
+                  Zatím není založená žádná složka - zakládají se{' '}
+                  <Link href="/admin/slozky" className="text-brand-purple underline">
+                    ve Složkách na Disku
+                  </Link>
+                  .
+                </span>
+              )}
+            </div>
+          </AdminField>
+        </div>
 
         {/* PŘÍSTUP DO SEKCÍ (zadání 28. 9. 2026: „tam mu pomocí zaškrtávacích
             polí dávám přístup jednotlivým sekcím").

@@ -161,6 +161,7 @@ export function DriveBrowser({
   token,
   jenCteni,
   odkazPripominek,
+  slozkaId,
 }: {
   initialFolderId: string;
   rootName: string;
@@ -184,11 +185,23 @@ export function DriveBrowser({
    * o který projekt jde. Prázdné = tlačítko se nikde neukáže.
    */
   odkazPripominek?: string | null;
+  /**
+   * PŘIDĚLENÁ SLOŽKA (zadání 30. 9. 2026: „máme na disku složky: Klientská
+   * zóna, Dokumenty, Marketing. Potřebuju, ať někteří uživatelé nevidí
+   * některé složky"). Když je vyplněné, prohlíží se tahle složka místo
+   * složky firmy — server si u každého dotazu znovu ověří, že na ni ten
+   * člověk má. Je to ID ZÁZNAMU v portálu, ne ID složky na Disku.
+   */
+  slozkaId?: string | null;
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
-  // Klic se lepi na KAZDOU adresu k Disku - vypis, stahovani i ZIP.
-  const klic = token ? `&k=${encodeURIComponent(token)}` : '';
+  // Lepi se na KAZDOU adresu k Disku - vypis, stahovani i ZIP. Bez toho by
+  // server u dalsiho dotazu nevedel, ve ktere slozce se clovek pohybuje,
+  // a spadl by zpatky na slozku firmy.
+  const klic =
+    (token ? `&k=${encodeURIComponent(token)}` : '') +
+    (slozkaId ? `&slozka=${encodeURIComponent(slozkaId)}` : '');
   // Sloupec akci je uzky; s tlacitkem „Pripominkovat" potrebuje vic mista.
   const sirkaAkci = odkazPripominek ? 'w-[108px] sm:w-[190px]' : 'w-[108px]';
   const [stack, setStack] = useState<{ id: string; name: string }[]>([{ id: initialFolderId, name: rootName }]);
@@ -424,7 +437,10 @@ export function DriveBrowser({
     }
     setRenameBusy(true);
     try {
-      const res = await fetch('/api/drive/rename', {
+      // Prejmenovani chodi POSTem, ale kterou slozku ma clovek otevrenou,
+      // se posila v adrese - stejne jako u vypisu (30. 9. 2026).
+      const adresa = slozkaId ? `/api/drive/rename?slozka=${encodeURIComponent(slozkaId)}` : '/api/drive/rename';
+      const res = await fetch(adresa, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId: item.id, name }),
