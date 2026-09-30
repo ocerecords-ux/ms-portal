@@ -39,6 +39,18 @@ export async function GET(_req: Request) {
     GOOGLE_DISK_nastaveno: Boolean(
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
     ),
+    // ZAPIS NA DISK (zadani 30. 9. 2026). Cteni Disku funguje uz se samotnym
+    // servisnim uctem, ale ZAPIS ne: servisni ucet nema na Disku zadne vlastni
+    // misto, takze do bezne slozky (Muj disk) nic nenahraje. Resi to bud
+    // sdileny disk, nebo delegace - token se vyda jmenem cloveka z Workspace.
+    // Kdyz uzivatel hlasi, ze se natacecí list nebo Rodny list na Disk
+    // nepropsal, tohle je prvni misto, kam se podivat.
+    GOOGLE_DELEGACE_nastavena: Boolean(process.env.GOOGLE_IMPERSONATE_EMAIL?.trim()),
+    // E-maily servisniho uctu a delegovaneho cloveka nejsou tajne (tajny je
+    // klic), ale jsou to udaje o lidech - proto jen pro spravce. Bez nich se
+    // nastaveni delegace v Google konzoli lovi naslepo.
+    GOOGLE_DELEGACE_za_koho: jeSpravce ? process.env.GOOGLE_IMPERSONATE_EMAIL?.trim() || null : undefined,
+    GOOGLE_SERVISNI_UCET: jeSpravce ? process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || null : undefined,
     // Uloziste fotek/priloh. Kdyz neni nastavene, fotka uzivatele se od
     // 8. 9. 2026 uklada rovnou do databaze (viz lib/storage.ts).
     ULOZISTE_S3_nastaveno: Boolean(

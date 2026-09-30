@@ -654,7 +654,8 @@ function popisChybyDisku(status: number, telo: string): string {
       return (
         'Složka není na sdíleném disku. Servisní účet portálu nemá vlastní místo na Disku, ' +
         'takže do osobní složky soubor uložit nemůže — přesuňte složku na sdílený disk, ' +
-        'nebo nastavte GOOGLE_IMPERSONATE_EMAIL.'
+        'nebo nastavte GOOGLE_IMPERSONATE_EMAIL na účet z našeho Google Workspace ' +
+        '(adresa na vlastní doméně, ne @gmail.com) a v Google konzoli mu povolte delegaci.'
       );
     }
     return 'Servisní účet portálu nemá do té složky právo zápisu.';
