@@ -216,6 +216,8 @@ async function main() {
   await uzavriKanalyUkoncenychProjektu();
   await pristupyPodleRoli();
   await pristupyDetaily();
+  await zvukariJenCteni();
+  await matejCernyVedeLondyn();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
   await projektGregorZCaflou();
@@ -2403,6 +2405,104 @@ async function pristupyPodleRoli() {
     await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
   } catch (err) {
     console.warn('  pristupy: doplneni podle role selhalo:', err);
+  }
+}
+
+/**
+ * ZVUKAŘI VIDÍ PROJEKTY, ALE NE ROZPOČTY (zadání 1. 10. 2026: „zvukaři mají
+ * mít nastavena práva tak, že jen vidí projekty, nevidí rozpočty apod., vidí
+ * své výkazy a vidí kalendář ke čtení").
+ *
+ * CO SE POKAZILO. Výchozí sada zvukaře obsahovala holé `PROJEKTY` bez jediného
+ * upřesnění a `maPristup` to vykládá jako „celá sekce = všechna její práva".
+ * Zvukaři tím viděli rozpočet, doklady, obchodní část karty i technické
+ * parametry. `pristupyDetaily()` (28. 9.) to pak ještě zapsal naplno do
+ * databáze, takže to bylo vidět i na zaškrtávátkách.
+ *
+ * Teď existuje `PROJEKTY.CTENI` (viz lib/pristupy.ts) a tenhle seed ho
+ * zvukařům nastaví místo těch ostatních. Kalendář zůstává ke čtení -
+ * `KALENDARE.VSICHNI_LIDE` je tam proto, aby sekce nebyla „bez upřesnění“,
+ * zapisovat (`KALENDARE.ZAPIS`) zvukař nesmí.
+ *
+ * VEDOUCÍ POBOČEK SE TO NETÝKÁ. Jejich právo měnit kalendář nejede přes tenhle
+ * seznam, ale přes `vedeStudia` na kartě účtu (viz lib/spravaKalendare.ts),
+ * takže se tím nehne.
+ *
+ * Výkazy a honoráře v seznamu sekcí nejsou - o těch rozhoduje role, zvukař je
+ * má tak jako tak.
+ */
+async function zvukariJenCteni() {
+  const ZNAMKA = 'zvukari-jen-cteni-1';
+  try {
+    if (await prisma.counter.findUnique({ where: { name: ZNAMKA } })) return;
+
+    const SADA = [
+      'PROCESY',
+      'PROJEKTY',
+      'PROJEKTY.CTENI',
+      'KALENDARE',
+      'KALENDARE.VSICHNI_LIDE',
+      'STUDIA',
+      'STUDIA.REZERVACE',
+    ];
+
+    const lide = (await prisma.user.findMany({
+      where: { role: 'ZVUKAR' as never, superadmin: false },
+      select: { id: true, email: true },
+    })) as { id: string; email: string }[];
+
+    for (const u of lide) {
+      await prisma.user.update({ where: { id: u.id }, data: { pristupy: SADA } });
+    }
+    console.log(`  prava: zvukarum (${lide.length}) nastaveno jen cteni projektu`);
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+  } catch (err) {
+    console.warn('  prava zvukaru selhala:', err);
+  }
+}
+
+/**
+ * MATĚJ ČERNÝ VEDE LONDÝN (zadání 1. 10. 2026). Stejná cesta jako u Tomáše
+ * Ilavského a Ondřeje Černého ml. - vedoucí pobočky smí upravovat kalendář
+ * svých studií, i když je jinak zvukař.
+ */
+async function matejCernyVedeLondyn() {
+  const ZNAMKA = 'vedouci-london-matej';
+  try {
+    if (await prisma.counter.findUnique({ where: { name: ZNAMKA } })) return;
+
+    const studia = (await prisma.studio.findMany({ select: { id: true, shortName: true } })) as {
+      id: string;
+      shortName: string;
+    }[];
+    // Pobočka se jmenuje „London"; kdyby se přejmenovala, bereme i „Lond".
+    const london = studia
+      .filter((s) => s.shortName.toLowerCase().includes('lond'))
+      .map((s) => ({ id: s.id }));
+
+    const matej = (await prisma.user.findFirst({
+      where: {
+        active: true,
+        AND: [
+          { name: { contains: 'Mat', mode: 'insensitive' } },
+          { name: { contains: 'Čern', mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, email: true },
+    })) as { id: string; email: string } | null;
+
+    if (!matej || london.length === 0) {
+      console.warn(
+        `  vedouci London: ${!matej ? 'Matej Cerny nenalezen' : 'studio London nenalezeno'} - zaskrtne se rucne`,
+      );
+      return;
+    }
+
+    await prisma.user.update({ where: { id: matej.id }, data: { vedeStudia: { connect: london } } });
+    console.log(`  vedouci London: ${matej.email}`);
+    await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+  } catch (err) {
+    console.warn('  vedouci London selhalo:', err);
   }
 }
 

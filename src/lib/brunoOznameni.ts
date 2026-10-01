@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { BRUNO_EMAIL } from '@/lib/brunoServer';
+import { BRUNO_EMAIL } from '@/lib/brunoUcet';
 import { komuPoslatUpozorneni } from '@/lib/chatUpozorneniServer';
 import { posliPush } from '@/lib/pushServer';
 import { spocitejPostup } from '@/lib/preposlechPostup';
@@ -47,6 +47,63 @@ export async function brunoNapisSoukrome(userId: string, text: string): Promise<
     return true;
   } catch (err) {
     console.error('Brunova soukroma zprava selhala:', err);
+    return false;
+  }
+}
+
+/**
+ * BRUNO NĚKOMU NĚCO VYŘÍDÍ (zadání 1. 10. 2026: „potřebuju, aby fungoval jako
+ * opravdový asistent" - Ondřej psal Brunovi „bude to dnes režírovat Peter
+ * Dratva, já jsem doma a jsem nemocný, dáš mu vědět?" a Bruno odpověděl, že
+ * zprávy posílat neumí).
+ *
+ * NIKDO SE ZA NIKOHO NEVYDÁVÁ. Zpráva přijde od Bruna a je v ní napsané, kdo
+ * ji vzkazuje - příjemce tak hned ví, že to není Brunův nápad, a může se
+ * obrátit na správného člověka. Vydávat se za odesílatele by znamenalo, že
+ * se v chatu nedá věřit podpisu, a to je cena, kterou platit nechceme.
+ *
+ * Cinkne stejně jako zpráva od člověka (zvoneček i mobil) - vyřízený vzkaz,
+ * o kterém se příjemce dozví zítra, je k ničemu.
+ */
+export async function brunoVyridVzkaz(
+  odJmeno: string,
+  prijemceId: string,
+  text: string,
+): Promise<boolean> {
+  try {
+    const bruno = await prisma.user.findUnique({ where: { email: BRUNO_EMAIL }, select: { id: true } });
+    if (!bruno || bruno.id === prijemceId) return false;
+
+    const telo = `**${odJmeno} vzkazuje:**\n\n${text}`;
+    const poslano = await brunoNapisSoukrome(prijemceId, telo);
+    if (!poslano) return false;
+
+    const kanal = await prisma.conversation.findFirst({
+      where: {
+        kind: 'SOUKROMA',
+        AND: [{ members: { some: { userId: bruno.id } } }, { members: { some: { userId: prijemceId } } }],
+      },
+      select: { id: true },
+    });
+    if (!kanal) return true;
+
+    const prijemci = await komuPoslatUpozorneni([prijemceId], {
+      conversationId: kanal.id,
+      druh: 'SOUKROMA',
+      body: telo,
+      parentId: null,
+    });
+    if (prijemci.length > 0) {
+      void posliPush(prijemci, {
+        titulek: 'Bruno',
+        text: `${odJmeno} vzkazuje: ${text.slice(0, 120)}`,
+        odkaz: `/chat?konverzace=${kanal.id}`,
+        znacka: `chat-${kanal.id}`,
+      });
+    }
+    return true;
+  } catch (err) {
+    console.error('Bruno: vzkaz se nepodarilo vyridit:', err);
     return false;
   }
 }

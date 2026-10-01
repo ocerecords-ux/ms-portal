@@ -6,6 +6,7 @@ import { canViewCalendar, canManageCalendar } from '@/lib/roles';
 import { nactiPorady } from '@/lib/poradyServer';
 import { utcParts, zonedToUtc } from '@/lib/calendar';
 import { bezTitulu } from '@/lib/jmena';
+import { brunoVyridVzkaz } from '@/lib/brunoOznameni';
 import type { Role } from '@prisma/client';
 
 /**
@@ -80,6 +81,25 @@ export const NASTROJE = [
     input_schema: { type: 'object' as const, properties: {} },
   },
   {
+    name: 'posli_zpravu',
+    description:
+      'Napíše někomu z týmu do chatu v portálu. Použij vždycky, když tě ten, kdo píše, požádá, ať někomu něco vyřídíš, dáš vědět nebo vzkážeš - „dáš mu vědět?", „napiš Karolíně", „vyřiď Petrovi". Nejdřív si rozmysli, co se doopravdy stalo a co z toho pro příjemce plyne, a napiš mu to souvisle, ne jen zopakuj zadání. Zpráva dorazí od tebe a je v ní napsané, kdo ji vzkazuje.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        komu: {
+          type: 'string',
+          description: 'Jméno nebo e-mail člověka z týmu. Stačí příjmení, když je jednoznačné.',
+        },
+        text: {
+          type: 'string',
+          description: 'Co mu napsat - celou větou, aby tomu rozuměl bez doptávání.',
+        },
+      },
+      required: ['komu', 'text'],
+    },
+  },
+  {
     name: 'hledej_navod',
     description:
       'Prohledá návody k portálu (Nápověda) a vrátí kus textu i s odkazem. Používej, když se někdo ptá, jak se co dělá nebo kde co je.',
@@ -111,6 +131,8 @@ export async function spustNastroj(
         return await mojeUkoly(kdo);
       case 'hledej_navod':
         return await hledejNavod(String(vstup.dotaz ?? ''), kdo);
+      case 'posli_zpravu':
+        return await posliZpravu(String(vstup.komu ?? ''), String(vstup.text ?? ''), kdo);
       default:
         return `Takový nástroj nemám: ${jmeno}`;
     }
@@ -338,4 +360,54 @@ async function hledejNavod(dotaz: string, kdo: KdoSePta): Promise<string> {
       return `NÁVOD: ${n.nazev}\nodkaz: /napoveda/${n.slug}\n${n.perex ? `${n.perex}\n` : ''}${od > 0 ? '…' : ''}${vyrez}…`;
     })
     .join('\n\n');
+}
+
+/**
+ * BRUNO VYŘÍDÍ VZKAZ (zadání 1. 10. 2026: „potřebuju, aby fungoval jako
+ * opravdový asistent. Tohle jsou základní věci, které by měl umět").
+ *
+ * Jediný nástroj, kterým Bruno něco ZAPÍŠE mimo kanál projektu. Pojistky:
+ *
+ *  - Píše se jen lidem z týmu a hercům, tedy těm, komu by ten člověk napsal
+ *    i sám v chatu. Klientům Bruno nepíše - na ně jdou zprávy z projektu,
+ *    kde je nad nimi kontrola.
+ *  - Robotům se nepíše (psal by sám sobě) a sám sobě taky ne.
+ *  - Když jméno sedí na víc lidí, nic se neodešle a Bruno se zeptá. Vzkaz
+ *    odeslaný nesprávnému člověku se nedá vzít zpátky.
+ *  - V odeslané zprávě je napsané, kdo ji vzkazuje (viz brunoVyridVzkaz).
+ */
+async function posliZpravu(komu: string, text: string, kdo: KdoSePta): Promise<string> {
+  const hledane = komu.trim();
+  if (hledane.length < 2) return 'Komu to mám napsat? Potřebuju jméno nebo e-mail.';
+  if (text.trim().length === 0) return 'Prázdnou zprávu neposílám - napiš, co mu mám vyřídit.';
+
+  const lide = (await prisma.user.findMany({
+    where: {
+      active: true,
+      role: { in: ['ADMIN', 'ZVUKAR', 'PRODUKCE', 'HEREC'] as Role[] },
+      OR: [
+        { name: { contains: hledane, mode: 'insensitive' } },
+        { email: { contains: hledane, mode: 'insensitive' } },
+      ],
+    },
+    select: { id: true, name: true, email: true },
+    take: 5,
+  })) as { id: string; name: string | null; email: string }[];
+
+  const bezSebe = lide.filter((u) => u.id !== kdo.userId);
+  if (bezSebe.length === 0) return `V portálu nikoho jménem „${hledane}" nevidím. Zkus celé jméno nebo e-mail.`;
+  if (bezSebe.length > 1) {
+    const jmena = bezSebe.map((u) => u.name || u.email).join(', ');
+    return `Na „${hledane}" mi sedí víc lidí: ${jmena}. Komu z nich to mám napsat?`;
+  }
+
+  const prijemce = bezSebe[0];
+  const ja = (await prisma.user.findUnique({
+    where: { id: kdo.userId },
+    select: { name: true, email: true },
+  })) as { name: string | null; email: string } | null;
+
+  const poslano = await brunoVyridVzkaz(bezTitulu(ja?.name) || ja?.email || 'Někdo z týmu', prijemce.id, text.trim());
+  if (!poslano) return 'Zprávu se odeslat nepodařilo, zkus to prosím přes chat napřímo.';
+  return `ODESLÁNO. ${prijemce.name || prijemce.email} dostal zprávu do chatu a cinklo mu to. Napiš, že je vyřízeno, a zopakuj, co jsi mu vzkázal.`;
 }

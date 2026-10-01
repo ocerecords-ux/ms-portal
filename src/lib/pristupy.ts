@@ -74,6 +74,23 @@ export const SEKCE: Sekce[] = [
     popis: 'Seznam projektů a jejich detail - stav, herci, termíny, výstupy.',
     cesty: ['/projekty', '/admin/nastaveni/projekty'],
     prava: [
+      /**
+       * JEN KE ČTENÍ (zadání 1. 10. 2026: „zvukaři mají mít nastavena práva
+       * tak, že jen vidí projekty, nevidí rozpočty apod.").
+       *
+       * Do téhle chvíle nešlo zapsat „sekci ano, nic dalšího ne": kdo měl
+       * sekci a žádné její právo, tomu `maPristup` dal VŠECHNA (viz pravidlo
+       * o celé sekci níž). Zvukař s holým `PROJEKTY` tak viděl rozpočet,
+       * doklady i obchodní část karty - přesně to, co vidět neměl.
+       *
+       * Tohle právo nedává nic navíc. Je tu proto, aby „jen čtení" byla
+       * zaškrtnutelná volba, a ne mezera, kterou si portál vyloží naopak.
+       */
+      {
+        klic: 'PROJEKTY.CTENI',
+        nazev: 'Vidí projekty (jen ke čtení)',
+        popis: 'Seznam a detail projektu. Bez dalších zaškrtávátek nic víc - žádný rozpočet, doklady ani klient.',
+      },
       {
         klic: 'PROJEKTY.UPRAVY',
         nazev: 'Upravuje údaje projektu',
@@ -443,7 +460,20 @@ export const VYCHOZI_PRISTUPY: Record<string, string[]> = {
   ],
   ZVUKAR: [
     'PROCESY',
+    /**
+     * Projekty JEN KE ČTENÍ (1. 10. 2026). Dřív tu bylo holé `PROJEKTY`,
+     * což portál vykládal jako „celá sekce bez upřesnění = všechna práva" -
+     * a zvukař tím dostal rozpočet, doklady i klienta. `PROJEKTY.CTENI` to
+     * zavírá: sekci vidí, nic z ní nepřibývá.
+     */
     'PROJEKTY',
+    'PROJEKTY.CTENI',
+    /**
+     * Kalendář jen ke čtení. `KALENDARE.VSICHNI_LIDE` je tu právě proto, aby
+     * sekce nebyla „bez upřesnění" - zapisovat (`KALENDARE.ZAPIS`) zvukař
+     * nesmí. Vedoucí poboček jsou výjimka a nejede přes tenhle seznam, ale
+     * přes Vedoucí pobočky na kartě účtu (viz lib/spravaKalendare.ts).
+     */
     'KALENDARE',
     'KALENDARE.VSICHNI_LIDE',
     'STUDIA',

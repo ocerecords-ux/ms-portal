@@ -247,7 +247,16 @@ export default async function KalendarPage({
             where: { active: true, OR: [{ role: { in: ['HEREC', 'ZVUKAR'] } }, { takyZvukar: true }] },
             // Studia zvukare (zadani 20. 9. 2026) - podle nich se v nabidce
             // radi nejdriv ti, kteri v tom studiu toci.
-            select: { id: true, name: true, email: true, role: true, takyZvukar: true, zvukarStudia: { select: { id: true } } },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              takyZvukar: true,
+              // Kdo stříhá externě, nesedí v žádné místnosti (1. 10. 2026).
+              strihaExterne: true,
+              zvukarStudia: { select: { id: true } },
+            },
             orderBy: [{ name: 'asc' }],
           })
           .catch(() => []),
@@ -260,13 +269,24 @@ export default async function KalendarPage({
     .map((u) => ({ id: u.id, label: bezTitulu(u.name) || u.email }));
   const zvukari = lideProUdalost
     .filter((u) => u.role === 'ZVUKAR' || u.takyZvukar)
-    // Kdo je „i zvukař" a studia zaškrtnutá nemá (Peter Dratva), nabízí se
-    // ve všech studiích.
+    /**
+     * KDO SE NABÍZÍ VŠUDE (opraveno 1. 10. 2026: „a proč Matěj Suk nejde
+     * zapsat do kalendáře?").
+     *
+     * Do teď platilo „všude" jen pro toho, kdo NENÍ v roli zvukař (Peter
+     * Dratva). Zvukař bez zaškrtnutého studia tím vypadl ze všech studií
+     * naráz a nešel vybrat nikde - což potkalo Matěje Suka, který stříhá
+     * externě a v žádné místnosti nesedí.
+     *
+     * Teď je to obráceně a dává to smysl: žádné zaškrtnuté studio znamená
+     * „nikam ho to neváže", ne „nikam nepatří". A kdo stříhá externě, se
+     * nabízí všude vždycky - jeho práce na místnosti nezávisí.
+     */
     .map((u) => ({
       id: u.id,
       label: u.name || u.email,
       studia: u.zvukarStudia.map((s) => s.id),
-      vsude: u.role !== 'ZVUKAR' && u.zvukarStudia.length === 0,
+      vsude: u.zvukarStudia.length === 0 || Boolean(u.strihaExterne),
     }));
 
   /**

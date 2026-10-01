@@ -7,6 +7,7 @@ import { nactiPrirucku } from '@/lib/brunoPrirucka';
 import { napovedaProRoli } from '@/lib/brunoNapoveda';
 import { brunoOdpoved } from '@/lib/brunoOdpoved';
 import { bezTitulu } from '@/lib/jmena';
+import { BRUNO_EMAIL } from '@/lib/brunoUcet';
 
 /**
  * BRUNO — asistent studia (zadání 12. 9. 2026: „pojďme přidat našeho firemního
@@ -39,8 +40,12 @@ import { bezTitulu } from '@/lib/jmena';
 const MODEL = process.env.BRUNO_MODEL || 'claude-sonnet-4-5';
 const ADRESA = 'https://api.anthropic.com/v1/messages';
 
-/** Účet, pod kterým Bruno píše. Zakládá ho seed. */
-export const BRUNO_EMAIL = 'bruno@mediaspace.cz';
+/**
+ * Účet, pod kterým Bruno píše. Bydlí v lib/brunoUcet.ts (bez importů, kvůli
+ * kruhu mezi nástroji a oznámeními); tady se jen přeposílá, ať nemusí měnit
+ * import každý, kdo ho dosud bral odsud.
+ */
+export { BRUNO_EMAIL };
 
 /**
  * Kolik posledních zpráv dostane k posouzení. Od 23. 9. 2026 víc - v soukromé
