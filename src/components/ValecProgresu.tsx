@@ -61,7 +61,16 @@ export function ValecProgresu({
   // Kolik zbyva dotocit (19. 9. 2026) - u dotoceneho a souhrnu vic hercu ne.
   const zbyva = !progres.dotoceno && progres.zbyva != null ? zbyvaText(jazyk, progres.zbyva) : null;
   return (
-    <div className="flex flex-col gap-1 min-w-[90px] w-full" title={zbyva ? `${popis} · ${zbyva}` : popis}>
+    /**
+     * V tabulce je šířka sloupce dána procentem, ne obsahem (`table-fixed`),
+     * takže `min-w` z válce udělalo prvek širší, než je buňka, a kreslil se
+     * přes sousední sloupec (oprava 1. 10. 2026 - přehled klienta).
+     * V kompaktním režimu proto žádné minimum: válec se zúží s buňkou.
+     */
+    <div
+      className={`flex flex-col gap-1 w-full ${kompaktni ? 'min-w-0' : 'min-w-[90px]'}`}
+      title={zbyva ? `${popis} · ${zbyva}` : popis}
+    >
       <div className={`flex items-center ${kompaktni ? 'gap-2' : 'gap-4'}`}>
         <div
           className={`${velky ? 'h-4' : 'h-3'} flex-1 rounded-pill bg-field border border-line overflow-hidden`}

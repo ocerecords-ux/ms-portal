@@ -1,3 +1,6 @@
+'use client';
+
+import { Fragment, useState } from 'react';
 import Link from 'next/link';
 import { ZnackaNabidky, type StavNabidky } from '@/lib/nabidkaReklamy';
 import { ZnackyDokladu, type DokladyProjektu } from '@/lib/dokladyUProjektu';
@@ -18,7 +21,7 @@ import { initials } from '@/lib/chat';
 import { barvaStavu, stavJeOdevzdany } from '@/lib/stavyProjektu';
 import { IkonaTypu, KresbaIkony, tridaBarvyIkony } from '@/lib/ikonyTypu';
 import { HerciBunka } from './HerciBunka';
-import { TerminyKlienta } from './TerminyKlienta';
+import { SeznamTerminu, TlacitkoTerminu } from './TerminyKlienta';
 import type { TerminKlienta } from '@/lib/terminyKlientaServer';
 import { StavProjektuSelect } from './StavProjektuSelect';
 import { OdkazTlacitko } from '../components/OdkazTlacitko';
@@ -248,6 +251,25 @@ export function ProjectsTable({
   const showPreposlech = preposlech !== undefined;
   const showSchvaleni = schvaleni !== undefined;
   const showProgres = progres !== undefined;
+
+  /**
+   * ROZBALENÝ NATÁČECÍ PLÁN (upřesnění 1. 10. 2026: „chci, aby se posunul
+   * další projekt, který je pod tím, dolů a udělalo se mezi nimi místo a tam
+   * se to zobrazí").
+   *
+   * Otevřený je vždycky nejvýš jeden - dva rozbalené plány pod sebou by
+   * z přehledu udělaly seznam termínů. Zavírá se týmž tlačítkem.
+   */
+  const [otevreneTerminy, setOtevreneTerminy] = useState<string | null>(null);
+  const pocetSloupcu =
+    6 +
+    (showKontakt ? 1 : 0) +
+    (showTerminy ? 1 : 0) +
+    (showProgres ? 1 : 0) +
+    (showPreposlech ? 2 : 0) +
+    (showRodnyList ? 1 : 0) +
+    (showSchvaleni ? 1 : 0);
+
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
       {/* Stejne jako u interniho prehledu: procentni sirky, jeden radek na
@@ -331,24 +353,14 @@ export function ProjectsTable({
           <tbody>
             {projects.length === 0 && (
               <tr>
-                <td
-                  colSpan={
-                    6 +
-                    (showKontakt ? 1 : 0) +
-                    (showTerminy ? 1 : 0) +
-                    (showProgres ? 1 : 0) +
-                    (showPreposlech ? 2 : 0) +
-                    (showRodnyList ? 1 : 0) +
-                    (showSchvaleni ? 1 : 0)
-                  }
-                  className="px-4 py-8 text-center text-muted text-sm font-body"
-                >
+                <td colSpan={pocetSloupcu} className="px-4 py-8 text-center text-muted text-sm font-body">
                   {emptyText}
                 </td>
               </tr>
             )}
             {projects.map((p) => (
-              <tr key={p.id} className={TRIDA_RADKU}>
+              <Fragment key={p.id}>
+              <tr className={TRIDA_RADKU}>
                 {/* NAZEV KNIHY MUSI BYT CELY (zadani 12. 9. 2026: „nazvy knih
                     musi byt cele. Kdyz to nevejde, dej to na dalsi radek").
                     Radek se o to zvysi - 52 px je u tabulky minimum, ne strop. */}
@@ -398,8 +410,18 @@ export function ProjectsTable({
                   )}
                 </td>
                 {showTerminy && (
-                  <td className="px-4 py-2 align-middle">
-                    <TerminyKlienta terminy={terminy?.[String(p.id)] ?? []} />
+                  // `overflow-hidden`: tlačítko se nesmí dostat přes sousední
+                  // sloupec, i kdyby byl popisek delší, než se do buňky vejde.
+                  <td className="px-4 py-2 align-middle overflow-hidden">
+                    <TlacitkoTerminu
+                      terminy={terminy?.[String(p.id)] ?? []}
+                      otevreno={otevreneTerminy === String(p.id)}
+                      onPrepnout={() =>
+                        setOtevreneTerminy((soucasne) =>
+                          soucasne === String(p.id) ? null : String(p.id),
+                        )
+                      }
+                    />
                   </td>
                 )}
                 {showProgres && (
@@ -468,6 +490,21 @@ export function ProjectsTable({
                   </td>
                 )}
               </tr>
+
+              {/*
+                ROZBALENÝ NATÁČECÍ PLÁN JAKO VLASTNÍ ŘÁDEK (1. 10. 2026).
+                Přes celou šířku tabulky, takže se nemá s čím překrývat,
+                a protože je to opravdový řádek, odsune další projekt dolů -
+                přesně jak to má vypadat.
+              */}
+              {showTerminy && otevreneTerminy === String(p.id) && (
+                <tr className="border-t border-line bg-surfaceSoft">
+                  <td colSpan={pocetSloupcu} className="px-4 py-3">
+                    <SeznamTerminu terminy={terminy?.[String(p.id)] ?? []} />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -1025,16 +1062,28 @@ const VAHA_SLOUPCE: Record<string, number> = {
    * počítané na obyčejné datum přestal vejít. Bere se z data vydání, které
    * zvýraznění nemá.
    */
-  endDate: 11,
-  releaseDate: 7,
+  endDate: 12,
+  /**
+   * Datum vydání se v klientském přehledu usekávalo na „30. 9. 20…"
+   * (oprava 1. 10. 2026) - při váze 7 se do buňky celé datum nevešlo.
+   */
+  releaseDate: 9,
   // Od 18. 9. 2026 je tu ikona, ne slovo - sloupec uz nemusi byt siroky.
   priority: 4,
   projectType: 8,
   pageCount: 6,
-  // Progres natáčení - válec s procenty (19. 9. 2026).
-  progres: 13,
-  // Natáčecí plán u klienta (30. 9. 2026) - tlačítko s počtem termínů.
-  terminy: 11,
+  /**
+   * Progres natáčení - válec s procenty (19. 9. 2026). Zvětšeno 1. 10. 2026:
+   * při váze 13 se válec s číslem do buňky nevešel a kreslil se přes
+   * sousední sloupec.
+   */
+  progres: 15,
+  /**
+   * Natáčecí plán u klienta (30. 9. 2026) - tlačítko s počtem termínů.
+   * Popisek „Zobrazit termíny" je dlouhý; při váze 11 z buňky vylézal
+   * a překrýval progres (oprava 1. 10. 2026).
+   */
+  terminy: 15,
   // Kdo ze zakaznikovy firmy zakazku vede (24. 9. 2026) - vejde se jmeno
   // i prijmeni, jinak by z „Radka Kopecká" zbylo „Radka K…".
   kontakt: 14,
