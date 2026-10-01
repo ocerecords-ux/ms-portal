@@ -165,6 +165,7 @@ export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy
       status: true,
       studioId: true,
       nabizenaStudia: true,
+      vyrazenaMista: true,
       actorUserId: true,
       periodFrom: true,
       periodTo: true,
@@ -189,7 +190,19 @@ export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy
     vlastniDrzene,
   });
 
-  const chtene = new Map(volna.map((m) => [klicMista(m), m]));
+  /**
+   * TERMÍNY VYHOZENÉ RUKOU (zadání 1. 10. 2026 od Heleny: „bylo by fajn,
+   * kdybych měla manuálně možnost tam nějaké termíny odebrat" - nabídka do
+   * ledna nereflektovala Vánoce a silvestr).
+   *
+   * Filtruje se TADY, protože tohle je jediné místo, kde se nabídka skládá.
+   * Kdyby se termín jen smazal, obnova by ho při příštím otevření stránky
+   * zase přidala - volné místo v kalendáři pořád je.
+   */
+  const vyrazene = new Set((request.vyrazenaMista as string[] | null) ?? []);
+  const volnaBezVyrazenych = vyrazene.size > 0 ? volna.filter((m) => !vyrazene.has(klicMista(m))) : volna;
+
+  const chtene = new Map(volnaBezVyrazenych.map((m) => [klicMista(m), m]));
   // Vlastni navrhy herce se neprepocitavaji - nejsou ze zkratek studia a
   // obnova by je jinak smazala hned po zapsani.
   const nabidnute = request.slots.filter((s) => s.state === 'OFFERED' && s.note !== POZNAMKA_NAVRH_HERCE);
@@ -197,7 +210,7 @@ export async function obnovVolnaMista(requestId: string): Promise<VysledekObnovy
   const uzJsou = new Set(nabidnute.map(klicMista));
 
   const odebrat = nabidnute.filter((s) => !chtene.has(klicMista(s))).map((s) => s.id);
-  const pridat = volna.filter((m) => !uzJsou.has(klicMista(m)));
+  const pridat = volnaBezVyrazenych.filter((m) => !uzJsou.has(klicMista(m)));
 
   if (odebrat.length > 0 || pridat.length > 0) {
     await prisma.$transaction([

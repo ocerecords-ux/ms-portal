@@ -2578,6 +2578,18 @@ model RecordingRequest {
   /// studia ve stejnem meste.
   nabizenaStudia String[] @default([])
 
+  /// TERMÍNY, KTERÉ PRODUKCE Z NABÍDKY RUČNĚ VYHODILA (zadání 1. 10. 2026,
+  /// Helena Rychlík: „bylo by fajn, kdybych měla manuálně možnost tam nějaké
+  /// termíny odebrat. Teď třeba posílám termín Richardovi a chtěla jsem mu
+  /// poslat nabídku až do ledna, ale ty termíny nereflektují Vánoce a
+  /// silvestr").
+  ///
+  /// Nabídka se při každém otevření přepočítává z volných míst v kalendáři,
+  /// takže smazaný termín by se hned vrátil. Proto se vyhození pamatuje tady:
+  /// klíč místa (`studioId|začátek|konec`, viz klicMista v lib/volnaMista.ts)
+  /// se z nabídky vynechá, dokud ho produkce nevrátí zpátky.
+  vyrazenaMista String[] @default([])
+
   /// Normostrany pro TOHOTO herce. Predvyplni se z projektu, da se prepsat.
   pageCount        Int?
   /// Kolik terminu musi herec vybrat. Uklada se natvrdo - pozdejsi zmena

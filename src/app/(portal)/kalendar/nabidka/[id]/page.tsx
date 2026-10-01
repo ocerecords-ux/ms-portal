@@ -83,6 +83,9 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
         }}
         slots={request.slots.map((s) => ({
           id: s.id,
+          // Klíč místa se skládá ze studia a času (viz klicMista) - produkce
+          // podle něj termín vyhazuje z nabídky (1. 10. 2026).
+          studioId: s.studioId,
           start: s.start.toISOString(),
           end: s.end.toISOString(),
           state: s.state,
@@ -93,6 +96,7 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
               ? { start: s.prebookStart.toISOString(), end: s.prebookEnd.toISOString() }
               : null,
         }))}
+        vyrazena={(request.vyrazenaMista as string[] | null) ?? []}
         studiaNabidky={obnova?.studia.map((s) => s.name) ?? [request.studio.name]}
         studios={studios.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
         historie={request.events.map((e) => ({

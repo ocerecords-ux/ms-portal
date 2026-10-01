@@ -22,6 +22,13 @@ const schema = z.object({
   periodTo: z.string().trim().min(8).optional(),
   note: z.string().trim().max(2000).nullable().optional(),
   cancel: z.boolean().optional(),
+  /**
+   * RUČNÍ ODEBRÁNÍ TERMÍNU Z NABÍDKY (zadání 1. 10. 2026 od Heleny). Posílá se
+   * klíč místa ze seznamu - `studioId|začátek|konec`, viz klicMista.
+   * `vratit` ho zase vrátí mezi nabízené.
+   */
+  vyradit: z.string().trim().min(10).max(200).optional(),
+  vratit: z.string().trim().min(10).max(200).optional(),
 });
 
 function toDate(value: string, endOfDay = false): Date | null {
@@ -70,6 +77,53 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         type: 'CANCELLED',
         fromStatus: request.status,
         toStatus: 'CANCELLED',
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    /**
+     * ODEBRÁNÍ A VRÁCENÍ TERMÍNU (zadání 1. 10. 2026 od Heleny: „kdybych do
+     * toho seznamu prostě mohla sáhnout a nějaký termíny odebrat, protože se
+     * může stát, že to bude z jakýchkoliv důvodů potřeba").
+     *
+     * Vyhození se musí PAMATOVAT, ne jen smazat: nabídka se přepočítává
+     * z volných míst v kalendáři, takže smazaný termín by se při příštím
+     * otevření stránky vrátil. Seznam pak respektuje obnovVolnaMista.
+     */
+    if (d.vyradit || d.vratit) {
+      const soucasne = new Set(((request.vyrazenaMista as string[] | null) ?? []));
+      if (d.vyradit) soucasne.add(d.vyradit);
+      if (d.vratit) soucasne.delete(d.vratit);
+
+      await prisma.$transaction(async (tx) => {
+        await tx.recordingRequest.update({
+          where: { id: request.id },
+          data: { vyrazenaMista: [...soucasne] },
+        });
+        /**
+         * Smaže se JEN ten jeden termín, ne celá nabídka. Vlastní návrhy herce
+         * se totiž při obnově nepřidávají zpátky (nevycházejí ze zkratek
+         * studia), takže plošné smazání by je tiše zahodilo.
+         */
+        if (d.vyradit) {
+          const [studioId, odISO, doISO] = d.vyradit.split('|');
+          const od = new Date(odISO ?? '');
+          const doo = new Date(doISO ?? '');
+          if (studioId && !Number.isNaN(od.getTime()) && !Number.isNaN(doo.getTime())) {
+            await tx.recordingSlot.deleteMany({
+              where: { requestId: request.id, state: 'OFFERED', studioId, start: od, end: doo },
+            });
+          }
+        }
+      });
+
+      await obnovVolnaMista(request.id);
+      await recordEvent({
+        requestId: request.id,
+        userId: session.user.id,
+        actorLabel: session.user.name || session.user.email,
+        type: 'SLOTS_REFRESHED',
+        note: d.vyradit ? 'Termín odebrán z nabídky ručně.' : 'Odebraný termín vrácen do nabídky.',
       });
       return NextResponse.json({ ok: true });
     }

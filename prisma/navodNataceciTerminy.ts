@@ -44,6 +44,7 @@ Tlačítkem **Odeslat herci** se nabídka založí a rovnou odejde e-mailem. Kdy
 - **Vynechá se** všechno, co je v kalendáři obsazené: potvrzené a držené termíny jiných nabídek, jakákoli událost ve studiu (natáčení, střih, casting, svátek, údržba) a jiné natáčení téhož herce.
 - **Jedno místo za město.** Když je stejný čas volný v obou brněnských studiích, herec ho uvidí jen jednou a patří **Brnu I**. Brno II dostane jen tehdy, když je Brno I v tu dobu obsazené.
 - Nabídka se srovnává s kalendářem **pokaždé, když ji kdo otevře** — co se mezitím obsadí, zmizí; co se uvolní, přibude.
+- **Termín jde z nabídky vyhodit ručně** (1. 10. 2026): v seznamu nabídnutých termínů je u každého křížek. Hodí se na Vánoce, silvestr nebo cokoliv, co kalendář nezná — nabídka do ledna jinak nabídne i 24. prosince. Vyhozené termíny se vypíšou pod seznamem a tlačítkem **Vrátit** je dáte zpátky. Protože se nabídka přepočítává při každém otevření, pamatuje si portál vyhozené termíny zvlášť — jinak by se hned vrátily. Vyhazovat jde **jen dokud nabídka neodešla herci**; potom už si z ní vybírá on.
 
 # 3. Výběr hercem
 

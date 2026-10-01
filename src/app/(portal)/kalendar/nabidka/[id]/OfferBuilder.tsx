@@ -43,6 +43,8 @@ type Request = {
 
 type Slot = {
   id: string;
+  /** Studio termínu - spolu s časem tvoří klíč místa (viz klicMista). */
+  studioId: string;
   start: string;
   end: string;
   state: string;
@@ -102,12 +104,15 @@ const KLICE_STAVU_TERMINU: Record<string, string> = {
 export function OfferBuilder({
   request,
   slots,
+  vyrazena,
   studiaNabidky,
   studios,
   historie,
 }: {
   request: Request;
   slots: Slot[];
+  /** Klíče termínů, které produkce z nabídky ručně vyhodila (1. 10. 2026). */
+  vyrazena: string[];
   /** Studia, ze kterých se nabízí - lokace herce plus studio nabídky. */
   studiaNabidky: string[];
   studios: { id: string; name: string; color?: string | null }[];
@@ -133,6 +138,54 @@ export function OfferBuilder({
   const [vzkaz, setVzkaz] = useState('');
 
   const nabidnute = slots.filter((s) => s.state === 'OFFERED');
+
+  /**
+   * ODEBRÁNÍ TERMÍNU Z NABÍDKY (zadání 1. 10. 2026 od Heleny: „posílám termín
+   * Richardovi a chtěla jsem mu poslat nabídku až do ledna, ale ty termíny
+   * nereflektují Vánoce a silvestr").
+   *
+   * Klíč musí být TENTÝŽ, který skládá klicMista na serveru - jinak by se
+   * vyhozený termín při obnově nabídky vrátil.
+   */
+  const klicSlotu = (s: Slot) => `${s.studioId}|${s.start}|${s.end}`;
+
+  async function zmenVyrazeni(telo: { vyradit: string } | { vratit: string }) {
+    setBusy(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/kalendar/nabidky/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(telo),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || 'Termín se nepodařilo změnit.');
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError('Termín se nepodařilo změnit.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** „út 24. 12. · 9:00–13:00" z klíče místa, ať jde vrátit i bez termínu. */
+  function popisKlice(klic: string): string {
+    const [, odISO, doISO] = klic.split('|');
+    if (!odISO || !doISO) return klic;
+    const den = new Intl.DateTimeFormat(kodJazyka(jazyk), {
+      timeZone: request.timezone,
+      weekday: 'short',
+      day: 'numeric',
+      month: 'numeric',
+    }).format(new Date(odISO));
+    return `${den} · ${minutesToTime(minutesInZone(new Date(odISO), request.timezone))}–${minutesToTime(
+      minutesInZone(new Date(doISO), request.timezone),
+    )}`;
+  }
   const vybrane = slots.filter((s) => s.state === 'SELECTED' || s.state === 'CONFIRMED');
 
   /**
@@ -475,7 +528,7 @@ export function OfferBuilder({
                   <li className="text-sm font-body text-muted">{t('nabidkaTerminu.vzalVsechny')}</li>
                 )}
                 {nabidnute.map((s) => (
-                  <li key={s.id} className="text-sm font-body text-muted">
+                  <li key={s.id} className="text-sm font-body text-muted flex items-center gap-2 group">
                     <span className="capitalize">
                       {new Intl.DateTimeFormat(kodJazyka(jazyk), {
                         timeZone: request.timezone,
@@ -489,9 +542,48 @@ export function OfferBuilder({
                       {minutesToTime(minutesInZone(new Date(s.start), request.timezone))}–
                       {minutesToTime(minutesInZone(new Date(s.end), request.timezone))}
                     </span>
+                    {/* Odebrání termínu z nabídky (1. 10. 2026). Po odeslání
+                        herci už se seznamem nehýbeme - ten už si z něj vybírá. */}
+                    {!locked && !request.sentAt && (
+                      <button
+                        type="button"
+                        onClick={() => void zmenVyrazeni({ vyradit: klicSlotu(s) })}
+                        disabled={busy}
+                        title="Odebrat z nabídky"
+                        aria-label="Odebrat z nabídky"
+                        className="ml-auto text-xs font-heading text-muted hover:text-danger transition-colors disabled:opacity-50"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
+
+              {vyrazena.length > 0 && (
+                <div className="mt-4 border-t border-line pt-3">
+                  <p className="text-xs font-heading font-semibold text-muted uppercase tracking-wide m-0 mb-2">
+                    Odebráno z nabídky ({vyrazena.length})
+                  </p>
+                  <ul className="list-none m-0 p-0 flex flex-col gap-1">
+                    {vyrazena.map((klic) => (
+                      <li key={klic} className="text-sm font-body text-muted flex items-center gap-2">
+                        <span className="capitalize line-through">{popisKlice(klic)}</span>
+                        {!locked && !request.sentAt && (
+                          <button
+                            type="button"
+                            onClick={() => void zmenVyrazeni({ vratit: klic })}
+                            disabled={busy}
+                            className="ml-auto text-xs font-heading text-brand-purple hover:underline disabled:opacity-50"
+                          >
+                            Vrátit
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
