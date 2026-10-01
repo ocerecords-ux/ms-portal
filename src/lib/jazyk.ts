@@ -319,6 +319,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'terminy.souhrn': { cs: 'odtočeno {odtoceno} z {celkem}', en: '{odtoceno} of {celkem} recorded' },
   'terminy.vseOdtoceno': { cs: 'všechno odtočeno', en: 'all recorded' },
   'terminy.nejblizsi': { cs: 'nejbližší', en: 'next up' },
+  // Kde se ten den skončilo (1. 10. 2026) - strana režijního editu.
+  'terminy.stranyRozsah': { cs: 'str. {od}–{do}', en: 'pp. {od}–{do}' },
+  'terminy.stranyDo': { cs: 'do str. {strana}', en: 'to p. {strana}' },
+  'terminy.stranyNapoveda': {
+    cs: 'Strany textu, na kterých se ten den skončilo - podle zápisu ze studia.',
+    en: 'The pages of the text reached that day, from the studio log.',
+  },
   'projekt.schvaleno': { cs: 'Klient zakázku schválil', en: 'The customer has approved the job' },
   'projekt.neschvaleno': { cs: 'Zatím neschváleno', en: 'Not approved yet' },
   'projekt.jakSeSchvaluje': {

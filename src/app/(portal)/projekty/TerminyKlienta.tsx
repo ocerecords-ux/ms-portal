@@ -112,6 +112,22 @@ export function SeznamTerminu({ terminy }: { terminy: TerminKlienta[] }) {
             </span>
             {x.herec && <span className="text-xs font-body">{x.herec}</span>}
             <span className="text-[11px] font-body text-muted">{x.studio}</span>
+            {/*
+              KDE SE TEN DEN SKONČILO (1. 10. 2026: „bylo by super, kdyby byly
+              zaznačeny strany v pdf, na které se v ten den skončilo").
+              Strana ze zápisu zvukaře. U budoucích termínů tam nic není -
+              prázdné místo je lepší než nula, která by vypadala jako údaj.
+            */}
+            {x.stranaDo != null && (
+              <span
+                title={t('terminy.stranyNapoveda')}
+                className="shrink-0 text-[11px] font-heading tabular-nums text-ink"
+              >
+                {x.stranaOd != null
+                  ? t('terminy.stranyRozsah', { od: x.stranaOd, do: x.stranaDo })
+                  : t('terminy.stranyDo', { strana: x.stranaDo })}
+              </span>
+            )}
             {x.odtoceno ? (
               <span
                 title={t('terminy.odtoceno')}
