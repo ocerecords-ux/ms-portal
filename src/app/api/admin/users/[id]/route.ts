@@ -54,6 +54,7 @@ const schema = z.object({
   statusZKalendare: z.string().trim().optional(),
   nabidkyReklam: z.string().trim().optional(),
   dostavaDotocenoKlient: z.string().trim().optional(),
+  dostavaZmenuTerminuKlient: z.string().trim().optional(),
   dostavaObjednavky: z.string().trim().optional(),
   takyZvukar: z.string().trim().optional(),
   dostavaVyplneneUdaje: z.string().trim().optional(),
@@ -104,6 +105,9 @@ function readFormData(formData: FormData) {
     nabidkyReklam: has('nabidkyReklam') ? formData.get('nabidkyReklam') : undefined,
     dostavaDotocenoKlient: has('dostavaDotocenoKlient')
       ? formData.get('dostavaDotocenoKlient')
+      : undefined,
+    dostavaZmenuTerminuKlient: has('dostavaZmenuTerminuKlient')
+      ? formData.get('dostavaZmenuTerminuKlient')
       : undefined,
     dostavaObjednavky: has('dostavaObjednavky') ? formData.get('dostavaObjednavky') : undefined,
     takyZvukar: has('takyZvukar') ? formData.get('takyZvukar') : undefined,
@@ -240,6 +244,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // Upozorneni klientovi na dotoceneho herce (zadani 16. 9. 2026).
       ...(data.dostavaDotocenoKlient !== undefined
         ? { dostavaDotocenoKlient: data.dostavaDotocenoKlient === '1' }
+        : {}),
+      // Upozorneni klientovi na zmenu nataceciho terminu (1. 10. 2026).
+      ...(data.dostavaZmenuTerminuKlient !== undefined
+        ? { dostavaZmenuTerminuKlient: data.dostavaZmenuTerminuKlient === '1' }
         : {}),
       ...(data.vychoziManazerAudioknih !== undefined
         ? { vychoziManazerAudioknih: data.vychoziManazerAudioknih === '1' }

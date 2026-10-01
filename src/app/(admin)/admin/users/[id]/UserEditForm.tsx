@@ -75,6 +75,8 @@ type EditableUser = {
   nabidkyReklam: boolean;
   /** Klient chce vědět o dotočeném herci na svém projektu (zadání 16. 9. 2026). */
   dostavaDotocenoKlient: boolean;
+  /** Klient chce vědět o změně natáčecího termínu (zadání 1. 10. 2026). */
+  dostavaZmenuTerminuKlient: boolean;
   dostavaObjednavky: boolean;
   takyZvukar: boolean;
   dostavaVyplneneUdaje: boolean;
@@ -146,6 +148,9 @@ export function UserEditForm({
   const [statusZKalendare, setStatusZKalendare] = useState(user.statusZKalendare);
   const [nabidkyReklam, setNabidkyReklam] = useState(user.nabidkyReklam);
   const [dostavaDotocenoKlient, setDostavaDotocenoKlient] = useState(user.dostavaDotocenoKlient);
+  const [dostavaZmenuTerminuKlient, setDostavaZmenuTerminuKlient] = useState(
+    user.dostavaZmenuTerminuKlient,
+  );
   const [dostavaObjednavky, setDostavaObjednavky] = useState(user.dostavaObjednavky);
   const [takyZvukar, setTakyZvukar] = useState(user.takyZvukar);
   const [dostavaVyplneneUdaje, setDostavaVyplneneUdaje] = useState(user.dostavaVyplneneUdaje);
@@ -283,6 +288,7 @@ export function UserEditForm({
         else if (removePhoto) fd.set('removePhoto', 'true');
       }
       if (isKlient) fd.set('dostavaDotocenoKlient', dostavaDotocenoKlient ? '1' : '0');
+      if (isKlient) fd.set('dostavaZmenuTerminuKlient', dostavaZmenuTerminuKlient ? '1' : '0');
       /**
        * Složky na Disku (30. 9. 2026) - schválně MIMO větve podle role: do
        * Klientské zóny chodí klienti i tým. Průvodce `slozkyDiskuPrazdne` je
@@ -1015,6 +1021,30 @@ export function UserEditForm({
                 {t('uzivatel.pravoDotocenoKlient')}
                 <span className="block text-xs text-muted">
                   {t('uzivatel.pravoDotocenoKlientPopis')}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* ZMENA NATACECIHO TERMINU (zadani 1. 10. 2026: „jeste dej klientovi
+            moznost nastaveni notifikace pri zmene terminu nataceci
+            frekvence"). Stejny princip jako prepinac vys - jen projekty, u
+            kterych je tenhle clovek napsany jako klient, a tyz prepinac ma
+            i u sebe v „Muj ucet". */}
+        {isKlient && (
+          <div className="flex-1 min-w-[240px] flex items-end">
+            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dostavaZmenuTerminuKlient}
+                onChange={(e) => setDostavaZmenuTerminuKlient(e.target.checked)}
+                className="w-4 h-4 accent-brand-purple"
+              />
+              <span className="text-sm font-body text-ink">
+                {t('uzivatel.pravoZmenaTerminuKlient')}
+                <span className="block text-xs text-muted">
+                  {t('uzivatel.pravoZmenaTerminuKlientPopis')}
                 </span>
               </span>
             </label>

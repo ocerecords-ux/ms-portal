@@ -1086,6 +1086,16 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
     cs: 'Mail a zvoneček v portálu pokaždé, když ve studiu skončíme s hercem na některém z vašich projektů.',
     en: 'An email and a bell in the portal every time we finish in the studio with a narrator on one of your projects.',
   },
+  // Změna natáčecího termínu (1. 10. 2026) - druhé zaškrtávátko v kartě
+  // Upozornění, jen u klienta.
+  'mujUcet.zmenaTerminu': {
+    cs: 'Chci vědět, když se změní natáčecí termín',
+    en: 'Tell me when a recording session changes',
+  },
+  'mujUcet.zmenaTerminuPopis': {
+    cs: 'Mail a zvoneček, když se natáčecí frekvence na některém z vašich projektů přesune nebo zruší.',
+    en: 'An email and a bell when a recording session on one of your projects moves or is cancelled.',
+  },
   'mujUcet.prehledDne': { cs: 'Přehled dne a připomínky', en: 'Daily brief and reminders' },
   'mujUcet.prehledDnePopis': {
     cs: 'Co vás ten den čeká — a štouchnutí před každou událostí.',
@@ -4054,6 +4064,14 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'uzivatel.pravoDotocenoKlientPopis': {
     cs: 'mail i zvoneček, když u jeho projektu dotočíme s hercem',
     en: 'an email and a bell when we finish recording with a narrator on their project',
+  },
+  'uzivatel.pravoZmenaTerminuKlient': {
+    cs: 'Upozornit na změnu natáčecího termínu',
+    en: 'Notify about a changed recording session',
+  },
+  'uzivatel.pravoZmenaTerminuKlientPopis': {
+    cs: 'mail i zvoneček, když se u jeho projektu frekvence přesune nebo zruší',
+    en: 'an email and a bell when a session on their project moves or is cancelled',
   },
 
   // --- karta uživatele: herec, který je zároveň dodavatel ---

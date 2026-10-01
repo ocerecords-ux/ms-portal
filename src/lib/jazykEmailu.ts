@@ -687,6 +687,38 @@ export const SLOVNIK_EMAILU: Record<string, { cs: string; en: string }> = {
     en: 'Recording finished - {herec} - {projekt}',
   },
 
+  // --- změna natáčecího termínu: zpráva klientovi (1. 10. 2026) ---
+  // sendZmenaTerminuKlientoviEmail. Dvě varianty: přesun a zrušení.
+  'mail.zmenaTerminu.stitek': { cs: 'Natáčení', en: 'Recording' },
+  'mail.zmenaTerminu.preheader': {
+    cs: '{projekt} — změna natáčecího termínu.',
+    en: '{projekt} — the recording session has moved.',
+  },
+  'mail.zmenaTerminu.preheaderZruseno': {
+    cs: '{projekt} — natáčecí termín zrušen.',
+    en: '{projekt} — the recording session has been cancelled.',
+  },
+  'mail.zmenaTerminu.predmet': {
+    cs: 'Zmena terminu - {projekt}',
+    en: 'Session moved - {projekt}',
+  },
+  'mail.zmenaTerminu.predmetZruseno': {
+    cs: 'Zruseny termin - {projekt}',
+    en: 'Session cancelled - {projekt}',
+  },
+  'mail.zmenaTerminu.veta': {
+    cs: 'u projektu {projekt} jsme posunuli natáčecí termín.',
+    en: 'we have moved a recording session on the project {projekt}.',
+  },
+  'mail.zmenaTerminu.vetaZruseno': {
+    cs: 'u projektu {projekt} jsme zrušili natáčecí termín.',
+    en: 'we have cancelled a recording session on the project {projekt}.',
+  },
+  'mail.zmenaTerminu.puvodne': { cs: 'Původně: {kdy}', en: 'Was: {kdy}' },
+  'mail.zmenaTerminu.nove': { cs: 'Nově: {kdy}', en: 'Now: {kdy}' },
+  'mail.zmenaTerminu.zruseno': { cs: 'Zrušený termín: {kdy}', en: 'Cancelled session: {kdy}' },
+  'mail.zmenaTerminu.tlacitko': { cs: 'Zobrazit projekty', en: 'View projects' },
+
   // --- nabídka (sendOfferEmail) ---
   'mail.nabidka.stitek': { cs: 'Nabídka', en: 'Quote' },
   'mail.nabidka.preheader': {

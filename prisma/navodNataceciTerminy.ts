@@ -156,6 +156,8 @@ Portál přitom nic nezakazuje: zapsat událost přes kolizi jde dál (tlačítk
 
 Herec dostane v portálu **oznámení** o každém přesunu i zrušení.
 
+**Klient o změně termínu** (1. 10. 2026). Kdo je u projektu napsaný jako **klient**, si může v **Můj účet → Upozornění** zaškrtnout *Chci vědět, když se změní natáčecí termín* — pak mu při přesunu i zrušení frekvence přijde mail a zvoneček. Zapnout se to dá i za něj na jeho kartě v Administraci. Chodí to **jen u projektů, u kterých je napsaný jako klient**, a jen při skutečné změně studia nebo času — ne při úpravě poznámky nebo výměně zvukaře. Vypnuté je to standardně: během přípravy se termíny posouvají často.
+
 # 6. Termíny v kalendáři herce
 
 Na stránce s termíny i v **Moje termíny** má herec po potvrzení tři tlačítka (v potvrzovacím e-mailu je jen **Přidat do kalendáře**):

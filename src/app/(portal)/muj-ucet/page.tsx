@@ -120,7 +120,12 @@ export default async function MyAccountPage() {
           moznost si to pak zapnout v portalu individualne"). Jen klient - my
           i herci mame upozorneni jinde a jinak. */}
       {user.role === 'CLIENT' && (
-        <UpozorneniKarta initial={{ dotoceno: user.dostavaDotocenoKlient }} />
+        <UpozorneniKarta
+          initial={{
+            dotoceno: user.dostavaDotocenoKlient,
+            zmenaTerminu: user.dostavaZmenuTerminuKlient,
+          }}
+        />
       )}
 
       {/* Ranní přehled od Bruna (23. 9. 2026) - jen pro tým; klient ani herec

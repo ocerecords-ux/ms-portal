@@ -11,13 +11,16 @@ import { prisma } from '@/lib/db';
  * MĚNÍ TO VÝHRADNĚ SVŮJ VLASTNÍ ÚČET: id se bere ze session, nikdy z těla
  * požadavku — jinak by si kdokoliv přepnul upozornění komukoliv jinému.
  *
- * Zatím je tu jediný přepínač (dotočený herec na mém projektu). Další
- * upozornění sem přibudou jako další pole, ne jako další routa.
+ * Klient si tu přepíná dotočeného herce a změnu natáčecího termínu, tým ranní
+ * přehled od Bruna. Další upozornění sem přibudou jako další pole, ne jako
+ * další routa.
  */
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
   dostavaDotocenoKlient: z.boolean().optional(),
+  /** Změna natáčecího termínu na mém projektu (1. 10. 2026). */
+  dostavaZmenuTerminuKlient: z.boolean().optional(),
   /** Ranní přehled od Bruna v 7:00 (23. 9. 2026) - jen pro tým. */
   ranniPrehled: z.boolean().optional(),
 });
@@ -35,6 +38,9 @@ export async function PATCH(req: NextRequest) {
     const data: Record<string, unknown> = {};
     if (parsed.data.dostavaDotocenoKlient !== undefined) {
       data.dostavaDotocenoKlient = parsed.data.dostavaDotocenoKlient;
+    }
+    if (parsed.data.dostavaZmenuTerminuKlient !== undefined) {
+      data.dostavaZmenuTerminuKlient = parsed.data.dostavaZmenuTerminuKlient;
     }
     if (parsed.data.ranniPrehled !== undefined) data.ranniPrehled = parsed.data.ranniPrehled;
     if (Object.keys(data).length === 0) {

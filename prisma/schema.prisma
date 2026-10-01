@@ -305,6 +305,19 @@ model User {
   /// prepnout i sam v „Muj ucet" (zadani tyz den).
   dostavaDotocenoKlient Boolean @default(false)
 
+  /// KLIENT chce vedet, kdyz se posune natacecí frekvence (zadani 1. 10. 2026:
+  /// „jeste dej klientovi moznost nastaveni notifikace pri zmene terminu
+  /// nataceci frekvence. Muze u sebe v profilu zaskrtnout").
+  ///
+  /// Stejny princip jako dostavaDotocenoKlient: nese jen projekty, u kterych je
+  /// ten clovek napsany jako klient (ProjectMeta.klientUserId) - tedy presne ty,
+  /// ktere v portalu vidi. Posila se pri presunu i pri zruseni frekvence, viz
+  /// lib/zmenaTerminuKlient.ts.
+  ///
+  /// Vychozi je vypnuto: terminy se behem pripravy posouvaji casto a klient,
+  /// ktery o to nepozadal, by dostaval mail po kazdem drobnem srovnani planu.
+  dostavaZmenuTerminuKlient Boolean @default(false)
+
   /// RANNÍ PŘEHLED OD BRUNA (zadani 23. 9. 2026: „chtel bych, aby mi Bruno
   /// sesumiroval udalosti na danny den. Vzdycky at mi to posle v sedm rano
   /// na dany den udalosti, ktere se me tykaji. Pripadne i ukoly co mam").

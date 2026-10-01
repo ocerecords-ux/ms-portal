@@ -9,6 +9,7 @@ import { popisUdalosti, zabiraStudio } from '@/lib/calendar';
 import { notify } from '@/lib/notifications';
 import { zapisZmenuKalendare } from '@/lib/kalendarLogServer';
 import { synchronizujUkolUdalosti, zrusUkolUdalosti } from '@/lib/kalendarUkolyServer';
+import { oznamKlientoviZmenuTerminu } from '@/lib/zmenaTerminuKlient';
 
 /**
  * ÚPRAVA POTVRZENÉ FREKVENCE PŘÍMO V KALENDÁŘI (zadání 19. 9. 2026: „když
@@ -181,6 +182,19 @@ export async function PATCH(req: NextRequest) {
           url: '/moje-terminy',
         });
       }
+      /**
+       * Klient projektu, a jen když si to zapnul v „Můj účet" (1. 10. 2026).
+       * Herci to chodí vždycky, klientovi jedině na přání - viz
+       * lib/zmenaTerminuKlient.ts.
+       */
+      if (posun) {
+        await oznamKlientoviZmenuTerminu({
+          caflouProjectId: slot.request.caflouProjectId,
+          nazevProjektu: slot.request.projectName,
+          puvodne: kdy(slot.start),
+          nove: kdy(start),
+        });
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -274,6 +288,14 @@ export async function PATCH(req: NextRequest) {
         url: '/moje-terminy',
       });
     }
+    // Frekvence klientovi zmizela z plánu - je to pro něj změna termínu
+    // stejně jako posun (1. 10. 2026).
+    await oznamKlientoviZmenuTerminu({
+      caflouProjectId: slot.request.caflouProjectId,
+      nazevProjektu: slot.request.projectName,
+      puvodne: kdy(slot.start),
+      nove: null,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('PATCH /api/kalendar/terminy selhalo:', err);
@@ -309,6 +331,12 @@ export async function DELETE(req: NextRequest) {
         url: '/moje-terminy',
       });
     }
+    await oznamKlientoviZmenuTerminu({
+      caflouProjectId: slot.request.caflouProjectId,
+      nazevProjektu: slot.request.projectName,
+      puvodne: kdy(slot.start),
+      nove: null,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/kalendar/terminy selhalo:', err);

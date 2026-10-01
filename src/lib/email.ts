@@ -1100,6 +1100,101 @@ export async function sendHerecDotocenKlientoviEmail(input: HerecDotocenKlientov
   return { sent: true as const, reason: undefined };
 }
 
+/**
+ * ZMĚNA NATÁČECÍHO TERMÍNU — ZPRÁVA KLIENTOVI (zadání 1. 10. 2026: „jeste dej
+ * klientovi moznost nastaveni notifikace pri zmene terminu nataceci
+ * frekvence"). Chodí jen klientovi projektu, a jen když si to zapnul — viz
+ * lib/zmenaTerminuKlient.ts.
+ *
+ * Termíny chodí hotovým textem (`puvodne`, `nove`), ne jako Date: formátuje je
+ * volající v pásmu studia. Mail nemá počítat, v jakém pásmu se natáčí.
+ */
+export type ZmenaTerminuKlientoviInput = {
+  to: string;
+  jmenoKlienta: string | null;
+  nazevProjektu: string;
+  /** Termín, jak byl zapsaný dosud. */
+  puvodne: string;
+  /** Nový termín. U zrušení null. */
+  nove: string | null;
+  /** Kam v portálu klient kouká na svoje projekty. */
+  odkazNaPortal: string;
+  /** Jazyk klienta (pravidlo 5). Bez něj čeština. */
+  jazyk?: Jazyk;
+};
+
+export function buildZmenaTerminuKlientoviHtml(input: ZmenaTerminuKlientoviInput): string {
+  const jazyk = input.jazyk ?? 'cs';
+  const zruseno = input.nove === null;
+  return emailShell({
+    jazyk,
+    tag: prelozitEmail(jazyk, 'mail.zmenaTerminu.stitek'),
+    preheader: prelozitEmailS(
+      jazyk,
+      zruseno ? 'mail.zmenaTerminu.preheaderZruseno' : 'mail.zmenaTerminu.preheader',
+      { projekt: input.nazevProjektu },
+    ),
+    // Krátká zpráva jako u dotočeno: pozdrav, věta, termíny, tlačítko.
+    body: `
+    <p>${escapeHtml(pozdravPosty(jazyk, input.jmenoKlienta))}</p>
+    <p>${escapeHtml(
+      prelozitEmailS(jazyk, zruseno ? 'mail.zmenaTerminu.vetaZruseno' : 'mail.zmenaTerminu.veta', {
+        projekt: input.nazevProjektu,
+      }),
+    )}</p>
+    <p>${
+      zruseno
+        ? escapeHtml(prelozitEmailS(jazyk, 'mail.zmenaTerminu.zruseno', { kdy: input.puvodne }))
+        : `${escapeHtml(prelozitEmailS(jazyk, 'mail.zmenaTerminu.puvodne', { kdy: input.puvodne }))}<br />${escapeHtml(
+            prelozitEmailS(jazyk, 'mail.zmenaTerminu.nove', { kdy: input.nove ?? '' }),
+          )}`
+    }</p>
+
+    <div class="cta-row">
+      <a href="${escapeHtml(input.odkazNaPortal)}" class="cta">${prelozitEmail(jazyk, 'mail.zmenaTerminu.tlacitko')}</a>
+    </div>
+`,
+  });
+}
+
+export async function sendZmenaTerminuKlientoviEmail(input: ZmenaTerminuKlientoviInput) {
+  const transport = getTransport();
+  if (!transport) return { sent: false as const, reason: 'SMTP_NOT_CONFIGURED' };
+  if (!input.to) return { sent: false as const, reason: 'ZADNY_PRIJEMCE' };
+
+  const jazyk = input.jazyk ?? 'cs';
+  const zruseno = input.nove === null;
+
+  await transport.sendMail({
+    ...odesilatelMediaspace(),
+    to: input.to,
+    subject: prelozitEmailS(
+      jazyk,
+      zruseno ? 'mail.zmenaTerminu.predmetZruseno' : 'mail.zmenaTerminu.predmet',
+      { projekt: input.nazevProjektu },
+    ),
+    text: [
+      pozdravPosty(jazyk, input.jmenoKlienta),
+      '',
+      prelozitEmailS(jazyk, zruseno ? 'mail.zmenaTerminu.vetaZruseno' : 'mail.zmenaTerminu.veta', {
+        projekt: input.nazevProjektu,
+      }),
+      '',
+      zruseno
+        ? prelozitEmailS(jazyk, 'mail.zmenaTerminu.zruseno', { kdy: input.puvodne })
+        : prelozitEmailS(jazyk, 'mail.zmenaTerminu.puvodne', { kdy: input.puvodne }),
+      ...(zruseno
+        ? []
+        : [prelozitEmailS(jazyk, 'mail.zmenaTerminu.nove', { kdy: input.nove ?? '' })]),
+      '',
+      input.odkazNaPortal,
+    ].join('\n'),
+    html: buildZmenaTerminuKlientoviHtml(input),
+  });
+
+  return { sent: true as const, reason: undefined };
+}
+
 export async function sendPasswordResetEmail(input: PasswordResetInput) {
   const transport = getTransport();
   if (!transport) {

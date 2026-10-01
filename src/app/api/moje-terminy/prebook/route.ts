@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { checkSlot, recordEvent } from '@/lib/calendarServer';
 import { notify } from '@/lib/notifications';
 import { frekvenceHerce, jePoLimitu, limitPrebooku, mistaProPrebook } from '@/lib/prebookServer';
+import { oznamKlientoviZmenuTerminu } from '@/lib/zmenaTerminuKlient';
 
 /**
  * Přebookování termínu hercem v Moje termíny (zadání 19. 9. 2026) - viz
@@ -129,6 +130,16 @@ export async function POST(req: NextRequest) {
       title: `${herec} si přebookoval termín`,
       body: `${slot.request.projectName} · ${kdy(slot.start)} → ${kdy(start)}`,
       url: `/kalendar/nabidka/${slot.request.id}`,
+    });
+    // Klientovi projektu, pokud si to zapnul (1. 10. 2026). Pro něj je to
+    // změna termínu stejně jako posun od produkce - že o něj požádal herec,
+    // mu nic neříká. Žádost, která čeká na potvrzení, se neposílá: ta termín
+    // ještě nemění (viz vyšší větev).
+    await oznamKlientoviZmenuTerminu({
+      caflouProjectId: slot.request.caflouProjectId,
+      nazevProjektu: slot.request.projectName,
+      puvodne: kdy(slot.start),
+      nove: kdy(start),
     });
     return NextResponse.json({ ok: true, cekaNaPotvrzeni: false });
   } catch (err) {

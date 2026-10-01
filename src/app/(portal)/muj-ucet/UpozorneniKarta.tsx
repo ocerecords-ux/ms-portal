@@ -12,40 +12,73 @@ import { usePreklad } from '../components/JazykProvider';
  * někdo od nás. Tady si to klient přepne sám, a hlavně sám vypne — upozornění,
  * které se dá zrušit jedině telefonátem do studia, se čte jako spam.
  *
- * Ukládá se hned při přepnutí, bez tlačítka: je to jediný přepínač a čekání
- * na „Uložit" by u něj byl jen krok navíc.
+ * Ukládá se hned při přepnutí, bez tlačítka: jsou to zaškrtávátka a čekání na
+ * „Uložit" by u nich byl jen krok navíc.
+ *
+ * PŘEPÍNAČŮ BUDE VÍC (1. 10. 2026: „jeste dej klientovi moznost nastaveni
+ * notifikace pri zmene terminu nataceci frekvence"), proto je karta napsaná na
+ * seznam a ne na jeden přepínač. Další se přidá řádkem v `PREPINACE` a polem
+ * v /api/me/upozorneni — nikam jinam se nesahá.
  */
-export function UpozorneniKarta({ initial }: { initial: { dotoceno: boolean } }) {
+
+type Klic = 'dotoceno' | 'zmenaTerminu';
+
+/** Pole v databázi a texty ke každému přepínači. */
+const PREPINACE: { klic: Klic; pole: string; nazev: string; popis: string }[] = [
+  {
+    klic: 'dotoceno',
+    pole: 'dostavaDotocenoKlient',
+    nazev: 'mujUcet.dotoceno',
+    popis: 'mujUcet.dotocenoPopis',
+  },
+  {
+    klic: 'zmenaTerminu',
+    pole: 'dostavaZmenuTerminuKlient',
+    nazev: 'mujUcet.zmenaTerminu',
+    popis: 'mujUcet.zmenaTerminuPopis',
+  },
+];
+
+export function UpozorneniKarta({
+  initial,
+}: {
+  initial: { dotoceno: boolean; zmenaTerminu: boolean };
+}) {
   const t = usePreklad();
   const router = useRouter();
-  const [dotoceno, setDotoceno] = useState(initial.dotoceno);
-  const [saving, setSaving] = useState(false);
+  const [stav, setStav] = useState<Record<Klic, boolean>>({
+    dotoceno: initial.dotoceno,
+    zmenaTerminu: initial.zmenaTerminu,
+  });
+  const [uklada, setUklada] = useState<Klic | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function uloz(hodnota: boolean) {
+  async function uloz(prepinac: (typeof PREPINACE)[number], hodnota: boolean) {
     // Prepinac se posune hned, at to nedrha. Kdyz ulozeni selze, vrati se
     // zpatky - jinak by na obrazovce zustal stav, ktery nikde neplati.
-    setDotoceno(hodnota);
-    setSaving(true);
+    // Pretypovani: klic je union ('dotoceno' | 'zmenaTerminu') a pocitany
+    // klic v objektovem literalu z nej sam Record nesestavi.
+    setStav((p) => ({ ...p, [prepinac.klic]: hodnota }) as Record<Klic, boolean>);
+    setUklada(prepinac.klic);
     setError(null);
     try {
       const res = await fetch('/api/me/upozorneni', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dostavaDotocenoKlient: hodnota }),
+        body: JSON.stringify({ [prepinac.pole]: hodnota }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data?.error || t('mujUcet.chybaUlozeni'));
-        setDotoceno(!hodnota);
+        setStav((p) => ({ ...p, [prepinac.klic]: !hodnota }) as Record<Klic, boolean>);
         return;
       }
       router.refresh();
     } catch {
       setError(t('mujUcet.chybaUlozeni'));
-      setDotoceno(!hodnota);
+      setStav((p) => ({ ...p, [prepinac.klic]: !hodnota }) as Record<Klic, boolean>);
     } finally {
-      setSaving(false);
+      setUklada(null);
     }
   }
 
@@ -56,20 +89,24 @@ export function UpozorneniKarta({ initial }: { initial: { dotoceno: boolean } })
         <p className="text-sm font-body text-muted m-0 mt-1">{t('mujUcet.upozorneniPopis')}</p>
       </div>
 
-      <label className="flex items-start gap-2 text-sm font-heading text-ink">
-        <input
-          type="checkbox"
-          checked={dotoceno}
-          disabled={saving}
-          onChange={(e) => void uloz(e.target.checked)}
-          className="mt-0.5"
-        />
-        <span>
-          {t('mujUcet.dotoceno')}
-          <br />
-          <span className="text-xs font-body text-muted">{t('mujUcet.dotocenoPopis')}</span>
-        </span>
-      </label>
+      <div className="flex flex-col gap-3">
+        {PREPINACE.map((p) => (
+          <label key={p.klic} className="flex items-start gap-2 text-sm font-heading text-ink">
+            <input
+              type="checkbox"
+              checked={stav[p.klic]}
+              disabled={uklada !== null}
+              onChange={(e) => void uloz(p, e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              {t(p.nazev)}
+              <br />
+              <span className="text-xs font-body text-muted">{t(p.popis)}</span>
+            </span>
+          </label>
+        ))}
+      </div>
 
       {error && <p className="text-sm text-danger m-0">{error}</p>}
     </div>

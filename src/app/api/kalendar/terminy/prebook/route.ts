@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { canManageCalendar } from '@/lib/roles';
 import { checkSlot, recordEvent } from '@/lib/calendarServer';
 import { notify } from '@/lib/notifications';
+import { oznamKlientoviZmenuTerminu } from '@/lib/zmenaTerminuKlient';
 
 /**
  * Produkce rozhoduje o žádosti herce o přesun za termín odevzdání
@@ -27,7 +28,11 @@ export async function POST(req: NextRequest) {
 
     const slot = await prisma.recordingSlot.findUnique({
       where: { id: parsed.data.slotId },
-      include: { request: { select: { id: true, projectName: true, actorUserId: true } } },
+      include: {
+        request: {
+          select: { id: true, projectName: true, actorUserId: true, caflouProjectId: true },
+        },
+      },
     });
     if (!slot || !slot.prebookStart || !slot.prebookEnd || !slot.prebookStudioId) {
       return NextResponse.json({ error: 'Žádost o přesun už neexistuje.' }, { status: 404 });
@@ -92,6 +97,14 @@ export async function POST(req: NextRequest) {
         url: '/moje-terminy',
       });
     }
+    // Teprve potvrzením se termín opravdu posunul - tady má jít upozornění
+    // klientovi, ne už při žádosti herce (1. 10. 2026).
+    await oznamKlientoviZmenuTerminu({
+      caflouProjectId: slot.request.caflouProjectId,
+      nazevProjektu: slot.request.projectName,
+      puvodne: kdy(puvodne),
+      nove: kdy(slot.prebookStart),
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('POST /api/kalendar/terminy/prebook selhalo:', err);
