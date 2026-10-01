@@ -216,11 +216,21 @@ function Polozka({
               <button
                 key={o.id}
                 type="button"
-                onClick={() => onNahled(o.url)}
+                /**
+                 * PŘES PORTÁL, NE ROVNOU Z ÚLOŽIŠTĚ (oprava 1. 10. 2026:
+                 * „nezobrazují se mi printscreeny"). Uložená adresa míří na
+                 * rozhraní R2 a to bez podpisu vrátí 401 - viz
+                 * api/pripominky/priloha/[id].
+                 */
+                onClick={() => onNahled(`/api/pripominky/priloha/${o.id}`)}
                 title={t('mujUcet.pripominkaZvetsit')}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={o.url} alt={o.nazev} className="w-14 h-14 object-cover rounded border border-line" />
+                <img
+                  src={`/api/pripominky/priloha/${o.id}`}
+                  alt={o.nazev}
+                  className="w-14 h-14 object-cover rounded border border-line"
+                />
               </button>
             ))}
           </div>
