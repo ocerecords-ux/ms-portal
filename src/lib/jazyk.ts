@@ -303,6 +303,13 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'terminy.zobrazit': { cs: 'Zobrazit termíny', en: 'Show sessions' },
   // Rozbalený natáčecí plán se zavírá týmž tlačítkem (1. 10. 2026).
   'terminy.skryt': { cs: 'Skrýt termíny', en: 'Hide sessions' },
+  /**
+   * Krátká podoba na tlačítko ve sloupci Natáčecí plán (1. 10. 2026: „u toho
+   * natáčecího plánu to můžeme zkrátit na Zobrazit a Skrýt"). Co se zobrazuje,
+   * říká hlavička sloupce.
+   */
+  'terminy.zobrazitKratce': { cs: 'Zobrazit', en: 'Show' },
+  'terminy.skrytKratce': { cs: 'Skrýt', en: 'Hide' },
   'terminy.nadpis': { cs: 'Natáčecí termíny', en: 'Recording sessions' },
   'terminy.napoveda': {
     cs: 'Domluvené natáčecí termíny téhle zakázky a kdo v nich čte',

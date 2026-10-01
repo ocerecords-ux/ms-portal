@@ -272,31 +272,28 @@ export function ProjectsTable({
 
   return (
     <div className="bg-surface rounded-card border border-line overflow-hidden shadow-sm">
-      {/* Stejne jako u interniho prehledu: procentni sirky, jeden radek na
-          bunku, zadne posouvani do stran (zadani 12. 9. 2026). */}
+      {/*
+        ŠÍŘKY SI URČUJE OBSAH (zadání 1. 10. 2026: „je tam podle mě strašně
+        moc volného místa, aby si to systém sám formátoval na doraz dle
+        potřeby").
+
+        Do té doby měla tabulka pevné poměry sloupců (`table-fixed`
+        a procenta ve `<col>`). To mělo jednu výhodu - nikdy nepřetekla - ale
+        dvě vady: krátký obsah (NS, datum) držel zbytečně široký sloupec
+        a dlouhý obsah se usekával, i když vedle bylo místo. U klienta,
+        kde jsou sloupce jen čtyři až osm, to bylo vidět nejvíc.
+
+        `table-auto` nechá šířky na prohlížeči: každý sloupec dostane přesně
+        tolik, kolik jeho nejširší buňka potřebuje, a zbytek připadne názvu
+        knihy. Interní a administrační přehled si pevné poměry nechávají -
+        tam je sloupců dvacet a bez nich by se tabulka roztáhla.
+      */}
       <div className="overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-field [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-full">
-        <table className="w-full min-w-[620px] table-fixed border-collapse">
-          <colgroup>
-            {sirkySloupcu([
-              'name',
-              ...(showKontakt ? ['kontakt'] : []),
-              'statusName',
-              'narrator',
-              ...(showTerminy ? ['terminy'] : []),
-              ...(showProgres ? ['progres'] : []),
-              ...(normostrany ? ['pageCountSirsi'] : []),
-              'endDate',
-              'releaseDate',
-              ...(showPreposlech ? ['kPreposlechu', 'preposlechnuto'] : []),
-              ...(showRodnyList ? ['rodnyList'] : []),
-              ...(showSchvaleni ? ['schvaleni'] : []),
-            ]).map((sirka, i) => (
-              <col key={i} style={{ width: sirka }} />
-            ))}
-          </colgroup>
+        <table className="w-full table-auto border-collapse">
           <thead>
             <tr className="bg-brand-purple text-white font-heading text-xs">
-              <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.projekt')}</th>
+              {/* Název bere zbylé místo - ostatní sloupce si vezmou jen svoje. */}
+              <th className="text-left px-4 py-3.5 w-full">{prelozit(jazyk, 'projekty.sl.projekt')}</th>
               {/* Kdo zakázku u klienta vede (24. 9. 2026). */}
               {showKontakt && <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.vede')}</th>}
               <th className="text-left px-4 py-3.5">{prelozit(jazyk, 'projekty.sl.stav')}</th>

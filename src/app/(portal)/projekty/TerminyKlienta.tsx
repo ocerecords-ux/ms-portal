@@ -49,14 +49,20 @@ export function TlacitkoTerminu({
       aria-expanded={otevreno}
       title={t('terminy.napoveda')}
       /**
-       * Tlačítko se musí vejít do svého sloupce (1. 10. 2026). Dřív mělo
-       * `whitespace-nowrap` s celým „Zobrazit termíny", takže z buňky vylezlo
-       * a lezlo přes sousední sloupec. Teď je popisek krátký a text se
-       * v nejhorším ořízne, místo aby přetekl.
+       * Tlačítko se do sloupce vejde celé (1. 10. 2026). Dřív neslo celé
+       * „Zobrazit termíny" a bylo širší než svůj sloupec, takže z buňky
+       * vylezlo přes progres; pak se zkracovalo třemi tečkami na „Zo…", což
+       * nebyl popisek, ale hádanka. Teď je text krátký a sloupec se mu
+       * přizpůsobí (tabulka má `table-auto`).
        */
-      className="inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-pill border border-line bg-surface px-2.5 py-1 text-xs font-heading text-ink cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors"
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-pill border border-line bg-surface px-2.5 py-1 text-xs font-heading text-ink cursor-pointer hover:text-brand-purple hover:border-brand-purple transition-colors"
     >
-      <span className="truncate">{otevreno ? t('terminy.skryt') : t('terminy.zobrazit')}</span>
+      {/*
+        Krátký popisek (1. 10. 2026: „u toho natáčecího plánu to můžeme
+        zkrátit na Zobrazit a Skrýt"). Co se zobrazuje, říká hlavička
+        sloupce - opakovat to na tlačítku jen bralo místo.
+      */}
+      <span>{otevreno ? t('terminy.skrytKratce') : t('terminy.zobrazitKratce')}</span>
       <span className="shrink-0 tabular-nums text-muted">
         {odtoceno > 0 ? `${odtoceno}/${terminy.length}` : terminy.length}
       </span>
@@ -74,7 +80,9 @@ export function SeznamTerminu({ terminy }: { terminy: TerminKlienta[] }) {
   const odtoceno = terminy.filter((x) => x.odtoceno).length;
 
   return (
-    <div className="flex flex-col gap-2 rounded-card border border-line bg-field/40 p-3">
+    // `max-w`: seznam se nemá roztahovat přes celou tabulku, jinak mezi
+    // datem a studiem zůstane půl obrazovky prázdna (1. 10. 2026).
+    <div className="flex max-w-2xl flex-col gap-2 rounded-card border border-line bg-field/40 p-3">
       <div className="flex items-baseline gap-2 flex-wrap">
         <span className="text-[11px] font-heading text-muted uppercase tracking-wide">
           {t('terminy.nadpis')}
@@ -87,15 +95,15 @@ export function SeznamTerminu({ terminy }: { terminy: TerminKlienta[] }) {
       </div>
 
       {/*
-        Termíny vedle sebe, dokud je místo. V tabulce přes celou šířku je
-        sloupec pod sebou zbytečně dlouhý a klient by u osmi frekvencí
-        scrolloval zbytečně.
+        Prostě seznam, jeden termín na řádek (1. 10. 2026: „a ten seznam
+        frekvencí bych dal pod sebe. Prostě seznam"). Dva sloupce vedle sebe
+        se četly hůř než delší sloupec pod sebou.
       */}
-      <ul className="list-none p-0 m-0 grid gap-1 sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="list-none p-0 m-0 flex flex-col gap-1">
         {terminy.map((x) => (
           <li
             key={x.id}
-            className={`flex items-baseline gap-2 flex-wrap rounded-lg px-2 py-1.5 ${
+            className={`flex items-baseline gap-x-3 gap-y-1 flex-wrap rounded-lg px-2 py-1.5 ${
               x.odtoceno ? 'text-muted' : 'bg-surface text-ink'
             } ${pristi && x.id === pristi.id ? 'border border-brand-purple/40' : ''}`}
           >
@@ -103,7 +111,7 @@ export function SeznamTerminu({ terminy }: { terminy: TerminKlienta[] }) {
               {kdy(x.start, x.end)}
             </span>
             {x.herec && <span className="text-xs font-body">{x.herec}</span>}
-            <span className="ml-auto text-[11px] font-body text-muted">{x.studio}</span>
+            <span className="text-[11px] font-body text-muted">{x.studio}</span>
             {x.odtoceno ? (
               <span
                 title={t('terminy.odtoceno')}
