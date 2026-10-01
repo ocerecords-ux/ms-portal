@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
+import { vychoziNotifikaceReklamy } from '@/lib/notifikaceReklamyServer';
 import { requireAdmin } from '@/lib/adminGuard';
 import { popisPrekazek, prekazkyFirmy } from '@/lib/mazani';
 import { jeZpusobSmazani } from '@/lib/archiv';
@@ -95,6 +96,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(data.active !== undefined ? { active: data.active } : {}),
       },
     });
+
+    /**
+     * ZAPNUTÍ REKLAMY DOPLNÍ VÝCHOZÍ ZPRÁVU (1. 10. 2026) - ale jen firmě,
+     * která žádnou nastavenou nemá. Kdo si zprávy nastavil po svém, o ně
+     * přepnutím zaškrtávátka nepřijde.
+     */
+    if (data.dealsAds === true && company.type === 'KLIENT') {
+      const uzMa = await prisma.notifikaceFirmy.count({ where: { companyId: company.id } });
+      if (uzMa === 0) {
+        await vychoziNotifikaceReklamy(company.id, !company.dealsAudiobooks).catch((err) =>
+          console.error('Vychozi notifikace reklamy pri zapnuti selhala:', err),
+        );
+      }
+    }
 
     return NextResponse.json(company);
   } catch (err) {

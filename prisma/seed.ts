@@ -218,6 +218,7 @@ async function main() {
   await pristupyDetaily();
   await zvukariJenCteni();
   await matejCernyVedeLondyn();
+  await notifikaceReklamnichFirem();
   await importujFakturyZCaflou('caflou-2026.json', 'import-faktur-caflou-2026');
   await importujFakturyZCaflou('caflou-2026-duben-cerven.json', 'import-faktur-caflou-2026-b');
   await projektGregorZCaflou();
@@ -441,6 +442,48 @@ async function zapniRodnyListURadiovehoSpotu() {
   if (polozka && !polozka.rodnyList) {
     await prisma.priceListItem.update({ where: { id: polozka.id }, data: { rodnyList: true } });
     console.log('  cenik: u "Výroba rádiového spotu" zapnut Rodný list');
+  }
+
+  await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });
+}
+
+/**
+ * NOTIFIKACE U REKLAMNÍCH FIREM (zadání 1. 10. 2026: „nastav u všech firem,
+ * pro které děláme reklamu, defaultně notifikaci jen při stavu dokončeno-ke
+ * schválení").
+ *
+ * U reklamy je jediný okamžik, kdy má klientovi něco přijít: spot je hotový
+ * a čeká na schválení. Zprávy o natáčení a střihu jsou u zakázky, která se
+ * udělá za den, jen šum.
+ *
+ * FIRMA, KTERÁ DĚLÁ JEN REKLAMU, se uklidí celá - ostatní stavy se vypnou.
+ * Firma, která dělá i audioknihy, dostane tenhle stav navíc a nic se jí
+ * nemaže: její audioknihová nastavení se zadání netýkají.
+ */
+async function notifikaceReklamnichFirem() {
+  const ZNAMKA = 'notifikace-reklama-ke-schvaleni';
+  const uz = await prisma.counter.findUnique({ where: { name: ZNAMKA } });
+  if (uz) return;
+
+  const STAV = 'Dokončeno - ke schválení';
+  const firmy = await prisma.company.findMany({
+    where: { type: 'KLIENT', dealsAds: true },
+    select: { id: true, name: true, dealsAudiobooks: true },
+  });
+
+  for (const f of firmy) {
+    await prisma.notifikaceFirmy.upsert({
+      where: { companyId_stav: { companyId: f.id, stav: STAV } },
+      update: { komu: 'KLIENT' },
+      create: { companyId: f.id, stav: STAV, komu: 'KLIENT' },
+    });
+    if (!f.dealsAudiobooks) {
+      await prisma.notifikaceFirmy.updateMany({
+        where: { companyId: f.id, stav: { not: STAV } },
+        data: { komu: 'NIKAM' },
+      });
+    }
+    console.log(`  notifikace reklamy: ${f.name}${f.dealsAudiobooks ? ' (jen doplneno)' : ''}`);
   }
 
   await prisma.counter.create({ data: { name: ZNAMKA, value: 1 } });

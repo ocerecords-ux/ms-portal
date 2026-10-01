@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
+import { vychoziNotifikaceReklamy } from '@/lib/notifikaceReklamyServer';
 import { requireAdmin } from '@/lib/adminGuard';
 import { nextCode } from '@/lib/codes';
 
@@ -99,6 +100,18 @@ export async function POST(req: NextRequest) {
             type: 'DODAVATEL',
           },
   });
+
+  /**
+   * NOVÁ REKLAMNÍ FIRMA MÁ ROVNOU ZAPNUTOU JEDNU ZPRÁVU (zadání 1. 10. 2026:
+   * „defaultně notifikaci jen při stavu dokončeno-ke schválení"). Nastavovat
+   * to u každé nové firmy ručně znamená, že se na to jednou zapomene a klient
+   * se o hotovém spotu nedozví.
+   */
+  if (company.type === 'KLIENT' && company.dealsAds) {
+    await vychoziNotifikaceReklamy(company.id, !company.dealsAudiobooks).catch((err) =>
+      console.error('Vychozi notifikace reklamy pri zalozeni firmy selhala:', err),
+    );
+  }
 
   return NextResponse.json(company, { status: 201 });
 }
