@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import type { InvoiceStatus, OfferStatus } from '@prisma/client';
 
 /**
  * DOKLADY, KTERÉ KLIENT VIDÍ U SVÉ ZAKÁZKY (zadání 1. 10. 2026: „tady budou
@@ -28,9 +29,15 @@ export type DokladKlienta = {
   barva: 'zelena' | 'oranzova' | 'seda' | 'cervena';
 };
 
-/** Stavy, ve kterých doklad klientovi ukazujeme. */
-const NABIDKA_VIDITELNA = ['SENT', 'APPROVED', 'REJECTED'];
-const FAKTURA_VIDITELNA = ['SENT', 'PAID'];
+/**
+ * Stavy, ve kterých doklad klientovi ukazujeme.
+ *
+ * Typ je potřeba napsat: holé pole řetězců se odvodí jako `string[]` a Prisma
+ * ho do `status: { in: … }` nevezme (chce svůj enum). Stejná past jako
+ * u `Role[]` v brunoNastroje.
+ */
+const NABIDKA_VIDITELNA: OfferStatus[] = ['SENT', 'APPROVED', 'REJECTED'];
+const FAKTURA_VIDITELNA: InvoiceStatus[] = ['SENT', 'PAID'];
 
 export async function dokladyProKlienta(
   caflouProjectIds: string[],
