@@ -254,7 +254,15 @@ export function ZpetnaVazba({
                               /* eslint-disable-next-line @next/next/no-img-element */
                               <img
                                 key={o.id}
-                                src={o.url}
+                                /**
+                                 * PŘES PORTÁL, NE ROVNOU Z ÚLOŽIŠTĚ (oprava
+                                 * 1. 10. 2026). Uložená adresa míří na rozhraní
+                                 * R2 a to bez podpisu vrátí 401 - viz
+                                 * api/pripominky/priloha/[id]. Totéž je v kartě
+                                 * Připomínky v Mém účtu; obě místa kreslí týž
+                                 * seznam, tak se musí opravit obě.
+                                 */
+                                src={`/api/pripominky/priloha/${o.id}`}
                                 alt={o.nazev}
                                 className="w-10 h-10 object-cover rounded border border-line"
                               />
