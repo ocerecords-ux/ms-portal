@@ -17,6 +17,7 @@ import { FinishedProjectsSection } from './FinishedProjectsSection';
 import { InternalProjectsBrowser } from './InternalProjectsBrowser';
 import { ZalozkyKlienta } from './ZalozkyKlienta';
 import { ReklamaPrehled, type DokumentProjektu } from './ReklamaPrehled';
+import { dokladyProKlienta } from '@/lib/dokladyKlientaServer';
 import { loadLicencniListyProjektu } from '@/lib/licencniListServer';
 import { DokonceneFirmy } from './DokonceneFirmy';
 import { nactiPoradiStavu } from '@/lib/poradiStavuServer';
@@ -315,15 +316,30 @@ export default async function ProjektyPage() {
    */
   const jeKlientReklam = Boolean(company?.dealsAds && !company?.dealsAudiobooks);
 
+  /**
+   * DOKLADY K ZAKÁZCE (zadání 1. 10. 2026: „tady budou ikony dokladů Nabídka,
+   * faktura a objednávka"). Jedním dotazem pro celou stránku - doklad po
+   * dokladu by to bylo padesát dotazů. Co klient smí vidět, řeší
+   * lib/dokladyKlientaServer.ts; tady se jen předá jeho firma ze session.
+   */
+  const dokladyKlienta = await dokladyProKlienta(
+    [...active, ...finished, ...firemniActive, ...firemniFinished].map((p) => String(p.id)),
+    companyId,
+  );
+
   const reklamaTypy: Record<string, string | null> = {};
+  const reklamaIkony: Record<string, string | null> = {};
   const reklamaLicence: Record<string, { nazev: string; ikona: string | null }[]> = {};
   const reklamaSlozky: Record<string, string | null> = {};
   const reklamaDokumenty: Record<string, DokumentProjektu[]> = {};
   let reklamaOdkazy: Record<string, string | null> = {};
 
   if (jeKlientReklam) {
+    // Ikona typu zakázky u názvu místo sloupce „Typ projektu" (1. 10. 2026).
+    const ikonyCeniku = await mapaIkonTypu();
     for (const m of firemniMeta) {
       reklamaTypy[m.caflouProjectId] = m.projectType ?? null;
+      reklamaIkony[m.caflouProjectId] = m.projectType ? ikonyCeniku[m.projectType] ?? null : null;
       reklamaLicence[m.caflouProjectId] = m.licence.map((l) => ({ nazev: l.nazev, ikona: l.ikona }));
       reklamaSlozky[m.caflouProjectId] = m.driveUrl ?? null;
     }
@@ -384,10 +400,12 @@ export default async function ProjektyPage() {
               aktivni={active}
               dokoncene={finished}
               typy={reklamaTypy}
+              ikony={reklamaIkony}
               licence={reklamaLicence}
               slozky={reklamaSlozky}
               dokumenty={reklamaDokumenty}
               odkazyPripominek={reklamaOdkazy}
+              doklady={dokladyKlienta}
             />
           ) : (
           <div className="flex flex-col gap-8">
@@ -407,6 +425,7 @@ export default async function ProjektyPage() {
                 odkazyAudioTaggeru={odkazyAudioTaggeru}
                 schvaleni={schvaleni}
                 progres={progres}
+                doklady={dokladyKlienta}
                 jazyk={jazyk}
                 normostrany={ukazNormostrany}
               />
@@ -415,6 +434,7 @@ export default async function ProjektyPage() {
             <FinishedProjectsSection
               projects={finished}
               rodneListy={rodneListy}
+              doklady={dokladyKlienta}
               normostrany={ukazNormostrany}
             />
           </div>
@@ -426,10 +446,12 @@ export default async function ProjektyPage() {
               aktivni={firemniActive}
               dokoncene={firemniFinished}
               typy={reklamaTypy}
+              ikony={reklamaIkony}
               licence={reklamaLicence}
               slozky={reklamaSlozky}
               dokumenty={reklamaDokumenty}
               odkazyPripominek={reklamaOdkazy}
+              doklady={dokladyKlienta}
             />
           ) : (
           <div className="flex flex-col gap-8">
@@ -449,6 +471,7 @@ export default async function ProjektyPage() {
                 rodneListy={rodneListy}
                 progres={firemniProgres}
                 kontakty={firemniKontakty}
+                doklady={dokladyKlienta}
                 jazyk={jazyk}
                 normostrany={ukazNormostrany}
               />
@@ -457,6 +480,7 @@ export default async function ProjektyPage() {
             <DokonceneFirmy
               projects={firemniFinished}
               rodneListy={rodneListy}
+              doklady={dokladyKlienta}
               kontakty={firemniKontakty}
               normostrany={ukazNormostrany}
             />

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { DisplayProject } from '@/lib/projektyTypy';
 import { ProjectsTable } from './shared';
+import type { DokladKlienta } from '@/lib/dokladyKlientaServer';
 import { useJazyk, usePreklad } from '../components/JazykProvider';
 
 const PAGE_SIZE = 20;
@@ -15,11 +16,14 @@ const PAGE_SIZE = 20;
 export function FinishedProjectsSection({
   projects,
   rodneListy,
+  doklady,
   normostrany = true,
 }: {
   projects: DisplayProject[];
   /** Rodné listy k projektům - viz ProjectsTable (zadání 9. 9. 2026). */
   rodneListy?: Record<string, { id: string; fileName: string }>;
+  /** Doklady k zakázce - ikony nabídky, faktury a objednávky (1. 10. 2026). */
+  doklady?: Record<string, DokladKlienta[]>;
   /** U reklamního klienta se sloupec NS nevykresluje (25. 9. 2026). */
   normostrany?: boolean;
 }) {
@@ -54,6 +58,7 @@ export function FinishedProjectsSection({
             projects={projects.slice(0, visibleCount)}
             emptyText={t('projekty.zadneDokoncene')}
             rodneListy={rodneListy}
+            doklady={doklady}
             jazyk={jazyk}
             normostrany={normostrany}
           />

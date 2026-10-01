@@ -792,3 +792,153 @@ export function dokladFileName(druh: 'FAKTURA' | 'NABIDKA', cislo: string): stri
     .slice(0, 60);
   return `${druh === 'FAKTURA' ? 'Faktura' : 'Nabidka'}_${zaklad || 'doklad'}.pdf`;
 }
+
+// --- Objednávka z webu -----------------------------------------------------
+
+/**
+ * OBJEDNÁVKA KLIENTA DO PDF (zadání 1. 10. 2026: „tady budou ikony dokladů
+ * Nabídka, faktura a objednávka (objednávka z webu v pdf)").
+ *
+ * Objednávka doteď žila jen jako řádky v databázi - klient si ji po odeslání
+ * nemohl nikde přečíst, natož uložit. Tohle je její papírová podoba: co si
+ * objednal, kdy a s jakým termínem.
+ *
+ * NENÍ TO DOKLAD V ÚČETNÍM SMYSLU, proto tu nejsou částky, DPH ani dodavatel
+ * s odběratelem ve dvou sloupcích. Je to potvrzení toho, co od nás klient
+ * chce - a tomu odpovídá i sazba: hlavička, firma, datum a pak dvojice
+ * popisek/hodnota pod sebou.
+ */
+export type ObjednavkaData = {
+  /** Číslo do hlavičky, např. „OBJ-7K2M". */
+  cislo: string;
+  /** Firma, která objednávala. */
+  firma: string;
+  /** Kdo objednávku odeslal. */
+  objednal?: string | null;
+  datum: Date;
+  nazev: string;
+  radky: { popis: string; hodnota: string }[];
+  /** Delší texty pod seznamem - poznámka klienta, úvod a závěr knihy. */
+  bloky?: { popis: string; text: string }[];
+  jazyk: 'cs' | 'en';
+};
+
+export function renderObjednavkaPdf(data: ObjednavkaData): Buffer {
+  const pdf = new PdfWriter();
+  const regularId = embedFont(pdf, FONT_REGULAR, 'LiberationSans');
+  const boldId = embedFont(pdf, FONT_BOLD, 'LiberationSans-Bold');
+  const logoId = embedImage(pdf, LOGO);
+  const en = data.jazyk === 'en';
+
+  const stranky: Kresba[] = [];
+  let c = new Kresba(A4.h);
+  stranky.push(c);
+
+  /** Táž fialová hlavička jako u faktury, jen s jiným nadpisem. */
+  const hlava = (k: Kresba, prvni: boolean) => {
+    const vyska = prvni ? HLAVICKA_H : HLAVICKA_DALSI_H;
+    k.fillRect(0, 0, A4.w, vyska, PURPLE);
+    const logoV = prvni ? 28 : 20;
+    k.image('ImLogo', LEFT, prvni ? 34 : 18, (logoV * LOGO.width) / LOGO.height, logoV);
+    const nazev = en ? 'ORDER' : 'OBJEDNÁVKA';
+    if (prvni) {
+      k.fillRound(LEFT, 74, 40, 3, 1.5, 1.5, GREEN);
+      vpravo(k, true, nazev, 10, RIGHT, 50, hex('#C9FFDF'));
+      vpravo(k, true, data.cislo, 22, RIGHT, 82, BILA);
+    } else {
+      vpravo(k, true, `${nazev} ${data.cislo}`, 9, RIGHT, 36, hex('#C9FFDF'));
+    }
+    return vyska;
+  };
+
+  hlava(c, true);
+  let y = HLAVICKA_H + 24;
+
+  // Kdo a kdy objednával.
+  popisek(c, en ? 'CUSTOMER' : 'OBJEDNAL', LEFT, y);
+  popisek(c, en ? 'ORDERED ON' : 'DATUM OBJEDNÁVKY', STRED, y);
+  let yl = y + 20;
+  for (const radek of zalom(data.firma, SIRKA / 2 - 20, 12, true)) {
+    c.text(FONT_BOLD, 'FB', radek, 12, LEFT, yl, INK);
+    yl += 15;
+  }
+  if (data.objednal) {
+    c.text(FONT_REGULAR, 'FR', data.objednal, 9.5, LEFT, yl, MUTED);
+    yl += 13;
+  }
+  c.text(FONT_BOLD, 'FB', datum(data.datum, data.jazyk), 12, STRED, y + 20, INK);
+  y = Math.max(yl, y + 35);
+
+  // Název zakázky velkým písmem - je to to hlavní, co na objednávce je.
+  y += 18;
+  popisek(c, en ? 'PROJECT' : 'ZAKÁZKA', LEFT, y);
+  y += 22;
+  for (const radek of zalom(data.nazev, SIRKA, 16, true)) {
+    c.text(FONT_BOLD, 'FB', radek, 16, LEFT, y, INK);
+    y += 20;
+  }
+
+  /** Nová stránka, když se další blok nevejde. */
+  const zalomStranku = () => {
+    c = new Kresba(A4.h);
+    stranky.push(c);
+    hlava(c, false);
+    return HLAVICKA_DALSI_H + 26;
+  };
+
+  // Dvojice popisek / hodnota pod sebou, hodnota vpravo.
+  y += 14;
+  const sirkaHodnoty = SIRKA - 170;
+  for (const radek of data.radky) {
+    const radkyHodnoty = zalom(radek.hodnota || '—', sirkaHodnoty, 10.5);
+    const vyska = Math.max(RADEK_MIN_H, 10 + radkyHodnoty.length * 14);
+    if (y + vyska > PATA_Y) y = zalomStranku();
+    c.fillRect(LEFT, y, SIRKA, vyska, TINT);
+    c.text(FONT_BOLD, 'FB', radek.popis, 9, LEFT + 12, y + 17, MUTED);
+    let yh = y + 17;
+    for (const r of radkyHodnoty) {
+      c.text(FONT_REGULAR, 'FR', r, 10.5, LEFT + 170, yh, INK);
+      yh += 14;
+    }
+    y += vyska + 4;
+  }
+
+  // Delší texty (poznámka, úvod a závěr knihy) - bez podbarvení, aby se četly.
+  for (const blok of data.bloky ?? []) {
+    const radky = zalom(blok.text, SIRKA, 10.5);
+    if (y + 28 + radky.length * 14 > PATA_Y) y = zalomStranku();
+    y += 18;
+    popisek(c, blok.popis, LEFT, y);
+    y += 18;
+    for (const r of radky) {
+      if (y > PATA_Y) y = zalomStranku();
+      c.text(FONT_REGULAR, 'FR', r, 10.5, LEFT, y, INK);
+      y += 14;
+    }
+  }
+
+  stranky.forEach((stranka, i) => {
+    stranka.line(LEFT, PATICKA_Y - 16, RIGHT, PATICKA_Y - 16, BORDER, 1);
+    stranka.text(FONT_REGULAR, 'FR', 'MEDIA SPACE s.r.o.', 8.5, LEFT, PATICKA_Y, MUTED);
+    vpravo(stranka, false, `${en ? 'Page' : 'Strana'} ${i + 1}/${stranky.length}`, 8.5, RIGHT, PATICKA_Y, MUTED);
+  });
+
+  const pagesId = pdf.reserve();
+  const zdroje =
+    `/Resources << /Font << /FR ${regularId} 0 R /FB ${boldId} 0 R >> ` +
+    `/XObject << /ImLogo ${logoId} 0 R >> >>`;
+  const ids = stranky.map((stranka) => {
+    const contentId = pdf.addStream('/Filter /FlateDecode', deflateSync(stranka.toBuffer(), { level: 9 }));
+    return pdf.add(
+      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${f(A4.w)} ${f(A4.h)}] ${zdroje} ` +
+        `/Contents ${contentId} 0 R >>`,
+    );
+  });
+  pdf.fill(pagesId, `<< /Type /Pages /Kids [${ids.map((id) => `${id} 0 R`).join(' ')}] /Count ${ids.length} >>`);
+
+  const infoId = pdf.add(
+    `<< /Title ${pdfText(`Objednávka ${data.cislo}`.replace(/[\r\n]+/g, ' '))} /Producer ${pdfText('MEDIA SPACE s.r.o.')} >>`,
+  );
+  const rootId = pdf.add(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+  return pdf.build(rootId, infoId);
+}

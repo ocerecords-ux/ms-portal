@@ -154,6 +154,10 @@ export const SLOVNIK: Record<string, { cs: string; en: string }> = {
   'projekty.sl.vydani': { cs: 'Vydání', en: 'Release' },
   'projekty.sl.kPreposlechu': { cs: 'K přeposlechu', en: 'To proof-listen' },
   'projekty.sl.preposlechnuto': { cs: 'Přeposlechnuto', en: 'Proof-listened' },
+  // Jeden sloupec misto dvou (1. 10. 2026) - viz BunkaPreposlechu.
+  'projekty.sl.preposlech': { cs: 'Přeposlech', en: 'Proof-listening' },
+  /** Ikony nabidky, faktury a objednavky v klientskem prehledu (1. 10. 2026). */
+  'projekty.sl.doklady': { cs: 'Doklady', en: 'Documents' },
   'projekty.sl.rodnyList': { cs: 'Rodný list', en: 'Advert record' },
   'projekty.sl.schvaleni': { cs: 'Schválení', en: 'Approval' },
   'projekty.rodnyListOtevrit': { cs: 'Rodný list ↗', en: 'Advert record ↗' },

@@ -4,6 +4,8 @@ import { Fragment, useState } from 'react';
 import Link from 'next/link';
 import { ZnackaNabidky, type StavNabidky } from '@/lib/nabidkaReklamy';
 import { ZnackyDokladu, type DokladyProjektu } from '@/lib/dokladyUProjektu';
+import { ZnackyDokladuKlienta } from '@/lib/dokladyKlienta';
+import type { DokladKlienta } from '@/lib/dokladyKlientaServer';
 import type { ProjectPriority } from '@prisma/client';
 import type { AdminDisplayProject, DisplayProject } from '@/lib/projektyTypy';
 import type { ColumnSetting } from '@/lib/columnLabels';
@@ -171,6 +173,7 @@ export function ProjectsTable({
   emptyText,
   terminy,
   rodneListy,
+  doklady,
   preposlech,
   odkazyAudioTaggeru,
   schvaleni,
@@ -244,11 +247,18 @@ export function ProjectsTable({
    * sloupec nevykreslí - u dokončených zakázek už nemá co ukazovat.
    */
   terminy?: Record<string, TerminKlienta[]>;
+  /**
+   * DOKLADY K ZAKÁZCE (zadání 1. 10. 2026: „tady budou ikony dokladů Nabídka,
+   * faktura a objednávka"). Klíč je ID projektu. Bez tohohle propu se sloupec
+   * nevykreslí - jsou přehledy, kam doklady nepatří.
+   */
+  doklady?: Record<string, DokladKlienta[]>;
 }) {
   const showKontakt = kontakty !== undefined;
   const showTerminy = terminy !== undefined;
   const showRodnyList = rodneListy !== undefined;
   const showPreposlech = preposlech !== undefined;
+  const showDoklady = doklady !== undefined;
   const showSchvaleni = schvaleni !== undefined;
   const showProgres = progres !== undefined;
 
@@ -266,7 +276,8 @@ export function ProjectsTable({
     (showKontakt ? 1 : 0) +
     (showTerminy ? 1 : 0) +
     (showProgres ? 1 : 0) +
-    (showPreposlech ? 2 : 0) +
+    (showPreposlech ? 1 : 0) +
+    (showDoklady ? 1 : 0) +
     (showRodnyList ? 1 : 0) +
     (showSchvaleni ? 1 : 0);
 
@@ -325,16 +336,19 @@ export function ProjectsTable({
               <th className="text-left px-4 py-3.5 whitespace-nowrap">
                 {prelozit(jazyk, 'projekty.sl.vydani')}
               </th>
-              {/* Dva sloupce k přeposlechu (zadání 12. 9. 2026): jestli už je
-                  co poslouchat, a jak daleko poslech došel. */}
+              {/* JEDEN SLOUPEC „Přeposlech" (1. 10. 2026: „dal bych pryč pole
+                  Přeposlechnuto a změnil bych název K přeposlechu na
+                  Přeposlech"). Kam poslech došel, se vešlo pod odkaz do
+                  AudioTaggeru - patří to k sobě a uvolněné místo zabraly
+                  Doklady. */}
               {showPreposlech && (
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">
-                  {prelozit(jazyk, 'projekty.sl.kPreposlechu')}
+                  {prelozit(jazyk, 'projekty.sl.preposlech')}
                 </th>
               )}
-              {showPreposlech && (
+              {showDoklady && (
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">
-                  {prelozit(jazyk, 'projekty.sl.preposlechnuto')}
+                  {prelozit(jazyk, 'projekty.sl.doklady')}
                 </th>
               )}
               {showRodnyList && (
@@ -443,14 +457,16 @@ export function ProjectsTable({
                   {formatDate(p.releaseDate, jazyk)}
                 </td>
                 {showPreposlech && (
-                  <BunkaKPreposlechu
+                  <BunkaPreposlechu
                     stav={preposlech?.[String(p.id)]}
                     odkaz={odkazyAudioTaggeru?.[String(p.id)]}
                     jazyk={jazyk}
                   />
                 )}
-                {showPreposlech && (
-                  <BunkaPreposlechnuto stav={preposlech?.[String(p.id)]} jazyk={jazyk} />
+                {showDoklady && (
+                  <td className="px-4 py-2 align-middle">
+                    <ZnackyDokladuKlienta doklady={doklady?.[String(p.id)]} />
+                  </td>
                 )}
                 {showSchvaleni && (
                   <td className="px-4 py-2 text-sm font-heading whitespace-nowrap align-middle">
@@ -1344,12 +1360,12 @@ function SortableHeader({
  * projektů by jinak znamenalo padesát dotazů do Google API při každém
  * otevření přehledu.
  */
-function BunkaKPreposlechu({
+function BunkaPreposlechu({
   stav,
   odkaz,
   jazyk,
 }: {
-  stav?: { stop: number };
+  stav?: { stop: number; poslechnuto: number; hotovo: boolean; procent?: number | null };
   odkaz?: string;
   jazyk: Jazyk;
 }) {
@@ -1368,7 +1384,8 @@ function BunkaKPreposlechu({
    */
   if (pripraveno && odkaz) {
     return (
-      <td className="px-4 py-0 whitespace-nowrap">
+      <td className="px-4 py-2 whitespace-nowrap">
+        <span className="flex flex-col items-start gap-1">
         <a
           href={odkaz}
           target="_blank"
@@ -1383,6 +1400,8 @@ function BunkaKPreposlechu({
           </svg>
           {prelozit(jazyk, 'projekty.poslechnout')}
         </a>
+        <PostupPreposlechu stav={stav} jazyk={jazyk} />
+        </span>
       </td>
     );
   }
@@ -1419,14 +1438,18 @@ function BunkaKPreposlechu({
 }
 
 /**
- * „PŘEPOSLECHNUTO" (zadání 12. 9. 2026: „tam bude počet tracků a kolik je
- * z nich přeposlechnuto, třeba 3 z 24. A když se přeposlech dokončí,
- * rozsvítí se tam Dokončeno").
+ * KAM POSLECH DOŠEL (zadání 12. 9. 2026: „tam bude počet tracků a kolik je
+ * z nich přeposlechnuto, třeba 3 z 24. A když se přeposlech dokončí, rozsvítí
+ * se tam Dokončeno").
+ *
+ * Od 1. 10. 2026 to není vlastní sloupec („dal bych pryč pole Přeposlechnuto"),
+ * ale druhý řádek pod odkazem do AudioTaggeru - patří to k sobě a dva sloupce
+ * na jednu věc braly místo, které potřebují doklady.
  *
  * Stopa se počítá, až když ji někdo doposlechl do konce — viz
  * /api/projekty/[id]/preposlech/stopa.
  */
-function BunkaPreposlechnuto({
+function PostupPreposlechu({
   stav,
   jazyk,
 }: {
@@ -1435,44 +1458,36 @@ function BunkaPreposlechnuto({
 }) {
   if (stav?.hotovo) {
     return (
-      <td className="px-4 py-0 whitespace-nowrap">
-        <span className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold px-3 py-1 rounded-pill bg-brand-green text-onAccent">
-          {prelozit(jazyk, 'projekty.hotovo')}
-        </span>
-      </td>
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-heading font-semibold px-2 py-0.5 rounded-pill bg-brand-green text-onAccent">
+        {prelozit(jazyk, 'projekty.hotovo')}
+      </span>
     );
   }
-  if (!stav || stav.stop === 0) {
-    return <td className="px-4 py-0 text-sm font-heading text-muted whitespace-nowrap">—</td>;
-  }
+  if (!stav || stav.stop === 0) return null;
   // Od 21. 9. 2026 hlavne PROCENTO podle stran PDF - stopy chodi po
   // kouscich, takze „3 z 5" o cele knize nic nerekne. Stopy zustavaji
   // v bublince.
   if (stav.procent !== null && stav.procent !== undefined) {
     return (
-      <td
-        className="px-4 py-0 text-sm font-heading text-muted whitespace-nowrap"
+      <span
+        className="inline-flex items-center gap-2 text-xs font-heading text-muted"
         title={prelozitS(jazyk, 'projekty.doposlechnuteStopy', {
           hotovo: stav.poslechnuto,
           celkem: stav.stop,
         })}
       >
-        <span className="inline-flex items-center gap-2">
-          <span className="w-12 h-1.5 rounded-full bg-field border border-line overflow-hidden" aria-hidden="true">
-            <span className="block h-full bg-brand-green" style={{ width: `${stav.procent}%` }} />
-          </span>
-          <span className={`tabular-nums ${stav.procent > 0 ? 'text-ink font-semibold' : ''}`}>{stav.procent} %</span>
+        <span className="w-12 h-1.5 rounded-full bg-field border border-line overflow-hidden" aria-hidden="true">
+          <span className="block h-full bg-brand-green" style={{ width: `${stav.procent}%` }} />
         </span>
-      </td>
+        <span className={`tabular-nums ${stav.procent > 0 ? 'text-ink font-semibold' : ''}`}>{stav.procent} %</span>
+      </span>
     );
   }
   return (
-    <td className="px-4 py-0 text-sm font-heading text-muted whitespace-nowrap">
-      <span className="tabular-nums">
-        <span className={stav.poslechnuto > 0 ? 'text-ink font-semibold' : ''}>{stav.poslechnuto}</span>{' '}
-        {prelozit(jazyk, 'obecne.z')} {stav.stop}
-      </span>
-    </td>
+    <span className="text-xs font-heading text-muted tabular-nums">
+      <span className={stav.poslechnuto > 0 ? 'text-ink font-semibold' : ''}>{stav.poslechnuto}</span>{' '}
+      {prelozit(jazyk, 'obecne.z')} {stav.stop}
+    </span>
   );
 }
 

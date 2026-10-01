@@ -24,19 +24,43 @@ import { usePreklad } from '@/app/(portal)/components/JazykProvider';
  * řádku, než ke kterému patří.
  */
 
-export type DruhNahledu = 'NABIDKA' | 'FAKTURA' | 'PREPOSLECH';
+export type DruhNahledu = 'NABIDKA' | 'FAKTURA' | 'PREPOSLECH' | 'OBJEDNAVKA';
 
 type Radek = { popis: string; hodnota: string; duraz?: boolean; varovani?: boolean };
-type Nahled = { nadpis: string; odkaz: string; tlacitko: string; radky: Radek[] };
+type Nahled = {
+  nadpis: string;
+  odkaz: string;
+  tlacitko: string;
+  radky: Radek[];
+  /**
+   * Odkaz na stazeni vedle hlavniho tlacitka (1. 10. 2026: „tlacitko kde se
+   * otevre cely nahled PDF a pujde i stahnout"). Bez nej je v okne jen jedno
+   * tlacitko jako driv.
+   */
+  stahnout?: string;
+  /** PDF se otevira do nove zalozky, at prehled projektu zustane otevreny. */
+  novaZalozka?: boolean;
+};
 
 /** Šířka okna; drží se i při počítání, aby nevylezlo z obrazovky. */
 const SIRKA = 300;
 const MEZERA = 8;
 
-function adresaNahledu(druh: DruhNahledu, id: string): string {
+const V_ADRESE: Record<DruhNahledu, string> = {
+  NABIDKA: 'nabidka',
+  FAKTURA: 'faktura',
+  OBJEDNAVKA: 'objednavka',
+  PREPOSLECH: 'preposlech',
+};
+
+/**
+ * Klient ma vlastni routu, ne jinou vetev v te nasi (1. 10. 2026): jina prava
+ * (doklad ME firmy misto „vidi Banku") a jiny obsah (bez upominek).
+ */
+function adresaNahledu(druh: DruhNahledu, id: string, klient: boolean): string {
   if (druh === 'PREPOSLECH') return `/api/nahled/preposlech?projekt=${encodeURIComponent(id)}`;
-  const d = druh === 'NABIDKA' ? 'nabidka' : 'faktura';
-  return `/api/nahled/doklad?druh=${d}&id=${encodeURIComponent(id)}`;
+  const zaklad = klient ? '/api/klient/doklady/nahled' : '/api/nahled/doklad';
+  return `${zaklad}?druh=${V_ADRESE[druh]}&id=${encodeURIComponent(id)}`;
 }
 
 export function NahledIkony({
@@ -44,6 +68,7 @@ export function NahledIkony({
   popis,
   druh,
   id,
+  klient = false,
   children,
 }: {
   /** Kam vede tlačítko v okně (a kam se jde, když náhled není z čeho složit). */
@@ -54,6 +79,8 @@ export function NahledIkony({
   druh?: DruhNahledu;
   /** Id dokladu, u přeposlechu caflouProjectId. */
   id?: string | null;
+  /** Nahled pro klienta - cte se z klientske routy (1. 10. 2026). */
+  klient?: boolean;
   children: React.ReactNode;
 }) {
   const t = usePreklad();
@@ -78,7 +105,7 @@ export function NahledIkony({
       if (data) return;
       void (async () => {
         try {
-          const res = await fetch(adresaNahledu(druh, id));
+          const res = await fetch(adresaNahledu(druh, id, klient));
           const o = await res.json().catch(() => ({}));
           if (!res.ok) {
             setChyba(o?.error || t('ikony.nahledNenacten'));
@@ -90,7 +117,7 @@ export function NahledIkony({
         }
       })();
     },
-    [druh, id, odkaz, data, t],
+    [druh, id, klient, odkaz, data, t],
   );
 
   /** Okno se nesmí schovat pod spodní hranou - když se nevejde, jde nad ikonu. */
@@ -187,9 +214,24 @@ export function NahledIkony({
               </span>
             )}
 
-            <span className="flex items-center justify-end pt-4">
+            <span className="flex items-center justify-end gap-3 pt-4">
+              {/* Stahnout je odkaz, ne druhe plne tlacitko: hlavni akce je
+                  otevrit, stazeni si clovek najde, kdyz ho chce (1. 10. 2026). */}
+              {data?.stahnout && (
+                <a
+                  href={data.stahnout}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setKotva(null);
+                  }}
+                  className="font-heading font-semibold text-sm text-brand-purple no-underline hover:underline"
+                >
+                  {t('obecne.stahnout')}
+                </a>
+              )}
               <a
                 href={data?.odkaz ?? odkaz}
+                {...(data?.novaZalozka ? { target: '_blank', rel: 'noreferrer' } : {})}
                 /* STEJNÉ OKNO, NE NOVÁ ZÁLOŽKA (zadání 28. 9. 2026:
                    „potřebuju se dostat v tom samém okně a na kartu Přeposlech
                    v detailu projektu"). Odkaz míří na

@@ -5,7 +5,9 @@ import Link from 'next/link';
 import type { DisplayProject } from '@/lib/projektyTypy';
 import { StatusPill, formatDate } from './shared';
 import { stavProKlientaReklamy } from '@/lib/stavyProjektu';
-import { KresbaIkony } from '@/lib/ikonyTypu';
+import { IkonaTypu, KresbaIkony } from '@/lib/ikonyTypu';
+import { ZnackyDokladuKlienta } from '@/lib/dokladyKlienta';
+import type { DokladKlienta } from '@/lib/dokladyKlientaServer';
 import { useJazyk, usePreklad } from '../components/JazykProvider';
 
 /**
@@ -60,10 +62,17 @@ export function ReklamaPrehled({
   slozky = {},
   dokumenty = {},
   odkazyPripominek = {},
+  doklady = {},
+  ikony = {},
 }: {
   aktivni: ReklamaProjekt[];
   dokoncene: ReklamaProjekt[];
-  /** Typ projektu podle ID zakázky (položka ceníku). */
+  /**
+   * Typ projektu podle ID zakázky (položka ceníku). Od 1. 10. 2026 nemá
+   * vlastní sloupec - je z něj ikona u názvu, stejně jako v našem přehledu
+   * („pole Typ projektu nahraďme ikonami, jako máme my v přehledu projektu").
+   * Název typu zůstává v bublince nad ikonou.
+   */
   typy?: Record<string, string | null>;
   /** Druhy licence u zakázky - jméno a ikona. */
   licence?: Record<string, { nazev: string; ikona: string | null }[]>;
@@ -73,6 +82,10 @@ export function ReklamaPrehled({
   dokumenty?: Record<string, DokumentProjektu[]>;
   /** Odkaz do AudioTaggeru (tagger spotu s tlačítkem Schválit). */
   odkazyPripominek?: Record<string, string | null>;
+  /** Nabídka, faktura a objednávka k zakázce (1. 10. 2026). */
+  doklady?: Record<string, DokladKlienta[]>;
+  /** Klíč ikony typu zakázky z ceníku (1. 10. 2026). */
+  ikony?: Record<string, string | null>;
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
@@ -138,7 +151,7 @@ export function ReklamaPrehled({
         <Tabulka
           projekty={aktivni}
           prazdne={t('projekty.zadneAktivni')}
-          {...{ typy, licence, slozky, dokumenty, odkazyPripominek, jazyk, setOkno }}
+          {...{ typy, licence, slozky, dokumenty, odkazyPripominek, doklady, ikony, jazyk, setOkno }}
         />
       </div>
 
@@ -161,7 +174,7 @@ export function ReklamaPrehled({
           <Tabulka
             projekty={dokoncene}
             prazdne={t('projekty.zadneDokoncene')}
-            {...{ typy, licence, slozky, dokumenty, odkazyPripominek, jazyk, setOkno }}
+            {...{ typy, licence, slozky, dokumenty, odkazyPripominek, doklady, ikony, jazyk, setOkno }}
           />
         )}
       </div>
@@ -224,6 +237,8 @@ function Tabulka({
   slozky,
   dokumenty,
   odkazyPripominek,
+  doklady,
+  ikony,
   jazyk,
   setOkno,
 }: {
@@ -234,6 +249,8 @@ function Tabulka({
   slozky: Record<string, string | null>;
   dokumenty: Record<string, DokumentProjektu[]>;
   odkazyPripominek: Record<string, string | null>;
+  doklady: Record<string, DokladKlienta[]>;
+  ikony: Record<string, string | null>;
   jazyk: ReturnType<typeof useJazyk>;
   setOkno: (v: OknoDokumentu | null) => void;
 }) {
@@ -254,8 +271,10 @@ function Tabulka({
               <th className="text-left px-4 py-3.5">Projekt</th>
               <th className="text-left px-4 py-3.5">Stav</th>
               <th className="text-left px-4 py-3.5">Herec</th>
-              <th className="text-left px-4 py-3.5 whitespace-nowrap">Typ projektu</th>
+              {/* „Typ projektu" tu od 1. 10. 2026 není - je z něj ikona
+                  u názvu a uvolněné místo zabraly Doklady. */}
               <th className="text-left px-4 py-3.5">Licence</th>
+              <th className="text-left px-4 py-3.5 whitespace-nowrap">Doklady</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Dokončení</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Složka</th>
               <th className="text-left px-4 py-3.5 whitespace-nowrap">Připomínkovat</th>
@@ -271,12 +290,17 @@ function Tabulka({
               return (
                 <tr key={p.id} className="border-t border-line hover:bg-field/60 transition-colors">
                   <td className="px-4 py-2.5 align-middle">
-                    <Link
-                      href={`/projekty/${p.id}`}
-                      className="text-ink hover:text-brand-purple no-underline font-heading text-sm whitespace-normal break-words leading-snug"
-                    >
-                      {p.name}
-                    </Link>
+                    <span className="flex items-center gap-2">
+                      {/* Ikona typu zakázky místo sloupce (1. 10. 2026) - co
+                          znamená, řekne bublinka nad ní, stejně jako u nás. */}
+                      <IkonaTypu klic={ikony[id] ?? null} typProjektu={typy[id] ?? null} mezeraKdyzNeni />
+                      <Link
+                        href={`/projekty/${p.id}`}
+                        className="text-ink hover:text-brand-purple no-underline font-heading text-sm whitespace-normal break-words leading-snug"
+                      >
+                        {p.name}
+                      </Link>
+                    </span>
                   </td>
                   <td className="px-4 py-2.5 align-middle">
                     {/* Klient reklamy vidí jen svých pět stavů (25. 9. 2026). */}
@@ -290,9 +314,6 @@ function Tabulka({
                     {p.herci && p.herci.length > 0
                       ? p.herci.map((h) => h.jmeno).join(', ')
                       : p.narrator || '—'}
-                  </td>
-                  <td className="px-4 py-2.5 align-middle text-sm font-body text-muted">
-                    {typy[id] || '—'}
                   </td>
                   <td className="px-4 py-2.5 align-middle">
                     {/* LICENCE JE POPIS, DOKUMENTY JSOU IKONA (zadání 27. 9.
@@ -353,6 +374,11 @@ function Tabulka({
                         )}
                       </span>
                     )}
+                  </td>
+                  <td className="px-4 py-2.5 align-middle">
+                    {/* Nabídka, faktura a objednávka (1. 10. 2026) - klik
+                        ukáže náhled a tlačítko na PDF, viz NahledIkony. */}
+                    <ZnackyDokladuKlienta doklady={doklady[id]} />
                   </td>
                   <td className="px-4 py-2.5 align-middle text-sm font-heading text-muted tabular-nums whitespace-nowrap">
                     {formatDate(p.endDate, jazyk)}
