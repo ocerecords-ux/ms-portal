@@ -340,14 +340,25 @@ export function CalendarBrowser({
    * takže se nedá splést ani po týdnu.
    */
   const [pasmoZobrazeni, setPasmoZobrazeni] = useState(pasmoStudiaVychozi);
+  /**
+   * Bez vlastní volby jede pásmo za STUDIEM, i když se výběr studií změní
+   * (oprava 1. 10. 2026). Dřív se uložená hodnota brala jen při prvním
+   * vykreslení: kdo si otevřel londýnský kalendář a pak se vrátil na všechna
+   * studia, zůstal v londýnském pásmu, aniž by si ho kdy vybral - a mřížka
+   * pak byla v pražských dnech, ale čtená v Londýně.
+   */
   useEffect(() => {
     try {
       const ulozene = window.localStorage.getItem(KLIC_PASMA);
-      if (ulozene && jePlatnePasmo(ulozene)) setPasmoZobrazeni(ulozene);
+      if (ulozene && jePlatnePasmo(ulozene)) {
+        setPasmoZobrazeni(ulozene);
+        return;
+      }
     } catch {
       /* Soukromé okno nebo zakázané úložiště - jede se v pásmu studia. */
     }
-  }, []);
+    setPasmoZobrazeni(pasmoStudiaVychozi);
+  }, [pasmoStudiaVychozi]);
   const zmenPasmo = (nove: string) => {
     setPasmoZobrazeni(nove);
     try {
@@ -357,8 +368,24 @@ export function CalendarBrowser({
       /* Nepodařilo se zapamatovat - na zobrazení to nic nemění. */
     }
   };
-  /** Odsud dál je `timezone` to, v čem se KRESLÍ. */
+  /** Odsud dál je `timezone` to, v čem se KRESLÍ ČASY. */
   const timezone = pasmoZobrazeni;
+  /**
+   * PÁSMO SLOUPCŮ (oprava 1. 10. 2026: „všechny jsou o den posunuté, jen
+   * Londýn je správně").
+   *
+   * Dny mřížky posílá server a jejich hranice jsou v pásmu prvního vybraného
+   * studia. Přepínač pásma mění JEN ČASY, ne hranice dnů — proto se dny
+   * (dnešek, přiřazení událostí do sloupců) počítají dál v tomhle pásmu.
+   *
+   * Do téhle opravy se v pásmu zobrazení počítaly i dny: popisek sloupce se
+   * skládal z půlnoci dne v pásmu STUDIA, ale formátoval se v pásmu
+   * ZOBRAZENÍ. Kdo si přepnul na Londýn — tedy na pásmo pozadu za pražským —
+   * dostal z půlnoci 1. 10. jedenáctou večer 30. 9. a celý kalendář měl
+   * popisky o den vedle. Popisky se proto skládají rovnou z klíče sloupce,
+   * viz poledneDne.
+   */
+  const pasmoMrizky = pasmoStudiaVychozi;
 
   /**
    * TELEFON NA ŠÍŘKU = JEN MŘÍŽKA (zadání 21. 9. 2026: „když jsem na stránce
@@ -519,7 +546,7 @@ export function CalendarBrowser({
       // střihů, nebylo kam dvojkliknout - dvojklik na událost, kterou
       // člověk upravit nesmí, proto založí novou ve stejném čase.
       setDetail(null);
-      const den = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date(e.start));
+      const den = new Intl.DateTimeFormat('en-CA', { timeZone: pasmoMrizky }).format(new Date(e.start));
       novaVMrizce(den, minutesInZone(new Date(e.start), timezone));
       return;
     }
@@ -657,14 +684,15 @@ export function CalendarBrowser({
     // Den události = její začátek v pásmu studia. en-CA píše datum jako
     // 2026-09-20, tedy přesně v podobě klíče dne.
     const naDen = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone,
+      // Sloupec je den v pásmu mřížky, ne v pásmu zobrazení (1. 10. 2026).
+      timeZone: pasmoMrizky,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
     });
     for (const e of viditelne) mapa.get(naDen.format(new Date(e.start)))?.push(e);
     return mapa;
-  }, [dnyPasu, viditelne, timezone]);
+  }, [dnyPasu, viditelne, pasmoMrizky]);
 
   /**
    * STÁTNÍ SVÁTKY U DNŮ (28. 9. 2026). Země se bere z pásma zobrazených studií
@@ -942,12 +970,13 @@ export function CalendarBrowser({
   }, [anchorIso, view, solo, puvodniNepritomnost, puvodniPorady, puvodniSchuzky, puvodniStudioIds.join(',')]);
 
   const nadpis = useMemo(() => {
-    const prvni = new Date(days[0].startIso);
-    const posledni = new Date(days[days.length - 1].startIso);
+    // Datum se bere z klíče sloupce, ne z jeho půlnoci - viz poledneDne.
+    const prvni = poledneDne(days[0].key);
+    const posledni = poledneDne(days[days.length - 1].key);
     // Názvy dnů a měsíců zná prohlížeč - jen se mu řekne jazyk portálu.
     if (view === 'den') {
       return new Intl.DateTimeFormat(kodJazyka(jazyk), {
-        timeZone: timezone,
+        timeZone: 'UTC',
         weekday: 'long',
         day: 'numeric',
         month: 'long',
@@ -956,17 +985,17 @@ export function CalendarBrowser({
     }
     if (view === 'mesic') {
       const stred = new Date(`${anchorIso}T12:00:00.000Z`);
-      return new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: timezone, month: 'long', year: 'numeric' }).format(
+      return new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(
         stred,
       );
     }
     const od = new Intl.DateTimeFormat(kodJazyka(jazyk), {
-      timeZone: timezone,
+      timeZone: 'UTC',
       day: 'numeric',
       month: 'numeric',
     }).format(prvni);
     const doo = new Intl.DateTimeFormat(kodJazyka(jazyk), {
-      timeZone: timezone,
+      timeZone: 'UTC',
       day: 'numeric',
       month: 'numeric',
       year: 'numeric',
@@ -1116,7 +1145,7 @@ export function CalendarBrowser({
           <button
             type="button"
             onClick={() => {
-              const dnes = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+              const dnes = new Intl.DateTimeFormat('en-CA', { timeZone: pasmoMrizky }).format(new Date());
               const den = days.some((d) => d.key === dnes) ? dnes : (days[0]?.key ?? dnes);
               novaVMrizce(den, 9 * 60);
             }}
@@ -1415,6 +1444,7 @@ export function CalendarBrowser({
                   svatkyPodleDnu={svatkyPodleDnu}
                   viceZemi={zemeVKalendari.length > 1}
                   timezone={timezone}
+                  pasmoMrizky={pasmoMrizky}
                   onDetail={klikNaUdalost}
                   onUpravit={dvojklikNaUdalost}
                   nepritomnostPodleDnu={ukazNepritomnost ? nepritomnostPodleDnu : null}
@@ -1428,6 +1458,7 @@ export function CalendarBrowser({
                   svatkyPodleDnu={svatkyPodleDnu}
                   viceZemi={zemeVKalendari.length > 1}
                   timezone={timezone}
+                  pasmoMrizky={pasmoMrizky}
                   onDetail={klikNaUdalost}
                   onUpravit={dvojklikNaUdalost}
                   nepritomnostPodleDnu={ukazNepritomnost ? celodenniPodleDnu : null}
@@ -1628,6 +1659,15 @@ function srovnejJmeno(text: string): string {
     .trim();
 }
 
+/**
+ * Poledne UTC daného dne. Z klíče sloupce („2026-10-01") se tím dá bezpečně
+ * naformátovat datum v jakémkoliv pásmu: půlnoc by se do sousedního dne
+ * překlopila, poledne nikdy (oprava 1. 10. 2026).
+ */
+function poledneDne(key: string): Date {
+  return new Date(`${key}T12:00:00.000Z`);
+}
+
 /** Denní a týdenní mřížka: sloupce = dny, řádky = hodiny, celých 0–24. */
 function MrizkaPohled({
   days,
@@ -1635,6 +1675,7 @@ function MrizkaPohled({
   svatkyPodleDnu,
   viceZemi,
   timezone,
+  pasmoMrizky,
   onDetail,
   onUpravit,
   nepritomnostPodleDnu,
@@ -1652,6 +1693,8 @@ function MrizkaPohled({
   /** Jsou vidět studia z obou zemí? Pak se u svátku píše i země. */
   viceZemi: boolean;
   timezone: string;
+  /** Pásmo, ve kterém jsou DNY sloupců - viz pasmoMrizky v CalendarBrowser. */
+  pasmoMrizky: string;
   onDetail: (e: CalendarEvent, kotva?: Kotva) => void;
   /** Dvojklik na událost - otevře úpravu (19. 9. 2026). */
   onUpravit?: (e: CalendarEvent) => void;
@@ -1665,7 +1708,7 @@ function MrizkaPohled({
   const jazyk = useJazyk();
   const celkovaVyska = (GRID_END_HOUR - GRID_START_HOUR) * HOUR_PX;
   const hodiny = Array.from({ length: GRID_END_HOUR - GRID_START_HOUR }, (_, i) => GRID_START_HOUR + i);
-  const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+  const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: pasmoMrizky }).format(new Date());
   const rolovatko = useRef<HTMLDivElement | null>(null);
   const vodorovne = useRef<HTMLDivElement | null>(null);
   // Novy tyden v mobilu: vpred od pondeli, zpet od nedele.
@@ -1675,7 +1718,7 @@ function MrizkaPohled({
   useEffect(() => {
     const el = vodorovne.current;
     if (!el || el.scrollWidth <= el.clientWidth + 1) return;
-    const dnes = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+    const dnes = new Intl.DateTimeFormat('en-CA', { timeZone: pasmoMrizky }).format(new Date());
     const iDnes = days.findIndex((d) => d.key === dnes);
     if (!uzOtevreno.current && iDnes >= 0) {
       const sloupec = (el.scrollWidth - 52) / days.length;
@@ -1741,9 +1784,11 @@ function MrizkaPohled({
           <div className="grid border-b border-line" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
             <div />
             {days.map((den) => {
-              const d = new Date(den.startIso);
+              // Datum ze samotného klíče sloupce (1. 10. 2026) - z půlnoci
+              // formátované v cizím pásmu vycházel předchozí den.
+              const d = poledneDne(den.key);
               const cislo = new Intl.DateTimeFormat(kodJazyka(jazyk), {
-                timeZone: timezone,
+                timeZone: 'UTC',
                 day: 'numeric',
                 month: 'numeric',
               }).format(d);
@@ -1979,6 +2024,7 @@ function MesicniPohled({
   svatkyPodleDnu,
   viceZemi,
   timezone,
+  pasmoMrizky,
   onDetail,
   onUpravit,
   nepritomnostPodleDnu,
@@ -1992,6 +2038,8 @@ function MesicniPohled({
   /** Jsou vidět studia z obou zemí? Pak se u svátku píše i země. */
   viceZemi: boolean;
   timezone: string;
+  /** Pásmo, ve kterém jsou DNY buněk - viz pasmoMrizky v CalendarBrowser. */
+  pasmoMrizky: string;
   onDetail: (e: CalendarEvent, kotva?: Kotva) => void;
   /** Dvojklik na událost - otevře úpravu (19. 9. 2026). */
   onUpravit?: (e: CalendarEvent) => void;
@@ -2002,7 +2050,7 @@ function MesicniPohled({
 }) {
   const t = usePreklad();
   const jazyk = useJazyk();
-  const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+  const dnesKey = new Intl.DateTimeFormat('en-CA', { timeZone: pasmoMrizky }).format(new Date());
   // Týden začíná pondělkem (1) a končí nedělí (0) - stejně jako mřížka.
   const dnyVTydnu = [1, 2, 3, 4, 5, 6, 0];
   return (
@@ -2019,8 +2067,8 @@ function MesicniPohled({
           // Mimo studio je v mesici celé ve štítcích nahoře (i to na čas),
           // tak se tu nesmí ukázat podruhé.
           const udalosti = (podleDnu.get(den.key) ?? []).filter((e) => e.kind !== 'MIMO');
-          const cislo = new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: timezone, day: 'numeric' }).format(
-            new Date(den.startIso),
+          const cislo = new Intl.DateTimeFormat(kodJazyka(jazyk), { timeZone: 'UTC', day: 'numeric' }).format(
+            poledneDne(den.key),
           );
           return (
             <div
