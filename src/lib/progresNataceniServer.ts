@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/db';
-import { posledniStrany, prvniStrany } from '@/lib/brunoServer';
+import { posledniStrany } from '@/lib/brunoServer';
 import { pocetStranTextu } from '@/lib/textProjektuServer';
 import {
+  koeficientKnihy,
   progresProjektu,
   progresZeStran,
-  rozdelPodleNormostran,
   type KoeficientKnihy,
   type ProgresNataceni,
 } from '@/lib/progresNataceni';
@@ -58,10 +58,8 @@ export async function nactiProgresNataceni(
   if (projekty.length === 0) return vysledek;
   const ids = projekty.map((p) => p.id);
 
-  const [strany, prvni, dotoceno, stran, normostrany, normostranyHercu] = await Promise.all([
+  const [strany, dotoceno, stran, normostrany, normostranyHercu] = await Promise.all([
     posledniStrany(ids),
-    // Kdo čte začátek knihy a kdo druhou půlku (30. 9. 2026) - viz `rozdelStrany`.
-    prvniStrany(ids).catch(() => new Map<string, number>()),
     prisma.herecDotocen
       .findMany({ where: { caflouProjectId: { in: ids } }, select: { caflouProjectId: true, userId: true } })
       .catch(() => [] as { caflouProjectId: string; userId: string }[]),
@@ -75,7 +73,8 @@ export async function nactiProgresNataceni(
       where: { caflouProjectId: { in: ids } },
       select: { caflouProjectId: true, pageCount: true },
     }) as Promise<RozsahProjektu[]>).catch((): RozsahProjektu[] => []),
-    // U víc herců čte každý svůj díl - pak platí jeho vlastní rozsah.
+    // Rozsah každého herce za celou knihu - váha do součtu projektu a číslo,
+    // ze kterého se plánují frekvence (1. 10. 2026).
     (prisma.herecNormostrany.findMany({
       where: { caflouProjectId: { in: ids } },
       orderBy: { createdAt: 'asc' },
@@ -85,10 +84,6 @@ export async function nactiProgresNataceni(
   const dotocene = new Set(dotoceno.map((d) => `${d.caflouProjectId}:${d.userId}`));
   const ns = new Map(normostrany.map((m) => [m.caflouProjectId, m.pageCount ?? null]));
   const nsHerce = new Map(normostranyHercu.map((m) => [`${m.caflouProjectId}:${m.userId}`, m.pageCount]));
-  /** Pořadí, ve kterém se rozsahy zapsaly - záloha, když ještě nikdo netočil. */
-  const poradiNs = new Map(
-    normostranyHercu.map((m, i) => [`${m.caflouProjectId}:${m.userId}`, i]),
-  );
 
   for (const p of projekty) {
     const zPdf = stran.get(p.id) ?? null;
@@ -97,36 +92,39 @@ export async function nactiProgresNataceni(
     const zdrojCelku = zPdf ? ('pdf' as const) : zNs ? ('ns' as const) : null;
 
     /**
-     * DÍLY HERCŮ (zadání 30. 9. 2026). Herci se seřadí podle toho, kdo čte
-     * dřívější strany - podle nejnižšího zápisu zvukaře, a kde ještě nikdo
-     * netočil, podle pořadí, ve kterém se rozsahy zapsaly. Pak se jejich
-     * normostrany přepočítají na strany PDF.
+     * NORMOSTRANY HERCE JSOU VÁHA, NE POZICE (upřesněno 1. 10. 2026: „ten
+     * počet NS u každého herce je celkový počet NS, které mají za celou
+     * knihu natočit, a mají to v různých částech knihy… slouží jen jako
+     * poměr a údaj pro to, kolik máme kterému naplánovat frekvencí").
      *
-     * `rozdelStrany` vrátí prázdno, kdykoliv dělit nelze (jeden herec, chybí
-     * rozsah, není počet stran) - tam se počítá po staru proti celému textu.
+     * Herec čte rozházené kapitoly po celé knize, takže souvislý díl „od
+     * strany - do strany" u něj neexistuje a nic takového se nepočítá.
+     * Procento je jeho strana proti celému textu, váha do součtu projektu
+     * jsou jeho normostrany.
      */
-    const serazeni = [...p.herciIds].sort((a, b) => {
-      const pa = prvni.get(`${p.id}:${a}`);
-      const pb = prvni.get(`${p.id}:${b}`);
-      if (pa != null && pb != null && pa !== pb) return pa - pb;
-      if (pa != null && pb == null) return -1;
-      if (pa == null && pb != null) return 1;
-      return (poradiNs.get(`${p.id}:${a}`) ?? 0) - (poradiNs.get(`${p.id}:${b}`) ?? 0);
-    });
-    const rozdeleni = rozdelPodleNormostran(
-      serazeni.map((h) => ({ klic: h, normostrany: nsHerce.get(`${p.id}:${h}`) ?? 0 })),
-      zPdf ?? zNs,
-      zNs,
-    );
-    const dily = rozdeleni.dily;
+    const bezNormostran =
+      p.herciIds.length > 1
+        ? p.herciIds.filter((h) => !((nsHerce.get(`${p.id}:${h}`) ?? 0) > 0))
+        : [];
+    const soucetNsHercu = p.herciIds.reduce((a, h) => a + (nsHerce.get(`${p.id}:${h}`) ?? 0), 0);
+    const nesoulad =
+      p.herciIds.length > 1 &&
+      bezNormostran.length === 0 &&
+      zNs &&
+      zNs > 0 &&
+      Math.abs(soucetNsHercu - zNs) > 1
+        ? { soucetHercu: soucetNsHercu, kniha: zNs }
+        : null;
 
     const herci: Record<string, ProgresNataceni> = {};
     for (const h of p.herciIds) {
       const strana = strany.get(`${p.id}:${h}`) ?? strany.get(`${p.id}:`) ?? null;
-      // Vlastní rozsah herce má přednost jen tam, kde se celek bere z NS -
-      // strany PDF jsou pro celý dokument, ne pro jeho díl.
-      const celekHerce = zPdf ?? nsHerce.get(`${p.id}:${h}`) ?? zNs;
-      herci[h] = progresZeStran(strana, celekHerce, dotocene.has(`${p.id}:${h}`), dily[h] ?? null);
+      herci[h] = progresZeStran(
+        strana,
+        celkemStran,
+        dotocene.has(`${p.id}:${h}`),
+        nsHerce.get(`${p.id}:${h}`) ?? null,
+      );
     }
     const celkem =
       p.herciIds.length > 0
@@ -137,11 +135,9 @@ export async function nactiProgresNataceni(
       herci,
       stranTextu: celkemStran,
       zdrojCelku,
-      koeficient: rozdeleni.koeficient,
-      // Hlásí se jen u projektů s víc herci - u jediného herce se stejně
-      // nedělí a upozornění by bylo jen šum.
-      bezNormostran: p.herciIds.length > 1 ? rozdeleni.bezNormostran : [],
-      nesoulad: p.herciIds.length > 1 ? rozdeleni.nesoulad : null,
+      koeficient: koeficientKnihy(zPdf, zNs),
+      bezNormostran,
+      nesoulad,
     });
   }
   return vysledek;

@@ -1,31 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import {
-  koeficientKnihy,
-  progresProjektu,
-  progresZeStran,
-  rozdelPodleNormostran,
-} from '../src/lib/progresNataceni';
+import { koeficientKnihy, progresProjektu, progresZeStran } from '../src/lib/progresNataceni';
 
 /**
- * Progres natáčení a koeficient převodu PDF ↔ normostrany (zadání
- * 30. 9. 2026: „musíme u každé knihy spočítat koeficient převodu z pdf na
- * normostrany. U každého herce jsou pak jasné poměry. Ten poměr je jasně
- * daný z NS" + „každá kniha ale bude mít jiný koeficient, musíme to vždycky
- * přepočítat").
+ * Progres natáčení (upřesněno 1. 10. 2026: „ten počet NS u každého herce je
+ * celkový počet NS, které mají za celou knihu natočit, a mají to v různých
+ * částech knihy… může se stát, že herečka čte kapitolu 1, 3, 7 a herec
+ * kapitolu 2, 4, 5 a 6. Ten počet NS u každého herce slouží jen jako poměr
+ * a údaj pro to, kolik máme kterému naplánovat frekvencí").
  *
- * Čísla v testech jsou ze skutečného projektu, na kterém se to vyhmátlo:
- * 670 stran PDF, 328 normostran, dva herci.
+ * Čísla jsou z projektu KOUSEK TEBE: 670 stran textu, 328 normostran,
+ * Martina na straně 95, Tomáš na straně 222.
  */
 describe('koeficient knihy', () => {
-  it('je poměr stran PDF k normostranám', () => {
-    const k = koeficientKnihy(670, 328);
-    expect(k?.stranNaNs).toBeCloseTo(2.043, 3);
+  it('říká, kolik normostran je na straně textu', () => {
+    expect(koeficientKnihy(670, 328)?.nsNaStranu).toBeCloseTo(0.4896, 4);
   });
 
   it('u hustěji vysázené knihy vyjde jiný - proto se počítá vždycky znovu', () => {
-    const rida = koeficientKnihy(670, 328)?.stranNaNs ?? 0;
-    const husta = koeficientKnihy(400, 328)?.stranNaNs ?? 0;
-    expect(husta).toBeLessThan(rida);
+    const rida = koeficientKnihy(670, 328)?.nsNaStranu ?? 0;
+    const husta = koeficientKnihy(400, 328)?.nsNaStranu ?? 0;
+    expect(husta).toBeGreaterThan(rida);
   });
 
   it('bez jednoho z čísel není co počítat', () => {
@@ -35,100 +29,76 @@ describe('koeficient knihy', () => {
   });
 });
 
-describe('rozdělení textu mezi herce', () => {
-  it('díl vyjde z normostran herce krát koeficient, ne z půlení textu', () => {
-    const { dily, koeficient } = rozdelPodleNormostran(
-      [
-        { klic: 'martina', normostrany: 100 },
-        { klic: 'tomas', normostrany: 228 },
-      ],
-      670,
-      328,
-    );
-    expect(koeficient?.stranNaNs).toBeCloseTo(2.043, 3);
-    // 100 NS × 2,043 = 204 stran, ne polovina z 670.
-    expect(dily.martina).toEqual({ od: 1, do: 204 });
-    expect(dily.tomas).toEqual({ od: 205, do: 670 });
+describe('progres herce', () => {
+  it('se měří proti celému textu - herec má kapitoly po celé knize', () => {
+    const p = progresZeStran(222, 670, false, 169);
+    expect(p?.procenta).toBe(33);
+    expect(p?.popis).toBe('str. 222 z 670');
   });
 
-  it('poslední herec vždycky končí na poslední straně', () => {
-    const { dily } = rozdelPodleNormostran(
-      [
-        { klic: 'a', normostrany: 111 },
-        { klic: 'b', normostrany: 111 },
-        { klic: 'c', normostrany: 111 },
-      ],
-      670,
-      333,
-    );
-    expect(dily.c.do).toBe(670);
-    expect(dily.a.od).toBe(1);
+  it('nikdy nevyjde nula jen proto, že herec čte druhou půlku knihy', () => {
+    // Přesně případ, který to rozbilo: Tomáš na straně 222 ukazoval 0 %.
+    expect(progresZeStran(222, 670, false, 169)?.procenta).toBeGreaterThan(0);
   });
 
-  it('když někomu chybí rozsah, žádný díl se nevymyslí', () => {
-    const v = rozdelPodleNormostran(
-      [
-        { klic: 'martina', normostrany: 158 },
-        { klic: 'tomas', normostrany: 0 },
-      ],
-      670,
-      328,
-    );
-    expect(v.dily).toEqual({});
-    expect(v.bezNormostran).toEqual(['tomas']);
+  it('zbývající normostrany vycházejí z jeho vlastního rozsahu', () => {
+    const p = progresZeStran(222, 670, false, 169);
+    // 169 NS × 222/670 = 56 hotových, zbývá 113.
+    expect(p?.hotovo).toBe(56);
+    expect(p?.zbyvaNs).toBe(113);
+    expect(p?.rozsah).toBe(169);
   });
 
-  it('rozchod součtu s rozsahem knihy ohlásí, ale počítat nepřestane', () => {
-    const v = rozdelPodleNormostran(
-      [
-        { klic: 'a', normostrany: 324 },
-        { klic: 'b', normostrany: 346 },
-      ],
-      670,
-      328,
-    );
-    expect(v.nesoulad).toEqual({ soucetHercu: 670, kniha: 328 });
-    expect(v.dily.b.do).toBe(670);
+  it('dva herci na stejné straně mají stejná procenta, ale jiné zbývající NS', () => {
+    const maly = progresZeStran(335, 670, false, 100);
+    const velky = progresZeStran(335, 670, false, 228);
+    expect(maly?.procenta).toBe(velky?.procenta);
+    expect(maly?.zbyvaNs).toBe(50);
+    expect(velky?.zbyvaNs).toBe(114);
   });
 
-  it('u jediného herce se nedělí', () => {
-    expect(rozdelPodleNormostran([{ klic: 'a', normostrany: 328 }], 670, 328).dily).toEqual({});
-  });
-});
-
-describe('progres herce v jeho dílu', () => {
-  it('počítá se uvnitř dílu, ne proti celé knize', () => {
-    const p = progresZeStran(95, 670, false, { od: 1, do: 324 });
-    expect(p?.procenta).toBe(29);
-    expect(p?.zbyva).toBe(229);
-    expect(p?.mimoDil).toBe(false);
+  it('bez rozsahu herce se pracuje jen se stranami', () => {
+    const p = progresZeStran(95, 670, false, null);
+    expect(p?.zbyvaNs).toBeNull();
+    expect(p?.rozsah).toBe(670);
   });
 
-  it('zápis před začátkem dílu je rozpor, ne nula bez vysvětlení', () => {
-    const p = progresZeStran(222, 670, false, { od: 325, do: 670 });
-    expect(p?.procenta).toBe(0);
-    expect(p?.mimoDil).toBe(true);
+  it('dotočeno je sto procent a nic nezbývá', () => {
+    const p = progresZeStran(300, 670, true, 169);
+    expect(p?.procenta).toBe(100);
+    expect(p?.zbyvaNs).toBe(0);
   });
 
-  it('herec, který ještě nezačal, rozpor nehlásí', () => {
-    const p = progresZeStran(null, 670, false, { od: 325, do: 670 });
-    expect(p?.procenta).toBe(0);
-    expect(p?.mimoDil).toBe(false);
+  it('bez počtu stran se ukáže aspoň strana, ne vymyšlené procento', () => {
+    const p = progresZeStran(141, null, false, 169);
+    expect(p?.neznamyCelek).toBe(true);
+    expect(p?.popis).toBe('str. 141');
   });
 });
 
 describe('souhrn projektu', () => {
-  it('je vážený podle dílů, ne průměr herců', () => {
-    // Kratší díl hotový, delší nezačatý: průměr by tvrdil 50 %.
-    const maly = progresZeStran(100, 670, false, { od: 1, do: 100 });
-    const velky = progresZeStran(null, 670, false, { od: 101, do: 670 });
-    const celkem = progresProjektu([maly, velky]);
-    expect(celkem?.procenta).toBe(15);
+  it('je vážený normostranami herců, ne průměr', () => {
+    // Malý rozsah hotový, velký nezačatý: průměr by tvrdil 50 %.
+    const maly = progresZeStran(670, 670, false, 50);
+    const velky = progresZeStran(0, 670, false, 450);
+    expect(progresProjektu([maly, velky])?.procenta).toBe(10);
   });
 
-  it('rozpor u herce je vidět i v souhrnu', () => {
-    const a = progresZeStran(95, 670, false, { od: 1, do: 324 });
-    const b = progresZeStran(222, 670, false, { od: 325, do: 670 });
-    expect(progresProjektu([a, b])?.mimoDil).toBe(true);
+  it('sečte zbývající normostrany za celý projekt', () => {
+    const a = progresZeStran(335, 670, false, 100);
+    const b = progresZeStran(335, 670, false, 228);
+    expect(progresProjektu([a, b])?.zbyvaNs).toBe(164);
+  });
+
+  it('když někomu rozsah chybí, spadne to na průměr a nespadne to', () => {
+    const a = progresZeStran(670, 670, false, 50);
+    const b = progresZeStran(0, 670, false, null);
+    expect(progresProjektu([a, b])?.procenta).toBe(50);
+  });
+
+  it('dotočeno u všech je sto procent', () => {
+    const a = progresZeStran(95, 670, true, 159);
+    const b = progresZeStran(222, 670, true, 169);
+    expect(progresProjektu([a, b])?.dotoceno).toBe(true);
   });
 });

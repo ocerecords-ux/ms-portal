@@ -5,46 +5,30 @@
  * Počítá se ze STRAN: poslední zapsaná strana („kde jsme skončili") proti
  * počtu stran PDF s textem. Tlačítko Dotočeno znamená 100 %.
  *
- * DVĚ JEDNOTKY, KTERÉ SE PŘEPOČÍTÁVAJÍ (zadání 30. 9. 2026: „máme tam dvě
- * jednotky, jak počítáme stránky, ale to bych zachoval, jen bych to
- * přepočítával mezi sebou"):
+ * JAK SE KNIHA DĚLÍ MEZI HERCE (upřesněno 1. 10. 2026 po dvou špatných
+ * pokusech): „ten počet NS u každého herce je celkový počet NS, které mají
+ * za celou knihu natočit, a mají to v různých částech knihy… může se stát,
+ * že herečka čte kapitolu 1, 3, 7 a herec kapitolu 2, 4, 5 a 6. Ten počet NS
+ * u každého herce slouží jen jako poměr a údaj pro to, kolik máme kterému
+ * naplánovat frekvencí."
  *
- *  1. STRANY PDF - zapisuje zvukař po natáčení, ať víme, na které straně
- *     jsme. PDF není formátované na normostrany, takže je to jiné číslo.
- *  2. NORMOSTRANY - z nich se počítá odhad frekvencí a cena a každý herec
- *     má u sebe napsaný svůj rozsah.
+ * Z toho plyne všechno podstatné:
  *
- * KDYŽ KNIHU ČTE VÍC HERCŮ, ČTE JI KAŽDÝ OD JINUD (zadání 30. 9. 2026:
- * „potřeboval bych nějak zohlednit to, že když první herec začíná na první
- * straně a ten druhý má až druhou půlku knihy, aby to nepočítalo, že je
- * progres vyšší, než je").
+ *  - Herec NEMÁ souvislý úsek knihy. Jeho kapitoly jsou rozházené po celém
+ *    textu, takže „od strany - do strany" u něj neexistuje. Dřívější dělení
+ *    textu na díly bylo postavené na hlavu: Tomáš se zapsanou stranou 222
+ *    dostal díl 325-670 a vyšla mu nula, i když točil.
+ *  - Oba herci se textem pohybují od začátku do konce SPOLEČNĚ. Kdo je na
+ *    straně 222 z 670, má za sebou zhruba třetinu SVÝCH kapitol - proto se
+ *    jeho procento počítá prostě proti celému textu.
+ *  - Normostrany herce jsou VÁHA, ne pozice. Projekt je vážený součet: kdo
+ *    má natočit dvě třetiny normostran, váží na výsledku dvě třetiny.
  *
- * Do teď se strana každého herce dělila CELÝM počtem stran PDF. Druhý herec
- * na straně 400 z 500 tím vyšel na 80 %, i když ze svého dílu (251-500) má
- * teprve necelých 60 - a první herec, který svou půlku dočetl na straně 250,
- * ukazoval 50 % místo hotova. Průměr obou pak lhal na obě strany.
- *
- * KOEFICIENT PŘEVODU U KAŽDÉ KNIHY ZVLÁŠŤ (zadání 30. 9. 2026: „musíme
- * u každé knihy spočítat koeficient převodu z pdf na normostrany. U každého
- * herce jsou pak jasné poměry. Ten poměr je jasně daný z NS" - a vzápětí:
- * „každá kniha ale bude mít jiný koeficient, musíme to vždycky přepočítat").
- *
- * Koeficient je `strany PDF ÷ normostrany knihy` a je to číslo TÉ JEDNÉ
- * KNIHY - jak hustě je vysázená. Nikde se neukládá a nikde se nesdílí mezi
- * projekty: pokaždé se spočítá ze dvou čísel toho projektu, takže se sám
- * opraví, jakmile se vymění PDF nebo upraví rozsah.
- *
- * Díl herce pak vyjde z JEHO normostran krát koeficient - ne z půlení textu.
- * Procento se počítá uvnitř dílu a projekt je vážený součet dílů, ne průměr:
- * herec s třetinou knihy má na výsledku třetinový podíl.
- *
- * CO SE NEDOMÝŠLÍ. Dělení podle normostran platí jen tehdy, když se kniha
- * dělila po sobě (první herec začátek, druhý konec) a když má rozsah
- * vyplněný KAŽDÝ herec. Chybí-li komukoliv, žádný díl se nevymyslí a počítá
- * se po staru proti celému textu - vymyšlená hranice je horší než žádná.
- * A když herci vyjde díl, do kterého se jeho zapsaná strana vůbec nevejde,
- * je to rozpor v datech a musí být vidět (`mimoDil`), ne utnutý na nulu.
+ * Je to odhad, ne zápis: předpokládá, že kapitoly herce jsou po knize
+ * rozložené rovnoměrně. Přesné by to bylo až ze seznamu kapitol s tím, kdo
+ * kterou čte - do té doby je tohle nejbližší pravdě, co z našich čísel jde.
  */
+
 export type ProgresNataceni = {
   procenta: number;
   /** „str. 142 z 380", „str. 141" nebo „Dotočeno". */
@@ -64,79 +48,94 @@ export type ProgresNataceni = {
    */
   neznamyCelek: boolean;
   /**
-   * Kolik stran zbývá dotočit (zadání 19. 9. 2026: „info o tom, kolik stran
-   * zbývá dotočit"). Null u souhrnu víc herců - každý čte jiný díl, součet
-   * by nic neříkal; zbytek je u každého herce zvlášť.
+   * Kolik STRAN TEXTU zbývá projít (zadání 19. 9. 2026: „info o tom, kolik
+   * stran zbývá dotočit"). Null u souhrnu víc herců.
    */
   zbyva: number | null;
   /**
-   * Kolik stran má díl, proti kterému se počítá, a kolik z nich je hotových
-   * (30. 9. 2026). Podle toho se projekt skládá VÁŽENĚ - herec s třetinou
-   * knihy má na výsledku třetinový podíl. Null = neznámý celek.
+   * Kolik NORMOSTRAN tomuhle herci zbývá natočit (1. 10. 2026). Tohle je
+   * číslo, ze kterého se plánují frekvence - strany textu k tomu neřeknou
+   * nic, protože herec čte jen své kapitoly. Null, když u herce rozsah není.
+   */
+  zbyvaNs: number | null;
+  /**
+   * CELKOVÝ ROZSAH HERCE V NORMOSTRANÁCH - jeho váha v projektu. Null, když
+   * u něj rozsah zadaný není.
+   *
+   * Schválně zvlášť od `rozsah`/`hotovo`: vážit se smí jen tehdy, když mají
+   * normostrany VŠICHNI. Míchat 169 normostran jednoho herce s 670 stranami
+   * druhého by dalo nesmysl.
+   */
+  vahaNs: number | null;
+  /**
+   * Odpracovaná část a celek - v normostranách, když je známe, jinak ve
+   * stranách textu. Slouží k výpisu („z jeho 169"), ne k vážení.
    */
   rozsah: number | null;
   hotovo: number | null;
-  /**
-   * ZAPSANÁ STRANA LEŽÍ MIMO DÍL, KTERÝ NA HERCE VYŠEL (30. 9. 2026).
-   *
-   * Stalo se to Tomáši Žilinskému: měl zapsanou stranu 222, ale z normostran
-   * mu vyšel díl 325-670. Výpočet ho utnul na nulu, takže karta tvrdila 0 %
-   * a „zbývá 346 stran" u herce, který evidentně někde na 222 točil.
-   *
-   * Tichá nula je tady horší než přiznaný rozpor: buď jsou špatně zadané
-   * normostrany, nebo se kniha nedělila po sobě. Obojí je práce pro člověka,
-   * ne pro dopočet.
-   */
-  mimoDil: boolean;
-} | null;
+};
 
 /** „1 strana", „3 strany", „12 stran". */
 export function stranText(n: number): string {
   return `${n} ${n === 1 ? 'strana' : n >= 2 && n <= 4 ? 'strany' : 'stran'}`;
 }
 
-/** Díl herce ve stranách PDF - od které do které čte, obojí včetně. */
-export type DilHerce = { od: number; do: number };
+/**
+ * KOEFICIENT PŘEVODU U JEDNÉ KNIHY (zadání 30. 9. 2026: „musíme u každé
+ * knihy spočítat koeficient převodu z pdf na normostrany" + „každá kniha ale
+ * bude mít jiný koeficient, musíme to vždycky přepočítat").
+ *
+ * Kolik normostran připadá na jednu stranu textu - záleží na sazbě, takže je
+ * u každé knihy jiný. Nikde se neukládá: počítá se při každém zobrazení ze
+ * dvou čísel toho projektu, takže se sám opraví, jakmile se vymění PDF nebo
+ * upraví rozsah.
+ *
+ * K čemu je: převádí „zbývá projít 448 stran textu" na „zbývá natočit 220
+ * normostran", a to je jednotka, ve které se plánují frekvence.
+ */
+export type KoeficientKnihy = {
+  /** Normostran na jednu stranu textu. 328 NS / 670 stran = 0,49. */
+  nsNaStranu: number;
+  stranPdf: number;
+  normostrany: number;
+};
 
+export function koeficientKnihy(
+  stranPdf: number | null,
+  normostrany: number | null,
+): KoeficientKnihy | null {
+  if (!stranPdf || stranPdf <= 0) return null;
+  if (!normostrany || normostrany <= 0) return null;
+  return { nsNaStranu: normostrany / stranPdf, stranPdf, normostrany };
+}
+
+/**
+ * Progres jednoho herce (nebo projektu s jediným hercem).
+ *
+ * `normostranyHerce` je jeho CELKOVÝ rozsah za celou knihu - váha, ne pozice.
+ * Když ho známe, počítá se z něj, kolik normostran má hotových a kolik mu
+ * zbývá; bez něj se pracuje jen se stranami textu.
+ */
 export function progresZeStran(
   strana: number | null,
   stranCelkem: number | null,
   dotoceno: boolean,
-  /** Díl herce (30. 9. 2026). Bez něj se počítá proti celému textu jako dřív. */
-  dil?: DilHerce | null,
+  normostranyHerce?: number | null,
 ): ProgresNataceni {
+  const ns = normostranyHerce && normostranyHerce > 0 ? normostranyHerce : null;
+
   if (dotoceno) {
-    const cely = dil ? dil.do - dil.od + 1 : (stranCelkem ?? null);
+    const vaha = ns ?? stranCelkem ?? null;
     return {
       procenta: 100,
       popis: 'Dotočeno',
       dotoceno: true,
       zbyva: 0,
+      zbyvaNs: ns ? 0 : null,
       neznamyCelek: false,
-      rozsah: cely,
-      hotovo: cely,
-      mimoDil: false,
-    };
-  }
-
-  if (dil && dil.do >= dil.od) {
-    const rozsah = dil.do - dil.od + 1;
-    // Strana před začátkem dílu = herec ještě nezačal; za koncem = má hotovo.
-    const hotovo = Math.max(0, Math.min((strana ?? 0) - dil.od + 1, rozsah));
-    // Zápis PŘED začátkem dílu není „ještě nezačal" - je to rozpor. Kdo
-    // nezačal, nemá zapsanou žádnou stranu.
-    const mimoDil = Boolean(strana && strana > 0 && strana < dil.od);
-    return {
-      procenta: Math.round((hotovo / rozsah) * 100),
-      // „str. 400 · díl 251-500" - číslo z PDF zůstává, ať se dá porovnat
-      // se zápisem zvukaře, a vedle je vidět, z čeho se počítá.
-      popis: strana ? `str. ${strana} · díl ${dil.od}–${dil.do}` : `díl ${dil.od}–${dil.do}`,
-      dotoceno: false,
-      zbyva: rozsah - hotovo,
-      neznamyCelek: false,
-      rozsah,
-      hotovo,
-      mimoDil,
+      vahaNs: ns,
+      rozsah: vaha,
+      hotovo: vaha,
     };
   }
 
@@ -148,122 +147,44 @@ export function progresZeStran(
       popis: `str. ${strana}`,
       dotoceno: false,
       zbyva: null,
+      zbyvaNs: null,
       neznamyCelek: true,
+      vahaNs: ns,
       rozsah: null,
       hotovo: null,
-      mimoDil: false,
     };
   }
+
   const s = Math.max(0, Math.min(strana ?? 0, stranCelkem));
+  const podil = s / stranCelkem;
+  // Hotovo a zbývá v normostranách: herec má svůj rozsah rozprostřený po celé
+  // knize, takže co prošel z textu, to prošel i ze svých kapitol.
+  const hotovoNs = ns ? Math.round(ns * podil) : null;
   return {
-    procenta: Math.round((s / stranCelkem) * 100),
+    procenta: Math.round(podil * 100),
     popis: `str. ${s} z ${stranCelkem}`,
     dotoceno: false,
     zbyva: stranCelkem - s,
+    zbyvaNs: ns && hotovoNs !== null ? Math.max(0, ns - hotovoNs) : null,
     neznamyCelek: false,
-    rozsah: stranCelkem,
-    hotovo: s,
-    mimoDil: false,
+    vahaNs: ns,
+    rozsah: ns ?? stranCelkem,
+    hotovo: hotovoNs ?? s,
   };
 }
 
 /**
- * KOEFICIENT PŘEVODU U JEDNÉ KNIHY: kolik stran PDF připadá na normostranu.
- *
- * Každá kniha má svůj (zadání 30. 9. 2026: „každá kniha ale bude mít jiný
- * koeficient, musíme to vždycky přepočítat"), protože záleží na sazbě -
- * velikosti písma, prokladu, okrajích. Proto se nikde neukládá: spočítá se
- * při každém zobrazení ze dvou čísel toho projektu.
- */
-export type KoeficientKnihy = {
-  /** Strany PDF na jednu normostranu. 670 stran / 328 NS = 2,043. */
-  stranNaNs: number;
-  stranPdf: number;
-  normostrany: number;
-};
-
-export function koeficientKnihy(
-  stranPdf: number | null,
-  normostrany: number | null,
-): KoeficientKnihy | null {
-  if (!stranPdf || stranPdf <= 0) return null;
-  if (!normostrany || normostrany <= 0) return null;
-  return { stranNaNs: stranPdf / normostrany, stranPdf, normostrany };
-}
-
-export type RozdeleniTextu = {
-  dily: Record<string, DilHerce>;
-  koeficient: KoeficientKnihy | null;
-  /** Klíče herců bez vyplněného rozsahu - kvůli nim se díly nepočítají. */
-  bezNormostran: string[];
-  /**
-   * Součet normostran herců se rozchází s rozsahem knihy. Není to důvod
-   * nepočítat - je to důvod to napsat, protože jedno z těch čísel je špatně.
-   */
-  nesoulad: { soucetHercu: number; kniha: number } | null;
-};
-
-/**
- * ROZDĚLENÍ TEXTU MEZI HERCE (30. 9. 2026). Díl každého herce vyjde z JEHO
- * normostran krát koeficient knihy - ne z půlení textu. Herci jdou po sobě
- * v pořadí, ve kterém čtou, a díly na sebe navazují bez mezery.
- *
- * Poslední herec dostane zbytek do konce, ať se zaokrouhlováním neztratí
- * strana a poslední díl vždycky končí na poslední straně textu. Bez toho by
- * u knihy, kde se čísla o kousek rozcházejí, nešlo dojet na 100 %.
- *
- * Když koeficient neznáme (chybí rozsah knihy v normostranách), použije se
- * poměr normostran herců mezi sebou - vyjde totéž, kdykoliv jejich součet
- * rozsahu knihy odpovídá.
- *
- * Díly zůstanou prázdné, když rozdělovat nemá co: jeden herec, chybějící
- * rozsah u kohokoliv, nebo neznámý počet stran PDF. Tam platí starý výpočet
- * proti celému textu.
- */
-export function rozdelPodleNormostran(
-  podily: { klic: string; normostrany: number }[],
-  stranPdf: number | null,
-  normostranyKnihy: number | null,
-): RozdeleniTextu {
-  const koeficient = koeficientKnihy(stranPdf, normostranyKnihy);
-  const bezNormostran = podily.filter((p) => !p.normostrany || p.normostrany <= 0).map((p) => p.klic);
-  const soucetHercu = podily.reduce((a, p) => a + (p.normostrany > 0 ? p.normostrany : 0), 0);
-  const nesoulad =
-    normostranyKnihy && normostranyKnihy > 0 && soucetHercu > 0 && Math.abs(soucetHercu - normostranyKnihy) > 1
-      ? { soucetHercu, kniha: normostranyKnihy }
-      : null;
-
-  const prazdno: RozdeleniTextu = { dily: {}, koeficient, bezNormostran, nesoulad };
-  if (!stranPdf || stranPdf <= 0) return prazdno;
-  if (podily.length < 2) return prazdno;
-  if (bezNormostran.length > 0) return prazdno;
-  if (soucetHercu <= 0) return prazdno;
-
-  const dily: Record<string, DilHerce> = {};
-  let od = 1;
-  podily.forEach((p, i) => {
-    const posledni = i === podily.length - 1;
-    // Délka dílu z koeficientu; bez něj z poměru normostran mezi herci.
-    const delka = koeficient
-      ? Math.round(p.normostrany * koeficient.stranNaNs)
-      : Math.round((p.normostrany / soucetHercu) * stranPdf);
-    const doStrany = posledni ? stranPdf : Math.min(stranPdf, od + Math.max(1, delka) - 1);
-    dily[p.klic] = { od, do: Math.max(od, doStrany) };
-    od = dily[p.klic].do + 1;
-  });
-  return { dily, koeficient, bezNormostran, nesoulad };
-}
-
-/**
- * Celý projekt s víc herci: průměr herců. Každý herec čte svůj díl (nebo
- * svou roli), takže projekt je hotový, až když jsou hotoví všichni.
+ * Celý projekt s víc herci. Každý má natočit svůj počet normostran, takže
+ * projekt je VÁŽENÝ součet: kdo má dvě třetiny normostran, váží na výsledku
+ * dvě třetiny. Prostý průměr by u knihy dělené 20/80 tvrdil, že je hotová
+ * z poloviny, i když se natočil jen ten kratší díl.
  */
 export function progresProjektu(herci: ProgresNataceni[]): ProgresNataceni {
   const vsichni = herci.filter((h): h is NonNullable<ProgresNataceni> => h !== null);
   if (vsichni.length === 0) return null;
   if (vsichni.length === 1) return vsichni[0];
 
-  // Do průměru jdou jen herci, u kterých procento něco znamená. Kdo má jen
+  // Do součtu jdou jen herci, u kterých procento něco znamená. Kdo má jen
   // stranu bez celku, se do něj počítat nedá - přispěl by nulou a projekt by
   // vypadal zpožděněji, než je.
   const znami = vsichni.filter((h) => !h.neznamyCelek);
@@ -274,10 +195,11 @@ export function progresProjektu(herci: ProgresNataceni[]): ProgresNataceni {
       popis: herciText,
       dotoceno: false,
       zbyva: null,
+      zbyvaNs: null,
       neznamyCelek: true,
+      vahaNs: null,
       rozsah: null,
       hotovo: null,
-      mimoDil: false,
     };
   }
   if (znami.length === herci.length && znami.every((h) => h.dotoceno)) {
@@ -286,39 +208,44 @@ export function progresProjektu(herci: ProgresNataceni[]): ProgresNataceni {
       popis: 'Dotočeno',
       dotoceno: true,
       zbyva: 0,
+      zbyvaNs: 0,
       neznamyCelek: false,
+      vahaNs: null,
       rozsah: null,
       hotovo: null,
-      mimoDil: false,
     };
   }
+
   /**
-   * VÁŽENĚ, NE PRŮMĚREM (30. 9. 2026). Kdo čte třetinu knihy, má na výsledku
-   * třetinový podíl - prostý průměr dvou herců by u knihy dělené 20/80 tvrdil,
-   * že je hotová z poloviny, i když se natočil jen ten kratší díl.
-   *
-   * Průměr zůstává jako záloha pro případ, že u někoho rozsah neznáme.
+   * VÁŽÍ SE JEN TEHDY, KDYŽ MAJÍ NORMOSTRANY VŠICHNI. Kdyby jeden herec
+   * rozsah neměl, vážilo by se jeho 670 stran textu proti 169 normostranám
+   * druhého a vyšel by nesmysl. Bez kompletních vah je poctivější průměr -
+   * a karta vedle toho napíše, komu rozsah chybí.
    */
-  const sRozsahem = znami.filter((h) => h.rozsah !== null && h.hotovo !== null);
-  const vazene = sRozsahem.length === znami.length && sRozsahem.length > 0;
-  const rozsahCelkem = vazene ? sRozsahem.reduce((a, h) => a + (h.rozsah ?? 0), 0) : 0;
-  const hotovoCelkem = vazene ? sRozsahem.reduce((a, h) => a + (h.hotovo ?? 0), 0) : 0;
+  const svahou = znami.filter((h) => h.vahaNs !== null && h.vahaNs > 0);
+  const vazene = svahou.length === znami.length && svahou.length > 0;
+  const rozsahCelkem = vazene ? svahou.reduce((a, h) => a + (h.vahaNs ?? 0), 0) : 0;
+  const hotovoCelkem = vazene
+    ? svahou.reduce((a, h) => a + (h.vahaNs ?? 0) * (h.procenta / 100), 0)
+    : 0;
 
   const procenta =
     vazene && rozsahCelkem > 0
       ? Math.round((hotovoCelkem / rozsahCelkem) * 100)
       : Math.round(znami.reduce((a, h) => a + h.procenta, 0) / znami.length);
   const hotovych = znami.filter((h) => h.dotoceno).length;
+  const zbyvaNs = znami.every((h) => h.zbyvaNs !== null)
+    ? znami.reduce((a, h) => a + (h.zbyvaNs ?? 0), 0)
+    : null;
   return {
     procenta,
     popis: hotovych > 0 ? `${herciText}, dotočeno ${hotovych}` : herciText,
     dotoceno: false,
     zbyva: null,
+    zbyvaNs,
     neznamyCelek: false,
+    vahaNs: vazene && rozsahCelkem > 0 ? rozsahCelkem : null,
     rozsah: vazene && rozsahCelkem > 0 ? rozsahCelkem : null,
-    hotovo: vazene && rozsahCelkem > 0 ? hotovoCelkem : null,
-    // Souhrn projektu nemá vlastní díl; rozpor se hlásí u herce, kterého se
-    // týká, ale ať je vidět i nahoře, že se v číslech někde nesejdeme.
-    mimoDil: znami.some((h) => h.mimoDil),
+    hotovo: vazene && rozsahCelkem > 0 ? Math.round(hotovoCelkem) : null,
   };
 }
